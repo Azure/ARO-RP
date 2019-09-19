@@ -1,0 +1,108 @@
+package cosmosdb
+
+import (
+	"bytes"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/textproto"
+	"net/url"
+	"strings"
+	"time"
+)
+
+// Error represents an error
+type Error struct {
+	StatusCode int
+	Code       string `json:"code"`
+	Message    string `json:"message"`
+}
+
+func (e Error) Error() string {
+	return fmt.Sprintf("%d %s: %s", e.StatusCode, e.Code, e.Message)
+}
+
+// IsErrorStatusCode returns true if err is of type Error and its StatusCode
+// matches statusCode
+func IsErrorStatusCode(err error, statusCode int) bool {
+	if err, ok := err.(Error); ok {
+		return err.StatusCode == statusCode
+	}
+	return false
+}
+
+// ErrETagRequired is the error returned if the ETag field is not populate on a
+// PUT or DELETE operation
+var ErrETagRequired = fmt.Errorf("ETag is required")
+
+func (c *databaseClient) authorizeRequest(req *http.Request, resourceType, resourceLink string) {
+	date := time.Now().UTC().Format("Mon, 02 Jan 2006 15:04:05 GMT")
+
+	h := hmac.New(sha256.New, c.masterKey)
+	fmt.Fprintf(h, "%s\n%s\n%s\n%s\n\n", strings.ToLower(req.Method), resourceType, resourceLink, strings.ToLower(date))
+
+	req.Header.Set("Authorization", url.QueryEscape(fmt.Sprintf("type=master&ver=1.0&sig=%s", base64.StdEncoding.EncodeToString(h.Sum(nil)))))
+	req.Header.Set("x-ms-date", date)
+}
+
+func (c *databaseClient) do(method, path, resourceType, resourceLink string, expectedStatusCode int, in, out interface{}, headers http.Header) error {
+	req, err := http.NewRequest(method, "https://"+c.databaseAccount+".documents.azure.com/"+path, nil)
+	if err != nil {
+		return err
+	}
+
+	if in != nil {
+		buf := &bytes.Buffer{}
+		err := json.NewEncoder(buf).Encode(in)
+		if err != nil {
+			return err
+		}
+		req.Body = ioutil.NopCloser(buf)
+		req.Header.Set("Content-Type", "application/json")
+	}
+
+	for k, v := range headers {
+		req.Header[textproto.CanonicalMIMEHeaderKey(k)] = v
+	}
+
+	req.Header.Set("x-ms-version", "2018-12-31")
+
+	c.authorizeRequest(req, resourceType, resourceLink)
+
+	resp, err := c.hc.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if headers != nil {
+		for k := range headers {
+			delete(headers, k)
+		}
+		for k, v := range resp.Header {
+			headers[k] = v
+		}
+	}
+
+	d := json.NewDecoder(resp.Body)
+	d.DisallowUnknownFields()
+
+	if resp.StatusCode != expectedStatusCode {
+		var err Error
+		if resp.Header.Get("Content-Type") == "application/json" {
+			d.Decode(&err)
+		}
+		err.StatusCode = resp.StatusCode
+		return err
+	}
+
+	if out != nil && resp.Header.Get("Content-Type") == "application/json" {
+		return d.Decode(&out)
+	}
+
+	return nil
+}
