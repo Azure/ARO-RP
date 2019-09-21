@@ -16,6 +16,7 @@ type templateClient struct {
 type TemplateClient interface {
 	Create(string, *pkg.Template) (*pkg.Template, error)
 	List() TemplateIterator
+	All(TemplateIterator) (*pkg.Templates, error)
 	Get(string, string) (*pkg.Template, error)
 	Replace(string, *pkg.Template) (*pkg.Template, error)
 	Delete(string, *pkg.Template) error
@@ -60,6 +61,26 @@ func (c *templateClient) Create(partitionkey string, newtemplate *pkg.Template) 
 
 func (c *templateClient) List() TemplateIterator {
 	return &templateListIterator{templateClient: c}
+}
+
+func (c *templateClient) All(i TemplateIterator) (*pkg.Templates, error) {
+	alltemplates := &pkg.Templates{}
+
+	for {
+		templates, err := i.Next()
+		if err != nil {
+			return nil, err
+		}
+		if templates == nil {
+			break
+		}
+
+		alltemplates.Count += templates.Count
+		alltemplates.ResourceID = templates.ResourceID
+		alltemplates.Templates = append(alltemplates.Templates, templates.Templates...)
+	}
+
+	return alltemplates, nil
 }
 
 func (c *templateClient) Get(partitionkey, templateid string) (template *pkg.Template, err error) {

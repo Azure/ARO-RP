@@ -105,6 +105,7 @@ type collectionClient struct {
 type CollectionClient interface {
 	Create(*Collection) (*Collection, error)
 	List() CollectionIterator
+	All(CollectionIterator) (*Collections, error)
 	Get(string) (*Collection, error)
 	Delete(*Collection) error
 	Replace(*Collection) (*Collection, error)
@@ -137,6 +138,26 @@ func (c *collectionClient) Create(newcoll *Collection) (coll *Collection, err er
 
 func (c *collectionClient) List() CollectionIterator {
 	return &collectionListIterator{collectionClient: c}
+}
+
+func (c *collectionClient) All(i CollectionIterator) (*Collections, error) {
+	allcolls := &Collections{}
+
+	for {
+		colls, err := i.Next()
+		if err != nil {
+			return nil, err
+		}
+		if colls == nil {
+			break
+		}
+
+		allcolls.Count += colls.Count
+		allcolls.ResourceID = colls.ResourceID
+		allcolls.Collections = append(allcolls.Collections, colls.Collections...)
+	}
+
+	return allcolls, nil
 }
 
 func (c *collectionClient) Get(collid string) (coll *Collection, err error) {

@@ -33,6 +33,7 @@ type databaseClient struct {
 type DatabaseClient interface {
 	Create(*Database) (*Database, error)
 	List() DatabaseIterator
+	All(DatabaseIterator) (*Databases, error)
 	Get(string) (*Database, error)
 	Delete(*Database) error
 }
@@ -72,6 +73,26 @@ func (c *databaseClient) Create(newdb *Database) (db *Database, err error) {
 
 func (c *databaseClient) List() DatabaseIterator {
 	return &databaseListIterator{databaseClient: c}
+}
+
+func (c *databaseClient) All(i DatabaseIterator) (*Databases, error) {
+	alldbs := &Databases{}
+
+	for {
+		dbs, err := i.Next()
+		if err != nil {
+			return nil, err
+		}
+		if dbs == nil {
+			break
+		}
+
+		alldbs.Count += dbs.Count
+		alldbs.ResourceID = dbs.ResourceID
+		alldbs.Databases = append(alldbs.Databases, dbs.Databases...)
+	}
+
+	return alldbs, nil
 }
 
 func (c *databaseClient) Get(dbid string) (db *Database, err error) {
