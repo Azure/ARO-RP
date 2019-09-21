@@ -12,7 +12,7 @@ type Template struct {
 
 // Templates represent templates
 type Templates struct {
-	Count      int        `json:"_count,omitempty"`
-	ResourceID string     `json:"_rid,omitempty"`
-	Templates  []Template `json:"Documents,omitempty"`
+	Count      int         `json:"_count,omitempty"`
+	ResourceID string      `json:"_rid,omitempty"`
+	Templates  []*Template `json:"Documents,omitempty"`
 }

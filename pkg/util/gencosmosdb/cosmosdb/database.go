@@ -18,9 +18,9 @@ type Database struct {
 
 // Databases represents databases
 type Databases struct {
-	Count      int        `json:"_count,omitempty"`
-	ResourceID string     `json:"_rid,omitempty"`
-	Databases  []Database `json:"Databases,omitempty"`
+	Count      int         `json:"_count,omitempty"`
+	ResourceID string      `json:"_rid,omitempty"`
+	Databases  []*Database `json:"Databases,omitempty"`
 }
 
 type databaseClient struct {

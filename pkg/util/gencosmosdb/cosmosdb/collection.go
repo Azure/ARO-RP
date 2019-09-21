@@ -69,9 +69,9 @@ type GeospatialConfig struct {
 
 // Collections represents collections
 type Collections struct {
-	Count       int          `json:"_count,omitempty"`
-	ResourceID  string       `json:"_rid,omitempty"`
-	Collections []Collection `json:"DocumentCollections,omitempty"`
+	Count       int           `json:"_count,omitempty"`
+	ResourceID  string        `json:"_rid,omitempty"`
+	Collections []*Collection `json:"DocumentCollections,omitempty"`
 }
 
 // PartitionKeyRanges represents partition key ranges
