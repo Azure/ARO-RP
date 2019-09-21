@@ -5,7 +5,6 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -13,6 +12,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/ugorji/go/codec"
 )
 
 // Error represents an error
@@ -39,6 +40,14 @@ func IsErrorStatusCode(err error, statusCode int) bool {
 // PUT or DELETE operation
 var ErrETagRequired = fmt.Errorf("ETag is required")
 
+var h = &codec.JsonHandle{
+	BasicHandle: codec.BasicHandle{
+		DecodeOptions: codec.DecodeOptions{
+			ErrorIfNoField: true,
+		},
+	},
+}
+
 func (c *databaseClient) authorizeRequest(req *http.Request, resourceType, resourceLink string) {
 	date := time.Now().UTC().Format("Mon, 02 Jan 2006 15:04:05 GMT")
 
@@ -57,7 +66,7 @@ func (c *databaseClient) do(method, path, resourceType, resourceLink string, exp
 
 	if in != nil {
 		buf := &bytes.Buffer{}
-		err := json.NewEncoder(buf).Encode(in)
+		err := codec.NewEncoder(buf, h).Encode(in)
 		if err != nil {
 			return err
 		}
@@ -88,8 +97,7 @@ func (c *databaseClient) do(method, path, resourceType, resourceLink string, exp
 		}
 	}
 
-	d := json.NewDecoder(resp.Body)
-	d.DisallowUnknownFields()
+	d := codec.NewDecoder(resp.Body, h)
 
 	if resp.StatusCode != expectedStatusCode {
 		var err Error
