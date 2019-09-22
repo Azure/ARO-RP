@@ -33,7 +33,7 @@ type databaseClient struct {
 type DatabaseClient interface {
 	Create(*Database) (*Database, error)
 	List() DatabaseIterator
-	All(DatabaseIterator) (*Databases, error)
+	ListAll() (*Databases, error)
 	Get(string) (*Database, error)
 	Delete(*Database) error
 }
@@ -66,16 +66,7 @@ func NewDatabaseClient(hc *http.Client, databaseAccount, masterKey string) (Data
 	return c, nil
 }
 
-func (c *databaseClient) Create(newdb *Database) (db *Database, err error) {
-	err = c.do(http.MethodPost, "dbs", "dbs", "", http.StatusCreated, &newdb, &db, nil)
-	return
-}
-
-func (c *databaseClient) List() DatabaseIterator {
-	return &databaseListIterator{databaseClient: c}
-}
-
-func (c *databaseClient) All(i DatabaseIterator) (*Databases, error) {
+func (c *databaseClient) all(i DatabaseIterator) (*Databases, error) {
 	alldbs := &Databases{}
 
 	for {
@@ -93,6 +84,19 @@ func (c *databaseClient) All(i DatabaseIterator) (*Databases, error) {
 	}
 
 	return alldbs, nil
+}
+
+func (c *databaseClient) Create(newdb *Database) (db *Database, err error) {
+	err = c.do(http.MethodPost, "dbs", "dbs", "", http.StatusCreated, &newdb, &db, nil)
+	return
+}
+
+func (c *databaseClient) List() DatabaseIterator {
+	return &databaseListIterator{databaseClient: c}
+}
+
+func (c *databaseClient) ListAll() (*Databases, error) {
+	return c.all(c.List())
 }
 
 func (c *databaseClient) Get(dbid string) (db *Database, err error) {

@@ -16,11 +16,12 @@ type templateClient struct {
 type TemplateClient interface {
 	Create(string, *pkg.Template) (*pkg.Template, error)
 	List() TemplateIterator
-	All(TemplateIterator) (*pkg.Templates, error)
+	ListAll() (*pkg.Templates, error)
 	Get(string, string) (*pkg.Template, error)
 	Replace(string, *pkg.Template) (*pkg.Template, error)
 	Delete(string, *pkg.Template) error
 	Query(*Query) TemplateIterator
+	QueryAll(*Query) (*pkg.Templates, error)
 }
 
 type templateListIterator struct {
@@ -50,20 +51,7 @@ func NewTemplateClient(collc CollectionClient, collid string, isPartitioned bool
 	}
 }
 
-func (c *templateClient) Create(partitionkey string, newtemplate *pkg.Template) (template *pkg.Template, err error) {
-	headers := http.Header{}
-	if partitionkey != "" {
-		headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
-	}
-	err = c.do(http.MethodPost, c.path+"/docs", "docs", c.path, http.StatusCreated, &newtemplate, &template, headers)
-	return
-}
-
-func (c *templateClient) List() TemplateIterator {
-	return &templateListIterator{templateClient: c}
-}
-
-func (c *templateClient) All(i TemplateIterator) (*pkg.Templates, error) {
+func (c *templateClient) all(i TemplateIterator) (*pkg.Templates, error) {
 	alltemplates := &pkg.Templates{}
 
 	for {
@@ -81,6 +69,23 @@ func (c *templateClient) All(i TemplateIterator) (*pkg.Templates, error) {
 	}
 
 	return alltemplates, nil
+}
+
+func (c *templateClient) Create(partitionkey string, newtemplate *pkg.Template) (template *pkg.Template, err error) {
+	headers := http.Header{}
+	if partitionkey != "" {
+		headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
+	}
+	err = c.do(http.MethodPost, c.path+"/docs", "docs", c.path, http.StatusCreated, &newtemplate, &template, headers)
+	return
+}
+
+func (c *templateClient) List() TemplateIterator {
+	return &templateListIterator{templateClient: c}
+}
+
+func (c *templateClient) ListAll() (*pkg.Templates, error) {
+	return c.all(c.List())
 }
 
 func (c *templateClient) Get(partitionkey, templateid string) (template *pkg.Template, err error) {
@@ -119,6 +124,10 @@ func (c *templateClient) Delete(partitionkey string, template *pkg.Template) err
 
 func (c *templateClient) Query(query *Query) TemplateIterator {
 	return &templateQueryIterator{templateClient: c, query: query}
+}
+
+func (c *templateClient) QueryAll(query *Query) (*pkg.Templates, error) {
+	return c.all(c.Query(query))
 }
 
 func (i *templateListIterator) Next() (templates *pkg.Templates, err error) {

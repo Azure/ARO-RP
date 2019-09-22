@@ -6,6 +6,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"unicode"
 
 	"github.com/jim-minter/go-cosmosdb/pkg/gencosmosdb"
 )
@@ -34,6 +35,12 @@ func writeFile(filename string, data []byte) error {
 	return err
 }
 
+func unexport(s string) string {
+	rs := []rune(s)
+	rs[0] = unicode.ToLower(rs[0])
+	return string(rs)
+}
+
 func run() error {
 	for _, name := range gencosmosdb.AssetNames() {
 		if name == "template.go" {
@@ -55,8 +62,8 @@ func run() error {
 		if len(args) == 3 {
 			pluralExported = args[2]
 		}
-		singular := strings.ToLower(singularExported)
-		plural := strings.ToLower(pluralExported)
+		singular := unexport(singularExported)
+		plural := unexport(pluralExported)
 
 		data := gencosmosdb.MustAsset("template.go")
 
@@ -68,7 +75,7 @@ func run() error {
 		data = singularRegexp.ReplaceAll(data, []byte(singular))
 		data = singularExportedRegexp.ReplaceAll(data, []byte(singularExported))
 
-		err := writeFile("zz_generated_"+singular+".go", data)
+		err := writeFile("zz_generated_"+strings.ToLower(singularExported)+".go", data)
 		if err != nil {
 			return err
 		}

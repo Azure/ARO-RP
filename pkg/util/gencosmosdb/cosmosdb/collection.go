@@ -105,7 +105,7 @@ type collectionClient struct {
 type CollectionClient interface {
 	Create(*Collection) (*Collection, error)
 	List() CollectionIterator
-	All(CollectionIterator) (*Collections, error)
+	ListAll() (*Collections, error)
 	Get(string) (*Collection, error)
 	Delete(*Collection) error
 	Replace(*Collection) (*Collection, error)
@@ -131,16 +131,7 @@ func NewCollectionClient(c DatabaseClient, dbid string) CollectionClient {
 	}
 }
 
-func (c *collectionClient) Create(newcoll *Collection) (coll *Collection, err error) {
-	err = c.do(http.MethodPost, c.path+"/colls", "colls", c.path, http.StatusCreated, &newcoll, &coll, nil)
-	return
-}
-
-func (c *collectionClient) List() CollectionIterator {
-	return &collectionListIterator{collectionClient: c}
-}
-
-func (c *collectionClient) All(i CollectionIterator) (*Collections, error) {
+func (c *collectionClient) all(i CollectionIterator) (*Collections, error) {
 	allcolls := &Collections{}
 
 	for {
@@ -158,6 +149,19 @@ func (c *collectionClient) All(i CollectionIterator) (*Collections, error) {
 	}
 
 	return allcolls, nil
+}
+
+func (c *collectionClient) Create(newcoll *Collection) (coll *Collection, err error) {
+	err = c.do(http.MethodPost, c.path+"/colls", "colls", c.path, http.StatusCreated, &newcoll, &coll, nil)
+	return
+}
+
+func (c *collectionClient) List() CollectionIterator {
+	return &collectionListIterator{collectionClient: c}
+}
+
+func (c *collectionClient) ListAll() (*Collections, error) {
+	return c.all(c.List())
 }
 
 func (c *collectionClient) Get(collid string) (coll *Collection, err error) {
