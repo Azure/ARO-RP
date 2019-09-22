@@ -40,7 +40,7 @@ func run() error {
 			continue
 		}
 
-		err := writeFile(name, gencosmosdb.MustAsset(name))
+		err := writeFile("zz_generated_"+name, gencosmosdb.MustAsset(name))
 		if err != nil {
 			return err
 		}
@@ -68,7 +68,7 @@ func run() error {
 		data = singularRegexp.ReplaceAll(data, []byte(singular))
 		data = singularExportedRegexp.ReplaceAll(data, []byte(singularExported))
 
-		err := writeFile(singular+".go", data)
+		err := writeFile("zz_generated_"+singular+".go", data)
 		if err != nil {
 			return err
 		}
