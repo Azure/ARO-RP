@@ -40,6 +40,19 @@ func IsErrorStatusCode(err error, statusCode int) bool {
 // PUT or DELETE operation
 var ErrETagRequired = fmt.Errorf("ETag is required")
 
+// RetryOnPreconditionFailed retries a function if it fails due to
+// PreconditionFailed
+func RetryOnPreconditionFailed(f func() error) (err error) {
+	for i := 0; i < 5; i++ {
+		err = f()
+		if !IsErrorStatusCode(err, http.StatusPreconditionFailed) {
+			return
+		}
+		time.Sleep(time.Duration(100*i) * time.Millisecond)
+	}
+	return
+}
+
 var h = &codec.JsonHandle{
 	BasicHandle: codec.BasicHandle{
 		DecodeOptions: codec.DecodeOptions{
