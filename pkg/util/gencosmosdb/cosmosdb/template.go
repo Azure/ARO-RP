@@ -8,8 +8,7 @@ import (
 
 type templateClient struct {
 	*databaseClient
-	path          string
-	isPartitioned bool
+	path string
 }
 
 // TemplateClient is a template client
@@ -20,8 +19,8 @@ type TemplateClient interface {
 	Get(string, string) (*pkg.Template, error)
 	Replace(string, *pkg.Template) (*pkg.Template, error)
 	Delete(string, *pkg.Template) error
-	Query(*Query) TemplateIterator
-	QueryAll(*Query) (*pkg.Templates, error)
+	Query(string, *Query) TemplateIterator
+	QueryAll(string, *Query) (*pkg.Templates, error)
 }
 
 type templateListIterator struct {
@@ -32,6 +31,7 @@ type templateListIterator struct {
 
 type templateQueryIterator struct {
 	*templateClient
+	partitionkey string
 	query        *Query
 	continuation string
 	done         bool
@@ -43,11 +43,10 @@ type TemplateIterator interface {
 }
 
 // NewTemplateClient returns a new template client
-func NewTemplateClient(collc CollectionClient, collid string, isPartitioned bool) TemplateClient {
+func NewTemplateClient(collc CollectionClient, collid string) TemplateClient {
 	return &templateClient{
 		databaseClient: collc.(*collectionClient).databaseClient,
 		path:           collc.(*collectionClient).path + "/colls/" + collid,
-		isPartitioned:  isPartitioned,
 	}
 }
 
@@ -122,12 +121,12 @@ func (c *templateClient) Delete(partitionkey string, template *pkg.Template) err
 	return c.do(http.MethodDelete, c.path+"/docs/"+template.ID, "docs", c.path+"/docs/"+template.ID, http.StatusNoContent, nil, nil, headers)
 }
 
-func (c *templateClient) Query(query *Query) TemplateIterator {
-	return &templateQueryIterator{templateClient: c, query: query}
+func (c *templateClient) Query(partitionkey string, query *Query) TemplateIterator {
+	return &templateQueryIterator{templateClient: c, partitionkey: partitionkey, query: query}
 }
 
-func (c *templateClient) QueryAll(query *Query) (*pkg.Templates, error) {
-	return c.all(c.Query(query))
+func (c *templateClient) QueryAll(partitionkey string, query *Query) (*pkg.Templates, error) {
+	return c.all(c.Query(partitionkey, query))
 }
 
 func (i *templateListIterator) Next() (templates *pkg.Templates, err error) {
@@ -159,7 +158,9 @@ func (i *templateQueryIterator) Next() (templates *pkg.Templates, err error) {
 	headers := http.Header{}
 	headers.Set("X-Ms-Documentdb-Isquery", "True")
 	headers.Set("Content-Type", "application/query+json")
-	if i.isPartitioned {
+	if i.partitionkey != "" {
+		headers.Set("X-Ms-Documentdb-Partitionkey", `["`+i.partitionkey+`"]`)
+	} else {
 		headers.Set("X-Ms-Documentdb-Query-Enablecrosspartition", "True")
 	}
 	if i.continuation != "" {
