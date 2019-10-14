@@ -53,7 +53,9 @@ func RetryOnPreconditionFailed(f func() error) (err error) {
 	return
 }
 
-var h = &codec.JsonHandle{
+// JSONHandle exposes the encode/decode options used by
+// github.com/ugorji/go/codec
+var JSONHandle = &codec.JsonHandle{
 	BasicHandle: codec.BasicHandle{
 		DecodeOptions: codec.DecodeOptions{
 			ErrorIfNoField: true,
@@ -79,7 +81,7 @@ func (c *databaseClient) do(method, path, resourceType, resourceLink string, exp
 
 	if in != nil {
 		buf := &bytes.Buffer{}
-		err := codec.NewEncoder(buf, h).Encode(in)
+		err := codec.NewEncoder(buf, JSONHandle).Encode(in)
 		if err != nil {
 			return err
 		}
@@ -110,7 +112,7 @@ func (c *databaseClient) do(method, path, resourceType, resourceLink string, exp
 		}
 	}
 
-	d := codec.NewDecoder(resp.Body, h)
+	d := codec.NewDecoder(resp.Body, JSONHandle)
 
 	if resp.StatusCode != expectedStatusCode {
 		var err Error
