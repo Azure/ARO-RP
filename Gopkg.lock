@@ -566,7 +566,7 @@
 
 [[projects]]
   branch = "release-4.2-azure"
-  digest = "1:6422311b52354d8c680588228cd5b95adafaa36f08a849c3ddc47a656b380bd7"
+  digest = "1:c091bf1c2e4d5fcec866eceaa42eb55cbb6c059476e79033c2062a9b71546cc9"
   name = "github.com/openshift/installer"
   packages = [
     "data",
@@ -649,7 +649,7 @@
     "pkg/validate",
     "pkg/version",
   ]
-  pruneopts = "UT"
+  pruneopts = "T"
   revision = "11e1a8d161ebf1402a4f4a29329f615317021b35"
   source = "https://github.com/jim-minter/installer"
 

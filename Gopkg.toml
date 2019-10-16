@@ -77,3 +77,7 @@
 [prune]
   go-tests = true
   unused-packages = true
+
+  [[prune.project]]
+    name = "github.com/openshift/installer"
+    unused-packages = false

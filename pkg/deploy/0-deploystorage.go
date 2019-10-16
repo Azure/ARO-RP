@@ -5,8 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"os"
-	"path/filepath"
 	"reflect"
 	"time"
 
@@ -15,7 +13,6 @@ import (
 	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/openshift/installer/data"
 	"github.com/openshift/installer/pkg/asset/ignition/bootstrap"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/manifests"
@@ -51,9 +48,6 @@ func (d *Deployer) deployStorage(ctx context.Context, doc *api.OpenShiftClusterD
 		reflect.TypeOf(installConfig): installConfig,
 		reflect.TypeOf(platformCreds): platformCreds,
 	}
-
-	// TODO: these need to be compiled in.
-	data.Assets = http.Dir(filepath.Join(os.Getenv("HOME"), "go/src/github.com/openshift/installer/data/data"))
 
 	for _, a := range targets.Cluster {
 		_, err := g.resolve(a)
