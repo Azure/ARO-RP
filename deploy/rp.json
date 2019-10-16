@@ -1,0 +1,119 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "defaultValue": "eastus",
+            "type": "string"
+        },
+        "storageAccountName": {
+            "type": "string"
+        },
+        "databaseAccountName": {
+            "type": "string"
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "name": "[parameters('databaseAccountName')]",
+            "type": "Microsoft.DocumentDB/databaseAccounts",
+            "apiVersion": "2015-04-08",
+            "location": "[parameters('location')]",
+            "tags": {
+                "defaultExperience": "Core (SQL)"
+            },
+            "kind": "GlobalDocumentDB",
+            "properties": {
+                "consistencyPolicy": {
+                    "defaultConsistencyLevel": "Strong"
+                },
+                "locations": [
+                    {
+                        "locationName": "[parameters('location')]"
+                    }
+                ],
+                "databaseAccountOfferType": "Standard"
+            }
+        },
+        {
+            "name": "[concat(parameters('databaseAccountName'), '/sql/OpenShiftClusters')]",
+            "type": "Microsoft.DocumentDB/databaseAccounts/apis/databases",
+            "apiVersion": "2015-04-08",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/', parameters('databaseAccountName'))]"
+            ],
+            "properties": {
+                "resource": {
+                    "id": "OpenShiftClusters"
+                },
+                "options": {}
+            }
+        },
+        {
+            "name": "[concat(parameters('databaseAccountName'), '/sql/OpenShiftClusters/OpenShiftClusterDocuments')]",
+            "type": "Microsoft.DocumentDB/databaseAccounts/apis/databases/containers",
+            "apiVersion": "2015-04-08",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/apis/databases', parameters('databaseAccountName'), 'sql', 'OpenShiftClusters')]"
+            ],
+            "properties": {
+                "resource": {
+                    "id": "OpenShiftClusterDocuments",
+                    "partitionKey": {
+                        "paths": [
+                            "/subscriptionId"
+                        ],
+                        "kind": "Hash"
+                    },
+                    "uniqueKeyPolicy": {
+                        "uniqueKeys": [
+                            {
+                                "paths": [
+                                    "/openShiftCluster/id"
+                                ]
+                            }
+                        ]
+                    }
+                },
+                "options": {}
+            }
+        },
+        {
+            "name": "[concat(parameters('databaseAccountName'), '/sql/OpenShiftClusters/Leases')]",
+            "type": "Microsoft.DocumentDB/databaseAccounts/apis/databases/containers",
+            "apiVersion": "2015-04-08",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/apis/databases', parameters('databaseAccountName'), 'sql', 'OpenShiftClusters')]"
+            ],
+            "properties": {
+                "resource": {
+                    "id": "Leases",
+                    "defaultTtl": -1,
+                    "partitionKey": {
+                        "paths": [
+                            "/id"
+                        ],
+                        "kind": "Hash"
+                    }
+                },
+                "options": {}
+            }
+        },
+        {
+            "name": "[parameters('storageAccountName')]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2019-04-01",
+            "location": "[parameters('location')]",
+            "sku": {
+                "name": "Standard_LRS"
+            },
+            "kind": "StorageV2",
+            "properties": {
+                "networkAcls": {
+                    "defaultAction": "Allow"
+                }
+            }
+        }
+    ]
+}
