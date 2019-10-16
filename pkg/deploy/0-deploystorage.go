@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"net/http"
 	"reflect"
 	"time"
 
@@ -15,7 +14,6 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/ignition/bootstrap"
 	"github.com/openshift/installer/pkg/asset/installconfig"
-	"github.com/openshift/installer/pkg/asset/manifests"
 	"github.com/openshift/installer/pkg/asset/rhcos"
 	"github.com/openshift/installer/pkg/asset/targets"
 
@@ -23,27 +21,6 @@ import (
 )
 
 func (d *Deployer) deployStorage(ctx context.Context, doc *api.OpenShiftClusterDocument, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds) error {
-	if doc.OpenShiftCluster.Properties.ResourceGroup != "" {
-		resp, err := d.groups.CheckExistence(ctx, doc.OpenShiftCluster.Properties.ResourceGroup)
-		if err != nil {
-			return err
-		}
-
-		if resp.StatusCode == http.StatusNoContent {
-			d.log.Printf("deleting stale resource group %s", doc.OpenShiftCluster.Properties.ResourceGroup)
-			future, err := d.groups.Delete(ctx, doc.OpenShiftCluster.Properties.ResourceGroup)
-			if err != nil {
-				return err
-			}
-
-			d.log.Print("waiting for stale resource group deletion")
-			err = future.WaitForCompletionRef(ctx, d.groups.Client)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
 	g := Graph{
 		reflect.TypeOf(installConfig): installConfig,
 		reflect.TypeOf(platformCreds): platformCreds,
@@ -57,41 +34,11 @@ func (d *Deployer) deployStorage(ctx context.Context, doc *api.OpenShiftClusterD
 	}
 
 	bootstrap := g[reflect.TypeOf(&bootstrap.Bootstrap{})].(*bootstrap.Bootstrap)
-	cloudProviderConfig := g[reflect.TypeOf(&manifests.CloudProviderConfig{})].(*manifests.CloudProviderConfig)
 	clusterID := g[reflect.TypeOf(&installconfig.ClusterID{})].(*installconfig.ClusterID)
 	rhcosImage := g[reflect.TypeOf(new(rhcos.Image))].(*rhcos.Image)
 
-	var resourceGroup string
-	{
-		var s struct {
-			ResourceGroup string `json:"resourceGroup,omitempty"`
-		}
-
-		err := json.Unmarshal([]byte(cloudProviderConfig.ConfigMap.Data["config"]), &s)
-		if err != nil {
-			return err
-		}
-
-		resourceGroup = s.ResourceGroup
-	}
-
-	doc, err := d.db.Patch(doc.OpenShiftCluster.ID, func(doc *api.OpenShiftClusterDocument) (err error) {
-		doc.OpenShiftCluster.Properties.StorageSuffix, err = randomLowerCaseAlphanumericString(5)
-		if err != nil {
-			return err
-		}
-
-		doc.OpenShiftCluster.Properties.Installation.Now = time.Now().UTC()
-
-		doc.OpenShiftCluster.Properties.ResourceGroup = resourceGroup
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-
 	d.log.Print("creating resource group")
-	_, err = d.groups.CreateOrUpdate(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, resources.Group{
+	_, err := d.groups.CreateOrUpdate(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, resources.Group{
 		Location: &installConfig.Config.Azure.Region,
 	})
 	if err != nil {
@@ -211,6 +158,14 @@ func (d *Deployer) deployStorage(ctx context.Context, doc *api.OpenShiftClusterD
 		if err != nil {
 			return err
 		}
+	}
+
+	doc, err = d.db.Patch(doc.OpenShiftCluster.ID, func(doc *api.OpenShiftClusterDocument) (err error) {
+		doc.OpenShiftCluster.Properties.Installation.Now = time.Now().UTC()
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
 	return nil

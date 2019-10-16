@@ -566,7 +566,7 @@
 
 [[projects]]
   branch = "release-4.2-azure"
-  digest = "1:c091bf1c2e4d5fcec866eceaa42eb55cbb6c059476e79033c2062a9b71546cc9"
+  digest = "1:13369f6dd5cf2c8150d08f7455e1c5c18b6aa0af991e234de85731292f574143"
   name = "github.com/openshift/installer"
   packages = [
     "data",
@@ -650,7 +650,7 @@
     "pkg/version",
   ]
   pruneopts = "T"
-  revision = "11e1a8d161ebf1402a4f4a29329f615317021b35"
+  revision = "734f58c96d26322007dadc6407f52acf42470259"
   source = "https://github.com/jim-minter/installer"
 
 [[projects]]
@@ -1231,7 +1231,10 @@
     "github.com/openshift/installer/pkg/ipnet",
     "github.com/openshift/installer/pkg/types",
     "github.com/openshift/installer/pkg/types/azure",
+    "github.com/openshift/installer/pkg/types/openstack/validation",
+    "github.com/openshift/installer/pkg/types/validation",
     "github.com/satori/go.uuid",
+    "github.com/shurcooL/vfsgen",
     "github.com/sirupsen/logrus",
     "github.com/ugorji/go/codec",
     "golang.org/x/crypto/ssh",

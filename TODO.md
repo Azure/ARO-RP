@@ -1,6 +1,5 @@
 ## TODO
 
-* Installer: must take resource group name as input
 * Unit tests
 * E2E tests
 * Subscription lifecycle API (need clarity from Microsoft)

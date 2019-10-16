@@ -1,7 +1,6 @@
 package manifests
 
 import (
-	"fmt"
 	"path/filepath"
 
 	"github.com/ghodss/yaml"
@@ -88,7 +87,7 @@ func (i *Infrastructure) Generate(dependencies asset.Parents) error {
 	case azure.Name:
 		config.Status.PlatformStatus.Type = configv1.AzurePlatformType
 		config.Status.PlatformStatus.Azure = &configv1.AzurePlatformStatus{
-			ResourceGroupName: fmt.Sprintf("%s-rg", clusterID.InfraID),
+			ResourceGroupName: installConfig.Config.Azure.ResourceGroup,
 		}
 	case baremetal.Name:
 		config.Status.PlatformStatus.Type = configv1.BareMetalPlatformType

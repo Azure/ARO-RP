@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	"github.com/openshift/installer/pkg/asset"
+	"github.com/openshift/installer/pkg/asset/cluster"
 	"github.com/openshift/installer/pkg/asset/ignition/bootstrap"
 	"github.com/openshift/installer/pkg/asset/ignition/machine"
 	"github.com/openshift/installer/pkg/asset/installconfig"
@@ -39,8 +40,11 @@ var registeredTypes = map[string]asset.Asset{
 	"*bootkube.OpenshiftConfigSecretPullSecret":               &bootkube.OpenshiftConfigSecretPullSecret{},
 	"*bootkube.OpenshiftMachineConfigOperator":                &bootkube.OpenshiftMachineConfigOperator{},
 	"*bootstrap.Bootstrap":                                    &bootstrap.Bootstrap{},
+	"*cluster.Metadata":                                       &cluster.Metadata{},
+	"*cluster.TerraformVariables":                             &cluster.TerraformVariables{},
 	"*installconfig.ClusterID":                                &installconfig.ClusterID{},
 	"*installconfig.InstallConfig":                            &installconfig.InstallConfig{},
+	"*installconfig.PlatformCreds":                            &installconfig.PlatformCreds{},
 	"*installconfig.PlatformCredsCheck":                       &installconfig.PlatformCredsCheck{},
 	"*kubeconfig.AdminClient":                                 &kubeconfig.AdminClient{},
 	"*kubeconfig.Kubelet":                                     &kubeconfig.Kubelet{},
@@ -117,24 +121,23 @@ var registeredTypes = map[string]asset.Asset{
 type Graph map[reflect.Type]asset.Asset
 
 func (g Graph) resolve(a asset.Asset) (asset.Asset, error) {
-	for _, dep := range a.Dependencies() {
-		if _, found := g[reflect.TypeOf(dep)]; found {
-			continue
+	if _, found := g[reflect.TypeOf(a)]; !found {
+		for _, dep := range a.Dependencies() {
+			_, err := g.resolve(dep)
+			if err != nil {
+				return nil, err
+			}
 		}
 
-		dep, err := g.resolve(dep)
+		err := a.Generate(asset.Parents(g))
 		if err != nil {
 			return nil, err
 		}
-		g[reflect.TypeOf(dep)] = dep
+
+		g[reflect.TypeOf(a)] = a
 	}
 
-	err := a.Generate(asset.Parents(g))
-	if err != nil {
-		return nil, err
-	}
-
-	return a, nil
+	return g[reflect.TypeOf(a)], nil
 }
 
 func (g Graph) MarshalJSON() ([]byte, error) {

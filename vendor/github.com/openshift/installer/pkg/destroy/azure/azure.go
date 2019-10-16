@@ -30,7 +30,8 @@ type ClusterUninstaller struct {
 	GraphAuthorizer autorest.Authorizer
 	Authorizer      autorest.Authorizer
 
-	InfraID string
+	ResourceGroup string
+	InfraID       string
 
 	Logger logrus.FieldLogger
 
@@ -65,11 +66,17 @@ func New(logger logrus.FieldLogger, metadata *types.ClusterMetadata) (providers.
 		return nil, err
 	}
 
+	resourceGroup := metadata.ClusterPlatformMetadata.Azure.ResourceGroup
+	if resourceGroup == "" {
+		resourceGroup = metadata.InfraID + "-rg"
+	}
+
 	return &ClusterUninstaller{
 		SubscriptionID:  session.Credentials.SubscriptionID,
 		TenantID:        session.Credentials.TenantID,
 		GraphAuthorizer: session.GraphAuthorizer,
 		Authorizer:      session.Authorizer,
+		ResourceGroup:   resourceGroup,
 		InfraID:         metadata.InfraID,
 		Logger:          logger,
 	}, nil
@@ -78,14 +85,13 @@ func New(logger logrus.FieldLogger, metadata *types.ClusterMetadata) (providers.
 // Run is the entrypoint to start the uninstall process.
 func (o *ClusterUninstaller) Run() error {
 	o.configureClients()
-	group := o.InfraID + "-rg"
 	o.Logger.Debug("deleting public records")
-	if err := deletePublicRecords(context.TODO(), o.zonesClient, o.recordsClient, o.Logger, group); err != nil {
+	if err := deletePublicRecords(context.TODO(), o.zonesClient, o.recordsClient, o.Logger, o.ResourceGroup); err != nil {
 		o.Logger.Debug(err)
 		return errors.Wrap(err, "failed to delete public DNS records")
 	}
 	o.Logger.Debug("deleting resource group")
-	if err := deleteResourceGroup(context.TODO(), o.resourceGroupsClient, o.Logger, group); err != nil {
+	if err := deleteResourceGroup(context.TODO(), o.resourceGroupsClient, o.Logger, o.ResourceGroup); err != nil {
 		o.Logger.Debug(err)
 		return errors.Wrap(err, "failed to delete resource group")
 	}

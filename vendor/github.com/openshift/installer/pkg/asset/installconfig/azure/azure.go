@@ -3,6 +3,7 @@ package azure
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -20,6 +21,8 @@ import (
 const (
 	defaultRegion string = "eastus"
 )
+
+var resourceGroupRx = regexp.MustCompile(`(?i)^[-a-z0-9_().]{0,89}[-a-z0-9_()]$`)
 
 // Platform collects azure-specific configuration.
 func Platform(credentials *Credentials) (*azure.Platform, error) {
@@ -69,8 +72,28 @@ func Platform(credentials *Credentials) (*azure.Platform, error) {
 		return nil, err
 	}
 
+	var resourceGroup string
+	err = survey.Ask([]*survey.Question{
+		{
+			Prompt: &survey.Select{
+				Message: "Resource group",
+				Help:    "The azure resource group to be used for installation.",
+			},
+			Validate: survey.ComposeValidators(survey.Required, func(ans interface{}) error {
+				if !resourceGroupRx.MatchString(ans.(string)) {
+					return errors.Errorf("invalid resource group %q", ans.(string))
+				}
+				return nil
+			}),
+		},
+	}, &resourceGroup)
+	if err != nil {
+		return nil, err
+	}
+
 	return &azure.Platform{
-		Region: region,
+		Region:        region,
+		ResourceGroup: resourceGroup,
 	}, nil
 }
 

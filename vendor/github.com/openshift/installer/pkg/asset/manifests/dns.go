@@ -100,7 +100,7 @@ func (d *DNS) Generate(dependencies asset.Parents) error {
 			ID: dnsConfig.GetDNSZoneID(installConfig.Config.Azure.BaseDomainResourceGroupName, installConfig.Config.BaseDomain),
 		}
 		config.Spec.PrivateZone = &configv1.DNSZone{
-			ID: dnsConfig.GetDNSZoneID(clusterID.InfraID+"-rg", installConfig.Config.ClusterDomain()),
+			ID: dnsConfig.GetDNSZoneID(installConfig.Config.Azure.ResourceGroup, installConfig.Config.ClusterDomain()),
 		}
 	case gcptypes.Name:
 		zone, err := icgcp.GetPublicZone(context.TODO(), installConfig.Config.Platform.GCP.ProjectID, installConfig.Config.BaseDomain)

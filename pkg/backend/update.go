@@ -2,8 +2,6 @@ package backend
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/rsa"
 	"encoding/base64"
 	"os"
 
@@ -13,6 +11,8 @@ import (
 	"github.com/openshift/installer/pkg/ipnet"
 	"github.com/openshift/installer/pkg/types"
 	"github.com/openshift/installer/pkg/types/azure"
+	openstackvalidation "github.com/openshift/installer/pkg/types/openstack/validation"
+	"github.com/openshift/installer/pkg/types/validation"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/ssh"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,21 +24,6 @@ import (
 func (b *backend) update(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument) error {
 	if doc.OpenShiftCluster.Properties.Installation == nil {
 		return nil
-	}
-
-	doc, err := b.db.Patch(doc.OpenShiftCluster.ID, func(doc *api.OpenShiftClusterDocument) error {
-		if doc.OpenShiftCluster.Properties.SSHKey == nil {
-			var err error
-			doc.OpenShiftCluster.Properties.SSHKey, err = rsa.GenerateKey(rand.Reader, 2048)
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
-	})
-	if err != nil {
-		return err
 	}
 
 	sshkey, err := ssh.NewPublicKey(&doc.OpenShiftCluster.Properties.SSHKey.PublicKey)
@@ -57,6 +42,9 @@ func (b *backend) update(ctx context.Context, log *logrus.Entry, doc *api.OpenSh
 
 	installConfig := &installconfig.InstallConfig{
 		Config: &types.InstallConfig{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: doc.OpenShiftCluster.Name,
 			},
@@ -64,6 +52,7 @@ func (b *backend) update(ctx context.Context, log *logrus.Entry, doc *api.OpenSh
 			BaseDomain: os.Getenv("DOMAIN"),
 			Networking: &types.Networking{
 				MachineCIDR: ipnet.MustParseCIDR(doc.OpenShiftCluster.Properties.NetworkProfile.VNetCIDR),
+				NetworkType: "OpenShiftSDN",
 				ClusterNetwork: []types.ClusterNetworkEntry{
 					{
 						CIDR:       *ipnet.MustParseCIDR(doc.OpenShiftCluster.Properties.NetworkProfile.PodCIDR),
@@ -82,10 +71,12 @@ func (b *backend) update(ctx context.Context, log *logrus.Entry, doc *api.OpenSh
 						InstanceType: string(doc.OpenShiftCluster.Properties.MasterProfile.VMSize),
 					},
 				},
+				Hyperthreading: "Enabled",
 			},
 			Platform: types.Platform{
 				Azure: &azure.Platform{
 					Region:                      doc.OpenShiftCluster.Location,
+					ResourceGroup:               doc.OpenShiftCluster.Properties.ResourceGroup,
 					BaseDomainResourceGroupName: os.Getenv("DOMAIN_RESOURCEGROUP"),
 				},
 			},
@@ -105,7 +96,13 @@ func (b *backend) update(ctx context.Context, log *logrus.Entry, doc *api.OpenSh
 					},
 				},
 			},
+			Hyperthreading: "Enabled",
 		})
+	}
+
+	err = validation.ValidateInstallConfig(installConfig.Config, openstackvalidation.NewValidValuesFetcher()).ToAggregate()
+	if err != nil {
+		return err
 	}
 
 	return deploy.NewDeployer(log, b.db, b.authorizer, doc.SubscriptionID).Deploy(ctx, doc, installConfig, platformCreds)

@@ -103,6 +103,7 @@ func (cpc *CloudProviderConfig) Generate(dependencies asset.Parents) error {
 			ResourcePrefix: clusterID.InfraID,
 			SubscriptionID: session.Credentials.SubscriptionID,
 			TenantID:       session.Credentials.TenantID,
+			ResourceGroup:  installConfig.Config.Azure.ResourceGroup,
 		}.JSON()
 		if err != nil {
 			return errors.Wrap(err, "could not create cloud provider config")

@@ -86,7 +86,6 @@ func (o *Openshift) Generate(dependencies asset.Parents) error {
 		}
 
 	case azuretypes.Name:
-		resourceGroupName := clusterID.InfraID + "-rg"
 		session, err := azure.GetSession(platformCreds.Azure)
 		if err != nil {
 			return err
@@ -99,7 +98,7 @@ func (o *Openshift) Generate(dependencies asset.Parents) error {
 				Base64encodeClientSecret:   base64.StdEncoding.EncodeToString([]byte(creds.ClientSecret)),
 				Base64encodeTenantID:       base64.StdEncoding.EncodeToString([]byte(creds.TenantID)),
 				Base64encodeResourcePrefix: base64.StdEncoding.EncodeToString([]byte(clusterID.InfraID)),
-				Base64encodeResourceGroup:  base64.StdEncoding.EncodeToString([]byte(resourceGroupName)),
+				Base64encodeResourceGroup:  base64.StdEncoding.EncodeToString([]byte(installConfig.Config.Azure.ResourceGroup)),
 				Base64encodeRegion:         base64.StdEncoding.EncodeToString([]byte(installConfig.Config.Azure.Region)),
 			},
 		}

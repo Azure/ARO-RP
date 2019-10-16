@@ -2,10 +2,8 @@ package deploy
 
 import (
 	"context"
-	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	"math/big"
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	"github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
@@ -148,23 +146,6 @@ func (d *Deployer) getGraph(ctx context.Context, doc *api.OpenShiftClusterDocume
 	}
 
 	return g, nil
-}
-
-func randomLowerCaseAlphanumericString(n int) (string, error) {
-	return randomString("abcdefghijklmnopqrstuvwxyz0123456789", n)
-}
-
-func randomString(letterBytes string, n int) (string, error) {
-	b := make([]byte, n)
-	for i := range b {
-		o, err := rand.Int(rand.Reader, big.NewInt(int64(len(letterBytes))))
-		if err != nil {
-			return "", err
-		}
-		b[i] = letterBytes[o.Int64()]
-	}
-
-	return string(b), nil
 }
 
 func restConfig(adminClient *kubeconfig.AdminClient) (*rest.Config, error) {
