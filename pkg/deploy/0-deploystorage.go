@@ -21,7 +21,7 @@ import (
 )
 
 func (d *Deployer) deployStorage(ctx context.Context, doc *api.OpenShiftClusterDocument, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds) error {
-	g := Graph{
+	g := graph{
 		reflect.TypeOf(installConfig): installConfig,
 		reflect.TypeOf(platformCreds): platformCreds,
 	}

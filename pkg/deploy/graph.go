@@ -118,9 +118,9 @@ var registeredTypes = map[string]asset.Asset{
 	"*tls.ServiceAccountKeyPair":                              &tls.ServiceAccountKeyPair{},
 }
 
-type Graph map[reflect.Type]asset.Asset
+type graph map[reflect.Type]asset.Asset
 
-func (g Graph) resolve(a asset.Asset) (asset.Asset, error) {
+func (g graph) resolve(a asset.Asset) (asset.Asset, error) {
 	if _, found := g[reflect.TypeOf(a)]; !found {
 		for _, dep := range a.Dependencies() {
 			_, err := g.resolve(dep)
@@ -140,7 +140,7 @@ func (g Graph) resolve(a asset.Asset) (asset.Asset, error) {
 	return g[reflect.TypeOf(a)], nil
 }
 
-func (g Graph) MarshalJSON() ([]byte, error) {
+func (g graph) MarshalJSON() ([]byte, error) {
 	m := map[string]asset.Asset{}
 	for t, a := range g {
 		m[t.String()] = a
@@ -148,9 +148,9 @@ func (g Graph) MarshalJSON() ([]byte, error) {
 	return json.Marshal(m)
 }
 
-func (g *Graph) UnmarshalJSON(b []byte) error {
+func (g *graph) UnmarshalJSON(b []byte) error {
 	if *g == nil {
-		*g = Graph{}
+		*g = graph{}
 	}
 
 	var m map[string]json.RawMessage

@@ -123,7 +123,7 @@ func (d *Deployer) getBlobService(ctx context.Context, doc *api.OpenShiftCluster
 	return storage.GetBlobService(), nil
 }
 
-func (d *Deployer) getGraph(ctx context.Context, doc *api.OpenShiftClusterDocument) (Graph, error) {
+func (d *Deployer) getGraph(ctx context.Context, doc *api.OpenShiftClusterDocument) (graph, error) {
 	d.log.Print("retrieving graph")
 
 	blobService, err := d.getBlobService(ctx, doc)
@@ -139,7 +139,7 @@ func (d *Deployer) getGraph(ctx context.Context, doc *api.OpenShiftClusterDocume
 	}
 	defer rc.Close()
 
-	var g Graph
+	var g graph
 	err = json.NewDecoder(rc).Decode(&g)
 	if err != nil {
 		return nil, err
