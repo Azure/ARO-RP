@@ -1,7 +1,6 @@
 ## TODO
 
-* Installer: mustn't connect to Azure or write to .azure/osServicePrincipal.json
-* Installer: must take credentials, resource group name as inputs
+* Installer: must take resource group name as input
 * Unit tests
 * E2E tests
 * Subscription lifecycle API (need clarity from Microsoft)

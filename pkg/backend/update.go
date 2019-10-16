@@ -9,6 +9,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/installconfig"
+	icazure "github.com/openshift/installer/pkg/asset/installconfig/azure"
 	"github.com/openshift/installer/pkg/ipnet"
 	"github.com/openshift/installer/pkg/types"
 	"github.com/openshift/installer/pkg/types/azure"
@@ -43,6 +44,15 @@ func (b *backend) update(ctx context.Context, log *logrus.Entry, doc *api.OpenSh
 	sshkey, err := ssh.NewPublicKey(&doc.OpenShiftCluster.Properties.SSHKey.PublicKey)
 	if err != nil {
 		return err
+	}
+
+	platformCreds := &installconfig.PlatformCreds{
+		Azure: &icazure.Credentials{
+			TenantID:       os.Getenv("AZURE_TENANT_ID"),
+			ClientID:       os.Getenv("AZURE_CLIENT_ID"),
+			ClientSecret:   os.Getenv("AZURE_CLIENT_SECRET"),
+			SubscriptionID: doc.SubscriptionID,
+		},
 	}
 
 	installConfig := &installconfig.InstallConfig{
@@ -98,5 +108,5 @@ func (b *backend) update(ctx context.Context, log *logrus.Entry, doc *api.OpenSh
 		})
 	}
 
-	return deploy.NewDeployer(log, b.db, b.authorizer, doc.SubscriptionID).Deploy(ctx, doc, installConfig)
+	return deploy.NewDeployer(log, b.db, b.authorizer, doc.SubscriptionID).Deploy(ctx, doc, installConfig, platformCreds)
 }

@@ -68,12 +68,12 @@ func NewDeployer(log *logrus.Entry, db database.OpenShiftClusters, authorizer au
 	return d
 }
 
-func (d *Deployer) Deploy(ctx context.Context, doc *api.OpenShiftClusterDocument, installConfig *installconfig.InstallConfig) error {
+func (d *Deployer) Deploy(ctx context.Context, doc *api.OpenShiftClusterDocument, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds) error {
 	for {
 		d.log.Printf("starting phase %s", doc.OpenShiftCluster.Properties.Installation.Phase)
 		switch doc.OpenShiftCluster.Properties.Installation.Phase {
 		case api.InstallationPhaseDeployStorage:
-			err := d.deployStorage(ctx, doc, installConfig)
+			err := d.deployStorage(ctx, doc, installConfig, platformCreds)
 			if err != nil {
 				return err
 			}

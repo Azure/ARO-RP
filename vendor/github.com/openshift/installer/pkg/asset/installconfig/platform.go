@@ -34,11 +34,16 @@ var _ asset.Asset = (*platform)(nil)
 
 // Dependencies returns no dependencies.
 func (a *platform) Dependencies() []asset.Asset {
-	return []asset.Asset{}
+	return []asset.Asset{
+		&PlatformCreds{},
+	}
 }
 
 // Generate queries for input from the user.
-func (a *platform) Generate(asset.Parents) error {
+func (a *platform) Generate(parents asset.Parents) error {
+	platformCreds := &PlatformCreds{}
+	parents.Get(platformCreds)
+
 	platform, err := a.queryUserForPlatform()
 	if err != nil {
 		return err
@@ -56,7 +61,7 @@ func (a *platform) Generate(asset.Parents) error {
 			return err
 		}
 	case azure.Name:
-		a.Azure, err = azureconfig.Platform()
+		a.Azure, err = azureconfig.Platform(platformCreds.Azure)
 		if err != nil {
 			return err
 		}

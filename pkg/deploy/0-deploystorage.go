@@ -25,7 +25,7 @@ import (
 	"github.com/jim-minter/rp/pkg/api"
 )
 
-func (d *Deployer) deployStorage(ctx context.Context, doc *api.OpenShiftClusterDocument, installConfig *installconfig.InstallConfig) error {
+func (d *Deployer) deployStorage(ctx context.Context, doc *api.OpenShiftClusterDocument, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds) error {
 	if doc.OpenShiftCluster.Properties.ResourceGroup != "" {
 		resp, err := d.groups.CheckExistence(ctx, doc.OpenShiftCluster.Properties.ResourceGroup)
 		if err != nil {
@@ -49,14 +49,13 @@ func (d *Deployer) deployStorage(ctx context.Context, doc *api.OpenShiftClusterD
 
 	g := Graph{
 		reflect.TypeOf(installConfig): installConfig,
+		reflect.TypeOf(platformCreds): platformCreds,
 	}
 
 	// TODO: these need to be compiled in.
 	data.Assets = http.Dir(filepath.Join(os.Getenv("HOME"), "go/src/github.com/openshift/installer/data/data"))
 
 	for _, a := range targets.Cluster {
-		// TODO: some prerequisite assets call out to Azure, and they really
-		// should not.
 		_, err := g.resolve(a)
 		if err != nil {
 			return err

@@ -13,8 +13,8 @@ import (
 )
 
 // AvailabilityZones retrieves a list of availability zones for the given region and instance type.
-func AvailabilityZones(region string, instanceType string) ([]string, error) {
-	skusClient, err := skusClient()
+func AvailabilityZones(credentials *azureutil.Credentials, region string, instanceType string) ([]string, error) {
+	skusClient, err := skusClient(credentials)
 	if err != nil {
 		return nil, err
 	}
@@ -25,8 +25,8 @@ func AvailabilityZones(region string, instanceType string) ([]string, error) {
 	return zones, nil
 }
 
-func skusClient() (client *compute.ResourceSkusClient, err error) {
-	ssn, err := azureutil.GetSession()
+func skusClient(credentials *azureutil.Credentials) (client *compute.ResourceSkusClient, err error) {
+	ssn, err := azureutil.GetSession(credentials)
 	if err != nil {
 		return nil, err
 	}

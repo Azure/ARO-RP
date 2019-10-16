@@ -30,14 +30,16 @@ var _ asset.Asset = (*PlatformCredsCheck)(nil)
 // Dependencies returns the dependencies for PlatformCredsCheck
 func (a *PlatformCredsCheck) Dependencies() []asset.Asset {
 	return []asset.Asset{
+		&PlatformCreds{},
 		&InstallConfig{},
 	}
 }
 
 // Generate queries for input from the user.
 func (a *PlatformCredsCheck) Generate(dependencies asset.Parents) error {
+	platformCreds := &PlatformCreds{}
 	ic := &InstallConfig{}
-	dependencies.Get(ic)
+	dependencies.Get(platformCreds, ic)
 
 	var err error
 	platform := ic.Config.Platform.Name()
@@ -63,7 +65,7 @@ func (a *PlatformCredsCheck) Generate(dependencies asset.Parents) error {
 	case baremetal.Name, libvirt.Name, none.Name, vsphere.Name:
 		// no creds to check
 	case azure.Name:
-		_, err = azureconfig.GetSession()
+		_, err = azureconfig.GetSession(platformCreds.Azure)
 		if err != nil {
 			return errors.Wrap(err, "creating Azure session")
 		}

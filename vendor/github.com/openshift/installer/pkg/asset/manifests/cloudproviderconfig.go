@@ -52,9 +52,9 @@ func (*CloudProviderConfig) Name() string {
 // the asset.
 func (*CloudProviderConfig) Dependencies() []asset.Asset {
 	return []asset.Asset{
+		&installconfig.PlatformCreds{},
 		&installconfig.InstallConfig{},
 		&installconfig.ClusterID{},
-
 		// PlatformCredsCheck just checks the creds (and asks, if needed)
 		// We do not actually use it in this asset directly, hence
 		// it is put in the dependencies but not fetched in Generate
@@ -64,9 +64,10 @@ func (*CloudProviderConfig) Dependencies() []asset.Asset {
 
 // Generate generates the CloudProviderConfig.
 func (cpc *CloudProviderConfig) Generate(dependencies asset.Parents) error {
+	platformCreds := &installconfig.PlatformCreds{}
 	installConfig := &installconfig.InstallConfig{}
 	clusterID := &installconfig.ClusterID{}
-	dependencies.Get(installConfig, clusterID)
+	dependencies.Get(platformCreds, installConfig, clusterID)
 
 	cm := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
@@ -93,7 +94,7 @@ func (cpc *CloudProviderConfig) Generate(dependencies asset.Parents) error {
 
 		cm.Data[cloudProviderConfigDataKey] = openstackmanifests.CloudProviderConfig(cloud)
 	case azuretypes.Name:
-		session, err := icazure.GetSession()
+		session, err := icazure.GetSession(platformCreds.Azure)
 		if err != nil {
 			return errors.Wrap(err, "could not get azure session")
 		}

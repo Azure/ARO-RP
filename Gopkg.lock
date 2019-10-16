@@ -566,7 +566,7 @@
 
 [[projects]]
   branch = "release-4.2-azure"
-  digest = "1:b7aa393467f1f87753ccd5ba0612cf6680bbd62e73be9ba6a5877465b0fe4385"
+  digest = "1:6422311b52354d8c680588228cd5b95adafaa36f08a849c3ddc47a656b380bd7"
   name = "github.com/openshift/installer"
   packages = [
     "data",
@@ -650,7 +650,7 @@
     "pkg/version",
   ]
   pruneopts = "UT"
-  revision = "69edf20f3d6e2e1dacd7453d3bf33940938972aa"
+  revision = "11e1a8d161ebf1402a4f4a29329f615317021b35"
   source = "https://github.com/jim-minter/installer"
 
 [[projects]]
@@ -1217,6 +1217,7 @@
     "github.com/openshift/installer/pkg/asset/ignition/bootstrap",
     "github.com/openshift/installer/pkg/asset/ignition/machine",
     "github.com/openshift/installer/pkg/asset/installconfig",
+    "github.com/openshift/installer/pkg/asset/installconfig/azure",
     "github.com/openshift/installer/pkg/asset/kubeconfig",
     "github.com/openshift/installer/pkg/asset/machines",
     "github.com/openshift/installer/pkg/asset/manifests",

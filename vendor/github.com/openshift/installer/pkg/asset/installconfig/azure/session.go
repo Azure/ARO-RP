@@ -35,7 +35,11 @@ type Credentials struct {
 
 // GetSession returns an azure session by using credentials found in ~/.azure/osServicePrincipal.json
 // and, if no creds are found, asks for them and stores them on disk in a config file
-func GetSession() (*Session, error) {
+func GetSession(credentials *Credentials) (*Session, error) {
+	if credentials != nil {
+		return newSessionFromCredentials(credentials)
+	}
+
 	authFile := defaultAuthFilePath
 	if f := os.Getenv(azureAuthEnv); len(f) > 0 {
 		authFile = f
@@ -71,12 +75,32 @@ func newSessionFromFile(authFilePath string) (*Session, error) {
 		return nil, errors.Wrap(err, "failed to map authsettings to credentials")
 	}
 
-	authorizer, err := authSettings.ClientCredentialsAuthorizerWithResource(azureenv.PublicCloud.ResourceManagerEndpoint)
+	return newSessionFromCredentials(credentials)
+}
+
+func newSessionFromCredentials(credentials *Credentials) (*Session, error) {
+	c := &auth.ClientCredentialsConfig{
+		TenantID:     credentials.TenantID,
+		ClientID:     credentials.ClientID,
+		ClientSecret: credentials.ClientSecret,
+		AADEndpoint:  azureenv.PublicCloud.ActiveDirectoryEndpoint,
+		Resource:     azureenv.PublicCloud.ResourceManagerEndpoint,
+	}
+
+	authorizer, err := c.Authorizer()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get client credentials authorizer from saved azure auth settings")
 	}
 
-	graphAuthorizer, err := authSettings.ClientCredentialsAuthorizerWithResource(azureenv.PublicCloud.GraphEndpoint)
+	c = &auth.ClientCredentialsConfig{
+		TenantID:     credentials.TenantID,
+		ClientID:     credentials.ClientID,
+		ClientSecret: credentials.ClientSecret,
+		AADEndpoint:  azureenv.PublicCloud.ActiveDirectoryEndpoint,
+		Resource:     azureenv.PublicCloud.GraphEndpoint,
+	}
+
+	graphAuthorizer, err := c.Authorizer()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get GraphEndpoint authorizer from saved azure auth settings")
 	}

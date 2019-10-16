@@ -99,8 +99,8 @@ func (config DNSConfig) GetDNSZone() (*Zone, error) {
 //NewDNSConfig returns a new DNSConfig struct that helps configuring the DNS
 //by querying your subscription and letting you choose
 //which domain you wish to use for the cluster
-func NewDNSConfig() (*DNSConfig, error) {
-	session, err := GetSession()
+func NewDNSConfig(credentials *Credentials) (*DNSConfig, error) {
+	session, err := GetSession(credentials)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not retrieve session information")
 	}

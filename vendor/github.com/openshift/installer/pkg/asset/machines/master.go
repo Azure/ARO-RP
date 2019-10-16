@@ -101,6 +101,7 @@ func (m *Master) Name() string {
 // Master asset
 func (m *Master) Dependencies() []asset.Asset {
 	return []asset.Asset{
+		&installconfig.PlatformCreds{},
 		&installconfig.ClusterID{},
 		// PlatformCredsCheck just checks the creds (and asks, if needed)
 		// We do not actually use it in this asset directly, hence
@@ -120,11 +121,12 @@ func awsDefaultMasterMachineType(installconfig *installconfig.InstallConfig) str
 
 // Generate generates the Master asset.
 func (m *Master) Generate(dependencies asset.Parents) error {
+	platformCreds := &installconfig.PlatformCreds{}
 	clusterID := &installconfig.ClusterID{}
 	installconfig := &installconfig.InstallConfig{}
 	rhcosImage := new(rhcos.Image)
 	mign := &machine.Master{}
-	dependencies.Get(clusterID, installconfig, rhcosImage, mign)
+	dependencies.Get(platformCreds, clusterID, installconfig, rhcosImage, mign)
 
 	ic := installconfig.Config
 
@@ -193,7 +195,7 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 		mpool.Set(ic.Platform.Azure.DefaultMachinePlatform)
 		mpool.Set(pool.Platform.Azure)
 		if len(mpool.Zones) == 0 {
-			azs, err := azure.AvailabilityZones(ic.Platform.Azure.Region, mpool.InstanceType)
+			azs, err := azure.AvailabilityZones(platformCreds.Azure, ic.Platform.Azure.Region, mpool.InstanceType)
 			if err != nil {
 				return errors.Wrap(err, "failed to fetch availability zones")
 			}

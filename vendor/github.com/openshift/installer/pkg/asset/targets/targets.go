@@ -69,6 +69,5 @@ var (
 		&password.KubeadminPassword{},
 		&tls.JournalCertKey{},
 		&cluster.Metadata{},
-		//&cluster.Cluster{},
 	}
 )
