@@ -84,7 +84,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, error) {
 			Type: r.resourceType,
 			Properties: api.Properties{
 				ProvisioningState: api.ProvisioningStateSucceeded,
-				NetworkProfile: api.NetworkProfile{
+				NetworkProfile: api.NetworkProfile{ // TODO: is defaulting on create a good idea?
 					VNetCIDR:    "10.0.0.0/16",
 					PodCIDR:     "10.128.0.0/14",
 					ServiceCIDR: "172.30.0.0/16",

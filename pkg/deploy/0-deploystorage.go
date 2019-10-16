@@ -51,6 +51,9 @@ func (d *Deployer) deployStorage(ctx context.Context, doc *api.OpenShiftClusterD
 			ContentVersion: "1.0.0.0",
 			Resources: []Resource{
 				{
+					// deploy the Identity now to give AAD a chance to update
+					// itself before we apply the RBAC rule in the next
+					// deployment
 					Resource: &msi.Identity{
 						Name:     to.StringPtr(clusterID.InfraID + "-identity"),
 						Location: &installConfig.Config.Azure.Region,
@@ -70,6 +73,7 @@ func (d *Deployer) deployStorage(ctx context.Context, doc *api.OpenShiftClusterD
 					APIVersion: apiVersions["storage"],
 				},
 				{
+					// should go away when we use a cloud partner image
 					Resource: &storage.BlobContainer{
 						Name: to.StringPtr("cluster" + doc.OpenShiftCluster.Properties.StorageSuffix + "/default/vhd"),
 						Type: to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
@@ -126,6 +130,7 @@ func (d *Deployer) deployStorage(ctx context.Context, doc *api.OpenShiftClusterD
 			return err
 		}
 
+		// blob copying should go away when we use a cloud partner image
 		d.log.Print("copying rhcos blob")
 		rhcosVhd := blobService.GetContainerReference("vhd").GetBlobReference("rhcos" + doc.OpenShiftCluster.Properties.StorageSuffix + ".vhd")
 		err = rhcosVhd.Copy(string(*rhcosImage), nil)
@@ -134,7 +139,7 @@ func (d *Deployer) deployStorage(ctx context.Context, doc *api.OpenShiftClusterD
 		}
 
 		rhcosVhd.Metadata = azstorage.BlobMetadata{
-			"source_uri": "var.azure_image_url",
+			"source_uri": "var.azure_image_url", // https://github.com/openshift/installer/pull/2468
 		}
 
 		err = rhcosVhd.SetMetadata(nil)
@@ -148,6 +153,8 @@ func (d *Deployer) deployStorage(ctx context.Context, doc *api.OpenShiftClusterD
 			return err
 		}
 
+		// the graph is quite big so we store it in a storage account instead of
+		// in cosmosdb
 		graph := blobService.GetContainerReference("aro").GetBlobReference("graph")
 		b, err := json.MarshalIndent(g, "", "  ")
 		if err != nil {
@@ -161,6 +168,8 @@ func (d *Deployer) deployStorage(ctx context.Context, doc *api.OpenShiftClusterD
 	}
 
 	doc, err = d.db.Patch(doc.OpenShiftCluster.ID, func(doc *api.OpenShiftClusterDocument) (err error) {
+		// used for the SAS token with which the bootstrap node retrieves its
+		// ignition payload
 		doc.OpenShiftCluster.Properties.Installation.Now = time.Now().UTC()
 		return nil
 	})
