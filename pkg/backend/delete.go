@@ -3,7 +3,9 @@ package backend
 import (
 	"context"
 	"net/http"
+	"os"
 
+	"github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
 	"github.com/sirupsen/logrus"
 
@@ -11,11 +13,15 @@ import (
 )
 
 func (b *backend) delete(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument) error {
+	recordsets := dns.NewRecordSetsClient(doc.SubscriptionID)
+	recordsets.Authorizer = b.authorizer
+
 	groups := resources.NewGroupsClient(doc.SubscriptionID)
 	groups.Authorizer = b.authorizer
 
-	if doc.OpenShiftCluster.Properties.ResourceGroup == "" {
-		return nil
+	_, err := recordsets.Delete(ctx, os.Getenv("DOMAIN_RESOURCEGROUP"), os.Getenv("DOMAIN"), "api."+doc.OpenShiftCluster.Name, dns.CNAME, "")
+	if err != nil {
+		return err
 	}
 
 	resp, err := groups.CheckExistence(ctx, doc.OpenShiftCluster.Properties.ResourceGroup)
