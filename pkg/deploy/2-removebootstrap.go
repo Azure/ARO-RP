@@ -26,6 +26,7 @@ func (d *Deployer) removeBootstrap(ctx context.Context, doc *api.OpenShiftCluste
 	kubeadminPassword := g[reflect.TypeOf(&password.KubeadminPassword{})].(*password.KubeadminPassword)
 
 	{
+		d.log.Print("removing bootstrap vm")
 		future, err := d.virtualmachines.Delete(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, clusterID.InfraID+"-bootstrap")
 		if err != nil {
 			return err
@@ -38,6 +39,7 @@ func (d *Deployer) removeBootstrap(ctx context.Context, doc *api.OpenShiftCluste
 	}
 
 	{
+		d.log.Print("removing bootstrap disk")
 		future, err := d.disks.Delete(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, clusterID.InfraID+"-bootstrap_OSDisk")
 		if err != nil {
 			return err
@@ -50,6 +52,7 @@ func (d *Deployer) removeBootstrap(ctx context.Context, doc *api.OpenShiftCluste
 	}
 
 	{
+		d.log.Print("removing bootstrap nic")
 		future, err := d.interfaces.Delete(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, clusterID.InfraID+"-bootstrap-nic")
 		if err != nil {
 			return err
@@ -62,6 +65,7 @@ func (d *Deployer) removeBootstrap(ctx context.Context, doc *api.OpenShiftCluste
 	}
 
 	{
+		d.log.Print("removing bootstrap ip")
 		future, err := d.publicipaddresses.Delete(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, clusterID.InfraID+"-bootstrap-pip")
 		if err != nil {
 			return err

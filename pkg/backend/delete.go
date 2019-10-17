@@ -19,6 +19,7 @@ func (b *backend) delete(ctx context.Context, log *logrus.Entry, doc *api.OpenSh
 	groups := resources.NewGroupsClient(doc.SubscriptionID)
 	groups.Authorizer = b.authorizer
 
+	log.Printf("deleting dns")
 	_, err := recordsets.Delete(ctx, os.Getenv("DOMAIN_RESOURCEGROUP"), os.Getenv("DOMAIN"), "api."+doc.OpenShiftCluster.Name, dns.CNAME, "")
 	if err != nil {
 		return err
