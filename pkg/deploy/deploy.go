@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	"github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
@@ -62,6 +63,8 @@ func NewDeployer(log *logrus.Entry, db database.OpenShiftClusters, authorizer au
 	d.groups.Authorizer = authorizer
 	d.resources.Authorizer = authorizer
 	d.accounts.Authorizer = authorizer
+
+	d.deployments.Client.PollingDuration = time.Hour
 
 	return d
 }
