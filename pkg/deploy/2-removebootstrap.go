@@ -3,13 +3,13 @@ package deploy
 import (
 	"context"
 	"fmt"
+	"os"
 	"reflect"
 	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
 	configv1client "github.com/openshift/client-go/config/clientset/versioned/typed/config/v1"
 	"github.com/openshift/installer/pkg/asset/installconfig"
-	"github.com/openshift/installer/pkg/asset/kubeconfig"
 	"github.com/openshift/installer/pkg/asset/password"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -22,9 +22,7 @@ func (d *Deployer) removeBootstrap(ctx context.Context, doc *api.OpenShiftCluste
 		return err
 	}
 
-	adminClient := g[reflect.TypeOf(&kubeconfig.AdminClient{})].(*kubeconfig.AdminClient)
 	clusterID := g[reflect.TypeOf(&installconfig.ClusterID{})].(*installconfig.ClusterID)
-	installConfig := g[reflect.TypeOf(&installconfig.InstallConfig{})].(*installconfig.InstallConfig)
 	kubeadminPassword := g[reflect.TypeOf(&password.KubeadminPassword{})].(*password.KubeadminPassword)
 
 	{
@@ -76,7 +74,7 @@ func (d *Deployer) removeBootstrap(ctx context.Context, doc *api.OpenShiftCluste
 	}
 
 	{
-		restConfig, err := restConfig(adminClient)
+		restConfig, err := restConfig(doc.OpenShiftCluster.Properties.AdminKubeconfig)
 		if err != nil {
 			return err
 		}
@@ -110,10 +108,9 @@ func (d *Deployer) removeBootstrap(ctx context.Context, doc *api.OpenShiftCluste
 	}
 
 	doc, err = d.db.Patch(doc.OpenShiftCluster.ID, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.APIServerURL = "https://api." + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + ":6443/"
-		doc.OpenShiftCluster.Properties.ConsoleURL = "https://console-openshift-console.apps." + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/"
+		doc.OpenShiftCluster.Properties.APIServerURL = "https://api." + doc.OpenShiftCluster.Name + "." + os.Getenv("DOMAIN") + ":6443/"
+		doc.OpenShiftCluster.Properties.ConsoleURL = "https://console-openshift-console.apps." + doc.OpenShiftCluster.Name + "." + os.Getenv("DOMAIN") + "/"
 		doc.OpenShiftCluster.Properties.KubeadminPassword = kubeadminPassword.Password
-		doc.OpenShiftCluster.Properties.AdminKubeconfig = adminClient.File.Data
 		return nil
 	})
 	return err

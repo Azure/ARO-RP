@@ -14,6 +14,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/ignition/bootstrap"
 	"github.com/openshift/installer/pkg/asset/installconfig"
+	"github.com/openshift/installer/pkg/asset/kubeconfig"
 	"github.com/openshift/installer/pkg/asset/rhcos"
 	"github.com/openshift/installer/pkg/asset/targets"
 
@@ -33,6 +34,7 @@ func (d *Deployer) deployStorage(ctx context.Context, doc *api.OpenShiftClusterD
 		}
 	}
 
+	adminClient := g[reflect.TypeOf(&kubeconfig.AdminClient{})].(*kubeconfig.AdminClient)
 	bootstrap := g[reflect.TypeOf(&bootstrap.Bootstrap{})].(*bootstrap.Bootstrap)
 	clusterID := g[reflect.TypeOf(&installconfig.ClusterID{})].(*installconfig.ClusterID)
 	rhcosImage := g[reflect.TypeOf(new(rhcos.Image))].(*rhcos.Image)
@@ -171,6 +173,8 @@ func (d *Deployer) deployStorage(ctx context.Context, doc *api.OpenShiftClusterD
 		// used for the SAS token with which the bootstrap node retrieves its
 		// ignition payload
 		doc.OpenShiftCluster.Properties.Installation.Now = time.Now().UTC()
+
+		doc.OpenShiftCluster.Properties.AdminKubeconfig = adminClient.File.Data
 		return nil
 	})
 	if err != nil {

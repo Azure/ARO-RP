@@ -14,7 +14,6 @@ import (
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/openshift/installer/pkg/asset/installconfig"
-	"github.com/openshift/installer/pkg/asset/kubeconfig"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -151,8 +150,8 @@ func (d *Deployer) getGraph(ctx context.Context, doc *api.OpenShiftClusterDocume
 	return g, nil
 }
 
-func restConfig(adminClient *kubeconfig.AdminClient) (*rest.Config, error) {
-	config, err := clientcmd.Load(adminClient.File.Data)
+func restConfig(b []byte) (*rest.Config, error) {
+	config, err := clientcmd.Load(b)
 	if err != nil {
 		return nil, err
 	}

@@ -17,7 +17,6 @@ import (
 	"github.com/apparentlymart/go-cidr/cidr"
 	"github.com/openshift/installer/pkg/asset/ignition/machine"
 	"github.com/openshift/installer/pkg/asset/installconfig"
-	"github.com/openshift/installer/pkg/asset/kubeconfig"
 	"github.com/openshift/installer/pkg/asset/machines"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -31,7 +30,6 @@ func (d *Deployer) deployResources(ctx context.Context, doc *api.OpenShiftCluste
 		return err
 	}
 
-	adminClient := g[reflect.TypeOf(&kubeconfig.AdminClient{})].(*kubeconfig.AdminClient)
 	clusterID := g[reflect.TypeOf(&installconfig.ClusterID{})].(*installconfig.ClusterID)
 	installConfig := g[reflect.TypeOf(&installconfig.InstallConfig{})].(*installconfig.InstallConfig)
 	machinesMaster := g[reflect.TypeOf(&machines.Master{})].(*machines.Master)
@@ -722,7 +720,7 @@ func (d *Deployer) deployResources(ctx context.Context, doc *api.OpenShiftCluste
 	}
 
 	{
-		restConfig, err := restConfig(adminClient)
+		restConfig, err := restConfig(doc.OpenShiftCluster.Properties.AdminKubeconfig)
 		if err != nil {
 			return err
 		}
