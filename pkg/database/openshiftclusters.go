@@ -79,7 +79,7 @@ func (c *openShiftClusters) Get(resourceID string) (*api.OpenShiftClusterDocumen
 	case len(docs.OpenShiftClusterDocuments) == 1:
 		return docs.OpenShiftClusterDocuments[0], nil
 	default:
-		return nil, nil
+		return nil, &cosmosdb.Error{StatusCode: http.StatusNotFound}
 	}
 }
 

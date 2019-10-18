@@ -66,7 +66,7 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 
 func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, error) {
 	doc, err := f.db.Get(r.resourceID)
-	if err != nil {
+	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil, err
 	}
 

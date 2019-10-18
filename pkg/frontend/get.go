@@ -9,6 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/jim-minter/rp/pkg/api"
+	"github.com/jim-minter/rp/pkg/database/cosmosdb"
 )
 
 func (f *frontend) getOpenShiftCluster(w http.ResponseWriter, r *http.Request) {
@@ -45,12 +46,11 @@ func (f *frontend) getOpenShiftCluster(w http.ResponseWriter, r *http.Request) {
 
 func (f *frontend) _getOpenShiftCluster(r *request) ([]byte, error) {
 	doc, err := f.db.Get(r.resourceID)
-	if err != nil {
-		return nil, err
-	}
-
-	if doc == nil {
+	switch {
+	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", r.resourceType, r.resourceName, r.resourceGroupName)
+	case err != nil:
+		return nil, err
 	}
 
 	doc.OpenShiftCluster.ID = r.resourceID
@@ -154,12 +154,11 @@ func (f *frontend) getOpenShiftClusterCredentials(w http.ResponseWriter, r *http
 
 func (f *frontend) _getOpenShiftClusterCredentials(r *request) ([]byte, error) {
 	doc, err := f.db.Get(r.resourceID)
-	if err != nil {
+	switch {
+	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
+		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", r.resourceType, r.resourceName, r.resourceGroupName)
+	case err != nil:
 		return nil, err
-	}
-
-	if doc == nil {
-		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s/credentials' under resource group '%s' was not found.", r.resourceType, r.resourceName, r.resourceGroupName)
 	}
 
 	return json.MarshalIndent(r.toExternal(doc.OpenShiftCluster), "", "  ")
