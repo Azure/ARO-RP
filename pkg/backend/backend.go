@@ -89,10 +89,7 @@ func (b *backend) Run(stop <-chan struct{}) {
 		log := b.baseLog.WithField("resource", m.ID())
 		if m.DequeueCount() == maxDequeueCount {
 			log.Warnf("dequeued %d times, failing", maxDequeueCount)
-			b.db.Patch(m.ID(), func(doc *api.OpenShiftClusterDocument) error {
-				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateFailed
-				return nil
-			})
+			b.setTerminalState(m.ID(), api.ProvisioningStateFailed)
 			m.Done(nil)
 		} else {
 			log.Print("dequeued")
@@ -146,20 +143,12 @@ func (b *backend) handleOne(ctx context.Context, log *logrus.Entry, m queue.Mess
 	}
 	if err != nil {
 		log.Error(err)
-		doc, err = b.db.Patch(m.ID(), func(doc *api.OpenShiftClusterDocument) error {
-			doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateFailed
-			return nil
-		})
-		return err
+		return b.setTerminalState(m.ID(), api.ProvisioningStateFailed)
 	}
 
 	switch doc.OpenShiftCluster.Properties.ProvisioningState {
 	case api.ProvisioningStateUpdating:
-		doc, err = b.db.Patch(m.ID(), func(doc *api.OpenShiftClusterDocument) error {
-			doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateSucceeded
-			return nil
-		})
-		return err
+		return b.setTerminalState(m.ID(), api.ProvisioningStateSucceeded)
 
 	case api.ProvisioningStateDeleting:
 		return b.db.Delete(m.ID())
@@ -167,4 +156,12 @@ func (b *backend) handleOne(ctx context.Context, log *logrus.Entry, m queue.Mess
 	default:
 		return fmt.Errorf("unexpected state %q", doc.OpenShiftCluster.Properties.ProvisioningState)
 	}
+}
+
+func (b *backend) setTerminalState(resourceID string, state api.ProvisioningState) error {
+	_, err := b.db.Patch(resourceID, func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.Properties.ProvisioningState = state
+		return nil
+	})
+	return err
 }
