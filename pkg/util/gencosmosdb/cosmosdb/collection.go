@@ -24,11 +24,20 @@ type Collection struct {
 
 // IndexingPolicy represents an indexing policy
 type IndexingPolicy struct {
-	Automatic     bool           `json:"automatic,omitempty"`
-	IndexingMode  string         `json:"indexingMode,omitempty"`
-	IncludedPaths []IncludedPath `json:"includedPaths,omitempty"`
-	ExcludedPaths []IncludedPath `json:"excludedPaths,omitempty"`
+	Automatic     bool               `json:"automatic,omitempty"`
+	IndexingMode  IndexingPolicyMode `json:"indexingMode,omitempty"`
+	IncludedPaths []IncludedPath     `json:"includedPaths,omitempty"`
+	ExcludedPaths []IncludedPath     `json:"excludedPaths,omitempty"`
 }
+
+// IndexingPolicyMode represents an indexing policy mode
+type IndexingPolicyMode string
+
+// IndexingPolicyMode constants
+const (
+	IndexingPolicyModeConsistent IndexingPolicyMode = "Consistent"
+	IndexingPolicyModeLazy       IndexingPolicyMode = "Lazy"
+)
 
 // IncludedPath represents an included path
 type IncludedPath struct {
@@ -38,10 +47,32 @@ type IncludedPath struct {
 
 // Index represents an index
 type Index struct {
-	DataType  string `json:"dataType,omitempty"`
-	Kind      string `json:"kind,omitempty"`
-	Precision int    `json:"precision,omitempty"`
+	DataType  IndexDataType `json:"dataType,omitempty"`
+	Kind      IndexKind     `json:"kind,omitempty"`
+	Precision int           `json:"precision,omitempty"`
 }
+
+// IndexDataType represents an index data type
+type IndexDataType string
+
+// IndexDataType constants
+const (
+	IndexDataTypeString     IndexDataType = "String"
+	IndexDataTypeNumber     IndexDataType = "Number"
+	IndexDataTypePoint      IndexDataType = "Point"
+	IndexDataTypePolygon    IndexDataType = "Polygon"
+	IndexDataTypeLineString IndexDataType = "LineString"
+)
+
+// IndexKind represents an index kind
+type IndexKind string
+
+// IndexKind constants
+const (
+	IndexKindHash    IndexKind = "Hash"
+	IndexKindRange   IndexKind = "Range"
+	IndexKindSpatial IndexKind = "Spatial"
+)
 
 // ExcludedPath represents an excluded path
 type ExcludedPath struct {
@@ -50,22 +81,47 @@ type ExcludedPath struct {
 
 // PartitionKey represents a partition key
 type PartitionKey struct {
-	Paths   []string `json:"paths,omitempty"`
-	Kind    string   `json:"kind,omitempty"`
-	Version int      `json:"version,omitempty"`
+	Paths   []string         `json:"paths,omitempty"`
+	Kind    PartitionKeyKind `json:"kind,omitempty"`
+	Version int              `json:"version,omitempty"`
 }
+
+// PartitionKeyKind represents a partition key kind
+type PartitionKeyKind string
+
+// PartitionKeyKind constants
+const (
+	PartitionKeyKindHash PartitionKeyKind = "Hash"
+)
 
 // ConflictResolutionPolicy represents a conflict resolution policy
 type ConflictResolutionPolicy struct {
-	Mode                        string `json:"mode,omitempty"`
-	ConflictResolutionPath      string `json:"conflictResolutionPath,omitempty"`
-	ConflictResolutionProcedure string `json:"conflictResolutionProcedure,omitempty"`
+	Mode                        ConflictResolutionPolicyMode `json:"mode,omitempty"`
+	ConflictResolutionPath      string                       `json:"conflictResolutionPath,omitempty"`
+	ConflictResolutionProcedure string                       `json:"conflictResolutionProcedure,omitempty"`
 }
+
+// ConflictResolutionPolicyMode represents a conflict resolution policy mode
+type ConflictResolutionPolicyMode string
+
+// ConflictResolutionPolicyMode constants
+const (
+	ConflictResolutionPolicyModeLastWriterWins ConflictResolutionPolicyMode = "LastWriterWins"
+	ConflictResolutionPolicyModeCustom         ConflictResolutionPolicyMode = "Custom"
+)
 
 // GeospatialConfig represents a geospatial config
 type GeospatialConfig struct {
-	Type string `json:"type,omitempty"`
+	Type GeospatialConfigType `json:"type,omitempty"`
 }
+
+// GeospatialConfigType represents geospatial config types
+type GeospatialConfigType string
+
+// GeospatialConfigType constants
+const (
+	GeospatialConfigTypeGeography GeospatialConfigType = "Geography"
+)
 
 // Collections represents collections
 type Collections struct {
@@ -83,18 +139,26 @@ type PartitionKeyRanges struct {
 
 // PartitionKeyRange represents a partition key range
 type PartitionKeyRange struct {
-	ID                 string   `json:"id,omitempty"`
-	ResourceID         string   `json:"_rid,omitempty"`
-	Timestamp          int      `json:"_ts,omitempty"`
-	Self               string   `json:"_self,omitempty"`
-	ETag               string   `json:"_etag,omitempty"`
-	MaxExclusive       string   `json:"maxExclusive,omitempty"`
-	MinInclusive       string   `json:"minInclusive,omitempty"`
-	ResourceIDPrefix   int      `json:"ridPrefix,omitempty"`
-	ThroughputFraction int      `json:"throughputFraction,omitempty"`
-	Status             string   `json:"status,omitempty"`
-	Parents            []string `json:"parents,omitempty"`
+	ID                 string                  `json:"id,omitempty"`
+	ResourceID         string                  `json:"_rid,omitempty"`
+	Timestamp          int                     `json:"_ts,omitempty"`
+	Self               string                  `json:"_self,omitempty"`
+	ETag               string                  `json:"_etag,omitempty"`
+	MaxExclusive       string                  `json:"maxExclusive,omitempty"`
+	MinInclusive       string                  `json:"minInclusive,omitempty"`
+	ResourceIDPrefix   int                     `json:"ridPrefix,omitempty"`
+	ThroughputFraction int                     `json:"throughputFraction,omitempty"`
+	Status             PartitionKeyRangeStatus `json:"status,omitempty"`
+	Parents            []string                `json:"parents,omitempty"`
 }
+
+// PartitionKeyRangeStatus represents a partition key range status
+type PartitionKeyRangeStatus string
+
+// PartitionKeyRangeStatus constants
+const (
+	PartitionKeyRangeStatusOnline PartitionKeyRangeStatus = "online"
+)
 
 type collectionClient struct {
 	*databaseClient
