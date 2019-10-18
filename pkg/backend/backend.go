@@ -66,7 +66,6 @@ func (b *backend) Run(stop <-chan struct{}) {
 		b.cond.Signal()
 	}()
 
-out:
 	for {
 		b.mu.Lock()
 		for atomic.LoadInt32(&b.workers) == maxWorkers && !b.stopping.Load().(bool) {
@@ -74,38 +73,30 @@ out:
 		}
 		b.mu.Unlock()
 
-		m, err := b.q.Get()
-		switch {
-		case err != nil:
-			b.baseLog.Error(err)
-
-		case m != nil:
-			log := b.baseLog.WithField("resource", m.ID())
-			if m.DequeueCount() == maxDequeueCount {
-				log.Warnf("dequeued %d times, failing", maxDequeueCount)
-				b.db.Patch(m.ID(), func(doc *api.OpenShiftClusterDocument) error {
-					doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateFailed
-					return nil
-				})
-				m.Done(nil)
-			} else {
-				log.Print("dequeued")
-				go b.handle(context.Background(), log, m)
-			}
-
-			select {
-			case <-stop:
-				break out
-			default:
-				continue
-			}
+		if b.stopping.Load().(bool) {
+			break
 		}
 
-		select {
-		case <-t.C:
-		case <-stop:
-			break out
-		default:
+		m, err := b.q.Get()
+		if err != nil || m == nil {
+			if err != nil {
+				b.baseLog.Error(err)
+			}
+			<-t.C
+			continue
+		}
+
+		log := b.baseLog.WithField("resource", m.ID())
+		if m.DequeueCount() == maxDequeueCount {
+			log.Warnf("dequeued %d times, failing", maxDequeueCount)
+			b.db.Patch(m.ID(), func(doc *api.OpenShiftClusterDocument) error {
+				doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateFailed
+				return nil
+			})
+			m.Done(nil)
+		} else {
+			log.Print("dequeued")
+			go b.handle(context.Background(), log, m)
 		}
 	}
 }
