@@ -15,12 +15,12 @@ type openShiftClusterDocumentClient struct {
 
 // OpenShiftClusterDocumentClient is a openShiftClusterDocument client
 type OpenShiftClusterDocumentClient interface {
-	Create(string, *pkg.OpenShiftClusterDocument) (*pkg.OpenShiftClusterDocument, error)
+	Create(string, *pkg.OpenShiftClusterDocument, *Options) (*pkg.OpenShiftClusterDocument, error)
 	List() OpenShiftClusterDocumentIterator
 	ListAll() (*pkg.OpenShiftClusterDocuments, error)
 	Get(string, string) (*pkg.OpenShiftClusterDocument, error)
-	Replace(string, *pkg.OpenShiftClusterDocument) (*pkg.OpenShiftClusterDocument, error)
-	Delete(string, *pkg.OpenShiftClusterDocument) error
+	Replace(string, *pkg.OpenShiftClusterDocument, *Options) (*pkg.OpenShiftClusterDocument, error)
+	Delete(string, *pkg.OpenShiftClusterDocument, *Options) error
 	Query(string, *Query) OpenShiftClusterDocumentIterator
 	QueryAll(string, *Query) (*pkg.OpenShiftClusterDocuments, error)
 }
@@ -72,10 +72,11 @@ func (c *openShiftClusterDocumentClient) all(i OpenShiftClusterDocumentIterator)
 	return allopenShiftClusterDocuments, nil
 }
 
-func (c *openShiftClusterDocumentClient) Create(partitionkey string, newopenShiftClusterDocument *pkg.OpenShiftClusterDocument) (openShiftClusterDocument *pkg.OpenShiftClusterDocument, err error) {
+func (c *openShiftClusterDocumentClient) Create(partitionkey string, newopenShiftClusterDocument *pkg.OpenShiftClusterDocument, options *Options) (openShiftClusterDocument *pkg.OpenShiftClusterDocument, err error) {
 	headers := http.Header{}
-	if partitionkey != "" {
-		headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
+	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
+	if options != nil {
+		setOptions(options, headers)
 	}
 	err = c.do(http.MethodPost, c.path+"/docs", "docs", c.path, http.StatusCreated, &newopenShiftClusterDocument, &openShiftClusterDocument, headers)
 	return
@@ -91,34 +92,34 @@ func (c *openShiftClusterDocumentClient) ListAll() (*pkg.OpenShiftClusterDocumen
 
 func (c *openShiftClusterDocumentClient) Get(partitionkey, openShiftClusterDocumentid string) (openShiftClusterDocument *pkg.OpenShiftClusterDocument, err error) {
 	headers := http.Header{}
-	if partitionkey != "" {
-		headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
-	}
+	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
 	err = c.do(http.MethodGet, c.path+"/docs/"+openShiftClusterDocumentid, "docs", c.path+"/docs/"+openShiftClusterDocumentid, http.StatusOK, nil, &openShiftClusterDocument, headers)
 	return
 }
 
-func (c *openShiftClusterDocumentClient) Replace(partitionkey string, newopenShiftClusterDocument *pkg.OpenShiftClusterDocument) (openShiftClusterDocument *pkg.OpenShiftClusterDocument, err error) {
+func (c *openShiftClusterDocumentClient) Replace(partitionkey string, newopenShiftClusterDocument *pkg.OpenShiftClusterDocument, options *Options) (openShiftClusterDocument *pkg.OpenShiftClusterDocument, err error) {
 	if newopenShiftClusterDocument.ETag == "" {
 		return nil, ErrETagRequired
 	}
 	headers := http.Header{}
 	headers.Set("If-Match", newopenShiftClusterDocument.ETag)
-	if partitionkey != "" {
-		headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
+	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
+	if options != nil {
+		setOptions(options, headers)
 	}
 	err = c.do(http.MethodPut, c.path+"/docs/"+newopenShiftClusterDocument.ID, "docs", c.path+"/docs/"+newopenShiftClusterDocument.ID, http.StatusOK, &newopenShiftClusterDocument, &openShiftClusterDocument, headers)
 	return
 }
 
-func (c *openShiftClusterDocumentClient) Delete(partitionkey string, openShiftClusterDocument *pkg.OpenShiftClusterDocument) error {
+func (c *openShiftClusterDocumentClient) Delete(partitionkey string, openShiftClusterDocument *pkg.OpenShiftClusterDocument, options *Options) error {
 	if openShiftClusterDocument.ETag == "" {
 		return ErrETagRequired
 	}
 	headers := http.Header{}
 	headers.Set("If-Match", openShiftClusterDocument.ETag)
-	if partitionkey != "" {
-		headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
+	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
+	if options != nil {
+		setOptions(options, headers)
 	}
 	return c.do(http.MethodDelete, c.path+"/docs/"+openShiftClusterDocument.ID, "docs", c.path+"/docs/"+openShiftClusterDocument.ID, http.StatusNoContent, nil, nil, headers)
 }

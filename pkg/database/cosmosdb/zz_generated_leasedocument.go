@@ -15,12 +15,12 @@ type leaseDocumentClient struct {
 
 // LeaseDocumentClient is a leaseDocument client
 type LeaseDocumentClient interface {
-	Create(string, *pkg.LeaseDocument) (*pkg.LeaseDocument, error)
+	Create(string, *pkg.LeaseDocument, *Options) (*pkg.LeaseDocument, error)
 	List() LeaseDocumentIterator
 	ListAll() (*pkg.LeaseDocuments, error)
 	Get(string, string) (*pkg.LeaseDocument, error)
-	Replace(string, *pkg.LeaseDocument) (*pkg.LeaseDocument, error)
-	Delete(string, *pkg.LeaseDocument) error
+	Replace(string, *pkg.LeaseDocument, *Options) (*pkg.LeaseDocument, error)
+	Delete(string, *pkg.LeaseDocument, *Options) error
 	Query(string, *Query) LeaseDocumentIterator
 	QueryAll(string, *Query) (*pkg.LeaseDocuments, error)
 }
@@ -72,10 +72,11 @@ func (c *leaseDocumentClient) all(i LeaseDocumentIterator) (*pkg.LeaseDocuments,
 	return allleaseDocuments, nil
 }
 
-func (c *leaseDocumentClient) Create(partitionkey string, newleaseDocument *pkg.LeaseDocument) (leaseDocument *pkg.LeaseDocument, err error) {
+func (c *leaseDocumentClient) Create(partitionkey string, newleaseDocument *pkg.LeaseDocument, options *Options) (leaseDocument *pkg.LeaseDocument, err error) {
 	headers := http.Header{}
-	if partitionkey != "" {
-		headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
+	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
+	if options != nil {
+		setOptions(options, headers)
 	}
 	err = c.do(http.MethodPost, c.path+"/docs", "docs", c.path, http.StatusCreated, &newleaseDocument, &leaseDocument, headers)
 	return
@@ -91,34 +92,34 @@ func (c *leaseDocumentClient) ListAll() (*pkg.LeaseDocuments, error) {
 
 func (c *leaseDocumentClient) Get(partitionkey, leaseDocumentid string) (leaseDocument *pkg.LeaseDocument, err error) {
 	headers := http.Header{}
-	if partitionkey != "" {
-		headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
-	}
+	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
 	err = c.do(http.MethodGet, c.path+"/docs/"+leaseDocumentid, "docs", c.path+"/docs/"+leaseDocumentid, http.StatusOK, nil, &leaseDocument, headers)
 	return
 }
 
-func (c *leaseDocumentClient) Replace(partitionkey string, newleaseDocument *pkg.LeaseDocument) (leaseDocument *pkg.LeaseDocument, err error) {
+func (c *leaseDocumentClient) Replace(partitionkey string, newleaseDocument *pkg.LeaseDocument, options *Options) (leaseDocument *pkg.LeaseDocument, err error) {
 	if newleaseDocument.ETag == "" {
 		return nil, ErrETagRequired
 	}
 	headers := http.Header{}
 	headers.Set("If-Match", newleaseDocument.ETag)
-	if partitionkey != "" {
-		headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
+	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
+	if options != nil {
+		setOptions(options, headers)
 	}
 	err = c.do(http.MethodPut, c.path+"/docs/"+newleaseDocument.ID, "docs", c.path+"/docs/"+newleaseDocument.ID, http.StatusOK, &newleaseDocument, &leaseDocument, headers)
 	return
 }
 
-func (c *leaseDocumentClient) Delete(partitionkey string, leaseDocument *pkg.LeaseDocument) error {
+func (c *leaseDocumentClient) Delete(partitionkey string, leaseDocument *pkg.LeaseDocument, options *Options) error {
 	if leaseDocument.ETag == "" {
 		return ErrETagRequired
 	}
 	headers := http.Header{}
 	headers.Set("If-Match", leaseDocument.ETag)
-	if partitionkey != "" {
-		headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
+	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
+	if options != nil {
+		setOptions(options, headers)
 	}
 	return c.do(http.MethodDelete, c.path+"/docs/"+leaseDocument.ID, "docs", c.path+"/docs/"+leaseDocument.ID, http.StatusNoContent, nil, nil, headers)
 }

@@ -52,7 +52,7 @@ func (l *leaser) refresh() error {
 	validUntil := time.Now().Add(l.leaseLength)
 
 	if doc != nil && uuid.Equal(doc.Holder, l.uuid) {
-		_, err = l.lc.Replace(l.leaseid, doc)
+		_, err = l.lc.Replace(l.leaseid, doc, nil)
 		switch {
 		case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 			doc = nil
@@ -69,7 +69,7 @@ func (l *leaser) refresh() error {
 			ID:     l.leaseid,
 			TTL:    int(l.leaseLength / time.Second),
 			Holder: l.uuid,
-		})
+		}, nil)
 
 		switch {
 		case cosmosdb.IsErrorStatusCode(err, http.StatusConflict):
