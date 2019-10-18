@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"runtime/debug"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest"
-
 	"github.com/sirupsen/logrus"
 
 	"github.com/jim-minter/rp/pkg/api"
@@ -30,8 +30,8 @@ type backend struct {
 
 	mu       sync.Mutex
 	cond     *sync.Cond
-	workers  int
-	stopping bool
+	workers  int32
+	stopping atomic.Value
 }
 
 // Runnable represents a runnable object
@@ -50,6 +50,7 @@ func NewBackend(log *logrus.Entry, authorizer autorest.Authorizer, q queue.Queue
 	}
 
 	b.cond = sync.NewCond(&b.mu)
+	b.stopping.Store(false)
 
 	return b
 }
@@ -60,16 +61,15 @@ func (b *backend) Run(stop <-chan struct{}) {
 
 	go func() {
 		<-stop
-		b.mu.Lock()
-		b.stopping = true
-		b.mu.Unlock()
+		b.baseLog.Print("stopping")
+		b.stopping.Store(true)
 		b.cond.Signal()
 	}()
 
 out:
 	for {
 		b.mu.Lock()
-		for b.workers == maxWorkers && !b.stopping {
+		for atomic.LoadInt32(&b.workers) == maxWorkers && !b.stopping.Load().(bool) {
 			b.cond.Wait()
 		}
 		b.mu.Unlock()
@@ -108,8 +108,6 @@ out:
 		default:
 		}
 	}
-
-	b.baseLog.Print("stopping")
 }
 
 func (b *backend) handle(ctx context.Context, log *logrus.Entry, m queue.Message) {
@@ -125,14 +123,10 @@ func (b *backend) handle(ctx context.Context, log *logrus.Entry, m queue.Message
 		m.Done(err)
 	}()
 
-	b.mu.Lock()
-	b.workers++
-	b.mu.Unlock()
+	atomic.AddInt32(&b.workers, 1)
 
 	defer func() {
-		b.mu.Lock()
-		b.workers--
-		b.mu.Unlock()
+		atomic.AddInt32(&b.workers, -1)
 		b.cond.Signal()
 	}()
 
