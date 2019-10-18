@@ -147,7 +147,6 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, error) {
 	external.ToInternal(doc.OpenShiftCluster)
 
 	doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateUpdating
-	doc.Unqueued = true
 
 	if isCreate {
 		doc.OpenShiftCluster.Properties.ResourceGroup = doc.OpenShiftCluster.Name

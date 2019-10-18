@@ -1214,6 +1214,7 @@
     "github.com/openshift/client-go/config/clientset/versioned/typed/config/v1",
     "github.com/openshift/installer/data",
     "github.com/openshift/installer/pkg/asset",
+    "github.com/openshift/installer/pkg/asset/cluster",
     "github.com/openshift/installer/pkg/asset/ignition/bootstrap",
     "github.com/openshift/installer/pkg/asset/ignition/machine",
     "github.com/openshift/installer/pkg/asset/installconfig",

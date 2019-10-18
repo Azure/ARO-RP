@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/sirupsen/logrus"
@@ -19,9 +18,7 @@ import (
 	"github.com/jim-minter/rp/pkg/database"
 	"github.com/jim-minter/rp/pkg/database/cosmosdb"
 	"github.com/jim-minter/rp/pkg/frontend"
-	"github.com/jim-minter/rp/pkg/queue"
-	"github.com/jim-minter/rp/pkg/queue/forwarder"
-	"github.com/jim-minter/rp/pkg/queue/leaser"
+	uuid "github.com/satori/go.uuid"
 )
 
 func run(log *logrus.Entry) error {
@@ -30,8 +27,6 @@ func run(log *logrus.Entry) error {
 		"COSMOSDB_KEY",
 		"DOMAIN",
 		"DOMAIN_RESOURCEGROUP",
-		"STORAGE_ACCOUNT",
-		"STORAGE_KEY",
 		"LOCATION",
 		"HOME",
 	} {
@@ -40,11 +35,18 @@ func run(log *logrus.Entry) error {
 		}
 	}
 
+	uuid := uuid.NewV4()
+	log.Printf("starting, uuid %s", uuid)
+
 	dbc, err := cosmosdb.NewDatabaseClient(http.DefaultClient, os.Getenv("COSMOSDB_ACCOUNT"), os.Getenv("COSMOSDB_KEY"))
 	if err != nil {
 		return err
 	}
-	db := database.NewOpenShiftClusters(dbc, "OpenShiftClusters", "OpenShiftClusterDocuments")
+
+	db, err := database.NewOpenShiftClusters(uuid, dbc, "OpenShiftClusters", "OpenShiftClusterDocuments")
+	if err != nil {
+		return err
+	}
 
 	authorizer, err := auth.NewAuthorizerFromEnvironment()
 	if err != nil {
@@ -55,24 +57,7 @@ func run(log *logrus.Entry) error {
 	stop := make(chan struct{})
 	signal.Notify(sigterm, syscall.SIGTERM)
 
-	{
-		log := log.WithField("component", "backend")
-		q, err := queue.NewQueue(log, os.Getenv("STORAGE_ACCOUNT"), os.Getenv("STORAGE_KEY"), "openshiftclusterdocuments")
-		if err != nil {
-			return err
-		}
-		go backend.NewBackend(log, authorizer, q, db).Run(stop)
-	}
-
-	{
-		log := log.WithField("component", "queue")
-		q, err := queue.NewQueue(log, os.Getenv("STORAGE_ACCOUNT"), os.Getenv("STORAGE_KEY"), "openshiftclusterdocuments")
-		if err != nil {
-			return err
-		}
-		l := leaser.NewLeaser(log, dbc, "OpenShiftClusters", "Leases", "forwarder", 10*time.Second, 60*time.Second)
-		go forwarder.NewForwarder(log, q, db, l).Run(stop)
-	}
+	go backend.NewBackend(log.WithField("component", "backend"), authorizer, db).Run(stop)
 
 	l, err := net.Listen("tcp", ":8080")
 	if err != nil {
