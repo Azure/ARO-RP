@@ -173,7 +173,7 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 		// used for the SAS token with which the bootstrap node retrieves its
 		// ignition payload
 		doc.OpenShiftCluster.Properties.Installation.Now = time.Now().UTC()
-
+		doc.OpenShiftCluster.Properties.ClusterID = clusterID.InfraID
 		doc.OpenShiftCluster.Properties.AdminKubeconfig = adminClient.File.Data
 		return nil
 	})
