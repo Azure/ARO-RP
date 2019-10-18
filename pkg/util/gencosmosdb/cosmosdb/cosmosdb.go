@@ -29,14 +29,14 @@ type Error struct {
 	Message    string `json:"message"`
 }
 
-func (e Error) Error() string {
+func (e *Error) Error() string {
 	return fmt.Sprintf("%d %s: %s", e.StatusCode, e.Code, e.Message)
 }
 
 // IsErrorStatusCode returns true if err is of type Error and its StatusCode
 // matches statusCode
 func IsErrorStatusCode(err error, statusCode int) bool {
-	if err, ok := err.(Error); ok {
+	if err, ok := err.(*Error); ok {
 		return err.StatusCode == statusCode
 	}
 	return false
@@ -121,7 +121,7 @@ func (c *databaseClient) do(method, path, resourceType, resourceLink string, exp
 	d := codec.NewDecoder(resp.Body, JSONHandle)
 
 	if resp.StatusCode != expectedStatusCode {
-		var err Error
+		var err *Error
 		if resp.Header.Get("Content-Type") == "application/json" {
 			d.Decode(&err)
 		}
