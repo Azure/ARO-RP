@@ -16,6 +16,12 @@ import (
 	"github.com/ugorji/go/codec"
 )
 
+// Options represents API options
+type Options struct {
+	PreTriggers  []string
+	PostTriggers []string
+}
+
 // Error represents an error
 type Error struct {
 	StatusCode int
@@ -128,4 +134,13 @@ func (c *databaseClient) do(method, path, resourceType, resourceLink string, exp
 	}
 
 	return nil
+}
+
+func setOptions(options *Options, headers http.Header) {
+	if len(options.PreTriggers) > 0 {
+		headers.Set("X-Ms-Documentdb-Pre-Trigger-Include", strings.Join(options.PreTriggers, ","))
+	}
+	if len(options.PostTriggers) > 0 {
+		headers.Set("X-Ms-Documentdb-Post-Trigger-Include", strings.Join(options.PostTriggers, ","))
+	}
 }

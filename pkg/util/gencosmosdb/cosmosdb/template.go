@@ -13,12 +13,12 @@ type templateClient struct {
 
 // TemplateClient is a template client
 type TemplateClient interface {
-	Create(string, *pkg.Template) (*pkg.Template, error)
+	Create(string, *pkg.Template, *Options) (*pkg.Template, error)
 	List() TemplateIterator
 	ListAll() (*pkg.Templates, error)
 	Get(string, string) (*pkg.Template, error)
-	Replace(string, *pkg.Template) (*pkg.Template, error)
-	Delete(string, *pkg.Template) error
+	Replace(string, *pkg.Template, *Options) (*pkg.Template, error)
+	Delete(string, *pkg.Template, *Options) error
 	Query(string, *Query) TemplateIterator
 	QueryAll(string, *Query) (*pkg.Templates, error)
 }
@@ -70,9 +70,12 @@ func (c *templateClient) all(i TemplateIterator) (*pkg.Templates, error) {
 	return alltemplates, nil
 }
 
-func (c *templateClient) Create(partitionkey string, newtemplate *pkg.Template) (template *pkg.Template, err error) {
+func (c *templateClient) Create(partitionkey string, newtemplate *pkg.Template, options *Options) (template *pkg.Template, err error) {
 	headers := http.Header{}
 	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
+	if options != nil {
+		setOptions(options, headers)
+	}
 	err = c.do(http.MethodPost, c.path+"/docs", "docs", c.path, http.StatusCreated, &newtemplate, &template, headers)
 	return
 }
@@ -92,24 +95,30 @@ func (c *templateClient) Get(partitionkey, templateid string) (template *pkg.Tem
 	return
 }
 
-func (c *templateClient) Replace(partitionkey string, newtemplate *pkg.Template) (template *pkg.Template, err error) {
+func (c *templateClient) Replace(partitionkey string, newtemplate *pkg.Template, options *Options) (template *pkg.Template, err error) {
 	if newtemplate.ETag == "" {
 		return nil, ErrETagRequired
 	}
 	headers := http.Header{}
 	headers.Set("If-Match", newtemplate.ETag)
 	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
+	if options != nil {
+		setOptions(options, headers)
+	}
 	err = c.do(http.MethodPut, c.path+"/docs/"+newtemplate.ID, "docs", c.path+"/docs/"+newtemplate.ID, http.StatusOK, &newtemplate, &template, headers)
 	return
 }
 
-func (c *templateClient) Delete(partitionkey string, template *pkg.Template) error {
+func (c *templateClient) Delete(partitionkey string, template *pkg.Template, options *Options) error {
 	if template.ETag == "" {
 		return ErrETagRequired
 	}
 	headers := http.Header{}
 	headers.Set("If-Match", template.ETag)
 	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
+	if options != nil {
+		setOptions(options, headers)
+	}
 	return c.do(http.MethodDelete, c.path+"/docs/"+template.ID, "docs", c.path+"/docs/"+template.ID, http.StatusNoContent, nil, nil, headers)
 }
 
