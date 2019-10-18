@@ -19,7 +19,7 @@ import (
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/machines"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/jim-minter/rp/pkg/api"
 	"github.com/jim-minter/rp/pkg/util/restconfig"
@@ -725,7 +725,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 			return err
 		}
 
-		cli, err := corev1client.NewForConfig(restConfig)
+		cli, err := kubernetes.NewForConfig(restConfig)
 		if err != nil {
 			return err
 		}
@@ -735,7 +735,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 		t := time.NewTicker(10 * time.Second)
 		defer t.Stop()
 		for {
-			cm, err := cli.ConfigMaps("kube-system").Get("bootstrap", metav1.GetOptions{})
+			cm, err := cli.CoreV1().ConfigMaps("kube-system").Get("bootstrap", metav1.GetOptions{})
 			if err == nil && cm.Data["status"] == "complete" {
 				break
 			}

@@ -26,28 +26,36 @@
 
 
 [[override]]
-  name = "github.com/Azure/azure-sdk-for-go"
-  version = "33.4.0"
-
-[[override]]
   name = "k8s.io/api"
   version = "kubernetes-1.14.0"
+  source = "https://github.com/openshift/kubernetes-api"
 
 [[override]]
   name = "k8s.io/apimachinery"
   version = "kubernetes-1.14.0"
+  source = "https://github.com/openshift/kubernetes-apimachinery"
 
 [[override]]
   name = "k8s.io/client-go"
   version = "kubernetes-1.14.0"
+  source = "https://github.com/openshift/kubernetes-client-go"
 
 [[override]]
   name = "k8s.io/utils"
   revision = "c2654d5206da6b7b6ace12841e8f359bb89b443c"
 
 [[override]]
-  name = "github.com/openshift/api"
+  name = "github.com/Azure/azure-sdk-for-go"
+  version = "33.4.0"
+
+[[override]]
+  name = "github.com/openshift/machine-config-operator"
   branch = "release-4.2"
+
+[[override]]
+  name = "sigs.k8s.io/cluster-api-provider-azure"
+  branch = "release-4.2"
+  source = "https://github.com/openshift/cluster-api-provider-azure"
 
 [[constraint]]
   name = "github.com/Azure/go-autorest"
@@ -56,6 +64,10 @@
 [[constraint]]
   name = "github.com/gorilla/mux"
   version = "1.7.3"
+
+[[override]]
+  name = "github.com/openshift/api"
+  branch = "release-4.2"
 
 [[constraint]]
   name = "github.com/openshift/client-go"

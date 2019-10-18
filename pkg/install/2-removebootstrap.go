@@ -8,7 +8,7 @@ import (
 	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
-	configv1client "github.com/openshift/client-go/config/clientset/versioned/typed/config/v1"
+	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	"github.com/openshift/installer/pkg/asset/password"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -82,7 +82,7 @@ func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClust
 			return err
 		}
 
-		cli, err := configv1client.NewForConfig(restConfig)
+		cli, err := configclient.NewForConfig(restConfig)
 		if err != nil {
 			return err
 		}
@@ -93,7 +93,7 @@ func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClust
 		defer t.Stop()
 	out:
 		for {
-			cv, err := cli.ClusterVersions().Get("version", metav1.GetOptions{})
+			cv, err := cli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
 			if err == nil {
 				for _, cond := range cv.Status.Conditions {
 					if cond.Type == configv1.OperatorAvailable && cond.Status == configv1.ConditionTrue {

@@ -239,9 +239,6 @@ func (wp *WorkerProfile) validateDelta(path string, current *WorkerProfile) erro
 	if current.DiskSizeGB != wp.DiskSizeGB {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, path+".diskSizeGB", "Changing property '"+path+".diskSizeGB' is not allowed.")
 	}
-	if current.Count != wp.Count {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, path+".count", "Changing property '"+path+".count' is not allowed.")
-	}
 
 	return nil
 }
