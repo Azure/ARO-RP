@@ -72,9 +72,7 @@ func (c *templateClient) all(i TemplateIterator) (*pkg.Templates, error) {
 
 func (c *templateClient) Create(partitionkey string, newtemplate *pkg.Template) (template *pkg.Template, err error) {
 	headers := http.Header{}
-	if partitionkey != "" {
-		headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
-	}
+	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
 	err = c.do(http.MethodPost, c.path+"/docs", "docs", c.path, http.StatusCreated, &newtemplate, &template, headers)
 	return
 }
@@ -89,9 +87,7 @@ func (c *templateClient) ListAll() (*pkg.Templates, error) {
 
 func (c *templateClient) Get(partitionkey, templateid string) (template *pkg.Template, err error) {
 	headers := http.Header{}
-	if partitionkey != "" {
-		headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
-	}
+	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
 	err = c.do(http.MethodGet, c.path+"/docs/"+templateid, "docs", c.path+"/docs/"+templateid, http.StatusOK, nil, &template, headers)
 	return
 }
@@ -102,9 +98,7 @@ func (c *templateClient) Replace(partitionkey string, newtemplate *pkg.Template)
 	}
 	headers := http.Header{}
 	headers.Set("If-Match", newtemplate.ETag)
-	if partitionkey != "" {
-		headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
-	}
+	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
 	err = c.do(http.MethodPut, c.path+"/docs/"+newtemplate.ID, "docs", c.path+"/docs/"+newtemplate.ID, http.StatusOK, &newtemplate, &template, headers)
 	return
 }
@@ -115,9 +109,7 @@ func (c *templateClient) Delete(partitionkey string, template *pkg.Template) err
 	}
 	headers := http.Header{}
 	headers.Set("If-Match", template.ETag)
-	if partitionkey != "" {
-		headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
-	}
+	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
 	return c.do(http.MethodDelete, c.path+"/docs/"+template.ID, "docs", c.path+"/docs/"+template.ID, http.StatusNoContent, nil, nil, headers)
 }
 
