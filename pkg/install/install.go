@@ -15,8 +15,6 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/sirupsen/logrus"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/jim-minter/rp/pkg/api"
 	"github.com/jim-minter/rp/pkg/database"
@@ -148,13 +146,4 @@ func (i *Installer) getGraph(ctx context.Context, doc *api.OpenShiftClusterDocum
 	}
 
 	return g, nil
-}
-
-func restConfig(b []byte) (*rest.Config, error) {
-	config, err := clientcmd.Load(b)
-	if err != nil {
-		return nil, err
-	}
-
-	return clientcmd.NewDefaultClientConfig(*config, &clientcmd.ConfigOverrides{}).ClientConfig()
 }

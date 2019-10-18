@@ -22,6 +22,7 @@ import (
 	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 
 	"github.com/jim-minter/rp/pkg/api"
+	"github.com/jim-minter/rp/pkg/util/restconfig"
 )
 
 func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
@@ -720,7 +721,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 	}
 
 	{
-		restConfig, err := restConfig(doc.OpenShiftCluster.Properties.AdminKubeconfig)
+		restConfig, err := restconfig.RestConfig(doc.OpenShiftCluster.Properties.AdminKubeconfig)
 		if err != nil {
 			return err
 		}
