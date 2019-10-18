@@ -10,8 +10,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/jim-minter/rp/pkg/queue/leaser"
-
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/sirupsen/logrus"
 
@@ -23,6 +21,7 @@ import (
 	"github.com/jim-minter/rp/pkg/frontend"
 	"github.com/jim-minter/rp/pkg/queue"
 	"github.com/jim-minter/rp/pkg/queue/forwarder"
+	"github.com/jim-minter/rp/pkg/queue/leaser"
 )
 
 func run(log *logrus.Entry) error {
@@ -53,7 +52,7 @@ func run(log *logrus.Entry) error {
 	}
 
 	sigterm := make(chan os.Signal, 1)
-	done := make(chan struct{})
+	stop := make(chan struct{})
 	signal.Notify(sigterm, syscall.SIGTERM)
 
 	{
@@ -62,7 +61,7 @@ func run(log *logrus.Entry) error {
 		if err != nil {
 			return err
 		}
-		go backend.NewBackend(log, authorizer, q, db).Run(done)
+		go backend.NewBackend(log, authorizer, q, db).Run(stop)
 	}
 
 	{
@@ -72,7 +71,7 @@ func run(log *logrus.Entry) error {
 			return err
 		}
 		l := leaser.NewLeaser(log, dbc, "OpenShiftClusters", "Leases", "forwarder", 10*time.Second, 60*time.Second)
-		go forwarder.NewForwarder(log, q, db, l).Run(done)
+		go forwarder.NewForwarder(log, q, db, l).Run(stop)
 	}
 
 	l, err := net.Listen("tcp", ":8080")
@@ -82,11 +81,11 @@ func run(log *logrus.Entry) error {
 
 	log.Print("listening")
 
-	go frontend.NewFrontend(log.WithField("component", "frontend"), l, db, api.APIs).Run(done)
+	go frontend.NewFrontend(log.WithField("component", "frontend"), l, db, api.APIs).Run(stop)
 
 	<-sigterm
 	log.Print("received SIGTERM")
-	close(done)
+	close(stop)
 
 	select {}
 }
