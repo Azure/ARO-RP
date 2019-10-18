@@ -1,4 +1,4 @@
-package deploy
+package install
 
 import (
 	"context"
@@ -22,7 +22,7 @@ import (
 	"github.com/jim-minter/rp/pkg/database"
 )
 
-type Deployer struct {
+type Installer struct {
 	log *logrus.Entry
 	db  database.OpenShiftClusters
 
@@ -37,8 +37,8 @@ type Deployer struct {
 	accounts          storage.AccountsClient
 }
 
-func NewDeployer(log *logrus.Entry, db database.OpenShiftClusters, authorizer autorest.Authorizer, subscriptionID string) *Deployer {
-	d := &Deployer{
+func NewInstaller(log *logrus.Entry, db database.OpenShiftClusters, authorizer autorest.Authorizer, subscriptionID string) *Installer {
+	d := &Installer{
 		log: log,
 		db:  db,
 
@@ -68,29 +68,29 @@ func NewDeployer(log *logrus.Entry, db database.OpenShiftClusters, authorizer au
 	return d
 }
 
-func (d *Deployer) Deploy(ctx context.Context, doc *api.OpenShiftClusterDocument, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds) error {
+func (i *Installer) Install(ctx context.Context, doc *api.OpenShiftClusterDocument, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds) error {
 	for {
-		d.log.Printf("starting phase %s", doc.OpenShiftCluster.Properties.Installation.Phase)
+		i.log.Printf("starting phase %s", doc.OpenShiftCluster.Properties.Installation.Phase)
 		switch doc.OpenShiftCluster.Properties.Installation.Phase {
 		case api.InstallationPhaseDeployStorage:
-			err := d.deployStorage(ctx, doc, installConfig, platformCreds)
+			err := i.installStorage(ctx, doc, installConfig, platformCreds)
 			if err != nil {
 				return err
 			}
 
 		case api.InstallationPhaseDeployResources:
-			err := d.deployResources(ctx, doc)
+			err := i.installResources(ctx, doc)
 			if err != nil {
 				return err
 			}
 
 		case api.InstallationPhaseRemoveBootstrap:
-			err := d.removeBootstrap(ctx, doc)
+			err := i.removeBootstrap(ctx, doc)
 			if err != nil {
 				return err
 			}
 
-			_, err = d.db.Patch(doc.OpenShiftCluster.ID, func(doc *api.OpenShiftClusterDocument) error {
+			_, err = i.db.Patch(doc.OpenShiftCluster.ID, func(doc *api.OpenShiftClusterDocument) error {
 				doc.OpenShiftCluster.Properties.Installation = nil
 				return nil
 			})
@@ -101,7 +101,7 @@ func (d *Deployer) Deploy(ctx context.Context, doc *api.OpenShiftClusterDocument
 		}
 
 		var err error
-		doc, err = d.db.Patch(doc.OpenShiftCluster.ID, func(doc *api.OpenShiftClusterDocument) error {
+		doc, err = i.db.Patch(doc.OpenShiftCluster.ID, func(doc *api.OpenShiftClusterDocument) error {
 			doc.OpenShiftCluster.Properties.Installation.Phase++
 			return nil
 		})
@@ -111,8 +111,8 @@ func (d *Deployer) Deploy(ctx context.Context, doc *api.OpenShiftClusterDocument
 	}
 }
 
-func (d *Deployer) getBlobService(ctx context.Context, doc *api.OpenShiftClusterDocument) (azstorage.BlobStorageClient, error) {
-	keys, err := d.accounts.ListKeys(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, "cluster"+doc.OpenShiftCluster.Properties.StorageSuffix)
+func (i *Installer) getBlobService(ctx context.Context, doc *api.OpenShiftClusterDocument) (azstorage.BlobStorageClient, error) {
+	keys, err := i.accounts.ListKeys(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, "cluster"+doc.OpenShiftCluster.Properties.StorageSuffix)
 	if err != nil {
 		return azstorage.BlobStorageClient{}, err
 	}
@@ -125,10 +125,10 @@ func (d *Deployer) getBlobService(ctx context.Context, doc *api.OpenShiftCluster
 	return storage.GetBlobService(), nil
 }
 
-func (d *Deployer) getGraph(ctx context.Context, doc *api.OpenShiftClusterDocument) (graph, error) {
-	d.log.Print("retrieving graph")
+func (i *Installer) getGraph(ctx context.Context, doc *api.OpenShiftClusterDocument) (graph, error) {
+	i.log.Print("retrieving graph")
 
-	blobService, err := d.getBlobService(ctx, doc)
+	blobService, err := i.getBlobService(ctx, doc)
 	if err != nil {
 		return nil, err
 	}

@@ -1,4 +1,4 @@
-package deploy
+package install
 
 import (
 	"context"
@@ -24,8 +24,8 @@ import (
 	"github.com/jim-minter/rp/pkg/api"
 )
 
-func (d *Deployer) deployResources(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
-	g, err := d.getGraph(ctx, doc)
+func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
+	g, err := i.getGraph(ctx, doc)
 	if err != nil {
 		return err
 	}
@@ -675,8 +675,8 @@ func (d *Deployer) deployResources(ctx context.Context, doc *api.OpenShiftCluste
 			},
 		}
 
-		d.log.Print("deploying resources template")
-		future, err := d.deployments.CreateOrUpdate(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy", resources.Deployment{
+		i.log.Print("deploying resources template")
+		future, err := i.deployments.CreateOrUpdate(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy", resources.Deployment{
 			Properties: &resources.DeploymentProperties{
 				Template: t,
 				Parameters: map[string]interface{}{
@@ -698,15 +698,15 @@ func (d *Deployer) deployResources(ctx context.Context, doc *api.OpenShiftCluste
 			return err
 		}
 
-		d.log.Print("waiting for resources template deployment")
-		err = future.WaitForCompletionRef(ctx, d.deployments.Client)
+		i.log.Print("waiting for resources template deployment")
+		err = future.WaitForCompletionRef(ctx, i.deployments.Client)
 		if err != nil {
 			return err
 		}
 	}
 
 	{
-		_, err = d.recordsets.CreateOrUpdate(ctx, installConfig.Config.Azure.BaseDomainResourceGroupName, installConfig.Config.BaseDomain, "api."+installConfig.Config.ObjectMeta.Name, dns.CNAME, dns.RecordSet{
+		_, err = i.recordsets.CreateOrUpdate(ctx, installConfig.Config.Azure.BaseDomainResourceGroupName, installConfig.Config.BaseDomain, "api."+installConfig.Config.ObjectMeta.Name, dns.CNAME, dns.RecordSet{
 			RecordSetProperties: &dns.RecordSetProperties{
 				TTL: to.Int64Ptr(300),
 				CnameRecord: &dns.CnameRecord{
@@ -730,7 +730,7 @@ func (d *Deployer) deployResources(ctx context.Context, doc *api.OpenShiftCluste
 			return err
 		}
 
-		d.log.Print("waiting for bootstrap configmap")
+		i.log.Print("waiting for bootstrap configmap")
 		now := time.Now()
 		t := time.NewTicker(10 * time.Second)
 		defer t.Stop()

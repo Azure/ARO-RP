@@ -18,7 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/jim-minter/rp/pkg/api"
-	"github.com/jim-minter/rp/pkg/deploy"
+	"github.com/jim-minter/rp/pkg/install"
 )
 
 func (b *backend) update(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument) error {
@@ -105,5 +105,5 @@ func (b *backend) update(ctx context.Context, log *logrus.Entry, doc *api.OpenSh
 		return err
 	}
 
-	return deploy.NewDeployer(log, b.db, b.authorizer, doc.SubscriptionID).Deploy(ctx, doc, installConfig, platformCreds)
+	return install.NewInstaller(log, b.db, b.authorizer, doc.SubscriptionID).Install(ctx, doc, installConfig, platformCreds)
 }

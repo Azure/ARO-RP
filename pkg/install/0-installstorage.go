@@ -1,4 +1,4 @@
-package deploy
+package install
 
 import (
 	"bytes"
@@ -21,7 +21,7 @@ import (
 	"github.com/jim-minter/rp/pkg/api"
 )
 
-func (d *Deployer) deployStorage(ctx context.Context, doc *api.OpenShiftClusterDocument, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds) error {
+func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftClusterDocument, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds) error {
 	g := graph{
 		reflect.TypeOf(installConfig): installConfig,
 		reflect.TypeOf(platformCreds): platformCreds,
@@ -39,8 +39,8 @@ func (d *Deployer) deployStorage(ctx context.Context, doc *api.OpenShiftClusterD
 	clusterID := g[reflect.TypeOf(&installconfig.ClusterID{})].(*installconfig.ClusterID)
 	rhcosImage := g[reflect.TypeOf(new(rhcos.Image))].(*rhcos.Image)
 
-	d.log.Print("creating resource group")
-	_, err := d.groups.CreateOrUpdate(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, resources.Group{
+	i.log.Print("creating resource group")
+	_, err := i.groups.CreateOrUpdate(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, resources.Group{
 		Location: &installConfig.Config.Azure.Region,
 	})
 	if err != nil {
@@ -108,8 +108,8 @@ func (d *Deployer) deployStorage(ctx context.Context, doc *api.OpenShiftClusterD
 			},
 		}
 
-		d.log.Print("deploying storage template")
-		future, err := d.deployments.CreateOrUpdate(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy", resources.Deployment{
+		i.log.Print("deploying storage template")
+		future, err := i.deployments.CreateOrUpdate(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy", resources.Deployment{
 			Properties: &resources.DeploymentProperties{
 				Template: t,
 				Mode:     resources.Incremental,
@@ -119,21 +119,21 @@ func (d *Deployer) deployStorage(ctx context.Context, doc *api.OpenShiftClusterD
 			return err
 		}
 
-		d.log.Print("waiting for storage template deployment")
-		err = future.WaitForCompletionRef(ctx, d.deployments.Client)
+		i.log.Print("waiting for storage template deployment")
+		err = future.WaitForCompletionRef(ctx, i.deployments.Client)
 		if err != nil {
 			return err
 		}
 	}
 
 	{
-		blobService, err := d.getBlobService(ctx, doc)
+		blobService, err := i.getBlobService(ctx, doc)
 		if err != nil {
 			return err
 		}
 
 		// blob copying should go away when we use a cloud partner image
-		d.log.Print("copying rhcos blob")
+		i.log.Print("copying rhcos blob")
 		rhcosVhd := blobService.GetContainerReference("vhd").GetBlobReference("rhcos" + doc.OpenShiftCluster.Properties.StorageSuffix + ".vhd")
 		err = rhcosVhd.Copy(string(*rhcosImage), nil)
 		if err != nil {
@@ -169,7 +169,7 @@ func (d *Deployer) deployStorage(ctx context.Context, doc *api.OpenShiftClusterD
 		}
 	}
 
-	doc, err = d.db.Patch(doc.OpenShiftCluster.ID, func(doc *api.OpenShiftClusterDocument) (err error) {
+	doc, err = i.db.Patch(doc.OpenShiftCluster.ID, func(doc *api.OpenShiftClusterDocument) (err error) {
 		// used for the SAS token with which the bootstrap node retrieves its
 		// ignition payload
 		doc.OpenShiftCluster.Properties.Installation.Now = time.Now().UTC()

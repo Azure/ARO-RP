@@ -1,4 +1,4 @@
-package deploy
+package install
 
 import (
 	"context"
@@ -16,8 +16,8 @@ import (
 	"github.com/jim-minter/rp/pkg/api"
 )
 
-func (d *Deployer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
-	g, err := d.getGraph(ctx, doc)
+func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
+	g, err := i.getGraph(ctx, doc)
 	if err != nil {
 		return err
 	}
@@ -26,52 +26,52 @@ func (d *Deployer) removeBootstrap(ctx context.Context, doc *api.OpenShiftCluste
 	kubeadminPassword := g[reflect.TypeOf(&password.KubeadminPassword{})].(*password.KubeadminPassword)
 
 	{
-		d.log.Print("removing bootstrap vm")
-		future, err := d.virtualmachines.Delete(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, clusterID.InfraID+"-bootstrap")
+		i.log.Print("removing bootstrap vm")
+		future, err := i.virtualmachines.Delete(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, clusterID.InfraID+"-bootstrap")
 		if err != nil {
 			return err
 		}
 
-		err = future.WaitForCompletionRef(ctx, d.virtualmachines.Client)
-		if err != nil {
-			return err
-		}
-	}
-
-	{
-		d.log.Print("removing bootstrap disk")
-		future, err := d.disks.Delete(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, clusterID.InfraID+"-bootstrap_OSDisk")
-		if err != nil {
-			return err
-		}
-
-		err = future.WaitForCompletionRef(ctx, d.disks.Client)
+		err = future.WaitForCompletionRef(ctx, i.virtualmachines.Client)
 		if err != nil {
 			return err
 		}
 	}
 
 	{
-		d.log.Print("removing bootstrap nic")
-		future, err := d.interfaces.Delete(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, clusterID.InfraID+"-bootstrap-nic")
+		i.log.Print("removing bootstrap disk")
+		future, err := i.disks.Delete(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, clusterID.InfraID+"-bootstrap_OSDisk")
 		if err != nil {
 			return err
 		}
 
-		err = future.WaitForCompletionRef(ctx, d.interfaces.Client)
+		err = future.WaitForCompletionRef(ctx, i.disks.Client)
 		if err != nil {
 			return err
 		}
 	}
 
 	{
-		d.log.Print("removing bootstrap ip")
-		future, err := d.publicipaddresses.Delete(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, clusterID.InfraID+"-bootstrap-pip")
+		i.log.Print("removing bootstrap nic")
+		future, err := i.interfaces.Delete(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, clusterID.InfraID+"-bootstrap-nic")
 		if err != nil {
 			return err
 		}
 
-		err = future.WaitForCompletionRef(ctx, d.publicipaddresses.Client)
+		err = future.WaitForCompletionRef(ctx, i.interfaces.Client)
+		if err != nil {
+			return err
+		}
+	}
+
+	{
+		i.log.Print("removing bootstrap ip")
+		future, err := i.publicipaddresses.Delete(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, clusterID.InfraID+"-bootstrap-pip")
+		if err != nil {
+			return err
+		}
+
+		err = future.WaitForCompletionRef(ctx, i.publicipaddresses.Client)
 		if err != nil {
 			return err
 		}
@@ -88,7 +88,7 @@ func (d *Deployer) removeBootstrap(ctx context.Context, doc *api.OpenShiftCluste
 			return err
 		}
 
-		d.log.Print("waiting for version clusterversion")
+		i.log.Print("waiting for version clusterversion")
 		now := time.Now()
 		t := time.NewTicker(10 * time.Second)
 		defer t.Stop()
@@ -111,7 +111,7 @@ func (d *Deployer) removeBootstrap(ctx context.Context, doc *api.OpenShiftCluste
 		}
 	}
 
-	doc, err = d.db.Patch(doc.OpenShiftCluster.ID, func(doc *api.OpenShiftClusterDocument) error {
+	doc, err = i.db.Patch(doc.OpenShiftCluster.ID, func(doc *api.OpenShiftClusterDocument) error {
 		doc.OpenShiftCluster.Properties.APIServerURL = "https://api." + doc.OpenShiftCluster.Name + "." + os.Getenv("DOMAIN") + ":6443/"
 		doc.OpenShiftCluster.Properties.ConsoleURL = "https://console-openshift-console.apps." + doc.OpenShiftCluster.Name + "." + os.Getenv("DOMAIN") + "/"
 		doc.OpenShiftCluster.Properties.KubeadminPassword = kubeadminPassword.Password

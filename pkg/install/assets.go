@@ -1,6 +1,6 @@
 //go:generate go run ../../hack/assets
 
-package deploy
+package install
 
 import (
 	"github.com/openshift/installer/data"
