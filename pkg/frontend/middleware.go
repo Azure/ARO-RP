@@ -75,7 +75,7 @@ func (f *frontend) middleware(h http.Handler) http.Handler {
 				"access":             true,
 				"bodyReceivedBytes":  b.bytes,
 				"bodySentBytes":      w.(*statsResponseWriter).bytes,
-				"requestDurationMs":  int(time.Now().Sub(t) / time.Millisecond),
+				"durationMs":         int(time.Now().Sub(t) / time.Millisecond),
 				"requestMethod":      r.Method,
 				"requestPath":        r.URL.Path,
 				"requestProto":       r.Proto,
