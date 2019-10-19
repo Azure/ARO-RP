@@ -8,47 +8,93 @@ https://docs.microsoft.com/en-gb/rest/api/cosmos-db
 
 https://github.com/jim-minter/go-cosmosdb
 
+## Installation
+
+* Copy env.example to env, edit the values and source it
+
+```
+cp env.example env
+vi env
+. ./env
+```
+
+* Deploy a CosmosDB SQL database to a resource group
+
+```
+az group create -g "$RP_RESOURCEGROUP" -l "$LOCATION"`
+
+az group deployment create -g "$RP_RESOURCEGROUP" --mode complete --template-file deploy/rp.json --parameters "location=$LOCATION" "databaseAccountName=$COSMOSDB_ACCOUNT"
+```
+
 ## Getting started
 
-* Copy env.example to env, edit the values and source it (`. ./env`)
+* Source env
 
-* Deploy a CosmosDB SQL database to a resource group:
-  `az group create -g "$RP_RESOURCEGROUP" -l "$LOCATION"`
-  `az group deployment create -g "$RP_RESOURCEGROUP" --mode complete --template-file deploy/rp.json --parameters "location=$LOCATION" "databaseAccountName=$COSMOSDB_ACCOUNT"`
+```
+. ./env
+```
 
-* `go run ./cmd/rp`
+* Run the RP
+
+```
+go run ./cmd/rp
+```
 
 ## Useful commands
 
-`CLUSTER=cluster`
+```
+CLUSTER=cluster
+```
 
-* Create a cluster:
-  `curl -X PUT "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/RedHat.OpenShift/OpenShiftClusters/$CLUSTER?api-version=2019-12-31-preview" -H 'Content-Type: application/json' -d '{"location":"'"$LOCATION"'", "properties": {"pullSecret": "'"$(base64 -w0 <<<$PULL_SECRET)"'"}}'`
+* Create a cluster
 
-* Get a cluster:
-  `curl "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/RedHat.OpenShift/OpenShiftClusters/$CLUSTER?api-version=2019-12-31-preview"`
+```
+curl -X PUT "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/RedHat.OpenShift/OpenShiftClusters/$CLUSTER?api-version=2019-12-31-preview" -H 'Content-Type: application/json' -d '{"location":"'"$LOCATION"'", "properties": {"pullSecret": "'"$(base64 -w0 <<<$PULL_SECRET)"'"}}'
+```
 
-* Get a cluster's credentials:
-  `curl "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/RedHat.OpenShift/OpenShiftClusters/$CLUSTER/credentials?api-version=2019-12-31-preview"`
+* Get a cluster
 
-* List clusters in resource group:
-  `curl "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/RedHat.OpenShift/OpenShiftClusters?api-version=2019-12-31-preview"`
+```
+curl "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/RedHat.OpenShift/OpenShiftClusters/$CLUSTER?api-version=2019-12-31-preview"
+```
 
-* List clusters in subscription:
-  `curl "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/providers/RedHat.OpenShift/OpenShiftClusters?api-version=2019-12-31-preview"`
+* Get a cluster's credentials
 
-* Scale a cluster:
-  `COUNT=count`
-  `curl -X PATCH "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/RedHat.OpenShift/OpenShiftClusters/$CLUSTER?api-version=2019-12-31-preview" -H 'Content-Type: application/json' -d '{"properties": {"workerProfiles": [{"name": "worker", "count": '"$COUNT"'}]}}'`
+```
+curl "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/RedHat.OpenShift/OpenShiftClusters/$CLUSTER/credentials?api-version=2019-12-31-preview"
+```
 
-* Delete a cluster:
-  `curl -X DELETE "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/RedHat.OpenShift/OpenShiftClusters/$CLUSTER?api-version=2019-12-31-preview"`
+* List clusters in resource group
+
+```
+curl "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/RedHat.OpenShift/OpenShiftClusters?api-version=2019-12-31-preview"
+```
+
+* List clusters in subscription
+
+```
+curl "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/providers/RedHat.OpenShift/OpenShiftClusters?api-version=2019-12-31-preview"
+```
+
+* Scale a cluster
+
+```
+COUNT=3
+
+curl -X PATCH "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/RedHat.OpenShift/OpenShiftClusters/$CLUSTER?api-version=2019-12-31-preview" -H 'Content-Type: application/json' -d '{"properties": {"workerProfiles": [{"name": "worker", "count": '"$COUNT"'}]}}'
+```
+
+* Delete a cluster
+
+```
+curl -X DELETE "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/RedHat.OpenShift/OpenShiftClusters/$CLUSTER?api-version=2019-12-31-preview"
+```
 
 ## Basic architecture
 
 * pkg/frontend is intended to become a spec-compliant RP web server.  It is
   backed by CosmosDB.  Incoming PUT/DELETE requests are written to the database
-  with an Updating/Deleting provisioningState.
+  with an non-terminal (Updating/Deleting) provisioningState.
 
 * pkg/backend reads documents with non-terminal provisioningStates,
   asynchronously updates them and finally updates document with a terminal
@@ -70,4 +116,5 @@ https://github.com/jim-minter/go-cosmosdb
   merge semantics and try pushing validation into the versioned APIs to improve
   error reporting.
 
-* Everything is intended to be crash/restart/upgrade-safe...
+* Everything is intended to be crash/restart/upgrade-safe, horizontally
+  scaleable, upgradeable...
