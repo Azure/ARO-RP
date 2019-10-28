@@ -8,13 +8,41 @@ https://docs.microsoft.com/en-gb/rest/api/cosmos-db
 
 https://github.com/jim-minter/go-cosmosdb
 
+## Prequisites
+
+* Publicly resolvable DNS zone resource in Azure
+
+* Service principal (client ID and secret) with (for now) Contributor access to
+  the subscription
+
 ## Installation
 
-* Copy env.example to env, edit the values and source it
+* Copy env.example to env and edit the values as follows:
+
+  * AZURE_TENANT_ID:       Azure tenant UUID
+  * AZURE_SUBSCRIPTION_ID: Azure subscription UUID
+  * AZURE_CLIENT_ID:       Azure service principal client UUID
+  * AZURE_CLIENT_SECRET:   Azure service principal secret
+
+  * LOCATION:              Azure location where RP and cluster(s) will run (default: `eastus`)
+
+  * RP_RESOURCEGROUP:      Name of resource group which will contain the CosmosDB resource
+  * COSMOSDB_ACCOUNT:      CosmosDB account name
+  * COSMOSDB_KEY:          CosmosDB master key (default: autopopulated)
+
+  * DOMAIN:                Name of publicly resolvable DNS zone resource
+  * DOMAIN_RESOURCEGROUP:  Name of resource group containing DNS zone resource
+
+  * PULL_SECRET:           A cluster pull secret retrieved from (Red Hat OpenShift Cluster Manager)[https://cloud.redhat.com/openshift/install/azure/installer-provisioned]
 
 ```
 cp env.example env
 vi env
+```
+
+* Source the env file
+
+```
 . ./env
 ```
 
@@ -28,7 +56,8 @@ az group deployment create -g "$RP_RESOURCEGROUP" --mode complete --template-fil
 
 ## Getting started
 
-* Source env
+* Source the env file a second time so that $COSMOSDB_KEY is discovered and
+  populated
 
 ```
 . ./env
