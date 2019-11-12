@@ -1,35 +1,54 @@
 package v20191231preview
 
-// OpenShiftCluster represents an OpenShift cluster
+// OpenShiftCluster represents an Azure Red Hat OpenShift cluster.
 type OpenShiftCluster struct {
-	ID         string     `json:"id,omitempty"`       // GET only
-	Name       string     `json:"name,omitempty"`     // GET only
-	Type       string     `json:"type,omitempty"`     // GET only
-	Location   string     `json:"location,omitempty"` // r/o
-	Tags       Tags       `json:"tags,omitempty"`
+	// The resource ID (immutable).
+	ID string `json:"id,omitempty"`
+
+	// The resource name (immutable).
+	Name string `json:"name,omitempty"`
+
+	// The resource type (immutable).
+	Type string `json:"type,omitempty"`
+
+	// The resource location (immutable).
+	Location string `json:"location,omitempty"`
+
+	// The resource tags.
+	Tags Tags `json:"tags,omitempty"`
+
+	// The cluster properties.
 	Properties Properties `json:"properties,omitempty"`
 }
 
-// Tags represents an OpenShift cluster's tags
+// Tags represents an OpenShift cluster's tags.
 type Tags map[string]string
 
-// Properties represents an OpenShift cluster's properties
+// Properties represents an OpenShift cluster's properties.
 type Properties struct {
-	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"` // r/o
+	// The cluster provisioning state (immutable).
+	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"`
 
-	PullSecret []byte `json:"pullSecret,omitempty"` // w/o
+	// The cluster pull secret (immutable, will be removed before GA).
+	PullSecret []byte `json:"pullSecret,omitempty"`
 
+	// The cluster network profile.
 	NetworkProfile NetworkProfile `json:"networkProfile,omitempty"`
 
+	// The cluster master profile.
 	MasterProfile MasterProfile `json:"masterProfile,omitempty"`
 
+	// The cluster worker profiles.
 	WorkerProfiles []WorkerProfile `json:"workerProfiles,omitempty"`
 
-	APIServerURL string `json:"apiserverURL,omitempty"` // r/o
-	ConsoleURL   string `json:"consoleURL,omitempty"`   // r/o
+	// The URL to access the cluster API server (immutable).
+	APIServerURL string `json:"apiserverURL,omitempty"`
+
+	// The URL to access the cluster console (immutable).
+	ConsoleURL string `json:"consoleURL,omitempty"`
 }
 
-// ProvisioningState represents a provisioning state
+// ProvisioningState represents a provisioning state.
 type ProvisioningState string
 
 // ProvisioningState constants
@@ -40,19 +59,25 @@ const (
 	ProvisioningStateFailed    ProvisioningState = "Failed"
 )
 
-// NetworkProfile represents a network profile
+// NetworkProfile represents a network profile.
 type NetworkProfile struct {
-	VNetCIDR    string `json:"vnetCidr,omitempty"`
-	PodCIDR     string `json:"podCidr,omitempty"`
+	// The CIDR used for the cluster VMs and IPs (immutable).
+	VNetCIDR string `json:"vnetCidr,omitempty"`
+
+	// The CIDR used for OpenShift/Kubernetes Pods (immutable).
+	PodCIDR string `json:"podCidr,omitempty"`
+
+	// The CIDR used for OpenShift/Kubernetes Services (immutable).
 	ServiceCIDR string `json:"serviceCidr,omitempty"`
 }
 
-// MasterProfile represents a master profile
+// MasterProfile represents a master profile.
 type MasterProfile struct {
+	// The size of the master VMs.
 	VMSize VMSize `json:"vmSize,omitempty"`
 }
 
-// VMSize represents a VM size
+// VMSize represents a VM size.
 type VMSize string
 
 // VMSize constants
@@ -62,10 +87,17 @@ const (
 	VMSizeStandardD8sV3 VMSize = "Standard_D8s_v3"
 )
 
-// WorkerProfile represents a worker profile
+// WorkerProfile represents a worker profile.
 type WorkerProfile struct {
-	Name       string `json:"name,omitempty"`
-	VMSize     VMSize `json:"vmSize,omitempty"`
-	DiskSizeGB int    `json:"diskSizeGB,omitempty"`
-	Count      int    `json:"count,omitempty"`
+	// The worker profile name.  Must be "worker".
+	Name string `json:"name,omitempty"`
+
+	// The size of the worker VMs.
+	VMSize VMSize `json:"vmSize,omitempty"`
+
+	// The disk size of the worker VMs.  Must be 128 or greater.
+	DiskSizeGB int `json:"diskSizeGB,omitempty"`
+
+	// The number of worker VMs.  Must be between 3 and 20.
+	Count int `json:"count,omitempty"`
 }

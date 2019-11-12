@@ -1,8 +1,10 @@
 package api
 
-import "fmt"
+import (
+	"fmt"
+)
 
-// CloudError is a cloud error
+// CloudError represents a cloud error.
 type CloudError struct {
 	StatusCode     int `json:"-"`
 	CloudErrorBody `json:"error,omitempty"`
@@ -12,7 +14,7 @@ func (err *CloudError) Error() string {
 	return fmt.Sprintf("%d: %s: %s", err.StatusCode, err.Code, err.Message)
 }
 
-// CloudErrorBody is a cloud error body
+// CloudErrorBody represents the body of a cloud error.
 type CloudErrorBody struct {
 	Code    string           `json:"code,omitempty"`
 	Message string           `json:"message,omitempty"`

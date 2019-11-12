@@ -1,0 +1,573 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Azure Red Hat OpenShift",
+    "description": "Rest API for Azure Red Hat OpenShift",
+    "version": "2019-12-31-preview"
+  },
+  "host": "management.azure.com",
+  "schemes": [
+    "https"
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/OpenShiftClusters": {
+      "get": {
+        "tags": [
+          "OpenShiftClusters"
+        ],
+        "summary": "Lists OpenShift clusters in the specified subscription.",
+        "description": "Lists OpenShift clusters in the specified subscription.  The operation returns properties of each OpenShift cluster.",
+        "operationId": "OpenShiftClusters_List",
+        "parameters": [
+          {
+            "$ref": "#/parameters/ApiVersionParameter"
+          },
+          {
+            "$ref": "#/parameters/SubscriptionIdParameter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/OpenShiftClusters"
+            }
+          },
+          "default": {
+            "description": "Error response describing why the operation failed.  If the resource doesn't exist, 404 (Not Found) is returned.  If any of the input parameters is wrong, 400 (Bad Request) is returned.",
+            "schema": {
+              "$ref": "#/definitions/CloudError"
+            }
+          }
+        }
+      }
+    },
+    "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/OpenShiftClusters": {
+      "get": {
+        "tags": [
+          "OpenShiftClusters"
+        ],
+        "summary": "Lists OpenShift clusters in the specified subscription and resource group.",
+        "description": "Lists OpenShift clusters in the specified subscription and resource group.  The operation returns properties of each OpenShift cluster.",
+        "operationId": "OpenShiftClusters_ListByResourceGroup",
+        "parameters": [
+          {
+            "$ref": "#/parameters/ApiVersionParameter"
+          },
+          {
+            "$ref": "#/parameters/SubscriptionIdParameter"
+          },
+          {
+            "name": "resourceGroupName",
+            "in": "path",
+            "description": "The name of the resource group.",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/OpenShiftClusters"
+            }
+          },
+          "default": {
+            "description": "Error response describing why the operation failed.  If the resource doesn't exist, 404 (Not Found) is returned.  If any of the input parameters is wrong, 400 (Bad Request) is returned.",
+            "schema": {
+              "$ref": "#/definitions/CloudError"
+            }
+          }
+        }
+      }
+    },
+    "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/{resourceName}": {
+      "get": {
+        "tags": [
+          "OpenShiftClusters"
+        ],
+        "summary": "Gets a OpenShift cluster with the specified subscription, resource group and resource name.",
+        "description": "Gets a OpenShift cluster with the specified subscription, resource group and resource name.",
+        "operationId": "OpenShiftClusters_Get",
+        "parameters": [
+          {
+            "$ref": "#/parameters/ApiVersionParameter"
+          },
+          {
+            "$ref": "#/parameters/SubscriptionIdParameter"
+          },
+          {
+            "name": "resourceGroupName",
+            "in": "path",
+            "description": "The name of the resource group.",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "resourceName",
+            "in": "path",
+            "description": "The name of the OpenShift cluster resource.",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/OpenShiftCluster"
+            }
+          },
+          "default": {
+            "description": "Error response describing why the operation failed.  If the resource doesn't exist, 404 (Not Found) is returned.  If any of the input parameters is wrong, 400 (Bad Request) is returned.",
+            "schema": {
+              "$ref": "#/definitions/CloudError"
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "OpenShiftClusters"
+        ],
+        "summary": "Creates or updates a OpenShift cluster with the specified subscription, resource group and resource name.",
+        "description": "Creates or updates a OpenShift cluster with the specified subscription, resource group and resource name.",
+        "operationId": "OpenShiftClusters_Put",
+        "parameters": [
+          {
+            "$ref": "#/parameters/ApiVersionParameter"
+          },
+          {
+            "$ref": "#/parameters/SubscriptionIdParameter"
+          },
+          {
+            "name": "resourceGroupName",
+            "in": "path",
+            "description": "The name of the resource group.",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "resourceName",
+            "in": "path",
+            "description": "The name of the OpenShift cluster resource.",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "parameters",
+            "in": "body",
+            "description": "The OpenShift cluster resource.",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/OpenShiftCluster"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/OpenShiftCluster"
+            }
+          },
+          "201": {
+            "description": "Created",
+            "schema": {
+              "$ref": "#/definitions/OpenShiftCluster"
+            }
+          },
+          "default": {
+            "description": "Error response describing why the operation failed.  If the resource doesn't exist, 404 (Not Found) is returned.  If any of the input parameters is wrong, 400 (Bad Request) is returned.",
+            "schema": {
+              "$ref": "#/definitions/CloudError"
+            }
+          }
+        },
+        "x-ms-long-running-operation": true
+      },
+      "delete": {
+        "tags": [
+          "OpenShiftClusters"
+        ],
+        "summary": "Deletes a OpenShift cluster with the specified subscription, resource group and resource name.",
+        "description": "Deletes a OpenShift cluster with the specified subscription, resource group and resource name.",
+        "operationId": "OpenShiftClusters_Delete",
+        "parameters": [
+          {
+            "$ref": "#/parameters/ApiVersionParameter"
+          },
+          {
+            "$ref": "#/parameters/SubscriptionIdParameter"
+          },
+          {
+            "name": "resourceGroupName",
+            "in": "path",
+            "description": "The name of the resource group.",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "resourceName",
+            "in": "path",
+            "description": "The name of the OpenShift cluster resource.",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "204": {
+            "description": "No Content"
+          },
+          "default": {
+            "description": "Error response describing why the operation failed.  If the resource doesn't exist, 404 (Not Found) is returned.  If any of the input parameters is wrong, 400 (Bad Request) is returned.",
+            "schema": {
+              "$ref": "#/definitions/CloudError"
+            }
+          }
+        },
+        "x-ms-long-running-operation": true
+      },
+      "patch": {
+        "tags": [
+          "OpenShiftClusters"
+        ],
+        "summary": "Creates or updates a OpenShift cluster with the specified subscription, resource group and resource name.",
+        "description": "Creates or updates a OpenShift cluster with the specified subscription, resource group and resource name.",
+        "operationId": "OpenShiftClusters_Patch",
+        "parameters": [
+          {
+            "$ref": "#/parameters/ApiVersionParameter"
+          },
+          {
+            "$ref": "#/parameters/SubscriptionIdParameter"
+          },
+          {
+            "name": "resourceGroupName",
+            "in": "path",
+            "description": "The name of the resource group.",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "resourceName",
+            "in": "path",
+            "description": "The name of the OpenShift cluster resource.",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "parameters",
+            "in": "body",
+            "description": "The OpenShift cluster resource.",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/OpenShiftCluster"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/OpenShiftCluster"
+            }
+          },
+          "201": {
+            "description": "Created",
+            "schema": {
+              "$ref": "#/definitions/OpenShiftCluster"
+            }
+          },
+          "default": {
+            "description": "Error response describing why the operation failed.  If the resource doesn't exist, 404 (Not Found) is returned.  If any of the input parameters is wrong, 400 (Bad Request) is returned.",
+            "schema": {
+              "$ref": "#/definitions/CloudError"
+            }
+          }
+        },
+        "x-ms-long-running-operation": true
+      }
+    },
+    "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/{resourceName}/credentials": {
+      "post": {
+        "tags": [
+          "OpenShiftClusters"
+        ],
+        "summary": "Gets admin credentials of a OpenShift cluster with the specified subscription, resource group and resource name.",
+        "description": "Gets admin credentials of a OpenShift cluster with the specified subscription, resource group and resource name.",
+        "operationId": "OpenShiftClusters_GetAdminCredentials",
+        "parameters": [
+          {
+            "$ref": "#/parameters/ApiVersionParameter"
+          },
+          {
+            "$ref": "#/parameters/SubscriptionIdParameter"
+          },
+          {
+            "name": "resourceGroupName",
+            "in": "path",
+            "description": "The name of the resource group.",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "resourceName",
+            "in": "path",
+            "description": "The name of the OpenShift cluster resource.",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/OpenShiftClusterCredentials"
+            }
+          },
+          "default": {
+            "description": "Error response describing why the operation failed.  If the resource doesn't exist, 404 (Not Found) is returned.  If any of the input parameters is wrong, 400 (Bad Request) is returned.",
+            "schema": {
+              "$ref": "#/definitions/CloudError"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "CloudError": {
+      "description": "CloudError represents a cloud error.",
+      "properties": {
+        "error": {
+          "$ref": "#/definitions/CloudErrorBody"
+        }
+      }
+    },
+    "CloudErrorBody": {
+      "description": "CloudErrorBody represents the body of a cloud error.",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/CloudErrorBody"
+          }
+        }
+      }
+    },
+    "MasterProfile": {
+      "description": "MasterProfile represents a master profile.",
+      "properties": {
+        "vmSize": {
+          "$ref": "#/definitions/VMSize",
+          "description": "The size of the master VMs."
+        }
+      }
+    },
+    "NetworkProfile": {
+      "description": "NetworkProfile represents a network profile.",
+      "properties": {
+        "vnetCidr": {
+          "description": "The CIDR used for the cluster VMs and IPs (immutable).",
+          "type": "string"
+        },
+        "podCidr": {
+          "description": "The CIDR used for OpenShift/Kubernetes Pods (immutable).",
+          "type": "string"
+        },
+        "serviceCidr": {
+          "description": "The CIDR used for OpenShift/Kubernetes Services (immutable).",
+          "type": "string"
+        }
+      }
+    },
+    "OpenShiftCluster": {
+      "description": "OpenShiftCluster represents an Azure Red Hat OpenShift cluster.",
+      "properties": {
+        "id": {
+          "description": "The resource ID (immutable).",
+          "type": "string"
+        },
+        "name": {
+          "description": "The resource name (immutable).",
+          "type": "string"
+        },
+        "type": {
+          "description": "The resource type (immutable).",
+          "type": "string"
+        },
+        "location": {
+          "description": "The resource location (immutable).",
+          "type": "string",
+          "x-ms-mutability": [
+            "create",
+            "read"
+          ]
+        },
+        "tags": {
+          "$ref": "#/definitions/Tags",
+          "description": "The resource tags."
+        },
+        "properties": {
+          "$ref": "#/definitions/Properties",
+          "description": "The cluster properties."
+        }
+      },
+      "x-ms-azure-resource": true
+    },
+    "OpenShiftClusterCredentials": {
+      "description": "OpenShiftClusterCredentials represents an OpenShift cluster's credentials",
+      "properties": {
+        "kubeadminPassword": {
+          "type": "string"
+        }
+      }
+    },
+    "OpenShiftClusters": {
+      "properties": {
+        "value": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/OpenShiftCluster"
+          }
+        }
+      }
+    },
+    "Properties": {
+      "description": "Properties represents an OpenShift cluster's properties.",
+      "properties": {
+        "provisioningState": {
+          "$ref": "#/definitions/ProvisioningState",
+          "description": "The cluster provisioning state (immutable)."
+        },
+        "pullSecret": {
+          "description": "The cluster pull secret (immutable, will be removed before GA).",
+          "type": "string"
+        },
+        "networkProfile": {
+          "$ref": "#/definitions/NetworkProfile",
+          "description": "The cluster network profile."
+        },
+        "masterProfile": {
+          "$ref": "#/definitions/MasterProfile",
+          "description": "The cluster master profile."
+        },
+        "workerProfiles": {
+          "description": "The cluster worker profiles.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/WorkerProfile"
+          }
+        },
+        "apiserverURL": {
+          "description": "The URL to access the cluster API server (immutable).",
+          "type": "string"
+        },
+        "consoleURL": {
+          "description": "The URL to access the cluster console (immutable).",
+          "type": "string"
+        }
+      }
+    },
+    "ProvisioningState": {
+      "description": "ProvisioningState represents a provisioning state.",
+      "enum": [
+        "Deleting",
+        "Failed",
+        "Succeeded",
+        "Updating"
+      ],
+      "type": "string"
+    },
+    "Tags": {
+      "description": "Tags represents an OpenShift cluster's tags.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "VMSize": {
+      "description": "VMSize represents a VM size.",
+      "enum": [
+        "Standard_D2s_v3",
+        "Standard_D4s_v3",
+        "Standard_D8s_v3"
+      ],
+      "type": "string"
+    },
+    "WorkerProfile": {
+      "description": "WorkerProfile represents a worker profile.",
+      "properties": {
+        "name": {
+          "description": "The worker profile name.  Must be \"worker\".",
+          "type": "string"
+        },
+        "vmSize": {
+          "$ref": "#/definitions/VMSize",
+          "description": "The size of the worker VMs."
+        },
+        "diskSizeGB": {
+          "description": "The disk size of the worker VMs.  Must be 128 or greater.",
+          "type": "integer"
+        },
+        "count": {
+          "description": "The number of worker VMs.  Must be between 3 and 20.",
+          "type": "integer"
+        }
+      }
+    }
+  },
+  "parameters": {
+    "ApiVersionParameter": {
+      "name": "api-version",
+      "in": "query",
+      "description": "Client API version.",
+      "required": true,
+      "type": "string"
+    },
+    "SubscriptionIdParameter": {
+      "name": "subscriptionId",
+      "in": "path",
+      "description": "Subscription credentials which uniquely identify Microsoft Azure subscription. The subscription ID forms part of the URI for every service call.",
+      "required": true,
+      "type": "string"
+    }
+  },
+  "securityDefinitions": {
+    "azure_auth": {
+      "type": "oauth2",
+      "description": "Azure Active Directory OAuth2 Flow",
+      "flow": "implicit",
+      "authorizationUrl": "https://login.microsoftonline.com/common/oauth2/authorize",
+      "scopes": {
+        "user_impersonation": "impersonate your user account"
+      }
+    }
+  },
+  "security": [
+    {
+      "azure_auth": [
+        "user_impersonation"
+      ]
+    }
+  ]
+}
