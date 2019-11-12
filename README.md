@@ -78,31 +78,31 @@ CLUSTER=cluster
 * Create a cluster
 
 ```
-curl -X PUT "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/RedHat.OpenShift/OpenShiftClusters/$CLUSTER?api-version=2019-12-31-preview" -H 'Content-Type: application/json' -d '{"location":"'"$LOCATION"'", "properties": {"pullSecret": "'"$(base64 -w0 <<<$PULL_SECRET)"'"}}'
+curl -X PUT "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/$CLUSTER?api-version=2019-12-31-preview" -H 'Content-Type: application/json' -d '{"location":"'"$LOCATION"'", "properties": {"pullSecret": "'"$(base64 -w0 <<<$PULL_SECRET)"'"}}'
 ```
 
 * Get a cluster
 
 ```
-curl "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/RedHat.OpenShift/OpenShiftClusters/$CLUSTER?api-version=2019-12-31-preview"
+curl "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/$CLUSTER?api-version=2019-12-31-preview"
 ```
 
 * Get a cluster's credentials
 
 ```
-curl -X POST "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/RedHat.OpenShift/OpenShiftClusters/$CLUSTER/credentials?api-version=2019-12-31-preview" -H 'Content-Type: application/json' -d '{}'
+curl -X POST "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/$CLUSTER/credentials?api-version=2019-12-31-preview" -H 'Content-Type: application/json' -d '{}'
 ```
 
 * List clusters in resource group
 
 ```
-curl "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/RedHat.OpenShift/OpenShiftClusters?api-version=2019-12-31-preview"
+curl "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters?api-version=2019-12-31-preview"
 ```
 
 * List clusters in subscription
 
 ```
-curl "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/providers/RedHat.OpenShift/OpenShiftClusters?api-version=2019-12-31-preview"
+curl "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/providers/Microsoft.RedHatOpenShift/OpenShiftClusters?api-version=2019-12-31-preview"
 ```
 
 * Scale a cluster
@@ -110,13 +110,13 @@ curl "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/providers/RedHat.OpenS
 ```
 COUNT=3
 
-curl -X PATCH "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/RedHat.OpenShift/OpenShiftClusters/$CLUSTER?api-version=2019-12-31-preview" -H 'Content-Type: application/json' -d '{"properties": {"workerProfiles": [{"name": "worker", "count": '"$COUNT"'}]}}'
+curl -X PATCH "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/$CLUSTER?api-version=2019-12-31-preview" -H 'Content-Type: application/json' -d '{"properties": {"workerProfiles": [{"name": "worker", "count": '"$COUNT"'}]}}'
 ```
 
 * Delete a cluster
 
 ```
-curl -X DELETE "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/RedHat.OpenShift/OpenShiftClusters/$CLUSTER?api-version=2019-12-31-preview"
+curl -X DELETE "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/$CLUSTER?api-version=2019-12-31-preview"
 ```
 
 ## Basic architecture

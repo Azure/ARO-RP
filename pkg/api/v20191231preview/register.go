@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	resourceProviderNamespace = "RedHat.OpenShift"
+	resourceProviderNamespace = "Microsoft.RedHatOpenShift"
 	resourceType              = "OpenShiftClusters"
 )
 
