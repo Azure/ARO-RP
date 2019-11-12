@@ -38,8 +38,9 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 	}
 
 	var b []byte
+	var created bool
 	err = cosmosdb.RetryOnPreconditionFailed(func() error {
-		b, err = f._putOrPatchOpenShiftCluster(&request{
+		b, created, err = f._putOrPatchOpenShiftCluster(&request{
 			method:       r.Method,
 			resourceID:   r.URL.Path,
 			resourceName: vars["resourceName"],
@@ -60,14 +61,17 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	if created {
+		w.WriteHeader(http.StatusCreated)
+	}
 	w.Write(b)
 	w.Write([]byte{'\n'})
 }
 
-func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, error) {
+func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error) {
 	doc, err := f.db.Get(r.resourceID)
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
-		return nil, err
+		return nil, false, err
 	}
 
 	isCreate := doc == nil
@@ -106,7 +110,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, error) {
 	} else {
 		err = validateProvisioningState(doc.OpenShiftCluster.Properties.ProvisioningState, api.ProvisioningStateSucceeded)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 
 		switch r.method {
@@ -128,12 +132,12 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, error) {
 
 	err = json.Unmarshal(r.body, &external)
 	if err != nil {
-		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
+		return nil, false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
 	}
 
 	err = external.Validate(r.resourceID, doc.OpenShiftCluster)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	if doc.OpenShiftCluster == nil {
@@ -152,11 +156,11 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, error) {
 		doc.OpenShiftCluster.Properties.ResourceGroup = doc.OpenShiftCluster.Name
 		doc.OpenShiftCluster.Properties.SSHKey, err = rsa.GenerateKey(rand.Reader, 2048)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 		doc.OpenShiftCluster.Properties.StorageSuffix, err = randomLowerCaseAlphanumericString(5)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 
 		doc, err = f.db.Create(doc)
@@ -164,7 +168,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, error) {
 		doc, err = f.db.Update(doc)
 	}
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	doc.OpenShiftCluster.ID = r.resourceID
@@ -172,7 +176,12 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, error) {
 	doc.OpenShiftCluster.Type = r.resourceType
 	doc.OpenShiftCluster.Properties.PullSecret = nil
 
-	return json.MarshalIndent(r.toExternal(doc.OpenShiftCluster), "", "  ")
+	b, err := json.MarshalIndent(r.toExternal(doc.OpenShiftCluster), "", "  ")
+	if err != nil {
+		return nil, false, err
+	}
+
+	return b, isCreate, nil
 }
 
 func randomLowerCaseAlphanumericString(n int) (string, error) {
