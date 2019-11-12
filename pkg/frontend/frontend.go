@@ -115,7 +115,7 @@ func (f *frontend) Run(stop <-chan struct{}) {
 		Subrouter()
 
 	s.Use(f.middleware)
-	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftClusterCredentials)
+	s.Methods(http.MethodPost).HandlerFunc(f.postOpenShiftClusterCredentials)
 
 	go func() {
 		<-stop

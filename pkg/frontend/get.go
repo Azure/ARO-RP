@@ -3,7 +3,6 @@ package frontend
 import (
 	"encoding/json"
 	"net/http"
-	"path/filepath"
 
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
@@ -14,10 +13,6 @@ import (
 
 func (f *frontend) getOpenShiftCluster(w http.ResponseWriter, r *http.Request) {
 	f.get(w, r, r.URL.Path, "OpenShiftCluster")
-}
-
-func (f *frontend) getOpenShiftClusterCredentials(w http.ResponseWriter, r *http.Request) {
-	f.get(w, r, filepath.Dir(r.URL.Path), "OpenShiftClusterCredentials")
 }
 
 func (f *frontend) get(w http.ResponseWriter, r *http.Request, resourceID, typ string) {
