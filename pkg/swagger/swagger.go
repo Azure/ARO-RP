@@ -22,6 +22,7 @@ func Run(outputFile string) error {
 		Definitions: Definitions{
 			// TODO: this should be defined in the API package itself
 			"OpenShiftClusters": {
+				Description: "OpenShiftClusters represents a list of OpenShift clusters.",
 				Properties: []NameSchema{
 					{
 						Name: "value",

@@ -443,6 +443,7 @@
       }
     },
     "OpenShiftClusters": {
+      "description": "OpenShiftClusters represents a list of OpenShift clusters.",
       "properties": {
         "value": {
           "type": "array",
