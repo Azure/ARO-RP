@@ -28,7 +28,6 @@ func run(log *logrus.Entry) error {
 		"DOMAIN",
 		"DOMAIN_RESOURCEGROUP",
 		"LOCATION",
-		"HOME",
 	} {
 		if _, found := os.LookupEnv(key); !found {
 			return fmt.Errorf("environment variable %q unset", key)
