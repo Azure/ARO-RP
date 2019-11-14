@@ -20,7 +20,17 @@ import (
 	"github.com/openshift/installer/pkg/asset/targets"
 
 	"github.com/jim-minter/rp/pkg/api"
+	"github.com/jim-minter/rp/pkg/util/arm"
 )
+
+var apiVersions = map[string]string{
+	"authorization": "2015-07-01",
+	"compute":       "2019-03-01",
+	"dns":           "2018-05-01",
+	"msi":           "2018-11-30",
+	"network":       "2019-07-01",
+	"storage":       "2019-04-01",
+}
 
 func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftClusterDocument, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds) error {
 	image := &releaseimage.Image{
@@ -56,10 +66,10 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 	}
 
 	{
-		t := &Template{
+		t := &arm.Template{
 			Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 			ContentVersion: "1.0.0.0",
-			Resources: []Resource{
+			Resources: []arm.Resource{
 				{
 					// deploy the Identity now to give AAD a chance to update
 					// itself before we apply the RBAC rule in the next

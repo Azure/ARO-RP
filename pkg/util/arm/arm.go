@@ -1,19 +1,10 @@
-package install
+package arm
 
 import (
 	"encoding/json"
 	"math"
 	"reflect"
 )
-
-var apiVersions = map[string]string{
-	"authorization": "2015-07-01",
-	"compute":       "2019-03-01",
-	"dns":           "2018-05-01",
-	"msi":           "2018-11-30",
-	"network":       "2019-07-01",
-	"storage":       "2019-04-01",
-}
 
 type Template struct {
 	Schema         string                 `json:"$schema,omitempty"`

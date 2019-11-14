@@ -22,6 +22,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/jim-minter/rp/pkg/api"
+	"github.com/jim-minter/rp/pkg/util/arm"
 	"github.com/jim-minter/rp/pkg/util/restconfig"
 )
 
@@ -62,15 +63,15 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 	}
 
 	{
-		t := &Template{
+		t := &arm.Template{
 			Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 			ContentVersion: "1.0.0.0",
-			Parameters: map[string]Parameter{
+			Parameters: map[string]arm.Parameter{
 				"sas": {
 					Type: "object",
 				},
 			},
-			Resources: []Resource{
+			Resources: []arm.Resource{
 				{
 					Resource: &authorization.RoleAssignment{
 						Name: to.StringPtr("[guid(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', '" + doc.OpenShiftCluster.Properties.ClusterID + "-identity'), 'contributor')]"),
@@ -251,7 +252,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 						},
 					},
 					APIVersion: apiVersions["dns"],
-					Copy: &Copy{
+					Copy: &arm.Copy{
 						Name:  "copy",
 						Count: len(machinesMaster.MachineFiles),
 					},
@@ -520,7 +521,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 						Location: &installConfig.Config.Azure.Region,
 					},
 					APIVersion: apiVersions["network"],
-					Copy: &Copy{
+					Copy: &arm.Copy{
 						Name:  "copy",
 						Count: len(machinesMaster.MachineFiles),
 					},
@@ -663,7 +664,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 						Location: &installConfig.Config.Azure.Region,
 					},
 					APIVersion: apiVersions["compute"],
-					Copy: &Copy{
+					Copy: &arm.Copy{
 						Name:  "copy",
 						Count: len(machinesMaster.MachineFiles),
 					},
