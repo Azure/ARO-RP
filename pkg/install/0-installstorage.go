@@ -15,6 +15,7 @@ import (
 	"github.com/openshift/installer/pkg/asset/ignition/bootstrap"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/kubeconfig"
+	"github.com/openshift/installer/pkg/asset/releaseimage"
 	"github.com/openshift/installer/pkg/asset/rhcos"
 	"github.com/openshift/installer/pkg/asset/targets"
 
@@ -22,9 +23,16 @@ import (
 )
 
 func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftClusterDocument, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds) error {
+	image := &releaseimage.Image{
+		// oc adm release info quay.io/openshift-release-dev/ocp-release:4.2.2
+		PullSpec:   "quay.io/openshift-release-dev/ocp-release@sha256:dc782b44cac3d59101904cc5da2b9d8bdb90e55a07814df50ea7a13071b0f5f0",
+		Repository: "quay.io/openshift-release-dev/ocp-release",
+	}
+
 	g := graph{
 		reflect.TypeOf(installConfig): installConfig,
 		reflect.TypeOf(platformCreds): platformCreds,
+		reflect.TypeOf(image):         image,
 	}
 
 	for _, a := range targets.Cluster {
