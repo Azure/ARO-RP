@@ -147,3 +147,19 @@ curl -X DELETE "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGrou
 
 * Everything is intended to be crash/restart/upgrade-safe, horizontally
   scaleable, upgradeable...
+
+## Debugging
+
+* Get an admin kubeconfig
+
+```
+hack/get-admin-kubeconfig.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/$CLUSTER
+export KUBECONFIG=admin.kubeconfig
+oc version
+```
+
+* SSH to the bootstrap node
+
+```
+hack/ssh-bootstrap.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/$CLUSTER
+```
