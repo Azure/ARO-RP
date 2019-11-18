@@ -28,8 +28,6 @@ https://github.com/jim-minter/go-cosmosdb
   * LOCATION:              Azure location where RP and cluster(s) will run (default: `eastus`)
 
   * RP_RESOURCEGROUP:      Name of resource group which will contain the CosmosDB resource
-  * COSMOSDB_ACCOUNT:      CosmosDB account name
-  * COSMOSDB_KEY:          CosmosDB master key (default: autopopulated)
 
   * PULL_SECRET:           A cluster pull secret retrieved from (Red Hat OpenShift Cluster Manager)[https://cloud.redhat.com/openshift/install/azure/installer-provisioned]
 
@@ -47,6 +45,7 @@ vi env
 * Deploy a CosmosDB SQL database and DNS zone to a resource group
 
 ```
+COSMOSDB_ACCOUNT=mycosmosdb
 DOMAIN=mydomain.osadev.cloud
 
 az group create -g "$RP_RESOURCEGROUP" -l "$LOCATION"`
@@ -68,13 +67,6 @@ for ns in $(az network dns zone show --resource-group "$RP_RESOURCEGROUP" --name
 ```
 
 ## Getting started
-
-* Source the env file a second time so that $COSMOSDB_KEY is discovered and
-  populated
-
-```
-. ./env
-```
 
 * Run the RP
 

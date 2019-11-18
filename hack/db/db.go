@@ -1,21 +1,24 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
 
+	"github.com/Azure/go-autorest/autorest/azure/auth"
+	uuid "github.com/satori/go.uuid"
+	"github.com/ugorji/go/codec"
+
 	"github.com/jim-minter/rp/pkg/api"
 	"github.com/jim-minter/rp/pkg/database"
 	"github.com/jim-minter/rp/pkg/database/cosmosdb"
-	uuid "github.com/satori/go.uuid"
-	"github.com/ugorji/go/codec"
+	"github.com/jim-minter/rp/pkg/env"
 )
 
-func run() error {
+func run(ctx context.Context) error {
 	for _, key := range []string{
-		"COSMOSDB_ACCOUNT",
-		"COSMOSDB_KEY",
+		"RP_RESOURCEGROUP",
 	} {
 		if _, found := os.LookupEnv(key); !found {
 			return fmt.Errorf("environment variable %q unset", key)
@@ -26,7 +29,17 @@ func run() error {
 		return fmt.Errorf("usage: %s resourceid", os.Args[0])
 	}
 
-	dbc, err := cosmosdb.NewDatabaseClient(http.DefaultClient, os.Getenv("COSMOSDB_ACCOUNT"), os.Getenv("COSMOSDB_KEY"))
+	authorizer, err := auth.NewAuthorizerFromEnvironment()
+	if err != nil {
+		return err
+	}
+
+	databaseAccount, masterKey, err := env.CosmosDB(ctx, authorizer)
+	if err != nil {
+		return err
+	}
+
+	dbc, err := cosmosdb.NewDatabaseClient(http.DefaultClient, databaseAccount, masterKey)
 	if err != nil {
 		return err
 	}
@@ -58,7 +71,7 @@ func run() error {
 }
 
 func main() {
-	if err := run(); err != nil {
+	if err := run(context.Background()); err != nil {
 		panic(err)
 	}
 }

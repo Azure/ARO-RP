@@ -10,7 +10,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/sirupsen/logrus"
 
@@ -19,14 +18,13 @@ import (
 	"github.com/jim-minter/rp/pkg/backend"
 	"github.com/jim-minter/rp/pkg/database"
 	"github.com/jim-minter/rp/pkg/database/cosmosdb"
+	"github.com/jim-minter/rp/pkg/env"
 	"github.com/jim-minter/rp/pkg/frontend"
 	uuid "github.com/satori/go.uuid"
 )
 
 func run(ctx context.Context, log *logrus.Entry) error {
 	for _, key := range []string{
-		"COSMOSDB_ACCOUNT",
-		"COSMOSDB_KEY",
 		"LOCATION",
 		"RP_RESOURCEGROUP",
 	} {
@@ -38,7 +36,17 @@ func run(ctx context.Context, log *logrus.Entry) error {
 	uuid := uuid.NewV4()
 	log.Printf("starting, uuid %s", uuid)
 
-	dbc, err := cosmosdb.NewDatabaseClient(http.DefaultClient, os.Getenv("COSMOSDB_ACCOUNT"), os.Getenv("COSMOSDB_KEY"))
+	authorizer, err := auth.NewAuthorizerFromEnvironment()
+	if err != nil {
+		return err
+	}
+
+	databaseAccount, masterKey, err := env.CosmosDB(ctx, authorizer)
+	if err != nil {
+		return err
+	}
+
+	dbc, err := cosmosdb.NewDatabaseClient(http.DefaultClient, databaseAccount, masterKey)
 	if err != nil {
 		return err
 	}
@@ -48,28 +56,16 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	authorizer, err := auth.NewAuthorizerFromEnvironment()
+	domain, err := env.DNS(ctx, authorizer)
 	if err != nil {
 		return err
-	}
-
-	zc := dns.NewZonesClient(os.Getenv("AZURE_SUBSCRIPTION_ID"))
-	zc.Authorizer = authorizer
-
-	page, err := zc.ListByResourceGroup(ctx, os.Getenv("RP_RESOURCEGROUP"), nil)
-	if err != nil {
-		return err
-	}
-	zones := page.Values()
-	if len(zones) != 1 {
-		return fmt.Errorf("found at least %d zones, expected 1", len(zones))
 	}
 
 	sigterm := make(chan os.Signal, 1)
 	stop := make(chan struct{})
 	signal.Notify(sigterm, syscall.SIGTERM)
 
-	go backend.NewBackend(log.WithField("component", "backend"), authorizer, db, *zones[0].Name).Run(stop)
+	go backend.NewBackend(log.WithField("component", "backend"), authorizer, db, domain).Run(stop)
 
 	l, err := net.Listen("tcp", ":8080")
 	if err != nil {
