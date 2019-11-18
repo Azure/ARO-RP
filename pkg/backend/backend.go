@@ -28,6 +28,8 @@ type backend struct {
 	cond     *sync.Cond
 	workers  int32
 	stopping atomic.Value
+
+	domain string
 }
 
 // Runnable represents a runnable object
@@ -36,11 +38,12 @@ type Runnable interface {
 }
 
 // NewBackend returns a new runnable backend
-func NewBackend(log *logrus.Entry, authorizer autorest.Authorizer, db database.OpenShiftClusters) Runnable {
+func NewBackend(log *logrus.Entry, authorizer autorest.Authorizer, db database.OpenShiftClusters, domain string) Runnable {
 	b := &backend{
 		baseLog:    log,
 		db:         db,
 		authorizer: authorizer,
+		domain:     domain,
 	}
 
 	b.cond = sync.NewCond(&b.mu)

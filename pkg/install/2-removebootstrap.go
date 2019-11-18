@@ -3,7 +3,6 @@ package install
 import (
 	"context"
 	"fmt"
-	"os"
 	"reflect"
 	"time"
 
@@ -111,8 +110,8 @@ func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClust
 	}
 
 	doc, err = i.db.Patch(doc.OpenShiftCluster.ID, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.APIServerURL = "https://api." + doc.OpenShiftCluster.Name + "." + os.Getenv("DOMAIN") + ":6443/"
-		doc.OpenShiftCluster.Properties.ConsoleURL = "https://console-openshift-console.apps." + doc.OpenShiftCluster.Name + "." + os.Getenv("DOMAIN") + "/"
+		doc.OpenShiftCluster.Properties.APIServerURL = "https://api." + doc.OpenShiftCluster.Name + "." + i.domain + ":6443/"
+		doc.OpenShiftCluster.Properties.ConsoleURL = "https://console-openshift-console.apps." + doc.OpenShiftCluster.Name + "." + i.domain + "/"
 		doc.OpenShiftCluster.Properties.KubeadminPassword = kubeadminPassword.Password
 		return nil
 	})

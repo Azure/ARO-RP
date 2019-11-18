@@ -31,8 +31,6 @@ https://github.com/jim-minter/go-cosmosdb
   * COSMOSDB_ACCOUNT:      CosmosDB account name
   * COSMOSDB_KEY:          CosmosDB master key (default: autopopulated)
 
-  * DOMAIN:                Name of publicly resolvable DNS zone resource
-
   * PULL_SECRET:           A cluster pull secret retrieved from (Red Hat OpenShift Cluster Manager)[https://cloud.redhat.com/openshift/install/azure/installer-provisioned]
 
 ```
@@ -49,6 +47,8 @@ vi env
 * Deploy a CosmosDB SQL database and DNS zone to a resource group
 
 ```
+DOMAIN=mydomain.osadev.cloud
+
 az group create -g "$RP_RESOURCEGROUP" -l "$LOCATION"`
 
 az group deployment create -g "$RP_RESOURCEGROUP" --mode complete --template-file deploy/rp.json --parameters "location=$LOCATION" "databaseAccountName=$COSMOSDB_ACCOUNT" "domainName=$DOMAIN"
@@ -57,6 +57,11 @@ az group deployment create -g "$RP_RESOURCEGROUP" --mode complete --template-fil
 * If appropriate, create a glue record in the parent DNS zone
 
 ```
+DOMAIN=mydomain.osadev.cloud
+PARENT_DNS_RESOURCEGROUP=dns
+PARENT_DNS_ZONE=osadev.cloud
+CHILD_DNS_NAME=mydomain
+
 az network dns record-set ns create --resource-group "$PARENT_DNS_RESOURCEGROUP" --zone "$PARENT_DNS_ZONE" --name "$CHILD_DNS_NAME"
 
 for ns in $(az network dns zone show --resource-group "$RP_RESOURCEGROUP" --name "$DOMAIN" --query nameServers -o tsv); do az network dns record-set ns add-record --resource-group "$PARENT_DNS_RESOURCEGROUP" --zone "$PARENT_DNS_ZONE" --record-set-name "$CHILD_DNS_NAME" --nsdname $ns; done

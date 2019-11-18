@@ -24,6 +24,8 @@ type Installer struct {
 	log *logrus.Entry
 	db  database.OpenShiftClusters
 
+	domain string
+
 	disks             compute.DisksClient
 	virtualmachines   compute.VirtualMachinesClient
 	recordsets        dns.RecordSetsClient
@@ -35,7 +37,7 @@ type Installer struct {
 	accounts          storage.AccountsClient
 }
 
-func NewInstaller(log *logrus.Entry, db database.OpenShiftClusters, authorizer autorest.Authorizer, subscriptionID string) *Installer {
+func NewInstaller(log *logrus.Entry, db database.OpenShiftClusters, domain string, authorizer autorest.Authorizer, subscriptionID string) *Installer {
 	d := &Installer{
 		log: log,
 		db:  db,

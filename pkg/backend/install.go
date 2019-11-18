@@ -46,7 +46,7 @@ func (b *backend) install(ctx context.Context, log *logrus.Entry, doc *api.OpenS
 				Name: doc.OpenShiftCluster.Name,
 			},
 			SSHKey:     sshkey.Type() + " " + base64.StdEncoding.EncodeToString(sshkey.Marshal()),
-			BaseDomain: os.Getenv("DOMAIN"),
+			BaseDomain: b.domain,
 			Networking: &types.Networking{
 				MachineCIDR: ipnet.MustParseCIDR(doc.OpenShiftCluster.Properties.NetworkProfile.VNetCIDR),
 				NetworkType: "OpenShiftSDN",
@@ -102,5 +102,5 @@ func (b *backend) install(ctx context.Context, log *logrus.Entry, doc *api.OpenS
 		return err
 	}
 
-	return install.NewInstaller(log, b.db, b.authorizer, doc.SubscriptionID).Install(ctx, doc, installConfig, platformCreds)
+	return install.NewInstaller(log, b.db, b.domain, b.authorizer, doc.SubscriptionID).Install(ctx, doc, installConfig, platformCreds)
 }

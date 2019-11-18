@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/sirupsen/logrus"
 
@@ -21,11 +23,10 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-func run(log *logrus.Entry) error {
+func run(ctx context.Context, log *logrus.Entry) error {
 	for _, key := range []string{
 		"COSMOSDB_ACCOUNT",
 		"COSMOSDB_KEY",
-		"DOMAIN",
 		"LOCATION",
 		"RP_RESOURCEGROUP",
 	} {
@@ -52,11 +53,23 @@ func run(log *logrus.Entry) error {
 		return err
 	}
 
+	zc := dns.NewZonesClient(os.Getenv("AZURE_SUBSCRIPTION_ID"))
+	zc.Authorizer = authorizer
+
+	page, err := zc.ListByResourceGroup(ctx, os.Getenv("RP_RESOURCEGROUP"), nil)
+	if err != nil {
+		return err
+	}
+	zones := page.Values()
+	if len(zones) != 1 {
+		return fmt.Errorf("found at least %d zones, expected 1", len(zones))
+	}
+
 	sigterm := make(chan os.Signal, 1)
 	stop := make(chan struct{})
 	signal.Notify(sigterm, syscall.SIGTERM)
 
-	go backend.NewBackend(log.WithField("component", "backend"), authorizer, db).Run(stop)
+	go backend.NewBackend(log.WithField("component", "backend"), authorizer, db, *zones[0].Name).Run(stop)
 
 	l, err := net.Listen("tcp", ":8080")
 	if err != nil {
@@ -82,7 +95,7 @@ func main() {
 	})
 	log := logrus.NewEntry(logrus.StandardLogger())
 
-	if err := run(log); err != nil {
+	if err := run(context.Background(), log); err != nil {
 		log.Fatal(err)
 	}
 }
