@@ -59,6 +59,7 @@ func (f *frontend) _getOpenShiftCluster(r *request) ([]byte, error) {
 	doc.OpenShiftCluster.ID = r.resourceID
 	doc.OpenShiftCluster.Name = r.resourceName
 	doc.OpenShiftCluster.Type = r.resourceType
+	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 
 	return json.MarshalIndent(r.toExternal(doc.OpenShiftCluster), "", "  ")
 }
@@ -116,6 +117,7 @@ func (f *frontend) _getOpenShiftClusters(r *request) ([]byte, error) {
 
 		for _, doc := range docs.OpenShiftClusterDocuments {
 			doc.OpenShiftCluster.Type = r.resourceType
+			doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 			rv.Value = append(rv.Value, r.toExternal(doc.OpenShiftCluster))
 		}
 	}

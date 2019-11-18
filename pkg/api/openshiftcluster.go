@@ -23,14 +23,16 @@ type Properties struct {
 
 	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"`
 
+	ServicePrincipalProfile ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
+
 	NetworkProfile NetworkProfile `json:"networkProfile,omitempty"`
 
 	MasterProfile MasterProfile `json:"masterProfile,omitempty"`
 
 	WorkerProfiles []WorkerProfile `json:"workerProfiles,omitempty"`
 
-	APIServerURL string `json:"apiserverURL,omitempty"` // r/o
-	ConsoleURL   string `json:"consoleURL,omitempty"`   // r/o
+	APIServerURL string `json:"apiserverURL,omitempty"`
+	ConsoleURL   string `json:"consoleURL,omitempty"`
 
 	Installation *Installation `json:"installation,omitempty"`
 
@@ -54,6 +56,13 @@ const (
 	ProvisioningStateFailed    ProvisioningState = "Failed"
 )
 
+// ServicePrincipalProfile represents a service principal profile.
+type ServicePrincipalProfile struct {
+	ClientID     string `json:"clientId,omitempty"`
+	ClientSecret string `json:"clientSecret,omitempty"`
+}
+
+// NetworkProfile represents a network profile
 type NetworkProfile struct {
 	VNetCIDR    string `json:"vnetCidr,omitempty"`
 	PodCIDR     string `json:"podCidr,omitempty"`

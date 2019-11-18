@@ -29,6 +29,9 @@ type Properties struct {
 	// The cluster provisioning state (immutable).
 	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"`
 
+	// The cluster service principal profile.
+	ServicePrincipalProfile ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
+
 	// The cluster network profile.
 	NetworkProfile NetworkProfile `json:"networkProfile,omitempty"`
 
@@ -55,6 +58,15 @@ const (
 	ProvisioningStateSucceeded ProvisioningState = "Succeeded"
 	ProvisioningStateFailed    ProvisioningState = "Failed"
 )
+
+// ServicePrincipalProfile represents a service principal profile.
+type ServicePrincipalProfile struct {
+	// The client ID used for the cluster
+	ClientID string `json:"clientId,omitempty"`
+
+	// The client secret used for the cluster
+	ClientSecret string `json:"clientSecret,omitempty"`
+}
 
 // NetworkProfile represents a network profile.
 type NetworkProfile struct {

@@ -30,8 +30,8 @@ func (b *backend) install(ctx context.Context, log *logrus.Entry, doc *api.OpenS
 	platformCreds := &installconfig.PlatformCreds{
 		Azure: &icazure.Credentials{
 			TenantID:       os.Getenv("AZURE_TENANT_ID"),
-			ClientID:       os.Getenv("AZURE_CLIENT_ID"),
-			ClientSecret:   os.Getenv("AZURE_CLIENT_SECRET"),
+			ClientID:       doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientID,
+			ClientSecret:   doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret,
 			SubscriptionID: doc.SubscriptionID,
 		},
 		Passthrough: true, // TODO: not working yet

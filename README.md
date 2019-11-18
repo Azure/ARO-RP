@@ -78,7 +78,7 @@ CLUSTER=cluster
 * Create a cluster
 
 ```
-curl -X PUT "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/$CLUSTER?api-version=2019-12-31-preview" -H 'Content-Type: application/json' -d '{"location":"'"$LOCATION"'"}'
+curl -X PUT "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/$CLUSTER?api-version=2019-12-31-preview" -H 'Content-Type: application/json' -d '{"location":"'"$LOCATION"'", "properties": {"servicePrincipalProfile": {"clientId": "'"$CLIENT_ID"'", "clientSecret": "'"$CLIENT_SECRET"'"}}}'
 ```
 
 * Get a cluster

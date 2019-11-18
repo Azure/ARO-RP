@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/apparentlymart/go-cidr/cidr"
+	uuid "github.com/satori/go.uuid"
 
 	"github.com/jim-minter/rp/pkg/api"
 	"github.com/jim-minter/rp/pkg/util/resource"
@@ -56,6 +57,9 @@ func (p *Properties) validate(path string) error {
 	default:
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".provisioningState", "The provided provisioning state '%s' is invalid.", p.ProvisioningState)
 	}
+	if err := p.ServicePrincipalProfile.validate(path + ".servicePrincipalProfile"); err != nil {
+		return err
+	}
 	if err := p.NetworkProfile.validate(path + ".networkProfile"); err != nil {
 		return err
 	}
@@ -77,6 +81,18 @@ func (p *Properties) validate(path string) error {
 		if _, err := url.Parse(p.ConsoleURL); err != nil {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".consoleURL", "The provided console URL '%s' is invalid.", p.ConsoleURL)
 		}
+	}
+
+	return nil
+}
+
+func (spp *ServicePrincipalProfile) validate(path string) error {
+	_, err := uuid.FromString(spp.ClientID)
+	if err != nil {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".clientId", "The provided client ID '%s' is invalid.", spp.ClientID)
+	}
+	if spp.ClientSecret == "" {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".cilentSecret", "The provided client secret is invalid.")
 	}
 
 	return nil
@@ -179,6 +195,9 @@ func (p *Properties) validateDelta(path string, current *Properties) error {
 	if current.ProvisioningState != p.ProvisioningState {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, path+".provisioningState", "Changing property '"+path+".provisioningState' is not allowed.")
 	}
+	if err := p.ServicePrincipalProfile.validateDelta(path+".servicePrincipalProfile", &current.ServicePrincipalProfile); err != nil {
+		return err
+	}
 	if err := p.NetworkProfile.validateDelta(path+".networkProfile", &current.NetworkProfile); err != nil {
 		return err
 	}
@@ -193,6 +212,17 @@ func (p *Properties) validateDelta(path string, current *Properties) error {
 	}
 	if current.ConsoleURL != p.ConsoleURL {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, path+".consoleURL", "Changing property '"+path+".consoleURL' is not allowed.")
+	}
+
+	return nil
+}
+
+func (spp *ServicePrincipalProfile) validateDelta(path string, current *ServicePrincipalProfile) error {
+	if current.ClientID != spp.ClientID {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, path+".vnetCidr", "Changing property '"+path+".clientId' is not allowed.")
+	}
+	if current.ClientSecret != spp.ClientSecret {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, path+".podCidr", "Changing property '"+path+".clientSecret' is not allowed.")
 	}
 
 	return nil

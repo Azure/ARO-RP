@@ -460,6 +460,10 @@
           "$ref": "#/definitions/ProvisioningState",
           "description": "The cluster provisioning state (immutable)."
         },
+        "servicePrincipalProfile": {
+          "$ref": "#/definitions/ServicePrincipalProfile",
+          "description": "The cluster service principal profile."
+        },
         "networkProfile": {
           "$ref": "#/definitions/NetworkProfile",
           "description": "The cluster network profile."
@@ -494,6 +498,19 @@
         "Updating"
       ],
       "type": "string"
+    },
+    "ServicePrincipalProfile": {
+      "description": "ServicePrincipalProfile represents a service principal profile.",
+      "properties": {
+        "clientId": {
+          "description": "The client ID used for the cluster",
+          "type": "string"
+        },
+        "clientSecret": {
+          "description": "The client secret used for the cluster",
+          "type": "string"
+        }
+      }
     },
     "Tags": {
       "description": "Tags represents an OpenShift cluster's tags.",
