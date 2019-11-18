@@ -10,7 +10,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/sirupsen/logrus"
 
 	"github.com/jim-minter/rp/pkg/api"
@@ -36,12 +35,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 	uuid := uuid.NewV4()
 	log.Printf("starting, uuid %s", uuid)
 
-	authorizer, err := auth.NewAuthorizerFromEnvironment()
-	if err != nil {
-		return err
-	}
-
-	databaseAccount, masterKey, err := env.CosmosDB(ctx, authorizer)
+	databaseAccount, masterKey, err := env.CosmosDB(ctx)
 	if err != nil {
 		return err
 	}
@@ -56,7 +50,12 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	domain, err := env.DNS(ctx, authorizer)
+	domain, err := env.DNS(ctx)
+	if err != nil {
+		return err
+	}
+
+	authorizer, err := env.FirstPartyAuthorizer(ctx)
 	if err != nil {
 		return err
 	}

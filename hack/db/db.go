@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/Azure/go-autorest/autorest/azure/auth"
 	uuid "github.com/satori/go.uuid"
 	"github.com/ugorji/go/codec"
 
@@ -29,12 +28,7 @@ func run(ctx context.Context) error {
 		return fmt.Errorf("usage: %s resourceid", os.Args[0])
 	}
 
-	authorizer, err := auth.NewAuthorizerFromEnvironment()
-	if err != nil {
-		return err
-	}
-
-	databaseAccount, masterKey, err := env.CosmosDB(ctx, authorizer)
+	databaseAccount, masterKey, err := env.CosmosDB(ctx)
 	if err != nil {
 		return err
 	}

@@ -11,6 +11,15 @@
         },
         "domainName": {
             "type": "string"
+        },
+        "keyvaultName": {
+            "type": "string"
+        },
+        "adminObjectId": {
+            "type": "string"
+        },
+        "rpObjectId": {
+            "type": "string"
         }
     },
     "variables": {},
@@ -21,6 +30,40 @@
             "apiVersion": "2018-05-01",
             "location": "global",
             "properties": {}
+        },
+        {
+            "name": "[parameters('keyvaultName')]",
+            "type": "Microsoft.KeyVault/vaults",
+            "apiVersion": "2016-10-01",
+            "location": "[parameters('location')]",
+            "properties": {
+                "accessPolicies": [
+                    {
+                        "objectId": "[parameters('adminObjectId')]",
+                        "permissions": {
+                            "certificates": [
+                                "list",
+                                "import"
+                            ]
+                        },
+                        "tenantId": "[subscription().tenantId]"
+                    },
+                    {
+                        "objectId": "[parameters('rpObjectId')]",
+                        "permissions": {
+                            "secrets": [
+                                "get"
+                            ]
+                        },
+                        "tenantId": "[parameters('tenantId')]"
+                    }
+                ],
+                "sku": {
+                    "name": "standard",
+                    "family": "A"
+                },
+                "tenantId": "[subscription().tenantId]"
+            }
         },
         {
             "name": "[parameters('databaseAccountName')]",

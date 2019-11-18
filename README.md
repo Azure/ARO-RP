@@ -1,73 +1,101 @@
-## Useful links
+# github.com/jim-minter/rp
 
-https://github.com/Azure/azure-resource-manager-rpc
+## Install
 
-https://github.com/microsoft/api-guidelines
+1. Install the following:
 
-https://docs.microsoft.com/en-gb/rest/api/cosmos-db
+   * go 1.12 or later
+   * az client
 
-https://github.com/jim-minter/go-cosmosdb
+1. Log in to Azure.
 
-## Prequisites
+```
+az login
+```
 
-* Publicly resolvable DNS zone resource in Azure
+1. You will need a publicly resolvable DNS zone resource in Azure.  For RH ARO
+   engineering, this is the `osadev.cloud` zone in the `dns` resource group.
 
-* Service principal (client ID and secret) with (for now) User Access
-  Administrator access to the subscription and (for now) `Azure Active Directory
-  Graph / Application.ReadWrite.OwnedBy` privileges
+1. You will need an AAD application with:
 
-## Installation
+   * client certificate and (for now) client secret authentication enabled
+   * (for now) User Access Administrator role granted on the subscription
+   * (for now) `Azure Active Directory Graph / Application.ReadWrite.OwnedBy`
+     privileges granted
 
-* Copy env.example to env and edit the values as follows:
+   For RH ARO engineering, this is the `aro-team-shared` AAD application. You
+   will need the client ID, client secret, and a key/certificate file
+   (aro-team-shared.pem) that can be loaded into your key vault.  Ask if you do
+   not have these.
 
-  * AZURE_TENANT_ID:       Azure tenant UUID
-  * AZURE_SUBSCRIPTION_ID: Azure subscription UUID
-  * AZURE_CLIENT_ID:       Azure service principal client UUID
-  * AZURE_CLIENT_SECRET:   Azure service principal secret
+   For non-RH ARO engineering, a suitable key/certificate file can be generated
+   using the following helper utility:
 
-  * LOCATION:              Azure location where RP and cluster(s) will run (default: `eastus`)
-  * RESOURCEGROUP:         Name of resource group which will contain the CosmosDB and DNS resources
+```
+# Non-RH ARO engineering only
+go run ./hack/genkey "$AZURE_CLIENT_ID"
+```
 
-  * PULL_SECRET:           A cluster pull secret retrieved from (Red Hat OpenShift Cluster Manager)[https://cloud.redhat.com/openshift/install/azure/installer-provisioned]
+1. Copy env.example to env, edit the values and source the env file.  This file
+   holds (only) the environment variables necessary for the RP to run.
+
+   * AZURE_TENANT_ID:       Azure tenant UUID
+   * AZURE_SUBSCRIPTION_ID: Azure subscription UUID
+   * AZURE_CLIENT_ID:       Azure AD application client UUID
+   * AZURE_CLIENT_SECRET:   Azure AD application client secret
+
+   * LOCATION:              Azure location where RP and cluster(s) will run (default: `eastus`)
+   * RESOURCEGROUP:         Name of a new resource group which will contain the RP resources
+
+   * PULL_SECRET:           A cluster pull secret retrieved from (Red Hat OpenShift Cluster Manager)[https://cloud.redhat.com/openshift/install/azure/installer-provisioned]
 
 ```
 cp env.example env
 vi env
-```
-
-* Source the env file
-
-```
 . ./env
 ```
 
-* Deploy a CosmosDB SQL database and DNS zone to a resource group
+1. Choose the RP deployment parameters.
+
+   * COSMOSDB_ACCOUNT: Name of a new CosmosDB account
+   * DOMAIN:           DNS subdomain shared by all clusters (RH: <something>.osadev.cloud)
+   * KEYVAULT_NAME:    Name of a new key vault
+   * ADMIN_OBJECT_ID:  AAD object ID for key vault admin(s) (RH: `az ad group list --query "[?displayName=='Engineering'].objectId" -o tsv`)
+   * RP_OBJECT_ID:     AAD object ID for AAD application    (RH: `az ad app list --all --query "[?appId=='$AZURE_CLIENT_ID'].objectId" -o tsv`)
+
+1. Create the resource group and deploy the RP resources.
 
 ```
 COSMOSDB_ACCOUNT=mycosmosdb
 DOMAIN=mydomain.osadev.cloud
+KEYVAULT_NAME=mykeyvault
+ADMIN_OBJECT_ID=$(az ad group list --query "[?displayName=='Engineering'].objectId" -o tsv)
+RP_OBJECT_ID=$(az ad app list --all --query "[?appId=='$AZURE_CLIENT_ID'].objectId" -o tsv)
 
-az group create -g "$RESOURCEGROUP" -l "$LOCATION"`
+az group create -g "$RESOURCEGROUP" -l "$LOCATION"
 
-az group deployment create -g "$RESOURCEGROUP" --mode complete --template-file deploy/rp.json --parameters "location=$LOCATION" "databaseAccountName=$COSMOSDB_ACCOUNT" "domainName=$DOMAIN"
+az group deployment create -g "$RESOURCEGROUP" --mode complete --template-file deploy/rp.json --parameters "location=$LOCATION" "databaseAccountName=$COSMOSDB_ACCOUNT" "domainName=$DOMAIN" "keyvaultName=$KEYVAULT_NAME" "adminObjectId=$ADMIN_OBJECT_ID" "rpObjectId=$RP_OBJECT_ID"
 ```
 
-* If appropriate, create a glue record in the parent DNS zone
+1. Load the application key/certificate into the key vault
 
 ```
-DOMAIN=mydomain.osadev.cloud
+KEY_FILE=aro-team-shared.pem
+
+az keyvault certificate import --vault-name "$KEYVAULT_NAME" --name azure --file "$KEY_FILE"
+```
+
+1. Create a glue record in the parent DNS zone
+
+```
 PARENT_DNS_RESOURCEGROUP=dns
-PARENT_DNS_ZONE=osadev.cloud
-CHILD_DNS_NAME=mydomain
 
-az network dns record-set ns create --resource-group "$PARENT_DNS_RESOURCEGROUP" --zone "$PARENT_DNS_ZONE" --name "$CHILD_DNS_NAME"
+az network dns record-set ns create --resource-group "$PARENT_DNS_RESOURCEGROUP" --zone "$(cut -d. -f2- <<<"$DOMAIN")" --name "$(cut -d. -f1 <<<"$DOMAIN")"
 
-for ns in $(az network dns zone show --resource-group "$RESOURCEGROUP" --name "$DOMAIN" --query nameServers -o tsv); do az network dns record-set ns add-record --resource-group "$PARENT_DNS_RESOURCEGROUP" --zone "$PARENT_DNS_ZONE" --record-set-name "$CHILD_DNS_NAME" --nsdname $ns; done
+for ns in $(az network dns zone show --resource-group "$RESOURCEGROUP" --name "$DOMAIN" --query nameServers -o tsv); do az network dns record-set ns add-record --resource-group "$PARENT_DNS_RESOURCEGROUP" --zone "$(cut -d. -f2- <<<"$DOMAIN")" --record-set-name "$(cut -d. -f1 <<<"$DOMAIN")" --nsdname $ns; done
 ```
 
-## Getting started
-
-* Run the RP
+## Running the RP
 
 ```
 go run ./cmd/rp
@@ -167,3 +195,13 @@ oc version
 ```
 hack/ssh-bootstrap.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/$CLUSTER
 ```
+
+## Useful links
+
+https://github.com/Azure/azure-resource-manager-rpc
+
+https://github.com/microsoft/api-guidelines
+
+https://docs.microsoft.com/en-gb/rest/api/cosmos-db
+
+https://github.com/jim-minter/go-cosmosdb
