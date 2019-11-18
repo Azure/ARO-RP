@@ -58,7 +58,7 @@
 1. Choose the RP deployment parameters:
 
    * COSMOSDB_ACCOUNT: Name of a new CosmosDB account
-   * DOMAIN:           DNS subdomain shared by all clusters (RH: <something>.osadev.cloud)
+   * DOMAIN:           DNS subdomain shared by all clusters (RH: $something.osadev.cloud)
    * KEYVAULT_NAME:    Name of a new key vault
    * ADMIN_OBJECT_ID:  AAD object ID for key vault admin(s) (RH: `az ad group list --query "[?displayName=='Engineering'].objectId" -o tsv`)
    * RP_OBJECT_ID:     AAD object ID for AAD application    (RH: `az ad app list --all --query "[?appId=='$AZURE_CLIENT_ID'].objectId" -o tsv`)
