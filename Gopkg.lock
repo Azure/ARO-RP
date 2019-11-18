@@ -10,7 +10,7 @@
   version = "v0.48.0"
 
 [[projects]]
-  digest = "1:775fb4189da0c2d744d38febc01a83c38afdd14d78da224a2ca05aac2a438187"
+  digest = "1:2bf50d54a2c49762d343431e29832409d0ddd9b1b28051a44bbbb68cdf19b915"
   name = "github.com/Azure/azure-sdk-for-go"
   packages = [
     "profiles/latest/dns/mgmt/dns",
@@ -18,6 +18,7 @@
     "services/authorization/mgmt/2015-07-01/authorization",
     "services/compute/mgmt/2018-10-01/compute",
     "services/compute/mgmt/2019-03-01/compute",
+    "services/cosmos-db/mgmt/2015-04-08/documentdb",
     "services/dns/mgmt/2018-05-01/dns",
     "services/msi/mgmt/2018-11-30/msi",
     "services/network/mgmt/2019-07-01/network",
@@ -1282,6 +1283,7 @@
   input-imports = [
     "github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization",
     "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute",
+    "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2015-04-08/documentdb",
     "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns",
     "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi",
     "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network",
