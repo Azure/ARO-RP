@@ -22,7 +22,14 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
+var (
+	gitCommit = "unknown"
+)
+
 func run(ctx context.Context, log *logrus.Entry) error {
+	uuid := uuid.NewV4()
+	log.Printf("starting, git commit %s, uuid %s", gitCommit, uuid)
+
 	for _, key := range []string{
 		"LOCATION",
 		"RESOURCEGROUP",
@@ -31,9 +38,6 @@ func run(ctx context.Context, log *logrus.Entry) error {
 			return fmt.Errorf("environment variable %q unset", key)
 		}
 	}
-
-	uuid := uuid.NewV4()
-	log.Printf("starting, uuid %s", uuid)
 
 	databaseAccount, masterKey, err := env.CosmosDB(ctx)
 	if err != nil {
