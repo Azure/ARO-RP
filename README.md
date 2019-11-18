@@ -47,7 +47,7 @@
    * LOCATION:              Azure location where RP and cluster(s) will run (default: `eastus`)
    * RESOURCEGROUP:         Name of a new resource group which will contain the RP resources
 
-   * PULL_SECRET:           A cluster pull secret retrieved from (Red Hat OpenShift Cluster Manager)[https://cloud.redhat.com/openshift/install/azure/installer-provisioned]
+   * PULL_SECRET:           A cluster pull secret retrieved from [Red Hat OpenShift Cluster Manager](https://cloud.redhat.com/openshift/install/azure/installer-provisioned)
 
    ```
    cp env.example env
