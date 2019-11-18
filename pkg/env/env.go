@@ -3,6 +3,7 @@ package env
 import (
 	"context"
 	"crypto/rsa"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
@@ -19,54 +20,16 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 )
 
-func CosmosDB(ctx context.Context) (string, string, error) {
-	authorizer, err := auth.NewAuthorizerFromEnvironment()
-	if err != nil {
-		return "", "", err
-	}
+type Env struct {
+	databaseaccounts documentdb.DatabaseAccountsClient
+	keyvault         keyvault.BaseClient
+	vaults           keyvaultmgmt.VaultsClient
+	zones            dns.ZonesClient
 
-	c := documentdb.NewDatabaseAccountsClient(os.Getenv("AZURE_SUBSCRIPTION_ID"))
-	c.Authorizer = authorizer
-
-	accts, err := c.ListByResourceGroup(ctx, os.Getenv("RESOURCEGROUP"))
-	if err != nil {
-		return "", "", err
-	}
-
-	if len(*accts.Value) != 1 {
-		return "", "", fmt.Errorf("found %d database accounts, expected 1", len(*accts.Value))
-	}
-
-	keys, err := c.ListKeys(ctx, os.Getenv("RESOURCEGROUP"), *(*accts.Value)[0].Name)
-	if err != nil {
-		return "", "", err
-	}
-
-	return *(*accts.Value)[0].Name, *keys.PrimaryMasterKey, nil
+	resourceGroup string
 }
 
-func DNS(ctx context.Context) (string, error) {
-	authorizer, err := auth.NewAuthorizerFromEnvironment()
-	if err != nil {
-		return "", err
-	}
-
-	c := dns.NewZonesClient(os.Getenv("AZURE_SUBSCRIPTION_ID"))
-	c.Authorizer = authorizer
-
-	page, err := c.ListByResourceGroup(ctx, os.Getenv("RESOURCEGROUP"), nil)
-	if err != nil {
-		return "", err
-	}
-	zones := page.Values()
-	if len(zones) != 1 {
-		return "", fmt.Errorf("found at least %d zones, expected 1", len(zones))
-	}
-
-	return *zones[0].Name, nil
-}
-
-func FirstPartyAuthorizer(ctx context.Context) (autorest.Authorizer, error) {
+func NewEnv(subscriptionId, resourceGroup string) (*Env, error) {
 	authorizer, err := auth.NewAuthorizerFromEnvironment()
 	if err != nil {
 		return nil, err
@@ -77,24 +40,59 @@ func FirstPartyAuthorizer(ctx context.Context) (autorest.Authorizer, error) {
 		return nil, err
 	}
 
-	mc := keyvaultmgmt.NewVaultsClient(os.Getenv("AZURE_SUBSCRIPTION_ID"))
-	mc.Authorizer = authorizer
-
-	page, err := mc.ListByResourceGroup(ctx, os.Getenv("RESOURCEGROUP"), nil)
-	if err != nil {
-		return nil, err
-	}
-	vaults := page.Values()
-	if len(vaults) != 1 {
-		return nil, fmt.Errorf("found at least %d vaults, expected 1", len(vaults))
+	e := &Env{
+		resourceGroup: resourceGroup,
 	}
 
-	c := keyvault.New()
-	c.Authorizer = vaultauthorizer
+	e.databaseaccounts = documentdb.NewDatabaseAccountsClient(subscriptionId)
+	e.keyvault = keyvault.New()
+	e.vaults = keyvaultmgmt.NewVaultsClient(subscriptionId)
+	e.zones = dns.NewZonesClient(subscriptionId)
 
-	bundle, err := c.GetSecret(ctx, *vaults[0].Properties.VaultURI, "azure", "")
+	e.databaseaccounts.Authorizer = authorizer
+	e.keyvault.Authorizer = vaultauthorizer
+	e.vaults.Authorizer = authorizer
+	e.zones.Authorizer = authorizer
+
+	return e, nil
+}
+
+func (e *Env) CosmosDB(ctx context.Context) (string, string, error) {
+	accts, err := e.databaseaccounts.ListByResourceGroup(ctx, e.resourceGroup)
 	if err != nil {
-		return nil, err
+		return "", "", err
+	}
+
+	if len(*accts.Value) != 1 {
+		return "", "", fmt.Errorf("found %d database accounts, expected 1", len(*accts.Value))
+	}
+
+	keys, err := e.databaseaccounts.ListKeys(ctx, e.resourceGroup, *(*accts.Value)[0].Name)
+	if err != nil {
+		return "", "", err
+	}
+
+	return *(*accts.Value)[0].Name, *keys.PrimaryMasterKey, nil
+}
+
+func (e *Env) DNS(ctx context.Context) (string, error) {
+	page, err := e.zones.ListByResourceGroup(ctx, e.resourceGroup, nil)
+	if err != nil {
+		return "", err
+	}
+
+	zones := page.Values()
+	if len(zones) != 1 {
+		return "", fmt.Errorf("found at least %d zones, expected 1", len(zones))
+	}
+
+	return *zones[0].Name, nil
+}
+
+func (e *Env) getSecret(ctx context.Context, vaultBaseURL, secretName string) (*rsa.PrivateKey, *x509.Certificate, error) {
+	bundle, err := e.keyvault.GetSecret(ctx, vaultBaseURL, secretName, "")
+	if err != nil {
+		return nil, nil, err
 	}
 
 	var key *rsa.PrivateKey
@@ -111,20 +109,39 @@ func FirstPartyAuthorizer(ctx context.Context) (autorest.Authorizer, error) {
 		case "PRIVATE KEY":
 			k, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			var ok bool
 			key, ok = k.(*rsa.PrivateKey)
 			if !ok {
-				return nil, errors.New("found unknown private key type in PKCS#8 wrapping")
+				return nil, nil, errors.New("found unknown private key type in PKCS#8 wrapping")
 			}
 
 		case "CERTIFICATE":
 			cert, err = x509.ParseCertificate(block.Bytes)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 		}
+	}
+
+	return key, cert, nil
+}
+
+func (e *Env) FirstPartyAuthorizer(ctx context.Context) (autorest.Authorizer, error) {
+	page, err := e.vaults.ListByResourceGroup(ctx, e.resourceGroup, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	vaults := page.Values()
+	if len(vaults) != 1 {
+		return nil, fmt.Errorf("found at least %d vaults, expected 1", len(vaults))
+	}
+
+	key, cert, err := e.getSecret(ctx, *vaults[0].Properties.VaultURI, "azure")
+	if err != nil {
+		return nil, err
 	}
 
 	oauthConfig, err := adal.NewOAuthConfig(azure.PublicCloud.ActiveDirectoryEndpoint, os.Getenv("AZURE_TENANT_ID"))
@@ -138,4 +155,28 @@ func FirstPartyAuthorizer(ctx context.Context) (autorest.Authorizer, error) {
 	}
 
 	return autorest.NewBearerAuthorizer(sp), nil
+}
+
+func (e *Env) ServingCert(ctx context.Context) (*tls.Certificate, error) {
+	page, err := e.vaults.ListByResourceGroup(ctx, e.resourceGroup, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	vaults := page.Values()
+	if len(vaults) != 1 {
+		return nil, fmt.Errorf("found at least %d vaults, expected 1", len(vaults))
+	}
+
+	key, cert, err := e.getSecret(ctx, *vaults[0].Properties.VaultURI, "tls")
+	if err != nil {
+		return nil, err
+	}
+
+	return &tls.Certificate{
+		Certificate: [][]byte{
+			cert.Raw,
+		},
+		PrivateKey: key,
+	}, nil
 }

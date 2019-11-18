@@ -1,6 +1,7 @@
 package frontend
 
 import (
+	"crypto/tls"
 	"net"
 	"net/http"
 	"sync/atomic"
@@ -44,7 +45,8 @@ type frontend struct {
 	db   database.OpenShiftClusters
 	apis map[api.APIVersionType]func(*api.OpenShiftCluster) api.External
 
-	l net.Listener
+	l    net.Listener
+	cert *tls.Certificate
 
 	healthy atomic.Value
 }
@@ -55,13 +57,14 @@ type Runnable interface {
 }
 
 // NewFrontend returns a new runnable frontend
-func NewFrontend(baseLog *logrus.Entry, l net.Listener, db database.OpenShiftClusters, apis map[api.APIVersionType]func(*api.OpenShiftCluster) api.External) Runnable {
+func NewFrontend(baseLog *logrus.Entry, l net.Listener, cert *tls.Certificate, db database.OpenShiftClusters, apis map[api.APIVersionType]func(*api.OpenShiftCluster) api.External) Runnable {
 	f := &frontend{
 		baseLog: baseLog,
 		db:      db,
 		apis:    apis,
 
-		l: l,
+		l:    l,
+		cert: cert,
 	}
 
 	f.healthy.Store(true)
@@ -123,6 +126,7 @@ func (f *frontend) Run(stop <-chan struct{}) {
 		f.healthy.Store(false)
 	}()
 
-	err := http.Serve(f.l, r)
+	l := tls.NewListener(f.l, &tls.Config{Certificates: []tls.Certificate{*f.cert}})
+	err := http.Serve(l, r)
 	f.baseLog.Error(err)
 }

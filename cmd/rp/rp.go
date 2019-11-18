@@ -39,6 +39,11 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
+	env, err := env.NewEnv(os.Getenv("AZURE_SUBSCRIPTION_ID"), os.Getenv("RESOURCEGROUP"))
+	if err != nil {
+		return err
+	}
+
 	databaseAccount, masterKey, err := env.CosmosDB(ctx)
 	if err != nil {
 		return err
@@ -59,6 +64,11 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
+	servingCert, err := env.ServingCert(ctx)
+	if err != nil {
+		return err
+	}
+
 	authorizer, err := env.FirstPartyAuthorizer(ctx)
 	if err != nil {
 		return err
@@ -70,14 +80,14 @@ func run(ctx context.Context, log *logrus.Entry) error {
 
 	go backend.NewBackend(log.WithField("component", "backend"), authorizer, db, domain).Run(stop)
 
-	l, err := net.Listen("tcp", ":8080")
+	l, err := net.Listen("tcp", ":8443")
 	if err != nil {
 		return err
 	}
 
 	log.Print("listening")
 
-	go frontend.NewFrontend(log.WithField("component", "frontend"), l, db, api.APIs).Run(stop)
+	go frontend.NewFrontend(log.WithField("component", "frontend"), l, servingCert, db, api.APIs).Run(stop)
 
 	<-sigterm
 	log.Print("received SIGTERM")

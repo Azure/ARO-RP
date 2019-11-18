@@ -7,10 +7,15 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"flag"
 	"io/ioutil"
 	"math/big"
-	"os"
+	"strings"
 	"time"
+)
+
+var (
+	extKeyUsage = flag.String("extKeyUsage", "server", "server or client")
 )
 
 func run(name string) error {
@@ -33,7 +38,13 @@ func run(name string) error {
 		Subject:               pkix.Name{CommonName: name},
 		BasicConstraintsValid: true,
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+	}
+
+	switch strings.ToLower(*extKeyUsage) {
+	case "client":
+		template.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}
+	case "server":
+		template.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}
 	}
 
 	cert, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
@@ -74,7 +85,9 @@ func run(name string) error {
 }
 
 func main() {
-	if err := run(os.Args[1]); err != nil {
+	flag.Parse()
+
+	if err := run(flag.Arg(0)); err != nil {
 		panic(err)
 	}
 }

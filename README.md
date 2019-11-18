@@ -33,7 +33,7 @@
 
    ```
    # Non-RH ARO engineering only
-   go run ./hack/genkey "$AZURE_CLIENT_ID"
+   go run ./hack/genkey -extKeyUsage client "$AZURE_CLIENT_ID"
    ```
 
 1. Copy env.example to env, edit the values and source the env file.  This file
@@ -80,9 +80,17 @@
 1. Load the application key/certificate into the key vault:
 
    ```
-   KEY_FILE=aro-team-shared.pem
+   AZURE_KEY_FILE=aro-team-shared.pem
 
-   az keyvault certificate import --vault-name "$KEYVAULT_NAME" --name azure --file "$KEY_FILE"
+   az keyvault certificate import --vault-name "$KEYVAULT_NAME" --name azure --file "$AZURE_KEY_FILE"
+   ```
+
+1. Generate a self-signed serving key/certificate and load it into the key vault:
+
+   ```
+   TLS_KEY_FILE=localhost.pem
+   go run ./hack/genkey localhost
+   az keyvault certificate import --vault-name "$KEYVAULT_NAME" --name tls --file "$TLS_KEY_FILE"
    ```
 
 1. Create a glue record in the parent DNS zone:
@@ -110,31 +118,31 @@ CLUSTER=cluster
 * Create a cluster:
 
 ```
-curl -X PUT "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/$CLUSTER?api-version=2019-12-31-preview" -H 'Content-Type: application/json' -d '{"location":"'"$LOCATION"'", "properties": {"servicePrincipalProfile": {"clientId": "'"$CLIENT_ID"'", "clientSecret": "'"$CLIENT_SECRET"'"}}}'
+curl -k -X PUT "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/$CLUSTER?api-version=2019-12-31-preview" -H 'Content-Type: application/json' -d '{"location":"'"$LOCATION"'", "properties": {"servicePrincipalProfile": {"clientId": "'"$CLIENT_ID"'", "clientSecret": "'"$CLIENT_SECRET"'"}}}'
 ```
 
 * Get a cluster:
 
 ```
-curl "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/$CLUSTER?api-version=2019-12-31-preview"
+curl -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/$CLUSTER?api-version=2019-12-31-preview"
 ```
 
 * Get a cluster's kubeadmin credentials:
 
 ```
-curl -X POST "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/$CLUSTER/credentials?api-version=2019-12-31-preview" -H 'Content-Type: application/json' -d '{}'
+curl -k -X POST "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/$CLUSTER/credentials?api-version=2019-12-31-preview" -H 'Content-Type: application/json' -d '{}'
 ```
 
 * List clusters in resource group:
 
 ```
-curl "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters?api-version=2019-12-31-preview"
+curl -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters?api-version=2019-12-31-preview"
 ```
 
 * List clusters in subscription:
 
 ```
-curl "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/providers/Microsoft.RedHatOpenShift/OpenShiftClusters?api-version=2019-12-31-preview"
+curl -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/providers/Microsoft.RedHatOpenShift/OpenShiftClusters?api-version=2019-12-31-preview"
 ```
 
 * Scale a cluster:
@@ -142,13 +150,13 @@ curl "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/providers/Microsoft.Re
 ```
 COUNT=3
 
-curl -X PATCH "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/$CLUSTER?api-version=2019-12-31-preview" -H 'Content-Type: application/json' -d '{"properties": {"workerProfiles": [{"name": "worker", "count": '"$COUNT"'}]}}'
+curl -k -X PATCH "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/$CLUSTER?api-version=2019-12-31-preview" -H 'Content-Type: application/json' -d '{"properties": {"workerProfiles": [{"name": "worker", "count": '"$COUNT"'}]}}'
 ```
 
 * Delete a cluster:
 
 ```
-curl -X DELETE "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/$CLUSTER?api-version=2019-12-31-preview"
+curl -k -X DELETE "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/$CLUSTER?api-version=2019-12-31-preview"
 ```
 
 ## Basic architecture
