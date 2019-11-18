@@ -74,7 +74,7 @@ func (b *backend) install(ctx context.Context, log *logrus.Entry, doc *api.OpenS
 				Azure: &azure.Platform{
 					Region:                      doc.OpenShiftCluster.Location,
 					ResourceGroup:               doc.OpenShiftCluster.Properties.ResourceGroup,
-					BaseDomainResourceGroupName: os.Getenv("DOMAIN_RESOURCEGROUP"),
+					BaseDomainResourceGroupName: os.Getenv("RP_RESOURCEGROUP"),
 				},
 			},
 			PullSecret: string(os.Getenv("PULL_SECRET")),

@@ -8,10 +8,20 @@
         },
         "databaseAccountName": {
             "type": "string"
+        },
+        "domainName": {
+            "type": "string"
         }
     },
     "variables": {},
     "resources": [
+        {
+            "name": "[parameters('domainName')]",
+            "type": "Microsoft.Network/dnsZones",
+            "apiVersion": "2018-05-01",
+            "location": "global",
+            "properties": {}
+        },
         {
             "name": "[parameters('databaseAccountName')]",
             "type": "Microsoft.DocumentDB/databaseAccounts",

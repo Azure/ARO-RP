@@ -26,8 +26,8 @@ func run(log *logrus.Entry) error {
 		"COSMOSDB_ACCOUNT",
 		"COSMOSDB_KEY",
 		"DOMAIN",
-		"DOMAIN_RESOURCEGROUP",
 		"LOCATION",
+		"RP_RESOURCEGROUP",
 	} {
 		if _, found := os.LookupEnv(key); !found {
 			return fmt.Errorf("environment variable %q unset", key)
