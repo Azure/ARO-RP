@@ -91,7 +91,7 @@
   version = "v1.0.1"
 
 [[projects]]
-  digest = "1:589236d12945bbd43c9543852a1019bf9f79c282f138a6932b92681bb84730f1"
+  digest = "1:b19435fea3a02de716c1642b812853ebb4b1de9dad06949097bee121058ad3e3"
   name = "github.com/aws/aws-sdk-go"
   packages = [
     "aws",
@@ -135,8 +135,8 @@
     "service/sts/stsiface",
   ]
   pruneopts = "UT"
-  revision = "eb75dc68e5eba8519331d5de0c070883d5e75941"
-  version = "v1.25.34"
+  revision = "7ac2b6f1d3c9c64a4cbb06212e33b5965d83e3e2"
+  version = "v1.25.36"
 
 [[projects]]
   digest = "1:5f9ab5eeb3788ba8945f9acb2755fba44c3bfefdc95fae477bf6cdc790cab525"
@@ -350,14 +350,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:9ed40e376d364f2caddc514f6557541d3172cd026c7a68baa986eb3ad4157819"
+  digest = "1:d9bfa087ee01f521f964b82fdf179eeb2a52234455bd94068811ae2f6de7e677"
   name = "github.com/gophercloud/utils"
   packages = [
     "env",
     "openstack/clientconfig",
   ]
   pruneopts = "UT"
-  revision = "bd86af96d544288b19b1ca1eb2a3640a3a2d1fab"
+  revision = "6e51b8944d05c5799af3037f5a5c59124bc67797"
 
 [[projects]]
   digest = "1:cbec35fe4d5a4fba369a656a8cd65e244ea2c743007d8f6c1ccb132acf9d1296"
@@ -543,7 +543,7 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "9b71397a3ae226f29d326f9cb0394495540e0988"
+  revision = "1ab2ca2f796cf1e77969164a67502fe910468b07"
 
 [[projects]]
   branch = "openshift-4.2-cluster-api-0.1.0"
@@ -586,7 +586,7 @@
 
 [[projects]]
   branch = "release-4.2-azure"
-  digest = "1:61145befb61d1d775059dc219751e72e06cd0c5068131c706ef1f20c48337f40"
+  digest = "1:91767a74bfb17717ea99f1c8e5d708aab3f9f465504f1deb1129a5dc0e370e0e"
   name = "github.com/openshift/installer"
   packages = [
     "data",
@@ -670,7 +670,7 @@
     "pkg/version",
   ]
   pruneopts = "T"
-  revision = "ea0c8fed2840681bb668b48799aed2cd7dcd470a"
+  revision = "daa70cfbd9c1d8e4703d31332ad2e8040927e116"
   source = "https://github.com/jim-minter/installer"
 
 [[projects]]
@@ -805,7 +805,7 @@
     "ssh/terminal",
   ]
   pruneopts = "UT"
-  revision = "e1110fd1c708ef015366ea01799a23c459593c47"
+  revision = "497ca9f6d64f9bb73048a960b4098309edcd2205"
 
 [[projects]]
   branch = "master"
@@ -822,7 +822,7 @@
     "trace",
   ]
   pruneopts = "UT"
-  revision = "2180aed2234323691e9fd264fb1d32d20ff04b27"
+  revision = "f9c8255933865a6f8452ccf0cc47ac980da5ac56"
 
 [[projects]]
   branch = "master"
@@ -840,7 +840,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:56dffd025d90fdbee3e88c4aef7ebf9884f1d5daab1c917fba73cd189f8c3f38"
+  digest = "1:5d507fb4c4f49b851691887afc8a5a547634186965f85209cc1f25a3ab6a6c57"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -848,7 +848,7 @@
     "windows",
   ]
   pruneopts = "UT"
-  revision = "4c7a9d0fe056d9d1de37e1409ca8a5c17accb46a"
+  revision = "6254a7c3cac686fe2a53a481f189cea00afecc17"
 
 [[projects]]
   digest = "1:1e7fe301d41aead2026c0ade066adcf5e60af7d355cd0f826193852190350d82"
@@ -905,7 +905,7 @@
     "internal/span",
   ]
   pruneopts = "UT"
-  revision = "e2727e816f5aa0f0179e2ee7ec02d5546cd1c5ba"
+  revision = "80313e1ba7181ff88576941b25b4beb004e348db"
 
 [[projects]]
   digest = "1:f3661f6218166acf60f5d551b44a537f7ecb8686be02ece061c5950cbfc9ba17"
@@ -951,7 +951,7 @@
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
   pruneopts = "UT"
-  revision = "16a3f7862a1a494c52b23987ef8a993fd3f9a85e"
+  revision = "83cc0476cb11ea0da33dacd4c6354ab192de6fe6"
 
 [[projects]]
   digest = "1:b59ce3ddb11daeeccccc9cb3183b58ebf8e9a779f1c853308cd91612e817a301"
@@ -1232,7 +1232,7 @@
     "pkg/apis/awsproviderconfig/v1beta1",
   ]
   pruneopts = "UT"
-  revision = "6814fc34f30a4c98d5edeb0a4ef73bbd03fa959b"
+  revision = "0ee2017971f62a3050bf44dac4753698e27e573e"
   source = "https://github.com/openshift/cluster-api-provider-aws.git"
 
 [[projects]]

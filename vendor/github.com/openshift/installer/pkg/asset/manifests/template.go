@@ -36,11 +36,12 @@ type VSphereCredsSecretData struct {
 }
 
 type cloudCredsSecretData struct {
-	AWS       *AwsCredsSecretData
-	Azure     *AzureCredsSecretData
-	GCP       *GCPCredsSecretData
-	OpenStack *OpenStackCredsSecretData
-	VSphere   *VSphereCredsSecretData
+	AWS         *AwsCredsSecretData
+	Azure       *AzureCredsSecretData
+	GCP         *GCPCredsSecretData
+	OpenStack   *OpenStackCredsSecretData
+	VSphere     *VSphereCredsSecretData
+	Passthrough bool
 }
 
 type bootkubeTemplateData struct {

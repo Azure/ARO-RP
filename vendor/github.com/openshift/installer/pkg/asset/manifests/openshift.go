@@ -67,7 +67,7 @@ func (o *Openshift) Generate(dependencies asset.Parents) error {
 	clusterID := &installconfig.ClusterID{}
 	kubeadminPassword := &password.KubeadminPassword{}
 	dependencies.Get(platformCreds, installConfig, kubeadminPassword, clusterID)
-	var cloudCreds cloudCredsSecretData
+	cloudCreds := cloudCredsSecretData{Passthrough: platformCreds.Passthrough}
 	platform := installConfig.Config.Platform.Name()
 	switch platform {
 	case awstypes.Name:
@@ -78,11 +78,9 @@ func (o *Openshift) Generate(dependencies asset.Parents) error {
 		if err != nil {
 			return err
 		}
-		cloudCreds = cloudCredsSecretData{
-			AWS: &AwsCredsSecretData{
-				Base64encodeAccessKeyID:     base64.StdEncoding.EncodeToString([]byte(creds.AccessKeyID)),
-				Base64encodeSecretAccessKey: base64.StdEncoding.EncodeToString([]byte(creds.SecretAccessKey)),
-			},
+		cloudCreds.AWS = &AwsCredsSecretData{
+			Base64encodeAccessKeyID:     base64.StdEncoding.EncodeToString([]byte(creds.AccessKeyID)),
+			Base64encodeSecretAccessKey: base64.StdEncoding.EncodeToString([]byte(creds.SecretAccessKey)),
 		}
 
 	case azuretypes.Name:
@@ -91,16 +89,14 @@ func (o *Openshift) Generate(dependencies asset.Parents) error {
 			return err
 		}
 		creds := session.Credentials
-		cloudCreds = cloudCredsSecretData{
-			Azure: &AzureCredsSecretData{
-				Base64encodeSubscriptionID: base64.StdEncoding.EncodeToString([]byte(creds.SubscriptionID)),
-				Base64encodeClientID:       base64.StdEncoding.EncodeToString([]byte(creds.ClientID)),
-				Base64encodeClientSecret:   base64.StdEncoding.EncodeToString([]byte(creds.ClientSecret)),
-				Base64encodeTenantID:       base64.StdEncoding.EncodeToString([]byte(creds.TenantID)),
-				Base64encodeResourcePrefix: base64.StdEncoding.EncodeToString([]byte(clusterID.InfraID)),
-				Base64encodeResourceGroup:  base64.StdEncoding.EncodeToString([]byte(installConfig.Config.Azure.ResourceGroup)),
-				Base64encodeRegion:         base64.StdEncoding.EncodeToString([]byte(installConfig.Config.Azure.Region)),
-			},
+		cloudCreds.Azure = &AzureCredsSecretData{
+			Base64encodeSubscriptionID: base64.StdEncoding.EncodeToString([]byte(creds.SubscriptionID)),
+			Base64encodeClientID:       base64.StdEncoding.EncodeToString([]byte(creds.ClientID)),
+			Base64encodeClientSecret:   base64.StdEncoding.EncodeToString([]byte(creds.ClientSecret)),
+			Base64encodeTenantID:       base64.StdEncoding.EncodeToString([]byte(creds.TenantID)),
+			Base64encodeResourcePrefix: base64.StdEncoding.EncodeToString([]byte(clusterID.InfraID)),
+			Base64encodeResourceGroup:  base64.StdEncoding.EncodeToString([]byte(installConfig.Config.Azure.ResourceGroup)),
+			Base64encodeRegion:         base64.StdEncoding.EncodeToString([]byte(installConfig.Config.Azure.Region)),
 		}
 	case gcptypes.Name:
 		session, err := gcp.GetSession(context.TODO())
@@ -108,10 +104,8 @@ func (o *Openshift) Generate(dependencies asset.Parents) error {
 			return err
 		}
 		creds := session.Credentials.JSON
-		cloudCreds = cloudCredsSecretData{
-			GCP: &GCPCredsSecretData{
-				Base64encodeServiceAccount: base64.StdEncoding.EncodeToString(creds),
-			},
+		cloudCreds.GCP = &GCPCredsSecretData{
+			Base64encodeServiceAccount: base64.StdEncoding.EncodeToString(creds),
 		}
 	case openstacktypes.Name:
 		opts := new(clientconfig.ClientOpts)
@@ -137,19 +131,15 @@ func (o *Openshift) Generate(dependencies asset.Parents) error {
 
 		credsEncoded := base64.StdEncoding.EncodeToString(marshalled)
 		credsINIEncoded := base64.StdEncoding.EncodeToString(cloudProviderConf)
-		cloudCreds = cloudCredsSecretData{
-			OpenStack: &OpenStackCredsSecretData{
-				Base64encodeCloudCreds:    credsEncoded,
-				Base64encodeCloudCredsINI: credsINIEncoded,
-			},
+		cloudCreds.OpenStack = &OpenStackCredsSecretData{
+			Base64encodeCloudCreds:    credsEncoded,
+			Base64encodeCloudCredsINI: credsINIEncoded,
 		}
 	case vspheretypes.Name:
-		cloudCreds = cloudCredsSecretData{
-			VSphere: &VSphereCredsSecretData{
-				VCenter:              installConfig.Config.VSphere.VCenter,
-				Base64encodeUsername: base64.StdEncoding.EncodeToString([]byte(installConfig.Config.VSphere.Username)),
-				Base64encodePassword: base64.StdEncoding.EncodeToString([]byte(installConfig.Config.VSphere.Password)),
-			},
+		cloudCreds.VSphere = &VSphereCredsSecretData{
+			VCenter:              installConfig.Config.VSphere.VCenter,
+			Base64encodeUsername: base64.StdEncoding.EncodeToString([]byte(installConfig.Config.VSphere.Username)),
+			Base64encodePassword: base64.StdEncoding.EncodeToString([]byte(installConfig.Config.VSphere.Password)),
 		}
 	}
 

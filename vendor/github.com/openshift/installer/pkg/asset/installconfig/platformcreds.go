@@ -6,7 +6,8 @@ import (
 )
 
 type PlatformCreds struct {
-	Azure *azure.Credentials `json:"-"`
+	Azure       *azure.Credentials
+	Passthrough bool
 }
 
 var _ asset.Asset = (*PlatformCreds)(nil)

@@ -56,11 +56,54 @@ type ClientOpts struct {
 	// This will override a region in clouds.yaml or can be used
 	// when authenticating directly with AuthInfo.
 	RegionName string
+
+	// YAMLOpts provides the ability to pass a customized set
+	// of options and methods for loading the YAML file.
+	// It takes a YAMLOptsBuilder interface that is defined
+	// in this file. This is optional and the default behavior
+	// is to call the local LoadCloudsYAML functions defined
+	// in this file.
+	YAMLOpts YAMLOptsBuilder
+}
+
+// YAMLOptsBuilder defines an interface for customization when
+// loading a clouds.yaml file.
+type YAMLOptsBuilder interface {
+	LoadCloudsYAML() (map[string]Cloud, error)
+	LoadSecureCloudsYAML() (map[string]Cloud, error)
+	LoadPublicCloudsYAML() (map[string]Cloud, error)
+}
+
+// YAMLOpts represents options and methods to load a clouds.yaml file.
+type YAMLOpts struct {
+	// By default, no options are specified.
+}
+
+// LoadCloudsYAML defines how to load a clouds.yaml file.
+// By default, this calls the local LoadCloudsYAML function.
+func (opts YAMLOpts) LoadCloudsYAML() (map[string]Cloud, error) {
+	return LoadCloudsYAML()
+}
+
+// LoadSecureCloudsYAML defines how to load a secure.yaml file.
+// By default, this calls the local LoadSecureCloudsYAML function.
+func (opts YAMLOpts) LoadSecureCloudsYAML() (map[string]Cloud, error) {
+	return LoadSecureCloudsYAML()
+}
+
+// LoadPublicCloudsYAML defines how to load a public-secure.yaml file.
+// By default, this calls the local LoadPublicCloudsYAML function.
+func (opts YAMLOpts) LoadPublicCloudsYAML() (map[string]Cloud, error) {
+	return LoadPublicCloudsYAML()
 }
 
 // LoadCloudsYAML will load a clouds.yaml file and return the full config.
+// This is called by the YAMLOpts method. Calling this function directly
+// is supported for now but has only been retained for backwards
+// compatibility from before YAMLOpts was defined. This may be removed in
+// the future.
 func LoadCloudsYAML() (map[string]Cloud, error) {
-	content, err := findAndReadCloudsYAML()
+	_, content, err := FindAndReadCloudsYAML()
 	if err != nil {
 		return nil, err
 	}
@@ -75,10 +118,14 @@ func LoadCloudsYAML() (map[string]Cloud, error) {
 }
 
 // LoadSecureCloudsYAML will load a secure.yaml file and return the full config.
+// This is called by the YAMLOpts method. Calling this function directly
+// is supported for now but has only been retained for backwards
+// compatibility from before YAMLOpts was defined. This may be removed in
+// the future.
 func LoadSecureCloudsYAML() (map[string]Cloud, error) {
 	var secureClouds Clouds
 
-	content, err := findAndReadSecureCloudsYAML()
+	_, content, err := FindAndReadSecureCloudsYAML()
 	if err != nil {
 		if err.Error() == "no secure.yaml file found" {
 			// secure.yaml is optional so just ignore read error
@@ -96,10 +143,14 @@ func LoadSecureCloudsYAML() (map[string]Cloud, error) {
 }
 
 // LoadPublicCloudsYAML will load a public-clouds.yaml file and return the full config.
+// This is called by the YAMLOpts method. Calling this function directly
+// is supported for now but has only been retained for backwards
+// compatibility from before YAMLOpts was defined. This may be removed in
+// the future.
 func LoadPublicCloudsYAML() (map[string]Cloud, error) {
 	var publicClouds PublicClouds
 
-	content, err := findAndReadPublicCloudsYAML()
+	_, content, err := FindAndReadPublicCloudsYAML()
 	if err != nil {
 		if err.Error() == "no clouds-public.yaml file found" {
 			// clouds-public.yaml is optional so just ignore read error
@@ -119,7 +170,13 @@ func LoadPublicCloudsYAML() (map[string]Cloud, error) {
 
 // GetCloudFromYAML will return a cloud entry from a clouds.yaml file.
 func GetCloudFromYAML(opts *ClientOpts) (*Cloud, error) {
-	clouds, err := LoadCloudsYAML()
+	if opts.YAMLOpts == nil {
+		opts.YAMLOpts = new(YAMLOpts)
+	}
+
+	yamlOpts := opts.YAMLOpts
+
+	clouds, err := yamlOpts.LoadCloudsYAML()
 	if err != nil {
 		return nil, fmt.Errorf("unable to load clouds.yaml: %s", err)
 	}
@@ -167,7 +224,7 @@ func GetCloudFromYAML(opts *ClientOpts) (*Cloud, error) {
 		cloudIsInCloudsYaml = true
 	}
 
-	publicClouds, err := LoadPublicCloudsYAML()
+	publicClouds, err := yamlOpts.LoadPublicCloudsYAML()
 	if err != nil {
 		return nil, fmt.Errorf("unable to load clouds-public.yaml: %s", err)
 	}
@@ -184,7 +241,7 @@ func GetCloudFromYAML(opts *ClientOpts) (*Cloud, error) {
 		}
 	}
 
-	secureClouds, err := LoadSecureCloudsYAML()
+	secureClouds, err := yamlOpts.LoadSecureCloudsYAML()
 	if err != nil {
 		return nil, fmt.Errorf("unable to load secure.yaml: %s", err)
 	}
