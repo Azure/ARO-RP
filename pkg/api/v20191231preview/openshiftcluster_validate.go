@@ -1,8 +1,6 @@
 package v20191231preview
 
 import (
-	"bytes"
-	"encoding/json"
 	"net"
 	"net/http"
 	"net/url"
@@ -57,10 +55,6 @@ func (p *Properties) validate(path string) error {
 		ProvisioningStateSucceeded, ProvisioningStateFailed:
 	default:
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".provisioningState", "The provided provisioning state '%s' is invalid.", p.ProvisioningState)
-	}
-	if !json.Valid(p.PullSecret) ||
-		!bytes.HasPrefix(p.PullSecret, []byte("{")) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".pullSecret", "The provided pull secret is invalid.")
 	}
 	if err := p.NetworkProfile.validate(path + ".networkProfile"); err != nil {
 		return err
@@ -184,9 +178,6 @@ func (oc *OpenShiftCluster) validateDelta(current *OpenShiftCluster) error {
 func (p *Properties) validateDelta(path string, current *Properties) error {
 	if current.ProvisioningState != p.ProvisioningState {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, path+".provisioningState", "Changing property '"+path+".provisioningState' is not allowed.")
-	}
-	if !bytes.Equal(current.PullSecret, p.PullSecret) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, path+".pullSecret", "Changing property '"+path+".pullSecret' is not allowed.")
 	}
 	if err := p.NetworkProfile.validateDelta(path+".networkProfile", &current.NetworkProfile); err != nil {
 		return err

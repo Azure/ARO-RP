@@ -460,10 +460,6 @@
           "$ref": "#/definitions/ProvisioningState",
           "description": "The cluster provisioning state (immutable)."
         },
-        "pullSecret": {
-          "description": "The cluster pull secret (immutable, will be removed before GA).",
-          "type": "string"
-        },
         "networkProfile": {
           "$ref": "#/definitions/NetworkProfile",
           "description": "The cluster network profile."

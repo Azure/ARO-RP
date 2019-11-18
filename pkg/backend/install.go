@@ -77,7 +77,7 @@ func (b *backend) install(ctx context.Context, log *logrus.Entry, doc *api.OpenS
 					BaseDomainResourceGroupName: os.Getenv("DOMAIN_RESOURCEGROUP"),
 				},
 			},
-			PullSecret: string(doc.OpenShiftCluster.Properties.PullSecret),
+			PullSecret: string(os.Getenv("PULL_SECRET")),
 		},
 	}
 

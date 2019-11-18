@@ -23,8 +23,6 @@ type Properties struct {
 
 	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"`
 
-	PullSecret []byte `json:"pullSecret,omitempty"` // w/o
-
 	NetworkProfile NetworkProfile `json:"networkProfile,omitempty"`
 
 	MasterProfile MasterProfile `json:"masterProfile,omitempty"`

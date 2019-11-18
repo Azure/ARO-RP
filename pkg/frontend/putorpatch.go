@@ -121,7 +121,6 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 				Type: r.resourceType,
 				Properties: api.Properties{
 					ProvisioningState: doc.OpenShiftCluster.Properties.ProvisioningState,
-					PullSecret:        doc.OpenShiftCluster.Properties.PullSecret,
 				},
 			})
 
@@ -174,7 +173,6 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 	doc.OpenShiftCluster.ID = r.resourceID
 	doc.OpenShiftCluster.Name = r.resourceName
 	doc.OpenShiftCluster.Type = r.resourceType
-	doc.OpenShiftCluster.Properties.PullSecret = nil
 
 	b, err := json.MarshalIndent(r.toExternal(doc.OpenShiftCluster), "", "  ")
 	if err != nil {

@@ -29,9 +29,6 @@ type Properties struct {
 	// The cluster provisioning state (immutable).
 	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"`
 
-	// The cluster pull secret (immutable, will be removed before GA).
-	PullSecret []byte `json:"pullSecret,omitempty"`
-
 	// The cluster network profile.
 	NetworkProfile NetworkProfile `json:"networkProfile,omitempty"`
 
