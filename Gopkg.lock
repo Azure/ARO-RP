@@ -10,7 +10,7 @@
   version = "v0.48.0"
 
 [[projects]]
-  digest = "1:2bf50d54a2c49762d343431e29832409d0ddd9b1b28051a44bbbb68cdf19b915"
+  digest = "1:552c0dc856cac730a31fea45459ac0ce4f31ad6154f4e6c5c7333695ed274642"
   name = "github.com/Azure/azure-sdk-for-go"
   packages = [
     "profiles/latest/dns/mgmt/dns",
@@ -20,6 +20,8 @@
     "services/compute/mgmt/2019-03-01/compute",
     "services/cosmos-db/mgmt/2015-04-08/documentdb",
     "services/dns/mgmt/2018-05-01/dns",
+    "services/keyvault/2016-10-01/keyvault",
+    "services/keyvault/mgmt/2016-10-01/keyvault",
     "services/msi/mgmt/2018-11-30/msi",
     "services/network/mgmt/2019-07-01/network",
     "services/resources/mgmt/2018-05-01/resources",
@@ -1285,12 +1287,15 @@
     "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute",
     "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2015-04-08/documentdb",
     "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns",
+    "github.com/Azure/azure-sdk-for-go/services/keyvault/2016-10-01/keyvault",
+    "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2016-10-01/keyvault",
     "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi",
     "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network",
     "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources",
     "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage",
     "github.com/Azure/azure-sdk-for-go/storage",
     "github.com/Azure/go-autorest/autorest",
+    "github.com/Azure/go-autorest/autorest/adal",
     "github.com/Azure/go-autorest/autorest/azure",
     "github.com/Azure/go-autorest/autorest/azure/auth",
     "github.com/Azure/go-autorest/autorest/to",
