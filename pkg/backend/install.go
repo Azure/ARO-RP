@@ -34,6 +34,7 @@ func (b *backend) install(ctx context.Context, log *logrus.Entry, doc *api.OpenS
 			ClientSecret:   os.Getenv("AZURE_CLIENT_SECRET"),
 			SubscriptionID: doc.SubscriptionID,
 		},
+		Passthrough: true, // TODO: not working yet
 	}
 
 	installConfig := &installconfig.InstallConfig{
