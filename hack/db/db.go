@@ -18,7 +18,7 @@ import (
 
 func run(ctx context.Context) error {
 	for _, key := range []string{
-		"RP_RESOURCEGROUP",
+		"RESOURCEGROUP",
 	} {
 		if _, found := os.LookupEnv(key); !found {
 			return fmt.Errorf("environment variable %q unset", key)

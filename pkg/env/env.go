@@ -14,7 +14,7 @@ func CosmosDB(ctx context.Context, authorizer autorest.Authorizer) (string, stri
 	dac := documentdb.NewDatabaseAccountsClient(os.Getenv("AZURE_SUBSCRIPTION_ID"))
 	dac.Authorizer = authorizer
 
-	accts, err := dac.ListByResourceGroup(ctx, os.Getenv("RP_RESOURCEGROUP"))
+	accts, err := dac.ListByResourceGroup(ctx, os.Getenv("RESOURCEGROUP"))
 	if err != nil {
 		return "", "", err
 	}
@@ -23,7 +23,7 @@ func CosmosDB(ctx context.Context, authorizer autorest.Authorizer) (string, stri
 		return "", "", fmt.Errorf("found %d database accounts, expected 1", len(*accts.Value))
 	}
 
-	keys, err := dac.ListKeys(ctx, os.Getenv("RP_RESOURCEGROUP"), *(*accts.Value)[0].Name)
+	keys, err := dac.ListKeys(ctx, os.Getenv("RESOURCEGROUP"), *(*accts.Value)[0].Name)
 	if err != nil {
 		return "", "", err
 	}
@@ -35,7 +35,7 @@ func DNS(ctx context.Context, authorizer autorest.Authorizer) (string, error) {
 	zc := dns.NewZonesClient(os.Getenv("AZURE_SUBSCRIPTION_ID"))
 	zc.Authorizer = authorizer
 
-	page, err := zc.ListByResourceGroup(ctx, os.Getenv("RP_RESOURCEGROUP"), nil)
+	page, err := zc.ListByResourceGroup(ctx, os.Getenv("RESOURCEGROUP"), nil)
 	if err != nil {
 		return "", err
 	}

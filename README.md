@@ -26,8 +26,7 @@ https://github.com/jim-minter/go-cosmosdb
   * AZURE_CLIENT_SECRET:   Azure service principal secret
 
   * LOCATION:              Azure location where RP and cluster(s) will run (default: `eastus`)
-
-  * RP_RESOURCEGROUP:      Name of resource group which will contain the CosmosDB resource
+  * RESOURCEGROUP:         Name of resource group which will contain the CosmosDB and DNS resources
 
   * PULL_SECRET:           A cluster pull secret retrieved from (Red Hat OpenShift Cluster Manager)[https://cloud.redhat.com/openshift/install/azure/installer-provisioned]
 
@@ -48,9 +47,9 @@ vi env
 COSMOSDB_ACCOUNT=mycosmosdb
 DOMAIN=mydomain.osadev.cloud
 
-az group create -g "$RP_RESOURCEGROUP" -l "$LOCATION"`
+az group create -g "$RESOURCEGROUP" -l "$LOCATION"`
 
-az group deployment create -g "$RP_RESOURCEGROUP" --mode complete --template-file deploy/rp.json --parameters "location=$LOCATION" "databaseAccountName=$COSMOSDB_ACCOUNT" "domainName=$DOMAIN"
+az group deployment create -g "$RESOURCEGROUP" --mode complete --template-file deploy/rp.json --parameters "location=$LOCATION" "databaseAccountName=$COSMOSDB_ACCOUNT" "domainName=$DOMAIN"
 ```
 
 * If appropriate, create a glue record in the parent DNS zone
@@ -63,7 +62,7 @@ CHILD_DNS_NAME=mydomain
 
 az network dns record-set ns create --resource-group "$PARENT_DNS_RESOURCEGROUP" --zone "$PARENT_DNS_ZONE" --name "$CHILD_DNS_NAME"
 
-for ns in $(az network dns zone show --resource-group "$RP_RESOURCEGROUP" --name "$DOMAIN" --query nameServers -o tsv); do az network dns record-set ns add-record --resource-group "$PARENT_DNS_RESOURCEGROUP" --zone "$PARENT_DNS_ZONE" --record-set-name "$CHILD_DNS_NAME" --nsdname $ns; done
+for ns in $(az network dns zone show --resource-group "$RESOURCEGROUP" --name "$DOMAIN" --query nameServers -o tsv); do az network dns record-set ns add-record --resource-group "$PARENT_DNS_RESOURCEGROUP" --zone "$PARENT_DNS_ZONE" --record-set-name "$CHILD_DNS_NAME" --nsdname $ns; done
 ```
 
 ## Getting started
