@@ -7,11 +7,11 @@
    * go 1.12 or later
    * az client
 
-1. Log in to Azure.
+1. Log in to Azure:
 
-```
-az login
-```
+   ```
+   az login
+   ```
 
 1. You will need a publicly resolvable DNS zone resource in Azure.  For RH ARO
    engineering, this is the `osadev.cloud` zone in the `dns` resource group.
@@ -25,16 +25,16 @@ az login
 
    For RH ARO engineering, this is the `aro-team-shared` AAD application. You
    will need the client ID, client secret, and a key/certificate file
-   (aro-team-shared.pem) that can be loaded into your key vault.  Ask if you do
-   not have these.
+   (`aro-team-shared.pem`) that can be loaded into your key vault.  Ask if you
+   do not have these.
 
    For non-RH ARO engineering, a suitable key/certificate file can be generated
    using the following helper utility:
 
-```
-# Non-RH ARO engineering only
-go run ./hack/genkey "$AZURE_CLIENT_ID"
-```
+   ```
+   # Non-RH ARO engineering only
+   go run ./hack/genkey "$AZURE_CLIENT_ID"
+   ```
 
 1. Copy env.example to env, edit the values and source the env file.  This file
    holds (only) the environment variables necessary for the RP to run.
@@ -49,13 +49,13 @@ go run ./hack/genkey "$AZURE_CLIENT_ID"
 
    * PULL_SECRET:           A cluster pull secret retrieved from (Red Hat OpenShift Cluster Manager)[https://cloud.redhat.com/openshift/install/azure/installer-provisioned]
 
-```
-cp env.example env
-vi env
-. ./env
-```
+   ```
+   cp env.example env
+   vi env
+   . ./env
+   ```
 
-1. Choose the RP deployment parameters.
+1. Choose the RP deployment parameters:
 
    * COSMOSDB_ACCOUNT: Name of a new CosmosDB account
    * DOMAIN:           DNS subdomain shared by all clusters (RH: <something>.osadev.cloud)
@@ -63,37 +63,37 @@ vi env
    * ADMIN_OBJECT_ID:  AAD object ID for key vault admin(s) (RH: `az ad group list --query "[?displayName=='Engineering'].objectId" -o tsv`)
    * RP_OBJECT_ID:     AAD object ID for AAD application    (RH: `az ad app list --all --query "[?appId=='$AZURE_CLIENT_ID'].objectId" -o tsv`)
 
-1. Create the resource group and deploy the RP resources.
+1. Create the resource group and deploy the RP resources:
 
-```
-COSMOSDB_ACCOUNT=mycosmosdb
-DOMAIN=mydomain.osadev.cloud
-KEYVAULT_NAME=mykeyvault
-ADMIN_OBJECT_ID=$(az ad group list --query "[?displayName=='Engineering'].objectId" -o tsv)
-RP_OBJECT_ID=$(az ad app list --all --query "[?appId=='$AZURE_CLIENT_ID'].objectId" -o tsv)
+   ```
+   COSMOSDB_ACCOUNT=mycosmosdb
+   DOMAIN=mydomain.osadev.cloud
+   KEYVAULT_NAME=mykeyvault
+   ADMIN_OBJECT_ID=$(az ad group list --query "[?displayName=='Engineering'].objectId" -o tsv)
+   RP_OBJECT_ID=$(az ad app list --all --query "[?appId=='$AZURE_CLIENT_ID'].objectId" -o tsv)
 
-az group create -g "$RESOURCEGROUP" -l "$LOCATION"
+   az group create -g "$RESOURCEGROUP" -l "$LOCATION"
 
-az group deployment create -g "$RESOURCEGROUP" --mode complete --template-file deploy/rp.json --parameters "location=$LOCATION" "databaseAccountName=$COSMOSDB_ACCOUNT" "domainName=$DOMAIN" "keyvaultName=$KEYVAULT_NAME" "adminObjectId=$ADMIN_OBJECT_ID" "rpObjectId=$RP_OBJECT_ID"
-```
+   az group deployment create -g "$RESOURCEGROUP" --mode complete --template-file deploy/rp.json --parameters "location=$LOCATION" "databaseAccountName=$COSMOSDB_ACCOUNT" "domainName=$DOMAIN" "keyvaultName=$KEYVAULT_NAME" "adminObjectId=$ADMIN_OBJECT_ID" "rpObjectId=$RP_OBJECT_ID"
+   ```
 
-1. Load the application key/certificate into the key vault
+1. Load the application key/certificate into the key vault:
 
-```
-KEY_FILE=aro-team-shared.pem
+   ```
+   KEY_FILE=aro-team-shared.pem
 
-az keyvault certificate import --vault-name "$KEYVAULT_NAME" --name azure --file "$KEY_FILE"
-```
+   az keyvault certificate import --vault-name "$KEYVAULT_NAME" --name azure --file "$KEY_FILE"
+   ```
 
-1. Create a glue record in the parent DNS zone
+1. Create a glue record in the parent DNS zone:
 
-```
-PARENT_DNS_RESOURCEGROUP=dns
+   ```
+   PARENT_DNS_RESOURCEGROUP=dns
 
-az network dns record-set ns create --resource-group "$PARENT_DNS_RESOURCEGROUP" --zone "$(cut -d. -f2- <<<"$DOMAIN")" --name "$(cut -d. -f1 <<<"$DOMAIN")"
+   az network dns record-set ns create --resource-group "$PARENT_DNS_RESOURCEGROUP" --zone "$(cut -d. -f2- <<<"$DOMAIN")" --name "$(cut -d. -f1 <<<"$DOMAIN")"
 
-for ns in $(az network dns zone show --resource-group "$RESOURCEGROUP" --name "$DOMAIN" --query nameServers -o tsv); do az network dns record-set ns add-record --resource-group "$PARENT_DNS_RESOURCEGROUP" --zone "$(cut -d. -f2- <<<"$DOMAIN")" --record-set-name "$(cut -d. -f1 <<<"$DOMAIN")" --nsdname $ns; done
-```
+   for ns in $(az network dns zone show --resource-group "$RESOURCEGROUP" --name "$DOMAIN" --query nameServers -o tsv); do az network dns record-set ns add-record --resource-group "$PARENT_DNS_RESOURCEGROUP" --zone "$(cut -d. -f2- <<<"$DOMAIN")" --record-set-name "$(cut -d. -f1 <<<"$DOMAIN")" --nsdname $ns; done
+   ```
 
 ## Running the RP
 
@@ -107,37 +107,37 @@ go run ./cmd/rp
 CLUSTER=cluster
 ```
 
-* Create a cluster
+* Create a cluster:
 
 ```
 curl -X PUT "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/$CLUSTER?api-version=2019-12-31-preview" -H 'Content-Type: application/json' -d '{"location":"'"$LOCATION"'", "properties": {"servicePrincipalProfile": {"clientId": "'"$CLIENT_ID"'", "clientSecret": "'"$CLIENT_SECRET"'"}}}'
 ```
 
-* Get a cluster
+* Get a cluster:
 
 ```
 curl "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/$CLUSTER?api-version=2019-12-31-preview"
 ```
 
-* Get a cluster's credentials
+* Get a cluster's kubeadmin credentials:
 
 ```
 curl -X POST "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/$CLUSTER/credentials?api-version=2019-12-31-preview" -H 'Content-Type: application/json' -d '{}'
 ```
 
-* List clusters in resource group
+* List clusters in resource group:
 
 ```
 curl "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters?api-version=2019-12-31-preview"
 ```
 
-* List clusters in subscription
+* List clusters in subscription:
 
 ```
 curl "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/providers/Microsoft.RedHatOpenShift/OpenShiftClusters?api-version=2019-12-31-preview"
 ```
 
-* Scale a cluster
+* Scale a cluster:
 
 ```
 COUNT=3
@@ -145,7 +145,7 @@ COUNT=3
 curl -X PATCH "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/$CLUSTER?api-version=2019-12-31-preview" -H 'Content-Type: application/json' -d '{"properties": {"workerProfiles": [{"name": "worker", "count": '"$COUNT"'}]}}'
 ```
 
-* Delete a cluster
+* Delete a cluster:
 
 ```
 curl -X DELETE "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/$CLUSTER?api-version=2019-12-31-preview"
@@ -182,26 +182,26 @@ curl -X DELETE "localhost:8080/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGrou
 
 ## Debugging
 
-* Get an admin kubeconfig
+* Get an admin kubeconfig:
 
-```
-hack/get-admin-kubeconfig.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/$CLUSTER
-export KUBECONFIG=admin.kubeconfig
-oc version
-```
+  ```
+  hack/get-admin-kubeconfig.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/$CLUSTER
+  export KUBECONFIG=admin.kubeconfig
+  oc version
+  ```
 
-* SSH to the bootstrap node
+* SSH to the bootstrap node:
 
-```
-hack/ssh-bootstrap.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/$CLUSTER
-```
+  ```
+  hack/ssh-bootstrap.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/$CLUSTER
+  ```
 
 ## Useful links
 
-https://github.com/Azure/azure-resource-manager-rpc
+* https://github.com/Azure/azure-resource-manager-rpc
 
-https://github.com/microsoft/api-guidelines
+* https://github.com/microsoft/api-guidelines
 
-https://docs.microsoft.com/en-gb/rest/api/cosmos-db
+* https://docs.microsoft.com/en-gb/rest/api/cosmos-db
 
-https://github.com/jim-minter/go-cosmosdb
+* https://github.com/jim-minter/go-cosmosdb
