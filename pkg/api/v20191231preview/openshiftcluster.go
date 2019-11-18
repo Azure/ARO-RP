@@ -70,7 +70,7 @@ type NetworkProfile struct {
 
 // MasterProfile represents a master profile.
 type MasterProfile struct {
-	// The size of the master VMs.
+	// The size of the master VMs (immutable).
 	VMSize VMSize `json:"vmSize,omitempty"`
 }
 
@@ -86,13 +86,13 @@ const (
 
 // WorkerProfile represents a worker profile.
 type WorkerProfile struct {
-	// The worker profile name.  Must be "worker".
+	// The worker profile name.  Must be "worker" (immutable).
 	Name string `json:"name,omitempty"`
 
-	// The size of the worker VMs.
+	// The size of the worker VMs (immutable).
 	VMSize VMSize `json:"vmSize,omitempty"`
 
-	// The disk size of the worker VMs.  Must be 128 or greater.
+	// The disk size of the worker VMs.  Must be 128 or greater (immutable).
 	DiskSizeGB int `json:"diskSizeGB,omitempty"`
 
 	// The number of worker VMs.  Must be between 3 and 20.

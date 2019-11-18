@@ -379,7 +379,7 @@
       "properties": {
         "vmSize": {
           "$ref": "#/definitions/VMSize",
-          "description": "The size of the master VMs."
+          "description": "The size of the master VMs (immutable)."
         }
       }
     },
@@ -515,15 +515,15 @@
       "description": "WorkerProfile represents a worker profile.",
       "properties": {
         "name": {
-          "description": "The worker profile name.  Must be \"worker\".",
+          "description": "The worker profile name.  Must be \"worker\" (immutable).",
           "type": "string"
         },
         "vmSize": {
           "$ref": "#/definitions/VMSize",
-          "description": "The size of the worker VMs."
+          "description": "The size of the worker VMs (immutable)."
         },
         "diskSizeGB": {
-          "description": "The disk size of the worker VMs.  Must be 128 or greater.",
+          "description": "The disk size of the worker VMs.  Must be 128 or greater (immutable).",
           "type": "integer"
         },
         "count": {
