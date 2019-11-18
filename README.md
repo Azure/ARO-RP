@@ -12,8 +12,9 @@ https://github.com/jim-minter/go-cosmosdb
 
 * Publicly resolvable DNS zone resource in Azure
 
-* Service principal (client ID and secret) with (for now) Contributor access to
-  the subscription
+* Service principal (client ID and secret) with (for now) User Access
+  Administrator access to the subscription and (for now) `Azure Active Directory
+  Graph / Application.ReadWrite.OwnedBy` privileges
 
 ## Installation
 
