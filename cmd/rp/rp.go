@@ -3,16 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
-	"net"
 	"net/http"
-	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/jim-minter/rp/pkg/api"
 	_ "github.com/jim-minter/rp/pkg/api/v20191231preview"
 	"github.com/jim-minter/rp/pkg/backend"
 	"github.com/jim-minter/rp/pkg/database"
@@ -39,7 +36,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
-	env, err := env.NewEnv(os.Getenv("AZURE_SUBSCRIPTION_ID"), os.Getenv("RESOURCEGROUP"))
+	env, err := env.NewEnv(ctx, log, os.Getenv("AZURE_SUBSCRIPTION_ID"), os.Getenv("RESOURCEGROUP"))
 	if err != nil {
 		return err
 	}
@@ -64,11 +61,6 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	servingCert, err := env.ServingCert(ctx)
-	if err != nil {
-		return err
-	}
-
 	authorizer, err := env.FirstPartyAuthorizer(ctx)
 	if err != nil {
 		return err
@@ -80,14 +72,14 @@ func run(ctx context.Context, log *logrus.Entry) error {
 
 	go backend.NewBackend(log.WithField("component", "backend"), authorizer, db, domain).Run(stop)
 
-	l, err := net.Listen("tcp", ":8443")
+	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), env, db)
 	if err != nil {
 		return err
 	}
 
 	log.Print("listening")
 
-	go frontend.NewFrontend(log.WithField("component", "frontend"), l, servingCert, db, api.APIs).Run(stop)
+	f.Run(stop)
 
 	<-sigterm
 	log.Print("received SIGTERM")

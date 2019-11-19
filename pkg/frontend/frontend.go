@@ -1,7 +1,7 @@
 package frontend
 
 import (
-	"crypto/tls"
+	"context"
 	"net"
 	"net/http"
 	"sync/atomic"
@@ -11,6 +11,7 @@ import (
 
 	"github.com/jim-minter/rp/pkg/api"
 	"github.com/jim-minter/rp/pkg/database"
+	"github.com/jim-minter/rp/pkg/env"
 )
 
 const (
@@ -41,14 +42,14 @@ func validateProvisioningState(state api.ProvisioningState, allowedStates ...api
 
 type frontend struct {
 	baseLog *logrus.Entry
+	env     env.Interface
 
-	db   database.OpenShiftClusters
-	apis map[api.APIVersionType]func(*api.OpenShiftCluster) api.External
+	db database.OpenShiftClusters
 
 	l    net.Listener
-	cert *tls.Certificate
+	tlsl net.Listener
 
-	healthy atomic.Value
+	ready atomic.Value
 }
 
 // Runnable represents a runnable object
@@ -57,33 +58,50 @@ type Runnable interface {
 }
 
 // NewFrontend returns a new runnable frontend
-func NewFrontend(baseLog *logrus.Entry, l net.Listener, cert *tls.Certificate, db database.OpenShiftClusters, apis map[api.APIVersionType]func(*api.OpenShiftCluster) api.External) Runnable {
+func NewFrontend(ctx context.Context, baseLog *logrus.Entry, env env.Interface, db database.OpenShiftClusters) (Runnable, error) {
 	f := &frontend{
 		baseLog: baseLog,
+		env:     env,
 		db:      db,
-		apis:    apis,
-
-		l:    l,
-		cert: cert,
 	}
 
-	f.healthy.Store(true)
+	var err error
+	f.l, err = net.Listen("tcp", ":8080")
+	if err != nil {
+		return nil, err
+	}
 
-	return f
+	f.tlsl, err = f.env.ListenTLS(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	f.ready.Store(true)
+
+	return f, nil
 }
 
-func (f *frontend) health(w http.ResponseWriter, r *http.Request) {
-	if f.healthy.Load().(bool) {
-		http.Error(w, "", http.StatusOK)
+func (f *frontend) getReady(w http.ResponseWriter, r *http.Request) {
+	if f.ready.Load().(bool) && f.env.IsReady() {
+		http.Error(w, http.StatusText(http.StatusOK), http.StatusOK)
 	} else {
-		http.Error(w, "", http.StatusInternalServerError)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 	}
 }
 
-func (f *frontend) Run(stop <-chan struct{}) {
+// unauthenticatedRouter returns the router which is served via unauthenticated
+// HTTP
+func (f *frontend) unauthenticatedRouter() *mux.Router {
 	r := mux.NewRouter()
-	r.PathPrefix("/debug/pprof/").Handler(http.DefaultServeMux)
-	r.Path("/health").Methods(http.MethodGet).HandlerFunc(f.health)
+	r.Path("/healthz/ready").Methods(http.MethodGet).HandlerFunc(f.getReady)
+
+	return r
+}
+
+// authenticatedRouter returns the router which is served via TLS and protected
+// by client certificate authentication
+func (f *frontend) authenticatedRouter() *mux.Router {
+	r := mux.NewRouter()
 
 	s := r.
 		Path("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}").
@@ -120,13 +138,21 @@ func (f *frontend) Run(stop <-chan struct{}) {
 	s.Use(f.middleware)
 	s.Methods(http.MethodPost).HandlerFunc(f.postOpenShiftClusterCredentials)
 
+	return r
+}
+
+func (f *frontend) Run(stop <-chan struct{}) {
 	go func() {
 		<-stop
-		f.baseLog.Println("marking frontend unhealthy")
-		f.healthy.Store(false)
+		f.baseLog.Print("marking frontend not ready")
+		f.ready.Store(false)
 	}()
 
-	l := tls.NewListener(f.l, &tls.Config{Certificates: []tls.Certificate{*f.cert}})
-	err := http.Serve(l, r)
+	go func() {
+		err := http.Serve(f.l, f.unauthenticatedRouter())
+		f.baseLog.Error(err)
+	}()
+
+	err := http.Serve(f.tlsl, f.authenticatedRouter())
 	f.baseLog.Error(err)
 }

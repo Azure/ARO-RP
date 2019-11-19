@@ -7,6 +7,7 @@ import (
 	"os"
 
 	uuid "github.com/satori/go.uuid"
+	"github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
 
 	"github.com/jim-minter/rp/pkg/api"
@@ -15,7 +16,7 @@ import (
 	"github.com/jim-minter/rp/pkg/env"
 )
 
-func run(ctx context.Context) error {
+func run(ctx context.Context, log *logrus.Entry) error {
 	for _, key := range []string{
 		"RESOURCEGROUP",
 	} {
@@ -26,6 +27,11 @@ func run(ctx context.Context) error {
 
 	if len(os.Args) != 2 {
 		return fmt.Errorf("usage: %s resourceid", os.Args[0])
+	}
+
+	env, err := env.NewEnv(ctx, log, os.Getenv("AZURE_SUBSCRIPTION_ID"), os.Getenv("RESOURCEGROUP"))
+	if err != nil {
+		return err
 	}
 
 	databaseAccount, masterKey, err := env.CosmosDB(ctx)
@@ -65,7 +71,14 @@ func run(ctx context.Context) error {
 }
 
 func main() {
-	if err := run(context.Background()); err != nil {
+	logrus.SetReportCaller(true)
+	logrus.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp:          true,
+		DisableLevelTruncation: true,
+	})
+	log := logrus.NewEntry(logrus.StandardLogger())
+
+	if err := run(context.Background(), log); err != nil {
 		panic(err)
 	}
 }
