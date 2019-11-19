@@ -49,6 +49,7 @@
 
    * PULL_SECRET:           A cluster pull secret retrieved from [Red Hat OpenShift Cluster Manager](https://cloud.redhat.com/openshift/install/azure/installer-provisioned)
 
+   * RP_MODE:               Set to `development` when not in production.
    ```
    cp env.example env
    vi env
