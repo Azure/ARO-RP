@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
 
 	uuid "github.com/satori/go.uuid"
@@ -12,7 +11,6 @@ import (
 
 	"github.com/jim-minter/rp/pkg/api"
 	"github.com/jim-minter/rp/pkg/database"
-	"github.com/jim-minter/rp/pkg/database/cosmosdb"
 	"github.com/jim-minter/rp/pkg/env"
 )
 
@@ -34,17 +32,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	databaseAccount, masterKey, err := env.CosmosDB(ctx)
-	if err != nil {
-		return err
-	}
-
-	dbc, err := cosmosdb.NewDatabaseClient(http.DefaultClient, databaseAccount, masterKey)
-	if err != nil {
-		return err
-	}
-
-	db, err := database.NewOpenShiftClusters(uuid.NewV4(), dbc, "OpenShiftClusters", "OpenShiftClusterDocuments")
+	db, err := database.NewOpenShiftClusters(ctx, env, uuid.NewV4(), "OpenShiftClusters", "OpenShiftClusterDocuments")
 	if err != nil {
 		return err
 	}

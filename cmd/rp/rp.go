@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -13,7 +12,6 @@ import (
 	_ "github.com/jim-minter/rp/pkg/api/v20191231preview"
 	"github.com/jim-minter/rp/pkg/backend"
 	"github.com/jim-minter/rp/pkg/database"
-	"github.com/jim-minter/rp/pkg/database/cosmosdb"
 	"github.com/jim-minter/rp/pkg/env"
 	"github.com/jim-minter/rp/pkg/frontend"
 	uuid "github.com/satori/go.uuid"
@@ -41,27 +39,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	databaseAccount, masterKey, err := env.CosmosDB(ctx)
-	if err != nil {
-		return err
-	}
-
-	dbc, err := cosmosdb.NewDatabaseClient(http.DefaultClient, databaseAccount, masterKey)
-	if err != nil {
-		return err
-	}
-
-	db, err := database.NewOpenShiftClusters(uuid, dbc, "OpenShiftClusters", "OpenShiftClusterDocuments")
-	if err != nil {
-		return err
-	}
-
-	domain, err := env.DNS(ctx)
-	if err != nil {
-		return err
-	}
-
-	authorizer, err := env.FirstPartyAuthorizer(ctx)
+	db, err := database.NewOpenShiftClusters(ctx, env, uuid, "OpenShiftClusters", "OpenShiftClusterDocuments")
 	if err != nil {
 		return err
 	}
@@ -70,7 +48,10 @@ func run(ctx context.Context, log *logrus.Entry) error {
 	stop := make(chan struct{})
 	signal.Notify(sigterm, syscall.SIGTERM)
 
-	go backend.NewBackend(log.WithField("component", "backend"), authorizer, db, domain).Run(stop)
+	b, err := backend.NewBackend(ctx, log.WithField("component", "backend"), env, db)
+	if err != nil {
+		return err
+	}
 
 	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), env, db)
 	if err != nil {
@@ -79,7 +60,8 @@ func run(ctx context.Context, log *logrus.Entry) error {
 
 	log.Print("listening")
 
-	f.Run(stop)
+	go b.Run(stop)
+	go f.Run(stop)
 
 	<-sigterm
 	log.Print("received SIGTERM")

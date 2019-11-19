@@ -12,6 +12,7 @@ import (
 
 	"github.com/jim-minter/rp/pkg/api"
 	"github.com/jim-minter/rp/pkg/database"
+	"github.com/jim-minter/rp/pkg/env"
 )
 
 const (
@@ -38,18 +39,28 @@ type Runnable interface {
 }
 
 // NewBackend returns a new runnable backend
-func NewBackend(log *logrus.Entry, authorizer autorest.Authorizer, db database.OpenShiftClusters, domain string) Runnable {
+func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, db database.OpenShiftClusters) (Runnable, error) {
+	var err error
+
 	b := &backend{
-		baseLog:    log,
-		db:         db,
-		authorizer: authorizer,
-		domain:     domain,
+		baseLog: log,
+		db:      db,
+	}
+
+	b.domain, err = env.DNS(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	b.authorizer, err = env.FirstPartyAuthorizer(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	b.cond = sync.NewCond(&b.mu)
 	b.stopping.Store(false)
 
-	return b
+	return b, nil
 }
 
 func (b *backend) Run(stop <-chan struct{}) {

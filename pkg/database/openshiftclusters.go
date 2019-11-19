@@ -1,6 +1,7 @@
 package database
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/jim-minter/rp/pkg/api"
 	"github.com/jim-minter/rp/pkg/database/cosmosdb"
+	"github.com/jim-minter/rp/pkg/env"
 	"github.com/jim-minter/rp/pkg/util/resource"
 )
 
@@ -30,11 +32,21 @@ type OpenShiftClusters interface {
 }
 
 // NewOpenShiftClusters returns a new OpenShiftClusters
-func NewOpenShiftClusters(uuid uuid.UUID, dbc cosmosdb.DatabaseClient, dbid, collid string) (OpenShiftClusters, error) {
+func NewOpenShiftClusters(ctx context.Context, env env.Interface, uuid uuid.UUID, dbid, collid string) (OpenShiftClusters, error) {
+	databaseAccount, masterKey, err := env.CosmosDB(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	dbc, err := cosmosdb.NewDatabaseClient(http.DefaultClient, databaseAccount, masterKey)
+	if err != nil {
+		return nil, err
+	}
+
 	collc := cosmosdb.NewCollectionClient(dbc, dbid)
 
 	triggerc := cosmosdb.NewTriggerClient(collc, collid)
-	_, err := triggerc.Create(&cosmosdb.Trigger{
+	_, err = triggerc.Create(&cosmosdb.Trigger{
 		ID:               "renewLease",
 		TriggerOperation: cosmosdb.TriggerOperationAll,
 		TriggerType:      cosmosdb.TriggerTypePre,
