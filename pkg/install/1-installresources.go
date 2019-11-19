@@ -742,7 +742,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 			}
 
 			if time.Now().Sub(now) > 30*time.Minute {
-				return fmt.Errorf("timed out waiting for bootstrap configmap")
+				return fmt.Errorf("timed out waiting for bootstrap configmap. Last error: %v", err)
 			}
 
 			<-t.C
