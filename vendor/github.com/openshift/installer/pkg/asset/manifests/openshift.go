@@ -19,6 +19,7 @@ import (
 	osmachine "github.com/openshift/installer/pkg/asset/machines/openstack"
 	"github.com/openshift/installer/pkg/asset/password"
 	"github.com/openshift/installer/pkg/asset/templates/content/openshift"
+	"github.com/openshift/installer/pkg/types"
 	awstypes "github.com/openshift/installer/pkg/types/aws"
 	azuretypes "github.com/openshift/installer/pkg/types/azure"
 	gcptypes "github.com/openshift/installer/pkg/types/gcp"
@@ -56,7 +57,7 @@ func (o *Openshift) Dependencies() []asset.Asset {
 		&openshift.CloudCredsSecret{},
 		&openshift.KubeadminPasswordSecret{},
 		&openshift.RoleCloudCredsSecretReader{},
-		&openshift.RoleBindingCloudCredsSecretReader{},
+		&openshift.PrivateClusterOutbound{},
 	}
 }
 
@@ -95,7 +96,7 @@ func (o *Openshift) Generate(dependencies asset.Parents) error {
 			Base64encodeClientSecret:   base64.StdEncoding.EncodeToString([]byte(creds.ClientSecret)),
 			Base64encodeTenantID:       base64.StdEncoding.EncodeToString([]byte(creds.TenantID)),
 			Base64encodeResourcePrefix: base64.StdEncoding.EncodeToString([]byte(clusterID.InfraID)),
-			Base64encodeResourceGroup:  base64.StdEncoding.EncodeToString([]byte(installConfig.Config.Azure.ResourceGroup)),
+			Base64encodeResourceGroup:  base64.StdEncoding.EncodeToString([]byte(installConfig.Config.Azure.ResourceGroupName)),
 			Base64encodeRegion:         base64.StdEncoding.EncodeToString([]byte(installConfig.Config.Azure.Region)),
 		}
 	case gcptypes.Name:
@@ -151,12 +152,10 @@ func (o *Openshift) Generate(dependencies asset.Parents) error {
 	cloudCredsSecret := &openshift.CloudCredsSecret{}
 	kubeadminPasswordSecret := &openshift.KubeadminPasswordSecret{}
 	roleCloudCredsSecretReader := &openshift.RoleCloudCredsSecretReader{}
-	roleBindingCloudCredsSecretReader := &openshift.RoleBindingCloudCredsSecretReader{}
 	dependencies.Get(
 		cloudCredsSecret,
 		kubeadminPasswordSecret,
-		roleCloudCredsSecretReader,
-		roleBindingCloudCredsSecretReader)
+		roleCloudCredsSecretReader)
 
 	assetData := map[string][]byte{
 		"99_kubeadmin-password-secret.yaml": applyTemplateData(kubeadminPasswordSecret.Files()[0].Data, templateData),
@@ -168,9 +167,10 @@ func (o *Openshift) Generate(dependencies asset.Parents) error {
 		assetData["99_role-cloud-creds-secret-reader.yaml"] = applyTemplateData(roleCloudCredsSecretReader.Files()[0].Data, templateData)
 	}
 
-	switch platform {
-	case openstacktypes.Name:
-		assetData["99_rolebinding-cloud-creds-secret-reader.yaml"] = applyTemplateData(roleBindingCloudCredsSecretReader.Files()[0].Data, templateData)
+	if platform == azuretypes.Name && installConfig.Config.Publish == types.InternalPublishingStrategy {
+		privateClusterOutbound := &openshift.PrivateClusterOutbound{}
+		dependencies.Get(privateClusterOutbound)
+		assetData["99_private-cluster-outbound-service.yaml"] = applyTemplateData(privateClusterOutbound.Files()[0].Data, templateData)
 	}
 
 	o.FileList = []*asset.File{}

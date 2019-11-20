@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"github.com/metal3-io/baremetal-operator/pkg/bmc"
 	"github.com/metal3-io/baremetal-operator/pkg/hardware"
-	libvirttfvars "github.com/openshift/installer/pkg/tfvars/libvirt"
+	"github.com/openshift/installer/pkg/tfvars/internal/cache"
 	"github.com/openshift/installer/pkg/types/baremetal"
 	"github.com/pkg/errors"
+	"net/url"
 	"path"
 	"strings"
 )
@@ -30,7 +31,7 @@ type config struct {
 
 // TFVars generates bare metal specific Terraform variables.
 func TFVars(libvirtURI, bootstrapProvisioningIP, bootstrapOSImage, externalBridge, provisioningBridge string, platformHosts []*baremetal.Host, image string) ([]byte, error) {
-	bootstrapOSImage, err := libvirttfvars.CachedImage(bootstrapOSImage)
+	bootstrapOSImage, err := cache.DownloadImageFile(bootstrapOSImage)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to use cached bootstrap libvirt image")
 	}
@@ -85,7 +86,17 @@ func TFVars(libvirtURI, bootstrapProvisioningIP, bootstrapOSImage, externalBridg
 		// Instance Info
 		// The rhcos-downloader container downloads the image, compresses it to speed up deployments
 		// and then makes it available on bootstrapProvisioningIP via http
-		imageFilename := path.Base(image)
+		// The image is now formatted with a query string containing the sha256sum, we strip that here
+		// and it will be consumed for validation in https://github.com/openshift/ironic-rhcos-downloader
+		imageURL, err := url.Parse(image)
+		if err != nil {
+			return nil, err
+		}
+		imageURL.RawQuery = ""
+		imageURL.Fragment = ""
+		// We strip any .gz suffix because ironic-rhcos-downloader unzips the image
+		// ref https://github.com/openshift/ironic-rhcos-downloader/pull/12
+		imageFilename := path.Base(strings.TrimSuffix(imageURL.String(), ".gz"))
 		compressedImageFilename := strings.Replace(imageFilename, "openstack", "compressed", 1)
 		cacheImageURL := fmt.Sprintf("http://%s/images/%s/%s", bootstrapProvisioningIP, imageFilename, compressedImageFilename)
 		cacheChecksumURL := fmt.Sprintf("%s.md5sum", cacheImageURL)

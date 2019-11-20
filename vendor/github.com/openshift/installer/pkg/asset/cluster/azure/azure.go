@@ -9,6 +9,6 @@ import (
 // Metadata converts an install configuration to Azure metadata.
 func Metadata(config *types.InstallConfig) *azure.Metadata {
 	return &azure.Metadata{
-		ResourceGroup: config.Platform.Azure.ResourceGroup,
+		ResourceGroupName: config.Platform.Azure.ResourceGroupName,
 	}
 }

@@ -1,82 +1,31 @@
-# Gopkg.toml example
-#
-# Refer to https://golang.github.io/dep/docs/Gopkg.toml.html
-# for detailed Gopkg.toml documentation.
-#
-# required = ["github.com/user/thing/cmd/thing"]
-# ignored = ["github.com/user/project/pkgX", "bitbucket.org/user/project/pkgA/pkgY"]
-#
-# [[constraint]]
-#   name = "github.com/user/project"
-#   version = "1.0.0"
-#
-# [[constraint]]
-#   name = "github.com/user/project2"
-#   branch = "dev"
-#   source = "github.com/myfork/project2"
-#
-# [[override]]
-#   name = "github.com/x/y"
-#   version = "2.4.0"
-#
-# [prune]
-#   non-go = false
-#   go-tests = true
-#   unused-packages = true
-
-
-[[override]]
-  name = "k8s.io/api"
-  version = "kubernetes-1.14.0"
-  source = "https://github.com/openshift/kubernetes-api"
-
-[[override]]
-  name = "k8s.io/apimachinery"
-  version = "kubernetes-1.14.0"
-  source = "https://github.com/openshift/kubernetes-apimachinery"
-
-[[override]]
-  name = "k8s.io/client-go"
-  version = "kubernetes-1.14.0"
-  source = "https://github.com/openshift/kubernetes-client-go"
-
-[[override]]
-  name = "k8s.io/utils"
-  revision = "c2654d5206da6b7b6ace12841e8f359bb89b443c"
-
 [[override]]
   name = "github.com/Azure/azure-sdk-for-go"
-  version = "33.4.0"
-
-[[override]]
-  name = "github.com/openshift/machine-config-operator"
-  branch = "release-4.2"
-
-[[override]]
-  name = "sigs.k8s.io/cluster-api-provider-azure"
-  branch = "release-4.2"
-  source = "https://github.com/openshift/cluster-api-provider-azure"
-
-[[constraint]]
-  name = "github.com/Azure/go-autorest"
-  version = "13.0.1"
+  version = "36.2.0"
 
 [[constraint]]
   name = "github.com/gorilla/mux"
   version = "1.7.3"
 
-[[override]]
+[[constraint]]
   name = "github.com/openshift/api"
-  branch = "release-4.2"
+  branch = "release-4.3"
 
 [[constraint]]
   name = "github.com/openshift/client-go"
-  branch = "release-4.2"
+  branch = "release-4.3"
+
+[[override]]
+  name = "github.com/openshift/cluster-api"
+  branch = "release-4.3"
 
 [[constraint]]
   name = "github.com/openshift/installer"
-  branch = "release-4.2-azure"
+  branch = "release-4.3-azure"
   source = "https://github.com/jim-minter/installer"
+
+[[override]]
+  name = "github.com/openshift/machine-config-operator"
+  branch = "release-4.3"
 
 [[constraint]]
   name = "github.com/satori/go.uuid"
@@ -85,6 +34,26 @@
 [[constraint]]
   name = "github.com/ugorji/go"
   version = "1.1.7"
+
+[[override]]
+  name = "k8s.io/api"
+  branch = "origin-4.3-kubernetes-1.16.2"
+  source = "https://github.com/openshift/kubernetes-api"
+
+[[override]]
+  name = "k8s.io/apimachinery"
+  branch = "origin-4.3-kubernetes-1.16.2"
+  source = "https://github.com/openshift/kubernetes-apimachinery"
+
+[[override]]
+  name = "k8s.io/client-go"
+  branch = "origin-4.3-kubernetes-1.16.2"
+  source = "https://github.com/openshift/kubernetes-client-go"
+
+[[override]]
+  name = "sigs.k8s.io/cluster-api-provider-azure"
+  branch = "release-4.3"
+  source = "https://github.com/openshift/cluster-api-provider-azure"
 
 [prune]
   go-tests = true

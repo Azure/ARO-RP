@@ -93,6 +93,9 @@ func ValidateInstallConfig(c *types.InstallConfig, openStackValidValuesFetcher o
 		allErrs = append(allErrs, validateProxy(c.Proxy, field.NewPath("proxy"))...)
 	}
 	allErrs = append(allErrs, validateImageContentSources(c.ImageContentSources, field.NewPath("imageContentSources"))...)
+	if _, ok := validPublishingStrategies[c.Publish]; !ok {
+		allErrs = append(allErrs, field.NotSupported(field.NewPath("publish"), c.Publish, validPublishingStrategyValues))
+	}
 	return allErrs
 }
 
@@ -222,7 +225,9 @@ func validatePlatform(platform *types.Platform, fldPath *field.Path, openStackVa
 		validate(aws.Name, platform.AWS, func(f *field.Path) field.ErrorList { return awsvalidation.ValidatePlatform(platform.AWS, f) })
 	}
 	if platform.Azure != nil {
-		validate(azure.Name, platform.Azure, func(f *field.Path) field.ErrorList { return azurevalidation.ValidatePlatform(platform.Azure, f) })
+		validate(azure.Name, platform.Azure, func(f *field.Path) field.ErrorList {
+			return azurevalidation.ValidatePlatform(platform.Azure, c.Publish, f)
+		})
 	}
 	if platform.GCP != nil {
 		validate(gcp.Name, platform.GCP, func(f *field.Path) field.ErrorList { return gcpvalidation.ValidatePlatform(platform.GCP, f) })
@@ -304,3 +309,19 @@ func validateNamedRepository(r string) error {
 	}
 	return nil
 }
+
+var (
+	validPublishingStrategies = map[types.PublishingStrategy]struct{}{
+		types.ExternalPublishingStrategy: {},
+		types.InternalPublishingStrategy: {},
+	}
+
+	validPublishingStrategyValues = func() []string {
+		v := make([]string, 0, len(validPublishingStrategies))
+		for m := range validPublishingStrategies {
+			v = append(v, string(m))
+		}
+		sort.Strings(v)
+		return v
+	}()
+)

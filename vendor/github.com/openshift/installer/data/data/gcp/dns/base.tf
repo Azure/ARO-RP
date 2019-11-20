@@ -2,6 +2,7 @@ resource "google_dns_managed_zone" "int" {
   name       = "${var.cluster_id}-private-zone"
   dns_name   = "${var.cluster_domain}."
   visibility = "private"
+
   private_visibility_config {
     networks {
       network_url = var.network
@@ -10,6 +11,8 @@ resource "google_dns_managed_zone" "int" {
 }
 
 resource "google_dns_record_set" "api_external" {
+  count = var.public_endpoints ? 1 : 0
+
   name         = "api.${var.cluster_domain}."
   type         = "A"
   ttl          = "60"
@@ -22,7 +25,7 @@ resource "google_dns_record_set" "api_internal" {
   type         = "A"
   ttl          = "60"
   managed_zone = google_dns_managed_zone.int.name
-  rrdatas      = [var.api_external_lb_ip]
+  rrdatas      = [var.api_internal_lb_ip]
 }
 
 resource "google_dns_record_set" "api_external_internal_zone" {
@@ -30,7 +33,7 @@ resource "google_dns_record_set" "api_external_internal_zone" {
   type         = "A"
   ttl          = "60"
   managed_zone = google_dns_managed_zone.int.name
-  rrdatas      = [var.api_external_lb_ip]
+  rrdatas      = [var.api_internal_lb_ip]
 }
 
 resource "google_dns_record_set" "etcd_a_nodes" {

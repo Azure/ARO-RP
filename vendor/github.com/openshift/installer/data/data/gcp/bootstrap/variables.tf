@@ -35,6 +35,15 @@ variable "network" {
   description = "The network the bootstrap node will be added to."
 }
 
+variable "network_cidr" {
+  type = string
+}
+
+variable "public_endpoints" {
+  type        = bool
+  description = "If the bootstrap instance should have externally accessible resources."
+}
+
 variable "subnet" {
   type        = string
   description = "The subnetwork the bootstrap node will be added to."
@@ -43,13 +52,11 @@ variable "subnet" {
 variable "root_volume_size" {
   type        = string
   description = "The volume size (in gibibytes) for the bootstrap node's root volume."
-  default     = "128"
 }
 
 variable "root_volume_type" {
   type        = string
   description = "The volume type for the bootstrap node's root volume."
-  default     = "pd-standard"
 }
 
 variable "zone" {

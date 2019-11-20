@@ -1,6 +1,7 @@
 [Unit]
 Description=Kubernetes Kubelet
-Wants=rpc-statd.service
+Wants=rpc-statd.service crio.service
+After=crio.service
 
 [Service]
 Type=notify
@@ -15,7 +16,6 @@ ExecStart=/usr/bin/hyperkube \
     --container-runtime-endpoint=/var/run/crio/crio.sock \
     --runtime-request-timeout=${KUBELET_RUNTIME_REQUEST_TIMEOUT} \
     --pod-manifest-path=/etc/kubernetes/manifests \
-    --allow-privileged \
     --minimum-container-ttl-duration=6m0s \
     --cluster-domain=cluster.local \
     --cgroup-driver=systemd \

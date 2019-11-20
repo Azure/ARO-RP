@@ -1,6 +1,7 @@
 package machines
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -35,6 +36,7 @@ import (
 	"github.com/openshift/installer/pkg/asset/machines/machineconfig"
 	"github.com/openshift/installer/pkg/asset/machines/openstack"
 	"github.com/openshift/installer/pkg/asset/rhcos"
+	rhcosutils "github.com/openshift/installer/pkg/rhcos"
 	"github.com/openshift/installer/pkg/types"
 	awstypes "github.com/openshift/installer/pkg/types/aws"
 	awsdefaults "github.com/openshift/installer/pkg/types/aws/defaults"
@@ -135,17 +137,18 @@ func awsDefaultWorkerMachineType(installconfig *installconfig.InstallConfig) str
 
 // Generate generates the Worker asset.
 func (w *Worker) Generate(dependencies asset.Parents) error {
+	ctx := context.TODO()
 	platformCreds := &installconfig.PlatformCreds{}
 	clusterID := &installconfig.ClusterID{}
-	installconfig := &installconfig.InstallConfig{}
+	installConfig := &installconfig.InstallConfig{}
 	rhcosImage := new(rhcos.Image)
 	wign := &machine.Worker{}
-	dependencies.Get(platformCreds, clusterID, installconfig, rhcosImage, wign)
+	dependencies.Get(platformCreds, clusterID, installConfig, rhcosImage, wign)
 
 	machineConfigs := []*mcfgv1.MachineConfig{}
 	machineSets := []runtime.Object{}
 	var err error
-	ic := installconfig.Config
+	ic := installConfig.Config
 	for _, pool := range ic.Compute {
 		if pool.Hyperthreading == types.HyperthreadingDisabled {
 			machineConfigs = append(machineConfigs, machineconfig.ForHyperthreadingDisabled("worker"))
@@ -153,21 +156,49 @@ func (w *Worker) Generate(dependencies asset.Parents) error {
 		if ic.SSHKey != "" {
 			machineConfigs = append(machineConfigs, machineconfig.ForAuthorizedKeys(ic.SSHKey, "worker"))
 		}
+		if ic.FIPS {
+			machineConfigs = append(machineConfigs, machineconfig.ForFIPSEnabled("worker"))
+		}
 		switch ic.Platform.Name() {
 		case awstypes.Name:
+			subnets := map[string]string{}
+			if len(ic.Platform.AWS.Subnets) > 0 {
+				subnetMeta, err := installConfig.AWS.PrivateSubnets(ctx)
+				if err != nil {
+					return err
+				}
+				for id, subnet := range subnetMeta {
+					subnets[subnet.Zone] = id
+				}
+			}
+
 			mpool := defaultAWSMachinePoolPlatform()
-			mpool.InstanceType = awsDefaultWorkerMachineType(installconfig)
+			mpool.InstanceType = awsDefaultWorkerMachineType(installConfig)
 			mpool.Set(ic.Platform.AWS.DefaultMachinePlatform)
 			mpool.Set(pool.Platform.AWS)
 			if len(mpool.Zones) == 0 {
-				azs, err := aws.AvailabilityZones(ic.Platform.AWS.Region)
-				if err != nil {
-					return errors.Wrap(err, "failed to fetch availability zones")
+				if len(subnets) > 0 {
+					for zone := range subnets {
+						mpool.Zones = append(mpool.Zones, zone)
+					}
+				} else {
+					mpool.Zones, err = installConfig.AWS.AvailabilityZones(ctx)
+					if err != nil {
+						return err
+					}
 				}
-				mpool.Zones = azs
 			}
 			pool.Platform.AWS = &mpool
-			sets, err := aws.MachineSets(clusterID.InfraID, ic, &pool, string(*rhcosImage), "worker", "worker-user-data")
+			sets, err := aws.MachineSets(
+				clusterID.InfraID,
+				installConfig.Config.Platform.AWS.Region,
+				subnets,
+				&pool,
+				string(*rhcosImage),
+				"worker",
+				"worker-user-data",
+				installConfig.Config.Platform.AWS.UserTags,
+			)
 			if err != nil {
 				return errors.Wrap(err, "failed to create worker machine objects")
 			}
@@ -176,7 +207,7 @@ func (w *Worker) Generate(dependencies asset.Parents) error {
 			}
 		case azuretypes.Name:
 			mpool := defaultAzureMachinePoolPlatform()
-			mpool.InstanceType = azuredefaults.ComputeInstanceType(installconfig.Config.Platform.Azure.Region)
+			mpool.InstanceType = azuredefaults.ComputeInstanceType(installConfig.Config.Platform.Azure.Region)
 			mpool.Set(ic.Platform.Azure.DefaultMachinePlatform)
 			mpool.Set(pool.Platform.Azure)
 			if len(mpool.Zones) == 0 {
@@ -249,7 +280,9 @@ func (w *Worker) Generate(dependencies asset.Parents) error {
 			mpool.Set(pool.Platform.OpenStack)
 			pool.Platform.OpenStack = &mpool
 
-			sets, err := openstack.MachineSets(clusterID.InfraID, ic, &pool, string(*rhcosImage), "worker", "worker-user-data")
+			imageName, _ := rhcosutils.GenerateOpenStackImageName(string(*rhcosImage), clusterID.InfraID)
+
+			sets, err := openstack.MachineSets(clusterID.InfraID, ic, &pool, imageName, "worker", "worker-user-data")
 			if err != nil {
 				return errors.Wrap(err, "failed to create master machine objects")
 			}
@@ -262,8 +295,7 @@ func (w *Worker) Generate(dependencies asset.Parents) error {
 		}
 	}
 
-	userDataMap := map[string][]byte{"worker-user-data": wign.File.Data}
-	data, err := userDataList(userDataMap)
+	data, err := userDataSecret("worker-user-data", wign.File.Data)
 	if err != nil {
 		return errors.Wrap(err, "failed to create user-data secret for worker machines")
 	}

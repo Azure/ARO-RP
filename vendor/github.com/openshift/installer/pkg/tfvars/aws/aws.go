@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/openshift/installer/pkg/types/aws/defaults"
 	"github.com/pkg/errors"
 	"sigs.k8s.io/cluster-api-provider-aws/pkg/apis/awsproviderconfig/v1beta1"
+
+	"github.com/openshift/installer/pkg/types"
+	"github.com/openshift/installer/pkg/types/aws/defaults"
 )
 
 type config struct {
@@ -21,10 +23,14 @@ type config struct {
 	Size                    int64             `json:"aws_master_root_volume_size,omitempty"`
 	Type                    string            `json:"aws_master_root_volume_type,omitempty"`
 	Region                  string            `json:"aws_region,omitempty"`
+	VPC                     string            `json:"aws_vpc,omitempty"`
+	PrivateSubnets          []string          `json:"aws_private_subnets,omitempty"`
+	PublicSubnets           *[]string         `json:"aws_public_subnets,omitempty"`
+	PublishStrategy         string            `json:"aws_publish_strategy,omitempty"`
 }
 
 // TFVars generates AWS-specific Terraform variables launching the cluster.
-func TFVars(masterConfigs []*v1beta1.AWSMachineProviderConfig, workerConfigs []*v1beta1.AWSMachineProviderConfig) ([]byte, error) {
+func TFVars(vpc string, privateSubnets []string, publicSubnets []string, publish types.PublishingStrategy, masterConfigs []*v1beta1.AWSMachineProviderConfig, workerConfigs []*v1beta1.AWSMachineProviderConfig) ([]byte, error) {
 	masterConfig := masterConfigs[0]
 
 	tags := make(map[string]string, len(masterConfig.Tags))
@@ -71,15 +77,26 @@ func TFVars(masterConfigs []*v1beta1.AWSMachineProviderConfig, workerConfigs []*
 	instanceClass := defaults.InstanceClass(masterConfig.Placement.Region)
 
 	cfg := &config{
-		Region:    masterConfig.Placement.Region,
-		ExtraTags: tags,
-		AMI:       *masterConfig.AMI.ID,
+		Region:                  masterConfig.Placement.Region,
+		ExtraTags:               tags,
+		AMI:                     *masterConfig.AMI.ID,
 		MasterAvailabilityZones: masterAvailabilityZones,
 		WorkerAvailabilityZones: workerAvailabilityZones,
 		BootstrapInstanceType:   fmt.Sprintf("%s.large", instanceClass),
 		MasterInstanceType:      masterConfig.InstanceType,
 		Size:                    *rootVolume.EBS.VolumeSize,
 		Type:                    *rootVolume.EBS.VolumeType,
+		VPC:                     vpc,
+		PrivateSubnets:          privateSubnets,
+		PublishStrategy:         string(publish),
+	}
+
+	if len(publicSubnets) == 0 {
+		if cfg.VPC != "" {
+			cfg.PublicSubnets = &[]string{}
+		}
+	} else {
+		cfg.PublicSubnets = &publicSubnets
 	}
 
 	if rootVolume.EBS.Iops != nil {

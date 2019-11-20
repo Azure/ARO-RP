@@ -57,10 +57,14 @@ variable "subnet_id" {
   description = "The subnet to attach the masters to."
 }
 
+variable "os_volume_type" {
+  type        = string
+  description = "The type of the volume for the root block device."
+}
+
 variable "os_volume_size" {
   type        = string
   description = "The size of the volume in gigabytes for the root block device."
-  default     = "100"
 }
 
 variable "tags" {
@@ -78,17 +82,12 @@ variable "ignition" {
   type = string
 }
 
-variable "master_subnet_cidr" {
-  type        = string
-  description = "the master subnet cidr"
-}
-
-variable "private_dns_zone_id" {
-  type        = string
-  description = "This is to create explicit dependency on private zone to exist before VMs are created in the vnet. https://github.com/MicrosoftDocs/azure-docs/issues/13728"
-}
-
 variable "availability_zones" {
   type        = list(string)
   description = "List of the availability zones in which to create the masters. The length of this list must match instance_count."
+}
+
+variable "private" {
+  type        = bool
+  description = "This value determines if this is a private cluster or not."
 }

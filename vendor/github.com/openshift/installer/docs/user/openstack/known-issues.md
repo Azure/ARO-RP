@@ -1,6 +1,6 @@
 # Known Issues and Workarounds
 
-During this release, we are shipping with a few known issues. We are documenting them here, along with whatever workarounds we are aware of, and have attached the links to where the engineering team is tracking the issues. As changes occur, we will update both this document and the issue trackers with the latest information.
+We have been tracking a few issues and FAQs from our users, and are documenting them here along with the known workarounds and solutions. For issues that still have open bugs, we have attached the links to where the engineering team is tracking their progress. As changes occur, we will update both this document and the issue trackers with the latest information.
 
 ## Long Cluster Names
 
@@ -12,12 +12,11 @@ Since the installer requires the *Name* of your external network and Red Hat Cor
 
 ## Self Signed Certificates
 
-Due to Terraform not being up to date with Ignition v2.2.0, we are unable to use the installer infrastructure to pass Certificate Authority Bundles to Ignition on Master Nodes. This means that the bootstrap node will be unable to retrieve the ignition configs from swift if your endpoint uses self-signed certificates. As a result, using the AdditionalTrustBundle Field in the install config will not automatically work. What we have observed in testing is that the cert bundles are in fact put in the correct file directories, however, it seems that ignition fails to detect/utilize them. This bug is currently being tracked in [this bugzilla]( https://bugzilla.redhat.com/show_bug.cgi?id=1735192).
+Support for Certificate Bundles has been fixed in 4.3. If your OpenStack cluster uses self signed certificates, you will need to add them using the AdditionalTrustBundle field in your `install-config.yaml`. For more information on how to do this, please see the [customizations doc](../customization.md).
 
 ## External Network Overlap
 
-If your external network's CIDR range is the same as one of the default network ranges, then you will need to change the matching network range by running the installer with a custom `install-config.yaml`. If users are experiencing unusual networking problems, please contact your cluster administrator and validate that none of your network CIDRs are overlapping with the external network. We were unfortunately unable to support validation for this due to a lack of support in gophercloud, and even if we were, it is likely that the CIDR range of the floating ip would only be accessable cluster administrators. The default network CIDR
-are as follows:
+If your external network's CIDR range is the same as one of the default network ranges, then you will need to change the matching network range by running the installer with a custom `install-config.yaml`. If users are experiencing unusual networking problems, please contact your cluster administrator and validate that none of your network CIDRs are overlapping with the external network. We were unfortunately unable to support validation for this due to a lack of support in gophercloud, and even if we were, it is likely that the CIDR range of the floating ip would only be accessible cluster administrators. The default network CIDR are as follows:
 
 ```txt
 machineCIDR:    10.0.0.0/16
@@ -25,8 +24,39 @@ serviceNetwork: 172.30.0.0/16
 clusterNetwork: 10.128.0.0/14
 ```
 
-## Ceph RGW and Swift temp-url
+## Lack of default DNS servers on created subnets
 
-The [account in url](https://docs.ceph.com/docs/master/radosgw/config-ref/#swift-settings) option must be enabled in Ceph RGW in order to use public-readable containers needed for temporary URLs.
+Some OpenStack clouds do not set default DNS servers for the newly created subnets. In this case, the bootstrap node may fail to resolve public name records to download the OpenShift images or resolve the OpenStack API endpoints.
 
-This setting wasn't enabled by default [prior to OSP15](https://bugs.launchpad.net/tripleo/+bug/1826894). We are working on removing the need for Swift temp-url in [PR #2311](https://github.com/openshift/installer/pull/2311).
+If you are having this problem in the IPI installer, you will need to set the [`externalDNS` property in `install-config.yaml`](./customization.md#cluster-scoped-properties).
+
+Alternatively, for UPI, you will need to [set the subnet DNS resolvers](./install_upi.md#subnet-dns-optional).
+
+## Cluster destruction if its metadata has been lost
+
+When deploying a cluster, the installer generates metadata in the asset directory that is then used to destroy the cluster. If the metadata were accidentally deleted, the destruction of the cluster terminates with an error
+
+```txt
+FATAL Failed while preparing to destroy cluster: open clustername/metadata.json: no such file or directory
+```
+
+To avoid this error and successfully destroy the cluster, you need to restore the `metadata.json` file in a temporary asset directory. To do this, you only need to know ID of the cluster you want to destroy.
+
+First, you need to create a temporary directory where the `metadata.json` file will be located. The name and location can be anything, but to avoid possible conflicts, we recommend using `mktemp` command.
+
+```sh
+export TMP_DIR=$(mktemp -d -t shiftstack-XXXXXXXXXX)
+```
+
+The next step is to restore the `metadata.json` file.
+
+```sh
+export CLUSTER_ID=clustername-eiu38 # id of the cluster you want to destroy
+echo "{\"infraID\":\"$INFRA_ID\",\"openstack\":{\"identifier\":{\"openshiftClusterID\":\"$INFRA_ID\"}}}" > $TMP_DIR/metadata.json
+```
+
+Now you have a working directory and you can destroy the cluster by executing the following command:
+
+```sh
+openshift-install destroy cluster --dir $TMP_DIR
+```

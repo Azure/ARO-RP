@@ -1,10 +1,27 @@
 #!/usr/bin/env bash
 
-ARTIFACTS="/tmp/artifacts"
+if test "x${1}" = 'x--id'
+then
+	GATHER_ID="${2}"
+	shift 2
+fi
+
+ARTIFACTS="/tmp/artifacts-${GATHER_ID}"
+mkdir -p "${ARTIFACTS}"
+
+echo "Gathering bootstrap systemd summary ..."
+LANG=POSIX systemctl list-units --state=failed >& "${ARTIFACTS}/failed-units.txt"
+
+echo "Gathering bootstrap failed systemd unit status ..."
+mkdir -p "${ARTIFACTS}/unit-status"
+sed -n 's/^\* \([^ ]*\) .*/\1/p' < "${ARTIFACTS}/failed-units.txt" | while read -r UNIT
+do
+    systemctl status "${UNIT}" >& "${ARTIFACTS}/unit-status/${UNIT}.txt"
+done
 
 echo "Gathering bootstrap journals ..."
 mkdir -p "${ARTIFACTS}/bootstrap/journals"
-for service in release-image bootkube openshift kubelet crio approve-csr
+for service in release-image crio-configure bootkube kubelet crio approve-csr
 do
     journalctl --boot --no-pager --output=short --unit="${service}" > "${ARTIFACTS}/bootstrap/journals/${service}.log"
 done
@@ -113,8 +130,9 @@ do
   echo "Collecting info from ${master}"
   scp -o PreferredAuthentications=publickey -o StrictHostKeyChecking=false -o UserKnownHostsFile=/dev/null -q /usr/local/bin/installer-masters-gather.sh "core@${master}:"
   mkdir -p "${ARTIFACTS}/control-plane/${master}"
-  ssh -o PreferredAuthentications=publickey -o StrictHostKeyChecking=false -o UserKnownHostsFile=/dev/null "core@${master}" -C 'sudo ./installer-masters-gather.sh' </dev/null
-  scp -o PreferredAuthentications=publickey -o StrictHostKeyChecking=false -o UserKnownHostsFile=/dev/null -r -q "core@${master}:/tmp/artifacts/*" "${ARTIFACTS}/control-plane/${master}/"
+  ssh -o PreferredAuthentications=publickey -o StrictHostKeyChecking=false -o UserKnownHostsFile=/dev/null "core@${master}" -C "sudo ./installer-masters-gather.sh --id '${GATHER_ID}'" </dev/null
+  scp -o PreferredAuthentications=publickey -o StrictHostKeyChecking=false -o UserKnownHostsFile=/dev/null -r -q "core@${master}:/tmp/artifacts-${GATHER_ID}/*" "${ARTIFACTS}/control-plane/${master}/"
 done
-tar cz -C /tmp/artifacts . > ~/log-bundle.tar.gz
-echo "Log bundle written to ~/log-bundle.tar.gz"
+TAR_FILE="${TAR_FILE:-${HOME}/log-bundle-${GATHER_ID}.tar.gz}"
+tar cz -C "${ARTIFACTS}" . >"${TAR_FILE}"
+echo "Log bundle written to ${TAR_FILE}"

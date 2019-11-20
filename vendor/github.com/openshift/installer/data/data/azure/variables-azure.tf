@@ -36,19 +36,24 @@ EOF
 default = {}
 }
 
+variable "azure_master_root_volume_type" {
+  type        = string
+  description = "The type of the volume the root block device of master nodes."
+}
+
 variable "azure_master_root_volume_size" {
-type        = string
-description = "The size of the volume in gigabytes for the root block device of master nodes."
+  type        = string
+  description = "The size of the volume in gigabytes for the root block device of master nodes."
 }
 
 variable "azure_base_domain_resource_group_name" {
-type        = string
-description = "The resource group that contains the dns zone used as base domain for the cluster."
+  type        = string
+  description = "The resource group that contains the dns zone used as base domain for the cluster."
 }
 
 variable "azure_image_url" {
-type        = string
-description = "The URL of the vm image used for all nodes."
+  type        = string
+  description = "The URL of the vm image used for all nodes."
 }
 
 variable "azure_subscription_id" {
@@ -71,8 +76,43 @@ variable "azure_tenant_id" {
   description = "The tenant ID that should be used to interact with Azure API"
 }
 
-
 variable "azure_master_availability_zones" {
   type        = list(string)
   description = "The availability zones in which to create the masters. The length of this list must match master_count."
+}
+
+variable "azure_preexisting_network" {
+  type        = bool
+  default     = false
+  description = "Specifies whether an existing network should be used or a new one created for installation."
+}
+
+variable "azure_resource_group_name" {
+  type        = string
+  description = "The name of the resource group, either existing or to be created."
+}
+
+variable "azure_network_resource_group_name" {
+  type        = string
+  description = "The name of the network resource group, either existing or to be created."
+}
+
+variable "azure_virtual_network" {
+  type        = string
+  description = "The name of the virtual network, either existing or to be created."
+}
+
+variable "azure_control_plane_subnet" {
+  type        = string
+  description = "The name of the subnet for the control plane, either existing or to be created."
+}
+
+variable "azure_compute_subnet" {
+  type        = string
+  description = "The name of the subnet for worker nodes, either existing or to be created"
+}
+
+variable "azure_private" {
+  type        = bool
+  description = "This determines if this is a private cluster or not."
 }

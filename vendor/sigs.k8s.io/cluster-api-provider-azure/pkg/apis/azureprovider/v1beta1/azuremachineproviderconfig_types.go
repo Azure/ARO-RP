@@ -56,6 +56,14 @@ type AzureMachineProviderSpec struct {
 	PublicIP     bool              `json:"publicIP"`
 	Tags         map[string]string `json:"tags,omitempty"`
 
+	// Network Security Group that needs to be attached to the machine's interface.
+	// No security group will be attached if empty.
+	SecurityGroup string `json:"securityGroup,omitempty"`
+
+	// Application Security Groups that need to be attached to the machine's interface.
+	// No application security groups will be attached if zero-length.
+	ApplicationSecurityGroups []string `json:"applicationSecurityGroups,omitempty"`
+
 	// Subnet to use for this instance
 	Subnet string `json:"subnet"`
 

@@ -1,13 +1,18 @@
 package installconfig
 
 import (
+	"context"
 	"os"
 
 	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/openshift/installer/pkg/asset"
+	"github.com/openshift/installer/pkg/asset/installconfig/aws"
+	icazure "github.com/openshift/installer/pkg/asset/installconfig/azure"
+	icgcp "github.com/openshift/installer/pkg/asset/installconfig/gcp"
 	"github.com/openshift/installer/pkg/types"
 	"github.com/openshift/installer/pkg/types/conversion"
 	"github.com/openshift/installer/pkg/types/defaults"
@@ -23,6 +28,7 @@ const (
 type InstallConfig struct {
 	Config *types.InstallConfig `json:"config"`
 	File   *asset.File          `json:"file"`
+	AWS    *aws.Metadata        `json:"aws,omitempty"`
 }
 
 var _ asset.WritableAsset = (*InstallConfig)(nil)
@@ -36,6 +42,7 @@ func (a *InstallConfig) Dependencies() []asset.Asset {
 		&clusterName{},
 		&pullSecret{},
 		&platform{},
+		&PlatformCreds{},
 	}
 }
 
@@ -46,12 +53,14 @@ func (a *InstallConfig) Generate(parents asset.Parents) error {
 	clusterName := &clusterName{}
 	pullSecret := &pullSecret{}
 	platform := &platform{}
+	platformCreds := &PlatformCreds{}
 	parents.Get(
 		sshPublicKey,
 		baseDomain,
 		clusterName,
 		pullSecret,
 		platform,
+		platformCreds,
 	)
 
 	a.Config = &types.InstallConfig{
@@ -75,23 +84,7 @@ func (a *InstallConfig) Generate(parents asset.Parents) error {
 	a.Config.GCP = platform.GCP
 	a.Config.BareMetal = platform.BareMetal
 
-	if err := a.setDefaults(); err != nil {
-		return errors.Wrap(err, "failed to set defaults for install config")
-	}
-
-	if err := validation.ValidateInstallConfig(a.Config, openstackvalidation.NewValidValuesFetcher()).ToAggregate(); err != nil {
-		return errors.Wrap(err, "invalid install config")
-	}
-
-	data, err := yaml.Marshal(a.Config)
-	if err != nil {
-		return errors.Wrap(err, "failed to Marshal InstallConfig")
-	}
-	a.File = &asset.File{
-		Filename: installConfigFilename,
-		Data:     data,
-	}
-	return nil
+	return a.finish("", platformCreds)
 }
 
 // Name returns the human-friendly name of the asset.
@@ -124,37 +117,67 @@ func (a *InstallConfig) Load(f asset.FileFetcher) (found bool, err error) {
 	a.Config = config
 
 	// Upconvert any deprecated fields
-	if err := a.convert(); err != nil {
+	if err := conversion.ConvertInstallConfig(a.Config); err != nil {
 		return false, errors.Wrap(err, "failed to upconvert install config")
 	}
 
-	if err := a.setDefaults(); err != nil {
-		return false, errors.Wrap(err, "failed to set defaults for install config")
+	err = a.finish(installConfigFilename, nil)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func (a *InstallConfig) finish(filename string, platformCreds *PlatformCreds) error {
+	defaults.SetInstallConfigDefaults(a.Config)
+
+	if a.Config.AWS != nil {
+		a.AWS = aws.NewMetadata(a.Config.Platform.AWS.Region, a.Config.Platform.AWS.Subnets)
 	}
 
 	if err := validation.ValidateInstallConfig(a.Config, openstackvalidation.NewValidValuesFetcher()).ToAggregate(); err != nil {
-		return false, errors.Wrapf(err, "invalid %q file", installConfigFilename)
+		if filename == "" {
+			return errors.Wrap(err, "invalid install config")
+		}
+		return errors.Wrapf(err, "invalid %q file", filename)
+	}
+
+	if err := a.platformValidation(platformCreds); err != nil {
+		return err
 	}
 
 	data, err := yaml.Marshal(a.Config)
 	if err != nil {
-		return false, errors.Wrap(err, "failed to Marshal InstallConfig")
+		return errors.Wrap(err, "failed to Marshal InstallConfig")
 	}
 	a.File = &asset.File{
 		Filename: installConfigFilename,
 		Data:     data,
 	}
-
-	return true, nil
-}
-
-func (a *InstallConfig) setDefaults() error {
-	defaults.SetInstallConfigDefaults(a.Config)
 	return nil
 }
 
-// convert converts possibly older versions of the install config to
-// the current version, relocating deprecated fields.
-func (a *InstallConfig) convert() error {
-	return conversion.ConvertInstallConfig(a.Config)
+func (a *InstallConfig) platformValidation(platformCreds *PlatformCreds) error {
+	if a.Config.Platform.Azure != nil {
+		var credentials *icazure.Credentials
+		if platformCreds != nil && platformCreds.Azure != nil {
+			credentials = platformCreds.Azure
+		}
+		client, err := icazure.NewClient(context.TODO(), credentials)
+		if err != nil {
+			return err
+		}
+		return icazure.Validate(client, a.Config)
+	}
+	if a.Config.Platform.GCP != nil {
+		client, err := icgcp.NewClient(context.TODO())
+		if err != nil {
+			return err
+		}
+		return icgcp.Validate(client, a.Config)
+	}
+	if a.Config.Platform.AWS != nil {
+		return aws.Validate(context.TODO(), a.AWS, a.Config)
+	}
+	return field.ErrorList{}.ToAggregate()
 }

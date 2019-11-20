@@ -948,6 +948,23 @@ func PossibleVirtualMachinePriorityTypesValues() []VirtualMachinePriorityTypes {
 	return []VirtualMachinePriorityTypes{Low, Regular}
 }
 
+// VirtualMachineScaleSetScaleInRules enumerates the values for virtual machine scale set scale in rules.
+type VirtualMachineScaleSetScaleInRules string
+
+const (
+	// Default ...
+	Default VirtualMachineScaleSetScaleInRules = "Default"
+	// NewestVM ...
+	NewestVM VirtualMachineScaleSetScaleInRules = "NewestVM"
+	// OldestVM ...
+	OldestVM VirtualMachineScaleSetScaleInRules = "OldestVM"
+)
+
+// PossibleVirtualMachineScaleSetScaleInRulesValues returns an array of possible values for the VirtualMachineScaleSetScaleInRules const type.
+func PossibleVirtualMachineScaleSetScaleInRulesValues() []VirtualMachineScaleSetScaleInRules {
+	return []VirtualMachineScaleSetScaleInRules{Default, NewestVM, OldestVM}
+}
+
 // VirtualMachineScaleSetSkuScaleType enumerates the values for virtual machine scale set sku scale type.
 type VirtualMachineScaleSetSkuScaleType string
 
@@ -1376,6 +1393,17 @@ type AutomaticOSUpgradePolicy struct {
 type AutomaticOSUpgradeProperties struct {
 	// AutomaticOSUpgradeSupported - Specifies whether automatic OS upgrade is supported on the image.
 	AutomaticOSUpgradeSupported *bool `json:"automaticOSUpgradeSupported,omitempty"`
+}
+
+// AutomaticRepairsPolicy specifies the configuration parameters for automatic repairs on the virtual
+// machine scale set.
+type AutomaticRepairsPolicy struct {
+	// Enabled - Specifies whether automatic repairs should be enabled on the virtual machine scale set. The default value is false.
+	Enabled *bool `json:"enabled,omitempty"`
+	// GracePeriod - The amount of time for which automatic repairs are suspended due to a state change on VM. The grace time starts after the state change has completed. This helps avoid premature or accidental repairs. The time duration should be specified in ISO 8601 format. The default value is 5 minutes (PT5M).
+	GracePeriod *string `json:"gracePeriod,omitempty"`
+	// MaxInstanceRepairsPercent - The percentage (capacity of scaleset) of virtual machines that will be simultaneously repaired. The default value is 20%.
+	MaxInstanceRepairsPercent *int32 `json:"maxInstanceRepairsPercent,omitempty"`
 }
 
 // AvailabilitySet specifies information about the availability set that the virtual machine should be
@@ -6281,6 +6309,8 @@ type OSProfile struct {
 	Secrets *[]VaultSecretGroup `json:"secrets,omitempty"`
 	// AllowExtensionOperations - Specifies whether extension operations should be allowed on the virtual machine. <br><br>This may only be set to False when no extensions are present on the virtual machine.
 	AllowExtensionOperations *bool `json:"allowExtensionOperations,omitempty"`
+	// RequireGuestProvisionSignal - Specifies whether the guest provision signal is required from the virtual machine.
+	RequireGuestProvisionSignal *bool `json:"requireGuestProvisionSignal,omitempty"`
 }
 
 // Plan specifies information about the marketplace image used to create the virtual machine. This element
@@ -7289,6 +7319,12 @@ type RunCommandResult struct {
 	autorest.Response `json:"-"`
 	// Value - Run command operation response.
 	Value *[]InstanceViewStatus `json:"value,omitempty"`
+}
+
+// ScaleInPolicy describes a scale-in policy for a virtual machine scale set.
+type ScaleInPolicy struct {
+	// Rules - The rules to be followed when scaling-in a virtual machine scale set. <br><br> Possible values are: <br><br> **Default** When a virtual machine scale set is scaled in, the scale set will first be balanced across zones if it is a zonal scale set. Then, it will be balanced across Fault Domains as far as possible. Within each Fault Domain, the virtual machines chosen for removal will be the newest ones that are not protected from scale-in. <br><br> **OldestVM** When a virtual machine scale set is being scaled-in, the oldest virtual machines that are not protected from scale-in will be chosen for removal. For zonal virtual machine scale sets, the scale set will first be balanced across zones. Within each zone, the oldest virtual machines that are not protected will be chosen for removal. <br><br> **NewestVM** When a virtual machine scale set is being scaled-in, the newest virtual machines that are not protected from scale-in will be chosen for removal. For zonal virtual machine scale sets, the scale set will first be balanced across zones. Within each zone, the newest virtual machines that are not protected will be chosen for removal. <br><br>
+	Rules *[]VirtualMachineScaleSetScaleInRules `json:"rules,omitempty"`
 }
 
 // ScheduledEventsProfile ...
@@ -10362,6 +10398,8 @@ type VirtualMachineScaleSetOSProfile struct {
 type VirtualMachineScaleSetProperties struct {
 	// UpgradePolicy - The upgrade policy.
 	UpgradePolicy *UpgradePolicy `json:"upgradePolicy,omitempty"`
+	// AutomaticRepairsPolicy - Policy for automatic repairs.
+	AutomaticRepairsPolicy *AutomaticRepairsPolicy `json:"automaticRepairsPolicy,omitempty"`
 	// VirtualMachineProfile - The virtual machine profile.
 	VirtualMachineProfile *VirtualMachineScaleSetVMProfile `json:"virtualMachineProfile,omitempty"`
 	// ProvisioningState - READ-ONLY; The provisioning state, which only appears in the response.
@@ -10382,6 +10420,8 @@ type VirtualMachineScaleSetProperties struct {
 	ProximityPlacementGroup *SubResource `json:"proximityPlacementGroup,omitempty"`
 	// AdditionalCapabilities - Specifies additional capabilities enabled or disabled on the Virtual Machines in the Virtual Machine Scale Set. For instance: whether the Virtual Machines have the capability to support attaching managed data disks with UltraSSD_LRS storage account type.
 	AdditionalCapabilities *AdditionalCapabilities `json:"additionalCapabilities,omitempty"`
+	// ScaleInPolicy - Specifies the scale-in policy that decides which virtual machines are chosen for removal when a Virtual Machine Scale Set is scaled-in.
+	ScaleInPolicy *ScaleInPolicy `json:"scaleInPolicy,omitempty"`
 }
 
 // VirtualMachineScaleSetPublicIPAddressConfiguration describes a virtual machines scale set IP
@@ -11146,6 +11186,8 @@ type VirtualMachineScaleSetUpdateNetworkConfigurationProperties struct {
 
 // VirtualMachineScaleSetUpdateNetworkProfile describes a virtual machine scale set network profile.
 type VirtualMachineScaleSetUpdateNetworkProfile struct {
+	// HealthProbe - A reference to a load balancer probe used to determine the health of an instance in the virtual machine scale set. The reference will be in the form: '/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.Network/loadBalancers/{loadBalancerName}/probes/{probeName}'.
+	HealthProbe *APIEntityReference `json:"healthProbe,omitempty"`
 	// NetworkInterfaceConfigurations - The list of network configurations.
 	NetworkInterfaceConfigurations *[]VirtualMachineScaleSetUpdateNetworkConfiguration `json:"networkInterfaceConfigurations,omitempty"`
 }
@@ -11183,14 +11225,20 @@ type VirtualMachineScaleSetUpdateOSProfile struct {
 type VirtualMachineScaleSetUpdateProperties struct {
 	// UpgradePolicy - The upgrade policy.
 	UpgradePolicy *UpgradePolicy `json:"upgradePolicy,omitempty"`
+	// AutomaticRepairsPolicy - Policy for automatic repairs.
+	AutomaticRepairsPolicy *AutomaticRepairsPolicy `json:"automaticRepairsPolicy,omitempty"`
 	// VirtualMachineProfile - The virtual machine profile.
 	VirtualMachineProfile *VirtualMachineScaleSetUpdateVMProfile `json:"virtualMachineProfile,omitempty"`
 	// Overprovision - Specifies whether the Virtual Machine Scale Set should be overprovisioned.
 	Overprovision *bool `json:"overprovision,omitempty"`
+	// DoNotRunExtensionsOnOverprovisionedVMs - When Overprovision is enabled, extensions are launched only on the requested number of VMs which are finally kept. This property will hence ensure that the extensions do not run on the extra overprovisioned VMs.
+	DoNotRunExtensionsOnOverprovisionedVMs *bool `json:"doNotRunExtensionsOnOverprovisionedVMs,omitempty"`
 	// SinglePlacementGroup - When true this limits the scale set to a single placement group, of max size 100 virtual machines.
 	SinglePlacementGroup *bool `json:"singlePlacementGroup,omitempty"`
 	// AdditionalCapabilities - Specifies additional capabilities enabled or disabled on the Virtual Machines in the Virtual Machine Scale Set. For instance: whether the Virtual Machines have the capability to support attaching managed data disks with UltraSSD_LRS storage account type.
 	AdditionalCapabilities *AdditionalCapabilities `json:"additionalCapabilities,omitempty"`
+	// ScaleInPolicy - Specifies the scale-in policy that decides which virtual machines are chosen for removal when a Virtual Machine Scale Set is scaled-in.
+	ScaleInPolicy *ScaleInPolicy `json:"scaleInPolicy,omitempty"`
 }
 
 // VirtualMachineScaleSetUpdatePublicIPAddressConfiguration describes a virtual machines scale set IP

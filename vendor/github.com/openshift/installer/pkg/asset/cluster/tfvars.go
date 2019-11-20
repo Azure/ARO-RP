@@ -31,6 +31,7 @@ import (
 	gcptfvars "github.com/openshift/installer/pkg/tfvars/gcp"
 	libvirttfvars "github.com/openshift/installer/pkg/tfvars/libvirt"
 	openstacktfvars "github.com/openshift/installer/pkg/tfvars/openstack"
+	"github.com/openshift/installer/pkg/types"
 	"github.com/openshift/installer/pkg/types/aws"
 	"github.com/openshift/installer/pkg/types/azure"
 	"github.com/openshift/installer/pkg/types/baremetal"
@@ -86,6 +87,7 @@ func (t *TerraformVariables) Dependencies() []asset.Asset {
 
 // Generate generates the terraform.tfvars file.
 func (t *TerraformVariables) Generate(parents asset.Parents) error {
+	ctx := context.TODO()
 	platformCreds := &installconfig.PlatformCreds{}
 	clusterID := &installconfig.ClusterID{}
 	installConfig := &installconfig.InstallConfig{}
@@ -135,6 +137,35 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 
 	switch platform {
 	case aws.Name:
+		var vpc string
+		var privateSubnets []string
+		var publicSubnets []string
+
+		if len(installConfig.Config.Platform.AWS.Subnets) > 0 {
+			subnets, err := installConfig.AWS.PrivateSubnets(ctx)
+			if err != nil {
+				return err
+			}
+
+			for id := range subnets {
+				privateSubnets = append(privateSubnets, id)
+			}
+
+			subnets, err = installConfig.AWS.PublicSubnets(ctx)
+			if err != nil {
+				return err
+			}
+
+			for id := range subnets {
+				publicSubnets = append(publicSubnets, id)
+			}
+
+			vpc, err = installConfig.AWS.VPC(ctx)
+			if err != nil {
+				return err
+			}
+		}
+
 		masters, err := mastersAsset.Machines()
 		if err != nil {
 			return err
@@ -151,7 +182,7 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 		for i, m := range workers {
 			workerConfigs[i] = m.Spec.Template.Spec.ProviderSpec.Value.Object.(*awsprovider.AWSMachineProviderConfig)
 		}
-		data, err := awstfvars.TFVars(masterConfigs, workerConfigs)
+		data, err := awstfvars.TFVars(vpc, privateSubnets, publicSubnets, installConfig.Config.Publish, masterConfigs, workerConfigs)
 		if err != nil {
 			return errors.Wrapf(err, "failed to get %s Terraform variables", platform)
 		}
@@ -178,11 +209,25 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 		for i, m := range masters {
 			masterConfigs[i] = m.Spec.ProviderSpec.Value.Object.(*azureprovider.AzureMachineProviderSpec)
 		}
+		workers, err := workersAsset.MachineSets()
+		if err != nil {
+			return err
+		}
+		workerConfigs := make([]*azureprovider.AzureMachineProviderSpec, len(masters))
+		for i, w := range workers {
+			workerConfigs[i] = w.Spec.Template.Spec.ProviderSpec.Value.Object.(*azureprovider.AzureMachineProviderSpec)
+		}
+		preexistingnetwork := installConfig.Config.Azure.VirtualNetwork != ""
 		data, err := azuretfvars.TFVars(
-			auth,
-			installConfig.Config.Azure.BaseDomainResourceGroupName,
-			string(*rhcosImage),
-			masterConfigs,
+			azuretfvars.TFVarsSources{
+				Auth:                        auth,
+				BaseDomainResourceGroupName: installConfig.Config.Azure.BaseDomainResourceGroupName,
+				MasterConfigs:               masterConfigs,
+				WorkerConfigs:               workerConfigs,
+				ImageURL:                    string(*rhcosImage),
+				PreexistingNetwork:          preexistingnetwork,
+				Publish:                     installConfig.Config.Publish,
+			},
 		)
 		if err != nil {
 			return errors.Wrapf(err, "failed to get %s Terraform variables", platform)
@@ -192,7 +237,8 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 			Data:     data,
 		})
 	case gcp.Name:
-		sess, err := gcpconfig.GetSession(context.TODO())
+		var publicZoneName string
+		sess, err := gcpconfig.GetSession(ctx)
 		if err != nil {
 			return err
 		}
@@ -200,6 +246,7 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 			ProjectID:      installConfig.Config.GCP.ProjectID,
 			ServiceAccount: string(sess.Credentials.JSON),
 		}
+
 		masters, err := mastersAsset.Machines()
 		if err != nil {
 			return err
@@ -208,15 +255,29 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 		for i, m := range masters {
 			masterConfigs[i] = m.Spec.ProviderSpec.Value.Object.(*gcpprovider.GCPMachineProviderSpec)
 		}
-		publicZone, err := gcpconfig.GetPublicZone(context.TODO(), installConfig.Config.GCP.ProjectID, installConfig.Config.BaseDomain)
-		if err != nil {
-			return errors.Wrapf(err, "failed to get GCP public zone")
+		workers, err := workersAsset.MachineSets()
+		workerConfigs := make([]*gcpprovider.GCPMachineProviderSpec, len(workers))
+		for i, w := range workers {
+			workerConfigs[i] = w.Spec.Template.Spec.ProviderSpec.Value.Object.(*gcpprovider.GCPMachineProviderSpec)
 		}
+		if installConfig.Config.Publish == types.ExternalPublishingStrategy {
+			publicZone, err := gcpconfig.GetPublicZone(ctx, installConfig.Config.GCP.ProjectID, installConfig.Config.BaseDomain)
+			if err != nil {
+				return errors.Wrapf(err, "failed to get GCP public zone")
+			}
+			publicZoneName = publicZone.Name
+		}
+		preexistingnetwork := installConfig.Config.GCP.Network != ""
 		data, err := gcptfvars.TFVars(
-			auth,
-			masterConfigs,
-			string(*rhcosImage),
-			publicZone.Name,
+			gcptfvars.TFVarsSources{
+				Auth:               auth,
+				MasterConfigs:      masterConfigs,
+				WorkerConfigs:      workerConfigs,
+				ImageURI:           string(*rhcosImage),
+				PublicZoneName:     publicZoneName,
+				PublishStrategy:    installConfig.Config.Publish,
+				PreexistingNetwork: preexistingnetwork,
+			},
 		)
 		if err != nil {
 			return errors.Wrapf(err, "failed to get %s Terraform variables", platform)
@@ -265,12 +326,17 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 			masters[0].Spec.ProviderSpec.Value.Object.(*openstackprovider.OpenstackProviderSpec),
 			installConfig.Config.Platform.OpenStack.Cloud,
 			installConfig.Config.Platform.OpenStack.ExternalNetwork,
+			installConfig.Config.Platform.OpenStack.ExternalDNS,
 			installConfig.Config.Platform.OpenStack.LbFloatingIP,
 			apiVIP.String(),
 			dnsVIP.String(),
 			ingressVIP.String(),
 			installConfig.Config.Platform.OpenStack.TrunkSupport,
 			installConfig.Config.Platform.OpenStack.OctaviaSupport,
+			string(*rhcosImage),
+			clusterID.InfraID,
+			installConfig.Config.AdditionalTrustBundle,
+			bootstrapIgn,
 		)
 		if err != nil {
 			return errors.Wrapf(err, "failed to get %s Terraform variables", platform)
@@ -284,8 +350,8 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 			installConfig.Config.Platform.BareMetal.LibvirtURI,
 			installConfig.Config.Platform.BareMetal.BootstrapProvisioningIP,
 			string(*rhcosBootstrapImage),
-			"baremetal",
-			"provisioning",
+			installConfig.Config.Platform.BareMetal.ExternalBridge,
+			installConfig.Config.Platform.BareMetal.ProvisioningBridge,
 			installConfig.Config.Platform.BareMetal.Hosts,
 			string(*rhcosImage),
 		)

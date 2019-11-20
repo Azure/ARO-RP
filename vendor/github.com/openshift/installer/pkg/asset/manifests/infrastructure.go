@@ -86,8 +86,13 @@ func (i *Infrastructure) Generate(dependencies asset.Parents) error {
 		}
 	case azure.Name:
 		config.Status.PlatformStatus.Type = configv1.AzurePlatformType
+
 		config.Status.PlatformStatus.Azure = &configv1.AzurePlatformStatus{
-			ResourceGroupName: installConfig.Config.Azure.ResourceGroup,
+			ResourceGroupName:        installConfig.Config.Azure.ResourceGroupName,
+			NetworkResourceGroupName: installConfig.Config.Azure.ResourceGroupName,
+		}
+		if nrg := installConfig.Config.Platform.Azure.NetworkResourceGroupName; nrg != "" {
+			config.Status.PlatformStatus.Azure.NetworkResourceGroupName = nrg
 		}
 	case baremetal.Name:
 		config.Status.PlatformStatus.Type = configv1.BareMetalPlatformType

@@ -45,14 +45,50 @@ INFO Consuming "Install Config" from target directory
 Remove the control-plane Machines and compute MachineSets, because we'll be providing those ourselves and don't want to involve [the machine-API operator][machine-api-operator]:
 
 ```console
-$ rm -f openshift/99_openshift-cluster-api_master-machines-*.yaml openshift/99_openshift-cluster-api_worker-machinesets-*.yaml
+$ rm -f openshift/99_openshift-cluster-api_master-machines-*.yaml openshift/99_openshift-cluster-api_worker-machineset-*.yaml
 ```
 
 You are free to leave the compute MachineSets in if you want to create compute machines via the machine API, but if you do you may need to update the various references (`subnet`, etc.) to match your environment.
 
-### Remove DNS Zones
+### Make control-plane nodes unschedulable
 
-If you don't want [the ingress operator][ingress-operator] to create DNS records on your behalf, remove the `privateZone` and `publicZone` sections from the DNS configuration:
+Currently [emptying the compute pools](#empty-compute-pools) makes control-plane nodes schedulable.
+But due to a [Kubernetes limitation][kubernetes-service-load-balancers-exclude-masters], router pods running on control-plane nodes will not be reachable by the ingress load balancer.
+Update the scheduler configuration to keep router pods and other workloads off the control-plane nodes:
+
+```sh
+python -c '
+import yaml;
+path = "manifests/cluster-scheduler-02-config.yml"
+data = yaml.load(open(path));
+data["spec"]["mastersSchedulable"] = False;
+open(path, "w").write(yaml.dump(data, default_flow_style=False))'
+```
+
+### Adjust DNS Zones
+
+[The ingress operator][ingress-operator] is able to manage DNS records on your behalf.
+Depending on whether you want operator-managed DNS or user-managed DNS, you can choose to [identify the internal DNS zone](#identify-the-internal-dns-zone) or [remove DNS zones](#remove-dns-zones) from the DNS configuration.
+
+#### Identify the internal DNS zone
+
+If you want [the ingress operator][ingress-operator] to manage DNS records on your behalf, adjust the `privateZone` section in the DNS configuration to identify the zone it should use.
+By default it will use a `kubernetes.io/cluster/{infrastructureName}: owned` tag, but that tag is only appropriate if `openshift-install destroy cluster` should remove the zone.
+For user-provided zones, you can remove `tags` completely and use the zone ID instead:
+
+```sh
+python -c '
+import yaml;
+path = "manifests/cluster-dns-02-config.yml";
+data = yaml.load(open(path));
+del data["spec"]["privateZone"]["tags"];
+data["spec"]["privateZone"]["id"] = "Z21IZ5YJJMZ2A4";
+open(path, "w").write(yaml.dump(data, default_flow_style=False))'
+```
+
+#### Remove DNS zones
+
+If you don't want [the ingress operator][ingress-operator] to manage DNS records on your behalf, remove the `privateZone` and `publicZone` sections from the DNS configuration:
 
 ```sh
 python -c '
@@ -92,13 +128,13 @@ $ tree
 Many of the operators and functions within OpenShift rely on tagging AWS resources. By default, Ignition
 generates a unique cluster identifier comprised of the cluster name specified during the invocation of the installer
 and a short string known internally as the infrastructure name. These values are seeded in the initial manifests within
-the Ignition configuration. To use the output of the default, generated 
+the Ignition configuration. To use the output of the default, generated
 `ignition-configs` extracting the internal infrastructure name is necessary.
 
-An example of a way to get this is below: 
+An example of a way to get this is below:
 
 ```
-$ jq -r .infraID metadata.json 
+$ jq -r .infraID metadata.json
 openshift-vw9j6
 ```
 
@@ -117,9 +153,9 @@ A created VPC via the template or manually should approximate a setup similar to
 
 The DNS and load balancer configuration within a CloudFormation template is provided
 [here](../../../upi/aws/cloudformation/02_cluster_infra.yaml). It uses a public hosted zone and creates a private hosted
-zone similar to the IPI installation method. 
+zone similar to the IPI installation method.
 It also creates load balancers, listeners, as well as hosted zone and subnet tags the same way as the IPI
-installation method. 
+installation method.
 This template can be run multiple times within a single VPC and in combination with the VPC
 template provided above.
 
@@ -200,75 +236,6 @@ CSRs can be approved by name, for example:
 oc adm certificate approve csr-bfd72
 ```
 
-## Configure Router for UPI
-
-The Ingress operator manages DNS and LoadBalancers. It makes use of tags on HostedZones to identify which public and 
-private zones are to be updated from the cluster by the operator as objects are created in the cluster. It makes use
-of tags on subnets to identify those to associate with Service objects of type LoadBalancer created in the cluster.
-
-The tags used for finding HostedZones used by the operator
-are fulfilled by the CloudFormation template [here](../../../upi/aws/cloudformation/02_cluster_infra.yaml).
-
-An example of the `spec` for DNS configuration is below:
-
-```
-$ oc get dns -o yaml
-apiVersion: v1
-items:
-- apiVersion: config.openshift.io/v1
-  kind: DNS
-  metadata:
-    creationTimestamp: 2019-03-28T12:31:10Z
-    generation: 1
-    name: cluster
-    namespace: ""
-    resourceVersion: "395"
-    selfLink: /apis/config.openshift.io/v1/dnses/cluster
-    uid: 5e51dd25-5155-11e9-befc-02d75ce1a902
-  spec:
-    baseDomain: test.example.com
-    privateZone:
-      tags:
-        Name: test-r69hh-int
-        kubernetes.io/cluster/test-r69hh: owned
-    publicZone:
-      id: Z21IZ5YJJMZ2A4
-  status: {}
-kind: List
-metadata:
-  resourceVersion: ""
-  selfLink: ""
-
-```
-
-## Monitor for Cluster Completion
-
-```console
-$ bin/openshift-install wait-for install-complete
-INFO Waiting up to 30m0s for the cluster to initialize...
-```
-
-Also, you can observe the running state of your cluster pods:
-
-```console
-$ oc get pods --all-namespaces
-NAMESPACE                                               NAME                                                                READY     STATUS      RESTARTS   AGE
-kube-system                                             etcd-member-ip-10-0-3-111.us-east-2.compute.internal                1/1       Running     0          35m
-kube-system                                             etcd-member-ip-10-0-3-239.us-east-2.compute.internal                1/1       Running     0          37m
-kube-system                                             etcd-member-ip-10-0-3-24.us-east-2.compute.internal                 1/1       Running     0          35m
-openshift-apiserver-operator                            openshift-apiserver-operator-6d6674f4f4-h7t2t                       1/1       Running     1          37m
-openshift-apiserver                                     apiserver-fm48r                                                     1/1       Running     0          30m
-openshift-apiserver                                     apiserver-fxkvv                                                     1/1       Running     0          29m
-openshift-apiserver                                     apiserver-q85nm                                                     1/1       Running     0          29m
-...
-openshift-service-ca-operator                           openshift-service-ca-operator-66ff6dc6cd-9r257                      1/1       Running     0          37m
-openshift-service-ca                                    apiservice-cabundle-injector-695b6bcbc-cl5hm                        1/1       Running     0          35m
-openshift-service-ca                                    configmap-cabundle-injector-8498544d7-25qn6                         1/1       Running     0          35m
-openshift-service-ca                                    service-serving-cert-signer-6445fc9c6-wqdqn                         1/1       Running     0          35m
-openshift-service-catalog-apiserver-operator            openshift-service-catalog-apiserver-operator-549f44668b-b5q2w       1/1       Running     0          32m
-openshift-service-catalog-controller-manager-operator   openshift-service-catalog-controller-manager-operator-b78cr2lnm     1/1       Running     0          31m
-```
-
 ## Add the Ingress DNS Records
 
 If you removed the DNS Zone configuration [earlier](#remove-dns-zones), you'll need to manually create some DNS records pointing at the ingress load balancer.
@@ -338,9 +305,38 @@ grafana-openshift-monitoring.apps.your.cluster.domain.example.com
 prometheus-k8s-openshift-monitoring.apps.your.cluster.domain.example.com
 ```
 
+## Monitor for Cluster Completion
+
+```console
+$ bin/openshift-install wait-for install-complete
+INFO Waiting up to 30m0s for the cluster to initialize...
+```
+
+Also, you can observe the running state of your cluster pods:
+
+```console
+$ oc get pods --all-namespaces
+NAMESPACE                                               NAME                                                                READY     STATUS      RESTARTS   AGE
+kube-system                                             etcd-member-ip-10-0-3-111.us-east-2.compute.internal                1/1       Running     0          35m
+kube-system                                             etcd-member-ip-10-0-3-239.us-east-2.compute.internal                1/1       Running     0          37m
+kube-system                                             etcd-member-ip-10-0-3-24.us-east-2.compute.internal                 1/1       Running     0          35m
+openshift-apiserver-operator                            openshift-apiserver-operator-6d6674f4f4-h7t2t                       1/1       Running     1          37m
+openshift-apiserver                                     apiserver-fm48r                                                     1/1       Running     0          30m
+openshift-apiserver                                     apiserver-fxkvv                                                     1/1       Running     0          29m
+openshift-apiserver                                     apiserver-q85nm                                                     1/1       Running     0          29m
+...
+openshift-service-ca-operator                           openshift-service-ca-operator-66ff6dc6cd-9r257                      1/1       Running     0          37m
+openshift-service-ca                                    apiservice-cabundle-injector-695b6bcbc-cl5hm                        1/1       Running     0          35m
+openshift-service-ca                                    configmap-cabundle-injector-8498544d7-25qn6                         1/1       Running     0          35m
+openshift-service-ca                                    service-serving-cert-signer-6445fc9c6-wqdqn                         1/1       Running     0          35m
+openshift-service-catalog-apiserver-operator            openshift-service-catalog-apiserver-operator-549f44668b-b5q2w       1/1       Running     0          32m
+openshift-service-catalog-controller-manager-operator   openshift-service-catalog-controller-manager-operator-b78cr2lnm     1/1       Running     0          31m
+```
+
 [cloudformation]: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/Welcome.html
 [delete-stack]: https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-console-delete-stack.html
 [ingress-operator]: https://github.com/openshift/cluster-ingress-operator
+[kubernetes-service-load-balancers-exclude-masters]: https://github.com/kubernetes/kubernetes/issues/65618
 [machine-api-operator]: https://github.com/openshift/machine-api-operator
 [route53-alias]: https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resource-record-sets-choosing-alias-non-alias.html
 [route53-zones-for-load-balancers]: https://docs.aws.amazon.com/general/latest/gr/rande.html#elb_region

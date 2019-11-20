@@ -3,6 +3,7 @@ locals {
 
   master_subnet_cidr = cidrsubnet(var.machine_cidr, 3, 0) #master subnet is a smaller subnet within the vnet. i.e from /21 to /24
   worker_subnet_cidr = cidrsubnet(var.machine_cidr, 3, 1) #worker subnet is a smaller subnet within the vnet. i.e from /21 to /24
+  public_endpoints   = var.gcp_publish_strategy == "External" ? true : false
 }
 
 provider "google" {
@@ -16,13 +17,15 @@ module "bootstrap" {
 
   bootstrap_enabled = var.gcp_bootstrap_enabled
 
-  image        = google_compute_image.cluster.self_link
-  machine_type = var.gcp_bootstrap_instance_type
-  cluster_id   = var.cluster_id
-  ignition     = var.ignition_bootstrap
-  network      = module.network.network
-  subnet       = module.network.master_subnet
-  zone         = var.gcp_master_availability_zones[0]
+  image            = google_compute_image.cluster.self_link
+  machine_type     = var.gcp_bootstrap_instance_type
+  cluster_id       = var.cluster_id
+  ignition         = var.ignition_bootstrap
+  network          = module.network.network
+  network_cidr     = var.machine_cidr
+  public_endpoints = local.public_endpoints
+  subnet           = module.network.master_subnet
+  zone             = var.gcp_master_availability_zones[0]
 
   root_volume_size = var.gcp_master_root_volume_size
   root_volume_type = var.gcp_master_root_volume_type
@@ -38,12 +41,13 @@ module "master" {
   machine_type   = var.gcp_master_instance_type
   cluster_id     = var.cluster_id
   ignition       = var.ignition_master
-  network        = module.network.network
   subnet         = module.network.master_subnet
   zones          = distinct(var.gcp_master_availability_zones)
 
   root_volume_size = var.gcp_master_root_volume_size
   root_volume_type = var.gcp_master_root_volume_type
+
+  bootstrap_instances = module.bootstrap.bootstrap_instances
 
   labels = local.labels
 }
@@ -61,11 +65,18 @@ module "network" {
   master_subnet_cidr = local.master_subnet_cidr
   worker_subnet_cidr = local.worker_subnet_cidr
   network_cidr       = var.machine_cidr
+  public_endpoints   = local.public_endpoints
 
   bootstrap_lb        = var.gcp_bootstrap_enabled
   bootstrap_instances = module.bootstrap.bootstrap_instances
 
-  master_instances = module.master.master_instances
+  master_instances       = module.master.master_instances
+  master_instance_groups = module.master.master_instance_groups
+
+  preexisting_network = var.gcp_preexisting_network
+  cluster_network     = var.gcp_cluster_network
+  master_subnet       = var.gcp_control_plane_subnet
+  worker_subnet       = var.gcp_compute_subnet
 }
 
 module "dns" {
@@ -78,6 +89,8 @@ module "dns" {
   etcd_count           = var.master_count
   cluster_domain       = var.cluster_domain
   api_external_lb_ip   = module.network.cluster_public_ip
+  api_internal_lb_ip   = module.network.cluster_ip
+  public_endpoints     = local.public_endpoints
 }
 
 resource "google_compute_image" "cluster" {

@@ -1,19 +1,5 @@
-variable "vnet_name" {
-  type = string
-}
-
 variable "vnet_cidr" {
   type = string
-}
-
-variable "master_subnet_cidr" {
-  type        = string
-  description = "The subnet for the masters"
-}
-
-variable "node_subnet_cidr" {
-  type        = string
-  description = "The subnet for the workers"
 }
 
 variable "resource_group_name" {
@@ -23,16 +9,6 @@ variable "resource_group_name" {
 
 variable "cluster_id" {
   type = string
-}
-
-variable "private_master_endpoints" {
-  description = "If set to true, private-facing ingress resources are created."
-  default     = true
-}
-
-variable "public_master_endpoints" {
-  description = "If set to true, public-facing ingress resources are created."
-  default     = true
 }
 
 variable "region" {
@@ -51,7 +27,33 @@ variable "dns_label" {
   description = "The label used to build the dns name. i.e. <label>.<region>.cloudapp.azure.com"
 }
 
-variable "private_dns_zone_id" {
+variable "preexisting_network" {
+  type        = bool
+  description = "This value determines if a vnet already exists or not. If true, then will not create a new vnet, subnet, or nsg's"
+  default     = false
+}
+
+variable "network_resource_group_name" {
   type        = string
-  description = "This is to create explicit dependency on private zone to exist before VMs are created in the vnet. https://github.com/MicrosoftDocs/azure-docs/issues/13728"
+  description = "This is the name of the network resource group for new or existing network resources"
+}
+
+variable "virtual_network_name" {
+  type        = string
+  description = "This is the name of the virtual network, new or existing"
+}
+
+variable "master_subnet" {
+  type        = string
+  description = "This is the name of the subnet used for the control plane, new or existing"
+}
+
+variable "worker_subnet" {
+  type        = string
+  description = "This is the name of the subnet used for the compute nodes, new or existing"
+}
+
+variable "private" {
+  type        = bool
+  description = "The determines if this is a private/internal cluster or not."
 }

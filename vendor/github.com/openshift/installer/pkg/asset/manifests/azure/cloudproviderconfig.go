@@ -7,11 +7,15 @@ import (
 
 //CloudProviderConfig is the azure cloud provider config
 type CloudProviderConfig struct {
-	TenantID       string
-	SubscriptionID string
-	GroupLocation  string
-	ResourcePrefix string
-	ResourceGroup  string
+	TenantID                 string
+	SubscriptionID           string
+	GroupLocation            string
+	ResourcePrefix           string
+	ResourceGroupName        string
+	NetworkResourceGroupName string
+	NetworkSecurityGroupName string
+	VirtualNetworkName       string
+	SubnetName               string
 }
 
 // JSON generates the cloud provider json config for the azure platform.
@@ -30,12 +34,12 @@ func (params CloudProviderConfig) JSON() (string, error) {
 			// ref: https://github.com/kubernetes/kubernetes/blob/4b7c607ba47928a7be77fadef1550d6498397a4c/staging/src/k8s.io/legacy-cloud-providers/azure/auth/azure_auth.go#L69
 			UserAssignedIdentityID: "",
 		},
-		ResourceGroup:          params.ResourceGroup,
+		ResourceGroup:          params.ResourceGroupName,
 		Location:               params.GroupLocation,
-		SubnetName:             params.ResourcePrefix + "-node-subnet",
-		SecurityGroupName:      params.ResourcePrefix + "-node-nsg",
-		VnetName:               params.ResourcePrefix + "-vnet",
-		VnetResourceGroup:      params.ResourceGroup,
+		SubnetName:             params.SubnetName,
+		SecurityGroupName:      params.NetworkSecurityGroupName,
+		VnetName:               params.VirtualNetworkName,
+		VnetResourceGroup:      params.NetworkResourceGroupName,
 		RouteTableName:         params.ResourcePrefix + "-node-routetable",
 		CloudProviderBackoff:   true,
 		CloudProviderRateLimit: true,

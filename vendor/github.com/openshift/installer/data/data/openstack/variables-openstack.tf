@@ -10,10 +10,21 @@ variable "openstack_master_root_volume_size" {
   description = "The size of the volume in gigabytes for the root block device of master nodes."
 }
 
-variable "openstack_base_image" {
+variable "openstack_base_image_name" {
   type        = string
-  default     = "rhcos"
   description = "Name of the base image to use for the nodes."
+}
+
+variable "openstack_base_image_local_file_path" {
+  type        = string
+  default     = ""
+  description = "Local file path of the base image file to use for the nodes."
+}
+
+variable "openstack_bootstrap_shim_ignition" {
+  type        = string
+  default     = ""
+  description = "Generated pointer/shim ignition config with user ca bundle."
 }
 
 variable "openstack_credentials_auth_url" {
@@ -294,6 +305,12 @@ variable "openstack_node_dns_ip" {
 variable "openstack_ingress_ip" {
   type        = string
   description = "IP on the nodes subnet reserved for the ingress VIP."
+}
+
+variable "openstack_external_dns" {
+  type        = list(string)
+  description = "IP addresses of exernal dns servers to add to networks."
+  default     = []
 }
 
 variable "openstack_master_flavor_name" {

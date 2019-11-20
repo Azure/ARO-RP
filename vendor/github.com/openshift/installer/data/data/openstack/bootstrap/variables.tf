@@ -1,6 +1,6 @@
-variable "image_name" {
+variable "base_image_id" {
   type        = string
-  description = "The name of the Glance image for the bootstrap node."
+  description = "The identifier of the Glance image for the bootstrap node."
 }
 
 variable "extra_tags" {
@@ -23,6 +23,11 @@ variable "cluster_id" {
 variable "ignition" {
   type = string
   description = "The content of the bootstrap ignition file."
+}
+
+variable "bootstrap_shim_ignition" {
+  type = string
+  description = "The content of the ignition file with user ca bundle."
 }
 
 variable "flavor_name" {
@@ -57,3 +62,4 @@ variable "nodes_subnet_id" {
 variable "cluster_domain" {
   type = string
 }
+

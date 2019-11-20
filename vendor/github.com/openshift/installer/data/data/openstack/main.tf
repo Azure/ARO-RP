@@ -25,24 +25,25 @@ provider "openstack" {
 module "bootstrap" {
   source = "./bootstrap"
 
-  cluster_id         = var.cluster_id
-  extra_tags         = var.openstack_extra_tags
-  image_name         = var.openstack_base_image
-  flavor_name        = var.openstack_master_flavor_name
-  ignition           = var.ignition_bootstrap
-  api_int_ip         = var.openstack_api_int_ip
-  node_dns_ip        = var.openstack_node_dns_ip
-  external_network   = var.openstack_external_network
-  cluster_domain     = var.cluster_domain
-  nodes_subnet_id    = module.topology.nodes_subnet_id
-  private_network_id = module.topology.private_network_id
-  master_sg_id       = module.topology.master_sg_id
+  cluster_id              = var.cluster_id
+  extra_tags              = var.openstack_extra_tags
+  base_image_id           = data.openstack_images_image_v2.base_image.id
+  flavor_name             = var.openstack_master_flavor_name
+  ignition                = var.ignition_bootstrap
+  api_int_ip              = var.openstack_api_int_ip
+  node_dns_ip             = var.openstack_node_dns_ip
+  external_network        = var.openstack_external_network
+  cluster_domain          = var.cluster_domain
+  nodes_subnet_id         = module.topology.nodes_subnet_id
+  private_network_id      = module.topology.private_network_id
+  master_sg_id            = module.topology.master_sg_id
+  bootstrap_shim_ignition = var.openstack_bootstrap_shim_ignition
 }
 
 module "masters" {
   source = "./masters"
 
-  base_image      = var.openstack_base_image
+  base_image_id   = data.openstack_images_image_v2.base_image.id
   cluster_id      = var.cluster_id
   flavor_name     = var.openstack_master_flavor_name
   instance_count  = var.master_count
@@ -69,6 +70,25 @@ module "topology" {
   api_int_ip          = var.openstack_api_int_ip
   node_dns_ip         = var.openstack_node_dns_ip
   ingress_ip          = var.openstack_ingress_ip
+  external_dns        = var.openstack_external_dns
   trunk_support       = var.openstack_trunk_support
   octavia_support     = var.openstack_octavia_support
+}
+
+resource "openstack_images_image_v2" "base_image" {
+  // we need to create a new image only if the base image local file path has been provided, plus base image name is <cluster_id>-rhcos
+  count = var.openstack_base_image_local_file_path != "" && var.openstack_base_image_name == "${var.cluster_id}-rhcos" ? 1 : 0
+
+  name             = var.openstack_base_image_name
+  local_file_path  = var.openstack_base_image_local_file_path
+  container_format = "bare"
+  disk_format      = "qcow2"
+
+  tags = ["openshiftClusterID=${var.cluster_id}"]
+}
+
+data "openstack_images_image_v2" "base_image" {
+  name = var.openstack_base_image_name
+
+  depends_on = ["openstack_images_image_v2.base_image"]
 }

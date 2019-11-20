@@ -1,6 +1,7 @@
 package manifests
 
 import (
+	"fmt"
 	"path/filepath"
 
 	"github.com/ghodss/yaml"
@@ -98,19 +99,41 @@ func (cpc *CloudProviderConfig) Generate(dependencies asset.Parents) error {
 		if err != nil {
 			return errors.Wrap(err, "could not get azure session")
 		}
+
+		nsg := fmt.Sprintf("%s-node-nsg", clusterID.InfraID)
+		nrg := installConfig.Config.Azure.ResourceGroupName
+		if installConfig.Config.Azure.NetworkResourceGroupName != "" {
+			nrg = installConfig.Config.Azure.NetworkResourceGroupName
+		}
+		vnet := fmt.Sprintf("%s-vnet", clusterID.InfraID)
+		if installConfig.Config.Azure.VirtualNetwork != "" {
+			vnet = installConfig.Config.Azure.VirtualNetwork
+		}
+		subnet := fmt.Sprintf("%s-worker-subnet", clusterID.InfraID)
+		if installConfig.Config.Azure.ComputeSubnet != "" {
+			subnet = installConfig.Config.Azure.ComputeSubnet
+		}
 		azureConfig, err := azure.CloudProviderConfig{
-			GroupLocation:  installConfig.Config.Azure.Region,
-			ResourcePrefix: clusterID.InfraID,
-			SubscriptionID: session.Credentials.SubscriptionID,
-			TenantID:       session.Credentials.TenantID,
-			ResourceGroup:  installConfig.Config.Azure.ResourceGroup,
+			GroupLocation:            installConfig.Config.Azure.Region,
+			ResourcePrefix:           clusterID.InfraID,
+			SubscriptionID:           session.Credentials.SubscriptionID,
+			TenantID:                 session.Credentials.TenantID,
+			ResourceGroupName:        installConfig.Config.Azure.ResourceGroupName,
+			NetworkResourceGroupName: nrg,
+			NetworkSecurityGroupName: nsg,
+			VirtualNetworkName:       vnet,
+			SubnetName:               subnet,
 		}.JSON()
 		if err != nil {
 			return errors.Wrap(err, "could not create cloud provider config")
 		}
 		cm.Data[cloudProviderConfigDataKey] = azureConfig
 	case gcptypes.Name:
-		gcpConfig, err := gcpmanifests.CloudProviderConfig(clusterID.InfraID, installConfig.Config.GCP.ProjectID)
+		subnet := fmt.Sprintf("%s-worker-subnet", clusterID.InfraID)
+		if installConfig.Config.GCP.ComputeSubnet != "" {
+			subnet = installConfig.Config.GCP.ComputeSubnet
+		}
+		gcpConfig, err := gcpmanifests.CloudProviderConfig(clusterID.InfraID, installConfig.Config.GCP.ProjectID, subnet)
 		if err != nil {
 			return errors.Wrap(err, "could not create cloud provider config")
 		}

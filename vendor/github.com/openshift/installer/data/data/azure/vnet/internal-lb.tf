@@ -10,9 +10,8 @@ resource "azurerm_lb" "internal" {
 
   frontend_ip_configuration {
     name                          = local.internal_lb_frontend_ip_configuration_name
-    subnet_id                     = azurerm_subnet.master_subnet.id
-    private_ip_address_allocation = "Static"
-    private_ip_address            = cidrhost(var.master_subnet_cidr, -2) #last ip is reserved by azure
+    subnet_id                     = local.master_subnet_id
+    private_ip_address_allocation = "Dynamic"
   }
 }
 

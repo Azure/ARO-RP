@@ -18,6 +18,11 @@ variable "master_instances" {
   description = "The master instances."
 }
 
+variable "master_instance_groups" {
+  type        = list
+  description = "The master instance groups."
+}
+
 variable "master_subnet_cidr" {
   type = string
 }
@@ -28,4 +33,26 @@ variable "network_cidr" {
 
 variable "worker_subnet_cidr" {
   type = string
+}
+
+variable "cluster_network" {
+  type = string
+}
+
+variable "master_subnet" {
+  type = string
+}
+
+variable "worker_subnet" {
+  type = string
+}
+
+variable "preexisting_network" {
+  type    = bool
+  default = false
+}
+
+variable "public_endpoints" {
+  type        = bool
+  description = "If the bootstrap instance should have externally accessible resources."
 }

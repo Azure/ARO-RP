@@ -1,6 +1,7 @@
 package machines
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -35,6 +36,7 @@ import (
 	"github.com/openshift/installer/pkg/asset/machines/machineconfig"
 	"github.com/openshift/installer/pkg/asset/machines/openstack"
 	"github.com/openshift/installer/pkg/asset/rhcos"
+	rhcosutils "github.com/openshift/installer/pkg/rhcos"
 	"github.com/openshift/installer/pkg/types"
 	awstypes "github.com/openshift/installer/pkg/types/aws"
 	awsdefaults "github.com/openshift/installer/pkg/types/aws/defaults"
@@ -121,37 +123,64 @@ func awsDefaultMasterMachineType(installconfig *installconfig.InstallConfig) str
 
 // Generate generates the Master asset.
 func (m *Master) Generate(dependencies asset.Parents) error {
+	ctx := context.TODO()
 	platformCreds := &installconfig.PlatformCreds{}
 	clusterID := &installconfig.ClusterID{}
-	installconfig := &installconfig.InstallConfig{}
+	installConfig := &installconfig.InstallConfig{}
 	rhcosImage := new(rhcos.Image)
 	mign := &machine.Master{}
-	dependencies.Get(platformCreds, clusterID, installconfig, rhcosImage, mign)
+	dependencies.Get(platformCreds, clusterID, installConfig, rhcosImage, mign)
 
-	ic := installconfig.Config
+	ic := installConfig.Config
 
 	pool := ic.ControlPlane
 	var err error
 	machines := []machineapi.Machine{}
 	switch ic.Platform.Name() {
 	case awstypes.Name:
+		subnets := map[string]string{}
+		if len(ic.Platform.AWS.Subnets) > 0 {
+			subnetMeta, err := installConfig.AWS.PrivateSubnets(ctx)
+			if err != nil {
+				return err
+			}
+			for id, subnet := range subnetMeta {
+				subnets[subnet.Zone] = id
+			}
+		}
+
 		mpool := defaultAWSMachinePoolPlatform()
-		mpool.InstanceType = awsDefaultMasterMachineType(installconfig)
+		mpool.InstanceType = awsDefaultMasterMachineType(installConfig)
 		mpool.Set(ic.Platform.AWS.DefaultMachinePlatform)
 		mpool.Set(pool.Platform.AWS)
 		if len(mpool.Zones) == 0 {
-			azs, err := aws.AvailabilityZones(ic.Platform.AWS.Region)
-			if err != nil {
-				return errors.Wrap(err, "failed to fetch availability zones")
+			if len(subnets) > 0 {
+				for zone := range subnets {
+					mpool.Zones = append(mpool.Zones, zone)
+				}
+			} else {
+				mpool.Zones, err = installConfig.AWS.AvailabilityZones(ctx)
+				if err != nil {
+					return err
+				}
 			}
-			mpool.Zones = azs
 		}
+
 		pool.Platform.AWS = &mpool
-		machines, err = aws.Machines(clusterID.InfraID, ic, pool, string(*rhcosImage), "master", "master-user-data")
+		machines, err = aws.Machines(
+			clusterID.InfraID,
+			installConfig.Config.Platform.AWS.Region,
+			subnets,
+			pool,
+			string(*rhcosImage),
+			"master",
+			"master-user-data",
+			installConfig.Config.Platform.AWS.UserTags,
+		)
 		if err != nil {
 			return errors.Wrap(err, "failed to create master machine objects")
 		}
-		aws.ConfigMasters(machines, clusterID.InfraID)
+		aws.ConfigMasters(machines, clusterID.InfraID, ic.Publish)
 	case gcptypes.Name:
 		mpool := defaultGCPMachinePoolPlatform()
 		mpool.Set(ic.Platform.GCP.DefaultMachinePlatform)
@@ -183,14 +212,17 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 		mpool.Set(ic.Platform.OpenStack.DefaultMachinePlatform)
 		mpool.Set(pool.Platform.OpenStack)
 		pool.Platform.OpenStack = &mpool
-		machines, err = openstack.Machines(clusterID.InfraID, ic, pool, string(*rhcosImage), "master", "master-user-data")
+
+		imageName, _ := rhcosutils.GenerateOpenStackImageName(string(*rhcosImage), clusterID.InfraID)
+
+		machines, err = openstack.Machines(clusterID.InfraID, ic, pool, imageName, "master", "master-user-data")
 		if err != nil {
 			return errors.Wrap(err, "failed to create master machine objects")
 		}
 		openstack.ConfigMasters(machines, clusterID.InfraID)
 	case azuretypes.Name:
 		mpool := defaultAzureMachinePoolPlatform()
-		mpool.InstanceType = azuredefaults.ControlPlaneInstanceType(installconfig.Config.Platform.Azure.Region)
+		mpool.InstanceType = azuredefaults.ControlPlaneInstanceType(installConfig.Config.Platform.Azure.Region)
 		mpool.OSDisk.DiskSizeGB = 1024
 		mpool.Set(ic.Platform.Azure.DefaultMachinePlatform)
 		mpool.Set(pool.Platform.Azure)
@@ -268,8 +300,7 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 		return fmt.Errorf("invalid Platform")
 	}
 
-	userDataMap := map[string][]byte{"master-user-data": mign.File.Data}
-	data, err := userDataList(userDataMap)
+	data, err := userDataSecret("master-user-data", mign.File.Data)
 	if err != nil {
 		return errors.Wrap(err, "failed to create user-data secret for master machines")
 	}
@@ -285,6 +316,9 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 	}
 	if ic.SSHKey != "" {
 		machineConfigs = append(machineConfigs, machineconfig.ForAuthorizedKeys(ic.SSHKey, "master"))
+	}
+	if ic.FIPS {
+		machineConfigs = append(machineConfigs, machineconfig.ForFIPSEnabled("master"))
 	}
 
 	m.MachineConfigFiles, err = machineconfig.Manifests(machineConfigs, "master", directory)

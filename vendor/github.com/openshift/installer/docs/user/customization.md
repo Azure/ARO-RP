@@ -21,8 +21,11 @@ The following `install-config.yaml` properties are available:
     The installer may also support older API versions.
 * `additionalTrustBundle` (optional string): a PEM-encoded X.509 certificate bundle that will be added to the nodes' trusted certificate store.
 * `baseDomain` (required string): The base domain to which the cluster should belong.
+* `publish` (optional string): This controls how the user facing endpoints of the cluster like the Kubernetes API, OpenShift routes etc. are exposed.
+    Valid values are `External` (the default) and `Internal`.
 * `controlPlane` (optional [machine-pool](#machine-pools)): The configuration for the machines that comprise the control plane.
 * `compute` (optional array of [machine-pools](#machine-pools)): The configuration for the machines that comprise the compute nodes.
+* `fips` (optional boolean): Enables FIPS mode (default false).
 * `imageContentSources` (optional array of objects): Sources and repositories for the release-image content.
     Each entry in the array is an object with the following properties:
     * `source` (required string): The repository that users refer to, e.g. in image pull specifications.
@@ -65,12 +68,13 @@ For example, 10.0.0.0/16 represents IP addresses 10.0.0.0 through 10.0.255.255.
 
 The following machine-pool properties are available:
 
-* `hyperthreading` (optional string): Determines the mode of hyperthreading that machines in the pool will utalize.
+* `hyperthreading` (optional string): Determines the mode of hyperthreading that machines in the pool will utilize.
     Valid values are `Enabled` (the default) and `Disabled`.
 * `name` (required string): The name of the machine pool.
 * `platform` (optional object): Platform-specific machine-pool configuration.
     * `aws` (optional object): [AWS-specific properties](aws/customization.md#machine-pools).
     * `azure` (optional object): [Azure-specific properties](azure/customization.md#machine-pools).
+    * `gcp` (optional object): [GCP-specific properties](gcp/customization.md#machine-pools).
     * `openstack` (optional object): [OpenStack-specific properties](openstack/customization.md#machine-pools).
     * `vsphere` (optional object): [vSphere-specific properties](vsphere/customization.md#machine-pools).
 * `replicas` (optional integer): The machine count for the machine pool.
@@ -221,7 +225,7 @@ The `manifest-templates` target will output the unrendered manifest templates in
 
 **IMPORTANT**:
 
-- These customizations require using the `manifests` target that does not provide compatibility guarantees, for more information [check here](versioning.md#versioning).
+- These customizations require using the `manifests` target that does not provide compatibility guarantees.
 - This can affect upgradability of your cluster as the `machine-config-operator` can mark clusters tainted when user defined [MachineConfig][machine-config] objects are present in the cluster.
 
 In most cases, user applications should be run on the cluster via Kubernetes workload objects (e.g. DaemonSet, Deployment, etc). For example, DaemonSets are the most stable way to run a logging agent on all hosts. However, there may be some cases where these workloads need to be executed prior to the node joining the Kubernetes cluster. For example, a compliance mandate like "the user must run auditing tools as soon as the operating system comes up" might require a custom systemd unit for an auditing container in the Ignition config for some or all nodes.
@@ -379,6 +383,67 @@ For example:
     master-55491738d7cd1ad6c72891e77c35e024                     3.11.0-744-g5b05d9d3-dirty   2.2.0             137m
     worker-edab0895c59dba7a566f4b955d87d964                     3.11.0-744-g5b05d9d3-dirty   2.2.0             137m
     ```
+
+#### Nodes with Custom Kernel Arguments
+
+Custom kernel arguments can be applied to through manifests as an installer operation, and can also be applied as a [MachineConfig][machine-config] as a day 2 operation. The kernel arguments are applied upon boot and will be honored by the Machine-Config-Operator from then on.
+
+Example application of `loglevel=7` (change Linux kernel log level to KERN_DEBUG) for master nodes:
+
+1. Run `manifests` target to create all the manifests.
+
+    ```console
+    $ mkdir log_debug_cluster
+
+    $ openshift-install --dir log_debug_cluster create manifests
+    ...
+
+    $ ls -l log_debug_cluster/openshift
+    ...
+    99_openshift-machineconfig_99-master-ssh.yaml
+    99_openshift-machineconfig_99-worker-ssh.yaml
+    ...
+    ```
+
+2. . Create a `MachineConfig` that adds a kernel argument to change log level:
+
+    ```sh
+    cat > log_debug_cluster/openshift/99-master-kargs-loglevel.yaml <<EOF
+    apiVersion: machineconfiguration.openshift.io/v1
+    kind: MachineConfig
+    metadata:
+      labels:
+        machineconfiguration.openshift.io/role: "master"
+      name: 99-master-kargs-loglevel
+    spec:
+      kernelArguments:
+        - 'loglevel=7'
+    EOF
+    ```
+
+3. Run `cluster` target to create the cluster using the custom manifests.
+
+    ```console
+    $ openshift-install --dir log_debug_cluster create cluster
+    ...
+    ```
+
+    Check that the machineconfig has the kernel arguments applied
+
+    ```console
+    $ oc --config log_debug_cluster/auth/kubeconfig get machineconfigs
+    NAME                                                        GENERATEDBYCONTROLLER                      IGNITIONVERSION   CREATED
+    99-master-kargs-loglevel                                    bd846958bc95d049547164046a962054fca093df   2.2.0             26h
+    99-master-ssh                                               bd846958bc95d049547164046a962054fca093df   2.2.0             26h
+    ...
+    rendered-master-5f4a5bd806567871be1b608474eca373            bd846958bc95d049547164046a962054fca093df   2.2.0             26h
+
+    $ oc describe machineconfig/rendered-master-5f4a5bd806567871be1b608474eca373 | grep -A 1 "Kernel Arguments"
+      Kernel Arguments:
+        loglevel=7
+    ```
+
+    If you wish to confirm the kernel argument is indeed being applied on the system, you can `oc debug` into a node and check with `rpm-ostree kargs`.
 
 ## OS Customization (unvalidated)
 

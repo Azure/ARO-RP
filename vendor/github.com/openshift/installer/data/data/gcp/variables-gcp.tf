@@ -57,10 +57,37 @@ variable "gcp_master_root_volume_size" {
 
 variable "gcp_public_dns_zone_name" {
   type = string
+  default = null
   description = "The name of the public DNS zone to use for this cluster"
 }
 
 variable "gcp_master_availability_zones" {
   type = list(string)
   description = "The availability zones in which to create the masters. The length of this list must match master_count."
+}
+
+variable "gcp_preexisting_network" {
+  type = bool
+  default = false
+  description = "Specifies whether an existing network should be used or a new one created for installation."
+}
+
+variable "gcp_cluster_network" {
+  type = string
+  description = "The name of the cluster network, either existing or to be created."
+}
+
+variable "gcp_control_plane_subnet" {
+  type = string
+  description = "The name of the subnet for the control plane, either existing or to be created."
+}
+
+variable "gcp_compute_subnet" {
+  type = string
+  description = "The name of the subnet for worker nodes, either existing or to be created"
+}
+
+variable "gcp_publish_strategy" {
+  type = string
+  description = "The cluster publishing strategy, either Internal or External"
 }

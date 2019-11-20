@@ -11,14 +11,9 @@ variable "cluster_id" {
   type = string
 }
 
-variable "private_master_endpoints" {
-  description = "If set to true, private-facing ingress resources are created."
-  default     = true
-}
-
-variable "public_master_endpoints" {
-  description = "If set to true, public-facing ingress resources are created."
-  default     = true
+variable "publish_strategy" {
+  type        = string
+  description = "The publishing strategy for endpoints like load balancers"
 }
 
 variable "region" {
@@ -32,3 +27,17 @@ variable "tags" {
   description = "AWS tags to be applied to created resources."
 }
 
+variable "vpc" {
+  type        = string
+  description = "An existing network (VPC ID) into which the cluster should be installed."
+}
+
+variable "public_subnets" {
+  type        = list(string)
+  description = "Existing public subnets into which the cluster should be installed."
+}
+
+variable "private_subnets" {
+  type        = list(string)
+  description = "Existing private subnets into which the cluster should be installed."
+}

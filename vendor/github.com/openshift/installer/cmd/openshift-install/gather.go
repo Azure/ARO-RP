@@ -1,15 +1,20 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	configv1 "github.com/openshift/api/config/v1"
+	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/rest"
 
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	assetstore "github.com/openshift/installer/pkg/asset/store"
@@ -117,11 +122,12 @@ func logGatherBootstrap(bootstrap string, port int, masters []string, directory 
 	} else if err != nil {
 		return errors.Wrap(err, "failed to create SSH client")
 	}
-	if err := ssh.Run(client, fmt.Sprintf("/usr/local/bin/installer-gather.sh %s", strings.Join(masters, " "))); err != nil {
+	gatherID := time.Now().Format("20060102150405")
+	if err := ssh.Run(client, fmt.Sprintf("/usr/local/bin/installer-gather.sh --id %s %s", gatherID, strings.Join(masters, " "))); err != nil {
 		return errors.Wrap(err, "failed to run remote command")
 	}
-	file := filepath.Join(directory, fmt.Sprintf("log-bundle-%s.tar.gz", time.Now().Format("20060102150405")))
-	if err := ssh.PullFileTo(client, "/home/core/log-bundle.tar.gz", file); err != nil {
+	file := filepath.Join(directory, fmt.Sprintf("log-bundle-%s.tar.gz", gatherID))
+	if err := ssh.PullFileTo(client, fmt.Sprintf("/home/core/log-bundle-%s.tar.gz", gatherID), file); err != nil {
 		return errors.Wrap(err, "failed to pull log file from remote")
 	}
 	logrus.Infof("Bootstrap gather logs captured here %q", file)
@@ -196,4 +202,35 @@ func unSupportedPlatformGather(directory string) error {
 	}
 
 	return logGatherBootstrap(gatherBootstrapOpts.bootstrap, 22, gatherBootstrapOpts.masters, directory)
+}
+
+func logClusterOperatorConditions(ctx context.Context, config *rest.Config) error {
+	client, err := configclient.NewForConfig(config)
+	if err != nil {
+		return errors.Wrap(err, "creating a config client")
+	}
+
+	operators, err := client.ConfigV1().ClusterOperators().List(metav1.ListOptions{})
+	if err != nil {
+		return errors.Wrap(err, "listing ClusterOperator objects")
+	}
+
+	for _, operator := range operators.Items {
+		for _, condition := range operator.Status.Conditions {
+			if condition.Type == configv1.OperatorUpgradeable {
+				continue
+			} else if condition.Type == configv1.OperatorAvailable && condition.Status == configv1.ConditionTrue {
+				continue
+			} else if (condition.Type == configv1.OperatorDegraded || condition.Type == configv1.OperatorProgressing) && condition.Status == configv1.ConditionFalse {
+				continue
+			}
+			if condition.Type == configv1.OperatorDegraded {
+				logrus.Errorf("Cluster operator %s %s is %s with %s: %s", operator.ObjectMeta.Name, condition.Type, condition.Status, condition.Reason, condition.Message)
+			} else {
+				logrus.Infof("Cluster operator %s %s is %s with %s: %s", operator.ObjectMeta.Name, condition.Type, condition.Status, condition.Reason, condition.Message)
+			}
+		}
+	}
+
+	return nil
 }
