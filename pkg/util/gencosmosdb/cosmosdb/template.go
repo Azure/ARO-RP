@@ -136,6 +136,7 @@ func (i *templateListIterator) Next() (templates *pkg.Templates, err error) {
 	}
 
 	headers := http.Header{}
+	headers.Set("X-Ms-Max-Item-Count", "-1")
 	if i.continuation != "" {
 		headers.Set("X-Ms-Continuation", i.continuation)
 	}
@@ -157,6 +158,7 @@ func (i *templateQueryIterator) Next() (templates *pkg.Templates, err error) {
 	}
 
 	headers := http.Header{}
+	headers.Set("X-Ms-Max-Item-Count", "-1")
 	headers.Set("X-Ms-Documentdb-Isquery", "True")
 	headers.Set("Content-Type", "application/query+json")
 	if i.partitionkey != "" {
