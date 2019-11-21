@@ -18,7 +18,7 @@ func Run(outputFile string) error {
 		Schemes:  []string{"https"},
 		Consumes: []string{"application/json"},
 		Produces: []string{"application/json"},
-		Paths:    populateTopLevelPaths("Microsoft.RedHatOpenShift", "OpenShiftCluster", "OpenShift cluster"),
+		Paths:    populateTopLevelPaths("Microsoft.RedHatOpenShift", "openShiftCluster", "OpenShift cluster"),
 		Definitions: Definitions{
 			// TODO: this should be defined in the API package itself
 			"OpenShiftClusters": {
@@ -70,12 +70,12 @@ func Run(outputFile string) error {
 		},
 	}
 
-	s.Paths["/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/{resourceName}/credentials"] = &PathItem{
+	s.Paths["/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}/credentials"] = &PathItem{
 		Post: &Operation{
 			Tags:        []string{"OpenShiftClusters"},
-			Summary:     "Gets admin credentials of a OpenShift cluster with the specified subscription, resource group and resource name.",
-			Description: "Gets admin credentials of a OpenShift cluster with the specified subscription, resource group and resource name.",
-			OperationID: "OpenShiftClusters_GetAdminCredentials",
+			Summary:     "Gets credentials of a OpenShift cluster with the specified subscription, resource group and resource name.",
+			Description: "Gets credentials of a OpenShift cluster with the specified subscription, resource group and resource name.",
+			OperationID: "OpenShiftClusters_GetCredentials",
 			Parameters:  populateParameters(2, "OpenShiftCluster", "OpenShift cluster"),
 			Responses:   populateResponses("OpenShiftClusterCredentials", false, http.StatusOK),
 		},

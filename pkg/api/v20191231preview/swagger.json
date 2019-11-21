@@ -16,7 +16,7 @@
     "application/json"
   ],
   "paths": {
-    "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/OpenShiftClusters": {
+    "/subscriptions/{subscriptionId}/providers/Microsoft.RedHatOpenShift/openShiftClusters": {
       "get": {
         "tags": [
           "OpenShiftClusters"
@@ -48,7 +48,7 @@
         }
       }
     },
-    "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/OpenShiftClusters": {
+    "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters": {
       "get": {
         "tags": [
           "OpenShiftClusters"
@@ -87,7 +87,7 @@
         }
       }
     },
-    "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/{resourceName}": {
+    "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}": {
       "get": {
         "tags": [
           "OpenShiftClusters"
@@ -298,14 +298,14 @@
         "x-ms-long-running-operation": true
       }
     },
-    "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/{resourceName}/credentials": {
+    "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}/credentials": {
       "post": {
         "tags": [
           "OpenShiftClusters"
         ],
-        "summary": "Gets admin credentials of a OpenShift cluster with the specified subscription, resource group and resource name.",
-        "description": "Gets admin credentials of a OpenShift cluster with the specified subscription, resource group and resource name.",
-        "operationId": "OpenShiftClusters_GetAdminCredentials",
+        "summary": "Gets credentials of a OpenShift cluster with the specified subscription, resource group and resource name.",
+        "description": "Gets credentials of a OpenShift cluster with the specified subscription, resource group and resource name.",
+        "operationId": "OpenShiftClusters_GetCredentials",
         "parameters": [
           {
             "$ref": "#/parameters/ApiVersionParameter"

@@ -3,6 +3,7 @@ package swagger
 import (
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 // populateParameters populates a parameters block.  Always expect an
@@ -92,60 +93,60 @@ func populateTopLevelPaths(resourceProviderNamespace, resourceType, friendlyName
 
 	ps["/subscriptions/{subscriptionId}/providers/"+resourceProviderNamespace+"/"+resourceType+"s"] = &PathItem{
 		Get: &Operation{
-			Tags:        []string{resourceType + "s"},
+			Tags:        []string{strings.Title(resourceType) + "s"},
 			Summary:     "Lists " + friendlyName + "s in the specified subscription.",
 			Description: "Lists " + friendlyName + "s in the specified subscription.  The operation returns properties of each " + friendlyName + ".",
-			OperationID: resourceType + "s_List",
-			Parameters:  populateParameters(0, resourceType, friendlyName),
-			Responses:   populateResponses(resourceType+"s", false, http.StatusOK),
+			OperationID: strings.Title(resourceType) + "s_List",
+			Parameters:  populateParameters(0, strings.Title(resourceType), friendlyName),
+			Responses:   populateResponses(strings.Title(resourceType)+"s", false, http.StatusOK),
 		},
 	}
 
 	ps["/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/"+resourceProviderNamespace+"/"+resourceType+"s"] = &PathItem{
 		Get: &Operation{
-			Tags:        []string{resourceType + "s"},
+			Tags:        []string{strings.Title(resourceType) + "s"},
 			Summary:     "Lists " + friendlyName + "s in the specified subscription and resource group.",
 			Description: "Lists " + friendlyName + "s in the specified subscription and resource group.  The operation returns properties of each " + friendlyName + ".",
-			OperationID: resourceType + "s_ListByResourceGroup",
-			Parameters:  populateParameters(1, resourceType, friendlyName),
-			Responses:   populateResponses(resourceType+"s", false, http.StatusOK),
+			OperationID: strings.Title(resourceType) + "s_ListByResourceGroup",
+			Parameters:  populateParameters(1, strings.Title(resourceType), friendlyName),
+			Responses:   populateResponses(strings.Title(resourceType)+"s", false, http.StatusOK),
 		},
 	}
 
 	ps["/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/"+resourceProviderNamespace+"/"+resourceType+"s/{resourceName}"] = &PathItem{
 		Get: &Operation{
-			Tags:        []string{resourceType + "s"},
+			Tags:        []string{strings.Title(resourceType) + "s"},
 			Summary:     "Gets a " + friendlyName + " with the specified subscription, resource group and resource name.",
 			Description: "Gets a " + friendlyName + " with the specified subscription, resource group and resource name.",
-			OperationID: resourceType + "s_Get",
-			Parameters:  populateParameters(2, resourceType, friendlyName),
-			Responses:   populateResponses(resourceType, false, http.StatusOK),
+			OperationID: strings.Title(resourceType) + "s_Get",
+			Parameters:  populateParameters(2, strings.Title(resourceType), friendlyName),
+			Responses:   populateResponses(strings.Title(resourceType), false, http.StatusOK),
 		},
 		Put: &Operation{
-			Tags:                 []string{resourceType + "s"},
+			Tags:                 []string{strings.Title(resourceType) + "s"},
 			Summary:              "Creates or updates a " + friendlyName + " with the specified subscription, resource group and resource name.",
 			Description:          "Creates or updates a " + friendlyName + " with the specified subscription, resource group and resource name.",
-			OperationID:          resourceType + "s_Put",
-			Parameters:           populateParameters(3, resourceType, friendlyName),
-			Responses:            populateResponses(resourceType, false, http.StatusOK, http.StatusCreated),
+			OperationID:          strings.Title(resourceType) + "s_Put",
+			Parameters:           populateParameters(3, strings.Title(resourceType), friendlyName),
+			Responses:            populateResponses(strings.Title(resourceType), false, http.StatusOK, http.StatusCreated),
 			LongRunningOperation: true,
 		},
 		Delete: &Operation{
-			Tags:                 []string{resourceType + "s"},
+			Tags:                 []string{strings.Title(resourceType) + "s"},
 			Summary:              "Deletes a " + friendlyName + " with the specified subscription, resource group and resource name.",
 			Description:          "Deletes a " + friendlyName + " with the specified subscription, resource group and resource name.",
-			OperationID:          resourceType + "s_Delete",
-			Parameters:           populateParameters(2, resourceType, friendlyName),
-			Responses:            populateResponses(resourceType, true, http.StatusOK, http.StatusNoContent),
+			OperationID:          strings.Title(resourceType) + "s_Delete",
+			Parameters:           populateParameters(2, strings.Title(resourceType), friendlyName),
+			Responses:            populateResponses(strings.Title(resourceType), true, http.StatusOK, http.StatusNoContent),
 			LongRunningOperation: true,
 		},
 		Patch: &Operation{
-			Tags:                 []string{resourceType + "s"},
+			Tags:                 []string{strings.Title(resourceType) + "s"},
 			Summary:              "Creates or updates a " + friendlyName + " with the specified subscription, resource group and resource name.",
 			Description:          "Creates or updates a " + friendlyName + " with the specified subscription, resource group and resource name.",
-			OperationID:          resourceType + "s_Patch",
-			Parameters:           populateParameters(3, resourceType, friendlyName),
-			Responses:            populateResponses(resourceType, false, http.StatusOK, http.StatusCreated),
+			OperationID:          strings.Title(resourceType) + "s_Patch",
+			Parameters:           populateParameters(3, strings.Title(resourceType), friendlyName),
+			Responses:            populateResponses(strings.Title(resourceType), false, http.StatusOK, http.StatusCreated),
 			LongRunningOperation: true,
 		},
 	}

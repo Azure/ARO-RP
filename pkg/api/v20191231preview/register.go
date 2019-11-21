@@ -6,7 +6,7 @@ import (
 
 const (
 	resourceProviderNamespace = "Microsoft.RedHatOpenShift"
-	resourceType              = "OpenShiftClusters"
+	resourceType              = "openShiftClusters"
 )
 
 func init() {

@@ -1,7 +1,7 @@
 {
-    "id": "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourcegroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenshiftClusters/$CLUSTER",
+    "id": "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourcegroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER",
     "name": "$CLUSTER",
-    "type": "Microsoft.RedHatOpenShift/OpenShiftClusters",
+    "type": "Microsoft.RedHatOpenShift/openShiftClusters",
     "location": "$LOCATION",
     "properties": {
         "servicePrincipalProfile": {
