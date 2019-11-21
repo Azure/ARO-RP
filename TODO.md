@@ -19,6 +19,7 @@
 
 (Lower priority)
 
+* Swagger example generation
 * Implement ARM move API
 * Implement paging on list APIs
 * Formal ARM asynchronous operation (Azure-AsyncOperation header)

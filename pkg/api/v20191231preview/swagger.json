@@ -487,7 +487,8 @@
         },
         "properties": {
           "$ref": "#/definitions/Properties",
-          "description": "The cluster properties."
+          "description": "The cluster properties.",
+          "x-ms-client-flatten": true
         }
       },
       "x-ms-azure-resource": true
