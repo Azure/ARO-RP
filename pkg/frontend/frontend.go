@@ -94,6 +94,8 @@ func (f *frontend) getReady(w http.ResponseWriter, r *http.Request) {
 // HTTP
 func (f *frontend) unauthenticatedRouter() *mux.Router {
 	r := mux.NewRouter()
+	r.Use(f.middleware)
+
 	r.Path("/healthz/ready").Methods(http.MethodGet).HandlerFunc(f.getReady)
 
 	return r
@@ -103,13 +105,13 @@ func (f *frontend) unauthenticatedRouter() *mux.Router {
 // by client certificate authentication
 func (f *frontend) authenticatedRouter() *mux.Router {
 	r := mux.NewRouter()
+	r.Use(f.middleware)
 
 	s := r.
 		Path("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}").
 		Queries("api-version", "").
 		Subrouter()
 
-	s.Use(f.middleware)
 	s.Methods(http.MethodDelete).HandlerFunc(f.deleteOpenShiftCluster)
 	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftCluster)
 	s.Methods(http.MethodPatch).HandlerFunc(f.putOrPatchOpenShiftCluster)
@@ -120,7 +122,6 @@ func (f *frontend) authenticatedRouter() *mux.Router {
 		Queries("api-version", "").
 		Subrouter()
 
-	s.Use(f.middleware)
 	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftClusters)
 
 	s = r.
@@ -128,7 +129,6 @@ func (f *frontend) authenticatedRouter() *mux.Router {
 		Queries("api-version", "").
 		Subrouter()
 
-	s.Use(f.middleware)
 	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftClusters)
 
 	s = r.
@@ -136,7 +136,6 @@ func (f *frontend) authenticatedRouter() *mux.Router {
 		Queries("api-version", "").
 		Subrouter()
 
-	s.Use(f.middleware)
 	s.Methods(http.MethodPost).HandlerFunc(f.postOpenShiftClusterCredentials)
 
 	return r
