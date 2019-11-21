@@ -1,14 +1,21 @@
 ## TODO
 
 * Unit tests
+  * MissingFields
 * E2E tests
 * Subscription lifecycle API (need clarity from Microsoft)
 * RBAC? (need clarity from Microsoft)
 * Metrics
 * Admin API
-* Adopt AMA if appropriate
 * Signed cluster TLS certificates
 * BBM
+* Carefully sort out URL case sensitivity
+* What to do with storage account at end of deploy?
+* Check about route table
+* Deploy to named resource group
+* Sort out mess of clients
+* Check insights, telemeter settings on deployed cluster
+* Was SNAT issue on internal LB solved?
 
 (Lower priority)
 

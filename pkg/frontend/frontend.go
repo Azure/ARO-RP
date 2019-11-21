@@ -138,6 +138,13 @@ func (f *frontend) authenticatedRouter() *mux.Router {
 
 	s.Methods(http.MethodPost).HandlerFunc(f.postOpenShiftClusterCredentials)
 
+	s = r.
+		Path("/providers/{resourceProviderNamespace}/operations").
+		Queries("api-version", "").
+		Subrouter()
+
+	s.Methods(http.MethodGet).HandlerFunc(f.getOperations)
+
 	return r
 }
 

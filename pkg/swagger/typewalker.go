@@ -93,6 +93,9 @@ func (tw *typeWalker) schemaFromType(t types.Type, deps map[*types.Named]struct{
 		s.Ref = "#/definitions/" + t.Obj().Name()
 		deps[t] = struct{}{}
 
+	case *types.Pointer:
+		s = tw.schemaFromType(t.Elem(), deps)
+
 	case *types.Slice:
 		if e, ok := t.Elem().(*types.Basic); ok {
 			// handle []byte as a string (it'll be base64 encoded by json.Marshal)

@@ -165,7 +165,12 @@ curl -k -X PATCH "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/re
 curl -k -X DELETE "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER?api-version=2019-12-31-preview"
 
 az group delete -g "$CLUSTER-vnet"
+```
 
+* List operations:
+
+```
+curl -k "https://localhost:8443/providers/Microsoft.RedHatOpenShift/operations?api-version=2019-12-31-preview"
 ```
 
 ## Basic architecture

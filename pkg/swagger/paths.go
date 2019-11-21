@@ -8,21 +8,25 @@ import (
 
 // populateParameters populates a parameters block.  Always expect an
 // subscriptionId and apiVersion; the rest is dependent on specificity:
-// n==0 list across subscription
-// n==1 list across resource group
-// n==2 action on resource not expecting input payload
-// n==3 action on resource expecting input payload
+// n==0 list across provider
+// n==1 list across subscription
+// n==2 list across resource group
+// n==3 action on resource not expecting input payload
+// n==4 action on resource expecting input payload
 func populateParameters(n int, typ, friendlyName string) (s []interface{}) {
 	s = []interface{}{
 		Reference{
 			Ref: "#/parameters/ApiVersionParameter",
 		},
-		Reference{
-			Ref: "#/parameters/SubscriptionIdParameter",
-		},
 	}
 
 	if n > 0 {
+		s = append(s, Reference{
+			Ref: "#/parameters/SubscriptionIdParameter",
+		})
+	}
+
+	if n > 1 {
 		s = append(s, Parameter{
 			Name:        "resourceGroupName",
 			In:          "path",
@@ -32,7 +36,7 @@ func populateParameters(n int, typ, friendlyName string) (s []interface{}) {
 		})
 	}
 
-	if n > 1 {
+	if n > 2 {
 		s = append(s, Parameter{
 			Name:        "resourceName",
 			In:          "path",
@@ -42,7 +46,7 @@ func populateParameters(n int, typ, friendlyName string) (s []interface{}) {
 		})
 	}
 
-	if n > 2 {
+	if n > 3 {
 		s = append(s, Parameter{
 			Name:        "parameters",
 			In:          "body",
@@ -97,7 +101,7 @@ func populateTopLevelPaths(resourceProviderNamespace, resourceType, friendlyName
 			Summary:     "Lists " + friendlyName + "s in the specified subscription.",
 			Description: "Lists " + friendlyName + "s in the specified subscription.  The operation returns properties of each " + friendlyName + ".",
 			OperationID: strings.Title(resourceType) + "s_List",
-			Parameters:  populateParameters(0, strings.Title(resourceType), friendlyName),
+			Parameters:  populateParameters(1, strings.Title(resourceType), friendlyName),
 			Responses:   populateResponses(strings.Title(resourceType)+"List", false, http.StatusOK),
 		},
 	}
@@ -108,7 +112,7 @@ func populateTopLevelPaths(resourceProviderNamespace, resourceType, friendlyName
 			Summary:     "Lists " + friendlyName + "s in the specified subscription and resource group.",
 			Description: "Lists " + friendlyName + "s in the specified subscription and resource group.  The operation returns properties of each " + friendlyName + ".",
 			OperationID: strings.Title(resourceType) + "s_ListByResourceGroup",
-			Parameters:  populateParameters(1, strings.Title(resourceType), friendlyName),
+			Parameters:  populateParameters(2, strings.Title(resourceType), friendlyName),
 			Responses:   populateResponses(strings.Title(resourceType)+"List", false, http.StatusOK),
 		},
 	}
@@ -119,7 +123,7 @@ func populateTopLevelPaths(resourceProviderNamespace, resourceType, friendlyName
 			Summary:     "Gets a " + friendlyName + " with the specified subscription, resource group and resource name.",
 			Description: "Gets a " + friendlyName + " with the specified subscription, resource group and resource name.  The operation returns properties of a " + friendlyName + ".",
 			OperationID: strings.Title(resourceType) + "s_Get",
-			Parameters:  populateParameters(2, strings.Title(resourceType), friendlyName),
+			Parameters:  populateParameters(3, strings.Title(resourceType), friendlyName),
 			Responses:   populateResponses(strings.Title(resourceType), false, http.StatusOK),
 		},
 		Put: &Operation{
@@ -127,7 +131,7 @@ func populateTopLevelPaths(resourceProviderNamespace, resourceType, friendlyName
 			Summary:              "Creates or updates a " + friendlyName + " with the specified subscription, resource group and resource name.",
 			Description:          "Creates or updates a " + friendlyName + " with the specified subscription, resource group and resource name.  The operation returns properties of a " + friendlyName + ".",
 			OperationID:          strings.Title(resourceType) + "s_Create",
-			Parameters:           populateParameters(3, strings.Title(resourceType), friendlyName),
+			Parameters:           populateParameters(4, strings.Title(resourceType), friendlyName),
 			Responses:            populateResponses(strings.Title(resourceType), false, http.StatusOK, http.StatusCreated),
 			LongRunningOperation: true,
 		},
@@ -136,7 +140,7 @@ func populateTopLevelPaths(resourceProviderNamespace, resourceType, friendlyName
 			Summary:              "Deletes a " + friendlyName + " with the specified subscription, resource group and resource name.",
 			Description:          "Deletes a " + friendlyName + " with the specified subscription, resource group and resource name.  The operation returns nothing.",
 			OperationID:          strings.Title(resourceType) + "s_Delete",
-			Parameters:           populateParameters(2, strings.Title(resourceType), friendlyName),
+			Parameters:           populateParameters(3, strings.Title(resourceType), friendlyName),
 			Responses:            populateResponses(strings.Title(resourceType), true, http.StatusOK, http.StatusNoContent),
 			LongRunningOperation: true,
 		},
@@ -145,7 +149,7 @@ func populateTopLevelPaths(resourceProviderNamespace, resourceType, friendlyName
 			Summary:              "Creates or updates a " + friendlyName + " with the specified subscription, resource group and resource name.",
 			Description:          "Creates or updates a " + friendlyName + " with the specified subscription, resource group and resource name.  The operation returns properties of a " + friendlyName + ".",
 			OperationID:          strings.Title(resourceType) + "s_Update",
-			Parameters:           populateParameters(3, strings.Title(resourceType), friendlyName),
+			Parameters:           populateParameters(4, strings.Title(resourceType), friendlyName),
 			Responses:            populateResponses(strings.Title(resourceType), false, http.StatusOK, http.StatusCreated),
 			LongRunningOperation: true,
 		},

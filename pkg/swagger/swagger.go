@@ -77,8 +77,19 @@ func Run(outputFile string) error {
 			Summary:     "Gets credentials of a OpenShift cluster with the specified subscription, resource group and resource name.",
 			Description: "Gets credentials of a OpenShift cluster with the specified subscription, resource group and resource name.  The operation returns the credentials.",
 			OperationID: "OpenShiftClusters_GetCredentials",
-			Parameters:  populateParameters(2, "OpenShiftCluster", "OpenShift cluster"),
+			Parameters:  populateParameters(3, "OpenShiftCluster", "OpenShift cluster"),
 			Responses:   populateResponses("OpenShiftClusterCredentials", false, http.StatusOK),
+		},
+	}
+
+	s.Paths["/providers/Microsoft.RedHatOpenShift/operations"] = &PathItem{
+		Get: &Operation{
+			Tags:        []string{"Operations"},
+			Summary:     "Lists all of the available RP operations.",
+			Description: "Lists all of the available RP operations.  The operation returns the operations.",
+			OperationID: "Operations_List",
+			Parameters:  populateParameters(0, "Operation", "Operation"),
+			Responses:   populateResponses("OperationList", false, http.StatusOK),
 		},
 	}
 
@@ -87,7 +98,7 @@ func Run(outputFile string) error {
 		return err
 	}
 
-	err = define(s.Definitions, "github.com/jim-minter/rp/pkg/api", "CloudError")
+	err = define(s.Definitions, "github.com/jim-minter/rp/pkg/api", "CloudError", "OperationList")
 	if err != nil {
 		return err
 	}
