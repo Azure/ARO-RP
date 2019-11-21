@@ -37,7 +37,6 @@ type Installer struct {
 	publicipaddresses      network.PublicIPAddressesClient
 	deployments            resources.DeploymentsClient
 	groups                 resources.GroupsClient
-	resources              resources.Client
 	accounts               storage.AccountsClient
 }
 
@@ -55,7 +54,6 @@ func NewInstaller(log *logrus.Entry, db database.OpenShiftClusters, domain strin
 		publicipaddresses:      network.NewPublicIPAddressesClient(subscriptionID),
 		deployments:            resources.NewDeploymentsClient(subscriptionID),
 		groups:                 resources.NewGroupsClient(subscriptionID),
-		resources:              resources.NewClient(subscriptionID),
 		accounts:               storage.NewAccountsClient(subscriptionID),
 	}
 
@@ -68,7 +66,6 @@ func NewInstaller(log *logrus.Entry, db database.OpenShiftClusters, domain strin
 	d.publicipaddresses.Authorizer = authorizer
 	d.deployments.Authorizer = authorizer
 	d.groups.Authorizer = authorizer
-	d.resources.Authorizer = authorizer
 	d.accounts.Authorizer = authorizer
 
 	d.deployments.Client.PollingDuration = time.Hour
