@@ -45,6 +45,8 @@ func NewInstaller(log *logrus.Entry, db database.OpenShiftClusters, domain strin
 		log: log,
 		db:  db,
 
+		domain: domain,
+
 		roleassignments:        authorization.NewRoleAssignmentsClient(subscriptionID),
 		disks:                  compute.NewDisksClient(subscriptionID),
 		virtualmachines:        compute.NewVirtualMachinesClient(subscriptionID),
