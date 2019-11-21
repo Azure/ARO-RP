@@ -1,0 +1,29 @@
+{
+    "id": "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourcegroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenshiftClusters/$CLUSTER",
+    "name": "$CLUSTER",
+    "type": "Microsoft.RedHatOpenShift/OpenShiftClusters",
+    "location": "$LOCATION",
+    "properties": {
+        "servicePrincipalProfile": {
+            "clientId": "$AZURE_CLIENT_ID",
+            "clientSecret": "$AZURE_CLIENT_SECRET"
+        },
+        "networkProfile": {
+            "podCidr": "10.128.0.0/14",
+            "serviceCidr": "172.30.0.0/16"
+        },
+        "masterProfile": {
+            "vmSize": "Standard_D8s_v3",
+            "subnetId": "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourcegroups/$CLUSTER-vnet/providers/Microsoft.Network/virtualNetworks/$CLUSTER-vnet/subnets/master"
+        },
+        "workerProfiles": [
+            {
+                "name": "worker",
+                "vmSize": "Standard_D2s_v3",
+                "diskSizeGB": 128,
+                "subnetId": "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourcegroups/$CLUSTER-vnet/providers/Microsoft.Network/virtualNetworks/$CLUSTER-vnet/subnets/worker",
+                "count": 3
+            }
+        ]
+    }
+}

@@ -1,8 +1,12 @@
 package api
 
+import (
+	"context"
+)
+
 // External is the interface that an external API must implement
 type External interface {
-	Validate(string, *OpenShiftCluster) error
+	Validate(context.Context, string, *OpenShiftCluster) error
 	ToInternal(*OpenShiftCluster)
 }
 

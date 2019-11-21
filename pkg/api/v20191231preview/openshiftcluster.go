@@ -70,9 +70,6 @@ type ServicePrincipalProfile struct {
 
 // NetworkProfile represents a network profile.
 type NetworkProfile struct {
-	// The CIDR used for the cluster VMs and IPs (immutable).
-	VNetCIDR string `json:"vnetCidr,omitempty"`
-
 	// The CIDR used for OpenShift/Kubernetes Pods (immutable).
 	PodCIDR string `json:"podCidr,omitempty"`
 
@@ -84,6 +81,9 @@ type NetworkProfile struct {
 type MasterProfile struct {
 	// The size of the master VMs (immutable).
 	VMSize VMSize `json:"vmSize,omitempty"`
+
+	// The Azure resource ID of the worker subnet (immutable).
+	SubnetID string `json:"subnetId,omitempty"`
 }
 
 // VMSize represents a VM size.
@@ -106,6 +106,9 @@ type WorkerProfile struct {
 
 	// The disk size of the worker VMs.  Must be 128 or greater (immutable).
 	DiskSizeGB int `json:"diskSizeGB,omitempty"`
+
+	// The Azure resource ID of the worker subnet (immutable).
+	SubnetID string `json:"subnetId,omitempty"`
 
 	// The number of worker VMs.  Must be between 3 and 20.
 	Count int `json:"count,omitempty"`

@@ -113,13 +113,18 @@ go run ./cmd/rp
 ## Useful commands
 
 ```
-CLUSTER=cluster
+export CLUSTER=cluster
 ```
 
 * Create a cluster:
 
 ```
-curl -k -X PUT "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/$CLUSTER?api-version=2019-12-31-preview" -H 'Content-Type: application/json' -d '{"location":"'"$LOCATION"'", "properties": {"servicePrincipalProfile": {"clientId": "'"$AZURE_CLIENT_ID"'", "clientSecret": "'"$AZURE_CLIENT_SECRET"'"}}}'
+az group create -g "$CLUSTER-vnet" -l "$LOCATION"
+az network vnet create -g "$CLUSTER-vnet" -n "$CLUSTER-vnet" --address-prefixes 10.0.0.0/16
+az network vnet subnet create -g "$CLUSTER-vnet" --vnet-name "$CLUSTER-vnet" -n master --address-prefixes 10.0.0.0/24
+az network vnet subnet create -g "$CLUSTER-vnet" --vnet-name "$CLUSTER-vnet" -n worker --address-prefixes 10.0.1.0/24
+
+envsubst <examples/cluster-v20191231.json | curl -k -X PUT "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/$CLUSTER?api-version=2019-12-31-preview" -H 'Content-Type: application/json' -d @-
 ```
 
 * Get a cluster:
@@ -158,6 +163,9 @@ curl -k -X PATCH "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/re
 
 ```
 curl -k -X DELETE "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/$CLUSTER?api-version=2019-12-31-preview"
+
+az group delete -g "$CLUSTER-vnet"
+
 ```
 
 ## Basic architecture

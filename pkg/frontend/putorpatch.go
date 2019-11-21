@@ -41,6 +41,7 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 	var created bool
 	err = cosmosdb.RetryOnPreconditionFailed(func() error {
 		b, created, err = f._putOrPatchOpenShiftCluster(&request{
+			context:      r.Context(),
 			method:       r.Method,
 			resourceID:   r.URL.Path,
 			resourceName: vars["resourceName"],
@@ -87,23 +88,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 			Name: r.resourceName,
 			Type: r.resourceType,
 			Properties: api.Properties{
-				ProvisioningState: api.ProvisioningStateSucceeded,
-				NetworkProfile: api.NetworkProfile{ // TODO: is defaulting on create a good idea?
-					VNetCIDR:    "10.0.0.0/16",
-					PodCIDR:     "10.128.0.0/14",
-					ServiceCIDR: "172.30.0.0/16",
-				},
-				MasterProfile: api.MasterProfile{
-					VMSize: api.VMSizeStandardD8sV3,
-				},
-				WorkerProfiles: []api.WorkerProfile{
-					{
-						Name:       "worker",
-						VMSize:     api.VMSizeStandardD2sV3,
-						DiskSizeGB: 128,
-						Count:      3,
-					},
-				},
+				ProvisioningState: api.ProvisioningStateUpdating,
 			},
 		})
 
@@ -134,7 +119,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 		return nil, false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
 	}
 
-	err = external.Validate(r.resourceID, doc.OpenShiftCluster)
+	err = external.Validate(r.context, r.resourceID, doc.OpenShiftCluster)
 	if err != nil {
 		return nil, false, err
 	}

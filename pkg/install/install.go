@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	"github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
+	"github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
 	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
@@ -26,15 +28,17 @@ type Installer struct {
 
 	domain string
 
-	disks             compute.DisksClient
-	virtualmachines   compute.VirtualMachinesClient
-	recordsets        dns.RecordSetsClient
-	interfaces        network.InterfacesClient
-	publicipaddresses network.PublicIPAddressesClient
-	deployments       resources.DeploymentsClient
-	groups            resources.GroupsClient
-	resources         resources.Client
-	accounts          storage.AccountsClient
+	roleassignments        authorization.RoleAssignmentsClient
+	disks                  compute.DisksClient
+	virtualmachines        compute.VirtualMachinesClient
+	recordsets             dns.RecordSetsClient
+	userassignedidentities msi.UserAssignedIdentitiesClient
+	interfaces             network.InterfacesClient
+	publicipaddresses      network.PublicIPAddressesClient
+	deployments            resources.DeploymentsClient
+	groups                 resources.GroupsClient
+	resources              resources.Client
+	accounts               storage.AccountsClient
 }
 
 func NewInstaller(log *logrus.Entry, db database.OpenShiftClusters, domain string, authorizer autorest.Authorizer, subscriptionID string) *Installer {
@@ -42,20 +46,24 @@ func NewInstaller(log *logrus.Entry, db database.OpenShiftClusters, domain strin
 		log: log,
 		db:  db,
 
-		disks:             compute.NewDisksClient(subscriptionID),
-		virtualmachines:   compute.NewVirtualMachinesClient(subscriptionID),
-		recordsets:        dns.NewRecordSetsClient(subscriptionID),
-		interfaces:        network.NewInterfacesClient(subscriptionID),
-		publicipaddresses: network.NewPublicIPAddressesClient(subscriptionID),
-		deployments:       resources.NewDeploymentsClient(subscriptionID),
-		groups:            resources.NewGroupsClient(subscriptionID),
-		resources:         resources.NewClient(subscriptionID),
-		accounts:          storage.NewAccountsClient(subscriptionID),
+		roleassignments:        authorization.NewRoleAssignmentsClient(subscriptionID),
+		disks:                  compute.NewDisksClient(subscriptionID),
+		virtualmachines:        compute.NewVirtualMachinesClient(subscriptionID),
+		recordsets:             dns.NewRecordSetsClient(subscriptionID),
+		userassignedidentities: msi.NewUserAssignedIdentitiesClient(subscriptionID),
+		interfaces:             network.NewInterfacesClient(subscriptionID),
+		publicipaddresses:      network.NewPublicIPAddressesClient(subscriptionID),
+		deployments:            resources.NewDeploymentsClient(subscriptionID),
+		groups:                 resources.NewGroupsClient(subscriptionID),
+		resources:              resources.NewClient(subscriptionID),
+		accounts:               storage.NewAccountsClient(subscriptionID),
 	}
 
+	d.roleassignments.Authorizer = authorizer
 	d.disks.Authorizer = authorizer
 	d.virtualmachines.Authorizer = authorizer
 	d.recordsets.Authorizer = authorizer
+	d.userassignedidentities.Authorizer = authorizer
 	d.interfaces.Authorizer = authorizer
 	d.publicipaddresses.Authorizer = authorizer
 	d.deployments.Authorizer = authorizer
@@ -112,7 +120,7 @@ func (i *Installer) Install(ctx context.Context, doc *api.OpenShiftClusterDocume
 }
 
 func (i *Installer) getBlobService(ctx context.Context, doc *api.OpenShiftClusterDocument) (azstorage.BlobStorageClient, error) {
-	keys, err := i.accounts.ListKeys(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, "cluster"+doc.OpenShiftCluster.Properties.StorageSuffix)
+	keys, err := i.accounts.ListKeys(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, "cluster"+doc.OpenShiftCluster.Properties.StorageSuffix, "")
 	if err != nil {
 		return azstorage.BlobStorageClient{}, err
 	}

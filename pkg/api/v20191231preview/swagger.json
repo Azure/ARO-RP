@@ -380,16 +380,16 @@
         "vmSize": {
           "$ref": "#/definitions/VMSize",
           "description": "The size of the master VMs (immutable)."
+        },
+        "subnetId": {
+          "description": "The Azure resource ID of the worker subnet (immutable).",
+          "type": "string"
         }
       }
     },
     "NetworkProfile": {
       "description": "NetworkProfile represents a network profile.",
       "properties": {
-        "vnetCidr": {
-          "description": "The CIDR used for the cluster VMs and IPs (immutable).",
-          "type": "string"
-        },
         "podCidr": {
           "description": "The CIDR used for OpenShift/Kubernetes Pods (immutable).",
           "type": "string"
@@ -542,6 +542,10 @@
         "diskSizeGB": {
           "description": "The disk size of the worker VMs.  Must be 128 or greater (immutable).",
           "type": "integer"
+        },
+        "subnetId": {
+          "description": "The Azure resource ID of the worker subnet (immutable).",
+          "type": "string"
         },
         "count": {
           "description": "The number of worker VMs.  Must be between 3 and 20.",

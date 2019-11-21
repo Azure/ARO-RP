@@ -12,6 +12,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	"github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
+	"github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/apparentlymart/go-cidr/cidr"
@@ -24,6 +25,7 @@ import (
 	"github.com/jim-minter/rp/pkg/api"
 	"github.com/jim-minter/rp/pkg/util/arm"
 	"github.com/jim-minter/rp/pkg/util/restconfig"
+	"github.com/jim-minter/rp/pkg/util/subnet"
 )
 
 func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
@@ -36,12 +38,17 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 	machinesMaster := g[reflect.TypeOf(&machines.Master{})].(*machines.Master)
 	machineMaster := g[reflect.TypeOf(&machine.Master{})].(*machine.Master)
 
-	masterSubnetCIDR, err := cidr.Subnet(&installConfig.Config.Networking.MachineCIDR.IPNet, 3, 0)
+	vnetID, _, err := subnet.Split(doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return err
 	}
 
-	workerSubnetCIDR, err := cidr.Subnet(&installConfig.Config.Networking.MachineCIDR.IPNet, 3, 1)
+	masterSubnet, err := subnet.Get(ctx, &doc.OpenShiftCluster.Properties.ServicePrincipalProfile, doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
+	if err != nil {
+		return err
+	}
+
+	_, masterSubnetCIDR, err := net.ParseCIDR(*masterSubnet.AddressPrefix)
 	if err != nil {
 		return err
 	}
@@ -52,9 +59,9 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 		lbIP = cidr.Dec(cidr.Dec(last))
 	}
 
-	srvRecords := make([]dns.SrvRecord, len(machinesMaster.MachineFiles))
+	srvRecords := make([]privatedns.SrvRecord, len(machinesMaster.MachineFiles))
 	for i := 0; i < len(machinesMaster.MachineFiles); i++ {
-		srvRecords[i] = dns.SrvRecord{
+		srvRecords[i] = privatedns.SrvRecord{
 			Priority: to.Int32Ptr(10),
 			Weight:   to.Int32Ptr(10),
 			Port:     to.Int32Ptr(2380),
@@ -85,183 +92,105 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 					APIVersion: apiVersions["authorization"],
 				},
 				{
-					Resource: &network.SecurityGroup{
-						SecurityGroupPropertiesFormat: &network.SecurityGroupPropertiesFormat{
-							SecurityRules: &[]network.SecurityRule{
-								{
-									SecurityRulePropertiesFormat: &network.SecurityRulePropertiesFormat{
-										Protocol:                 network.SecurityRuleProtocolTCP,
-										SourcePortRange:          to.StringPtr("*"),
-										DestinationPortRange:     to.StringPtr("6443"),
-										SourceAddressPrefix:      to.StringPtr("*"),
-										DestinationAddressPrefix: to.StringPtr("*"),
-										Access:                   network.SecurityRuleAccessAllow,
-										Priority:                 to.Int32Ptr(101),
-										Direction:                network.SecurityRuleDirectionInbound,
-									},
-									Name: to.StringPtr("apiserver_in"),
-								},
-								{
-									SecurityRulePropertiesFormat: &network.SecurityRulePropertiesFormat{
-										Protocol:                 network.SecurityRuleProtocolTCP,
-										SourcePortRange:          to.StringPtr("*"),
-										DestinationPortRange:     to.StringPtr("22"),
-										SourceAddressPrefix:      to.StringPtr("*"),
-										DestinationAddressPrefix: to.StringPtr("*"),
-										Access:                   network.SecurityRuleAccessAllow,
-										Priority:                 to.Int32Ptr(103),
-										Direction:                network.SecurityRuleDirectionInbound,
-									},
-									Name: to.StringPtr("bootstrap_ssh_in"),
-								},
-							},
-						},
-						Name:     to.StringPtr(doc.OpenShiftCluster.Properties.ClusterID + "-controlplane-nsg"),
-						Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
-						Location: &installConfig.Config.Azure.Region,
-					},
-					APIVersion: apiVersions["network"],
-				},
-				{
-					Resource: &network.SecurityGroup{
-						Name:     to.StringPtr(doc.OpenShiftCluster.Properties.ClusterID + "-node-nsg"),
-						Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
-						Location: &installConfig.Config.Azure.Region,
-					},
-					APIVersion: apiVersions["network"],
-				},
-				{
-					Resource: &network.VirtualNetwork{
-						VirtualNetworkPropertiesFormat: &network.VirtualNetworkPropertiesFormat{
-							AddressSpace: &network.AddressSpace{
-								AddressPrefixes: &[]string{
-									installConfig.Config.Networking.MachineCIDR.String(),
-								},
-							},
-							Subnets: &[]network.Subnet{
-								{
-									SubnetPropertiesFormat: &network.SubnetPropertiesFormat{
-										AddressPrefix: to.StringPtr(masterSubnetCIDR.String()),
-										NetworkSecurityGroup: &network.SecurityGroup{
-											ID: to.StringPtr("[resourceId('Microsoft.Network/networkSecurityGroups', '" + doc.OpenShiftCluster.Properties.ClusterID + "-controlplane-nsg')]"),
-										},
-									},
-									Name: to.StringPtr(doc.OpenShiftCluster.Properties.ClusterID + "-master-subnet"),
-								},
-								{
-									SubnetPropertiesFormat: &network.SubnetPropertiesFormat{
-										AddressPrefix: to.StringPtr(workerSubnetCIDR.String()),
-										NetworkSecurityGroup: &network.SecurityGroup{
-											ID: to.StringPtr("[resourceId('Microsoft.Network/networkSecurityGroups', '" + doc.OpenShiftCluster.Properties.ClusterID + "-node-nsg')]"),
-										},
-									},
-									Name: to.StringPtr(doc.OpenShiftCluster.Properties.ClusterID + "-worker-subnet"),
-								},
-							},
-						},
-						Name:     to.StringPtr(doc.OpenShiftCluster.Properties.ClusterID + "-vnet"),
-						Type:     to.StringPtr("Microsoft.Network/virtualNetworks"),
-						Location: &installConfig.Config.Azure.Region,
-					},
-					APIVersion: apiVersions["network"],
-					DependsOn: []string{
-						"Microsoft.Network/networkSecurityGroups/" + doc.OpenShiftCluster.Properties.ClusterID + "-controlplane-nsg",
-						"Microsoft.Network/networkSecurityGroups/" + doc.OpenShiftCluster.Properties.ClusterID + "-node-nsg",
-					},
-				},
-				{
-					Resource: &dns.Zone{
-						ZoneProperties: &dns.ZoneProperties{
-							ZoneType: dns.Private,
-							ResolutionVirtualNetworks: &[]dns.SubResource{
-								{
-									ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks', '" + doc.OpenShiftCluster.Properties.ClusterID + "-vnet')]"),
-								},
-							},
-						},
+					Resource: &privatedns.PrivateZone{
 						Name:     to.StringPtr(installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain),
-						Type:     to.StringPtr("Microsoft.Network/dnszones"),
+						Type:     to.StringPtr("Microsoft.Network/privateDnsZones"),
 						Location: to.StringPtr("global"),
 					},
-					APIVersion: apiVersions["dns"],
+					APIVersion: apiVersions["privatedns"],
+				},
+				{
+					Resource: &privatedns.VirtualNetworkLink{
+						VirtualNetworkLinkProperties: &privatedns.VirtualNetworkLinkProperties{
+							VirtualNetwork: &privatedns.SubResource{
+								ID: to.StringPtr(vnetID),
+							},
+							RegistrationEnabled: to.BoolPtr(false),
+						},
+						Name:     to.StringPtr(installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/" + installConfig.Config.ObjectMeta.Name + "-network-link"),
+						Type:     to.StringPtr("Microsoft.Network/privateDnsZones/virtualNetworkLinks"),
+						Location: to.StringPtr("global"),
+					},
+					APIVersion: apiVersions["privatedns"],
 					DependsOn: []string{
-						"Microsoft.Network/virtualNetworks/" + doc.OpenShiftCluster.Properties.ClusterID + "-vnet",
+						"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
 					},
 				},
 				{
-					Resource: &dns.RecordSet{
+					Resource: &privatedns.RecordSet{
 						Name: to.StringPtr(installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/api-int"),
-						Type: to.StringPtr("Microsoft.Network/dnszones/a"),
-						RecordSetProperties: &dns.RecordSetProperties{
+						Type: to.StringPtr("Microsoft.Network/privateDnsZones/A"),
+						RecordSetProperties: &privatedns.RecordSetProperties{
 							TTL: to.Int64Ptr(300),
-							ARecords: &[]dns.ARecord{
+							ARecords: &[]privatedns.ARecord{
 								{
 									Ipv4Address: to.StringPtr(lbIP.String()),
 								},
 							},
 						},
 					},
-					APIVersion: apiVersions["dns"],
+					APIVersion: apiVersions["privatedns"],
 					DependsOn: []string{
-						"Microsoft.Network/dnszones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
+						"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
 					},
 				},
 				{
-					Resource: &dns.RecordSet{
+					Resource: &privatedns.RecordSet{
 						Name: to.StringPtr(installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/api"),
-						Type: to.StringPtr("Microsoft.Network/dnszones/a"),
-						RecordSetProperties: &dns.RecordSetProperties{
+						Type: to.StringPtr("Microsoft.Network/privateDnsZones/A"),
+						RecordSetProperties: &privatedns.RecordSetProperties{
 							TTL: to.Int64Ptr(300),
-							ARecords: &[]dns.ARecord{
+							ARecords: &[]privatedns.ARecord{
 								{
 									Ipv4Address: to.StringPtr(lbIP.String()),
 								},
 							},
 						},
 					},
-					APIVersion: apiVersions["dns"],
+					APIVersion: apiVersions["privatedns"],
 					DependsOn: []string{
-						"Microsoft.Network/dnszones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
+						"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
 					},
 				},
 				{
-					Resource: &dns.RecordSet{
+					Resource: &privatedns.RecordSet{
 						Name: to.StringPtr(installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/_etcd-server-ssl._tcp"),
-						Type: to.StringPtr("Microsoft.Network/dnszones/srv"),
-						RecordSetProperties: &dns.RecordSetProperties{
+						Type: to.StringPtr("Microsoft.Network/privateDnsZones/SRV"),
+						RecordSetProperties: &privatedns.RecordSetProperties{
 							TTL:        to.Int64Ptr(60),
 							SrvRecords: &srvRecords,
 						},
 					},
-					APIVersion: apiVersions["dns"],
+					APIVersion: apiVersions["privatedns"],
 					DependsOn: []string{
-						"Microsoft.Network/dnszones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
+						"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
 					},
 				},
 				{
-					Resource: &dns.RecordSet{
+					Resource: &privatedns.RecordSet{
 						Name: to.StringPtr("[concat('" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/etcd-', copyIndex())]"),
-						Type: to.StringPtr("Microsoft.Network/dnszones/a"),
-						RecordSetProperties: &dns.RecordSetProperties{
+						Type: to.StringPtr("Microsoft.Network/privateDnsZones/A"),
+						RecordSetProperties: &privatedns.RecordSetProperties{
 							TTL: to.Int64Ptr(60),
-							ARecords: &[]dns.ARecord{
+							ARecords: &[]privatedns.ARecord{
 								{
 									Ipv4Address: to.StringPtr("[reference(resourceId('Microsoft.Network/networkInterfaces', concat('" + doc.OpenShiftCluster.Properties.ClusterID + "-master', copyIndex(), '-nic')), '2019-07-01').ipConfigurations[0].properties.privateIPAddress]"),
 								},
 							},
 						},
 					},
-					APIVersion: apiVersions["dns"],
+					APIVersion: apiVersions["privatedns"],
 					Copy: &arm.Copy{
 						Name:  "copy",
 						Count: len(machinesMaster.MachineFiles),
 					},
 					DependsOn: []string{
-						"Microsoft.Network/dnszones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
 						"[concat('Microsoft.Network/networkInterfaces/" + doc.OpenShiftCluster.Properties.ClusterID + "-master', copyIndex(), '-nic')]",
+						"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
 					},
 				},
 				{
+					// TODO: upstream doesn't appear to wire this in to any vnet - investigate.
 					Resource: &network.RouteTable{
 						Name:     to.StringPtr(doc.OpenShiftCluster.Properties.ClusterID + "-node-routetable"),
 						Type:     to.StringPtr("Microsoft.Network/routeTables"),
@@ -376,7 +305,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 										PrivateIPAddress:          to.StringPtr(lbIP.String()),
 										PrivateIPAllocationMethod: network.Static,
 										Subnet: &network.Subnet{
-											ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', '" + doc.OpenShiftCluster.Properties.ClusterID + "-vnet', '" + doc.OpenShiftCluster.Properties.ClusterID + "-master-subnet')]"),
+											ID: to.StringPtr(doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 										},
 									},
 									Name: to.StringPtr("internal-lb-ip"),
@@ -454,7 +383,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 					},
 					APIVersion: apiVersions["network"],
 					DependsOn: []string{
-						"Microsoft.Network/dnszones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
+						"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
 					},
 				},
 				{
@@ -472,7 +401,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 											},
 										},
 										Subnet: &network.Subnet{
-											ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', '" + doc.OpenShiftCluster.Properties.ClusterID + "-vnet', '" + doc.OpenShiftCluster.Properties.ClusterID + "-master-subnet')]"),
+											ID: to.StringPtr(doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 										},
 										PublicIPAddress: &network.PublicIPAddress{
 											ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', '" + doc.OpenShiftCluster.Properties.ClusterID + "-bootstrap-pip')]"),
@@ -488,10 +417,9 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 					},
 					APIVersion: apiVersions["network"],
 					DependsOn: []string{
-						"Microsoft.Network/publicIPAddresses/" + doc.OpenShiftCluster.Properties.ClusterID + "-bootstrap-pip",
-						"Microsoft.Network/dnszones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
 						"Microsoft.Network/loadBalancers/" + doc.OpenShiftCluster.Properties.ClusterID + "-internal-lb",
 						"Microsoft.Network/loadBalancers/" + doc.OpenShiftCluster.Properties.ClusterID + "-public-lb",
+						"Microsoft.Network/publicIPAddresses/" + doc.OpenShiftCluster.Properties.ClusterID + "-bootstrap-pip",
 					},
 				},
 				{
@@ -509,7 +437,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 											},
 										},
 										Subnet: &network.Subnet{
-											ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', '" + doc.OpenShiftCluster.Properties.ClusterID + "-vnet', '" + doc.OpenShiftCluster.Properties.ClusterID + "-master-subnet')]"),
+											ID: to.StringPtr(doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 										},
 									},
 									Name: to.StringPtr("pipConfig"),
@@ -526,7 +454,6 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 						Count: len(machinesMaster.MachineFiles),
 					},
 					DependsOn: []string{
-						"Microsoft.Network/dnszones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
 						"Microsoft.Network/loadBalancers/" + doc.OpenShiftCluster.Properties.ClusterID + "-internal-lb",
 						"Microsoft.Network/loadBalancers/" + doc.OpenShiftCluster.Properties.ClusterID + "-public-lb",
 					},
@@ -605,6 +532,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 					DependsOn: []string{
 						"Microsoft.Compute/images/" + doc.OpenShiftCluster.Properties.ClusterID,
 						"Microsoft.Network/networkInterfaces/" + doc.OpenShiftCluster.Properties.ClusterID + "-bootstrap-nic",
+						"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/virtualNetworkLinks/" + installConfig.Config.ObjectMeta.Name + "-network-link",
 					},
 				},
 				{
@@ -671,6 +599,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 					DependsOn: []string{
 						"Microsoft.Compute/images/" + doc.OpenShiftCluster.Properties.ClusterID,
 						"[concat('Microsoft.Network/networkInterfaces/" + doc.OpenShiftCluster.Properties.ClusterID + "-master', copyIndex(), '-nic')]",
+						"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/virtualNetworkLinks/" + installConfig.Config.ObjectMeta.Name + "-network-link",
 					},
 				},
 			},

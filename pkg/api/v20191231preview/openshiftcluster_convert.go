@@ -22,12 +22,12 @@ func OpenShiftClusterToExternal(oc *api.OpenShiftCluster) *OpenShiftCluster {
 				ClientSecret: oc.Properties.ServicePrincipalProfile.ClientSecret,
 			},
 			NetworkProfile: NetworkProfile{
-				VNetCIDR:    oc.Properties.NetworkProfile.VNetCIDR,
 				PodCIDR:     oc.Properties.NetworkProfile.PodCIDR,
 				ServiceCIDR: oc.Properties.NetworkProfile.ServiceCIDR,
 			},
 			MasterProfile: MasterProfile{
-				VMSize: VMSize(oc.Properties.MasterProfile.VMSize),
+				VMSize:   VMSize(oc.Properties.MasterProfile.VMSize),
+				SubnetID: oc.Properties.MasterProfile.SubnetID,
 			},
 			APIServerURL: oc.Properties.APIServerURL,
 			ConsoleURL:   oc.Properties.ConsoleURL,
@@ -41,6 +41,7 @@ func OpenShiftClusterToExternal(oc *api.OpenShiftCluster) *OpenShiftCluster {
 				Name:       p.Name,
 				VMSize:     VMSize(p.VMSize),
 				DiskSizeGB: p.DiskSizeGB,
+				SubnetID:   p.SubnetID,
 				Count:      p.Count,
 			})
 		}
@@ -75,10 +76,10 @@ func (oc *OpenShiftCluster) ToInternal(out *api.OpenShiftCluster) {
 	out.Properties.ProvisioningState = api.ProvisioningState(oc.Properties.ProvisioningState)
 	out.Properties.ServicePrincipalProfile.ClientID = oc.Properties.ServicePrincipalProfile.ClientID
 	out.Properties.ServicePrincipalProfile.ClientSecret = oc.Properties.ServicePrincipalProfile.ClientSecret
-	out.Properties.NetworkProfile.VNetCIDR = oc.Properties.NetworkProfile.VNetCIDR
 	out.Properties.NetworkProfile.PodCIDR = oc.Properties.NetworkProfile.PodCIDR
 	out.Properties.NetworkProfile.ServiceCIDR = oc.Properties.NetworkProfile.ServiceCIDR
 	out.Properties.MasterProfile.VMSize = api.VMSize(oc.Properties.MasterProfile.VMSize)
+	out.Properties.MasterProfile.SubnetID = oc.Properties.MasterProfile.SubnetID
 	for _, p := range oc.Properties.WorkerProfiles {
 		var outp *api.WorkerProfile
 		for i, pp := range out.Properties.WorkerProfiles {
@@ -94,6 +95,7 @@ func (oc *OpenShiftCluster) ToInternal(out *api.OpenShiftCluster) {
 		outp.Name = p.Name
 		outp.VMSize = api.VMSize(p.VMSize)
 		outp.DiskSizeGB = p.DiskSizeGB
+		outp.SubnetID = p.SubnetID
 		outp.Count = p.Count
 	}
 	out.Properties.APIServerURL = oc.Properties.APIServerURL

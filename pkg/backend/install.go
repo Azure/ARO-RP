@@ -5,12 +5,13 @@ import (
 	"encoding/base64"
 	"os"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	icazure "github.com/openshift/installer/pkg/asset/installconfig/azure"
 	"github.com/openshift/installer/pkg/ipnet"
 	"github.com/openshift/installer/pkg/types"
-	"github.com/openshift/installer/pkg/types/azure"
+	azuretypes "github.com/openshift/installer/pkg/types/azure"
 	openstackvalidation "github.com/openshift/installer/pkg/types/openstack/validation"
 	"github.com/openshift/installer/pkg/types/validation"
 	"github.com/sirupsen/logrus"
@@ -19,9 +20,25 @@ import (
 
 	"github.com/jim-minter/rp/pkg/api"
 	"github.com/jim-minter/rp/pkg/install"
+	"github.com/jim-minter/rp/pkg/util/subnet"
 )
 
 func (b *backend) install(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument) error {
+	vnetID, masterSubnetName, err := subnet.Split(doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
+	if err != nil {
+		return err
+	}
+
+	vnetID, workerSubnetName, err := subnet.Split(doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID)
+	if err != nil {
+		return err
+	}
+
+	r, err := azure.ParseResourceID(vnetID)
+	if err != nil {
+		return err
+	}
+
 	sshkey, err := ssh.NewPublicKey(&doc.OpenShiftCluster.Properties.SSHKey.PublicKey)
 	if err != nil {
 		return err
@@ -48,7 +65,7 @@ func (b *backend) install(ctx context.Context, log *logrus.Entry, doc *api.OpenS
 			SSHKey:     sshkey.Type() + " " + base64.StdEncoding.EncodeToString(sshkey.Marshal()),
 			BaseDomain: b.domain,
 			Networking: &types.Networking{
-				MachineCIDR: ipnet.MustParseCIDR(doc.OpenShiftCluster.Properties.NetworkProfile.VNetCIDR),
+				MachineCIDR: ipnet.MustParseCIDR("127.0.0.0/8"), // dummy
 				NetworkType: "OpenShiftSDN",
 				ClusterNetwork: []types.ClusterNetworkEntry{
 					{
@@ -64,37 +81,41 @@ func (b *backend) install(ctx context.Context, log *logrus.Entry, doc *api.OpenS
 				Name:     "master",
 				Replicas: to.Int64Ptr(3),
 				Platform: types.MachinePoolPlatform{
-					Azure: &azure.MachinePool{
+					Azure: &azuretypes.MachinePool{
 						InstanceType: string(doc.OpenShiftCluster.Properties.MasterProfile.VMSize),
 					},
 				},
 				Hyperthreading: "Enabled",
 			},
+			Compute: []types.MachinePool{
+				{
+					Name:     doc.OpenShiftCluster.Properties.WorkerProfiles[0].Name,
+					Replicas: to.Int64Ptr(int64(doc.OpenShiftCluster.Properties.WorkerProfiles[0].Count)),
+					Platform: types.MachinePoolPlatform{
+						Azure: &azuretypes.MachinePool{
+							InstanceType: string(doc.OpenShiftCluster.Properties.WorkerProfiles[0].VMSize),
+							OSDisk: azuretypes.OSDisk{
+								DiskSizeGB: int32(doc.OpenShiftCluster.Properties.WorkerProfiles[0].DiskSizeGB),
+							},
+						},
+					},
+					Hyperthreading: "Enabled",
+				},
+			},
 			Platform: types.Platform{
-				Azure: &azure.Platform{
+				Azure: &azuretypes.Platform{
 					Region:                      doc.OpenShiftCluster.Location,
-					ResourceGroup:               doc.OpenShiftCluster.Properties.ResourceGroup,
+					ResourceGroupName:           doc.OpenShiftCluster.Properties.ResourceGroup,
 					BaseDomainResourceGroupName: os.Getenv("RESOURCEGROUP"),
+					NetworkResourceGroupName:    r.ResourceGroup,
+					VirtualNetwork:              r.ResourceName,
+					ControlPlaneSubnet:          masterSubnetName,
+					ComputeSubnet:               workerSubnetName,
 				},
 			},
 			PullSecret: string(os.Getenv("PULL_SECRET")),
+			Publish:    types.ExternalPublishingStrategy,
 		},
-	}
-
-	for _, wp := range doc.OpenShiftCluster.Properties.WorkerProfiles {
-		installConfig.Config.Compute = append(installConfig.Config.Compute, types.MachinePool{
-			Name:     wp.Name,
-			Replicas: to.Int64Ptr(int64(wp.Count)),
-			Platform: types.MachinePoolPlatform{
-				Azure: &azure.MachinePool{
-					InstanceType: string(wp.VMSize),
-					OSDisk: azure.OSDisk{
-						DiskSizeGB: int32(wp.DiskSizeGB),
-					},
-				},
-			},
-			Hyperthreading: "Enabled",
-		})
 	}
 
 	err = validation.ValidateInstallConfig(installConfig.Config, openstackvalidation.NewValidValuesFetcher()).ToAggregate()

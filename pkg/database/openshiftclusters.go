@@ -6,12 +6,12 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/jim-minter/rp/pkg/api"
 	"github.com/jim-minter/rp/pkg/database/cosmosdb"
 	"github.com/jim-minter/rp/pkg/env"
-	"github.com/jim-minter/rp/pkg/util/resource"
 )
 
 type openShiftClusters struct {
@@ -69,12 +69,12 @@ func NewOpenShiftClusters(ctx context.Context, env env.Interface, uuid uuid.UUID
 }
 
 func (c *openShiftClusters) Create(doc *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error) {
-	var err error
-	doc.SubscriptionID, err = resource.SubscriptionID(doc.OpenShiftCluster.ID)
+	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
 		return nil, err
 	}
 
+	doc.SubscriptionID = r.SubscriptionID
 	doc.OpenShiftCluster.ID = strings.ToLower(doc.OpenShiftCluster.ID)
 	doc.OpenShiftCluster.Name = strings.ToLower(doc.OpenShiftCluster.Name)
 	doc.OpenShiftCluster.Type = strings.ToLower(doc.OpenShiftCluster.Type)
@@ -89,12 +89,12 @@ func (c *openShiftClusters) Create(doc *api.OpenShiftClusterDocument) (*api.Open
 }
 
 func (c *openShiftClusters) Get(resourceID string) (*api.OpenShiftClusterDocument, error) {
-	subscriptionID, err := resource.SubscriptionID(resourceID)
+	r, err := azure.ParseResourceID(resourceID)
 	if err != nil {
 		return nil, err
 	}
 
-	docs, err := c.c.QueryAll(subscriptionID, &cosmosdb.Query{
+	docs, err := c.c.QueryAll(r.SubscriptionID, &cosmosdb.Query{
 		Query: "SELECT * FROM OpenshiftClusterDocuments doc WHERE doc.openShiftCluster.id = @id",
 		Parameters: []cosmosdb.Parameter{
 			{

@@ -58,20 +58,26 @@ const (
 
 // ServicePrincipalProfile represents a service principal profile.
 type ServicePrincipalProfile struct {
+	MissingFields
+
 	ClientID     string `json:"clientId,omitempty"`
 	ClientSecret string `json:"clientSecret,omitempty"`
 }
 
 // NetworkProfile represents a network profile
 type NetworkProfile struct {
-	VNetCIDR    string `json:"vnetCidr,omitempty"`
+	MissingFields
+
 	PodCIDR     string `json:"podCidr,omitempty"`
 	ServiceCIDR string `json:"serviceCidr,omitempty"`
 }
 
 // MasterProfile represents a master profile
 type MasterProfile struct {
-	VMSize VMSize `json:"vmSize,omitempty"`
+	MissingFields
+
+	VMSize   VMSize `json:"vmSize,omitempty"`
+	SubnetID string `json:"subnetId,omitempty"`
 }
 
 // VMSize represents a VM size
@@ -86,9 +92,12 @@ const (
 
 // WorkerProfile represents a worker profile
 type WorkerProfile struct {
+	MissingFields
+
 	Name       string `json:"name,omitempty"`
 	VMSize     VMSize `json:"vmSize,omitempty"`
 	DiskSizeGB int    `json:"diskSizeGB,omitempty"`
+	SubnetID   string `json:"subnetId,omitempty"`
 	Count      int    `json:"count,omitempty"`
 }
 

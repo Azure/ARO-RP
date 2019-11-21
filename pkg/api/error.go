@@ -39,6 +39,7 @@ var (
 	CloudErrorCodeResourceGroupNotFound    = "ResourceGroupNotFound"
 	CloudErrorCodeResourceNotFound         = "ResourceNotFound"
 	CloudErrorCodeUnsupportedMediaType     = "UnsupportedMediaType"
+	CloudErrorCodeInvalidLinkedVNet        = "InvalidLinkedVNet"
 )
 
 // NewCloudError returns a new CloudError

@@ -20,6 +20,7 @@ const (
 )
 
 type request struct {
+	context           context.Context
 	method            string
 	subscriptionID    string
 	resourceID        string

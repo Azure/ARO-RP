@@ -1,16 +1,19 @@
 package v20191231preview
 
 import (
+	"context"
 	"net/http"
 	"regexp"
 
 	"github.com/jim-minter/rp/pkg/api"
 )
 
-var rxKubeadminPassword = regexp.MustCompile(`(?i)^[-a-z0-9]{0,64}$`)
+var (
+	rxKubeadminPassword = regexp.MustCompile(`(?i)^[-a-z0-9]{0,64}$`)
+)
 
 // Validate validates an OpenShift cluster's credentials
-func (occ *OpenShiftClusterCredentials) Validate(resourceID string, current *api.OpenShiftCluster) error {
+func (occ *OpenShiftClusterCredentials) Validate(ctx context.Context, resourceID string, current *api.OpenShiftCluster) error {
 	err := occ.validate(resourceID)
 	if err != nil {
 		return err
