@@ -10,7 +10,7 @@
   version = "v0.49.0"
 
 [[projects]]
-  digest = "1:a588ae12166a792f8357cd30a513eb08daf8996ea12de4b04958b659c3186ed2"
+  digest = "1:3b1b5944cbcfa02ed41a1f567d129069f67dab42745b6383aa478944b3fcf124"
   name = "github.com/Azure/azure-sdk-for-go"
   packages = [
     "profiles/latest/dns/mgmt/dns",
@@ -25,6 +25,7 @@
     "services/msi/mgmt/2018-11-30/msi",
     "services/network/mgmt/2018-12-01/network",
     "services/network/mgmt/2019-07-01/network",
+    "services/privatedns/mgmt/2018-09-01/privatedns",
     "services/resources/mgmt/2018-05-01/resources",
     "services/resources/mgmt/2019-06-01/subscriptions",
     "services/storage/mgmt/2019-04-01/storage",
@@ -95,7 +96,7 @@
   version = "v1.0.1"
 
 [[projects]]
-  digest = "1:897bef9c0c5db9564cabff345341d9c2b07dde68819720042d2f14ea9da1d212"
+  digest = "1:44307b624b99d6621fb1e098733f62ad13ef0ac9ea123970e5f527e01caa0d9a"
   name = "github.com/aws/aws-sdk-go"
   packages = [
     "aws",
@@ -141,8 +142,8 @@
     "service/sts/stsiface",
   ]
   pruneopts = "UT"
-  revision = "21b4bd21e2384d41ef459c78fc8f70dff2b1286f"
-  version = "v1.25.38"
+  revision = "cb07f15eaeb388725a2d4145cd5f0367f04a97e1"
+  version = "v1.25.39"
 
 [[projects]]
   digest = "1:5f9ab5eeb3788ba8945f9acb2755fba44c3bfefdc95fae477bf6cdc790cab525"
@@ -423,7 +424,7 @@
   name = "github.com/kubernetes/apimachinery"
   packages = ["pkg/util/rand"]
   pruneopts = "UT"
-  revision = "08e4eafd6d117bf3ae812cf000257303af8c43d2"
+  revision = "41065c7a8c2a807d7fbd6d734a36200a76e5cacb"
 
 [[projects]]
   digest = "1:a2bfa52d08ed3100f934a39a3f927e9279f8a106633ff97e47bad7120a1ad07e"
@@ -708,7 +709,7 @@
   name = "github.com/openshift/machine-config-operator"
   packages = ["pkg/apis/machineconfiguration.openshift.io/v1"]
   pruneopts = "UT"
-  revision = "e9033544f42191376529efdb7a67deb5427efd1d"
+  revision = "ea51a9f88458a528a5782ca170090c201dd32ace"
 
 [[projects]]
   digest = "1:e5d0bd87abc2781d14e274807a470acd180f0499f8bf5bb18606e9ec22ad9de9"
@@ -877,7 +878,7 @@
     "windows",
   ]
   pruneopts = "UT"
-  revision = "6bfc516c8699a01fce75e51d680e03b80d068f24"
+  revision = "bd437916bb0eb726b873ee8e9b2dcf212d32e2fd"
 
 [[projects]]
   digest = "1:1e7fe301d41aead2026c0ade066adcf5e60af7d355cd0f826193852190350d82"
@@ -919,7 +920,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:e48760fc099273347f411f9def6122238a06afe0f5b5d242db0e66cf0de94948"
+  digest = "1:2f12deac21dd95601b0c44b46deaab1cd107b853ef6f2eea5893e8a72324c274"
   name = "golang.org/x/tools"
   packages = [
     "go/ast/astutil",
@@ -934,7 +935,7 @@
     "internal/span",
   ]
   pruneopts = "UT"
-  revision = "e97fc272220f6fef8df6cb8dff047355c4c67b3f"
+  revision = "947d4aa89328ca3de223e23c6ed064660ff03347"
 
 [[projects]]
   digest = "1:f3661f6218166acf60f5d551b44a537f7ecb8686be02ece061c5950cbfc9ba17"
@@ -1320,6 +1321,7 @@
     "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2016-10-01/keyvault",
     "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi",
     "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network",
+    "github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns",
     "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources",
     "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage",
     "github.com/Azure/azure-sdk-for-go/storage",
