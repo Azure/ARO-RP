@@ -6,7 +6,10 @@ import (
 
 // CloudError represents a cloud error.
 type CloudError struct {
-	StatusCode     int `json:"-"`
+	// The status code.
+	StatusCode int `json:"-"`
+
+	// An error response from the service.
 	CloudErrorBody `json:"error,omitempty"`
 }
 
@@ -16,9 +19,16 @@ func (err *CloudError) Error() string {
 
 // CloudErrorBody represents the body of a cloud error.
 type CloudErrorBody struct {
-	Code    string           `json:"code,omitempty"`
-	Message string           `json:"message,omitempty"`
-	Target  string           `json:"target,omitempty"`
+	// An identifier for the error. Codes are invariant and are intended to be consumed programmatically.
+	Code string `json:"code,omitempty"`
+
+	// A message describing the error, intended to be suitable for display in a user interface.
+	Message string `json:"message,omitempty"`
+
+	// The target of the particular error. For example, the name of the property in error.
+	Target string `json:"target,omitempty"`
+
+	//A list of additional details about the error.
 	Details []CloudErrorBody `json:"details,omitempty"`
 }
 

@@ -98,7 +98,7 @@ func populateTopLevelPaths(resourceProviderNamespace, resourceType, friendlyName
 			Description: "Lists " + friendlyName + "s in the specified subscription.  The operation returns properties of each " + friendlyName + ".",
 			OperationID: strings.Title(resourceType) + "s_List",
 			Parameters:  populateParameters(0, strings.Title(resourceType), friendlyName),
-			Responses:   populateResponses(strings.Title(resourceType)+"s", false, http.StatusOK),
+			Responses:   populateResponses(strings.Title(resourceType)+"List", false, http.StatusOK),
 		},
 	}
 
@@ -109,7 +109,7 @@ func populateTopLevelPaths(resourceProviderNamespace, resourceType, friendlyName
 			Description: "Lists " + friendlyName + "s in the specified subscription and resource group.  The operation returns properties of each " + friendlyName + ".",
 			OperationID: strings.Title(resourceType) + "s_ListByResourceGroup",
 			Parameters:  populateParameters(1, strings.Title(resourceType), friendlyName),
-			Responses:   populateResponses(strings.Title(resourceType)+"s", false, http.StatusOK),
+			Responses:   populateResponses(strings.Title(resourceType)+"List", false, http.StatusOK),
 		},
 	}
 
@@ -117,7 +117,7 @@ func populateTopLevelPaths(resourceProviderNamespace, resourceType, friendlyName
 		Get: &Operation{
 			Tags:        []string{strings.Title(resourceType) + "s"},
 			Summary:     "Gets a " + friendlyName + " with the specified subscription, resource group and resource name.",
-			Description: "Gets a " + friendlyName + " with the specified subscription, resource group and resource name.",
+			Description: "Gets a " + friendlyName + " with the specified subscription, resource group and resource name.  The operation returns properties of a " + friendlyName + ".",
 			OperationID: strings.Title(resourceType) + "s_Get",
 			Parameters:  populateParameters(2, strings.Title(resourceType), friendlyName),
 			Responses:   populateResponses(strings.Title(resourceType), false, http.StatusOK),
@@ -125,7 +125,7 @@ func populateTopLevelPaths(resourceProviderNamespace, resourceType, friendlyName
 		Put: &Operation{
 			Tags:                 []string{strings.Title(resourceType) + "s"},
 			Summary:              "Creates or updates a " + friendlyName + " with the specified subscription, resource group and resource name.",
-			Description:          "Creates or updates a " + friendlyName + " with the specified subscription, resource group and resource name.",
+			Description:          "Creates or updates a " + friendlyName + " with the specified subscription, resource group and resource name.  The operation returns properties of a " + friendlyName + ".",
 			OperationID:          strings.Title(resourceType) + "s_Put",
 			Parameters:           populateParameters(3, strings.Title(resourceType), friendlyName),
 			Responses:            populateResponses(strings.Title(resourceType), false, http.StatusOK, http.StatusCreated),
@@ -134,7 +134,7 @@ func populateTopLevelPaths(resourceProviderNamespace, resourceType, friendlyName
 		Delete: &Operation{
 			Tags:                 []string{strings.Title(resourceType) + "s"},
 			Summary:              "Deletes a " + friendlyName + " with the specified subscription, resource group and resource name.",
-			Description:          "Deletes a " + friendlyName + " with the specified subscription, resource group and resource name.",
+			Description:          "Deletes a " + friendlyName + " with the specified subscription, resource group and resource name.  The operation returns nothing.",
 			OperationID:          strings.Title(resourceType) + "s_Delete",
 			Parameters:           populateParameters(2, strings.Title(resourceType), friendlyName),
 			Responses:            populateResponses(strings.Title(resourceType), true, http.StatusOK, http.StatusNoContent),
@@ -143,7 +143,7 @@ func populateTopLevelPaths(resourceProviderNamespace, resourceType, friendlyName
 		Patch: &Operation{
 			Tags:                 []string{strings.Title(resourceType) + "s"},
 			Summary:              "Creates or updates a " + friendlyName + " with the specified subscription, resource group and resource name.",
-			Description:          "Creates or updates a " + friendlyName + " with the specified subscription, resource group and resource name.",
+			Description:          "Creates or updates a " + friendlyName + " with the specified subscription, resource group and resource name.  The operation returns properties of a " + friendlyName + ".",
 			OperationID:          strings.Title(resourceType) + "s_Patch",
 			Parameters:           populateParameters(3, strings.Title(resourceType), friendlyName),
 			Responses:            populateResponses(strings.Title(resourceType), false, http.StatusOK, http.StatusCreated),

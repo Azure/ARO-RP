@@ -21,13 +21,14 @@ func Run(outputFile string) error {
 		Paths:    populateTopLevelPaths("Microsoft.RedHatOpenShift", "openShiftCluster", "OpenShift cluster"),
 		Definitions: Definitions{
 			// TODO: this should be defined in the API package itself
-			"OpenShiftClusters": {
-				Description: "OpenShiftClusters represents a list of OpenShift clusters.",
+			"OpenShiftClusterList": {
+				Description: "OpenShiftClusterList represents a list of OpenShift clusters.",
 				Properties: []NameSchema{
 					{
 						Name: "value",
 						Schema: &Schema{
-							Type: "array",
+							Description: "The list of OpenShift clusters.",
+							Type:        "array",
 							Items: &Schema{
 								Ref: "#/definitions/OpenShiftCluster",
 							},
@@ -74,7 +75,7 @@ func Run(outputFile string) error {
 		Post: &Operation{
 			Tags:        []string{"OpenShiftClusters"},
 			Summary:     "Gets credentials of a OpenShift cluster with the specified subscription, resource group and resource name.",
-			Description: "Gets credentials of a OpenShift cluster with the specified subscription, resource group and resource name.",
+			Description: "Gets credentials of a OpenShift cluster with the specified subscription, resource group and resource name.  The operation returns the credentials.",
 			OperationID: "OpenShiftClusters_GetCredentials",
 			Parameters:  populateParameters(2, "OpenShiftCluster", "OpenShift cluster"),
 			Responses:   populateResponses("OpenShiftClusterCredentials", false, http.StatusOK),
@@ -93,11 +94,15 @@ func Run(outputFile string) error {
 
 	s.Definitions["OpenShiftCluster"].AzureResource = true
 	for i, property := range s.Definitions["OpenShiftCluster"].Properties {
-		if property.Name == "location" {
-			// TODO: use x-ms-mutability more widely
+		switch property.Name {
+		case "name", "id", "type":
+			property.Schema.ReadOnly = true
+		case "location":
 			property.Schema.Mutability = []string{"create", "read"}
-			s.Definitions["OpenShiftCluster"].Properties[i] = property
+		case "properties":
+			property.Schema.ClientFlatten = true
 		}
+		s.Definitions["OpenShiftCluster"].Properties[i] = property
 	}
 
 	f := os.Stdout

@@ -36,7 +36,7 @@
           "200": {
             "description": "OK",
             "schema": {
-              "$ref": "#/definitions/OpenShiftClusters"
+              "$ref": "#/definitions/OpenShiftClusterList"
             }
           },
           "default": {
@@ -75,7 +75,7 @@
           "200": {
             "description": "OK",
             "schema": {
-              "$ref": "#/definitions/OpenShiftClusters"
+              "$ref": "#/definitions/OpenShiftClusterList"
             }
           },
           "default": {
@@ -93,7 +93,7 @@
           "OpenShiftClusters"
         ],
         "summary": "Gets a OpenShift cluster with the specified subscription, resource group and resource name.",
-        "description": "Gets a OpenShift cluster with the specified subscription, resource group and resource name.",
+        "description": "Gets a OpenShift cluster with the specified subscription, resource group and resource name.  The operation returns properties of a OpenShift cluster.",
         "operationId": "OpenShiftClusters_Get",
         "parameters": [
           {
@@ -137,7 +137,7 @@
           "OpenShiftClusters"
         ],
         "summary": "Creates or updates a OpenShift cluster with the specified subscription, resource group and resource name.",
-        "description": "Creates or updates a OpenShift cluster with the specified subscription, resource group and resource name.",
+        "description": "Creates or updates a OpenShift cluster with the specified subscription, resource group and resource name.  The operation returns properties of a OpenShift cluster.",
         "operationId": "OpenShiftClusters_Put",
         "parameters": [
           {
@@ -197,7 +197,7 @@
           "OpenShiftClusters"
         ],
         "summary": "Deletes a OpenShift cluster with the specified subscription, resource group and resource name.",
-        "description": "Deletes a OpenShift cluster with the specified subscription, resource group and resource name.",
+        "description": "Deletes a OpenShift cluster with the specified subscription, resource group and resource name.  The operation returns nothing.",
         "operationId": "OpenShiftClusters_Delete",
         "parameters": [
           {
@@ -242,7 +242,7 @@
           "OpenShiftClusters"
         ],
         "summary": "Creates or updates a OpenShift cluster with the specified subscription, resource group and resource name.",
-        "description": "Creates or updates a OpenShift cluster with the specified subscription, resource group and resource name.",
+        "description": "Creates or updates a OpenShift cluster with the specified subscription, resource group and resource name.  The operation returns properties of a OpenShift cluster.",
         "operationId": "OpenShiftClusters_Patch",
         "parameters": [
           {
@@ -304,7 +304,7 @@
           "OpenShiftClusters"
         ],
         "summary": "Gets credentials of a OpenShift cluster with the specified subscription, resource group and resource name.",
-        "description": "Gets credentials of a OpenShift cluster with the specified subscription, resource group and resource name.",
+        "description": "Gets credentials of a OpenShift cluster with the specified subscription, resource group and resource name.  The operation returns the credentials.",
         "operationId": "OpenShiftClusters_GetCredentials",
         "parameters": [
           {
@@ -350,7 +350,8 @@
       "description": "CloudError represents a cloud error.",
       "properties": {
         "error": {
-          "$ref": "#/definitions/CloudErrorBody"
+          "$ref": "#/definitions/CloudErrorBody",
+          "description": "An error response from the service."
         }
       }
     },
@@ -358,15 +359,19 @@
       "description": "CloudErrorBody represents the body of a cloud error.",
       "properties": {
         "code": {
+          "description": "An identifier for the error. Codes are invariant and are intended to be consumed programmatically.",
           "type": "string"
         },
         "message": {
+          "description": "A message describing the error, intended to be suitable for display in a user interface.",
           "type": "string"
         },
         "target": {
+          "description": "The target of the particular error. For example, the name of the property in error.",
           "type": "string"
         },
         "details": {
+          "description": "A list of additional details about the error.",
           "type": "array",
           "items": {
             "$ref": "#/definitions/CloudErrorBody"
@@ -405,15 +410,18 @@
       "properties": {
         "id": {
           "description": "The resource ID (immutable).",
-          "type": "string"
+          "type": "string",
+          "readOnly": true
         },
         "name": {
           "description": "The resource name (immutable).",
-          "type": "string"
+          "type": "string",
+          "readOnly": true
         },
         "type": {
           "description": "The resource type (immutable).",
-          "type": "string"
+          "type": "string",
+          "readOnly": true
         },
         "location": {
           "description": "The resource location (immutable).",
@@ -429,7 +437,8 @@
         },
         "properties": {
           "$ref": "#/definitions/Properties",
-          "description": "The cluster properties."
+          "description": "The cluster properties.",
+          "x-ms-azure-client-flatten": true
         }
       },
       "x-ms-azure-resource": true
@@ -438,14 +447,16 @@
       "description": "OpenShiftClusterCredentials represents an OpenShift cluster's credentials",
       "properties": {
         "kubeadminPassword": {
+          "description": "The password for the kubeadmin user",
           "type": "string"
         }
       }
     },
-    "OpenShiftClusters": {
-      "description": "OpenShiftClusters represents a list of OpenShift clusters.",
+    "OpenShiftClusterList": {
+      "description": "OpenShiftClusterList represents a list of OpenShift clusters.",
       "properties": {
         "value": {
+          "description": "The list of OpenShift clusters.",
           "type": "array",
           "items": {
             "$ref": "#/definitions/OpenShiftCluster"
