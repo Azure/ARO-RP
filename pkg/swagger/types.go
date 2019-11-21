@@ -236,7 +236,6 @@ type Schema struct {
 	Example              interface{}            `json:"example,omitempty"`
 
 	AzureResource bool     `json:"x-ms-azure-resource,omitempty"`
-	ClientFlatten bool     `json:"x-ms-azure-client-flatten,omitempty"`
 	Mutability    []string `json:"x-ms-mutability,omitempty"`
 }
 

@@ -138,7 +138,7 @@
         ],
         "summary": "Creates or updates a OpenShift cluster with the specified subscription, resource group and resource name.",
         "description": "Creates or updates a OpenShift cluster with the specified subscription, resource group and resource name.  The operation returns properties of a OpenShift cluster.",
-        "operationId": "OpenShiftClusters_Put",
+        "operationId": "OpenShiftClusters_Create",
         "parameters": [
           {
             "$ref": "#/parameters/ApiVersionParameter"
@@ -243,7 +243,7 @@
         ],
         "summary": "Creates or updates a OpenShift cluster with the specified subscription, resource group and resource name.",
         "description": "Creates or updates a OpenShift cluster with the specified subscription, resource group and resource name.  The operation returns properties of a OpenShift cluster.",
-        "operationId": "OpenShiftClusters_Patch",
+        "operationId": "OpenShiftClusters_Update",
         "parameters": [
           {
             "$ref": "#/parameters/ApiVersionParameter"
@@ -437,8 +437,7 @@
         },
         "properties": {
           "$ref": "#/definitions/Properties",
-          "description": "The cluster properties.",
-          "x-ms-azure-client-flatten": true
+          "description": "The cluster properties."
         }
       },
       "x-ms-azure-resource": true

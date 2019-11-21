@@ -99,8 +99,6 @@ func Run(outputFile string) error {
 			property.Schema.ReadOnly = true
 		case "location":
 			property.Schema.Mutability = []string{"create", "read"}
-		case "properties":
-			property.Schema.ClientFlatten = true
 		}
 		s.Definitions["OpenShiftCluster"].Properties[i] = property
 	}
