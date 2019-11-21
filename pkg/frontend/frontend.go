@@ -84,9 +84,9 @@ func NewFrontend(ctx context.Context, baseLog *logrus.Entry, env env.Interface, 
 
 func (f *frontend) getReady(w http.ResponseWriter, r *http.Request) {
 	if f.ready.Load().(bool) && f.env.IsReady() {
-		http.Error(w, http.StatusText(http.StatusOK), http.StatusOK)
+		f.cloudError(w, &api.CloudError{StatusCode: http.StatusOK})
 	} else {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		f.error(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
 	}
 }
 

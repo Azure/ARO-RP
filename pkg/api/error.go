@@ -10,7 +10,7 @@ type CloudError struct {
 	StatusCode int `json:"-"`
 
 	// An error response from the service.
-	CloudErrorBody `json:"error,omitempty"`
+	*CloudErrorBody `json:"error,omitempty"`
 }
 
 func (err *CloudError) Error() string {
@@ -56,7 +56,7 @@ var (
 func NewCloudError(statusCode int, code, target, message string, a ...interface{}) *CloudError {
 	return &CloudError{
 		StatusCode: statusCode,
-		CloudErrorBody: CloudErrorBody{
+		CloudErrorBody: &CloudErrorBody{
 			Code:    code,
 			Message: fmt.Sprintf(message, a...),
 			Target:  target,
