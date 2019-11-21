@@ -479,11 +479,11 @@
             "$ref": "#/definitions/WorkerProfile"
           }
         },
-        "apiserverURL": {
+        "apiserverUrl": {
           "description": "The URL to access the cluster API server (immutable).",
           "type": "string"
         },
-        "consoleURL": {
+        "consoleUrl": {
           "description": "The URL to access the cluster console (immutable).",
           "type": "string"
         }

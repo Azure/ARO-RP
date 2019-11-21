@@ -31,8 +31,8 @@ type Properties struct {
 
 	WorkerProfiles []WorkerProfile `json:"workerProfiles,omitempty"`
 
-	APIServerURL string `json:"apiserverURL,omitempty"`
-	ConsoleURL   string `json:"consoleURL,omitempty"`
+	APIServerURL string `json:"apiserverUrl,omitempty"`
+	ConsoleURL   string `json:"consoleUrl,omitempty"`
 
 	Installation *Installation `json:"installation,omitempty"`
 

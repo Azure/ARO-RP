@@ -42,10 +42,10 @@ type Properties struct {
 	WorkerProfiles []WorkerProfile `json:"workerProfiles,omitempty"`
 
 	// The URL to access the cluster API server (immutable).
-	APIServerURL string `json:"apiserverURL,omitempty"`
+	APIServerURL string `json:"apiserverUrl,omitempty"`
 
 	// The URL to access the cluster console (immutable).
-	ConsoleURL string `json:"consoleURL,omitempty"`
+	ConsoleURL string `json:"consoleUrl,omitempty"`
 }
 
 // ProvisioningState represents a provisioning state.
