@@ -55,7 +55,7 @@
                                 "get"
                             ]
                         },
-                        "tenantId": "[parameters('tenantId')]"
+                        "tenantId": "[subscription().tenantId]"
                     }
                 ],
                 "sku": {
