@@ -135,7 +135,14 @@ func _shadowCopy(v reflect.Value) reflect.Value {
 		return m
 
 	case reflect.Slice:
-		t := reflect.SliceOf(emptyInterfaceType)
+		var t reflect.Type
+		if v.Type().Elem().Kind() == reflect.Uint8 {
+			// It's a slice of byte. It should be marshaled as a base64 encoded string
+			// to match encoding/json behaviour, so preserve element's type in this case
+			t = reflect.SliceOf(v.Type().Elem())
+		} else {
+			t = reflect.SliceOf(emptyInterfaceType)
+		}
 		if v.IsNil() {
 			return reflect.Zero(t)
 		}
