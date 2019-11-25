@@ -16,6 +16,10 @@
 * Sort out mess of clients
 * Check insights, telemeter settings on deployed cluster
 * Was SNAT issue on internal LB solved?
+* Design and implement how we will configure release-payload
+    * Release payload hosting in Azure
+    * Offline cluster
+    * "Hot patch" path in production
 
 (Lower priority)
 
@@ -24,3 +28,4 @@
 * Implement paging on list APIs
 * Formal ARM asynchronous operation (Azure-AsyncOperation header)
 * Make installer providers pluggable
+* Move to go modules
