@@ -23,18 +23,18 @@ import (
 	"github.com/jim-minter/rp/pkg/util/subnet"
 )
 
-func (b *backend) install(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument) error {
-	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
+func (b *backend) install(ctx context.Context, log *logrus.Entry, oc *api.OpenShiftCluster) error {
+	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
 		return err
 	}
 
-	vnetID, masterSubnetName, err := subnet.Split(doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
+	vnetID, masterSubnetName, err := subnet.Split(oc.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return err
 	}
 
-	vnetID, workerSubnetName, err := subnet.Split(doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID)
+	vnetID, workerSubnetName, err := subnet.Split(oc.Properties.WorkerProfiles[0].SubnetID)
 	if err != nil {
 		return err
 	}
@@ -44,7 +44,7 @@ func (b *backend) install(ctx context.Context, log *logrus.Entry, doc *api.OpenS
 		return err
 	}
 
-	sshkey, err := ssh.NewPublicKey(&doc.OpenShiftCluster.Properties.SSHKey.PublicKey)
+	sshkey, err := ssh.NewPublicKey(&oc.Properties.SSHKey.PublicKey)
 	if err != nil {
 		return err
 	}
@@ -52,8 +52,8 @@ func (b *backend) install(ctx context.Context, log *logrus.Entry, doc *api.OpenS
 	platformCreds := &installconfig.PlatformCreds{
 		Azure: &icazure.Credentials{
 			TenantID:       os.Getenv("AZURE_TENANT_ID"),
-			ClientID:       doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientID,
-			ClientSecret:   doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret,
+			ClientID:       oc.Properties.ServicePrincipalProfile.ClientID,
+			ClientSecret:   oc.Properties.ServicePrincipalProfile.ClientSecret,
 			SubscriptionID: r.SubscriptionID,
 		},
 		Passthrough: true, // TODO: not working yet
@@ -65,7 +65,7 @@ func (b *backend) install(ctx context.Context, log *logrus.Entry, doc *api.OpenS
 				APIVersion: "v1",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: doc.OpenShiftCluster.Name,
+				Name: oc.Name,
 			},
 			SSHKey:     sshkey.Type() + " " + base64.StdEncoding.EncodeToString(sshkey.Marshal()),
 			BaseDomain: b.domain,
@@ -74,12 +74,12 @@ func (b *backend) install(ctx context.Context, log *logrus.Entry, doc *api.OpenS
 				NetworkType: "OpenShiftSDN",
 				ClusterNetwork: []types.ClusterNetworkEntry{
 					{
-						CIDR:       *ipnet.MustParseCIDR(doc.OpenShiftCluster.Properties.NetworkProfile.PodCIDR),
+						CIDR:       *ipnet.MustParseCIDR(oc.Properties.NetworkProfile.PodCIDR),
 						HostPrefix: 23,
 					},
 				},
 				ServiceNetwork: []ipnet.IPNet{
-					*ipnet.MustParseCIDR(doc.OpenShiftCluster.Properties.NetworkProfile.ServiceCIDR),
+					*ipnet.MustParseCIDR(oc.Properties.NetworkProfile.ServiceCIDR),
 				},
 			},
 			ControlPlane: &types.MachinePool{
@@ -87,20 +87,20 @@ func (b *backend) install(ctx context.Context, log *logrus.Entry, doc *api.OpenS
 				Replicas: to.Int64Ptr(3),
 				Platform: types.MachinePoolPlatform{
 					Azure: &azuretypes.MachinePool{
-						InstanceType: string(doc.OpenShiftCluster.Properties.MasterProfile.VMSize),
+						InstanceType: string(oc.Properties.MasterProfile.VMSize),
 					},
 				},
 				Hyperthreading: "Enabled",
 			},
 			Compute: []types.MachinePool{
 				{
-					Name:     doc.OpenShiftCluster.Properties.WorkerProfiles[0].Name,
-					Replicas: to.Int64Ptr(int64(doc.OpenShiftCluster.Properties.WorkerProfiles[0].Count)),
+					Name:     oc.Properties.WorkerProfiles[0].Name,
+					Replicas: to.Int64Ptr(int64(oc.Properties.WorkerProfiles[0].Count)),
 					Platform: types.MachinePoolPlatform{
 						Azure: &azuretypes.MachinePool{
-							InstanceType: string(doc.OpenShiftCluster.Properties.WorkerProfiles[0].VMSize),
+							InstanceType: string(oc.Properties.WorkerProfiles[0].VMSize),
 							OSDisk: azuretypes.OSDisk{
-								DiskSizeGB: int32(doc.OpenShiftCluster.Properties.WorkerProfiles[0].DiskSizeGB),
+								DiskSizeGB: int32(oc.Properties.WorkerProfiles[0].DiskSizeGB),
 							},
 						},
 					},
@@ -109,8 +109,8 @@ func (b *backend) install(ctx context.Context, log *logrus.Entry, doc *api.OpenS
 			},
 			Platform: types.Platform{
 				Azure: &azuretypes.Platform{
-					Region:                      doc.OpenShiftCluster.Location,
-					ResourceGroupName:           doc.OpenShiftCluster.Properties.ResourceGroup,
+					Region:                      oc.Location,
+					ResourceGroupName:           oc.Properties.ResourceGroup,
 					BaseDomainResourceGroupName: os.Getenv("RESOURCEGROUP"),
 					NetworkResourceGroupName:    vnetr.ResourceGroup,
 					VirtualNetwork:              vnetr.ResourceName,
@@ -128,5 +128,5 @@ func (b *backend) install(ctx context.Context, log *logrus.Entry, doc *api.OpenS
 		return err
 	}
 
-	return install.NewInstaller(log, b.db, b.domain, b.authorizer, r.SubscriptionID).Install(ctx, doc, installConfig, platformCreds)
+	return install.NewInstaller(log, b.db, b.domain, b.authorizer, r.SubscriptionID).Install(ctx, oc, installConfig, platformCreds)
 }

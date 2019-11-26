@@ -133,10 +133,10 @@ func (b *backend) handle(ctx context.Context, log *logrus.Entry, doc *api.OpenSh
 	switch doc.OpenShiftCluster.Properties.ProvisioningState {
 	case api.ProvisioningStateUpdating:
 		log.Print("updating")
-		err = b.update(ctx, log, doc)
+		err = b.update(ctx, log, doc.OpenShiftCluster)
 	case api.ProvisioningStateDeleting:
 		log.Print("deleting")
-		err = b.delete(ctx, log, doc)
+		err = b.delete(ctx, log, doc.OpenShiftCluster)
 	}
 
 	stop()

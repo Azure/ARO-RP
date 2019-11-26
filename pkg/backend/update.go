@@ -8,10 +8,10 @@ import (
 	"github.com/jim-minter/rp/pkg/api"
 )
 
-func (b *backend) update(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument) error {
-	if doc.OpenShiftCluster.Properties.Installation != nil {
-		return b.install(ctx, log, doc)
+func (b *backend) update(ctx context.Context, log *logrus.Entry, oc *api.OpenShiftCluster) error {
+	if oc.Properties.Installation != nil {
+		return b.install(ctx, log, oc)
 	}
 
-	return b.scale(ctx, log, doc)
+	return b.scale(ctx, log, oc)
 }

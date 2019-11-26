@@ -15,8 +15,8 @@ import (
 	"github.com/jim-minter/rp/pkg/util/restconfig"
 )
 
-func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
-	g, err := i.getGraph(ctx, doc.OpenShiftCluster)
+func (i *Installer) removeBootstrap(ctx context.Context, oc *api.OpenShiftCluster) error {
+	g, err := i.getGraph(ctx, oc)
 	if err != nil {
 		return err
 	}
@@ -25,7 +25,7 @@ func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClust
 
 	{
 		i.log.Print("removing bootstrap vm")
-		future, err := i.virtualmachines.Delete(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, doc.OpenShiftCluster.Properties.ClusterID+"-bootstrap")
+		future, err := i.virtualmachines.Delete(ctx, oc.Properties.ResourceGroup, oc.Properties.ClusterID+"-bootstrap")
 		if err != nil {
 			return err
 		}
@@ -38,7 +38,7 @@ func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClust
 
 	{
 		i.log.Print("removing bootstrap disk")
-		future, err := i.disks.Delete(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, doc.OpenShiftCluster.Properties.ClusterID+"-bootstrap_OSDisk")
+		future, err := i.disks.Delete(ctx, oc.Properties.ResourceGroup, oc.Properties.ClusterID+"-bootstrap_OSDisk")
 		if err != nil {
 			return err
 		}
@@ -51,7 +51,7 @@ func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClust
 
 	{
 		i.log.Print("removing bootstrap nic")
-		future, err := i.interfaces.Delete(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, doc.OpenShiftCluster.Properties.ClusterID+"-bootstrap-nic")
+		future, err := i.interfaces.Delete(ctx, oc.Properties.ResourceGroup, oc.Properties.ClusterID+"-bootstrap-nic")
 		if err != nil {
 			return err
 		}
@@ -64,7 +64,7 @@ func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClust
 
 	{
 		i.log.Print("removing bootstrap ip")
-		future, err := i.publicipaddresses.Delete(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, doc.OpenShiftCluster.Properties.ClusterID+"-bootstrap-pip")
+		future, err := i.publicipaddresses.Delete(ctx, oc.Properties.ResourceGroup, oc.Properties.ClusterID+"-bootstrap-pip")
 		if err != nil {
 			return err
 		}
@@ -76,7 +76,7 @@ func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClust
 	}
 
 	{
-		restConfig, err := restconfig.RestConfig(doc.OpenShiftCluster.Properties.AdminKubeconfig)
+		restConfig, err := restconfig.RestConfig(oc.Properties.AdminKubeconfig)
 		if err != nil {
 			return err
 		}
@@ -109,7 +109,7 @@ func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClust
 		}
 	}
 
-	doc, err = i.db.Patch(doc.OpenShiftCluster.ID, func(doc *api.OpenShiftClusterDocument) error {
+	_, err = i.db.Patch(oc.ID, func(doc *api.OpenShiftClusterDocument) error {
 		doc.OpenShiftCluster.Properties.APIServerURL = "https://api." + doc.OpenShiftCluster.Name + "." + i.domain + ":6443/"
 		doc.OpenShiftCluster.Properties.ConsoleURL = "https://console-openshift-console.apps." + doc.OpenShiftCluster.Name + "." + i.domain + "/"
 		doc.OpenShiftCluster.Properties.KubeadminPassword = kubeadminPassword.Password

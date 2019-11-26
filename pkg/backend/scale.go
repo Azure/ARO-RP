@@ -27,8 +27,8 @@ func find(xs interface{}, f func(int, int) bool) interface{} {
 	return v.Index(j).Addr().Interface()
 }
 
-func (b *backend) scale(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument) error {
-	restConfig, err := restconfig.RestConfig(doc.OpenShiftCluster.Properties.AdminKubeconfig)
+func (b *backend) scale(ctx context.Context, log *logrus.Entry, oc *api.OpenShiftCluster) error {
+	restConfig, err := restconfig.RestConfig(oc.Properties.AdminKubeconfig)
 	if err != nil {
 		return err
 	}
@@ -51,13 +51,13 @@ func (b *backend) scale(ctx context.Context, log *logrus.Entry, doc *api.OpenShi
 		have += int(*m.Spec.Replicas)
 	}
 
-	for have > doc.OpenShiftCluster.Properties.WorkerProfiles[0].Count {
+	for have > oc.Properties.WorkerProfiles[0].Count {
 		m := find(l.Items, func(i, j int) bool { return *l.Items[i].Spec.Replicas > *l.Items[j].Spec.Replicas }).(*machinev1beta1.MachineSet)
 		*m.Spec.Replicas--
 		have--
 	}
 
-	for have < doc.OpenShiftCluster.Properties.WorkerProfiles[0].Count {
+	for have < oc.Properties.WorkerProfiles[0].Count {
 		m := find(l.Items, func(i, j int) bool { return *l.Items[i].Spec.Replicas < *l.Items[j].Spec.Replicas }).(*machinev1beta1.MachineSet)
 		*m.Spec.Replicas++
 		have++

@@ -15,8 +15,8 @@ import (
 	"github.com/jim-minter/rp/pkg/util/subnet"
 )
 
-func (b *backend) delete(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument) error {
-	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
+func (b *backend) delete(ctx context.Context, log *logrus.Entry, oc *api.OpenShiftCluster) error {
+	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
 		return err
 	}
@@ -29,18 +29,18 @@ func (b *backend) delete(ctx context.Context, log *logrus.Entry, doc *api.OpenSh
 	groups.Client.PollingDuration = time.Hour
 
 	log.Printf("deleting dns")
-	_, err = recordsets.Delete(ctx, os.Getenv("RESOURCEGROUP"), b.domain, "api."+doc.OpenShiftCluster.Name, dns.CNAME, "")
+	_, err = recordsets.Delete(ctx, os.Getenv("RESOURCEGROUP"), b.domain, "api."+oc.Name, dns.CNAME, "")
 	if err != nil {
 		return err
 	}
 
 	// TODO: ideally we would do this after all the VMs have been deleted
 	for _, subnetID := range []string{
-		doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
-		doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID,
+		oc.Properties.MasterProfile.SubnetID,
+		oc.Properties.WorkerProfiles[0].SubnetID,
 	} {
 		// TODO: there is probably an undesirable race condition here - check if etags can help.
-		s, err := subnet.Get(ctx, &doc.OpenShiftCluster.Properties.ServicePrincipalProfile, subnetID)
+		s, err := subnet.Get(ctx, &oc.Properties.ServicePrincipalProfile, subnetID)
 		if err != nil {
 			return err
 		}
@@ -49,14 +49,14 @@ func (b *backend) delete(ctx context.Context, log *logrus.Entry, doc *api.OpenSh
 			s.SubnetPropertiesFormat.NetworkSecurityGroup = nil
 
 			log.Printf("removing network security group from subnet %s", subnetID)
-			err = subnet.CreateOrUpdate(ctx, &doc.OpenShiftCluster.Properties.ServicePrincipalProfile, subnetID, s)
+			err = subnet.CreateOrUpdate(ctx, &oc.Properties.ServicePrincipalProfile, subnetID, s)
 			if err != nil {
 				return err
 			}
 		}
 	}
 
-	resp, err := groups.CheckExistence(ctx, doc.OpenShiftCluster.Properties.ResourceGroup)
+	resp, err := groups.CheckExistence(ctx, oc.Properties.ResourceGroup)
 	if err != nil {
 		return err
 	}
@@ -64,8 +64,8 @@ func (b *backend) delete(ctx context.Context, log *logrus.Entry, doc *api.OpenSh
 		return nil
 	}
 
-	log.Printf("deleting resource group %s", doc.OpenShiftCluster.Properties.ResourceGroup)
-	future, err := groups.Delete(ctx, doc.OpenShiftCluster.Properties.ResourceGroup)
+	log.Printf("deleting resource group %s", oc.Properties.ResourceGroup)
+	future, err := groups.Delete(ctx, oc.Properties.ResourceGroup)
 	if err != nil {
 		return err
 	}

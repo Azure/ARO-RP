@@ -75,46 +75,46 @@ func NewInstaller(log *logrus.Entry, db database.OpenShiftClusters, domain strin
 	return d
 }
 
-func (i *Installer) Install(ctx context.Context, doc *api.OpenShiftClusterDocument, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds) error {
+func (i *Installer) Install(ctx context.Context, oc *api.OpenShiftCluster, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds) error {
 	for {
-		i.log.Printf("starting phase %s", doc.OpenShiftCluster.Properties.Installation.Phase)
-		switch doc.OpenShiftCluster.Properties.Installation.Phase {
+		i.log.Printf("starting phase %s", oc.Properties.Installation.Phase)
+		switch oc.Properties.Installation.Phase {
 		case api.InstallationPhaseDeployStorage:
-			err := i.installStorage(ctx, doc, installConfig, platformCreds)
+			err := i.installStorage(ctx, oc, installConfig, platformCreds)
 			if err != nil {
 				return err
 			}
 
 		case api.InstallationPhaseDeployResources:
-			err := i.installResources(ctx, doc)
+			err := i.installResources(ctx, oc)
 			if err != nil {
 				return err
 			}
 
 		case api.InstallationPhaseRemoveBootstrap:
-			err := i.removeBootstrap(ctx, doc)
+			err := i.removeBootstrap(ctx, oc)
 			if err != nil {
 				return err
 			}
 
-			_, err = i.db.Patch(doc.OpenShiftCluster.ID, func(doc *api.OpenShiftClusterDocument) error {
+			_, err = i.db.Patch(oc.ID, func(doc *api.OpenShiftClusterDocument) error {
 				doc.OpenShiftCluster.Properties.Installation = nil
 				return nil
 			})
 			return err
 
 		default:
-			return fmt.Errorf("unrecognised phase %s", doc.OpenShiftCluster.Properties.Installation.Phase)
+			return fmt.Errorf("unrecognised phase %s", oc.Properties.Installation.Phase)
 		}
 
-		var err error
-		doc, err = i.db.Patch(doc.OpenShiftCluster.ID, func(doc *api.OpenShiftClusterDocument) error {
+		doc, err := i.db.Patch(oc.ID, func(doc *api.OpenShiftClusterDocument) error {
 			doc.OpenShiftCluster.Properties.Installation.Phase++
 			return nil
 		})
 		if err != nil {
 			return err
 		}
+		oc = doc.OpenShiftCluster
 	}
 }
 
