@@ -1,7 +1,9 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
 )
 
 // CloudError represents a cloud error.
@@ -50,6 +52,7 @@ var (
 	CloudErrorCodeResourceNotFound         = "ResourceNotFound"
 	CloudErrorCodeUnsupportedMediaType     = "UnsupportedMediaType"
 	CloudErrorCodeInvalidLinkedVNet        = "InvalidLinkedVNet"
+	CloudErrorCodeForbidden                = "Forbidden"
 )
 
 // NewCloudError returns a new CloudError
@@ -62,4 +65,17 @@ func NewCloudError(statusCode int, code, target, message string, a ...interface{
 			Target:  target,
 		},
 	}
+}
+
+// WriteError constructs and writes a CloudError to the given ResponseWriter
+func WriteError(w http.ResponseWriter, statusCode int, code, target, message string, a ...interface{}) {
+	WriteCloudError(w, NewCloudError(statusCode, code, target, message, a...))
+}
+
+// WriteCloudError writes a CloudError to the given ResponseWriter
+func WriteCloudError(w http.ResponseWriter, err *CloudError) {
+	w.WriteHeader(err.StatusCode)
+	e := json.NewEncoder(w)
+	e.SetIndent("", "  ")
+	e.Encode(err)
 }

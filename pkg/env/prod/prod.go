@@ -3,12 +3,12 @@ package prod
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
-	"errors"
 	"net"
+	"net/http"
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/jim-minter/rp/pkg/api"
 	"github.com/jim-minter/rp/pkg/env/shared"
 )
 
@@ -48,12 +48,19 @@ func (p *prod) ListenTLS(ctx context.Context) (net.Listener, error) {
 			},
 		},
 		ClientAuth: tls.RequestClientCert,
-		VerifyPeerCertificate: func(rawCerts [][]byte, _ [][]*x509.Certificate) error {
-			if len(rawCerts) == 0 || !p.ms.allowClientCertificate(rawCerts[0]) {
-				return errors.New("invalid certificate")
-			}
-			return nil
-		},
+	})
+}
+
+func (p *prod) Authenticated(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.TLS == nil ||
+			len(r.TLS.PeerCertificates) == 0 ||
+			!p.ms.allowClientCertificate(r.TLS.PeerCertificates[0].Raw) {
+			api.WriteError(w, http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Forbidden.")
+			return
+		}
+
+		h.ServeHTTP(w, r)
 	})
 }
 

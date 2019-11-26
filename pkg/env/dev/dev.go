@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"net"
+	"net/http"
 
 	"github.com/sirupsen/logrus"
 
@@ -45,6 +46,10 @@ func (d *dev) ListenTLS(ctx context.Context) (net.Listener, error) {
 			},
 		},
 	})
+}
+
+func (d *dev) Authenticated(h http.Handler) http.Handler {
+	return h
 }
 
 func (d *dev) IsReady() bool {

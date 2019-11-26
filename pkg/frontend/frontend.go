@@ -47,8 +47,7 @@ type frontend struct {
 
 	db database.OpenShiftClusters
 
-	l    net.Listener
-	tlsl net.Listener
+	l net.Listener
 
 	ready atomic.Value
 }
@@ -67,12 +66,7 @@ func NewFrontend(ctx context.Context, baseLog *logrus.Entry, env env.Interface, 
 	}
 
 	var err error
-	f.l, err = net.Listen("tcp", ":8080")
-	if err != nil {
-		return nil, err
-	}
-
-	f.tlsl, err = f.env.ListenTLS(ctx)
+	f.l, err = f.env.ListenTLS(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -84,29 +78,17 @@ func NewFrontend(ctx context.Context, baseLog *logrus.Entry, env env.Interface, 
 
 func (f *frontend) getReady(w http.ResponseWriter, r *http.Request) {
 	if f.ready.Load().(bool) && f.env.IsReady() {
-		f.cloudError(w, &api.CloudError{StatusCode: http.StatusOK})
+		api.WriteCloudError(w, &api.CloudError{StatusCode: http.StatusOK})
 	} else {
-		f.error(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
+		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
 	}
 }
 
-// unauthenticatedRouter returns the router which is served via unauthenticated
-// HTTP
-func (f *frontend) unauthenticatedRouter() *mux.Router {
-	r := mux.NewRouter()
-	r.Use(f.middleware)
-
+func (f *frontend) unauthenticatedRoutes(r *mux.Router) {
 	r.Path("/healthz/ready").Methods(http.MethodGet).HandlerFunc(f.getReady)
-
-	return r
 }
 
-// authenticatedRouter returns the router which is served via TLS and protected
-// by client certificate authentication
-func (f *frontend) authenticatedRouter() *mux.Router {
-	r := mux.NewRouter()
-	r.Use(f.middleware)
-
+func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	s := r.
 		Path("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}").
 		Queries("api-version", "").
@@ -144,8 +126,6 @@ func (f *frontend) authenticatedRouter() *mux.Router {
 		Subrouter()
 
 	s.Methods(http.MethodGet).HandlerFunc(f.getOperations)
-
-	return r
 }
 
 func (f *frontend) Run(stop <-chan struct{}) {
@@ -155,11 +135,16 @@ func (f *frontend) Run(stop <-chan struct{}) {
 		f.ready.Store(false)
 	}()
 
-	go func() {
-		err := http.Serve(f.l, f.unauthenticatedRouter())
-		f.baseLog.Error(err)
-	}()
+	r := mux.NewRouter()
+	r.Use(f.middleware)
 
-	err := http.Serve(f.tlsl, f.authenticatedRouter())
+	unauthenticated := r.NewRoute().Subrouter()
+	f.unauthenticatedRoutes(unauthenticated)
+
+	authenticated := r.NewRoute().Subrouter()
+	authenticated.Use(f.env.Authenticated)
+	f.authenticatedRoutes(authenticated)
+
+	err := http.Serve(f.l, r)
 	f.baseLog.Error(err)
 }

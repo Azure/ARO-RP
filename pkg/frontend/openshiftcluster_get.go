@@ -21,7 +21,7 @@ func (f *frontend) get(w http.ResponseWriter, r *http.Request, resourceID, typ s
 
 	toExternal, found := api.APIs[api.APIVersionType{APIVersion: r.URL.Query().Get("api-version"), Type: typ}]
 	if !found {
-		f.error(w, http.StatusNotFound, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], r.URL.Query().Get("api-version"))
+		api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], r.URL.Query().Get("api-version"))
 		return
 	}
 
@@ -35,10 +35,10 @@ func (f *frontend) get(w http.ResponseWriter, r *http.Request, resourceID, typ s
 	if err != nil {
 		switch err := err.(type) {
 		case *api.CloudError:
-			f.cloudError(w, err)
+			api.WriteCloudError(w, err)
 		default:
 			log.Error(err)
-			f.error(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
+			api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
 		}
 		return
 	}

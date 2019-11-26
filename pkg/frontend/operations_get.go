@@ -16,7 +16,7 @@ func (f *frontend) getOperations(w http.ResponseWriter, r *http.Request) {
 
 	_, found := api.APIs[api.APIVersionType{APIVersion: r.URL.Query().Get("api-version"), Type: "OpenShiftCluster"}]
 	if !found {
-		f.error(w, http.StatusNotFound, api.CloudErrorCodeInvalidResourceNamespace, "", "The resource namespace '%s' could not be found for api version '%s'.", vars["resourceProviderNamespace"], r.URL.Query().Get("api-version"))
+		api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeInvalidResourceNamespace, "", "The resource namespace '%s' could not be found for api version '%s'.", vars["resourceProviderNamespace"], r.URL.Query().Get("api-version"))
 		return
 	}
 
@@ -60,7 +60,7 @@ func (f *frontend) getOperations(w http.ResponseWriter, r *http.Request) {
 	b, err := json.MarshalIndent(ops, "", "  ")
 	if err != nil {
 		log.Error(err)
-		f.error(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
+		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
 		return
 	}
 

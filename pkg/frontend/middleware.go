@@ -2,7 +2,6 @@ package frontend
 
 import (
 	"context"
-	"encoding/json"
 	"io"
 	"net/http"
 	"runtime/debug"
@@ -69,7 +68,7 @@ func (f *frontend) middleware(h http.Handler) http.Handler {
 		defer func() {
 			if e := recover(); e != nil {
 				log.Errorf("panic: %#v\n%s\n", e, string(debug.Stack()))
-				f.error(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
+				api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
 			}
 			log.WithFields(logrus.Fields{
 				"access":             true,
@@ -95,15 +94,4 @@ func (f *frontend) middleware(h http.Handler) http.Handler {
 
 		h.ServeHTTP(w, r)
 	})
-}
-
-func (f *frontend) error(w http.ResponseWriter, statusCode int, code, target, message string, a ...interface{}) {
-	f.cloudError(w, api.NewCloudError(statusCode, code, target, message, a...))
-}
-
-func (f *frontend) cloudError(w http.ResponseWriter, err *api.CloudError) {
-	w.WriteHeader(err.StatusCode)
-	e := json.NewEncoder(w)
-	e.SetIndent("", "  ")
-	e.Encode(err)
 }

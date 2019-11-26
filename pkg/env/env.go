@@ -3,6 +3,7 @@ package env
 import (
 	"context"
 	"net"
+	"net/http"
 	"os"
 	"strings"
 
@@ -19,6 +20,7 @@ type Interface interface {
 	FirstPartyAuthorizer(ctx context.Context) (autorest.Authorizer, error)
 	IsReady() bool
 	ListenTLS(ctx context.Context) (net.Listener, error)
+	Authenticated(h http.Handler) http.Handler
 }
 
 func NewEnv(ctx context.Context, log *logrus.Entry, subscriptionId, resourceGroup string) (Interface, error) {
