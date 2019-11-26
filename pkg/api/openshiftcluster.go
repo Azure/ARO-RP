@@ -38,7 +38,6 @@ type Properties struct {
 
 	ResourceGroup string `json:"resourceGroup,omitempty"`
 	StorageSuffix string `json:"storageSuffix,omitempty"`
-	ClusterID     string `json:"clusterId,omitempty"`
 
 	SSHKey            *rsa.PrivateKey `json:"sshKey,omitempty"`
 	AdminKubeconfig   []byte          `json:"adminKubeconfig,omitempty"`

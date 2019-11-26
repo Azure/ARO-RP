@@ -8,6 +8,7 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
+	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/password"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -21,11 +22,12 @@ func (i *Installer) removeBootstrap(ctx context.Context, oc *api.OpenShiftCluste
 		return err
 	}
 
+	clusterID := g[reflect.TypeOf(&installconfig.ClusterID{})].(*installconfig.ClusterID)
 	kubeadminPassword := g[reflect.TypeOf(&password.KubeadminPassword{})].(*password.KubeadminPassword)
 
 	{
 		i.log.Print("removing bootstrap vm")
-		future, err := i.virtualmachines.Delete(ctx, oc.Properties.ResourceGroup, oc.Properties.ClusterID+"-bootstrap")
+		future, err := i.virtualmachines.Delete(ctx, oc.Properties.ResourceGroup, clusterID.InfraID+"-bootstrap")
 		if err != nil {
 			return err
 		}
@@ -38,7 +40,7 @@ func (i *Installer) removeBootstrap(ctx context.Context, oc *api.OpenShiftCluste
 
 	{
 		i.log.Print("removing bootstrap disk")
-		future, err := i.disks.Delete(ctx, oc.Properties.ResourceGroup, oc.Properties.ClusterID+"-bootstrap_OSDisk")
+		future, err := i.disks.Delete(ctx, oc.Properties.ResourceGroup, clusterID.InfraID+"-bootstrap_OSDisk")
 		if err != nil {
 			return err
 		}
@@ -51,7 +53,7 @@ func (i *Installer) removeBootstrap(ctx context.Context, oc *api.OpenShiftCluste
 
 	{
 		i.log.Print("removing bootstrap nic")
-		future, err := i.interfaces.Delete(ctx, oc.Properties.ResourceGroup, oc.Properties.ClusterID+"-bootstrap-nic")
+		future, err := i.interfaces.Delete(ctx, oc.Properties.ResourceGroup, clusterID.InfraID+"-bootstrap-nic")
 		if err != nil {
 			return err
 		}
@@ -64,7 +66,7 @@ func (i *Installer) removeBootstrap(ctx context.Context, oc *api.OpenShiftCluste
 
 	{
 		i.log.Print("removing bootstrap ip")
-		future, err := i.publicipaddresses.Delete(ctx, oc.Properties.ResourceGroup, oc.Properties.ClusterID+"-bootstrap-pip")
+		future, err := i.publicipaddresses.Delete(ctx, oc.Properties.ResourceGroup, clusterID.InfraID+"-bootstrap-pip")
 		if err != nil {
 			return err
 		}
