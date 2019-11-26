@@ -24,6 +24,11 @@ import (
 )
 
 func (b *backend) install(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument) error {
+	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
+	if err != nil {
+		return err
+	}
+
 	vnetID, masterSubnetName, err := subnet.Split(doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return err
@@ -34,7 +39,7 @@ func (b *backend) install(ctx context.Context, log *logrus.Entry, doc *api.OpenS
 		return err
 	}
 
-	r, err := azure.ParseResourceID(vnetID)
+	vnetr, err := azure.ParseResourceID(vnetID)
 	if err != nil {
 		return err
 	}
@@ -49,7 +54,7 @@ func (b *backend) install(ctx context.Context, log *logrus.Entry, doc *api.OpenS
 			TenantID:       os.Getenv("AZURE_TENANT_ID"),
 			ClientID:       doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientID,
 			ClientSecret:   doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret,
-			SubscriptionID: doc.SubscriptionID,
+			SubscriptionID: r.SubscriptionID,
 		},
 		Passthrough: true, // TODO: not working yet
 	}
@@ -107,8 +112,8 @@ func (b *backend) install(ctx context.Context, log *logrus.Entry, doc *api.OpenS
 					Region:                      doc.OpenShiftCluster.Location,
 					ResourceGroupName:           doc.OpenShiftCluster.Properties.ResourceGroup,
 					BaseDomainResourceGroupName: os.Getenv("RESOURCEGROUP"),
-					NetworkResourceGroupName:    r.ResourceGroup,
-					VirtualNetwork:              r.ResourceName,
+					NetworkResourceGroupName:    vnetr.ResourceGroup,
+					VirtualNetwork:              vnetr.ResourceName,
 					ControlPlaneSubnet:          masterSubnetName,
 					ComputeSubnet:               workerSubnetName,
 				},
@@ -123,5 +128,5 @@ func (b *backend) install(ctx context.Context, log *logrus.Entry, doc *api.OpenS
 		return err
 	}
 
-	return install.NewInstaller(log, b.db, b.domain, b.authorizer, doc.SubscriptionID).Install(ctx, doc, installConfig, platformCreds)
+	return install.NewInstaller(log, b.db, b.domain, b.authorizer, r.SubscriptionID).Install(ctx, doc, installConfig, platformCreds)
 }

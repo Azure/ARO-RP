@@ -8,6 +8,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 
 	"github.com/jim-minter/rp/pkg/api"
@@ -15,15 +16,20 @@ import (
 )
 
 func (b *backend) delete(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument) error {
-	recordsets := dns.NewRecordSetsClient(doc.SubscriptionID)
+	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
+	if err != nil {
+		return err
+	}
+
+	recordsets := dns.NewRecordSetsClient(r.SubscriptionID)
 	recordsets.Authorizer = b.authorizer
 
-	groups := resources.NewGroupsClient(doc.SubscriptionID)
+	groups := resources.NewGroupsClient(r.SubscriptionID)
 	groups.Authorizer = b.authorizer
 	groups.Client.PollingDuration = time.Hour
 
 	log.Printf("deleting dns")
-	_, err := recordsets.Delete(ctx, os.Getenv("RESOURCEGROUP"), b.domain, "api."+doc.OpenShiftCluster.Name, dns.CNAME, "")
+	_, err = recordsets.Delete(ctx, os.Getenv("RESOURCEGROUP"), b.domain, "api."+doc.OpenShiftCluster.Name, dns.CNAME, "")
 	if err != nil {
 		return err
 	}

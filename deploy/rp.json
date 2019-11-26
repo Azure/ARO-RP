@@ -112,7 +112,7 @@
                     "id": "OpenShiftClusterDocuments",
                     "partitionKey": {
                         "paths": [
-                            "/subscriptionId"
+                            "/partitionKey"
                         ],
                         "kind": "Hash"
                     },

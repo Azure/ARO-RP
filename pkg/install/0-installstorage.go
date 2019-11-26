@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest/azure"
+
 	"github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
 	"github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
@@ -37,6 +39,11 @@ var apiVersions = map[string]string{
 }
 
 func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftClusterDocument, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds) error {
+	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
+	if err != nil {
+		return err
+	}
+
 	image := &releaseimage.Image{
 		// https://openshift-release.svc.ci.openshift.org/
 		// oc adm release info quay.io/openshift-release-dev/ocp-release-nightly:4.3.0-0.nightly-2019-11-19-122017
@@ -72,7 +79,7 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 	rhcosImage := g[reflect.TypeOf(new(rhcos.Image))].(*rhcos.Image)
 
 	i.log.Print("creating resource group")
-	_, err := i.groups.CreateOrUpdate(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, resources.Group{
+	_, err = i.groups.CreateOrUpdate(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, resources.Group{
 		Location: &installConfig.Config.Azure.Region,
 	})
 	if err != nil {
@@ -248,8 +255,8 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 	}
 
 	for subnetID, nsgID := range map[string]string{
-		doc.OpenShiftCluster.Properties.MasterProfile.SubnetID:     "/subscriptions/" + doc.SubscriptionID + "/resourceGroups/" + doc.OpenShiftCluster.Properties.ResourceGroup + "/providers/Microsoft.Network/networkSecurityGroups/" + clusterID.InfraID + "-controlplane-nsg",
-		doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID: "/subscriptions/" + doc.SubscriptionID + "/resourceGroups/" + doc.OpenShiftCluster.Properties.ResourceGroup + "/providers/Microsoft.Network/networkSecurityGroups/" + clusterID.InfraID + "-node-nsg",
+		doc.OpenShiftCluster.Properties.MasterProfile.SubnetID:     "/subscriptions/" + r.SubscriptionID + "/resourceGroups/" + doc.OpenShiftCluster.Properties.ResourceGroup + "/providers/Microsoft.Network/networkSecurityGroups/" + clusterID.InfraID + "-controlplane-nsg",
+		doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID: "/subscriptions/" + r.SubscriptionID + "/resourceGroups/" + doc.OpenShiftCluster.Properties.ResourceGroup + "/providers/Microsoft.Network/networkSecurityGroups/" + clusterID.InfraID + "-node-nsg",
 	} {
 		i.log.Printf("attaching network security group to subnet %s", subnetID)
 
@@ -279,9 +286,9 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 			return err
 		}
 
-		_, err = i.roleassignments.Create(ctx, "/subscriptions/"+doc.SubscriptionID+"/resourceGroups/"+installConfig.Config.Azure.NetworkResourceGroupName+"/providers/Microsoft.Network/virtualNetworks/"+installConfig.Config.Azure.VirtualNetwork, uuid.NewV4().String(), authorization.RoleAssignmentCreateParameters{
+		_, err = i.roleassignments.Create(ctx, "/subscriptions/"+r.SubscriptionID+"/resourceGroups/"+installConfig.Config.Azure.NetworkResourceGroupName+"/providers/Microsoft.Network/virtualNetworks/"+installConfig.Config.Azure.VirtualNetwork, uuid.NewV4().String(), authorization.RoleAssignmentCreateParameters{
 			Properties: &authorization.RoleAssignmentProperties{
-				RoleDefinitionID: to.StringPtr("/subscriptions/" + doc.SubscriptionID + "/providers/Microsoft.Authorization/roleDefinitions/8e3af657-a8ff-443c-a75c-2fe8c4bcb635"), // Owner
+				RoleDefinitionID: to.StringPtr("/subscriptions/" + r.SubscriptionID + "/providers/Microsoft.Authorization/roleDefinitions/8e3af657-a8ff-443c-a75c-2fe8c4bcb635"), // Owner
 				PrincipalID:      to.StringPtr(identity.PrincipalID.String()),
 			},
 		})

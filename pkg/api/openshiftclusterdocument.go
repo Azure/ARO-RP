@@ -24,7 +24,7 @@ type OpenShiftClusterDocument struct {
 	ETag        string `json:"_etag,omitempty"`
 	Attachments string `json:"_attachments,omitempty"`
 
-	SubscriptionID string `json:"subscriptionId,omitempty"` // partition key
+	PartitionKey string `json:"partitionKey,omitempty"`
 
 	LeaseOwner   *uuid.UUID `json:"leaseOwner,omitempty"`
 	LeaseExpires int        `json:"leaseExpires,omitempty"`

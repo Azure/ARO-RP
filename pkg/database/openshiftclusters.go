@@ -74,12 +74,12 @@ func (c *openShiftClusters) Create(doc *api.OpenShiftClusterDocument) (*api.Open
 		return nil, err
 	}
 
-	doc.SubscriptionID = r.SubscriptionID
+	doc.PartitionKey = r.SubscriptionID
 	doc.OpenShiftCluster.ID = strings.ToLower(doc.OpenShiftCluster.ID)
 	doc.OpenShiftCluster.Name = strings.ToLower(doc.OpenShiftCluster.Name)
 	doc.OpenShiftCluster.Type = strings.ToLower(doc.OpenShiftCluster.Type)
 
-	doc, err = c.c.Create(doc.SubscriptionID, doc, nil)
+	doc, err = c.c.Create(doc.PartitionKey, doc, nil)
 
 	if err, ok := err.(*cosmosdb.Error); ok && err.StatusCode == http.StatusConflict {
 		err.StatusCode = http.StatusPreconditionFailed
@@ -151,7 +151,7 @@ func (c *openShiftClusters) update(doc *api.OpenShiftClusterDocument, options *c
 	doc.OpenShiftCluster.Name = strings.ToLower(doc.OpenShiftCluster.Name)
 	doc.OpenShiftCluster.Type = strings.ToLower(doc.OpenShiftCluster.Type)
 
-	return c.c.Replace(doc.SubscriptionID, doc, options)
+	return c.c.Replace(doc.PartitionKey, doc, options)
 }
 
 func (c *openShiftClusters) Delete(resourceID string) error {
@@ -161,7 +161,7 @@ func (c *openShiftClusters) Delete(resourceID string) error {
 			return
 		}
 
-		return c.c.Delete(doc.SubscriptionID, doc, nil)
+		return c.c.Delete(doc.PartitionKey, doc, nil)
 	})
 }
 
