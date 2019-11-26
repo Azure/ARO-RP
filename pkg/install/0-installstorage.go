@@ -205,7 +205,7 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 	}
 
 	{
-		blobService, err := i.getBlobService(ctx, doc)
+		blobService, err := i.getBlobService(ctx, doc.OpenShiftCluster)
 		if err != nil {
 			return err
 		}

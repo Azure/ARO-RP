@@ -118,13 +118,13 @@ func (i *Installer) Install(ctx context.Context, doc *api.OpenShiftClusterDocume
 	}
 }
 
-func (i *Installer) getBlobService(ctx context.Context, doc *api.OpenShiftClusterDocument) (azstorage.BlobStorageClient, error) {
-	keys, err := i.accounts.ListKeys(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, "cluster"+doc.OpenShiftCluster.Properties.StorageSuffix, "")
+func (i *Installer) getBlobService(ctx context.Context, oc *api.OpenShiftCluster) (azstorage.BlobStorageClient, error) {
+	keys, err := i.accounts.ListKeys(ctx, oc.Properties.ResourceGroup, "cluster"+oc.Properties.StorageSuffix, "")
 	if err != nil {
 		return azstorage.BlobStorageClient{}, err
 	}
 
-	storage, err := azstorage.NewClient("cluster"+doc.OpenShiftCluster.Properties.StorageSuffix, *(*keys.Keys)[0].Value, azstorage.DefaultBaseURL, azstorage.DefaultAPIVersion, true)
+	storage, err := azstorage.NewClient("cluster"+oc.Properties.StorageSuffix, *(*keys.Keys)[0].Value, azstorage.DefaultBaseURL, azstorage.DefaultAPIVersion, true)
 	if err != nil {
 		return azstorage.BlobStorageClient{}, err
 	}
@@ -132,10 +132,10 @@ func (i *Installer) getBlobService(ctx context.Context, doc *api.OpenShiftCluste
 	return storage.GetBlobService(), nil
 }
 
-func (i *Installer) getGraph(ctx context.Context, doc *api.OpenShiftClusterDocument) (graph, error) {
+func (i *Installer) getGraph(ctx context.Context, oc *api.OpenShiftCluster) (graph, error) {
 	i.log.Print("retrieving graph")
 
-	blobService, err := i.getBlobService(ctx, doc)
+	blobService, err := i.getBlobService(ctx, oc)
 	if err != nil {
 		return nil, err
 	}

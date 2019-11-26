@@ -16,7 +16,7 @@ import (
 )
 
 func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
-	g, err := i.getGraph(ctx, doc)
+	g, err := i.getGraph(ctx, doc.OpenShiftCluster)
 	if err != nil {
 		return err
 	}
