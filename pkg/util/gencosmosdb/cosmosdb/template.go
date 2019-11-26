@@ -2,6 +2,7 @@ package cosmosdb
 
 import (
 	"net/http"
+	"strings"
 
 	pkg "github.com/jim-minter/go-cosmosdb/pkg/gencosmosdb/cosmosdb/dummy"
 )
@@ -73,9 +74,17 @@ func (c *templateClient) all(i TemplateIterator) (*pkg.Templates, error) {
 func (c *templateClient) Create(partitionkey string, newtemplate *pkg.Template, options *Options) (template *pkg.Template, err error) {
 	headers := http.Header{}
 	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
-	if options != nil {
-		setOptions(options, headers)
+
+	if options == nil {
+		options = &Options{}
 	}
+	options.NoETag = true
+
+	err = c.setOptions(options, newtemplate, headers)
+	if err != nil {
+		return
+	}
+
 	err = c.do(http.MethodPost, c.path+"/docs", "docs", c.path, http.StatusCreated, &newtemplate, &template, headers)
 	return
 }
@@ -96,30 +105,29 @@ func (c *templateClient) Get(partitionkey, templateid string) (template *pkg.Tem
 }
 
 func (c *templateClient) Replace(partitionkey string, newtemplate *pkg.Template, options *Options) (template *pkg.Template, err error) {
-	if newtemplate.ETag == "" {
-		return nil, ErrETagRequired
-	}
 	headers := http.Header{}
-	headers.Set("If-Match", newtemplate.ETag)
 	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
-	if options != nil {
-		setOptions(options, headers)
+
+	err = c.setOptions(options, template, headers)
+	if err != nil {
+		return
 	}
+
 	err = c.do(http.MethodPut, c.path+"/docs/"+newtemplate.ID, "docs", c.path+"/docs/"+newtemplate.ID, http.StatusOK, &newtemplate, &template, headers)
 	return
 }
 
-func (c *templateClient) Delete(partitionkey string, template *pkg.Template, options *Options) error {
-	if template.ETag == "" {
-		return ErrETagRequired
-	}
+func (c *templateClient) Delete(partitionkey string, template *pkg.Template, options *Options) (err error) {
 	headers := http.Header{}
-	headers.Set("If-Match", template.ETag)
 	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
-	if options != nil {
-		setOptions(options, headers)
+
+	err = c.setOptions(options, template, headers)
+	if err != nil {
+		return
 	}
-	return c.do(http.MethodDelete, c.path+"/docs/"+template.ID, "docs", c.path+"/docs/"+template.ID, http.StatusNoContent, nil, nil, headers)
+
+	err = c.do(http.MethodDelete, c.path+"/docs/"+template.ID, "docs", c.path+"/docs/"+template.ID, http.StatusNoContent, nil, nil, headers)
+	return
 }
 
 func (c *templateClient) Query(partitionkey string, query *Query) TemplateIterator {
@@ -128,6 +136,27 @@ func (c *templateClient) Query(partitionkey string, query *Query) TemplateIterat
 
 func (c *templateClient) QueryAll(partitionkey string, query *Query) (*pkg.Templates, error) {
 	return c.all(c.Query(partitionkey, query))
+}
+
+func (c *templateClient) setOptions(options *Options, template *pkg.Template, headers http.Header) error {
+	if options == nil {
+		return nil
+	}
+
+	if !options.NoETag {
+		if template.ETag == "" {
+			return ErrETagRequired
+		}
+		headers.Set("If-Match", template.ETag)
+	}
+	if len(options.PreTriggers) > 0 {
+		headers.Set("X-Ms-Documentdb-Pre-Trigger-Include", strings.Join(options.PreTriggers, ","))
+	}
+	if len(options.PostTriggers) > 0 {
+		headers.Set("X-Ms-Documentdb-Post-Trigger-Include", strings.Join(options.PostTriggers, ","))
+	}
+
+	return nil
 }
 
 func (i *templateListIterator) Next() (templates *pkg.Templates, err error) {
