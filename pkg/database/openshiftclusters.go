@@ -25,7 +25,7 @@ type OpenShiftClusters interface {
 	Get(string) (*api.OpenShiftClusterDocument, error)
 	Patch(string, func(*api.OpenShiftClusterDocument) error) (*api.OpenShiftClusterDocument, error)
 	Update(*api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error)
-	Delete(string) error
+	Delete(*api.OpenShiftClusterDocument) error
 	ListByPrefix(string, string) cosmosdb.OpenShiftClusterDocumentIterator
 	Dequeue() (*api.OpenShiftClusterDocument, error)
 	Lease(string) (*api.OpenShiftClusterDocument, error)
@@ -154,15 +154,8 @@ func (c *openShiftClusters) update(doc *api.OpenShiftClusterDocument, options *c
 	return c.c.Replace(doc.PartitionKey, doc, options)
 }
 
-func (c *openShiftClusters) Delete(resourceID string) error {
-	return cosmosdb.RetryOnPreconditionFailed(func() (err error) {
-		doc, err := c.Get(resourceID)
-		if err != nil {
-			return
-		}
-
-		return c.c.Delete(doc.PartitionKey, doc, nil)
-	})
+func (c *openShiftClusters) Delete(doc *api.OpenShiftClusterDocument) error {
+	return c.c.Delete(doc.PartitionKey, doc, &cosmosdb.Options{NoETag: true})
 }
 
 func (c *openShiftClusters) ListByPrefix(subscriptionID, prefix string) cosmosdb.OpenShiftClusterDocumentIterator {

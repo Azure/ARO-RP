@@ -151,7 +151,7 @@ func (b *backend) handle(ctx context.Context, log *logrus.Entry, doc *api.OpenSh
 		return b.setTerminalState(doc, api.ProvisioningStateSucceeded)
 
 	case api.ProvisioningStateDeleting:
-		return b.db.Delete(doc.OpenShiftCluster.ID)
+		return b.db.Delete(doc)
 
 	default:
 		return fmt.Errorf("unexpected state %q", doc.OpenShiftCluster.Properties.ProvisioningState)
