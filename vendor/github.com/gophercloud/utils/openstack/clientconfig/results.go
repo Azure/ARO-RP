@@ -23,6 +23,12 @@ type Cloud struct {
 	RegionName string        `yaml:"region_name" json:"region_name"`
 	Regions    []interface{} `yaml:"regions" json:"regions"`
 
+	// EndpointType and Interface both specify whether to use the public, internal,
+	// or admin interface of a service. They should be considered synonymous, but
+	// EndpointType will take precedence when both are specified.
+	EndpointType string `yaml:"endpoint_type" json:"endpoint_type"`
+	Interface    string `yaml:"interface" json:"interface"`
+
 	// API Version overrides.
 	IdentityAPIVersion string `yaml:"identity_api_version" json:"identity_api_version"`
 	VolumeAPIVersion   string `yaml:"volume_api_version" json:"volume_api_version"`
