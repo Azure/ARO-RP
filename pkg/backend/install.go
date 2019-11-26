@@ -65,7 +65,7 @@ func (b *backend) install(ctx context.Context, log *logrus.Entry, oc *api.OpenSh
 				APIVersion: "v1",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: oc.Name,
+				Name: oc.Properties.DomainName,
 			},
 			SSHKey:     sshkey.Type() + " " + base64.StdEncoding.EncodeToString(sshkey.Marshal()),
 			BaseDomain: b.domain,

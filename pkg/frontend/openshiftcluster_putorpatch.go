@@ -138,6 +138,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 
 	if isCreate {
 		doc.OpenShiftCluster.Properties.ResourceGroup = doc.OpenShiftCluster.Name
+		doc.OpenShiftCluster.Properties.DomainName = uuid.NewV4().String()
 		doc.OpenShiftCluster.Properties.SSHKey, err = rsa.GenerateKey(rand.Reader, 2048)
 		if err != nil {
 			return nil, false, err

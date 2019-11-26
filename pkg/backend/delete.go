@@ -29,7 +29,7 @@ func (b *backend) delete(ctx context.Context, log *logrus.Entry, oc *api.OpenShi
 	groups.Client.PollingDuration = time.Hour
 
 	log.Printf("deleting dns")
-	_, err = recordsets.Delete(ctx, os.Getenv("RESOURCEGROUP"), b.domain, "api."+oc.Name, dns.CNAME, "")
+	_, err = recordsets.Delete(ctx, os.Getenv("RESOURCEGROUP"), b.domain, "api."+oc.Properties.DomainName, dns.CNAME, "")
 	if err != nil {
 		return err
 	}

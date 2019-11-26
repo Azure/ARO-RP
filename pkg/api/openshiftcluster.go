@@ -37,6 +37,7 @@ type Properties struct {
 	Installation *Installation `json:"installation,omitempty"`
 
 	ResourceGroup string `json:"resourceGroup,omitempty"`
+	DomainName    string `json:"domainName,omitempty"`
 	StorageSuffix string `json:"storageSuffix,omitempty"`
 
 	SSHKey            *rsa.PrivateKey `json:"sshKey,omitempty"`
