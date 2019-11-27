@@ -88,6 +88,14 @@
   revision = "6a2fe990e08303c82d966297ddb29a58678a4783"
 
 [[projects]]
+  digest = "1:03a1d1b3090ed320c6e3cd5b936729430e4e255ca06e32d0a50a3832d88fb1ac"
+  name = "github.com/alvaroloes/enumer"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "642f2c04365f76460301ce0ea10d0dbbdf0b0508"
+  version = "v1.1.2"
+
+[[projects]]
   digest = "1:aef9339f69dda1ca77fdb2fd83cf64c3f5087c1f00f69719eaa14679f5321512"
   name = "github.com/apparentlymart/go-cidr"
   packages = ["cidr"]
@@ -386,6 +394,17 @@
   pruneopts = "UT"
   revision = "1afb36080aec31e0d1528973ebe6721b191b0369"
   version = "v0.3.8"
+
+[[projects]]
+  branch = "master"
+  digest = "1:e35aaaa913b3844719fef679db37e18d1fb7d08612c8cd67742eac5109781259"
+  name = "github.com/jim-minter/go-cosmosdb"
+  packages = [
+    "cmd/gencosmosdb",
+    "pkg/gencosmosdb",
+  ]
+  pruneopts = "UT"
+  revision = "37b069ffb0f1725f26cbf3f2c6486b6a1c9a8514"
 
 [[projects]]
   digest = "1:bb81097a5b62634f3e9fec1014657855610c82d19b9a40c17612e32651e35dca"
@@ -710,6 +729,14 @@
   packages = ["pkg/apis/machineconfiguration.openshift.io/v1"]
   pruneopts = "UT"
   revision = "a6a863218ba135404217da637751df8a55336c7c"
+
+[[projects]]
+  digest = "1:c7d8ecc4e8f2843096c784e55a221446cb944b9e728fb42e9272a9ad2996c780"
+  name = "github.com/pascaldekloe/name"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "1a74cd989213e86be80d47f103f31ed7a8054850"
+  version = "v1.0.0"
 
 [[projects]]
   digest = "1:e5d0bd87abc2781d14e274807a470acd180f0499f8bf5bb18606e9ec22ad9de9"
@@ -1330,8 +1357,10 @@
     "github.com/Azure/go-autorest/autorest/azure",
     "github.com/Azure/go-autorest/autorest/azure/auth",
     "github.com/Azure/go-autorest/autorest/to",
+    "github.com/alvaroloes/enumer",
     "github.com/apparentlymart/go-cidr/cidr",
     "github.com/gorilla/mux",
+    "github.com/jim-minter/go-cosmosdb/cmd/gencosmosdb",
     "github.com/openshift/api/config/v1",
     "github.com/openshift/client-go/config/clientset/versioned",
     "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1",

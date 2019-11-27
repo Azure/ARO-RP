@@ -1,3 +1,5 @@
+required = ["github.com/jim-minter/go-cosmosdb/cmd/gencosmosdb", "github.com/alvaroloes/enumer"]
+
 [[override]]
   name = "github.com/Azure/azure-sdk-for-go"
   version = "36.2.0"
@@ -54,6 +56,14 @@
   name = "sigs.k8s.io/cluster-api-provider-azure"
   branch = "release-4.3"
   source = "https://github.com/openshift/cluster-api-provider-azure"
+
+[[constraint]]
+  name = "github.com/jim-minter/go-cosmosdb"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/alvaroloes/enumer"
+  version = "1.1.2"
 
 [prune]
   go-tests = true
