@@ -48,7 +48,7 @@ func (f *frontend) get(w http.ResponseWriter, r *http.Request, resourceID, typ s
 }
 
 func (f *frontend) _getOpenShiftCluster(r *request) ([]byte, error) {
-	doc, err := f.db.Get(r.resourceID)
+	doc, err := f.db.Get(api.Key(r.resourceID))
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", r.resourceType, r.resourceName, r.resourceGroupName)
@@ -56,9 +56,6 @@ func (f *frontend) _getOpenShiftCluster(r *request) ([]byte, error) {
 		return nil, err
 	}
 
-	doc.OpenShiftCluster.ID = r.resourceID
-	doc.OpenShiftCluster.Name = r.resourceName
-	doc.OpenShiftCluster.Type = r.resourceType
 	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 
 	return json.MarshalIndent(r.toExternal(doc.OpenShiftCluster), "", "  ")

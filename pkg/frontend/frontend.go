@@ -90,7 +90,7 @@ func (f *frontend) unauthenticatedRoutes(r *mux.Router) {
 
 func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	s := r.
-		Path("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}").
+		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}").
 		Queries("api-version", "").
 		Subrouter()
 
@@ -100,7 +100,7 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	s.Methods(http.MethodPut).HandlerFunc(f.putOrPatchOpenShiftCluster)
 
 	s = r.
-		Path("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}").
+		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}").
 		Queries("api-version", "").
 		Subrouter()
 
@@ -114,7 +114,7 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftClusters)
 
 	s = r.
-		Path("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/credentials").
+		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/credentials").
 		Queries("api-version", "").
 		Subrouter()
 
@@ -145,6 +145,6 @@ func (f *frontend) Run(stop <-chan struct{}) {
 	authenticated.Use(f.env.Authenticated)
 	f.authenticatedRoutes(authenticated)
 
-	err := http.Serve(f.l, r)
+	err := http.Serve(f.l, lowercase(r))
 	f.baseLog.Error(err)
 }

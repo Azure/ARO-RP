@@ -18,6 +18,7 @@ type contextKey int
 
 const (
 	contextKeyLog contextKey = iota
+	contextKeyOriginalPath
 )
 
 type statsResponseWriter struct {
@@ -91,6 +92,15 @@ func (f *frontend) middleware(h http.Handler) http.Handler {
 		if strings.EqualFold(r.Header.Get("X-Ms-Return-Client-Request-Id"), "true") {
 			w.Header().Set("X-Ms-Client-Request-Id", r.Header.Get("X-Ms-Client-Request-Id"))
 		}
+
+		h.ServeHTTP(w, r)
+	})
+}
+
+func lowercase(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r = r.WithContext(context.WithValue(r.Context(), contextKeyOriginalPath, r.URL.Path))
+		r.URL.Path = strings.ToLower(r.URL.Path)
 
 		h.ServeHTTP(w, r)
 	})

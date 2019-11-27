@@ -44,9 +44,13 @@ func (f *frontend) getOpenShiftClusters(w http.ResponseWriter, r *http.Request) 
 func (f *frontend) _getOpenShiftClusters(r *request) ([]byte, error) {
 	prefix := "/subscriptions/" + r.subscriptionID + "/"
 	if r.resourceGroupName != "" {
-		prefix += "resourceGroups/" + r.resourceGroupName + "/"
+		prefix += "resourcegroups/" + r.resourceGroupName + "/"
 	}
-	i := f.db.ListByPrefix(r.subscriptionID, prefix)
+
+	i, err := f.db.ListByPrefix(r.subscriptionID, api.Key(prefix))
+	if err != nil {
+		return nil, err
+	}
 
 	var rv struct {
 		Value []api.External `json:"value"`
@@ -62,7 +66,6 @@ func (f *frontend) _getOpenShiftClusters(r *request) ([]byte, error) {
 		}
 
 		for _, doc := range docs.OpenShiftClusterDocuments {
-			doc.OpenShiftCluster.Type = r.resourceType
 			doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 			rv.Value = append(rv.Value, r.toExternal(doc.OpenShiftCluster))
 		}

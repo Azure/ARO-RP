@@ -9,6 +9,8 @@ import (
 type OpenShiftCluster struct {
 	MissingFields
 
+	Key Key `json:"key,omitempty"`
+
 	ID         string            `json:"id,omitempty"`
 	Name       string            `json:"name,omitempty"`
 	Type       string            `json:"type,omitempty"`
@@ -16,6 +18,9 @@ type OpenShiftCluster struct {
 	Tags       map[string]string `json:"tags,omitempty"`
 	Properties Properties        `json:"properties,omitempty"`
 }
+
+// Key represents a database lookup key.  It is always lower case.
+type Key string
 
 // Properties represents an OpenShift cluster's properties
 type Properties struct {
@@ -36,6 +41,7 @@ type Properties struct {
 
 	Installation *Installation `json:"installation,omitempty"`
 
+	// TODO: ResourceGroup should be exposed in external API
 	ResourceGroup string `json:"resourceGroup,omitempty"`
 	DomainName    string `json:"domainName,omitempty"`
 	StorageSuffix string `json:"storageSuffix,omitempty"`

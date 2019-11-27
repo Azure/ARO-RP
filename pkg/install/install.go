@@ -97,7 +97,7 @@ func (i *Installer) Install(ctx context.Context, oc *api.OpenShiftCluster, insta
 				return err
 			}
 
-			_, err = i.db.Patch(oc.ID, func(doc *api.OpenShiftClusterDocument) error {
+			_, err = i.db.Patch(oc.Key, func(doc *api.OpenShiftClusterDocument) error {
 				doc.OpenShiftCluster.Properties.Installation = nil
 				return nil
 			})
@@ -107,7 +107,7 @@ func (i *Installer) Install(ctx context.Context, oc *api.OpenShiftCluster, insta
 			return fmt.Errorf("unrecognised phase %s", oc.Properties.Installation.Phase)
 		}
 
-		doc, err := i.db.Patch(oc.ID, func(doc *api.OpenShiftClusterDocument) error {
+		doc, err := i.db.Patch(oc.Key, func(doc *api.OpenShiftClusterDocument) error {
 			doc.OpenShiftCluster.Properties.Installation.Phase++
 			return nil
 		})

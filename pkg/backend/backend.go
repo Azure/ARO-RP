@@ -169,7 +169,7 @@ func (b *backend) heartbeat(log *logrus.Entry, doc *api.OpenShiftClusterDocument
 		defer t.Stop()
 
 		for {
-			_, err := b.db.Lease(doc.OpenShiftCluster.ID)
+			_, err := b.db.Lease(doc.OpenShiftCluster.Key)
 			if err != nil {
 				log.Error(err)
 				return
@@ -193,7 +193,7 @@ func (b *backend) heartbeat(log *logrus.Entry, doc *api.OpenShiftClusterDocument
 }
 
 func (b *backend) setTerminalState(doc *api.OpenShiftClusterDocument, state api.ProvisioningState) error {
-	_, err := b.db.Patch(doc.OpenShiftCluster.ID, func(doc *api.OpenShiftClusterDocument) error {
+	_, err := b.db.Patch(doc.OpenShiftCluster.Key, func(doc *api.OpenShiftClusterDocument) error {
 		doc.LeaseOwner = nil
 		doc.LeaseExpires = 0
 		doc.Dequeues = 0

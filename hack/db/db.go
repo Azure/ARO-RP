@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
@@ -37,7 +38,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	doc, err := db.Get(os.Args[1])
+	doc, err := db.Get(api.Key(strings.ToLower(os.Args[1])))
 	if err != nil {
 		return err
 	}

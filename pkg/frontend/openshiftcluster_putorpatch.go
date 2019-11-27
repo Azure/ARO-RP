@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"net/http"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/gorilla/mux"
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
@@ -70,7 +71,13 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 }
 
 func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error) {
-	doc, err := f.db.Get(r.resourceID)
+	originalPath := r.context.Value(contextKeyOriginalPath).(string)
+	originalR, err := azure.ParseResourceID(originalPath)
+	if err != nil {
+		return nil, false, err
+	}
+
+	doc, err := f.db.Get(api.Key(r.resourceID))
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil, false, err
 	}
@@ -84,9 +91,9 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 		}
 
 		external = r.toExternal(&api.OpenShiftCluster{
-			ID:   r.resourceID,
-			Name: r.resourceName,
-			Type: r.resourceType,
+			ID:   originalPath,
+			Name: originalR.ResourceName,
+			Type: originalR.ResourceType,
 			Properties: api.Properties{
 				ProvisioningState: api.ProvisioningStateUpdating,
 			},
@@ -101,9 +108,9 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 		switch r.method {
 		case http.MethodPut:
 			external = r.toExternal(&api.OpenShiftCluster{
-				ID:   r.resourceID,
-				Name: r.resourceName,
-				Type: r.resourceType,
+				ID:   doc.OpenShiftCluster.ID,
+				Name: doc.OpenShiftCluster.Name,
+				Type: doc.OpenShiftCluster.Type,
 				Properties: api.Properties{
 					ProvisioningState: doc.OpenShiftCluster.Properties.ProvisioningState,
 				},
@@ -125,18 +132,19 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 	}
 
 	if doc.OpenShiftCluster == nil {
-		doc.OpenShiftCluster = &api.OpenShiftCluster{
-			Properties: api.Properties{
-				Installation: &api.Installation{},
-			},
-		}
+		doc.OpenShiftCluster = &api.OpenShiftCluster{}
 	}
 
+	oldID, oldName, oldType := doc.OpenShiftCluster.ID, doc.OpenShiftCluster.Name, doc.OpenShiftCluster.Type
 	external.ToInternal(doc.OpenShiftCluster)
+	doc.OpenShiftCluster.ID, doc.OpenShiftCluster.Name, doc.OpenShiftCluster.Type = oldID, oldName, oldType
 
 	doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateUpdating
 
 	if isCreate {
+		doc.OpenShiftCluster.Key = api.Key(r.resourceID)
+		doc.OpenShiftCluster.Properties.Installation = &api.Installation{}
+		// TODO: ResourceGroup should be exposed in external API
 		doc.OpenShiftCluster.Properties.ResourceGroup = doc.OpenShiftCluster.Name
 		doc.OpenShiftCluster.Properties.DomainName = uuid.NewV4().String()
 		doc.OpenShiftCluster.Properties.SSHKey, err = rsa.GenerateKey(rand.Reader, 2048)
@@ -156,9 +164,6 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 		return nil, false, err
 	}
 
-	doc.OpenShiftCluster.ID = r.resourceID
-	doc.OpenShiftCluster.Name = r.resourceName
-	doc.OpenShiftCluster.Type = r.resourceType
 	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 
 	b, err := json.MarshalIndent(r.toExternal(doc.OpenShiftCluster), "", "  ")

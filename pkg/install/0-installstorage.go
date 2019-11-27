@@ -297,7 +297,7 @@ func (i *Installer) installStorage(ctx context.Context, oc *api.OpenShiftCluster
 		}
 	}
 
-	_, err = i.db.Patch(oc.ID, func(doc *api.OpenShiftClusterDocument) (err error) {
+	_, err = i.db.Patch(oc.Key, func(doc *api.OpenShiftClusterDocument) (err error) {
 		// used for the SAS token with which the bootstrap node retrieves its
 		// ignition payload
 		doc.OpenShiftCluster.Properties.Installation.Now = time.Now().UTC()
