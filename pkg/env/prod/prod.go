@@ -48,6 +48,7 @@ func (p *prod) ListenTLS(ctx context.Context) (net.Listener, error) {
 			},
 		},
 		ClientAuth: tls.RequestClientCert,
+		MinVersion: tls.VersionTLS12,
 	})
 }
 

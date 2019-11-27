@@ -45,6 +45,7 @@ func (d *dev) ListenTLS(ctx context.Context) (net.Listener, error) {
 				PrivateKey: key,
 			},
 		},
+		MinVersion: tls.VersionTLS12,
 	})
 }
 
