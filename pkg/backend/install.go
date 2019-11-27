@@ -128,5 +128,5 @@ func (b *backend) install(ctx context.Context, log *logrus.Entry, oc *api.OpenSh
 		return err
 	}
 
-	return install.NewInstaller(log, b.db, b.domain, b.authorizer, r.SubscriptionID).Install(ctx, oc, installConfig, platformCreds)
+	return install.NewInstaller(log, b.db.OpenShiftClusters, b.domain, b.authorizer, r.SubscriptionID).Install(ctx, oc, installConfig, platformCreds)
 }

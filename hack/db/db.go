@@ -33,12 +33,12 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	db, err := database.NewOpenShiftClusters(ctx, env, uuid.NewV4(), "OpenShiftClusters", "OpenShiftClusterDocuments")
+	db, err := database.NewDatabase(ctx, env, uuid.NewV4(), "OpenShiftClusters")
 	if err != nil {
 		return err
 	}
 
-	doc, err := db.Get(api.Key(strings.ToLower(os.Args[1])))
+	doc, err := db.OpenShiftClusters.Get(api.Key(strings.ToLower(os.Args[1])))
 	if err != nil {
 		return err
 	}

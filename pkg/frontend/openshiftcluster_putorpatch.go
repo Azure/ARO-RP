@@ -77,7 +77,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 		return nil, false, err
 	}
 
-	doc, err := f.db.Get(api.Key(r.resourceID))
+	doc, err := f.db.OpenShiftClusters.Get(api.Key(r.resourceID))
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil, false, err
 	}
@@ -156,9 +156,9 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 			return nil, false, err
 		}
 
-		doc, err = f.db.Create(doc)
+		doc, err = f.db.OpenShiftClusters.Create(doc)
 	} else {
-		doc, err = f.db.Update(doc)
+		doc, err = f.db.OpenShiftClusters.Update(doc)
 	}
 	if err != nil {
 		return nil, false, err

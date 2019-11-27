@@ -23,7 +23,7 @@ func (f *frontend) deleteOpenShiftCluster(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	_, err := f.db.Patch(api.Key(r.URL.Path), func(doc *api.OpenShiftClusterDocument) error {
+	_, err := f.db.OpenShiftClusters.Patch(api.Key(r.URL.Path), func(doc *api.OpenShiftClusterDocument) error {
 		return f._deleteOpenShiftCluster(&request{
 			resourceID: r.URL.Path,
 		}, doc)

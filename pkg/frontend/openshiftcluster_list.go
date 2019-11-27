@@ -47,7 +47,7 @@ func (f *frontend) _getOpenShiftClusters(r *request) ([]byte, error) {
 		prefix += "resourcegroups/" + r.resourceGroupName + "/"
 	}
 
-	i, err := f.db.ListByPrefix(r.subscriptionID, api.Key(prefix))
+	i, err := f.db.OpenShiftClusters.ListByPrefix(r.subscriptionID, api.Key(prefix))
 	if err != nil {
 		return nil, err
 	}

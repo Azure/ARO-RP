@@ -22,7 +22,7 @@ const (
 
 type backend struct {
 	baseLog    *logrus.Entry
-	db         database.OpenShiftClusters
+	db         *database.Database
 	authorizer autorest.Authorizer
 
 	mu       sync.Mutex
@@ -39,7 +39,7 @@ type Runnable interface {
 }
 
 // NewBackend returns a new runnable backend
-func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, db database.OpenShiftClusters) (Runnable, error) {
+func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, db *database.Database) (Runnable, error) {
 	var err error
 
 	b := &backend{
@@ -85,7 +85,7 @@ func (b *backend) Run(stop <-chan struct{}) {
 			break
 		}
 
-		doc, err := b.db.Dequeue()
+		doc, err := b.db.OpenShiftClusters.Dequeue()
 		if err != nil || doc == nil {
 			if err != nil {
 				b.baseLog.Error(err)
@@ -151,7 +151,7 @@ func (b *backend) handle(ctx context.Context, log *logrus.Entry, doc *api.OpenSh
 		return b.setTerminalState(doc, api.ProvisioningStateSucceeded)
 
 	case api.ProvisioningStateDeleting:
-		return b.db.Delete(doc)
+		return b.db.OpenShiftClusters.Delete(doc)
 
 	default:
 		return fmt.Errorf("unexpected state %q", doc.OpenShiftCluster.Properties.ProvisioningState)
@@ -169,7 +169,7 @@ func (b *backend) heartbeat(log *logrus.Entry, doc *api.OpenShiftClusterDocument
 		defer t.Stop()
 
 		for {
-			_, err := b.db.Lease(doc.OpenShiftCluster.Key)
+			_, err := b.db.OpenShiftClusters.Lease(doc.OpenShiftCluster.Key)
 			if err != nil {
 				log.Error(err)
 				return
@@ -193,7 +193,7 @@ func (b *backend) heartbeat(log *logrus.Entry, doc *api.OpenShiftClusterDocument
 }
 
 func (b *backend) setTerminalState(doc *api.OpenShiftClusterDocument, state api.ProvisioningState) error {
-	_, err := b.db.Patch(doc.OpenShiftCluster.Key, func(doc *api.OpenShiftClusterDocument) error {
+	_, err := b.db.OpenShiftClusters.Patch(doc.OpenShiftCluster.Key, func(doc *api.OpenShiftClusterDocument) error {
 		doc.LeaseOwner = nil
 		doc.LeaseExpires = 0
 		doc.Dequeues = 0

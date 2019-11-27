@@ -45,7 +45,7 @@ type frontend struct {
 	baseLog *logrus.Entry
 	env     env.Interface
 
-	db database.OpenShiftClusters
+	db *database.Database
 
 	l net.Listener
 
@@ -58,7 +58,7 @@ type Runnable interface {
 }
 
 // NewFrontend returns a new runnable frontend
-func NewFrontend(ctx context.Context, baseLog *logrus.Entry, env env.Interface, db database.OpenShiftClusters) (Runnable, error) {
+func NewFrontend(ctx context.Context, baseLog *logrus.Entry, env env.Interface, db *database.Database) (Runnable, error) {
 	f := &frontend{
 		baseLog: baseLog,
 		env:     env,
