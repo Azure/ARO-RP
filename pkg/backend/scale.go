@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest/to"
 	machinev1beta1 "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
 	clusterapiclient "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset"
 	"github.com/sirupsen/logrus"
@@ -46,7 +47,7 @@ func (b *backend) scale(ctx context.Context, log *logrus.Entry, oc *api.OpenShif
 	have := 0
 	for _, m := range l.Items {
 		if m.Spec.Replicas == nil {
-			m.Spec.Replicas = &[]int32{1}[0]
+			m.Spec.Replicas = to.Int32Ptr(1)
 		}
 		have += int(*m.Spec.Replicas)
 	}
@@ -73,7 +74,7 @@ func (b *backend) scale(ctx context.Context, log *logrus.Entry, oc *api.OpenShif
 			}
 
 			log.Printf("scaling machineset %s to %d replicas", m.Name, want)
-			m.Spec.Replicas = &[]int32{want}[0]
+			m.Spec.Replicas = to.Int32Ptr(want)
 			_, err = cli.MachineV1beta1().MachineSets(m.Namespace).Update(m)
 			return err
 		})
