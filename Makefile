@@ -12,6 +12,10 @@ image:
 	imagebuilder -f Dockerfile -t rp:latest .
 
 test: generate
+	go vet ./...
+	./hack/verify/validate-code-format.sh
+	./hack/verify/validate-util.sh
+	go run ./hack/validate-imports/validate-imports.go cmd hack pkg
 	go test ./...
 
 .PHONY: clean generate image rp test
