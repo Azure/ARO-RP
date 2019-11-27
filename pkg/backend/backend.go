@@ -11,6 +11,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/jim-minter/rp/pkg/api"
+	"github.com/jim-minter/rp/pkg/backend/openshiftcluster"
 	"github.com/jim-minter/rp/pkg/database"
 	"github.com/jim-minter/rp/pkg/env"
 )
@@ -129,14 +130,19 @@ func (b *backend) handle(ctx context.Context, log *logrus.Entry, doc *api.OpenSh
 	stop := b.heartbeat(log, doc)
 	defer stop()
 
-	var err error
+	m, err := openshiftcluster.NewManager(log, b.db.OpenShiftClusters, b.authorizer, doc.OpenShiftCluster, b.domain)
+	if err != nil {
+		log.Error(err)
+		return b.setTerminalState(doc, api.ProvisioningStateFailed)
+	}
+
 	switch doc.OpenShiftCluster.Properties.ProvisioningState {
 	case api.ProvisioningStateUpdating:
 		log.Print("updating")
-		err = b.update(ctx, log, doc.OpenShiftCluster)
+		err = m.Update(ctx)
 	case api.ProvisioningStateDeleting:
 		log.Print("deleting")
-		err = b.delete(ctx, log, doc.OpenShiftCluster)
+		err = m.Delete(ctx)
 	}
 
 	stop()
