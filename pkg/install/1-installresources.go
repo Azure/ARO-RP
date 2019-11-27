@@ -521,7 +521,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 						Identity: &compute.VirtualMachineIdentity{
 							Type: compute.ResourceIdentityTypeUserAssigned,
 							UserAssignedIdentities: map[string]*compute.VirtualMachineIdentityUserAssignedIdentitiesValue{
-								"[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', '" + doc.OpenShiftCluster.Properties.InfraID + "-identity')]": &compute.VirtualMachineIdentityUserAssignedIdentitiesValue{},
+								"[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', '" + doc.OpenShiftCluster.Properties.InfraID + "-identity')]": {},
 							},
 						},
 						Name:     to.StringPtr(doc.OpenShiftCluster.Properties.InfraID + "-bootstrap"),
@@ -581,7 +581,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 						Identity: &compute.VirtualMachineIdentity{
 							Type: compute.ResourceIdentityTypeUserAssigned,
 							UserAssignedIdentities: map[string]*compute.VirtualMachineIdentityUserAssignedIdentitiesValue{
-								"[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', '" + doc.OpenShiftCluster.Properties.InfraID + "-identity')]": &compute.VirtualMachineIdentityUserAssignedIdentitiesValue{},
+								"[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', '" + doc.OpenShiftCluster.Properties.InfraID + "-identity')]": {},
 							},
 						},
 						Zones: &[]string{
