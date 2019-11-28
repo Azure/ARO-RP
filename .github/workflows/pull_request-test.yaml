@@ -22,9 +22,6 @@ jobs:
       run: |
         set -x
 
-        go get github.com/alvaroloes/enumer
-        go get github.com/jim-minter/go-cosmosdb/cmd/gencosmosdb
-
         go generate ./...
         go build ./...
         go test ./...
