@@ -4,6 +4,7 @@ package cosmosdb
 
 import (
 	"net/http"
+	"strings"
 
 	pkg "github.com/jim-minter/rp/pkg/api"
 )
@@ -75,9 +76,17 @@ func (c *openShiftClusterDocumentClient) all(i OpenShiftClusterDocumentIterator)
 func (c *openShiftClusterDocumentClient) Create(partitionkey string, newopenShiftClusterDocument *pkg.OpenShiftClusterDocument, options *Options) (openShiftClusterDocument *pkg.OpenShiftClusterDocument, err error) {
 	headers := http.Header{}
 	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
-	if options != nil {
-		setOptions(options, headers)
+
+	if options == nil {
+		options = &Options{}
 	}
+	options.NoETag = true
+
+	err = c.setOptions(options, newopenShiftClusterDocument, headers)
+	if err != nil {
+		return
+	}
+
 	err = c.do(http.MethodPost, c.path+"/docs", "docs", c.path, http.StatusCreated, &newopenShiftClusterDocument, &openShiftClusterDocument, headers)
 	return
 }
@@ -98,30 +107,29 @@ func (c *openShiftClusterDocumentClient) Get(partitionkey, openShiftClusterDocum
 }
 
 func (c *openShiftClusterDocumentClient) Replace(partitionkey string, newopenShiftClusterDocument *pkg.OpenShiftClusterDocument, options *Options) (openShiftClusterDocument *pkg.OpenShiftClusterDocument, err error) {
-	if newopenShiftClusterDocument.ETag == "" {
-		return nil, ErrETagRequired
-	}
 	headers := http.Header{}
-	headers.Set("If-Match", newopenShiftClusterDocument.ETag)
 	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
-	if options != nil {
-		setOptions(options, headers)
+
+	err = c.setOptions(options, openShiftClusterDocument, headers)
+	if err != nil {
+		return
 	}
+
 	err = c.do(http.MethodPut, c.path+"/docs/"+newopenShiftClusterDocument.ID, "docs", c.path+"/docs/"+newopenShiftClusterDocument.ID, http.StatusOK, &newopenShiftClusterDocument, &openShiftClusterDocument, headers)
 	return
 }
 
-func (c *openShiftClusterDocumentClient) Delete(partitionkey string, openShiftClusterDocument *pkg.OpenShiftClusterDocument, options *Options) error {
-	if openShiftClusterDocument.ETag == "" {
-		return ErrETagRequired
-	}
+func (c *openShiftClusterDocumentClient) Delete(partitionkey string, openShiftClusterDocument *pkg.OpenShiftClusterDocument, options *Options) (err error) {
 	headers := http.Header{}
-	headers.Set("If-Match", openShiftClusterDocument.ETag)
 	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
-	if options != nil {
-		setOptions(options, headers)
+
+	err = c.setOptions(options, openShiftClusterDocument, headers)
+	if err != nil {
+		return
 	}
-	return c.do(http.MethodDelete, c.path+"/docs/"+openShiftClusterDocument.ID, "docs", c.path+"/docs/"+openShiftClusterDocument.ID, http.StatusNoContent, nil, nil, headers)
+
+	err = c.do(http.MethodDelete, c.path+"/docs/"+openShiftClusterDocument.ID, "docs", c.path+"/docs/"+openShiftClusterDocument.ID, http.StatusNoContent, nil, nil, headers)
+	return
 }
 
 func (c *openShiftClusterDocumentClient) Query(partitionkey string, query *Query) OpenShiftClusterDocumentIterator {
@@ -130,6 +138,27 @@ func (c *openShiftClusterDocumentClient) Query(partitionkey string, query *Query
 
 func (c *openShiftClusterDocumentClient) QueryAll(partitionkey string, query *Query) (*pkg.OpenShiftClusterDocuments, error) {
 	return c.all(c.Query(partitionkey, query))
+}
+
+func (c *openShiftClusterDocumentClient) setOptions(options *Options, openShiftClusterDocument *pkg.OpenShiftClusterDocument, headers http.Header) error {
+	if options == nil {
+		return nil
+	}
+
+	if !options.NoETag {
+		if openShiftClusterDocument.ETag == "" {
+			return ErrETagRequired
+		}
+		headers.Set("If-Match", openShiftClusterDocument.ETag)
+	}
+	if len(options.PreTriggers) > 0 {
+		headers.Set("X-Ms-Documentdb-Pre-Trigger-Include", strings.Join(options.PreTriggers, ","))
+	}
+	if len(options.PostTriggers) > 0 {
+		headers.Set("X-Ms-Documentdb-Post-Trigger-Include", strings.Join(options.PostTriggers, ","))
+	}
+
+	return nil
 }
 
 func (i *openShiftClusterDocumentListIterator) Next() (openShiftClusterDocuments *pkg.OpenShiftClusterDocuments, err error) {
