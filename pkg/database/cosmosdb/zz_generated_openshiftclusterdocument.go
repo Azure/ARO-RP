@@ -110,7 +110,7 @@ func (c *openShiftClusterDocumentClient) Replace(partitionkey string, newopenShi
 	headers := http.Header{}
 	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
 
-	err = c.setOptions(options, openShiftClusterDocument, headers)
+	err = c.setOptions(options, newopenShiftClusterDocument, headers)
 	if err != nil {
 		return
 	}
