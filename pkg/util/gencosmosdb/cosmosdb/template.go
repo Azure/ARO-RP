@@ -108,7 +108,7 @@ func (c *templateClient) Replace(partitionkey string, newtemplate *pkg.Template,
 	headers := http.Header{}
 	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
 
-	err = c.setOptions(options, template, headers)
+	err = c.setOptions(options, newtemplate, headers)
 	if err != nil {
 		return
 	}
