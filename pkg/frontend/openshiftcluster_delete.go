@@ -47,7 +47,7 @@ func (f *frontend) _deleteOpenShiftCluster(r *request, doc *api.OpenShiftCluster
 		return &noContent{}
 	}
 
-	err := validateProvisioningState(doc.OpenShiftCluster.Properties.ProvisioningState, api.ProvisioningStateSucceeded, api.ProvisioningStateFailed)
+	err := validateTerminalProvisioningState(doc.OpenShiftCluster.Properties.ProvisioningState)
 	if err != nil {
 		return err
 	}

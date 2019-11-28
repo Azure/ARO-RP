@@ -125,11 +125,23 @@ func (ocb *openShiftClusterBackend) heartbeat(log *logrus.Entry, oc *api.OpenShi
 }
 
 func (ocb *openShiftClusterBackend) setTerminalState(oc *api.OpenShiftCluster, state api.ProvisioningState) error {
+	var failedOperation api.FailedOperation
+	switch {
+	case state == api.ProvisioningStateFailed && oc.Properties.Installation != nil:
+		failedOperation = api.FailedOperationInstall
+	case state == api.ProvisioningStateFailed && oc.Properties.Installation == nil:
+		failedOperation = api.FailedOperationUpdate
+	default:
+		failedOperation = api.FailedOperationNone
+	}
+
 	_, err := ocb.db.OpenShiftClusters.Patch(oc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.Properties.ProvisioningState = state
+		doc.OpenShiftCluster.Properties.FailedOperation = failedOperation
+
 		doc.LeaseOwner = nil
 		doc.LeaseExpires = 0
 		doc.Dequeues = 0
-		doc.OpenShiftCluster.Properties.ProvisioningState = state
 		return nil
 	})
 	return err

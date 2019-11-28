@@ -31,11 +31,10 @@ type request struct {
 	toExternal        func(*api.OpenShiftCluster) api.External
 }
 
-func validateProvisioningState(state api.ProvisioningState, allowedStates ...api.ProvisioningState) error {
-	for _, allowedState := range allowedStates {
-		if state == allowedState {
-			return nil
-		}
+func validateTerminalProvisioningState(state api.ProvisioningState) error {
+	switch state {
+	case api.ProvisioningStateSucceeded, api.ProvisioningStateFailed:
+		return nil
 	}
 
 	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed in provisioningState '%s'.", state)

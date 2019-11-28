@@ -100,9 +100,14 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 		})
 
 	} else {
-		err = validateProvisioningState(doc.OpenShiftCluster.Properties.ProvisioningState, api.ProvisioningStateSucceeded)
+		err = validateTerminalProvisioningState(doc.OpenShiftCluster.Properties.ProvisioningState)
 		if err != nil {
 			return nil, false, err
+		}
+
+		if doc.OpenShiftCluster.Properties.ProvisioningState == api.ProvisioningStateFailed &&
+			doc.OpenShiftCluster.Properties.FailedOperation == api.FailedOperationInstall {
+			return nil, false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed on cluster whose installation failed. Delete the cluster.")
 		}
 
 		switch r.method {

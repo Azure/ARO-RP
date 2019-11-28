@@ -27,6 +27,7 @@ type Properties struct {
 	MissingFields
 
 	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"`
+	FailedOperation   FailedOperation   `json:"failedOperation,omitempty"`
 
 	ServicePrincipalProfile ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
 
@@ -60,6 +61,16 @@ const (
 	ProvisioningStateDeleting  ProvisioningState = "Deleting"
 	ProvisioningStateSucceeded ProvisioningState = "Succeeded"
 	ProvisioningStateFailed    ProvisioningState = "Failed"
+)
+
+// FailedOperation represents a failed operation
+type FailedOperation string
+
+// FailedOperation constants
+const (
+	FailedOperationNone    FailedOperation = ""
+	FailedOperationInstall FailedOperation = "Install"
+	FailedOperationUpdate  FailedOperation = "Update"
 )
 
 // ServicePrincipalProfile represents a service principal profile.
