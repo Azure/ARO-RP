@@ -128,6 +128,35 @@
                 },
                 "options": {}
             }
+        },
+        {
+            "name": "[concat(parameters('databaseAccountName'), '/sql/OpenShiftClusters/SubscriptionDocuments')]",
+            "type": "Microsoft.DocumentDB/databaseAccounts/apis/databases/containers",
+            "apiVersion": "2015-04-08",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/apis/databases', parameters('databaseAccountName'), 'sql', 'OpenShiftClusters')]"
+            ],
+            "properties": {
+                "resource": {
+                    "id": "SubscriptionDocuments",
+                    "partitionKey": {
+                        "paths": [
+                            "/key"
+                        ],
+                        "kind": "Hash"
+                    },
+                    "uniqueKeyPolicy": {
+                        "uniqueKeys": [
+                            {
+                                "paths": [
+                                    "/key"
+                                ]
+                            }
+                        ]
+                    }
+                },
+                "options": {}
+            }
         }
     ]
 }

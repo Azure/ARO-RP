@@ -31,15 +31,6 @@ type request struct {
 	toExternal        func(*api.OpenShiftCluster) api.External
 }
 
-func validateTerminalProvisioningState(state api.ProvisioningState) error {
-	switch state {
-	case api.ProvisioningStateSucceeded, api.ProvisioningStateFailed:
-		return nil
-	}
-
-	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed in provisioningState '%s'.", state)
-}
-
 type frontend struct {
 	baseLog *logrus.Entry
 	env     env.Interface
@@ -125,6 +116,13 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 		Subrouter()
 
 	s.Methods(http.MethodGet).HandlerFunc(f.getOperations)
+
+	s = r.
+		Path("/subscriptions/{subscriptionId}").
+		Queries("api-version", "").
+		Subrouter()
+
+	s.Methods(http.MethodPut).HandlerFunc(f.putSubscription)
 }
 
 func (f *frontend) Run(stop <-chan struct{}) {

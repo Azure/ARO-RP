@@ -101,6 +101,11 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 		})
 
 	} else {
+		err = f.validateSubscriptionState(doc, api.SubscriptionStateRegistered)
+		if err != nil {
+			return nil, false, err
+		}
+
 		err = validateTerminalProvisioningState(doc.OpenShiftCluster.Properties.ProvisioningState)
 		if err != nil {
 			return nil, false, err

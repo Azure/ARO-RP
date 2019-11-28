@@ -53,6 +53,7 @@ var (
 	CloudErrorCodeUnsupportedMediaType     = "UnsupportedMediaType"
 	CloudErrorCodeInvalidLinkedVNet        = "InvalidLinkedVNet"
 	CloudErrorCodeForbidden                = "Forbidden"
+	CloudErrorCodeInvalidSubscriptionState = "CloudErrorCodeInvalidSubscriptionState"
 )
 
 // NewCloudError returns a new CloudError

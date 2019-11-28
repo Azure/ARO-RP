@@ -29,6 +29,7 @@ type backend struct {
 	stopping atomic.Value
 
 	ocb *openShiftClusterBackend
+	sb  *subscriptionBackend
 
 	domain string
 }
@@ -61,6 +62,7 @@ func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, db *d
 	b.stopping.Store(false)
 
 	b.ocb = &openShiftClusterBackend{backend: b}
+	b.sb = &subscriptionBackend{backend: b}
 
 	return b, nil
 }
@@ -87,12 +89,17 @@ func (b *backend) Run(stop <-chan struct{}) {
 			break
 		}
 
-		didWork, err := b.ocb.try()
+		ocbDidWork, err := b.ocb.try()
 		if err != nil {
 			b.baseLog.Error(err)
 		}
 
-		if !didWork {
+		sbDidWork, err := b.sb.try()
+		if err != nil {
+			b.baseLog.Error(err)
+		}
+
+		if !(ocbDidWork || sbDidWork) {
 			<-t.C
 		}
 	}

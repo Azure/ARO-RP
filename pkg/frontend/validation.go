@@ -5,10 +5,12 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/gorilla/mux"
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/jim-minter/rp/pkg/api"
+	"github.com/jim-minter/rp/pkg/database/cosmosdb"
 )
 
 var rxResourceGroupName = regexp.MustCompile(`^[-a-z0-9_().]{0,89}[-a-z0-9_()]$`)
@@ -53,4 +55,36 @@ func (f *frontend) isValidRequestPath(w http.ResponseWriter, r *http.Request) bo
 	}
 
 	return true
+}
+
+func validateTerminalProvisioningState(state api.ProvisioningState) error {
+	switch state {
+	case api.ProvisioningStateSucceeded, api.ProvisioningStateFailed:
+		return nil
+	}
+
+	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed in provisioningState '%s'.", state)
+}
+
+func (f *frontend) validateSubscriptionState(doc *api.OpenShiftClusterDocument, allowedStates ...api.SubscriptionState) error {
+	r, err := azure.ParseResourceID(string(doc.OpenShiftCluster.Key))
+	if err != nil {
+		return err
+	}
+
+	subdoc, err := f.db.Subscriptions.Get(api.Key(r.SubscriptionID))
+	switch {
+	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionState, "", "Request is not allowed in unregistered subscription '%s'.", r.SubscriptionID)
+	case err != nil:
+		return err
+	}
+
+	for _, allowedState := range allowedStates {
+		if subdoc.Subscription.State == allowedState {
+			return nil
+		}
+	}
+
+	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionState, "", "Request is not allowed in subscription in state '%s'.", subdoc.Subscription.State)
 }
