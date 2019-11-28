@@ -613,8 +613,8 @@ func (i *Installer) installResources(ctx context.Context, oc *api.OpenShiftClust
 				Parameters: map[string]interface{}{
 					"sas": map[string]interface{}{
 						"value": map[string]interface{}{
-							"signedStart":         oc.Properties.Installation.Now.UTC().Format(time.RFC3339),
-							"signedExpiry":        oc.Properties.Installation.Now.Add(24 * time.Hour).Format(time.RFC3339),
+							"signedStart":         oc.Properties.Install.Now.UTC().Format(time.RFC3339),
+							"signedExpiry":        oc.Properties.Install.Now.Add(24 * time.Hour).Format(time.RFC3339),
 							"signedPermission":    "rl",
 							"signedResourceTypes": "o",
 							"signedServices":      "b",

@@ -109,7 +109,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 		if doc.OpenShiftCluster.Properties.ProvisioningState == api.ProvisioningStateFailed {
 			switch doc.OpenShiftCluster.Properties.FailedProvisioningState {
 			case api.ProvisioningStateCreating:
-				return nil, false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed on cluster whose install failed. Delete the cluster.")
+				return nil, false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed on cluster whose creation failed. Delete the cluster.")
 			case api.ProvisioningStateUpdating:
 				// allow
 			case api.ProvisioningStateDeleting:
@@ -157,7 +157,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 
 	if isCreate {
 		doc.OpenShiftCluster.Key = api.Key(r.resourceID)
-		doc.OpenShiftCluster.Properties.Installation = &api.Installation{}
+		doc.OpenShiftCluster.Properties.Install = &api.Install{}
 		// TODO: ResourceGroup should be exposed in external API
 		doc.OpenShiftCluster.Properties.ResourceGroup = doc.OpenShiftCluster.Name
 		doc.OpenShiftCluster.Properties.DomainName = uuid.NewV4().String()

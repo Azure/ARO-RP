@@ -73,8 +73,8 @@ type Properties struct {
 	APIServerURL string `json:"apiserverUrl,omitempty"`
 	ConsoleURL   string `json:"consoleUrl,omitempty"`
 
-	// Installation is non-nil only when an installation is in progress
-	Installation *Installation `json:"installation,omitempty"`
+	// Install is non-nil only when an install is in progress
+	Install *Install `json:"install,omitempty"`
 
 	// TODO: ResourceGroup should be exposed in external API
 	ResourceGroup string `json:"resourceGroup,omitempty"`
@@ -143,20 +143,20 @@ type WorkerProfile struct {
 	Count      int    `json:"count,omitempty"`
 }
 
-// Installation represents an installation process
-type Installation struct {
+// Install represents an install process
+type Install struct {
 	MissingFields
 
-	Now   time.Time         `json:"now,omitempty"`
-	Phase InstallationPhase `json:"phase"`
+	Now   time.Time    `json:"now,omitempty"`
+	Phase InstallPhase `json:"phase"`
 }
 
-// InstallationPhase represents an installation phase
-type InstallationPhase int
+// InstallPhase represents an install phase
+type InstallPhase int
 
-// InstallationPhase constants
+// InstallPhase constants
 const (
-	InstallationPhaseDeployStorage InstallationPhase = iota
-	InstallationPhaseDeployResources
-	InstallationPhaseRemoveBootstrap
+	InstallPhaseDeployStorage InstallPhase = iota
+	InstallPhaseDeployResources
+	InstallPhaseRemoveBootstrap
 )

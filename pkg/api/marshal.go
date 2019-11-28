@@ -32,18 +32,18 @@ func AddExtensions(h *codec.BasicHandle) error {
 	return nil
 }
 
-// MarshalJSON marshals an InstallationPhase
-func (p InstallationPhase) MarshalJSON() ([]byte, error) {
+// MarshalJSON marshals an InstallPhase
+func (p InstallPhase) MarshalJSON() ([]byte, error) {
 	return json.Marshal(p.String())
 }
 
-// UnmarshalJSON unmarshals an InstallationPhase
-func (p *InstallationPhase) UnmarshalJSON(b []byte) error {
+// UnmarshalJSON unmarshals an InstallPhase
+func (p *InstallPhase) UnmarshalJSON(b []byte) error {
 	var s string
 	err := json.Unmarshal(b, &s)
 	if err != nil {
 		return err
 	}
-	*p, err = InstallationPhaseString(s)
+	*p, err = InstallPhaseString(s)
 	return err
 }
