@@ -1,18 +1,28 @@
+name: push-test
 on: push
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      GOPATH: /home/runner/work/rp/go
     steps:
-    - uses: actions/setup-go@v1
+    - name: Set up Go
+      uses: actions/setup-go@v1
       with:
         go-version: 1.12
-    - uses: actions/checkout@v1
-    - run: |
+    - name: Check out source
+      uses: actions/checkout@v1
+      with:
+        path: go/src/github.com/jim-minter/rp
+    - name: Test
+      run: |
+        set -x
+
         go get github.com/alvaroloes/enumer
         go get github.com/jim-minter/go-cosmosdb/cmd/gencosmosdb
-        
+
         go generate ./...
         go build ./...
         go test ./...
-        
+
         [[ -z $(git status -s) ]]
