@@ -28,7 +28,7 @@ func (ocb *openShiftClusterBackend) try() (bool, error) {
 	log := ocb.baseLog.WithField("resource", doc.OpenShiftCluster.ID)
 	if doc.Dequeues > maxDequeueCount {
 		log.Warnf("dequeued %d times, failing", doc.Dequeues)
-		return true, ocb.setTerminalState(doc.OpenShiftCluster, api.ProvisioningStateFailed)
+		return true, ocb.endLease(doc.OpenShiftCluster, api.ProvisioningStateFailed)
 	}
 
 	log.Print("dequeued")
@@ -59,7 +59,9 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 	m, err := openshiftcluster.NewManager(log, ocb.db.OpenShiftClusters, ocb.authorizer, doc.OpenShiftCluster, ocb.domain)
 	if err != nil {
 		log.Error(err)
-		return ocb.setTerminalState(doc.OpenShiftCluster, api.ProvisioningStateFailed)
+
+		stop()
+		return ocb.endLease(doc.OpenShiftCluster, api.ProvisioningStateFailed)
 	}
 
 	switch doc.OpenShiftCluster.Properties.ProvisioningState {
@@ -75,12 +77,12 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 
 	if err != nil {
 		log.Error(err)
-		return ocb.setTerminalState(doc.OpenShiftCluster, api.ProvisioningStateFailed)
+		return ocb.endLease(doc.OpenShiftCluster, api.ProvisioningStateFailed)
 	}
 
 	switch doc.OpenShiftCluster.Properties.ProvisioningState {
 	case api.ProvisioningStateUpdating:
-		return ocb.setTerminalState(doc.OpenShiftCluster, api.ProvisioningStateSucceeded)
+		return ocb.endLease(doc.OpenShiftCluster, api.ProvisioningStateSucceeded)
 
 	case api.ProvisioningStateDeleting:
 		return ocb.db.OpenShiftClusters.Delete(doc)
@@ -124,25 +126,17 @@ func (ocb *openShiftClusterBackend) heartbeat(log *logrus.Entry, oc *api.OpenShi
 	}
 }
 
-func (ocb *openShiftClusterBackend) setTerminalState(oc *api.OpenShiftCluster, state api.ProvisioningState) error {
+func (ocb *openShiftClusterBackend) endLease(oc *api.OpenShiftCluster, provisioningState api.ProvisioningState) error {
 	var failedOperation api.FailedOperation
 	switch {
-	case state == api.ProvisioningStateFailed && oc.Properties.Installation != nil:
+	case provisioningState == api.ProvisioningStateFailed && oc.Properties.Installation != nil:
 		failedOperation = api.FailedOperationInstall
-	case state == api.ProvisioningStateFailed && oc.Properties.Installation == nil:
+	case provisioningState == api.ProvisioningStateFailed && oc.Properties.Installation == nil:
 		failedOperation = api.FailedOperationUpdate
 	default:
 		failedOperation = api.FailedOperationNone
 	}
 
-	_, err := ocb.db.OpenShiftClusters.Patch(oc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.ProvisioningState = state
-		doc.OpenShiftCluster.Properties.FailedOperation = failedOperation
-
-		doc.LeaseOwner = nil
-		doc.LeaseExpires = 0
-		doc.Dequeues = 0
-		return nil
-	})
+	_, err := ocb.db.OpenShiftClusters.EndLease(oc.Key, provisioningState, failedOperation)
 	return err
 }

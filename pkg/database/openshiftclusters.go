@@ -28,6 +28,7 @@ type OpenShiftClusters interface {
 	ListByPrefix(string, api.Key) (cosmosdb.OpenShiftClusterDocumentIterator, error)
 	Dequeue() (*api.OpenShiftClusterDocument, error)
 	Lease(api.Key) (*api.OpenShiftClusterDocument, error)
+	EndLease(api.Key, api.ProvisioningState, api.FailedOperation) (*api.OpenShiftClusterDocument, error)
 }
 
 // NewOpenShiftClusters returns a new OpenShiftClusters
@@ -215,6 +216,23 @@ func (c *openShiftClusters) Lease(key api.Key) (*api.OpenShiftClusterDocument, e
 		}
 		return nil
 	}, &cosmosdb.Options{PreTriggers: []string{"renewLease"}})
+}
+
+func (c *openShiftClusters) EndLease(key api.Key, provisioningState api.ProvisioningState, failedOperation api.FailedOperation) (*api.OpenShiftClusterDocument, error) {
+	return c.patch(key, func(doc *api.OpenShiftClusterDocument) error {
+		if doc.LeaseOwner == nil || !uuid.Equal(*doc.LeaseOwner, c.uuid) {
+			return fmt.Errorf("lost lease")
+		}
+
+		doc.OpenShiftCluster.Properties.ProvisioningState = provisioningState
+		doc.OpenShiftCluster.Properties.FailedOperation = failedOperation
+
+		doc.LeaseOwner = nil
+		doc.LeaseExpires = 0
+		doc.Dequeues = 0
+
+		return nil
+	}, nil)
 }
 
 func (c *openShiftClusters) partitionKey(key api.Key) (string, error) {
