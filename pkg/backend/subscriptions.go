@@ -22,7 +22,7 @@ type subscriptionBackend struct {
 func (sb *subscriptionBackend) try() (bool, error) {
 	doc, err := sb.db.Subscriptions.Dequeue()
 	if err != nil || doc == nil {
-		return false, nil
+		return false, err
 	}
 
 	log := sb.baseLog.WithField("subscription", doc.Key)

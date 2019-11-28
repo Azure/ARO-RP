@@ -110,7 +110,7 @@ func (c *subscriptionDocumentClient) Replace(partitionkey string, newsubscriptio
 	headers := http.Header{}
 	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
 
-	err = c.setOptions(options, subscriptionDocument, headers)
+	err = c.setOptions(options, newsubscriptionDocument, headers)
 	if err != nil {
 		return
 	}

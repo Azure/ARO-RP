@@ -71,8 +71,9 @@ func (f *frontend) _putSubscription(r *request) ([]byte, bool, error) {
 
 	if isCreate {
 		doc = &api.SubscriptionDocument{
-			ID:  uuid.NewV4().String(),
-			Key: api.Key(r.subscriptionID),
+			ID:           uuid.NewV4().String(),
+			Key:          api.Key(r.subscriptionID),
+			Subscription: &api.Subscription{},
 		}
 	}
 
@@ -94,7 +95,7 @@ func (f *frontend) _putSubscription(r *request) ([]byte, bool, error) {
 	}
 
 	if oldState == api.SubscriptionStateDeleted && doc.Subscription.State != api.SubscriptionStateDeleted {
-		return nil, false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionState, "", "Request is not allowed in subscription in state '%s'.", doc.Subscription.State)
+		return nil, false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionState, "", "Request is not allowed in subscription in state '%s'.", oldState)
 	}
 
 	if isCreate {
