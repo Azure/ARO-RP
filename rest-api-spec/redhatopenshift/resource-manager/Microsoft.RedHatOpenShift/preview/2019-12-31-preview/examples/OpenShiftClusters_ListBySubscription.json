@@ -1,0 +1,45 @@
+{
+  "parameters": {
+    "api-version": "2019-12-31-preview",
+    "subscriptionId": "subscriptionId"
+  },
+  "responses": {
+    "200": {
+      "body": {
+        "value": [
+          {
+            "id": "/subscriptions/subscriptionId/resourceGroups/resourceGroup/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/resourceName",
+            "name": "resourceName",
+            "type": "Microsoft.RedHatOpenShift/OpenShiftClusters",
+            "location": "location",
+            "properties": {
+              "provisioningState": "Succeeded",
+              "servicePrincipalProfile": {
+                "clientId": "clientId"
+              },
+              "networkProfile": {
+                "podCidr": "10.128.0.0/14",
+                "serviceCidr": "172.30.0.0/16"
+              },
+              "masterProfile": {
+                "vmSize": "Standard_D8s_v3",
+                "subnetId": "/subscriptions/subscriptionId/resourceGroups/resourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/masterSubnet"
+              },
+              "workerProfiles": [
+                {
+                  "name": "worker",
+                  "vmSize": "Standard_D2s_v3",
+                  "diskSizeGB": 128,
+                  "subnetId": "/subscriptions/subscriptionId/resourceGroups/resourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/workerSubnet",
+                  "count": 3
+                }
+              ],
+              "apiserverUrl": "https://api.random.location.aroapp.io:6443/",
+              "consoleUrl": "https://console-openshift-console.apps.random.location.aroapp.io/"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

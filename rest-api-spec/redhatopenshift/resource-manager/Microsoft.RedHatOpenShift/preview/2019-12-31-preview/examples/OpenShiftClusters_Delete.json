@@ -1,0 +1,12 @@
+{
+  "parameters": {
+    "api-version": "2019-12-31-preview",
+    "subscriptionId": "subscriptionId",
+    "resourceGroupName": "resourceGroup",
+    "resourceName": "resourceName"
+  },
+  "responses": {
+    "200": {},
+    "204": {}
+  }
+}
