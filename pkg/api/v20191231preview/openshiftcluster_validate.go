@@ -87,8 +87,9 @@ func (oc *OpenShiftCluster) validate(resourceID string) error {
 
 func (p *Properties) validate(path string, resourceID string) error {
 	switch p.ProvisioningState {
-	case ProvisioningStateUpdating, ProvisioningStateDeleting,
-		ProvisioningStateSucceeded, ProvisioningStateFailed:
+	case ProvisioningStateCreating, ProvisioningStateUpdating,
+		ProvisioningStateDeleting, ProvisioningStateSucceeded,
+		ProvisioningStateFailed:
 	default:
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".provisioningState", "The provided provisioning state '%s' is invalid.", p.ProvisioningState)
 	}

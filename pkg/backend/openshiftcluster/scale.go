@@ -23,7 +23,7 @@ func find(xs interface{}, f func(int, int) bool) interface{} {
 	return v.Index(j).Addr().Interface()
 }
 
-func (b *Manager) scale(ctx context.Context) error {
+func (b *Manager) Update(ctx context.Context) error {
 	machinesets, err := b.machinesets.List(metav1.ListOptions{})
 	if err != nil {
 		return err

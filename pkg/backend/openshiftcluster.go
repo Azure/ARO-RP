@@ -16,19 +16,20 @@ type openShiftClusterBackend struct {
 	*backend
 }
 
+// try tries to dequeue an OpenShiftClusterDocument for work, and works it on a
+// new goroutine.  It returns a boolean to the caller indicating whether it
+// succeeded in dequeuing anything - if this is false, the caller should sleep
+// before calling again
 func (ocb *openShiftClusterBackend) try() (bool, error) {
 	doc, err := ocb.db.OpenShiftClusters.Dequeue()
-	if err != nil {
+	if err != nil || doc == nil {
 		return false, err
-	}
-	if doc == nil {
-		return false, nil
 	}
 
 	log := ocb.baseLog.WithField("resource", doc.OpenShiftCluster.ID)
 	if doc.Dequeues > maxDequeueCount {
 		log.Warnf("dequeued %d times, failing", doc.Dequeues)
-		return true, ocb.endLease(doc.OpenShiftCluster, api.ProvisioningStateFailed)
+		return true, ocb.endLease(nil, doc.OpenShiftCluster, api.ProvisioningStateFailed)
 	}
 
 	log.Print("dequeued")
@@ -59,37 +60,46 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 	m, err := openshiftcluster.NewManager(log, ocb.db.OpenShiftClusters, ocb.authorizer, doc.OpenShiftCluster, ocb.domain)
 	if err != nil {
 		log.Error(err)
-
-		stop()
-		return ocb.endLease(doc.OpenShiftCluster, api.ProvisioningStateFailed)
+		return ocb.endLease(stop, doc.OpenShiftCluster, api.ProvisioningStateFailed)
 	}
 
 	switch doc.OpenShiftCluster.Properties.ProvisioningState {
+	case api.ProvisioningStateCreating:
+		log.Print("creating")
+
+		err = m.Create(ctx)
+		if err != nil {
+			log.Error(err)
+			return ocb.endLease(stop, doc.OpenShiftCluster, api.ProvisioningStateFailed)
+		}
+
+		return ocb.endLease(stop, doc.OpenShiftCluster, api.ProvisioningStateSucceeded)
+
 	case api.ProvisioningStateUpdating:
 		log.Print("updating")
+
 		err = m.Update(ctx)
+		if err != nil {
+			log.Error(err)
+			return ocb.endLease(stop, doc.OpenShiftCluster, api.ProvisioningStateFailed)
+		}
+
+		return ocb.endLease(stop, doc.OpenShiftCluster, api.ProvisioningStateSucceeded)
+
 	case api.ProvisioningStateDeleting:
 		log.Print("deleting")
 		err = m.Delete(ctx)
-	}
+		if err != nil {
+			log.Error(err)
+			return ocb.endLease(stop, doc.OpenShiftCluster, api.ProvisioningStateFailed)
+		}
 
-	stop()
-
-	if err != nil {
-		log.Error(err)
-		return ocb.endLease(doc.OpenShiftCluster, api.ProvisioningStateFailed)
-	}
-
-	switch doc.OpenShiftCluster.Properties.ProvisioningState {
-	case api.ProvisioningStateUpdating:
-		return ocb.endLease(doc.OpenShiftCluster, api.ProvisioningStateSucceeded)
-
-	case api.ProvisioningStateDeleting:
+		stop()
 		return ocb.db.OpenShiftClusters.Delete(doc)
 
-	default:
-		return fmt.Errorf("unexpected state %q", doc.OpenShiftCluster.Properties.ProvisioningState)
 	}
+
+	return fmt.Errorf("unexpected provisioningState %q", doc.OpenShiftCluster.Properties.ProvisioningState)
 }
 
 func (ocb *openShiftClusterBackend) heartbeat(log *logrus.Entry, oc *api.OpenShiftCluster) func() {
@@ -126,17 +136,16 @@ func (ocb *openShiftClusterBackend) heartbeat(log *logrus.Entry, oc *api.OpenShi
 	}
 }
 
-func (ocb *openShiftClusterBackend) endLease(oc *api.OpenShiftCluster, provisioningState api.ProvisioningState) error {
-	var failedOperation api.FailedOperation
-	switch {
-	case provisioningState == api.ProvisioningStateFailed && oc.Properties.Installation != nil:
-		failedOperation = api.FailedOperationInstall
-	case provisioningState == api.ProvisioningStateFailed && oc.Properties.Installation == nil:
-		failedOperation = api.FailedOperationUpdate
-	default:
-		failedOperation = api.FailedOperationNone
+func (ocb *openShiftClusterBackend) endLease(stop func(), oc *api.OpenShiftCluster, provisioningState api.ProvisioningState) error {
+	var failedProvisioningState api.ProvisioningState
+	if provisioningState == api.ProvisioningStateFailed {
+		failedProvisioningState = oc.Properties.ProvisioningState
 	}
 
-	_, err := ocb.db.OpenShiftClusters.EndLease(oc.Key, provisioningState, failedOperation)
+	if stop != nil {
+		stop()
+	}
+
+	_, err := ocb.db.OpenShiftClusters.EndLease(oc.Key, provisioningState, failedProvisioningState)
 	return err
 }

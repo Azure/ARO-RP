@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"math/big"
 	"net/http"
@@ -95,7 +96,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 			Name: originalR.ResourceName,
 			Type: originalR.ResourceType,
 			Properties: api.Properties{
-				ProvisioningState: api.ProvisioningStateUpdating,
+				ProvisioningState: api.ProvisioningStateCreating,
 			},
 		})
 
@@ -105,10 +106,20 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 			return nil, false, err
 		}
 
-		if doc.OpenShiftCluster.Properties.ProvisioningState == api.ProvisioningStateFailed &&
-			doc.OpenShiftCluster.Properties.FailedOperation == api.FailedOperationInstall {
-			return nil, false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed on cluster whose installation failed. Delete the cluster.")
+		if doc.OpenShiftCluster.Properties.ProvisioningState == api.ProvisioningStateFailed {
+			switch doc.OpenShiftCluster.Properties.FailedProvisioningState {
+			case api.ProvisioningStateCreating:
+				return nil, false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed on cluster whose install failed. Delete the cluster.")
+			case api.ProvisioningStateUpdating:
+				// allow
+			case api.ProvisioningStateDeleting:
+				return nil, false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed on cluster whose deletion failed. Delete the cluster.")
+			default:
+				return nil, false, fmt.Errorf("unexpected failedProvisioningState %q", doc.OpenShiftCluster.Properties.FailedProvisioningState)
+			}
 		}
+
+		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateUpdating
 
 		switch r.method {
 		case http.MethodPut:
@@ -143,8 +154,6 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 	oldID, oldName, oldType := doc.OpenShiftCluster.ID, doc.OpenShiftCluster.Name, doc.OpenShiftCluster.Type
 	external.ToInternal(doc.OpenShiftCluster)
 	doc.OpenShiftCluster.ID, doc.OpenShiftCluster.Name, doc.OpenShiftCluster.Type = oldID, oldName, oldType
-
-	doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateUpdating
 
 	if isCreate {
 		doc.OpenShiftCluster.Key = api.Key(r.resourceID)

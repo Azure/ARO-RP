@@ -9,8 +9,11 @@ import (
 type OpenShiftCluster struct {
 	MissingFields
 
+	// Database lookup key.  Immutable.  Always lower case.
 	Key Key `json:"key,omitempty"`
 
+	// ID, Name and Type are cased as the user provided them at create time.
+	// ID, Name, Type and Location are immutable.
 	ID         string            `json:"id,omitempty"`
 	Name       string            `json:"name,omitempty"`
 	Type       string            `json:"type,omitempty"`
@@ -19,15 +22,45 @@ type OpenShiftCluster struct {
 	Properties Properties        `json:"properties,omitempty"`
 }
 
-// Key represents a database lookup key.  It is always lower case.
+// Key represents a database lookup key.
 type Key string
 
 // Properties represents an OpenShift cluster's properties
 type Properties struct {
 	MissingFields
 
-	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"`
-	FailedOperation   FailedOperation   `json:"failedOperation,omitempty"`
+	// Provisioning state machine:
+	//
+	// From ARM's perspective, Succeeded and Failed are the only two terminal
+	// provisioning states for asynchronous operations.  Clients will poll PUT,
+	// PATCH or DELETE operations until the resource gets to one of those
+	// provisioning states.
+	//
+	// ARO uses Creating, Updating and Deleting as non-terminal provisioning
+	// states to signal asynchronous operations from the front end to the back
+	// end.
+	//
+	// In case of failures, the back end sets failedProvisioningState to the
+	// provisioning state at the time of the failure.
+	//
+	// The ARO front end gates provisioning state machine transitions as
+	// follows:
+	//
+	// * no PUT, PATCH or DELETE is accepted unless the cluster is currently in
+	//   a terminal provisioning state.
+	//
+	// * DELETE is always allowed regardless of the terminal provisioning state
+	//   of the cluster.
+	//
+	// * PUT and PATCH are allowed as long as the cluster is in Succeeded
+	//   provisioning state, or in a Failed provisioning state with the failed
+	//   provisioning state to Updating.
+	//
+	// i.e. if a cluster creation or deletion fails, there is no remedy but to
+	// delete the cluster.
+
+	ProvisioningState       ProvisioningState `json:"provisioningState,omitempty"`
+	FailedProvisioningState ProvisioningState `json:"failedProvisioningState,omitempty"`
 
 	ServicePrincipalProfile ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
 
@@ -40,6 +73,7 @@ type Properties struct {
 	APIServerURL string `json:"apiserverUrl,omitempty"`
 	ConsoleURL   string `json:"consoleUrl,omitempty"`
 
+	// Installation is non-nil only when an installation is in progress
 	Installation *Installation `json:"installation,omitempty"`
 
 	// TODO: ResourceGroup should be exposed in external API
@@ -57,20 +91,11 @@ type ProvisioningState string
 
 // ProvisioningState constants
 const (
+	ProvisioningStateCreating  ProvisioningState = "Creating"
 	ProvisioningStateUpdating  ProvisioningState = "Updating"
 	ProvisioningStateDeleting  ProvisioningState = "Deleting"
 	ProvisioningStateSucceeded ProvisioningState = "Succeeded"
 	ProvisioningStateFailed    ProvisioningState = "Failed"
-)
-
-// FailedOperation represents a failed operation
-type FailedOperation string
-
-// FailedOperation constants
-const (
-	FailedOperationNone    FailedOperation = ""
-	FailedOperationInstall FailedOperation = "Install"
-	FailedOperationUpdate  FailedOperation = "Update"
 )
 
 // ServicePrincipalProfile represents a service principal profile.

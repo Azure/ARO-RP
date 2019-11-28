@@ -21,7 +21,7 @@ import (
 	"github.com/jim-minter/rp/pkg/util/subnet"
 )
 
-func (m *Manager) install(ctx context.Context) error {
+func (m *Manager) Create(ctx context.Context) error {
 	r, err := azure.ParseResourceID(m.oc.ID)
 	if err != nil {
 		return err

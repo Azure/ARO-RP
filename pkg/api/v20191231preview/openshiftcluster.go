@@ -53,6 +53,7 @@ type ProvisioningState string
 
 // ProvisioningState constants
 const (
+	ProvisioningStateCreating  ProvisioningState = "Creating"
 	ProvisioningStateUpdating  ProvisioningState = "Updating"
 	ProvisioningStateDeleting  ProvisioningState = "Deleting"
 	ProvisioningStateSucceeded ProvisioningState = "Succeeded"
