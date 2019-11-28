@@ -1,13 +1,13 @@
 package frontend
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"net/http"
 
 	"github.com/gorilla/mux"
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
+	"github.com/ugorji/go/codec"
 
 	"github.com/jim-minter/rp/pkg/api"
 	"github.com/jim-minter/rp/pkg/database/cosmosdb"
@@ -78,8 +78,18 @@ func (f *frontend) _putSubscription(r *request) ([]byte, bool, error) {
 	}
 
 	oldState := doc.Subscription.State
+	doc.Subscription = &api.Subscription{}
 
-	err = json.Unmarshal(r.body, &doc.Subscription)
+	h := &codec.JsonHandle{
+		BasicHandle: codec.BasicHandle{
+			DecodeOptions: codec.DecodeOptions{
+				ErrorIfNoField: true,
+			},
+		},
+		Indent: 2,
+	}
+
+	err = codec.NewDecoderBytes(r.body, h).Decode(&doc.Subscription)
 	if err != nil {
 		return nil, false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
 	}
@@ -107,7 +117,8 @@ func (f *frontend) _putSubscription(r *request) ([]byte, bool, error) {
 		return nil, false, err
 	}
 
-	b, err := json.MarshalIndent(doc.Subscription, "", "  ")
+	var b []byte
+	err = codec.NewEncoderBytes(&b, h).Encode(doc.Subscription)
 	if err != nil {
 		return nil, false, err
 	}

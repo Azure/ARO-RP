@@ -4,10 +4,12 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/jim-minter/rp/pkg/database/cosmosdb"
-
-	"github.com/jim-minter/rp/pkg/env"
 	uuid "github.com/satori/go.uuid"
+	"github.com/ugorji/go/codec"
+
+	"github.com/jim-minter/rp/pkg/api"
+	"github.com/jim-minter/rp/pkg/database/cosmosdb"
+	"github.com/jim-minter/rp/pkg/env"
 )
 
 // Database represents a database
@@ -23,7 +25,20 @@ func NewDatabase(ctx context.Context, env env.Interface, uuid uuid.UUID, dbid st
 		return nil, err
 	}
 
-	dbc, err := cosmosdb.NewDatabaseClient(http.DefaultClient, databaseAccount, masterKey)
+	h := &codec.JsonHandle{
+		BasicHandle: codec.BasicHandle{
+			DecodeOptions: codec.DecodeOptions{
+				ErrorIfNoField: true,
+			},
+		},
+	}
+
+	err = api.AddExtensions(&h.BasicHandle)
+	if err != nil {
+		return nil, err
+	}
+
+	dbc, err := cosmosdb.NewDatabaseClient(http.DefaultClient, h, databaseAccount, masterKey)
 	if err != nil {
 		return nil, err
 	}

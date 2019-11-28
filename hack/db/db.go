@@ -44,13 +44,9 @@ func run(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	h := &codec.JsonHandle{
-		BasicHandle: codec.BasicHandle{
-			DecodeOptions: codec.DecodeOptions{
-				ErrorIfNoField: true,
-			},
-		},
 		Indent: 2,
 	}
+
 	err = api.AddExtensions(&h.BasicHandle)
 	if err != nil {
 		return err
