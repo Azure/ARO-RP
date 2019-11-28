@@ -48,19 +48,6 @@ func NewOpenShiftClusters(ctx context.Context, uuid uuid.UUID, dbc cosmosdb.Data
 	request.setBody(body);
 }`,
 		},
-		{
-			ID:               "validateCase",
-			TriggerOperation: cosmosdb.TriggerOperationAll,
-			TriggerType:      cosmosdb.TriggerTypePre,
-			Body: `function trigger() {
-	var request = getContext().getRequest();
-	var body = request.getBody();
-	if(body["openShiftCluster"]["key"] != body["openShiftCluster"]["key"].toLowerCase())
-		throw "openShiftCluster.key is not lower case";
-	if(body["partitionKey"] != body["partitionKey"].toLowerCase())
-		throw "partitionKey is not lower case";
-}`,
-		},
 	}
 
 	triggerc := cosmosdb.NewTriggerClient(collc, collid)
@@ -78,13 +65,17 @@ func NewOpenShiftClusters(ctx context.Context, uuid uuid.UUID, dbc cosmosdb.Data
 }
 
 func (c *openShiftClusters) Create(doc *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error) {
+	if string(doc.OpenShiftCluster.Key) != strings.ToLower(string(doc.OpenShiftCluster.Key)) {
+		return nil, fmt.Errorf("key %q is not lower case", doc.OpenShiftCluster.Key)
+	}
+
 	var err error
 	doc.PartitionKey, err = c.partitionKey(doc.OpenShiftCluster.Key)
 	if err != nil {
 		return nil, err
 	}
 
-	doc, err = c.c.Create(doc.PartitionKey, doc, &cosmosdb.Options{PreTriggers: []string{"validateCase"}})
+	doc, err = c.c.Create(doc.PartitionKey, doc, nil)
 
 	if err, ok := err.(*cosmosdb.Error); ok && err.StatusCode == http.StatusConflict {
 		err.StatusCode = http.StatusPreconditionFailed
@@ -156,16 +147,18 @@ func (c *openShiftClusters) Update(doc *api.OpenShiftClusterDocument) (*api.Open
 }
 
 func (c *openShiftClusters) update(doc *api.OpenShiftClusterDocument, options *cosmosdb.Options) (*api.OpenShiftClusterDocument, error) {
-	if options == nil {
-		options = &cosmosdb.Options{}
+	if string(doc.OpenShiftCluster.Key) != strings.ToLower(string(doc.OpenShiftCluster.Key)) {
+		return nil, fmt.Errorf("key %q is not lower case", doc.OpenShiftCluster.Key)
 	}
-
-	options.PreTriggers = append(options.PreTriggers, "validateCase")
 
 	return c.c.Replace(doc.PartitionKey, doc, options)
 }
 
 func (c *openShiftClusters) Delete(doc *api.OpenShiftClusterDocument) error {
+	if string(doc.OpenShiftCluster.Key) != strings.ToLower(string(doc.OpenShiftCluster.Key)) {
+		return fmt.Errorf("key %q is not lower case", doc.OpenShiftCluster.Key)
+	}
+
 	return c.c.Delete(doc.PartitionKey, doc, &cosmosdb.Options{NoETag: true})
 }
 

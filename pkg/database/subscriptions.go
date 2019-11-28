@@ -58,17 +58,6 @@ func NewSubscriptions(ctx context.Context, uuid uuid.UUID, dbc cosmosdb.Database
 	request.setBody(body);
 }`,
 		},
-		{
-			ID:               "validateCase",
-			TriggerOperation: cosmosdb.TriggerOperationAll,
-			TriggerType:      cosmosdb.TriggerTypePre,
-			Body: `function trigger() {
-	var request = getContext().getRequest();
-	var body = request.getBody();
-	if(body["key"] != body["key"].toLowerCase())
-		throw "key is not lower case";
-}`,
-		},
 	}
 
 	triggerc := cosmosdb.NewTriggerClient(collc, collid)
@@ -86,7 +75,11 @@ func NewSubscriptions(ctx context.Context, uuid uuid.UUID, dbc cosmosdb.Database
 }
 
 func (c *subscriptions) Create(doc *api.SubscriptionDocument) (*api.SubscriptionDocument, error) {
-	doc, err := c.c.Create(string(doc.Key), doc, &cosmosdb.Options{PreTriggers: []string{"validateCase"}})
+	if string(doc.Key) != strings.ToLower(string(doc.Key)) {
+		return nil, fmt.Errorf("key %q is not lower case", doc.Key)
+	}
+
+	doc, err := c.c.Create(string(doc.Key), doc, nil)
 
 	if err, ok := err.(*cosmosdb.Error); ok && err.StatusCode == http.StatusConflict {
 		err.StatusCode = http.StatusPreconditionFailed
@@ -101,7 +94,7 @@ func (c *subscriptions) Get(key api.Key) (*api.SubscriptionDocument, error) {
 	}
 
 	docs, err := c.c.QueryAll(string(key), &cosmosdb.Query{
-		Query: "SELECT * FROM SubscriptionDocuments doc WHERE doc.subscription.key = @key",
+		Query: "SELECT * FROM SubscriptionDocuments doc WHERE doc.key = @key",
 		Parameters: []cosmosdb.Parameter{
 			{
 				Name:  "@key",
@@ -153,16 +146,18 @@ func (c *subscriptions) Update(doc *api.SubscriptionDocument) (*api.Subscription
 }
 
 func (c *subscriptions) update(doc *api.SubscriptionDocument, options *cosmosdb.Options) (*api.SubscriptionDocument, error) {
-	if options == nil {
-		options = &cosmosdb.Options{}
+	if string(doc.Key) != strings.ToLower(string(doc.Key)) {
+		return nil, fmt.Errorf("key %q is not lower case", doc.Key)
 	}
-
-	options.PreTriggers = append(options.PreTriggers, "validateCase")
 
 	return c.c.Replace(string(doc.Key), doc, options)
 }
 
 func (c *subscriptions) Delete(doc *api.SubscriptionDocument) error {
+	if string(doc.Key) != strings.ToLower(string(doc.Key)) {
+		return fmt.Errorf("key %q is not lower case", doc.Key)
+	}
+
 	return c.c.Delete(string(doc.Key), doc, &cosmosdb.Options{NoETag: true})
 }
 
