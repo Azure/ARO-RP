@@ -1,7 +1,11 @@
-name: push-test
-on: push
+name: pull_request-test
+on:
+  pull_request:
+    types:
+    - opened
+    - synchronize
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     env:
       GOPATH: /home/runner/work/rp/go
@@ -25,4 +29,4 @@ jobs:
         go build ./...
         go test ./...
 
-        [[ -z $(git status -s) ]]
+        [[ -z "$(git status -s)" ]]
