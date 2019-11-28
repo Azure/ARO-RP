@@ -3,6 +3,8 @@ package cosmosdb
 import (
 	"encoding/base64"
 	"net/http"
+
+	"github.com/ugorji/go/codec"
 )
 
 // Database represents a database
@@ -25,6 +27,7 @@ type Databases struct {
 
 type databaseClient struct {
 	hc              *http.Client
+	jsonHandle      *codec.JsonHandle
 	databaseAccount string
 	masterKey       []byte
 }
@@ -50,11 +53,12 @@ type DatabaseIterator interface {
 }
 
 // NewDatabaseClient returns a new database client
-func NewDatabaseClient(hc *http.Client, databaseAccount, masterKey string) (DatabaseClient, error) {
+func NewDatabaseClient(hc *http.Client, jsonHandle *codec.JsonHandle, databaseAccount, masterKey string) (DatabaseClient, error) {
 	var err error
 
 	c := &databaseClient{
 		hc:              hc,
+		jsonHandle:      jsonHandle,
 		databaseAccount: databaseAccount,
 	}
 
