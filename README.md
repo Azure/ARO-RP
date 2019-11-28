@@ -71,7 +71,7 @@
    DOMAIN=mydomain.osadev.cloud
    KEYVAULT_NAME=mykeyvault
    ADMIN_OBJECT_ID=$(az ad group list --query "[?displayName=='Engineering'].objectId" -o tsv)
-   RP_OBJECT_ID=$(az ad app list --all --query "[?appId=='$AZURE_CLIENT_ID'].objectId" -o tsv)
+   RP_OBJECT_ID=$(az ad sp list --all --query "[?appId=='$AZURE_CLIENT_ID'].objectId" -o tsv)
 
    az group create -g "$RESOURCEGROUP" -l "$LOCATION"
 
