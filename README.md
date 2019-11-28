@@ -67,9 +67,9 @@
 1. Create the resource group and deploy the RP resources:
 
    ```
-   COSMOSDB_ACCOUNT=mycosmosdb
-   DOMAIN=mydomain.osadev.cloud
-   KEYVAULT_NAME=mykeyvault
+   COSMOSDB_ACCOUNT=$RESOURCEGROUP
+   DOMAIN=$RESOURCEGROUP.osadev.cloud
+   KEYVAULT_NAME=$RESOURCEGROUP
    ADMIN_OBJECT_ID=$(az ad group list --query "[?displayName=='Engineering'].objectId" -o tsv)
    RP_OBJECT_ID=$(az ad sp list --all --query "[?appId=='$AZURE_CLIENT_ID'].objectId" -o tsv)
 
