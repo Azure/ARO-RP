@@ -35,28 +35,24 @@ type OpenShiftClusters interface {
 func NewOpenShiftClusters(ctx context.Context, uuid uuid.UUID, dbc cosmosdb.DatabaseClient, dbid, collid string) (OpenShiftClusters, error) {
 	collc := cosmosdb.NewCollectionClient(dbc, dbid)
 
-	triggerc := cosmosdb.NewTriggerClient(collc, collid)
-	_, err := triggerc.Create(&cosmosdb.Trigger{
-		ID:               "renewLease",
-		TriggerOperation: cosmosdb.TriggerOperationAll,
-		TriggerType:      cosmosdb.TriggerTypePre,
-		Body: `function trigger() {
+	triggers := []*cosmosdb.Trigger{
+		{
+			ID:               "renewLease",
+			TriggerOperation: cosmosdb.TriggerOperationAll,
+			TriggerType:      cosmosdb.TriggerTypePre,
+			Body: `function trigger() {
 	var request = getContext().getRequest();
 	var body = request.getBody();
 	var date = new Date();
 	body["leaseExpires"] = Math.floor(date.getTime() / 1000) + 60;
 	request.setBody(body);
 }`,
-	})
-	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusConflict) {
-		return nil, err
-	}
-
-	_, err = triggerc.Create(&cosmosdb.Trigger{
-		ID:               "validateCase",
-		TriggerOperation: cosmosdb.TriggerOperationAll,
-		TriggerType:      cosmosdb.TriggerTypePre,
-		Body: `function trigger() {
+		},
+		{
+			ID:               "validateCase",
+			TriggerOperation: cosmosdb.TriggerOperationAll,
+			TriggerType:      cosmosdb.TriggerTypePre,
+			Body: `function trigger() {
 	var request = getContext().getRequest();
 	var body = request.getBody();
 	if(body["openShiftCluster"]["key"] != body["openShiftCluster"]["key"].toLowerCase())
@@ -64,9 +60,15 @@ func NewOpenShiftClusters(ctx context.Context, uuid uuid.UUID, dbc cosmosdb.Data
 	if(body["partitionKey"] != body["partitionKey"].toLowerCase())
 		throw "partitionKey is not lower case";
 }`,
-	})
-	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusConflict) {
-		return nil, err
+		},
+	}
+
+	triggerc := cosmosdb.NewTriggerClient(collc, collid)
+	for _, trigger := range triggers {
+		_, err := triggerc.Create(trigger)
+		if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusConflict) {
+			return nil, err
+		}
 	}
 
 	return &openShiftClusters{
