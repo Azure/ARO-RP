@@ -14,14 +14,14 @@
         },
         "masterProfile": {
             "vmSize": "Standard_D8s_v3",
-            "subnetId": "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourcegroups/$CLUSTER-vnet/providers/Microsoft.Network/virtualNetworks/$CLUSTER-vnet/subnets/master"
+            "subnetId": "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourcegroups/$VNET_RESOURCEGROUP/providers/Microsoft.Network/virtualNetworks/vnet/subnets/$CLUSTER-master"
         },
         "workerProfiles": [
             {
                 "name": "worker",
                 "vmSize": "Standard_D2s_v3",
                 "diskSizeGB": 128,
-                "subnetId": "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourcegroups/$CLUSTER-vnet/providers/Microsoft.Network/virtualNetworks/$CLUSTER-vnet/subnets/worker",
+                "subnetId": "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourcegroups/$VNET_RESOURCEGROUP/providers/Microsoft.Network/virtualNetworks/vnet/subnets/$CLUSTER-worker",
                 "count": 3
             }
         ]

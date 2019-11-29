@@ -33,9 +33,11 @@ func (oc *OpenShiftCluster) Validate(ctx context.Context, tenantID, resourceID s
 	oc.ToInternal(internal)
 
 	// TODO: remove this hack
-	internal.Properties.InfraID = current.Properties.InfraID
-	internal.Properties.ResourceGroup = current.Properties.ResourceGroup
-	internal.Properties.ServicePrincipalProfile.TenantID = current.Properties.ServicePrincipalProfile.TenantID
+	if current != nil {
+		internal.Properties.InfraID = current.Properties.InfraID
+		internal.Properties.ResourceGroup = current.Properties.ResourceGroup
+	}
+	internal.Properties.ServicePrincipalProfile.TenantID = tenantID
 
 	err = oc.validateSubnets(ctx, internal)
 	if err != nil {
@@ -123,7 +125,7 @@ func (spp *ServicePrincipalProfile) validate(path string) error {
 func (np *NetworkProfile) validate(path string) error {
 	_, pod, err := net.ParseCIDR(np.PodCIDR)
 	if err != nil {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".podCidr", "The provided pod CIDR '%s' is invalid: %q.", np.PodCIDR, err)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".podCidr", "The provided pod CIDR '%s' is invalid: '%s'.", np.PodCIDR, err)
 	}
 	if pod.IP.To4() == nil {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".podCidr", "The provided pod CIDR '%s' is invalid: must be IPv4.", np.PodCIDR)
@@ -136,7 +138,7 @@ func (np *NetworkProfile) validate(path string) error {
 	}
 	_, service, err := net.ParseCIDR(np.ServiceCIDR)
 	if err != nil {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".serviceCidr", "The provided service CIDR '%s' is invalid: %q.", np.ServiceCIDR, err)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".serviceCidr", "The provided service CIDR '%s' is invalid: '%s'.", np.ServiceCIDR, err)
 	}
 	if service.IP.To4() == nil {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".serviceCidr", "The provided service CIDR '%s' is invalid: must be IPv4.", np.ServiceCIDR)
@@ -325,7 +327,7 @@ func (oc *OpenShiftCluster) validateSubnets(ctx context.Context, internal *api.O
 
 	err = cidr.VerifyNoOverlap([]*net.IPNet{master, worker, pod, service}, &net.IPNet{IP: net.IPv4zero, Mask: net.IPMask(net.IPv4zero)})
 	if err != nil {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided CIDRs must not overlap: %q.", err)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided CIDRs must not overlap: '%s'.", err)
 	}
 
 	return nil
@@ -356,7 +358,7 @@ func (oc *OpenShiftCluster) validateSubnet(ctx context.Context, internal *api.Op
 		if s.SubnetPropertiesFormat == nil ||
 			s.SubnetPropertiesFormat.NetworkSecurityGroup == nil ||
 			!strings.EqualFold(*s.SubnetPropertiesFormat.NetworkSecurityGroup.ID, nsgID) {
-			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The provided "+typ+" VM subnet '%s' is invalid: must have network security group %q attached.", subnetID, nsgID)
+			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The provided "+typ+" VM subnet '%s' is invalid: must have network security group '%s' attached.", subnetID, nsgID)
 		}
 	}
 

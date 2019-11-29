@@ -113,6 +113,10 @@ go run ./cmd/rp
 ## Useful commands
 
 ```
+export VNET_RESOURCEGROUP=$RESOURCEGROUP-vnet
+az group create -g "$VNET_RESOURCEGROUP" -l "$LOCATION"
+az network vnet create -g "$VNET_RESOURCEGROUP" -n vnet --address-prefixes 10.0.0.0/9
+
 export CLUSTER=cluster
 ```
 
@@ -123,10 +127,8 @@ curl -k -X PUT "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID?api-
 * Create a cluster:
 
 ```
-az group create -g "$CLUSTER-vnet" -l "$LOCATION"
-az network vnet create -g "$CLUSTER-vnet" -n "$CLUSTER-vnet" --address-prefixes 10.0.0.0/16
-az network vnet subnet create -g "$CLUSTER-vnet" --vnet-name "$CLUSTER-vnet" -n master --address-prefixes 10.0.0.0/24
-az network vnet subnet create -g "$CLUSTER-vnet" --vnet-name "$CLUSTER-vnet" -n worker --address-prefixes 10.0.1.0/24
+az network vnet subnet create -g "$VNET_RESOURCEGROUP" --vnet-name vnet -n "$CLUSTER-master" --address-prefixes 10.$((RANDOM & 127)).$((RANDOM & 255)).0/24
+az network vnet subnet create -g "$VNET_RESOURCEGROUP" --vnet-name vnet -n "$CLUSTER-worker" --address-prefixes 10.$((RANDOM & 127)).$((RANDOM & 255)).0/24
 
 envsubst <examples/cluster-v20191231.json | curl -k -X PUT "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER?api-version=2019-12-31-preview" -H 'Content-Type: application/json' -d @-
 ```
@@ -168,7 +170,8 @@ curl -k -X PATCH "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/re
 ```
 curl -k -X DELETE "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER?api-version=2019-12-31-preview"
 
-az group delete -g "$CLUSTER-vnet"
+az network vnet subnet delete -g "$VNET_RESOURCEGROUP" --vnet-name vnet -n "$CLUSTER-master"
+az network vnet subnet delete -g "$VNET_RESOURCEGROUP" --vnet-name vnet -n "$CLUSTER-worker"
 ```
 
 * List operations:
