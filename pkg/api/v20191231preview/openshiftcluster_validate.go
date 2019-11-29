@@ -109,7 +109,7 @@ func (v *validator) validateServicePrincipalProfile(path string, spp *ServicePri
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".clientId", "The provided client ID '%s' is invalid.", spp.ClientID)
 	}
 	if spp.ClientSecret == "" {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".cilentSecret", "The provided client secret is invalid.")
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".clientSecret", "The provided client secret is invalid.")
 	}
 
 	return nil
