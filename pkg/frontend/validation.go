@@ -66,13 +66,13 @@ func validateTerminalProvisioningState(state api.ProvisioningState) error {
 	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed in provisioningState '%s'.", state)
 }
 
-func (f *frontend) validateSubscriptionState(doc *api.OpenShiftClusterDocument, allowedStates ...api.SubscriptionState) error {
-	r, err := azure.ParseResourceID(string(doc.OpenShiftCluster.Key))
+func (f *frontend) validateSubscriptionState(key api.Key, allowedStates ...api.SubscriptionState) error {
+	r, err := azure.ParseResourceID(string(key))
 	if err != nil {
 		return err
 	}
 
-	subdoc, err := f.db.Subscriptions.Get(api.Key(r.SubscriptionID))
+	doc, err := f.db.Subscriptions.Get(api.Key(r.SubscriptionID))
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionState, "", "Request is not allowed in unregistered subscription '%s'.", r.SubscriptionID)
@@ -81,10 +81,10 @@ func (f *frontend) validateSubscriptionState(doc *api.OpenShiftClusterDocument, 
 	}
 
 	for _, allowedState := range allowedStates {
-		if subdoc.Subscription.State == allowedState {
+		if doc.Subscription.State == allowedState {
 			return nil
 		}
 	}
 
-	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionState, "", "Request is not allowed in subscription in state '%s'.", subdoc.Subscription.State)
+	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionState, "", "Request is not allowed in subscription in state '%s'.", doc.Subscription.State)
 }

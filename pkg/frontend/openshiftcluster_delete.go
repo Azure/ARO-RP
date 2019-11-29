@@ -47,7 +47,7 @@ func (f *frontend) _deleteOpenShiftCluster(r *request, doc *api.OpenShiftCluster
 		return &noContent{}
 	}
 
-	err := f.validateSubscriptionState(doc, api.SubscriptionStateRegistered, api.SubscriptionStateWarned, api.SubscriptionStateSuspended)
+	err := f.validateSubscriptionState(doc.OpenShiftCluster.Key, api.SubscriptionStateRegistered, api.SubscriptionStateWarned, api.SubscriptionStateSuspended)
 	if err != nil {
 		return err
 	}

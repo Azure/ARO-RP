@@ -72,6 +72,11 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 }
 
 func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error) {
+	err := f.validateSubscriptionState(api.Key(r.resourceID), api.SubscriptionStateRegistered)
+	if err != nil {
+		return nil, false, err
+	}
+
 	originalPath := r.context.Value(contextKeyOriginalPath).(string)
 	originalR, err := azure.ParseResourceID(originalPath)
 	if err != nil {
@@ -101,11 +106,6 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 		})
 
 	} else {
-		err = f.validateSubscriptionState(doc, api.SubscriptionStateRegistered)
-		if err != nil {
-			return nil, false, err
-		}
-
 		err = validateTerminalProvisioningState(doc.OpenShiftCluster.Properties.ProvisioningState)
 		if err != nil {
 			return nil, false, err
@@ -158,7 +158,6 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 
 	oldID, oldName, oldType := doc.OpenShiftCluster.ID, doc.OpenShiftCluster.Name, doc.OpenShiftCluster.Type
 	external.ToInternal(doc.OpenShiftCluster)
-	doc.OpenShiftCluster.ID, doc.OpenShiftCluster.Name, doc.OpenShiftCluster.Type = oldID, oldName, oldType
 
 	if isCreate {
 		doc.OpenShiftCluster.Key = api.Key(r.resourceID)
@@ -178,6 +177,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 
 		doc, err = f.db.OpenShiftClusters.Create(doc)
 	} else {
+		doc.OpenShiftCluster.ID, doc.OpenShiftCluster.Name, doc.OpenShiftCluster.Type = oldID, oldName, oldType
 		doc, err = f.db.OpenShiftClusters.Update(doc)
 	}
 	if err != nil {
