@@ -26,8 +26,8 @@ func find(xs interface{}, f func(int, int) bool) interface{} {
 	return v.Index(j).Addr().Interface()
 }
 
-func (b *Manager) Update(ctx context.Context) error {
-	restConfig, err := restconfig.RestConfig(b.oc.Properties.AdminKubeconfig)
+func (m *Manager) Update(ctx context.Context) error {
+	restConfig, err := restconfig.RestConfig(m.doc.OpenShiftCluster.Properties.AdminKubeconfig)
 	if err != nil {
 		return err
 	}
@@ -50,13 +50,13 @@ func (b *Manager) Update(ctx context.Context) error {
 		have += int(*machineset.Spec.Replicas)
 	}
 
-	for have > b.oc.Properties.WorkerProfiles[0].Count {
+	for have > m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].Count {
 		machineset := find(machinesets.Items, func(i, j int) bool { return *machinesets.Items[i].Spec.Replicas > *machinesets.Items[j].Spec.Replicas }).(*machinev1beta1.MachineSet)
 		*machineset.Spec.Replicas--
 		have--
 	}
 
-	for have < b.oc.Properties.WorkerProfiles[0].Count {
+	for have < m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].Count {
 		machineset := find(machinesets.Items, func(i, j int) bool { return *machinesets.Items[i].Spec.Replicas < *machinesets.Items[j].Spec.Replicas }).(*machinev1beta1.MachineSet)
 		*machineset.Spec.Replicas++
 		have++
@@ -71,7 +71,7 @@ func (b *Manager) Update(ctx context.Context) error {
 				return err
 			}
 
-			b.log.Printf("scaling machineset %s to %d replicas", machineset.Name, want)
+			m.log.Printf("scaling machineset %s to %d replicas", machineset.Name, want)
 			machineset.Spec.Replicas = to.Int32Ptr(want)
 			_, err = cli.MachineSets(machineset.Namespace).Update(machineset)
 			return err
@@ -84,7 +84,7 @@ func (b *Manager) Update(ctx context.Context) error {
 	for _, machineset := range machinesets.Items {
 		want := *machineset.Spec.Replicas
 
-		b.log.Printf("waiting for machineset %s", machineset.Name)
+		m.log.Printf("waiting for machineset %s", machineset.Name)
 		err := wait.PollImmediate(10*time.Second, 30*time.Minute, func() (bool, error) {
 			m, err := cli.MachineSets(machineset.Namespace).Get(machineset.Name, metav1.GetOptions{})
 			if err != nil {

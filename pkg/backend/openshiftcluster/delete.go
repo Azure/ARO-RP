@@ -13,24 +13,24 @@ import (
 )
 
 func (m *Manager) Delete(ctx context.Context) error {
-	r, err := azure.ParseResourceID(m.oc.ID)
+	r, err := azure.ParseResourceID(m.doc.OpenShiftCluster.ID)
 	if err != nil {
 		return err
 	}
 
 	m.log.Printf("deleting dns")
-	_, err = m.recordsets.Delete(ctx, os.Getenv("RESOURCEGROUP"), m.domain, "api."+m.oc.Properties.DomainName, dns.CNAME, "")
+	_, err = m.recordsets.Delete(ctx, os.Getenv("RESOURCEGROUP"), m.domain, "api."+m.doc.OpenShiftCluster.Properties.DomainName, dns.CNAME, "")
 	if err != nil {
 		return err
 	}
 
 	// TODO: ideally we would do this after all the VMs have been deleted
 	for subnetID, nsgID := range map[string]string{
-		m.oc.Properties.MasterProfile.SubnetID:     "/subscriptions/" + r.SubscriptionID + "/resourceGroups/" + m.oc.Properties.ResourceGroup + "/providers/Microsoft.Network/networkSecurityGroups/" + m.oc.Properties.InfraID + "-controlplane-nsg",
-		m.oc.Properties.WorkerProfiles[0].SubnetID: "/subscriptions/" + r.SubscriptionID + "/resourceGroups/" + m.oc.Properties.ResourceGroup + "/providers/Microsoft.Network/networkSecurityGroups/" + m.oc.Properties.InfraID + "-node-nsg",
+		m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID:     "/subscriptions/" + r.SubscriptionID + "/resourceGroups/" + m.doc.OpenShiftCluster.Properties.ResourceGroup + "/providers/Microsoft.Network/networkSecurityGroups/" + m.doc.OpenShiftCluster.Properties.InfraID + "-controlplane-nsg",
+		m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID: "/subscriptions/" + r.SubscriptionID + "/resourceGroups/" + m.doc.OpenShiftCluster.Properties.ResourceGroup + "/providers/Microsoft.Network/networkSecurityGroups/" + m.doc.OpenShiftCluster.Properties.InfraID + "-node-nsg",
 	} {
 		// TODO: there is probably an undesirable race condition here - check if etags can help.
-		s, err := subnet.Get(ctx, &m.oc.Properties.ServicePrincipalProfile, subnetID)
+		s, err := subnet.Get(ctx, &m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile, subnetID)
 		if err != nil {
 			return err
 		}
@@ -44,13 +44,13 @@ func (m *Manager) Delete(ctx context.Context) error {
 		s.SubnetPropertiesFormat.NetworkSecurityGroup = nil
 
 		m.log.Printf("removing network security group from subnet %s", subnetID)
-		err = subnet.CreateOrUpdate(ctx, &m.oc.Properties.ServicePrincipalProfile, subnetID, s)
+		err = subnet.CreateOrUpdate(ctx, &m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile, subnetID, s)
 		if err != nil {
 			return err
 		}
 	}
 
-	resp, err := m.groups.CheckExistence(ctx, m.oc.Properties.ResourceGroup)
+	resp, err := m.groups.CheckExistence(ctx, m.doc.OpenShiftCluster.Properties.ResourceGroup)
 	if err != nil {
 		return err
 	}
@@ -58,8 +58,8 @@ func (m *Manager) Delete(ctx context.Context) error {
 		return nil
 	}
 
-	m.log.Printf("deleting resource group %s", m.oc.Properties.ResourceGroup)
-	future, err := m.groups.Delete(ctx, m.oc.Properties.ResourceGroup)
+	m.log.Printf("deleting resource group %s", m.doc.OpenShiftCluster.Properties.ResourceGroup)
+	future, err := m.groups.Delete(ctx, m.doc.OpenShiftCluster.Properties.ResourceGroup)
 	if err != nil {
 		return err
 	}

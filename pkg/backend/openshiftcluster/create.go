@@ -22,17 +22,17 @@ import (
 )
 
 func (m *Manager) Create(ctx context.Context) error {
-	r, err := azure.ParseResourceID(m.oc.ID)
+	r, err := azure.ParseResourceID(m.doc.OpenShiftCluster.ID)
 	if err != nil {
 		return err
 	}
 
-	vnetID, masterSubnetName, err := subnet.Split(m.oc.Properties.MasterProfile.SubnetID)
+	vnetID, masterSubnetName, err := subnet.Split(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return err
 	}
 
-	vnetID, workerSubnetName, err := subnet.Split(m.oc.Properties.WorkerProfiles[0].SubnetID)
+	vnetID, workerSubnetName, err := subnet.Split(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID)
 	if err != nil {
 		return err
 	}
@@ -42,7 +42,7 @@ func (m *Manager) Create(ctx context.Context) error {
 		return err
 	}
 
-	sshkey, err := ssh.NewPublicKey(&m.oc.Properties.SSHKey.PublicKey)
+	sshkey, err := ssh.NewPublicKey(&m.doc.OpenShiftCluster.Properties.SSHKey.PublicKey)
 	if err != nil {
 		return err
 	}
@@ -50,8 +50,8 @@ func (m *Manager) Create(ctx context.Context) error {
 	platformCreds := &installconfig.PlatformCreds{
 		Azure: &icazure.Credentials{
 			TenantID:       os.Getenv("AZURE_TENANT_ID"),
-			ClientID:       m.oc.Properties.ServicePrincipalProfile.ClientID,
-			ClientSecret:   m.oc.Properties.ServicePrincipalProfile.ClientSecret,
+			ClientID:       m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientID,
+			ClientSecret:   m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret,
 			SubscriptionID: r.SubscriptionID,
 		},
 		Passthrough: true, // TODO: not working yet
@@ -63,7 +63,7 @@ func (m *Manager) Create(ctx context.Context) error {
 				APIVersion: "v1",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: m.oc.Properties.DomainName,
+				Name: m.doc.OpenShiftCluster.Properties.DomainName,
 			},
 			SSHKey:     sshkey.Type() + " " + base64.StdEncoding.EncodeToString(sshkey.Marshal()),
 			BaseDomain: m.domain,
@@ -72,12 +72,12 @@ func (m *Manager) Create(ctx context.Context) error {
 				NetworkType: "OpenShiftSDN",
 				ClusterNetwork: []types.ClusterNetworkEntry{
 					{
-						CIDR:       *ipnet.MustParseCIDR(m.oc.Properties.NetworkProfile.PodCIDR),
+						CIDR:       *ipnet.MustParseCIDR(m.doc.OpenShiftCluster.Properties.NetworkProfile.PodCIDR),
 						HostPrefix: 23,
 					},
 				},
 				ServiceNetwork: []ipnet.IPNet{
-					*ipnet.MustParseCIDR(m.oc.Properties.NetworkProfile.ServiceCIDR),
+					*ipnet.MustParseCIDR(m.doc.OpenShiftCluster.Properties.NetworkProfile.ServiceCIDR),
 				},
 			},
 			ControlPlane: &types.MachinePool{
@@ -85,20 +85,20 @@ func (m *Manager) Create(ctx context.Context) error {
 				Replicas: to.Int64Ptr(3),
 				Platform: types.MachinePoolPlatform{
 					Azure: &azuretypes.MachinePool{
-						InstanceType: string(m.oc.Properties.MasterProfile.VMSize),
+						InstanceType: string(m.doc.OpenShiftCluster.Properties.MasterProfile.VMSize),
 					},
 				},
 				Hyperthreading: "Enabled",
 			},
 			Compute: []types.MachinePool{
 				{
-					Name:     m.oc.Properties.WorkerProfiles[0].Name,
-					Replicas: to.Int64Ptr(int64(m.oc.Properties.WorkerProfiles[0].Count)),
+					Name:     m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].Name,
+					Replicas: to.Int64Ptr(int64(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].Count)),
 					Platform: types.MachinePoolPlatform{
 						Azure: &azuretypes.MachinePool{
-							InstanceType: string(m.oc.Properties.WorkerProfiles[0].VMSize),
+							InstanceType: string(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].VMSize),
 							OSDisk: azuretypes.OSDisk{
-								DiskSizeGB: int32(m.oc.Properties.WorkerProfiles[0].DiskSizeGB),
+								DiskSizeGB: int32(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].DiskSizeGB),
 							},
 						},
 					},
@@ -107,8 +107,8 @@ func (m *Manager) Create(ctx context.Context) error {
 			},
 			Platform: types.Platform{
 				Azure: &azuretypes.Platform{
-					Region:                      m.oc.Location,
-					ResourceGroupName:           m.oc.Properties.ResourceGroup,
+					Region:                      m.doc.OpenShiftCluster.Location,
+					ResourceGroupName:           m.doc.OpenShiftCluster.Properties.ResourceGroup,
 					BaseDomainResourceGroupName: os.Getenv("RESOURCEGROUP"),
 					NetworkResourceGroupName:    vnetr.ResourceGroup,
 					VirtualNetwork:              vnetr.ResourceName,
@@ -126,5 +126,5 @@ func (m *Manager) Create(ctx context.Context) error {
 		return err
 	}
 
-	return install.NewInstaller(m.log, m.db, m.domain, m.authorizer, r.SubscriptionID).Install(ctx, m.oc, installConfig, platformCreds)
+	return install.NewInstaller(m.log, m.db, m.domain, m.authorizer, r.SubscriptionID).Install(ctx, m.doc, installConfig, platformCreds)
 }

@@ -120,7 +120,7 @@
                         "uniqueKeys": [
                             {
                                 "paths": [
-                                    "/openShiftCluster/key"
+                                    "/key"
                                 ]
                             }
                         ]

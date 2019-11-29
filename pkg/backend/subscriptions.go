@@ -88,7 +88,7 @@ func (sb *subscriptionBackend) handleDelete(ctx context.Context, log *logrus.Ent
 		}
 
 		for _, doc := range docs.OpenShiftClusterDocuments {
-			_, err = sb.db.OpenShiftClusters.Patch(doc.OpenShiftCluster.Key, func(doc *api.OpenShiftClusterDocument) error {
+			_, err = sb.db.OpenShiftClusters.Patch(doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 				switch doc.OpenShiftCluster.Properties.ProvisioningState {
 				case api.ProvisioningStateCreating,
 					api.ProvisioningStateUpdating:

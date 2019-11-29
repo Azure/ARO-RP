@@ -160,7 +160,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 	external.ToInternal(doc.OpenShiftCluster)
 
 	if isCreate {
-		doc.OpenShiftCluster.Key = api.Key(r.resourceID)
+		doc.Key = api.Key(r.resourceID)
 		doc.OpenShiftCluster.Properties.Install = &api.Install{}
 		// TODO: ResourceGroup should be exposed in external API
 		doc.OpenShiftCluster.Properties.ResourceGroup = doc.OpenShiftCluster.Name

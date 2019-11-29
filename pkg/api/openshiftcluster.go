@@ -9,9 +9,6 @@ import (
 type OpenShiftCluster struct {
 	MissingFields
 
-	// Database lookup key.  Immutable.  Always lower case.
-	Key Key `json:"key,omitempty"`
-
 	// ID, Name and Type are cased as the user provided them at create time.
 	// ID, Name, Type and Location are immutable.
 	ID         string            `json:"id,omitempty"`
@@ -21,9 +18,6 @@ type OpenShiftCluster struct {
 	Tags       map[string]string `json:"tags,omitempty"`
 	Properties Properties        `json:"properties,omitempty"`
 }
-
-// Key represents a database lookup key.
-type Key string
 
 // Properties represents an OpenShift cluster's properties
 type Properties struct {

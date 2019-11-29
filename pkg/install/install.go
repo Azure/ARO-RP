@@ -75,46 +75,45 @@ func NewInstaller(log *logrus.Entry, db database.OpenShiftClusters, domain strin
 	return d
 }
 
-func (i *Installer) Install(ctx context.Context, oc *api.OpenShiftCluster, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds) error {
+func (i *Installer) Install(ctx context.Context, doc *api.OpenShiftClusterDocument, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds) error {
 	for {
-		i.log.Printf("starting phase %s", oc.Properties.Install.Phase)
-		switch oc.Properties.Install.Phase {
+		i.log.Printf("starting phase %s", doc.OpenShiftCluster.Properties.Install.Phase)
+		switch doc.OpenShiftCluster.Properties.Install.Phase {
 		case api.InstallPhaseDeployStorage:
-			err := i.installStorage(ctx, oc, installConfig, platformCreds)
+			err := i.installStorage(ctx, doc, installConfig, platformCreds)
 			if err != nil {
 				return err
 			}
 
 		case api.InstallPhaseDeployResources:
-			err := i.installResources(ctx, oc)
+			err := i.installResources(ctx, doc)
 			if err != nil {
 				return err
 			}
 
 		case api.InstallPhaseRemoveBootstrap:
-			err := i.removeBootstrap(ctx, oc)
+			err := i.removeBootstrap(ctx, doc)
 			if err != nil {
 				return err
 			}
 
-			_, err = i.db.Patch(oc.Key, func(doc *api.OpenShiftClusterDocument) error {
+			_, err = i.db.Patch(doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 				doc.OpenShiftCluster.Properties.Install = nil
 				return nil
 			})
 			return err
 
 		default:
-			return fmt.Errorf("unrecognised phase %s", oc.Properties.Install.Phase)
+			return fmt.Errorf("unrecognised phase %s", doc.OpenShiftCluster.Properties.Install.Phase)
 		}
 
-		doc, err := i.db.Patch(oc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		_, err := i.db.Patch(doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 			doc.OpenShiftCluster.Properties.Install.Phase++
 			return nil
 		})
 		if err != nil {
 			return err
 		}
-		oc = doc.OpenShiftCluster
 	}
 }
 

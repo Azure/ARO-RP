@@ -65,12 +65,12 @@ func NewOpenShiftClusters(ctx context.Context, uuid uuid.UUID, dbc cosmosdb.Data
 }
 
 func (c *openShiftClusters) Create(doc *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error) {
-	if string(doc.OpenShiftCluster.Key) != strings.ToLower(string(doc.OpenShiftCluster.Key)) {
-		return nil, fmt.Errorf("key %q is not lower case", doc.OpenShiftCluster.Key)
+	if string(doc.Key) != strings.ToLower(string(doc.Key)) {
+		return nil, fmt.Errorf("key %q is not lower case", doc.Key)
 	}
 
 	var err error
-	doc.PartitionKey, err = c.partitionKey(doc.OpenShiftCluster.Key)
+	doc.PartitionKey, err = c.partitionKey(doc.Key)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +95,7 @@ func (c *openShiftClusters) Get(key api.Key) (*api.OpenShiftClusterDocument, err
 	}
 
 	docs, err := c.c.QueryAll(partitionKey, &cosmosdb.Query{
-		Query: "SELECT * FROM OpenshiftClusterDocuments doc WHERE doc.openShiftCluster.key = @key",
+		Query: "SELECT * FROM OpenshiftClusterDocuments doc WHERE doc.key = @key",
 		Parameters: []cosmosdb.Parameter{
 			{
 				Name:  "@key",
@@ -147,16 +147,16 @@ func (c *openShiftClusters) Update(doc *api.OpenShiftClusterDocument) (*api.Open
 }
 
 func (c *openShiftClusters) update(doc *api.OpenShiftClusterDocument, options *cosmosdb.Options) (*api.OpenShiftClusterDocument, error) {
-	if string(doc.OpenShiftCluster.Key) != strings.ToLower(string(doc.OpenShiftCluster.Key)) {
-		return nil, fmt.Errorf("key %q is not lower case", doc.OpenShiftCluster.Key)
+	if string(doc.Key) != strings.ToLower(string(doc.Key)) {
+		return nil, fmt.Errorf("key %q is not lower case", doc.Key)
 	}
 
 	return c.c.Replace(doc.PartitionKey, doc, options)
 }
 
 func (c *openShiftClusters) Delete(doc *api.OpenShiftClusterDocument) error {
-	if string(doc.OpenShiftCluster.Key) != strings.ToLower(string(doc.OpenShiftCluster.Key)) {
-		return fmt.Errorf("key %q is not lower case", doc.OpenShiftCluster.Key)
+	if string(doc.Key) != strings.ToLower(string(doc.Key)) {
+		return fmt.Errorf("key %q is not lower case", doc.Key)
 	}
 
 	return c.c.Delete(doc.PartitionKey, doc, &cosmosdb.Options{NoETag: true})
@@ -168,7 +168,7 @@ func (c *openShiftClusters) ListByPrefix(subscriptionID string, prefix api.Key) 
 	}
 
 	return c.c.Query(subscriptionID, &cosmosdb.Query{
-		Query: "SELECT * FROM OpenshiftClusterDocuments doc WHERE STARTSWITH(doc.openShiftCluster.key, @prefix)",
+		Query: "SELECT * FROM OpenshiftClusterDocuments doc WHERE STARTSWITH(doc.key, @prefix)",
 		Parameters: []cosmosdb.Parameter{
 			{
 				Name:  "@prefix",

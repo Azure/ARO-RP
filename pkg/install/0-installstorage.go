@@ -38,8 +38,8 @@ var apiVersions = map[string]string{
 	"storage":       "2019-04-01",
 }
 
-func (i *Installer) installStorage(ctx context.Context, oc *api.OpenShiftCluster, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds) error {
-	r, err := azure.ParseResourceID(oc.ID)
+func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftClusterDocument, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds) error {
+	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
 		return err
 	}
@@ -57,7 +57,7 @@ func (i *Installer) installStorage(ctx context.Context, oc *api.OpenShiftCluster
 
 	clusterID := &installconfig.ClusterID{
 		UUID:    uuid.NewV4().String(),
-		InfraID: oc.Properties.InfraID,
+		InfraID: doc.OpenShiftCluster.Properties.InfraID,
 	}
 
 	g := graph{
@@ -79,7 +79,7 @@ func (i *Installer) installStorage(ctx context.Context, oc *api.OpenShiftCluster
 	rhcosImage := g[reflect.TypeOf(new(rhcos.Image))].(*rhcos.Image)
 
 	i.log.Print("creating resource group")
-	_, err = i.groups.CreateOrUpdate(ctx, oc.Properties.ResourceGroup, resources.Group{
+	_, err = i.groups.CreateOrUpdate(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, resources.Group{
 		Location: &installConfig.Config.Azure.Region,
 	})
 	if err != nil {
@@ -96,7 +96,7 @@ func (i *Installer) installStorage(ctx context.Context, oc *api.OpenShiftCluster
 					// itself before we apply the RBAC rule in the next
 					// deployment
 					Resource: &msi.Identity{
-						Name:     to.StringPtr(oc.Properties.InfraID + "-identity"),
+						Name:     to.StringPtr(doc.OpenShiftCluster.Properties.InfraID + "-identity"),
 						Location: &installConfig.Config.Azure.Region,
 						Type:     "Microsoft.ManagedIdentity/userAssignedIdentities",
 					},
@@ -107,7 +107,7 @@ func (i *Installer) installStorage(ctx context.Context, oc *api.OpenShiftCluster
 						Sku: &storage.Sku{
 							Name: "Standard_LRS",
 						},
-						Name:     to.StringPtr("cluster" + oc.Properties.StorageSuffix),
+						Name:     to.StringPtr("cluster" + doc.OpenShiftCluster.Properties.StorageSuffix),
 						Location: &installConfig.Config.Azure.Region,
 						Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
 					},
@@ -116,32 +116,32 @@ func (i *Installer) installStorage(ctx context.Context, oc *api.OpenShiftCluster
 				{
 					// should go away when we use a cloud partner image
 					Resource: &storage.BlobContainer{
-						Name: to.StringPtr("cluster" + oc.Properties.StorageSuffix + "/default/vhd"),
+						Name: to.StringPtr("cluster" + doc.OpenShiftCluster.Properties.StorageSuffix + "/default/vhd"),
 						Type: to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
 					},
 					APIVersion: apiVersions["storage"],
 					DependsOn: []string{
-						"Microsoft.Storage/storageAccounts/cluster" + oc.Properties.StorageSuffix,
+						"Microsoft.Storage/storageAccounts/cluster" + doc.OpenShiftCluster.Properties.StorageSuffix,
 					},
 				},
 				{
 					Resource: &storage.BlobContainer{
-						Name: to.StringPtr("cluster" + oc.Properties.StorageSuffix + "/default/ignition"),
+						Name: to.StringPtr("cluster" + doc.OpenShiftCluster.Properties.StorageSuffix + "/default/ignition"),
 						Type: to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
 					},
 					APIVersion: apiVersions["storage"],
 					DependsOn: []string{
-						"Microsoft.Storage/storageAccounts/cluster" + oc.Properties.StorageSuffix,
+						"Microsoft.Storage/storageAccounts/cluster" + doc.OpenShiftCluster.Properties.StorageSuffix,
 					},
 				},
 				{
 					Resource: &storage.BlobContainer{
-						Name: to.StringPtr("cluster" + oc.Properties.StorageSuffix + "/default/aro"),
+						Name: to.StringPtr("cluster" + doc.OpenShiftCluster.Properties.StorageSuffix + "/default/aro"),
 						Type: to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
 					},
 					APIVersion: apiVersions["storage"],
 					DependsOn: []string{
-						"Microsoft.Storage/storageAccounts/cluster" + oc.Properties.StorageSuffix,
+						"Microsoft.Storage/storageAccounts/cluster" + doc.OpenShiftCluster.Properties.StorageSuffix,
 					},
 				},
 				{
@@ -176,7 +176,7 @@ func (i *Installer) installStorage(ctx context.Context, oc *api.OpenShiftCluster
 								},
 							},
 						},
-						Name:     to.StringPtr(oc.Properties.InfraID + "-controlplane-nsg"),
+						Name:     to.StringPtr(doc.OpenShiftCluster.Properties.InfraID + "-controlplane-nsg"),
 						Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
 						Location: &installConfig.Config.Azure.Region,
 					},
@@ -184,7 +184,7 @@ func (i *Installer) installStorage(ctx context.Context, oc *api.OpenShiftCluster
 				},
 				{
 					Resource: &network.SecurityGroup{
-						Name:     to.StringPtr(oc.Properties.InfraID + "-node-nsg"),
+						Name:     to.StringPtr(doc.OpenShiftCluster.Properties.InfraID + "-node-nsg"),
 						Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
 						Location: &installConfig.Config.Azure.Region,
 					},
@@ -194,7 +194,7 @@ func (i *Installer) installStorage(ctx context.Context, oc *api.OpenShiftCluster
 		}
 
 		i.log.Print("deploying storage template")
-		future, err := i.deployments.CreateOrUpdate(ctx, oc.Properties.ResourceGroup, "azuredeploy", resources.Deployment{
+		future, err := i.deployments.CreateOrUpdate(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy", resources.Deployment{
 			Properties: &resources.DeploymentProperties{
 				Template: t,
 				Mode:     resources.Incremental,
@@ -212,14 +212,14 @@ func (i *Installer) installStorage(ctx context.Context, oc *api.OpenShiftCluster
 	}
 
 	{
-		blobService, err := i.getBlobService(ctx, oc)
+		blobService, err := i.getBlobService(ctx, doc.OpenShiftCluster)
 		if err != nil {
 			return err
 		}
 
 		// blob copying should go away when we use a cloud partner image
 		i.log.Print("copying rhcos blob")
-		rhcosVhd := blobService.GetContainerReference("vhd").GetBlobReference("rhcos" + oc.Properties.StorageSuffix + ".vhd")
+		rhcosVhd := blobService.GetContainerReference("vhd").GetBlobReference("rhcos" + doc.OpenShiftCluster.Properties.StorageSuffix + ".vhd")
 		err = rhcosVhd.Copy(string(*rhcosImage), nil)
 		if err != nil {
 			return err
@@ -255,13 +255,13 @@ func (i *Installer) installStorage(ctx context.Context, oc *api.OpenShiftCluster
 	}
 
 	for subnetID, nsgID := range map[string]string{
-		oc.Properties.MasterProfile.SubnetID:     "/subscriptions/" + r.SubscriptionID + "/resourceGroups/" + oc.Properties.ResourceGroup + "/providers/Microsoft.Network/networkSecurityGroups/" + oc.Properties.InfraID + "-controlplane-nsg",
-		oc.Properties.WorkerProfiles[0].SubnetID: "/subscriptions/" + r.SubscriptionID + "/resourceGroups/" + oc.Properties.ResourceGroup + "/providers/Microsoft.Network/networkSecurityGroups/" + oc.Properties.InfraID + "-node-nsg",
+		doc.OpenShiftCluster.Properties.MasterProfile.SubnetID:     "/subscriptions/" + r.SubscriptionID + "/resourceGroups/" + doc.OpenShiftCluster.Properties.ResourceGroup + "/providers/Microsoft.Network/networkSecurityGroups/" + doc.OpenShiftCluster.Properties.InfraID + "-controlplane-nsg",
+		doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID: "/subscriptions/" + r.SubscriptionID + "/resourceGroups/" + doc.OpenShiftCluster.Properties.ResourceGroup + "/providers/Microsoft.Network/networkSecurityGroups/" + doc.OpenShiftCluster.Properties.InfraID + "-node-nsg",
 	} {
 		i.log.Printf("attaching network security group to subnet %s", subnetID)
 
 		// TODO: there is probably an undesirable race condition here - check if etags can help.
-		s, err := subnet.Get(ctx, &oc.Properties.ServicePrincipalProfile, subnetID)
+		s, err := subnet.Get(ctx, &doc.OpenShiftCluster.Properties.ServicePrincipalProfile, subnetID)
 		if err != nil {
 			return err
 		}
@@ -274,14 +274,14 @@ func (i *Installer) installStorage(ctx context.Context, oc *api.OpenShiftCluster
 			ID: to.StringPtr(nsgID),
 		}
 
-		err = subnet.CreateOrUpdate(ctx, &oc.Properties.ServicePrincipalProfile, subnetID, s)
+		err = subnet.CreateOrUpdate(ctx, &doc.OpenShiftCluster.Properties.ServicePrincipalProfile, subnetID, s)
 		if err != nil {
 			return err
 		}
 	}
 
 	{
-		identity, err := i.userassignedidentities.Get(ctx, oc.Properties.ResourceGroup, oc.Properties.InfraID+"-identity")
+		identity, err := i.userassignedidentities.Get(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, doc.OpenShiftCluster.Properties.InfraID+"-identity")
 		if err != nil {
 			return err
 		}
@@ -297,7 +297,7 @@ func (i *Installer) installStorage(ctx context.Context, oc *api.OpenShiftCluster
 		}
 	}
 
-	_, err = i.db.Patch(oc.Key, func(doc *api.OpenShiftClusterDocument) (err error) {
+	_, err = i.db.Patch(doc.Key, func(doc *api.OpenShiftClusterDocument) (err error) {
 		// used for the SAS token with which the bootstrap node retrieves its
 		// ignition payload
 		doc.OpenShiftCluster.Properties.Install.Now = time.Now().UTC()

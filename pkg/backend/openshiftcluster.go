@@ -29,7 +29,7 @@ func (ocb *openShiftClusterBackend) try() (bool, error) {
 	log := ocb.baseLog.WithField("resource", doc.OpenShiftCluster.ID)
 	if doc.Dequeues > maxDequeueCount {
 		log.Warnf("dequeued %d times, failing", doc.Dequeues)
-		return true, ocb.endLease(nil, doc.OpenShiftCluster, api.ProvisioningStateFailed)
+		return true, ocb.endLease(nil, doc, api.ProvisioningStateFailed)
 	}
 
 	log.Print("dequeued")
@@ -54,13 +54,13 @@ func (ocb *openShiftClusterBackend) try() (bool, error) {
 }
 
 func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument) error {
-	stop := ocb.heartbeat(log, doc.OpenShiftCluster)
+	stop := ocb.heartbeat(log, doc)
 	defer stop()
 
-	m, err := openshiftcluster.NewManager(log, ocb.db.OpenShiftClusters, ocb.authorizer, doc.OpenShiftCluster, ocb.domain)
+	m, err := openshiftcluster.NewManager(log, ocb.db.OpenShiftClusters, ocb.authorizer, doc, ocb.domain)
 	if err != nil {
 		log.Error(err)
-		return ocb.endLease(stop, doc.OpenShiftCluster, api.ProvisioningStateFailed)
+		return ocb.endLease(stop, doc, api.ProvisioningStateFailed)
 	}
 
 	switch doc.OpenShiftCluster.Properties.ProvisioningState {
@@ -70,10 +70,10 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 		err = m.Create(ctx)
 		if err != nil {
 			log.Error(err)
-			return ocb.endLease(stop, doc.OpenShiftCluster, api.ProvisioningStateFailed)
+			return ocb.endLease(stop, doc, api.ProvisioningStateFailed)
 		}
 
-		return ocb.endLease(stop, doc.OpenShiftCluster, api.ProvisioningStateSucceeded)
+		return ocb.endLease(stop, doc, api.ProvisioningStateSucceeded)
 
 	case api.ProvisioningStateUpdating:
 		log.Print("updating")
@@ -81,17 +81,17 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 		err = m.Update(ctx)
 		if err != nil {
 			log.Error(err)
-			return ocb.endLease(stop, doc.OpenShiftCluster, api.ProvisioningStateFailed)
+			return ocb.endLease(stop, doc, api.ProvisioningStateFailed)
 		}
 
-		return ocb.endLease(stop, doc.OpenShiftCluster, api.ProvisioningStateSucceeded)
+		return ocb.endLease(stop, doc, api.ProvisioningStateSucceeded)
 
 	case api.ProvisioningStateDeleting:
 		log.Print("deleting")
 		err = m.Delete(ctx)
 		if err != nil {
 			log.Error(err)
-			return ocb.endLease(stop, doc.OpenShiftCluster, api.ProvisioningStateFailed)
+			return ocb.endLease(stop, doc, api.ProvisioningStateFailed)
 		}
 
 		stop()
@@ -102,7 +102,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 	return fmt.Errorf("unexpected provisioningState %q", doc.OpenShiftCluster.Properties.ProvisioningState)
 }
 
-func (ocb *openShiftClusterBackend) heartbeat(log *logrus.Entry, oc *api.OpenShiftCluster) func() {
+func (ocb *openShiftClusterBackend) heartbeat(log *logrus.Entry, doc *api.OpenShiftClusterDocument) func() {
 	var stopped bool
 	stop, done := make(chan struct{}), make(chan struct{})
 
@@ -113,7 +113,7 @@ func (ocb *openShiftClusterBackend) heartbeat(log *logrus.Entry, oc *api.OpenShi
 		defer t.Stop()
 
 		for {
-			_, err := ocb.db.OpenShiftClusters.Lease(oc.Key)
+			_, err := ocb.db.OpenShiftClusters.Lease(doc.Key)
 			if err != nil {
 				log.Error(err)
 				return
@@ -136,16 +136,16 @@ func (ocb *openShiftClusterBackend) heartbeat(log *logrus.Entry, oc *api.OpenShi
 	}
 }
 
-func (ocb *openShiftClusterBackend) endLease(stop func(), oc *api.OpenShiftCluster, provisioningState api.ProvisioningState) error {
+func (ocb *openShiftClusterBackend) endLease(stop func(), doc *api.OpenShiftClusterDocument, provisioningState api.ProvisioningState) error {
 	var failedProvisioningState api.ProvisioningState
 	if provisioningState == api.ProvisioningStateFailed {
-		failedProvisioningState = oc.Properties.ProvisioningState
+		failedProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
 	}
 
 	if stop != nil {
 		stop()
 	}
 
-	_, err := ocb.db.OpenShiftClusters.EndLease(oc.Key, provisioningState, failedProvisioningState)
+	_, err := ocb.db.OpenShiftClusters.EndLease(doc.Key, provisioningState, failedProvisioningState)
 	return err
 }

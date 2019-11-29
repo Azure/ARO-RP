@@ -21,12 +21,12 @@ type Manager struct {
 	recordsets dns.RecordSetsClient
 	groups     resources.GroupsClient
 
-	oc     *api.OpenShiftCluster
+	doc    *api.OpenShiftClusterDocument
 	domain string
 }
 
-func NewManager(log *logrus.Entry, db database.OpenShiftClusters, authorizer autorest.Authorizer, oc *api.OpenShiftCluster, domain string) (*Manager, error) {
-	r, err := azure.ParseResourceID(oc.ID)
+func NewManager(log *logrus.Entry, db database.OpenShiftClusters, authorizer autorest.Authorizer, doc *api.OpenShiftClusterDocument, domain string) (*Manager, error) {
+	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +36,7 @@ func NewManager(log *logrus.Entry, db database.OpenShiftClusters, authorizer aut
 		db:         db,
 		authorizer: authorizer,
 
-		oc:     oc,
+		doc:    doc,
 		domain: domain,
 	}
 
