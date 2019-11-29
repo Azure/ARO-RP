@@ -80,6 +80,7 @@ type Properties struct {
 	ResourceGroup string `json:"resourceGroup,omitempty"`
 	DomainName    string `json:"domainName,omitempty"`
 	StorageSuffix string `json:"storageSuffix,omitempty"`
+	InfraID       string `json:"infraId,omitempty"`
 
 	SSHKey            *rsa.PrivateKey `json:"sshKey,omitempty"`
 	AdminKubeconfig   []byte          `json:"adminKubeconfig,omitempty"`

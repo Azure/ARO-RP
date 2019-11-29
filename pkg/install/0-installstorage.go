@@ -57,7 +57,7 @@ func (i *Installer) installStorage(ctx context.Context, oc *api.OpenShiftCluster
 
 	clusterID := &installconfig.ClusterID{
 		UUID:    uuid.NewV4().String(),
-		InfraID: "aro",
+		InfraID: oc.Properties.InfraID,
 	}
 
 	g := graph{
@@ -96,7 +96,7 @@ func (i *Installer) installStorage(ctx context.Context, oc *api.OpenShiftCluster
 					// itself before we apply the RBAC rule in the next
 					// deployment
 					Resource: &msi.Identity{
-						Name:     to.StringPtr(clusterID.InfraID + "-identity"),
+						Name:     to.StringPtr(oc.Properties.InfraID + "-identity"),
 						Location: &installConfig.Config.Azure.Region,
 						Type:     "Microsoft.ManagedIdentity/userAssignedIdentities",
 					},
@@ -176,7 +176,7 @@ func (i *Installer) installStorage(ctx context.Context, oc *api.OpenShiftCluster
 								},
 							},
 						},
-						Name:     to.StringPtr(clusterID.InfraID + "-controlplane-nsg"),
+						Name:     to.StringPtr(oc.Properties.InfraID + "-controlplane-nsg"),
 						Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
 						Location: &installConfig.Config.Azure.Region,
 					},
@@ -184,7 +184,7 @@ func (i *Installer) installStorage(ctx context.Context, oc *api.OpenShiftCluster
 				},
 				{
 					Resource: &network.SecurityGroup{
-						Name:     to.StringPtr(clusterID.InfraID + "-node-nsg"),
+						Name:     to.StringPtr(oc.Properties.InfraID + "-node-nsg"),
 						Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
 						Location: &installConfig.Config.Azure.Region,
 					},
@@ -255,8 +255,8 @@ func (i *Installer) installStorage(ctx context.Context, oc *api.OpenShiftCluster
 	}
 
 	for subnetID, nsgID := range map[string]string{
-		oc.Properties.MasterProfile.SubnetID:     "/subscriptions/" + r.SubscriptionID + "/resourceGroups/" + oc.Properties.ResourceGroup + "/providers/Microsoft.Network/networkSecurityGroups/" + clusterID.InfraID + "-controlplane-nsg",
-		oc.Properties.WorkerProfiles[0].SubnetID: "/subscriptions/" + r.SubscriptionID + "/resourceGroups/" + oc.Properties.ResourceGroup + "/providers/Microsoft.Network/networkSecurityGroups/" + clusterID.InfraID + "-node-nsg",
+		oc.Properties.MasterProfile.SubnetID:     "/subscriptions/" + r.SubscriptionID + "/resourceGroups/" + oc.Properties.ResourceGroup + "/providers/Microsoft.Network/networkSecurityGroups/" + oc.Properties.InfraID + "-controlplane-nsg",
+		oc.Properties.WorkerProfiles[0].SubnetID: "/subscriptions/" + r.SubscriptionID + "/resourceGroups/" + oc.Properties.ResourceGroup + "/providers/Microsoft.Network/networkSecurityGroups/" + oc.Properties.InfraID + "-node-nsg",
 	} {
 		i.log.Printf("attaching network security group to subnet %s", subnetID)
 
@@ -281,7 +281,7 @@ func (i *Installer) installStorage(ctx context.Context, oc *api.OpenShiftCluster
 	}
 
 	{
-		identity, err := i.userassignedidentities.Get(ctx, oc.Properties.ResourceGroup, clusterID.InfraID+"-identity")
+		identity, err := i.userassignedidentities.Get(ctx, oc.Properties.ResourceGroup, oc.Properties.InfraID+"-identity")
 		if err != nil {
 			return err
 		}
