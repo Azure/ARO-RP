@@ -26,7 +26,7 @@ type Subscriptions interface {
 	Delete(*api.SubscriptionDocument) error
 	Dequeue() (*api.SubscriptionDocument, error)
 	Lease(api.Key) (*api.SubscriptionDocument, error)
-	EndLease(api.Key, bool) (*api.SubscriptionDocument, error)
+	EndLease(api.Key, bool, bool) (*api.SubscriptionDocument, error)
 }
 
 // NewSubscriptions returns a new Subscriptions
@@ -196,7 +196,7 @@ func (c *subscriptions) Lease(key api.Key) (*api.SubscriptionDocument, error) {
 	}, &cosmosdb.Options{PreTriggers: []string{"renewLease"}})
 }
 
-func (c *subscriptions) EndLease(key api.Key, retryLater bool) (*api.SubscriptionDocument, error) {
+func (c *subscriptions) EndLease(key api.Key, done, retryLater bool) (*api.SubscriptionDocument, error) {
 	var options *cosmosdb.Options
 	if retryLater {
 		options = &cosmosdb.Options{PreTriggers: []string{"retryLater"}}
@@ -207,12 +207,14 @@ func (c *subscriptions) EndLease(key api.Key, retryLater bool) (*api.Subscriptio
 			return fmt.Errorf("lost lease")
 		}
 
-		doc.Deleting = false
+		if done {
+			doc.Deleting = false
+		}
 
 		doc.LeaseOwner = nil
 		doc.LeaseExpires = 0
 
-		if retryLater {
+		if done || retryLater {
 			doc.Dequeues = 0
 		}
 

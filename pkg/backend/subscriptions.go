@@ -28,7 +28,7 @@ func (sb *subscriptionBackend) try() (bool, error) {
 	log := sb.baseLog.WithField("subscription", doc.Key)
 	if doc.Dequeues > maxDequeueCount {
 		log.Warnf("dequeued %d times, failing", doc.Dequeues)
-		return true, sb.endLease(nil, doc, true)
+		return true, sb.endLease(nil, doc, false, true)
 	}
 
 	log.Print("dequeued")
@@ -57,14 +57,12 @@ func (sb *subscriptionBackend) handle(ctx context.Context, log *logrus.Entry, do
 	defer stop()
 
 	done, err := sb.handleDelete(ctx, log, doc)
-	if err != nil || !done {
-		if err != nil {
-			log.Error(err)
-		}
-		return sb.endLease(stop, doc, false)
+	if err != nil {
+		log.Error(err)
+		return sb.endLease(stop, doc, false, false)
 	}
 
-	return sb.endLease(stop, doc, false)
+	return sb.endLease(stop, doc, done, !done)
 }
 
 // handleDelete ensures that all the clusters in a subscription which is being
@@ -146,11 +144,11 @@ func (sb *subscriptionBackend) heartbeat(log *logrus.Entry, doc *api.Subscriptio
 	}
 }
 
-func (sb *subscriptionBackend) endLease(stop func(), doc *api.SubscriptionDocument, retryLater bool) error {
+func (sb *subscriptionBackend) endLease(stop func(), doc *api.SubscriptionDocument, done, retryLater bool) error {
 	if stop != nil {
 		stop()
 	}
 
-	_, err := sb.db.Subscriptions.EndLease(doc.Key, retryLater)
+	_, err := sb.db.Subscriptions.EndLease(doc.Key, done, retryLater)
 	return err
 }
