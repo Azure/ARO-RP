@@ -211,7 +211,10 @@ func (c *subscriptions) EndLease(key api.Key, retryLater bool) (*api.Subscriptio
 
 		doc.LeaseOwner = nil
 		doc.LeaseExpires = 0
-		doc.Dequeues = 0
+
+		if retryLater {
+			doc.Dequeues = 0
+		}
 
 		return nil
 	}, options)

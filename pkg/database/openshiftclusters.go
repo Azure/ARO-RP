@@ -224,7 +224,10 @@ func (c *openShiftClusters) EndLease(key api.Key, provisioningState, failedProvi
 
 		doc.LeaseOwner = nil
 		doc.LeaseExpires = 0
-		doc.Dequeues = 0
+
+		if provisioningState == api.ProvisioningStateSucceeded {
+			doc.Dequeues = 0
+		}
 
 		return nil
 	}, nil)

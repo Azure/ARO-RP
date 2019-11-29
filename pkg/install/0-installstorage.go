@@ -7,14 +7,14 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/azure"
-
 	"github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
 	"github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
 	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/ignition/bootstrap"
 	"github.com/openshift/installer/pkg/asset/installconfig"
@@ -281,11 +281,15 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 	}
 
 	{
+		// TODO: we probably don't want to do this
+		i.log.Printf("creating role assignment on vnet")
+
 		identity, err := i.userassignedidentities.Get(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, doc.OpenShiftCluster.Properties.InfraID+"-identity")
 		if err != nil {
 			return err
 		}
 
+		// TODO: do we need to remove this at tear-down?
 		_, err = i.roleassignments.Create(ctx, "/subscriptions/"+r.SubscriptionID+"/resourceGroups/"+installConfig.Config.Azure.NetworkResourceGroupName+"/providers/Microsoft.Network/virtualNetworks/"+installConfig.Config.Azure.VirtualNetwork, uuid.NewV4().String(), authorization.RoleAssignmentCreateParameters{
 			Properties: &authorization.RoleAssignmentProperties{
 				RoleDefinitionID: to.StringPtr("/subscriptions/" + r.SubscriptionID + "/providers/Microsoft.Authorization/roleDefinitions/8e3af657-a8ff-443c-a75c-2fe8c4bcb635"), // Owner
@@ -293,20 +297,24 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 			},
 		})
 		if err != nil {
-			return err
+			var ignore bool
+			if err, ok := err.(autorest.DetailedError); ok {
+				if err, ok := err.Original.(*azure.RequestError); ok && err.ServiceError != nil && err.ServiceError.Code == "RoleAssignmentExists" {
+					ignore = true
+				}
+			}
+			if !ignore {
+				return err
+			}
 		}
 	}
 
-	_, err = i.db.Patch(doc.Key, func(doc *api.OpenShiftClusterDocument) (err error) {
+	_, err = i.db.Patch(doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		// used for the SAS token with which the bootstrap node retrieves its
 		// ignition payload
 		doc.OpenShiftCluster.Properties.Install.Now = time.Now().UTC()
 		doc.OpenShiftCluster.Properties.AdminKubeconfig = adminClient.File.Data
 		return nil
 	})
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }

@@ -61,7 +61,7 @@ func (sb *subscriptionBackend) handle(ctx context.Context, log *logrus.Entry, do
 		if err != nil {
 			log.Error(err)
 		}
-		return sb.endLease(stop, doc, true)
+		return sb.endLease(stop, doc, false)
 	}
 
 	return sb.endLease(stop, doc, false)

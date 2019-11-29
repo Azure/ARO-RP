@@ -58,5 +58,7 @@ func (f *frontend) _deleteOpenShiftCluster(r *request, doc *api.OpenShiftCluster
 	}
 
 	doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateDeleting
+	doc.Dequeues = 0
+
 	return nil
 }

@@ -125,6 +125,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 		}
 
 		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateUpdating
+		doc.Dequeues = 0
 
 		switch r.method {
 		case http.MethodPut:
@@ -164,7 +165,10 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 		doc.OpenShiftCluster.Properties.Install = &api.Install{}
 		// TODO: ResourceGroup should be exposed in external API
 		doc.OpenShiftCluster.Properties.ResourceGroup = doc.OpenShiftCluster.Name
-		doc.OpenShiftCluster.Properties.DomainName = uuid.NewV4().String()
+		doc.OpenShiftCluster.Properties.DomainName, err = randomDomainName()
+		if err != nil {
+			return nil, false, err
+		}
 		doc.OpenShiftCluster.Properties.InfraID = "aro"
 		doc.OpenShiftCluster.Properties.SSHKey, err = rsa.GenerateKey(rand.Reader, 2048)
 		if err != nil {
@@ -194,6 +198,18 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 	}
 
 	return b, isCreate, nil
+}
+
+func randomDomainName() (string, error) {
+	prefix, err := randomString("abcdefghijklmnopqrstuvwxyz", 1)
+	if err != nil {
+		return "", err
+	}
+	suffix, err := randomString("abcdefghijklmnopqrstuvwxyz0123456789", 7)
+	if err != nil {
+		return "", err
+	}
+	return prefix + suffix, nil
 }
 
 func randomLowerCaseAlphanumericString(n int) (string, error) {
