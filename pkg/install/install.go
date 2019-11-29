@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	"github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	"github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
@@ -20,6 +19,7 @@ import (
 
 	"github.com/jim-minter/rp/pkg/api"
 	"github.com/jim-minter/rp/pkg/database"
+	"github.com/jim-minter/rp/pkg/util/azureclient/authorization"
 )
 
 type Installer struct {
@@ -47,7 +47,7 @@ func NewInstaller(log *logrus.Entry, db database.OpenShiftClusters, domain strin
 
 		domain: domain,
 
-		roleassignments:        authorization.NewRoleAssignmentsClient(subscriptionID),
+		roleassignments:        authorization.NewRoleAssignmentsClient(subscriptionID, authorizer),
 		disks:                  compute.NewDisksClient(subscriptionID),
 		virtualmachines:        compute.NewVirtualMachinesClient(subscriptionID),
 		recordsets:             dns.NewRecordSetsClient(subscriptionID),
@@ -59,7 +59,6 @@ func NewInstaller(log *logrus.Entry, db database.OpenShiftClusters, domain strin
 		accounts:               storage.NewAccountsClient(subscriptionID),
 	}
 
-	d.roleassignments.Authorizer = authorizer
 	d.disks.Authorizer = authorizer
 	d.virtualmachines.Authorizer = authorizer
 	d.recordsets.Authorizer = authorizer
