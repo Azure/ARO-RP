@@ -1,6 +1,7 @@
 required = [
   "github.com/alvaroloes/enumer",
   "github.com/jim-minter/go-cosmosdb/cmd/gencosmosdb",
+  "github.com/golang/mock/mockgen",
   "golang.org/x/tools/cmd/goimports"
 ]
 
@@ -72,3 +73,7 @@ required = [
   [[prune.project]]
     name = "github.com/openshift/installer"
     unused-packages = false
+
+[[constraint]]
+  name = "github.com/golang/mock"
+  version = "1.3.1"

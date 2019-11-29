@@ -301,6 +301,17 @@
   revision = "611e8accdfc92c4187d399e95ce826046d4c8d73"
 
 [[projects]]
+  digest = "1:27f22f5f78d7258edae2bedc36f7abb2b3224044e0d7fe900cce272b9b857d1c"
+  name = "github.com/golang/mock"
+  packages = [
+    "mockgen",
+    "mockgen/model",
+  ]
+  pruneopts = "UT"
+  revision = "9fa652df1129bef0e734c9cf9bf6dbae9ef3b9fa"
+  version = "1.3.1"
+
+[[projects]]
   digest = "1:f5ce1529abc1204444ec73779f44f94e2fa8fcdb7aca3c355b0c95947e4005c6"
   name = "github.com/golang/protobuf"
   packages = [
@@ -1371,6 +1382,7 @@
     "github.com/Azure/go-autorest/autorest/to",
     "github.com/alvaroloes/enumer",
     "github.com/apparentlymart/go-cidr/cidr",
+    "github.com/golang/mock/mockgen",
     "github.com/gorilla/mux",
     "github.com/jim-minter/go-cosmosdb/cmd/gencosmosdb",
     "github.com/openshift/api/config/v1",
