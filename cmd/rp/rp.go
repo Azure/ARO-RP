@@ -39,7 +39,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	db, err := database.NewDatabase(ctx, env, uuid, "OpenShiftClusters")
+	db, err := database.NewDatabase(ctx, env, uuid, "ARO")
 	if err != nil {
 		return err
 	}

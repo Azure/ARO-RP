@@ -87,7 +87,7 @@
             }
         },
         {
-            "name": "[concat(parameters('databaseAccountName'), '/sql/OpenShiftClusters')]",
+            "name": "[concat(parameters('databaseAccountName'), '/sql/ARO')]",
             "type": "Microsoft.DocumentDB/databaseAccounts/apis/databases",
             "apiVersion": "2015-04-08",
             "dependsOn": [
@@ -95,21 +95,21 @@
             ],
             "properties": {
                 "resource": {
-                    "id": "OpenShiftClusters"
+                    "id": "ARO"
                 },
                 "options": {}
             }
         },
         {
-            "name": "[concat(parameters('databaseAccountName'), '/sql/OpenShiftClusters/OpenShiftClusterDocuments')]",
+            "name": "[concat(parameters('databaseAccountName'), '/sql/ARO/OpenShiftClusters')]",
             "type": "Microsoft.DocumentDB/databaseAccounts/apis/databases/containers",
             "apiVersion": "2015-04-08",
             "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts/apis/databases', parameters('databaseAccountName'), 'sql', 'OpenShiftClusters')]"
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/apis/databases', parameters('databaseAccountName'), 'sql', 'ARO')]"
             ],
             "properties": {
                 "resource": {
-                    "id": "OpenShiftClusterDocuments",
+                    "id": "OpenShiftClusters",
                     "partitionKey": {
                         "paths": [
                             "/partitionKey"
@@ -130,15 +130,15 @@
             }
         },
         {
-            "name": "[concat(parameters('databaseAccountName'), '/sql/OpenShiftClusters/SubscriptionDocuments')]",
+            "name": "[concat(parameters('databaseAccountName'), '/sql/ARO/Subscriptions')]",
             "type": "Microsoft.DocumentDB/databaseAccounts/apis/databases/containers",
             "apiVersion": "2015-04-08",
             "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts/apis/databases', parameters('databaseAccountName'), 'sql', 'OpenShiftClusters')]"
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/apis/databases', parameters('databaseAccountName'), 'sql', 'ARO')]"
             ],
             "properties": {
                 "resource": {
-                    "id": "SubscriptionDocuments",
+                    "id": "Subscriptions",
                     "partitionKey": {
                         "paths": [
                             "/key"

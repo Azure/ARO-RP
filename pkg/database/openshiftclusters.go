@@ -95,7 +95,7 @@ func (c *openShiftClusters) Get(key api.Key) (*api.OpenShiftClusterDocument, err
 	}
 
 	docs, err := c.c.QueryAll(partitionKey, &cosmosdb.Query{
-		Query: "SELECT * FROM OpenshiftClusterDocuments doc WHERE doc.key = @key",
+		Query: "SELECT * FROM OpenShiftClusters doc WHERE doc.key = @key",
 		Parameters: []cosmosdb.Parameter{
 			{
 				Name:  "@key",
@@ -168,7 +168,7 @@ func (c *openShiftClusters) ListByPrefix(subscriptionID string, prefix api.Key) 
 	}
 
 	return c.c.Query(subscriptionID, &cosmosdb.Query{
-		Query: "SELECT * FROM OpenshiftClusterDocuments doc WHERE STARTSWITH(doc.key, @prefix)",
+		Query: "SELECT * FROM OpenShiftClusters doc WHERE STARTSWITH(doc.key, @prefix)",
 		Parameters: []cosmosdb.Parameter{
 			{
 				Name:  "@prefix",
@@ -180,7 +180,7 @@ func (c *openShiftClusters) ListByPrefix(subscriptionID string, prefix api.Key) 
 
 func (c *openShiftClusters) Dequeue() (*api.OpenShiftClusterDocument, error) {
 	i := c.c.Query("", &cosmosdb.Query{
-		Query: `SELECT * FROM OpenShiftClusterDocuments doc WHERE NOT (doc.openShiftCluster.properties.provisioningState IN ("Succeeded", "Failed")) AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`,
+		Query: `SELECT * FROM OpenShiftClusters doc WHERE NOT (doc.openShiftCluster.properties.provisioningState IN ("Succeeded", "Failed")) AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`,
 	})
 
 	for {

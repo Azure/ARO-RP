@@ -94,7 +94,7 @@ func (c *subscriptions) Get(key api.Key) (*api.SubscriptionDocument, error) {
 	}
 
 	docs, err := c.c.QueryAll(string(key), &cosmosdb.Query{
-		Query: "SELECT * FROM SubscriptionDocuments doc WHERE doc.key = @key",
+		Query: "SELECT * FROM Subscriptions doc WHERE doc.key = @key",
 		Parameters: []cosmosdb.Parameter{
 			{
 				Name:  "@key",
@@ -163,7 +163,7 @@ func (c *subscriptions) Delete(doc *api.SubscriptionDocument) error {
 
 func (c *subscriptions) Dequeue() (*api.SubscriptionDocument, error) {
 	i := c.c.Query("", &cosmosdb.Query{
-		Query: `SELECT * FROM SubscriptionDocuments doc WHERE (doc.deleting ?? false) AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`,
+		Query: `SELECT * FROM Subscriptions doc WHERE (doc.deleting ?? false) AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`,
 	})
 
 	for {

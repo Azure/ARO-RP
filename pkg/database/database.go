@@ -45,12 +45,12 @@ func NewDatabase(ctx context.Context, env env.Interface, uuid uuid.UUID, dbid st
 
 	db = &Database{}
 
-	db.OpenShiftClusters, err = NewOpenShiftClusters(ctx, uuid, dbc, dbid, "OpenShiftClusterDocuments")
+	db.OpenShiftClusters, err = NewOpenShiftClusters(ctx, uuid, dbc, dbid, "OpenShiftClusters")
 	if err != nil {
 		return nil, err
 	}
 
-	db.Subscriptions, err = NewSubscriptions(ctx, uuid, dbc, dbid, "SubscriptionDocuments")
+	db.Subscriptions, err = NewSubscriptions(ctx, uuid, dbc, dbid, "Subscriptions")
 	if err != nil {
 		return nil, err
 	}
