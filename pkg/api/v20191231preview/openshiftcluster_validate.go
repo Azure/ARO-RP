@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/apparentlymart/go-cidr/cidr"
@@ -32,27 +31,13 @@ func (oc *OpenShiftCluster) Validate(ctx context.Context, tenantID, resourceID s
 
 	internal := &api.OpenShiftCluster{}
 	oc.ToInternal(internal)
-	internal.Properties.ServicePrincipalProfile.TenantID = tenantID
 
-	masterSubnet, err := subnet.Get(ctx, &internal.Properties.ServicePrincipalProfile, internal.Properties.MasterProfile.SubnetID)
-	if err != nil {
-		// TODO: return friendly error if SP is not authorised
-		if err, ok := err.(autorest.DetailedError); ok && err.StatusCode == http.StatusNotFound {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "properties.masterProfile.subnetId", "The provided master VM subnet '%s' could not be found.", oc.Properties.MasterProfile.SubnetID)
-		}
-		return err
-	}
+	// TODO: remove this hack
+	internal.Properties.InfraID = current.Properties.InfraID
+	internal.Properties.ResourceGroup = current.Properties.ResourceGroup
+	internal.Properties.ServicePrincipalProfile.TenantID = current.Properties.ServicePrincipalProfile.TenantID
 
-	workerSubnet, err := subnet.Get(ctx, &internal.Properties.ServicePrincipalProfile, internal.Properties.WorkerProfiles[0].SubnetID)
-	if err != nil {
-		// TODO: return friendly error if SP is not authorised
-		if err, ok := err.(autorest.DetailedError); ok && err.StatusCode == http.StatusNotFound {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "properties.masterProfile.subnetId", "The provided master VM subnet '%s' could not be found.", oc.Properties.MasterProfile.SubnetID)
-		}
-		return err
-	}
-
-	err = oc.validateSubnets(masterSubnet, workerSubnet)
+	err = oc.validateSubnets(ctx, internal)
 	if err != nil {
 		return err
 	}
@@ -317,35 +302,15 @@ func (wp *WorkerProfile) validateDelta(path string, current *WorkerProfile) erro
 	return nil
 }
 
-func (oc *OpenShiftCluster) validateSubnets(masterSubnet, workerSubnet *network.Subnet) error {
-	if masterSubnet.SubnetPropertiesFormat != nil && masterSubnet.SubnetPropertiesFormat.NetworkSecurityGroup != nil {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "properties.masterProfile.subnetId", "The provided master VM subnet '%s' is invalid: must not have a network security group attached.", oc.Properties.MasterProfile.SubnetID)
-	}
-
-	_, master, err := net.ParseCIDR(*masterSubnet.AddressPrefix)
+func (oc *OpenShiftCluster) validateSubnets(ctx context.Context, internal *api.OpenShiftCluster) error {
+	master, err := oc.validateSubnet(ctx, internal, "properties.masterProfile.subnetId", "master", internal.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return err
 	}
-	{
-		ones, _ := master.Mask.Size()
-		if ones > 27 {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "properties.masterProfile.subnetId", "The provided master VM subnet '%s' is invalid: must be /27 or larger.", oc.Properties.MasterProfile.SubnetID)
-		}
-	}
 
-	if workerSubnet.SubnetPropertiesFormat != nil && workerSubnet.SubnetPropertiesFormat.NetworkSecurityGroup != nil {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, `properties.workerProfiles["worker"].subnetId`, "The provided worker VM subnet '%s' is invalid: must not have a network security group attached.", oc.Properties.WorkerProfiles[0].SubnetID)
-	}
-
-	_, worker, err := net.ParseCIDR(*workerSubnet.AddressPrefix)
+	worker, err := oc.validateSubnet(ctx, internal, `properties.workerProfiles["worker"].subnetId`, "worker", internal.Properties.WorkerProfiles[0].SubnetID)
 	if err != nil {
 		return err
-	}
-	{
-		ones, _ := worker.Mask.Size()
-		if ones > 27 {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, `properties.workerProfiles["worker"].subnetId`, "The provided worker VM subnet '%s' is invalid: must be /27 or larger.", oc.Properties.WorkerProfiles[0].SubnetID)
-		}
 	}
 
 	_, pod, err := net.ParseCIDR(oc.Properties.NetworkProfile.PodCIDR)
@@ -364,4 +329,47 @@ func (oc *OpenShiftCluster) validateSubnets(masterSubnet, workerSubnet *network.
 	}
 
 	return nil
+}
+
+func (oc *OpenShiftCluster) validateSubnet(ctx context.Context, internal *api.OpenShiftCluster, path, typ, subnetID string) (*net.IPNet, error) {
+	s, err := subnet.Get(ctx, &internal.Properties.ServicePrincipalProfile, subnetID)
+	if err != nil {
+		// TODO: return friendly error if SP is not authorised
+		if err, ok := err.(autorest.DetailedError); ok && err.StatusCode == http.StatusNotFound {
+			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The provided "+typ+" VM subnet '%s' could not be found.", subnetID)
+		}
+		return nil, err
+	}
+
+	if oc.Properties.ProvisioningState == ProvisioningStateCreating {
+		if s.SubnetPropertiesFormat != nil &&
+			s.SubnetPropertiesFormat.NetworkSecurityGroup != nil {
+			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The provided "+typ+" VM subnet '%s' is invalid: must not have a network security group attached.", subnetID)
+		}
+
+	} else {
+		nsgID, err := subnet.NetworkSecurityGroupID(internal, *s.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		if s.SubnetPropertiesFormat == nil ||
+			s.SubnetPropertiesFormat.NetworkSecurityGroup == nil ||
+			!strings.EqualFold(*s.SubnetPropertiesFormat.NetworkSecurityGroup.ID, nsgID) {
+			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The provided "+typ+" VM subnet '%s' is invalid: must have network security group %q attached.", subnetID, nsgID)
+		}
+	}
+
+	_, net, err := net.ParseCIDR(*s.AddressPrefix)
+	if err != nil {
+		return nil, err
+	}
+	{
+		ones, _ := net.Mask.Size()
+		if ones > 27 {
+			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The provided "+typ+" VM subnet '%s' is invalid: must be /27 or larger.", subnetID)
+		}
+	}
+
+	return net, nil
 }

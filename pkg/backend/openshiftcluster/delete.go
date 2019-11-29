@@ -7,30 +7,29 @@ import (
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
-	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/jim-minter/rp/pkg/util/subnet"
 )
 
 func (m *Manager) Delete(ctx context.Context) error {
-	r, err := azure.ParseResourceID(m.doc.OpenShiftCluster.ID)
-	if err != nil {
-		return err
-	}
-
 	m.log.Printf("deleting dns")
-	_, err = m.recordsets.Delete(ctx, os.Getenv("RESOURCEGROUP"), m.domain, "api."+m.doc.OpenShiftCluster.Properties.DomainName, dns.CNAME, "")
+	_, err := m.recordsets.Delete(ctx, os.Getenv("RESOURCEGROUP"), m.domain, "api."+m.doc.OpenShiftCluster.Properties.DomainName, dns.CNAME, "")
 	if err != nil {
 		return err
 	}
 
 	// TODO: ideally we would do this after all the VMs have been deleted
-	for subnetID, nsgID := range map[string]string{
-		m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID:     "/subscriptions/" + r.SubscriptionID + "/resourceGroups/" + m.doc.OpenShiftCluster.Properties.ResourceGroup + "/providers/Microsoft.Network/networkSecurityGroups/" + m.doc.OpenShiftCluster.Properties.InfraID + "-controlplane-nsg",
-		m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID: "/subscriptions/" + r.SubscriptionID + "/resourceGroups/" + m.doc.OpenShiftCluster.Properties.ResourceGroup + "/providers/Microsoft.Network/networkSecurityGroups/" + m.doc.OpenShiftCluster.Properties.InfraID + "-node-nsg",
+	for _, subnetID := range []string{
+		m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
+		m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID,
 	} {
 		// TODO: there is probably an undesirable race condition here - check if etags can help.
 		s, err := subnet.Get(ctx, &m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile, subnetID)
+		if err != nil {
+			return err
+		}
+
+		nsgID, err := subnet.NetworkSecurityGroupID(m.doc.OpenShiftCluster, subnetID)
 		if err != nil {
 			return err
 		}

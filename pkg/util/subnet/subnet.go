@@ -79,3 +79,21 @@ func CreateOrUpdate(ctx context.Context, spp *api.ServicePrincipalProfile, subne
 
 	return future.WaitForCompletionRef(ctx, c.Client)
 }
+
+// NetworkSecurityGroupID returns the NetworkSecurityGroup ID for a given subnet
+// ID
+func NetworkSecurityGroupID(oc *api.OpenShiftCluster, subnetID string) (string, error) {
+	r, err := azure.ParseResourceID(oc.ID)
+	if err != nil {
+		return "", err
+	}
+
+	switch {
+	case strings.EqualFold(subnetID, oc.Properties.MasterProfile.SubnetID):
+		return "/subscriptions/" + r.SubscriptionID + "/resourceGroups/" + oc.Properties.ResourceGroup + "/providers/Microsoft.Network/networkSecurityGroups/" + oc.Properties.InfraID + "-controlplane-nsg", nil
+	case strings.EqualFold(subnetID, oc.Properties.WorkerProfiles[0].SubnetID):
+		return "/subscriptions/" + r.SubscriptionID + "/resourceGroups/" + oc.Properties.ResourceGroup + "/providers/Microsoft.Network/networkSecurityGroups/" + oc.Properties.InfraID + "-node-nsg", nil
+	default:
+		return "", fmt.Errorf("unknown subnetID %q", subnetID)
+	}
+}

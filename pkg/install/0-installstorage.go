@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"time"
 
@@ -254,9 +255,9 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 		}
 	}
 
-	for subnetID, nsgID := range map[string]string{
-		doc.OpenShiftCluster.Properties.MasterProfile.SubnetID:     "/subscriptions/" + r.SubscriptionID + "/resourceGroups/" + doc.OpenShiftCluster.Properties.ResourceGroup + "/providers/Microsoft.Network/networkSecurityGroups/" + doc.OpenShiftCluster.Properties.InfraID + "-controlplane-nsg",
-		doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID: "/subscriptions/" + r.SubscriptionID + "/resourceGroups/" + doc.OpenShiftCluster.Properties.ResourceGroup + "/providers/Microsoft.Network/networkSecurityGroups/" + doc.OpenShiftCluster.Properties.InfraID + "-node-nsg",
+	for _, subnetID := range []string{
+		doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
+		doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID,
 	} {
 		i.log.Printf("attaching network security group to subnet %s", subnetID)
 
@@ -268,6 +269,15 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 
 		if s.SubnetPropertiesFormat == nil {
 			s.SubnetPropertiesFormat = &network.SubnetPropertiesFormat{}
+		}
+
+		if s.SubnetPropertiesFormat.NetworkSecurityGroup != nil {
+			return fmt.Errorf("tried to overwrite non-nil network security group")
+		}
+
+		nsgID, err := subnet.NetworkSecurityGroupID(doc.OpenShiftCluster, subnetID)
+		if err != nil {
+			return err
 		}
 
 		s.SubnetPropertiesFormat.NetworkSecurityGroup = &network.SecurityGroup{
