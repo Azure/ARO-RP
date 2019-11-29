@@ -7,9 +7,12 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/to"
 	machinev1beta1 "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
+	machine "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset/typed/machine/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
+
+	"github.com/jim-minter/rp/pkg/util/restconfig"
 )
 
 func find(xs interface{}, f func(int, int) bool) interface{} {
@@ -24,7 +27,17 @@ func find(xs interface{}, f func(int, int) bool) interface{} {
 }
 
 func (b *Manager) Update(ctx context.Context) error {
-	machinesets, err := b.machinesets.List(metav1.ListOptions{})
+	restConfig, err := restconfig.RestConfig(b.oc.Properties.AdminKubeconfig)
+	if err != nil {
+		return err
+	}
+
+	cli, err := machine.NewForConfig(restConfig)
+	if err != nil {
+		return err
+	}
+
+	machinesets, err := cli.MachineSets("openshift-machine-api").List(metav1.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -53,14 +66,14 @@ func (b *Manager) Update(ctx context.Context) error {
 		want := *machineset.Spec.Replicas
 
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			machineset, err := b.machinesets.Get(machineset.Name, metav1.GetOptions{})
+			machineset, err := cli.MachineSets(machineset.Namespace).Get(machineset.Name, metav1.GetOptions{})
 			if err != nil {
 				return err
 			}
 
 			b.log.Printf("scaling machineset %s to %d replicas", machineset.Name, want)
 			machineset.Spec.Replicas = to.Int32Ptr(want)
-			_, err = b.machinesets.Update(machineset)
+			_, err = cli.MachineSets(machineset.Namespace).Update(machineset)
 			return err
 		})
 		if err != nil {
@@ -73,7 +86,7 @@ func (b *Manager) Update(ctx context.Context) error {
 
 		b.log.Printf("waiting for machineset %s", machineset.Name)
 		err := wait.PollImmediate(10*time.Second, 30*time.Minute, func() (bool, error) {
-			m, err := b.machinesets.Get(machineset.Name, metav1.GetOptions{})
+			m, err := cli.MachineSets(machineset.Namespace).Get(machineset.Name, metav1.GetOptions{})
 			if err != nil {
 				return false, err
 			}
