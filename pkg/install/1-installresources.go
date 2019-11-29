@@ -220,7 +220,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 						PublicIPAddressPropertiesFormat: &network.PublicIPAddressPropertiesFormat{
 							PublicIPAllocationMethod: network.Static,
 							DNSSettings: &network.PublicIPAddressDNSSettings{
-								DomainNameLabel: &doc.OpenShiftCluster.Properties.InfraID,
+								DomainNameLabel: &doc.OpenShiftCluster.Properties.DomainName,
 							},
 						},
 						Name:     to.StringPtr(doc.OpenShiftCluster.Properties.InfraID + "-pip"),
@@ -640,7 +640,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 			RecordSetProperties: &dns.RecordSetProperties{
 				TTL: to.Int64Ptr(300),
 				CnameRecord: &dns.CnameRecord{
-					Cname: to.StringPtr(doc.OpenShiftCluster.Properties.InfraID + "." + installConfig.Config.Azure.Region + ".cloudapp.azure.com"),
+					Cname: to.StringPtr(doc.OpenShiftCluster.Properties.DomainName + "." + installConfig.Config.Azure.Region + ".cloudapp.azure.com"),
 				},
 			},
 		}, "", "")
