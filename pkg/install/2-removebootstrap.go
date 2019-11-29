@@ -56,7 +56,7 @@ func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClust
 			return err
 		}
 
-		err = future.WaitForCompletionRef(ctx, i.interfaces.Client)
+		err = future.WaitForCompletionRef(ctx, i.interfaces.Client())
 		if err != nil {
 			return err
 		}
@@ -69,7 +69,7 @@ func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClust
 			return err
 		}
 
-		err = future.WaitForCompletionRef(ctx, i.publicipaddresses.Client)
+		err = future.WaitForCompletionRef(ctx, i.publicipaddresses.Client())
 		if err != nil {
 			return err
 		}

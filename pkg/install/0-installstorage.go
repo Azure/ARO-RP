@@ -206,7 +206,7 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 		}
 
 		i.log.Print("waiting for storage template deployment")
-		err = future.WaitForCompletionRef(ctx, i.deployments.Client)
+		err = future.WaitForCompletionRef(ctx, i.deployments.Client())
 		if err != nil {
 			return err
 		}

@@ -629,7 +629,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 		}
 
 		i.log.Print("waiting for resources template deployment")
-		err = future.WaitForCompletionRef(ctx, i.deployments.Client)
+		err = future.WaitForCompletionRef(ctx, i.deployments.Client())
 		if err != nil {
 			return err
 		}
