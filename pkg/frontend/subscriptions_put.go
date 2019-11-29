@@ -100,7 +100,6 @@ func (f *frontend) _putSubscription(r *request) ([]byte, bool, error) {
 		// allow
 	case api.SubscriptionStateDeleted:
 		doc.Deleting = true
-		doc.Dequeues = 0
 	default:
 		return nil, false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "state", "The provided state '%s' is invalid.", doc.Subscription.State)
 	}

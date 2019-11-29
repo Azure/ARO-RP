@@ -122,7 +122,9 @@ export CLUSTER=cluster
 
 * Register a subscription:
 
+```
 curl -k -X PUT "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID?api-version=2.0" -H 'Content-Type: application/json' -d '{"state": "Registered", "properties": {"tenantId": "'"$AZURE_TENANT_ID"'"}}'
+```
 
 * Create a cluster:
 
@@ -160,7 +162,7 @@ curl -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/providers/M
 * Scale a cluster:
 
 ```
-COUNT=3
+COUNT=4
 
 curl -k -X PATCH "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER?api-version=2019-12-31-preview" -H 'Content-Type: application/json' -d '{"properties": {"workerProfiles": [{"name": "worker", "count": '"$COUNT"'}]}}'
 ```
@@ -172,6 +174,12 @@ curl -k -X DELETE "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/r
 
 az network vnet subnet delete -g "$VNET_RESOURCEGROUP" --vnet-name vnet -n "$CLUSTER-master"
 az network vnet subnet delete -g "$VNET_RESOURCEGROUP" --vnet-name vnet -n "$CLUSTER-worker"
+```
+
+* Delete a subscription:
+
+```
+curl -k -X PUT "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID?api-version=2.0" -H 'Content-Type: application/json' -d '{"state": "Deleted", "properties": {"tenantId": "'"$AZURE_TENANT_ID"'"}}'
 ```
 
 * List operations:
