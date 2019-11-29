@@ -3,7 +3,6 @@ package subnet
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
@@ -37,7 +36,7 @@ func Get(ctx context.Context, spp *api.ServicePrincipalProfile, subnetID string)
 		return nil, err
 	}
 
-	authorizer, err := auth.NewClientCredentialsConfig(spp.ClientID, spp.ClientSecret, os.Getenv("AZURE_TENANT_ID")).Authorizer()
+	authorizer, err := auth.NewClientCredentialsConfig(spp.ClientID, spp.ClientSecret, spp.TenantID).Authorizer()
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +64,7 @@ func CreateOrUpdate(ctx context.Context, spp *api.ServicePrincipalProfile, subne
 		return err
 	}
 
-	authorizer, err := auth.NewClientCredentialsConfig(spp.ClientID, spp.ClientSecret, os.Getenv("AZURE_TENANT_ID")).Authorizer()
+	authorizer, err := auth.NewClientCredentialsConfig(spp.ClientID, spp.ClientSecret, spp.TenantID).Authorizer()
 	if err != nil {
 		return err
 	}

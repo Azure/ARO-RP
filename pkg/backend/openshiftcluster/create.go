@@ -49,7 +49,7 @@ func (m *Manager) Create(ctx context.Context) error {
 
 	platformCreds := &installconfig.PlatformCreds{
 		Azure: &icazure.Credentials{
-			TenantID:       os.Getenv("AZURE_TENANT_ID"),
+			TenantID:       m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID,
 			ClientID:       m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientID,
 			ClientSecret:   m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret,
 			SubscriptionID: r.SubscriptionID,

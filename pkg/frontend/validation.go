@@ -66,25 +66,25 @@ func validateTerminalProvisioningState(state api.ProvisioningState) error {
 	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed in provisioningState '%s'.", state)
 }
 
-func (f *frontend) validateSubscriptionState(key api.Key, allowedStates ...api.SubscriptionState) error {
+func (f *frontend) validateSubscriptionState(key api.Key, allowedStates ...api.SubscriptionState) (*api.SubscriptionDocument, error) {
 	r, err := azure.ParseResourceID(string(key))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	doc, err := f.db.Subscriptions.Get(api.Key(r.SubscriptionID))
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionState, "", "Request is not allowed in unregistered subscription '%s'.", r.SubscriptionID)
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionState, "", "Request is not allowed in unregistered subscription '%s'.", r.SubscriptionID)
 	case err != nil:
-		return err
+		return nil, err
 	}
 
 	for _, allowedState := range allowedStates {
 		if doc.Subscription.State == allowedState {
-			return nil
+			return doc, nil
 		}
 	}
 
-	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionState, "", "Request is not allowed in subscription in state '%s'.", doc.Subscription.State)
+	return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionState, "", "Request is not allowed in subscription in state '%s'.", doc.Subscription.State)
 }

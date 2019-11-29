@@ -72,7 +72,7 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 }
 
 func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error) {
-	err := f.validateSubscriptionState(api.Key(r.resourceID), api.SubscriptionStateRegistered)
+	subdoc, err := f.validateSubscriptionState(api.Key(r.resourceID), api.SubscriptionStateRegistered)
 	if err != nil {
 		return nil, false, err
 	}
@@ -147,7 +147,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 		return nil, false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
 	}
 
-	err = external.Validate(r.context, r.resourceID, doc.OpenShiftCluster)
+	err = external.Validate(r.context, subdoc.Subscription.Properties.TenantID, r.resourceID, doc.OpenShiftCluster)
 	if err != nil {
 		return nil, false, err
 	}
@@ -174,10 +174,12 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 		if err != nil {
 			return nil, false, err
 		}
+		doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID = subdoc.Subscription.Properties.TenantID
 
 		doc, err = f.db.OpenShiftClusters.Create(doc)
 	} else {
 		doc.OpenShiftCluster.ID, doc.OpenShiftCluster.Name, doc.OpenShiftCluster.Type = oldID, oldName, oldType
+
 		doc, err = f.db.OpenShiftClusters.Update(doc)
 	}
 	if err != nil {

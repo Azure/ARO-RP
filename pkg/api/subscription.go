@@ -5,6 +5,8 @@ type Subscription struct {
 	MissingFields
 
 	State SubscriptionState `json:"state,omitempty"`
+
+	Properties *SubscriptionProperties `json:"properties,omitempty"`
 }
 
 // SubscriptionState represents a subscription state
@@ -18,3 +20,10 @@ const (
 	SubscriptionStateSuspended    SubscriptionState = "Suspended"
 	SubscriptionStateDeleted      SubscriptionState = "Deleted"
 )
+
+// SubscriptionProperties represents subscription properties
+type SubscriptionProperties struct {
+	MissingFields
+
+	TenantID string `json:"tenantId,omitempty"`
+}

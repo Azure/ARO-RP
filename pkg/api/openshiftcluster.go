@@ -97,6 +97,7 @@ const (
 type ServicePrincipalProfile struct {
 	MissingFields
 
+	TenantID     string `json:"tenantId,omitempty"`
 	ClientID     string `json:"clientId,omitempty"`
 	ClientSecret string `json:"clientSecret,omitempty"`
 }

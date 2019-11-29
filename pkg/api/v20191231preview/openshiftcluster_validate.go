@@ -24,7 +24,7 @@ var (
 )
 
 // Validate validates an OpenShift cluster
-func (oc *OpenShiftCluster) Validate(ctx context.Context, resourceID string, current *api.OpenShiftCluster) error {
+func (oc *OpenShiftCluster) Validate(ctx context.Context, tenantID, resourceID string, current *api.OpenShiftCluster) error {
 	err := oc.validate(resourceID)
 	if err != nil {
 		return err
@@ -32,6 +32,7 @@ func (oc *OpenShiftCluster) Validate(ctx context.Context, resourceID string, cur
 
 	internal := &api.OpenShiftCluster{}
 	oc.ToInternal(internal)
+	internal.Properties.ServicePrincipalProfile.TenantID = tenantID
 
 	masterSubnet, err := subnet.Get(ctx, &internal.Properties.ServicePrincipalProfile, internal.Properties.MasterProfile.SubnetID)
 	if err != nil {
