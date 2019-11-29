@@ -71,9 +71,15 @@ func (m *Manager) Update(ctx context.Context) error {
 				return err
 			}
 
-			m.log.Printf("scaling machineset %s to %d replicas", machineset.Name, want)
-			machineset.Spec.Replicas = to.Int32Ptr(want)
-			_, err = cli.MachineSets(machineset.Namespace).Update(machineset)
+			if machineset.Spec.Replicas == nil {
+				machineset.Spec.Replicas = to.Int32Ptr(1)
+			}
+
+			if *machineset.Spec.Replicas != want {
+				m.log.Printf("scaling machineset %s from %d to %d replicas", machineset.Name, *machineset.Spec.Replicas, want)
+				machineset.Spec.Replicas = to.Int32Ptr(want)
+				_, err = cli.MachineSets(machineset.Namespace).Update(machineset)
+			}
 			return err
 		})
 		if err != nil {
