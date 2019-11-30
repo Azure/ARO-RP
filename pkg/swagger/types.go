@@ -83,7 +83,8 @@ type Operation struct {
 	Schemes      []string               `json:"schemes,omitempty"`
 	Deprecated   bool                   `json:"deprecated,omitempty"`
 
-	LongRunningOperation bool `json:"x-ms-long-running-operation,omitempty"`
+	LongRunningOperation bool                 `json:"x-ms-long-running-operation,omitempty"`
+	Examples             map[string]Reference `json:"x-ms-examples,omitempty"`
 }
 
 // ExternalDocumentation represents an External Documentation object

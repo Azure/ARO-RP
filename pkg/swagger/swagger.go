@@ -6,17 +6,13 @@ import (
 	"os"
 )
 
-func Run(outputFile, shortVersion string) error {
-	longVersion, err := longVersion(shortVersion)
-	if err != nil {
-		return err
-	}
+func Run(outputFile string) error {
 	s := &Swagger{
 		Swagger: "2.0",
 		Info: &Info{
 			Title:       "Azure Red Hat OpenShift",
 			Description: "Rest API for Azure Red Hat OpenShift",
-			Version:     longVersion,
+			Version:     "2019-12-31-preview",
 		},
 		Host:     "management.azure.com",
 		Schemes:  []string{"https"},
@@ -97,7 +93,9 @@ func Run(outputFile, shortVersion string) error {
 		},
 	}
 
-	err = define(s.Definitions, "github.com/jim-minter/rp/pkg/api/"+shortVersion, "OpenShiftCluster", "OpenShiftClusterCredentials")
+	populateExamples(s.Paths)
+
+	err := define(s.Definitions, "github.com/jim-minter/rp/pkg/api/v20191231preview", "OpenShiftCluster", "OpenShiftClusterCredentials")
 	if err != nil {
 		return err
 	}

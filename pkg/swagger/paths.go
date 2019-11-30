@@ -157,3 +157,21 @@ func populateTopLevelPaths(resourceProviderNamespace, resourceType, friendlyName
 
 	return
 }
+
+func populateExamples(ps Paths) {
+	for p, pi := range ps {
+		for _, op := range []*Operation{pi.Get, pi.Put, pi.Post, pi.Delete, pi.Options, pi.Head, pi.Patch} {
+			if op == nil {
+				continue
+			}
+
+			op.Examples = map[string]Reference{
+				op.Summary: {
+					Ref: "./examples/" + op.OperationID + ".json",
+				},
+			}
+		}
+
+		ps[p] = pi
+	}
+}

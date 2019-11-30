@@ -301,9 +301,10 @@
   revision = "611e8accdfc92c4187d399e95ce826046d4c8d73"
 
 [[projects]]
-  digest = "1:27f22f5f78d7258edae2bedc36f7abb2b3224044e0d7fe900cce272b9b857d1c"
+  digest = "1:5e14df5b9539151b485eeb3ebea90a2823347516732978b0911ff17acea2842c"
   name = "github.com/golang/mock"
   packages = [
+    "gomock",
     "mockgen",
     "mockgen/model",
   ]
@@ -775,14 +776,6 @@
   version = "v0.8.1"
 
 [[projects]]
-  digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
-  name = "github.com/pmezard/go-difflib"
-  packages = ["difflib"]
-  pruneopts = "UT"
-  revision = "792786c7400a136282c1664665ae0a8db921c6c2"
-  version = "v1.0.0"
-
-[[projects]]
   digest = "1:274f67cb6fed9588ea2521ecdac05a6d62a8c51c074c1fccc6a49a40ba80e925"
   name = "github.com/satori/go.uuid"
   packages = ["."]
@@ -821,14 +814,6 @@
   pruneopts = "UT"
   revision = "2e9d26c8c37aae03e3f9d4e90b7116f5accb7cab"
   version = "v1.0.5"
-
-[[projects]]
-  digest = "1:8548c309c65a85933a625be5e7d52b6ac927ca30c56869fae58123b8a77a75e1"
-  name = "github.com/stretchr/testify"
-  packages = ["assert"]
-  pruneopts = "UT"
-  revision = "221dbe5ed46703ee255b1da0dec05086f5035f62"
-  version = "v1.4.0"
 
 [[projects]]
   digest = "1:5a1cf4e370bc86137b58da2ae065e76526d32b11f62a7665f36dbd5f41fa95ff"
@@ -1396,8 +1381,10 @@
     "github.com/Azure/go-autorest/autorest/azure",
     "github.com/Azure/go-autorest/autorest/azure/auth",
     "github.com/Azure/go-autorest/autorest/to",
+    "github.com/Azure/go-autorest/tracing",
     "github.com/alvaroloes/enumer",
     "github.com/apparentlymart/go-cidr/cidr",
+    "github.com/golang/mock/gomock",
     "github.com/golang/mock/mockgen",
     "github.com/gorilla/mux",
     "github.com/jim-minter/go-cosmosdb/cmd/gencosmosdb",
@@ -1430,7 +1417,6 @@
     "github.com/satori/go.uuid",
     "github.com/shurcooL/vfsgen",
     "github.com/sirupsen/logrus",
-    "github.com/stretchr/testify/assert",
     "github.com/ugorji/go/codec",
     "golang.org/x/crypto/ssh",
     "golang.org/x/tools/cmd/goimports",

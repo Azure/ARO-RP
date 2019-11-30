@@ -7,19 +7,13 @@ import (
 )
 
 var (
-	outputFile   = flag.String("o", "", "output file")
-	inputVersion = flag.String("i", "", "api version for input [example v20190211preview]")
+	outputFile = flag.String("o", "", "output file")
 )
 
 func main() {
 	flag.Parse()
 
-	err := swagger.ValidateVersion(*inputVersion)
-	if err != nil {
-		panic(err)
-	}
-
-	if err := swagger.Run(*outputFile, *inputVersion); err != nil {
+	if err := swagger.Run(*outputFile); err != nil {
 		panic(err)
 	}
 }

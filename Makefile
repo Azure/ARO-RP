@@ -6,6 +6,21 @@ rp:
 clean:
 	rm -f rp
 
+client:
+	go generate ./...
+	rm -rf pkg/client
+	sudo docker run \
+		-v $(PWD)/pkg/client:/github.com/jim-minter/rp/pkg/client \
+		-v $(PWD)/swagger:/swagger \
+		azuresdk/autorest \
+		--go \
+		--namespace=redhatopenshift \
+		--input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/preview/2019-12-31-preview/redhatopenshift.json \
+		--output-folder=/github.com/jim-minter/rp/pkg/client/services/preview/redhatopenshift/mgmt/2019-12-31-preview/redhatopenshift
+
+	sudo chown -R $(USER):$(USER) pkg/client
+	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/jim-minter/rp pkg/client
+
 image: rp
 	docker build -t rp:$(COMMIT) .
 
@@ -22,17 +37,4 @@ test:
 	go vet ./...
 	go test ./...
 
-generate-sdk:
-	go generate ./...
-	# Due to orering https://github.com/Azure/autorest.go/blob/3f9bdd60fd7a7c8740bbe3ec986f583f7ffa5fbd/src/Model/CodeModelGo.cs#L120-L141
-	# package FQDN are either hardcoded to azure sdk or set wrong. For this we do
-	# replace in the end
-	podman run --privileged --workdir=/go/src -it -v $(GOPATH):/go --entrypoint autorest \
-    azuresdk/autorest ./github.com/jim-minter/rp/rest-api-spec/redhatopenshift/resource-manager/readme.md \
-    --go --go-sdks-folder=./github.com/jim-minter/rp/pkg/sdk --multiapi \
-    --use=@microsoft.azure/autorest.go@~2.1.137 --use-onever --verbose
-	# HACK to align pkg imports when running in non default repository
-	find . -type f -name "*.go" -exec sed -i 's/go\/src\/github.com/github.com/g' {} +
-
-.PHONY: clean generate-sdk image rp test
-
+.PHONY: rp clean client image test
