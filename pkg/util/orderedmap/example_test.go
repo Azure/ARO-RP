@@ -1,29 +1,30 @@
 package orderedmap
 
 import (
+	"bytes"
 	"encoding/json"
 	"reflect"
 	"testing"
 )
 
-type KeyValue struct {
+type keyValue struct {
 	Key   string
 	Value int
 }
 
-type KeyValues []KeyValue
+type keyValues []keyValue
 
-func (xs *KeyValues) UnmarshalJSON(b []byte) error {
+func (xs *keyValues) UnmarshalJSON(b []byte) error {
 	return UnmarshalJSON(b, xs)
 }
 
-func (xs KeyValues) MarshalJSON() ([]byte, error) {
+func (xs keyValues) MarshalJSON() ([]byte, error) {
 	return MarshalJSON(xs)
 }
 
 func TestExample(t *testing.T) {
 	in := []byte(`{"a":1,"b":2}`)
-	out := KeyValues{
+	out := keyValues{
 		{
 			Key:   "a",
 			Value: 1,
@@ -34,14 +35,14 @@ func TestExample(t *testing.T) {
 		},
 	}
 
-	var m KeyValues
+	var m keyValues
 	err := json.Unmarshal(in, &m)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if !reflect.DeepEqual(m, out) {
-		t.Errorf("got m %#v", m)
+		t.Error(m)
 	}
 
 	b, err := json.Marshal(&m)
@@ -49,7 +50,7 @@ func TestExample(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(b, in) {
-		t.Errorf("got b %s", string(b))
+	if !bytes.Equal(b, in) {
+		t.Error(string(b))
 	}
 }

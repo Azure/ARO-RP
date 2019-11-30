@@ -21,6 +21,7 @@ func UnmarshalJSON(b []byte, i interface{}) error {
 		return fmt.Errorf("unexpected token %v", tok)
 	}
 
+	indexes := map[string]int{}
 	for {
 		tok, err = d.Token()
 		if err != nil {
@@ -41,7 +42,12 @@ func UnmarshalJSON(b []byte, i interface{}) error {
 			return err
 		}
 
-		xs = reflect.Append(xs, kv)
+		if i, found := indexes[k]; found {
+			xs.Index(i).Set(kv)
+		} else {
+			indexes[k] = xs.Len()
+			xs = reflect.Append(xs, kv)
+		}
 	}
 
 	reflect.ValueOf(i).Elem().Set(xs)
