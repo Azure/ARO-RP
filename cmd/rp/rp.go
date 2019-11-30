@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 
 	_ "github.com/jim-minter/rp/pkg/api/v20191231preview"
@@ -14,7 +15,6 @@ import (
 	"github.com/jim-minter/rp/pkg/database"
 	"github.com/jim-minter/rp/pkg/env"
 	"github.com/jim-minter/rp/pkg/frontend"
-	uuid "github.com/satori/go.uuid"
 )
 
 var (

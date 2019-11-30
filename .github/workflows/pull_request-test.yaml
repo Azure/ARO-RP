@@ -21,9 +21,5 @@ jobs:
     - name: Test
       run: |
         set -x
-
-        go generate ./...
-        go build ./...
-        go test ./...
-
+        make test
         [[ -z "$(git status -s)" ]]
