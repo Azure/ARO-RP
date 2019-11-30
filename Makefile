@@ -1,12 +1,13 @@
+COMMIT = $(shell git rev-parse --short HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
+
 rp:
-	go build -ldflags "-X main.gitCommit=$(shell git rev-parse --short HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)" ./cmd/rp
+	go build -ldflags "-X main.gitCommit=$(COMMIT)" ./cmd/rp
 
 clean:
 	rm -f rp
 
-image:
-	go get github.com/openshift/imagebuilder/cmd/imagebuilder
-	imagebuilder -f Dockerfile -t rp:latest .
+image: rp
+	docker build -t rp:$(COMMIT) .
 
 test:
 	go generate ./...
