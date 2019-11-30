@@ -54,7 +54,6 @@ func (m *Manager) Create(ctx context.Context) error {
 			ClientSecret:   m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret,
 			SubscriptionID: r.SubscriptionID,
 		},
-		Passthrough: true, // TODO: not working yet
 	}
 
 	installConfig := &installconfig.InstallConfig{

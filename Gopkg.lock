@@ -356,7 +356,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:5ac4f65a967ff85b05d5994cb74a982d8b55147c2ae19919279354ab72120943"
+  digest = "1:c890d8954d8c2d70635c0b005c0a0a5cbf208388ef7efcb5993e5f35db31ec4f"
   name = "github.com/gophercloud/gophercloud"
   packages = [
     ".",
@@ -378,7 +378,7 @@
     "pagination",
   ]
   pruneopts = "UT"
-  revision = "794fbdbba08a7d1b848500304c708c980a6a272f"
+  revision = "6dad56fdca42773a2993258183682d7ebd2197e6"
 
 [[projects]]
   branch = "master"
@@ -644,7 +644,7 @@
 
 [[projects]]
   branch = "release-4.3-azure"
-  digest = "1:d61af085a0b161a4c67ff960ffdabd8c8e3add4c4fc2a6252742a6db0ca86938"
+  digest = "1:482f1b1a391c24f3b379e4bed77bcdc3a150c615418cce850b6912367a553dde"
   name = "github.com/openshift/installer"
   packages = [
     "data",
@@ -729,7 +729,7 @@
     "pkg/version",
   ]
   pruneopts = "T"
-  revision = "ba832225ce2943ea12ae4e2f0a399dd4cf151e90"
+  revision = "86289f922b4145c6d5324b82a7e5f5fe7eb88ebf"
   source = "https://github.com/jim-minter/installer"
 
 [[projects]]
@@ -986,7 +986,7 @@
     "internal/span",
   ]
   pruneopts = "UT"
-  revision = "ecd32218bd7f33fd31c1abbfb74283690bedd093"
+  revision = "6e064ea0cf2dcfaca8da2da9f42da458bab38756"
 
 [[projects]]
   digest = "1:f3661f6218166acf60f5d551b44a537f7ecb8686be02ece061c5950cbfc9ba17"
