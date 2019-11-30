@@ -2,10 +2,14 @@ package arm
 
 import (
 	"encoding/json"
+	"fmt"
 	"math"
 	"reflect"
+
+	"github.com/jim-minter/rp/pkg/util/orderedmap"
 )
 
+// Template represents an ARM template
 type Template struct {
 	Schema         string                 `json:"$schema,omitempty"`
 	APIProfile     string                 `json:"apiProfile,omitempty"`
@@ -17,6 +21,7 @@ type Template struct {
 	Outputs        map[string]interface{} `json:"outputs,omitempty"`
 }
 
+// Parameter represents an ARM template parameter
 type Parameter struct {
 	Type          string                 `json:"type,omitempty"`
 	DefaultValue  interface{}            `json:"defaultValue,omitempty"`
@@ -28,6 +33,7 @@ type Parameter struct {
 	MaxLength     int                    `json:"maxLength,omitempty"`
 }
 
+// Resource represents an ARM template resource
 type Resource struct {
 	Resource interface{}
 
@@ -42,6 +48,7 @@ type Resource struct {
 	Comments   string                 `json:"comments,omitempty"`
 }
 
+// Copy represents an ARM template copy stanza
 type Copy struct {
 	Name      string `json:"name,omitempty"`
 	Count     int    `json:"count,omitempty"`
@@ -49,22 +56,40 @@ type Copy struct {
 	BatchSize int    `json:"batchSize,omitempty"`
 }
 
-// MarshalJSON marshals r.Resource ignoring any MarshalJSON() methods on its
-// types.  It then merges remaining fields of r over the result
-func (r *Resource) MarshalJSON() ([]byte, error) {
+type keyValue struct {
+	Key   string
+	Value interface{}
+}
+
+type keyValues []keyValue
+
+func (xs *keyValues) UnmarshalJSON(b []byte) error {
+	return orderedmap.UnmarshalJSON(b, xs)
+}
+
+func (xs keyValues) MarshalJSON() ([]byte, error) {
+	return orderedmap.MarshalJSON(xs)
+}
+
+// MarshalJSON marshals the nested r.Resource ignoring any MarshalJSON() methods
+// on its types.  It then merges remaining fields of r over the result
+func (r Resource) MarshalJSON() ([]byte, error) {
+	// first marshal the nested r.Resource ignoring any MarshalJSON() methods
 	b, err := json.Marshal(shadowCopy(r.Resource))
 	if err != nil {
 		return nil, err
 	}
 
-	var m map[string]interface{}
+	var nested keyValues
 
-	err = json.Unmarshal(b, &m)
+	err = json.Unmarshal(b, &nested)
 	if err != nil {
 		return nil, err
 	}
 
-	v := reflect.ValueOf(*r)
+	// now create a shadow of r without the nested r.Resource field, and marshal
+	// that
+	v := reflect.ValueOf(r)
 
 	fields := make([]reflect.StructField, 0, v.NumField()-1)
 	for i := 0; i < v.NumField()-1; i++ {
@@ -82,15 +107,44 @@ func (r *Resource) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 
-	err = json.Unmarshal(b, &m)
+	var outer keyValues
+
+	err = json.Unmarshal(b, &outer)
 	if err != nil {
 		return nil, err
 	}
 
-	return json.Marshal(m)
+	// now scan through nested and remove any keys that appear in outer
+	outerkeys := map[string]struct{}{}
+	for _, kv := range outer {
+		outerkeys[kv.Key] = struct{}{}
+	}
+
+	{
+		newnested := make(keyValues, 0, len(nested))
+		for _, kv := range nested {
+			if _, found := outerkeys[kv.Key]; !found {
+				newnested = append(newnested, kv)
+			}
+		}
+		nested = newnested
+	}
+
+	// finally, append outer to nested, marshal and return
+	nested = append(nested, outer...)
+
+	return json.Marshal(nested)
 }
 
-var emptyInterfaceType = reflect.ValueOf([]interface{}(nil)).Type().Elem()
+// UnmarshalJSON is not implemented
+func (r *Resource) UnmarshalJSON(b []byte) error {
+	return fmt.Errorf("not implemented")
+}
+
+var (
+	stringType         = reflect.TypeOf("")
+	emptyInterfaceType = reflect.ValueOf([]interface{}(nil)).Type().Elem()
+)
 
 // shadowCopy returns a copy of the input object wherein all the struct types
 // have been replaced with dynamically created ones.  The idea is that the
@@ -123,7 +177,7 @@ func _shadowCopy(v reflect.Value) reflect.Value {
 	case reflect.Map:
 		// this is not fully generic but Go json marshaling requires
 		// map[string]interface{}
-		t := reflect.MapOf(reflect.TypeOf(""), emptyInterfaceType)
+		t := reflect.MapOf(stringType, emptyInterfaceType)
 		if v.IsNil() {
 			return reflect.Zero(t)
 		}
@@ -137,8 +191,8 @@ func _shadowCopy(v reflect.Value) reflect.Value {
 	case reflect.Slice:
 		var t reflect.Type
 		if v.Type().Elem().Kind() == reflect.Uint8 {
-			// It's a slice of byte. It should be marshaled as a base64 encoded string
-			// to match encoding/json behaviour, so preserve element's type in this case
+			// keep []byte - encoding/json will detect it and marshal it into a
+			// base64 encoded string
 			t = reflect.SliceOf(v.Type().Elem())
 		} else {
 			t = reflect.SliceOf(emptyInterfaceType)

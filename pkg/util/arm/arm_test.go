@@ -1,125 +1,124 @@
 package arm
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"testing"
+
+	"github.com/Azure/go-autorest/autorest/to"
 )
 
-func TestResource(t *testing.T) {
+func TestResourceMarshal(t *testing.T) {
 	tests := []struct {
-		name     string
-		input    *Resource
-		expected string
+		name string
+		r    *Resource
+		want []byte
 	}{
 		{
 			name: "non-zero values",
-			input: &Resource{
+			r: &Resource{
 				Name: "test",
-				Resource: ResourceWithCustomMarshaling{
-					MapField:          map[string]int{"zero": 0, "one": 1},
-					SliceField:        []int{0, 1},
-					SliceOfBytesField: []byte("test"),
-					ArrayField:        [2]int{0, 1},
-					InterfaceField:    1,
-					PtrField:          stringPtr("test"),
-					unexportedField:   1,
-					BoolField:         true,
-					IntField:          1,
-					UintField:         1,
-					FloatField:        1,
-					StringField:       "test",
-					StructField:       NestedStruct{NestedField: 1},
+				Resource: &testResource{
+					Bool:      true,
+					Int:       1,
+					Uint:      1,
+					Float:     1.1,
+					Array:     [1]*testResource{{Bool: true, Unmarshaled: 1}},
+					Interface: &testResource{Int: 1, Unmarshaled: 1},
+					Map: map[string]*testResource{
+						"zero": {Uint: 0, Unmarshaled: 1},
+						"one":  {Uint: 1, Unmarshaled: 1},
+					},
+					Ptr:         to.StringPtr("test"),
+					Slice:       []*testResource{{Float: 1.1, Unmarshaled: 1}},
+					ByteSlice:   []byte("test"),
+					String:      "test",
+					Struct:      &testResource{String: "test", Unmarshaled: 1},
+					Name:        "should be overwritten by parent name",
+					Unmarshaled: 1,
+					unexported:  1,
 				},
 			},
-			expected: `{
- "array_field": [
-  0,
-  1
- ],
- "bool_field": true,
- "float_field": 1,
- "int_field": 1,
- "interface_field": 1,
- "map_field": {
-  "one": 1,
-  "zero": 0
- },
- "name": "test",
- "ptr_field": "test",
- "slice_field": [
-  0,
-  1
- ],
- "slice_of_bytes_field": "dGVzdA==",
- "string_field": "test",
- "struct_field": {
-  "nested_field": 1
- },
- "uint_field": 1
-}`,
+			want: []byte(`{
+  "bool": true,
+  "int": 1,
+  "uint": 1,
+  "float": 1.1,
+  "array": [
+    {
+      "bool": true
+    }
+  ],
+  "interface": {
+    "int": 1
+  },
+  "map": {
+    "one": {
+      "uint": 1
+    },
+    "zero": {}
+  },
+  "ptr": "test",
+  "slice": [
+    {
+      "float": 1.1
+    }
+  ],
+  "byte_slice": "dGVzdA==",
+  "string": "test",
+  "struct": {
+    "string": "test"
+  },
+  "name": "test"
+}`),
 		},
 		{
 			name: "zero values",
-			input: &Resource{
+			r: &Resource{
 				Name:     "test",
-				Resource: ResourceWithCustomMarshaling{},
+				Resource: &testResource{},
 			},
-			expected: `{
- "array_field": [
-  0,
-  0
- ],
- "name": "test"
-}`,
+			want: []byte(`{
+  "name": "test"
+}`),
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			b, err := json.MarshalIndent(test.input, "", " ")
+			b, err := json.MarshalIndent(test.r, "", "  ")
 			if err != nil {
-				t.Errorf("unexpected error: %s", err.Error())
+				t.Fatal(err)
 			}
 
-			result := string(b)
-			if result != test.expected {
-				t.Errorf("got %s, expected %s", result, test.expected)
+			if !bytes.Equal(b, test.want) {
+				t.Error(string(b))
 			}
 		})
 	}
 }
 
-type ResourceWithCustomMarshaling struct {
-	MapField          map[string]int `json:"map_field,omitempty"`
-	SliceField        []int          `json:"slice_field,omitempty"`
-	SliceOfBytesField []byte         `json:"slice_of_bytes_field,omitempty"`
-	ArrayField        [2]int         `json:"array_field,omitempty"`
-	InterfaceField    interface{}    `json:"interface_field,omitempty"`
-	PtrField          *string        `json:"ptr_field,omitempty"`
-	BoolField         bool           `json:"bool_field,omitempty"`
-	IntField          int            `json:"int_field,omitempty"`
-	UintField         uint           `json:"uint_field,omitempty"`
-	FloatField        float64        `json:"float_field,omitempty"`
-	StringField       string         `json:"string_field,omitempty"`
-	StructField       NestedStruct   `json:"struct_field,omitempty"`
-	unexportedField   int
+type testResource struct {
+	Bool        bool                     `json:"bool,omitempty"`
+	Int         int                      `json:"int,omitempty"`
+	Uint        uint                     `json:"uint,omitempty"`
+	Float       float64                  `json:"float,omitempty"`
+	Array       [1]*testResource         `json:"array,omitempty"`
+	Interface   interface{}              `json:"interface,omitempty"`
+	Map         map[string]*testResource `json:"map,omitempty"`
+	Ptr         *string                  `json:"ptr,omitempty"`
+	Slice       []*testResource          `json:"slice,omitempty"`
+	ByteSlice   []byte                   `json:"byte_slice,omitempty"`
+	String      string                   `json:"string,omitempty"`
+	Struct      *testResource            `json:"struct,omitempty"`
+	Name        string                   `json:"name,omitempty"`
+	Unmarshaled int                      `json:"-"`
+	unexported  int
 }
 
 // MarshalJSON contains custom marshaling logic which we expect to be dropped
 // during marshalling as part of arm.Resource type
-func (r *ResourceWithCustomMarshaling) MarshalJSON() ([]byte, error) {
-	objectMap := make(map[string]interface{})
-	if r.MapField != nil {
-		objectMap["custom_field_key"] = r.MapField
-	}
-	return json.Marshal(objectMap)
-}
-
-type NestedStruct struct {
-	NestedField int `json:"nested_field,omitempty"`
-}
-
-// stringPtr returns a pointer to the passed string.
-func stringPtr(s string) *string {
-	return &s
+func (r *testResource) MarshalJSON() ([]byte, error) {
+	return nil, fmt.Errorf("should not be called")
 }
