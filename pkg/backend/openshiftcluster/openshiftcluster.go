@@ -11,40 +11,47 @@ import (
 
 	"github.com/jim-minter/rp/pkg/api"
 	"github.com/jim-minter/rp/pkg/database"
+	"github.com/jim-minter/rp/pkg/util/subnet"
 )
 
 type Manager struct {
-	log        *logrus.Entry
-	db         database.OpenShiftClusters
-	authorizer autorest.Authorizer
+	log          *logrus.Entry
+	db           database.OpenShiftClusters
+	rpAuthorizer autorest.Authorizer
+	spAuthorizer autorest.Authorizer
 
 	recordsets dns.RecordSetsClient
 	groups     resources.GroupsClient
+
+	subnets subnet.Manager
 
 	doc    *api.OpenShiftClusterDocument
 	domain string
 }
 
-func NewManager(log *logrus.Entry, db database.OpenShiftClusters, authorizer autorest.Authorizer, doc *api.OpenShiftClusterDocument, domain string) (*Manager, error) {
+func NewManager(log *logrus.Entry, db database.OpenShiftClusters, rpAuthorizer, spAuthorizer autorest.Authorizer, doc *api.OpenShiftClusterDocument, domain string) (*Manager, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
 		return nil, err
 	}
 
 	m := &Manager{
-		log:        log,
-		db:         db,
-		authorizer: authorizer,
+		log:          log,
+		db:           db,
+		rpAuthorizer: rpAuthorizer,
+		spAuthorizer: spAuthorizer,
+
+		subnets: subnet.NewManager(r.SubscriptionID, spAuthorizer),
 
 		doc:    doc,
 		domain: domain,
 	}
 
 	m.recordsets = dns.NewRecordSetsClient(r.SubscriptionID)
-	m.recordsets.Authorizer = authorizer
+	m.recordsets.Authorizer = rpAuthorizer
 
 	m.groups = resources.NewGroupsClient(r.SubscriptionID)
-	m.groups.Authorizer = authorizer
+	m.groups.Authorizer = rpAuthorizer
 	m.groups.Client.PollingDuration = time.Hour
 
 	return m, nil

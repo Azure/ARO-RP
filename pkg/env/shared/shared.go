@@ -31,12 +31,12 @@ type Shared struct {
 }
 
 func NewShared(ctx context.Context, log *logrus.Entry, subscriptionId, resourceGroup string) (*Shared, error) {
-	authorizer, err := auth.NewAuthorizerFromEnvironment()
+	rpAuthorizer, err := auth.NewAuthorizerFromEnvironment()
 	if err != nil {
 		return nil, err
 	}
 
-	vaultauthorizer, err := auth.NewAuthorizerFromEnvironmentWithResource("https://vault.azure.net")
+	rpVaultAuthorizer, err := auth.NewAuthorizerFromEnvironmentWithResource("https://vault.azure.net")
 	if err != nil {
 		return nil, err
 	}
@@ -50,10 +50,10 @@ func NewShared(ctx context.Context, log *logrus.Entry, subscriptionId, resourceG
 	s.vaults = keyvaultmgmt.NewVaultsClient(subscriptionId)
 	s.zones = dns.NewZonesClient(subscriptionId)
 
-	s.databaseaccounts.Authorizer = authorizer
-	s.keyvault.Authorizer = vaultauthorizer
-	s.vaults.Authorizer = authorizer
-	s.zones.Authorizer = authorizer
+	s.databaseaccounts.Authorizer = rpAuthorizer
+	s.keyvault.Authorizer = rpVaultAuthorizer
+	s.vaults.Authorizer = rpAuthorizer
+	s.zones.Authorizer = rpAuthorizer
 
 	page, err := s.vaults.ListByResourceGroup(ctx, s.resourceGroup, nil)
 	if err != nil {
@@ -140,7 +140,7 @@ func (s *Shared) GetSecret(ctx context.Context, secretName string) (*rsa.Private
 	return key, cert, nil
 }
 
-func (s *Shared) FirstPartyAuthorizer(ctx context.Context) (autorest.Authorizer, error) {
+func (s *Shared) RPAuthorizer(ctx context.Context) (autorest.Authorizer, error) {
 	key, cert, err := s.GetSecret(ctx, "azure")
 	if err != nil {
 		return nil, err

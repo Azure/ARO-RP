@@ -19,6 +19,7 @@ import (
 	"github.com/jim-minter/rp/pkg/util/azureclient/network"
 	"github.com/jim-minter/rp/pkg/util/azureclient/resources"
 	"github.com/jim-minter/rp/pkg/util/azureclient/storage"
+	"github.com/jim-minter/rp/pkg/util/subnet"
 )
 
 type Installer struct {
@@ -37,30 +38,35 @@ type Installer struct {
 	deployments            resources.DeploymentsClient
 	groups                 resources.GroupsClient
 	accounts               storage.AccountsClient
+
+	subnets subnet.Manager
 }
 
-func NewInstaller(log *logrus.Entry, db database.OpenShiftClusters, domain string, authorizer autorest.Authorizer, subscriptionID string) *Installer {
+func NewInstaller(log *logrus.Entry, db database.OpenShiftClusters, domain string, rpAuthorizer, spAuthorizer autorest.Authorizer, subscriptionID string) *Installer {
 	d := &Installer{
 		log: log,
 		db:  db,
 
 		domain: domain,
 
-		roleassignments:        authorization.NewRoleAssignmentsClient(subscriptionID, authorizer),
+		roleassignments:        authorization.NewRoleAssignmentsClient(subscriptionID, rpAuthorizer),
 		disks:                  compute.NewDisksClient(subscriptionID),
 		virtualmachines:        compute.NewVirtualMachinesClient(subscriptionID),
-		recordsets:             dns.NewRecordSetsClient(subscriptionID, authorizer),
+		recordsets:             dns.NewRecordSetsClient(subscriptionID, rpAuthorizer),
 		userassignedidentities: msi.NewUserAssignedIdentitiesClient(subscriptionID),
-		interfaces:             network.NewInterfacesClient(subscriptionID, authorizer),
-		publicipaddresses:      network.NewPublicIPAddressesClient(subscriptionID, authorizer),
-		deployments:            resources.NewDeploymentsClient(subscriptionID, authorizer),
-		groups:                 resources.NewGroupsClient(subscriptionID, authorizer),
-		accounts:               storage.NewAccountsClient(subscriptionID, authorizer),
+		interfaces:             network.NewInterfacesClient(subscriptionID, rpAuthorizer),
+		publicipaddresses:      network.NewPublicIPAddressesClient(subscriptionID, rpAuthorizer),
+		deployments:            resources.NewDeploymentsClient(subscriptionID, rpAuthorizer),
+		groups:                 resources.NewGroupsClient(subscriptionID, rpAuthorizer),
+		accounts:               storage.NewAccountsClient(subscriptionID, rpAuthorizer),
+
+		subnets: subnet.NewManager(subscriptionID, spAuthorizer),
 	}
 
-	d.disks.Authorizer = authorizer
-	d.virtualmachines.Authorizer = authorizer
-	d.userassignedidentities.Authorizer = authorizer
+	d.disks.Authorizer = rpAuthorizer
+	d.virtualmachines.Authorizer = rpAuthorizer
+	d.userassignedidentities.Authorizer = rpAuthorizer
+
 	return d
 }
 

@@ -6,13 +6,70 @@ import (
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
+	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/azure/auth"
 
 	"github.com/jim-minter/rp/pkg/api"
 )
 
-// TODO: restructure to allow mocking
+type Manager interface {
+	Get(ctx context.Context, subnetID string) (*network.Subnet, error)
+	CreateOrUpdate(ctx context.Context, subnetID string, subnet *network.Subnet) error
+}
+
+type manager struct {
+	subnets network.SubnetsClient
+}
+
+func NewManager(subscriptionID string, spAuthorizer autorest.Authorizer) Manager {
+	m := &manager{
+		subnets: network.NewSubnetsClient(subscriptionID),
+	}
+
+	m.subnets.Authorizer = spAuthorizer
+
+	return m
+}
+
+// Get retrieves the linked subnet using the passed service principal
+func (m *manager) Get(ctx context.Context, subnetID string) (*network.Subnet, error) {
+	vnetID, subnetName, err := Split(subnetID)
+	if err != nil {
+		return nil, err
+	}
+
+	r, err := azure.ParseResourceID(vnetID)
+	if err != nil {
+		return nil, err
+	}
+
+	subnet, err := m.subnets.Get(ctx, r.ResourceGroup, r.ResourceName, subnetName, "")
+	if err != nil {
+		return nil, err
+	}
+
+	return &subnet, nil
+}
+
+// CreateOrUpdate updates the linked subnet using the passed service principal
+func (m *manager) CreateOrUpdate(ctx context.Context, subnetID string, subnet *network.Subnet) error {
+	vnetID, subnetName, err := Split(subnetID)
+	if err != nil {
+		return err
+	}
+
+	r, err := azure.ParseResourceID(vnetID)
+	if err != nil {
+		return err
+	}
+
+	future, err := m.subnets.CreateOrUpdate(ctx, r.ResourceGroup, r.ResourceName, subnetName, *subnet)
+	if err != nil {
+		return err
+	}
+
+	return future.WaitForCompletionRef(ctx, m.subnets.Client)
+}
 
 // Split splits the given subnetID into a vnetID and subnetName
 func Split(subnetID string) (string, string, error) {
@@ -22,62 +79,6 @@ func Split(subnetID string) (string, string, error) {
 	}
 
 	return strings.Join(parts[:len(parts)-2], "/"), parts[len(parts)-1], nil
-}
-
-// Get retrieves the linked subnet using the passed service principal
-func Get(ctx context.Context, spp *api.ServicePrincipalProfile, subnetID string) (*network.Subnet, error) {
-	vnetID, subnetName, err := Split(subnetID)
-	if err != nil {
-		return nil, err
-	}
-
-	r, err := azure.ParseResourceID(vnetID)
-	if err != nil {
-		return nil, err
-	}
-
-	authorizer, err := auth.NewClientCredentialsConfig(spp.ClientID, spp.ClientSecret, spp.TenantID).Authorizer()
-	if err != nil {
-		return nil, err
-	}
-
-	c := network.NewSubnetsClient(r.SubscriptionID)
-	c.Authorizer = authorizer
-
-	subnet, err := c.Get(ctx, r.ResourceGroup, r.ResourceName, subnetName, "")
-	if err != nil {
-		return nil, err
-	}
-
-	return &subnet, nil
-}
-
-// CreateOrUpdate updates the linked subnet using the passed service principal
-func CreateOrUpdate(ctx context.Context, spp *api.ServicePrincipalProfile, subnetID string, subnet *network.Subnet) error {
-	vnetID, subnetName, err := Split(subnetID)
-	if err != nil {
-		return err
-	}
-
-	r, err := azure.ParseResourceID(vnetID)
-	if err != nil {
-		return err
-	}
-
-	authorizer, err := auth.NewClientCredentialsConfig(spp.ClientID, spp.ClientSecret, spp.TenantID).Authorizer()
-	if err != nil {
-		return err
-	}
-
-	c := network.NewSubnetsClient(r.SubscriptionID)
-	c.Authorizer = authorizer
-
-	future, err := c.CreateOrUpdate(ctx, r.ResourceGroup, r.ResourceName, subnetName, *subnet)
-	if err != nil {
-		return err
-	}
-
-	return future.WaitForCompletionRef(ctx, c.Client)
 }
 
 // NetworkSecurityGroupID returns the NetworkSecurityGroup ID for a given subnet

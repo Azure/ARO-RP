@@ -11,6 +11,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/apparentlymart/go-cidr/cidr"
 	uuid "github.com/satori/go.uuid"
 
@@ -334,7 +335,20 @@ func (oc *OpenShiftCluster) validateSubnets(ctx context.Context, internal *api.O
 }
 
 func (oc *OpenShiftCluster) validateSubnet(ctx context.Context, internal *api.OpenShiftCluster, path, typ, subnetID string) (*net.IPNet, error) {
-	s, err := subnet.Get(ctx, &internal.Properties.ServicePrincipalProfile, subnetID)
+	r, err := azure.ParseResourceID(oc.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: shouldn't be doing this here
+	spp := &internal.Properties.ServicePrincipalProfile
+	spAuthorizer, err := auth.NewClientCredentialsConfig(spp.ClientID, spp.ClientSecret, spp.TenantID).Authorizer()
+	if err != nil {
+		return nil, err
+	}
+
+	subnets := subnet.NewManager(r.SubscriptionID, spAuthorizer)
+	s, err := subnets.Get(ctx, subnetID)
 	if err != nil {
 		// TODO: return friendly error if SP is not authorised
 		if err, ok := err.(autorest.DetailedError); ok && err.StatusCode == http.StatusNotFound {

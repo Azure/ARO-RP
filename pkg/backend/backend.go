@@ -19,9 +19,9 @@ const (
 )
 
 type backend struct {
-	baseLog    *logrus.Entry
-	db         *database.Database
-	authorizer autorest.Authorizer
+	baseLog      *logrus.Entry
+	db           *database.Database
+	rpAuthorizer autorest.Authorizer
 
 	mu       sync.Mutex
 	cond     *sync.Cond
@@ -53,7 +53,7 @@ func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, db *d
 		return nil, err
 	}
 
-	b.authorizer, err = env.FirstPartyAuthorizer(ctx)
+	b.rpAuthorizer, err = env.RPAuthorizer(ctx)
 	if err != nil {
 		return nil, err
 	}

@@ -43,7 +43,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 		return err
 	}
 
-	masterSubnet, err := subnet.Get(ctx, &doc.OpenShiftCluster.Properties.ServicePrincipalProfile, doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
+	masterSubnet, err := i.subnets.Get(ctx, doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return err
 	}

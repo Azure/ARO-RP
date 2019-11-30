@@ -125,5 +125,5 @@ func (m *Manager) Create(ctx context.Context) error {
 		return err
 	}
 
-	return install.NewInstaller(m.log, m.db, m.domain, m.authorizer, r.SubscriptionID).Install(ctx, m.doc, installConfig, platformCreds)
+	return install.NewInstaller(m.log, m.db, m.domain, m.rpAuthorizer, m.spAuthorizer, r.SubscriptionID).Install(ctx, m.doc, installConfig, platformCreds)
 }

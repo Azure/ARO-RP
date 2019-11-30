@@ -17,7 +17,7 @@ import (
 type Interface interface {
 	CosmosDB(ctx context.Context) (string, string, error)
 	DNS(ctx context.Context) (string, error)
-	FirstPartyAuthorizer(ctx context.Context) (autorest.Authorizer, error)
+	RPAuthorizer(ctx context.Context) (autorest.Authorizer, error)
 	IsReady() bool
 	ListenTLS(ctx context.Context) (net.Listener, error)
 	Authenticated(h http.Handler) http.Handler
