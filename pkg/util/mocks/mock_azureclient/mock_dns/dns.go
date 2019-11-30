@@ -65,18 +65,3 @@ func (mr *MockRecordSetsClientMockRecorder) Delete(arg0, arg1, arg2, arg3, arg4,
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockRecordSetsClient)(nil).Delete), arg0, arg1, arg2, arg3, arg4, arg5)
 }
-
-// Get mocks base method
-func (m *MockRecordSetsClient) Get(arg0 context.Context, arg1, arg2, arg3 string, arg4 dns.RecordType) (dns.RecordSet, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2, arg3, arg4)
-	ret0, _ := ret[0].(dns.RecordSet)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Get indicates an expected call of Get
-func (mr *MockRecordSetsClientMockRecorder) Get(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockRecordSetsClient)(nil).Get), arg0, arg1, arg2, arg3, arg4)
-}

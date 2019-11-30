@@ -7,10 +7,9 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 )
 
-// GroupsClient is a minimal interface for azure Resources Client
+// GroupsClient is a minimal interface for azure GroupsClient
 type GroupsClient interface {
 	CreateOrUpdate(ctx context.Context, resourceGroupName string, parameters resources.Group) (result resources.Group, err error)
-	Get(ctx context.Context, resourceGroupName string) (result resources.Group, err error)
 	GroupsClientAddons
 }
 

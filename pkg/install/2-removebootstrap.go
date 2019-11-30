@@ -51,12 +51,7 @@ func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClust
 
 	{
 		i.log.Print("removing bootstrap nic")
-		future, err := i.interfaces.Delete(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, doc.OpenShiftCluster.Properties.InfraID+"-bootstrap-nic")
-		if err != nil {
-			return err
-		}
-
-		err = future.WaitForCompletionRef(ctx, i.interfaces.Client())
+		err = i.interfaces.DeleteAndWait(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, doc.OpenShiftCluster.Properties.InfraID+"-bootstrap-nic")
 		if err != nil {
 			return err
 		}
@@ -64,12 +59,7 @@ func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClust
 
 	{
 		i.log.Print("removing bootstrap ip")
-		future, err := i.publicipaddresses.Delete(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, doc.OpenShiftCluster.Properties.InfraID+"-bootstrap-pip")
-		if err != nil {
-			return err
-		}
-
-		err = future.WaitForCompletionRef(ctx, i.publicipaddresses.Client())
+		err = i.publicipaddresses.DeleteAndWait(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, doc.OpenShiftCluster.Properties.InfraID+"-bootstrap-pip")
 		if err != nil {
 			return err
 		}

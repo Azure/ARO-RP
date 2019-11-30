@@ -9,7 +9,6 @@ import (
 	reflect "reflect"
 
 	resources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
-	autorest "github.com/Azure/go-autorest/autorest"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -34,35 +33,6 @@ func NewMockDeploymentsClient(ctrl *gomock.Controller) *MockDeploymentsClient {
 // EXPECT returns an object that allows the caller to indicate expected use
 func (m *MockDeploymentsClient) EXPECT() *MockDeploymentsClientMockRecorder {
 	return m.recorder
-}
-
-// Client mocks base method
-func (m *MockDeploymentsClient) Client() autorest.Client {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Client")
-	ret0, _ := ret[0].(autorest.Client)
-	return ret0
-}
-
-// Client indicates an expected call of Client
-func (mr *MockDeploymentsClientMockRecorder) Client() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Client", reflect.TypeOf((*MockDeploymentsClient)(nil).Client))
-}
-
-// CreateOrUpdate mocks base method
-func (m *MockDeploymentsClient) CreateOrUpdate(arg0 context.Context, arg1, arg2 string, arg3 resources.Deployment) (resources.DeploymentsCreateOrUpdateFuture, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateOrUpdate", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(resources.DeploymentsCreateOrUpdateFuture)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CreateOrUpdate indicates an expected call of CreateOrUpdate
-func (mr *MockDeploymentsClientMockRecorder) CreateOrUpdate(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdate", reflect.TypeOf((*MockDeploymentsClient)(nil).CreateOrUpdate), arg0, arg1, arg2, arg3)
 }
 
 // CreateOrUpdateAndWait mocks base method
@@ -117,31 +87,16 @@ func (mr *MockGroupsClientMockRecorder) CreateOrUpdate(arg0, arg1, arg2 interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdate", reflect.TypeOf((*MockGroupsClient)(nil).CreateOrUpdate), arg0, arg1, arg2)
 }
 
-// Delete mocks base method
-func (m *MockGroupsClient) Delete(arg0 context.Context, arg1 string) error {
+// DeleteAndWait mocks base method
+func (m *MockGroupsClient) DeleteAndWait(arg0 context.Context, arg1 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", arg0, arg1)
+	ret := m.ctrl.Call(m, "DeleteAndWait", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// Delete indicates an expected call of Delete
-func (mr *MockGroupsClientMockRecorder) Delete(arg0, arg1 interface{}) *gomock.Call {
+// DeleteAndWait indicates an expected call of DeleteAndWait
+func (mr *MockGroupsClientMockRecorder) DeleteAndWait(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockGroupsClient)(nil).Delete), arg0, arg1)
-}
-
-// Get mocks base method
-func (m *MockGroupsClient) Get(arg0 context.Context, arg1 string) (resources.Group, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1)
-	ret0, _ := ret[0].(resources.Group)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Get indicates an expected call of Get
-func (mr *MockGroupsClientMockRecorder) Get(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockGroupsClient)(nil).Get), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockGroupsClient)(nil).DeleteAndWait), arg0, arg1)
 }

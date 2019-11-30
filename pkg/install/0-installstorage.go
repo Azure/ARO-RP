@@ -195,18 +195,12 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 		}
 
 		i.log.Print("deploying storage template")
-		future, err := i.deployments.CreateOrUpdate(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy", resources.Deployment{
+		err = i.deployments.CreateOrUpdateAndWait(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy", resources.Deployment{
 			Properties: &resources.DeploymentProperties{
 				Template: t,
 				Mode:     resources.Incremental,
 			},
 		})
-		if err != nil {
-			return err
-		}
-
-		i.log.Print("waiting for storage template deployment")
-		err = future.WaitForCompletionRef(ctx, i.deployments.Client())
 		if err != nil {
 			return err
 		}

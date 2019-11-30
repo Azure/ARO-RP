@@ -606,7 +606,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 		}
 
 		i.log.Print("deploying resources template")
-		future, err := i.deployments.CreateOrUpdate(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy", resources.Deployment{
+		err = i.deployments.CreateOrUpdateAndWait(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy", resources.Deployment{
 			Properties: &resources.DeploymentProperties{
 				Template: t,
 				Parameters: map[string]interface{}{
@@ -624,12 +624,6 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 				Mode: resources.Incremental,
 			},
 		})
-		if err != nil {
-			return err
-		}
-
-		i.log.Print("waiting for resources template deployment")
-		err = future.WaitForCompletionRef(ctx, i.deployments.Client())
 		if err != nil {
 			return err
 		}
