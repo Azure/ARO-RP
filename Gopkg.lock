@@ -10,7 +10,7 @@
   version = "v0.49.0"
 
 [[projects]]
-  digest = "1:3b1b5944cbcfa02ed41a1f567d129069f67dab42745b6383aa478944b3fcf124"
+  digest = "1:62f880c9da3a934677f9a90a7bee1c936700255415d58085d2c914afcbad50f7"
   name = "github.com/Azure/azure-sdk-for-go"
   packages = [
     "profiles/latest/dns/mgmt/dns",
@@ -20,9 +20,9 @@
     "services/compute/mgmt/2019-03-01/compute",
     "services/cosmos-db/mgmt/2015-04-08/documentdb",
     "services/dns/mgmt/2018-05-01/dns",
+    "services/graphrbac/1.6/graphrbac",
     "services/keyvault/2016-10-01/keyvault",
     "services/keyvault/mgmt/2016-10-01/keyvault",
-    "services/msi/mgmt/2018-11-30/msi",
     "services/network/mgmt/2018-12-01/network",
     "services/network/mgmt/2019-07-01/network",
     "services/privatedns/mgmt/2018-09-01/privatedns",
@@ -644,7 +644,7 @@
 
 [[projects]]
   branch = "release-4.3-azure"
-  digest = "1:482f1b1a391c24f3b379e4bed77bcdc3a150c615418cce850b6912367a553dde"
+  digest = "1:77d6c5993b2f89a00cad16761c84751dd7d2fceabf4b3ffe9d05cd4d0ef06ec2"
   name = "github.com/openshift/installer"
   packages = [
     "data",
@@ -729,7 +729,7 @@
     "pkg/version",
   ]
   pruneopts = "T"
-  revision = "86289f922b4145c6d5324b82a7e5f5fe7eb88ebf"
+  revision = "c102f89a2b5cf20df78b94b62d76b332d77eacd1"
   source = "https://github.com/jim-minter/installer"
 
 [[projects]]
@@ -1368,9 +1368,9 @@
     "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute",
     "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2015-04-08/documentdb",
     "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns",
+    "github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac",
     "github.com/Azure/azure-sdk-for-go/services/keyvault/2016-10-01/keyvault",
     "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2016-10-01/keyvault",
-    "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi",
     "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network",
     "github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns",
     "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources",

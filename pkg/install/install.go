@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
-	"github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/openshift/installer/pkg/asset/installconfig"
@@ -28,16 +27,15 @@ type Installer struct {
 	env env.Interface
 	db  database.OpenShiftClusters
 
-	roleassignments        authorization.RoleAssignmentsClient
-	disks                  compute.DisksClient
-	virtualmachines        compute.VirtualMachinesClient
-	recordsets             dns.RecordSetsClient
-	userassignedidentities msi.UserAssignedIdentitiesClient
-	interfaces             network.InterfacesClient
-	publicipaddresses      network.PublicIPAddressesClient
-	deployments            resources.DeploymentsClient
-	groups                 resources.GroupsClient
-	accounts               storage.AccountsClient
+	roleassignments   authorization.RoleAssignmentsClient
+	disks             compute.DisksClient
+	virtualmachines   compute.VirtualMachinesClient
+	recordsets        dns.RecordSetsClient
+	interfaces        network.InterfacesClient
+	publicipaddresses network.PublicIPAddressesClient
+	deployments       resources.DeploymentsClient
+	groups            resources.GroupsClient
+	accounts          storage.AccountsClient
 
 	subnets subnet.Manager
 }
@@ -48,23 +46,21 @@ func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClu
 		env: env,
 		db:  db,
 
-		roleassignments:        authorization.NewRoleAssignmentsClient(subscriptionID, fpAuthorizer),
-		disks:                  compute.NewDisksClient(subscriptionID),
-		virtualmachines:        compute.NewVirtualMachinesClient(subscriptionID),
-		recordsets:             dns.NewRecordSetsClient(subscriptionID, fpAuthorizer),
-		userassignedidentities: msi.NewUserAssignedIdentitiesClient(subscriptionID),
-		interfaces:             network.NewInterfacesClient(subscriptionID, fpAuthorizer),
-		publicipaddresses:      network.NewPublicIPAddressesClient(subscriptionID, fpAuthorizer),
-		deployments:            resources.NewDeploymentsClient(subscriptionID, fpAuthorizer),
-		groups:                 resources.NewGroupsClient(subscriptionID, fpAuthorizer),
-		accounts:               storage.NewAccountsClient(subscriptionID, fpAuthorizer),
+		roleassignments:   authorization.NewRoleAssignmentsClient(subscriptionID, fpAuthorizer),
+		disks:             compute.NewDisksClient(subscriptionID),
+		virtualmachines:   compute.NewVirtualMachinesClient(subscriptionID),
+		recordsets:        dns.NewRecordSetsClient(subscriptionID, fpAuthorizer),
+		interfaces:        network.NewInterfacesClient(subscriptionID, fpAuthorizer),
+		publicipaddresses: network.NewPublicIPAddressesClient(subscriptionID, fpAuthorizer),
+		deployments:       resources.NewDeploymentsClient(subscriptionID, fpAuthorizer),
+		groups:            resources.NewGroupsClient(subscriptionID, fpAuthorizer),
+		accounts:          storage.NewAccountsClient(subscriptionID, fpAuthorizer),
 
 		subnets: subnet.NewManager(subscriptionID, spAuthorizer),
 	}
 
 	d.disks.Authorizer = fpAuthorizer
 	d.virtualmachines.Authorizer = fpAuthorizer
-	d.userassignedidentities.Authorizer = fpAuthorizer
 
 	return d
 }

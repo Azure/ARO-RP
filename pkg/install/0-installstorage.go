@@ -8,14 +8,10 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
-	"github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
 	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/ignition/bootstrap"
 	"github.com/openshift/installer/pkg/asset/installconfig"
@@ -33,18 +29,12 @@ import (
 var apiVersions = map[string]string{
 	"authorization": "2015-07-01",
 	"compute":       "2019-03-01",
-	"msi":           "2018-11-30",
 	"network":       "2019-07-01",
 	"privatedns":    "2018-09-01",
 	"storage":       "2019-04-01",
 }
 
 func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftClusterDocument, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds) error {
-	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
-	if err != nil {
-		return err
-	}
-
 	image := &releaseimage.Image{
 		// https://openshift-release.svc.ci.openshift.org/
 		// oc adm release info quay.io/openshift-release-dev/ocp-release-nightly:4.3.0-0.nightly-2019-11-19-122017
@@ -80,7 +70,7 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 	rhcosImage := g[reflect.TypeOf(new(rhcos.Image))].(*rhcos.Image)
 
 	i.log.Print("creating resource group")
-	_, err = i.groups.CreateOrUpdate(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, resources.Group{
+	_, err := i.groups.CreateOrUpdate(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, resources.Group{
 		Location: &installConfig.Config.Azure.Region,
 	})
 	if err != nil {
@@ -92,17 +82,6 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 			Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 			ContentVersion: "1.0.0.0",
 			Resources: []arm.Resource{
-				{
-					// deploy the Identity now to give AAD a chance to update
-					// itself before we apply the RBAC rule in the next
-					// deployment
-					Resource: &msi.Identity{
-						Name:     to.StringPtr(doc.OpenShiftCluster.Properties.InfraID + "-identity"),
-						Location: &installConfig.Config.Azure.Region,
-						Type:     "Microsoft.ManagedIdentity/userAssignedIdentities",
-					},
-					APIVersion: apiVersions["msi"],
-				},
 				{
 					Resource: &storage.Account{
 						Sku: &storage.Sku{
@@ -281,35 +260,6 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 		err = i.subnets.CreateOrUpdate(ctx, subnetID, s)
 		if err != nil {
 			return err
-		}
-	}
-
-	{
-		// TODO: we probably don't want to do this
-		i.log.Printf("creating role assignment on vnet")
-
-		identity, err := i.userassignedidentities.Get(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, doc.OpenShiftCluster.Properties.InfraID+"-identity")
-		if err != nil {
-			return err
-		}
-
-		// TODO: do we need to remove this at tear-down?
-		_, err = i.roleassignments.Create(ctx, "/subscriptions/"+r.SubscriptionID+"/resourceGroups/"+installConfig.Config.Azure.NetworkResourceGroupName+"/providers/Microsoft.Network/virtualNetworks/"+installConfig.Config.Azure.VirtualNetwork, uuid.NewV4().String(), authorization.RoleAssignmentCreateParameters{
-			Properties: &authorization.RoleAssignmentProperties{
-				RoleDefinitionID: to.StringPtr("/subscriptions/" + r.SubscriptionID + "/providers/Microsoft.Authorization/roleDefinitions/8e3af657-a8ff-443c-a75c-2fe8c4bcb635"), // Owner
-				PrincipalID:      to.StringPtr(identity.PrincipalID.String()),
-			},
-		})
-		if err != nil {
-			var ignore bool
-			if err, ok := err.(autorest.DetailedError); ok {
-				if err, ok := err.Original.(*azure.RequestError); ok && err.ServiceError != nil && err.ServiceError.Code == "RoleAssignmentExists" {
-					ignore = true
-				}
-			}
-			if !ignore {
-				return err
-			}
 		}
 	}
 
