@@ -65,7 +65,7 @@ func (m *Manager) Create(ctx context.Context) error {
 				Name: m.doc.OpenShiftCluster.Properties.DomainName,
 			},
 			SSHKey:     sshkey.Type() + " " + base64.StdEncoding.EncodeToString(sshkey.Marshal()),
-			BaseDomain: m.domain,
+			BaseDomain: m.env.DNS().Domain(),
 			Networking: &types.Networking{
 				MachineCIDR: ipnet.MustParseCIDR("127.0.0.0/8"), // dummy
 				NetworkType: "OpenShiftSDN",
@@ -108,7 +108,7 @@ func (m *Manager) Create(ctx context.Context) error {
 				Azure: &azuretypes.Platform{
 					Region:                      m.doc.OpenShiftCluster.Location,
 					ResourceGroupName:           m.doc.OpenShiftCluster.Properties.ResourceGroup,
-					BaseDomainResourceGroupName: os.Getenv("RESOURCEGROUP"),
+					BaseDomainResourceGroupName: m.env.ResourceGroup(),
 					NetworkResourceGroupName:    vnetr.ResourceGroup,
 					VirtualNetwork:              vnetr.ResourceName,
 					ControlPlaneSubnet:          masterSubnetName,
@@ -125,5 +125,5 @@ func (m *Manager) Create(ctx context.Context) error {
 		return err
 	}
 
-	return install.NewInstaller(m.log, m.db, m.domain, m.fpAuthorizer, m.spAuthorizer, r.SubscriptionID).Install(ctx, m.doc, installConfig, platformCreds)
+	return install.NewInstaller(m.log, m.env, m.db, m.fpAuthorizer, m.spAuthorizer, r.SubscriptionID).Install(ctx, m.doc, installConfig, platformCreds)
 }

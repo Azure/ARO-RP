@@ -31,7 +31,7 @@ func NewManager(subscriptionID string, spAuthorizer autorest.Authorizer) Manager
 	return m
 }
 
-// Get retrieves the linked subnet using the passed service principal
+// Get retrieves the linked subnet
 func (m *manager) Get(ctx context.Context, subnetID string) (*network.Subnet, error) {
 	vnetID, subnetName, err := Split(subnetID)
 	if err != nil {
@@ -51,7 +51,7 @@ func (m *manager) Get(ctx context.Context, subnetID string) (*network.Subnet, er
 	return &subnet, nil
 }
 
-// CreateOrUpdate updates the linked subnet using the passed service principal
+// CreateOrUpdate updates the linked subnet
 func (m *manager) CreateOrUpdate(ctx context.Context, subnetID string, subnet *network.Subnet) error {
 	vnetID, subnetName, err := Split(subnetID)
 	if err != nil {

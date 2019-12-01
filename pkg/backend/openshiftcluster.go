@@ -65,7 +65,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 		return ocb.endLease(stop, doc, api.ProvisioningStateFailed)
 	}
 
-	m, err := openshiftcluster.NewManager(log, ocb.db.OpenShiftClusters, ocb.fpAuthorizer, spAuthorizer, doc, ocb.domain)
+	m, err := openshiftcluster.NewManager(log, ocb.env, ocb.db.OpenShiftClusters, ocb.fpAuthorizer, spAuthorizer, doc)
 	if err != nil {
 		log.Error(err)
 		return ocb.endLease(stop, doc, api.ProvisioningStateFailed)

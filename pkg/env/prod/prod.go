@@ -17,8 +17,9 @@ import (
 
 type prod struct {
 	*shared.Shared
-	ms       *metadataService
-	location string
+	ms            *metadataService
+	location      string
+	resourceGroup string
 }
 
 func New(ctx context.Context, log *logrus.Entry) (*prod, error) {
@@ -28,8 +29,9 @@ func New(ctx context.Context, log *logrus.Entry) (*prod, error) {
 	}
 
 	p := &prod{
-		ms:       NewMetadataService(log),
-		location: location,
+		ms:            NewMetadataService(log),
+		location:      location,
+		resourceGroup: resourceGroup,
 	}
 
 	p.Shared, err = shared.NewShared(ctx, log, subscriptionID, resourceGroup)
@@ -79,6 +81,10 @@ func (p *prod) IsReady() bool {
 
 func (p *prod) Location() string {
 	return p.location
+}
+
+func (p *prod) ResourceGroup() string {
+	return p.resourceGroup
 }
 
 func getMetadata() (string, string, string, error) {

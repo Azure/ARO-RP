@@ -14,6 +14,7 @@ import (
 
 	"github.com/jim-minter/rp/pkg/api"
 	"github.com/jim-minter/rp/pkg/database"
+	"github.com/jim-minter/rp/pkg/env"
 	"github.com/jim-minter/rp/pkg/util/azureclient/authorization"
 	"github.com/jim-minter/rp/pkg/util/azureclient/dns"
 	"github.com/jim-minter/rp/pkg/util/azureclient/network"
@@ -24,9 +25,8 @@ import (
 
 type Installer struct {
 	log *logrus.Entry
+	env env.Interface
 	db  database.OpenShiftClusters
-
-	domain string
 
 	roleassignments        authorization.RoleAssignmentsClient
 	disks                  compute.DisksClient
@@ -42,12 +42,11 @@ type Installer struct {
 	subnets subnet.Manager
 }
 
-func NewInstaller(log *logrus.Entry, db database.OpenShiftClusters, domain string, fpAuthorizer, spAuthorizer autorest.Authorizer, subscriptionID string) *Installer {
+func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClusters, fpAuthorizer, spAuthorizer autorest.Authorizer, subscriptionID string) *Installer {
 	d := &Installer{
 		log: log,
+		env: env,
 		db:  db,
-
-		domain: domain,
 
 		roleassignments:        authorization.NewRoleAssignmentsClient(subscriptionID, fpAuthorizer),
 		disks:                  compute.NewDisksClient(subscriptionID),

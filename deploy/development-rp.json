@@ -183,6 +183,19 @@
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '5bd9cd88-fe45-4216-938b-f97437e15450')]",
                 "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts/', parameters('databaseAccountName'))]"
             }
+        },
+        {
+            "name": "[concat(parameters('domainName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/dnsZones/', parameters('domainName')), 'RP / DNS Zone Contributor'))]",
+            "apiVersion": "2017-09-01",
+            "type": "Microsoft.Network/dnsZones/providers/roleAssignments",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/dnsZones/', parameters('domainName'))]"
+            ],
+            "properties": {
+                "principalId": "[parameters('rpServicePrincipalId')]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'befefa01-2a29-4197-83a8-272ff33ce314')]",
+                "scope": "[resourceId('Microsoft.Network/dnsZones/', parameters('domainName'))]"
+            }
         }
     ]
 }

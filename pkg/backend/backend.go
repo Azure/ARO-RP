@@ -20,6 +20,7 @@ const (
 
 type backend struct {
 	baseLog      *logrus.Entry
+	env          env.Interface
 	db           *database.Database
 	fpAuthorizer autorest.Authorizer
 
@@ -30,8 +31,6 @@ type backend struct {
 
 	ocb *openShiftClusterBackend
 	sb  *subscriptionBackend
-
-	domain string
 }
 
 // Runnable represents a runnable object
@@ -45,12 +44,8 @@ func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, db *d
 
 	b := &backend{
 		baseLog: log,
+		env:     env,
 		db:      db,
-	}
-
-	b.domain, err = env.DNS(ctx)
-	if err != nil {
-		return nil, err
 	}
 
 	b.fpAuthorizer, err = env.FPAuthorizer(ctx)

@@ -61,3 +61,7 @@ func (d *dev) IsReady() bool {
 func (d *dev) Location() string {
 	return os.Getenv("LOCATION")
 }
+
+func (d *dev) ResourceGroup() string {
+	return os.Getenv("RESOURCEGROUP")
+}

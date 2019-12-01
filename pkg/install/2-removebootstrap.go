@@ -100,8 +100,8 @@ func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClust
 	}
 
 	_, err = i.db.Patch(doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.APIServerURL = "https://api." + doc.OpenShiftCluster.Properties.DomainName + "." + i.domain + ":6443/"
-		doc.OpenShiftCluster.Properties.ConsoleURL = "https://console-openshift-console.apps." + doc.OpenShiftCluster.Properties.DomainName + "." + i.domain + "/"
+		doc.OpenShiftCluster.Properties.APIServerURL = "https://api." + doc.OpenShiftCluster.Properties.DomainName + "." + i.env.DNS().Domain() + ":6443/"
+		doc.OpenShiftCluster.Properties.ConsoleURL = "https://console-openshift-console.apps." + doc.OpenShiftCluster.Properties.DomainName + "." + i.env.DNS().Domain() + "/"
 		doc.OpenShiftCluster.Properties.KubeadminPassword = kubeadminPassword.Password
 		return nil
 	})

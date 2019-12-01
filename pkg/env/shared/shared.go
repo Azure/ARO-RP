@@ -10,7 +10,6 @@ import (
 	"os"
 
 	"github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2015-04-08/documentdb"
-	"github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/2016-10-01/keyvault"
 	keyvaultmgmt "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2016-10-01/keyvault"
 	"github.com/Azure/go-autorest/autorest"
@@ -18,19 +17,22 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/sirupsen/logrus"
+
+	"github.com/jim-minter/rp/pkg/env/shared/dns"
 )
 
 type Shared struct {
 	databaseaccounts documentdb.DatabaseAccountsClient
 	keyvault         keyvault.BaseClient
 	vaults           keyvaultmgmt.VaultsClient
-	zones            dns.ZonesClient
+
+	dns dns.Manager
 
 	resourceGroup string
 	vaultURI      string
 }
 
-func NewShared(ctx context.Context, log *logrus.Entry, subscriptionId, resourceGroup string) (*Shared, error) {
+func NewShared(ctx context.Context, log *logrus.Entry, subscriptionID, resourceGroup string) (*Shared, error) {
 	rpAuthorizer, err := auth.NewAuthorizerFromEnvironment()
 	if err != nil {
 		return nil, err
@@ -45,15 +47,13 @@ func NewShared(ctx context.Context, log *logrus.Entry, subscriptionId, resourceG
 		resourceGroup: resourceGroup,
 	}
 
-	s.databaseaccounts = documentdb.NewDatabaseAccountsClient(subscriptionId)
+	s.databaseaccounts = documentdb.NewDatabaseAccountsClient(subscriptionID)
 	s.keyvault = keyvault.New()
-	s.vaults = keyvaultmgmt.NewVaultsClient(subscriptionId)
-	s.zones = dns.NewZonesClient(subscriptionId)
+	s.vaults = keyvaultmgmt.NewVaultsClient(subscriptionID)
 
 	s.databaseaccounts.Authorizer = rpAuthorizer
 	s.keyvault.Authorizer = rpVaultAuthorizer
 	s.vaults.Authorizer = rpAuthorizer
-	s.zones.Authorizer = rpAuthorizer
 
 	page, err := s.vaults.ListByResourceGroup(ctx, s.resourceGroup, nil)
 	if err != nil {
@@ -65,6 +65,11 @@ func NewShared(ctx context.Context, log *logrus.Entry, subscriptionId, resourceG
 		return nil, fmt.Errorf("found at least %d vaults, expected 1", len(vaults))
 	}
 	s.vaultURI = *vaults[0].Properties.VaultURI
+
+	s.dns, err = dns.NewManager(ctx, subscriptionID, rpAuthorizer, s.resourceGroup)
+	if err != nil {
+		return nil, err
+	}
 
 	return s, nil
 }
@@ -87,18 +92,8 @@ func (s *Shared) CosmosDB(ctx context.Context) (string, string, error) {
 	return *(*accts.Value)[0].Name, *keys.PrimaryMasterKey, nil
 }
 
-func (s *Shared) DNS(ctx context.Context) (string, error) {
-	page, err := s.zones.ListByResourceGroup(ctx, s.resourceGroup, nil)
-	if err != nil {
-		return "", err
-	}
-
-	zones := page.Values()
-	if len(zones) != 1 {
-		return "", fmt.Errorf("found at least %d zones, expected 1", len(zones))
-	}
-
-	return *zones[0].Name, nil
+func (s *Shared) DNS() dns.Manager {
+	return s.dns
 }
 
 func (s *Shared) GetSecret(ctx context.Context, secretName string) (*rsa.PrivateKey, *x509.Certificate, error) {

@@ -12,16 +12,18 @@ import (
 
 	"github.com/jim-minter/rp/pkg/env/dev"
 	"github.com/jim-minter/rp/pkg/env/prod"
+	"github.com/jim-minter/rp/pkg/env/shared/dns"
 )
 
 type Interface interface {
 	CosmosDB(ctx context.Context) (string, string, error)
-	DNS(ctx context.Context) (string, error)
+	DNS() dns.Manager
 	FPAuthorizer(ctx context.Context) (autorest.Authorizer, error)
 	IsReady() bool
 	ListenTLS(ctx context.Context) (net.Listener, error)
 	Authenticated(h http.Handler) http.Handler
 	Location() string
+	ResourceGroup() string
 }
 
 func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
