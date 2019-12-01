@@ -6,12 +6,14 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/jim-minter/rp/pkg/api"
 )
 
 type Manager interface {
 	Domain() string
+	CreateOrUpdate(context.Context, *api.OpenShiftCluster) error
 	Delete(context.Context, *api.OpenShiftCluster) error
 }
 
@@ -53,11 +55,21 @@ func (m *manager) Domain() string {
 	return m.domain
 }
 
+func (m *manager) CreateOrUpdate(ctx context.Context, oc *api.OpenShiftCluster) error {
+	_, err := m.recordsets.CreateOrUpdate(ctx, m.resourceGroup, m.domain, "api."+oc.Properties.DomainName, dns.CNAME, dns.RecordSet{
+		RecordSetProperties: &dns.RecordSetProperties{
+			TTL: to.Int64Ptr(300),
+			CnameRecord: &dns.CnameRecord{
+				Cname: to.StringPtr(oc.Properties.DomainName + "." + oc.Location + ".cloudapp.azure.com"),
+			},
+		},
+	}, "", "")
+
+	return err
+}
+
 func (m *manager) Delete(ctx context.Context, oc *api.OpenShiftCluster) error {
 	_, err := m.recordsets.Delete(ctx, m.resourceGroup, m.domain, "api."+oc.Properties.DomainName, dns.CNAME, "")
-	if err != nil {
-		return err
-	}
 
-	return nil
+	return err
 }

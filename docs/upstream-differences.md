@@ -30,6 +30,11 @@ upstream OCP.
   components using the user-provided SP.  Later, we'll reinstate a separate
   managed identity at least for worker kubelets
 
+* CARRY: HACK: don't set public DNS zone on DNS CRD in ARO
+
+  In ARO, the public DNS zone is maintained by the service and the cluster
+  operator does not have permissions to modify it
+
 ## Installation differences
 
 * ARO persists the install graph in the cluster storage account in a new "aro"

@@ -10,7 +10,6 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
-	"github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
@@ -639,14 +638,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 	}
 
 	{
-		_, err = i.recordsets.CreateOrUpdate(ctx, installConfig.Config.Azure.BaseDomainResourceGroupName, installConfig.Config.BaseDomain, "api."+installConfig.Config.ObjectMeta.Name, dns.CNAME, dns.RecordSet{
-			RecordSetProperties: &dns.RecordSetProperties{
-				TTL: to.Int64Ptr(300),
-				CnameRecord: &dns.CnameRecord{
-					Cname: to.StringPtr(doc.OpenShiftCluster.Properties.DomainName + "." + installConfig.Config.Azure.Region + ".cloudapp.azure.com"),
-				},
-			},
-		}, "", "")
+		err = i.env.DNS().CreateOrUpdate(ctx, doc.OpenShiftCluster)
 		if err != nil {
 			return err
 		}
