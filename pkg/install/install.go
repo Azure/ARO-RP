@@ -14,7 +14,6 @@ import (
 	"github.com/jim-minter/rp/pkg/api"
 	"github.com/jim-minter/rp/pkg/database"
 	"github.com/jim-minter/rp/pkg/env"
-	"github.com/jim-minter/rp/pkg/util/azureclient/authorization"
 	"github.com/jim-minter/rp/pkg/util/azureclient/network"
 	"github.com/jim-minter/rp/pkg/util/azureclient/resources"
 	"github.com/jim-minter/rp/pkg/util/azureclient/storage"
@@ -26,7 +25,6 @@ type Installer struct {
 	env env.Interface
 	db  database.OpenShiftClusters
 
-	roleassignments   authorization.RoleAssignmentsClient
 	disks             compute.DisksClient
 	virtualmachines   compute.VirtualMachinesClient
 	interfaces        network.InterfacesClient
@@ -44,7 +42,6 @@ func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClu
 		env: env,
 		db:  db,
 
-		roleassignments:   authorization.NewRoleAssignmentsClient(subscriptionID, fpAuthorizer),
 		disks:             compute.NewDisksClient(subscriptionID),
 		virtualmachines:   compute.NewVirtualMachinesClient(subscriptionID),
 		interfaces:        network.NewInterfacesClient(subscriptionID, fpAuthorizer),
