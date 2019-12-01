@@ -3,8 +3,11 @@ package prod
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
+	"fmt"
 	"net"
 	"net/http"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 
@@ -14,17 +17,22 @@ import (
 
 type prod struct {
 	*shared.Shared
-	ms *metadataService
+	ms       *metadataService
+	location string
 }
 
-func New(ctx context.Context, log *logrus.Entry, subscriptionId, resourceGroup string) (*prod, error) {
-	var err error
-
-	p := &prod{
-		ms: NewMetadataService(log),
+func New(ctx context.Context, log *logrus.Entry) (*prod, error) {
+	location, subscriptionID, resourceGroup, err := getMetadata()
+	if err != nil {
+		return nil, err
 	}
 
-	p.Shared, err = shared.NewShared(ctx, log, subscriptionId, resourceGroup)
+	p := &prod{
+		ms:       NewMetadataService(log),
+		location: location,
+	}
+
+	p.Shared, err = shared.NewShared(ctx, log, subscriptionID, resourceGroup)
 	if err != nil {
 		return nil, err
 	}
@@ -67,4 +75,43 @@ func (p *prod) Authenticated(h http.Handler) http.Handler {
 
 func (p *prod) IsReady() bool {
 	return p.ms.isReady()
+}
+
+func (p *prod) Location() string {
+	return p.location
+}
+
+func getMetadata() (string, string, string, error) {
+	req, err := http.NewRequest(http.MethodGet, "http://169.254.169.254/metadata/instance/compute?api-version=2019-03-11", nil)
+	if err != nil {
+		return "", "", "", err
+	}
+	req.Header.Set("Metadata", "true")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", "", "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", "", "", fmt.Errorf("unexpected status code %q", resp.StatusCode)
+	}
+
+	if strings.SplitN(resp.Header.Get("Content-Type"), ";", 2)[0] != "application/json" {
+		return "", "", "", fmt.Errorf("unexpected content type %q", resp.Header.Get("Content-Type"))
+	}
+
+	var m *struct {
+		Location          string `json:"location,omitempty"`
+		ResourceGroupName string `json:"resourceGroupName,omitempty"`
+		SubscriptionID    string `json:"subscriptionId,omitempty"`
+	}
+
+	err = json.NewDecoder(resp.Body).Decode(&m)
+	if err != nil {
+		return "", "", "", err
+	}
+
+	return m.Location, m.SubscriptionID, m.ResourceGroupName, nil
 }

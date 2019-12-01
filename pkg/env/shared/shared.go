@@ -140,7 +140,7 @@ func (s *Shared) GetSecret(ctx context.Context, secretName string) (*rsa.Private
 	return key, cert, nil
 }
 
-func (s *Shared) RPAuthorizer(ctx context.Context) (autorest.Authorizer, error) {
+func (s *Shared) FPAuthorizer(ctx context.Context) (autorest.Authorizer, error) {
 	key, cert, err := s.GetSecret(ctx, "azure")
 	if err != nil {
 		return nil, err
@@ -151,7 +151,7 @@ func (s *Shared) RPAuthorizer(ctx context.Context) (autorest.Authorizer, error) 
 		return nil, err
 	}
 
-	sp, err := adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, os.Getenv("AZURE_CLIENT_ID"), cert, key, azure.PublicCloud.ResourceManagerEndpoint)
+	sp, err := adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, os.Getenv("AZURE_FP_CLIENT_ID"), cert, key, azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}

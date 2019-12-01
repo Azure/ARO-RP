@@ -42,30 +42,30 @@ type Installer struct {
 	subnets subnet.Manager
 }
 
-func NewInstaller(log *logrus.Entry, db database.OpenShiftClusters, domain string, rpAuthorizer, spAuthorizer autorest.Authorizer, subscriptionID string) *Installer {
+func NewInstaller(log *logrus.Entry, db database.OpenShiftClusters, domain string, fpAuthorizer, spAuthorizer autorest.Authorizer, subscriptionID string) *Installer {
 	d := &Installer{
 		log: log,
 		db:  db,
 
 		domain: domain,
 
-		roleassignments:        authorization.NewRoleAssignmentsClient(subscriptionID, rpAuthorizer),
+		roleassignments:        authorization.NewRoleAssignmentsClient(subscriptionID, fpAuthorizer),
 		disks:                  compute.NewDisksClient(subscriptionID),
 		virtualmachines:        compute.NewVirtualMachinesClient(subscriptionID),
-		recordsets:             dns.NewRecordSetsClient(subscriptionID, rpAuthorizer),
+		recordsets:             dns.NewRecordSetsClient(subscriptionID, fpAuthorizer),
 		userassignedidentities: msi.NewUserAssignedIdentitiesClient(subscriptionID),
-		interfaces:             network.NewInterfacesClient(subscriptionID, rpAuthorizer),
-		publicipaddresses:      network.NewPublicIPAddressesClient(subscriptionID, rpAuthorizer),
-		deployments:            resources.NewDeploymentsClient(subscriptionID, rpAuthorizer),
-		groups:                 resources.NewGroupsClient(subscriptionID, rpAuthorizer),
-		accounts:               storage.NewAccountsClient(subscriptionID, rpAuthorizer),
+		interfaces:             network.NewInterfacesClient(subscriptionID, fpAuthorizer),
+		publicipaddresses:      network.NewPublicIPAddressesClient(subscriptionID, fpAuthorizer),
+		deployments:            resources.NewDeploymentsClient(subscriptionID, fpAuthorizer),
+		groups:                 resources.NewGroupsClient(subscriptionID, fpAuthorizer),
+		accounts:               storage.NewAccountsClient(subscriptionID, fpAuthorizer),
 
 		subnets: subnet.NewManager(subscriptionID, spAuthorizer),
 	}
 
-	d.disks.Authorizer = rpAuthorizer
-	d.virtualmachines.Authorizer = rpAuthorizer
-	d.userassignedidentities.Authorizer = rpAuthorizer
+	d.disks.Authorizer = fpAuthorizer
+	d.virtualmachines.Authorizer = fpAuthorizer
+	d.userassignedidentities.Authorizer = fpAuthorizer
 
 	return d
 }

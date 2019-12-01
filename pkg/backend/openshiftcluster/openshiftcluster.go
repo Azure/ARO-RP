@@ -17,7 +17,7 @@ import (
 type Manager struct {
 	log          *logrus.Entry
 	db           database.OpenShiftClusters
-	rpAuthorizer autorest.Authorizer
+	fpAuthorizer autorest.Authorizer
 	spAuthorizer autorest.Authorizer
 
 	recordsets dns.RecordSetsClient
@@ -29,7 +29,7 @@ type Manager struct {
 	domain string
 }
 
-func NewManager(log *logrus.Entry, db database.OpenShiftClusters, rpAuthorizer, spAuthorizer autorest.Authorizer, doc *api.OpenShiftClusterDocument, domain string) (*Manager, error) {
+func NewManager(log *logrus.Entry, db database.OpenShiftClusters, fpAuthorizer, spAuthorizer autorest.Authorizer, doc *api.OpenShiftClusterDocument, domain string) (*Manager, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
 		return nil, err
@@ -38,7 +38,7 @@ func NewManager(log *logrus.Entry, db database.OpenShiftClusters, rpAuthorizer, 
 	m := &Manager{
 		log:          log,
 		db:           db,
-		rpAuthorizer: rpAuthorizer,
+		fpAuthorizer: fpAuthorizer,
 		spAuthorizer: spAuthorizer,
 
 		subnets: subnet.NewManager(r.SubscriptionID, spAuthorizer),
@@ -48,10 +48,10 @@ func NewManager(log *logrus.Entry, db database.OpenShiftClusters, rpAuthorizer, 
 	}
 
 	m.recordsets = dns.NewRecordSetsClient(r.SubscriptionID)
-	m.recordsets.Authorizer = rpAuthorizer
+	m.recordsets.Authorizer = fpAuthorizer
 
 	m.groups = resources.NewGroupsClient(r.SubscriptionID)
-	m.groups.Authorizer = rpAuthorizer
+	m.groups.Authorizer = fpAuthorizer
 	m.groups.Client.PollingDuration = time.Hour
 
 	return m, nil

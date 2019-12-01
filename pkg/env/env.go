@@ -17,16 +17,17 @@ import (
 type Interface interface {
 	CosmosDB(ctx context.Context) (string, string, error)
 	DNS(ctx context.Context) (string, error)
-	RPAuthorizer(ctx context.Context) (autorest.Authorizer, error)
+	FPAuthorizer(ctx context.Context) (autorest.Authorizer, error)
 	IsReady() bool
 	ListenTLS(ctx context.Context) (net.Listener, error)
 	Authenticated(h http.Handler) http.Handler
+	Location() string
 }
 
-func NewEnv(ctx context.Context, log *logrus.Entry, subscriptionId, resourceGroup string) (Interface, error) {
+func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
 	if strings.ToLower(os.Getenv("RP_MODE")) == "development" {
 		log.Warn("running in development mode")
-		return dev.New(ctx, log, subscriptionId, resourceGroup)
+		return dev.New(ctx, log)
 	}
-	return prod.New(ctx, log, subscriptionId, resourceGroup)
+	return prod.New(ctx, log)
 }

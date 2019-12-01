@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"net"
 	"net/http"
+	"os"
 
 	"github.com/sirupsen/logrus"
 
@@ -15,12 +16,12 @@ type dev struct {
 	*shared.Shared
 }
 
-func New(ctx context.Context, log *logrus.Entry, subscriptionId, resourceGroup string) (*dev, error) {
+func New(ctx context.Context, log *logrus.Entry) (*dev, error) {
 	var err error
 
 	d := &dev{}
 
-	d.Shared, err = shared.NewShared(ctx, log, subscriptionId, resourceGroup)
+	d.Shared, err = shared.NewShared(ctx, log, os.Getenv("AZURE_SUBSCRIPTION_ID"), os.Getenv("RESOURCEGROUP"))
 	if err != nil {
 		return nil, err
 	}
@@ -55,4 +56,8 @@ func (d *dev) Authenticated(h http.Handler) http.Handler {
 
 func (d *dev) IsReady() bool {
 	return true
+}
+
+func (d *dev) Location() string {
+	return os.Getenv("LOCATION")
 }

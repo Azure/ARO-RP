@@ -34,7 +34,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
-	env, err := env.NewEnv(ctx, log, os.Getenv("AZURE_SUBSCRIPTION_ID"), os.Getenv("RESOURCEGROUP"))
+	env, err := env.NewEnv(ctx, log)
 	if err != nil {
 		return err
 	}
