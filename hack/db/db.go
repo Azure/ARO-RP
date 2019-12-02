@@ -16,14 +16,6 @@ import (
 )
 
 func run(ctx context.Context, log *logrus.Entry) error {
-	for _, key := range []string{
-		"RESOURCEGROUP",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return fmt.Errorf("environment variable %q unset", key)
-		}
-	}
-
 	if len(os.Args) != 2 {
 		return fmt.Errorf("usage: %s resourceid", os.Args[0])
 	}

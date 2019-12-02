@@ -3,6 +3,7 @@ package dev
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -17,10 +18,18 @@ type dev struct {
 }
 
 func New(ctx context.Context, log *logrus.Entry) (*dev, error) {
-	var err error
+	for _, key := range []string{
+		"LOCATION",
+		"RESOURCEGROUP",
+	} {
+		if _, found := os.LookupEnv(key); !found {
+			return nil, fmt.Errorf("environment variable %q unset", key)
+		}
+	}
 
 	d := &dev{}
 
+	var err error
 	d.Shared, err = shared.NewShared(ctx, log, os.Getenv("AZURE_SUBSCRIPTION_ID"), os.Getenv("RESOURCEGROUP"))
 	if err != nil {
 		return nil, err
