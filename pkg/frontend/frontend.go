@@ -20,20 +20,6 @@ const (
 	resourceType              = "openShiftClusters"
 )
 
-type request struct {
-	context           context.Context
-	method            string
-	subscriptionID    string
-	resourceID        string
-	resourceGroupName string
-	resourceName      string
-	resourceType      string
-	body              []byte
-	toExternal        api.OpenShiftClusterToExternal
-	toExternals       api.OpenShiftClustersToExternal
-	toInternal        api.OpenShiftClusterToInternal
-}
-
 type frontend struct {
 	baseLog      *logrus.Entry
 	env          env.Interface

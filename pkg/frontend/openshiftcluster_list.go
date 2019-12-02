@@ -14,34 +14,20 @@ func (f *frontend) getOpenShiftClusters(w http.ResponseWriter, r *http.Request) 
 	log := r.Context().Value(contextKeyLog).(*logrus.Entry)
 	vars := mux.Vars(r)
 
-	b, err := f._getOpenShiftClusters(&request{
-		subscriptionID:    vars["subscriptionId"],
-		resourceGroupName: vars["resourceGroupName"],
-		resourceType:      vars["resourceProviderNamespace"] + "/" + vars["resourceType"],
-		toExternals:       api.APIs[vars["api-version"]]["OpenShiftCluster"].(api.OpenShiftClustersToExternal),
-	})
-	if err != nil {
-		switch err := err.(type) {
-		case *api.CloudError:
-			api.WriteCloudError(w, err)
-		default:
-			log.Error(err)
-			api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
-		}
-		return
-	}
+	b, err := f._getOpenShiftClusters(r, api.APIs[vars["api-version"]]["OpenShiftCluster"].(api.OpenShiftClustersToExternal))
 
-	w.Write(b)
-	w.Write([]byte{'\n'})
+	reply(log, w, b, err)
 }
 
-func (f *frontend) _getOpenShiftClusters(r *request) ([]byte, error) {
-	prefix := "/subscriptions/" + r.subscriptionID + "/"
-	if r.resourceGroupName != "" {
-		prefix += "resourcegroups/" + r.resourceGroupName + "/"
+func (f *frontend) _getOpenShiftClusters(r *http.Request, externals api.OpenShiftClustersToExternal) ([]byte, error) {
+	vars := mux.Vars(r)
+
+	prefix := "/subscriptions/" + vars["subscriptionId"] + "/"
+	if vars["resourceGroupName"] != "" {
+		prefix += "resourcegroups/" + vars["resourceGroupName"] + "/"
 	}
 
-	i, err := f.db.OpenShiftClusters.ListByPrefix(r.subscriptionID, api.Key(prefix))
+	i, err := f.db.OpenShiftClusters.ListByPrefix(vars["subscriptionId"], api.Key(prefix))
 	if err != nil {
 		return nil, err
 	}
@@ -63,5 +49,5 @@ func (f *frontend) _getOpenShiftClusters(r *request) ([]byte, error) {
 		}
 	}
 
-	return json.MarshalIndent(r.toExternals.OpenShiftClustersToExternal(ocs), "", "  ")
+	return json.MarshalIndent(externals.OpenShiftClustersToExternal(ocs), "", "  ")
 }

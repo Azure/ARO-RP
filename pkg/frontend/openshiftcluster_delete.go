@@ -16,25 +16,13 @@ func (f *frontend) deleteOpenShiftCluster(w http.ResponseWriter, r *http.Request
 	log := r.Context().Value(contextKeyLog).(*logrus.Entry)
 
 	_, err := f.db.OpenShiftClusters.Patch(api.Key(r.URL.Path), func(doc *api.OpenShiftClusterDocument) error {
-		return f._deleteOpenShiftCluster(&request{
-			resourceID: r.URL.Path,
-		}, doc)
+		return f._deleteOpenShiftCluster(doc)
 	})
-	if err != nil {
-		switch err := err.(type) {
-		case *api.CloudError:
-			api.WriteCloudError(w, err)
-		case *noContent:
-			w.WriteHeader(http.StatusNoContent)
-		default:
-			log.Error(err)
-			api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
-		}
-		return
-	}
+
+	reply(log, w, nil, err)
 }
 
-func (f *frontend) _deleteOpenShiftCluster(r *request, doc *api.OpenShiftClusterDocument) error {
+func (f *frontend) _deleteOpenShiftCluster(doc *api.OpenShiftClusterDocument) error {
 	if doc == nil {
 		return &noContent{}
 	}

@@ -5,7 +5,6 @@ import (
 	"crypto/rsa"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math/big"
 	"net/http"
 
@@ -22,76 +21,54 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 	log := r.Context().Value(contextKeyLog).(*logrus.Entry)
 	vars := mux.Vars(r)
 
-	if r.Header.Get("Content-Type") != "application/json" {
-		api.WriteError(w, http.StatusUnsupportedMediaType, api.CloudErrorCodeUnsupportedMediaType, "", "The content media type '%s' is not supported. Only 'application/json' is supported.", r.Header.Get("Content-Type"))
-		return
-	}
-
-	body, err := ioutil.ReadAll(http.MaxBytesReader(w, r.Body, 1048576))
+	var err error
+	r, err = readBody(w, r)
 	if err != nil {
-		api.WriteError(w, http.StatusUnsupportedMediaType, api.CloudErrorCodeInvalidResource, "", "The resource definition is invalid.")
+		api.WriteCloudError(w, err.(*api.CloudError))
 		return
 	}
 
 	var b []byte
 	var created bool
 	err = cosmosdb.RetryOnPreconditionFailed(func() error {
-		b, created, err = f._putOrPatchOpenShiftCluster(&request{
-			context:      r.Context(),
-			method:       r.Method,
-			resourceID:   r.URL.Path,
-			resourceName: vars["resourceName"],
-			resourceType: vars["resourceProviderNamespace"] + "/" + vars["resourceType"],
-			body:         body,
-			toExternal:   api.APIs[vars["api-version"]]["OpenShiftCluster"].(api.OpenShiftClusterToExternal),
-			toInternal:   api.APIs[vars["api-version"]]["OpenShiftCluster"].(api.OpenShiftClusterToInternal),
-		})
+		b, created, err = f._putOrPatchOpenShiftCluster(r, api.APIs[vars["api-version"]]["OpenShiftCluster"].(api.OpenShiftClusterToInternal), api.APIs[vars["api-version"]]["OpenShiftCluster"].(api.OpenShiftClusterToExternal))
 		return err
 	})
-	if err != nil {
-		switch err := err.(type) {
-		case *api.CloudError:
-			api.WriteCloudError(w, err)
-		default:
-			log.Error(err)
-			api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
-		}
-		return
-	}
-
-	if created {
+	if err == nil && created {
 		w.WriteHeader(http.StatusCreated)
 	}
-	w.Write(b)
-	w.Write([]byte{'\n'})
+
+	reply(log, w, b, err)
 }
 
-func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error) {
-	subdoc, err := f.validateSubscriptionState(api.Key(r.resourceID), api.SubscriptionStateRegistered)
+func (f *frontend) _putOrPatchOpenShiftCluster(r *http.Request, internal api.OpenShiftClusterToInternal, external api.OpenShiftClusterToExternal) ([]byte, bool, error) {
+	body := r.Context().Value(contextKeyBody).([]byte)
+
+	subdoc, err := f.validateSubscriptionState(api.Key(r.URL.Path), api.SubscriptionStateRegistered)
 	if err != nil {
 		return nil, false, err
 	}
 
-	originalPath := r.context.Value(contextKeyOriginalPath).(string)
+	originalPath := r.Context().Value(contextKeyOriginalPath).(string)
 	originalR, err := azure.ParseResourceID(originalPath)
 	if err != nil {
 		return nil, false, err
 	}
 
-	doc, err := f.db.OpenShiftClusters.Get(api.Key(r.resourceID))
+	doc, err := f.db.OpenShiftClusters.Get(api.Key(r.URL.Path))
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil, false, err
 	}
 
 	isCreate := doc == nil
 
-	var external interface{}
+	var ext interface{}
 	if isCreate {
 		doc = &api.OpenShiftClusterDocument{
 			ID: uuid.NewV4().String(),
 		}
 
-		external = r.toExternal.OpenShiftClusterToExternal(&api.OpenShiftCluster{
+		ext = external.OpenShiftClusterToExternal(&api.OpenShiftCluster{
 			ID:   originalPath,
 			Name: originalR.ResourceName,
 			Type: originalR.ResourceType,
@@ -122,9 +99,9 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateUpdating
 		doc.Dequeues = 0
 
-		switch r.method {
+		switch r.Method {
 		case http.MethodPut:
-			external = r.toExternal.OpenShiftClusterToExternal(&api.OpenShiftCluster{
+			ext = external.OpenShiftClusterToExternal(&api.OpenShiftCluster{
 				ID:   doc.OpenShiftCluster.ID,
 				Name: doc.OpenShiftCluster.Name,
 				Type: doc.OpenShiftCluster.Type,
@@ -134,16 +111,16 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 			})
 
 		case http.MethodPatch:
-			external = r.toExternal.OpenShiftClusterToExternal(doc.OpenShiftCluster)
+			ext = external.OpenShiftClusterToExternal(doc.OpenShiftCluster)
 		}
 	}
 
-	err = json.Unmarshal(r.body, &external)
+	err = json.Unmarshal(body, &ext)
 	if err != nil {
 		return nil, false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
 	}
 
-	err = r.toInternal.ValidateOpenShiftCluster(f.env.Location(), r.resourceID, external, doc.OpenShiftCluster)
+	err = internal.ValidateOpenShiftCluster(f.env.Location(), r.URL.Path, ext, doc.OpenShiftCluster)
 	if err != nil {
 		return nil, false, err
 	}
@@ -153,10 +130,10 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 	}
 
 	oldID, oldName, oldType := doc.OpenShiftCluster.ID, doc.OpenShiftCluster.Name, doc.OpenShiftCluster.Type
-	r.toInternal.OpenShiftClusterToInternal(external, doc.OpenShiftCluster)
+	internal.OpenShiftClusterToInternal(ext, doc.OpenShiftCluster)
 
 	if isCreate {
-		doc.Key = api.Key(r.resourceID)
+		doc.Key = api.Key(r.URL.Path)
 		doc.OpenShiftCluster.Properties.Install = &api.Install{}
 		// TODO: ResourceGroup should be exposed in external API
 		doc.OpenShiftCluster.Properties.ResourceGroup = doc.OpenShiftCluster.Name
@@ -178,7 +155,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 		doc.OpenShiftCluster.ID, doc.OpenShiftCluster.Name, doc.OpenShiftCluster.Type = oldID, oldName, oldType
 	}
 
-	err = r.toInternal.ValidateOpenShiftClusterDynamic(r.context, f.fpAuthorizer, doc.OpenShiftCluster)
+	err = internal.ValidateOpenShiftClusterDynamic(r.Context(), f.fpAuthorizer, doc.OpenShiftCluster)
 	if err != nil {
 		return nil, false, err
 	}
@@ -194,7 +171,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 
 	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 
-	b, err := json.MarshalIndent(r.toExternal.OpenShiftClusterToExternal(doc.OpenShiftCluster), "", "  ")
+	b, err := json.MarshalIndent(external.OpenShiftClusterToExternal(doc.OpenShiftCluster), "", "  ")
 	if err != nil {
 		return nil, false, err
 	}

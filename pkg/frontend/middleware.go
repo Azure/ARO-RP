@@ -3,6 +3,7 @@ package frontend
 import (
 	"context"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"runtime/debug"
 	"strings"
@@ -19,6 +20,7 @@ type contextKey int
 const (
 	contextKeyLog contextKey = iota
 	contextKeyOriginalPath
+	contextKeyBody
 )
 
 type statsResponseWriter struct {
@@ -104,4 +106,38 @@ func lowercase(h http.Handler) http.Handler {
 
 		h.ServeHTTP(w, r)
 	})
+}
+
+func readBody(w http.ResponseWriter, r *http.Request) (*http.Request, error) {
+	if r.Header.Get("Content-Type") != "application/json" {
+		return nil, api.NewCloudError(http.StatusUnsupportedMediaType, api.CloudErrorCodeUnsupportedMediaType, "", "The content media type '%s' is not supported. Only 'application/json' is supported.", r.Header.Get("Content-Type"))
+	}
+
+	body, err := ioutil.ReadAll(http.MaxBytesReader(w, r.Body, 1048576))
+	if err != nil {
+		return nil, api.NewCloudError(http.StatusUnsupportedMediaType, api.CloudErrorCodeInvalidResource, "", "The resource definition is invalid.")
+
+	}
+
+	return r.WithContext(context.WithValue(r.Context(), contextKeyBody, body)), nil
+}
+
+func reply(log *logrus.Entry, w http.ResponseWriter, b []byte, err error) {
+	if err != nil {
+		switch err := err.(type) {
+		case *api.CloudError:
+			api.WriteCloudError(w, err)
+		case *noContent:
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			log.Error(err)
+			api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
+		}
+		return
+	}
+
+	if b != nil {
+		w.Write(b)
+		w.Write([]byte{'\n'})
+	}
 }

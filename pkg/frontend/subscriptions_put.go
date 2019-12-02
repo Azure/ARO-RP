@@ -1,7 +1,6 @@
 package frontend
 
 import (
-	"io/ioutil"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -22,47 +21,31 @@ func (f *frontend) putSubscription(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.Header.Get("Content-Type") != "application/json" {
-		api.WriteError(w, http.StatusUnsupportedMediaType, api.CloudErrorCodeUnsupportedMediaType, "", "The content media type '%s' is not supported. Only 'application/json' is supported.", r.Header.Get("Content-Type"))
-		return
-	}
-
-	body, err := ioutil.ReadAll(http.MaxBytesReader(w, r.Body, 1048576))
+	var err error
+	r, err = readBody(w, r)
 	if err != nil {
-		api.WriteError(w, http.StatusUnsupportedMediaType, api.CloudErrorCodeInvalidResource, "", "The resource definition is invalid.")
+		api.WriteCloudError(w, err.(*api.CloudError))
 		return
 	}
 
 	var b []byte
 	var created bool
 	err = cosmosdb.RetryOnPreconditionFailed(func() error {
-		b, created, err = f._putSubscription(&request{
-			context:        r.Context(),
-			subscriptionID: vars["subscriptionId"],
-			body:           body,
-		})
+		b, created, err = f._putSubscription(r)
 		return err
 	})
-	if err != nil {
-		switch err := err.(type) {
-		case *api.CloudError:
-			api.WriteCloudError(w, err)
-		default:
-			log.Error(err)
-			api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
-		}
-		return
-	}
-
-	if created {
+	if err == nil && created {
 		w.WriteHeader(http.StatusCreated)
 	}
-	w.Write(b)
-	w.Write([]byte{'\n'})
+
+	reply(log, w, b, err)
 }
 
-func (f *frontend) _putSubscription(r *request) ([]byte, bool, error) {
-	doc, err := f.db.Subscriptions.Get(api.Key(r.subscriptionID))
+func (f *frontend) _putSubscription(r *http.Request) ([]byte, bool, error) {
+	body := r.Context().Value(contextKeyBody).([]byte)
+	vars := mux.Vars(r)
+
+	doc, err := f.db.Subscriptions.Get(api.Key(vars["subscriptionId"]))
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil, false, err
 	}
@@ -72,13 +55,12 @@ func (f *frontend) _putSubscription(r *request) ([]byte, bool, error) {
 	if isCreate {
 		doc = &api.SubscriptionDocument{
 			ID:           uuid.NewV4().String(),
-			Key:          api.Key(r.subscriptionID),
+			Key:          api.Key(vars["subscriptionId"]),
 			Subscription: &api.Subscription{},
 		}
 	}
 
 	oldState := doc.Subscription.State
-	doc.Subscription = &api.Subscription{}
 
 	h := &codec.JsonHandle{
 		BasicHandle: codec.BasicHandle{
@@ -89,7 +71,8 @@ func (f *frontend) _putSubscription(r *request) ([]byte, bool, error) {
 		Indent: 2,
 	}
 
-	err = codec.NewDecoderBytes(r.body, h).Decode(&doc.Subscription)
+	doc.Subscription = &api.Subscription{}
+	err = codec.NewDecoderBytes(body, h).Decode(&doc.Subscription)
 	if err != nil {
 		return nil, false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
 	}

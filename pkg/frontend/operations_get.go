@@ -50,12 +50,5 @@ func (f *frontend) getOperations(w http.ResponseWriter, r *http.Request) {
 	}
 
 	b, err := json.MarshalIndent(l, "", "  ")
-	if err != nil {
-		log.Error(err)
-		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
-		return
-	}
-
-	w.Write(b)
-	w.Write([]byte{'\n'})
+	reply(log, w, b, err)
 }
