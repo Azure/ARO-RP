@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sync/atomic"
 
+	"github.com/Azure/go-autorest/autorest"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
@@ -32,10 +33,10 @@ type request struct {
 }
 
 type frontend struct {
-	baseLog *logrus.Entry
-	env     env.Interface
-
-	db *database.Database
+	baseLog      *logrus.Entry
+	env          env.Interface
+	db           *database.Database
+	fpAuthorizer autorest.Authorizer
 
 	l net.Listener
 
@@ -49,13 +50,19 @@ type Runnable interface {
 
 // NewFrontend returns a new runnable frontend
 func NewFrontend(ctx context.Context, baseLog *logrus.Entry, env env.Interface, db *database.Database) (Runnable, error) {
+	var err error
+
 	f := &frontend{
 		baseLog: baseLog,
 		env:     env,
 		db:      db,
 	}
 
-	var err error
+	f.fpAuthorizer, err = env.FPAuthorizer(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	f.l, err = f.env.ListenTLS(ctx)
 	if err != nil {
 		return nil, err

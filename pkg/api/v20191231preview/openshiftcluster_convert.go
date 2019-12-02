@@ -57,11 +57,11 @@ func OpenShiftClusterToExternal(oc *api.OpenShiftCluster) *OpenShiftCluster {
 	return out
 }
 
-// ToInternal overwrites in place a pre-existing internal object, setting (only)
-// all mapped fields from the external representation.  ToInternal modifies its
-// argument; there is no pointer aliasing between the passed and returned
-// objects.
-func (oc *OpenShiftCluster) ToInternal(out *api.OpenShiftCluster) {
+// OpenShiftClusterToInternal overwrites in place a pre-existing internal
+// object, setting (only) all mapped fields from the external representation.
+// ToInternal modifies its argument; there is no pointer aliasing between the
+// passed and returned objects.
+func OpenShiftClusterToInternal(oc *OpenShiftCluster, out *api.OpenShiftCluster) {
 	out.ID = oc.ID
 	out.Name = oc.Name
 	out.Type = oc.Type

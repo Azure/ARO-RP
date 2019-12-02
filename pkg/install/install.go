@@ -36,7 +36,7 @@ type Installer struct {
 	subnets subnet.Manager
 }
 
-func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClusters, fpAuthorizer, spAuthorizer autorest.Authorizer, subscriptionID string) *Installer {
+func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClusters, fpAuthorizer autorest.Authorizer, subscriptionID string) *Installer {
 	d := &Installer{
 		log: log,
 		env: env,
@@ -50,7 +50,7 @@ func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClu
 		groups:            resources.NewGroupsClient(subscriptionID, fpAuthorizer),
 		accounts:          storage.NewAccountsClient(subscriptionID, fpAuthorizer),
 
-		subnets: subnet.NewManager(subscriptionID, spAuthorizer),
+		subnets: subnet.NewManager(subscriptionID, fpAuthorizer),
 	}
 
 	d.disks.Authorizer = fpAuthorizer

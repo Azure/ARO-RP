@@ -16,11 +16,3 @@ func OpenShiftClusterCredentialsToExternal(oc *api.OpenShiftCluster) *OpenShiftC
 
 	return out
 }
-
-// ToInternal overwrites in place a pre-existing internal object, setting (only)
-// all mapped fields from the external representation.  ToInternal modifies its
-// argument; there is no pointer aliasing between the passed and returned
-// objects.
-func (occ *OpenShiftClusterCredentials) ToInternal(out *api.OpenShiftCluster) {
-	out.Properties.KubeadminPassword = occ.KubeadminPassword
-}

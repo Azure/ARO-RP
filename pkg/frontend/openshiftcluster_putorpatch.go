@@ -15,6 +15,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/jim-minter/rp/pkg/api"
+	"github.com/jim-minter/rp/pkg/api/v20191231preview"
 	"github.com/jim-minter/rp/pkg/database/cosmosdb"
 )
 
@@ -148,7 +149,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 		return nil, false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
 	}
 
-	err = external.Validate(r.context, subdoc.Subscription.Properties.TenantID, r.resourceID, doc.OpenShiftCluster)
+	err = v20191231preview.ValidateOpenShiftCluster(f.env, r.resourceID, external.(*v20191231preview.OpenShiftCluster), doc.OpenShiftCluster)
 	if err != nil {
 		return nil, false, err
 	}
@@ -158,7 +159,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 	}
 
 	oldID, oldName, oldType := doc.OpenShiftCluster.ID, doc.OpenShiftCluster.Name, doc.OpenShiftCluster.Type
-	external.ToInternal(doc.OpenShiftCluster)
+	v20191231preview.OpenShiftClusterToInternal(external.(*v20191231preview.OpenShiftCluster), doc.OpenShiftCluster)
 
 	if isCreate {
 		doc.Key = api.Key(r.resourceID)
@@ -179,11 +180,18 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 			return nil, false, err
 		}
 		doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID = subdoc.Subscription.Properties.TenantID
-
-		doc, err = f.db.OpenShiftClusters.Create(doc)
 	} else {
 		doc.OpenShiftCluster.ID, doc.OpenShiftCluster.Name, doc.OpenShiftCluster.Type = oldID, oldName, oldType
+	}
 
+	err = v20191231preview.ValidateOpenShiftClusterDynamic(r.context, f.fpAuthorizer, doc.OpenShiftCluster)
+	if err != nil {
+		return nil, false, err
+	}
+
+	if isCreate {
+		doc, err = f.db.OpenShiftClusters.Create(doc)
+	} else {
 		doc, err = f.db.OpenShiftClusters.Update(doc)
 	}
 	if err != nil {

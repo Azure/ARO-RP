@@ -6,7 +6,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/sirupsen/logrus"
 
 	"github.com/jim-minter/rp/pkg/api"
@@ -58,14 +57,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 	stop := ocb.heartbeat(log, doc)
 	defer stop()
 
-	spp := &doc.OpenShiftCluster.Properties.ServicePrincipalProfile
-	spAuthorizer, err := auth.NewClientCredentialsConfig(spp.ClientID, spp.ClientSecret, spp.TenantID).Authorizer()
-	if err != nil {
-		log.Error(err)
-		return ocb.endLease(stop, doc, api.ProvisioningStateFailed)
-	}
-
-	m, err := openshiftcluster.NewManager(log, ocb.env, ocb.db.OpenShiftClusters, ocb.fpAuthorizer, spAuthorizer, doc)
+	m, err := openshiftcluster.NewManager(log, ocb.env, ocb.db.OpenShiftClusters, ocb.fpAuthorizer, doc)
 	if err != nil {
 		log.Error(err)
 		return ocb.endLease(stop, doc, api.ProvisioningStateFailed)

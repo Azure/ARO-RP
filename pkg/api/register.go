@@ -1,13 +1,7 @@
 package api
 
-import (
-	"context"
-)
-
 // External is the interface that an external API must implement
 type External interface {
-	Validate(context.Context, string, string, *OpenShiftCluster) error
-	ToInternal(*OpenShiftCluster)
 }
 
 // APIVersionType represents an APIVersion and a Type

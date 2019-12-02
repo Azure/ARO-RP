@@ -54,6 +54,8 @@ var (
 	CloudErrorCodeInvalidLinkedVNet                  = "InvalidLinkedVNet"
 	CloudErrorCodeForbidden                          = "Forbidden"
 	CloudErrorCodeInvalidSubscriptionState           = "CloudErrorCodeInvalidSubscriptionState"
+	CloudErrorCodeInvalidServicePrincipalCredentials = "InvalidServicePrincipalCredentials"
+	CloudErrorCodeInvalidResourceProviderPermissions = "InvalidResourceProviderPermissions"
 	CloudErrorCodeInvalidServicePrincipalPermissions = "InvalidServicePrincipalPermissions"
 )
 

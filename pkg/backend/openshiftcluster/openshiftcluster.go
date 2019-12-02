@@ -19,7 +19,6 @@ type Manager struct {
 	env          env.Interface
 	db           database.OpenShiftClusters
 	fpAuthorizer autorest.Authorizer
-	spAuthorizer autorest.Authorizer
 
 	groups resources.GroupsClient
 
@@ -28,7 +27,7 @@ type Manager struct {
 	doc *api.OpenShiftClusterDocument
 }
 
-func NewManager(log *logrus.Entry, env env.Interface, db database.OpenShiftClusters, fpAuthorizer, spAuthorizer autorest.Authorizer, doc *api.OpenShiftClusterDocument) (*Manager, error) {
+func NewManager(log *logrus.Entry, env env.Interface, db database.OpenShiftClusters, fpAuthorizer autorest.Authorizer, doc *api.OpenShiftClusterDocument) (*Manager, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
 		return nil, err
@@ -39,9 +38,8 @@ func NewManager(log *logrus.Entry, env env.Interface, db database.OpenShiftClust
 		env:          env,
 		db:           db,
 		fpAuthorizer: fpAuthorizer,
-		spAuthorizer: spAuthorizer,
 
-		subnets: subnet.NewManager(r.SubscriptionID, spAuthorizer),
+		subnets: subnet.NewManager(r.SubscriptionID, fpAuthorizer),
 
 		doc: doc,
 	}
