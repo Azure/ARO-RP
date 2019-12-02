@@ -43,38 +43,6 @@
             }
         },
         {
-            "name": "44e387cf-b19e-441c-8477-ce0c263ab0a0",
-            "apiVersion": "2017-09-01",
-            "type": "Microsoft.Authorization/roleDefinitions",
-            "properties": {
-                "assignableScopes": [
-                    "[concat('/subscriptions/', subscription().subscriptionId)]"
-                ],
-                "permissions": [
-                    {
-                        "actions": []
-                    }
-                ],
-                "roleName": "ARO v4 Master"
-            }
-        },
-        {
-            "name": "29d58564-3514-44e8-898d-01926c90353e",
-            "apiVersion": "2017-09-01",
-            "type": "Microsoft.Authorization/roleDefinitions",
-            "properties": {
-                "assignableScopes": [
-                    "[concat('/subscriptions/', subscription().subscriptionId)]"
-                ],
-                "permissions": [
-                    {
-                        "actions": []
-                    }
-                ],
-                "roleName": "ARO v4 Worker"
-            }
-        },
-        {
             "name": "[guid(subscription().id, 'FP / ARO v4 FP Subscription')]",
             "apiVersion": "2017-09-01",
             "type": "Microsoft.Authorization/roleAssignments",
