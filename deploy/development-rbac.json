@@ -36,7 +36,31 @@
                 ],
                 "permissions": [
                     {
-                        "actions": []
+                        "actions": [
+                            "Microsoft.Authorization/roleAssignments/write",
+                            "Microsoft.Compute/images/read",
+                            "Microsoft.Compute/images/write",
+                            "Microsoft.Compute/virtualMachines/read",
+                            "Microsoft.Compute/virtualMachines/write",
+                            "Microsoft.Network/loadBalancers/write",
+                            "Microsoft.Network/networkInterfaces/write",
+                            "Microsoft.Network/networkSecurityGroups/read",
+                            "Microsoft.Network/networkSecurityGroups/write",
+                            "Microsoft.Network/privateDnsZones/A/write",
+                            "Microsoft.Network/privateDnsZones/SRV/write",
+                            "Microsoft.Network/privateDnsZones/virtualNetworkLinks/write",
+                            "Microsoft.Network/privateDnsZones/write",
+                            "Microsoft.Network/publicIPAddresses/read",
+                            "Microsoft.Network/publicIPAddresses/write",
+                            "Microsoft.Network/routeTables/read",
+                            "Microsoft.Network/routeTables/write",
+                            "Microsoft.Resources/deployments/operationStatuses/read",
+                            "Microsoft.Resources/deployments/write",
+                            "Microsoft.Storage/storageAccounts/blobServices/containers/write",
+                            "Microsoft.Storage/storageAccounts/listAccountSas/action",
+                            "Microsoft.Storage/storageAccounts/listKeys/action",
+                            "Microsoft.Storage/storageAccounts/write"
+                        ]
                     }
                 ],
                 "roleName": "ARO v4 FP Resource Group"

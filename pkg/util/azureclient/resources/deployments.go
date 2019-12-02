@@ -26,6 +26,7 @@ func NewDeploymentsClient(subscriptionID string, authorizer autorest.Authorizer)
 	client := resources.NewDeploymentsClient(subscriptionID)
 	client.Authorizer = authorizer
 	client.PollingDuration = time.Hour
+	client.PollingDelay = 10 * time.Second
 
 	return &deploymentsClient{
 		DeploymentsClient: client,

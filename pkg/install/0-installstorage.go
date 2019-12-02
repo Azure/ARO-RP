@@ -8,10 +8,14 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
+	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
 	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
+	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/ignition/bootstrap"
 	"github.com/openshift/installer/pkg/asset/installconfig"
@@ -58,6 +62,7 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 		reflect.TypeOf(clusterID):     clusterID,
 	}
 
+	i.log.Print("resolving graph")
 	for _, a := range targets.Cluster {
 		_, err := g.resolve(a)
 		if err != nil {
@@ -77,11 +82,46 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 		return err
 	}
 
+	var objectID string
+	{
+		spp := &doc.OpenShiftCluster.Properties.ServicePrincipalProfile
+
+		conf := auth.NewClientCredentialsConfig(spp.ClientID, spp.ClientSecret, spp.TenantID)
+		conf.Resource = azure.PublicCloud.GraphEndpoint
+
+		spAuthorizer, err := conf.Authorizer()
+		if err != nil {
+			return err
+		}
+
+		applications := graphrbac.NewApplicationsClient(spp.TenantID)
+		applications.Authorizer = spAuthorizer
+
+		res, err := applications.GetServicePrincipalsIDByAppID(ctx, spp.ClientID)
+		if err != nil {
+			return err
+		}
+
+		objectID = *res.Value
+	}
+
 	{
 		t := &arm.Template{
 			Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 			ContentVersion: "1.0.0.0",
 			Resources: []arm.Resource{
+				{
+					Resource: &authorization.RoleAssignment{
+						Name: to.StringPtr("[guid(resourceGroup().id, 'SP / Contributor')]"),
+						Type: to.StringPtr("Microsoft.Authorization/roleAssignments"),
+						Properties: &authorization.RoleAssignmentPropertiesWithScope{
+							Scope:            to.StringPtr("[resourceGroup().id]"),
+							RoleDefinitionID: to.StringPtr("[resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]"), // Contributor
+							PrincipalID:      to.StringPtr(objectID),
+						},
+					},
+					APIVersion: apiVersions["authorization"],
+				},
 				{
 					Resource: &storage.Account{
 						Sku: &storage.Sku{
