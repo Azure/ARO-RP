@@ -40,6 +40,11 @@ func (oc *OpenShiftCluster) Validate(ctx context.Context, tenantID, resourceID s
 	}
 	internal.Properties.ServicePrincipalProfile.TenantID = tenantID
 
+	err = oc.validateServicePrincipalProfile(internal)
+	if err != nil {
+		return err
+	}
+
 	err = oc.validateSubnets(ctx, internal)
 	if err != nil {
 		return err
@@ -305,6 +310,21 @@ func (wp *WorkerProfile) validateDelta(path string, current *WorkerProfile) erro
 	return nil
 }
 
+func (oc *OpenShiftCluster) validateServicePrincipalProfile(internal *api.OpenShiftCluster) error {
+	spp := &internal.Properties.ServicePrincipalProfile
+	token, err := auth.NewClientCredentialsConfig(spp.ClientID, spp.ClientSecret, spp.TenantID).ServicePrincipalToken()
+	if err != nil {
+		return err
+	}
+
+	err = token.EnsureFresh()
+	if err != nil {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalPermissions, "properties.servicePrincipalProfile", "The provided service principal is invalid.")
+	}
+
+	return nil
+}
+
 func (oc *OpenShiftCluster) validateSubnets(ctx context.Context, internal *api.OpenShiftCluster) error {
 	master, err := oc.validateSubnet(ctx, internal, "properties.masterProfile.subnetId", "master", internal.Properties.MasterProfile.SubnetID)
 	if err != nil {
@@ -350,9 +370,13 @@ func (oc *OpenShiftCluster) validateSubnet(ctx context.Context, internal *api.Op
 	subnets := subnet.NewManager(r.SubscriptionID, spAuthorizer)
 	s, err := subnets.Get(ctx, subnetID)
 	if err != nil {
-		// TODO: return friendly error if SP is not authorised
-		if err, ok := err.(autorest.DetailedError); ok && err.StatusCode == http.StatusNotFound {
-			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The provided "+typ+" VM subnet '%s' could not be found.", subnetID)
+		if err, ok := err.(autorest.DetailedError); ok {
+			switch err.StatusCode {
+			case http.StatusForbidden:
+				return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalPermissions, path, "The provided service principal does not have permission to access "+typ+" VM subnet '%s'.", subnetID)
+			case http.StatusNotFound:
+				return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The provided "+typ+" VM subnet '%s' could not be found.", subnetID)
+			}
 		}
 		return nil, err
 	}

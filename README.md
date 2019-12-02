@@ -48,21 +48,32 @@
 
    *RH ARO engineering*: the above step has already been done.
 
+1. You will need your own **cluster AAD application** with client secret
+   authentication enabled.
+
+   ```
+   AZURE_CLUSTER_CLIENT_ID=$(az ad app create --display-name user-$USER-v4 --query appId -o tsv)
+   az ad sp create --id "$AZURE_CLUSTER_CLIENT_ID"
+   AZURE_CLUSTER_CLIENT_SECRET=$(az ad app credential reset --id $AZURE_CLUSTER_CLIENT_ID --query password -o tsv)
+   ```
+
 1. Copy env.example to env, edit the values and source the env file.  This file
    holds (only) the environment variables necessary for the RP to run.
 
-   * AZURE_TENANT_ID:       Azure tenant UUID
-   * AZURE_SUBSCRIPTION_ID: Azure subscription UUID
-   * AZURE_FP_CLIENT_ID:    RP "first party" application client UUID
-   * AZURE_CLIENT_ID:       RP AAD application client UUID
-   * AZURE_CLIENT_SECRET:   RP AAD application client secret
+   * AZURE_TENANT_ID:               Azure tenant UUID
+   * AZURE_SUBSCRIPTION_ID:         Azure subscription UUID
+   * AZURE_FP_CLIENT_ID:            RP "first party" application client UUID
+   * AZURE_CLIENT_ID:               RP AAD application client UUID
+   * AZURE_CLIENT_SECRET:           RP AAD application client secret
+   * AZURE_CLUSTER_CLIENT_ID:       Cluster AAD application client UUID
+   * AZURE_CLUSTER_CLIENT_SECRET:   Cluster AAD application client secret
 
-   * LOCATION:              Azure location where RP and cluster(s) will run (default: `eastus`)
-   * RESOURCEGROUP:         Name of a new resource group which will contain the RP resources
+   * LOCATION:                      Azure location where RP and cluster(s) will run (default: `eastus`)
+   * RESOURCEGROUP:                 Name of a new resource group which will contain the RP resources
 
-   * PULL_SECRET:           A cluster pull secret retrieved from [Red Hat OpenShift Cluster Manager](https://cloud.redhat.com/openshift/install/azure/installer-provisioned)
+   * PULL_SECRET:                   A cluster pull secret retrieved from [Red Hat OpenShift Cluster Manager](https://cloud.redhat.com/openshift/install/azure/installer-provisioned)
 
-   * RP_MODE:               Set to `development` when not in production.
+   * RP_MODE:                       Set to `development` when not in production.
 
    ```
    cp env.example env
@@ -133,6 +144,7 @@ go run ./cmd/rp
 export VNET_RESOURCEGROUP=$RESOURCEGROUP-vnet
 az group create -g "$VNET_RESOURCEGROUP" -l "$LOCATION"
 az network vnet create -g "$VNET_RESOURCEGROUP" -n vnet --address-prefixes 10.0.0.0/9
+az role assignment create --role Owner --assignee-object-id "$(az ad sp list --all --query "[?appId=='$AZURE_CLUSTER_CLIENT_ID'].objectId" -o tsv)" --scope "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$VNET_RESOURCEGROUP/providers/Microsoft.Network/virtualNetworks/vnet"
 
 export CLUSTER=cluster
 ```
