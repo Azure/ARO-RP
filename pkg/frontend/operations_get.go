@@ -12,8 +12,8 @@ import (
 func (f *frontend) getOperations(w http.ResponseWriter, r *http.Request) {
 	log := r.Context().Value(contextKeyLog).(*logrus.Entry)
 
-	ops := &api.OperationList{
-		Value: []api.Operation{
+	l := &api.OperationList{
+		Operations: []api.Operation{
 			{
 				Name: "Microsoft.RedHatOpenShift/openShiftClusters/read",
 				Display: api.Display{
@@ -49,7 +49,7 @@ func (f *frontend) getOperations(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	b, err := json.MarshalIndent(ops, "", "  ")
+	b, err := json.MarshalIndent(l, "", "  ")
 	if err != nil {
 		log.Error(err)
 		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")

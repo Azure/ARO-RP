@@ -18,7 +18,7 @@ func (f *frontend) getOpenShiftClusters(w http.ResponseWriter, r *http.Request) 
 		subscriptionID:    vars["subscriptionId"],
 		resourceGroupName: vars["resourceGroupName"],
 		resourceType:      vars["resourceProviderNamespace"] + "/" + vars["resourceType"],
-		toExternal:        api.APIs[vars["api-version"]]["OpenShiftCluster"].(api.OpenShiftClusterToExternal),
+		toExternals:       api.APIs[vars["api-version"]]["OpenShiftCluster"].(api.OpenShiftClustersToExternal),
 	})
 	if err != nil {
 		switch err := err.(type) {
@@ -46,9 +46,7 @@ func (f *frontend) _getOpenShiftClusters(r *request) ([]byte, error) {
 		return nil, err
 	}
 
-	var rv struct {
-		Value []interface{} `json:"value"`
-	}
+	var ocs []*api.OpenShiftCluster
 
 	for {
 		docs, err := i.Next()
@@ -61,9 +59,9 @@ func (f *frontend) _getOpenShiftClusters(r *request) ([]byte, error) {
 
 		for _, doc := range docs.OpenShiftClusterDocuments {
 			doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
-			rv.Value = append(rv.Value, r.toExternal.OpenShiftClusterToExternal(doc.OpenShiftCluster))
+			ocs = append(ocs, doc.OpenShiftCluster)
 		}
 	}
 
-	return json.MarshalIndent(rv, "", "  ")
+	return json.MarshalIndent(r.toExternals.OpenShiftClustersToExternal(ocs), "", "  ")
 }

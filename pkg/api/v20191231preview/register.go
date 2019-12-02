@@ -16,11 +16,15 @@ const (
 type openShiftCluster struct{}
 
 var _ api.OpenShiftClusterToExternal = (*openShiftCluster)(nil)
-
+var _ api.OpenShiftClustersToExternal = (*openShiftCluster)(nil)
 var _ api.OpenShiftClusterToInternal = (*openShiftCluster)(nil)
 
 func (openShiftCluster) OpenShiftClusterToExternal(oc *api.OpenShiftCluster) interface{} {
 	return openShiftClusterToExternal(oc)
+}
+
+func (openShiftCluster) OpenShiftClustersToExternal(ocs []*api.OpenShiftCluster) interface{} {
+	return openShiftClustersToExternal(ocs)
 }
 
 func (openShiftCluster) OpenShiftClusterToInternal(oc interface{}, out *api.OpenShiftCluster) {

@@ -3,7 +3,7 @@ package api
 // OperationList represents an operation list.
 type OperationList struct {
 	// List of operations supported by the resource provider.
-	Value []Operation `json:"value"`
+	Operations []Operation `json:"value"`
 }
 
 // Operation represents an operation.

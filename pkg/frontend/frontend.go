@@ -30,6 +30,7 @@ type request struct {
 	resourceType      string
 	body              []byte
 	toExternal        api.OpenShiftClusterToExternal
+	toExternals       api.OpenShiftClustersToExternal
 	toInternal        api.OpenShiftClusterToInternal
 }
 

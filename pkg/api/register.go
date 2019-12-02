@@ -13,6 +13,13 @@ type OpenShiftClusterToExternal interface {
 	OpenShiftClusterToExternal(*OpenShiftCluster) interface{}
 }
 
+// OpenShiftClustersToExternal is implemented by APIs that can convert multiple
+// internal OpenShiftCluster representations to the API-specific versioned
+// external representation
+type OpenShiftClustersToExternal interface {
+	OpenShiftClustersToExternal([]*OpenShiftCluster) interface{}
+}
+
 // OpenShiftClusterToInternal is implemented by APIs that can convert their
 // API-specific versioned external representation to the internal
 // OpenShiftCluster representation.  It also includes validators

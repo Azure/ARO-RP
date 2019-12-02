@@ -8,7 +8,7 @@ import (
 // internal object, reading from the subset of the internal object's fields that
 // appear in the external representation.  ToExternal does not modify its
 // argument; there is no pointer aliasing between the passed and returned
-// objects.
+// objects
 func openShiftClusterToExternal(oc *api.OpenShiftCluster) *OpenShiftCluster {
 	out := &OpenShiftCluster{
 		ID:       oc.ID,
@@ -57,10 +57,24 @@ func openShiftClusterToExternal(oc *api.OpenShiftCluster) *OpenShiftCluster {
 	return out
 }
 
+// openShiftClustersToExternal returns a slice of external representations of
+// the internal objects
+func openShiftClustersToExternal(ocs []*api.OpenShiftCluster) *OpenShiftClusterList {
+	l := &OpenShiftClusterList{
+		OpenShiftClusters: make([]*OpenShiftCluster, 0, len(ocs)),
+	}
+
+	for _, oc := range ocs {
+		l.OpenShiftClusters = append(l.OpenShiftClusters, openShiftClusterToExternal(oc))
+	}
+
+	return l
+}
+
 // openShiftClusterToInternal overwrites in place a pre-existing internal
 // object, setting (only) all mapped fields from the external representation.
 // ToInternal modifies its argument; there is no pointer aliasing between the
-// passed and returned objects.
+// passed and returned objects
 func openShiftClusterToInternal(oc *OpenShiftCluster, out *api.OpenShiftCluster) {
 	out.ID = oc.ID
 	out.Name = oc.Name
