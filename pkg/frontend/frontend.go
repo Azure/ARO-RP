@@ -29,7 +29,8 @@ type request struct {
 	resourceName      string
 	resourceType      string
 	body              []byte
-	toExternal        func(*api.OpenShiftCluster) api.External
+	toExternal        api.OpenShiftClusterToExternal
+	toInternal        api.OpenShiftClusterToInternal
 }
 
 type frontend struct {
@@ -88,7 +89,7 @@ func (f *frontend) unauthenticatedRoutes(r *mux.Router) {
 func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	s := r.
 		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}").
-		Queries("api-version", "").
+		Queries("api-version", "{api-version}").
 		Subrouter()
 
 	s.Methods(http.MethodDelete).HandlerFunc(f.deleteOpenShiftCluster)
@@ -98,35 +99,35 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}").
-		Queries("api-version", "").
+		Queries("api-version", "{api-version}").
 		Subrouter()
 
 	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftClusters)
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/{resourceType}").
-		Queries("api-version", "").
+		Queries("api-version", "{api-version}").
 		Subrouter()
 
 	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftClusters)
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/credentials").
-		Queries("api-version", "").
+		Queries("api-version", "{api-version}").
 		Subrouter()
 
 	s.Methods(http.MethodPost).HandlerFunc(f.postOpenShiftClusterCredentials)
 
 	s = r.
 		Path("/providers/{resourceProviderNamespace}/operations").
-		Queries("api-version", "").
+		Queries("api-version", "{api-version}").
 		Subrouter()
 
 	s.Methods(http.MethodGet).HandlerFunc(f.getOperations)
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}").
-		Queries("api-version", "").
+		Queries("api-version", "{api-version}").
 		Subrouter()
 
 	s.Methods(http.MethodPut).HandlerFunc(f.putSubscription)

@@ -14,17 +14,11 @@ func (f *frontend) getOpenShiftClusters(w http.ResponseWriter, r *http.Request) 
 	log := r.Context().Value(contextKeyLog).(*logrus.Entry)
 	vars := mux.Vars(r)
 
-	toExternal, found := api.APIs[api.APIVersionType{APIVersion: r.URL.Query().Get("api-version"), Type: "OpenShiftCluster"}]
-	if !found {
-		api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], r.URL.Query().Get("api-version"))
-		return
-	}
-
 	b, err := f._getOpenShiftClusters(&request{
 		subscriptionID:    vars["subscriptionId"],
 		resourceGroupName: vars["resourceGroupName"],
 		resourceType:      vars["resourceProviderNamespace"] + "/" + vars["resourceType"],
-		toExternal:        toExternal,
+		toExternal:        api.APIs[vars["api-version"]]["OpenShiftCluster"].(api.OpenShiftClusterToExternal),
 	})
 	if err != nil {
 		switch err := err.(type) {
@@ -53,7 +47,7 @@ func (f *frontend) _getOpenShiftClusters(r *request) ([]byte, error) {
 	}
 
 	var rv struct {
-		Value []api.External `json:"value"`
+		Value []interface{} `json:"value"`
 	}
 
 	for {
@@ -67,7 +61,7 @@ func (f *frontend) _getOpenShiftClusters(r *request) ([]byte, error) {
 
 		for _, doc := range docs.OpenShiftClusterDocuments {
 			doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
-			rv.Value = append(rv.Value, r.toExternal(doc.OpenShiftCluster))
+			rv.Value = append(rv.Value, r.toExternal.OpenShiftClusterToExternal(doc.OpenShiftCluster))
 		}
 	}
 

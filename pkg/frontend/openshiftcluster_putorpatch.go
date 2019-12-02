@@ -15,19 +15,12 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/jim-minter/rp/pkg/api"
-	"github.com/jim-minter/rp/pkg/api/v20191231preview"
 	"github.com/jim-minter/rp/pkg/database/cosmosdb"
 )
 
 func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Request) {
 	log := r.Context().Value(contextKeyLog).(*logrus.Entry)
 	vars := mux.Vars(r)
-
-	toExternal, found := api.APIs[api.APIVersionType{APIVersion: r.URL.Query().Get("api-version"), Type: "OpenShiftCluster"}]
-	if !found {
-		api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], r.URL.Query().Get("api-version"))
-		return
-	}
 
 	if r.Header.Get("Content-Type") != "application/json" {
 		api.WriteError(w, http.StatusUnsupportedMediaType, api.CloudErrorCodeUnsupportedMediaType, "", "The content media type '%s' is not supported. Only 'application/json' is supported.", r.Header.Get("Content-Type"))
@@ -50,7 +43,8 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 			resourceName: vars["resourceName"],
 			resourceType: vars["resourceProviderNamespace"] + "/" + vars["resourceType"],
 			body:         body,
-			toExternal:   toExternal,
+			toExternal:   api.APIs[vars["api-version"]]["OpenShiftCluster"].(api.OpenShiftClusterToExternal),
+			toInternal:   api.APIs[vars["api-version"]]["OpenShiftCluster"].(api.OpenShiftClusterToInternal),
 		})
 		return err
 	})
@@ -91,13 +85,13 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 
 	isCreate := doc == nil
 
-	var external api.External
+	var external interface{}
 	if isCreate {
 		doc = &api.OpenShiftClusterDocument{
 			ID: uuid.NewV4().String(),
 		}
 
-		external = r.toExternal(&api.OpenShiftCluster{
+		external = r.toExternal.OpenShiftClusterToExternal(&api.OpenShiftCluster{
 			ID:   originalPath,
 			Name: originalR.ResourceName,
 			Type: originalR.ResourceType,
@@ -130,7 +124,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 
 		switch r.method {
 		case http.MethodPut:
-			external = r.toExternal(&api.OpenShiftCluster{
+			external = r.toExternal.OpenShiftClusterToExternal(&api.OpenShiftCluster{
 				ID:   doc.OpenShiftCluster.ID,
 				Name: doc.OpenShiftCluster.Name,
 				Type: doc.OpenShiftCluster.Type,
@@ -140,7 +134,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 			})
 
 		case http.MethodPatch:
-			external = r.toExternal(doc.OpenShiftCluster)
+			external = r.toExternal.OpenShiftClusterToExternal(doc.OpenShiftCluster)
 		}
 	}
 
@@ -149,7 +143,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 		return nil, false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
 	}
 
-	err = v20191231preview.ValidateOpenShiftCluster(f.env, r.resourceID, external.(*v20191231preview.OpenShiftCluster), doc.OpenShiftCluster)
+	err = r.toInternal.ValidateOpenShiftCluster(f.env.Location(), r.resourceID, external, doc.OpenShiftCluster)
 	if err != nil {
 		return nil, false, err
 	}
@@ -159,7 +153,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 	}
 
 	oldID, oldName, oldType := doc.OpenShiftCluster.ID, doc.OpenShiftCluster.Name, doc.OpenShiftCluster.Type
-	v20191231preview.OpenShiftClusterToInternal(external.(*v20191231preview.OpenShiftCluster), doc.OpenShiftCluster)
+	r.toInternal.OpenShiftClusterToInternal(external, doc.OpenShiftCluster)
 
 	if isCreate {
 		doc.Key = api.Key(r.resourceID)
@@ -184,7 +178,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 		doc.OpenShiftCluster.ID, doc.OpenShiftCluster.Name, doc.OpenShiftCluster.Type = oldID, oldName, oldType
 	}
 
-	err = v20191231preview.ValidateOpenShiftClusterDynamic(r.context, f.fpAuthorizer, doc.OpenShiftCluster)
+	err = r.toInternal.ValidateOpenShiftClusterDynamic(r.context, f.fpAuthorizer, doc.OpenShiftCluster)
 	if err != nil {
 		return nil, false, err
 	}
@@ -200,7 +194,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 
 	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 
-	b, err := json.MarshalIndent(r.toExternal(doc.OpenShiftCluster), "", "  ")
+	b, err := json.MarshalIndent(r.toExternal.OpenShiftClusterToExternal(doc.OpenShiftCluster), "", "  ")
 	if err != nil {
 		return nil, false, err
 	}

@@ -11,7 +11,6 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/jim-minter/rp/pkg/api"
-	"github.com/jim-minter/rp/pkg/env"
 	"github.com/jim-minter/rp/pkg/util/subnet"
 )
 
@@ -20,20 +19,20 @@ var (
 )
 
 type validator struct {
-	env        env.Interface
+	location   string
 	resourceID string
 	r          azure.Resource
 }
 
-// ValidateOpenShiftCluster validates an OpenShift cluster
-func ValidateOpenShiftCluster(env env.Interface, resourceID string, oc *OpenShiftCluster, current *api.OpenShiftCluster) error {
+// validateOpenShiftCluster validates an OpenShift cluster
+func validateOpenShiftCluster(location, resourceID string, oc, current *OpenShiftCluster) error {
 	r, err := azure.ParseResourceID(resourceID)
 	if err != nil {
 		return err
 	}
 
 	v := &validator{
-		env:        env,
+		location:   location,
 		resourceID: resourceID,
 		r:          r,
 	}
@@ -47,7 +46,7 @@ func ValidateOpenShiftCluster(env env.Interface, resourceID string, oc *OpenShif
 		return nil
 	}
 
-	return v.validateOpenShiftClusterDelta(oc, OpenShiftClusterToExternal(current))
+	return v.validateOpenShiftClusterDelta(oc, current)
 }
 
 func (v *validator) validateOpenShiftCluster(oc *OpenShiftCluster) error {
@@ -60,7 +59,7 @@ func (v *validator) validateOpenShiftCluster(oc *OpenShiftCluster) error {
 	if !strings.EqualFold(oc.Type, resourceProviderNamespace+"/"+resourceType) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeMismatchingResourceType, "type", "The provided resource type '%s' did not match the name in the Url '%s'.", oc.Type, resourceProviderNamespace+"/"+resourceType)
 	}
-	if !strings.EqualFold(oc.Location, v.env.Location()) {
+	if !strings.EqualFold(oc.Location, v.location) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "location", "The provided location '%s' is invalid.", oc.Location)
 	}
 

@@ -17,8 +17,8 @@ func (f *frontend) putSubscription(w http.ResponseWriter, r *http.Request) {
 	log := r.Context().Value(contextKeyLog).(*logrus.Entry)
 	vars := mux.Vars(r)
 
-	if r.URL.Query().Get("api-version") != "2.0" {
-		api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeInvalidParameter, "", "The resource type 'subscriptions' could not be found for api version '%s'.", r.URL.Query().Get("api-version"))
+	if vars["api-version"] != "2.0" {
+		api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeInvalidParameter, "", "The resource type 'subscriptions' could not be found for api version '%s'.", vars["api-version"])
 		return
 	}
 

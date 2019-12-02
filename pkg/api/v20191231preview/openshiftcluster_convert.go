@@ -4,12 +4,12 @@ import (
 	"github.com/jim-minter/rp/pkg/api"
 )
 
-// OpenShiftClusterToExternal returns a new external representation of the
+// openShiftClusterToExternal returns a new external representation of the
 // internal object, reading from the subset of the internal object's fields that
 // appear in the external representation.  ToExternal does not modify its
 // argument; there is no pointer aliasing between the passed and returned
 // objects.
-func OpenShiftClusterToExternal(oc *api.OpenShiftCluster) *OpenShiftCluster {
+func openShiftClusterToExternal(oc *api.OpenShiftCluster) *OpenShiftCluster {
 	out := &OpenShiftCluster{
 		ID:       oc.ID,
 		Name:     oc.Name,
@@ -57,11 +57,11 @@ func OpenShiftClusterToExternal(oc *api.OpenShiftCluster) *OpenShiftCluster {
 	return out
 }
 
-// OpenShiftClusterToInternal overwrites in place a pre-existing internal
+// openShiftClusterToInternal overwrites in place a pre-existing internal
 // object, setting (only) all mapped fields from the external representation.
 // ToInternal modifies its argument; there is no pointer aliasing between the
 // passed and returned objects.
-func OpenShiftClusterToInternal(oc *OpenShiftCluster, out *api.OpenShiftCluster) {
+func openShiftClusterToInternal(oc *OpenShiftCluster, out *api.OpenShiftCluster) {
 	out.ID = oc.ID
 	out.Name = oc.Name
 	out.Type = oc.Type

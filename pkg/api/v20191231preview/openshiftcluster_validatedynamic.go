@@ -23,8 +23,8 @@ type dynamicValidator struct {
 	r  azure.Resource
 }
 
-// ValidateOpenShiftClusterDynamic validates an OpenShift cluster
-func ValidateOpenShiftClusterDynamic(ctx context.Context, fpAuthorizer autorest.Authorizer, oc *api.OpenShiftCluster) error {
+// validateOpenShiftClusterDynamic validates an OpenShift cluster
+func validateOpenShiftClusterDynamic(ctx context.Context, fpAuthorizer autorest.Authorizer, oc *api.OpenShiftCluster) error {
 	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
 		return err
