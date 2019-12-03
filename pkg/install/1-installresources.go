@@ -8,10 +8,14 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
+	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
+	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/apparentlymart/go-cidr/cidr"
 	"github.com/openshift/installer/pkg/asset/ignition/machine"
@@ -67,6 +71,29 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 		}
 	}
 
+	var objectID string
+	{
+		spp := &doc.OpenShiftCluster.Properties.ServicePrincipalProfile
+
+		conf := auth.NewClientCredentialsConfig(spp.ClientID, spp.ClientSecret, spp.TenantID)
+		conf.Resource = azure.PublicCloud.GraphEndpoint
+
+		spAuthorizer, err := conf.Authorizer()
+		if err != nil {
+			return err
+		}
+
+		applications := graphrbac.NewApplicationsClient(spp.TenantID)
+		applications.Authorizer = spAuthorizer
+
+		res, err := applications.GetServicePrincipalsIDByAppID(ctx, spp.ClientID)
+		if err != nil {
+			return err
+		}
+
+		objectID = *res.Value
+	}
+
 	{
 		t := &arm.Template{
 			Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
@@ -77,6 +104,30 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 				},
 			},
 			Resources: []arm.Resource{
+				{
+					Resource: &authorization.RoleAssignment{
+						Name: to.StringPtr("[guid(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'aro-identity'), 'Identity / Contributor')]"),
+						Type: to.StringPtr("Microsoft.Authorization/roleAssignments"),
+						Properties: &authorization.RoleAssignmentPropertiesWithScope{
+							Scope:            to.StringPtr("[resourceGroup().id]"),
+							RoleDefinitionID: to.StringPtr("[resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]"),
+							PrincipalID:      to.StringPtr("[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'aro-identity'), '2018-11-30').principalId]"),
+						},
+					},
+					APIVersion: apiVersions["authorization"],
+				},
+				{
+					Resource: &authorization.RoleAssignment{
+						Name: to.StringPtr("[guid(resourceGroup().id, 'SP / Contributor')]"),
+						Type: to.StringPtr("Microsoft.Authorization/roleAssignments"),
+						Properties: &authorization.RoleAssignmentPropertiesWithScope{
+							Scope:            to.StringPtr("[resourceGroup().id]"),
+							RoleDefinitionID: to.StringPtr("[resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]"),
+							PrincipalID:      to.StringPtr(objectID),
+						},
+					},
+					APIVersion: apiVersions["authorization"],
+				},
 				{
 					Resource: &privatedns.PrivateZone{
 						Name:     to.StringPtr(installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain),
@@ -504,6 +555,12 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 								},
 							},
 						},
+						Identity: &compute.VirtualMachineIdentity{
+							Type: compute.ResourceIdentityTypeUserAssigned,
+							UserAssignedIdentities: map[string]*compute.VirtualMachineIdentityUserAssignedIdentitiesValue{
+								"[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'aro-identity')]": {},
+							},
+						},
 						Name:     to.StringPtr("aro-bootstrap"),
 						Type:     to.StringPtr("Microsoft.Compute/virtualMachines"),
 						Location: &installConfig.Config.Azure.Region,
@@ -556,6 +613,12 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 									Enabled:    to.BoolPtr(true),
 									StorageURI: to.StringPtr("https://cluster" + doc.OpenShiftCluster.Properties.StorageSuffix + ".blob.core.windows.net/"),
 								},
+							},
+						},
+						Identity: &compute.VirtualMachineIdentity{
+							Type: compute.ResourceIdentityTypeUserAssigned,
+							UserAssignedIdentities: map[string]*compute.VirtualMachineIdentityUserAssignedIdentitiesValue{
+								"[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'aro-identity')]": {},
 							},
 						},
 						Zones: &[]string{

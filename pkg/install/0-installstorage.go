@@ -9,14 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
-	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
+	"github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
 	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
-	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/ignition/bootstrap"
 	"github.com/openshift/installer/pkg/asset/installconfig"
@@ -34,6 +31,7 @@ import (
 var apiVersions = map[string]string{
 	"authorization": "2015-07-01",
 	"compute":       "2019-03-01",
+	"msi":           "2018-11-30",
 	"network":       "2019-07-01",
 	"privatedns":    "2018-09-01",
 	"storage":       "2019-04-01",
@@ -83,45 +81,21 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 		return err
 	}
 
-	var objectID string
-	{
-		spp := &doc.OpenShiftCluster.Properties.ServicePrincipalProfile
-
-		conf := auth.NewClientCredentialsConfig(spp.ClientID, spp.ClientSecret, spp.TenantID)
-		conf.Resource = azure.PublicCloud.GraphEndpoint
-
-		spAuthorizer, err := conf.Authorizer()
-		if err != nil {
-			return err
-		}
-
-		applications := graphrbac.NewApplicationsClient(spp.TenantID)
-		applications.Authorizer = spAuthorizer
-
-		res, err := applications.GetServicePrincipalsIDByAppID(ctx, spp.ClientID)
-		if err != nil {
-			return err
-		}
-
-		objectID = *res.Value
-	}
-
 	{
 		t := &arm.Template{
 			Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 			ContentVersion: "1.0.0.0",
 			Resources: []arm.Resource{
 				{
-					Resource: &authorization.RoleAssignment{
-						Name: to.StringPtr("[guid(resourceGroup().id, 'SP / Contributor')]"),
-						Type: to.StringPtr("Microsoft.Authorization/roleAssignments"),
-						Properties: &authorization.RoleAssignmentPropertiesWithScope{
-							Scope:            to.StringPtr("[resourceGroup().id]"),
-							RoleDefinitionID: to.StringPtr("[resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]"), // Contributor
-							PrincipalID:      to.StringPtr(objectID),
-						},
+					// deploy the Identity now to give AAD a chance to update
+					// itself before we apply the RBAC rule in the next
+					// deployment
+					Resource: &msi.Identity{
+						Name:     to.StringPtr("aro-identity"),
+						Location: &installConfig.Config.Azure.Region,
+						Type:     "Microsoft.ManagedIdentity/userAssignedIdentities",
 					},
-					APIVersion: apiVersions["authorization"],
+					APIVersion: apiVersions["msi"],
 				},
 				{
 					Resource: &storage.Account{

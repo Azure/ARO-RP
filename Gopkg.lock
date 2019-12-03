@@ -644,7 +644,7 @@
 
 [[projects]]
   branch = "release-4.3-azure"
-  digest = "1:22bc7dcdbd9f10ef7547fd278f1e20d8022cd734653e50b84165e2dbd2120f8a"
+  digest = "1:78ae90a770e1622539c07878cd4acbf477a5f18b4999fd1f2496030e08712035"
   name = "github.com/openshift/installer"
   packages = [
     "data",
@@ -729,7 +729,7 @@
     "pkg/version",
   ]
   pruneopts = "T"
-  revision = "300d04ffcf37462dc15f07684064421b4633f394"
+  revision = "d41e621f07144df3d7f00eded84e2cccd4f098e6"
   source = "https://github.com/jim-minter/installer"
 
 [[projects]]
@@ -986,7 +986,7 @@
     "internal/span",
   ]
   pruneopts = "UT"
-  revision = "2b6af5f9ace725aefaab9e4e3abbcdd9f07ef5bc"
+  revision = "db047d72ee39222674197c28adb04e2107488d83"
 
 [[projects]]
   digest = "1:f3661f6218166acf60f5d551b44a537f7ecb8686be02ece061c5950cbfc9ba17"
@@ -1341,7 +1341,7 @@
     "pkg/apis/openstackproviderconfig/v1alpha1",
   ]
   pruneopts = "UT"
-  revision = "c14315ec71021976371f457598351db5c00fc586"
+  revision = "da0de49f4edd053bc7840aa3c0d7f8dcd18cf6e6"
   source = "https://github.com/openshift/cluster-api-provider-openstack.git"
 
 [[projects]]

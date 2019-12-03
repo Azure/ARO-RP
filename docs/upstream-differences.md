@@ -23,13 +23,6 @@ upstream OCP.
   scope of this patch to get this upstream; don't allow end-users to choose
   their cluster resource group
 
-* CARRY: HACK: don't use managed identity on ARO
-
-  At the moment OCP on Azure uses MSI for kubelets and controllers and one or
-  more service principals for operators.  For now on ARO, simplify to all
-  components using the user-provided SP.  Later, we'll reinstate a separate
-  managed identity at least for worker kubelets
-
 * CARRY: HACK: don't set public DNS zone on DNS CRD in ARO
 
   In ARO, the public DNS zone is maintained by the service and the cluster
@@ -39,8 +32,6 @@ upstream OCP.
 
 * ARO persists the install graph in the cluster storage account in a new "aro"
   container / "graph" blob
-
-* No managed identity (for now)
 
 * installconfig.ClusterID.InfraID is hard-coded to "aro"
 
