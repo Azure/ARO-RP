@@ -10,7 +10,7 @@
   version = "v0.49.0"
 
 [[projects]]
-  digest = "1:3b1b5944cbcfa02ed41a1f567d129069f67dab42745b6383aa478944b3fcf124"
+  digest = "1:62f880c9da3a934677f9a90a7bee1c936700255415d58085d2c914afcbad50f7"
   name = "github.com/Azure/azure-sdk-for-go"
   packages = [
     "profiles/latest/dns/mgmt/dns",
@@ -20,9 +20,9 @@
     "services/compute/mgmt/2019-03-01/compute",
     "services/cosmos-db/mgmt/2015-04-08/documentdb",
     "services/dns/mgmt/2018-05-01/dns",
+    "services/graphrbac/1.6/graphrbac",
     "services/keyvault/2016-10-01/keyvault",
     "services/keyvault/mgmt/2016-10-01/keyvault",
-    "services/msi/mgmt/2018-11-30/msi",
     "services/network/mgmt/2018-12-01/network",
     "services/network/mgmt/2019-07-01/network",
     "services/privatedns/mgmt/2018-09-01/privatedns",
@@ -104,7 +104,7 @@
   version = "v1.0.1"
 
 [[projects]]
-  digest = "1:ecd589b54bb09f628d948e21d6fc88508b37472ee673a7fac6c712f3c2515304"
+  digest = "1:f3fe09231a1d032b9a58d1a19bc8f88a00cff17f2444b9215fa6cbe95ba97cb2"
   name = "github.com/aws/aws-sdk-go"
   packages = [
     "aws",
@@ -150,8 +150,8 @@
     "service/sts/stsiface",
   ]
   pruneopts = "UT"
-  revision = "44514743a8152d5959d045f906997c7152f46d14"
-  version = "v1.25.43"
+  revision = "ed081a7af453411de4fdd66717d9f68bbcc3b92c"
+  version = "v1.25.45"
 
 [[projects]]
   digest = "1:5f9ab5eeb3788ba8945f9acb2755fba44c3bfefdc95fae477bf6cdc790cab525"
@@ -579,7 +579,7 @@
     "operator/v1alpha1",
   ]
   pruneopts = "UT"
-  revision = "63a261ad3171fad9dd29618e9f630765f446a2f8"
+  revision = "e7263773f60ccdb052b09a6b3ad438256116714b"
 
 [[projects]]
   branch = "release-4.3"
@@ -644,7 +644,7 @@
 
 [[projects]]
   branch = "release-4.3-azure"
-  digest = "1:482f1b1a391c24f3b379e4bed77bcdc3a150c615418cce850b6912367a553dde"
+  digest = "1:78ae90a770e1622539c07878cd4acbf477a5f18b4999fd1f2496030e08712035"
   name = "github.com/openshift/installer"
   packages = [
     "data",
@@ -729,7 +729,7 @@
     "pkg/version",
   ]
   pruneopts = "T"
-  revision = "86289f922b4145c6d5324b82a7e5f5fe7eb88ebf"
+  revision = "d41e621f07144df3d7f00eded84e2cccd4f098e6"
   source = "https://github.com/jim-minter/installer"
 
 [[projects]]
@@ -866,7 +866,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:7761d765ffe600b8912dc84aa323b43e1583a059f3b2837ddc27b875bd256406"
+  digest = "1:9a6537289bcc060a1ea41c58b856c8686489cd2b1b225e7f2a480f9695fa4bf0"
   name = "golang.org/x/crypto"
   packages = [
     "bcrypt",
@@ -883,7 +883,7 @@
     "ssh/terminal",
   ]
   pruneopts = "UT"
-  revision = "b544559bb6d1b5c62fba4af5e843ff542174f079"
+  revision = "86a70503ff7e82ffc18c7b0de83db35da4791e6a"
 
 [[projects]]
   branch = "master"
@@ -904,7 +904,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:31e33f76456ccf54819ab4a646cf01271d1a99d7712ab84bf1a9e7b61cd2031b"
+  digest = "1:e9dec12f847de7d8cd7c1d3d0d89aa40a345a768fd20e10d378a260da9ad65aa"
   name = "golang.org/x/oauth2"
   packages = [
     ".",
@@ -914,7 +914,7 @@
     "jwt",
   ]
   pruneopts = "UT"
-  revision = "5d9234df094ce600ff541158d1491aa10d078a47"
+  revision = "858c2ad4c8b6c5d10852cb89079f6ca1c7309787"
 
 [[projects]]
   branch = "master"
@@ -968,7 +968,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:45ba63c018e89d2061c1e8f1cc670b3f600c0fcc2acf4453399d6a776c734632"
+  digest = "1:9b9f5a66ca725877165cd992207aaf7c358dc5f654ea5f418d83dcf792e148df"
   name = "golang.org/x/tools"
   packages = [
     "cmd/goimports",
@@ -986,7 +986,7 @@
     "internal/span",
   ]
   pruneopts = "UT"
-  revision = "6e064ea0cf2dcfaca8da2da9f42da458bab38756"
+  revision = "db047d72ee39222674197c28adb04e2107488d83"
 
 [[projects]]
   digest = "1:f3661f6218166acf60f5d551b44a537f7ecb8686be02ece061c5950cbfc9ba17"
@@ -1341,7 +1341,7 @@
     "pkg/apis/openstackproviderconfig/v1alpha1",
   ]
   pruneopts = "UT"
-  revision = "c14315ec71021976371f457598351db5c00fc586"
+  revision = "da0de49f4edd053bc7840aa3c0d7f8dcd18cf6e6"
   source = "https://github.com/openshift/cluster-api-provider-openstack.git"
 
 [[projects]]
@@ -1368,9 +1368,9 @@
     "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute",
     "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2015-04-08/documentdb",
     "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns",
+    "github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac",
     "github.com/Azure/azure-sdk-for-go/services/keyvault/2016-10-01/keyvault",
     "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2016-10-01/keyvault",
-    "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi",
     "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network",
     "github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns",
     "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources",
@@ -1384,6 +1384,7 @@
     "github.com/Azure/go-autorest/tracing",
     "github.com/alvaroloes/enumer",
     "github.com/apparentlymart/go-cidr/cidr",
+    "github.com/dgrijalva/jwt-go",
     "github.com/golang/mock/gomock",
     "github.com/golang/mock/mockgen",
     "github.com/gorilla/mux",

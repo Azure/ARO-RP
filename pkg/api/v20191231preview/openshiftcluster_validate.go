@@ -1,18 +1,13 @@
 package v20191231preview
 
 import (
-	"context"
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"regexp"
 	"strings"
 
-	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/azure/auth"
-	"github.com/apparentlymart/go-cidr/cidr"
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/jim-minter/rp/pkg/api"
@@ -23,24 +18,26 @@ var (
 	rxSubnetID = regexp.MustCompile(`(?i)^/subscriptions/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/resourceGroups/[-a-z0-9_().]{0,89}[-a-z0-9_()]/providers/Microsoft\.Network/virtualNetworks/[-a-z0-9_.]{2,64}/subnets/[-a-z0-9_.]{2,80}$`)
 )
 
-// Validate validates an OpenShift cluster
-func (oc *OpenShiftCluster) Validate(ctx context.Context, tenantID, resourceID string, current *api.OpenShiftCluster) error {
-	err := oc.validate(resourceID)
+type validator struct {
+	location   string
+	resourceID string
+	r          azure.Resource
+}
+
+// validateOpenShiftCluster validates an OpenShift cluster
+func validateOpenShiftCluster(location, resourceID string, oc, current *OpenShiftCluster) error {
+	r, err := azure.ParseResourceID(resourceID)
 	if err != nil {
 		return err
 	}
 
-	internal := &api.OpenShiftCluster{}
-	oc.ToInternal(internal)
-
-	// TODO: remove this hack
-	if current != nil {
-		internal.Properties.InfraID = current.Properties.InfraID
-		internal.Properties.ResourceGroup = current.Properties.ResourceGroup
+	v := &validator{
+		location:   location,
+		resourceID: resourceID,
+		r:          r,
 	}
-	internal.Properties.ServicePrincipalProfile.TenantID = tenantID
 
-	err = oc.validateSubnets(ctx, internal)
+	err = v.validateOpenShiftCluster(oc)
 	if err != nil {
 		return err
 	}
@@ -49,32 +46,27 @@ func (oc *OpenShiftCluster) Validate(ctx context.Context, tenantID, resourceID s
 		return nil
 	}
 
-	return oc.validateDelta(OpenShiftClusterToExternal(current))
+	return v.validateOpenShiftClusterDelta(oc, current)
 }
 
-func (oc *OpenShiftCluster) validate(resourceID string) error {
-	r, err := azure.ParseResourceID(resourceID)
-	if err != nil {
-		return err
+func (v *validator) validateOpenShiftCluster(oc *OpenShiftCluster) error {
+	if !strings.EqualFold(oc.ID, v.resourceID) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeMismatchingResourceID, "id", "The provided resource ID '%s' did not match the name in the Url '%s'.", oc.ID, v.resourceID)
 	}
-
-	if !strings.EqualFold(oc.ID, resourceID) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeMismatchingResourceID, "id", "The provided resource ID '%s' did not match the name in the Url '%s'.", oc.ID, resourceID)
-	}
-	if !strings.EqualFold(oc.Name, r.ResourceName) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeMismatchingResourceName, "name", "The provided resource name '%s' did not match the name in the Url '%s'.", oc.Name, r.ResourceName)
+	if !strings.EqualFold(oc.Name, v.r.ResourceName) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeMismatchingResourceName, "name", "The provided resource name '%s' did not match the name in the Url '%s'.", oc.Name, v.r.ResourceName)
 	}
 	if !strings.EqualFold(oc.Type, resourceProviderNamespace+"/"+resourceType) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeMismatchingResourceType, "type", "The provided resource type '%s' did not match the name in the Url '%s'.", oc.Type, resourceProviderNamespace+"/"+resourceType)
 	}
-	if !strings.EqualFold(oc.Location, os.Getenv("LOCATION")) {
+	if !strings.EqualFold(oc.Location, v.location) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "location", "The provided location '%s' is invalid.", oc.Location)
 	}
 
-	return oc.Properties.validate("properties", resourceID)
+	return v.validateProperties("properties", &oc.Properties)
 }
 
-func (p *Properties) validate(path string, resourceID string) error {
+func (v *validator) validateProperties(path string, p *Properties) error {
 	switch p.ProvisioningState {
 	case ProvisioningStateCreating, ProvisioningStateUpdating,
 		ProvisioningStateDeleting, ProvisioningStateSucceeded,
@@ -82,19 +74,19 @@ func (p *Properties) validate(path string, resourceID string) error {
 	default:
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".provisioningState", "The provided provisioning state '%s' is invalid.", p.ProvisioningState)
 	}
-	if err := p.ServicePrincipalProfile.validate(path + ".servicePrincipalProfile"); err != nil {
+	if err := v.validateServicePrincipalProfile(path+".servicePrincipalProfile", &p.ServicePrincipalProfile); err != nil {
 		return err
 	}
-	if err := p.NetworkProfile.validate(path + ".networkProfile"); err != nil {
+	if err := v.validateNetworkProfile(path+".networkProfile", &p.NetworkProfile); err != nil {
 		return err
 	}
-	if err := p.MasterProfile.validate(path+".masterProfile", resourceID); err != nil {
+	if err := v.validateMasterProfile(path+".masterProfile", &p.MasterProfile); err != nil {
 		return err
 	}
 	if len(p.WorkerProfiles) != 1 {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".workerProfiles", "There should be exactly one worker profile.")
 	}
-	if err := p.WorkerProfiles[0].validate(path+`.workerProfiles["`+p.WorkerProfiles[0].Name+`"]`, &p.MasterProfile); err != nil {
+	if err := v.validateWorkerProfile(path+`.workerProfiles["`+p.WorkerProfiles[0].Name+`"]`, &p.WorkerProfiles[0], &p.MasterProfile); err != nil {
 		return err
 	}
 	if p.APIServerURL != "" {
@@ -111,7 +103,7 @@ func (p *Properties) validate(path string, resourceID string) error {
 	return nil
 }
 
-func (spp *ServicePrincipalProfile) validate(path string) error {
+func (v *validator) validateServicePrincipalProfile(path string, spp *ServicePrincipalProfile) error {
 	_, err := uuid.FromString(spp.ClientID)
 	if err != nil {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".clientId", "The provided client ID '%s' is invalid.", spp.ClientID)
@@ -123,7 +115,7 @@ func (spp *ServicePrincipalProfile) validate(path string) error {
 	return nil
 }
 
-func (np *NetworkProfile) validate(path string) error {
+func (v *validator) validateNetworkProfile(path string, np *NetworkProfile) error {
 	_, pod, err := net.ParseCIDR(np.PodCIDR)
 	if err != nil {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".podCidr", "The provided pod CIDR '%s' is invalid: '%s'.", np.PodCIDR, err)
@@ -154,12 +146,7 @@ func (np *NetworkProfile) validate(path string) error {
 	return nil
 }
 
-func (mp *MasterProfile) validate(path, resourceID string) error {
-	r, err := azure.ParseResourceID(resourceID)
-	if err != nil {
-		return err
-	}
-
+func (v *validator) validateMasterProfile(path string, mp *MasterProfile) error {
 	switch mp.VMSize {
 	case VMSizeStandardD8sV3:
 	default:
@@ -172,14 +159,14 @@ func (mp *MasterProfile) validate(path, resourceID string) error {
 	if err != nil {
 		return err
 	}
-	if sr.SubscriptionID != r.SubscriptionID {
+	if sr.SubscriptionID != v.r.SubscriptionID {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".subnetId", "The provided master VM subnet '%s' is invalid: must be in same subscription as cluster.", mp.SubnetID)
 	}
 
 	return nil
 }
 
-func (wp *WorkerProfile) validate(path string, mp *MasterProfile) error {
+func (v *validator) validateWorkerProfile(path string, wp *WorkerProfile, mp *MasterProfile) error {
 	if wp.Name != "worker" {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".name", "The provided worker name '%s' is invalid.", wp.Name)
 	}
@@ -212,7 +199,7 @@ func (wp *WorkerProfile) validate(path string, mp *MasterProfile) error {
 	return nil
 }
 
-func (oc *OpenShiftCluster) validateDelta(current *OpenShiftCluster) error {
+func (v *validator) validateOpenShiftClusterDelta(oc, current *OpenShiftCluster) error {
 	if !strings.EqualFold(current.ID, oc.ID) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, "id", "Changing property 'id' is not allowed.")
 	}
@@ -226,23 +213,23 @@ func (oc *OpenShiftCluster) validateDelta(current *OpenShiftCluster) error {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, "location", "Changing property 'location' is not allowed.")
 	}
 
-	return oc.Properties.validateDelta("properties", &current.Properties)
+	return v.validatePropertiesDelta("properties", &oc.Properties, &current.Properties)
 }
 
-func (p *Properties) validateDelta(path string, current *Properties) error {
+func (v *validator) validatePropertiesDelta(path string, p, current *Properties) error {
 	if current.ProvisioningState != p.ProvisioningState {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, path+".provisioningState", "Changing property '"+path+".provisioningState' is not allowed.")
 	}
-	if err := p.ServicePrincipalProfile.validateDelta(path+".servicePrincipalProfile", &current.ServicePrincipalProfile); err != nil {
+	if err := v.validateServicePrincipalProfileDelta(path+".servicePrincipalProfile", &p.ServicePrincipalProfile, &current.ServicePrincipalProfile); err != nil {
 		return err
 	}
-	if err := p.NetworkProfile.validateDelta(path+".networkProfile", &current.NetworkProfile); err != nil {
+	if err := v.validateNetworkProfileDelta(path+".networkProfile", &p.NetworkProfile, &current.NetworkProfile); err != nil {
 		return err
 	}
-	if err := p.MasterProfile.validateDelta(path+".masterProfile", &current.MasterProfile); err != nil {
+	if err := v.validateMasterProfileDelta(path+".masterProfile", &p.MasterProfile, &current.MasterProfile); err != nil {
 		return err
 	}
-	if err := p.WorkerProfiles[0].validateDelta(path+`.workerProfiles["`+p.WorkerProfiles[0].Name+`"]`, &current.WorkerProfiles[0]); err != nil {
+	if err := v.validateWorkerProfileDelta(path+`.workerProfiles["`+p.WorkerProfiles[0].Name+`"]`, &p.WorkerProfiles[0], &current.WorkerProfiles[0]); err != nil {
 		return err
 	}
 	if current.APIServerURL != p.APIServerURL {
@@ -255,7 +242,7 @@ func (p *Properties) validateDelta(path string, current *Properties) error {
 	return nil
 }
 
-func (spp *ServicePrincipalProfile) validateDelta(path string, current *ServicePrincipalProfile) error {
+func (v *validator) validateServicePrincipalProfileDelta(path string, spp, current *ServicePrincipalProfile) error {
 	if current.ClientID != spp.ClientID {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, path+".vnetCidr", "Changing property '"+path+".clientId' is not allowed.")
 	}
@@ -266,7 +253,7 @@ func (spp *ServicePrincipalProfile) validateDelta(path string, current *ServiceP
 	return nil
 }
 
-func (np *NetworkProfile) validateDelta(path string, current *NetworkProfile) error {
+func (v *validator) validateNetworkProfileDelta(path string, np, current *NetworkProfile) error {
 	if current.PodCIDR != np.PodCIDR {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, path+".podCidr", "Changing property '"+path+".podCidr' is not allowed.")
 	}
@@ -277,7 +264,7 @@ func (np *NetworkProfile) validateDelta(path string, current *NetworkProfile) er
 	return nil
 }
 
-func (mp *MasterProfile) validateDelta(path string, current *MasterProfile) error {
+func (v *validator) validateMasterProfileDelta(path string, mp, current *MasterProfile) error {
 	if current.VMSize != mp.VMSize {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, path+".vmSize", "Changing property '"+path+".vmSize' is not allowed.")
 	}
@@ -288,7 +275,7 @@ func (mp *MasterProfile) validateDelta(path string, current *MasterProfile) erro
 	return nil
 }
 
-func (wp *WorkerProfile) validateDelta(path string, current *WorkerProfile) error {
+func (v *validator) validateWorkerProfileDelta(path string, wp, current *WorkerProfile) error {
 	if current.Name != wp.Name {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, path+".name", "Changing property '"+path+".name' is not allowed.")
 	}
@@ -303,89 +290,4 @@ func (wp *WorkerProfile) validateDelta(path string, current *WorkerProfile) erro
 	}
 
 	return nil
-}
-
-func (oc *OpenShiftCluster) validateSubnets(ctx context.Context, internal *api.OpenShiftCluster) error {
-	master, err := oc.validateSubnet(ctx, internal, "properties.masterProfile.subnetId", "master", internal.Properties.MasterProfile.SubnetID)
-	if err != nil {
-		return err
-	}
-
-	worker, err := oc.validateSubnet(ctx, internal, `properties.workerProfiles["worker"].subnetId`, "worker", internal.Properties.WorkerProfiles[0].SubnetID)
-	if err != nil {
-		return err
-	}
-
-	_, pod, err := net.ParseCIDR(oc.Properties.NetworkProfile.PodCIDR)
-	if err != nil {
-		return err
-	}
-
-	_, service, err := net.ParseCIDR(oc.Properties.NetworkProfile.ServiceCIDR)
-	if err != nil {
-		return err
-	}
-
-	err = cidr.VerifyNoOverlap([]*net.IPNet{master, worker, pod, service}, &net.IPNet{IP: net.IPv4zero, Mask: net.IPMask(net.IPv4zero)})
-	if err != nil {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided CIDRs must not overlap: '%s'.", err)
-	}
-
-	return nil
-}
-
-func (oc *OpenShiftCluster) validateSubnet(ctx context.Context, internal *api.OpenShiftCluster, path, typ, subnetID string) (*net.IPNet, error) {
-	r, err := azure.ParseResourceID(oc.ID)
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO: shouldn't be doing this here
-	spp := &internal.Properties.ServicePrincipalProfile
-	spAuthorizer, err := auth.NewClientCredentialsConfig(spp.ClientID, spp.ClientSecret, spp.TenantID).Authorizer()
-	if err != nil {
-		return nil, err
-	}
-
-	subnets := subnet.NewManager(r.SubscriptionID, spAuthorizer)
-	s, err := subnets.Get(ctx, subnetID)
-	if err != nil {
-		// TODO: return friendly error if SP is not authorised
-		if err, ok := err.(autorest.DetailedError); ok && err.StatusCode == http.StatusNotFound {
-			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The provided "+typ+" VM subnet '%s' could not be found.", subnetID)
-		}
-		return nil, err
-	}
-
-	if oc.Properties.ProvisioningState == ProvisioningStateCreating {
-		if s.SubnetPropertiesFormat != nil &&
-			s.SubnetPropertiesFormat.NetworkSecurityGroup != nil {
-			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The provided "+typ+" VM subnet '%s' is invalid: must not have a network security group attached.", subnetID)
-		}
-
-	} else {
-		nsgID, err := subnet.NetworkSecurityGroupID(internal, *s.ID)
-		if err != nil {
-			return nil, err
-		}
-
-		if s.SubnetPropertiesFormat == nil ||
-			s.SubnetPropertiesFormat.NetworkSecurityGroup == nil ||
-			!strings.EqualFold(*s.SubnetPropertiesFormat.NetworkSecurityGroup.ID, nsgID) {
-			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The provided "+typ+" VM subnet '%s' is invalid: must have network security group '%s' attached.", subnetID, nsgID)
-		}
-	}
-
-	_, net, err := net.ParseCIDR(*s.AddressPrefix)
-	if err != nil {
-		return nil, err
-	}
-	{
-		ones, _ := net.Mask.Size()
-		if ones > 27 {
-			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The provided "+typ+" VM subnet '%s' is invalid: must be /27 or larger.", subnetID)
-		}
-	}
-
-	return net, nil
 }

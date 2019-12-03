@@ -11,6 +11,7 @@ import (
 
 	"github.com/jim-minter/rp/pkg/database"
 	"github.com/jim-minter/rp/pkg/env"
+	"github.com/jim-minter/rp/pkg/util/recover"
 )
 
 const (
@@ -20,8 +21,9 @@ const (
 
 type backend struct {
 	baseLog      *logrus.Entry
+	env          env.Interface
 	db           *database.Database
-	rpAuthorizer autorest.Authorizer
+	fpAuthorizer autorest.Authorizer
 
 	mu       sync.Mutex
 	cond     *sync.Cond
@@ -30,8 +32,6 @@ type backend struct {
 
 	ocb *openShiftClusterBackend
 	sb  *subscriptionBackend
-
-	domain string
 }
 
 // Runnable represents a runnable object
@@ -45,15 +45,11 @@ func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, db *d
 
 	b := &backend{
 		baseLog: log,
+		env:     env,
 		db:      db,
 	}
 
-	b.domain, err = env.DNS(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	b.rpAuthorizer, err = env.RPAuthorizer(ctx)
+	b.fpAuthorizer, err = env.FPAuthorizer(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -68,10 +64,14 @@ func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, db *d
 }
 
 func (b *backend) Run(stop <-chan struct{}) {
+	defer recover.Panic(b.baseLog)
+
 	t := time.NewTicker(time.Second)
 	defer t.Stop()
 
 	go func() {
+		defer recover.Panic(b.baseLog)
+
 		<-stop
 		b.baseLog.Print("stopping")
 		b.stopping.Store(true)

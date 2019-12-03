@@ -6,16 +6,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
 	"github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
 	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/ignition/bootstrap"
 	"github.com/openshift/installer/pkg/asset/installconfig"
@@ -40,15 +38,10 @@ var apiVersions = map[string]string{
 }
 
 func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftClusterDocument, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds) error {
-	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
-	if err != nil {
-		return err
-	}
-
 	image := &releaseimage.Image{
 		// https://openshift-release.svc.ci.openshift.org/
-		// oc adm release info quay.io/openshift-release-dev/ocp-release-nightly:4.3.0-0.nightly-2019-11-19-122017
-		PullSpec:   "quay.io/openshift-release-dev/ocp-release-nightly@sha256:ab5022516a948e40190e4ce5729737780b96c96d2cf4d3fc665105b32d751d20",
+		// oc adm release info quay.io/openshift-release-dev/ocp-release-nightly:4.3.0-0.nightly-2019-12-02-232545
+		PullSpec:   "quay.io/openshift-release-dev/ocp-release-nightly@sha256:212203fe4aaffcbfddf16c00c9562f6d216e7d7e89036d2e396833d39daec617",
 		Repository: "quay.io/openshift-release-dev/ocp-release-nightly",
 
 		// oc adm release info quay.io/openshift-release-dev/ocp-release:4.2.4
@@ -58,7 +51,7 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 
 	clusterID := &installconfig.ClusterID{
 		UUID:    uuid.NewV4().String(),
-		InfraID: doc.OpenShiftCluster.Properties.InfraID,
+		InfraID: "aro",
 	}
 
 	g := graph{
@@ -68,6 +61,7 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 		reflect.TypeOf(clusterID):     clusterID,
 	}
 
+	i.log.Print("resolving graph")
 	for _, a := range targets.Cluster {
 		_, err := g.resolve(a)
 		if err != nil {
@@ -80,7 +74,7 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 	rhcosImage := g[reflect.TypeOf(new(rhcos.Image))].(*rhcos.Image)
 
 	i.log.Print("creating resource group")
-	_, err = i.groups.CreateOrUpdate(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, resources.Group{
+	_, err := i.groups.CreateOrUpdate(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, resources.Group{
 		Location: &installConfig.Config.Azure.Region,
 	})
 	if err != nil {
@@ -97,7 +91,7 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 					// itself before we apply the RBAC rule in the next
 					// deployment
 					Resource: &msi.Identity{
-						Name:     to.StringPtr(doc.OpenShiftCluster.Properties.InfraID + "-identity"),
+						Name:     to.StringPtr("aro-identity"),
 						Location: &installConfig.Config.Azure.Region,
 						Type:     "Microsoft.ManagedIdentity/userAssignedIdentities",
 					},
@@ -177,7 +171,7 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 								},
 							},
 						},
-						Name:     to.StringPtr(doc.OpenShiftCluster.Properties.InfraID + "-controlplane-nsg"),
+						Name:     to.StringPtr("aro-controlplane-nsg"),
 						Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
 						Location: &installConfig.Config.Azure.Region,
 					},
@@ -185,7 +179,7 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 				},
 				{
 					Resource: &network.SecurityGroup{
-						Name:     to.StringPtr(doc.OpenShiftCluster.Properties.InfraID + "-node-nsg"),
+						Name:     to.StringPtr("aro-node-nsg"),
 						Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
 						Location: &installConfig.Config.Azure.Region,
 					},
@@ -265,13 +259,17 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 			s.SubnetPropertiesFormat = &network.SubnetPropertiesFormat{}
 		}
 
-		if s.SubnetPropertiesFormat.NetworkSecurityGroup != nil {
-			return fmt.Errorf("tried to overwrite non-nil network security group")
-		}
-
 		nsgID, err := subnet.NetworkSecurityGroupID(doc.OpenShiftCluster, subnetID)
 		if err != nil {
 			return err
+		}
+
+		if s.SubnetPropertiesFormat.NetworkSecurityGroup != nil {
+			if strings.EqualFold(*s.SubnetPropertiesFormat.NetworkSecurityGroup.ID, nsgID) {
+				continue
+			}
+
+			return fmt.Errorf("tried to overwrite non-nil network security group")
 		}
 
 		s.SubnetPropertiesFormat.NetworkSecurityGroup = &network.SecurityGroup{
@@ -281,35 +279,6 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 		err = i.subnets.CreateOrUpdate(ctx, subnetID, s)
 		if err != nil {
 			return err
-		}
-	}
-
-	{
-		// TODO: we probably don't want to do this
-		i.log.Printf("creating role assignment on vnet")
-
-		identity, err := i.userassignedidentities.Get(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, doc.OpenShiftCluster.Properties.InfraID+"-identity")
-		if err != nil {
-			return err
-		}
-
-		// TODO: do we need to remove this at tear-down?
-		_, err = i.roleassignments.Create(ctx, "/subscriptions/"+r.SubscriptionID+"/resourceGroups/"+installConfig.Config.Azure.NetworkResourceGroupName+"/providers/Microsoft.Network/virtualNetworks/"+installConfig.Config.Azure.VirtualNetwork, uuid.NewV4().String(), authorization.RoleAssignmentCreateParameters{
-			Properties: &authorization.RoleAssignmentProperties{
-				RoleDefinitionID: to.StringPtr("/subscriptions/" + r.SubscriptionID + "/providers/Microsoft.Authorization/roleDefinitions/8e3af657-a8ff-443c-a75c-2fe8c4bcb635"), // Owner
-				PrincipalID:      to.StringPtr(identity.PrincipalID.String()),
-			},
-		})
-		if err != nil {
-			var ignore bool
-			if err, ok := err.(autorest.DetailedError); ok {
-				if err, ok := err.Original.(*azure.RequestError); ok && err.ServiceError != nil && err.ServiceError.Code == "RoleAssignmentExists" {
-					ignore = true
-				}
-			}
-			if !ignore {
-				return err
-			}
 		}
 	}
 

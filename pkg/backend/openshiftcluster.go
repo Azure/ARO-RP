@@ -6,11 +6,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/sirupsen/logrus"
 
 	"github.com/jim-minter/rp/pkg/api"
 	"github.com/jim-minter/rp/pkg/backend/openshiftcluster"
+	"github.com/jim-minter/rp/pkg/util/recover"
 )
 
 type openShiftClusterBackend struct {
@@ -36,6 +36,8 @@ func (ocb *openShiftClusterBackend) try() (bool, error) {
 	log.Print("dequeued")
 	atomic.AddInt32(&ocb.workers, 1)
 	go func() {
+		defer recover.Panic(log)
+
 		defer func() {
 			atomic.AddInt32(&ocb.workers, -1)
 			ocb.cond.Signal()
@@ -58,14 +60,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 	stop := ocb.heartbeat(log, doc)
 	defer stop()
 
-	spp := &doc.OpenShiftCluster.Properties.ServicePrincipalProfile
-	spAuthorizer, err := auth.NewClientCredentialsConfig(spp.ClientID, spp.ClientSecret, spp.TenantID).Authorizer()
-	if err != nil {
-		log.Error(err)
-		return ocb.endLease(stop, doc, api.ProvisioningStateFailed)
-	}
-
-	m, err := openshiftcluster.NewManager(log, ocb.db.OpenShiftClusters, ocb.rpAuthorizer, spAuthorizer, doc, ocb.domain)
+	m, err := openshiftcluster.NewManager(log, ocb.env, ocb.db.OpenShiftClusters, ocb.fpAuthorizer, doc)
 	if err != nil {
 		log.Error(err)
 		return ocb.endLease(stop, doc, api.ProvisioningStateFailed)
@@ -115,6 +110,8 @@ func (ocb *openShiftClusterBackend) heartbeat(log *logrus.Entry, doc *api.OpenSh
 	stop, done := make(chan struct{}), make(chan struct{})
 
 	go func() {
+		defer recover.Panic(log)
+
 		defer close(done)
 
 		t := time.NewTicker(10 * time.Second)

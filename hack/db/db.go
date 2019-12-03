@@ -16,19 +16,11 @@ import (
 )
 
 func run(ctx context.Context, log *logrus.Entry) error {
-	for _, key := range []string{
-		"RESOURCEGROUP",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return fmt.Errorf("environment variable %q unset", key)
-		}
-	}
-
 	if len(os.Args) != 2 {
 		return fmt.Errorf("usage: %s resourceid", os.Args[0])
 	}
 
-	env, err := env.NewEnv(ctx, log, os.Getenv("AZURE_SUBSCRIPTION_ID"), os.Getenv("RESOURCEGROUP"))
+	env, err := env.NewEnv(ctx, log)
 	if err != nil {
 		return err
 	}

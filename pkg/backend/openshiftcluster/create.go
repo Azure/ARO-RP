@@ -2,7 +2,10 @@ package openshiftcluster
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
 	"encoding/base64"
+	"math/big"
 	"os"
 
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -17,11 +20,44 @@ import (
 	"golang.org/x/crypto/ssh"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/jim-minter/rp/pkg/api"
 	"github.com/jim-minter/rp/pkg/install"
 	"github.com/jim-minter/rp/pkg/util/subnet"
 )
 
 func (m *Manager) Create(ctx context.Context) error {
+	var err error
+
+	m.doc, err = m.db.Patch(m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		var err error
+
+		if doc.OpenShiftCluster.Properties.SSHKey == nil {
+			doc.OpenShiftCluster.Properties.SSHKey, err = rsa.GenerateKey(rand.Reader, 2048)
+			if err != nil {
+				return err
+			}
+		}
+
+		if doc.OpenShiftCluster.Properties.StorageSuffix == "" {
+			doc.OpenShiftCluster.Properties.StorageSuffix, err = randomLowerCaseAlphanumericString(5)
+			if err != nil {
+				return err
+			}
+		}
+
+		if doc.OpenShiftCluster.Properties.DomainName == "" {
+			doc.OpenShiftCluster.Properties.DomainName, err = randomDomainName()
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
 	r, err := azure.ParseResourceID(m.doc.OpenShiftCluster.ID)
 	if err != nil {
 		return err
@@ -65,7 +101,7 @@ func (m *Manager) Create(ctx context.Context) error {
 				Name: m.doc.OpenShiftCluster.Properties.DomainName,
 			},
 			SSHKey:     sshkey.Type() + " " + base64.StdEncoding.EncodeToString(sshkey.Marshal()),
-			BaseDomain: m.domain,
+			BaseDomain: m.env.DNS().Domain(),
 			Networking: &types.Networking{
 				MachineCIDR: ipnet.MustParseCIDR("127.0.0.0/8"), // dummy
 				NetworkType: "OpenShiftSDN",
@@ -108,7 +144,7 @@ func (m *Manager) Create(ctx context.Context) error {
 				Azure: &azuretypes.Platform{
 					Region:                      m.doc.OpenShiftCluster.Location,
 					ResourceGroupName:           m.doc.OpenShiftCluster.Properties.ResourceGroup,
-					BaseDomainResourceGroupName: os.Getenv("RESOURCEGROUP"),
+					BaseDomainResourceGroupName: m.env.ResourceGroup(),
 					NetworkResourceGroupName:    vnetr.ResourceGroup,
 					VirtualNetwork:              vnetr.ResourceName,
 					ControlPlaneSubnet:          masterSubnetName,
@@ -125,5 +161,34 @@ func (m *Manager) Create(ctx context.Context) error {
 		return err
 	}
 
-	return install.NewInstaller(m.log, m.db, m.domain, m.rpAuthorizer, m.spAuthorizer, r.SubscriptionID).Install(ctx, m.doc, installConfig, platformCreds)
+	return install.NewInstaller(m.log, m.env, m.db, m.fpAuthorizer, r.SubscriptionID).Install(ctx, m.doc, installConfig, platformCreds)
+}
+
+func randomDomainName() (string, error) {
+	prefix, err := randomString("abcdefghijklmnopqrstuvwxyz", 1)
+	if err != nil {
+		return "", err
+	}
+	suffix, err := randomString("abcdefghijklmnopqrstuvwxyz0123456789", 7)
+	if err != nil {
+		return "", err
+	}
+	return prefix + suffix, nil
+}
+
+func randomLowerCaseAlphanumericString(n int) (string, error) {
+	return randomString("abcdefghijklmnopqrstuvwxyz0123456789", n)
+}
+
+func randomString(letterBytes string, n int) (string, error) {
+	b := make([]byte, n)
+	for i := range b {
+		o, err := rand.Int(rand.Reader, big.NewInt(int64(len(letterBytes))))
+		if err != nil {
+			return "", err
+		}
+		b[i] = letterBytes[o.Int64()]
+	}
+
+	return string(b), nil
 }

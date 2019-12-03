@@ -14,29 +14,12 @@ func Run(outputFile string) error {
 			Description: "Rest API for Azure Red Hat OpenShift",
 			Version:     "2019-12-31-preview",
 		},
-		Host:     "management.azure.com",
-		Schemes:  []string{"https"},
-		Consumes: []string{"application/json"},
-		Produces: []string{"application/json"},
-		Paths:    populateTopLevelPaths("Microsoft.RedHatOpenShift", "openShiftCluster", "OpenShift cluster"),
-		Definitions: Definitions{
-			// TODO: this should be defined in the API package itself
-			"OpenShiftClusterList": {
-				Description: "OpenShiftClusterList represents a list of OpenShift clusters.",
-				Properties: []NameSchema{
-					{
-						Name: "value",
-						Schema: &Schema{
-							Description: "The list of OpenShift clusters.",
-							Type:        "array",
-							Items: &Schema{
-								Ref: "#/definitions/OpenShiftCluster",
-							},
-						},
-					},
-				},
-			},
-		},
+		Host:        "management.azure.com",
+		Schemes:     []string{"https"},
+		Consumes:    []string{"application/json"},
+		Produces:    []string{"application/json"},
+		Paths:       populateTopLevelPaths("Microsoft.RedHatOpenShift", "openShiftCluster", "OpenShift cluster"),
+		Definitions: Definitions{},
 		Parameters: ParametersDefinitions{
 			"SubscriptionIdParameter": {
 				Name:        "subscriptionId",
@@ -95,7 +78,7 @@ func Run(outputFile string) error {
 
 	populateExamples(s.Paths)
 
-	err := define(s.Definitions, "github.com/jim-minter/rp/pkg/api/v20191231preview", "OpenShiftCluster", "OpenShiftClusterCredentials")
+	err := define(s.Definitions, "github.com/jim-minter/rp/pkg/api/v20191231preview", "OpenShiftClusterList", "OpenShiftClusterCredentials")
 	if err != nil {
 		return err
 	}

@@ -1,5 +1,11 @@
 package v20191231preview
 
+// OpenShiftClusterList represents a list of OpenShift clusters.
+type OpenShiftClusterList struct {
+	// The list of OpenShift clusters.
+	OpenShiftClusters []*OpenShiftCluster `json:"value"`
+}
+
 // OpenShiftCluster represents an Azure Red Hat OpenShift cluster.
 type OpenShiftCluster struct {
 	// The resource ID (immutable).

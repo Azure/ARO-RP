@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
-	"github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/openshift/installer/pkg/asset/installconfig"
@@ -14,8 +13,7 @@ import (
 
 	"github.com/jim-minter/rp/pkg/api"
 	"github.com/jim-minter/rp/pkg/database"
-	"github.com/jim-minter/rp/pkg/util/azureclient/authorization"
-	"github.com/jim-minter/rp/pkg/util/azureclient/dns"
+	"github.com/jim-minter/rp/pkg/env"
 	"github.com/jim-minter/rp/pkg/util/azureclient/network"
 	"github.com/jim-minter/rp/pkg/util/azureclient/resources"
 	"github.com/jim-minter/rp/pkg/util/azureclient/storage"
@@ -24,53 +22,54 @@ import (
 
 type Installer struct {
 	log *logrus.Entry
+	env env.Interface
 	db  database.OpenShiftClusters
 
-	domain string
-
-	roleassignments        authorization.RoleAssignmentsClient
-	disks                  compute.DisksClient
-	virtualmachines        compute.VirtualMachinesClient
-	recordsets             dns.RecordSetsClient
-	userassignedidentities msi.UserAssignedIdentitiesClient
-	interfaces             network.InterfacesClient
-	publicipaddresses      network.PublicIPAddressesClient
-	deployments            resources.DeploymentsClient
-	groups                 resources.GroupsClient
-	accounts               storage.AccountsClient
+	disks             compute.DisksClient
+	virtualmachines   compute.VirtualMachinesClient
+	interfaces        network.InterfacesClient
+	publicipaddresses network.PublicIPAddressesClient
+	deployments       resources.DeploymentsClient
+	groups            resources.GroupsClient
+	accounts          storage.AccountsClient
 
 	subnets subnet.Manager
 }
 
-func NewInstaller(log *logrus.Entry, db database.OpenShiftClusters, domain string, rpAuthorizer, spAuthorizer autorest.Authorizer, subscriptionID string) *Installer {
+func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClusters, fpAuthorizer autorest.Authorizer, subscriptionID string) *Installer {
 	d := &Installer{
 		log: log,
+		env: env,
 		db:  db,
 
-		domain: domain,
+		disks:             compute.NewDisksClient(subscriptionID),
+		virtualmachines:   compute.NewVirtualMachinesClient(subscriptionID),
+		interfaces:        network.NewInterfacesClient(subscriptionID, fpAuthorizer),
+		publicipaddresses: network.NewPublicIPAddressesClient(subscriptionID, fpAuthorizer),
+		deployments:       resources.NewDeploymentsClient(subscriptionID, fpAuthorizer),
+		groups:            resources.NewGroupsClient(subscriptionID, fpAuthorizer),
+		accounts:          storage.NewAccountsClient(subscriptionID, fpAuthorizer),
 
-		roleassignments:        authorization.NewRoleAssignmentsClient(subscriptionID, rpAuthorizer),
-		disks:                  compute.NewDisksClient(subscriptionID),
-		virtualmachines:        compute.NewVirtualMachinesClient(subscriptionID),
-		recordsets:             dns.NewRecordSetsClient(subscriptionID, rpAuthorizer),
-		userassignedidentities: msi.NewUserAssignedIdentitiesClient(subscriptionID),
-		interfaces:             network.NewInterfacesClient(subscriptionID, rpAuthorizer),
-		publicipaddresses:      network.NewPublicIPAddressesClient(subscriptionID, rpAuthorizer),
-		deployments:            resources.NewDeploymentsClient(subscriptionID, rpAuthorizer),
-		groups:                 resources.NewGroupsClient(subscriptionID, rpAuthorizer),
-		accounts:               storage.NewAccountsClient(subscriptionID, rpAuthorizer),
-
-		subnets: subnet.NewManager(subscriptionID, spAuthorizer),
+		subnets: subnet.NewManager(subscriptionID, fpAuthorizer),
 	}
 
-	d.disks.Authorizer = rpAuthorizer
-	d.virtualmachines.Authorizer = rpAuthorizer
-	d.userassignedidentities.Authorizer = rpAuthorizer
+	d.disks.Authorizer = fpAuthorizer
+	d.virtualmachines.Authorizer = fpAuthorizer
 
 	return d
 }
 
 func (i *Installer) Install(ctx context.Context, doc *api.OpenShiftClusterDocument, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds) error {
+	doc, err := i.db.Patch(doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		if doc.OpenShiftCluster.Properties.Install == nil {
+			doc.OpenShiftCluster.Properties.Install = &api.Install{}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
 	for {
 		i.log.Printf("starting phase %s", doc.OpenShiftCluster.Properties.Install.Phase)
 		switch doc.OpenShiftCluster.Properties.Install.Phase {

@@ -3,8 +3,10 @@ package dev
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"net"
 	"net/http"
+	"os"
 
 	"github.com/sirupsen/logrus"
 
@@ -15,12 +17,20 @@ type dev struct {
 	*shared.Shared
 }
 
-func New(ctx context.Context, log *logrus.Entry, subscriptionId, resourceGroup string) (*dev, error) {
-	var err error
+func New(ctx context.Context, log *logrus.Entry) (*dev, error) {
+	for _, key := range []string{
+		"LOCATION",
+		"RESOURCEGROUP",
+	} {
+		if _, found := os.LookupEnv(key); !found {
+			return nil, fmt.Errorf("environment variable %q unset", key)
+		}
+	}
 
 	d := &dev{}
 
-	d.Shared, err = shared.NewShared(ctx, log, subscriptionId, resourceGroup)
+	var err error
+	d.Shared, err = shared.NewShared(ctx, log, os.Getenv("AZURE_TENANT_ID"), os.Getenv("AZURE_SUBSCRIPTION_ID"), os.Getenv("RESOURCEGROUP"))
 	if err != nil {
 		return nil, err
 	}
@@ -55,4 +65,12 @@ func (d *dev) Authenticated(h http.Handler) http.Handler {
 
 func (d *dev) IsReady() bool {
 	return true
+}
+
+func (d *dev) Location() string {
+	return os.Getenv("LOCATION")
+}
+
+func (d *dev) ResourceGroup() string {
+	return os.Getenv("RESOURCEGROUP")
 }

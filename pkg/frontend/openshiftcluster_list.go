@@ -14,47 +14,25 @@ func (f *frontend) getOpenShiftClusters(w http.ResponseWriter, r *http.Request) 
 	log := r.Context().Value(contextKeyLog).(*logrus.Entry)
 	vars := mux.Vars(r)
 
-	toExternal, found := api.APIs[api.APIVersionType{APIVersion: r.URL.Query().Get("api-version"), Type: "OpenShiftCluster"}]
-	if !found {
-		api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], r.URL.Query().Get("api-version"))
-		return
-	}
+	b, err := f._getOpenShiftClusters(r, api.APIs[vars["api-version"]]["OpenShiftCluster"].(api.OpenShiftClustersToExternal))
 
-	b, err := f._getOpenShiftClusters(&request{
-		subscriptionID:    vars["subscriptionId"],
-		resourceGroupName: vars["resourceGroupName"],
-		resourceType:      vars["resourceProviderNamespace"] + "/" + vars["resourceType"],
-		toExternal:        toExternal,
-	})
-	if err != nil {
-		switch err := err.(type) {
-		case *api.CloudError:
-			api.WriteCloudError(w, err)
-		default:
-			log.Error(err)
-			api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
-		}
-		return
-	}
-
-	w.Write(b)
-	w.Write([]byte{'\n'})
+	reply(log, w, b, err)
 }
 
-func (f *frontend) _getOpenShiftClusters(r *request) ([]byte, error) {
-	prefix := "/subscriptions/" + r.subscriptionID + "/"
-	if r.resourceGroupName != "" {
-		prefix += "resourcegroups/" + r.resourceGroupName + "/"
+func (f *frontend) _getOpenShiftClusters(r *http.Request, externals api.OpenShiftClustersToExternal) ([]byte, error) {
+	vars := mux.Vars(r)
+
+	prefix := "/subscriptions/" + vars["subscriptionId"] + "/"
+	if vars["resourceGroupName"] != "" {
+		prefix += "resourcegroups/" + vars["resourceGroupName"] + "/"
 	}
 
-	i, err := f.db.OpenShiftClusters.ListByPrefix(r.subscriptionID, api.Key(prefix))
+	i, err := f.db.OpenShiftClusters.ListByPrefix(vars["subscriptionId"], api.Key(prefix))
 	if err != nil {
 		return nil, err
 	}
 
-	var rv struct {
-		Value []api.External `json:"value"`
-	}
+	var ocs []*api.OpenShiftCluster
 
 	for {
 		docs, err := i.Next()
@@ -67,9 +45,9 @@ func (f *frontend) _getOpenShiftClusters(r *request) ([]byte, error) {
 
 		for _, doc := range docs.OpenShiftClusterDocuments {
 			doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
-			rv.Value = append(rv.Value, r.toExternal(doc.OpenShiftCluster))
+			ocs = append(ocs, doc.OpenShiftCluster)
 		}
 	}
 
-	return json.MarshalIndent(rv, "", "  ")
+	return json.MarshalIndent(externals.OpenShiftClustersToExternal(ocs), "", "  ")
 }

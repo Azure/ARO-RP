@@ -12,51 +12,26 @@ import (
 )
 
 func (f *frontend) getOpenShiftCluster(w http.ResponseWriter, r *http.Request) {
-	f.get(w, r, r.URL.Path, "OpenShiftCluster")
-}
-
-func (f *frontend) get(w http.ResponseWriter, r *http.Request, resourceID, typ string) {
 	log := r.Context().Value(contextKeyLog).(*logrus.Entry)
 	vars := mux.Vars(r)
 
-	toExternal, found := api.APIs[api.APIVersionType{APIVersion: r.URL.Query().Get("api-version"), Type: typ}]
-	if !found {
-		api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], r.URL.Query().Get("api-version"))
-		return
-	}
+	b, err := f._getOpenShiftCluster(r, api.APIs[vars["api-version"]]["OpenShiftCluster"].(api.OpenShiftClusterToExternal))
 
-	b, err := f._getOpenShiftCluster(&request{
-		resourceID:        resourceID,
-		resourceGroupName: vars["resourceGroupName"],
-		resourceName:      vars["resourceName"],
-		resourceType:      vars["resourceProviderNamespace"] + "/" + vars["resourceType"],
-		toExternal:        toExternal,
-	})
-	if err != nil {
-		switch err := err.(type) {
-		case *api.CloudError:
-			api.WriteCloudError(w, err)
-		default:
-			log.Error(err)
-			api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
-		}
-		return
-	}
-
-	w.Write(b)
-	w.Write([]byte{'\n'})
+	reply(log, w, b, err)
 }
 
-func (f *frontend) _getOpenShiftCluster(r *request) ([]byte, error) {
-	doc, err := f.db.OpenShiftClusters.Get(api.Key(r.resourceID))
+func (f *frontend) _getOpenShiftCluster(r *http.Request, external api.OpenShiftClusterToExternal) ([]byte, error) {
+	vars := mux.Vars(r)
+
+	doc, err := f.db.OpenShiftClusters.Get(api.Key(r.URL.Path))
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
-		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", r.resourceType, r.resourceName, r.resourceGroupName)
+		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
 	case err != nil:
 		return nil, err
 	}
 
 	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 
-	return json.MarshalIndent(r.toExternal(doc.OpenShiftCluster), "", "  ")
+	return json.MarshalIndent(external.OpenShiftClusterToExternal(doc.OpenShiftCluster), "", "  ")
 }

@@ -10,10 +10,12 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
-	"github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
+	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
+	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/apparentlymart/go-cidr/cidr"
 	"github.com/openshift/installer/pkg/asset/ignition/machine"
@@ -53,6 +55,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 		return err
 	}
 
+	// TODO: make this dynamic and use a DNS alias record
 	var lbIP net.IP
 	{
 		_, last := cidr.AddressRange(masterSubnetCIDR)
@@ -69,6 +72,29 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 		}
 	}
 
+	var objectID string
+	{
+		spp := &doc.OpenShiftCluster.Properties.ServicePrincipalProfile
+
+		conf := auth.NewClientCredentialsConfig(spp.ClientID, spp.ClientSecret, spp.TenantID)
+		conf.Resource = azure.PublicCloud.GraphEndpoint
+
+		spAuthorizer, err := conf.Authorizer()
+		if err != nil {
+			return err
+		}
+
+		applications := graphrbac.NewApplicationsClient(spp.TenantID)
+		applications.Authorizer = spAuthorizer
+
+		res, err := applications.GetServicePrincipalsIDByAppID(ctx, spp.ClientID)
+		if err != nil {
+			return err
+		}
+
+		objectID = *res.Value
+	}
+
 	{
 		t := &arm.Template{
 			Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
@@ -81,12 +107,24 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 			Resources: []arm.Resource{
 				{
 					Resource: &authorization.RoleAssignment{
-						Name: to.StringPtr("[guid(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', '" + doc.OpenShiftCluster.Properties.InfraID + "-identity'), 'contributor')]"),
+						Name: to.StringPtr("[guid(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'aro-identity'), 'Identity / Contributor')]"),
 						Type: to.StringPtr("Microsoft.Authorization/roleAssignments"),
 						Properties: &authorization.RoleAssignmentPropertiesWithScope{
 							Scope:            to.StringPtr("[resourceGroup().id]"),
-							RoleDefinitionID: to.StringPtr("[resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]"), // Contributor
-							PrincipalID:      to.StringPtr("[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', '" + doc.OpenShiftCluster.Properties.InfraID + "-identity'), '2018-11-30').principalId]"),
+							RoleDefinitionID: to.StringPtr("[resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]"),
+							PrincipalID:      to.StringPtr("[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'aro-identity'), '2018-11-30').principalId]"),
+						},
+					},
+					APIVersion: apiVersions["authorization"],
+				},
+				{
+					Resource: &authorization.RoleAssignment{
+						Name: to.StringPtr("[guid(resourceGroup().id, 'SP / Contributor')]"),
+						Type: to.StringPtr("Microsoft.Authorization/roleAssignments"),
+						Properties: &authorization.RoleAssignmentPropertiesWithScope{
+							Scope:            to.StringPtr("[resourceGroup().id]"),
+							RoleDefinitionID: to.StringPtr("[resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]"),
+							PrincipalID:      to.StringPtr(objectID),
 						},
 					},
 					APIVersion: apiVersions["authorization"],
@@ -98,23 +136,6 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 						Location: to.StringPtr("global"),
 					},
 					APIVersion: apiVersions["privatedns"],
-				},
-				{
-					Resource: &privatedns.VirtualNetworkLink{
-						VirtualNetworkLinkProperties: &privatedns.VirtualNetworkLinkProperties{
-							VirtualNetwork: &privatedns.SubResource{
-								ID: to.StringPtr(vnetID),
-							},
-							RegistrationEnabled: to.BoolPtr(false),
-						},
-						Name:     to.StringPtr(installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/" + installConfig.Config.ObjectMeta.Name + "-network-link"),
-						Type:     to.StringPtr("Microsoft.Network/privateDnsZones/virtualNetworkLinks"),
-						Location: to.StringPtr("global"),
-					},
-					APIVersion: apiVersions["privatedns"],
-					DependsOn: []string{
-						"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
-					},
 				},
 				{
 					Resource: &privatedns.RecordSet{
@@ -174,31 +195,50 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 							TTL: to.Int64Ptr(60),
 							ARecords: &[]privatedns.ARecord{
 								{
-									Ipv4Address: to.StringPtr("[reference(resourceId('Microsoft.Network/networkInterfaces', concat('" + doc.OpenShiftCluster.Properties.InfraID + "-master', copyIndex(), '-nic')), '2019-07-01').ipConfigurations[0].properties.privateIPAddress]"),
+									Ipv4Address: to.StringPtr("[reference(resourceId('Microsoft.Network/networkInterfaces', concat('aro-master', copyIndex(), '-nic')), '2019-07-01').ipConfigurations[0].properties.privateIPAddress]"),
 								},
 							},
 						},
 					},
 					APIVersion: apiVersions["privatedns"],
 					Copy: &arm.Copy{
-						Name:  "copy",
+						Name:  "privatednscopy",
 						Count: len(machinesMaster.MachineFiles),
 					},
 					DependsOn: []string{
-						"[concat('Microsoft.Network/networkInterfaces/" + doc.OpenShiftCluster.Properties.InfraID + "-master', copyIndex(), '-nic')]",
+						"[concat('Microsoft.Network/networkInterfaces/aro-master', copyIndex(), '-nic')]",
 						"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
+					},
+				},
+				{
+					Resource: &privatedns.VirtualNetworkLink{
+						VirtualNetworkLinkProperties: &privatedns.VirtualNetworkLinkProperties{
+							VirtualNetwork: &privatedns.SubResource{
+								ID: to.StringPtr(vnetID),
+							},
+							RegistrationEnabled: to.BoolPtr(false),
+						},
+						Name:     to.StringPtr(installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/" + installConfig.Config.ObjectMeta.Name + "-network-link"),
+						Type:     to.StringPtr("Microsoft.Network/privateDnsZones/virtualNetworkLinks"),
+						Location: to.StringPtr("global"),
+					},
+					APIVersion: apiVersions["privatedns"],
+					DependsOn: []string{
+						"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
+						"privatednscopy",
 					},
 				},
 				{
 					// TODO: upstream doesn't appear to wire this in to any vnet - investigate.
 					Resource: &network.RouteTable{
-						Name:     to.StringPtr(doc.OpenShiftCluster.Properties.InfraID + "-node-routetable"),
+						Name:     to.StringPtr("aro-node-routetable"),
 						Type:     to.StringPtr("Microsoft.Network/routeTables"),
 						Location: &installConfig.Config.Azure.Region,
 					},
 					APIVersion: apiVersions["network"],
 				},
 				{
+					// TODO: we will want to remove this
 					Resource: &network.PublicIPAddress{
 						Sku: &network.PublicIPAddressSku{
 							Name: network.PublicIPAddressSkuNameStandard,
@@ -206,7 +246,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 						PublicIPAddressPropertiesFormat: &network.PublicIPAddressPropertiesFormat{
 							PublicIPAllocationMethod: network.Static,
 						},
-						Name:     to.StringPtr(doc.OpenShiftCluster.Properties.InfraID + "-bootstrap-pip"),
+						Name:     to.StringPtr("aro-bootstrap-pip"),
 						Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
 						Location: &installConfig.Config.Azure.Region,
 					},
@@ -223,7 +263,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 								DomainNameLabel: &doc.OpenShiftCluster.Properties.DomainName,
 							},
 						},
-						Name:     to.StringPtr(doc.OpenShiftCluster.Properties.InfraID + "-pip"),
+						Name:     to.StringPtr("aro-pip"),
 						Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
 						Location: &installConfig.Config.Azure.Region,
 					},
@@ -239,7 +279,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 								{
 									FrontendIPConfigurationPropertiesFormat: &network.FrontendIPConfigurationPropertiesFormat{
 										PublicIPAddress: &network.PublicIPAddress{
-											ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', '" + doc.OpenShiftCluster.Properties.InfraID + "-pip')]"),
+											ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', 'aro-pip')]"),
 										},
 									},
 									Name: to.StringPtr("public-lb-ip"),
@@ -247,20 +287,20 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 							},
 							BackendAddressPools: &[]network.BackendAddressPool{
 								{
-									Name: to.StringPtr(doc.OpenShiftCluster.Properties.InfraID + "-public-lb-control-plane"),
+									Name: to.StringPtr("aro-public-lb-control-plane"),
 								},
 							},
 							LoadBalancingRules: &[]network.LoadBalancingRule{
 								{
 									LoadBalancingRulePropertiesFormat: &network.LoadBalancingRulePropertiesFormat{
 										FrontendIPConfiguration: &network.SubResource{
-											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '" + doc.OpenShiftCluster.Properties.InfraID + "-public-lb', 'public-lb-ip')]"),
+											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'aro-public-lb', 'public-lb-ip')]"),
 										},
 										BackendAddressPool: &network.SubResource{
-											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '" + doc.OpenShiftCluster.Properties.InfraID + "-public-lb', '" + doc.OpenShiftCluster.Properties.InfraID + "-public-lb-control-plane')]"),
+											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'aro-public-lb', 'aro-public-lb-control-plane')]"),
 										},
 										Probe: &network.SubResource{
-											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/probes', '" + doc.OpenShiftCluster.Properties.InfraID + "-public-lb', 'api-internal-probe')]"),
+											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'aro-public-lb', 'api-internal-probe')]"),
 										},
 										Protocol:             network.TransportProtocolTCP,
 										LoadDistribution:     network.LoadDistributionDefault,
@@ -284,13 +324,13 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 								},
 							},
 						},
-						Name:     to.StringPtr(doc.OpenShiftCluster.Properties.InfraID + "-public-lb"),
+						Name:     to.StringPtr("aro-public-lb"),
 						Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
 						Location: &installConfig.Config.Azure.Region,
 					},
 					APIVersion: apiVersions["network"],
 					DependsOn: []string{
-						"Microsoft.Network/publicIPAddresses/" + doc.OpenShiftCluster.Properties.InfraID + "-pip",
+						"Microsoft.Network/publicIPAddresses/aro-pip",
 					},
 				},
 				{
@@ -313,20 +353,20 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 							},
 							BackendAddressPools: &[]network.BackendAddressPool{
 								{
-									Name: to.StringPtr(doc.OpenShiftCluster.Properties.InfraID + "-internal-controlplane"),
+									Name: to.StringPtr("aro-internal-controlplane"),
 								},
 							},
 							LoadBalancingRules: &[]network.LoadBalancingRule{
 								{
 									LoadBalancingRulePropertiesFormat: &network.LoadBalancingRulePropertiesFormat{
 										FrontendIPConfiguration: &network.SubResource{
-											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '" + doc.OpenShiftCluster.Properties.InfraID + "-internal-lb', 'internal-lb-ip')]"),
+											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'aro-internal-lb', 'internal-lb-ip')]"),
 										},
 										BackendAddressPool: &network.SubResource{
-											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '" + doc.OpenShiftCluster.Properties.InfraID + "-internal-lb', '" + doc.OpenShiftCluster.Properties.InfraID + "-internal-controlplane')]"),
+											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'aro-internal-lb', 'aro-internal-controlplane')]"),
 										},
 										Probe: &network.SubResource{
-											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/probes', '" + doc.OpenShiftCluster.Properties.InfraID + "-internal-lb', 'api-internal-probe')]"),
+											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'aro-internal-lb', 'api-internal-probe')]"),
 										},
 										Protocol:             network.TransportProtocolTCP,
 										LoadDistribution:     network.LoadDistributionDefault,
@@ -339,13 +379,13 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 								{
 									LoadBalancingRulePropertiesFormat: &network.LoadBalancingRulePropertiesFormat{
 										FrontendIPConfiguration: &network.SubResource{
-											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '" + doc.OpenShiftCluster.Properties.InfraID + "-internal-lb', 'internal-lb-ip')]"),
+											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'aro-internal-lb', 'internal-lb-ip')]"),
 										},
 										BackendAddressPool: &network.SubResource{
-											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '" + doc.OpenShiftCluster.Properties.InfraID + "-internal-lb', '" + doc.OpenShiftCluster.Properties.InfraID + "-internal-controlplane')]"),
+											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'aro-internal-lb', 'aro-internal-controlplane')]"),
 										},
 										Probe: &network.SubResource{
-											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/probes', '" + doc.OpenShiftCluster.Properties.InfraID + "-internal-lb', 'sint-probe')]"),
+											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'aro-internal-lb', 'sint-probe')]"),
 										},
 										Protocol:             network.TransportProtocolTCP,
 										LoadDistribution:     network.LoadDistributionDefault,
@@ -377,14 +417,11 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 								},
 							},
 						},
-						Name:     to.StringPtr(doc.OpenShiftCluster.Properties.InfraID + "-internal-lb"),
+						Name:     to.StringPtr("aro-internal-lb"),
 						Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
 						Location: &installConfig.Config.Azure.Region,
 					},
 					APIVersion: apiVersions["network"],
-					DependsOn: []string{
-						"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
-					},
 				},
 				{
 					Resource: &network.Interface{
@@ -394,32 +431,32 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 									InterfaceIPConfigurationPropertiesFormat: &network.InterfaceIPConfigurationPropertiesFormat{
 										LoadBalancerBackendAddressPools: &[]network.BackendAddressPool{
 											{
-												ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '" + doc.OpenShiftCluster.Properties.InfraID + "-public-lb', '" + doc.OpenShiftCluster.Properties.InfraID + "-public-lb-control-plane')]"),
+												ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'aro-public-lb', 'aro-public-lb-control-plane')]"),
 											},
 											{
-												ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '" + doc.OpenShiftCluster.Properties.InfraID + "-internal-lb', '" + doc.OpenShiftCluster.Properties.InfraID + "-internal-controlplane')]"),
+												ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'aro-internal-lb', 'aro-internal-controlplane')]"),
 											},
 										},
 										Subnet: &network.Subnet{
 											ID: to.StringPtr(doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 										},
 										PublicIPAddress: &network.PublicIPAddress{
-											ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', '" + doc.OpenShiftCluster.Properties.InfraID + "-bootstrap-pip')]"),
+											ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', 'aro-bootstrap-pip')]"),
 										},
 									},
 									Name: to.StringPtr("bootstrap-nic-ip"),
 								},
 							},
 						},
-						Name:     to.StringPtr(doc.OpenShiftCluster.Properties.InfraID + "-bootstrap-nic"),
+						Name:     to.StringPtr("aro-bootstrap-nic"),
 						Type:     to.StringPtr("Microsoft.Network/networkInterfaces"),
 						Location: &installConfig.Config.Azure.Region,
 					},
 					APIVersion: apiVersions["network"],
 					DependsOn: []string{
-						"Microsoft.Network/loadBalancers/" + doc.OpenShiftCluster.Properties.InfraID + "-internal-lb",
-						"Microsoft.Network/loadBalancers/" + doc.OpenShiftCluster.Properties.InfraID + "-public-lb",
-						"Microsoft.Network/publicIPAddresses/" + doc.OpenShiftCluster.Properties.InfraID + "-bootstrap-pip",
+						"Microsoft.Network/loadBalancers/aro-internal-lb",
+						"Microsoft.Network/loadBalancers/aro-public-lb",
+						"Microsoft.Network/publicIPAddresses/aro-bootstrap-pip",
 					},
 				},
 				{
@@ -430,10 +467,10 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 									InterfaceIPConfigurationPropertiesFormat: &network.InterfaceIPConfigurationPropertiesFormat{
 										LoadBalancerBackendAddressPools: &[]network.BackendAddressPool{
 											{
-												ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '" + doc.OpenShiftCluster.Properties.InfraID + "-public-lb', '" + doc.OpenShiftCluster.Properties.InfraID + "-public-lb-control-plane')]"),
+												ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'aro-public-lb', 'aro-public-lb-control-plane')]"),
 											},
 											{
-												ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '" + doc.OpenShiftCluster.Properties.InfraID + "-internal-lb', '" + doc.OpenShiftCluster.Properties.InfraID + "-internal-controlplane')]"),
+												ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'aro-internal-lb', 'aro-internal-controlplane')]"),
 											},
 										},
 										Subnet: &network.Subnet{
@@ -444,18 +481,18 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 								},
 							},
 						},
-						Name:     to.StringPtr("[concat('" + doc.OpenShiftCluster.Properties.InfraID + "-master', copyIndex(), '-nic')]"),
+						Name:     to.StringPtr("[concat('aro-master', copyIndex(), '-nic')]"),
 						Type:     to.StringPtr("Microsoft.Network/networkInterfaces"),
 						Location: &installConfig.Config.Azure.Region,
 					},
 					APIVersion: apiVersions["network"],
 					Copy: &arm.Copy{
-						Name:  "copy",
+						Name:  "networkcopy",
 						Count: len(machinesMaster.MachineFiles),
 					},
 					DependsOn: []string{
-						"Microsoft.Network/loadBalancers/" + doc.OpenShiftCluster.Properties.InfraID + "-internal-lb",
-						"Microsoft.Network/loadBalancers/" + doc.OpenShiftCluster.Properties.InfraID + "-public-lb",
+						"Microsoft.Network/loadBalancers/aro-internal-lb",
+						"Microsoft.Network/loadBalancers/aro-public-lb",
 					},
 				},
 				{
@@ -469,7 +506,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 							},
 							HyperVGeneration: compute.HyperVGenerationTypesV1,
 						},
-						Name:     &doc.OpenShiftCluster.Properties.InfraID,
+						Name:     to.StringPtr("aro"),
 						Type:     to.StringPtr("Microsoft.Compute/images"),
 						Location: &installConfig.Config.Azure.Region,
 					},
@@ -483,10 +520,10 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 							},
 							StorageProfile: &compute.StorageProfile{
 								ImageReference: &compute.ImageReference{
-									ID: to.StringPtr("[resourceId('Microsoft.Compute/images', '" + doc.OpenShiftCluster.Properties.InfraID + "')]"),
+									ID: to.StringPtr("[resourceId('Microsoft.Compute/images', 'aro')]"),
 								},
 								OsDisk: &compute.OSDisk{
-									Name:         to.StringPtr(doc.OpenShiftCluster.Properties.InfraID + "-bootstrap_OSDisk"),
+									Name:         to.StringPtr("aro-bootstrap_OSDisk"),
 									Caching:      compute.CachingTypesReadWrite,
 									CreateOption: compute.DiskCreateOptionTypesFromImage,
 									DiskSizeGB:   to.Int32Ptr(100),
@@ -496,7 +533,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 								},
 							},
 							OsProfile: &compute.OSProfile{
-								ComputerName:  to.StringPtr(doc.OpenShiftCluster.Properties.InfraID + "-bootstrap-vm"),
+								ComputerName:  to.StringPtr("aro-bootstrap-vm"),
 								AdminUsername: to.StringPtr("core"),
 								AdminPassword: to.StringPtr("NotActuallyApplied!"),
 								CustomData:    to.StringPtr(`[base64(concat('{"ignition":{"version":"2.2.0","config":{"replace":{"source":"https://cluster` + doc.OpenShiftCluster.Properties.StorageSuffix + `.blob.core.windows.net/ignition/bootstrap.ign?', listAccountSas(resourceId('Microsoft.Storage/storageAccounts', 'cluster` + doc.OpenShiftCluster.Properties.StorageSuffix + `'), '2019-04-01', parameters('sas')).accountSasToken, '"}}}}'))]`),
@@ -507,7 +544,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 							NetworkProfile: &compute.NetworkProfile{
 								NetworkInterfaces: &[]compute.NetworkInterfaceReference{
 									{
-										ID: to.StringPtr("[resourceId('Microsoft.Network/networkInterfaces', '" + doc.OpenShiftCluster.Properties.InfraID + "-bootstrap-nic')]"),
+										ID: to.StringPtr("[resourceId('Microsoft.Network/networkInterfaces', 'aro-bootstrap-nic')]"),
 									},
 								},
 							},
@@ -521,17 +558,19 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 						Identity: &compute.VirtualMachineIdentity{
 							Type: compute.ResourceIdentityTypeUserAssigned,
 							UserAssignedIdentities: map[string]*compute.VirtualMachineIdentityUserAssignedIdentitiesValue{
-								"[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', '" + doc.OpenShiftCluster.Properties.InfraID + "-identity')]": {},
+								"[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'aro-identity')]": {},
 							},
 						},
-						Name:     to.StringPtr(doc.OpenShiftCluster.Properties.InfraID + "-bootstrap"),
+						Name:     to.StringPtr("aro-bootstrap"),
 						Type:     to.StringPtr("Microsoft.Compute/virtualMachines"),
 						Location: &installConfig.Config.Azure.Region,
 					},
 					APIVersion: apiVersions["compute"],
 					DependsOn: []string{
-						"Microsoft.Compute/images/" + doc.OpenShiftCluster.Properties.InfraID,
-						"Microsoft.Network/networkInterfaces/" + doc.OpenShiftCluster.Properties.InfraID + "-bootstrap-nic",
+						"[concat('Microsoft.Authorization/roleAssignments/', guid(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'aro-identity'), 'Identity / Contributor'))]",
+						"[concat('Microsoft.Authorization/roleAssignments/', guid(resourceGroup().id, 'SP / Contributor'))]",
+						"Microsoft.Compute/images/aro",
+						"Microsoft.Network/networkInterfaces/aro-bootstrap-nic",
 						"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/virtualNetworkLinks/" + installConfig.Config.ObjectMeta.Name + "-network-link",
 					},
 				},
@@ -543,10 +582,10 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 							},
 							StorageProfile: &compute.StorageProfile{
 								ImageReference: &compute.ImageReference{
-									ID: to.StringPtr("[resourceId('Microsoft.Compute/images', '" + doc.OpenShiftCluster.Properties.InfraID + "')]"),
+									ID: to.StringPtr("[resourceId('Microsoft.Compute/images', 'aro')]"),
 								},
 								OsDisk: &compute.OSDisk{
-									Name:         to.StringPtr("[concat('" + doc.OpenShiftCluster.Properties.InfraID + "-master-', copyIndex(), '_OSDisk')]"),
+									Name:         to.StringPtr("[concat('aro-master-', copyIndex(), '_OSDisk')]"),
 									Caching:      compute.CachingTypesReadOnly,
 									CreateOption: compute.DiskCreateOptionTypesFromImage,
 									DiskSizeGB:   &installConfig.Config.ControlPlane.Platform.Azure.OSDisk.DiskSizeGB,
@@ -556,7 +595,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 								},
 							},
 							OsProfile: &compute.OSProfile{
-								ComputerName:  to.StringPtr("[concat('" + doc.OpenShiftCluster.Properties.InfraID + "-master-', copyIndex())]"),
+								ComputerName:  to.StringPtr("[concat('aro-master-', copyIndex())]"),
 								AdminUsername: to.StringPtr("core"),
 								AdminPassword: to.StringPtr("NotActuallyApplied!"),
 								CustomData:    to.StringPtr(base64.StdEncoding.EncodeToString(machineMaster.File.Data)),
@@ -567,7 +606,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 							NetworkProfile: &compute.NetworkProfile{
 								NetworkInterfaces: &[]compute.NetworkInterfaceReference{
 									{
-										ID: to.StringPtr("[resourceId('Microsoft.Network/networkInterfaces', concat('" + doc.OpenShiftCluster.Properties.InfraID + "-master', copyIndex(), '-nic'))]"),
+										ID: to.StringPtr("[resourceId('Microsoft.Network/networkInterfaces', concat('aro-master', copyIndex(), '-nic'))]"),
 									},
 								},
 							},
@@ -581,24 +620,26 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 						Identity: &compute.VirtualMachineIdentity{
 							Type: compute.ResourceIdentityTypeUserAssigned,
 							UserAssignedIdentities: map[string]*compute.VirtualMachineIdentityUserAssignedIdentitiesValue{
-								"[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', '" + doc.OpenShiftCluster.Properties.InfraID + "-identity')]": {},
+								"[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'aro-identity')]": {},
 							},
 						},
 						Zones: &[]string{
 							"[copyIndex(1)]",
 						},
-						Name:     to.StringPtr("[concat('" + doc.OpenShiftCluster.Properties.InfraID + "-master-', copyIndex())]"),
+						Name:     to.StringPtr("[concat('aro-master-', copyIndex())]"),
 						Type:     to.StringPtr("Microsoft.Compute/virtualMachines"),
 						Location: &installConfig.Config.Azure.Region,
 					},
 					APIVersion: apiVersions["compute"],
 					Copy: &arm.Copy{
-						Name:  "copy",
+						Name:  "computecopy",
 						Count: len(machinesMaster.MachineFiles),
 					},
 					DependsOn: []string{
-						"Microsoft.Compute/images/" + doc.OpenShiftCluster.Properties.InfraID,
-						"[concat('Microsoft.Network/networkInterfaces/" + doc.OpenShiftCluster.Properties.InfraID + "-master', copyIndex(), '-nic')]",
+						"[concat('Microsoft.Authorization/roleAssignments/', guid(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'aro-identity'), 'Identity / Contributor'))]",
+						"[concat('Microsoft.Authorization/roleAssignments/', guid(resourceGroup().id, 'SP / Contributor'))]",
+						"Microsoft.Compute/images/aro",
+						"[concat('Microsoft.Network/networkInterfaces/aro-master', copyIndex(), '-nic')]",
 						"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/virtualNetworkLinks/" + installConfig.Config.ObjectMeta.Name + "-network-link",
 					},
 				},
@@ -630,14 +671,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 	}
 
 	{
-		_, err = i.recordsets.CreateOrUpdate(ctx, installConfig.Config.Azure.BaseDomainResourceGroupName, installConfig.Config.BaseDomain, "api."+installConfig.Config.ObjectMeta.Name, dns.CNAME, dns.RecordSet{
-			RecordSetProperties: &dns.RecordSetProperties{
-				TTL: to.Int64Ptr(300),
-				CnameRecord: &dns.CnameRecord{
-					Cname: to.StringPtr(doc.OpenShiftCluster.Properties.DomainName + "." + installConfig.Config.Azure.Region + ".cloudapp.azure.com"),
-				},
-			},
-		}, "", "")
+		err = i.env.DNS().CreateOrUpdate(ctx, doc.OpenShiftCluster)
 		if err != nil {
 			return err
 		}

@@ -25,7 +25,7 @@ func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClust
 
 	{
 		i.log.Print("removing bootstrap vm")
-		future, err := i.virtualmachines.Delete(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, doc.OpenShiftCluster.Properties.InfraID+"-bootstrap")
+		future, err := i.virtualmachines.Delete(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, "aro-bootstrap")
 		if err != nil {
 			return err
 		}
@@ -38,7 +38,7 @@ func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClust
 
 	{
 		i.log.Print("removing bootstrap disk")
-		future, err := i.disks.Delete(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, doc.OpenShiftCluster.Properties.InfraID+"-bootstrap_OSDisk")
+		future, err := i.disks.Delete(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, "aro-bootstrap_OSDisk")
 		if err != nil {
 			return err
 		}
@@ -51,7 +51,7 @@ func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClust
 
 	{
 		i.log.Print("removing bootstrap nic")
-		err = i.interfaces.DeleteAndWait(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, doc.OpenShiftCluster.Properties.InfraID+"-bootstrap-nic")
+		err = i.interfaces.DeleteAndWait(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, "aro-bootstrap-nic")
 		if err != nil {
 			return err
 		}
@@ -59,7 +59,7 @@ func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClust
 
 	{
 		i.log.Print("removing bootstrap ip")
-		err = i.publicipaddresses.DeleteAndWait(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, doc.OpenShiftCluster.Properties.InfraID+"-bootstrap-pip")
+		err = i.publicipaddresses.DeleteAndWait(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, "aro-bootstrap-pip")
 		if err != nil {
 			return err
 		}
@@ -100,8 +100,8 @@ func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClust
 	}
 
 	_, err = i.db.Patch(doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.APIServerURL = "https://api." + doc.OpenShiftCluster.Properties.DomainName + "." + i.domain + ":6443/"
-		doc.OpenShiftCluster.Properties.ConsoleURL = "https://console-openshift-console.apps." + doc.OpenShiftCluster.Properties.DomainName + "." + i.domain + "/"
+		doc.OpenShiftCluster.Properties.APIServerURL = "https://api." + doc.OpenShiftCluster.Properties.DomainName + "." + i.env.DNS().Domain() + ":6443/"
+		doc.OpenShiftCluster.Properties.ConsoleURL = "https://console-openshift-console.apps." + doc.OpenShiftCluster.Properties.DomainName + "." + i.env.DNS().Domain() + "/"
 		doc.OpenShiftCluster.Properties.KubeadminPassword = kubeadminPassword.Password
 		return nil
 	})

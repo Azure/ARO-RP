@@ -1,0 +1,111 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "fpServicePrincipalId": {
+            "type": "string"
+        }
+    },
+    "variables": {},
+    "resources": [
+        {
+            "name": "79ed474a-7267-4ff8-b226-96140be062a2",
+            "apiVersion": "2017-09-01",
+            "type": "Microsoft.Authorization/roleDefinitions",
+            "properties": {
+                "assignableScopes": [
+                    "[concat('/subscriptions/', subscription().subscriptionId)]"
+                ],
+                "permissions": [
+                    {
+                        "actions": [
+                            "Microsoft.Resources/subscriptions/resourceGroups/write"
+                        ]
+                    }
+                ],
+                "roleName": "ARO v4 FP Subscription"
+            }
+        },
+        {
+            "name": "c95361b8-cf7c-40a1-ad0a-df9f39a30225",
+            "apiVersion": "2017-09-01",
+            "type": "Microsoft.Authorization/roleDefinitions",
+            "properties": {
+                "assignableScopes": [
+                    "[concat('/subscriptions/', subscription().subscriptionId)]"
+                ],
+                "permissions": [
+                    {
+                        "actions": [
+                            "Microsoft.Authorization/roleAssignments/write",
+                            "Microsoft.Compute/disks/delete",
+                            "Microsoft.Compute/images/read",
+                            "Microsoft.Compute/images/write",
+                            "Microsoft.Compute/virtualMachines/delete",
+                            "Microsoft.Compute/virtualMachines/read",
+                            "Microsoft.Compute/virtualMachines/write",
+                            "Microsoft.ManagedIdentity/userAssignedIdentities/assign/action",
+                            "Microsoft.ManagedIdentity/userAssignedIdentities/read",
+                            "Microsoft.ManagedIdentity/userAssignedIdentities/write",
+                            "Microsoft.Network/loadBalancers/backendAddressPools/join/action",
+                            "Microsoft.Network/loadBalancers/read",
+                            "Microsoft.Network/loadBalancers/write",
+                            "Microsoft.Network/networkInterfaces/delete",
+                            "Microsoft.Network/networkInterfaces/join/action",
+                            "Microsoft.Network/networkInterfaces/read",
+                            "Microsoft.Network/networkInterfaces/write",
+                            "Microsoft.Network/networkSecurityGroups/join/action",
+                            "Microsoft.Network/networkSecurityGroups/read",
+                            "Microsoft.Network/networkSecurityGroups/write",
+                            "Microsoft.Network/privateDnsZones/A/write",
+                            "Microsoft.Network/privateDnsZones/SRV/write",
+                            "Microsoft.Network/privateDnsZones/virtualNetworkLinks/write",
+                            "Microsoft.Network/privateDnsZones/write",
+                            "Microsoft.Network/publicIPAddresses/delete",
+                            "Microsoft.Network/publicIPAddresses/join/action",
+                            "Microsoft.Network/publicIPAddresses/read",
+                            "Microsoft.Network/publicIPAddresses/write",
+                            "Microsoft.Network/routeTables/read",
+                            "Microsoft.Network/routeTables/write",
+                            "Microsoft.Resources/deployments/operationStatuses/read",
+                            "Microsoft.Resources/deployments/write",
+                            "Microsoft.Resources/subscriptions/resourceGroups/delete",
+                            "Microsoft.Resources/subscriptions/resourceGroups/read",
+                            "Microsoft.Storage/storageAccounts/blobServices/containers/write",
+                            "Microsoft.Storage/storageAccounts/listAccountSas/action",
+                            "Microsoft.Storage/storageAccounts/listKeys/action",
+                            "Microsoft.Storage/storageAccounts/write"
+                        ]
+                    }
+                ],
+                "roleName": "ARO v4 FP Resource Group"
+            }
+        },
+        {
+            "name": "[guid(subscription().id, 'FP / ARO v4 FP Subscription')]",
+            "apiVersion": "2017-09-01",
+            "type": "Microsoft.Authorization/roleAssignments",
+            "dependsOn": [
+                "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '79ed474a-7267-4ff8-b226-96140be062a2')]"
+            ],
+            "properties": {
+                "principalId": "[parameters('fpServicePrincipalId')]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '79ed474a-7267-4ff8-b226-96140be062a2')]",
+                "scope": "[subscription().id]"
+            }
+        },
+        {
+            "name": "[guid(subscription().id, 'FP / ARO v4 FP Resource Group')]",
+            "apiVersion": "2017-09-01",
+            "type": "Microsoft.Authorization/roleAssignments",
+            "dependsOn": [
+                "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'c95361b8-cf7c-40a1-ad0a-df9f39a30225')]"
+            ],
+            "properties": {
+                "principalId": "[parameters('fpServicePrincipalId')]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'c95361b8-cf7c-40a1-ad0a-df9f39a30225')]",
+                "scope": "[subscription().id]"
+            }
+        }
+    ]
+}

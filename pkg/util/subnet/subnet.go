@@ -31,7 +31,7 @@ func NewManager(subscriptionID string, spAuthorizer autorest.Authorizer) Manager
 	return m
 }
 
-// Get retrieves the linked subnet using the passed service principal
+// Get retrieves the linked subnet
 func (m *manager) Get(ctx context.Context, subnetID string) (*network.Subnet, error) {
 	vnetID, subnetName, err := Split(subnetID)
 	if err != nil {
@@ -51,7 +51,7 @@ func (m *manager) Get(ctx context.Context, subnetID string) (*network.Subnet, er
 	return &subnet, nil
 }
 
-// CreateOrUpdate updates the linked subnet using the passed service principal
+// CreateOrUpdate updates the linked subnet
 func (m *manager) CreateOrUpdate(ctx context.Context, subnetID string, subnet *network.Subnet) error {
 	vnetID, subnetName, err := Split(subnetID)
 	if err != nil {
@@ -91,9 +91,9 @@ func NetworkSecurityGroupID(oc *api.OpenShiftCluster, subnetID string) (string, 
 
 	switch {
 	case strings.EqualFold(subnetID, oc.Properties.MasterProfile.SubnetID):
-		return "/subscriptions/" + r.SubscriptionID + "/resourceGroups/" + oc.Properties.ResourceGroup + "/providers/Microsoft.Network/networkSecurityGroups/" + oc.Properties.InfraID + "-controlplane-nsg", nil
+		return "/subscriptions/" + r.SubscriptionID + "/resourceGroups/" + oc.Properties.ResourceGroup + "/providers/Microsoft.Network/networkSecurityGroups/aro-controlplane-nsg", nil
 	case strings.EqualFold(subnetID, oc.Properties.WorkerProfiles[0].SubnetID):
-		return "/subscriptions/" + r.SubscriptionID + "/resourceGroups/" + oc.Properties.ResourceGroup + "/providers/Microsoft.Network/networkSecurityGroups/" + oc.Properties.InfraID + "-node-nsg", nil
+		return "/subscriptions/" + r.SubscriptionID + "/resourceGroups/" + oc.Properties.ResourceGroup + "/providers/Microsoft.Network/networkSecurityGroups/aro-node-nsg", nil
 	default:
 		return "", fmt.Errorf("unknown subnetID %q", subnetID)
 	}

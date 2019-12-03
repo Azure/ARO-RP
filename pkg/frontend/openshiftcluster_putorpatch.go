@@ -1,12 +1,8 @@
 package frontend
 
 import (
-	"crypto/rand"
-	"crypto/rsa"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"math/big"
 	"net/http"
 
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -22,168 +18,135 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 	log := r.Context().Value(contextKeyLog).(*logrus.Entry)
 	vars := mux.Vars(r)
 
-	toExternal, found := api.APIs[api.APIVersionType{APIVersion: r.URL.Query().Get("api-version"), Type: "OpenShiftCluster"}]
-	if !found {
-		api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], r.URL.Query().Get("api-version"))
-		return
-	}
-
-	if r.Header.Get("Content-Type") != "application/json" {
-		api.WriteError(w, http.StatusUnsupportedMediaType, api.CloudErrorCodeUnsupportedMediaType, "", "The content media type '%s' is not supported. Only 'application/json' is supported.", r.Header.Get("Content-Type"))
-		return
-	}
-
-	body, err := ioutil.ReadAll(http.MaxBytesReader(w, r.Body, 1048576))
+	var err error
+	r, err = readBody(w, r)
 	if err != nil {
-		api.WriteError(w, http.StatusUnsupportedMediaType, api.CloudErrorCodeInvalidResource, "", "The resource definition is invalid.")
+		api.WriteCloudError(w, err.(*api.CloudError))
 		return
 	}
 
 	var b []byte
 	var created bool
 	err = cosmosdb.RetryOnPreconditionFailed(func() error {
-		b, created, err = f._putOrPatchOpenShiftCluster(&request{
-			context:      r.Context(),
-			method:       r.Method,
-			resourceID:   r.URL.Path,
-			resourceName: vars["resourceName"],
-			resourceType: vars["resourceProviderNamespace"] + "/" + vars["resourceType"],
-			body:         body,
-			toExternal:   toExternal,
-		})
+		b, created, err = f._putOrPatchOpenShiftCluster(r, api.APIs[vars["api-version"]]["OpenShiftCluster"].(api.OpenShiftClusterToInternal), api.APIs[vars["api-version"]]["OpenShiftCluster"].(api.OpenShiftClusterToExternal))
 		return err
 	})
-	if err != nil {
-		switch err := err.(type) {
-		case *api.CloudError:
-			api.WriteCloudError(w, err)
-		default:
-			log.Error(err)
-			api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
-		}
-		return
-	}
-
-	if created {
+	if err == nil && created {
 		w.WriteHeader(http.StatusCreated)
 	}
-	w.Write(b)
-	w.Write([]byte{'\n'})
+
+	reply(log, w, b, err)
 }
 
-func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error) {
-	subdoc, err := f.validateSubscriptionState(api.Key(r.resourceID), api.SubscriptionStateRegistered)
+func (f *frontend) _putOrPatchOpenShiftCluster(r *http.Request, internal api.OpenShiftClusterToInternal, external api.OpenShiftClusterToExternal) ([]byte, bool, error) {
+	vars := mux.Vars(r)
+	body := r.Context().Value(contextKeyBody).([]byte)
+
+	subdoc, err := f.validateSubscriptionState(api.Key(r.URL.Path), api.SubscriptionStateRegistered)
 	if err != nil {
 		return nil, false, err
 	}
 
-	originalPath := r.context.Value(contextKeyOriginalPath).(string)
-	originalR, err := azure.ParseResourceID(originalPath)
-	if err != nil {
-		return nil, false, err
-	}
-
-	doc, err := f.db.OpenShiftClusters.Get(api.Key(r.resourceID))
+	doc, err := f.db.OpenShiftClusters.Get(api.Key(r.URL.Path))
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil, false, err
 	}
 
 	isCreate := doc == nil
 
-	var external api.External
 	if isCreate {
-		doc = &api.OpenShiftClusterDocument{
-			ID: uuid.NewV4().String(),
-		}
-
-		external = r.toExternal(&api.OpenShiftCluster{
-			ID:   originalPath,
-			Name: originalR.ResourceName,
-			Type: originalR.ResourceType,
-			Properties: api.Properties{
-				ProvisioningState: api.ProvisioningStateCreating,
-			},
-		})
-
-	} else {
-		err = validateTerminalProvisioningState(doc.OpenShiftCluster.Properties.ProvisioningState)
+		originalPath := r.Context().Value(contextKeyOriginalPath).(string)
+		originalR, err := azure.ParseResourceID(originalPath)
 		if err != nil {
 			return nil, false, err
 		}
 
-		if doc.OpenShiftCluster.Properties.ProvisioningState == api.ProvisioningStateFailed {
-			switch doc.OpenShiftCluster.Properties.FailedProvisioningState {
-			case api.ProvisioningStateCreating:
-				return nil, false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed on cluster whose creation failed. Delete the cluster.")
-			case api.ProvisioningStateUpdating:
-				// allow
-			case api.ProvisioningStateDeleting:
-				return nil, false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed on cluster whose deletion failed. Delete the cluster.")
-			default:
-				return nil, false, fmt.Errorf("unexpected failedProvisioningState %q", doc.OpenShiftCluster.Properties.FailedProvisioningState)
-			}
-		}
-
-		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateUpdating
-		doc.Dequeues = 0
-
-		switch r.method {
-		case http.MethodPut:
-			external = r.toExternal(&api.OpenShiftCluster{
-				ID:   doc.OpenShiftCluster.ID,
-				Name: doc.OpenShiftCluster.Name,
-				Type: doc.OpenShiftCluster.Type,
+		doc = &api.OpenShiftClusterDocument{
+			ID:  uuid.NewV4().String(),
+			Key: api.Key(r.URL.Path),
+			OpenShiftCluster: &api.OpenShiftCluster{
+				ID:   originalPath,
+				Name: originalR.ResourceName,
+				Type: originalR.ResourceType,
 				Properties: api.Properties{
-					ProvisioningState: doc.OpenShiftCluster.Properties.ProvisioningState,
+					ProvisioningState: api.ProvisioningStateSucceeded,
+					// TODO: ResourceGroup should be exposed in external API
+					ResourceGroup: vars["resourceName"],
+					ServicePrincipalProfile: api.ServicePrincipalProfile{
+						TenantID: subdoc.Subscription.Properties.TenantID,
+					},
 				},
-			})
-
-		case http.MethodPatch:
-			external = r.toExternal(doc.OpenShiftCluster)
+			},
 		}
 	}
 
-	err = json.Unmarshal(r.body, &external)
-	if err != nil {
-		return nil, false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
-	}
-
-	err = external.Validate(r.context, subdoc.Subscription.Properties.TenantID, r.resourceID, doc.OpenShiftCluster)
+	err = validateTerminalProvisioningState(doc.OpenShiftCluster.Properties.ProvisioningState)
 	if err != nil {
 		return nil, false, err
 	}
 
-	if doc.OpenShiftCluster == nil {
-		doc.OpenShiftCluster = &api.OpenShiftCluster{}
+	if doc.OpenShiftCluster.Properties.ProvisioningState == api.ProvisioningStateFailed {
+		switch doc.OpenShiftCluster.Properties.FailedProvisioningState {
+		case api.ProvisioningStateCreating:
+			return nil, false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed on cluster whose creation failed. Delete the cluster.")
+		case api.ProvisioningStateUpdating:
+			// allow
+		case api.ProvisioningStateDeleting:
+			return nil, false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed on cluster whose deletion failed. Delete the cluster.")
+		default:
+			return nil, false, fmt.Errorf("unexpected failedProvisioningState %q", doc.OpenShiftCluster.Properties.FailedProvisioningState)
+		}
+	}
+
+	var ext interface{}
+	switch r.Method {
+	case http.MethodPut:
+		ext = external.OpenShiftClusterToExternal(&api.OpenShiftCluster{
+			ID:   doc.OpenShiftCluster.ID,
+			Name: doc.OpenShiftCluster.Name,
+			Type: doc.OpenShiftCluster.Type,
+			Properties: api.Properties{
+				ProvisioningState: doc.OpenShiftCluster.Properties.ProvisioningState,
+			},
+		})
+
+	case http.MethodPatch:
+		ext = external.OpenShiftClusterToExternal(doc.OpenShiftCluster)
+	}
+
+	err = json.Unmarshal(body, &ext)
+	if err != nil {
+		return nil, false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
+	}
+
+	if isCreate {
+		err = internal.ValidateOpenShiftCluster(f.env.Location(), r.URL.Path, ext, nil)
+	} else {
+		err = internal.ValidateOpenShiftCluster(f.env.Location(), r.URL.Path, ext, doc.OpenShiftCluster)
+	}
+	if err != nil {
+		return nil, false, err
 	}
 
 	oldID, oldName, oldType := doc.OpenShiftCluster.ID, doc.OpenShiftCluster.Name, doc.OpenShiftCluster.Type
-	external.ToInternal(doc.OpenShiftCluster)
+	internal.OpenShiftClusterToInternal(ext, doc.OpenShiftCluster)
+	doc.OpenShiftCluster.ID, doc.OpenShiftCluster.Name, doc.OpenShiftCluster.Type = oldID, oldName, oldType
 
 	if isCreate {
-		doc.Key = api.Key(r.resourceID)
-		doc.OpenShiftCluster.Properties.Install = &api.Install{}
-		// TODO: ResourceGroup should be exposed in external API
-		doc.OpenShiftCluster.Properties.ResourceGroup = doc.OpenShiftCluster.Name
-		doc.OpenShiftCluster.Properties.DomainName, err = randomDomainName()
-		if err != nil {
-			return nil, false, err
-		}
-		doc.OpenShiftCluster.Properties.InfraID = "aro"
-		doc.OpenShiftCluster.Properties.SSHKey, err = rsa.GenerateKey(rand.Reader, 2048)
-		if err != nil {
-			return nil, false, err
-		}
-		doc.OpenShiftCluster.Properties.StorageSuffix, err = randomLowerCaseAlphanumericString(5)
-		if err != nil {
-			return nil, false, err
-		}
-		doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID = subdoc.Subscription.Properties.TenantID
+		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateCreating
+	} else {
+		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateUpdating
+		doc.Dequeues = 0
+	}
 
+	err = internal.ValidateOpenShiftClusterDynamic(r.Context(), f.fpAuthorizer, doc.OpenShiftCluster)
+	if err != nil {
+		return nil, false, err
+	}
+
+	if isCreate {
 		doc, err = f.db.OpenShiftClusters.Create(doc)
 	} else {
-		doc.OpenShiftCluster.ID, doc.OpenShiftCluster.Name, doc.OpenShiftCluster.Type = oldID, oldName, oldType
-
 		doc, err = f.db.OpenShiftClusters.Update(doc)
 	}
 	if err != nil {
@@ -192,39 +155,10 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *request) ([]byte, bool, error)
 
 	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 
-	b, err := json.MarshalIndent(r.toExternal(doc.OpenShiftCluster), "", "  ")
+	b, err := json.MarshalIndent(external.OpenShiftClusterToExternal(doc.OpenShiftCluster), "", "  ")
 	if err != nil {
 		return nil, false, err
 	}
 
 	return b, isCreate, nil
-}
-
-func randomDomainName() (string, error) {
-	prefix, err := randomString("abcdefghijklmnopqrstuvwxyz", 1)
-	if err != nil {
-		return "", err
-	}
-	suffix, err := randomString("abcdefghijklmnopqrstuvwxyz0123456789", 7)
-	if err != nil {
-		return "", err
-	}
-	return prefix + suffix, nil
-}
-
-func randomLowerCaseAlphanumericString(n int) (string, error) {
-	return randomString("abcdefghijklmnopqrstuvwxyz0123456789", n)
-}
-
-func randomString(letterBytes string, n int) (string, error) {
-	b := make([]byte, n)
-	for i := range b {
-		o, err := rand.Int(rand.Reader, big.NewInt(int64(len(letterBytes))))
-		if err != nil {
-			return "", err
-		}
-		b[i] = letterBytes[o.Int64()]
-	}
-
-	return string(b), nil
 }

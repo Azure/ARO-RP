@@ -42,7 +42,7 @@ func (f *frontend) isValidRequestPath(w http.ResponseWriter, r *http.Request) bo
 
 	if _, found := vars["resourceType"]; found {
 		if vars["resourceType"] != strings.ToLower(resourceType) {
-			api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], r.URL.Query().Get("api-version"))
+			api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], vars["api-version"])
 			return false
 		}
 	}
@@ -50,6 +50,13 @@ func (f *frontend) isValidRequestPath(w http.ResponseWriter, r *http.Request) bo
 	if _, found := vars["resourceName"]; found {
 		if !rxResourceGroupName.MatchString(vars["resourceName"]) {
 			api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s/%s' under resource group '%s' was not found.", vars["resourceProviderNamespace"], vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
+			return false
+		}
+	}
+
+	if _, found := vars["api-version"]; !found {
+		if _, found := api.APIs[vars["api-version"]]; !found {
+			api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], vars["api-version"])
 			return false
 		}
 	}

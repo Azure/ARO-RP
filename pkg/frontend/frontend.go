@@ -6,12 +6,14 @@ import (
 	"net/http"
 	"sync/atomic"
 
+	"github.com/Azure/go-autorest/autorest"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
 	"github.com/jim-minter/rp/pkg/api"
 	"github.com/jim-minter/rp/pkg/database"
 	"github.com/jim-minter/rp/pkg/env"
+	"github.com/jim-minter/rp/pkg/util/recover"
 )
 
 const (
@@ -19,23 +21,11 @@ const (
 	resourceType              = "openShiftClusters"
 )
 
-type request struct {
-	context           context.Context
-	method            string
-	subscriptionID    string
-	resourceID        string
-	resourceGroupName string
-	resourceName      string
-	resourceType      string
-	body              []byte
-	toExternal        func(*api.OpenShiftCluster) api.External
-}
-
 type frontend struct {
-	baseLog *logrus.Entry
-	env     env.Interface
-
-	db *database.Database
+	baseLog      *logrus.Entry
+	env          env.Interface
+	db           *database.Database
+	fpAuthorizer autorest.Authorizer
 
 	l net.Listener
 
@@ -49,13 +39,19 @@ type Runnable interface {
 
 // NewFrontend returns a new runnable frontend
 func NewFrontend(ctx context.Context, baseLog *logrus.Entry, env env.Interface, db *database.Database) (Runnable, error) {
+	var err error
+
 	f := &frontend{
 		baseLog: baseLog,
 		env:     env,
 		db:      db,
 	}
 
-	var err error
+	f.fpAuthorizer, err = env.FPAuthorizer(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	f.l, err = f.env.ListenTLS(ctx)
 	if err != nil {
 		return nil, err
@@ -81,7 +77,7 @@ func (f *frontend) unauthenticatedRoutes(r *mux.Router) {
 func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	s := r.
 		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}").
-		Queries("api-version", "").
+		Queries("api-version", "{api-version}").
 		Subrouter()
 
 	s.Methods(http.MethodDelete).HandlerFunc(f.deleteOpenShiftCluster)
@@ -91,42 +87,46 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}").
-		Queries("api-version", "").
+		Queries("api-version", "{api-version}").
 		Subrouter()
 
 	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftClusters)
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/{resourceType}").
-		Queries("api-version", "").
+		Queries("api-version", "{api-version}").
 		Subrouter()
 
 	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftClusters)
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/credentials").
-		Queries("api-version", "").
+		Queries("api-version", "{api-version}").
 		Subrouter()
 
 	s.Methods(http.MethodPost).HandlerFunc(f.postOpenShiftClusterCredentials)
 
 	s = r.
 		Path("/providers/{resourceProviderNamespace}/operations").
-		Queries("api-version", "").
+		Queries("api-version", "{api-version}").
 		Subrouter()
 
 	s.Methods(http.MethodGet).HandlerFunc(f.getOperations)
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}").
-		Queries("api-version", "").
+		Queries("api-version", "{api-version}").
 		Subrouter()
 
 	s.Methods(http.MethodPut).HandlerFunc(f.putSubscription)
 }
 
 func (f *frontend) Run(stop <-chan struct{}) {
+	defer recover.Panic(f.baseLog)
+
 	go func() {
+		defer recover.Panic(f.baseLog)
+
 		<-stop
 		f.baseLog.Print("marking frontend not ready")
 		f.ready.Store(false)

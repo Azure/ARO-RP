@@ -3,17 +3,15 @@ package openshiftcluster
 import (
 	"context"
 	"net/http"
-	"os"
 	"strings"
-
-	"github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 
 	"github.com/jim-minter/rp/pkg/util/subnet"
 )
 
 func (m *Manager) Delete(ctx context.Context) error {
 	m.log.Printf("deleting dns")
-	_, err := m.recordsets.Delete(ctx, os.Getenv("RESOURCEGROUP"), m.domain, "api."+m.doc.OpenShiftCluster.Properties.DomainName, dns.CNAME, "")
+
+	err := m.env.DNS().Delete(ctx, m.doc.OpenShiftCluster)
 	if err != nil {
 		return err
 	}
@@ -26,12 +24,14 @@ func (m *Manager) Delete(ctx context.Context) error {
 		// TODO: there is probably an undesirable race condition here - check if etags can help.
 		s, err := m.subnets.Get(ctx, subnetID)
 		if err != nil {
-			return err
+			m.log.Error(err)
+			continue
 		}
 
 		nsgID, err := subnet.NetworkSecurityGroupID(m.doc.OpenShiftCluster, subnetID)
 		if err != nil {
-			return err
+			m.log.Error(err)
+			continue
 		}
 
 		if s.SubnetPropertiesFormat == nil ||
@@ -45,7 +45,8 @@ func (m *Manager) Delete(ctx context.Context) error {
 		m.log.Printf("removing network security group from subnet %s", subnetID)
 		err = m.subnets.CreateOrUpdate(ctx, subnetID, s)
 		if err != nil {
-			return err
+			m.log.Error(err)
+			continue
 		}
 	}
 

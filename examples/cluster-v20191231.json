@@ -1,12 +1,12 @@
 {
-    "id": "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourcegroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER",
+    "id": "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourcegroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER",
     "name": "$CLUSTER",
     "type": "Microsoft.RedHatOpenShift/openShiftClusters",
     "location": "$LOCATION",
     "properties": {
         "servicePrincipalProfile": {
-            "clientId": "$AZURE_CLIENT_ID",
-            "clientSecret": "$AZURE_CLIENT_SECRET"
+            "clientId": "$AZURE_CLUSTER_CLIENT_ID",
+            "clientSecret": "$AZURE_CLUSTER_CLIENT_SECRET"
         },
         "networkProfile": {
             "podCidr": "10.128.0.0/14",

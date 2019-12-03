@@ -3,7 +3,6 @@ package frontend
 import (
 	"net/http"
 
-	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
 	"github.com/jim-minter/rp/pkg/api"
@@ -15,34 +14,15 @@ func (noContent) Error() string { return "" }
 
 func (f *frontend) deleteOpenShiftCluster(w http.ResponseWriter, r *http.Request) {
 	log := r.Context().Value(contextKeyLog).(*logrus.Entry)
-	vars := mux.Vars(r)
-
-	_, found := api.APIs[api.APIVersionType{APIVersion: r.URL.Query().Get("api-version"), Type: "OpenShiftCluster"}]
-	if !found {
-		api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], r.URL.Query().Get("api-version"))
-		return
-	}
 
 	_, err := f.db.OpenShiftClusters.Patch(api.Key(r.URL.Path), func(doc *api.OpenShiftClusterDocument) error {
-		return f._deleteOpenShiftCluster(&request{
-			resourceID: r.URL.Path,
-		}, doc)
+		return f._deleteOpenShiftCluster(doc)
 	})
-	if err != nil {
-		switch err := err.(type) {
-		case *api.CloudError:
-			api.WriteCloudError(w, err)
-		case *noContent:
-			w.WriteHeader(http.StatusNoContent)
-		default:
-			log.Error(err)
-			api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
-		}
-		return
-	}
+
+	reply(log, w, nil, err)
 }
 
-func (f *frontend) _deleteOpenShiftCluster(r *request, doc *api.OpenShiftClusterDocument) error {
+func (f *frontend) _deleteOpenShiftCluster(doc *api.OpenShiftClusterDocument) error {
 	if doc == nil {
 		return &noContent{}
 	}

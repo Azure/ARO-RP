@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -25,16 +24,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 	uuid := uuid.NewV4()
 	log.Printf("starting, git commit %s, uuid %s", gitCommit, uuid)
 
-	for _, key := range []string{
-		"LOCATION",
-		"RESOURCEGROUP",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return fmt.Errorf("environment variable %q unset", key)
-		}
-	}
-
-	env, err := env.NewEnv(ctx, log, os.Getenv("AZURE_SUBSCRIPTION_ID"), os.Getenv("RESOURCEGROUP"))
+	env, err := env.NewEnv(ctx, log)
 	if err != nil {
 		return err
 	}

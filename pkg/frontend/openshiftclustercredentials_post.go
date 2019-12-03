@@ -2,29 +2,35 @@ package frontend
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
 	"path/filepath"
+
+	"github.com/gorilla/mux"
+	"github.com/sirupsen/logrus"
 
 	"github.com/jim-minter/rp/pkg/api"
 )
 
 func (f *frontend) postOpenShiftClusterCredentials(w http.ResponseWriter, r *http.Request) {
-	if r.Header.Get("Content-Type") != "application/json" {
-		api.WriteError(w, http.StatusUnsupportedMediaType, api.CloudErrorCodeUnsupportedMediaType, "", "The content media type '%s' is not supported. Only 'application/json' is supported.", r.Header.Get("Content-Type"))
-		return
-	}
+	log := r.Context().Value(contextKeyLog).(*logrus.Entry)
+	vars := mux.Vars(r)
 
-	body, err := ioutil.ReadAll(http.MaxBytesReader(w, r.Body, 1048576))
+	var err error
+	r, err = readBody(w, r)
 	if err != nil {
-		api.WriteError(w, http.StatusUnsupportedMediaType, api.CloudErrorCodeInvalidResource, "", "The resource definition is invalid.")
+		api.WriteCloudError(w, err.(*api.CloudError))
 		return
 	}
 
+	body := r.Context().Value(contextKeyBody).([]byte)
 	if !json.Valid(body) {
 		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
 		return
 	}
 
-	f.get(w, r, filepath.Dir(r.URL.Path), "OpenShiftClusterCredentials")
+	r.URL.Path = filepath.Dir(r.URL.Path)
+
+	b, err := f._getOpenShiftCluster(r, api.APIs[vars["api-version"]]["OpenShiftClusterCredentials"].(api.OpenShiftClusterToExternal))
+
+	reply(log, w, b, err)
 }

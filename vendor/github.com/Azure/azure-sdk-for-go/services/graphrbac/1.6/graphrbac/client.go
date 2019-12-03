@@ -1,7 +1,7 @@
-// Package msi implements the Azure ARM Msi service API version 2018-11-30.
+// Package graphrbac implements the Azure ARM Graphrbac service API version 1.6.
 //
-// The Managed Service Identity Client.
-package msi
+// The Graph RBAC Management Client
+package graphrbac
 
 // Copyright (c) Microsoft and contributors.  All rights reserved.
 //
@@ -25,27 +25,27 @@ import (
 )
 
 const (
-	// DefaultBaseURI is the default URI used for the service Msi
-	DefaultBaseURI = "https://management.azure.com"
+	// DefaultBaseURI is the default URI used for the service Graphrbac
+	DefaultBaseURI = "https://graph.windows.net"
 )
 
-// BaseClient is the base client for Msi.
+// BaseClient is the base client for Graphrbac.
 type BaseClient struct {
 	autorest.Client
-	BaseURI        string
-	SubscriptionID string
+	BaseURI  string
+	TenantID string
 }
 
 // New creates an instance of the BaseClient client.
-func New(subscriptionID string) BaseClient {
-	return NewWithBaseURI(DefaultBaseURI, subscriptionID)
+func New(tenantID string) BaseClient {
+	return NewWithBaseURI(DefaultBaseURI, tenantID)
 }
 
 // NewWithBaseURI creates an instance of the BaseClient client.
-func NewWithBaseURI(baseURI string, subscriptionID string) BaseClient {
+func NewWithBaseURI(baseURI string, tenantID string) BaseClient {
 	return BaseClient{
-		Client:         autorest.NewClientWithUserAgent(UserAgent()),
-		BaseURI:        baseURI,
-		SubscriptionID: subscriptionID,
+		Client:   autorest.NewClientWithUserAgent(UserAgent()),
+		BaseURI:  baseURI,
+		TenantID: tenantID,
 	}
 }
