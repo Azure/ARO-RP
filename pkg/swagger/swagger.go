@@ -10,7 +10,7 @@ func Run(outputFile string) error {
 	s := &Swagger{
 		Swagger: "2.0",
 		Info: &Info{
-			Title:       "Azure Red Hat OpenShift",
+			Title:       "Azure Red Hat OpenShift Client",
 			Description: "Rest API for Azure Red Hat OpenShift",
 			Version:     "2019-12-31-preview",
 		},

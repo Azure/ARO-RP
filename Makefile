@@ -6,11 +6,14 @@ rp:
 clean:
 	rm -f rp
 
-client:
+client: client-go client-python
+
+client-go:
 	go generate ./...
 	rm -rf pkg/client
 	sha256sum swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/preview/2019-12-31-preview/redhatopenshift.json >.sha256sum
 	sudo docker run \
+		--net host \
 		-v $(PWD)/pkg/client:/github.com/jim-minter/rp/pkg/client \
 		-v $(PWD)/swagger:/swagger \
 		azuresdk/autorest \
@@ -21,6 +24,21 @@ client:
 
 	sudo chown -R $(USER):$(USER) pkg/client
 	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/jim-minter/rp pkg/client
+
+client-python:
+	go generate ./...
+	sudo docker run \
+		--net host \
+		-v $(PWD)/az:/az \
+		-v $(PWD)/swagger:/swagger \
+		azuresdk/autorest \
+		--use=@microsoft.azure/autorest.python@4.0.70 \
+		--python \
+		--azure-arm \
+		--input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/preview/2019-12-31-preview/redhatopenshift.json \
+		--output-folder=/az/azure-python-sdk/2019-12-31-preview
+
+	sudo chown -R $(USER):$(USER) az
 
 image: rp
 	docker build -t rp:$(COMMIT) .
@@ -47,4 +65,4 @@ test:
 	go vet ./...
 	go test ./...
 
-.PHONY: rp clean client image secrets secrets-update test
+.PHONY: rp clean client client-go client-python image secrets-update test
