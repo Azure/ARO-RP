@@ -104,7 +104,7 @@
   version = "v1.0.1"
 
 [[projects]]
-  digest = "1:ecd589b54bb09f628d948e21d6fc88508b37472ee673a7fac6c712f3c2515304"
+  digest = "1:f3fe09231a1d032b9a58d1a19bc8f88a00cff17f2444b9215fa6cbe95ba97cb2"
   name = "github.com/aws/aws-sdk-go"
   packages = [
     "aws",
@@ -150,8 +150,8 @@
     "service/sts/stsiface",
   ]
   pruneopts = "UT"
-  revision = "44514743a8152d5959d045f906997c7152f46d14"
-  version = "v1.25.43"
+  revision = "ed081a7af453411de4fdd66717d9f68bbcc3b92c"
+  version = "v1.25.45"
 
 [[projects]]
   digest = "1:5f9ab5eeb3788ba8945f9acb2755fba44c3bfefdc95fae477bf6cdc790cab525"
@@ -579,7 +579,7 @@
     "operator/v1alpha1",
   ]
   pruneopts = "UT"
-  revision = "63a261ad3171fad9dd29618e9f630765f446a2f8"
+  revision = "e7263773f60ccdb052b09a6b3ad438256116714b"
 
 [[projects]]
   branch = "release-4.3"
@@ -644,7 +644,7 @@
 
 [[projects]]
   branch = "release-4.3-azure"
-  digest = "1:7c1b2f5050501fc85fe0f9877438d3e5517ed5a5615f5d1a337feba58ce0a928"
+  digest = "1:22bc7dcdbd9f10ef7547fd278f1e20d8022cd734653e50b84165e2dbd2120f8a"
   name = "github.com/openshift/installer"
   packages = [
     "data",
@@ -729,7 +729,7 @@
     "pkg/version",
   ]
   pruneopts = "T"
-  revision = "621d4a3669a649f702f3d3f6aeb8d65b2016bab7"
+  revision = "300d04ffcf37462dc15f07684064421b4633f394"
   source = "https://github.com/jim-minter/installer"
 
 [[projects]]
@@ -866,7 +866,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:7761d765ffe600b8912dc84aa323b43e1583a059f3b2837ddc27b875bd256406"
+  digest = "1:9a6537289bcc060a1ea41c58b856c8686489cd2b1b225e7f2a480f9695fa4bf0"
   name = "golang.org/x/crypto"
   packages = [
     "bcrypt",
@@ -883,7 +883,7 @@
     "ssh/terminal",
   ]
   pruneopts = "UT"
-  revision = "b544559bb6d1b5c62fba4af5e843ff542174f079"
+  revision = "86a70503ff7e82ffc18c7b0de83db35da4791e6a"
 
 [[projects]]
   branch = "master"
@@ -904,7 +904,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:31e33f76456ccf54819ab4a646cf01271d1a99d7712ab84bf1a9e7b61cd2031b"
+  digest = "1:e9dec12f847de7d8cd7c1d3d0d89aa40a345a768fd20e10d378a260da9ad65aa"
   name = "golang.org/x/oauth2"
   packages = [
     ".",
@@ -914,7 +914,7 @@
     "jwt",
   ]
   pruneopts = "UT"
-  revision = "5d9234df094ce600ff541158d1491aa10d078a47"
+  revision = "858c2ad4c8b6c5d10852cb89079f6ca1c7309787"
 
 [[projects]]
   branch = "master"
@@ -968,7 +968,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:45ba63c018e89d2061c1e8f1cc670b3f600c0fcc2acf4453399d6a776c734632"
+  digest = "1:9b9f5a66ca725877165cd992207aaf7c358dc5f654ea5f418d83dcf792e148df"
   name = "golang.org/x/tools"
   packages = [
     "cmd/goimports",
@@ -986,7 +986,7 @@
     "internal/span",
   ]
   pruneopts = "UT"
-  revision = "6e064ea0cf2dcfaca8da2da9f42da458bab38756"
+  revision = "2b6af5f9ace725aefaab9e4e3abbcdd9f07ef5bc"
 
 [[projects]]
   digest = "1:f3661f6218166acf60f5d551b44a537f7ecb8686be02ece061c5950cbfc9ba17"
@@ -1384,6 +1384,7 @@
     "github.com/Azure/go-autorest/tracing",
     "github.com/alvaroloes/enumer",
     "github.com/apparentlymart/go-cidr/cidr",
+    "github.com/dgrijalva/jwt-go",
     "github.com/golang/mock/gomock",
     "github.com/golang/mock/mockgen",
     "github.com/gorilla/mux",
