@@ -93,7 +93,7 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 		t := &arm.Template{
 			Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 			ContentVersion: "1.0.0.0",
-			Resources: []arm.Resource{
+			Resources: []*arm.Resource{
 				{
 					// deploy the Identity now to give AAD a chance to update
 					// itself before we apply the RBAC rule in the next

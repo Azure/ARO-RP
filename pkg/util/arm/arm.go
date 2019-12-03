@@ -6,6 +6,8 @@ import (
 	"math"
 	"reflect"
 
+	uuid "github.com/satori/go.uuid"
+
 	"github.com/jim-minter/rp/pkg/util/orderedmap"
 )
 
@@ -15,9 +17,9 @@ type Template struct {
 	APIProfile     string                 `json:"apiProfile,omitempty"`
 	ContentVersion string                 `json:"contentVersion,omitempty"`
 	Variables      map[string]interface{} `json:"variables,omitempty"`
-	Parameters     map[string]Parameter   `json:"parameters,omitempty"`
+	Parameters     map[string]*Parameter  `json:"parameters,omitempty"`
 	Functions      []interface{}          `json:"functions,omitempty"`
-	Resources      []Resource             `json:"resources,omitempty"`
+	Resources      []*Resource            `json:"resources,omitempty"`
 	Outputs        map[string]interface{} `json:"outputs,omitempty"`
 }
 
@@ -159,7 +161,15 @@ func shadowCopy(i interface{}) interface{} {
 func _shadowCopy(v reflect.Value) reflect.Value {
 	switch v.Kind() {
 	case reflect.Array:
-		a := reflect.New(reflect.ArrayOf(v.Len(), emptyInterfaceType)).Elem()
+		var t reflect.Type
+		if v.Type() == reflect.TypeOf(uuid.UUID{}) {
+			// keep uuid.UUID - encoding/json will detect it and marshal it into
+			// a string
+			t = v.Type()
+		} else {
+			t = reflect.ArrayOf(v.Len(), emptyInterfaceType)
+		}
+		a := reflect.New(t).Elem()
 		for i := 0; i < v.Len(); i++ {
 			a.Index(i).Set(_shadowCopy(v.Index(i)))
 		}

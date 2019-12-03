@@ -48,7 +48,7 @@
    ARM_SERVICEPRINCIPAL_ID=$(az ad sp list --all --query "[?appId=='$AZURE_ARM_CLIENT_ID'].objectId" -o tsv)
    FP_SERVICEPRINCIPAL_ID=$(az ad sp list --all --query "[?appId=='$AZURE_FP_CLIENT_ID'].objectId" -o tsv)
 
-   az deployment create -l eastus --template-file deploy/development-rbac.json --parameters "armServicePrincipalId=$ARM_SERVICEPRINCIPAL_ID" "fpServicePrincipalId=$FP_SERVICEPRINCIPAL_ID"
+   az deployment create -l eastus --template-file deploy/rbac-development.json --parameters "armServicePrincipalId=$ARM_SERVICEPRINCIPAL_ID" "fpServicePrincipalId=$FP_SERVICEPRINCIPAL_ID"
    ```
 
    *RH ARO engineering*: the above step has already been done.
@@ -109,7 +109,7 @@
 
    az group create -g "$RESOURCEGROUP" -l "$LOCATION"
 
-   az group deployment create -g "$RESOURCEGROUP" --mode complete --template-file deploy/development-rp.json --parameters "location=$LOCATION" "databaseAccountName=$COSMOSDB_ACCOUNT" "domainName=$DOMAIN" "keyvaultName=$KEYVAULT_NAME" "adminObjectId=$ADMIN_OBJECT_ID" "rpServicePrincipalId=$RP_SERVICEPRINCIPAL_ID" "fpServicePrincipalId=$FP_SERVICEPRINCIPAL_ID"
+   az group deployment create -g "$RESOURCEGROUP" --mode complete --template-file deploy/rp-development.json --parameters "location=$LOCATION" "databaseAccountName=$COSMOSDB_ACCOUNT" "domainName=$DOMAIN" "keyvaultName=$KEYVAULT_NAME" "adminObjectId=$ADMIN_OBJECT_ID" "rpServicePrincipalId=$RP_SERVICEPRINCIPAL_ID" "fpServicePrincipalId=$FP_SERVICEPRINCIPAL_ID"
    ```
 
 1. Load the application key/certificate into the key vault:
