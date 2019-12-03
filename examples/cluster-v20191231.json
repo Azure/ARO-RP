@@ -1,5 +1,5 @@
 {
-    "id": "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourcegroups/$CLUSTER/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER",
+    "id": "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourcegroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER",
     "name": "$CLUSTER",
     "type": "Microsoft.RedHatOpenShift/openShiftClusters",
     "location": "$LOCATION",
