@@ -240,7 +240,7 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 		// the graph is quite big so we store it in a storage account instead of
 		// in cosmosdb
 		graph := blobService.GetContainerReference("aro").GetBlobReference("graph")
-		b, err := json.MarshalIndent(g, "", "  ")
+		b, err := json.MarshalIndent(g, "", "    ")
 		if err != nil {
 			return err
 		}

@@ -68,7 +68,7 @@ func (f *frontend) _putSubscription(r *http.Request) ([]byte, bool, error) {
 				ErrorIfNoField: true,
 			},
 		},
-		Indent: 2,
+		Indent: 4,
 	}
 
 	doc.Subscription = &api.Subscription{}

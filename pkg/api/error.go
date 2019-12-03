@@ -80,6 +80,6 @@ func WriteError(w http.ResponseWriter, statusCode int, code, target, message str
 func WriteCloudError(w http.ResponseWriter, err *CloudError) {
 	w.WriteHeader(err.StatusCode)
 	e := json.NewEncoder(w)
-	e.SetIndent("", "  ")
+	e.SetIndent("", "    ")
 	e.Encode(err)
 }

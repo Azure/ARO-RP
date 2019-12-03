@@ -36,7 +36,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	h := &codec.JsonHandle{
-		Indent: 2,
+		Indent: 4,
 	}
 
 	err = api.AddExtensions(&h.BasicHandle)

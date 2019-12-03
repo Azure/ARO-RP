@@ -49,6 +49,6 @@ func (f *frontend) getOperations(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	b, err := json.MarshalIndent(l, "", "  ")
+	b, err := json.MarshalIndent(l, "", "    ")
 	reply(log, w, b, err)
 }

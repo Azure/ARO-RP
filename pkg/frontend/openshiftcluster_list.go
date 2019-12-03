@@ -49,5 +49,5 @@ func (f *frontend) _getOpenShiftClusters(r *http.Request, externals api.OpenShif
 		}
 	}
 
-	return json.MarshalIndent(externals.OpenShiftClustersToExternal(ocs), "", "  ")
+	return json.MarshalIndent(externals.OpenShiftClustersToExternal(ocs), "", "    ")
 }

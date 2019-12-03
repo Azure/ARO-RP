@@ -112,6 +112,6 @@ func Run(outputFile string) error {
 	}
 
 	e := json.NewEncoder(f)
-	e.SetIndent("", "  ")
+	e.SetIndent("", "    ")
 	return e.Encode(s)
 }

@@ -41,36 +41,36 @@ func TestResourceMarshal(t *testing.T) {
 				},
 			},
 			want: []byte(`{
-  "bool": true,
-  "int": 1,
-  "uint": 1,
-  "float": 1.1,
-  "array": [
-    {
-      "bool": true
-    }
-  ],
-  "interface": {
-    "int": 1
-  },
-  "map": {
-    "one": {
-      "uint": 1
+    "bool": true,
+    "int": 1,
+    "uint": 1,
+    "float": 1.1,
+    "array": [
+        {
+            "bool": true
+        }
+    ],
+    "interface": {
+        "int": 1
     },
-    "zero": {}
-  },
-  "ptr": "test",
-  "slice": [
-    {
-      "float": 1.1
-    }
-  ],
-  "byte_slice": "dGVzdA==",
-  "string": "test",
-  "struct": {
-    "string": "test"
-  },
-  "name": "test"
+    "map": {
+        "one": {
+            "uint": 1
+        },
+        "zero": {}
+    },
+    "ptr": "test",
+    "slice": [
+        {
+            "float": 1.1
+        }
+    ],
+    "byte_slice": "dGVzdA==",
+    "string": "test",
+    "struct": {
+        "string": "test"
+    },
+    "name": "test"
 }`),
 		},
 		{
@@ -80,14 +80,14 @@ func TestResourceMarshal(t *testing.T) {
 				Resource: &testResource{},
 			},
 			want: []byte(`{
-  "name": "test"
+    "name": "test"
 }`),
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			b, err := json.MarshalIndent(test.r, "", "  ")
+			b, err := json.MarshalIndent(test.r, "", "    ")
 			if err != nil {
 				t.Fatal(err)
 			}
