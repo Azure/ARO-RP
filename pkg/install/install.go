@@ -60,8 +60,14 @@ func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClu
 }
 
 func (i *Installer) Install(ctx context.Context, doc *api.OpenShiftClusterDocument, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds) error {
-	if doc.OpenShiftCluster.Properties.Install == nil {
-		doc.OpenShiftCluster.Properties.Install = &api.Install{}
+	doc, err := i.db.Patch(doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		if doc.OpenShiftCluster.Properties.Install == nil {
+			doc.OpenShiftCluster.Properties.Install = &api.Install{}
+		}
+		return nil
+	})
+	if err != nil {
+		return err
 	}
 
 	for {

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
@@ -284,13 +285,17 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 			s.SubnetPropertiesFormat = &network.SubnetPropertiesFormat{}
 		}
 
-		if s.SubnetPropertiesFormat.NetworkSecurityGroup != nil {
-			return fmt.Errorf("tried to overwrite non-nil network security group")
-		}
-
 		nsgID, err := subnet.NetworkSecurityGroupID(doc.OpenShiftCluster, subnetID)
 		if err != nil {
 			return err
+		}
+
+		if s.SubnetPropertiesFormat.NetworkSecurityGroup != nil {
+			if strings.EqualFold(*s.SubnetPropertiesFormat.NetworkSecurityGroup.ID, nsgID) {
+				continue
+			}
+
+			return fmt.Errorf("tried to overwrite non-nil network security group")
 		}
 
 		s.SubnetPropertiesFormat.NetworkSecurityGroup = &network.SecurityGroup{
