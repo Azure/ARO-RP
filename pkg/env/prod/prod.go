@@ -9,6 +9,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Azure/go-autorest/autorest/adal"
+	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/sirupsen/logrus"
 
 	"github.com/jim-minter/rp/pkg/api"
@@ -22,8 +25,21 @@ type prod struct {
 	resourceGroup string
 }
 
+type azureClaim struct {
+	TenantID string `json:"tid,omitempty"`
+}
+
+func (*azureClaim) Valid() error {
+	return fmt.Errorf("unimplemented")
+}
+
 func New(ctx context.Context, log *logrus.Entry) (*prod, error) {
-	location, subscriptionID, resourceGroup, err := getMetadata()
+	tenantID, err := getTenantID()
+	if err != nil {
+		return nil, err
+	}
+
+	subscriptionID, location, resourceGroup, err := getInstanceMetadata()
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +50,7 @@ func New(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		resourceGroup: resourceGroup,
 	}
 
-	p.Shared, err = shared.NewShared(ctx, log, subscriptionID, resourceGroup)
+	p.Shared, err = shared.NewShared(ctx, log, tenantID, subscriptionID, resourceGroup)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +103,33 @@ func (p *prod) ResourceGroup() string {
 	return p.resourceGroup
 }
 
-func getMetadata() (string, string, string, error) {
+func getTenantID() (string, error) {
+	msiEndpoint, err := adal.GetMSIVMEndpoint()
+	if err != nil {
+		return "", err
+	}
+
+	token, err := adal.NewServicePrincipalTokenFromMSI(msiEndpoint, azure.PublicCloud.ResourceManagerEndpoint)
+	if err != nil {
+		return "", err
+	}
+
+	err = token.EnsureFresh()
+	if err != nil {
+		return "", err
+	}
+
+	p := &jwt.Parser{}
+	c := &azureClaim{}
+	_, _, err = p.ParseUnverified(token.OAuthToken(), c)
+	if err != nil {
+		return "", err
+	}
+
+	return c.TenantID, nil
+}
+
+func getInstanceMetadata() (string, string, string, error) {
 	req, err := http.NewRequest(http.MethodGet, "http://169.254.169.254/metadata/instance/compute?api-version=2019-03-11", nil)
 	if err != nil {
 		return "", "", "", err
@@ -119,5 +161,5 @@ func getMetadata() (string, string, string, error) {
 		return "", "", "", err
 	}
 
-	return m.Location, m.SubscriptionID, m.ResourceGroupName, nil
+	return m.SubscriptionID, m.Location, m.ResourceGroupName, nil
 }

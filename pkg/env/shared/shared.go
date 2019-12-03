@@ -28,11 +28,12 @@ type Shared struct {
 
 	dns dns.Manager
 
+	tenantID      string
 	resourceGroup string
 	vaultURI      string
 }
 
-func NewShared(ctx context.Context, log *logrus.Entry, subscriptionID, resourceGroup string) (*Shared, error) {
+func NewShared(ctx context.Context, log *logrus.Entry, tenantID, subscriptionID, resourceGroup string) (*Shared, error) {
 	rpAuthorizer, err := auth.NewAuthorizerFromEnvironment()
 	if err != nil {
 		return nil, err
@@ -44,6 +45,7 @@ func NewShared(ctx context.Context, log *logrus.Entry, subscriptionID, resourceG
 	}
 
 	s := &Shared{
+		tenantID:      tenantID,
 		resourceGroup: resourceGroup,
 	}
 
@@ -141,7 +143,7 @@ func (s *Shared) FPAuthorizer(ctx context.Context) (autorest.Authorizer, error) 
 		return nil, err
 	}
 
-	oauthConfig, err := adal.NewOAuthConfig(azure.PublicCloud.ActiveDirectoryEndpoint, os.Getenv("AZURE_TENANT_ID"))
+	oauthConfig, err := adal.NewOAuthConfig(azure.PublicCloud.ActiveDirectoryEndpoint, s.tenantID)
 	if err != nil {
 		return nil, err
 	}

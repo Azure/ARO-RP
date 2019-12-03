@@ -30,7 +30,7 @@ func New(ctx context.Context, log *logrus.Entry) (*dev, error) {
 	d := &dev{}
 
 	var err error
-	d.Shared, err = shared.NewShared(ctx, log, os.Getenv("AZURE_SUBSCRIPTION_ID"), os.Getenv("RESOURCEGROUP"))
+	d.Shared, err = shared.NewShared(ctx, log, os.Getenv("AZURE_TENANT_ID"), os.Getenv("AZURE_SUBSCRIPTION_ID"), os.Getenv("RESOURCEGROUP"))
 	if err != nil {
 		return nil, err
 	}
