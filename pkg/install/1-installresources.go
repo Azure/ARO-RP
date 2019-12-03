@@ -55,6 +55,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 		return err
 	}
 
+	// TODO: make this dynamic and use a DNS alias record
 	var lbIP net.IP
 	{
 		_, last := cidr.AddressRange(masterSubnetCIDR)
@@ -137,23 +138,6 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 					APIVersion: apiVersions["privatedns"],
 				},
 				{
-					Resource: &privatedns.VirtualNetworkLink{
-						VirtualNetworkLinkProperties: &privatedns.VirtualNetworkLinkProperties{
-							VirtualNetwork: &privatedns.SubResource{
-								ID: to.StringPtr(vnetID),
-							},
-							RegistrationEnabled: to.BoolPtr(false),
-						},
-						Name:     to.StringPtr(installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/" + installConfig.Config.ObjectMeta.Name + "-network-link"),
-						Type:     to.StringPtr("Microsoft.Network/privateDnsZones/virtualNetworkLinks"),
-						Location: to.StringPtr("global"),
-					},
-					APIVersion: apiVersions["privatedns"],
-					DependsOn: []string{
-						"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
-					},
-				},
-				{
 					Resource: &privatedns.RecordSet{
 						Name: to.StringPtr(installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/api-int"),
 						Type: to.StringPtr("Microsoft.Network/privateDnsZones/A"),
@@ -218,12 +202,30 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 					},
 					APIVersion: apiVersions["privatedns"],
 					Copy: &arm.Copy{
-						Name:  "copy",
+						Name:  "privatednscopy",
 						Count: len(machinesMaster.MachineFiles),
 					},
 					DependsOn: []string{
 						"[concat('Microsoft.Network/networkInterfaces/aro-master', copyIndex(), '-nic')]",
 						"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
+					},
+				},
+				{
+					Resource: &privatedns.VirtualNetworkLink{
+						VirtualNetworkLinkProperties: &privatedns.VirtualNetworkLinkProperties{
+							VirtualNetwork: &privatedns.SubResource{
+								ID: to.StringPtr(vnetID),
+							},
+							RegistrationEnabled: to.BoolPtr(false),
+						},
+						Name:     to.StringPtr(installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/" + installConfig.Config.ObjectMeta.Name + "-network-link"),
+						Type:     to.StringPtr("Microsoft.Network/privateDnsZones/virtualNetworkLinks"),
+						Location: to.StringPtr("global"),
+					},
+					APIVersion: apiVersions["privatedns"],
+					DependsOn: []string{
+						"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
+						"privatednscopy",
 					},
 				},
 				{
@@ -236,6 +238,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 					APIVersion: apiVersions["network"],
 				},
 				{
+					// TODO: we will want to remove this
 					Resource: &network.PublicIPAddress{
 						Sku: &network.PublicIPAddressSku{
 							Name: network.PublicIPAddressSkuNameStandard,
@@ -419,9 +422,6 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 						Location: &installConfig.Config.Azure.Region,
 					},
 					APIVersion: apiVersions["network"],
-					DependsOn: []string{
-						"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
-					},
 				},
 				{
 					Resource: &network.Interface{
@@ -487,7 +487,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 					},
 					APIVersion: apiVersions["network"],
 					Copy: &arm.Copy{
-						Name:  "copy",
+						Name:  "networkcopy",
 						Count: len(machinesMaster.MachineFiles),
 					},
 					DependsOn: []string{
@@ -567,6 +567,8 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 					},
 					APIVersion: apiVersions["compute"],
 					DependsOn: []string{
+						"[concat('Microsoft.Authorization/roleAssignments/', guid(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'aro-identity'), 'Identity / Contributor'))]",
+						"[concat('Microsoft.Authorization/roleAssignments/', guid(resourceGroup().id, 'SP / Contributor'))]",
 						"Microsoft.Compute/images/aro",
 						"Microsoft.Network/networkInterfaces/aro-bootstrap-nic",
 						"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/virtualNetworkLinks/" + installConfig.Config.ObjectMeta.Name + "-network-link",
@@ -630,10 +632,12 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 					},
 					APIVersion: apiVersions["compute"],
 					Copy: &arm.Copy{
-						Name:  "copy",
+						Name:  "computecopy",
 						Count: len(machinesMaster.MachineFiles),
 					},
 					DependsOn: []string{
+						"[concat('Microsoft.Authorization/roleAssignments/', guid(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'aro-identity'), 'Identity / Contributor'))]",
+						"[concat('Microsoft.Authorization/roleAssignments/', guid(resourceGroup().id, 'SP / Contributor'))]",
 						"Microsoft.Compute/images/aro",
 						"[concat('Microsoft.Network/networkInterfaces/aro-master', copyIndex(), '-nic')]",
 						"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/virtualNetworkLinks/" + installConfig.Config.ObjectMeta.Name + "-network-link",
