@@ -24,12 +24,14 @@ func (m *Manager) Delete(ctx context.Context) error {
 		// TODO: there is probably an undesirable race condition here - check if etags can help.
 		s, err := m.subnets.Get(ctx, subnetID)
 		if err != nil {
-			return err
+			m.log.Error(err)
+			continue
 		}
 
 		nsgID, err := subnet.NetworkSecurityGroupID(m.doc.OpenShiftCluster, subnetID)
 		if err != nil {
-			return err
+			m.log.Error(err)
+			continue
 		}
 
 		if s.SubnetPropertiesFormat == nil ||
@@ -43,7 +45,8 @@ func (m *Manager) Delete(ctx context.Context) error {
 		m.log.Printf("removing network security group from subnet %s", subnetID)
 		err = m.subnets.CreateOrUpdate(ctx, subnetID, s)
 		if err != nil {
-			return err
+			m.log.Error(err)
+			continue
 		}
 	}
 
