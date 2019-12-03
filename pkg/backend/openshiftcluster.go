@@ -10,6 +10,7 @@ import (
 
 	"github.com/jim-minter/rp/pkg/api"
 	"github.com/jim-minter/rp/pkg/backend/openshiftcluster"
+	"github.com/jim-minter/rp/pkg/util/recover"
 )
 
 type openShiftClusterBackend struct {
@@ -35,6 +36,8 @@ func (ocb *openShiftClusterBackend) try() (bool, error) {
 	log.Print("dequeued")
 	atomic.AddInt32(&ocb.workers, 1)
 	go func() {
+		defer recover.Panic(log)
+
 		defer func() {
 			atomic.AddInt32(&ocb.workers, -1)
 			ocb.cond.Signal()
@@ -107,6 +110,8 @@ func (ocb *openShiftClusterBackend) heartbeat(log *logrus.Entry, doc *api.OpenSh
 	stop, done := make(chan struct{}), make(chan struct{})
 
 	go func() {
+		defer recover.Panic(log)
+
 		defer close(done)
 
 		t := time.NewTicker(10 * time.Second)

@@ -9,6 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/jim-minter/rp/pkg/api"
+	"github.com/jim-minter/rp/pkg/util/recover"
 )
 
 type subscriptionBackend struct {
@@ -34,6 +35,8 @@ func (sb *subscriptionBackend) try() (bool, error) {
 	log.Print("dequeued")
 	atomic.AddInt32(&sb.workers, 1)
 	go func() {
+		defer recover.Panic(log)
+
 		defer func() {
 			atomic.AddInt32(&sb.workers, -1)
 			sb.cond.Signal()
@@ -115,6 +118,8 @@ func (sb *subscriptionBackend) heartbeat(log *logrus.Entry, doc *api.Subscriptio
 	stop, done := make(chan struct{}), make(chan struct{})
 
 	go func() {
+		defer recover.Panic(log)
+
 		defer close(done)
 
 		t := time.NewTicker(10 * time.Second)

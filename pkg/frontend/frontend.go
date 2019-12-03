@@ -13,6 +13,7 @@ import (
 	"github.com/jim-minter/rp/pkg/api"
 	"github.com/jim-minter/rp/pkg/database"
 	"github.com/jim-minter/rp/pkg/env"
+	"github.com/jim-minter/rp/pkg/util/recover"
 )
 
 const (
@@ -121,7 +122,11 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 }
 
 func (f *frontend) Run(stop <-chan struct{}) {
+	defer recover.Panic(f.baseLog)
+
 	go func() {
+		defer recover.Panic(f.baseLog)
+
 		<-stop
 		f.baseLog.Print("marking frontend not ready")
 		f.ready.Store(false)

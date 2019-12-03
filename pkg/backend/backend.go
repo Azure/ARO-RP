@@ -11,6 +11,7 @@ import (
 
 	"github.com/jim-minter/rp/pkg/database"
 	"github.com/jim-minter/rp/pkg/env"
+	"github.com/jim-minter/rp/pkg/util/recover"
 )
 
 const (
@@ -63,10 +64,14 @@ func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, db *d
 }
 
 func (b *backend) Run(stop <-chan struct{}) {
+	defer recover.Panic(b.baseLog)
+
 	t := time.NewTicker(time.Second)
 	defer t.Stop()
 
 	go func() {
+		defer recover.Panic(b.baseLog)
+
 		<-stop
 		b.baseLog.Print("stopping")
 		b.stopping.Store(true)

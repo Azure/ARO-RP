@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+
+	"github.com/jim-minter/rp/pkg/util/recover"
 )
 
 type metadata struct {
@@ -55,6 +57,8 @@ func (ms *metadataService) allowClientCertificate(rawCert []byte) bool {
 }
 
 func (ms *metadataService) refresh() {
+	defer recover.Panic(ms.log)
+
 	t := time.NewTicker(time.Hour)
 
 	for {
