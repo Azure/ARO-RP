@@ -6,6 +6,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/jim-minter/rp/pkg/api"
+	"github.com/jim-minter/rp/pkg/database/cosmosdb"
 )
 
 type noContent struct{}
@@ -18,15 +19,14 @@ func (f *frontend) deleteOpenShiftCluster(w http.ResponseWriter, r *http.Request
 	_, err := f.db.OpenShiftClusters.Patch(api.Key(r.URL.Path), func(doc *api.OpenShiftClusterDocument) error {
 		return f._deleteOpenShiftCluster(doc)
 	})
+	if cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
+		err = &noContent{}
+	}
 
 	reply(log, w, nil, err)
 }
 
 func (f *frontend) _deleteOpenShiftCluster(doc *api.OpenShiftClusterDocument) error {
-	if doc == nil {
-		return &noContent{}
-	}
-
 	_, err := f.validateSubscriptionState(doc.Key, api.SubscriptionStateRegistered, api.SubscriptionStateWarned, api.SubscriptionStateSuspended)
 	if err != nil {
 		return err
