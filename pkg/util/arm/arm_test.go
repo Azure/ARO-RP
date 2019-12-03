@@ -47,28 +47,35 @@ func TestResourceMarshal(t *testing.T) {
     "float": 1.1,
     "array": [
         {
-            "bool": true
+            "bool": true,
+            "tags": null
         }
     ],
     "interface": {
-        "int": 1
+        "int": 1,
+        "tags": null
     },
     "map": {
         "one": {
-            "uint": 1
+            "uint": 1,
+            "tags": null
         },
-        "zero": {}
+        "zero": {
+            "tags": null
+        }
     },
     "ptr": "test",
     "slice": [
         {
-            "float": 1.1
+            "float": 1.1,
+            "tags": null
         }
     ],
     "byte_slice": "dGVzdA==",
     "string": "test",
     "struct": {
-        "string": "test"
+        "string": "test",
+        "tags": null
     },
     "name": "test"
 }`),
@@ -115,6 +122,10 @@ type testResource struct {
 	Name        string                   `json:"name,omitempty"`
 	Unmarshaled int                      `json:"-"`
 	unexported  int
+	// Both `arm.Resource` and nested `testResource` have fields with name `Tags`.
+	// The `Tags` field from `arm.Resource` must override the one from `testResource`
+	// on the top-level of JSON.
+	Tags map[string]*string `json:"tags"`
 }
 
 // MarshalJSON contains custom marshaling logic which we expect to be dropped
