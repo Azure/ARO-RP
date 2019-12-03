@@ -52,7 +52,7 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 
 	clusterID := &installconfig.ClusterID{
 		UUID:    uuid.NewV4().String(),
-		InfraID: doc.OpenShiftCluster.Properties.InfraID,
+		InfraID: "aro",
 	}
 
 	g := graph{
@@ -196,7 +196,7 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 								},
 							},
 						},
-						Name:     to.StringPtr(doc.OpenShiftCluster.Properties.InfraID + "-controlplane-nsg"),
+						Name:     to.StringPtr("aro-controlplane-nsg"),
 						Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
 						Location: &installConfig.Config.Azure.Region,
 					},
@@ -204,7 +204,7 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 				},
 				{
 					Resource: &network.SecurityGroup{
-						Name:     to.StringPtr(doc.OpenShiftCluster.Properties.InfraID + "-node-nsg"),
+						Name:     to.StringPtr("aro-node-nsg"),
 						Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
 						Location: &installConfig.Config.Azure.Region,
 					},

@@ -91,9 +91,9 @@ func NetworkSecurityGroupID(oc *api.OpenShiftCluster, subnetID string) (string, 
 
 	switch {
 	case strings.EqualFold(subnetID, oc.Properties.MasterProfile.SubnetID):
-		return "/subscriptions/" + r.SubscriptionID + "/resourceGroups/" + oc.Properties.ResourceGroup + "/providers/Microsoft.Network/networkSecurityGroups/" + oc.Properties.InfraID + "-controlplane-nsg", nil
+		return "/subscriptions/" + r.SubscriptionID + "/resourceGroups/" + oc.Properties.ResourceGroup + "/providers/Microsoft.Network/networkSecurityGroups/aro-controlplane-nsg", nil
 	case strings.EqualFold(subnetID, oc.Properties.WorkerProfiles[0].SubnetID):
-		return "/subscriptions/" + r.SubscriptionID + "/resourceGroups/" + oc.Properties.ResourceGroup + "/providers/Microsoft.Network/networkSecurityGroups/" + oc.Properties.InfraID + "-node-nsg", nil
+		return "/subscriptions/" + r.SubscriptionID + "/resourceGroups/" + oc.Properties.ResourceGroup + "/providers/Microsoft.Network/networkSecurityGroups/aro-node-nsg", nil
 	default:
 		return "", fmt.Errorf("unknown subnetID %q", subnetID)
 	}

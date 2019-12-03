@@ -60,6 +60,10 @@ func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClu
 }
 
 func (i *Installer) Install(ctx context.Context, doc *api.OpenShiftClusterDocument, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds) error {
+	if doc.OpenShiftCluster.Properties.Install == nil {
+		doc.OpenShiftCluster.Properties.Install = &api.Install{}
+	}
+
 	for {
 		i.log.Printf("starting phase %s", doc.OpenShiftCluster.Properties.Install.Phase)
 		switch doc.OpenShiftCluster.Properties.Install.Phase {
