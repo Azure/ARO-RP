@@ -40,8 +40,8 @@ var apiVersions = map[string]string{
 func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftClusterDocument, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds) error {
 	image := &releaseimage.Image{
 		// https://openshift-release.svc.ci.openshift.org/
-		// oc adm release info quay.io/openshift-release-dev/ocp-release-nightly:4.3.0-0.nightly-2019-11-19-122017
-		PullSpec:   "quay.io/openshift-release-dev/ocp-release-nightly@sha256:ab5022516a948e40190e4ce5729737780b96c96d2cf4d3fc665105b32d751d20",
+		// oc adm release info quay.io/openshift-release-dev/ocp-release-nightly:4.3.0-0.nightly-2019-12-02-232545
+		PullSpec:   "quay.io/openshift-release-dev/ocp-release-nightly@sha256:212203fe4aaffcbfddf16c00c9562f6d216e7d7e89036d2e396833d39daec617",
 		Repository: "quay.io/openshift-release-dev/ocp-release-nightly",
 
 		// oc adm release info quay.io/openshift-release-dev/ocp-release:4.2.4
