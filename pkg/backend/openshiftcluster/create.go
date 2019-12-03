@@ -26,7 +26,9 @@ import (
 )
 
 func (m *Manager) Create(ctx context.Context) error {
-	_, err := m.db.Patch(m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+	var err error
+
+	m.doc, err = m.db.Patch(m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		var err error
 
 		if doc.OpenShiftCluster.Properties.SSHKey == nil {

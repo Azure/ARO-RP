@@ -31,8 +31,12 @@ func (openShiftCluster) OpenShiftClusterToInternal(oc interface{}, out *api.Open
 	openShiftClusterToInternal(oc.(*OpenShiftCluster), out)
 }
 
-func (openShiftCluster) ValidateOpenShiftCluster(location, resourceID string, oc interface{}, current *api.OpenShiftCluster) error {
-	return validateOpenShiftCluster(location, resourceID, oc.(*OpenShiftCluster), openShiftClusterToExternal(current))
+func (openShiftCluster) ValidateOpenShiftCluster(location, resourceID string, oc interface{}, curr *api.OpenShiftCluster) error {
+	var current *OpenShiftCluster
+	if curr != nil {
+		current = openShiftClusterToExternal(curr)
+	}
+	return validateOpenShiftCluster(location, resourceID, oc.(*OpenShiftCluster), current)
 }
 
 func (openShiftCluster) ValidateOpenShiftClusterDynamic(ctx context.Context, fpAuthorizer autorest.Authorizer, oc *api.OpenShiftCluster) error {

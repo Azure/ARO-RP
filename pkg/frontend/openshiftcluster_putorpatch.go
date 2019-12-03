@@ -132,17 +132,21 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *http.Request, internal api.Ope
 	internal.OpenShiftClusterToInternal(ext, doc.OpenShiftCluster)
 	doc.OpenShiftCluster.ID, doc.OpenShiftCluster.Name, doc.OpenShiftCluster.Type = oldID, oldName, oldType
 
+	if isCreate {
+		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateCreating
+	} else {
+		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateUpdating
+		doc.Dequeues = 0
+	}
+
 	err = internal.ValidateOpenShiftClusterDynamic(r.Context(), f.fpAuthorizer, doc.OpenShiftCluster)
 	if err != nil {
 		return nil, false, err
 	}
 
 	if isCreate {
-		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateCreating
 		doc, err = f.db.OpenShiftClusters.Create(doc)
 	} else {
-		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateUpdating
-		doc.Dequeues = 0
 		doc, err = f.db.OpenShiftClusters.Update(doc)
 	}
 	if err != nil {
