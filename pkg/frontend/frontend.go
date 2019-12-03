@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
@@ -47,7 +48,7 @@ func NewFrontend(ctx context.Context, baseLog *logrus.Entry, env env.Interface, 
 		db:      db,
 	}
 
-	f.fpAuthorizer, err = env.FPAuthorizer(ctx)
+	f.fpAuthorizer, err = env.FPAuthorizer(ctx, azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 
 	"github.com/jim-minter/rp/pkg/database"
@@ -49,7 +50,7 @@ func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, db *d
 		db:      db,
 	}
 
-	b.fpAuthorizer, err = env.FPAuthorizer(ctx)
+	b.fpAuthorizer, err = env.FPAuthorizer(ctx, azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}

@@ -17,6 +17,10 @@
    subscription.  *RH ARO engineering*: use the `osadev.cloud` zone in the `dns`
    resource group.
 
+1. You will need an **ARM AAD application** with client secret authentication
+   enabled.  *RH ARO engineering*: use `aro-v4-arm-shared` and ask for the
+   credentials.
+
 1. You will need an **RP AAD application** with client secret authentication
    enabled.  *RH ARO engineering*: use `aro-v4-rp-shared` and ask for the
    credentials.
@@ -41,9 +45,10 @@
 
    ```
    # Non-RH ARO engineering only
-   FP_SERVICEPRINCIPAL_ID=$(az ad sp list --all --query "[?appId=='$FP_AAD_APPLICATION_ID'].objectId" -o tsv)
+   ARM_SERVICEPRINCIPAL_ID=$(az ad sp list --all --query "[?appId=='$AZURE_ARM_CLIENT_ID'].objectId" -o tsv)
+   FP_SERVICEPRINCIPAL_ID=$(az ad sp list --all --query "[?appId=='$AZURE_FP_CLIENT_ID'].objectId" -o tsv)
 
-   az deployment create -l eastus --template-file deploy/development-rbac.json --parameters "fpServicePrincipalId=$FP_SERVICEPRINCIPAL_ID"
+   az deployment create -l eastus --template-file deploy/development-rbac.json --parameters "armServicePrincipalId=$ARM_SERVICEPRINCIPAL_ID" "fpServicePrincipalId=$FP_SERVICEPRINCIPAL_ID"
    ```
 
    *RH ARO engineering*: the above step has already been done.
@@ -62,6 +67,8 @@
 
    * AZURE_TENANT_ID:               Azure tenant UUID
    * AZURE_SUBSCRIPTION_ID:         Azure subscription UUID
+   * AZURE_ARM_CLIENT_ID:           ARM application client UUID
+   * AZURE_ARM_CLIENT_SECRET:       ARM application client secret
    * AZURE_FP_CLIENT_ID:            RP "first party" application client UUID
    * AZURE_CLIENT_ID:               RP AAD application client UUID
    * AZURE_CLIENT_SECRET:           RP AAD application client secret
@@ -144,8 +151,8 @@ go run ./cmd/rp
 export VNET_RESOURCEGROUP=$RESOURCEGROUP-vnet
 az group create -g "$VNET_RESOURCEGROUP" -l "$LOCATION"
 az network vnet create -g "$VNET_RESOURCEGROUP" -n vnet --address-prefixes 10.0.0.0/9
-az role assignment create --role Owner --assignee-object-id "$(az ad sp list --all --query "[?appId=='$AZURE_FP_CLIENT_ID'].objectId" -o tsv)" --scope "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$VNET_RESOURCEGROUP/providers/Microsoft.Network/virtualNetworks/vnet"
-az role assignment create --role Owner --assignee-object-id "$(az ad sp list --all --query "[?appId=='$AZURE_CLUSTER_CLIENT_ID'].objectId" -o tsv)" --scope "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$VNET_RESOURCEGROUP/providers/Microsoft.Network/virtualNetworks/vnet"
+az role assignment create --role "ARO v4 Development Subnet Contributor" --assignee-object-id "$(az ad sp list --all --query "[?appId=='$AZURE_FP_CLIENT_ID'].objectId" -o tsv)" --scope "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$VNET_RESOURCEGROUP/providers/Microsoft.Network/virtualNetworks/vnet"
+az role assignment create --role "ARO v4 Development Subnet Contributor" --assignee-object-id "$(az ad sp list --all --query "[?appId=='$AZURE_CLUSTER_CLIENT_ID'].objectId" -o tsv)" --scope "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$VNET_RESOURCEGROUP/providers/Microsoft.Network/virtualNetworks/vnet"
 
 export CLUSTER=cluster
 ```

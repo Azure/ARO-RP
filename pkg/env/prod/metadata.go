@@ -65,7 +65,7 @@ func (ms *metadataService) refresh() {
 		ms.log.Print("refreshing metadata")
 		err := ms.refreshOnce()
 		if err != nil {
-			ms.log.Warnf("metadata refresh: %v", err)
+			ms.log.Error(err)
 		}
 
 		<-t.C

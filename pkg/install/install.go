@@ -21,9 +21,10 @@ import (
 )
 
 type Installer struct {
-	log *logrus.Entry
-	env env.Interface
-	db  database.OpenShiftClusters
+	log          *logrus.Entry
+	env          env.Interface
+	db           database.OpenShiftClusters
+	fpAuthorizer autorest.Authorizer
 
 	disks             compute.DisksClient
 	virtualmachines   compute.VirtualMachinesClient
@@ -38,9 +39,10 @@ type Installer struct {
 
 func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClusters, fpAuthorizer autorest.Authorizer, subscriptionID string) *Installer {
 	d := &Installer{
-		log: log,
-		env: env,
-		db:  db,
+		log:          log,
+		env:          env,
+		db:           db,
+		fpAuthorizer: fpAuthorizer,
 
 		disks:             compute.NewDisksClient(subscriptionID),
 		virtualmachines:   compute.NewVirtualMachinesClient(subscriptionID),

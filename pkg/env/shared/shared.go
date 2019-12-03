@@ -21,6 +21,15 @@ import (
 	"github.com/jim-minter/rp/pkg/env/shared/dns"
 )
 
+type RefreshableAuthorizer struct {
+	autorest.Authorizer
+	sp *adal.ServicePrincipalToken
+}
+
+func (ra *RefreshableAuthorizer) Refresh() error {
+	return ra.sp.Refresh()
+}
+
 type Shared struct {
 	databaseaccounts documentdb.DatabaseAccountsClient
 	keyvault         keyvault.BaseClient
@@ -137,7 +146,7 @@ func (s *Shared) GetSecret(ctx context.Context, secretName string) (*rsa.Private
 	return key, cert, nil
 }
 
-func (s *Shared) FPAuthorizer(ctx context.Context) (autorest.Authorizer, error) {
+func (s *Shared) FPAuthorizer(ctx context.Context, resource string) (autorest.Authorizer, error) {
 	key, cert, err := s.GetSecret(ctx, "azure")
 	if err != nil {
 		return nil, err
@@ -148,10 +157,10 @@ func (s *Shared) FPAuthorizer(ctx context.Context) (autorest.Authorizer, error) 
 		return nil, err
 	}
 
-	sp, err := adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, os.Getenv("AZURE_FP_CLIENT_ID"), cert, key, azure.PublicCloud.ResourceManagerEndpoint)
+	sp, err := adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, os.Getenv("AZURE_FP_CLIENT_ID"), cert, key, resource)
 	if err != nil {
 		return nil, err
 	}
 
-	return autorest.NewBearerAuthorizer(sp), nil
+	return &RefreshableAuthorizer{autorest.NewBearerAuthorizer(sp), sp}, nil
 }

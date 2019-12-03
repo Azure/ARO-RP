@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
@@ -40,25 +41,14 @@ func validateOpenShiftClusterDynamic(ctx context.Context, fpAuthorizer autorest.
 		return err
 	}
 
-	vnetID, _, err := subnet.Split(oc.Properties.MasterProfile.SubnetID)
+	err = v.validateVnetPermissions(ctx, fpAuthorizer, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
 	if err != nil {
 		return err
 	}
 
-	ok, err := v.hasOwnerPermissionOnVnet(ctx, fpAuthorizer, vnetID)
+	err = v.validateVnetPermissions(ctx, spAuthorizer, api.CloudErrorCodeInvalidServicePrincipalPermissions, "provided service principal")
 	if err != nil {
 		return err
-	}
-	if !ok {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidResourceProviderPermissions, "", "The resource provider does not have Owner permission on vnet '%s'.", vnetID)
-	}
-
-	ok, err = v.hasOwnerPermissionOnVnet(ctx, spAuthorizer, vnetID)
-	if err != nil {
-		return err
-	}
-	if !ok {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalPermissions, "", "The provided service principal does not have Owner permission on vnet '%s'.", vnetID)
 	}
 
 	v.subnets = subnet.NewManager(r.SubscriptionID, spAuthorizer)
@@ -83,10 +73,15 @@ func (dv *dynamicValidator) validateServicePrincipalProfile() (autorest.Authoriz
 	return conf.Authorizer()
 }
 
-func (dv *dynamicValidator) hasOwnerPermissionOnVnet(ctx context.Context, authorizer autorest.Authorizer, vnetID string) (bool, error) {
+func (dv *dynamicValidator) validateVnetPermissions(ctx context.Context, authorizer autorest.Authorizer, code, typ string) error {
+	vnetID, _, err := subnet.Split(dv.oc.Properties.MasterProfile.SubnetID)
+	if err != nil {
+		return err
+	}
+
 	vnetr, err := azure.ParseResourceID(vnetID)
 	if err != nil {
-		return false, err
+		return err
 	}
 
 	permissions := authorization.NewPermissionsClient(dv.r.SubscriptionID)
@@ -96,29 +91,78 @@ func (dv *dynamicValidator) hasOwnerPermissionOnVnet(ctx context.Context, author
 	if err != nil {
 		if err, ok := err.(autorest.DetailedError); ok {
 			if err.StatusCode == http.StatusNotFound {
-				return false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "properties.masterProfile.subnetId", "The provided master VM subnet '%s' could not be found.", dv.oc.Properties.MasterProfile.SubnetID)
+				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "properties.masterProfile.subnetId", "The provided master VM subnet '%s' could not be found.", dv.oc.Properties.MasterProfile.SubnetID)
 			}
 		}
 
-		return false, err
+		return err
 	}
 
+	var ps []authorization.Permission
+
 	for {
-		for _, p := range page.Values() {
-			for _, a := range *p.Actions {
-				if a == "*" {
-					return true, nil
-				}
-			}
-		}
+		ps = append(ps, page.Values()...)
 
 		err = page.Next()
 		if err != nil {
-			return false, err
+			return err
 		}
 
 		if !page.NotDone() {
 			break
+		}
+	}
+
+	for _, action := range []string{
+		"Microsoft.Network/virtualNetworks/subnets/join/action",
+		"Microsoft.Network/virtualNetworks/subnets/read",
+		"Microsoft.Network/virtualNetworks/subnets/write",
+	} {
+		ok, err := canDoAction(ps, action)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return api.NewCloudError(http.StatusBadRequest, code, "", "The "+typ+" does not have Contributor permission on vnet '%s'.", vnetID)
+		}
+	}
+
+	return nil
+}
+
+func canDoAction(ps []authorization.Permission, a string) (bool, error) {
+	for _, p := range ps {
+		var matched bool
+		for _, action := range *p.Actions {
+			action := regexp.QuoteMeta(action)
+			action = "(?i)^" + strings.ReplaceAll(action, `\*`, ".*") + "$"
+			rx, err := regexp.Compile(action)
+			if err != nil {
+				return false, err
+			}
+			if rx.MatchString(a) {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			continue
+		}
+
+		for _, notAction := range *p.NotActions {
+			notAction := regexp.QuoteMeta(notAction)
+			notAction = "(?i)^" + strings.ReplaceAll(notAction, `\*`, ".*") + "$"
+			rx, err := regexp.Compile(notAction)
+			if err != nil {
+				return false, err
+			}
+			if rx.MatchString(a) {
+				matched = false
+				break
+			}
+		}
+		if matched {
+			return true, nil
 		}
 	}
 

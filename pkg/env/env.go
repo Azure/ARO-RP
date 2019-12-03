@@ -16,12 +16,12 @@ import (
 )
 
 type Interface interface {
-	CosmosDB(ctx context.Context) (string, string, error)
+	CosmosDB(context.Context) (string, string, error)
 	DNS() dns.Manager
-	FPAuthorizer(ctx context.Context) (autorest.Authorizer, error)
+	FPAuthorizer(context.Context, string) (autorest.Authorizer, error)
 	IsReady() bool
-	ListenTLS(ctx context.Context) (net.Listener, error)
-	Authenticated(h http.Handler) http.Handler
+	ListenTLS(context.Context) (net.Listener, error)
+	Authenticated(http.Handler) http.Handler
 	Location() string
 	ResourceGroup() string
 }

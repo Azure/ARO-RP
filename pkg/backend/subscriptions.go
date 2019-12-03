@@ -28,7 +28,7 @@ func (sb *subscriptionBackend) try() (bool, error) {
 
 	log := sb.baseLog.WithField("subscription", doc.Key)
 	if doc.Dequeues > maxDequeueCount {
-		log.Warnf("dequeued %d times, failing", doc.Dequeues)
+		log.Errorf("dequeued %d times, failing", doc.Dequeues)
 		return true, sb.endLease(nil, doc, false, true)
 	}
 

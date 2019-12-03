@@ -2,6 +2,9 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
+        "armServicePrincipalId": {
+            "type": "string"
+        },
         "fpServicePrincipalId": {
             "type": "string"
         }
@@ -23,7 +26,7 @@
                         ]
                     }
                 ],
-                "roleName": "ARO v4 FP Subscription"
+                "roleName": "ARO v4 Development First Party Subscription"
             }
         },
         {
@@ -78,7 +81,28 @@
                         ]
                     }
                 ],
-                "roleName": "ARO v4 FP Resource Group"
+                "roleName": "ARO v4 Development First Party Managed Resource Group"
+            }
+        },
+        {
+            "name": "f3fe7bc1-0ef9-4681-a68c-c1fa285d6128",
+            "apiVersion": "2017-09-01",
+            "type": "Microsoft.Authorization/roleDefinitions",
+            "properties": {
+                "assignableScopes": [
+                    "[concat('/subscriptions/', subscription().subscriptionId)]"
+                ],
+                "permissions": [
+                    {
+                        "actions": [
+                            "Microsoft.Network/virtualNetworks/join/action",
+                            "Microsoft.Network/virtualNetworks/subnets/join/action",
+                            "Microsoft.Network/virtualNetworks/subnets/read",
+                            "Microsoft.Network/virtualNetworks/subnets/write"
+                        ]
+                    }
+                ],
+                "roleName": "ARO v4 Development Subnet Contributor"
             }
         },
         {
@@ -95,15 +119,12 @@
             }
         },
         {
-            "name": "[guid(subscription().id, 'FP / ARO v4 FP Resource Group')]",
+            "name": "[guid(subscription().id, 'ARM / User Access Administrator')]",
             "apiVersion": "2017-09-01",
             "type": "Microsoft.Authorization/roleAssignments",
-            "dependsOn": [
-                "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'c95361b8-cf7c-40a1-ad0a-df9f39a30225')]"
-            ],
             "properties": {
-                "principalId": "[parameters('fpServicePrincipalId')]",
-                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'c95361b8-cf7c-40a1-ad0a-df9f39a30225')]",
+                "principalId": "[parameters('armServicePrincipalId')]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '18d7d88d-d35e-4fb5-a5c3-7773c20a72d9')]",
                 "scope": "[subscription().id]"
             }
         }

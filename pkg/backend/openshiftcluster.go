@@ -29,7 +29,7 @@ func (ocb *openShiftClusterBackend) try() (bool, error) {
 
 	log := ocb.baseLog.WithField("resource", doc.OpenShiftCluster.ID)
 	if doc.Dequeues > maxDequeueCount {
-		log.Warnf("dequeued %d times, failing", doc.Dequeues)
+		log.Errorf("dequeued %d times, failing", doc.Dequeues)
 		return true, ocb.endLease(nil, doc, api.ProvisioningStateFailed)
 	}
 
@@ -91,6 +91,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 
 	case api.ProvisioningStateDeleting:
 		log.Print("deleting")
+
 		err = m.Delete(ctx)
 		if err != nil {
 			log.Error(err)

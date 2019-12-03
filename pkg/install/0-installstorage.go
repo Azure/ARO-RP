@@ -24,6 +24,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/jim-minter/rp/pkg/api"
+	"github.com/jim-minter/rp/pkg/env/dev"
 	"github.com/jim-minter/rp/pkg/util/arm"
 	"github.com/jim-minter/rp/pkg/util/subnet"
 )
@@ -79,6 +80,13 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 	})
 	if err != nil {
 		return err
+	}
+
+	if development, ok := i.env.(dev.Interface); ok {
+		err = development.CreateARMResourceGroupRoleAssignment(ctx, i.fpAuthorizer, doc.OpenShiftCluster)
+		if err != nil {
+			return err
+		}
 	}
 
 	{
