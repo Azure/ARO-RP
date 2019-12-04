@@ -27,42 +27,40 @@
             "name": "[parameters('domainName')]",
             "type": "Microsoft.Network/dnsZones",
             "location": "global",
-            "tags": null,
             "apiVersion": "2018-05-01"
         },
         {
             "properties": {
+                "tenantId": "[subscription().tenantId]",
+                "sku": {
+                    "family": "A",
+                    "name": "standard"
+                },
                 "accessPolicies": [
                     {
+                        "tenantId": "[subscription().tenantId]",
                         "objectId": "[parameters('rpServicePrincipalId')]",
                         "permissions": {
                             "secrets": [
                                 "get"
                             ]
-                        },
-                        "tenantId": "[subscription().tenantId]"
+                        }
                     },
                     {
+                        "tenantId": "[subscription().tenantId]",
                         "objectId": "[parameters('adminObjectId')]",
                         "permissions": {
                             "certificates": [
                                 "import",
                                 "list"
                             ]
-                        },
-                        "tenantId": "[subscription().tenantId]"
+                        }
                     }
-                ],
-                "sku": {
-                    "family": "A",
-                    "name": "standard"
-                },
-                "tenantId": "[subscription().tenantId]"
+                ]
             },
             "name": "[parameters('keyvaultName')]",
             "type": "Microsoft.KeyVault/vaults",
             "location": "[parameters('location')]",
-            "tags": null,
             "apiVersion": "2016-10-01"
         },
         {
@@ -71,13 +69,13 @@
                 "consistencyPolicy": {
                     "defaultConsistencyLevel": "Strong"
                 },
-                "databaseAccountOfferType": "Standard",
-                "disableKeyBasedMetadataWriteAccess": true,
                 "locations": [
                     {
                         "locationName": "[parameters('location')]"
                     }
-                ]
+                ],
+                "databaseAccountOfferType": "Standard",
+                "disableKeyBasedMetadataWriteAccess": true
             },
             "name": "[parameters('databaseAccountName')]",
             "type": "Microsoft.DocumentDB/databaseAccounts",
@@ -89,14 +87,13 @@
         },
         {
             "properties": {
-                "options": {},
                 "resource": {
                     "id": "ARO"
-                }
+                },
+                "options": {}
             },
             "name": "[concat(parameters('databaseAccountName'), '/ARO')]",
             "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
-            "tags": null,
             "apiVersion": "2019-08-01",
             "dependsOn": [
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
@@ -104,14 +101,13 @@
         },
         {
             "properties": {
-                "options": {},
                 "resource": {
                     "id": "OpenShiftClusters",
                     "partitionKey": {
-                        "kind": "Hash",
                         "paths": [
                             "/partitionKey"
-                        ]
+                        ],
+                        "kind": "Hash"
                     },
                     "uniqueKeyPolicy": {
                         "uniqueKeys": [
@@ -122,11 +118,11 @@
                             }
                         ]
                     }
-                }
+                },
+                "options": {}
             },
             "name": "[concat(parameters('databaseAccountName'), '/ARO/OpenShiftClusters')]",
             "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
-            "tags": null,
             "apiVersion": "2019-08-01",
             "dependsOn": [
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]"
@@ -134,14 +130,13 @@
         },
         {
             "properties": {
-                "options": {},
                 "resource": {
                     "id": "Subscriptions",
                     "partitionKey": {
-                        "kind": "Hash",
                         "paths": [
                             "/key"
-                        ]
+                        ],
+                        "kind": "Hash"
                     },
                     "uniqueKeyPolicy": {
                         "uniqueKeys": [
@@ -152,11 +147,11 @@
                             }
                         ]
                     }
-                }
+                },
+                "options": {}
             },
             "name": "[concat(parameters('databaseAccountName'), '/ARO/Subscriptions')]",
             "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
-            "tags": null,
             "apiVersion": "2019-08-01",
             "dependsOn": [
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]"
@@ -166,10 +161,10 @@
             "name": "[guid(resourceGroup().id, 'RP / Reader')]",
             "type": "Microsoft.Authorization/roleAssignments",
             "properties": {
-                "principalId": "[parameters('rpServicePrincipalId')]",
-                "principalType": "ServicePrincipal",
+                "scope": "[resourceGroup().id]",
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')]",
-                "scope": "[resourceGroup().id]"
+                "principalId": "[parameters('rpServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
             },
             "apiVersion": "2018-09-01-preview"
         },
@@ -177,10 +172,10 @@
             "name": "[concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), 'RP / DocumentDB Account Contributor'))]",
             "type": "Microsoft.DocumentDB/databaseAccounts/providers/roleAssignments",
             "properties": {
-                "principalId": "[parameters('rpServicePrincipalId')]",
-                "principalType": "ServicePrincipal",
+                "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '5bd9cd88-fe45-4216-938b-f97437e15450')]",
-                "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
+                "principalId": "[parameters('rpServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
             },
             "apiVersion": "2018-09-01-preview",
             "dependsOn": [
@@ -191,10 +186,10 @@
             "name": "[concat(parameters('domainName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/dnsZones', parameters('domainName')), 'RP / DNS Zone Contributor'))]",
             "type": "Microsoft.Network/dnsZones/providers/roleAssignments",
             "properties": {
-                "principalId": "[parameters('rpServicePrincipalId')]",
-                "principalType": "ServicePrincipal",
+                "scope": "[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]",
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'befefa01-2a29-4197-83a8-272ff33ce314')]",
-                "scope": "[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]"
+                "principalId": "[parameters('rpServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
             },
             "apiVersion": "2018-09-01-preview",
             "dependsOn": [

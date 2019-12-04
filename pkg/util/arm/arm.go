@@ -2,13 +2,12 @@ package arm
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"reflect"
 
 	uuid "github.com/satori/go.uuid"
-
-	"github.com/jim-minter/rp/pkg/util/orderedmap"
 )
 
 // Template represents an ARM template
@@ -58,84 +57,65 @@ type Copy struct {
 	BatchSize int    `json:"batchSize,omitempty"`
 }
 
-type keyValue struct {
-	Key   string
-	Value interface{}
-}
-
-type keyValues []keyValue
-
-func (xs *keyValues) UnmarshalJSON(b []byte) error {
-	return orderedmap.UnmarshalJSON(b, xs)
-}
-
-func (xs keyValues) MarshalJSON() ([]byte, error) {
-	return orderedmap.MarshalJSON(xs)
-}
-
 // MarshalJSON marshals the nested r.Resource ignoring any MarshalJSON() methods
 // on its types.  It then merges remaining fields of r over the result
-func (r Resource) MarshalJSON() ([]byte, error) {
-	// first marshal the nested r.Resource ignoring any MarshalJSON() methods
-	b, err := json.Marshal(shadowCopy(r.Resource))
-	if err != nil {
-		return nil, err
+func (r *Resource) MarshalJSON() ([]byte, error) {
+	// Make a shadow copy of the `r.Resource`
+	resource := shadowCopy(r.Resource)
+
+	resourceV := reflect.ValueOf(resource)
+	outerV := reflect.ValueOf(*r)
+
+	// Check that the underlying resource is a struct
+	if resourceV.Kind() != reflect.Struct {
+		return nil, errors.New("Resource field of the arm.Resource must be a struct")
 	}
 
-	var nested keyValues
-
-	err = json.Unmarshal(b, &nested)
-	if err != nil {
-		return nil, err
+	// Create a list of fields that combines fields of `r.Resource` and outer `*r` structs.
+	// Fields from the outer struct `*r` override fields from `r.Resource`.
+	fields := make([]reflect.StructField, 0, resourceV.NumField())
+	fieldsMap := map[string]int{}
+	// Copy fields from `r.Resource`
+	for i := 0; i < resourceV.NumField(); i++ {
+		field := resourceV.Type().Field(i)
+		fields = append(fields, field)
+		fieldsMap[field.Name] = i
 	}
-
-	// now create a shadow of r without the nested r.Resource field, and marshal
-	// that
-	v := reflect.ValueOf(r)
-
-	fields := make([]reflect.StructField, 0, v.NumField()-1)
-	for i := 0; i < v.NumField()-1; i++ {
-		fields = append(fields, v.Type().Field(i+1))
-	}
-
-	shadow := reflect.New(reflect.StructOf(fields)).Elem()
-
-	for i := 0; i < v.NumField()-1; i++ {
-		shadow.Field(i).Set(v.Field(i + 1))
-	}
-
-	b, err = json.Marshal(shadow.Interface())
-	if err != nil {
-		return nil, err
-	}
-
-	var outer keyValues
-
-	err = json.Unmarshal(b, &outer)
-	if err != nil {
-		return nil, err
-	}
-
-	// now scan through nested and remove any keys that appear in outer
-	outerkeys := map[string]struct{}{}
-	for _, kv := range outer {
-		outerkeys[kv.Key] = struct{}{}
-	}
-
-	{
-		newnested := make(keyValues, 0, len(nested))
-		for _, kv := range nested {
-			if _, found := outerkeys[kv.Key]; !found {
-				newnested = append(newnested, kv)
-			}
+	// Copy fields from `*r` & override if already exists
+	for i := 0; i < outerV.NumField(); i++ {
+		outerField := outerV.Type().Field(i)
+		if outerField.Name == "Resource" {
+			continue
 		}
-		nested = newnested
+		if fieldsIndex, found := fieldsMap[outerField.Name]; found {
+			outerField.Type = emptyInterfaceType
+			fields[fieldsIndex] = outerField
+		} else {
+			fields = append(fields, outerField)
+		}
 	}
 
-	// finally, append outer to nested, marshal and return
-	nested = append(nested, outer...)
+	// Create a new struct of fields
+	combinedV := reflect.New(reflect.StructOf(fields)).Elem()
+	// Copy values from `r.Resource`
+	for i := 0; i < resourceV.NumField(); i++ {
+		field := resourceV.Type().Field(i)
+		fieldV := resourceV.Field(i)
+		combinedV.FieldByName(field.Name).Set(fieldV)
+	}
+	// Copy values from `*r`
+	for i := 0; i < outerV.NumField(); i++ {
+		field := outerV.Type().Field(i)
+		fieldV := outerV.Field(i)
+		if field.Name == "Resource" {
+			continue
+		}
+		if !isZero(fieldV) {
+			combinedV.FieldByName(field.Name).Set(fieldV)
+		}
+	}
 
-	return json.Marshal(nested)
+	return json.Marshal(combinedV.Interface())
 }
 
 // UnmarshalJSON is not implemented
