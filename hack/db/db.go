@@ -51,9 +51,8 @@ func run(ctx context.Context, log *logrus.Entry) error {
 func main() {
 	logrus.SetReportCaller(true)
 	logrus.SetFormatter(&logrus.TextFormatter{
-		FullTimestamp:          true,
-		DisableLevelTruncation: true,
-		CallerPrettyfier:       utillog.RelativeFilePathPrettier,
+		FullTimestamp:    true,
+		CallerPrettyfier: utillog.RelativeFilePathPrettier,
 	})
 	log := logrus.NewEntry(logrus.StandardLogger())
 
