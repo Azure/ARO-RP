@@ -22,7 +22,6 @@
         {
             "name": "rp-identity",
             "location": "[parameters('location')]",
-            "tags": null,
             "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
             "apiVersion": "2018-11-30"
         },
@@ -30,24 +29,23 @@
             "properties": {
                 "securityRules": [
                     {
-                        "name": "rp_in",
                         "properties": {
-                            "access": "Allow",
-                            "destinationAddressPrefix": "*",
-                            "destinationPortRange": "443",
-                            "direction": "Inbound",
-                            "priority": 101,
                             "protocol": "Tcp",
+                            "sourcePortRange": "*",
+                            "destinationPortRange": "443",
                             "sourceAddressPrefix": "*",
-                            "sourcePortRange": "*"
-                        }
+                            "destinationAddressPrefix": "*",
+                            "access": "Allow",
+                            "priority": 101,
+                            "direction": "Inbound"
+                        },
+                        "name": "rp_in"
                     }
                 ]
             },
             "name": "rp-nsg",
             "type": "Microsoft.Network/networkSecurityGroups",
             "location": "[parameters('location')]",
-            "tags": null,
             "apiVersion": "2019-07-01"
         },
         {
@@ -59,7 +57,6 @@
                 },
                 "subnets": [
                     {
-                        "name": "rp-subnet",
                         "properties": {
                             "addressPrefix": "10.0.0.0/24",
                             "networkSecurityGroup": {
@@ -68,26 +65,26 @@
                             },
                             "serviceEndpoints": [
                                 {
+                                    "service": "Microsoft.KeyVault",
                                     "locations": [
                                         "*"
-                                    ],
-                                    "service": "Microsoft.KeyVault"
+                                    ]
                                 },
                                 {
+                                    "service": "Microsoft.AzureCosmosDB",
                                     "locations": [
                                         "*"
-                                    ],
-                                    "service": "Microsoft.AzureCosmosDB"
+                                    ]
                                 }
                             ]
-                        }
+                        },
+                        "name": "rp-subnet"
                     }
                 ]
             },
             "name": "rp-vnet",
             "type": "Microsoft.Network/virtualNetworks",
             "location": "[parameters('location')]",
-            "tags": null,
             "apiVersion": "2019-07-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"
@@ -103,7 +100,6 @@
             "name": "rp-pip",
             "type": "Microsoft.Network/publicIPAddresses",
             "location": "[parameters('location')]",
-            "tags": null,
             "apiVersion": "2019-07-01"
         },
         {
@@ -111,57 +107,56 @@
                 "name": "Standard"
             },
             "properties": {
-                "backendAddressPools": [
-                    {
-                        "name": "rp-backend"
-                    }
-                ],
                 "frontendIPConfigurations": [
                     {
-                        "name": "rp-frontend",
                         "properties": {
                             "publicIPAddress": {
                                 "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip')]",
                                 "tags": null
                             }
-                        }
+                        },
+                        "name": "rp-frontend"
+                    }
+                ],
+                "backendAddressPools": [
+                    {
+                        "name": "rp-backend"
                     }
                 ],
                 "loadBalancingRules": [
                     {
-                        "name": "rp-lbrule",
                         "properties": {
-                            "backendAddressPool": {
-                                "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"
-                            },
-                            "backendPort": 8443,
                             "frontendIPConfiguration": {
                                 "id": "[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'rp-frontend')]"
                             },
-                            "frontendPort": 443,
-                            "loadDistribution": "Default",
+                            "backendAddressPool": {
+                                "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"
+                            },
                             "probe": {
                                 "id": "[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'rp-probe')]"
                             },
-                            "protocol": "Tcp"
-                        }
+                            "protocol": "Tcp",
+                            "loadDistribution": "Default",
+                            "frontendPort": 443,
+                            "backendPort": 8443
+                        },
+                        "name": "rp-lbrule"
                     }
                 ],
                 "probes": [
                     {
-                        "name": "rp-probe",
                         "properties": {
-                            "numberOfProbes": 2,
+                            "protocol": "Tcp",
                             "port": 8443,
-                            "protocol": "Tcp"
-                        }
+                            "numberOfProbes": 2
+                        },
+                        "name": "rp-probe"
                     }
                 ]
             },
             "name": "rp-lb",
             "type": "Microsoft.Network/loadBalancers",
             "location": "[parameters('location')]",
-            "tags": null,
             "apiVersion": "2019-07-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip')]"
@@ -169,69 +164,25 @@
         },
         {
             "sku": {
-                "capacity": 1,
                 "name": "Standard_D2s_v3",
-                "tier": "Standard"
+                "tier": "Standard",
+                "capacity": 1
             },
             "properties": {
-                "overprovision": false,
                 "upgradePolicy": {
                     "mode": "Manual"
                 },
                 "virtualMachineProfile": {
-                    "extensionProfile": {
-                        "extensions": [
-                            {
-                                "name": "rp-vmss-cse",
-                                "properties": {
-                                    "autoUpgradeMinorVersion": true,
-                                    "protectedSettings": {
-                                        "script": "IyEvYmluL2Jhc2gKeXVtIC15IHVwZGF0ZSAteCBXQUxpbnV4QWdlbnQKCnJwbSAtLWltcG9ydCBodHRwczovL2RsLmZlZG9yYXByb2plY3Qub3JnL3B1Yi9lcGVsL1JQTS1HUEctS0VZLUVQRUwtNwoKeXVtIC15IGluc3RhbGwgaHR0cHM6Ly9kbC5mZWRvcmFwcm9qZWN0Lm9yZy9wdWIvZXBlbC9lcGVsLXJlbGVhc2UtbGF0ZXN0LTcubm9hcmNoLnJwbQoKY2F0ID4vZXRjL3l1bS5yZXBvcy5kL2F6dXJlLWNsaS5yZXBvIDw8J0VPRicKW2F6dXJlY29yZV0KbmFtZT1henVyZWNvcmUKYmFzZXVybD1odHRwczovL3BhY2thZ2VzLm1pY3Jvc29mdC5jb20veXVtcmVwb3MvYXp1cmVjb3JlCmVuYWJsZWQ9eWVzCmdwZ2NoZWNrPW5vCkVPRgoKeXVtIC15IGluc3RhbGwgYXp1cmUtbWRzZCBhenVyZS1zZWN1cml0eSBhenNlYy1tb25pdG9yIGF6c2VjLWNsYW1hdiBkb2NrZXIKCmZpcmV3YWxsLWNtZCAtLWFkZC1wb3J0PTg0NDMvdGNwIC0tcGVybWFuZW50CmZpcmV3YWxsLWNtZCAtLXJlbG9hZAo="
-                                    },
-                                    "publisher": "Microsoft.Azure.Extensions",
-                                    "settings": {},
-                                    "type": "CustomScript",
-                                    "typeHandlerVersion": "2.0"
-                                }
-                            }
-                        ]
-                    },
-                    "networkProfile": {
-                        "networkInterfaceConfigurations": [
-                            {
-                                "name": "rp-vmss-nic",
-                                "properties": {
-                                    "ipConfigurations": [
-                                        {
-                                            "name": "rp-vmss-ipconfig",
-                                            "properties": {
-                                                "loadBalancerBackendAddressPools": [
-                                                    {
-                                                        "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"
-                                                    }
-                                                ],
-                                                "primary": true,
-                                                "subnet": {
-                                                    "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"
-                                                }
-                                            }
-                                        }
-                                    ],
-                                    "primary": true
-                                }
-                            }
-                        ]
-                    },
                     "osProfile": {
-                        "adminUsername": "cloud-user",
                         "computerNamePrefix": "rp-",
+                        "adminUsername": "cloud-user",
                         "linuxConfiguration": {
                             "disablePasswordAuthentication": true,
                             "ssh": {
                                 "publicKeys": [
                                     {
-                                        "keyData": "[parameters('sshPublicKey')]",
-                                        "path": "/home/cloud-user/.ssh/authorized_keys"
+                                        "path": "/home/cloud-user/.ssh/authorized_keys",
+                                        "keyData": "[parameters('sshPublicKey')]"
                                     }
                                 ]
                             }
@@ -239,8 +190,8 @@
                     },
                     "storageProfile": {
                         "imageReference": {
-                            "offer": "RHEL",
                             "publisher": "RedHat",
+                            "offer": "RHEL",
                             "sku": "7-RAW",
                             "version": "latest"
                         },
@@ -250,13 +201,56 @@
                                 "storageAccountType": "Premium_LRS"
                             }
                         }
+                    },
+                    "networkProfile": {
+                        "networkInterfaceConfigurations": [
+                            {
+                                "name": "rp-vmss-nic",
+                                "properties": {
+                                    "primary": true,
+                                    "ipConfigurations": [
+                                        {
+                                            "name": "rp-vmss-ipconfig",
+                                            "properties": {
+                                                "subnet": {
+                                                    "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"
+                                                },
+                                                "primary": true,
+                                                "loadBalancerBackendAddressPools": [
+                                                    {
+                                                        "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    },
+                    "extensionProfile": {
+                        "extensions": [
+                            {
+                                "name": "rp-vmss-cse",
+                                "properties": {
+                                    "publisher": "Microsoft.Azure.Extensions",
+                                    "type": "CustomScript",
+                                    "typeHandlerVersion": "2.0",
+                                    "autoUpgradeMinorVersion": true,
+                                    "settings": {},
+                                    "protectedSettings": {
+                                        "script": "IyEvYmluL2Jhc2gKeXVtIC15IHVwZGF0ZSAteCBXQUxpbnV4QWdlbnQKCnJwbSAtLWltcG9ydCBodHRwczovL2RsLmZlZG9yYXByb2plY3Qub3JnL3B1Yi9lcGVsL1JQTS1HUEctS0VZLUVQRUwtNwoKeXVtIC15IGluc3RhbGwgaHR0cHM6Ly9kbC5mZWRvcmFwcm9qZWN0Lm9yZy9wdWIvZXBlbC9lcGVsLXJlbGVhc2UtbGF0ZXN0LTcubm9hcmNoLnJwbQoKY2F0ID4vZXRjL3l1bS5yZXBvcy5kL2F6dXJlLWNsaS5yZXBvIDw8J0VPRicKW2F6dXJlY29yZV0KbmFtZT1henVyZWNvcmUKYmFzZXVybD1odHRwczovL3BhY2thZ2VzLm1pY3Jvc29mdC5jb20veXVtcmVwb3MvYXp1cmVjb3JlCmVuYWJsZWQ9eWVzCmdwZ2NoZWNrPW5vCkVPRgoKeXVtIC15IGluc3RhbGwgYXp1cmUtbWRzZCBhenVyZS1zZWN1cml0eSBhenNlYy1tb25pdG9yIGF6c2VjLWNsYW1hdiBkb2NrZXIKCmZpcmV3YWxsLWNtZCAtLWFkZC1wb3J0PTg0NDMvdGNwIC0tcGVybWFuZW50CmZpcmV3YWxsLWNtZCAtLXJlbG9hZAo="
+                                    }
+                                }
+                            }
+                        ]
                     }
-                }
+                },
+                "overprovision": false
             },
             "name": "rp-vmss",
             "type": "Microsoft.Compute/virtualMachineScaleSets",
             "location": "[parameters('location')]",
-            "tags": null,
             "apiVersion": "2019-03-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]",
@@ -268,32 +262,30 @@
             "name": "[parameters('domainName')]",
             "type": "Microsoft.Network/dnsZones",
             "location": "global",
-            "tags": null,
             "apiVersion": "2018-05-01"
         },
         {
             "properties": {
+                "tenantId": "[subscription().tenantId]",
+                "sku": {
+                    "family": "A",
+                    "name": "standard"
+                },
                 "accessPolicies": [
                     {
+                        "tenantId": "[subscription().tenantId]",
                         "objectId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity'), '2018-11-30').principalId]",
                         "permissions": {
                             "secrets": [
                                 "get"
                             ]
-                        },
-                        "tenantId": "[subscription().tenantId]"
+                        }
                     }
-                ],
-                "sku": {
-                    "family": "A",
-                    "name": "standard"
-                },
-                "tenantId": "[subscription().tenantId]"
+                ]
             },
             "name": "[parameters('keyvaultName')]",
             "type": "Microsoft.KeyVault/vaults",
             "location": "[parameters('location')]",
-            "tags": null,
             "apiVersion": "2016-10-01"
         },
         {
@@ -302,19 +294,19 @@
                 "consistencyPolicy": {
                     "defaultConsistencyLevel": "Strong"
                 },
-                "databaseAccountOfferType": "Standard",
-                "disableKeyBasedMetadataWriteAccess": true,
-                "isVirtualNetworkFilterEnabled": true,
                 "locations": [
                     {
                         "locationName": "[parameters('location')]"
                     }
                 ],
+                "databaseAccountOfferType": "Standard",
+                "isVirtualNetworkFilterEnabled": true,
                 "virtualNetworkRules": [
                     {
                         "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"
                     }
-                ]
+                ],
+                "disableKeyBasedMetadataWriteAccess": true
             },
             "name": "[parameters('databaseAccountName')]",
             "type": "Microsoft.DocumentDB/databaseAccounts",
@@ -329,14 +321,13 @@
         },
         {
             "properties": {
-                "options": {},
                 "resource": {
                     "id": "ARO"
-                }
+                },
+                "options": {}
             },
             "name": "[concat(parameters('databaseAccountName'), '/ARO')]",
             "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
-            "tags": null,
             "apiVersion": "2019-08-01",
             "dependsOn": [
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
@@ -344,14 +335,13 @@
         },
         {
             "properties": {
-                "options": {},
                 "resource": {
                     "id": "OpenShiftClusters",
                     "partitionKey": {
-                        "kind": "Hash",
                         "paths": [
                             "/partitionKey"
-                        ]
+                        ],
+                        "kind": "Hash"
                     },
                     "uniqueKeyPolicy": {
                         "uniqueKeys": [
@@ -362,11 +352,11 @@
                             }
                         ]
                     }
-                }
+                },
+                "options": {}
             },
             "name": "[concat(parameters('databaseAccountName'), '/ARO/OpenShiftClusters')]",
             "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
-            "tags": null,
             "apiVersion": "2019-08-01",
             "dependsOn": [
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]"
@@ -374,14 +364,13 @@
         },
         {
             "properties": {
-                "options": {},
                 "resource": {
                     "id": "Subscriptions",
                     "partitionKey": {
-                        "kind": "Hash",
                         "paths": [
                             "/key"
-                        ]
+                        ],
+                        "kind": "Hash"
                     },
                     "uniqueKeyPolicy": {
                         "uniqueKeys": [
@@ -392,11 +381,11 @@
                             }
                         ]
                     }
-                }
+                },
+                "options": {}
             },
             "name": "[concat(parameters('databaseAccountName'), '/ARO/Subscriptions')]",
             "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
-            "tags": null,
             "apiVersion": "2019-08-01",
             "dependsOn": [
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]"
@@ -406,10 +395,10 @@
             "name": "[guid(resourceGroup().id, 'RP / Reader')]",
             "type": "Microsoft.Authorization/roleAssignments",
             "properties": {
-                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity'), '2018-11-30').principalId]",
-                "principalType": "ServicePrincipal",
+                "scope": "[resourceGroup().id]",
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')]",
-                "scope": "[resourceGroup().id]"
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity'), '2018-11-30').principalId]",
+                "principalType": "ServicePrincipal"
             },
             "apiVersion": "2018-09-01-preview",
             "dependsOn": [
@@ -420,10 +409,10 @@
             "name": "[concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), 'RP / DocumentDB Account Contributor'))]",
             "type": "Microsoft.DocumentDB/databaseAccounts/providers/roleAssignments",
             "properties": {
-                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity'), '2018-11-30').principalId]",
-                "principalType": "ServicePrincipal",
+                "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '5bd9cd88-fe45-4216-938b-f97437e15450')]",
-                "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity'), '2018-11-30').principalId]",
+                "principalType": "ServicePrincipal"
             },
             "apiVersion": "2018-09-01-preview",
             "dependsOn": [
@@ -435,10 +424,10 @@
             "name": "[concat(parameters('domainName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/dnsZones', parameters('domainName')), 'RP / DNS Zone Contributor'))]",
             "type": "Microsoft.Network/dnsZones/providers/roleAssignments",
             "properties": {
-                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity'), '2018-11-30').principalId]",
-                "principalType": "ServicePrincipal",
+                "scope": "[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]",
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'befefa01-2a29-4197-83a8-272ff33ce314')]",
-                "scope": "[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]"
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity'), '2018-11-30').principalId]",
+                "principalType": "ServicePrincipal"
             },
             "apiVersion": "2018-09-01-preview",
             "dependsOn": [
