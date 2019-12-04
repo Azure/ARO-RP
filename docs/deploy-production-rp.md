@@ -22,4 +22,19 @@ az group deployment create -g "$RESOURCEGROUP" \
     "keyvaultName=$KEYVAULT_NAME" \
     "location=$LOCATION" \
     "sshPublicKey=$(cat ~/.ssh/id_rsa.pub)"
+
+PARENT_DNS_RESOURCEGROUP=dns
+
+az network dns record-set ns create \
+  --resource-group "$PARENT_DNS_RESOURCEGROUP" \
+  --zone "$(cut -d. -f2- <<<"$DOMAIN")" \
+  --name "$(cut -d. -f1 <<<"$DOMAIN")"
+
+for ns in $(az network dns zone show --resource-group "$RESOURCEGROUP" --name "$DOMAIN" --query nameServers -o tsv); do
+  az network dns record-set ns add-record \
+    --resource-group "$PARENT_DNS_RESOURCEGROUP" \
+    --zone "$(cut -d. -f2- <<<"$DOMAIN")" \
+    --record-set-name "$(cut -d. -f1 <<<"$DOMAIN")" \
+    --nsdname $ns
+done
 ```
