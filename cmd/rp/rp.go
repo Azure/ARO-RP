@@ -14,6 +14,7 @@ import (
 	"github.com/jim-minter/rp/pkg/database"
 	"github.com/jim-minter/rp/pkg/env"
 	"github.com/jim-minter/rp/pkg/frontend"
+	utillog "github.com/jim-minter/rp/pkg/util/log"
 )
 
 var (
@@ -63,9 +64,10 @@ func run(ctx context.Context, log *logrus.Entry) error {
 func main() {
 	logrus.SetReportCaller(true)
 	logrus.SetFormatter(&logrus.TextFormatter{
-		FullTimestamp:          true,
-		DisableLevelTruncation: true,
+		FullTimestamp:    true,
+		CallerPrettyfier: utillog.RelativeFilePathPrettier,
 	})
+
 	log := logrus.NewEntry(logrus.StandardLogger())
 
 	if err := run(context.Background(), log); err != nil {
