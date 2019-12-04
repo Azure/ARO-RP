@@ -43,7 +43,7 @@ type Installer struct {
 }
 
 func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClusters, fpAuthorizer autorest.Authorizer, subscriptionID string) *Installer {
-	d := &Installer{
+	return &Installer{
 		log:          log,
 		env:          env,
 		db:           db,
@@ -59,8 +59,6 @@ func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClu
 
 		subnets: subnet.NewManager(subscriptionID, fpAuthorizer),
 	}
-
-	return d
 }
 
 func (i *Installer) Install(ctx context.Context, doc *api.OpenShiftClusterDocument, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds) error {
