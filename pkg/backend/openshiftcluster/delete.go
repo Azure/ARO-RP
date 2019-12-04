@@ -59,11 +59,5 @@ func (m *Manager) Delete(ctx context.Context) error {
 	}
 
 	m.log.Printf("deleting resource group %s", m.doc.OpenShiftCluster.Properties.ResourceGroup)
-	future, err := m.groups.Delete(ctx, m.doc.OpenShiftCluster.Properties.ResourceGroup)
-	if err != nil {
-		return err
-	}
-
-	m.log.Print("waiting for resource group deletion")
-	return future.WaitForCompletionRef(ctx, m.groups.Client)
+	return m.groups.DeleteAndWait(ctx, m.doc.OpenShiftCluster.Properties.ResourceGroup)
 }

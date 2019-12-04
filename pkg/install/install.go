@@ -7,7 +7,6 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/Azure/go-autorest/autorest"
@@ -19,6 +18,7 @@ import (
 	"github.com/jim-minter/rp/pkg/api"
 	"github.com/jim-minter/rp/pkg/database"
 	"github.com/jim-minter/rp/pkg/env"
+	"github.com/jim-minter/rp/pkg/util/azureclient/compute"
 	"github.com/jim-minter/rp/pkg/util/azureclient/network"
 	"github.com/jim-minter/rp/pkg/util/azureclient/resources"
 	"github.com/jim-minter/rp/pkg/util/azureclient/storage"
@@ -49,8 +49,8 @@ func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClu
 		db:           db,
 		fpAuthorizer: fpAuthorizer,
 
-		disks:             compute.NewDisksClient(subscriptionID),
-		virtualmachines:   compute.NewVirtualMachinesClient(subscriptionID),
+		disks:             compute.NewDisksClient(subscriptionID, fpAuthorizer),
+		virtualmachines:   compute.NewVirtualMachinesClient(subscriptionID, fpAuthorizer),
 		interfaces:        network.NewInterfacesClient(subscriptionID, fpAuthorizer),
 		publicipaddresses: network.NewPublicIPAddressesClient(subscriptionID, fpAuthorizer),
 		deployments:       resources.NewDeploymentsClient(subscriptionID, fpAuthorizer),
@@ -59,9 +59,6 @@ func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClu
 
 		subnets: subnet.NewManager(subscriptionID, fpAuthorizer),
 	}
-
-	d.disks.Authorizer = fpAuthorizer
-	d.virtualmachines.Authorizer = fpAuthorizer
 
 	return d
 }
