@@ -10,7 +10,7 @@
   version = "v0.49.0"
 
 [[projects]]
-  digest = "1:62f880c9da3a934677f9a90a7bee1c936700255415d58085d2c914afcbad50f7"
+  digest = "1:3e1057c80981bec8fa783dd950845480d1457d0cc279252a5a7fdae4d972d5e5"
   name = "github.com/Azure/azure-sdk-for-go"
   packages = [
     "profiles/latest/dns/mgmt/dns",
@@ -23,6 +23,7 @@
     "services/graphrbac/1.6/graphrbac",
     "services/keyvault/2016-10-01/keyvault",
     "services/keyvault/mgmt/2016-10-01/keyvault",
+    "services/msi/mgmt/2018-11-30/msi",
     "services/network/mgmt/2018-12-01/network",
     "services/network/mgmt/2019-07-01/network",
     "services/privatedns/mgmt/2018-09-01/privatedns",
@@ -1371,6 +1372,7 @@
     "github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac",
     "github.com/Azure/azure-sdk-for-go/services/keyvault/2016-10-01/keyvault",
     "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2016-10-01/keyvault",
+    "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi",
     "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network",
     "github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns",
     "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources",
