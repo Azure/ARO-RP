@@ -2,41 +2,53 @@ package v20191231preview
 
 import (
 	"fmt"
-	"reflect"
+	"net/http"
+	"strings"
 	"testing"
+	"unicode"
 
 	"github.com/Azure/go-autorest/autorest/azure"
-	uuid "github.com/satori/go.uuid"
 
 	"github.com/jim-minter/rp/pkg/api"
 )
 
 type validateTest struct {
 	name    string
-	f       func(change *OpenShiftCluster)
-	wantErr error
+	modify  func(oc *OpenShiftCluster)
+	wantErr string
 }
 
 var (
-	subID        = uuid.NewV4().String()
-	testLocation = "australiasoutheast"
-	clusterName  = "test-cluster"
-	resID        = fmt.Sprintf("/subscriptions/%s/resourcegroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s", subID, clusterName, clusterName)
-	vnetID       = fmt.Sprintf("/subscriptions/%s/resourcegroups/test-vnet/providers/Microsoft.Network/virtualNetworks/test-vnet", subID)
-	subnetID     = vnetID + "/subnets/master"
-	goodOC       = OpenShiftCluster{
-		ID:       resID,
-		Name:     clusterName,
+	subscriptionID = "af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1"
+	resourceGroup  = "resourcegroup"
+	location       = "australiasoutheast"
+	name           = "test-cluster"
+	id             = fmt.Sprintf("/subscriptions/%s/resourcegroups/%s/providers/microsoft.redhatopenshift/openshiftclusters/%s", subscriptionID, resourceGroup, name)
+
+	v = &validator{
+		location:   location,
+		resourceID: id,
+		r: azure.Resource{
+			SubscriptionID: subscriptionID,
+			ResourceGroup:  resourceGroup,
+			Provider:       "microsoft.redhatopenShift",
+			ResourceType:   "openshiftclusters",
+			ResourceName:   name,
+		},
+	}
+)
+
+func validOpenShiftCluster() *OpenShiftCluster {
+	return &OpenShiftCluster{
+		ID:       id,
+		Name:     name,
 		Type:     "Microsoft.RedHatOpenShift/openShiftClusters",
-		Location: testLocation,
-		Tags:     map[string]string{"foo": "fee"}, // not validated
+		Location: location,
 		Properties: Properties{
 			ProvisioningState: ProvisioningStateSucceeded,
-			APIServerURL:      "url",
-			ConsoleURL:        "url",
 			ServicePrincipalProfile: ServicePrincipalProfile{
-				ClientID:     uuid.NewV4().String(),
-				ClientSecret: "foo",
+				ClientID:     "2b5ba2c6-6205-4fc4-8b5d-9fea369ae1a2",
+				ClientSecret: "secret",
 			},
 			NetworkProfile: NetworkProfile{
 				PodCIDR:     "10.0.0.0/18",
@@ -44,447 +56,347 @@ var (
 			},
 			MasterProfile: MasterProfile{
 				VMSize:   VMSizeStandardD8sV3,
-				SubnetID: subnetID,
+				SubnetID: fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master", subscriptionID),
 			},
 			WorkerProfiles: []WorkerProfile{
 				{
 					Name:       "worker",
 					VMSize:     VMSizeStandardD4sV3,
 					DiskSizeGB: 128,
-					SubnetID:   subnetID,
+					SubnetID:   fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker", subscriptionID),
 					Count:      12,
 				},
 			},
+			APIServerURL: "url",
+			ConsoleURL:   "url",
 		},
 	}
-)
+}
 
-func TestOpenShiftClusterValidate(t *testing.T) {
-	tests := []validateTest{
-		{
-			name: "pass",
-			f:    func(change *OpenShiftCluster) {},
-		},
-		{
-			name: "Name wrong",
-			f:    func(change *OpenShiftCluster) { change.Name = "wrong" },
-			wantErr: &api.CloudError{
-				StatusCode: 400,
-				CloudErrorBody: &api.CloudErrorBody{
-					Code:    api.CloudErrorCodeMismatchingResourceName,
-					Message: "The provided resource name 'wrong' did not match the name in the Url 'test-cluster'.",
-					Target:  "name",
-				},
-			},
-		},
-		{
-			name: "ID wrong",
-			f:    func(change *OpenShiftCluster) { change.ID = "missmatch" },
-			wantErr: &api.CloudError{
-				StatusCode: 400,
-				CloudErrorBody: &api.CloudErrorBody{
-					Code:    api.CloudErrorCodeMismatchingResourceID,
-					Message: fmt.Sprintf("The provided resource ID 'missmatch' did not match the name in the Url '/subscriptions/%s/resourcegroups/test-cluster/providers/Microsoft.RedHatOpenShift/openShiftClusters/test-cluster'.", subID),
-					Target:  "id",
-				},
-			},
-		},
-		{
-			name: "Type wrong",
-			f:    func(change *OpenShiftCluster) { change.Type = "wrong" },
-			wantErr: &api.CloudError{
-				StatusCode: 400,
-				CloudErrorBody: &api.CloudErrorBody{
-					Code:    api.CloudErrorCodeMismatchingResourceType,
-					Message: "The provided resource type 'wrong' did not match the name in the Url 'Microsoft.RedHatOpenShift/openShiftClusters'.",
-					Target:  "type",
-				},
-			},
-		},
-	}
-	v := &validator{
-		location:   testLocation,
-		resourceID: resID,
-		r: azure.Resource{
-			SubscriptionID: subID,
-			ResourceGroup:  clusterName,
-			Provider:       "Microsoft.RedHatOpenShift",
-			ResourceType:   "openShiftClusters",
-			ResourceName:   clusterName,
-		},
-	}
+func runTests(t *testing.T, tests []*validateTest, f func(*OpenShiftCluster) error) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			oc := goodOC.DeepCopy()
-			tt.f(oc)
-			err := v.validateOpenShiftCluster(oc)
-			if !reflect.DeepEqual(err, tt.wantErr) {
-				t.Errorf("OpenShiftCluster.validate() error = %v, wantErr %v", err, tt.wantErr)
+			oc := validOpenShiftCluster()
+			if tt.modify != nil {
+				tt.modify(oc)
+			}
+
+			err := f(oc)
+			if err == nil {
+				if tt.wantErr != "" {
+					t.Error(err)
+				}
+
+			} else {
+				if err.Error() != tt.wantErr {
+					t.Error(err)
+				}
+
+				cloudErr, ok := err.(*api.CloudError)
+				if !ok {
+					t.Fatal("must return *api.CloudError")
+				}
+
+				if cloudErr.StatusCode != http.StatusBadRequest {
+					t.Error(cloudErr.StatusCode)
+				}
+				if cloudErr.Code == "" {
+					t.Error("code is required")
+				}
+				if cloudErr.Message == "" {
+					t.Error("message is required")
+				}
+				if cloudErr.Target == "" {
+					t.Error("target is required")
+				}
+				if cloudErr.Message != "" && !unicode.IsUpper(rune(cloudErr.Message[0])) {
+					t.Error("message must start with upper case letter")
+				}
+				if strings.Contains(cloudErr.Message, `"`) {
+					t.Error(`message must not contain '"'`)
+				}
+				if !strings.HasSuffix(cloudErr.Message, ".") {
+					t.Error("message must end in '.'")
+				}
 			}
 		})
 	}
 }
 
-func TestPropertiesValidate(t *testing.T) {
-	tests := []validateTest{
+func TestValidateOpenShiftCluster(t *testing.T) {
+	tests := []*validateTest{
 		{
-			name: "pass",
-			f:    func(change *OpenShiftCluster) {},
+			name: "valid",
 		},
 		{
-			name: "apiServerURL invalid",
-			f:    func(change *OpenShiftCluster) { change.Properties.APIServerURL = `f://\\` },
-			wantErr: &api.CloudError{
-				StatusCode: 400,
-				CloudErrorBody: &api.CloudErrorBody{
-					Code:    api.CloudErrorCodeInvalidParameter,
-					Message: `The provided API server URL 'f://\\' is invalid.`,
-					Target:  ".test.apiserverURL",
-				},
+			name: "id wrong",
+			modify: func(oc *OpenShiftCluster) {
+				oc.ID = "wrong"
 			},
+			wantErr: "400: MismatchingResourceID: id: The provided resource ID 'wrong' did not match the name in the Url '/subscriptions/af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/test-cluster'.",
 		},
 		{
-			name: "ConsoleURL invalid",
-			f:    func(change *OpenShiftCluster) { change.Properties.ConsoleURL = `f://\\` },
-			wantErr: &api.CloudError{
-				StatusCode: 400,
-				CloudErrorBody: &api.CloudErrorBody{
-					Code:    api.CloudErrorCodeInvalidParameter,
-					Message: `The provided console URL 'f://\\' is invalid.`,
-					Target:  ".test.consoleURL",
-				},
+			name: "name wrong",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Name = "wrong"
 			},
+			wantErr: "400: MismatchingResourceName: name: The provided resource name 'wrong' did not match the name in the Url 'test-cluster'.",
 		},
 		{
-			name: "wrong provisioning state",
-			f:    func(change *OpenShiftCluster) { change.Properties.ProvisioningState = "waat" },
-			wantErr: &api.CloudError{
-				StatusCode: 400,
-				CloudErrorBody: &api.CloudErrorBody{
-					Code:    api.CloudErrorCodeInvalidParameter,
-					Message: "The provided provisioning state 'waat' is invalid.",
-					Target:  ".test.provisioningState",
-				},
+			name: "type wrong",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Type = "wrong"
 			},
+			wantErr: "400: MismatchingResourceType: type: The provided resource type 'wrong' did not match the name in the Url 'Microsoft.RedHatOpenShift/openShiftClusters'.",
 		},
-	}
-	v := &validator{
-		location:   testLocation,
-		resourceID: resID,
-		r: azure.Resource{
-			SubscriptionID: subID,
-			ResourceGroup:  clusterName,
-			Provider:       "Microsoft.RedHatOpenShift",
-			ResourceType:   "openShiftClusters",
-			ResourceName:   clusterName,
+		{
+			name: "location invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Location = "invalid"
+			},
+			wantErr: "400: InvalidParameter: location: The provided location 'invalid' is invalid.",
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			oc := goodOC.DeepCopy()
-			tt.f(oc)
-			err := v.validateProperties(".test", &oc.Properties)
-			if !reflect.DeepEqual(err, tt.wantErr) {
-				t.Errorf("Properties.validate() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
+	runTests(t, tests, v.validateOpenShiftCluster)
 }
 
-func TestServicePrincipalProfileValidate(t *testing.T) {
-	tests := []validateTest{
+func TestValidateProperties(t *testing.T) {
+	tests := []*validateTest{
 		{
-			name: "good",
-			f:    func(change *OpenShiftCluster) {},
-		},
-		{
-			name: "no secret",
-			f: func(change *OpenShiftCluster) {
-				change.Properties.ServicePrincipalProfile.ClientSecret = ""
-			},
-			wantErr: &api.CloudError{
-				StatusCode: 400,
-				CloudErrorBody: &api.CloudErrorBody{
-					Code:    api.CloudErrorCodeInvalidParameter,
-					Message: "The provided client secret is invalid.",
-					Target:  ".test.clientSecret",
-				},
-			},
+			name: "valid",
 		},
 		{
-			name: "invalid clientID",
-			f: func(change *OpenShiftCluster) {
-				change.Properties.ServicePrincipalProfile.ClientID = "not a uuid"
+			name: "provisioningState invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ProvisioningState = "invalid"
 			},
-			wantErr: &api.CloudError{
-				StatusCode: 400,
-				CloudErrorBody: &api.CloudErrorBody{
-					Code:    api.CloudErrorCodeInvalidParameter,
-					Message: "The provided client ID 'not a uuid' is invalid.",
-					Target:  ".test.clientId",
-				},
+			wantErr: "400: InvalidParameter: properties.provisioningState: The provided provisioning state 'invalid' is invalid.",
+		},
+		{
+			name: "no workerProfiles invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.WorkerProfiles = nil
+			},
+			wantErr: "400: InvalidParameter: properties.workerProfiles: There should be exactly one worker profile.",
+		},
+		{
+			name: "multiple workerProfiles invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.WorkerProfiles = []WorkerProfile{{}, {}}
+			},
+			wantErr: "400: InvalidParameter: properties.workerProfiles: There should be exactly one worker profile.",
+		},
+		{
+			name: "empty apiServerUrl valid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.APIServerURL = ""
 			},
 		},
-	}
-	v := &validator{
-		location:   testLocation,
-		resourceID: resID,
-		r: azure.Resource{
-			SubscriptionID: subID,
-			ResourceGroup:  clusterName,
-			Provider:       "Microsoft.RedHatOpenShift",
-			ResourceType:   "openShiftClusters",
-			ResourceName:   clusterName,
+		{
+			name: "apiServerUrl invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.APIServerURL = "\x00"
+			},
+			wantErr: "400: InvalidParameter: properties.apiserverUrl: The provided API server URL '\x00' is invalid.",
+		},
+		{
+			name: "empty consoleUrl valid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ConsoleURL = ""
+			},
+		},
+		{
+			name: "consoleUrl invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ConsoleURL = "\x00"
+			},
+			wantErr: "400: InvalidParameter: properties.consoleUrl: The provided console URL '\x00' is invalid.",
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			oc := goodOC.DeepCopy()
-			tt.f(oc)
-			err := v.validateServicePrincipalProfile(".test", &oc.Properties.ServicePrincipalProfile)
-			if !reflect.DeepEqual(err, tt.wantErr) {
-				t.Errorf("ServicePrincipalProfile.validate() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
+
+	runTests(t, tests, func(oc *OpenShiftCluster) error {
+		return v.validateProperties("properties", &oc.Properties)
+	})
 }
 
-func TestNetworkProfileValidate(t *testing.T) {
-	tests := []validateTest{
+func TestValidateServicePrincipalProfile(t *testing.T) {
+	tests := []*validateTest{
 		{
-			name: "pass",
-			f:    func(change *OpenShiftCluster) {},
+			name: "valid",
 		},
 		{
-			name: "podCIDR invalid",
-			f:    func(change *OpenShiftCluster) { change.Properties.NetworkProfile.PodCIDR = "not a CIDR" },
-			wantErr: &api.CloudError{
-				StatusCode: 400,
-				CloudErrorBody: &api.CloudErrorBody{
-					Code:    api.CloudErrorCodeInvalidParameter,
-					Message: "The provided pod CIDR 'not a CIDR' is invalid: 'invalid CIDR address: not a CIDR'.",
-					Target:  ".test.podCidr",
-				},
+			name: "clientID invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ServicePrincipalProfile.ClientID = "invalid"
 			},
+			wantErr: "400: InvalidParameter: properties.servicePrincipalProfile.clientId: The provided client ID 'invalid' is invalid.",
 		},
 		{
-			name: "serviceCIDR invalid",
-			f:    func(change *OpenShiftCluster) { change.Properties.NetworkProfile.ServiceCIDR = "not a CIDR" },
-			wantErr: &api.CloudError{
-				StatusCode: 400,
-				CloudErrorBody: &api.CloudErrorBody{
-					Code:    api.CloudErrorCodeInvalidParameter,
-					Message: "The provided service CIDR 'not a CIDR' is invalid: 'invalid CIDR address: not a CIDR'.",
-					Target:  ".test.serviceCidr",
-				},
+			name: "empty clientSecret invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ServicePrincipalProfile.ClientSecret = ""
 			},
-		},
-		{
-			name: "podCIDR too small",
-			f:    func(change *OpenShiftCluster) { change.Properties.NetworkProfile.PodCIDR = "10.0.0.0/24" },
-			wantErr: &api.CloudError{
-				StatusCode: 400,
-				CloudErrorBody: &api.CloudErrorBody{
-					Code:    api.CloudErrorCodeInvalidParameter,
-					Message: "The provided vnet CIDR '10.0.0.0/24' is invalid: must be /18 or larger.",
-					Target:  ".test.podCidr",
-				},
-			},
-		},
-		{
-			name: "serviceCIDR too small",
-			f:    func(change *OpenShiftCluster) { change.Properties.NetworkProfile.ServiceCIDR = "10.0.0.0/24" },
-			wantErr: &api.CloudError{
-				StatusCode: 400,
-				CloudErrorBody: &api.CloudErrorBody{
-					Code:    api.CloudErrorCodeInvalidParameter,
-					Message: "The provided vnet CIDR '10.0.0.0/24' is invalid: must be /22 or larger.",
-					Target:  ".test.serviceCidr",
-				},
-			},
+			wantErr: "400: InvalidParameter: properties.servicePrincipalProfile.clientSecret: The provided client secret is invalid.",
 		},
 	}
-	v := &validator{
-		location:   testLocation,
-		resourceID: resID,
-		r: azure.Resource{
-			SubscriptionID: subID,
-			ResourceGroup:  clusterName,
-			Provider:       "Microsoft.RedHatOpenShift",
-			ResourceType:   "openShiftClusters",
-			ResourceName:   clusterName,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			oc := goodOC.DeepCopy()
-			tt.f(oc)
-			err := v.validateNetworkProfile(".test", &oc.Properties.NetworkProfile)
-			if !reflect.DeepEqual(err, tt.wantErr) {
-				t.Errorf("NetworkProfile.validate() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
+
+	runTests(t, tests, func(oc *OpenShiftCluster) error {
+		return v.validateServicePrincipalProfile("properties.servicePrincipalProfile", &oc.Properties.ServicePrincipalProfile)
+	})
 }
 
-func TestMasterProfileValidate(t *testing.T) {
-	sub2ID := uuid.NewV4().String()
-	resID := fmt.Sprintf("/subscriptions/%s/resourcegroups/test-vnet/providers/Microsoft.Network/virtualNetworks/test-vnet", subID)
-	subnet2ID := fmt.Sprintf("/subscriptions/%s/resourcegroups/test-vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master", sub2ID)
-	tests := []validateTest{
+func TestValidateNetworkProfile(t *testing.T) {
+	tests := []*validateTest{
 		{
-			name: "pass",
-			f:    func(change *OpenShiftCluster) {},
+			name: "valid",
 		},
 		{
-			name: "invalid vmsize",
-			f:    func(change *OpenShiftCluster) { change.Properties.MasterProfile.VMSize = VMSizeStandardD2sV3 },
-			wantErr: &api.CloudError{
-				StatusCode: 400,
-				CloudErrorBody: &api.CloudErrorBody{
-					Code:    api.CloudErrorCodeInvalidParameter,
-					Message: "The provided master VM size 'Standard_D2s_v3' is invalid.",
-					Target:  ".test.vmSize",
-				},
+			name: "podCidr invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PodCIDR = "invalid"
 			},
+			wantErr: "400: InvalidParameter: properties.networkProfile.podCidr: The provided pod CIDR 'invalid' is invalid: 'invalid CIDR address: invalid'.",
 		},
 		{
-			name: "invalid subnetid",
-			f:    func(change *OpenShiftCluster) { change.Properties.MasterProfile.SubnetID = "not right" },
-			wantErr: &api.CloudError{
-				StatusCode: 400,
-				CloudErrorBody: &api.CloudErrorBody{
-					Code:    api.CloudErrorCodeInvalidParameter,
-					Message: "The provided master VM subnet 'not right' is invalid.",
-					Target:  ".test.subnetId",
-				},
+			name: "ipv6 podCidr invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PodCIDR = "::0/0"
 			},
+			wantErr: "400: InvalidParameter: properties.networkProfile.podCidr: The provided pod CIDR '::0/0' is invalid: must be IPv4.",
 		},
 		{
-			name: "subs not matching",
-			f:    func(change *OpenShiftCluster) { change.Properties.MasterProfile.SubnetID = subnet2ID },
-			wantErr: &api.CloudError{
-				StatusCode: 400,
-				CloudErrorBody: &api.CloudErrorBody{
-					Code:    api.CloudErrorCodeInvalidParameter,
-					Message: fmt.Sprintf("The provided master VM subnet '/subscriptions/%s/resourcegroups/test-vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master' is invalid: must be in same subscription as cluster.", sub2ID),
-					Target:  ".test.subnetId",
-				},
+			name: "serviceCidr invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.ServiceCIDR = "invalid"
 			},
+			wantErr: "400: InvalidParameter: properties.networkProfile.serviceCidr: The provided service CIDR 'invalid' is invalid: 'invalid CIDR address: invalid'.",
+		},
+		{
+			name: "ipv6 serviceCidr invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.ServiceCIDR = "::0/0"
+			},
+			wantErr: "400: InvalidParameter: properties.networkProfile.serviceCidr: The provided service CIDR '::0/0' is invalid: must be IPv4.",
+		},
+		{
+			name: "podCidr too small",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.PodCIDR = "10.0.0.0/19"
+			},
+			wantErr: "400: InvalidParameter: properties.networkProfile.podCidr: The provided vnet CIDR '10.0.0.0/19' is invalid: must be /18 or larger.",
+		},
+		{
+			name: "serviceCidr too small",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.NetworkProfile.ServiceCIDR = "10.0.0.0/23"
+			},
+			wantErr: "400: InvalidParameter: properties.networkProfile.serviceCidr: The provided vnet CIDR '10.0.0.0/23' is invalid: must be /22 or larger.",
 		},
 	}
 
-	v := &validator{
-		location:   testLocation,
-		resourceID: resID,
-		r: azure.Resource{
-			SubscriptionID: subID,
-			ResourceGroup:  clusterName,
-			Provider:       "Microsoft.RedHatOpenShift",
-			ResourceType:   "openShiftClusters",
-			ResourceName:   clusterName,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			testOC := goodOC.DeepCopy()
-			tt.f(testOC)
-			err := v.validateMasterProfile(".test", &testOC.Properties.MasterProfile)
-			if !reflect.DeepEqual(err, tt.wantErr) {
-				t.Errorf("MasterProfile.validate() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
+	runTests(t, tests, func(oc *OpenShiftCluster) error {
+		return v.validateNetworkProfile("properties.networkProfile", &oc.Properties.NetworkProfile)
+	})
 }
 
-func TestWorkerProfileValidate(t *testing.T) {
-	subnet2ID := fmt.Sprintf("/subscriptions/%s/resourcegroups/test-vnet/providers/Microsoft.Network/virtualNetworks/other-vnet/subnets/other", subID)
-	tests := []validateTest{
+func TestValidateMasterProfile(t *testing.T) {
+	tests := []*validateTest{
 		{
-			name: "pass",
-			f:    func(oc *OpenShiftCluster) {},
+			name: "valid",
+		},
+		{
+			name: "vmSize unsupported",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.MasterProfile.VMSize = VMSizeStandardD2sV3
+			},
+			wantErr: "400: InvalidParameter: properties.masterProfile.vmSize: The provided master VM size 'Standard_D2s_v3' is invalid.",
+		},
+		{
+			name: "subnetId invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.MasterProfile.SubnetID = "invalid"
+			},
+			wantErr: "400: InvalidParameter: properties.masterProfile.subnetId: The provided master VM subnet 'invalid' is invalid.",
+		},
+		{
+			name: "subnet subscriptionId not matching cluster subscriptionId",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.MasterProfile.SubnetID = "/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourcegroups/test-vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master"
+			},
+			wantErr: "400: InvalidParameter: properties.masterProfile.subnetId: The provided master VM subnet '/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourcegroups/test-vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master' is invalid: must be in same subscription as cluster.",
+		},
+	}
+
+	runTests(t, tests, func(oc *OpenShiftCluster) error {
+		return v.validateMasterProfile("properties.masterProfile", &oc.Properties.MasterProfile)
+	})
+}
+
+func TestValidateWorkerProfile(t *testing.T) {
+	tests := []*validateTest{
+		{
+			name: "valid",
+		},
+		{
+			name: "name invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.WorkerProfiles[0].Name = "invalid"
+			},
+			wantErr: "400: InvalidParameter: properties.workerProfiles[0].name: The provided worker name 'invalid' is invalid.",
+		},
+		{
+			name: "vmSize invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.WorkerProfiles[0].VMSize = "invalid"
+			},
+			wantErr: "400: InvalidParameter: properties.workerProfiles[0].vmSize: The provided worker VM size 'invalid' is invalid.",
 		},
 		{
 			name: "disk too small",
-			f:    func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].DiskSizeGB = 100 },
-			wantErr: &api.CloudError{
-				StatusCode: 400,
-				CloudErrorBody: &api.CloudErrorBody{
-					Code:    api.CloudErrorCodeInvalidParameter,
-					Message: "The provided worker disk size '100' is invalid.",
-					Target:  ".test.diskSizeGB",
-				},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.WorkerProfiles[0].DiskSizeGB = 127
 			},
+			wantErr: "400: InvalidParameter: properties.workerProfiles[0].diskSizeGB: The provided worker disk size '127' is invalid.",
+		},
+		{
+			name: "subnetId invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.WorkerProfiles[0].SubnetID = "invalid"
+			},
+			wantErr: "400: InvalidParameter: properties.workerProfiles[0].subnetId: The provided worker VM subnet 'invalid' is invalid.",
+		},
+		{
+			name: "master and worker subnets not in same vnet",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.WorkerProfiles[0].SubnetID = fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/different-vnet/subnets/worker", subscriptionID)
+			},
+			wantErr: "400: InvalidParameter: properties.workerProfiles[0].subnetId: The provided worker VM subnet '/subscriptions/af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/different-vnet/subnets/worker' is invalid: must be in the same vnet as master VM subnet '/subscriptions/af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master'.",
+		},
+		{
+			name: "master and worker subnets not different",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.WorkerProfiles[0].SubnetID = oc.Properties.MasterProfile.SubnetID
+			},
+			wantErr: "400: InvalidParameter: properties.workerProfiles[0].subnetId: The provided worker VM subnet '/subscriptions/af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master' is invalid: must be different to master VM subnet '/subscriptions/af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master'.",
 		},
 		{
 			name: "count too small",
-			f:    func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].Count = 2 },
-			wantErr: &api.CloudError{
-				StatusCode: 400,
-				CloudErrorBody: &api.CloudErrorBody{
-					Code:    api.CloudErrorCodeInvalidParameter,
-					Message: "The provided worker count '2' is invalid.",
-					Target:  ".test.count",
-				},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.WorkerProfiles[0].Count = 2
 			},
+			wantErr: "400: InvalidParameter: properties.workerProfiles[0].count: The provided worker count '2' is invalid.",
 		},
 		{
 			name: "count too big",
-			f:    func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].Count = 21 },
-			wantErr: &api.CloudError{
-				StatusCode: 400,
-				CloudErrorBody: &api.CloudErrorBody{
-					Code:    api.CloudErrorCodeInvalidParameter,
-					Message: "The provided worker count '21' is invalid.",
-					Target:  ".test.count",
-				},
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.WorkerProfiles[0].Count = 21
 			},
-		},
-		{
-			name: "subnet different to master",
-			f:    func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].SubnetID = subnet2ID },
-			wantErr: &api.CloudError{
-				StatusCode: 400,
-				CloudErrorBody: &api.CloudErrorBody{
-					Code:    api.CloudErrorCodeInvalidParameter,
-					Message: fmt.Sprintf("The provided worker VM subnet '/subscriptions/%s/resourcegroups/test-vnet/providers/Microsoft.Network/virtualNetworks/other-vnet/subnets/other' is invalid: must be in the same vnet as master VM subnet '/subscriptions/%s/resourcegroups/test-vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master'", subID, subID),
-					Target:  ".test.subnetId",
-				},
-			},
-		},
-		{
-			name: "must be worker",
-			f:    func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].Name = "buzzy-bee" },
-			wantErr: &api.CloudError{
-				StatusCode: 400,
-				CloudErrorBody: &api.CloudErrorBody{
-					Code:    api.CloudErrorCodeInvalidParameter,
-					Message: "The provided worker name 'buzzy-bee' is invalid.",
-					Target:  ".test.name",
-				},
-			},
+			wantErr: "400: InvalidParameter: properties.workerProfiles[0].count: The provided worker count '21' is invalid.",
 		},
 	}
-	v := &validator{
-		location:   testLocation,
-		resourceID: resID,
-		r: azure.Resource{
-			SubscriptionID: subID,
-			ResourceGroup:  clusterName,
-			Provider:       "Microsoft.RedHatOpenShift",
-			ResourceType:   "openShiftClusters",
-			ResourceName:   clusterName,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			testOC := goodOC.DeepCopy()
-			tt.f(testOC)
-			err := v.validateWorkerProfile(".test", &testOC.Properties.WorkerProfiles[0], &goodOC.Properties.MasterProfile)
-			if !reflect.DeepEqual(err, tt.wantErr) {
-				t.Errorf("WorkerProfile.validate() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
+
+	runTests(t, tests, func(oc *OpenShiftCluster) error {
+		return v.validateWorkerProfile("properties.workerProfiles[0]", &oc.Properties.WorkerProfiles[0], &oc.Properties.MasterProfile)
+	})
 }

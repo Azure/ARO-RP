@@ -16,7 +16,7 @@ type CloudError struct {
 }
 
 func (err *CloudError) Error() string {
-	return fmt.Sprintf("%d: %s: %s", err.StatusCode, err.Code, err.Message)
+	return fmt.Sprintf("%d: %s: %s: %s", err.StatusCode, err.Code, err.Target, err.Message)
 }
 
 // CloudErrorBody represents the body of a cloud error.
