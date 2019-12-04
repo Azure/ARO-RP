@@ -91,12 +91,12 @@ func (v *validator) validateProperties(path string, p *Properties) error {
 	}
 	if p.APIServerURL != "" {
 		if _, err := url.Parse(p.APIServerURL); err != nil {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".apiserverURL", "The provided API server URL '%s' is invalid.", p.APIServerURL)
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".apiserverUrl", "The provided API server URL '%s' is invalid.", p.APIServerURL)
 		}
 	}
 	if p.ConsoleURL != "" {
 		if _, err := url.Parse(p.ConsoleURL); err != nil {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".consoleURL", "The provided console URL '%s' is invalid.", p.ConsoleURL)
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".consoleUrl", "The provided console URL '%s' is invalid.", p.ConsoleURL)
 		}
 	}
 
@@ -109,7 +109,7 @@ func (v *validator) validateServicePrincipalProfile(path string, spp *ServicePri
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".clientId", "The provided client ID '%s' is invalid.", spp.ClientID)
 	}
 	if spp.ClientSecret == "" {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".cilentSecret", "The provided client secret is invalid.")
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".clientSecret", "The provided client secret is invalid.")
 	}
 
 	return nil
@@ -190,7 +190,10 @@ func (v *validator) validateWorkerProfile(path string, wp *WorkerProfile, mp *Ma
 		return err
 	}
 	if !strings.EqualFold(masterVnetID, workerVnetID) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".subnetId", "The provided worker VM subnet '%s' is invalid: must be in the same vnet as master VM subnet '%s'", wp.SubnetID, mp.SubnetID)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".subnetId", "The provided worker VM subnet '%s' is invalid: must be in the same vnet as master VM subnet '%s'.", wp.SubnetID, mp.SubnetID)
+	}
+	if strings.EqualFold(mp.SubnetID, wp.SubnetID) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".subnetId", "The provided worker VM subnet '%s' is invalid: must be different to master VM subnet '%s'.", wp.SubnetID, mp.SubnetID)
 	}
 	if wp.Count < 3 || wp.Count > 20 {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".count", "The provided worker count '%d' is invalid.", wp.Count)
