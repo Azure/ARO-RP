@@ -121,7 +121,15 @@ func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthor
 		},
 	})
 	if err != nil {
-		return err
+		var ignore bool
+		if err, ok := err.(autorest.DetailedError); ok {
+			if err, ok := err.Original.(*azure.RequestError); ok && err.ServiceError != nil && err.ServiceError.Code == "RoleAssignmentExists" {
+				ignore = true
+			}
+		}
+		if !ignore {
+			return err
+		}
 	}
 
 	fpRefreshableAuthorizer, ok := fpAuthorizer.(*shared.RefreshableAuthorizer)
