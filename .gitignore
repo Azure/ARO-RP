@@ -1,7 +1,9 @@
 /*.crt
 /*.key
 /*.pem
-/admin.kubeconfig
-/env
+/*.kubeconfig
+/env*
+!/env.example
 /id_rsa
 /rp
+/secrets

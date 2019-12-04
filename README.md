@@ -18,26 +18,24 @@
    resource group.
 
 1. You will need an **ARM AAD application** with client secret authentication
-   enabled.  *RH ARO engineering*: use `aro-v4-arm-shared` and ask for the
-   credentials.
+   enabled.  *RH ARO engineering*: use `aro-v4-arm-shared` in the shared
+   `secrets/env` file.
 
 1. You will need an **RP AAD application** with client secret authentication
-   enabled.  *RH ARO engineering*: use `aro-v4-rp-shared` and ask for the
-   credentials.
+   enabled.  *RH ARO engineering*: use `aro-v4-rp-shared` in the shared
+   `secrets/env` file.
 
 1. You will need a **"first party" AAD application** with client certificate
-   authentication enabled.  This mimics the first party production AAD
-   application.  A suitable key/certificate file can be generated using the
-   following helper utility:
+   authentication enabled.  A suitable key/certificate file can be generated
+   using the following helper utility:
 
    ```
    # Non-RH ARO engineering only
    go run ./hack/genkey -extKeyUsage client "$RP_AAD_APPLICATION_NAME"
    ```
 
-   *RH ARO engineering*: use the `aro-v4-fp-shared` AAD application.  Ask for
-   the key/certificate file (`aro-v4-fp-shared.pem`) to load into your key
-   vault.
+   *RH ARO engineering*: use the `aro-v4-fp-shared` AAD application in the
+   shared `secrets/env` and `secrets/aro-v4-fp-shared.pem` files.
 
 1. You will need to set up the **RP role definitions and assignments** in your
    Azure subscription.  This mimics the RBAC that ARM sets up.  With at least
@@ -53,6 +51,17 @@
 
    *RH ARO engineering*: the above step has already been done.
 
+1. You will need an RP serving key/certificate.  A suitable key/certificate file
+   can be generated using the following helper utility:
+
+   ```
+   # Non-RH ARO engineering only
+   go run ./hack/genkey localhost
+   ```
+
+   *RH ARO engineering*: use the `localhost` key and certificate in the shared
+   `secrets/localhost.pem` file.
+
 1. You will need your own **cluster AAD application** with client secret
    authentication enabled.
 
@@ -65,6 +74,10 @@
 1. Copy env.example to env, edit the values and source the env file.  This file
    holds (only) the environment variables necessary for the RP to run.
 
+   * LOCATION:                      Azure location where RP and cluster(s) will run (default: `eastus`)
+   * RESOURCEGROUP:                 Name of a new resource group which will contain the RP resources
+   * RP_MODE:                       Set to `development` when not in production.
+
    * AZURE_TENANT_ID:               Azure tenant UUID
    * AZURE_SUBSCRIPTION_ID:         Azure subscription UUID
    * AZURE_ARM_CLIENT_ID:           ARM application client UUID
@@ -75,12 +88,7 @@
    * AZURE_CLUSTER_CLIENT_ID:       Cluster AAD application client UUID
    * AZURE_CLUSTER_CLIENT_SECRET:   Cluster AAD application client secret
 
-   * LOCATION:                      Azure location where RP and cluster(s) will run (default: `eastus`)
-   * RESOURCEGROUP:                 Name of a new resource group which will contain the RP resources
-
    * PULL_SECRET:                   A cluster pull secret retrieved from [Red Hat OpenShift Cluster Manager](https://cloud.redhat.com/openshift/install/azure/installer-provisioned)
-
-   * RP_MODE:                       Set to `development` when not in production.
 
    ```
    cp env.example env
@@ -115,17 +123,16 @@
 1. Load the application key/certificate into the key vault:
 
    ```
-   AZURE_KEY_FILE=aro-v4-fp-shared.pem
+   AZURE_KEY_FILE=secrets/aro-v4-fp-shared.pem
 
    az keyvault certificate import --vault-name "$KEYVAULT_NAME" --name azure --file "$AZURE_KEY_FILE"
    ```
 
-1. Generate a self-signed serving key/certificate and load it into the key vault:
+1. Load the serving key/certificate into the key vault:
 
    ```
-   TLS_KEY_FILE=localhost.pem
+   TLS_KEY_FILE=secrets/localhost.pem
 
-   go run ./hack/genkey localhost
    az keyvault certificate import --vault-name "$KEYVAULT_NAME" --name tls --file "$TLS_KEY_FILE"
    ```
 

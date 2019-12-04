@@ -25,6 +25,14 @@ client:
 image: rp
 	docker build -t rp:$(COMMIT) .
 
+secrets:
+	rm -rf secrets
+	mkdir secrets
+	oc extract -n azure secret/aro-v4-dev --to=secrets
+
+secrets-update:
+	oc create secret generic aro-v4-dev --from-file=secrets --dry-run -o yaml | oc apply -f -
+
 test:
 	go generate ./...
 	go build ./...
@@ -39,4 +47,4 @@ test:
 	go vet ./...
 	go test ./...
 
-.PHONY: rp clean client image test
+.PHONY: rp clean client image secrets secrets-update test
