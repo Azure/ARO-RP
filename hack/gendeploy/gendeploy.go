@@ -239,7 +239,24 @@ func (g *generator) lb() *arm.Resource {
 
 func (g *generator) vmss() *arm.Resource {
 	script := base64.StdEncoding.EncodeToString([]byte(`#!/bin/bash
-yum update -x WALinuxAgent -y
+yum -y update -x WALinuxAgent
+
+rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
+
+yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+
+cat >/etc/yum.repos.d/azure-cli.repo <<'EOF'
+[azurecore]
+name=azurecore
+baseurl=https://packages.microsoft.com/yumrepos/azurecore
+enabled=yes
+gpgcheck=no
+EOF
+
+yum -y install azure-mdsd azure-security azsec-monitor azsec-clamav docker
+
+firewall-cmd --add-port=8443/tcp --permanent
+firewall-cmd --reload
 `))
 
 	vmss := &compute.VirtualMachineScaleSet{
