@@ -1,9 +1,6 @@
 package openshiftcluster
 
 import (
-	"time"
-
-	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
@@ -11,6 +8,7 @@ import (
 	"github.com/jim-minter/rp/pkg/api"
 	"github.com/jim-minter/rp/pkg/database"
 	"github.com/jim-minter/rp/pkg/env"
+	"github.com/jim-minter/rp/pkg/util/azureclient/resources"
 	"github.com/jim-minter/rp/pkg/util/subnet"
 )
 
@@ -40,13 +38,10 @@ func NewManager(log *logrus.Entry, env env.Interface, db database.OpenShiftClust
 		fpAuthorizer: fpAuthorizer,
 
 		subnets: subnet.NewManager(r.SubscriptionID, fpAuthorizer),
+		groups:  resources.NewGroupsClient(r.SubscriptionID, fpAuthorizer),
 
 		doc: doc,
 	}
-
-	m.groups = resources.NewGroupsClient(r.SubscriptionID)
-	m.groups.Authorizer = fpAuthorizer
-	m.groups.Client.PollingDuration = time.Hour
 
 	return m, nil
 }

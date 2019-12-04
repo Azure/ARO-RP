@@ -2,6 +2,7 @@ package resources
 
 import (
 	"context"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
 	"github.com/Azure/go-autorest/autorest"
@@ -10,6 +11,7 @@ import (
 // GroupsClient is a minimal interface for azure GroupsClient
 type GroupsClient interface {
 	CreateOrUpdate(ctx context.Context, resourceGroupName string, parameters resources.Group) (result resources.Group, err error)
+	CheckExistence(ctx context.Context, resourceGroupName string) (result autorest.Response, err error)
 	GroupsClientAddons
 }
 
@@ -23,6 +25,7 @@ var _ GroupsClient = &groupsClient{}
 func NewGroupsClient(subscriptionID string, authorizer autorest.Authorizer) GroupsClient {
 	client := resources.NewGroupsClient(subscriptionID)
 	client.Authorizer = authorizer
+	client.PollingDuration = time.Hour
 
 	return &groupsClient{
 		GroupsClient: client,

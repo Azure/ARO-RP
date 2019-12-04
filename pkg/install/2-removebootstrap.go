@@ -25,12 +25,7 @@ func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClust
 
 	{
 		i.log.Print("removing bootstrap vm")
-		future, err := i.virtualmachines.Delete(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, "aro-bootstrap")
-		if err != nil {
-			return err
-		}
-
-		err = future.WaitForCompletionRef(ctx, i.virtualmachines.Client)
+		err := i.virtualmachines.DeleteAndWait(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, "aro-bootstrap")
 		if err != nil {
 			return err
 		}
@@ -38,12 +33,7 @@ func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClust
 
 	{
 		i.log.Print("removing bootstrap disk")
-		future, err := i.disks.Delete(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, "aro-bootstrap_OSDisk")
-		if err != nil {
-			return err
-		}
-
-		err = future.WaitForCompletionRef(ctx, i.disks.Client)
+		err := i.disks.DeleteAndWait(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, "aro-bootstrap_OSDisk")
 		if err != nil {
 			return err
 		}
