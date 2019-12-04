@@ -4,10 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
+	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/autorest/date"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/sirupsen/logrus"
 
@@ -114,18 +119,29 @@ func (i *Installer) Install(ctx context.Context, doc *api.OpenShiftClusterDocume
 	}
 }
 
-func (i *Installer) getBlobService(ctx context.Context, oc *api.OpenShiftCluster) (azstorage.BlobStorageClient, error) {
-	keys, err := i.accounts.ListKeys(ctx, oc.Properties.ResourceGroup, "cluster"+oc.Properties.StorageSuffix, "")
+func (i *Installer) getBlobService(ctx context.Context, oc *api.OpenShiftCluster) (*azstorage.BlobStorageClient, error) {
+	t := time.Now().UTC().Truncate(time.Second)
+
+	res, err := i.accounts.ListAccountSAS(ctx, oc.Properties.ResourceGroup, "cluster"+oc.Properties.StorageSuffix, mgmtstorage.AccountSasParameters{
+		Services:               "b",
+		ResourceTypes:          "o",
+		Permissions:            "crw",
+		Protocols:              mgmtstorage.HTTPS,
+		SharedAccessStartTime:  &date.Time{Time: t},
+		SharedAccessExpiryTime: &date.Time{Time: t.Add(24 * time.Hour)},
+	})
 	if err != nil {
-		return azstorage.BlobStorageClient{}, err
+		return nil, err
 	}
 
-	storage, err := azstorage.NewClient("cluster"+oc.Properties.StorageSuffix, *(*keys.Keys)[0].Value, azstorage.DefaultBaseURL, azstorage.DefaultAPIVersion, true)
+	v, err := url.ParseQuery(*res.AccountSasToken)
 	if err != nil {
-		return azstorage.BlobStorageClient{}, err
+		return nil, err
 	}
 
-	return storage.GetBlobService(), nil
+	c := azstorage.NewAccountSASClient("cluster"+oc.Properties.StorageSuffix, v, azure.PublicCloud).GetBlobService()
+
+	return &c, nil
 }
 
 func (i *Installer) getGraph(ctx context.Context, oc *api.OpenShiftCluster) (graph, error) {

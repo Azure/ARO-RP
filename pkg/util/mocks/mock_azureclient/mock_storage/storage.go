@@ -49,6 +49,21 @@ func (mr *MockAccountsClientMockRecorder) CreateAndWait(arg0, arg1, arg2, arg3 i
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAndWait", reflect.TypeOf((*MockAccountsClient)(nil).CreateAndWait), arg0, arg1, arg2, arg3)
 }
 
+// ListAccountSAS mocks base method
+func (m *MockAccountsClient) ListAccountSAS(arg0 context.Context, arg1, arg2 string, arg3 storage.AccountSasParameters) (storage.ListAccountSasResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAccountSAS", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(storage.ListAccountSasResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListAccountSAS indicates an expected call of ListAccountSAS
+func (mr *MockAccountsClientMockRecorder) ListAccountSAS(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAccountSAS", reflect.TypeOf((*MockAccountsClient)(nil).ListAccountSAS), arg0, arg1, arg2, arg3)
+}
+
 // ListByResourceGroup mocks base method
 func (m *MockAccountsClient) ListByResourceGroup(arg0 context.Context, arg1 string) (storage.AccountListResult, error) {
 	m.ctrl.T.Helper()
@@ -62,19 +77,4 @@ func (m *MockAccountsClient) ListByResourceGroup(arg0 context.Context, arg1 stri
 func (mr *MockAccountsClientMockRecorder) ListByResourceGroup(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByResourceGroup", reflect.TypeOf((*MockAccountsClient)(nil).ListByResourceGroup), arg0, arg1)
-}
-
-// ListKeys mocks base method
-func (m *MockAccountsClient) ListKeys(arg0 context.Context, arg1, arg2 string, arg3 storage.ListKeyExpand) (storage.AccountListKeysResult, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListKeys", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(storage.AccountListKeysResult)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListKeys indicates an expected call of ListKeys
-func (mr *MockAccountsClientMockRecorder) ListKeys(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListKeys", reflect.TypeOf((*MockAccountsClient)(nil).ListKeys), arg0, arg1, arg2, arg3)
 }

@@ -76,7 +76,6 @@
                             "Microsoft.Resources/subscriptions/resourceGroups/read",
                             "Microsoft.Storage/storageAccounts/blobServices/containers/write",
                             "Microsoft.Storage/storageAccounts/listAccountSas/action",
-                            "Microsoft.Storage/storageAccounts/listKeys/action",
                             "Microsoft.Storage/storageAccounts/write"
                         ]
                     }
