@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
+	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
 	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -19,6 +19,7 @@ import (
 
 	"github.com/jim-minter/rp/pkg/api"
 	"github.com/jim-minter/rp/pkg/env/shared"
+	"github.com/jim-minter/rp/pkg/util/azureclient/authorization"
 )
 
 type dev struct {
@@ -44,19 +45,18 @@ func New(ctx context.Context, log *logrus.Entry) (*dev, error) {
 		}
 	}
 
-	d := &dev{
-		log:             log,
-		roleassignments: authorization.NewRoleAssignmentsClient(os.Getenv("AZURE_SUBSCRIPTION_ID")),
-		applications:    graphrbac.NewApplicationsClient(os.Getenv("AZURE_TENANT_ID")),
-	}
-
-	var err error
-	d.Shared, err = shared.NewShared(ctx, log, os.Getenv("AZURE_TENANT_ID"), os.Getenv("AZURE_SUBSCRIPTION_ID"), os.Getenv("RESOURCEGROUP"))
+	armAuthorizer, err := auth.NewClientCredentialsConfig(os.Getenv("AZURE_ARM_CLIENT_ID"), os.Getenv("AZURE_ARM_CLIENT_SECRET"), os.Getenv("AZURE_TENANT_ID")).Authorizer()
 	if err != nil {
 		return nil, err
 	}
 
-	d.roleassignments.Authorizer, err = auth.NewClientCredentialsConfig(os.Getenv("AZURE_ARM_CLIENT_ID"), os.Getenv("AZURE_ARM_CLIENT_SECRET"), os.Getenv("AZURE_TENANT_ID")).Authorizer()
+	d := &dev{
+		log:             log,
+		roleassignments: authorization.NewRoleAssignmentsClient(os.Getenv("AZURE_SUBSCRIPTION_ID"), armAuthorizer),
+		applications:    graphrbac.NewApplicationsClient(os.Getenv("AZURE_TENANT_ID")),
+	}
+
+	d.Shared, err = shared.NewShared(ctx, log, os.Getenv("AZURE_TENANT_ID"), os.Getenv("AZURE_SUBSCRIPTION_ID"), os.Getenv("RESOURCEGROUP"))
 	if err != nil {
 		return nil, err
 	}
@@ -114,8 +114,8 @@ func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthor
 		return err
 	}
 
-	_, err = d.roleassignments.Create(ctx, "/subscriptions/"+os.Getenv("AZURE_SUBSCRIPTION_ID")+"/resourceGroups/"+oc.Properties.ResourceGroup, uuid.NewV4().String(), authorization.RoleAssignmentCreateParameters{
-		Properties: &authorization.RoleAssignmentProperties{
+	_, err = d.roleassignments.Create(ctx, "/subscriptions/"+os.Getenv("AZURE_SUBSCRIPTION_ID")+"/resourceGroups/"+oc.Properties.ResourceGroup, uuid.NewV4().String(), mgmtauthorization.RoleAssignmentCreateParameters{
+		Properties: &mgmtauthorization.RoleAssignmentProperties{
 			RoleDefinitionID: to.StringPtr("/subscriptions/" + os.Getenv("AZURE_SUBSCRIPTION_ID") + "/providers/Microsoft.Authorization/roleDefinitions/c95361b8-cf7c-40a1-ad0a-df9f39a30225"),
 			PrincipalID:      res.Value,
 		},
