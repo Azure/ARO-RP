@@ -67,7 +67,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *http.Request, internal api.Ope
 			OpenShiftCluster: &api.OpenShiftCluster{
 				ID:   originalPath,
 				Name: originalR.ResourceName,
-				Type: fmt.Sprintf("%s/%s", originalR.Provider, originalR.ResourceType),
+				Type: originalR.Provider + "/" + originalR.ResourceType,
 				Properties: api.Properties{
 					ProvisioningState: api.ProvisioningStateSucceeded,
 					// TODO: ResourceGroup should be exposed in external API
