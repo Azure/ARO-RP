@@ -85,7 +85,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "ed081a7af453411de4fdd66717d9f68bbcc3b92c",
+                    "commitHash": "f421e2327a6e6566d937e4519317765f3cd0e856",
                     "repositoryUrl": "https://github.com/aws/aws-sdk-go/"
                 }
             }
@@ -274,7 +274,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "6dad56fdca42773a2993258183682d7ebd2197e6",
+                    "commitHash": "c99da270f3181ddc1b3d5c5e7d040971024cb71a",
                     "repositoryUrl": "https://github.com/gophercloud/gophercloud/"
                 }
             }
@@ -355,7 +355,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "4c4803ed55e31c024ba6c245cba8fc441fb04edd",
+                    "commitHash": "adc6f4cd9e7d28fc1c1e5efc658d940d55c0f356",
                     "repositoryUrl": "https://github.com/kubernetes/apimachinery/"
                 }
             }
@@ -526,7 +526,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "d41e621f07144df3d7f00eded84e2cccd4f098e6",
+                    "commitHash": "300d04ffcf37462dc15f07684064421b4633f394",
                     "repositoryUrl": "https://github.com/openshift/installer/"
                 }
             }
@@ -535,7 +535,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "986b771e661d787083ea5f0b6fd81fdc13fc2830",
+                    "commitHash": "829aed455755535b778f8ab298fd3c86c79dfb13",
                     "repositoryUrl": "https://github.com/openshift/machine-api-operator/"
                 }
             }
@@ -544,7 +544,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "a6a863218ba135404217da637751df8a55336c7c",
+                    "commitHash": "d6e699040aa8d2330a9b9e84b8b3192147e077d2",
                     "repositoryUrl": "https://github.com/openshift/machine-config-operator/"
                 }
             }
@@ -670,7 +670,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "ef20fe5d793301b553005db740f730d87993f778",
+                    "commitHash": "5ee1b9f4859acd2e99987ef94ec7a58427c53bef",
                     "repositoryUrl": "https://golang.org/x/net/"
                 }
             }
@@ -688,7 +688,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "6d18c012aee9febd81bbf9806760c8c4480e870d",
+                    "commitHash": "ce4227a45e2eb77e5c847278dcc6a626742e2945",
                     "repositoryUrl": "https://golang.org/x/sys/"
                 }
             }
@@ -715,7 +715,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "db047d72ee39222674197c28adb04e2107488d83",
+                    "commitHash": "e84277c2c0088d7953ec19455caf17a84c8cbf8e",
                     "repositoryUrl": "https://golang.org/x/tools/"
                 }
             }
@@ -742,7 +742,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "83cc0476cb11ea0da33dacd4c6354ab192de6fe6",
+                    "commitHash": "3fa9dbf08042c806feeb0b21b23e07587714c143",
                     "repositoryUrl": "https://google.golang.org/genproto/"
                 }
             }
@@ -859,7 +859,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "a46da8ea986b1bba33511f3c1ed4ce03b2b4b142",
+                    "commitHash": "86ecb23daa83c78761414a7abcb169c73c18a756",
                     "repositoryUrl": "https://sigs.k8s.io/cluster-api-provider-azure/"
                 }
             }
