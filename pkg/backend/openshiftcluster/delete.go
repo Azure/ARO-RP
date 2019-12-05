@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Azure/go-autorest/autorest"
+
 	"github.com/jim-minter/rp/pkg/util/subnet"
 )
 
@@ -50,12 +52,14 @@ func (m *Manager) Delete(ctx context.Context) error {
 		}
 	}
 
-	resp, err := m.groups.CheckExistence(ctx, m.doc.OpenShiftCluster.Properties.ResourceGroup)
+	_, err = m.groups.CheckExistence(ctx, m.doc.OpenShiftCluster.Properties.ResourceGroup)
 	if err != nil {
+		if err, ok := err.(autorest.DetailedError); ok {
+			if err.StatusCode == http.StatusForbidden {
+				return nil
+			}
+		}
 		return err
-	}
-	if resp.StatusCode != http.StatusNoContent {
-		return nil
 	}
 
 	m.log.Printf("deleting resource group %s", m.doc.OpenShiftCluster.Properties.ResourceGroup)
