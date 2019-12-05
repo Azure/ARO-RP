@@ -20,6 +20,7 @@ import (
 	"github.com/jim-minter/rp/pkg/api"
 	"github.com/jim-minter/rp/pkg/env/shared"
 	"github.com/jim-minter/rp/pkg/util/azureclient/authorization"
+	utilpermissions "github.com/jim-minter/rp/pkg/util/permissions"
 )
 
 type dev struct {
@@ -27,6 +28,7 @@ type dev struct {
 
 	*shared.Shared
 
+	permissions     authorization.PermissionsClient
 	roleassignments authorization.RoleAssignmentsClient
 	applications    graphrbac.ApplicationsClient
 }
@@ -65,6 +67,13 @@ func New(ctx context.Context, log *logrus.Entry) (*dev, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	fpAuthorizer, err := d.FPAuthorizer(ctx, azure.PublicCloud.ResourceManagerEndpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	d.permissions = authorization.NewPermissionsClient(os.Getenv("AZURE_SUBSCRIPTION_ID"), fpAuthorizer)
 
 	return d, nil
 }
@@ -138,5 +147,25 @@ func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthor
 	}
 
 	d.log.Print("development mode: refreshing authorizer")
-	return fpRefreshableAuthorizer.Refresh()
+	err = fpRefreshableAuthorizer.Refresh()
+	if err != nil {
+		return err
+	}
+
+	// try removing the code below after a bit if we don't hit the error
+	permissions, err := d.permissions.ListForResourceGroup(ctx, oc.Properties.ResourceGroup)
+	if err != nil {
+		return err
+	}
+
+	ok, err = utilpermissions.CanDoAction(permissions, "Microsoft.Storage/storageAccounts/write")
+	if err != nil {
+		return err
+	}
+
+	if !ok {
+		return fmt.Errorf("Microsoft.Storage/storageAccounts/write permission not found")
+	}
+
+	return nil
 }
