@@ -2,7 +2,6 @@ package arm
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math"
 	"reflect"
@@ -60,62 +59,52 @@ type Copy struct {
 // MarshalJSON marshals the nested r.Resource ignoring any MarshalJSON() methods
 // on its types.  It then merges remaining fields of r over the result
 func (r *Resource) MarshalJSON() ([]byte, error) {
-	// Make a shadow copy of the `r.Resource`
-	resource := shadowCopy(r.Resource)
+	resource := reflect.ValueOf(shadowCopy(r.Resource))
+	outer := reflect.ValueOf(*r)
 
-	resourceV := reflect.ValueOf(resource)
-	outerV := reflect.ValueOf(*r)
-
-	// Check that the underlying resource is a struct
-	if resourceV.Kind() != reflect.Struct {
-		return nil, errors.New("Resource field of the arm.Resource must be a struct")
+	if resource.Kind() != reflect.Struct {
+		return nil, fmt.Errorf("Resource field must be a struct")
 	}
 
-	// Create a list of fields that combines fields of `r.Resource` and outer `*r` structs.
-	// Fields from the outer struct `*r` override fields from `r.Resource`.
-	fields := make([]reflect.StructField, 0, resourceV.NumField())
-	fieldsMap := map[string]int{}
-	// Copy fields from `r.Resource`
-	for i := 0; i < resourceV.NumField(); i++ {
-		field := resourceV.Type().Field(i)
+	// Create slices of field types and values that combine `r.Resource` and
+	// outer `*r` structs.  Fields from the outer struct `*r` override fields
+	// from `r.Resource`.
+	fields := make([]reflect.StructField, 0, resource.NumField()+outer.NumField())
+	values := make([]reflect.Value, 0, resource.NumField()+outer.NumField())
+	indexes := map[string]int{}
+
+	// Copy fields and values from `r.Resource`
+	for i := 0; i < resource.NumField(); i++ {
+		field := resource.Type().Field(i)
 		fields = append(fields, field)
-		fieldsMap[field.Name] = i
+		values = append(values, resource.Field(i))
+		indexes[field.Name] = i
 	}
-	// Copy fields from `*r` & override if already exists
-	for i := 0; i < outerV.NumField(); i++ {
-		outerField := outerV.Type().Field(i)
-		if outerField.Name == "Resource" {
-			continue
-		}
-		if fieldsIndex, found := fieldsMap[outerField.Name]; found {
-			outerField.Type = emptyInterfaceType
-			fields[fieldsIndex] = outerField
+
+	// Copy fields and values from `*r` and override if they already exist
+	for i := 1; i < outer.NumField(); i++ {
+		field := outer.Type().Field(i)
+
+		if idx, found := indexes[field.Name]; found {
+			field.Type = emptyInterfaceType
+			fields[idx] = field
+			if !isZero(outer.Field(i)) {
+				values[idx] = outer.Field(i)
+			}
 		} else {
-			fields = append(fields, outerField)
+			fields = append(fields, field)
+			values = append(values, outer.Field(i))
+			indexes[field.Name] = len(fields) - 1
 		}
 	}
 
-	// Create a new struct of fields
-	combinedV := reflect.New(reflect.StructOf(fields)).Elem()
-	// Copy values from `r.Resource`
-	for i := 0; i < resourceV.NumField(); i++ {
-		field := resourceV.Type().Field(i)
-		fieldV := resourceV.Field(i)
-		combinedV.FieldByName(field.Name).Set(fieldV)
-	}
-	// Copy values from `*r`
-	for i := 0; i < outerV.NumField(); i++ {
-		field := outerV.Type().Field(i)
-		fieldV := outerV.Field(i)
-		if field.Name == "Resource" {
-			continue
-		}
-		if !isZero(fieldV) {
-			combinedV.FieldByName(field.Name).Set(fieldV)
-		}
+	combined := reflect.New(reflect.StructOf(fields)).Elem()
+
+	for i, v := range values {
+		combined.Field(i).Set(v)
 	}
 
-	return json.Marshal(combinedV.Interface())
+	return json.Marshal(combined.Interface())
 }
 
 // UnmarshalJSON is not implemented
@@ -183,7 +172,7 @@ func _shadowCopy(v reflect.Value) reflect.Value {
 		if v.Type().Elem().Kind() == reflect.Uint8 {
 			// keep []byte - encoding/json will detect it and marshal it into a
 			// base64 encoded string
-			t = reflect.SliceOf(v.Type().Elem())
+			t = v.Type()
 		} else {
 			t = reflect.SliceOf(emptyInterfaceType)
 		}
@@ -198,10 +187,14 @@ func _shadowCopy(v reflect.Value) reflect.Value {
 
 	case reflect.Struct:
 		fields := make([]reflect.StructField, 0, v.Type().NumField())
+		values := make([]reflect.Value, 0, v.Type().NumField())
 		for i := 0; i < v.Type().NumField(); i++ {
 			if v.Type().Field(i).PkgPath != "" {
 				continue
 			}
+			f := _shadowCopy(v.Field(i))
+			values = append(values, f)
+
 			field := v.Type().Field(i)
 			field.Type = emptyInterfaceType
 			fields = append(fields, field)
@@ -209,15 +202,10 @@ func _shadowCopy(v reflect.Value) reflect.Value {
 		t := reflect.StructOf(fields)
 
 		s := reflect.New(t).Elem()
-		for i, j := 0, 0; i < v.NumField(); i++ {
-			if v.Type().Field(i).PkgPath != "" {
-				continue
+		for i, v := range values {
+			if !isZero(v) {
+				s.Field(i).Set(v)
 			}
-			f := _shadowCopy(v.Field(i))
-			if !isZero(f) {
-				s.Field(j).Set(f)
-			}
-			j++
 		}
 		return s
 
