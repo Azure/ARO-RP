@@ -4,16 +4,16 @@ import (
 	"context"
 	"net"
 	"net/http"
-	"regexp"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/apparentlymart/go-cidr/cidr"
 
 	"github.com/jim-minter/rp/pkg/api"
+	"github.com/jim-minter/rp/pkg/util/azureclient/authorization"
+	utilpermissions "github.com/jim-minter/rp/pkg/util/permissions"
 	"github.com/jim-minter/rp/pkg/util/subnet"
 )
 
@@ -79,15 +79,9 @@ func (dv *dynamicValidator) validateVnetPermissions(ctx context.Context, authori
 		return err
 	}
 
-	vnetr, err := azure.ParseResourceID(vnetID)
-	if err != nil {
-		return err
-	}
+	cli := authorization.NewPermissionsClient(dv.r.SubscriptionID, authorizer)
 
-	permissions := authorization.NewPermissionsClient(dv.r.SubscriptionID)
-	permissions.Authorizer = authorizer
-
-	page, err := permissions.ListForResource(ctx, vnetr.ResourceGroup, vnetr.Provider, vnetr.ResourceType, "", vnetr.ResourceName)
+	permissions, err := cli.ListForResource(ctx, vnetID)
 	if err != nil {
 		if err, ok := err.(autorest.DetailedError); ok {
 			if err.StatusCode == http.StatusNotFound {
@@ -98,27 +92,12 @@ func (dv *dynamicValidator) validateVnetPermissions(ctx context.Context, authori
 		return err
 	}
 
-	var ps []authorization.Permission
-
-	for {
-		ps = append(ps, page.Values()...)
-
-		err = page.Next()
-		if err != nil {
-			return err
-		}
-
-		if !page.NotDone() {
-			break
-		}
-	}
-
 	for _, action := range []string{
 		"Microsoft.Network/virtualNetworks/subnets/join/action",
 		"Microsoft.Network/virtualNetworks/subnets/read",
 		"Microsoft.Network/virtualNetworks/subnets/write",
 	} {
-		ok, err := canDoAction(ps, action)
+		ok, err := utilpermissions.CanDoAction(permissions, action)
 		if err != nil {
 			return err
 		}
@@ -128,45 +107,6 @@ func (dv *dynamicValidator) validateVnetPermissions(ctx context.Context, authori
 	}
 
 	return nil
-}
-
-func canDoAction(ps []authorization.Permission, a string) (bool, error) {
-	for _, p := range ps {
-		var matched bool
-		for _, action := range *p.Actions {
-			action := regexp.QuoteMeta(action)
-			action = "(?i)^" + strings.ReplaceAll(action, `\*`, ".*") + "$"
-			rx, err := regexp.Compile(action)
-			if err != nil {
-				return false, err
-			}
-			if rx.MatchString(a) {
-				matched = true
-				break
-			}
-		}
-		if !matched {
-			continue
-		}
-
-		for _, notAction := range *p.NotActions {
-			notAction := regexp.QuoteMeta(notAction)
-			notAction = "(?i)^" + strings.ReplaceAll(notAction, `\*`, ".*") + "$"
-			rx, err := regexp.Compile(notAction)
-			if err != nil {
-				return false, err
-			}
-			if rx.MatchString(a) {
-				matched = false
-				break
-			}
-		}
-		if matched {
-			return true, nil
-		}
-	}
-
-	return false, nil
 }
 
 func (dv *dynamicValidator) validateSubnets(ctx context.Context) error {
