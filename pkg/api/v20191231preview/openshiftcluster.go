@@ -9,19 +9,19 @@ type OpenShiftClusterList struct {
 // OpenShiftCluster represents an Azure Red Hat OpenShift cluster.
 type OpenShiftCluster struct {
 	// The resource ID (immutable).
-	ID string `json:"id,omitempty"`
+	ID string `json:"id,omitempty" mutable:"case"`
 
 	// The resource name (immutable).
-	Name string `json:"name,omitempty"`
+	Name string `json:"name,omitempty" mutable:"case"`
 
 	// The resource type (immutable).
-	Type string `json:"type,omitempty"`
+	Type string `json:"type,omitempty" mutable:"case"`
 
 	// The resource location (immutable).
 	Location string `json:"location,omitempty"`
 
 	// The resource tags.
-	Tags Tags `json:"tags,omitempty"`
+	Tags Tags `json:"tags,omitempty" mutable:"true"`
 
 	// The cluster properties.
 	Properties Properties `json:"properties,omitempty"`
@@ -118,5 +118,5 @@ type WorkerProfile struct {
 	SubnetID string `json:"subnetId,omitempty"`
 
 	// The number of worker VMs.  Must be between 3 and 20.
-	Count int `json:"count,omitempty"`
+	Count int `json:"count,omitempty" mutable:"true"`
 }

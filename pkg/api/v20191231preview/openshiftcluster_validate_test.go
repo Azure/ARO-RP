@@ -3,6 +3,7 @@ package v20191231preview
 import (
 	"fmt"
 	"net/http"
+	"reflect"
 	"strings"
 	"testing"
 	"unicode"
@@ -10,6 +11,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/jim-minter/rp/pkg/api"
+	"github.com/jim-minter/rp/pkg/util/immutable"
 )
 
 type validateTest struct {
@@ -44,6 +46,7 @@ func validOpenShiftCluster() *OpenShiftCluster {
 		Name:     name,
 		Type:     "Microsoft.RedHatOpenShift/openShiftClusters",
 		Location: location,
+		Tags:     Tags{"key": "value"},
 		Properties: Properties{
 			ProvisioningState: ProvisioningStateSucceeded,
 			ServicePrincipalProfile: ServicePrincipalProfile{
@@ -64,7 +67,7 @@ func validOpenShiftCluster() *OpenShiftCluster {
 					VMSize:     VMSizeStandardD4sV3,
 					DiskSizeGB: 128,
 					SubnetID:   fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker", subscriptionID),
-					Count:      12,
+					Count:      3,
 				},
 			},
 			APIServerURL: "url",
@@ -92,35 +95,41 @@ func runTests(t *testing.T, tests []*validateTest, f func(*OpenShiftCluster) err
 					t.Error(err)
 				}
 
-				cloudErr, ok := err.(*api.CloudError)
-				if !ok {
-					t.Fatal("must return *api.CloudError")
-				}
-
-				if cloudErr.StatusCode != http.StatusBadRequest {
-					t.Error(cloudErr.StatusCode)
-				}
-				if cloudErr.Code == "" {
-					t.Error("code is required")
-				}
-				if cloudErr.Message == "" {
-					t.Error("message is required")
-				}
-				if cloudErr.Target == "" {
-					t.Error("target is required")
-				}
-				if cloudErr.Message != "" && !unicode.IsUpper(rune(cloudErr.Message[0])) {
-					t.Error("message must start with upper case letter")
-				}
-				if strings.Contains(cloudErr.Message, `"`) {
-					t.Error(`message must not contain '"'`)
-				}
-				if !strings.HasSuffix(cloudErr.Message, ".") {
-					t.Error("message must end in '.'")
-				}
+				validateCloudError(t, err)
 			}
 		})
 	}
+}
+
+func validateCloudError(t *testing.T, err error) *api.CloudError {
+	cloudErr, ok := err.(*api.CloudError)
+	if !ok {
+		t.Fatal("must return *api.CloudError")
+	}
+
+	if cloudErr.StatusCode != http.StatusBadRequest {
+		t.Error(cloudErr.StatusCode)
+	}
+	if cloudErr.Code == "" {
+		t.Error("code is required")
+	}
+	if cloudErr.Message == "" {
+		t.Error("message is required")
+	}
+	if cloudErr.Target == "" {
+		t.Error("target is required")
+	}
+	if cloudErr.Message != "" && !unicode.IsUpper(rune(cloudErr.Message[0])) {
+		t.Error("message must start with upper case letter")
+	}
+	if strings.Contains(cloudErr.Message, `"`) {
+		t.Error(`message must not contain '"'`)
+	}
+	if !strings.HasSuffix(cloudErr.Message, ".") {
+		t.Error("message must end in '.'")
+	}
+
+	return cloudErr
 }
 
 func TestValidateOpenShiftCluster(t *testing.T) {
@@ -399,4 +408,117 @@ func TestValidateWorkerProfile(t *testing.T) {
 	runTests(t, tests, func(oc *OpenShiftCluster) error {
 		return v.validateWorkerProfile("properties.workerProfiles[0]", &oc.Properties.WorkerProfiles[0], &oc.Properties.MasterProfile)
 	})
+}
+
+// walk recurses through each child value of a parent value v with no cycles.
+// Excepting when v is a struct, at each step it temporarily mutates v by
+// overwriting it with its zero value, calls the test function f, then restores
+// v.  It then recurses on v's children.  The mutable field is set if any parent
+// of v is marked `mutable:"true"`.
+func walk(f func(string, bool), v reflect.Value, set func(reflect.Value), path string, mutable, ignoreCase bool) {
+	if v.Kind() != reflect.Struct {
+		current := reflect.New(v.Type()).Elem()
+		current.Set(v)
+
+		if ignoreCase && v.Kind() == reflect.String {
+			set(reflect.ValueOf(strings.ToUpper(v.String())))
+			f(path, true)
+		}
+
+		set(zeroVal(v.Type()))
+		f(path, mutable)
+
+		set(current)
+	}
+
+	switch v.Kind() {
+	case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32,
+		reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16,
+		reflect.Uint32, reflect.Uint64, reflect.Uintptr, reflect.Float32,
+		reflect.Float64, reflect.Complex64, reflect.Complex128, reflect.String:
+
+	case reflect.Array, reflect.Slice:
+		for i := 0; i < v.Len(); i++ {
+			walk(f, v.Index(i), v.Index(i).Set, fmt.Sprintf("%s[%d]", path, i), mutable, ignoreCase)
+		}
+
+	case reflect.Interface, reflect.Ptr:
+		if v.IsNil() {
+			return
+		}
+
+		walk(f, v.Elem(), v.Elem().Set, path, mutable, ignoreCase)
+
+	case reflect.Map:
+		i := v.MapRange()
+		for i.Next() {
+			// currently we don't recurse on keys - we assume they're simple
+			walk(f, i.Value(), func(new reflect.Value) {
+				v.SetMapIndex(i.Key(), new)
+			}, fmt.Sprintf("%s[%q]", path, i.Key()), mutable, ignoreCase)
+		}
+
+	case reflect.Struct:
+		for i := 0; i < v.NumField(); i++ {
+			name := strings.SplitN(v.Type().Field(i).Tag.Get("json"), ",", 2)[0]
+			if name == "" {
+				name = v.Type().Field(i).Name
+			}
+
+			mut := mutable || strings.EqualFold(v.Type().Field(i).Tag.Get("mutable"), "true")
+			ic := ignoreCase || strings.EqualFold(v.Type().Field(i).Tag.Get("mutable"), "case")
+
+			subpath := path
+			if subpath != "" {
+				subpath += "."
+			}
+			subpath += name
+
+			walk(f, v.Field(i), v.Field(i).Set, subpath, mut, ic)
+		}
+
+	default:
+		panic("unexpected kind " + v.Kind().String())
+	}
+}
+
+func zeroVal(t reflect.Type) reflect.Value {
+	return reflect.New(t).Elem()
+}
+
+func TestValidateOpenShiftClusterDelta(t *testing.T) {
+	oc, mut := validOpenShiftCluster(), validOpenShiftCluster()
+
+	v := reflect.ValueOf(mut).Elem()
+
+	walk(func(path string, mutable bool) {
+		err := immutable.Validate("", oc, mut)
+		if mutable {
+			if err == nil {
+				t.Logf("%s: mutable, no error", path)
+			} else {
+				t.Errorf("%s: mutable, unexpected error %s", path, err)
+			}
+		} else {
+			if err == nil {
+				t.Errorf("%s: immutable, unexpected no error", path)
+			} else {
+				t.Logf("%s: immutable, error %s", path, err)
+
+				cloudErr := validateCloudError(t, err)
+
+				if cloudErr.Code != api.CloudErrorCodePropertyChangeNotAllowed {
+					t.Error(cloudErr.Code)
+				}
+
+				if cloudErr.Target != path {
+					t.Error(cloudErr.Target)
+				}
+
+				if cloudErr.Message != fmt.Sprintf("Changing property '%s' is not allowed.", path) {
+					t.Error(cloudErr.Message)
+				}
+			}
+		}
+	}, v, v.Set, "", false, false)
 }

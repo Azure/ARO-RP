@@ -11,6 +11,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/jim-minter/rp/pkg/api"
+	"github.com/jim-minter/rp/pkg/util/immutable"
 	"github.com/jim-minter/rp/pkg/util/subnet"
 )
 
@@ -203,94 +204,5 @@ func (v *validator) validateWorkerProfile(path string, wp *WorkerProfile, mp *Ma
 }
 
 func (v *validator) validateOpenShiftClusterDelta(oc, current *OpenShiftCluster) error {
-	if !strings.EqualFold(current.ID, oc.ID) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, "id", "Changing property 'id' is not allowed.")
-	}
-	if !strings.EqualFold(current.Name, oc.Name) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, "name", "Changing property 'name' is not allowed.")
-	}
-	if !strings.EqualFold(current.Type, oc.Type) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, "type", "Changing property 'type' is not allowed.")
-	}
-	if !strings.EqualFold(current.Location, oc.Location) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, "location", "Changing property 'location' is not allowed.")
-	}
-
-	return v.validatePropertiesDelta("properties", &oc.Properties, &current.Properties)
-}
-
-func (v *validator) validatePropertiesDelta(path string, p, current *Properties) error {
-	if current.ProvisioningState != p.ProvisioningState {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, path+".provisioningState", "Changing property '"+path+".provisioningState' is not allowed.")
-	}
-	if err := v.validateServicePrincipalProfileDelta(path+".servicePrincipalProfile", &p.ServicePrincipalProfile, &current.ServicePrincipalProfile); err != nil {
-		return err
-	}
-	if err := v.validateNetworkProfileDelta(path+".networkProfile", &p.NetworkProfile, &current.NetworkProfile); err != nil {
-		return err
-	}
-	if err := v.validateMasterProfileDelta(path+".masterProfile", &p.MasterProfile, &current.MasterProfile); err != nil {
-		return err
-	}
-	if err := v.validateWorkerProfileDelta(path+`.workerProfiles["`+p.WorkerProfiles[0].Name+`"]`, &p.WorkerProfiles[0], &current.WorkerProfiles[0]); err != nil {
-		return err
-	}
-	if current.APIServerURL != p.APIServerURL {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, path+".apiserverURL", "Changing property '"+path+".apiserverURL' is not allowed.")
-	}
-	if current.ConsoleURL != p.ConsoleURL {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, path+".consoleURL", "Changing property '"+path+".consoleURL' is not allowed.")
-	}
-
-	return nil
-}
-
-func (v *validator) validateServicePrincipalProfileDelta(path string, spp, current *ServicePrincipalProfile) error {
-	if current.ClientID != spp.ClientID {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, path+".vnetCidr", "Changing property '"+path+".clientId' is not allowed.")
-	}
-	if current.ClientSecret != spp.ClientSecret {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, path+".podCidr", "Changing property '"+path+".clientSecret' is not allowed.")
-	}
-
-	return nil
-}
-
-func (v *validator) validateNetworkProfileDelta(path string, np, current *NetworkProfile) error {
-	if current.PodCIDR != np.PodCIDR {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, path+".podCidr", "Changing property '"+path+".podCidr' is not allowed.")
-	}
-	if current.ServiceCIDR != np.ServiceCIDR {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, path+".serviceCidr", "Changing property '"+path+".serviceCidr' is not allowed.")
-	}
-
-	return nil
-}
-
-func (v *validator) validateMasterProfileDelta(path string, mp, current *MasterProfile) error {
-	if current.VMSize != mp.VMSize {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, path+".vmSize", "Changing property '"+path+".vmSize' is not allowed.")
-	}
-	if current.SubnetID != mp.SubnetID {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, path+".subnetId", "Changing property '"+path+".subnetId' is not allowed.")
-	}
-
-	return nil
-}
-
-func (v *validator) validateWorkerProfileDelta(path string, wp, current *WorkerProfile) error {
-	if current.Name != wp.Name {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, path+".name", "Changing property '"+path+".name' is not allowed.")
-	}
-	if current.VMSize != wp.VMSize {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, path+".vmSize", "Changing property '"+path+".vmSize' is not allowed.")
-	}
-	if current.DiskSizeGB != wp.DiskSizeGB {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, path+".diskSizeGB", "Changing property '"+path+".diskSizeGB' is not allowed.")
-	}
-	if current.SubnetID != wp.SubnetID {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, path+".subnetId", "Changing property '"+path+".subnetId' is not allowed.")
-	}
-
-	return nil
+	return immutable.Validate("", oc, current)
 }
