@@ -107,18 +107,6 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 			Resources: []*arm.Resource{
 				{
 					Resource: &authorization.RoleAssignment{
-						Name: to.StringPtr("[guid(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'aro-identity'), 'Identity / Contributor')]"),
-						Type: to.StringPtr("Microsoft.Authorization/roleAssignments"),
-						Properties: &authorization.RoleAssignmentPropertiesWithScope{
-							Scope:            to.StringPtr("[resourceGroup().id]"),
-							RoleDefinitionID: to.StringPtr("[resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]"),
-							PrincipalID:      to.StringPtr("[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'aro-identity'), '2018-11-30').principalId]"),
-						},
-					},
-					APIVersion: apiVersions["authorization"],
-				},
-				{
-					Resource: &authorization.RoleAssignment{
 						Name: to.StringPtr("[guid(resourceGroup().id, 'SP / Contributor')]"),
 						Type: to.StringPtr("Microsoft.Authorization/roleAssignments"),
 						Properties: &authorization.RoleAssignmentPropertiesWithScope{
@@ -555,19 +543,12 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 								},
 							},
 						},
-						Identity: &compute.VirtualMachineIdentity{
-							Type: compute.ResourceIdentityTypeUserAssigned,
-							UserAssignedIdentities: map[string]*compute.VirtualMachineIdentityUserAssignedIdentitiesValue{
-								"[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'aro-identity')]": {},
-							},
-						},
 						Name:     to.StringPtr("aro-bootstrap"),
 						Type:     to.StringPtr("Microsoft.Compute/virtualMachines"),
 						Location: &installConfig.Config.Azure.Region,
 					},
 					APIVersion: apiVersions["compute"],
 					DependsOn: []string{
-						"[concat('Microsoft.Authorization/roleAssignments/', guid(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'aro-identity'), 'Identity / Contributor'))]",
 						"[concat('Microsoft.Authorization/roleAssignments/', guid(resourceGroup().id, 'SP / Contributor'))]",
 						"Microsoft.Compute/images/aro",
 						"Microsoft.Network/networkInterfaces/aro-bootstrap-nic",
@@ -617,12 +598,6 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 								},
 							},
 						},
-						Identity: &compute.VirtualMachineIdentity{
-							Type: compute.ResourceIdentityTypeUserAssigned,
-							UserAssignedIdentities: map[string]*compute.VirtualMachineIdentityUserAssignedIdentitiesValue{
-								"[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'aro-identity')]": {},
-							},
-						},
 						Zones: &[]string{
 							"[copyIndex(1)]",
 						},
@@ -636,7 +611,6 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 						Count: len(machinesMaster.MachineFiles),
 					},
 					DependsOn: []string{
-						"[concat('Microsoft.Authorization/roleAssignments/', guid(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'aro-identity'), 'Identity / Contributor'))]",
 						"[concat('Microsoft.Authorization/roleAssignments/', guid(resourceGroup().id, 'SP / Contributor'))]",
 						"Microsoft.Compute/images/aro",
 						"[concat('Microsoft.Network/networkInterfaces/aro-master', copyIndex(), '-nic')]",

@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
 	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
@@ -32,7 +31,6 @@ import (
 var apiVersions = map[string]string{
 	"authorization": "2015-07-01",
 	"compute":       "2019-03-01",
-	"msi":           "2018-11-30",
 	"network":       "2019-07-01",
 	"privatedns":    "2018-09-01",
 	"storage":       "2019-04-01",
@@ -41,8 +39,8 @@ var apiVersions = map[string]string{
 func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftClusterDocument, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds) error {
 	image := &releaseimage.Image{
 		// https://openshift-release.svc.ci.openshift.org/
-		// oc adm release info quay.io/openshift-release-dev/ocp-release-nightly:4.3.0-0.nightly-2019-12-02-232545
-		PullSpec:   "quay.io/openshift-release-dev/ocp-release-nightly@sha256:212203fe4aaffcbfddf16c00c9562f6d216e7d7e89036d2e396833d39daec617",
+		// oc adm release info quay.io/openshift-release-dev/ocp-release-nightly:4.3.0-0.nightly-2019-12-05-001549
+		PullSpec:   "quay.io/openshift-release-dev/ocp-release-nightly@sha256:5f1ff5e767acd58445532222c38e643069fdb9fdf0bb176ced48bc2eb1032f2a",
 		Repository: "quay.io/openshift-release-dev/ocp-release-nightly",
 
 		// oc adm release info quay.io/openshift-release-dev/ocp-release:4.2.4
@@ -94,17 +92,6 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 			Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 			ContentVersion: "1.0.0.0",
 			Resources: []*arm.Resource{
-				{
-					// deploy the Identity now to give AAD a chance to update
-					// itself before we apply the RBAC rule in the next
-					// deployment
-					Resource: &msi.Identity{
-						Name:     to.StringPtr("aro-identity"),
-						Location: &installConfig.Config.Azure.Region,
-						Type:     "Microsoft.ManagedIdentity/userAssignedIdentities",
-					},
-					APIVersion: apiVersions["msi"],
-				},
 				{
 					Resource: &storage.Account{
 						Sku: &storage.Sku{
