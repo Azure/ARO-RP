@@ -109,7 +109,7 @@ func lowercase(h http.Handler) http.Handler {
 }
 
 func readBody(w http.ResponseWriter, r *http.Request) (*http.Request, error) {
-	if r.Header.Get("Content-Type") != "application/json" {
+	if strings.SplitN(r.Header.Get("Content-Type"), ";", 2)[0] != "application/json" {
 		return nil, api.NewCloudError(http.StatusUnsupportedMediaType, api.CloudErrorCodeUnsupportedMediaType, "", "The content media type '%s' is not supported. Only 'application/json' is supported.", r.Header.Get("Content-Type"))
 	}
 
