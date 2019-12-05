@@ -105,7 +105,8 @@
    * RP_SERVICEPRINCIPAL_ID: AAD object ID for RP principal                    (RH: `az ad sp list --all --query "[?appDisplayName=='aro-v4-rp-shared'].objectId" -o tsv`)
    * FP_SERVICEPRINCIPAL_ID: AAD object ID for "first party" service principal (RH: `az ad sp list --all --query "[?appDisplayName=='aro-v4-fp-shared'].objectId" -o tsv`)
 
-1. Create the resource group and deploy the RP resources:
+1. Create the resource group and with at least `Contributor` and `User Access
+   Administrator` permissions on your subscription deploy the RP resources:
 
    ```
    COSMOSDB_ACCOUNT=$RESOURCEGROUP
