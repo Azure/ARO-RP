@@ -41,12 +41,14 @@ func validateOpenShiftClusterDynamic(ctx context.Context, fpAuthorizer autorest.
 		return err
 	}
 
-	err = v.validateVnetPermissions(ctx, fpAuthorizer, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
+	fpPermissions := authorization.NewPermissionsClient(v.r.SubscriptionID, fpAuthorizer)
+	err = v.validateVnetPermissions(ctx, fpPermissions, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
 	if err != nil {
 		return err
 	}
 
-	err = v.validateVnetPermissions(ctx, spAuthorizer, api.CloudErrorCodeInvalidServicePrincipalPermissions, "provided service principal")
+	spPermissions := authorization.NewPermissionsClient(v.r.SubscriptionID, spAuthorizer)
+	err = v.validateVnetPermissions(ctx, spPermissions, api.CloudErrorCodeInvalidServicePrincipalPermissions, "provided service principal")
 	if err != nil {
 		return err
 	}
@@ -73,15 +75,13 @@ func (dv *dynamicValidator) validateServicePrincipalProfile() (autorest.Authoriz
 	return conf.Authorizer()
 }
 
-func (dv *dynamicValidator) validateVnetPermissions(ctx context.Context, authorizer autorest.Authorizer, code, typ string) error {
+func (dv *dynamicValidator) validateVnetPermissions(ctx context.Context, client authorization.PermissionsClient, code, typ string) error {
 	vnetID, _, err := subnet.Split(dv.oc.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return err
 	}
 
-	cli := authorization.NewPermissionsClient(dv.r.SubscriptionID, authorizer)
-
-	permissions, err := cli.ListForResource(ctx, vnetID)
+	permissions, err := client.ListForResource(ctx, vnetID)
 	if err != nil {
 		if err, ok := err.(autorest.DetailedError); ok {
 			if err.StatusCode == http.StatusNotFound {
