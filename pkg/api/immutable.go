@@ -1,18 +1,16 @@
-package immutable
+package api
 
 import (
 	"fmt"
 	"net/http"
 	"reflect"
 	"strings"
-
-	"github.com/jim-minter/rp/pkg/api"
 )
 
-// Validate returns nil if v and w are identical, bar any differences on any
+// ValidateImmutable returns nil if v and w are identical, bar any differences on any
 // struct fields explicitly tagged `mutable:"true"`.  Otherwise it returns a
 // CloudError indicating the first difference it finds
-func Validate(path string, v, w interface{}) error {
+func ValidateImmutable(path string, v, w interface{}) error {
 	return validate(path, reflect.ValueOf(v), reflect.ValueOf(w), false)
 }
 
@@ -126,5 +124,5 @@ func validate(path string, v, w reflect.Value, ignoreCase bool) error {
 }
 
 func validationError(path string) error {
-	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, path, fmt.Sprintf("Changing property '%s' is not allowed.", path))
+	return NewCloudError(http.StatusBadRequest, CloudErrorCodePropertyChangeNotAllowed, path, fmt.Sprintf("Changing property '%s' is not allowed.", path))
 }

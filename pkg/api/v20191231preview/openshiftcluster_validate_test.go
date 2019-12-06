@@ -3,7 +3,6 @@ package v20191231preview
 import (
 	"fmt"
 	"net/http"
-	"reflect"
 	"strings"
 	"testing"
 	"unicode"
@@ -11,7 +10,6 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/jim-minter/rp/pkg/api"
-	"github.com/jim-minter/rp/pkg/util/immutable"
 )
 
 type validateTest struct {
@@ -410,115 +408,160 @@ func TestValidateWorkerProfile(t *testing.T) {
 	})
 }
 
-// walk recurses through each child value of a parent value v with no cycles.
-// Excepting when v is a struct, at each step it temporarily mutates v by
-// overwriting it with its zero value, calls the test function f, then restores
-// v.  It then recurses on v's children.  The mutable field is set if any parent
-// of v is marked `mutable:"true"`.
-func walk(f func(string, bool), v reflect.Value, set func(reflect.Value), path string, mutable, ignoreCase bool) {
-	if v.Kind() != reflect.Struct {
-		current := reflect.New(v.Type()).Elem()
-		current.Set(v)
-
-		if ignoreCase && v.Kind() == reflect.String {
-			set(reflect.ValueOf(strings.ToUpper(v.String())))
-			f(path, true)
-		}
-
-		set(zeroVal(v.Type()))
-		f(path, mutable)
-
-		set(current)
+func TestOpenShiftClusterValidateDelta(t *testing.T) {
+	tests := []struct {
+		name    string
+		modify  func(oc *OpenShiftCluster)
+		wantErr string
+	}{
+		{
+			name:   "no change",
+			modify: func(change *OpenShiftCluster) {},
+		},
+		{
+			name:    "ID change",
+			modify:  func(change *OpenShiftCluster) { change.ID = "foo" },
+			wantErr: "400: PropertyChangeNotAllowed: id: Changing property 'id' is not allowed.",
+		},
+		{
+			name:    "name change",
+			modify:  func(change *OpenShiftCluster) { change.Name = "foo" },
+			wantErr: "400: PropertyChangeNotAllowed: name: Changing property 'name' is not allowed.",
+		},
+		{
+			name:    "type change",
+			modify:  func(change *OpenShiftCluster) { change.Type = "foo" },
+			wantErr: "400: PropertyChangeNotAllowed: type: Changing property 'type' is not allowed.",
+		},
+		{
+			name:    "location change",
+			modify:  func(change *OpenShiftCluster) { change.Location = "westus" },
+			wantErr: "400: PropertyChangeNotAllowed: location: Changing property 'location' is not allowed.",
+		},
+		{
+			name:   "tags change",
+			modify: func(change *OpenShiftCluster) { change.Tags = Tags{"new": "value"} },
+		},
+		{
+			name:    "provisioningstate change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.ProvisioningState = ProvisioningStateUpdating },
+			wantErr: "400: PropertyChangeNotAllowed: properties.provisioningState: Changing property 'properties.provisioningState' is not allowed.",
+		},
+		{
+			name:    "APIServerURL change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.APIServerURL = "http://example.com" },
+			wantErr: "400: PropertyChangeNotAllowed: properties.apiserverUrl: Changing property 'properties.apiserverUrl' is not allowed.",
+		},
+		{
+			name:    "ConsoleURL change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.ConsoleURL = "http://example.com" },
+			wantErr: "400: PropertyChangeNotAllowed: properties.consoleUrl: Changing property 'properties.consoleUrl' is not allowed.",
+		},
+		{
+			name:    "vmsize changed",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.MasterProfile.VMSize = VMSizeStandardD4sV3 },
+			wantErr: "400: PropertyChangeNotAllowed: properties.masterProfile.vmSize: Changing property 'properties.masterProfile.vmSize' is not allowed.",
+		},
+		{
+			name: "subnet changed",
+			modify: func(oc *OpenShiftCluster) {
+				subID := fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/other", subscriptionID)
+				oc.Properties.MasterProfile.SubnetID = subID
+			},
+			wantErr: "400: PropertyChangeNotAllowed: properties.masterProfile.subnetId: Changing property 'properties.masterProfile.subnetId' is not allowed.",
+		},
+		{
+			name:    "passwd change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.ServicePrincipalProfile.ClientSecret = "frog" },
+			wantErr: "400: PropertyChangeNotAllowed: properties.servicePrincipalProfile.clientSecret: Changing property 'properties.servicePrincipalProfile.clientSecret' is not allowed.",
+		},
+		{
+			name:    "clientID change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.ServicePrincipalProfile.ClientID = "fred" },
+			wantErr: "400: PropertyChangeNotAllowed: properties.servicePrincipalProfile.clientId: Changing property 'properties.servicePrincipalProfile.clientId' is not allowed.",
+		},
+		{
+			name:    "serviceCIDR change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.NetworkProfile.ServiceCIDR = "10.0.4.0/22" },
+			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.serviceCidr: Changing property 'properties.networkProfile.serviceCidr' is not allowed.",
+		},
+		{
+			name:    "podCIDR change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.NetworkProfile.PodCIDR = "10.0.4.0/18" },
+			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.podCidr: Changing property 'properties.networkProfile.podCidr' is not allowed.",
+		},
+		{
+			name: "name change",
+			modify: func(oc *OpenShiftCluster) {
+				wp := oc.Properties.WorkerProfiles[0]
+				wp.Name = "notthis"
+				oc.Properties.WorkerProfiles = []WorkerProfile{wp}
+			},
+			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles[0].name: Changing property 'properties.workerProfiles[0].name' is not allowed.",
+		},
+		{
+			name: "vmsize change",
+			modify: func(oc *OpenShiftCluster) {
+				wp := oc.Properties.WorkerProfiles[0]
+				wp.VMSize = VMSizeStandardD8sV3
+				oc.Properties.WorkerProfiles = []WorkerProfile{wp}
+			},
+			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles[0].vmSize: Changing property 'properties.workerProfiles[0].vmSize' is not allowed.",
+		},
+		{
+			name: "disksize change",
+			modify: func(oc *OpenShiftCluster) {
+				wp := oc.Properties.WorkerProfiles[0]
+				wp.DiskSizeGB = 200
+				oc.Properties.WorkerProfiles = []WorkerProfile{wp}
+			},
+			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles[0].diskSizeGB: Changing property 'properties.workerProfiles[0].diskSizeGB' is not allowed.",
+		},
+		{
+			name: "subnet change",
+			modify: func(oc *OpenShiftCluster) {
+				subID := fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/other", subscriptionID)
+				wp := oc.Properties.WorkerProfiles[0]
+				wp.SubnetID = subID
+				oc.Properties.WorkerProfiles = []WorkerProfile{wp}
+			},
+			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles[0].subnetId: Changing property 'properties.workerProfiles[0].subnetId' is not allowed.",
+		},
+		{
+			name: "new worker profile",
+			modify: func(oc *OpenShiftCluster) {
+				wp := oc.Properties.WorkerProfiles[0]
+				oc.Properties.WorkerProfiles = []WorkerProfile{wp, wp}
+			},
+			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles: Changing property 'properties.workerProfiles' is not allowed.",
+		},
+		{
+			name: "count can change",
+			modify: func(oc *OpenShiftCluster) {
+				wp := oc.Properties.WorkerProfiles[0]
+				wp.Count = 15
+				oc.Properties.WorkerProfiles = []WorkerProfile{wp}
+			},
+		},
 	}
+	old := validOpenShiftCluster()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			oc := *old
+			tt.modify(&oc)
+			err := v.validateOpenShiftClusterDelta(&oc, old)
+			if err == nil {
+				if tt.wantErr != "" {
+					t.Error(err)
+				}
+			} else {
+				if err.Error() != tt.wantErr {
+					t.Error(err)
+				}
 
-	switch v.Kind() {
-	case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32,
-		reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16,
-		reflect.Uint32, reflect.Uint64, reflect.Uintptr, reflect.Float32,
-		reflect.Float64, reflect.Complex64, reflect.Complex128, reflect.String:
-
-	case reflect.Array, reflect.Slice:
-		for i := 0; i < v.Len(); i++ {
-			walk(f, v.Index(i), v.Index(i).Set, fmt.Sprintf("%s[%d]", path, i), mutable, ignoreCase)
-		}
-
-	case reflect.Interface, reflect.Ptr:
-		if v.IsNil() {
-			return
-		}
-
-		walk(f, v.Elem(), v.Elem().Set, path, mutable, ignoreCase)
-
-	case reflect.Map:
-		i := v.MapRange()
-		for i.Next() {
-			// currently we don't recurse on keys - we assume they're simple
-			walk(f, i.Value(), func(new reflect.Value) {
-				v.SetMapIndex(i.Key(), new)
-			}, fmt.Sprintf("%s[%q]", path, i.Key()), mutable, ignoreCase)
-		}
-
-	case reflect.Struct:
-		for i := 0; i < v.NumField(); i++ {
-			name := strings.SplitN(v.Type().Field(i).Tag.Get("json"), ",", 2)[0]
-			if name == "" {
-				name = v.Type().Field(i).Name
+				validateCloudError(t, err)
 			}
 
-			mut := mutable || strings.EqualFold(v.Type().Field(i).Tag.Get("mutable"), "true")
-			ic := ignoreCase || strings.EqualFold(v.Type().Field(i).Tag.Get("mutable"), "case")
-
-			subpath := path
-			if subpath != "" {
-				subpath += "."
-			}
-			subpath += name
-
-			walk(f, v.Field(i), v.Field(i).Set, subpath, mut, ic)
-		}
-
-	default:
-		panic("unexpected kind " + v.Kind().String())
+		})
 	}
-}
-
-func zeroVal(t reflect.Type) reflect.Value {
-	return reflect.New(t).Elem()
-}
-
-func TestValidateOpenShiftClusterDelta(t *testing.T) {
-	oc, mut := validOpenShiftCluster(), validOpenShiftCluster()
-
-	v := reflect.ValueOf(mut).Elem()
-
-	walk(func(path string, mutable bool) {
-		err := immutable.Validate("", oc, mut)
-		if mutable {
-			if err == nil {
-				t.Logf("%s: mutable, no error", path)
-			} else {
-				t.Errorf("%s: mutable, unexpected error %s", path, err)
-			}
-		} else {
-			if err == nil {
-				t.Errorf("%s: immutable, unexpected no error", path)
-			} else {
-				t.Logf("%s: immutable, error %s", path, err)
-
-				cloudErr := validateCloudError(t, err)
-
-				if cloudErr.Code != api.CloudErrorCodePropertyChangeNotAllowed {
-					t.Error(cloudErr.Code)
-				}
-
-				if cloudErr.Target != path {
-					t.Error(cloudErr.Target)
-				}
-
-				if cloudErr.Message != fmt.Sprintf("Changing property '%s' is not allowed.", path) {
-					t.Error(cloudErr.Message)
-				}
-			}
-		}
-	}, v, v.Set, "", false, false)
 }
