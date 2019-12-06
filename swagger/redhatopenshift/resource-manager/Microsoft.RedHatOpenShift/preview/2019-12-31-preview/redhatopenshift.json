@@ -1,7 +1,7 @@
 {
     "swagger": "2.0",
     "info": {
-        "title": "Azure Red Hat OpenShift",
+        "title": "Azure Red Hat OpenShift Client",
         "description": "Rest API for Azure Red Hat OpenShift",
         "version": "2019-12-31-preview"
     },
