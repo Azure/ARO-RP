@@ -185,7 +185,10 @@ func (s *Shared) TLSConfig(ctx context.Context) (*tls.Config, error) {
 				PrivateKey: key,
 			},
 		},
+		NextProtos:               []string{"h2", "http/1.1"},
 		ClientAuth:               tls.RequestClientCert,
+		PreferServerCipherSuites: true,
+		SessionTicketsDisabled:   true,
 		MinVersion:               tls.VersionTLS12,
 	}
 

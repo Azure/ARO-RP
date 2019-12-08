@@ -2,9 +2,11 @@ package frontend
 
 import (
 	"context"
+	"log"
 	"net"
 	"net/http"
 	"sync/atomic"
+	"time"
 
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -143,6 +145,14 @@ func (f *frontend) Run(stop <-chan struct{}) {
 	authenticated.Use(f.env.Authenticated)
 	f.authenticatedRoutes(authenticated)
 
-	err := http.Serve(f.l, lowercase(r))
+	s := &http.Server{
+		Handler:      lowercase(r),
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: time.Minute,
+		IdleTimeout:  2 * time.Minute,
+		ErrorLog:     log.New(f.baseLog.Writer(), "", 0),
+	}
+
+	err := s.Serve(f.l)
 	f.baseLog.Error(err)
 }
