@@ -145,6 +145,10 @@ func (f *frontend) Run(stop <-chan struct{}) {
 	authenticated.Use(f.env.Authenticated)
 	f.authenticatedRoutes(authenticated)
 
+	authenticated.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeNotFound, "", "The requested path could not be found.")
+	})
+
 	s := &http.Server{
 		Handler:      lowercase(r),
 		ReadTimeout:  10 * time.Second,
