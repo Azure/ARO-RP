@@ -19,7 +19,7 @@ import (
 
 type prod struct {
 	*shared.Shared
-	ms            *metadataService
+	ms            *armMetadataService
 	location      string
 	resourceGroup string
 }
@@ -44,7 +44,7 @@ func New(ctx context.Context, log *logrus.Entry) (*prod, error) {
 	}
 
 	p := &prod{
-		ms:            NewMetadataService(log),
+		ms:            NewARMMetadataService(log),
 		location:      location,
 		resourceGroup: resourceGroup,
 	}

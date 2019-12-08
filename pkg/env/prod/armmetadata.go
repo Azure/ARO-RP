@@ -23,7 +23,7 @@ type metadata struct {
 	} `json:"clientCertificates,omitempty"`
 }
 
-type metadataService struct {
+type armMetadataService struct {
 	log *logrus.Entry
 
 	mu sync.RWMutex
@@ -32,15 +32,15 @@ type metadataService struct {
 	lastSuccessfulRefresh time.Time
 }
 
-func NewMetadataService(log *logrus.Entry) *metadataService {
-	ms := &metadataService{log: log}
+func NewARMMetadataService(log *logrus.Entry) *armMetadataService {
+	ms := &armMetadataService{log: log}
 
 	go ms.refresh()
 
 	return ms
 }
 
-func (ms *metadataService) allowClientCertificate(rawCert []byte) bool {
+func (ms *armMetadataService) allowClientCertificate(rawCert []byte) bool {
 	ms.mu.RLock()
 	defer ms.mu.RUnlock()
 
@@ -56,7 +56,7 @@ func (ms *metadataService) allowClientCertificate(rawCert []byte) bool {
 	return false
 }
 
-func (ms *metadataService) refresh() {
+func (ms *armMetadataService) refresh() {
 	defer recover.Panic(ms.log)
 
 	t := time.NewTicker(time.Hour)
@@ -72,7 +72,7 @@ func (ms *metadataService) refresh() {
 	}
 }
 
-func (ms *metadataService) refreshOnce() error {
+func (ms *armMetadataService) refreshOnce() error {
 	now := time.Now()
 
 	resp, err := http.Get("https://management.azure.com:24582/metadata/authentication?api-version=2015-01-01")
@@ -103,7 +103,7 @@ func (ms *metadataService) refreshOnce() error {
 	return nil
 }
 
-func (ms *metadataService) isReady() bool {
+func (ms *armMetadataService) isReady() bool {
 	ms.mu.RLock()
 	defer ms.mu.RUnlock()
 
