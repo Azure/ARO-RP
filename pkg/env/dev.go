@@ -1,4 +1,4 @@
-package dev
+package env
 
 import (
 	"context"
@@ -32,11 +32,11 @@ type dev struct {
 	applications    graphrbac.ApplicationsClient
 }
 
-type Interface interface {
+type Dev interface {
 	CreateARMResourceGroupRoleAssignment(context.Context, autorest.Authorizer, *api.OpenShiftCluster) error
 }
 
-func New(ctx context.Context, log *logrus.Entry) (*dev, error) {
+func newDev(ctx context.Context, log *logrus.Entry) (*dev, error) {
 	for _, key := range []string{
 		"LOCATION",
 		"RESOURCEGROUP",

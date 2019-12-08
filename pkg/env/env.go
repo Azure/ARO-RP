@@ -12,7 +12,6 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/sirupsen/logrus"
 
-	"github.com/jim-minter/rp/pkg/env/dev"
 	"github.com/jim-minter/rp/pkg/env/prod"
 	"github.com/jim-minter/rp/pkg/env/shared/dns"
 )
@@ -32,7 +31,7 @@ type Interface interface {
 func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
 	if strings.ToLower(os.Getenv("RP_MODE")) == "development" {
 		log.Warn("running in development mode")
-		return dev.New(ctx, log)
+		return newDev(ctx, log)
 	}
 	return prod.New(ctx, log)
 }
