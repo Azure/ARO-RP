@@ -2,7 +2,6 @@ package prod
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -58,13 +57,8 @@ func New(ctx context.Context, log *logrus.Entry) (*prod, error) {
 	return p, nil
 }
 
-func (p *prod) ListenTLS(ctx context.Context) (net.Listener, error) {
-	config, err := p.TLSConfig(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	return tls.Listen("tcp", ":8443", config)
+func (p *prod) Listen() (net.Listener, error) {
+	return net.Listen("tcp", ":8443")
 }
 
 func (p *prod) Authenticated(h http.Handler) http.Handler {

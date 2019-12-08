@@ -2,7 +2,6 @@ package dev
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"net"
 	"net/http"
@@ -78,15 +77,10 @@ func New(ctx context.Context, log *logrus.Entry) (*dev, error) {
 	return d, nil
 }
 
-func (d *dev) ListenTLS(ctx context.Context) (net.Listener, error) {
-	config, err := d.TLSConfig(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	// in dev mode there is no TLS client cert verification, so for safety we
-	// only listen on localhost
-	return tls.Listen("tcp", "localhost:8443", config)
+func (d *dev) Listen() (net.Listener, error) {
+	// in dev mode there is no authentication, so for safety we only listen on
+	// localhost
+	return net.Listen("tcp", "localhost:8443")
 }
 
 func (d *dev) Authenticated(h http.Handler) http.Handler {

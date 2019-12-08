@@ -2,6 +2,8 @@ package env
 
 import (
 	"context"
+	"crypto/rsa"
+	"crypto/x509"
 	"net"
 	"net/http"
 	"os"
@@ -19,8 +21,9 @@ type Interface interface {
 	CosmosDB(context.Context) (string, string, error)
 	DNS() dns.Manager
 	FPAuthorizer(context.Context, string) (autorest.Authorizer, error)
+	GetSecret(context.Context, string) (*rsa.PrivateKey, []*x509.Certificate, error)
 	IsReady() bool
-	ListenTLS(context.Context) (net.Listener, error)
+	Listen() (net.Listener, error)
 	Authenticated(http.Handler) http.Handler
 	Location() string
 	ResourceGroup() string

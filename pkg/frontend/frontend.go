@@ -2,6 +2,7 @@ package frontend
 
 import (
 	"context"
+	"crypto/tls"
 	"log"
 	"net"
 	"net/http"
@@ -55,10 +56,34 @@ func NewFrontend(ctx context.Context, baseLog *logrus.Entry, env env.Interface, 
 		return nil, err
 	}
 
-	f.l, err = f.env.ListenTLS(ctx)
+	l, err := f.env.Listen()
 	if err != nil {
 		return nil, err
 	}
+
+	key, certs, err := f.env.GetSecret(ctx, "tls")
+	if err != nil {
+		return nil, err
+	}
+
+	config := &tls.Config{
+		Certificates: []tls.Certificate{
+			{
+				PrivateKey: key,
+			},
+		},
+		NextProtos:               []string{"h2", "http/1.1"},
+		ClientAuth:               tls.RequestClientCert,
+		PreferServerCipherSuites: true,
+		SessionTicketsDisabled:   true,
+		MinVersion:               tls.VersionTLS12,
+	}
+
+	for _, cert := range certs {
+		config.Certificates[0].Certificate = append(config.Certificates[0].Certificate, cert.Raw)
+	}
+
+	f.l = tls.NewListener(l, config)
 
 	f.ready.Store(true)
 
