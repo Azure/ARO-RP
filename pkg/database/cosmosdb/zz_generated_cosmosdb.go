@@ -100,7 +100,10 @@ func (c *databaseClient) do(method, path, resourceType, resourceLink string, exp
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() {
+		resp.Body.Read(nil)
+		resp.Body.Close()
+	}()
 
 	if headers != nil {
 		for k := range headers {

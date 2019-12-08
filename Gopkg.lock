@@ -40,7 +40,7 @@
   version = "v36.2.0"
 
 [[projects]]
-  digest = "1:6a638b1a468a4a8b67fc80ae6a075811a932c6aea327cc28b3ef3a29fba31f4a"
+  digest = "1:2e9f9f3381b65a6f99438e30ce398cbc13eb224187950158321ad9e560261f40"
   name = "github.com/Azure/go-autorest"
   packages = [
     "autorest",
@@ -55,8 +55,8 @@
     "tracing",
   ]
   pruneopts = "UT"
-  revision = "3492b2aff5036c67228ab3c7dba3577c871db200"
-  version = "v13.3.0"
+  revision = "21d4b01533b1005be0d020da67a6d3f8ebdf0141"
+  version = "v13.3.1"
 
 [[projects]]
   digest = "1:9f3b30d9f8e0d7040f729b82dcbc8f0dead820a133b3147ce355fc451f32d761"
@@ -412,14 +412,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:e35aaaa913b3844719fef679db37e18d1fb7d08612c8cd67742eac5109781259"
+  digest = "1:fab78769b9f0db838a8b336506a6c0cd24deda70d99c5c8179eedce5d1566256"
   name = "github.com/jim-minter/go-cosmosdb"
   packages = [
     "cmd/gencosmosdb",
     "pkg/gencosmosdb",
   ]
   pruneopts = "UT"
-  revision = "37b069ffb0f1725f26cbf3f2c6486b6a1c9a8514"
+  revision = "5d89a846947107f9cc5db3eef66a14582da82e74"
 
 [[projects]]
   digest = "1:bb81097a5b62634f3e9fec1014657855610c82d19b9a40c17612e32651e35dca"
@@ -606,7 +606,7 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "c54751546ee405b1fc7784988ef828d35e3b2777"
+  revision = "83cfad33adf5a3a60fd801f71e190d82363dd764"
 
 [[projects]]
   branch = "release-4.3"
@@ -886,7 +886,7 @@
     "ssh/terminal",
   ]
   pruneopts = "UT"
-  revision = "0a08dada0ff98d02f3864a23ae8d27cb8fba5303"
+  revision = "e9b2fee46413994441b28dfca259d911d963dfed"
 
 [[projects]]
   branch = "master"
@@ -903,7 +903,7 @@
     "trace",
   ]
   pruneopts = "UT"
-  revision = "5ee1b9f4859acd2e99987ef94ec7a58427c53bef"
+  revision = "e7e4b65ae66375ec1e85afc8e6b9b4933ae4da81"
 
 [[projects]]
   branch = "master"
@@ -921,7 +921,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:81ed742366f09d62d06e52d955c66f5401067a60f307c111da04b46c99bd9869"
+  digest = "1:091b04b83236a97c5a301c2db511f178f5dc628ddaf35d0e77223679e9e3ca52"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -929,7 +929,7 @@
     "windows",
   ]
   pruneopts = "UT"
-  revision = "ce4227a45e2eb77e5c847278dcc6a626742e2945"
+  revision = "eeba5f6aabab6d6594a9191d6bfeaca5fa6a8248"
 
 [[projects]]
   digest = "1:1e7fe301d41aead2026c0ade066adcf5e60af7d355cd0f826193852190350d82"
@@ -971,7 +971,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:b2f37ab238edaf8b8507215cd24a1eaf57071bb3234e9142c32bf23f59986844"
+  digest = "1:e809a6adc0de0a9ec4c4f87f9895cca0bf80d28e62019247d5dd0db05c9fd847"
   name = "golang.org/x/tools"
   packages = [
     "cmd/goimports",
@@ -988,7 +988,7 @@
     "internal/semver",
   ]
   pruneopts = "UT"
-  revision = "d1f10d1c4e255575ef5161427fac1a82b5d5ddf8"
+  revision = "259af5ff87bdcd4abf2ecda8edc3f13f04f26a42"
 
 [[projects]]
   digest = "1:f3661f6218166acf60f5d551b44a537f7ecb8686be02ece061c5950cbfc9ba17"
@@ -1034,7 +1034,7 @@
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
   pruneopts = "UT"
-  revision = "51378566eb590fa106d1025ea12835a4416dda84"
+  revision = "0243a4be9c8f1264d238fdc2895620b4d9baf9e1"
 
 [[projects]]
   digest = "1:b59ce3ddb11daeeccccc9cb3183b58ebf8e9a779f1c853308cd91612e817a301"
@@ -1318,7 +1318,7 @@
     "pkg/apis/awsproviderconfig/v1beta1",
   ]
   pruneopts = "UT"
-  revision = "987ca1c365a091232e9bc4db32c2fc6d04486219"
+  revision = "c22ade5b51f43a415ff5115928b8e39a9ed4fa75"
   source = "https://github.com/openshift/cluster-api-provider-aws.git"
 
 [[projects]]

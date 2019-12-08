@@ -22,7 +22,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "3492b2aff5036c67228ab3c7dba3577c871db200",
+                    "commitHash": "21d4b01533b1005be0d020da67a6d3f8ebdf0141",
                     "repositoryUrl": "https://github.com/Azure/go-autorest/"
                 }
             }
@@ -310,7 +310,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "37b069ffb0f1725f26cbf3f2c6486b6a1c9a8514",
+                    "commitHash": "5d89a846947107f9cc5db3eef66a14582da82e74",
                     "repositoryUrl": "https://github.com/jim-minter/go-cosmosdb/"
                 }
             }
@@ -490,7 +490,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "c54751546ee405b1fc7784988ef828d35e3b2777",
+                    "commitHash": "83cfad33adf5a3a60fd801f71e190d82363dd764",
                     "repositoryUrl": "https://github.com/openshift/cloud-credential-operator/"
                 }
             }
@@ -661,7 +661,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "0a08dada0ff98d02f3864a23ae8d27cb8fba5303",
+                    "commitHash": "e9b2fee46413994441b28dfca259d911d963dfed",
                     "repositoryUrl": "https://golang.org/x/crypto/"
                 }
             }
@@ -670,7 +670,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "5ee1b9f4859acd2e99987ef94ec7a58427c53bef",
+                    "commitHash": "e7e4b65ae66375ec1e85afc8e6b9b4933ae4da81",
                     "repositoryUrl": "https://golang.org/x/net/"
                 }
             }
@@ -688,7 +688,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "ce4227a45e2eb77e5c847278dcc6a626742e2945",
+                    "commitHash": "eeba5f6aabab6d6594a9191d6bfeaca5fa6a8248",
                     "repositoryUrl": "https://golang.org/x/sys/"
                 }
             }
@@ -715,7 +715,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "d1f10d1c4e255575ef5161427fac1a82b5d5ddf8",
+                    "commitHash": "259af5ff87bdcd4abf2ecda8edc3f13f04f26a42",
                     "repositoryUrl": "https://golang.org/x/tools/"
                 }
             }
@@ -742,7 +742,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "51378566eb590fa106d1025ea12835a4416dda84",
+                    "commitHash": "0243a4be9c8f1264d238fdc2895620b4d9baf9e1",
                     "repositoryUrl": "https://google.golang.org/genproto/"
                 }
             }
@@ -850,7 +850,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "987ca1c365a091232e9bc4db32c2fc6d04486219",
+                    "commitHash": "c22ade5b51f43a415ff5115928b8e39a9ed4fa75",
                     "repositoryUrl": "https://sigs.k8s.io/cluster-api-provider-aws/"
                 }
             }
