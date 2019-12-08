@@ -59,23 +59,9 @@ func New(ctx context.Context, log *logrus.Entry) (*prod, error) {
 }
 
 func (p *prod) ListenTLS(ctx context.Context) (net.Listener, error) {
-	key, certs, err := p.GetSecret(ctx, "tls")
+	config, err := p.TLSConfig(ctx)
 	if err != nil {
 		return nil, err
-	}
-
-	config := &tls.Config{
-		Certificates: []tls.Certificate{
-			{
-				PrivateKey: key,
-			},
-		},
-		ClientAuth:               tls.RequestClientCert,
-		MinVersion:               tls.VersionTLS12,
-	}
-
-	for _, cert := range certs {
-		config.Certificates[0].Certificate = append(config.Certificates[0].Certificate, cert.Raw)
 	}
 
 	return tls.Listen("tcp", ":8443", config)

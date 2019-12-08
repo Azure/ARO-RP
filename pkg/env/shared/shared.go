@@ -3,6 +3,7 @@ package shared
 import (
 	"context"
 	"crypto/rsa"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
@@ -107,7 +108,7 @@ func (s *Shared) DNS() dns.Manager {
 	return s.dns
 }
 
-func (s *Shared) GetSecret(ctx context.Context, secretName string) (key *rsa.PrivateKey, certs []*x509.Certificate, err error) {
+func (s *Shared) getSecret(ctx context.Context, secretName string) (key *rsa.PrivateKey, certs []*x509.Certificate, err error) {
 	bundle, err := s.keyvault.GetSecret(ctx, s.vaultURI, secretName, "")
 	if err != nil {
 		return nil, nil, err
@@ -154,7 +155,7 @@ func (s *Shared) GetSecret(ctx context.Context, secretName string) (key *rsa.Pri
 }
 
 func (s *Shared) FPAuthorizer(ctx context.Context, resource string) (autorest.Authorizer, error) {
-	key, certs, err := s.GetSecret(ctx, "azure")
+	key, certs, err := s.getSecret(ctx, "azure")
 	if err != nil {
 		return nil, err
 	}
@@ -170,4 +171,27 @@ func (s *Shared) FPAuthorizer(ctx context.Context, resource string) (autorest.Au
 	}
 
 	return &RefreshableAuthorizer{autorest.NewBearerAuthorizer(sp), sp}, nil
+}
+
+func (s *Shared) TLSConfig(ctx context.Context) (*tls.Config, error) {
+	key, certs, err := s.getSecret(ctx, "tls")
+	if err != nil {
+		return nil, err
+	}
+
+	config := &tls.Config{
+		Certificates: []tls.Certificate{
+			{
+				PrivateKey: key,
+			},
+		},
+		ClientAuth:               tls.RequestClientCert,
+		MinVersion:               tls.VersionTLS12,
+	}
+
+	for _, cert := range certs {
+		config.Certificates[0].Certificate = append(config.Certificates[0].Certificate, cert.Raw)
+	}
+
+	return config, nil
 }

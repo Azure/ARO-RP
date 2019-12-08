@@ -79,24 +79,14 @@ func New(ctx context.Context, log *logrus.Entry) (*dev, error) {
 }
 
 func (d *dev) ListenTLS(ctx context.Context) (net.Listener, error) {
-	key, certs, err := d.GetSecret(ctx, "tls")
+	config, err := d.TLSConfig(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	// no TLS client cert verification in dev mode, but we'll only listen on
-	// localhost
-	return tls.Listen("tcp", "localhost:8443", &tls.Config{
-		Certificates: []tls.Certificate{
-			{
-				Certificate: [][]byte{
-					certs[0].Raw,
-				},
-				PrivateKey: key,
-			},
-		},
-		MinVersion: tls.VersionTLS12,
-	})
+	// in dev mode there is no TLS client cert verification, so for safety we
+	// only listen on localhost
+	return tls.Listen("tcp", "localhost:8443", config)
 }
 
 func (d *dev) Authenticated(h http.Handler) http.Handler {
