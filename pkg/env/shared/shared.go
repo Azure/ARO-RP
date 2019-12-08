@@ -107,14 +107,12 @@ func (s *Shared) DNS() dns.Manager {
 	return s.dns
 }
 
-func (s *Shared) GetSecret(ctx context.Context, secretName string) (*rsa.PrivateKey, *x509.Certificate, error) {
+func (s *Shared) GetSecret(ctx context.Context, secretName string) (key *rsa.PrivateKey, certs []*x509.Certificate, err error) {
 	bundle, err := s.keyvault.GetSecret(ctx, s.vaultURI, secretName, "")
 	if err != nil {
 		return nil, nil, err
 	}
 
-	var key *rsa.PrivateKey
-	var cert *x509.Certificate
 	b := []byte(*bundle.Value)
 	for {
 		var block *pem.Block
@@ -136,18 +134,27 @@ func (s *Shared) GetSecret(ctx context.Context, secretName string) (*rsa.Private
 			}
 
 		case "CERTIFICATE":
-			cert, err = x509.ParseCertificate(block.Bytes)
+			c, err := x509.ParseCertificate(block.Bytes)
 			if err != nil {
 				return nil, nil, err
 			}
+			certs = append(certs, c)
 		}
 	}
 
-	return key, cert, nil
+	if key == nil {
+		return nil, nil, errors.New("no private key found")
+	}
+
+	if len(certs) == 0 {
+		return nil, nil, errors.New("no certificate found")
+	}
+
+	return key, certs, nil
 }
 
 func (s *Shared) FPAuthorizer(ctx context.Context, resource string) (autorest.Authorizer, error) {
-	key, cert, err := s.GetSecret(ctx, "azure")
+	key, certs, err := s.GetSecret(ctx, "azure")
 	if err != nil {
 		return nil, err
 	}
@@ -157,7 +164,7 @@ func (s *Shared) FPAuthorizer(ctx context.Context, resource string) (autorest.Au
 		return nil, err
 	}
 
-	sp, err := adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, os.Getenv("AZURE_FP_CLIENT_ID"), cert, key, resource)
+	sp, err := adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, os.Getenv("AZURE_FP_CLIENT_ID"), certs[0], key, resource)
 	if err != nil {
 		return nil, err
 	}

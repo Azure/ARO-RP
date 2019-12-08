@@ -79,7 +79,7 @@ func New(ctx context.Context, log *logrus.Entry) (*dev, error) {
 }
 
 func (d *dev) ListenTLS(ctx context.Context) (net.Listener, error) {
-	key, cert, err := d.GetSecret(ctx, "tls")
+	key, certs, err := d.GetSecret(ctx, "tls")
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func (d *dev) ListenTLS(ctx context.Context) (net.Listener, error) {
 		Certificates: []tls.Certificate{
 			{
 				Certificate: [][]byte{
-					cert.Raw,
+					certs[0].Raw,
 				},
 				PrivateKey: key,
 			},
