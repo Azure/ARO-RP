@@ -17,7 +17,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/jim-minter/rp/pkg/api"
-	"github.com/jim-minter/rp/pkg/env/shared"
 	"github.com/jim-minter/rp/pkg/util/azureclient/authorization"
 	utilpermissions "github.com/jim-minter/rp/pkg/util/permissions"
 )
@@ -25,7 +24,7 @@ import (
 type dev struct {
 	log *logrus.Entry
 
-	*shared.Shared
+	*shared
 
 	permissions     authorization.PermissionsClient
 	roleassignments authorization.RoleAssignmentsClient
@@ -57,7 +56,7 @@ func newDev(ctx context.Context, log *logrus.Entry) (*dev, error) {
 		applications:    graphrbac.NewApplicationsClient(os.Getenv("AZURE_TENANT_ID")),
 	}
 
-	d.Shared, err = shared.NewShared(ctx, log, os.Getenv("AZURE_TENANT_ID"), os.Getenv("AZURE_SUBSCRIPTION_ID"), os.Getenv("RESOURCEGROUP"))
+	d.shared, err = newShared(ctx, log, os.Getenv("AZURE_TENANT_ID"), os.Getenv("AZURE_SUBSCRIPTION_ID"), os.Getenv("RESOURCEGROUP"))
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +124,7 @@ func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthor
 		}
 	}
 
-	fpRefreshableAuthorizer, ok := fpAuthorizer.(*shared.RefreshableAuthorizer)
+	fpRefreshableAuthorizer, ok := fpAuthorizer.(*RefreshableAuthorizer)
 	if !ok {
 		return fmt.Errorf("fpAuthorizer is not refreshable")
 	}

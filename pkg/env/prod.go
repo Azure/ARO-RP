@@ -14,11 +14,10 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/jim-minter/rp/pkg/api"
-	"github.com/jim-minter/rp/pkg/env/shared"
 )
 
 type prod struct {
-	*shared.Shared
+	*shared
 	ms            *armMetadataService
 	location      string
 	resourceGroup string
@@ -49,7 +48,7 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		resourceGroup: resourceGroup,
 	}
 
-	p.Shared, err = shared.NewShared(ctx, log, tenantID, subscriptionID, resourceGroup)
+	p.shared, err = newShared(ctx, log, tenantID, subscriptionID, resourceGroup)
 	if err != nil {
 		return nil, err
 	}

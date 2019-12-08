@@ -1,4 +1,4 @@
-package shared
+package env
 
 import (
 	"context"
@@ -30,7 +30,7 @@ func (ra *RefreshableAuthorizer) Refresh() error {
 	return ra.sp.Refresh()
 }
 
-type Shared struct {
+type shared struct {
 	databaseaccounts documentdb.DatabaseAccountsClient
 	keyvault         keyvault.BaseClient
 	vaults           keyvaultmgmt.VaultsClient
@@ -42,7 +42,7 @@ type Shared struct {
 	vaultURI      string
 }
 
-func NewShared(ctx context.Context, log *logrus.Entry, tenantID, subscriptionID, resourceGroup string) (*Shared, error) {
+func newShared(ctx context.Context, log *logrus.Entry, tenantID, subscriptionID, resourceGroup string) (*shared, error) {
 	rpAuthorizer, err := auth.NewAuthorizerFromEnvironment()
 	if err != nil {
 		return nil, err
@@ -53,7 +53,7 @@ func NewShared(ctx context.Context, log *logrus.Entry, tenantID, subscriptionID,
 		return nil, err
 	}
 
-	s := &Shared{
+	s := &shared{
 		tenantID:      tenantID,
 		resourceGroup: resourceGroup,
 	}
@@ -85,7 +85,7 @@ func NewShared(ctx context.Context, log *logrus.Entry, tenantID, subscriptionID,
 	return s, nil
 }
 
-func (s *Shared) CosmosDB(ctx context.Context) (string, string, error) {
+func (s *shared) CosmosDB(ctx context.Context) (string, string, error) {
 	accts, err := s.databaseaccounts.ListByResourceGroup(ctx, s.resourceGroup)
 	if err != nil {
 		return "", "", err
@@ -103,11 +103,11 @@ func (s *Shared) CosmosDB(ctx context.Context) (string, string, error) {
 	return *(*accts.Value)[0].Name, *keys.PrimaryMasterKey, nil
 }
 
-func (s *Shared) DNS() dns.Manager {
+func (s *shared) DNS() dns.Manager {
 	return s.dns
 }
 
-func (s *Shared) GetSecret(ctx context.Context, secretName string) (key *rsa.PrivateKey, certs []*x509.Certificate, err error) {
+func (s *shared) GetSecret(ctx context.Context, secretName string) (key *rsa.PrivateKey, certs []*x509.Certificate, err error) {
 	bundle, err := s.keyvault.GetSecret(ctx, s.vaultURI, secretName, "")
 	if err != nil {
 		return nil, nil, err
@@ -153,7 +153,7 @@ func (s *Shared) GetSecret(ctx context.Context, secretName string) (key *rsa.Pri
 	return key, certs, nil
 }
 
-func (s *Shared) FPAuthorizer(ctx context.Context, resource string) (autorest.Authorizer, error) {
+func (s *shared) FPAuthorizer(ctx context.Context, resource string) (autorest.Authorizer, error) {
 	key, certs, err := s.GetSecret(ctx, "azure")
 	if err != nil {
 		return nil, err
