@@ -1,4 +1,4 @@
-package prod
+package env
 
 import (
 	"bytes"
@@ -32,7 +32,7 @@ type armMetadataService struct {
 	lastSuccessfulRefresh time.Time
 }
 
-func NewARMMetadataService(log *logrus.Entry) *armMetadataService {
+func newARMMetadataService(log *logrus.Entry) *armMetadataService {
 	ms := &armMetadataService{log: log}
 
 	go ms.refresh()

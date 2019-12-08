@@ -12,7 +12,6 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/sirupsen/logrus"
 
-	"github.com/jim-minter/rp/pkg/env/prod"
 	"github.com/jim-minter/rp/pkg/env/shared/dns"
 )
 
@@ -33,5 +32,5 @@ func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
 		log.Warn("running in development mode")
 		return newDev(ctx, log)
 	}
-	return prod.New(ctx, log)
+	return newProd(ctx, log)
 }

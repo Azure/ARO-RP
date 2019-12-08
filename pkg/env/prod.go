@@ -1,4 +1,4 @@
-package prod
+package env
 
 import (
 	"context"
@@ -32,7 +32,7 @@ func (*azureClaim) Valid() error {
 	return fmt.Errorf("unimplemented")
 }
 
-func New(ctx context.Context, log *logrus.Entry) (*prod, error) {
+func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 	tenantID, err := getTenantID()
 	if err != nil {
 		return nil, err
@@ -44,7 +44,7 @@ func New(ctx context.Context, log *logrus.Entry) (*prod, error) {
 	}
 
 	p := &prod{
-		ms:            NewARMMetadataService(log),
+		ms:            newARMMetadataService(log),
 		location:      location,
 		resourceGroup: resourceGroup,
 	}
