@@ -2,7 +2,9 @@ package database
 
 import (
 	"context"
+	"crypto/tls"
 	"net/http"
+	"time"
 
 	uuid "github.com/satori/go.uuid"
 	"github.com/ugorji/go/codec"
@@ -38,7 +40,15 @@ func NewDatabase(ctx context.Context, env env.Interface, uuid uuid.UUID, dbid st
 		return nil, err
 	}
 
-	dbc, err := cosmosdb.NewDatabaseClient(http.DefaultClient, h, databaseAccount, masterKey)
+	c := &http.Client{
+		Transport: &http.Transport{
+			// disable HTTP/2 for now: https://github.com/golang/go/issues/36026
+			TLSNextProto: map[string]func(string, *tls.Conn) http.RoundTripper{},
+		},
+		Timeout: 30 * time.Second,
+	}
+
+	dbc, err := cosmosdb.NewDatabaseClient(c, h, databaseAccount, masterKey)
 	if err != nil {
 		return nil, err
 	}
