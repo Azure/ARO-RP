@@ -10,6 +10,7 @@ import (
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
 	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -20,6 +21,15 @@ import (
 	"github.com/jim-minter/rp/pkg/util/azureclient/authorization"
 	utilpermissions "github.com/jim-minter/rp/pkg/util/permissions"
 )
+
+type refreshableAuthorizer struct {
+	autorest.Authorizer
+	sp *adal.ServicePrincipalToken
+}
+
+func (ra *refreshableAuthorizer) Refresh() error {
+	return ra.sp.Refresh()
+}
 
 type dev struct {
 	log *logrus.Entry
@@ -86,6 +96,15 @@ func (d *dev) Authenticated(h http.Handler) http.Handler {
 	return h
 }
 
+func (d *dev) FPAuthorizer(ctx context.Context, resource string) (autorest.Authorizer, error) {
+	sp, err := d.fpToken(ctx, resource)
+	if err != nil {
+		return nil, err
+	}
+
+	return &refreshableAuthorizer{autorest.NewBearerAuthorizer(sp), sp}, nil
+}
+
 func (d *dev) IsReady() bool {
 	return true
 }
@@ -124,13 +143,8 @@ func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthor
 		}
 	}
 
-	fpRefreshableAuthorizer, ok := fpAuthorizer.(*RefreshableAuthorizer)
-	if !ok {
-		return fmt.Errorf("fpAuthorizer is not refreshable")
-	}
-
 	d.log.Print("development mode: refreshing authorizer")
-	err = fpRefreshableAuthorizer.Refresh()
+	err = fpAuthorizer.(*refreshableAuthorizer).Refresh()
 	if err != nil {
 		return err
 	}
@@ -141,7 +155,7 @@ func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthor
 		return err
 	}
 
-	ok, err = utilpermissions.CanDoAction(permissions, "Microsoft.Storage/storageAccounts/write")
+	ok, err := utilpermissions.CanDoAction(permissions, "Microsoft.Storage/storageAccounts/write")
 	if err != nil {
 		return err
 	}

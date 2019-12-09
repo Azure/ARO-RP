@@ -12,7 +12,6 @@ import (
 	"github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2015-04-08/documentdb"
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/2016-10-01/keyvault"
 	keyvaultmgmt "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2016-10-01/keyvault"
-	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
@@ -20,15 +19,6 @@ import (
 
 	"github.com/jim-minter/rp/pkg/env/shared/dns"
 )
-
-type RefreshableAuthorizer struct {
-	autorest.Authorizer
-	sp *adal.ServicePrincipalToken
-}
-
-func (ra *RefreshableAuthorizer) Refresh() error {
-	return ra.sp.Refresh()
-}
 
 type shared struct {
 	databaseaccounts documentdb.DatabaseAccountsClient
@@ -153,7 +143,7 @@ func (s *shared) GetSecret(ctx context.Context, secretName string) (key *rsa.Pri
 	return key, certs, nil
 }
 
-func (s *shared) FPAuthorizer(ctx context.Context, resource string) (autorest.Authorizer, error) {
+func (s *shared) fpToken(ctx context.Context, resource string) (*adal.ServicePrincipalToken, error) {
 	key, certs, err := s.GetSecret(ctx, "azure")
 	if err != nil {
 		return nil, err
@@ -164,10 +154,5 @@ func (s *shared) FPAuthorizer(ctx context.Context, resource string) (autorest.Au
 		return nil, err
 	}
 
-	sp, err := adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, os.Getenv("AZURE_FP_CLIENT_ID"), certs[0], key, resource)
-	if err != nil {
-		return nil, err
-	}
-
-	return &RefreshableAuthorizer{autorest.NewBearerAuthorizer(sp), sp}, nil
+	return adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, os.Getenv("AZURE_FP_CLIENT_ID"), certs[0], key, resource)
 }

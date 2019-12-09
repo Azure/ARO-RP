@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/dgrijalva/jwt-go"
@@ -71,6 +72,15 @@ func (p *prod) Authenticated(h http.Handler) http.Handler {
 
 		h.ServeHTTP(w, r)
 	})
+}
+
+func (p *prod) FPAuthorizer(ctx context.Context, resource string) (autorest.Authorizer, error) {
+	sp, err := p.fpToken(ctx, resource)
+	if err != nil {
+		return nil, err
+	}
+
+	return autorest.NewBearerAuthorizer(sp), nil
 }
 
 func (p *prod) IsReady() bool {
