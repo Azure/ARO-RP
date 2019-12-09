@@ -126,7 +126,7 @@
    ```
    AZURE_KEY_FILE=secrets/aro-v4-fp-shared.pem
 
-   az keyvault certificate import --vault-name "$KEYVAULT_NAME" --name firstparty --file "$AZURE_KEY_FILE"
+   az keyvault certificate import --vault-name "$KEYVAULT_NAME" --name rp-firstparty --file "$AZURE_KEY_FILE"
    ```
 
 1. Load the serving key/certificate into the key vault:

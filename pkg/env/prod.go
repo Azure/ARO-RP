@@ -192,7 +192,7 @@ func (p *prod) Listen() (net.Listener, error) {
 }
 
 func (p *prod) fpToken(ctx context.Context, resource string) (*adal.ServicePrincipalToken, error) {
-	key, certs, err := p.GetSecret(ctx, "firstparty")
+	key, certs, err := p.GetSecret(ctx, "rp-firstparty")
 	if err != nil {
 		return nil, err
 	}
