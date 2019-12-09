@@ -11,6 +11,7 @@ import (
 func CanDoAction(ps []authorization.Permission, a string) (bool, error) {
 	for _, p := range ps {
 		var matched bool
+
 		for _, action := range *p.Actions {
 			action := regexp.QuoteMeta(action)
 			action = "(?i)^" + strings.ReplaceAll(action, `\*`, ".*") + "$"
