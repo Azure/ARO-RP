@@ -19,6 +19,7 @@ func (o *one) IsAuthorized(cs *tls.ConnectionState) bool {
 	if cs == nil || len(cs.PeerCertificates) == 0 {
 		return false
 	}
+
 	return bytes.Equal(o.cert, cs.PeerCertificates[0].Raw)
 }
 

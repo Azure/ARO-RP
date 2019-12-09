@@ -51,6 +51,7 @@ func (a *arm) IsAuthorized(cs *tls.ConnectionState) bool {
 	if cs == nil || len(cs.PeerCertificates) == 0 {
 		return false
 	}
+
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 

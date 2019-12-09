@@ -1,6 +1,8 @@
 package clientauthorizer
 
-import "crypto/tls"
+import (
+	"crypto/tls"
+)
 
 type ClientAuthorizer interface {
 	IsAuthorized(*tls.ConnectionState) bool
