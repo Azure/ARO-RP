@@ -1,4 +1,4 @@
-package env
+package clientauthorizer
 
 import (
 	"bytes"
@@ -23,8 +23,10 @@ type metadata struct {
 	} `json:"clientCertificates,omitempty"`
 }
 
-type armMetadataService struct {
+type arm struct {
 	log *logrus.Entry
+	now func() time.Time
+	do  func(*http.Request) (*http.Response, error)
 
 	mu sync.RWMutex
 	m  metadata
@@ -32,20 +34,24 @@ type armMetadataService struct {
 	lastSuccessfulRefresh time.Time
 }
 
-func newARMMetadataService(log *logrus.Entry) *armMetadataService {
-	ms := &armMetadataService{log: log}
+func NewARM(log *logrus.Entry) ClientAuthorizer {
+	a := &arm{
+		log: log,
+		now: time.Now,
+		do:  http.DefaultClient.Do,
+	}
 
-	go ms.refresh()
+	go a.refresh()
 
-	return ms
+	return a
 }
 
-func (ms *armMetadataService) allowClientCertificate(rawCert []byte) bool {
-	ms.mu.RLock()
-	defer ms.mu.RUnlock()
+func (a *arm) IsAuthorized(rawCert []byte) bool {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
 
-	now := time.Now()
-	for _, c := range ms.m.ClientCertificates {
+	now := a.now()
+	for _, c := range a.m.ClientCertificates {
 		if c.NotBefore.Before(now) &&
 			c.NotAfter.After(now) &&
 			bytes.Equal(c.Certificate, rawCert) {
@@ -56,26 +62,32 @@ func (ms *armMetadataService) allowClientCertificate(rawCert []byte) bool {
 	return false
 }
 
-func (ms *armMetadataService) refresh() {
-	defer recover.Panic(ms.log)
+func (a *arm) refresh() {
+	defer recover.Panic(a.log)
 
 	t := time.NewTicker(time.Hour)
 
 	for {
-		ms.log.Print("refreshing metadata")
-		err := ms.refreshOnce()
+		a.log.Print("refreshing metadata")
+
+		err := a.refreshOnce()
 		if err != nil {
-			ms.log.Error(err)
+			a.log.Error(err)
 		}
 
 		<-t.C
 	}
 }
 
-func (ms *armMetadataService) refreshOnce() error {
-	now := time.Now()
+func (a *arm) refreshOnce() error {
+	now := a.now()
 
-	resp, err := http.Get("https://management.azure.com:24582/metadata/authentication?api-version=2015-01-01")
+	req, err := http.NewRequest(http.MethodGet, "https://management.azure.com:24582/metadata/authentication?api-version=2015-01-01", nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := a.do(req)
 	if err != nil {
 		return err
 	}
@@ -95,17 +107,18 @@ func (ms *armMetadataService) refreshOnce() error {
 		return err
 	}
 
-	ms.mu.Lock()
-	defer ms.mu.Unlock()
-	ms.m = *m
-	ms.lastSuccessfulRefresh = now
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	a.m = *m
+	a.lastSuccessfulRefresh = now
 
 	return nil
 }
 
-func (ms *armMetadataService) isReady() bool {
-	ms.mu.RLock()
-	defer ms.mu.RUnlock()
+func (a *arm) IsReady() bool {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
 
-	return time.Now().Add(-6 * time.Hour).Before(ms.lastSuccessfulRefresh)
+	return a.now().Add(-6 * time.Hour).Before(a.lastSuccessfulRefresh)
 }

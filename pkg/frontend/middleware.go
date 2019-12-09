@@ -53,6 +53,19 @@ func (rc *statsReadCloser) Read(b []byte) (int, error) {
 	return n, err
 }
 
+func (f frontend) authenticated(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.TLS == nil ||
+			len(r.TLS.PeerCertificates) == 0 ||
+			!f.env.IsAuthorized(r.TLS.PeerCertificates[0].Raw) {
+			api.WriteError(w, http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Forbidden.")
+			return
+		}
+
+		h.ServeHTTP(w, r)
+	})
+}
+
 func (f *frontend) middleware(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		t := time.Now()

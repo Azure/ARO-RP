@@ -9,6 +9,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/jim-minter/rp/pkg/api"
+	"github.com/jim-minter/rp/pkg/util/instancemetadata"
 )
 
 type Manager interface {
@@ -18,35 +19,36 @@ type Manager interface {
 }
 
 type manager struct {
-	recordsets dns.RecordSetsClient
-	zones      dns.ZonesClient
+	instancemetadata instancemetadata.InstanceMetadata
 
-	resourceGroup string
-	domain        string
+	recordsets dns.RecordSetsClient
+
+	domain string
 }
 
-func NewManager(ctx context.Context, subscriptionID string, rpAuthorizer autorest.Authorizer, resourceGroup string) (Manager, error) {
+func NewManager(ctx context.Context, instancemetadata instancemetadata.InstanceMetadata, rpAuthorizer autorest.Authorizer) (Manager, error) {
 	m := &manager{
-		recordsets: dns.NewRecordSetsClient(subscriptionID),
-		zones:      dns.NewZonesClient(subscriptionID),
+		instancemetadata: instancemetadata,
 
-		resourceGroup: resourceGroup,
+		recordsets: dns.NewRecordSetsClient(instancemetadata.SubscriptionID()),
 	}
 
 	m.recordsets.Authorizer = rpAuthorizer
-	m.zones.Authorizer = rpAuthorizer
 
-	page, err := m.zones.ListByResourceGroup(ctx, m.resourceGroup, nil)
+	zones := dns.NewZonesClient(instancemetadata.SubscriptionID())
+	zones.Authorizer = rpAuthorizer
+
+	page, err := zones.ListByResourceGroup(ctx, m.instancemetadata.ResourceGroup(), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	zones := page.Values()
-	if len(zones) != 1 {
-		return nil, fmt.Errorf("found at least %d zones, expected 1", len(zones))
+	zs := page.Values()
+	if len(zs) != 1 {
+		return nil, fmt.Errorf("found at least %d zones, expected 1", len(zs))
 	}
 
-	m.domain = *zones[0].Name
+	m.domain = *zs[0].Name
 
 	return m, nil
 }
@@ -56,7 +58,7 @@ func (m *manager) Domain() string {
 }
 
 func (m *manager) CreateOrUpdate(ctx context.Context, oc *api.OpenShiftCluster) error {
-	_, err := m.recordsets.CreateOrUpdate(ctx, m.resourceGroup, m.domain, "api."+oc.Properties.DomainName, dns.CNAME, dns.RecordSet{
+	_, err := m.recordsets.CreateOrUpdate(ctx, m.instancemetadata.ResourceGroup(), m.domain, "api."+oc.Properties.DomainName, dns.CNAME, dns.RecordSet{
 		RecordSetProperties: &dns.RecordSetProperties{
 			TTL: to.Int64Ptr(300),
 			CnameRecord: &dns.CnameRecord{
@@ -69,7 +71,7 @@ func (m *manager) CreateOrUpdate(ctx context.Context, oc *api.OpenShiftCluster) 
 }
 
 func (m *manager) Delete(ctx context.Context, oc *api.OpenShiftCluster) error {
-	_, err := m.recordsets.Delete(ctx, m.resourceGroup, m.domain, "api."+oc.Properties.DomainName, dns.CNAME, "")
+	_, err := m.recordsets.Delete(ctx, m.instancemetadata.ResourceGroup(), m.domain, "api."+oc.Properties.DomainName, dns.CNAME, "")
 
 	return err
 }

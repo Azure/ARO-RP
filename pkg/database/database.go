@@ -22,10 +22,7 @@ type Database struct {
 
 // NewDatabase returns a new Database
 func NewDatabase(ctx context.Context, env env.Interface, uuid uuid.UUID, dbid string) (db *Database, err error) {
-	databaseAccount, masterKey, err := env.CosmosDB(ctx)
-	if err != nil {
-		return nil, err
-	}
+	databaseAccount, masterKey := env.CosmosDB(ctx)
 
 	h := &codec.JsonHandle{
 		BasicHandle: codec.BasicHandle{

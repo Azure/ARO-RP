@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"net/http"
 	"os"
 
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
@@ -19,6 +18,8 @@ import (
 
 	"github.com/jim-minter/rp/pkg/api"
 	"github.com/jim-minter/rp/pkg/util/azureclient/authorization"
+	"github.com/jim-minter/rp/pkg/util/clientauthorizer"
+	"github.com/jim-minter/rp/pkg/util/instancemetadata"
 	utilpermissions "github.com/jim-minter/rp/pkg/util/permissions"
 )
 
@@ -32,9 +33,9 @@ func (ra *refreshableAuthorizer) Refresh() error {
 }
 
 type dev struct {
-	log *logrus.Entry
+	*prod
 
-	*shared
+	log *logrus.Entry
 
 	permissions     authorization.PermissionsClient
 	roleassignments authorization.RoleAssignmentsClient
@@ -66,7 +67,7 @@ func newDev(ctx context.Context, log *logrus.Entry) (*dev, error) {
 		applications:    graphrbac.NewApplicationsClient(os.Getenv("AZURE_TENANT_ID")),
 	}
 
-	d.shared, err = newShared(ctx, log, os.Getenv("AZURE_TENANT_ID"), os.Getenv("AZURE_SUBSCRIPTION_ID"), os.Getenv("RESOURCEGROUP"))
+	d.prod, err = newProd(ctx, log, instancemetadata.NewDev(), clientauthorizer.NewAll())
 	if err != nil {
 		return nil, err
 	}
@@ -92,10 +93,6 @@ func (d *dev) Listen() (net.Listener, error) {
 	return net.Listen("tcp", "localhost:8443")
 }
 
-func (d *dev) Authenticated(h http.Handler) http.Handler {
-	return h
-}
-
 func (d *dev) FPAuthorizer(ctx context.Context, resource string) (autorest.Authorizer, error) {
 	sp, err := d.fpToken(ctx, resource)
 	if err != nil {
@@ -103,18 +100,6 @@ func (d *dev) FPAuthorizer(ctx context.Context, resource string) (autorest.Autho
 	}
 
 	return &refreshableAuthorizer{autorest.NewBearerAuthorizer(sp), sp}, nil
-}
-
-func (d *dev) IsReady() bool {
-	return true
-}
-
-func (d *dev) Location() string {
-	return os.Getenv("LOCATION")
-}
-
-func (d *dev) ResourceGroup() string {
-	return os.Getenv("RESOURCEGROUP")
 }
 
 func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthorizer autorest.Authorizer, oc *api.OpenShiftCluster) error {

@@ -1,4 +1,4 @@
-package env
+package instancemetadata
 
 import (
 	"encoding/json"
@@ -19,51 +19,69 @@ func (*azureClaim) Valid() error {
 	return fmt.Errorf("unimplemented")
 }
 
-func getTenantID() (string, error) {
+func NewProd() (InstanceMetadata, error) {
+	im := &instanceMetadata{}
+
+	err := im.populateTenantIDFromMSI()
+	if err != nil {
+		return nil, err
+	}
+
+	err = im.populateInstanceMetadata()
+	if err != nil {
+		return nil, err
+	}
+
+	return im, nil
+}
+
+func (im *instanceMetadata) populateTenantIDFromMSI() error {
 	msiEndpoint, err := adal.GetMSIVMEndpoint()
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	token, err := adal.NewServicePrincipalTokenFromMSI(msiEndpoint, azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	err = token.EnsureFresh()
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	p := &jwt.Parser{}
 	c := &azureClaim{}
 	_, _, err = p.ParseUnverified(token.OAuthToken(), c)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	return c.TenantID, nil
+	im.tenantID = c.TenantID
+
+	return nil
 }
 
-func getInstanceMetadata() (string, string, string, error) {
+func (im *instanceMetadata) populateInstanceMetadata() error {
 	req, err := http.NewRequest(http.MethodGet, "http://169.254.169.254/metadata/instance/compute?api-version=2019-03-11", nil)
 	if err != nil {
-		return "", "", "", err
+		return err
 	}
 	req.Header.Set("Metadata", "true")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", "", "", err
+		return err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return "", "", "", fmt.Errorf("unexpected status code %q", resp.StatusCode)
+		return fmt.Errorf("unexpected status code %q", resp.StatusCode)
 	}
 
 	if strings.SplitN(resp.Header.Get("Content-Type"), ";", 2)[0] != "application/json" {
-		return "", "", "", fmt.Errorf("unexpected content type %q", resp.Header.Get("Content-Type"))
+		return fmt.Errorf("unexpected content type %q", resp.Header.Get("Content-Type"))
 	}
 
 	var m *struct {
@@ -74,8 +92,12 @@ func getInstanceMetadata() (string, string, string, error) {
 
 	err = json.NewDecoder(resp.Body).Decode(&m)
 	if err != nil {
-		return "", "", "", err
+		return err
 	}
 
-	return m.SubscriptionID, m.Location, m.ResourceGroupName, nil
+	im.subscriptionID = m.SubscriptionID
+	im.location = m.Location
+	im.resourceGroup = m.ResourceGroupName
+
+	return nil
 }

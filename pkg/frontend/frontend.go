@@ -167,7 +167,7 @@ func (f *frontend) Run(stop <-chan struct{}) {
 	f.unauthenticatedRoutes(unauthenticated)
 
 	authenticated := r.NewRoute().Subrouter()
-	authenticated.Use(f.env.Authenticated)
+	authenticated.Use(f.authenticated)
 	f.authenticatedRoutes(authenticated)
 
 	authenticated.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
