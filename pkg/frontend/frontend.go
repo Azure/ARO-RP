@@ -91,14 +91,6 @@ func NewFrontend(ctx context.Context, baseLog *logrus.Entry, env env.Interface, 
 	return f, nil
 }
 
-func (f *frontend) getReady(w http.ResponseWriter, r *http.Request) {
-	if f.ready.Load().(bool) && f.env.IsReady() {
-		api.WriteCloudError(w, &api.CloudError{StatusCode: http.StatusOK})
-	} else {
-		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
-	}
-}
-
 func (f *frontend) unauthenticatedRoutes(r *mux.Router) {
 	r.Path("/healthz/ready").Methods(http.MethodGet).HandlerFunc(f.getReady)
 }
