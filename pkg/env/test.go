@@ -36,7 +36,7 @@ func (t *test) FPAuthorizer(ctx context.Context, resource string) (autorest.Auth
 
 func (t *test) GetSecret(ctx context.Context, secretName string) (key *rsa.PrivateKey, certs []*x509.Certificate, err error) {
 	switch secretName {
-	case "tls":
+	case "rp-server":
 		return t.TLSKey, t.TLSCerts, nil
 	default:
 		return nil, nil, fmt.Errorf("secret %q not found", secretName)

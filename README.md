@@ -126,7 +126,7 @@
    ```
    AZURE_KEY_FILE=secrets/aro-v4-fp-shared.pem
 
-   az keyvault certificate import --vault-name "$KEYVAULT_NAME" --name azure --file "$AZURE_KEY_FILE"
+   az keyvault certificate import --vault-name "$KEYVAULT_NAME" --name firstparty --file "$AZURE_KEY_FILE"
    ```
 
 1. Load the serving key/certificate into the key vault:
@@ -134,7 +134,7 @@
    ```
    TLS_KEY_FILE=secrets/localhost.pem
 
-   az keyvault certificate import --vault-name "$KEYVAULT_NAME" --name tls --file "$TLS_KEY_FILE"
+   az keyvault certificate import --vault-name "$KEYVAULT_NAME" --name rp-server --file "$TLS_KEY_FILE"
    ```
 
 1. Create a glue record in the parent DNS zone:
