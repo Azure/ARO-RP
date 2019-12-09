@@ -17,7 +17,7 @@ func (f *frontend) postOpenShiftClusterCredentials(w http.ResponseWriter, r *htt
 	vars := mux.Vars(r)
 
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
-	if !json.Valid(body) {
+	if len(body) > 0 && !json.Valid(body) {
 		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized.")
 		return
 	}
