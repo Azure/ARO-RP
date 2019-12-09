@@ -11,6 +11,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/jim-minter/rp/pkg/api"
+	"github.com/jim-minter/rp/pkg/util/immutable"
 	"github.com/jim-minter/rp/pkg/util/subnet"
 )
 
@@ -203,5 +204,5 @@ func (v *validator) validateWorkerProfile(path string, wp *WorkerProfile, mp *Ma
 }
 
 func (v *validator) validateOpenShiftClusterDelta(oc, current *OpenShiftCluster) error {
-	return api.ValidateImmutable("", oc, current)
+	return immutable.Validate("", oc, current)
 }

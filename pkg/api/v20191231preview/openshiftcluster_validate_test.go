@@ -409,159 +409,126 @@ func TestValidateWorkerProfile(t *testing.T) {
 }
 
 func TestOpenShiftClusterValidateDelta(t *testing.T) {
-	tests := []struct {
-		name    string
-		modify  func(oc *OpenShiftCluster)
-		wantErr string
-	}{
+	tests := []*validateTest{
 		{
-			name:   "no change",
-			modify: func(change *OpenShiftCluster) {},
+			name: "valid",
 		},
 		{
-			name:    "ID change",
-			modify:  func(change *OpenShiftCluster) { change.ID = "foo" },
+			name:   "valid id case change",
+			modify: func(oc *OpenShiftCluster) { oc.ID = strings.ToUpper(oc.ID) },
+		},
+		{
+			name:    "id change",
+			modify:  func(oc *OpenShiftCluster) { oc.ID = "invalid" },
 			wantErr: "400: PropertyChangeNotAllowed: id: Changing property 'id' is not allowed.",
 		},
 		{
+			name:   "valid name case change",
+			modify: func(oc *OpenShiftCluster) { oc.Name = strings.ToUpper(oc.Name) },
+		},
+		{
 			name:    "name change",
-			modify:  func(change *OpenShiftCluster) { change.Name = "foo" },
+			modify:  func(oc *OpenShiftCluster) { oc.Name = "invalid" },
 			wantErr: "400: PropertyChangeNotAllowed: name: Changing property 'name' is not allowed.",
 		},
 		{
+			name:   "valid type case change",
+			modify: func(oc *OpenShiftCluster) { oc.Type = strings.ToUpper(oc.Type) },
+		},
+		{
 			name:    "type change",
-			modify:  func(change *OpenShiftCluster) { change.Type = "foo" },
+			modify:  func(oc *OpenShiftCluster) { oc.Type = "invalid" },
 			wantErr: "400: PropertyChangeNotAllowed: type: Changing property 'type' is not allowed.",
 		},
 		{
 			name:    "location change",
-			modify:  func(change *OpenShiftCluster) { change.Location = "westus" },
+			modify:  func(oc *OpenShiftCluster) { oc.Location = "invalid" },
 			wantErr: "400: PropertyChangeNotAllowed: location: Changing property 'location' is not allowed.",
 		},
 		{
-			name:   "tags change",
-			modify: func(change *OpenShiftCluster) { change.Tags = Tags{"new": "value"} },
+			name:   "valid tags change",
+			modify: func(oc *OpenShiftCluster) { oc.Tags = Tags{"new": "value"} },
 		},
 		{
-			name:    "provisioningstate change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.ProvisioningState = ProvisioningStateUpdating },
+			name:    "provisioningState change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.ProvisioningState = "invalid" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.provisioningState: Changing property 'properties.provisioningState' is not allowed.",
 		},
 		{
-			name:    "APIServerURL change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.APIServerURL = "http://example.com" },
+			name:    "apiserverUrl change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.APIServerURL = "invalid" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.apiserverUrl: Changing property 'properties.apiserverUrl' is not allowed.",
 		},
 		{
-			name:    "ConsoleURL change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.ConsoleURL = "http://example.com" },
+			name:    "consoleUrl change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.ConsoleURL = "invalid" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.consoleUrl: Changing property 'properties.consoleUrl' is not allowed.",
 		},
 		{
-			name:    "vmsize changed",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.MasterProfile.VMSize = VMSizeStandardD4sV3 },
-			wantErr: "400: PropertyChangeNotAllowed: properties.masterProfile.vmSize: Changing property 'properties.masterProfile.vmSize' is not allowed.",
-		},
-		{
-			name: "subnet changed",
-			modify: func(oc *OpenShiftCluster) {
-				subID := fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/other", subscriptionID)
-				oc.Properties.MasterProfile.SubnetID = subID
-			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.masterProfile.subnetId: Changing property 'properties.masterProfile.subnetId' is not allowed.",
-		},
-		{
-			name:    "passwd change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.ServicePrincipalProfile.ClientSecret = "frog" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.servicePrincipalProfile.clientSecret: Changing property 'properties.servicePrincipalProfile.clientSecret' is not allowed.",
-		},
-		{
-			name:    "clientID change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.ServicePrincipalProfile.ClientID = "fred" },
+			name:    "clientId change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.ServicePrincipalProfile.ClientID = "invalid" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.servicePrincipalProfile.clientId: Changing property 'properties.servicePrincipalProfile.clientId' is not allowed.",
 		},
 		{
-			name:    "serviceCIDR change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.NetworkProfile.ServiceCIDR = "10.0.4.0/22" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.serviceCidr: Changing property 'properties.networkProfile.serviceCidr' is not allowed.",
+			name:    "clientSecret change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.ServicePrincipalProfile.ClientSecret = "invalid" },
+			wantErr: "400: PropertyChangeNotAllowed: properties.servicePrincipalProfile.clientSecret: Changing property 'properties.servicePrincipalProfile.clientSecret' is not allowed.",
 		},
 		{
-			name:    "podCIDR change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.NetworkProfile.PodCIDR = "10.0.4.0/18" },
+			name:    "podCidr change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.NetworkProfile.PodCIDR = "invalid" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.podCidr: Changing property 'properties.networkProfile.podCidr' is not allowed.",
 		},
 		{
-			name: "name change",
-			modify: func(oc *OpenShiftCluster) {
-				wp := oc.Properties.WorkerProfiles[0]
-				wp.Name = "notthis"
-				oc.Properties.WorkerProfiles = []WorkerProfile{wp}
-			},
+			name:    "serviceCidr change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.NetworkProfile.ServiceCIDR = "invalid" },
+			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.serviceCidr: Changing property 'properties.networkProfile.serviceCidr' is not allowed.",
+		},
+		{
+			name:    "master vmSize change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.MasterProfile.VMSize = "invalid" },
+			wantErr: "400: PropertyChangeNotAllowed: properties.masterProfile.vmSize: Changing property 'properties.masterProfile.vmSize' is not allowed.",
+		},
+		{
+			name:    "master subnetId change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.MasterProfile.SubnetID = "invalid" },
+			wantErr: "400: PropertyChangeNotAllowed: properties.masterProfile.subnetId: Changing property 'properties.masterProfile.subnetId' is not allowed.",
+		},
+		{
+			name:    "worker name change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].Name = "invalid" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles[0].name: Changing property 'properties.workerProfiles[0].name' is not allowed.",
 		},
 		{
-			name: "vmsize change",
-			modify: func(oc *OpenShiftCluster) {
-				wp := oc.Properties.WorkerProfiles[0]
-				wp.VMSize = VMSizeStandardD8sV3
-				oc.Properties.WorkerProfiles = []WorkerProfile{wp}
-			},
+			name:    "worker vmSize change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].VMSize = "invalid" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles[0].vmSize: Changing property 'properties.workerProfiles[0].vmSize' is not allowed.",
 		},
 		{
-			name: "disksize change",
-			modify: func(oc *OpenShiftCluster) {
-				wp := oc.Properties.WorkerProfiles[0]
-				wp.DiskSizeGB = 200
-				oc.Properties.WorkerProfiles = []WorkerProfile{wp}
-			},
+			name:    "worker diskSizeGB change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].DiskSizeGB++ },
 			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles[0].diskSizeGB: Changing property 'properties.workerProfiles[0].diskSizeGB' is not allowed.",
 		},
 		{
-			name: "subnet change",
-			modify: func(oc *OpenShiftCluster) {
-				subID := fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/other", subscriptionID)
-				wp := oc.Properties.WorkerProfiles[0]
-				wp.SubnetID = subID
-				oc.Properties.WorkerProfiles = []WorkerProfile{wp}
-			},
+			name:    "worker subnetId change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].SubnetID = "invalid" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles[0].subnetId: Changing property 'properties.workerProfiles[0].subnetId' is not allowed.",
 		},
 		{
-			name: "new worker profile",
+			name: "additional workerProfile",
 			modify: func(oc *OpenShiftCluster) {
-				wp := oc.Properties.WorkerProfiles[0]
-				oc.Properties.WorkerProfiles = []WorkerProfile{wp, wp}
+				oc.Properties.WorkerProfiles = append(oc.Properties.WorkerProfiles, WorkerProfile{})
 			},
 			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles: Changing property 'properties.workerProfiles' is not allowed.",
 		},
 		{
-			name: "count can change",
-			modify: func(oc *OpenShiftCluster) {
-				wp := oc.Properties.WorkerProfiles[0]
-				wp.Count = 15
-				oc.Properties.WorkerProfiles = []WorkerProfile{wp}
-			},
+			name:   "valid count change",
+			modify: func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].Count++ },
 		},
 	}
-	old := validOpenShiftCluster()
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			oc := *old
-			tt.modify(&oc)
-			err := v.validateOpenShiftClusterDelta(&oc, old)
-			if err == nil {
-				if tt.wantErr != "" {
-					t.Error(err)
-				}
-			} else {
-				if err.Error() != tt.wantErr {
-					t.Error(err)
-				}
 
-				validateCloudError(t, err)
-			}
-
-		})
-	}
+	current := validOpenShiftCluster()
+	runTests(t, tests, func(oc *OpenShiftCluster) error {
+		return v.validateOpenShiftClusterDelta(oc, current)
+	})
 }

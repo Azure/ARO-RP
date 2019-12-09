@@ -1,16 +1,18 @@
-package api
+package immutable
 
-import "testing"
+import (
+	"testing"
+)
 
 type ts struct {
-	Case        string `json:"case,omitempty" mutable:"case"`    // should be case insensitive
 	Mutable     string `json:"mutable,omitempty" mutable:"true"` // should be able to change
+	Case        string `json:"case,omitempty" mutable:"case"`    // should be case insensitive
 	Empty       string `json:"empty,omitempty" mutable:""`       // default to immutable
 	EmptyNoJSON string `mutable:"false"`                         // handle no json tag
 	None        string // default to immutable
 }
 
-func TestValidateImmutable(t *testing.T) {
+func TestValidate(t *testing.T) {
 	before := ts{
 		Mutable:     "before",
 		Case:        "before",
@@ -20,59 +22,62 @@ func TestValidateImmutable(t *testing.T) {
 	}
 	tests := []struct {
 		name    string
-		modify  func(s *ts)
+		modify  func(*ts)
 		wantErr string
 	}{
 		{
-			name:   "no change",
-			modify: func(s *ts) {},
+			name: "no change",
 		},
 		{
-			name: "can change mutables",
+			name: "can change mutable",
 			modify: func(s *ts) {
-				s.Mutable = "what ever I want"
+				s.Mutable = "after"
 			},
 		},
 		{
-			name: "can change Case caps",
+			name: "can change case caps",
 			modify: func(s *ts) {
-				s.Case = "BeFoRe"
+				s.Case = "BEFORE"
 			},
 		},
 		{
-			name: "can NOT change None",
+			name: "can NOT change case",
 			modify: func(s *ts) {
-				s.None = "what ever i want"
+				s.Case = "after"
 			},
-			wantErr: "400: PropertyChangeNotAllowed: None: Changing property 'None' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: case: Changing property 'case' is not allowed.",
 		},
 		{
-			name: "can NOT change Empty",
+			name: "can NOT change empty",
 			modify: func(s *ts) {
-				s.Empty = "what ever i want"
+				s.Empty = "after"
 			},
 			wantErr: "400: PropertyChangeNotAllowed: empty: Changing property 'empty' is not allowed.",
 		},
 		{
 			name: "can NOT change EmptyNoJSON",
 			modify: func(s *ts) {
-				s.EmptyNoJSON = "what ever i want"
+				s.EmptyNoJSON = "after"
 			},
 			wantErr: "400: PropertyChangeNotAllowed: EmptyNoJSON: Changing property 'EmptyNoJSON' is not allowed.",
 		},
 		{
-			name: "can NOT change Case",
+			name: "can NOT change None",
 			modify: func(s *ts) {
-				s.Case = "what ever i want"
+				s.None = "after"
 			},
-			wantErr: "400: PropertyChangeNotAllowed: case: Changing property 'case' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: None: Changing property 'None' is not allowed.",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			after := before
-			tt.modify(&after)
-			err := ValidateImmutable("", &after, &before)
+
+			if tt.modify != nil {
+				tt.modify(&after)
+			}
+
+			err := Validate("", &after, &before)
 			if err == nil {
 				if tt.wantErr != "" {
 					t.Error(err)
@@ -82,7 +87,6 @@ func TestValidateImmutable(t *testing.T) {
 					t.Error(err)
 				}
 			}
-
 		})
 	}
 }
