@@ -38,6 +38,14 @@ type prod struct {
 }
 
 func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata, clientauthorizer clientauthorizer.ClientAuthorizer) (*prod, error) {
+	for _, key := range []string{
+		"AZURE_FP_CLIENT_ID",
+	} {
+		if _, found := os.LookupEnv(key); !found {
+			return nil, fmt.Errorf("environment variable %q unset", key)
+		}
+	}
+
 	p := &prod{
 		InstanceMetadata: instancemetadata,
 		ClientAuthorizer: clientauthorizer,

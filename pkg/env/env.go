@@ -30,7 +30,7 @@ type Interface interface {
 func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
 	if strings.ToLower(os.Getenv("RP_MODE")) == "development" {
 		log.Warn("running in development mode")
-		return newDev(ctx, log)
+		return newDev(ctx, log, instancemetadata.NewDev(), clientauthorizer.NewAll())
 	}
 
 	im, err := instancemetadata.NewProd()

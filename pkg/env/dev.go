@@ -32,6 +32,10 @@ func (ra *refreshableAuthorizer) Refresh() error {
 	return ra.sp.Refresh()
 }
 
+type Dev interface {
+	CreateARMResourceGroupRoleAssignment(context.Context, autorest.Authorizer, *api.OpenShiftCluster) error
+}
+
 type dev struct {
 	*prod
 
@@ -42,12 +46,13 @@ type dev struct {
 	applications    graphrbac.ApplicationsClient
 }
 
-type Dev interface {
-	CreateARMResourceGroupRoleAssignment(context.Context, autorest.Authorizer, *api.OpenShiftCluster) error
-}
-
-func newDev(ctx context.Context, log *logrus.Entry) (*dev, error) {
+func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata, clientauthorizer clientauthorizer.ClientAuthorizer) (*dev, error) {
 	for _, key := range []string{
+		"AZURE_ARM_CLIENT_ID",
+		"AZURE_ARM_CLIENT_SECRET",
+		"AZURE_FP_CLIENT_ID",
+		"AZURE_SUBSCRIPTION_ID",
+		"AZURE_TENANT_ID",
 		"LOCATION",
 		"RESOURCEGROUP",
 	} {
@@ -67,7 +72,7 @@ func newDev(ctx context.Context, log *logrus.Entry) (*dev, error) {
 		applications:    graphrbac.NewApplicationsClient(os.Getenv("AZURE_TENANT_ID")),
 	}
 
-	d.prod, err = newProd(ctx, log, instancemetadata.NewDev(), clientauthorizer.NewAll())
+	d.prod, err = newProd(ctx, log, instancemetadata, clientauthorizer)
 	if err != nil {
 		return nil, err
 	}
