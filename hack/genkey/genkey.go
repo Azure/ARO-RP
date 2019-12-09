@@ -2,16 +2,13 @@ package main
 
 import (
 	"bytes"
-	"crypto/rand"
-	"crypto/rsa"
 	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/pem"
 	"flag"
 	"io/ioutil"
-	"math/big"
 	"strings"
-	"time"
+
+	"github.com/jim-minter/rp/pkg/util/tls"
 )
 
 var (
@@ -19,35 +16,7 @@ var (
 )
 
 func run(name string) error {
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		return err
-	}
-
-	serialNumber, err := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
-	if err != nil {
-		return err
-	}
-
-	now := time.Now()
-
-	template := &x509.Certificate{
-		SerialNumber:          serialNumber,
-		NotBefore:             now,
-		NotAfter:              now.AddDate(1, 0, 0),
-		Subject:               pkix.Name{CommonName: name},
-		BasicConstraintsValid: true,
-		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
-	}
-
-	switch strings.ToLower(*extKeyUsage) {
-	case "client":
-		template.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}
-	case "server":
-		template.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}
-	}
-
-	cert, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
+	key, cert, err := tls.GenerateKeyAndCertificate(name, strings.EqualFold(*extKeyUsage, "client"))
 	if err != nil {
 		return err
 	}
@@ -59,7 +28,7 @@ func run(name string) error {
 	}
 
 	// cert in der format
-	err = ioutil.WriteFile(name+".crt", cert, 0666)
+	err = ioutil.WriteFile(name+".crt", cert[0].Raw, 0666)
 	if err != nil {
 		return err
 	}
@@ -75,7 +44,7 @@ func run(name string) error {
 		return err
 	}
 
-	err = pem.Encode(buf, &pem.Block{Type: "CERTIFICATE", Bytes: cert})
+	err = pem.Encode(buf, &pem.Block{Type: "CERTIFICATE", Bytes: cert[0].Raw})
 	if err != nil {
 		return err
 	}
