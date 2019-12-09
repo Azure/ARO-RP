@@ -62,7 +62,7 @@ func NewFrontend(ctx context.Context, baseLog *logrus.Entry, env env.Interface, 
 		return nil, err
 	}
 
-	key, certs, err := f.env.GetSecret(ctx, "tls")
+	key, certs, err := f.env.GetSecret(ctx, "rp-server")
 	if err != nil {
 		return nil, err
 	}
