@@ -54,7 +54,7 @@ func (f *frontend) isValidRequestPath(w http.ResponseWriter, r *http.Request) bo
 		}
 	}
 
-	if _, found := vars["api-version"]; !found {
+	if _, found := vars["api-version"]; found {
 		if _, found := api.APIs[vars["api-version"]]; !found {
 			api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], vars["api-version"])
 			return false

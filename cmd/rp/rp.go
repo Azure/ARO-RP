@@ -9,7 +9,6 @@ import (
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 
-	_ "github.com/jim-minter/rp/pkg/api/v20191231preview"
 	"github.com/jim-minter/rp/pkg/backend"
 	"github.com/jim-minter/rp/pkg/database"
 	"github.com/jim-minter/rp/pkg/env"

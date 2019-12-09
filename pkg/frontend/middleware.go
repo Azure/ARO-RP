@@ -71,7 +71,7 @@ func (f *frontend) middleware(h http.Handler) http.Handler {
 		t := time.Now()
 		b := &statsReadCloser{ReadCloser: r.Body}
 		r.Body = b
-		w = &statsResponseWriter{ResponseWriter: w}
+		w = &statsResponseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 
 		correlationID := r.Header.Get("X-Ms-Correlation-Request-Id")
 		requestID := uuid.NewV4().String()

@@ -15,6 +15,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/jim-minter/rp/pkg/api"
+	_ "github.com/jim-minter/rp/pkg/api/v20191231preview"
 	"github.com/jim-minter/rp/pkg/database"
 	"github.com/jim-minter/rp/pkg/env"
 	"github.com/jim-minter/rp/pkg/util/recover"
@@ -163,16 +164,17 @@ func (f *frontend) Run(stop <-chan struct{}) {
 	r := mux.NewRouter()
 	r.Use(f.middleware)
 
+	r.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeNotFound, "", "The requested path could not be found.")
+	})
+	r.NotFoundHandler = f.authenticated(r.NotFoundHandler)
+
 	unauthenticated := r.NewRoute().Subrouter()
 	f.unauthenticatedRoutes(unauthenticated)
 
 	authenticated := r.NewRoute().Subrouter()
 	authenticated.Use(f.authenticated)
 	f.authenticatedRoutes(authenticated)
-
-	authenticated.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeNotFound, "", "The requested path could not be found.")
-	})
 
 	s := &http.Server{
 		Handler:      lowercase(r),
