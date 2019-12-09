@@ -78,6 +78,10 @@ required = [
   branch = "release-4.3"
   source = "https://github.com/openshift/cluster-api-provider-azure"
 
+[[override]]
+  name = "gopkg.in/fsnotify.v1"
+  source = "https://github.com/fsnotify/fsnotify.git"
+
 [prune]
   go-tests = true
   unused-packages = true
