@@ -55,9 +55,7 @@ func (rc *statsReadCloser) Read(b []byte) (int, error) {
 
 func (f frontend) authenticated(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.TLS == nil ||
-			len(r.TLS.PeerCertificates) == 0 ||
-			!f.env.IsAuthorized(r.TLS.PeerCertificates[0].Raw) {
+		if !f.env.IsAuthorized(r.TLS) {
 			api.WriteError(w, http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Forbidden.")
 			return
 		}

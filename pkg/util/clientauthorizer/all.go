@@ -1,12 +1,14 @@
 package clientauthorizer
 
+import "crypto/tls"
+
 type all struct{}
 
 func NewAll() ClientAuthorizer {
 	return &all{}
 }
 
-func (all) IsAuthorized([]byte) bool {
+func (all) IsAuthorized(cs *tls.ConnectionState) bool {
 	return true
 }
 
