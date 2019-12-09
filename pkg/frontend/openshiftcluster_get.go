@@ -9,10 +9,11 @@ import (
 
 	"github.com/jim-minter/rp/pkg/api"
 	"github.com/jim-minter/rp/pkg/database/cosmosdb"
+	"github.com/jim-minter/rp/pkg/frontend/middleware"
 )
 
 func (f *frontend) getOpenShiftCluster(w http.ResponseWriter, r *http.Request) {
-	log := r.Context().Value(contextKeyLog).(*logrus.Entry)
+	log := r.Context().Value(middleware.ContextKeyLog).(*logrus.Entry)
 	vars := mux.Vars(r)
 
 	b, err := f._getOpenShiftCluster(r, api.APIs[vars["api-version"]]["OpenShiftCluster"].(api.OpenShiftClusterToExternal))

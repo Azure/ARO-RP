@@ -8,10 +8,11 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/jim-minter/rp/pkg/api"
+	"github.com/jim-minter/rp/pkg/frontend/middleware"
 )
 
 func (f *frontend) getOpenShiftClusters(w http.ResponseWriter, r *http.Request) {
-	log := r.Context().Value(contextKeyLog).(*logrus.Entry)
+	log := r.Context().Value(middleware.ContextKeyLog).(*logrus.Entry)
 	vars := mux.Vars(r)
 
 	b, err := f._getOpenShiftClusters(r, api.APIs[vars["api-version"]]["OpenShiftCluster"].(api.OpenShiftClustersToExternal))

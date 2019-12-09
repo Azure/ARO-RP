@@ -10,27 +10,16 @@ import (
 
 	"github.com/jim-minter/rp/pkg/api"
 	"github.com/jim-minter/rp/pkg/database/cosmosdb"
+	"github.com/jim-minter/rp/pkg/frontend/middleware"
 )
 
 func (f *frontend) putSubscription(w http.ResponseWriter, r *http.Request) {
-	log := r.Context().Value(contextKeyLog).(*logrus.Entry)
-	vars := mux.Vars(r)
-
-	if vars["api-version"] != "2.0" {
-		api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeInvalidParameter, "", "The resource type 'subscriptions' could not be found for api version '%s'.", vars["api-version"])
-		return
-	}
-
-	var err error
-	r, err = readBody(w, r)
-	if err != nil {
-		api.WriteCloudError(w, err.(*api.CloudError))
-		return
-	}
+	log := r.Context().Value(middleware.ContextKeyLog).(*logrus.Entry)
 
 	var b []byte
 	var created bool
-	err = cosmosdb.RetryOnPreconditionFailed(func() error {
+	err := cosmosdb.RetryOnPreconditionFailed(func() error {
+		var err error
 		b, created, err = f._putSubscription(r)
 		return err
 	})
@@ -42,7 +31,7 @@ func (f *frontend) putSubscription(w http.ResponseWriter, r *http.Request) {
 }
 
 func (f *frontend) _putSubscription(r *http.Request) ([]byte, bool, error) {
-	body := r.Context().Value(contextKeyBody).([]byte)
+	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 	vars := mux.Vars(r)
 
 	doc, err := f.db.Subscriptions.Get(api.Key(vars["subscriptionId"]))

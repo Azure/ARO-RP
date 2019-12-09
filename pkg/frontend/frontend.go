@@ -18,13 +18,13 @@ import (
 	_ "github.com/jim-minter/rp/pkg/api/v20191231preview"
 	"github.com/jim-minter/rp/pkg/database"
 	"github.com/jim-minter/rp/pkg/env"
+	"github.com/jim-minter/rp/pkg/frontend/middleware"
 	"github.com/jim-minter/rp/pkg/util/recover"
 )
 
-const (
-	resourceProviderNamespace = "Microsoft.RedHatOpenShift"
-	resourceType              = "openShiftClusters"
-)
+type noContent struct{}
+
+func (noContent) Error() string { return "" }
 
 type frontend struct {
 	baseLog      *logrus.Entry
@@ -136,7 +136,7 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}").
-		Queries("api-version", "{api-version}").
+		Queries("api-version", "2.0").
 		Subrouter()
 
 	s.Methods(http.MethodPut).HandlerFunc(f.putSubscription)
@@ -154,22 +154,26 @@ func (f *frontend) Run(stop <-chan struct{}) {
 	}()
 
 	r := mux.NewRouter()
-	r.Use(f.middleware)
+	r.Use(middleware.Log(f.baseLog))
+	r.Use(middleware.Panic)
+	r.Use(middleware.Headers)
+	r.Use(middleware.Validate)
+	r.Use(middleware.Body)
 
 	r.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeNotFound, "", "The requested path could not be found.")
 	})
-	r.NotFoundHandler = f.authenticated(r.NotFoundHandler)
+	r.NotFoundHandler = middleware.Authenticated(f.env)(r.NotFoundHandler)
 
 	unauthenticated := r.NewRoute().Subrouter()
 	f.unauthenticatedRoutes(unauthenticated)
 
 	authenticated := r.NewRoute().Subrouter()
-	authenticated.Use(f.authenticated)
+	authenticated.Use(middleware.Authenticated(f.env))
 	f.authenticatedRoutes(authenticated)
 
 	s := &http.Server{
-		Handler:      lowercase(r),
+		Handler:      middleware.Lowercase(r),
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: time.Minute,
 		IdleTimeout:  2 * time.Minute,
@@ -178,4 +182,24 @@ func (f *frontend) Run(stop <-chan struct{}) {
 
 	err := s.Serve(f.l)
 	f.baseLog.Error(err)
+}
+
+func reply(log *logrus.Entry, w http.ResponseWriter, b []byte, err error) {
+	if err != nil {
+		switch err := err.(type) {
+		case *api.CloudError:
+			api.WriteCloudError(w, err)
+		case *noContent:
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			log.Error(err)
+			api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
+		}
+		return
+	}
+
+	if b != nil {
+		w.Write(b)
+		w.Write([]byte{'\n'})
+	}
 }

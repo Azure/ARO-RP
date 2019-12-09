@@ -7,14 +7,11 @@ import (
 
 	"github.com/jim-minter/rp/pkg/api"
 	"github.com/jim-minter/rp/pkg/database/cosmosdb"
+	"github.com/jim-minter/rp/pkg/frontend/middleware"
 )
 
-type noContent struct{}
-
-func (noContent) Error() string { return "" }
-
 func (f *frontend) deleteOpenShiftCluster(w http.ResponseWriter, r *http.Request) {
-	log := r.Context().Value(contextKeyLog).(*logrus.Entry)
+	log := r.Context().Value(middleware.ContextKeyLog).(*logrus.Entry)
 
 	_, err := f.db.OpenShiftClusters.Patch(api.Key(r.URL.Path), func(doc *api.OpenShiftClusterDocument) error {
 		return f._deleteOpenShiftCluster(doc)

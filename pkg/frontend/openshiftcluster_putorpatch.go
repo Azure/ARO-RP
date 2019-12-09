@@ -12,22 +12,17 @@ import (
 
 	"github.com/jim-minter/rp/pkg/api"
 	"github.com/jim-minter/rp/pkg/database/cosmosdb"
+	"github.com/jim-minter/rp/pkg/frontend/middleware"
 )
 
 func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Request) {
-	log := r.Context().Value(contextKeyLog).(*logrus.Entry)
+	log := r.Context().Value(middleware.ContextKeyLog).(*logrus.Entry)
 	vars := mux.Vars(r)
-
-	var err error
-	r, err = readBody(w, r)
-	if err != nil {
-		api.WriteCloudError(w, err.(*api.CloudError))
-		return
-	}
 
 	var b []byte
 	var created bool
-	err = cosmosdb.RetryOnPreconditionFailed(func() error {
+	err := cosmosdb.RetryOnPreconditionFailed(func() error {
+		var err error
 		b, created, err = f._putOrPatchOpenShiftCluster(r, api.APIs[vars["api-version"]]["OpenShiftCluster"].(api.OpenShiftClusterToInternal), api.APIs[vars["api-version"]]["OpenShiftCluster"].(api.OpenShiftClusterToExternal))
 		return err
 	})
@@ -40,7 +35,7 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 
 func (f *frontend) _putOrPatchOpenShiftCluster(r *http.Request, internal api.OpenShiftClusterToInternal, external api.OpenShiftClusterToExternal) ([]byte, bool, error) {
 	vars := mux.Vars(r)
-	body := r.Context().Value(contextKeyBody).([]byte)
+	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 
 	subdoc, err := f.validateSubscriptionState(api.Key(r.URL.Path), api.SubscriptionStateRegistered)
 	if err != nil {
@@ -55,7 +50,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *http.Request, internal api.Ope
 	isCreate := doc == nil
 
 	if isCreate {
-		originalPath := r.Context().Value(contextKeyOriginalPath).(string)
+		originalPath := r.Context().Value(middleware.ContextKeyOriginalPath).(string)
 		originalR, err := azure.ParseResourceID(originalPath)
 		if err != nil {
 			return nil, false, err
