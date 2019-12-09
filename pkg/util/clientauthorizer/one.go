@@ -2,6 +2,7 @@ package clientauthorizer
 
 import (
 	"bytes"
+	"crypto/tls"
 )
 
 type one struct {
@@ -14,8 +15,11 @@ func NewOne(cert []byte) ClientAuthorizer {
 	}
 }
 
-func (o *one) IsAuthorized(b []byte) bool {
-	return bytes.Equal(o.cert, b)
+func (o *one) IsAuthorized(cs *tls.ConnectionState) bool {
+	if cs == nil || len(cs.PeerCertificates) == 0 {
+		return false
+	}
+	return bytes.Equal(o.cert, cs.PeerCertificates[0].Raw)
 }
 
 func (one) IsReady() bool {

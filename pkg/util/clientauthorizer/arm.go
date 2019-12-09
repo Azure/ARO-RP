@@ -2,6 +2,7 @@ package clientauthorizer
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -46,7 +47,10 @@ func NewARM(log *logrus.Entry) ClientAuthorizer {
 	return a
 }
 
-func (a *arm) IsAuthorized(rawCert []byte) bool {
+func (a *arm) IsAuthorized(cs *tls.ConnectionState) bool {
+	if cs == nil || len(cs.PeerCertificates) == 0 {
+		return false
+	}
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 
@@ -54,7 +58,7 @@ func (a *arm) IsAuthorized(rawCert []byte) bool {
 	for _, c := range a.m.ClientCertificates {
 		if c.NotBefore.Before(now) &&
 			c.NotAfter.After(now) &&
-			bytes.Equal(c.Certificate, rawCert) {
+			bytes.Equal(c.Certificate, cs.PeerCertificates[0].Raw) {
 			return true
 		}
 	}
