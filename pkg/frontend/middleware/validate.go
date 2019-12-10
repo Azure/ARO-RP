@@ -23,6 +23,11 @@ func Validate(h http.Handler) http.Handler {
 		vars := mux.Vars(r)
 		route := mux.CurrentRoute(r)
 
+		if route == nil {
+			api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
+			return
+		}
+
 		if _, found := vars["subscriptionId"]; found {
 			_, err := uuid.FromString(vars["subscriptionId"])
 			if err != nil || vars["subscriptionId"] != strings.ToLower(vars["subscriptionId"]) {
