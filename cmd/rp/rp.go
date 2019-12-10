@@ -36,6 +36,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 
 	sigterm := make(chan os.Signal, 1)
 	stop := make(chan struct{})
+	done := make(chan struct{})
 	signal.Notify(sigterm, syscall.SIGTERM)
 
 	b, err := backend.NewBackend(ctx, log.WithField("component", "backend"), env, db)
@@ -51,13 +52,14 @@ func run(ctx context.Context, log *logrus.Entry) error {
 	log.Print("listening")
 
 	go b.Run(stop)
-	go f.Run(stop)
+	go f.Run(stop, done)
 
 	<-sigterm
 	log.Print("received SIGTERM")
 	close(stop)
+	<-done
 
-	select {}
+	return nil
 }
 
 func main() {

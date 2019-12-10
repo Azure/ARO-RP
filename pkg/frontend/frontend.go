@@ -33,13 +33,14 @@ type frontend struct {
 	fpAuthorizer autorest.Authorizer
 
 	l net.Listener
+	s *http.Server
 
 	ready atomic.Value
 }
 
 // Runnable represents a runnable object
 type Runnable interface {
-	Run(stop <-chan struct{})
+	Run(<-chan struct{}, chan<- struct{})
 }
 
 // NewFrontend returns a new runnable frontend
@@ -142,15 +143,32 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	s.Methods(http.MethodPut).HandlerFunc(f.putSubscription)
 }
 
-func (f *frontend) Run(stop <-chan struct{}) {
+func (f *frontend) Run(stop <-chan struct{}, done chan<- struct{}) {
 	defer recover.Panic(f.baseLog)
 
 	go func() {
 		defer recover.Panic(f.baseLog)
 
 		<-stop
-		f.baseLog.Print("marking frontend not ready")
+
+		// mark not ready and wait for ((#probes + 1) * interval + margin) to
+		// stop receiving new connections
+		f.baseLog.Print("marking not ready and waiting 20 seconds")
 		f.ready.Store(false)
+		time.Sleep(20 * time.Second)
+
+		// initiate server shutdown and wait for (longest connection timeout +
+		// margin) for connections to complete
+		f.baseLog.Print("shutting down and waiting up to 65 seconds")
+		ctx, cancel := context.WithTimeout(context.Background(), 65*time.Second)
+		defer cancel()
+
+		err := f.s.Shutdown(ctx)
+		if err != nil {
+			f.baseLog.Error(err)
+		}
+
+		close(done)
 	}()
 
 	r := mux.NewRouter()
@@ -172,7 +190,7 @@ func (f *frontend) Run(stop <-chan struct{}) {
 	authenticated.Use(middleware.Authenticated(f.env))
 	f.authenticatedRoutes(authenticated)
 
-	s := &http.Server{
+	f.s = &http.Server{
 		Handler:      middleware.Lowercase(r),
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: time.Minute,
@@ -180,8 +198,10 @@ func (f *frontend) Run(stop <-chan struct{}) {
 		ErrorLog:     log.New(f.baseLog.Writer(), "", 0),
 	}
 
-	err := s.Serve(f.l)
-	f.baseLog.Error(err)
+	err := f.s.Serve(f.l)
+	if err != http.ErrServerClosed {
+		f.baseLog.Error(err)
+	}
 }
 
 func reply(log *logrus.Entry, w http.ResponseWriter, b []byte, err error) {
