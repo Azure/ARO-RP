@@ -298,12 +298,12 @@ type NameSchema struct {
 	Schema *Schema
 }
 
-// UnmarshalJSON implemnets json.Unmarshaler
+// UnmarshalJSON implements json.Unmarshaler
 func (xs *NameSchemas) UnmarshalJSON(b []byte) error {
 	return orderedmap.UnmarshalJSON(b, xs)
 }
 
-// MarshalJSON implemnets json.Marshaler
+// MarshalJSON implements json.Marshaler
 func (xs NameSchemas) MarshalJSON() ([]byte, error) {
 	return orderedmap.MarshalJSON(xs)
 }
