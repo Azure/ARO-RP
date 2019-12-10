@@ -8,6 +8,8 @@ COSMOSDB_ACCOUNT=$RESOURCEGROUP
 DOMAIN=$RESOURCEGROUP.osadev.cloud
 DOMAIN_NAME_LABEL=$RESOURCEGROUP
 KEYVAULT_NAME=$RESOURCEGROUP
+RP_IMAGE=
+RP_IMAGE_AUTH=
 
 az group create -g "$RESOURCEGROUP" -l "$LOCATION"
 
@@ -16,11 +18,15 @@ az group deployment create -g "$RESOURCEGROUP" \
   --template-file deploy/rp-production-debug.json \
   --parameters \
     "adminObjectId=$ADMIN_OBJECT_ID" \
+    "azureFpClientId=$AZURE_FP_CLIENT_ID" \
     "databaseAccountName=$COSMOSDB_ACCOUNT" \
     "domainName=$DOMAIN" \
     "domainNameLabel=$DOMAIN_NAME_LABEL" \
     "keyvaultName=$KEYVAULT_NAME" \
     "location=$LOCATION" \
+    "pullSecret=$PULL_SECRET" \
+    "rpImage=$RP_IMAGE" \
+    "rpImageAuth=$RP_IMAGE_AUTH" \
     "sshPublicKey=$(cat ~/.ssh/id_rsa.pub)"
 
 PARENT_DNS_RESOURCEGROUP=dns

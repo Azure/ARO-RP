@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	"github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2019-08-01/documentdb"
@@ -22,9 +23,9 @@ import (
 )
 
 var (
-	production = flag.Bool("production", false, "output production template")
-	debug      = flag.Bool("debug", false, "debug")
-	outputFile = flag.String("o", "", "output file")
+	development = flag.Bool("development", false, "output development template")
+	debug       = flag.Bool("debug", false, "debug")
+	outputFile  = flag.String("o", "", "output file")
 )
 
 var apiVersions = map[string]string{
@@ -210,7 +211,7 @@ func (g *generator) lb() *arm.Resource {
 							Protocol:         network.TransportProtocolTCP,
 							LoadDistribution: network.LoadDistributionDefault,
 							FrontendPort:     to.Int32Ptr(443),
-							BackendPort:      to.Int32Ptr(8443),
+							BackendPort:      to.Int32Ptr(443),
 						},
 						Name: to.StringPtr("rp-lbrule"),
 					},
@@ -218,9 +219,10 @@ func (g *generator) lb() *arm.Resource {
 				Probes: &[]network.Probe{
 					{
 						ProbePropertiesFormat: &network.ProbePropertiesFormat{
-							Protocol:       network.ProbeProtocolTCP,
-							Port:           to.Int32Ptr(8443),
+							Protocol:       network.ProbeProtocolHTTPS,
+							Port:           to.Int32Ptr(443),
 							NumberOfProbes: to.Int32Ptr(2),
+							RequestPath:    to.StringPtr("/healthz/ready"),
 						},
 						Name: to.StringPtr("rp-probe"),
 					},
@@ -238,8 +240,17 @@ func (g *generator) lb() *arm.Resource {
 }
 
 func (g *generator) vmss() *arm.Resource {
-	script := base64.StdEncoding.EncodeToString([]byte(`#!/bin/bash
-yum -y update -x WALinuxAgent
+	var parts []string
+
+	for _, variable := range []string{"azureFpClientId", "pullSecret", "rpImage", "rpImageAuth"} {
+		parts = append(parts,
+			fmt.Sprintf("'%s=$(base64 -d <<<'''", strings.ToUpper(variable)),
+			fmt.Sprintf("base64(parameters('%s'))", variable),
+			"''')\n'",
+		)
+	}
+
+	trailer := base64.StdEncoding.EncodeToString([]byte(`yum -y update -x WALinuxAgent
 
 rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
 
@@ -253,17 +264,57 @@ enabled=yes
 gpgcheck=no
 EOF
 
-yum -y install azure-mdsd azure-security azsec-monitor azsec-clamav docker
+yum -y install azsec-clamav azsec-monitor azure-mdsd azure-security docker
 
-firewall-cmd --add-port=8443/tcp --permanent
-firewall-cmd --reload
+firewall-cmd --add-port=443/tcp --permanent
+
+if [[ -n "$RPIMAGEAUTH" ]]; then
+  mkdir /root/.docker
+
+  cat >/root/.docker/config.json <<EOF
+{
+	"auths": {
+		"${RPIMAGE%%/*}": {
+			"auth": "$RPIMAGEAUTH"
+		}
+	}
+}
+EOF
+fi
+
+cat >/etc/sysconfig/arorp <<EOF
+AZURE_FP_CLIENT_ID='$AZUREFPCLIENTID'
+PULL_SECRET='$PULLSECRET'
+EOF
+
+cat >/etc/systemd/system/arorp.service <<EOF
+[Unit]
+After=docker.service
+Requires=docker.service
+
+[Service]
+EnvironmentFile=/etc/sysconfig/arorp
+ExecStartPre=-/usr/bin/docker stop %n
+ExecStartPre=-/usr/bin/docker rm %n
+ExecStartPre=/usr/bin/docker pull $RPIMAGE
+ExecStart=/usr/bin/docker run --rm --name %n -p 443:8443 -e AZURE_FP_CLIENT_ID -e PULL_SECRET $RPIMAGE
+Restart=always
+EOF
+
+systemctl enable arorp.service
+
+(sleep 30; reboot) &
 `))
+
+	parts = append(parts, "'\n'", fmt.Sprintf("base64ToString('%s')", trailer))
+
+	script := fmt.Sprintf("[base64(concat(%s))]", strings.Join(parts, ","))
 
 	vmss := &compute.VirtualMachineScaleSet{
 		Sku: &compute.Sku{
 			Name:     to.StringPtr(string(compute.VirtualMachineSizeTypesStandardD2sV3)),
 			Tier:     to.StringPtr("Standard"),
-			Capacity: to.Int64Ptr(1),
+			Capacity: to.Int64Ptr(3),
 		},
 		VirtualMachineScaleSetProperties: &compute.VirtualMachineScaleSetProperties{
 			UpgradePolicy: &compute.UpgradePolicy{
@@ -345,12 +396,19 @@ firewall-cmd --reload
 			},
 			Overprovision: to.BoolPtr(false),
 		},
+		Identity: &compute.VirtualMachineScaleSetIdentity{
+			Type: compute.ResourceIdentityTypeUserAssigned,
+			UserAssignedIdentities: map[string]*compute.VirtualMachineScaleSetIdentityUserAssignedIdentitiesValue{
+				"[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity')]": {},
+			},
+		},
 		Name:     to.StringPtr("rp-vmss"),
 		Type:     to.StringPtr("Microsoft.Compute/virtualMachineScaleSets"),
 		Location: to.StringPtr("[parameters('location')]"),
 	}
 
 	if g.debug {
+		vmss.Sku.Capacity = to.Int64Ptr(1)
 		(*(*vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations)[0].VirtualMachineScaleSetNetworkConfigurationProperties.IPConfigurations)[0].PublicIPAddressConfiguration = &compute.VirtualMachineScaleSetPublicIPAddressConfiguration{
 			Name: to.StringPtr("rp-vmss-pip"),
 		}
@@ -612,7 +670,7 @@ func newGenerator(production, debug bool) *generator {
 		debug:      debug,
 	}
 
-	if production {
+	if g.production {
 		g.rpServicePrincipalID = "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity'), '2018-11-30').principalId]"
 	} else {
 		g.rpServicePrincipalID = "[parameters('rpServicePrincipalId')]"
@@ -635,7 +693,7 @@ func (g *generator) template() *arm.Template {
 		"location",
 	}
 	if g.production {
-		params = append(params, "sshPublicKey")
+		params = append(params, "azureFpClientId", "pullSecret", "rpImage", "rpImageAuth", "sshPublicKey")
 		if g.debug {
 			params = append(params, "adminObjectId", "domainNameLabel")
 		}
@@ -658,7 +716,7 @@ func (g *generator) template() *arm.Template {
 }
 
 func run() error {
-	g := newGenerator(*production, *debug)
+	g := newGenerator(!*development, *debug)
 
 	b, err := json.MarshalIndent(g.template(), "", "    ")
 	if err != nil {
