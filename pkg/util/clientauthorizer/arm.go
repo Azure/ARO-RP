@@ -16,12 +16,14 @@ import (
 )
 
 type metadata struct {
-	ClientCertificates []struct {
-		Thumbprint  string    `json:"thumbprint,omitempty"`
-		NotBefore   time.Time `json:"notBefore,omitempty"`
-		NotAfter    time.Time `json:"notAfter,omitempty"`
-		Certificate []byte    `json:"certificate,omitempty"`
-	} `json:"clientCertificates,omitempty"`
+	ClientCertificates []clientCertificate `json:"clientCertificates,omitempty"`
+}
+
+type clientCertificate struct {
+	Thumbprint  string    `json:"thumbprint,omitempty"`
+	NotBefore   time.Time `json:"notBefore,omitempty"`
+	NotAfter    time.Time `json:"notAfter,omitempty"`
+	Certificate []byte    `json:"certificate,omitempty"`
 }
 
 type arm struct {
@@ -99,7 +101,7 @@ func (a *arm) refreshOnce() error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status code %q", resp.StatusCode)
+		return fmt.Errorf("unexpected status code %d", resp.StatusCode)
 	}
 
 	if strings.SplitN(resp.Header.Get("Content-Type"), ";", 2)[0] != "application/json" {
