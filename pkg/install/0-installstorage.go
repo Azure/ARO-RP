@@ -74,7 +74,8 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 
 	i.log.Print("creating resource group")
 	_, err := i.groups.CreateOrUpdate(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, resources.Group{
-		Location: &installConfig.Config.Azure.Region,
+		Location:  &installConfig.Config.Azure.Region,
+		ManagedBy: to.StringPtr(doc.OpenShiftCluster.ID),
 	})
 	if err != nil {
 		return err
