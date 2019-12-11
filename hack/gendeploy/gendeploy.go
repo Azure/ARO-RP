@@ -294,10 +294,10 @@ Requires=docker.service
 
 [Service]
 EnvironmentFile=/etc/sysconfig/arorp
-ExecStartPre=-/usr/bin/docker stop %n
-ExecStartPre=-/usr/bin/docker rm %n
+ExecStartPre=-/usr/bin/docker rm -f %n
 ExecStartPre=/usr/bin/docker pull $RPIMAGE
 ExecStart=/usr/bin/docker run --rm --name %n -p 443:8443 -e AZURE_FP_CLIENT_ID -e PULL_SECRET $RPIMAGE
+ExecStop=/usr/bin/docker stop -t 90 %n
 Restart=always
 EOF
 
@@ -467,8 +467,20 @@ func (g *generator) vault() *arm.Resource {
 			ObjectID: to.StringPtr("[parameters('adminObjectId')]"),
 			Permissions: &keyvault.Permissions{
 				Certificates: &[]keyvault.CertificatePermissions{
+					keyvault.Create,
+					keyvault.Delete,
+					keyvault.Deleteissuers,
+					keyvault.Get,
+					keyvault.Getissuers,
 					keyvault.Import,
 					keyvault.List,
+					keyvault.Listissuers,
+					keyvault.Managecontacts,
+					keyvault.Manageissuers,
+					keyvault.Purge,
+					keyvault.Recover,
+					keyvault.Setissuers,
+					keyvault.Update,
 				},
 			},
 		})

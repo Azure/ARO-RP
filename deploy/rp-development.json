@@ -51,8 +51,20 @@
                         "objectId": "[parameters('adminObjectId')]",
                         "permissions": {
                             "certificates": [
+                                "create",
+                                "delete",
+                                "deleteissuers",
+                                "get",
+                                "getissuers",
                                 "import",
-                                "list"
+                                "list",
+                                "listissuers",
+                                "managecontacts",
+                                "manageissuers",
+                                "purge",
+                                "recover",
+                                "setissuers",
+                                "update"
                             ]
                         }
                     }
