@@ -37,7 +37,6 @@ var (
 )
 
 type generator struct {
-	outputFile           string
 	production           bool
 	debug                bool
 	rpServicePrincipalID string
@@ -136,9 +135,6 @@ func (g *generator) vnet() *arm.Resource {
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
 		APIVersion: apiVersions["network"],
-		DependsOn: []string{
-			"[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]",
-		},
 	}
 }
 
@@ -660,9 +656,8 @@ func (g *generator) rbac() []*arm.Resource {
 	return rs
 }
 
-func newGenerator(outputFile string, production, debug bool) *generator {
+func newGenerator(production, debug bool) *generator {
 	g := &generator{
-		outputFile: outputFile,
 		production: production,
 		debug:      debug,
 	}
@@ -674,6 +669,16 @@ func newGenerator(outputFile string, production, debug bool) *generator {
 	}
 
 	return g
+}
+
+func (g *generator) nsgTemplate() *arm.Template {
+	return &arm.Template{
+		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+		ContentVersion: "1.0.0.0",
+		Resources: []*arm.Resource{
+			g.nsg(),
+		},
+	}
 }
 
 func (g *generator) template() *arm.Template {
@@ -702,7 +707,7 @@ func (g *generator) template() *arm.Template {
 	}
 
 	if g.production {
-		t.Resources = append(t.Resources, g.msi(), g.nsg(), g.vnet(), g.pip(), g.lb(), g.vmss())
+		t.Resources = append(t.Resources, g.msi(), g.vnet(), g.pip(), g.lb(), g.vmss())
 	}
 	t.Resources = append(t.Resources, g.zone(), g.vault())
 	t.Resources = append(t.Resources, g.cosmosdb()...)
@@ -711,26 +716,52 @@ func (g *generator) template() *arm.Template {
 	return t
 }
 
-func (g *generator) generate() error {
-	b, err := json.MarshalIndent(g.template(), "", "    ")
-	if err != nil {
-		return err
-	}
-	b = bytes.ReplaceAll(b, []byte(tenantIDHack), []byte("[subscription().tenantId]")) // :-(
-	b = append(b, byte('\n'))
-
-	return ioutil.WriteFile(g.outputFile, b, 0666)
-}
-
 func run() error {
-	for _, g := range []*generator{
-		newGenerator("rp-development.json", false, false),
-		newGenerator("rp-production.json", true, false),
-		newGenerator("rp-production-debug.json", true, true),
+	for _, i := range []struct {
+		nsgTemplateFile string
+		templateFile    string
+		g               *generator
+	}{
+		{
+			templateFile: "rp-development.json",
+			g:            newGenerator(false, false),
+		},
+		{
+			nsgTemplateFile: "rp-production-nsg.json",
+			templateFile:    "rp-production.json",
+			g:               newGenerator(true, false),
+		},
+		{
+			nsgTemplateFile: "rp-production-nsg-debug.json",
+			templateFile:    "rp-production-debug.json",
+			g:               newGenerator(true, true),
+		},
 	} {
-		err := g.generate()
+		b, err := json.MarshalIndent(i.g.template(), "", "    ")
 		if err != nil {
 			return err
+		}
+
+		b = bytes.ReplaceAll(b, []byte(tenantIDHack), []byte("[subscription().tenantId]")) // :-(
+		b = append(b, byte('\n'))
+
+		err = ioutil.WriteFile(i.templateFile, b, 0666)
+		if err != nil {
+			return err
+		}
+
+		if i.nsgTemplateFile != "" {
+			b, err := json.MarshalIndent(i.g.nsgTemplate(), "", "    ")
+			if err != nil {
+				return err
+			}
+
+			b = append(b, byte('\n'))
+
+			err = ioutil.WriteFile(i.nsgTemplateFile, b, 0666)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
