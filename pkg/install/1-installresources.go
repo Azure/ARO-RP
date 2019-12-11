@@ -645,13 +645,6 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 	}
 
 	{
-		err = i.env.DNS().CreateOrUpdate(ctx, doc.OpenShiftCluster)
-		if err != nil {
-			return err
-		}
-	}
-
-	{
 		restConfig, err := restconfig.RestConfig(doc.OpenShiftCluster.Properties.AdminKubeconfig)
 		if err != nil {
 			return err

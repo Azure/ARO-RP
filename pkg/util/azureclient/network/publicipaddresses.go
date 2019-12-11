@@ -1,12 +1,15 @@
 package network
 
 import (
+	"context"
+
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/go-autorest/autorest"
 )
 
 // PublicIPAddressesClient is a minimal interface for azure PublicIPAddressesClient
 type PublicIPAddressesClient interface {
+	List(ctx context.Context, resourceGroupName string) (ips []network.PublicIPAddress, err error)
 	PublicIPAddressesClientAddons
 }
 

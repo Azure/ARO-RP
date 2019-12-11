@@ -8,6 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	network "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -83,4 +84,19 @@ func (m *MockPublicIPAddressesClient) DeleteAndWait(arg0 context.Context, arg1, 
 func (mr *MockPublicIPAddressesClientMockRecorder) DeleteAndWait(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockPublicIPAddressesClient)(nil).DeleteAndWait), arg0, arg1, arg2)
+}
+
+// List mocks base method
+func (m *MockPublicIPAddressesClient) List(arg0 context.Context, arg1 string) ([]network.PublicIPAddress, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", arg0, arg1)
+	ret0, _ := ret[0].([]network.PublicIPAddress)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List
+func (mr *MockPublicIPAddressesClientMockRecorder) List(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockPublicIPAddressesClient)(nil).List), arg0, arg1)
 }

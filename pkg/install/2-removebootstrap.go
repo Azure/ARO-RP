@@ -89,6 +89,29 @@ func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClust
 		}
 	}
 
+	ips, err := i.publicipaddresses.List(ctx, doc.OpenShiftCluster.Properties.ResourceGroup)
+	if err != nil {
+		return err
+	}
+
+	{
+		var routerIP string
+		for _, ip := range ips {
+			if ip.Tags["kubernetes-cluster-name"] != nil && *ip.Tags["kubernetes-cluster-name"] == "aro" &&
+				ip.Tags["service"] != nil && *ip.Tags["service"] == "openshift-ingress/router-default" {
+				routerIP = *ip.IPAddress
+			}
+		}
+		if routerIP == "" {
+			return fmt.Errorf("routerIP not found")
+		}
+
+		err = i.env.DNS().CreateOrUpdate(ctx, doc.OpenShiftCluster, routerIP)
+		if err != nil {
+			return err
+		}
+	}
+
 	_, err = i.db.Patch(doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		doc.OpenShiftCluster.Properties.APIServerURL = "https://api." + doc.OpenShiftCluster.Properties.DomainName + "." + i.env.DNS().Domain() + ":6443/"
 		doc.OpenShiftCluster.Properties.ConsoleURL = "https://console-openshift-console.apps." + doc.OpenShiftCluster.Properties.DomainName + "." + i.env.DNS().Domain() + "/"
