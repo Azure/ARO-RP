@@ -106,7 +106,7 @@ func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClust
 			return fmt.Errorf("routerIP not found")
 		}
 
-		err = i.env.DNS().CreateOrUpdate(ctx, doc.OpenShiftCluster, routerIP)
+		err = i.env.DNS().CreateOrUpdateRouter(ctx, doc.OpenShiftCluster, routerIP)
 		if err != nil {
 			return err
 		}

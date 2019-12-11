@@ -14,7 +14,8 @@ import (
 
 type Manager interface {
 	Domain() string
-	CreateOrUpdate(context.Context, *api.OpenShiftCluster, string) error
+	CreateOrUpdate(context.Context, *api.OpenShiftCluster) error
+	CreateOrUpdateRouter(context.Context, *api.OpenShiftCluster, string) error
 	Delete(context.Context, *api.OpenShiftCluster) error
 }
 
@@ -57,7 +58,7 @@ func (m *manager) Domain() string {
 	return m.domain
 }
 
-func (m *manager) CreateOrUpdate(ctx context.Context, oc *api.OpenShiftCluster, routerIP string) error {
+func (m *manager) CreateOrUpdate(ctx context.Context, oc *api.OpenShiftCluster) error {
 	_, err := m.recordsets.CreateOrUpdate(ctx, m.instancemetadata.ResourceGroup(), m.domain, "api."+oc.Properties.DomainName, dns.CNAME, dns.RecordSet{
 		RecordSetProperties: &dns.RecordSetProperties{
 			TTL: to.Int64Ptr(300),
@@ -66,11 +67,12 @@ func (m *manager) CreateOrUpdate(ctx context.Context, oc *api.OpenShiftCluster, 
 			},
 		},
 	}, "", "")
-	if err != nil {
-		return err
-	}
 
-	_, err = m.recordsets.CreateOrUpdate(ctx, m.instancemetadata.ResourceGroup(), m.domain, "*.apps."+oc.Properties.DomainName, dns.A, dns.RecordSet{
+	return err
+}
+
+func (m *manager) CreateOrUpdateRouter(ctx context.Context, oc *api.OpenShiftCluster, routerIP string) error {
+	_, err := m.recordsets.CreateOrUpdate(ctx, m.instancemetadata.ResourceGroup(), m.domain, "*.apps."+oc.Properties.DomainName, dns.A, dns.RecordSet{
 		RecordSetProperties: &dns.RecordSetProperties{
 			TTL: to.Int64Ptr(300),
 			ARecords: &[]dns.ARecord{
