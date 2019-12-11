@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"strings"
@@ -20,12 +19,6 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/jim-minter/rp/pkg/util/arm"
-)
-
-var (
-	development = flag.Bool("development", false, "output development template")
-	debug       = flag.Bool("debug", false, "debug")
-	outputFile  = flag.String("o", "", "output file")
 )
 
 var apiVersions = map[string]string{
@@ -44,6 +37,7 @@ var (
 )
 
 type generator struct {
+	outputFile           string
 	production           bool
 	debug                bool
 	rpServicePrincipalID string
@@ -663,8 +657,9 @@ func (g *generator) rbac() []*arm.Resource {
 	return rs
 }
 
-func newGenerator(production, debug bool) *generator {
+func newGenerator(outputFile string, production, debug bool) *generator {
 	g := &generator{
+		outputFile: outputFile,
 		production: production,
 		debug:      debug,
 	}
@@ -713,9 +708,7 @@ func (g *generator) template() *arm.Template {
 	return t
 }
 
-func run() error {
-	g := newGenerator(!*development, *debug)
-
+func (g *generator) generate() error {
 	b, err := json.MarshalIndent(g.template(), "", "    ")
 	if err != nil {
 		return err
@@ -723,18 +716,25 @@ func run() error {
 	b = bytes.ReplaceAll(b, []byte(tenantIDHack), []byte("[subscription().tenantId]")) // :-(
 	b = append(b, byte('\n'))
 
-	if *outputFile != "" {
-		err = ioutil.WriteFile(*outputFile, b, 0666)
-	} else {
-		_, err = fmt.Print(string(b))
+	return ioutil.WriteFile(g.outputFile, b, 0666)
+}
+
+func run() error {
+	for _, g := range []*generator{
+		newGenerator("rp-development.json", false, false),
+		newGenerator("rp-production.json", true, false),
+		newGenerator("rp-production-debug.json", true, true),
+	} {
+		err := g.generate()
+		if err != nil {
+			return err
+		}
 	}
 
-	return err
+	return nil
 }
 
 func main() {
-	flag.Parse()
-
 	if err := run(); err != nil {
 		panic(err)
 	}
