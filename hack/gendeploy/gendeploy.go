@@ -287,6 +287,9 @@ ExecStartPre=/usr/bin/docker pull $RPIMAGE
 ExecStart=/usr/bin/docker run --rm --name %n -p 443:8443 -e AZURE_FP_CLIENT_ID -e PULL_SECRET $RPIMAGE
 ExecStop=/usr/bin/docker stop -t 90 %n
 Restart=always
+
+[Install]
+WantedBy=multi-user.target
 EOF
 
 systemctl enable arorp.service
