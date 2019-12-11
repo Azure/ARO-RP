@@ -38,7 +38,7 @@ generate:
 	go generate ./...
 
 image: rp
-	docker build -t rp:$(COMMIT) .
+	docker build -t arosvc.azurecr.io/rp:$(COMMIT) .
 
 secrets:
 	rm -rf secrets
