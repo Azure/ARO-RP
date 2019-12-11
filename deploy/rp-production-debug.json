@@ -14,9 +14,6 @@
         "domainName": {
             "type": "string"
         },
-        "domainNameLabel": {
-            "type": "string"
-        },
         "keyvaultName": {
             "type": "string"
         },
@@ -51,7 +48,7 @@
                             "sourceAddressPrefix": "*",
                             "destinationAddressPrefix": "*",
                             "access": "Allow",
-                            "priority": 101,
+                            "priority": 120,
                             "direction": "Inbound"
                         },
                         "name": "rp_in"
@@ -123,10 +120,7 @@
                 "name": "Standard"
             },
             "properties": {
-                "publicIPAllocationMethod": "Static",
-                "dnsSettings": {
-                    "domainNameLabel": "[parameters('domainNameLabel')]"
-                }
+                "publicIPAllocationMethod": "Static"
             },
             "name": "rp-pip",
             "type": "Microsoft.Network/publicIPAddresses",
@@ -198,7 +192,7 @@
             "sku": {
                 "name": "Standard_D2s_v3",
                 "tier": "Standard",
-                "capacity": 1
+                "capacity": 3
             },
             "properties": {
                 "upgradePolicy": {

@@ -45,7 +45,7 @@
                             "sourceAddressPrefix": "*",
                             "destinationAddressPrefix": "*",
                             "access": "Allow",
-                            "priority": 101,
+                            "priority": 120,
                             "direction": "Inbound"
                         },
                         "name": "rp_in"
@@ -226,6 +226,9 @@
                                                     "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"
                                                 },
                                                 "primary": true,
+                                                "publicIPAddressConfiguration": {
+                                                    "name": "rp-vmss-pip"
+                                                },
                                                 "loadBalancerBackendAddressPools": [
                                                     {
                                                         "id": "[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"
@@ -316,6 +319,7 @@
                     }
                 ],
                 "databaseAccountOfferType": "Standard",
+                "ipRangeFilter": "104.42.195.92,40.76.54.131,52.176.6.30,52.169.50.45,52.187.184.26",
                 "isVirtualNetworkFilterEnabled": true,
                 "virtualNetworkRules": [
                     {

@@ -161,12 +161,6 @@ func (g *generator) pip() *arm.Resource {
 		Location: to.StringPtr("[resourceGroup().location]"),
 	}
 
-	if g.debug {
-		pip.PublicIPAddressPropertiesFormat.DNSSettings = &network.PublicIPAddressDNSSettings{
-			DomainNameLabel: to.StringPtr("[parameters('domainNameLabel')]"),
-		}
-	}
-
 	return &arm.Resource{
 		Resource:   pip,
 		APIVersion: apiVersions["network"],
@@ -364,6 +358,9 @@ systemctl enable arorp.service
 												ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"),
 											},
 											Primary: to.BoolPtr(true),
+											PublicIPAddressConfiguration: &compute.VirtualMachineScaleSetPublicIPAddressConfiguration{
+												Name: to.StringPtr("rp-vmss-pip"),
+											},
 											LoadBalancerBackendAddressPools: &[]compute.SubResource{
 												{
 													ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
@@ -405,13 +402,6 @@ systemctl enable arorp.service
 		Name:     to.StringPtr("rp-vmss"),
 		Type:     to.StringPtr("Microsoft.Compute/virtualMachineScaleSets"),
 		Location: to.StringPtr("[resourceGroup().location]"),
-	}
-
-	if g.debug {
-		vmss.Sku.Capacity = to.Int64Ptr(1)
-		(*(*vmss.VirtualMachineProfile.NetworkProfile.NetworkInterfaceConfigurations)[0].VirtualMachineScaleSetNetworkConfigurationProperties.IPConfigurations)[0].PublicIPAddressConfiguration = &compute.VirtualMachineScaleSetPublicIPAddressConfiguration{
-			Name: to.StringPtr("rp-vmss-pip"),
-		}
 	}
 
 	return &arm.Resource{
@@ -521,15 +511,12 @@ func (g *generator) cosmosdb() []*arm.Resource {
 	}
 
 	if g.production {
+		cosmosdb.IPRangeFilter = to.StringPtr("104.42.195.92,40.76.54.131,52.176.6.30,52.169.50.45,52.187.184.26")
 		cosmosdb.IsVirtualNetworkFilterEnabled = to.BoolPtr(true)
 		cosmosdb.VirtualNetworkRules = &[]documentdb.VirtualNetworkRule{
 			{
 				ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"),
 			},
-		}
-
-		if g.debug {
-			cosmosdb.IPRangeFilter = to.StringPtr("104.42.195.92,40.76.54.131,52.176.6.30,52.169.50.45,52.187.184.26")
 		}
 
 		r.DependsOn = append(r.DependsOn, "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]")
@@ -706,7 +693,7 @@ func (g *generator) template() *arm.Template {
 	if g.production {
 		params = append(params, "azureFpClientId", "pullSecret", "rpImage", "rpImageAuth", "sshPublicKey")
 		if g.debug {
-			params = append(params, "adminObjectId", "domainNameLabel")
+			params = append(params, "adminObjectId")
 		}
 	} else {
 		params = append(params, "adminObjectId", "rpServicePrincipalId")
