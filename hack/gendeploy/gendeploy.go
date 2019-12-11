@@ -72,7 +72,7 @@ func (g *generator) nsg() *arm.Resource {
 						SourceAddressPrefix:      to.StringPtr("*"),
 						DestinationAddressPrefix: to.StringPtr("*"),
 						Access:                   network.SecurityRuleAccessAllow,
-						Priority:                 to.Int32Ptr(101),
+						Priority:                 to.Int32Ptr(120),
 						Direction:                network.SecurityRuleDirectionInbound,
 					},
 					Name: to.StringPtr("rp_in"),
