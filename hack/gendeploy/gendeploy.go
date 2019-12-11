@@ -267,6 +267,7 @@ EOF
 fi
 
 cat >/etc/sysconfig/arorp <<EOF
+RP_IMAGE='$RPIMAGE'
 AZURE_FP_CLIENT_ID='$AZUREFPCLIENTID'
 PULL_SECRET='$PULLSECRET'
 EOF
@@ -279,8 +280,8 @@ Requires=docker.service
 [Service]
 EnvironmentFile=/etc/sysconfig/arorp
 ExecStartPre=-/usr/bin/docker rm -f %n
-ExecStartPre=/usr/bin/docker pull $RPIMAGE
-ExecStart=/usr/bin/docker run --rm --name %n -p 443:8443 -e AZURE_FP_CLIENT_ID -e PULL_SECRET $RPIMAGE
+ExecStartPre=/usr/bin/docker pull \$RP_IMAGE
+ExecStart=/usr/bin/docker run --rm --name %n -p 443:8443 -e AZURE_FP_CLIENT_ID -e PULL_SECRET \$RP_IMAGE
 ExecStop=/usr/bin/docker stop -t 90 %n
 Restart=always
 
