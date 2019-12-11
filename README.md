@@ -118,7 +118,7 @@
 
    az group create -g "$RESOURCEGROUP" -l "$LOCATION"
 
-   az group deployment create -g "$RESOURCEGROUP" --mode complete --template-file deploy/rp-development.json --parameters "location=$LOCATION" "databaseAccountName=$COSMOSDB_ACCOUNT" "domainName=$DOMAIN" "keyvaultName=$KEYVAULT_NAME" "adminObjectId=$ADMIN_OBJECT_ID" "rpServicePrincipalId=$RP_SERVICEPRINCIPAL_ID"
+   az group deployment create -g "$RESOURCEGROUP" --mode complete --template-file deploy/rp-development.json --parameters "databaseAccountName=$COSMOSDB_ACCOUNT" "domainName=$DOMAIN" "keyvaultName=$KEYVAULT_NAME" "adminObjectId=$ADMIN_OBJECT_ID" "rpServicePrincipalId=$RP_SERVICEPRINCIPAL_ID"
    ```
 
 1. Load the application key/certificate into the key vault:

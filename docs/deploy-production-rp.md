@@ -23,7 +23,6 @@ az group deployment create -g "$RESOURCEGROUP" \
     "domainName=$DOMAIN" \
     "domainNameLabel=$DOMAIN_NAME_LABEL" \
     "keyvaultName=$KEYVAULT_NAME" \
-    "location=$LOCATION" \
     "pullSecret=$PULL_SECRET" \
     "rpImage=$RP_IMAGE" \
     "rpImageAuth=$RP_IMAGE_AUTH" \

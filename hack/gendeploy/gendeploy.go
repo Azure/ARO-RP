@@ -53,7 +53,7 @@ func (g *generator) msi() *arm.Resource {
 	return &arm.Resource{
 		Resource: &msi.Identity{
 			Name:     to.StringPtr("rp-identity"),
-			Location: to.StringPtr("[parameters('location')]"),
+			Location: to.StringPtr("[resourceGroup().location]"),
 			Type:     "Microsoft.ManagedIdentity/userAssignedIdentities",
 		},
 		APIVersion: apiVersions["msi"],
@@ -81,7 +81,7 @@ func (g *generator) nsg() *arm.Resource {
 		},
 		Name:     to.StringPtr("rp-nsg"),
 		Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
-		Location: to.StringPtr("[parameters('location')]"),
+		Location: to.StringPtr("[resourceGroup().location]"),
 	}
 
 	if g.debug {
@@ -139,7 +139,7 @@ func (g *generator) vnet() *arm.Resource {
 			},
 			Name:     to.StringPtr("rp-vnet"),
 			Type:     to.StringPtr("Microsoft.Network/virtualNetworks"),
-			Location: to.StringPtr("[parameters('location')]"),
+			Location: to.StringPtr("[resourceGroup().location]"),
 		},
 		APIVersion: apiVersions["network"],
 		DependsOn: []string{
@@ -158,7 +158,7 @@ func (g *generator) pip() *arm.Resource {
 		},
 		Name:     to.StringPtr("rp-pip"),
 		Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
-		Location: to.StringPtr("[parameters('location')]"),
+		Location: to.StringPtr("[resourceGroup().location]"),
 	}
 
 	if g.debug {
@@ -230,7 +230,7 @@ func (g *generator) lb() *arm.Resource {
 			},
 			Name:     to.StringPtr("rp-lb"),
 			Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
-			Location: to.StringPtr("[parameters('location')]"),
+			Location: to.StringPtr("[resourceGroup().location]"),
 		},
 		APIVersion: apiVersions["network"],
 		DependsOn: []string{
@@ -404,7 +404,7 @@ systemctl enable arorp.service
 		},
 		Name:     to.StringPtr("rp-vmss"),
 		Type:     to.StringPtr("Microsoft.Compute/virtualMachineScaleSets"),
-		Location: to.StringPtr("[parameters('location')]"),
+		Location: to.StringPtr("[resourceGroup().location]"),
 	}
 
 	if g.debug {
@@ -458,7 +458,7 @@ func (g *generator) vault() *arm.Resource {
 		},
 		Name:     to.StringPtr("[parameters('keyvaultName')]"),
 		Type:     to.StringPtr("Microsoft.KeyVault/vaults"),
-		Location: to.StringPtr("[parameters('location')]"),
+		Location: to.StringPtr("[resourceGroup().location]"),
 	}
 
 	if !g.production || g.debug {
@@ -501,7 +501,7 @@ func (g *generator) cosmosdb() []*arm.Resource {
 			},
 			Locations: &[]documentdb.Location{
 				{
-					LocationName: to.StringPtr("[parameters('location')]"),
+					LocationName: to.StringPtr("[resourceGroup().location]"),
 				},
 			},
 			DatabaseAccountOfferType:           to.StringPtr(string(documentdb.Standard)),
@@ -509,7 +509,7 @@ func (g *generator) cosmosdb() []*arm.Resource {
 		},
 		Name:     to.StringPtr("[parameters('databaseAccountName')]"),
 		Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts"),
-		Location: to.StringPtr("[parameters('location')]"),
+		Location: to.StringPtr("[resourceGroup().location]"),
 		Tags: map[string]*string{
 			"defaultExperience": to.StringPtr("Core (SQL)"),
 		},
@@ -702,7 +702,6 @@ func (g *generator) template() *arm.Template {
 		"databaseAccountName",
 		"domainName",
 		"keyvaultName",
-		"location",
 	}
 	if g.production {
 		params = append(params, "azureFpClientId", "pullSecret", "rpImage", "rpImageAuth", "sshPublicKey")

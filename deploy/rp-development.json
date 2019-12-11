@@ -14,9 +14,6 @@
         "keyvaultName": {
             "type": "string"
         },
-        "location": {
-            "type": "string"
-        },
         "rpServicePrincipalId": {
             "type": "string"
         }
@@ -72,7 +69,7 @@
             },
             "name": "[parameters('keyvaultName')]",
             "type": "Microsoft.KeyVault/vaults",
-            "location": "[parameters('location')]",
+            "location": "[resourceGroup().location]",
             "apiVersion": "2016-10-01"
         },
         {
@@ -83,7 +80,7 @@
                 },
                 "locations": [
                     {
-                        "locationName": "[parameters('location')]"
+                        "locationName": "[resourceGroup().location]"
                     }
                 ],
                 "databaseAccountOfferType": "Standard",
@@ -91,7 +88,7 @@
             },
             "name": "[parameters('databaseAccountName')]",
             "type": "Microsoft.DocumentDB/databaseAccounts",
-            "location": "[parameters('location')]",
+            "location": "[resourceGroup().location]",
             "tags": {
                 "defaultExperience": "Core (SQL)"
             },

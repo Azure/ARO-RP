@@ -20,9 +20,6 @@
         "keyvaultName": {
             "type": "string"
         },
-        "location": {
-            "type": "string"
-        },
         "pullSecret": {
             "type": "string"
         },
@@ -39,7 +36,7 @@
     "resources": [
         {
             "name": "rp-identity",
-            "location": "[parameters('location')]",
+            "location": "[resourceGroup().location]",
             "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
             "apiVersion": "2018-11-30"
         },
@@ -76,7 +73,7 @@
             },
             "name": "rp-nsg",
             "type": "Microsoft.Network/networkSecurityGroups",
-            "location": "[parameters('location')]",
+            "location": "[resourceGroup().location]",
             "apiVersion": "2019-07-01"
         },
         {
@@ -115,7 +112,7 @@
             },
             "name": "rp-vnet",
             "type": "Microsoft.Network/virtualNetworks",
-            "location": "[parameters('location')]",
+            "location": "[resourceGroup().location]",
             "apiVersion": "2019-07-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"
@@ -133,7 +130,7 @@
             },
             "name": "rp-pip",
             "type": "Microsoft.Network/publicIPAddresses",
-            "location": "[parameters('location')]",
+            "location": "[resourceGroup().location]",
             "apiVersion": "2019-07-01"
         },
         {
@@ -191,7 +188,7 @@
             },
             "name": "rp-lb",
             "type": "Microsoft.Network/loadBalancers",
-            "location": "[parameters('location')]",
+            "location": "[resourceGroup().location]",
             "apiVersion": "2019-07-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip')]"
@@ -294,7 +291,7 @@
             },
             "name": "rp-vmss",
             "type": "Microsoft.Compute/virtualMachineScaleSets",
-            "location": "[parameters('location')]",
+            "location": "[resourceGroup().location]",
             "apiVersion": "2019-03-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]",
@@ -351,7 +348,7 @@
             },
             "name": "[parameters('keyvaultName')]",
             "type": "Microsoft.KeyVault/vaults",
-            "location": "[parameters('location')]",
+            "location": "[resourceGroup().location]",
             "apiVersion": "2016-10-01"
         },
         {
@@ -362,7 +359,7 @@
                 },
                 "locations": [
                     {
-                        "locationName": "[parameters('location')]"
+                        "locationName": "[resourceGroup().location]"
                     }
                 ],
                 "databaseAccountOfferType": "Standard",
@@ -377,7 +374,7 @@
             },
             "name": "[parameters('databaseAccountName')]",
             "type": "Microsoft.DocumentDB/databaseAccounts",
-            "location": "[parameters('location')]",
+            "location": "[resourceGroup().location]",
             "tags": {
                 "defaultExperience": "Core (SQL)"
             },
