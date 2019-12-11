@@ -134,7 +134,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *http.Request, internal api.Ope
 		doc.Dequeues = 0
 	}
 
-	err = internal.ValidateOpenShiftClusterDynamic(r.Context(), f.fpAuthorizer, doc.OpenShiftCluster)
+	err = internal.ValidateOpenShiftClusterDynamic(r.Context(), f.env.FPAuthorizer, doc.OpenShiftCluster)
 	if err != nil {
 		return nil, false, err
 	}

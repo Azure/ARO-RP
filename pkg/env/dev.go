@@ -54,6 +54,7 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 		"AZURE_SUBSCRIPTION_ID",
 		"AZURE_TENANT_ID",
 		"LOCATION",
+		"PULL_SECRET",
 		"RESOURCEGROUP",
 	} {
 		if _, found := os.LookupEnv(key); !found {
@@ -61,15 +62,17 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 		}
 	}
 
-	armAuthorizer, err := auth.NewClientCredentialsConfig(os.Getenv("AZURE_ARM_CLIENT_ID"), os.Getenv("AZURE_ARM_CLIENT_SECRET"), os.Getenv("AZURE_TENANT_ID")).Authorizer()
+	tenantID := os.Getenv("AZURE_TENANT_ID")
+
+	armAuthorizer, err := auth.NewClientCredentialsConfig(os.Getenv("AZURE_ARM_CLIENT_ID"), os.Getenv("AZURE_ARM_CLIENT_SECRET"), tenantID).Authorizer()
 	if err != nil {
 		return nil, err
 	}
 
 	d := &dev{
 		log:             log,
-		roleassignments: authorization.NewRoleAssignmentsClient(os.Getenv("AZURE_SUBSCRIPTION_ID"), armAuthorizer),
-		applications:    graphrbac.NewApplicationsClient(os.Getenv("AZURE_TENANT_ID")),
+		roleassignments: authorization.NewRoleAssignmentsClient(instancemetadata.SubscriptionID(), armAuthorizer),
+		applications:    graphrbac.NewApplicationsClient(tenantID),
 	}
 
 	d.prod, err = newProd(ctx, log, instancemetadata, clientauthorizer)
@@ -77,17 +80,17 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 		return nil, err
 	}
 
-	d.applications.Authorizer, err = d.FPAuthorizer(ctx, azure.PublicCloud.GraphEndpoint)
+	d.applications.Authorizer, err = d.FPAuthorizer(tenantID, azure.PublicCloud.GraphEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	fpAuthorizer, err := d.FPAuthorizer(ctx, azure.PublicCloud.ResourceManagerEndpoint)
+	fpAuthorizer, err := d.FPAuthorizer(tenantID, azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	d.permissions = authorization.NewPermissionsClient(os.Getenv("AZURE_SUBSCRIPTION_ID"), fpAuthorizer)
+	d.permissions = authorization.NewPermissionsClient(instancemetadata.SubscriptionID(), fpAuthorizer)
 
 	return d, nil
 }
@@ -98,8 +101,8 @@ func (d *dev) Listen() (net.Listener, error) {
 	return net.Listen("tcp", "localhost:8443")
 }
 
-func (d *dev) FPAuthorizer(ctx context.Context, resource string) (autorest.Authorizer, error) {
-	sp, err := d.fpToken(ctx, resource)
+func (d *dev) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, error) {
+	sp, err := d.fpToken(tenantID, resource)
 	if err != nil {
 		return nil, err
 	}
@@ -115,9 +118,9 @@ func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthor
 		return err
 	}
 
-	_, err = d.roleassignments.Create(ctx, "/subscriptions/"+os.Getenv("AZURE_SUBSCRIPTION_ID")+"/resourceGroups/"+oc.Properties.ResourceGroup, uuid.NewV4().String(), mgmtauthorization.RoleAssignmentCreateParameters{
+	_, err = d.roleassignments.Create(ctx, "/subscriptions/"+d.SubscriptionID()+"/resourceGroups/"+oc.Properties.ResourceGroup, uuid.NewV4().String(), mgmtauthorization.RoleAssignmentCreateParameters{
 		Properties: &mgmtauthorization.RoleAssignmentProperties{
-			RoleDefinitionID: to.StringPtr("/subscriptions/" + os.Getenv("AZURE_SUBSCRIPTION_ID") + "/providers/Microsoft.Authorization/roleDefinitions/c95361b8-cf7c-40a1-ad0a-df9f39a30225"),
+			RoleDefinitionID: to.StringPtr("/subscriptions/" + d.SubscriptionID() + "/providers/Microsoft.Authorization/roleDefinitions/c95361b8-cf7c-40a1-ad0a-df9f39a30225"),
 			PrincipalID:      res.Value,
 		},
 	})

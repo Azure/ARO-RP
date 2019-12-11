@@ -26,7 +26,7 @@ type OpenShiftClustersToExternal interface {
 type OpenShiftClusterToInternal interface {
 	OpenShiftClusterToInternal(interface{}, *OpenShiftCluster)
 	ValidateOpenShiftCluster(string, string, interface{}, *OpenShiftCluster) error
-	ValidateOpenShiftClusterDynamic(context.Context, autorest.Authorizer, *OpenShiftCluster) error
+	ValidateOpenShiftClusterDynamic(context.Context, func(string, string) (autorest.Authorizer, error), *OpenShiftCluster) error
 }
 
 // APIs is the map of registered external APIs

@@ -1391,7 +1391,6 @@
     "github.com/BurntSushi/toml",
     "github.com/alvaroloes/enumer",
     "github.com/apparentlymart/go-cidr/cidr",
-    "github.com/dgrijalva/jwt-go",
     "github.com/golang/mock/gomock",
     "github.com/golang/mock/mockgen",
     "github.com/gorilla/mux",

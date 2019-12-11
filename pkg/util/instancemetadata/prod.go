@@ -5,62 +5,17 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-
-	"github.com/Azure/go-autorest/autorest/adal"
-	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/dgrijalva/jwt-go"
 )
-
-type azureClaim struct {
-	TenantID string `json:"tid,omitempty"`
-}
-
-func (*azureClaim) Valid() error {
-	return fmt.Errorf("unimplemented")
-}
 
 func NewProd() (InstanceMetadata, error) {
 	im := &instanceMetadata{}
 
-	err := im.populateTenantIDFromMSI()
-	if err != nil {
-		return nil, err
-	}
-
-	err = im.populateInstanceMetadata()
+	err := im.populateInstanceMetadata()
 	if err != nil {
 		return nil, err
 	}
 
 	return im, nil
-}
-
-func (im *instanceMetadata) populateTenantIDFromMSI() error {
-	msiEndpoint, err := adal.GetMSIVMEndpoint()
-	if err != nil {
-		return err
-	}
-
-	token, err := adal.NewServicePrincipalTokenFromMSI(msiEndpoint, azure.PublicCloud.ResourceManagerEndpoint)
-	if err != nil {
-		return err
-	}
-
-	err = token.EnsureFresh()
-	if err != nil {
-		return err
-	}
-
-	p := &jwt.Parser{}
-	c := &azureClaim{}
-	_, _, err = p.ParseUnverified(token.OAuthToken(), c)
-	if err != nil {
-		return err
-	}
-
-	im.tenantID = c.TenantID
-
-	return nil
 }
 
 func (im *instanceMetadata) populateInstanceMetadata() error {

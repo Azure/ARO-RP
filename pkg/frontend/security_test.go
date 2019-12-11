@@ -46,7 +46,7 @@ func TestSecurity(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	go f.Run(nil)
+	go f.Run(nil, nil)
 
 	for _, tt := range []struct {
 		name           string

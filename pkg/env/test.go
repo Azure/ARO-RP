@@ -30,7 +30,7 @@ func NewTest(l net.Listener, cert []byte) *test {
 	}
 }
 
-func (t *test) FPAuthorizer(ctx context.Context, resource string) (autorest.Authorizer, error) {
+func (t *test) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, error) {
 	return nil, nil
 }
 

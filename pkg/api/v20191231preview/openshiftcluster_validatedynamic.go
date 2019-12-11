@@ -25,7 +25,7 @@ type dynamicValidator struct {
 }
 
 // validateOpenShiftClusterDynamic validates an OpenShift cluster
-func validateOpenShiftClusterDynamic(ctx context.Context, fpAuthorizer autorest.Authorizer, oc *api.OpenShiftCluster) error {
+func validateOpenShiftClusterDynamic(ctx context.Context, getFPAuthorizer func(string, string) (autorest.Authorizer, error), oc *api.OpenShiftCluster) error {
 	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
 		return err
@@ -41,14 +41,19 @@ func validateOpenShiftClusterDynamic(ctx context.Context, fpAuthorizer autorest.
 		return err
 	}
 
-	fpPermissions := authorization.NewPermissionsClient(v.r.SubscriptionID, fpAuthorizer)
-	err = v.validateVnetPermissions(ctx, fpPermissions, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
+	spPermissions := authorization.NewPermissionsClient(v.r.SubscriptionID, spAuthorizer)
+	err = v.validateVnetPermissions(ctx, spPermissions, api.CloudErrorCodeInvalidServicePrincipalPermissions, "provided service principal")
 	if err != nil {
 		return err
 	}
 
-	spPermissions := authorization.NewPermissionsClient(v.r.SubscriptionID, spAuthorizer)
-	err = v.validateVnetPermissions(ctx, spPermissions, api.CloudErrorCodeInvalidServicePrincipalPermissions, "provided service principal")
+	fpAuthorizer, err := getFPAuthorizer(oc.Properties.ServicePrincipalProfile.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
+	if err != nil {
+		return err
+	}
+
+	fpPermissions := authorization.NewPermissionsClient(v.r.SubscriptionID, fpAuthorizer)
+	err = v.validateVnetPermissions(ctx, fpPermissions, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
 	if err != nil {
 		return err
 	}

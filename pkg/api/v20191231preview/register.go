@@ -39,8 +39,8 @@ func (openShiftCluster) ValidateOpenShiftCluster(location, resourceID string, oc
 	return validateOpenShiftCluster(location, resourceID, oc.(*OpenShiftCluster), current)
 }
 
-func (openShiftCluster) ValidateOpenShiftClusterDynamic(ctx context.Context, fpAuthorizer autorest.Authorizer, oc *api.OpenShiftCluster) error {
-	return validateOpenShiftClusterDynamic(ctx, fpAuthorizer, oc)
+func (openShiftCluster) ValidateOpenShiftClusterDynamic(ctx context.Context, getFPAuthorizer func(string, string) (autorest.Authorizer, error), oc *api.OpenShiftCluster) error {
+	return validateOpenShiftClusterDynamic(ctx, getFPAuthorizer, oc)
 }
 
 type openShiftClusterCredentials struct{}

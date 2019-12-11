@@ -22,7 +22,7 @@ type Interface interface {
 
 	CosmosDB(context.Context) (string, string)
 	DNS() dns.Manager
-	FPAuthorizer(context.Context, string) (autorest.Authorizer, error)
+	FPAuthorizer(string, string) (autorest.Authorizer, error)
 	GetSecret(context.Context, string) (*rsa.PrivateKey, []*x509.Certificate, error)
 	Listen() (net.Listener, error)
 }

@@ -35,11 +35,15 @@ type prod struct {
 	vaultURI                 string
 	cosmosDBAccountName      string
 	cosmosDBPrimaryMasterKey string
+
+	fpCertificate *x509.Certificate
+	fpPrivateKey  *rsa.PrivateKey
 }
 
 func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata, clientauthorizer clientauthorizer.ClientAuthorizer) (*prod, error) {
 	for _, key := range []string{
 		"AZURE_FP_CLIENT_ID",
+		"PULL_SECRET",
 	} {
 		if _, found := os.LookupEnv(key); !found {
 			return nil, fmt.Errorf("environment variable %q unset", key)
@@ -77,6 +81,14 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 	if err != nil {
 		return nil, err
 	}
+
+	fpPrivateKey, fpCertificates, err := p.GetSecret(ctx, "rp-firstparty")
+	if err != nil {
+		return nil, err
+	}
+
+	p.fpPrivateKey = fpPrivateKey
+	p.fpCertificate = fpCertificates[0]
 
 	return p, nil
 }
@@ -132,8 +144,8 @@ func (p *prod) DNS() dns.Manager {
 	return p.dns
 }
 
-func (p *prod) FPAuthorizer(ctx context.Context, resource string) (autorest.Authorizer, error) {
-	sp, err := p.fpToken(ctx, resource)
+func (p *prod) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, error) {
+	sp, err := p.fpToken(tenantID, resource)
 	if err != nil {
 		return nil, err
 	}
@@ -191,16 +203,11 @@ func (p *prod) Listen() (net.Listener, error) {
 	return net.Listen("tcp", ":8443")
 }
 
-func (p *prod) fpToken(ctx context.Context, resource string) (*adal.ServicePrincipalToken, error) {
-	key, certs, err := p.GetSecret(ctx, "rp-firstparty")
+func (p *prod) fpToken(tenantID, resource string) (*adal.ServicePrincipalToken, error) {
+	oauthConfig, err := adal.NewOAuthConfig(azure.PublicCloud.ActiveDirectoryEndpoint, tenantID)
 	if err != nil {
 		return nil, err
 	}
 
-	oauthConfig, err := adal.NewOAuthConfig(azure.PublicCloud.ActiveDirectoryEndpoint, p.TenantID())
-	if err != nil {
-		return nil, err
-	}
-
-	return adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, os.Getenv("AZURE_FP_CLIENT_ID"), certs[0], key, resource)
+	return adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, os.Getenv("AZURE_FP_CLIENT_ID"), p.fpCertificate, p.fpPrivateKey, resource)
 }

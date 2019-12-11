@@ -25,8 +25,13 @@ type Manager struct {
 	doc *api.OpenShiftClusterDocument
 }
 
-func NewManager(log *logrus.Entry, env env.Interface, db database.OpenShiftClusters, fpAuthorizer autorest.Authorizer, doc *api.OpenShiftClusterDocument) (*Manager, error) {
+func NewManager(log *logrus.Entry, env env.Interface, db database.OpenShiftClusters, doc *api.OpenShiftClusterDocument) (*Manager, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	fpAuthorizer, err := env.FPAuthorizer(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}

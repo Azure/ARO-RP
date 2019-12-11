@@ -6,8 +6,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 
 	"github.com/jim-minter/rp/pkg/database"
@@ -21,10 +19,9 @@ const (
 )
 
 type backend struct {
-	baseLog      *logrus.Entry
-	env          env.Interface
-	db           *database.Database
-	fpAuthorizer autorest.Authorizer
+	baseLog *logrus.Entry
+	env     env.Interface
+	db      *database.Database
 
 	mu       sync.Mutex
 	cond     *sync.Cond
@@ -42,17 +39,10 @@ type Runnable interface {
 
 // NewBackend returns a new runnable backend
 func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, db *database.Database) (Runnable, error) {
-	var err error
-
 	b := &backend{
 		baseLog: log,
 		env:     env,
 		db:      db,
-	}
-
-	b.fpAuthorizer, err = env.FPAuthorizer(ctx, azure.PublicCloud.ResourceManagerEndpoint)
-	if err != nil {
-		return nil, err
 	}
 
 	b.cond = sync.NewCond(&b.mu)

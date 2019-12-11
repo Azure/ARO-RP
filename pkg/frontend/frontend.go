@@ -9,8 +9,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
@@ -27,10 +25,9 @@ type noContent struct{}
 func (noContent) Error() string { return "" }
 
 type frontend struct {
-	baseLog      *logrus.Entry
-	env          env.Interface
-	db           *database.Database
-	fpAuthorizer autorest.Authorizer
+	baseLog *logrus.Entry
+	env     env.Interface
+	db      *database.Database
 
 	l net.Listener
 	s *http.Server
@@ -51,11 +48,6 @@ func NewFrontend(ctx context.Context, baseLog *logrus.Entry, env env.Interface, 
 		baseLog: baseLog,
 		env:     env,
 		db:      db,
-	}
-
-	f.fpAuthorizer, err = env.FPAuthorizer(ctx, azure.PublicCloud.ResourceManagerEndpoint)
-	if err != nil {
-		return nil, err
 	}
 
 	l, err := f.env.Listen()
