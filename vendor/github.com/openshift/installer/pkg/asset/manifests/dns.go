@@ -98,7 +98,7 @@ func (d *DNS) Generate(dependencies asset.Parents) error {
 			return err
 		}
 
-		if platformCreds.Azure != nil &&
+		if platformCreds.Azure == nil &&
 			installConfig.Config.Publish == types.ExternalPublishingStrategy {
 			//currently, this guesses the azure resource IDs from known parameter.
 			config.Spec.PublicZone = &configv1.DNSZone{
