@@ -1,13 +1,12 @@
 COMMIT = $(shell git rev-parse --short HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
 
-rp:
+rp: generate
 	go build -ldflags "-X main.gitCommit=$(COMMIT)" ./cmd/rp
 
 clean:
 	rm -f rp
 
-client:
-	go generate ./...
+client: generate
 	rm -rf azure-python-sdk pkg/client
 	mkdir azure-python-sdk pkg/client
 	sha256sum swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/preview/2019-12-31-preview/redhatopenshift.json >.sha256sum
@@ -35,6 +34,9 @@ client:
 
 	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/jim-minter/rp pkg/client
 
+generate:
+	go generate ./...
+
 image: rp
 	docker build -t rp:$(COMMIT) .
 
@@ -46,8 +48,7 @@ secrets:
 secrets-update:
 	oc create secret generic aro-v4-dev --from-file=secrets --dry-run -o yaml | oc apply -f -
 
-test:
-	go generate ./...
+test: generate
 	go build ./...
 
 	gofmt -s -w cmd hack pkg
@@ -60,4 +61,4 @@ test:
 	go vet ./...
 	go test ./...
 
-.PHONY: rp clean client image secrets secrets-update test
+.PHONY: rp clean client generate image secrets secrets-update test
