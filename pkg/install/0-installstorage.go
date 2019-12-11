@@ -73,10 +73,14 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 	rhcosImage := g[reflect.TypeOf(new(rhcos.Image))].(*rhcos.Image)
 
 	i.log.Print("creating resource group")
-	_, err := i.groups.CreateOrUpdate(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, resources.Group{
+	group := resources.Group{
 		Location:  &installConfig.Config.Azure.Region,
 		ManagedBy: to.StringPtr(doc.OpenShiftCluster.ID),
-	})
+	}
+	if _, ok := i.env.(env.Dev); ok {
+		group.ManagedBy = nil
+	}
+	_, err := i.groups.CreateOrUpdate(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, group)
 	if err != nil {
 		return err
 	}
