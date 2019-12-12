@@ -226,7 +226,7 @@ func (g *generator) lb() *arm.Resource {
 func (g *generator) vmss() *arm.Resource {
 	var parts []string
 
-	for _, variable := range []string{"azureFpClientId", "pullSecret", "rpImage", "rpImageAuth"} {
+	for _, variable := range []string{"pullSecret", "rpImage", "rpImageAuth"} {
 		parts = append(parts,
 			fmt.Sprintf("'%s=$(base64 -d <<<'''", strings.ToUpper(variable)),
 			fmt.Sprintf("base64(parameters('%s'))", variable),
@@ -268,7 +268,6 @@ fi
 
 cat >/etc/sysconfig/arorp <<EOF
 RP_IMAGE='$RPIMAGE'
-AZURE_FP_CLIENT_ID='$AZUREFPCLIENTID'
 PULL_SECRET='$PULLSECRET'
 EOF
 
@@ -281,7 +280,7 @@ Requires=docker.service
 EnvironmentFile=/etc/sysconfig/arorp
 ExecStartPre=-/usr/bin/docker rm -f %n
 ExecStartPre=/usr/bin/docker pull \$RP_IMAGE
-ExecStart=/usr/bin/docker run --rm --name %n -p 443:8443 -e AZURE_FP_CLIENT_ID -e PULL_SECRET \$RP_IMAGE
+ExecStart=/usr/bin/docker run --rm --name %n -p 443:8443 -e PULL_SECRET \$RP_IMAGE
 ExecStop=/usr/bin/docker stop -t 90 %n
 Restart=always
 
@@ -695,7 +694,7 @@ func (g *generator) template() *arm.Template {
 		"keyvaultName",
 	}
 	if g.production {
-		params = append(params, "azureFpClientId", "pullSecret", "rpImage", "rpImageAuth", "sshPublicKey")
+		params = append(params, "pullSecret", "rpImage", "rpImageAuth", "sshPublicKey")
 		if g.debug {
 			params = append(params, "adminObjectId")
 		}

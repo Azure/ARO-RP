@@ -102,7 +102,12 @@ func (d *dev) Listen() (net.Listener, error) {
 }
 
 func (d *dev) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, error) {
-	sp, err := d.fpToken(tenantID, resource)
+	oauthConfig, err := adal.NewOAuthConfig(azure.PublicCloud.ActiveDirectoryEndpoint, tenantID)
+	if err != nil {
+		return nil, err
+	}
+
+	sp, err := adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, os.Getenv("AZURE_FP_CLIENT_ID"), p.fpCertificate, p.fpPrivateKey, resource)
 	if err != nil {
 		return nil, err
 	}

@@ -18,7 +18,6 @@ az group deployment create -g "$RESOURCEGROUP" \
   --template-file deploy/rp-production-debug.json \
   --parameters \
     "adminObjectId=$ADMIN_OBJECT_ID" \
-    "azureFpClientId=$AZURE_FP_CLIENT_ID" \
     "databaseAccountName=$COSMOSDB_ACCOUNT" \
     "domainName=$DOMAIN" \
     "domainNameLabel=$DOMAIN_NAME_LABEL" \

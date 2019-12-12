@@ -42,7 +42,6 @@ type prod struct {
 
 func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata, clientauthorizer clientauthorizer.ClientAuthorizer) (*prod, error) {
 	for _, key := range []string{
-		"AZURE_FP_CLIENT_ID",
 		"PULL_SECRET",
 	} {
 		if _, found := os.LookupEnv(key); !found {
@@ -145,7 +144,12 @@ func (p *prod) DNS() dns.Manager {
 }
 
 func (p *prod) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, error) {
-	sp, err := p.fpToken(tenantID, resource)
+	oauthConfig, err := adal.NewOAuthConfig(azure.PublicCloud.ActiveDirectoryEndpoint, tenantID)
+	if err != nil {
+		return nil, err
+	}
+
+	sp, err := adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, "f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875", p.fpCertificate, p.fpPrivateKey, resource)
 	if err != nil {
 		return nil, err
 	}
@@ -201,13 +205,4 @@ func (p *prod) GetSecret(ctx context.Context, secretName string) (key *rsa.Priva
 
 func (p *prod) Listen() (net.Listener, error) {
 	return net.Listen("tcp", ":8443")
-}
-
-func (p *prod) fpToken(tenantID, resource string) (*adal.ServicePrincipalToken, error) {
-	oauthConfig, err := adal.NewOAuthConfig(azure.PublicCloud.ActiveDirectoryEndpoint, tenantID)
-	if err != nil {
-		return nil, err
-	}
-
-	return adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, os.Getenv("AZURE_FP_CLIENT_ID"), p.fpCertificate, p.fpPrivateKey, resource)
 }
