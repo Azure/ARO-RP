@@ -557,7 +557,7 @@ func (g *generator) cosmosdb() []*arm.Resource {
 }
 
 func (g *generator) rbac() []*arm.Resource {
-	rs := []*arm.Resource{
+	return []*arm.Resource{
 		{
 			Resource: &authorization.RoleAssignment{
 				Name: to.StringPtr("[guid(resourceGroup().id, 'RP / Reader')]"),
@@ -604,14 +604,6 @@ func (g *generator) rbac() []*arm.Resource {
 			},
 		},
 	}
-
-	if g.production {
-		for i := range rs {
-			rs[i].DependsOn = append(rs[i].DependsOn, "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity')]")
-		}
-	}
-
-	return rs
 }
 
 func (g *generator) template() *arm.Template {

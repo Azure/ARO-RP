@@ -399,10 +399,7 @@
                 "principalId": "[parameters('rpServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
-            "apiVersion": "2018-09-01-preview",
-            "dependsOn": [
-                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity')]"
-            ]
+            "apiVersion": "2018-09-01-preview"
         },
         {
             "name": "[concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), 'RP / DocumentDB Account Contributor'))]",
@@ -415,8 +412,7 @@
             },
             "apiVersion": "2018-09-01-preview",
             "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
-                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity')]"
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
             ]
         },
         {
@@ -430,8 +426,7 @@
             },
             "apiVersion": "2018-09-01-preview",
             "dependsOn": [
-                "[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]",
-                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity')]"
+                "[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]"
             ]
         }
     ]
