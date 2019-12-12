@@ -191,7 +191,9 @@ func (g *generator) lb() *arm.Resource {
 }
 
 func (g *generator) vmss() *arm.Resource {
-	var parts []string
+	parts := []string{
+		fmt.Sprintf("base64ToString('%s')", base64.StdEncoding.EncodeToString([]byte("set -ex\n\n"))),
+	}
 
 	for _, variable := range []string{"pullSecret", "rpImage", "rpImageAuth"} {
 		parts = append(parts,
@@ -201,7 +203,9 @@ func (g *generator) vmss() *arm.Resource {
 		)
 	}
 
-	trailer := base64.StdEncoding.EncodeToString([]byte(`yum -y update -x WALinuxAgent
+	trailer := base64.StdEncoding.EncodeToString([]byte(`systemctl stop arorp.service || true
+
+yum -y update -x WALinuxAgent
 
 rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
 
@@ -220,7 +224,7 @@ yum -y install azsec-clamav azsec-monitor azure-mdsd azure-security docker
 firewall-cmd --add-port=443/tcp --permanent
 
 if [[ -n "$RPIMAGEAUTH" ]]; then
-  mkdir /root/.docker
+  mkdir -p /root/.docker
 
   cat >/root/.docker/config.json <<EOF
 {
@@ -231,6 +235,9 @@ if [[ -n "$RPIMAGEAUTH" ]]; then
 	}
 }
 EOF
+
+else
+  rm -rf /root/.docker
 fi
 
 cat >/etc/sysconfig/arorp <<EOF
