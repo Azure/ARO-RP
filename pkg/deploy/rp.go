@@ -188,7 +188,7 @@ yum -y update -x WALinuxAgent
 
 rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
 
-yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm || true
 
 cat >/etc/yum.repos.d/azure-cli.repo <<'EOF'
 [azurecore]
