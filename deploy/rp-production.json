@@ -202,6 +202,9 @@
                         }
                     },
                     "networkProfile": {
+                        "healthProbe": {
+                            "id": "[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'rp-probe')]"
+                        },
                         "networkInterfaceConfigurations": [
                             {
                                 "name": "rp-vmss-nic",

@@ -291,6 +291,9 @@ systemctl enable arorp.service
 					},
 				},
 				NetworkProfile: &compute.VirtualMachineScaleSetNetworkProfile{
+					HealthProbe: &compute.APIEntityReference{
+						ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'rp-probe')]"),
+					},
 					NetworkInterfaceConfigurations: &[]compute.VirtualMachineScaleSetNetworkConfiguration{
 						{
 							Name: to.StringPtr("rp-vmss-nic"),
