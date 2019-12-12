@@ -16,7 +16,7 @@ func GenerateNSGTemplate() error {
 		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 		ContentVersion: "1.0.0.0",
 		Resources: []*arm.Resource{
-			&arm.Resource{
+			{
 				Resource: &msi.Identity{
 					Name:     to.StringPtr("rp-identity"),
 					Location: to.StringPtr("[resourceGroup().location]"),
@@ -24,7 +24,7 @@ func GenerateNSGTemplate() error {
 				},
 				APIVersion: apiVersions["msi"],
 			},
-			&arm.Resource{
+			{
 				Resource: &network.SecurityGroup{
 					SecurityGroupPropertiesFormat: &network.SecurityGroupPropertiesFormat{
 						SecurityRules: &[]network.SecurityRule{
