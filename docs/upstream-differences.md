@@ -35,6 +35,11 @@ upstream OCP.
   In ARO, the public DNS zone is maintained by the service and the cluster
   operator does not have permissions to modify it
 
+* CARRY: HACK: disable CloudProviderRateLimit
+
+  Enabling CloudProviderRateLimit seems to get us into serious problems with the
+  LoadBalancer reconciliation logic.
+
 ## Installation differences
 
 * ARO persists the install graph in the cluster storage account in a new "aro"
