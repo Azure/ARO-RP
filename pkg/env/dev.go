@@ -107,7 +107,7 @@ func (d *dev) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, erro
 		return nil, err
 	}
 
-	sp, err := adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, os.Getenv("AZURE_FP_CLIENT_ID"), p.fpCertificate, p.fpPrivateKey, resource)
+	sp, err := adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, os.Getenv("AZURE_FP_CLIENT_ID"), d.fpCertificate, d.fpPrivateKey, resource)
 	if err != nil {
 		return nil, err
 	}
