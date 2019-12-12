@@ -5,7 +5,7 @@
         "keyvaultAccessPolicies": [
             {
                 "tenantId": "[subscription().tenantId]",
-                "objectId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity'), '2018-11-30').principalId]",
+                "objectId": "[parameters('rpServicePrincipalId')]",
                 "permissions": {
                     "secrets": [
                         "get"
@@ -41,17 +41,14 @@
         "rpImageAuth": {
             "type": "string"
         },
+        "rpServicePrincipalId": {
+            "type": "string"
+        },
         "sshPublicKey": {
             "type": "string"
         }
     },
     "resources": [
-        {
-            "name": "rp-identity",
-            "location": "[resourceGroup().location]",
-            "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
-            "apiVersion": "2018-11-30"
-        },
         {
             "properties": {
                 "addressSpace": {
@@ -399,7 +396,7 @@
             "properties": {
                 "scope": "[resourceGroup().id]",
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')]",
-                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity'), '2018-11-30').principalId]",
+                "principalId": "[parameters('rpServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
             "apiVersion": "2018-09-01-preview",
@@ -413,7 +410,7 @@
             "properties": {
                 "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '5bd9cd88-fe45-4216-938b-f97437e15450')]",
-                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity'), '2018-11-30').principalId]",
+                "principalId": "[parameters('rpServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
             "apiVersion": "2018-09-01-preview",
@@ -428,7 +425,7 @@
             "properties": {
                 "scope": "[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]",
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'befefa01-2a29-4197-83a8-272ff33ce314')]",
-                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity'), '2018-11-30').principalId]",
+                "principalId": "[parameters('rpServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
             "apiVersion": "2018-09-01-preview",

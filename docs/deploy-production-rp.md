@@ -14,6 +14,8 @@ az group create -g "$RESOURCEGROUP" -l "$LOCATION"
 az group deployment create -g "$RESOURCEGROUP" \
   --template-file deploy/rp-production-nsg.json
 
+# use rpServicePrincipalId from this step in the next step
+
 az group deployment create -g "$RESOURCEGROUP" \
   --template-file deploy/rp-production.json \
   --parameters \
@@ -23,6 +25,7 @@ az group deployment create -g "$RESOURCEGROUP" \
     "pullSecret=$PULL_SECRET" \
     "rpImage=$RP_IMAGE" \
     "rpImageAuth=$RP_IMAGE_AUTH" \
+    "rpServicePrincipalId=$RP_SERVICEPRINCIPAL_ID" \
     "sshPublicKey=$(cat ~/.ssh/id_rsa.pub)"
 
 # Load certificate into key vault

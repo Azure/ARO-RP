@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 
+	"github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 
@@ -15,6 +16,14 @@ func GenerateNSGTemplate() error {
 		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 		ContentVersion: "1.0.0.0",
 		Resources: []*arm.Resource{
+			&arm.Resource{
+				Resource: &msi.Identity{
+					Name:     to.StringPtr("rp-identity"),
+					Location: to.StringPtr("[resourceGroup().location]"),
+					Type:     "Microsoft.ManagedIdentity/userAssignedIdentities",
+				},
+				APIVersion: apiVersions["msi"],
+			},
 			&arm.Resource{
 				Resource: &network.SecurityGroup{
 					SecurityGroupPropertiesFormat: &network.SecurityGroupPropertiesFormat{
@@ -40,6 +49,9 @@ func GenerateNSGTemplate() error {
 				},
 				APIVersion: apiVersions["network"],
 			},
+		},
+		Outputs: map[string]interface{}{
+			"rpServicePrincipalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity'), '2018-11-30').principalId]",
 		},
 	}
 

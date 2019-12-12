@@ -3,6 +3,12 @@
     "contentVersion": "1.0.0.0",
     "resources": [
         {
+            "name": "rp-identity",
+            "location": "[resourceGroup().location]",
+            "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+            "apiVersion": "2018-11-30"
+        },
+        {
             "properties": {
                 "securityRules": [
                     {
@@ -25,5 +31,8 @@
             "location": "[resourceGroup().location]",
             "apiVersion": "2019-07-01"
         }
-    ]
+    ],
+    "outputs": {
+        "rpServicePrincipalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity'), '2018-11-30').principalId]"
+    }
 }

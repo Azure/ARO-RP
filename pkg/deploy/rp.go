@@ -12,7 +12,6 @@ import (
 	"github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2019-08-01/documentdb"
 	"github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2016-10-01/keyvault"
-	"github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -37,32 +36,12 @@ var (
 )
 
 type generator struct {
-	production           bool
-	rpServicePrincipalID string
+	production bool
 }
 
 func newGenerator(production bool) *generator {
-	g := &generator{
+	return &generator{
 		production: production,
-	}
-
-	if g.production {
-		g.rpServicePrincipalID = "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity'), '2018-11-30').principalId]"
-	} else {
-		g.rpServicePrincipalID = "[parameters('rpServicePrincipalId')]"
-	}
-
-	return g
-}
-
-func (g *generator) msi() *arm.Resource {
-	return &arm.Resource{
-		Resource: &msi.Identity{
-			Name:     to.StringPtr("rp-identity"),
-			Location: to.StringPtr("[resourceGroup().location]"),
-			Type:     "Microsoft.ManagedIdentity/userAssignedIdentities",
-		},
-		APIVersion: apiVersions["msi"],
 	}
 }
 
@@ -395,9 +374,8 @@ func (g *generator) zone() *arm.Resource {
 
 func (g *generator) accessPolicyEntry() keyvault.AccessPolicyEntry {
 	return keyvault.AccessPolicyEntry{
-
 		TenantID: &tenantUUIDHack,
-		ObjectID: to.StringPtr(g.rpServicePrincipalID),
+		ObjectID: to.StringPtr("[parameters('rpServicePrincipalId')]"),
 		Permissions: &keyvault.Permissions{
 			Secrets: &[]keyvault.SecretPermissions{
 				keyvault.SecretPermissionsGet,
@@ -587,7 +565,7 @@ func (g *generator) rbac() []*arm.Resource {
 				RoleAssignmentPropertiesWithScope: &authorization.RoleAssignmentPropertiesWithScope{
 					Scope:            to.StringPtr("[resourceGroup().id]"),
 					RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')]"),
-					PrincipalID:      to.StringPtr(g.rpServicePrincipalID),
+					PrincipalID:      to.StringPtr("[parameters('rpServicePrincipalId')]"),
 					PrincipalType:    authorization.ServicePrincipal,
 				},
 			},
@@ -600,7 +578,7 @@ func (g *generator) rbac() []*arm.Resource {
 				RoleAssignmentPropertiesWithScope: &authorization.RoleAssignmentPropertiesWithScope{
 					Scope:            to.StringPtr("[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"),
 					RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '5bd9cd88-fe45-4216-938b-f97437e15450')]"),
-					PrincipalID:      to.StringPtr(g.rpServicePrincipalID),
+					PrincipalID:      to.StringPtr("[parameters('rpServicePrincipalId')]"),
 					PrincipalType:    authorization.ServicePrincipal,
 				},
 			},
@@ -616,7 +594,7 @@ func (g *generator) rbac() []*arm.Resource {
 				RoleAssignmentPropertiesWithScope: &authorization.RoleAssignmentPropertiesWithScope{
 					Scope:            to.StringPtr("[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]"),
 					RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'befefa01-2a29-4197-83a8-272ff33ce314')]"),
-					PrincipalID:      to.StringPtr(g.rpServicePrincipalID),
+					PrincipalID:      to.StringPtr("[parameters('rpServicePrincipalId')]"),
 					PrincipalType:    authorization.ServicePrincipal,
 				},
 			},
@@ -655,11 +633,12 @@ func (g *generator) template() *arm.Template {
 		"databaseAccountName",
 		"domainName",
 		"keyvaultName",
+		"rpServicePrincipalId",
 	}
 	if g.production {
 		params = append(params, "pullSecret", "rpImage", "rpImageAuth", "sshPublicKey")
 	} else {
-		params = append(params, "adminObjectId", "rpServicePrincipalId")
+		params = append(params, "adminObjectId")
 	}
 
 	for _, param := range params {
@@ -678,7 +657,7 @@ func (g *generator) template() *arm.Template {
 	}
 
 	if g.production {
-		t.Resources = append(t.Resources, g.msi(), g.vnet(), g.pip(), g.lb(), g.vmss())
+		t.Resources = append(t.Resources, g.vnet(), g.pip(), g.lb(), g.vmss())
 	}
 	t.Resources = append(t.Resources, g.zone(), g.vault())
 	t.Resources = append(t.Resources, g.cosmosdb()...)
