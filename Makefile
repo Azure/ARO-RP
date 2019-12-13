@@ -7,8 +7,8 @@ clean:
 	rm -f rp
 
 client: generate
-	rm -rf azure-python-sdk pkg/client
-	mkdir azure-python-sdk pkg/client
+	rm -rf pkg/client python/client
+	mkdir pkg/client python/client
 	sha256sum swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/preview/2019-12-31-preview/redhatopenshift.json >.sha256sum
 
 	sudo docker run \
@@ -21,16 +21,16 @@ client: generate
 		--output-folder=/github.com/jim-minter/rp/pkg/client/services/preview/redhatopenshift/mgmt/2019-12-31-preview/redhatopenshift
 
 	sudo docker run \
-		-v $(PWD)/azure-python-sdk:/azure-python-sdk \
+		-v $(PWD)/python/client:/python/client \
 		-v $(PWD)/swagger:/swagger \
 		azuresdk/autorest \
 		--use=@microsoft.azure/autorest.python@4.0.70 \
 		--python \
 		--azure-arm \
 		--input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/preview/2019-12-31-preview/redhatopenshift.json \
-		--output-folder=/azure-python-sdk/2019-12-31-preview
+		--output-folder=/python/client/2019-12-31-preview
 
-	sudo chown -R $(USER):$(USER) azure-python-sdk pkg/client
+	sudo chown -R $(USER):$(USER) pkg/client python/client
 
 	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/jim-minter/rp pkg/client
 
