@@ -43,8 +43,8 @@
 
    ```
    # Non-RH ARO engineering only
-   ARM_SERVICEPRINCIPAL_ID=$(az ad sp list --all --query "[?appId=='$AZURE_ARM_CLIENT_ID'].objectId" -o tsv)
-   FP_SERVICEPRINCIPAL_ID=$(az ad sp list --all --query "[?appId=='$AZURE_FP_CLIENT_ID'].objectId" -o tsv)
+   ARM_SERVICEPRINCIPAL_ID="$(az ad sp list --all --query "[?appId=='$AZURE_ARM_CLIENT_ID'].objectId" -o tsv)"
+   FP_SERVICEPRINCIPAL_ID="$(az ad sp list --all --query "[?appId=='$AZURE_FP_CLIENT_ID'].objectId" -o tsv)"
 
    az deployment create -l eastus --template-file deploy/rbac-development.json --parameters "armServicePrincipalId=$ARM_SERVICEPRINCIPAL_ID" "fpServicePrincipalId=$FP_SERVICEPRINCIPAL_ID"
    ```
@@ -66,9 +66,9 @@
    authentication enabled.
 
    ```
-   AZURE_CLUSTER_CLIENT_ID=$(az ad app create --display-name user-$USER-v4 --query appId -o tsv)
+   AZURE_CLUSTER_CLIENT_ID="$(az ad app create --display-name "user-$USER-v4" --query appId -o tsv)"
    az ad sp create --id "$AZURE_CLUSTER_CLIENT_ID"
-   AZURE_CLUSTER_CLIENT_SECRET=$(az ad app credential reset --id $AZURE_CLUSTER_CLIENT_ID --query password -o tsv)
+   AZURE_CLUSTER_CLIENT_SECRET="$(az ad app credential reset --id "$AZURE_CLUSTER_CLIENT_ID" --query password -o tsv)"
    ```
 
 1. Copy env.example to env, edit the values and source the env file.  This file
@@ -109,12 +109,12 @@
    Administrator` permissions on your subscription deploy the RP resources:
 
    ```
-   COSMOSDB_ACCOUNT=$RESOURCEGROUP
-   DOMAIN=$RESOURCEGROUP.osadev.cloud
-   KEYVAULT_NAME=$RESOURCEGROUP
-   ADMIN_OBJECT_ID=$(az ad group list --query "[?displayName=='Engineering'].objectId" -o tsv)
-   RP_SERVICEPRINCIPAL_ID=$(az ad sp list --all --query "[?appDisplayName=='aro-v4-rp-shared'].objectId" -o tsv)
-   FP_SERVICEPRINCIPAL_ID=$(az ad sp list --all --query "[?appDisplayName=='aro-v4-fp-shared'].objectId" -o tsv)
+   COSMOSDB_ACCOUNT="$RESOURCEGROUP"
+   DOMAIN="$RESOURCEGROUP.osadev.cloud"
+   KEYVAULT_NAME="$RESOURCEGROUP"
+   ADMIN_OBJECT_ID="$(az ad group list --query "[?displayName=='Engineering'].objectId" -o tsv)"
+   RP_SERVICEPRINCIPAL_ID="$(az ad sp list --all --query "[?appDisplayName=='aro-v4-rp-shared'].objectId" -o tsv)"
+   FP_SERVICEPRINCIPAL_ID="$(az ad sp list --all --query "[?appDisplayName=='aro-v4-fp-shared'].objectId" -o tsv)"
 
    az group create -g "$RESOURCEGROUP" -l "$LOCATION"
 
@@ -144,7 +144,7 @@
 
    az network dns record-set ns create --resource-group "$PARENT_DNS_RESOURCEGROUP" --zone "$(cut -d. -f2- <<<"$DOMAIN")" --name "$(cut -d. -f1 <<<"$DOMAIN")"
 
-   for ns in $(az network dns zone show --resource-group "$RESOURCEGROUP" --name "$DOMAIN" --query nameServers -o tsv); do az network dns record-set ns add-record --resource-group "$PARENT_DNS_RESOURCEGROUP" --zone "$(cut -d. -f2- <<<"$DOMAIN")" --record-set-name "$(cut -d. -f1 <<<"$DOMAIN")" --nsdname $ns; done
+   for ns in "$(az network dns zone show --resource-group "$RESOURCEGROUP" --name "$DOMAIN" --query nameServers -o tsv)"; do az network dns record-set ns add-record --resource-group "$PARENT_DNS_RESOURCEGROUP" --zone "$(cut -d. -f2- <<<"$DOMAIN")" --record-set-name "$(cut -d. -f1 <<<"$DOMAIN")" --nsdname "$ns"; done
    ```
 
 ## Running the RP
@@ -156,7 +156,7 @@ go run ./cmd/rp
 ## Useful commands
 
 ```
-export VNET_RESOURCEGROUP=$RESOURCEGROUP-vnet
+export VNET_RESOURCEGROUP="$RESOURCEGROUP-vnet"
 az group create -g "$VNET_RESOURCEGROUP" -l "$LOCATION"
 az network vnet create -g "$VNET_RESOURCEGROUP" -n vnet --address-prefixes 10.0.0.0/9
 az role assignment create --role "ARO v4 Development Subnet Contributor" --assignee-object-id "$(az ad sp list --all --query "[?appId=='$AZURE_FP_CLIENT_ID'].objectId" -o tsv)" --scope "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$VNET_RESOURCEGROUP/providers/Microsoft.Network/virtualNetworks/vnet"
@@ -174,8 +174,8 @@ curl -k -X PUT "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID?api-
 * Create a cluster:
 
 ```
-az network vnet subnet create -g "$VNET_RESOURCEGROUP" --vnet-name vnet -n "$CLUSTER-master" --address-prefixes 10.$((RANDOM & 127)).$((RANDOM & 255)).0/24
-az network vnet subnet create -g "$VNET_RESOURCEGROUP" --vnet-name vnet -n "$CLUSTER-worker" --address-prefixes 10.$((RANDOM & 127)).$((RANDOM & 255)).0/24
+az network vnet subnet create -g "$VNET_RESOURCEGROUP" --vnet-name vnet -n "$CLUSTER-master" --address-prefixes "10.$((RANDOM & 127)).$((RANDOM & 255)).0/24"
+az network vnet subnet create -g "$VNET_RESOURCEGROUP" --vnet-name vnet -n "$CLUSTER-worker" --address-prefixes "10.$((RANDOM & 127)).$((RANDOM & 255)).0/24"
 
 envsubst <examples/cluster-v20191231.json | curl -k -X PUT "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER?api-version=2019-12-31-preview" -H 'Content-Type: application/json' -d @-
 ```
@@ -267,7 +267,7 @@ curl -k "https://localhost:8443/providers/Microsoft.RedHatOpenShift/operations?a
 * Get an admin kubeconfig:
 
   ```
-  hack/get-admin-kubeconfig.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER
+  hack/get-admin-kubeconfig.sh "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER"
   export KUBECONFIG=admin.kubeconfig
   oc version
   ```
@@ -275,7 +275,7 @@ curl -k "https://localhost:8443/providers/Microsoft.RedHatOpenShift/operations?a
 * SSH to the bootstrap node:
 
   ```
-  hack/ssh-bootstrap.sh /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER
+  hack/ssh-bootstrap.sh "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER"
   ```
 
 ## Useful links
