@@ -1,4 +1,4 @@
-name: pull_request-test
+name: pull_request-test-go
 on:
   pull_request:
     types:
@@ -21,5 +21,5 @@ jobs:
     - name: Test
       run: |
         set -x
-        make test
+        make test-go
         [[ -z "$(git status -s)" ]]

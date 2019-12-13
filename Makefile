@@ -3,8 +3,13 @@ COMMIT = $(shell git rev-parse --short HEAD)$(shell [[ $$(git status --porcelain
 rp: generate
 	go build -ldflags "-X main.gitCommit=$(COMMIT)" ./cmd/rp
 
+az:
+	cd python/az/aro && python ./setup.py bdist_egg
+
 clean:
-	rm -f rp
+	rm -rf python/az/aro/{aro.egg-info,build,dist} rp
+	find python -type f -name '*.pyc' -delete
+	find python -type d -name __pycache__ -delete
 
 client: generate
 	rm -rf pkg/client python/client
@@ -33,6 +38,7 @@ client: generate
 
 	sudo chown -R $(USER):$(USER) pkg/client python/client
 	rm -rf python/client/azure/mgmt/redhatopenshift/v2019_12_31_preview/aio
+	>python/client/__init__.py
 
 	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/jim-minter/rp pkg/client
 
@@ -50,7 +56,7 @@ secrets:
 secrets-update:
 	oc create secret generic aro-v4-dev --from-file=secrets --dry-run -o yaml | oc apply -f -
 
-test: generate
+test-go: generate
 	go build ./...
 
 	gofmt -s -w cmd hack pkg
@@ -63,4 +69,14 @@ test: generate
 	go vet ./...
 	go test ./...
 
-.PHONY: rp clean client generate image secrets secrets-update test
+test-python:
+	virtualenv --python=/usr/bin/python${PYTHON_VERSION} pyenv${PYTHON_VERSION}
+	. pyenv${PYTHON_VERSION}/bin/activate && \
+		pip install azdev && \
+		azdev setup -r . && \
+		sed -i -e "s|^dev_sources = $(PWD)$$|dev_sources = $(PWD)/python|" ~/.azure/config && \
+		$(MAKE) az && \
+		azdev linter && \
+		azdev style
+
+.PHONY: rp az clean client generate image secrets secrets-update test-go test-python

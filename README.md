@@ -13,6 +13,17 @@
    az login
    ```
 
+1. Add the ARO preview extension to `az`:
+
+   ```
+   make az
+
+   cat >>~/.azure/config <<EOF
+   [extension]
+   dev_sources = $(go env GOPATH)/src/github.com/jim-minter/rp/python
+   EOF
+   ```
+
 1. You will need a publicly resolvable **DNS zone** resource in your Azure
    subscription.  *RH ARO engineering*: use the `osadev.cloud` zone in the `dns`
    resource group.
@@ -62,15 +73,6 @@
    *RH ARO engineering*: use the `localhost` key and certificate in the shared
    `secrets/localhost.pem` file.
 
-1. You will need your own **cluster AAD application** with client secret
-   authentication enabled.
-
-   ```
-   AZURE_CLUSTER_CLIENT_ID="$(az ad app create --display-name "user-$USER-v4" --query appId -o tsv)"
-   az ad sp create --id "$AZURE_CLUSTER_CLIENT_ID"
-   AZURE_CLUSTER_CLIENT_SECRET="$(az ad app credential reset --id "$AZURE_CLUSTER_CLIENT_ID" --query password -o tsv)"
-   ```
-
 1. Copy env.example to env, edit the values and source the env file.  This file
    holds (only) the environment variables necessary for the RP to run.
 
@@ -85,8 +87,6 @@
    * AZURE_FP_CLIENT_ID:            RP "first party" application client UUID
    * AZURE_CLIENT_ID:               RP AAD application client UUID
    * AZURE_CLIENT_SECRET:           RP AAD application client secret
-   * AZURE_CLUSTER_CLIENT_ID:       Cluster AAD application client UUID
-   * AZURE_CLUSTER_CLIENT_SECRET:   Cluster AAD application client secret
 
    * PULL_SECRET:                   A cluster pull secret retrieved from [Red Hat OpenShift Cluster Manager](https://cloud.redhat.com/openshift/install/azure/installer-provisioned)
 
@@ -156,13 +156,11 @@ go run ./cmd/rp
 ## Useful commands
 
 ```
-export VNET_RESOURCEGROUP="$RESOURCEGROUP-vnet"
+VNET_RESOURCEGROUP="$RESOURCEGROUP-vnet"
 az group create -g "$VNET_RESOURCEGROUP" -l "$LOCATION"
 az network vnet create -g "$VNET_RESOURCEGROUP" -n vnet --address-prefixes 10.0.0.0/9
-az role assignment create --role "ARO v4 Development Subnet Contributor" --assignee-object-id "$(az ad sp list --all --query "[?appId=='$AZURE_FP_CLIENT_ID'].objectId" -o tsv)" --scope "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$VNET_RESOURCEGROUP/providers/Microsoft.Network/virtualNetworks/vnet"
-az role assignment create --role "ARO v4 Development Subnet Contributor" --assignee-object-id "$(az ad sp list --all --query "[?appId=='$AZURE_CLUSTER_CLIENT_ID'].objectId" -o tsv)" --scope "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$VNET_RESOURCEGROUP/providers/Microsoft.Network/virtualNetworks/vnet"
 
-export CLUSTER=cluster
+CLUSTER=cluster
 ```
 
 * Register a subscription:
@@ -177,31 +175,31 @@ curl -k -X PUT "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID?api-
 az network vnet subnet create -g "$VNET_RESOURCEGROUP" --vnet-name vnet -n "$CLUSTER-master" --address-prefixes "10.$((RANDOM & 127)).$((RANDOM & 255)).0/24"
 az network vnet subnet create -g "$VNET_RESOURCEGROUP" --vnet-name vnet -n "$CLUSTER-worker" --address-prefixes "10.$((RANDOM & 127)).$((RANDOM & 255)).0/24"
 
-envsubst <examples/cluster-v20191231.json | curl -k -X PUT "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER?api-version=2019-12-31-preview" -H 'Content-Type: application/json' -d @-
+az aro create -g "$RESOURCEGROUP" -n "$CLUSTER" --vnet-resource-group "$VNET_RESOURCEGROUP" --vnet vnet --master-subnet "$CLUSTER-master" --worker-subnet "$CLUSTER-worker" --location="$LOCATION"
 ```
 
 * Get a cluster:
 
 ```
-curl -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER?api-version=2019-12-31-preview"
+az aro show -g "$RESOURCEGROUP" -n "$CLUSTER"
 ```
 
 * Get a cluster's kubeadmin credentials:
 
 ```
-curl -k -X POST "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER/credentials?api-version=2019-12-31-preview" -H 'Content-Type: application/json' -d '{}'
+az aro get-credentials -g "$RESOURCEGROUP" -n "$CLUSTER"
 ```
 
 * List clusters in resource group:
 
 ```
-curl -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters?api-version=2019-12-31-preview"
+az aro list -g "$RESOURCEGROUP"
 ```
 
 * List clusters in subscription:
 
 ```
-curl -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/providers/Microsoft.RedHatOpenShift/openShiftClusters?api-version=2019-12-31-preview"
+az aro list
 ```
 
 * Scale a cluster:
@@ -209,13 +207,13 @@ curl -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/providers/M
 ```
 COUNT=4
 
-curl -k -X PATCH "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER?api-version=2019-12-31-preview" -H 'Content-Type: application/json' -d '{"properties": {"workerProfiles": [{"name": "worker", "count": '"$COUNT"'}]}}'
+az aro update -g "$RESOURCEGROUP" -n "$CLUSTER" --worker-count "$COUNT"
 ```
 
 * Delete a cluster:
 
 ```
-curl -k -X DELETE "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER?api-version=2019-12-31-preview"
+az aro delete -g "$RESOURCEGROUP" -n "$CLUSTER"
 
 az network vnet subnet delete -g "$VNET_RESOURCEGROUP" --vnet-name vnet -n "$CLUSTER-master"
 az network vnet subnet delete -g "$VNET_RESOURCEGROUP" --vnet-name vnet -n "$CLUSTER-worker"

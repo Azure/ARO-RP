@@ -1,9 +1,16 @@
+__pycache__
+*.egg-info
+*.pyc
+/.vscode
 /*.crt
 /*.key
-/*.pem
 /*.kubeconfig
+/*.pem
 /env*
 !/env.example
 /id_rsa
+/pyenv*
+/python/az/aro/build
+/python/az/aro/dist
 /rp
 /secrets
