@@ -27,10 +27,12 @@ client: generate
 		--use=@microsoft.azure/autorest.python@4.0.70 \
 		--python \
 		--azure-arm \
+		--namespace=azure.mgmt.redhatopenshift.v2019_12_31_preview \
 		--input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/preview/2019-12-31-preview/redhatopenshift.json \
-		--output-folder=/python/client/2019-12-31-preview
+		--output-folder=/python/client
 
 	sudo chown -R $(USER):$(USER) pkg/client python/client
+	rm -rf python/client/azure/mgmt/redhatopenshift/v2019_12_31_preview/aio
 
 	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/jim-minter/rp pkg/client
 

@@ -48,8 +48,9 @@ class Operations(object):
         :param operation_config: :ref:`Operation configuration
          overrides<msrest:optionsforoperations>`.
         :return: OperationList or ClientRawResponse if raw=true
-        :rtype: ~redhatopenshift.models.OperationList or
-         ~msrest.pipeline.ClientRawResponse
+        :rtype:
+         ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.OperationList
+         or ~msrest.pipeline.ClientRawResponse
         :raises: :class:`CloudError<msrestazure.azure_exceptions.CloudError>`
         """
         # Construct URL
