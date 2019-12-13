@@ -4,7 +4,7 @@
 
 1. Install the following:
 
-   * go 1.12 or later
+   * go 1.13 or later
    * az client
 
 1. Log in to Azure:
