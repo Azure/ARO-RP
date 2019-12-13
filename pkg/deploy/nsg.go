@@ -50,8 +50,11 @@ func GenerateNSGTemplate() error {
 				APIVersion: apiVersions["network"],
 			},
 		},
-		Outputs: map[string]interface{}{
-			"rpServicePrincipalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity'), '2018-11-30').principalId]",
+		Outputs: map[string]*arm.Output{
+			"rpServicePrincipalId": {
+				Type:  "string",
+				Value: "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity'), '2018-11-30').principalId]",
+			},
 		},
 	}
 

@@ -18,7 +18,7 @@ type Template struct {
 	Parameters     map[string]*Parameter  `json:"parameters,omitempty"`
 	Functions      []interface{}          `json:"functions,omitempty"`
 	Resources      []*Resource            `json:"resources,omitempty"`
-	Outputs        map[string]interface{} `json:"outputs,omitempty"`
+	Outputs        map[string]*Output     `json:"outputs,omitempty"`
 }
 
 // Parameter represents an ARM template parameter
@@ -54,6 +54,13 @@ type Copy struct {
 	Count     int    `json:"count,omitempty"`
 	Mode      string `json:"mode,omitempty"`
 	BatchSize int    `json:"batchSize,omitempty"`
+}
+
+// Output represents an ARM template output
+type Output struct {
+	Condition bool        `json:"condition,omitempty"`
+	Type      string      `json:"type,omitempty"`
+	Value     interface{} `json:"value,omitempty"`
 }
 
 // MarshalJSON marshals the nested r.Resource ignoring any MarshalJSON() methods
