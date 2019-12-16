@@ -27,15 +27,15 @@ func NewOpenShiftClustersClientWithBaseURI(baseURI string, subscriptionID string
 	return OpenShiftClustersClient{NewWithBaseURI(baseURI, subscriptionID)}
 }
 
-// Create creates or updates a OpenShift cluster with the specified subscription, resource group and resource name.
-// The operation returns properties of a OpenShift cluster.
+// CreateOrUpdate creates or updates a OpenShift cluster with the specified subscription, resource group and resource
+// name.  The operation returns properties of a OpenShift cluster.
 // Parameters:
 // resourceGroupName - the name of the resource group.
 // resourceName - the name of the OpenShift cluster resource.
 // parameters - the OpenShift cluster resource.
-func (client OpenShiftClustersClient) Create(ctx context.Context, resourceGroupName string, resourceName string, parameters OpenShiftCluster) (result OpenShiftClustersCreateFuture, err error) {
+func (client OpenShiftClustersClient) CreateOrUpdate(ctx context.Context, resourceGroupName string, resourceName string, parameters OpenShiftCluster) (result OpenShiftClustersCreateOrUpdateFuture, err error) {
 	if tracing.IsEnabled() {
-		ctx = tracing.StartSpan(ctx, fqdn+"/OpenShiftClustersClient.Create")
+		ctx = tracing.StartSpan(ctx, fqdn+"/OpenShiftClustersClient.CreateOrUpdate")
 		defer func() {
 			sc := -1
 			if result.Response() != nil {
@@ -44,23 +44,23 @@ func (client OpenShiftClustersClient) Create(ctx context.Context, resourceGroupN
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	req, err := client.CreatePreparer(ctx, resourceGroupName, resourceName, parameters)
+	req, err := client.CreateOrUpdatePreparer(ctx, resourceGroupName, resourceName, parameters)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "Create", nil, "Failure preparing request")
+		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "CreateOrUpdate", nil, "Failure preparing request")
 		return
 	}
 
-	result, err = client.CreateSender(req)
+	result, err = client.CreateOrUpdateSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "Create", result.Response(), "Failure sending request")
+		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "CreateOrUpdate", result.Response(), "Failure sending request")
 		return
 	}
 
 	return
 }
 
-// CreatePreparer prepares the Create request.
-func (client OpenShiftClustersClient) CreatePreparer(ctx context.Context, resourceGroupName string, resourceName string, parameters OpenShiftCluster) (*http.Request, error) {
+// CreateOrUpdatePreparer prepares the CreateOrUpdate request.
+func (client OpenShiftClustersClient) CreateOrUpdatePreparer(ctx context.Context, resourceGroupName string, resourceName string, parameters OpenShiftCluster) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
 		"resourceGroupName": autorest.Encode("path", resourceGroupName),
 		"resourceName":      autorest.Encode("path", resourceName),
@@ -85,9 +85,9 @@ func (client OpenShiftClustersClient) CreatePreparer(ctx context.Context, resour
 	return preparer.Prepare((&http.Request{}).WithContext(ctx))
 }
 
-// CreateSender sends the Create request. The method will close the
+// CreateOrUpdateSender sends the CreateOrUpdate request. The method will close the
 // http.Response Body if it receives an error.
-func (client OpenShiftClustersClient) CreateSender(req *http.Request) (future OpenShiftClustersCreateFuture, err error) {
+func (client OpenShiftClustersClient) CreateOrUpdateSender(req *http.Request) (future OpenShiftClustersCreateOrUpdateFuture, err error) {
 	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
 	var resp *http.Response
 	resp, err = autorest.SendWithSender(client, req, sd...)
@@ -98,9 +98,9 @@ func (client OpenShiftClustersClient) CreateSender(req *http.Request) (future Op
 	return
 }
 
-// CreateResponder handles the response to the Create request. The method always
+// CreateOrUpdateResponder handles the response to the CreateOrUpdate request. The method always
 // closes the http.Response Body.
-func (client OpenShiftClustersClient) CreateResponder(resp *http.Response) (result OpenShiftCluster, err error) {
+func (client OpenShiftClustersClient) CreateOrUpdateResponder(resp *http.Response) (result OpenShiftCluster, err error) {
 	err = autorest.Respond(
 		resp,
 		client.ByInspecting(),

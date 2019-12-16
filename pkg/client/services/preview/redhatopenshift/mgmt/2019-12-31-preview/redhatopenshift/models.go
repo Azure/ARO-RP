@@ -231,30 +231,30 @@ type OpenShiftClusterList struct {
 	Value *[]OpenShiftCluster `json:"value,omitempty"`
 }
 
-// OpenShiftClustersCreateFuture an abstraction for monitoring and retrieving the results of a long-running
-// operation.
-type OpenShiftClustersCreateFuture struct {
+// OpenShiftClustersCreateOrUpdateFuture an abstraction for monitoring and retrieving the results of a
+// long-running operation.
+type OpenShiftClustersCreateOrUpdateFuture struct {
 	azure.Future
 }
 
 // Result returns the result of the asynchronous operation.
 // If the operation has not completed it will return an error.
-func (future *OpenShiftClustersCreateFuture) Result(client OpenShiftClustersClient) (osc OpenShiftCluster, err error) {
+func (future *OpenShiftClustersCreateOrUpdateFuture) Result(client OpenShiftClustersClient) (osc OpenShiftCluster, err error) {
 	var done bool
 	done, err = future.DoneWithContext(context.Background(), client)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersCreateFuture", "Result", future.Response(), "Polling failure")
+		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersCreateOrUpdateFuture", "Result", future.Response(), "Polling failure")
 		return
 	}
 	if !done {
-		err = azure.NewAsyncOpIncompleteError("redhatopenshift.OpenShiftClustersCreateFuture")
+		err = azure.NewAsyncOpIncompleteError("redhatopenshift.OpenShiftClustersCreateOrUpdateFuture")
 		return
 	}
 	sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
 	if osc.Response.Response, err = future.GetResult(sender); err == nil && osc.Response.Response.StatusCode != http.StatusNoContent {
-		osc, err = client.CreateResponder(osc.Response.Response)
+		osc, err = client.CreateOrUpdateResponder(osc.Response.Response)
 		if err != nil {
-			err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersCreateFuture", "Result", osc.Response.Response, "Failure responding to request")
+			err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersCreateOrUpdateFuture", "Result", osc.Response.Response, "Failure responding to request")
 		}
 	}
 	return

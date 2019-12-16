@@ -227,10 +227,10 @@ class OpenShiftClustersOperations(object):
     get.metadata = {'url': '/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}'}
 
 
-    def _create_initial(
+    def _create_or_update_initial(
             self, resource_group_name, resource_name, parameters, custom_headers=None, raw=False, **operation_config):
         # Construct URL
-        url = self.create.metadata['url']
+        url = self.create_or_update.metadata['url']
         path_format_arguments = {
             'subscriptionId': self._serialize.url("self.config.subscription_id", self.config.subscription_id, 'str'),
             'resourceGroupName': self._serialize.url("resource_group_name", resource_group_name, 'str'),
@@ -278,7 +278,7 @@ class OpenShiftClustersOperations(object):
 
         return deserialized
 
-    def create(
+    def create_or_update(
             self, resource_group_name, resource_name, parameters, custom_headers=None, raw=False, polling=True, **operation_config):
         """Creates or updates a OpenShift cluster with the specified subscription,
         resource group and resource name.
@@ -307,7 +307,7 @@ class OpenShiftClustersOperations(object):
          ~msrestazure.azure_operation.AzureOperationPoller[~msrest.pipeline.ClientRawResponse[~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.OpenShiftCluster]]
         :raises: :class:`CloudError<msrestazure.azure_exceptions.CloudError>`
         """
-        raw_result = self._create_initial(
+        raw_result = self._create_or_update_initial(
             resource_group_name=resource_group_name,
             resource_name=resource_name,
             parameters=parameters,
@@ -332,7 +332,7 @@ class OpenShiftClustersOperations(object):
         elif polling is False: polling_method = NoPolling()
         else: polling_method = polling
         return LROPoller(self._client, raw_result, get_long_running_output, polling_method)
-    create.metadata = {'url': '/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}'}
+    create_or_update.metadata = {'url': '/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}'}
 
 
     def _delete_initial(
