@@ -4,40 +4,34 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/sirupsen/logrus"
 )
 
-func TestARMIsReady(t *testing.T) {
-	log := logrus.NewEntry(logrus.StandardLogger())
-	fakeNow, _ := time.Parse(time.RFC3339, "2020-01-20T00:00:00Z")
-	fakeNowFunc := func() time.Time { return fakeNow }
-
+func TestARMRefreshOnce(t *testing.T) {
 	tests := []struct {
 		name    string
-		do      func(req *http.Request) (*http.Response, error)
+		do      func(*http.Request) (*http.Response, error)
 		wantErr string
 	}{
 		{
-			name: "success",
-			do: func(req *http.Request) (*http.Response, error) {
+			name: "valid",
+			do: func(*http.Request) (*http.Response, error) {
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Header: http.Header{
-						"Content-Type": []string{"application/json"},
+						"Content-Type": []string{"application/json; charset=utf-8"},
 					},
 					Body: ioutil.NopCloser(strings.NewReader(
 						`{
 							"clientCertificates": [
 								{
 									"notBefore": "2020-01-19T23:00:00Z",
-									"notAfter": "2020-01-20T01:00:00Z",
-									"certificate": "dGVzdA=="
+									"notAfter": "2020-01-20T01:00:00Z"
 								}
 							]
 						}`,
@@ -46,8 +40,30 @@ func TestARMIsReady(t *testing.T) {
 			},
 		},
 		{
+			name: "invalid - no certificate for now",
+			do: func(*http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Header: http.Header{
+						"Content-Type": []string{"application/json; charset=utf-8"},
+					},
+					Body: ioutil.NopCloser(strings.NewReader(
+						`{
+							"clientCertificates": [
+								{
+									"notBefore": "2020-01-20T23:00:00Z",
+									"notAfter": "2020-01-21T01:00:00Z"
+								}
+							]
+						}`,
+					)),
+				}, nil
+			},
+			wantErr: "did not receive current certificate",
+		},
+		{
 			name: "invalid JSON",
-			do: func(req *http.Request) (*http.Response, error) {
+			do: func(*http.Request) (*http.Response, error) {
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Header: http.Header{
@@ -59,60 +75,64 @@ func TestARMIsReady(t *testing.T) {
 			wantErr: "invalid character 'o' in literal null (expecting 'u')",
 		},
 		{
-			name: "request - error",
-			do: func(req *http.Request) (*http.Response, error) {
+			name: "invalid - error",
+			do: func(*http.Request) (*http.Response, error) {
 				return nil, errors.New("fake error")
 			},
 			wantErr: "fake error",
 		},
 		{
-			name: "request - unexpected status code",
-			do: func(req *http.Request) (*http.Response, error) {
+			name: "invalid - status code",
+			do: func(*http.Request) (*http.Response, error) {
 				return &http.Response{
 					StatusCode: http.StatusBadGateway,
-					Header: http.Header{
-						"Content-Type": []string{"application/json"},
-					},
-					Body: ioutil.NopCloser(strings.NewReader("{}")),
+					Body:       ioutil.NopCloser(nil),
 				}, nil
 			},
 			wantErr: "unexpected status code 502",
 		},
 		{
-			name: "request - unexpected content type",
-			do: func(req *http.Request) (*http.Response, error) {
+			name: "invalid - content type",
+			do: func(*http.Request) (*http.Response, error) {
 				return &http.Response{
 					StatusCode: http.StatusOK,
 					Header: http.Header{
 						"Content-Type": []string{"text/plain"},
 					},
-					Body: ioutil.NopCloser(strings.NewReader("")),
+					Body: ioutil.NopCloser(nil),
 				}, nil
 			},
 			wantErr: `unexpected content type "text/plain"`,
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			a := &arm{
-				log: log,
-				now: fakeNowFunc,
-				do:  test.do,
+				now: func() time.Time { return time.Date(2020, 1, 20, 0, 0, 0, 0, time.UTC) },
+				do: func(req *http.Request) (*http.Response, error) {
+					if req.Method != http.MethodGet {
+						return nil, fmt.Errorf("unexpected method %s", req.Method)
+					}
+					if req.URL.String() != "https://management.azure.com:24582/metadata/authentication?api-version=2015-01-01" {
+						return nil, fmt.Errorf("unexpected URL %q", req.URL.String())
+					}
+					return tt.do(req)
+				},
 			}
 
-			if a.IsReady() == true {
+			if a.IsReady() {
 				t.Fatal("unexpected ready state")
 			}
 
-			// Ignore possible errors. If an error occurs, authoriser must not be ready.
-			// We are testing this behaviour via checking result of a.IsReady()
 			err := a.refreshOnce()
-			if err != nil && err.Error() != test.wantErr {
-				t.Errorf("got error %#v, expected %#v", err.Error(), test.wantErr)
+
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Error(err)
 			}
 
-			if test.wantErr != "" && a.IsReady() {
+			if a.IsReady() != (tt.wantErr == "") {
 				t.Fatal("unexpected ready state")
 			}
 		})
@@ -120,104 +140,147 @@ func TestARMIsReady(t *testing.T) {
 }
 
 func TestARMIsAuthorized(t *testing.T) {
-	log := logrus.NewEntry(logrus.StandardLogger())
-	fakeNow, _ := time.Parse(time.RFC3339, "2020-01-20T00:00:00Z")
-	fakeNowFunc := func() time.Time { return fakeNow }
+	now := time.Date(2020, 1, 20, 0, 0, 0, 0, time.UTC)
 
 	tests := []struct {
-		name string
-		m    metadata
-		cs   *tls.ConnectionState
-		want bool
+		name           string
+		certs          []clientCertificate
+		cs             *tls.ConnectionState
+		wantReady      bool
+		wantAuthorized bool
 	}{
 		{
-			name: "cert is present in the chain - single client cert in meta",
-			m: metadata{ClientCertificates: []clientCertificate{
+			name: "leaf cert matches the client certificate",
+			certs: []clientCertificate{
 				{
-					Thumbprint:  "current",
 					Certificate: []byte("current"),
-					NotBefore:   fakeNow.Add(-time.Hour),
-					NotAfter:    fakeNow.Add(time.Hour),
-				},
-			}},
-			cs: &tls.ConnectionState{
-				PeerCertificates: []*x509.Certificate{
-					{Raw: []byte("current")},
+					NotBefore:   now.Add(-time.Hour),
+					NotAfter:    now.Add(time.Hour),
 				},
 			},
-			want: true,
+			cs: &tls.ConnectionState{
+				PeerCertificates: []*x509.Certificate{
+					{
+						Raw: []byte("current"),
+					},
+				},
+			},
+			wantReady:      true,
+			wantAuthorized: true,
 		},
 		{
-			name: "cert is present in the chain - multiple client certs in meta",
-			m: metadata{ClientCertificates: []clientCertificate{
+			name: "leaf cert matches a client certificate",
+			certs: []clientCertificate{
 				{
-					Thumbprint:  "past",
 					Certificate: []byte("past"),
-					NotBefore:   fakeNow.Add(-6 * time.Hour),
-					NotAfter:    fakeNow.Add(-5 * time.Hour),
+					NotBefore:   now.Add(-6 * time.Hour),
+					NotAfter:    now.Add(-5 * time.Hour),
 				},
 				{
-					Thumbprint:  "current",
 					Certificate: []byte("current"),
-					NotBefore:   fakeNow.Add(-time.Hour),
-					NotAfter:    fakeNow.Add(time.Hour),
+					NotBefore:   now.Add(-time.Hour),
+					NotAfter:    now.Add(time.Hour),
 				},
 				{
-					Thumbprint:  "future",
 					Certificate: []byte("future"),
-					NotBefore:   fakeNow.Add(5 * time.Hour),
-					NotAfter:    fakeNow.Add(6 * time.Hour),
-				},
-			}},
-			cs: &tls.ConnectionState{
-				PeerCertificates: []*x509.Certificate{
-					{Raw: []byte("current")},
+					NotBefore:   now.Add(5 * time.Hour),
+					NotAfter:    now.Add(6 * time.Hour),
 				},
 			},
-			want: true,
+			cs: &tls.ConnectionState{
+				PeerCertificates: []*x509.Certificate{
+					{
+						Raw: []byte("current"),
+					},
+				},
+			},
+			wantReady:      true,
+			wantAuthorized: true,
 		},
 		{
-			name: "cert is present in the chain - not latest",
-			m: metadata{ClientCertificates: []clientCertificate{
+			name: "leaf cert does not match past client certificate",
+			certs: []clientCertificate{
 				{
-					Thumbprint:  "current",
-					Certificate: []byte("current"),
-					NotBefore:   fakeNow.Add(-time.Hour),
-					NotAfter:    fakeNow.Add(time.Hour),
+					Certificate: []byte("past"),
+					NotBefore:   now.Add(-6 * time.Hour),
+					NotAfter:    now.Add(-5 * time.Hour),
 				},
-			}},
+			},
 			cs: &tls.ConnectionState{
 				PeerCertificates: []*x509.Certificate{
-					{Raw: []byte("does not match")},
-					{Raw: []byte("current")},
+					{
+						Raw: []byte("past"),
+					},
 				},
 			},
 		},
 		{
-			name: "invalid connection state - empty",
+			name: "leaf cert does not match future client certificate",
+			certs: []clientCertificate{
+				{
+					Certificate: []byte("future"),
+					NotBefore:   now.Add(5 * time.Hour),
+					NotAfter:    now.Add(6 * time.Hour),
+				},
+			},
+			cs: &tls.ConnectionState{
+				PeerCertificates: []*x509.Certificate{
+					{
+						Raw: []byte("future"),
+					},
+				},
+			},
+		},
+		{
+			name: "non-leaf cert does not match client certificate",
+			certs: []clientCertificate{
+				{
+					Certificate: []byte("current"),
+					NotBefore:   now.Add(-time.Hour),
+					NotAfter:    now.Add(time.Hour),
+				},
+			},
+			cs: &tls.ConnectionState{
+				PeerCertificates: []*x509.Certificate{
+					{
+						Raw: []byte("does not match"),
+					},
+					{
+						Raw: []byte("current"),
+					},
+				},
+			},
+			wantReady: true,
+		},
+		{
+			name: "invalid connection state - not TLS",
 		},
 		{
 			name: "invalid connection state - no PeerCertificates",
-			cs:   &tls.ConnectionState{ServerName: "test"},
+			cs:   &tls.ConnectionState{},
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 			a := &arm{
-				log:                   log,
-				now:                   fakeNowFunc,
-				m:                     test.m,
-				lastSuccessfulRefresh: fakeNow,
+				now: func() time.Time {
+					return now
+				},
+				m: metadata{
+					ClientCertificates: tt.certs,
+				},
+				lastSuccessfulRefresh: now,
 			}
 
-			if !a.IsReady() {
-				t.Fatal("expected ready state")
+			ready := a.IsReady()
+			if ready != tt.wantReady {
+				t.Error(ready)
 			}
 
-			result := a.IsAuthorized(test.cs)
-			if result != test.want {
-				t.Fatalf("got %#v, expected %#v", result, test.want)
+			isAuthorized := a.IsAuthorized(tt.cs)
+			if isAuthorized != tt.wantAuthorized {
+				t.Error(isAuthorized)
 			}
 		})
 	}

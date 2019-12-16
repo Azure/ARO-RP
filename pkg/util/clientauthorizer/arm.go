@@ -38,10 +38,16 @@ type arm struct {
 }
 
 func NewARM(log *logrus.Entry) ClientAuthorizer {
+	c := http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return fmt.Errorf("tried to redirect")
+		},
+	}
+
 	a := &arm{
 		log: log,
 		now: time.Now,
-		do:  http.DefaultClient.Do,
+		do:  c.Do,
 	}
 
 	go a.refresh()
@@ -114,6 +120,18 @@ func (a *arm) refreshOnce() error {
 		return err
 	}
 
+	var ok bool
+	for _, c := range m.ClientCertificates {
+		if c.NotBefore.Before(now) &&
+			c.NotAfter.After(now) {
+			ok = true
+			break
+		}
+	}
+	if !ok {
+		return fmt.Errorf("did not receive current certificate")
+	}
+
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -124,8 +142,21 @@ func (a *arm) refreshOnce() error {
 }
 
 func (a *arm) IsReady() bool {
+	now := a.now()
+
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 
-	return a.now().Add(-6 * time.Hour).Before(a.lastSuccessfulRefresh)
+	if a.lastSuccessfulRefresh.Add(24 * time.Hour).Before(a.now()) {
+		return false
+	}
+
+	for _, c := range a.m.ClientCertificates {
+		if c.NotBefore.Before(now) &&
+			c.NotAfter.After(now) {
+			return true
+		}
+	}
+
+	return false
 }
