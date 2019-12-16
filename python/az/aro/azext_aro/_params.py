@@ -3,6 +3,7 @@ from azext_aro._validators import validate_client_id
 from azext_aro._validators import validate_client_secret
 from azext_aro._validators import validate_subnet
 from azext_aro._validators import validate_vnet
+from azext_aro._validators import validate_vnet_resource_group_name
 from azext_aro._validators import validate_worker_count
 from azext_aro._validators import validate_worker_vm_disk_size_gb
 from azure.cli.core.commands.parameters import name_type
@@ -50,7 +51,8 @@ def load_arguments(self, _):
         c.argument('vnet_resource_group_name',
                    resource_group_name_type,
                    options_list=['--vnet-resource-group'],
-                   help='Name of vnet resource group.')
+                   help='Name of vnet resource group.',
+                   validator=validate_vnet_resource_group_name)
         c.argument('vnet',
                    help='Name or ID of vnet.  If name is supplied, `--vnet-resource-group` must be supplied.',
                    validator=validate_vnet)

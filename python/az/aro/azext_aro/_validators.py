@@ -127,12 +127,10 @@ def validate_subnets(master_subnet, worker_subnet):
 
 
 def validate_vnet(cmd, namespace):
+    validate_vnet_resource_group_name(namespace)
+
     if namespace.vnet:
         if not is_valid_resource_id(namespace.vnet):
-            if not namespace.vnet_resource_group_name:
-                raise CLIError(
-                    "Must specify --vnet-resource-group-name if --vnet is not an id.")
-
             namespace.vnet = resource_id(
                 subscription=get_subscription_id(cmd.cli_ctx),
                 resource_group=namespace.vnet_resource_group_name,
@@ -140,6 +138,11 @@ def validate_vnet(cmd, namespace):
                 type='virtualNetworks',
                 name=namespace.vnet,
             )
+
+
+def validate_vnet_resource_group_name(namespace):
+    if not namespace.vnet_resource_group_name:
+        namespace.vnet_resource_group_name = namespace.validate_vnet_resource_group_name
 
 
 def validate_worker_count(namespace):
