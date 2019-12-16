@@ -5,25 +5,25 @@
 # regenerated.
 # --------------------------------------------------------------------------
 
-from msrest.async_client import SDKClientAsync
+from msrest.service_client import SDKClient
 from msrest import Serializer, Deserializer
 
-from .._configuration import AzureRedHatOpenShiftClientConfiguration
-from .operations_async import Operations
-from .operations_async import OpenShiftClustersOperations
-from .. import models
+from ._configuration import AzureRedHatOpenShiftClientConfiguration
+from .operations import Operations
+from .operations import OpenShiftClustersOperations
+from . import models
 
 
-class AzureRedHatOpenShiftClient(SDKClientAsync):
+class AzureRedHatOpenShiftClient(SDKClient):
     """Rest API for Azure Red Hat OpenShift
 
     :ivar config: Configuration for client.
     :vartype config: AzureRedHatOpenShiftClientConfiguration
 
     :ivar operations: Operations operations
-    :vartype operations: redhatopenshift.operations.Operations
+    :vartype operations: azure.mgmt.redhatopenshift.v2019_12_31_preview.operations.Operations
     :ivar open_shift_clusters: OpenShiftClusters operations
-    :vartype open_shift_clusters: redhatopenshift.operations.OpenShiftClustersOperations
+    :vartype open_shift_clusters: azure.mgmt.redhatopenshift.v2019_12_31_preview.operations.OpenShiftClustersOperations
 
     :param credentials: Credentials needed for the client to connect to Azure.
     :type credentials: :mod:`A msrestazure Credentials
@@ -39,7 +39,7 @@ class AzureRedHatOpenShiftClient(SDKClientAsync):
             self, credentials, subscription_id, base_url=None):
 
         self.config = AzureRedHatOpenShiftClientConfiguration(credentials, subscription_id, base_url)
-        super(AzureRedHatOpenShiftClient, self).__init__(self.config)
+        super(AzureRedHatOpenShiftClient, self).__init__(self.config.credentials, self.config)
 
         client_models = {k: v for k, v in models.__dict__.items() if isinstance(v, type)}
         self.api_version = '2019-12-31-preview'
