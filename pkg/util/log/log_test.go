@@ -14,22 +14,22 @@ func TestRelativeFilePathPrettier(t *testing.T) {
 	currentFunc.Line = 11 // so it's not too fragile
 	goPath := strings.Split(currentFunc.File, "src/github.com")[0]
 	tests := []struct {
-		name  string
-		f     *runtime.Frame
-		want1 string
-		want2 string
+		name         string
+		f            *runtime.Frame
+		wantFunction string
+		wantFile     string
 	}{
 		{
-			name:  "current function",
-			f:     &currentFunc,
-			want1: "log.TestRelativeFilePathPrettier()",
-			want2: " pkg/util/log/log_test.go:11",
+			name:         "current function",
+			f:            &currentFunc,
+			wantFunction: "log.TestRelativeFilePathPrettier()",
+			wantFile:     " pkg/util/log/log_test.go:11",
 		},
 		{
-			name:  "empty",
-			f:     &runtime.Frame{},
-			want1: "()",
-			want2: " :0",
+			name:         "empty",
+			f:            &runtime.Frame{},
+			wantFunction: "()",
+			wantFile:     " :0",
 		},
 		{
 			name: "install",
@@ -38,19 +38,19 @@ func TestRelativeFilePathPrettier(t *testing.T) {
 				File:     goPath + "src/github.com/jim-minter/rp/pkg/install/1-installresources.go",
 				Line:     623,
 			},
-			want1: "install.installResources()",
-			want2: " pkg/install/1-installresources.go:623",
+			wantFunction: "install.installResources()",
+			wantFile:     " pkg/install/1-installresources.go:623",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got1, got2 := RelativeFilePathPrettier(tt.f)
-			if got1 != tt.want1 {
-				t.Errorf("RelativeFilePathPrettier() got1 = %v, want %v", got1, tt.want1)
+			function, file := RelativeFilePathPrettier(tt.f)
+			if function != tt.wantFunction {
+				t.Error(function)
 			}
-			if got2 != tt.want2 {
-				t.Errorf("RelativeFilePathPrettier() got2 = %v, want %v", got2, tt.want2)
+			if file != tt.wantFile {
+				t.Error(file)
 			}
 		})
 	}

@@ -52,6 +52,6 @@ func main() {
 	log := utillog.GetLogger()
 
 	if err := run(context.Background(), log); err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 }
