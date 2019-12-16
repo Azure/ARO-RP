@@ -81,7 +81,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
         ]
     )
 
-    return sdk_no_wait(no_wait, client.create,
+    return sdk_no_wait(no_wait, client.create_or_update,
                        resource_group_name=resource_group_name,
                        resource_name=resource_name,
                        parameters=oc)
@@ -129,7 +129,7 @@ def aro_update(client, resource_group_name, resource_name,
         # TODO: [0] should not be hard-coded
         oc.worker_profiles[0].count = worker_count
 
-    return sdk_no_wait(no_wait, client.create,
+    return sdk_no_wait(no_wait, client.create_or_update,
                        resource_group_name=resource_group_name,
                        resource_name=resource_name,
                        parameters=oc)
