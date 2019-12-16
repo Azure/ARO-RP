@@ -613,7 +613,7 @@ func (g *generator) template() *arm.Template {
 	t := &arm.Template{
 		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 		ContentVersion: "1.0.0.0",
-		Parameters:     map[string]*arm.Parameter{},
+		Parameters:     map[string]*arm.TemplateParameter{},
 	}
 
 	if g.production {
@@ -637,15 +637,15 @@ func (g *generator) template() *arm.Template {
 	}
 
 	for _, param := range params {
-		t.Parameters[param] = &arm.Parameter{Type: "string"}
+		t.Parameters[param] = &arm.TemplateParameter{Type: "string"}
 	}
 
 	if g.production {
-		t.Parameters["extraCosmosDBIPs"] = &arm.Parameter{
+		t.Parameters["extraCosmosDBIPs"] = &arm.TemplateParameter{
 			Type:         "string",
 			DefaultValue: "",
 		}
-		t.Parameters["extraKeyvaultAccessPolicies"] = &arm.Parameter{
+		t.Parameters["extraKeyvaultAccessPolicies"] = &arm.TemplateParameter{
 			Type:         "array",
 			DefaultValue: []keyvault.AccessPolicyEntry{},
 		}
@@ -690,6 +690,38 @@ func GenerateRPTemplates() error {
 		if err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func GenerateRPParameterTemplate() error {
+	t := newGenerator(true).template()
+
+	p := &arm.Parameters{
+		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+		ContentVersion: "1.0.0.0",
+		Parameters:     map[string]*arm.ParametersParameter{},
+	}
+
+	for name, tp := range t.Parameters {
+		param := &arm.ParametersParameter{Value: tp.DefaultValue}
+		if param.Value == nil {
+			param.Value = ""
+		}
+		p.Parameters[name] = param
+	}
+
+	b, err := json.MarshalIndent(p, "", "    ")
+	if err != nil {
+		return err
+	}
+
+	b = append(b, byte('\n'))
+
+	err = ioutil.WriteFile("rp-production-parameters.json", b, 0666)
+	if err != nil {
+		return err
 	}
 
 	return nil

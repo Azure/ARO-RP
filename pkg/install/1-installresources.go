@@ -99,7 +99,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 		t := &arm.Template{
 			Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 			ContentVersion: "1.0.0.0",
-			Parameters: map[string]*arm.Parameter{
+			Parameters: map[string]*arm.TemplateParameter{
 				"sas": {
 					Type: "object",
 				},

@@ -10,7 +10,12 @@ func run() error {
 		return err
 	}
 
-	return deploy.GenerateNSGTemplate()
+	err = deploy.GenerateNSGTemplate()
+	if err != nil {
+		return err
+	}
+
+	return deploy.GenerateRPParameterTemplate()
 }
 
 func main() {
