@@ -48,6 +48,13 @@ generate:
 image: rp
 	docker build -t arosvc.azurecr.io/rp:$(COMMIT) .
 
+pyenv${PYTHON_VERSION}:
+	virtualenv --python=/usr/bin/python${PYTHON_VERSION} pyenv${PYTHON_VERSION}
+	. pyenv${PYTHON_VERSION}/bin/activate && \
+		pip install azdev && \
+		azdev setup -r . && \
+		sed -i -e "s|^dev_sources = $(PWD)$$|dev_sources = $(PWD)/python|" ~/.azure/config
+
 secrets:
 	rm -rf secrets
 	mkdir secrets
@@ -69,12 +76,8 @@ test-go: generate
 	go vet ./...
 	go test ./...
 
-test-python:
-	virtualenv --python=/usr/bin/python${PYTHON_VERSION} pyenv${PYTHON_VERSION}
+test-python: generate pyenv${PYTHON_VERSION}
 	. pyenv${PYTHON_VERSION}/bin/activate && \
-		pip install azdev && \
-		azdev setup -r . && \
-		sed -i -e "s|^dev_sources = $(PWD)$$|dev_sources = $(PWD)/python|" ~/.azure/config && \
 		$(MAKE) az && \
 		azdev linter && \
 		azdev style
