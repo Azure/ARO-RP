@@ -4,7 +4,6 @@ from azure.cli.core.commands.client_factory import get_mgmt_service_client
 from azure.cli.core.commands.client_factory import get_subscription_id
 from azure.cli.core.profiles import get_sdk
 from azure.cli.core.profiles import ResourceType
-from msrestazure.azure_exceptions import CloudError
 from msrestazure.tools import resource_id
 
 
@@ -18,18 +17,20 @@ def assign_contributor_to_vnet(cli_ctx, vnet, object_id):
                                              'RoleAssignmentCreateParameters', mod='models',
                                              operation_group='role_assignments')
 
-    try:
-        client.role_assignments.create(vnet, uuid.uuid4(), RoleAssignmentCreateParameters(
-            role_definition_id=resource_id(
-                subscription=get_subscription_id(cli_ctx),
-                namespace='Microsoft.Authorization',
-                type='roleDefinitions',
-                name=CONTRIBUTOR,
-            ),
-            principal_id=object_id,
-            principal_type="ServicePrincipal",
-        ))
-    except CloudError as err:
-        if err.status_code == 409:
+    role_definition_id = resource_id(
+        subscription=get_subscription_id(cli_ctx),
+        namespace='Microsoft.Authorization',
+        type='roleDefinitions',
+        name=CONTRIBUTOR,
+    )
+
+    for assignment in list(client.role_assignments.list_for_scope(vnet)):
+        if assignment.role_definition_id.lower() == role_definition_id.lower() and \
+                assignment.principal_id.lower() == object_id.lower():
             return
-        raise err
+
+    client.role_assignments.create(vnet, uuid.uuid4(), RoleAssignmentCreateParameters(
+        role_definition_id=role_definition_id,
+        principal_id=object_id,
+        principal_type="ServicePrincipal",
+    ))
