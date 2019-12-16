@@ -50,6 +50,18 @@ def _validate_int(key, i):
     return i
 
 
+def validate_resource_name(cmd, namespace):
+    # TODO: remove this limitation, ideally by allowing the end user to specify
+    # the cluster resource group
+
+    client = get_mgmt_service_client(
+        cmd.cli_ctx, ResourceType.MGMT_RESOURCE_RESOURCES)
+
+    if client.resource_groups.check_existence(namespace.resource_name):
+        raise CLIError(
+            "Invalid --name '%s': resource group with same name must not exist." % namespace.resource_name)
+
+
 def validate_subnet(key):
     def _validate_subnet(cmd, namespace):
         subnet = getattr(namespace, key)

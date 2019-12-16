@@ -1,6 +1,7 @@
 from azext_aro._validators import validate_cidr
 from azext_aro._validators import validate_client_id
 from azext_aro._validators import validate_client_secret
+from azext_aro._validators import validate_resource_name
 from azext_aro._validators import validate_subnet
 from azext_aro._validators import validate_vnet
 from azext_aro._validators import validate_vnet_resource_group_name
@@ -18,7 +19,8 @@ def load_arguments(self, _):
                    validator=get_default_location_from_resource_group)
         c.argument('resource_name',
                    name_type,
-                   help='Name of cluster.')
+                   help='Name of cluster.',
+                   validator=validate_resource_name)
         c.argument('tags',
                    tags_type)
 
