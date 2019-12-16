@@ -21,6 +21,7 @@ client: generate
 		-v $(PWD)/swagger:/swagger:z \
 		azuresdk/autorest \
 		--go \
+		--license-header=MICROSOFT_APACHE_NO_VERSION \
 		--namespace=redhatopenshift \
 		--input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/preview/2019-12-31-preview/redhatopenshift.json \
 		--output-folder=/github.com/jim-minter/rp/pkg/client/services/preview/redhatopenshift/mgmt/2019-12-31-preview/redhatopenshift
@@ -32,6 +33,7 @@ client: generate
 		--use=@microsoft.azure/autorest.python@4.0.70 \
 		--python \
 		--azure-arm \
+		--license-header=MICROSOFT_APACHE_NO_VERSION \
 		--namespace=azure.mgmt.redhatopenshift.v2019_12_31_preview \
 		--input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/preview/2019-12-31-preview/redhatopenshift.json \
 		--output-folder=/python/client
@@ -68,7 +70,8 @@ test-go: generate
 
 	gofmt -s -w cmd hack pkg
 	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/jim-minter/rp cmd hack pkg
-	go run ./hack/validate-imports/validate-imports.go cmd hack pkg
+	go run ./hack/validate-imports cmd hack pkg
+	go run ./hack/licenses
 	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
 	@[ -z "$$(find -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
 	@sha256sum --quiet -c .sha256sum || (echo error: client library is stale, please run make client; exit 1)
