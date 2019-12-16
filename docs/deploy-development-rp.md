@@ -230,6 +230,7 @@
        "https://localhost:8443/providers/Microsoft.RedHatOpenShift/operations?api-version=2019-12-31-preview"
      ```
 
+
 ## Debugging
 
 * Get an admin kubeconfig:

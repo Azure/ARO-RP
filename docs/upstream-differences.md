@@ -3,6 +3,7 @@
 This file catalogues the differences of install approach between ARO and
 upstream OCP.
 
+
 ## Installer carry patches
 
 * CARRY: HACK: remove dependency on github.com/openshift/installer/pkg/terraform
@@ -39,6 +40,7 @@ upstream OCP.
 
   Enabling CloudProviderRateLimit seems to get us into serious problems with the
   LoadBalancer reconciliation logic.
+
 
 ## Installation differences
 

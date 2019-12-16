@@ -10,6 +10,7 @@ service, please see the following links:
 * https://docs.microsoft.com/en-us/azure/openshift/
 * https://docs.openshift.com/aro/welcome/index.html
 
+
 ## Quickstarts
 
 * If you have a whitelisted subscription and want to use `az aro` to create a
@@ -17,6 +18,7 @@ service, please see the following links:
 
 * If you want to deploy a development RP, follow [deploy development
   RP](docs/deploy-development-rp.md).
+
 
 ## Repository map
 
@@ -60,6 +62,7 @@ service, please see the following links:
 * test: End-to-end tests.
 
 * vendor: Vendored Go libraries.
+
 
 ## Basic architecture
 
