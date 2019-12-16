@@ -61,7 +61,7 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 		return nil, err
 	}
 
-	p.keyvault.Authorizer, err = auth.NewAuthorizerFromEnvironmentWithResource("https://vault.azure.net")
+	p.keyvault.Authorizer, err = auth.NewAuthorizerFromEnvironmentWithResource(azure.PublicCloud.ResourceIdentifiers.KeyVault)
 	if err != nil {
 		return nil, err
 	}

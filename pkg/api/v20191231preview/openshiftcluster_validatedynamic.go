@@ -2,6 +2,7 @@ package v20191231preview
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"net/http"
 	"strings"
@@ -10,12 +11,21 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/apparentlymart/go-cidr/cidr"
+	"github.com/dgrijalva/jwt-go"
 
 	"github.com/jim-minter/rp/pkg/api"
 	"github.com/jim-minter/rp/pkg/util/azureclient/authorization"
 	utilpermissions "github.com/jim-minter/rp/pkg/util/permissions"
 	"github.com/jim-minter/rp/pkg/util/subnet"
 )
+
+type azureClaim struct {
+	Roles []string `json:"roles,omitempty"`
+}
+
+func (*azureClaim) Valid() error {
+	return fmt.Errorf("unimplemented")
+}
 
 type dynamicValidator struct {
 	subnets subnet.Manager
@@ -37,6 +47,11 @@ func validateOpenShiftClusterDynamic(ctx context.Context, getFPAuthorizer func(s
 	}
 
 	spAuthorizer, err := v.validateServicePrincipalProfile()
+	if err != nil {
+		return err
+	}
+
+	err = v.validateServicePrincipalRole()
 	if err != nil {
 		return err
 	}
@@ -78,6 +93,37 @@ func (dv *dynamicValidator) validateServicePrincipalProfile() (autorest.Authoriz
 	}
 
 	return conf.Authorizer()
+}
+
+func (dv *dynamicValidator) validateServicePrincipalRole() error {
+	spp := &dv.oc.Properties.ServicePrincipalProfile
+	conf := auth.NewClientCredentialsConfig(spp.ClientID, spp.ClientSecret, spp.TenantID)
+	conf.Resource = azure.PublicCloud.GraphEndpoint
+
+	token, err := conf.ServicePrincipalToken()
+	if err != nil {
+		return err
+	}
+
+	err = token.EnsureFresh()
+	if err != nil {
+		return err
+	}
+
+	p := &jwt.Parser{}
+	c := &azureClaim{}
+	_, _, err = p.ParseUnverified(token.OAuthToken(), c)
+	if err != nil {
+		return err
+	}
+
+	for _, role := range c.Roles {
+		if role == "Application.ReadWrite.OwnedBy" {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalCredentials, "properties.servicePrincipalProfile", "The provided service principal must not have the Application.ReadWrite.OwnedBy permission.")
+		}
+	}
+
+	return nil
 }
 
 func (dv *dynamicValidator) validateVnetPermissions(ctx context.Context, client authorization.PermissionsClient, code, typ string) error {
