@@ -130,7 +130,7 @@ func populateTopLevelPaths(resourceProviderNamespace, resourceType, friendlyName
 			Tags:                 []string{strings.Title(resourceType) + "s"},
 			Summary:              "Creates or updates a " + friendlyName + " with the specified subscription, resource group and resource name.",
 			Description:          "Creates or updates a " + friendlyName + " with the specified subscription, resource group and resource name.  The operation returns properties of a " + friendlyName + ".",
-			OperationID:          strings.Title(resourceType) + "s_Create",
+			OperationID:          strings.Title(resourceType) + "s_CreateOrUpdate",
 			Parameters:           populateParameters(4, strings.Title(resourceType), friendlyName),
 			Responses:            populateResponses(strings.Title(resourceType), false, http.StatusOK, http.StatusCreated),
 			LongRunningOperation: true,

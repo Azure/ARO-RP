@@ -187,7 +187,7 @@
                 ],
                 "summary": "Creates or updates a OpenShift cluster with the specified subscription, resource group and resource name.",
                 "description": "Creates or updates a OpenShift cluster with the specified subscription, resource group and resource name.  The operation returns properties of a OpenShift cluster.",
-                "operationId": "OpenShiftClusters_Create",
+                "operationId": "OpenShiftClusters_CreateOrUpdate",
                 "parameters": [
                     {
                         "$ref": "#/parameters/ApiVersionParameter"
@@ -242,7 +242,7 @@
                 "x-ms-long-running-operation": true,
                 "x-ms-examples": {
                     "Creates or updates a OpenShift cluster with the specified subscription, resource group and resource name.": {
-                        "$ref": "./examples/OpenShiftClusters_Create.json"
+                        "$ref": "./examples/OpenShiftClusters_CreateOrUpdate.json"
                     }
                 }
             },
