@@ -1,0 +1,34 @@
+package validate
+
+import (
+	"strings"
+	"testing"
+	"unicode"
+
+	"github.com/jim-minter/rp/pkg/api"
+)
+
+func CloudError(t *testing.T, err error) *api.CloudError {
+	cloudErr, ok := err.(*api.CloudError)
+	if !ok {
+		t.Fatal("must return *api.CloudError")
+	}
+
+	if cloudErr.Code == "" {
+		t.Error("code is required")
+	}
+	if cloudErr.Message == "" {
+		t.Error("message is required")
+	}
+	if cloudErr.Message != "" && !unicode.IsUpper(rune(cloudErr.Message[0])) {
+		t.Error("message must start with upper case letter")
+	}
+	if strings.Contains(cloudErr.Message, `"`) {
+		t.Error(`message must not contain '"'`)
+	}
+	if !strings.HasSuffix(cloudErr.Message, ".") {
+		t.Error("message must end in '.'")
+	}
+
+	return cloudErr
+}

@@ -5,11 +5,11 @@ import (
 	"net/http"
 	"strings"
 	"testing"
-	"unicode"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/jim-minter/rp/pkg/api"
+	"github.com/jim-minter/rp/test/validate"
 )
 
 type validateTest struct {
@@ -93,41 +93,19 @@ func runTests(t *testing.T, tests []*validateTest, f func(*OpenShiftCluster) err
 					t.Error(err)
 				}
 
-				validateCloudError(t, err)
+				cloudErr := err.(*api.CloudError)
+
+				if cloudErr.StatusCode != http.StatusBadRequest {
+					t.Error(cloudErr.StatusCode)
+				}
+				if cloudErr.Target == "" {
+					t.Error("target is required")
+				}
+
+				validate.CloudError(t, err)
 			}
 		})
 	}
-}
-
-func validateCloudError(t *testing.T, err error) *api.CloudError {
-	cloudErr, ok := err.(*api.CloudError)
-	if !ok {
-		t.Fatal("must return *api.CloudError")
-	}
-
-	if cloudErr.StatusCode != http.StatusBadRequest {
-		t.Error(cloudErr.StatusCode)
-	}
-	if cloudErr.Code == "" {
-		t.Error("code is required")
-	}
-	if cloudErr.Message == "" {
-		t.Error("message is required")
-	}
-	if cloudErr.Target == "" {
-		t.Error("target is required")
-	}
-	if cloudErr.Message != "" && !unicode.IsUpper(rune(cloudErr.Message[0])) {
-		t.Error("message must start with upper case letter")
-	}
-	if strings.Contains(cloudErr.Message, `"`) {
-		t.Error(`message must not contain '"'`)
-	}
-	if !strings.HasSuffix(cloudErr.Message, ".") {
-		t.Error("message must end in '.'")
-	}
-
-	return cloudErr
 }
 
 func TestValidateOpenShiftCluster(t *testing.T) {

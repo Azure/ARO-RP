@@ -2,79 +2,113 @@ package middleware
 
 import (
 	"bytes"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gorilla/mux"
+	"github.com/jim-minter/rp/pkg/api"
+	"github.com/jim-minter/rp/test/validate"
 )
 
 func TestBody(t *testing.T) {
 	tests := []struct {
-		name           string
-		url            string
-		method         string
-		header         http.Header
-		wantStatusCode int
+		name    string
+		isGet   bool
+		header  http.Header
+		body    []byte
+		wantErr string
 	}{
 		{
-			name:           "Get request - No checking",
-			method:         http.MethodGet,
-			wantStatusCode: http.StatusOK,
+			name:  "GET request - valid",
+			isGet: true,
 		},
 		{
-			name:   "Post request - unsupported media type",
-			method: http.MethodPost,
+			name:    "non-GET request - large body",
+			body:    bytes.Repeat([]byte{0}, 1048577),
+			wantErr: "400: InvalidResource: : The resource definition is invalid.",
+		},
+		{
+			name: "non-GET request - invalid media type",
 			header: http.Header{
-				"Content-Type": []string{"test"},
+				"Content-Type": []string{"invalid"},
 			},
-			wantStatusCode: http.StatusUnsupportedMediaType,
+			wantErr: "415: UnsupportedMediaType: : The content media type 'invalid' is not supported. Only 'application/json' is supported.",
 		},
 		{
-			name:   "Post request - supported media type",
-			method: http.MethodPut,
-			header: http.Header{
-				"Content-Type": []string{"application/json"},
-			},
-			wantStatusCode: http.StatusOK,
+			name: "non-GET request - empty media type allowed with empty body",
 		},
 		{
-			name:   "Put request - supported media type",
-			method: http.MethodPut,
-			header: http.Header{
-				"Content-Type": []string{"application/json"},
-			},
-			wantStatusCode: http.StatusOK,
+			name:    "non-GET request - empty media type not allowed with non-empty body",
+			body:    []byte("body"),
+			wantErr: "415: UnsupportedMediaType: : The content media type '' is not supported. Only 'application/json' is supported.",
 		},
 		{
-			name:   "Patch request - supported media type",
-			method: http.MethodPatch,
+			name: "non-GET request - valid media type allowed with empty body",
 			header: http.Header{
 				"Content-Type": []string{"application/json"},
 			},
-			wantStatusCode: http.StatusOK,
+		},
+		{
+			name: "non-GET request - valid media type allowed with non-empty body",
+			header: http.Header{
+				"Content-Type": []string{"application/json"},
+			},
+			body: []byte("body"),
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			w := httptest.NewRecorder()
-			r := mux.NewRouter()
-			path := "/test"
+	for _, tt := range tests {
+		methods := []string{http.MethodGet}
+		if !tt.isGet {
+			methods = []string{http.MethodPatch, http.MethodPost, http.MethodPatch}
+		}
 
-			GetTestHandler().AddRoute(r, path, test.method)
-			r.Use(Body)
+		for _, method := range methods {
+			t.Run(tt.name+"/"+method, func(t *testing.T) {
+				r, err := http.NewRequest(method, "", bytes.NewReader(tt.body))
+				if err != nil {
+					t.Fatal(err)
+				}
+				r.Header = tt.header
 
-			req := httptest.NewRequest(test.method, path, bytes.NewBuffer([]byte("")))
+				w := httptest.NewRecorder()
 
-			req.Header = test.header
+				Body(http.HandlerFunc(func(w http.ResponseWriter, _r *http.Request) {
+					r = _r
+				})).ServeHTTP(w, r)
 
-			r.ServeHTTP(w, req)
+				if tt.wantErr == "" {
+					if w.Code != http.StatusOK {
+						t.Error(w.Code)
+					}
 
-			if test.wantStatusCode != w.Code {
-				t.Errorf("test %s failed %d != %d", test.name, test.wantStatusCode, w.Code)
-			}
-		})
+					if w.Body.String() != "" {
+						t.Error(w.Body.String())
+					}
 
+					if !tt.isGet {
+						body := r.Context().Value(ContextKeyBody).([]byte)
+						if !bytes.Equal(body, tt.body) {
+							t.Error(string(body))
+						}
+					}
+
+				} else {
+					var cloudErr *api.CloudError
+					err = json.Unmarshal(w.Body.Bytes(), &cloudErr)
+					if err != nil {
+						t.Fatal(err)
+					}
+					cloudErr.StatusCode = w.Code
+
+					validate.CloudError(t, cloudErr)
+
+					if tt.wantErr != cloudErr.Error() {
+						t.Error(cloudErr)
+					}
+				}
+			})
+		}
 	}
 }

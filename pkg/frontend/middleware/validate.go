@@ -7,6 +7,7 @@ import (
 
 	"github.com/gorilla/mux"
 	uuid "github.com/satori/go.uuid"
+	"github.com/sirupsen/logrus"
 
 	"github.com/jim-minter/rp/pkg/api"
 )
@@ -24,13 +25,24 @@ func Validate(h http.Handler) http.Handler {
 		route := mux.CurrentRoute(r)
 
 		if route == nil {
+			if log, ok := r.Context().Value(ContextKeyLog).(*logrus.Entry); ok {
+				log.Error("route was nil")
+			}
 			api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
+			return
+		}
+
+		if r.URL.Path != strings.ToLower(r.URL.Path) {
+			if log, ok := r.Context().Value(ContextKeyLog).(*logrus.Entry); ok {
+				log.Error("path was not lower case")
+			}
+			api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
 			return
 		}
 
 		if _, found := vars["subscriptionId"]; found {
 			_, err := uuid.FromString(vars["subscriptionId"])
-			if err != nil || vars["subscriptionId"] != strings.ToLower(vars["subscriptionId"]) {
+			if err != nil {
 				api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeInvalidSubscriptionID, "", "The provided subscription identifier '%s' is malformed or invalid.", vars["subscriptionId"])
 				return
 			}

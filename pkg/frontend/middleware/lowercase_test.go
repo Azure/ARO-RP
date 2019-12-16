@@ -1,29 +1,26 @@
 package middleware
 
 import (
-	"bytes"
 	"net/http"
-	"net/http/httptest"
 	"testing"
-
-	"github.com/gorilla/mux"
 )
 
 func TestLowercase(t *testing.T) {
-	w := httptest.NewRecorder()
-	r := mux.NewRouter()
-	r.Use(Lowercase)
+	r, err := http.NewRequest(http.MethodGet, "/TEST", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	r.NewRoute().Path("/test").Methods(http.MethodGet).
-		HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-			rw.Write([]byte("ack"))
-		})
-	h := Lowercase(r)
+	Lowercase(http.HandlerFunc(func(w http.ResponseWriter, _r *http.Request) {
+		r = _r
+	})).ServeHTTP(nil, r)
 
-	req := httptest.NewRequest(http.MethodGet, "/TeST", bytes.NewBuffer([]byte("")))
-	h.ServeHTTP(w, req)
+	if r.URL.Path != "/test" {
+		t.Error(r.URL.Path)
+	}
 
-	if w.Body.String() != "ack" {
-		t.Errorf("path lowercase sensitivity test failed")
+	originalPath := r.Context().Value(ContextKeyOriginalPath).(string)
+	if originalPath != "/TEST" {
+		t.Error(originalPath)
 	}
 }
