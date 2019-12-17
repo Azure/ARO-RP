@@ -17,7 +17,7 @@ jobs:
     - name: Check out source
       uses: actions/checkout@v1
       with:
-        path: go/src/github.com/jim-minter/rp
+        path: go/src/github.com/Azure/ARO-RP
     - name: Test
       run: |
         set -x

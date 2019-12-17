@@ -15,7 +15,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 
-	"github.com/jim-minter/rp/pkg/util/restconfig"
+	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
 
 func find(xs interface{}, f func(int, int) bool) interface{} {

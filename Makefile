@@ -17,14 +17,14 @@ client: generate
 	sha256sum swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/preview/2019-12-31-preview/redhatopenshift.json >.sha256sum
 
 	sudo docker run \
-		-v $(PWD)/pkg/client:/github.com/jim-minter/rp/pkg/client:z \
+		-v $(PWD)/pkg/client:/github.com/Azure/ARO-RP/pkg/client:z \
 		-v $(PWD)/swagger:/swagger:z \
 		azuresdk/autorest \
 		--go \
 		--license-header=MICROSOFT_APACHE_NO_VERSION \
 		--namespace=redhatopenshift \
 		--input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/preview/2019-12-31-preview/redhatopenshift.json \
-		--output-folder=/github.com/jim-minter/rp/pkg/client/services/preview/redhatopenshift/mgmt/2019-12-31-preview/redhatopenshift
+		--output-folder=/github.com/Azure/ARO-RP/pkg/client/services/preview/redhatopenshift/mgmt/2019-12-31-preview/redhatopenshift
 
 	sudo docker run \
 		-v $(PWD)/python/client:/python/client:z \
@@ -42,7 +42,7 @@ client: generate
 	rm -rf python/client/azure/mgmt/redhatopenshift/v2019_12_31_preview/aio
 	>python/client/__init__.py
 
-	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/jim-minter/rp pkg/client
+	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/Azure/ARO-RP pkg/client
 
 generate:
 	go generate ./...
@@ -69,7 +69,7 @@ test-go: generate
 	go build ./...
 
 	gofmt -s -w cmd hack pkg
-	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/jim-minter/rp cmd hack pkg
+	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/Azure/ARO-RP cmd hack pkg
 	go run ./hack/validate-imports cmd hack pkg
 	go run ./hack/licenses
 	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)

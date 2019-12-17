@@ -4,7 +4,7 @@ package v20191231preview
 // Licensed under the Apache License 2.0.
 
 import (
-	"github.com/jim-minter/rp/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api"
 )
 
 // openShiftClusterToExternal returns a new external representation of the

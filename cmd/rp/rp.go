@@ -12,11 +12,11 @@ import (
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 
-	"github.com/jim-minter/rp/pkg/backend"
-	"github.com/jim-minter/rp/pkg/database"
-	"github.com/jim-minter/rp/pkg/env"
-	"github.com/jim-minter/rp/pkg/frontend"
-	utillog "github.com/jim-minter/rp/pkg/util/log"
+	"github.com/Azure/ARO-RP/pkg/backend"
+	"github.com/Azure/ARO-RP/pkg/database"
+	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/frontend"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
 var (

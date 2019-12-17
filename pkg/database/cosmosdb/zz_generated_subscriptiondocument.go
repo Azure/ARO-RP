@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	pkg "github.com/jim-minter/rp/pkg/api"
+	pkg "github.com/Azure/ARO-RP/pkg/api"
 )
 
 type subscriptionDocumentClient struct {

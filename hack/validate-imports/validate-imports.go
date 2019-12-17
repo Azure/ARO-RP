@@ -14,7 +14,7 @@ import (
 	"strings"
 )
 
-const local = "github.com/jim-minter/rp"
+const local = "github.com/Azure/ARO-RP"
 
 type importSpecs []*ast.ImportSpec
 

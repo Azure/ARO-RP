@@ -13,10 +13,10 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
 
-	"github.com/jim-minter/rp/pkg/api"
-	"github.com/jim-minter/rp/pkg/database"
-	"github.com/jim-minter/rp/pkg/env"
-	utillog "github.com/jim-minter/rp/pkg/util/log"
+	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database"
+	"github.com/Azure/ARO-RP/pkg/env"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
 func run(ctx context.Context, log *logrus.Entry) error {

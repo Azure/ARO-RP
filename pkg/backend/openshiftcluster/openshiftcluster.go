@@ -8,11 +8,11 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 
-	"github.com/jim-minter/rp/pkg/api"
-	"github.com/jim-minter/rp/pkg/database"
-	"github.com/jim-minter/rp/pkg/env"
-	"github.com/jim-minter/rp/pkg/util/azureclient/resources"
-	"github.com/jim-minter/rp/pkg/util/subnet"
+	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database"
+	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/resources"
+	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 type Manager struct {

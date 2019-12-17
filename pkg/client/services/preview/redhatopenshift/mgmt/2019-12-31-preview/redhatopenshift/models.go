@@ -27,7 +27,7 @@ import (
 )
 
 // The package's fully qualified name.
-const fqdn = "github.com/jim-minter/rp/pkg/client/services/preview/redhatopenshift/mgmt/2019-12-31-preview/redhatopenshift"
+const fqdn = "github.com/Azure/ARO-RP/pkg/client/services/preview/redhatopenshift/mgmt/2019-12-31-preview/redhatopenshift"
 
 // ProvisioningState enumerates the values for provisioning state.
 type ProvisioningState string

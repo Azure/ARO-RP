@@ -13,9 +13,9 @@ import (
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 
-	"github.com/jim-minter/rp/pkg/api"
-	"github.com/jim-minter/rp/pkg/database/cosmosdb"
-	"github.com/jim-minter/rp/pkg/frontend/middleware"
+	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
 
 func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Request) {

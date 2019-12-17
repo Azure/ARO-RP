@@ -8,7 +8,7 @@ import (
 	"testing"
 	"unicode"
 
-	"github.com/jim-minter/rp/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api"
 )
 
 func CloudError(t *testing.T, err error) *api.CloudError {

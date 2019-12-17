@@ -6,8 +6,8 @@ package middleware
 import (
 	"net/http"
 
-	"github.com/jim-minter/rp/pkg/api"
-	"github.com/jim-minter/rp/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
 )
 
 func Authenticated(env env.Interface) func(http.Handler) http.Handler {

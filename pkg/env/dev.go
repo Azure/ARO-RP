@@ -19,11 +19,11 @@ import (
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 
-	"github.com/jim-minter/rp/pkg/api"
-	"github.com/jim-minter/rp/pkg/util/azureclient/authorization"
-	"github.com/jim-minter/rp/pkg/util/clientauthorizer"
-	"github.com/jim-minter/rp/pkg/util/instancemetadata"
-	utilpermissions "github.com/jim-minter/rp/pkg/util/permissions"
+	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/authorization"
+	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
+	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
+	utilpermissions "github.com/Azure/ARO-RP/pkg/util/permissions"
 )
 
 type refreshableAuthorizer struct {

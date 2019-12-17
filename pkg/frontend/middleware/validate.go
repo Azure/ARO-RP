@@ -12,7 +12,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 
-	"github.com/jim-minter/rp/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api"
 )
 
 const (

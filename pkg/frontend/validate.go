@@ -8,8 +8,8 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 
-	"github.com/jim-minter/rp/pkg/api"
-	"github.com/jim-minter/rp/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 )
 
 func validateTerminalProvisioningState(state api.ProvisioningState) error {

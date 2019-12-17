@@ -20,7 +20,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	uuid "github.com/satori/go.uuid"
 
-	"github.com/jim-minter/rp/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/arm"
 )
 
 var apiVersions = map[string]string{

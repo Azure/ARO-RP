@@ -4,7 +4,7 @@ package swagger
 // Licensed under the Apache License 2.0.
 
 import (
-	"github.com/jim-minter/rp/pkg/util/orderedmap"
+	"github.com/Azure/ARO-RP/pkg/util/orderedmap"
 )
 
 // Swagger represents a Swagger object

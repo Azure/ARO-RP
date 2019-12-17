@@ -8,7 +8,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest"
 
-	"github.com/jim-minter/rp/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api"
 )
 
 const (

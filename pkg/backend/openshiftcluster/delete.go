@@ -10,7 +10,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest"
 
-	"github.com/jim-minter/rp/pkg/util/subnet"
+	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 func (m *Manager) Delete(ctx context.Context) error {

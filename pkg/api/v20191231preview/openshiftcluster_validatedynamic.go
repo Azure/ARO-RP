@@ -16,10 +16,10 @@ import (
 	"github.com/apparentlymart/go-cidr/cidr"
 	"github.com/dgrijalva/jwt-go"
 
-	"github.com/jim-minter/rp/pkg/api"
-	"github.com/jim-minter/rp/pkg/util/azureclient/authorization"
-	utilpermissions "github.com/jim-minter/rp/pkg/util/permissions"
-	"github.com/jim-minter/rp/pkg/util/subnet"
+	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/authorization"
+	utilpermissions "github.com/Azure/ARO-RP/pkg/util/permissions"
+	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 type azureClaim struct {

@@ -21,7 +21,7 @@
 1. Git clone this repository to your local machine:
 
    ```
-   go get github.com/jim-minter/rp/...
+   go get github.com/Azure/ARO-RP/...
    ```
 
 1. You will need the `Contributor` and `User Access Administrator` roles on your

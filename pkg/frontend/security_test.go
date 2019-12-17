@@ -13,9 +13,9 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/jim-minter/rp/pkg/env"
-	utiltls "github.com/jim-minter/rp/pkg/util/tls"
-	"github.com/jim-minter/rp/test/util/listener"
+	"github.com/Azure/ARO-RP/pkg/env"
+	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
+	"github.com/Azure/ARO-RP/test/util/listener"
 )
 
 func TestSecurity(t *testing.T) {

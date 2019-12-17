@@ -15,7 +15,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/openshift/installer/pkg/rhcos"
 
-	_ "github.com/jim-minter/rp/pkg/install"
+	_ "github.com/Azure/ARO-RP/pkg/install"
 )
 
 func run(ctx context.Context) error {

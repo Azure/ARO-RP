@@ -81,12 +81,12 @@ func Run(outputFile string) error {
 
 	populateExamples(s.Paths)
 
-	err := define(s.Definitions, "github.com/jim-minter/rp/pkg/api/v20191231preview", "OpenShiftClusterList", "OpenShiftClusterCredentials")
+	err := define(s.Definitions, "github.com/Azure/ARO-RP/pkg/api/v20191231preview", "OpenShiftClusterList", "OpenShiftClusterCredentials")
 	if err != nil {
 		return err
 	}
 
-	err = define(s.Definitions, "github.com/jim-minter/rp/pkg/api", "CloudError", "OperationList")
+	err = define(s.Definitions, "github.com/Azure/ARO-RP/pkg/api", "CloudError", "OperationList")
 	if err != nil {
 		return err
 	}

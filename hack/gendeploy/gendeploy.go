@@ -4,7 +4,7 @@ package main
 // Licensed under the Apache License 2.0.
 
 import (
-	"github.com/jim-minter/rp/pkg/deploy"
+	"github.com/Azure/ARO-RP/pkg/deploy"
 )
 
 func run() error {

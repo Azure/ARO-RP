@@ -14,8 +14,8 @@ import (
 	"github.com/openshift/installer/pkg/asset/password"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/jim-minter/rp/pkg/api"
-	"github.com/jim-minter/rp/pkg/util/restconfig"
+	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
 
 func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClusterDocument) error {

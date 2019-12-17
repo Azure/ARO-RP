@@ -11,9 +11,9 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/jim-minter/rp/pkg/api"
-	"github.com/jim-minter/rp/pkg/backend/openshiftcluster"
-	"github.com/jim-minter/rp/pkg/util/recover"
+	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/backend/openshiftcluster"
+	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
 type openShiftClusterBackend struct {

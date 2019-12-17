@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/jim-minter/rp/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api"
 )
 
 // Validate returns nil if v and w are identical, bar any differences on any

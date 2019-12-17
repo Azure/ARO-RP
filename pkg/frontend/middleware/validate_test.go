@@ -11,9 +11,9 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"github.com/jim-minter/rp/pkg/api"
-	_ "github.com/jim-minter/rp/pkg/api/v20191231preview"
-	"github.com/jim-minter/rp/test/validate"
+	"github.com/Azure/ARO-RP/pkg/api"
+	_ "github.com/Azure/ARO-RP/pkg/api/v20191231preview"
+	"github.com/Azure/ARO-RP/test/validate"
 )
 
 func TestValidate(t *testing.T) {

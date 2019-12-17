@@ -11,9 +11,9 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/jim-minter/rp/pkg/database"
-	"github.com/jim-minter/rp/pkg/env"
-	"github.com/jim-minter/rp/pkg/util/recover"
+	"github.com/Azure/ARO-RP/pkg/database"
+	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
 const (

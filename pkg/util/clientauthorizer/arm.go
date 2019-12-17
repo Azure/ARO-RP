@@ -15,7 +15,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/jim-minter/rp/pkg/util/recover"
+	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
 type metadata struct {

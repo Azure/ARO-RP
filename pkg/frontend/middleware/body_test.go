@@ -10,8 +10,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/jim-minter/rp/pkg/api"
-	"github.com/jim-minter/rp/test/validate"
+	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/test/validate"
 )
 
 func TestBody(t *testing.T) {

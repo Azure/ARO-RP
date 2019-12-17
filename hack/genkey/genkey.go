@@ -11,7 +11,7 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/jim-minter/rp/pkg/util/tls"
+	"github.com/Azure/ARO-RP/pkg/util/tls"
 )
 
 var (

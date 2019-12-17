@@ -6,7 +6,7 @@ package main
 import (
 	"flag"
 
-	"github.com/jim-minter/rp/pkg/swagger"
+	"github.com/Azure/ARO-RP/pkg/swagger"
 )
 
 var (

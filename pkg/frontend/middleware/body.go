@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/jim-minter/rp/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api"
 )
 
 func Body(h http.Handler) http.Handler {

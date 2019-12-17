@@ -15,12 +15,12 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
-	"github.com/jim-minter/rp/pkg/api"
-	_ "github.com/jim-minter/rp/pkg/api/v20191231preview"
-	"github.com/jim-minter/rp/pkg/database"
-	"github.com/jim-minter/rp/pkg/env"
-	"github.com/jim-minter/rp/pkg/frontend/middleware"
-	"github.com/jim-minter/rp/pkg/util/recover"
+	"github.com/Azure/ARO-RP/pkg/api"
+	_ "github.com/Azure/ARO-RP/pkg/api/v20191231preview"
+	"github.com/Azure/ARO-RP/pkg/database"
+	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
 type noContent struct{}

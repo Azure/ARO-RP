@@ -10,9 +10,9 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
-	"github.com/jim-minter/rp/pkg/api"
-	"github.com/jim-minter/rp/pkg/database/cosmosdb"
-	"github.com/jim-minter/rp/pkg/frontend/middleware"
+	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
 
 func (f *frontend) getOpenShiftCluster(w http.ResponseWriter, r *http.Request) {

@@ -6,7 +6,7 @@ package frontend
 import (
 	"net/http"
 
-	"github.com/jim-minter/rp/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api"
 )
 
 func (f *frontend) getReady(w http.ResponseWriter, r *http.Request) {

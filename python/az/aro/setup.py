@@ -45,7 +45,7 @@ setup(
     description='Microsoft Azure Command-Line Tools ARO Extension',
     author='Red Hat, Inc.',
     author_email='support@redhat.com',
-    url='https://github.com/jim-minter/rp',
+    url='https://github.com/Azure/ARO-RP',
     long_description=README + '\n\n' + HISTORY,
     license='Apache',
     classifiers=CLASSIFIERS,

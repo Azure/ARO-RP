@@ -14,9 +14,9 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/sirupsen/logrus"
 
-	"github.com/jim-minter/rp/pkg/util/clientauthorizer"
-	"github.com/jim-minter/rp/pkg/util/dns"
-	"github.com/jim-minter/rp/pkg/util/instancemetadata"
+	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
+	"github.com/Azure/ARO-RP/pkg/util/dns"
+	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 )
 
 type Interface interface {

@@ -12,7 +12,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest"
 
-	"github.com/jim-minter/rp/pkg/util/clientauthorizer"
+	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 )
 
 type test struct {

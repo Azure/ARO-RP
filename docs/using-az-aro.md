@@ -25,7 +25,7 @@ against a development RP running at https://localhost:8443/.
 1. Git clone this repository to your local machine:
 
    ```
-   git clone https://github.com/jim-minter/rp
+   git clone https://github.com/Azure/ARO-RP
    cd rp
    ```
 

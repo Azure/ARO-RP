@@ -25,10 +25,10 @@ import (
 	"github.com/openshift/installer/pkg/asset/targets"
 	uuid "github.com/satori/go.uuid"
 
-	"github.com/jim-minter/rp/pkg/api"
-	"github.com/jim-minter/rp/pkg/env"
-	"github.com/jim-minter/rp/pkg/util/arm"
-	"github.com/jim-minter/rp/pkg/util/subnet"
+	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 var apiVersions = map[string]string{

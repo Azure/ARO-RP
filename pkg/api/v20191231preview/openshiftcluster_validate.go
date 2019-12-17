@@ -13,9 +13,9 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	uuid "github.com/satori/go.uuid"
 
-	"github.com/jim-minter/rp/pkg/api"
-	"github.com/jim-minter/rp/pkg/util/immutable"
-	"github.com/jim-minter/rp/pkg/util/subnet"
+	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/immutable"
+	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 var (

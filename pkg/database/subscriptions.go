@@ -11,8 +11,8 @@ import (
 
 	uuid "github.com/satori/go.uuid"
 
-	"github.com/jim-minter/rp/pkg/api"
-	"github.com/jim-minter/rp/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 )
 
 type subscriptions struct {

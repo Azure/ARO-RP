@@ -23,9 +23,9 @@ import (
 	"golang.org/x/crypto/ssh"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/jim-minter/rp/pkg/api"
-	"github.com/jim-minter/rp/pkg/install"
-	"github.com/jim-minter/rp/pkg/util/subnet"
+	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/install"
+	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 func (m *Manager) Create(ctx context.Context) error {

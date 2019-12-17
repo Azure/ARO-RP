@@ -1,4 +1,4 @@
-# github.com/jim-minter/rp
+# Azure Red Hat OpenShift Resource Provider
 
 ## Notice
 
