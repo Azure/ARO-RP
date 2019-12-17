@@ -2,12 +2,12 @@
 
 
 [[projects]]
-  digest = "1:26ee1e365ea8f312ee11e170fc6675bac0dd3d4adf2406e753d0a43527e1afb8"
+  digest = "1:3dd9912f6fdb0feaf39dde946262ba20a3c744cf157b2a3a7d8fb84a974d0345"
   name = "cloud.google.com/go"
   packages = ["compute/metadata"]
   pruneopts = "UT"
-  revision = "d1ee711ee996fa74abaffbdb572963f368f215a9"
-  version = "v0.49.0"
+  revision = "e5804108aed715c49f731aab1a847f063fb23681"
+  version = "v0.50.0"
 
 [[projects]]
   digest = "1:ed00ff571a71da02f8ba862eb314ff003c276b0fb33563dfe1536c184b7fa854"
@@ -107,7 +107,7 @@
   version = "v1.0.1"
 
 [[projects]]
-  digest = "1:9fab5b17657bdbcfd1a33f79b5898b160673184aa39c92bfe41709c3d48288d8"
+  digest = "1:73cda6c53c0201aa46c7b3c2b327bb0272de50312f3dbae91845f6dd29ca6532"
   name = "github.com/aws/aws-sdk-go"
   packages = [
     "aws",
@@ -153,8 +153,8 @@
     "service/sts/stsiface",
   ]
   pruneopts = "UT"
-  revision = "65f671578f7e006706e6e28804a8b016cb4fbefb"
-  version = "v1.26.0"
+  revision = "159facb5f5d95b49552461ea9097486b801ec86d"
+  version = "v1.26.4"
 
 [[projects]]
   digest = "1:5f9ab5eeb3788ba8945f9acb2755fba44c3bfefdc95fae477bf6cdc790cab525"
@@ -359,7 +359,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:b4a32a0f263341ec52be25f0c0de51cee5ff37e5ca4a2b9bd31c264ee7009fbb"
+  digest = "1:c94a92a282583ad27d45dd80cdd61a7e36603cf2a49f58a4c20ebb096dc1cec1"
   name = "github.com/gophercloud/gophercloud"
   packages = [
     ".",
@@ -381,7 +381,7 @@
     "pagination",
   ]
   pruneopts = "UT"
-  revision = "f940f50ff1f774107ecff13425265c5361682f74"
+  revision = "a06ca8757f510f228c85598a663f2a1ea361240c"
 
 [[projects]]
   branch = "master"
@@ -392,7 +392,7 @@
     "openstack/clientconfig",
   ]
   pruneopts = "UT"
-  revision = "463e26ffa30d81795505c9773498d3566d4212d8"
+  revision = "4533a07bd4928c54878134528d0dcdd27ff32bcb"
 
 [[projects]]
   digest = "1:cbec35fe4d5a4fba369a656a8cd65e244ea2c743007d8f6c1ccb132acf9d1296"
@@ -582,7 +582,7 @@
     "operator/v1alpha1",
   ]
   pruneopts = "UT"
-  revision = "1537aa86567a5d75725bdba96c2439f0d16469d2"
+  revision = "73a708d0631c7acd8be89592ea4c578c405fa7c0"
 
 [[projects]]
   branch = "release-4.3"
@@ -632,7 +632,7 @@
     "pkg/apis/gcpprovider/v1beta1",
   ]
   pruneopts = "UT"
-  revision = "2fe1cf06b7761acb220a57c941b00ea2f9f0cead"
+  revision = "d4e098e238eb0250f6928ea1f011b6283116d317"
 
 [[projects]]
   branch = "master"
@@ -643,11 +643,11 @@
     "pkg/apis/libvirtproviderconfig/v1beta1",
   ]
   pruneopts = "UT"
-  revision = "c32e2ea813cf282e2d85e24e882ed3e2e897f500"
+  revision = "703d6832962973b1e1eb09a3a3b92912569fa4a4"
 
 [[projects]]
   branch = "release-4.3-azure"
-  digest = "1:67bc68a29b8ea40b9e97312c630c9e06ecf9975273a0b65c69e20cd8a0ff4ea8"
+  digest = "1:10a7cb51d6a5d98e106fdfe33b52974394eae63e92ee2f327b7cd245af0f36e4"
   name = "github.com/openshift/installer"
   packages = [
     "data",
@@ -732,19 +732,19 @@
     "pkg/version",
   ]
   pruneopts = "T"
-  revision = "beef98861d06baa98224b622a24b6f252a8ef3f9"
+  revision = "af05053de0283586eeea73cece358b223878d146"
   source = "https://github.com/jim-minter/installer"
 
 [[projects]]
   branch = "master"
-  digest = "1:cce9f8087dc6e96ad7beac0c8def853104c6b7e3bd7a58ddf590a946e65f785b"
+  digest = "1:a5ddbf6e812bd49d5965c07851fa691b325bdcef59bf70ff9b3de51e30e80682"
   name = "github.com/openshift/machine-api-operator"
   packages = [
     "pkg/apis/machine",
     "pkg/apis/machine/v1beta1",
   ]
   pruneopts = "UT"
-  revision = "addf3f6b24d57917ed6b96042937084072fd2c0b"
+  revision = "a9f87599116276ad71cf5277985a9bf21314b137"
 
 [[projects]]
   branch = "release-4.3"
@@ -752,7 +752,7 @@
   name = "github.com/openshift/machine-config-operator"
   packages = ["pkg/apis/machineconfiguration.openshift.io/v1"]
   pruneopts = "UT"
-  revision = "2789973d61a0011415e2d019c09bbcb0f1bd3383"
+  revision = "80c8aed7f7b2d68070d8c5902d1fa89ed95e370c"
 
 [[projects]]
   digest = "1:c7d8ecc4e8f2843096c784e55a221446cb944b9e728fb42e9272a9ad2996c780"
@@ -971,7 +971,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:1d56cb60dfda6d194afd502bbda8b975ad966d5998502e7d68097f314c2f705d"
+  digest = "1:1bd088f53218b35490c90837bf2f474ddf4c7f1a3dd2c89846092ad237f35ce5"
   name = "golang.org/x/tools"
   packages = [
     "cmd/goimports",
@@ -988,7 +988,7 @@
     "internal/semver",
   ]
   pruneopts = "UT"
-  revision = "dfebd2802ad38c7b8e5972cd02d0283b105433f5"
+  revision = "210e553fe1f64b5f29af9b359e51cb5216e1cd8e"
 
 [[projects]]
   digest = "1:f3661f6218166acf60f5d551b44a537f7ecb8686be02ece061c5950cbfc9ba17"
@@ -1034,13 +1034,14 @@
   name = "google.golang.org/genproto"
   packages = ["googleapis/rpc/status"]
   pruneopts = "UT"
-  revision = "0243a4be9c8f1264d238fdc2895620b4d9baf9e1"
+  revision = "b31c10ee225f87dbb9f5f878ead9d64f34f5cbbb"
 
 [[projects]]
-  digest = "1:b59ce3ddb11daeeccccc9cb3183b58ebf8e9a779f1c853308cd91612e817a301"
+  digest = "1:3fe55026bb11519b45c0fc9d848fd779028b868dc62f5563c518cf850c7421d5"
   name = "google.golang.org/grpc"
   packages = [
     ".",
+    "attributes",
     "backoff",
     "balancer",
     "balancer/base",
@@ -1077,8 +1078,8 @@
     "tap",
   ]
   pruneopts = "UT"
-  revision = "1a3960e4bd028ac0cec0a2afd27d7d8e67c11514"
-  version = "v1.25.1"
+  revision = "f5b0812e6fe574d90da76b205e9eb51f6ddb1919"
+  version = "v1.26.0"
 
 [[projects]]
   digest = "1:d95ba5ef55d8b2cdb896d1196efd1859b62c64829b1098c8b8cc395dd34fd25c"
@@ -1318,7 +1319,7 @@
     "pkg/apis/awsproviderconfig/v1beta1",
   ]
   pruneopts = "UT"
-  revision = "07a8fd7b9920bcc9c6e6e0ef37529f0b3969836f"
+  revision = "52379b4ad74a8299e73e194e9c7cad7cc36489a4"
   source = "https://github.com/openshift/cluster-api-provider-aws.git"
 
 [[projects]]
@@ -1391,6 +1392,7 @@
     "github.com/BurntSushi/toml",
     "github.com/alvaroloes/enumer",
     "github.com/apparentlymart/go-cidr/cidr",
+    "github.com/dgrijalva/jwt-go",
     "github.com/golang/mock/gomock",
     "github.com/golang/mock/mockgen",
     "github.com/gorilla/mux",
@@ -1417,6 +1419,7 @@
     "github.com/openshift/installer/pkg/asset/templates/content/openshift",
     "github.com/openshift/installer/pkg/asset/tls",
     "github.com/openshift/installer/pkg/ipnet",
+    "github.com/openshift/installer/pkg/rhcos",
     "github.com/openshift/installer/pkg/types",
     "github.com/openshift/installer/pkg/types/azure",
     "github.com/openshift/installer/pkg/types/openstack/validation",

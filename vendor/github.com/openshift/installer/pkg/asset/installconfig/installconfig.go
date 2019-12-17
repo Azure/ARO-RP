@@ -160,7 +160,7 @@ func (a *InstallConfig) finish(filename string, platformCreds *PlatformCreds) er
 func (a *InstallConfig) platformValidation(platformCreds *PlatformCreds) error {
 	if a.Config.Platform.Azure != nil {
 		var credentials *icazure.Credentials
-		if platformCreds != nil && platformCreds.Azure != nil {
+		if platformCreds != nil {
 			credentials = platformCreds.Azure
 		}
 		client, err := icazure.NewClient(context.TODO(), credentials)

@@ -21,7 +21,7 @@ const (
 )
 
 // Machines returns a list of machines for a machinepool.
-func Machines(clusterID string, config *types.InstallConfig, pool *types.MachinePool, osImage, role, userDataSecret string, isARO bool) ([]machineapi.Machine, error) {
+func Machines(clusterID string, config *types.InstallConfig, pool *types.MachinePool, osImage, role, userDataSecret string) ([]machineapi.Machine, error) {
 	if configPlatform := config.Platform.Name(); configPlatform != azure.Name {
 		return nil, fmt.Errorf("non-Azure configuration: %q", configPlatform)
 	}
@@ -47,7 +47,7 @@ func Machines(clusterID string, config *types.InstallConfig, pool *types.Machine
 		if len(azs) > 0 {
 			azIndex = int(idx) % len(azs)
 		}
-		provider, err := provider(platform, mpool, osImage, userDataSecret, clusterID, role, &azIndex, isARO)
+		provider, err := provider(platform, mpool, osImage, userDataSecret, clusterID, role, &azIndex)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create provider")
 		}
@@ -79,7 +79,7 @@ func Machines(clusterID string, config *types.InstallConfig, pool *types.Machine
 	return machines, nil
 }
 
-func provider(platform *azure.Platform, mpool *azure.MachinePool, osImage string, userDataSecret string, clusterID string, role string, azIdx *int, isARO bool) (*azureprovider.AzureMachineProviderSpec, error) {
+func provider(platform *azure.Platform, mpool *azure.MachinePool, osImage string, userDataSecret string, clusterID string, role string, azIdx *int) (*azureprovider.AzureMachineProviderSpec, error) {
 	var az *string
 	if len(mpool.Zones) > 0 && azIdx != nil {
 		az = &mpool.Zones[*azIdx]
@@ -90,7 +90,7 @@ func provider(platform *azure.Platform, mpool *azure.MachinePool, osImage string
 		return nil, err
 	}
 
-	p := &azureprovider.AzureMachineProviderSpec{
+	spec := &azureprovider.AzureMachineProviderSpec{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "azureproviderconfig.openshift.io/v1beta1",
 			Kind:       "AzureMachineProviderSpec",
@@ -111,16 +111,32 @@ func provider(platform *azure.Platform, mpool *azure.MachinePool, osImage string
 		},
 		Zone:                 az,
 		Subnet:               subnet,
+		ManagedIdentity:      fmt.Sprintf("%s-identity", clusterID),
 		Vnet:                 virtualNetwork,
 		ResourceGroup:        platform.ResourceGroupName,
 		NetworkResourceGroup: networkResourceGroup,
 	}
 
-	if !isARO {
-		p.ManagedIdentity = fmt.Sprintf("%s-identity", clusterID)
+	if platform.Image != nil {
+		if platform.Image.ResourceID != "" {
+			spec.Image = azureprovider.Image{
+				ResourceID: platform.Image.ResourceID,
+			}
+		} else {
+			spec.Image = azureprovider.Image{
+				Publisher: platform.Image.Publisher,
+				Offer:     platform.Image.Offer,
+				SKU:       platform.Image.SKU,
+				Version:   platform.Image.Version,
+			}
+		}
 	}
 
-	return p, nil
+	if platform.ARO {
+		spec.ManagedIdentity = ""
+	}
+
+	return spec, nil
 }
 
 // ConfigMasters sets the PublicIP flag and assigns a set of load balancers to the given machines
