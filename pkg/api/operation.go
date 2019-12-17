@@ -1,5 +1,8 @@
 package api
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 // OperationList represents an operation list.
 type OperationList struct {
 	// List of operations supported by the resource provider.

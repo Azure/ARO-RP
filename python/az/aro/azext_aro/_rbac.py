@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the Apache License 2.0.
+
 import uuid
 
 from azure.cli.core.commands.client_factory import get_mgmt_service_client

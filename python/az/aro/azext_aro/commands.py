@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the Apache License 2.0.
+
 from azure.cli.core.commands import CliCommandType
 from azext_aro._client_factory import cf_aro
 from azext_aro._format import aro_show_table_format

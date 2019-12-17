@@ -1,5 +1,8 @@
 package arm
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 // Template represents an ARM template
 type Template struct {
 	Schema         string                        `json:"$schema,omitempty"`

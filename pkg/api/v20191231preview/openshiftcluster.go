@@ -1,5 +1,8 @@
 package v20191231preview
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 // OpenShiftClusterList represents a list of OpenShift clusters.
 type OpenShiftClusterList struct {
 	// The list of OpenShift clusters.

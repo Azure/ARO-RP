@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the Apache License 2.0.
+
 import urllib3
 
 from azext_aro.custom import rp_mode_development

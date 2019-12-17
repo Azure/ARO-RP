@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the Apache License 2.0.
+
 import os
 
 import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2019_12_31_preview.models as v2019_12_31_preview

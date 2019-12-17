@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the Apache License 2.0.
+
 from azext_aro._client_factory import cf_aro
 from azext_aro._params import load_arguments
 from azext_aro.commands import load_command_table

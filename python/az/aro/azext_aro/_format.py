@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the Apache License 2.0.
+
 import collections
 
 from msrestazure.tools import parse_resource_id

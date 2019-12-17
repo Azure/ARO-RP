@@ -1,5 +1,8 @@
 package api
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 // MissingFields retains values that do not map to struct fields during JSON
 // marshalling/unmarshalling.  MissingFields implements
 // github.com/ugorji/go/codec.MissingFielder.

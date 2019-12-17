@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+# Copyright (c) Microsoft Corporation.
+# Licensed under the Apache License 2.0.
+
 from codecs import open
 from setuptools import setup, find_packages
 try:
