@@ -8,7 +8,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     env:
-      GOPATH: /home/runner/work/rp/go
+      GOPATH: /home/runner/work/ARO-RP/go
     steps:
     - name: Set up Go
       uses: actions/setup-go@v1

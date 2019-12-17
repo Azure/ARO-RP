@@ -157,7 +157,7 @@ def validate_vnet(cmd, namespace):
 
 def validate_vnet_resource_group_name(namespace):
     if not namespace.vnet_resource_group_name:
-        namespace.vnet_resource_group_name = namespace.validate_vnet_resource_group_name
+        namespace.vnet_resource_group_name = namespace.resource_group_name
 
 
 def validate_worker_count(namespace):
