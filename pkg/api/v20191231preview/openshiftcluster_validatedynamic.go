@@ -9,12 +9,14 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/apparentlymart/go-cidr/cidr"
 	"github.com/dgrijalva/jwt-go"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/authorization"
@@ -90,7 +92,10 @@ func (dv *dynamicValidator) validateServicePrincipalProfile() (autorest.Authoriz
 		return nil, err
 	}
 
-	err = token.EnsureFresh()
+	wait.PollImmediate(time.Second, 30*time.Second, func() (done bool, err error) {
+		err = token.EnsureFresh()
+		return err == nil, nil
+	})
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalCredentials, "properties.servicePrincipalProfile", "The provided service principal credentials are invalid.")
 	}
@@ -108,7 +113,10 @@ func (dv *dynamicValidator) validateServicePrincipalRole() error {
 		return err
 	}
 
-	err = token.EnsureFresh()
+	wait.PollImmediate(time.Second, 30*time.Second, func() (done bool, err error) {
+		err = token.EnsureFresh()
+		return err == nil, nil
+	})
 	if err != nil {
 		return err
 	}

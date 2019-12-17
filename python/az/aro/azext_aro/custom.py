@@ -1,6 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the Apache License 2.0.
 
+import time
 import os
 
 import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2019_12_31_preview.models as v2019_12_31_preview
@@ -42,7 +43,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
     aad = AADManager(cmd.cli_ctx)
     if client_id is None:
         app, client_secret = aad.createManagedApplication(
-            "aro-%s-%s-%s" % (subscription_id, resource_group_name, resource_name))
+            "aro-%d-%s-%s-%s" % (time.time(), subscription_id, resource_group_name, resource_name))
         client_id = app.app_id
 
     client_sp = aad.getServicePrincipal(client_id)
