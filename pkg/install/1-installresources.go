@@ -487,23 +487,6 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 					},
 				},
 				{
-					Resource: &compute.Image{
-						ImageProperties: &compute.ImageProperties{
-							StorageProfile: &compute.ImageStorageProfile{
-								OsDisk: &compute.ImageOSDisk{
-									OsType:  compute.Linux,
-									BlobURI: to.StringPtr("https://cluster" + doc.OpenShiftCluster.Properties.StorageSuffix + ".blob.core.windows.net/vhd/rhcos" + doc.OpenShiftCluster.Properties.StorageSuffix + ".vhd"),
-								},
-							},
-							HyperVGeneration: compute.HyperVGenerationTypesV1,
-						},
-						Name:     to.StringPtr("aro"),
-						Type:     to.StringPtr("Microsoft.Compute/images"),
-						Location: &installConfig.Config.Azure.Region,
-					},
-					APIVersion: apiVersions["compute"],
-				},
-				{
 					Resource: &compute.VirtualMachine{
 						VirtualMachineProperties: &compute.VirtualMachineProperties{
 							HardwareProfile: &compute.HardwareProfile{
@@ -511,7 +494,10 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 							},
 							StorageProfile: &compute.StorageProfile{
 								ImageReference: &compute.ImageReference{
-									ID: to.StringPtr("[resourceId('Microsoft.Compute/images', 'aro')]"),
+									Publisher: &installConfig.Config.Azure.Image.Publisher,
+									Offer:     &installConfig.Config.Azure.Image.Offer,
+									Sku:       &installConfig.Config.Azure.Image.SKU,
+									Version:   &installConfig.Config.Azure.Image.Version,
 								},
 								OsDisk: &compute.OSDisk{
 									Name:         to.StringPtr("aro-bootstrap_OSDisk"),
@@ -553,7 +539,6 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 					APIVersion: apiVersions["compute"],
 					DependsOn: []string{
 						"[concat('Microsoft.Authorization/roleAssignments/', guid(resourceGroup().id, 'SP / Contributor'))]",
-						"Microsoft.Compute/images/aro",
 						"Microsoft.Network/networkInterfaces/aro-bootstrap-nic",
 						"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/virtualNetworkLinks/" + installConfig.Config.ObjectMeta.Name + "-network-link",
 					},
@@ -566,7 +551,10 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 							},
 							StorageProfile: &compute.StorageProfile{
 								ImageReference: &compute.ImageReference{
-									ID: to.StringPtr("[resourceId('Microsoft.Compute/images', 'aro')]"),
+									Publisher: &installConfig.Config.Azure.Image.Publisher,
+									Offer:     &installConfig.Config.Azure.Image.Offer,
+									Sku:       &installConfig.Config.Azure.Image.SKU,
+									Version:   &installConfig.Config.Azure.Image.Version,
 								},
 								OsDisk: &compute.OSDisk{
 									Name:         to.StringPtr("[concat('aro-master-', copyIndex(), '_OSDisk')]"),
@@ -615,7 +603,6 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 					},
 					DependsOn: []string{
 						"[concat('Microsoft.Authorization/roleAssignments/', guid(resourceGroup().id, 'SP / Contributor'))]",
-						"Microsoft.Compute/images/aro",
 						"[concat('Microsoft.Network/networkInterfaces/aro-master', copyIndex(), '-nic')]",
 						"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/virtualNetworkLinks/" + installConfig.Config.ObjectMeta.Name + "-network-link",
 					},

@@ -41,6 +41,10 @@ upstream OCP.
   Enabling CloudProviderRateLimit seems to get us into serious problems with the
   LoadBalancer reconciliation logic.
 
+* CARRY: allow VM image to be overriden
+
+  This commit enables ARO to use platform-published VM images.
+
 
 ## Installation differences
 
@@ -53,3 +57,5 @@ upstream OCP.
 
 * API server public IP domain name label is an 8 character random label, not the
   infraID
+
+* ARO uses first party RHCOS OS images published by Microsoft.
