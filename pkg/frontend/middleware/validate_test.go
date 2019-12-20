@@ -53,7 +53,7 @@ func TestValidate(t *testing.T) {
 		{
 			name:    "invalid openShiftClusters - subscriptionId",
 			path:    "/subscriptions/invalid/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/cluster?api-version=2019-12-31-preview",
-			wantErr: "404: CloudErrorCodeInvalidSubscriptionID: : The provided subscription identifier 'invalid' is malformed or invalid.",
+			wantErr: "404: InvalidSubscriptionID: : The provided subscription identifier 'invalid' is malformed or invalid.",
 		},
 		{
 			name:    "invalid openShiftClusters - resourceGroupName",
@@ -101,7 +101,7 @@ func TestValidate(t *testing.T) {
 		{
 			name:    "invalid subscriptions - subscriptionId",
 			path:    "/subscriptions/invalid?api-version=2.0",
-			wantErr: "404: CloudErrorCodeInvalidSubscriptionID: : The provided subscription identifier 'invalid' is malformed or invalid.",
+			wantErr: "404: InvalidSubscriptionID: : The provided subscription identifier 'invalid' is malformed or invalid.",
 		},
 	}
 
