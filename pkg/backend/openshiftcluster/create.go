@@ -8,14 +8,17 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/base64"
+	"fmt"
 	"math/big"
 	"os"
+	"regexp"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	icazure "github.com/openshift/installer/pkg/asset/installconfig/azure"
 	"github.com/openshift/installer/pkg/ipnet"
+	"github.com/openshift/installer/pkg/rhcos"
 	"github.com/openshift/installer/pkg/types"
 	azuretypes "github.com/openshift/installer/pkg/types/azure"
 	openstackvalidation "github.com/openshift/installer/pkg/types/openstack/validation"
@@ -152,11 +155,17 @@ func (m *Manager) Create(ctx context.Context) error {
 					VirtualNetwork:              vnetr.ResourceName,
 					ControlPlaneSubnet:          masterSubnetName,
 					ComputeSubnet:               workerSubnetName,
+					ARO:                         true,
 				},
 			},
 			PullSecret: string(os.Getenv("PULL_SECRET")),
 			Publish:    types.ExternalPublishingStrategy,
 		},
+	}
+
+	installConfig.Config.Azure.Image, err = getImage(ctx)
+	if err != nil {
+		return err
 	}
 
 	err = validation.ValidateInstallConfig(installConfig.Config, openstackvalidation.NewValidValuesFetcher()).ToAggregate()
@@ -165,6 +174,28 @@ func (m *Manager) Create(ctx context.Context) error {
 	}
 
 	return install.NewInstaller(m.log, m.env, m.db, m.fpAuthorizer, r.SubscriptionID).Install(ctx, m.doc, installConfig, platformCreds)
+}
+
+var rxRHCOS = regexp.MustCompile(`rhcos-((\d+)\.\d+\.\d{8})\d{4}\.\d+-azure\.x86_64\.vhd`)
+
+func getImage(ctx context.Context) (*azuretypes.Image, error) {
+	// https://rhcos.blob.core.windows.net/imagebucket/rhcos-43.81.201911221453.0-azure.x86_64.vhd
+	osImage, err := rhcos.VHD(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	m := rxRHCOS.FindStringSubmatch(osImage)
+	if m == nil {
+		return nil, fmt.Errorf("couldn't match osImage %q", osImage)
+	}
+
+	return &azuretypes.Image{
+		Publisher: "azureopenshift",
+		Offer:     "aro4",
+		SKU:       "aro_" + m[2], // "aro_43"
+		Version:   m[1],          // "43.81.20191122"
+	}, nil
 }
 
 func randomDomainName() (string, error) {

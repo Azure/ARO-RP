@@ -15,13 +15,11 @@ import (
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
 	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
-	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/ignition/bootstrap"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/kubeconfig"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
-	"github.com/openshift/installer/pkg/asset/rhcos"
 	"github.com/openshift/installer/pkg/asset/targets"
 	uuid "github.com/satori/go.uuid"
 
@@ -73,7 +71,6 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 
 	adminClient := g[reflect.TypeOf(&kubeconfig.AdminClient{})].(*kubeconfig.AdminClient)
 	bootstrap := g[reflect.TypeOf(&bootstrap.Bootstrap{})].(*bootstrap.Bootstrap)
-	rhcosImage := g[reflect.TypeOf(new(rhcos.Image))].(*rhcos.Image)
 
 	i.log.Print("creating resource group")
 	group := resources.Group{
@@ -110,17 +107,6 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 						Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
 					},
 					APIVersion: apiVersions["storage"],
-				},
-				{
-					// should go away when we use a cloud partner image
-					Resource: &storage.BlobContainer{
-						Name: to.StringPtr("cluster" + doc.OpenShiftCluster.Properties.StorageSuffix + "/default/vhd"),
-						Type: to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
-					},
-					APIVersion: apiVersions["storage"],
-					DependsOn: []string{
-						"Microsoft.Storage/storageAccounts/cluster" + doc.OpenShiftCluster.Properties.StorageSuffix,
-					},
 				},
 				{
 					Resource: &storage.BlobContainer{
@@ -205,23 +191,6 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 
 	{
 		blobService, err := i.getBlobService(ctx, doc.OpenShiftCluster)
-		if err != nil {
-			return err
-		}
-
-		// blob copying should go away when we use a cloud partner image
-		i.log.Print("copying rhcos blob")
-		rhcosVhd := blobService.GetContainerReference("vhd").GetBlobReference("rhcos" + doc.OpenShiftCluster.Properties.StorageSuffix + ".vhd")
-		err = rhcosVhd.Copy(string(*rhcosImage), nil)
-		if err != nil {
-			return err
-		}
-
-		rhcosVhd.Metadata = azstorage.BlobMetadata{
-			"source_uri": "var.azure_image_url", // https://github.com/openshift/installer/pull/2468
-		}
-
-		err = rhcosVhd.SetMetadata(nil)
 		if err != nil {
 			return err
 		}
