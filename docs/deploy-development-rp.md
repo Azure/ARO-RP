@@ -233,6 +233,12 @@
 
 ## Debugging
 
+* SSH to the bootstrap node:
+
+  ```
+  hack/ssh-bootstrap.sh "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER"
+  ```
+
 * Get an admin kubeconfig:
 
   ```
@@ -241,8 +247,8 @@
   oc version
   ```
 
-* SSH to the bootstrap node:
+* "SSH" to a cluster node:
 
   ```
-  hack/ssh-bootstrap.sh "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER"
+  hack/ssh.sh [aro-master-0]
   ```
