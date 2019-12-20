@@ -144,7 +144,7 @@ func populateTopLevelPaths(resourceProviderNamespace, resourceType, friendlyName
 			Description:          "Deletes a " + friendlyName + " with the specified subscription, resource group and resource name.  The operation returns nothing.",
 			OperationID:          strings.Title(resourceType) + "s_Delete",
 			Parameters:           populateParameters(3, strings.Title(resourceType), friendlyName),
-			Responses:            populateResponses(strings.Title(resourceType), true, http.StatusOK, http.StatusNoContent),
+			Responses:            populateResponses(strings.Title(resourceType), true, http.StatusAccepted, http.StatusNoContent),
 			LongRunningOperation: true,
 		},
 		Patch: &Operation{

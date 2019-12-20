@@ -6,6 +6,7 @@ package frontend
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -23,9 +24,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
-type noContent struct{}
+type statusCodeError int
 
-func (noContent) Error() string { return "" }
+func (err statusCodeError) Error() string {
+	return fmt.Sprintf("%d", err)
+}
 
 type frontend struct {
 	baseLog *logrus.Entry
@@ -216,8 +219,8 @@ func reply(log *logrus.Entry, w http.ResponseWriter, b []byte, err error) {
 		switch err := err.(type) {
 		case *api.CloudError:
 			api.WriteCloudError(w, err)
-		case *noContent:
-			w.WriteHeader(http.StatusNoContent)
+		case statusCodeError:
+			w.WriteHeader(int(err))
 		default:
 			log.Error(err)
 			api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")

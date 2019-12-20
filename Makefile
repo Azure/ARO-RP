@@ -39,6 +39,7 @@ client: generate
 		--output-folder=/python/client
 
 	sudo chown -R $(USER):$(USER) pkg/client python/client
+	sed -i -e 's|azure/aro-rp|Azure/ARO-RP|g' pkg/client/services/preview/redhatopenshift/mgmt/2019-12-31-preview/redhatopenshift/models.go pkg/client/services/preview/redhatopenshift/mgmt/2019-12-31-preview/redhatopenshift/redhatopenshiftapi/interfaces.go
 	rm -rf python/client/azure/mgmt/redhatopenshift/v2019_12_31_preview/aio
 	>python/client/__init__.py
 
