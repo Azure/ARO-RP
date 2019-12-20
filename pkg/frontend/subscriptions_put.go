@@ -19,26 +19,22 @@ func (f *frontend) putSubscription(w http.ResponseWriter, r *http.Request) {
 	log := r.Context().Value(middleware.ContextKeyLog).(*logrus.Entry)
 
 	var b []byte
-	var created bool
 	err := cosmosdb.RetryOnPreconditionFailed(func() error {
 		var err error
-		b, created, err = f._putSubscription(r)
+		b, err = f._putSubscription(r)
 		return err
 	})
-	if err == nil && created {
-		w.WriteHeader(http.StatusCreated)
-	}
 
 	reply(log, w, b, err)
 }
 
-func (f *frontend) _putSubscription(r *http.Request) ([]byte, bool, error) {
+func (f *frontend) _putSubscription(r *http.Request) ([]byte, error) {
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 	vars := mux.Vars(r)
 
 	doc, err := f.db.Subscriptions.Get(vars["subscriptionId"])
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
-		return nil, false, err
+		return nil, err
 	}
 
 	isCreate := doc == nil
@@ -64,7 +60,7 @@ func (f *frontend) _putSubscription(r *http.Request) ([]byte, bool, error) {
 	doc.Subscription = &api.Subscription{}
 	err = codec.NewDecoderBytes(body, h).Decode(&doc.Subscription)
 	if err != nil {
-		return nil, false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
 	}
 
 	switch doc.Subscription.State {
@@ -74,11 +70,11 @@ func (f *frontend) _putSubscription(r *http.Request) ([]byte, bool, error) {
 	case api.SubscriptionStateDeleted:
 		doc.Deleting = true
 	default:
-		return nil, false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "state", "The provided state '%s' is invalid.", doc.Subscription.State)
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "state", "The provided state '%s' is invalid.", doc.Subscription.State)
 	}
 
 	if oldState == api.SubscriptionStateDeleted && doc.Subscription.State != api.SubscriptionStateDeleted {
-		return nil, false, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionState, "", "Request is not allowed in subscription in state '%s'.", oldState)
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionState, "", "Request is not allowed in subscription in state '%s'.", oldState)
 	}
 
 	if isCreate {
@@ -87,14 +83,17 @@ func (f *frontend) _putSubscription(r *http.Request) ([]byte, bool, error) {
 		doc, err = f.db.Subscriptions.Update(doc)
 	}
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
 	var b []byte
 	err = codec.NewEncoderBytes(&b, h).Encode(doc.Subscription)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
-	return b, isCreate, nil
+	if isCreate {
+		err = statusCodeError(http.StatusCreated)
+	}
+	return b, err
 }
