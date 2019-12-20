@@ -100,7 +100,7 @@ func (dv *dynamicValidator) validateServicePrincipalProfile() (autorest.Authoriz
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalCredentials, "properties.servicePrincipalProfile", "The provided service principal credentials are invalid.")
 	}
 
-	return conf.Authorizer()
+	return autorest.NewBearerAuthorizer(token), nil
 }
 
 func (dv *dynamicValidator) validateServicePrincipalRole() error {
