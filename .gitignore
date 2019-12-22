@@ -6,11 +6,11 @@ __pycache__
 /*.key
 /*.kubeconfig
 /*.pem
+/aro
 /env*
 !/env.example
 /id_rsa
 /pyenv*
 /python/az/aro/build
 /python/az/aro/dist
-/rp
 /secrets

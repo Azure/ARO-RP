@@ -16,16 +16,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend"
-	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
-var (
-	gitCommit = "unknown"
-)
-
-func run(ctx context.Context, log *logrus.Entry) error {
+func rp(ctx context.Context, log *logrus.Entry) error {
 	uuid := uuid.NewV4().String()
-	log.Printf("starting, git commit %s, uuid %s", gitCommit, uuid)
+	log.Printf("uuid %s", uuid)
 
 	env, err := env.NewEnv(ctx, log)
 	if err != nil {
@@ -63,12 +58,4 @@ func run(ctx context.Context, log *logrus.Entry) error {
 	<-done
 
 	return nil
-}
-
-func main() {
-	log := utillog.GetLogger()
-
-	if err := run(context.Background(), log); err != nil {
-		log.Fatal(err)
-	}
 }

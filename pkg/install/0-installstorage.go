@@ -37,18 +37,7 @@ var apiVersions = map[string]string{
 	"storage":       "2019-04-01",
 }
 
-func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftClusterDocument, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds) error {
-	image := &releaseimage.Image{
-		// https://openshift-release.svc.ci.openshift.org/
-		// oc adm release info quay.io/openshift-release-dev/ocp-release-nightly:4.3.0-0.nightly-2019-12-05-001549
-		PullSpec:   "quay.io/openshift-release-dev/ocp-release-nightly@sha256:5f1ff5e767acd58445532222c38e643069fdb9fdf0bb176ced48bc2eb1032f2a",
-		Repository: "quay.io/openshift-release-dev/ocp-release-nightly",
-
-		// oc adm release info quay.io/openshift-release-dev/ocp-release:4.2.4
-		// PullSpec:   "quay.io/openshift-release-dev/ocp-release@sha256:cebce35c054f1fb066a4dc0a518064945087ac1f3637fe23d2ee2b0c433d6ba8",
-		// Repository: "quay.io/openshift-release-dev/ocp-release",
-	}
-
+func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftClusterDocument, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) error {
 	clusterID := &installconfig.ClusterID{
 		UUID:    uuid.NewV4().String(),
 		InfraID: "aro",
