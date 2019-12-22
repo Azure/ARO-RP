@@ -13,6 +13,7 @@ import (
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	"github.com/openshift/installer/pkg/asset/password"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
@@ -89,6 +90,22 @@ func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClust
 			}
 
 			<-t.C
+		}
+
+		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			cv, err := cli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
+			if err != nil {
+				return err
+			}
+
+			cv.Spec.Upstream = ""
+			cv.Spec.Channel = ""
+
+			_, err = cli.ConfigV1().ClusterVersions().Update(cv)
+			return err
+		})
+		if err != nil {
+			return err
 		}
 	}
 
