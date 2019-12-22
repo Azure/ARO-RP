@@ -40,12 +40,12 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *http.Request, internal api.Ope
 	vars := mux.Vars(r)
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 
-	subdoc, err := f.validateSubscriptionState(api.Key(r.URL.Path), api.SubscriptionStateRegistered)
+	subdoc, err := f.validateSubscriptionState(r.URL.Path, api.SubscriptionStateRegistered)
 	if err != nil {
 		return nil, false, err
 	}
 
-	doc, err := f.db.OpenShiftClusters.Get(api.Key(r.URL.Path))
+	doc, err := f.db.OpenShiftClusters.Get(r.URL.Path)
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil, false, err
 	}
@@ -61,7 +61,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *http.Request, internal api.Ope
 
 		doc = &api.OpenShiftClusterDocument{
 			ID:  uuid.NewV4().String(),
-			Key: api.Key(r.URL.Path),
+			Key: r.URL.Path,
 			OpenShiftCluster: &api.OpenShiftCluster{
 				ID:   originalPath,
 				Name: originalR.ResourceName,

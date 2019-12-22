@@ -81,7 +81,7 @@ func (mr *MockOpenShiftClustersMockRecorder) Dequeue() *gomock.Call {
 }
 
 // EndLease mocks base method
-func (m *MockOpenShiftClusters) EndLease(arg0 api.Key, arg1, arg2 api.ProvisioningState) (*api.OpenShiftClusterDocument, error) {
+func (m *MockOpenShiftClusters) EndLease(arg0 string, arg1, arg2 api.ProvisioningState) (*api.OpenShiftClusterDocument, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EndLease", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*api.OpenShiftClusterDocument)
@@ -96,7 +96,7 @@ func (mr *MockOpenShiftClustersMockRecorder) EndLease(arg0, arg1, arg2 interface
 }
 
 // Get mocks base method
-func (m *MockOpenShiftClusters) Get(arg0 api.Key) (*api.OpenShiftClusterDocument, error) {
+func (m *MockOpenShiftClusters) Get(arg0 string) (*api.OpenShiftClusterDocument, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", arg0)
 	ret0, _ := ret[0].(*api.OpenShiftClusterDocument)
@@ -111,7 +111,7 @@ func (mr *MockOpenShiftClustersMockRecorder) Get(arg0 interface{}) *gomock.Call 
 }
 
 // Lease mocks base method
-func (m *MockOpenShiftClusters) Lease(arg0 api.Key) (*api.OpenShiftClusterDocument, error) {
+func (m *MockOpenShiftClusters) Lease(arg0 string) (*api.OpenShiftClusterDocument, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Lease", arg0)
 	ret0, _ := ret[0].(*api.OpenShiftClusterDocument)
@@ -126,7 +126,7 @@ func (mr *MockOpenShiftClustersMockRecorder) Lease(arg0 interface{}) *gomock.Cal
 }
 
 // ListByPrefix mocks base method
-func (m *MockOpenShiftClusters) ListByPrefix(arg0 string, arg1 api.Key) (cosmosdb.OpenShiftClusterDocumentIterator, error) {
+func (m *MockOpenShiftClusters) ListByPrefix(arg0, arg1 string) (cosmosdb.OpenShiftClusterDocumentIterator, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListByPrefix", arg0, arg1)
 	ret0, _ := ret[0].(cosmosdb.OpenShiftClusterDocumentIterator)
@@ -141,7 +141,7 @@ func (mr *MockOpenShiftClustersMockRecorder) ListByPrefix(arg0, arg1 interface{}
 }
 
 // Patch mocks base method
-func (m *MockOpenShiftClusters) Patch(arg0 api.Key, arg1 func(*api.OpenShiftClusterDocument) error) (*api.OpenShiftClusterDocument, error) {
+func (m *MockOpenShiftClusters) Patch(arg0 string, arg1 func(*api.OpenShiftClusterDocument) error) (*api.OpenShiftClusterDocument, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Patch", arg0, arg1)
 	ret0, _ := ret[0].(*api.OpenShiftClusterDocument)
@@ -224,7 +224,7 @@ func (mr *MockSubscriptionsMockRecorder) Dequeue() *gomock.Call {
 }
 
 // EndLease mocks base method
-func (m *MockSubscriptions) EndLease(arg0 api.Key, arg1, arg2 bool) (*api.SubscriptionDocument, error) {
+func (m *MockSubscriptions) EndLease(arg0 string, arg1, arg2 bool) (*api.SubscriptionDocument, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "EndLease", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*api.SubscriptionDocument)
@@ -239,7 +239,7 @@ func (mr *MockSubscriptionsMockRecorder) EndLease(arg0, arg1, arg2 interface{}) 
 }
 
 // Get mocks base method
-func (m *MockSubscriptions) Get(arg0 api.Key) (*api.SubscriptionDocument, error) {
+func (m *MockSubscriptions) Get(arg0 string) (*api.SubscriptionDocument, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", arg0)
 	ret0, _ := ret[0].(*api.SubscriptionDocument)
@@ -254,7 +254,7 @@ func (mr *MockSubscriptionsMockRecorder) Get(arg0 interface{}) *gomock.Call {
 }
 
 // Lease mocks base method
-func (m *MockSubscriptions) Lease(arg0 api.Key) (*api.SubscriptionDocument, error) {
+func (m *MockSubscriptions) Lease(arg0 string) (*api.SubscriptionDocument, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Lease", arg0)
 	ret0, _ := ret[0].(*api.SubscriptionDocument)

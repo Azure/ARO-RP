@@ -27,7 +27,7 @@ type SubscriptionDocument struct {
 	ETag        string `json:"_etag,omitempty"`
 	Attachments string `json:"_attachments,omitempty"`
 
-	Key Key `json:"key,omitempty"` // also the partition key
+	Key string `json:"key,omitempty"` // also the partition key
 
 	LeaseOwner   *uuid.UUID `json:"leaseOwner,omitempty"`
 	LeaseExpires int        `json:"leaseExpires,omitempty"`

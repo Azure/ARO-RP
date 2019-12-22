@@ -27,7 +27,7 @@ type OpenShiftClusterDocument struct {
 	ETag        string `json:"_etag,omitempty"`
 	Attachments string `json:"_attachments,omitempty"`
 
-	Key          Key    `json:"key,omitempty"`
+	Key          string `json:"key,omitempty"`
 	PartitionKey string `json:"partitionKey,omitempty"`
 
 	LeaseOwner   *uuid.UUID `json:"leaseOwner,omitempty"`
@@ -36,6 +36,3 @@ type OpenShiftClusterDocument struct {
 
 	OpenShiftCluster *OpenShiftCluster `json:"openShiftCluster,omitempty"`
 }
-
-// Key represents a database lookup key.
-type Key string

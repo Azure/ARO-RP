@@ -34,7 +34,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	doc, err := db.OpenShiftClusters.Get(api.Key(strings.ToLower(os.Args[1])))
+	doc, err := db.OpenShiftClusters.Get(strings.ToLower(os.Args[1]))
 	if err != nil {
 		return err
 	}

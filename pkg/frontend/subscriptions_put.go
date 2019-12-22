@@ -37,7 +37,7 @@ func (f *frontend) _putSubscription(r *http.Request) ([]byte, bool, error) {
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 	vars := mux.Vars(r)
 
-	doc, err := f.db.Subscriptions.Get(api.Key(vars["subscriptionId"]))
+	doc, err := f.db.Subscriptions.Get(vars["subscriptionId"])
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil, false, err
 	}
@@ -47,7 +47,7 @@ func (f *frontend) _putSubscription(r *http.Request) ([]byte, bool, error) {
 	if isCreate {
 		doc = &api.SubscriptionDocument{
 			ID:           uuid.NewV4().String(),
-			Key:          api.Key(vars["subscriptionId"]),
+			Key:          vars["subscriptionId"],
 			Subscription: &api.Subscription{},
 		}
 	}

@@ -16,7 +16,7 @@ import (
 func (f *frontend) deleteOpenShiftCluster(w http.ResponseWriter, r *http.Request) {
 	log := r.Context().Value(middleware.ContextKeyLog).(*logrus.Entry)
 
-	_, err := f.db.OpenShiftClusters.Patch(api.Key(r.URL.Path), func(doc *api.OpenShiftClusterDocument) error {
+	_, err := f.db.OpenShiftClusters.Patch(r.URL.Path, func(doc *api.OpenShiftClusterDocument) error {
 		return f._deleteOpenShiftCluster(doc)
 	})
 	if cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
