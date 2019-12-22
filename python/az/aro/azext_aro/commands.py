@@ -15,7 +15,7 @@ def load_command_table(self, _):
 
     with self.command_group('aro', aro_sdk, client_factory=cf_aro, is_preview=True) as g:
         g.custom_command('create', 'aro_create', supports_no_wait=True)
-        g.custom_command('delete', 'aro_delete', supports_no_wait=True)
+        g.custom_command('delete', 'aro_delete', supports_no_wait=True, confirmation=True)
         g.custom_command('list', 'aro_list', table_transformer=aro_list_table_format)
         g.custom_show_command('show', 'aro_show', table_transformer=aro_show_table_format)
         g.custom_command('update', 'aro_update', supports_no_wait=True)
