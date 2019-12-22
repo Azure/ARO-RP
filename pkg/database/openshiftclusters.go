@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
-	uuid "github.com/satori/go.uuid"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
@@ -18,7 +17,7 @@ import (
 
 type openShiftClusters struct {
 	c    cosmosdb.OpenShiftClusterDocumentClient
-	uuid uuid.UUID
+	uuid string
 }
 
 // OpenShiftClusters is the database interface for OpenShiftClusterDocuments
@@ -35,7 +34,7 @@ type OpenShiftClusters interface {
 }
 
 // NewOpenShiftClusters returns a new OpenShiftClusters
-func NewOpenShiftClusters(ctx context.Context, uuid uuid.UUID, dbc cosmosdb.DatabaseClient, dbid, collid string) (OpenShiftClusters, error) {
+func NewOpenShiftClusters(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, dbid, collid string) (OpenShiftClusters, error) {
 	collc := cosmosdb.NewCollectionClient(dbc, dbid)
 
 	triggers := []*cosmosdb.Trigger{
@@ -196,7 +195,7 @@ func (c *openShiftClusters) Dequeue() (*api.OpenShiftClusterDocument, error) {
 		}
 
 		for _, doc := range docs.OpenShiftClusterDocuments {
-			doc.LeaseOwner = &c.uuid
+			doc.LeaseOwner = c.uuid
 			doc.Dequeues++
 			doc, err = c.update(doc, &cosmosdb.Options{PreTriggers: []string{"renewLease"}})
 			if cosmosdb.IsErrorStatusCode(err, http.StatusPreconditionFailed) { // someone else got there first
@@ -209,7 +208,7 @@ func (c *openShiftClusters) Dequeue() (*api.OpenShiftClusterDocument, error) {
 
 func (c *openShiftClusters) Lease(key string) (*api.OpenShiftClusterDocument, error) {
 	return c.patch(key, func(doc *api.OpenShiftClusterDocument) error {
-		if doc.LeaseOwner == nil || !uuid.Equal(*doc.LeaseOwner, c.uuid) {
+		if doc.LeaseOwner != c.uuid {
 			return fmt.Errorf("lost lease")
 		}
 		return nil
@@ -218,14 +217,14 @@ func (c *openShiftClusters) Lease(key string) (*api.OpenShiftClusterDocument, er
 
 func (c *openShiftClusters) EndLease(key string, provisioningState, failedProvisioningState api.ProvisioningState) (*api.OpenShiftClusterDocument, error) {
 	return c.patch(key, func(doc *api.OpenShiftClusterDocument) error {
-		if doc.LeaseOwner == nil || !uuid.Equal(*doc.LeaseOwner, c.uuid) {
+		if doc.LeaseOwner != c.uuid {
 			return fmt.Errorf("lost lease")
 		}
 
 		doc.OpenShiftCluster.Properties.ProvisioningState = provisioningState
 		doc.OpenShiftCluster.Properties.FailedProvisioningState = failedProvisioningState
 
-		doc.LeaseOwner = nil
+		doc.LeaseOwner = ""
 		doc.LeaseExpires = 0
 
 		if provisioningState == api.ProvisioningStateSucceeded {

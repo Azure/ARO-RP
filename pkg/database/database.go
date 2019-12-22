@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"time"
 
-	uuid "github.com/satori/go.uuid"
 	"github.com/ugorji/go/codec"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -24,7 +23,7 @@ type Database struct {
 }
 
 // NewDatabase returns a new Database
-func NewDatabase(ctx context.Context, env env.Interface, uuid uuid.UUID, dbid string) (db *Database, err error) {
+func NewDatabase(ctx context.Context, env env.Interface, uuid, dbid string) (db *Database, err error) {
 	databaseAccount, masterKey := env.CosmosDB(ctx)
 
 	h := &codec.JsonHandle{

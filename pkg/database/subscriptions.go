@@ -9,15 +9,13 @@ import (
 	"net/http"
 	"strings"
 
-	uuid "github.com/satori/go.uuid"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 )
 
 type subscriptions struct {
 	c    cosmosdb.SubscriptionDocumentClient
-	uuid uuid.UUID
+	uuid string
 }
 
 // Subscriptions is the database interface for SubscriptionDocuments
@@ -31,7 +29,7 @@ type Subscriptions interface {
 }
 
 // NewSubscriptions returns a new Subscriptions
-func NewSubscriptions(ctx context.Context, uuid uuid.UUID, dbc cosmosdb.DatabaseClient, dbid, collid string) (Subscriptions, error) {
+func NewSubscriptions(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, dbid, collid string) (Subscriptions, error) {
 	collc := cosmosdb.NewCollectionClient(dbc, dbid)
 
 	triggers := []*cosmosdb.Trigger{
@@ -165,7 +163,7 @@ func (c *subscriptions) Dequeue() (*api.SubscriptionDocument, error) {
 		}
 
 		for _, doc := range docs.SubscriptionDocuments {
-			doc.LeaseOwner = &c.uuid
+			doc.LeaseOwner = c.uuid
 			doc.Dequeues++
 			doc, err = c.update(doc, &cosmosdb.Options{PreTriggers: []string{"renewLease"}})
 			if cosmosdb.IsErrorStatusCode(err, http.StatusPreconditionFailed) { // someone else got there first
@@ -178,7 +176,7 @@ func (c *subscriptions) Dequeue() (*api.SubscriptionDocument, error) {
 
 func (c *subscriptions) Lease(key string) (*api.SubscriptionDocument, error) {
 	return c.patch(key, func(doc *api.SubscriptionDocument) error {
-		if doc.LeaseOwner == nil || !uuid.Equal(*doc.LeaseOwner, c.uuid) {
+		if doc.LeaseOwner != c.uuid {
 			return fmt.Errorf("lost lease")
 		}
 		return nil
@@ -192,7 +190,7 @@ func (c *subscriptions) EndLease(key string, done, retryLater bool) (*api.Subscr
 	}
 
 	return c.patch(key, func(doc *api.SubscriptionDocument) error {
-		if doc.LeaseOwner == nil || !uuid.Equal(*doc.LeaseOwner, c.uuid) {
+		if doc.LeaseOwner != c.uuid {
 			return fmt.Errorf("lost lease")
 		}
 
@@ -200,7 +198,7 @@ func (c *subscriptions) EndLease(key string, done, retryLater bool) (*api.Subscr
 			doc.Deleting = false
 		}
 
-		doc.LeaseOwner = nil
+		doc.LeaseOwner = ""
 		doc.LeaseExpires = 0
 
 		if done || retryLater {

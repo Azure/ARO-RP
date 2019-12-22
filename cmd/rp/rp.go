@@ -24,7 +24,7 @@ var (
 )
 
 func run(ctx context.Context, log *logrus.Entry) error {
-	uuid := uuid.NewV4()
+	uuid := uuid.NewV4().String()
 	log.Printf("starting, git commit %s, uuid %s", gitCommit, uuid)
 
 	env, err := env.NewEnv(ctx, log)
