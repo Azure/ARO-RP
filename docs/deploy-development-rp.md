@@ -157,7 +157,7 @@
        "databaseAccountName=$COSMOSDB_ACCOUNT" \
        "domainName=$DOMAIN" \
        "keyvaultName=$KEYVAULT_NAME" \
-       "rpServicePrincipalId=$SERVICEPRINCIPAL_ID" \
+       "rpServicePrincipalId=$SERVICEPRINCIPAL_ID"
    ```
 
 1. Load the keys/certificates into the key vault:

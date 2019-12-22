@@ -23,7 +23,7 @@ class AADManager(object):
             credentials, tenant_id, base_url=cli_ctx.cloud.endpoints.active_directory_graph_resource_id)
         configure_common_settings(cli_ctx, self.client)
 
-    def createManagedApplication(self, display_name):
+    def create_application(self, display_name):
         password = uuid.uuid4()
 
         try:
@@ -46,26 +46,26 @@ class AADManager(object):
 
         return app, password
 
-    def getApplication(self, app_id):
+    def get_application(self, app_id):
         apps = list(self.client.applications.list(
             filter="appId eq '%s'" % app_id))
         if apps:
             return apps[0]
         return None
 
-    def deleteManagedApplication(self, app_id):
-        app = self.getApplication(app_id)
+    def delete_managed_application(self, app_id):
+        app = self.get_application(app_id)
         if app and app.identifier_uris and app.identifier_uris[0].startswith(self.MANAGED_APP_PREFIX):
             self.client.applications.delete(app.object_id)
 
-    def getServicePrincipal(self, app_id):
+    def get_service_principal(self, app_id):
         sps = list(self.client.service_principals.list(
             filter="appId eq '%s'" % app_id))
         if sps:
             return sps[0]
         return None
 
-    def createServicePrincipal(self, app_id):
+    def create_service_principal(self, app_id):
         return self.client.service_principals.create(ServicePrincipalCreateParameters(
             app_id=app_id,
         ))

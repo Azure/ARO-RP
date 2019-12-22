@@ -7,8 +7,28 @@ fi
 
 export KUBECONFIG=admin.kubeconfig
 
+while [[ $1 == -* ]]; do
+  if [[ $1 == -- ]]; then
+    shift
+    break
+  fi
+  shift
+done
+
 NODENAME=aro-master-0
-[[ "$#" -gt 0 ]] && NODENAME=$1
+if [[ "$#" -gt 0 ]]; then
+  NODENAME=$1
+  shift
+fi
+
+COMMAND='bash --login'
+TTY=true
+TTYOPT=-t
+if [[ "$#" -gt 0 ]]; then
+  COMMAND="bash -c $(printf ' %q' "$@" | sed -e "s/'/''/g")"
+  TTY=false
+  TTYOPT=
+fi
 
 cleanup() {
     [[ -n "$POD" ]] && oc delete pod -n default "$POD" >/dev/null
@@ -29,11 +49,52 @@ spec:
     - /host
     - /bin/bash
     - -c
-    - "cd && exec bash --login"
+    - 'cd && exec $COMMAND'
     image: ubi8/ubi-minimal
     name: debug
+    securityContext:
+      capabilities:
+        add:
+        - CHOWN
+        - DAC_OVERRIDE
+        - DAC_READ_SEARCH
+        - FOWNER
+        - FSETID
+        - KILL
+        - SETGID
+        - SETUID
+        - SETPCAP
+        - LINUX_IMMUTABLE
+        - NET_BIND_SERVICE
+        - NET_BROADCAST
+        - NET_ADMIN
+        - NET_RAW
+        - IPC_LOCK
+        - IPC_OWNER
+        - SYS_MODULE
+        - SYS_RAWIO
+        - SYS_CHROOT
+        - SYS_PTRACE
+        - SYS_PACCT
+        - SYS_ADMIN
+        - SYS_BOOT
+        - SYS_NICE
+        - SYS_RESOURCE
+        - SYS_TIME
+        - SYS_TTY_CONFIG
+        - MKNOD
+        - LEASE
+        - AUDIT_WRITE
+        - AUDIT_CONTROL
+        - SETFCAP
+        - MAC_OVERRIDE
+        - MAC_ADMIN
+        - SYSLOG
+        - WAKE_ALARM
+        - BLOCK_SUSPEND
+        - AUDIT_READ
     stdin: true
-    tty: true
+    tty: $TTY
     volumeMounts:
     - mountPath: /host
       name: host
@@ -51,4 +112,4 @@ EOF
 )
 
 oc wait --for=condition=Ready "pod/$POD" >/dev/null
-oc attach -it -n default -c debug "pod/$POD"
+oc attach -i $TTYOPT -n default -c debug "pod/$POD"

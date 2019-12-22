@@ -42,19 +42,19 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
 
     aad = AADManager(cmd.cli_ctx)
     if client_id is None:
-        app, client_secret = aad.createManagedApplication(
+        app, client_secret = aad.create_application(
             "aro-%d-%s-%s-%s" % (time.time(), subscription_id, resource_group_name, resource_name))
         client_id = app.app_id
 
-    client_sp = aad.getServicePrincipal(client_id)
+    client_sp = aad.get_service_principal(client_id)
     if not client_sp:
-        client_sp = aad.createServicePrincipal(client_id)
+        client_sp = aad.create_service_principal(client_id)
 
     rp_client_id = FP_CLIENT_ID
     if rp_mode_development():
         rp_client_id = os.environ['AZURE_FP_CLIENT_ID']
 
-    rp_client_sp = aad.getServicePrincipal(rp_client_id)
+    rp_client_sp = aad.get_service_principal(rp_client_id)
 
     assign_contributor_to_vnet(cmd.cli_ctx, vnet, client_sp.object_id)
     assign_contributor_to_vnet(cmd.cli_ctx, vnet, rp_client_sp.object_id)
@@ -107,7 +107,7 @@ def aro_delete(cmd, client, resource_group_name, resource_name,
                 resource_name=resource_name)
 
     if not no_wait:
-        aad.deleteManagedApplication(oc.service_principal_profile.client_id)
+        aad.delete_managed_application(oc.service_principal_profile.client_id)
 
 
 def aro_list(client, resource_group_name=None):

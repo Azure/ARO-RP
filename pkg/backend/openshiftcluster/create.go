@@ -158,7 +158,7 @@ func (m *Manager) Create(ctx context.Context) error {
 					ARO:                         true,
 				},
 			},
-			PullSecret: string(os.Getenv("PULL_SECRET")),
+			PullSecret: os.Getenv("PULL_SECRET"),
 			Publish:    types.ExternalPublishingStrategy,
 		},
 	}
