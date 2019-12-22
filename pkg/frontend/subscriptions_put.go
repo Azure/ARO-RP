@@ -25,7 +25,7 @@ func (f *frontend) putSubscription(w http.ResponseWriter, r *http.Request) {
 		return err
 	})
 
-	reply(log, w, b, err)
+	reply(log, w, nil, b, err)
 }
 
 func (f *frontend) _putSubscription(r *http.Request) ([]byte, error) {

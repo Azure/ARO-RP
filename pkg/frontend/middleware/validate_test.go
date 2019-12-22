@@ -34,7 +34,7 @@ func TestValidate(t *testing.T) {
 		Queries("api-version", "2.0").
 		HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
 
-	router.Use(Validate)
+	router.Use(Validate(nil))
 
 	tests := []struct {
 		name    string

@@ -29,5 +29,5 @@ func (f *frontend) postOpenShiftClusterCredentials(w http.ResponseWriter, r *htt
 
 	b, err := f._getOpenShiftCluster(r, api.APIs[vars["api-version"]]["OpenShiftClusterCredentials"].(api.OpenShiftClusterToExternal))
 
-	reply(log, w, b, err)
+	reply(log, w, nil, b, err)
 }

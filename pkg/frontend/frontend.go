@@ -132,6 +132,20 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftClusters)
 
 	s = r.
+		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/locations/{location}/operations/{operationId}").
+		Queries("api-version", "{api-version}").
+		Subrouter()
+
+	s.Methods(http.MethodGet).HandlerFunc(f.getAsyncOperation)
+
+	s = r.
+		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/locations/{location}/operationresults/{operationId}").
+		Queries("api-version", "{api-version}").
+		Subrouter()
+
+	s.Methods(http.MethodGet).HandlerFunc(f.getAsyncOperationResult)
+
+	s = r.
 		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/credentials").
 		Queries("api-version", "{api-version}").
 		Subrouter()
@@ -184,8 +198,8 @@ func (f *frontend) Run(stop <-chan struct{}, done chan<- struct{}) {
 	r := mux.NewRouter()
 	r.Use(middleware.Log(f.baseLog))
 	r.Use(middleware.Panic)
-	r.Use(middleware.Headers)
-	r.Use(middleware.Validate)
+	r.Use(middleware.Headers(f.env))
+	r.Use(middleware.Validate(f.env))
 	r.Use(middleware.Body)
 
 	r.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -214,7 +228,11 @@ func (f *frontend) Run(stop <-chan struct{}, done chan<- struct{}) {
 	}
 }
 
-func reply(log *logrus.Entry, w http.ResponseWriter, b []byte, err error) {
+func reply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b []byte, err error) {
+	for k, v := range header {
+		w.Header()[k] = v
+	}
+
 	if err != nil {
 		switch err := err.(type) {
 		case *api.CloudError:

@@ -101,9 +101,15 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 			return ocb.endLease(stop, doc, api.ProvisioningStateFailed)
 		}
 
-		stop()
-		return ocb.db.OpenShiftClusters.Delete(doc)
+		err = ocb.updateAsyncOperation(doc.AsyncOperationID, nil, api.ProvisioningStateSucceeded, "")
+		if err != nil {
+			log.Error(err)
+			return ocb.endLease(stop, doc, api.ProvisioningStateFailed)
+		}
 
+		stop()
+
+		return ocb.db.OpenShiftClusters.Delete(doc)
 	}
 
 	return fmt.Errorf("unexpected provisioningState %q", doc.OpenShiftCluster.Properties.ProvisioningState)
@@ -145,16 +151,55 @@ func (ocb *openShiftClusterBackend) heartbeat(log *logrus.Entry, doc *api.OpenSh
 	}
 }
 
+func (ocb *openShiftClusterBackend) updateAsyncOperation(id string, oc *api.OpenShiftCluster, provisioningState, failedProvisioningState api.ProvisioningState) error {
+	if id != "" {
+		_, err := ocb.db.AsyncOperations.Patch(id, func(asyncdoc *api.AsyncOperationDocument) error {
+			asyncdoc.AsyncOperation.ProvisioningState = provisioningState
+
+			now := time.Now()
+			asyncdoc.AsyncOperation.EndTime = &now
+
+			if provisioningState == api.ProvisioningStateFailed {
+				asyncdoc.AsyncOperation.Error = &api.CloudErrorBody{
+					Code:    api.CloudErrorCodeInternalServerError,
+					Message: "Internal server error.",
+				}
+			}
+
+			if oc != nil {
+				ocCopy := *oc
+				ocCopy.Properties.ProvisioningState = provisioningState
+				ocCopy.Properties.FailedProvisioningState = failedProvisioningState
+
+				asyncdoc.OpenShiftCluster = &ocCopy
+			}
+
+			return nil
+		})
+
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (ocb *openShiftClusterBackend) endLease(stop func(), doc *api.OpenShiftClusterDocument, provisioningState api.ProvisioningState) error {
 	var failedProvisioningState api.ProvisioningState
 	if provisioningState == api.ProvisioningStateFailed {
 		failedProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
 	}
 
+	err := ocb.updateAsyncOperation(doc.AsyncOperationID, doc.OpenShiftCluster, provisioningState, failedProvisioningState)
+	if err != nil {
+		return err
+	}
+
 	if stop != nil {
 		stop()
 	}
 
-	_, err := ocb.db.OpenShiftClusters.EndLease(doc.Key, provisioningState, failedProvisioningState)
+	_, err = ocb.db.OpenShiftClusters.EndLease(doc.Key, provisioningState, failedProvisioningState)
 	return err
 }

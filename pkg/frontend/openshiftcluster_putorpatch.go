@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/gorilla/mux"
@@ -22,17 +23,18 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 	log := r.Context().Value(middleware.ContextKeyLog).(*logrus.Entry)
 	vars := mux.Vars(r)
 
+	var header http.Header
 	var b []byte
 	err := cosmosdb.RetryOnPreconditionFailed(func() error {
 		var err error
-		b, err = f._putOrPatchOpenShiftCluster(r, api.APIs[vars["api-version"]]["OpenShiftCluster"].(api.OpenShiftClusterToInternal), api.APIs[vars["api-version"]]["OpenShiftCluster"].(api.OpenShiftClusterToExternal))
+		b, err = f._putOrPatchOpenShiftCluster(r, &header, api.APIs[vars["api-version"]]["OpenShiftCluster"].(api.OpenShiftClusterToInternal), api.APIs[vars["api-version"]]["OpenShiftCluster"].(api.OpenShiftClusterToExternal))
 		return err
 	})
 
-	reply(log, w, b, err)
+	reply(log, w, header, b, err)
 }
 
-func (f *frontend) _putOrPatchOpenShiftCluster(r *http.Request, internal api.OpenShiftClusterToInternal, external api.OpenShiftClusterToExternal) ([]byte, error) {
+func (f *frontend) _putOrPatchOpenShiftCluster(r *http.Request, header *http.Header, internal api.OpenShiftClusterToInternal, external api.OpenShiftClusterToExternal) ([]byte, error) {
 	vars := mux.Vars(r)
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 
@@ -136,6 +138,21 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *http.Request, internal api.Ope
 	err = internal.ValidateOpenShiftClusterDynamic(r.Context(), f.env.FPAuthorizer, doc.OpenShiftCluster)
 	if err != nil {
 		return nil, err
+	}
+
+	doc.AsyncOperationID, err = f.newAsyncOperation(r, doc)
+	if err != nil {
+		return nil, err
+	}
+
+	u, err := url.Parse(r.Header.Get("Referer"))
+	if err != nil {
+		return nil, err
+	}
+
+	u.Path = f.operationsPath(r, doc.AsyncOperationID)
+	*header = http.Header{
+		"Azure-AsyncOperation": []string{u.String()},
 	}
 
 	if isCreate {

@@ -231,6 +231,8 @@ func (c *openShiftClusters) EndLease(key string, provisioningState, failedProvis
 			doc.Dequeues = 0
 		}
 
+		doc.AsyncOperationID = ""
+
 		return nil
 	}, nil)
 }

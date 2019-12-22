@@ -21,7 +21,7 @@ func (f *frontend) getOpenShiftCluster(w http.ResponseWriter, r *http.Request) {
 
 	b, err := f._getOpenShiftCluster(r, api.APIs[vars["api-version"]]["OpenShiftCluster"].(api.OpenShiftClusterToExternal))
 
-	reply(log, w, b, err)
+	reply(log, w, nil, b, err)
 }
 
 func (f *frontend) _getOpenShiftCluster(r *http.Request, external api.OpenShiftClusterToExternal) ([]byte, error) {

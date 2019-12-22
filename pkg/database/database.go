@@ -18,6 +18,7 @@ import (
 
 // Database represents a database
 type Database struct {
+	AsyncOperations   AsyncOperations
 	OpenShiftClusters OpenShiftClusters
 	Subscriptions     Subscriptions
 }
@@ -53,6 +54,11 @@ func NewDatabase(ctx context.Context, env env.Interface, uuid, dbid string) (db 
 	}
 
 	db = &Database{}
+
+	db.AsyncOperations, err = NewAsyncOperations(ctx, uuid, dbc, dbid, "AsyncOperations")
+	if err != nil {
+		return nil, err
+	}
 
 	db.OpenShiftClusters, err = NewOpenShiftClusters(ctx, uuid, dbc, dbid, "OpenShiftClusters")
 	if err != nil {
