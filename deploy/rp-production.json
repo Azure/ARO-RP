@@ -33,13 +33,13 @@
             "type": "string"
         },
         "pullSecret": {
-            "type": "string"
+            "type": "securestring"
         },
         "rpImage": {
             "type": "string"
         },
         "rpImageAuth": {
-            "type": "string"
+            "type": "securestring"
         },
         "rpServicePrincipalId": {
             "type": "string"

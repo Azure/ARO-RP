@@ -654,7 +654,12 @@ func (g *generator) template() *arm.Template {
 	}
 
 	for _, param := range params {
-		t.Parameters[param] = &arm.TemplateParameter{Type: "string"}
+		typ := "string"
+		switch param {
+		case "pullSecret", "rpImageAuth":
+			typ = "securestring"
+		}
+		t.Parameters[param] = &arm.TemplateParameter{Type: typ}
 	}
 
 	if g.production {
