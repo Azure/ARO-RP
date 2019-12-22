@@ -49,6 +49,7 @@ generate:
 	go generate ./...
 
 image: rp
+	docker pull registry.access.redhat.com/ubi8/ubi-minimal
 	docker build -t arosvc.azurecr.io/rp:$(COMMIT) .
 
 pyenv${PYTHON_VERSION}:
