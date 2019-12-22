@@ -62,8 +62,8 @@ func Log(baseLog *logrus.Entry) func(http.Handler) http.Handler {
 			defer func() {
 				log.WithFields(logrus.Fields{
 					"access":             true,
-					"bodyReceivedBytes":  r.Body.(*logReadCloser).bytes,
-					"bodySentBytes":      w.(*logResponseWriter).bytes,
+					"bodyReadBytes":      r.Body.(*logReadCloser).bytes,
+					"bodyWrittenBytes":   w.(*logResponseWriter).bytes,
 					"durationMs":         int(time.Now().Sub(t) / time.Millisecond),
 					"requestMethod":      r.Method,
 					"requestPath":        r.URL.Path,
@@ -73,6 +73,15 @@ func Log(baseLog *logrus.Entry) func(http.Handler) http.Handler {
 					"responseStatusCode": w.(*logResponseWriter).statusCode,
 				}).Print()
 			}()
+
+			log.WithFields(logrus.Fields{
+				"access":            true,
+				"requestMethod":     r.Method,
+				"requestPath":       r.URL.Path,
+				"requestProto":      r.Proto,
+				"requestRemoteAddr": r.RemoteAddr,
+				"requestUserAgent":  r.UserAgent(),
+			}).Print()
 
 			h.ServeHTTP(w, r)
 		})
