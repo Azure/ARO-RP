@@ -24,9 +24,7 @@ type subscriptions struct {
 type Subscriptions interface {
 	Create(*api.SubscriptionDocument) (*api.SubscriptionDocument, error)
 	Get(api.Key) (*api.SubscriptionDocument, error)
-	Patch(api.Key, func(*api.SubscriptionDocument) error) (*api.SubscriptionDocument, error)
 	Update(*api.SubscriptionDocument) (*api.SubscriptionDocument, error)
-	Delete(*api.SubscriptionDocument) error
 	Dequeue() (*api.SubscriptionDocument, error)
 	Lease(api.Key) (*api.SubscriptionDocument, error)
 	EndLease(api.Key, bool, bool) (*api.SubscriptionDocument, error)
@@ -119,10 +117,6 @@ func (c *subscriptions) Get(key api.Key) (*api.SubscriptionDocument, error) {
 	}
 }
 
-func (c *subscriptions) Patch(key api.Key, f func(*api.SubscriptionDocument) error) (*api.SubscriptionDocument, error) {
-	return c.patch(key, f, nil)
-}
-
 func (c *subscriptions) patch(key api.Key, f func(*api.SubscriptionDocument) error, options *cosmosdb.Options) (*api.SubscriptionDocument, error) {
 	var doc *api.SubscriptionDocument
 
@@ -154,14 +148,6 @@ func (c *subscriptions) update(doc *api.SubscriptionDocument, options *cosmosdb.
 	}
 
 	return c.c.Replace(string(doc.Key), doc, options)
-}
-
-func (c *subscriptions) Delete(doc *api.SubscriptionDocument) error {
-	if string(doc.Key) != strings.ToLower(string(doc.Key)) {
-		return fmt.Errorf("key %q is not lower case", doc.Key)
-	}
-
-	return c.c.Delete(string(doc.Key), doc, &cosmosdb.Options{NoETag: true})
 }
 
 func (c *subscriptions) Dequeue() (*api.SubscriptionDocument, error) {

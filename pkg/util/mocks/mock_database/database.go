@@ -208,20 +208,6 @@ func (mr *MockSubscriptionsMockRecorder) Create(arg0 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockSubscriptions)(nil).Create), arg0)
 }
 
-// Delete mocks base method
-func (m *MockSubscriptions) Delete(arg0 *api.SubscriptionDocument) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Delete indicates an expected call of Delete
-func (mr *MockSubscriptionsMockRecorder) Delete(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockSubscriptions)(nil).Delete), arg0)
-}
-
 // Dequeue mocks base method
 func (m *MockSubscriptions) Dequeue() (*api.SubscriptionDocument, error) {
 	m.ctrl.T.Helper()
@@ -280,21 +266,6 @@ func (m *MockSubscriptions) Lease(arg0 api.Key) (*api.SubscriptionDocument, erro
 func (mr *MockSubscriptionsMockRecorder) Lease(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Lease", reflect.TypeOf((*MockSubscriptions)(nil).Lease), arg0)
-}
-
-// Patch mocks base method
-func (m *MockSubscriptions) Patch(arg0 api.Key, arg1 func(*api.SubscriptionDocument) error) (*api.SubscriptionDocument, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Patch", arg0, arg1)
-	ret0, _ := ret[0].(*api.SubscriptionDocument)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Patch indicates an expected call of Patch
-func (mr *MockSubscriptionsMockRecorder) Patch(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Patch", reflect.TypeOf((*MockSubscriptions)(nil).Patch), arg0, arg1)
 }
 
 // Update mocks base method
