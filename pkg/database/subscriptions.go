@@ -74,11 +74,11 @@ func NewSubscriptions(ctx context.Context, uuid string, dbc cosmosdb.DatabaseCli
 }
 
 func (c *subscriptions) Create(doc *api.SubscriptionDocument) (*api.SubscriptionDocument, error) {
-	if doc.Key != strings.ToLower(doc.Key) {
-		return nil, fmt.Errorf("key %q is not lower case", doc.Key)
+	if doc.ID != strings.ToLower(doc.ID) {
+		return nil, fmt.Errorf("id %q is not lower case", doc.ID)
 	}
 
-	doc, err := c.c.Create(doc.Key, doc, nil)
+	doc, err := c.c.Create(doc.ID, doc, nil)
 
 	if err, ok := err.(*cosmosdb.Error); ok && err.StatusCode == http.StatusConflict {
 		err.StatusCode = http.StatusPreconditionFailed
@@ -87,39 +87,19 @@ func (c *subscriptions) Create(doc *api.SubscriptionDocument) (*api.Subscription
 	return doc, err
 }
 
-func (c *subscriptions) Get(key string) (*api.SubscriptionDocument, error) {
-	if key != strings.ToLower(key) {
-		return nil, fmt.Errorf("key %q is not lower case", key)
+func (c *subscriptions) Get(id string) (*api.SubscriptionDocument, error) {
+	if id != strings.ToLower(id) {
+		return nil, fmt.Errorf("id %q is not lower case", id)
 	}
 
-	docs, err := c.c.QueryAll(key, &cosmosdb.Query{
-		Query: "SELECT * FROM Subscriptions doc WHERE doc.key = @key",
-		Parameters: []cosmosdb.Parameter{
-			{
-				Name:  "@key",
-				Value: key,
-			},
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	switch {
-	case len(docs.SubscriptionDocuments) > 1:
-		return nil, fmt.Errorf("read %d documents, expected <= 1", len(docs.SubscriptionDocuments))
-	case len(docs.SubscriptionDocuments) == 1:
-		return docs.SubscriptionDocuments[0], nil
-	default:
-		return nil, &cosmosdb.Error{StatusCode: http.StatusNotFound}
-	}
+	return c.c.Get(id, id)
 }
 
-func (c *subscriptions) patch(key string, f func(*api.SubscriptionDocument) error, options *cosmosdb.Options) (*api.SubscriptionDocument, error) {
+func (c *subscriptions) patch(id string, f func(*api.SubscriptionDocument) error, options *cosmosdb.Options) (*api.SubscriptionDocument, error) {
 	var doc *api.SubscriptionDocument
 
 	err := cosmosdb.RetryOnPreconditionFailed(func() (err error) {
-		doc, err = c.Get(key)
+		doc, err = c.Get(id)
 		if err != nil {
 			return
 		}
@@ -141,11 +121,11 @@ func (c *subscriptions) Update(doc *api.SubscriptionDocument) (*api.Subscription
 }
 
 func (c *subscriptions) update(doc *api.SubscriptionDocument, options *cosmosdb.Options) (*api.SubscriptionDocument, error) {
-	if doc.Key != strings.ToLower(doc.Key) {
-		return nil, fmt.Errorf("key %q is not lower case", doc.Key)
+	if doc.ID != strings.ToLower(doc.ID) {
+		return nil, fmt.Errorf("id %q is not lower case", doc.ID)
 	}
 
-	return c.c.Replace(doc.Key, doc, options)
+	return c.c.Replace(doc.ID, doc, options)
 }
 
 func (c *subscriptions) Dequeue() (*api.SubscriptionDocument, error) {
@@ -174,8 +154,8 @@ func (c *subscriptions) Dequeue() (*api.SubscriptionDocument, error) {
 	}
 }
 
-func (c *subscriptions) Lease(key string) (*api.SubscriptionDocument, error) {
-	return c.patch(key, func(doc *api.SubscriptionDocument) error {
+func (c *subscriptions) Lease(id string) (*api.SubscriptionDocument, error) {
+	return c.patch(id, func(doc *api.SubscriptionDocument) error {
 		if doc.LeaseOwner != c.uuid {
 			return fmt.Errorf("lost lease")
 		}
@@ -183,13 +163,13 @@ func (c *subscriptions) Lease(key string) (*api.SubscriptionDocument, error) {
 	}, &cosmosdb.Options{PreTriggers: []string{"renewLease"}})
 }
 
-func (c *subscriptions) EndLease(key string, done, retryLater bool) (*api.SubscriptionDocument, error) {
+func (c *subscriptions) EndLease(id string, done, retryLater bool) (*api.SubscriptionDocument, error) {
 	var options *cosmosdb.Options
 	if retryLater {
 		options = &cosmosdb.Options{PreTriggers: []string{"retryLater"}}
 	}
 
-	return c.patch(key, func(doc *api.SubscriptionDocument) error {
+	return c.patch(id, func(doc *api.SubscriptionDocument) error {
 		if doc.LeaseOwner != c.uuid {
 			return fmt.Errorf("lost lease")
 		}

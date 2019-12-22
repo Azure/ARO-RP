@@ -535,18 +535,9 @@ func (g *generator) cosmosdb() []*arm.Resource {
 						ID: to.StringPtr("Subscriptions"),
 						PartitionKey: &documentdb.ContainerPartitionKey{
 							Paths: &[]string{
-								"/key",
+								"/id",
 							},
 							Kind: documentdb.PartitionKindHash,
-						},
-						UniqueKeyPolicy: &documentdb.UniqueKeyPolicy{
-							UniqueKeys: &[]documentdb.UniqueKey{
-								{
-									Paths: &[]string{
-										"/key",
-									},
-								},
-							},
 						},
 					},
 					Options: map[string]*string{},

@@ -23,8 +23,6 @@ type SubscriptionDocument struct {
 	ETag        string `json:"_etag,omitempty"`
 	Attachments string `json:"_attachments,omitempty"`
 
-	Key string `json:"key,omitempty"` // also the partition key
-
 	LeaseOwner   string `json:"leaseOwner,omitempty"`
 	LeaseExpires int    `json:"leaseExpires,omitempty"`
 	Dequeues     int    `json:"dequeues,omitempty"`

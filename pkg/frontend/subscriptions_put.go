@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
 
@@ -46,8 +45,7 @@ func (f *frontend) _putSubscription(r *http.Request) ([]byte, bool, error) {
 
 	if isCreate {
 		doc = &api.SubscriptionDocument{
-			ID:           uuid.NewV4().String(),
-			Key:          vars["subscriptionId"],
+			ID:           vars["subscriptionId"],
 			Subscription: &api.Subscription{},
 		}
 	}
