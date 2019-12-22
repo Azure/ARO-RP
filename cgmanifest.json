@@ -40,6 +40,15 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "6c72808b55902eae4c5943626030429ff20f3b63",
+                    "repositoryUrl": "https://github.com/Microsoft/go-winio/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "44968752391892e1b0d0b821ee79e9a85fa13049",
                     "repositoryUrl": "https://github.com/PuerkitoBio/purell/"
                 }
@@ -51,6 +60,15 @@
                 "git": {
                     "commitHash": "de5bf2ad457846296e2031421a34e2568e304e35",
                     "repositoryUrl": "https://github.com/PuerkitoBio/urlesc/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "b24eb346a94c3ba12c1da1e564dbac1b498a77ce",
+                    "repositoryUrl": "https://github.com/VividCortex/ewma/"
                 }
             }
         },
@@ -94,8 +112,26 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "37c8de3658fcb183f997c4e13e8337516ab753e6",
+                    "repositoryUrl": "https://github.com/beorn7/perks/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "35f569df3607ab29b87dd5e19f7901c3ce7cf511",
                     "repositoryUrl": "https://github.com/containers/image/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "7bb9317d53c232a83be3d9cf379461abf75e3d78",
+                    "repositoryUrl": "https://github.com/containers/storage/"
                 }
             }
         },
@@ -157,8 +193,80 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "2461543d988979529609e8cb6fca9ca190dc48da",
+                    "repositoryUrl": "https://github.com/docker/distribution/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "092cba3727bb9b4a2f0e922cd6c0f93ea270e363",
+                    "repositoryUrl": "https://github.com/docker/docker/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "54f0238b6bf101fc3ad3b34114cb5520beb562f5",
+                    "repositoryUrl": "https://github.com/docker/docker-credential-helpers/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "7395e3f8aa162843a74ed6d48e79627d9792ac55",
+                    "repositoryUrl": "https://github.com/docker/go-connections/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "b619b3592b65de4f087d9f16863a7e6ff905973c",
+                    "repositoryUrl": "https://github.com/docker/go-metrics/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "519db1ee28dcc9fd2474ae59fca29a810482bfb1",
+                    "repositoryUrl": "https://github.com/docker/go-units/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "aabc10ec26b754e797f9028f4589c5b7bd90dc20",
+                    "repositoryUrl": "https://github.com/docker/libtrust/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "99f05a26a0a1c71e664ebe6a76d29b2c80333056",
                     "repositoryUrl": "https://github.com/emicklei/go-restful/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "a0458a2b35708eef59eb5f620ceb3cd1c01a824d",
+                    "repositoryUrl": "https://github.com/etcd-io/bbolt/"
                 }
             }
         },
@@ -346,6 +454,24 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "438db640fd672278e44bb9bec0b979358e7e9c76",
+                    "repositoryUrl": "https://github.com/klauspost/compress/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "083b1c3f84dd6486588802e5ce295de3a7f41a8b",
+                    "repositoryUrl": "https://github.com/klauspost/pgzip/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "f55edac94c9bbba5d6182a4be46d86a2c9b5b50e",
                     "repositoryUrl": "https://github.com/konsorten/go-windows-terminal-sequences/"
                 }
@@ -393,6 +519,15 @@
                 "git": {
                     "commitHash": "31745d66dd679ac0ac4f8d3ecff168fce6170c6a",
                     "repositoryUrl": "https://github.com/mattn/go-isatty/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "c12348ce28de40eed0136aa2b644d0ee0650e56c",
+                    "repositoryUrl": "https://github.com/matttproud/golang_protobuf_extensions/"
                 }
             }
         },
@@ -454,6 +589,15 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "b2432428689ca58c2b8e8dea9449d3295cf96fc9",
+                    "repositoryUrl": "https://github.com/mtrmac/gpgme/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "279bed98673dd5bef374d3b6e4b09e2af76183bf",
                     "repositoryUrl": "https://github.com/opencontainers/go-digest/"
                 }
@@ -465,6 +609,15 @@
                 "git": {
                     "commitHash": "d60099175f88c47cd379c4738d158884749ed235",
                     "repositoryUrl": "https://github.com/opencontainers/image-spec/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "baf6536d6259209c3edfa2b22237af82942d3dfa",
+                    "repositoryUrl": "https://github.com/opencontainers/runc/"
                 }
             }
         },
@@ -580,6 +733,42 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "170205fb58decfd011f1550d4cfb737230d7ae4f",
+                    "repositoryUrl": "https://github.com/prometheus/client_golang/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "d1d2010b5beead3fa1c5f271a5cf626e40b3ad6e",
+                    "repositoryUrl": "https://github.com/prometheus/client_model/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "287d3e634a1e550c9e463dd7e5a75a422c614505",
+                    "repositoryUrl": "https://github.com/prometheus/common/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "6d489fc7f1d9cd890a250f3ea3431b1744b9623f",
+                    "repositoryUrl": "https://github.com/prometheus/procfs/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "f58768cc1a7a7e77a3bd49e98cdd21419399b6a3",
                     "repositoryUrl": "https://github.com/satori/go.uuid/"
                 }
@@ -634,6 +823,24 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "6f934d456d51e742b4eeab20d925a827ef22320a",
+                    "repositoryUrl": "https://github.com/ulikunitz/xz/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "b1fa246876b8398a7e3aad2000ef5c0b1a0b58fe",
+                    "repositoryUrl": "https://github.com/vbauerster/mpb/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "d1553a71de50473073e188aa79cebf7f993f20fe",
                     "repositoryUrl": "https://github.com/vincent-petithory/dataurl/"
                 }
@@ -681,6 +888,15 @@
                 "git": {
                     "commitHash": "858c2ad4c8b6c5d10852cb89079f6ca1c7309787",
                     "repositoryUrl": "https://golang.org/x/oauth2/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "cd5d95a43a6e21273425c7ae415d3df9ea832eeb",
+                    "repositoryUrl": "https://golang.org/x/sync/"
                 }
             }
         },

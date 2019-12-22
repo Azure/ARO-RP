@@ -67,6 +67,17 @@
   version = "v0.3.1"
 
 [[projects]]
+  digest = "1:d5e752c67b445baa5b6cb6f8aa706775c2aa8e41aca95a0c651520ff2c80361a"
+  name = "github.com/Microsoft/go-winio"
+  packages = [
+    ".",
+    "pkg/guid",
+  ]
+  pruneopts = "UT"
+  revision = "6c72808b55902eae4c5943626030429ff20f3b63"
+  version = "v0.4.14"
+
+[[projects]]
   digest = "1:a2682518d905d662d984ef9959984ef87cecb777d379bfa9d9fe40e78069b3e4"
   name = "github.com/PuerkitoBio/purell"
   packages = ["."]
@@ -81,6 +92,14 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "de5bf2ad457846296e2031421a34e2568e304e35"
+
+[[projects]]
+  digest = "1:e626376fab8608a972d47e91b3c1bbbddaecaf1d42b82be6dcc52d10a7557893"
+  name = "github.com/VividCortex/ewma"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "b24eb346a94c3ba12c1da1e564dbac1b498a77ce"
+  version = "v1.1.1"
 
 [[projects]]
   branch = "go15"
@@ -157,16 +176,55 @@
   version = "v1.26.4"
 
 [[projects]]
-  digest = "1:5f9ab5eeb3788ba8945f9acb2755fba44c3bfefdc95fae477bf6cdc790cab525"
+  digest = "1:d6afaeed1502aa28e80a4ed0981d570ad91b2579193404256ce672ed0a609e0d"
+  name = "github.com/beorn7/perks"
+  packages = ["quantile"]
+  pruneopts = "UT"
+  revision = "37c8de3658fcb183f997c4e13e8337516ab753e6"
+  version = "v1.0.1"
+
+[[projects]]
+  digest = "1:4e648ec283351e1036443ba736420113de2050fa7af7b34041f2555ef047a221"
   name = "github.com/containers/image"
   packages = [
+    "copy",
+    "docker",
+    "docker/policyconfiguration",
     "docker/reference",
+    "image",
+    "manifest",
+    "pkg/blobinfocache",
+    "pkg/blobinfocache/boltdb",
+    "pkg/blobinfocache/internal/prioritize",
+    "pkg/blobinfocache/memory",
+    "pkg/blobinfocache/none",
+    "pkg/compression",
+    "pkg/docker/config",
+    "pkg/strslice",
     "pkg/sysregistriesv2",
+    "pkg/tlsclientconfig",
+    "signature",
+    "transports",
     "types",
+    "version",
   ]
   pruneopts = "UT"
   revision = "35f569df3607ab29b87dd5e19f7901c3ce7cf511"
   version = "v2.0.1"
+
+[[projects]]
+  digest = "1:f031cc7fd1159479030de1bc5d4ed50488843ed0bb693cd3714df381024c6500"
+  name = "github.com/containers/storage"
+  packages = [
+    "pkg/fileutils",
+    "pkg/homedir",
+    "pkg/idtools",
+    "pkg/mount",
+    "pkg/system",
+  ]
+  pruneopts = "UT"
+  revision = "7bb9317d53c232a83be3d9cf379461abf75e3d78"
+  version = "v1.15.3"
 
 [[projects]]
   digest = "1:05ffeeed3f0f05520de0679f6aa3219ffee69cfd6d9fb6c194879d4c818ad670"
@@ -234,6 +292,83 @@
   version = "v1.1.0"
 
 [[projects]]
+  digest = "1:8efa27b267b2824a60a066f130f67b37eacc66d580bf471a79bf5403fe827db5"
+  name = "github.com/docker/distribution"
+  packages = [
+    ".",
+    "digestset",
+    "metrics",
+    "reference",
+    "registry/api/errcode",
+    "registry/api/v2",
+    "registry/client",
+    "registry/client/auth/challenge",
+    "registry/client/transport",
+    "registry/storage/cache",
+    "registry/storage/cache/memory",
+  ]
+  pruneopts = "UT"
+  revision = "2461543d988979529609e8cb6fca9ca190dc48da"
+  version = "v2.7.1"
+
+[[projects]]
+  digest = "1:60436dbf87427369a5ec255d2af32022d2cbe8c26cff09c3d4b53833edde2349"
+  name = "github.com/docker/docker"
+  packages = [
+    "api/types/versions",
+    "pkg/homedir",
+  ]
+  pruneopts = "UT"
+  revision = "092cba3727bb9b4a2f0e922cd6c0f93ea270e363"
+  version = "v1.13.1"
+
+[[projects]]
+  digest = "1:9f3f49b4e32d3da2dd6ed07cc568627b53cc80205c0dcf69f4091f027416cb60"
+  name = "github.com/docker/docker-credential-helpers"
+  packages = [
+    "client",
+    "credentials",
+  ]
+  pruneopts = "UT"
+  revision = "54f0238b6bf101fc3ad3b34114cb5520beb562f5"
+  version = "v0.6.3"
+
+[[projects]]
+  digest = "1:200c4b479428e0d31c41126fab42597338ba4f546ffd76e5622b56935d6d4fc5"
+  name = "github.com/docker/go-connections"
+  packages = [
+    "sockets",
+    "tlsconfig",
+  ]
+  pruneopts = "UT"
+  revision = "7395e3f8aa162843a74ed6d48e79627d9792ac55"
+  version = "v0.4.0"
+
+[[projects]]
+  digest = "1:9f1c706b956b58bbe2a420082dd47df25329a082ae873fdd43c175b09887cea8"
+  name = "github.com/docker/go-metrics"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "b619b3592b65de4f087d9f16863a7e6ff905973c"
+  version = "v0.0.1"
+
+[[projects]]
+  digest = "1:e95ef557dc3120984bb66b385ae01b4bb8ff56bcde28e7b0d1beed0cccc4d69f"
+  name = "github.com/docker/go-units"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "519db1ee28dcc9fd2474ae59fca29a810482bfb1"
+  version = "v0.4.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:4841e14252a2cecf11840bd05230412ad469709bbacfc12467e2ce5ad07f339b"
+  name = "github.com/docker/libtrust"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "aabc10ec26b754e797f9028f4589c5b7bd90dc20"
+
+[[projects]]
   digest = "1:e15b0065da1011473634ffa0dda17731ea1d5f6fb8bb87905216d95fa29eaec0"
   name = "github.com/emicklei/go-restful"
   packages = [
@@ -243,6 +378,14 @@
   pruneopts = "UT"
   revision = "99f05a26a0a1c71e664ebe6a76d29b2c80333056"
   version = "v2.11.1"
+
+[[projects]]
+  digest = "1:f2ac2c724fc8214bb7b9dd6d4f5b7a983152051f5133320f228557182263cb94"
+  name = "github.com/etcd-io/bbolt"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "a0458a2b35708eef59eb5f620ceb3cd1c01a824d"
+  version = "v1.3.3"
 
 [[projects]]
   digest = "1:2cd7915ab26ede7d95b8749e6b1f933f1c6d5398030684e6505940a10f31cfda"
@@ -445,6 +588,22 @@
   revision = "95032a82bc518f77982ea72343cc1ade730072f0"
 
 [[projects]]
+  digest = "1:b1bcef3a26702bf9eb896d8279197dab96755d5b5667899184a5b5d6a306bb29"
+  name = "github.com/klauspost/compress"
+  packages = ["flate"]
+  pruneopts = "UT"
+  revision = "438db640fd672278e44bb9bec0b979358e7e9c76"
+  version = "v1.9.4"
+
+[[projects]]
+  digest = "1:ce7769e1e6c4180a163da92df483369d689c8849eacfdd24a3cdcbcdc47b8b95"
+  name = "github.com/klauspost/pgzip"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "083b1c3f84dd6486588802e5ce295de3a7f41a8b"
+  version = "v1.2.1"
+
+[[projects]]
   digest = "1:31e761d97c76151dde79e9d28964a812c46efc5baee4085b86f68f0c654450de"
   name = "github.com/konsorten/go-windows-terminal-sequences"
   packages = ["."]
@@ -495,6 +654,14 @@
   pruneopts = "UT"
   revision = "31745d66dd679ac0ac4f8d3ecff168fce6170c6a"
   version = "v0.0.11"
+
+[[projects]]
+  digest = "1:ff5ebae34cfbf047d505ee150de27e60570e8c394b3b8fdbb720ff6ac71985fc"
+  name = "github.com/matttproud/golang_protobuf_extensions"
+  packages = ["pbutil"]
+  pruneopts = "UT"
+  revision = "c12348ce28de40eed0136aa2b644d0ee0650e56c"
+  version = "v1.0.1"
 
 [[projects]]
   branch = "master"
@@ -554,6 +721,14 @@
   version = "1.0.1"
 
 [[projects]]
+  branch = "master"
+  digest = "1:9ff46eeb29cd78dad4f96328e23f088c10a72dff353a5c20844a8d3ed0c720d8"
+  name = "github.com/mtrmac/gpgme"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "b2432428689ca58c2b8e8dea9449d3295cf96fc9"
+
+[[projects]]
   digest = "1:ee4d4af67d93cc7644157882329023ce9a7bcfce956a079069a9405521c7cc8d"
   name = "github.com/opencontainers/go-digest"
   packages = ["."]
@@ -573,11 +748,22 @@
   version = "v1.0.1"
 
 [[projects]]
+  digest = "1:38ee335aedf4626620f3cf8f605661e71abdcce7b40b38921962beb3980f0a20"
+  name = "github.com/opencontainers/runc"
+  packages = ["libcontainer/user"]
+  pruneopts = "UT"
+  revision = "baf6536d6259209c3edfa2b22237af82942d3dfa"
+  version = "v0.1.1"
+
+[[projects]]
   branch = "release-4.3"
-  digest = "1:81a504705a6902d4c00034a6e7fcfa0e628be45ee64b50bc933eb4cdf39242aa"
+  digest = "1:474e0169f23fd3871747a9a0706035a342dd672a6f400943038c6b4235c92487"
   name = "github.com/openshift/api"
   packages = [
     "config/v1",
+    "image/docker10",
+    "image/dockerpre012",
+    "image/v1",
     "operator/v1",
     "operator/v1alpha1",
   ]
@@ -779,6 +965,50 @@
   version = "v0.8.1"
 
 [[projects]]
+  digest = "1:eb04f69c8991e52eff33c428bd729e04208bf03235be88e4df0d88497c6861b9"
+  name = "github.com/prometheus/client_golang"
+  packages = [
+    "prometheus",
+    "prometheus/internal",
+    "prometheus/promhttp",
+  ]
+  pruneopts = "UT"
+  revision = "170205fb58decfd011f1550d4cfb737230d7ae4f"
+  version = "v1.1.0"
+
+[[projects]]
+  digest = "1:982be0b5396e16a663697899ce69cc7b1e71ddcae4153af157578d4dc9bc3f88"
+  name = "github.com/prometheus/client_model"
+  packages = ["go"]
+  pruneopts = "UT"
+  revision = "d1d2010b5beead3fa1c5f271a5cf626e40b3ad6e"
+  version = "v0.1.0"
+
+[[projects]]
+  digest = "1:f119e3205d3a1f0f19dbd7038eb37528e2c6f0933269dc344e305951fb87d632"
+  name = "github.com/prometheus/common"
+  packages = [
+    "expfmt",
+    "internal/bitbucket.org/ww/goautoneg",
+    "model",
+  ]
+  pruneopts = "UT"
+  revision = "287d3e634a1e550c9e463dd7e5a75a422c614505"
+  version = "v0.7.0"
+
+[[projects]]
+  digest = "1:ec0ff4bd619a67065e34d6477711ed0117e335f99059a4c508e0fe21cfe7b304"
+  name = "github.com/prometheus/procfs"
+  packages = [
+    ".",
+    "internal/fs",
+    "internal/util",
+  ]
+  pruneopts = "UT"
+  revision = "6d489fc7f1d9cd890a250f3ea3431b1744b9623f"
+  version = "v0.0.8"
+
+[[projects]]
   digest = "1:274f67cb6fed9588ea2521ecdac05a6d62a8c51c074c1fccc6a49a40ba80e925"
   name = "github.com/satori/go.uuid"
   packages = ["."]
@@ -827,6 +1057,32 @@
   version = "v1.1.7"
 
 [[projects]]
+  digest = "1:2643d81498e38e44bdcf480be199cac55f29e97403b0342d962824bfe9960722"
+  name = "github.com/ulikunitz/xz"
+  packages = [
+    ".",
+    "internal/hash",
+    "internal/xlog",
+    "lzma",
+  ]
+  pruneopts = "UT"
+  revision = "6f934d456d51e742b4eeab20d925a827ef22320a"
+  version = "v0.5.6"
+
+[[projects]]
+  digest = "1:b98980042819240ff47f380378e881dfc04cdf36c373c12dce3397fdfb71d5cb"
+  name = "github.com/vbauerster/mpb"
+  packages = [
+    ".",
+    "cwriter",
+    "decor",
+    "internal",
+  ]
+  pruneopts = "UT"
+  revision = "b1fa246876b8398a7e3aad2000ef5c0b1a0b58fe"
+  version = "v3.4.0"
+
+[[projects]]
   branch = "master"
   digest = "1:c72e01f0dbae0dd9bc671b223234c2e0549343d5fb10f182fa4da3ea79322c25"
   name = "github.com/vincent-petithory/dataurl"
@@ -869,16 +1125,23 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:f032a8a6fe8950b4a0d2e9348b9be31fff1ccf762544947a04ac12d998ebfc22"
+  digest = "1:f39e87aefd06d1c727d726b7a2c97bf15a3df8625ce1042a4efdae4e301e4795"
   name = "golang.org/x/crypto"
   packages = [
     "bcrypt",
     "blowfish",
+    "cast5",
     "chacha20",
     "curve25519",
     "ed25519",
     "ed25519/internal/edwards25519",
     "internal/subtle",
+    "openpgp",
+    "openpgp/armor",
+    "openpgp/elgamal",
+    "openpgp/errors",
+    "openpgp/packet",
+    "openpgp/s2k",
     "pkcs12",
     "pkcs12/internal/rc2",
     "poly1305",
@@ -890,7 +1153,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:676f320d34ccfa88bfa6d04bdf388ed7062af175355c805ef57ccda1a3f13432"
+  digest = "1:acf27ebc20ba6dfedd0ec4b01dfeab79da907ccfd902307d8ea3e87faf6f5226"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -899,7 +1162,9 @@
     "http2",
     "http2/hpack",
     "idna",
+    "internal/socks",
     "internal/timeseries",
+    "proxy",
     "trace",
   ]
   pruneopts = "UT"
@@ -918,6 +1183,14 @@
   ]
   pruneopts = "UT"
   revision = "858c2ad4c8b6c5d10852cb89079f6ca1c7309787"
+
+[[projects]]
+  branch = "master"
+  digest = "1:382bb5a7fb4034db3b6a2d19e5a4a6bcf52f4750530603c01ca18a172fa3089b"
+  name = "golang.org/x/sync"
+  packages = ["semaphore"]
+  pruneopts = "UT"
+  revision = "cd5d95a43a6e21273425c7ae415d3df9ea832eeb"
 
 [[projects]]
   branch = "master"
@@ -1392,12 +1665,18 @@
     "github.com/BurntSushi/toml",
     "github.com/alvaroloes/enumer",
     "github.com/apparentlymart/go-cidr/cidr",
+    "github.com/containers/image/copy",
+    "github.com/containers/image/docker",
+    "github.com/containers/image/pkg/blobinfocache/memory",
+    "github.com/containers/image/signature",
+    "github.com/containers/image/types",
     "github.com/dgrijalva/jwt-go",
     "github.com/golang/mock/gomock",
     "github.com/golang/mock/mockgen",
     "github.com/gorilla/mux",
     "github.com/jim-minter/go-cosmosdb/cmd/gencosmosdb",
     "github.com/openshift/api/config/v1",
+    "github.com/openshift/api/image/v1",
     "github.com/openshift/client-go/config/clientset/versioned",
     "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1",
     "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset/typed/machine/v1beta1",
