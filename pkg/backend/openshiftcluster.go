@@ -5,6 +5,7 @@ package backend
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"sync/atomic"
 	"time"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/backend/openshiftcluster"
+	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
@@ -33,7 +35,7 @@ func (ocb *openShiftClusterBackend) try() (bool, error) {
 	log := ocb.baseLog.WithField("resource", doc.OpenShiftCluster.ID)
 	if doc.Dequeues > maxDequeueCount {
 		log.Errorf("dequeued %d times, failing", doc.Dequeues)
-		return true, ocb.endLease(nil, doc, api.ProvisioningStateFailed)
+		return true, ocb.updateStatusAndEndLease(nil, doc, api.ProvisioningStateFailed)
 	}
 
 	log.Print("dequeued")
@@ -59,14 +61,17 @@ func (ocb *openShiftClusterBackend) try() (bool, error) {
 	return true, nil
 }
 
+// handle is responsible for handling backend operation and lease
 func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument) error {
-	stop := ocb.heartbeat(log, doc)
+	ctx, cancel := context.WithCancel(ctx)
+
+	stop := ocb.heartbeat(cancel, log, doc)
 	defer stop()
 
 	m, err := openshiftcluster.NewManager(log, ocb.env, ocb.db.OpenShiftClusters, doc)
 	if err != nil {
 		log.Error(err)
-		return ocb.endLease(stop, doc, api.ProvisioningStateFailed)
+		return ocb.updateStatusAndEndLease(stop, doc, api.ProvisioningStateFailed)
 	}
 
 	switch doc.OpenShiftCluster.Properties.ProvisioningState {
@@ -76,10 +81,10 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 		err = m.Create(ctx)
 		if err != nil {
 			log.Error(err)
-			return ocb.endLease(stop, doc, api.ProvisioningStateFailed)
+			return ocb.updateStatusAndEndLease(stop, doc, api.ProvisioningStateFailed)
 		}
 
-		return ocb.endLease(stop, doc, api.ProvisioningStateSucceeded)
+		return ocb.updateStatusAndEndLease(stop, doc, api.ProvisioningStateSucceeded)
 
 	case api.ProvisioningStateUpdating:
 		log.Print("updating")
@@ -87,10 +92,10 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 		err = m.Update(ctx)
 		if err != nil {
 			log.Error(err)
-			return ocb.endLease(stop, doc, api.ProvisioningStateFailed)
+			return ocb.updateStatusAndEndLease(stop, doc, api.ProvisioningStateFailed)
 		}
 
-		return ocb.endLease(stop, doc, api.ProvisioningStateSucceeded)
+		return ocb.updateStatusAndEndLease(stop, doc, api.ProvisioningStateSucceeded)
 
 	case api.ProvisioningStateDeleting:
 		log.Print("deleting")
@@ -98,7 +103,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 		err = m.Delete(ctx)
 		if err != nil {
 			log.Error(err)
-			return ocb.endLease(stop, doc, api.ProvisioningStateFailed)
+			return ocb.updateStatusAndEndLease(stop, doc, api.ProvisioningStateFailed)
 		}
 
 		err = ocb.updateAsyncOperation(doc.AsyncOperationID, nil, api.ProvisioningStateSucceeded, "")
@@ -115,7 +120,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 	return fmt.Errorf("unexpected provisioningState %q", doc.OpenShiftCluster.Properties.ProvisioningState)
 }
 
-func (ocb *openShiftClusterBackend) heartbeat(log *logrus.Entry, doc *api.OpenShiftClusterDocument) func() {
+func (ocb *openShiftClusterBackend) heartbeat(cancel context.CancelFunc, log *logrus.Entry, doc *api.OpenShiftClusterDocument) func() {
 	var stopped bool
 	stop, done := make(chan struct{}), make(chan struct{})
 
@@ -130,6 +135,12 @@ func (ocb *openShiftClusterBackend) heartbeat(log *logrus.Entry, doc *api.OpenSh
 		for {
 			_, err := ocb.db.OpenShiftClusters.Lease(doc.Key)
 			if err != nil {
+				// if lost lease - cancel backend workers
+				// and revoke lease
+				if errors.Is(err, database.ErrorLostLease) {
+					cancel()
+					ocb.db.OpenShiftClusters.RevokeLease(doc.Key)
+				}
 				log.Error(err)
 				return
 			}
@@ -137,6 +148,7 @@ func (ocb *openShiftClusterBackend) heartbeat(log *logrus.Entry, doc *api.OpenSh
 			select {
 			case <-t.C:
 			case <-stop:
+				ocb.db.OpenShiftClusters.RevokeLease(doc.Key)
 				return
 			}
 		}
