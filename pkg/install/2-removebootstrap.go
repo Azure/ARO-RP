@@ -14,6 +14,7 @@ import (
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/password"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
@@ -75,25 +76,22 @@ func (i *Installer) removeBootstrap(ctx context.Context) error {
 		}
 
 		i.log.Print("waiting for version clusterversion")
-		now := time.Now()
-		t := time.NewTicker(10 * time.Second)
-		defer t.Stop()
-	out:
-		for {
+		timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
+		defer cancel()
+		err = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 			cv, err := cli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
 			if err == nil {
 				for _, cond := range cv.Status.Conditions {
 					if cond.Type == configv1.OperatorAvailable && cond.Status == configv1.ConditionTrue {
-						break out
+						return true, nil
 					}
 				}
 			}
+			return false, nil
 
-			if time.Now().Sub(now) > 30*time.Minute {
-				return fmt.Errorf("timed out waiting for version clusterversion")
-			}
-
-			<-t.C
+		}, timeoutCtx.Done())
+		if err != nil {
+			return err
 		}
 
 		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {

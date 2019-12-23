@@ -24,6 +24,7 @@ import (
 	"github.com/openshift/installer/pkg/asset/ignition/machine"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -717,20 +718,15 @@ func (i *Installer) installResources(ctx context.Context) error {
 		}
 
 		i.log.Print("waiting for bootstrap configmap")
-		now := time.Now()
-		t := time.NewTicker(10 * time.Second)
-		defer t.Stop()
-		for {
+		timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
+		defer cancel()
+		err = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 			cm, err := cli.CoreV1().ConfigMaps("kube-system").Get("bootstrap", metav1.GetOptions{})
-			if err == nil && cm.Data["status"] == "complete" {
-				break
-			}
+			return err == nil && cm.Data["status"] == "complete", nil
 
-			if time.Now().Sub(now) > 30*time.Minute {
-				return fmt.Errorf("timed out waiting for bootstrap configmap. Last error: %v", err)
-			}
-
-			<-t.C
+		}, timeoutCtx.Done())
+		if err != nil {
+			return err
 		}
 	}
 
