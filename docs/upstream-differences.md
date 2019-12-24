@@ -59,3 +59,6 @@ upstream OCP.
   infraID
 
 * ARO uses first party RHCOS OS images published by Microsoft.
+
+* ARO API server internal LB remains on highest available master subnet IP, like
+  in 4.2.
