@@ -501,6 +501,29 @@ func (g *generator) cosmosdb() []*arm.Resource {
 			Resource: &documentdb.SQLContainerCreateUpdateParameters{
 				SQLContainerCreateUpdateProperties: &documentdb.SQLContainerCreateUpdateProperties{
 					Resource: &documentdb.SQLContainerResource{
+						ID: to.StringPtr("AsyncOperations"),
+						PartitionKey: &documentdb.ContainerPartitionKey{
+							Paths: &[]string{
+								"/id",
+							},
+							Kind: documentdb.PartitionKindHash,
+						},
+						DefaultTTL: to.Int32Ptr(7 * 86400), // 7 days
+					},
+					Options: map[string]*string{},
+				},
+				Name: to.StringPtr("[concat(parameters('databaseAccountName'), '/ARO/AsyncOperations')]"),
+				Type: to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+			},
+			APIVersion: apiVersions["documentdb"],
+			DependsOn: []string{
+				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
+			},
+		},
+		{
+			Resource: &documentdb.SQLContainerCreateUpdateParameters{
+				SQLContainerCreateUpdateProperties: &documentdb.SQLContainerCreateUpdateProperties{
+					Resource: &documentdb.SQLContainerResource{
 						ID: to.StringPtr("OpenShiftClusters"),
 						PartitionKey: &documentdb.ContainerPartitionKey{
 							Paths: &[]string{
@@ -535,18 +558,9 @@ func (g *generator) cosmosdb() []*arm.Resource {
 						ID: to.StringPtr("Subscriptions"),
 						PartitionKey: &documentdb.ContainerPartitionKey{
 							Paths: &[]string{
-								"/key",
+								"/id",
 							},
 							Kind: documentdb.PartitionKindHash,
-						},
-						UniqueKeyPolicy: &documentdb.UniqueKeyPolicy{
-							UniqueKeys: &[]documentdb.UniqueKey{
-								{
-									Paths: &[]string{
-										"/key",
-									},
-								},
-							},
 						},
 					},
 					Options: map[string]*string{},

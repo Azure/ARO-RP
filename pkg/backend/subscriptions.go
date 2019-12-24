@@ -29,7 +29,7 @@ func (sb *subscriptionBackend) try() (bool, error) {
 		return false, err
 	}
 
-	log := sb.baseLog.WithField("subscription", doc.Key)
+	log := sb.baseLog.WithField("subscription", doc.ID)
 	if doc.Dequeues > maxDequeueCount {
 		log.Errorf("dequeued %d times, failing", doc.Dequeues)
 		return true, sb.endLease(nil, doc, false, true)
@@ -76,7 +76,7 @@ func (sb *subscriptionBackend) handle(ctx context.Context, log *logrus.Entry, do
 // caller indicating whether it this is the case - if this is false, the caller
 // should sleep before calling again
 func (sb *subscriptionBackend) handleDelete(ctx context.Context, log *logrus.Entry, subdoc *api.SubscriptionDocument) (bool, error) {
-	i, err := sb.db.OpenShiftClusters.ListByPrefix(string(subdoc.Key), "/subscriptions/"+subdoc.Key+"/")
+	i, err := sb.db.OpenShiftClusters.ListByPrefix(subdoc.ID, "/subscriptions/"+subdoc.ID+"/")
 	if err != nil {
 		return false, err
 	}
@@ -129,7 +129,7 @@ func (sb *subscriptionBackend) heartbeat(log *logrus.Entry, doc *api.Subscriptio
 		defer t.Stop()
 
 		for {
-			_, err := sb.db.Subscriptions.Lease(doc.Key)
+			_, err := sb.db.Subscriptions.Lease(doc.ID)
 			if err != nil {
 				log.Error(err)
 				return
@@ -157,6 +157,6 @@ func (sb *subscriptionBackend) endLease(stop func(), doc *api.SubscriptionDocume
 		stop()
 	}
 
-	_, err := sb.db.Subscriptions.EndLease(doc.Key, done, retryLater)
+	_, err := sb.db.Subscriptions.EndLease(doc.ID, done, retryLater)
 	return err
 }

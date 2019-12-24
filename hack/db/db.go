@@ -9,7 +9,6 @@ import (
 	"os"
 	"strings"
 
-	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
 
@@ -29,12 +28,12 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	db, err := database.NewDatabase(ctx, env, uuid.NewV4(), "ARO")
+	db, err := database.NewDatabase(ctx, env, "", "ARO")
 	if err != nil {
 		return err
 	}
 
-	doc, err := db.OpenShiftClusters.Get(api.Key(strings.ToLower(os.Args[1])))
+	doc, err := db.OpenShiftClusters.Get(strings.ToLower(os.Args[1]))
 	if err != nil {
 		return err
 	}

@@ -46,18 +46,6 @@ class AADManager(object):
 
         return app, password
 
-    def get_application(self, app_id):
-        apps = list(self.client.applications.list(
-            filter="appId eq '%s'" % app_id))
-        if apps:
-            return apps[0]
-        return None
-
-    def delete_managed_application(self, app_id):
-        app = self.get_application(app_id)
-        if app and app.identifier_uris and app.identifier_uris[0].startswith(self.MANAGED_APP_PREFIX):
-            self.client.applications.delete(app.object_id)
-
     def get_service_principal(self, app_id):
         sps = list(self.client.service_principals.list(
             filter="appId eq '%s'" % app_id))

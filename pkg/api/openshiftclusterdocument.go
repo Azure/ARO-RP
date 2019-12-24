@@ -3,10 +3,6 @@ package api
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-import (
-	uuid "github.com/satori/go.uuid"
-)
-
 // OpenShiftClusterDocuments represents OpenShift cluster documents.
 // pkg/database/cosmosdb requires its definition.
 type OpenShiftClusterDocuments struct {
@@ -27,15 +23,14 @@ type OpenShiftClusterDocument struct {
 	ETag        string `json:"_etag,omitempty"`
 	Attachments string `json:"_attachments,omitempty"`
 
-	Key          Key    `json:"key,omitempty"`
+	Key          string `json:"key,omitempty"`
 	PartitionKey string `json:"partitionKey,omitempty"`
 
-	LeaseOwner   *uuid.UUID `json:"leaseOwner,omitempty"`
-	LeaseExpires int        `json:"leaseExpires,omitempty"`
-	Dequeues     int        `json:"dequeues,omitempty"`
+	LeaseOwner   string `json:"leaseOwner,omitempty"`
+	LeaseExpires int    `json:"leaseExpires,omitempty"`
+	Dequeues     int    `json:"dequeues,omitempty"`
+
+	AsyncOperationID string `json:"asyncOperationId,omitempty"`
 
 	OpenShiftCluster *OpenShiftCluster `json:"openShiftCluster,omitempty"`
 }
-
-// Key represents a database lookup key.
-type Key string

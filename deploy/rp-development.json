@@ -111,6 +111,27 @@
         {
             "properties": {
                 "resource": {
+                    "id": "AsyncOperations",
+                    "partitionKey": {
+                        "paths": [
+                            "/id"
+                        ],
+                        "kind": "Hash"
+                    },
+                    "defaultTtl": 604800
+                },
+                "options": {}
+            },
+            "name": "[concat(parameters('databaseAccountName'), '/ARO/AsyncOperations')]",
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+            "apiVersion": "2019-08-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]"
+            ]
+        },
+        {
+            "properties": {
+                "resource": {
                     "id": "OpenShiftClusters",
                     "partitionKey": {
                         "paths": [
@@ -143,18 +164,9 @@
                     "id": "Subscriptions",
                     "partitionKey": {
                         "paths": [
-                            "/key"
+                            "/id"
                         ],
                         "kind": "Hash"
-                    },
-                    "uniqueKeyPolicy": {
-                        "uniqueKeys": [
-                            {
-                                "paths": [
-                                    "/key"
-                                ]
-                            }
-                        ]
                     }
                 },
                 "options": {}

@@ -5,6 +5,7 @@ package frontend
 
 import (
 	"net/http"
+	"net/url"
 
 	"github.com/sirupsen/logrus"
 
@@ -16,17 +17,21 @@ import (
 func (f *frontend) deleteOpenShiftCluster(w http.ResponseWriter, r *http.Request) {
 	log := r.Context().Value(middleware.ContextKeyLog).(*logrus.Entry)
 
-	_, err := f.db.OpenShiftClusters.Patch(api.Key(r.URL.Path), func(doc *api.OpenShiftClusterDocument) error {
-		return f._deleteOpenShiftCluster(doc)
+	var header http.Header
+	_, err := f.db.OpenShiftClusters.Patch(r.URL.Path, func(doc *api.OpenShiftClusterDocument) error {
+		return f._deleteOpenShiftCluster(r, &header, doc)
 	})
-	if cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
-		err = &noContent{}
+	switch {
+	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
+		err = statusCodeError(http.StatusNoContent)
+	case err == nil:
+		err = statusCodeError(http.StatusAccepted)
 	}
 
-	reply(log, w, nil, err)
+	reply(log, w, header, nil, err)
 }
 
-func (f *frontend) _deleteOpenShiftCluster(doc *api.OpenShiftClusterDocument) error {
+func (f *frontend) _deleteOpenShiftCluster(r *http.Request, header *http.Header, doc *api.OpenShiftClusterDocument) error {
 	_, err := f.validateSubscriptionState(doc.Key, api.SubscriptionStateRegistered, api.SubscriptionStateWarned, api.SubscriptionStateSuspended)
 	if err != nil {
 		return err
@@ -39,6 +44,24 @@ func (f *frontend) _deleteOpenShiftCluster(doc *api.OpenShiftClusterDocument) er
 
 	doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateDeleting
 	doc.Dequeues = 0
+
+	doc.AsyncOperationID, err = f.newAsyncOperation(r, doc)
+	if err != nil {
+		return err
+	}
+
+	u, err := url.Parse(r.Header.Get("Referer"))
+	if err != nil {
+		return err
+	}
+
+	*header = http.Header{}
+
+	u.Path = f.operationResultsPath(r, doc.AsyncOperationID)
+	(*header)["Location"] = []string{u.String()}
+
+	u.Path = f.operationsPath(r, doc.AsyncOperationID)
+	(*header)["Azure-AsyncOperation"] = []string{u.String()}
 
 	return nil
 }

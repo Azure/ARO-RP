@@ -11,7 +11,6 @@ from azext_aro._rbac import assign_contributor_to_vnet
 from azext_aro._validators import validate_subnets
 from azure.cli.core.commands.client_factory import get_subscription_id
 from azure.cli.core.util import sdk_no_wait
-from msrestazure.azure_exceptions import CloudError
 
 
 FP_CLIENT_ID = "f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875"
@@ -91,23 +90,10 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                        parameters=oc)
 
 
-def aro_delete(cmd, client, resource_group_name, resource_name,
-               no_wait=False):
-    if not no_wait:
-        aad = AADManager(cmd.cli_ctx)
-        try:
-            oc = client.get(resource_group_name, resource_name)
-        except CloudError as err:
-            if err.status_code == 404:
-                return
-            raise err
-
-    sdk_no_wait(no_wait, client.delete,
-                resource_group_name=resource_group_name,
-                resource_name=resource_name)
-
-    if not no_wait:
-        aad.delete_managed_application(oc.service_principal_profile.client_id)
+def aro_delete(client, resource_group_name, resource_name, no_wait=False):
+    return sdk_no_wait(no_wait, client.delete,
+                       resource_group_name=resource_group_name,
+                       resource_name=resource_name)
 
 
 def aro_list(client, resource_group_name=None):
@@ -124,8 +110,7 @@ def aro_get_credentials(client, resource_group_name, resource_name):
     return client.get_credentials(resource_group_name, resource_name)
 
 
-def aro_update(client, resource_group_name, resource_name,
-               worker_count=None,
+def aro_update(client, resource_group_name, resource_name, worker_count=None,
                no_wait=False):
     oc = client.get(resource_group_name, resource_name)
 

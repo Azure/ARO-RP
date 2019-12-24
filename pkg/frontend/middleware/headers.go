@@ -6,16 +6,24 @@ package middleware
 import (
 	"net/http"
 	"strings"
+
+	"github.com/Azure/ARO-RP/pkg/env"
 )
 
-func Headers(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
+func Headers(_env env.Interface) func(http.Handler) http.Handler {
+	return func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/json")
 
-		if strings.EqualFold(r.Header.Get("X-Ms-Return-Client-Request-Id"), "true") {
-			w.Header().Set("X-Ms-Client-Request-Id", r.Header.Get("X-Ms-Client-Request-Id"))
-		}
+			if strings.EqualFold(r.Header.Get("X-Ms-Return-Client-Request-Id"), "true") {
+				w.Header().Set("X-Ms-Client-Request-Id", r.Header.Get("X-Ms-Client-Request-Id"))
+			}
 
-		h.ServeHTTP(w, r)
-	})
+			if _, ok := _env.(env.Dev); ok {
+				r.Header.Set("Referer", "https://localhost:8443"+r.URL.String())
+			}
+
+			h.ServeHTTP(w, r)
+		})
+	}
 }

@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
-	uuid "github.com/satori/go.uuid"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
@@ -18,24 +17,24 @@ import (
 
 type openShiftClusters struct {
 	c    cosmosdb.OpenShiftClusterDocumentClient
-	uuid uuid.UUID
+	uuid string
 }
 
 // OpenShiftClusters is the database interface for OpenShiftClusterDocuments
 type OpenShiftClusters interface {
 	Create(*api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error)
-	Get(api.Key) (*api.OpenShiftClusterDocument, error)
-	Patch(api.Key, func(*api.OpenShiftClusterDocument) error) (*api.OpenShiftClusterDocument, error)
+	Get(string) (*api.OpenShiftClusterDocument, error)
+	Patch(string, func(*api.OpenShiftClusterDocument) error) (*api.OpenShiftClusterDocument, error)
 	Update(*api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error)
 	Delete(*api.OpenShiftClusterDocument) error
-	ListByPrefix(string, api.Key) (cosmosdb.OpenShiftClusterDocumentIterator, error)
+	ListByPrefix(string, string) (cosmosdb.OpenShiftClusterDocumentIterator, error)
 	Dequeue() (*api.OpenShiftClusterDocument, error)
-	Lease(api.Key) (*api.OpenShiftClusterDocument, error)
-	EndLease(api.Key, api.ProvisioningState, api.ProvisioningState) (*api.OpenShiftClusterDocument, error)
+	Lease(string) (*api.OpenShiftClusterDocument, error)
+	EndLease(string, api.ProvisioningState, api.ProvisioningState) (*api.OpenShiftClusterDocument, error)
 }
 
 // NewOpenShiftClusters returns a new OpenShiftClusters
-func NewOpenShiftClusters(ctx context.Context, uuid uuid.UUID, dbc cosmosdb.DatabaseClient, dbid, collid string) (OpenShiftClusters, error) {
+func NewOpenShiftClusters(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, dbid, collid string) (OpenShiftClusters, error) {
 	collc := cosmosdb.NewCollectionClient(dbc, dbid)
 
 	triggers := []*cosmosdb.Trigger{
@@ -68,7 +67,7 @@ func NewOpenShiftClusters(ctx context.Context, uuid uuid.UUID, dbc cosmosdb.Data
 }
 
 func (c *openShiftClusters) Create(doc *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error) {
-	if string(doc.Key) != strings.ToLower(string(doc.Key)) {
+	if doc.Key != strings.ToLower(doc.Key) {
 		return nil, fmt.Errorf("key %q is not lower case", doc.Key)
 	}
 
@@ -87,8 +86,8 @@ func (c *openShiftClusters) Create(doc *api.OpenShiftClusterDocument) (*api.Open
 	return doc, err
 }
 
-func (c *openShiftClusters) Get(key api.Key) (*api.OpenShiftClusterDocument, error) {
-	if string(key) != strings.ToLower(string(key)) {
+func (c *openShiftClusters) Get(key string) (*api.OpenShiftClusterDocument, error) {
+	if key != strings.ToLower(key) {
 		return nil, fmt.Errorf("key %q is not lower case", key)
 	}
 
@@ -102,7 +101,7 @@ func (c *openShiftClusters) Get(key api.Key) (*api.OpenShiftClusterDocument, err
 		Parameters: []cosmosdb.Parameter{
 			{
 				Name:  "@key",
-				Value: string(key),
+				Value: key,
 			},
 		},
 	})
@@ -120,11 +119,11 @@ func (c *openShiftClusters) Get(key api.Key) (*api.OpenShiftClusterDocument, err
 	}
 }
 
-func (c *openShiftClusters) Patch(key api.Key, f func(*api.OpenShiftClusterDocument) error) (*api.OpenShiftClusterDocument, error) {
+func (c *openShiftClusters) Patch(key string, f func(*api.OpenShiftClusterDocument) error) (*api.OpenShiftClusterDocument, error) {
 	return c.patch(key, f, nil)
 }
 
-func (c *openShiftClusters) patch(key api.Key, f func(*api.OpenShiftClusterDocument) error, options *cosmosdb.Options) (*api.OpenShiftClusterDocument, error) {
+func (c *openShiftClusters) patch(key string, f func(*api.OpenShiftClusterDocument) error, options *cosmosdb.Options) (*api.OpenShiftClusterDocument, error) {
 	var doc *api.OpenShiftClusterDocument
 
 	err := cosmosdb.RetryOnPreconditionFailed(func() (err error) {
@@ -150,7 +149,7 @@ func (c *openShiftClusters) Update(doc *api.OpenShiftClusterDocument) (*api.Open
 }
 
 func (c *openShiftClusters) update(doc *api.OpenShiftClusterDocument, options *cosmosdb.Options) (*api.OpenShiftClusterDocument, error) {
-	if string(doc.Key) != strings.ToLower(string(doc.Key)) {
+	if doc.Key != strings.ToLower(doc.Key) {
 		return nil, fmt.Errorf("key %q is not lower case", doc.Key)
 	}
 
@@ -158,15 +157,15 @@ func (c *openShiftClusters) update(doc *api.OpenShiftClusterDocument, options *c
 }
 
 func (c *openShiftClusters) Delete(doc *api.OpenShiftClusterDocument) error {
-	if string(doc.Key) != strings.ToLower(string(doc.Key)) {
+	if doc.Key != strings.ToLower(doc.Key) {
 		return fmt.Errorf("key %q is not lower case", doc.Key)
 	}
 
 	return c.c.Delete(doc.PartitionKey, doc, &cosmosdb.Options{NoETag: true})
 }
 
-func (c *openShiftClusters) ListByPrefix(subscriptionID string, prefix api.Key) (cosmosdb.OpenShiftClusterDocumentIterator, error) {
-	if string(prefix) != strings.ToLower(string(prefix)) {
+func (c *openShiftClusters) ListByPrefix(subscriptionID string, prefix string) (cosmosdb.OpenShiftClusterDocumentIterator, error) {
+	if prefix != strings.ToLower(prefix) {
 		return nil, fmt.Errorf("prefix %q is not lower case", prefix)
 	}
 
@@ -175,7 +174,7 @@ func (c *openShiftClusters) ListByPrefix(subscriptionID string, prefix api.Key) 
 		Parameters: []cosmosdb.Parameter{
 			{
 				Name:  "@prefix",
-				Value: string(prefix),
+				Value: prefix,
 			},
 		},
 	}), nil
@@ -196,7 +195,7 @@ func (c *openShiftClusters) Dequeue() (*api.OpenShiftClusterDocument, error) {
 		}
 
 		for _, doc := range docs.OpenShiftClusterDocuments {
-			doc.LeaseOwner = &c.uuid
+			doc.LeaseOwner = c.uuid
 			doc.Dequeues++
 			doc, err = c.update(doc, &cosmosdb.Options{PreTriggers: []string{"renewLease"}})
 			if cosmosdb.IsErrorStatusCode(err, http.StatusPreconditionFailed) { // someone else got there first
@@ -207,36 +206,38 @@ func (c *openShiftClusters) Dequeue() (*api.OpenShiftClusterDocument, error) {
 	}
 }
 
-func (c *openShiftClusters) Lease(key api.Key) (*api.OpenShiftClusterDocument, error) {
+func (c *openShiftClusters) Lease(key string) (*api.OpenShiftClusterDocument, error) {
 	return c.patch(key, func(doc *api.OpenShiftClusterDocument) error {
-		if doc.LeaseOwner == nil || !uuid.Equal(*doc.LeaseOwner, c.uuid) {
+		if doc.LeaseOwner != c.uuid {
 			return fmt.Errorf("lost lease")
 		}
 		return nil
 	}, &cosmosdb.Options{PreTriggers: []string{"renewLease"}})
 }
 
-func (c *openShiftClusters) EndLease(key api.Key, provisioningState, failedProvisioningState api.ProvisioningState) (*api.OpenShiftClusterDocument, error) {
+func (c *openShiftClusters) EndLease(key string, provisioningState, failedProvisioningState api.ProvisioningState) (*api.OpenShiftClusterDocument, error) {
 	return c.patch(key, func(doc *api.OpenShiftClusterDocument) error {
-		if doc.LeaseOwner == nil || !uuid.Equal(*doc.LeaseOwner, c.uuid) {
+		if doc.LeaseOwner != c.uuid {
 			return fmt.Errorf("lost lease")
 		}
 
 		doc.OpenShiftCluster.Properties.ProvisioningState = provisioningState
 		doc.OpenShiftCluster.Properties.FailedProvisioningState = failedProvisioningState
 
-		doc.LeaseOwner = nil
+		doc.LeaseOwner = ""
 		doc.LeaseExpires = 0
 
 		if provisioningState == api.ProvisioningStateSucceeded {
 			doc.Dequeues = 0
 		}
 
+		doc.AsyncOperationID = ""
+
 		return nil
 	}, nil)
 }
 
-func (c *openShiftClusters) partitionKey(key api.Key) (string, error) {
-	r, err := azure.ParseResourceID(string(key))
+func (c *openShiftClusters) partitionKey(key string) (string, error) {
+	r, err := azure.ParseResourceID(key)
 	return r.SubscriptionID, err
 }

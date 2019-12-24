@@ -3,10 +3,6 @@ package api
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-import (
-	uuid "github.com/satori/go.uuid"
-)
-
 // SubscriptionDocuments represents subscription documents.
 // pkg/database/cosmosdb requires its definition.
 type SubscriptionDocuments struct {
@@ -27,11 +23,9 @@ type SubscriptionDocument struct {
 	ETag        string `json:"_etag,omitempty"`
 	Attachments string `json:"_attachments,omitempty"`
 
-	Key Key `json:"key,omitempty"` // also the partition key
-
-	LeaseOwner   *uuid.UUID `json:"leaseOwner,omitempty"`
-	LeaseExpires int        `json:"leaseExpires,omitempty"`
-	Dequeues     int        `json:"dequeues,omitempty"`
+	LeaseOwner   string `json:"leaseOwner,omitempty"`
+	LeaseExpires int    `json:"leaseExpires,omitempty"`
+	Dequeues     int    `json:"dequeues,omitempty"`
 
 	Deleting bool `json:"deleting,omitempty"`
 
