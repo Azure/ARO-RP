@@ -17,6 +17,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	icazure "github.com/openshift/installer/pkg/asset/installconfig/azure"
+	"github.com/openshift/installer/pkg/asset/releaseimage"
 	"github.com/openshift/installer/pkg/ipnet"
 	"github.com/openshift/installer/pkg/rhcos"
 	"github.com/openshift/installer/pkg/types"
@@ -159,13 +160,31 @@ func (m *Manager) Create(ctx context.Context) error {
 				},
 			},
 			PullSecret: os.Getenv("PULL_SECRET"),
-			Publish:    types.ExternalPublishingStrategy,
+			ImageContentSources: []types.ImageContentSource{
+				{
+					Source: "quay.io/openshift-release-dev/ocp-release-nightly",
+					Mirrors: []string{
+						"arosvc.azurecr.io/openshift-release-dev/ocp-release-nightly",
+					},
+				},
+				{
+					Source: "quay.io/openshift-release-dev/ocp-v4.0-art-dev",
+					Mirrors: []string{
+						"arosvc.azurecr.io/openshift-release-dev/ocp-v4.0-art-dev",
+					},
+				},
+			},
+			Publish: types.ExternalPublishingStrategy,
 		},
 	}
 
-	installConfig.Config.Azure.Image, err = getImage(ctx)
+	installConfig.Config.Azure.Image, err = getRHCOSImage(ctx)
 	if err != nil {
 		return err
+	}
+
+	image := &releaseimage.Image{
+		PullSpec: "arosvc.azurecr.io/openshift-release-dev/ocp-release-nightly@sha256:5f1ff5e767acd58445532222c38e643069fdb9fdf0bb176ced48bc2eb1032f2a",
 	}
 
 	err = validation.ValidateInstallConfig(installConfig.Config, openstackvalidation.NewValidValuesFetcher()).ToAggregate()
@@ -173,12 +192,12 @@ func (m *Manager) Create(ctx context.Context) error {
 		return err
 	}
 
-	return install.NewInstaller(m.log, m.env, m.db, m.fpAuthorizer, r.SubscriptionID).Install(ctx, m.doc, installConfig, platformCreds)
+	return install.NewInstaller(m.log, m.env, m.db, m.fpAuthorizer, r.SubscriptionID).Install(ctx, m.doc, installConfig, platformCreds, image)
 }
 
 var rxRHCOS = regexp.MustCompile(`rhcos-((\d+)\.\d+\.\d{8})\d{4}\.\d+-azure\.x86_64\.vhd`)
 
-func getImage(ctx context.Context) (*azuretypes.Image, error) {
+func getRHCOSImage(ctx context.Context) (*azuretypes.Image, error) {
 	// https://rhcos.blob.core.windows.net/imagebucket/rhcos-43.81.201911221453.0-azure.x86_64.vhd
 	osImage, err := rhcos.VHD(ctx)
 	if err != nil {

@@ -236,7 +236,7 @@ Requires=docker.service
 EnvironmentFile=/etc/sysconfig/arorp
 ExecStartPre=-/usr/bin/docker rm -f %n
 ExecStartPre=/usr/bin/docker pull \$RP_IMAGE
-ExecStart=/usr/bin/docker run --rm --name %n -p 443:8443 -e PULL_SECRET \$RP_IMAGE
+ExecStart=/usr/bin/docker run --rm --name %n -p 443:8443 -e PULL_SECRET \$RP_IMAGE rp
 ExecStop=/usr/bin/docker stop -t 90 %n
 Restart=always
 
@@ -654,7 +654,12 @@ func (g *generator) template() *arm.Template {
 	}
 
 	for _, param := range params {
-		t.Parameters[param] = &arm.TemplateParameter{Type: "string"}
+		typ := "string"
+		switch param {
+		case "pullSecret", "rpImageAuth":
+			typ = "securestring"
+		}
+		t.Parameters[param] = &arm.TemplateParameter{Type: typ}
 	}
 
 	if g.production {

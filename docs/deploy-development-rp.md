@@ -193,7 +193,7 @@
 1. Run the RP
 
    ```
-   go run ./cmd/rp
+   go run ./cmd/aro rp
    ```
 
 1. Before creating a cluster, it is necessary to fake up the step of registering

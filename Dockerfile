@@ -1,5 +1,5 @@
 FROM registry.access.redhat.com/ubi8/ubi-minimal
-COPY rp /usr/local/bin
-ENTRYPOINT ["rp"]
+COPY aro /usr/local/bin
+ENTRYPOINT ["aro"]
 EXPOSE 8443/tcp
 USER 1000

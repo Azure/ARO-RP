@@ -44,7 +44,7 @@ questions or comments.
 
 * .github/workflows: CI workflows using GitHub Actions.
 
-* cmd/rp: RP entrypoint.
+* cmd/aro: RP entrypoint.
 
 * deploy: ARM templates to deploy RP in development and production.
 
@@ -70,6 +70,8 @@ questions or comments.
   * pkg/frontend: RP frontend webserver.
 
   * pkg/install: OpenShift installer wrapper layer.
+
+  * pkg/mirror: OpenShift release mirror tooling.
 
   * pkg/swagger: /swagger Swagger specification generation code.
 

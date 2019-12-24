@@ -1,13 +1,13 @@
 COMMIT = $(shell git rev-parse --short HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
 
-rp: generate
-	go build -ldflags "-X main.gitCommit=$(COMMIT)" ./cmd/rp
+aro: generate
+	go build -ldflags "-X main.gitCommit=$(COMMIT)" ./cmd/aro
 
 az:
 	cd python/az/aro && python ./setup.py bdist_egg
 
 clean:
-	rm -rf python/az/aro/{aro.egg-info,build,dist} rp
+	rm -rf python/az/aro/{aro.egg-info,build,dist} aro
 	find python -type f -name '*.pyc' -delete
 	find python -type d -name __pycache__ -delete
 
@@ -48,8 +48,9 @@ client: generate
 generate:
 	go generate ./...
 
-image: rp
-	docker build -t arosvc.azurecr.io/rp:$(COMMIT) .
+image: aro
+	docker pull registry.access.redhat.com/ubi8/ubi-minimal
+	docker build -t arosvc.azurecr.io/aro:$(COMMIT) .
 
 pyenv${PYTHON_VERSION}:
 	virtualenv --python=/usr/bin/python${PYTHON_VERSION} pyenv${PYTHON_VERSION}
@@ -86,4 +87,4 @@ test-python: generate pyenv${PYTHON_VERSION}
 		azdev linter && \
 		azdev style
 
-.PHONY: rp az clean client generate image secrets secrets-update test-go test-python
+.PHONY: aro az clean client generate image secrets secrets-update test-go test-python

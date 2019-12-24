@@ -10,6 +10,9 @@ jobs:
     env:
       GOPATH: /home/runner/work/ARO-RP/go
     steps:
+    - name: Install packages
+      run: |
+        sudo apt-get install libgpgme-dev
     - name: Set up Go
       uses: actions/setup-go@v1
       with:
