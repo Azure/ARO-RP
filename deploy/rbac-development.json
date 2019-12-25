@@ -67,6 +67,7 @@
                             "Microsoft.Network/routeTables/read",
                             "Microsoft.Network/routeTables/write",
                             "Microsoft.Resources/deployments/operationStatuses/read",
+                            "Microsoft.Resources/deployments/read",
                             "Microsoft.Resources/deployments/write",
                             "Microsoft.Resources/subscriptions/resourceGroups/delete",
                             "Microsoft.Resources/subscriptions/resourceGroups/read",

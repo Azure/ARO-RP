@@ -15,6 +15,8 @@ import (
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
 	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/ignition/bootstrap"
 	"github.com/openshift/installer/pkg/asset/installconfig"
@@ -174,7 +176,17 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 			},
 		})
 		if err != nil {
-			return err
+			if detailedError, ok := err.(autorest.DetailedError); ok {
+				if requestError, ok := detailedError.Original.(azure.RequestError); ok &&
+					requestError.ServiceError != nil &&
+					requestError.ServiceError.Code == "DeploymentActive" {
+					i.log.Print("waiting for storage template")
+					err = i.deployments.Wait(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy")
+				}
+			}
+			if err != nil {
+				return err
+			}
 		}
 	}
 

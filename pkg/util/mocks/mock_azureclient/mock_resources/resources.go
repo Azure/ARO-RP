@@ -50,6 +50,20 @@ func (mr *MockDeploymentsClientMockRecorder) CreateOrUpdateAndWait(arg0, arg1, a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockDeploymentsClient)(nil).CreateOrUpdateAndWait), arg0, arg1, arg2, arg3)
 }
 
+// Wait mocks base method
+func (m *MockDeploymentsClient) Wait(arg0 context.Context, arg1, arg2 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Wait", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Wait indicates an expected call of Wait
+func (mr *MockDeploymentsClientMockRecorder) Wait(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Wait", reflect.TypeOf((*MockDeploymentsClient)(nil).Wait), arg0, arg1, arg2)
+}
+
 // MockGroupsClient is a mock of GroupsClient interface
 type MockGroupsClient struct {
 	ctrl     *gomock.Controller
