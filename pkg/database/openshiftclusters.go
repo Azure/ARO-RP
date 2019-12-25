@@ -4,7 +4,6 @@ package database
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -34,7 +33,7 @@ type OpenShiftClusters interface {
 }
 
 // NewOpenShiftClusters returns a new OpenShiftClusters
-func NewOpenShiftClusters(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, dbid, collid string) (OpenShiftClusters, error) {
+func NewOpenShiftClusters(uuid string, dbc cosmosdb.DatabaseClient, dbid, collid string) (OpenShiftClusters, error) {
 	collc := cosmosdb.NewCollectionClient(dbc, dbid)
 
 	triggers := []*cosmosdb.Trigger{

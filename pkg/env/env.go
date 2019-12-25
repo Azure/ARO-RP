@@ -23,7 +23,7 @@ type Interface interface {
 	clientauthorizer.ClientAuthorizer
 	instancemetadata.InstanceMetadata
 
-	CosmosDB(context.Context) (string, string)
+	CosmosDB() (string, string)
 	DNS() dns.Manager
 	FPAuthorizer(string, string) (autorest.Authorizer, error)
 	GetSecret(context.Context, string) (*rsa.PrivateKey, []*x509.Certificate, error)

@@ -4,7 +4,6 @@ package database
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -26,7 +25,7 @@ type AsyncOperations interface {
 }
 
 // NewAsyncOperations returns a new AsyncOperations
-func NewAsyncOperations(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, dbid, collid string) (AsyncOperations, error) {
+func NewAsyncOperations(uuid string, dbc cosmosdb.DatabaseClient, dbid, collid string) (AsyncOperations, error) {
 	collc := cosmosdb.NewCollectionClient(dbc, dbid)
 
 	return &asyncOperations{

@@ -4,7 +4,6 @@ package database
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -29,7 +28,7 @@ type Subscriptions interface {
 }
 
 // NewSubscriptions returns a new Subscriptions
-func NewSubscriptions(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, dbid, collid string) (Subscriptions, error) {
+func NewSubscriptions(uuid string, dbc cosmosdb.DatabaseClient, dbid, collid string) (Subscriptions, error) {
 	collc := cosmosdb.NewCollectionClient(dbc, dbid)
 
 	triggers := []*cosmosdb.Trigger{

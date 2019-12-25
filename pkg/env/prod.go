@@ -138,7 +138,7 @@ func (p *prod) populateCosmosDB(ctx context.Context, rpAuthorizer autorest.Autho
 	return nil
 }
 
-func (p *prod) CosmosDB(context.Context) (string, string) {
+func (p *prod) CosmosDB() (string, string) {
 	return p.cosmosDBAccountName, p.cosmosDBPrimaryMasterKey
 }
 
