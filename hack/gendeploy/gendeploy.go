@@ -13,7 +13,7 @@ func run() error {
 		return err
 	}
 
-	err = deploy.GenerateNSGTemplate()
+	err = deploy.GenerateNSGTemplates()
 	if err != nil {
 		return err
 	}

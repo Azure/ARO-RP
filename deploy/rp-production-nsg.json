@@ -3,10 +3,11 @@
     "contentVersion": "1.0.0.0",
     "resources": [
         {
-            "name": "rp-identity",
+            "properties": {},
+            "name": "rp-pe-nsg",
+            "type": "Microsoft.Network/networkSecurityGroups",
             "location": "[resourceGroup().location]",
-            "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
-            "apiVersion": "2018-11-30"
+            "apiVersion": "2019-07-01"
         },
         {
             "properties": {
@@ -30,6 +31,12 @@
             "type": "Microsoft.Network/networkSecurityGroups",
             "location": "[resourceGroup().location]",
             "apiVersion": "2019-07-01"
+        },
+        {
+            "name": "rp-identity",
+            "location": "[resourceGroup().location]",
+            "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+            "apiVersion": "2018-11-30"
         }
     ],
     "outputs": {

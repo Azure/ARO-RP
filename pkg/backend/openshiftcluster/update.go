@@ -30,7 +30,7 @@ func find(xs interface{}, f func(int, int) bool) interface{} {
 }
 
 func (m *Manager) Update(ctx context.Context) error {
-	restConfig, err := restconfig.RestConfig(m.doc.OpenShiftCluster.Properties.AdminKubeconfig)
+	restConfig, err := restconfig.RestConfig(ctx, m.env, m.doc)
 	if err != nil {
 		return err
 	}

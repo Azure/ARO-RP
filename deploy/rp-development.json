@@ -73,6 +73,32 @@
             "apiVersion": "2016-10-01"
         },
         {
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.0.0.0/8"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "properties": {
+                            "addressPrefix": "10.1.0.0/16",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]",
+                                "tags": null
+                            },
+                            "privateEndpointNetworkPolicies": "Disabled"
+                        },
+                        "name": "rp-pe-subnet"
+                    }
+                ]
+            },
+            "name": "rp-vnet",
+            "type": "Microsoft.Network/virtualNetworks",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2019-07-01"
+        },
+        {
             "kind": "GlobalDocumentDB",
             "properties": {
                 "consistencyPolicy": {
@@ -184,6 +210,17 @@
             "properties": {
                 "scope": "[resourceGroup().id]",
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')]",
+                "principalId": "[parameters('rpServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
+            },
+            "apiVersion": "2018-09-01-preview"
+        },
+        {
+            "name": "[guid(resourceGroup().id, 'RP / Network Contributor')]",
+            "type": "Microsoft.Authorization/roleAssignments",
+            "properties": {
+                "scope": "[resourceGroup().id]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4d97b98b-1d4f-4787-a291-c67834d212e7')]",
                 "principalId": "[parameters('rpServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },

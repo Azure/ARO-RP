@@ -60,7 +60,7 @@ func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClust
 	}
 
 	{
-		restConfig, err := restconfig.RestConfig(doc.OpenShiftCluster.Properties.AdminKubeconfig)
+		restConfig, err := restconfig.RestConfig(ctx, i.env, doc)
 		if err != nil {
 			return err
 		}

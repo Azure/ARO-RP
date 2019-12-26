@@ -151,6 +151,10 @@
 
    az group deployment create \
      -g "$RESOURCEGROUP" \
+     --template-file deploy/rp-development-nsg.json
+
+   az group deployment create \
+     -g "$RESOURCEGROUP" \
      --template-file deploy/rp-development.json \
      --parameters \
        "adminObjectId=$ADMIN_OBJECT_ID" \

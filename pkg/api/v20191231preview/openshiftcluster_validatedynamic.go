@@ -211,6 +211,12 @@ func (dv *dynamicValidator) validateSubnet(ctx context.Context, path, typ, subne
 		return nil, err
 	}
 
+	if strings.EqualFold(dv.oc.Properties.MasterProfile.SubnetID, subnetID) {
+		if !strings.EqualFold(*s.PrivateLinkServiceNetworkPolicies, "Disabled") {
+			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The provided "+typ+" VM subnet '%s' is invalid: must have privateLinkServiceNetworkPolicies disabled.", subnetID)
+		}
+	}
+
 	if dv.oc.Properties.ProvisioningState == api.ProvisioningStateCreating {
 		if s.SubnetPropertiesFormat != nil &&
 			s.SubnetPropertiesFormat.NetworkSecurityGroup != nil {

@@ -60,6 +60,8 @@
                             "Microsoft.Network/privateDnsZones/SRV/write",
                             "Microsoft.Network/privateDnsZones/virtualNetworkLinks/write",
                             "Microsoft.Network/privateDnsZones/write",
+                            "Microsoft.Network/privateLinkServices/read",
+                            "Microsoft.Network/privateLinkServices/write",
                             "Microsoft.Network/publicIPAddresses/delete",
                             "Microsoft.Network/publicIPAddresses/join/action",
                             "Microsoft.Network/publicIPAddresses/read",

@@ -49,40 +49,57 @@ func newGenerator(production bool) *generator {
 }
 
 func (g *generator) vnet() *arm.Resource {
-	return &arm.Resource{
-		Resource: &network.VirtualNetwork{
-			VirtualNetworkPropertiesFormat: &network.VirtualNetworkPropertiesFormat{
-				AddressSpace: &network.AddressSpace{
-					AddressPrefixes: &[]string{
-						"10.0.0.0/8",
-					},
-				},
-				Subnets: &[]network.Subnet{
-					{
-						SubnetPropertiesFormat: &network.SubnetPropertiesFormat{
-							AddressPrefix: to.StringPtr("10.0.0.0/24"),
-							NetworkSecurityGroup: &network.SecurityGroup{
-								ID: to.StringPtr("[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"),
-							},
-							ServiceEndpoints: &[]network.ServiceEndpointPropertiesFormat{
-								{
-									Service:   to.StringPtr("Microsoft.KeyVault"),
-									Locations: &[]string{"*"},
-								},
-								{
-									Service:   to.StringPtr("Microsoft.AzureCosmosDB"),
-									Locations: &[]string{"*"},
-								},
-							},
-						},
-						Name: to.StringPtr("rp-subnet"),
-					},
+	vnet := &network.VirtualNetwork{
+		VirtualNetworkPropertiesFormat: &network.VirtualNetworkPropertiesFormat{
+			AddressSpace: &network.AddressSpace{
+				AddressPrefixes: &[]string{
+					"10.0.0.0/8",
 				},
 			},
-			Name:     to.StringPtr("rp-vnet"),
-			Type:     to.StringPtr("Microsoft.Network/virtualNetworks"),
-			Location: to.StringPtr("[resourceGroup().location]"),
+			Subnets: &[]network.Subnet{
+				{
+					SubnetPropertiesFormat: &network.SubnetPropertiesFormat{
+						AddressPrefix: to.StringPtr("10.1.0.0/16"),
+						NetworkSecurityGroup: &network.SecurityGroup{
+							ID: to.StringPtr("[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]"),
+						},
+						PrivateEndpointNetworkPolicies: to.StringPtr("Disabled"),
+					},
+					Name: to.StringPtr("rp-pe-subnet"),
+				},
+			},
 		},
+		Name:     to.StringPtr("rp-vnet"),
+		Type:     to.StringPtr("Microsoft.Network/virtualNetworks"),
+		Location: to.StringPtr("[resourceGroup().location]"),
+	}
+
+	if g.production {
+		*vnet.VirtualNetworkPropertiesFormat.Subnets = append(*vnet.VirtualNetworkPropertiesFormat.Subnets,
+			network.Subnet{
+				SubnetPropertiesFormat: &network.SubnetPropertiesFormat{
+					AddressPrefix: to.StringPtr("10.0.0.0/24"),
+					NetworkSecurityGroup: &network.SecurityGroup{
+						ID: to.StringPtr("[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"),
+					},
+					ServiceEndpoints: &[]network.ServiceEndpointPropertiesFormat{
+						{
+							Service:   to.StringPtr("Microsoft.KeyVault"),
+							Locations: &[]string{"*"},
+						},
+						{
+							Service:   to.StringPtr("Microsoft.AzureCosmosDB"),
+							Locations: &[]string{"*"},
+						},
+					},
+				},
+				Name: to.StringPtr("rp-subnet"),
+			},
+		)
+	}
+
+	return &arm.Resource{
+		Resource:   vnet,
 		APIVersion: apiVersions["network"],
 	}
 }
@@ -102,7 +119,6 @@ func (g *generator) pip() *arm.Resource {
 		},
 		APIVersion: apiVersions["network"],
 	}
-
 }
 
 func (g *generator) lb() *arm.Resource {
@@ -589,6 +605,19 @@ func (g *generator) rbac() []*arm.Resource {
 		},
 		{
 			Resource: &authorization.RoleAssignment{
+				Name: to.StringPtr("[guid(resourceGroup().id, 'RP / Network Contributor')]"),
+				Type: to.StringPtr("Microsoft.Authorization/roleAssignments"),
+				RoleAssignmentPropertiesWithScope: &authorization.RoleAssignmentPropertiesWithScope{
+					Scope:            to.StringPtr("[resourceGroup().id]"),
+					RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4d97b98b-1d4f-4787-a291-c67834d212e7')]"),
+					PrincipalID:      to.StringPtr("[parameters('rpServicePrincipalId')]"),
+					PrincipalType:    authorization.ServicePrincipal,
+				},
+			},
+			APIVersion: apiVersions["authorization"],
+		},
+		{
+			Resource: &authorization.RoleAssignment{
 				Name: to.StringPtr("[concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), 'RP / DocumentDB Account Contributor'))]"),
 				Type: to.StringPtr("Microsoft.DocumentDB/databaseAccounts/providers/roleAssignments"),
 				RoleAssignmentPropertiesWithScope: &authorization.RoleAssignmentPropertiesWithScope{
@@ -670,9 +699,9 @@ func (g *generator) template() *arm.Template {
 	}
 
 	if g.production {
-		t.Resources = append(t.Resources, g.vnet(), g.pip(), g.lb(), g.vmss())
+		t.Resources = append(t.Resources, g.pip(), g.lb(), g.vmss())
 	}
-	t.Resources = append(t.Resources, g.zone(), g.vault())
+	t.Resources = append(t.Resources, g.zone(), g.vault(), g.vnet())
 	t.Resources = append(t.Resources, g.cosmosdb()...)
 	t.Resources = append(t.Resources, g.rbac()...)
 

@@ -35,6 +35,11 @@ import (
 )
 
 func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
+	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
+	if err != nil {
+		return err
+	}
+
 	g, err := i.getGraph(ctx, doc.OpenShiftCluster)
 	if err != nil {
 		return err
@@ -218,6 +223,44 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 					DependsOn: []string{
 						"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
 						"privatednscopy",
+					},
+				},
+				{
+					Resource: &network.PrivateLinkService{
+						PrivateLinkServiceProperties: &network.PrivateLinkServiceProperties{
+							LoadBalancerFrontendIPConfigurations: &[]network.FrontendIPConfiguration{
+								{
+									ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'aro-internal-lb', 'internal-lb-ip')]"),
+								},
+							},
+							IPConfigurations: &[]network.PrivateLinkServiceIPConfiguration{
+								{
+									PrivateLinkServiceIPConfigurationProperties: &network.PrivateLinkServiceIPConfigurationProperties{
+										Subnet: &network.Subnet{
+											ID: to.StringPtr(doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
+										},
+									},
+									Name: to.StringPtr("aro-pls-nic"),
+								},
+							},
+							Visibility: &network.PrivateLinkServicePropertiesVisibility{
+								Subscriptions: &[]string{
+									i.env.SubscriptionID(),
+								},
+							},
+							AutoApproval: &network.PrivateLinkServicePropertiesAutoApproval{
+								Subscriptions: &[]string{
+									i.env.SubscriptionID(),
+								},
+							},
+						},
+						Name:     to.StringPtr("aro-pls"),
+						Type:     to.StringPtr("Microsoft.Network/privateLinkServices"),
+						Location: &installConfig.Config.Azure.Region,
+					},
+					APIVersion: apiVersions["network"],
+					DependsOn: []string{
+						"Microsoft.Network/loadBalancers/aro-internal-lb",
 					},
 				},
 				{
@@ -646,6 +689,29 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 	}
 
 	{
+		i.log.Print("creating private endpoint")
+		err = i.env.PrivateEndpoint().CreateOrUpdateAndWait(ctx, i.env.ResourceGroup(), "rp-pe-"+doc.ID, network.PrivateEndpoint{
+			PrivateEndpointProperties: &network.PrivateEndpointProperties{
+				Subnet: &network.Subnet{
+					ID: to.StringPtr("/subscriptions/" + i.env.SubscriptionID() + "/resourceGroups/" + i.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-vnet/subnets/rp-pe-subnet"),
+				},
+				ManualPrivateLinkServiceConnections: &[]network.PrivateLinkServiceConnection{
+					{
+						Name: to.StringPtr("rp-plsconnection"),
+						PrivateLinkServiceConnectionProperties: &network.PrivateLinkServiceConnectionProperties{
+							PrivateLinkServiceID: to.StringPtr("/subscriptions/" + r.SubscriptionID + "/resourceGroups/" + doc.OpenShiftCluster.Properties.ResourceGroup + "/providers/Microsoft.Network/privateLinkServices/aro-pls"),
+						},
+					},
+				},
+			},
+			Location: &installConfig.Config.Azure.Region,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	{
 		err = i.env.DNS().CreateOrUpdate(ctx, doc.OpenShiftCluster)
 		if err != nil {
 			return err
@@ -653,7 +719,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 	}
 
 	{
-		restConfig, err := restconfig.RestConfig(doc.OpenShiftCluster.Properties.AdminKubeconfig)
+		restConfig, err := restconfig.RestConfig(ctx, i.env, doc)
 		if err != nil {
 			return err
 		}
