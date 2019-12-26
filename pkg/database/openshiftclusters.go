@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/pborman/uuid"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
@@ -145,7 +144,7 @@ func (c *openShiftClusters) patch(key string, f func(*api.OpenShiftClusterDocume
 }
 
 func (c *openShiftClusters) Update(doc *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error) {
-	if doc.LeaseOwner == nil || !uuid.Equal(*doc.LeaseOwner, c.uuid) {
+	if doc.LeaseOwner != c.uuid {
 		return nil, ErrorLostLease
 	}
 	return c.update(doc, nil)
@@ -230,7 +229,7 @@ func (c *openShiftClusters) EndLease(key string, provisioningState, failedProvis
 		doc.LeaseOwner = ""
 		doc.LeaseExpires = 0
 
-		if doc.OpenShiftCluster.Properties.ProvisioningState == api.ProvisioningStateSucceeded {
+		if provisioningState == api.ProvisioningStateSucceeded {
 			doc.Dequeues = 0
 		}
 

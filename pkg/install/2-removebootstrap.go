@@ -20,6 +20,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
+	"github.com/Azure/ARO-RP/pkg/util/wait"
 )
 
 func (i *Installer) removeBootstrap(ctx context.Context) error {
@@ -75,26 +76,18 @@ func (i *Installer) removeBootstrap(ctx context.Context) error {
 		}
 
 		i.log.Print("waiting for version clusterversion")
-		now := time.Now()
-		t := time.NewTicker(10 * time.Second)
-		defer t.Stop()
-	out:
-		for {
+		wait.PollImmediateWithContext(10*time.Second, 30*time.Minute, func() (bool, error) {
 			cv, err := cli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
 			if err == nil {
 				for _, cond := range cv.Status.Conditions {
 					if cond.Type == configv1.OperatorAvailable && cond.Status == configv1.ConditionTrue {
-						break out
+						return true, nil
 					}
 				}
 			}
+			return false, nil
 
-			if time.Now().Sub(now) > 30*time.Minute {
-				return fmt.Errorf("timed out waiting for version clusterversion")
-			}
-
-			<-t.C
-		}
+		}, ctx.Done())
 
 		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			cv, err := cli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})

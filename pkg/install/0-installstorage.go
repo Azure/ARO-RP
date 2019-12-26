@@ -174,7 +174,7 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 		}
 
 		i.log.Print("deploying storage template")
-		err = i.deployments.CreateOrUpdateAndWait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy", mgmtresources.Deployment{
+		err = i.deployments.CreateOrUpdateAndWait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "installstorage", mgmtresources.Deployment{
 			Properties: &mgmtresources.DeploymentProperties{
 				Template: t,
 				Mode:     mgmtresources.Incremental,
@@ -186,13 +186,14 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 					requestError.ServiceError != nil &&
 					requestError.ServiceError.Code == "DeploymentActive" {
 					i.log.Print("waiting for storage template")
-					err = i.deployments.Wait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy")
+					err = i.deployments.Wait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "installstorage")
 				}
 			}
 			if err != nil {
 				return err
 			}
 		}
+
 	}
 
 	{

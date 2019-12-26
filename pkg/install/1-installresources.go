@@ -31,6 +31,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
+	"github.com/Azure/ARO-RP/pkg/util/wait"
 )
 
 func (i *Installer) installResources(ctx context.Context) error {
@@ -632,7 +633,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 		}
 
 		i.log.Print("deploying resources template")
-		err = i.deployments.CreateOrUpdateAndWait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy", mgmtresources.Deployment{
+		err = i.deployments.CreateOrUpdateAndWait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "installresource", mgmtresources.Deployment{
 			Properties: &mgmtresources.DeploymentProperties{
 				Template: t,
 				Parameters: map[string]interface{}{
@@ -656,7 +657,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 					requestError.ServiceError != nil &&
 					requestError.ServiceError.Code == "DeploymentActive" {
 					i.log.Print("waiting for resources template")
-					err = i.deployments.Wait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy")
+					err = i.deployments.Wait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "installresource")
 				}
 			}
 			if err != nil {
@@ -716,22 +717,14 @@ func (i *Installer) installResources(ctx context.Context) error {
 		}
 
 		i.log.Print("waiting for bootstrap configmap")
-		now := time.Now()
-		t := time.NewTicker(10 * time.Second)
-		defer t.Stop()
-		for {
+		wait.PollImmediateWithContext(10*time.Second, 30*time.Minute, func() (bool, error) {
 			cm, err := cli.CoreV1().ConfigMaps("kube-system").Get("bootstrap", metav1.GetOptions{})
 			if err == nil && cm.Data["status"] == "complete" {
-				break
+				return true, nil
 			}
+			return false, nil
 
-			if time.Now().Sub(now) > 30*time.Minute {
-				return fmt.Errorf("timed out waiting for bootstrap configmap. Last error: %v", err)
-			}
-
-			<-t.C
-		}
+		}, ctx.Done())
 	}
-
 	return nil
 }

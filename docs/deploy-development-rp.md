@@ -71,6 +71,8 @@
 
 1. Run the RP
 
+   Note: To run and build RP you need to have package `gpgme-devel` installed.
+
    ```
    go run ./cmd/aro rp
    ```
