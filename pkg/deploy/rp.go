@@ -88,20 +88,18 @@ func (g *generator) vnet() *arm.Resource {
 }
 
 func (g *generator) pip() *arm.Resource {
-	pip := &network.PublicIPAddress{
-		Sku: &network.PublicIPAddressSku{
-			Name: network.PublicIPAddressSkuNameStandard,
-		},
-		PublicIPAddressPropertiesFormat: &network.PublicIPAddressPropertiesFormat{
-			PublicIPAllocationMethod: network.Static,
-		},
-		Name:     to.StringPtr("rp-pip"),
-		Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
-		Location: to.StringPtr("[resourceGroup().location]"),
-	}
-
 	return &arm.Resource{
-		Resource:   pip,
+		Resource: &network.PublicIPAddress{
+			Sku: &network.PublicIPAddressSku{
+				Name: network.PublicIPAddressSkuNameStandard,
+			},
+			PublicIPAddressPropertiesFormat: &network.PublicIPAddressPropertiesFormat{
+				PublicIPAllocationMethod: network.Static,
+			},
+			Name:     to.StringPtr("rp-pip"),
+			Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
+			Location: to.StringPtr("[resourceGroup().location]"),
+		},
 		APIVersion: apiVersions["network"],
 	}
 
@@ -253,69 +251,71 @@ systemctl enable arorp.service
 
 	script := fmt.Sprintf("[base64(concat(%s))]", strings.Join(parts, ","))
 
-	vmss := &compute.VirtualMachineScaleSet{
-		Sku: &compute.Sku{
-			Name:     to.StringPtr(string(compute.VirtualMachineSizeTypesStandardD2sV3)),
-			Tier:     to.StringPtr("Standard"),
-			Capacity: to.Int64Ptr(3),
-		},
-		VirtualMachineScaleSetProperties: &compute.VirtualMachineScaleSetProperties{
-			UpgradePolicy: &compute.UpgradePolicy{
-				Mode: compute.Manual,
+	return &arm.Resource{
+		Resource: &compute.VirtualMachineScaleSet{
+			Sku: &compute.Sku{
+				Name:     to.StringPtr(string(compute.VirtualMachineSizeTypesStandardD2sV3)),
+				Tier:     to.StringPtr("Standard"),
+				Capacity: to.Int64Ptr(3),
 			},
-			VirtualMachineProfile: &compute.VirtualMachineScaleSetVMProfile{
-				OsProfile: &compute.VirtualMachineScaleSetOSProfile{
-					ComputerNamePrefix: to.StringPtr("rp-"),
-					AdminUsername:      to.StringPtr("cloud-user"),
-					LinuxConfiguration: &compute.LinuxConfiguration{
-						DisablePasswordAuthentication: to.BoolPtr(true),
-						SSH: &compute.SSHConfiguration{
-							PublicKeys: &[]compute.SSHPublicKey{
-								{
-									Path:    to.StringPtr("/home/cloud-user/.ssh/authorized_keys"),
-									KeyData: to.StringPtr("[parameters('sshPublicKey')]"),
+			VirtualMachineScaleSetProperties: &compute.VirtualMachineScaleSetProperties{
+				UpgradePolicy: &compute.UpgradePolicy{
+					Mode: compute.Manual,
+				},
+				VirtualMachineProfile: &compute.VirtualMachineScaleSetVMProfile{
+					OsProfile: &compute.VirtualMachineScaleSetOSProfile{
+						ComputerNamePrefix: to.StringPtr("rp-"),
+						AdminUsername:      to.StringPtr("cloud-user"),
+						LinuxConfiguration: &compute.LinuxConfiguration{
+							DisablePasswordAuthentication: to.BoolPtr(true),
+							SSH: &compute.SSHConfiguration{
+								PublicKeys: &[]compute.SSHPublicKey{
+									{
+										Path:    to.StringPtr("/home/cloud-user/.ssh/authorized_keys"),
+										KeyData: to.StringPtr("[parameters('sshPublicKey')]"),
+									},
 								},
 							},
 						},
 					},
-				},
-				StorageProfile: &compute.VirtualMachineScaleSetStorageProfile{
-					ImageReference: &compute.ImageReference{
-						Publisher: to.StringPtr("RedHat"),
-						Offer:     to.StringPtr("RHEL"),
-						Sku:       to.StringPtr("7-RAW"),
-						Version:   to.StringPtr("latest"),
-					},
-					OsDisk: &compute.VirtualMachineScaleSetOSDisk{
-						CreateOption: compute.DiskCreateOptionTypesFromImage,
-						ManagedDisk: &compute.VirtualMachineScaleSetManagedDiskParameters{
-							StorageAccountType: compute.StorageAccountTypesPremiumLRS,
+					StorageProfile: &compute.VirtualMachineScaleSetStorageProfile{
+						ImageReference: &compute.ImageReference{
+							Publisher: to.StringPtr("RedHat"),
+							Offer:     to.StringPtr("RHEL"),
+							Sku:       to.StringPtr("7-RAW"),
+							Version:   to.StringPtr("latest"),
+						},
+						OsDisk: &compute.VirtualMachineScaleSetOSDisk{
+							CreateOption: compute.DiskCreateOptionTypesFromImage,
+							ManagedDisk: &compute.VirtualMachineScaleSetManagedDiskParameters{
+								StorageAccountType: compute.StorageAccountTypesPremiumLRS,
+							},
 						},
 					},
-				},
-				NetworkProfile: &compute.VirtualMachineScaleSetNetworkProfile{
-					HealthProbe: &compute.APIEntityReference{
-						ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'rp-probe')]"),
-					},
-					NetworkInterfaceConfigurations: &[]compute.VirtualMachineScaleSetNetworkConfiguration{
-						{
-							Name: to.StringPtr("rp-vmss-nic"),
-							VirtualMachineScaleSetNetworkConfigurationProperties: &compute.VirtualMachineScaleSetNetworkConfigurationProperties{
-								Primary: to.BoolPtr(true),
-								IPConfigurations: &[]compute.VirtualMachineScaleSetIPConfiguration{
-									{
-										Name: to.StringPtr("rp-vmss-ipconfig"),
-										VirtualMachineScaleSetIPConfigurationProperties: &compute.VirtualMachineScaleSetIPConfigurationProperties{
-											Subnet: &compute.APIEntityReference{
-												ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"),
-											},
-											Primary: to.BoolPtr(true),
-											PublicIPAddressConfiguration: &compute.VirtualMachineScaleSetPublicIPAddressConfiguration{
-												Name: to.StringPtr("rp-vmss-pip"),
-											},
-											LoadBalancerBackendAddressPools: &[]compute.SubResource{
-												{
-													ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
+					NetworkProfile: &compute.VirtualMachineScaleSetNetworkProfile{
+						HealthProbe: &compute.APIEntityReference{
+							ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'rp-probe')]"),
+						},
+						NetworkInterfaceConfigurations: &[]compute.VirtualMachineScaleSetNetworkConfiguration{
+							{
+								Name: to.StringPtr("rp-vmss-nic"),
+								VirtualMachineScaleSetNetworkConfigurationProperties: &compute.VirtualMachineScaleSetNetworkConfigurationProperties{
+									Primary: to.BoolPtr(true),
+									IPConfigurations: &[]compute.VirtualMachineScaleSetIPConfiguration{
+										{
+											Name: to.StringPtr("rp-vmss-ipconfig"),
+											VirtualMachineScaleSetIPConfigurationProperties: &compute.VirtualMachineScaleSetIPConfigurationProperties{
+												Subnet: &compute.APIEntityReference{
+													ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"),
+												},
+												Primary: to.BoolPtr(true),
+												PublicIPAddressConfiguration: &compute.VirtualMachineScaleSetPublicIPAddressConfiguration{
+													Name: to.StringPtr("rp-vmss-pip"),
+												},
+												LoadBalancerBackendAddressPools: &[]compute.SubResource{
+													{
+														ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
+													},
 												},
 											},
 										},
@@ -324,40 +324,36 @@ systemctl enable arorp.service
 							},
 						},
 					},
-				},
-				ExtensionProfile: &compute.VirtualMachineScaleSetExtensionProfile{
-					Extensions: &[]compute.VirtualMachineScaleSetExtension{
-						{
-							Name: to.StringPtr("rp-vmss-cse"),
-							VirtualMachineScaleSetExtensionProperties: &compute.VirtualMachineScaleSetExtensionProperties{
-								Publisher:               to.StringPtr("Microsoft.Azure.Extensions"),
-								Type:                    to.StringPtr("CustomScript"),
-								TypeHandlerVersion:      to.StringPtr("2.0"),
-								AutoUpgradeMinorVersion: to.BoolPtr(true),
-								Settings:                map[string]interface{}{},
-								ProtectedSettings: map[string]interface{}{
-									"script": script,
+					ExtensionProfile: &compute.VirtualMachineScaleSetExtensionProfile{
+						Extensions: &[]compute.VirtualMachineScaleSetExtension{
+							{
+								Name: to.StringPtr("rp-vmss-cse"),
+								VirtualMachineScaleSetExtensionProperties: &compute.VirtualMachineScaleSetExtensionProperties{
+									Publisher:               to.StringPtr("Microsoft.Azure.Extensions"),
+									Type:                    to.StringPtr("CustomScript"),
+									TypeHandlerVersion:      to.StringPtr("2.0"),
+									AutoUpgradeMinorVersion: to.BoolPtr(true),
+									Settings:                map[string]interface{}{},
+									ProtectedSettings: map[string]interface{}{
+										"script": script,
+									},
 								},
 							},
 						},
 					},
 				},
+				Overprovision: to.BoolPtr(false),
 			},
-			Overprovision: to.BoolPtr(false),
-		},
-		Identity: &compute.VirtualMachineScaleSetIdentity{
-			Type: compute.ResourceIdentityTypeUserAssigned,
-			UserAssignedIdentities: map[string]*compute.VirtualMachineScaleSetIdentityUserAssignedIdentitiesValue{
-				"[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity')]": {},
+			Identity: &compute.VirtualMachineScaleSetIdentity{
+				Type: compute.ResourceIdentityTypeUserAssigned,
+				UserAssignedIdentities: map[string]*compute.VirtualMachineScaleSetIdentityUserAssignedIdentitiesValue{
+					"[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity')]": {},
+				},
 			},
+			Name:     to.StringPtr("rp-vmss"),
+			Type:     to.StringPtr("Microsoft.Compute/virtualMachineScaleSets"),
+			Location: to.StringPtr("[resourceGroup().location]"),
 		},
-		Name:     to.StringPtr("rp-vmss"),
-		Type:     to.StringPtr("Microsoft.Compute/virtualMachineScaleSets"),
-		Location: to.StringPtr("[resourceGroup().location]"),
-	}
-
-	return &arm.Resource{
-		Resource:   vmss,
 		APIVersion: apiVersions["compute"],
 		DependsOn: []string{
 			"[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]",
