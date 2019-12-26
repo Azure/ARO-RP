@@ -35,9 +35,9 @@ type prod struct {
 
 	dns dns.Manager
 
-	vaultURI                 string
 	cosmosDBAccountName      string
 	cosmosDBPrimaryMasterKey string
+	vaultURI                 string
 
 	fpCertificate *x509.Certificate
 	fpPrivateKey  *rsa.PrivateKey
@@ -69,12 +69,12 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 		return nil, err
 	}
 
-	err = p.populateVaultURI(ctx, rpAuthorizer)
+	err = p.populateCosmosDB(ctx, rpAuthorizer)
 	if err != nil {
 		return nil, err
 	}
 
-	err = p.populateCosmosDB(ctx, rpAuthorizer)
+	err = p.populateVaultURI(ctx, rpAuthorizer)
 	if err != nil {
 		return nil, err
 	}
@@ -93,25 +93,6 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 	p.fpCertificate = fpCertificates[0]
 
 	return p, nil
-}
-
-func (p *prod) populateVaultURI(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
-	vaults := keyvaultmgmt.NewVaultsClient(p.SubscriptionID())
-	vaults.Authorizer = rpAuthorizer
-
-	page, err := vaults.ListByResourceGroup(ctx, p.ResourceGroup(), nil)
-	if err != nil {
-		return err
-	}
-
-	vs := page.Values()
-	if len(vs) != 1 {
-		return fmt.Errorf("found at least %d vaults, expected 1", len(vs))
-	}
-
-	p.vaultURI = *vs[0].Properties.VaultURI
-
-	return nil
 }
 
 func (p *prod) populateCosmosDB(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
@@ -134,6 +115,25 @@ func (p *prod) populateCosmosDB(ctx context.Context, rpAuthorizer autorest.Autho
 
 	p.cosmosDBAccountName = *(*accts.Value)[0].Name
 	p.cosmosDBPrimaryMasterKey = *keys.PrimaryMasterKey
+
+	return nil
+}
+
+func (p *prod) populateVaultURI(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
+	vaults := keyvaultmgmt.NewVaultsClient(p.SubscriptionID())
+	vaults.Authorizer = rpAuthorizer
+
+	page, err := vaults.ListByResourceGroup(ctx, p.ResourceGroup(), nil)
+	if err != nil {
+		return err
+	}
+
+	vs := page.Values()
+	if len(vs) != 1 {
+		return fmt.Errorf("found at least %d vaults, expected 1", len(vs))
+	}
+
+	p.vaultURI = *vs[0].Properties.VaultURI
 
 	return nil
 }
