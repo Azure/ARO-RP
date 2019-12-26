@@ -51,6 +51,9 @@
    * RESOURCEGROUP: Name of the new resource group into which you will deploy
      your RP assets.
 
+   * DATABASE_NAME: Name of the database to use within the CosmosDB database
+     account (default: `$USER`).
+
    * RP_MODE: Set to `development` to enable the RP to read its development
      configuration, and the `az aro` client to connect to the development RP.
 
@@ -71,6 +74,9 @@
 
    * RESOURCEGROUP: Name of the new resource group into which you will deploy
      your RP assets.
+
+   * DATABASE_NAME: Name of the database to use within the CosmosDB database
+     account (default: `$USER`).
 
    * RP_MODE: Set to `development` to enable the RP to read its development
      configuration, and the `az aro` client to connect to the development RP.
@@ -162,6 +168,13 @@
        "domainName=$DOMAIN" \
        "keyvaultName=$KEYVAULT_NAME" \
        "rpServicePrincipalId=$SERVICEPRINCIPAL_ID"
+
+   az group deployment create \
+     -g "$RESOURCEGROUP" \
+     --template-file deploy/databases-development.json \
+     --parameters \
+       "databaseAccountName=$COSMOSDB_ACCOUNT" \
+       "databaseName=$DATABASE_NAME"
    ```
 
 1. Load the keys/certificates into the key vault:

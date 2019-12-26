@@ -451,7 +451,7 @@ func (g *generator) vault() *arm.Resource {
 	}
 }
 
-func (g *generator) cosmosdb() []*arm.Resource {
+func (g *generator) cosmosdb(databaseName string) []*arm.Resource {
 	cosmosdb := &documentdb.DatabaseAccountCreateUpdateParameters{
 		Kind: documentdb.GlobalDocumentDB,
 		DatabaseAccountCreateUpdateProperties: &documentdb.DatabaseAccountCreateUpdateProperties{
@@ -491,23 +491,41 @@ func (g *generator) cosmosdb() []*arm.Resource {
 		r.DependsOn = append(r.DependsOn, "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]")
 	}
 
-	return []*arm.Resource{
+	rs := []*arm.Resource{
 		r,
+	}
+
+	if g.production {
+		rs = append(rs, g.database(databaseName, true)...)
+	}
+
+	return rs
+}
+
+func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Resource {
+	var dependsOn []string
+
+	if addDependsOn {
+		dependsOn = []string{
+			"[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
+		}
+	}
+
+	return []*arm.Resource{
 		{
 			Resource: &documentdb.SQLDatabaseCreateUpdateParameters{
 				SQLDatabaseCreateUpdateProperties: &documentdb.SQLDatabaseCreateUpdateProperties{
 					Resource: &documentdb.SQLDatabaseResource{
-						ID: to.StringPtr("ARO"),
+						ID: to.StringPtr("[" + databaseName + "]"),
 					},
 					Options: map[string]*string{},
 				},
-				Name: to.StringPtr("[concat(parameters('databaseAccountName'), '/ARO')]"),
-				Type: to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases"),
+				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ")]"),
+				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases"),
+				Location: to.StringPtr("[resourceGroup().location]"),
 			},
 			APIVersion: apiVersions["documentdb"],
-			DependsOn: []string{
-				"[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
-			},
+			DependsOn:  dependsOn,
 		},
 		{
 			Resource: &documentdb.SQLContainerCreateUpdateParameters{
@@ -524,13 +542,12 @@ func (g *generator) cosmosdb() []*arm.Resource {
 					},
 					Options: map[string]*string{},
 				},
-				Name: to.StringPtr("[concat(parameters('databaseAccountName'), '/ARO/AsyncOperations')]"),
-				Type: to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/AsyncOperations')]"),
+				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+				Location: to.StringPtr("[resourceGroup().location]"),
 			},
 			APIVersion: apiVersions["documentdb"],
-			DependsOn: []string{
-				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
-			},
+			DependsOn:  dependsOn,
 		},
 		{
 			Resource: &documentdb.SQLContainerCreateUpdateParameters{
@@ -555,13 +572,12 @@ func (g *generator) cosmosdb() []*arm.Resource {
 					},
 					Options: map[string]*string{},
 				},
-				Name: to.StringPtr("[concat(parameters('databaseAccountName'), '/ARO/OpenShiftClusters')]"),
-				Type: to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/OpenShiftClusters')]"),
+				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+				Location: to.StringPtr("[resourceGroup().location]"),
 			},
 			APIVersion: apiVersions["documentdb"],
-			DependsOn: []string{
-				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
-			},
+			DependsOn:  dependsOn,
 		},
 		{
 			Resource: &documentdb.SQLContainerCreateUpdateParameters{
@@ -577,13 +593,12 @@ func (g *generator) cosmosdb() []*arm.Resource {
 					},
 					Options: map[string]*string{},
 				},
-				Name: to.StringPtr("[concat(parameters('databaseAccountName'), '/ARO/Subscriptions')]"),
-				Type: to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/Subscriptions')]"),
+				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+				Location: to.StringPtr("[resourceGroup().location]"),
 			},
 			APIVersion: apiVersions["documentdb"],
-			DependsOn: []string{
-				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
-			},
+			DependsOn:  dependsOn,
 		},
 	}
 }
@@ -702,7 +717,11 @@ func (g *generator) template() *arm.Template {
 		t.Resources = append(t.Resources, g.pip(), g.lb(), g.vmss())
 	}
 	t.Resources = append(t.Resources, g.zone(), g.vault(), g.vnet())
-	t.Resources = append(t.Resources, g.cosmosdb()...)
+	if g.production {
+		t.Resources = append(t.Resources, g.cosmosdb("'ARO'")...)
+	} else {
+		t.Resources = append(t.Resources, g.cosmosdb("parameters('databaseName')")...)
+	}
 	t.Resources = append(t.Resources, g.rbac()...)
 
 	return t
@@ -739,7 +758,31 @@ func GenerateRPTemplates() error {
 		}
 	}
 
-	return nil
+	t := &arm.Template{
+		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+		ContentVersion: "1.0.0.0",
+		Parameters: map[string]*arm.TemplateParameter{
+			"databaseAccountName": {
+				Type: "string",
+			},
+			"databaseName": {
+				Type: "string",
+			},
+		},
+	}
+
+	g := newGenerator(false)
+
+	t.Resources = append(t.Resources, g.database("parameters('databaseName')", false)...)
+
+	b, err := json.MarshalIndent(t, "", "    ")
+	if err != nil {
+		return err
+	}
+
+	b = append(b, byte('\n'))
+
+	return ioutil.WriteFile("databases-development.json", b, 0666)
 }
 
 func GenerateRPParameterTemplate() error {

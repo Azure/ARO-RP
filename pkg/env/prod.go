@@ -146,6 +146,10 @@ func (p *prod) CosmosDB() (string, string) {
 	return p.cosmosDBAccountName, p.cosmosDBPrimaryMasterKey
 }
 
+func (p *prod) DatabaseName() string {
+	return "ARO"
+}
+
 func (p *prod) DNS() dns.Manager {
 	return p.dns
 }

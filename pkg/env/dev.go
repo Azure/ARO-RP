@@ -55,6 +55,7 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 		"AZURE_FP_CLIENT_ID",
 		"AZURE_SUBSCRIPTION_ID",
 		"AZURE_TENANT_ID",
+		"DATABASE_NAME",
 		"LOCATION",
 		"PULL_SECRET",
 		"RESOURCEGROUP",
@@ -95,6 +96,10 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 	d.permissions = authorization.NewPermissionsClient(instancemetadata.SubscriptionID(), fpAuthorizer)
 
 	return d, nil
+}
+
+func (d *dev) DatabaseName() string {
+	return os.Getenv("DATABASE_NAME")
 }
 
 func (d *dev) Listen() (net.Listener, error) {

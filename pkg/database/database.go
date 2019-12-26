@@ -23,7 +23,7 @@ type Database struct {
 }
 
 // NewDatabase returns a new Database
-func NewDatabase(env env.Interface, uuid, dbid string) (db *Database, err error) {
+func NewDatabase(env env.Interface, uuid string) (db *Database, err error) {
 	databaseAccount, masterKey := env.CosmosDB()
 
 	h := &codec.JsonHandle{
@@ -54,17 +54,17 @@ func NewDatabase(env env.Interface, uuid, dbid string) (db *Database, err error)
 
 	db = &Database{}
 
-	db.AsyncOperations, err = NewAsyncOperations(uuid, dbc, dbid, "AsyncOperations")
+	db.AsyncOperations, err = NewAsyncOperations(uuid, dbc, env.DatabaseName(), "AsyncOperations")
 	if err != nil {
 		return nil, err
 	}
 
-	db.OpenShiftClusters, err = NewOpenShiftClusters(uuid, dbc, dbid, "OpenShiftClusters")
+	db.OpenShiftClusters, err = NewOpenShiftClusters(uuid, dbc, env.DatabaseName(), "OpenShiftClusters")
 	if err != nil {
 		return nil, err
 	}
 
-	db.Subscriptions, err = NewSubscriptions(uuid, dbc, dbid, "Subscriptions")
+	db.Subscriptions, err = NewSubscriptions(uuid, dbc, env.DatabaseName(), "Subscriptions")
 	if err != nil {
 		return nil, err
 	}

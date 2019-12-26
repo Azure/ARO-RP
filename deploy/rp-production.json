@@ -335,12 +335,13 @@
         {
             "properties": {
                 "resource": {
-                    "id": "ARO"
+                    "id": "['ARO']"
                 },
                 "options": {}
             },
-            "name": "[concat(parameters('databaseAccountName'), '/ARO')]",
+            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO')]",
             "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
+            "location": "[resourceGroup().location]",
             "apiVersion": "2019-08-01",
             "dependsOn": [
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
@@ -360,11 +361,12 @@
                 },
                 "options": {}
             },
-            "name": "[concat(parameters('databaseAccountName'), '/ARO/AsyncOperations')]",
+            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/AsyncOperations')]",
             "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+            "location": "[resourceGroup().location]",
             "apiVersion": "2019-08-01",
             "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]"
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
             ]
         },
         {
@@ -389,11 +391,12 @@
                 },
                 "options": {}
             },
-            "name": "[concat(parameters('databaseAccountName'), '/ARO/OpenShiftClusters')]",
+            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/OpenShiftClusters')]",
             "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+            "location": "[resourceGroup().location]",
             "apiVersion": "2019-08-01",
             "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]"
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
             ]
         },
         {
@@ -409,11 +412,12 @@
                 },
                 "options": {}
             },
-            "name": "[concat(parameters('databaseAccountName'), '/ARO/Subscriptions')]",
+            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Subscriptions')]",
             "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+            "location": "[resourceGroup().location]",
             "apiVersion": "2019-08-01",
             "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]"
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
             ]
         },
         {
