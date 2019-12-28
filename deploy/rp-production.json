@@ -337,7 +337,9 @@
                 "resource": {
                     "id": "['ARO']"
                 },
-                "options": {}
+                "options": {
+                    "x-ms-offer-throughput": "400"
+                }
             },
             "name": "[concat(parameters('databaseAccountName'), '/', 'ARO')]",
             "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",

@@ -15,7 +15,9 @@
                 "resource": {
                     "id": "[parameters('databaseName')]"
                 },
-                "options": {}
+                "options": {
+                    "x-ms-offer-throughput": "400"
+                }
             },
             "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'))]",
             "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",

@@ -119,8 +119,7 @@
                         "locationName": "[resourceGroup().location]"
                     }
                 ],
-                "databaseAccountOfferType": "Standard",
-                "disableKeyBasedMetadataWriteAccess": true
+                "databaseAccountOfferType": "Standard"
             },
             "name": "[parameters('databaseAccountName')]",
             "type": "Microsoft.DocumentDB/databaseAccounts",

@@ -461,8 +461,7 @@ func (g *generator) cosmosdb(databaseName string) []*arm.Resource {
 					LocationName: to.StringPtr("[resourceGroup().location]"),
 				},
 			},
-			DatabaseAccountOfferType:           to.StringPtr(string(documentdb.Standard)),
-			DisableKeyBasedMetadataWriteAccess: to.BoolPtr(true),
+			DatabaseAccountOfferType: to.StringPtr(string(documentdb.Standard)),
 		},
 		Name:     to.StringPtr("[parameters('databaseAccountName')]"),
 		Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts"),
@@ -485,6 +484,7 @@ func (g *generator) cosmosdb(databaseName string) []*arm.Resource {
 				ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"),
 			},
 		}
+		cosmosdb.DisableKeyBasedMetadataWriteAccess = to.BoolPtr(true)
 
 		r.DependsOn = append(r.DependsOn, "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]")
 	}
@@ -516,7 +516,9 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 					Resource: &documentdb.SQLDatabaseResource{
 						ID: to.StringPtr("[" + databaseName + "]"),
 					},
-					Options: map[string]*string{},
+					Options: map[string]*string{
+						"x-ms-offer-throughput": to.StringPtr("400"),
+					},
 				},
 				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ")]"),
 				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases"),
