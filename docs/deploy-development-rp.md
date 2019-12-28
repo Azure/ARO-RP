@@ -104,7 +104,7 @@
      utility; then configure it in AAD.
 
      ```
-     go run ./hack/genkey -extKeyUsage client firstparty-development
+     go run ./hack/genkey -client firstparty-development
      ```
 
    * AZURE_CLIENT_{ID,SECRET}: Credentials of an AAD application which fakes up

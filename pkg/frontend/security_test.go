@@ -21,7 +21,7 @@ import (
 func TestSecurity(t *testing.T) {
 	ctx := context.Background()
 
-	validclientkey, validclientcerts, err := utiltls.GenerateKeyAndCertificate("validclient", true)
+	validclientkey, validclientcerts, err := utiltls.GenerateKeyAndCertificate("validclient", nil, nil, false, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -31,12 +31,12 @@ func TestSecurity(t *testing.T) {
 
 	env := env.NewTest(l, validclientcerts[0].Raw)
 
-	env.TLSKey, env.TLSCerts, err = utiltls.GenerateKeyAndCertificate("server", false)
+	env.TLSKey, env.TLSCerts, err = utiltls.GenerateKeyAndCertificate("server", nil, nil, false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	invalidclientkey, invalidclientcerts, err := utiltls.GenerateKeyAndCertificate("invalidclient", true)
+	invalidclientkey, invalidclientcerts, err := utiltls.GenerateKeyAndCertificate("invalidclient", nil, nil, false, true)
 	if err != nil {
 		t.Fatal(err)
 	}
