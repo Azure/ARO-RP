@@ -14,7 +14,8 @@ service, please see the following links:
 ## Quickstarts
 
 * If you have a whitelisted subscription and want to use `az aro` to create a
-  cluster, follow [using `az aro`](docs/using-az-aro.md).
+  cluster using the production RP, follow [using `az
+  aro`](docs/using-az-aro.md).
 
 * If you want to deploy a development RP, follow [deploy development
   RP](docs/deploy-development-rp.md).
