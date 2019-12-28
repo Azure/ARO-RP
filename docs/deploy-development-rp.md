@@ -57,6 +57,8 @@
    * RP_MODE: Set to `development` to enable the RP to read its development
      configuration, and the `az aro` client to connect to the development RP.
 
+   Don't forget to uncomment `. secrets/env`.
+
 
 ## Configuration - non-Red Hat ARO engineering
 
@@ -140,6 +142,13 @@
        "fpServicePrincipalId=$FP_SERVICEPRINCIPAL_ID"
    ```
 
+1. Create the VPN CA key/certificate.  A suitable key/certificate file can be
+   generated using the following helper utility:
+
+   ```
+   go run ./hack/genkey -ca vpn-ca
+   ```
+
 1. Create an RP serving key/certificate.  A suitable key/certificate file
    can be generated using the following helper utility:
 
@@ -167,7 +176,8 @@
        "databaseAccountName=$COSMOSDB_ACCOUNT" \
        "domainName=$DOMAIN" \
        "keyvaultName=$KEYVAULT_NAME" \
-       "rpServicePrincipalId=$SERVICEPRINCIPAL_ID"
+       "rpServicePrincipalId=$SERVICEPRINCIPAL_ID" \
+       "vpnCACertificate=$(base64 -w0 <$VPN_CA_CERTFILE)"
 
    az group deployment create \
      -g "$RESOURCEGROUP" \

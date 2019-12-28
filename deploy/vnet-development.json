@@ -1,0 +1,92 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "vpnCACertificate": {
+            "type": "string"
+        }
+    },
+    "resources": [
+        {
+            "sku": {
+                "name": "Standard"
+            },
+            "properties": {
+                "publicIPAllocationMethod": "Static"
+            },
+            "name": "dev-vpn-pip",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2019-07-01"
+        },
+        {
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.0.0.0/9"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "properties": {
+                            "addressPrefix": "10.0.0.0/24"
+                        },
+                        "name": "GatewaySubnet"
+                    }
+                ]
+            },
+            "name": "dev-vnet",
+            "type": "Microsoft.Network/virtualNetworks",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2019-07-01"
+        },
+        {
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "properties": {
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'dev-vnet', 'GatewaySubnet')]"
+                            },
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'dev-vpn-pip')]"
+                            }
+                        },
+                        "name": "default"
+                    }
+                ],
+                "vpnType": "RouteBased",
+                "sku": {
+                    "name": "VpnGw1",
+                    "tier": "VpnGw1"
+                },
+                "vpnClientConfiguration": {
+                    "vpnClientAddressPool": {
+                        "addressPrefixes": [
+                            "192.168.255.0/24"
+                        ]
+                    },
+                    "vpnClientRootCertificates": [
+                        {
+                            "properties": {
+                                "publicCertData": "[parameters('vpnCACertificate')]"
+                            },
+                            "name": "dev-vpn-ca"
+                        }
+                    ],
+                    "vpnClientProtocols": [
+                        "OpenVPN"
+                    ]
+                }
+            },
+            "name": "dev-vpn",
+            "type": "Microsoft.Network/virtualNetworkGateways",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2019-07-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', 'dev-vpn-pip')]",
+                "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]"
+            ]
+        }
+    ]
+}

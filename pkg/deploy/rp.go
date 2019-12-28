@@ -75,7 +75,7 @@ func (g *generator) vnet() *arm.Resource {
 	}
 
 	if g.production {
-		*vnet.VirtualNetworkPropertiesFormat.Subnets = append(*vnet.VirtualNetworkPropertiesFormat.Subnets,
+		*vnet.Subnets = append(*vnet.Subnets,
 			network.Subnet{
 				SubnetPropertiesFormat: &network.SubnetPropertiesFormat{
 					AddressPrefix: to.StringPtr("10.0.0.0/24"),

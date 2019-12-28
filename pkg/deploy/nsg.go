@@ -17,14 +17,14 @@ import (
 func GenerateNSGTemplates() error {
 	for _, i := range []struct {
 		templateFile string
-		identity     bool
+		production   bool
 	}{
 		{
 			templateFile: "rp-development-nsg.json",
 		},
 		{
 			templateFile: "rp-production-nsg.json",
-			identity:     true,
+			production:   true,
 		},
 	} {
 		t := &arm.Template{
@@ -43,7 +43,7 @@ func GenerateNSGTemplates() error {
 			},
 		}
 
-		if i.identity {
+		if i.production {
 			t.Resources = append(t.Resources,
 				&arm.Resource{
 					Resource: &network.SecurityGroup{

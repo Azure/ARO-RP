@@ -18,7 +18,12 @@ func run() error {
 		return err
 	}
 
-	return deploy.GenerateRPParameterTemplate()
+	err = deploy.GenerateRPParameterTemplate()
+	if err != nil {
+		return err
+	}
+
+	return deploy.GenerateDevelopmentTemplate()
 }
 
 func main() {
