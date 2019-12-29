@@ -23,7 +23,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
-	utilpermissions "github.com/Azure/ARO-RP/pkg/util/permissions"
 )
 
 type refreshableAuthorizer struct {
@@ -145,25 +144,5 @@ func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthor
 	}
 
 	d.log.Print("development mode: refreshing authorizer")
-	err = fpAuthorizer.(*refreshableAuthorizer).Refresh()
-	if err != nil {
-		return err
-	}
-
-	// try removing the code below after a bit if we don't hit the error
-	permissions, err := d.permissions.ListForResourceGroup(ctx, oc.Properties.ResourceGroup)
-	if err != nil {
-		return err
-	}
-
-	ok, err := utilpermissions.CanDoAction(permissions, "Microsoft.Storage/storageAccounts/write")
-	if err != nil {
-		return err
-	}
-
-	if !ok {
-		return fmt.Errorf("Microsoft.Storage/storageAccounts/write permission not found")
-	}
-
-	return nil
+	return fpAuthorizer.(*refreshableAuthorizer).Refresh()
 }
