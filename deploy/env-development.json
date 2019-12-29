@@ -1,0 +1,207 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "proxyCert": {
+            "type": "string"
+        },
+        "proxyClientCert": {
+            "type": "string"
+        },
+        "proxyDomainNameLabel": {
+            "type": "string"
+        },
+        "proxyImage": {
+            "type": "string"
+        },
+        "proxyImageAuth": {
+            "type": "securestring"
+        },
+        "proxyKey": {
+            "type": "securestring"
+        },
+        "sshPublicKey": {
+            "type": "string"
+        },
+        "vpnCACertificate": {
+            "type": "string"
+        }
+    },
+    "resources": [
+        {
+            "sku": {
+                "name": "Standard"
+            },
+            "properties": {
+                "publicIPAllocationMethod": "Static"
+            },
+            "name": "dev-vpn-pip",
+            "type": "Microsoft.Network/publicIPAddresses",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2019-07-01"
+        },
+        {
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.0.0.0/9"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "properties": {
+                            "addressPrefix": "10.0.0.0/24"
+                        },
+                        "name": "GatewaySubnet"
+                    }
+                ]
+            },
+            "name": "dev-vnet",
+            "type": "Microsoft.Network/virtualNetworks",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2019-07-01"
+        },
+        {
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "properties": {
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'dev-vnet', 'GatewaySubnet')]"
+                            },
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'dev-vpn-pip')]"
+                            }
+                        },
+                        "name": "default"
+                    }
+                ],
+                "vpnType": "RouteBased",
+                "sku": {
+                    "name": "VpnGw1",
+                    "tier": "VpnGw1"
+                },
+                "vpnClientConfiguration": {
+                    "vpnClientAddressPool": {
+                        "addressPrefixes": [
+                            "192.168.255.0/24"
+                        ]
+                    },
+                    "vpnClientRootCertificates": [
+                        {
+                            "properties": {
+                                "publicCertData": "[parameters('vpnCACertificate')]"
+                            },
+                            "name": "dev-vpn-ca"
+                        }
+                    ],
+                    "vpnClientProtocols": [
+                        "OpenVPN"
+                    ]
+                }
+            },
+            "name": "dev-vpn",
+            "type": "Microsoft.Network/virtualNetworkGateways",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2019-07-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', 'dev-vpn-pip')]",
+                "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]"
+            ]
+        },
+        {
+            "sku": {
+                "name": "Standard_D2s_v3",
+                "tier": "Standard",
+                "capacity": 1
+            },
+            "properties": {
+                "upgradePolicy": {
+                    "mode": "Manual"
+                },
+                "virtualMachineProfile": {
+                    "osProfile": {
+                        "computerNamePrefix": "dev-proxy-",
+                        "adminUsername": "cloud-user",
+                        "linuxConfiguration": {
+                            "disablePasswordAuthentication": true,
+                            "ssh": {
+                                "publicKeys": [
+                                    {
+                                        "path": "/home/cloud-user/.ssh/authorized_keys",
+                                        "keyData": "[parameters('sshPublicKey')]"
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    "storageProfile": {
+                        "imageReference": {
+                            "publisher": "RedHat",
+                            "offer": "RHEL",
+                            "sku": "7-RAW",
+                            "version": "latest"
+                        },
+                        "osDisk": {
+                            "createOption": "FromImage",
+                            "managedDisk": {
+                                "storageAccountType": "Premium_LRS"
+                            }
+                        }
+                    },
+                    "networkProfile": {
+                        "networkInterfaceConfigurations": [
+                            {
+                                "name": "dev-proxy-vmss-nic",
+                                "properties": {
+                                    "primary": true,
+                                    "ipConfigurations": [
+                                        {
+                                            "name": "dev-proxy-vmss-ipconfig",
+                                            "properties": {
+                                                "subnet": {
+                                                    "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"
+                                                },
+                                                "primary": true,
+                                                "publicIPAddressConfiguration": {
+                                                    "name": "dev-proxy-vmss-pip",
+                                                    "properties": {
+                                                        "dnsSettings": {
+                                                            "domainNameLabel": "[parameters('proxyDomainNameLabel')]"
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    },
+                    "extensionProfile": {
+                        "extensions": [
+                            {
+                                "name": "dev-proxy-vmss-cse",
+                                "properties": {
+                                    "publisher": "Microsoft.Azure.Extensions",
+                                    "type": "CustomScript",
+                                    "typeHandlerVersion": "2.0",
+                                    "autoUpgradeMinorVersion": true,
+                                    "settings": {},
+                                    "protectedSettings": {
+                                        "script": "[base64(concat(base64ToString('c2V0IC1leAoK'),'PROXYIMAGE=$(base64 -d \u003c\u003c\u003c''',base64(parameters('proxyImage')),''')\n','PROXYIMAGEAUTH=$(base64 -d \u003c\u003c\u003c''',base64(parameters('proxyImageAuth')),''')\n','PROXYCERT=''',parameters('proxyCert'),'''\n','PROXYCLIENTCERT=''',parameters('proxyClientCert'),'''\n','PROXYKEY=''',parameters('proxyKey'),'''\n','\n',base64ToString('eXVtIC15IHVwZGF0ZSAteCBXQUxpbnV4QWdlbnQKCnl1bSAteSBpbnN0YWxsIGRvY2tlcgoKZmlyZXdhbGwtY21kIC0tYWRkLXBvcnQ9NDQzL3RjcCAtLXBlcm1hbmVudAoKbWtkaXIgL3Jvb3QvLmRvY2tlcgpjYXQgPi9yb290Ly5kb2NrZXIvY29uZmlnLmpzb24gPDxFT0YKewoJImF1dGhzIjogewoJCSIke1BST1hZSU1BR0UlJS8qfSI6IHsKCQkJImF1dGgiOiAiJFBST1hZSU1BR0VBVVRIIgoJCX0KCX0KfQpFT0YKCm1rZGlyIC9ldGMvcHJveHkKYmFzZTY0IC1kIDw8PCIkUFJPWFlDRVJUIiA+L2V0Yy9wcm94eS9wcm94eS5jcnQKYmFzZTY0IC1kIDw8PCIkUFJPWFlLRVkiID4vZXRjL3Byb3h5L3Byb3h5LmtleQpiYXNlNjQgLWQgPDw8IiRQUk9YWUNMSUVOVENFUlQiID4vZXRjL3Byb3h5L3Byb3h5LWNsaWVudC5jcnQKY2hvd24gLVIgMTAwMDoxMDAwIC9ldGMvcHJveHkKY2htb2QgMDYwMCAvZXRjL3Byb3h5L3Byb3h5LmtleQoKY2F0ID4vZXRjL3N5c2NvbmZpZy9wcm94eSA8PEVPRgpQUk9YWV9JTUFHRT0nJFBST1hZSU1BR0UnCkVPRgoKY2F0ID4vZXRjL3N5c3RlbWQvc3lzdGVtL3Byb3h5LnNlcnZpY2UgPDxFT0YKW1VuaXRdCkFmdGVyPWRvY2tlci5zZXJ2aWNlClJlcXVpcmVzPWRvY2tlci5zZXJ2aWNlCgpbU2VydmljZV0KRW52aXJvbm1lbnRGaWxlPS9ldGMvc3lzY29uZmlnL3Byb3h5CkV4ZWNTdGFydFByZT0tL3Vzci9iaW4vZG9ja2VyIHJtIC1mICVuCkV4ZWNTdGFydFByZT0vdXNyL2Jpbi9kb2NrZXIgcHVsbCBcJFBST1hZX0lNQUdFCkV4ZWNTdGFydD0vdXNyL2Jpbi9kb2NrZXIgcnVuIC0tcm0gLS1uYW1lICVuIC1wIDQ0Mzo4NDQzIC12IC9ldGMvcHJveHk6L3NlY3JldHMgXCRQUk9YWV9JTUFHRQpFeGVjU3RvcD0vdXNyL2Jpbi9kb2NrZXIgc3RvcCAlbgpSZXN0YXJ0PWFsd2F5cwoKW0luc3RhbGxdCldhbnRlZEJ5PW11bHRpLXVzZXIudGFyZ2V0CkVPRgoKc3lzdGVtY3RsIGVuYWJsZSBwcm94eS5zZXJ2aWNlCgooc2xlZXAgMzA7IHJlYm9vdCkgJgo=')))]"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                },
+                "overprovision": false
+            },
+            "name": "dev-proxy-vmss",
+            "type": "Microsoft.Compute/virtualMachineScaleSets",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2019-03-01"
+        }
+    ]
+}

@@ -49,57 +49,55 @@ func newGenerator(production bool) *generator {
 }
 
 func (g *generator) vnet() *arm.Resource {
-	vnet := &network.VirtualNetwork{
-		VirtualNetworkPropertiesFormat: &network.VirtualNetworkPropertiesFormat{
-			AddressSpace: &network.AddressSpace{
-				AddressPrefixes: &[]string{
-					"10.0.0.0/8",
-				},
-			},
-			Subnets: &[]network.Subnet{
-				{
-					SubnetPropertiesFormat: &network.SubnetPropertiesFormat{
-						AddressPrefix: to.StringPtr("10.1.0.0/16"),
-						NetworkSecurityGroup: &network.SecurityGroup{
-							ID: to.StringPtr("[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]"),
-						},
-						PrivateEndpointNetworkPolicies: to.StringPtr("Disabled"),
-					},
-					Name: to.StringPtr("rp-pe-subnet"),
-				},
+	subnet := network.Subnet{
+		SubnetPropertiesFormat: &network.SubnetPropertiesFormat{
+			AddressPrefix: to.StringPtr("10.0.0.0/24"),
+			NetworkSecurityGroup: &network.SecurityGroup{
+				ID: to.StringPtr("[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"),
 			},
 		},
-		Name:     to.StringPtr("rp-vnet"),
-		Type:     to.StringPtr("Microsoft.Network/virtualNetworks"),
-		Location: to.StringPtr("[resourceGroup().location]"),
+		Name: to.StringPtr("rp-subnet"),
 	}
 
 	if g.production {
-		*vnet.Subnets = append(*vnet.Subnets,
-			network.Subnet{
-				SubnetPropertiesFormat: &network.SubnetPropertiesFormat{
-					AddressPrefix: to.StringPtr("10.0.0.0/24"),
-					NetworkSecurityGroup: &network.SecurityGroup{
-						ID: to.StringPtr("[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"),
-					},
-					ServiceEndpoints: &[]network.ServiceEndpointPropertiesFormat{
-						{
-							Service:   to.StringPtr("Microsoft.KeyVault"),
-							Locations: &[]string{"*"},
-						},
-						{
-							Service:   to.StringPtr("Microsoft.AzureCosmosDB"),
-							Locations: &[]string{"*"},
-						},
-					},
-				},
-				Name: to.StringPtr("rp-subnet"),
+		subnet.ServiceEndpoints = &[]network.ServiceEndpointPropertiesFormat{
+			{
+				Service:   to.StringPtr("Microsoft.KeyVault"),
+				Locations: &[]string{"*"},
 			},
-		)
+			{
+				Service:   to.StringPtr("Microsoft.AzureCosmosDB"),
+				Locations: &[]string{"*"},
+			},
+		}
 	}
 
 	return &arm.Resource{
-		Resource:   vnet,
+		Resource: &network.VirtualNetwork{
+			VirtualNetworkPropertiesFormat: &network.VirtualNetworkPropertiesFormat{
+				AddressSpace: &network.AddressSpace{
+					AddressPrefixes: &[]string{
+						"10.0.0.0/8",
+					},
+				},
+				Subnets: &[]network.Subnet{
+					subnet,
+					{
+						SubnetPropertiesFormat: &network.SubnetPropertiesFormat{
+							AddressPrefix: to.StringPtr("10.1.0.0/16"),
+							NetworkSecurityGroup: &network.SecurityGroup{
+								ID: to.StringPtr("[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]"),
+							},
+							PrivateEndpointNetworkPolicies: to.StringPtr("Disabled"),
+						},
+						Name: to.StringPtr("rp-pe-subnet"),
+					},
+				},
+			},
+			Name:     to.StringPtr("rp-vnet"),
+			Type:     to.StringPtr("Microsoft.Network/virtualNetworks"),
+			Location: to.StringPtr("[resourceGroup().location]"),
+		},
 		APIVersion: apiVersions["network"],
 	}
 }

@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2015-04-08/documentdb"
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/2016-10-01/keyvault"
@@ -148,6 +149,13 @@ func (p *prod) CosmosDB() (string, string) {
 
 func (p *prod) DatabaseName() string {
 	return "ARO"
+}
+
+func (p *prod) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
+	return (&net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+	}).DialContext(ctx, network, address)
 }
 
 func (p *prod) DNS() dns.Manager {

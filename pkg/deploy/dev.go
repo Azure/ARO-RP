@@ -17,11 +17,7 @@ func GenerateDevelopmentTemplate() error {
 	t := &arm.Template{
 		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 		ContentVersion: "1.0.0.0",
-		Parameters: map[string]*arm.TemplateParameter{
-			"vpnCACertificate": {
-				Type: "string",
-			},
-		},
+		Parameters:     map[string]*arm.TemplateParameter{},
 		Resources: []*arm.Resource{
 			{
 				Resource: &network.PublicIPAddress{
@@ -108,7 +104,26 @@ func GenerateDevelopmentTemplate() error {
 					"[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]",
 				},
 			},
+			proxyVmss(),
 		},
+	}
+
+	for _, param := range []string{
+		"proxyCert",
+		"proxyClientCert",
+		"proxyDomainNameLabel",
+		"proxyImage",
+		"proxyImageAuth",
+		"proxyKey",
+		"sshPublicKey",
+		"vpnCACertificate",
+	} {
+		typ := "string"
+		switch param {
+		case "proxyImageAuth", "proxyKey":
+			typ = "securestring"
+		}
+		t.Parameters[param] = &arm.TemplateParameter{Type: typ}
 	}
 
 	b, err := json.MarshalIndent(t, "", "    ")
@@ -118,5 +133,5 @@ func GenerateDevelopmentTemplate() error {
 
 	b = append(b, byte('\n'))
 
-	return ioutil.WriteFile("vnet-development.json", b, 0666)
+	return ioutil.WriteFile("env-development.json", b, 0666)
 }

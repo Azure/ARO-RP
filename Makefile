@@ -48,9 +48,16 @@ client: generate
 generate:
 	go generate ./...
 
-image: aro
+image-aro: aro
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
-	docker build -t arosvc.azurecr.io/aro:$(COMMIT) .
+	docker build -f Dockerfile.aro -t arosvc.azurecr.io/aro:$(COMMIT) .
+
+image-proxy: proxy
+	docker pull registry.access.redhat.com/ubi8/ubi-minimal
+	docker build -f Dockerfile.proxy -t arosvc.azurecr.io/proxy:latest .
+
+proxy:
+	go build -ldflags "-X main.gitCommit=$(COMMIT)" ./hack/proxy
 
 pyenv${PYTHON_VERSION}:
 	virtualenv --python=/usr/bin/python${PYTHON_VERSION} pyenv${PYTHON_VERSION}
@@ -87,4 +94,4 @@ test-python: generate pyenv${PYTHON_VERSION}
 		azdev linter && \
 		azdev style
 
-.PHONY: aro az clean client generate image secrets secrets-update test-go test-python
+.PHONY: aro az clean client generate image-aro proxy secrets secrets-update test-go test-python

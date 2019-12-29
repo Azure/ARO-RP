@@ -27,10 +27,53 @@ func GenerateNSGTemplates() error {
 			production:   true,
 		},
 	} {
+		nsg := &network.SecurityGroup{
+			SecurityGroupPropertiesFormat: &network.SecurityGroupPropertiesFormat{
+				SecurityRules: &[]network.SecurityRule{
+					{
+						SecurityRulePropertiesFormat: &network.SecurityRulePropertiesFormat{
+							Protocol:                 network.SecurityRuleProtocolTCP,
+							SourcePortRange:          to.StringPtr("*"),
+							DestinationPortRange:     to.StringPtr("443"),
+							SourceAddressPrefix:      to.StringPtr("*"),
+							DestinationAddressPrefix: to.StringPtr("*"),
+							Access:                   network.SecurityRuleAccessAllow,
+							Priority:                 to.Int32Ptr(120),
+							Direction:                network.SecurityRuleDirectionInbound,
+						},
+						Name: to.StringPtr("rp_in"),
+					},
+				},
+			},
+			Name:     to.StringPtr("rp-nsg"),
+			Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
+			Location: to.StringPtr("[resourceGroup().location]"),
+		}
+
+		if !i.production {
+			*nsg.SecurityRules = append(*nsg.SecurityRules, network.SecurityRule{
+				SecurityRulePropertiesFormat: &network.SecurityRulePropertiesFormat{
+					Protocol:                 network.SecurityRuleProtocolTCP,
+					SourcePortRange:          to.StringPtr("*"),
+					DestinationPortRange:     to.StringPtr("22"),
+					SourceAddressPrefix:      to.StringPtr("*"),
+					DestinationAddressPrefix: to.StringPtr("*"),
+					Access:                   network.SecurityRuleAccessAllow,
+					Priority:                 to.Int32Ptr(100),
+					Direction:                network.SecurityRuleDirectionInbound,
+				},
+				Name: to.StringPtr("ssh_in"),
+			})
+		}
+
 		t := &arm.Template{
 			Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 			ContentVersion: "1.0.0.0",
 			Resources: []*arm.Resource{
+				{
+					Resource:   nsg,
+					APIVersion: apiVersions["network"],
+				},
 				{
 					Resource: &network.SecurityGroup{
 						SecurityGroupPropertiesFormat: &network.SecurityGroupPropertiesFormat{},
@@ -45,31 +88,6 @@ func GenerateNSGTemplates() error {
 
 		if i.production {
 			t.Resources = append(t.Resources,
-				&arm.Resource{
-					Resource: &network.SecurityGroup{
-						SecurityGroupPropertiesFormat: &network.SecurityGroupPropertiesFormat{
-							SecurityRules: &[]network.SecurityRule{
-								{
-									SecurityRulePropertiesFormat: &network.SecurityRulePropertiesFormat{
-										Protocol:                 network.SecurityRuleProtocolTCP,
-										SourcePortRange:          to.StringPtr("*"),
-										DestinationPortRange:     to.StringPtr("443"),
-										SourceAddressPrefix:      to.StringPtr("*"),
-										DestinationAddressPrefix: to.StringPtr("*"),
-										Access:                   network.SecurityRuleAccessAllow,
-										Priority:                 to.Int32Ptr(120),
-										Direction:                network.SecurityRuleDirectionInbound,
-									},
-									Name: to.StringPtr("rp_in"),
-								},
-							},
-						},
-						Name:     to.StringPtr("rp-nsg"),
-						Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
-						Location: to.StringPtr("[resourceGroup().location]"),
-					},
-					APIVersion: apiVersions["network"],
-				},
 				&arm.Resource{
 					Resource: &msi.Identity{
 						Name:     to.StringPtr("rp-identity"),

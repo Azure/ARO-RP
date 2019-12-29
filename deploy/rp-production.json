@@ -260,17 +260,6 @@
                 "subnets": [
                     {
                         "properties": {
-                            "addressPrefix": "10.1.0.0/16",
-                            "networkSecurityGroup": {
-                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]",
-                                "tags": null
-                            },
-                            "privateEndpointNetworkPolicies": "Disabled"
-                        },
-                        "name": "rp-pe-subnet"
-                    },
-                    {
-                        "properties": {
                             "addressPrefix": "10.0.0.0/24",
                             "networkSecurityGroup": {
                                 "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]",
@@ -292,6 +281,17 @@
                             ]
                         },
                         "name": "rp-subnet"
+                    },
+                    {
+                        "properties": {
+                            "addressPrefix": "10.1.0.0/16",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]",
+                                "tags": null
+                            },
+                            "privateEndpointNetworkPolicies": "Disabled"
+                        },
+                        "name": "rp-pe-subnet"
                     }
                 ]
             },

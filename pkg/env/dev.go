@@ -4,10 +4,17 @@ package env
 // Licensed under the Apache License 2.0.
 
 import (
+	"bufio"
 	"context"
+	"crypto/rsa"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"net"
+	"net/http"
 	"os"
+	"time"
 
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
 	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
@@ -24,6 +31,15 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 )
+
+type conn struct {
+	net.Conn
+	r *bufio.Reader
+}
+
+func (c *conn) Read(b []byte) (int, error) {
+	return c.r.Read(b)
+}
 
 type refreshableAuthorizer struct {
 	autorest.Authorizer
@@ -46,6 +62,10 @@ type dev struct {
 	permissions     authorization.PermissionsClient
 	roleassignments authorization.RoleAssignmentsClient
 	applications    graphrbac.ApplicationsClient
+
+	proxyPool       *x509.CertPool
+	proxyClientCert []byte
+	proxyClientKey  *rsa.PrivateKey
 }
 
 func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata, clientauthorizer clientauthorizer.ClientAuthorizer) (*dev, error) {
@@ -57,6 +77,7 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 		"AZURE_TENANT_ID",
 		"DATABASE_NAME",
 		"LOCATION",
+		"PROXY_HOSTNAME",
 		"PULL_SECRET",
 		"RESOURCEGROUP",
 	} {
@@ -95,11 +116,99 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 
 	d.permissions = authorization.NewPermissionsClient(instancemetadata.SubscriptionID(), fpAuthorizer)
 
+	b, err := ioutil.ReadFile("secrets/proxy.crt")
+	if err != nil {
+		return nil, err
+	}
+
+	cert, err := x509.ParseCertificate(b)
+	if err != nil {
+		return nil, err
+	}
+
+	d.proxyPool = x509.NewCertPool()
+	d.proxyPool.AddCert(cert)
+
+	d.proxyClientCert, err = ioutil.ReadFile("secrets/proxy-client.crt")
+	if err != nil {
+		return nil, err
+	}
+
+	b, err = ioutil.ReadFile("secrets/proxy-client.key")
+	if err != nil {
+		return nil, err
+	}
+
+	d.proxyClientKey, err = x509.ParsePKCS1PrivateKey(b)
+	if err != nil {
+		return nil, err
+	}
+
 	return d, nil
 }
 
 func (d *dev) DatabaseName() string {
 	return os.Getenv("DATABASE_NAME")
+}
+
+func (d *dev) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
+	if network != "tcp" {
+		return nil, fmt.Errorf("unimplemented network %q", network)
+	}
+
+	c, err := (&net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+	}).DialContext(ctx, network, os.Getenv("PROXY_HOSTNAME")+":443")
+	if err != nil {
+		return nil, err
+	}
+
+	c = tls.Client(c, &tls.Config{
+		RootCAs: d.proxyPool,
+		Certificates: []tls.Certificate{
+			{
+				Certificate: [][]byte{
+					d.proxyClientCert,
+				},
+				PrivateKey: d.proxyClientKey,
+			},
+		},
+		ServerName: "proxy",
+	})
+
+	err = c.(*tls.Conn).Handshake()
+	if err != nil {
+		c.Close()
+		return nil, err
+	}
+
+	r := bufio.NewReader(c)
+
+	req, err := http.NewRequest(http.MethodConnect, "", nil)
+	if err != nil {
+		c.Close()
+		return nil, err
+	}
+	req.Host = address
+
+	err = req.Write(c)
+	if err != nil {
+		c.Close()
+		return nil, err
+	}
+
+	resp, err := http.ReadResponse(r, req)
+	if err != nil {
+		c.Close()
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		c.Close()
+		return nil, fmt.Errorf("unexpected status code %d", resp.StatusCode)
+	}
+
+	return &conn{Conn: c, r: r}, nil
 }
 
 func (d *dev) Listen() (net.Listener, error) {

@@ -5,8 +5,8 @@ package restconfig
 
 import (
 	"context"
+	"fmt"
 	"net"
-	"time"
 
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -33,10 +33,16 @@ func RestConfig(ctx context.Context, env env.Interface, doc *api.OpenShiftCluste
 	}
 
 	restconfig.Dial = func(ctx context.Context, network, address string) (net.Conn, error) {
-		return (&net.Dialer{
-			Timeout:   30 * time.Second,
-			KeepAlive: 30 * time.Second,
-		}).DialContext(ctx, network, *(*(*pe.PrivateEndpointProperties.NetworkInterfaces)[0].IPConfigurations)[0].PrivateIPAddress)
+		if network != "tcp" {
+			return nil, fmt.Errorf("unimplemented network %q", network)
+		}
+
+		_, port, err := net.SplitHostPort(address)
+		if err != nil {
+			return nil, err
+		}
+
+		return env.DialContext(ctx, network, *(*(*pe.PrivateEndpointProperties.NetworkInterfaces)[0].IPConfigurations)[0].PrivateIPAddress+":"+port)
 	}
 
 	return restconfig, nil

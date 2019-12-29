@@ -1,0 +1,5 @@
+FROM registry.access.redhat.com/ubi8/ubi-minimal
+COPY proxy /usr/local/bin
+ENTRYPOINT ["proxy"]
+EXPOSE 8443/tcp
+USER 1000

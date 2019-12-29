@@ -3,13 +3,6 @@
     "contentVersion": "1.0.0.0",
     "resources": [
         {
-            "properties": {},
-            "name": "rp-pe-nsg",
-            "type": "Microsoft.Network/networkSecurityGroups",
-            "location": "[resourceGroup().location]",
-            "apiVersion": "2019-07-01"
-        },
-        {
             "properties": {
                 "securityRules": [
                     {
@@ -28,6 +21,13 @@
                 ]
             },
             "name": "rp-nsg",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2019-07-01"
+        },
+        {
+            "properties": {},
+            "name": "rp-pe-nsg",
             "type": "Microsoft.Network/networkSecurityGroups",
             "location": "[resourceGroup().location]",
             "apiVersion": "2019-07-01"

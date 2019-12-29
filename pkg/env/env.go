@@ -26,6 +26,7 @@ type Interface interface {
 
 	CosmosDB() (string, string)
 	DatabaseName() string
+	DialContext(context.Context, string, string) (net.Conn, error)
 	DNS() dns.Manager
 	FPAuthorizer(string, string) (autorest.Authorizer, error)
 	GetSecret(context.Context, string) (*rsa.PrivateKey, []*x509.Certificate, error)

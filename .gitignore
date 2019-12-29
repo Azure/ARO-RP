@@ -10,6 +10,7 @@ __pycache__
 /env*
 !/env.example
 /id_rsa
+/proxy
 /pyenv*
 /python/az/aro/build
 /python/az/aro/dist
