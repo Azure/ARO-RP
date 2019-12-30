@@ -23,7 +23,6 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/sirupsen/logrus"
 
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/network"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
@@ -33,8 +32,7 @@ type prod struct {
 	instancemetadata.InstanceMetadata
 	clientauthorizer.ClientAuthorizer
 
-	keyvault        keyvault.BaseClient
-	privateendpoint network.PrivateEndpointsClient
+	keyvault keyvault.BaseClient
 
 	dns dns.Manager
 
@@ -71,8 +69,6 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 	if err != nil {
 		return nil, err
 	}
-
-	p.privateendpoint = network.NewPrivateEndpointsClient(p.SubscriptionID(), rpAuthorizer)
 
 	err = p.populateCosmosDB(ctx, rpAuthorizer)
 	if err != nil {
@@ -224,8 +220,4 @@ func (p *prod) GetSecret(ctx context.Context, secretName string) (key *rsa.Priva
 
 func (p *prod) Listen() (net.Listener, error) {
 	return net.Listen("tcp", ":8443")
-}
-
-func (p *prod) PrivateEndpoint() network.PrivateEndpointsClient {
-	return p.privateendpoint
 }

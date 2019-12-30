@@ -620,12 +620,12 @@ func (g *generator) rbac() []*arm.Resource {
 		},
 		{
 			Resource: &authorization.RoleAssignment{
-				Name: to.StringPtr("[guid(resourceGroup().id, 'RP / Network Contributor')]"),
+				Name: to.StringPtr("[guid(resourceGroup().id, 'FP / Network Contributor')]"),
 				Type: to.StringPtr("Microsoft.Authorization/roleAssignments"),
 				RoleAssignmentPropertiesWithScope: &authorization.RoleAssignmentPropertiesWithScope{
 					Scope:            to.StringPtr("[resourceGroup().id]"),
 					RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4d97b98b-1d4f-4787-a291-c67834d212e7')]"),
-					PrincipalID:      to.StringPtr("[parameters('rpServicePrincipalId')]"),
+					PrincipalID:      to.StringPtr("[parameters('fpServicePrincipalId')]"),
 					PrincipalType:    authorization.ServicePrincipal,
 				},
 			},
@@ -684,6 +684,7 @@ func (g *generator) template() *arm.Template {
 	params := []string{
 		"databaseAccountName",
 		"domainName",
+		"fpServicePrincipalId",
 		"keyvaultName",
 		"rpServicePrincipalId",
 	}

@@ -65,7 +65,7 @@ func (m *Manager) Delete(ctx context.Context) error {
 	}
 
 	m.log.Print("deleting private endpoint")
-	err = m.env.PrivateEndpoint().DeleteAndWait(ctx, m.env.ResourceGroup(), "rp-pe-"+m.doc.ID)
+	err = m.privateendpoint.Delete(ctx, m.doc)
 	if err != nil {
 		return err
 	}

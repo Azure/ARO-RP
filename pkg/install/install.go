@@ -26,6 +26,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/network"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/resources"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/storage"
+	"github.com/Azure/ARO-RP/pkg/util/privateendpoint"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
@@ -35,6 +36,8 @@ type Installer struct {
 	db           database.OpenShiftClusters
 	doc          *api.OpenShiftClusterDocument
 	fpAuthorizer autorest.Authorizer
+
+	privateendpoint privateendpoint.Manager
 
 	disks             compute.DisksClient
 	virtualmachines   compute.VirtualMachinesClient
@@ -47,7 +50,22 @@ type Installer struct {
 	subnets subnet.Manager
 }
 
-func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClusters, doc *api.OpenShiftClusterDocument, fpAuthorizer autorest.Authorizer, subscriptionID string) *Installer {
+func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClusters, doc *api.OpenShiftClusterDocument) (*Installer, error) {
+	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	localFPAuthorizer, err := env.FPAuthorizer(env.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	fpAuthorizer, err := env.FPAuthorizer(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Installer{
 		log:          log,
 		env:          env,
@@ -55,20 +73,23 @@ func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClu
 		doc:          doc,
 		fpAuthorizer: fpAuthorizer,
 
-		disks:             compute.NewDisksClient(subscriptionID, fpAuthorizer),
-		virtualmachines:   compute.NewVirtualMachinesClient(subscriptionID, fpAuthorizer),
-		interfaces:        network.NewInterfacesClient(subscriptionID, fpAuthorizer),
-		publicipaddresses: network.NewPublicIPAddressesClient(subscriptionID, fpAuthorizer),
-		deployments:       resources.NewDeploymentsClient(subscriptionID, fpAuthorizer),
-		groups:            resources.NewGroupsClient(subscriptionID, fpAuthorizer),
-		accounts:          storage.NewAccountsClient(subscriptionID, fpAuthorizer),
+		privateendpoint: privateendpoint.NewManager(env, localFPAuthorizer),
 
-		subnets: subnet.NewManager(subscriptionID, fpAuthorizer),
-	}
+		disks:             compute.NewDisksClient(r.SubscriptionID, fpAuthorizer),
+		virtualmachines:   compute.NewVirtualMachinesClient(r.SubscriptionID, fpAuthorizer),
+		interfaces:        network.NewInterfacesClient(r.SubscriptionID, fpAuthorizer),
+		publicipaddresses: network.NewPublicIPAddressesClient(r.SubscriptionID, fpAuthorizer),
+		deployments:       resources.NewDeploymentsClient(r.SubscriptionID, fpAuthorizer),
+		groups:            resources.NewGroupsClient(r.SubscriptionID, fpAuthorizer),
+		accounts:          storage.NewAccountsClient(r.SubscriptionID, fpAuthorizer),
+
+		subnets: subnet.NewManager(r.SubscriptionID, fpAuthorizer),
+	}, nil
 }
 
 func (i *Installer) Install(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) error {
 	var err error
+
 	i.doc, err = i.db.Patch(i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		if doc.OpenShiftCluster.Properties.Install == nil {
 			doc.OpenShiftCluster.Properties.Install = &api.Install{}

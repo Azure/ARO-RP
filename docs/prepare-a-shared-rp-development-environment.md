@@ -113,6 +113,7 @@ locations.
    Later this application will be granted:
 
    * `ARO v4 FP Subscription` on your subscription.
+   * `Network Contributor` on RESOURCEGROUP.
 
 1. Create an AAD application which will fake up the RP identity.
 
@@ -132,7 +133,6 @@ locations.
    Later this application will be granted:
 
    * `Reader` on RESOURCEGROUP.
-   * `Network Contributor` on RESOURCEGROUP.
    * `Secrets / Get` on the key vault in RESOURCEGROUP.
    * `DocumentDB Account Contributor` on the CosmosDB resource in RESOURCEGROUP.
    * `DNS Zone Contributor` on the DNS zone in RESOURCEGROUP.
@@ -273,6 +273,7 @@ locations.
        "adminObjectId=$ADMIN_OBJECT_ID" \
        "databaseAccountName=$COSMOSDB_ACCOUNT" \
        "domainName=$DOMAIN_NAME.$PARENT_DOMAIN_NAME" \
+       "fpServicePrincipalId=$(az ad sp list --all --query "[?appId=='$AZURE_FP_CLIENT_ID'].objectId" -o tsv)" \
        "keyvaultName=$KEYVAULT_NAME" \
        "rpServicePrincipalId=$(az ad sp list --all --query "[?appId=='$AZURE_CLIENT_ID'].objectId" -o tsv)" \
      >/dev/null

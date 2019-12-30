@@ -34,11 +34,6 @@ import (
 )
 
 func (i *Installer) installResources(ctx context.Context) error {
-	r, err := azure.ParseResourceID(i.doc.OpenShiftCluster.ID)
-	if err != nil {
-		return err
-	}
-
 	g, err := i.getGraph(ctx)
 	if err != nil {
 		return err
@@ -689,22 +684,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 
 	{
 		i.log.Print("creating private endpoint")
-		err = i.env.PrivateEndpoint().CreateOrUpdateAndWait(ctx, i.env.ResourceGroup(), "rp-pe-"+i.doc.ID, network.PrivateEndpoint{
-			PrivateEndpointProperties: &network.PrivateEndpointProperties{
-				Subnet: &network.Subnet{
-					ID: to.StringPtr("/subscriptions/" + i.env.SubscriptionID() + "/resourceGroups/" + i.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-vnet/subnets/rp-pe-subnet"),
-				},
-				ManualPrivateLinkServiceConnections: &[]network.PrivateLinkServiceConnection{
-					{
-						Name: to.StringPtr("rp-plsconnection"),
-						PrivateLinkServiceConnectionProperties: &network.PrivateLinkServiceConnectionProperties{
-							PrivateLinkServiceID: to.StringPtr("/subscriptions/" + r.SubscriptionID + "/resourceGroups/" + i.doc.OpenShiftCluster.Properties.ResourceGroup + "/providers/Microsoft.Network/privateLinkServices/aro-pls"),
-						},
-					},
-				},
-			},
-			Location: &installConfig.Config.Azure.Region,
-		})
+		err = i.privateendpoint.Create(ctx, i.doc)
 		if err != nil {
 			return err
 		}
@@ -718,7 +698,12 @@ func (i *Installer) installResources(ctx context.Context) error {
 	}
 
 	{
-		restConfig, err := restconfig.RestConfig(ctx, i.env, i.doc)
+		ip, err := i.privateendpoint.GetIP(ctx, i.doc)
+		if err != nil {
+			return err
+		}
+
+		restConfig, err := restconfig.RestConfig(ctx, i.env, i.doc, ip)
 		if err != nil {
 			return err
 		}

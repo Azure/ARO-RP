@@ -14,7 +14,6 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/sirupsen/logrus"
 
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/network"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
@@ -31,7 +30,6 @@ type Interface interface {
 	FPAuthorizer(string, string) (autorest.Authorizer, error)
 	GetSecret(context.Context, string) (*rsa.PrivateKey, []*x509.Certificate, error)
 	Listen() (net.Listener, error)
-	PrivateEndpoint() network.PrivateEndpointsClient
 }
 
 func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {

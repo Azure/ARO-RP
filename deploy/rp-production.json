@@ -29,6 +29,9 @@
             "type": "array",
             "defaultValue": []
         },
+        "fpServicePrincipalId": {
+            "type": "string"
+        },
         "keyvaultName": {
             "type": "string"
         },
@@ -434,12 +437,12 @@
             "apiVersion": "2018-09-01-preview"
         },
         {
-            "name": "[guid(resourceGroup().id, 'RP / Network Contributor')]",
+            "name": "[guid(resourceGroup().id, 'FP / Network Contributor')]",
             "type": "Microsoft.Authorization/roleAssignments",
             "properties": {
                 "scope": "[resourceGroup().id]",
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4d97b98b-1d4f-4787-a291-c67834d212e7')]",
-                "principalId": "[parameters('rpServicePrincipalId')]",
+                "principalId": "[parameters('fpServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
             "apiVersion": "2018-09-01-preview"

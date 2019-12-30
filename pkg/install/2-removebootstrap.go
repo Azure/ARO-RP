@@ -60,7 +60,12 @@ func (i *Installer) removeBootstrap(ctx context.Context) error {
 	}
 
 	{
-		restConfig, err := restconfig.RestConfig(ctx, i.env, i.doc)
+		ip, err := i.privateendpoint.GetIP(ctx, i.doc)
+		if err != nil {
+			return err
+		}
+
+		restConfig, err := restconfig.RestConfig(ctx, i.env, i.doc, ip)
 		if err != nil {
 			return err
 		}

@@ -30,7 +30,12 @@ func find(xs interface{}, f func(int, int) bool) interface{} {
 }
 
 func (m *Manager) Update(ctx context.Context) error {
-	restConfig, err := restconfig.RestConfig(ctx, m.env, m.doc)
+	ip, err := m.privateendpoint.GetIP(ctx, m.doc)
+	if err != nil {
+		return err
+	}
+
+	restConfig, err := restconfig.RestConfig(ctx, m.env, m.doc, ip)
 	if err != nil {
 		return err
 	}
