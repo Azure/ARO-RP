@@ -23,7 +23,6 @@ import (
 	"github.com/apparentlymart/go-cidr/cidr"
 	"github.com/openshift/installer/pkg/asset/ignition/machine"
 	"github.com/openshift/installer/pkg/asset/installconfig"
-	"github.com/openshift/installer/pkg/asset/machines"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
@@ -40,7 +39,6 @@ func (i *Installer) installResources(ctx context.Context) error {
 	}
 
 	installConfig := g[reflect.TypeOf(&installconfig.InstallConfig{})].(*installconfig.InstallConfig)
-	machinesMaster := g[reflect.TypeOf(&machines.Master{})].(*machines.Master)
 	machineMaster := g[reflect.TypeOf(&machine.Master{})].(*machine.Master)
 
 	vnetID, _, err := subnet.Split(i.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
@@ -58,21 +56,31 @@ func (i *Installer) installResources(ctx context.Context) error {
 		return err
 	}
 
-	// TODO: make this dynamic and use a DNS alias record
 	var lbIP net.IP
 	{
 		_, last := cidr.AddressRange(masterSubnetCIDR)
 		lbIP = cidr.Dec(cidr.Dec(last))
 	}
 
-	srvRecords := make([]mgmtprivatedns.SrvRecord, len(machinesMaster.MachineFiles))
-	for i := 0; i < len(machinesMaster.MachineFiles); i++ {
+	srvRecords := make([]mgmtprivatedns.SrvRecord, *installConfig.Config.ControlPlane.Replicas)
+	for i := 0; i < int(*installConfig.Config.ControlPlane.Replicas); i++ {
 		srvRecords[i] = mgmtprivatedns.SrvRecord{
 			Priority: to.Int32Ptr(10),
 			Weight:   to.Int32Ptr(10),
 			Port:     to.Int32Ptr(2380),
 			Target:   to.StringPtr(fmt.Sprintf("etcd-%d.%s", i, installConfig.Config.ObjectMeta.Name+"."+installConfig.Config.BaseDomain)),
 		}
+	}
+
+	var zones *[]string
+	switch len(installConfig.Config.ControlPlane.Platform.Azure.Zones) {
+	case 1:
+	case int(*installConfig.Config.ControlPlane.Replicas):
+		zones = &[]string{
+			"[copyIndex(1)]",
+		}
+	default:
+		return fmt.Errorf("cluster creation with %d zones is unimplemented", len(installConfig.Config.ControlPlane.Platform.Azure.Zones))
 	}
 
 	var objectID string
@@ -193,7 +201,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 					APIVersion: apiVersions["privatedns"],
 					Copy: &arm.Copy{
 						Name:  "privatednscopy",
-						Count: len(machinesMaster.MachineFiles),
+						Count: int(*installConfig.Config.ControlPlane.Replicas),
 					},
 					DependsOn: []string{
 						"[concat('Microsoft.Network/networkInterfaces/aro-master', copyIndex(), '-nic')]",
@@ -516,7 +524,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 					APIVersion: apiVersions["network"],
 					Copy: &arm.Copy{
 						Name:  "networkcopy",
-						Count: len(machinesMaster.MachineFiles),
+						Count: int(*installConfig.Config.ControlPlane.Replicas),
 					},
 					DependsOn: []string{
 						"Microsoft.Network/loadBalancers/aro-internal-lb",
@@ -626,9 +634,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 								},
 							},
 						},
-						Zones: &[]string{
-							"[copyIndex(1)]",
-						},
+						Zones:    zones,
 						Name:     to.StringPtr("[concat('aro-master-', copyIndex())]"),
 						Type:     to.StringPtr("Microsoft.Compute/virtualMachines"),
 						Location: &installConfig.Config.Azure.Region,
@@ -636,7 +642,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 					APIVersion: apiVersions["compute"],
 					Copy: &arm.Copy{
 						Name:  "computecopy",
-						Count: len(machinesMaster.MachineFiles),
+						Count: int(*installConfig.Config.ControlPlane.Replicas),
 					},
 					DependsOn: []string{
 						"[concat('Microsoft.Authorization/roleAssignments/', guid(resourceGroup().id, 'SP / Contributor'))]",

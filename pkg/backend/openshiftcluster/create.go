@@ -90,6 +90,22 @@ func (m *Manager) Create(ctx context.Context) error {
 		return err
 	}
 
+	masterZones, err := m.env.Zones(string(m.doc.OpenShiftCluster.Properties.MasterProfile.VMSize))
+	if err != nil {
+		return err
+	}
+	if len(masterZones) == 0 {
+		masterZones = []string{""}
+	}
+
+	workerZones, err := m.env.Zones(string(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].VMSize))
+	if err != nil {
+		return err
+	}
+	if len(workerZones) == 0 {
+		masterZones = []string{""}
+	}
+
 	platformCreds := &installconfig.PlatformCreds{
 		Azure: &icazure.Credentials{
 			TenantID:       m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID,
@@ -127,6 +143,7 @@ func (m *Manager) Create(ctx context.Context) error {
 				Replicas: to.Int64Ptr(3),
 				Platform: types.MachinePoolPlatform{
 					Azure: &azuretypes.MachinePool{
+						Zones:        masterZones,
 						InstanceType: string(m.doc.OpenShiftCluster.Properties.MasterProfile.VMSize),
 					},
 				},
@@ -138,6 +155,7 @@ func (m *Manager) Create(ctx context.Context) error {
 					Replicas: to.Int64Ptr(int64(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].Count)),
 					Platform: types.MachinePoolPlatform{
 						Azure: &azuretypes.MachinePool{
+							Zones:        workerZones,
 							InstanceType: string(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].VMSize),
 							OSDisk: azuretypes.OSDisk{
 								DiskSizeGB: int32(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].DiskSizeGB),
