@@ -691,7 +691,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 	}
 
 	{
-		err = i.env.DNS().CreateOrUpdate(ctx, i.doc.OpenShiftCluster)
+		err = i.dns.CreateOrUpdate(ctx, i.doc.OpenShiftCluster)
 		if err != nil {
 			return err
 		}

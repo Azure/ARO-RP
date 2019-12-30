@@ -649,12 +649,12 @@ func (g *generator) rbac() []*arm.Resource {
 		},
 		{
 			Resource: &authorization.RoleAssignment{
-				Name: to.StringPtr("[concat(parameters('domainName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/dnsZones', parameters('domainName')), 'RP / DNS Zone Contributor'))]"),
+				Name: to.StringPtr("[concat(parameters('domainName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/dnsZones', parameters('domainName')), 'FP / DNS Zone Contributor'))]"),
 				Type: to.StringPtr("Microsoft.Network/dnsZones/providers/roleAssignments"),
 				RoleAssignmentPropertiesWithScope: &authorization.RoleAssignmentPropertiesWithScope{
 					Scope:            to.StringPtr("[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]"),
 					RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'befefa01-2a29-4197-83a8-272ff33ce314')]"),
-					PrincipalID:      to.StringPtr("[parameters('rpServicePrincipalId')]"),
+					PrincipalID:      to.StringPtr("[parameters('fpServicePrincipalId')]"),
 					PrincipalType:    authorization.ServicePrincipal,
 				},
 			},

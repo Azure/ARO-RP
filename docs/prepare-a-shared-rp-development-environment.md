@@ -113,6 +113,7 @@ locations.
    Later this application will be granted:
 
    * `ARO v4 FP Subscription` on your subscription.
+   * `DNS Zone Contributor` on the DNS zone in RESOURCEGROUP.
    * `Network Contributor` on RESOURCEGROUP.
 
 1. Create an AAD application which will fake up the RP identity.
@@ -135,7 +136,6 @@ locations.
    * `Reader` on RESOURCEGROUP.
    * `Secrets / Get` on the key vault in RESOURCEGROUP.
    * `DocumentDB Account Contributor` on the CosmosDB resource in RESOURCEGROUP.
-   * `DNS Zone Contributor` on the DNS zone in RESOURCEGROUP.
 
 1. Set up the RP role definitions and subscription role assignments in your
    Azure subscription. This mimics the RBAC that ARM sets up.  With at least

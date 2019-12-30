@@ -12,6 +12,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/resources"
+	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/privateendpoint"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
@@ -23,6 +24,7 @@ type Manager struct {
 	fpAuthorizer autorest.Authorizer
 
 	privateendpoint privateendpoint.Manager
+	dns             dns.Manager
 
 	groups resources.GroupsClient
 
@@ -54,6 +56,7 @@ func NewManager(log *logrus.Entry, env env.Interface, db database.OpenShiftClust
 		fpAuthorizer: fpAuthorizer,
 
 		privateendpoint: privateendpoint.NewManager(env, localFPAuthorizer),
+		dns:             dns.NewManager(env, localFPAuthorizer),
 
 		subnets: subnet.NewManager(r.SubscriptionID, fpAuthorizer),
 		groups:  resources.NewGroupsClient(r.SubscriptionID, fpAuthorizer),

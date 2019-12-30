@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2015-04-08/documentdb"
+	"github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/2016-10-01/keyvault"
 	keyvaultmgmt "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2016-10-01/keyvault"
 	"github.com/Azure/go-autorest/autorest"
@@ -24,7 +25,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
-	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 )
 
@@ -34,10 +34,9 @@ type prod struct {
 
 	keyvault keyvault.BaseClient
 
-	dns dns.Manager
-
 	cosmosDBAccountName      string
 	cosmosDBPrimaryMasterKey string
+	domain                   string
 	vaultURI                 string
 
 	fpCertificate *x509.Certificate
@@ -75,12 +74,12 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 		return nil, err
 	}
 
-	err = p.populateVaultURI(ctx, rpAuthorizer)
+	err = p.populateDomain(ctx, rpAuthorizer)
 	if err != nil {
 		return nil, err
 	}
 
-	p.dns, err = dns.NewManager(ctx, instancemetadata, rpAuthorizer)
+	err = p.populateVaultURI(ctx, rpAuthorizer)
 	if err != nil {
 		return nil, err
 	}
@@ -120,6 +119,25 @@ func (p *prod) populateCosmosDB(ctx context.Context, rpAuthorizer autorest.Autho
 	return nil
 }
 
+func (p *prod) populateDomain(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
+	zones := dns.NewZonesClient(p.SubscriptionID())
+	zones.Authorizer = rpAuthorizer
+
+	page, err := zones.ListByResourceGroup(ctx, p.ResourceGroup(), nil)
+	if err != nil {
+		return err
+	}
+
+	zs := page.Values()
+	if len(zs) != 1 {
+		return fmt.Errorf("found at least %d zones, expected 1", len(zs))
+	}
+
+	p.domain = *zs[0].Name
+
+	return nil
+}
+
 func (p *prod) populateVaultURI(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
 	vaults := keyvaultmgmt.NewVaultsClient(p.SubscriptionID())
 	vaults.Authorizer = rpAuthorizer
@@ -154,8 +172,8 @@ func (p *prod) DialContext(ctx context.Context, network, address string) (net.Co
 	}).DialContext(ctx, network, address)
 }
 
-func (p *prod) DNS() dns.Manager {
-	return p.dns
+func (p *prod) Domain() string {
+	return p.domain
 }
 
 func (p *prod) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, error) {

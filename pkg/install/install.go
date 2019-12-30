@@ -26,6 +26,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/network"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/resources"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/storage"
+	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/privateendpoint"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
@@ -38,6 +39,7 @@ type Installer struct {
 	fpAuthorizer autorest.Authorizer
 
 	privateendpoint privateendpoint.Manager
+	dns             dns.Manager
 
 	disks             compute.DisksClient
 	virtualmachines   compute.VirtualMachinesClient
@@ -74,6 +76,7 @@ func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClu
 		fpAuthorizer: fpAuthorizer,
 
 		privateendpoint: privateendpoint.NewManager(env, localFPAuthorizer),
+		dns:             dns.NewManager(env, localFPAuthorizer),
 
 		disks:             compute.NewDisksClient(r.SubscriptionID, fpAuthorizer),
 		virtualmachines:   compute.NewVirtualMachinesClient(r.SubscriptionID, fpAuthorizer),

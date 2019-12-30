@@ -108,7 +108,7 @@ func (m *Manager) Create(ctx context.Context) error {
 				Name: m.doc.OpenShiftCluster.Properties.DomainName,
 			},
 			SSHKey:     sshkey.Type() + " " + base64.StdEncoding.EncodeToString(sshkey.Marshal()),
-			BaseDomain: m.env.DNS().Domain(),
+			BaseDomain: m.dns.Domain(),
 			Networking: &types.Networking{
 				MachineCIDR: ipnet.MustParseCIDR("127.0.0.0/8"), // dummy
 				NetworkType: "OpenShiftSDN",

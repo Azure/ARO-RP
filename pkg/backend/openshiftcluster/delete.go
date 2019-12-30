@@ -15,7 +15,7 @@ import (
 
 func (m *Manager) Delete(ctx context.Context) error {
 	m.log.Printf("deleting dns")
-	err := m.env.DNS().Delete(ctx, m.doc.OpenShiftCluster)
+	err := m.dns.Delete(ctx, m.doc.OpenShiftCluster)
 	if err != nil {
 		return err
 	}
