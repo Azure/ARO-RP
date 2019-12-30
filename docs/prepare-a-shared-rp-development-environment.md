@@ -232,9 +232,14 @@ locations.
    export RESOURCEGROUP="$RESOURCEGROUP_PREFIX-\$LOCATION"
    export PROXY_HOSTNAME="vm0.$PROXY_DOMAIN_NAME_LABEL.\$LOCATION.cloudapp.azure.com"
    export DATABASE_NAME="\$USER"
-   export RP_MODE=development
+   export RP_MODE='development'
    export PULL_SECRET='$PULL_SECRET'
+   ADMIN_OBJECT_ID='$ADMIN_OBJECT_ID'
    COSMOSDB_ACCOUNT="\$RESOURCEGROUP"
+   DOMAIN_NAME="\$RESOURCEGROUP"
+   KEYVAULT_NAME="\$RESOURCEGROUP"
+   PARENT_DOMAIN_NAME='$PARENT_DOMAIN_NAME'
+   PARENT_DOMAIN_RESOURCEGROUP='$PARENT_DOMAIN_RESOURCEGROUP'
    EOF
    ```
 
@@ -256,10 +261,7 @@ locations.
 1. Create the resource group and deploy the RP resources:
 
    ```
-   DOMAIN_NAME="$RESOURCEGROUP"
-   KEYVAULT_NAME="$RESOURCEGROUP"
-
-   az group create -g "$RESOURCEGROUP" -l "$LOCATION"
+   az group create -g "$RESOURCEGROUP" -l "$LOCATION" >/dev/null
 
    az group deployment create \
      -g "$RESOURCEGROUP" \
