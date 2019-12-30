@@ -112,13 +112,16 @@ def aro_get_credentials(client, resource_group_name, resource_name):
 
 def aro_update(client, resource_group_name, resource_name, worker_count=None,
                no_wait=False):
-    oc = client.get(resource_group_name, resource_name)
-
-    if worker_count is not None:
+    oc = v2019_12_31_preview.OpenShiftCluster(
         # TODO: [0] should not be hard-coded
-        oc.worker_profiles[0].count = worker_count
+        worker_profiles=[
+            v2019_12_31_preview.WorkerProfile(
+                count=worker_count,
+            )
+        ]
+    )
 
-    return sdk_no_wait(no_wait, client.create_or_update,
+    return sdk_no_wait(no_wait, client.update,
                        resource_group_name=resource_group_name,
                        resource_name=resource_name,
                        parameters=oc)
