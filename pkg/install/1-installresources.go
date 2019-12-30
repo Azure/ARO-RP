@@ -28,19 +28,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
-	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
-func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
-	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
+func (i *Installer) installResources(ctx context.Context) error {
+	r, err := azure.ParseResourceID(i.doc.OpenShiftCluster.ID)
 	if err != nil {
 		return err
 	}
 
-	g, err := i.getGraph(ctx, doc.OpenShiftCluster)
+	g, err := i.getGraph(ctx)
 	if err != nil {
 		return err
 	}
@@ -49,12 +48,12 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 	machinesMaster := g[reflect.TypeOf(&machines.Master{})].(*machines.Master)
 	machineMaster := g[reflect.TypeOf(&machine.Master{})].(*machine.Master)
 
-	vnetID, _, err := subnet.Split(doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
+	vnetID, _, err := subnet.Split(i.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return err
 	}
 
-	masterSubnet, err := i.subnets.Get(ctx, doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
+	masterSubnet, err := i.subnets.Get(ctx, i.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return err
 	}
@@ -83,7 +82,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 
 	var objectID string
 	{
-		spp := &doc.OpenShiftCluster.Properties.ServicePrincipalProfile
+		spp := &i.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
 
 		conf := auth.NewClientCredentialsConfig(spp.ClientID, spp.ClientSecret, spp.TenantID)
 		conf.Resource = azure.PublicCloud.GraphEndpoint
@@ -237,7 +236,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 								{
 									PrivateLinkServiceIPConfigurationProperties: &network.PrivateLinkServiceIPConfigurationProperties{
 										Subnet: &network.Subnet{
-											ID: to.StringPtr(doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
+											ID: to.StringPtr(i.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 										},
 									},
 									Name: to.StringPtr("aro-pls-nic"),
@@ -295,7 +294,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 						PublicIPAddressPropertiesFormat: &network.PublicIPAddressPropertiesFormat{
 							PublicIPAllocationMethod: network.Static,
 							DNSSettings: &network.PublicIPAddressDNSSettings{
-								DomainNameLabel: &doc.OpenShiftCluster.Properties.DomainName,
+								DomainNameLabel: &i.doc.OpenShiftCluster.Properties.DomainName,
 							},
 						},
 						Name:     to.StringPtr("aro-pip"),
@@ -380,7 +379,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 										PrivateIPAddress:          to.StringPtr(lbIP.String()),
 										PrivateIPAllocationMethod: network.Static,
 										Subnet: &network.Subnet{
-											ID: to.StringPtr(doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
+											ID: to.StringPtr(i.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 										},
 									},
 									Name: to.StringPtr("internal-lb-ip"),
@@ -473,7 +472,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 											},
 										},
 										Subnet: &network.Subnet{
-											ID: to.StringPtr(doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
+											ID: to.StringPtr(i.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 										},
 										PublicIPAddress: &network.PublicIPAddress{
 											ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', 'aro-bootstrap-pip')]"),
@@ -509,7 +508,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 											},
 										},
 										Subnet: &network.Subnet{
-											ID: to.StringPtr(doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
+											ID: to.StringPtr(i.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 										},
 									},
 									Name: to.StringPtr("pipConfig"),
@@ -557,7 +556,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 								ComputerName:  to.StringPtr("aro-bootstrap-vm"),
 								AdminUsername: to.StringPtr("core"),
 								AdminPassword: to.StringPtr("NotActuallyApplied!"),
-								CustomData:    to.StringPtr(`[base64(concat('{"ignition":{"version":"2.2.0","config":{"replace":{"source":"https://cluster` + doc.OpenShiftCluster.Properties.StorageSuffix + `.blob.core.windows.net/ignition/bootstrap.ign?', listAccountSas(resourceId('Microsoft.Storage/storageAccounts', 'cluster` + doc.OpenShiftCluster.Properties.StorageSuffix + `'), '2019-04-01', parameters('sas')).accountSasToken, '"}}}}'))]`),
+								CustomData:    to.StringPtr(`[base64(concat('{"ignition":{"version":"2.2.0","config":{"replace":{"source":"https://cluster` + i.doc.OpenShiftCluster.Properties.StorageSuffix + `.blob.core.windows.net/ignition/bootstrap.ign?', listAccountSas(resourceId('Microsoft.Storage/storageAccounts', 'cluster` + i.doc.OpenShiftCluster.Properties.StorageSuffix + `'), '2019-04-01', parameters('sas')).accountSasToken, '"}}}}'))]`),
 								LinuxConfiguration: &compute.LinuxConfiguration{
 									DisablePasswordAuthentication: to.BoolPtr(false),
 								},
@@ -572,7 +571,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 							DiagnosticsProfile: &compute.DiagnosticsProfile{
 								BootDiagnostics: &compute.BootDiagnostics{
 									Enabled:    to.BoolPtr(true),
-									StorageURI: to.StringPtr("https://cluster" + doc.OpenShiftCluster.Properties.StorageSuffix + ".blob.core.windows.net/"),
+									StorageURI: to.StringPtr("https://cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix + ".blob.core.windows.net/"),
 								},
 							},
 						},
@@ -629,7 +628,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 							DiagnosticsProfile: &compute.DiagnosticsProfile{
 								BootDiagnostics: &compute.BootDiagnostics{
 									Enabled:    to.BoolPtr(true),
-									StorageURI: to.StringPtr("https://cluster" + doc.OpenShiftCluster.Properties.StorageSuffix + ".blob.core.windows.net/"),
+									StorageURI: to.StringPtr("https://cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix + ".blob.core.windows.net/"),
 								},
 							},
 						},
@@ -655,14 +654,14 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 		}
 
 		i.log.Print("deploying resources template")
-		err = i.deployments.CreateOrUpdateAndWait(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy", resources.Deployment{
+		err = i.deployments.CreateOrUpdateAndWait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy", resources.Deployment{
 			Properties: &resources.DeploymentProperties{
 				Template: t,
 				Parameters: map[string]interface{}{
 					"sas": map[string]interface{}{
 						"value": map[string]interface{}{
-							"signedStart":         doc.OpenShiftCluster.Properties.Install.Now.Format(time.RFC3339),
-							"signedExpiry":        doc.OpenShiftCluster.Properties.Install.Now.Add(24 * time.Hour).Format(time.RFC3339),
+							"signedStart":         i.doc.OpenShiftCluster.Properties.Install.Now.Format(time.RFC3339),
+							"signedExpiry":        i.doc.OpenShiftCluster.Properties.Install.Now.Add(24 * time.Hour).Format(time.RFC3339),
 							"signedPermission":    "rl",
 							"signedResourceTypes": "o",
 							"signedServices":      "b",
@@ -679,7 +678,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 					requestError.ServiceError != nil &&
 					requestError.ServiceError.Code == "DeploymentActive" {
 					i.log.Print("waiting for resources template")
-					err = i.deployments.Wait(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy")
+					err = i.deployments.Wait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy")
 				}
 			}
 			if err != nil {
@@ -690,7 +689,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 
 	{
 		i.log.Print("creating private endpoint")
-		err = i.env.PrivateEndpoint().CreateOrUpdateAndWait(ctx, i.env.ResourceGroup(), "rp-pe-"+doc.ID, network.PrivateEndpoint{
+		err = i.env.PrivateEndpoint().CreateOrUpdateAndWait(ctx, i.env.ResourceGroup(), "rp-pe-"+i.doc.ID, network.PrivateEndpoint{
 			PrivateEndpointProperties: &network.PrivateEndpointProperties{
 				Subnet: &network.Subnet{
 					ID: to.StringPtr("/subscriptions/" + i.env.SubscriptionID() + "/resourceGroups/" + i.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-vnet/subnets/rp-pe-subnet"),
@@ -699,7 +698,7 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 					{
 						Name: to.StringPtr("rp-plsconnection"),
 						PrivateLinkServiceConnectionProperties: &network.PrivateLinkServiceConnectionProperties{
-							PrivateLinkServiceID: to.StringPtr("/subscriptions/" + r.SubscriptionID + "/resourceGroups/" + doc.OpenShiftCluster.Properties.ResourceGroup + "/providers/Microsoft.Network/privateLinkServices/aro-pls"),
+							PrivateLinkServiceID: to.StringPtr("/subscriptions/" + r.SubscriptionID + "/resourceGroups/" + i.doc.OpenShiftCluster.Properties.ResourceGroup + "/providers/Microsoft.Network/privateLinkServices/aro-pls"),
 						},
 					},
 				},
@@ -712,14 +711,14 @@ func (i *Installer) installResources(ctx context.Context, doc *api.OpenShiftClus
 	}
 
 	{
-		err = i.env.DNS().CreateOrUpdate(ctx, doc.OpenShiftCluster)
+		err = i.env.DNS().CreateOrUpdate(ctx, i.doc.OpenShiftCluster)
 		if err != nil {
 			return err
 		}
 	}
 
 	{
-		restConfig, err := restconfig.RestConfig(ctx, i.env, doc)
+		restConfig, err := restconfig.RestConfig(ctx, i.env, i.doc)
 		if err != nil {
 			return err
 		}

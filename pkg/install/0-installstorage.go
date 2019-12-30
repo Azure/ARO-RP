@@ -39,7 +39,7 @@ var apiVersions = map[string]string{
 	"storage":       "2019-04-01",
 }
 
-func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftClusterDocument, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) error {
+func (i *Installer) installStorage(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) error {
 	clusterID := &installconfig.ClusterID{
 		UUID:    uuid.NewV4().String(),
 		InfraID: "aro",
@@ -66,18 +66,18 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 	i.log.Print("creating resource group")
 	group := resources.Group{
 		Location:  &installConfig.Config.Azure.Region,
-		ManagedBy: to.StringPtr(doc.OpenShiftCluster.ID),
+		ManagedBy: to.StringPtr(i.doc.OpenShiftCluster.ID),
 	}
 	if _, ok := i.env.(env.Dev); ok {
 		group.ManagedBy = nil
 	}
-	_, err := i.groups.CreateOrUpdate(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, group)
+	_, err := i.groups.CreateOrUpdate(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, group)
 	if err != nil {
 		return err
 	}
 
 	if development, ok := i.env.(env.Dev); ok {
-		err = development.CreateARMResourceGroupRoleAssignment(ctx, i.fpAuthorizer, doc.OpenShiftCluster)
+		err = development.CreateARMResourceGroupRoleAssignment(ctx, i.fpAuthorizer, i.doc.OpenShiftCluster)
 		if err != nil {
 			return err
 		}
@@ -93,7 +93,7 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 						Sku: &storage.Sku{
 							Name: "Standard_LRS",
 						},
-						Name:     to.StringPtr("cluster" + doc.OpenShiftCluster.Properties.StorageSuffix),
+						Name:     to.StringPtr("cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix),
 						Location: &installConfig.Config.Azure.Region,
 						Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
 					},
@@ -101,22 +101,22 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 				},
 				{
 					Resource: &storage.BlobContainer{
-						Name: to.StringPtr("cluster" + doc.OpenShiftCluster.Properties.StorageSuffix + "/default/ignition"),
+						Name: to.StringPtr("cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix + "/default/ignition"),
 						Type: to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
 					},
 					APIVersion: apiVersions["storage"],
 					DependsOn: []string{
-						"Microsoft.Storage/storageAccounts/cluster" + doc.OpenShiftCluster.Properties.StorageSuffix,
+						"Microsoft.Storage/storageAccounts/cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix,
 					},
 				},
 				{
 					Resource: &storage.BlobContainer{
-						Name: to.StringPtr("cluster" + doc.OpenShiftCluster.Properties.StorageSuffix + "/default/aro"),
+						Name: to.StringPtr("cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix + "/default/aro"),
 						Type: to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
 					},
 					APIVersion: apiVersions["storage"],
 					DependsOn: []string{
-						"Microsoft.Storage/storageAccounts/cluster" + doc.OpenShiftCluster.Properties.StorageSuffix,
+						"Microsoft.Storage/storageAccounts/cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix,
 					},
 				},
 				{
@@ -169,7 +169,7 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 		}
 
 		i.log.Print("deploying storage template")
-		err = i.deployments.CreateOrUpdateAndWait(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy", resources.Deployment{
+		err = i.deployments.CreateOrUpdateAndWait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy", resources.Deployment{
 			Properties: &resources.DeploymentProperties{
 				Template: t,
 				Mode:     resources.Incremental,
@@ -181,7 +181,7 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 					requestError.ServiceError != nil &&
 					requestError.ServiceError.Code == "DeploymentActive" {
 					i.log.Print("waiting for storage template")
-					err = i.deployments.Wait(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy")
+					err = i.deployments.Wait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy")
 				}
 			}
 			if err != nil {
@@ -191,7 +191,7 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 	}
 
 	{
-		blobService, err := i.getBlobService(ctx, doc.OpenShiftCluster)
+		blobService, err := i.getBlobService(ctx)
 		if err != nil {
 			return err
 		}
@@ -217,8 +217,8 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 	}
 
 	for _, subnetID := range []string{
-		doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
-		doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID,
+		i.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
+		i.doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID,
 	} {
 		i.log.Printf("attaching network security group to subnet %s", subnetID)
 
@@ -232,7 +232,7 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 			s.SubnetPropertiesFormat = &network.SubnetPropertiesFormat{}
 		}
 
-		nsgID, err := subnet.NetworkSecurityGroupID(doc.OpenShiftCluster, subnetID)
+		nsgID, err := subnet.NetworkSecurityGroupID(i.doc.OpenShiftCluster, subnetID)
 		if err != nil {
 			return err
 		}
@@ -255,7 +255,7 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 		}
 	}
 
-	_, err = i.db.Patch(doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+	i.doc, err = i.db.Patch(i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		// used for the SAS token with which the bootstrap node retrieves its
 		// ignition payload
 		doc.OpenShiftCluster.Properties.Install.Now = time.Now().UTC()
