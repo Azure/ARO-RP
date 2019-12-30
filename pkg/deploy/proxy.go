@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
@@ -90,24 +90,24 @@ systemctl enable proxy.service
 	script := fmt.Sprintf("[base64(concat(%s))]", strings.Join(parts, ","))
 
 	return &arm.Resource{
-		Resource: &compute.VirtualMachineScaleSet{
-			Sku: &compute.Sku{
-				Name:     to.StringPtr(string(compute.VirtualMachineSizeTypesStandardD2sV3)),
+		Resource: &mgmtcompute.VirtualMachineScaleSet{
+			Sku: &mgmtcompute.Sku{
+				Name:     to.StringPtr(string(mgmtcompute.VirtualMachineSizeTypesStandardD2sV3)),
 				Tier:     to.StringPtr("Standard"),
 				Capacity: to.Int64Ptr(1),
 			},
-			VirtualMachineScaleSetProperties: &compute.VirtualMachineScaleSetProperties{
-				UpgradePolicy: &compute.UpgradePolicy{
-					Mode: compute.Manual,
+			VirtualMachineScaleSetProperties: &mgmtcompute.VirtualMachineScaleSetProperties{
+				UpgradePolicy: &mgmtcompute.UpgradePolicy{
+					Mode: mgmtcompute.Manual,
 				},
-				VirtualMachineProfile: &compute.VirtualMachineScaleSetVMProfile{
-					OsProfile: &compute.VirtualMachineScaleSetOSProfile{
+				VirtualMachineProfile: &mgmtcompute.VirtualMachineScaleSetVMProfile{
+					OsProfile: &mgmtcompute.VirtualMachineScaleSetOSProfile{
 						ComputerNamePrefix: to.StringPtr("dev-proxy-"),
 						AdminUsername:      to.StringPtr("cloud-user"),
-						LinuxConfiguration: &compute.LinuxConfiguration{
+						LinuxConfiguration: &mgmtcompute.LinuxConfiguration{
 							DisablePasswordAuthentication: to.BoolPtr(true),
-							SSH: &compute.SSHConfiguration{
-								PublicKeys: &[]compute.SSHPublicKey{
+							SSH: &mgmtcompute.SSHConfiguration{
+								PublicKeys: &[]mgmtcompute.SSHPublicKey{
 									{
 										Path:    to.StringPtr("/home/cloud-user/.ssh/authorized_keys"),
 										KeyData: to.StringPtr("[parameters('sshPublicKey')]"),
@@ -116,38 +116,38 @@ systemctl enable proxy.service
 							},
 						},
 					},
-					StorageProfile: &compute.VirtualMachineScaleSetStorageProfile{
-						ImageReference: &compute.ImageReference{
+					StorageProfile: &mgmtcompute.VirtualMachineScaleSetStorageProfile{
+						ImageReference: &mgmtcompute.ImageReference{
 							Publisher: to.StringPtr("RedHat"),
 							Offer:     to.StringPtr("RHEL"),
 							Sku:       to.StringPtr("7-RAW"),
 							Version:   to.StringPtr("latest"),
 						},
-						OsDisk: &compute.VirtualMachineScaleSetOSDisk{
-							CreateOption: compute.DiskCreateOptionTypesFromImage,
-							ManagedDisk: &compute.VirtualMachineScaleSetManagedDiskParameters{
-								StorageAccountType: compute.StorageAccountTypesPremiumLRS,
+						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
+							CreateOption: mgmtcompute.DiskCreateOptionTypesFromImage,
+							ManagedDisk: &mgmtcompute.VirtualMachineScaleSetManagedDiskParameters{
+								StorageAccountType: mgmtcompute.StorageAccountTypesPremiumLRS,
 							},
 						},
 					},
-					NetworkProfile: &compute.VirtualMachineScaleSetNetworkProfile{
-						NetworkInterfaceConfigurations: &[]compute.VirtualMachineScaleSetNetworkConfiguration{
+					NetworkProfile: &mgmtcompute.VirtualMachineScaleSetNetworkProfile{
+						NetworkInterfaceConfigurations: &[]mgmtcompute.VirtualMachineScaleSetNetworkConfiguration{
 							{
 								Name: to.StringPtr("dev-proxy-vmss-nic"),
-								VirtualMachineScaleSetNetworkConfigurationProperties: &compute.VirtualMachineScaleSetNetworkConfigurationProperties{
+								VirtualMachineScaleSetNetworkConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetNetworkConfigurationProperties{
 									Primary: to.BoolPtr(true),
-									IPConfigurations: &[]compute.VirtualMachineScaleSetIPConfiguration{
+									IPConfigurations: &[]mgmtcompute.VirtualMachineScaleSetIPConfiguration{
 										{
 											Name: to.StringPtr("dev-proxy-vmss-ipconfig"),
-											VirtualMachineScaleSetIPConfigurationProperties: &compute.VirtualMachineScaleSetIPConfigurationProperties{
-												Subnet: &compute.APIEntityReference{
+											VirtualMachineScaleSetIPConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetIPConfigurationProperties{
+												Subnet: &mgmtcompute.APIEntityReference{
 													ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"),
 												},
 												Primary: to.BoolPtr(true),
-												PublicIPAddressConfiguration: &compute.VirtualMachineScaleSetPublicIPAddressConfiguration{
+												PublicIPAddressConfiguration: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfiguration{
 													Name: to.StringPtr("dev-proxy-vmss-pip"),
-													VirtualMachineScaleSetPublicIPAddressConfigurationProperties: &compute.VirtualMachineScaleSetPublicIPAddressConfigurationProperties{
-														DNSSettings: &compute.VirtualMachineScaleSetPublicIPAddressConfigurationDNSSettings{
+													VirtualMachineScaleSetPublicIPAddressConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfigurationProperties{
+														DNSSettings: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfigurationDNSSettings{
 															DomainNameLabel: to.StringPtr("[parameters('proxyDomainNameLabel')]"),
 														},
 													},
@@ -159,11 +159,11 @@ systemctl enable proxy.service
 							},
 						},
 					},
-					ExtensionProfile: &compute.VirtualMachineScaleSetExtensionProfile{
-						Extensions: &[]compute.VirtualMachineScaleSetExtension{
+					ExtensionProfile: &mgmtcompute.VirtualMachineScaleSetExtensionProfile{
+						Extensions: &[]mgmtcompute.VirtualMachineScaleSetExtension{
 							{
 								Name: to.StringPtr("dev-proxy-vmss-cse"),
-								VirtualMachineScaleSetExtensionProperties: &compute.VirtualMachineScaleSetExtensionProperties{
+								VirtualMachineScaleSetExtensionProperties: &mgmtcompute.VirtualMachineScaleSetExtensionProperties{
 									Publisher:               to.StringPtr("Microsoft.Azure.Extensions"),
 									Type:                    to.StringPtr("CustomScript"),
 									TypeHandlerVersion:      to.StringPtr("2.0"),

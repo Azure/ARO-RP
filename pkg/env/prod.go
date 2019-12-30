@@ -14,16 +14,16 @@ import (
 	"os"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2015-04-08/documentdb"
-	"github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
-	"github.com/Azure/azure-sdk-for-go/services/keyvault/2016-10-01/keyvault"
-	keyvaultmgmt "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2016-10-01/keyvault"
+	basekeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/2016-10-01/keyvault"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/dns"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/documentdb"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 )
@@ -32,7 +32,7 @@ type prod struct {
 	instancemetadata.InstanceMetadata
 	clientauthorizer.ClientAuthorizer
 
-	keyvault keyvault.BaseClient
+	keyvault basekeyvault.BaseClient
 
 	cosmosDBAccountName      string
 	cosmosDBPrimaryMasterKey string
@@ -56,7 +56,7 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 		InstanceMetadata: instancemetadata,
 		ClientAuthorizer: clientauthorizer,
 
-		keyvault: keyvault.New(),
+		keyvault: basekeyvault.New(),
 	}
 
 	rpAuthorizer, err := auth.NewAuthorizerFromEnvironment()
@@ -96,8 +96,7 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 }
 
 func (p *prod) populateCosmosDB(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
-	databaseaccounts := documentdb.NewDatabaseAccountsClient(p.SubscriptionID())
-	databaseaccounts.Authorizer = rpAuthorizer
+	databaseaccounts := documentdb.NewDatabaseAccountsClient(p.SubscriptionID(), rpAuthorizer)
 
 	accts, err := databaseaccounts.ListByResourceGroup(ctx, p.ResourceGroup())
 	if err != nil {
@@ -120,17 +119,15 @@ func (p *prod) populateCosmosDB(ctx context.Context, rpAuthorizer autorest.Autho
 }
 
 func (p *prod) populateDomain(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
-	zones := dns.NewZonesClient(p.SubscriptionID())
-	zones.Authorizer = rpAuthorizer
+	zones := dns.NewZonesClient(p.SubscriptionID(), rpAuthorizer)
 
-	page, err := zones.ListByResourceGroup(ctx, p.ResourceGroup(), nil)
+	zs, err := zones.ListByResourceGroup(ctx, p.ResourceGroup(), nil)
 	if err != nil {
 		return err
 	}
 
-	zs := page.Values()
 	if len(zs) != 1 {
-		return fmt.Errorf("found at least %d zones, expected 1", len(zs))
+		return fmt.Errorf("found %d zones, expected 1", len(zs))
 	}
 
 	p.domain = *zs[0].Name
@@ -139,17 +136,15 @@ func (p *prod) populateDomain(ctx context.Context, rpAuthorizer autorest.Authori
 }
 
 func (p *prod) populateVaultURI(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
-	vaults := keyvaultmgmt.NewVaultsClient(p.SubscriptionID())
-	vaults.Authorizer = rpAuthorizer
+	vaults := keyvault.NewVaultsClient(p.SubscriptionID(), rpAuthorizer)
 
-	page, err := vaults.ListByResourceGroup(ctx, p.ResourceGroup(), nil)
+	vs, err := vaults.ListByResourceGroup(ctx, p.ResourceGroup(), nil)
 	if err != nil {
 		return err
 	}
 
-	vs := page.Values()
 	if len(vs) != 1 {
-		return fmt.Errorf("found at least %d vaults, expected 1", len(vs))
+		return fmt.Errorf("found %d vaults, expected 1", len(vs))
 	}
 
 	p.vaultURI = *vs[0].Properties.VaultURI

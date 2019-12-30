@@ -7,22 +7,16 @@ import (
 	"context"
 
 	"github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
-	"github.com/Azure/go-autorest/autorest/azure"
 )
 
 // PermissionsClientAddons contains addons for PermissionsClient
 type PermissionsClientAddons interface {
-	ListForResource(ctx context.Context, resourceID string) (permissions []authorization.Permission, err error)
+	ListForResource(ctx context.Context, resourceGroupName string, resourceProviderNamespace string, parentResourcePath string, resourceType string, resourceName string) (permissions []authorization.Permission, err error)
 	ListForResourceGroup(ctx context.Context, resourceGroupName string) (permissions []authorization.Permission, err error)
 }
 
-func (c *permissionsClient) ListForResource(ctx context.Context, resourceID string) (permissions []authorization.Permission, error error) {
-	r, err := azure.ParseResourceID(resourceID)
-	if err != nil {
-		return nil, err
-	}
-
-	page, err := c.PermissionsClient.ListForResource(ctx, r.ResourceGroup, r.Provider, r.ResourceType, "", r.ResourceName)
+func (c *permissionsClient) ListForResource(ctx context.Context, resourceGroupName string, resourceProviderNamespace string, parentResourcePath string, resourceType string, resourceName string) (permissions []authorization.Permission, err error) {
+	page, err := c.PermissionsClient.ListForResource(ctx, resourceGroupName, resourceProviderNamespace, parentResourcePath, resourceType, resourceName)
 	if err != nil {
 		return nil, err
 	}

@@ -21,7 +21,7 @@ func (c *privateEndpointsClient) CreateOrUpdateAndWait(ctx context.Context, reso
 		return err
 	}
 
-	return future.WaitForCompletionRef(ctx, c.PrivateEndpointsClient.Client)
+	return future.WaitForCompletionRef(ctx, c.Client)
 }
 
 func (c *privateEndpointsClient) DeleteAndWait(ctx context.Context, resourceGroupName string, publicIPAddressName string) error {
@@ -30,5 +30,5 @@ func (c *privateEndpointsClient) DeleteAndWait(ctx context.Context, resourceGrou
 		return err
 	}
 
-	return future.WaitForCompletionRef(ctx, c.PrivateEndpointsClient.Client)
+	return future.WaitForCompletionRef(ctx, c.Client)
 }

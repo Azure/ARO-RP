@@ -21,7 +21,7 @@ func (c *virtualMachinesClient) CreateOrUpdateAndWait(ctx context.Context, resou
 		return err
 	}
 
-	return future.WaitForCompletionRef(ctx, c.VirtualMachinesClient.Client)
+	return future.WaitForCompletionRef(ctx, c.Client)
 }
 
 func (c *virtualMachinesClient) DeleteAndWait(ctx context.Context, resourceGroupName string, VMName string) error {
@@ -30,5 +30,5 @@ func (c *virtualMachinesClient) DeleteAndWait(ctx context.Context, resourceGroup
 		return err
 	}
 
-	return future.WaitForCompletionRef(ctx, c.VirtualMachinesClient.Client)
+	return future.WaitForCompletionRef(ctx, c.Client)
 }

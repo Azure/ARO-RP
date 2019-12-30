@@ -20,7 +20,7 @@ func (c *publicIPAddressesClient) DeleteAndWait(ctx context.Context, resourceGro
 		return err
 	}
 
-	return future.WaitForCompletionRef(ctx, c.PublicIPAddressesClient.Client)
+	return future.WaitForCompletionRef(ctx, c.Client)
 }
 
 func (c *publicIPAddressesClient) List(ctx context.Context, resourceGroupName string) (ips []network.PublicIPAddress, err error) {

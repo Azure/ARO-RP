@@ -18,5 +18,5 @@ func (c *disksClient) DeleteAndWait(ctx context.Context, resourceGroupName strin
 		return err
 	}
 
-	return future.WaitForCompletionRef(ctx, c.DisksClient.Client)
+	return future.WaitForCompletionRef(ctx, c.Client)
 }

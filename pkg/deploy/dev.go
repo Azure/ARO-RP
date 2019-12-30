@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 
-	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
@@ -20,12 +20,12 @@ func GenerateDevelopmentTemplate() error {
 		Parameters:     map[string]*arm.TemplateParameter{},
 		Resources: []*arm.Resource{
 			{
-				Resource: &network.PublicIPAddress{
-					Sku: &network.PublicIPAddressSku{
-						Name: network.PublicIPAddressSkuNameStandard,
+				Resource: &mgmtnetwork.PublicIPAddress{
+					Sku: &mgmtnetwork.PublicIPAddressSku{
+						Name: mgmtnetwork.PublicIPAddressSkuNameStandard,
 					},
-					PublicIPAddressPropertiesFormat: &network.PublicIPAddressPropertiesFormat{
-						PublicIPAllocationMethod: network.Static,
+					PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
+						PublicIPAllocationMethod: mgmtnetwork.Static,
 					},
 					Name:     to.StringPtr("dev-vpn-pip"),
 					Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
@@ -34,16 +34,16 @@ func GenerateDevelopmentTemplate() error {
 				APIVersion: apiVersions["network"],
 			},
 			{
-				Resource: &network.VirtualNetwork{
-					VirtualNetworkPropertiesFormat: &network.VirtualNetworkPropertiesFormat{
-						AddressSpace: &network.AddressSpace{
+				Resource: &mgmtnetwork.VirtualNetwork{
+					VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
+						AddressSpace: &mgmtnetwork.AddressSpace{
 							AddressPrefixes: &[]string{
 								"10.0.0.0/9",
 							},
 						},
-						Subnets: &[]network.Subnet{
+						Subnets: &[]mgmtnetwork.Subnet{
 							{
-								SubnetPropertiesFormat: &network.SubnetPropertiesFormat{
+								SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 									AddressPrefix: to.StringPtr("10.0.0.0/24"),
 								},
 								Name: to.StringPtr("GatewaySubnet"),
@@ -57,40 +57,40 @@ func GenerateDevelopmentTemplate() error {
 				APIVersion: apiVersions["network"],
 			},
 			{
-				Resource: &network.VirtualNetworkGateway{
-					VirtualNetworkGatewayPropertiesFormat: &network.VirtualNetworkGatewayPropertiesFormat{
-						IPConfigurations: &[]network.VirtualNetworkGatewayIPConfiguration{
+				Resource: &mgmtnetwork.VirtualNetworkGateway{
+					VirtualNetworkGatewayPropertiesFormat: &mgmtnetwork.VirtualNetworkGatewayPropertiesFormat{
+						IPConfigurations: &[]mgmtnetwork.VirtualNetworkGatewayIPConfiguration{
 							{
-								VirtualNetworkGatewayIPConfigurationPropertiesFormat: &network.VirtualNetworkGatewayIPConfigurationPropertiesFormat{
-									Subnet: &network.SubResource{
+								VirtualNetworkGatewayIPConfigurationPropertiesFormat: &mgmtnetwork.VirtualNetworkGatewayIPConfigurationPropertiesFormat{
+									Subnet: &mgmtnetwork.SubResource{
 										ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'dev-vnet', 'GatewaySubnet')]"),
 									},
-									PublicIPAddress: &network.SubResource{
+									PublicIPAddress: &mgmtnetwork.SubResource{
 										ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', 'dev-vpn-pip')]"),
 									},
 								},
 								Name: to.StringPtr("default"),
 							},
 						},
-						VpnType: network.RouteBased,
-						Sku: &network.VirtualNetworkGatewaySku{
-							Name: network.VirtualNetworkGatewaySkuNameVpnGw1,
-							Tier: network.VirtualNetworkGatewaySkuTierVpnGw1,
+						VpnType: mgmtnetwork.RouteBased,
+						Sku: &mgmtnetwork.VirtualNetworkGatewaySku{
+							Name: mgmtnetwork.VirtualNetworkGatewaySkuNameVpnGw1,
+							Tier: mgmtnetwork.VirtualNetworkGatewaySkuTierVpnGw1,
 						},
-						VpnClientConfiguration: &network.VpnClientConfiguration{
-							VpnClientAddressPool: &network.AddressSpace{
+						VpnClientConfiguration: &mgmtnetwork.VpnClientConfiguration{
+							VpnClientAddressPool: &mgmtnetwork.AddressSpace{
 								AddressPrefixes: &[]string{"192.168.255.0/24"},
 							},
-							VpnClientRootCertificates: &[]network.VpnClientRootCertificate{
+							VpnClientRootCertificates: &[]mgmtnetwork.VpnClientRootCertificate{
 								{
-									VpnClientRootCertificatePropertiesFormat: &network.VpnClientRootCertificatePropertiesFormat{
+									VpnClientRootCertificatePropertiesFormat: &mgmtnetwork.VpnClientRootCertificatePropertiesFormat{
 										PublicCertData: to.StringPtr("[parameters('vpnCACertificate')]"),
 									},
 									Name: to.StringPtr("dev-vpn-ca"),
 								},
 							},
-							VpnClientProtocols: &[]network.VpnClientProtocol{
-								network.OpenVPN,
+							VpnClientProtocols: &[]mgmtnetwork.VpnClientProtocol{
+								mgmtnetwork.OpenVPN,
 							},
 						},
 					},

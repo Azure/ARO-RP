@@ -6,16 +6,21 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
+	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
+	"github.com/Azure/go-autorest/autorest/date"
 	"github.com/openshift/installer/pkg/rhcos"
 
 	_ "github.com/Azure/ARO-RP/pkg/install"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
 func run(ctx context.Context) error {
@@ -28,20 +33,28 @@ func run(ctx context.Context) error {
 		return err
 	}
 
-	accounts := storage.NewAccountsClient(subscriptionID)
-	accounts.Authorizer = authorizer
+	accounts := storage.NewAccountsClient(subscriptionID, authorizer)
 
-	keys, err := accounts.ListKeys(ctx, resourceGroup, accountName, "")
+	t := time.Now().UTC().Truncate(time.Second)
+
+	res, err := accounts.ListAccountSAS(ctx, resourceGroup, accountName, mgmtstorage.AccountSasParameters{
+		Services:               "b",
+		ResourceTypes:          "co",
+		Permissions:            "cr",
+		Protocols:              mgmtstorage.HTTPS,
+		SharedAccessStartTime:  &date.Time{Time: t},
+		SharedAccessExpiryTime: &date.Time{Time: t.Add(24 * time.Hour)},
+	})
 	if err != nil {
 		return err
 	}
 
-	storageClient, err := azstorage.NewBasicClient(accountName, *(*keys.Keys)[0].Value)
+	v, err := url.ParseQuery(*res.AccountSasToken)
 	if err != nil {
 		return err
 	}
 
-	blobService := storageClient.GetBlobService()
+	blobService := azstorage.NewAccountSASClient(accountName, v, azure.PublicCloud).GetBlobService()
 
 	c := blobService.GetContainerReference("rhcos")
 
@@ -92,7 +105,9 @@ func run(ctx context.Context) error {
 }
 
 func main() {
+	log := utillog.GetLogger()
+
 	if err := run(context.Background()); err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 }

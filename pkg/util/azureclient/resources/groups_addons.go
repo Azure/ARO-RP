@@ -18,5 +18,5 @@ func (c *groupsClient) DeleteAndWait(ctx context.Context, resourceGroupName stri
 		return err
 	}
 
-	return future.WaitForCompletionRef(ctx, c.GroupsClient.Client)
+	return future.WaitForCompletionRef(ctx, c.Client)
 }

@@ -20,5 +20,5 @@ func (c *accountsClient) CreateAndWait(ctx context.Context, resourceGroupName st
 		return err
 	}
 
-	return future.WaitForCompletionRef(ctx, c.AccountsClient.Client)
+	return future.WaitForCompletionRef(ctx, c.Client)
 }

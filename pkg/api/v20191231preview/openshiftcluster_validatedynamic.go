@@ -143,7 +143,12 @@ func (dv *dynamicValidator) validateVnetPermissions(ctx context.Context, client 
 		return err
 	}
 
-	permissions, err := client.ListForResource(ctx, vnetID)
+	r, err := azure.ParseResourceID(vnetID)
+	if err != nil {
+		return err
+	}
+
+	permissions, err := client.ListForResource(ctx, r.ResourceGroup, r.Provider, r.ResourceType, "", r.ResourceName)
 	if err != nil {
 		if err, ok := err.(autorest.DetailedError); ok {
 			if err.StatusCode == http.StatusNotFound {

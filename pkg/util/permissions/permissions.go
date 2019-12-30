@@ -7,11 +7,11 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
+	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
 )
 
 // CanDoAction returns true if a given action is granted by a set of permissions
-func CanDoAction(ps []authorization.Permission, a string) (bool, error) {
+func CanDoAction(ps []mgmtauthorization.Permission, a string) (bool, error) {
 	for _, p := range ps {
 		var matched bool
 

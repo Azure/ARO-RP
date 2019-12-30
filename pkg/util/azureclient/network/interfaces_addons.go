@@ -18,5 +18,5 @@ func (c *interfacesClient) DeleteAndWait(ctx context.Context, resourceGroupName 
 		return err
 	}
 
-	return future.WaitForCompletionRef(ctx, c.InterfacesClient.Client)
+	return future.WaitForCompletionRef(ctx, c.Client)
 }

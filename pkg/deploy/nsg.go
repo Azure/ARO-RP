@@ -7,8 +7,8 @@ import (
 	"encoding/json"
 	"io/ioutil"
 
-	"github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
-	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
+	mgmtmsi "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
@@ -27,19 +27,19 @@ func GenerateNSGTemplates() error {
 			production:   true,
 		},
 	} {
-		nsg := &network.SecurityGroup{
-			SecurityGroupPropertiesFormat: &network.SecurityGroupPropertiesFormat{
-				SecurityRules: &[]network.SecurityRule{
+		nsg := &mgmtnetwork.SecurityGroup{
+			SecurityGroupPropertiesFormat: &mgmtnetwork.SecurityGroupPropertiesFormat{
+				SecurityRules: &[]mgmtnetwork.SecurityRule{
 					{
-						SecurityRulePropertiesFormat: &network.SecurityRulePropertiesFormat{
-							Protocol:                 network.SecurityRuleProtocolTCP,
+						SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
+							Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
 							SourcePortRange:          to.StringPtr("*"),
 							DestinationPortRange:     to.StringPtr("443"),
 							SourceAddressPrefix:      to.StringPtr("*"),
 							DestinationAddressPrefix: to.StringPtr("*"),
-							Access:                   network.SecurityRuleAccessAllow,
+							Access:                   mgmtnetwork.SecurityRuleAccessAllow,
 							Priority:                 to.Int32Ptr(120),
-							Direction:                network.SecurityRuleDirectionInbound,
+							Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
 						},
 						Name: to.StringPtr("rp_in"),
 					},
@@ -51,16 +51,16 @@ func GenerateNSGTemplates() error {
 		}
 
 		if !i.production {
-			*nsg.SecurityRules = append(*nsg.SecurityRules, network.SecurityRule{
-				SecurityRulePropertiesFormat: &network.SecurityRulePropertiesFormat{
-					Protocol:                 network.SecurityRuleProtocolTCP,
+			*nsg.SecurityRules = append(*nsg.SecurityRules, mgmtnetwork.SecurityRule{
+				SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
+					Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
 					SourcePortRange:          to.StringPtr("*"),
 					DestinationPortRange:     to.StringPtr("22"),
 					SourceAddressPrefix:      to.StringPtr("*"),
 					DestinationAddressPrefix: to.StringPtr("*"),
-					Access:                   network.SecurityRuleAccessAllow,
+					Access:                   mgmtnetwork.SecurityRuleAccessAllow,
 					Priority:                 to.Int32Ptr(100),
-					Direction:                network.SecurityRuleDirectionInbound,
+					Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
 				},
 				Name: to.StringPtr("ssh_in"),
 			})
@@ -75,8 +75,8 @@ func GenerateNSGTemplates() error {
 					APIVersion: apiVersions["network"],
 				},
 				{
-					Resource: &network.SecurityGroup{
-						SecurityGroupPropertiesFormat: &network.SecurityGroupPropertiesFormat{},
+					Resource: &mgmtnetwork.SecurityGroup{
+						SecurityGroupPropertiesFormat: &mgmtnetwork.SecurityGroupPropertiesFormat{},
 						Name:                          to.StringPtr("rp-pe-nsg"),
 						Type:                          to.StringPtr("Microsoft.Network/networkSecurityGroups"),
 						Location:                      to.StringPtr("[resourceGroup().location]"),
@@ -89,7 +89,7 @@ func GenerateNSGTemplates() error {
 		if i.production {
 			t.Resources = append(t.Resources,
 				&arm.Resource{
-					Resource: &msi.Identity{
+					Resource: &mgmtmsi.Identity{
 						Name:     to.StringPtr("rp-identity"),
 						Location: to.StringPtr("[resourceGroup().location]"),
 						Type:     "Microsoft.ManagedIdentity/userAssignedIdentities",

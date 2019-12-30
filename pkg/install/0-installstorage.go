@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
-	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
-	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
+	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
+	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -64,7 +64,7 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 	bootstrap := g[reflect.TypeOf(&bootstrap.Bootstrap{})].(*bootstrap.Bootstrap)
 
 	i.log.Print("creating resource group")
-	group := resources.Group{
+	group := mgmtresources.Group{
 		Location:  &installConfig.Config.Azure.Region,
 		ManagedBy: to.StringPtr(i.doc.OpenShiftCluster.ID),
 	}
@@ -89,8 +89,8 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 			ContentVersion: "1.0.0.0",
 			Resources: []*arm.Resource{
 				{
-					Resource: &storage.Account{
-						Sku: &storage.Sku{
+					Resource: &mgmtstorage.Account{
+						Sku: &mgmtstorage.Sku{
 							Name: "Standard_LRS",
 						},
 						Name:     to.StringPtr("cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix),
@@ -100,7 +100,7 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 					APIVersion: apiVersions["storage"],
 				},
 				{
-					Resource: &storage.BlobContainer{
+					Resource: &mgmtstorage.BlobContainer{
 						Name: to.StringPtr("cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix + "/default/ignition"),
 						Type: to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
 					},
@@ -110,7 +110,7 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 					},
 				},
 				{
-					Resource: &storage.BlobContainer{
+					Resource: &mgmtstorage.BlobContainer{
 						Name: to.StringPtr("cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix + "/default/aro"),
 						Type: to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
 					},
@@ -120,32 +120,32 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 					},
 				},
 				{
-					Resource: &network.SecurityGroup{
-						SecurityGroupPropertiesFormat: &network.SecurityGroupPropertiesFormat{
-							SecurityRules: &[]network.SecurityRule{
+					Resource: &mgmtnetwork.SecurityGroup{
+						SecurityGroupPropertiesFormat: &mgmtnetwork.SecurityGroupPropertiesFormat{
+							SecurityRules: &[]mgmtnetwork.SecurityRule{
 								{
-									SecurityRulePropertiesFormat: &network.SecurityRulePropertiesFormat{
-										Protocol:                 network.SecurityRuleProtocolTCP,
+									SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
+										Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
 										SourcePortRange:          to.StringPtr("*"),
 										DestinationPortRange:     to.StringPtr("6443"),
 										SourceAddressPrefix:      to.StringPtr("*"),
 										DestinationAddressPrefix: to.StringPtr("*"),
-										Access:                   network.SecurityRuleAccessAllow,
+										Access:                   mgmtnetwork.SecurityRuleAccessAllow,
 										Priority:                 to.Int32Ptr(101),
-										Direction:                network.SecurityRuleDirectionInbound,
+										Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
 									},
 									Name: to.StringPtr("apiserver_in"),
 								},
 								{
-									SecurityRulePropertiesFormat: &network.SecurityRulePropertiesFormat{
-										Protocol:                 network.SecurityRuleProtocolTCP,
+									SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
+										Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
 										SourcePortRange:          to.StringPtr("*"),
 										DestinationPortRange:     to.StringPtr("22"),
 										SourceAddressPrefix:      to.StringPtr("*"),
 										DestinationAddressPrefix: to.StringPtr("*"),
-										Access:                   network.SecurityRuleAccessAllow,
+										Access:                   mgmtnetwork.SecurityRuleAccessAllow,
 										Priority:                 to.Int32Ptr(103),
-										Direction:                network.SecurityRuleDirectionInbound,
+										Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
 									},
 									Name: to.StringPtr("bootstrap_ssh_in"),
 								},
@@ -158,7 +158,7 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 					APIVersion: apiVersions["network"],
 				},
 				{
-					Resource: &network.SecurityGroup{
+					Resource: &mgmtnetwork.SecurityGroup{
 						Name:     to.StringPtr("aro-node-nsg"),
 						Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
 						Location: &installConfig.Config.Azure.Region,
@@ -169,10 +169,10 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 		}
 
 		i.log.Print("deploying storage template")
-		err = i.deployments.CreateOrUpdateAndWait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy", resources.Deployment{
-			Properties: &resources.DeploymentProperties{
+		err = i.deployments.CreateOrUpdateAndWait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy", mgmtresources.Deployment{
+			Properties: &mgmtresources.DeploymentProperties{
 				Template: t,
-				Mode:     resources.Incremental,
+				Mode:     mgmtresources.Incremental,
 			},
 		})
 		if err != nil {
@@ -229,7 +229,7 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 		}
 
 		if s.SubnetPropertiesFormat == nil {
-			s.SubnetPropertiesFormat = &network.SubnetPropertiesFormat{}
+			s.SubnetPropertiesFormat = &mgmtnetwork.SubnetPropertiesFormat{}
 		}
 
 		nsgID, err := subnet.NetworkSecurityGroupID(i.doc.OpenShiftCluster, subnetID)
@@ -245,7 +245,7 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 			return fmt.Errorf("tried to overwrite non-nil network security group")
 		}
 
-		s.SubnetPropertiesFormat.NetworkSecurityGroup = &network.SecurityGroup{
+		s.SubnetPropertiesFormat.NetworkSecurityGroup = &mgmtnetwork.SecurityGroup{
 			ID: to.StringPtr(nsgID),
 		}
 

@@ -23,7 +23,7 @@ func (c *deploymentsClient) CreateOrUpdateAndWait(ctx context.Context, resourceG
 		return err
 	}
 
-	return future.WaitForCompletionRef(ctx, c.DeploymentsClient.Client)
+	return future.WaitForCompletionRef(ctx, c.Client)
 }
 
 func (c *deploymentsClient) Wait(ctx context.Context, resourceGroupName string, deploymentName string) error {

@@ -6,7 +6,7 @@ package dns
 import (
 	"context"
 
-	dnsmgmt "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
+	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/to"
 
@@ -40,10 +40,10 @@ func (m *manager) Domain() string {
 }
 
 func (m *manager) CreateOrUpdate(ctx context.Context, oc *api.OpenShiftCluster) error {
-	_, err := m.recordsets.CreateOrUpdate(ctx, m.env.ResourceGroup(), m.Domain(), "api."+oc.Properties.DomainName, dnsmgmt.CNAME, dnsmgmt.RecordSet{
-		RecordSetProperties: &dnsmgmt.RecordSetProperties{
+	_, err := m.recordsets.CreateOrUpdate(ctx, m.env.ResourceGroup(), m.Domain(), "api."+oc.Properties.DomainName, mgmtdns.CNAME, mgmtdns.RecordSet{
+		RecordSetProperties: &mgmtdns.RecordSetProperties{
 			TTL: to.Int64Ptr(300),
-			CnameRecord: &dnsmgmt.CnameRecord{
+			CnameRecord: &mgmtdns.CnameRecord{
 				Cname: to.StringPtr(oc.Properties.DomainName + "." + oc.Location + ".cloudapp.azure.com"),
 			},
 		},
@@ -53,10 +53,10 @@ func (m *manager) CreateOrUpdate(ctx context.Context, oc *api.OpenShiftCluster) 
 }
 
 func (m *manager) CreateOrUpdateRouter(ctx context.Context, oc *api.OpenShiftCluster, routerIP string) error {
-	_, err := m.recordsets.CreateOrUpdate(ctx, m.env.ResourceGroup(), m.Domain(), "*.apps."+oc.Properties.DomainName, dnsmgmt.A, dnsmgmt.RecordSet{
-		RecordSetProperties: &dnsmgmt.RecordSetProperties{
+	_, err := m.recordsets.CreateOrUpdate(ctx, m.env.ResourceGroup(), m.Domain(), "*.apps."+oc.Properties.DomainName, mgmtdns.A, mgmtdns.RecordSet{
+		RecordSetProperties: &mgmtdns.RecordSetProperties{
 			TTL: to.Int64Ptr(300),
-			ARecords: &[]dnsmgmt.ARecord{
+			ARecords: &[]mgmtdns.ARecord{
 				{
 					Ipv4Address: to.StringPtr(routerIP),
 				},
@@ -68,12 +68,12 @@ func (m *manager) CreateOrUpdateRouter(ctx context.Context, oc *api.OpenShiftClu
 }
 
 func (m *manager) Delete(ctx context.Context, oc *api.OpenShiftCluster) error {
-	_, err := m.recordsets.Delete(ctx, m.env.ResourceGroup(), m.Domain(), "api."+oc.Properties.DomainName, dnsmgmt.CNAME, "")
+	_, err := m.recordsets.Delete(ctx, m.env.ResourceGroup(), m.Domain(), "api."+oc.Properties.DomainName, mgmtdns.CNAME, "")
 	if err != nil {
 		return err
 	}
 
-	_, err = m.recordsets.Delete(ctx, m.env.ResourceGroup(), m.Domain(), "*.apps."+oc.Properties.DomainName, dnsmgmt.A, "")
+	_, err = m.recordsets.Delete(ctx, m.env.ResourceGroup(), m.Domain(), "*.apps."+oc.Properties.DomainName, mgmtdns.A, "")
 
 	return err
 }
