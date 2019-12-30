@@ -86,9 +86,7 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 		}
 	}
 
-	tenantID := os.Getenv("AZURE_TENANT_ID")
-
-	armAuthorizer, err := auth.NewClientCredentialsConfig(os.Getenv("AZURE_ARM_CLIENT_ID"), os.Getenv("AZURE_ARM_CLIENT_SECRET"), tenantID).Authorizer()
+	armAuthorizer, err := auth.NewClientCredentialsConfig(os.Getenv("AZURE_ARM_CLIENT_ID"), os.Getenv("AZURE_ARM_CLIENT_SECRET"), instancemetadata.TenantID()).Authorizer()
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +94,7 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 	d := &dev{
 		log:             log,
 		roleassignments: authorization.NewRoleAssignmentsClient(instancemetadata.SubscriptionID(), armAuthorizer),
-		applications:    graphrbac.NewApplicationsClient(tenantID),
+		applications:    graphrbac.NewApplicationsClient(instancemetadata.TenantID()),
 	}
 
 	d.prod, err = newProd(ctx, log, instancemetadata, clientauthorizer)
@@ -104,12 +102,12 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 		return nil, err
 	}
 
-	d.applications.Authorizer, err = d.FPAuthorizer(tenantID, azure.PublicCloud.GraphEndpoint)
+	d.applications.Authorizer, err = d.FPAuthorizer(instancemetadata.TenantID(), azure.PublicCloud.GraphEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	fpAuthorizer, err := d.FPAuthorizer(tenantID, azure.PublicCloud.ResourceManagerEndpoint)
+	fpAuthorizer, err := d.FPAuthorizer(instancemetadata.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
