@@ -501,15 +501,8 @@ func (g *generator) cosmosdb(databaseName string) []*arm.Resource {
 }
 
 func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Resource {
-	var dependsOn []string
 
-	if addDependsOn {
-		dependsOn = []string{
-			"[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
-		}
-	}
-
-	return []*arm.Resource{
+	rs := []*arm.Resource{
 		{
 			Resource: &mgmtdocumentdb.SQLDatabaseCreateUpdateParameters{
 				SQLDatabaseCreateUpdateProperties: &mgmtdocumentdb.SQLDatabaseCreateUpdateProperties{
@@ -525,7 +518,6 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},
 			APIVersion: apiVersions["documentdb"],
-			DependsOn:  dependsOn,
 		},
 		{
 			Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
@@ -547,7 +539,9 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},
 			APIVersion: apiVersions["documentdb"],
-			DependsOn:  dependsOn,
+			DependsOn: []string{
+				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
+			},
 		},
 		{
 			Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
@@ -577,7 +571,9 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},
 			APIVersion: apiVersions["documentdb"],
-			DependsOn:  dependsOn,
+			DependsOn: []string{
+				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
+			},
 		},
 		{
 			Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
@@ -598,9 +594,21 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},
 			APIVersion: apiVersions["documentdb"],
-			DependsOn:  dependsOn,
+			DependsOn: []string{
+				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
+			},
 		},
 	}
+
+	if addDependsOn {
+		for i := range rs {
+			rs[i].DependsOn = append(rs[i].DependsOn,
+				"[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
+			)
+		}
+	}
+
+	return rs
 }
 
 func (g *generator) rbac() []*arm.Resource {
