@@ -4,7 +4,6 @@ package database
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
 	"crypto/tls"
 	"net/http"
 	"time"
@@ -24,8 +23,8 @@ type Database struct {
 }
 
 // NewDatabase returns a new Database
-func NewDatabase(ctx context.Context, env env.Interface, uuid, dbid string) (db *Database, err error) {
-	databaseAccount, masterKey := env.CosmosDB(ctx)
+func NewDatabase(env env.Interface, uuid string) (db *Database, err error) {
+	databaseAccount, masterKey := env.CosmosDB()
 
 	h := &codec.JsonHandle{
 		BasicHandle: codec.BasicHandle{
@@ -55,17 +54,17 @@ func NewDatabase(ctx context.Context, env env.Interface, uuid, dbid string) (db 
 
 	db = &Database{}
 
-	db.AsyncOperations, err = NewAsyncOperations(ctx, uuid, dbc, dbid, "AsyncOperations")
+	db.AsyncOperations, err = NewAsyncOperations(uuid, dbc, env.DatabaseName(), "AsyncOperations")
 	if err != nil {
 		return nil, err
 	}
 
-	db.OpenShiftClusters, err = NewOpenShiftClusters(ctx, uuid, dbc, dbid, "OpenShiftClusters")
+	db.OpenShiftClusters, err = NewOpenShiftClusters(uuid, dbc, env.DatabaseName(), "OpenShiftClusters")
 	if err != nil {
 		return nil, err
 	}
 
-	db.Subscriptions, err = NewSubscriptions(ctx, uuid, dbc, dbid, "Subscriptions")
+	db.Subscriptions, err = NewSubscriptions(uuid, dbc, env.DatabaseName(), "Subscriptions")
 	if err != nil {
 		return nil, err
 	}

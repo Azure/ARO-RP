@@ -108,7 +108,7 @@ func (m *Manager) Create(ctx context.Context) error {
 				Name: m.doc.OpenShiftCluster.Properties.DomainName,
 			},
 			SSHKey:     sshkey.Type() + " " + base64.StdEncoding.EncodeToString(sshkey.Marshal()),
-			BaseDomain: m.env.DNS().Domain(),
+			BaseDomain: m.dns.Domain(),
 			Networking: &types.Networking{
 				MachineCIDR: ipnet.MustParseCIDR("127.0.0.0/8"), // dummy
 				NetworkType: "OpenShiftSDN",
@@ -192,7 +192,12 @@ func (m *Manager) Create(ctx context.Context) error {
 		return err
 	}
 
-	return install.NewInstaller(m.log, m.env, m.db, m.fpAuthorizer, r.SubscriptionID).Install(ctx, m.doc, installConfig, platformCreds, image)
+	i, err := install.NewInstaller(m.log, m.env, m.db, m.doc)
+	if err != nil {
+		return err
+	}
+
+	return i.Install(ctx, installConfig, platformCreds, image)
 }
 
 var rxRHCOS = regexp.MustCompile(`rhcos-((\d+)\.\d+\.\d{8})\d{4}\.\d+-azure\.x86_64\.vhd`)

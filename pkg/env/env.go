@@ -15,7 +15,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
-	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 )
 
@@ -23,8 +22,10 @@ type Interface interface {
 	clientauthorizer.ClientAuthorizer
 	instancemetadata.InstanceMetadata
 
-	CosmosDB(context.Context) (string, string)
-	DNS() dns.Manager
+	CosmosDB() (string, string)
+	DatabaseName() string
+	DialContext(context.Context, string, string) (net.Conn, error)
+	Domain() string
 	FPAuthorizer(string, string) (autorest.Authorizer, error)
 	GetSecret(context.Context, string) (*rsa.PrivateKey, []*x509.Certificate, error)
 	Listen() (net.Listener, error)

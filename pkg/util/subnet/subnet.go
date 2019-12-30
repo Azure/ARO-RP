@@ -8,16 +8,17 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 )
 
 type Manager interface {
-	Get(ctx context.Context, subnetID string) (*network.Subnet, error)
-	CreateOrUpdate(ctx context.Context, subnetID string, subnet *network.Subnet) error
+	Get(ctx context.Context, subnetID string) (*mgmtnetwork.Subnet, error)
+	CreateOrUpdate(ctx context.Context, subnetID string, subnet *mgmtnetwork.Subnet) error
 }
 
 type manager struct {
@@ -25,17 +26,13 @@ type manager struct {
 }
 
 func NewManager(subscriptionID string, spAuthorizer autorest.Authorizer) Manager {
-	m := &manager{
-		subnets: network.NewSubnetsClient(subscriptionID),
+	return &manager{
+		subnets: network.NewSubnetsClient(subscriptionID, spAuthorizer),
 	}
-
-	m.subnets.Authorizer = spAuthorizer
-
-	return m
 }
 
 // Get retrieves the linked subnet
-func (m *manager) Get(ctx context.Context, subnetID string) (*network.Subnet, error) {
+func (m *manager) Get(ctx context.Context, subnetID string) (*mgmtnetwork.Subnet, error) {
 	vnetID, subnetName, err := Split(subnetID)
 	if err != nil {
 		return nil, err
@@ -55,7 +52,7 @@ func (m *manager) Get(ctx context.Context, subnetID string) (*network.Subnet, er
 }
 
 // CreateOrUpdate updates the linked subnet
-func (m *manager) CreateOrUpdate(ctx context.Context, subnetID string, subnet *network.Subnet) error {
+func (m *manager) CreateOrUpdate(ctx context.Context, subnetID string, subnet *mgmtnetwork.Subnet) error {
 	vnetID, subnetName, err := Split(subnetID)
 	if err != nil {
 		return err
@@ -66,12 +63,7 @@ func (m *manager) CreateOrUpdate(ctx context.Context, subnetID string, subnet *n
 		return err
 	}
 
-	future, err := m.subnets.CreateOrUpdate(ctx, r.ResourceGroup, r.ResourceName, subnetName, *subnet)
-	if err != nil {
-		return err
-	}
-
-	return future.WaitForCompletionRef(ctx, m.subnets.Client)
+	return m.subnets.CreateOrUpdateAndWait(ctx, r.ResourceGroup, r.ResourceName, subnetName, *subnet)
 }
 
 // Split splits the given subnetID into a vnetID and subnetName

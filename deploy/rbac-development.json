@@ -9,7 +9,6 @@
             "type": "string"
         }
     },
-    "variables": {},
     "resources": [
         {
             "name": "79ed474a-7267-4ff8-b226-96140be062a2",
@@ -61,6 +60,8 @@
                             "Microsoft.Network/privateDnsZones/SRV/write",
                             "Microsoft.Network/privateDnsZones/virtualNetworkLinks/write",
                             "Microsoft.Network/privateDnsZones/write",
+                            "Microsoft.Network/privateLinkServices/read",
+                            "Microsoft.Network/privateLinkServices/write",
                             "Microsoft.Network/publicIPAddresses/delete",
                             "Microsoft.Network/publicIPAddresses/join/action",
                             "Microsoft.Network/publicIPAddresses/read",
@@ -68,6 +69,7 @@
                             "Microsoft.Network/routeTables/read",
                             "Microsoft.Network/routeTables/write",
                             "Microsoft.Resources/deployments/operationStatuses/read",
+                            "Microsoft.Resources/deployments/read",
                             "Microsoft.Resources/deployments/write",
                             "Microsoft.Resources/subscriptions/resourceGroups/delete",
                             "Microsoft.Resources/subscriptions/resourceGroups/read",
@@ -78,27 +80,6 @@
                     }
                 ],
                 "roleName": "ARO v4 Development First Party Managed Resource Group"
-            }
-        },
-        {
-            "name": "f3fe7bc1-0ef9-4681-a68c-c1fa285d6128",
-            "apiVersion": "2017-09-01",
-            "type": "Microsoft.Authorization/roleDefinitions",
-            "properties": {
-                "assignableScopes": [
-                    "[concat('/subscriptions/', subscription().subscriptionId)]"
-                ],
-                "permissions": [
-                    {
-                        "actions": [
-                            "Microsoft.Network/virtualNetworks/join/action",
-                            "Microsoft.Network/virtualNetworks/subnets/join/action",
-                            "Microsoft.Network/virtualNetworks/subnets/read",
-                            "Microsoft.Network/virtualNetworks/subnets/write"
-                        ]
-                    }
-                ],
-                "roleName": "ARO v4 Development Subnet Contributor"
             }
         },
         {

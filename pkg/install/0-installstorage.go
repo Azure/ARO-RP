@@ -12,9 +12,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
-	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
-	"github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
+	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
+	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/ignition/bootstrap"
 	"github.com/openshift/installer/pkg/asset/installconfig"
@@ -37,7 +39,7 @@ var apiVersions = map[string]string{
 	"storage":       "2019-04-01",
 }
 
-func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftClusterDocument, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) error {
+func (i *Installer) installStorage(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) error {
 	clusterID := &installconfig.ClusterID{
 		UUID:    uuid.NewV4().String(),
 		InfraID: "aro",
@@ -62,20 +64,20 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 	bootstrap := g[reflect.TypeOf(&bootstrap.Bootstrap{})].(*bootstrap.Bootstrap)
 
 	i.log.Print("creating resource group")
-	group := resources.Group{
+	group := mgmtresources.Group{
 		Location:  &installConfig.Config.Azure.Region,
-		ManagedBy: to.StringPtr(doc.OpenShiftCluster.ID),
+		ManagedBy: to.StringPtr(i.doc.OpenShiftCluster.ID),
 	}
 	if _, ok := i.env.(env.Dev); ok {
 		group.ManagedBy = nil
 	}
-	_, err := i.groups.CreateOrUpdate(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, group)
+	_, err := i.groups.CreateOrUpdate(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, group)
 	if err != nil {
 		return err
 	}
 
 	if development, ok := i.env.(env.Dev); ok {
-		err = development.CreateARMResourceGroupRoleAssignment(ctx, i.fpAuthorizer, doc.OpenShiftCluster)
+		err = development.CreateARMResourceGroupRoleAssignment(ctx, i.fpAuthorizer, i.doc.OpenShiftCluster)
 		if err != nil {
 			return err
 		}
@@ -87,63 +89,63 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 			ContentVersion: "1.0.0.0",
 			Resources: []*arm.Resource{
 				{
-					Resource: &storage.Account{
-						Sku: &storage.Sku{
+					Resource: &mgmtstorage.Account{
+						Sku: &mgmtstorage.Sku{
 							Name: "Standard_LRS",
 						},
-						Name:     to.StringPtr("cluster" + doc.OpenShiftCluster.Properties.StorageSuffix),
+						Name:     to.StringPtr("cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix),
 						Location: &installConfig.Config.Azure.Region,
 						Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
 					},
 					APIVersion: apiVersions["storage"],
 				},
 				{
-					Resource: &storage.BlobContainer{
-						Name: to.StringPtr("cluster" + doc.OpenShiftCluster.Properties.StorageSuffix + "/default/ignition"),
+					Resource: &mgmtstorage.BlobContainer{
+						Name: to.StringPtr("cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix + "/default/ignition"),
 						Type: to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
 					},
 					APIVersion: apiVersions["storage"],
 					DependsOn: []string{
-						"Microsoft.Storage/storageAccounts/cluster" + doc.OpenShiftCluster.Properties.StorageSuffix,
+						"Microsoft.Storage/storageAccounts/cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix,
 					},
 				},
 				{
-					Resource: &storage.BlobContainer{
-						Name: to.StringPtr("cluster" + doc.OpenShiftCluster.Properties.StorageSuffix + "/default/aro"),
+					Resource: &mgmtstorage.BlobContainer{
+						Name: to.StringPtr("cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix + "/default/aro"),
 						Type: to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
 					},
 					APIVersion: apiVersions["storage"],
 					DependsOn: []string{
-						"Microsoft.Storage/storageAccounts/cluster" + doc.OpenShiftCluster.Properties.StorageSuffix,
+						"Microsoft.Storage/storageAccounts/cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix,
 					},
 				},
 				{
-					Resource: &network.SecurityGroup{
-						SecurityGroupPropertiesFormat: &network.SecurityGroupPropertiesFormat{
-							SecurityRules: &[]network.SecurityRule{
+					Resource: &mgmtnetwork.SecurityGroup{
+						SecurityGroupPropertiesFormat: &mgmtnetwork.SecurityGroupPropertiesFormat{
+							SecurityRules: &[]mgmtnetwork.SecurityRule{
 								{
-									SecurityRulePropertiesFormat: &network.SecurityRulePropertiesFormat{
-										Protocol:                 network.SecurityRuleProtocolTCP,
+									SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
+										Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
 										SourcePortRange:          to.StringPtr("*"),
 										DestinationPortRange:     to.StringPtr("6443"),
 										SourceAddressPrefix:      to.StringPtr("*"),
 										DestinationAddressPrefix: to.StringPtr("*"),
-										Access:                   network.SecurityRuleAccessAllow,
+										Access:                   mgmtnetwork.SecurityRuleAccessAllow,
 										Priority:                 to.Int32Ptr(101),
-										Direction:                network.SecurityRuleDirectionInbound,
+										Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
 									},
 									Name: to.StringPtr("apiserver_in"),
 								},
 								{
-									SecurityRulePropertiesFormat: &network.SecurityRulePropertiesFormat{
-										Protocol:                 network.SecurityRuleProtocolTCP,
+									SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
+										Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
 										SourcePortRange:          to.StringPtr("*"),
 										DestinationPortRange:     to.StringPtr("22"),
 										SourceAddressPrefix:      to.StringPtr("*"),
 										DestinationAddressPrefix: to.StringPtr("*"),
-										Access:                   network.SecurityRuleAccessAllow,
+										Access:                   mgmtnetwork.SecurityRuleAccessAllow,
 										Priority:                 to.Int32Ptr(103),
-										Direction:                network.SecurityRuleDirectionInbound,
+										Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
 									},
 									Name: to.StringPtr("bootstrap_ssh_in"),
 								},
@@ -156,7 +158,7 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 					APIVersion: apiVersions["network"],
 				},
 				{
-					Resource: &network.SecurityGroup{
+					Resource: &mgmtnetwork.SecurityGroup{
 						Name:     to.StringPtr("aro-node-nsg"),
 						Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
 						Location: &installConfig.Config.Azure.Region,
@@ -167,19 +169,29 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 		}
 
 		i.log.Print("deploying storage template")
-		err = i.deployments.CreateOrUpdateAndWait(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy", resources.Deployment{
-			Properties: &resources.DeploymentProperties{
+		err = i.deployments.CreateOrUpdateAndWait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy", mgmtresources.Deployment{
+			Properties: &mgmtresources.DeploymentProperties{
 				Template: t,
-				Mode:     resources.Incremental,
+				Mode:     mgmtresources.Incremental,
 			},
 		})
 		if err != nil {
-			return err
+			if detailedError, ok := err.(autorest.DetailedError); ok {
+				if requestError, ok := detailedError.Original.(azure.RequestError); ok &&
+					requestError.ServiceError != nil &&
+					requestError.ServiceError.Code == "DeploymentActive" {
+					i.log.Print("waiting for storage template")
+					err = i.deployments.Wait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy")
+				}
+			}
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	{
-		blobService, err := i.getBlobService(ctx, doc.OpenShiftCluster)
+		blobService, err := i.getBlobService(ctx)
 		if err != nil {
 			return err
 		}
@@ -205,8 +217,8 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 	}
 
 	for _, subnetID := range []string{
-		doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
-		doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID,
+		i.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
+		i.doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID,
 	} {
 		i.log.Printf("attaching network security group to subnet %s", subnetID)
 
@@ -217,10 +229,10 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 		}
 
 		if s.SubnetPropertiesFormat == nil {
-			s.SubnetPropertiesFormat = &network.SubnetPropertiesFormat{}
+			s.SubnetPropertiesFormat = &mgmtnetwork.SubnetPropertiesFormat{}
 		}
 
-		nsgID, err := subnet.NetworkSecurityGroupID(doc.OpenShiftCluster, subnetID)
+		nsgID, err := subnet.NetworkSecurityGroupID(i.doc.OpenShiftCluster, subnetID)
 		if err != nil {
 			return err
 		}
@@ -233,7 +245,7 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 			return fmt.Errorf("tried to overwrite non-nil network security group")
 		}
 
-		s.SubnetPropertiesFormat.NetworkSecurityGroup = &network.SecurityGroup{
+		s.SubnetPropertiesFormat.NetworkSecurityGroup = &mgmtnetwork.SecurityGroup{
 			ID: to.StringPtr(nsgID),
 		}
 
@@ -243,7 +255,7 @@ func (i *Installer) installStorage(ctx context.Context, doc *api.OpenShiftCluste
 		}
 	}
 
-	_, err = i.db.Patch(doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+	i.doc, err = i.db.Patch(i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		// used for the SAS token with which the bootstrap node retrieves its
 		// ignition payload
 		doc.OpenShiftCluster.Properties.Install.Now = time.Now().UTC()

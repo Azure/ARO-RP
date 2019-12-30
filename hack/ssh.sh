@@ -1,12 +1,5 @@
 #!/bin/bash -e
 
-if [[ ! -e admin.kubeconfig ]]; then
-    echo "run hack/get-admin-kubeconfig.sh first" >&2
-    exit 1
-fi
-
-export KUBECONFIG=admin.kubeconfig
-
 while [[ $1 == -* ]]; do
   if [[ $1 == -- ]]; then
     shift

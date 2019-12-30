@@ -19,7 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/authorization"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	utilpermissions "github.com/Azure/ARO-RP/pkg/util/permissions"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
@@ -143,7 +143,12 @@ func (dv *dynamicValidator) validateVnetPermissions(ctx context.Context, client 
 		return err
 	}
 
-	permissions, err := client.ListForResource(ctx, vnetID)
+	r, err := azure.ParseResourceID(vnetID)
+	if err != nil {
+		return err
+	}
+
+	permissions, err := client.ListForResource(ctx, r.ResourceGroup, r.Provider, r.ResourceType, "", r.ResourceName)
 	if err != nil {
 		if err, ok := err.(autorest.DetailedError); ok {
 			if err.StatusCode == http.StatusNotFound {
@@ -209,6 +214,12 @@ func (dv *dynamicValidator) validateSubnet(ctx context.Context, path, typ, subne
 			}
 		}
 		return nil, err
+	}
+
+	if strings.EqualFold(dv.oc.Properties.MasterProfile.SubnetID, subnetID) {
+		if !strings.EqualFold(*s.PrivateLinkServiceNetworkPolicies, "Disabled") {
+			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The provided "+typ+" VM subnet '%s' is invalid: must have privateLinkServiceNetworkPolicies disabled.", subnetID)
+		}
 	}
 
 	if dv.oc.Properties.ProvisioningState == api.ProvisioningStateCreating {

@@ -6,13 +6,13 @@ package permissions
 import (
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
+	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
 )
 
 func TestCanDoAction(t *testing.T) {
 	tests := []struct {
 		name        string
-		permissions []authorization.Permission
+		permissions []mgmtauthorization.Permission
 		action      string
 		want        bool
 	}{
@@ -22,7 +22,7 @@ func TestCanDoAction(t *testing.T) {
 		},
 		{
 			name: "has permission - exact",
-			permissions: []authorization.Permission{
+			permissions: []mgmtauthorization.Permission{
 				{
 					Actions:    &[]string{"Microsoft.Compute/virtualMachines/*"},
 					NotActions: &[]string{},
@@ -37,7 +37,7 @@ func TestCanDoAction(t *testing.T) {
 		},
 		{
 			name: "has permission - wildcard",
-			permissions: []authorization.Permission{{
+			permissions: []mgmtauthorization.Permission{{
 				Actions:    &[]string{"Microsoft.Network/virtualNetworks/subnets/*/action"},
 				NotActions: &[]string{},
 			}},
@@ -46,7 +46,7 @@ func TestCanDoAction(t *testing.T) {
 		},
 		{
 			name: "has permission - exact, conflict",
-			permissions: []authorization.Permission{
+			permissions: []mgmtauthorization.Permission{
 				{
 					Actions:    &[]string{"Microsoft.Network/virtualNetworks/subnets/join/action"},
 					NotActions: &[]string{},
@@ -61,7 +61,7 @@ func TestCanDoAction(t *testing.T) {
 		},
 		{
 			name: "has permission excluded - exact",
-			permissions: []authorization.Permission{{
+			permissions: []mgmtauthorization.Permission{{
 				Actions:    &[]string{"Microsoft.Network/*"},
 				NotActions: &[]string{"Microsoft.Network/virtualNetworks/subnets/join/action"},
 			}},
@@ -69,7 +69,7 @@ func TestCanDoAction(t *testing.T) {
 		},
 		{
 			name: "has permission excluded - wildcard",
-			permissions: []authorization.Permission{{
+			permissions: []mgmtauthorization.Permission{{
 				Actions:    &[]string{"Microsoft.Network/*"},
 				NotActions: &[]string{"Microsoft.Network/virtualNetworks/subnets/*/action"},
 			}},

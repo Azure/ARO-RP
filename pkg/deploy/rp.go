@@ -11,12 +11,12 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
-	"github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2019-08-01/documentdb"
-	"github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
-	"github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2016-10-01/keyvault"
-	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
-	"github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
+	mgmtdocumentdb "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2019-08-01/documentdb"
+	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
+	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2016-10-01/keyvault"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
+	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	"github.com/Azure/go-autorest/autorest/to"
 	uuid "github.com/satori/go.uuid"
 
@@ -49,33 +49,48 @@ func newGenerator(production bool) *generator {
 }
 
 func (g *generator) vnet() *arm.Resource {
+	subnet := mgmtnetwork.Subnet{
+		SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+			AddressPrefix: to.StringPtr("10.0.0.0/24"),
+			NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+				ID: to.StringPtr("[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"),
+			},
+		},
+		Name: to.StringPtr("rp-subnet"),
+	}
+
+	if g.production {
+		subnet.ServiceEndpoints = &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
+			{
+				Service:   to.StringPtr("Microsoft.KeyVault"),
+				Locations: &[]string{"*"},
+			},
+			{
+				Service:   to.StringPtr("Microsoft.AzureCosmosDB"),
+				Locations: &[]string{"*"},
+			},
+		}
+	}
+
 	return &arm.Resource{
-		Resource: &network.VirtualNetwork{
-			VirtualNetworkPropertiesFormat: &network.VirtualNetworkPropertiesFormat{
-				AddressSpace: &network.AddressSpace{
+		Resource: &mgmtnetwork.VirtualNetwork{
+			VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
+				AddressSpace: &mgmtnetwork.AddressSpace{
 					AddressPrefixes: &[]string{
 						"10.0.0.0/8",
 					},
 				},
-				Subnets: &[]network.Subnet{
+				Subnets: &[]mgmtnetwork.Subnet{
+					subnet,
 					{
-						SubnetPropertiesFormat: &network.SubnetPropertiesFormat{
-							AddressPrefix: to.StringPtr("10.0.0.0/24"),
-							NetworkSecurityGroup: &network.SecurityGroup{
-								ID: to.StringPtr("[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"),
+						SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+							AddressPrefix: to.StringPtr("10.1.0.0/16"),
+							NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+								ID: to.StringPtr("[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]"),
 							},
-							ServiceEndpoints: &[]network.ServiceEndpointPropertiesFormat{
-								{
-									Service:   to.StringPtr("Microsoft.KeyVault"),
-									Locations: &[]string{"*"},
-								},
-								{
-									Service:   to.StringPtr("Microsoft.AzureCosmosDB"),
-									Locations: &[]string{"*"},
-								},
-							},
+							PrivateEndpointNetworkPolicies: to.StringPtr("Disabled"),
 						},
-						Name: to.StringPtr("rp-subnet"),
+						Name: to.StringPtr("rp-pe-subnet"),
 					},
 				},
 			},
@@ -88,71 +103,68 @@ func (g *generator) vnet() *arm.Resource {
 }
 
 func (g *generator) pip() *arm.Resource {
-	pip := &network.PublicIPAddress{
-		Sku: &network.PublicIPAddressSku{
-			Name: network.PublicIPAddressSkuNameStandard,
-		},
-		PublicIPAddressPropertiesFormat: &network.PublicIPAddressPropertiesFormat{
-			PublicIPAllocationMethod: network.Static,
-		},
-		Name:     to.StringPtr("rp-pip"),
-		Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
-		Location: to.StringPtr("[resourceGroup().location]"),
-	}
-
 	return &arm.Resource{
-		Resource:   pip,
+		Resource: &mgmtnetwork.PublicIPAddress{
+			Sku: &mgmtnetwork.PublicIPAddressSku{
+				Name: mgmtnetwork.PublicIPAddressSkuNameStandard,
+			},
+			PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
+				PublicIPAllocationMethod: mgmtnetwork.Static,
+			},
+			Name:     to.StringPtr("rp-pip"),
+			Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
+			Location: to.StringPtr("[resourceGroup().location]"),
+		},
 		APIVersion: apiVersions["network"],
 	}
-
 }
 
 func (g *generator) lb() *arm.Resource {
 	return &arm.Resource{
-		Resource: &network.LoadBalancer{
-			Sku: &network.LoadBalancerSku{
-				Name: network.LoadBalancerSkuNameStandard,
+		Resource: &mgmtnetwork.LoadBalancer{
+			Sku: &mgmtnetwork.LoadBalancerSku{
+				Name: mgmtnetwork.LoadBalancerSkuNameStandard,
 			},
-			LoadBalancerPropertiesFormat: &network.LoadBalancerPropertiesFormat{
-				FrontendIPConfigurations: &[]network.FrontendIPConfiguration{
+			LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
+				FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
 					{
-						FrontendIPConfigurationPropertiesFormat: &network.FrontendIPConfigurationPropertiesFormat{
-							PublicIPAddress: &network.PublicIPAddress{
+						FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
+							PublicIPAddress: &mgmtnetwork.PublicIPAddress{
 								ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip')]"),
 							},
 						},
 						Name: to.StringPtr("rp-frontend"),
 					},
 				},
-				BackendAddressPools: &[]network.BackendAddressPool{
+				BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
 					{
 						Name: to.StringPtr("rp-backend"),
 					},
 				},
-				LoadBalancingRules: &[]network.LoadBalancingRule{
+				LoadBalancingRules: &[]mgmtnetwork.LoadBalancingRule{
 					{
-						LoadBalancingRulePropertiesFormat: &network.LoadBalancingRulePropertiesFormat{
-							FrontendIPConfiguration: &network.SubResource{
+						LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
+							FrontendIPConfiguration: &mgmtnetwork.SubResource{
 								ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'rp-frontend')]"),
 							},
-							BackendAddressPool: &network.SubResource{
+							BackendAddressPool: &mgmtnetwork.SubResource{
 								ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
 							},
-							Probe: &network.SubResource{
+							Probe: &mgmtnetwork.SubResource{
 								ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'rp-probe')]"),
 							},
-							Protocol:         network.TransportProtocolTCP,
-							LoadDistribution: network.LoadDistributionDefault,
+							Protocol:         mgmtnetwork.TransportProtocolTCP,
+							LoadDistribution: mgmtnetwork.LoadDistributionDefault,
 							FrontendPort:     to.Int32Ptr(443),
 							BackendPort:      to.Int32Ptr(443),
 						},
 						Name: to.StringPtr("rp-lbrule"),
 					},
 				},
-				Probes: &[]network.Probe{
+				Probes: &[]mgmtnetwork.Probe{
 					{
-						ProbePropertiesFormat: &network.ProbePropertiesFormat{
-							Protocol:       network.ProbeProtocolHTTPS,
+						ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
+							Protocol:       mgmtnetwork.ProbeProtocolHTTPS,
 							Port:           to.Int32Ptr(443),
 							NumberOfProbes: to.Int32Ptr(2),
 							RequestPath:    to.StringPtr("/healthz/ready"),
@@ -253,69 +265,71 @@ systemctl enable arorp.service
 
 	script := fmt.Sprintf("[base64(concat(%s))]", strings.Join(parts, ","))
 
-	vmss := &compute.VirtualMachineScaleSet{
-		Sku: &compute.Sku{
-			Name:     to.StringPtr(string(compute.VirtualMachineSizeTypesStandardD2sV3)),
-			Tier:     to.StringPtr("Standard"),
-			Capacity: to.Int64Ptr(3),
-		},
-		VirtualMachineScaleSetProperties: &compute.VirtualMachineScaleSetProperties{
-			UpgradePolicy: &compute.UpgradePolicy{
-				Mode: compute.Manual,
+	return &arm.Resource{
+		Resource: &mgmtcompute.VirtualMachineScaleSet{
+			Sku: &mgmtcompute.Sku{
+				Name:     to.StringPtr(string(mgmtcompute.VirtualMachineSizeTypesStandardD2sV3)),
+				Tier:     to.StringPtr("Standard"),
+				Capacity: to.Int64Ptr(3),
 			},
-			VirtualMachineProfile: &compute.VirtualMachineScaleSetVMProfile{
-				OsProfile: &compute.VirtualMachineScaleSetOSProfile{
-					ComputerNamePrefix: to.StringPtr("rp-"),
-					AdminUsername:      to.StringPtr("cloud-user"),
-					LinuxConfiguration: &compute.LinuxConfiguration{
-						DisablePasswordAuthentication: to.BoolPtr(true),
-						SSH: &compute.SSHConfiguration{
-							PublicKeys: &[]compute.SSHPublicKey{
-								{
-									Path:    to.StringPtr("/home/cloud-user/.ssh/authorized_keys"),
-									KeyData: to.StringPtr("[parameters('sshPublicKey')]"),
+			VirtualMachineScaleSetProperties: &mgmtcompute.VirtualMachineScaleSetProperties{
+				UpgradePolicy: &mgmtcompute.UpgradePolicy{
+					Mode: mgmtcompute.Manual,
+				},
+				VirtualMachineProfile: &mgmtcompute.VirtualMachineScaleSetVMProfile{
+					OsProfile: &mgmtcompute.VirtualMachineScaleSetOSProfile{
+						ComputerNamePrefix: to.StringPtr("rp-"),
+						AdminUsername:      to.StringPtr("cloud-user"),
+						LinuxConfiguration: &mgmtcompute.LinuxConfiguration{
+							DisablePasswordAuthentication: to.BoolPtr(true),
+							SSH: &mgmtcompute.SSHConfiguration{
+								PublicKeys: &[]mgmtcompute.SSHPublicKey{
+									{
+										Path:    to.StringPtr("/home/cloud-user/.ssh/authorized_keys"),
+										KeyData: to.StringPtr("[parameters('sshPublicKey')]"),
+									},
 								},
 							},
 						},
 					},
-				},
-				StorageProfile: &compute.VirtualMachineScaleSetStorageProfile{
-					ImageReference: &compute.ImageReference{
-						Publisher: to.StringPtr("RedHat"),
-						Offer:     to.StringPtr("RHEL"),
-						Sku:       to.StringPtr("7-RAW"),
-						Version:   to.StringPtr("latest"),
-					},
-					OsDisk: &compute.VirtualMachineScaleSetOSDisk{
-						CreateOption: compute.DiskCreateOptionTypesFromImage,
-						ManagedDisk: &compute.VirtualMachineScaleSetManagedDiskParameters{
-							StorageAccountType: compute.StorageAccountTypesPremiumLRS,
+					StorageProfile: &mgmtcompute.VirtualMachineScaleSetStorageProfile{
+						ImageReference: &mgmtcompute.ImageReference{
+							Publisher: to.StringPtr("RedHat"),
+							Offer:     to.StringPtr("RHEL"),
+							Sku:       to.StringPtr("7-RAW"),
+							Version:   to.StringPtr("latest"),
+						},
+						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
+							CreateOption: mgmtcompute.DiskCreateOptionTypesFromImage,
+							ManagedDisk: &mgmtcompute.VirtualMachineScaleSetManagedDiskParameters{
+								StorageAccountType: mgmtcompute.StorageAccountTypesPremiumLRS,
+							},
 						},
 					},
-				},
-				NetworkProfile: &compute.VirtualMachineScaleSetNetworkProfile{
-					HealthProbe: &compute.APIEntityReference{
-						ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'rp-probe')]"),
-					},
-					NetworkInterfaceConfigurations: &[]compute.VirtualMachineScaleSetNetworkConfiguration{
-						{
-							Name: to.StringPtr("rp-vmss-nic"),
-							VirtualMachineScaleSetNetworkConfigurationProperties: &compute.VirtualMachineScaleSetNetworkConfigurationProperties{
-								Primary: to.BoolPtr(true),
-								IPConfigurations: &[]compute.VirtualMachineScaleSetIPConfiguration{
-									{
-										Name: to.StringPtr("rp-vmss-ipconfig"),
-										VirtualMachineScaleSetIPConfigurationProperties: &compute.VirtualMachineScaleSetIPConfigurationProperties{
-											Subnet: &compute.APIEntityReference{
-												ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"),
-											},
-											Primary: to.BoolPtr(true),
-											PublicIPAddressConfiguration: &compute.VirtualMachineScaleSetPublicIPAddressConfiguration{
-												Name: to.StringPtr("rp-vmss-pip"),
-											},
-											LoadBalancerBackendAddressPools: &[]compute.SubResource{
-												{
-													ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
+					NetworkProfile: &mgmtcompute.VirtualMachineScaleSetNetworkProfile{
+						HealthProbe: &mgmtcompute.APIEntityReference{
+							ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'rp-probe')]"),
+						},
+						NetworkInterfaceConfigurations: &[]mgmtcompute.VirtualMachineScaleSetNetworkConfiguration{
+							{
+								Name: to.StringPtr("rp-vmss-nic"),
+								VirtualMachineScaleSetNetworkConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetNetworkConfigurationProperties{
+									Primary: to.BoolPtr(true),
+									IPConfigurations: &[]mgmtcompute.VirtualMachineScaleSetIPConfiguration{
+										{
+											Name: to.StringPtr("rp-vmss-ipconfig"),
+											VirtualMachineScaleSetIPConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetIPConfigurationProperties{
+												Subnet: &mgmtcompute.APIEntityReference{
+													ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"),
+												},
+												Primary: to.BoolPtr(true),
+												PublicIPAddressConfiguration: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfiguration{
+													Name: to.StringPtr("rp-vmss-pip"),
+												},
+												LoadBalancerBackendAddressPools: &[]mgmtcompute.SubResource{
+													{
+														ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
+													},
 												},
 											},
 										},
@@ -324,40 +338,36 @@ systemctl enable arorp.service
 							},
 						},
 					},
-				},
-				ExtensionProfile: &compute.VirtualMachineScaleSetExtensionProfile{
-					Extensions: &[]compute.VirtualMachineScaleSetExtension{
-						{
-							Name: to.StringPtr("rp-vmss-cse"),
-							VirtualMachineScaleSetExtensionProperties: &compute.VirtualMachineScaleSetExtensionProperties{
-								Publisher:               to.StringPtr("Microsoft.Azure.Extensions"),
-								Type:                    to.StringPtr("CustomScript"),
-								TypeHandlerVersion:      to.StringPtr("2.0"),
-								AutoUpgradeMinorVersion: to.BoolPtr(true),
-								Settings:                map[string]interface{}{},
-								ProtectedSettings: map[string]interface{}{
-									"script": script,
+					ExtensionProfile: &mgmtcompute.VirtualMachineScaleSetExtensionProfile{
+						Extensions: &[]mgmtcompute.VirtualMachineScaleSetExtension{
+							{
+								Name: to.StringPtr("rp-vmss-cse"),
+								VirtualMachineScaleSetExtensionProperties: &mgmtcompute.VirtualMachineScaleSetExtensionProperties{
+									Publisher:               to.StringPtr("Microsoft.Azure.Extensions"),
+									Type:                    to.StringPtr("CustomScript"),
+									TypeHandlerVersion:      to.StringPtr("2.0"),
+									AutoUpgradeMinorVersion: to.BoolPtr(true),
+									Settings:                map[string]interface{}{},
+									ProtectedSettings: map[string]interface{}{
+										"script": script,
+									},
 								},
 							},
 						},
 					},
 				},
+				Overprovision: to.BoolPtr(false),
 			},
-			Overprovision: to.BoolPtr(false),
-		},
-		Identity: &compute.VirtualMachineScaleSetIdentity{
-			Type: compute.ResourceIdentityTypeUserAssigned,
-			UserAssignedIdentities: map[string]*compute.VirtualMachineScaleSetIdentityUserAssignedIdentitiesValue{
-				"[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity')]": {},
+			Identity: &mgmtcompute.VirtualMachineScaleSetIdentity{
+				Type: mgmtcompute.ResourceIdentityTypeUserAssigned,
+				UserAssignedIdentities: map[string]*mgmtcompute.VirtualMachineScaleSetIdentityUserAssignedIdentitiesValue{
+					"[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity')]": {},
+				},
 			},
+			Name:     to.StringPtr("rp-vmss"),
+			Type:     to.StringPtr("Microsoft.Compute/virtualMachineScaleSets"),
+			Location: to.StringPtr("[resourceGroup().location]"),
 		},
-		Name:     to.StringPtr("rp-vmss"),
-		Type:     to.StringPtr("Microsoft.Compute/virtualMachineScaleSets"),
-		Location: to.StringPtr("[resourceGroup().location]"),
-	}
-
-	return &arm.Resource{
-		Resource:   vmss,
 		APIVersion: apiVersions["compute"],
 		DependsOn: []string{
 			"[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]",
@@ -368,8 +378,8 @@ systemctl enable arorp.service
 
 func (g *generator) zone() *arm.Resource {
 	return &arm.Resource{
-		Resource: &dns.Zone{
-			ZoneProperties: &dns.ZoneProperties{},
+		Resource: &mgmtdns.Zone{
+			ZoneProperties: &mgmtdns.ZoneProperties{},
 			Name:           to.StringPtr("[parameters('domainName')]"),
 			Type:           to.StringPtr("Microsoft.Network/dnsZones"),
 			Location:       to.StringPtr("global"),
@@ -378,27 +388,27 @@ func (g *generator) zone() *arm.Resource {
 	}
 }
 
-func (g *generator) accessPolicyEntry() keyvault.AccessPolicyEntry {
-	return keyvault.AccessPolicyEntry{
+func (g *generator) accessPolicyEntry() mgmtkeyvault.AccessPolicyEntry {
+	return mgmtkeyvault.AccessPolicyEntry{
 		TenantID: &tenantUUIDHack,
 		ObjectID: to.StringPtr("[parameters('rpServicePrincipalId')]"),
-		Permissions: &keyvault.Permissions{
-			Secrets: &[]keyvault.SecretPermissions{
-				keyvault.SecretPermissionsGet,
+		Permissions: &mgmtkeyvault.Permissions{
+			Secrets: &[]mgmtkeyvault.SecretPermissions{
+				mgmtkeyvault.SecretPermissionsGet,
 			},
 		},
 	}
 }
 
 func (g *generator) vault() *arm.Resource {
-	vault := &keyvault.Vault{
-		Properties: &keyvault.VaultProperties{
+	vault := &mgmtkeyvault.Vault{
+		Properties: &mgmtkeyvault.VaultProperties{
 			TenantID: &tenantUUIDHack,
-			Sku: &keyvault.Sku{
-				Name:   keyvault.Standard,
+			Sku: &mgmtkeyvault.Sku{
+				Name:   mgmtkeyvault.Standard,
 				Family: to.StringPtr("A"),
 			},
-			AccessPolicies: &[]keyvault.AccessPolicyEntry{},
+			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{},
 		},
 		Name:     to.StringPtr("[parameters('keyvaultName')]"),
 		Type:     to.StringPtr("Microsoft.KeyVault/vaults"),
@@ -406,27 +416,27 @@ func (g *generator) vault() *arm.Resource {
 	}
 
 	if !g.production {
-		vault.Properties.AccessPolicies = &[]keyvault.AccessPolicyEntry{
+		vault.Properties.AccessPolicies = &[]mgmtkeyvault.AccessPolicyEntry{
 			g.accessPolicyEntry(),
 			{
 				TenantID: &tenantUUIDHack,
 				ObjectID: to.StringPtr("[parameters('adminObjectId')]"),
-				Permissions: &keyvault.Permissions{
-					Certificates: &[]keyvault.CertificatePermissions{
-						keyvault.Create,
-						keyvault.Delete,
-						keyvault.Deleteissuers,
-						keyvault.Get,
-						keyvault.Getissuers,
-						keyvault.Import,
-						keyvault.List,
-						keyvault.Listissuers,
-						keyvault.Managecontacts,
-						keyvault.Manageissuers,
-						keyvault.Purge,
-						keyvault.Recover,
-						keyvault.Setissuers,
-						keyvault.Update,
+				Permissions: &mgmtkeyvault.Permissions{
+					Certificates: &[]mgmtkeyvault.CertificatePermissions{
+						mgmtkeyvault.Create,
+						mgmtkeyvault.Delete,
+						mgmtkeyvault.Deleteissuers,
+						mgmtkeyvault.Get,
+						mgmtkeyvault.Getissuers,
+						mgmtkeyvault.Import,
+						mgmtkeyvault.List,
+						mgmtkeyvault.Listissuers,
+						mgmtkeyvault.Managecontacts,
+						mgmtkeyvault.Manageissuers,
+						mgmtkeyvault.Purge,
+						mgmtkeyvault.Recover,
+						mgmtkeyvault.Setissuers,
+						mgmtkeyvault.Update,
 					},
 				},
 			},
@@ -439,20 +449,19 @@ func (g *generator) vault() *arm.Resource {
 	}
 }
 
-func (g *generator) cosmosdb() []*arm.Resource {
-	cosmosdb := &documentdb.DatabaseAccountCreateUpdateParameters{
-		Kind: documentdb.GlobalDocumentDB,
-		DatabaseAccountCreateUpdateProperties: &documentdb.DatabaseAccountCreateUpdateProperties{
-			ConsistencyPolicy: &documentdb.ConsistencyPolicy{
-				DefaultConsistencyLevel: documentdb.Strong,
+func (g *generator) cosmosdb(databaseName string) []*arm.Resource {
+	cosmosdb := &mgmtdocumentdb.DatabaseAccountCreateUpdateParameters{
+		Kind: mgmtdocumentdb.GlobalDocumentDB,
+		DatabaseAccountCreateUpdateProperties: &mgmtdocumentdb.DatabaseAccountCreateUpdateProperties{
+			ConsistencyPolicy: &mgmtdocumentdb.ConsistencyPolicy{
+				DefaultConsistencyLevel: mgmtdocumentdb.Strong,
 			},
-			Locations: &[]documentdb.Location{
+			Locations: &[]mgmtdocumentdb.Location{
 				{
 					LocationName: to.StringPtr("[resourceGroup().location]"),
 				},
 			},
-			DatabaseAccountOfferType:           to.StringPtr(string(documentdb.Standard)),
-			DisableKeyBasedMetadataWriteAccess: to.BoolPtr(true),
+			DatabaseAccountOfferType: to.StringPtr(string(mgmtdocumentdb.Standard)),
 		},
 		Name:     to.StringPtr("[parameters('databaseAccountName')]"),
 		Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts"),
@@ -470,69 +479,89 @@ func (g *generator) cosmosdb() []*arm.Resource {
 	if g.production {
 		cosmosdb.IPRangeFilter = to.StringPtr("[concat('104.42.195.92,40.76.54.131,52.176.6.30,52.169.50.45,52.187.184.26', if(equals(parameters('extraCosmosDBIPs'), ''), '', ','), parameters('extraCosmosDBIPs'))]")
 		cosmosdb.IsVirtualNetworkFilterEnabled = to.BoolPtr(true)
-		cosmosdb.VirtualNetworkRules = &[]documentdb.VirtualNetworkRule{
+		cosmosdb.VirtualNetworkRules = &[]mgmtdocumentdb.VirtualNetworkRule{
 			{
 				ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"),
 			},
 		}
+		cosmosdb.DisableKeyBasedMetadataWriteAccess = to.BoolPtr(true)
 
 		r.DependsOn = append(r.DependsOn, "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]")
 	}
 
-	return []*arm.Resource{
+	rs := []*arm.Resource{
 		r,
+	}
+
+	if g.production {
+		rs = append(rs, g.database(databaseName, true)...)
+	}
+
+	return rs
+}
+
+func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Resource {
+	var dependsOn []string
+
+	if addDependsOn {
+		dependsOn = []string{
+			"[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
+		}
+	}
+
+	return []*arm.Resource{
 		{
-			Resource: &documentdb.SQLDatabaseCreateUpdateParameters{
-				SQLDatabaseCreateUpdateProperties: &documentdb.SQLDatabaseCreateUpdateProperties{
-					Resource: &documentdb.SQLDatabaseResource{
-						ID: to.StringPtr("ARO"),
+			Resource: &mgmtdocumentdb.SQLDatabaseCreateUpdateParameters{
+				SQLDatabaseCreateUpdateProperties: &mgmtdocumentdb.SQLDatabaseCreateUpdateProperties{
+					Resource: &mgmtdocumentdb.SQLDatabaseResource{
+						ID: to.StringPtr("[" + databaseName + "]"),
 					},
-					Options: map[string]*string{},
+					Options: map[string]*string{
+						"x-ms-offer-throughput": to.StringPtr("400"),
+					},
 				},
-				Name: to.StringPtr("[concat(parameters('databaseAccountName'), '/ARO')]"),
-				Type: to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases"),
+				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ")]"),
+				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases"),
+				Location: to.StringPtr("[resourceGroup().location]"),
 			},
 			APIVersion: apiVersions["documentdb"],
-			DependsOn: []string{
-				"[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
-			},
+			DependsOn:  dependsOn,
 		},
 		{
-			Resource: &documentdb.SQLContainerCreateUpdateParameters{
-				SQLContainerCreateUpdateProperties: &documentdb.SQLContainerCreateUpdateProperties{
-					Resource: &documentdb.SQLContainerResource{
+			Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
+				SQLContainerCreateUpdateProperties: &mgmtdocumentdb.SQLContainerCreateUpdateProperties{
+					Resource: &mgmtdocumentdb.SQLContainerResource{
 						ID: to.StringPtr("AsyncOperations"),
-						PartitionKey: &documentdb.ContainerPartitionKey{
+						PartitionKey: &mgmtdocumentdb.ContainerPartitionKey{
 							Paths: &[]string{
 								"/id",
 							},
-							Kind: documentdb.PartitionKindHash,
+							Kind: mgmtdocumentdb.PartitionKindHash,
 						},
 						DefaultTTL: to.Int32Ptr(7 * 86400), // 7 days
 					},
 					Options: map[string]*string{},
 				},
-				Name: to.StringPtr("[concat(parameters('databaseAccountName'), '/ARO/AsyncOperations')]"),
-				Type: to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/AsyncOperations')]"),
+				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+				Location: to.StringPtr("[resourceGroup().location]"),
 			},
 			APIVersion: apiVersions["documentdb"],
-			DependsOn: []string{
-				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
-			},
+			DependsOn:  dependsOn,
 		},
 		{
-			Resource: &documentdb.SQLContainerCreateUpdateParameters{
-				SQLContainerCreateUpdateProperties: &documentdb.SQLContainerCreateUpdateProperties{
-					Resource: &documentdb.SQLContainerResource{
+			Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
+				SQLContainerCreateUpdateProperties: &mgmtdocumentdb.SQLContainerCreateUpdateProperties{
+					Resource: &mgmtdocumentdb.SQLContainerResource{
 						ID: to.StringPtr("OpenShiftClusters"),
-						PartitionKey: &documentdb.ContainerPartitionKey{
+						PartitionKey: &mgmtdocumentdb.ContainerPartitionKey{
 							Paths: &[]string{
 								"/partitionKey",
 							},
-							Kind: documentdb.PartitionKindHash,
+							Kind: mgmtdocumentdb.PartitionKindHash,
 						},
-						UniqueKeyPolicy: &documentdb.UniqueKeyPolicy{
-							UniqueKeys: &[]documentdb.UniqueKey{
+						UniqueKeyPolicy: &mgmtdocumentdb.UniqueKeyPolicy{
+							UniqueKeys: &[]mgmtdocumentdb.UniqueKey{
 								{
 									Paths: &[]string{
 										"/key",
@@ -543,35 +572,33 @@ func (g *generator) cosmosdb() []*arm.Resource {
 					},
 					Options: map[string]*string{},
 				},
-				Name: to.StringPtr("[concat(parameters('databaseAccountName'), '/ARO/OpenShiftClusters')]"),
-				Type: to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/OpenShiftClusters')]"),
+				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+				Location: to.StringPtr("[resourceGroup().location]"),
 			},
 			APIVersion: apiVersions["documentdb"],
-			DependsOn: []string{
-				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
-			},
+			DependsOn:  dependsOn,
 		},
 		{
-			Resource: &documentdb.SQLContainerCreateUpdateParameters{
-				SQLContainerCreateUpdateProperties: &documentdb.SQLContainerCreateUpdateProperties{
-					Resource: &documentdb.SQLContainerResource{
+			Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
+				SQLContainerCreateUpdateProperties: &mgmtdocumentdb.SQLContainerCreateUpdateProperties{
+					Resource: &mgmtdocumentdb.SQLContainerResource{
 						ID: to.StringPtr("Subscriptions"),
-						PartitionKey: &documentdb.ContainerPartitionKey{
+						PartitionKey: &mgmtdocumentdb.ContainerPartitionKey{
 							Paths: &[]string{
 								"/id",
 							},
-							Kind: documentdb.PartitionKindHash,
+							Kind: mgmtdocumentdb.PartitionKindHash,
 						},
 					},
 					Options: map[string]*string{},
 				},
-				Name: to.StringPtr("[concat(parameters('databaseAccountName'), '/ARO/Subscriptions')]"),
-				Type: to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/Subscriptions')]"),
+				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+				Location: to.StringPtr("[resourceGroup().location]"),
 			},
 			APIVersion: apiVersions["documentdb"],
-			DependsOn: []string{
-				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
-			},
+			DependsOn:  dependsOn,
 		},
 	}
 }
@@ -579,27 +606,40 @@ func (g *generator) cosmosdb() []*arm.Resource {
 func (g *generator) rbac() []*arm.Resource {
 	return []*arm.Resource{
 		{
-			Resource: &authorization.RoleAssignment{
+			Resource: &mgmtauthorization.RoleAssignment{
 				Name: to.StringPtr("[guid(resourceGroup().id, 'RP / Reader')]"),
 				Type: to.StringPtr("Microsoft.Authorization/roleAssignments"),
-				RoleAssignmentPropertiesWithScope: &authorization.RoleAssignmentPropertiesWithScope{
+				RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 					Scope:            to.StringPtr("[resourceGroup().id]"),
 					RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')]"),
 					PrincipalID:      to.StringPtr("[parameters('rpServicePrincipalId')]"),
-					PrincipalType:    authorization.ServicePrincipal,
+					PrincipalType:    mgmtauthorization.ServicePrincipal,
 				},
 			},
 			APIVersion: apiVersions["authorization"],
 		},
 		{
-			Resource: &authorization.RoleAssignment{
+			Resource: &mgmtauthorization.RoleAssignment{
+				Name: to.StringPtr("[guid(resourceGroup().id, 'FP / Network Contributor')]"),
+				Type: to.StringPtr("Microsoft.Authorization/roleAssignments"),
+				RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+					Scope:            to.StringPtr("[resourceGroup().id]"),
+					RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4d97b98b-1d4f-4787-a291-c67834d212e7')]"),
+					PrincipalID:      to.StringPtr("[parameters('fpServicePrincipalId')]"),
+					PrincipalType:    mgmtauthorization.ServicePrincipal,
+				},
+			},
+			APIVersion: apiVersions["authorization"],
+		},
+		{
+			Resource: &mgmtauthorization.RoleAssignment{
 				Name: to.StringPtr("[concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), 'RP / DocumentDB Account Contributor'))]"),
 				Type: to.StringPtr("Microsoft.DocumentDB/databaseAccounts/providers/roleAssignments"),
-				RoleAssignmentPropertiesWithScope: &authorization.RoleAssignmentPropertiesWithScope{
+				RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 					Scope:            to.StringPtr("[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"),
 					RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '5bd9cd88-fe45-4216-938b-f97437e15450')]"),
 					PrincipalID:      to.StringPtr("[parameters('rpServicePrincipalId')]"),
-					PrincipalType:    authorization.ServicePrincipal,
+					PrincipalType:    mgmtauthorization.ServicePrincipal,
 				},
 			},
 			APIVersion: apiVersions["authorization"],
@@ -608,14 +648,14 @@ func (g *generator) rbac() []*arm.Resource {
 			},
 		},
 		{
-			Resource: &authorization.RoleAssignment{
-				Name: to.StringPtr("[concat(parameters('domainName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/dnsZones', parameters('domainName')), 'RP / DNS Zone Contributor'))]"),
+			Resource: &mgmtauthorization.RoleAssignment{
+				Name: to.StringPtr("[concat(parameters('domainName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/dnsZones', parameters('domainName')), 'FP / DNS Zone Contributor'))]"),
 				Type: to.StringPtr("Microsoft.Network/dnsZones/providers/roleAssignments"),
-				RoleAssignmentPropertiesWithScope: &authorization.RoleAssignmentPropertiesWithScope{
+				RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 					Scope:            to.StringPtr("[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]"),
 					RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'befefa01-2a29-4197-83a8-272ff33ce314')]"),
-					PrincipalID:      to.StringPtr("[parameters('rpServicePrincipalId')]"),
-					PrincipalType:    authorization.ServicePrincipal,
+					PrincipalID:      to.StringPtr("[parameters('fpServicePrincipalId')]"),
+					PrincipalType:    mgmtauthorization.ServicePrincipal,
 				},
 			},
 			APIVersion: apiVersions["authorization"],
@@ -635,7 +675,7 @@ func (g *generator) template() *arm.Template {
 
 	if g.production {
 		t.Variables = map[string]interface{}{
-			"keyvaultAccessPolicies": []keyvault.AccessPolicyEntry{
+			"keyvaultAccessPolicies": []mgmtkeyvault.AccessPolicyEntry{
 				g.accessPolicyEntry(),
 			},
 		}
@@ -644,6 +684,7 @@ func (g *generator) template() *arm.Template {
 	params := []string{
 		"databaseAccountName",
 		"domainName",
+		"fpServicePrincipalId",
 		"keyvaultName",
 		"rpServicePrincipalId",
 	}
@@ -669,15 +710,19 @@ func (g *generator) template() *arm.Template {
 		}
 		t.Parameters["extraKeyvaultAccessPolicies"] = &arm.TemplateParameter{
 			Type:         "array",
-			DefaultValue: []keyvault.AccessPolicyEntry{},
+			DefaultValue: []mgmtkeyvault.AccessPolicyEntry{},
 		}
 	}
 
 	if g.production {
-		t.Resources = append(t.Resources, g.vnet(), g.pip(), g.lb(), g.vmss())
+		t.Resources = append(t.Resources, g.pip(), g.lb(), g.vmss())
 	}
-	t.Resources = append(t.Resources, g.zone(), g.vault())
-	t.Resources = append(t.Resources, g.cosmosdb()...)
+	t.Resources = append(t.Resources, g.zone(), g.vault(), g.vnet())
+	if g.production {
+		t.Resources = append(t.Resources, g.cosmosdb("'ARO'")...)
+	} else {
+		t.Resources = append(t.Resources, g.cosmosdb("parameters('databaseName')")...)
+	}
 	t.Resources = append(t.Resources, g.rbac()...)
 
 	return t
@@ -714,7 +759,31 @@ func GenerateRPTemplates() error {
 		}
 	}
 
-	return nil
+	t := &arm.Template{
+		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+		ContentVersion: "1.0.0.0",
+		Parameters: map[string]*arm.TemplateParameter{
+			"databaseAccountName": {
+				Type: "string",
+			},
+			"databaseName": {
+				Type: "string",
+			},
+		},
+	}
+
+	g := newGenerator(false)
+
+	t.Resources = append(t.Resources, g.database("parameters('databaseName')", false)...)
+
+	b, err := json.MarshalIndent(t, "", "    ")
+	if err != nil {
+		return err
+	}
+
+	b = append(b, byte('\n'))
+
+	return ioutil.WriteFile("databases-development.json", b, 0666)
 }
 
 func GenerateRPParameterTemplate() error {

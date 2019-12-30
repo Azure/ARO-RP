@@ -15,8 +15,7 @@ import (
 
 func (m *Manager) Delete(ctx context.Context) error {
 	m.log.Printf("deleting dns")
-
-	err := m.env.DNS().Delete(ctx, m.doc.OpenShiftCluster)
+	err := m.dns.Delete(ctx, m.doc.OpenShiftCluster)
 	if err != nil {
 		return err
 	}
@@ -62,6 +61,12 @@ func (m *Manager) Delete(ctx context.Context) error {
 				return nil
 			}
 		}
+		return err
+	}
+
+	m.log.Print("deleting private endpoint")
+	err = m.privateendpoint.Delete(ctx, m.doc)
+	if err != nil {
 		return err
 	}
 

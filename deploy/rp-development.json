@@ -11,6 +11,9 @@
         "domainName": {
             "type": "string"
         },
+        "fpServicePrincipalId": {
+            "type": "string"
+        },
         "keyvaultName": {
             "type": "string"
         },
@@ -73,6 +76,42 @@
             "apiVersion": "2016-10-01"
         },
         {
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.0.0.0/8"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "properties": {
+                            "addressPrefix": "10.0.0.0/24",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]",
+                                "tags": null
+                            }
+                        },
+                        "name": "rp-subnet"
+                    },
+                    {
+                        "properties": {
+                            "addressPrefix": "10.1.0.0/16",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]",
+                                "tags": null
+                            },
+                            "privateEndpointNetworkPolicies": "Disabled"
+                        },
+                        "name": "rp-pe-subnet"
+                    }
+                ]
+            },
+            "name": "rp-vnet",
+            "type": "Microsoft.Network/virtualNetworks",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2019-07-01"
+        },
+        {
             "kind": "GlobalDocumentDB",
             "properties": {
                 "consistencyPolicy": {
@@ -83,8 +122,7 @@
                         "locationName": "[resourceGroup().location]"
                     }
                 ],
-                "databaseAccountOfferType": "Standard",
-                "disableKeyBasedMetadataWriteAccess": true
+                "databaseAccountOfferType": "Standard"
             },
             "name": "[parameters('databaseAccountName')]",
             "type": "Microsoft.DocumentDB/databaseAccounts",
@@ -95,96 +133,23 @@
             "apiVersion": "2019-08-01"
         },
         {
-            "properties": {
-                "resource": {
-                    "id": "ARO"
-                },
-                "options": {}
-            },
-            "name": "[concat(parameters('databaseAccountName'), '/ARO')]",
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
-            "apiVersion": "2019-08-01",
-            "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
-            ]
-        },
-        {
-            "properties": {
-                "resource": {
-                    "id": "AsyncOperations",
-                    "partitionKey": {
-                        "paths": [
-                            "/id"
-                        ],
-                        "kind": "Hash"
-                    },
-                    "defaultTtl": 604800
-                },
-                "options": {}
-            },
-            "name": "[concat(parameters('databaseAccountName'), '/ARO/AsyncOperations')]",
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
-            "apiVersion": "2019-08-01",
-            "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]"
-            ]
-        },
-        {
-            "properties": {
-                "resource": {
-                    "id": "OpenShiftClusters",
-                    "partitionKey": {
-                        "paths": [
-                            "/partitionKey"
-                        ],
-                        "kind": "Hash"
-                    },
-                    "uniqueKeyPolicy": {
-                        "uniqueKeys": [
-                            {
-                                "paths": [
-                                    "/key"
-                                ]
-                            }
-                        ]
-                    }
-                },
-                "options": {}
-            },
-            "name": "[concat(parameters('databaseAccountName'), '/ARO/OpenShiftClusters')]",
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
-            "apiVersion": "2019-08-01",
-            "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]"
-            ]
-        },
-        {
-            "properties": {
-                "resource": {
-                    "id": "Subscriptions",
-                    "partitionKey": {
-                        "paths": [
-                            "/id"
-                        ],
-                        "kind": "Hash"
-                    }
-                },
-                "options": {}
-            },
-            "name": "[concat(parameters('databaseAccountName'), '/ARO/Subscriptions')]",
-            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
-            "apiVersion": "2019-08-01",
-            "dependsOn": [
-                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]"
-            ]
-        },
-        {
             "name": "[guid(resourceGroup().id, 'RP / Reader')]",
             "type": "Microsoft.Authorization/roleAssignments",
             "properties": {
                 "scope": "[resourceGroup().id]",
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')]",
                 "principalId": "[parameters('rpServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
+            },
+            "apiVersion": "2018-09-01-preview"
+        },
+        {
+            "name": "[guid(resourceGroup().id, 'FP / Network Contributor')]",
+            "type": "Microsoft.Authorization/roleAssignments",
+            "properties": {
+                "scope": "[resourceGroup().id]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4d97b98b-1d4f-4787-a291-c67834d212e7')]",
+                "principalId": "[parameters('fpServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
             "apiVersion": "2018-09-01-preview"
@@ -204,12 +169,12 @@
             ]
         },
         {
-            "name": "[concat(parameters('domainName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/dnsZones', parameters('domainName')), 'RP / DNS Zone Contributor'))]",
+            "name": "[concat(parameters('domainName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/dnsZones', parameters('domainName')), 'FP / DNS Zone Contributor'))]",
             "type": "Microsoft.Network/dnsZones/providers/roleAssignments",
             "properties": {
                 "scope": "[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]",
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'befefa01-2a29-4197-83a8-272ff33ce314')]",
-                "principalId": "[parameters('rpServicePrincipalId')]",
+                "principalId": "[parameters('fpServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
             "apiVersion": "2018-09-01-preview",

@@ -79,14 +79,29 @@ cluster:
    attached.  Your cluster will be deployed into these subnets.
 
    ```
-   RESOURCEGROUP=cluster-rg
+   LOCATION=eastus
+   RESOURCEGROUP="v4-$LOCATION"
    CLUSTER=cluster
 
-   az group create -g "$RESOURCEGROUP" -l eastus
-   az network vnet create -g "$RESOURCEGROUP" -n vnet --address-prefixes 10.0.0.0/9
+   az group create -g "$RESOURCEGROUP" -l $LOCATION
+   az network vnet create \
+     -g "$RESOURCEGROUP" \
+     -n dev-vnet \
+     --address-prefixes 10.0.0.0/9
    for subnet in "$CLUSTER-master" "$CLUSTER-worker"; do
-     az network vnet subnet create -g "$RESOURCEGROUP" --vnet-name vnet -n "$subnet" --address-prefixes 10.$((RANDOM & 127)).$((RANDOM & 255)).0/24
+     az network vnet subnet create \
+       -g "$RESOURCEGROUP" \
+       --vnet-name dev-vnet \
+       -n "$subnet" \
+       --address-prefixes 10.$((RANDOM & 127)).$((RANDOM & 255)).0/24 \
+       >/dev/null
    done
+   az network vnet subnet update \
+     -g "$RESOURCEGROUP" \
+     --vnet-name dev-vnet \
+     -n "$CLUSTER-master" \
+     --disable-private-link-service-network-policies true \
+     >/dev/null
    ```
 
 1. A cluster AAD application (client ID and secret) and service principal, or
@@ -104,10 +119,15 @@ cluster:
 1. Create a cluster:
 
    ```
-   az aro create -g "$RESOURCEGROUP" -n "$CLUSTER" --vnet vnet --master-subnet "$CLUSTER-master" --worker-subnet "$CLUSTER-worker"
+   az aro create \
+     -g "$RESOURCEGROUP" \
+     -n "$CLUSTER" \
+     --vnet dev-vnet \
+     --master-subnet "$CLUSTER-master" \
+     --worker-subnet "$CLUSTER-worker"
    ```
 
-   Note: cluster creation takes about 45 minutes.
+   Note: cluster creation takes about 35 minutes.
 
 1. Access the cluster console:
 
@@ -144,6 +164,6 @@ cluster:
 
    # (optionally)
    for subnet in "$CLUSTER-master" "$CLUSTER-worker"; do
-     az network vnet subnet delete -g "$RESOURCEGROUP" --vnet-name vnet -n "$subnet"
+     az network vnet subnet delete -g "$RESOURCEGROUP" --vnet-name dev-vnet -n "$subnet"
    done
    ```

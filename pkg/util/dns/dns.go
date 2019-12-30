@@ -5,14 +5,14 @@ package dns
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
+	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
+	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
 )
 
 type Manager interface {
@@ -23,49 +23,27 @@ type Manager interface {
 }
 
 type manager struct {
-	instancemetadata instancemetadata.InstanceMetadata
-
+	env        env.Interface
 	recordsets dns.RecordSetsClient
-
-	domain string
 }
 
-func NewManager(ctx context.Context, instancemetadata instancemetadata.InstanceMetadata, rpAuthorizer autorest.Authorizer) (Manager, error) {
-	m := &manager{
-		instancemetadata: instancemetadata,
+func NewManager(env env.Interface, localFPAuthorizer autorest.Authorizer) Manager {
+	return &manager{
+		env: env,
 
-		recordsets: dns.NewRecordSetsClient(instancemetadata.SubscriptionID()),
+		recordsets: dns.NewRecordSetsClient(env.SubscriptionID(), localFPAuthorizer),
 	}
-
-	m.recordsets.Authorizer = rpAuthorizer
-
-	zones := dns.NewZonesClient(instancemetadata.SubscriptionID())
-	zones.Authorizer = rpAuthorizer
-
-	page, err := zones.ListByResourceGroup(ctx, m.instancemetadata.ResourceGroup(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	zs := page.Values()
-	if len(zs) != 1 {
-		return nil, fmt.Errorf("found at least %d zones, expected 1", len(zs))
-	}
-
-	m.domain = *zs[0].Name
-
-	return m, nil
 }
 
 func (m *manager) Domain() string {
-	return m.domain
+	return m.env.Domain()
 }
 
 func (m *manager) CreateOrUpdate(ctx context.Context, oc *api.OpenShiftCluster) error {
-	_, err := m.recordsets.CreateOrUpdate(ctx, m.instancemetadata.ResourceGroup(), m.domain, "api."+oc.Properties.DomainName, dns.CNAME, dns.RecordSet{
-		RecordSetProperties: &dns.RecordSetProperties{
+	_, err := m.recordsets.CreateOrUpdate(ctx, m.env.ResourceGroup(), m.Domain(), "api."+oc.Properties.DomainName, mgmtdns.CNAME, mgmtdns.RecordSet{
+		RecordSetProperties: &mgmtdns.RecordSetProperties{
 			TTL: to.Int64Ptr(300),
-			CnameRecord: &dns.CnameRecord{
+			CnameRecord: &mgmtdns.CnameRecord{
 				Cname: to.StringPtr(oc.Properties.DomainName + "." + oc.Location + ".cloudapp.azure.com"),
 			},
 		},
@@ -75,10 +53,10 @@ func (m *manager) CreateOrUpdate(ctx context.Context, oc *api.OpenShiftCluster) 
 }
 
 func (m *manager) CreateOrUpdateRouter(ctx context.Context, oc *api.OpenShiftCluster, routerIP string) error {
-	_, err := m.recordsets.CreateOrUpdate(ctx, m.instancemetadata.ResourceGroup(), m.domain, "*.apps."+oc.Properties.DomainName, dns.A, dns.RecordSet{
-		RecordSetProperties: &dns.RecordSetProperties{
+	_, err := m.recordsets.CreateOrUpdate(ctx, m.env.ResourceGroup(), m.Domain(), "*.apps."+oc.Properties.DomainName, mgmtdns.A, mgmtdns.RecordSet{
+		RecordSetProperties: &mgmtdns.RecordSetProperties{
 			TTL: to.Int64Ptr(300),
-			ARecords: &[]dns.ARecord{
+			ARecords: &[]mgmtdns.ARecord{
 				{
 					Ipv4Address: to.StringPtr(routerIP),
 				},
@@ -90,12 +68,12 @@ func (m *manager) CreateOrUpdateRouter(ctx context.Context, oc *api.OpenShiftClu
 }
 
 func (m *manager) Delete(ctx context.Context, oc *api.OpenShiftCluster) error {
-	_, err := m.recordsets.Delete(ctx, m.instancemetadata.ResourceGroup(), m.domain, "api."+oc.Properties.DomainName, dns.CNAME, "")
+	_, err := m.recordsets.Delete(ctx, m.env.ResourceGroup(), m.Domain(), "api."+oc.Properties.DomainName, mgmtdns.CNAME, "")
 	if err != nil {
 		return err
 	}
 
-	_, err = m.recordsets.Delete(ctx, m.instancemetadata.ResourceGroup(), m.domain, "*.apps."+oc.Properties.DomainName, dns.A, "")
+	_, err = m.recordsets.Delete(ctx, m.env.ResourceGroup(), m.Domain(), "*.apps."+oc.Properties.DomainName, mgmtdns.A, "")
 
 	return err
 }

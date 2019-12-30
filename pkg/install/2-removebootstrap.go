@@ -19,8 +19,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
 
-func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
-	g, err := i.getGraph(ctx, doc.OpenShiftCluster)
+func (i *Installer) removeBootstrap(ctx context.Context) error {
+	g, err := i.getGraph(ctx)
 	if err != nil {
 		return err
 	}
@@ -29,7 +29,7 @@ func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClust
 
 	{
 		i.log.Print("removing bootstrap vm")
-		err := i.virtualmachines.DeleteAndWait(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, "aro-bootstrap")
+		err := i.virtualmachines.DeleteAndWait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "aro-bootstrap")
 		if err != nil {
 			return err
 		}
@@ -37,7 +37,7 @@ func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClust
 
 	{
 		i.log.Print("removing bootstrap disk")
-		err := i.disks.DeleteAndWait(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, "aro-bootstrap_OSDisk")
+		err := i.disks.DeleteAndWait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "aro-bootstrap_OSDisk")
 		if err != nil {
 			return err
 		}
@@ -45,7 +45,7 @@ func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClust
 
 	{
 		i.log.Print("removing bootstrap nic")
-		err = i.interfaces.DeleteAndWait(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, "aro-bootstrap-nic")
+		err = i.interfaces.DeleteAndWait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "aro-bootstrap-nic")
 		if err != nil {
 			return err
 		}
@@ -53,14 +53,19 @@ func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClust
 
 	{
 		i.log.Print("removing bootstrap ip")
-		err = i.publicipaddresses.DeleteAndWait(ctx, doc.OpenShiftCluster.Properties.ResourceGroup, "aro-bootstrap-pip")
+		err = i.publicipaddresses.DeleteAndWait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "aro-bootstrap-pip")
 		if err != nil {
 			return err
 		}
 	}
 
 	{
-		restConfig, err := restconfig.RestConfig(doc.OpenShiftCluster.Properties.AdminKubeconfig)
+		ip, err := i.privateendpoint.GetIP(ctx, i.doc)
+		if err != nil {
+			return err
+		}
+
+		restConfig, err := restconfig.RestConfig(ctx, i.env, i.doc, ip)
 		if err != nil {
 			return err
 		}
@@ -109,7 +114,7 @@ func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClust
 		}
 	}
 
-	ips, err := i.publicipaddresses.List(ctx, doc.OpenShiftCluster.Properties.ResourceGroup)
+	ips, err := i.publicipaddresses.List(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup)
 	if err != nil {
 		return err
 	}
@@ -126,15 +131,15 @@ func (i *Installer) removeBootstrap(ctx context.Context, doc *api.OpenShiftClust
 			return fmt.Errorf("routerIP not found")
 		}
 
-		err = i.env.DNS().CreateOrUpdateRouter(ctx, doc.OpenShiftCluster, routerIP)
+		err = i.dns.CreateOrUpdateRouter(ctx, i.doc.OpenShiftCluster, routerIP)
 		if err != nil {
 			return err
 		}
 	}
 
-	_, err = i.db.Patch(doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.APIServerURL = "https://api." + doc.OpenShiftCluster.Properties.DomainName + "." + i.env.DNS().Domain() + ":6443/"
-		doc.OpenShiftCluster.Properties.ConsoleURL = "https://console-openshift-console.apps." + doc.OpenShiftCluster.Properties.DomainName + "." + i.env.DNS().Domain() + "/"
+	i.doc, err = i.db.Patch(i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.Properties.APIServerURL = "https://api." + doc.OpenShiftCluster.Properties.DomainName + "." + i.dns.Domain() + ":6443/"
+		doc.OpenShiftCluster.Properties.ConsoleURL = "https://console-openshift-console.apps." + doc.OpenShiftCluster.Properties.DomainName + "." + i.dns.Domain() + "/"
 		doc.OpenShiftCluster.Properties.KubeadminPassword = kubeadminPassword.Password
 		return nil
 	})

@@ -28,7 +28,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	db, err := database.NewDatabase(ctx, env, "", "ARO")
+	db, err := database.NewDatabase(env, "")
 	if err != nil {
 		return err
 	}
