@@ -13,7 +13,6 @@ import (
 
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
-	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	mgmtprivatedns "github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
 	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
@@ -29,6 +28,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
@@ -82,13 +82,12 @@ func (i *Installer) installResources(ctx context.Context) error {
 		conf := auth.NewClientCredentialsConfig(spp.ClientID, spp.ClientSecret, spp.TenantID)
 		conf.Resource = azure.PublicCloud.GraphEndpoint
 
-		spAuthorizer, err := conf.Authorizer()
+		spGraphAuthorizer, err := conf.Authorizer()
 		if err != nil {
 			return err
 		}
 
-		applications := graphrbac.NewApplicationsClient(spp.TenantID)
-		applications.Authorizer = spAuthorizer
+		applications := graphrbac.NewApplicationsClient(spp.TenantID, spGraphAuthorizer)
 
 		res, err := applications.GetServicePrincipalsIDByAppID(ctx, spp.ClientID)
 		if err != nil {

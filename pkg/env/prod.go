@@ -14,13 +14,13 @@ import (
 	"os"
 	"time"
 
-	basekeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/2016-10-01/keyvault"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/sirupsen/logrus"
 
+	basekeyvault "github.com/Azure/ARO-RP/pkg/util/azureclient/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/documentdb"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/keyvault"
@@ -52,19 +52,19 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 		}
 	}
 
-	p := &prod{
-		InstanceMetadata: instancemetadata,
-		ClientAuthorizer: clientauthorizer,
-
-		keyvault: basekeyvault.New(),
-	}
-
-	rpAuthorizer, err := auth.NewAuthorizerFromEnvironment()
+	kvAuthorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(azure.PublicCloud.ResourceIdentifiers.KeyVault)
 	if err != nil {
 		return nil, err
 	}
 
-	p.keyvault.Authorizer, err = auth.NewAuthorizerFromEnvironmentWithResource(azure.PublicCloud.ResourceIdentifiers.KeyVault)
+	p := &prod{
+		InstanceMetadata: instancemetadata,
+		ClientAuthorizer: clientauthorizer,
+
+		keyvault: basekeyvault.New(kvAuthorizer),
+	}
+
+	rpAuthorizer, err := auth.NewAuthorizerFromEnvironment()
 	if err != nil {
 		return nil, err
 	}

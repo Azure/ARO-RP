@@ -17,7 +17,6 @@ import (
 	"time"
 
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
-	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -27,6 +26,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
@@ -94,7 +94,6 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 	d := &dev{
 		log:             log,
 		roleassignments: authorization.NewRoleAssignmentsClient(instancemetadata.SubscriptionID(), armAuthorizer),
-		applications:    graphrbac.NewApplicationsClient(instancemetadata.TenantID()),
 	}
 
 	d.prod, err = newProd(ctx, log, instancemetadata, clientauthorizer)
@@ -102,10 +101,12 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 		return nil, err
 	}
 
-	d.applications.Authorizer, err = d.FPAuthorizer(instancemetadata.TenantID(), azure.PublicCloud.GraphEndpoint)
+	fpGraphAuthorizer, err := d.FPAuthorizer(instancemetadata.TenantID(), azure.PublicCloud.GraphEndpoint)
 	if err != nil {
 		return nil, err
 	}
+
+	d.applications = graphrbac.NewApplicationsClient(instancemetadata.TenantID(), fpGraphAuthorizer)
 
 	fpAuthorizer, err := d.FPAuthorizer(instancemetadata.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
