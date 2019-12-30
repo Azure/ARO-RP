@@ -22,10 +22,10 @@ func GenerateDevelopmentTemplate() error {
 			{
 				Resource: &mgmtnetwork.PublicIPAddress{
 					Sku: &mgmtnetwork.PublicIPAddressSku{
-						Name: mgmtnetwork.PublicIPAddressSkuNameStandard,
+						Name: "[parameters('publicIPAddressSkuName')]",
 					},
 					PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
-						PublicIPAllocationMethod: mgmtnetwork.Static,
+						PublicIPAllocationMethod: "[parameters('publicIPAddressAllocationMethod')]",
 					},
 					Name:     to.StringPtr("dev-vpn-pip"),
 					Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
@@ -115,15 +115,25 @@ func GenerateDevelopmentTemplate() error {
 		"proxyImage",
 		"proxyImageAuth",
 		"proxyKey",
+		"publicIPAddressAllocationMethod",
+		"publicIPAddressSkuName",
 		"sshPublicKey",
 		"vpnCACertificate",
 	} {
 		typ := "string"
+		var defaultValue interface{}
 		switch param {
 		case "proxyImageAuth", "proxyKey":
 			typ = "securestring"
+		case "publicIPAddressAllocationMethod":
+			defaultValue = "Static"
+		case "publicIPAddressSkuName":
+			defaultValue = "Standard"
 		}
-		t.Parameters[param] = &arm.TemplateParameter{Type: typ}
+		t.Parameters[param] = &arm.TemplateParameter{
+			Type:         typ,
+			DefaultValue: defaultValue,
+		}
 	}
 
 	b, err := json.MarshalIndent(t, "", "    ")
