@@ -12,7 +12,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/dns"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
 )
 
 type Manager interface {

@@ -21,9 +21,9 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/sirupsen/logrus"
 
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/dns"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/documentdb"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/keyvault"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/documentdb"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 )

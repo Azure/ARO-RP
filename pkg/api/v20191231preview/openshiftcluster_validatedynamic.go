@@ -19,7 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/authorization"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	utilpermissions "github.com/Azure/ARO-RP/pkg/util/permissions"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )

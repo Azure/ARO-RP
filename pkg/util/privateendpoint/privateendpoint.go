@@ -13,7 +13,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/network"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 )
 
 const prefix = "rp-pe-"

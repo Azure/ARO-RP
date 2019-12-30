@@ -13,7 +13,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/network"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 )
 
 type Manager interface {
