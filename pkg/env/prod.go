@@ -8,10 +8,10 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
-	"errors"
 	"fmt"
 	"net"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest"
@@ -21,6 +21,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	basekeyvault "github.com/Azure/ARO-RP/pkg/util/azureclient/keyvault"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/documentdb"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/keyvault"
@@ -38,6 +39,7 @@ type prod struct {
 	cosmosDBPrimaryMasterKey string
 	domain                   string
 	vaultURI                 string
+	zones                    map[string][]string
 
 	fpCertificate *x509.Certificate
 	fpPrivateKey  *rsa.PrivateKey
@@ -80,6 +82,11 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 	}
 
 	err = p.populateVaultURI(ctx, rpAuthorizer)
+	if err != nil {
+		return nil, err
+	}
+
+	err = p.populateZones(ctx, rpAuthorizer)
 	if err != nil {
 		return nil, err
 	}
@@ -152,6 +159,28 @@ func (p *prod) populateVaultURI(ctx context.Context, rpAuthorizer autorest.Autho
 	return nil
 }
 
+func (p *prod) populateZones(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
+	c := compute.NewResourceSkusClient(p.SubscriptionID(), rpAuthorizer)
+
+	skus, err := c.List(ctx, "")
+	if err != nil {
+		return err
+	}
+
+	p.zones = map[string][]string{}
+
+	for _, sku := range skus {
+		if !strings.EqualFold((*sku.Locations)[0], p.Location()) ||
+			*sku.ResourceType != "virtualMachines" {
+			continue
+		}
+
+		p.zones[*sku.Name] = *(*sku.LocationInfo)[0].Zones
+	}
+
+	return nil
+}
+
 func (p *prod) CosmosDB() (string, string) {
 	return p.cosmosDBAccountName, p.cosmosDBPrimaryMasterKey
 }
@@ -208,7 +237,7 @@ func (p *prod) GetSecret(ctx context.Context, secretName string) (key *rsa.Priva
 			var ok bool
 			key, ok = k.(*rsa.PrivateKey)
 			if !ok {
-				return nil, nil, errors.New("found unknown private key type in PKCS#8 wrapping")
+				return nil, nil, fmt.Errorf("found unimplemented private key type %T in PKCS#8 wrapping", k)
 			}
 
 		case "CERTIFICATE":
@@ -221,11 +250,11 @@ func (p *prod) GetSecret(ctx context.Context, secretName string) (key *rsa.Priva
 	}
 
 	if key == nil {
-		return nil, nil, errors.New("no private key found")
+		return nil, nil, fmt.Errorf("no private key found")
 	}
 
 	if len(certs) == 0 {
-		return nil, nil, errors.New("no certificate found")
+		return nil, nil, fmt.Errorf("no certificate found")
 	}
 
 	return key, certs, nil
@@ -233,4 +262,12 @@ func (p *prod) GetSecret(ctx context.Context, secretName string) (key *rsa.Priva
 
 func (p *prod) Listen() (net.Listener, error) {
 	return net.Listen("tcp", ":8443")
+}
+
+func (p *prod) Zones(vmSize string) ([]string, error) {
+	zones, found := p.zones[vmSize]
+	if !found {
+		return nil, fmt.Errorf("zone information not found for vm size %q", vmSize)
+	}
+	return zones, nil
 }

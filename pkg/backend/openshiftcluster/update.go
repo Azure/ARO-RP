@@ -5,7 +5,9 @@ package openshiftcluster
 
 import (
 	"context"
+	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/to"
@@ -48,6 +50,20 @@ func (m *Manager) Update(ctx context.Context) error {
 	machinesets, err := cli.MachineSets("openshift-machine-api").List(metav1.ListOptions{})
 	if err != nil {
 		return err
+	}
+
+	{
+		items := make([]machinev1beta1.MachineSet, 0, len(machinesets.Items))
+		for _, machineset := range machinesets.Items {
+			if strings.HasPrefix(machineset.Name, "aro-worker-") {
+				items = append(items, machineset)
+			}
+		}
+		machinesets.Items = items
+	}
+
+	if len(machinesets.Items) == 0 {
+		return fmt.Errorf("no worker machinesets found")
 	}
 
 	have := 0

@@ -371,6 +371,7 @@
             "location": "[resourceGroup().location]",
             "apiVersion": "2019-08-01",
             "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
             ]
         },
@@ -401,6 +402,7 @@
             "location": "[resourceGroup().location]",
             "apiVersion": "2019-08-01",
             "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
             ]
         },
@@ -422,6 +424,7 @@
             "location": "[resourceGroup().location]",
             "apiVersion": "2019-08-01",
             "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
             ]
         },

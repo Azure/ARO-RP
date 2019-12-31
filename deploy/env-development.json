@@ -20,6 +20,14 @@
         "proxyKey": {
             "type": "securestring"
         },
+        "publicIPAddressAllocationMethod": {
+            "type": "string",
+            "defaultValue": "Static"
+        },
+        "publicIPAddressSkuName": {
+            "type": "string",
+            "defaultValue": "Standard"
+        },
         "sshPublicKey": {
             "type": "string"
         },
@@ -30,10 +38,10 @@
     "resources": [
         {
             "sku": {
-                "name": "Standard"
+                "name": "[parameters('publicIPAddressSkuName')]"
             },
             "properties": {
-                "publicIPAllocationMethod": "Static"
+                "publicIPAllocationMethod": "[parameters('publicIPAddressAllocationMethod')]"
             },
             "name": "dev-vpn-pip",
             "type": "Microsoft.Network/publicIPAddresses",
