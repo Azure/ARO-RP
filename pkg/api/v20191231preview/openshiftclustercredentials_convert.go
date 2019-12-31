@@ -14,6 +14,7 @@ import (
 // returned objects.
 func openShiftClusterCredentialsToExternal(oc *api.OpenShiftCluster) *OpenShiftClusterCredentials {
 	out := &OpenShiftClusterCredentials{
+		KubeadminUsername: "kubeadmin",
 		KubeadminPassword: oc.Properties.KubeadminPassword,
 	}
 

@@ -236,16 +236,20 @@ class OpenShiftCluster(Model):
 class OpenShiftClusterCredentials(Model):
     """OpenShiftClusterCredentials represents an OpenShift cluster's credentials.
 
+    :param kubeadmin_username: The username for the kubeadmin user
+    :type kubeadmin_username: str
     :param kubeadmin_password: The password for the kubeadmin user
     :type kubeadmin_password: str
     """
 
     _attribute_map = {
+        'kubeadmin_username': {'key': 'kubeadminUsername', 'type': 'str'},
         'kubeadmin_password': {'key': 'kubeadminPassword', 'type': 'str'},
     }
 
-    def __init__(self, *, kubeadmin_password: str=None, **kwargs) -> None:
+    def __init__(self, *, kubeadmin_username: str=None, kubeadmin_password: str=None, **kwargs) -> None:
         super(OpenShiftClusterCredentials, self).__init__(**kwargs)
+        self.kubeadmin_username = kubeadmin_username
         self.kubeadmin_password = kubeadmin_password
 
 

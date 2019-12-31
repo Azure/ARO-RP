@@ -234,6 +234,8 @@ func (osc *OpenShiftCluster) UnmarshalJSON(body []byte) error {
 // OpenShiftClusterCredentials openShiftClusterCredentials represents an OpenShift cluster's credentials
 type OpenShiftClusterCredentials struct {
 	autorest.Response `json:"-"`
+	// KubeadminUsername - The username for the kubeadmin user
+	KubeadminUsername *string `json:"kubeadminUsername,omitempty"`
 	// KubeadminPassword - The password for the kubeadmin user
 	KubeadminPassword *string `json:"kubeadminPassword,omitempty"`
 }
