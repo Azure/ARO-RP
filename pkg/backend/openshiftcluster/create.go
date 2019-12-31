@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"os"
 	"regexp"
+	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -52,13 +53,6 @@ func (m *Manager) Create(ctx context.Context) error {
 			}
 		}
 
-		if doc.OpenShiftCluster.Properties.DomainName == "" {
-			doc.OpenShiftCluster.Properties.DomainName, err = randomDomainName()
-			if err != nil {
-				return err
-			}
-		}
-
 		return nil
 	})
 	if err != nil {
@@ -88,6 +82,11 @@ func (m *Manager) Create(ctx context.Context) error {
 	sshkey, err := ssh.NewPublicKey(&m.doc.OpenShiftCluster.Properties.SSHKey.PublicKey)
 	if err != nil {
 		return err
+	}
+
+	clusterDomain := m.doc.OpenShiftCluster.Properties.ClusterDomain
+	if !strings.ContainsRune(clusterDomain, '.') {
+		clusterDomain += "." + m.env.Domain()
 	}
 
 	masterZones, err := m.env.Zones(string(m.doc.OpenShiftCluster.Properties.MasterProfile.VMSize))
@@ -121,10 +120,10 @@ func (m *Manager) Create(ctx context.Context) error {
 				APIVersion: "v1",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: m.doc.OpenShiftCluster.Properties.DomainName,
+				Name: clusterDomain[:strings.IndexByte(clusterDomain, '.')],
 			},
 			SSHKey:     sshkey.Type() + " " + base64.StdEncoding.EncodeToString(sshkey.Marshal()),
-			BaseDomain: m.dns.Domain(),
+			BaseDomain: clusterDomain[strings.IndexByte(clusterDomain, '.')+1:],
 			Networking: &types.Networking{
 				MachineCIDR: ipnet.MustParseCIDR("127.0.0.0/8"), // dummy
 				NetworkType: "OpenShiftSDN",
@@ -167,14 +166,13 @@ func (m *Manager) Create(ctx context.Context) error {
 			},
 			Platform: types.Platform{
 				Azure: &azuretypes.Platform{
-					Region:                      m.doc.OpenShiftCluster.Location,
-					ResourceGroupName:           m.doc.OpenShiftCluster.Properties.ResourceGroup,
-					BaseDomainResourceGroupName: m.env.ResourceGroup(),
-					NetworkResourceGroupName:    vnetr.ResourceGroup,
-					VirtualNetwork:              vnetr.ResourceName,
-					ControlPlaneSubnet:          masterSubnetName,
-					ComputeSubnet:               workerSubnetName,
-					ARO:                         true,
+					Region:                   m.doc.OpenShiftCluster.Location,
+					ResourceGroupName:        m.doc.OpenShiftCluster.Properties.ResourceGroup,
+					NetworkResourceGroupName: vnetr.ResourceGroup,
+					VirtualNetwork:           vnetr.ResourceName,
+					ControlPlaneSubnet:       masterSubnetName,
+					ComputeSubnet:            workerSubnetName,
+					ARO:                      true,
 				},
 			},
 			PullSecret: os.Getenv("PULL_SECRET"),
@@ -194,6 +192,10 @@ func (m *Manager) Create(ctx context.Context) error {
 			},
 			Publish: types.ExternalPublishingStrategy,
 		},
+	}
+
+	if m.doc.OpenShiftCluster.Properties.IngressProfiles[0].Private {
+		installConfig.Config.Publish = types.InternalPublishingStrategy
 	}
 
 	installConfig.Config.Azure.Image, err = getRHCOSImage(ctx)
@@ -238,18 +240,6 @@ func getRHCOSImage(ctx context.Context) (*azuretypes.Image, error) {
 		SKU:       "aro_" + m[2], // "aro_43"
 		Version:   m[1],          // "43.81.20191122"
 	}, nil
-}
-
-func randomDomainName() (string, error) {
-	prefix, err := randomString("abcdefghijklmnopqrstuvwxyz", 1)
-	if err != nil {
-		return "", err
-	}
-	suffix, err := randomString("abcdefghijklmnopqrstuvwxyz0123456789", 7)
-	if err != nil {
-		return "", err
-	}
-	return prefix + suffix, nil
 }
 
 func randomLowerCaseAlphanumericString(n int) (string, error) {

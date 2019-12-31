@@ -94,6 +94,7 @@ cluster:
        --vnet-name dev-vnet \
        -n "$subnet" \
        --address-prefixes 10.$((RANDOM & 127)).$((RANDOM & 255)).0/24 \
+       --service-endpoints Microsoft.ContainerRegistry \
        >/dev/null
    done
    az network vnet subnet update \
@@ -132,8 +133,8 @@ cluster:
 1. Access the cluster console:
 
    You can find the cluster console URL (of the form
-   `https://console-openshift-console.apps.<random>.eastus.aroapp.io/`) in the
-   Azure Red Hat OpenShift v4 cluster resource:
+   `https://console-openshift-console.apps.<random>.<location>.aroapp.io/`) in
+   the Azure Red Hat OpenShift v4 cluster resource:
 
    ```
    az aro list -o table

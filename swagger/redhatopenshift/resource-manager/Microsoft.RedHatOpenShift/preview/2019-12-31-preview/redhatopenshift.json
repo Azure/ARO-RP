@@ -415,6 +415,23 @@
         }
     },
     "definitions": {
+        "APIServerProfile": {
+            "description": "APIServerProfile represents an API server profile.",
+            "properties": {
+                "private": {
+                    "description": "Expose the API server on a private IP address only (immutable).",
+                    "type": "boolean"
+                },
+                "url": {
+                    "description": "The URL to access the cluster API server (immutable).",
+                    "type": "string"
+                },
+                "ip": {
+                    "description": "The IP of the cluster API server (immutable).",
+                    "type": "string"
+                }
+            }
+        },
         "CloudError": {
             "description": "CloudError represents a cloud error.",
             "properties": {
@@ -469,6 +486,23 @@
                 }
             }
         },
+        "IngressProfile": {
+            "description": "IngressProfile represents an ingress profile.",
+            "properties": {
+                "name": {
+                    "description": "The ingress profile name.  Must be \"default\" (immutable).",
+                    "type": "string"
+                },
+                "private": {
+                    "description": "Expose the ingress on a private IP address only (immutable).",
+                    "type": "boolean"
+                },
+                "ip": {
+                    "description": "The IP of the ingress (immutable).",
+                    "type": "string"
+                }
+            }
+        },
         "MasterProfile": {
             "description": "MasterProfile represents a master profile.",
             "properties": {
@@ -477,7 +511,7 @@
                     "description": "The size of the master VMs (immutable)."
                 },
                 "subnetId": {
-                    "description": "The Azure resource ID of the worker subnet (immutable).",
+                    "description": "The Azure resource ID of the master subnet (immutable).",
                     "type": "string"
                 }
             }
@@ -536,6 +570,10 @@
         "OpenShiftClusterCredentials": {
             "description": "OpenShiftClusterCredentials represents an OpenShift cluster's credentials",
             "properties": {
+                "kubeadminUsername": {
+                    "description": "The username for the kubeadmin user",
+                    "type": "string"
+                },
                 "kubeadminPassword": {
                     "description": "The password for the kubeadmin user",
                     "type": "string"
@@ -586,6 +624,10 @@
                     "$ref": "#/definitions/ProvisioningState",
                     "description": "The cluster provisioning state (immutable)."
                 },
+                "clusterDomain": {
+                    "description": "The domain for the cluster (immutable).",
+                    "type": "string"
+                },
                 "servicePrincipalProfile": {
                     "$ref": "#/definitions/ServicePrincipalProfile",
                     "description": "The cluster service principal profile."
@@ -605,9 +647,16 @@
                         "$ref": "#/definitions/WorkerProfile"
                     }
                 },
-                "apiserverUrl": {
-                    "description": "The URL to access the cluster API server (immutable).",
-                    "type": "string"
+                "apiserverProfile": {
+                    "$ref": "#/definitions/APIServerProfile",
+                    "description": "The cluster API server profile."
+                },
+                "ingressProfiles": {
+                    "description": "The cluster ingress profiles.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/IngressProfile"
+                    }
                 },
                 "consoleUrl": {
                     "description": "The URL to access the cluster console (immutable).",
@@ -630,11 +679,11 @@
             "description": "ServicePrincipalProfile represents a service principal profile.",
             "properties": {
                 "clientId": {
-                    "description": "The client ID used for the cluster",
+                    "description": "The client ID used for the cluster (immutable).",
                     "type": "string"
                 },
                 "clientSecret": {
-                    "description": "The client secret used for the cluster",
+                    "description": "The client secret used for the cluster (immutable).",
                     "type": "string"
                 }
             }

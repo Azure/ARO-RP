@@ -23,6 +23,31 @@ from msrest.serialization import Model
 from msrest.exceptions import HttpOperationError
 
 
+class APIServerProfile(Model):
+    """APIServerProfile represents an API server profile.
+
+    :param private: Expose the API server on a private IP address only
+     (immutable).
+    :type private: bool
+    :param url: The URL to access the cluster API server (immutable).
+    :type url: str
+    :param ip: The IP of the cluster API server (immutable).
+    :type ip: str
+    """
+
+    _attribute_map = {
+        'private': {'key': 'private', 'type': 'bool'},
+        'url': {'key': 'url', 'type': 'str'},
+        'ip': {'key': 'ip', 'type': 'str'},
+    }
+
+    def __init__(self, **kwargs):
+        super(APIServerProfile, self).__init__(**kwargs)
+        self.private = kwargs.get('private', None)
+        self.url = kwargs.get('url', None)
+        self.ip = kwargs.get('ip', None)
+
+
 class CloudError(Model):
     """CloudError represents a cloud error.
 
@@ -113,6 +138,31 @@ class Display(Model):
         self.description = kwargs.get('description', None)
 
 
+class IngressProfile(Model):
+    """IngressProfile represents an ingress profile.
+
+    :param name: The ingress profile name.  Must be "default" (immutable).
+    :type name: str
+    :param private: Expose the ingress on a private IP address only
+     (immutable).
+    :type private: bool
+    :param ip: The IP of the ingress (immutable).
+    :type ip: str
+    """
+
+    _attribute_map = {
+        'name': {'key': 'name', 'type': 'str'},
+        'private': {'key': 'private', 'type': 'bool'},
+        'ip': {'key': 'ip', 'type': 'str'},
+    }
+
+    def __init__(self, **kwargs):
+        super(IngressProfile, self).__init__(**kwargs)
+        self.name = kwargs.get('name', None)
+        self.private = kwargs.get('private', None)
+        self.ip = kwargs.get('ip', None)
+
+
 class MasterProfile(Model):
     """MasterProfile represents a master profile.
 
@@ -120,7 +170,7 @@ class MasterProfile(Model):
      include: 'Standard_D2s_v3', 'Standard_D4s_v3', 'Standard_D8s_v3'
     :type vm_size: str or
      ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.enum
-    :param subnet_id: The Azure resource ID of the worker subnet (immutable).
+    :param subnet_id: The Azure resource ID of the master subnet (immutable).
     :type subnet_id: str
     """
 
@@ -177,6 +227,8 @@ class OpenShiftCluster(Model):
      'Updating'
     :type provisioning_state: str or
      ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.enum
+    :param cluster_domain: The domain for the cluster (immutable).
+    :type cluster_domain: str
     :param service_principal_profile: The cluster service principal profile.
     :type service_principal_profile:
      ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.ServicePrincipalProfile
@@ -189,9 +241,12 @@ class OpenShiftCluster(Model):
     :param worker_profiles: The cluster worker profiles.
     :type worker_profiles:
      list[~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.WorkerProfile]
-    :param apiserver_url: The URL to access the cluster API server
-     (immutable).
-    :type apiserver_url: str
+    :param apiserver_profile: The cluster API server profile.
+    :type apiserver_profile:
+     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.APIServerProfile
+    :param ingress_profiles: The cluster ingress profiles.
+    :type ingress_profiles:
+     list[~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.IngressProfile]
     :param console_url: The URL to access the cluster console (immutable).
     :type console_url: str
     """
@@ -209,11 +264,13 @@ class OpenShiftCluster(Model):
         'location': {'key': 'location', 'type': 'str'},
         'tags': {'key': 'tags', 'type': '{str}'},
         'provisioning_state': {'key': 'properties.provisioningState', 'type': 'str'},
+        'cluster_domain': {'key': 'properties.clusterDomain', 'type': 'str'},
         'service_principal_profile': {'key': 'properties.servicePrincipalProfile', 'type': 'ServicePrincipalProfile'},
         'network_profile': {'key': 'properties.networkProfile', 'type': 'NetworkProfile'},
         'master_profile': {'key': 'properties.masterProfile', 'type': 'MasterProfile'},
         'worker_profiles': {'key': 'properties.workerProfiles', 'type': '[WorkerProfile]'},
-        'apiserver_url': {'key': 'properties.apiserverUrl', 'type': 'str'},
+        'apiserver_profile': {'key': 'properties.apiserverProfile', 'type': 'APIServerProfile'},
+        'ingress_profiles': {'key': 'properties.ingressProfiles', 'type': '[IngressProfile]'},
         'console_url': {'key': 'properties.consoleUrl', 'type': 'str'},
     }
 
@@ -225,27 +282,33 @@ class OpenShiftCluster(Model):
         self.location = kwargs.get('location', None)
         self.tags = kwargs.get('tags', None)
         self.provisioning_state = kwargs.get('provisioning_state', None)
+        self.cluster_domain = kwargs.get('cluster_domain', None)
         self.service_principal_profile = kwargs.get('service_principal_profile', None)
         self.network_profile = kwargs.get('network_profile', None)
         self.master_profile = kwargs.get('master_profile', None)
         self.worker_profiles = kwargs.get('worker_profiles', None)
-        self.apiserver_url = kwargs.get('apiserver_url', None)
+        self.apiserver_profile = kwargs.get('apiserver_profile', None)
+        self.ingress_profiles = kwargs.get('ingress_profiles', None)
         self.console_url = kwargs.get('console_url', None)
 
 
 class OpenShiftClusterCredentials(Model):
     """OpenShiftClusterCredentials represents an OpenShift cluster's credentials.
 
+    :param kubeadmin_username: The username for the kubeadmin user
+    :type kubeadmin_username: str
     :param kubeadmin_password: The password for the kubeadmin user
     :type kubeadmin_password: str
     """
 
     _attribute_map = {
+        'kubeadmin_username': {'key': 'kubeadminUsername', 'type': 'str'},
         'kubeadmin_password': {'key': 'kubeadminPassword', 'type': 'str'},
     }
 
     def __init__(self, **kwargs):
         super(OpenShiftClusterCredentials, self).__init__(**kwargs)
+        self.kubeadmin_username = kwargs.get('kubeadmin_username', None)
         self.kubeadmin_password = kwargs.get('kubeadmin_password', None)
 
 
@@ -307,9 +370,9 @@ class OperationList(Model):
 class ServicePrincipalProfile(Model):
     """ServicePrincipalProfile represents a service principal profile.
 
-    :param client_id: The client ID used for the cluster
+    :param client_id: The client ID used for the cluster (immutable).
     :type client_id: str
-    :param client_secret: The client secret used for the cluster
+    :param client_secret: The client secret used for the cluster (immutable).
     :type client_secret: str
     """
 

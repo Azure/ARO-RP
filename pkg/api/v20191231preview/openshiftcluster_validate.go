@@ -19,7 +19,11 @@ import (
 )
 
 var (
-	rxSubnetID = regexp.MustCompile(`(?i)^/subscriptions/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/resourceGroups/[-a-z0-9_().]{0,89}[-a-z0-9_()]/providers/Microsoft\.Network/virtualNetworks/[-a-z0-9_.]{2,64}/subnets/[-a-z0-9_.]{2,80}$`)
+	rxSubnetID   = regexp.MustCompile(`(?i)^/subscriptions/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/resourceGroups/[-a-z0-9_().]{0,89}[-a-z0-9_()]/providers/Microsoft\.Network/virtualNetworks/[-a-z0-9_.]{2,64}/subnets/[-a-z0-9_.]{2,80}$`)
+	rxDomainName = regexp.MustCompile(`^` +
+		`([a-z0-9]|[a-z0-9][-a-z0-9]{0,61}[a-z0-9])` +
+		`(\.([a-z0-9]|[a-z0-9][-a-z0-9]{0,61}[a-z0-9]))*` +
+		`$`)
 )
 
 type validator struct {
@@ -78,6 +82,9 @@ func (v *validator) validateProperties(path string, p *Properties) error {
 	default:
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".provisioningState", "The provided provisioning state '%s' is invalid.", p.ProvisioningState)
 	}
+	if !rxDomainName.MatchString(p.ClusterDomain) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".clusterDomain", "The provided cluster domain '%s' is invalid.", p.ClusterDomain)
+	}
 	if err := v.validateServicePrincipalProfile(path+".servicePrincipalProfile", &p.ServicePrincipalProfile); err != nil {
 		return err
 	}
@@ -93,10 +100,14 @@ func (v *validator) validateProperties(path string, p *Properties) error {
 	if err := v.validateWorkerProfile(path+`.workerProfiles["`+p.WorkerProfiles[0].Name+`"]`, &p.WorkerProfiles[0], &p.MasterProfile); err != nil {
 		return err
 	}
-	if p.APIServerURL != "" {
-		if _, err := url.Parse(p.APIServerURL); err != nil {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".apiserverUrl", "The provided API server URL '%s' is invalid.", p.APIServerURL)
-		}
+	if err := v.validateAPIServerProfile(path+`.apiserverProfile`, &p.APIServerProfile); err != nil {
+		return err
+	}
+	if len(p.IngressProfiles) != 1 {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".ingressProfiles", "There should be exactly one ingress profile.")
+	}
+	if err := v.validateIngressProfile(path+`.ingressProfiles["`+p.IngressProfiles[0].Name+`"]`, &p.IngressProfiles[0]); err != nil {
+		return err
 	}
 	if p.ConsoleURL != "" {
 		if _, err := url.Parse(p.ConsoleURL); err != nil {
@@ -201,6 +212,44 @@ func (v *validator) validateWorkerProfile(path string, wp *WorkerProfile, mp *Ma
 	}
 	if wp.Count < 3 || wp.Count > 20 {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".count", "The provided worker count '%d' is invalid.", wp.Count)
+	}
+
+	return nil
+}
+
+func (v *validator) validateAPIServerProfile(path string, ap *APIServerProfile) error {
+	if ap.URL != "" {
+		if _, err := url.Parse(ap.URL); err != nil {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".url", "The provided URL '%s' is invalid.", ap.URL)
+		}
+	}
+	if ap.IP != "" {
+		ip := net.ParseIP(ap.IP)
+		if ip == nil {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".ip", "The provided IP '%s' is invalid.", ap.IP)
+
+		}
+		if ip.To4() == nil {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".ip", "The provided IP '%s' is invalid: must be IPv4.", ap.IP)
+		}
+	}
+
+	return nil
+}
+
+func (v *validator) validateIngressProfile(path string, p *IngressProfile) error {
+	if p.Name != "default" {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".name", "The provided ingress name '%s' is invalid.", p.Name)
+	}
+	if p.IP != "" {
+		ip := net.ParseIP(p.IP)
+		if ip == nil {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".ip", "The provided IP '%s' is invalid.", p.IP)
+
+		}
+		if ip.To4() == nil {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".ip", "The provided IP '%s' is invalid: must be IPv4.", p.IP)
+		}
 	}
 
 	return nil

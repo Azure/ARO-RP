@@ -38,6 +38,9 @@ type Properties struct {
 	// The cluster provisioning state (immutable).
 	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"`
 
+	// The domain for the cluster (immutable).
+	ClusterDomain string `json:"clusterDomain,omitempty"`
+
 	// The cluster service principal profile.
 	ServicePrincipalProfile ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
 
@@ -50,8 +53,11 @@ type Properties struct {
 	// The cluster worker profiles.
 	WorkerProfiles []WorkerProfile `json:"workerProfiles,omitempty"`
 
-	// The URL to access the cluster API server (immutable).
-	APIServerURL string `json:"apiserverUrl,omitempty"`
+	// The cluster API server profile.
+	APIServerProfile APIServerProfile `json:"apiserverProfile,omitempty"`
+
+	// The cluster ingress profiles.
+	IngressProfiles []IngressProfile `json:"ingressProfiles,omitempty"`
 
 	// The URL to access the cluster console (immutable).
 	ConsoleURL string `json:"consoleUrl,omitempty"`
@@ -71,10 +77,10 @@ const (
 
 // ServicePrincipalProfile represents a service principal profile.
 type ServicePrincipalProfile struct {
-	// The client ID used for the cluster
+	// The client ID used for the cluster (immutable).
 	ClientID string `json:"clientId,omitempty"`
 
-	// The client secret used for the cluster
+	// The client secret used for the cluster (immutable).
 	ClientSecret string `json:"clientSecret,omitempty"`
 }
 
@@ -92,7 +98,7 @@ type MasterProfile struct {
 	// The size of the master VMs (immutable).
 	VMSize VMSize `json:"vmSize,omitempty"`
 
-	// The Azure resource ID of the worker subnet (immutable).
+	// The Azure resource ID of the master subnet (immutable).
 	SubnetID string `json:"subnetId,omitempty"`
 }
 
@@ -122,4 +128,28 @@ type WorkerProfile struct {
 
 	// The number of worker VMs.  Must be between 3 and 20.
 	Count int `json:"count,omitempty" mutable:"true"`
+}
+
+// APIServerProfile represents an API server profile.
+type APIServerProfile struct {
+	// Expose the API server on a private IP address only (immutable).
+	Private bool `json:"private,omitempty"`
+
+	// The URL to access the cluster API server (immutable).
+	URL string `json:"url,omitempty"`
+
+	// The IP of the cluster API server (immutable).
+	IP string `json:"ip,omitempty"`
+}
+
+// IngressProfile represents an ingress profile.
+type IngressProfile struct {
+	// The ingress profile name.  Must be "default" (immutable).
+	Name string `json:"name,omitempty"`
+
+	// Expose the ingress on a private IP address only (immutable).
+	Private bool `json:"private,omitempty"`
+
+	// The IP of the ingress (immutable).
+	IP string `json:"ip,omitempty"`
 }

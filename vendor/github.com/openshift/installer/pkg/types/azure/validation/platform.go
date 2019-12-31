@@ -23,7 +23,7 @@ func ValidatePlatform(p *azure.Platform, publish types.PublishingStrategy, fldPa
 	if !resourceGroupNameRx.MatchString(p.ResourceGroupName) {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("resourceGroupName"), p.ResourceGroupName, "resourceGroupName is invalid"))
 	}
-	if publish == types.ExternalPublishingStrategy {
+	if !p.ARO && publish == types.ExternalPublishingStrategy {
 		if p.BaseDomainResourceGroupName == "" {
 			allErrs = append(allErrs, field.Required(fldPath.Child("baseDomainResourceGroupName"), "baseDomainResourceGroupName is the resource group name where the azure dns zone is deployed"))
 		}

@@ -40,6 +40,11 @@ var apiVersions = map[string]string{
 }
 
 func (i *Installer) installStorage(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) error {
+	err := i.dns.Create(ctx, i.doc.OpenShiftCluster)
+	if err != nil {
+		return err
+	}
+
 	clusterID := &installconfig.ClusterID{
 		UUID:    uuid.NewV4().String(),
 		InfraID: "aro",
@@ -71,7 +76,7 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 	if _, ok := i.env.(env.Dev); ok {
 		group.ManagedBy = nil
 	}
-	_, err := i.groups.CreateOrUpdate(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, group)
+	_, err = i.groups.CreateOrUpdate(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, group)
 	if err != nil {
 		return err
 	}

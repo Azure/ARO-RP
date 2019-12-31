@@ -80,6 +80,8 @@ func (tw *typeWalker) schemaFromType(t types.Type, deps map[*types.Named]struct{
 	switch t := t.(type) {
 	case *types.Basic:
 		switch t.Kind() {
+		case types.Bool:
+			s.Type = "boolean"
 		case types.Int:
 			s.Type = "integer"
 		case types.String:

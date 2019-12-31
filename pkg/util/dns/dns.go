@@ -5,9 +5,12 @@ package dns
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -15,9 +18,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
 )
 
+const resourceID = "resourceId"
+
 type Manager interface {
-	Domain() string
-	CreateOrUpdate(context.Context, *api.OpenShiftCluster) error
+	Create(context.Context, *api.OpenShiftCluster) error
+	Update(context.Context, *api.OpenShiftCluster, string) error
 	CreateOrUpdateRouter(context.Context, *api.OpenShiftCluster, string) error
 	Delete(context.Context, *api.OpenShiftCluster) error
 }
@@ -35,25 +40,60 @@ func NewManager(env env.Interface, localFPAuthorizer autorest.Authorizer) Manage
 	}
 }
 
-func (m *manager) Domain() string {
-	return m.env.Domain()
+func (m *manager) Create(ctx context.Context, oc *api.OpenShiftCluster) error {
+	clusterDomain := m.managedDomain(oc.Properties.ClusterDomain)
+	if clusterDomain == "" {
+		return nil
+	}
+
+	rs, err := m.recordsets.Get(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+clusterDomain, mgmtdns.A)
+	if err == nil {
+		if rs.Metadata[resourceID] == nil || *rs.Metadata[resourceID] != oc.ID {
+			return fmt.Errorf("recordset %q already registered", "api."+clusterDomain)
+		}
+
+		return nil
+	}
+
+	if detailedError, ok := err.(autorest.DetailedError); ok {
+		if requestError, ok := detailedError.Original.(*azure.RequestError); ok &&
+			requestError.ServiceError != nil &&
+			requestError.ServiceError.Code == "NotFound" {
+			err = nil
+		}
+	}
+	if err != nil {
+		return err
+	}
+
+	return m.createOrUpdate(ctx, oc, "", "", "*")
 }
 
-func (m *manager) CreateOrUpdate(ctx context.Context, oc *api.OpenShiftCluster) error {
-	_, err := m.recordsets.CreateOrUpdate(ctx, m.env.ResourceGroup(), m.Domain(), "api."+oc.Properties.DomainName, mgmtdns.CNAME, mgmtdns.RecordSet{
-		RecordSetProperties: &mgmtdns.RecordSetProperties{
-			TTL: to.Int64Ptr(300),
-			CnameRecord: &mgmtdns.CnameRecord{
-				Cname: to.StringPtr(oc.Properties.DomainName + "." + oc.Location + ".cloudapp.azure.com"),
-			},
-		},
-	}, "", "")
+func (m *manager) Update(ctx context.Context, oc *api.OpenShiftCluster, ip string) error {
+	clusterDomain := m.managedDomain(oc.Properties.ClusterDomain)
+	if clusterDomain == "" {
+		return nil
+	}
 
-	return err
+	rs, err := m.recordsets.Get(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+clusterDomain, mgmtdns.A)
+	if err != nil {
+		return err
+	}
+
+	if rs.Metadata[resourceID] == nil || *rs.Metadata[resourceID] != oc.ID {
+		return fmt.Errorf("recordset %q already registered", "api."+clusterDomain)
+	}
+
+	return m.createOrUpdate(ctx, oc, ip, *rs.Etag, "")
 }
 
 func (m *manager) CreateOrUpdateRouter(ctx context.Context, oc *api.OpenShiftCluster, routerIP string) error {
-	_, err := m.recordsets.CreateOrUpdate(ctx, m.env.ResourceGroup(), m.Domain(), "*.apps."+oc.Properties.DomainName, mgmtdns.A, mgmtdns.RecordSet{
+	clusterDomain := m.managedDomain(oc.Properties.ClusterDomain)
+	if clusterDomain == "" {
+		return nil
+	}
+
+	_, err := m.recordsets.CreateOrUpdate(ctx, m.env.ResourceGroup(), m.env.Domain(), "*.apps."+clusterDomain, mgmtdns.A, mgmtdns.RecordSet{
 		RecordSetProperties: &mgmtdns.RecordSetProperties{
 			TTL: to.Int64Ptr(300),
 			ARecords: &[]mgmtdns.ARecord{
@@ -68,12 +108,70 @@ func (m *manager) CreateOrUpdateRouter(ctx context.Context, oc *api.OpenShiftClu
 }
 
 func (m *manager) Delete(ctx context.Context, oc *api.OpenShiftCluster) error {
-	_, err := m.recordsets.Delete(ctx, m.env.ResourceGroup(), m.Domain(), "api."+oc.Properties.DomainName, mgmtdns.CNAME, "")
+	clusterDomain := m.managedDomain(oc.Properties.ClusterDomain)
+	if clusterDomain == "" {
+		return nil
+	}
+
+	rs, err := m.recordsets.Get(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+clusterDomain, mgmtdns.A)
+	if err != nil {
+		if detailedError, ok := err.(autorest.DetailedError); ok {
+			if requestError, ok := detailedError.Original.(*azure.RequestError); ok &&
+				requestError.ServiceError != nil &&
+				requestError.ServiceError.Code == "NotFound" {
+				err = nil
+			}
+		}
+
+		return err
+	}
+
+	if rs.Metadata[resourceID] == nil || *rs.Metadata[resourceID] != oc.ID {
+		return nil
+	}
+
+	_, err = m.recordsets.Delete(ctx, m.env.ResourceGroup(), m.env.Domain(), "*.apps."+clusterDomain, mgmtdns.A, "")
 	if err != nil {
 		return err
 	}
 
-	_, err = m.recordsets.Delete(ctx, m.env.ResourceGroup(), m.Domain(), "*.apps."+oc.Properties.DomainName, mgmtdns.A, "")
+	_, err = m.recordsets.Delete(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+clusterDomain, mgmtdns.A, *rs.Etag)
 
 	return err
+}
+
+func (m *manager) createOrUpdate(ctx context.Context, oc *api.OpenShiftCluster, ip, ifMatch, ifNoneMatch string) error {
+	clusterDomain := m.managedDomain(oc.Properties.ClusterDomain)
+	if clusterDomain == "" {
+		return nil
+	}
+
+	rs := mgmtdns.RecordSet{
+		RecordSetProperties: &mgmtdns.RecordSetProperties{
+			Metadata: map[string]*string{
+				resourceID: to.StringPtr(oc.ID),
+			},
+			TTL: to.Int64Ptr(300),
+		},
+	}
+
+	if ip != "" {
+		rs.ARecords = &[]mgmtdns.ARecord{
+			{
+				Ipv4Address: to.StringPtr(ip),
+			},
+		}
+	}
+
+	_, err := m.recordsets.CreateOrUpdate(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+clusterDomain, mgmtdns.A, rs, ifMatch, ifNoneMatch)
+
+	return err
+}
+
+func (m *manager) managedDomain(clusterDomain string) string {
+	clusterDomain = strings.TrimSuffix(clusterDomain, "."+m.env.Domain())
+	if !strings.ContainsRune(clusterDomain, '.') {
+		return clusterDomain
+	}
+	return ""
 }

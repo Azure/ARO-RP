@@ -59,6 +59,8 @@ type Properties struct {
 	ProvisioningState       ProvisioningState `json:"provisioningState,omitempty"`
 	FailedProvisioningState ProvisioningState `json:"failedProvisioningState,omitempty"`
 
+	ClusterDomain string `json:"clusterDomain,omitempty"`
+
 	ServicePrincipalProfile ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
 
 	NetworkProfile NetworkProfile `json:"networkProfile,omitempty"`
@@ -67,15 +69,17 @@ type Properties struct {
 
 	WorkerProfiles []WorkerProfile `json:"workerProfiles,omitempty"`
 
-	APIServerURL string `json:"apiserverUrl,omitempty"`
-	ConsoleURL   string `json:"consoleUrl,omitempty"`
+	APIServerProfile APIServerProfile `json:"apiserverProfile,omitempty"`
+
+	IngressProfiles []IngressProfile `json:"ingressProfiles,omitempty"`
+
+	ConsoleURL string `json:"consoleUrl,omitempty"`
 
 	// Install is non-nil only when an install is in progress
 	Install *Install `json:"install,omitempty"`
 
 	// TODO: ResourceGroup should be exposed in external API
 	ResourceGroup string `json:"resourceGroup,omitempty"`
-	DomainName    string `json:"domainName,omitempty"`
 	StorageSuffix string `json:"storageSuffix,omitempty"`
 
 	SSHKey            *rsa.PrivateKey `json:"sshKey,omitempty"`
@@ -139,6 +143,24 @@ type WorkerProfile struct {
 	DiskSizeGB int    `json:"diskSizeGB,omitempty"`
 	SubnetID   string `json:"subnetId,omitempty"`
 	Count      int    `json:"count,omitempty"`
+}
+
+// APIServerProfile represents an API server profile
+type APIServerProfile struct {
+	MissingFields
+
+	Private bool   `json:"private,omitempty"`
+	URL     string `json:"url,omitempty"`
+	IP      string `json:"ip,omitempty"`
+}
+
+// IngressProfile represents an ingress profile
+type IngressProfile struct {
+	MissingFields
+
+	Name    string `json:"name,omitempty"`
+	Private bool   `json:"private,omitempty"`
+	IP      string `json:"ip,omitempty"`
 }
 
 // Install represents an install process

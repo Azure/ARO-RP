@@ -11,8 +11,11 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
+	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/password"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -25,6 +28,7 @@ func (i *Installer) removeBootstrap(ctx context.Context) error {
 		return err
 	}
 
+	installConfig := g[reflect.TypeOf(&installconfig.InstallConfig{})].(*installconfig.InstallConfig)
 	kubeadminPassword := g[reflect.TypeOf(&password.KubeadminPassword{})].(*password.KubeadminPassword)
 
 	{
@@ -51,25 +55,20 @@ func (i *Installer) removeBootstrap(ctx context.Context) error {
 		}
 	}
 
-	{
-		i.log.Print("removing bootstrap ip")
-		err = i.publicipaddresses.DeleteAndWait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "aro-bootstrap-pip")
-		if err != nil {
-			return err
-		}
-	}
-
+	var restConfig *rest.Config
 	{
 		ip, err := i.privateendpoint.GetIP(ctx, i.doc)
 		if err != nil {
 			return err
 		}
 
-		restConfig, err := restconfig.RestConfig(ctx, i.env, i.doc, ip)
+		restConfig, err = restconfig.RestConfig(ctx, i.env, i.doc, ip)
 		if err != nil {
 			return err
 		}
+	}
 
+	{
 		cli, err := configclient.NewForConfig(restConfig)
 		if err != nil {
 			return err
@@ -114,32 +113,34 @@ func (i *Installer) removeBootstrap(ctx context.Context) error {
 		}
 	}
 
-	ips, err := i.publicipaddresses.List(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup)
+	var routerIP string
+	{
+		cli, err := kubernetes.NewForConfig(restConfig)
+		if err != nil {
+			return err
+		}
+
+		svc, err := cli.CoreV1().Services("openshift-ingress").Get("router-default", metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		if len(svc.Status.LoadBalancer.Ingress) == 0 {
+			return fmt.Errorf("routerIP not found")
+		}
+
+		routerIP = svc.Status.LoadBalancer.Ingress[0].IP
+	}
+
+	err = i.dns.CreateOrUpdateRouter(ctx, i.doc.OpenShiftCluster, routerIP)
 	if err != nil {
 		return err
 	}
 
-	{
-		var routerIP string
-		for _, ip := range ips {
-			if ip.Tags["kubernetes-cluster-name"] != nil && *ip.Tags["kubernetes-cluster-name"] == "aro" &&
-				ip.Tags["service"] != nil && *ip.Tags["service"] == "openshift-ingress/router-default" {
-				routerIP = *ip.IPAddress
-			}
-		}
-		if routerIP == "" {
-			return fmt.Errorf("routerIP not found")
-		}
-
-		err = i.dns.CreateOrUpdateRouter(ctx, i.doc.OpenShiftCluster, routerIP)
-		if err != nil {
-			return err
-		}
-	}
-
 	i.doc, err = i.db.Patch(i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.APIServerURL = "https://api." + doc.OpenShiftCluster.Properties.DomainName + "." + i.dns.Domain() + ":6443/"
-		doc.OpenShiftCluster.Properties.ConsoleURL = "https://console-openshift-console.apps." + doc.OpenShiftCluster.Properties.DomainName + "." + i.dns.Domain() + "/"
+		doc.OpenShiftCluster.Properties.APIServerProfile.URL = "https://api." + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + ":6443/"
+		doc.OpenShiftCluster.Properties.IngressProfiles[0].IP = routerIP
+		doc.OpenShiftCluster.Properties.ConsoleURL = "https://console-openshift-console.apps." + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/"
 		doc.OpenShiftCluster.Properties.KubeadminPassword = kubeadminPassword.Password
 		return nil
 	})

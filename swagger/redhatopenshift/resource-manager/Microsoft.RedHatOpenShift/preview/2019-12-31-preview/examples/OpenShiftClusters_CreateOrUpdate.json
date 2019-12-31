@@ -7,6 +7,7 @@
         "parameters": {
             "location": "location",
             "properties": {
+                "clusterDomain": "cluster.location.aroapp.io",
                 "servicePrincipalProfile": {
                     "clientId": "clientId",
                     "clientSecret": "clientSecret"
@@ -27,6 +28,15 @@
                         "subnetId": "/subscriptions/subscriptionId/resourceGroups/resourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/workerSubnet",
                         "count": 3
                     }
+                ],
+                "apiserverProfile": {
+                    "private": false
+                },
+                "ingressProfiles": [
+                    {
+                        "name": "default",
+                        "private": false
+                    }
                 ]
             }
         }
@@ -40,6 +50,7 @@
                 "location": "location",
                 "properties": {
                     "provisioningState": "Succeeded",
+                    "clusterDomain": "cluster.location.aroapp.io",
                     "servicePrincipalProfile": {
                         "clientId": "clientId"
                     },
@@ -60,8 +71,19 @@
                             "count": 3
                         }
                     ],
-                    "apiserverUrl": "https://api.random.location.aroapp.io:6443/",
-                    "consoleUrl": "https://console-openshift-console.apps.random.location.aroapp.io/"
+                    "apiserverProfile": {
+                        "private": false,
+                        "url": "https://api.cluster.location.aroapp.io:6443/",
+                        "ip": "1.2.3.4"
+                    },
+                    "ingressProfiles": [
+                        {
+                            "name": "default",
+                            "private": false,
+                            "ip": "1.2.3.4"
+                        }
+                    ],
+                    "consoleUrl": "https://console-openshift-console.apps.cluster.location.aroapp.io/"
                 }
             }
         },
@@ -73,6 +95,7 @@
                 "location": "location",
                 "properties": {
                     "provisioningState": "Succeeded",
+                    "clusterDomain": "cluster.location.aroapp.io",
                     "servicePrincipalProfile": {
                         "clientId": "clientId"
                     },
@@ -93,8 +116,19 @@
                             "count": 3
                         }
                     ],
-                    "apiserverUrl": "https://api.random.location.aroapp.io:6443/",
-                    "consoleUrl": "https://console-openshift-console.apps.random.location.aroapp.io/"
+                    "apiserverProfile": {
+                        "private": false,
+                        "url": "https://api.cluster.location.aroapp.io:6443/",
+                        "ip": "1.2.3.4"
+                    },
+                    "ingressProfiles": [
+                        {
+                            "name": "default",
+                            "private": false,
+                            "ip": "1.2.3.4"
+                        }
+                    ],
+                    "consoleUrl": "https://console-openshift-console.apps.cluster.location.aroapp.io/"
                 }
             }
         }

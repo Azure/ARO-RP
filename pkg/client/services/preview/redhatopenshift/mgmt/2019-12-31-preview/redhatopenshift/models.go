@@ -84,6 +84,16 @@ func PossibleVMSize1Values() []VMSize1 {
 	return []VMSize1{VMSize1StandardD2sV3, VMSize1StandardD4sV3, VMSize1StandardD8sV3}
 }
 
+// APIServerProfile aPIServerProfile represents an API server profile.
+type APIServerProfile struct {
+	// Private - Expose the API server on a private IP address only (immutable).
+	Private *bool `json:"private,omitempty"`
+	// URL - The URL to access the cluster API server (immutable).
+	URL *string `json:"url,omitempty"`
+	// IP - The IP of the cluster API server (immutable).
+	IP *string `json:"ip,omitempty"`
+}
+
 // CloudError cloudError represents a cloud error.
 type CloudError struct {
 	// Error - An error response from the service.
@@ -114,11 +124,21 @@ type Display struct {
 	Description *string `json:"description,omitempty"`
 }
 
+// IngressProfile ingressProfile represents an ingress profile.
+type IngressProfile struct {
+	// Name - The ingress profile name.  Must be "default" (immutable).
+	Name *string `json:"name,omitempty"`
+	// Private - Expose the ingress on a private IP address only (immutable).
+	Private *bool `json:"private,omitempty"`
+	// IP - The IP of the ingress (immutable).
+	IP *string `json:"ip,omitempty"`
+}
+
 // MasterProfile masterProfile represents a master profile.
 type MasterProfile struct {
 	// VMSize - The size of the master VMs (immutable). Possible values include: 'StandardD2sV3', 'StandardD4sV3', 'StandardD8sV3'
 	VMSize VMSize `json:"vmSize,omitempty"`
-	// SubnetID - The Azure resource ID of the worker subnet (immutable).
+	// SubnetID - The Azure resource ID of the master subnet (immutable).
 	SubnetID *string `json:"subnetId,omitempty"`
 }
 
@@ -234,6 +254,8 @@ func (osc *OpenShiftCluster) UnmarshalJSON(body []byte) error {
 // OpenShiftClusterCredentials openShiftClusterCredentials represents an OpenShift cluster's credentials
 type OpenShiftClusterCredentials struct {
 	autorest.Response `json:"-"`
+	// KubeadminUsername - The username for the kubeadmin user
+	KubeadminUsername *string `json:"kubeadminUsername,omitempty"`
 	// KubeadminPassword - The password for the kubeadmin user
 	KubeadminPassword *string `json:"kubeadminPassword,omitempty"`
 }
@@ -345,6 +367,8 @@ type OperationList struct {
 type Properties struct {
 	// ProvisioningState - The cluster provisioning state (immutable). Possible values include: 'Creating', 'Deleting', 'Failed', 'Succeeded', 'Updating'
 	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"`
+	// ClusterDomain - The domain for the cluster (immutable).
+	ClusterDomain *string `json:"clusterDomain,omitempty"`
 	// ServicePrincipalProfile - The cluster service principal profile.
 	ServicePrincipalProfile *ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
 	// NetworkProfile - The cluster network profile.
@@ -353,17 +377,19 @@ type Properties struct {
 	MasterProfile *MasterProfile `json:"masterProfile,omitempty"`
 	// WorkerProfiles - The cluster worker profiles.
 	WorkerProfiles *[]WorkerProfile `json:"workerProfiles,omitempty"`
-	// ApiserverURL - The URL to access the cluster API server (immutable).
-	ApiserverURL *string `json:"apiserverUrl,omitempty"`
+	// ApiserverProfile - The cluster API server profile.
+	ApiserverProfile *APIServerProfile `json:"apiserverProfile,omitempty"`
+	// IngressProfiles - The cluster ingress profiles.
+	IngressProfiles *[]IngressProfile `json:"ingressProfiles,omitempty"`
 	// ConsoleURL - The URL to access the cluster console (immutable).
 	ConsoleURL *string `json:"consoleUrl,omitempty"`
 }
 
 // ServicePrincipalProfile servicePrincipalProfile represents a service principal profile.
 type ServicePrincipalProfile struct {
-	// ClientID - The client ID used for the cluster
+	// ClientID - The client ID used for the cluster (immutable).
 	ClientID *string `json:"clientId,omitempty"`
-	// ClientSecret - The client secret used for the cluster
+	// ClientSecret - The client secret used for the cluster (immutable).
 	ClientSecret *string `json:"clientSecret,omitempty"`
 }
 

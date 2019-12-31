@@ -115,6 +115,7 @@
 * SSH to the bootstrap node:
 
   ```
+  sudo openvpn secrets/vpn-$LOCATION.ovpn &
   hack/ssh-bootstrap.sh "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER"
   ```
 

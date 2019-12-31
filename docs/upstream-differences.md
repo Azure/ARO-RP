@@ -10,31 +10,31 @@ upstream OCP.
   from pkg/asset/cluster
 
   This enables dep to import the installer as a library as well as significantly
-  decreasing compilation time and binary footprint
+  decreasing compilation time and binary footprint.
 
 * CARRY: PARTIAL: allow platform credentials to be prepopulated in
   installconfig.PlatformCreds
 
   This avoids the installer going to disk to fetch the credentials, enabling one
-  installer to handle multiple cluster installations simultaneously
+  installer to handle multiple cluster installations simultaneously.
 
 * CARRY: allow end user to specify Azure resource group on cluster creation
 
   This allows the RP to specify the cluster's resource group.  TODO: reduce the
   scope of this patch to get this upstream; don't allow end-users to choose
-  their cluster resource group
+  their cluster resource group.
 
 * CARRY: HACK: don't use managed identity on ARO
 
   At the moment OCP on Azure uses MSI for kubelets and controllers and one or
   more service principals for operators.  For now on ARO, simplify to all
   components using the user-provided SP.  Later, we'll reinstate a separate
-  managed identity at least for worker kubelets
+  managed identity at least for worker kubelets.
 
 * CARRY: HACK: don't set public DNS zone on DNS CRD in ARO
 
   In ARO, the public DNS zone is maintained by the service and the cluster
-  operator does not have permissions to modify it
+  operator does not have permissions to modify it.
 
 * CARRY: HACK: disable CloudProviderRateLimit
 
@@ -45,20 +45,36 @@ upstream OCP.
 
   This commit enables ARO to use platform-published VM images.
 
+* CARRY: HACK: insert worker VMs into aro load balancer backend
+
+  This ensures that worker VMs are always in the aro load balancer backend, and
+  are thus always eligible for the associated outbound rule, and thus should
+  have internet access.  As a result a fake inbound service is not necessary.
+
+* CARRY: HACK: don't require BaseDomainResourceGroupName on ARO
+
+  This prevents a validating failure when omitting a configurable which is never
+  used in ARO.
+
 
 ## Installation differences
 
 * ARO persists the install graph in the cluster storage account in a new "aro"
-  container / "graph" blob
+  container / "graph" blob.
 
-* No managed identity (for now)
+* No managed identity (for now).
 
-* installconfig.ClusterID.InfraID is hard-coded to "aro"
+* installconfig.ClusterID.InfraID is hard-coded to "aro".
 
-* API server public IP domain name label is an 8 character random label, not the
-  infraID
+* API server public IP domain name label is not set.
 
 * ARO uses first party RHCOS OS images published by Microsoft.
 
 * ARO API server internal LB remains on highest available master subnet IP, like
   in 4.2.
+
+* ARO never creates aro-bootstrap-pip for bootstrap VM.
+
+* ARO API server LB uses Azure outboundRule rather than port 27627 inbound rule.
+
+* `aro` LB uses Azure outboundRule and outbound IP `aro-outbound-pip`.

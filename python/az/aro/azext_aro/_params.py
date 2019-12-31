@@ -4,6 +4,7 @@
 from azext_aro._validators import validate_cidr
 from azext_aro._validators import validate_client_id
 from azext_aro._validators import validate_client_secret
+from azext_aro._validators import validate_cluster_domain
 from azext_aro._validators import validate_resource_name
 from azext_aro._validators import validate_subnet
 from azext_aro._validators import validate_vnet
@@ -14,6 +15,7 @@ from azure.cli.core.commands.parameters import name_type
 from azure.cli.core.commands.parameters import resource_group_name_type
 from azure.cli.core.commands.parameters import tags_type
 from azure.cli.core.commands.validators import get_default_location_from_resource_group
+from knack.arguments import CLIArgumentType
 
 
 def load_arguments(self, _):
@@ -26,6 +28,10 @@ def load_arguments(self, _):
                    validator=validate_resource_name)
         c.argument('tags',
                    tags_type)
+
+        c.argument('cluster_domain',
+                   help='Domain of cluster.',
+                   validator=validate_cluster_domain)
 
         c.argument('client_id',
                    help='Client ID of cluster service principal.',
@@ -52,6 +58,14 @@ def load_arguments(self, _):
         c.argument('worker_count',
                    help='Count of worker VMs.',
                    validator=validate_worker_count)
+
+        c.argument('private_apiserver',
+                   CLIArgumentType(action='store_true'),
+                   help='Private API server.')
+
+        c.argument('private_ingress',
+                   CLIArgumentType(action='store_true'),
+                   help='Private ingress.')
 
         c.argument('vnet_resource_group_name',
                    resource_group_name_type,

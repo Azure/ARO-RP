@@ -20,9 +20,11 @@
 # --------------------------------------------------------------------------
 
 try:
+    from ._models_py3 import APIServerProfile
     from ._models_py3 import CloudError, CloudErrorException
     from ._models_py3 import CloudErrorBody
     from ._models_py3 import Display
+    from ._models_py3 import IngressProfile
     from ._models_py3 import MasterProfile
     from ._models_py3 import NetworkProfile
     from ._models_py3 import OpenShiftCluster
@@ -33,9 +35,11 @@ try:
     from ._models_py3 import ServicePrincipalProfile
     from ._models_py3 import WorkerProfile
 except (SyntaxError, ImportError):
+    from ._models import APIServerProfile
     from ._models import CloudError, CloudErrorException
     from ._models import CloudErrorBody
     from ._models import Display
+    from ._models import IngressProfile
     from ._models import MasterProfile
     from ._models import NetworkProfile
     from ._models import OpenShiftCluster
@@ -47,9 +51,11 @@ except (SyntaxError, ImportError):
     from ._models import WorkerProfile
 
 __all__ = [
+    'APIServerProfile',
     'CloudError', 'CloudErrorException',
     'CloudErrorBody',
     'Display',
+    'IngressProfile',
     'MasterProfile',
     'NetworkProfile',
     'OpenShiftCluster',
