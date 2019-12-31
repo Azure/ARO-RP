@@ -71,10 +71,10 @@ const (
 
 // ServicePrincipalProfile represents a service principal profile.
 type ServicePrincipalProfile struct {
-	// The client ID used for the cluster
+	// The client ID used for the cluster (immutable).
 	ClientID string `json:"clientId,omitempty"`
 
-	// The client secret used for the cluster
+	// The client secret used for the cluster (immutable).
 	ClientSecret string `json:"clientSecret,omitempty"`
 }
 
@@ -92,7 +92,7 @@ type MasterProfile struct {
 	// The size of the master VMs (immutable).
 	VMSize VMSize `json:"vmSize,omitempty"`
 
-	// The Azure resource ID of the worker subnet (immutable).
+	// The Azure resource ID of the master subnet (immutable).
 	SubnetID string `json:"subnetId,omitempty"`
 }
 

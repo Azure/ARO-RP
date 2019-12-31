@@ -477,7 +477,7 @@
                     "description": "The size of the master VMs (immutable)."
                 },
                 "subnetId": {
-                    "description": "The Azure resource ID of the worker subnet (immutable).",
+                    "description": "The Azure resource ID of the master subnet (immutable).",
                     "type": "string"
                 }
             }
@@ -630,11 +630,11 @@
             "description": "ServicePrincipalProfile represents a service principal profile.",
             "properties": {
                 "clientId": {
-                    "description": "The client ID used for the cluster",
+                    "description": "The client ID used for the cluster (immutable).",
                     "type": "string"
                 },
                 "clientSecret": {
-                    "description": "The client secret used for the cluster",
+                    "description": "The client secret used for the cluster (immutable).",
                     "type": "string"
                 }
             }

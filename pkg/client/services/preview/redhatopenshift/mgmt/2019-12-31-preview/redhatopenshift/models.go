@@ -118,7 +118,7 @@ type Display struct {
 type MasterProfile struct {
 	// VMSize - The size of the master VMs (immutable). Possible values include: 'StandardD2sV3', 'StandardD4sV3', 'StandardD8sV3'
 	VMSize VMSize `json:"vmSize,omitempty"`
-	// SubnetID - The Azure resource ID of the worker subnet (immutable).
+	// SubnetID - The Azure resource ID of the master subnet (immutable).
 	SubnetID *string `json:"subnetId,omitempty"`
 }
 
@@ -361,9 +361,9 @@ type Properties struct {
 
 // ServicePrincipalProfile servicePrincipalProfile represents a service principal profile.
 type ServicePrincipalProfile struct {
-	// ClientID - The client ID used for the cluster
+	// ClientID - The client ID used for the cluster (immutable).
 	ClientID *string `json:"clientId,omitempty"`
-	// ClientSecret - The client secret used for the cluster
+	// ClientSecret - The client secret used for the cluster (immutable).
 	ClientSecret *string `json:"clientSecret,omitempty"`
 }
 

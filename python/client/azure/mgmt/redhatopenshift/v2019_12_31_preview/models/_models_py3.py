@@ -120,7 +120,7 @@ class MasterProfile(Model):
      include: 'Standard_D2s_v3', 'Standard_D4s_v3', 'Standard_D8s_v3'
     :type vm_size: str or
      ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.enum
-    :param subnet_id: The Azure resource ID of the worker subnet (immutable).
+    :param subnet_id: The Azure resource ID of the master subnet (immutable).
     :type subnet_id: str
     """
 
@@ -307,9 +307,9 @@ class OperationList(Model):
 class ServicePrincipalProfile(Model):
     """ServicePrincipalProfile represents a service principal profile.
 
-    :param client_id: The client ID used for the cluster
+    :param client_id: The client ID used for the cluster (immutable).
     :type client_id: str
-    :param client_secret: The client secret used for the cluster
+    :param client_secret: The client secret used for the cluster (immutable).
     :type client_secret: str
     """
 
