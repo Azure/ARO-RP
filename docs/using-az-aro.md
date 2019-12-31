@@ -94,6 +94,7 @@ cluster:
        --vnet-name dev-vnet \
        -n "$subnet" \
        --address-prefixes 10.$((RANDOM & 127)).$((RANDOM & 255)).0/24 \
+       --service-endpoints Microsoft.ContainerRegistry \
        >/dev/null
    done
    az network vnet subnet update \

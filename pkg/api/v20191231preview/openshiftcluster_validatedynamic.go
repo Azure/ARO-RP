@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
@@ -222,6 +223,18 @@ func (dv *dynamicValidator) validateSubnet(ctx context.Context, path, typ, subne
 		if !strings.EqualFold(*s.PrivateLinkServiceNetworkPolicies, "Disabled") {
 			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The provided "+typ+" VM subnet '%s' is invalid: must have privateLinkServiceNetworkPolicies disabled.", subnetID)
 		}
+	}
+
+	var found bool
+	for _, se := range *s.ServiceEndpoints {
+		if strings.EqualFold(*se.Service, "Microsoft.ContainerRegistry") &&
+			se.ProvisioningState == mgmtnetwork.Succeeded {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The provided "+typ+" VM subnet '%s' is invalid: must have Microsoft.ContainerRegistry serviceEndpoint.", subnetID)
 	}
 
 	if dv.oc.Properties.ProvisioningState == api.ProvisioningStateCreating {
