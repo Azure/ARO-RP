@@ -23,6 +23,22 @@ from msrest.serialization import Model
 from msrest.exceptions import HttpOperationError
 
 
+class APIServerProfile(Model):
+    """APIServerProfile represents an API server profile.
+
+    :param url: The URL to access the cluster API server (immutable).
+    :type url: str
+    """
+
+    _attribute_map = {
+        'url': {'key': 'url', 'type': 'str'},
+    }
+
+    def __init__(self, *, url: str=None, **kwargs) -> None:
+        super(APIServerProfile, self).__init__(**kwargs)
+        self.url = url
+
+
 class CloudError(Model):
     """CloudError represents a cloud error.
 
@@ -191,9 +207,9 @@ class OpenShiftCluster(Model):
     :param worker_profiles: The cluster worker profiles.
     :type worker_profiles:
      list[~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.WorkerProfile]
-    :param apiserver_url: The URL to access the cluster API server
-     (immutable).
-    :type apiserver_url: str
+    :param apiserver_profile: The cluster API server profile.
+    :type apiserver_profile:
+     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.APIServerProfile
     :param console_url: The URL to access the cluster console (immutable).
     :type console_url: str
     """
@@ -216,11 +232,11 @@ class OpenShiftCluster(Model):
         'network_profile': {'key': 'properties.networkProfile', 'type': 'NetworkProfile'},
         'master_profile': {'key': 'properties.masterProfile', 'type': 'MasterProfile'},
         'worker_profiles': {'key': 'properties.workerProfiles', 'type': '[WorkerProfile]'},
-        'apiserver_url': {'key': 'properties.apiserverUrl', 'type': 'str'},
+        'apiserver_profile': {'key': 'properties.apiserverProfile', 'type': 'APIServerProfile'},
         'console_url': {'key': 'properties.consoleUrl', 'type': 'str'},
     }
 
-    def __init__(self, *, location: str=None, tags=None, provisioning_state=None, cluster_domain: str=None, service_principal_profile=None, network_profile=None, master_profile=None, worker_profiles=None, apiserver_url: str=None, console_url: str=None, **kwargs) -> None:
+    def __init__(self, *, location: str=None, tags=None, provisioning_state=None, cluster_domain: str=None, service_principal_profile=None, network_profile=None, master_profile=None, worker_profiles=None, apiserver_profile=None, console_url: str=None, **kwargs) -> None:
         super(OpenShiftCluster, self).__init__(**kwargs)
         self.id = None
         self.name = None
@@ -233,7 +249,7 @@ class OpenShiftCluster(Model):
         self.network_profile = network_profile
         self.master_profile = master_profile
         self.worker_profiles = worker_profiles
-        self.apiserver_url = apiserver_url
+        self.apiserver_profile = apiserver_profile
         self.console_url = console_url
 
 

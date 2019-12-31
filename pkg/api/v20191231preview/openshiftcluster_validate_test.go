@@ -72,8 +72,10 @@ func validOpenShiftCluster() *OpenShiftCluster {
 					Count:      3,
 				},
 			},
-			APIServerURL: "url",
-			ConsoleURL:   "url",
+			APIServerProfile: APIServerProfile{
+				URL: "url",
+			},
+			ConsoleURL: "url",
 		},
 	}
 }
@@ -196,19 +198,6 @@ func TestValidateProperties(t *testing.T) {
 				oc.Properties.WorkerProfiles = []WorkerProfile{{}, {}}
 			},
 			wantErr: "400: InvalidParameter: properties.workerProfiles: There should be exactly one worker profile.",
-		},
-		{
-			name: "empty apiServerUrl valid",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.APIServerURL = ""
-			},
-		},
-		{
-			name: "apiServerUrl invalid",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.APIServerURL = "\x00"
-			},
-			wantErr: "400: InvalidParameter: properties.apiserverUrl: The provided API server URL '\x00' is invalid.",
 		},
 		{
 			name: "empty consoleUrl valid",
@@ -411,6 +400,31 @@ func TestValidateWorkerProfile(t *testing.T) {
 	})
 }
 
+func TestValidateAPIServerProfile(t *testing.T) {
+	tests := []*validateTest{
+		{
+			name: "valid",
+		},
+		{
+			name: "empty url valid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.APIServerProfile.URL = ""
+			},
+		},
+		{
+			name: "url invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.APIServerProfile.URL = "\x00"
+			},
+			wantErr: "400: InvalidParameter: properties.apiserverProfile.url: The provided URL '\x00' is invalid.",
+		},
+	}
+
+	runTests(t, tests, func(oc *OpenShiftCluster) error {
+		return v.validateAPIServerProfile("properties.apiserverProfile", &oc.Properties.APIServerProfile)
+	})
+}
+
 func TestOpenShiftClusterValidateDelta(t *testing.T) {
 	tests := []*validateTest{
 		{
@@ -463,9 +477,16 @@ func TestOpenShiftClusterValidateDelta(t *testing.T) {
 			wantErr: "400: PropertyChangeNotAllowed: properties.clusterDomain: Changing property 'properties.clusterDomain' is not allowed.",
 		},
 		{
-			name:    "apiserverUrl change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.APIServerURL = "invalid" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.apiserverUrl: Changing property 'properties.apiserverUrl' is not allowed.",
+			name: "apiServer private change",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.APIServerProfile.Private = !oc.Properties.APIServerProfile.Private
+			},
+			wantErr: "400: PropertyChangeNotAllowed: properties.apiserverProfile.private: Changing property 'properties.apiserverProfile.private' is not allowed.",
+		},
+		{
+			name:    "apiServer url change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.APIServerProfile.URL = "invalid" },
+			wantErr: "400: PropertyChangeNotAllowed: properties.apiserverProfile.url: Changing property 'properties.apiserverProfile.url' is not allowed.",
 		},
 		{
 			name:    "consoleUrl change",

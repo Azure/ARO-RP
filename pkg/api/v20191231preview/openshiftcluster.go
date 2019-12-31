@@ -53,8 +53,8 @@ type Properties struct {
 	// The cluster worker profiles.
 	WorkerProfiles []WorkerProfile `json:"workerProfiles,omitempty"`
 
-	// The URL to access the cluster API server (immutable).
-	APIServerURL string `json:"apiserverUrl,omitempty"`
+	// The cluster API server profile.
+	APIServerProfile APIServerProfile `json:"apiserverProfile,omitempty"`
 
 	// The URL to access the cluster console (immutable).
 	ConsoleURL string `json:"consoleUrl,omitempty"`
@@ -125,4 +125,10 @@ type WorkerProfile struct {
 
 	// The number of worker VMs.  Must be between 3 and 20.
 	Count int `json:"count,omitempty" mutable:"true"`
+}
+
+// APIServerProfile represents an API server profile.
+type APIServerProfile struct {
+	// The URL to access the cluster API server (immutable).
+	URL string `json:"url,omitempty"`
 }

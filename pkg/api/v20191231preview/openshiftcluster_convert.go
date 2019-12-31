@@ -33,8 +33,10 @@ func openShiftClusterToExternal(oc *api.OpenShiftCluster) *OpenShiftCluster {
 				VMSize:   VMSize(oc.Properties.MasterProfile.VMSize),
 				SubnetID: oc.Properties.MasterProfile.SubnetID,
 			},
-			APIServerURL: oc.Properties.APIServerURL,
-			ConsoleURL:   oc.Properties.ConsoleURL,
+			APIServerProfile: APIServerProfile{
+				URL: oc.Properties.APIServerProfile.URL,
+			},
+			ConsoleURL: oc.Properties.ConsoleURL,
 		},
 	}
 
@@ -117,6 +119,6 @@ func openShiftClusterToInternal(oc *OpenShiftCluster, out *api.OpenShiftCluster)
 		outp.SubnetID = p.SubnetID
 		outp.Count = p.Count
 	}
-	out.Properties.APIServerURL = oc.Properties.APIServerURL
+	out.Properties.APIServerProfile.URL = oc.Properties.APIServerProfile.URL
 	out.Properties.ConsoleURL = oc.Properties.ConsoleURL
 }

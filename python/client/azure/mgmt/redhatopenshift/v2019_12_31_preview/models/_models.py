@@ -23,6 +23,22 @@ from msrest.serialization import Model
 from msrest.exceptions import HttpOperationError
 
 
+class APIServerProfile(Model):
+    """APIServerProfile represents an API server profile.
+
+    :param url: The URL to access the cluster API server (immutable).
+    :type url: str
+    """
+
+    _attribute_map = {
+        'url': {'key': 'url', 'type': 'str'},
+    }
+
+    def __init__(self, **kwargs):
+        super(APIServerProfile, self).__init__(**kwargs)
+        self.url = kwargs.get('url', None)
+
+
 class CloudError(Model):
     """CloudError represents a cloud error.
 
@@ -191,9 +207,9 @@ class OpenShiftCluster(Model):
     :param worker_profiles: The cluster worker profiles.
     :type worker_profiles:
      list[~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.WorkerProfile]
-    :param apiserver_url: The URL to access the cluster API server
-     (immutable).
-    :type apiserver_url: str
+    :param apiserver_profile: The cluster API server profile.
+    :type apiserver_profile:
+     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.APIServerProfile
     :param console_url: The URL to access the cluster console (immutable).
     :type console_url: str
     """
@@ -216,7 +232,7 @@ class OpenShiftCluster(Model):
         'network_profile': {'key': 'properties.networkProfile', 'type': 'NetworkProfile'},
         'master_profile': {'key': 'properties.masterProfile', 'type': 'MasterProfile'},
         'worker_profiles': {'key': 'properties.workerProfiles', 'type': '[WorkerProfile]'},
-        'apiserver_url': {'key': 'properties.apiserverUrl', 'type': 'str'},
+        'apiserver_profile': {'key': 'properties.apiserverProfile', 'type': 'APIServerProfile'},
         'console_url': {'key': 'properties.consoleUrl', 'type': 'str'},
     }
 
@@ -233,7 +249,7 @@ class OpenShiftCluster(Model):
         self.network_profile = kwargs.get('network_profile', None)
         self.master_profile = kwargs.get('master_profile', None)
         self.worker_profiles = kwargs.get('worker_profiles', None)
-        self.apiserver_url = kwargs.get('apiserver_url', None)
+        self.apiserver_profile = kwargs.get('apiserver_profile', None)
         self.console_url = kwargs.get('console_url', None)
 
 

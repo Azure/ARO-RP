@@ -84,6 +84,12 @@ func PossibleVMSize1Values() []VMSize1 {
 	return []VMSize1{VMSize1StandardD2sV3, VMSize1StandardD4sV3, VMSize1StandardD8sV3}
 }
 
+// APIServerProfile aPIServerProfile represents an API server profile.
+type APIServerProfile struct {
+	// URL - The URL to access the cluster API server (immutable).
+	URL *string `json:"url,omitempty"`
+}
+
 // CloudError cloudError represents a cloud error.
 type CloudError struct {
 	// Error - An error response from the service.
@@ -357,8 +363,8 @@ type Properties struct {
 	MasterProfile *MasterProfile `json:"masterProfile,omitempty"`
 	// WorkerProfiles - The cluster worker profiles.
 	WorkerProfiles *[]WorkerProfile `json:"workerProfiles,omitempty"`
-	// ApiserverURL - The URL to access the cluster API server (immutable).
-	ApiserverURL *string `json:"apiserverUrl,omitempty"`
+	// ApiserverProfile - The cluster API server profile.
+	ApiserverProfile *APIServerProfile `json:"apiserverProfile,omitempty"`
 	// ConsoleURL - The URL to access the cluster console (immutable).
 	ConsoleURL *string `json:"consoleUrl,omitempty"`
 }

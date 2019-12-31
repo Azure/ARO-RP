@@ -100,10 +100,8 @@ func (v *validator) validateProperties(path string, p *Properties) error {
 	if err := v.validateWorkerProfile(path+`.workerProfiles["`+p.WorkerProfiles[0].Name+`"]`, &p.WorkerProfiles[0], &p.MasterProfile); err != nil {
 		return err
 	}
-	if p.APIServerURL != "" {
-		if _, err := url.Parse(p.APIServerURL); err != nil {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".apiserverUrl", "The provided API server URL '%s' is invalid.", p.APIServerURL)
-		}
+	if err := v.validateAPIServerProfile(path+`.apiserverProfile`, &p.APIServerProfile); err != nil {
+		return err
 	}
 	if p.ConsoleURL != "" {
 		if _, err := url.Parse(p.ConsoleURL); err != nil {
@@ -208,6 +206,16 @@ func (v *validator) validateWorkerProfile(path string, wp *WorkerProfile, mp *Ma
 	}
 	if wp.Count < 3 || wp.Count > 20 {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".count", "The provided worker count '%d' is invalid.", wp.Count)
+	}
+
+	return nil
+}
+
+func (v *validator) validateAPIServerProfile(path string, ap *APIServerProfile) error {
+	if ap.URL != "" {
+		if _, err := url.Parse(ap.URL); err != nil {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".url", "The provided URL '%s' is invalid.", ap.URL)
+		}
 	}
 
 	return nil

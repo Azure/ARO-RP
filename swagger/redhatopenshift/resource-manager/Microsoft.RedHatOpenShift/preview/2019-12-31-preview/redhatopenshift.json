@@ -415,6 +415,15 @@
         }
     },
     "definitions": {
+        "APIServerProfile": {
+            "description": "APIServerProfile represents an API server profile.",
+            "properties": {
+                "url": {
+                    "description": "The URL to access the cluster API server (immutable).",
+                    "type": "string"
+                }
+            }
+        },
         "CloudError": {
             "description": "CloudError represents a cloud error.",
             "properties": {
@@ -613,9 +622,9 @@
                         "$ref": "#/definitions/WorkerProfile"
                     }
                 },
-                "apiserverUrl": {
-                    "description": "The URL to access the cluster API server (immutable).",
-                    "type": "string"
+                "apiserverProfile": {
+                    "$ref": "#/definitions/APIServerProfile",
+                    "description": "The cluster API server profile."
                 },
                 "consoleUrl": {
                     "description": "The URL to access the cluster console (immutable).",

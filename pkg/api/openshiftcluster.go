@@ -69,8 +69,9 @@ type Properties struct {
 
 	WorkerProfiles []WorkerProfile `json:"workerProfiles,omitempty"`
 
-	APIServerURL string `json:"apiserverUrl,omitempty"`
-	ConsoleURL   string `json:"consoleUrl,omitempty"`
+	APIServerProfile APIServerProfile `json:"apiserverProfile,omitempty"`
+
+	ConsoleURL string `json:"consoleUrl,omitempty"`
 
 	// Install is non-nil only when an install is in progress
 	Install *Install `json:"install,omitempty"`
@@ -140,6 +141,13 @@ type WorkerProfile struct {
 	DiskSizeGB int    `json:"diskSizeGB,omitempty"`
 	SubnetID   string `json:"subnetId,omitempty"`
 	Count      int    `json:"count,omitempty"`
+}
+
+// APIServerProfile represents an API server profile
+type APIServerProfile struct {
+	MissingFields
+
+	URL string `json:"url,omitempty"`
 }
 
 // Install represents an install process

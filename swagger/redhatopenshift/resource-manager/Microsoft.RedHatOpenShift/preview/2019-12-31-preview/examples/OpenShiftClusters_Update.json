@@ -62,7 +62,9 @@
                             "count": 3
                         }
                     ],
-                    "apiserverUrl": "https://api.cluster.location.aroapp.io:6443/",
+                    "apiserverProfile": {
+                        "url": "https://api.cluster.location.aroapp.io:6443/"
+                    },
                     "consoleUrl": "https://console-openshift-console.apps.cluster.location.aroapp.io/"
                 }
             }
@@ -96,7 +98,9 @@
                             "count": 3
                         }
                     ],
-                    "apiserverUrl": "https://api.cluster.location.aroapp.io:6443/",
+                    "apiserverProfile": {
+                        "url": "https://api.cluster.location.aroapp.io:6443/"
+                    },
                     "consoleUrl": "https://console-openshift-console.apps.cluster.location.aroapp.io/"
                 }
             }
