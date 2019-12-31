@@ -132,8 +132,8 @@ cluster:
 1. Access the cluster console:
 
    You can find the cluster console URL (of the form
-   `https://console-openshift-console.apps.<random>.eastus.aroapp.io/`) in the
-   Azure Red Hat OpenShift v4 cluster resource:
+   `https://console-openshift-console.apps.<random>.<location>.aroapp.io/`) in
+   the Azure Red Hat OpenShift v4 cluster resource:
 
    ```
    az aro list -o table

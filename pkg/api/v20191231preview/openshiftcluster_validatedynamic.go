@@ -51,6 +51,8 @@ func validateOpenShiftClusterDynamic(ctx context.Context, getFPAuthorizer func(s
 		r:  r,
 	}
 
+	// TODO: pre-check that the cluster domain doesn't already exist
+
 	spAuthorizer, err := v.validateServicePrincipalProfile()
 	if err != nil {
 		return err

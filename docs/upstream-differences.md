@@ -55,8 +55,7 @@ upstream OCP.
 
 * installconfig.ClusterID.InfraID is hard-coded to "aro".
 
-* API server public IP domain name label is an 8 character random label, not the
-  infraID.
+* API server public IP domain name label is not used.
 
 * ARO uses first party RHCOS OS images published by Microsoft.
 

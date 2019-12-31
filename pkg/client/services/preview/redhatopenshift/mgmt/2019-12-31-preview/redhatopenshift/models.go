@@ -347,6 +347,8 @@ type OperationList struct {
 type Properties struct {
 	// ProvisioningState - The cluster provisioning state (immutable). Possible values include: 'Creating', 'Deleting', 'Failed', 'Succeeded', 'Updating'
 	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"`
+	// ClusterDomain - The domain for the cluster (immutable).
+	ClusterDomain *string `json:"clusterDomain,omitempty"`
 	// ServicePrincipalProfile - The cluster service principal profile.
 	ServicePrincipalProfile *ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
 	// NetworkProfile - The cluster network profile.

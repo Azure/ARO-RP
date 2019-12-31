@@ -19,7 +19,11 @@ import (
 )
 
 var (
-	rxSubnetID = regexp.MustCompile(`(?i)^/subscriptions/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/resourceGroups/[-a-z0-9_().]{0,89}[-a-z0-9_()]/providers/Microsoft\.Network/virtualNetworks/[-a-z0-9_.]{2,64}/subnets/[-a-z0-9_.]{2,80}$`)
+	rxSubnetID   = regexp.MustCompile(`(?i)^/subscriptions/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/resourceGroups/[-a-z0-9_().]{0,89}[-a-z0-9_()]/providers/Microsoft\.Network/virtualNetworks/[-a-z0-9_.]{2,64}/subnets/[-a-z0-9_.]{2,80}$`)
+	rxDomainName = regexp.MustCompile(`^` +
+		`([a-z0-9]|[a-z0-9][-a-z0-9]{0,61}[a-z0-9])` +
+		`(\.([a-z0-9]|[a-z0-9][-a-z0-9]{0,61}[a-z0-9]))*` +
+		`$`)
 )
 
 type validator struct {
@@ -77,6 +81,9 @@ func (v *validator) validateProperties(path string, p *Properties) error {
 		ProvisioningStateFailed:
 	default:
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".provisioningState", "The provided provisioning state '%s' is invalid.", p.ProvisioningState)
+	}
+	if !rxDomainName.MatchString(p.ClusterDomain) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".clusterDomain", "The provided cluster domain '%s' is invalid.", p.ClusterDomain)
 	}
 	if err := v.validateServicePrincipalProfile(path+".servicePrincipalProfile", &p.ServicePrincipalProfile); err != nil {
 		return err

@@ -177,6 +177,8 @@ class OpenShiftCluster(Model):
      'Updating'
     :type provisioning_state: str or
      ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.enum
+    :param cluster_domain: The domain for the cluster (immutable).
+    :type cluster_domain: str
     :param service_principal_profile: The cluster service principal profile.
     :type service_principal_profile:
      ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.ServicePrincipalProfile
@@ -209,6 +211,7 @@ class OpenShiftCluster(Model):
         'location': {'key': 'location', 'type': 'str'},
         'tags': {'key': 'tags', 'type': '{str}'},
         'provisioning_state': {'key': 'properties.provisioningState', 'type': 'str'},
+        'cluster_domain': {'key': 'properties.clusterDomain', 'type': 'str'},
         'service_principal_profile': {'key': 'properties.servicePrincipalProfile', 'type': 'ServicePrincipalProfile'},
         'network_profile': {'key': 'properties.networkProfile', 'type': 'NetworkProfile'},
         'master_profile': {'key': 'properties.masterProfile', 'type': 'MasterProfile'},
@@ -225,6 +228,7 @@ class OpenShiftCluster(Model):
         self.location = kwargs.get('location', None)
         self.tags = kwargs.get('tags', None)
         self.provisioning_state = kwargs.get('provisioning_state', None)
+        self.cluster_domain = kwargs.get('cluster_domain', None)
         self.service_principal_profile = kwargs.get('service_principal_profile', None)
         self.network_profile = kwargs.get('network_profile', None)
         self.master_profile = kwargs.get('master_profile', None)

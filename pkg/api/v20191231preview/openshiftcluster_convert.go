@@ -20,6 +20,7 @@ func openShiftClusterToExternal(oc *api.OpenShiftCluster) *OpenShiftCluster {
 		Location: oc.Location,
 		Properties: Properties{
 			ProvisioningState: ProvisioningState(oc.Properties.ProvisioningState),
+			ClusterDomain:     oc.Properties.ClusterDomain,
 			ServicePrincipalProfile: ServicePrincipalProfile{
 				ClientID:     oc.Properties.ServicePrincipalProfile.ClientID,
 				ClientSecret: oc.Properties.ServicePrincipalProfile.ClientSecret,
@@ -91,6 +92,7 @@ func openShiftClusterToInternal(oc *OpenShiftCluster, out *api.OpenShiftCluster)
 		}
 	}
 	out.Properties.ProvisioningState = api.ProvisioningState(oc.Properties.ProvisioningState)
+	out.Properties.ClusterDomain = oc.Properties.ClusterDomain
 	out.Properties.ServicePrincipalProfile.ClientID = oc.Properties.ServicePrincipalProfile.ClientID
 	out.Properties.ServicePrincipalProfile.ClientSecret = oc.Properties.ServicePrincipalProfile.ClientSecret
 	out.Properties.NetworkProfile.PodCIDR = oc.Properties.NetworkProfile.PodCIDR

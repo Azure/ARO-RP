@@ -295,9 +295,6 @@ func (i *Installer) installResources(ctx context.Context) error {
 						},
 						PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
 							PublicIPAllocationMethod: mgmtnetwork.Static,
-							DNSSettings: &mgmtnetwork.PublicIPAddressDNSSettings{
-								DomainNameLabel: &i.doc.OpenShiftCluster.Properties.DomainName,
-							},
 						},
 						Name:     to.StringPtr("aro-pip"),
 						Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
@@ -696,7 +693,12 @@ func (i *Installer) installResources(ctx context.Context) error {
 	}
 
 	{
-		err = i.dns.CreateOrUpdate(ctx, i.doc.OpenShiftCluster)
+		ip, err := i.publicipaddresses.Get(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "aro-pip", "")
+		if err != nil {
+			return err
+		}
+
+		err = i.dns.Update(ctx, i.doc.OpenShiftCluster, *ip.IPAddress)
 		if err != nil {
 			return err
 		}

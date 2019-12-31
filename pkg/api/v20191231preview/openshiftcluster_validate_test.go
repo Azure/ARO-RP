@@ -50,6 +50,7 @@ func validOpenShiftCluster() *OpenShiftCluster {
 		Tags:     Tags{"key": "value"},
 		Properties: Properties{
 			ProvisioningState: ProvisioningStateSucceeded,
+			ClusterDomain:     "cluster.eastus.aroapp.io",
 			ServicePrincipalProfile: ServicePrincipalProfile{
 				ClientID:     "2b5ba2c6-6205-4fc4-8b5d-9fea369ae1a2",
 				ClientSecret: "secret",
@@ -160,6 +161,27 @@ func TestValidateProperties(t *testing.T) {
 				oc.Properties.ProvisioningState = "invalid"
 			},
 			wantErr: "400: InvalidParameter: properties.provisioningState: The provided provisioning state 'invalid' is invalid.",
+		},
+		{
+			name: "empty clusterDomain invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterDomain = ""
+			},
+			wantErr: "400: InvalidParameter: properties.clusterDomain: The provided cluster domain '' is invalid.",
+		},
+		{
+			name: "upper case clusterDomain invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterDomain = "BAD"
+			},
+			wantErr: "400: InvalidParameter: properties.clusterDomain: The provided cluster domain 'BAD' is invalid.",
+		},
+		{
+			name: "clusterDomain invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterDomain = "!"
+			},
+			wantErr: "400: InvalidParameter: properties.clusterDomain: The provided cluster domain '!' is invalid.",
 		},
 		{
 			name: "no workerProfiles invalid",
@@ -434,6 +456,11 @@ func TestOpenShiftClusterValidateDelta(t *testing.T) {
 			name:    "provisioningState change",
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.ProvisioningState = "invalid" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.provisioningState: Changing property 'properties.provisioningState' is not allowed.",
+		},
+		{
+			name:    "clusterDomain change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.ClusterDomain = "invalid" },
+			wantErr: "400: PropertyChangeNotAllowed: properties.clusterDomain: Changing property 'properties.clusterDomain' is not allowed.",
 		},
 		{
 			name:    "apiserverUrl change",

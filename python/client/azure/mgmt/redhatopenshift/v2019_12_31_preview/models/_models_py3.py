@@ -177,6 +177,8 @@ class OpenShiftCluster(Model):
      'Updating'
     :type provisioning_state: str or
      ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.enum
+    :param cluster_domain: The domain for the cluster (immutable).
+    :type cluster_domain: str
     :param service_principal_profile: The cluster service principal profile.
     :type service_principal_profile:
      ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.ServicePrincipalProfile
@@ -209,6 +211,7 @@ class OpenShiftCluster(Model):
         'location': {'key': 'location', 'type': 'str'},
         'tags': {'key': 'tags', 'type': '{str}'},
         'provisioning_state': {'key': 'properties.provisioningState', 'type': 'str'},
+        'cluster_domain': {'key': 'properties.clusterDomain', 'type': 'str'},
         'service_principal_profile': {'key': 'properties.servicePrincipalProfile', 'type': 'ServicePrincipalProfile'},
         'network_profile': {'key': 'properties.networkProfile', 'type': 'NetworkProfile'},
         'master_profile': {'key': 'properties.masterProfile', 'type': 'MasterProfile'},
@@ -217,7 +220,7 @@ class OpenShiftCluster(Model):
         'console_url': {'key': 'properties.consoleUrl', 'type': 'str'},
     }
 
-    def __init__(self, *, location: str=None, tags=None, provisioning_state=None, service_principal_profile=None, network_profile=None, master_profile=None, worker_profiles=None, apiserver_url: str=None, console_url: str=None, **kwargs) -> None:
+    def __init__(self, *, location: str=None, tags=None, provisioning_state=None, cluster_domain: str=None, service_principal_profile=None, network_profile=None, master_profile=None, worker_profiles=None, apiserver_url: str=None, console_url: str=None, **kwargs) -> None:
         super(OpenShiftCluster, self).__init__(**kwargs)
         self.id = None
         self.name = None
@@ -225,6 +228,7 @@ class OpenShiftCluster(Model):
         self.location = location
         self.tags = tags
         self.provisioning_state = provisioning_state
+        self.cluster_domain = cluster_domain
         self.service_principal_profile = service_principal_profile
         self.network_profile = network_profile
         self.master_profile = master_profile

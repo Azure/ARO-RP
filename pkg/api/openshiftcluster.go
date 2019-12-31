@@ -59,6 +59,8 @@ type Properties struct {
 	ProvisioningState       ProvisioningState `json:"provisioningState,omitempty"`
 	FailedProvisioningState ProvisioningState `json:"failedProvisioningState,omitempty"`
 
+	ClusterDomain string `json:"clusterDomain,omitempty"`
+
 	ServicePrincipalProfile ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
 
 	NetworkProfile NetworkProfile `json:"networkProfile,omitempty"`
@@ -75,7 +77,6 @@ type Properties struct {
 
 	// TODO: ResourceGroup should be exposed in external API
 	ResourceGroup string `json:"resourceGroup,omitempty"`
-	DomainName    string `json:"domainName,omitempty"`
 	StorageSuffix string `json:"storageSuffix,omitempty"`
 
 	SSHKey            *rsa.PrivateKey `json:"sshKey,omitempty"`

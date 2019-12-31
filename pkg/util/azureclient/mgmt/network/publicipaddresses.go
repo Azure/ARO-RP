@@ -12,6 +12,7 @@ import (
 
 // PublicIPAddressesClient is a minimal interface for azure PublicIPAddressesClient
 type PublicIPAddressesClient interface {
+	Get(ctx context.Context, resourceGroupName string, publicIPAddressName string, expand string) (result network.PublicIPAddress, err error)
 	List(ctx context.Context, resourceGroupName string) (ips []network.PublicIPAddress, err error)
 	PublicIPAddressesClientAddons
 }

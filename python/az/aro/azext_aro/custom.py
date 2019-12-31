@@ -1,6 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the Apache License 2.0.
 
+import random
 import time
 import os
 
@@ -25,6 +26,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                vnet=None,
                vnet_resource_group_name=None,  # pylint: disable=unused-argument
                location=None,
+               cluster_domain=None,
                client_id=None,
                client_secret=None,
                pod_cidr=None,
@@ -61,6 +63,8 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
     oc = v2019_12_31_preview.OpenShiftCluster(
         location=location,
         tags=tags,
+        cluster_domain=cluster_domain or ''.join(random.choice(
+            'abcdefghijklmnopqrstuvwxyz0123456789') for _ in range(8)),
         service_principal_profile=v2019_12_31_preview.ServicePrincipalProfile(
             client_id=client_id,
             client_secret=client_secret,

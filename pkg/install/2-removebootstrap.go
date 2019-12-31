@@ -11,6 +11,7 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
+	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/password"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
@@ -25,6 +26,7 @@ func (i *Installer) removeBootstrap(ctx context.Context) error {
 		return err
 	}
 
+	installConfig := g[reflect.TypeOf(&installconfig.InstallConfig{})].(*installconfig.InstallConfig)
 	kubeadminPassword := g[reflect.TypeOf(&password.KubeadminPassword{})].(*password.KubeadminPassword)
 
 	{
@@ -138,8 +140,8 @@ func (i *Installer) removeBootstrap(ctx context.Context) error {
 	}
 
 	i.doc, err = i.db.Patch(i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.APIServerURL = "https://api." + doc.OpenShiftCluster.Properties.DomainName + "." + i.dns.Domain() + ":6443/"
-		doc.OpenShiftCluster.Properties.ConsoleURL = "https://console-openshift-console.apps." + doc.OpenShiftCluster.Properties.DomainName + "." + i.dns.Domain() + "/"
+		doc.OpenShiftCluster.Properties.APIServerURL = "https://api." + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + ":6443/"
+		doc.OpenShiftCluster.Properties.ConsoleURL = "https://console-openshift-console.apps." + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/"
 		doc.OpenShiftCluster.Properties.KubeadminPassword = kubeadminPassword.Password
 		return nil
 	})

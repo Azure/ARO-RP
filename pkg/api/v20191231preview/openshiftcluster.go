@@ -38,6 +38,9 @@ type Properties struct {
 	// The cluster provisioning state (immutable).
 	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"`
 
+	// The domain for the cluster (immutable).
+	ClusterDomain string `json:"clusterDomain,omitempty"`
+
 	// The cluster service principal profile.
 	ServicePrincipalProfile ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
 
