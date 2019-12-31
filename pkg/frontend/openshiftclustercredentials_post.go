@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
 
@@ -27,7 +28,27 @@ func (f *frontend) postOpenShiftClusterCredentials(w http.ResponseWriter, r *htt
 
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
-	b, err := f._getOpenShiftCluster(r, api.APIs[vars["api-version"]]["OpenShiftClusterCredentials"].(api.OpenShiftClusterToExternal))
+	b, err := f._postOpenShiftClusterCredentials(r, api.APIs[vars["api-version"]]["OpenShiftClusterCredentials"].(api.OpenShiftClusterToExternal))
 
 	reply(log, w, nil, b, err)
+}
+
+func (f *frontend) _postOpenShiftClusterCredentials(r *http.Request, external api.OpenShiftClusterToExternal) ([]byte, error) {
+	vars := mux.Vars(r)
+
+	doc, err := f.db.OpenShiftClusters.Get(r.URL.Path)
+	switch {
+	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
+		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
+	case err != nil:
+		return nil, err
+	}
+
+	if doc.OpenShiftCluster.Properties.ProvisioningState == api.ProvisioningStateCreating {
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed in provisioningState '%s'.", doc.OpenShiftCluster.Properties.ProvisioningState)
+	}
+
+	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
+
+	return json.MarshalIndent(external.OpenShiftClusterToExternal(doc.OpenShiftCluster), "", "    ")
 }
