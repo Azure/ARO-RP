@@ -147,8 +147,9 @@ type WorkerProfile struct {
 type APIServerProfile struct {
 	MissingFields
 
-	URL string `json:"url,omitempty"`
-	IP  string `json:"ip,omitempty"`
+	Private bool   `json:"private,omitempty"`
+	URL     string `json:"url,omitempty"`
+	IP      string `json:"ip,omitempty"`
 }
 
 // Install represents an install process

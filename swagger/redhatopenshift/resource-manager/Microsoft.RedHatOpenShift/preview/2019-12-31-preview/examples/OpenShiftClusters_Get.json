@@ -36,6 +36,7 @@
                         }
                     ],
                     "apiserverProfile": {
+                        "private": false,
                         "url": "https://api.cluster.location.aroapp.io:6443/",
                         "ip": "1.2.3.4"
                     },

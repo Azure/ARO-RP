@@ -15,6 +15,7 @@ from azure.cli.core.commands.parameters import name_type
 from azure.cli.core.commands.parameters import resource_group_name_type
 from azure.cli.core.commands.parameters import tags_type
 from azure.cli.core.commands.validators import get_default_location_from_resource_group
+from knack.arguments import CLIArgumentType
 
 
 def load_arguments(self, _):
@@ -57,6 +58,10 @@ def load_arguments(self, _):
         c.argument('worker_count',
                    help='Count of worker VMs.',
                    validator=validate_worker_count)
+
+        c.argument('private_apiserver',
+                   CLIArgumentType(action='store_true'),
+                   help='Private API server.')
 
         c.argument('vnet_resource_group_name',
                    resource_group_name_type,

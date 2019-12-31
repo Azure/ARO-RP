@@ -275,21 +275,6 @@ func (i *Installer) installResources(ctx context.Context) error {
 					APIVersion: apiVersions["network"],
 				},
 				{
-					// TODO: we will want to remove this
-					Resource: &mgmtnetwork.PublicIPAddress{
-						Sku: &mgmtnetwork.PublicIPAddressSku{
-							Name: mgmtnetwork.PublicIPAddressSkuNameStandard,
-						},
-						PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
-							PublicIPAllocationMethod: mgmtnetwork.Static,
-						},
-						Name:     to.StringPtr("aro-bootstrap-pip"),
-						Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
-						Location: &installConfig.Config.Azure.Region,
-					},
-					APIVersion: apiVersions["network"],
-				},
-				{
 					Resource: &mgmtnetwork.PublicIPAddress{
 						Sku: &mgmtnetwork.PublicIPAddressSku{
 							Name: mgmtnetwork.PublicIPAddressSkuNameStandard,
@@ -303,70 +288,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 					},
 					APIVersion: apiVersions["network"],
 				},
-				{
-					Resource: &mgmtnetwork.LoadBalancer{
-						Sku: &mgmtnetwork.LoadBalancerSku{
-							Name: mgmtnetwork.LoadBalancerSkuNameStandard,
-						},
-						LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
-							FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
-								{
-									FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
-										PublicIPAddress: &mgmtnetwork.PublicIPAddress{
-											ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', 'aro-pip')]"),
-										},
-									},
-									Name: to.StringPtr("public-lb-ip"),
-								},
-							},
-							BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
-								{
-									Name: to.StringPtr("aro-public-lb-control-plane"),
-								},
-							},
-							LoadBalancingRules: &[]mgmtnetwork.LoadBalancingRule{
-								{
-									LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
-										FrontendIPConfiguration: &mgmtnetwork.SubResource{
-											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'aro-public-lb', 'public-lb-ip')]"),
-										},
-										BackendAddressPool: &mgmtnetwork.SubResource{
-											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'aro-public-lb', 'aro-public-lb-control-plane')]"),
-										},
-										Probe: &mgmtnetwork.SubResource{
-											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'aro-public-lb', 'api-internal-probe')]"),
-										},
-										Protocol:             mgmtnetwork.TransportProtocolTCP,
-										LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
-										FrontendPort:         to.Int32Ptr(6443),
-										BackendPort:          to.Int32Ptr(6443),
-										IdleTimeoutInMinutes: to.Int32Ptr(30),
-									},
-									Name: to.StringPtr("api-internal"),
-								},
-							},
-							Probes: &[]mgmtnetwork.Probe{
-								{
-									ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
-										Protocol:          mgmtnetwork.ProbeProtocolTCP,
-										Port:              to.Int32Ptr(6443),
-										IntervalInSeconds: to.Int32Ptr(10),
-										NumberOfProbes:    to.Int32Ptr(3),
-									},
-									Name: to.StringPtr("api-internal-probe"),
-									Type: to.StringPtr("Microsoft.Network/loadBalancers/probes"),
-								},
-							},
-						},
-						Name:     to.StringPtr("aro-public-lb"),
-						Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
-						Location: &installConfig.Config.Azure.Region,
-					},
-					APIVersion: apiVersions["network"],
-					DependsOn: []string{
-						"Microsoft.Network/publicIPAddresses/aro-pip",
-					},
-				},
+				i.apiServerPublicLoadBalancer(installConfig.Config.Azure.Region, i.doc.OpenShiftCluster.Properties.APIServerProfile.Private),
 				{
 					Resource: &mgmtnetwork.LoadBalancer{
 						Sku: &mgmtnetwork.LoadBalancerSku{
@@ -474,9 +396,6 @@ func (i *Installer) installResources(ctx context.Context) error {
 										Subnet: &mgmtnetwork.Subnet{
 											ID: to.StringPtr(i.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 										},
-										PublicIPAddress: &mgmtnetwork.PublicIPAddress{
-											ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', 'aro-bootstrap-pip')]"),
-										},
 									},
 									Name: to.StringPtr("bootstrap-nic-ip"),
 								},
@@ -490,7 +409,6 @@ func (i *Installer) installResources(ctx context.Context) error {
 					DependsOn: []string{
 						"Microsoft.Network/loadBalancers/aro-internal-lb",
 						"Microsoft.Network/loadBalancers/aro-public-lb",
-						"Microsoft.Network/publicIPAddresses/aro-bootstrap-pip",
 					},
 				},
 				{
@@ -694,18 +612,24 @@ func (i *Installer) installResources(ctx context.Context) error {
 	}
 
 	{
-		ip, err := i.publicipaddresses.Get(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "aro-pip", "")
-		if err != nil {
-			return err
+		ipAddress := lbIP.String()
+
+		if !i.doc.OpenShiftCluster.Properties.APIServerProfile.Private {
+			ip, err := i.publicipaddresses.Get(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "aro-pip", "")
+			if err != nil {
+				return err
+			}
+
+			ipAddress = *ip.IPAddress
 		}
 
-		err = i.dns.Update(ctx, i.doc.OpenShiftCluster, *ip.IPAddress)
+		err = i.dns.Update(ctx, i.doc.OpenShiftCluster, ipAddress)
 		if err != nil {
 			return err
 		}
 
 		i.doc, err = i.db.Patch(i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-			doc.OpenShiftCluster.Properties.APIServerProfile.IP = *ip.IPAddress
+			doc.OpenShiftCluster.Properties.APIServerProfile.IP = ipAddress
 			return nil
 		})
 		if err != nil {

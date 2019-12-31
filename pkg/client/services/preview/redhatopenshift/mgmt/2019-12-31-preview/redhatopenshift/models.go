@@ -86,6 +86,8 @@ func PossibleVMSize1Values() []VMSize1 {
 
 // APIServerProfile aPIServerProfile represents an API server profile.
 type APIServerProfile struct {
+	// Private - Expose the API server on a private IP address only (immutable).
+	Private *bool `json:"private,omitempty"`
 	// URL - The URL to access the cluster API server (immutable).
 	URL *string `json:"url,omitempty"`
 	// IP - The IP of the cluster API server (immutable).

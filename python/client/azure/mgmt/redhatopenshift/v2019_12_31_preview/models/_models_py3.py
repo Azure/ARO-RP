@@ -26,6 +26,9 @@ from msrest.exceptions import HttpOperationError
 class APIServerProfile(Model):
     """APIServerProfile represents an API server profile.
 
+    :param private: Expose the API server on a private IP address only
+     (immutable).
+    :type private: bool
     :param url: The URL to access the cluster API server (immutable).
     :type url: str
     :param ip: The IP of the cluster API server (immutable).
@@ -33,12 +36,14 @@ class APIServerProfile(Model):
     """
 
     _attribute_map = {
+        'private': {'key': 'private', 'type': 'bool'},
         'url': {'key': 'url', 'type': 'str'},
         'ip': {'key': 'ip', 'type': 'str'},
     }
 
-    def __init__(self, *, url: str=None, ip: str=None, **kwargs) -> None:
+    def __init__(self, *, private: bool=None, url: str=None, ip: str=None, **kwargs) -> None:
         super(APIServerProfile, self).__init__(**kwargs)
+        self.private = private
         self.url = url
         self.ip = ip
 

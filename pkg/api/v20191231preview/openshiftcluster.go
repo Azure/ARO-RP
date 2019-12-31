@@ -129,6 +129,9 @@ type WorkerProfile struct {
 
 // APIServerProfile represents an API server profile.
 type APIServerProfile struct {
+	// Expose the API server on a private IP address only (immutable).
+	Private bool `json:"private,omitempty"`
+
 	// The URL to access the cluster API server (immutable).
 	URL string `json:"url,omitempty"`
 

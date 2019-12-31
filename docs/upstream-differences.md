@@ -55,9 +55,13 @@ upstream OCP.
 
 * installconfig.ClusterID.InfraID is hard-coded to "aro".
 
-* API server public IP domain name label is not used.
+* API server public IP domain name label is not set.
 
 * ARO uses first party RHCOS OS images published by Microsoft.
 
 * ARO API server internal LB remains on highest available master subnet IP, like
   in 4.2.
+
+* ARO never creates aro-bootstrap-pip for bootstrap VM.
+
+* ARO API server LB uses Azure outboundRule rather than port 27627 inbound rule.

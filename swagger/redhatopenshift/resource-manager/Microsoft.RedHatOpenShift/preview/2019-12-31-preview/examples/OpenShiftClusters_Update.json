@@ -28,7 +28,10 @@
                         "subnetId": "/subscriptions/subscriptionId/resourceGroups/resourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/workerSubnet",
                         "count": 3
                     }
-                ]
+                ],
+                "apiserverProfile": {
+                    "private": false
+                }
             }
         }
     },
@@ -63,6 +66,7 @@
                         }
                     ],
                     "apiserverProfile": {
+                        "private": false,
                         "url": "https://api.cluster.location.aroapp.io:6443/",
                         "ip": "1.2.3.4"
                     },
@@ -100,6 +104,7 @@
                         }
                     ],
                     "apiserverProfile": {
+                        "private": false,
                         "url": "https://api.cluster.location.aroapp.io:6443/",
                         "ip": "1.2.3.4"
                     },

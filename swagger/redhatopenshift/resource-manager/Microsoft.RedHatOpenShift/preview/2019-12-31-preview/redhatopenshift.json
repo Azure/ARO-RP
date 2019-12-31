@@ -418,6 +418,10 @@
         "APIServerProfile": {
             "description": "APIServerProfile represents an API server profile.",
             "properties": {
+                "private": {
+                    "description": "Expose the API server on a private IP address only (immutable).",
+                    "type": "boolean"
+                },
                 "url": {
                     "description": "The URL to access the cluster API server (immutable).",
                     "type": "string"

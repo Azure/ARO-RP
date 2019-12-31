@@ -54,14 +54,6 @@ func (i *Installer) removeBootstrap(ctx context.Context) error {
 	}
 
 	{
-		i.log.Print("removing bootstrap ip")
-		err = i.publicipaddresses.DeleteAndWait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "aro-bootstrap-pip")
-		if err != nil {
-			return err
-		}
-	}
-
-	{
 		ip, err := i.privateendpoint.GetIP(ctx, i.doc)
 		if err != nil {
 			return err
