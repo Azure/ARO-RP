@@ -566,6 +566,68 @@ func (i *Installer) installResources(ctx context.Context) error {
 						"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/virtualNetworkLinks/" + installConfig.Config.ObjectMeta.Name + "-network-link",
 					},
 				},
+				{
+					Resource: &mgmtnetwork.PublicIPAddress{
+						Sku: &mgmtnetwork.PublicIPAddressSku{
+							Name: mgmtnetwork.PublicIPAddressSkuNameStandard,
+						},
+						PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
+							PublicIPAllocationMethod: mgmtnetwork.Static,
+						},
+						Name:     to.StringPtr("aro-outbound-pip"),
+						Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
+						Location: &installConfig.Config.Azure.Region,
+					},
+					APIVersion: apiVersions["network"],
+				},
+				{
+					Resource: &mgmtnetwork.LoadBalancer{
+						Sku: &mgmtnetwork.LoadBalancerSku{
+							Name: mgmtnetwork.LoadBalancerSkuNameStandard,
+						},
+						LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
+							FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
+								{
+									FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
+										PublicIPAddress: &mgmtnetwork.PublicIPAddress{
+											ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', 'aro-outbound-pip')]"),
+										},
+									},
+									Name: to.StringPtr("outbound"),
+								},
+							},
+							BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
+								{
+									Name: to.StringPtr("aro"),
+								},
+							},
+							OutboundRules: &[]mgmtnetwork.OutboundRule{
+								{
+									OutboundRulePropertiesFormat: &mgmtnetwork.OutboundRulePropertiesFormat{
+										FrontendIPConfigurations: &[]mgmtnetwork.SubResource{
+											{
+												ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'aro', 'outbound')]"),
+											},
+										},
+										BackendAddressPool: &mgmtnetwork.SubResource{
+											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'aro', 'aro')]"),
+										},
+										Protocol:             mgmtnetwork.LoadBalancerOutboundRuleProtocolAll,
+										IdleTimeoutInMinutes: to.Int32Ptr(30),
+									},
+									Name: to.StringPtr("outboundrule"),
+								},
+							},
+						},
+						Name:     to.StringPtr("aro"),
+						Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
+						Location: &installConfig.Config.Azure.Region,
+					},
+					APIVersion: apiVersions["network"],
+					DependsOn: []string{
+						"Microsoft.Network/publicIPAddresses/aro-outbound-pip",
+					},
+				},
 			},
 		}
 

@@ -138,6 +138,31 @@ class Display(Model):
         self.description = kwargs.get('description', None)
 
 
+class IngressProfile(Model):
+    """IngressProfile represents an ingress profile.
+
+    :param name: The ingress profile name.  Must be "default" (immutable).
+    :type name: str
+    :param private: Expose the ingress on a private IP address only
+     (immutable).
+    :type private: bool
+    :param ip: The IP of the ingress (immutable).
+    :type ip: str
+    """
+
+    _attribute_map = {
+        'name': {'key': 'name', 'type': 'str'},
+        'private': {'key': 'private', 'type': 'bool'},
+        'ip': {'key': 'ip', 'type': 'str'},
+    }
+
+    def __init__(self, **kwargs):
+        super(IngressProfile, self).__init__(**kwargs)
+        self.name = kwargs.get('name', None)
+        self.private = kwargs.get('private', None)
+        self.ip = kwargs.get('ip', None)
+
+
 class MasterProfile(Model):
     """MasterProfile represents a master profile.
 
@@ -219,6 +244,9 @@ class OpenShiftCluster(Model):
     :param apiserver_profile: The cluster API server profile.
     :type apiserver_profile:
      ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.APIServerProfile
+    :param ingress_profiles: The cluster ingress profiles.
+    :type ingress_profiles:
+     list[~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.IngressProfile]
     :param console_url: The URL to access the cluster console (immutable).
     :type console_url: str
     """
@@ -242,6 +270,7 @@ class OpenShiftCluster(Model):
         'master_profile': {'key': 'properties.masterProfile', 'type': 'MasterProfile'},
         'worker_profiles': {'key': 'properties.workerProfiles', 'type': '[WorkerProfile]'},
         'apiserver_profile': {'key': 'properties.apiserverProfile', 'type': 'APIServerProfile'},
+        'ingress_profiles': {'key': 'properties.ingressProfiles', 'type': '[IngressProfile]'},
         'console_url': {'key': 'properties.consoleUrl', 'type': 'str'},
     }
 
@@ -259,6 +288,7 @@ class OpenShiftCluster(Model):
         self.master_profile = kwargs.get('master_profile', None)
         self.worker_profiles = kwargs.get('worker_profiles', None)
         self.apiserver_profile = kwargs.get('apiserver_profile', None)
+        self.ingress_profiles = kwargs.get('ingress_profiles', None)
         self.console_url = kwargs.get('console_url', None)
 
 

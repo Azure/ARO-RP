@@ -166,14 +166,13 @@ func (m *Manager) Create(ctx context.Context) error {
 			},
 			Platform: types.Platform{
 				Azure: &azuretypes.Platform{
-					Region:                      m.doc.OpenShiftCluster.Location,
-					ResourceGroupName:           m.doc.OpenShiftCluster.Properties.ResourceGroup,
-					BaseDomainResourceGroupName: "dummy",
-					NetworkResourceGroupName:    vnetr.ResourceGroup,
-					VirtualNetwork:              vnetr.ResourceName,
-					ControlPlaneSubnet:          masterSubnetName,
-					ComputeSubnet:               workerSubnetName,
-					ARO:                         true,
+					Region:                   m.doc.OpenShiftCluster.Location,
+					ResourceGroupName:        m.doc.OpenShiftCluster.Properties.ResourceGroup,
+					NetworkResourceGroupName: vnetr.ResourceGroup,
+					VirtualNetwork:           vnetr.ResourceName,
+					ControlPlaneSubnet:       masterSubnetName,
+					ComputeSubnet:            workerSubnetName,
+					ARO:                      true,
 				},
 			},
 			PullSecret: os.Getenv("PULL_SECRET"),
@@ -193,6 +192,10 @@ func (m *Manager) Create(ctx context.Context) error {
 			},
 			Publish: types.ExternalPublishingStrategy,
 		},
+	}
+
+	if m.doc.OpenShiftCluster.Properties.IngressProfiles[0].Private {
+		installConfig.Config.Publish = types.InternalPublishingStrategy
 	}
 
 	installConfig.Config.Azure.Image, err = getRHCOSImage(ctx)

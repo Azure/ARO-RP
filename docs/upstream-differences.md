@@ -45,6 +45,17 @@ upstream OCP.
 
   This commit enables ARO to use platform-published VM images.
 
+* CARRY: HACK: insert worker VMs into aro load balancer backend
+
+  This ensures that worker VMs are always in the aro load balancer backend, and
+  are thus always eligible for the associated outbound rule, and thus should
+  have internet access.  As a result a fake inbound service is not necessary.
+
+* CARRY: HACK: don't require BaseDomainResourceGroupName on ARO
+
+  This prevents a validating failure when omitting a configurable which is never
+  used in ARO.
+
 
 ## Installation differences
 
@@ -65,3 +76,5 @@ upstream OCP.
 * ARO never creates aro-bootstrap-pip for bootstrap VM.
 
 * ARO API server LB uses Azure outboundRule rather than port 27627 inbound rule.
+
+* `aro` LB uses Azure outboundRule and outbound IP `aro-outbound-pip`.

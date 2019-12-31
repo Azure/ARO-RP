@@ -103,6 +103,12 @@ func (v *validator) validateProperties(path string, p *Properties) error {
 	if err := v.validateAPIServerProfile(path+`.apiserverProfile`, &p.APIServerProfile); err != nil {
 		return err
 	}
+	if len(p.IngressProfiles) != 1 {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".ingressProfiles", "There should be exactly one ingress profile.")
+	}
+	if err := v.validateIngressProfile(path+`.ingressProfiles["`+p.IngressProfiles[0].Name+`"]`, &p.IngressProfiles[0]); err != nil {
+		return err
+	}
 	if p.ConsoleURL != "" {
 		if _, err := url.Parse(p.ConsoleURL); err != nil {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".consoleUrl", "The provided console URL '%s' is invalid.", p.ConsoleURL)
@@ -225,6 +231,24 @@ func (v *validator) validateAPIServerProfile(path string, ap *APIServerProfile) 
 		}
 		if ip.To4() == nil {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".ip", "The provided IP '%s' is invalid: must be IPv4.", ap.IP)
+		}
+	}
+
+	return nil
+}
+
+func (v *validator) validateIngressProfile(path string, p *IngressProfile) error {
+	if p.Name != "default" {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".name", "The provided ingress name '%s' is invalid.", p.Name)
+	}
+	if p.IP != "" {
+		ip := net.ParseIP(p.IP)
+		if ip == nil {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".ip", "The provided IP '%s' is invalid.", p.IP)
+
+		}
+		if ip.To4() == nil {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".ip", "The provided IP '%s' is invalid: must be IPv4.", p.IP)
 		}
 	}
 

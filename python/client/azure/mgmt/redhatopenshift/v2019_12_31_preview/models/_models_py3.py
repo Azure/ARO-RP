@@ -138,6 +138,31 @@ class Display(Model):
         self.description = description
 
 
+class IngressProfile(Model):
+    """IngressProfile represents an ingress profile.
+
+    :param name: The ingress profile name.  Must be "default" (immutable).
+    :type name: str
+    :param private: Expose the ingress on a private IP address only
+     (immutable).
+    :type private: bool
+    :param ip: The IP of the ingress (immutable).
+    :type ip: str
+    """
+
+    _attribute_map = {
+        'name': {'key': 'name', 'type': 'str'},
+        'private': {'key': 'private', 'type': 'bool'},
+        'ip': {'key': 'ip', 'type': 'str'},
+    }
+
+    def __init__(self, *, name: str=None, private: bool=None, ip: str=None, **kwargs) -> None:
+        super(IngressProfile, self).__init__(**kwargs)
+        self.name = name
+        self.private = private
+        self.ip = ip
+
+
 class MasterProfile(Model):
     """MasterProfile represents a master profile.
 
@@ -219,6 +244,9 @@ class OpenShiftCluster(Model):
     :param apiserver_profile: The cluster API server profile.
     :type apiserver_profile:
      ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.APIServerProfile
+    :param ingress_profiles: The cluster ingress profiles.
+    :type ingress_profiles:
+     list[~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.IngressProfile]
     :param console_url: The URL to access the cluster console (immutable).
     :type console_url: str
     """
@@ -242,10 +270,11 @@ class OpenShiftCluster(Model):
         'master_profile': {'key': 'properties.masterProfile', 'type': 'MasterProfile'},
         'worker_profiles': {'key': 'properties.workerProfiles', 'type': '[WorkerProfile]'},
         'apiserver_profile': {'key': 'properties.apiserverProfile', 'type': 'APIServerProfile'},
+        'ingress_profiles': {'key': 'properties.ingressProfiles', 'type': '[IngressProfile]'},
         'console_url': {'key': 'properties.consoleUrl', 'type': 'str'},
     }
 
-    def __init__(self, *, location: str=None, tags=None, provisioning_state=None, cluster_domain: str=None, service_principal_profile=None, network_profile=None, master_profile=None, worker_profiles=None, apiserver_profile=None, console_url: str=None, **kwargs) -> None:
+    def __init__(self, *, location: str=None, tags=None, provisioning_state=None, cluster_domain: str=None, service_principal_profile=None, network_profile=None, master_profile=None, worker_profiles=None, apiserver_profile=None, ingress_profiles=None, console_url: str=None, **kwargs) -> None:
         super(OpenShiftCluster, self).__init__(**kwargs)
         self.id = None
         self.name = None
@@ -259,6 +288,7 @@ class OpenShiftCluster(Model):
         self.master_profile = master_profile
         self.worker_profiles = worker_profiles
         self.apiserver_profile = apiserver_profile
+        self.ingress_profiles = ingress_profiles
         self.console_url = console_url
 
 

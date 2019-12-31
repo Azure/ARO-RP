@@ -76,6 +76,12 @@ func validOpenShiftCluster() *OpenShiftCluster {
 				URL: "url",
 				IP:  "1.2.3.4",
 			},
+			IngressProfiles: []IngressProfile{
+				{
+					Name: "default",
+					IP:   "1.2.3.4",
+				},
+			},
 			ConsoleURL: "url",
 		},
 	}
@@ -446,6 +452,45 @@ func TestValidateAPIServerProfile(t *testing.T) {
 	})
 }
 
+func TestValidateIngressProfile(t *testing.T) {
+	tests := []*validateTest{
+		{
+			name: "valid",
+		},
+		{
+			name: "name invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.IngressProfiles[0].Name = "invalid"
+			},
+			wantErr: "400: InvalidParameter: properties.ingressProfiles[0].name: The provided ingress name 'invalid' is invalid.",
+		},
+		{
+			name: "empty ip valid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.IngressProfiles[0].IP = ""
+			},
+		},
+		{
+			name: "ip invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.IngressProfiles[0].IP = "invalid"
+			},
+			wantErr: "400: InvalidParameter: properties.ingressProfiles[0].ip: The provided IP 'invalid' is invalid.",
+		},
+		{
+			name: "ipv6 ip invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.IngressProfiles[0].IP = "::"
+			},
+			wantErr: "400: InvalidParameter: properties.ingressProfiles[0].ip: The provided IP '::' is invalid: must be IPv4.",
+		},
+	}
+
+	runTests(t, tests, func(oc *OpenShiftCluster) error {
+		return v.validateIngressProfile("properties.ingressProfiles[0]", &oc.Properties.IngressProfiles[0])
+	})
+}
+
 func TestOpenShiftClusterValidateDelta(t *testing.T) {
 	tests := []*validateTest{
 		{
@@ -513,6 +558,23 @@ func TestOpenShiftClusterValidateDelta(t *testing.T) {
 			name:    "apiServer ip change",
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.APIServerProfile.IP = "invalid" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.apiserverProfile.ip: Changing property 'properties.apiserverProfile.ip' is not allowed.",
+		},
+		{
+			name:    "ingress name change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.IngressProfiles[0].Name = "invalid" },
+			wantErr: "400: PropertyChangeNotAllowed: properties.ingressProfiles[0].name: Changing property 'properties.ingressProfiles[0].name' is not allowed.",
+		},
+		{
+			name: "ingress private change",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.IngressProfiles[0].Private = !oc.Properties.IngressProfiles[0].Private
+			},
+			wantErr: "400: PropertyChangeNotAllowed: properties.ingressProfiles[0].private: Changing property 'properties.ingressProfiles[0].private' is not allowed.",
+		},
+		{
+			name:    "ingress ip change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.IngressProfiles[0].IP = "invalid" },
+			wantErr: "400: PropertyChangeNotAllowed: properties.ingressProfiles[0].ip: Changing property 'properties.ingressProfiles[0].ip' is not allowed.",
 		},
 		{
 			name:    "consoleUrl change",

@@ -24,6 +24,7 @@ try:
     from ._models_py3 import CloudError, CloudErrorException
     from ._models_py3 import CloudErrorBody
     from ._models_py3 import Display
+    from ._models_py3 import IngressProfile
     from ._models_py3 import MasterProfile
     from ._models_py3 import NetworkProfile
     from ._models_py3 import OpenShiftCluster
@@ -38,6 +39,7 @@ except (SyntaxError, ImportError):
     from ._models import CloudError, CloudErrorException
     from ._models import CloudErrorBody
     from ._models import Display
+    from ._models import IngressProfile
     from ._models import MasterProfile
     from ._models import NetworkProfile
     from ._models import OpenShiftCluster
@@ -53,6 +55,7 @@ __all__ = [
     'CloudError', 'CloudErrorException',
     'CloudErrorBody',
     'Display',
+    'IngressProfile',
     'MasterProfile',
     'NetworkProfile',
     'OpenShiftCluster',

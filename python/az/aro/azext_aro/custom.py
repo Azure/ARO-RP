@@ -36,6 +36,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                worker_vm_disk_size_gb=None,
                worker_count=None,
                private_apiserver=None,
+               private_ingress=None,
                tags=None,
                no_wait=False):
     vnet = validate_subnets(master_subnet, worker_subnet)
@@ -89,7 +90,13 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
         ],
         apiserver_profile=v2019_12_31_preview.APIServerProfile(
             private=private_apiserver or False,
-        )
+        ),
+        ingress_profiles=[
+            v2019_12_31_preview.IngressProfile(
+                name="default",  # TODO: "default" should not be hard-coded
+                private=private_ingress or False,
+            )
+        ],
     )
 
     return sdk_no_wait(no_wait, client.create_or_update,

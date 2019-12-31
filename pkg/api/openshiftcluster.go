@@ -71,6 +71,8 @@ type Properties struct {
 
 	APIServerProfile APIServerProfile `json:"apiserverProfile,omitempty"`
 
+	IngressProfiles []IngressProfile `json:"ingressProfiles,omitempty"`
+
 	ConsoleURL string `json:"consoleUrl,omitempty"`
 
 	// Install is non-nil only when an install is in progress
@@ -149,6 +151,15 @@ type APIServerProfile struct {
 
 	Private bool   `json:"private,omitempty"`
 	URL     string `json:"url,omitempty"`
+	IP      string `json:"ip,omitempty"`
+}
+
+// IngressProfile represents an ingress profile
+type IngressProfile struct {
+	MissingFields
+
+	Name    string `json:"name,omitempty"`
+	Private bool   `json:"private,omitempty"`
 	IP      string `json:"ip,omitempty"`
 }
 

@@ -63,6 +63,10 @@ def load_arguments(self, _):
                    CLIArgumentType(action='store_true'),
                    help='Private API server.')
 
+        c.argument('private_ingress',
+                   CLIArgumentType(action='store_true'),
+                   help='Private ingress.')
+
         c.argument('vnet_resource_group_name',
                    resource_group_name_type,
                    options_list=['--vnet-resource-group'],

@@ -55,6 +55,17 @@ func openShiftClusterToExternal(oc *api.OpenShiftCluster) *OpenShiftCluster {
 		}
 	}
 
+	if oc.Properties.IngressProfiles != nil {
+		out.Properties.IngressProfiles = make([]IngressProfile, 0, len(oc.Properties.IngressProfiles))
+		for _, p := range oc.Properties.IngressProfiles {
+			out.Properties.IngressProfiles = append(out.Properties.IngressProfiles, IngressProfile{
+				Name:    p.Name,
+				Private: p.Private,
+				IP:      p.IP,
+			})
+		}
+	}
+
 	if oc.Tags != nil {
 		out.Tags = make(map[string]string, len(oc.Tags))
 		for k, v := range oc.Tags {
@@ -124,5 +135,21 @@ func openShiftClusterToInternal(oc *OpenShiftCluster, out *api.OpenShiftCluster)
 	out.Properties.APIServerProfile.Private = oc.Properties.APIServerProfile.Private
 	out.Properties.APIServerProfile.URL = oc.Properties.APIServerProfile.URL
 	out.Properties.APIServerProfile.IP = oc.Properties.APIServerProfile.IP
+	for _, p := range oc.Properties.IngressProfiles {
+		var outp *api.IngressProfile
+		for i, pp := range out.Properties.IngressProfiles {
+			if pp.Name == p.Name {
+				outp = &out.Properties.IngressProfiles[i]
+				break
+			}
+		}
+		if outp == nil {
+			out.Properties.IngressProfiles = append(out.Properties.IngressProfiles, api.IngressProfile{})
+			outp = &out.Properties.IngressProfiles[len(out.Properties.IngressProfiles)-1]
+		}
+		outp.Name = p.Name
+		outp.Private = p.Private
+		outp.IP = p.IP
+	}
 	out.Properties.ConsoleURL = oc.Properties.ConsoleURL
 }

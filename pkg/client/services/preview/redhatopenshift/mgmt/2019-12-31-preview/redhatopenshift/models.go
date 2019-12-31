@@ -124,6 +124,16 @@ type Display struct {
 	Description *string `json:"description,omitempty"`
 }
 
+// IngressProfile ingressProfile represents an ingress profile.
+type IngressProfile struct {
+	// Name - The ingress profile name.  Must be "default" (immutable).
+	Name *string `json:"name,omitempty"`
+	// Private - Expose the ingress on a private IP address only (immutable).
+	Private *bool `json:"private,omitempty"`
+	// IP - The IP of the ingress (immutable).
+	IP *string `json:"ip,omitempty"`
+}
+
 // MasterProfile masterProfile represents a master profile.
 type MasterProfile struct {
 	// VMSize - The size of the master VMs (immutable). Possible values include: 'StandardD2sV3', 'StandardD4sV3', 'StandardD8sV3'
@@ -369,6 +379,8 @@ type Properties struct {
 	WorkerProfiles *[]WorkerProfile `json:"workerProfiles,omitempty"`
 	// ApiserverProfile - The cluster API server profile.
 	ApiserverProfile *APIServerProfile `json:"apiserverProfile,omitempty"`
+	// IngressProfiles - The cluster ingress profiles.
+	IngressProfiles *[]IngressProfile `json:"ingressProfiles,omitempty"`
 	// ConsoleURL - The URL to access the cluster console (immutable).
 	ConsoleURL *string `json:"consoleUrl,omitempty"`
 }

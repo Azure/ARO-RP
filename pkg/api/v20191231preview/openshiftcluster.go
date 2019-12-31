@@ -56,6 +56,9 @@ type Properties struct {
 	// The cluster API server profile.
 	APIServerProfile APIServerProfile `json:"apiserverProfile,omitempty"`
 
+	// The cluster ingress profiles.
+	IngressProfiles []IngressProfile `json:"ingressProfiles,omitempty"`
+
 	// The URL to access the cluster console (immutable).
 	ConsoleURL string `json:"consoleUrl,omitempty"`
 }
@@ -136,5 +139,17 @@ type APIServerProfile struct {
 	URL string `json:"url,omitempty"`
 
 	// The IP of the cluster API server (immutable).
+	IP string `json:"ip,omitempty"`
+}
+
+// IngressProfile represents an ingress profile.
+type IngressProfile struct {
+	// The ingress profile name.  Must be "default" (immutable).
+	Name string `json:"name,omitempty"`
+
+	// Expose the ingress on a private IP address only (immutable).
+	Private bool `json:"private,omitempty"`
+
+	// The IP of the ingress (immutable).
 	IP string `json:"ip,omitempty"`
 }

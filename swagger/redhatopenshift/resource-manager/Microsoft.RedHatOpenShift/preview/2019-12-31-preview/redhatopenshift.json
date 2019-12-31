@@ -486,6 +486,23 @@
                 }
             }
         },
+        "IngressProfile": {
+            "description": "IngressProfile represents an ingress profile.",
+            "properties": {
+                "name": {
+                    "description": "The ingress profile name.  Must be \"default\" (immutable).",
+                    "type": "string"
+                },
+                "private": {
+                    "description": "Expose the ingress on a private IP address only (immutable).",
+                    "type": "boolean"
+                },
+                "ip": {
+                    "description": "The IP of the ingress (immutable).",
+                    "type": "string"
+                }
+            }
+        },
         "MasterProfile": {
             "description": "MasterProfile represents a master profile.",
             "properties": {
@@ -633,6 +650,13 @@
                 "apiserverProfile": {
                     "$ref": "#/definitions/APIServerProfile",
                     "description": "The cluster API server profile."
+                },
+                "ingressProfiles": {
+                    "description": "The cluster ingress profiles.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/IngressProfile"
+                    }
                 },
                 "consoleUrl": {
                     "description": "The URL to access the cluster console (immutable).",
