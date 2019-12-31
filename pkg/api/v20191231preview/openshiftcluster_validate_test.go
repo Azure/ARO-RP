@@ -74,6 +74,7 @@ func validOpenShiftCluster() *OpenShiftCluster {
 			},
 			APIServerProfile: APIServerProfile{
 				URL: "url",
+				IP:  "1.2.3.4",
 			},
 			ConsoleURL: "url",
 		},
@@ -418,6 +419,26 @@ func TestValidateAPIServerProfile(t *testing.T) {
 			},
 			wantErr: "400: InvalidParameter: properties.apiserverProfile.url: The provided URL '\x00' is invalid.",
 		},
+		{
+			name: "empty ip valid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.APIServerProfile.IP = ""
+			},
+		},
+		{
+			name: "ip invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.APIServerProfile.IP = "invalid"
+			},
+			wantErr: "400: InvalidParameter: properties.apiserverProfile.ip: The provided IP 'invalid' is invalid.",
+		},
+		{
+			name: "ipv6 ip invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.APIServerProfile.IP = "::"
+			},
+			wantErr: "400: InvalidParameter: properties.apiserverProfile.ip: The provided IP '::' is invalid: must be IPv4.",
+		},
 	}
 
 	runTests(t, tests, func(oc *OpenShiftCluster) error {
@@ -487,6 +508,11 @@ func TestOpenShiftClusterValidateDelta(t *testing.T) {
 			name:    "apiServer url change",
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.APIServerProfile.URL = "invalid" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.apiserverProfile.url: Changing property 'properties.apiserverProfile.url' is not allowed.",
+		},
+		{
+			name:    "apiServer ip change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.APIServerProfile.IP = "invalid" },
+			wantErr: "400: PropertyChangeNotAllowed: properties.apiserverProfile.ip: Changing property 'properties.apiserverProfile.ip' is not allowed.",
 		},
 		{
 			name:    "consoleUrl change",

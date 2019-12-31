@@ -28,15 +28,19 @@ class APIServerProfile(Model):
 
     :param url: The URL to access the cluster API server (immutable).
     :type url: str
+    :param ip: The IP of the cluster API server (immutable).
+    :type ip: str
     """
 
     _attribute_map = {
         'url': {'key': 'url', 'type': 'str'},
+        'ip': {'key': 'ip', 'type': 'str'},
     }
 
     def __init__(self, **kwargs):
         super(APIServerProfile, self).__init__(**kwargs)
         self.url = kwargs.get('url', None)
+        self.ip = kwargs.get('ip', None)
 
 
 class CloudError(Model):

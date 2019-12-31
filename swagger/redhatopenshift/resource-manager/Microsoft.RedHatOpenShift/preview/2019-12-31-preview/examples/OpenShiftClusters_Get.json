@@ -36,7 +36,8 @@
                         }
                     ],
                     "apiserverProfile": {
-                        "url": "https://api.cluster.location.aroapp.io:6443/"
+                        "url": "https://api.cluster.location.aroapp.io:6443/",
+                        "ip": "1.2.3.4"
                     },
                     "consoleUrl": "https://console-openshift-console.apps.cluster.location.aroapp.io/"
                 }

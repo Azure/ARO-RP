@@ -35,6 +35,7 @@ func openShiftClusterToExternal(oc *api.OpenShiftCluster) *OpenShiftCluster {
 			},
 			APIServerProfile: APIServerProfile{
 				URL: oc.Properties.APIServerProfile.URL,
+				IP:  oc.Properties.APIServerProfile.IP,
 			},
 			ConsoleURL: oc.Properties.ConsoleURL,
 		},
@@ -120,5 +121,6 @@ func openShiftClusterToInternal(oc *OpenShiftCluster, out *api.OpenShiftCluster)
 		outp.Count = p.Count
 	}
 	out.Properties.APIServerProfile.URL = oc.Properties.APIServerProfile.URL
+	out.Properties.APIServerProfile.IP = oc.Properties.APIServerProfile.IP
 	out.Properties.ConsoleURL = oc.Properties.ConsoleURL
 }

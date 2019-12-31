@@ -131,4 +131,7 @@ type WorkerProfile struct {
 type APIServerProfile struct {
 	// The URL to access the cluster API server (immutable).
 	URL string `json:"url,omitempty"`
+
+	// The IP of the cluster API server (immutable).
+	IP string `json:"ip,omitempty"`
 }

@@ -217,6 +217,16 @@ func (v *validator) validateAPIServerProfile(path string, ap *APIServerProfile) 
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".url", "The provided URL '%s' is invalid.", ap.URL)
 		}
 	}
+	if ap.IP != "" {
+		ip := net.ParseIP(ap.IP)
+		if ip == nil {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".ip", "The provided IP '%s' is invalid.", ap.IP)
+
+		}
+		if ip.To4() == nil {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".ip", "The provided IP '%s' is invalid: must be IPv4.", ap.IP)
+		}
+	}
 
 	return nil
 }

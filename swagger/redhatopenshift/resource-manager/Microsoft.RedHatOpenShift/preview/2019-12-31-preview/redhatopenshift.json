@@ -421,6 +421,10 @@
                 "url": {
                     "description": "The URL to access the cluster API server (immutable).",
                     "type": "string"
+                },
+                "ip": {
+                    "description": "The IP of the cluster API server (immutable).",
+                    "type": "string"
                 }
             }
         },

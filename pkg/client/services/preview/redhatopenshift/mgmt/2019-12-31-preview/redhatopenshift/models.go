@@ -88,6 +88,8 @@ func PossibleVMSize1Values() []VMSize1 {
 type APIServerProfile struct {
 	// URL - The URL to access the cluster API server (immutable).
 	URL *string `json:"url,omitempty"`
+	// IP - The IP of the cluster API server (immutable).
+	IP *string `json:"ip,omitempty"`
 }
 
 // CloudError cloudError represents a cloud error.

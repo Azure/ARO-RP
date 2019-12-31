@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
@@ -699,6 +700,14 @@ func (i *Installer) installResources(ctx context.Context) error {
 		}
 
 		err = i.dns.Update(ctx, i.doc.OpenShiftCluster, *ip.IPAddress)
+		if err != nil {
+			return err
+		}
+
+		i.doc, err = i.db.Patch(i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+			doc.OpenShiftCluster.Properties.APIServerProfile.IP = *ip.IPAddress
+			return nil
+		})
 		if err != nil {
 			return err
 		}
