@@ -44,6 +44,9 @@ func MachineSets(clusterID string, config *types.InstallConfig, pool *types.Mach
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create provider")
 		}
+		if config.Platform.Azure.ARO {
+			provider.PublicLoadBalancer = "aro"
+		}
 		name := fmt.Sprintf("%s-%s-%s%s", clusterID, pool.Name, platform.Region, az)
 		mset := &clusterapi.MachineSet{
 			TypeMeta: metav1.TypeMeta{
