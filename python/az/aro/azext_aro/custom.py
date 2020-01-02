@@ -14,7 +14,7 @@ from azure.cli.core.commands.client_factory import get_subscription_id
 from azure.cli.core.util import sdk_no_wait
 
 
-FP_CLIENT_ID = "f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875"
+FP_CLIENT_ID = 'f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875'
 
 
 def aro_create(cmd,  # pylint: disable=too-many-locals
@@ -46,7 +46,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
     aad = AADManager(cmd.cli_ctx)
     if client_id is None:
         app, client_secret = aad.create_application(
-            "aro-%d-%s-%s-%s" % (time.time(), subscription_id, resource_group_name, resource_name))
+            'aro-%d-%s-%s-%s' % (time.time(), subscription_id, resource_group_name, resource_name))
         client_id = app.app_id
 
     client_sp = aad.get_service_principal(client_id)
@@ -72,29 +72,29 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
             client_secret=client_secret,
         ),
         network_profile=v2019_12_31_preview.NetworkProfile(
-            pod_cidr=pod_cidr or "10.128.0.0/14",
-            service_cidr=service_cidr or "172.30.0.0/16",
+            pod_cidr=pod_cidr or '10.128.0.0/14',
+            service_cidr=service_cidr or '172.30.0.0/16',
         ),
         master_profile=v2019_12_31_preview.MasterProfile(
-            vm_size=master_vm_size or "Standard_D8s_v3",
+            vm_size=master_vm_size or 'Standard_D8s_v3',
             subnet_id=master_subnet,
         ),
         worker_profiles=[
             v2019_12_31_preview.WorkerProfile(
-                name="worker",  # TODO: "worker" should not be hard-coded
-                vm_size=worker_vm_size or "Standard_D2s_v3",
+                name='worker',  # TODO: 'worker' should not be hard-coded
+                vm_size=worker_vm_size or 'Standard_D2s_v3',
                 disk_size_gb=worker_vm_disk_size_gb or 128,
                 subnet_id=worker_subnet,
                 count=worker_count or 3,
             )
         ],
         apiserver_profile=v2019_12_31_preview.APIServerProfile(
-            visibility=apiserver_visibility or "Public",
+            visibility=apiserver_visibility or 'Public',
         ),
         ingress_profiles=[
             v2019_12_31_preview.IngressProfile(
-                name="default",  # TODO: "default" should not be hard-coded
-                visibility=ingress_visibility or "Public",
+                name='default',  # TODO: 'default' should not be hard-coded
+                visibility=ingress_visibility or 'Public',
             )
         ],
     )
