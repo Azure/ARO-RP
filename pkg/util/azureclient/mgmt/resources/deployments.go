@@ -16,8 +16,8 @@ import (
 
 // DeploymentsClient is a minimal interface for azure DeploymentsClient
 type DeploymentsClient interface {
-	DeploymentsClientAddons
 	Get(ctx context.Context, resourceGroupName, deploymentName string) (resources.DeploymentExtended, error)
+	DeploymentsClientAddons
 }
 
 type deploymentsClient struct {

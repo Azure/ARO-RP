@@ -266,17 +266,19 @@ func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthor
 	// in the azure backends. We test by trying to call API directly and check if
 	// role was applied.
 	d.log.Print("development mode: refreshing authorizer")
-	fpAuthorizer.(*refreshableAuthorizer).Refresh()
+	err = fpAuthorizer.(*refreshableAuthorizer).Refresh()
+	if err != nil {
+		return err
+	}
+
 	return wait.Poll(time.Second, time.Minute, func() (bool, error) {
 		// this should always error. Either 403 or 404
 		_, err := d.deployments.Get(ctx, oc.Properties.ResourceGroup, "dummy")
 		if detailedError, ok := err.(autorest.DetailedError); ok {
 			if requestError, ok := detailedError.Original.(azure.RequestError); ok &&
-				requestError.ServiceError != nil {
-				if requestError.ServiceError.Code == "AuthorizationFailed" {
-					return false, nil
-				}
-				return true, nil
+				requestError.ServiceError != nil &&
+				requestError.ServiceError.Code == "AuthorizationFailed" {
+				return false, nil
 			}
 		}
 		return true, nil
