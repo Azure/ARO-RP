@@ -362,14 +362,14 @@
                 }
             }
         },
-        "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}/credentials": {
+        "/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}/listCredentials": {
             "post": {
                 "tags": [
                     "OpenShiftClusters"
                 ],
-                "summary": "Gets credentials of a OpenShift cluster with the specified subscription, resource group and resource name.",
-                "description": "Gets credentials of a OpenShift cluster with the specified subscription, resource group and resource name.  The operation returns the credentials.",
-                "operationId": "OpenShiftClusters_GetCredentials",
+                "summary": "Lists credentials of an OpenShift cluster with the specified subscription, resource group and resource name.",
+                "description": "Lists credentials of an OpenShift cluster with the specified subscription, resource group and resource name.  The operation returns the credentials.",
+                "operationId": "OpenShiftClusters_ListCredentials",
                 "parameters": [
                     {
                         "$ref": "#/parameters/ApiVersionParameter"
@@ -407,8 +407,8 @@
                     }
                 },
                 "x-ms-examples": {
-                    "Gets credentials of a OpenShift cluster with the specified subscription, resource group and resource name.": {
-                        "$ref": "./examples/OpenShiftClusters_GetCredentials.json"
+                    "Lists credentials of an OpenShift cluster with the specified subscription, resource group and resource name.": {
+                        "$ref": "./examples/OpenShiftClusters_ListCredentials.json"
                     }
                 }
             }

@@ -144,7 +144,7 @@ cluster:
    the `kubeadmin` user can be found as follows:
 
    ```
-   az aro get-credentials -g "$RESOURCEGROUP" -n "$CLUSTER"
+   az aro list-credentials -g "$RESOURCEGROUP" -n "$CLUSTER"
    ```
 
    Note: the cluster console certificate is not yet signed by a CA: expect a

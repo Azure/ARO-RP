@@ -539,12 +539,12 @@ class OpenShiftClustersOperations(object):
         return LROPoller(self._client, raw_result, get_long_running_output, polling_method)
     update.metadata = {'url': '/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}'}
 
-    def get_credentials(
+    def list_credentials(
             self, resource_group_name, resource_name, custom_headers=None, raw=False, **operation_config):
-        """Gets credentials of a OpenShift cluster with the specified
+        """Lists credentials of an OpenShift cluster with the specified
         subscription, resource group and resource name.
 
-        Gets credentials of a OpenShift cluster with the specified
+        Lists credentials of an OpenShift cluster with the specified
         subscription, resource group and resource name.  The operation returns
         the credentials.
 
@@ -564,7 +564,7 @@ class OpenShiftClustersOperations(object):
         :raises: :class:`CloudError<msrestazure.azure_exceptions.CloudError>`
         """
         # Construct URL
-        url = self.get_credentials.metadata['url']
+        url = self.list_credentials.metadata['url']
         path_format_arguments = {
             'subscriptionId': self._serialize.url("self.config.subscription_id", self.config.subscription_id, 'str'),
             'resourceGroupName': self._serialize.url("resource_group_name", resource_group_name, 'str'),
@@ -604,4 +604,4 @@ class OpenShiftClustersOperations(object):
             return client_raw_response
 
         return deserialized
-    get_credentials.metadata = {'url': '/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}/credentials'}
+    list_credentials.metadata = {'url': '/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}/listCredentials'}

@@ -57,12 +57,12 @@ func Run(outputFile string) error {
 		},
 	}
 
-	s.Paths["/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}/credentials"] = &PathItem{
+	s.Paths["/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}/listCredentials"] = &PathItem{
 		Post: &Operation{
 			Tags:        []string{"OpenShiftClusters"},
-			Summary:     "Gets credentials of a OpenShift cluster with the specified subscription, resource group and resource name.",
-			Description: "Gets credentials of a OpenShift cluster with the specified subscription, resource group and resource name.  The operation returns the credentials.",
-			OperationID: "OpenShiftClusters_GetCredentials",
+			Summary:     "Lists credentials of an OpenShift cluster with the specified subscription, resource group and resource name.",
+			Description: "Lists credentials of an OpenShift cluster with the specified subscription, resource group and resource name.  The operation returns the credentials.",
+			OperationID: "OpenShiftClusters_ListCredentials",
 			Parameters:  populateParameters(3, "OpenShiftCluster", "OpenShift cluster"),
 			Responses:   populateResponses("OpenShiftClusterCredentials", false, http.StatusOK),
 		},

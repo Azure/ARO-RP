@@ -121,8 +121,8 @@ def aro_show(client, resource_group_name, resource_name):
     return client.get(resource_group_name, resource_name)
 
 
-def aro_get_credentials(client, resource_group_name, resource_name):
-    return client.get_credentials(resource_group_name, resource_name)
+def aro_list_credentials(client, resource_group_name, resource_name):
+    return client.list_credentials(resource_group_name, resource_name)
 
 
 def aro_update(client, resource_group_name, resource_name, worker_count=None,

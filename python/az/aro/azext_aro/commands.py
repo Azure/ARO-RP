@@ -20,4 +20,4 @@ def load_command_table(self, _):
         g.custom_show_command('show', 'aro_show', table_transformer=aro_show_table_format)
         g.custom_command('update', 'aro_update', supports_no_wait=True)
 
-        g.custom_command('get-credentials', 'aro_get_credentials')
+        g.custom_command('list-credentials', 'aro_list_credentials')

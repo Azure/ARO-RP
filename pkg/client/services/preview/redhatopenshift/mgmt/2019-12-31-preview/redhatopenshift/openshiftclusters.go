@@ -280,84 +280,6 @@ func (client OpenShiftClustersClient) GetResponder(resp *http.Response) (result 
 	return
 }
 
-// GetCredentials gets credentials of a OpenShift cluster with the specified subscription, resource group and resource
-// name.  The operation returns the credentials.
-// Parameters:
-// resourceGroupName - the name of the resource group.
-// resourceName - the name of the OpenShift cluster resource.
-func (client OpenShiftClustersClient) GetCredentials(ctx context.Context, resourceGroupName string, resourceName string) (result OpenShiftClusterCredentials, err error) {
-	if tracing.IsEnabled() {
-		ctx = tracing.StartSpan(ctx, fqdn+"/OpenShiftClustersClient.GetCredentials")
-		defer func() {
-			sc := -1
-			if result.Response.Response != nil {
-				sc = result.Response.Response.StatusCode
-			}
-			tracing.EndSpan(ctx, sc, err)
-		}()
-	}
-	req, err := client.GetCredentialsPreparer(ctx, resourceGroupName, resourceName)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "GetCredentials", nil, "Failure preparing request")
-		return
-	}
-
-	resp, err := client.GetCredentialsSender(req)
-	if err != nil {
-		result.Response = autorest.Response{Response: resp}
-		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "GetCredentials", resp, "Failure sending request")
-		return
-	}
-
-	result, err = client.GetCredentialsResponder(resp)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "GetCredentials", resp, "Failure responding to request")
-	}
-
-	return
-}
-
-// GetCredentialsPreparer prepares the GetCredentials request.
-func (client OpenShiftClustersClient) GetCredentialsPreparer(ctx context.Context, resourceGroupName string, resourceName string) (*http.Request, error) {
-	pathParameters := map[string]interface{}{
-		"resourceGroupName": autorest.Encode("path", resourceGroupName),
-		"resourceName":      autorest.Encode("path", resourceName),
-		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
-	}
-
-	const APIVersion = "2019-12-31-preview"
-	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
-	}
-
-	preparer := autorest.CreatePreparer(
-		autorest.AsPost(),
-		autorest.WithBaseURL(client.BaseURI),
-		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}/credentials", pathParameters),
-		autorest.WithQueryParameters(queryParameters))
-	return preparer.Prepare((&http.Request{}).WithContext(ctx))
-}
-
-// GetCredentialsSender sends the GetCredentials request. The method will close the
-// http.Response Body if it receives an error.
-func (client OpenShiftClustersClient) GetCredentialsSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
-	return autorest.SendWithSender(client, req, sd...)
-}
-
-// GetCredentialsResponder handles the response to the GetCredentials request. The method always
-// closes the http.Response Body.
-func (client OpenShiftClustersClient) GetCredentialsResponder(resp *http.Response) (result OpenShiftClusterCredentials, err error) {
-	err = autorest.Respond(
-		resp,
-		client.ByInspecting(),
-		azure.WithErrorUnlessStatusCode(http.StatusOK),
-		autorest.ByUnmarshallingJSON(&result),
-		autorest.ByClosing())
-	result.Response = autorest.Response{Response: resp}
-	return
-}
-
 // List lists OpenShift clusters in the specified subscription.  The operation returns properties of each OpenShift
 // cluster.
 func (client OpenShiftClustersClient) List(ctx context.Context) (result OpenShiftClusterList, err error) {
@@ -497,6 +419,84 @@ func (client OpenShiftClustersClient) ListByResourceGroupSender(req *http.Reques
 // ListByResourceGroupResponder handles the response to the ListByResourceGroup request. The method always
 // closes the http.Response Body.
 func (client OpenShiftClustersClient) ListByResourceGroupResponder(resp *http.Response) (result OpenShiftClusterList, err error) {
+	err = autorest.Respond(
+		resp,
+		client.ByInspecting(),
+		azure.WithErrorUnlessStatusCode(http.StatusOK),
+		autorest.ByUnmarshallingJSON(&result),
+		autorest.ByClosing())
+	result.Response = autorest.Response{Response: resp}
+	return
+}
+
+// ListCredentials lists credentials of an OpenShift cluster with the specified subscription, resource group and
+// resource name.  The operation returns the credentials.
+// Parameters:
+// resourceGroupName - the name of the resource group.
+// resourceName - the name of the OpenShift cluster resource.
+func (client OpenShiftClustersClient) ListCredentials(ctx context.Context, resourceGroupName string, resourceName string) (result OpenShiftClusterCredentials, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/OpenShiftClustersClient.ListCredentials")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	req, err := client.ListCredentialsPreparer(ctx, resourceGroupName, resourceName)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "ListCredentials", nil, "Failure preparing request")
+		return
+	}
+
+	resp, err := client.ListCredentialsSender(req)
+	if err != nil {
+		result.Response = autorest.Response{Response: resp}
+		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "ListCredentials", resp, "Failure sending request")
+		return
+	}
+
+	result, err = client.ListCredentialsResponder(resp)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "ListCredentials", resp, "Failure responding to request")
+	}
+
+	return
+}
+
+// ListCredentialsPreparer prepares the ListCredentials request.
+func (client OpenShiftClustersClient) ListCredentialsPreparer(ctx context.Context, resourceGroupName string, resourceName string) (*http.Request, error) {
+	pathParameters := map[string]interface{}{
+		"resourceGroupName": autorest.Encode("path", resourceGroupName),
+		"resourceName":      autorest.Encode("path", resourceName),
+		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
+	}
+
+	const APIVersion = "2019-12-31-preview"
+	queryParameters := map[string]interface{}{
+		"api-version": APIVersion,
+	}
+
+	preparer := autorest.CreatePreparer(
+		autorest.AsPost(),
+		autorest.WithBaseURL(client.BaseURI),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}/listCredentials", pathParameters),
+		autorest.WithQueryParameters(queryParameters))
+	return preparer.Prepare((&http.Request{}).WithContext(ctx))
+}
+
+// ListCredentialsSender sends the ListCredentials request. The method will close the
+// http.Response Body if it receives an error.
+func (client OpenShiftClustersClient) ListCredentialsSender(req *http.Request) (*http.Response, error) {
+	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
+	return autorest.SendWithSender(client, req, sd...)
+}
+
+// ListCredentialsResponder handles the response to the ListCredentials request. The method always
+// closes the http.Response Body.
+func (client OpenShiftClustersClient) ListCredentialsResponder(resp *http.Response) (result OpenShiftClusterCredentials, err error) {
 	err = autorest.Respond(
 		resp,
 		client.ByInspecting(),
