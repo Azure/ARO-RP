@@ -26,7 +26,7 @@
                 "operationId": "Operations_List",
                 "parameters": [
                     {
-                        "$ref": "#/parameters/ApiVersionParameter"
+                        "$ref": "../../../../../common-types/resource-management/v1/types.json#/parameters/ApiVersionParameter"
                     }
                 ],
                 "responses": {
@@ -60,10 +60,10 @@
                 "operationId": "OpenShiftClusters_List",
                 "parameters": [
                     {
-                        "$ref": "#/parameters/ApiVersionParameter"
+                        "$ref": "../../../../../common-types/resource-management/v1/types.json#/parameters/ApiVersionParameter"
                     },
                     {
-                        "$ref": "#/parameters/SubscriptionIdParameter"
+                        "$ref": "../../../../../common-types/resource-management/v1/types.json#/parameters/SubscriptionIdParameter"
                     }
                 ],
                 "responses": {
@@ -97,17 +97,13 @@
                 "operationId": "OpenShiftClusters_ListByResourceGroup",
                 "parameters": [
                     {
-                        "$ref": "#/parameters/ApiVersionParameter"
+                        "$ref": "../../../../../common-types/resource-management/v1/types.json#/parameters/ApiVersionParameter"
                     },
                     {
-                        "$ref": "#/parameters/SubscriptionIdParameter"
+                        "$ref": "../../../../../common-types/resource-management/v1/types.json#/parameters/SubscriptionIdParameter"
                     },
                     {
-                        "name": "resourceGroupName",
-                        "in": "path",
-                        "description": "The name of the resource group.",
-                        "required": true,
-                        "type": "string"
+                        "$ref": "../../../../../common-types/resource-management/v1/types.json#/parameters/ResourceGroupNameParameter"
                     }
                 ],
                 "responses": {
@@ -141,17 +137,13 @@
                 "operationId": "OpenShiftClusters_Get",
                 "parameters": [
                     {
-                        "$ref": "#/parameters/ApiVersionParameter"
+                        "$ref": "../../../../../common-types/resource-management/v1/types.json#/parameters/ApiVersionParameter"
                     },
                     {
-                        "$ref": "#/parameters/SubscriptionIdParameter"
+                        "$ref": "../../../../../common-types/resource-management/v1/types.json#/parameters/SubscriptionIdParameter"
                     },
                     {
-                        "name": "resourceGroupName",
-                        "in": "path",
-                        "description": "The name of the resource group.",
-                        "required": true,
-                        "type": "string"
+                        "$ref": "../../../../../common-types/resource-management/v1/types.json#/parameters/ResourceGroupNameParameter"
                     },
                     {
                         "name": "resourceName",
@@ -190,17 +182,13 @@
                 "operationId": "OpenShiftClusters_CreateOrUpdate",
                 "parameters": [
                     {
-                        "$ref": "#/parameters/ApiVersionParameter"
+                        "$ref": "../../../../../common-types/resource-management/v1/types.json#/parameters/ApiVersionParameter"
                     },
                     {
-                        "$ref": "#/parameters/SubscriptionIdParameter"
+                        "$ref": "../../../../../common-types/resource-management/v1/types.json#/parameters/SubscriptionIdParameter"
                     },
                     {
-                        "name": "resourceGroupName",
-                        "in": "path",
-                        "description": "The name of the resource group.",
-                        "required": true,
-                        "type": "string"
+                        "$ref": "../../../../../common-types/resource-management/v1/types.json#/parameters/ResourceGroupNameParameter"
                     },
                     {
                         "name": "resourceName",
@@ -255,17 +243,13 @@
                 "operationId": "OpenShiftClusters_Delete",
                 "parameters": [
                     {
-                        "$ref": "#/parameters/ApiVersionParameter"
+                        "$ref": "../../../../../common-types/resource-management/v1/types.json#/parameters/ApiVersionParameter"
                     },
                     {
-                        "$ref": "#/parameters/SubscriptionIdParameter"
+                        "$ref": "../../../../../common-types/resource-management/v1/types.json#/parameters/SubscriptionIdParameter"
                     },
                     {
-                        "name": "resourceGroupName",
-                        "in": "path",
-                        "description": "The name of the resource group.",
-                        "required": true,
-                        "type": "string"
+                        "$ref": "../../../../../common-types/resource-management/v1/types.json#/parameters/ResourceGroupNameParameter"
                     },
                     {
                         "name": "resourceName",
@@ -305,17 +289,13 @@
                 "operationId": "OpenShiftClusters_Update",
                 "parameters": [
                     {
-                        "$ref": "#/parameters/ApiVersionParameter"
+                        "$ref": "../../../../../common-types/resource-management/v1/types.json#/parameters/ApiVersionParameter"
                     },
                     {
-                        "$ref": "#/parameters/SubscriptionIdParameter"
+                        "$ref": "../../../../../common-types/resource-management/v1/types.json#/parameters/SubscriptionIdParameter"
                     },
                     {
-                        "name": "resourceGroupName",
-                        "in": "path",
-                        "description": "The name of the resource group.",
-                        "required": true,
-                        "type": "string"
+                        "$ref": "../../../../../common-types/resource-management/v1/types.json#/parameters/ResourceGroupNameParameter"
                     },
                     {
                         "name": "resourceName",
@@ -372,17 +352,13 @@
                 "operationId": "OpenShiftClusters_ListCredentials",
                 "parameters": [
                     {
-                        "$ref": "#/parameters/ApiVersionParameter"
+                        "$ref": "../../../../../common-types/resource-management/v1/types.json#/parameters/ApiVersionParameter"
                     },
                     {
-                        "$ref": "#/parameters/SubscriptionIdParameter"
+                        "$ref": "../../../../../common-types/resource-management/v1/types.json#/parameters/SubscriptionIdParameter"
                     },
                     {
-                        "name": "resourceGroupName",
-                        "in": "path",
-                        "description": "The name of the resource group.",
-                        "required": true,
-                        "type": "string"
+                        "$ref": "../../../../../common-types/resource-management/v1/types.json#/parameters/ResourceGroupNameParameter"
                     },
                     {
                         "name": "resourceName",
@@ -728,22 +704,6 @@
                     "type": "integer"
                 }
             }
-        }
-    },
-    "parameters": {
-        "ApiVersionParameter": {
-            "name": "api-version",
-            "in": "query",
-            "description": "Client API version.",
-            "required": true,
-            "type": "string"
-        },
-        "SubscriptionIdParameter": {
-            "name": "subscriptionId",
-            "in": "path",
-            "description": "Subscription credentials which uniquely identify Microsoft Azure subscription. The subscription ID forms part of the URI for every service call.",
-            "required": true,
-            "type": "string"
         }
     },
     "securityDefinitions": {

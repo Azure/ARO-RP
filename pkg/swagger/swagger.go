@@ -23,22 +23,6 @@ func Run(outputFile string) error {
 		Produces:    []string{"application/json"},
 		Paths:       populateTopLevelPaths("Microsoft.RedHatOpenShift", "openShiftCluster", "OpenShift cluster"),
 		Definitions: Definitions{},
-		Parameters: ParametersDefinitions{
-			"SubscriptionIdParameter": {
-				Name:        "subscriptionId",
-				In:          "path",
-				Description: "Subscription credentials which uniquely identify Microsoft Azure subscription. The subscription ID forms part of the URI for every service call.",
-				Required:    true,
-				Type:        "string",
-			},
-			"ApiVersionParameter": {
-				Name:        "api-version",
-				In:          "query",
-				Description: "Client API version.",
-				Required:    true,
-				Type:        "string",
-			},
-		},
 		SecurityDefinitions: SecurityDefinitions{
 			"azure_auth": {
 				Type:             "oauth2",
