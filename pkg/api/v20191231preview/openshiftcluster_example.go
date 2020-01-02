@@ -37,15 +37,15 @@ func exampleOpenShiftCluster() *OpenShiftCluster {
 				},
 			},
 			APIServerProfile: APIServerProfile{
-				Private: true,
-				URL:     "https://api.cluster.location.aroapp.io:6443/",
-				IP:      "1.2.3.4",
+				Visibility: VisibilityPublic,
+				URL:        "https://api.cluster.location.aroapp.io:6443/",
+				IP:         "1.2.3.4",
 			},
 			IngressProfiles: []IngressProfile{
 				{
-					Name:    "default",
-					Private: true,
-					IP:      "1.2.3.4",
+					Name:       "default",
+					Visibility: VisibilityPublic,
+					IP:         "1.2.3.4",
 				},
 			},
 			ConsoleURL: "https://console-openshift-console.apps.cluster.location.aroapp.io/",

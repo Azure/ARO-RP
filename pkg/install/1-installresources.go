@@ -288,7 +288,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 					},
 					APIVersion: apiVersions["network"],
 				},
-				i.apiServerPublicLoadBalancer(installConfig.Config.Azure.Region, i.doc.OpenShiftCluster.Properties.APIServerProfile.Private),
+				i.apiServerPublicLoadBalancer(installConfig.Config.Azure.Region, i.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility),
 				{
 					Resource: &mgmtnetwork.LoadBalancer{
 						Sku: &mgmtnetwork.LoadBalancerSku{
@@ -677,7 +677,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 	{
 		ipAddress := lbIP.String()
 
-		if !i.doc.OpenShiftCluster.Properties.APIServerProfile.Private {
+		if i.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {
 			ip, err := i.publicipaddresses.Get(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "aro-pip", "")
 			if err != nil {
 				return err

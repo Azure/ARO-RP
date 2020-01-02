@@ -50,6 +50,36 @@ func PossibleProvisioningStateValues() []ProvisioningState {
 	return []ProvisioningState{Creating, Deleting, Failed, Succeeded, Updating}
 }
 
+// Visibility enumerates the values for visibility.
+type Visibility string
+
+const (
+	// Private ...
+	Private Visibility = "Private"
+	// Public ...
+	Public Visibility = "Public"
+)
+
+// PossibleVisibilityValues returns an array of possible values for the Visibility const type.
+func PossibleVisibilityValues() []Visibility {
+	return []Visibility{Private, Public}
+}
+
+// Visibility1 enumerates the values for visibility 1.
+type Visibility1 string
+
+const (
+	// Visibility1Private ...
+	Visibility1Private Visibility1 = "Private"
+	// Visibility1Public ...
+	Visibility1Public Visibility1 = "Public"
+)
+
+// PossibleVisibility1Values returns an array of possible values for the Visibility1 const type.
+func PossibleVisibility1Values() []Visibility1 {
+	return []Visibility1{Visibility1Private, Visibility1Public}
+}
+
 // VMSize enumerates the values for vm size.
 type VMSize string
 
@@ -86,8 +116,8 @@ func PossibleVMSize1Values() []VMSize1 {
 
 // APIServerProfile aPIServerProfile represents an API server profile.
 type APIServerProfile struct {
-	// Private - Expose the API server on a private IP address only (immutable).
-	Private *bool `json:"private,omitempty"`
+	// Visibility - API server visibility (immutable). Possible values include: 'Private', 'Public'
+	Visibility Visibility `json:"visibility,omitempty"`
 	// URL - The URL to access the cluster API server (immutable).
 	URL *string `json:"url,omitempty"`
 	// IP - The IP of the cluster API server (immutable).
@@ -140,8 +170,8 @@ type Display struct {
 type IngressProfile struct {
 	// Name - The ingress profile name.  Must be "default" (immutable).
 	Name *string `json:"name,omitempty"`
-	// Private - Expose the ingress on a private IP address only (immutable).
-	Private *bool `json:"private,omitempty"`
+	// Visibility - Ingress visibility (immutable). Possible values include: 'Visibility1Private', 'Visibility1Public'
+	Visibility Visibility1 `json:"visibility,omitempty"`
 	// IP - The IP of the ingress (immutable).
 	IP *string `json:"ip,omitempty"`
 }

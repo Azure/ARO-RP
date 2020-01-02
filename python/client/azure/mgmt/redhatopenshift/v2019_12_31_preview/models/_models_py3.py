@@ -26,9 +26,10 @@ from msrest.exceptions import HttpOperationError
 class APIServerProfile(Model):
     """APIServerProfile represents an API server profile.
 
-    :param private: Expose the API server on a private IP address only
-     (immutable).
-    :type private: bool
+    :param visibility: API server visibility (immutable). Possible values
+     include: 'Private', 'Public'
+    :type visibility: str or
+     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.enum
     :param url: The URL to access the cluster API server (immutable).
     :type url: str
     :param ip: The IP of the cluster API server (immutable).
@@ -36,14 +37,14 @@ class APIServerProfile(Model):
     """
 
     _attribute_map = {
-        'private': {'key': 'private', 'type': 'bool'},
+        'visibility': {'key': 'visibility', 'type': 'str'},
         'url': {'key': 'url', 'type': 'str'},
         'ip': {'key': 'ip', 'type': 'str'},
     }
 
-    def __init__(self, *, private: bool=None, url: str=None, ip: str=None, **kwargs) -> None:
+    def __init__(self, *, visibility=None, url: str=None, ip: str=None, **kwargs) -> None:
         super(APIServerProfile, self).__init__(**kwargs)
-        self.private = private
+        self.visibility = visibility
         self.url = url
         self.ip = ip
 
@@ -216,23 +217,24 @@ class IngressProfile(Model):
 
     :param name: The ingress profile name.  Must be "default" (immutable).
     :type name: str
-    :param private: Expose the ingress on a private IP address only
-     (immutable).
-    :type private: bool
+    :param visibility: Ingress visibility (immutable). Possible values
+     include: 'Private', 'Public'
+    :type visibility: str or
+     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.enum
     :param ip: The IP of the ingress (immutable).
     :type ip: str
     """
 
     _attribute_map = {
         'name': {'key': 'name', 'type': 'str'},
-        'private': {'key': 'private', 'type': 'bool'},
+        'visibility': {'key': 'visibility', 'type': 'str'},
         'ip': {'key': 'ip', 'type': 'str'},
     }
 
-    def __init__(self, *, name: str=None, private: bool=None, ip: str=None, **kwargs) -> None:
+    def __init__(self, *, name: str=None, visibility=None, ip: str=None, **kwargs) -> None:
         super(IngressProfile, self).__init__(**kwargs)
         self.name = name
-        self.private = private
+        self.visibility = visibility
         self.ip = ip
 
 

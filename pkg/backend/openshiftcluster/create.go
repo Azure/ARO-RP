@@ -194,7 +194,7 @@ func (m *Manager) Create(ctx context.Context) error {
 		},
 	}
 
-	if m.doc.OpenShiftCluster.Properties.IngressProfiles[0].Private {
+	if m.doc.OpenShiftCluster.Properties.IngressProfiles[0].Visibility == api.VisibilityPrivate {
 		installConfig.Config.Publish = types.InternalPublishingStrategy
 	}
 

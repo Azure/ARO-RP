@@ -7,6 +7,7 @@ from azext_aro._validators import validate_client_secret
 from azext_aro._validators import validate_cluster_domain
 from azext_aro._validators import validate_resource_name
 from azext_aro._validators import validate_subnet
+from azext_aro._validators import validate_visibility
 from azext_aro._validators import validate_vnet
 from azext_aro._validators import validate_vnet_resource_group_name
 from azext_aro._validators import validate_worker_count
@@ -15,7 +16,6 @@ from azure.cli.core.commands.parameters import name_type
 from azure.cli.core.commands.parameters import resource_group_name_type
 from azure.cli.core.commands.parameters import tags_type
 from azure.cli.core.commands.validators import get_default_location_from_resource_group
-from knack.arguments import CLIArgumentType
 
 
 def load_arguments(self, _):
@@ -59,13 +59,13 @@ def load_arguments(self, _):
                    help='Count of worker VMs.',
                    validator=validate_worker_count)
 
-        c.argument('private_apiserver',
-                   CLIArgumentType(action='store_true'),
-                   help='Private API server.')
+        c.argument('apiserver_visibility',
+                   help='API server visibility.',
+                   validator=validate_visibility('apiserver_visibility'))
 
-        c.argument('private_ingress',
-                   CLIArgumentType(action='store_true'),
-                   help='Private ingress.')
+        c.argument('ingress_visibility',
+                   help='Ingress visibility.',
+                   validator=validate_visibility('ingress_visibility'))
 
         c.argument('vnet_resource_group_name',
                    resource_group_name_type,

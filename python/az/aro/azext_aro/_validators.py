@@ -154,6 +154,17 @@ def validate_subnets(master_subnet, worker_subnet):
     )
 
 
+def validate_visibility(key):
+    def _validate_visibility(namespace):
+        visibility = getattr(namespace, key)
+        if visibility is not None:
+            if visibility not in ["Private", "Public"]:
+                raise CLIError("Invalid --%s '%s'." %
+                               (key.replace('_', '-'), visibility))
+
+    return _validate_visibility
+
+
 def validate_vnet(cmd, namespace):
     validate_vnet_resource_group_name(namespace)
 

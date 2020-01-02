@@ -374,6 +374,13 @@ func TestValidateAPIServerProfile(t *testing.T) {
 			name: "valid",
 		},
 		{
+			name: "visibility invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.APIServerProfile.Visibility = "invalid"
+			},
+			wantErr: "400: InvalidParameter: properties.apiserverProfile.visibility: The provided visibility 'invalid' is invalid.",
+		},
+		{
 			name: "empty url valid",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.APIServerProfile.URL = ""
@@ -424,6 +431,13 @@ func TestValidateIngressProfile(t *testing.T) {
 				oc.Properties.IngressProfiles[0].Name = "invalid"
 			},
 			wantErr: "400: InvalidParameter: properties.ingressProfiles[0].name: The provided ingress name 'invalid' is invalid.",
+		},
+		{
+			name: "visibility invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.IngressProfiles[0].Visibility = "invalid"
+			},
+			wantErr: "400: InvalidParameter: properties.ingressProfiles[0].visibility: The provided visibility 'invalid' is invalid.",
 		},
 		{
 			name: "empty ip valid",
@@ -506,9 +520,9 @@ func TestOpenShiftClusterValidateDelta(t *testing.T) {
 		{
 			name: "apiServer private change",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.APIServerProfile.Private = !oc.Properties.APIServerProfile.Private
+				oc.Properties.APIServerProfile.Visibility = "invalid"
 			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.apiserverProfile.private: Changing property 'properties.apiserverProfile.private' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.apiserverProfile.visibility: Changing property 'properties.apiserverProfile.visibility' is not allowed.",
 		},
 		{
 			name:    "apiServer url change",
@@ -528,9 +542,9 @@ func TestOpenShiftClusterValidateDelta(t *testing.T) {
 		{
 			name: "ingress private change",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.IngressProfiles[0].Private = !oc.Properties.IngressProfiles[0].Private
+				oc.Properties.IngressProfiles[0].Visibility = "invalid"
 			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.ingressProfiles[0].private: Changing property 'properties.ingressProfiles[0].private' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.ingressProfiles[0].visibility: Changing property 'properties.ingressProfiles[0].visibility' is not allowed.",
 		},
 		{
 			name:    "ingress ip change",

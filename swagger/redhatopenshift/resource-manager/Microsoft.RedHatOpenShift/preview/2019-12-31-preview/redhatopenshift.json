@@ -394,9 +394,9 @@
         "APIServerProfile": {
             "description": "APIServerProfile represents an API server profile.",
             "properties": {
-                "private": {
-                    "description": "Expose the API server on a private IP address only (immutable).",
-                    "type": "boolean"
+                "visibility": {
+                    "$ref": "#/definitions/Visibility",
+                    "description": "API server visibility (immutable)."
                 },
                 "url": {
                     "description": "The URL to access the cluster API server (immutable).",
@@ -469,9 +469,9 @@
                     "description": "The ingress profile name.  Must be \"default\" (immutable).",
                     "type": "string"
                 },
-                "private": {
-                    "description": "Expose the ingress on a private IP address only (immutable).",
-                    "type": "boolean"
+                "visibility": {
+                    "$ref": "#/definitions/Visibility",
+                    "description": "Ingress visibility (immutable)."
                 },
                 "ip": {
                     "description": "The IP of the ingress (immutable).",
@@ -667,6 +667,14 @@
                 "Standard_D2s_v3",
                 "Standard_D4s_v3",
                 "Standard_D8s_v3"
+            ],
+            "type": "string"
+        },
+        "Visibility": {
+            "description": "Visibility represents visibility.",
+            "enum": [
+                "Private",
+                "Public"
             ],
             "type": "string"
         },

@@ -40,14 +40,14 @@
                                 }
                             ],
                             "apiserverProfile": {
-                                "private": true,
+                                "visibility": "Public",
                                 "url": "https://api.cluster.location.aroapp.io:6443/",
                                 "ip": "1.2.3.4"
                             },
                             "ingressProfiles": [
                                 {
                                     "name": "default",
-                                    "private": true,
+                                    "visibility": "Public",
                                     "ip": "1.2.3.4"
                                 }
                             ],
