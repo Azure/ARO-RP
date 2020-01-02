@@ -87,7 +87,8 @@ cluster:
    az network vnet create \
      -g "$RESOURCEGROUP" \
      -n dev-vnet \
-     --address-prefixes 10.0.0.0/9
+     --address-prefixes 10.0.0.0/9 \
+     >/dev/null
    for subnet in "$CLUSTER-master" "$CLUSTER-worker"; do
      az network vnet subnet create \
        -g "$RESOURCEGROUP" \
