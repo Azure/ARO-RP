@@ -5,11 +5,11 @@ package swagger
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
-	"os"
 )
 
-func Run(outputFile string) error {
+func Run(outputDir string) error {
 	s := &Swagger{
 		Swagger: "2.0",
 		Info: &Info{
@@ -123,17 +123,12 @@ func Run(outputFile string) error {
 
 	delete(s.Definitions, "Tags")
 
-	f := os.Stdout
-	if outputFile != "" {
-		var err error
-		f, err = os.Create(outputFile)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
+	b, err := json.MarshalIndent(s, "", "    ")
+	if err != nil {
+		return err
 	}
 
-	e := json.NewEncoder(f)
-	e.SetIndent("", "    ")
-	return e.Encode(s)
+	b = append(b, '\n')
+
+	return ioutil.WriteFile(outputDir+"/redhatopenshift.json", b, 0666)
 }

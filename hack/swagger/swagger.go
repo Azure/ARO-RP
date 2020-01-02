@@ -4,19 +4,13 @@ package main
 // Licensed under the Apache License 2.0.
 
 import (
-	"flag"
+	"os"
 
 	"github.com/Azure/ARO-RP/pkg/swagger"
 )
 
-var (
-	outputFile = flag.String("o", "", "output file")
-)
-
 func main() {
-	flag.Parse()
-
-	if err := swagger.Run(*outputFile); err != nil {
+	if err := swagger.Run(os.Args[1]); err != nil {
 		panic(err)
 	}
 }
