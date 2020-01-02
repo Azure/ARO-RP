@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/backend/openshiftcluster"
@@ -132,7 +133,23 @@ func (ocb *openShiftClusterBackend) heartbeat(cancel context.CancelFunc, log *lo
 		defer t.Stop()
 
 		for {
-			_, err := ocb.db.OpenShiftClusters.Lease(doc.Key)
+			current, err := ocb.db.OpenShiftClusters.Get(doc.Key)
+			if err != nil {
+				log.Error(err)
+			} else {
+				// If current document, we are working on is not in Deleting
+				// but frontend updated to delete it - cancel and release
+				if doc.OpenShiftCluster.Properties.ProvisioningState != api.ProvisioningStateDeleting &&
+					current.OpenShiftCluster.Properties.ProvisioningState == api.ProvisioningStateDeleting {
+					err := ocb.handleDelete(cancel, doc)
+					if err != nil {
+						log.Error(err)
+						return
+					}
+					return
+				}
+			}
+			_, err = ocb.db.OpenShiftClusters.Lease(doc.Key)
 			if err != nil {
 				cancel()
 				log.Error(err)
@@ -207,4 +224,32 @@ func (ocb *openShiftClusterBackend) endLease(stop func(), doc *api.OpenShiftClus
 
 	_, err = ocb.db.OpenShiftClusters.EndLease(doc.Key, provisioningState, failedProvisioningState)
 	return err
+}
+
+// handleDelete handles document state during context cancelation and backend
+// worker shutdown. If backend worker context is canceled, it will mark document
+// as Failed. We need to wait for it and update to Deleting.
+// End to end state change flow should be:
+// Creating -> Deleting -> Failed -> Deleting
+func (ocb *openShiftClusterBackend) handleDelete(cancel context.CancelFunc, doc *api.OpenShiftClusterDocument) error {
+	cancel()
+	return wait.PollImmediate(time.Second, time.Minute*5, func() (bool, error) {
+		var err error
+		doc, err = ocb.db.OpenShiftClusters.Get(doc.Key)
+		if err != nil {
+			return false, err
+		}
+		switch doc.OpenShiftCluster.Properties.ProvisioningState {
+		case api.ProvisioningStateCreating:
+			return false, err
+		case api.ProvisioningStateFailed:
+			err := ocb.updateAsyncOperation(doc.AsyncOperationID, doc.OpenShiftCluster, api.ProvisioningStateDeleting, "")
+			if err != nil {
+				return false, err
+			}
+			return true, nil
+		default:
+			return false, nil
+		}
+	})
 }

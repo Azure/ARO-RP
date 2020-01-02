@@ -37,11 +37,6 @@ func (f *frontend) _deleteOpenShiftCluster(r *http.Request, header *http.Header,
 		return err
 	}
 
-	err = validateTerminalProvisioningState(doc.OpenShiftCluster.Properties.ProvisioningState)
-	if err != nil {
-		return err
-	}
-
 	doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateDeleting
 	doc.Dequeues = 0
 
