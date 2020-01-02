@@ -24,10 +24,12 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/resources"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 )
@@ -62,6 +64,7 @@ type dev struct {
 	permissions     authorization.PermissionsClient
 	roleassignments authorization.RoleAssignmentsClient
 	applications    graphrbac.ApplicationsClient
+	deployments     resources.DeploymentsClient
 
 	proxyPool       *x509.CertPool
 	proxyClientCert []byte
@@ -114,6 +117,8 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 	}
 
 	d.permissions = authorization.NewPermissionsClient(instancemetadata.SubscriptionID(), fpAuthorizer)
+
+	d.deployments = resources.NewDeploymentsClient(instancemetadata.TenantID(), fpAuthorizer)
 
 	b, err := ioutil.ReadFile("secrets/proxy.crt")
 	if err != nil {
@@ -256,6 +261,24 @@ func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthor
 		}
 	}
 
+	// Issue: https://github.com/Azure/ARO-RP/issues/31
+	// rbac client returns right permissions, but access is not yet propagated
+	// in the azure backends. We test by trying to call API directly and check if
+	// role was applied.
 	d.log.Print("development mode: refreshing authorizer")
-	return fpAuthorizer.(*refreshableAuthorizer).Refresh()
+	fpAuthorizer.(*refreshableAuthorizer).Refresh()
+	return wait.Poll(time.Second, time.Minute, func() (bool, error) {
+		// this should always error. Either 403 or 404
+		_, err := d.deployments.Get(ctx, oc.Properties.ResourceGroup, "dummy")
+		if detailedError, ok := err.(autorest.DetailedError); ok {
+			if requestError, ok := detailedError.Original.(azure.RequestError); ok &&
+				requestError.ServiceError != nil {
+				if requestError.ServiceError.Code == "AuthorizationFailed" {
+					return false, nil
+				}
+				return true, nil
+			}
+		}
+		return true, nil
+	})
 }

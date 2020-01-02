@@ -7,6 +7,7 @@ package resources
 //go:generate go run ../../../../../vendor/golang.org/x/tools/cmd/goimports -local=github.com/Azure/ARO-RP -e -w ../../../../util/mocks/azureclient/mgmt/$GOPACKAGE/$GOPACKAGE.go
 
 import (
+	"context"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
@@ -16,6 +17,7 @@ import (
 // DeploymentsClient is a minimal interface for azure DeploymentsClient
 type DeploymentsClient interface {
 	DeploymentsClientAddons
+	Get(ctx context.Context, resourceGroupName, deploymentName string) (resources.DeploymentExtended, error)
 }
 
 type deploymentsClient struct {
