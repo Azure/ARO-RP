@@ -237,13 +237,14 @@ func reply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b []byt
 		switch err := err.(type) {
 		case *api.CloudError:
 			api.WriteCloudError(w, err)
+			return
 		case statusCodeError:
 			w.WriteHeader(int(err))
 		default:
 			log.Error(err)
 			api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
+			return
 		}
-		return
 	}
 
 	if b != nil {
