@@ -23,68 +23,29 @@ type validateTest struct {
 
 var (
 	subscriptionID = "af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1"
-	resourceGroup  = "resourcegroup"
-	location       = "australiasoutheast"
-	name           = "test-cluster"
-	id             = fmt.Sprintf("/subscriptions/%s/resourcegroups/%s/providers/microsoft.redhatopenshift/openshiftclusters/%s", subscriptionID, resourceGroup, name)
+	id             = fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/microsoft.redhatopenshift/openshiftclusters/resourceName", subscriptionID)
 
 	v = &validator{
-		location:   location,
+		location:   "location",
 		resourceID: id,
 		r: azure.Resource{
 			SubscriptionID: subscriptionID,
-			ResourceGroup:  resourceGroup,
-			Provider:       "microsoft.redhatopenShift",
-			ResourceType:   "openshiftclusters",
-			ResourceName:   name,
+			ResourceGroup:  "resourceGroup",
+			Provider:       "Microsoft.RedHatOpenShift",
+			ResourceType:   "openshiftClusters",
+			ResourceName:   "resourceName",
 		},
 	}
 )
 
 func validOpenShiftCluster() *OpenShiftCluster {
-	return &OpenShiftCluster{
-		ID:       id,
-		Name:     name,
-		Type:     "Microsoft.RedHatOpenShift/openShiftClusters",
-		Location: location,
-		Tags:     Tags{"key": "value"},
-		Properties: Properties{
-			ProvisioningState: ProvisioningStateSucceeded,
-			ClusterDomain:     "cluster.eastus.aroapp.io",
-			ServicePrincipalProfile: ServicePrincipalProfile{
-				ClientID:     "2b5ba2c6-6205-4fc4-8b5d-9fea369ae1a2",
-				ClientSecret: "secret",
-			},
-			NetworkProfile: NetworkProfile{
-				PodCIDR:     "10.0.0.0/18",
-				ServiceCIDR: "10.0.1.0/22",
-			},
-			MasterProfile: MasterProfile{
-				VMSize:   VMSizeStandardD8sV3,
-				SubnetID: fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master", subscriptionID),
-			},
-			WorkerProfiles: []WorkerProfile{
-				{
-					Name:       "worker",
-					VMSize:     VMSizeStandardD4sV3,
-					DiskSizeGB: 128,
-					SubnetID:   fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker", subscriptionID),
-					Count:      3,
-				},
-			},
-			APIServerProfile: APIServerProfile{
-				URL: "url",
-				IP:  "1.2.3.4",
-			},
-			IngressProfiles: []IngressProfile{
-				{
-					Name: "default",
-					IP:   "1.2.3.4",
-				},
-			},
-			ConsoleURL: "url",
-		},
-	}
+	oc := exampleOpenShiftCluster()
+	oc.ID = id
+	oc.Properties.ServicePrincipalProfile.ClientID = "2b5ba2c6-6205-4fc4-8b5d-9fea369ae1a2"
+	oc.Properties.MasterProfile.SubnetID = fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master", subscriptionID)
+	oc.Properties.WorkerProfiles[0].SubnetID = fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker", subscriptionID)
+
+	return oc
 }
 
 func runTests(t *testing.T, tests []*validateTest, f func(*OpenShiftCluster) error) {
@@ -131,14 +92,14 @@ func TestValidateOpenShiftCluster(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.ID = "wrong"
 			},
-			wantErr: "400: MismatchingResourceID: id: The provided resource ID 'wrong' did not match the name in the Url '/subscriptions/af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/test-cluster'.",
+			wantErr: "400: MismatchingResourceID: id: The provided resource ID 'wrong' did not match the name in the Url '/subscriptions/af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1/resourcegroups/resourceGroup/providers/microsoft.redhatopenshift/openshiftclusters/resourceName'.",
 		},
 		{
 			name: "name wrong",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Name = "wrong"
 			},
-			wantErr: "400: MismatchingResourceName: name: The provided resource name 'wrong' did not match the name in the Url 'test-cluster'.",
+			wantErr: "400: MismatchingResourceName: name: The provided resource name 'wrong' did not match the name in the Url 'resourceName'.",
 		},
 		{
 			name: "type wrong",

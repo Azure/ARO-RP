@@ -6,6 +6,9 @@
         "resourceName": "resourceName",
         "parameters": {
             "location": "location",
+            "tags": {
+                "key": "value"
+            },
             "properties": {
                 "clusterDomain": "cluster.location.aroapp.io",
                 "servicePrincipalProfile": {
@@ -18,24 +21,24 @@
                 },
                 "masterProfile": {
                     "vmSize": "Standard_D8s_v3",
-                    "subnetId": "/subscriptions/subscriptionId/resourceGroups/resourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/masterSubnet"
+                    "subnetId": "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/master"
                 },
                 "workerProfiles": [
                     {
                         "name": "worker",
                         "vmSize": "Standard_D2s_v3",
                         "diskSizeGB": 128,
-                        "subnetId": "/subscriptions/subscriptionId/resourceGroups/resourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/workerSubnet",
+                        "subnetId": "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker",
                         "count": 3
                     }
                 ],
                 "apiserverProfile": {
-                    "private": false
+                    "private": true
                 },
                 "ingressProfiles": [
                     {
                         "name": "default",
-                        "private": false
+                        "private": true
                     }
                 ]
             }
@@ -48,6 +51,9 @@
                 "name": "resourceName",
                 "type": "Microsoft.RedHatOpenShift/OpenShiftClusters",
                 "location": "location",
+                "tags": {
+                    "key": "value"
+                },
                 "properties": {
                     "provisioningState": "Succeeded",
                     "clusterDomain": "cluster.location.aroapp.io",
@@ -60,26 +66,26 @@
                     },
                     "masterProfile": {
                         "vmSize": "Standard_D8s_v3",
-                        "subnetId": "/subscriptions/subscriptionId/resourceGroups/resourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/masterSubnet"
+                        "subnetId": "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/master"
                     },
                     "workerProfiles": [
                         {
                             "name": "worker",
                             "vmSize": "Standard_D2s_v3",
                             "diskSizeGB": 128,
-                            "subnetId": "/subscriptions/subscriptionId/resourceGroups/resourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/workerSubnet",
+                            "subnetId": "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker",
                             "count": 3
                         }
                     ],
                     "apiserverProfile": {
-                        "private": false,
+                        "private": true,
                         "url": "https://api.cluster.location.aroapp.io:6443/",
                         "ip": "1.2.3.4"
                     },
                     "ingressProfiles": [
                         {
                             "name": "default",
-                            "private": false,
+                            "private": true,
                             "ip": "1.2.3.4"
                         }
                     ],
@@ -93,6 +99,9 @@
                 "name": "resourceName",
                 "type": "Microsoft.RedHatOpenShift/OpenShiftClusters",
                 "location": "location",
+                "tags": {
+                    "key": "value"
+                },
                 "properties": {
                     "provisioningState": "Succeeded",
                     "clusterDomain": "cluster.location.aroapp.io",
@@ -105,26 +114,26 @@
                     },
                     "masterProfile": {
                         "vmSize": "Standard_D8s_v3",
-                        "subnetId": "/subscriptions/subscriptionId/resourceGroups/resourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/masterSubnet"
+                        "subnetId": "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/master"
                     },
                     "workerProfiles": [
                         {
                             "name": "worker",
                             "vmSize": "Standard_D2s_v3",
                             "diskSizeGB": 128,
-                            "subnetId": "/subscriptions/subscriptionId/resourceGroups/resourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/workerSubnet",
+                            "subnetId": "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker",
                             "count": 3
                         }
                     ],
                     "apiserverProfile": {
-                        "private": false,
+                        "private": true,
                         "url": "https://api.cluster.location.aroapp.io:6443/",
                         "ip": "1.2.3.4"
                     },
                     "ingressProfiles": [
                         {
                             "name": "default",
-                            "private": false,
+                            "private": true,
                             "ip": "1.2.3.4"
                         }
                     ],

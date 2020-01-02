@@ -130,5 +130,10 @@ func Run(outputDir string) error {
 
 	b = append(b, '\n')
 
+	err = generateExamples(outputDir, s)
+	if err != nil {
+		return err
+	}
+
 	return ioutil.WriteFile(outputDir+"/redhatopenshift.json", b, 0666)
 }

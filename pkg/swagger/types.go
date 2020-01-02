@@ -291,6 +291,25 @@ type SecurityRequirement map[string][]string
 // NameSchemas uses orderedmap to ensure that the ordering of properties stanzas
 // is respected.
 
+// NameParameters is a slice of NameParameters
+type NameParameters []NameParameter
+
+// NameParameter representes a name and a Parameter
+type NameParameter struct {
+	Name      string
+	Parameter interface{}
+}
+
+// UnmarshalJSON implements json.Unmarshaler
+func (xs *NameParameters) UnmarshalJSON(b []byte) error {
+	return orderedmap.UnmarshalJSON(b, xs)
+}
+
+// MarshalJSON implements json.Marshaler
+func (xs NameParameters) MarshalJSON() ([]byte, error) {
+	return orderedmap.MarshalJSON(xs)
+}
+
 // NameSchemas is a slice of NameSchemas
 type NameSchemas []NameSchema
 

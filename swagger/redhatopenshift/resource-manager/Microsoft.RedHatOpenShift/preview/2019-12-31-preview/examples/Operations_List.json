@@ -7,11 +7,11 @@
             "body": {
                 "value": [
                     {
-                        "name": "Microsoft.RedHatOpenShift/openShiftClusters/action",
+                        "name": "Microsoft.RedHatOpenShift/openShiftClusters/read",
                         "display": {
                             "provider": "Azure Red Hat OpenShift",
                             "resource": "openShiftClusters",
-                            "operation": "operation"
+                            "operation": "Read OpenShift cluster"
                         }
                     }
                 ]
