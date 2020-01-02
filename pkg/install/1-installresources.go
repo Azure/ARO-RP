@@ -329,6 +329,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 										FrontendPort:         to.Int32Ptr(6443),
 										BackendPort:          to.Int32Ptr(6443),
 										IdleTimeoutInMinutes: to.Int32Ptr(30),
+										DisableOutboundSnat:  to.BoolPtr(true),
 									},
 									Name: to.StringPtr("api-internal"),
 								},
