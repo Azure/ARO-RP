@@ -103,7 +103,7 @@ func generateExamples(outputDir string, s *Swagger) error {
 				}
 			}
 
-			b, err := json.MarshalIndent(example, "", "    ")
+			b, err := json.MarshalIndent(example, "", "  ")
 			if err != nil {
 				return err
 			}

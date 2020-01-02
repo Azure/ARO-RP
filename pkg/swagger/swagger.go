@@ -123,7 +123,7 @@ func Run(outputDir string) error {
 
 	delete(s.Definitions, "Tags")
 
-	b, err := json.MarshalIndent(s, "", "    ")
+	b, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
 		return err
 	}
