@@ -507,41 +507,38 @@
         },
         "OpenShiftCluster": {
             "description": "OpenShiftCluster represents an Azure Red Hat OpenShift cluster.",
+            "allOf": [
+                {
+                    "$ref": "../../../../../common-types/resource-management/v1/types.json#/definitions/Resource"
+                }
+            ],
             "properties": {
-                "id": {
-                    "description": "The resource ID (immutable).",
-                    "type": "string",
-                    "readOnly": true
-                },
-                "name": {
-                    "description": "The resource name (immutable).",
-                    "type": "string",
-                    "readOnly": true
-                },
-                "type": {
-                    "description": "The resource type (immutable).",
-                    "type": "string",
-                    "readOnly": true
-                },
-                "location": {
-                    "description": "The resource location (immutable).",
-                    "type": "string",
+                "tags": {
+                    "description": "Resource tags.",
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    },
                     "x-ms-mutability": [
+                        "read",
                         "create",
-                        "read"
+                        "update"
                     ]
                 },
-                "tags": {
-                    "$ref": "#/definitions/Tags",
-                    "description": "The resource tags."
+                "location": {
+                    "description": "The geo-location where the resource lives",
+                    "type": "string",
+                    "x-ms-mutability": [
+                        "read",
+                        "create"
+                    ]
                 },
                 "properties": {
                     "$ref": "#/definitions/Properties",
                     "description": "The cluster properties.",
                     "x-ms-client-flatten": true
                 }
-            },
-            "x-ms-azure-resource": true
+            }
         },
         "OpenShiftClusterCredentials": {
             "description": "OpenShiftClusterCredentials represents an OpenShift cluster's credentials",
@@ -662,13 +659,6 @@
                     "description": "The client secret used for the cluster (immutable).",
                     "type": "string"
                 }
-            }
-        },
-        "Tags": {
-            "description": "Tags represents an OpenShift cluster's tags.",
-            "type": "object",
-            "additionalProperties": {
-                "type": "string"
             }
         },
         "VMSize": {

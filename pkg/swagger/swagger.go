@@ -75,18 +75,53 @@ func Run(outputFile string) error {
 		return err
 	}
 
-	s.Definitions["OpenShiftCluster"].AzureResource = true
-	for i, property := range s.Definitions["OpenShiftCluster"].Properties {
-		switch property.Name {
-		case "name", "id", "type":
-			property.Schema.ReadOnly = true
-		case "location":
-			property.Schema.Mutability = []string{"create", "read"}
-		case "properties":
-			property.Schema.ClientFlatten = true
+	for _, azureResource := range []string{"OpenShiftCluster"} {
+		s.Definitions[azureResource].AllOf = []Schema{
+			{
+				Ref: "../../../../../common-types/resource-management/v1/types.json#/definitions/Resource",
+			},
 		}
-		s.Definitions["OpenShiftCluster"].Properties[i] = property
+
+		properties := []NameSchema{
+			{
+				Name: "tags",
+				Schema: &Schema{
+					Description: "Resource tags.",
+					Type:        "object",
+					AdditionalProperties: &Schema{
+						Type: "string",
+					},
+					Mutability: []string{
+						"read",
+						"create",
+						"update",
+					},
+				},
+			},
+			{
+				Name: "location",
+				Schema: &Schema{
+					Description: "The geo-location where the resource lives",
+					Type:        "string",
+					Mutability: []string{
+						"read",
+						"create",
+					},
+				},
+			},
+		}
+
+		for _, property := range s.Definitions[azureResource].Properties {
+			if property.Name == "properties" {
+				property.Schema.ClientFlatten = true
+				properties = append(properties, property)
+			}
+		}
+
+		s.Definitions[azureResource].Properties = properties
 	}
+
+	delete(s.Definitions, "Tags")
 
 	f := os.Stdout
 	if outputFile != "" {

@@ -94,6 +94,18 @@ type APIServerProfile struct {
 	IP *string `json:"ip,omitempty"`
 }
 
+// AzureEntityResource the resource model definition for a Azure Resource Manager resource with an etag.
+type AzureEntityResource struct {
+	// Etag - READ-ONLY; Resource Etag.
+	Etag *string `json:"etag,omitempty"`
+	// ID - READ-ONLY; Fully qualified resource Id for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; The name of the resource
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; The type of the resource. Ex- Microsoft.Compute/virtualMachines or Microsoft.Storage/storageAccounts.
+	Type *string `json:"type,omitempty"`
+}
+
 // CloudError cloudError represents a cloud error.
 type CloudError struct {
 	// Error - An error response from the service.
@@ -153,28 +165,28 @@ type NetworkProfile struct {
 // OpenShiftCluster openShiftCluster represents an Azure Red Hat OpenShift cluster.
 type OpenShiftCluster struct {
 	autorest.Response `json:"-"`
-	// ID - READ-ONLY; The resource ID (immutable).
-	ID *string `json:"id,omitempty"`
-	// Name - READ-ONLY; The resource name (immutable).
-	Name *string `json:"name,omitempty"`
-	// Type - READ-ONLY; The resource type (immutable).
-	Type *string `json:"type,omitempty"`
-	// Location - The resource location (immutable).
-	Location *string `json:"location,omitempty"`
-	// Tags - The resource tags.
+	// Tags - Resource tags.
 	Tags map[string]*string `json:"tags"`
+	// Location - The geo-location where the resource lives
+	Location *string `json:"location,omitempty"`
 	// Properties - The cluster properties.
 	*Properties `json:"properties,omitempty"`
+	// ID - READ-ONLY; Fully qualified resource Id for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; The name of the resource
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; The type of the resource. Ex- Microsoft.Compute/virtualMachines or Microsoft.Storage/storageAccounts.
+	Type *string `json:"type,omitempty"`
 }
 
 // MarshalJSON is the custom marshaler for OpenShiftCluster.
 func (osc OpenShiftCluster) MarshalJSON() ([]byte, error) {
 	objectMap := make(map[string]interface{})
-	if osc.Location != nil {
-		objectMap["location"] = osc.Location
-	}
 	if osc.Tags != nil {
 		objectMap["tags"] = osc.Tags
+	}
+	if osc.Location != nil {
+		objectMap["location"] = osc.Location
 	}
 	if osc.Properties != nil {
 		objectMap["properties"] = osc.Properties
@@ -191,6 +203,33 @@ func (osc *OpenShiftCluster) UnmarshalJSON(body []byte) error {
 	}
 	for k, v := range m {
 		switch k {
+		case "tags":
+			if v != nil {
+				var tags map[string]*string
+				err = json.Unmarshal(*v, &tags)
+				if err != nil {
+					return err
+				}
+				osc.Tags = tags
+			}
+		case "location":
+			if v != nil {
+				var location string
+				err = json.Unmarshal(*v, &location)
+				if err != nil {
+					return err
+				}
+				osc.Location = &location
+			}
+		case "properties":
+			if v != nil {
+				var properties Properties
+				err = json.Unmarshal(*v, &properties)
+				if err != nil {
+					return err
+				}
+				osc.Properties = &properties
+			}
 		case "id":
 			if v != nil {
 				var ID string
@@ -217,33 +256,6 @@ func (osc *OpenShiftCluster) UnmarshalJSON(body []byte) error {
 					return err
 				}
 				osc.Type = &typeVar
-			}
-		case "location":
-			if v != nil {
-				var location string
-				err = json.Unmarshal(*v, &location)
-				if err != nil {
-					return err
-				}
-				osc.Location = &location
-			}
-		case "tags":
-			if v != nil {
-				var tags map[string]*string
-				err = json.Unmarshal(*v, &tags)
-				if err != nil {
-					return err
-				}
-				osc.Tags = tags
-			}
-		case "properties":
-			if v != nil {
-				var properties Properties
-				err = json.Unmarshal(*v, &properties)
-				if err != nil {
-					return err
-				}
-				osc.Properties = &properties
 			}
 		}
 	}
@@ -385,12 +397,59 @@ type Properties struct {
 	ConsoleURL *string `json:"consoleUrl,omitempty"`
 }
 
+// ProxyResource the resource model definition for a ARM proxy resource. It will have everything other than
+// required location and tags
+type ProxyResource struct {
+	// ID - READ-ONLY; Fully qualified resource Id for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; The name of the resource
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; The type of the resource. Ex- Microsoft.Compute/virtualMachines or Microsoft.Storage/storageAccounts.
+	Type *string `json:"type,omitempty"`
+}
+
+// Resource ...
+type Resource struct {
+	// ID - READ-ONLY; Fully qualified resource Id for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; The name of the resource
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; The type of the resource. Ex- Microsoft.Compute/virtualMachines or Microsoft.Storage/storageAccounts.
+	Type *string `json:"type,omitempty"`
+}
+
 // ServicePrincipalProfile servicePrincipalProfile represents a service principal profile.
 type ServicePrincipalProfile struct {
 	// ClientID - The client ID used for the cluster (immutable).
 	ClientID *string `json:"clientId,omitempty"`
 	// ClientSecret - The client secret used for the cluster (immutable).
 	ClientSecret *string `json:"clientSecret,omitempty"`
+}
+
+// TrackedResource the resource model definition for a ARM tracked top level resource
+type TrackedResource struct {
+	// Tags - Resource tags.
+	Tags map[string]*string `json:"tags"`
+	// Location - The geo-location where the resource lives
+	Location *string `json:"location,omitempty"`
+	// ID - READ-ONLY; Fully qualified resource Id for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; The name of the resource
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; The type of the resource. Ex- Microsoft.Compute/virtualMachines or Microsoft.Storage/storageAccounts.
+	Type *string `json:"type,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for TrackedResource.
+func (tr TrackedResource) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if tr.Tags != nil {
+		objectMap["tags"] = tr.Tags
+	}
+	if tr.Location != nil {
+		objectMap["location"] = tr.Location
+	}
+	return json.Marshal(objectMap)
 }
 
 // WorkerProfile workerProfile represents a worker profile.

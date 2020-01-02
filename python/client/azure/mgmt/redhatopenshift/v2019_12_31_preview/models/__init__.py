@@ -21,6 +21,7 @@
 
 try:
     from ._models_py3 import APIServerProfile
+    from ._models_py3 import AzureEntityResource
     from ._models_py3 import CloudError, CloudErrorException
     from ._models_py3 import CloudErrorBody
     from ._models_py3 import Display
@@ -32,10 +33,14 @@ try:
     from ._models_py3 import OpenShiftClusterList
     from ._models_py3 import Operation
     from ._models_py3 import OperationList
+    from ._models_py3 import ProxyResource
+    from ._models_py3 import Resource
     from ._models_py3 import ServicePrincipalProfile
+    from ._models_py3 import TrackedResource
     from ._models_py3 import WorkerProfile
 except (SyntaxError, ImportError):
     from ._models import APIServerProfile
+    from ._models import AzureEntityResource
     from ._models import CloudError, CloudErrorException
     from ._models import CloudErrorBody
     from ._models import Display
@@ -47,11 +52,15 @@ except (SyntaxError, ImportError):
     from ._models import OpenShiftClusterList
     from ._models import Operation
     from ._models import OperationList
+    from ._models import ProxyResource
+    from ._models import Resource
     from ._models import ServicePrincipalProfile
+    from ._models import TrackedResource
     from ._models import WorkerProfile
 
 __all__ = [
     'APIServerProfile',
+    'AzureEntityResource',
     'CloudError', 'CloudErrorException',
     'CloudErrorBody',
     'Display',
@@ -63,6 +72,9 @@ __all__ = [
     'OpenShiftClusterList',
     'Operation',
     'OperationList',
+    'ProxyResource',
+    'Resource',
     'ServicePrincipalProfile',
+    'TrackedResource',
     'WorkerProfile',
 ]
