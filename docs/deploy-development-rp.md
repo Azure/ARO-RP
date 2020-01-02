@@ -8,6 +8,8 @@
    you don't have one installed already.  The `az` client supports Python 2.7
    and Python 3.5+.  A recent Python 3.x version is recommended.
 
+1. Install `gpgme-devel` package.
+
 1. Install the [Azure
    CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli), if you
    haven't already.
@@ -70,8 +72,6 @@
    ```
 
 1. Run the RP
-
-   Note: To run and build RP you need to have package `gpgme-devel` installed.
 
    ```
    go run ./cmd/aro rp

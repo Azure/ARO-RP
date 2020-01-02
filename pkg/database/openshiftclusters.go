@@ -145,7 +145,7 @@ func (c *openShiftClusters) patch(key string, f func(*api.OpenShiftClusterDocume
 
 func (c *openShiftClusters) Update(doc *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error) {
 	if doc.LeaseOwner != c.uuid {
-		return nil, ErrorLostLease
+		return nil, fmt.Errorf("lost lease")
 	}
 	return c.update(doc, nil)
 }
@@ -211,7 +211,7 @@ func (c *openShiftClusters) Dequeue() (*api.OpenShiftClusterDocument, error) {
 func (c *openShiftClusters) Lease(key string) (*api.OpenShiftClusterDocument, error) {
 	return c.patch(key, func(doc *api.OpenShiftClusterDocument) error {
 		if doc.LeaseOwner != c.uuid {
-			return ErrorLostLease
+			return fmt.Errorf("lost lease")
 		}
 		return nil
 	}, &cosmosdb.Options{PreTriggers: []string{"renewLease"}})

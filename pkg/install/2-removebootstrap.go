@@ -76,7 +76,7 @@ func (i *Installer) removeBootstrap(ctx context.Context) error {
 		}
 
 		i.log.Print("waiting for version clusterversion")
-		wait.PollImmediateWithContext(10*time.Second, 30*time.Minute, func() (bool, error) {
+		err = wait.PollImmediateWithContext(10*time.Second, 30*time.Minute, func() (bool, error) {
 			cv, err := cli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
 			if err == nil {
 				for _, cond := range cv.Status.Conditions {
@@ -88,6 +88,9 @@ func (i *Installer) removeBootstrap(ctx context.Context) error {
 			return false, nil
 
 		}, ctx.Done())
+		if err != nil {
+			return err
+		}
 
 		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			cv, err := cli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})

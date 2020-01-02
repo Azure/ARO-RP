@@ -633,7 +633,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 		}
 
 		i.log.Print("deploying resources template")
-		err = i.deployments.CreateOrUpdateAndWait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "installresource", mgmtresources.Deployment{
+		err = i.deployments.CreateOrUpdateAndWait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy", mgmtresources.Deployment{
 			Properties: &mgmtresources.DeploymentProperties{
 				Template: t,
 				Parameters: map[string]interface{}{
@@ -657,7 +657,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 					requestError.ServiceError != nil &&
 					requestError.ServiceError.Code == "DeploymentActive" {
 					i.log.Print("waiting for resources template")
-					err = i.deployments.Wait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "installresource")
+					err = i.deployments.Wait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy")
 				}
 			}
 			if err != nil {
@@ -717,14 +717,14 @@ func (i *Installer) installResources(ctx context.Context) error {
 		}
 
 		i.log.Print("waiting for bootstrap configmap")
-		wait.PollImmediateWithContext(10*time.Second, 30*time.Minute, func() (bool, error) {
+		err = wait.PollImmediateWithContext(10*time.Second, 30*time.Minute, func() (bool, error) {
 			cm, err := cli.CoreV1().ConfigMaps("kube-system").Get("bootstrap", metav1.GetOptions{})
-			if err == nil && cm.Data["status"] == "complete" {
-				return true, nil
-			}
-			return false, nil
+			return err == nil && cm.Data["status"] == "complete", nil
 
 		}, ctx.Done())
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

@@ -5,7 +5,6 @@ package backend
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync/atomic"
 	"time"
@@ -14,7 +13,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/backend/openshiftcluster"
-	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
@@ -64,6 +62,7 @@ func (ocb *openShiftClusterBackend) try() (bool, error) {
 // handle is responsible for handling backend operation and lease
 func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument) error {
 	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
 	stop := ocb.heartbeat(cancel, log, doc)
 	defer stop()
@@ -135,11 +134,7 @@ func (ocb *openShiftClusterBackend) heartbeat(cancel context.CancelFunc, log *lo
 		for {
 			_, err := ocb.db.OpenShiftClusters.Lease(doc.Key)
 			if err != nil {
-				// if lost lease - cancel backend workers
-				// and revoke lease
-				if errors.Is(err, database.ErrorLostLease) {
-					cancel()
-				}
+				cancel()
 				log.Error(err)
 				return
 			}
@@ -147,7 +142,6 @@ func (ocb *openShiftClusterBackend) heartbeat(cancel context.CancelFunc, log *lo
 			select {
 			case <-t.C:
 			case <-stop:
-				cancel()
 				return
 			}
 		}
