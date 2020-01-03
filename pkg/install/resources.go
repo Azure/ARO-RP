@@ -72,6 +72,7 @@ func (i *Installer) apiServerPublicLoadBalancer(location string, private bool) *
 					FrontendPort:         to.Int32Ptr(6443),
 					BackendPort:          to.Int32Ptr(6443),
 					IdleTimeoutInMinutes: to.Int32Ptr(30),
+					DisableOutboundSnat:  to.BoolPtr(true),
 				},
 				Name: to.StringPtr("api-internal"),
 			},
