@@ -106,6 +106,8 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
 
 
 def aro_delete(client, resource_group_name, resource_name, no_wait=False):
+    # TODO: clean up rbac
+
     return sdk_no_wait(no_wait, client.delete,
                        resource_group_name=resource_group_name,
                        resource_name=resource_name)
