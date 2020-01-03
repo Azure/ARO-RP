@@ -149,18 +149,27 @@ type WorkerProfile struct {
 type APIServerProfile struct {
 	MissingFields
 
-	Private bool   `json:"private,omitempty"`
-	URL     string `json:"url,omitempty"`
-	IP      string `json:"ip,omitempty"`
+	Visibility Visibility `json:"visibility,omitempty"`
+	URL        string     `json:"url,omitempty"`
+	IP         string     `json:"ip,omitempty"`
 }
+
+// Visibility represents visibility.
+type Visibility string
+
+// Visibility constants
+const (
+	VisibilityPublic  Visibility = "Public"
+	VisibilityPrivate Visibility = "Private"
+)
 
 // IngressProfile represents an ingress profile
 type IngressProfile struct {
 	MissingFields
 
-	Name    string `json:"name,omitempty"`
-	Private bool   `json:"private,omitempty"`
-	IP      string `json:"ip,omitempty"`
+	Name       string     `json:"name,omitempty"`
+	Visibility Visibility `json:"visibility,omitempty"`
+	IP         string     `json:"ip,omitempty"`
 }
 
 // Install represents an install process

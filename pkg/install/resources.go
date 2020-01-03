@@ -7,10 +7,11 @@ import (
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 )
 
-func (i *Installer) apiServerPublicLoadBalancer(location string, private bool) *arm.Resource {
+func (i *Installer) apiServerPublicLoadBalancer(location string, visibility api.Visibility) *arm.Resource {
 	lb := &mgmtnetwork.LoadBalancer{
 		Sku: &mgmtnetwork.LoadBalancerSku{
 			Name: mgmtnetwork.LoadBalancerSkuNameStandard,
@@ -54,7 +55,7 @@ func (i *Installer) apiServerPublicLoadBalancer(location string, private bool) *
 		Location: &location,
 	}
 
-	if !private {
+	if visibility == api.VisibilityPublic {
 		lb.LoadBalancingRules = &[]mgmtnetwork.LoadBalancingRule{
 			{
 				LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{

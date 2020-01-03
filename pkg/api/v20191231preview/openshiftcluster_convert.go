@@ -34,9 +34,9 @@ func openShiftClusterToExternal(oc *api.OpenShiftCluster) *OpenShiftCluster {
 				SubnetID: oc.Properties.MasterProfile.SubnetID,
 			},
 			APIServerProfile: APIServerProfile{
-				Private: oc.Properties.APIServerProfile.Private,
-				URL:     oc.Properties.APIServerProfile.URL,
-				IP:      oc.Properties.APIServerProfile.IP,
+				Visibility: Visibility(oc.Properties.APIServerProfile.Visibility),
+				URL:        oc.Properties.APIServerProfile.URL,
+				IP:         oc.Properties.APIServerProfile.IP,
 			},
 			ConsoleURL: oc.Properties.ConsoleURL,
 		},
@@ -59,9 +59,9 @@ func openShiftClusterToExternal(oc *api.OpenShiftCluster) *OpenShiftCluster {
 		out.Properties.IngressProfiles = make([]IngressProfile, 0, len(oc.Properties.IngressProfiles))
 		for _, p := range oc.Properties.IngressProfiles {
 			out.Properties.IngressProfiles = append(out.Properties.IngressProfiles, IngressProfile{
-				Name:    p.Name,
-				Private: p.Private,
-				IP:      p.IP,
+				Name:       p.Name,
+				Visibility: Visibility(p.Visibility),
+				IP:         p.IP,
 			})
 		}
 	}
@@ -132,7 +132,7 @@ func openShiftClusterToInternal(oc *OpenShiftCluster, out *api.OpenShiftCluster)
 		outp.SubnetID = p.SubnetID
 		outp.Count = p.Count
 	}
-	out.Properties.APIServerProfile.Private = oc.Properties.APIServerProfile.Private
+	out.Properties.APIServerProfile.Visibility = api.Visibility(oc.Properties.APIServerProfile.Visibility)
 	out.Properties.APIServerProfile.URL = oc.Properties.APIServerProfile.URL
 	out.Properties.APIServerProfile.IP = oc.Properties.APIServerProfile.IP
 	for _, p := range oc.Properties.IngressProfiles {
@@ -148,7 +148,7 @@ func openShiftClusterToInternal(oc *OpenShiftCluster, out *api.OpenShiftCluster)
 			outp = &out.Properties.IngressProfiles[len(out.Properties.IngressProfiles)-1]
 		}
 		outp.Name = p.Name
-		outp.Private = p.Private
+		outp.Visibility = api.Visibility(p.Visibility)
 		outp.IP = p.IP
 	}
 	out.Properties.ConsoleURL = oc.Properties.ConsoleURL

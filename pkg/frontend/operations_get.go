@@ -43,11 +43,11 @@ func (f *frontend) getOperations(w http.ResponseWriter, r *http.Request) {
 				},
 			},
 			{
-				Name: "Microsoft.RedHatOpenShift/openShiftClusters/credentials/action",
+				Name: "Microsoft.RedHatOpenShift/openShiftClusters/listCredentials/action",
 				Display: api.Display{
 					Provider:  "Azure Red Hat OpenShift",
-					Resource:  "openShiftClusters/credentials",
-					Operation: "Gets credentials of a OpenShift cluster",
+					Resource:  "openShiftClusters",
+					Operation: "Lists credentials of an OpenShift cluster",
 				},
 			},
 		},

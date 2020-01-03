@@ -19,23 +19,19 @@ import (
 func populateParameters(n int, typ, friendlyName string) (s []interface{}) {
 	s = []interface{}{
 		Reference{
-			Ref: "#/parameters/ApiVersionParameter",
+			Ref: "../../../../../common-types/resource-management/v1/types.json#/parameters/ApiVersionParameter",
 		},
 	}
 
 	if n > 0 {
 		s = append(s, Reference{
-			Ref: "#/parameters/SubscriptionIdParameter",
+			Ref: "../../../../../common-types/resource-management/v1/types.json#/parameters/SubscriptionIdParameter",
 		})
 	}
 
 	if n > 1 {
-		s = append(s, Parameter{
-			Name:        "resourceGroupName",
-			In:          "path",
-			Description: "The name of the resource group.",
-			Required:    true,
-			Type:        "string",
+		s = append(s, Reference{
+			Ref: "../../../../../common-types/resource-management/v1/types.json#/parameters/ResourceGroupNameParameter",
 		})
 	}
 

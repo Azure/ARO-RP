@@ -1,4 +1,4 @@
-//go:generate go run ../../../hack/swagger -o ../../../swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/preview/2019-12-31-preview/redhatopenshift.json
+//go:generate go run ../../../hack/swagger ../../../swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/preview/2019-12-31-preview
 
 package v20191231preview
 

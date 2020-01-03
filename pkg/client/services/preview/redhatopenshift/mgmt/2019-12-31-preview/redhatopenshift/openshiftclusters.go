@@ -23,6 +23,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/autorest/validation"
 	"github.com/Azure/go-autorest/tracing"
 )
 
@@ -44,7 +45,7 @@ func NewOpenShiftClustersClientWithBaseURI(baseURI string, subscriptionID string
 // CreateOrUpdate creates or updates a OpenShift cluster with the specified subscription, resource group and resource
 // name.  The operation returns properties of a OpenShift cluster.
 // Parameters:
-// resourceGroupName - the name of the resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // resourceName - the name of the OpenShift cluster resource.
 // parameters - the OpenShift cluster resource.
 func (client OpenShiftClustersClient) CreateOrUpdate(ctx context.Context, resourceGroupName string, resourceName string, parameters OpenShiftCluster) (result OpenShiftClustersCreateOrUpdateFuture, err error) {
@@ -58,6 +59,16 @@ func (client OpenShiftClustersClient) CreateOrUpdate(ctx context.Context, resour
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
+	if err := validation.Validate([]validation.Validation{
+		{TargetValue: client.SubscriptionID,
+			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceGroupName,
+			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\w\._\(\)]+$`, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("redhatopenshift.OpenShiftClustersClient", "CreateOrUpdate", err.Error())
+	}
+
 	req, err := client.CreateOrUpdatePreparer(ctx, resourceGroupName, resourceName, parameters)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "CreateOrUpdate", nil, "Failure preparing request")
@@ -86,9 +97,6 @@ func (client OpenShiftClustersClient) CreateOrUpdatePreparer(ctx context.Context
 		"api-version": APIVersion,
 	}
 
-	parameters.ID = nil
-	parameters.Name = nil
-	parameters.Type = nil
 	preparer := autorest.CreatePreparer(
 		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPut(),
@@ -128,7 +136,7 @@ func (client OpenShiftClustersClient) CreateOrUpdateResponder(resp *http.Respons
 // Delete deletes a OpenShift cluster with the specified subscription, resource group and resource name.  The operation
 // returns nothing.
 // Parameters:
-// resourceGroupName - the name of the resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // resourceName - the name of the OpenShift cluster resource.
 func (client OpenShiftClustersClient) Delete(ctx context.Context, resourceGroupName string, resourceName string) (result OpenShiftClustersDeleteFuture, err error) {
 	if tracing.IsEnabled() {
@@ -141,6 +149,16 @@ func (client OpenShiftClustersClient) Delete(ctx context.Context, resourceGroupN
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
+	if err := validation.Validate([]validation.Validation{
+		{TargetValue: client.SubscriptionID,
+			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceGroupName,
+			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\w\._\(\)]+$`, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("redhatopenshift.OpenShiftClustersClient", "Delete", err.Error())
+	}
+
 	req, err := client.DeletePreparer(ctx, resourceGroupName, resourceName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "Delete", nil, "Failure preparing request")
@@ -205,7 +223,7 @@ func (client OpenShiftClustersClient) DeleteResponder(resp *http.Response) (resu
 // Get gets a OpenShift cluster with the specified subscription, resource group and resource name.  The operation
 // returns properties of a OpenShift cluster.
 // Parameters:
-// resourceGroupName - the name of the resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // resourceName - the name of the OpenShift cluster resource.
 func (client OpenShiftClustersClient) Get(ctx context.Context, resourceGroupName string, resourceName string) (result OpenShiftCluster, err error) {
 	if tracing.IsEnabled() {
@@ -218,6 +236,16 @@ func (client OpenShiftClustersClient) Get(ctx context.Context, resourceGroupName
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
+	if err := validation.Validate([]validation.Validation{
+		{TargetValue: client.SubscriptionID,
+			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceGroupName,
+			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\w\._\(\)]+$`, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("redhatopenshift.OpenShiftClustersClient", "Get", err.Error())
+	}
+
 	req, err := client.GetPreparer(ctx, resourceGroupName, resourceName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "Get", nil, "Failure preparing request")
@@ -280,84 +308,6 @@ func (client OpenShiftClustersClient) GetResponder(resp *http.Response) (result 
 	return
 }
 
-// GetCredentials gets credentials of a OpenShift cluster with the specified subscription, resource group and resource
-// name.  The operation returns the credentials.
-// Parameters:
-// resourceGroupName - the name of the resource group.
-// resourceName - the name of the OpenShift cluster resource.
-func (client OpenShiftClustersClient) GetCredentials(ctx context.Context, resourceGroupName string, resourceName string) (result OpenShiftClusterCredentials, err error) {
-	if tracing.IsEnabled() {
-		ctx = tracing.StartSpan(ctx, fqdn+"/OpenShiftClustersClient.GetCredentials")
-		defer func() {
-			sc := -1
-			if result.Response.Response != nil {
-				sc = result.Response.Response.StatusCode
-			}
-			tracing.EndSpan(ctx, sc, err)
-		}()
-	}
-	req, err := client.GetCredentialsPreparer(ctx, resourceGroupName, resourceName)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "GetCredentials", nil, "Failure preparing request")
-		return
-	}
-
-	resp, err := client.GetCredentialsSender(req)
-	if err != nil {
-		result.Response = autorest.Response{Response: resp}
-		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "GetCredentials", resp, "Failure sending request")
-		return
-	}
-
-	result, err = client.GetCredentialsResponder(resp)
-	if err != nil {
-		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "GetCredentials", resp, "Failure responding to request")
-	}
-
-	return
-}
-
-// GetCredentialsPreparer prepares the GetCredentials request.
-func (client OpenShiftClustersClient) GetCredentialsPreparer(ctx context.Context, resourceGroupName string, resourceName string) (*http.Request, error) {
-	pathParameters := map[string]interface{}{
-		"resourceGroupName": autorest.Encode("path", resourceGroupName),
-		"resourceName":      autorest.Encode("path", resourceName),
-		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
-	}
-
-	const APIVersion = "2019-12-31-preview"
-	queryParameters := map[string]interface{}{
-		"api-version": APIVersion,
-	}
-
-	preparer := autorest.CreatePreparer(
-		autorest.AsPost(),
-		autorest.WithBaseURL(client.BaseURI),
-		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}/credentials", pathParameters),
-		autorest.WithQueryParameters(queryParameters))
-	return preparer.Prepare((&http.Request{}).WithContext(ctx))
-}
-
-// GetCredentialsSender sends the GetCredentials request. The method will close the
-// http.Response Body if it receives an error.
-func (client OpenShiftClustersClient) GetCredentialsSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
-	return autorest.SendWithSender(client, req, sd...)
-}
-
-// GetCredentialsResponder handles the response to the GetCredentials request. The method always
-// closes the http.Response Body.
-func (client OpenShiftClustersClient) GetCredentialsResponder(resp *http.Response) (result OpenShiftClusterCredentials, err error) {
-	err = autorest.Respond(
-		resp,
-		client.ByInspecting(),
-		azure.WithErrorUnlessStatusCode(http.StatusOK),
-		autorest.ByUnmarshallingJSON(&result),
-		autorest.ByClosing())
-	result.Response = autorest.Response{Response: resp}
-	return
-}
-
 // List lists OpenShift clusters in the specified subscription.  The operation returns properties of each OpenShift
 // cluster.
 func (client OpenShiftClustersClient) List(ctx context.Context) (result OpenShiftClusterList, err error) {
@@ -371,6 +321,12 @@ func (client OpenShiftClustersClient) List(ctx context.Context) (result OpenShif
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
+	if err := validation.Validate([]validation.Validation{
+		{TargetValue: client.SubscriptionID,
+			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("redhatopenshift.OpenShiftClustersClient", "List", err.Error())
+	}
+
 	req, err := client.ListPreparer(ctx)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "List", nil, "Failure preparing request")
@@ -434,7 +390,7 @@ func (client OpenShiftClustersClient) ListResponder(resp *http.Response) (result
 // ListByResourceGroup lists OpenShift clusters in the specified subscription and resource group.  The operation
 // returns properties of each OpenShift cluster.
 // Parameters:
-// resourceGroupName - the name of the resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 func (client OpenShiftClustersClient) ListByResourceGroup(ctx context.Context, resourceGroupName string) (result OpenShiftClusterList, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/OpenShiftClustersClient.ListByResourceGroup")
@@ -446,6 +402,16 @@ func (client OpenShiftClustersClient) ListByResourceGroup(ctx context.Context, r
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
+	if err := validation.Validate([]validation.Validation{
+		{TargetValue: client.SubscriptionID,
+			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceGroupName,
+			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\w\._\(\)]+$`, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("redhatopenshift.OpenShiftClustersClient", "ListByResourceGroup", err.Error())
+	}
+
 	req, err := client.ListByResourceGroupPreparer(ctx, resourceGroupName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "ListByResourceGroup", nil, "Failure preparing request")
@@ -507,10 +473,98 @@ func (client OpenShiftClustersClient) ListByResourceGroupResponder(resp *http.Re
 	return
 }
 
+// ListCredentials lists credentials of an OpenShift cluster with the specified subscription, resource group and
+// resource name.  The operation returns the credentials.
+// Parameters:
+// resourceGroupName - the name of the resource group. The name is case insensitive.
+// resourceName - the name of the OpenShift cluster resource.
+func (client OpenShiftClustersClient) ListCredentials(ctx context.Context, resourceGroupName string, resourceName string) (result OpenShiftClusterCredentials, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/OpenShiftClustersClient.ListCredentials")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	if err := validation.Validate([]validation.Validation{
+		{TargetValue: client.SubscriptionID,
+			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceGroupName,
+			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\w\._\(\)]+$`, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("redhatopenshift.OpenShiftClustersClient", "ListCredentials", err.Error())
+	}
+
+	req, err := client.ListCredentialsPreparer(ctx, resourceGroupName, resourceName)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "ListCredentials", nil, "Failure preparing request")
+		return
+	}
+
+	resp, err := client.ListCredentialsSender(req)
+	if err != nil {
+		result.Response = autorest.Response{Response: resp}
+		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "ListCredentials", resp, "Failure sending request")
+		return
+	}
+
+	result, err = client.ListCredentialsResponder(resp)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "ListCredentials", resp, "Failure responding to request")
+	}
+
+	return
+}
+
+// ListCredentialsPreparer prepares the ListCredentials request.
+func (client OpenShiftClustersClient) ListCredentialsPreparer(ctx context.Context, resourceGroupName string, resourceName string) (*http.Request, error) {
+	pathParameters := map[string]interface{}{
+		"resourceGroupName": autorest.Encode("path", resourceGroupName),
+		"resourceName":      autorest.Encode("path", resourceName),
+		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
+	}
+
+	const APIVersion = "2019-12-31-preview"
+	queryParameters := map[string]interface{}{
+		"api-version": APIVersion,
+	}
+
+	preparer := autorest.CreatePreparer(
+		autorest.AsPost(),
+		autorest.WithBaseURL(client.BaseURI),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}/listCredentials", pathParameters),
+		autorest.WithQueryParameters(queryParameters))
+	return preparer.Prepare((&http.Request{}).WithContext(ctx))
+}
+
+// ListCredentialsSender sends the ListCredentials request. The method will close the
+// http.Response Body if it receives an error.
+func (client OpenShiftClustersClient) ListCredentialsSender(req *http.Request) (*http.Response, error) {
+	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
+	return autorest.SendWithSender(client, req, sd...)
+}
+
+// ListCredentialsResponder handles the response to the ListCredentials request. The method always
+// closes the http.Response Body.
+func (client OpenShiftClustersClient) ListCredentialsResponder(resp *http.Response) (result OpenShiftClusterCredentials, err error) {
+	err = autorest.Respond(
+		resp,
+		client.ByInspecting(),
+		azure.WithErrorUnlessStatusCode(http.StatusOK),
+		autorest.ByUnmarshallingJSON(&result),
+		autorest.ByClosing())
+	result.Response = autorest.Response{Response: resp}
+	return
+}
+
 // Update creates or updates a OpenShift cluster with the specified subscription, resource group and resource name.
 // The operation returns properties of a OpenShift cluster.
 // Parameters:
-// resourceGroupName - the name of the resource group.
+// resourceGroupName - the name of the resource group. The name is case insensitive.
 // resourceName - the name of the OpenShift cluster resource.
 // parameters - the OpenShift cluster resource.
 func (client OpenShiftClustersClient) Update(ctx context.Context, resourceGroupName string, resourceName string, parameters OpenShiftCluster) (result OpenShiftClustersUpdateFuture, err error) {
@@ -524,6 +578,16 @@ func (client OpenShiftClustersClient) Update(ctx context.Context, resourceGroupN
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
+	if err := validation.Validate([]validation.Validation{
+		{TargetValue: client.SubscriptionID,
+			Constraints: []validation.Constraint{{Target: "client.SubscriptionID", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: resourceGroupName,
+			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MaxLength, Rule: 90, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil},
+				{Target: "resourceGroupName", Name: validation.Pattern, Rule: `^[-\w\._\(\)]+$`, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("redhatopenshift.OpenShiftClustersClient", "Update", err.Error())
+	}
+
 	req, err := client.UpdatePreparer(ctx, resourceGroupName, resourceName, parameters)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "Update", nil, "Failure preparing request")
@@ -552,9 +616,6 @@ func (client OpenShiftClustersClient) UpdatePreparer(ctx context.Context, resour
 		"api-version": APIVersion,
 	}
 
-	parameters.ID = nil
-	parameters.Name = nil
-	parameters.Type = nil
 	preparer := autorest.CreatePreparer(
 		autorest.AsContentType("application/json; charset=utf-8"),
 		autorest.AsPatch(),

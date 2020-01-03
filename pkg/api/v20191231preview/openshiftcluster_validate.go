@@ -218,6 +218,11 @@ func (v *validator) validateWorkerProfile(path string, wp *WorkerProfile, mp *Ma
 }
 
 func (v *validator) validateAPIServerProfile(path string, ap *APIServerProfile) error {
+	switch ap.Visibility {
+	case VisibilityPublic, VisibilityPrivate:
+	default:
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".visibility", "The provided visibility '%s' is invalid.", ap.Visibility)
+	}
 	if ap.URL != "" {
 		if _, err := url.Parse(ap.URL); err != nil {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".url", "The provided URL '%s' is invalid.", ap.URL)
@@ -240,6 +245,11 @@ func (v *validator) validateAPIServerProfile(path string, ap *APIServerProfile) 
 func (v *validator) validateIngressProfile(path string, p *IngressProfile) error {
 	if p.Name != "default" {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".name", "The provided ingress name '%s' is invalid.", p.Name)
+	}
+	switch p.Visibility {
+	case VisibilityPublic, VisibilityPrivate:
+	default:
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".visibility", "The provided visibility '%s' is invalid.", p.Visibility)
 	}
 	if p.IP != "" {
 		ip := net.ParseIP(p.IP)

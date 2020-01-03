@@ -13,7 +13,7 @@ from azure.graphrbac.models import ServicePrincipalCreateParameters
 
 
 class AADManager(object):
-    MANAGED_APP_PREFIX = "https://az.aro.azure.com/"
+    MANAGED_APP_PREFIX = 'https://az.aro.azure.com/'
 
     def __init__(self, cli_ctx):
         profile = Profile(cli_ctx=cli_ctx)

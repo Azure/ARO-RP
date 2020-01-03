@@ -26,9 +26,10 @@ from msrest.exceptions import HttpOperationError
 class APIServerProfile(Model):
     """APIServerProfile represents an API server profile.
 
-    :param private: Expose the API server on a private IP address only
-     (immutable).
-    :type private: bool
+    :param visibility: API server visibility (immutable). Possible values
+     include: 'Private', 'Public'
+    :type visibility: str or
+     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.enum
     :param url: The URL to access the cluster API server (immutable).
     :type url: str
     :param ip: The IP of the cluster API server (immutable).
@@ -36,16 +37,89 @@ class APIServerProfile(Model):
     """
 
     _attribute_map = {
-        'private': {'key': 'private', 'type': 'bool'},
+        'visibility': {'key': 'visibility', 'type': 'str'},
         'url': {'key': 'url', 'type': 'str'},
         'ip': {'key': 'ip', 'type': 'str'},
     }
 
     def __init__(self, **kwargs):
         super(APIServerProfile, self).__init__(**kwargs)
-        self.private = kwargs.get('private', None)
+        self.visibility = kwargs.get('visibility', None)
         self.url = kwargs.get('url', None)
         self.ip = kwargs.get('ip', None)
+
+
+class Resource(Model):
+    """Resource.
+
+    Variables are only populated by the server, and will be ignored when
+    sending a request.
+
+    :ivar id: Fully qualified resource Id for the resource. Ex -
+     /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+    :vartype id: str
+    :ivar name: The name of the resource
+    :vartype name: str
+    :ivar type: The type of the resource. Ex-
+     Microsoft.Compute/virtualMachines or Microsoft.Storage/storageAccounts.
+    :vartype type: str
+    """
+
+    _validation = {
+        'id': {'readonly': True},
+        'name': {'readonly': True},
+        'type': {'readonly': True},
+    }
+
+    _attribute_map = {
+        'id': {'key': 'id', 'type': 'str'},
+        'name': {'key': 'name', 'type': 'str'},
+        'type': {'key': 'type', 'type': 'str'},
+    }
+
+    def __init__(self, **kwargs):
+        super(Resource, self).__init__(**kwargs)
+        self.id = None
+        self.name = None
+        self.type = None
+
+
+class AzureEntityResource(Resource):
+    """The resource model definition for a Azure Resource Manager resource with an
+    etag.
+
+    Variables are only populated by the server, and will be ignored when
+    sending a request.
+
+    :ivar id: Fully qualified resource Id for the resource. Ex -
+     /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+    :vartype id: str
+    :ivar name: The name of the resource
+    :vartype name: str
+    :ivar type: The type of the resource. Ex-
+     Microsoft.Compute/virtualMachines or Microsoft.Storage/storageAccounts.
+    :vartype type: str
+    :ivar etag: Resource Etag.
+    :vartype etag: str
+    """
+
+    _validation = {
+        'id': {'readonly': True},
+        'name': {'readonly': True},
+        'type': {'readonly': True},
+        'etag': {'readonly': True},
+    }
+
+    _attribute_map = {
+        'id': {'key': 'id', 'type': 'str'},
+        'name': {'key': 'name', 'type': 'str'},
+        'type': {'key': 'type', 'type': 'str'},
+        'etag': {'key': 'etag', 'type': 'str'},
+    }
+
+    def __init__(self, **kwargs):
+        super(AzureEntityResource, self).__init__(**kwargs)
+        self.etag = None
 
 
 class CloudError(Model):
@@ -143,23 +217,24 @@ class IngressProfile(Model):
 
     :param name: The ingress profile name.  Must be "default" (immutable).
     :type name: str
-    :param private: Expose the ingress on a private IP address only
-     (immutable).
-    :type private: bool
+    :param visibility: Ingress visibility (immutable). Possible values
+     include: 'Private', 'Public'
+    :type visibility: str or
+     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.enum
     :param ip: The IP of the ingress (immutable).
     :type ip: str
     """
 
     _attribute_map = {
         'name': {'key': 'name', 'type': 'str'},
-        'private': {'key': 'private', 'type': 'bool'},
+        'visibility': {'key': 'visibility', 'type': 'str'},
         'ip': {'key': 'ip', 'type': 'str'},
     }
 
     def __init__(self, **kwargs):
         super(IngressProfile, self).__init__(**kwargs)
         self.name = kwargs.get('name', None)
-        self.private = kwargs.get('private', None)
+        self.visibility = kwargs.get('visibility', None)
         self.ip = kwargs.get('ip', None)
 
 
@@ -206,22 +281,24 @@ class NetworkProfile(Model):
         self.service_cidr = kwargs.get('service_cidr', None)
 
 
-class OpenShiftCluster(Model):
+class OpenShiftCluster(Resource):
     """OpenShiftCluster represents an Azure Red Hat OpenShift cluster.
 
     Variables are only populated by the server, and will be ignored when
     sending a request.
 
-    :ivar id: The resource ID (immutable).
+    :ivar id: Fully qualified resource Id for the resource. Ex -
+     /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
     :vartype id: str
-    :ivar name: The resource name (immutable).
+    :ivar name: The name of the resource
     :vartype name: str
-    :ivar type: The resource type (immutable).
+    :ivar type: The type of the resource. Ex-
+     Microsoft.Compute/virtualMachines or Microsoft.Storage/storageAccounts.
     :vartype type: str
-    :param location: The resource location (immutable).
-    :type location: str
-    :param tags: The resource tags.
+    :param tags: Resource tags.
     :type tags: dict[str, str]
+    :param location: The geo-location where the resource lives
+    :type location: str
     :param provisioning_state: The cluster provisioning state (immutable).
      Possible values include: 'Creating', 'Deleting', 'Failed', 'Succeeded',
      'Updating'
@@ -261,8 +338,8 @@ class OpenShiftCluster(Model):
         'id': {'key': 'id', 'type': 'str'},
         'name': {'key': 'name', 'type': 'str'},
         'type': {'key': 'type', 'type': 'str'},
-        'location': {'key': 'location', 'type': 'str'},
         'tags': {'key': 'tags', 'type': '{str}'},
+        'location': {'key': 'location', 'type': 'str'},
         'provisioning_state': {'key': 'properties.provisioningState', 'type': 'str'},
         'cluster_domain': {'key': 'properties.clusterDomain', 'type': 'str'},
         'service_principal_profile': {'key': 'properties.servicePrincipalProfile', 'type': 'ServicePrincipalProfile'},
@@ -276,11 +353,8 @@ class OpenShiftCluster(Model):
 
     def __init__(self, **kwargs):
         super(OpenShiftCluster, self).__init__(**kwargs)
-        self.id = None
-        self.name = None
-        self.type = None
-        self.location = kwargs.get('location', None)
         self.tags = kwargs.get('tags', None)
+        self.location = kwargs.get('location', None)
         self.provisioning_state = kwargs.get('provisioning_state', None)
         self.cluster_domain = kwargs.get('cluster_domain', None)
         self.service_principal_profile = kwargs.get('service_principal_profile', None)
@@ -367,6 +441,39 @@ class OperationList(Model):
         self.value = kwargs.get('value', None)
 
 
+class ProxyResource(Resource):
+    """The resource model definition for a ARM proxy resource. It will have
+    everything other than required location and tags.
+
+    Variables are only populated by the server, and will be ignored when
+    sending a request.
+
+    :ivar id: Fully qualified resource Id for the resource. Ex -
+     /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+    :vartype id: str
+    :ivar name: The name of the resource
+    :vartype name: str
+    :ivar type: The type of the resource. Ex-
+     Microsoft.Compute/virtualMachines or Microsoft.Storage/storageAccounts.
+    :vartype type: str
+    """
+
+    _validation = {
+        'id': {'readonly': True},
+        'name': {'readonly': True},
+        'type': {'readonly': True},
+    }
+
+    _attribute_map = {
+        'id': {'key': 'id', 'type': 'str'},
+        'name': {'key': 'name', 'type': 'str'},
+        'type': {'key': 'type', 'type': 'str'},
+    }
+
+    def __init__(self, **kwargs):
+        super(ProxyResource, self).__init__(**kwargs)
+
+
 class ServicePrincipalProfile(Model):
     """ServicePrincipalProfile represents a service principal profile.
 
@@ -385,6 +492,49 @@ class ServicePrincipalProfile(Model):
         super(ServicePrincipalProfile, self).__init__(**kwargs)
         self.client_id = kwargs.get('client_id', None)
         self.client_secret = kwargs.get('client_secret', None)
+
+
+class TrackedResource(Resource):
+    """The resource model definition for a ARM tracked top level resource.
+
+    Variables are only populated by the server, and will be ignored when
+    sending a request.
+
+    All required parameters must be populated in order to send to Azure.
+
+    :ivar id: Fully qualified resource Id for the resource. Ex -
+     /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+    :vartype id: str
+    :ivar name: The name of the resource
+    :vartype name: str
+    :ivar type: The type of the resource. Ex-
+     Microsoft.Compute/virtualMachines or Microsoft.Storage/storageAccounts.
+    :vartype type: str
+    :param tags: Resource tags.
+    :type tags: dict[str, str]
+    :param location: Required. The geo-location where the resource lives
+    :type location: str
+    """
+
+    _validation = {
+        'id': {'readonly': True},
+        'name': {'readonly': True},
+        'type': {'readonly': True},
+        'location': {'required': True},
+    }
+
+    _attribute_map = {
+        'id': {'key': 'id', 'type': 'str'},
+        'name': {'key': 'name', 'type': 'str'},
+        'type': {'key': 'type', 'type': 'str'},
+        'tags': {'key': 'tags', 'type': '{str}'},
+        'location': {'key': 'location', 'type': 'str'},
+    }
+
+    def __init__(self, **kwargs):
+        super(TrackedResource, self).__init__(**kwargs)
+        self.tags = kwargs.get('tags', None)
+        self.location = kwargs.get('location', None)
 
 
 class WorkerProfile(Model):

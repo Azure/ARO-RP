@@ -50,6 +50,36 @@ func PossibleProvisioningStateValues() []ProvisioningState {
 	return []ProvisioningState{Creating, Deleting, Failed, Succeeded, Updating}
 }
 
+// Visibility enumerates the values for visibility.
+type Visibility string
+
+const (
+	// Private ...
+	Private Visibility = "Private"
+	// Public ...
+	Public Visibility = "Public"
+)
+
+// PossibleVisibilityValues returns an array of possible values for the Visibility const type.
+func PossibleVisibilityValues() []Visibility {
+	return []Visibility{Private, Public}
+}
+
+// Visibility1 enumerates the values for visibility 1.
+type Visibility1 string
+
+const (
+	// Visibility1Private ...
+	Visibility1Private Visibility1 = "Private"
+	// Visibility1Public ...
+	Visibility1Public Visibility1 = "Public"
+)
+
+// PossibleVisibility1Values returns an array of possible values for the Visibility1 const type.
+func PossibleVisibility1Values() []Visibility1 {
+	return []Visibility1{Visibility1Private, Visibility1Public}
+}
+
 // VMSize enumerates the values for vm size.
 type VMSize string
 
@@ -86,12 +116,24 @@ func PossibleVMSize1Values() []VMSize1 {
 
 // APIServerProfile aPIServerProfile represents an API server profile.
 type APIServerProfile struct {
-	// Private - Expose the API server on a private IP address only (immutable).
-	Private *bool `json:"private,omitempty"`
+	// Visibility - API server visibility (immutable). Possible values include: 'Private', 'Public'
+	Visibility Visibility `json:"visibility,omitempty"`
 	// URL - The URL to access the cluster API server (immutable).
 	URL *string `json:"url,omitempty"`
 	// IP - The IP of the cluster API server (immutable).
 	IP *string `json:"ip,omitempty"`
+}
+
+// AzureEntityResource the resource model definition for a Azure Resource Manager resource with an etag.
+type AzureEntityResource struct {
+	// Etag - READ-ONLY; Resource Etag.
+	Etag *string `json:"etag,omitempty"`
+	// ID - READ-ONLY; Fully qualified resource Id for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; The name of the resource
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; The type of the resource. Ex- Microsoft.Compute/virtualMachines or Microsoft.Storage/storageAccounts.
+	Type *string `json:"type,omitempty"`
 }
 
 // CloudError cloudError represents a cloud error.
@@ -128,8 +170,8 @@ type Display struct {
 type IngressProfile struct {
 	// Name - The ingress profile name.  Must be "default" (immutable).
 	Name *string `json:"name,omitempty"`
-	// Private - Expose the ingress on a private IP address only (immutable).
-	Private *bool `json:"private,omitempty"`
+	// Visibility - Ingress visibility (immutable). Possible values include: 'Visibility1Private', 'Visibility1Public'
+	Visibility Visibility1 `json:"visibility,omitempty"`
 	// IP - The IP of the ingress (immutable).
 	IP *string `json:"ip,omitempty"`
 }
@@ -153,28 +195,28 @@ type NetworkProfile struct {
 // OpenShiftCluster openShiftCluster represents an Azure Red Hat OpenShift cluster.
 type OpenShiftCluster struct {
 	autorest.Response `json:"-"`
-	// ID - READ-ONLY; The resource ID (immutable).
-	ID *string `json:"id,omitempty"`
-	// Name - READ-ONLY; The resource name (immutable).
-	Name *string `json:"name,omitempty"`
-	// Type - READ-ONLY; The resource type (immutable).
-	Type *string `json:"type,omitempty"`
-	// Location - The resource location (immutable).
-	Location *string `json:"location,omitempty"`
-	// Tags - The resource tags.
+	// Tags - Resource tags.
 	Tags map[string]*string `json:"tags"`
+	// Location - The geo-location where the resource lives
+	Location *string `json:"location,omitempty"`
 	// Properties - The cluster properties.
 	*Properties `json:"properties,omitempty"`
+	// ID - READ-ONLY; Fully qualified resource Id for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; The name of the resource
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; The type of the resource. Ex- Microsoft.Compute/virtualMachines or Microsoft.Storage/storageAccounts.
+	Type *string `json:"type,omitempty"`
 }
 
 // MarshalJSON is the custom marshaler for OpenShiftCluster.
 func (osc OpenShiftCluster) MarshalJSON() ([]byte, error) {
 	objectMap := make(map[string]interface{})
-	if osc.Location != nil {
-		objectMap["location"] = osc.Location
-	}
 	if osc.Tags != nil {
 		objectMap["tags"] = osc.Tags
+	}
+	if osc.Location != nil {
+		objectMap["location"] = osc.Location
 	}
 	if osc.Properties != nil {
 		objectMap["properties"] = osc.Properties
@@ -191,6 +233,33 @@ func (osc *OpenShiftCluster) UnmarshalJSON(body []byte) error {
 	}
 	for k, v := range m {
 		switch k {
+		case "tags":
+			if v != nil {
+				var tags map[string]*string
+				err = json.Unmarshal(*v, &tags)
+				if err != nil {
+					return err
+				}
+				osc.Tags = tags
+			}
+		case "location":
+			if v != nil {
+				var location string
+				err = json.Unmarshal(*v, &location)
+				if err != nil {
+					return err
+				}
+				osc.Location = &location
+			}
+		case "properties":
+			if v != nil {
+				var properties Properties
+				err = json.Unmarshal(*v, &properties)
+				if err != nil {
+					return err
+				}
+				osc.Properties = &properties
+			}
 		case "id":
 			if v != nil {
 				var ID string
@@ -217,33 +286,6 @@ func (osc *OpenShiftCluster) UnmarshalJSON(body []byte) error {
 					return err
 				}
 				osc.Type = &typeVar
-			}
-		case "location":
-			if v != nil {
-				var location string
-				err = json.Unmarshal(*v, &location)
-				if err != nil {
-					return err
-				}
-				osc.Location = &location
-			}
-		case "tags":
-			if v != nil {
-				var tags map[string]*string
-				err = json.Unmarshal(*v, &tags)
-				if err != nil {
-					return err
-				}
-				osc.Tags = tags
-			}
-		case "properties":
-			if v != nil {
-				var properties Properties
-				err = json.Unmarshal(*v, &properties)
-				if err != nil {
-					return err
-				}
-				osc.Properties = &properties
 			}
 		}
 	}
@@ -385,12 +427,59 @@ type Properties struct {
 	ConsoleURL *string `json:"consoleUrl,omitempty"`
 }
 
+// ProxyResource the resource model definition for a ARM proxy resource. It will have everything other than
+// required location and tags
+type ProxyResource struct {
+	// ID - READ-ONLY; Fully qualified resource Id for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; The name of the resource
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; The type of the resource. Ex- Microsoft.Compute/virtualMachines or Microsoft.Storage/storageAccounts.
+	Type *string `json:"type,omitempty"`
+}
+
+// Resource ...
+type Resource struct {
+	// ID - READ-ONLY; Fully qualified resource Id for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; The name of the resource
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; The type of the resource. Ex- Microsoft.Compute/virtualMachines or Microsoft.Storage/storageAccounts.
+	Type *string `json:"type,omitempty"`
+}
+
 // ServicePrincipalProfile servicePrincipalProfile represents a service principal profile.
 type ServicePrincipalProfile struct {
 	// ClientID - The client ID used for the cluster (immutable).
 	ClientID *string `json:"clientId,omitempty"`
 	// ClientSecret - The client secret used for the cluster (immutable).
 	ClientSecret *string `json:"clientSecret,omitempty"`
+}
+
+// TrackedResource the resource model definition for a ARM tracked top level resource
+type TrackedResource struct {
+	// Tags - Resource tags.
+	Tags map[string]*string `json:"tags"`
+	// Location - The geo-location where the resource lives
+	Location *string `json:"location,omitempty"`
+	// ID - READ-ONLY; Fully qualified resource Id for the resource. Ex - /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; The name of the resource
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; The type of the resource. Ex- Microsoft.Compute/virtualMachines or Microsoft.Storage/storageAccounts.
+	Type *string `json:"type,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for TrackedResource.
+func (tr TrackedResource) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if tr.Tags != nil {
+		objectMap["tags"] = tr.Tags
+	}
+	if tr.Location != nil {
+		objectMap["location"] = tr.Location
+	}
+	return json.Marshal(objectMap)
 }
 
 // WorkerProfile workerProfile represents a worker profile.

@@ -34,7 +34,7 @@ helps['aro update'] = """
     short-summary: Update a cluster.
 """
 
-helps['aro get-credentials'] = """
+helps['aro list-credentials'] = """
     type: command
-    short-summary: Get credentials of a cluster.
+    short-summary: List credentials of a cluster.
 """

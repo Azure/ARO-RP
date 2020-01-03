@@ -5,11 +5,11 @@ package swagger
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
-	"os"
 )
 
-func Run(outputFile string) error {
+func Run(outputDir string) error {
 	s := &Swagger{
 		Swagger: "2.0",
 		Info: &Info{
@@ -23,22 +23,6 @@ func Run(outputFile string) error {
 		Produces:    []string{"application/json"},
 		Paths:       populateTopLevelPaths("Microsoft.RedHatOpenShift", "openShiftCluster", "OpenShift cluster"),
 		Definitions: Definitions{},
-		Parameters: ParametersDefinitions{
-			"SubscriptionIdParameter": {
-				Name:        "subscriptionId",
-				In:          "path",
-				Description: "Subscription credentials which uniquely identify Microsoft Azure subscription. The subscription ID forms part of the URI for every service call.",
-				Required:    true,
-				Type:        "string",
-			},
-			"ApiVersionParameter": {
-				Name:        "api-version",
-				In:          "query",
-				Description: "Client API version.",
-				Required:    true,
-				Type:        "string",
-			},
-		},
 		SecurityDefinitions: SecurityDefinitions{
 			"azure_auth": {
 				Type:             "oauth2",
@@ -57,12 +41,12 @@ func Run(outputFile string) error {
 		},
 	}
 
-	s.Paths["/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}/credentials"] = &PathItem{
+	s.Paths["/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.RedHatOpenShift/openShiftClusters/{resourceName}/listCredentials"] = &PathItem{
 		Post: &Operation{
 			Tags:        []string{"OpenShiftClusters"},
-			Summary:     "Gets credentials of a OpenShift cluster with the specified subscription, resource group and resource name.",
-			Description: "Gets credentials of a OpenShift cluster with the specified subscription, resource group and resource name.  The operation returns the credentials.",
-			OperationID: "OpenShiftClusters_GetCredentials",
+			Summary:     "Lists credentials of an OpenShift cluster with the specified subscription, resource group and resource name.",
+			Description: "Lists credentials of an OpenShift cluster with the specified subscription, resource group and resource name.  The operation returns the credentials.",
+			OperationID: "OpenShiftClusters_ListCredentials",
 			Parameters:  populateParameters(3, "OpenShiftCluster", "OpenShift cluster"),
 			Responses:   populateResponses("OpenShiftClusterCredentials", false, http.StatusOK),
 		},
@@ -91,30 +75,65 @@ func Run(outputFile string) error {
 		return err
 	}
 
-	s.Definitions["OpenShiftCluster"].AzureResource = true
-	for i, property := range s.Definitions["OpenShiftCluster"].Properties {
-		switch property.Name {
-		case "name", "id", "type":
-			property.Schema.ReadOnly = true
-		case "location":
-			property.Schema.Mutability = []string{"create", "read"}
-		case "properties":
-			property.Schema.ClientFlatten = true
+	for _, azureResource := range []string{"OpenShiftCluster"} {
+		s.Definitions[azureResource].AllOf = []Schema{
+			{
+				Ref: "../../../../../common-types/resource-management/v1/types.json#/definitions/Resource",
+			},
 		}
-		s.Definitions["OpenShiftCluster"].Properties[i] = property
+
+		properties := []NameSchema{
+			{
+				Name: "tags",
+				Schema: &Schema{
+					Description: "Resource tags.",
+					Type:        "object",
+					AdditionalProperties: &Schema{
+						Type: "string",
+					},
+					Mutability: []string{
+						"read",
+						"create",
+						"update",
+					},
+				},
+			},
+			{
+				Name: "location",
+				Schema: &Schema{
+					Description: "The geo-location where the resource lives",
+					Type:        "string",
+					Mutability: []string{
+						"read",
+						"create",
+					},
+				},
+			},
+		}
+
+		for _, property := range s.Definitions[azureResource].Properties {
+			if property.Name == "properties" {
+				property.Schema.ClientFlatten = true
+				properties = append(properties, property)
+			}
+		}
+
+		s.Definitions[azureResource].Properties = properties
 	}
 
-	f := os.Stdout
-	if outputFile != "" {
-		var err error
-		f, err = os.Create(outputFile)
-		if err != nil {
-			return err
-		}
-		defer f.Close()
+	delete(s.Definitions, "Tags")
+
+	b, err := json.MarshalIndent(s, "", "  ")
+	if err != nil {
+		return err
 	}
 
-	e := json.NewEncoder(f)
-	e.SetIndent("", "    ")
-	return e.Encode(s)
+	b = append(b, '\n')
+
+	err = generateExamples(outputDir, s)
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(outputDir+"/redhatopenshift.json", b, 0666)
 }

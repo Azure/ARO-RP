@@ -10,7 +10,7 @@ from azure.cli.core.profiles import ResourceType
 from msrestazure.tools import resource_id
 
 
-CONTRIBUTOR = "b24988ac-6180-42a0-ab88-20f7382dd24c"
+CONTRIBUTOR = 'b24988ac-6180-42a0-ab88-20f7382dd24c'
 
 
 def assign_contributor_to_vnet(cli_ctx, vnet, object_id):
@@ -35,5 +35,5 @@ def assign_contributor_to_vnet(cli_ctx, vnet, object_id):
     client.role_assignments.create(vnet, uuid.uuid4(), RoleAssignmentCreateParameters(
         role_definition_id=role_definition_id,
         principal_id=object_id,
-        principal_type="ServicePrincipal",
+        principal_type='ServicePrincipal',
     ))

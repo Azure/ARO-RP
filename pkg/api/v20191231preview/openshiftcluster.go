@@ -132,8 +132,8 @@ type WorkerProfile struct {
 
 // APIServerProfile represents an API server profile.
 type APIServerProfile struct {
-	// Expose the API server on a private IP address only (immutable).
-	Private bool `json:"private,omitempty"`
+	// API server visibility (immutable).
+	Visibility Visibility `json:"visibility,omitempty"`
 
 	// The URL to access the cluster API server (immutable).
 	URL string `json:"url,omitempty"`
@@ -142,13 +142,22 @@ type APIServerProfile struct {
 	IP string `json:"ip,omitempty"`
 }
 
+// Visibility represents visibility.
+type Visibility string
+
+// Visibility constants
+const (
+	VisibilityPublic  Visibility = "Public"
+	VisibilityPrivate Visibility = "Private"
+)
+
 // IngressProfile represents an ingress profile.
 type IngressProfile struct {
 	// The ingress profile name.  Must be "default" (immutable).
 	Name string `json:"name,omitempty"`
 
-	// Expose the ingress on a private IP address only (immutable).
-	Private bool `json:"private,omitempty"`
+	// Ingress visibility (immutable).
+	Visibility Visibility `json:"visibility,omitempty"`
 
 	// The IP of the ingress (immutable).
 	IP string `json:"ip,omitempty"`
