@@ -20,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	utilpermissions "github.com/Azure/ARO-RP/pkg/util/permissions"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
@@ -34,56 +35,54 @@ func (*azureClaim) Valid() error {
 }
 
 type openShiftClusterDynamicValidator struct {
+	env env.Interface
+
 	subnets subnet.Manager
 
 	oc *api.OpenShiftCluster
-	r  azure.Resource
 }
 
-// validateOpenShiftClusterDynamic validates an OpenShift cluster
-func validateOpenShiftClusterDynamic(ctx context.Context, getFPAuthorizer func(string, string) (autorest.Authorizer, error), oc *api.OpenShiftCluster) error {
+// Dynamic validates an OpenShift cluster
+func (v *openShiftClusterValidator) Dynamic(ctx context.Context, oc *api.OpenShiftCluster) error {
+	v.dv.oc = oc
+
 	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
 		return err
 	}
 
-	v := &openShiftClusterDynamicValidator{
-		oc: oc,
-		r:  r,
-	}
-
 	// TODO: pre-check that the cluster domain doesn't already exist
 
-	spAuthorizer, err := v.validateServicePrincipalProfile()
+	spAuthorizer, err := v.dv.validateServicePrincipalProfile()
 	if err != nil {
 		return err
 	}
 
-	err = v.validateServicePrincipalRole()
+	err = v.dv.validateServicePrincipalRole()
 	if err != nil {
 		return err
 	}
 
-	spPermissions := authorization.NewPermissionsClient(v.r.SubscriptionID, spAuthorizer)
-	err = v.validateVnetPermissions(ctx, spPermissions, api.CloudErrorCodeInvalidServicePrincipalPermissions, "provided service principal")
+	spPermissions := authorization.NewPermissionsClient(r.SubscriptionID, spAuthorizer)
+	err = v.dv.validateVnetPermissions(ctx, spPermissions, api.CloudErrorCodeInvalidServicePrincipalPermissions, "provided service principal")
 	if err != nil {
 		return err
 	}
 
-	fpAuthorizer, err := getFPAuthorizer(oc.Properties.ServicePrincipalProfile.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
+	fpAuthorizer, err := v.dv.env.FPAuthorizer(oc.Properties.ServicePrincipalProfile.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return err
 	}
 
-	fpPermissions := authorization.NewPermissionsClient(v.r.SubscriptionID, fpAuthorizer)
-	err = v.validateVnetPermissions(ctx, fpPermissions, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
+	fpPermissions := authorization.NewPermissionsClient(r.SubscriptionID, fpAuthorizer)
+	err = v.dv.validateVnetPermissions(ctx, fpPermissions, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
 	if err != nil {
 		return err
 	}
 
-	v.subnets = subnet.NewManager(r.SubscriptionID, spAuthorizer)
+	v.dv.subnets = subnet.NewManager(r.SubscriptionID, spAuthorizer)
 
-	return v.validateSubnets(ctx)
+	return v.dv.validateSubnets(ctx)
 }
 
 func (dv *openShiftClusterDynamicValidator) validateServicePrincipalProfile() (autorest.Authorizer, error) {

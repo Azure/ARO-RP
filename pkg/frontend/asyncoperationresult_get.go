@@ -20,12 +20,12 @@ func (f *frontend) getAsyncOperationResult(w http.ResponseWriter, r *http.Reques
 	vars := mux.Vars(r)
 
 	header := http.Header{}
-	b, err := f._getAsyncOperationResult(r, header, api.APIs[vars["api-version"]]["OpenShiftCluster"].(api.OpenShiftClusterToExternal))
+	b, err := f._getAsyncOperationResult(r, header, f.apis[vars["api-version"]].OpenShiftClusterConverter())
 
 	reply(log, w, header, b, err)
 }
 
-func (f *frontend) _getAsyncOperationResult(r *http.Request, header http.Header, external api.OpenShiftClusterToExternal) ([]byte, error) {
+func (f *frontend) _getAsyncOperationResult(r *http.Request, header http.Header, converter api.OpenShiftClusterConverter) ([]byte, error) {
 	vars := mux.Vars(r)
 
 	asyncdoc, err := f.db.AsyncOperations.Get(vars["operationId"])
@@ -54,5 +54,5 @@ func (f *frontend) _getAsyncOperationResult(r *http.Request, header http.Header,
 
 	asyncdoc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 
-	return json.MarshalIndent(external.OpenShiftClusterToExternal(asyncdoc.OpenShiftCluster), "", "    ")
+	return json.MarshalIndent(converter.ToExternal(asyncdoc.OpenShiftCluster), "", "    ")
 }

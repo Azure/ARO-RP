@@ -23,7 +23,7 @@ const (
 
 var rxResourceGroupName = regexp.MustCompile(`^[-a-z0-9_().]{0,89}[-a-z0-9_()]$`)
 
-func Validate(env env.Interface) func(http.Handler) http.Handler {
+func Validate(env env.Interface, apis map[string]*api.Version) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			vars := mux.Vars(r)
@@ -107,7 +107,7 @@ func Validate(env env.Interface) func(http.Handler) http.Handler {
 
 			if err != nil || hasVariableAPIVersion {
 				if _, found := vars["api-version"]; found {
-					if _, found := api.APIs[vars["api-version"]]; !found {
+					if _, found := apis[vars["api-version"]]; !found {
 						api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], vars["api-version"])
 						return
 					}
