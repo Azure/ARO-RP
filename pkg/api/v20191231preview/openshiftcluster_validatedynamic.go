@@ -33,7 +33,7 @@ func (*azureClaim) Valid() error {
 	return fmt.Errorf("unimplemented")
 }
 
-type dynamicValidator struct {
+type openShiftClusterDynamicValidator struct {
 	subnets subnet.Manager
 
 	oc *api.OpenShiftCluster
@@ -47,7 +47,7 @@ func validateOpenShiftClusterDynamic(ctx context.Context, getFPAuthorizer func(s
 		return err
 	}
 
-	v := &dynamicValidator{
+	v := &openShiftClusterDynamicValidator{
 		oc: oc,
 		r:  r,
 	}
@@ -86,7 +86,7 @@ func validateOpenShiftClusterDynamic(ctx context.Context, getFPAuthorizer func(s
 	return v.validateSubnets(ctx)
 }
 
-func (dv *dynamicValidator) validateServicePrincipalProfile() (autorest.Authorizer, error) {
+func (dv *openShiftClusterDynamicValidator) validateServicePrincipalProfile() (autorest.Authorizer, error) {
 	spp := &dv.oc.Properties.ServicePrincipalProfile
 	conf := auth.NewClientCredentialsConfig(spp.ClientID, spp.ClientSecret, spp.TenantID)
 
@@ -106,7 +106,7 @@ func (dv *dynamicValidator) validateServicePrincipalProfile() (autorest.Authoriz
 	return autorest.NewBearerAuthorizer(token), nil
 }
 
-func (dv *dynamicValidator) validateServicePrincipalRole() error {
+func (dv *openShiftClusterDynamicValidator) validateServicePrincipalRole() error {
 	spp := &dv.oc.Properties.ServicePrincipalProfile
 	conf := auth.NewClientCredentialsConfig(spp.ClientID, spp.ClientSecret, spp.TenantID)
 	conf.Resource = azure.PublicCloud.GraphEndpoint
@@ -140,7 +140,7 @@ func (dv *dynamicValidator) validateServicePrincipalRole() error {
 	return nil
 }
 
-func (dv *dynamicValidator) validateVnetPermissions(ctx context.Context, client authorization.PermissionsClient, code, typ string) error {
+func (dv *openShiftClusterDynamicValidator) validateVnetPermissions(ctx context.Context, client authorization.PermissionsClient, code, typ string) error {
 	vnetID, _, err := subnet.Split(dv.oc.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return err
@@ -179,7 +179,7 @@ func (dv *dynamicValidator) validateVnetPermissions(ctx context.Context, client 
 	return nil
 }
 
-func (dv *dynamicValidator) validateSubnets(ctx context.Context) error {
+func (dv *openShiftClusterDynamicValidator) validateSubnets(ctx context.Context) error {
 	master, err := dv.validateSubnet(ctx, "properties.masterProfile.subnetId", "master", dv.oc.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return err
@@ -208,7 +208,7 @@ func (dv *dynamicValidator) validateSubnets(ctx context.Context) error {
 	return nil
 }
 
-func (dv *dynamicValidator) validateSubnet(ctx context.Context, path, typ, subnetID string) (*net.IPNet, error) {
+func (dv *openShiftClusterDynamicValidator) validateSubnet(ctx context.Context, path, typ, subnetID string) (*net.IPNet, error) {
 	s, err := dv.subnets.Get(ctx, subnetID)
 	if err != nil {
 		if err, ok := err.(autorest.DetailedError); ok {

@@ -26,7 +26,7 @@ var (
 	subscriptionID = "af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1"
 	id             = fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/microsoft.redhatopenshift/openshiftclusters/resourceName", subscriptionID)
 
-	v = &validator{
+	v = &openShiftClusterStaticValidator{
 		location:   "location",
 		resourceID: id,
 		r: azure.Resource{
@@ -89,7 +89,7 @@ func runTests(t *testing.T, tests []*validateTest, delta bool) {
 	}
 }
 
-func TestValidateOpenShiftCluster(t *testing.T) {
+func TestOpenShiftClusterStaticValidate(t *testing.T) {
 	tests := []*validateTest{
 		{
 			name: "valid",
@@ -127,7 +127,7 @@ func TestValidateOpenShiftCluster(t *testing.T) {
 	runTests(t, tests, false)
 }
 
-func TestValidateProperties(t *testing.T) {
+func TestOpenShiftClusterStaticValidateProperties(t *testing.T) {
 	tests := []*validateTest{
 		{
 			name: "valid",
@@ -192,7 +192,7 @@ func TestValidateProperties(t *testing.T) {
 	runTests(t, tests, false)
 }
 
-func TestValidateServicePrincipalProfile(t *testing.T) {
+func TestOpenShiftClusterStaticValidateServicePrincipalProfile(t *testing.T) {
 	tests := []*validateTest{
 		{
 			name: "valid",
@@ -216,7 +216,7 @@ func TestValidateServicePrincipalProfile(t *testing.T) {
 	runTests(t, tests, false)
 }
 
-func TestValidateNetworkProfile(t *testing.T) {
+func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
 	tests := []*validateTest{
 		{
 			name: "valid",
@@ -268,7 +268,7 @@ func TestValidateNetworkProfile(t *testing.T) {
 	runTests(t, tests, false)
 }
 
-func TestValidateMasterProfile(t *testing.T) {
+func TestOpenShiftClusterStaticValidateMasterProfile(t *testing.T) {
 	tests := []*validateTest{
 		{
 			name: "valid",
@@ -299,7 +299,7 @@ func TestValidateMasterProfile(t *testing.T) {
 	runTests(t, tests, false)
 }
 
-func TestValidateWorkerProfile(t *testing.T) {
+func TestOpenShiftClusterStaticValidateWorkerProfile(t *testing.T) {
 	tests := []*validateTest{
 		{
 			name: "valid",
@@ -365,7 +365,7 @@ func TestValidateWorkerProfile(t *testing.T) {
 	runTests(t, tests, false)
 }
 
-func TestValidateAPIServerProfile(t *testing.T) {
+func TestOpenShiftClusterStaticValidateAPIServerProfile(t *testing.T) {
 	tests := []*validateTest{
 		{
 			name: "valid",
@@ -415,7 +415,7 @@ func TestValidateAPIServerProfile(t *testing.T) {
 	runTests(t, tests, false)
 }
 
-func TestValidateIngressProfile(t *testing.T) {
+func TestOpenShiftClusterStaticValidateIngressProfile(t *testing.T) {
 	tests := []*validateTest{
 		{
 			name: "valid",
@@ -459,7 +459,7 @@ func TestValidateIngressProfile(t *testing.T) {
 	runTests(t, tests, false)
 }
 
-func TestOpenShiftClusterValidateDelta(t *testing.T) {
+func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 	tests := []*validateTest{
 		{
 			name: "valid",
