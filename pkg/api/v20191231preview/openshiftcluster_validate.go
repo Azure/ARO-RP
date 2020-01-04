@@ -97,16 +97,16 @@ func (v *validator) validateProperties(path string, p *Properties) error {
 	if len(p.WorkerProfiles) != 1 {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".workerProfiles", "There should be exactly one worker profile.")
 	}
-	if err := v.validateWorkerProfile(path+`.workerProfiles["`+p.WorkerProfiles[0].Name+`"]`, &p.WorkerProfiles[0], &p.MasterProfile); err != nil {
+	if err := v.validateWorkerProfile(path+".workerProfiles['"+p.WorkerProfiles[0].Name+"']", &p.WorkerProfiles[0], &p.MasterProfile); err != nil {
 		return err
 	}
-	if err := v.validateAPIServerProfile(path+`.apiserverProfile`, &p.APIServerProfile); err != nil {
+	if err := v.validateAPIServerProfile(path+".apiserverProfile", &p.APIServerProfile); err != nil {
 		return err
 	}
 	if len(p.IngressProfiles) != 1 {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".ingressProfiles", "There should be exactly one ingress profile.")
 	}
-	if err := v.validateIngressProfile(path+`.ingressProfiles["`+p.IngressProfiles[0].Name+`"]`, &p.IngressProfiles[0]); err != nil {
+	if err := v.validateIngressProfile(path+".ingressProfiles['"+p.IngressProfiles[0].Name+"']", &p.IngressProfiles[0]); err != nil {
 		return err
 	}
 	if p.ConsoleURL != "" {
