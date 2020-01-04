@@ -82,7 +82,7 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 	}
 
 	if development, ok := i.env.(env.Dev); ok {
-		err = development.CreateARMResourceGroupRoleAssignment(ctx, i.fpAuthorizer, i.doc.OpenShiftCluster)
+		err = development.CreateARMResourceGroupRoleAssignment(ctx, i.fpAuthorizer, i.doc.OpenShiftCluster.Properties.ResourceGroup)
 		if err != nil {
 			return err
 		}

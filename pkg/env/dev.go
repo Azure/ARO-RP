@@ -26,7 +26,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/resources"
@@ -53,7 +52,7 @@ func (ra *refreshableAuthorizer) Refresh() error {
 }
 
 type Dev interface {
-	CreateARMResourceGroupRoleAssignment(context.Context, autorest.Authorizer, *api.OpenShiftCluster) error
+	CreateARMResourceGroupRoleAssignment(context.Context, autorest.Authorizer, string) error
 }
 
 type dev struct {
@@ -235,7 +234,7 @@ func (d *dev) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, erro
 	return &refreshableAuthorizer{autorest.NewBearerAuthorizer(sp), sp}, nil
 }
 
-func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthorizer autorest.Authorizer, oc *api.OpenShiftCluster) error {
+func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthorizer autorest.Authorizer, resourceGroup string) error {
 	d.log.Print("development mode: applying resource group role assignment")
 
 	res, err := d.applications.GetServicePrincipalsIDByAppID(ctx, os.Getenv("AZURE_FP_CLIENT_ID"))
@@ -243,7 +242,7 @@ func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthor
 		return err
 	}
 
-	_, err = d.roleassignments.Create(ctx, "/subscriptions/"+d.SubscriptionID()+"/resourceGroups/"+oc.Properties.ResourceGroup, uuid.NewV4().String(), mgmtauthorization.RoleAssignmentCreateParameters{
+	_, err = d.roleassignments.Create(ctx, "/subscriptions/"+d.SubscriptionID()+"/resourceGroups/"+resourceGroup, uuid.NewV4().String(), mgmtauthorization.RoleAssignmentCreateParameters{
 		Properties: &mgmtauthorization.RoleAssignmentProperties{
 			RoleDefinitionID: to.StringPtr("/subscriptions/" + d.SubscriptionID() + "/providers/Microsoft.Authorization/roleDefinitions/c95361b8-cf7c-40a1-ad0a-df9f39a30225"),
 			PrincipalID:      res.Value,
@@ -273,7 +272,7 @@ func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthor
 
 	return wait.Poll(time.Second, time.Minute, func() (bool, error) {
 		// this should always error. Either 403 or 404
-		_, err := d.deployments.Get(ctx, oc.Properties.ResourceGroup, "dummy")
+		_, err := d.deployments.Get(ctx, resourceGroup, "dummy")
 		if detailedError, ok := err.(autorest.DetailedError); ok {
 			if requestError, ok := detailedError.Original.(azure.RequestError); ok &&
 				requestError.ServiceError != nil &&
