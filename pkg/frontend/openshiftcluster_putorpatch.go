@@ -67,7 +67,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *http.Request, header *http.Hea
 				Properties: api.Properties{
 					ProvisioningState: api.ProvisioningStateSucceeded,
 					// TODO: ResourceGroup should be exposed in external API
-					ResourceGroup: vars["resourceName"],
+					ResourceGroup: originalR.ResourceName,
 					ServicePrincipalProfile: api.ServicePrincipalProfile{
 						TenantID: subdoc.Subscription.Properties.TenantID,
 					},
