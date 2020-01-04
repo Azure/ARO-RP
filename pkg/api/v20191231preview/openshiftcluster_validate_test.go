@@ -310,61 +310,61 @@ func TestValidateWorkerProfile(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.WorkerProfiles[0].Name = "invalid"
 			},
-			wantErr: "400: InvalidParameter: properties.workerProfiles[0].name: The provided worker name 'invalid' is invalid.",
+			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].name: The provided worker name 'invalid' is invalid.",
 		},
 		{
 			name: "vmSize invalid",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.WorkerProfiles[0].VMSize = "invalid"
 			},
-			wantErr: "400: InvalidParameter: properties.workerProfiles[0].vmSize: The provided worker VM size 'invalid' is invalid.",
+			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].vmSize: The provided worker VM size 'invalid' is invalid.",
 		},
 		{
 			name: "disk too small",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.WorkerProfiles[0].DiskSizeGB = 127
 			},
-			wantErr: "400: InvalidParameter: properties.workerProfiles[0].diskSizeGB: The provided worker disk size '127' is invalid.",
+			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].diskSizeGB: The provided worker disk size '127' is invalid.",
 		},
 		{
 			name: "subnetId invalid",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.WorkerProfiles[0].SubnetID = "invalid"
 			},
-			wantErr: "400: InvalidParameter: properties.workerProfiles[0].subnetId: The provided worker VM subnet 'invalid' is invalid.",
+			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].subnetId: The provided worker VM subnet 'invalid' is invalid.",
 		},
 		{
 			name: "master and worker subnets not in same vnet",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.WorkerProfiles[0].SubnetID = fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/different-vnet/subnets/worker", subscriptionID)
 			},
-			wantErr: "400: InvalidParameter: properties.workerProfiles[0].subnetId: The provided worker VM subnet '/subscriptions/af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/different-vnet/subnets/worker' is invalid: must be in the same vnet as master VM subnet '/subscriptions/af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master'.",
+			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].subnetId: The provided worker VM subnet '/subscriptions/af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/different-vnet/subnets/worker' is invalid: must be in the same vnet as master VM subnet '/subscriptions/af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master'.",
 		},
 		{
 			name: "master and worker subnets not different",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.WorkerProfiles[0].SubnetID = oc.Properties.MasterProfile.SubnetID
 			},
-			wantErr: "400: InvalidParameter: properties.workerProfiles[0].subnetId: The provided worker VM subnet '/subscriptions/af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master' is invalid: must be different to master VM subnet '/subscriptions/af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master'.",
+			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].subnetId: The provided worker VM subnet '/subscriptions/af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master' is invalid: must be different to master VM subnet '/subscriptions/af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master'.",
 		},
 		{
 			name: "count too small",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.WorkerProfiles[0].Count = 2
 			},
-			wantErr: "400: InvalidParameter: properties.workerProfiles[0].count: The provided worker count '2' is invalid.",
+			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].count: The provided worker count '2' is invalid.",
 		},
 		{
 			name: "count too big",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.WorkerProfiles[0].Count = 21
 			},
-			wantErr: "400: InvalidParameter: properties.workerProfiles[0].count: The provided worker count '21' is invalid.",
+			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].count: The provided worker count '21' is invalid.",
 		},
 	}
 
 	runTests(t, tests, func(oc *OpenShiftCluster) error {
-		return v.validateWorkerProfile("properties.workerProfiles[0]", &oc.Properties.WorkerProfiles[0], &oc.Properties.MasterProfile)
+		return v.validateWorkerProfile("properties.workerProfiles['worker']", &oc.Properties.WorkerProfiles[0], &oc.Properties.MasterProfile)
 	})
 }
 
@@ -430,14 +430,14 @@ func TestValidateIngressProfile(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.IngressProfiles[0].Name = "invalid"
 			},
-			wantErr: "400: InvalidParameter: properties.ingressProfiles[0].name: The provided ingress name 'invalid' is invalid.",
+			wantErr: "400: InvalidParameter: properties.ingressProfiles['default'].name: The provided ingress name 'invalid' is invalid.",
 		},
 		{
 			name: "visibility invalid",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.IngressProfiles[0].Visibility = "invalid"
 			},
-			wantErr: "400: InvalidParameter: properties.ingressProfiles[0].visibility: The provided visibility 'invalid' is invalid.",
+			wantErr: "400: InvalidParameter: properties.ingressProfiles['default'].visibility: The provided visibility 'invalid' is invalid.",
 		},
 		{
 			name: "empty ip valid",
@@ -450,19 +450,19 @@ func TestValidateIngressProfile(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.IngressProfiles[0].IP = "invalid"
 			},
-			wantErr: "400: InvalidParameter: properties.ingressProfiles[0].ip: The provided IP 'invalid' is invalid.",
+			wantErr: "400: InvalidParameter: properties.ingressProfiles['default'].ip: The provided IP 'invalid' is invalid.",
 		},
 		{
 			name: "ipv6 ip invalid",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.IngressProfiles[0].IP = "::"
 			},
-			wantErr: "400: InvalidParameter: properties.ingressProfiles[0].ip: The provided IP '::' is invalid: must be IPv4.",
+			wantErr: "400: InvalidParameter: properties.ingressProfiles['default'].ip: The provided IP '::' is invalid: must be IPv4.",
 		},
 	}
 
 	runTests(t, tests, func(oc *OpenShiftCluster) error {
-		return v.validateIngressProfile("properties.ingressProfiles[0]", &oc.Properties.IngressProfiles[0])
+		return v.validateIngressProfile("properties.ingressProfiles['default']", &oc.Properties.IngressProfiles[0])
 	})
 }
 
@@ -537,19 +537,19 @@ func TestOpenShiftClusterValidateDelta(t *testing.T) {
 		{
 			name:    "ingress name change",
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.IngressProfiles[0].Name = "invalid" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.ingressProfiles[0].name: Changing property 'properties.ingressProfiles[0].name' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.ingressProfiles['invalid'].name: Changing property 'properties.ingressProfiles['invalid'].name' is not allowed.",
 		},
 		{
 			name: "ingress private change",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.IngressProfiles[0].Visibility = "invalid"
 			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.ingressProfiles[0].visibility: Changing property 'properties.ingressProfiles[0].visibility' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.ingressProfiles['default'].visibility: Changing property 'properties.ingressProfiles['default'].visibility' is not allowed.",
 		},
 		{
 			name:    "ingress ip change",
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.IngressProfiles[0].IP = "invalid" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.ingressProfiles[0].ip: Changing property 'properties.ingressProfiles[0].ip' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.ingressProfiles['default'].ip: Changing property 'properties.ingressProfiles['default'].ip' is not allowed.",
 		},
 		{
 			name:    "consoleUrl change",
@@ -589,22 +589,22 @@ func TestOpenShiftClusterValidateDelta(t *testing.T) {
 		{
 			name:    "worker name change",
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].Name = "invalid" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles[0].name: Changing property 'properties.workerProfiles[0].name' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles['invalid'].name: Changing property 'properties.workerProfiles['invalid'].name' is not allowed.",
 		},
 		{
 			name:    "worker vmSize change",
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].VMSize = "invalid" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles[0].vmSize: Changing property 'properties.workerProfiles[0].vmSize' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles['worker'].vmSize: Changing property 'properties.workerProfiles['worker'].vmSize' is not allowed.",
 		},
 		{
 			name:    "worker diskSizeGB change",
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].DiskSizeGB++ },
-			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles[0].diskSizeGB: Changing property 'properties.workerProfiles[0].diskSizeGB' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles['worker'].diskSizeGB: Changing property 'properties.workerProfiles['worker'].diskSizeGB' is not allowed.",
 		},
 		{
 			name:    "worker subnetId change",
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].SubnetID = "invalid" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles[0].subnetId: Changing property 'properties.workerProfiles[0].subnetId' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles['worker'].subnetId: Changing property 'properties.workerProfiles['worker'].subnetId' is not allowed.",
 		},
 		{
 			name: "additional workerProfile",
