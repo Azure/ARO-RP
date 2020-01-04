@@ -170,30 +170,32 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 func (f *frontend) Run(stop <-chan struct{}, done chan<- struct{}) {
 	defer recover.Panic(f.baseLog)
 
-	go func() {
-		defer recover.Panic(f.baseLog)
+	if stop != nil {
+		go func() {
+			defer recover.Panic(f.baseLog)
 
-		<-stop
+			<-stop
 
-		// mark not ready and wait for ((#probes + 1) * interval + margin) to
-		// stop receiving new connections
-		f.baseLog.Print("marking not ready and waiting 20 seconds")
-		f.ready.Store(false)
-		time.Sleep(20 * time.Second)
+			// mark not ready and wait for ((#probes + 1) * interval + margin) to
+			// stop receiving new connections
+			f.baseLog.Print("marking not ready and waiting 20 seconds")
+			f.ready.Store(false)
+			time.Sleep(20 * time.Second)
 
-		// initiate server shutdown and wait for (longest connection timeout +
-		// margin) for connections to complete
-		f.baseLog.Print("shutting down and waiting up to 65 seconds")
-		ctx, cancel := context.WithTimeout(context.Background(), 65*time.Second)
-		defer cancel()
+			// initiate server shutdown and wait for (longest connection timeout +
+			// margin) for connections to complete
+			f.baseLog.Print("shutting down and waiting up to 65 seconds")
+			ctx, cancel := context.WithTimeout(context.Background(), 65*time.Second)
+			defer cancel()
 
-		err := f.s.Shutdown(ctx)
-		if err != nil {
-			f.baseLog.Error(err)
-		}
+			err := f.s.Shutdown(ctx)
+			if err != nil {
+				f.baseLog.Error(err)
+			}
 
-		close(done)
-	}()
+			close(done)
+		}()
+	}
 
 	r := mux.NewRouter()
 	r.Use(middleware.Log(f.baseLog))
