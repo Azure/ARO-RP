@@ -49,3 +49,7 @@ func (t *test) GetSecret(ctx context.Context, secretName string) (key *rsa.Priva
 func (t *test) Listen() (net.Listener, error) {
 	return t.l, nil
 }
+
+func (t *test) Location() string {
+	return "eastus"
+}
