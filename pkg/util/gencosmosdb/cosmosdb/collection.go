@@ -1,6 +1,7 @@
 package cosmosdb
 
 import (
+	"context"
 	"net/http"
 )
 
@@ -167,13 +168,13 @@ type collectionClient struct {
 
 // CollectionClient is a collection client
 type CollectionClient interface {
-	Create(*Collection) (*Collection, error)
+	Create(context.Context, *Collection) (*Collection, error)
 	List() CollectionIterator
-	ListAll() (*Collections, error)
-	Get(string) (*Collection, error)
-	Delete(*Collection) error
-	Replace(*Collection) (*Collection, error)
-	PartitionKeyRanges(string) (*PartitionKeyRanges, error)
+	ListAll(context.Context) (*Collections, error)
+	Get(context.Context, string) (*Collection, error)
+	Delete(context.Context, *Collection) error
+	Replace(context.Context, *Collection) (*Collection, error)
+	PartitionKeyRanges(context.Context, string) (*PartitionKeyRanges, error)
 }
 
 type collectionListIterator struct {
@@ -184,7 +185,7 @@ type collectionListIterator struct {
 
 // CollectionIterator is a collection iterator
 type CollectionIterator interface {
-	Next() (*Collections, error)
+	Next(context.Context) (*Collections, error)
 }
 
 // NewCollectionClient returns a new collection client
@@ -195,11 +196,11 @@ func NewCollectionClient(c DatabaseClient, dbid string) CollectionClient {
 	}
 }
 
-func (c *collectionClient) all(i CollectionIterator) (*Collections, error) {
+func (c *collectionClient) all(ctx context.Context, i CollectionIterator) (*Collections, error) {
 	allcolls := &Collections{}
 
 	for {
-		colls, err := i.Next()
+		colls, err := i.Next(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -215,8 +216,8 @@ func (c *collectionClient) all(i CollectionIterator) (*Collections, error) {
 	return allcolls, nil
 }
 
-func (c *collectionClient) Create(newcoll *Collection) (coll *Collection, err error) {
-	err = c.do(http.MethodPost, c.path+"/colls", "colls", c.path, http.StatusCreated, &newcoll, &coll, nil)
+func (c *collectionClient) Create(ctx context.Context, newcoll *Collection) (coll *Collection, err error) {
+	err = c.do(ctx, http.MethodPost, c.path+"/colls", "colls", c.path, http.StatusCreated, &newcoll, &coll, nil)
 	return
 }
 
@@ -224,35 +225,35 @@ func (c *collectionClient) List() CollectionIterator {
 	return &collectionListIterator{collectionClient: c}
 }
 
-func (c *collectionClient) ListAll() (*Collections, error) {
-	return c.all(c.List())
+func (c *collectionClient) ListAll(ctx context.Context) (*Collections, error) {
+	return c.all(ctx, c.List())
 }
 
-func (c *collectionClient) Get(collid string) (coll *Collection, err error) {
-	err = c.do(http.MethodGet, c.path+"/colls/"+collid, "colls", c.path+"/colls/"+collid, http.StatusOK, nil, &coll, nil)
+func (c *collectionClient) Get(ctx context.Context, collid string) (coll *Collection, err error) {
+	err = c.do(ctx, http.MethodGet, c.path+"/colls/"+collid, "colls", c.path+"/colls/"+collid, http.StatusOK, nil, &coll, nil)
 	return
 }
 
-func (c *collectionClient) Delete(coll *Collection) error {
+func (c *collectionClient) Delete(ctx context.Context, coll *Collection) error {
 	if coll.ETag == "" {
 		return ErrETagRequired
 	}
 	headers := http.Header{}
 	headers.Set("If-Match", coll.ETag)
-	return c.do(http.MethodDelete, c.path+"/colls/"+coll.ID, "colls", c.path+"/colls/"+coll.ID, http.StatusNoContent, nil, nil, headers)
+	return c.do(ctx, http.MethodDelete, c.path+"/colls/"+coll.ID, "colls", c.path+"/colls/"+coll.ID, http.StatusNoContent, nil, nil, headers)
 }
 
-func (c *collectionClient) Replace(newcoll *Collection) (coll *Collection, err error) {
-	err = c.do(http.MethodPost, c.path+"/colls/"+newcoll.ID, "colls", c.path+"/colls/"+newcoll.ID, http.StatusCreated, &newcoll, &coll, nil)
+func (c *collectionClient) Replace(ctx context.Context, newcoll *Collection) (coll *Collection, err error) {
+	err = c.do(ctx, http.MethodPost, c.path+"/colls/"+newcoll.ID, "colls", c.path+"/colls/"+newcoll.ID, http.StatusCreated, &newcoll, &coll, nil)
 	return
 }
 
-func (c *collectionClient) PartitionKeyRanges(collid string) (pkrs *PartitionKeyRanges, err error) {
-	err = c.do(http.MethodGet, c.path+"/colls/"+collid+"/pkranges", "pkranges", c.path+"/colls/"+collid, http.StatusOK, nil, &pkrs, nil)
+func (c *collectionClient) PartitionKeyRanges(ctx context.Context, collid string) (pkrs *PartitionKeyRanges, err error) {
+	err = c.do(ctx, http.MethodGet, c.path+"/colls/"+collid+"/pkranges", "pkranges", c.path+"/colls/"+collid, http.StatusOK, nil, &pkrs, nil)
 	return
 }
 
-func (i *collectionListIterator) Next() (colls *Collections, err error) {
+func (i *collectionListIterator) Next(ctx context.Context) (colls *Collections, err error) {
 	if i.done {
 		return
 	}
@@ -262,7 +263,7 @@ func (i *collectionListIterator) Next() (colls *Collections, err error) {
 		headers.Set("X-Ms-Continuation", i.continuation)
 	}
 
-	err = i.do(http.MethodGet, i.path+"/colls", "colls", i.path, http.StatusOK, nil, &colls, headers)
+	err = i.do(ctx, http.MethodGet, i.path+"/colls", "colls", i.path, http.StatusOK, nil, &colls, headers)
 	if err != nil {
 		return
 	}

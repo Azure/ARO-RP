@@ -2,6 +2,7 @@ package cosmosdb
 
 import (
 	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
@@ -70,8 +71,8 @@ func (c *databaseClient) authorizeRequest(req *http.Request, resourceType, resou
 	req.Header.Set("x-ms-date", date)
 }
 
-func (c *databaseClient) do(method, path, resourceType, resourceLink string, expectedStatusCode int, in, out interface{}, headers http.Header) error {
-	req, err := http.NewRequest(method, "https://"+c.databaseAccount+".documents.azure.com/"+path, nil)
+func (c *databaseClient) do(ctx context.Context, method, path, resourceType, resourceLink string, expectedStatusCode int, in, out interface{}, headers http.Header) error {
+	req, err := http.NewRequestWithContext(ctx, method, "https://"+c.databaseAccount+".documents.azure.com/"+path, nil)
 	if err != nil {
 		return err
 	}

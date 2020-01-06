@@ -1,6 +1,7 @@
 package cosmosdb
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
@@ -14,14 +15,14 @@ type templateClient struct {
 
 // TemplateClient is a template client
 type TemplateClient interface {
-	Create(string, *pkg.Template, *Options) (*pkg.Template, error)
+	Create(context.Context, string, *pkg.Template, *Options) (*pkg.Template, error)
 	List() TemplateIterator
-	ListAll() (*pkg.Templates, error)
-	Get(string, string) (*pkg.Template, error)
-	Replace(string, *pkg.Template, *Options) (*pkg.Template, error)
-	Delete(string, *pkg.Template, *Options) error
+	ListAll(context.Context) (*pkg.Templates, error)
+	Get(context.Context, string, string) (*pkg.Template, error)
+	Replace(context.Context, string, *pkg.Template, *Options) (*pkg.Template, error)
+	Delete(context.Context, string, *pkg.Template, *Options) error
 	Query(string, *Query) TemplateIterator
-	QueryAll(string, *Query) (*pkg.Templates, error)
+	QueryAll(context.Context, string, *Query) (*pkg.Templates, error)
 }
 
 type templateListIterator struct {
@@ -40,7 +41,7 @@ type templateQueryIterator struct {
 
 // TemplateIterator is a template iterator
 type TemplateIterator interface {
-	Next() (*pkg.Templates, error)
+	Next(context.Context) (*pkg.Templates, error)
 }
 
 // NewTemplateClient returns a new template client
@@ -51,11 +52,11 @@ func NewTemplateClient(collc CollectionClient, collid string) TemplateClient {
 	}
 }
 
-func (c *templateClient) all(i TemplateIterator) (*pkg.Templates, error) {
+func (c *templateClient) all(ctx context.Context, i TemplateIterator) (*pkg.Templates, error) {
 	alltemplates := &pkg.Templates{}
 
 	for {
-		templates, err := i.Next()
+		templates, err := i.Next(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -71,7 +72,7 @@ func (c *templateClient) all(i TemplateIterator) (*pkg.Templates, error) {
 	return alltemplates, nil
 }
 
-func (c *templateClient) Create(partitionkey string, newtemplate *pkg.Template, options *Options) (template *pkg.Template, err error) {
+func (c *templateClient) Create(ctx context.Context, partitionkey string, newtemplate *pkg.Template, options *Options) (template *pkg.Template, err error) {
 	headers := http.Header{}
 	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
 
@@ -85,7 +86,7 @@ func (c *templateClient) Create(partitionkey string, newtemplate *pkg.Template, 
 		return
 	}
 
-	err = c.do(http.MethodPost, c.path+"/docs", "docs", c.path, http.StatusCreated, &newtemplate, &template, headers)
+	err = c.do(ctx, http.MethodPost, c.path+"/docs", "docs", c.path, http.StatusCreated, &newtemplate, &template, headers)
 	return
 }
 
@@ -93,18 +94,18 @@ func (c *templateClient) List() TemplateIterator {
 	return &templateListIterator{templateClient: c}
 }
 
-func (c *templateClient) ListAll() (*pkg.Templates, error) {
-	return c.all(c.List())
+func (c *templateClient) ListAll(ctx context.Context) (*pkg.Templates, error) {
+	return c.all(ctx, c.List())
 }
 
-func (c *templateClient) Get(partitionkey, templateid string) (template *pkg.Template, err error) {
+func (c *templateClient) Get(ctx context.Context, partitionkey, templateid string) (template *pkg.Template, err error) {
 	headers := http.Header{}
 	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
-	err = c.do(http.MethodGet, c.path+"/docs/"+templateid, "docs", c.path+"/docs/"+templateid, http.StatusOK, nil, &template, headers)
+	err = c.do(ctx, http.MethodGet, c.path+"/docs/"+templateid, "docs", c.path+"/docs/"+templateid, http.StatusOK, nil, &template, headers)
 	return
 }
 
-func (c *templateClient) Replace(partitionkey string, newtemplate *pkg.Template, options *Options) (template *pkg.Template, err error) {
+func (c *templateClient) Replace(ctx context.Context, partitionkey string, newtemplate *pkg.Template, options *Options) (template *pkg.Template, err error) {
 	headers := http.Header{}
 	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
 
@@ -113,11 +114,11 @@ func (c *templateClient) Replace(partitionkey string, newtemplate *pkg.Template,
 		return
 	}
 
-	err = c.do(http.MethodPut, c.path+"/docs/"+newtemplate.ID, "docs", c.path+"/docs/"+newtemplate.ID, http.StatusOK, &newtemplate, &template, headers)
+	err = c.do(ctx, http.MethodPut, c.path+"/docs/"+newtemplate.ID, "docs", c.path+"/docs/"+newtemplate.ID, http.StatusOK, &newtemplate, &template, headers)
 	return
 }
 
-func (c *templateClient) Delete(partitionkey string, template *pkg.Template, options *Options) (err error) {
+func (c *templateClient) Delete(ctx context.Context, partitionkey string, template *pkg.Template, options *Options) (err error) {
 	headers := http.Header{}
 	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
 
@@ -126,7 +127,7 @@ func (c *templateClient) Delete(partitionkey string, template *pkg.Template, opt
 		return
 	}
 
-	err = c.do(http.MethodDelete, c.path+"/docs/"+template.ID, "docs", c.path+"/docs/"+template.ID, http.StatusNoContent, nil, nil, headers)
+	err = c.do(ctx, http.MethodDelete, c.path+"/docs/"+template.ID, "docs", c.path+"/docs/"+template.ID, http.StatusNoContent, nil, nil, headers)
 	return
 }
 
@@ -134,8 +135,8 @@ func (c *templateClient) Query(partitionkey string, query *Query) TemplateIterat
 	return &templateQueryIterator{templateClient: c, partitionkey: partitionkey, query: query}
 }
 
-func (c *templateClient) QueryAll(partitionkey string, query *Query) (*pkg.Templates, error) {
-	return c.all(c.Query(partitionkey, query))
+func (c *templateClient) QueryAll(ctx context.Context, partitionkey string, query *Query) (*pkg.Templates, error) {
+	return c.all(ctx, c.Query(partitionkey, query))
 }
 
 func (c *templateClient) setOptions(options *Options, template *pkg.Template, headers http.Header) error {
@@ -159,7 +160,7 @@ func (c *templateClient) setOptions(options *Options, template *pkg.Template, he
 	return nil
 }
 
-func (i *templateListIterator) Next() (templates *pkg.Templates, err error) {
+func (i *templateListIterator) Next(ctx context.Context) (templates *pkg.Templates, err error) {
 	if i.done {
 		return
 	}
@@ -170,7 +171,7 @@ func (i *templateListIterator) Next() (templates *pkg.Templates, err error) {
 		headers.Set("X-Ms-Continuation", i.continuation)
 	}
 
-	err = i.do(http.MethodGet, i.path+"/docs", "docs", i.path, http.StatusOK, nil, &templates, headers)
+	err = i.do(ctx, http.MethodGet, i.path+"/docs", "docs", i.path, http.StatusOK, nil, &templates, headers)
 	if err != nil {
 		return
 	}
@@ -181,7 +182,7 @@ func (i *templateListIterator) Next() (templates *pkg.Templates, err error) {
 	return
 }
 
-func (i *templateQueryIterator) Next() (templates *pkg.Templates, err error) {
+func (i *templateQueryIterator) Next(ctx context.Context) (templates *pkg.Templates, err error) {
 	if i.done {
 		return
 	}
@@ -199,7 +200,7 @@ func (i *templateQueryIterator) Next() (templates *pkg.Templates, err error) {
 		headers.Set("X-Ms-Continuation", i.continuation)
 	}
 
-	err = i.do(http.MethodPost, i.path+"/docs", "docs", i.path, http.StatusOK, &i.query, &templates, headers)
+	err = i.do(ctx, http.MethodPost, i.path+"/docs", "docs", i.path, http.StatusOK, &i.query, &templates, headers)
 	if err != nil {
 		return
 	}
