@@ -59,8 +59,12 @@ func (ocb *openShiftClusterBackend) try() (bool, error) {
 	return true, nil
 }
 
+// handle is responsible for handling backend operation and lease
 func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument) error {
-	stop := ocb.heartbeat(log, doc)
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	stop := ocb.heartbeat(cancel, log, doc)
 	defer stop()
 
 	m, err := openshiftcluster.NewManager(log, ocb.env, ocb.db.OpenShiftClusters, doc)
@@ -115,7 +119,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 	return fmt.Errorf("unexpected provisioningState %q", doc.OpenShiftCluster.Properties.ProvisioningState)
 }
 
-func (ocb *openShiftClusterBackend) heartbeat(log *logrus.Entry, doc *api.OpenShiftClusterDocument) func() {
+func (ocb *openShiftClusterBackend) heartbeat(cancel context.CancelFunc, log *logrus.Entry, doc *api.OpenShiftClusterDocument) func() {
 	var stopped bool
 	stop, done := make(chan struct{}), make(chan struct{})
 
@@ -131,6 +135,7 @@ func (ocb *openShiftClusterBackend) heartbeat(log *logrus.Entry, doc *api.OpenSh
 			_, err := ocb.db.OpenShiftClusters.Lease(doc.Key)
 			if err != nil {
 				log.Error(err)
+				cancel()
 				return
 			}
 

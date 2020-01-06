@@ -58,8 +58,12 @@ func (sb *subscriptionBackend) try() (bool, error) {
 	return true, nil
 }
 
+// handle is responsible for handling backend operation and lease
 func (sb *subscriptionBackend) handle(ctx context.Context, log *logrus.Entry, doc *api.SubscriptionDocument) error {
-	stop := sb.heartbeat(log, doc)
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	stop := sb.heartbeat(cancel, log, doc)
 	defer stop()
 
 	done, err := sb.handleDelete(ctx, log, doc)
@@ -116,7 +120,7 @@ func (sb *subscriptionBackend) handleDelete(ctx context.Context, log *logrus.Ent
 	return done, nil
 }
 
-func (sb *subscriptionBackend) heartbeat(log *logrus.Entry, doc *api.SubscriptionDocument) func() {
+func (sb *subscriptionBackend) heartbeat(cancel context.CancelFunc, log *logrus.Entry, doc *api.SubscriptionDocument) func() {
 	var stopped bool
 	stop, done := make(chan struct{}), make(chan struct{})
 
@@ -132,6 +136,7 @@ func (sb *subscriptionBackend) heartbeat(log *logrus.Entry, doc *api.Subscriptio
 			_, err := sb.db.Subscriptions.Lease(doc.ID)
 			if err != nil {
 				log.Error(err)
+				cancel()
 				return
 			}
 
