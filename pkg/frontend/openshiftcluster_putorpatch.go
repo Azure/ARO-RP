@@ -34,7 +34,7 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 	reply(log, w, header, b, err)
 }
 
-func (f *frontend) _putOrPatchOpenShiftCluster(r *http.Request, header *http.Header, converter api.OpenShiftClusterConverter, validater api.OpenShiftClusterValidator) ([]byte, error) {
+func (f *frontend) _putOrPatchOpenShiftCluster(r *http.Request, header *http.Header, converter api.OpenShiftClusterConverter, validator api.OpenShiftClusterValidator) ([]byte, error) {
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 
 	subdoc, err := f.validateSubscriptionState(r.URL.Path, api.SubscriptionStateRegistered)
@@ -115,9 +115,9 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *http.Request, header *http.Hea
 	}
 
 	if isCreate {
-		err = validater.Static(ext, nil)
+		err = validator.Static(ext, nil)
 	} else {
-		err = validater.Static(ext, doc.OpenShiftCluster)
+		err = validator.Static(ext, doc.OpenShiftCluster)
 	}
 	if err != nil {
 		return nil, err
@@ -134,7 +134,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *http.Request, header *http.Hea
 		doc.Dequeues = 0
 	}
 
-	err = validater.Dynamic(r.Context(), doc.OpenShiftCluster)
+	err = validator.Dynamic(r.Context(), doc.OpenShiftCluster)
 	if err != nil {
 		return nil, err
 	}
