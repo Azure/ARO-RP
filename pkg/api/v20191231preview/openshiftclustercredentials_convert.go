@@ -7,12 +7,14 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
-// openShiftClusterCredentialsToExternal returns a new external representation
+type openShiftClusterCredentialsConverter struct{}
+
+// OpenShiftClusterCredentialsToExternal returns a new external representation
 // of the internal object, reading from the subset of the internal object's
 // fields that appear in the external representation.  ToExternal does not
 // modify its argument; there is no pointer aliasing between the passed and
 // returned objects.
-func openShiftClusterCredentialsToExternal(oc *api.OpenShiftCluster) *OpenShiftClusterCredentials {
+func (*openShiftClusterCredentialsConverter) ToExternal(oc *api.OpenShiftCluster) interface{} {
 	out := &OpenShiftClusterCredentials{
 		KubeadminUsername: "kubeadmin",
 		KubeadminPassword: oc.Properties.KubeadminPassword,

@@ -28,12 +28,12 @@ func (f *frontend) postOpenShiftClusterCredentials(w http.ResponseWriter, r *htt
 
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
-	b, err := f._postOpenShiftClusterCredentials(r, api.APIs[vars["api-version"]]["OpenShiftClusterCredentials"].(api.OpenShiftClusterToExternal))
+	b, err := f._postOpenShiftClusterCredentials(r, f.apis[vars["api-version"]].OpenShiftClusterCredentialsConverter())
 
 	reply(log, w, nil, b, err)
 }
 
-func (f *frontend) _postOpenShiftClusterCredentials(r *http.Request, external api.OpenShiftClusterToExternal) ([]byte, error) {
+func (f *frontend) _postOpenShiftClusterCredentials(r *http.Request, converter api.OpenShiftClusterCredentialsConverter) ([]byte, error) {
 	vars := mux.Vars(r)
 
 	doc, err := f.db.OpenShiftClusters.Get(r.URL.Path)
@@ -50,5 +50,5 @@ func (f *frontend) _postOpenShiftClusterCredentials(r *http.Request, external ap
 
 	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 
-	return json.MarshalIndent(external.OpenShiftClusterToExternal(doc.OpenShiftCluster), "", "    ")
+	return json.MarshalIndent(converter.ToExternal(doc.OpenShiftCluster), "", "    ")
 }

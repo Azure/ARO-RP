@@ -57,7 +57,15 @@ func validate(path string, v, w reflect.Value, ignoreCase bool) error {
 		}
 
 		for i := 0; i < v.Len(); i++ {
-			err := validate(fmt.Sprintf("%s[%d]", path, i), v.Index(i), w.Index(i), ignoreCase)
+			index := fmt.Sprintf("[%d]", i)
+			if v.Index(i).Kind() == reflect.Struct {
+				f := v.Index(i).FieldByName("Name")
+				if f.Kind() == reflect.String {
+					index = fmt.Sprintf("['%s']", f.String())
+				}
+			}
+
+			err := validate(path+index, v.Index(i), w.Index(i), ignoreCase)
 			if err != nil {
 				return err
 			}

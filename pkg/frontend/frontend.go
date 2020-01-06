@@ -17,7 +17,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	_ "github.com/Azure/ARO-RP/pkg/api/v20191231preview"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
@@ -34,6 +33,7 @@ type frontend struct {
 	baseLog *logrus.Entry
 	env     env.Interface
 	db      *database.Database
+	apis    map[string]*api.Version
 
 	l net.Listener
 	s *http.Server
@@ -47,13 +47,14 @@ type Runnable interface {
 }
 
 // NewFrontend returns a new runnable frontend
-func NewFrontend(ctx context.Context, baseLog *logrus.Entry, env env.Interface, db *database.Database) (Runnable, error) {
+func NewFrontend(ctx context.Context, baseLog *logrus.Entry, env env.Interface, db *database.Database, apis map[string]*api.Version) (Runnable, error) {
 	var err error
 
 	f := &frontend{
 		baseLog: baseLog,
 		env:     env,
 		db:      db,
+		apis:    apis,
 	}
 
 	l, err := f.env.Listen()
@@ -170,36 +171,38 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 func (f *frontend) Run(stop <-chan struct{}, done chan<- struct{}) {
 	defer recover.Panic(f.baseLog)
 
-	go func() {
-		defer recover.Panic(f.baseLog)
+	if stop != nil {
+		go func() {
+			defer recover.Panic(f.baseLog)
 
-		<-stop
+			<-stop
 
-		// mark not ready and wait for ((#probes + 1) * interval + margin) to
-		// stop receiving new connections
-		f.baseLog.Print("marking not ready and waiting 20 seconds")
-		f.ready.Store(false)
-		time.Sleep(20 * time.Second)
+			// mark not ready and wait for ((#probes + 1) * interval + margin) to
+			// stop receiving new connections
+			f.baseLog.Print("marking not ready and waiting 20 seconds")
+			f.ready.Store(false)
+			time.Sleep(20 * time.Second)
 
-		// initiate server shutdown and wait for (longest connection timeout +
-		// margin) for connections to complete
-		f.baseLog.Print("shutting down and waiting up to 65 seconds")
-		ctx, cancel := context.WithTimeout(context.Background(), 65*time.Second)
-		defer cancel()
+			// initiate server shutdown and wait for (longest connection timeout +
+			// margin) for connections to complete
+			f.baseLog.Print("shutting down and waiting up to 65 seconds")
+			ctx, cancel := context.WithTimeout(context.Background(), 65*time.Second)
+			defer cancel()
 
-		err := f.s.Shutdown(ctx)
-		if err != nil {
-			f.baseLog.Error(err)
-		}
+			err := f.s.Shutdown(ctx)
+			if err != nil {
+				f.baseLog.Error(err)
+			}
 
-		close(done)
-	}()
+			close(done)
+		}()
+	}
 
 	r := mux.NewRouter()
 	r.Use(middleware.Log(f.baseLog))
 	r.Use(middleware.Panic)
 	r.Use(middleware.Headers(f.env))
-	r.Use(middleware.Validate(f.env))
+	r.Use(middleware.Validate(f.env, f.apis))
 	r.Use(middleware.Body)
 
 	r.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

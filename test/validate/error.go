@@ -32,6 +32,9 @@ func CloudError(t *testing.T, err error) *api.CloudError {
 	if !strings.HasSuffix(cloudErr.Message, ".") {
 		t.Error("message must end in '.'")
 	}
+	if strings.Contains(cloudErr.Target, `"`) {
+		t.Error(`target must not contain '"'`)
+	}
 
 	return cloudErr
 }

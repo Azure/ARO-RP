@@ -7,12 +7,13 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
-// openShiftClusterToExternal returns a new external representation of the
-// internal object, reading from the subset of the internal object's fields that
-// appear in the external representation.  ToExternal does not modify its
-// argument; there is no pointer aliasing between the passed and returned
-// objects
-func openShiftClusterToExternal(oc *api.OpenShiftCluster) *OpenShiftCluster {
+type openShiftClusterConverter struct{}
+
+// ToExternal returns a new external representation of the internal object,
+// reading from the subset of the internal object's fields that appear in the
+// external representation.  ToExternal does not modify its argument; there is
+// no pointer aliasing between the passed and returned objects
+func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interface{} {
 	out := &OpenShiftCluster{
 		ID:       oc.ID,
 		Name:     oc.Name,
@@ -76,25 +77,27 @@ func openShiftClusterToExternal(oc *api.OpenShiftCluster) *OpenShiftCluster {
 	return out
 }
 
-// openShiftClustersToExternal returns a slice of external representations of
-// the internal objects
-func openShiftClustersToExternal(ocs []*api.OpenShiftCluster) *OpenShiftClusterList {
+// ToExternalList returns a slice of external representations of the internal
+// objects
+func (c *openShiftClusterConverter) ToExternalList(ocs []*api.OpenShiftCluster) interface{} {
 	l := &OpenShiftClusterList{
 		OpenShiftClusters: make([]*OpenShiftCluster, 0, len(ocs)),
 	}
 
 	for _, oc := range ocs {
-		l.OpenShiftClusters = append(l.OpenShiftClusters, openShiftClusterToExternal(oc))
+		l.OpenShiftClusters = append(l.OpenShiftClusters, c.ToExternal(oc).(*OpenShiftCluster))
 	}
 
 	return l
 }
 
-// openShiftClusterToInternal overwrites in place a pre-existing internal
-// object, setting (only) all mapped fields from the external representation.
-// ToInternal modifies its argument; there is no pointer aliasing between the
-// passed and returned objects
-func openShiftClusterToInternal(oc *OpenShiftCluster, out *api.OpenShiftCluster) {
+// ToInternal overwrites in place a pre-existing internal object, setting (only)
+// all mapped fields from the external representation. ToInternal modifies its
+// argument; there is no pointer aliasing between the passed and returned
+// objects
+func (c *openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShiftCluster) {
+	oc := _oc.(*OpenShiftCluster)
+
 	out.ID = oc.ID
 	out.Name = oc.Name
 	out.Type = oc.Type

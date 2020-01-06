@@ -6,31 +6,30 @@ package api
 import (
 	"context"
 
-	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/ARO-RP/pkg/env"
 )
 
-// OpenShiftClusterToExternal is implemented by all APIs - it enables conversion
-// of the internal OpenShiftCluster representation to the API-specific versioned
-// external representation
-type OpenShiftClusterToExternal interface {
-	OpenShiftClusterToExternal(*OpenShiftCluster) interface{}
+type OpenShiftClusterConverter interface {
+	ToExternal(*OpenShiftCluster) interface{}
+	ToExternalList([]*OpenShiftCluster) interface{}
+	ToInternal(interface{}, *OpenShiftCluster)
 }
 
-// OpenShiftClustersToExternal is implemented by APIs that can convert multiple
-// internal OpenShiftCluster representations to the API-specific versioned
-// external representation
-type OpenShiftClustersToExternal interface {
-	OpenShiftClustersToExternal([]*OpenShiftCluster) interface{}
+type OpenShiftClusterValidator interface {
+	Static(interface{}, *OpenShiftCluster) error
+	Dynamic(context.Context, *OpenShiftCluster) error
 }
 
-// OpenShiftClusterToInternal is implemented by APIs that can convert their
-// API-specific versioned external representation to the internal
-// OpenShiftCluster representation.  It also includes validators
-type OpenShiftClusterToInternal interface {
-	OpenShiftClusterToInternal(interface{}, *OpenShiftCluster)
-	ValidateOpenShiftCluster(string, string, interface{}, *OpenShiftCluster) error
-	ValidateOpenShiftClusterDynamic(context.Context, func(string, string) (autorest.Authorizer, error), *OpenShiftCluster) error
+type OpenShiftClusterCredentialsConverter interface {
+	ToExternal(*OpenShiftCluster) interface{}
 }
 
-// APIs is the map of registered external APIs
-var APIs = map[string]map[string]interface{}{}
+// Version is a set of endpoints implemented by each API version
+type Version struct {
+	OpenShiftClusterConverter            func() OpenShiftClusterConverter
+	OpenShiftClusterValidator            func(env.Interface, string) OpenShiftClusterValidator
+	OpenShiftClusterCredentialsConverter func() OpenShiftClusterCredentialsConverter
+}
+
+// APIs is the map of registered API versions
+var APIs = map[string]*Version{}

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/Azure/go-autorest/autorest/azure"
+	uuid "github.com/satori/go.uuid"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/test/validate"
@@ -25,15 +26,17 @@ var (
 	subscriptionID = "af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1"
 	id             = fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/microsoft.redhatopenshift/openshiftclusters/resourceName", subscriptionID)
 
-	v = &validator{
-		location:   "location",
-		resourceID: id,
-		r: azure.Resource{
-			SubscriptionID: subscriptionID,
-			ResourceGroup:  "resourceGroup",
-			Provider:       "Microsoft.RedHatOpenShift",
-			ResourceType:   "openshiftClusters",
-			ResourceName:   "resourceName",
+	v = &openShiftClusterValidator{
+		sv: openShiftClusterStaticValidator{
+			location:   "location",
+			resourceID: id,
+			r: azure.Resource{
+				SubscriptionID: subscriptionID,
+				ResourceGroup:  "resourceGroup",
+				Provider:       "Microsoft.RedHatOpenShift",
+				ResourceType:   "openshiftClusters",
+				ResourceName:   "resourceName",
+			},
 		},
 	}
 )
@@ -48,7 +51,7 @@ func validOpenShiftCluster() *OpenShiftCluster {
 	return oc
 }
 
-func runTests(t *testing.T, tests []*validateTest, f func(*OpenShiftCluster) error) {
+func runTests(t *testing.T, tests []*validateTest, delta bool) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			oc := validOpenShiftCluster()
@@ -56,7 +59,13 @@ func runTests(t *testing.T, tests []*validateTest, f func(*OpenShiftCluster) err
 				tt.modify(oc)
 			}
 
-			err := f(oc)
+			current := &api.OpenShiftCluster{}
+			if delta {
+				(&openShiftClusterConverter{}).ToInternal(validOpenShiftCluster(), current)
+			} else {
+				(&openShiftClusterConverter{}).ToInternal(oc, current)
+			}
+			err := v.Static(oc, current)
 			if err == nil {
 				if tt.wantErr != "" {
 					t.Error(err)
@@ -82,7 +91,7 @@ func runTests(t *testing.T, tests []*validateTest, f func(*OpenShiftCluster) err
 	}
 }
 
-func TestValidateOpenShiftCluster(t *testing.T) {
+func TestOpenShiftClusterStaticValidate(t *testing.T) {
 	tests := []*validateTest{
 		{
 			name: "valid",
@@ -117,10 +126,10 @@ func TestValidateOpenShiftCluster(t *testing.T) {
 		},
 	}
 
-	runTests(t, tests, v.validateOpenShiftCluster)
+	runTests(t, tests, false)
 }
 
-func TestValidateProperties(t *testing.T) {
+func TestOpenShiftClusterStaticValidateProperties(t *testing.T) {
 	tests := []*validateTest{
 		{
 			name: "valid",
@@ -182,12 +191,10 @@ func TestValidateProperties(t *testing.T) {
 		},
 	}
 
-	runTests(t, tests, func(oc *OpenShiftCluster) error {
-		return v.validateProperties("properties", &oc.Properties)
-	})
+	runTests(t, tests, false)
 }
 
-func TestValidateServicePrincipalProfile(t *testing.T) {
+func TestOpenShiftClusterStaticValidateServicePrincipalProfile(t *testing.T) {
 	tests := []*validateTest{
 		{
 			name: "valid",
@@ -208,12 +215,10 @@ func TestValidateServicePrincipalProfile(t *testing.T) {
 		},
 	}
 
-	runTests(t, tests, func(oc *OpenShiftCluster) error {
-		return v.validateServicePrincipalProfile("properties.servicePrincipalProfile", &oc.Properties.ServicePrincipalProfile)
-	})
+	runTests(t, tests, false)
 }
 
-func TestValidateNetworkProfile(t *testing.T) {
+func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
 	tests := []*validateTest{
 		{
 			name: "valid",
@@ -262,12 +267,10 @@ func TestValidateNetworkProfile(t *testing.T) {
 		},
 	}
 
-	runTests(t, tests, func(oc *OpenShiftCluster) error {
-		return v.validateNetworkProfile("properties.networkProfile", &oc.Properties.NetworkProfile)
-	})
+	runTests(t, tests, false)
 }
 
-func TestValidateMasterProfile(t *testing.T) {
+func TestOpenShiftClusterStaticValidateMasterProfile(t *testing.T) {
 	tests := []*validateTest{
 		{
 			name: "valid",
@@ -295,12 +298,10 @@ func TestValidateMasterProfile(t *testing.T) {
 		},
 	}
 
-	runTests(t, tests, func(oc *OpenShiftCluster) error {
-		return v.validateMasterProfile("properties.masterProfile", &oc.Properties.MasterProfile)
-	})
+	runTests(t, tests, false)
 }
 
-func TestValidateWorkerProfile(t *testing.T) {
+func TestOpenShiftClusterStaticValidateWorkerProfile(t *testing.T) {
 	tests := []*validateTest{
 		{
 			name: "valid",
@@ -310,65 +311,63 @@ func TestValidateWorkerProfile(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.WorkerProfiles[0].Name = "invalid"
 			},
-			wantErr: "400: InvalidParameter: properties.workerProfiles[0].name: The provided worker name 'invalid' is invalid.",
+			wantErr: "400: InvalidParameter: properties.workerProfiles['invalid'].name: The provided worker name 'invalid' is invalid.",
 		},
 		{
 			name: "vmSize invalid",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.WorkerProfiles[0].VMSize = "invalid"
 			},
-			wantErr: "400: InvalidParameter: properties.workerProfiles[0].vmSize: The provided worker VM size 'invalid' is invalid.",
+			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].vmSize: The provided worker VM size 'invalid' is invalid.",
 		},
 		{
 			name: "disk too small",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.WorkerProfiles[0].DiskSizeGB = 127
 			},
-			wantErr: "400: InvalidParameter: properties.workerProfiles[0].diskSizeGB: The provided worker disk size '127' is invalid.",
+			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].diskSizeGB: The provided worker disk size '127' is invalid.",
 		},
 		{
 			name: "subnetId invalid",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.WorkerProfiles[0].SubnetID = "invalid"
 			},
-			wantErr: "400: InvalidParameter: properties.workerProfiles[0].subnetId: The provided worker VM subnet 'invalid' is invalid.",
+			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].subnetId: The provided worker VM subnet 'invalid' is invalid.",
 		},
 		{
 			name: "master and worker subnets not in same vnet",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.WorkerProfiles[0].SubnetID = fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/different-vnet/subnets/worker", subscriptionID)
 			},
-			wantErr: "400: InvalidParameter: properties.workerProfiles[0].subnetId: The provided worker VM subnet '/subscriptions/af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/different-vnet/subnets/worker' is invalid: must be in the same vnet as master VM subnet '/subscriptions/af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master'.",
+			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].subnetId: The provided worker VM subnet '/subscriptions/af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/different-vnet/subnets/worker' is invalid: must be in the same vnet as master VM subnet '/subscriptions/af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master'.",
 		},
 		{
 			name: "master and worker subnets not different",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.WorkerProfiles[0].SubnetID = oc.Properties.MasterProfile.SubnetID
 			},
-			wantErr: "400: InvalidParameter: properties.workerProfiles[0].subnetId: The provided worker VM subnet '/subscriptions/af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master' is invalid: must be different to master VM subnet '/subscriptions/af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master'.",
+			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].subnetId: The provided worker VM subnet '/subscriptions/af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master' is invalid: must be different to master VM subnet '/subscriptions/af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master'.",
 		},
 		{
 			name: "count too small",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.WorkerProfiles[0].Count = 2
 			},
-			wantErr: "400: InvalidParameter: properties.workerProfiles[0].count: The provided worker count '2' is invalid.",
+			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].count: The provided worker count '2' is invalid.",
 		},
 		{
 			name: "count too big",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.WorkerProfiles[0].Count = 21
 			},
-			wantErr: "400: InvalidParameter: properties.workerProfiles[0].count: The provided worker count '21' is invalid.",
+			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].count: The provided worker count '21' is invalid.",
 		},
 	}
 
-	runTests(t, tests, func(oc *OpenShiftCluster) error {
-		return v.validateWorkerProfile("properties.workerProfiles[0]", &oc.Properties.WorkerProfiles[0], &oc.Properties.MasterProfile)
-	})
+	runTests(t, tests, false)
 }
 
-func TestValidateAPIServerProfile(t *testing.T) {
+func TestOpenShiftClusterStaticValidateAPIServerProfile(t *testing.T) {
 	tests := []*validateTest{
 		{
 			name: "valid",
@@ -415,12 +414,10 @@ func TestValidateAPIServerProfile(t *testing.T) {
 		},
 	}
 
-	runTests(t, tests, func(oc *OpenShiftCluster) error {
-		return v.validateAPIServerProfile("properties.apiserverProfile", &oc.Properties.APIServerProfile)
-	})
+	runTests(t, tests, false)
 }
 
-func TestValidateIngressProfile(t *testing.T) {
+func TestOpenShiftClusterStaticValidateIngressProfile(t *testing.T) {
 	tests := []*validateTest{
 		{
 			name: "valid",
@@ -430,14 +427,14 @@ func TestValidateIngressProfile(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.IngressProfiles[0].Name = "invalid"
 			},
-			wantErr: "400: InvalidParameter: properties.ingressProfiles[0].name: The provided ingress name 'invalid' is invalid.",
+			wantErr: "400: InvalidParameter: properties.ingressProfiles['invalid'].name: The provided ingress name 'invalid' is invalid.",
 		},
 		{
 			name: "visibility invalid",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.IngressProfiles[0].Visibility = "invalid"
 			},
-			wantErr: "400: InvalidParameter: properties.ingressProfiles[0].visibility: The provided visibility 'invalid' is invalid.",
+			wantErr: "400: InvalidParameter: properties.ingressProfiles['default'].visibility: The provided visibility 'invalid' is invalid.",
 		},
 		{
 			name: "empty ip valid",
@@ -450,23 +447,21 @@ func TestValidateIngressProfile(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.IngressProfiles[0].IP = "invalid"
 			},
-			wantErr: "400: InvalidParameter: properties.ingressProfiles[0].ip: The provided IP 'invalid' is invalid.",
+			wantErr: "400: InvalidParameter: properties.ingressProfiles['default'].ip: The provided IP 'invalid' is invalid.",
 		},
 		{
 			name: "ipv6 ip invalid",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.IngressProfiles[0].IP = "::"
 			},
-			wantErr: "400: InvalidParameter: properties.ingressProfiles[0].ip: The provided IP '::' is invalid: must be IPv4.",
+			wantErr: "400: InvalidParameter: properties.ingressProfiles['default'].ip: The provided IP '::' is invalid: must be IPv4.",
 		},
 	}
 
-	runTests(t, tests, func(oc *OpenShiftCluster) error {
-		return v.validateIngressProfile("properties.ingressProfiles[0]", &oc.Properties.IngressProfiles[0])
-	})
+	runTests(t, tests, false)
 }
 
-func TestOpenShiftClusterValidateDelta(t *testing.T) {
+func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 	tests := []*validateTest{
 		{
 			name: "valid",
@@ -476,31 +471,16 @@ func TestOpenShiftClusterValidateDelta(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) { oc.ID = strings.ToUpper(oc.ID) },
 		},
 		{
-			name:    "id change",
-			modify:  func(oc *OpenShiftCluster) { oc.ID = "invalid" },
-			wantErr: "400: PropertyChangeNotAllowed: id: Changing property 'id' is not allowed.",
-		},
-		{
 			name:   "valid name case change",
 			modify: func(oc *OpenShiftCluster) { oc.Name = strings.ToUpper(oc.Name) },
-		},
-		{
-			name:    "name change",
-			modify:  func(oc *OpenShiftCluster) { oc.Name = "invalid" },
-			wantErr: "400: PropertyChangeNotAllowed: name: Changing property 'name' is not allowed.",
 		},
 		{
 			name:   "valid type case change",
 			modify: func(oc *OpenShiftCluster) { oc.Type = strings.ToUpper(oc.Type) },
 		},
 		{
-			name:    "type change",
-			modify:  func(oc *OpenShiftCluster) { oc.Type = "invalid" },
-			wantErr: "400: PropertyChangeNotAllowed: type: Changing property 'type' is not allowed.",
-		},
-		{
 			name:    "location change",
-			modify:  func(oc *OpenShiftCluster) { oc.Location = "invalid" },
+			modify:  func(oc *OpenShiftCluster) { oc.Location = strings.ToUpper(oc.Location) },
 			wantErr: "400: PropertyChangeNotAllowed: location: Changing property 'location' is not allowed.",
 		},
 		{
@@ -509,7 +489,7 @@ func TestOpenShiftClusterValidateDelta(t *testing.T) {
 		},
 		{
 			name:    "provisioningState change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.ProvisioningState = "invalid" },
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.ProvisioningState = ProvisioningStateFailed },
 			wantErr: "400: PropertyChangeNotAllowed: properties.provisioningState: Changing property 'properties.provisioningState' is not allowed.",
 		},
 		{
@@ -520,7 +500,7 @@ func TestOpenShiftClusterValidateDelta(t *testing.T) {
 		{
 			name: "apiServer private change",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.APIServerProfile.Visibility = "invalid"
+				oc.Properties.APIServerProfile.Visibility = VisibilityPrivate
 			},
 			wantErr: "400: PropertyChangeNotAllowed: properties.apiserverProfile.visibility: Changing property 'properties.apiserverProfile.visibility' is not allowed.",
 		},
@@ -531,25 +511,20 @@ func TestOpenShiftClusterValidateDelta(t *testing.T) {
 		},
 		{
 			name:    "apiServer ip change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.APIServerProfile.IP = "invalid" },
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.APIServerProfile.IP = "2.3.4.5" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.apiserverProfile.ip: Changing property 'properties.apiserverProfile.ip' is not allowed.",
-		},
-		{
-			name:    "ingress name change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.IngressProfiles[0].Name = "invalid" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.ingressProfiles[0].name: Changing property 'properties.ingressProfiles[0].name' is not allowed.",
 		},
 		{
 			name: "ingress private change",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.IngressProfiles[0].Visibility = "invalid"
+				oc.Properties.IngressProfiles[0].Visibility = VisibilityPrivate
 			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.ingressProfiles[0].visibility: Changing property 'properties.ingressProfiles[0].visibility' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.ingressProfiles['default'].visibility: Changing property 'properties.ingressProfiles['default'].visibility' is not allowed.",
 		},
 		{
 			name:    "ingress ip change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.IngressProfiles[0].IP = "invalid" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.ingressProfiles[0].ip: Changing property 'properties.ingressProfiles[0].ip' is not allowed.",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.IngressProfiles[0].IP = "2.3.4.5" },
+			wantErr: "400: PropertyChangeNotAllowed: properties.ingressProfiles['default'].ip: Changing property 'properties.ingressProfiles['default'].ip' is not allowed.",
 		},
 		{
 			name:    "consoleUrl change",
@@ -558,7 +533,7 @@ func TestOpenShiftClusterValidateDelta(t *testing.T) {
 		},
 		{
 			name:    "clientId change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.ServicePrincipalProfile.ClientID = "invalid" },
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.ServicePrincipalProfile.ClientID = uuid.NewV4().String() },
 			wantErr: "400: PropertyChangeNotAllowed: properties.servicePrincipalProfile.clientId: Changing property 'properties.servicePrincipalProfile.clientId' is not allowed.",
 		},
 		{
@@ -568,50 +543,37 @@ func TestOpenShiftClusterValidateDelta(t *testing.T) {
 		},
 		{
 			name:    "podCidr change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.NetworkProfile.PodCIDR = "invalid" },
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.NetworkProfile.PodCIDR = "0.0.0.0/0" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.podCidr: Changing property 'properties.networkProfile.podCidr' is not allowed.",
 		},
 		{
 			name:    "serviceCidr change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.NetworkProfile.ServiceCIDR = "invalid" },
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.NetworkProfile.ServiceCIDR = "0.0.0.0/0" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.networkProfile.serviceCidr: Changing property 'properties.networkProfile.serviceCidr' is not allowed.",
 		},
 		{
-			name:    "master vmSize change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.MasterProfile.VMSize = "invalid" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.masterProfile.vmSize: Changing property 'properties.masterProfile.vmSize' is not allowed.",
-		},
-		{
-			name:    "master subnetId change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.MasterProfile.SubnetID = "invalid" },
+			name: "master subnetId change",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.MasterProfile.SubnetID = oc.Properties.MasterProfile.SubnetID[:strings.LastIndexByte(oc.Properties.MasterProfile.SubnetID, '/')] + "/changed"
+			},
 			wantErr: "400: PropertyChangeNotAllowed: properties.masterProfile.subnetId: Changing property 'properties.masterProfile.subnetId' is not allowed.",
 		},
 		{
-			name:    "worker name change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].Name = "invalid" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles[0].name: Changing property 'properties.workerProfiles[0].name' is not allowed.",
-		},
-		{
 			name:    "worker vmSize change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].VMSize = "invalid" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles[0].vmSize: Changing property 'properties.workerProfiles[0].vmSize' is not allowed.",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].VMSize = VMSizeStandardD4sV3 },
+			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles['worker'].vmSize: Changing property 'properties.workerProfiles['worker'].vmSize' is not allowed.",
 		},
 		{
 			name:    "worker diskSizeGB change",
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].DiskSizeGB++ },
-			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles[0].diskSizeGB: Changing property 'properties.workerProfiles[0].diskSizeGB' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles['worker'].diskSizeGB: Changing property 'properties.workerProfiles['worker'].diskSizeGB' is not allowed.",
 		},
 		{
-			name:    "worker subnetId change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].SubnetID = "invalid" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles[0].subnetId: Changing property 'properties.workerProfiles[0].subnetId' is not allowed.",
-		},
-		{
-			name: "additional workerProfile",
+			name: "worker subnetId change",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.WorkerProfiles = append(oc.Properties.WorkerProfiles, WorkerProfile{})
+				oc.Properties.WorkerProfiles[0].SubnetID = oc.Properties.WorkerProfiles[0].SubnetID[:strings.LastIndexByte(oc.Properties.WorkerProfiles[0].SubnetID, '/')] + "/changed"
 			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles: Changing property 'properties.workerProfiles' is not allowed.",
+			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles['worker'].subnetId: Changing property 'properties.workerProfiles['worker'].subnetId' is not allowed.",
 		},
 		{
 			name:   "valid count change",
@@ -619,8 +581,5 @@ func TestOpenShiftClusterValidateDelta(t *testing.T) {
 		},
 	}
 
-	current := validOpenShiftCluster()
-	runTests(t, tests, func(oc *OpenShiftCluster) error {
-		return v.validateOpenShiftClusterDelta(oc, current)
-	})
+	runTests(t, tests, true)
 }
