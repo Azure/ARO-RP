@@ -1,6 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the Apache License 2.0.
 
+import os
 import uuid
 
 from azure.cli.core.commands.client_factory import get_mgmt_service_client
@@ -11,6 +12,7 @@ from msrestazure.tools import resource_id
 
 
 CONTRIBUTOR = 'b24988ac-6180-42a0-ab88-20f7382dd24c'
+DEVELOPMENT_CONTRIBUTOR = 'f3fe7bc1-0ef9-4681-a68c-c1fa285d6128'
 
 
 def assign_contributor_to_vnet(cli_ctx, vnet, object_id):
@@ -24,7 +26,7 @@ def assign_contributor_to_vnet(cli_ctx, vnet, object_id):
         subscription=get_subscription_id(cli_ctx),
         namespace='Microsoft.Authorization',
         type='roleDefinitions',
-        name=CONTRIBUTOR,
+        name=DEVELOPMENT_CONTRIBUTOR if rp_mode_development() else CONTRIBUTOR,
     )
 
     for assignment in list(client.role_assignments.list_for_scope(vnet)):
@@ -37,3 +39,7 @@ def assign_contributor_to_vnet(cli_ctx, vnet, object_id):
         principal_id=object_id,
         principal_type='ServicePrincipal',
     ))
+
+
+def rp_mode_development():
+    return os.environ.get('RP_MODE', '').lower() == 'development'
