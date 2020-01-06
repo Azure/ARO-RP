@@ -24,8 +24,8 @@ type openShiftClusterBackend struct {
 // new goroutine.  It returns a boolean to the caller indicating whether it
 // succeeded in dequeuing anything - if this is false, the caller should sleep
 // before calling again
-func (ocb *openShiftClusterBackend) try() (bool, error) {
-	doc, err := ocb.db.OpenShiftClusters.Dequeue()
+func (ocb *openShiftClusterBackend) try(ctx context.Context) (bool, error) {
+	doc, err := ocb.db.OpenShiftClusters.Dequeue(ctx)
 	if err != nil || doc == nil {
 		return false, err
 	}
@@ -33,7 +33,7 @@ func (ocb *openShiftClusterBackend) try() (bool, error) {
 	log := ocb.baseLog.WithField("resource", doc.OpenShiftCluster.ID)
 	if doc.Dequeues > maxDequeueCount {
 		log.Errorf("dequeued %d times, failing", doc.Dequeues)
-		return true, ocb.endLease(nil, doc, api.ProvisioningStateFailed)
+		return true, ocb.endLease(ctx, nil, doc, api.ProvisioningStateFailed)
 	}
 
 	log.Print("dequeued")
@@ -64,13 +64,13 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	stop := ocb.heartbeat(cancel, log, doc)
+	stop := ocb.heartbeat(ctx, cancel, log, doc)
 	defer stop()
 
 	m, err := openshiftcluster.NewManager(log, ocb.env, ocb.db.OpenShiftClusters, doc)
 	if err != nil {
 		log.Error(err)
-		return ocb.endLease(stop, doc, api.ProvisioningStateFailed)
+		return ocb.endLease(ctx, stop, doc, api.ProvisioningStateFailed)
 	}
 
 	switch doc.OpenShiftCluster.Properties.ProvisioningState {
@@ -80,10 +80,10 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 		err = m.Create(ctx)
 		if err != nil {
 			log.Error(err)
-			return ocb.endLease(stop, doc, api.ProvisioningStateFailed)
+			return ocb.endLease(ctx, stop, doc, api.ProvisioningStateFailed)
 		}
 
-		return ocb.endLease(stop, doc, api.ProvisioningStateSucceeded)
+		return ocb.endLease(ctx, stop, doc, api.ProvisioningStateSucceeded)
 
 	case api.ProvisioningStateUpdating:
 		log.Print("updating")
@@ -91,10 +91,10 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 		err = m.Update(ctx)
 		if err != nil {
 			log.Error(err)
-			return ocb.endLease(stop, doc, api.ProvisioningStateFailed)
+			return ocb.endLease(ctx, stop, doc, api.ProvisioningStateFailed)
 		}
 
-		return ocb.endLease(stop, doc, api.ProvisioningStateSucceeded)
+		return ocb.endLease(ctx, stop, doc, api.ProvisioningStateSucceeded)
 
 	case api.ProvisioningStateDeleting:
 		log.Print("deleting")
@@ -102,24 +102,24 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 		err = m.Delete(ctx)
 		if err != nil {
 			log.Error(err)
-			return ocb.endLease(stop, doc, api.ProvisioningStateFailed)
+			return ocb.endLease(ctx, stop, doc, api.ProvisioningStateFailed)
 		}
 
-		err = ocb.updateAsyncOperation(doc.AsyncOperationID, nil, api.ProvisioningStateSucceeded, "")
+		err = ocb.updateAsyncOperation(ctx, doc.AsyncOperationID, nil, api.ProvisioningStateSucceeded, "")
 		if err != nil {
 			log.Error(err)
-			return ocb.endLease(stop, doc, api.ProvisioningStateFailed)
+			return ocb.endLease(ctx, stop, doc, api.ProvisioningStateFailed)
 		}
 
 		stop()
 
-		return ocb.db.OpenShiftClusters.Delete(doc)
+		return ocb.db.OpenShiftClusters.Delete(ctx, doc)
 	}
 
 	return fmt.Errorf("unexpected provisioningState %q", doc.OpenShiftCluster.Properties.ProvisioningState)
 }
 
-func (ocb *openShiftClusterBackend) heartbeat(cancel context.CancelFunc, log *logrus.Entry, doc *api.OpenShiftClusterDocument) func() {
+func (ocb *openShiftClusterBackend) heartbeat(ctx context.Context, cancel context.CancelFunc, log *logrus.Entry, doc *api.OpenShiftClusterDocument) func() {
 	var stopped bool
 	stop, done := make(chan struct{}), make(chan struct{})
 
@@ -132,7 +132,7 @@ func (ocb *openShiftClusterBackend) heartbeat(cancel context.CancelFunc, log *lo
 		defer t.Stop()
 
 		for {
-			_, err := ocb.db.OpenShiftClusters.Lease(doc.Key)
+			_, err := ocb.db.OpenShiftClusters.Lease(ctx, doc.Key)
 			if err != nil {
 				log.Error(err)
 				cancel()
@@ -156,9 +156,9 @@ func (ocb *openShiftClusterBackend) heartbeat(cancel context.CancelFunc, log *lo
 	}
 }
 
-func (ocb *openShiftClusterBackend) updateAsyncOperation(id string, oc *api.OpenShiftCluster, provisioningState, failedProvisioningState api.ProvisioningState) error {
+func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, id string, oc *api.OpenShiftCluster, provisioningState, failedProvisioningState api.ProvisioningState) error {
 	if id != "" {
-		_, err := ocb.db.AsyncOperations.Patch(id, func(asyncdoc *api.AsyncOperationDocument) error {
+		_, err := ocb.db.AsyncOperations.Patch(ctx, id, func(asyncdoc *api.AsyncOperationDocument) error {
 			asyncdoc.AsyncOperation.ProvisioningState = provisioningState
 
 			now := time.Now()
@@ -190,13 +190,13 @@ func (ocb *openShiftClusterBackend) updateAsyncOperation(id string, oc *api.Open
 	return nil
 }
 
-func (ocb *openShiftClusterBackend) endLease(stop func(), doc *api.OpenShiftClusterDocument, provisioningState api.ProvisioningState) error {
+func (ocb *openShiftClusterBackend) endLease(ctx context.Context, stop func(), doc *api.OpenShiftClusterDocument, provisioningState api.ProvisioningState) error {
 	var failedProvisioningState api.ProvisioningState
 	if provisioningState == api.ProvisioningStateFailed {
 		failedProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
 	}
 
-	err := ocb.updateAsyncOperation(doc.AsyncOperationID, doc.OpenShiftCluster, provisioningState, failedProvisioningState)
+	err := ocb.updateAsyncOperation(ctx, doc.AsyncOperationID, doc.OpenShiftCluster, provisioningState, failedProvisioningState)
 	if err != nil {
 		return err
 	}
@@ -205,6 +205,6 @@ func (ocb *openShiftClusterBackend) endLease(stop func(), doc *api.OpenShiftClus
 		stop()
 	}
 
-	_, err = ocb.db.OpenShiftClusters.EndLease(doc.Key, provisioningState, failedProvisioningState)
+	_, err = ocb.db.OpenShiftClusters.EndLease(ctx, doc.Key, provisioningState, failedProvisioningState)
 	return err
 }

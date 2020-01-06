@@ -4,6 +4,7 @@ package frontend
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"path/filepath"
@@ -17,7 +18,8 @@ import (
 )
 
 func (f *frontend) postOpenShiftClusterCredentials(w http.ResponseWriter, r *http.Request) {
-	log := r.Context().Value(middleware.ContextKeyLog).(*logrus.Entry)
+	ctx := r.Context()
+	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	vars := mux.Vars(r)
 
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
@@ -28,15 +30,15 @@ func (f *frontend) postOpenShiftClusterCredentials(w http.ResponseWriter, r *htt
 
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
-	b, err := f._postOpenShiftClusterCredentials(r, f.apis[vars["api-version"]].OpenShiftClusterCredentialsConverter())
+	b, err := f._postOpenShiftClusterCredentials(ctx, r, f.apis[vars["api-version"]].OpenShiftClusterCredentialsConverter())
 
 	reply(log, w, nil, b, err)
 }
 
-func (f *frontend) _postOpenShiftClusterCredentials(r *http.Request, converter api.OpenShiftClusterCredentialsConverter) ([]byte, error) {
+func (f *frontend) _postOpenShiftClusterCredentials(ctx context.Context, r *http.Request, converter api.OpenShiftClusterCredentialsConverter) ([]byte, error) {
 	vars := mux.Vars(r)
 
-	doc, err := f.db.OpenShiftClusters.Get(r.URL.Path)
+	doc, err := f.db.OpenShiftClusters.Get(ctx, r.URL.Path)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])

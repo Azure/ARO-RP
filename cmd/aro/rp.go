@@ -29,7 +29,7 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	db, err := database.NewDatabase(env, uuid)
+	db, err := database.NewDatabase(ctx, env, uuid)
 	if err != nil {
 		return err
 	}
@@ -51,8 +51,8 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 
 	log.Print("listening")
 
-	go b.Run(stop)
-	go f.Run(stop, done)
+	go b.Run(ctx, stop)
+	go f.Run(ctx, stop, done)
 
 	<-sigterm
 	log.Print("received SIGTERM")

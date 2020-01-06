@@ -4,6 +4,7 @@ package frontend
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -16,17 +17,18 @@ import (
 )
 
 func (f *frontend) getAsyncOperation(w http.ResponseWriter, r *http.Request) {
-	log := r.Context().Value(middleware.ContextKeyLog).(*logrus.Entry)
+	ctx := r.Context()
+	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 
-	b, err := f._getAsyncOperation(r)
+	b, err := f._getAsyncOperation(ctx, r)
 
 	reply(log, w, nil, b, err)
 }
 
-func (f *frontend) _getAsyncOperation(r *http.Request) ([]byte, error) {
+func (f *frontend) _getAsyncOperation(ctx context.Context, r *http.Request) ([]byte, error) {
 	vars := mux.Vars(r)
 
-	asyncdoc, err := f.db.AsyncOperations.Get(vars["operationId"])
+	asyncdoc, err := f.db.AsyncOperations.Get(ctx, vars["operationId"])
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", "The entity was not found.")
@@ -34,7 +36,7 @@ func (f *frontend) _getAsyncOperation(r *http.Request) ([]byte, error) {
 		return nil, err
 	}
 
-	doc, err := f.db.OpenShiftClusters.Get(asyncdoc.OpenShiftClusterKey)
+	doc, err := f.db.OpenShiftClusters.Get(ctx, asyncdoc.OpenShiftClusterKey)
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil, err
 	}

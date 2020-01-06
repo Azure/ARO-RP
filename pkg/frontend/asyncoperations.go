@@ -4,6 +4,7 @@ package frontend
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"net/http"
 	"strings"
 	"time"
@@ -14,9 +15,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
-func (f *frontend) newAsyncOperation(r *http.Request, doc *api.OpenShiftClusterDocument) (string, error) {
+func (f *frontend) newAsyncOperation(ctx context.Context, r *http.Request, doc *api.OpenShiftClusterDocument) (string, error) {
 	id := uuid.NewV4().String()
-	_, err := f.db.AsyncOperations.Create(&api.AsyncOperationDocument{
+	_, err := f.db.AsyncOperations.Create(ctx, &api.AsyncOperationDocument{
 		ID:                  id,
 		OpenShiftClusterKey: doc.Key,
 		AsyncOperation: &api.AsyncOperation{

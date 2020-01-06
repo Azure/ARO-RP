@@ -3,6 +3,7 @@
 package cosmosdb
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
@@ -16,14 +17,14 @@ type openShiftClusterDocumentClient struct {
 
 // OpenShiftClusterDocumentClient is a openShiftClusterDocument client
 type OpenShiftClusterDocumentClient interface {
-	Create(string, *pkg.OpenShiftClusterDocument, *Options) (*pkg.OpenShiftClusterDocument, error)
+	Create(context.Context, string, *pkg.OpenShiftClusterDocument, *Options) (*pkg.OpenShiftClusterDocument, error)
 	List() OpenShiftClusterDocumentIterator
-	ListAll() (*pkg.OpenShiftClusterDocuments, error)
-	Get(string, string) (*pkg.OpenShiftClusterDocument, error)
-	Replace(string, *pkg.OpenShiftClusterDocument, *Options) (*pkg.OpenShiftClusterDocument, error)
-	Delete(string, *pkg.OpenShiftClusterDocument, *Options) error
+	ListAll(context.Context) (*pkg.OpenShiftClusterDocuments, error)
+	Get(context.Context, string, string) (*pkg.OpenShiftClusterDocument, error)
+	Replace(context.Context, string, *pkg.OpenShiftClusterDocument, *Options) (*pkg.OpenShiftClusterDocument, error)
+	Delete(context.Context, string, *pkg.OpenShiftClusterDocument, *Options) error
 	Query(string, *Query) OpenShiftClusterDocumentIterator
-	QueryAll(string, *Query) (*pkg.OpenShiftClusterDocuments, error)
+	QueryAll(context.Context, string, *Query) (*pkg.OpenShiftClusterDocuments, error)
 }
 
 type openShiftClusterDocumentListIterator struct {
@@ -42,7 +43,7 @@ type openShiftClusterDocumentQueryIterator struct {
 
 // OpenShiftClusterDocumentIterator is a openShiftClusterDocument iterator
 type OpenShiftClusterDocumentIterator interface {
-	Next() (*pkg.OpenShiftClusterDocuments, error)
+	Next(context.Context) (*pkg.OpenShiftClusterDocuments, error)
 }
 
 // NewOpenShiftClusterDocumentClient returns a new openShiftClusterDocument client
@@ -53,11 +54,11 @@ func NewOpenShiftClusterDocumentClient(collc CollectionClient, collid string) Op
 	}
 }
 
-func (c *openShiftClusterDocumentClient) all(i OpenShiftClusterDocumentIterator) (*pkg.OpenShiftClusterDocuments, error) {
+func (c *openShiftClusterDocumentClient) all(ctx context.Context, i OpenShiftClusterDocumentIterator) (*pkg.OpenShiftClusterDocuments, error) {
 	allopenShiftClusterDocuments := &pkg.OpenShiftClusterDocuments{}
 
 	for {
-		openShiftClusterDocuments, err := i.Next()
+		openShiftClusterDocuments, err := i.Next(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -73,7 +74,7 @@ func (c *openShiftClusterDocumentClient) all(i OpenShiftClusterDocumentIterator)
 	return allopenShiftClusterDocuments, nil
 }
 
-func (c *openShiftClusterDocumentClient) Create(partitionkey string, newopenShiftClusterDocument *pkg.OpenShiftClusterDocument, options *Options) (openShiftClusterDocument *pkg.OpenShiftClusterDocument, err error) {
+func (c *openShiftClusterDocumentClient) Create(ctx context.Context, partitionkey string, newopenShiftClusterDocument *pkg.OpenShiftClusterDocument, options *Options) (openShiftClusterDocument *pkg.OpenShiftClusterDocument, err error) {
 	headers := http.Header{}
 	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
 
@@ -87,7 +88,7 @@ func (c *openShiftClusterDocumentClient) Create(partitionkey string, newopenShif
 		return
 	}
 
-	err = c.do(http.MethodPost, c.path+"/docs", "docs", c.path, http.StatusCreated, &newopenShiftClusterDocument, &openShiftClusterDocument, headers)
+	err = c.do(ctx, http.MethodPost, c.path+"/docs", "docs", c.path, http.StatusCreated, &newopenShiftClusterDocument, &openShiftClusterDocument, headers)
 	return
 }
 
@@ -95,18 +96,18 @@ func (c *openShiftClusterDocumentClient) List() OpenShiftClusterDocumentIterator
 	return &openShiftClusterDocumentListIterator{openShiftClusterDocumentClient: c}
 }
 
-func (c *openShiftClusterDocumentClient) ListAll() (*pkg.OpenShiftClusterDocuments, error) {
-	return c.all(c.List())
+func (c *openShiftClusterDocumentClient) ListAll(ctx context.Context) (*pkg.OpenShiftClusterDocuments, error) {
+	return c.all(ctx, c.List())
 }
 
-func (c *openShiftClusterDocumentClient) Get(partitionkey, openShiftClusterDocumentid string) (openShiftClusterDocument *pkg.OpenShiftClusterDocument, err error) {
+func (c *openShiftClusterDocumentClient) Get(ctx context.Context, partitionkey, openShiftClusterDocumentid string) (openShiftClusterDocument *pkg.OpenShiftClusterDocument, err error) {
 	headers := http.Header{}
 	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
-	err = c.do(http.MethodGet, c.path+"/docs/"+openShiftClusterDocumentid, "docs", c.path+"/docs/"+openShiftClusterDocumentid, http.StatusOK, nil, &openShiftClusterDocument, headers)
+	err = c.do(ctx, http.MethodGet, c.path+"/docs/"+openShiftClusterDocumentid, "docs", c.path+"/docs/"+openShiftClusterDocumentid, http.StatusOK, nil, &openShiftClusterDocument, headers)
 	return
 }
 
-func (c *openShiftClusterDocumentClient) Replace(partitionkey string, newopenShiftClusterDocument *pkg.OpenShiftClusterDocument, options *Options) (openShiftClusterDocument *pkg.OpenShiftClusterDocument, err error) {
+func (c *openShiftClusterDocumentClient) Replace(ctx context.Context, partitionkey string, newopenShiftClusterDocument *pkg.OpenShiftClusterDocument, options *Options) (openShiftClusterDocument *pkg.OpenShiftClusterDocument, err error) {
 	headers := http.Header{}
 	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
 
@@ -115,11 +116,11 @@ func (c *openShiftClusterDocumentClient) Replace(partitionkey string, newopenShi
 		return
 	}
 
-	err = c.do(http.MethodPut, c.path+"/docs/"+newopenShiftClusterDocument.ID, "docs", c.path+"/docs/"+newopenShiftClusterDocument.ID, http.StatusOK, &newopenShiftClusterDocument, &openShiftClusterDocument, headers)
+	err = c.do(ctx, http.MethodPut, c.path+"/docs/"+newopenShiftClusterDocument.ID, "docs", c.path+"/docs/"+newopenShiftClusterDocument.ID, http.StatusOK, &newopenShiftClusterDocument, &openShiftClusterDocument, headers)
 	return
 }
 
-func (c *openShiftClusterDocumentClient) Delete(partitionkey string, openShiftClusterDocument *pkg.OpenShiftClusterDocument, options *Options) (err error) {
+func (c *openShiftClusterDocumentClient) Delete(ctx context.Context, partitionkey string, openShiftClusterDocument *pkg.OpenShiftClusterDocument, options *Options) (err error) {
 	headers := http.Header{}
 	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
 
@@ -128,7 +129,7 @@ func (c *openShiftClusterDocumentClient) Delete(partitionkey string, openShiftCl
 		return
 	}
 
-	err = c.do(http.MethodDelete, c.path+"/docs/"+openShiftClusterDocument.ID, "docs", c.path+"/docs/"+openShiftClusterDocument.ID, http.StatusNoContent, nil, nil, headers)
+	err = c.do(ctx, http.MethodDelete, c.path+"/docs/"+openShiftClusterDocument.ID, "docs", c.path+"/docs/"+openShiftClusterDocument.ID, http.StatusNoContent, nil, nil, headers)
 	return
 }
 
@@ -136,8 +137,8 @@ func (c *openShiftClusterDocumentClient) Query(partitionkey string, query *Query
 	return &openShiftClusterDocumentQueryIterator{openShiftClusterDocumentClient: c, partitionkey: partitionkey, query: query}
 }
 
-func (c *openShiftClusterDocumentClient) QueryAll(partitionkey string, query *Query) (*pkg.OpenShiftClusterDocuments, error) {
-	return c.all(c.Query(partitionkey, query))
+func (c *openShiftClusterDocumentClient) QueryAll(ctx context.Context, partitionkey string, query *Query) (*pkg.OpenShiftClusterDocuments, error) {
+	return c.all(ctx, c.Query(partitionkey, query))
 }
 
 func (c *openShiftClusterDocumentClient) setOptions(options *Options, openShiftClusterDocument *pkg.OpenShiftClusterDocument, headers http.Header) error {
@@ -161,7 +162,7 @@ func (c *openShiftClusterDocumentClient) setOptions(options *Options, openShiftC
 	return nil
 }
 
-func (i *openShiftClusterDocumentListIterator) Next() (openShiftClusterDocuments *pkg.OpenShiftClusterDocuments, err error) {
+func (i *openShiftClusterDocumentListIterator) Next(ctx context.Context) (openShiftClusterDocuments *pkg.OpenShiftClusterDocuments, err error) {
 	if i.done {
 		return
 	}
@@ -172,7 +173,7 @@ func (i *openShiftClusterDocumentListIterator) Next() (openShiftClusterDocuments
 		headers.Set("X-Ms-Continuation", i.continuation)
 	}
 
-	err = i.do(http.MethodGet, i.path+"/docs", "docs", i.path, http.StatusOK, nil, &openShiftClusterDocuments, headers)
+	err = i.do(ctx, http.MethodGet, i.path+"/docs", "docs", i.path, http.StatusOK, nil, &openShiftClusterDocuments, headers)
 	if err != nil {
 		return
 	}
@@ -183,7 +184,7 @@ func (i *openShiftClusterDocumentListIterator) Next() (openShiftClusterDocuments
 	return
 }
 
-func (i *openShiftClusterDocumentQueryIterator) Next() (openShiftClusterDocuments *pkg.OpenShiftClusterDocuments, err error) {
+func (i *openShiftClusterDocumentQueryIterator) Next(ctx context.Context) (openShiftClusterDocuments *pkg.OpenShiftClusterDocuments, err error) {
 	if i.done {
 		return
 	}
@@ -201,7 +202,7 @@ func (i *openShiftClusterDocumentQueryIterator) Next() (openShiftClusterDocument
 		headers.Set("X-Ms-Continuation", i.continuation)
 	}
 
-	err = i.do(http.MethodPost, i.path+"/docs", "docs", i.path, http.StatusOK, &i.query, &openShiftClusterDocuments, headers)
+	err = i.do(ctx, http.MethodPost, i.path+"/docs", "docs", i.path, http.StatusOK, &i.query, &openShiftClusterDocuments, headers)
 	if err != nil {
 		return
 	}

@@ -23,8 +23,8 @@ type subscriptionBackend struct {
 // goroutine.  It returns a boolean to the caller indicating whether it
 // succeeded in dequeuing anything - if this is false, the caller should sleep
 // before calling again
-func (sb *subscriptionBackend) try() (bool, error) {
-	doc, err := sb.db.Subscriptions.Dequeue()
+func (sb *subscriptionBackend) try(ctx context.Context) (bool, error) {
+	doc, err := sb.db.Subscriptions.Dequeue(ctx)
 	if err != nil || doc == nil {
 		return false, err
 	}
@@ -32,7 +32,7 @@ func (sb *subscriptionBackend) try() (bool, error) {
 	log := sb.baseLog.WithField("subscription", doc.ID)
 	if doc.Dequeues > maxDequeueCount {
 		log.Errorf("dequeued %d times, failing", doc.Dequeues)
-		return true, sb.endLease(nil, doc, false, true)
+		return true, sb.endLease(ctx, nil, doc, false, true)
 	}
 
 	log.Print("dequeued")
@@ -63,16 +63,16 @@ func (sb *subscriptionBackend) handle(ctx context.Context, log *logrus.Entry, do
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	stop := sb.heartbeat(cancel, log, doc)
+	stop := sb.heartbeat(ctx, cancel, log, doc)
 	defer stop()
 
 	done, err := sb.handleDelete(ctx, log, doc)
 	if err != nil {
 		log.Error(err)
-		return sb.endLease(stop, doc, false, false)
+		return sb.endLease(ctx, stop, doc, false, false)
 	}
 
-	return sb.endLease(stop, doc, done, !done)
+	return sb.endLease(ctx, stop, doc, done, !done)
 }
 
 // handleDelete ensures that all the clusters in a subscription which is being
@@ -87,7 +87,7 @@ func (sb *subscriptionBackend) handleDelete(ctx context.Context, log *logrus.Ent
 
 	done := true
 	for {
-		docs, err := i.Next()
+		docs, err := i.Next(ctx)
 		if err != nil {
 			return false, err
 		}
@@ -96,7 +96,7 @@ func (sb *subscriptionBackend) handleDelete(ctx context.Context, log *logrus.Ent
 		}
 
 		for _, doc := range docs.OpenShiftClusterDocuments {
-			_, err = sb.db.OpenShiftClusters.Patch(doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+			_, err = sb.db.OpenShiftClusters.Patch(ctx, doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 				switch doc.OpenShiftCluster.Properties.ProvisioningState {
 				case api.ProvisioningStateCreating,
 					api.ProvisioningStateUpdating:
@@ -120,7 +120,7 @@ func (sb *subscriptionBackend) handleDelete(ctx context.Context, log *logrus.Ent
 	return done, nil
 }
 
-func (sb *subscriptionBackend) heartbeat(cancel context.CancelFunc, log *logrus.Entry, doc *api.SubscriptionDocument) func() {
+func (sb *subscriptionBackend) heartbeat(ctx context.Context, cancel context.CancelFunc, log *logrus.Entry, doc *api.SubscriptionDocument) func() {
 	var stopped bool
 	stop, done := make(chan struct{}), make(chan struct{})
 
@@ -133,7 +133,7 @@ func (sb *subscriptionBackend) heartbeat(cancel context.CancelFunc, log *logrus.
 		defer t.Stop()
 
 		for {
-			_, err := sb.db.Subscriptions.Lease(doc.ID)
+			_, err := sb.db.Subscriptions.Lease(ctx, doc.ID)
 			if err != nil {
 				log.Error(err)
 				cancel()
@@ -157,11 +157,11 @@ func (sb *subscriptionBackend) heartbeat(cancel context.CancelFunc, log *logrus.
 	}
 }
 
-func (sb *subscriptionBackend) endLease(stop func(), doc *api.SubscriptionDocument, done, retryLater bool) error {
+func (sb *subscriptionBackend) endLease(ctx context.Context, stop func(), doc *api.SubscriptionDocument, done, retryLater bool) error {
 	if stop != nil {
 		stop()
 	}
 
-	_, err := sb.db.Subscriptions.EndLease(doc.ID, done, retryLater)
+	_, err := sb.db.Subscriptions.EndLease(ctx, doc.ID, done, retryLater)
 	return err
 }

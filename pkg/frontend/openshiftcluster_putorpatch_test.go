@@ -40,7 +40,7 @@ func (*dummyOpenShiftClusterValidator) Dynamic(context.Context, *api.OpenShiftCl
 
 func expectAsyncOperationDocumentCreate(asyncOperations *mock_database.MockAsyncOperations, key string, provisioningState api.ProvisioningState) {
 	asyncOperations.EXPECT().
-		Create((*matcher.AsyncOperationDocument)(
+		Create(gomock.Any(), (*matcher.AsyncOperationDocument)(
 			&api.AsyncOperationDocument{
 				OpenShiftClusterKey: key,
 				AsyncOperation: &api.AsyncOperation{
@@ -107,7 +107,7 @@ func TestPutOpenShiftCluster(t *testing.T) {
 			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName",
 			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters) {
 				openShiftClusters.EXPECT().
-					Get(strings.ToLower(tt.resourceID)).
+					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
 					Return(nil, &cosmosdb.Error{StatusCode: http.StatusNotFound})
 
 				expectAsyncOperationDocumentCreate(asyncOperations, strings.ToLower(tt.resourceID), api.ProvisioningStateCreating)
@@ -129,7 +129,7 @@ func TestPutOpenShiftCluster(t *testing.T) {
 				}
 
 				openShiftClusters.EXPECT().
-					Create((*matcher.OpenShiftClusterDocument)(clusterdoc)).
+					Create(gomock.Any(), (*matcher.OpenShiftClusterDocument)(clusterdoc)).
 					Return(clusterdoc, nil)
 			},
 			wantStatusCode: http.StatusCreated,
@@ -152,7 +152,7 @@ func TestPutOpenShiftCluster(t *testing.T) {
 			},
 			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters) {
 				openShiftClusters.EXPECT().
-					Get(strings.ToLower(tt.resourceID)).
+					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
 					Return(&api.OpenShiftClusterDocument{
 						Key: strings.ToLower(tt.resourceID),
 						OpenShiftCluster: &api.OpenShiftCluster{
@@ -181,7 +181,7 @@ func TestPutOpenShiftCluster(t *testing.T) {
 				}
 
 				openShiftClusters.EXPECT().
-					Update((*matcher.OpenShiftClusterDocument)(clusterdoc)).
+					Update(gomock.Any(), (*matcher.OpenShiftClusterDocument)(clusterdoc)).
 					Return(clusterdoc, nil)
 			},
 			wantStatusCode: http.StatusOK,
@@ -205,7 +205,7 @@ func TestPutOpenShiftCluster(t *testing.T) {
 			},
 			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters) {
 				openShiftClusters.EXPECT().
-					Get(strings.ToLower(tt.resourceID)).
+					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
 					Return(&api.OpenShiftClusterDocument{
 						Key: strings.ToLower(tt.resourceID),
 						OpenShiftCluster: &api.OpenShiftCluster{
@@ -235,7 +235,7 @@ func TestPutOpenShiftCluster(t *testing.T) {
 				}
 
 				openShiftClusters.EXPECT().
-					Update((*matcher.OpenShiftClusterDocument)(clusterdoc)).
+					Update(gomock.Any(), (*matcher.OpenShiftClusterDocument)(clusterdoc)).
 					Return(clusterdoc, nil)
 			},
 			wantStatusCode: http.StatusOK,
@@ -259,7 +259,7 @@ func TestPutOpenShiftCluster(t *testing.T) {
 			},
 			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters) {
 				openShiftClusters.EXPECT().
-					Get(strings.ToLower(tt.resourceID)).
+					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
 					Return(&api.OpenShiftClusterDocument{
 						Key: strings.ToLower(tt.resourceID),
 						OpenShiftCluster: &api.OpenShiftCluster{
@@ -284,7 +284,7 @@ func TestPutOpenShiftCluster(t *testing.T) {
 			},
 			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters) {
 				openShiftClusters.EXPECT().
-					Get(strings.ToLower(tt.resourceID)).
+					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
 					Return(&api.OpenShiftClusterDocument{
 						Key: strings.ToLower(tt.resourceID),
 						OpenShiftCluster: &api.OpenShiftCluster{
@@ -323,7 +323,7 @@ func TestPutOpenShiftCluster(t *testing.T) {
 			tt.mocks(tt, asyncOperations, openShiftClusters)
 
 			subscriptions.EXPECT().
-				Get("00000000-0000-0000-0000-000000000000").
+				Get(gomock.Any(), "00000000-0000-0000-0000-000000000000").
 				Return(&api.SubscriptionDocument{
 					Subscription: &api.Subscription{
 						State: api.SubscriptionStateRegistered,
@@ -342,7 +342,7 @@ func TestPutOpenShiftCluster(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			go f.Run(nil, nil)
+			go f.Run(ctx, nil, nil)
 
 			buf := &bytes.Buffer{}
 			oc := &v20191231preview.OpenShiftCluster{}

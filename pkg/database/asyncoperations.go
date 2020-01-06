@@ -4,6 +4,7 @@ package database
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -19,9 +20,9 @@ type asyncOperations struct {
 
 // AsyncOperations is the database interface for AsyncOperationDocuments
 type AsyncOperations interface {
-	Create(*api.AsyncOperationDocument) (*api.AsyncOperationDocument, error)
-	Get(string) (*api.AsyncOperationDocument, error)
-	Patch(string, func(*api.AsyncOperationDocument) error) (*api.AsyncOperationDocument, error)
+	Create(context.Context, *api.AsyncOperationDocument) (*api.AsyncOperationDocument, error)
+	Get(context.Context, string) (*api.AsyncOperationDocument, error)
+	Patch(context.Context, string, func(*api.AsyncOperationDocument) error) (*api.AsyncOperationDocument, error)
 }
 
 // NewAsyncOperations returns a new AsyncOperations
@@ -34,12 +35,12 @@ func NewAsyncOperations(uuid string, dbc cosmosdb.DatabaseClient, dbid, collid s
 	}, nil
 }
 
-func (c *asyncOperations) Create(doc *api.AsyncOperationDocument) (*api.AsyncOperationDocument, error) {
+func (c *asyncOperations) Create(ctx context.Context, doc *api.AsyncOperationDocument) (*api.AsyncOperationDocument, error) {
 	if doc.ID != strings.ToLower(doc.ID) {
 		return nil, fmt.Errorf("id %q is not lower case", doc.ID)
 	}
 
-	doc, err := c.c.Create(doc.ID, doc, nil)
+	doc, err := c.c.Create(ctx, doc.ID, doc, nil)
 
 	if err, ok := err.(*cosmosdb.Error); ok && err.StatusCode == http.StatusConflict {
 		err.StatusCode = http.StatusPreconditionFailed
@@ -48,19 +49,19 @@ func (c *asyncOperations) Create(doc *api.AsyncOperationDocument) (*api.AsyncOpe
 	return doc, err
 }
 
-func (c *asyncOperations) Get(id string) (*api.AsyncOperationDocument, error) {
+func (c *asyncOperations) Get(ctx context.Context, id string) (*api.AsyncOperationDocument, error) {
 	if id != strings.ToLower(id) {
 		return nil, fmt.Errorf("id %q is not lower case", id)
 	}
 
-	return c.c.Get(id, id)
+	return c.c.Get(ctx, id, id)
 }
 
-func (c *asyncOperations) Patch(id string, f func(*api.AsyncOperationDocument) error) (*api.AsyncOperationDocument, error) {
+func (c *asyncOperations) Patch(ctx context.Context, id string, f func(*api.AsyncOperationDocument) error) (*api.AsyncOperationDocument, error) {
 	var doc *api.AsyncOperationDocument
 
 	err := cosmosdb.RetryOnPreconditionFailed(func() (err error) {
-		doc, err = c.Get(id)
+		doc, err = c.Get(ctx, id)
 		if err != nil {
 			return
 		}
@@ -70,7 +71,7 @@ func (c *asyncOperations) Patch(id string, f func(*api.AsyncOperationDocument) e
 			return
 		}
 
-		doc, err = c.c.Replace(doc.ID, doc, nil)
+		doc, err = c.c.Replace(ctx, doc.ID, doc, nil)
 		return
 	})
 
