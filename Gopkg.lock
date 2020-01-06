@@ -126,7 +126,7 @@
   version = "v1.0.1"
 
 [[projects]]
-  digest = "1:12370b12cf4d68fbd17b9a172b0192df233e5590e56ee47524226d599ad2e249"
+  digest = "1:732d36b5255b18fd4d32196f04c0de749acff3c4bcb8b88cb62f217635df4855"
   name = "github.com/aws/aws-sdk-go"
   packages = [
     "aws",
@@ -172,8 +172,8 @@
     "service/sts/stsiface",
   ]
   pruneopts = "UT"
-  revision = "fcbfc357f185c1d55e2c37626357ec92abd52286"
-  version = "v1.26.8"
+  revision = "a1e6946e8014a793d989e64ef5566315010ce898"
+  version = "v1.27.0"
 
 [[projects]]
   digest = "1:d6afaeed1502aa28e80a4ed0981d570ad91b2579193404256ce672ed0a609e0d"
@@ -528,14 +528,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:1dce060674ee5fde4194ccdecf5185def64df934413358b34455f8a1e6582a98"
+  digest = "1:242f63b58b7e3e61dc6d604bc50efd3c190ab5cb129becf2879b37759a8a02ad"
   name = "github.com/gophercloud/utils"
   packages = [
     "env",
     "openstack/clientconfig",
   ]
   pruneopts = "UT"
-  revision = "4533a07bd4928c54878134528d0dcdd27ff32bcb"
+  revision = "cb37ab634bffc7c150154d1a60192e926d2eddbf"
 
 [[projects]]
   digest = "1:cbec35fe4d5a4fba369a656a8cd65e244ea2c743007d8f6c1ccb132acf9d1296"
@@ -555,14 +555,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:fab78769b9f0db838a8b336506a6c0cd24deda70d99c5c8179eedce5d1566256"
+  digest = "1:1f17db52ca75ca26db700d49f23246eb0ba7570c5bd975839f52af01320930b3"
   name = "github.com/jim-minter/go-cosmosdb"
   packages = [
     "cmd/gencosmosdb",
     "pkg/gencosmosdb",
   ]
   pruneopts = "UT"
-  revision = "5d89a846947107f9cc5db3eef66a14582da82e74"
+  revision = "f2dfdff43c9629f82f9034eb2897193a7151a1fb"
 
 [[projects]]
   digest = "1:bb81097a5b62634f3e9fec1014657855610c82d19b9a40c17612e32651e35dca"
@@ -588,12 +588,12 @@
   revision = "95032a82bc518f77982ea72343cc1ade730072f0"
 
 [[projects]]
-  digest = "1:b1bcef3a26702bf9eb896d8279197dab96755d5b5667899184a5b5d6a306bb29"
+  digest = "1:566e67ce0ce71612b828d3c4fc1582d1899a8937bebf525b37da19554e53e59f"
   name = "github.com/klauspost/compress"
   packages = ["flate"]
   pruneopts = "UT"
-  revision = "17b3d80415252d99aa09c6717fea5f1f60a01ea5"
-  version = "v1.9.5"
+  revision = "f61bac3a179b270c811148ce2a1f819dfc82825f"
+  version = "v1.9.7"
 
 [[projects]]
   digest = "1:ce7769e1e6c4180a163da92df483369d689c8849eacfdd24a3cdcbcdc47b8b95"
@@ -1121,7 +1121,7 @@
   name = "go4.org"
   packages = ["errorutil"]
   pruneopts = "UT"
-  revision = "132d2879e1e95dadb805c26cd339344efd1a67c8"
+  revision = "c7e774b10ea04ad8fe5241e62ac4bf676c1d6b16"
 
 [[projects]]
   branch = "master"
@@ -1194,7 +1194,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:a85ee5c8f31b0dc1bad28fc6e9b20961cfe5f5711eac52d68e308adaf8a2aaa7"
+  digest = "1:f54cdb08087261550358c3a7309388d26fb93bef33ac57b76b5ca9b60bdb6799"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
@@ -1202,7 +1202,7 @@
     "windows",
   ]
   pruneopts = "UT"
-  revision = "04cbcbbfeed8aa0b2b010b2ddab558e9f717fd3e"
+  revision = "5f8ca72cd6325689efbbfd415c3e82ec8be1f5a4"
 
 [[projects]]
   digest = "1:1e7fe301d41aead2026c0ade066adcf5e60af7d355cd0f826193852190350d82"
@@ -1244,7 +1244,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:08f59feb15cfa4f65e3af02ef24ffb1206fe15c8648292575c154daa8f5d0503"
+  digest = "1:8f7c89c96d6fc14bd0dc95b2269274ecfeaffdc0457fa2b9d47a856c7996f51a"
   name = "golang.org/x/tools"
   packages = [
     "cmd/goimports",
@@ -1261,7 +1261,7 @@
     "internal/semver",
   ]
   pruneopts = "UT"
-  revision = "2aa90c603ae35ab89ce30e45e49d870b7e5e7698"
+  revision = "774c71fcf11405d0a5ce0aba75dc113822d62178"
 
 [[projects]]
   digest = "1:f3661f6218166acf60f5d551b44a537f7ecb8686be02ece061c5950cbfc9ba17"
@@ -1617,7 +1617,7 @@
     "pkg/apis/openstackproviderconfig/v1alpha1",
   ]
   pruneopts = "UT"
-  revision = "da0de49f4edd053bc7840aa3c0d7f8dcd18cf6e6"
+  revision = "db51683ce60713c22ebd9da14e8a515e3662535e"
   source = "https://github.com/openshift/cluster-api-provider-openstack.git"
 
 [[projects]]
@@ -1661,6 +1661,7 @@
     "github.com/Azure/go-autorest/autorest/azure/auth",
     "github.com/Azure/go-autorest/autorest/date",
     "github.com/Azure/go-autorest/autorest/to",
+    "github.com/Azure/go-autorest/autorest/validation",
     "github.com/Azure/go-autorest/tracing",
     "github.com/BurntSushi/toml",
     "github.com/alvaroloes/enumer",
