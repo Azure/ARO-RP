@@ -55,10 +55,13 @@ func TestPutOpenShiftCluster(t *testing.T) {
 	ctx := context.Background()
 
 	apis := map[string]*api.Version{
-		"2019-12-31-preview": api.APIs["2019-12-31-preview"],
-	}
-	apis["2019-12-31-preview"].OpenShiftClusterValidator = func(env.Interface, string) api.OpenShiftClusterValidator {
-		return &dummyOpenShiftClusterValidator{}
+		"2019-12-31-preview": {
+			OpenShiftClusterConverter: api.APIs["2019-12-31-preview"].OpenShiftClusterConverter,
+			OpenShiftClusterValidator: func(env.Interface, string) api.OpenShiftClusterValidator {
+				return &dummyOpenShiftClusterValidator{}
+			},
+			OpenShiftClusterCredentialsConverter: api.APIs["2019-12-31-preview"].OpenShiftClusterCredentialsConverter,
+		},
 	}
 
 	clientkey, clientcerts, err := utiltls.GenerateKeyAndCertificate("client", nil, nil, false, true)
