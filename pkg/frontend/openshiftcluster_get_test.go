@@ -72,7 +72,7 @@ func TestGetOpenShiftCluster(t *testing.T) {
 			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName",
 			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters) {
 				openshiftClusters.EXPECT().
-					Get(strings.ToLower(tt.resourceID)).
+					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
 					Return(&api.OpenShiftClusterDocument{
 						OpenShiftCluster: &api.OpenShiftCluster{
 							ID:   tt.resourceID,
@@ -100,7 +100,7 @@ func TestGetOpenShiftCluster(t *testing.T) {
 			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName",
 			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters) {
 				openshiftClusters.EXPECT().
-					Get(strings.ToLower(tt.resourceID)).
+					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
 					Return(nil, &cosmosdb.Error{StatusCode: http.StatusNotFound})
 			},
 			wantStatusCode: http.StatusNotFound,
@@ -111,7 +111,7 @@ func TestGetOpenShiftCluster(t *testing.T) {
 			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName",
 			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters) {
 				openshiftClusters.EXPECT().
-					Get(strings.ToLower(tt.resourceID)).
+					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
 					Return(nil, errors.New("random error"))
 			},
 			wantStatusCode: http.StatusInternalServerError,
@@ -141,7 +141,7 @@ func TestGetOpenShiftCluster(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			go f.Run(nil, nil)
+			go f.Run(ctx, nil, nil)
 
 			resp, err := cli.Get("https://server" + tt.resourceID + "?api-version=2019-12-31-preview")
 			if err != nil {

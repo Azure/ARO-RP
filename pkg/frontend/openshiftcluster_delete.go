@@ -4,6 +4,7 @@ package frontend
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"net/http"
 	"net/url"
 
@@ -15,11 +16,12 @@ import (
 )
 
 func (f *frontend) deleteOpenShiftCluster(w http.ResponseWriter, r *http.Request) {
-	log := r.Context().Value(middleware.ContextKeyLog).(*logrus.Entry)
+	ctx := r.Context()
+	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 
 	var header http.Header
-	_, err := f.db.OpenShiftClusters.Patch(r.URL.Path, func(doc *api.OpenShiftClusterDocument) error {
-		return f._deleteOpenShiftCluster(r, &header, doc)
+	_, err := f.db.OpenShiftClusters.Patch(ctx, r.URL.Path, func(doc *api.OpenShiftClusterDocument) error {
+		return f._deleteOpenShiftCluster(ctx, r, &header, doc)
 	})
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
@@ -31,8 +33,8 @@ func (f *frontend) deleteOpenShiftCluster(w http.ResponseWriter, r *http.Request
 	reply(log, w, header, nil, err)
 }
 
-func (f *frontend) _deleteOpenShiftCluster(r *http.Request, header *http.Header, doc *api.OpenShiftClusterDocument) error {
-	_, err := f.validateSubscriptionState(doc.Key, api.SubscriptionStateRegistered, api.SubscriptionStateWarned, api.SubscriptionStateSuspended)
+func (f *frontend) _deleteOpenShiftCluster(ctx context.Context, r *http.Request, header *http.Header, doc *api.OpenShiftClusterDocument) error {
+	_, err := f.validateSubscriptionState(ctx, doc.Key, api.SubscriptionStateRegistered, api.SubscriptionStateWarned, api.SubscriptionStateSuspended)
 	if err != nil {
 		return err
 	}
@@ -45,7 +47,7 @@ func (f *frontend) _deleteOpenShiftCluster(r *http.Request, header *http.Header,
 	doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateDeleting
 	doc.Dequeues = 0
 
-	doc.AsyncOperationID, err = f.newAsyncOperation(r, doc)
+	doc.AsyncOperationID, err = f.newAsyncOperation(ctx, r, doc)
 	if err != nil {
 		return err
 	}

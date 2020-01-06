@@ -4,6 +4,7 @@ package frontend
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -20,29 +21,30 @@ import (
 )
 
 func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Request) {
-	log := r.Context().Value(middleware.ContextKeyLog).(*logrus.Entry)
+	ctx := r.Context()
+	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	vars := mux.Vars(r)
 
 	var header http.Header
 	var b []byte
 	err := cosmosdb.RetryOnPreconditionFailed(func() error {
 		var err error
-		b, err = f._putOrPatchOpenShiftCluster(r, &header, f.apis[vars["api-version"]].OpenShiftClusterConverter(), f.apis[vars["api-version"]].OpenShiftClusterValidator(f.env, r.URL.Path))
+		b, err = f._putOrPatchOpenShiftCluster(ctx, r, &header, f.apis[vars["api-version"]].OpenShiftClusterConverter(), f.apis[vars["api-version"]].OpenShiftClusterValidator(f.env, r.URL.Path))
 		return err
 	})
 
 	reply(log, w, header, b, err)
 }
 
-func (f *frontend) _putOrPatchOpenShiftCluster(r *http.Request, header *http.Header, converter api.OpenShiftClusterConverter, validator api.OpenShiftClusterValidator) ([]byte, error) {
+func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Request, header *http.Header, converter api.OpenShiftClusterConverter, validator api.OpenShiftClusterValidator) ([]byte, error) {
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 
-	subdoc, err := f.validateSubscriptionState(r.URL.Path, api.SubscriptionStateRegistered)
+	subdoc, err := f.validateSubscriptionState(ctx, r.URL.Path, api.SubscriptionStateRegistered)
 	if err != nil {
 		return nil, err
 	}
 
-	doc, err := f.db.OpenShiftClusters.Get(r.URL.Path)
+	doc, err := f.db.OpenShiftClusters.Get(ctx, r.URL.Path)
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil, err
 	}
@@ -139,7 +141,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *http.Request, header *http.Hea
 		return nil, err
 	}
 
-	doc.AsyncOperationID, err = f.newAsyncOperation(r, doc)
+	doc.AsyncOperationID, err = f.newAsyncOperation(ctx, r, doc)
 	if err != nil {
 		return nil, err
 	}
@@ -155,9 +157,9 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *http.Request, header *http.Hea
 	}
 
 	if isCreate {
-		doc, err = f.db.OpenShiftClusters.Create(doc)
+		doc, err = f.db.OpenShiftClusters.Create(ctx, doc)
 	} else {
-		doc, err = f.db.OpenShiftClusters.Update(doc)
+		doc, err = f.db.OpenShiftClusters.Update(ctx, doc)
 	}
 	if err != nil {
 		return nil, err

@@ -43,7 +43,7 @@ type frontend struct {
 
 // Runnable represents a runnable object
 type Runnable interface {
-	Run(<-chan struct{}, chan<- struct{})
+	Run(context.Context, <-chan struct{}, chan<- struct{})
 }
 
 // NewFrontend returns a new runnable frontend
@@ -168,7 +168,7 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	s.Methods(http.MethodPut).HandlerFunc(f.putSubscription)
 }
 
-func (f *frontend) Run(stop <-chan struct{}, done chan<- struct{}) {
+func (f *frontend) Run(ctx context.Context, stop <-chan struct{}, done chan<- struct{}) {
 	defer recover.Panic(f.baseLog)
 
 	if stop != nil {
@@ -223,6 +223,7 @@ func (f *frontend) Run(stop <-chan struct{}, done chan<- struct{}) {
 		WriteTimeout: time.Minute,
 		IdleTimeout:  2 * time.Minute,
 		ErrorLog:     log.New(f.baseLog.Writer(), "", 0),
+		BaseContext:  func(net.Listener) context.Context { return ctx },
 	}
 
 	err := f.s.Serve(f.l)

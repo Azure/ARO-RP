@@ -93,7 +93,7 @@ func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClu
 func (i *Installer) Install(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) error {
 	var err error
 
-	i.doc, err = i.db.Patch(i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+	i.doc, err = i.db.Patch(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		if doc.OpenShiftCluster.Properties.Install == nil {
 			doc.OpenShiftCluster.Properties.Install = &api.Install{}
 		}
@@ -124,7 +124,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 				return err
 			}
 
-			i.doc, err = i.db.Patch(i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+			i.doc, err = i.db.Patch(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 				doc.OpenShiftCluster.Properties.Install = nil
 				return nil
 			})
@@ -134,7 +134,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			return fmt.Errorf("unrecognised phase %s", i.doc.OpenShiftCluster.Properties.Install.Phase)
 		}
 
-		i.doc, err = i.db.Patch(i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		i.doc, err = i.db.Patch(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 			doc.OpenShiftCluster.Properties.Install.Phase++
 			return nil
 		})
