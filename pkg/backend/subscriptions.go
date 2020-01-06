@@ -37,22 +37,32 @@ func (sb *subscriptionBackend) try(ctx context.Context) (bool, error) {
 
 	log.Print("dequeued")
 	atomic.AddInt32(&sb.workers, 1)
+	sb.m.EmitGauge("backend.subscriptions.workers.count", int64(atomic.LoadInt32(&sb.workers)), nil)
+
 	go func() {
 		defer recover.Panic(log)
 
+		t := time.Now()
+
 		defer func() {
 			atomic.AddInt32(&sb.workers, -1)
+			sb.m.EmitGauge("backend.subscriptions.workers.count", int64(atomic.LoadInt32(&sb.workers)), nil)
 			sb.cond.Signal()
-		}()
 
-		t := time.Now()
+			sb.m.EmitFloat("backend.subscriptions.duration", time.Now().Sub(t).Seconds(), map[string]string{
+				"state": string(doc.Subscription.State),
+			})
+
+			sb.m.EmitGauge("backend.subscriptions.count", 1, map[string]string{})
+
+			log.WithField("duration", time.Now().Sub(t).Seconds()).Print("done")
+		}()
 
 		err := sb.handle(context.Background(), log, doc)
 		if err != nil {
 			log.Error(err)
 		}
 
-		log.WithField("durationMs", int(time.Now().Sub(t)/time.Millisecond)).Print("done")
 	}()
 
 	return true, nil
