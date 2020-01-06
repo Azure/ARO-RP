@@ -13,6 +13,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
@@ -25,6 +26,7 @@ type backend struct {
 	baseLog *logrus.Entry
 	env     env.Interface
 	db      *database.Database
+	m       metrics.Interface
 
 	mu       sync.Mutex
 	cond     *sync.Cond
@@ -41,11 +43,12 @@ type Runnable interface {
 }
 
 // NewBackend returns a new runnable backend
-func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, db *database.Database) (Runnable, error) {
+func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, db *database.Database, m metrics.Interface) (Runnable, error) {
 	b := &backend{
 		baseLog: log,
 		env:     env,
 		db:      db,
+		m:       m,
 	}
 
 	b.cond = sync.NewCond(&b.mu)

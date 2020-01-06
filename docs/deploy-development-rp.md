@@ -135,3 +135,10 @@
   ```
   hack/ssh.sh [aro-master-{0,1,2}]
   ```
+
+### Metrics
+
+To run fake metrics socket:
+```
+nc -U -l /tmp/mdm_statsd.socket
+```

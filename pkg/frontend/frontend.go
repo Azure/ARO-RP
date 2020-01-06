@@ -20,6 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
@@ -34,6 +35,7 @@ type frontend struct {
 	env     env.Interface
 	db      *database.Database
 	apis    map[string]*api.Version
+	m       metrics.Interface
 
 	l net.Listener
 	s *http.Server
@@ -47,7 +49,7 @@ type Runnable interface {
 }
 
 // NewFrontend returns a new runnable frontend
-func NewFrontend(ctx context.Context, baseLog *logrus.Entry, env env.Interface, db *database.Database, apis map[string]*api.Version) (Runnable, error) {
+func NewFrontend(ctx context.Context, baseLog *logrus.Entry, env env.Interface, db *database.Database, apis map[string]*api.Version, m metrics.Interface) (Runnable, error) {
 	var err error
 
 	f := &frontend{
@@ -55,12 +57,15 @@ func NewFrontend(ctx context.Context, baseLog *logrus.Entry, env env.Interface, 
 		env:     env,
 		db:      db,
 		apis:    apis,
+		m:       m,
 	}
 
 	l, err := f.env.Listen()
 	if err != nil {
 		return nil, err
 	}
+
+	m.EmitFloat("dummy", float64(5))
 
 	key, certs, err := f.env.GetSecret(ctx, "rp-server")
 	if err != nil {
@@ -113,59 +118,59 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 		Queries("api-version", "{api-version}").
 		Subrouter()
 
-	s.Methods(http.MethodDelete).HandlerFunc(f.deleteOpenShiftCluster)
-	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftCluster)
-	s.Methods(http.MethodPatch).HandlerFunc(f.putOrPatchOpenShiftCluster)
-	s.Methods(http.MethodPut).HandlerFunc(f.putOrPatchOpenShiftCluster)
+	s.Methods(http.MethodDelete).HandlerFunc(f.deleteOpenShiftCluster).Name("deleteOpenShiftCluster")
+	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftCluster).Name("getOpenShiftCluster")
+	s.Methods(http.MethodPatch).HandlerFunc(f.putOrPatchOpenShiftCluster).Name("putOrPatchOpenShiftCluster")
+	s.Methods(http.MethodPut).HandlerFunc(f.putOrPatchOpenShiftCluster).Name("putOrPatchOpenShiftCluster")
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}").
 		Queries("api-version", "{api-version}").
 		Subrouter()
 
-	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftClusters)
+	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftClusters).Name("getOpenShiftClusters")
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/{resourceType}").
 		Queries("api-version", "{api-version}").
 		Subrouter()
 
-	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftClusters)
+	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftClusters).Name("getOpenShiftClusters")
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/locations/{location}/operations/{operationId}").
 		Queries("api-version", "{api-version}").
 		Subrouter()
 
-	s.Methods(http.MethodGet).HandlerFunc(f.getAsyncOperation)
+	s.Methods(http.MethodGet).HandlerFunc(f.getAsyncOperation).Name("getAsyncOperation")
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/locations/{location}/operationresults/{operationId}").
 		Queries("api-version", "{api-version}").
 		Subrouter()
 
-	s.Methods(http.MethodGet).HandlerFunc(f.getAsyncOperationResult)
+	s.Methods(http.MethodGet).HandlerFunc(f.getAsyncOperationResult).Name("getAsyncOperationResult")
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/listCredentials").
 		Queries("api-version", "{api-version}").
 		Subrouter()
 
-	s.Methods(http.MethodPost).HandlerFunc(f.postOpenShiftClusterCredentials)
+	s.Methods(http.MethodPost).HandlerFunc(f.postOpenShiftClusterCredentials).Name("postOpenShiftClusterCredentials")
 
 	s = r.
 		Path("/providers/{resourceProviderNamespace}/operations").
 		Queries("api-version", "{api-version}").
 		Subrouter()
 
-	s.Methods(http.MethodGet).HandlerFunc(f.getOperations)
+	s.Methods(http.MethodGet).HandlerFunc(f.getOperations).Name("getOperations")
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}").
 		Queries("api-version", "2.0").
 		Subrouter()
 
-	s.Methods(http.MethodPut).HandlerFunc(f.putSubscription)
+	s.Methods(http.MethodPut).HandlerFunc(f.putSubscription).Name("putSubscription")
 }
 
 func (f *frontend) Run(ctx context.Context, stop <-chan struct{}, done chan<- struct{}) {
@@ -200,6 +205,7 @@ func (f *frontend) Run(ctx context.Context, stop <-chan struct{}, done chan<- st
 
 	r := mux.NewRouter()
 	r.Use(middleware.Log(f.baseLog))
+	r.Use(middleware.Metric(f.m))
 	r.Use(middleware.Panic)
 	r.Use(middleware.Headers(f.env))
 	r.Use(middleware.Validate(f.env, f.apis))
