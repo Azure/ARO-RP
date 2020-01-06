@@ -17,6 +17,7 @@ client: generate
 	sha256sum swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/preview/2019-12-31-preview/redhatopenshift.json >.sha256sum
 
 	sudo docker run \
+		--rm \
 		-v $(PWD)/pkg/client:/github.com/Azure/ARO-RP/pkg/client:z \
 		-v $(PWD)/swagger:/swagger:z \
 		azuresdk/autorest \
@@ -27,6 +28,7 @@ client: generate
 		--output-folder=/github.com/Azure/ARO-RP/pkg/client/services/preview/redhatopenshift/mgmt/2019-12-31-preview/redhatopenshift
 
 	sudo docker run \
+		--rm \
 		-v $(PWD)/python/client:/python/client:z \
 		-v $(PWD)/swagger:/swagger:z \
 		azuresdk/autorest \

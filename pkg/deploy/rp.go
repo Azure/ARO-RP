@@ -257,6 +257,7 @@ WantedBy=multi-user.target
 EOF
 
 systemctl enable arorp.service
+systemctl enable chronyd.service
 
 (sleep 30; reboot) &
 `))
