@@ -13,14 +13,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics"
 )
 
-type frontendMetric struct {
-	Start      time.Time
-	Verb       string
-	RouteName  string
-	ApiVersion string
-	Code       string
-}
-
 // Metric records request metrics for tracking
 func Metric(m metrics.Interface) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
@@ -38,14 +30,23 @@ func Metric(m metrics.Interface) func(http.Handler) http.Handler {
 
 			h.ServeHTTP(w, r)
 
-			// TODO: Request count metric
+			// request count
+			defer m.EmitGauge("frontend.count",
+				1, map[string]string{
+					"verb":        r.Method,
+					"api-version": vars["api-version"],
+					"code":        strconv.Itoa(w.(*logResponseWriter).statusCode),
+					"route":       routeName,
+				})
 
+			// request duration
 			defer m.EmitFloat("frontend.duration",
-				float64(time.Now().Sub(t)/time.Millisecond),
-				"verb", r.Method,
-				"api-version", vars["api-version"],
-				"code", strconv.Itoa(w.(*logResponseWriter).statusCode),
-				"route", routeName)
+				float64(time.Now().Sub(t)/time.Millisecond), map[string]string{
+					"verb":        r.Method,
+					"api-version": vars["api-version"],
+					"code":        strconv.Itoa(w.(*logResponseWriter).statusCode),
+					"route":       routeName,
+				})
 
 		})
 	}

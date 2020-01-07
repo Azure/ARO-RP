@@ -65,8 +65,6 @@ func NewFrontend(ctx context.Context, baseLog *logrus.Entry, env env.Interface, 
 		return nil, err
 	}
 
-	m.EmitFloat("dummy", float64(5))
-
 	key, certs, err := f.env.GetSecret(ctx, "rp-server")
 	if err != nil {
 		return nil, err

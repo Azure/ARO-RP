@@ -19,7 +19,7 @@ func TestMarshalFloat(t *testing.T) {
 		TS:         time.Unix(0, 0),
 		ValueFloat: to.Float64Ptr(1.0),
 	}
-	b, err := f.Marshal()
+	b, err := f.MarshalStatsd()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +38,7 @@ func TestMarshalGauge(t *testing.T) {
 		TS:         time.Unix(0, 0),
 		ValueGauge: to.Int64Ptr(42),
 	}
-	b, err := g.Marshal()
+	b, err := g.MarshalStatsd()
 	if err != nil {
 		t.Fatal(err)
 	}

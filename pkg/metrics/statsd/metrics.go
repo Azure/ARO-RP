@@ -22,7 +22,7 @@ type metric struct {
 	ValueFloat *float64
 }
 
-// MarshalJSON marshals a Float into JSON format.
+// MarshalJSON marshals a metric into JSON format.
 func (f *metric) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Metric    string
@@ -39,8 +39,8 @@ func (f *metric) MarshalJSON() ([]byte, error) {
 	})
 }
 
-// Marshal a Float into its statsd format.  Call this instead of MarshalJSON().
-func (f *metric) Marshal() ([]byte, error) {
+// Marshal a metric into its statsd format. Call this instead of MarshalJSON().
+func (f *metric) MarshalStatsd() ([]byte, error) {
 	buf := &bytes.Buffer{}
 
 	e := json.NewEncoder(buf)

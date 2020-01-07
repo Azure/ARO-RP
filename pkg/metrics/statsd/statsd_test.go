@@ -45,9 +45,12 @@ func (c *testConn) Close() error {
 func newTestClient() (*Statsd, error) {
 	return &Statsd{
 		conn:      &testConn{},
-		dims:      map[string]string{"key": "value"},
 		account:   "test_account",
 		namespace: "test_namespace",
+		now: func() time.Time {
+			time, _ := time.Parse("", "0001-01-01T00:00:00.000")
+			return time
+		},
 	}, nil
 }
 
@@ -60,11 +63,6 @@ func getOutput(c *Statsd) string {
 func testOutput(t *testing.T, want string, f func(*Statsd)) {
 	c, _ := newTestClient()
 	defer c.Close()
-	// use fake time
-	Now = func() time.Time {
-		time, _ := time.Parse("", "0001-01-01T00:00:00.000")
-		return time
-	}
 
 	f(c)
 	c.Close()
@@ -78,12 +76,12 @@ func testOutput(t *testing.T, want string, f func(*Statsd)) {
 // TODO: Refactor these to smaller test
 func TestEmitFloat(t *testing.T) {
 	testOutput(t, fmt.Sprintf(testOutputF, float64(5)), func(c *Statsd) {
-		c.EmitFloat(testKey, 5)
+		c.EmitFloat(testKey, 5, map[string]string{"key": "value"})
 	})
 }
 
 func TestEmitGauge(t *testing.T) {
 	testOutput(t, fmt.Sprintf(testOutputG, 5), func(c *Statsd) {
-		c.EmitGauge(testKey, 5)
+		c.EmitGauge(testKey, 5, map[string]string{"key": "value"})
 	})
 }
