@@ -14,7 +14,7 @@
         "fpServicePrincipalId": {
             "type": "string"
         },
-        "keyvaultName": {
+        "keyvaultPrefix": {
             "type": "string"
         },
         "rpServicePrincipalId": {
@@ -70,9 +70,12 @@
                     }
                 ]
             },
-            "name": "[parameters('keyvaultName')]",
+            "name": "[concat(parameters('keyvaultPrefix'), '-service')]",
             "type": "Microsoft.KeyVault/vaults",
             "location": "[resourceGroup().location]",
+            "tags": {
+                "vault": "service"
+            },
             "apiVersion": "2016-10-01"
         },
         {

@@ -237,7 +237,7 @@ locations.
    ADMIN_OBJECT_ID='$ADMIN_OBJECT_ID'
    COSMOSDB_ACCOUNT="\$RESOURCEGROUP"
    DOMAIN_NAME="\$RESOURCEGROUP"
-   KEYVAULT_NAME="\$RESOURCEGROUP"
+   KEYVAULT_PREFIX="\$RESOURCEGROUP"
    PARENT_DOMAIN_NAME='$PARENT_DOMAIN_NAME'
    PARENT_DOMAIN_RESOURCEGROUP='$PARENT_DOMAIN_RESOURCEGROUP'
    EOF
@@ -276,7 +276,7 @@ locations.
        "databaseAccountName=$COSMOSDB_ACCOUNT" \
        "domainName=$DOMAIN_NAME.$PARENT_DOMAIN_NAME" \
        "fpServicePrincipalId=$(az ad sp list --all --query "[?appId=='$AZURE_FP_CLIENT_ID'].objectId" -o tsv)" \
-       "keyvaultName=$KEYVAULT_NAME" \
+       "keyvaultPrefix=$KEYVAULT_PREFIX" \
        "rpServicePrincipalId=$(az ad sp list --all --query "[?appId=='$AZURE_CLIENT_ID'].objectId" -o tsv)" \
      >/dev/null
 
@@ -299,12 +299,12 @@ locations.
 
    ```
    az keyvault certificate import \
-     --vault-name "$KEYVAULT_NAME" \
+     --vault-name "$KEYVAULT_PREFIX-service" \
      --name rp-firstparty \
      --file secrets/firstparty-development.pem \
      >/dev/null
    az keyvault certificate import \
-     --vault-name "$KEYVAULT_NAME" \
+     --vault-name "$KEYVAULT_PREFIX-service" \
      --name rp-server \
      --file secrets/localhost.pem \
      >/dev/null
