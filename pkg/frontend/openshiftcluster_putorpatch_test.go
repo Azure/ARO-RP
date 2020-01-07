@@ -51,7 +51,7 @@ func expectAsyncOperationDocumentCreate(asyncOperations *mock_database.MockAsync
 		)
 }
 
-func TestPutOpenShiftCluster(t *testing.T) {
+func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 	ctx := context.Background()
 
 	apis := map[string]*api.Version{
@@ -95,6 +95,7 @@ func TestPutOpenShiftCluster(t *testing.T) {
 		name           string
 		resourceID     string
 		request        func(*v20191231preview.OpenShiftCluster)
+		isPatch        bool
 		mocks          func(*test, *mock_database.MockAsyncOperations, *mock_database.MockOpenShiftClusters)
 		wantStatusCode int
 		wantResponse   func(*test) *v20191231preview.OpenShiftCluster
@@ -159,8 +160,11 @@ func TestPutOpenShiftCluster(t *testing.T) {
 							ID:   tt.resourceID,
 							Name: "resourceName",
 							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+							Tags: map[string]string{"tag": "will-be-removed"},
 							Properties: api.Properties{
 								ProvisioningState: api.ProvisioningStateSucceeded,
+								IngressProfiles:   []api.IngressProfile{{Name: "will-be-removed"}},
+								WorkerProfiles:    []api.WorkerProfile{{Name: "will-be-removed"}},
 							},
 						},
 					}, nil)
@@ -212,9 +216,12 @@ func TestPutOpenShiftCluster(t *testing.T) {
 							ID:   tt.resourceID,
 							Name: "resourceName",
 							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+							Tags: map[string]string{"tag": "will-be-removed"},
 							Properties: api.Properties{
 								ProvisioningState:       api.ProvisioningStateFailed,
 								FailedProvisioningState: api.ProvisioningStateUpdating,
+								IngressProfiles:         []api.IngressProfile{{Name: "will-be-removed"}},
+								WorkerProfiles:          []api.WorkerProfile{{Name: "will-be-removed"}},
 							},
 						},
 					}, nil)
@@ -301,6 +308,187 @@ func TestPutOpenShiftCluster(t *testing.T) {
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      "400: RequestNotAllowed: : Request is not allowed on cluster whose deletion failed. Delete the cluster.",
 		},
+		{
+			name:       "patch a cluster from succeeded",
+			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName",
+			request: func(oc *v20191231preview.OpenShiftCluster) {
+				oc.Properties.ClusterDomain = "changed"
+				oc.Properties.IngressProfiles = []v20191231preview.IngressProfile{{Name: "changed"}}
+				oc.Properties.WorkerProfiles = []v20191231preview.WorkerProfile{{Name: "changed"}}
+			},
+			isPatch: true,
+			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters) {
+				openShiftClusters.EXPECT().
+					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
+					Return(&api.OpenShiftClusterDocument{
+						Key: strings.ToLower(tt.resourceID),
+						OpenShiftCluster: &api.OpenShiftCluster{
+							ID:   tt.resourceID,
+							Name: "resourceName",
+							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+							Tags: map[string]string{"tag": "will-be-kept"},
+							Properties: api.Properties{
+								ProvisioningState: api.ProvisioningStateSucceeded,
+								IngressProfiles:   []api.IngressProfile{{Name: "default"}},
+								WorkerProfiles:    []api.WorkerProfile{{Name: "default"}},
+							},
+						},
+					}, nil)
+
+				expectAsyncOperationDocumentCreate(asyncOperations, strings.ToLower(tt.resourceID), api.ProvisioningStateUpdating)
+
+				clusterdoc := &api.OpenShiftClusterDocument{
+					Key: strings.ToLower(tt.resourceID),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   tt.resourceID,
+						Name: "resourceName",
+						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+						Tags: map[string]string{"tag": "will-be-kept"},
+						Properties: api.Properties{
+							ProvisioningState: api.ProvisioningStateUpdating,
+							ClusterDomain:     "changed",
+							IngressProfiles:   []api.IngressProfile{{Name: "changed"}},
+							WorkerProfiles:    []api.WorkerProfile{{Name: "changed"}},
+						},
+					},
+				}
+
+				openShiftClusters.EXPECT().
+					Update(gomock.Any(), (*matcher.OpenShiftClusterDocument)(clusterdoc)).
+					Return(clusterdoc, nil)
+			},
+			wantStatusCode: http.StatusOK,
+			wantResponse: func(tt *test) *v20191231preview.OpenShiftCluster {
+				return &v20191231preview.OpenShiftCluster{
+					ID:   tt.resourceID,
+					Name: "resourceName",
+					Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+					Tags: map[string]string{"tag": "will-be-kept"},
+					Properties: v20191231preview.Properties{
+						ProvisioningState: v20191231preview.ProvisioningStateUpdating,
+						ClusterDomain:     "changed",
+						IngressProfiles:   []v20191231preview.IngressProfile{{Name: "changed"}},
+						WorkerProfiles:    []v20191231preview.WorkerProfile{{Name: "changed"}},
+					},
+				}
+			},
+		},
+		{
+			name:       "patch a cluster from failed during update",
+			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName",
+			request: func(oc *v20191231preview.OpenShiftCluster) {
+				oc.Properties.ClusterDomain = "changed"
+			},
+			isPatch: true,
+			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters) {
+				openShiftClusters.EXPECT().
+					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
+					Return(&api.OpenShiftClusterDocument{
+						Key: strings.ToLower(tt.resourceID),
+						OpenShiftCluster: &api.OpenShiftCluster{
+							ID:   tt.resourceID,
+							Name: "resourceName",
+							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+							Tags: map[string]string{"tag": "will-be-kept"},
+							Properties: api.Properties{
+								ProvisioningState:       api.ProvisioningStateFailed,
+								FailedProvisioningState: api.ProvisioningStateUpdating,
+								IngressProfiles:         []api.IngressProfile{{Name: "will-be-kept"}},
+								WorkerProfiles:          []api.WorkerProfile{{Name: "will-be-kept"}},
+							},
+						},
+					}, nil)
+
+				expectAsyncOperationDocumentCreate(asyncOperations, strings.ToLower(tt.resourceID), api.ProvisioningStateUpdating)
+
+				clusterdoc := &api.OpenShiftClusterDocument{
+					Key: strings.ToLower(tt.resourceID),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   tt.resourceID,
+						Name: "resourceName",
+						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+						Tags: map[string]string{"tag": "will-be-kept"},
+						Properties: api.Properties{
+							ProvisioningState: api.ProvisioningStateUpdating,
+							ClusterDomain:     "changed",
+							IngressProfiles:   []api.IngressProfile{{Name: "will-be-kept"}},
+							WorkerProfiles:    []api.WorkerProfile{{Name: "will-be-kept"}},
+						},
+					},
+				}
+
+				openShiftClusters.EXPECT().
+					Update(gomock.Any(), (*matcher.OpenShiftClusterDocument)(clusterdoc)).
+					Return(clusterdoc, nil)
+			},
+			wantStatusCode: http.StatusOK,
+			wantResponse: func(tt *test) *v20191231preview.OpenShiftCluster {
+				return &v20191231preview.OpenShiftCluster{
+					ID:   tt.resourceID,
+					Name: "resourceName",
+					Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+					Tags: map[string]string{"tag": "will-be-kept"},
+					Properties: v20191231preview.Properties{
+						ProvisioningState: v20191231preview.ProvisioningStateUpdating,
+						ClusterDomain:     "changed",
+						IngressProfiles:   []v20191231preview.IngressProfile{{Name: "will-be-kept"}},
+						WorkerProfiles:    []v20191231preview.WorkerProfile{{Name: "will-be-kept"}},
+					},
+				}
+			},
+		},
+		{
+			name:       "patch a cluster from failed during creation",
+			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName",
+			request: func(oc *v20191231preview.OpenShiftCluster) {
+				oc.Properties.ClusterDomain = "changed"
+			},
+			isPatch: true,
+			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters) {
+				openShiftClusters.EXPECT().
+					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
+					Return(&api.OpenShiftClusterDocument{
+						Key: strings.ToLower(tt.resourceID),
+						OpenShiftCluster: &api.OpenShiftCluster{
+							ID:   tt.resourceID,
+							Name: "resourceName",
+							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+							Properties: api.Properties{
+								ProvisioningState:       api.ProvisioningStateFailed,
+								FailedProvisioningState: api.ProvisioningStateCreating,
+							},
+						},
+					}, nil)
+			},
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      "400: RequestNotAllowed: : Request is not allowed on cluster whose creation failed. Delete the cluster.",
+		},
+		{
+			name:       "patch a cluster from failed during deletion",
+			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName",
+			request: func(oc *v20191231preview.OpenShiftCluster) {
+				oc.Properties.ClusterDomain = "changed"
+			},
+			isPatch: true,
+			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters) {
+				openShiftClusters.EXPECT().
+					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
+					Return(&api.OpenShiftClusterDocument{
+						Key: strings.ToLower(tt.resourceID),
+						OpenShiftCluster: &api.OpenShiftCluster{
+							ID:   tt.resourceID,
+							Name: "resourceName",
+							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+							Properties: api.Properties{
+								ProvisioningState:       api.ProvisioningStateFailed,
+								FailedProvisioningState: api.ProvisioningStateDeleting,
+							},
+						},
+					}, nil)
+			},
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      "400: RequestNotAllowed: : Request is not allowed on cluster whose deletion failed. Delete the cluster.",
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			defer cli.CloseIdleConnections()
@@ -354,7 +542,11 @@ func TestPutOpenShiftCluster(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			req, err := http.NewRequest("PUT", "https://server"+tt.resourceID+"?api-version=2019-12-31-preview", buf)
+			method := http.MethodPut
+			if tt.isPatch {
+				method = http.MethodPatch
+			}
+			req, err := http.NewRequest(method, "https://server"+tt.resourceID+"?api-version=2019-12-31-preview", buf)
 			if err != nil {
 				t.Fatal(err)
 			}

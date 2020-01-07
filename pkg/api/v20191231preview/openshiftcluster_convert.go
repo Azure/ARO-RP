@@ -117,42 +117,28 @@ func (c *openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShi
 	out.Properties.NetworkProfile.ServiceCIDR = oc.Properties.NetworkProfile.ServiceCIDR
 	out.Properties.MasterProfile.VMSize = api.VMSize(oc.Properties.MasterProfile.VMSize)
 	out.Properties.MasterProfile.SubnetID = oc.Properties.MasterProfile.SubnetID
-	for _, p := range oc.Properties.WorkerProfiles {
-		var outp *api.WorkerProfile
-		for i, pp := range out.Properties.WorkerProfiles {
-			if pp.Name == p.Name {
-				outp = &out.Properties.WorkerProfiles[i]
-				break
-			}
+	out.Properties.WorkerProfiles = nil
+	if oc.Properties.WorkerProfiles != nil {
+		out.Properties.WorkerProfiles = make([]api.WorkerProfile, len(oc.Properties.WorkerProfiles))
+		for i := range oc.Properties.WorkerProfiles {
+			out.Properties.WorkerProfiles[i].Name = oc.Properties.WorkerProfiles[i].Name
+			out.Properties.WorkerProfiles[i].VMSize = api.VMSize(oc.Properties.WorkerProfiles[i].VMSize)
+			out.Properties.WorkerProfiles[i].DiskSizeGB = oc.Properties.WorkerProfiles[i].DiskSizeGB
+			out.Properties.WorkerProfiles[i].SubnetID = oc.Properties.WorkerProfiles[i].SubnetID
+			out.Properties.WorkerProfiles[i].Count = oc.Properties.WorkerProfiles[i].Count
 		}
-		if outp == nil {
-			out.Properties.WorkerProfiles = append(out.Properties.WorkerProfiles, api.WorkerProfile{})
-			outp = &out.Properties.WorkerProfiles[len(out.Properties.WorkerProfiles)-1]
-		}
-		outp.Name = p.Name
-		outp.VMSize = api.VMSize(p.VMSize)
-		outp.DiskSizeGB = p.DiskSizeGB
-		outp.SubnetID = p.SubnetID
-		outp.Count = p.Count
 	}
 	out.Properties.APIServerProfile.Visibility = api.Visibility(oc.Properties.APIServerProfile.Visibility)
 	out.Properties.APIServerProfile.URL = oc.Properties.APIServerProfile.URL
 	out.Properties.APIServerProfile.IP = oc.Properties.APIServerProfile.IP
-	for _, p := range oc.Properties.IngressProfiles {
-		var outp *api.IngressProfile
-		for i, pp := range out.Properties.IngressProfiles {
-			if pp.Name == p.Name {
-				outp = &out.Properties.IngressProfiles[i]
-				break
-			}
+	out.Properties.IngressProfiles = nil
+	if oc.Properties.IngressProfiles != nil {
+		out.Properties.IngressProfiles = make([]api.IngressProfile, len(oc.Properties.IngressProfiles))
+		for i := range oc.Properties.IngressProfiles {
+			out.Properties.IngressProfiles[i].Name = oc.Properties.IngressProfiles[i].Name
+			out.Properties.IngressProfiles[i].Visibility = api.Visibility(oc.Properties.IngressProfiles[i].Visibility)
+			out.Properties.IngressProfiles[i].IP = oc.Properties.IngressProfiles[i].IP
 		}
-		if outp == nil {
-			out.Properties.IngressProfiles = append(out.Properties.IngressProfiles, api.IngressProfile{})
-			outp = &out.Properties.IngressProfiles[len(out.Properties.IngressProfiles)-1]
-		}
-		outp.Name = p.Name
-		outp.Visibility = api.Visibility(p.Visibility)
-		outp.IP = p.IP
 	}
 	out.Properties.ConsoleURL = oc.Properties.ConsoleURL
 }
