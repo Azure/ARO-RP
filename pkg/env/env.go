@@ -22,6 +22,7 @@ type Interface interface {
 	clientauthorizer.ClientAuthorizer
 	instancemetadata.InstanceMetadata
 
+	ClustersKeyvaultURI() string
 	CosmosDB() (string, string)
 	DatabaseName() string
 	DialContext(context.Context, string, string) (net.Conn, error)

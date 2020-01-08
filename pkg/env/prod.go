@@ -36,6 +36,7 @@ type prod struct {
 
 	keyvault basekeyvault.BaseClient
 
+	clustersKeyvaultURI      string
 	cosmosDBAccountName      string
 	cosmosDBPrimaryMasterKey string
 	domain                   string
@@ -83,7 +84,7 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 		return nil, err
 	}
 
-	err = p.populateServiceVaultURI(ctx, rpAuthorizer)
+	err = p.populateVaultURIs(ctx, rpAuthorizer)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +150,7 @@ func (p *prod) populateDomain(ctx context.Context, rpAuthorizer autorest.Authori
 	return nil
 }
 
-func (p *prod) populateServiceVaultURI(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
+func (p *prod) populateVaultURIs(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
 	vaults := keyvault.NewVaultsClient(p.SubscriptionID(), rpAuthorizer)
 
 	vs, err := vaults.ListByResourceGroup(ctx, p.ResourceGroup(), nil)
@@ -158,13 +159,25 @@ func (p *prod) populateServiceVaultURI(ctx context.Context, rpAuthorizer autores
 	}
 
 	for _, v := range vs {
-		if v.Tags["vault"] != nil && *v.Tags["vault"] == "service" {
-			p.serviceKeyvaultURI = *v.Properties.VaultURI
-			return nil
+		if v.Tags["vault"] != nil {
+			switch *v.Tags["vault"] {
+			case "clusters":
+				p.clustersKeyvaultURI = *v.Properties.VaultURI
+			case "service":
+				p.serviceKeyvaultURI = *v.Properties.VaultURI
+			}
 		}
 	}
 
-	return fmt.Errorf("service vault not found")
+	if p.clustersKeyvaultURI == "" {
+		return fmt.Errorf("clusters key vault not found")
+	}
+
+	if p.serviceKeyvaultURI == "" {
+		return fmt.Errorf("service key vault not found")
+	}
+
+	return nil
 }
 
 func (p *prod) populateVnet(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
@@ -212,6 +225,10 @@ func (p *prod) populateZones(ctx context.Context, rpAuthorizer autorest.Authoriz
 	}
 
 	return nil
+}
+
+func (p *prod) ClustersKeyvaultURI() string {
+	return p.clustersKeyvaultURI
 }
 
 func (p *prod) CosmosDB() (string, string) {

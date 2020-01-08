@@ -36,6 +36,23 @@
                     "family": "A",
                     "name": "standard"
                 },
+                "accessPolicies": []
+            },
+            "name": "[concat(parameters('keyvaultPrefix'), '-clusters')]",
+            "type": "Microsoft.KeyVault/vaults",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "vault": "clusters"
+            },
+            "apiVersion": "2016-10-01"
+        },
+        {
+            "properties": {
+                "tenantId": "[subscription().tenantId]",
+                "sku": {
+                    "family": "A",
+                    "name": "standard"
+                },
                 "accessPolicies": [
                     {
                         "tenantId": "[subscription().tenantId]",
@@ -51,20 +68,10 @@
                         "objectId": "[parameters('adminObjectId')]",
                         "permissions": {
                             "certificates": [
-                                "create",
                                 "delete",
-                                "deleteissuers",
                                 "get",
-                                "getissuers",
                                 "import",
-                                "list",
-                                "listissuers",
-                                "managecontacts",
-                                "manageissuers",
-                                "purge",
-                                "recover",
-                                "setissuers",
-                                "update"
+                                "list"
                             ]
                         }
                     }

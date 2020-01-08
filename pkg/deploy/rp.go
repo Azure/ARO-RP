@@ -462,6 +462,18 @@ func (g *generator) zone() *arm.Resource {
 	}
 }
 
+func (g *generator) clustersKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyEntry {
+	return []mgmtkeyvault.AccessPolicyEntry{
+		// TODO: uncomment when there are permissions we want to grant
+		/*
+			{
+				TenantID: &tenantUUIDHack,
+				ObjectID: to.StringPtr("[parameters('fpServicePrincipalId')]"),
+			},
+		*/
+	}
+}
+
 func (g *generator) serviceKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyEntry {
 	return []mgmtkeyvault.AccessPolicyEntry{
 		{
@@ -473,6 +485,42 @@ func (g *generator) serviceKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyE
 				},
 			},
 		},
+	}
+}
+
+func (g *generator) clustersKeyvault() *arm.Resource {
+	vault := &mgmtkeyvault.Vault{
+		Properties: &mgmtkeyvault.VaultProperties{
+			TenantID: &tenantUUIDHack,
+			Sku: &mgmtkeyvault.Sku{
+				Name:   mgmtkeyvault.Standard,
+				Family: to.StringPtr("A"),
+			},
+			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{},
+		},
+		Name:     to.StringPtr("[concat(parameters('keyvaultPrefix'), '-clusters')]"),
+		Type:     to.StringPtr("Microsoft.KeyVault/vaults"),
+		Location: to.StringPtr("[resourceGroup().location]"),
+		Tags: map[string]*string{
+			"vault": to.StringPtr("clusters"),
+		},
+	}
+
+	if !g.production {
+		// TODO: uncomment when there are permissions we want to grant
+		/*
+			*vault.Properties.AccessPolicies = append(g.clustersKeyvaultAccessPolicies(),
+				mgmtkeyvault.AccessPolicyEntry{
+					TenantID: &tenantUUIDHack,
+					ObjectID: to.StringPtr("[parameters('adminObjectId')]"),
+				},
+			)
+		*/
+	}
+
+	return &arm.Resource{
+		Resource:   vault,
+		APIVersion: apiVersions["keyvault"],
 	}
 }
 
@@ -501,20 +549,10 @@ func (g *generator) serviceKeyvault() *arm.Resource {
 				ObjectID: to.StringPtr("[parameters('adminObjectId')]"),
 				Permissions: &mgmtkeyvault.Permissions{
 					Certificates: &[]mgmtkeyvault.CertificatePermissions{
-						mgmtkeyvault.Create,
 						mgmtkeyvault.Delete,
-						mgmtkeyvault.Deleteissuers,
 						mgmtkeyvault.Get,
-						mgmtkeyvault.Getissuers,
 						mgmtkeyvault.Import,
 						mgmtkeyvault.List,
-						mgmtkeyvault.Listissuers,
-						mgmtkeyvault.Managecontacts,
-						mgmtkeyvault.Manageissuers,
-						mgmtkeyvault.Purge,
-						mgmtkeyvault.Recover,
-						mgmtkeyvault.Setissuers,
-						mgmtkeyvault.Update,
 					},
 				},
 			},
@@ -790,7 +828,8 @@ func (g *generator) template() *arm.Template {
 
 	if g.production {
 		t.Variables = map[string]interface{}{
-			"serviceKeyvaultAccessPolicies": g.serviceKeyvaultAccessPolicies(),
+			"clustersKeyvaultAccessPolicies": g.clustersKeyvaultAccessPolicies(),
+			"serviceKeyvaultAccessPolicies":  g.serviceKeyvaultAccessPolicies(),
 		}
 	}
 
@@ -843,7 +882,8 @@ func (g *generator) template() *arm.Template {
 	if g.production {
 		t.Resources = append(t.Resources, g.pip(), g.lb(), g.vmss())
 	}
-	t.Resources = append(t.Resources, g.zone(), g.serviceKeyvault(), g.vnet())
+	// clustersKeyvault must preceed serviceKeyvault due to terrible bytes.Replace below
+	t.Resources = append(t.Resources, g.zone(), g.clustersKeyvault(), g.serviceKeyvault(), g.vnet())
 	if g.production {
 		t.Resources = append(t.Resources, g.cosmosdb("'ARO'")...)
 	} else {
@@ -875,7 +915,10 @@ func GenerateRPTemplates() error {
 
 		// :-(
 		b = bytes.ReplaceAll(b, []byte(tenantIDHack), []byte("[subscription().tenantId]"))
-		b = bytes.ReplaceAll(b, []byte(`"accessPolicies": []`), []byte(`"accessPolicies": "[concat(variables('serviceKeyvaultAccessPolicies'), parameters('extraKeyvaultAccessPolicies'))]"`))
+		if i.g.production {
+			b = bytes.Replace(b, []byte(`"accessPolicies": []`), []byte(`"accessPolicies": "[concat(variables('clustersKeyvaultAccessPolicies'), parameters('extraKeyvaultAccessPolicies'))]"`), 1)
+			b = bytes.Replace(b, []byte(`"accessPolicies": []`), []byte(`"accessPolicies": "[concat(variables('serviceKeyvaultAccessPolicies'), parameters('extraKeyvaultAccessPolicies'))]"`), 1)
+		}
 
 		b = append(b, byte('\n'))
 
