@@ -13,6 +13,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/resources"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
+	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/privateendpoint"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
@@ -23,12 +24,12 @@ type Manager struct {
 	db           database.OpenShiftClusters
 	fpAuthorizer autorest.Authorizer
 
-	privateendpoint privateendpoint.Manager
-	dns             dns.Manager
-
 	groups resources.GroupsClient
 
-	subnets subnet.Manager
+	dns             dns.Manager
+	keyvault        keyvault.Manager
+	privateendpoint privateendpoint.Manager
+	subnets         subnet.Manager
 
 	doc *api.OpenShiftClusterDocument
 }
@@ -44,6 +45,11 @@ func NewManager(log *logrus.Entry, env env.Interface, db database.OpenShiftClust
 		return nil, err
 	}
 
+	localFPKVAuthorizer, err := env.FPAuthorizer(env.TenantID(), azure.PublicCloud.ResourceIdentifiers.KeyVault)
+	if err != nil {
+		return nil, err
+	}
+
 	fpAuthorizer, err := env.FPAuthorizer(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
@@ -55,11 +61,12 @@ func NewManager(log *logrus.Entry, env env.Interface, db database.OpenShiftClust
 		db:           db,
 		fpAuthorizer: fpAuthorizer,
 
-		privateendpoint: privateendpoint.NewManager(env, localFPAuthorizer),
-		dns:             dns.NewManager(env, localFPAuthorizer),
+		groups: resources.NewGroupsClient(r.SubscriptionID, fpAuthorizer),
 
-		subnets: subnet.NewManager(r.SubscriptionID, fpAuthorizer),
-		groups:  resources.NewGroupsClient(r.SubscriptionID, fpAuthorizer),
+		dns:             dns.NewManager(env, localFPAuthorizer),
+		keyvault:        keyvault.NewManager(env, localFPKVAuthorizer),
+		privateendpoint: privateendpoint.NewManager(env, localFPAuthorizer),
+		subnets:         subnet.NewManager(r.SubscriptionID, fpAuthorizer),
 
 		doc: doc,
 	}

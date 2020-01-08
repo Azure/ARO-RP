@@ -28,6 +28,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/resources"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
+	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/privateendpoint"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
@@ -41,6 +42,7 @@ type Installer struct {
 
 	privateendpoint privateendpoint.Manager
 	dns             dns.Manager
+	keyvault        keyvault.Manager
 
 	disks             compute.DisksClient
 	virtualmachines   compute.VirtualMachinesClient
@@ -64,6 +66,11 @@ func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClu
 		return nil, err
 	}
 
+	localFPKVAuthorizer, err := env.FPAuthorizer(env.TenantID(), azure.PublicCloud.ResourceIdentifiers.KeyVault)
+	if err != nil {
+		return nil, err
+	}
+
 	fpAuthorizer, err := env.FPAuthorizer(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
@@ -78,6 +85,7 @@ func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClu
 
 		privateendpoint: privateendpoint.NewManager(env, localFPAuthorizer),
 		dns:             dns.NewManager(env, localFPAuthorizer),
+		keyvault:        keyvault.NewManager(env, localFPKVAuthorizer),
 
 		disks:             compute.NewDisksClient(r.SubscriptionID, fpAuthorizer),
 		virtualmachines:   compute.NewVirtualMachinesClient(r.SubscriptionID, fpAuthorizer),
