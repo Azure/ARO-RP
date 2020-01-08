@@ -6,6 +6,8 @@ package statsd
 // statsd implementation for https://genevamondocs.azurewebsites.net/collect/references/statsdref.html
 import (
 	"context"
+	"fmt"
+	"io"
 	"net"
 	"os"
 	"sync"
@@ -19,9 +21,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 )
 
-var (
-	defaultSocket = "mdm_statsd.socket"
-)
+const defaultSocket = "mdm_statsd.socket"
 
 // Statsd defines internal statsd client
 // It should be cloned, but not modified
@@ -29,7 +29,7 @@ type Statsd struct {
 	account   string
 	namespace string
 
-	conn net.Conn
+	conn io.WriteCloser
 	env  env.Interface
 	mu   sync.Mutex
 
@@ -60,29 +60,32 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface) (metrics.In
 }
 
 // Close closes the connection
-func (c *Statsd) Close() {
-	c.conn.Close()
+func (c *Statsd) Close() error {
+	return c.conn.Close()
 }
 
 // EmitFloat records float information
 func (c *Statsd) EmitFloat(stat string, value float64, dims map[string]string) error {
-	return c.emitMetric(metric{
+	return c.emitMetric(&metric{
 		Metric:     stat,
 		Dims:       dims,
-		ValueFloat: to.Float64Ptr(float64(value)),
+		ValueFloat: to.Float64Ptr(value),
 	})
 }
 
 // EmitGauge records gauge information
 func (c *Statsd) EmitGauge(stat string, value int64, dims map[string]string) error {
-	return c.emitMetric(metric{
+	return c.emitMetric(&metric{
 		Metric:     stat,
 		Dims:       dims,
-		ValueGauge: to.Int64Ptr(int64(value)),
+		ValueGauge: to.Int64Ptr(value),
 	})
 }
 
-func (c *Statsd) emitMetric(m metric) error {
+func (c *Statsd) emitMetric(m *metric) error {
+	if m == nil {
+		return fmt.Errorf("metric can't be nil")
+	}
 	m.Account = c.account
 	m.Namespace = c.namespace
 	m.TS = c.now()
@@ -91,7 +94,7 @@ func (c *Statsd) emitMetric(m metric) error {
 	if err != nil {
 		return err
 	}
-	_, err = c.Send(b)
+	_, err = c.Write(b)
 	if err != nil {
 		return err
 	}
@@ -99,7 +102,7 @@ func (c *Statsd) emitMetric(m metric) error {
 }
 
 // Send data to statsd daemon
-func (c *Statsd) Send(data []byte) (int, error) {
+func (c *Statsd) Write(data []byte) (int, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return c.conn.Write(data)

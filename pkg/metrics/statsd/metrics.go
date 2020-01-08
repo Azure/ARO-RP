@@ -39,7 +39,7 @@ func (f *metric) MarshalJSON() ([]byte, error) {
 	})
 }
 
-// Marshal a metric into its statsd format. Call this instead of MarshalJSON().
+// MarshalStatsd a metric into its statsd format. Call this instead of MarshalJSON().
 func (f *metric) MarshalStatsd() ([]byte, error) {
 	buf := &bytes.Buffer{}
 

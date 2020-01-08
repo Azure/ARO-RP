@@ -256,7 +256,9 @@ Requires=docker.service
 EnvironmentFile=/etc/sysconfig/arorp
 ExecStartPre=-/usr/bin/docker rm -f %n
 ExecStartPre=/usr/bin/docker pull \$RP_IMAGE
-ExecStart=/usr/bin/docker run --rm --name %n -p 443:8443 -e PULL_SECRET \$RP_IMAGE rp
+ExecStart=/usr/bin/docker run --rm --name %n -p 443:8443 \
+							  -e METRICS_ACCOUNT -e METRICS_NAMESPACE \
+							  -e PULL_SECRET \$RP_IMAGE rp
 ExecStop=/usr/bin/docker stop -t 90 %n
 Restart=always
 

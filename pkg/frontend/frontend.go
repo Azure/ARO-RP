@@ -203,7 +203,7 @@ func (f *frontend) Run(ctx context.Context, stop <-chan struct{}, done chan<- st
 
 	r := mux.NewRouter()
 	r.Use(middleware.Log(f.baseLog))
-	r.Use(middleware.Metric(f.m))
+	r.Use(middleware.Metrics(f.m))
 	r.Use(middleware.Panic)
 	r.Use(middleware.Headers(f.env))
 	r.Use(middleware.Validate(f.env, f.apis))

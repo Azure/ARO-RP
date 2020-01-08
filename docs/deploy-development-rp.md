@@ -140,5 +140,5 @@
 
 To run fake metrics socket:
 ```
-nc -U -l /tmp/mdm_statsd.socket
+nc -U -l mdm_statsd.socket
 ```
