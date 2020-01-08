@@ -6,10 +6,10 @@ package statsd
 // statsd implementation for https://genevamondocs.azurewebsites.net/collect/references/statsdref.html
 import (
 	"context"
-	"fmt"
 	"io"
 	"net"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -24,21 +24,18 @@ import (
 const defaultSocket = "mdm_statsd.socket"
 
 // Statsd defines internal statsd client
-// It should be cloned, but not modified
 type Statsd struct {
 	account   string
 	namespace string
 
 	conn io.WriteCloser
-	env  env.Interface
 	mu   sync.Mutex
 
 	now func() time.Time
 }
 
-// New method to initialize udp connection
+// New returns a new metrics.Interface
 func New(ctx context.Context, log *logrus.Entry, _env env.Interface) (metrics.Interface, error) {
-	// defaults- dev
 	config := &Statsd{
 		account:   os.Getenv("METRICS_ACCOUNT"),
 		namespace: os.Getenv("METRICS_NAMESPACE"),
@@ -47,13 +44,14 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface) (metrics.In
 
 	var err error
 	config.conn, err = net.Dial("unix", defaultSocket)
+	if _, ok := _env.(env.Dev); ok &&
+		err != nil &&
+		strings.HasSuffix(err.Error(), "connect: no such file or directory") {
+		log.Printf("%s does not exist; not outputting metrics", defaultSocket)
+		return &noop.Noop{}, nil
+	}
 	if err != nil {
-		if _, ok := _env.(env.Dev); ok {
-			log.Printf("Running in development, no metrics socket found %v", err)
-			return &noop.Noop{}, nil
-		} else if err != nil {
-			return nil, err
-		}
+		return nil, err
 	}
 
 	return config, nil
@@ -66,7 +64,7 @@ func (c *Statsd) Close() error {
 
 // EmitFloat records float information
 func (c *Statsd) EmitFloat(stat string, value float64, dims map[string]string) error {
-	return c.emitMetric(&metric{
+	return c.emitMetric(metric{
 		Metric:     stat,
 		Dims:       dims,
 		ValueFloat: to.Float64Ptr(value),
@@ -75,17 +73,14 @@ func (c *Statsd) EmitFloat(stat string, value float64, dims map[string]string) e
 
 // EmitGauge records gauge information
 func (c *Statsd) EmitGauge(stat string, value int64, dims map[string]string) error {
-	return c.emitMetric(&metric{
+	return c.emitMetric(metric{
 		Metric:     stat,
 		Dims:       dims,
 		ValueGauge: to.Int64Ptr(value),
 	})
 }
 
-func (c *Statsd) emitMetric(m *metric) error {
-	if m == nil {
-		return fmt.Errorf("metric can't be nil")
-	}
+func (c *Statsd) emitMetric(m metric) error {
 	m.Account = c.account
 	m.Namespace = c.namespace
 	m.TS = c.now()
@@ -94,11 +89,9 @@ func (c *Statsd) emitMetric(m *metric) error {
 	if err != nil {
 		return err
 	}
+
 	_, err = c.Write(b)
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
 
 // Send data to statsd daemon
