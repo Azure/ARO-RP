@@ -29,26 +29,22 @@ func Metrics(m metrics.Interface) func(http.Handler) http.Handler {
 			w = &logResponseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 
 			defer func() {
-				// request count
-				m.EmitGauge("frontend.count",
-					1, map[string]string{
-						"verb":        r.Method,
-						"api-version": vars["api-version"],
-						"code":        strconv.Itoa(w.(*logResponseWriter).statusCode),
-						"route":       routeName,
-					})
-				// request duration
-				m.EmitFloat("frontend.duration",
-					float64(time.Now().Sub(t)/time.Millisecond), map[string]string{
-						"verb":        r.Method,
-						"api-version": vars["api-version"],
-						"code":        strconv.Itoa(w.(*logResponseWriter).statusCode),
-						"route":       routeName,
-					})
+				m.EmitGauge("frontend.count", 1, map[string]string{
+					"verb":        r.Method,
+					"api-version": vars["api-version"],
+					"code":        strconv.Itoa(w.(*logResponseWriter).statusCode),
+					"route":       routeName,
+				})
+
+				m.EmitFloat("frontend.duration", float64(time.Now().Sub(t)/time.Millisecond), map[string]string{
+					"verb":        r.Method,
+					"api-version": vars["api-version"],
+					"code":        strconv.Itoa(w.(*logResponseWriter).statusCode),
+					"route":       routeName,
+				})
 			}()
 
 			h.ServeHTTP(w, r)
-
 		})
 	}
 }
