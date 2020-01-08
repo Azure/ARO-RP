@@ -10,7 +10,7 @@
   version = "v0.51.0"
 
 [[projects]]
-  digest = "1:ed00ff571a71da02f8ba862eb314ff003c276b0fb33563dfe1536c184b7fa854"
+  digest = "1:e072b8b6e9ea2e1a1a119dc668f3e121b27b2a82b98f79d2b95006f78798462e"
   name = "github.com/Azure/azure-sdk-for-go"
   packages = [
     "profiles/latest/dns/mgmt/dns",
@@ -22,8 +22,8 @@
     "services/cosmos-db/mgmt/2019-08-01/documentdb",
     "services/dns/mgmt/2018-05-01/dns",
     "services/graphrbac/1.6/graphrbac",
-    "services/keyvault/2016-10-01/keyvault",
     "services/keyvault/mgmt/2016-10-01/keyvault",
+    "services/keyvault/v7.0/keyvault",
     "services/msi/mgmt/2018-11-30/msi",
     "services/network/mgmt/2018-12-01/network",
     "services/network/mgmt/2019-07-01/network",
@@ -773,12 +773,16 @@
 
 [[projects]]
   branch = "release-4.3"
-  digest = "1:a0d7f81ca6a56bea17ae0727af08837e52ec368d47a7d259702c762317882546"
+  digest = "1:389e8899bcd32ef27c6ab649f2fd99153afee3d4f02090625047687e859ebcab"
   name = "github.com/openshift/client-go"
   packages = [
     "config/clientset/versioned",
     "config/clientset/versioned/scheme",
     "config/clientset/versioned/typed/config/v1",
+    "operator/clientset/versioned",
+    "operator/clientset/versioned/scheme",
+    "operator/clientset/versioned/typed/operator/v1",
+    "operator/clientset/versioned/typed/operator/v1alpha1",
   ]
   pruneopts = "UT"
   revision = "f6563a70e19a12b2f240eaf4e716ef75baf7003e"
@@ -1651,8 +1655,8 @@
     "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2019-08-01/documentdb",
     "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns",
     "github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac",
-    "github.com/Azure/azure-sdk-for-go/services/keyvault/2016-10-01/keyvault",
     "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2016-10-01/keyvault",
+    "github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault",
     "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi",
     "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network",
     "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization",
@@ -1684,6 +1688,7 @@
     "github.com/openshift/api/config/v1",
     "github.com/openshift/api/image/v1",
     "github.com/openshift/client-go/config/clientset/versioned",
+    "github.com/openshift/client-go/operator/clientset/versioned",
     "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1",
     "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset/typed/machine/v1beta1",
     "github.com/openshift/installer/data",
@@ -1718,6 +1723,8 @@
     "golang.org/x/tools/cmd/goimports",
     "golang.org/x/tools/go/ast/astutil",
     "golang.org/x/tools/go/packages",
+    "k8s.io/api/core/v1",
+    "k8s.io/apimachinery/pkg/api/errors",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/apimachinery/pkg/util/wait",
     "k8s.io/client-go/kubernetes",
