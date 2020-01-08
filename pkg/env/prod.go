@@ -47,6 +47,8 @@ type prod struct {
 
 func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata, clientauthorizer clientauthorizer.ClientAuthorizer) (*prod, error) {
 	for _, key := range []string{
+		"METRICS_ACCOUNT",
+		"METRICS_NAMESPACE",
 		"PULL_SECRET",
 	} {
 		if _, found := os.LookupEnv(key); !found {

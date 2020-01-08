@@ -189,7 +189,13 @@ func (g *generator) vmss() *arm.Resource {
 		fmt.Sprintf("base64ToString('%s')", base64.StdEncoding.EncodeToString([]byte("set -ex\n\n"))),
 	}
 
-	for _, variable := range []string{"pullSecret", "rpImage", "rpImageAuth"} {
+	for _, variable := range []string{
+		"metricsAccount",
+		"metricsNamespace",
+		"pullSecret",
+		"rpImage",
+		"rpImageAuth",
+	} {
 		parts = append(parts,
 			fmt.Sprintf("'%s=$(base64 -d <<<'''", strings.ToUpper(variable)),
 			fmt.Sprintf("base64(parameters('%s'))", variable),
@@ -237,6 +243,8 @@ fi
 cat >/etc/sysconfig/arorp <<EOF
 RP_IMAGE='$RPIMAGE'
 PULL_SECRET='$PULLSECRET'
+METRICS_NAMESPACE='$METRICSNAMESPACE'
+METRICS_ACCOUNT='$METRICSACCOUNT'
 EOF
 
 cat >/etc/systemd/system/arorp.service <<EOF
@@ -248,7 +256,9 @@ Requires=docker.service
 EnvironmentFile=/etc/sysconfig/arorp
 ExecStartPre=-/usr/bin/docker rm -f %n
 ExecStartPre=/usr/bin/docker pull \$RP_IMAGE
-ExecStart=/usr/bin/docker run --rm --name %n -p 443:8443 -e PULL_SECRET \$RP_IMAGE rp
+ExecStart=/usr/bin/docker run --rm --name %n -p 443:8443 \
+							  -e METRICS_ACCOUNT -e METRICS_NAMESPACE \
+							  -e PULL_SECRET \$RP_IMAGE rp
 ExecStop=/usr/bin/docker stop -t 90 %n
 Restart=always
 
@@ -696,6 +706,8 @@ func (g *generator) template() *arm.Template {
 		"fpServicePrincipalId",
 		"keyvaultName",
 		"rpServicePrincipalId",
+		"metricsAccount",
+		"metricsNamespace",
 	}
 	if g.production {
 		params = append(params, "pullSecret", "rpImage", "rpImageAuth", "sshPublicKey")

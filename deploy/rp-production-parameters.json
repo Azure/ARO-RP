@@ -20,6 +20,12 @@
         "keyvaultName": {
             "value": ""
         },
+        "metricsAccount": {
+            "value": ""
+        },
+        "metricsNamespace": {
+            "value": ""
+        },
         "pullSecret": {
             "value": ""
         },
