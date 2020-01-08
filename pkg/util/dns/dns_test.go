@@ -35,7 +35,13 @@ func TestCreate(t *testing.T) {
 		},
 	}
 
-	unmanagedOc := &api.OpenShiftCluster{}
+	unmanagedOc := &api.OpenShiftCluster{
+		Properties: api.Properties{
+			ClusterProfile: api.ClusterProfile{
+				Domain: "domain.notmanaged",
+			},
+		},
+	}
 
 	type test struct {
 		name    string
@@ -152,7 +158,13 @@ func TestUpdate(t *testing.T) {
 		},
 	}
 
-	unmanagedOc := &api.OpenShiftCluster{}
+	unmanagedOc := &api.OpenShiftCluster{
+		Properties: api.Properties{
+			ClusterProfile: api.ClusterProfile{
+				Domain: "domain.notmanaged",
+			},
+		},
+	}
 
 	type test struct {
 		name    string
@@ -264,7 +276,13 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 		},
 	}
 
-	unmanagedOc := &api.OpenShiftCluster{}
+	unmanagedOc := &api.OpenShiftCluster{
+		Properties: api.Properties{
+			ClusterProfile: api.ClusterProfile{
+				Domain: "domain.notmanaged",
+			},
+		},
+	}
 
 	type test struct {
 		name    string
@@ -355,7 +373,13 @@ func TestDelete(t *testing.T) {
 		},
 	}
 
-	unmanagedOc := &api.OpenShiftCluster{}
+	unmanagedOc := &api.OpenShiftCluster{
+		Properties: api.Properties{
+			ClusterProfile: api.ClusterProfile{
+				Domain: "domain.notmanaged",
+			},
+		},
+	}
 
 	type test struct {
 		name    string
@@ -453,7 +477,7 @@ func TestDelete(t *testing.T) {
 	}
 }
 
-func TestManagedDomain(t *testing.T) {
+func TestManagedDomainPrefix(t *testing.T) {
 	m := &manager{
 		env: &env.Test{
 			TestResourceGroup: "rpResourcegroup",
@@ -462,8 +486,9 @@ func TestManagedDomain(t *testing.T) {
 	}
 
 	for _, tt := range []struct {
-		domain string
-		want   string
+		domain  string
+		want    string
+		wantErr string
 	}{
 		{
 			domain: "foo",
@@ -477,11 +502,27 @@ func TestManagedDomain(t *testing.T) {
 			domain: "foo.other",
 			want:   "",
 		},
+		{
+			domain:  "",
+			wantErr: `invalid domain ""`,
+		},
+		{
+			domain:  ".foo",
+			wantErr: `invalid domain ".foo"`,
+		},
+		{
+			domain:  "foo.",
+			wantErr: `invalid domain "foo."`,
+		},
 	} {
 		t.Run(tt.domain, func(t *testing.T) {
-			got := m.managedDomain(tt.domain)
+			got, err := m.managedDomainPrefix(tt.domain)
 			if got != tt.want {
 				t.Error(got)
+			}
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Error(err)
 			}
 		})
 	}

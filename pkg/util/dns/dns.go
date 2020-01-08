@@ -41,15 +41,15 @@ func NewManager(env env.Interface, localFPAuthorizer autorest.Authorizer) Manage
 }
 
 func (m *manager) Create(ctx context.Context, oc *api.OpenShiftCluster) error {
-	managedDomain := m.managedDomain(oc.Properties.ClusterProfile.Domain)
-	if managedDomain == "" {
-		return nil
+	prefix, err := m.managedDomainPrefix(oc.Properties.ClusterProfile.Domain)
+	if err != nil || prefix == "" {
+		return err
 	}
 
-	rs, err := m.recordsets.Get(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+managedDomain, mgmtdns.A)
+	rs, err := m.recordsets.Get(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+prefix, mgmtdns.A)
 	if err == nil {
 		if rs.Metadata[resourceID] == nil || *rs.Metadata[resourceID] != oc.ID {
-			return fmt.Errorf("recordset %q already registered", "api."+managedDomain)
+			return fmt.Errorf("recordset %q already registered", "api."+prefix)
 		}
 
 		return nil
@@ -67,30 +67,30 @@ func (m *manager) Create(ctx context.Context, oc *api.OpenShiftCluster) error {
 }
 
 func (m *manager) Update(ctx context.Context, oc *api.OpenShiftCluster, ip string) error {
-	managedDomain := m.managedDomain(oc.Properties.ClusterProfile.Domain)
-	if managedDomain == "" {
-		return nil
+	prefix, err := m.managedDomainPrefix(oc.Properties.ClusterProfile.Domain)
+	if err != nil || prefix == "" {
+		return err
 	}
 
-	rs, err := m.recordsets.Get(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+managedDomain, mgmtdns.A)
+	rs, err := m.recordsets.Get(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+prefix, mgmtdns.A)
 	if err != nil {
 		return err
 	}
 
 	if rs.Metadata[resourceID] == nil || *rs.Metadata[resourceID] != oc.ID {
-		return fmt.Errorf("recordset %q already registered", "api."+managedDomain)
+		return fmt.Errorf("recordset %q already registered", "api."+prefix)
 	}
 
 	return m.createOrUpdate(ctx, oc, ip, *rs.Etag, "")
 }
 
 func (m *manager) CreateOrUpdateRouter(ctx context.Context, oc *api.OpenShiftCluster, routerIP string) error {
-	managedDomain := m.managedDomain(oc.Properties.ClusterProfile.Domain)
-	if managedDomain == "" {
-		return nil
+	prefix, err := m.managedDomainPrefix(oc.Properties.ClusterProfile.Domain)
+	if err != nil || prefix == "" {
+		return err
 	}
 
-	_, err := m.recordsets.CreateOrUpdate(ctx, m.env.ResourceGroup(), m.env.Domain(), "*.apps."+managedDomain, mgmtdns.A, mgmtdns.RecordSet{
+	_, err = m.recordsets.CreateOrUpdate(ctx, m.env.ResourceGroup(), m.env.Domain(), "*.apps."+prefix, mgmtdns.A, mgmtdns.RecordSet{
 		RecordSetProperties: &mgmtdns.RecordSetProperties{
 			TTL: to.Int64Ptr(300),
 			ARecords: &[]mgmtdns.ARecord{
@@ -105,12 +105,12 @@ func (m *manager) CreateOrUpdateRouter(ctx context.Context, oc *api.OpenShiftClu
 }
 
 func (m *manager) Delete(ctx context.Context, oc *api.OpenShiftCluster) error {
-	managedDomain := m.managedDomain(oc.Properties.ClusterProfile.Domain)
-	if managedDomain == "" {
-		return nil
+	prefix, err := m.managedDomainPrefix(oc.Properties.ClusterProfile.Domain)
+	if err != nil || prefix == "" {
+		return err
 	}
 
-	rs, err := m.recordsets.Get(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+managedDomain, mgmtdns.A)
+	rs, err := m.recordsets.Get(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+prefix, mgmtdns.A)
 	if detailedErr, ok := err.(autorest.DetailedError); ok &&
 		detailedErr.StatusCode == http.StatusNotFound {
 		return nil
@@ -123,20 +123,20 @@ func (m *manager) Delete(ctx context.Context, oc *api.OpenShiftCluster) error {
 		return nil
 	}
 
-	_, err = m.recordsets.Delete(ctx, m.env.ResourceGroup(), m.env.Domain(), "*.apps."+managedDomain, mgmtdns.A, "")
+	_, err = m.recordsets.Delete(ctx, m.env.ResourceGroup(), m.env.Domain(), "*.apps."+prefix, mgmtdns.A, "")
 	if err != nil {
 		return err
 	}
 
-	_, err = m.recordsets.Delete(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+managedDomain, mgmtdns.A, *rs.Etag)
+	_, err = m.recordsets.Delete(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+prefix, mgmtdns.A, *rs.Etag)
 
 	return err
 }
 
 func (m *manager) createOrUpdate(ctx context.Context, oc *api.OpenShiftCluster, ip, ifMatch, ifNoneMatch string) error {
-	managedDomain := m.managedDomain(oc.Properties.ClusterProfile.Domain)
-	if managedDomain == "" {
-		return nil
+	prefix, err := m.managedDomainPrefix(oc.Properties.ClusterProfile.Domain)
+	if err != nil || prefix == "" {
+		return err
 	}
 
 	rs := mgmtdns.RecordSet{
@@ -156,15 +156,16 @@ func (m *manager) createOrUpdate(ctx context.Context, oc *api.OpenShiftCluster, 
 		}
 	}
 
-	_, err := m.recordsets.CreateOrUpdate(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+managedDomain, mgmtdns.A, rs, ifMatch, ifNoneMatch)
+	_, err = m.recordsets.CreateOrUpdate(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+prefix, mgmtdns.A, rs, ifMatch, ifNoneMatch)
 
 	return err
 }
 
-func (m *manager) managedDomain(domain string) string {
-	domain = strings.TrimSuffix(domain, "."+m.env.Domain())
-	if !strings.ContainsRune(domain, '.') {
-		return domain
+func (m *manager) managedDomainPrefix(clusterDomain string) (string, error) {
+	managedDomain, err := m.env.ManagedDomain(clusterDomain)
+	if err != nil || managedDomain == "" {
+		return "", err
 	}
-	return ""
+
+	return managedDomain[:strings.IndexByte(managedDomain, '.')], nil
 }
