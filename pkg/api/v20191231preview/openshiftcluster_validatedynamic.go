@@ -37,7 +37,7 @@ func (*azureClaim) Valid() error {
 type openShiftClusterDynamicValidator struct {
 	env env.Interface
 
-	subnets subnet.Manager
+	subnet subnet.Manager
 
 	oc *api.OpenShiftCluster
 }
@@ -80,7 +80,7 @@ func (v *openShiftClusterValidator) Dynamic(ctx context.Context, oc *api.OpenShi
 		return err
 	}
 
-	v.dv.subnets = subnet.NewManager(r.SubscriptionID, spAuthorizer)
+	v.dv.subnet = subnet.NewManager(r.SubscriptionID, spAuthorizer)
 
 	return v.dv.validateSubnets(ctx)
 }
@@ -206,7 +206,7 @@ func (dv *openShiftClusterDynamicValidator) validateSubnets(ctx context.Context)
 }
 
 func (dv *openShiftClusterDynamicValidator) validateSubnet(ctx context.Context, path, typ, subnetID string) (*net.IPNet, error) {
-	s, err := dv.subnets.Get(ctx, subnetID)
+	s, err := dv.subnet.Get(ctx, subnetID)
 	if detailedErr, ok := err.(autorest.DetailedError); ok &&
 		detailedErr.StatusCode == http.StatusNotFound {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The provided "+typ+" VM subnet '%s' could not be found.", subnetID)

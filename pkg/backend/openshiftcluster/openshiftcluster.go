@@ -29,7 +29,7 @@ type Manager struct {
 	dns             dns.Manager
 	keyvault        keyvault.Manager
 	privateendpoint privateendpoint.Manager
-	subnets         subnet.Manager
+	subnet          subnet.Manager
 
 	doc *api.OpenShiftClusterDocument
 }
@@ -66,7 +66,7 @@ func NewManager(log *logrus.Entry, env env.Interface, db database.OpenShiftClust
 		dns:             dns.NewManager(env, localFPAuthorizer),
 		keyvault:        keyvault.NewManager(env, localFPKVAuthorizer),
 		privateendpoint: privateendpoint.NewManager(env, localFPAuthorizer),
-		subnets:         subnet.NewManager(r.SubscriptionID, fpAuthorizer),
+		subnet:          subnet.NewManager(r.SubscriptionID, fpAuthorizer),
 
 		doc: doc,
 	}

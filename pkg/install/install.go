@@ -40,10 +40,6 @@ type Installer struct {
 	doc          *api.OpenShiftClusterDocument
 	fpAuthorizer autorest.Authorizer
 
-	privateendpoint privateendpoint.Manager
-	dns             dns.Manager
-	keyvault        keyvault.Manager
-
 	disks             compute.DisksClient
 	virtualmachines   compute.VirtualMachinesClient
 	interfaces        network.InterfacesClient
@@ -52,7 +48,10 @@ type Installer struct {
 	groups            resources.GroupsClient
 	accounts          storage.AccountsClient
 
-	subnets subnet.Manager
+	dns             dns.Manager
+	keyvault        keyvault.Manager
+	privateendpoint privateendpoint.Manager
+	subnet          subnet.Manager
 }
 
 func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClusters, doc *api.OpenShiftClusterDocument) (*Installer, error) {
@@ -83,10 +82,6 @@ func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClu
 		doc:          doc,
 		fpAuthorizer: fpAuthorizer,
 
-		privateendpoint: privateendpoint.NewManager(env, localFPAuthorizer),
-		dns:             dns.NewManager(env, localFPAuthorizer),
-		keyvault:        keyvault.NewManager(env, localFPKVAuthorizer),
-
 		disks:             compute.NewDisksClient(r.SubscriptionID, fpAuthorizer),
 		virtualmachines:   compute.NewVirtualMachinesClient(r.SubscriptionID, fpAuthorizer),
 		interfaces:        network.NewInterfacesClient(r.SubscriptionID, fpAuthorizer),
@@ -95,7 +90,10 @@ func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClu
 		groups:            resources.NewGroupsClient(r.SubscriptionID, fpAuthorizer),
 		accounts:          storage.NewAccountsClient(r.SubscriptionID, fpAuthorizer),
 
-		subnets: subnet.NewManager(r.SubscriptionID, fpAuthorizer),
+		dns:             dns.NewManager(env, localFPAuthorizer),
+		keyvault:        keyvault.NewManager(env, localFPKVAuthorizer),
+		privateendpoint: privateendpoint.NewManager(env, localFPAuthorizer),
+		subnet:          subnet.NewManager(r.SubscriptionID, fpAuthorizer),
 	}, nil
 }
 

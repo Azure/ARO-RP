@@ -230,7 +230,7 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 		i.log.Printf("attaching network security group to subnet %s", subnetID)
 
 		// TODO: there is probably an undesirable race condition here - check if etags can help.
-		s, err := i.subnets.Get(ctx, subnetID)
+		s, err := i.subnet.Get(ctx, subnetID)
 		if err != nil {
 			return err
 		}
@@ -256,7 +256,7 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 			ID: to.StringPtr(nsgID),
 		}
 
-		err = i.subnets.CreateOrUpdate(ctx, subnetID, s)
+		err = i.subnet.CreateOrUpdate(ctx, subnetID, s)
 		if err != nil {
 			return err
 		}
