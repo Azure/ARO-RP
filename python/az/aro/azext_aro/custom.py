@@ -12,6 +12,7 @@ from azext_aro._rbac import assign_contributor_to_vnet
 from azext_aro._validators import validate_subnets
 from azure.cli.core.commands.client_factory import get_subscription_id
 from azure.cli.core.util import sdk_no_wait
+from knack.util import CLIError
 
 
 FP_CLIENT_ID = 'f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875'
@@ -129,13 +130,14 @@ def aro_list_credentials(client, resource_group_name, resource_name):
 
 def aro_update(client, resource_group_name, resource_name, worker_count=None,
                no_wait=False):
+    current = client.get(resource_group_name, resource_name)
+
+    if len(current.worker_profiles) != 1:
+        raise CLIError("Cannot update cluster with %d worker profiles." % len(current.worker_profiles))
+
+    current.worker_profiles[0].count = worker_count
     oc = v2019_12_31_preview.OpenShiftCluster(
-        # TODO: [0] should not be hard-coded
-        worker_profiles=[
-            v2019_12_31_preview.WorkerProfile(
-                count=worker_count,
-            )
-        ]
+        worker_profiles=current.worker_profiles,
     )
 
     return sdk_no_wait(no_wait, client.update,
