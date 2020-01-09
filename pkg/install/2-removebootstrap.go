@@ -16,7 +16,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -56,17 +55,9 @@ func (i *Installer) removeBootstrap(ctx context.Context) error {
 		}
 	}
 
-	var restConfig *rest.Config
-	{
-		ip, err := i.privateendpoint.GetIP(ctx, i.doc)
-		if err != nil {
-			return err
-		}
-
-		restConfig, err = restconfig.RestConfig(ctx, i.env, i.doc, ip)
-		if err != nil {
-			return err
-		}
+	restConfig, err := restconfig.RestConfig(ctx, i.env, i.doc.OpenShiftCluster)
+	if err != nil {
+		return err
 	}
 
 	{
