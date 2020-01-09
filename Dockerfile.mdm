@@ -1,0 +1,14 @@
+ARG VERSION
+FROM ubuntu:bionic
+RUN apt-get update && \
+  apt-get -y dist-upgrade && \
+  apt-get install -y curl && \
+  curl -o metricsext2.deb https://packages.microsoft.com/repos/azurecore/pool/main/m/metricsext2/metricsext2_$VERSION.deb && \
+  apt-get install -y ./metricsext2.deb && \
+  rm metricsext2.deb && \
+  apt-get purge -y curl && \
+  apt-get autoremove -y && \
+  rm -rf /var/lib/apt/lists/* && \
+  chown -R 1000:1000 /var/etw
+ENTRYPOINT ["MetricsExtension"]
+USER 1000

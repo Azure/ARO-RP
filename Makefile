@@ -54,6 +54,10 @@ image-aro: aro
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
 	docker build -f Dockerfile.aro -t arosvc.azurecr.io/aro:$(COMMIT) .
 
+image-mdm:
+	docker build --build-arg VERSION=2.2019.801.1228-66cac1-~bionic_amd64 \
+	  -f Dockerfile.mdm -t arosvc.azurecr.io/mdm:2019.801.1228-66cac1 .
+
 image-proxy: proxy
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
 	docker build -f Dockerfile.proxy -t arosvc.azurecr.io/proxy:latest .
