@@ -207,9 +207,9 @@ func (g *generator) vmss() *arm.Resource {
 
 yum -y update -x WALinuxAgent
 
-rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
+rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8
 
-yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm || true
+yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm || true
 
 cat >/etc/yum.repos.d/azure-cli.repo <<'EOF'
 [azurecore]
@@ -219,7 +219,7 @@ enabled=yes
 gpgcheck=no
 EOF
 
-yum -y install azsec-clamav azsec-monitor azure-mdsd azure-security docker
+yum -y install azsec-clamav azsec-monitor azure-mdsd azure-security podman-docker
 
 firewall-cmd --add-port=443/tcp --permanent
 
@@ -309,7 +309,7 @@ systemctl enable chronyd.service
 						ImageReference: &mgmtcompute.ImageReference{
 							Publisher: to.StringPtr("RedHat"),
 							Offer:     to.StringPtr("RHEL"),
-							Sku:       to.StringPtr("7-RAW"),
+							Sku:       to.StringPtr("8"),
 							Version:   to.StringPtr("latest"),
 						},
 						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
