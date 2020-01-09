@@ -36,7 +36,7 @@ import (
 func (m *Manager) Create(ctx context.Context) error {
 	var err error
 
-	m.doc, err = m.db.Patch(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		var err error
 
 		if doc.OpenShiftCluster.Properties.SSHKey == nil {
