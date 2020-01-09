@@ -13,7 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/Azure/go-autorest/tracing"
 	"github.com/sirupsen/logrus"
 	k8smetrics "k8s.io/client-go/tools/metrics"
@@ -27,8 +26,7 @@ import (
 
 const defaultSocket = "mdm_statsd.socket"
 
-// Statsd defines internal statsd client
-type Statsd struct {
+type statsd struct {
 	account   string
 	namespace string
 
@@ -40,14 +38,14 @@ type Statsd struct {
 
 // New returns a new metrics.Interface
 func New(ctx context.Context, log *logrus.Entry, _env env.Interface) (metrics.Interface, error) {
-	config := &Statsd{
+	s := &statsd{
 		account:   os.Getenv("METRICS_ACCOUNT"),
 		namespace: os.Getenv("METRICS_NAMESPACE"),
 		now:       time.Now,
 	}
 
 	var err error
-	config.conn, err = net.Dial("unix", defaultSocket)
+	s.conn, err = net.Dial("unix", defaultSocket)
 	if _, ok := _env.(env.Dev); ok &&
 		err != nil &&
 		strings.HasSuffix(err.Error(), "connect: no such file or directory") {
@@ -59,54 +57,54 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface) (metrics.In
 	}
 
 	// register azure client tracer
-	tracing.Register(statsdazure.New(config))
+	tracing.Register(statsdazure.New(s))
 
 	// register k8s client tracer
-	k8smetrics.Register(statsdk8s.NewLatency(config), statsdk8s.NewResult(config))
+	k8smetrics.Register(statsdk8s.NewLatency(s), statsdk8s.NewResult(s))
 
-	return config, nil
+	return s, nil
 }
 
 // Close closes the connection
-func (c *Statsd) Close() error {
-	return c.conn.Close()
+func (s *statsd) Close() error {
+	return s.conn.Close()
 }
 
 // EmitFloat records float information
-func (c *Statsd) EmitFloat(stat string, value float64, dims map[string]string) error {
-	return c.emitMetric(metric{
-		Metric:     stat,
-		Dims:       dims,
-		ValueFloat: to.Float64Ptr(value),
+func (s *statsd) EmitFloat(m string, value float64, dims map[string]string) error {
+	return s.emitMetric(metric{
+		metric:     m,
+		dims:       dims,
+		valueFloat: &value,
 	})
 }
 
 // EmitGauge records gauge information
-func (c *Statsd) EmitGauge(stat string, value int64, dims map[string]string) error {
-	return c.emitMetric(metric{
-		Metric:     stat,
-		Dims:       dims,
-		ValueGauge: to.Int64Ptr(value),
+func (s *statsd) EmitGauge(m string, value int64, dims map[string]string) error {
+	return s.emitMetric(metric{
+		metric:     m,
+		dims:       dims,
+		valueGauge: &value,
 	})
 }
 
-func (c *Statsd) emitMetric(m metric) error {
-	m.Account = c.account
-	m.Namespace = c.namespace
-	m.TS = c.now()
+func (s *statsd) emitMetric(m metric) error {
+	m.account = s.account
+	m.namespace = s.namespace
+	m.ts = s.now()
 
-	b, err := m.MarshalStatsd()
+	b, err := m.marshalStatsd()
 	if err != nil {
 		return err
 	}
 
-	_, err = c.Write(b)
+	_, err = s.Write(b)
 	return err
 }
 
 // Send data to statsd daemon
-func (c *Statsd) Write(data []byte) (int, error) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	return c.conn.Write(data)
+func (s *statsd) Write(data []byte) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.conn.Write(data)
 }

@@ -12,18 +12,18 @@ import (
 
 // metric represents generic metric structure
 type metric struct {
-	Metric    string
-	Account   string
-	Namespace string
-	Dims      map[string]string
-	TS        time.Time
+	metric    string
+	account   string
+	namespace string
+	dims      map[string]string
+	ts        time.Time
 
-	ValueGauge *int64
-	ValueFloat *float64
+	valueGauge *int64
+	valueFloat *float64
 }
 
 // MarshalJSON marshals a metric into JSON format.
-func (f *metric) MarshalJSON() ([]byte, error) {
+func (m *metric) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		Metric    string
 		Account   string `json:"Account,omitempty"`
@@ -31,20 +31,21 @@ func (f *metric) MarshalJSON() ([]byte, error) {
 		Dims      map[string]string
 		TS        string
 	}{
-		Metric:    f.Metric,
-		Account:   f.Account,
-		Namespace: f.Namespace,
-		Dims:      f.Dims,
-		TS:        f.TS.UTC().Format("2006-01-02T15:04:05.000"),
+		Metric:    m.metric,
+		Account:   m.account,
+		Namespace: m.namespace,
+		Dims:      m.dims,
+		TS:        m.ts.UTC().Format("2006-01-02T15:04:05.000"),
 	})
 }
 
-// MarshalStatsd a metric into its statsd format. Call this instead of MarshalJSON().
-func (f *metric) MarshalStatsd() ([]byte, error) {
+// marshalStatsd marshals a metric into its statsd format. Call this instead of
+// MarshalJSON().
+func (m *metric) marshalStatsd() ([]byte, error) {
 	buf := &bytes.Buffer{}
 
 	e := json.NewEncoder(buf)
-	err := e.Encode(f)
+	err := e.Encode(m)
 	if err != nil {
 		return nil, err
 	}
@@ -54,13 +55,13 @@ func (f *metric) MarshalStatsd() ([]byte, error) {
 		buf.Truncate(buf.Len() - 1)
 	}
 
-	if f.ValueFloat != nil {
-		_, err = fmt.Fprintf(buf, ":%f|f\n", *f.ValueFloat)
+	if m.valueFloat != nil {
+		_, err = fmt.Fprintf(buf, ":%f|f\n", *m.valueFloat)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		_, err = fmt.Fprintf(buf, ":%d|g\n", *f.ValueGauge)
+		_, err = fmt.Fprintf(buf, ":%d|g\n", *m.valueGauge)
 		if err != nil {
 			return nil, err
 		}
