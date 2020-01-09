@@ -38,22 +38,34 @@ func (ocb *openShiftClusterBackend) try(ctx context.Context) (bool, error) {
 
 	log.Print("dequeued")
 	atomic.AddInt32(&ocb.workers, 1)
+	ocb.m.EmitGauge("backend.openshiftcluster.workers.count", int64(atomic.LoadInt32(&ocb.workers)), nil)
+
 	go func() {
 		defer recover.Panic(log)
 
+		t := time.Now()
+
 		defer func() {
 			atomic.AddInt32(&ocb.workers, -1)
+			ocb.m.EmitGauge("backend.openshiftcluster.workers.count", int64(atomic.LoadInt32(&ocb.workers)), nil)
 			ocb.cond.Signal()
-		}()
 
-		t := time.Now()
+			ocb.m.EmitFloat("backend.openshiftcluster.duration", time.Now().Sub(t).Seconds(), map[string]string{
+				"state": string(doc.OpenShiftCluster.Properties.ProvisioningState),
+			})
+
+			ocb.m.EmitGauge("backend.openshiftcluster.count", 1, map[string]string{
+				"state": string(doc.OpenShiftCluster.Properties.ProvisioningState),
+			})
+
+			log.WithField("duration", time.Now().Sub(t).Seconds()).Print("done")
+		}()
 
 		err := ocb.handle(context.Background(), log, doc)
 		if err != nil {
 			log.Error(err)
 		}
 
-		log.WithField("durationMs", int(time.Now().Sub(t)/time.Millisecond)).Print("done")
 	}()
 
 	return true, nil

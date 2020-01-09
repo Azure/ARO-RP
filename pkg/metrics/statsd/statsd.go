@@ -14,11 +14,15 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/Azure/go-autorest/tracing"
 	"github.com/sirupsen/logrus"
+	k8smetrics "k8s.io/client-go/tools/metrics"
 
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
+	statsdazure "github.com/Azure/ARO-RP/pkg/metrics/statsd/azure"
+	statsdk8s "github.com/Azure/ARO-RP/pkg/metrics/statsd/k8s"
 )
 
 const defaultSocket = "mdm_statsd.socket"
@@ -53,6 +57,12 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface) (metrics.In
 	if err != nil {
 		return nil, err
 	}
+
+	// register azure client tracer
+	tracing.Register(statsdazure.New(config))
+
+	// register k8s client tracer
+	k8smetrics.Register(statsdk8s.NewLatency(config), statsdk8s.NewResult(config))
 
 	return config, nil
 }
