@@ -30,7 +30,13 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	db, err := database.NewDatabase(ctx, log.WithField("component", "database"), env, uuid)
+	m, err := statsd.New(ctx, log.WithField("component", "metrics"), env)
+	if err != nil {
+		return err
+	}
+	defer m.Close()
+
+	db, err := database.NewDatabase(ctx, log.WithField("component", "database"), env, m, uuid)
 	if err != nil {
 		return err
 	}
@@ -39,12 +45,6 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 	stop := make(chan struct{})
 	done := make(chan struct{})
 	signal.Notify(sigterm, syscall.SIGTERM)
-
-	m, err := statsd.New(ctx, log.WithField("component", "metrics"), env)
-	if err != nil {
-		return err
-	}
-	defer m.Close()
 
 	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), env, db, api.APIs, m)
 	if err != nil {
