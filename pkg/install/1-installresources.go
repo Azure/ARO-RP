@@ -692,7 +692,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 			return err
 		}
 
-		i.doc, err = i.db.Patch(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 			doc.OpenShiftCluster.Properties.APIServerProfile.IP = ipAddress
 			return nil
 		})

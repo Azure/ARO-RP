@@ -116,6 +116,16 @@ func (c *subscriptions) patch(ctx context.Context, id string, f func(*api.Subscr
 	return doc, err
 }
 
+func (c *subscriptions) patchWithLease(ctx context.Context, key string, f func(*api.SubscriptionDocument) error, options *cosmosdb.Options) (*api.SubscriptionDocument, error) {
+	return c.patch(ctx, key, func(doc *api.SubscriptionDocument) error {
+		if doc.LeaseOwner != c.uuid {
+			return fmt.Errorf("lost lease")
+		}
+
+		return f(doc)
+	}, nil)
+}
+
 func (c *subscriptions) Update(ctx context.Context, doc *api.SubscriptionDocument) (*api.SubscriptionDocument, error) {
 	return c.update(ctx, doc, nil)
 }
@@ -155,10 +165,7 @@ func (c *subscriptions) Dequeue(ctx context.Context) (*api.SubscriptionDocument,
 }
 
 func (c *subscriptions) Lease(ctx context.Context, id string) (*api.SubscriptionDocument, error) {
-	return c.patch(ctx, id, func(doc *api.SubscriptionDocument) error {
-		if doc.LeaseOwner != c.uuid {
-			return fmt.Errorf("lost lease")
-		}
+	return c.patchWithLease(ctx, id, func(doc *api.SubscriptionDocument) error {
 		return nil
 	}, &cosmosdb.Options{PreTriggers: []string{"renewLease"}})
 }
@@ -169,11 +176,7 @@ func (c *subscriptions) EndLease(ctx context.Context, id string, done, retryLate
 		options = &cosmosdb.Options{PreTriggers: []string{"retryLater"}}
 	}
 
-	return c.patch(ctx, id, func(doc *api.SubscriptionDocument) error {
-		if doc.LeaseOwner != c.uuid {
-			return fmt.Errorf("lost lease")
-		}
-
+	return c.patchWithLease(ctx, id, func(doc *api.SubscriptionDocument) error {
 		if done {
 			doc.Deleting = false
 		}

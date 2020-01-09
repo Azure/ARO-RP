@@ -224,6 +224,21 @@ func (mr *MockOpenShiftClustersMockRecorder) Patch(arg0, arg1, arg2 interface{})
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Patch", reflect.TypeOf((*MockOpenShiftClusters)(nil).Patch), arg0, arg1, arg2)
 }
 
+// PatchWithLease mocks base method
+func (m *MockOpenShiftClusters) PatchWithLease(arg0 context.Context, arg1 string, arg2 func(*api.OpenShiftClusterDocument) error) (*api.OpenShiftClusterDocument, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PatchWithLease", arg0, arg1, arg2)
+	ret0, _ := ret[0].(*api.OpenShiftClusterDocument)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PatchWithLease indicates an expected call of PatchWithLease
+func (mr *MockOpenShiftClustersMockRecorder) PatchWithLease(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PatchWithLease", reflect.TypeOf((*MockOpenShiftClusters)(nil).PatchWithLease), arg0, arg1, arg2)
+}
+
 // Update mocks base method
 func (m *MockOpenShiftClusters) Update(arg0 context.Context, arg1 *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error) {
 	m.ctrl.T.Helper()
