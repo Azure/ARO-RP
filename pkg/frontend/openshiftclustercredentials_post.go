@@ -38,6 +38,11 @@ func (f *frontend) postOpenShiftClusterCredentials(w http.ResponseWriter, r *htt
 func (f *frontend) _postOpenShiftClusterCredentials(ctx context.Context, r *http.Request, converter api.OpenShiftClusterCredentialsConverter) ([]byte, error) {
 	vars := mux.Vars(r)
 
+	_, err := f.validateSubscriptionState(ctx, r.URL.Path, api.SubscriptionStateRegistered)
+	if err != nil {
+		return nil, err
+	}
+
 	doc, err := f.db.OpenShiftClusters.Get(ctx, r.URL.Path)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
