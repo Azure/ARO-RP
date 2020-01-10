@@ -181,10 +181,10 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 			},
 		})
 		if err != nil {
-			if detailedError, ok := err.(autorest.DetailedError); ok {
-				if requestError, ok := detailedError.Original.(azure.RequestError); ok &&
-					requestError.ServiceError != nil &&
-					requestError.ServiceError.Code == "DeploymentActive" {
+			if detailedErr, ok := err.(autorest.DetailedError); ok {
+				if requestErr, ok := detailedErr.Original.(azure.RequestError); ok &&
+					requestErr.ServiceError != nil &&
+					requestErr.ServiceError.Code == "DeploymentActive" {
 					i.log.Print("waiting for storage template")
 					err = i.deployments.Wait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy")
 				}

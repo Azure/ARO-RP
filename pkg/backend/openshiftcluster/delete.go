@@ -56,8 +56,8 @@ func (m *Manager) Delete(ctx context.Context) error {
 
 	_, err = m.groups.CheckExistence(ctx, m.doc.OpenShiftCluster.Properties.ResourceGroup)
 	if err != nil {
-		if err, ok := err.(autorest.DetailedError); ok {
-			if err.StatusCode == http.StatusForbidden {
+		if detailedErr, ok := err.(autorest.DetailedError); ok {
+			if detailedErr.StatusCode == http.StatusForbidden {
 				return nil
 			}
 		}

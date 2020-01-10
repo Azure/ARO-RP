@@ -152,8 +152,8 @@ func (dv *openShiftClusterDynamicValidator) validateVnetPermissions(ctx context.
 
 	permissions, err := client.ListForResource(ctx, r.ResourceGroup, r.Provider, r.ResourceType, "", r.ResourceName)
 	if err != nil {
-		if err, ok := err.(autorest.DetailedError); ok {
-			if err.StatusCode == http.StatusNotFound {
+		if detailedErr, ok := err.(autorest.DetailedError); ok {
+			if detailedErr.StatusCode == http.StatusNotFound {
 				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "properties.masterProfile.subnetId", "The provided master VM subnet '%s' could not be found.", dv.oc.Properties.MasterProfile.SubnetID)
 			}
 		}
@@ -210,8 +210,8 @@ func (dv *openShiftClusterDynamicValidator) validateSubnets(ctx context.Context)
 func (dv *openShiftClusterDynamicValidator) validateSubnet(ctx context.Context, path, typ, subnetID string) (*net.IPNet, error) {
 	s, err := dv.subnets.Get(ctx, subnetID)
 	if err != nil {
-		if err, ok := err.(autorest.DetailedError); ok {
-			if err.StatusCode == http.StatusNotFound {
+		if detailedErr, ok := err.(autorest.DetailedError); ok {
+			if detailedErr.StatusCode == http.StatusNotFound {
 				return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The provided "+typ+" VM subnet '%s' could not be found.", subnetID)
 			}
 		}

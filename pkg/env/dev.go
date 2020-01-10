@@ -250,8 +250,10 @@ func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthor
 	})
 	if err != nil {
 		var ignore bool
-		if err, ok := err.(autorest.DetailedError); ok {
-			if err, ok := err.Original.(*azure.RequestError); ok && err.ServiceError != nil && err.ServiceError.Code == "RoleAssignmentExists" {
+		if detailedErr, ok := err.(autorest.DetailedError); ok {
+			if requestErr, ok := detailedErr.Original.(*azure.RequestError); ok &&
+				requestErr.ServiceError != nil &&
+				requestErr.ServiceError.Code == "RoleAssignmentExists" {
 				ignore = true
 			}
 		}
@@ -273,10 +275,10 @@ func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthor
 	return wait.Poll(time.Second, time.Minute, func() (bool, error) {
 		// this should always error. Either 403 or 404
 		_, err := d.deployments.Get(ctx, resourceGroup, "dummy")
-		if detailedError, ok := err.(autorest.DetailedError); ok {
-			if requestError, ok := detailedError.Original.(azure.RequestError); ok &&
-				requestError.ServiceError != nil &&
-				requestError.ServiceError.Code == "AuthorizationFailed" {
+		if detailedErr, ok := err.(autorest.DetailedError); ok {
+			if requestErr, ok := detailedErr.Original.(azure.RequestError); ok &&
+				requestErr.ServiceError != nil &&
+				requestErr.ServiceError.Code == "AuthorizationFailed" {
 				return false, nil
 			}
 		}

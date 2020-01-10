@@ -55,10 +55,10 @@ func (m *manager) Create(ctx context.Context, oc *api.OpenShiftCluster) error {
 		return nil
 	}
 
-	if detailedError, ok := err.(autorest.DetailedError); ok {
-		if requestError, ok := detailedError.Original.(*azure.RequestError); ok &&
-			requestError.ServiceError != nil &&
-			requestError.ServiceError.Code == "NotFound" {
+	if detailedErr, ok := err.(autorest.DetailedError); ok {
+		if requestErr, ok := detailedErr.Original.(*azure.RequestError); ok &&
+			requestErr.ServiceError != nil &&
+			requestErr.ServiceError.Code == "NotFound" {
 			err = nil
 		}
 	}
@@ -115,10 +115,10 @@ func (m *manager) Delete(ctx context.Context, oc *api.OpenShiftCluster) error {
 
 	rs, err := m.recordsets.Get(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+clusterDomain, mgmtdns.A)
 	if err != nil {
-		if detailedError, ok := err.(autorest.DetailedError); ok {
-			if requestError, ok := detailedError.Original.(*azure.RequestError); ok &&
-				requestError.ServiceError != nil &&
-				requestError.ServiceError.Code == "NotFound" {
+		if detailedErr, ok := err.(autorest.DetailedError); ok {
+			if requestErr, ok := detailedErr.Original.(*azure.RequestError); ok &&
+				requestErr.ServiceError != nil &&
+				requestErr.ServiceError.Code == "NotFound" {
 				err = nil
 			}
 		}
