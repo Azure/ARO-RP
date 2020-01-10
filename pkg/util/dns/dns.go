@@ -114,15 +114,14 @@ func (m *manager) Delete(ctx context.Context, oc *api.OpenShiftCluster) error {
 	}
 
 	rs, err := m.recordsets.Get(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+clusterDomain, mgmtdns.A)
-	if err != nil {
-		if detailedErr, ok := err.(autorest.DetailedError); ok {
-			if requestErr, ok := detailedErr.Original.(*azure.RequestError); ok &&
-				requestErr.ServiceError != nil &&
-				requestErr.ServiceError.Code == "NotFound" {
-				err = nil
-			}
+	if detailedErr, ok := err.(autorest.DetailedError); ok {
+		if requestErr, ok := detailedErr.Original.(*azure.RequestError); ok &&
+			requestErr.ServiceError != nil &&
+			requestErr.ServiceError.Code == "NotFound" {
+			err = nil
 		}
-
+	}
+	if err != nil {
 		return err
 	}
 

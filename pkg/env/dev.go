@@ -248,18 +248,15 @@ func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthor
 			PrincipalID:      res.Value,
 		},
 	})
+	if detailedErr, ok := err.(autorest.DetailedError); ok {
+		if requestErr, ok := detailedErr.Original.(*azure.RequestError); ok &&
+			requestErr.ServiceError != nil &&
+			requestErr.ServiceError.Code == "RoleAssignmentExists" {
+			err = nil
+		}
+	}
 	if err != nil {
-		var ignore bool
-		if detailedErr, ok := err.(autorest.DetailedError); ok {
-			if requestErr, ok := detailedErr.Original.(*azure.RequestError); ok &&
-				requestErr.ServiceError != nil &&
-				requestErr.ServiceError.Code == "RoleAssignmentExists" {
-				ignore = true
-			}
-		}
-		if !ignore {
-			return err
-		}
+		return err
 	}
 
 	// Issue: https://github.com/Azure/ARO-RP/issues/31
