@@ -301,7 +301,6 @@ ExecStart=/usr/bin/docker run \
   --rm \
   -e PULLSECRET \
   -p 443:8443 \
-  -v /var/etw/mdm_statsd.socket:/mdm_statsd.socket \
   \$RPIMAGE \
   rp
 ExecStop=/usr/bin/docker stop -t 90 %N
@@ -311,7 +310,7 @@ Restart=always
 WantedBy=multi-user.target
 EOF
 
-for service in arorp chronyd mdm; do
+for service in arorp chronyd; do
   systemctl enable $service.service
 done
 

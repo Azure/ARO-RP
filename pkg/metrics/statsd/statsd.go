@@ -38,6 +38,10 @@ type statsd struct {
 
 // New returns a new metrics.Interface
 func New(ctx context.Context, log *logrus.Entry, _env env.Interface) (metrics.Interface, error) {
+	if os.Getenv("FEATURE_METRICS") == "" {
+		return &noop.Noop{}, nil
+	}
+
 	s := &statsd{
 		env: _env,
 		now: time.Now,
