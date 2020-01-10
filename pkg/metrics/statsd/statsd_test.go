@@ -7,6 +7,8 @@ import (
 	"bytes"
 	"testing"
 	"time"
+
+	"github.com/Azure/ARO-RP/pkg/env"
 )
 
 type writeCloser struct {
@@ -19,6 +21,7 @@ func TestEmitGauge(t *testing.T) {
 	wc := &writeCloser{Buffer: &bytes.Buffer{}}
 
 	s := &statsd{
+		env:  env.NewTest(nil, nil),
 		conn: wc,
 		now:  func() time.Time { return time.Time{} },
 	}
@@ -28,7 +31,7 @@ func TestEmitGauge(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if wc.String() != `{"Metric":"tests.test_key","Dims":{"key":"value"},"TS":"0001-01-01T00:00:00.000"}:42|g`+"\n" {
+	if wc.String() != `{"Metric":"tests.test_key","Account":"*","Namespace":"*","Dims":{"hostname":"","key":"value","location":"eastus"},"TS":"0001-01-01T00:00:00.000"}:42|g`+"\n" {
 		t.Error(wc.String())
 	}
 }
@@ -37,6 +40,7 @@ func TestEmitFloat(t *testing.T) {
 	wc := &writeCloser{Buffer: &bytes.Buffer{}}
 
 	s := &statsd{
+		env:  env.NewTest(nil, nil),
 		conn: wc,
 		now:  func() time.Time { return time.Time{} },
 	}
@@ -46,7 +50,7 @@ func TestEmitFloat(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if wc.String() != `{"Metric":"tests.test_key","Dims":{"key":"value"},"TS":"0001-01-01T00:00:00.000"}:5.000000|f`+"\n" {
+	if wc.String() != `{"Metric":"tests.test_key","Account":"*","Namespace":"*","Dims":{"hostname":"","key":"value","location":"eastus"},"TS":"0001-01-01T00:00:00.000"}:5.000000|f`+"\n" {
 		t.Error(wc.String())
 	}
 }

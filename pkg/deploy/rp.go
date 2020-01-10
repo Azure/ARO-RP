@@ -190,8 +190,11 @@ func (g *generator) vmss() *arm.Resource {
 	}
 
 	for _, variable := range []string{
-		"metricsAccount",
-		"metricsNamespace",
+		"mdmCertificate",
+		"mdmFrontendUrl",
+		"mdmMetricNamespace",
+		"mdmMonitoringAccount",
+		"mdmPrivateKey",
 		"pullSecret",
 		"rpImage",
 		"rpImageAuth",
@@ -240,11 +243,47 @@ else
   rm -rf /root/.docker
 fi
 
+mkdir -p /etc/mdm
+echo "$MDMCERTIFICATE" >/etc/mdm/cert.pem
+echo "$MDMPRIVATEKEY" >/etc/mdm/key.pem
+chown -R 1000:1000 /etc/mdm
+chmod 0600 /etc/mdm/key.pem
+
+cat >/etc/sysconfig/mdm <<EOF
+MDMIMAGE='arosvc.azurecr.io/mdm:2019.801.1228-66cac1'
+EOF
+
 cat >/etc/sysconfig/arorp <<EOF
-RP_IMAGE='$RPIMAGE'
-PULL_SECRET='$PULLSECRET'
-METRICS_NAMESPACE='$METRICSNAMESPACE'
-METRICS_ACCOUNT='$METRICSACCOUNT'
+PULLSECRET='$PULLSECRET'
+RPIMAGE='$RPIMAGE'
+EOF
+
+cat >/etc/systemd/system/mdm.service <<EOF
+[Unit]
+After=docker.service
+Requires=docker.service
+
+[Service]
+EnvironmentFile=/etc/sysconfig/mdm
+ExecStartPre=-/usr/bin/docker rm -f %N
+ExecStartPre=/usr/bin/docker pull \$MDMIMAGE
+ExecStart=/usr/bin/docker run \
+  --hostname %H \
+  --name %N \
+  --rm \
+  -v /etc/mdm:/etc/mdm \
+  -v /var/etw:/var/etw \
+  \$MDMIMAGE
+  -FrontEndUrl \$MDMFRONTENDURL
+  -MonitoringAccount \$MDMMONITORINGACCOUNT
+  -MetricNamespace \$MDMMETRICNAMESPACE
+  -CertFile /etc/mdm/cert.pem
+  -PrivateKeyFile /etc/mdm/key.pem
+ExecStop=/usr/bin/docker stop %N
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
 EOF
 
 cat >/etc/systemd/system/arorp.service <<EOF
@@ -254,22 +293,27 @@ Requires=docker.service
 
 [Service]
 EnvironmentFile=/etc/sysconfig/arorp
-ExecStartPre=-/usr/bin/docker rm -f %n
-ExecStartPre=/usr/bin/docker pull \$RP_IMAGE
-ExecStart=/usr/bin/docker run --rm --name %n -p 443:8443 \
-  -e METRICS_ACCOUNT \
-  -e METRICS_NAMESPACE \
-  -e PULL_SECRET \
-  \$RP_IMAGE rp
-ExecStop=/usr/bin/docker stop -t 90 %n
+ExecStartPre=-/usr/bin/docker rm -f %N
+ExecStartPre=/usr/bin/docker pull \$RPIMAGE
+ExecStart=/usr/bin/docker run \
+  --hostname %H \
+  --name %N \
+  --rm \
+  -e PULLSECRET \
+  -p 443:8443 \
+  -v /var/etw/mdm_statsd.socket:/mdm_statsd.socket \
+  \$RPIMAGE \
+  rp
+ExecStop=/usr/bin/docker stop -t 90 %N
 Restart=always
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
-systemctl enable arorp.service
-systemctl enable chronyd.service
+for service in arorp chronyd mdm; do
+  systemctl enable $service.service
+done
 
 (sleep 30; reboot) &
 `))
@@ -713,19 +757,29 @@ func (g *generator) template() *arm.Template {
 		"fpServicePrincipalId",
 		"keyvaultName",
 		"rpServicePrincipalId",
-		"metricsAccount",
-		"metricsNamespace",
 	}
 	if g.production {
-		params = append(params, "pullSecret", "rpImage", "rpImageAuth", "sshPublicKey")
+		params = append(params,
+			"mdmCertificate",
+			"mdmFrontendUrl",
+			"mdmMetricNamespace",
+			"mdmMonitoringAccount",
+			"mdmPrivateKey",
+			"pullSecret",
+			"rpImage",
+			"rpImageAuth",
+			"sshPublicKey",
+		)
 	} else {
-		params = append(params, "adminObjectId")
+		params = append(params,
+			"adminObjectId",
+		)
 	}
 
 	for _, param := range params {
 		typ := "string"
 		switch param {
-		case "pullSecret", "rpImageAuth":
+		case "mdmPrivateKey", "pullSecret", "rpImageAuth":
 			typ = "securestring"
 		}
 		t.Parameters[param] = &arm.TemplateParameter{Type: typ}

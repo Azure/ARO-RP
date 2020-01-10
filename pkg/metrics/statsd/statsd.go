@@ -27,24 +27,28 @@ import (
 const defaultSocket = "mdm_statsd.socket"
 
 type statsd struct {
-	account   string
-	namespace string
-
+	env  env.Interface
 	conn io.WriteCloser
 	mu   sync.Mutex
 
 	now func() time.Time
+
+	hostname string
 }
 
 // New returns a new metrics.Interface
 func New(ctx context.Context, log *logrus.Entry, _env env.Interface) (metrics.Interface, error) {
 	s := &statsd{
-		account:   os.Getenv("METRICS_ACCOUNT"),
-		namespace: os.Getenv("METRICS_NAMESPACE"),
-		now:       time.Now,
+		env: _env,
+		now: time.Now,
 	}
 
-	var err error
+	hostname, err := os.Hostname()
+	if err != nil {
+		return nil, err
+	}
+	s.hostname = hostname
+
 	s.conn, err = net.Dial("unix", defaultSocket)
 	if _, ok := _env.(env.Dev); ok &&
 		err != nil &&
@@ -89,8 +93,13 @@ func (s *statsd) EmitGauge(m string, value int64, dims map[string]string) error 
 }
 
 func (s *statsd) emitMetric(m metric) error {
-	m.account = s.account
-	m.namespace = s.namespace
+	m.account = "*"
+	m.namespace = "*"
+	if m.dims == nil {
+		m.dims = map[string]string{}
+	}
+	m.dims["location"] = s.env.Location()
+	m.dims["hostname"] = s.hostname
 	m.ts = s.now()
 
 	b, err := m.marshalStatsd()

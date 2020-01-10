@@ -7,7 +7,6 @@ import (
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
-	"fmt"
 	"net"
 	"os"
 	"strings"
@@ -42,15 +41,6 @@ func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
 	im, err := instancemetadata.NewProd()
 	if err != nil {
 		return nil, err
-	}
-
-	for _, key := range []string{
-		"METRICS_ACCOUNT",
-		"METRICS_NAMESPACE",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return nil, fmt.Errorf("environment variable %q unset", key)
-		}
 	}
 
 	return newProd(ctx, log, im, clientauthorizer.NewARM(log))

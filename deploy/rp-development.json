@@ -17,12 +17,6 @@
         "keyvaultName": {
             "type": "string"
         },
-        "metricsAccount": {
-            "type": "string"
-        },
-        "metricsNamespace": {
-            "type": "string"
-        },
         "rpServicePrincipalId": {
             "type": "string"
         }
