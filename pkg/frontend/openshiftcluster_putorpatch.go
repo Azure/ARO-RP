@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -147,14 +148,16 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 		return nil, err
 	}
 
-	u, err := url.Parse(r.Header.Get("Referer"))
-	if err != nil {
-		return nil, err
-	}
+	if os.Getenv("FEATURE_OPERATIONS") != "" {
+		u, err := url.Parse(r.Header.Get("Referer"))
+		if err != nil {
+			return nil, err
+		}
 
-	u.Path = f.operationsPath(r, doc.AsyncOperationID)
-	*header = http.Header{
-		"Azure-AsyncOperation": []string{u.String()},
+		u.Path = f.operationsPath(r, doc.AsyncOperationID)
+		*header = http.Header{
+			"Azure-AsyncOperation": []string{u.String()},
+		}
 	}
 
 	if isCreate {
