@@ -36,6 +36,8 @@ import (
 func (m *Manager) Create(ctx context.Context) error {
 	var err error
 
+	resourceGroup := m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID[strings.LastIndexByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')+1:]
+
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		var err error
 
@@ -84,9 +86,9 @@ func (m *Manager) Create(ctx context.Context) error {
 		return err
 	}
 
-	clusterDomain := m.doc.OpenShiftCluster.Properties.ClusterDomain
-	if !strings.ContainsRune(clusterDomain, '.') {
-		clusterDomain += "." + m.env.Domain()
+	domain := m.doc.OpenShiftCluster.Properties.ClusterProfile.Domain
+	if !strings.ContainsRune(domain, '.') {
+		domain += "." + m.env.Domain()
 	}
 
 	masterZones, err := m.env.Zones(string(m.doc.OpenShiftCluster.Properties.MasterProfile.VMSize))
@@ -120,10 +122,10 @@ func (m *Manager) Create(ctx context.Context) error {
 				APIVersion: "v1",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: clusterDomain[:strings.IndexByte(clusterDomain, '.')],
+				Name: domain[:strings.IndexByte(domain, '.')],
 			},
 			SSHKey:     sshkey.Type() + " " + base64.StdEncoding.EncodeToString(sshkey.Marshal()),
-			BaseDomain: clusterDomain[strings.IndexByte(clusterDomain, '.')+1:],
+			BaseDomain: domain[strings.IndexByte(domain, '.')+1:],
 			Networking: &types.Networking{
 				MachineCIDR: ipnet.MustParseCIDR("127.0.0.0/8"), // dummy
 				NetworkType: "OpenShiftSDN",
@@ -167,7 +169,7 @@ func (m *Manager) Create(ctx context.Context) error {
 			Platform: types.Platform{
 				Azure: &azuretypes.Platform{
 					Region:                   m.doc.OpenShiftCluster.Location,
-					ResourceGroupName:        m.doc.OpenShiftCluster.Properties.ResourceGroup,
+					ResourceGroupName:        resourceGroup,
 					NetworkResourceGroupName: vnetr.ResourceGroup,
 					VirtualNetwork:           vnetr.ResourceName,
 					ControlPlaneSubnet:       masterSubnetName,
@@ -203,8 +205,12 @@ func (m *Manager) Create(ctx context.Context) error {
 		return err
 	}
 
-	image := &releaseimage.Image{
-		PullSpec: "arosvc.azurecr.io/openshift-release-dev/ocp-release-nightly@sha256:5f1ff5e767acd58445532222c38e643069fdb9fdf0bb176ced48bc2eb1032f2a",
+	image := &releaseimage.Image{}
+	switch m.doc.OpenShiftCluster.Properties.ClusterProfile.Version {
+	case "4.3.0-0.nightly-2019-12-05-001549":
+		image.PullSpec = "arosvc.azurecr.io/openshift-release-dev/ocp-release-nightly@sha256:5f1ff5e767acd58445532222c38e643069fdb9fdf0bb176ced48bc2eb1032f2a"
+	default:
+		return fmt.Errorf("unimplemented version %q", m.doc.OpenShiftCluster.Properties.ClusterProfile.Version)
 	}
 
 	err = validation.ValidateInstallConfig(installConfig.Config, openstackvalidation.NewValidValuesFetcher()).ToAggregate()

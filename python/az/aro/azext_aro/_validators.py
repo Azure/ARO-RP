@@ -45,15 +45,25 @@ def validate_client_secret(namespace):
             raise CLIError('Must specify --client-id with --client-secret.')
 
 
-def validate_cluster_domain(namespace):
-    if namespace.cluster_domain is not None:
+def validate_cluster_resource_group(cmd, namespace):
+    if namespace.cluster_resource_group is not None:
+        client = get_mgmt_service_client(
+            cmd.cli_ctx, ResourceType.MGMT_RESOURCE_RESOURCES)
+
+        if client.resource_groups.check_existence(namespace.cluster_resource_group):
+            raise CLIError(
+                "Invalid --cluster-resource-group '%s': resource group must not exist." %
+                namespace.cluster_resource_group)
+
+
+def validate_domain(namespace):
+    if namespace.domain is not None:
         if not re.match(r'^' +
                         r'([a-z0-9]|[a-z0-9][-a-z0-9]{0,61}[a-z0-9])' +
                         r'(\.([a-z0-9]|[a-z0-9][-a-z0-9]{0,61}[a-z0-9]))*' +
-                        r'$', namespace.cluster_domain) \
-                or namespace.cluster_domain.count('.') == 0:
-            raise CLIError("Invalid --cluster-domain '%s'." %
-                           namespace.cluster_domain)
+                        r'$', namespace.domain):
+            raise CLIError("Invalid --domain '%s'." %
+                           namespace.domain)
 
 
 def _validate_int(key, i):
@@ -63,19 +73,6 @@ def _validate_int(key, i):
         raise CLIError("Invalid --%s '%s'." % (key.replace('_', '-'), i))
 
     return i
-
-
-def validate_resource_name(cmd, namespace):
-    # TODO: remove this limitation, ideally by allowing the end user to specify
-    # the cluster resource group
-
-    if cmd.name == 'aro create':
-        client = get_mgmt_service_client(
-            cmd.cli_ctx, ResourceType.MGMT_RESOURCE_RESOURCES)
-
-        if client.resource_groups.check_existence(namespace.resource_name):
-            raise CLIError(
-                "Invalid --name '%s': resource group with same name must not exist." % namespace.resource_name)
 
 
 def validate_subnet(key):

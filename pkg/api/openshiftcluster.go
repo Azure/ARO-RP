@@ -59,7 +59,7 @@ type Properties struct {
 	ProvisioningState       ProvisioningState `json:"provisioningState,omitempty"`
 	FailedProvisioningState ProvisioningState `json:"failedProvisioningState,omitempty"`
 
-	ClusterDomain string `json:"clusterDomain,omitempty"`
+	ClusterProfile ClusterProfile `json:"clusterProfile,omitempty"`
 
 	ServicePrincipalProfile ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
 
@@ -78,8 +78,6 @@ type Properties struct {
 	// Install is non-nil only when an install is in progress
 	Install *Install `json:"install,omitempty"`
 
-	// TODO: ResourceGroup should be exposed in external API
-	ResourceGroup string `json:"resourceGroup,omitempty"`
 	StorageSuffix string `json:"storageSuffix,omitempty"`
 
 	SSHKey            *rsa.PrivateKey `json:"sshKey,omitempty"`
@@ -98,6 +96,15 @@ const (
 	ProvisioningStateSucceeded ProvisioningState = "Succeeded"
 	ProvisioningStateFailed    ProvisioningState = "Failed"
 )
+
+// ClusterProfile represents a cluster profile.
+type ClusterProfile struct {
+	MissingFields
+
+	Domain          string `json:"domain,omitempty"`
+	Version         string `json:"version,omitempty"`
+	ResourceGroupID string `json:"resourceGroupId,omitempty"`
+}
 
 // ServicePrincipalProfile represents a service principal profile.
 type ServicePrincipalProfile struct {

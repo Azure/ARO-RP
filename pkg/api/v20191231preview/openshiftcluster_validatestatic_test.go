@@ -44,6 +44,8 @@ var (
 func validOpenShiftCluster() *OpenShiftCluster {
 	oc := exampleOpenShiftCluster()
 	oc.ID = id
+	oc.Properties.ClusterProfile.Version = "4.3.0-0.nightly-2019-12-05-001549" // for now
+	oc.Properties.ClusterProfile.ResourceGroupID = fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", subscriptionID)
 	oc.Properties.ServicePrincipalProfile.ClientID = "2b5ba2c6-6205-4fc4-8b5d-9fea369ae1a2"
 	oc.Properties.MasterProfile.SubnetID = fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master", subscriptionID)
 	oc.Properties.WorkerProfiles[0].SubnetID = fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker", subscriptionID)
@@ -142,27 +144,6 @@ func TestOpenShiftClusterStaticValidateProperties(t *testing.T) {
 			wantErr: "400: InvalidParameter: properties.provisioningState: The provided provisioning state 'invalid' is invalid.",
 		},
 		{
-			name: "empty clusterDomain invalid",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ClusterDomain = ""
-			},
-			wantErr: "400: InvalidParameter: properties.clusterDomain: The provided cluster domain '' is invalid.",
-		},
-		{
-			name: "upper case clusterDomain invalid",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ClusterDomain = "BAD"
-			},
-			wantErr: "400: InvalidParameter: properties.clusterDomain: The provided cluster domain 'BAD' is invalid.",
-		},
-		{
-			name: "clusterDomain invalid",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ClusterDomain = "!"
-			},
-			wantErr: "400: InvalidParameter: properties.clusterDomain: The provided cluster domain '!' is invalid.",
-		},
-		{
 			name: "no workerProfiles invalid",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.WorkerProfiles = nil
@@ -188,6 +169,58 @@ func TestOpenShiftClusterStaticValidateProperties(t *testing.T) {
 				oc.Properties.ConsoleURL = "\x00"
 			},
 			wantErr: "400: InvalidParameter: properties.consoleUrl: The provided console URL '\x00' is invalid.",
+		},
+	}
+
+	runTests(t, tests, false)
+}
+
+func TestOpenShiftClusterStaticValidateClusterProfile(t *testing.T) {
+	tests := []*validateTest{
+		{
+			name: "valid",
+		},
+		{
+			name: "empty domain invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterProfile.Domain = ""
+			},
+			wantErr: "400: InvalidParameter: properties.clusterProfile.domain: The provided domain '' is invalid.",
+		},
+		{
+			name: "upper case domain invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterProfile.Domain = "BAD"
+			},
+			wantErr: "400: InvalidParameter: properties.clusterProfile.domain: The provided domain 'BAD' is invalid.",
+		},
+		{
+			name: "domain invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterProfile.Domain = "!"
+			},
+			wantErr: "400: InvalidParameter: properties.clusterProfile.domain: The provided domain '!' is invalid.",
+		},
+		{
+			name: "version invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterProfile.Version = "invalid"
+			},
+			wantErr: "400: InvalidParameter: properties.clusterProfile.version: The provided version 'invalid' is invalid.",
+		},
+		{
+			name: "resourceGroupId invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterProfile.ResourceGroupID = "invalid"
+			},
+			wantErr: "400: InvalidParameter: properties.clusterProfile.resourceGroupId: The provided resource group 'invalid' is invalid.",
+		},
+		{
+			name: "cluster resource group subscriptionId not matching cluster subscriptionId",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterProfile.ResourceGroupID = "/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourcegroups/test-cluster"
+			},
+			wantErr: "400: InvalidParameter: properties.clusterProfile.resourceGroupId: The provided resource group '/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourcegroups/test-cluster' is invalid: must be in same subscription as cluster.",
 		},
 	}
 
@@ -493,9 +526,21 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			wantErr: "400: PropertyChangeNotAllowed: properties.provisioningState: Changing property 'properties.provisioningState' is not allowed.",
 		},
 		{
-			name:    "clusterDomain change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.ClusterDomain = "invalid" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.clusterDomain: Changing property 'properties.clusterDomain' is not allowed.",
+			name:    "domain change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.ClusterProfile.Domain = "invalid" },
+			wantErr: "400: PropertyChangeNotAllowed: properties.clusterProfile.domain: Changing property 'properties.clusterProfile.domain' is not allowed.",
+		},
+		{
+			name:    "version change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.ClusterProfile.Version = "" },
+			wantErr: "400: PropertyChangeNotAllowed: properties.clusterProfile.version: Changing property 'properties.clusterProfile.version' is not allowed.",
+		},
+		{
+			name: "resource group change",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterProfile.ResourceGroupID = oc.Properties.ClusterProfile.ResourceGroupID[:strings.LastIndexByte(oc.Properties.ClusterProfile.ResourceGroupID, '/')] + "/changed"
+			},
+			wantErr: "400: PropertyChangeNotAllowed: properties.clusterProfile.resourceGroupId: Changing property 'properties.clusterProfile.resourceGroupId' is not allowed.",
 		},
 		{
 			name: "apiServer private change",

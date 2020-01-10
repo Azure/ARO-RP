@@ -397,6 +397,11 @@
                                 "paths": [
                                     "/key"
                                 ]
+                            },
+                            {
+                                "paths": [
+                                    "/clusterResourceGroupIdKey"
+                                ]
                             }
                         ]
                     }

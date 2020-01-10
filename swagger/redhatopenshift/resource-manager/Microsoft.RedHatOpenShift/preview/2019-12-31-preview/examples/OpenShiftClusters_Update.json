@@ -10,7 +10,10 @@
         "key": "value"
       },
       "properties": {
-        "clusterDomain": "cluster.location.aroapp.io",
+        "clusterProfile": {
+          "domain": "cluster.location.aroapp.io",
+          "resourceGroupId": "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup"
+        },
         "servicePrincipalProfile": {
           "clientId": "clientId",
           "clientSecret": "clientSecret"
@@ -56,7 +59,11 @@
         },
         "properties": {
           "provisioningState": "Succeeded",
-          "clusterDomain": "cluster.location.aroapp.io",
+          "clusterProfile": {
+            "domain": "cluster.location.aroapp.io",
+            "version": "4.3.0",
+            "resourceGroupId": "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup"
+          },
           "servicePrincipalProfile": {
             "clientId": "clientId"
           },
@@ -104,7 +111,11 @@
         },
         "properties": {
           "provisioningState": "Succeeded",
-          "clusterDomain": "cluster.location.aroapp.io",
+          "clusterProfile": {
+            "domain": "cluster.location.aroapp.io",
+            "version": "4.3.0",
+            "resourceGroupId": "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup"
+          },
           "servicePrincipalProfile": {
             "clientId": "clientId"
           },

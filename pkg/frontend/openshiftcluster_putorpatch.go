@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/gorilla/mux"
@@ -67,8 +68,6 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 				Type: originalR.Provider + "/" + originalR.ResourceType,
 				Properties: api.Properties{
 					ProvisioningState: api.ProvisioningStateSucceeded,
-					// TODO: ResourceGroup should be exposed in external API
-					ResourceGroup: originalR.ResourceName,
 					ServicePrincipalProfile: api.ServicePrincipalProfile{
 						TenantID: subdoc.Subscription.Properties.TenantID,
 					},
@@ -130,7 +129,9 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 	doc.OpenShiftCluster.ID, doc.OpenShiftCluster.Name, doc.OpenShiftCluster.Type = oldID, oldName, oldType
 
 	if isCreate {
+		doc.ClusterResourceGroupIDKey = strings.ToLower(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
 		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateCreating
+		doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.3.0-0.nightly-2019-12-05-001549"
 	} else {
 		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateUpdating
 		doc.Dequeues = 0
@@ -157,7 +158,11 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 	}
 
 	if isCreate {
-		doc, err = f.db.OpenShiftClusters.Create(ctx, doc)
+		newdoc, err := f.db.OpenShiftClusters.Create(ctx, doc)
+		if cosmosdb.IsErrorStatusCode(err, http.StatusPreconditionFailed) {
+			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidResourceGroup, "", "The provided resource group '%s' already contains a cluster.", doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
+		}
+		doc = newdoc
 	} else {
 		doc, err = f.db.OpenShiftClusters.Update(ctx, doc)
 	}

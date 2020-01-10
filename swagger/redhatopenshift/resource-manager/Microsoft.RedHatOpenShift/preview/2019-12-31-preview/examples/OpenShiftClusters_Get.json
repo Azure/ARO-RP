@@ -17,7 +17,11 @@
         },
         "properties": {
           "provisioningState": "Succeeded",
-          "clusterDomain": "cluster.location.aroapp.io",
+          "clusterProfile": {
+            "domain": "cluster.location.aroapp.io",
+            "version": "4.3.0",
+            "resourceGroupId": "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup"
+          },
           "servicePrincipalProfile": {
             "clientId": "clientId"
           },

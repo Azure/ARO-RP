@@ -14,6 +14,8 @@ import (
 )
 
 func (m *Manager) Delete(ctx context.Context) error {
+	resourceGroup := m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID[strings.LastIndexByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')+1:]
+
 	m.log.Printf("deleting dns")
 	err := m.dns.Delete(ctx, m.doc.OpenShiftCluster)
 	if err != nil {
@@ -60,8 +62,8 @@ func (m *Manager) Delete(ctx context.Context) error {
 		return err
 	}
 
-	m.log.Printf("deleting resource group %s", m.doc.OpenShiftCluster.Properties.ResourceGroup)
-	err = m.groups.DeleteAndWait(ctx, m.doc.OpenShiftCluster.Properties.ResourceGroup)
+	m.log.Printf("deleting resource group %s", resourceGroup)
+	err = m.groups.DeleteAndWait(ctx, resourceGroup)
 	if detailedErr, ok := err.(autorest.DetailedError); ok &&
 		detailedErr.StatusCode == http.StatusForbidden {
 		err = nil

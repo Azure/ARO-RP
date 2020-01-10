@@ -183,6 +183,31 @@ class CloudErrorBody(Model):
         self.details = details
 
 
+class ClusterProfile(Model):
+    """ClusterProfile.
+
+    :param domain: The domain for the cluster (immutable).
+    :type domain: str
+    :param version: The version of the cluster (immutable).
+    :type version: str
+    :param resource_group_id: The ID of the cluster resource group
+     (immutable).
+    :type resource_group_id: str
+    """
+
+    _attribute_map = {
+        'domain': {'key': 'domain', 'type': 'str'},
+        'version': {'key': 'version', 'type': 'str'},
+        'resource_group_id': {'key': 'resourceGroupId', 'type': 'str'},
+    }
+
+    def __init__(self, *, domain: str=None, version: str=None, resource_group_id: str=None, **kwargs) -> None:
+        super(ClusterProfile, self).__init__(**kwargs)
+        self.domain = domain
+        self.version = version
+        self.resource_group_id = resource_group_id
+
+
 class Display(Model):
     """Display represents the display details of an operation.
 
@@ -304,8 +329,9 @@ class OpenShiftCluster(Resource):
      'Updating'
     :type provisioning_state: str or
      ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.enum
-    :param cluster_domain: The domain for the cluster (immutable).
-    :type cluster_domain: str
+    :param cluster_profile: The cluster profile.
+    :type cluster_profile:
+     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.ClusterProfile
     :param service_principal_profile: The cluster service principal profile.
     :type service_principal_profile:
      ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.ServicePrincipalProfile
@@ -341,7 +367,7 @@ class OpenShiftCluster(Resource):
         'tags': {'key': 'tags', 'type': '{str}'},
         'location': {'key': 'location', 'type': 'str'},
         'provisioning_state': {'key': 'properties.provisioningState', 'type': 'str'},
-        'cluster_domain': {'key': 'properties.clusterDomain', 'type': 'str'},
+        'cluster_profile': {'key': 'properties.clusterProfile', 'type': 'ClusterProfile'},
         'service_principal_profile': {'key': 'properties.servicePrincipalProfile', 'type': 'ServicePrincipalProfile'},
         'network_profile': {'key': 'properties.networkProfile', 'type': 'NetworkProfile'},
         'master_profile': {'key': 'properties.masterProfile', 'type': 'MasterProfile'},
@@ -351,12 +377,12 @@ class OpenShiftCluster(Resource):
         'console_url': {'key': 'properties.consoleUrl', 'type': 'str'},
     }
 
-    def __init__(self, *, tags=None, location: str=None, provisioning_state=None, cluster_domain: str=None, service_principal_profile=None, network_profile=None, master_profile=None, worker_profiles=None, apiserver_profile=None, ingress_profiles=None, console_url: str=None, **kwargs) -> None:
+    def __init__(self, *, tags=None, location: str=None, provisioning_state=None, cluster_profile=None, service_principal_profile=None, network_profile=None, master_profile=None, worker_profiles=None, apiserver_profile=None, ingress_profiles=None, console_url: str=None, **kwargs) -> None:
         super(OpenShiftCluster, self).__init__(**kwargs)
         self.tags = tags
         self.location = location
         self.provisioning_state = provisioning_state
-        self.cluster_domain = cluster_domain
+        self.cluster_profile = cluster_profile
         self.service_principal_profile = service_principal_profile
         self.network_profile = network_profile
         self.master_profile = master_profile

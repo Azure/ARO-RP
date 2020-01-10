@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
@@ -145,9 +146,11 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 }
 
 func (i *Installer) getBlobService(ctx context.Context) (*azstorage.BlobStorageClient, error) {
+	resourceGroup := i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID[strings.LastIndexByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')+1:]
+
 	t := time.Now().UTC().Truncate(time.Second)
 
-	res, err := i.accounts.ListAccountSAS(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "cluster"+i.doc.OpenShiftCluster.Properties.StorageSuffix, mgmtstorage.AccountSasParameters{
+	res, err := i.accounts.ListAccountSAS(ctx, resourceGroup, "cluster"+i.doc.OpenShiftCluster.Properties.StorageSuffix, mgmtstorage.AccountSasParameters{
 		Services:               "b",
 		ResourceTypes:          "o",
 		Permissions:            "crw",

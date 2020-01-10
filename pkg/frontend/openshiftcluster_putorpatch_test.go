@@ -122,10 +122,12 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 						Properties: api.Properties{
 							ProvisioningState: api.ProvisioningStateCreating,
+							ClusterProfile: api.ClusterProfile{
+								Version: "4.3.0-0.nightly-2019-12-05-001549",
+							},
 							ServicePrincipalProfile: api.ServicePrincipalProfile{
 								TenantID: "11111111-1111-1111-1111-111111111111",
 							},
-							ResourceGroup: "resourceName",
 						},
 					},
 				}
@@ -142,6 +144,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 					Properties: v20191231preview.Properties{
 						ProvisioningState: v20191231preview.ProvisioningStateCreating,
+						ClusterProfile: v20191231preview.ClusterProfile{
+							Version: "4.3.0-0.nightly-2019-12-05-001549",
+						},
 					},
 				}
 			},
@@ -150,7 +155,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			name:       "update a cluster from succeeded",
 			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName",
 			request: func(oc *v20191231preview.OpenShiftCluster) {
-				oc.Properties.ClusterDomain = "changed"
+				oc.Properties.ClusterProfile.Domain = "changed"
 			},
 			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters) {
 				openShiftClusters.EXPECT().
@@ -180,7 +185,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 						Properties: api.Properties{
 							ProvisioningState: api.ProvisioningStateUpdating,
-							ClusterDomain:     "changed",
+							ClusterProfile: api.ClusterProfile{
+								Domain: "changed",
+							},
 						},
 					},
 				}
@@ -197,7 +204,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 					Properties: v20191231preview.Properties{
 						ProvisioningState: v20191231preview.ProvisioningStateUpdating,
-						ClusterDomain:     "changed",
+						ClusterProfile: v20191231preview.ClusterProfile{
+							Domain: "changed",
+						},
 					},
 				}
 			},
@@ -206,7 +215,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			name:       "update a cluster from failed during update",
 			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName",
 			request: func(oc *v20191231preview.OpenShiftCluster) {
-				oc.Properties.ClusterDomain = "changed"
+				oc.Properties.ClusterProfile.Domain = "changed"
 			},
 			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters) {
 				openShiftClusters.EXPECT().
@@ -237,7 +246,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 						Properties: api.Properties{
 							ProvisioningState: api.ProvisioningStateUpdating,
-							ClusterDomain:     "changed",
+							ClusterProfile: api.ClusterProfile{
+								Domain: "changed",
+							},
 						},
 					},
 				}
@@ -254,7 +265,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 					Properties: v20191231preview.Properties{
 						ProvisioningState: v20191231preview.ProvisioningStateUpdating,
-						ClusterDomain:     "changed",
+						ClusterProfile: v20191231preview.ClusterProfile{
+							Domain: "changed",
+						},
 					},
 				}
 			},
@@ -263,7 +276,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			name:       "update a cluster from failed during creation",
 			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName",
 			request: func(oc *v20191231preview.OpenShiftCluster) {
-				oc.Properties.ClusterDomain = "changed"
+				oc.Properties.ClusterProfile.Domain = "changed"
 			},
 			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters) {
 				openShiftClusters.EXPECT().
@@ -288,7 +301,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			name:       "update a cluster from failed during deletion",
 			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName",
 			request: func(oc *v20191231preview.OpenShiftCluster) {
-				oc.Properties.ClusterDomain = "changed"
+				oc.Properties.ClusterProfile.Domain = "changed"
 			},
 			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters) {
 				openShiftClusters.EXPECT().
@@ -313,7 +326,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			name:       "patch a cluster from succeeded",
 			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName",
 			request: func(oc *v20191231preview.OpenShiftCluster) {
-				oc.Properties.ClusterDomain = "changed"
+				oc.Properties.ClusterProfile.Domain = "changed"
 				oc.Properties.IngressProfiles = []v20191231preview.IngressProfile{{Name: "changed"}}
 				oc.Properties.WorkerProfiles = []v20191231preview.WorkerProfile{{Name: "changed"}}
 			},
@@ -347,9 +360,11 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						Tags: map[string]string{"tag": "will-be-kept"},
 						Properties: api.Properties{
 							ProvisioningState: api.ProvisioningStateUpdating,
-							ClusterDomain:     "changed",
-							IngressProfiles:   []api.IngressProfile{{Name: "changed"}},
-							WorkerProfiles:    []api.WorkerProfile{{Name: "changed"}},
+							ClusterProfile: api.ClusterProfile{
+								Domain: "changed",
+							},
+							IngressProfiles: []api.IngressProfile{{Name: "changed"}},
+							WorkerProfiles:  []api.WorkerProfile{{Name: "changed"}},
 						},
 					},
 				}
@@ -367,9 +382,11 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					Tags: map[string]string{"tag": "will-be-kept"},
 					Properties: v20191231preview.Properties{
 						ProvisioningState: v20191231preview.ProvisioningStateUpdating,
-						ClusterDomain:     "changed",
-						IngressProfiles:   []v20191231preview.IngressProfile{{Name: "changed"}},
-						WorkerProfiles:    []v20191231preview.WorkerProfile{{Name: "changed"}},
+						ClusterProfile: v20191231preview.ClusterProfile{
+							Domain: "changed",
+						},
+						IngressProfiles: []v20191231preview.IngressProfile{{Name: "changed"}},
+						WorkerProfiles:  []v20191231preview.WorkerProfile{{Name: "changed"}},
 					},
 				}
 			},
@@ -378,7 +395,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			name:       "patch a cluster from failed during update",
 			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName",
 			request: func(oc *v20191231preview.OpenShiftCluster) {
-				oc.Properties.ClusterDomain = "changed"
+				oc.Properties.ClusterProfile.Domain = "changed"
 			},
 			isPatch: true,
 			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters) {
@@ -411,9 +428,11 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						Tags: map[string]string{"tag": "will-be-kept"},
 						Properties: api.Properties{
 							ProvisioningState: api.ProvisioningStateUpdating,
-							ClusterDomain:     "changed",
-							IngressProfiles:   []api.IngressProfile{{Name: "will-be-kept"}},
-							WorkerProfiles:    []api.WorkerProfile{{Name: "will-be-kept"}},
+							ClusterProfile: api.ClusterProfile{
+								Domain: "changed",
+							},
+							IngressProfiles: []api.IngressProfile{{Name: "will-be-kept"}},
+							WorkerProfiles:  []api.WorkerProfile{{Name: "will-be-kept"}},
 						},
 					},
 				}
@@ -431,9 +450,11 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					Tags: map[string]string{"tag": "will-be-kept"},
 					Properties: v20191231preview.Properties{
 						ProvisioningState: v20191231preview.ProvisioningStateUpdating,
-						ClusterDomain:     "changed",
-						IngressProfiles:   []v20191231preview.IngressProfile{{Name: "will-be-kept"}},
-						WorkerProfiles:    []v20191231preview.WorkerProfile{{Name: "will-be-kept"}},
+						ClusterProfile: v20191231preview.ClusterProfile{
+							Domain: "changed",
+						},
+						IngressProfiles: []v20191231preview.IngressProfile{{Name: "will-be-kept"}},
+						WorkerProfiles:  []v20191231preview.WorkerProfile{{Name: "will-be-kept"}},
 					},
 				}
 			},
@@ -442,7 +463,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			name:       "patch a cluster from failed during creation",
 			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName",
 			request: func(oc *v20191231preview.OpenShiftCluster) {
-				oc.Properties.ClusterDomain = "changed"
+				oc.Properties.ClusterProfile.Domain = "changed"
 			},
 			isPatch: true,
 			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters) {
@@ -468,7 +489,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			name:       "patch a cluster from failed during deletion",
 			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName",
 			request: func(oc *v20191231preview.OpenShiftCluster) {
-				oc.Properties.ClusterDomain = "changed"
+				oc.Properties.ClusterProfile.Domain = "changed"
 			},
 			isPatch: true,
 			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters) {

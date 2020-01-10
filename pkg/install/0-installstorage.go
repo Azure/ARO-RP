@@ -68,6 +68,8 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 	adminClient := g[reflect.TypeOf(&kubeconfig.AdminClient{})].(*kubeconfig.AdminClient)
 	bootstrap := g[reflect.TypeOf(&bootstrap.Bootstrap{})].(*bootstrap.Bootstrap)
 
+	resourceGroup := i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID[strings.LastIndexByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')+1:]
+
 	i.log.Print("creating resource group")
 	group := mgmtresources.Group{
 		Location:  &installConfig.Config.Azure.Region,
@@ -76,13 +78,13 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 	if _, ok := i.env.(env.Dev); ok {
 		group.ManagedBy = nil
 	}
-	_, err = i.groups.CreateOrUpdate(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, group)
+	_, err = i.groups.CreateOrUpdate(ctx, resourceGroup, group)
 	if err != nil {
 		return err
 	}
 
 	if development, ok := i.env.(env.Dev); ok {
-		err = development.CreateARMResourceGroupRoleAssignment(ctx, i.fpAuthorizer, i.doc.OpenShiftCluster.Properties.ResourceGroup)
+		err = development.CreateARMResourceGroupRoleAssignment(ctx, i.fpAuthorizer, resourceGroup)
 		if err != nil {
 			return err
 		}
@@ -174,7 +176,7 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 		}
 
 		i.log.Print("deploying storage template")
-		err = i.deployments.CreateOrUpdateAndWait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy", mgmtresources.Deployment{
+		err = i.deployments.CreateOrUpdateAndWait(ctx, resourceGroup, "azuredeploy", mgmtresources.Deployment{
 			Properties: &mgmtresources.DeploymentProperties{
 				Template: t,
 				Mode:     mgmtresources.Incremental,
@@ -186,7 +188,7 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 					requestErr.ServiceError != nil &&
 					requestErr.ServiceError.Code == "DeploymentActive" {
 					i.log.Print("waiting for storage template")
-					err = i.deployments.Wait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy")
+					err = i.deployments.Wait(ctx, resourceGroup, "azuredeploy")
 				}
 			}
 			if err != nil {
