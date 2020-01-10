@@ -18,12 +18,12 @@ func (c *writeCloser) Close() error { return nil }
 func TestEmitGauge(t *testing.T) {
 	wc := &writeCloser{Buffer: &bytes.Buffer{}}
 
-	c := &Statsd{
+	s := &statsd{
 		conn: wc,
 		now:  func() time.Time { return time.Time{} },
 	}
 
-	err := c.EmitGauge("tests.test_key", 42, map[string]string{"key": "value"})
+	err := s.EmitGauge("tests.test_key", 42, map[string]string{"key": "value"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,12 +36,12 @@ func TestEmitGauge(t *testing.T) {
 func TestEmitFloat(t *testing.T) {
 	wc := &writeCloser{Buffer: &bytes.Buffer{}}
 
-	c := &Statsd{
+	s := &statsd{
 		conn: wc,
 		now:  func() time.Time { return time.Time{} },
 	}
 
-	err := c.EmitFloat("tests.test_key", 5, map[string]string{"key": "value"})
+	err := s.EmitFloat("tests.test_key", 5, map[string]string{"key": "value"})
 	if err != nil {
 		t.Fatal(err)
 	}
