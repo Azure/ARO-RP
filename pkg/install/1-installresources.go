@@ -692,7 +692,13 @@ func (i *Installer) installResources(ctx context.Context) error {
 			return err
 		}
 
+		privateEndpointIP, err := i.privateendpoint.GetIP(ctx, i.doc)
+		if err != nil {
+			return err
+		}
+
 		i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+			doc.OpenShiftCluster.Properties.NetworkProfile.PrivateEndpointIP = privateEndpointIP
 			doc.OpenShiftCluster.Properties.APIServerProfile.IP = ipAddress
 			return nil
 		})
@@ -702,12 +708,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 	}
 
 	{
-		ip, err := i.privateendpoint.GetIP(ctx, i.doc)
-		if err != nil {
-			return err
-		}
-
-		restConfig, err := restconfig.RestConfig(ctx, i.env, i.doc, ip)
+		restConfig, err := restconfig.RestConfig(ctx, i.env, i.doc.OpenShiftCluster)
 		if err != nil {
 			return err
 		}
