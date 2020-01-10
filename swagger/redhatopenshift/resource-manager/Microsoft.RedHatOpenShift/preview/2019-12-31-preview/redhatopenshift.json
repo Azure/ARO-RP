@@ -446,6 +446,10 @@
         "domain": {
           "description": "The domain for the cluster (immutable).",
           "type": "string"
+        },
+        "version": {
+          "description": "The version of the cluster (immutable).",
+          "type": "string"
         }
       }
     },

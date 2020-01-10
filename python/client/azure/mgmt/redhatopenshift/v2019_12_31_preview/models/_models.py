@@ -188,15 +188,19 @@ class ClusterProfile(Model):
 
     :param domain: The domain for the cluster (immutable).
     :type domain: str
+    :param version: The version of the cluster (immutable).
+    :type version: str
     """
 
     _attribute_map = {
         'domain': {'key': 'domain', 'type': 'str'},
+        'version': {'key': 'version', 'type': 'str'},
     }
 
     def __init__(self, **kwargs):
         super(ClusterProfile, self).__init__(**kwargs)
         self.domain = kwargs.get('domain', None)
+        self.version = kwargs.get('version', None)
 
 
 class Display(Model):

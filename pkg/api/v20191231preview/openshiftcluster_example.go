@@ -15,7 +15,8 @@ func exampleOpenShiftCluster() *OpenShiftCluster {
 		Properties: Properties{
 			ProvisioningState: ProvisioningStateSucceeded,
 			ClusterProfile: ClusterProfile{
-				Domain: "cluster.location.aroapp.io",
+				Domain:  "cluster.location.aroapp.io",
+				Version: "4.3.0",
 			},
 			ServicePrincipalProfile: ServicePrincipalProfile{
 				ClientSecret: "clientSecret",
@@ -63,6 +64,7 @@ func ExampleOpenShiftClusterParameter() *OpenShiftCluster {
 	oc.Name = ""
 	oc.Type = ""
 	oc.Properties.ProvisioningState = ""
+	oc.Properties.ClusterProfile.Version = ""
 	oc.Properties.APIServerProfile.URL = ""
 	oc.Properties.APIServerProfile.IP = ""
 	oc.Properties.IngressProfiles[0].IP = ""

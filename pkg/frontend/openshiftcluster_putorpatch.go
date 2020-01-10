@@ -131,6 +131,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 
 	if isCreate {
 		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateCreating
+		doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.3.0-0.nightly-2019-12-05-001549"
 	} else {
 		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateUpdating
 		doc.Dequeues = 0

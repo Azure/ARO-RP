@@ -203,8 +203,12 @@ func (m *Manager) Create(ctx context.Context) error {
 		return err
 	}
 
-	image := &releaseimage.Image{
-		PullSpec: "arosvc.azurecr.io/openshift-release-dev/ocp-release-nightly@sha256:5f1ff5e767acd58445532222c38e643069fdb9fdf0bb176ced48bc2eb1032f2a",
+	image := &releaseimage.Image{}
+	switch m.doc.OpenShiftCluster.Properties.ClusterProfile.Version {
+	case "4.3.0-0.nightly-2019-12-05-001549":
+		image.PullSpec = "arosvc.azurecr.io/openshift-release-dev/ocp-release-nightly@sha256:5f1ff5e767acd58445532222c38e643069fdb9fdf0bb176ced48bc2eb1032f2a"
+	default:
+		return fmt.Errorf("unimplemented version %q", m.doc.OpenShiftCluster.Properties.ClusterProfile.Version)
 	}
 
 	err = validation.ValidateInstallConfig(installConfig.Config, openstackvalidation.NewValidValuesFetcher()).ToAggregate()

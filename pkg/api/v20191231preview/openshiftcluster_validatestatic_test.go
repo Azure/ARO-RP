@@ -44,6 +44,7 @@ var (
 func validOpenShiftCluster() *OpenShiftCluster {
 	oc := exampleOpenShiftCluster()
 	oc.ID = id
+	oc.Properties.ClusterProfile.Version = "4.3.0-0.nightly-2019-12-05-001549" // for now
 	oc.Properties.ServicePrincipalProfile.ClientID = "2b5ba2c6-6205-4fc4-8b5d-9fea369ae1a2"
 	oc.Properties.MasterProfile.SubnetID = fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master", subscriptionID)
 	oc.Properties.WorkerProfiles[0].SubnetID = fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker", subscriptionID)
@@ -198,6 +199,13 @@ func TestOpenShiftClusterStaticValidateClusterProfile(t *testing.T) {
 				oc.Properties.ClusterProfile.Domain = "!"
 			},
 			wantErr: "400: InvalidParameter: properties.clusterProfile.domain: The provided domain '!' is invalid.",
+		},
+		{
+			name: "version invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterProfile.Version = "invalid"
+			},
+			wantErr: "400: InvalidParameter: properties.clusterProfile.version: The provided version 'invalid' is invalid.",
 		},
 	}
 
@@ -506,6 +514,11 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name:    "domain change",
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.ClusterProfile.Domain = "invalid" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.clusterProfile.domain: Changing property 'properties.clusterProfile.domain' is not allowed.",
+		},
+		{
+			name:    "version change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.ClusterProfile.Version = "" },
+			wantErr: "400: PropertyChangeNotAllowed: properties.clusterProfile.version: Changing property 'properties.clusterProfile.version' is not allowed.",
 		},
 		{
 			name: "apiServer private change",

@@ -22,7 +22,8 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 		Properties: Properties{
 			ProvisioningState: ProvisioningState(oc.Properties.ProvisioningState),
 			ClusterProfile: ClusterProfile{
-				Domain: oc.Properties.ClusterProfile.Domain,
+				Domain:  oc.Properties.ClusterProfile.Domain,
+				Version: oc.Properties.ClusterProfile.Version,
 			},
 			ServicePrincipalProfile: ServicePrincipalProfile{
 				ClientID:     oc.Properties.ServicePrincipalProfile.ClientID,
@@ -113,6 +114,7 @@ func (c *openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShi
 	}
 	out.Properties.ProvisioningState = api.ProvisioningState(oc.Properties.ProvisioningState)
 	out.Properties.ClusterProfile.Domain = oc.Properties.ClusterProfile.Domain
+	out.Properties.ClusterProfile.Version = oc.Properties.ClusterProfile.Version
 	out.Properties.ServicePrincipalProfile.ClientID = oc.Properties.ServicePrincipalProfile.ClientID
 	out.Properties.ServicePrincipalProfile.ClientSecret = oc.Properties.ServicePrincipalProfile.ClientSecret
 	out.Properties.NetworkProfile.PodCIDR = oc.Properties.NetworkProfile.PodCIDR

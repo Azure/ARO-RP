@@ -158,6 +158,8 @@ type CloudErrorBody struct {
 type ClusterProfile struct {
 	// Domain - The domain for the cluster (immutable).
 	Domain *string `json:"domain,omitempty"`
+	// Version - The version of the cluster (immutable).
+	Version *string `json:"version,omitempty"`
 }
 
 // Display display represents the display details of an operation.

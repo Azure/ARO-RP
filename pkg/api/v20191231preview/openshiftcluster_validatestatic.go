@@ -130,6 +130,11 @@ func (sv *openShiftClusterStaticValidator) validateClusterProfile(path string, c
 	if !rxDomainName.MatchString(cp.Domain) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".domain", "The provided domain '%s' is invalid.", cp.Domain)
 	}
+	switch cp.Version {
+	case "", "4.3.0-0.nightly-2019-12-05-001549":
+	default:
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".version", "The provided version '%s' is invalid.", cp.Version)
+	}
 
 	return nil
 }

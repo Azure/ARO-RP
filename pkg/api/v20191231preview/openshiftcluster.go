@@ -78,6 +78,9 @@ const (
 type ClusterProfile struct {
 	// The domain for the cluster (immutable).
 	Domain string `json:"domain,omitempty"`
+
+	// The version of the cluster (immutable).
+	Version string `json:"version,omitempty"`
 }
 
 // ServicePrincipalProfile represents a service principal profile.

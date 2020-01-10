@@ -103,7 +103,8 @@ const (
 type ClusterProfile struct {
 	MissingFields
 
-	Domain string `json:"domain,omitempty"`
+	Domain  string `json:"domain,omitempty"`
+	Version string `json:"version,omitempty"`
 }
 
 // ServicePrincipalProfile represents a service principal profile.
