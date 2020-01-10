@@ -6,11 +6,11 @@ package dns
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 
 	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -55,12 +55,9 @@ func (m *manager) Create(ctx context.Context, oc *api.OpenShiftCluster) error {
 		return nil
 	}
 
-	if detailedError, ok := err.(autorest.DetailedError); ok {
-		if requestError, ok := detailedError.Original.(*azure.RequestError); ok &&
-			requestError.ServiceError != nil &&
-			requestError.ServiceError.Code == "NotFound" {
-			err = nil
-		}
+	if detailedErr, ok := err.(autorest.DetailedError); ok &&
+		detailedErr.StatusCode == http.StatusNotFound {
+		err = nil
 	}
 	if err != nil {
 		return err
@@ -114,15 +111,11 @@ func (m *manager) Delete(ctx context.Context, oc *api.OpenShiftCluster) error {
 	}
 
 	rs, err := m.recordsets.Get(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+clusterDomain, mgmtdns.A)
+	if detailedErr, ok := err.(autorest.DetailedError); ok &&
+		detailedErr.StatusCode == http.StatusNotFound {
+		err = nil
+	}
 	if err != nil {
-		if detailedError, ok := err.(autorest.DetailedError); ok {
-			if requestError, ok := detailedError.Original.(*azure.RequestError); ok &&
-				requestError.ServiceError != nil &&
-				requestError.ServiceError.Code == "NotFound" {
-				err = nil
-			}
-		}
-
 		return err
 	}
 
