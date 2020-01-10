@@ -210,6 +210,7 @@ func (f *frontend) Run(ctx context.Context, stop <-chan struct{}, done chan<- st
 	r.Use(middleware.Body)
 
 	r.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeNotFound, "", "The requested path could not be found.")
 	})
 	r.NotFoundHandler = middleware.Authenticated(f.env)(r.NotFoundHandler)
