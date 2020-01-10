@@ -156,7 +156,7 @@ func (c *openShiftClusters) patchWithLease(ctx context.Context, key string, f fu
 		}
 
 		return f(doc)
-	}, nil)
+	}, options)
 }
 
 func (c *openShiftClusters) Update(ctx context.Context, doc *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error) {
