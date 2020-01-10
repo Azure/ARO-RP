@@ -18,7 +18,9 @@
             },
             "properties": {
               "provisioningState": "Succeeded",
-              "clusterDomain": "cluster.location.aroapp.io",
+              "clusterProfile": {
+                "domain": "cluster.location.aroapp.io"
+              },
               "servicePrincipalProfile": {
                 "clientId": "clientId"
               },

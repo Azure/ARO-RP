@@ -59,7 +59,7 @@ type Properties struct {
 	ProvisioningState       ProvisioningState `json:"provisioningState,omitempty"`
 	FailedProvisioningState ProvisioningState `json:"failedProvisioningState,omitempty"`
 
-	ClusterDomain string `json:"clusterDomain,omitempty"`
+	ClusterProfile ClusterProfile `json:"clusterProfile,omitempty"`
 
 	ServicePrincipalProfile ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
 
@@ -98,6 +98,13 @@ const (
 	ProvisioningStateSucceeded ProvisioningState = "Succeeded"
 	ProvisioningStateFailed    ProvisioningState = "Failed"
 )
+
+// ClusterProfile represents a cluster profile.
+type ClusterProfile struct {
+	MissingFields
+
+	Domain string `json:"domain,omitempty"`
+}
 
 // ServicePrincipalProfile represents a service principal profile.
 type ServicePrincipalProfile struct {

@@ -142,27 +142,6 @@ func TestOpenShiftClusterStaticValidateProperties(t *testing.T) {
 			wantErr: "400: InvalidParameter: properties.provisioningState: The provided provisioning state 'invalid' is invalid.",
 		},
 		{
-			name: "empty clusterDomain invalid",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ClusterDomain = ""
-			},
-			wantErr: "400: InvalidParameter: properties.clusterDomain: The provided cluster domain '' is invalid.",
-		},
-		{
-			name: "upper case clusterDomain invalid",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ClusterDomain = "BAD"
-			},
-			wantErr: "400: InvalidParameter: properties.clusterDomain: The provided cluster domain 'BAD' is invalid.",
-		},
-		{
-			name: "clusterDomain invalid",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ClusterDomain = "!"
-			},
-			wantErr: "400: InvalidParameter: properties.clusterDomain: The provided cluster domain '!' is invalid.",
-		},
-		{
 			name: "no workerProfiles invalid",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.WorkerProfiles = nil
@@ -188,6 +167,37 @@ func TestOpenShiftClusterStaticValidateProperties(t *testing.T) {
 				oc.Properties.ConsoleURL = "\x00"
 			},
 			wantErr: "400: InvalidParameter: properties.consoleUrl: The provided console URL '\x00' is invalid.",
+		},
+	}
+
+	runTests(t, tests, false)
+}
+
+func TestOpenShiftClusterStaticValidateClusterProfile(t *testing.T) {
+	tests := []*validateTest{
+		{
+			name: "valid",
+		},
+		{
+			name: "empty domain invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterProfile.Domain = ""
+			},
+			wantErr: "400: InvalidParameter: properties.clusterProfile.domain: The provided domain '' is invalid.",
+		},
+		{
+			name: "upper case domain invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterProfile.Domain = "BAD"
+			},
+			wantErr: "400: InvalidParameter: properties.clusterProfile.domain: The provided domain 'BAD' is invalid.",
+		},
+		{
+			name: "domain invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterProfile.Domain = "!"
+			},
+			wantErr: "400: InvalidParameter: properties.clusterProfile.domain: The provided domain '!' is invalid.",
 		},
 	}
 
@@ -493,9 +503,9 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			wantErr: "400: PropertyChangeNotAllowed: properties.provisioningState: Changing property 'properties.provisioningState' is not allowed.",
 		},
 		{
-			name:    "clusterDomain change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.ClusterDomain = "invalid" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.clusterDomain: Changing property 'properties.clusterDomain' is not allowed.",
+			name:    "domain change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.ClusterProfile.Domain = "invalid" },
+			wantErr: "400: PropertyChangeNotAllowed: properties.clusterProfile.domain: Changing property 'properties.clusterProfile.domain' is not allowed.",
 		},
 		{
 			name: "apiServer private change",

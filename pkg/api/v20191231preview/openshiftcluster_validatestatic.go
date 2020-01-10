@@ -90,8 +90,8 @@ func (sv *openShiftClusterStaticValidator) validateProperties(path string, p *Pr
 	default:
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".provisioningState", "The provided provisioning state '%s' is invalid.", p.ProvisioningState)
 	}
-	if !rxDomainName.MatchString(p.ClusterDomain) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".clusterDomain", "The provided cluster domain '%s' is invalid.", p.ClusterDomain)
+	if err := sv.validateClusterProfile(path+".clusterProfile", &p.ClusterProfile); err != nil {
+		return err
 	}
 	if err := sv.validateServicePrincipalProfile(path+".servicePrincipalProfile", &p.ServicePrincipalProfile); err != nil {
 		return err
@@ -121,6 +121,14 @@ func (sv *openShiftClusterStaticValidator) validateProperties(path string, p *Pr
 		if _, err := url.Parse(p.ConsoleURL); err != nil {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".consoleUrl", "The provided console URL '%s' is invalid.", p.ConsoleURL)
 		}
+	}
+
+	return nil
+}
+
+func (sv *openShiftClusterStaticValidator) validateClusterProfile(path string, cp *ClusterProfile) error {
+	if !rxDomainName.MatchString(cp.Domain) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".domain", "The provided domain '%s' is invalid.", cp.Domain)
 	}
 
 	return nil

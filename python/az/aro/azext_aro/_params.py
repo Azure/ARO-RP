@@ -4,7 +4,7 @@
 from azext_aro._validators import validate_cidr
 from azext_aro._validators import validate_client_id
 from azext_aro._validators import validate_client_secret
-from azext_aro._validators import validate_cluster_domain
+from azext_aro._validators import validate_domain
 from azext_aro._validators import validate_resource_name
 from azext_aro._validators import validate_subnet
 from azext_aro._validators import validate_visibility
@@ -29,9 +29,9 @@ def load_arguments(self, _):
         c.argument('tags',
                    tags_type)
 
-        c.argument('cluster_domain',
+        c.argument('domain',
                    help='Domain of cluster.',
-                   validator=validate_cluster_domain)
+                   validator=validate_domain)
 
         c.argument('client_id',
                    help='Client ID of cluster service principal.',

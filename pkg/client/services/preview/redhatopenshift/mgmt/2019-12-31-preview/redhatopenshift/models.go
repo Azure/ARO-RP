@@ -154,6 +154,12 @@ type CloudErrorBody struct {
 	Details *[]CloudErrorBody `json:"details,omitempty"`
 }
 
+// ClusterProfile ...
+type ClusterProfile struct {
+	// Domain - The domain for the cluster (immutable).
+	Domain *string `json:"domain,omitempty"`
+}
+
 // Display display represents the display details of an operation.
 type Display struct {
 	// Provider - Friendly name of the resource provider.
@@ -409,8 +415,8 @@ type OperationList struct {
 type Properties struct {
 	// ProvisioningState - The cluster provisioning state (immutable). Possible values include: 'Creating', 'Deleting', 'Failed', 'Succeeded', 'Updating'
 	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"`
-	// ClusterDomain - The domain for the cluster (immutable).
-	ClusterDomain *string `json:"clusterDomain,omitempty"`
+	// ClusterProfile - The cluster profile.
+	ClusterProfile *ClusterProfile `json:"clusterProfile,omitempty"`
 	// ServicePrincipalProfile - The cluster service principal profile.
 	ServicePrincipalProfile *ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
 	// NetworkProfile - The cluster network profile.

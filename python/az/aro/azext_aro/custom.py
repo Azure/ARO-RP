@@ -27,7 +27,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                vnet=None,
                vnet_resource_group_name=None,  # pylint: disable=unused-argument
                location=None,
-               cluster_domain=None,
+               domain=None,
                client_id=None,
                client_secret=None,
                pod_cidr=None,
@@ -66,8 +66,10 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
     oc = v2019_12_31_preview.OpenShiftCluster(
         location=location,
         tags=tags,
-        cluster_domain=cluster_domain or ''.join(random.choice(
-            'abcdefghijklmnopqrstuvwxyz0123456789') for _ in range(8)),
+        cluster_profile=v2019_12_31_preview.ClusterProfile(
+            domain=domain or ''.join(random.choice(
+                'abcdefghijklmnopqrstuvwxyz0123456789') for _ in range(8)),
+        ),
         service_principal_profile=v2019_12_31_preview.ServicePrincipalProfile(
             client_id=client_id,
             client_secret=client_secret,
@@ -133,7 +135,8 @@ def aro_update(client, resource_group_name, resource_name, worker_count=None,
     current = client.get(resource_group_name, resource_name)
 
     if len(current.worker_profiles) != 1:
-        raise CLIError("Cannot update cluster with %d worker profiles." % len(current.worker_profiles))
+        raise CLIError("Cannot update cluster with %d worker profiles." %
+                       len(current.worker_profiles))
 
     current.worker_profiles[0].count = worker_count
     oc = v2019_12_31_preview.OpenShiftCluster(

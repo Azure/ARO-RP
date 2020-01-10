@@ -84,9 +84,9 @@ func (m *Manager) Create(ctx context.Context) error {
 		return err
 	}
 
-	clusterDomain := m.doc.OpenShiftCluster.Properties.ClusterDomain
-	if !strings.ContainsRune(clusterDomain, '.') {
-		clusterDomain += "." + m.env.Domain()
+	domain := m.doc.OpenShiftCluster.Properties.ClusterProfile.Domain
+	if !strings.ContainsRune(domain, '.') {
+		domain += "." + m.env.Domain()
 	}
 
 	masterZones, err := m.env.Zones(string(m.doc.OpenShiftCluster.Properties.MasterProfile.VMSize))
@@ -120,10 +120,10 @@ func (m *Manager) Create(ctx context.Context) error {
 				APIVersion: "v1",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: clusterDomain[:strings.IndexByte(clusterDomain, '.')],
+				Name: domain[:strings.IndexByte(domain, '.')],
 			},
 			SSHKey:     sshkey.Type() + " " + base64.StdEncoding.EncodeToString(sshkey.Marshal()),
-			BaseDomain: clusterDomain[strings.IndexByte(clusterDomain, '.')+1:],
+			BaseDomain: domain[strings.IndexByte(domain, '.')+1:],
 			Networking: &types.Networking{
 				MachineCIDR: ipnet.MustParseCIDR("127.0.0.0/8"), // dummy
 				NetworkType: "OpenShiftSDN",

@@ -38,8 +38,8 @@ type Properties struct {
 	// The cluster provisioning state (immutable).
 	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"`
 
-	// The domain for the cluster (immutable).
-	ClusterDomain string `json:"clusterDomain,omitempty"`
+	// The cluster profile.
+	ClusterProfile ClusterProfile `json:"clusterProfile,omitempty"`
 
 	// The cluster service principal profile.
 	ServicePrincipalProfile ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
@@ -74,6 +74,11 @@ const (
 	ProvisioningStateSucceeded ProvisioningState = "Succeeded"
 	ProvisioningStateFailed    ProvisioningState = "Failed"
 )
+
+type ClusterProfile struct {
+	// The domain for the cluster (immutable).
+	Domain string `json:"domain,omitempty"`
+}
 
 // ServicePrincipalProfile represents a service principal profile.
 type ServicePrincipalProfile struct {

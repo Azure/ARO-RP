@@ -45,15 +45,14 @@ def validate_client_secret(namespace):
             raise CLIError('Must specify --client-id with --client-secret.')
 
 
-def validate_cluster_domain(namespace):
-    if namespace.cluster_domain is not None:
+def validate_domain(namespace):
+    if namespace.domain is not None:
         if not re.match(r'^' +
                         r'([a-z0-9]|[a-z0-9][-a-z0-9]{0,61}[a-z0-9])' +
                         r'(\.([a-z0-9]|[a-z0-9][-a-z0-9]{0,61}[a-z0-9]))*' +
-                        r'$', namespace.cluster_domain) \
-                or namespace.cluster_domain.count('.') == 0:
-            raise CLIError("Invalid --cluster-domain '%s'." %
-                           namespace.cluster_domain)
+                        r'$', namespace.domain):
+            raise CLIError("Invalid --domain '%s'." %
+                           namespace.domain)
 
 
 def _validate_int(key, i):
