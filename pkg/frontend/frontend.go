@@ -136,11 +136,11 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftClusters).Name("getOpenShiftClusters")
 
 	s = r.
-		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/locations/{location}/operations/{operationId}").
+		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/locations/{location}/operationsstatus/{operationId}").
 		Queries("api-version", "{api-version}").
 		Subrouter()
 
-	s.Methods(http.MethodGet).HandlerFunc(f.getAsyncOperation).Name("getAsyncOperation")
+	s.Methods(http.MethodGet).HandlerFunc(f.getAsyncOperationsStatus).Name("getAsyncOperationsStatus")
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/locations/{location}/operationresults/{operationId}").

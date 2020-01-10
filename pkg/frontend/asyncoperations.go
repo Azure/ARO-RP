@@ -38,7 +38,7 @@ func (f *frontend) newAsyncOperation(ctx context.Context, r *http.Request, doc *
 func (f *frontend) operationsPath(r *http.Request, id string) string {
 	vars := mux.Vars(r)
 
-	return "/subscriptions/" + vars["subscriptionId"] + "/providers/" + vars["resourceProviderNamespace"] + "/locations/" + strings.ToLower(f.env.Location()) + "/operations/" + id
+	return "/subscriptions/" + vars["subscriptionId"] + "/providers/" + vars["resourceProviderNamespace"] + "/locations/" + strings.ToLower(f.env.Location()) + "/operationsstatus/" + id
 }
 
 func (f *frontend) operationResultsPath(r *http.Request, id string) string {

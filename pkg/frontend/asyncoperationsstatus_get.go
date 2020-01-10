@@ -16,16 +16,16 @@ import (
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
 
-func (f *frontend) getAsyncOperation(w http.ResponseWriter, r *http.Request) {
+func (f *frontend) getAsyncOperationsStatus(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 
-	b, err := f._getAsyncOperation(ctx, r)
+	b, err := f._getAsyncOperationsStatus(ctx, r)
 
 	reply(log, w, nil, b, err)
 }
 
-func (f *frontend) _getAsyncOperation(ctx context.Context, r *http.Request) ([]byte, error) {
+func (f *frontend) _getAsyncOperationsStatus(ctx context.Context, r *http.Request) ([]byte, error) {
 	vars := mux.Vars(r)
 
 	asyncdoc, err := f.db.AsyncOperations.Get(ctx, vars["operationId"])

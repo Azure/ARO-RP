@@ -27,11 +27,11 @@ func (f *frontend) getOperations(w http.ResponseWriter, r *http.Request) {
 				},
 			},
 			{
-				Name: "Microsoft.RedHatOpenShift/locations/operations/read",
+				Name: "Microsoft.RedHatOpenShift/locations/operationsstatus/read",
 				Display: api.Display{
 					Provider:  "Azure Red Hat OpenShift",
-					Resource:  "locations/operations",
-					Operation: "Read operations",
+					Resource:  "locations/operationsstatus",
+					Operation: "Read operations status",
 				},
 			},
 			{
