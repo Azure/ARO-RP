@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net"
 	"reflect"
+	"strings"
 	"time"
 
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
@@ -42,6 +43,8 @@ func (i *Installer) installResources(ctx context.Context) error {
 
 	installConfig := g[reflect.TypeOf(&installconfig.InstallConfig{})].(*installconfig.InstallConfig)
 	machineMaster := g[reflect.TypeOf(&machine.Master{})].(*machine.Master)
+
+	resourceGroup := i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID[strings.LastIndexByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')+1:]
 
 	vnetID, _, err := subnet.Split(i.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
 	if err != nil {
@@ -634,7 +637,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 		}
 
 		i.log.Print("deploying resources template")
-		err = i.deployments.CreateOrUpdateAndWait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy", mgmtresources.Deployment{
+		err = i.deployments.CreateOrUpdateAndWait(ctx, resourceGroup, "azuredeploy", mgmtresources.Deployment{
 			Properties: &mgmtresources.DeploymentProperties{
 				Template: t,
 				Parameters: map[string]interface{}{
@@ -658,7 +661,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 					requestErr.ServiceError != nil &&
 					requestErr.ServiceError.Code == "DeploymentActive" {
 					i.log.Print("waiting for resources template")
-					err = i.deployments.Wait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy")
+					err = i.deployments.Wait(ctx, resourceGroup, "azuredeploy")
 				}
 			}
 			if err != nil {
@@ -679,7 +682,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 		ipAddress := lbIP.String()
 
 		if i.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {
-			ip, err := i.publicipaddresses.Get(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "aro-pip", "")
+			ip, err := i.publicipaddresses.Get(ctx, resourceGroup, "aro-pip", "")
 			if err != nil {
 				return err
 			}

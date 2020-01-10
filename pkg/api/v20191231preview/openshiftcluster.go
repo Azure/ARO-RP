@@ -81,6 +81,9 @@ type ClusterProfile struct {
 
 	// The version of the cluster (immutable).
 	Version string `json:"version,omitempty"`
+
+	// The ID of the cluster resource group (immutable).
+	ResourceGroupID string `json:"resourceGroupId,omitempty"`
 }
 
 // ServicePrincipalProfile represents a service principal profile.

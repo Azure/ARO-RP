@@ -160,6 +160,8 @@ type ClusterProfile struct {
 	Domain *string `json:"domain,omitempty"`
 	// Version - The version of the cluster (immutable).
 	Version *string `json:"version,omitempty"`
+	// ResourceGroupID - The ID of the cluster resource group (immutable).
+	ResourceGroupID *string `json:"resourceGroupId,omitempty"`
 }
 
 // Display display represents the display details of an operation.

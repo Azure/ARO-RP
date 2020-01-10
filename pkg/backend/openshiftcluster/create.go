@@ -36,6 +36,8 @@ import (
 func (m *Manager) Create(ctx context.Context) error {
 	var err error
 
+	resourceGroup := m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID[strings.LastIndexByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')+1:]
+
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		var err error
 
@@ -167,7 +169,7 @@ func (m *Manager) Create(ctx context.Context) error {
 			Platform: types.Platform{
 				Azure: &azuretypes.Platform{
 					Region:                   m.doc.OpenShiftCluster.Location,
-					ResourceGroupName:        m.doc.OpenShiftCluster.Properties.ResourceGroup,
+					ResourceGroupName:        resourceGroup,
 					NetworkResourceGroupName: vnetr.ResourceGroup,
 					VirtualNetwork:           vnetr.ResourceName,
 					ControlPlaneSubnet:       masterSubnetName,

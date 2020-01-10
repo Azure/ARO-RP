@@ -450,6 +450,10 @@
         "version": {
           "description": "The version of the cluster (immutable).",
           "type": "string"
+        },
+        "resourceGroupId": {
+          "description": "The ID of the cluster resource group (immutable).",
+          "type": "string"
         }
       }
     },

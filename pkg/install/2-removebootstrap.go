@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -31,9 +32,11 @@ func (i *Installer) removeBootstrap(ctx context.Context) error {
 	installConfig := g[reflect.TypeOf(&installconfig.InstallConfig{})].(*installconfig.InstallConfig)
 	kubeadminPassword := g[reflect.TypeOf(&password.KubeadminPassword{})].(*password.KubeadminPassword)
 
+	resourceGroup := i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID[strings.LastIndexByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')+1:]
+
 	{
 		i.log.Print("removing bootstrap vm")
-		err := i.virtualmachines.DeleteAndWait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "aro-bootstrap")
+		err := i.virtualmachines.DeleteAndWait(ctx, resourceGroup, "aro-bootstrap")
 		if err != nil {
 			return err
 		}
@@ -41,7 +44,7 @@ func (i *Installer) removeBootstrap(ctx context.Context) error {
 
 	{
 		i.log.Print("removing bootstrap disk")
-		err := i.disks.DeleteAndWait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "aro-bootstrap_OSDisk")
+		err := i.disks.DeleteAndWait(ctx, resourceGroup, "aro-bootstrap_OSDisk")
 		if err != nil {
 			return err
 		}
@@ -49,7 +52,7 @@ func (i *Installer) removeBootstrap(ctx context.Context) error {
 
 	{
 		i.log.Print("removing bootstrap nic")
-		err = i.interfaces.DeleteAndWait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "aro-bootstrap-nic")
+		err = i.interfaces.DeleteAndWait(ctx, resourceGroup, "aro-bootstrap-nic")
 		if err != nil {
 			return err
 		}

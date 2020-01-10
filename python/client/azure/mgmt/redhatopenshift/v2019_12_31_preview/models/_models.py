@@ -190,17 +190,22 @@ class ClusterProfile(Model):
     :type domain: str
     :param version: The version of the cluster (immutable).
     :type version: str
+    :param resource_group_id: The ID of the cluster resource group
+     (immutable).
+    :type resource_group_id: str
     """
 
     _attribute_map = {
         'domain': {'key': 'domain', 'type': 'str'},
         'version': {'key': 'version', 'type': 'str'},
+        'resource_group_id': {'key': 'resourceGroupId', 'type': 'str'},
     }
 
     def __init__(self, **kwargs):
         super(ClusterProfile, self).__init__(**kwargs)
         self.domain = kwargs.get('domain', None)
         self.version = kwargs.get('version', None)
+        self.resource_group_id = kwargs.get('resource_group_id', None)
 
 
 class Display(Model):

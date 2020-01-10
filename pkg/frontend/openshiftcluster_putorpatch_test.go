@@ -128,7 +128,6 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							ServicePrincipalProfile: api.ServicePrincipalProfile{
 								TenantID: "11111111-1111-1111-1111-111111111111",
 							},
-							ResourceGroup: "resourceName",
 						},
 					},
 				}

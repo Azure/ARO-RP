@@ -78,8 +78,6 @@ type Properties struct {
 	// Install is non-nil only when an install is in progress
 	Install *Install `json:"install,omitempty"`
 
-	// TODO: ResourceGroup should be exposed in external API
-	ResourceGroup string `json:"resourceGroup,omitempty"`
 	StorageSuffix string `json:"storageSuffix,omitempty"`
 
 	SSHKey            *rsa.PrivateKey `json:"sshKey,omitempty"`
@@ -103,8 +101,9 @@ const (
 type ClusterProfile struct {
 	MissingFields
 
-	Domain  string `json:"domain,omitempty"`
-	Version string `json:"version,omitempty"`
+	Domain          string `json:"domain,omitempty"`
+	Version         string `json:"version,omitempty"`
+	ResourceGroupID string `json:"resourceGroupId,omitempty"`
 }
 
 // ServicePrincipalProfile represents a service principal profile.

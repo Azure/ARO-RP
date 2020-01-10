@@ -45,6 +45,7 @@ func validOpenShiftCluster() *OpenShiftCluster {
 	oc := exampleOpenShiftCluster()
 	oc.ID = id
 	oc.Properties.ClusterProfile.Version = "4.3.0-0.nightly-2019-12-05-001549" // for now
+	oc.Properties.ClusterProfile.ResourceGroupID = fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", subscriptionID)
 	oc.Properties.ServicePrincipalProfile.ClientID = "2b5ba2c6-6205-4fc4-8b5d-9fea369ae1a2"
 	oc.Properties.MasterProfile.SubnetID = fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master", subscriptionID)
 	oc.Properties.WorkerProfiles[0].SubnetID = fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker", subscriptionID)
@@ -206,6 +207,20 @@ func TestOpenShiftClusterStaticValidateClusterProfile(t *testing.T) {
 				oc.Properties.ClusterProfile.Version = "invalid"
 			},
 			wantErr: "400: InvalidParameter: properties.clusterProfile.version: The provided version 'invalid' is invalid.",
+		},
+		{
+			name: "resourceGroupId invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterProfile.ResourceGroupID = "invalid"
+			},
+			wantErr: "400: InvalidParameter: properties.clusterProfile.resourceGroupId: The provided resource group 'invalid' is invalid.",
+		},
+		{
+			name: "cluster resource group subscriptionId not matching cluster subscriptionId",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterProfile.ResourceGroupID = "/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourcegroups/test-cluster"
+			},
+			wantErr: "400: InvalidParameter: properties.clusterProfile.resourceGroupId: The provided resource group '/subscriptions/7a3036d1-60a1-4605-8a41-44955e050804/resourcegroups/test-cluster' is invalid: must be in same subscription as cluster.",
 		},
 	}
 
@@ -519,6 +534,13 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name:    "version change",
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.ClusterProfile.Version = "" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.clusterProfile.version: Changing property 'properties.clusterProfile.version' is not allowed.",
+		},
+		{
+			name: "resource group change",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterProfile.ResourceGroupID = oc.Properties.ClusterProfile.ResourceGroupID[:strings.LastIndexByte(oc.Properties.ClusterProfile.ResourceGroupID, '/')] + "/changed"
+			},
+			wantErr: "400: PropertyChangeNotAllowed: properties.clusterProfile.resourceGroupId: Changing property 'properties.clusterProfile.resourceGroupId' is not allowed.",
 		},
 		{
 			name: "apiServer private change",

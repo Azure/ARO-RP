@@ -15,8 +15,9 @@ func exampleOpenShiftCluster() *OpenShiftCluster {
 		Properties: Properties{
 			ProvisioningState: ProvisioningStateSucceeded,
 			ClusterProfile: ClusterProfile{
-				Domain:  "cluster.location.aroapp.io",
-				Version: "4.3.0",
+				Domain:          "cluster.location.aroapp.io",
+				Version:         "4.3.0",
+				ResourceGroupID: "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup",
 			},
 			ServicePrincipalProfile: ServicePrincipalProfile{
 				ClientSecret: "clientSecret",

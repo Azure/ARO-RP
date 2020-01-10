@@ -19,8 +19,9 @@ import (
 )
 
 var (
-	rxSubnetID   = regexp.MustCompile(`(?i)^/subscriptions/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/resourceGroups/[-a-z0-9_().]{0,89}[-a-z0-9_()]/providers/Microsoft\.Network/virtualNetworks/[-a-z0-9_.]{2,64}/subnets/[-a-z0-9_.]{2,80}$`)
-	rxDomainName = regexp.MustCompile(`^` +
+	rxResourceGroupID = regexp.MustCompile(`(?i)^/subscriptions/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/resourceGroups/[-a-z0-9_().]{0,89}[-a-z0-9_()]$`)
+	rxSubnetID        = regexp.MustCompile(`(?i)^/subscriptions/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/resourceGroups/[-a-z0-9_().]{0,89}[-a-z0-9_()]/providers/Microsoft\.Network/virtualNetworks/[-a-z0-9_.]{2,64}/subnets/[-a-z0-9_.]{2,80}$`)
+	rxDomainName      = regexp.MustCompile(`^` +
 		`([a-z0-9]|[a-z0-9][-a-z0-9]{0,61}[a-z0-9])` +
 		`(\.([a-z0-9]|[a-z0-9][-a-z0-9]{0,61}[a-z0-9]))*` +
 		`$`)
@@ -134,6 +135,12 @@ func (sv *openShiftClusterStaticValidator) validateClusterProfile(path string, c
 	case "", "4.3.0-0.nightly-2019-12-05-001549":
 	default:
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".version", "The provided version '%s' is invalid.", cp.Version)
+	}
+	if !rxResourceGroupID.MatchString(cp.ResourceGroupID) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".resourceGroupId", "The provided resource group '%s' is invalid.", cp.ResourceGroupID)
+	}
+	if strings.Split(cp.ResourceGroupID, "/")[2] != sv.r.SubscriptionID {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".resourceGroupId", "The provided resource group '%s' is invalid: must be in same subscription as cluster.", cp.ResourceGroupID)
 	}
 
 	return nil
