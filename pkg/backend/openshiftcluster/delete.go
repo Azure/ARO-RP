@@ -54,16 +54,6 @@ func (m *Manager) Delete(ctx context.Context) error {
 		}
 	}
 
-	_, err = m.groups.CheckExistence(ctx, m.doc.OpenShiftCluster.Properties.ResourceGroup)
-	if err != nil {
-		if detailedErr, ok := err.(autorest.DetailedError); ok {
-			if detailedErr.StatusCode == http.StatusForbidden {
-				return nil
-			}
-		}
-		return err
-	}
-
 	m.log.Print("deleting private endpoint")
 	err = m.privateendpoint.Delete(ctx, m.doc)
 	if err != nil {
@@ -71,5 +61,10 @@ func (m *Manager) Delete(ctx context.Context) error {
 	}
 
 	m.log.Printf("deleting resource group %s", m.doc.OpenShiftCluster.Properties.ResourceGroup)
-	return m.groups.DeleteAndWait(ctx, m.doc.OpenShiftCluster.Properties.ResourceGroup)
+	err = m.groups.DeleteAndWait(ctx, m.doc.OpenShiftCluster.Properties.ResourceGroup)
+	if detailedErr, ok := err.(autorest.DetailedError); ok &&
+		detailedErr.StatusCode == http.StatusForbidden {
+		err = nil
+	}
+	return err
 }
