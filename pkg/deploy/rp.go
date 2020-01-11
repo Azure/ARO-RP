@@ -389,6 +389,11 @@ rm /etc/motd.d/*
 												Primary: to.BoolPtr(true),
 												PublicIPAddressConfiguration: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfiguration{
 													Name: to.StringPtr("rp-vmss-pip"),
+													VirtualMachineScaleSetPublicIPAddressConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfigurationProperties{
+														DNSSettings: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfigurationDNSSettings{
+															DomainNameLabel: to.StringPtr("[parameters('vmssDomainNameLabel')]"),
+														},
+													},
 												},
 												LoadBalancerBackendAddressPools: &[]mgmtcompute.SubResource{
 													{
@@ -776,6 +781,7 @@ func (g *generator) template() *arm.Template {
 			"rpImage",
 			"rpImageAuth",
 			"sshPublicKey",
+			"vmssDomainNameLabel",
 		)
 	} else {
 		params = append(params,
