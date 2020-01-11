@@ -317,7 +317,7 @@ for service in auoms azsecd azsecmond mdsd; do
   systemctl mask $service.service
 done
 
-rm /etc/rsyslogd.10-mdsd.conf
+rm /etc/rsyslog.d/10-mdsd.conf
 
 rm /etc/motd.d/*
 >/etc/containers/nodocker
