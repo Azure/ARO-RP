@@ -7,6 +7,7 @@ import (
 	"context"
 	"net/http"
 	"net/url"
+	"os"
 
 	"github.com/sirupsen/logrus"
 
@@ -62,8 +63,10 @@ func (f *frontend) _deleteOpenShiftCluster(ctx context.Context, r *http.Request,
 	u.Path = f.operationResultsPath(r, doc.AsyncOperationID)
 	(*header)["Location"] = []string{u.String()}
 
-	u.Path = f.operationsPath(r, doc.AsyncOperationID)
-	(*header)["Azure-AsyncOperation"] = []string{u.String()}
+	if os.Getenv("FEATURE_OPERATIONS") != "" {
+		u.Path = f.operationsPath(r, doc.AsyncOperationID)
+		(*header)["Azure-AsyncOperation"] = []string{u.String()}
+	}
 
 	return nil
 }

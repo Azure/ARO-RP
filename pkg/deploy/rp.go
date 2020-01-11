@@ -190,8 +190,11 @@ func (g *generator) vmss() *arm.Resource {
 	}
 
 	for _, variable := range []string{
-		"metricsAccount",
-		"metricsNamespace",
+		"mdmCertificate",
+		"mdmFrontendUrl",
+		"mdmMetricNamespace",
+		"mdmMonitoringAccount",
+		"mdmPrivateKey",
 		"pullSecret",
 		"rpImage",
 		"rpImageAuth",
@@ -207,9 +210,9 @@ func (g *generator) vmss() *arm.Resource {
 
 yum -y update -x WALinuxAgent
 
-rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
+rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8
 
-yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm || true
+yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm || true
 
 cat >/etc/yum.repos.d/azure-cli.repo <<'EOF'
 [azurecore]
@@ -219,7 +222,7 @@ enabled=yes
 gpgcheck=no
 EOF
 
-yum -y install azsec-clamav azsec-monitor azure-mdsd azure-security docker
+yum -y install azsec-clamav azsec-monitor azure-mdsd azure-security podman-docker
 
 firewall-cmd --add-port=443/tcp --permanent
 
@@ -240,36 +243,86 @@ else
   rm -rf /root/.docker
 fi
 
-cat >/etc/sysconfig/arorp <<EOF
-RP_IMAGE='$RPIMAGE'
-PULL_SECRET='$PULLSECRET'
-METRICS_NAMESPACE='$METRICSNAMESPACE'
-METRICS_ACCOUNT='$METRICSACCOUNT'
+mkdir -p /etc/mdm
+echo "$MDMCERTIFICATE" >/etc/mdm/cert.pem
+echo "$MDMPRIVATEKEY" >/etc/mdm/key.pem
+chown -R 1000:1000 /etc/mdm
+chmod 0600 /etc/mdm/key.pem
+
+cat >/etc/sysconfig/mdm <<EOF
+MDMIMAGE='arosvc.azurecr.io/mdm:2019.801.1228-66cac1'
 EOF
 
-cat >/etc/systemd/system/arorp.service <<EOF
+cat >/etc/sysconfig/arorp <<EOF
+PULL_SECRET='$PULLSECRET'
+RPIMAGE='$RPIMAGE'
+EOF
+
+cat >/etc/systemd/system/mdm.service <<EOF
 [Unit]
-After=docker.service
-Requires=docker.service
+After=network-online.target
 
 [Service]
-EnvironmentFile=/etc/sysconfig/arorp
-ExecStartPre=-/usr/bin/docker rm -f %n
-ExecStartPre=/usr/bin/docker pull \$RP_IMAGE
-ExecStart=/usr/bin/docker run --rm --name %n -p 443:8443 \
-  -e METRICS_ACCOUNT \
-  -e METRICS_NAMESPACE \
-  -e PULL_SECRET \
-  \$RP_IMAGE rp
-ExecStop=/usr/bin/docker stop -t 90 %n
+EnvironmentFile=/etc/sysconfig/mdm
+ExecStartPre=-/usr/bin/docker rm -f %N
+ExecStartPre=/usr/bin/docker pull \$MDMIMAGE
+ExecStart=/usr/bin/docker run \
+  --hostname %H \
+  --name %N \
+  --rm \
+  -v /etc/mdm:/etc/mdm \
+  -v /var/etw:/var/etw \
+  \$MDMIMAGE \
+  -FrontEndUrl \$MDMFRONTENDURL \
+  -MonitoringAccount \$MDMMONITORINGACCOUNT \
+  -MetricNamespace \$MDMMETRICNAMESPACE \
+  -CertFile /etc/mdm/cert.pem \
+  -PrivateKeyFile /etc/mdm/key.pem
+ExecStop=/usr/bin/docker stop %N
 Restart=always
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
-systemctl enable arorp.service
-systemctl enable chronyd.service
+cat >/etc/systemd/system/arorp.service <<EOF
+[Unit]
+After=network-online.target
+
+[Service]
+EnvironmentFile=/etc/sysconfig/arorp
+ExecStartPre=-/usr/bin/docker rm -f %N
+ExecStartPre=/usr/bin/docker pull \$RPIMAGE
+ExecStart=/usr/bin/docker run \
+  --hostname %H \
+  --name %N \
+  --rm \
+  -e PULL_SECRET \
+  -p 443:8443 \
+  \$RPIMAGE \
+  rp
+ExecStop=/usr/bin/docker stop -t 90 %N
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+for service in arorp chronyd; do
+  systemctl enable $service.service
+done
+
+chcon -R system_u:object_r:var_log_t:s0 /var/opt/microsoft/linuxmonagent
+
+for service in auoms azsecd azsecmond mdsd; do
+  systemctl disable $service.service
+  systemctl mask $service.service
+done
+
+rm /etc/rsyslog.d/10-mdsd.conf
+
+rm /etc/motd.d/*
+>/etc/containers/nodocker
 
 (sleep 30; reboot) &
 `))
@@ -309,7 +362,7 @@ systemctl enable chronyd.service
 						ImageReference: &mgmtcompute.ImageReference{
 							Publisher: to.StringPtr("RedHat"),
 							Offer:     to.StringPtr("RHEL"),
-							Sku:       to.StringPtr("7-RAW"),
+							Sku:       to.StringPtr("8"),
 							Version:   to.StringPtr("latest"),
 						},
 						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
@@ -338,6 +391,11 @@ systemctl enable chronyd.service
 												Primary: to.BoolPtr(true),
 												PublicIPAddressConfiguration: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfiguration{
 													Name: to.StringPtr("rp-vmss-pip"),
+													VirtualMachineScaleSetPublicIPAddressConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfigurationProperties{
+														DNSSettings: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfigurationDNSSettings{
+															DomainNameLabel: to.StringPtr("[parameters('vmssDomainNameLabel')]"),
+														},
+													},
 												},
 												LoadBalancerBackendAddressPools: &[]mgmtcompute.SubResource{
 													{
@@ -713,19 +771,30 @@ func (g *generator) template() *arm.Template {
 		"fpServicePrincipalId",
 		"keyvaultName",
 		"rpServicePrincipalId",
-		"metricsAccount",
-		"metricsNamespace",
 	}
 	if g.production {
-		params = append(params, "pullSecret", "rpImage", "rpImageAuth", "sshPublicKey")
+		params = append(params,
+			"mdmCertificate",
+			"mdmFrontendUrl",
+			"mdmMetricNamespace",
+			"mdmMonitoringAccount",
+			"mdmPrivateKey",
+			"pullSecret",
+			"rpImage",
+			"rpImageAuth",
+			"sshPublicKey",
+			"vmssDomainNameLabel",
+		)
 	} else {
-		params = append(params, "adminObjectId")
+		params = append(params,
+			"adminObjectId",
+		)
 	}
 
 	for _, param := range params {
 		typ := "string"
 		switch param {
-		case "pullSecret", "rpImageAuth":
+		case "mdmPrivateKey", "pullSecret", "rpImageAuth":
 			typ = "securestring"
 		}
 		t.Parameters[param] = &arm.TemplateParameter{Type: typ}

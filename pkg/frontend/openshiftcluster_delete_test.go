@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"testing"
 
@@ -202,7 +203,7 @@ func TestDeleteOpenShiftCluster(t *testing.T) {
 				if !strings.HasPrefix(location, fmt.Sprintf("/subscriptions/%s/providers/microsoft.redhatopenshift/locations/%s/operationresults/", mockSubID, env.Location())) {
 					t.Error(location)
 				}
-				if !strings.HasPrefix(azureAsyncOperation, fmt.Sprintf("/subscriptions/%s/providers/microsoft.redhatopenshift/locations/%s/operations/", mockSubID, env.Location())) {
+				if os.Getenv("FEATURE_OPERATIONS") != "" && !strings.HasPrefix(azureAsyncOperation, fmt.Sprintf("/subscriptions/%s/providers/microsoft.redhatopenshift/locations/%s/operationsstatus/", mockSubID, env.Location())) {
 					t.Error(azureAsyncOperation)
 				}
 			} else {

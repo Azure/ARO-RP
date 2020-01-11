@@ -20,10 +20,19 @@
         "keyvaultName": {
             "value": ""
         },
-        "metricsAccount": {
+        "mdmCertificate": {
             "value": ""
         },
-        "metricsNamespace": {
+        "mdmFrontendUrl": {
+            "value": ""
+        },
+        "mdmMetricNamespace": {
+            "value": ""
+        },
+        "mdmMonitoringAccount": {
+            "value": ""
+        },
+        "mdmPrivateKey": {
             "value": ""
         },
         "pullSecret": {
@@ -39,6 +48,9 @@
             "value": ""
         },
         "sshPublicKey": {
+            "value": ""
+        },
+        "vmssDomainNameLabel": {
             "value": ""
         }
     }
