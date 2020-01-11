@@ -271,11 +271,11 @@ ExecStart=/usr/bin/docker run \
   --rm \
   -v /etc/mdm:/etc/mdm \
   -v /var/etw:/var/etw \
-  \$MDMIMAGE
-  -FrontEndUrl \$MDMFRONTENDURL
-  -MonitoringAccount \$MDMMONITORINGACCOUNT
-  -MetricNamespace \$MDMMETRICNAMESPACE
-  -CertFile /etc/mdm/cert.pem
+  \$MDMIMAGE \
+  -FrontEndUrl \$MDMFRONTENDURL \
+  -MonitoringAccount \$MDMMONITORINGACCOUNT \
+  -MetricNamespace \$MDMMETRICNAMESPACE \
+  -CertFile /etc/mdm/cert.pem \
   -PrivateKeyFile /etc/mdm/key.pem
 ExecStop=/usr/bin/docker stop %N
 Restart=always
@@ -309,6 +309,18 @@ EOF
 for service in arorp chronyd; do
   systemctl enable $service.service
 done
+
+chcon -R system_u:object_r:var_log_t:s0 /var/opt/microsoft/linuxmonagent
+
+for service in auoms azsecd azsecmond mdsd; do
+  systemctl disable $service.service
+  systemctl mask $service.service
+done
+
+rm /etc/rsyslogd.10-mdsd.conf
+
+rm /etc/motd.d/*
+>/etc/containers/nodocker
 
 (sleep 30; reboot) &
 `))
