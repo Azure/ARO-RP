@@ -254,7 +254,7 @@ MDMIMAGE='arosvc.azurecr.io/mdm:2019.801.1228-66cac1'
 EOF
 
 cat >/etc/sysconfig/arorp <<EOF
-PULLSECRET='$PULLSECRET'
+PULL_SECRET='$PULLSECRET'
 RPIMAGE='$RPIMAGE'
 EOF
 
@@ -299,7 +299,7 @@ ExecStart=/usr/bin/docker run \
   --hostname %H \
   --name %N \
   --rm \
-  -e PULLSECRET \
+  -e PULL_SECRET \
   -p 443:8443 \
   \$RPIMAGE \
   rp
