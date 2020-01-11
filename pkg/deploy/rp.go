@@ -260,8 +260,6 @@ EOF
 
 cat >/etc/systemd/system/mdm.service <<EOF
 [Unit]
-After=docker.service
-Requires=docker.service
 
 [Service]
 EnvironmentFile=/etc/sysconfig/mdm
@@ -288,8 +286,6 @@ EOF
 
 cat >/etc/systemd/system/arorp.service <<EOF
 [Unit]
-After=docker.service
-Requires=docker.service
 
 [Service]
 EnvironmentFile=/etc/sysconfig/arorp
