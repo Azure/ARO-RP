@@ -260,6 +260,7 @@ EOF
 
 cat >/etc/systemd/system/mdm.service <<EOF
 [Unit]
+After=network-online.target
 
 [Service]
 EnvironmentFile=/etc/sysconfig/mdm
@@ -286,6 +287,7 @@ EOF
 
 cat >/etc/systemd/system/arorp.service <<EOF
 [Unit]
+After=network-online.target
 
 [Service]
 EnvironmentFile=/etc/sysconfig/arorp
