@@ -171,6 +171,31 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	s.Methods(http.MethodPut).HandlerFunc(f.putSubscription).Name("putSubscription")
 }
 
+func (f *frontend) setupRouter() *mux.Router {
+	r := mux.NewRouter()
+	r.Use(middleware.Log(f.baseLog))
+	r.Use(middleware.Metrics(f.m))
+	r.Use(middleware.Panic)
+	r.Use(middleware.Headers(f.env))
+	r.Use(middleware.Validate(f.env, f.apis))
+	r.Use(middleware.Body)
+
+	r.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeNotFound, "", "The requested path could not be found.")
+	})
+	r.NotFoundHandler = middleware.Authenticated(f.env)(r.NotFoundHandler)
+
+	unauthenticated := r.NewRoute().Subrouter()
+	f.unauthenticatedRoutes(unauthenticated)
+
+	authenticated := r.NewRoute().Subrouter()
+	authenticated.Use(middleware.Authenticated(f.env))
+	f.authenticatedRoutes(authenticated)
+
+	return r
+}
+
 func (f *frontend) Run(ctx context.Context, stop <-chan struct{}, done chan<- struct{}) {
 	defer recover.Panic(f.baseLog)
 
@@ -201,29 +226,8 @@ func (f *frontend) Run(ctx context.Context, stop <-chan struct{}, done chan<- st
 		}()
 	}
 
-	r := mux.NewRouter()
-	r.Use(middleware.Log(f.baseLog))
-	r.Use(middleware.Metrics(f.m))
-	r.Use(middleware.Panic)
-	r.Use(middleware.Headers(f.env))
-	r.Use(middleware.Validate(f.env, f.apis))
-	r.Use(middleware.Body)
-
-	r.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeNotFound, "", "The requested path could not be found.")
-	})
-	r.NotFoundHandler = middleware.Authenticated(f.env)(r.NotFoundHandler)
-
-	unauthenticated := r.NewRoute().Subrouter()
-	f.unauthenticatedRoutes(unauthenticated)
-
-	authenticated := r.NewRoute().Subrouter()
-	authenticated.Use(middleware.Authenticated(f.env))
-	f.authenticatedRoutes(authenticated)
-
 	f.s = &http.Server{
-		Handler:      middleware.Lowercase(r),
+		Handler:      middleware.Lowercase(f.setupRouter()),
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: time.Minute,
 		IdleTimeout:  2 * time.Minute,
