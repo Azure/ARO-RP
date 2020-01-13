@@ -19,9 +19,10 @@ import (
 
 // Options represents API options
 type Options struct {
-	NoETag       bool
-	PreTriggers  []string
-	PostTriggers []string
+	NoETag              bool
+	PreTriggers         []string
+	PostTriggers        []string
+	PartitionKeyRangeID string
 }
 
 // Error represents an error

@@ -16,19 +16,20 @@ type templateClient struct {
 // TemplateClient is a template client
 type TemplateClient interface {
 	Create(context.Context, string, *pkg.Template, *Options) (*pkg.Template, error)
-	List() TemplateIterator
-	ListAll(context.Context) (*pkg.Templates, error)
-	Get(context.Context, string, string) (*pkg.Template, error)
+	List(*Options) TemplateIterator
+	ListAll(context.Context, *Options) (*pkg.Templates, error)
+	Get(context.Context, string, string, *Options) (*pkg.Template, error)
 	Replace(context.Context, string, *pkg.Template, *Options) (*pkg.Template, error)
 	Delete(context.Context, string, *pkg.Template, *Options) error
-	Query(string, *Query) TemplateIterator
-	QueryAll(context.Context, string, *Query) (*pkg.Templates, error)
+	Query(string, *Query, *Options) TemplateIterator
+	QueryAll(context.Context, string, *Query, *Options) (*pkg.Templates, error)
 }
 
 type templateListIterator struct {
 	*templateClient
 	continuation string
 	done         bool
+	options      *Options
 }
 
 type templateQueryIterator struct {
@@ -37,11 +38,13 @@ type templateQueryIterator struct {
 	query        *Query
 	continuation string
 	done         bool
+	options      *Options
 }
 
 // TemplateIterator is a template iterator
 type TemplateIterator interface {
 	Next(context.Context) (*pkg.Templates, error)
+	NextRaw(context.Context, interface{}) error
 }
 
 // NewTemplateClient returns a new template client
@@ -90,17 +93,23 @@ func (c *templateClient) Create(ctx context.Context, partitionkey string, newtem
 	return
 }
 
-func (c *templateClient) List() TemplateIterator {
-	return &templateListIterator{templateClient: c}
+func (c *templateClient) List(options *Options) TemplateIterator {
+	return &templateListIterator{templateClient: c, options: options}
 }
 
-func (c *templateClient) ListAll(ctx context.Context) (*pkg.Templates, error) {
-	return c.all(ctx, c.List())
+func (c *templateClient) ListAll(ctx context.Context, options *Options) (*pkg.Templates, error) {
+	return c.all(ctx, c.List(options))
 }
 
-func (c *templateClient) Get(ctx context.Context, partitionkey, templateid string) (template *pkg.Template, err error) {
+func (c *templateClient) Get(ctx context.Context, partitionkey, templateid string, options *Options) (template *pkg.Template, err error) {
 	headers := http.Header{}
 	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
+
+	err = c.setOptions(options, nil, headers)
+	if err != nil {
+		return
+	}
+
 	err = c.do(ctx, http.MethodGet, c.path+"/docs/"+templateid, "docs", c.path+"/docs/"+templateid, http.StatusOK, nil, &template, headers)
 	return
 }
@@ -131,12 +140,12 @@ func (c *templateClient) Delete(ctx context.Context, partitionkey string, templa
 	return
 }
 
-func (c *templateClient) Query(partitionkey string, query *Query) TemplateIterator {
-	return &templateQueryIterator{templateClient: c, partitionkey: partitionkey, query: query}
+func (c *templateClient) Query(partitionkey string, query *Query, options *Options) TemplateIterator {
+	return &templateQueryIterator{templateClient: c, partitionkey: partitionkey, query: query, options: options}
 }
 
-func (c *templateClient) QueryAll(ctx context.Context, partitionkey string, query *Query) (*pkg.Templates, error) {
-	return c.all(ctx, c.Query(partitionkey, query))
+func (c *templateClient) QueryAll(ctx context.Context, partitionkey string, query *Query, options *Options) (*pkg.Templates, error) {
+	return c.all(ctx, c.Query(partitionkey, query, options))
 }
 
 func (c *templateClient) setOptions(options *Options, template *pkg.Template, headers http.Header) error {
@@ -144,7 +153,7 @@ func (c *templateClient) setOptions(options *Options, template *pkg.Template, he
 		return nil
 	}
 
-	if !options.NoETag {
+	if template != nil && !options.NoETag {
 		if template.ETag == "" {
 			return ErrETagRequired
 		}
@@ -156,11 +165,19 @@ func (c *templateClient) setOptions(options *Options, template *pkg.Template, he
 	if len(options.PostTriggers) > 0 {
 		headers.Set("X-Ms-Documentdb-Post-Trigger-Include", strings.Join(options.PostTriggers, ","))
 	}
+	if len(options.PartitionKeyRangeID) > 0 {
+		headers.Set("X-Ms-Documentdb-PartitionKeyRangeID", options.PartitionKeyRangeID)
+	}
 
 	return nil
 }
 
 func (i *templateListIterator) Next(ctx context.Context) (templates *pkg.Templates, err error) {
+	err = i.NextRaw(ctx, &templates)
+	return
+}
+
+func (i *templateListIterator) NextRaw(ctx context.Context, raw interface{}) (err error) {
 	if i.done {
 		return
 	}
@@ -171,7 +188,12 @@ func (i *templateListIterator) Next(ctx context.Context) (templates *pkg.Templat
 		headers.Set("X-Ms-Continuation", i.continuation)
 	}
 
-	err = i.do(ctx, http.MethodGet, i.path+"/docs", "docs", i.path, http.StatusOK, nil, &templates, headers)
+	err = i.setOptions(i.options, nil, headers)
+	if err != nil {
+		return
+	}
+
+	err = i.do(ctx, http.MethodGet, i.path+"/docs", "docs", i.path, http.StatusOK, nil, &raw, headers)
 	if err != nil {
 		return
 	}
@@ -183,6 +205,11 @@ func (i *templateListIterator) Next(ctx context.Context) (templates *pkg.Templat
 }
 
 func (i *templateQueryIterator) Next(ctx context.Context) (templates *pkg.Templates, err error) {
+	err = i.NextRaw(ctx, &templates)
+	return
+}
+
+func (i *templateQueryIterator) NextRaw(ctx context.Context, raw interface{}) (err error) {
 	if i.done {
 		return
 	}
@@ -200,7 +227,12 @@ func (i *templateQueryIterator) Next(ctx context.Context) (templates *pkg.Templa
 		headers.Set("X-Ms-Continuation", i.continuation)
 	}
 
-	err = i.do(ctx, http.MethodPost, i.path+"/docs", "docs", i.path, http.StatusOK, &i.query, &templates, headers)
+	err = i.setOptions(i.options, nil, headers)
+	if err != nil {
+		return
+	}
+
+	err = i.do(ctx, http.MethodPost, i.path+"/docs", "docs", i.path, http.StatusOK, &i.query, &raw, headers)
 	if err != nil {
 		return
 	}
