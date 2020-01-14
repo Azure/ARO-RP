@@ -29,6 +29,8 @@ type Interface interface {
 	FPAuthorizer(string, string) (autorest.Authorizer, error)
 	GetSecret(context.Context, string) (*rsa.PrivateKey, []*x509.Certificate, error)
 	Listen() (net.Listener, error)
+	SubnetName() string
+	VnetName() string
 	Zones(vmSize string) ([]string, error)
 }
 
