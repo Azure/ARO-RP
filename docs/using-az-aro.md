@@ -26,7 +26,7 @@ against a development RP running at https://localhost:8443/.
 
    ```
    git clone https://github.com/Azure/ARO-RP
-   cd rp
+   cd ARO-RP
    ```
 
    Note: you will be able to update the `az aro` extension in the future by
@@ -66,9 +66,13 @@ subscription, ensure that the `Microsoft.RedHatOpenShift` resource provider is
 registered:
 
 ```
-az provider register -n Microsoft.RedHatOpenShift --wait
+az feature register --subscription <Your Subscription ID> --name preview --namespace Microsoft.RedHatOpenShift
 ```
 
+You can verify the status of the registration by doing :
+```
+az feature show  --namespace Microsoft.RedHatOpenShift --name preview
+```
 
 ## Prerequisites to create an Azure Red Hat OpenShift v4 cluster
 
