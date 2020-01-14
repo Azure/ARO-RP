@@ -53,3 +53,19 @@ func (t *test) Listen() (net.Listener, error) {
 func (t *test) Location() string {
 	return "eastus"
 }
+
+func (t *test) ResourceGroup() string {
+	return "rpResourcegroup"
+}
+
+func (t *test) SubnetName() string {
+	return "rpSubnet"
+}
+
+func (t *test) SubscriptionID() string {
+	return "rpSubscriptionId"
+}
+
+func (t *test) VnetName() string {
+	return "rpVnet"
+}
