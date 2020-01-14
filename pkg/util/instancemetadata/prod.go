@@ -3,6 +3,9 @@ package instancemetadata
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
+//go:generate go run ../../../vendor/github.com/golang/mock/mockgen -destination=../../util/mocks/$GOPACKAGE/$GOPACKAGE.go github.com/Azure/ARO-RP/pkg/util/$GOPACKAGE ServicePrincipalToken
+//go:generate go run ../../../vendor/golang.org/x/tools/cmd/goimports -local=github.com/Azure/ARO-RP -e -w ../../util/mocks/$GOPACKAGE/$GOPACKAGE.go
+
 import (
 	"encoding/json"
 	"fmt"
@@ -22,29 +25,46 @@ func (*azureClaim) Valid() error {
 	return fmt.Errorf("unimplemented")
 }
 
-func NewProd() (InstanceMetadata, error) {
-	im := &instanceMetadata{}
-
-	err := im.populateTenantIDFromMSI()
-	if err != nil {
-		return nil, err
-	}
-
-	err = im.populateInstanceMetadata()
-	if err != nil {
-		return nil, err
-	}
-
-	return im, nil
+type ServicePrincipalToken interface {
+	EnsureFresh() error
+	OAuthToken() string
 }
 
-func (im *instanceMetadata) populateTenantIDFromMSI() error {
+type prod struct {
+	instanceMetadata
+
+	do                              func(*http.Request) (*http.Response, error)
+	newServicePrincipalTokenFromMSI func(string, string) (ServicePrincipalToken, error)
+}
+
+func NewProd() (InstanceMetadata, error) {
+	p := &prod{
+		do: http.DefaultClient.Do,
+		newServicePrincipalTokenFromMSI: func(msiEndpoint, resource string) (ServicePrincipalToken, error) {
+			return adal.NewServicePrincipalTokenFromMSI(msiEndpoint, resource)
+		},
+	}
+
+	err := p.populateTenantIDFromMSI()
+	if err != nil {
+		return nil, err
+	}
+
+	err = p.populateInstanceMetadata()
+	if err != nil {
+		return nil, err
+	}
+
+	return p, nil
+}
+
+func (p *prod) populateTenantIDFromMSI() error {
 	msiEndpoint, err := adal.GetMSIVMEndpoint()
 	if err != nil {
 		return err
 	}
 
-	token, err := adal.NewServicePrincipalTokenFromMSI(msiEndpoint, azure.PublicCloud.ResourceManagerEndpoint)
+	token, err := p.newServicePrincipalTokenFromMSI(msiEndpoint, azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return err
 	}
@@ -54,26 +74,26 @@ func (im *instanceMetadata) populateTenantIDFromMSI() error {
 		return err
 	}
 
-	p := &jwt.Parser{}
+	parser := &jwt.Parser{}
 	c := &azureClaim{}
-	_, _, err = p.ParseUnverified(token.OAuthToken(), c)
+	_, _, err = parser.ParseUnverified(token.OAuthToken(), c)
 	if err != nil {
 		return err
 	}
 
-	im.tenantID = c.TenantID
+	p.tenantID = c.TenantID
 
 	return nil
 }
 
-func (im *instanceMetadata) populateInstanceMetadata() error {
+func (p *prod) populateInstanceMetadata() error {
 	req, err := http.NewRequest(http.MethodGet, "http://169.254.169.254/metadata/instance/compute?api-version=2019-03-11", nil)
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Metadata", "true")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := p.do(req)
 	if err != nil {
 		return err
 	}
@@ -98,9 +118,9 @@ func (im *instanceMetadata) populateInstanceMetadata() error {
 		return err
 	}
 
-	im.subscriptionID = m.SubscriptionID
-	im.location = m.Location
-	im.resourceGroup = m.ResourceGroupName
+	p.subscriptionID = m.SubscriptionID
+	p.location = m.Location
+	p.resourceGroup = m.ResourceGroupName
 
 	return nil
 }
