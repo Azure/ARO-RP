@@ -16,7 +16,7 @@ import (
 )
 
 func TestARMRefreshOnce(t *testing.T) {
-	tests := []struct {
+	for _, tt := range []struct {
 		name    string
 		do      func(*http.Request) (*http.Response, error)
 		wantErr string
@@ -107,15 +107,13 @@ func TestARMRefreshOnce(t *testing.T) {
 			},
 			wantErr: `unexpected content type "text/plain"`,
 		},
-	}
-
-	for _, tt := range tests {
+	} {
 		t.Run(tt.name, func(t *testing.T) {
 			a := &arm{
 				now: func() time.Time { return time.Date(2020, 1, 20, 0, 0, 0, 0, time.UTC) },
 				do: func(req *http.Request) (*http.Response, error) {
 					if req.Method != http.MethodGet {
-						return nil, fmt.Errorf("unexpected method %s", req.Method)
+						return nil, fmt.Errorf("unexpected method %q", req.Method)
 					}
 					if req.URL.String() != "https://management.azure.com:24582/metadata/authentication?api-version=2015-01-01" {
 						return nil, fmt.Errorf("unexpected URL %q", req.URL.String())
@@ -145,7 +143,7 @@ func TestARMRefreshOnce(t *testing.T) {
 func TestARMIsAuthorized(t *testing.T) {
 	now := time.Date(2020, 1, 20, 0, 0, 0, 0, time.UTC)
 
-	tests := []struct {
+	for _, tt := range []struct {
 		name           string
 		certs          []clientCertificate
 		cs             *tls.ConnectionState
@@ -262,9 +260,7 @@ func TestARMIsAuthorized(t *testing.T) {
 			name: "invalid connection state - no PeerCertificates",
 			cs:   &tls.ConnectionState{},
 		},
-	}
-
-	for _, tt := range tests {
+	} {
 		t.Run(tt.name, func(t *testing.T) {
 			a := &arm{
 				now: func() time.Time {
