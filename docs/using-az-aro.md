@@ -61,18 +61,15 @@ against a development RP running at https://localhost:8443/.
 
 ## Registering the resource provider
 
-If using the pre-GA Azure Red Hat OpenShift v4 service with a whitelisted
-subscription, ensure that the `Microsoft.RedHatOpenShift` resource provider is
-registered:
+If using the pre-GA Azure Red Hat OpenShift v4 service, ensure that the
+`Microsoft.RedHatOpenShift/preview` feature is registered and that the
+`Microsoft.RedHatOpenShift` resource provider is registered:
 
 ```
-az feature register --subscription <Your Subscription ID> --name preview --namespace Microsoft.RedHatOpenShift
+az feature register --namespace Microsoft.RedHatOpenShift --name preview
+az provider register -n Microsoft.RedHatOpenShift --wait
 ```
 
-You can verify the status of the registration by doing :
-```
-az feature show  --namespace Microsoft.RedHatOpenShift --name preview
-```
 
 ## Prerequisites to create an Azure Red Hat OpenShift v4 cluster
 
