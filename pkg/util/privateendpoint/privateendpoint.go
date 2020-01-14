@@ -63,7 +63,7 @@ func (m *manager) Delete(ctx context.Context, doc *api.OpenShiftClusterDocument)
 func (m *manager) GetIP(ctx context.Context, doc *api.OpenShiftClusterDocument) (string, error) {
 	pe, err := m.privateendpoints.Get(ctx, m.env.ResourceGroup(), prefix+doc.ID, "networkInterfaces")
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 
 	return *(*(*pe.PrivateEndpointProperties.NetworkInterfaces)[0].IPConfigurations)[0].PrivateIPAddress, nil
