@@ -100,7 +100,7 @@ func (p *prod) populateInstanceMetadata() error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("unexpected status code %q", resp.StatusCode)
+		return fmt.Errorf("unexpected status code %d", resp.StatusCode)
 	}
 
 	if strings.SplitN(resp.Header.Get("Content-Type"), ";", 2)[0] != "application/json" {
