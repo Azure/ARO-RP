@@ -33,6 +33,10 @@ func NewTest(l net.Listener, cert []byte) *test {
 	}
 }
 
+func (t *test) Domain() string {
+	return "test"
+}
+
 func (t *test) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, error) {
 	return nil, nil
 }
