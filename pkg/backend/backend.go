@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	defaultMaxWorkers      = 100
+	defaultMaxWorkers      = 20
 	defaultMaxDequeueCount = 5
 )
 
