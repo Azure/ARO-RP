@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"net/http"
 
+	"github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
 )
 
@@ -27,10 +28,12 @@ type Databases struct {
 }
 
 type databaseClient struct {
+	log             *logrus.Entry
 	hc              *http.Client
 	jsonHandle      *codec.JsonHandle
 	databaseAccount string
 	masterKey       []byte
+	maxRetries      int
 }
 
 // DatabaseClient is a database client
@@ -54,13 +57,15 @@ type DatabaseIterator interface {
 }
 
 // NewDatabaseClient returns a new database client
-func NewDatabaseClient(hc *http.Client, jsonHandle *codec.JsonHandle, databaseAccount, masterKey string) (DatabaseClient, error) {
+func NewDatabaseClient(log *logrus.Entry, hc *http.Client, jsonHandle *codec.JsonHandle, databaseAccount, masterKey string) (DatabaseClient, error) {
 	var err error
 
 	c := &databaseClient{
+		log:             log,
 		hc:              hc,
 		jsonHandle:      jsonHandle,
 		databaseAccount: databaseAccount,
+		maxRetries:      10,
 	}
 
 	c.masterKey, err = base64.StdEncoding.DecodeString(masterKey)

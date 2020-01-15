@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/textproto"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -73,16 +74,48 @@ func (c *databaseClient) authorizeRequest(req *http.Request, resourceType, resou
 }
 
 func (c *databaseClient) do(ctx context.Context, method, path, resourceType, resourceLink string, expectedStatusCode int, in, out interface{}, headers http.Header) error {
+	var resp *http.Response
+	var err error
+
+	for retry := 0; retry < c.maxRetries; retry++ {
+		resp, err = c._do(ctx, method, path, resourceType, resourceLink, expectedStatusCode, in, out, headers)
+		if !IsErrorStatusCode(err, http.StatusTooManyRequests) {
+			break
+		}
+
+		c.log.Warnf("%s %s: attempt %d: %s", method, path, retry, err)
+
+		ms, err2 := strconv.ParseInt(resp.Header.Get("x-ms-retry-after-ms"), 10, 0)
+		if err2 != nil {
+			return err2
+		}
+
+		time.Sleep(time.Duration(ms) * time.Millisecond)
+	}
+
+	if headers != nil {
+		for k := range headers {
+			delete(headers, k)
+		}
+		for k, v := range resp.Header {
+			headers[k] = v
+		}
+	}
+
+	return err
+}
+
+func (c *databaseClient) _do(ctx context.Context, method, path, resourceType, resourceLink string, expectedStatusCode int, in, out interface{}, headers http.Header) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(ctx, method, "https://"+c.databaseAccount+".documents.azure.com/"+path, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if in != nil {
 		buf := &bytes.Buffer{}
 		err := codec.NewEncoder(buf, c.jsonHandle).Encode(in)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		req.Body = ioutil.NopCloser(buf)
 		req.Header.Set("Content-Type", "application/json")
@@ -98,36 +131,27 @@ func (c *databaseClient) do(ctx context.Context, method, path, resourceType, res
 
 	resp, err := c.hc.Do(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer func() {
 		resp.Body.Read(nil)
 		resp.Body.Close()
 	}()
 
-	if headers != nil {
-		for k := range headers {
-			delete(headers, k)
-		}
-		for k, v := range resp.Header {
-			headers[k] = v
-		}
-	}
-
 	d := codec.NewDecoder(resp.Body, c.jsonHandle)
 
 	if resp.StatusCode != expectedStatusCode {
-		var err *Error
+		err := &Error{}
 		if resp.Header.Get("Content-Type") == "application/json" {
 			d.Decode(&err)
 		}
 		err.StatusCode = resp.StatusCode
-		return err
+		return resp, err
 	}
 
 	if out != nil && resp.Header.Get("Content-Type") == "application/json" {
-		return d.Decode(&out)
+		return nil, d.Decode(&out)
 	}
 
-	return nil
+	return resp, nil
 }
