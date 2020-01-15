@@ -5,10 +5,13 @@ package backend
 
 import (
 	"context"
+	"os"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -18,8 +21,8 @@ import (
 )
 
 const (
-	maxWorkers      = 100
-	maxDequeueCount = 5
+	defaultMaxWorkers      = 100
+	defaultMaxDequeueCount = 5
 )
 
 type backend struct {
@@ -28,13 +31,16 @@ type backend struct {
 	db      *database.Database
 	m       metrics.Interface
 
-	mu       sync.Mutex
-	cond     *sync.Cond
-	workers  int32
-	stopping atomic.Value
+	mu         sync.Mutex
+	cond       *sync.Cond
+	workers    int32
+	maxWorkers *int32
+	stopping   atomic.Value
 
 	ocb *openShiftClusterBackend
 	sb  *subscriptionBackend
+
+	maxDequeueCount *int
 }
 
 // Runnable represents a runnable object
@@ -57,6 +63,21 @@ func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, db *d
 	b.ocb = &openShiftClusterBackend{backend: b}
 	b.sb = &subscriptionBackend{backend: b}
 
+	if len(os.Getenv("MAX_WORKERS")) > 0 {
+		i, err := strconv.Atoi(os.Getenv("MAX_WORKERS"))
+		if err != nil {
+			return nil, err
+		}
+		b.maxWorkers = to.Int32Ptr(int32(i))
+	}
+	if len(os.Getenv("MAX_DEQUEUE")) > 0 {
+		i, err := strconv.Atoi(os.Getenv("MAX_DEQUEUE"))
+		if err != nil {
+			return nil, err
+		}
+		b.maxDequeueCount = to.IntPtr(i)
+	}
+
 	return b, nil
 }
 
@@ -74,10 +95,16 @@ func (b *backend) Run(ctx context.Context, stop <-chan struct{}) {
 		b.stopping.Store(true)
 		b.cond.Signal()
 	}()
+	if b.maxWorkers == nil {
+		b.maxWorkers = to.Int32Ptr(defaultMaxWorkers)
+	}
+	if b.maxDequeueCount == nil {
+		b.maxDequeueCount = to.IntPtr(defaultMaxDequeueCount)
+	}
 
 	for {
 		b.mu.Lock()
-		for atomic.LoadInt32(&b.workers) >= maxWorkers && !b.stopping.Load().(bool) {
+		for atomic.LoadInt32(&b.workers) >= *b.maxWorkers && !b.stopping.Load().(bool) {
 			b.cond.Wait()
 		}
 		b.mu.Unlock()

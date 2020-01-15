@@ -30,7 +30,7 @@ func (sb *subscriptionBackend) try(ctx context.Context) (bool, error) {
 	}
 
 	log := sb.baseLog.WithField("subscription", doc.ID)
-	if doc.Dequeues > maxDequeueCount {
+	if doc.Dequeues > *sb.backend.maxDequeueCount {
 		log.Errorf("dequeued %d times, failing", doc.Dequeues)
 		return true, sb.endLease(ctx, nil, doc, false, true)
 	}
