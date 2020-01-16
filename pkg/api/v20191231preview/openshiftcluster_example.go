@@ -19,6 +19,9 @@ func exampleOpenShiftCluster() *OpenShiftCluster {
 				Version:         "4.3.0",
 				ResourceGroupID: "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup",
 			},
+			ConsoleProfile: ConsoleProfile{
+				URL: "https://console-openshift-console.apps.cluster.location.aroapp.io/",
+			},
 			ServicePrincipalProfile: ServicePrincipalProfile{
 				ClientSecret: "clientSecret",
 				ClientID:     "clientId",
@@ -52,7 +55,6 @@ func exampleOpenShiftCluster() *OpenShiftCluster {
 					IP:         "1.2.3.4",
 				},
 			},
-			ConsoleURL: "https://console-openshift-console.apps.cluster.location.aroapp.io/",
 		},
 	}
 }
@@ -66,10 +68,10 @@ func ExampleOpenShiftClusterParameter() *OpenShiftCluster {
 	oc.Type = ""
 	oc.Properties.ProvisioningState = ""
 	oc.Properties.ClusterProfile.Version = ""
+	oc.Properties.ConsoleProfile.URL = ""
 	oc.Properties.APIServerProfile.URL = ""
 	oc.Properties.APIServerProfile.IP = ""
 	oc.Properties.IngressProfiles[0].IP = ""
-	oc.Properties.ConsoleURL = ""
 
 	return oc
 }

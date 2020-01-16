@@ -208,6 +208,22 @@ class ClusterProfile(Model):
         self.resource_group_id = resource_group_id
 
 
+class ConsoleProfile(Model):
+    """ConsoleProfile.
+
+    :param url: The URL to access the cluster console (immutable).
+    :type url: str
+    """
+
+    _attribute_map = {
+        'url': {'key': 'url', 'type': 'str'},
+    }
+
+    def __init__(self, *, url: str=None, **kwargs) -> None:
+        super(ConsoleProfile, self).__init__(**kwargs)
+        self.url = url
+
+
 class Display(Model):
     """Display represents the display details of an operation.
 
@@ -332,6 +348,9 @@ class OpenShiftCluster(Resource):
     :param cluster_profile: The cluster profile.
     :type cluster_profile:
      ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.ClusterProfile
+    :param console_profile: The console profile.
+    :type console_profile:
+     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.ConsoleProfile
     :param service_principal_profile: The cluster service principal profile.
     :type service_principal_profile:
      ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.ServicePrincipalProfile
@@ -350,8 +369,6 @@ class OpenShiftCluster(Resource):
     :param ingress_profiles: The cluster ingress profiles.
     :type ingress_profiles:
      list[~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.IngressProfile]
-    :param console_url: The URL to access the cluster console (immutable).
-    :type console_url: str
     """
 
     _validation = {
@@ -368,28 +385,28 @@ class OpenShiftCluster(Resource):
         'location': {'key': 'location', 'type': 'str'},
         'provisioning_state': {'key': 'properties.provisioningState', 'type': 'str'},
         'cluster_profile': {'key': 'properties.clusterProfile', 'type': 'ClusterProfile'},
+        'console_profile': {'key': 'properties.consoleProfile', 'type': 'ConsoleProfile'},
         'service_principal_profile': {'key': 'properties.servicePrincipalProfile', 'type': 'ServicePrincipalProfile'},
         'network_profile': {'key': 'properties.networkProfile', 'type': 'NetworkProfile'},
         'master_profile': {'key': 'properties.masterProfile', 'type': 'MasterProfile'},
         'worker_profiles': {'key': 'properties.workerProfiles', 'type': '[WorkerProfile]'},
         'apiserver_profile': {'key': 'properties.apiserverProfile', 'type': 'APIServerProfile'},
         'ingress_profiles': {'key': 'properties.ingressProfiles', 'type': '[IngressProfile]'},
-        'console_url': {'key': 'properties.consoleUrl', 'type': 'str'},
     }
 
-    def __init__(self, *, tags=None, location: str=None, provisioning_state=None, cluster_profile=None, service_principal_profile=None, network_profile=None, master_profile=None, worker_profiles=None, apiserver_profile=None, ingress_profiles=None, console_url: str=None, **kwargs) -> None:
+    def __init__(self, *, tags=None, location: str=None, provisioning_state=None, cluster_profile=None, console_profile=None, service_principal_profile=None, network_profile=None, master_profile=None, worker_profiles=None, apiserver_profile=None, ingress_profiles=None, **kwargs) -> None:
         super(OpenShiftCluster, self).__init__(**kwargs)
         self.tags = tags
         self.location = location
         self.provisioning_state = provisioning_state
         self.cluster_profile = cluster_profile
+        self.console_profile = console_profile
         self.service_principal_profile = service_principal_profile
         self.network_profile = network_profile
         self.master_profile = master_profile
         self.worker_profiles = worker_profiles
         self.apiserver_profile = apiserver_profile
         self.ingress_profiles = ingress_profiles
-        self.console_url = console_url
 
 
 class OpenShiftClusterCredentials(Model):

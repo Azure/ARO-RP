@@ -26,6 +26,9 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 				Version:         oc.Properties.ClusterProfile.Version,
 				ResourceGroupID: oc.Properties.ClusterProfile.ResourceGroupID,
 			},
+			ConsoleProfile: ConsoleProfile{
+				URL: oc.Properties.ConsoleProfile.URL,
+			},
 			ServicePrincipalProfile: ServicePrincipalProfile{
 				ClientID:     oc.Properties.ServicePrincipalProfile.ClientID,
 				ClientSecret: oc.Properties.ServicePrincipalProfile.ClientSecret,
@@ -43,7 +46,6 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 				URL:        oc.Properties.APIServerProfile.URL,
 				IP:         oc.Properties.APIServerProfile.IP,
 			},
-			ConsoleURL: oc.Properties.ConsoleURL,
 		},
 	}
 
@@ -117,6 +119,7 @@ func (c *openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShi
 	out.Properties.ClusterProfile.Domain = oc.Properties.ClusterProfile.Domain
 	out.Properties.ClusterProfile.Version = oc.Properties.ClusterProfile.Version
 	out.Properties.ClusterProfile.ResourceGroupID = oc.Properties.ClusterProfile.ResourceGroupID
+	out.Properties.ConsoleProfile.URL = oc.Properties.ConsoleProfile.URL
 	out.Properties.ServicePrincipalProfile.ClientID = oc.Properties.ServicePrincipalProfile.ClientID
 	out.Properties.ServicePrincipalProfile.ClientSecret = oc.Properties.ServicePrincipalProfile.ClientSecret
 	out.Properties.NetworkProfile.PodCIDR = oc.Properties.NetworkProfile.PodCIDR
@@ -146,5 +149,4 @@ func (c *openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShi
 			out.Properties.IngressProfiles[i].IP = oc.Properties.IngressProfiles[i].IP
 		}
 	}
-	out.Properties.ConsoleURL = oc.Properties.ConsoleURL
 }

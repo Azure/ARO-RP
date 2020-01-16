@@ -14,6 +14,7 @@
           "domain": "cluster.location.aroapp.io",
           "resourceGroupId": "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup"
         },
+        "consoleProfile": {},
         "servicePrincipalProfile": {
           "clientId": "clientId",
           "clientSecret": "clientSecret"
@@ -64,6 +65,9 @@
             "version": "4.3.0",
             "resourceGroupId": "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup"
           },
+          "consoleProfile": {
+            "url": "https://console-openshift-console.apps.cluster.location.aroapp.io/"
+          },
           "servicePrincipalProfile": {
             "clientId": "clientId"
           },
@@ -95,8 +99,7 @@
               "visibility": "Public",
               "ip": "1.2.3.4"
             }
-          ],
-          "consoleUrl": "https://console-openshift-console.apps.cluster.location.aroapp.io/"
+          ]
         }
       }
     },
@@ -116,6 +119,9 @@
             "version": "4.3.0",
             "resourceGroupId": "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup"
           },
+          "consoleProfile": {
+            "url": "https://console-openshift-console.apps.cluster.location.aroapp.io/"
+          },
           "servicePrincipalProfile": {
             "clientId": "clientId"
           },
@@ -147,8 +153,7 @@
               "visibility": "Public",
               "ip": "1.2.3.4"
             }
-          ],
-          "consoleUrl": "https://console-openshift-console.apps.cluster.location.aroapp.io/"
+          ]
         }
       }
     }
