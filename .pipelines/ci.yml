@@ -30,7 +30,9 @@ steps:
   displayName: 'Set up the Go workspace'
 
 - script: |
-    sudo apt-get update && sudo apt-get install libgpgme-dev -y
+    sudo add-apt-repository ppa:kubuntu-ppa/backports
+    sudo apt-get update
+    sudo apt-get install libgpgme-dev -y
   displayName: 'Install packages'
 
 - script: |
