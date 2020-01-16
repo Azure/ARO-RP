@@ -10,34 +10,36 @@
 
 1. Install the `gpgme-devel` package.
 
-1. Install the [Azure
+> MacOS user will need to run : `brew install gpgme`
+
+2. Install the [Azure
    CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli), if you
    haven't already.
 
-1. Install [OpenVPN](https://openvpn.net/community-downloads), if you haven't
+3. Install [OpenVPN](https://openvpn.net/community-downloads), if you haven't
    already.
 
-1. Log in to Azure:
+4. Log in to Azure:
 
    ```
    az login
    ```
 
-1. Git clone this repository to your local machine:
+5. Git clone this repository to your local machine:
 
    ```
    go get -u github.com/Azure/ARO-RP/...
    cd ${GOPATH:-$HOME/go}/src/github.com/Azure/ARO-RP
    ```
 
-1. Non-Red Hat ARO engineering: if you don't have access to a shared development
+6. Non-Red Hat ARO engineering: if you don't have access to a shared development
    environment and secrets, follow [prepare a shared RP development
    environment](prepare-a-shared-rp-development-environment.md).
 
-1. Place your shared development environment secrets in `secrets` (Red Hat ARO
+7. Place your shared development environment secrets in `secrets` (Red Hat ARO
    engineering: run `make secrets`).
 
-1. Copy, edit (if necessary) and source your environment file.  The required
+8. Copy, edit (if necessary) and source your environment file.  The required
    environment variable configuration is documented immediately below:
 
    ```
@@ -49,7 +51,7 @@
    * LOCATION: Location of the shared RP development environment (default:
      `eastus`).
 
-1. Create your own RP database:
+9.  Create your own RP database:
 
    ```
    az group deployment create \
