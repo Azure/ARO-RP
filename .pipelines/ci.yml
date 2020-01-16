@@ -64,11 +64,18 @@ steps:
     echo '##vso[task.prependpath]$(GOROOT)/bin'
   displayName: 'Set up the Go workspace'
 
-  - script: |
-      sudo add-apt-repository ppa:kubuntu-ppa/backports
-      sudo apt-get update
-      sudo apt-get install libgpgme-dev gcc -y
-    displayName: 'Install packages'
+- script: |
+    sudo add-apt-repository ppa:kubuntu-ppa/backports
+    sudo apt-get update
+    sudo apt-get install libgpgme-dev gcc -y
+  displayName: 'Install packages'
+
+- script: |
+    set -x
+    make test-go
+    [[ -z "$(git status -s)" ]]
+  workingDirectory: '$(modulePath)'
+  displayName: 'Test'
 
 # - script: |
 #     go version
@@ -80,10 +87,3 @@ steps:
 #     go build -v .
 #   workingDirectory: '$(modulePath)'
 #   displayName: 'Get dependencies, then build'
-
-  - script: |
-      set -x
-      make test-go
-      [[ -z "$(git status -s)" ]]
-    workingDirectory: '$(modulePath)'
-    displayName: 'Test'
