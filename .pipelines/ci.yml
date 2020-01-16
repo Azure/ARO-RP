@@ -5,39 +5,74 @@ trigger:
 pool:
   vmImage: 'ubuntu-latest'
 
-variables:
-  GOPATH: '$(Agent.BuildDirectory)/gopath' # Go workspace path
-  GOROOT: '$(Agent.BuildDirectory)/go' # Go installation path
-  GOBIN:  '$(GOPATH)/bin' # Go binaries path
-  modulePath: '$(GOPATH)/src/github.com/$(build.repository.name)' # Path to the module's code
+# variables:
+#   GOPATH: '$(Agent.BuildDirectory)/gopath' # Go workspace path
+#   GOROOT: '$(Agent.BuildDirectory)/go' # Go installation path
+#   GOBIN:  '$(GOPATH)/bin' # Go binaries path
+#   modulePath: '$(GOPATH)/src/github.com/$(build.repository.name)' # Path to the module's code
 
-steps:
-- script: |
-    wget "https://storage.googleapis.com/golang/go1.13.linux-amd64.tar.gz" --output-document "$(Agent.BuildDirectory)/go1.13.tar.gz"
-    tar -C '$(Agent.BuildDirectory)' -xzf "$(Agent.BuildDirectory)/go1.13.tar.gz"
-  displayName: 'Install Go 1.13'
+# steps:
+# - script: |
+#     wget "https://storage.googleapis.com/golang/go1.13.linux-amd64.tar.gz"
+#     tar -xvf go1.13.3.linux-amd64.tar.gz
+#     mv go /usr/local
+#     export GOROOT=/usr/local/go
+#     export GOPATH=$(Agent.BuildDirectory)
+#     export PATH=$GOPATH/bin:$GOROOT/bin:$PATH
+#   displayName: 'Install Go 1.13'
   
-- script: |
-    mkdir -p '$(GOBIN)'
-    mkdir -p '$(GOPATH)/pkg'
-    mkdir -p '$(modulePath)'
-    shopt -s extglob
-    shopt -s dotglob
-    mv !(gopath) '$(modulePath)'
-    echo '##vso[task.prependpath]$(GOBIN)'
-    echo '##vso[task.prependpath]$(GOROOT)/bin'
-    go version
-  displayName: 'Set up the Go workspace'
+# - script: |
+#     mkdir -p '$(GOBIN)'
+#     mkdir -p '$(GOPATH)/pkg'
+#     mkdir -p '$(modulePath)'
+#     shopt -s extglob
+#     shopt -s dotglob
+#     mv !(gopath) '$(modulePath)'
+#     echo '##vso[task.prependpath]$(GOBIN)'
+#     echo '##vso[task.prependpath]$(GOROOT)/bin'
+#     go version
+#   displayName: 'Set up the Go workspace'
 
-- script: |
-    sudo add-apt-repository ppa:kubuntu-ppa/backports
-    sudo apt-get update
-    sudo apt-get install libgpgme-dev -y
-  displayName: 'Install packages'
+# - script: |
+#     sudo add-apt-repository ppa:kubuntu-ppa/backports
+#     sudo apt-get update
+#     sudo apt-get install libgpgme-dev gcc -y
+#   displayName: 'Install packages'
 
-- script: |
-    set -x
-    make test-go
-    [[ -z "$(git status -s)" ]]
-  workingDirectory: '$(modulePath)'
-  displayName: 'Test'
+# - script: |
+#     set -x
+#     make test-go
+#     [[ -z "$(git status -s)" ]]
+#   workingDirectory: '$(modulePath)'
+#   displayName: 'Test'
+
+steps: 
+  - task: GoTool@0
+    inputs:
+      version: '1.13.5'
+  - script: |
+      sudo add-apt-repository ppa:kubuntu-ppa/backports
+      sudo apt-get update
+      sudo apt-get install libgpgme-dev gcc -y
+    displayName: 'Install packages'
+  - script: |
+      set -x
+      make test-go
+      [[ -z "$(git status -s)" ]]
+    workingDirectory: '$(System.DefaultWorkingDirectory)'
+    displayName: 'Test'
+  # - task: Go@0
+  #   inputs:
+  #     command: 'get'
+  #     arguments: '-d'
+  #     workingDirectory: '$(System.DefaultWorkingDirectory)'
+  # - task: Go@0
+  #   inputs:
+  #     command: 'build'
+  #     workingDirectory: '$(System.DefaultWorkingDirectory)'
+  # - task: CopyFiles@2
+  #   inputs:
+  #     TargetFolder: '$(Build.ArtifactStagingDirectory)'
+  # - task: PublishBuildArtifacts@1
+  #   inputs:
+  #      artifactName: drop
