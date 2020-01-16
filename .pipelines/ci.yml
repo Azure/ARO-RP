@@ -1,8 +1,4 @@
-# Go
-# Build your Go project.
-# Add steps that test, save build artifacts, deploy, and more:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/go
-
+# Azure DevOps Pipeline running CI
 trigger:
 - master
 
@@ -10,12 +6,17 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
+  GOPATH: '$(Agent.BuildDirectory)/gopath' # Go workspace path
+  GOROOT: '$(Agent.BuildDirectory)/go' # Go installation path
   GOBIN:  '$(GOPATH)/bin' # Go binaries path
-  GOROOT: '/usr/local/go1.13' # Go installation path
-  GOPATH: '$(system.defaultWorkingDirectory)/gopath' # Go workspace path
   modulePath: '$(GOPATH)/src/github.com/$(build.repository.name)' # Path to the module's code
 
 steps:
+- script: |
+    wget "https://storage.googleapis.com/golang/go1.13.linux-amd64.tar.gz" --output-document "$(Agent.BuildDirectory)/go1.13.tar.gz"
+    tar -C '$(Agent.BuildDirectory)' -xzf "$(Agent.BuildDirectory)/go1.13.tar.gz"
+  displayName: 'Install Go 1.13'
+  
 - script: |
     mkdir -p '$(GOBIN)'
     mkdir -p '$(GOPATH)/pkg'
@@ -27,6 +28,10 @@ steps:
     echo '##vso[task.prependpath]$(GOROOT)/bin'
     go version
   displayName: 'Set up the Go workspace'
+
+- script: |
+    sudo apt-get install libgpgme-dev -y
+  displayName: 'Install packages'
 
 - script: |
     set -x
