@@ -59,7 +59,7 @@ steps:
       set -x
       make test-go
       [[ -z "$(git status -s)" ]]
-    workingDirectory: '$(System.DefaultWorkingDirectory)'
+    workingDirectory: '$(modulePath)'
     displayName: 'Test'
   # - task: Go@0
   #   inputs:
