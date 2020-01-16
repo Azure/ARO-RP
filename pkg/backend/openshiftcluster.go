@@ -31,7 +31,7 @@ func (ocb *openShiftClusterBackend) try(ctx context.Context) (bool, error) {
 	}
 
 	log := ocb.baseLog.WithField("resource", doc.OpenShiftCluster.ID)
-	if doc.Dequeues > *ocb.backend.maxDequeueCount {
+	if doc.Dequeues > ocb.backend.maxDequeueCount {
 		log.Errorf("dequeued %d times, failing", doc.Dequeues)
 		return true, ocb.endLease(ctx, nil, doc, api.ProvisioningStateFailed)
 	}
