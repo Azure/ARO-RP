@@ -30,7 +30,7 @@ steps:
   displayName: 'Set up the Go workspace'
 
 - script: |
-    sudo apt-get install libgpgme-dev -y
+    sudo apt-get update && sudo apt-get install libgpgme-dev -y
   displayName: 'Install packages'
 
 - script: |
