@@ -1,5 +1,21 @@
 COMMIT = $(shell git rev-parse --short HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
 
+ifeq ($(OS),Windows_NT)
+	BUILD_MODE ?= NT
+else
+	UNAME_S := $(shell uname -s)
+	ifeq ($(UNAME_S), Linux)
+		BUILD_MODE ?= LINUX
+		CMD_SHASUM ?= sha256sum --quiet
+		CMD_FIND ?= find
+	endif
+	ifeq ($(UNAME_S), Darwin)
+		BUILD_MODE ?= DARWIN
+		CMD_SHASUM ?= shasum -s
+		CMD_FIND ?= find .
+	endif
+endif
+
 aro: generate
 	go build -ldflags "-X main.gitCommit=$(COMMIT)" ./cmd/aro
 
@@ -17,7 +33,6 @@ client: generate
 	sha256sum swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/preview/2019-12-31-preview/redhatopenshift.json >.sha256sum
 
 	sudo docker run \
-		--rm \
 		-v $(PWD)/pkg/client:/github.com/Azure/ARO-RP/pkg/client:z \
 		-v $(PWD)/swagger:/swagger:z \
 		azuresdk/autorest \
@@ -28,7 +43,6 @@ client: generate
 		--output-folder=/github.com/Azure/ARO-RP/pkg/client/services/preview/redhatopenshift/mgmt/2019-12-31-preview/redhatopenshift
 
 	sudo docker run \
-		--rm \
 		-v $(PWD)/python/client:/python/client:z \
 		-v $(PWD)/swagger:/swagger:z \
 		azuresdk/autorest \
@@ -53,10 +67,6 @@ generate:
 image-aro: aro
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
 	docker build -f Dockerfile.aro -t arosvc.azurecr.io/aro:$(COMMIT) .
-
-image-mdm:
-	docker build --build-arg VERSION=2.2019.801.1228-66cac1-~bionic_amd64 \
-	  -f Dockerfile.mdm -t arosvc.azurecr.io/mdm:2019.801.1228-66cac1 .
 
 image-proxy: proxy
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
@@ -88,8 +98,8 @@ test-go: generate
 	go run ./hack/validate-imports cmd hack pkg
 	go run ./hack/licenses
 	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
-	@[ -z "$$(find -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
-	@sha256sum --quiet -c .sha256sum || (echo error: client library is stale, please run make client; exit 1)
+	@[ -z "$$($(CMD_FIND) -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
+	@$(CMD_SHASUM) -c .sha256sum || (echo error: client library is stale, please run make client; exit 1)
 
 	go vet ./...
 	go test ./...
