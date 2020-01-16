@@ -9,7 +9,9 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -92,6 +94,8 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		},
 	}
 
+	mockSubID := "00000000-0000-0000-0000-000000000000"
+
 	type test struct {
 		name           string
 		resourceID     string
@@ -100,13 +104,14 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		mocks          func(*test, *mock_database.MockAsyncOperations, *mock_database.MockOpenShiftClusters)
 		wantStatusCode int
 		wantResponse   func(*test) *v20191231preview.OpenShiftCluster
+		wantAsync      bool
 		wantError      string
 	}
 
 	for _, tt := range []*test{
 		{
 			name:       "create a new cluster",
-			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName",
+			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName", mockSubID),
 			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters) {
 				openShiftClusters.EXPECT().
 					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
@@ -136,6 +141,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					Create(gomock.Any(), (*matcher.OpenShiftClusterDocument)(clusterdoc)).
 					Return(clusterdoc, nil)
 			},
+			wantAsync:      true,
 			wantStatusCode: http.StatusCreated,
 			wantResponse: func(tt *test) *v20191231preview.OpenShiftCluster {
 				return &v20191231preview.OpenShiftCluster{
@@ -153,7 +159,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		},
 		{
 			name:       "update a cluster from succeeded",
-			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName",
+			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName", mockSubID),
 			request: func(oc *v20191231preview.OpenShiftCluster) {
 				oc.Properties.ClusterProfile.Domain = "changed"
 			},
@@ -196,6 +202,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					Update(gomock.Any(), (*matcher.OpenShiftClusterDocument)(clusterdoc)).
 					Return(clusterdoc, nil)
 			},
+			wantAsync:      true,
 			wantStatusCode: http.StatusOK,
 			wantResponse: func(tt *test) *v20191231preview.OpenShiftCluster {
 				return &v20191231preview.OpenShiftCluster{
@@ -213,7 +220,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		},
 		{
 			name:       "update a cluster from failed during update",
-			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName",
+			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName", mockSubID),
 			request: func(oc *v20191231preview.OpenShiftCluster) {
 				oc.Properties.ClusterProfile.Domain = "changed"
 			},
@@ -257,6 +264,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					Update(gomock.Any(), (*matcher.OpenShiftClusterDocument)(clusterdoc)).
 					Return(clusterdoc, nil)
 			},
+			wantAsync:      true,
 			wantStatusCode: http.StatusOK,
 			wantResponse: func(tt *test) *v20191231preview.OpenShiftCluster {
 				return &v20191231preview.OpenShiftCluster{
@@ -274,7 +282,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		},
 		{
 			name:       "update a cluster from failed during creation",
-			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName",
+			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName", mockSubID),
 			request: func(oc *v20191231preview.OpenShiftCluster) {
 				oc.Properties.ClusterProfile.Domain = "changed"
 			},
@@ -299,7 +307,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		},
 		{
 			name:       "update a cluster from failed during deletion",
-			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName",
+			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName", mockSubID),
 			request: func(oc *v20191231preview.OpenShiftCluster) {
 				oc.Properties.ClusterProfile.Domain = "changed"
 			},
@@ -324,7 +332,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		},
 		{
 			name:       "patch a cluster from succeeded",
-			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName",
+			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName", mockSubID),
 			request: func(oc *v20191231preview.OpenShiftCluster) {
 				oc.Properties.ClusterProfile.Domain = "changed"
 				oc.Properties.IngressProfiles = []v20191231preview.IngressProfile{{Name: "changed"}}
@@ -373,6 +381,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					Update(gomock.Any(), (*matcher.OpenShiftClusterDocument)(clusterdoc)).
 					Return(clusterdoc, nil)
 			},
+			wantAsync:      true,
 			wantStatusCode: http.StatusOK,
 			wantResponse: func(tt *test) *v20191231preview.OpenShiftCluster {
 				return &v20191231preview.OpenShiftCluster{
@@ -393,7 +402,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		},
 		{
 			name:       "patch a cluster from failed during update",
-			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName",
+			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName", mockSubID),
 			request: func(oc *v20191231preview.OpenShiftCluster) {
 				oc.Properties.ClusterProfile.Domain = "changed"
 			},
@@ -441,6 +450,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					Update(gomock.Any(), (*matcher.OpenShiftClusterDocument)(clusterdoc)).
 					Return(clusterdoc, nil)
 			},
+			wantAsync:      true,
 			wantStatusCode: http.StatusOK,
 			wantResponse: func(tt *test) *v20191231preview.OpenShiftCluster {
 				return &v20191231preview.OpenShiftCluster{
@@ -461,7 +471,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		},
 		{
 			name:       "patch a cluster from failed during creation",
-			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName",
+			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName", mockSubID),
 			request: func(oc *v20191231preview.OpenShiftCluster) {
 				oc.Properties.ClusterProfile.Domain = "changed"
 			},
@@ -487,7 +497,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		},
 		{
 			name:       "patch a cluster from failed during deletion",
-			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName",
+			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName", mockSubID),
 			request: func(oc *v20191231preview.OpenShiftCluster) {
 				oc.Properties.ClusterProfile.Domain = "changed"
 			},
@@ -533,7 +543,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			tt.mocks(tt, asyncOperations, openShiftClusters)
 
 			subscriptions.EXPECT().
-				Get(gomock.Any(), "00000000-0000-0000-0000-000000000000").
+				Get(gomock.Any(), mockSubID).
 				Return(&api.SubscriptionDocument{
 					Subscription: &api.Subscription{
 						State: api.SubscriptionStateRegistered,
@@ -583,6 +593,17 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 
 			if resp.StatusCode != tt.wantStatusCode {
 				t.Error(resp.StatusCode)
+			}
+
+			azureAsyncOperation := resp.Header.Get("Azure-AsyncOperation")
+			if tt.wantAsync {
+				if os.Getenv("FEATURE_OPERATIONS") != "" && !strings.HasPrefix(azureAsyncOperation, fmt.Sprintf("/subscriptions/%s/providers/microsoft.redhatopenshift/locations/%s/operationsstatus/", mockSubID, env.Location())) {
+					t.Error(azureAsyncOperation)
+				}
+			} else {
+				if azureAsyncOperation != "" {
+					t.Error(azureAsyncOperation)
+				}
 			}
 
 			if tt.wantError == "" {
