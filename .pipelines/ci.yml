@@ -62,6 +62,7 @@ steps:
     mv !(gopath) '$(modulePath)'
     echo '##vso[task.prependpath]$(GOBIN)'
     echo '##vso[task.prependpath]$(GOROOT)/bin'
+    go version
   displayName: 'Set up the Go workspace'
 
 - script: |
@@ -71,6 +72,9 @@ steps:
   displayName: 'Install packages'
 
 - script: |
+    export
+    pwd
+    go env
     set -x
     make test-go
     [[ -z "$(git status -s)" ]]
