@@ -20,6 +20,7 @@ import (
 // Database represents a database
 type Database struct {
 	AsyncOperations   AsyncOperations
+	Monitors          Monitors
 	OpenShiftClusters OpenShiftClusters
 	Subscriptions     Subscriptions
 }
@@ -57,6 +58,11 @@ func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Interface, uuid
 	db = &Database{}
 
 	db.AsyncOperations, err = NewAsyncOperations(uuid, dbc, env.DatabaseName(), "AsyncOperations")
+	if err != nil {
+		return nil, err
+	}
+
+	db.Monitors, err = NewMonitors(ctx, uuid, dbc, env.DatabaseName(), "Monitors")
 	if err != nil {
 		return nil, err
 	}

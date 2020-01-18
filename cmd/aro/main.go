@@ -16,6 +16,7 @@ var (
 )
 
 func main() {
+	ctx := context.Background()
 	log := utillog.GetLogger()
 
 	log.Printf("starting, git commit %s", gitCommit)
@@ -27,9 +28,14 @@ func main() {
 	var err error
 	switch strings.ToLower(os.Args[1]) {
 	case "mirror":
-		err = mirror(context.Background(), log)
+		err = mirror(ctx, log)
+	case "monitor":
+		err = monitor(ctx, log)
 	case "rp":
-		err = rp(context.Background(), log)
+		err = rp(ctx, log)
+	default:
+		usage()
+		os.Exit(2)
 	}
 
 	if err != nil {
