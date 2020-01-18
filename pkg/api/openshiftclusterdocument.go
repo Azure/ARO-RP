@@ -27,6 +27,8 @@ type OpenShiftClusterDocument struct {
 	PartitionKey              string `json:"partitionKey,omitempty"`
 	ClusterResourceGroupIDKey string `json:"clusterResourceGroupIdKey,omitempty"`
 
+	Bucket int `json:"bucket,omitempty"`
+
 	LeaseOwner   string `json:"leaseOwner,omitempty"`
 	LeaseExpires int    `json:"leaseExpires,omitempty"`
 	Dequeues     int    `json:"dequeues,omitempty"`
