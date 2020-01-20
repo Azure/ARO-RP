@@ -1,4 +1,5 @@
 COMMIT = $(shell git rev-parse --short HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
+CRUNTIME = $(if $(shell PATH=$(PATH) which docker),docker,podman)
 
 aro: generate
 	go build -ldflags "-X main.gitCommit=$(COMMIT)" ./cmd/aro
@@ -16,7 +17,7 @@ client: generate
 	mkdir pkg/client python/client
 	sha256sum swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/preview/2019-12-31-preview/redhatopenshift.json >.sha256sum
 
-	sudo docker run \
+	sudo ${CRUNTIME} run \
 		--rm \
 		-v $(PWD)/pkg/client:/github.com/Azure/ARO-RP/pkg/client:z \
 		-v $(PWD)/swagger:/swagger:z \
@@ -27,7 +28,7 @@ client: generate
 		--input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/preview/2019-12-31-preview/redhatopenshift.json \
 		--output-folder=/github.com/Azure/ARO-RP/pkg/client/services/preview/redhatopenshift/mgmt/2019-12-31-preview/redhatopenshift
 
-	sudo docker run \
+	sudo ${CRUNTIME} run \
 		--rm \
 		-v $(PWD)/python/client:/python/client:z \
 		-v $(PWD)/swagger:/swagger:z \
