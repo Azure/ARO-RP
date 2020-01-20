@@ -270,15 +270,6 @@ func (i *Installer) installResources(ctx context.Context) error {
 					},
 				},
 				{
-					// TODO: upstream doesn't appear to wire this in to any vnet - investigate.
-					Resource: &mgmtnetwork.RouteTable{
-						Name:     to.StringPtr("aro-node-routetable"),
-						Type:     to.StringPtr("Microsoft.Network/routeTables"),
-						Location: &installConfig.Config.Azure.Region,
-					},
-					APIVersion: apiVersions["network"],
-				},
-				{
 					Resource: &mgmtnetwork.PublicIPAddress{
 						Sku: &mgmtnetwork.PublicIPAddressSku{
 							Name: mgmtnetwork.PublicIPAddressSkuNameStandard,
