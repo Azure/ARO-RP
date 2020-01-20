@@ -50,9 +50,14 @@ func run(ctx context.Context) error {
 		return err
 	}
 
-	vhd, err := rhcos.VHD(ctx)
-	if err != nil {
-		return err
+	var vhd string
+	if len(os.Args) == 2 {
+		vhd = os.Args[1]
+	} else {
+		vhd, err = rhcos.VHD(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
 	name := vhd[strings.LastIndexByte(vhd, '/')+1:]
