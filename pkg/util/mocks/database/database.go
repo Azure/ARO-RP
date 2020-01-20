@@ -105,6 +105,20 @@ func (m *MockOpenShiftClusters) EXPECT() *MockOpenShiftClustersMockRecorder {
 	return m.recorder
 }
 
+// ChangeFeed mocks base method
+func (m *MockOpenShiftClusters) ChangeFeed() cosmosdb.OpenShiftClusterDocumentIterator {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ChangeFeed")
+	ret0, _ := ret[0].(cosmosdb.OpenShiftClusterDocumentIterator)
+	return ret0
+}
+
+// ChangeFeed indicates an expected call of ChangeFeed
+func (mr *MockOpenShiftClustersMockRecorder) ChangeFeed() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeFeed", reflect.TypeOf((*MockOpenShiftClusters)(nil).ChangeFeed))
+}
+
 // Create mocks base method
 func (m *MockOpenShiftClusters) Create(arg0 context.Context, arg1 *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error) {
 	m.ctrl.T.Helper()
