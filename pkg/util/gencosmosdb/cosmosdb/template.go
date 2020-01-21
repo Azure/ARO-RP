@@ -16,13 +16,20 @@ type templateClient struct {
 // TemplateClient is a template client
 type TemplateClient interface {
 	Create(context.Context, string, *pkg.Template, *Options) (*pkg.Template, error)
-	List(*Options) TemplateIterator
+	List(*Options) TemplateRawIterator
 	ListAll(context.Context, *Options) (*pkg.Templates, error)
 	Get(context.Context, string, string, *Options) (*pkg.Template, error)
 	Replace(context.Context, string, *pkg.Template, *Options) (*pkg.Template, error)
 	Delete(context.Context, string, *pkg.Template, *Options) error
-	Query(string, *Query, *Options) TemplateIterator
+	Query(string, *Query, *Options) TemplateRawIterator
 	QueryAll(context.Context, string, *Query, *Options) (*pkg.Templates, error)
+	ChangeFeed(*Options) TemplateIterator
+}
+
+type templateChangeFeedIterator struct {
+	*templateClient
+	continuation string
+	options      *Options
 }
 
 type templateListIterator struct {
@@ -44,6 +51,11 @@ type templateQueryIterator struct {
 // TemplateIterator is a template iterator
 type TemplateIterator interface {
 	Next(context.Context) (*pkg.Templates, error)
+}
+
+// TemplateRawIterator is a template raw iterator
+type TemplateRawIterator interface {
+	TemplateIterator
 	NextRaw(context.Context, interface{}) error
 }
 
@@ -93,7 +105,7 @@ func (c *templateClient) Create(ctx context.Context, partitionkey string, newtem
 	return
 }
 
-func (c *templateClient) List(options *Options) TemplateIterator {
+func (c *templateClient) List(options *Options) TemplateRawIterator {
 	return &templateListIterator{templateClient: c, options: options}
 }
 
@@ -140,12 +152,16 @@ func (c *templateClient) Delete(ctx context.Context, partitionkey string, templa
 	return
 }
 
-func (c *templateClient) Query(partitionkey string, query *Query, options *Options) TemplateIterator {
+func (c *templateClient) Query(partitionkey string, query *Query, options *Options) TemplateRawIterator {
 	return &templateQueryIterator{templateClient: c, partitionkey: partitionkey, query: query, options: options}
 }
 
 func (c *templateClient) QueryAll(ctx context.Context, partitionkey string, query *Query, options *Options) (*pkg.Templates, error) {
 	return c.all(ctx, c.Query(partitionkey, query, options))
+}
+
+func (c *templateClient) ChangeFeed(options *Options) TemplateIterator {
+	return &templateChangeFeedIterator{templateClient: c}
 }
 
 func (c *templateClient) setOptions(options *Options, template *pkg.Template, headers http.Header) error {
@@ -170,6 +186,33 @@ func (c *templateClient) setOptions(options *Options, template *pkg.Template, he
 	}
 
 	return nil
+}
+
+func (i *templateChangeFeedIterator) Next(ctx context.Context) (templates *pkg.Templates, err error) {
+	headers := http.Header{}
+	headers.Set("A-IM", "Incremental feed")
+
+	headers.Set("X-Ms-Max-Item-Count", "-1")
+	if i.continuation != "" {
+		headers.Set("If-None-Match", i.continuation)
+	}
+
+	err = i.setOptions(i.options, nil, headers)
+	if err != nil {
+		return
+	}
+
+	err = i.do(ctx, http.MethodGet, i.path+"/docs", "docs", i.path, http.StatusOK, nil, &templates, headers)
+	if IsErrorStatusCode(err, http.StatusNotModified) {
+		err = nil
+	}
+	if err != nil {
+		return
+	}
+
+	i.continuation = headers.Get("Etag")
+
+	return
 }
 
 func (i *templateListIterator) Next(ctx context.Context) (templates *pkg.Templates, err error) {
