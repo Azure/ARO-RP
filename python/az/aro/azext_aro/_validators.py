@@ -41,7 +41,7 @@ def validate_client_id(namespace):
 
 def validate_client_secret(namespace):
     if namespace.client_secret is not None:
-        if namespace.client_id is not None or not str(namespace.client_id):
+        if namespace.client_id is None or not str(namespace.client_id):
             raise CLIError('Must specify --client-id with --client-secret.')
 
 
