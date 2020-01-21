@@ -22,7 +22,10 @@ import (
 func TestCreate(t *testing.T) {
 	ctx := context.Background()
 
-	env := env.NewTest(nil, nil)
+	env := &env.Test{
+		TestResourceGroup: "rpResourcegroup",
+		TestDomain:        "domain",
+	}
 
 	managedOc := &api.OpenShiftCluster{
 		Properties: api.Properties{
@@ -47,13 +50,13 @@ func TestCreate(t *testing.T) {
 			oc:   managedOc,
 			mocks: func(tt *test, recordsets *mock_dns.MockRecordSetsClient) {
 				recordsets.EXPECT().
-					Get(ctx, "rpResourcegroup", "test", "api.domain", mgmtdns.A).
+					Get(ctx, "rpResourcegroup", "domain", "api.domain", mgmtdns.A).
 					Return(mgmtdns.RecordSet{}, autorest.DetailedError{
 						StatusCode: http.StatusNotFound,
 					})
 
 				recordsets.EXPECT().
-					CreateOrUpdate(ctx, "rpResourcegroup", "test", "api.domain", mgmtdns.A, mgmtdns.RecordSet{
+					CreateOrUpdate(ctx, "rpResourcegroup", "domain", "api.domain", mgmtdns.A, mgmtdns.RecordSet{
 						RecordSetProperties: &mgmtdns.RecordSetProperties{
 							Metadata: map[string]*string{
 								resourceID: to.StringPtr(tt.oc.ID),
@@ -69,7 +72,7 @@ func TestCreate(t *testing.T) {
 			oc:   managedOc,
 			mocks: func(tt *test, recordsets *mock_dns.MockRecordSetsClient) {
 				recordsets.EXPECT().
-					Get(ctx, "rpResourcegroup", "test", "api.domain", mgmtdns.A).
+					Get(ctx, "rpResourcegroup", "domain", "api.domain", mgmtdns.A).
 					Return(mgmtdns.RecordSet{
 						RecordSetProperties: &mgmtdns.RecordSetProperties{
 							Metadata: map[string]*string{
@@ -84,7 +87,7 @@ func TestCreate(t *testing.T) {
 			oc:   managedOc,
 			mocks: func(tt *test, recordsets *mock_dns.MockRecordSetsClient) {
 				recordsets.EXPECT().
-					Get(ctx, "rpResourcegroup", "test", "api.domain", mgmtdns.A).
+					Get(ctx, "rpResourcegroup", "domain", "api.domain", mgmtdns.A).
 					Return(mgmtdns.RecordSet{
 						RecordSetProperties: &mgmtdns.RecordSetProperties{
 							Metadata: map[string]*string{
@@ -100,7 +103,7 @@ func TestCreate(t *testing.T) {
 			oc:   managedOc,
 			mocks: func(tt *test, recordsets *mock_dns.MockRecordSetsClient) {
 				recordsets.EXPECT().
-					Get(ctx, "rpResourcegroup", "test", "api.domain", mgmtdns.A).
+					Get(ctx, "rpResourcegroup", "domain", "api.domain", mgmtdns.A).
 					Return(mgmtdns.RecordSet{}, fmt.Errorf("random error"))
 			},
 			wantErr: "random error",
@@ -136,12 +139,15 @@ func TestCreate(t *testing.T) {
 func TestUpdate(t *testing.T) {
 	ctx := context.Background()
 
-	env := env.NewTest(nil, nil)
+	env := &env.Test{
+		TestResourceGroup: "rpResourcegroup",
+		TestDomain:        "domain",
+	}
 
 	managedOc := &api.OpenShiftCluster{
 		Properties: api.Properties{
 			ClusterProfile: api.ClusterProfile{
-				Domain: "domain.test",
+				Domain: "test.domain",
 			},
 		},
 	}
@@ -161,7 +167,7 @@ func TestUpdate(t *testing.T) {
 			oc:   managedOc,
 			mocks: func(tt *test, recordsets *mock_dns.MockRecordSetsClient) {
 				recordsets.EXPECT().
-					Get(ctx, "rpResourcegroup", "test", "api.domain", mgmtdns.A).
+					Get(ctx, "rpResourcegroup", "domain", "api.test", mgmtdns.A).
 					Return(mgmtdns.RecordSet{
 						Etag: to.StringPtr("etag"),
 						RecordSetProperties: &mgmtdns.RecordSetProperties{
@@ -172,7 +178,7 @@ func TestUpdate(t *testing.T) {
 					}, nil)
 
 				recordsets.EXPECT().
-					CreateOrUpdate(ctx, "rpResourcegroup", "test", "api.domain", mgmtdns.A, mgmtdns.RecordSet{
+					CreateOrUpdate(ctx, "rpResourcegroup", "domain", "api.test", mgmtdns.A, mgmtdns.RecordSet{
 						RecordSetProperties: &mgmtdns.RecordSetProperties{
 							Metadata: map[string]*string{
 								resourceID: to.StringPtr(tt.oc.ID),
@@ -193,7 +199,7 @@ func TestUpdate(t *testing.T) {
 			oc:   managedOc,
 			mocks: func(tt *test, recordsets *mock_dns.MockRecordSetsClient) {
 				recordsets.EXPECT().
-					Get(ctx, "rpResourcegroup", "test", "api.domain", mgmtdns.A).
+					Get(ctx, "rpResourcegroup", "domain", "api.test", mgmtdns.A).
 					Return(mgmtdns.RecordSet{
 						RecordSetProperties: &mgmtdns.RecordSetProperties{
 							Metadata: map[string]*string{
@@ -202,14 +208,14 @@ func TestUpdate(t *testing.T) {
 						},
 					}, nil)
 			},
-			wantErr: `recordset "api.domain" already registered`,
+			wantErr: `recordset "api.test" already registered`,
 		},
 		{
 			name: "managed, error",
 			oc:   managedOc,
 			mocks: func(tt *test, recordsets *mock_dns.MockRecordSetsClient) {
 				recordsets.EXPECT().
-					Get(ctx, "rpResourcegroup", "test", "api.domain", mgmtdns.A).
+					Get(ctx, "rpResourcegroup", "domain", "api.test", mgmtdns.A).
 					Return(mgmtdns.RecordSet{}, fmt.Errorf("random error"))
 			},
 			wantErr: "random error",
@@ -245,7 +251,10 @@ func TestUpdate(t *testing.T) {
 func TestCreateOrUpdateRouter(t *testing.T) {
 	ctx := context.Background()
 
-	env := env.NewTest(nil, nil)
+	env := &env.Test{
+		TestResourceGroup: "rpResourcegroup",
+		TestDomain:        "domain",
+	}
 
 	managedOc := &api.OpenShiftCluster{
 		Properties: api.Properties{
@@ -270,7 +279,7 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 			oc:   managedOc,
 			mocks: func(tt *test, recordsets *mock_dns.MockRecordSetsClient) {
 				recordsets.EXPECT().
-					CreateOrUpdate(ctx, "rpResourcegroup", "test", "*.apps.domain", mgmtdns.A, mgmtdns.RecordSet{
+					CreateOrUpdate(ctx, "rpResourcegroup", "domain", "*.apps.domain", mgmtdns.A, mgmtdns.RecordSet{
 						RecordSetProperties: &mgmtdns.RecordSetProperties{
 							TTL: to.Int64Ptr(300),
 							ARecords: &[]mgmtdns.ARecord{
@@ -288,7 +297,7 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 			oc:   managedOc,
 			mocks: func(tt *test, recordsets *mock_dns.MockRecordSetsClient) {
 				recordsets.EXPECT().
-					CreateOrUpdate(ctx, "rpResourcegroup", "test", "*.apps.domain", mgmtdns.A, mgmtdns.RecordSet{
+					CreateOrUpdate(ctx, "rpResourcegroup", "domain", "*.apps.domain", mgmtdns.A, mgmtdns.RecordSet{
 						RecordSetProperties: &mgmtdns.RecordSetProperties{
 							TTL: to.Int64Ptr(300),
 							ARecords: &[]mgmtdns.ARecord{
@@ -333,7 +342,10 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 func TestDelete(t *testing.T) {
 	ctx := context.Background()
 
-	env := env.NewTest(nil, nil)
+	env := &env.Test{
+		TestResourceGroup: "rpResourcegroup",
+		TestDomain:        "domain",
+	}
 
 	managedOc := &api.OpenShiftCluster{
 		Properties: api.Properties{
@@ -358,7 +370,7 @@ func TestDelete(t *testing.T) {
 			oc:   managedOc,
 			mocks: func(tt *test, recordsets *mock_dns.MockRecordSetsClient) {
 				recordsets.EXPECT().
-					Get(ctx, "rpResourcegroup", "test", "api.domain", mgmtdns.A).
+					Get(ctx, "rpResourcegroup", "domain", "api.domain", mgmtdns.A).
 					Return(mgmtdns.RecordSet{}, autorest.DetailedError{
 						StatusCode: http.StatusNotFound,
 					})
@@ -369,7 +381,7 @@ func TestDelete(t *testing.T) {
 			oc:   managedOc,
 			mocks: func(tt *test, recordsets *mock_dns.MockRecordSetsClient) {
 				recordsets.EXPECT().
-					Get(ctx, "rpResourcegroup", "test", "api.domain", mgmtdns.A).
+					Get(ctx, "rpResourcegroup", "domain", "api.domain", mgmtdns.A).
 					Return(mgmtdns.RecordSet{
 						Etag: to.StringPtr("etag"),
 						RecordSetProperties: &mgmtdns.RecordSetProperties{
@@ -380,11 +392,11 @@ func TestDelete(t *testing.T) {
 					}, nil)
 
 				recordsets.EXPECT().
-					Delete(ctx, "rpResourcegroup", "test", "*.apps.domain", mgmtdns.A, "").
+					Delete(ctx, "rpResourcegroup", "domain", "*.apps.domain", mgmtdns.A, "").
 					Return(autorest.Response{}, nil)
 
 				recordsets.EXPECT().
-					Delete(ctx, "rpResourcegroup", "test", "api.domain", mgmtdns.A, "etag").
+					Delete(ctx, "rpResourcegroup", "domain", "api.domain", mgmtdns.A, "etag").
 					Return(autorest.Response{}, nil)
 			},
 		},
@@ -393,7 +405,7 @@ func TestDelete(t *testing.T) {
 			oc:   managedOc,
 			mocks: func(tt *test, recordsets *mock_dns.MockRecordSetsClient) {
 				recordsets.EXPECT().
-					Get(ctx, "rpResourcegroup", "test", "api.domain", mgmtdns.A).
+					Get(ctx, "rpResourcegroup", "domain", "api.domain", mgmtdns.A).
 					Return(mgmtdns.RecordSet{
 						RecordSetProperties: &mgmtdns.RecordSetProperties{
 							Metadata: map[string]*string{
@@ -408,7 +420,7 @@ func TestDelete(t *testing.T) {
 			oc:   managedOc,
 			mocks: func(tt *test, recordsets *mock_dns.MockRecordSetsClient) {
 				recordsets.EXPECT().
-					Get(ctx, "rpResourcegroup", "test", "api.domain", mgmtdns.A).
+					Get(ctx, "rpResourcegroup", "domain", "api.domain", mgmtdns.A).
 					Return(mgmtdns.RecordSet{}, fmt.Errorf("random error"))
 			},
 			wantErr: "random error",
@@ -443,7 +455,10 @@ func TestDelete(t *testing.T) {
 
 func TestManagedDomain(t *testing.T) {
 	m := &manager{
-		env: env.NewTest(nil, nil),
+		env: &env.Test{
+			TestResourceGroup: "rpResourcegroup",
+			TestDomain:        "domain",
+		},
 	}
 
 	for _, tt := range []struct {
@@ -455,7 +470,7 @@ func TestManagedDomain(t *testing.T) {
 			want:   "foo",
 		},
 		{
-			domain: "foo.test",
+			domain: "foo.domain",
 			want:   "foo",
 		},
 		{

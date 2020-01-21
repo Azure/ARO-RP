@@ -32,7 +32,12 @@ func TestCreate(t *testing.T) {
 		},
 	}
 
-	env := env.NewTest(nil, nil)
+	env := &env.Test{
+		TestSubscriptionID: "rpSubscriptionId",
+		TestResourceGroup:  "rpResourcegroup",
+		TestVNetName:       "rpVnet",
+		TestSubnetName:     "rpSubnet",
+	}
 
 	type test struct {
 		name     string
@@ -122,7 +127,9 @@ func TestDelete(t *testing.T) {
 		ID: "id",
 	}
 
-	env := env.NewTest(nil, nil)
+	env := &env.Test{
+		TestResourceGroup: "rpResourcegroup",
+	}
 
 	type test struct {
 		name     string
@@ -182,7 +189,9 @@ func TestGetIP(t *testing.T) {
 		ID: "id",
 	}
 
-	env := env.NewTest(nil, nil)
+	env := &env.Test{
+		TestResourceGroup: "rpResourcegroup",
+	}
 
 	type test struct {
 		name     string
