@@ -54,7 +54,7 @@ func (c *asyncOperations) Get(ctx context.Context, id string) (*api.AsyncOperati
 		return nil, fmt.Errorf("id %q is not lower case", id)
 	}
 
-	return c.c.Get(ctx, id, id)
+	return c.c.Get(ctx, id, id, nil)
 }
 
 func (c *asyncOperations) Patch(ctx context.Context, id string, f func(*api.AsyncOperationDocument) error) (*api.AsyncOperationDocument, error) {

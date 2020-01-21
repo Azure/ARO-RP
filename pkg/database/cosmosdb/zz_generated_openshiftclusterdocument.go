@@ -18,19 +18,27 @@ type openShiftClusterDocumentClient struct {
 // OpenShiftClusterDocumentClient is a openShiftClusterDocument client
 type OpenShiftClusterDocumentClient interface {
 	Create(context.Context, string, *pkg.OpenShiftClusterDocument, *Options) (*pkg.OpenShiftClusterDocument, error)
-	List() OpenShiftClusterDocumentIterator
-	ListAll(context.Context) (*pkg.OpenShiftClusterDocuments, error)
-	Get(context.Context, string, string) (*pkg.OpenShiftClusterDocument, error)
+	List(*Options) OpenShiftClusterDocumentRawIterator
+	ListAll(context.Context, *Options) (*pkg.OpenShiftClusterDocuments, error)
+	Get(context.Context, string, string, *Options) (*pkg.OpenShiftClusterDocument, error)
 	Replace(context.Context, string, *pkg.OpenShiftClusterDocument, *Options) (*pkg.OpenShiftClusterDocument, error)
 	Delete(context.Context, string, *pkg.OpenShiftClusterDocument, *Options) error
-	Query(string, *Query) OpenShiftClusterDocumentIterator
-	QueryAll(context.Context, string, *Query) (*pkg.OpenShiftClusterDocuments, error)
+	Query(string, *Query, *Options) OpenShiftClusterDocumentRawIterator
+	QueryAll(context.Context, string, *Query, *Options) (*pkg.OpenShiftClusterDocuments, error)
+	ChangeFeed(*Options) OpenShiftClusterDocumentIterator
+}
+
+type openShiftClusterDocumentChangeFeedIterator struct {
+	*openShiftClusterDocumentClient
+	continuation string
+	options      *Options
 }
 
 type openShiftClusterDocumentListIterator struct {
 	*openShiftClusterDocumentClient
 	continuation string
 	done         bool
+	options      *Options
 }
 
 type openShiftClusterDocumentQueryIterator struct {
@@ -39,11 +47,18 @@ type openShiftClusterDocumentQueryIterator struct {
 	query        *Query
 	continuation string
 	done         bool
+	options      *Options
 }
 
 // OpenShiftClusterDocumentIterator is a openShiftClusterDocument iterator
 type OpenShiftClusterDocumentIterator interface {
 	Next(context.Context) (*pkg.OpenShiftClusterDocuments, error)
+}
+
+// OpenShiftClusterDocumentRawIterator is a openShiftClusterDocument raw iterator
+type OpenShiftClusterDocumentRawIterator interface {
+	OpenShiftClusterDocumentIterator
+	NextRaw(context.Context, interface{}) error
 }
 
 // NewOpenShiftClusterDocumentClient returns a new openShiftClusterDocument client
@@ -92,17 +107,23 @@ func (c *openShiftClusterDocumentClient) Create(ctx context.Context, partitionke
 	return
 }
 
-func (c *openShiftClusterDocumentClient) List() OpenShiftClusterDocumentIterator {
-	return &openShiftClusterDocumentListIterator{openShiftClusterDocumentClient: c}
+func (c *openShiftClusterDocumentClient) List(options *Options) OpenShiftClusterDocumentRawIterator {
+	return &openShiftClusterDocumentListIterator{openShiftClusterDocumentClient: c, options: options}
 }
 
-func (c *openShiftClusterDocumentClient) ListAll(ctx context.Context) (*pkg.OpenShiftClusterDocuments, error) {
-	return c.all(ctx, c.List())
+func (c *openShiftClusterDocumentClient) ListAll(ctx context.Context, options *Options) (*pkg.OpenShiftClusterDocuments, error) {
+	return c.all(ctx, c.List(options))
 }
 
-func (c *openShiftClusterDocumentClient) Get(ctx context.Context, partitionkey, openShiftClusterDocumentid string) (openShiftClusterDocument *pkg.OpenShiftClusterDocument, err error) {
+func (c *openShiftClusterDocumentClient) Get(ctx context.Context, partitionkey, openShiftClusterDocumentid string, options *Options) (openShiftClusterDocument *pkg.OpenShiftClusterDocument, err error) {
 	headers := http.Header{}
 	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
+
+	err = c.setOptions(options, nil, headers)
+	if err != nil {
+		return
+	}
+
 	err = c.do(ctx, http.MethodGet, c.path+"/docs/"+openShiftClusterDocumentid, "docs", c.path+"/docs/"+openShiftClusterDocumentid, http.StatusOK, nil, &openShiftClusterDocument, headers)
 	return
 }
@@ -133,12 +154,16 @@ func (c *openShiftClusterDocumentClient) Delete(ctx context.Context, partitionke
 	return
 }
 
-func (c *openShiftClusterDocumentClient) Query(partitionkey string, query *Query) OpenShiftClusterDocumentIterator {
-	return &openShiftClusterDocumentQueryIterator{openShiftClusterDocumentClient: c, partitionkey: partitionkey, query: query}
+func (c *openShiftClusterDocumentClient) Query(partitionkey string, query *Query, options *Options) OpenShiftClusterDocumentRawIterator {
+	return &openShiftClusterDocumentQueryIterator{openShiftClusterDocumentClient: c, partitionkey: partitionkey, query: query, options: options}
 }
 
-func (c *openShiftClusterDocumentClient) QueryAll(ctx context.Context, partitionkey string, query *Query) (*pkg.OpenShiftClusterDocuments, error) {
-	return c.all(ctx, c.Query(partitionkey, query))
+func (c *openShiftClusterDocumentClient) QueryAll(ctx context.Context, partitionkey string, query *Query, options *Options) (*pkg.OpenShiftClusterDocuments, error) {
+	return c.all(ctx, c.Query(partitionkey, query, options))
+}
+
+func (c *openShiftClusterDocumentClient) ChangeFeed(options *Options) OpenShiftClusterDocumentIterator {
+	return &openShiftClusterDocumentChangeFeedIterator{openShiftClusterDocumentClient: c}
 }
 
 func (c *openShiftClusterDocumentClient) setOptions(options *Options, openShiftClusterDocument *pkg.OpenShiftClusterDocument, headers http.Header) error {
@@ -146,7 +171,7 @@ func (c *openShiftClusterDocumentClient) setOptions(options *Options, openShiftC
 		return nil
 	}
 
-	if !options.NoETag {
+	if openShiftClusterDocument != nil && !options.NoETag {
 		if openShiftClusterDocument.ETag == "" {
 			return ErrETagRequired
 		}
@@ -158,11 +183,46 @@ func (c *openShiftClusterDocumentClient) setOptions(options *Options, openShiftC
 	if len(options.PostTriggers) > 0 {
 		headers.Set("X-Ms-Documentdb-Post-Trigger-Include", strings.Join(options.PostTriggers, ","))
 	}
+	if len(options.PartitionKeyRangeID) > 0 {
+		headers.Set("X-Ms-Documentdb-PartitionKeyRangeID", options.PartitionKeyRangeID)
+	}
 
 	return nil
 }
 
+func (i *openShiftClusterDocumentChangeFeedIterator) Next(ctx context.Context) (openShiftClusterDocuments *pkg.OpenShiftClusterDocuments, err error) {
+	headers := http.Header{}
+	headers.Set("A-IM", "Incremental feed")
+
+	headers.Set("X-Ms-Max-Item-Count", "-1")
+	if i.continuation != "" {
+		headers.Set("If-None-Match", i.continuation)
+	}
+
+	err = i.setOptions(i.options, nil, headers)
+	if err != nil {
+		return
+	}
+
+	err = i.do(ctx, http.MethodGet, i.path+"/docs", "docs", i.path, http.StatusOK, nil, &openShiftClusterDocuments, headers)
+	if IsErrorStatusCode(err, http.StatusNotModified) {
+		err = nil
+	}
+	if err != nil {
+		return
+	}
+
+	i.continuation = headers.Get("Etag")
+
+	return
+}
+
 func (i *openShiftClusterDocumentListIterator) Next(ctx context.Context) (openShiftClusterDocuments *pkg.OpenShiftClusterDocuments, err error) {
+	err = i.NextRaw(ctx, &openShiftClusterDocuments)
+	return
+}
+
+func (i *openShiftClusterDocumentListIterator) NextRaw(ctx context.Context, raw interface{}) (err error) {
 	if i.done {
 		return
 	}
@@ -173,7 +233,12 @@ func (i *openShiftClusterDocumentListIterator) Next(ctx context.Context) (openSh
 		headers.Set("X-Ms-Continuation", i.continuation)
 	}
 
-	err = i.do(ctx, http.MethodGet, i.path+"/docs", "docs", i.path, http.StatusOK, nil, &openShiftClusterDocuments, headers)
+	err = i.setOptions(i.options, nil, headers)
+	if err != nil {
+		return
+	}
+
+	err = i.do(ctx, http.MethodGet, i.path+"/docs", "docs", i.path, http.StatusOK, nil, &raw, headers)
 	if err != nil {
 		return
 	}
@@ -185,6 +250,11 @@ func (i *openShiftClusterDocumentListIterator) Next(ctx context.Context) (openSh
 }
 
 func (i *openShiftClusterDocumentQueryIterator) Next(ctx context.Context) (openShiftClusterDocuments *pkg.OpenShiftClusterDocuments, err error) {
+	err = i.NextRaw(ctx, &openShiftClusterDocuments)
+	return
+}
+
+func (i *openShiftClusterDocumentQueryIterator) NextRaw(ctx context.Context, raw interface{}) (err error) {
 	if i.done {
 		return
 	}
@@ -202,7 +272,12 @@ func (i *openShiftClusterDocumentQueryIterator) Next(ctx context.Context) (openS
 		headers.Set("X-Ms-Continuation", i.continuation)
 	}
 
-	err = i.do(ctx, http.MethodPost, i.path+"/docs", "docs", i.path, http.StatusOK, &i.query, &openShiftClusterDocuments, headers)
+	err = i.setOptions(i.options, nil, headers)
+	if err != nil {
+		return
+	}
+
+	err = i.do(ctx, http.MethodPost, i.path+"/docs", "docs", i.path, http.StatusOK, &i.query, &raw, headers)
 	if err != nil {
 		return
 	}
