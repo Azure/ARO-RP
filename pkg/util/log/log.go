@@ -4,6 +4,7 @@ package log
 // Licensed under the Apache License 2.0.
 
 import (
+	"flag"
 	"fmt"
 	"runtime"
 	"strings"
@@ -14,6 +15,8 @@ import (
 var (
 	_, thisfile, _, _ = runtime.Caller(0)
 	repopath          = strings.Replace(thisfile, "pkg/util/log/log.go", "", -1)
+
+	loglevel = flag.String("loglevel", "info", "{panic,fatal,error,warning,info,debug,trace}")
 )
 
 // GetLogger returns a consistently configured log entry
@@ -24,7 +27,16 @@ func GetLogger() *logrus.Entry {
 		CallerPrettyfier: relativeFilePathPrettier,
 	})
 
-	return logrus.NewEntry(logrus.StandardLogger())
+	log := logrus.NewEntry(logrus.StandardLogger())
+
+	l, err := logrus.ParseLevel(*loglevel)
+	if err == nil {
+		logrus.SetLevel(l)
+	} else {
+		log.Warn(err)
+	}
+
+	return log
 }
 
 func relativeFilePathPrettier(f *runtime.Frame) (string, string) {
