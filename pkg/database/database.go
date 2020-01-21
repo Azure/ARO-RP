@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -24,7 +25,7 @@ type Database struct {
 }
 
 // NewDatabase returns a new Database
-func NewDatabase(ctx context.Context, env env.Interface, uuid string) (db *Database, err error) {
+func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Interface, uuid string) (db *Database, err error) {
 	databaseAccount, masterKey := env.CosmosDB()
 
 	h := &codec.JsonHandle{
@@ -48,7 +49,7 @@ func NewDatabase(ctx context.Context, env env.Interface, uuid string) (db *Datab
 		Timeout: 30 * time.Second,
 	}
 
-	dbc, err := cosmosdb.NewDatabaseClient(c, h, databaseAccount, masterKey)
+	dbc, err := cosmosdb.NewDatabaseClient(log, c, h, databaseAccount, masterKey)
 	if err != nil {
 		return nil, err
 	}

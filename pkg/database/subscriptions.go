@@ -92,7 +92,7 @@ func (c *subscriptions) Get(ctx context.Context, id string) (*api.SubscriptionDo
 		return nil, fmt.Errorf("id %q is not lower case", id)
 	}
 
-	return c.c.Get(ctx, id, id)
+	return c.c.Get(ctx, id, id, nil)
 }
 
 func (c *subscriptions) patch(ctx context.Context, id string, f func(*api.SubscriptionDocument) error, options *cosmosdb.Options) (*api.SubscriptionDocument, error) {
@@ -141,7 +141,7 @@ func (c *subscriptions) update(ctx context.Context, doc *api.SubscriptionDocumen
 func (c *subscriptions) Dequeue(ctx context.Context) (*api.SubscriptionDocument, error) {
 	i := c.c.Query("", &cosmosdb.Query{
 		Query: `SELECT * FROM Subscriptions doc WHERE (doc.deleting ?? false) AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`,
-	})
+	}, nil)
 
 	for {
 		docs, err := i.Next(ctx)

@@ -18,19 +18,27 @@ type asyncOperationDocumentClient struct {
 // AsyncOperationDocumentClient is a asyncOperationDocument client
 type AsyncOperationDocumentClient interface {
 	Create(context.Context, string, *pkg.AsyncOperationDocument, *Options) (*pkg.AsyncOperationDocument, error)
-	List() AsyncOperationDocumentIterator
-	ListAll(context.Context) (*pkg.AsyncOperationDocuments, error)
-	Get(context.Context, string, string) (*pkg.AsyncOperationDocument, error)
+	List(*Options) AsyncOperationDocumentRawIterator
+	ListAll(context.Context, *Options) (*pkg.AsyncOperationDocuments, error)
+	Get(context.Context, string, string, *Options) (*pkg.AsyncOperationDocument, error)
 	Replace(context.Context, string, *pkg.AsyncOperationDocument, *Options) (*pkg.AsyncOperationDocument, error)
 	Delete(context.Context, string, *pkg.AsyncOperationDocument, *Options) error
-	Query(string, *Query) AsyncOperationDocumentIterator
-	QueryAll(context.Context, string, *Query) (*pkg.AsyncOperationDocuments, error)
+	Query(string, *Query, *Options) AsyncOperationDocumentRawIterator
+	QueryAll(context.Context, string, *Query, *Options) (*pkg.AsyncOperationDocuments, error)
+	ChangeFeed(*Options) AsyncOperationDocumentIterator
+}
+
+type asyncOperationDocumentChangeFeedIterator struct {
+	*asyncOperationDocumentClient
+	continuation string
+	options      *Options
 }
 
 type asyncOperationDocumentListIterator struct {
 	*asyncOperationDocumentClient
 	continuation string
 	done         bool
+	options      *Options
 }
 
 type asyncOperationDocumentQueryIterator struct {
@@ -39,11 +47,18 @@ type asyncOperationDocumentQueryIterator struct {
 	query        *Query
 	continuation string
 	done         bool
+	options      *Options
 }
 
 // AsyncOperationDocumentIterator is a asyncOperationDocument iterator
 type AsyncOperationDocumentIterator interface {
 	Next(context.Context) (*pkg.AsyncOperationDocuments, error)
+}
+
+// AsyncOperationDocumentRawIterator is a asyncOperationDocument raw iterator
+type AsyncOperationDocumentRawIterator interface {
+	AsyncOperationDocumentIterator
+	NextRaw(context.Context, interface{}) error
 }
 
 // NewAsyncOperationDocumentClient returns a new asyncOperationDocument client
@@ -92,17 +107,23 @@ func (c *asyncOperationDocumentClient) Create(ctx context.Context, partitionkey 
 	return
 }
 
-func (c *asyncOperationDocumentClient) List() AsyncOperationDocumentIterator {
-	return &asyncOperationDocumentListIterator{asyncOperationDocumentClient: c}
+func (c *asyncOperationDocumentClient) List(options *Options) AsyncOperationDocumentRawIterator {
+	return &asyncOperationDocumentListIterator{asyncOperationDocumentClient: c, options: options}
 }
 
-func (c *asyncOperationDocumentClient) ListAll(ctx context.Context) (*pkg.AsyncOperationDocuments, error) {
-	return c.all(ctx, c.List())
+func (c *asyncOperationDocumentClient) ListAll(ctx context.Context, options *Options) (*pkg.AsyncOperationDocuments, error) {
+	return c.all(ctx, c.List(options))
 }
 
-func (c *asyncOperationDocumentClient) Get(ctx context.Context, partitionkey, asyncOperationDocumentid string) (asyncOperationDocument *pkg.AsyncOperationDocument, err error) {
+func (c *asyncOperationDocumentClient) Get(ctx context.Context, partitionkey, asyncOperationDocumentid string, options *Options) (asyncOperationDocument *pkg.AsyncOperationDocument, err error) {
 	headers := http.Header{}
 	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
+
+	err = c.setOptions(options, nil, headers)
+	if err != nil {
+		return
+	}
+
 	err = c.do(ctx, http.MethodGet, c.path+"/docs/"+asyncOperationDocumentid, "docs", c.path+"/docs/"+asyncOperationDocumentid, http.StatusOK, nil, &asyncOperationDocument, headers)
 	return
 }
@@ -133,12 +154,16 @@ func (c *asyncOperationDocumentClient) Delete(ctx context.Context, partitionkey 
 	return
 }
 
-func (c *asyncOperationDocumentClient) Query(partitionkey string, query *Query) AsyncOperationDocumentIterator {
-	return &asyncOperationDocumentQueryIterator{asyncOperationDocumentClient: c, partitionkey: partitionkey, query: query}
+func (c *asyncOperationDocumentClient) Query(partitionkey string, query *Query, options *Options) AsyncOperationDocumentRawIterator {
+	return &asyncOperationDocumentQueryIterator{asyncOperationDocumentClient: c, partitionkey: partitionkey, query: query, options: options}
 }
 
-func (c *asyncOperationDocumentClient) QueryAll(ctx context.Context, partitionkey string, query *Query) (*pkg.AsyncOperationDocuments, error) {
-	return c.all(ctx, c.Query(partitionkey, query))
+func (c *asyncOperationDocumentClient) QueryAll(ctx context.Context, partitionkey string, query *Query, options *Options) (*pkg.AsyncOperationDocuments, error) {
+	return c.all(ctx, c.Query(partitionkey, query, options))
+}
+
+func (c *asyncOperationDocumentClient) ChangeFeed(options *Options) AsyncOperationDocumentIterator {
+	return &asyncOperationDocumentChangeFeedIterator{asyncOperationDocumentClient: c}
 }
 
 func (c *asyncOperationDocumentClient) setOptions(options *Options, asyncOperationDocument *pkg.AsyncOperationDocument, headers http.Header) error {
@@ -146,7 +171,7 @@ func (c *asyncOperationDocumentClient) setOptions(options *Options, asyncOperati
 		return nil
 	}
 
-	if !options.NoETag {
+	if asyncOperationDocument != nil && !options.NoETag {
 		if asyncOperationDocument.ETag == "" {
 			return ErrETagRequired
 		}
@@ -158,11 +183,46 @@ func (c *asyncOperationDocumentClient) setOptions(options *Options, asyncOperati
 	if len(options.PostTriggers) > 0 {
 		headers.Set("X-Ms-Documentdb-Post-Trigger-Include", strings.Join(options.PostTriggers, ","))
 	}
+	if len(options.PartitionKeyRangeID) > 0 {
+		headers.Set("X-Ms-Documentdb-PartitionKeyRangeID", options.PartitionKeyRangeID)
+	}
 
 	return nil
 }
 
+func (i *asyncOperationDocumentChangeFeedIterator) Next(ctx context.Context) (asyncOperationDocuments *pkg.AsyncOperationDocuments, err error) {
+	headers := http.Header{}
+	headers.Set("A-IM", "Incremental feed")
+
+	headers.Set("X-Ms-Max-Item-Count", "-1")
+	if i.continuation != "" {
+		headers.Set("If-None-Match", i.continuation)
+	}
+
+	err = i.setOptions(i.options, nil, headers)
+	if err != nil {
+		return
+	}
+
+	err = i.do(ctx, http.MethodGet, i.path+"/docs", "docs", i.path, http.StatusOK, nil, &asyncOperationDocuments, headers)
+	if IsErrorStatusCode(err, http.StatusNotModified) {
+		err = nil
+	}
+	if err != nil {
+		return
+	}
+
+	i.continuation = headers.Get("Etag")
+
+	return
+}
+
 func (i *asyncOperationDocumentListIterator) Next(ctx context.Context) (asyncOperationDocuments *pkg.AsyncOperationDocuments, err error) {
+	err = i.NextRaw(ctx, &asyncOperationDocuments)
+	return
+}
+
+func (i *asyncOperationDocumentListIterator) NextRaw(ctx context.Context, raw interface{}) (err error) {
 	if i.done {
 		return
 	}
@@ -173,7 +233,12 @@ func (i *asyncOperationDocumentListIterator) Next(ctx context.Context) (asyncOpe
 		headers.Set("X-Ms-Continuation", i.continuation)
 	}
 
-	err = i.do(ctx, http.MethodGet, i.path+"/docs", "docs", i.path, http.StatusOK, nil, &asyncOperationDocuments, headers)
+	err = i.setOptions(i.options, nil, headers)
+	if err != nil {
+		return
+	}
+
+	err = i.do(ctx, http.MethodGet, i.path+"/docs", "docs", i.path, http.StatusOK, nil, &raw, headers)
 	if err != nil {
 		return
 	}
@@ -185,6 +250,11 @@ func (i *asyncOperationDocumentListIterator) Next(ctx context.Context) (asyncOpe
 }
 
 func (i *asyncOperationDocumentQueryIterator) Next(ctx context.Context) (asyncOperationDocuments *pkg.AsyncOperationDocuments, err error) {
+	err = i.NextRaw(ctx, &asyncOperationDocuments)
+	return
+}
+
+func (i *asyncOperationDocumentQueryIterator) NextRaw(ctx context.Context, raw interface{}) (err error) {
 	if i.done {
 		return
 	}
@@ -202,7 +272,12 @@ func (i *asyncOperationDocumentQueryIterator) Next(ctx context.Context) (asyncOp
 		headers.Set("X-Ms-Continuation", i.continuation)
 	}
 
-	err = i.do(ctx, http.MethodPost, i.path+"/docs", "docs", i.path, http.StatusOK, &i.query, &asyncOperationDocuments, headers)
+	err = i.setOptions(i.options, nil, headers)
+	if err != nil {
+		return
+	}
+
+	err = i.do(ctx, http.MethodPost, i.path+"/docs", "docs", i.path, http.StatusOK, &i.query, &raw, headers)
 	if err != nil {
 		return
 	}

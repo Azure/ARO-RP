@@ -105,7 +105,7 @@ func (c *openShiftClusters) Get(ctx context.Context, key string) (*api.OpenShift
 				Value: key,
 			},
 		},
-	})
+	}, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -192,13 +192,13 @@ func (c *openShiftClusters) ListByPrefix(subscriptionID string, prefix string) (
 				Value: prefix,
 			},
 		},
-	}), nil
+	}, nil), nil
 }
 
 func (c *openShiftClusters) Dequeue(ctx context.Context) (*api.OpenShiftClusterDocument, error) {
 	i := c.c.Query("", &cosmosdb.Query{
 		Query: `SELECT * FROM OpenShiftClusters doc WHERE NOT (doc.openShiftCluster.properties.provisioningState IN ("Succeeded", "Failed")) AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`,
-	})
+	}, nil)
 
 	for {
 		docs, err := i.Next(ctx)

@@ -30,7 +30,7 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	db, err := database.NewDatabase(ctx, env, uuid)
+	db, err := database.NewDatabase(ctx, log.WithField("component", "database"), env, uuid)
 	if err != nil {
 		return err
 	}
