@@ -164,6 +164,12 @@ type ClusterProfile struct {
 	ResourceGroupID *string `json:"resourceGroupId,omitempty"`
 }
 
+// ConsoleProfile ...
+type ConsoleProfile struct {
+	// URL - The URL to access the cluster console (immutable).
+	URL *string `json:"url,omitempty"`
+}
+
 // Display display represents the display details of an operation.
 type Display struct {
 	// Provider - Friendly name of the resource provider.
@@ -421,6 +427,8 @@ type Properties struct {
 	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"`
 	// ClusterProfile - The cluster profile.
 	ClusterProfile *ClusterProfile `json:"clusterProfile,omitempty"`
+	// ConsoleProfile - The console profile.
+	ConsoleProfile *ConsoleProfile `json:"consoleProfile,omitempty"`
 	// ServicePrincipalProfile - The cluster service principal profile.
 	ServicePrincipalProfile *ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
 	// NetworkProfile - The cluster network profile.
@@ -433,8 +441,6 @@ type Properties struct {
 	ApiserverProfile *APIServerProfile `json:"apiserverProfile,omitempty"`
 	// IngressProfiles - The cluster ingress profiles.
 	IngressProfiles *[]IngressProfile `json:"ingressProfiles,omitempty"`
-	// ConsoleURL - The URL to access the cluster console (immutable).
-	ConsoleURL *string `json:"consoleUrl,omitempty"`
 }
 
 // ProxyResource the resource model definition for a ARM proxy resource. It will have everything other than

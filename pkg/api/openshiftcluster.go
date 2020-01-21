@@ -61,6 +61,8 @@ type Properties struct {
 
 	ClusterProfile ClusterProfile `json:"clusterProfile,omitempty"`
 
+	ConsoleProfile ConsoleProfile `json:"consoleProfile,omitempty"`
+
 	ServicePrincipalProfile ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
 
 	NetworkProfile NetworkProfile `json:"networkProfile,omitempty"`
@@ -72,8 +74,6 @@ type Properties struct {
 	APIServerProfile APIServerProfile `json:"apiserverProfile,omitempty"`
 
 	IngressProfiles []IngressProfile `json:"ingressProfiles,omitempty"`
-
-	ConsoleURL string `json:"consoleUrl,omitempty"`
 
 	// Install is non-nil only when an install is in progress
 	Install *Install `json:"install,omitempty"`
@@ -104,6 +104,13 @@ type ClusterProfile struct {
 	Domain          string `json:"domain,omitempty"`
 	Version         string `json:"version,omitempty"`
 	ResourceGroupID string `json:"resourceGroupId,omitempty"`
+}
+
+// ConsoleProfile represents a console profile.
+type ConsoleProfile struct {
+	MissingFields
+
+	URL string `json:"url,omitempty"`
 }
 
 // ServicePrincipalProfile represents a service principal profile.

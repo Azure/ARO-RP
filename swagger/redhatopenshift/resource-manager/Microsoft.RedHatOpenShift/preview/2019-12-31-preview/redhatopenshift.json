@@ -457,6 +457,14 @@
         }
       }
     },
+    "ConsoleProfile": {
+      "properties": {
+        "url": {
+          "description": "The URL to access the cluster console (immutable).",
+          "type": "string"
+        }
+      }
+    },
     "Display": {
       "description": "Display represents the display details of an operation.",
       "properties": {
@@ -617,6 +625,10 @@
           "$ref": "#/definitions/ClusterProfile",
           "description": "The cluster profile."
         },
+        "consoleProfile": {
+          "$ref": "#/definitions/ConsoleProfile",
+          "description": "The console profile."
+        },
         "servicePrincipalProfile": {
           "$ref": "#/definitions/ServicePrincipalProfile",
           "description": "The cluster service principal profile."
@@ -646,10 +658,6 @@
           "items": {
             "$ref": "#/definitions/IngressProfile"
           }
-        },
-        "consoleUrl": {
-          "description": "The URL to access the cluster console (immutable).",
-          "type": "string"
         }
       }
     },

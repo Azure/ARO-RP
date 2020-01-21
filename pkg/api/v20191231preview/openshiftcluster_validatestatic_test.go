@@ -157,19 +157,6 @@ func TestOpenShiftClusterStaticValidateProperties(t *testing.T) {
 			},
 			wantErr: "400: InvalidParameter: properties.workerProfiles: There should be exactly one worker profile.",
 		},
-		{
-			name: "empty consoleUrl valid",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ConsoleURL = ""
-			},
-		},
-		{
-			name: "consoleUrl invalid",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ConsoleURL = "\x00"
-			},
-			wantErr: "400: InvalidParameter: properties.consoleUrl: The provided console URL '\x00' is invalid.",
-		},
 	}
 
 	runTests(t, tests, false)
@@ -225,6 +212,30 @@ func TestOpenShiftClusterStaticValidateClusterProfile(t *testing.T) {
 	}
 
 	runTests(t, tests, false)
+}
+
+func TestOpenShiftClusterStaticValidateConsoleProfile(t *testing.T) {
+	tests := []*validateTest{
+		{
+			name: "valid",
+		},
+		{
+			name: "empty console url valid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ConsoleProfile.URL = ""
+			},
+		},
+		{
+			name: "console url invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ConsoleProfile.URL = "\x00"
+			},
+			wantErr: "400: InvalidParameter: properties.consoleProfile.url: The provided console URL '\x00' is invalid.",
+		},
+	}
+
+	runTests(t, tests, false)
+
 }
 
 func TestOpenShiftClusterStaticValidateServicePrincipalProfile(t *testing.T) {
@@ -526,6 +537,11 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			wantErr: "400: PropertyChangeNotAllowed: properties.provisioningState: Changing property 'properties.provisioningState' is not allowed.",
 		},
 		{
+			name:    "console url change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.ConsoleProfile.URL = "invalid" },
+			wantErr: "400: PropertyChangeNotAllowed: properties.consoleProfile.url: Changing property 'properties.consoleProfile.url' is not allowed.",
+		},
+		{
 			name:    "domain change",
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.ClusterProfile.Domain = "invalid" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.clusterProfile.domain: Changing property 'properties.clusterProfile.domain' is not allowed.",
@@ -570,11 +586,6 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name:    "ingress ip change",
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.IngressProfiles[0].IP = "2.3.4.5" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.ingressProfiles['default'].ip: Changing property 'properties.ingressProfiles['default'].ip' is not allowed.",
-		},
-		{
-			name:    "consoleUrl change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.ConsoleURL = "invalid" },
-			wantErr: "400: PropertyChangeNotAllowed: properties.consoleUrl: Changing property 'properties.consoleUrl' is not allowed.",
 		},
 		{
 			name:    "clientId change",

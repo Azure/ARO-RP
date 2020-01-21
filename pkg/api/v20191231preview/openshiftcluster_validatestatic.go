@@ -94,6 +94,9 @@ func (sv *openShiftClusterStaticValidator) validateProperties(path string, p *Pr
 	if err := sv.validateClusterProfile(path+".clusterProfile", &p.ClusterProfile); err != nil {
 		return err
 	}
+	if err := sv.validateConsoleProfile(path+".consoleProfile", &p.ConsoleProfile); err != nil {
+		return err
+	}
 	if err := sv.validateServicePrincipalProfile(path+".servicePrincipalProfile", &p.ServicePrincipalProfile); err != nil {
 		return err
 	}
@@ -118,11 +121,6 @@ func (sv *openShiftClusterStaticValidator) validateProperties(path string, p *Pr
 	if err := sv.validateIngressProfile(path+".ingressProfiles['"+p.IngressProfiles[0].Name+"']", &p.IngressProfiles[0]); err != nil {
 		return err
 	}
-	if p.ConsoleURL != "" {
-		if _, err := url.Parse(p.ConsoleURL); err != nil {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".consoleUrl", "The provided console URL '%s' is invalid.", p.ConsoleURL)
-		}
-	}
 
 	return nil
 }
@@ -141,6 +139,16 @@ func (sv *openShiftClusterStaticValidator) validateClusterProfile(path string, c
 	}
 	if strings.Split(cp.ResourceGroupID, "/")[2] != sv.r.SubscriptionID {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".resourceGroupId", "The provided resource group '%s' is invalid: must be in same subscription as cluster.", cp.ResourceGroupID)
+	}
+
+	return nil
+}
+
+func (sv *openShiftClusterStaticValidator) validateConsoleProfile(path string, cp *ConsoleProfile) error {
+	if cp.URL != "" {
+		if _, err := url.Parse(cp.URL); err != nil {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".url", "The provided console URL '%s' is invalid.", cp.URL)
+		}
 	}
 
 	return nil
