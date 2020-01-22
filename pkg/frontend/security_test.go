@@ -16,6 +16,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
+	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/test/util/listener"
 )
@@ -31,7 +32,10 @@ func TestSecurity(t *testing.T) {
 	l := listener.NewListener()
 	defer l.Close()
 
-	env := env.NewTest(l, validclientcerts[0].Raw)
+	env := &env.Test{
+		L: l,
+	}
+	env.SetClientAuthorizer(clientauthorizer.NewOne(validclientcerts[0].Raw))
 
 	env.TLSKey, env.TLSCerts, err = utiltls.GenerateKeyAndCertificate("server", nil, nil, false, false)
 	if err != nil {

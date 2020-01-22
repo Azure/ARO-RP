@@ -25,6 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/documentdb"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/keyvault"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 )
@@ -38,7 +39,9 @@ type prod struct {
 	cosmosDBAccountName      string
 	cosmosDBPrimaryMasterKey string
 	domain                   string
+	subnetName               string
 	vaultURI                 string
+	vnetName                 string
 	zones                    map[string][]string
 
 	fpCertificate *x509.Certificate
@@ -82,6 +85,11 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 	}
 
 	err = p.populateVaultURI(ctx, rpAuthorizer)
+	if err != nil {
+		return nil, err
+	}
+
+	err = p.populateVnet(ctx, rpAuthorizer)
 	if err != nil {
 		return nil, err
 	}
@@ -155,6 +163,28 @@ func (p *prod) populateVaultURI(ctx context.Context, rpAuthorizer autorest.Autho
 	}
 
 	p.vaultURI = *vs[0].Properties.VaultURI
+
+	return nil
+}
+
+func (p *prod) populateVnet(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
+	virtualnetworks := network.NewVirtualNetworksClient(p.SubscriptionID(), rpAuthorizer)
+
+	vnets, err := virtualnetworks.List(ctx, p.ResourceGroup())
+	if err != nil {
+		return err
+	}
+
+	if len(vnets) != 1 {
+		return fmt.Errorf("found %d virtual networks, expected 1", len(vnets))
+	}
+
+	if len(*vnets[0].Subnets) != 1 {
+		return fmt.Errorf("found %d virtual network subnets, expected 1", len(vnets))
+	}
+
+	p.vnetName = *(vnets[0]).Name
+	p.subnetName = *(*vnets[0].Subnets)[0].Name
 
 	return nil
 }
@@ -262,6 +292,14 @@ func (p *prod) GetSecret(ctx context.Context, secretName string) (key *rsa.Priva
 
 func (p *prod) Listen() (net.Listener, error) {
 	return net.Listen("tcp", ":8443")
+}
+
+func (p *prod) SubnetName() string {
+	return p.subnetName
+}
+
+func (p *prod) VnetName() string {
+	return p.vnetName
 }
 
 func (p *prod) Zones(vmSize string) ([]string, error) {

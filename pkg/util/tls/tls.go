@@ -45,7 +45,9 @@ func GenerateKeyAndCertificate(commonName string, parentKey *rsa.PrivateKey, par
 		IsCA:                  isCA,
 	}
 
-	if !isCA {
+	if isCA {
+		template.KeyUsage |= x509.KeyUsageCertSign
+	} else {
 		if isClient {
 			template.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}
 		} else {

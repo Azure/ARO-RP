@@ -41,7 +41,7 @@ func (m *manager) Create(ctx context.Context, doc *api.OpenShiftClusterDocument)
 	return m.privateendpoints.CreateOrUpdateAndWait(ctx, m.env.ResourceGroup(), prefix+doc.ID, mgmtnetwork.PrivateEndpoint{
 		PrivateEndpointProperties: &mgmtnetwork.PrivateEndpointProperties{
 			Subnet: &mgmtnetwork.Subnet{
-				ID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-vnet/subnets/rp-pe-subnet"),
+				ID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/" + m.env.VnetName() + "/subnets/" + m.env.SubnetName()),
 			},
 			ManualPrivateLinkServiceConnections: &[]mgmtnetwork.PrivateLinkServiceConnection{
 				{
@@ -63,7 +63,7 @@ func (m *manager) Delete(ctx context.Context, doc *api.OpenShiftClusterDocument)
 func (m *manager) GetIP(ctx context.Context, doc *api.OpenShiftClusterDocument) (string, error) {
 	pe, err := m.privateendpoints.Get(ctx, m.env.ResourceGroup(), prefix+doc.ID, "networkInterfaces")
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 
 	return *(*(*pe.PrivateEndpointProperties.NetworkInterfaces)[0].IPConfigurations)[0].PrivateIPAddress, nil

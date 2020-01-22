@@ -15,29 +15,38 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 )
 
-type test struct {
+type Test struct {
 	*prod
 
-	l net.Listener
+	L net.Listener
+
+	TestSubscriptionID string
+	TestLocation       string
+	TestResourceGroup  string
+	TestDomain         string
+	TestVNetName       string
+	TestSubnetName     string
 
 	TLSKey   *rsa.PrivateKey
 	TLSCerts []*x509.Certificate
 }
 
-func NewTest(l net.Listener, cert []byte) *test {
-	return &test{
-		prod: &prod{
-			ClientAuthorizer: clientauthorizer.NewOne(cert),
-		},
-		l: l,
+func (t *Test) SetClientAuthorizer(clientauthorizer clientauthorizer.ClientAuthorizer) {
+	if t.prod == nil {
+		t.prod = &prod{}
 	}
+	t.ClientAuthorizer = clientauthorizer
 }
 
-func (t *test) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, error) {
+func (t *Test) Domain() string {
+	return t.TestDomain
+}
+
+func (t *Test) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, error) {
 	return nil, nil
 }
 
-func (t *test) GetSecret(ctx context.Context, secretName string) (key *rsa.PrivateKey, certs []*x509.Certificate, err error) {
+func (t *Test) GetSecret(ctx context.Context, secretName string) (key *rsa.PrivateKey, certs []*x509.Certificate, err error) {
 	switch secretName {
 	case "rp-server":
 		return t.TLSKey, t.TLSCerts, nil
@@ -46,10 +55,26 @@ func (t *test) GetSecret(ctx context.Context, secretName string) (key *rsa.Priva
 	}
 }
 
-func (t *test) Listen() (net.Listener, error) {
-	return t.l, nil
+func (t *Test) Listen() (net.Listener, error) {
+	return t.L, nil
 }
 
-func (t *test) Location() string {
-	return "eastus"
+func (t *Test) Location() string {
+	return t.TestLocation
+}
+
+func (t *Test) ResourceGroup() string {
+	return t.TestResourceGroup
+}
+
+func (t *Test) SubnetName() string {
+	return t.TestSubnetName
+}
+
+func (t *Test) SubscriptionID() string {
+	return t.TestSubscriptionID
+}
+
+func (t *Test) VnetName() string {
+	return t.TestVNetName
 }

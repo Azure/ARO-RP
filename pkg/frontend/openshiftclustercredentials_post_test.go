@@ -24,6 +24,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
+	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/test/util/listener"
@@ -152,8 +153,12 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 			l := listener.NewListener()
 			defer l.Close()
 
-			env := env.NewTest(l, clientcerts[0].Raw)
-			env.TLSKey, env.TLSCerts = serverkey, servercerts
+			env := &env.Test{
+				L:        l,
+				TLSKey:   serverkey,
+				TLSCerts: servercerts,
+			}
+			env.SetClientAuthorizer(clientauthorizer.NewOne(clientcerts[0].Raw))
 
 			cli.Transport.(*http.Transport).Dial = l.Dial
 

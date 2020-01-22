@@ -21,7 +21,9 @@ func TestEmitGauge(t *testing.T) {
 	wc := &writeCloser{Buffer: &bytes.Buffer{}}
 
 	s := &statsd{
-		env:  env.NewTest(nil, nil),
+		env: &env.Test{
+			TestLocation: "eastus",
+		},
 		conn: wc,
 		now:  func() time.Time { return time.Time{} },
 	}
@@ -40,7 +42,9 @@ func TestEmitFloat(t *testing.T) {
 	wc := &writeCloser{Buffer: &bytes.Buffer{}}
 
 	s := &statsd{
-		env:  env.NewTest(nil, nil),
+		env: &env.Test{
+			TestLocation: "eastus",
+		},
 		conn: wc,
 		now:  func() time.Time { return time.Time{} },
 	}
