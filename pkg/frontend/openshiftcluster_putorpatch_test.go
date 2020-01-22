@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -602,7 +601,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 
 			azureAsyncOperation := resp.Header.Get("Azure-AsyncOperation")
 			if tt.wantAsync {
-				if os.Getenv("FEATURE_OPERATIONS") != "" && !strings.HasPrefix(azureAsyncOperation, fmt.Sprintf("/subscriptions/%s/providers/microsoft.redhatopenshift/locations/%s/operationsstatus/", mockSubID, env.Location())) {
+				if !strings.HasPrefix(azureAsyncOperation, fmt.Sprintf("/subscriptions/%s/providers/microsoft.redhatopenshift/locations/%s/operationsstatus/", mockSubID, env.Location())) {
 					t.Error(azureAsyncOperation)
 				}
 			} else {
