@@ -175,6 +175,14 @@ func (p *prod) populateVnet(ctx context.Context, rpAuthorizer autorest.Authorize
 		return err
 	}
 
+	for i := 0; i < len(vnets); {
+		if vnets[i].Tags["vnet"] == nil || *vnets[i].Tags["vnet"] != "rp" {
+			vnets = append(vnets[:i], vnets[i+1:]...)
+		} else {
+			i++
+		}
+	}
+
 	if len(vnets) != 1 {
 		return fmt.Errorf("found %d virtual networks, expected 1", len(vnets))
 	}
