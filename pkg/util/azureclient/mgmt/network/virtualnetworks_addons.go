@@ -20,7 +20,7 @@ func (c *virtualNetworksClient) List(ctx context.Context, resourceGroupName stri
 		return nil, err
 	}
 
-	for !page.NotDone() {
+	for page.NotDone() {
 		virtualnetworks = append(virtualnetworks, page.Values()...)
 
 		err = page.Next()
