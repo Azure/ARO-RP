@@ -21,6 +21,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/metrics"
+	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
@@ -40,6 +41,8 @@ type frontend struct {
 	l net.Listener
 	s *http.Server
 
+	bucketAllocator bucket.Allocator
+
 	ready atomic.Value
 }
 
@@ -58,6 +61,8 @@ func NewFrontend(ctx context.Context, baseLog *logrus.Entry, env env.Interface, 
 		db:      db,
 		apis:    apis,
 		m:       m,
+
+		bucketAllocator: &bucket.Random{},
 	}
 
 	l, err := f.env.Listen()

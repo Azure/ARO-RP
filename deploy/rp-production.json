@@ -404,6 +404,29 @@
         {
             "properties": {
                 "resource": {
+                    "id": "Monitors",
+                    "partitionKey": {
+                        "paths": [
+                            "/id"
+                        ],
+                        "kind": "Hash"
+                    },
+                    "defaultTtl": -1
+                },
+                "options": {}
+            },
+            "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Monitors')]",
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2019-08-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
+            ]
+        },
+        {
+            "properties": {
+                "resource": {
                     "id": "OpenShiftClusters",
                     "partitionKey": {
                         "paths": [

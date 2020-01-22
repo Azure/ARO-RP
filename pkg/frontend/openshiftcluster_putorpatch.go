@@ -133,6 +133,12 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 		doc.ClusterResourceGroupIDKey = strings.ToLower(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
 		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateCreating
 		doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.3.0-0.nightly-2019-12-05-001549"
+
+		doc.Bucket, err = f.bucketAllocator.Allocate()
+		if err != nil {
+			return nil, err
+		}
+
 	} else {
 		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateUpdating
 		doc.Dequeues = 0

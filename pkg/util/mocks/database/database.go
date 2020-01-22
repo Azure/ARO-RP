@@ -105,6 +105,20 @@ func (m *MockOpenShiftClusters) EXPECT() *MockOpenShiftClustersMockRecorder {
 	return m.recorder
 }
 
+// ChangeFeed mocks base method
+func (m *MockOpenShiftClusters) ChangeFeed() cosmosdb.OpenShiftClusterDocumentIterator {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ChangeFeed")
+	ret0, _ := ret[0].(cosmosdb.OpenShiftClusterDocumentIterator)
+	return ret0
+}
+
+// ChangeFeed indicates an expected call of ChangeFeed
+func (mr *MockOpenShiftClustersMockRecorder) ChangeFeed() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeFeed", reflect.TypeOf((*MockOpenShiftClusters)(nil).ChangeFeed))
+}
+
 // Create mocks base method
 func (m *MockOpenShiftClusters) Create(arg0 context.Context, arg1 *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error) {
 	m.ctrl.T.Helper()
@@ -192,6 +206,21 @@ func (m *MockOpenShiftClusters) Lease(arg0 context.Context, arg1 string) (*api.O
 func (mr *MockOpenShiftClustersMockRecorder) Lease(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Lease", reflect.TypeOf((*MockOpenShiftClusters)(nil).Lease), arg0, arg1)
+}
+
+// ListAll mocks base method
+func (m *MockOpenShiftClusters) ListAll(arg0 context.Context) (*api.OpenShiftClusterDocuments, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAll", arg0)
+	ret0, _ := ret[0].(*api.OpenShiftClusterDocuments)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListAll indicates an expected call of ListAll
+func (mr *MockOpenShiftClustersMockRecorder) ListAll(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAll", reflect.TypeOf((*MockOpenShiftClusters)(nil).ListAll), arg0)
 }
 
 // ListByPrefix mocks base method

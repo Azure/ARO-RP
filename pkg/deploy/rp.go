@@ -621,6 +621,30 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 			Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
 				SQLContainerCreateUpdateProperties: &mgmtdocumentdb.SQLContainerCreateUpdateProperties{
 					Resource: &mgmtdocumentdb.SQLContainerResource{
+						ID: to.StringPtr("Monitors"),
+						PartitionKey: &mgmtdocumentdb.ContainerPartitionKey{
+							Paths: &[]string{
+								"/id",
+							},
+							Kind: mgmtdocumentdb.PartitionKindHash,
+						},
+						DefaultTTL: to.Int32Ptr(-1),
+					},
+					Options: map[string]*string{},
+				},
+				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/Monitors')]"),
+				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+				Location: to.StringPtr("[resourceGroup().location]"),
+			},
+			APIVersion: apiVersions["documentdb"],
+			DependsOn: []string{
+				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
+			},
+		},
+		{
+			Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
+				SQLContainerCreateUpdateProperties: &mgmtdocumentdb.SQLContainerCreateUpdateProperties{
+					Resource: &mgmtdocumentdb.SQLContainerResource{
 						ID: to.StringPtr("OpenShiftClusters"),
 						PartitionKey: &mgmtdocumentdb.ContainerPartitionKey{
 							Paths: &[]string{

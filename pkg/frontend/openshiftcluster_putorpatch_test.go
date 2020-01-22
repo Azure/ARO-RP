@@ -25,6 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
+	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
@@ -121,7 +122,8 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				expectAsyncOperationDocumentCreate(asyncOperations, strings.ToLower(tt.resourceID), api.ProvisioningStateCreating)
 
 				clusterdoc := &api.OpenShiftClusterDocument{
-					Key: strings.ToLower(tt.resourceID),
+					Key:    strings.ToLower(tt.resourceID),
+					Bucket: 1,
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID:   tt.resourceID,
 						Name: "resourceName",
@@ -566,6 +568,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			f.(*frontend).bucketAllocator = bucket.Fixed(1)
 
 			go f.Run(ctx, nil, nil)
 

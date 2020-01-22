@@ -23,11 +23,13 @@ type openShiftClusters struct {
 // OpenShiftClusters is the database interface for OpenShiftClusterDocuments
 type OpenShiftClusters interface {
 	Create(context.Context, *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error)
+	ListAll(context.Context) (*api.OpenShiftClusterDocuments, error)
 	Get(context.Context, string) (*api.OpenShiftClusterDocument, error)
 	Patch(context.Context, string, func(*api.OpenShiftClusterDocument) error) (*api.OpenShiftClusterDocument, error)
 	PatchWithLease(context.Context, string, func(*api.OpenShiftClusterDocument) error) (*api.OpenShiftClusterDocument, error)
 	Update(context.Context, *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error)
 	Delete(context.Context, *api.OpenShiftClusterDocument) error
+	ChangeFeed() cosmosdb.OpenShiftClusterDocumentIterator
 	ListByPrefix(string, string) (cosmosdb.OpenShiftClusterDocumentIterator, error)
 	Dequeue(context.Context) (*api.OpenShiftClusterDocument, error)
 	Lease(context.Context, string) (*api.OpenShiftClusterDocument, error)
@@ -85,6 +87,10 @@ func (c *openShiftClusters) Create(ctx context.Context, doc *api.OpenShiftCluste
 	}
 
 	return doc, err
+}
+
+func (c *openShiftClusters) ListAll(ctx context.Context) (*api.OpenShiftClusterDocuments, error) {
+	return c.c.ListAll(ctx, nil)
 }
 
 func (c *openShiftClusters) Get(ctx context.Context, key string) (*api.OpenShiftClusterDocument, error) {
@@ -177,6 +183,10 @@ func (c *openShiftClusters) Delete(ctx context.Context, doc *api.OpenShiftCluste
 	}
 
 	return c.c.Delete(ctx, doc.PartitionKey, doc, &cosmosdb.Options{NoETag: true})
+}
+
+func (c *openShiftClusters) ChangeFeed() cosmosdb.OpenShiftClusterDocumentIterator {
+	return c.c.ChangeFeed(nil)
 }
 
 func (c *openShiftClusters) ListByPrefix(subscriptionID string, prefix string) (cosmosdb.OpenShiftClusterDocumentIterator, error) {

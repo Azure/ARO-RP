@@ -3,17 +3,17 @@ package api
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-// SubscriptionDocuments represents subscription documents.
+// MonitorDocuments represents monitor documents.
 // pkg/database/cosmosdb requires its definition.
-type SubscriptionDocuments struct {
-	Count                 int                     `json:"_count,omitempty"`
-	ResourceID            string                  `json:"_rid,omitempty"`
-	SubscriptionDocuments []*SubscriptionDocument `json:"Documents,omitempty"`
+type MonitorDocuments struct {
+	Count            int                `json:"_count,omitempty"`
+	ResourceID       string             `json:"_rid,omitempty"`
+	MonitorDocuments []*MonitorDocument `json:"Documents,omitempty"`
 }
 
-// SubscriptionDocument represents a subscription document.
+// MonitorDocument represents a monitor document.
 // pkg/database/cosmosdb requires its definition.
-type SubscriptionDocument struct {
+type MonitorDocument struct {
 	MissingFields
 
 	ID          string                 `json:"id,omitempty"`
@@ -22,14 +22,12 @@ type SubscriptionDocument struct {
 	Self        string                 `json:"_self,omitempty"`
 	ETag        string                 `json:"_etag,omitempty"`
 	Attachments string                 `json:"_attachments,omitempty"`
+	TTL         int                    `json:"ttl,omitempty"`
 	LSN         int                    `json:"_lsn,omitempty"`
 	Metadata    map[string]interface{} `json:"_metadata,omitempty"`
 
 	LeaseOwner   string `json:"leaseOwner,omitempty"`
 	LeaseExpires int    `json:"leaseExpires,omitempty"`
-	Dequeues     int    `json:"dequeues,omitempty"`
 
-	Deleting bool `json:"deleting,omitempty"`
-
-	Subscription *Subscription `json:"subscription,omitempty"`
+	Monitor *Monitor `json:"monitor,omitempty"`
 }

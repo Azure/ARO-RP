@@ -5,6 +5,8 @@ package main
 
 import (
 	"context"
+	"flag"
+	"fmt"
 	"os"
 	"strings"
 
@@ -15,21 +17,36 @@ var (
 	gitCommit = "unknown"
 )
 
+func usage() {
+	fmt.Fprintf(flag.CommandLine.Output(), "usage: %s {rp,mirror,monitor}\n", os.Args[0])
+	flag.PrintDefaults()
+}
+
 func main() {
+	flag.Usage = usage
+	flag.Parse()
+
+	if len(flag.Args()) != 1 {
+		usage()
+		os.Exit(2)
+	}
+
+	ctx := context.Background()
 	log := utillog.GetLogger()
 
 	log.Printf("starting, git commit %s", gitCommit)
 
-	if len(os.Args) < 2 {
-		log.Fatalf("usage: %s {rp,mirror}", os.Args[0])
-	}
-
 	var err error
 	switch strings.ToLower(os.Args[1]) {
 	case "mirror":
-		err = mirror(context.Background(), log)
+		err = mirror(ctx, log)
+	case "monitor":
+		err = monitor(ctx, log)
 	case "rp":
-		err = rp(context.Background(), log)
+		err = rp(ctx, log)
+	default:
+		usage()
+		os.Exit(2)
 	}
 
 	if err != nil {
