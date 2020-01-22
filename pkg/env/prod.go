@@ -39,7 +39,6 @@ type prod struct {
 	cosmosDBAccountName      string
 	cosmosDBPrimaryMasterKey string
 	domain                   string
-	subnetName               string
 	vaultURI                 string
 	vnetName                 string
 	zones                    map[string][]string
@@ -175,16 +174,19 @@ func (p *prod) populateVnet(ctx context.Context, rpAuthorizer autorest.Authorize
 		return err
 	}
 
+	for i := 0; i < len(vnets); {
+		if vnets[i].Tags["vnet"] == nil || *vnets[i].Tags["vnet"] != "rp" {
+			vnets = append(vnets[:i], vnets[i+1:]...)
+		} else {
+			i++
+		}
+	}
+
 	if len(vnets) != 1 {
 		return fmt.Errorf("found %d virtual networks, expected 1", len(vnets))
 	}
 
-	if len(*vnets[0].Subnets) != 1 {
-		return fmt.Errorf("found %d virtual network subnets, expected 1", len(vnets))
-	}
-
 	p.vnetName = *(vnets[0]).Name
-	p.subnetName = *(*vnets[0].Subnets)[0].Name
 
 	return nil
 }
@@ -292,10 +294,6 @@ func (p *prod) GetSecret(ctx context.Context, secretName string) (key *rsa.Priva
 
 func (p *prod) Listen() (net.Listener, error) {
 	return net.Listen("tcp", ":8443")
-}
-
-func (p *prod) SubnetName() string {
-	return p.subnetName
 }
 
 func (p *prod) VnetName() string {

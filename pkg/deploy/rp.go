@@ -97,6 +97,9 @@ func (g *generator) vnet() *arm.Resource {
 			Name:     to.StringPtr("rp-vnet"),
 			Type:     to.StringPtr("Microsoft.Network/virtualNetworks"),
 			Location: to.StringPtr("[resourceGroup().location]"),
+			Tags: map[string]*string{
+				"vnet": to.StringPtr("rp"),
+			},
 		},
 		APIVersion: apiVersions["network"],
 	}
