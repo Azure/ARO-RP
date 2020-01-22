@@ -55,8 +55,8 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	releases = append(releases,
-		// quay.io/openshift-release-dev/ocp-release-nightly:4.3.0-0.nightly-2019-12-05-001549
-		"quay.io/openshift-release-dev/ocp-release-nightly@sha256:5f1ff5e767acd58445532222c38e643069fdb9fdf0bb176ced48bc2eb1032f2a",
+		// quay.io/openshift-release-dev/ocp-release:4.3.0-x86_64
+		"quay.io/openshift-release-dev/ocp-release@sha256:3a516480dfd68e0f87f702b4d7bdd6f6a0acfdac5cd2e9767b838ceede34d70d",
 	)
 
 	log.Printf("mirroring %d release(s)", len(releases))

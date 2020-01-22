@@ -131,7 +131,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						Properties: api.Properties{
 							ProvisioningState: api.ProvisioningStateCreating,
 							ClusterProfile: api.ClusterProfile{
-								Version: "4.3.0-0.nightly-2019-12-05-001549",
+								Version: "4.3.0",
 							},
 							ServicePrincipalProfile: api.ServicePrincipalProfile{
 								TenantID: "11111111-1111-1111-1111-111111111111",
@@ -154,7 +154,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					Properties: v20191231preview.Properties{
 						ProvisioningState: v20191231preview.ProvisioningStateCreating,
 						ClusterProfile: v20191231preview.ClusterProfile{
-							Version: "4.3.0-0.nightly-2019-12-05-001549",
+							Version: "4.3.0",
 						},
 					},
 				}
