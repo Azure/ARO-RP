@@ -92,3 +92,7 @@ required = [
   [[prune.project]]
     name = "github.com/openshift/installer"
     unused-packages = false
+
+[[constraint]]
+  branch = "master"
+  name = "golang.org/x/crypto"
