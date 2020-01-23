@@ -5,23 +5,6 @@ trigger:
 pool:
   vmImage: 'ubuntu-latest'
 
-# steps: 
-# - task: GoTool@0
-#   inputs:
-#     version: '1.13.5'
-# - script: |
-#     go version
-#     export
-#     pwd
-#     go env
-#     set -x
-#     make test-go
-#     [[ -z "$(git status -s)" ]]
-#   workingDirectory: '$(System.DefaultWorkingDirectory)'
-#   displayName: 'Build'
-
-
-
 variables:
   GOBIN:  '$(GOPATH)/bin' # Go binaries path
   GOROOT: '/usr/local/go1.13' # Go installation path
@@ -38,15 +21,15 @@ steps:
     mv !(gopath) '$(modulePath)'
     echo '##vso[task.prependpath]$(GOBIN)'
     echo '##vso[task.prependpath]$(GOROOT)/bin'
-  displayName: 'Set up the Go workspace'
+    go version
+    sudo add-apt-repository ppa:kubuntu-ppa/backports
+    sudo apt-get update
+    sudo apt-get install libgpgme-dev gcc -y
+  displayName: '⚙️Set up the workspace'
 
 - script: |
-    go version
-    export
-    pwd
-    go env
     set -x
     make test-go
     [[ -z "$(git status -s)" ]]
   workingDirectory: '$(modulePath)'
-  displayName: 'Get dependencies, then build'
+  displayName: '🧪Run Unit Tests'
