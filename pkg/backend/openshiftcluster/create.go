@@ -180,6 +180,12 @@ func (m *Manager) Create(ctx context.Context) error {
 			PullSecret: os.Getenv("PULL_SECRET"),
 			ImageContentSources: []types.ImageContentSource{
 				{
+					Source: "quay.io/openshift-release-dev/ocp-release",
+					Mirrors: []string{
+						"arosvc.azurecr.io/openshift-release-dev/ocp-release",
+					},
+				},
+				{
 					Source: "quay.io/openshift-release-dev/ocp-release-nightly",
 					Mirrors: []string{
 						"arosvc.azurecr.io/openshift-release-dev/ocp-release-nightly",
@@ -207,8 +213,8 @@ func (m *Manager) Create(ctx context.Context) error {
 
 	image := &releaseimage.Image{}
 	switch m.doc.OpenShiftCluster.Properties.ClusterProfile.Version {
-	case "4.3.0-0.nightly-2019-12-05-001549":
-		image.PullSpec = "arosvc.azurecr.io/openshift-release-dev/ocp-release-nightly@sha256:5f1ff5e767acd58445532222c38e643069fdb9fdf0bb176ced48bc2eb1032f2a"
+	case "4.3.0":
+		image.PullSpec = "arosvc.azurecr.io/openshift-release-dev/ocp-release@sha256:3a516480dfd68e0f87f702b4d7bdd6f6a0acfdac5cd2e9767b838ceede34d70d"
 	default:
 		return fmt.Errorf("unimplemented version %q", m.doc.OpenShiftCluster.Properties.ClusterProfile.Version)
 	}

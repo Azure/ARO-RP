@@ -44,7 +44,6 @@ var (
 func validOpenShiftCluster() *OpenShiftCluster {
 	oc := exampleOpenShiftCluster()
 	oc.ID = id
-	oc.Properties.ClusterProfile.Version = "4.3.0-0.nightly-2019-12-05-001549" // for now
 	oc.Properties.ClusterProfile.ResourceGroupID = fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", subscriptionID)
 	oc.Properties.ServicePrincipalProfile.ClientID = "2b5ba2c6-6205-4fc4-8b5d-9fea369ae1a2"
 	oc.Properties.MasterProfile.SubnetID = fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master", subscriptionID)
