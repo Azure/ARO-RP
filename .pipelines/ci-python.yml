@@ -1,0 +1,49 @@
+# Azure DevOps Pipeline running CI
+trigger:
+- master
+
+jobs:
+- job: 'Python Unit Test'
+  pool:
+    vmImage: 'ubuntu-latest'
+  variables:
+    GOBIN:  '$(GOPATH)/bin' # Go binaries path
+    GOROOT: '/usr/local/go1.13' # Go installation path
+    GOPATH: '$(system.defaultWorkingDirectory)/gopath' # Go workspace path
+    modulePath: '$(GOPATH)/src/github.com/Azure/ARO-RP' # Path to the module's code
+  strategy:
+    matrix:
+      Python27:
+        python.version: '2.7.17'
+      Python35:
+        python.version: '3.5.9'
+      Python36:
+        python.version: '3.6.10'
+      Python37:
+        python.version: '3.7.6'
+      Python38:
+        python.version: '3.8.1'
+
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '$(python.version)'
+  - script: |
+      mkdir -p '$(GOBIN)'
+      mkdir -p '$(GOPATH)/pkg'
+      mkdir -p '$(modulePath)'
+      shopt -s extglob
+      shopt -s dotglob
+      mv !(gopath) '$(modulePath)'
+      echo '##vso[task.prependpath]$(GOBIN)'
+      echo '##vso[task.prependpath]$(GOROOT)/bin'
+      go version
+      sudo add-apt-repository ppa:kubuntu-ppa/backports
+      sudo apt-get update
+      sudo apt-get install libgpgme-dev gcc -y
+    displayName: '⚙️Set up the workspace'
+  - script: |
+      set -x
+      pip install virtualenv
+      make test-python
+    displayName: '🧪Run Unit Tests : $(python.version)'
