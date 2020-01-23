@@ -9,11 +9,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GOPATH: /home/runner/work/ARO-RP/go
-      FEATURE_OPERATIONS: ${{ matrix.FEATURE_OPERATIONS }}
       FEATURE_METRICS: ${{ matrix.FEATURE_METRICS }}
     strategy:
       matrix:
-       FEATURE_OPERATIONS: ["enable-operations", ""]
        FEATURE_METRICS: ["enable-metrics", ""]
     steps:
     - name: Install packages
