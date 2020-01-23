@@ -2,54 +2,54 @@
 trigger:
   - master
   
-  jobs:
-  - job: 'Python_Unit_Tests'
-    pool:
-      vmImage: 'ubuntu-latest'
-    # variables:
-    #   GOBIN:  '$(GOPATH)/bin' # Go binaries path
-    #   GOROOT: '/usr/local/go1.13' # Go installation path
-    #   GOPATH: '$(system.defaultWorkingDirectory)/gopath' # Go workspace path
-    #   modulePath: '$(GOPATH)/src/github.com/Azure/ARO-RP' # Path to the module's code
-    strategy:
-      matrix:
-        Python27:
-          python.version: '2.7.17'
-        Python35:
-          python.version: '3.5.9'
-        Python36:
-          python.version: '3.6.10'
-        Python37:
-          python.version: '3.7.6'
-        Python38:
-          python.version: '3.8.1'
-  
-    steps:
-    - task: UsePythonVersion@0
-      inputs:
-        versionSpec: '$(python.version)'
-    - template: ./templates/template-setup-golang-env.yml
-    - script: |
-        set -x
-        pip install virtualenv
-        make test-python
-      displayName: '🧪Run Python Unit Tests : $(python.version)'
-      workingDirectory: '$(modulePath)'
+jobs:
+- job: 'Python_Unit_Tests'
+  pool:
+    vmImage: 'ubuntu-latest'
+  # variables:
+  #   GOBIN:  '$(GOPATH)/bin' # Go binaries path
+  #   GOROOT: '/usr/local/go1.13' # Go installation path
+  #   GOPATH: '$(system.defaultWorkingDirectory)/gopath' # Go workspace path
+  #   modulePath: '$(GOPATH)/src/github.com/Azure/ARO-RP' # Path to the module's code
+  strategy:
+    matrix:
+      Python27:
+        python.version: '2.7.17'
+      Python35:
+        python.version: '3.5.9'
+      Python36:
+        python.version: '3.6.10'
+      Python37:
+        python.version: '3.7.6'
+      Python38:
+        python.version: '3.8.1'
 
-  - job: 'Golang_Unit_Tests'
-    pool:
-      vmImage: 'ubuntu-latest'
-    # variables:
-    #   GOBIN:  '$(GOPATH)/bin' # Go binaries path
-    #   GOROOT: '/usr/local/go1.13' # Go installation path
-    #   GOPATH: '$(system.defaultWorkingDirectory)/gopath' # Go workspace path
-    #   modulePath: '$(GOPATH)/src/github.com/Azure/ARO-RP' # Path to the module's code
-  
-    steps:
-    - template: ./templates/template-setup-golang-env.yml
-    - script: |
-        set -x
-        make test-go
-        [[ -z "$(git status -s)" ]]
-      workingDirectory: '$(modulePath)'
-      displayName: '🧪Run Golang Unit Tests'
+  steps:
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '$(python.version)'
+  - template: ./templates/template-setup-golang-env.yml
+  - script: |
+      set -x
+      pip install virtualenv
+      make test-python
+    displayName: '🧪Run Python Unit Tests : $(python.version)'
+    workingDirectory: '$(modulePath)'
+
+- job: 'Golang_Unit_Tests'
+  pool:
+    vmImage: 'ubuntu-latest'
+  # variables:
+  #   GOBIN:  '$(GOPATH)/bin' # Go binaries path
+  #   GOROOT: '/usr/local/go1.13' # Go installation path
+  #   GOPATH: '$(system.defaultWorkingDirectory)/gopath' # Go workspace path
+  #   modulePath: '$(GOPATH)/src/github.com/Azure/ARO-RP' # Path to the module's code
+
+  steps:
+  - template: ./templates/template-setup-golang-env.yml
+  - script: |
+      set -x
+      make test-go
+      [[ -z "$(git status -s)" ]]
+    workingDirectory: '$(modulePath)'
+    displayName: '🧪Run Golang Unit Tests'
