@@ -11,7 +11,10 @@ import (
 	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
+	operatorsv1 "github.com/openshift/api/operator/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
+	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
+	consoleapi "github.com/openshift/console-operator/pkg/api"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/password"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -64,6 +67,15 @@ func (i *Installer) removeBootstrap(ctx context.Context) error {
 	}
 
 	{
+		cli, err := operatorclient.NewForConfig(restConfig)
+		if err != nil {
+			return err
+		}
+
+		i.updateConsoleBranding(ctx, cli)
+	}
+
+	{
 		cli, err := configclient.NewForConfig(restConfig)
 		if err != nil {
 			return err
@@ -88,6 +100,7 @@ func (i *Installer) removeBootstrap(ctx context.Context) error {
 			return err
 		}
 
+		i.log.Print("disabling updates")
 		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			cv, err := cli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
 			if err != nil {
@@ -137,4 +150,43 @@ func (i *Installer) removeBootstrap(ctx context.Context) error {
 		return nil
 	})
 	return err
+}
+
+func (i *Installer) updateConsoleBranding(ctx context.Context, cli operatorclient.Interface) error {
+	i.log.Print("updating console branding")
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		operatorConfig, err := cli.OperatorV1().Consoles().Get(consoleapi.ConfigResourceName, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		operatorConfig.Spec.Customization.Brand = operatorsv1.BrandAzure
+
+		_, err = cli.OperatorV1().Consoles().Update(operatorConfig)
+		return err
+	})
+	if err != nil {
+		return err
+	}
+
+	i.log.Print("waiting for console to reload")
+	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	defer cancel()
+	err = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+		operatorConfig, err := cli.OperatorV1().Consoles().Get(consoleapi.ConfigResourceName, metav1.GetOptions{})
+		if err == nil && operatorConfig.Status.ObservedGeneration == operatorConfig.Generation {
+			for _, cond := range operatorConfig.Status.Conditions {
+				if cond.Type == "Deployment"+operatorsv1.OperatorStatusTypeAvailable && cond.Status == operatorsv1.ConditionTrue {
+					return true, nil
+				}
+			}
+		}
+
+		return false, nil
+	}, timeoutCtx.Done())
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
