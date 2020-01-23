@@ -8,7 +8,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	keyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/2016-10-01/keyvault"
+	keyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
 	gomock "github.com/golang/mock/gomock"
 )
 

@@ -2,7 +2,8 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "variables": {
-        "keyvaultAccessPolicies": [
+        "clustersKeyvaultAccessPolicies": [],
+        "serviceKeyvaultAccessPolicies": [
             {
                 "tenantId": "[subscription().tenantId]",
                 "objectId": "[parameters('rpServicePrincipalId')]",
@@ -32,7 +33,7 @@
         "fpServicePrincipalId": {
             "type": "string"
         },
-        "keyvaultName": {
+        "keyvaultPrefix": {
             "type": "string"
         },
         "mdmCertificate": {
@@ -269,11 +270,31 @@
                     "family": "A",
                     "name": "standard"
                 },
-                "accessPolicies": "[concat(variables('keyvaultAccessPolicies'), parameters('extraKeyvaultAccessPolicies'))]"
+                "accessPolicies": "[concat(variables('clustersKeyvaultAccessPolicies'), parameters('extraKeyvaultAccessPolicies'))]"
             },
-            "name": "[parameters('keyvaultName')]",
+            "name": "[concat(parameters('keyvaultPrefix'), '-clusters')]",
             "type": "Microsoft.KeyVault/vaults",
             "location": "[resourceGroup().location]",
+            "tags": {
+                "vault": "clusters"
+            },
+            "apiVersion": "2016-10-01"
+        },
+        {
+            "properties": {
+                "tenantId": "[subscription().tenantId]",
+                "sku": {
+                    "family": "A",
+                    "name": "standard"
+                },
+                "accessPolicies": "[concat(variables('serviceKeyvaultAccessPolicies'), parameters('extraKeyvaultAccessPolicies'))]"
+            },
+            "name": "[concat(parameters('keyvaultPrefix'), '-service')]",
+            "type": "Microsoft.KeyVault/vaults",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "vault": "service"
+            },
             "apiVersion": "2016-10-01"
         },
         {

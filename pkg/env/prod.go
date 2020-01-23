@@ -20,6 +20,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/ARO-RP/pkg/deploy"
 	basekeyvault "github.com/Azure/ARO-RP/pkg/util/azureclient/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
@@ -36,10 +37,11 @@ type prod struct {
 
 	keyvault basekeyvault.BaseClient
 
+	clustersKeyvaultURI      string
 	cosmosDBAccountName      string
 	cosmosDBPrimaryMasterKey string
 	domain                   string
-	vaultURI                 string
+	serviceKeyvaultURI       string
 	vnetName                 string
 	zones                    map[string][]string
 
@@ -83,7 +85,7 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 		return nil, err
 	}
 
-	err = p.populateVaultURI(ctx, rpAuthorizer)
+	err = p.populateVaultURIs(ctx, rpAuthorizer)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +151,7 @@ func (p *prod) populateDomain(ctx context.Context, rpAuthorizer autorest.Authori
 	return nil
 }
 
-func (p *prod) populateVaultURI(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
+func (p *prod) populateVaultURIs(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
 	vaults := keyvault.NewVaultsClient(p.SubscriptionID(), rpAuthorizer)
 
 	vs, err := vaults.ListByResourceGroup(ctx, p.ResourceGroup(), nil)
@@ -157,11 +159,24 @@ func (p *prod) populateVaultURI(ctx context.Context, rpAuthorizer autorest.Autho
 		return err
 	}
 
-	if len(vs) != 1 {
-		return fmt.Errorf("found %d vaults, expected 1", len(vs))
+	for _, v := range vs {
+		if v.Tags[deploy.KeyVaultTagName] != nil {
+			switch *v.Tags[deploy.KeyVaultTagName] {
+			case deploy.ClustersKeyVaultTagValue:
+				p.clustersKeyvaultURI = *v.Properties.VaultURI
+			case deploy.ServiceKeyVaultTagValue:
+				p.serviceKeyvaultURI = *v.Properties.VaultURI
+			}
+		}
 	}
 
-	p.vaultURI = *vs[0].Properties.VaultURI
+	if p.clustersKeyvaultURI == "" {
+		return fmt.Errorf("clusters key vault not found")
+	}
+
+	if p.serviceKeyvaultURI == "" {
+		return fmt.Errorf("service key vault not found")
+	}
 
 	return nil
 }
@@ -213,6 +228,10 @@ func (p *prod) populateZones(ctx context.Context, rpAuthorizer autorest.Authoriz
 	return nil
 }
 
+func (p *prod) ClustersKeyvaultURI() string {
+	return p.clustersKeyvaultURI
+}
+
 func (p *prod) CosmosDB() (string, string) {
 	return p.cosmosDBAccountName, p.cosmosDBPrimaryMasterKey
 }
@@ -247,7 +266,7 @@ func (p *prod) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, err
 }
 
 func (p *prod) GetSecret(ctx context.Context, secretName string) (key *rsa.PrivateKey, certs []*x509.Certificate, err error) {
-	bundle, err := p.keyvault.GetSecret(ctx, p.vaultURI, secretName, "")
+	bundle, err := p.keyvault.GetSecret(ctx, p.serviceKeyvaultURI, secretName, "")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -294,6 +313,25 @@ func (p *prod) GetSecret(ctx context.Context, secretName string) (key *rsa.Priva
 
 func (p *prod) Listen() (net.Listener, error) {
 	return net.Listen("tcp", ":8443")
+}
+
+// ManagedDomain returns the fully qualified domain of a cluster if we manage
+// it.  If we don't, it returns the empty string.  We manage only domains of the
+// form "foo.$LOCATION.aroapp.io" and "foo" (we consider this a short form of
+// the former).
+func (p *prod) ManagedDomain(domain string) (string, error) {
+	if domain == "" ||
+		strings.HasPrefix(domain, ".") ||
+		strings.HasSuffix(domain, ".") {
+		// belt and braces: validation should already prevent this
+		return "", fmt.Errorf("invalid domain %q", domain)
+	}
+
+	domain = strings.TrimSuffix(domain, "."+p.Domain())
+	if strings.ContainsRune(domain, '.') {
+		return "", nil
+	}
+	return domain + "." + p.Domain(), nil
 }
 
 func (p *prod) VnetName() string {
