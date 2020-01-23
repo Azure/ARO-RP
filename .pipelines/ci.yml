@@ -17,5 +17,5 @@ steps:
     set -x
     make test-go
     [[ -z "$(git status -s)" ]]
-  workingDirectory: '$(modulePath)'
+  workingDirectory: '$(System.DefaultWorkingDirectory)'
   displayName: 'Build'
