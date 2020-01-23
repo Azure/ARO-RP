@@ -502,7 +502,7 @@ func (g *generator) clustersKeyvault() *arm.Resource {
 		Type:     to.StringPtr("Microsoft.KeyVault/vaults"),
 		Location: to.StringPtr("[resourceGroup().location]"),
 		Tags: map[string]*string{
-			"vault": to.StringPtr("clusters"),
+			KeyVaultTagName: to.StringPtr(ClustersKeyVaultTagValue),
 		},
 	}
 
@@ -538,7 +538,7 @@ func (g *generator) serviceKeyvault() *arm.Resource {
 		Type:     to.StringPtr("Microsoft.KeyVault/vaults"),
 		Location: to.StringPtr("[resourceGroup().location]"),
 		Tags: map[string]*string{
-			"vault": to.StringPtr("service"),
+			KeyVaultTagName: to.StringPtr(ServiceKeyVaultTagValue),
 		},
 	}
 
