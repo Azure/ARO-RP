@@ -3,7 +3,7 @@ trigger:
 - master
 
 jobs:
-- job: 'Python Unit Test'
+- job: 'Python_Unit_Test'
   pool:
     vmImage: 'ubuntu-latest'
   variables:
