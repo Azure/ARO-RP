@@ -4,7 +4,6 @@ package api
 // Licensed under the Apache License 2.0.
 
 import (
-	"crypto/rsa"
 	"time"
 )
 
@@ -21,6 +20,12 @@ type OpenShiftCluster struct {
 	Tags       map[string]string `json:"tags,omitempty"`
 	Properties Properties        `json:"properties,omitempty"`
 }
+
+// SecureBytes represents encrypted []byte
+type SecureBytes []byte
+
+// SecureString represents encrypted string
+type SecureString string
 
 // Properties represents an OpenShift cluster's properties
 type Properties struct {
@@ -80,9 +85,9 @@ type Properties struct {
 
 	StorageSuffix string `json:"storageSuffix,omitempty"`
 
-	SSHKey            *rsa.PrivateKey `json:"sshKey,omitempty"`
-	AdminKubeconfig   []byte          `json:"adminKubeconfig,omitempty"`
-	KubeadminPassword string          `json:"kubeadminPassword,omitempty"`
+	SSHKey            SecureBytes  `json:"sshKey,omitempty"`
+	AdminKubeconfig   SecureBytes  `json:"adminKubeconfig,omitempty"`
+	KubeadminPassword SecureString `json:"kubeadminPassword,omitempty"`
 }
 
 // ProvisioningState represents a provisioning state
@@ -117,9 +122,9 @@ type ConsoleProfile struct {
 type ServicePrincipalProfile struct {
 	MissingFields
 
-	TenantID     string `json:"tenantId,omitempty"`
-	ClientID     string `json:"clientId,omitempty"`
-	ClientSecret string `json:"clientSecret,omitempty"`
+	TenantID     string       `json:"tenantId,omitempty"`
+	ClientID     string       `json:"clientId,omitempty"`
+	ClientSecret SecureString `json:"clientSecret,omitempty"`
 }
 
 // NetworkProfile represents a network profile

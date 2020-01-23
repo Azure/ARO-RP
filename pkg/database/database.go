@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/tls"
 	"net/http"
+	"reflect"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -17,6 +18,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	dbmetrics "github.com/Azure/ARO-RP/pkg/metrics/statsd/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/util/encryption"
 )
 
 // Database represents a database
@@ -31,21 +33,18 @@ type Database struct {
 }
 
 // NewDatabase returns a new Database
-func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Interface, m metrics.Interface, uuid string) (db *Database, err error) {
+func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Interface, m metrics.Interface, uuid string, decryptDatabase bool) (db *Database, err error) {
+	var cipher encryption.Cipher
+	if decryptDatabase {
+		cipher, err = encryption.NewCipher(ctx, env)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	databaseAccount, masterKey := env.CosmosDB()
 
-	h := &codec.JsonHandle{
-		BasicHandle: codec.BasicHandle{
-			DecodeOptions: codec.DecodeOptions{
-				ErrorIfNoField: true,
-			},
-		},
-	}
-
-	err = api.AddExtensions(&h.BasicHandle)
-	if err != nil {
-		return nil, err
-	}
+	h := newJSONHandle(cipher)
 
 	c := &http.Client{
 		Transport: dbmetrics.New(log, &http.Transport{
@@ -89,4 +88,18 @@ func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Interface, m me
 	go db.emitMetrics(ctx)
 
 	return db, nil
+}
+
+func newJSONHandle(cipher encryption.Cipher) *codec.JsonHandle {
+	h := &codec.JsonHandle{
+		BasicHandle: codec.BasicHandle{
+			DecodeOptions: codec.DecodeOptions{
+				ErrorIfNoField: true,
+			},
+		},
+	}
+
+	h.SetInterfaceExt(reflect.TypeOf(api.SecureBytes{}), 1, SecureBytesExt{Cipher: cipher})
+	h.SetInterfaceExt(reflect.TypeOf((*api.SecureString)(nil)), 1, SecureStringExt{Cipher: cipher})
+	return h
 }
