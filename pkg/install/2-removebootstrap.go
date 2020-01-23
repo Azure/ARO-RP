@@ -11,7 +11,7 @@ import (
 	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
-	operatorsv1 "github.com/openshift/api/operator/v1"
+	operatorv1 "github.com/openshift/api/operator/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	consoleapi "github.com/openshift/console-operator/pkg/api"
@@ -72,7 +72,10 @@ func (i *Installer) removeBootstrap(ctx context.Context) error {
 			return err
 		}
 
-		i.updateConsoleBranding(ctx, cli)
+		err = i.updateConsoleBranding(ctx, cli)
+		if err != nil {
+			return err
+		}
 	}
 
 	{
@@ -160,7 +163,7 @@ func (i *Installer) updateConsoleBranding(ctx context.Context, cli operatorclien
 			return err
 		}
 
-		operatorConfig.Spec.Customization.Brand = operatorsv1.BrandAzure
+		operatorConfig.Spec.Customization.Brand = operatorv1.BrandAzure
 
 		_, err = cli.OperatorV1().Consoles().Update(operatorConfig)
 		return err
@@ -172,11 +175,12 @@ func (i *Installer) updateConsoleBranding(ctx context.Context, cli operatorclien
 	i.log.Print("waiting for console to reload")
 	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
-	err = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 		operatorConfig, err := cli.OperatorV1().Consoles().Get(consoleapi.ConfigResourceName, metav1.GetOptions{})
 		if err == nil && operatorConfig.Status.ObservedGeneration == operatorConfig.Generation {
 			for _, cond := range operatorConfig.Status.Conditions {
-				if cond.Type == "Deployment"+operatorsv1.OperatorStatusTypeAvailable && cond.Status == operatorsv1.ConditionTrue {
+				if cond.Type == "Deployment"+operatorv1.OperatorStatusTypeAvailable &&
+					cond.Status == operatorv1.ConditionTrue {
 					return true, nil
 				}
 			}
@@ -184,9 +188,4 @@ func (i *Installer) updateConsoleBranding(ctx context.Context, cli operatorclien
 
 		return false, nil
 	}, timeoutCtx.Done())
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
