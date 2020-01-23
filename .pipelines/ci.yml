@@ -9,7 +9,7 @@ steps:
 - script: |
     wget "https://storage.googleapis.com/golang/go1.13.6.linux-amd64.tar.gz"
     tar -xvf go1.13.6.linux-amd64.tar.gz
-    mv go /usr/local
+    sudo mv go /usr/local
     export GOROOT=/usr/local/go
     # export GOPATH=$(Agent.BuildDirectory)
     # export PATH=$GOPATH/bin:$GOROOT/bin:$PATH
