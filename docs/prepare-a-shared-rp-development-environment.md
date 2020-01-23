@@ -146,8 +146,8 @@ locations.
      -l eastus \
      --template-file deploy/rbac-development.json \
      --parameters \
-       "armServicePrincipalId=$(az ad sp list --all --query "[?appId=='$AZURE_ARM_CLIENT_ID'].objectId" -o tsv)" \
-       "fpServicePrincipalId=$(az ad sp list --all --query "[?appId=='$AZURE_FP_CLIENT_ID'].objectId" -o tsv)" \
+       "armServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_ARM_CLIENT_ID'" --query '[].objectId' -o tsv)" \
+       "fpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].objectId' -o tsv)" \
      >/dev/null
    ```
 
@@ -275,9 +275,9 @@ locations.
        "adminObjectId=$ADMIN_OBJECT_ID" \
        "databaseAccountName=$COSMOSDB_ACCOUNT" \
        "domainName=$DOMAIN_NAME.$PARENT_DOMAIN_NAME" \
-       "fpServicePrincipalId=$(az ad sp list --all --query "[?appId=='$AZURE_FP_CLIENT_ID'].objectId" -o tsv)" \
+       "fpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].objectId' -o tsv)" \
        "keyvaultPrefix=$KEYVAULT_PREFIX" \
-       "rpServicePrincipalId=$(az ad sp list --all --query "[?appId=='$AZURE_CLIENT_ID'].objectId" -o tsv)" \
+       "rpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_CLIENT_ID'" --query '[].objectId' -o tsv)" \
      >/dev/null
 
    az group deployment create \
