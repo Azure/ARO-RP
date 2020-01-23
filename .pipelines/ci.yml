@@ -5,65 +5,18 @@ trigger:
 pool:
   vmImage: 'ubuntu-latest'
 
-# variables:
-#   GOPATH: '$(Agent.BuildDirectory)/gopath' # Go workspace path
-#   GOROOT: '$(Agent.BuildDirectory)/go' # Go installation path
-#   GOBIN:  '$(GOPATH)/bin' # Go binaries path
-#   modulePath: '$(GOPATH)/src/github.com/$(build.repository.name)' # Path to the module's code
-
-# steps:
-# - script: |
-#     wget "https://storage.googleapis.com/golang/go1.13.linux-amd64.tar.gz"
-#     tar -xvf go1.13.3.linux-amd64.tar.gz
-#     mv go /usr/local
-#     export GOROOT=/usr/local/go
-#     export GOPATH=$(Agent.BuildDirectory)
-#     export PATH=$GOPATH/bin:$GOROOT/bin:$PATH
-#   displayName: 'Install Go 1.13'
-  
-# - script: |
-#     mkdir -p '$(GOBIN)'
-#     mkdir -p '$(GOPATH)/pkg'
-#     mkdir -p '$(modulePath)'
-#     shopt -s extglob
-#     shopt -s dotglob
-#     mv !(gopath) '$(modulePath)'
-#     echo '##vso[task.prependpath]$(GOBIN)'
-#     echo '##vso[task.prependpath]$(GOROOT)/bin'
-#     go version
-#   displayName: 'Set up the Go workspace'
-
-# - script: |
-#     sudo add-apt-repository ppa:kubuntu-ppa/backports
-#     sudo apt-get update
-#     sudo apt-get install libgpgme-dev gcc -y
-#   displayName: 'Install packages'
-
-# - script: |
-#     set -x
-#     make test-go
-#     [[ -z "$(git status -s)" ]]
-#   workingDirectory: '$(modulePath)'
-#   displayName: 'Test'
-
-variables:
-  GOBIN:  '$(GOPATH)/bin' # Go binaries path
-  GOROOT: '/usr/local/go1.13' # Go installation path
-  GOPATH: '$(system.defaultWorkingDirectory)/gopath' # Go workspace path
-  modulePath: '$(GOPATH)/src/github.com/$(build.repository.name)' # Path to the module's code
-
 steps:
 - script: |
-    mkdir -p '$(GOBIN)'
-    mkdir -p '$(GOPATH)/pkg'
-    mkdir -p '$(modulePath)'
-    shopt -s extglob
-    shopt -s dotglob
-    mv !(gopath) '$(modulePath)'
+    wget "https://storage.googleapis.com/golang/go1.13.linux-amd64.tar.gz"
+    tar -xvf go1.13.3.linux-amd64.tar.gz
+    mv go /usr/local
+    export GOROOT=/usr/local/go
+    # export GOPATH=$(Agent.BuildDirectory)
+    # export PATH=$GOPATH/bin:$GOROOT/bin:$PATH
     echo '##vso[task.prependpath]$(GOBIN)'
     echo '##vso[task.prependpath]$(GOROOT)/bin'
     go version
-  displayName: 'Set up the Go workspace'
+  displayName: 'Install Go 1.13'
 
 - script: |
     sudo add-apt-repository ppa:kubuntu-ppa/backports
@@ -80,14 +33,3 @@ steps:
     [[ -z "$(git status -s)" ]]
   workingDirectory: '$(modulePath)'
   displayName: 'Test'
-
-# - script: |
-#     go version
-#     go get -v -t -d ./...
-#     if [ -f Gopkg.toml ]; then
-#         curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-#         dep ensure
-#     fi
-#     go build -v .
-#   workingDirectory: '$(modulePath)'
-#   displayName: 'Get dependencies, then build'
