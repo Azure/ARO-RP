@@ -679,6 +679,15 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "cb47e810bee8c56f0738f0723c98cf3192ea7736",
+                    "repositoryUrl": "https://github.com/openshift/console-operator/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "b9fbbcca65a9419959977be586e290e215eb1c62",
                     "repositoryUrl": "https://github.com/openshift/installer/"
                 }
