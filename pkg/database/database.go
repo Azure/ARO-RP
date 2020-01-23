@@ -14,10 +14,14 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/encrypt"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	dbmetrics "github.com/Azure/ARO-RP/pkg/metrics/statsd/cosmosdb"
 )
+
+// encryptionSecretName must match key name in the service keyvault
+const encryptionSecretName = "db-encryption-key"
 
 // Database represents a database
 type Database struct {
@@ -28,6 +32,8 @@ type Database struct {
 	Monitors          Monitors
 	OpenShiftClusters OpenShiftClusters
 	Subscriptions     Subscriptions
+
+	cipher encrypt.Cipher
 }
 
 // NewDatabase returns a new Database

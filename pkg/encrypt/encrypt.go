@@ -13,9 +13,11 @@ import (
 const prefix = "ENC*"
 
 type Cipher interface {
-	Decrypt(input, nonce string) (string, error)
-	Encrypt(input, nonce string) (string, error)
+	Decrypt(string) (string, error)
+	Encrypt(string) (string, error)
 }
+
+var _ Cipher = (*ChaChaCipher)(nil)
 
 type ChaChaCipher struct {
 	aead cipher.AEAD

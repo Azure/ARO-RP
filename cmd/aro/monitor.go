@@ -30,6 +30,11 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 	}
 	defer m.Close()
 
+	db, err := database.NewDatabase(ctx, log.WithField("component", "database"), env, uuid, true)
+	if err != nil {
+		return err
+	}
+
 	db, err := database.NewDatabase(ctx, log.WithField("component", "database"), env, m, uuid)
 	if err != nil {
 		return err

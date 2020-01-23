@@ -15,6 +15,14 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 )
 
+// fields to be encrypted/decrypted before writes/reads
+var enryptedFields = []string{
+	"/openShiftCluster/properties/servicePrincipalProfile/clientSecret",
+	"/openShiftCluster/properties/sshKey",
+	"/openShiftCluster/properties/adminKubeconfig",
+	"/openShiftCluster/properties/kubeadminPassword",
+}
+
 type openShiftClusters struct {
 	c     cosmosdb.OpenShiftClusterDocumentClient
 	collc cosmosdb.CollectionClient
