@@ -125,6 +125,77 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 			wantError:      `400: RequestNotAllowed: : Request is not allowed in provisioningState 'Creating'.`,
 		},
 		{
+			name:       "cluster exists in db in deleting state",
+			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
+			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters) {
+				openshiftClusters.EXPECT().
+					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
+					Return(&api.OpenShiftClusterDocument{
+						OpenShiftCluster: &api.OpenShiftCluster{
+							ID:   tt.resourceID,
+							Name: "resourceName",
+							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+							Properties: api.Properties{
+								ProvisioningState: api.ProvisioningStateDeleting,
+								ServicePrincipalProfile: api.ServicePrincipalProfile{
+									ClientSecret: "clientSecret",
+								},
+							},
+						},
+					}, nil)
+			},
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      `400: RequestNotAllowed: : Request is not allowed in provisioningState 'Deleting'.`,
+		},
+		{
+			name:       "cluster failed to create",
+			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
+			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters) {
+				openshiftClusters.EXPECT().
+					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
+					Return(&api.OpenShiftClusterDocument{
+						OpenShiftCluster: &api.OpenShiftCluster{
+							ID:   tt.resourceID,
+							Name: "resourceName",
+							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+							Properties: api.Properties{
+								ProvisioningState:       api.ProvisioningStateFailed,
+								FailedProvisioningState: api.ProvisioningStateCreating,
+								ServicePrincipalProfile: api.ServicePrincipalProfile{
+									ClientSecret: "clientSecret",
+								},
+							},
+						},
+					}, nil)
+			},
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      `400: RequestNotAllowed: : Request is not allowed in provisioningState 'Failed'.`,
+		},
+		{
+			name:       "cluster failed to delete",
+			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
+			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters) {
+				openshiftClusters.EXPECT().
+					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
+					Return(&api.OpenShiftClusterDocument{
+						OpenShiftCluster: &api.OpenShiftCluster{
+							ID:   tt.resourceID,
+							Name: "resourceName",
+							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+							Properties: api.Properties{
+								ProvisioningState:       api.ProvisioningStateFailed,
+								FailedProvisioningState: api.ProvisioningStateDeleting,
+								ServicePrincipalProfile: api.ServicePrincipalProfile{
+									ClientSecret: "clientSecret",
+								},
+							},
+						},
+					}, nil)
+			},
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      `400: RequestNotAllowed: : Request is not allowed in provisioningState 'Failed'.`,
+		},
+		{
 			name:       "cluster not found in db",
 			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
 			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters) {
