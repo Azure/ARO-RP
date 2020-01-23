@@ -773,12 +773,16 @@
 
 [[projects]]
   branch = "release-4.3"
-  digest = "1:a0d7f81ca6a56bea17ae0727af08837e52ec368d47a7d259702c762317882546"
+  digest = "1:389e8899bcd32ef27c6ab649f2fd99153afee3d4f02090625047687e859ebcab"
   name = "github.com/openshift/client-go"
   packages = [
     "config/clientset/versioned",
     "config/clientset/versioned/scheme",
     "config/clientset/versioned/typed/config/v1",
+    "operator/clientset/versioned",
+    "operator/clientset/versioned/scheme",
+    "operator/clientset/versioned/typed/operator/v1",
+    "operator/clientset/versioned/typed/operator/v1alpha1",
   ]
   pruneopts = "UT"
   revision = "f6563a70e19a12b2f240eaf4e716ef75baf7003e"
@@ -831,6 +835,14 @@
   ]
   pruneopts = "UT"
   revision = "2336783d460353458477aa9e181eca87e4db5d27"
+
+[[projects]]
+  branch = "release-4.3"
+  digest = "1:4221f7b123b05d8ece2b79a3cd6891e3a421c8b2f2e6f2ab8abe3be0f7ef0fee"
+  name = "github.com/openshift/console-operator"
+  packages = ["pkg/api"]
+  pruneopts = "UT"
+  revision = "cb47e810bee8c56f0738f0723c98cf3192ea7736"
 
 [[projects]]
   branch = "release-4.3-azure"
@@ -1683,9 +1695,12 @@
     "github.com/jim-minter/go-cosmosdb/cmd/gencosmosdb",
     "github.com/openshift/api/config/v1",
     "github.com/openshift/api/image/v1",
+    "github.com/openshift/api/operator/v1",
     "github.com/openshift/client-go/config/clientset/versioned",
+    "github.com/openshift/client-go/operator/clientset/versioned",
     "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1",
     "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset/typed/machine/v1beta1",
+    "github.com/openshift/console-operator/pkg/api",
     "github.com/openshift/installer/data",
     "github.com/openshift/installer/pkg/asset",
     "github.com/openshift/installer/pkg/asset/cluster",
