@@ -5,10 +5,41 @@ trigger:
 pool:
   vmImage: 'ubuntu-latest'
 
-steps: 
-- task: GoTool@0
-  inputs:
-    version: '1.13.5'
+# steps: 
+# - task: GoTool@0
+#   inputs:
+#     version: '1.13.5'
+# - script: |
+#     go version
+#     export
+#     pwd
+#     go env
+#     set -x
+#     make test-go
+#     [[ -z "$(git status -s)" ]]
+#   workingDirectory: '$(System.DefaultWorkingDirectory)'
+#   displayName: 'Build'
+
+
+
+variables:
+  GOBIN:  '$(GOPATH)/bin' # Go binaries path
+  GOROOT: '/usr/local/go1.13' # Go installation path
+  GOPATH: '$(system.defaultWorkingDirectory)/gopath' # Go workspace path
+  modulePath: '$(GOPATH)/src/github.com/$(build.repository.name)' # Path to the module's code
+
+steps:
+- script: |
+    mkdir -p '$(GOBIN)'
+    mkdir -p '$(GOPATH)/pkg'
+    mkdir -p '$(modulePath)'
+    shopt -s extglob
+    shopt -s dotglob
+    mv !(gopath) '$(modulePath)'
+    echo '##vso[task.prependpath]$(GOBIN)'
+    echo '##vso[task.prependpath]$(GOROOT)/bin'
+  displayName: 'Set up the Go workspace'
+
 - script: |
     go version
     export
@@ -17,5 +48,5 @@ steps:
     set -x
     make test-go
     [[ -z "$(git status -s)" ]]
-  workingDirectory: '$(System.DefaultWorkingDirectory)'
-  displayName: 'Build'
+  workingDirectory: '$(modulePath)'
+  displayName: 'Get dependencies, then build'
