@@ -81,14 +81,14 @@ secrets-update:
 	oc create secret generic aro-v4-dev --from-file=secrets --dry-run -o yaml | oc apply -f -
 
 e2e:
-	go test -race ./test/e2e -timeout "60m" -v -ginkgo.v -tags e2e
+	go test ./test/e2e -timeout "60m" -v -ginkgo.v -tags e2e
 
 test-go: generate
 	go build ./...
 
-	gofmt -s -w cmd hack pkg
-	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/Azure/ARO-RP cmd hack pkg
-	go run ./hack/validate-imports cmd hack pkg
+	gofmt -s -w cmd hack pkg test
+	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/Azure/ARO-RP cmd hack pkg test
+	go run ./hack/validate-imports cmd hack pkg test
 	go run ./hack/licenses
 	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
 	@[ -z "$$(find -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)

@@ -117,25 +117,6 @@ questions or comments.
   scaleable, upgradeable...
 
 
-## Testing
-
-* unit tests
-
-  ```
-  make test
-  ```
-
-* e2e tests
-
-  1. start the RP
-  1. run the e2e
-  ```
-  make e2e
-  ```
-  Note:
-  1. the test will tell you will what Environment variables to define
-  2. AZURE_E2E_CLIENT_{ID,SECRET} can be taken from the v3 AZURE_CLIENT_{ID,SECRET} variables
-
 ## Useful links
 
 * https://github.com/Azure/azure-resource-manager-rpc

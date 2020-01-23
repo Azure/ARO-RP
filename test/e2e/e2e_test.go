@@ -11,9 +11,9 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
 
 	"github.com/onsi/gomega/format"
+	"github.com/sirupsen/logrus"
 
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
@@ -25,8 +25,8 @@ var (
 func TestE2E(t *testing.T) {
 	flag.Parse()
 	logrus.SetOutput(GinkgoWriter)
-	log := utillog.GetLogger()
-	log.Infof("e2e tests starting, git commit %s\n", gitCommit)
+	Log = utillog.GetLogger()
+	Log.Infof("e2e tests starting, git commit %s\n", gitCommit)
 	RegisterFailHandler(Fail)
 	format.TruncatedDiff = false
 	RunSpecs(t, "e2e tests")

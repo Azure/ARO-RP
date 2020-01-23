@@ -13,55 +13,70 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/sirupsen/logrus"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	kapi "k8s.io/client-go/tools/clientcmd/api"
+	"k8s.io/client-go/tools/clientcmd/api/latest"
 	v1 "k8s.io/client-go/tools/clientcmd/api/v1"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift"
-	utillog "github.com/Azure/ARO-RP/pkg/util/log"
-	"github.com/Azure/ARO-RP/test/clients/openshift"
 )
 
 type ClientSet struct {
-	log *logrus.Entry
-
 	openshiftclusters redhatopenshift.OpenShiftClustersClient
-	openshiftclient   *openshift.Client
+	kubernetes        kubernetes.Interface
 }
 
 var (
+	Log     *logrus.Entry
 	Clients *ClientSet
 )
 
-func newClientSet(log *logrus.Entry) (*ClientSet, error) {
-	conf := auth.NewClientCredentialsConfig(os.Getenv("AZURE_CLIENT_ID"), os.Getenv("AZURE_CLIENT_SECRET"), os.Getenv("AZURE_TENANT_ID"))
-	authorizer, err := conf.Authorizer()
+func restConfigFromV1Config(kc *v1.Config) (*rest.Config, error) {
+	var c kapi.Config
+	err := latest.Scheme.Convert(kc, &c, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	cs := &ClientSet{
-		log:               log,
-		openshiftclusters: redhatopenshift.NewOpenShiftClustersClient(os.Getenv("AZURE_SUBSCRIPTION_ID"), authorizer),
+	kubeconfig := clientcmd.NewDefaultClientConfig(c, &clientcmd.ConfigOverrides{})
+	return kubeconfig.ClientConfig()
+}
+
+func newClientSet() (*ClientSet, error) {
+	authorizer, err := auth.NewAuthorizerFromEnvironment()
+	if err != nil {
+		return nil, err
 	}
+
 	d, err := ioutil.ReadFile("../../admin.kubeconfig")
 	if err != nil {
 		return nil, err
 	}
-	var adminKubeconfig *v1.Config
-	json.Unmarshal(d, &adminKubeconfig)
+	var config *v1.Config
+	json.Unmarshal(d, &config)
 	if err != nil {
 		return nil, err
 	}
-	cs.openshiftclient, err = openshift.NewAdminClient(log, adminKubeconfig)
+	restconfig, err := restConfigFromV1Config(config)
 	if err != nil {
 		return nil, err
+	}
+	cli, err := kubernetes.NewForConfig(restconfig)
+	if err != nil {
+		return nil, err
+	}
+	cs := &ClientSet{
+		openshiftclusters: redhatopenshift.NewOpenShiftClustersClient(os.Getenv("AZURE_SUBSCRIPTION_ID"), authorizer),
+		kubernetes:        cli,
 	}
 
 	return cs, nil
 }
 
 var _ = BeforeSuite(func() {
-	logrus.SetOutput(GinkgoWriter)
-	logger := utillog.GetLogger()
+	Log.Info("BeforeSuite")
 	for _, key := range []string{
 		"AZURE_SUBSCRIPTION_ID", "AZURE_TENANT_ID", "AZURE_CLIENT_ID", "AZURE_CLIENT_SECRET",
 		"CLUSTER", "RESOURCEGROUP",
@@ -71,7 +86,7 @@ var _ = BeforeSuite(func() {
 		}
 	}
 	var err error
-	Clients, err = newClientSet(logger)
+	Clients, err = newClientSet()
 	if err != nil {
 		panic(err)
 	}
