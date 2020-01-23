@@ -14,7 +14,7 @@
         "fpServicePrincipalId": {
             "type": "string"
         },
-        "keyvaultName": {
+        "keyvaultPrefix": {
             "type": "string"
         },
         "rpServicePrincipalId": {
@@ -28,6 +28,23 @@
             "type": "Microsoft.Network/dnsZones",
             "location": "global",
             "apiVersion": "2018-05-01"
+        },
+        {
+            "properties": {
+                "tenantId": "[subscription().tenantId]",
+                "sku": {
+                    "family": "A",
+                    "name": "standard"
+                },
+                "accessPolicies": []
+            },
+            "name": "[concat(parameters('keyvaultPrefix'), '-clusters')]",
+            "type": "Microsoft.KeyVault/vaults",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "vault": "clusters"
+            },
+            "apiVersion": "2016-10-01"
         },
         {
             "properties": {
@@ -51,28 +68,21 @@
                         "objectId": "[parameters('adminObjectId')]",
                         "permissions": {
                             "certificates": [
-                                "create",
                                 "delete",
-                                "deleteissuers",
                                 "get",
-                                "getissuers",
                                 "import",
-                                "list",
-                                "listissuers",
-                                "managecontacts",
-                                "manageissuers",
-                                "purge",
-                                "recover",
-                                "setissuers",
-                                "update"
+                                "list"
                             ]
                         }
                     }
                 ]
             },
-            "name": "[parameters('keyvaultName')]",
+            "name": "[concat(parameters('keyvaultPrefix'), '-service')]",
             "type": "Microsoft.KeyVault/vaults",
             "location": "[resourceGroup().location]",
+            "tags": {
+                "vault": "service"
+            },
             "apiVersion": "2016-10-01"
         },
         {
@@ -109,6 +119,9 @@
             "name": "rp-vnet",
             "type": "Microsoft.Network/virtualNetworks",
             "location": "[resourceGroup().location]",
+            "tags": {
+                "vnet": "rp"
+            },
             "apiVersion": "2019-07-01"
         },
         {

@@ -3,9 +3,11 @@
 package cosmosdb
 
 import (
+	"context"
 	"encoding/base64"
 	"net/http"
 
+	"github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
 )
 
@@ -28,19 +30,21 @@ type Databases struct {
 }
 
 type databaseClient struct {
+	log             *logrus.Entry
 	hc              *http.Client
 	jsonHandle      *codec.JsonHandle
 	databaseAccount string
 	masterKey       []byte
+	maxRetries      int
 }
 
 // DatabaseClient is a database client
 type DatabaseClient interface {
-	Create(*Database) (*Database, error)
+	Create(context.Context, *Database) (*Database, error)
 	List() DatabaseIterator
-	ListAll() (*Databases, error)
-	Get(string) (*Database, error)
-	Delete(*Database) error
+	ListAll(context.Context) (*Databases, error)
+	Get(context.Context, string) (*Database, error)
+	Delete(context.Context, *Database) error
 }
 
 type databaseListIterator struct {
@@ -51,17 +55,19 @@ type databaseListIterator struct {
 
 // DatabaseIterator is a database iterator
 type DatabaseIterator interface {
-	Next() (*Databases, error)
+	Next(context.Context) (*Databases, error)
 }
 
 // NewDatabaseClient returns a new database client
-func NewDatabaseClient(hc *http.Client, jsonHandle *codec.JsonHandle, databaseAccount, masterKey string) (DatabaseClient, error) {
+func NewDatabaseClient(log *logrus.Entry, hc *http.Client, jsonHandle *codec.JsonHandle, databaseAccount, masterKey string) (DatabaseClient, error) {
 	var err error
 
 	c := &databaseClient{
+		log:             log,
 		hc:              hc,
 		jsonHandle:      jsonHandle,
 		databaseAccount: databaseAccount,
+		maxRetries:      10,
 	}
 
 	c.masterKey, err = base64.StdEncoding.DecodeString(masterKey)
@@ -72,11 +78,11 @@ func NewDatabaseClient(hc *http.Client, jsonHandle *codec.JsonHandle, databaseAc
 	return c, nil
 }
 
-func (c *databaseClient) all(i DatabaseIterator) (*Databases, error) {
+func (c *databaseClient) all(ctx context.Context, i DatabaseIterator) (*Databases, error) {
 	alldbs := &Databases{}
 
 	for {
-		dbs, err := i.Next()
+		dbs, err := i.Next(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -92,8 +98,8 @@ func (c *databaseClient) all(i DatabaseIterator) (*Databases, error) {
 	return alldbs, nil
 }
 
-func (c *databaseClient) Create(newdb *Database) (db *Database, err error) {
-	err = c.do(http.MethodPost, "dbs", "dbs", "", http.StatusCreated, &newdb, &db, nil)
+func (c *databaseClient) Create(ctx context.Context, newdb *Database) (db *Database, err error) {
+	err = c.do(ctx, http.MethodPost, "dbs", "dbs", "", http.StatusCreated, &newdb, &db, nil)
 	return
 }
 
@@ -101,25 +107,25 @@ func (c *databaseClient) List() DatabaseIterator {
 	return &databaseListIterator{databaseClient: c}
 }
 
-func (c *databaseClient) ListAll() (*Databases, error) {
-	return c.all(c.List())
+func (c *databaseClient) ListAll(ctx context.Context) (*Databases, error) {
+	return c.all(ctx, c.List())
 }
 
-func (c *databaseClient) Get(dbid string) (db *Database, err error) {
-	err = c.do(http.MethodGet, "dbs/"+dbid, "dbs", "dbs/"+dbid, http.StatusOK, nil, &db, nil)
+func (c *databaseClient) Get(ctx context.Context, dbid string) (db *Database, err error) {
+	err = c.do(ctx, http.MethodGet, "dbs/"+dbid, "dbs", "dbs/"+dbid, http.StatusOK, nil, &db, nil)
 	return
 }
 
-func (c *databaseClient) Delete(db *Database) error {
+func (c *databaseClient) Delete(ctx context.Context, db *Database) error {
 	if db.ETag == "" {
 		return ErrETagRequired
 	}
 	headers := http.Header{}
 	headers.Set("If-Match", db.ETag)
-	return c.do(http.MethodDelete, "dbs/"+db.ID, "dbs", "dbs/"+db.ID, http.StatusNoContent, nil, nil, headers)
+	return c.do(ctx, http.MethodDelete, "dbs/"+db.ID, "dbs", "dbs/"+db.ID, http.StatusNoContent, nil, nil, headers)
 }
 
-func (i *databaseListIterator) Next() (dbs *Databases, err error) {
+func (i *databaseListIterator) Next(ctx context.Context) (dbs *Databases, err error) {
 	if i.done {
 		return
 	}
@@ -129,7 +135,7 @@ func (i *databaseListIterator) Next() (dbs *Databases, err error) {
 		headers.Set("X-Ms-Continuation", i.continuation)
 	}
 
-	err = i.do(http.MethodGet, "dbs", "dbs", "", http.StatusOK, nil, &dbs, headers)
+	err = i.do(ctx, http.MethodGet, "dbs", "dbs", "", http.StatusOK, nil, &dbs, headers)
 	if err != nil {
 		return
 	}

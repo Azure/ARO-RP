@@ -19,5 +19,5 @@ def aro_show_table_format(result):
         Location=result['location'],
         ProvisioningState=result['provisioningState'],
         WorkerCount=result['workerProfiles'][0]['count'],
-        ConsoleURL=result['consoleUrl'],
+        URL=result['consoleProfile']['url'],
     )

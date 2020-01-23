@@ -64,7 +64,7 @@ func Log(baseLog *logrus.Entry) func(http.Handler) http.Handler {
 					"access":             true,
 					"bodyReadBytes":      r.Body.(*logReadCloser).bytes,
 					"bodyWrittenBytes":   w.(*logResponseWriter).bytes,
-					"durationMs":         int(time.Now().Sub(t) / time.Millisecond),
+					"duration":           time.Now().Sub(t).Seconds(),
 					"requestMethod":      r.Method,
 					"requestPath":        r.URL.Path,
 					"requestProto":       r.Proto,

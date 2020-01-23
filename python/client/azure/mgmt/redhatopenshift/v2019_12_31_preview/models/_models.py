@@ -183,6 +183,47 @@ class CloudErrorBody(Model):
         self.details = kwargs.get('details', None)
 
 
+class ClusterProfile(Model):
+    """ClusterProfile.
+
+    :param domain: The domain for the cluster (immutable).
+    :type domain: str
+    :param version: The version of the cluster (immutable).
+    :type version: str
+    :param resource_group_id: The ID of the cluster resource group
+     (immutable).
+    :type resource_group_id: str
+    """
+
+    _attribute_map = {
+        'domain': {'key': 'domain', 'type': 'str'},
+        'version': {'key': 'version', 'type': 'str'},
+        'resource_group_id': {'key': 'resourceGroupId', 'type': 'str'},
+    }
+
+    def __init__(self, **kwargs):
+        super(ClusterProfile, self).__init__(**kwargs)
+        self.domain = kwargs.get('domain', None)
+        self.version = kwargs.get('version', None)
+        self.resource_group_id = kwargs.get('resource_group_id', None)
+
+
+class ConsoleProfile(Model):
+    """ConsoleProfile.
+
+    :param url: The URL to access the cluster console (immutable).
+    :type url: str
+    """
+
+    _attribute_map = {
+        'url': {'key': 'url', 'type': 'str'},
+    }
+
+    def __init__(self, **kwargs):
+        super(ConsoleProfile, self).__init__(**kwargs)
+        self.url = kwargs.get('url', None)
+
+
 class Display(Model):
     """Display represents the display details of an operation.
 
@@ -304,8 +345,12 @@ class OpenShiftCluster(Resource):
      'Updating'
     :type provisioning_state: str or
      ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.enum
-    :param cluster_domain: The domain for the cluster (immutable).
-    :type cluster_domain: str
+    :param cluster_profile: The cluster profile.
+    :type cluster_profile:
+     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.ClusterProfile
+    :param console_profile: The console profile.
+    :type console_profile:
+     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.ConsoleProfile
     :param service_principal_profile: The cluster service principal profile.
     :type service_principal_profile:
      ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.ServicePrincipalProfile
@@ -324,8 +369,6 @@ class OpenShiftCluster(Resource):
     :param ingress_profiles: The cluster ingress profiles.
     :type ingress_profiles:
      list[~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.IngressProfile]
-    :param console_url: The URL to access the cluster console (immutable).
-    :type console_url: str
     """
 
     _validation = {
@@ -341,14 +384,14 @@ class OpenShiftCluster(Resource):
         'tags': {'key': 'tags', 'type': '{str}'},
         'location': {'key': 'location', 'type': 'str'},
         'provisioning_state': {'key': 'properties.provisioningState', 'type': 'str'},
-        'cluster_domain': {'key': 'properties.clusterDomain', 'type': 'str'},
+        'cluster_profile': {'key': 'properties.clusterProfile', 'type': 'ClusterProfile'},
+        'console_profile': {'key': 'properties.consoleProfile', 'type': 'ConsoleProfile'},
         'service_principal_profile': {'key': 'properties.servicePrincipalProfile', 'type': 'ServicePrincipalProfile'},
         'network_profile': {'key': 'properties.networkProfile', 'type': 'NetworkProfile'},
         'master_profile': {'key': 'properties.masterProfile', 'type': 'MasterProfile'},
         'worker_profiles': {'key': 'properties.workerProfiles', 'type': '[WorkerProfile]'},
         'apiserver_profile': {'key': 'properties.apiserverProfile', 'type': 'APIServerProfile'},
         'ingress_profiles': {'key': 'properties.ingressProfiles', 'type': '[IngressProfile]'},
-        'console_url': {'key': 'properties.consoleUrl', 'type': 'str'},
     }
 
     def __init__(self, **kwargs):
@@ -356,14 +399,14 @@ class OpenShiftCluster(Resource):
         self.tags = kwargs.get('tags', None)
         self.location = kwargs.get('location', None)
         self.provisioning_state = kwargs.get('provisioning_state', None)
-        self.cluster_domain = kwargs.get('cluster_domain', None)
+        self.cluster_profile = kwargs.get('cluster_profile', None)
+        self.console_profile = kwargs.get('console_profile', None)
         self.service_principal_profile = kwargs.get('service_principal_profile', None)
         self.network_profile = kwargs.get('network_profile', None)
         self.master_profile = kwargs.get('master_profile', None)
         self.worker_profiles = kwargs.get('worker_profiles', None)
         self.apiserver_profile = kwargs.get('apiserver_profile', None)
         self.ingress_profiles = kwargs.get('ingress_profiles', None)
-        self.console_url = kwargs.get('console_url', None)
 
 
 class OpenShiftClusterCredentials(Model):

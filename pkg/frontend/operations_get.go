@@ -19,6 +19,22 @@ func (f *frontend) getOperations(w http.ResponseWriter, r *http.Request) {
 	l := &api.OperationList{
 		Operations: []api.Operation{
 			{
+				Name: "Microsoft.RedHatOpenShift/locations/operationresults/read",
+				Display: api.Display{
+					Provider:  "Azure Red Hat OpenShift",
+					Resource:  "locations/operationresults",
+					Operation: "Read operation results",
+				},
+			},
+			{
+				Name: "Microsoft.RedHatOpenShift/locations/operationsstatus/read",
+				Display: api.Display{
+					Provider:  "Azure Red Hat OpenShift",
+					Resource:  "locations/operationsstatus",
+					Operation: "Read operations status",
+				},
+			},
+			{
 				Name: "Microsoft.RedHatOpenShift/openShiftClusters/read",
 				Display: api.Display{
 					Provider:  "Azure Red Hat OpenShift",
@@ -48,6 +64,14 @@ func (f *frontend) getOperations(w http.ResponseWriter, r *http.Request) {
 					Provider:  "Azure Red Hat OpenShift",
 					Resource:  "openShiftClusters",
 					Operation: "Lists credentials of an OpenShift cluster",
+				},
+			},
+			{
+				Name: "Microsoft.RedHatOpenShift/operations/read",
+				Display: api.Display{
+					Provider:  "Azure Red Hat OpenShift",
+					Resource:  "operations",
+					Operation: "Read operations",
 				},
 			},
 		},

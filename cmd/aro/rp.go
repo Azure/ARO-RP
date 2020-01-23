@@ -12,10 +12,13 @@ import (
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/ARO-RP/pkg/api"
+	_ "github.com/Azure/ARO-RP/pkg/api/v20191231preview"
 	"github.com/Azure/ARO-RP/pkg/backend"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend"
+	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
 )
 
 func rp(ctx context.Context, log *logrus.Entry) error {
@@ -27,7 +30,7 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	db, err := database.NewDatabase(env, uuid)
+	db, err := database.NewDatabase(ctx, log.WithField("component", "database"), env, uuid)
 	if err != nil {
 		return err
 	}
@@ -37,20 +40,26 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 	done := make(chan struct{})
 	signal.Notify(sigterm, syscall.SIGTERM)
 
-	b, err := backend.NewBackend(ctx, log.WithField("component", "backend"), env, db)
+	m, err := statsd.New(ctx, log.WithField("component", "metrics"), env)
+	if err != nil {
+		return err
+	}
+	defer m.Close()
+
+	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), env, db, api.APIs, m)
 	if err != nil {
 		return err
 	}
 
-	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), env, db)
+	b, err := backend.NewBackend(ctx, log.WithField("component", "backend"), env, db, m)
 	if err != nil {
 		return err
 	}
 
 	log.Print("listening")
 
-	go b.Run(stop)
-	go f.Run(stop, done)
+	go b.Run(ctx, stop)
+	go f.Run(ctx, stop, done)
 
 	<-sigterm
 	log.Print("received SIGTERM")

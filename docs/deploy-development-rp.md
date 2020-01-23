@@ -8,6 +8,8 @@
    you don't have one installed already.  The `az` client supports Python 2.7
    and Python 3.5+.  A recent Python 3.x version is recommended.
 
+1. Install the `gpgme-devel` package.
+
 1. Install the [Azure
    CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli), if you
    haven't already.
@@ -30,7 +32,7 @@
 
 1. Non-Red Hat ARO engineering: if you don't have access to a shared development
    environment and secrets, follow [prepare a shared RP development
-   environment](docs/prepare-a-shared-rp-development-environment.md).
+   environment](prepare-a-shared-rp-development-environment.md).
 
 1. Place your shared development environment secrets in `secrets` (Red Hat ARO
    engineering: run `make secrets`).
@@ -86,7 +88,7 @@
    ```
 
 1. To create a cluster, follow the instructions in [using `az
-   aro`](docs/using-az-aro.md).  Note that as long as the RP_MODE environment
+   aro`](using-az-aro.md).  Note that as long as the RP_MODE environment
    variable is set to development, the `az aro` client will connect to your
    local RP.
 
@@ -133,3 +135,10 @@
   ```
   hack/ssh.sh [aro-master-{0,1,2}]
   ```
+
+### Metrics
+
+To run fake metrics socket:
+```
+nc -U -l mdm_statsd.socket
+```

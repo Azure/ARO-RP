@@ -6,16 +6,12 @@ package main
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"os"
 	"strings"
 	"time"
 
-	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
-	"github.com/Azure/go-autorest/autorest/date"
 	"github.com/openshift/installer/pkg/rhcos"
 
 	_ "github.com/Azure/ARO-RP/pkg/install"
@@ -35,26 +31,17 @@ func run(ctx context.Context) error {
 
 	accounts := storage.NewAccountsClient(subscriptionID, authorizer)
 
-	t := time.Now().UTC().Truncate(time.Second)
-
-	res, err := accounts.ListAccountSAS(ctx, resourceGroup, accountName, mgmtstorage.AccountSasParameters{
-		Services:               "b",
-		ResourceTypes:          "co",
-		Permissions:            "cr",
-		Protocols:              mgmtstorage.HTTPS,
-		SharedAccessStartTime:  &date.Time{Time: t},
-		SharedAccessExpiryTime: &date.Time{Time: t.Add(24 * time.Hour)},
-	})
+	keys, err := accounts.ListKeys(ctx, resourceGroup, accountName, "")
 	if err != nil {
 		return err
 	}
 
-	v, err := url.ParseQuery(*res.AccountSasToken)
+	storageClient, err := azstorage.NewBasicClient(accountName, *(*keys.Keys)[0].Value)
 	if err != nil {
 		return err
 	}
 
-	blobService := azstorage.NewAccountSASClient(accountName, v, azure.PublicCloud).GetBlobService()
+	blobService := storageClient.GetBlobService()
 
 	c := blobService.GetContainerReference("rhcos")
 
@@ -63,9 +50,14 @@ func run(ctx context.Context) error {
 		return err
 	}
 
-	vhd, err := rhcos.VHD(ctx)
-	if err != nil {
-		return err
+	var vhd string
+	if len(os.Args) == 2 {
+		vhd = os.Args[1]
+	} else {
+		vhd, err = rhcos.VHD(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
 	name := vhd[strings.LastIndexByte(vhd, '/')+1:]

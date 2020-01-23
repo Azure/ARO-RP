@@ -48,7 +48,7 @@ func TestRelativeFilePathPrettier(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			function, file := RelativeFilePathPrettier(tt.f)
+			function, file := relativeFilePathPrettier(tt.f)
 			if function != tt.wantFunction {
 				t.Error(function)
 			}

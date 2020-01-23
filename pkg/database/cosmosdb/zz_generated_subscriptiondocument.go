@@ -3,6 +3,7 @@
 package cosmosdb
 
 import (
+	"context"
 	"net/http"
 	"strings"
 
@@ -16,20 +17,28 @@ type subscriptionDocumentClient struct {
 
 // SubscriptionDocumentClient is a subscriptionDocument client
 type SubscriptionDocumentClient interface {
-	Create(string, *pkg.SubscriptionDocument, *Options) (*pkg.SubscriptionDocument, error)
-	List() SubscriptionDocumentIterator
-	ListAll() (*pkg.SubscriptionDocuments, error)
-	Get(string, string) (*pkg.SubscriptionDocument, error)
-	Replace(string, *pkg.SubscriptionDocument, *Options) (*pkg.SubscriptionDocument, error)
-	Delete(string, *pkg.SubscriptionDocument, *Options) error
-	Query(string, *Query) SubscriptionDocumentIterator
-	QueryAll(string, *Query) (*pkg.SubscriptionDocuments, error)
+	Create(context.Context, string, *pkg.SubscriptionDocument, *Options) (*pkg.SubscriptionDocument, error)
+	List(*Options) SubscriptionDocumentRawIterator
+	ListAll(context.Context, *Options) (*pkg.SubscriptionDocuments, error)
+	Get(context.Context, string, string, *Options) (*pkg.SubscriptionDocument, error)
+	Replace(context.Context, string, *pkg.SubscriptionDocument, *Options) (*pkg.SubscriptionDocument, error)
+	Delete(context.Context, string, *pkg.SubscriptionDocument, *Options) error
+	Query(string, *Query, *Options) SubscriptionDocumentRawIterator
+	QueryAll(context.Context, string, *Query, *Options) (*pkg.SubscriptionDocuments, error)
+	ChangeFeed(*Options) SubscriptionDocumentIterator
+}
+
+type subscriptionDocumentChangeFeedIterator struct {
+	*subscriptionDocumentClient
+	continuation string
+	options      *Options
 }
 
 type subscriptionDocumentListIterator struct {
 	*subscriptionDocumentClient
 	continuation string
 	done         bool
+	options      *Options
 }
 
 type subscriptionDocumentQueryIterator struct {
@@ -38,11 +47,18 @@ type subscriptionDocumentQueryIterator struct {
 	query        *Query
 	continuation string
 	done         bool
+	options      *Options
 }
 
 // SubscriptionDocumentIterator is a subscriptionDocument iterator
 type SubscriptionDocumentIterator interface {
-	Next() (*pkg.SubscriptionDocuments, error)
+	Next(context.Context) (*pkg.SubscriptionDocuments, error)
+}
+
+// SubscriptionDocumentRawIterator is a subscriptionDocument raw iterator
+type SubscriptionDocumentRawIterator interface {
+	SubscriptionDocumentIterator
+	NextRaw(context.Context, interface{}) error
 }
 
 // NewSubscriptionDocumentClient returns a new subscriptionDocument client
@@ -53,11 +69,11 @@ func NewSubscriptionDocumentClient(collc CollectionClient, collid string) Subscr
 	}
 }
 
-func (c *subscriptionDocumentClient) all(i SubscriptionDocumentIterator) (*pkg.SubscriptionDocuments, error) {
+func (c *subscriptionDocumentClient) all(ctx context.Context, i SubscriptionDocumentIterator) (*pkg.SubscriptionDocuments, error) {
 	allsubscriptionDocuments := &pkg.SubscriptionDocuments{}
 
 	for {
-		subscriptionDocuments, err := i.Next()
+		subscriptionDocuments, err := i.Next(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -73,7 +89,7 @@ func (c *subscriptionDocumentClient) all(i SubscriptionDocumentIterator) (*pkg.S
 	return allsubscriptionDocuments, nil
 }
 
-func (c *subscriptionDocumentClient) Create(partitionkey string, newsubscriptionDocument *pkg.SubscriptionDocument, options *Options) (subscriptionDocument *pkg.SubscriptionDocument, err error) {
+func (c *subscriptionDocumentClient) Create(ctx context.Context, partitionkey string, newsubscriptionDocument *pkg.SubscriptionDocument, options *Options) (subscriptionDocument *pkg.SubscriptionDocument, err error) {
 	headers := http.Header{}
 	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
 
@@ -87,26 +103,32 @@ func (c *subscriptionDocumentClient) Create(partitionkey string, newsubscription
 		return
 	}
 
-	err = c.do(http.MethodPost, c.path+"/docs", "docs", c.path, http.StatusCreated, &newsubscriptionDocument, &subscriptionDocument, headers)
+	err = c.do(ctx, http.MethodPost, c.path+"/docs", "docs", c.path, http.StatusCreated, &newsubscriptionDocument, &subscriptionDocument, headers)
 	return
 }
 
-func (c *subscriptionDocumentClient) List() SubscriptionDocumentIterator {
-	return &subscriptionDocumentListIterator{subscriptionDocumentClient: c}
+func (c *subscriptionDocumentClient) List(options *Options) SubscriptionDocumentRawIterator {
+	return &subscriptionDocumentListIterator{subscriptionDocumentClient: c, options: options}
 }
 
-func (c *subscriptionDocumentClient) ListAll() (*pkg.SubscriptionDocuments, error) {
-	return c.all(c.List())
+func (c *subscriptionDocumentClient) ListAll(ctx context.Context, options *Options) (*pkg.SubscriptionDocuments, error) {
+	return c.all(ctx, c.List(options))
 }
 
-func (c *subscriptionDocumentClient) Get(partitionkey, subscriptionDocumentid string) (subscriptionDocument *pkg.SubscriptionDocument, err error) {
+func (c *subscriptionDocumentClient) Get(ctx context.Context, partitionkey, subscriptionDocumentid string, options *Options) (subscriptionDocument *pkg.SubscriptionDocument, err error) {
 	headers := http.Header{}
 	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
-	err = c.do(http.MethodGet, c.path+"/docs/"+subscriptionDocumentid, "docs", c.path+"/docs/"+subscriptionDocumentid, http.StatusOK, nil, &subscriptionDocument, headers)
+
+	err = c.setOptions(options, nil, headers)
+	if err != nil {
+		return
+	}
+
+	err = c.do(ctx, http.MethodGet, c.path+"/docs/"+subscriptionDocumentid, "docs", c.path+"/docs/"+subscriptionDocumentid, http.StatusOK, nil, &subscriptionDocument, headers)
 	return
 }
 
-func (c *subscriptionDocumentClient) Replace(partitionkey string, newsubscriptionDocument *pkg.SubscriptionDocument, options *Options) (subscriptionDocument *pkg.SubscriptionDocument, err error) {
+func (c *subscriptionDocumentClient) Replace(ctx context.Context, partitionkey string, newsubscriptionDocument *pkg.SubscriptionDocument, options *Options) (subscriptionDocument *pkg.SubscriptionDocument, err error) {
 	headers := http.Header{}
 	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
 
@@ -115,11 +137,11 @@ func (c *subscriptionDocumentClient) Replace(partitionkey string, newsubscriptio
 		return
 	}
 
-	err = c.do(http.MethodPut, c.path+"/docs/"+newsubscriptionDocument.ID, "docs", c.path+"/docs/"+newsubscriptionDocument.ID, http.StatusOK, &newsubscriptionDocument, &subscriptionDocument, headers)
+	err = c.do(ctx, http.MethodPut, c.path+"/docs/"+newsubscriptionDocument.ID, "docs", c.path+"/docs/"+newsubscriptionDocument.ID, http.StatusOK, &newsubscriptionDocument, &subscriptionDocument, headers)
 	return
 }
 
-func (c *subscriptionDocumentClient) Delete(partitionkey string, subscriptionDocument *pkg.SubscriptionDocument, options *Options) (err error) {
+func (c *subscriptionDocumentClient) Delete(ctx context.Context, partitionkey string, subscriptionDocument *pkg.SubscriptionDocument, options *Options) (err error) {
 	headers := http.Header{}
 	headers.Set("X-Ms-Documentdb-Partitionkey", `["`+partitionkey+`"]`)
 
@@ -128,16 +150,20 @@ func (c *subscriptionDocumentClient) Delete(partitionkey string, subscriptionDoc
 		return
 	}
 
-	err = c.do(http.MethodDelete, c.path+"/docs/"+subscriptionDocument.ID, "docs", c.path+"/docs/"+subscriptionDocument.ID, http.StatusNoContent, nil, nil, headers)
+	err = c.do(ctx, http.MethodDelete, c.path+"/docs/"+subscriptionDocument.ID, "docs", c.path+"/docs/"+subscriptionDocument.ID, http.StatusNoContent, nil, nil, headers)
 	return
 }
 
-func (c *subscriptionDocumentClient) Query(partitionkey string, query *Query) SubscriptionDocumentIterator {
-	return &subscriptionDocumentQueryIterator{subscriptionDocumentClient: c, partitionkey: partitionkey, query: query}
+func (c *subscriptionDocumentClient) Query(partitionkey string, query *Query, options *Options) SubscriptionDocumentRawIterator {
+	return &subscriptionDocumentQueryIterator{subscriptionDocumentClient: c, partitionkey: partitionkey, query: query, options: options}
 }
 
-func (c *subscriptionDocumentClient) QueryAll(partitionkey string, query *Query) (*pkg.SubscriptionDocuments, error) {
-	return c.all(c.Query(partitionkey, query))
+func (c *subscriptionDocumentClient) QueryAll(ctx context.Context, partitionkey string, query *Query, options *Options) (*pkg.SubscriptionDocuments, error) {
+	return c.all(ctx, c.Query(partitionkey, query, options))
+}
+
+func (c *subscriptionDocumentClient) ChangeFeed(options *Options) SubscriptionDocumentIterator {
+	return &subscriptionDocumentChangeFeedIterator{subscriptionDocumentClient: c}
 }
 
 func (c *subscriptionDocumentClient) setOptions(options *Options, subscriptionDocument *pkg.SubscriptionDocument, headers http.Header) error {
@@ -145,7 +171,7 @@ func (c *subscriptionDocumentClient) setOptions(options *Options, subscriptionDo
 		return nil
 	}
 
-	if !options.NoETag {
+	if subscriptionDocument != nil && !options.NoETag {
 		if subscriptionDocument.ETag == "" {
 			return ErrETagRequired
 		}
@@ -157,11 +183,46 @@ func (c *subscriptionDocumentClient) setOptions(options *Options, subscriptionDo
 	if len(options.PostTriggers) > 0 {
 		headers.Set("X-Ms-Documentdb-Post-Trigger-Include", strings.Join(options.PostTriggers, ","))
 	}
+	if len(options.PartitionKeyRangeID) > 0 {
+		headers.Set("X-Ms-Documentdb-PartitionKeyRangeID", options.PartitionKeyRangeID)
+	}
 
 	return nil
 }
 
-func (i *subscriptionDocumentListIterator) Next() (subscriptionDocuments *pkg.SubscriptionDocuments, err error) {
+func (i *subscriptionDocumentChangeFeedIterator) Next(ctx context.Context) (subscriptionDocuments *pkg.SubscriptionDocuments, err error) {
+	headers := http.Header{}
+	headers.Set("A-IM", "Incremental feed")
+
+	headers.Set("X-Ms-Max-Item-Count", "-1")
+	if i.continuation != "" {
+		headers.Set("If-None-Match", i.continuation)
+	}
+
+	err = i.setOptions(i.options, nil, headers)
+	if err != nil {
+		return
+	}
+
+	err = i.do(ctx, http.MethodGet, i.path+"/docs", "docs", i.path, http.StatusOK, nil, &subscriptionDocuments, headers)
+	if IsErrorStatusCode(err, http.StatusNotModified) {
+		err = nil
+	}
+	if err != nil {
+		return
+	}
+
+	i.continuation = headers.Get("Etag")
+
+	return
+}
+
+func (i *subscriptionDocumentListIterator) Next(ctx context.Context) (subscriptionDocuments *pkg.SubscriptionDocuments, err error) {
+	err = i.NextRaw(ctx, &subscriptionDocuments)
+	return
+}
+
+func (i *subscriptionDocumentListIterator) NextRaw(ctx context.Context, raw interface{}) (err error) {
 	if i.done {
 		return
 	}
@@ -172,7 +233,12 @@ func (i *subscriptionDocumentListIterator) Next() (subscriptionDocuments *pkg.Su
 		headers.Set("X-Ms-Continuation", i.continuation)
 	}
 
-	err = i.do(http.MethodGet, i.path+"/docs", "docs", i.path, http.StatusOK, nil, &subscriptionDocuments, headers)
+	err = i.setOptions(i.options, nil, headers)
+	if err != nil {
+		return
+	}
+
+	err = i.do(ctx, http.MethodGet, i.path+"/docs", "docs", i.path, http.StatusOK, nil, &raw, headers)
 	if err != nil {
 		return
 	}
@@ -183,7 +249,12 @@ func (i *subscriptionDocumentListIterator) Next() (subscriptionDocuments *pkg.Su
 	return
 }
 
-func (i *subscriptionDocumentQueryIterator) Next() (subscriptionDocuments *pkg.SubscriptionDocuments, err error) {
+func (i *subscriptionDocumentQueryIterator) Next(ctx context.Context) (subscriptionDocuments *pkg.SubscriptionDocuments, err error) {
+	err = i.NextRaw(ctx, &subscriptionDocuments)
+	return
+}
+
+func (i *subscriptionDocumentQueryIterator) NextRaw(ctx context.Context, raw interface{}) (err error) {
 	if i.done {
 		return
 	}
@@ -201,7 +272,12 @@ func (i *subscriptionDocumentQueryIterator) Next() (subscriptionDocuments *pkg.S
 		headers.Set("X-Ms-Continuation", i.continuation)
 	}
 
-	err = i.do(http.MethodPost, i.path+"/docs", "docs", i.path, http.StatusOK, &i.query, &subscriptionDocuments, headers)
+	err = i.setOptions(i.options, nil, headers)
+	if err != nil {
+		return
+	}
+
+	err = i.do(ctx, http.MethodPost, i.path+"/docs", "docs", i.path, http.StatusOK, &i.query, &raw, headers)
 	if err != nil {
 		return
 	}

@@ -154,6 +154,22 @@ type CloudErrorBody struct {
 	Details *[]CloudErrorBody `json:"details,omitempty"`
 }
 
+// ClusterProfile ...
+type ClusterProfile struct {
+	// Domain - The domain for the cluster (immutable).
+	Domain *string `json:"domain,omitempty"`
+	// Version - The version of the cluster (immutable).
+	Version *string `json:"version,omitempty"`
+	// ResourceGroupID - The ID of the cluster resource group (immutable).
+	ResourceGroupID *string `json:"resourceGroupId,omitempty"`
+}
+
+// ConsoleProfile ...
+type ConsoleProfile struct {
+	// URL - The URL to access the cluster console (immutable).
+	URL *string `json:"url,omitempty"`
+}
+
 // Display display represents the display details of an operation.
 type Display struct {
 	// Provider - Friendly name of the resource provider.
@@ -409,8 +425,10 @@ type OperationList struct {
 type Properties struct {
 	// ProvisioningState - The cluster provisioning state (immutable). Possible values include: 'Creating', 'Deleting', 'Failed', 'Succeeded', 'Updating'
 	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"`
-	// ClusterDomain - The domain for the cluster (immutable).
-	ClusterDomain *string `json:"clusterDomain,omitempty"`
+	// ClusterProfile - The cluster profile.
+	ClusterProfile *ClusterProfile `json:"clusterProfile,omitempty"`
+	// ConsoleProfile - The console profile.
+	ConsoleProfile *ConsoleProfile `json:"consoleProfile,omitempty"`
 	// ServicePrincipalProfile - The cluster service principal profile.
 	ServicePrincipalProfile *ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
 	// NetworkProfile - The cluster network profile.
@@ -423,8 +441,6 @@ type Properties struct {
 	ApiserverProfile *APIServerProfile `json:"apiserverProfile,omitempty"`
 	// IngressProfiles - The cluster ingress profiles.
 	IngressProfiles *[]IngressProfile `json:"ingressProfiles,omitempty"`
-	// ConsoleURL - The URL to access the cluster console (immutable).
-	ConsoleURL *string `json:"consoleUrl,omitempty"`
 }
 
 // ProxyResource the resource model definition for a ARM proxy resource. It will have everything other than

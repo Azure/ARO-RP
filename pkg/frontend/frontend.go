@@ -17,10 +17,11 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	_ "github.com/Azure/ARO-RP/pkg/api/v20191231preview"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	"github.com/Azure/ARO-RP/pkg/metrics"
+	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
@@ -34,26 +35,34 @@ type frontend struct {
 	baseLog *logrus.Entry
 	env     env.Interface
 	db      *database.Database
+	apis    map[string]*api.Version
+	m       metrics.Interface
 
 	l net.Listener
 	s *http.Server
+
+	bucketAllocator bucket.Allocator
 
 	ready atomic.Value
 }
 
 // Runnable represents a runnable object
 type Runnable interface {
-	Run(<-chan struct{}, chan<- struct{})
+	Run(context.Context, <-chan struct{}, chan<- struct{})
 }
 
 // NewFrontend returns a new runnable frontend
-func NewFrontend(ctx context.Context, baseLog *logrus.Entry, env env.Interface, db *database.Database) (Runnable, error) {
+func NewFrontend(ctx context.Context, baseLog *logrus.Entry, env env.Interface, db *database.Database, apis map[string]*api.Version, m metrics.Interface) (Runnable, error) {
 	var err error
 
 	f := &frontend{
 		baseLog: baseLog,
 		env:     env,
 		db:      db,
+		apis:    apis,
+		m:       m,
+
+		bucketAllocator: &bucket.Random{},
 	}
 
 	l, err := f.env.Listen()
@@ -112,97 +121,72 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 		Queries("api-version", "{api-version}").
 		Subrouter()
 
-	s.Methods(http.MethodDelete).HandlerFunc(f.deleteOpenShiftCluster)
-	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftCluster)
-	s.Methods(http.MethodPatch).HandlerFunc(f.putOrPatchOpenShiftCluster)
-	s.Methods(http.MethodPut).HandlerFunc(f.putOrPatchOpenShiftCluster)
+	s.Methods(http.MethodDelete).HandlerFunc(f.deleteOpenShiftCluster).Name("deleteOpenShiftCluster")
+	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftCluster).Name("getOpenShiftCluster")
+	s.Methods(http.MethodPatch).HandlerFunc(f.putOrPatchOpenShiftCluster).Name("putOrPatchOpenShiftCluster")
+	s.Methods(http.MethodPut).HandlerFunc(f.putOrPatchOpenShiftCluster).Name("putOrPatchOpenShiftCluster")
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}").
 		Queries("api-version", "{api-version}").
 		Subrouter()
 
-	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftClusters)
+	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftClusters).Name("getOpenShiftClusters")
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/{resourceType}").
 		Queries("api-version", "{api-version}").
 		Subrouter()
 
-	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftClusters)
+	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftClusters).Name("getOpenShiftClusters")
 
 	s = r.
-		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/locations/{location}/operations/{operationId}").
+		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/locations/{location}/operationsstatus/{operationId}").
 		Queries("api-version", "{api-version}").
 		Subrouter()
 
-	s.Methods(http.MethodGet).HandlerFunc(f.getAsyncOperation)
+	s.Methods(http.MethodGet).HandlerFunc(f.getAsyncOperationsStatus).Name("getAsyncOperationsStatus")
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}/providers/{resourceProviderNamespace}/locations/{location}/operationresults/{operationId}").
 		Queries("api-version", "{api-version}").
 		Subrouter()
 
-	s.Methods(http.MethodGet).HandlerFunc(f.getAsyncOperationResult)
+	s.Methods(http.MethodGet).HandlerFunc(f.getAsyncOperationResult).Name("getAsyncOperationResult")
 
 	s = r.
-		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/listCredentials").
+		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/listcredentials").
 		Queries("api-version", "{api-version}").
 		Subrouter()
 
-	s.Methods(http.MethodPost).HandlerFunc(f.postOpenShiftClusterCredentials)
+	s.Methods(http.MethodPost).HandlerFunc(f.postOpenShiftClusterCredentials).Name("postOpenShiftClusterCredentials")
 
 	s = r.
 		Path("/providers/{resourceProviderNamespace}/operations").
 		Queries("api-version", "{api-version}").
 		Subrouter()
 
-	s.Methods(http.MethodGet).HandlerFunc(f.getOperations)
+	s.Methods(http.MethodGet).HandlerFunc(f.getOperations).Name("getOperations")
 
 	s = r.
 		Path("/subscriptions/{subscriptionId}").
 		Queries("api-version", "2.0").
 		Subrouter()
 
-	s.Methods(http.MethodPut).HandlerFunc(f.putSubscription)
+	s.Methods(http.MethodPut).HandlerFunc(f.putSubscription).Name("putSubscription")
 }
 
-func (f *frontend) Run(stop <-chan struct{}, done chan<- struct{}) {
-	defer recover.Panic(f.baseLog)
-
-	go func() {
-		defer recover.Panic(f.baseLog)
-
-		<-stop
-
-		// mark not ready and wait for ((#probes + 1) * interval + margin) to
-		// stop receiving new connections
-		f.baseLog.Print("marking not ready and waiting 20 seconds")
-		f.ready.Store(false)
-		time.Sleep(20 * time.Second)
-
-		// initiate server shutdown and wait for (longest connection timeout +
-		// margin) for connections to complete
-		f.baseLog.Print("shutting down and waiting up to 65 seconds")
-		ctx, cancel := context.WithTimeout(context.Background(), 65*time.Second)
-		defer cancel()
-
-		err := f.s.Shutdown(ctx)
-		if err != nil {
-			f.baseLog.Error(err)
-		}
-
-		close(done)
-	}()
-
+func (f *frontend) setupRouter() *mux.Router {
 	r := mux.NewRouter()
 	r.Use(middleware.Log(f.baseLog))
+	r.Use(middleware.Metrics(f.m))
 	r.Use(middleware.Panic)
 	r.Use(middleware.Headers(f.env))
-	r.Use(middleware.Validate(f.env))
+	r.Use(middleware.Validate(f.env, f.apis))
 	r.Use(middleware.Body)
 
 	r.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
 		api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeNotFound, "", "The requested path could not be found.")
 	})
 	r.NotFoundHandler = middleware.Authenticated(f.env)(r.NotFoundHandler)
@@ -214,12 +198,46 @@ func (f *frontend) Run(stop <-chan struct{}, done chan<- struct{}) {
 	authenticated.Use(middleware.Authenticated(f.env))
 	f.authenticatedRoutes(authenticated)
 
+	return r
+}
+
+func (f *frontend) Run(ctx context.Context, stop <-chan struct{}, done chan<- struct{}) {
+	defer recover.Panic(f.baseLog)
+
+	if stop != nil {
+		go func() {
+			defer recover.Panic(f.baseLog)
+
+			<-stop
+
+			// mark not ready and wait for ((#probes + 1) * interval + margin) to
+			// stop receiving new connections
+			f.baseLog.Print("marking not ready and waiting 20 seconds")
+			f.ready.Store(false)
+			time.Sleep(20 * time.Second)
+
+			// initiate server shutdown and wait for (longest connection timeout +
+			// margin) for connections to complete
+			f.baseLog.Print("shutting down and waiting up to 65 seconds")
+			ctx, cancel := context.WithTimeout(context.Background(), 65*time.Second)
+			defer cancel()
+
+			err := f.s.Shutdown(ctx)
+			if err != nil {
+				f.baseLog.Error(err)
+			}
+
+			close(done)
+		}()
+	}
+
 	f.s = &http.Server{
-		Handler:      middleware.Lowercase(r),
+		Handler:      middleware.Lowercase(f.setupRouter()),
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: time.Minute,
 		IdleTimeout:  2 * time.Minute,
 		ErrorLog:     log.New(f.baseLog.Writer(), "", 0),
+		BaseContext:  func(net.Listener) context.Context { return ctx },
 	}
 
 	err := f.s.Serve(f.l)

@@ -5,6 +5,7 @@
 package mock_database
 
 import (
+	context "context"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -37,48 +38,48 @@ func (m *MockAsyncOperations) EXPECT() *MockAsyncOperationsMockRecorder {
 }
 
 // Create mocks base method
-func (m *MockAsyncOperations) Create(arg0 *api.AsyncOperationDocument) (*api.AsyncOperationDocument, error) {
+func (m *MockAsyncOperations) Create(arg0 context.Context, arg1 *api.AsyncOperationDocument) (*api.AsyncOperationDocument, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", arg0)
+	ret := m.ctrl.Call(m, "Create", arg0, arg1)
 	ret0, _ := ret[0].(*api.AsyncOperationDocument)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Create indicates an expected call of Create
-func (mr *MockAsyncOperationsMockRecorder) Create(arg0 interface{}) *gomock.Call {
+func (mr *MockAsyncOperationsMockRecorder) Create(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockAsyncOperations)(nil).Create), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockAsyncOperations)(nil).Create), arg0, arg1)
 }
 
 // Get mocks base method
-func (m *MockAsyncOperations) Get(arg0 string) (*api.AsyncOperationDocument, error) {
+func (m *MockAsyncOperations) Get(arg0 context.Context, arg1 string) (*api.AsyncOperationDocument, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0)
+	ret := m.ctrl.Call(m, "Get", arg0, arg1)
 	ret0, _ := ret[0].(*api.AsyncOperationDocument)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get
-func (mr *MockAsyncOperationsMockRecorder) Get(arg0 interface{}) *gomock.Call {
+func (mr *MockAsyncOperationsMockRecorder) Get(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockAsyncOperations)(nil).Get), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockAsyncOperations)(nil).Get), arg0, arg1)
 }
 
 // Patch mocks base method
-func (m *MockAsyncOperations) Patch(arg0 string, arg1 func(*api.AsyncOperationDocument) error) (*api.AsyncOperationDocument, error) {
+func (m *MockAsyncOperations) Patch(arg0 context.Context, arg1 string, arg2 func(*api.AsyncOperationDocument) error) (*api.AsyncOperationDocument, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Patch", arg0, arg1)
+	ret := m.ctrl.Call(m, "Patch", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*api.AsyncOperationDocument)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Patch indicates an expected call of Patch
-func (mr *MockAsyncOperationsMockRecorder) Patch(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockAsyncOperationsMockRecorder) Patch(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Patch", reflect.TypeOf((*MockAsyncOperations)(nil).Patch), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Patch", reflect.TypeOf((*MockAsyncOperations)(nil).Patch), arg0, arg1, arg2)
 }
 
 // MockOpenShiftClusters is a mock of OpenShiftClusters interface
@@ -104,93 +105,122 @@ func (m *MockOpenShiftClusters) EXPECT() *MockOpenShiftClustersMockRecorder {
 	return m.recorder
 }
 
-// Create mocks base method
-func (m *MockOpenShiftClusters) Create(arg0 *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error) {
+// ChangeFeed mocks base method
+func (m *MockOpenShiftClusters) ChangeFeed() cosmosdb.OpenShiftClusterDocumentIterator {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", arg0)
+	ret := m.ctrl.Call(m, "ChangeFeed")
+	ret0, _ := ret[0].(cosmosdb.OpenShiftClusterDocumentIterator)
+	return ret0
+}
+
+// ChangeFeed indicates an expected call of ChangeFeed
+func (mr *MockOpenShiftClustersMockRecorder) ChangeFeed() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeFeed", reflect.TypeOf((*MockOpenShiftClusters)(nil).ChangeFeed))
+}
+
+// Create mocks base method
+func (m *MockOpenShiftClusters) Create(arg0 context.Context, arg1 *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", arg0, arg1)
 	ret0, _ := ret[0].(*api.OpenShiftClusterDocument)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Create indicates an expected call of Create
-func (mr *MockOpenShiftClustersMockRecorder) Create(arg0 interface{}) *gomock.Call {
+func (mr *MockOpenShiftClustersMockRecorder) Create(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockOpenShiftClusters)(nil).Create), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockOpenShiftClusters)(nil).Create), arg0, arg1)
 }
 
 // Delete mocks base method
-func (m *MockOpenShiftClusters) Delete(arg0 *api.OpenShiftClusterDocument) error {
+func (m *MockOpenShiftClusters) Delete(arg0 context.Context, arg1 *api.OpenShiftClusterDocument) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", arg0)
+	ret := m.ctrl.Call(m, "Delete", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete
-func (mr *MockOpenShiftClustersMockRecorder) Delete(arg0 interface{}) *gomock.Call {
+func (mr *MockOpenShiftClustersMockRecorder) Delete(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockOpenShiftClusters)(nil).Delete), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockOpenShiftClusters)(nil).Delete), arg0, arg1)
 }
 
 // Dequeue mocks base method
-func (m *MockOpenShiftClusters) Dequeue() (*api.OpenShiftClusterDocument, error) {
+func (m *MockOpenShiftClusters) Dequeue(arg0 context.Context) (*api.OpenShiftClusterDocument, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Dequeue")
+	ret := m.ctrl.Call(m, "Dequeue", arg0)
 	ret0, _ := ret[0].(*api.OpenShiftClusterDocument)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Dequeue indicates an expected call of Dequeue
-func (mr *MockOpenShiftClustersMockRecorder) Dequeue() *gomock.Call {
+func (mr *MockOpenShiftClustersMockRecorder) Dequeue(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Dequeue", reflect.TypeOf((*MockOpenShiftClusters)(nil).Dequeue))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Dequeue", reflect.TypeOf((*MockOpenShiftClusters)(nil).Dequeue), arg0)
 }
 
 // EndLease mocks base method
-func (m *MockOpenShiftClusters) EndLease(arg0 string, arg1, arg2 api.ProvisioningState) (*api.OpenShiftClusterDocument, error) {
+func (m *MockOpenShiftClusters) EndLease(arg0 context.Context, arg1 string, arg2, arg3 api.ProvisioningState) (*api.OpenShiftClusterDocument, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EndLease", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "EndLease", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(*api.OpenShiftClusterDocument)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // EndLease indicates an expected call of EndLease
-func (mr *MockOpenShiftClustersMockRecorder) EndLease(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockOpenShiftClustersMockRecorder) EndLease(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EndLease", reflect.TypeOf((*MockOpenShiftClusters)(nil).EndLease), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EndLease", reflect.TypeOf((*MockOpenShiftClusters)(nil).EndLease), arg0, arg1, arg2, arg3)
 }
 
 // Get mocks base method
-func (m *MockOpenShiftClusters) Get(arg0 string) (*api.OpenShiftClusterDocument, error) {
+func (m *MockOpenShiftClusters) Get(arg0 context.Context, arg1 string) (*api.OpenShiftClusterDocument, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0)
+	ret := m.ctrl.Call(m, "Get", arg0, arg1)
 	ret0, _ := ret[0].(*api.OpenShiftClusterDocument)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get
-func (mr *MockOpenShiftClustersMockRecorder) Get(arg0 interface{}) *gomock.Call {
+func (mr *MockOpenShiftClustersMockRecorder) Get(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockOpenShiftClusters)(nil).Get), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockOpenShiftClusters)(nil).Get), arg0, arg1)
 }
 
 // Lease mocks base method
-func (m *MockOpenShiftClusters) Lease(arg0 string) (*api.OpenShiftClusterDocument, error) {
+func (m *MockOpenShiftClusters) Lease(arg0 context.Context, arg1 string) (*api.OpenShiftClusterDocument, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Lease", arg0)
+	ret := m.ctrl.Call(m, "Lease", arg0, arg1)
 	ret0, _ := ret[0].(*api.OpenShiftClusterDocument)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Lease indicates an expected call of Lease
-func (mr *MockOpenShiftClustersMockRecorder) Lease(arg0 interface{}) *gomock.Call {
+func (mr *MockOpenShiftClustersMockRecorder) Lease(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Lease", reflect.TypeOf((*MockOpenShiftClusters)(nil).Lease), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Lease", reflect.TypeOf((*MockOpenShiftClusters)(nil).Lease), arg0, arg1)
+}
+
+// ListAll mocks base method
+func (m *MockOpenShiftClusters) ListAll(arg0 context.Context) (*api.OpenShiftClusterDocuments, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAll", arg0)
+	ret0, _ := ret[0].(*api.OpenShiftClusterDocuments)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListAll indicates an expected call of ListAll
+func (mr *MockOpenShiftClustersMockRecorder) ListAll(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAll", reflect.TypeOf((*MockOpenShiftClusters)(nil).ListAll), arg0)
 }
 
 // ListByPrefix mocks base method
@@ -209,33 +239,48 @@ func (mr *MockOpenShiftClustersMockRecorder) ListByPrefix(arg0, arg1 interface{}
 }
 
 // Patch mocks base method
-func (m *MockOpenShiftClusters) Patch(arg0 string, arg1 func(*api.OpenShiftClusterDocument) error) (*api.OpenShiftClusterDocument, error) {
+func (m *MockOpenShiftClusters) Patch(arg0 context.Context, arg1 string, arg2 func(*api.OpenShiftClusterDocument) error) (*api.OpenShiftClusterDocument, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Patch", arg0, arg1)
+	ret := m.ctrl.Call(m, "Patch", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*api.OpenShiftClusterDocument)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Patch indicates an expected call of Patch
-func (mr *MockOpenShiftClustersMockRecorder) Patch(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockOpenShiftClustersMockRecorder) Patch(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Patch", reflect.TypeOf((*MockOpenShiftClusters)(nil).Patch), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Patch", reflect.TypeOf((*MockOpenShiftClusters)(nil).Patch), arg0, arg1, arg2)
+}
+
+// PatchWithLease mocks base method
+func (m *MockOpenShiftClusters) PatchWithLease(arg0 context.Context, arg1 string, arg2 func(*api.OpenShiftClusterDocument) error) (*api.OpenShiftClusterDocument, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PatchWithLease", arg0, arg1, arg2)
+	ret0, _ := ret[0].(*api.OpenShiftClusterDocument)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// PatchWithLease indicates an expected call of PatchWithLease
+func (mr *MockOpenShiftClustersMockRecorder) PatchWithLease(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PatchWithLease", reflect.TypeOf((*MockOpenShiftClusters)(nil).PatchWithLease), arg0, arg1, arg2)
 }
 
 // Update mocks base method
-func (m *MockOpenShiftClusters) Update(arg0 *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error) {
+func (m *MockOpenShiftClusters) Update(arg0 context.Context, arg1 *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Update", arg0)
+	ret := m.ctrl.Call(m, "Update", arg0, arg1)
 	ret0, _ := ret[0].(*api.OpenShiftClusterDocument)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Update indicates an expected call of Update
-func (mr *MockOpenShiftClustersMockRecorder) Update(arg0 interface{}) *gomock.Call {
+func (mr *MockOpenShiftClustersMockRecorder) Update(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockOpenShiftClusters)(nil).Update), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockOpenShiftClusters)(nil).Update), arg0, arg1)
 }
 
 // MockSubscriptions is a mock of Subscriptions interface
@@ -262,91 +307,91 @@ func (m *MockSubscriptions) EXPECT() *MockSubscriptionsMockRecorder {
 }
 
 // Create mocks base method
-func (m *MockSubscriptions) Create(arg0 *api.SubscriptionDocument) (*api.SubscriptionDocument, error) {
+func (m *MockSubscriptions) Create(arg0 context.Context, arg1 *api.SubscriptionDocument) (*api.SubscriptionDocument, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", arg0)
+	ret := m.ctrl.Call(m, "Create", arg0, arg1)
 	ret0, _ := ret[0].(*api.SubscriptionDocument)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Create indicates an expected call of Create
-func (mr *MockSubscriptionsMockRecorder) Create(arg0 interface{}) *gomock.Call {
+func (mr *MockSubscriptionsMockRecorder) Create(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockSubscriptions)(nil).Create), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockSubscriptions)(nil).Create), arg0, arg1)
 }
 
 // Dequeue mocks base method
-func (m *MockSubscriptions) Dequeue() (*api.SubscriptionDocument, error) {
+func (m *MockSubscriptions) Dequeue(arg0 context.Context) (*api.SubscriptionDocument, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Dequeue")
+	ret := m.ctrl.Call(m, "Dequeue", arg0)
 	ret0, _ := ret[0].(*api.SubscriptionDocument)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Dequeue indicates an expected call of Dequeue
-func (mr *MockSubscriptionsMockRecorder) Dequeue() *gomock.Call {
+func (mr *MockSubscriptionsMockRecorder) Dequeue(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Dequeue", reflect.TypeOf((*MockSubscriptions)(nil).Dequeue))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Dequeue", reflect.TypeOf((*MockSubscriptions)(nil).Dequeue), arg0)
 }
 
 // EndLease mocks base method
-func (m *MockSubscriptions) EndLease(arg0 string, arg1, arg2 bool) (*api.SubscriptionDocument, error) {
+func (m *MockSubscriptions) EndLease(arg0 context.Context, arg1 string, arg2, arg3 bool) (*api.SubscriptionDocument, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EndLease", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "EndLease", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(*api.SubscriptionDocument)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // EndLease indicates an expected call of EndLease
-func (mr *MockSubscriptionsMockRecorder) EndLease(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockSubscriptionsMockRecorder) EndLease(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EndLease", reflect.TypeOf((*MockSubscriptions)(nil).EndLease), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EndLease", reflect.TypeOf((*MockSubscriptions)(nil).EndLease), arg0, arg1, arg2, arg3)
 }
 
 // Get mocks base method
-func (m *MockSubscriptions) Get(arg0 string) (*api.SubscriptionDocument, error) {
+func (m *MockSubscriptions) Get(arg0 context.Context, arg1 string) (*api.SubscriptionDocument, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0)
+	ret := m.ctrl.Call(m, "Get", arg0, arg1)
 	ret0, _ := ret[0].(*api.SubscriptionDocument)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get
-func (mr *MockSubscriptionsMockRecorder) Get(arg0 interface{}) *gomock.Call {
+func (mr *MockSubscriptionsMockRecorder) Get(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockSubscriptions)(nil).Get), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockSubscriptions)(nil).Get), arg0, arg1)
 }
 
 // Lease mocks base method
-func (m *MockSubscriptions) Lease(arg0 string) (*api.SubscriptionDocument, error) {
+func (m *MockSubscriptions) Lease(arg0 context.Context, arg1 string) (*api.SubscriptionDocument, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Lease", arg0)
+	ret := m.ctrl.Call(m, "Lease", arg0, arg1)
 	ret0, _ := ret[0].(*api.SubscriptionDocument)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Lease indicates an expected call of Lease
-func (mr *MockSubscriptionsMockRecorder) Lease(arg0 interface{}) *gomock.Call {
+func (mr *MockSubscriptionsMockRecorder) Lease(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Lease", reflect.TypeOf((*MockSubscriptions)(nil).Lease), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Lease", reflect.TypeOf((*MockSubscriptions)(nil).Lease), arg0, arg1)
 }
 
 // Update mocks base method
-func (m *MockSubscriptions) Update(arg0 *api.SubscriptionDocument) (*api.SubscriptionDocument, error) {
+func (m *MockSubscriptions) Update(arg0 context.Context, arg1 *api.SubscriptionDocument) (*api.SubscriptionDocument, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Update", arg0)
+	ret := m.ctrl.Call(m, "Update", arg0, arg1)
 	ret0, _ := ret[0].(*api.SubscriptionDocument)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Update indicates an expected call of Update
-func (mr *MockSubscriptionsMockRecorder) Update(arg0 interface{}) *gomock.Call {
+func (mr *MockSubscriptionsMockRecorder) Update(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockSubscriptions)(nil).Update), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockSubscriptions)(nil).Update), arg0, arg1)
 }

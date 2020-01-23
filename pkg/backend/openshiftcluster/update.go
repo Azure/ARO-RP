@@ -32,12 +32,7 @@ func find(xs interface{}, f func(int, int) bool) interface{} {
 }
 
 func (m *Manager) Update(ctx context.Context) error {
-	ip, err := m.privateendpoint.GetIP(ctx, m.doc)
-	if err != nil {
-		return err
-	}
-
-	restConfig, err := restconfig.RestConfig(ctx, m.env, m.doc, ip)
+	restConfig, err := restconfig.RestConfig(ctx, m.env, m.doc.OpenShiftCluster)
 	if err != nil {
 		return err
 	}

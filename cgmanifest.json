@@ -4,7 +4,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "e5804108aed715c49f731aab1a847f063fb23681",
+                    "commitHash": "b4cdc8d6eb508c4e74df26094d1adb678c87f818",
                     "repositoryUrl": "https://cloud.google.com/go/compute/metadata/"
                 }
             }
@@ -22,7 +22,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "21d4b01533b1005be0d020da67a6d3f8ebdf0141",
+                    "commitHash": "20a15b4e99645bc30a1cf8de518a6e8ac331c864",
                     "repositoryUrl": "https://github.com/Azure/go-autorest/"
                 }
             }
@@ -103,7 +103,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "fcbfc357f185c1d55e2c37626357ec92abd52286",
+                    "commitHash": "cd610ee76770524d9f1135bfdc241e1b60dfd00b",
                     "repositoryUrl": "https://github.com/aws/aws-sdk-go/"
                 }
             }
@@ -130,7 +130,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "8d6aff7314c17967af9b7eecf71fb6fd4d266bcd",
+                    "commitHash": "fc6792474f4ab346ffb6bc7cde35f95dbd04ce8e",
                     "repositoryUrl": "https://github.com/containers/storage/"
                 }
             }
@@ -328,7 +328,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "215e87163ea771ffa998a96c611387313bb5a403",
+                    "commitHash": "8c9f03a8e57eb486e42badaed3fb287da51807ba",
                     "repositoryUrl": "https://github.com/golang/groupcache/"
                 }
             }
@@ -382,7 +382,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "a06ca8757f510f228c85598a663f2a1ea361240c",
+                    "commitHash": "46fdd1830e9a58a60f7489b973ed3789a48cb1f1",
                     "repositoryUrl": "https://github.com/gophercloud/gophercloud/"
                 }
             }
@@ -391,7 +391,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "4533a07bd4928c54878134528d0dcdd27ff32bcb",
+                    "commitHash": "cb37ab634bffc7c150154d1a60192e926d2eddbf",
                     "repositoryUrl": "https://github.com/gophercloud/utils/"
                 }
             }
@@ -418,7 +418,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "5d89a846947107f9cc5db3eef66a14582da82e74",
+                    "commitHash": "691a7a9f56ae38b2109e491be76bc52175164cd7",
                     "repositoryUrl": "https://github.com/jim-minter/go-cosmosdb/"
                 }
             }
@@ -454,7 +454,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "17b3d80415252d99aa09c6717fea5f1f60a01ea5",
+                    "commitHash": "459b83aadb42b806aed42f0f4b3240c8834e0cc1",
                     "repositoryUrl": "https://github.com/klauspost/compress/"
                 }
             }
@@ -589,7 +589,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "b2432428689ca58c2b8e8dea9449d3295cf96fc9",
+                    "commitHash": "ce00817b8a3f5f0c7dfc5a50be6499b6b8c8c8b4",
                     "repositoryUrl": "https://github.com/mtrmac/gpgme/"
                 }
             }
@@ -643,7 +643,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "a9d30e86dcf08d5c0bd4c116529e80392d2552b9",
+                    "commitHash": "fa06f17ab6de64c341a4d7bbe58f0cb8265e6f9c",
                     "repositoryUrl": "https://github.com/openshift/cloud-credential-operator/"
                 }
             }
@@ -661,7 +661,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "b7fbd402f9729c4eea605a25e598fa734bc159e9",
+                    "commitHash": "1b09fd9e7156c5996ef674a4769dfbe4d85b2a19",
                     "repositoryUrl": "https://github.com/openshift/cluster-api-provider-gcp/"
                 }
             }
@@ -679,7 +679,16 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "50216919b0a22cb3bdde9e14b89d85c2f463ee0b",
+                    "commitHash": "cb47e810bee8c56f0738f0723c98cf3192ea7736",
+                    "repositoryUrl": "https://github.com/openshift/console-operator/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "b9fbbcca65a9419959977be586e290e215eb1c62",
                     "repositoryUrl": "https://github.com/openshift/installer/"
                 }
             }
@@ -688,7 +697,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "463c63d746da60d953060af0f9846d89d9521105",
+                    "commitHash": "a3345f5a437a8ca82be683c7c38fe49de64c2b5f",
                     "repositoryUrl": "https://github.com/openshift/machine-api-operator/"
                 }
             }
@@ -697,7 +706,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "23a6e6fb37e73501bc3216183ef5e6ebb15efc7a",
+                    "commitHash": "25bb6aeb58135c38a667e849edf5244871be4992",
                     "repositoryUrl": "https://github.com/openshift/machine-config-operator/"
                 }
             }
@@ -742,7 +751,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "d1d2010b5beead3fa1c5f271a5cf626e40b3ad6e",
+                    "commitHash": "7bc5445566f0fe75b15de23e6b93886e982d7bf9",
                     "repositoryUrl": "https://github.com/prometheus/client_model/"
                 }
             }
@@ -751,7 +760,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "287d3e634a1e550c9e463dd7e5a75a422c614505",
+                    "commitHash": "d978bcb1309602d68bb4ba69cf3f8ed900e07308",
                     "repositoryUrl": "https://github.com/prometheus/common/"
                 }
             }
@@ -859,7 +868,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "132d2879e1e95dadb805c26cd339344efd1a67c8",
+                    "commitHash": "c7e774b10ea04ad8fe5241e62ac4bf676c1d6b16",
                     "repositoryUrl": "https://go4.org/"
                 }
             }
@@ -868,7 +877,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "53104e6ec876ad4e22ad27cce588b01392043c1b",
+                    "commitHash": "530e935923ad688be97c15eeb8e5ee42ebf2b54a",
                     "repositoryUrl": "https://golang.org/x/crypto/"
                 }
             }
@@ -877,7 +886,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "c0dbc17a35534bf2e581d7a942408dc936316da4",
+                    "commitHash": "6afb5195e5aab057fda82e27171243402346b0ad",
                     "repositoryUrl": "https://golang.org/x/net/"
                 }
             }
@@ -886,7 +895,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "858c2ad4c8b6c5d10852cb89079f6ca1c7309787",
+                    "commitHash": "bf48bf16ab8d622ce64ec6ce98d2c98f916b6303",
                     "repositoryUrl": "https://golang.org/x/oauth2/"
                 }
             }
@@ -904,7 +913,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "04cbcbbfeed8aa0b2b010b2ddab558e9f717fd3e",
+                    "commitHash": "34d275377bf96a094e8d5b0c61750ddd54cd6b36",
                     "repositoryUrl": "https://golang.org/x/sys/"
                 }
             }
@@ -931,7 +940,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "2aa90c603ae35ab89ce30e45e49d870b7e5e7698",
+                    "commitHash": "dbc83e6dc05ede08439f32f7024b36e4e9e5b406",
                     "repositoryUrl": "https://golang.org/x/tools/"
                 }
             }
@@ -958,7 +967,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "f3c370f40bfba3cb25c5c2f823a1a8031b5ad724",
+                    "commitHash": "32f20d992d240fbca6ef7dec6c05d1f024314e02",
                     "repositoryUrl": "https://google.golang.org/genproto/"
                 }
             }
@@ -1030,7 +1039,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "b167779e8a836c2af8742c3b83d56fef2b2b4b59",
+                    "commitHash": "1f3b2931966858d724e363b2707cb87da322fd45",
                     "repositoryUrl": "https://github.com/kubernetes/client-go/"
                 }
             }
@@ -1084,7 +1093,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "da0de49f4edd053bc7840aa3c0d7f8dcd18cf6e6",
+                    "commitHash": "ffbc0f0cf8236f398ae48abffd662f01b0d1a876",
                     "repositoryUrl": "https://sigs.k8s.io/cluster-api-provider-openstack/"
                 }
             }

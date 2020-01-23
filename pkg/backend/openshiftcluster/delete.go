@@ -14,6 +14,8 @@ import (
 )
 
 func (m *Manager) Delete(ctx context.Context) error {
+	resourceGroup := m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID[strings.LastIndexByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')+1:]
+
 	m.log.Printf("deleting dns")
 	err := m.dns.Delete(ctx, m.doc.OpenShiftCluster)
 	if err != nil {
@@ -26,7 +28,7 @@ func (m *Manager) Delete(ctx context.Context) error {
 		m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID,
 	} {
 		// TODO: there is probably an undesirable race condition here - check if etags can help.
-		s, err := m.subnets.Get(ctx, subnetID)
+		s, err := m.subnet.Get(ctx, subnetID)
 		if err != nil {
 			m.log.Error(err)
 			continue
@@ -47,21 +49,11 @@ func (m *Manager) Delete(ctx context.Context) error {
 		s.SubnetPropertiesFormat.NetworkSecurityGroup = nil
 
 		m.log.Printf("removing network security group from subnet %s", subnetID)
-		err = m.subnets.CreateOrUpdate(ctx, subnetID, s)
+		err = m.subnet.CreateOrUpdate(ctx, subnetID, s)
 		if err != nil {
 			m.log.Error(err)
 			continue
 		}
-	}
-
-	_, err = m.groups.CheckExistence(ctx, m.doc.OpenShiftCluster.Properties.ResourceGroup)
-	if err != nil {
-		if err, ok := err.(autorest.DetailedError); ok {
-			if err.StatusCode == http.StatusForbidden {
-				return nil
-			}
-		}
-		return err
 	}
 
 	m.log.Print("deleting private endpoint")
@@ -70,6 +62,11 @@ func (m *Manager) Delete(ctx context.Context) error {
 		return err
 	}
 
-	m.log.Printf("deleting resource group %s", m.doc.OpenShiftCluster.Properties.ResourceGroup)
-	return m.groups.DeleteAndWait(ctx, m.doc.OpenShiftCluster.Properties.ResourceGroup)
+	m.log.Printf("deleting resource group %s", resourceGroup)
+	err = m.groups.DeleteAndWait(ctx, resourceGroup)
+	if detailedErr, ok := err.(autorest.DetailedError); ok &&
+		detailedErr.StatusCode == http.StatusForbidden {
+		err = nil
+	}
+	return err
 }

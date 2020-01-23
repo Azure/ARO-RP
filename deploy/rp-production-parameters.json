@@ -17,7 +17,22 @@
         "fpServicePrincipalId": {
             "value": ""
         },
-        "keyvaultName": {
+        "keyvaultPrefix": {
+            "value": ""
+        },
+        "mdmCertificate": {
+            "value": ""
+        },
+        "mdmFrontendUrl": {
+            "value": ""
+        },
+        "mdmMetricNamespace": {
+            "value": ""
+        },
+        "mdmMonitoringAccount": {
+            "value": ""
+        },
+        "mdmPrivateKey": {
             "value": ""
         },
         "pullSecret": {
@@ -33,6 +48,9 @@
             "value": ""
         },
         "sshPublicKey": {
+            "value": ""
+        },
+        "vmssDomainNameLabel": {
             "value": ""
         }
     }

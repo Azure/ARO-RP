@@ -4,6 +4,7 @@ package frontend
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -16,18 +17,19 @@ import (
 )
 
 func (f *frontend) getOpenShiftCluster(w http.ResponseWriter, r *http.Request) {
-	log := r.Context().Value(middleware.ContextKeyLog).(*logrus.Entry)
+	ctx := r.Context()
+	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	vars := mux.Vars(r)
 
-	b, err := f._getOpenShiftCluster(r, api.APIs[vars["api-version"]]["OpenShiftCluster"].(api.OpenShiftClusterToExternal))
+	b, err := f._getOpenShiftCluster(ctx, r, f.apis[vars["api-version"]].OpenShiftClusterConverter())
 
 	reply(log, w, nil, b, err)
 }
 
-func (f *frontend) _getOpenShiftCluster(r *http.Request, external api.OpenShiftClusterToExternal) ([]byte, error) {
+func (f *frontend) _getOpenShiftCluster(ctx context.Context, r *http.Request, converter api.OpenShiftClusterConverter) ([]byte, error) {
 	vars := mux.Vars(r)
 
-	doc, err := f.db.OpenShiftClusters.Get(r.URL.Path)
+	doc, err := f.db.OpenShiftClusters.Get(ctx, r.URL.Path)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
@@ -37,5 +39,5 @@ func (f *frontend) _getOpenShiftCluster(r *http.Request, external api.OpenShiftC
 
 	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 
-	return json.MarshalIndent(external.OpenShiftClusterToExternal(doc.OpenShiftCluster), "", "    ")
+	return json.MarshalIndent(converter.ToExternal(doc.OpenShiftCluster), "", "    ")
 }

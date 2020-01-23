@@ -49,6 +49,28 @@
         {
             "properties": {
                 "resource": {
+                    "id": "Monitors",
+                    "partitionKey": {
+                        "paths": [
+                            "/id"
+                        ],
+                        "kind": "Hash"
+                    },
+                    "defaultTtl": -1
+                },
+                "options": {}
+            },
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Monitors')]",
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2019-08-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]"
+            ]
+        },
+        {
+            "properties": {
+                "resource": {
                     "id": "OpenShiftClusters",
                     "partitionKey": {
                         "paths": [
@@ -61,6 +83,11 @@
                             {
                                 "paths": [
                                     "/key"
+                                ]
+                            },
+                            {
+                                "paths": [
+                                    "/clusterResourceGroupIdKey"
                                 ]
                             }
                         ]

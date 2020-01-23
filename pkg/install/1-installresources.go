@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net"
 	"reflect"
+	"strings"
 	"time"
 
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
@@ -24,6 +25,7 @@ import (
 	"github.com/openshift/installer/pkg/asset/ignition/machine"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -42,12 +44,14 @@ func (i *Installer) installResources(ctx context.Context) error {
 	installConfig := g[reflect.TypeOf(&installconfig.InstallConfig{})].(*installconfig.InstallConfig)
 	machineMaster := g[reflect.TypeOf(&machine.Master{})].(*machine.Master)
 
+	resourceGroup := i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID[strings.LastIndexByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')+1:]
+
 	vnetID, _, err := subnet.Split(i.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return err
 	}
 
-	masterSubnet, err := i.subnets.Get(ctx, i.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
+	masterSubnet, err := i.subnet.Get(ctx, i.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return err
 	}
@@ -264,15 +268,6 @@ func (i *Installer) installResources(ctx context.Context) error {
 					DependsOn: []string{
 						"Microsoft.Network/loadBalancers/aro-internal-lb",
 					},
-				},
-				{
-					// TODO: upstream doesn't appear to wire this in to any vnet - investigate.
-					Resource: &mgmtnetwork.RouteTable{
-						Name:     to.StringPtr("aro-node-routetable"),
-						Type:     to.StringPtr("Microsoft.Network/routeTables"),
-						Location: &installConfig.Config.Azure.Region,
-					},
-					APIVersion: apiVersions["network"],
 				},
 				{
 					Resource: &mgmtnetwork.PublicIPAddress{
@@ -633,7 +628,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 		}
 
 		i.log.Print("deploying resources template")
-		err = i.deployments.CreateOrUpdateAndWait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy", mgmtresources.Deployment{
+		err = i.deployments.CreateOrUpdateAndWait(ctx, resourceGroup, "azuredeploy", mgmtresources.Deployment{
 			Properties: &mgmtresources.DeploymentProperties{
 				Template: t,
 				Parameters: map[string]interface{}{
@@ -652,12 +647,12 @@ func (i *Installer) installResources(ctx context.Context) error {
 			},
 		})
 		if err != nil {
-			if detailedError, ok := err.(autorest.DetailedError); ok {
-				if requestError, ok := detailedError.Original.(azure.RequestError); ok &&
-					requestError.ServiceError != nil &&
-					requestError.ServiceError.Code == "DeploymentActive" {
+			if detailedErr, ok := err.(autorest.DetailedError); ok {
+				if requestErr, ok := detailedErr.Original.(azure.RequestError); ok &&
+					requestErr.ServiceError != nil &&
+					requestErr.ServiceError.Code == "DeploymentActive" {
 					i.log.Print("waiting for resources template")
-					err = i.deployments.Wait(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "azuredeploy")
+					err = i.deployments.Wait(ctx, resourceGroup, "azuredeploy")
 				}
 			}
 			if err != nil {
@@ -678,7 +673,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 		ipAddress := lbIP.String()
 
 		if i.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {
-			ip, err := i.publicipaddresses.Get(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "aro-pip", "")
+			ip, err := i.publicipaddresses.Get(ctx, resourceGroup, "aro-pip", "")
 			if err != nil {
 				return err
 			}
@@ -691,7 +686,13 @@ func (i *Installer) installResources(ctx context.Context) error {
 			return err
 		}
 
-		i.doc, err = i.db.Patch(i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		privateEndpointIP, err := i.privateendpoint.GetIP(ctx, i.doc)
+		if err != nil {
+			return err
+		}
+
+		i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+			doc.OpenShiftCluster.Properties.NetworkProfile.PrivateEndpointIP = privateEndpointIP
 			doc.OpenShiftCluster.Properties.APIServerProfile.IP = ipAddress
 			return nil
 		})
@@ -701,12 +702,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 	}
 
 	{
-		ip, err := i.privateendpoint.GetIP(ctx, i.doc)
-		if err != nil {
-			return err
-		}
-
-		restConfig, err := restconfig.RestConfig(ctx, i.env, i.doc, ip)
+		restConfig, err := restconfig.RestConfig(ctx, i.env, i.doc.OpenShiftCluster)
 		if err != nil {
 			return err
 		}
@@ -717,20 +713,15 @@ func (i *Installer) installResources(ctx context.Context) error {
 		}
 
 		i.log.Print("waiting for bootstrap configmap")
-		now := time.Now()
-		t := time.NewTicker(10 * time.Second)
-		defer t.Stop()
-		for {
+		timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
+		defer cancel()
+		err = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 			cm, err := cli.CoreV1().ConfigMaps("kube-system").Get("bootstrap", metav1.GetOptions{})
-			if err == nil && cm.Data["status"] == "complete" {
-				break
-			}
+			return err == nil && cm.Data["status"] == "complete", nil
 
-			if time.Now().Sub(now) > 30*time.Minute {
-				return fmt.Errorf("timed out waiting for bootstrap configmap. Last error: %v", err)
-			}
-
-			<-t.C
+		}, timeoutCtx.Done())
+		if err != nil {
+			return err
 		}
 	}
 

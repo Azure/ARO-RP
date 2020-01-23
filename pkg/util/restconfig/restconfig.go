@@ -16,8 +16,8 @@ import (
 )
 
 // RestConfig returns the Kubernetes *rest.Config for a kubeconfig
-func RestConfig(ctx context.Context, env env.Interface, doc *api.OpenShiftClusterDocument, ip string) (*rest.Config, error) {
-	config, err := clientcmd.Load(doc.OpenShiftCluster.Properties.AdminKubeconfig)
+func RestConfig(ctx context.Context, env env.Interface, oc *api.OpenShiftCluster) (*rest.Config, error) {
+	config, err := clientcmd.Load(oc.Properties.AdminKubeconfig)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +37,7 @@ func RestConfig(ctx context.Context, env env.Interface, doc *api.OpenShiftCluste
 			return nil, err
 		}
 
-		return env.DialContext(ctx, network, ip+":"+port)
+		return env.DialContext(ctx, network, oc.Properties.NetworkProfile.PrivateEndpointIP+":"+port)
 	}
 
 	return restconfig, nil
