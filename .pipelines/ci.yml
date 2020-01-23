@@ -5,26 +5,12 @@ trigger:
 pool:
   vmImage: 'ubuntu-latest'
 
-steps:
+steps: 
+- task: GoTool@0
+  inputs:
+    version: '1.13.5'
 - script: |
-    wget "https://storage.googleapis.com/golang/go1.13.6.linux-amd64.tar.gz"
-    tar -xvf go1.13.6.linux-amd64.tar.gz
-    sudo mv go /usr/local
-    export GOROOT=/usr/local/go
-    # export GOPATH=$(Agent.BuildDirectory)
-    # export PATH=$GOPATH/bin:$GOROOT/bin:$PATH
-    echo '##vso[task.prependpath]$(GOBIN)'
-    echo '##vso[task.prependpath]$(GOROOT)/bin'
     go version
-  displayName: 'Install Go 1.13'
-
-- script: |
-    sudo add-apt-repository ppa:kubuntu-ppa/backports
-    sudo apt-get update
-    sudo apt-get install libgpgme-dev gcc -y
-  displayName: 'Install packages'
-
-- script: |
     export
     pwd
     go env
@@ -32,4 +18,4 @@ steps:
     make test-go
     [[ -z "$(git status -s)" ]]
   workingDirectory: '$(modulePath)'
-  displayName: 'Test'
+  displayName: 'Build'
