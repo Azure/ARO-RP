@@ -47,3 +47,4 @@ jobs:
       pip install virtualenv
       make test-python
     displayName: '🧪Run Unit Tests : $(python.version)'
+    workingDirectory: '$(modulePath)'
