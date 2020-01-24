@@ -5,14 +5,14 @@ parameters:
   modulePath: $(modulePath)
 steps:
 - script: |
-    mkdir -p '$(GOBIN)'
-    mkdir -p '$(GOPATH)/pkg'
-    mkdir -p '$(modulePath)'
+    mkdir -p '${{ parameters.GOBIN}}'
+    mkdir -p '${{ parameters.GOPATH}}/pkg'
+    mkdir -p '${{ parameters.modulePath}}'
     shopt -s extglob
     shopt -s dotglob
-    mv !(gopath) '$(modulePath)'
-    echo '##vso[task.prependpath]$(GOBIN)'
-    echo '##vso[task.prependpath]$(GOROOT)/bin'
+    mv !(gopath) '${{ parameters.modulePath}}'
+    echo '##vso[task.prependpath]${{ parameters.GOBIN}}'
+    echo '##vso[task.prependpath]${{ parameters.GOROOT}}/bin'
     go version
     sudo add-apt-repository ppa:kubuntu-ppa/backports
     sudo apt-get update
