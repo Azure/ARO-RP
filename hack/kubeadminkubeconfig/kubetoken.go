@@ -46,13 +46,18 @@ func getAuthorizedToken(tokenURL *url.URL, username, password string) (string, e
 	req.SetBasicAuth(username, password)
 	req.Header.Add("X-CSRF-Token", "1")
 
-	resp, err := (&http.Client{
+	cli := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,
 			},
 		},
-		CheckRedirect: func(req *http.Request, via []*http.Request) error { return http.ErrUseLastResponse }}).Do(req)
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	resp, err := cli.Do(req)
 	if err != nil {
 		return "", err
 	}
