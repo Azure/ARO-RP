@@ -27,6 +27,11 @@ jobs:
     inputs:
       versionSpec: '$(python.version)'
   - template: ./templates/template-setup-golang-env.yml
+    parameters:
+      gobin: ${{ variables.GOBIN }}
+      gopath: ${{ variables.GOPATH }}
+      goroot: ${{ variables.GOROOT }}
+      modulePath: ${{ variables.modulePath }}
   - script: |
       export
       set -x
@@ -41,6 +46,11 @@ jobs:
 
   steps:
   - template: ./templates/template-setup-golang-env.yml
+    parameters:
+      gobin: ${{ variables.GOBIN }}
+      gopath: ${{ variables.GOPATH }}
+      goroot: ${{ variables.GOROOT }}
+      modulePath: ${{ variables.modulePath }}
   - script: |
       set -x
       make test-go
