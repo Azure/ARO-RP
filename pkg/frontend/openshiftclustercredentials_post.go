@@ -51,7 +51,10 @@ func (f *frontend) _postOpenShiftClusterCredentials(ctx context.Context, r *http
 		return nil, err
 	}
 
-	if doc.OpenShiftCluster.Properties.ProvisioningState == api.ProvisioningStateCreating {
+	if doc.OpenShiftCluster.Properties.ProvisioningState == api.ProvisioningStateCreating ||
+		doc.OpenShiftCluster.Properties.ProvisioningState == api.ProvisioningStateDeleting ||
+		doc.OpenShiftCluster.Properties.ProvisioningState == api.ProvisioningStateFailed && doc.OpenShiftCluster.Properties.FailedProvisioningState == api.ProvisioningStateCreating ||
+		doc.OpenShiftCluster.Properties.ProvisioningState == api.ProvisioningStateFailed && doc.OpenShiftCluster.Properties.FailedProvisioningState == api.ProvisioningStateDeleting {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed in provisioningState '%s'.", doc.OpenShiftCluster.Properties.ProvisioningState)
 	}
 
