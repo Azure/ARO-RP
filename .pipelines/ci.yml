@@ -3,10 +3,7 @@ trigger:
   - master
 
 variables:
-  GOBIN:  '$(GOPATH)/bin' # Go binaries path
-  GOROOT: '/usr/local/go1.13' # Go installation path
-  GOPATH: '$(system.defaultWorkingDirectory)/gopath' # Go workspace path
-  modulePath: '$(GOPATH)/src/github.com/Azure/ARO-RP' # Path to the module's code
+- template: vars.yml
   
 jobs:
 - job: 'Python_Unit_Tests'
@@ -30,18 +27,13 @@ jobs:
     inputs:
       versionSpec: '$(python.version)'
   - template: ./templates/template-setup-golang-env.yml
-    parameters:
-      GOBIN: $(GOBIN)
-      GOROOT: $(GOROOT)
-      GOPATH: $(GOPATH)
-      modulePath: $(modulePath)
   - script: |
       export
       set -x
       pip install virtualenv
       make test-python
     displayName: '🧪Run Python Unit Tests : $(python.version)'
-    workingDirectory: '$(modulePath)'
+    workingDirectory: '${{ variables.modulePath }}'
 
 - job: 'Golang_Unit_Tests'
   pool:
@@ -49,11 +41,6 @@ jobs:
 
   steps:
   - template: ./templates/template-setup-golang-env.yml
-    parameters:
-      GOBIN: $(GOBIN)
-      GOROOT: $(GOROOT)
-      GOPATH: $(GOPATH)
-      modulePath: $(modulePath)
   - script: |
       set -x
       make test-go
@@ -63,5 +50,5 @@ jobs:
       gocov-xml < coverage.json > coverage.xml
       mkdir coverage
       gocov-html < coverage.json > coverage/index.html
-    workingDirectory: '$(modulePath)'
+    workingDirectory: '${{ variables.modulePath }}'
     displayName: '🧪Run Golang Unit Tests'

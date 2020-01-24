@@ -1,18 +1,13 @@
-parameters:
-  GOBIN: $(GOBIN)
-  GOROOT: $(GOROOT)
-  GOPATH: $(GOPATH)
-  modulePath: $(modulePath)
 steps:
 - script: |
-    mkdir -p '${{ parameters.GOBIN}}'
-    mkdir -p '${{ parameters.GOPATH}}/pkg'
-    mkdir -p '${{ parameters.modulePath}}'
+    mkdir -p '${{ variables.GOBIN }}'
+    mkdir -p '${{ variables.GOPATH }}/pkg'
+    mkdir -p '${{ variables.modulePath }}'
     shopt -s extglob
     shopt -s dotglob
-    mv !(gopath) '${{ parameters.modulePath}}'
-    echo '##vso[task.prependpath]${{ parameters.GOBIN}}'
-    echo '##vso[task.prependpath]${{ parameters.GOROOT}}/bin'
+    mv !(gopath) '${{ variables.modulePath }}'
+    echo '##vso[task.prependpath]${{ variables.GOBIN }}'
+    echo '##vso[task.prependpath]${{ variables.GOROOT }}/bin'
     go version
     go get github.com/jstemmer/go-junit-report
     go get github.com/axw/gocov/gocov
