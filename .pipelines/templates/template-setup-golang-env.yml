@@ -5,6 +5,11 @@ parameters:
   modulePath: ''
 steps:
 - script: |
+    export
+    echo ${{ parameters.gobin }}
+    echo ${{ parameters.gopath }}
+    echo ${{ parameters.modulePath }}
+    echo ${{ parameters.goroot }}
     mkdir -p '${{ parameters.gobin }}'
     mkdir -p '${{ parameters.gopath }}/pkg'
     mkdir -p '${{ parameters.modulePath }}'
@@ -13,6 +18,7 @@ steps:
     mv !(gopath) '${{ parameters.modulePath }}'
     echo '##vso[task.prependpath]${{ parameters.gobin }}'
     echo '##vso[task.prependpath]${{ parameters.goroot }}/bin'
+    export
     go version
     go get github.com/jstemmer/go-junit-report
     go get github.com/axw/gocov/gocov
