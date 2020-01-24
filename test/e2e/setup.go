@@ -57,8 +57,9 @@ func newClientSet() (*ClientSet, error) {
 var _ = BeforeSuite(func() {
 	Log.Info("BeforeSuite")
 	for _, key := range []string{
-		"AZURE_SUBSCRIPTION_ID", "AZURE_TENANT_ID", "AZURE_CLIENT_ID", "AZURE_CLIENT_SECRET",
-		"CLUSTER", "RESOURCEGROUP",
+		"AZURE_SUBSCRIPTION_ID",
+		"CLUSTER",
+		"RESOURCEGROUP",
 	} {
 		if _, found := os.LookupEnv(key); !found {
 			panic(fmt.Sprintf("environment variable %q unset", key))
