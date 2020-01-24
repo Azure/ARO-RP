@@ -16,8 +16,8 @@ steps:
     shopt -s extglob
     shopt -s dotglob
     mv !(gopath) '${{ parameters.modulePath }}'
-    export PATH=$PATH:${{ parameters.gobin }}
-    export PATH=$PATH:${{ parameters.goroot }}/bin
+    export PATH=${{ parameters.gobin }}:$PATH
+    export PATH=${{ parameters.goroot }}/bin:$PATH
     echo "$PATH"
     export
     go version
