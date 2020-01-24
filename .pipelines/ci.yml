@@ -33,7 +33,6 @@ jobs:
           goroot: ${{ variables.GOROOT }}
           modulePath: ${{ variables.modulePath }}
       - script: |
-          export
           set -x
           pip install virtualenv
           make test-python
@@ -58,19 +57,16 @@ jobs:
           bash -c 'go-junit-report < uts.txt > report.xml'
           bash -c 'gocov convert cover.out > coverage.json'
           bash -c 'gocov-xml < coverage.json > coverage.xml'
-          ls -la
-          cat report.xml
-          pwd
         workingDirectory: "${{ variables.modulePath }}"
         displayName: "🧪Run Golang Unit Tests"
       - task: PublishTestResults@2
-        displayName: "🚀 Publish tests results"
+        displayName: "📊 Publish tests results"
         inputs:
           testResultsFiles: $(System.DefaultWorkingDirectory)/**/report.xml
         condition: succeededOrFailed()
 
       - task: PublishCodeCoverageResults@1
-        displayName: "🚀 Publish code coverage"
+        displayName: "📈 Publish code coverage"
         inputs:
           codeCoverageTool: Cobertura
           summaryFileLocation: "$(System.DefaultWorkingDirectory)/**/coverage.xml"
