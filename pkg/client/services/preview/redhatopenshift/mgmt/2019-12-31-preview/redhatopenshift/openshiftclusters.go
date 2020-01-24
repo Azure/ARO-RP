@@ -37,7 +37,9 @@ func NewOpenShiftClustersClient(subscriptionID string) OpenShiftClustersClient {
 	return NewOpenShiftClustersClientWithBaseURI(DefaultBaseURI, subscriptionID)
 }
 
-// NewOpenShiftClustersClientWithBaseURI creates an instance of the OpenShiftClustersClient client.
+// NewOpenShiftClustersClientWithBaseURI creates an instance of the OpenShiftClustersClient client using a custom
+// endpoint.  Use this when interacting with an Azure cloud that uses a non-standard base URI (sovereign clouds, Azure
+// stack).
 func NewOpenShiftClustersClientWithBaseURI(baseURI string, subscriptionID string) OpenShiftClustersClient {
 	return OpenShiftClustersClient{NewWithBaseURI(baseURI, subscriptionID)}
 }

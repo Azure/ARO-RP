@@ -441,6 +441,30 @@
         }
       }
     },
+    "ClusterProfile": {
+      "properties": {
+        "domain": {
+          "description": "The domain for the cluster (immutable).",
+          "type": "string"
+        },
+        "version": {
+          "description": "The version of the cluster (immutable).",
+          "type": "string"
+        },
+        "resourceGroupId": {
+          "description": "The ID of the cluster resource group (immutable).",
+          "type": "string"
+        }
+      }
+    },
+    "ConsoleProfile": {
+      "properties": {
+        "url": {
+          "description": "The URL to access the cluster console (immutable).",
+          "type": "string"
+        }
+      }
+    },
     "Display": {
       "description": "Display represents the display details of an operation.",
       "properties": {
@@ -597,9 +621,13 @@
           "$ref": "#/definitions/ProvisioningState",
           "description": "The cluster provisioning state (immutable)."
         },
-        "clusterDomain": {
-          "description": "The domain for the cluster (immutable).",
-          "type": "string"
+        "clusterProfile": {
+          "$ref": "#/definitions/ClusterProfile",
+          "description": "The cluster profile."
+        },
+        "consoleProfile": {
+          "$ref": "#/definitions/ConsoleProfile",
+          "description": "The console profile."
         },
         "servicePrincipalProfile": {
           "$ref": "#/definitions/ServicePrincipalProfile",
@@ -630,10 +658,6 @@
           "items": {
             "$ref": "#/definitions/IngressProfile"
           }
-        },
-        "consoleUrl": {
-          "description": "The URL to access the cluster console (immutable).",
-          "type": "string"
         }
       }
     },

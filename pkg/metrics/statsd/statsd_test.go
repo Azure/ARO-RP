@@ -1,0 +1,60 @@
+package statsd
+
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
+import (
+	"bytes"
+	"testing"
+	"time"
+
+	"github.com/Azure/ARO-RP/pkg/env"
+)
+
+type writeCloser struct {
+	*bytes.Buffer
+}
+
+func (c *writeCloser) Close() error { return nil }
+
+func TestEmitGauge(t *testing.T) {
+	wc := &writeCloser{Buffer: &bytes.Buffer{}}
+
+	s := &statsd{
+		env: &env.Test{
+			TestLocation: "eastus",
+		},
+		conn: wc,
+		now:  func() time.Time { return time.Time{} },
+	}
+
+	err := s.EmitGauge("tests.test_key", 42, map[string]string{"key": "value"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if wc.String() != `{"Metric":"tests.test_key","Account":"*","Namespace":"*","Dims":{"hostname":"","key":"value","location":"eastus"},"TS":"0001-01-01T00:00:00.000"}:42|g`+"\n" {
+		t.Error(wc.String())
+	}
+}
+
+func TestEmitFloat(t *testing.T) {
+	wc := &writeCloser{Buffer: &bytes.Buffer{}}
+
+	s := &statsd{
+		env: &env.Test{
+			TestLocation: "eastus",
+		},
+		conn: wc,
+		now:  func() time.Time { return time.Time{} },
+	}
+
+	err := s.EmitFloat("tests.test_key", 5, map[string]string{"key": "value"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if wc.String() != `{"Metric":"tests.test_key","Account":"*","Namespace":"*","Dims":{"hostname":"","key":"value","location":"eastus"},"TS":"0001-01-01T00:00:00.000"}:5.000000|f`+"\n" {
+		t.Error(wc.String())
+	}
+}

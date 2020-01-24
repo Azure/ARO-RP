@@ -26,7 +26,7 @@ against a development RP running at https://localhost:8443/.
 
    ```
    git clone https://github.com/Azure/ARO-RP
-   cd rp
+   cd ARO-RP
    ```
 
    Note: you will be able to update the `az aro` extension in the future by
@@ -61,11 +61,12 @@ against a development RP running at https://localhost:8443/.
 
 ## Registering the resource provider
 
-If using the pre-GA Azure Red Hat OpenShift v4 service with a whitelisted
-subscription, ensure that the `Microsoft.RedHatOpenShift` resource provider is
-registered:
+If using the pre-GA Azure Red Hat OpenShift v4 service, ensure that the
+`Microsoft.RedHatOpenShift/preview` feature is registered and that the
+`Microsoft.RedHatOpenShift` resource provider is registered:
 
 ```
+az feature register --namespace Microsoft.RedHatOpenShift --name preview
 az provider register -n Microsoft.RedHatOpenShift --wait
 ```
 

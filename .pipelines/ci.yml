@@ -1,0 +1,79 @@
+# Azure DevOps Pipeline running CI
+trigger:
+  - master
+
+variables:
+  - template: vars.yml
+
+jobs:
+  - job: "Python_Unit_Tests"
+    pool:
+      vmImage: "ubuntu-latest"
+    strategy:
+      matrix:
+        Python27:
+          python.version: "2.7.17"
+        Python35:
+          python.version: "3.5.9"
+        Python36:
+          python.version: "3.6.10"
+        Python37:
+          python.version: "3.7.6"
+        Python38:
+          python.version: "3.8.1"
+
+    steps:
+      - task: UsePythonVersion@0
+        inputs:
+          versionSpec: "$(python.version)"
+      - template: ./templates/template-setup-golang-env.yml
+        parameters:
+          gobin: ${{ variables.GOBIN }}
+          gopath: ${{ variables.GOPATH }}
+          goroot: ${{ variables.GOROOT }}
+          modulePath: ${{ variables.modulePath }}
+      - script: |
+          export
+          set -x
+          pip install virtualenv
+          make test-python
+        displayName: "🧪Run Python Unit Tests : $(python.version)"
+        workingDirectory: "${{ variables.modulePath }}"
+
+  - job: "Golang_Unit_Tests"
+    pool:
+      vmImage: "ubuntu-latest"
+
+    steps:
+      - template: ./templates/template-setup-golang-env.yml
+        parameters:
+          gobin: ${{ variables.GOBIN }}
+          gopath: ${{ variables.GOPATH }}
+          goroot: ${{ variables.GOROOT }}
+          modulePath: ${{ variables.modulePath }}
+      - script: |
+          set -x
+          make test-go
+          [[ -z "$(git status -s)" ]]
+          bash -c 'go-junit-report < uts.txt > report.xml'
+          bash -c 'gocov convert cover.out > coverage.json'
+          bash -c 'gocov-xml < coverage.json > coverage.xml'
+          ls -la
+          cat report.xml
+          pwd
+        workingDirectory: "${{ variables.modulePath }}"
+        displayName: "🧪Run Golang Unit Tests"
+      - task: PublishTestResults@2
+        displayName: "🚀 Publish tests results"
+        inputs:
+          testResultsFiles: $(System.DefaultWorkingDirectory)/**/report.xml
+        condition: succeededOrFailed()
+
+      - task: PublishCodeCoverageResults@1
+        displayName: "🚀 Publish code coverage"
+        inputs:
+          codeCoverageTool: Cobertura
+          summaryFileLocation: "$(System.DefaultWorkingDirectory)/**/coverage.xml"
+          reportDirectory: "$(System.DefaultWorkingDirectory)/**/coverage"
+          failIfCoverageEmpty: false
+        condition: succeededOrFailed()

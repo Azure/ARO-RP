@@ -78,3 +78,18 @@ func (mr *MockAccountsClientMockRecorder) ListByResourceGroup(arg0, arg1 interfa
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByResourceGroup", reflect.TypeOf((*MockAccountsClient)(nil).ListByResourceGroup), arg0, arg1)
 }
+
+// ListKeys mocks base method
+func (m *MockAccountsClient) ListKeys(arg0 context.Context, arg1, arg2 string, arg3 storage.ListKeyExpand) (storage.AccountListKeysResult, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListKeys", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(storage.AccountListKeysResult)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListKeys indicates an expected call of ListKeys
+func (mr *MockAccountsClientMockRecorder) ListKeys(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListKeys", reflect.TypeOf((*MockAccountsClient)(nil).ListKeys), arg0, arg1, arg2, arg3)
+}

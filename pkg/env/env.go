@@ -22,13 +22,16 @@ type Interface interface {
 	clientauthorizer.ClientAuthorizer
 	instancemetadata.InstanceMetadata
 
+	ClustersKeyvaultURI() string
 	CosmosDB() (string, string)
 	DatabaseName() string
 	DialContext(context.Context, string, string) (net.Conn, error)
 	Domain() string
 	FPAuthorizer(string, string) (autorest.Authorizer, error)
 	GetSecret(context.Context, string) (*rsa.PrivateKey, []*x509.Certificate, error)
+	ManagedDomain(string) (string, error)
 	Listen() (net.Listener, error)
+	VnetName() string
 	Zones(vmSize string) ([]string, error)
 }
 

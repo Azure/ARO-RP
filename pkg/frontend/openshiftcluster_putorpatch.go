@@ -4,10 +4,12 @@ package frontend
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/gorilla/mux"
@@ -20,30 +22,30 @@ import (
 )
 
 func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Request) {
-	log := r.Context().Value(middleware.ContextKeyLog).(*logrus.Entry)
+	ctx := r.Context()
+	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	vars := mux.Vars(r)
 
 	var header http.Header
 	var b []byte
 	err := cosmosdb.RetryOnPreconditionFailed(func() error {
 		var err error
-		b, err = f._putOrPatchOpenShiftCluster(r, &header, api.APIs[vars["api-version"]]["OpenShiftCluster"].(api.OpenShiftClusterToInternal), api.APIs[vars["api-version"]]["OpenShiftCluster"].(api.OpenShiftClusterToExternal))
+		b, err = f._putOrPatchOpenShiftCluster(ctx, r, &header, f.apis[vars["api-version"]].OpenShiftClusterConverter(), f.apis[vars["api-version"]].OpenShiftClusterValidator(f.env, r.URL.Path))
 		return err
 	})
 
 	reply(log, w, header, b, err)
 }
 
-func (f *frontend) _putOrPatchOpenShiftCluster(r *http.Request, header *http.Header, internal api.OpenShiftClusterToInternal, external api.OpenShiftClusterToExternal) ([]byte, error) {
-	vars := mux.Vars(r)
+func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Request, header *http.Header, converter api.OpenShiftClusterConverter, validator api.OpenShiftClusterValidator) ([]byte, error) {
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 
-	subdoc, err := f.validateSubscriptionState(r.URL.Path, api.SubscriptionStateRegistered)
+	subdoc, err := f.validateSubscriptionState(ctx, r.URL.Path, api.SubscriptionStateRegistered)
 	if err != nil {
 		return nil, err
 	}
 
-	doc, err := f.db.OpenShiftClusters.Get(r.URL.Path)
+	doc, err := f.db.OpenShiftClusters.Get(ctx, r.URL.Path)
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil, err
 	}
@@ -66,8 +68,6 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *http.Request, header *http.Hea
 				Type: originalR.Provider + "/" + originalR.ResourceType,
 				Properties: api.Properties{
 					ProvisioningState: api.ProvisioningStateSucceeded,
-					// TODO: ResourceGroup should be exposed in external API
-					ResourceGroup: vars["resourceName"],
 					ServicePrincipalProfile: api.ServicePrincipalProfile{
 						TenantID: subdoc.Subscription.Properties.TenantID,
 					},
@@ -86,7 +86,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *http.Request, header *http.Hea
 		case api.ProvisioningStateCreating:
 			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed on cluster whose creation failed. Delete the cluster.")
 		case api.ProvisioningStateUpdating:
-			// allow
+			doc.OpenShiftCluster.Properties.FailedProvisioningState = "" // allow
 		case api.ProvisioningStateDeleting:
 			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed on cluster whose deletion failed. Delete the cluster.")
 		default:
@@ -97,7 +97,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *http.Request, header *http.Hea
 	var ext interface{}
 	switch r.Method {
 	case http.MethodPut:
-		ext = external.OpenShiftClusterToExternal(&api.OpenShiftCluster{
+		ext = converter.ToExternal(&api.OpenShiftCluster{
 			ID:   doc.OpenShiftCluster.ID,
 			Name: doc.OpenShiftCluster.Name,
 			Type: doc.OpenShiftCluster.Type,
@@ -107,7 +107,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *http.Request, header *http.Hea
 		})
 
 	case http.MethodPatch:
-		ext = external.OpenShiftClusterToExternal(doc.OpenShiftCluster)
+		ext = converter.ToExternal(doc.OpenShiftCluster)
 	}
 
 	err = json.Unmarshal(body, &ext)
@@ -116,31 +116,39 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *http.Request, header *http.Hea
 	}
 
 	if isCreate {
-		err = internal.ValidateOpenShiftCluster(f.env.Location(), r.URL.Path, ext, nil)
+		err = validator.Static(ext, nil)
 	} else {
-		err = internal.ValidateOpenShiftCluster(f.env.Location(), r.URL.Path, ext, doc.OpenShiftCluster)
+		err = validator.Static(ext, doc.OpenShiftCluster)
 	}
 	if err != nil {
 		return nil, err
 	}
 
 	oldID, oldName, oldType := doc.OpenShiftCluster.ID, doc.OpenShiftCluster.Name, doc.OpenShiftCluster.Type
-	internal.OpenShiftClusterToInternal(ext, doc.OpenShiftCluster)
+	converter.ToInternal(ext, doc.OpenShiftCluster)
 	doc.OpenShiftCluster.ID, doc.OpenShiftCluster.Name, doc.OpenShiftCluster.Type = oldID, oldName, oldType
 
 	if isCreate {
+		doc.ClusterResourceGroupIDKey = strings.ToLower(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
 		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateCreating
+		doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.3.0"
+
+		doc.Bucket, err = f.bucketAllocator.Allocate()
+		if err != nil {
+			return nil, err
+		}
+
 	} else {
 		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateUpdating
 		doc.Dequeues = 0
 	}
 
-	err = internal.ValidateOpenShiftClusterDynamic(r.Context(), f.env.FPAuthorizer, doc.OpenShiftCluster)
+	err = validator.Dynamic(r.Context(), doc.OpenShiftCluster)
 	if err != nil {
 		return nil, err
 	}
 
-	doc.AsyncOperationID, err = f.newAsyncOperation(r, doc)
+	doc.AsyncOperationID, err = f.newAsyncOperation(ctx, r, doc)
 	if err != nil {
 		return nil, err
 	}
@@ -156,9 +164,13 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *http.Request, header *http.Hea
 	}
 
 	if isCreate {
-		doc, err = f.db.OpenShiftClusters.Create(doc)
+		newdoc, err := f.db.OpenShiftClusters.Create(ctx, doc)
+		if cosmosdb.IsErrorStatusCode(err, http.StatusPreconditionFailed) {
+			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidResourceGroup, "", "The provided resource group '%s' already contains a cluster.", doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
+		}
+		doc = newdoc
 	} else {
-		doc, err = f.db.OpenShiftClusters.Update(doc)
+		doc, err = f.db.OpenShiftClusters.Update(ctx, doc)
 	}
 	if err != nil {
 		return nil, err
@@ -166,7 +178,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(r *http.Request, header *http.Hea
 
 	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 
-	b, err := json.MarshalIndent(external.OpenShiftClusterToExternal(doc.OpenShiftCluster), "", "    ")
+	b, err := json.MarshalIndent(converter.ToExternal(doc.OpenShiftCluster), "", "    ")
 	if err != nil {
 		return nil, err
 	}

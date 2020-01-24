@@ -9,7 +9,6 @@ import (
 	reflect "reflect"
 
 	resources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
-	autorest "github.com/Azure/go-autorest/autorest"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -100,21 +99,6 @@ func NewMockGroupsClient(ctrl *gomock.Controller) *MockGroupsClient {
 // EXPECT returns an object that allows the caller to indicate expected use
 func (m *MockGroupsClient) EXPECT() *MockGroupsClientMockRecorder {
 	return m.recorder
-}
-
-// CheckExistence mocks base method
-func (m *MockGroupsClient) CheckExistence(arg0 context.Context, arg1 string) (autorest.Response, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CheckExistence", arg0, arg1)
-	ret0, _ := ret[0].(autorest.Response)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// CheckExistence indicates an expected call of CheckExistence
-func (mr *MockGroupsClientMockRecorder) CheckExistence(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CheckExistence", reflect.TypeOf((*MockGroupsClient)(nil).CheckExistence), arg0, arg1)
 }
 
 // CreateOrUpdate mocks base method

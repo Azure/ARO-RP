@@ -38,8 +38,11 @@ type Properties struct {
 	// The cluster provisioning state (immutable).
 	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"`
 
-	// The domain for the cluster (immutable).
-	ClusterDomain string `json:"clusterDomain,omitempty"`
+	// The cluster profile.
+	ClusterProfile ClusterProfile `json:"clusterProfile,omitempty"`
+
+	// The console profile.
+	ConsoleProfile ConsoleProfile `json:"consoleProfile,omitempty"`
 
 	// The cluster service principal profile.
 	ServicePrincipalProfile ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
@@ -58,9 +61,6 @@ type Properties struct {
 
 	// The cluster ingress profiles.
 	IngressProfiles []IngressProfile `json:"ingressProfiles,omitempty"`
-
-	// The URL to access the cluster console (immutable).
-	ConsoleURL string `json:"consoleUrl,omitempty"`
 }
 
 // ProvisioningState represents a provisioning state.
@@ -74,6 +74,22 @@ const (
 	ProvisioningStateSucceeded ProvisioningState = "Succeeded"
 	ProvisioningStateFailed    ProvisioningState = "Failed"
 )
+
+type ClusterProfile struct {
+	// The domain for the cluster (immutable).
+	Domain string `json:"domain,omitempty"`
+
+	// The version of the cluster (immutable).
+	Version string `json:"version,omitempty"`
+
+	// The ID of the cluster resource group (immutable).
+	ResourceGroupID string `json:"resourceGroupId,omitempty"`
+}
+
+type ConsoleProfile struct {
+	// The URL to access the cluster console (immutable).
+	URL string `json:"url,omitempty"`
+}
 
 // ServicePrincipalProfile represents a service principal profile.
 type ServicePrincipalProfile struct {

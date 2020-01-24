@@ -24,6 +24,8 @@ try:
     from ._models_py3 import AzureEntityResource
     from ._models_py3 import CloudError, CloudErrorException
     from ._models_py3 import CloudErrorBody
+    from ._models_py3 import ClusterProfile
+    from ._models_py3 import ConsoleProfile
     from ._models_py3 import Display
     from ._models_py3 import IngressProfile
     from ._models_py3 import MasterProfile
@@ -43,6 +45,8 @@ except (SyntaxError, ImportError):
     from ._models import AzureEntityResource
     from ._models import CloudError, CloudErrorException
     from ._models import CloudErrorBody
+    from ._models import ClusterProfile
+    from ._models import ConsoleProfile
     from ._models import Display
     from ._models import IngressProfile
     from ._models import MasterProfile
@@ -63,6 +67,8 @@ __all__ = [
     'AzureEntityResource',
     'CloudError', 'CloudErrorException',
     'CloudErrorBody',
+    'ClusterProfile',
+    'ConsoleProfile',
     'Display',
     'IngressProfile',
     'MasterProfile',

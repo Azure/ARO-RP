@@ -14,7 +14,6 @@ import (
 // GroupsClient is a minimal interface for azure GroupsClient
 type GroupsClient interface {
 	CreateOrUpdate(ctx context.Context, resourceGroupName string, parameters resources.Group) (result resources.Group, err error)
-	CheckExistence(ctx context.Context, resourceGroupName string) (result autorest.Response, err error)
 	GroupsClientAddons
 }
 

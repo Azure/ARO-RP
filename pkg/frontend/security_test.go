@@ -13,7 +13,10 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/metrics/noop"
+	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/test/util/listener"
 )
@@ -29,7 +32,10 @@ func TestSecurity(t *testing.T) {
 	l := listener.NewListener()
 	defer l.Close()
 
-	env := env.NewTest(l, validclientcerts[0].Raw)
+	env := &env.Test{
+		L: l,
+	}
+	env.SetClientAuthorizer(clientauthorizer.NewOne(validclientcerts[0].Raw))
 
 	env.TLSKey, env.TLSCerts, err = utiltls.GenerateKeyAndCertificate("server", nil, nil, false, false)
 	if err != nil {
@@ -44,12 +50,12 @@ func TestSecurity(t *testing.T) {
 	pool := x509.NewCertPool()
 	pool.AddCert(env.TLSCerts[0])
 
-	f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, nil)
+	f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, nil, api.APIs, &noop.Noop{})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	go f.Run(nil, nil)
+	go f.Run(ctx, nil, nil)
 
 	for _, tt := range []struct {
 		name           string

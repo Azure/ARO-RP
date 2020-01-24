@@ -8,7 +8,6 @@ import (
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -39,21 +38,16 @@ func NewManager(env env.Interface, localFPAuthorizer autorest.Authorizer) Manage
 }
 
 func (m *manager) Create(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
-	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
-	if err != nil {
-		return err
-	}
-
 	return m.privateendpoints.CreateOrUpdateAndWait(ctx, m.env.ResourceGroup(), prefix+doc.ID, mgmtnetwork.PrivateEndpoint{
 		PrivateEndpointProperties: &mgmtnetwork.PrivateEndpointProperties{
 			Subnet: &mgmtnetwork.Subnet{
-				ID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-vnet/subnets/rp-pe-subnet"),
+				ID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/" + m.env.VnetName() + "/subnets/rp-pe-subnet"),
 			},
 			ManualPrivateLinkServiceConnections: &[]mgmtnetwork.PrivateLinkServiceConnection{
 				{
 					Name: to.StringPtr("rp-plsconnection"),
 					PrivateLinkServiceConnectionProperties: &mgmtnetwork.PrivateLinkServiceConnectionProperties{
-						PrivateLinkServiceID: to.StringPtr("/subscriptions/" + r.SubscriptionID + "/resourceGroups/" + doc.OpenShiftCluster.Properties.ResourceGroup + "/providers/Microsoft.Network/privateLinkServices/aro-pls"),
+						PrivateLinkServiceID: to.StringPtr(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID + "/providers/Microsoft.Network/privateLinkServices/aro-pls"),
 					},
 				},
 			},
@@ -69,7 +63,7 @@ func (m *manager) Delete(ctx context.Context, doc *api.OpenShiftClusterDocument)
 func (m *manager) GetIP(ctx context.Context, doc *api.OpenShiftClusterDocument) (string, error) {
 	pe, err := m.privateendpoints.Get(ctx, m.env.ResourceGroup(), prefix+doc.ID, "networkInterfaces")
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 
 	return *(*(*pe.PrivateEndpointProperties.NetworkInterfaces)[0].IPConfigurations)[0].PrivateIPAddress, nil

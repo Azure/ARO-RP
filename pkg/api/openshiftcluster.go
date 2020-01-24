@@ -59,7 +59,9 @@ type Properties struct {
 	ProvisioningState       ProvisioningState `json:"provisioningState,omitempty"`
 	FailedProvisioningState ProvisioningState `json:"failedProvisioningState,omitempty"`
 
-	ClusterDomain string `json:"clusterDomain,omitempty"`
+	ClusterProfile ClusterProfile `json:"clusterProfile,omitempty"`
+
+	ConsoleProfile ConsoleProfile `json:"consoleProfile,omitempty"`
 
 	ServicePrincipalProfile ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
 
@@ -73,13 +75,9 @@ type Properties struct {
 
 	IngressProfiles []IngressProfile `json:"ingressProfiles,omitempty"`
 
-	ConsoleURL string `json:"consoleUrl,omitempty"`
-
 	// Install is non-nil only when an install is in progress
 	Install *Install `json:"install,omitempty"`
 
-	// TODO: ResourceGroup should be exposed in external API
-	ResourceGroup string `json:"resourceGroup,omitempty"`
 	StorageSuffix string `json:"storageSuffix,omitempty"`
 
 	SSHKey            *rsa.PrivateKey `json:"sshKey,omitempty"`
@@ -99,6 +97,22 @@ const (
 	ProvisioningStateFailed    ProvisioningState = "Failed"
 )
 
+// ClusterProfile represents a cluster profile.
+type ClusterProfile struct {
+	MissingFields
+
+	Domain          string `json:"domain,omitempty"`
+	Version         string `json:"version,omitempty"`
+	ResourceGroupID string `json:"resourceGroupId,omitempty"`
+}
+
+// ConsoleProfile represents a console profile.
+type ConsoleProfile struct {
+	MissingFields
+
+	URL string `json:"url,omitempty"`
+}
+
 // ServicePrincipalProfile represents a service principal profile.
 type ServicePrincipalProfile struct {
 	MissingFields
@@ -114,6 +128,8 @@ type NetworkProfile struct {
 
 	PodCIDR     string `json:"podCidr,omitempty"`
 	ServiceCIDR string `json:"serviceCidr,omitempty"`
+
+	PrivateEndpointIP string `json:"privateEndpointIp,omitempty"`
 }
 
 // MasterProfile represents a master profile

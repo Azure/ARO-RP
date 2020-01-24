@@ -3,6 +3,7 @@
 package cosmosdb
 
 import (
+	"context"
 	"net/http"
 )
 
@@ -52,12 +53,12 @@ type triggerClient struct {
 
 // TriggerClient is a trigger client
 type TriggerClient interface {
-	Create(*Trigger) (*Trigger, error)
+	Create(context.Context, *Trigger) (*Trigger, error)
 	List() TriggerIterator
-	ListAll() (*Triggers, error)
-	Get(string) (*Trigger, error)
-	Delete(*Trigger) error
-	Replace(*Trigger) (*Trigger, error)
+	ListAll(context.Context) (*Triggers, error)
+	Get(context.Context, string) (*Trigger, error)
+	Delete(context.Context, *Trigger) error
+	Replace(context.Context, *Trigger) (*Trigger, error)
 }
 
 type triggerListIterator struct {
@@ -68,7 +69,7 @@ type triggerListIterator struct {
 
 // TriggerIterator is a trigger iterator
 type TriggerIterator interface {
-	Next() (*Triggers, error)
+	Next(context.Context) (*Triggers, error)
 }
 
 // NewTriggerClient returns a new trigger client
@@ -79,11 +80,11 @@ func NewTriggerClient(collc CollectionClient, collid string) TriggerClient {
 	}
 }
 
-func (c *triggerClient) all(i TriggerIterator) (*Triggers, error) {
+func (c *triggerClient) all(ctx context.Context, i TriggerIterator) (*Triggers, error) {
 	alltriggers := &Triggers{}
 
 	for {
-		triggers, err := i.Next()
+		triggers, err := i.Next(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -99,8 +100,8 @@ func (c *triggerClient) all(i TriggerIterator) (*Triggers, error) {
 	return alltriggers, nil
 }
 
-func (c *triggerClient) Create(newtrigger *Trigger) (trigger *Trigger, err error) {
-	err = c.do(http.MethodPost, c.path+"/triggers", "triggers", c.path, http.StatusCreated, &newtrigger, &trigger, nil)
+func (c *triggerClient) Create(ctx context.Context, newtrigger *Trigger) (trigger *Trigger, err error) {
+	err = c.do(ctx, http.MethodPost, c.path+"/triggers", "triggers", c.path, http.StatusCreated, &newtrigger, &trigger, nil)
 	return
 }
 
@@ -108,30 +109,30 @@ func (c *triggerClient) List() TriggerIterator {
 	return &triggerListIterator{triggerClient: c}
 }
 
-func (c *triggerClient) ListAll() (*Triggers, error) {
-	return c.all(c.List())
+func (c *triggerClient) ListAll(ctx context.Context) (*Triggers, error) {
+	return c.all(ctx, c.List())
 }
 
-func (c *triggerClient) Get(triggerid string) (trigger *Trigger, err error) {
-	err = c.do(http.MethodGet, c.path+"/triggers/"+triggerid, "triggers", c.path+"/triggers/"+triggerid, http.StatusOK, nil, &trigger, nil)
+func (c *triggerClient) Get(ctx context.Context, triggerid string) (trigger *Trigger, err error) {
+	err = c.do(ctx, http.MethodGet, c.path+"/triggers/"+triggerid, "triggers", c.path+"/triggers/"+triggerid, http.StatusOK, nil, &trigger, nil)
 	return
 }
 
-func (c *triggerClient) Delete(trigger *Trigger) error {
+func (c *triggerClient) Delete(ctx context.Context, trigger *Trigger) error {
 	if trigger.ETag == "" {
 		return ErrETagRequired
 	}
 	headers := http.Header{}
 	headers.Set("If-Match", trigger.ETag)
-	return c.do(http.MethodDelete, c.path+"/triggers/"+trigger.ID, "triggers", c.path+"/triggers/"+trigger.ID, http.StatusNoContent, nil, nil, headers)
+	return c.do(ctx, http.MethodDelete, c.path+"/triggers/"+trigger.ID, "triggers", c.path+"/triggers/"+trigger.ID, http.StatusNoContent, nil, nil, headers)
 }
 
-func (c *triggerClient) Replace(newtrigger *Trigger) (trigger *Trigger, err error) {
-	err = c.do(http.MethodPost, c.path+"/triggers/"+newtrigger.ID, "triggers", c.path+"/triggers/"+newtrigger.ID, http.StatusCreated, &newtrigger, &trigger, nil)
+func (c *triggerClient) Replace(ctx context.Context, newtrigger *Trigger) (trigger *Trigger, err error) {
+	err = c.do(ctx, http.MethodPost, c.path+"/triggers/"+newtrigger.ID, "triggers", c.path+"/triggers/"+newtrigger.ID, http.StatusCreated, &newtrigger, &trigger, nil)
 	return
 }
 
-func (i *triggerListIterator) Next() (triggers *Triggers, err error) {
+func (i *triggerListIterator) Next(ctx context.Context) (triggers *Triggers, err error) {
 	if i.done {
 		return
 	}
@@ -141,7 +142,7 @@ func (i *triggerListIterator) Next() (triggers *Triggers, err error) {
 		headers.Set("X-Ms-Continuation", i.continuation)
 	}
 
-	err = i.do(http.MethodGet, i.path+"/triggers", "triggers", i.path, http.StatusOK, nil, &triggers, headers)
+	err = i.do(ctx, http.MethodGet, i.path+"/triggers", "triggers", i.path, http.StatusOK, nil, &triggers, headers)
 	if err != nil {
 		return
 	}

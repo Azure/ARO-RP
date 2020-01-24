@@ -4,6 +4,7 @@ package frontend
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -15,15 +16,16 @@ import (
 )
 
 func (f *frontend) getOpenShiftClusters(w http.ResponseWriter, r *http.Request) {
-	log := r.Context().Value(middleware.ContextKeyLog).(*logrus.Entry)
+	ctx := r.Context()
+	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	vars := mux.Vars(r)
 
-	b, err := f._getOpenShiftClusters(r, api.APIs[vars["api-version"]]["OpenShiftCluster"].(api.OpenShiftClustersToExternal))
+	b, err := f._getOpenShiftClusters(ctx, r, f.apis[vars["api-version"]].OpenShiftClusterConverter())
 
 	reply(log, w, nil, b, err)
 }
 
-func (f *frontend) _getOpenShiftClusters(r *http.Request, externals api.OpenShiftClustersToExternal) ([]byte, error) {
+func (f *frontend) _getOpenShiftClusters(ctx context.Context, r *http.Request, converter api.OpenShiftClusterConverter) ([]byte, error) {
 	vars := mux.Vars(r)
 
 	prefix := "/subscriptions/" + vars["subscriptionId"] + "/"
@@ -39,7 +41,7 @@ func (f *frontend) _getOpenShiftClusters(r *http.Request, externals api.OpenShif
 	var ocs []*api.OpenShiftCluster
 
 	for {
-		docs, err := i.Next()
+		docs, err := i.Next(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -53,5 +55,5 @@ func (f *frontend) _getOpenShiftClusters(r *http.Request, externals api.OpenShif
 		}
 	}
 
-	return json.MarshalIndent(externals.OpenShiftClustersToExternal(ocs), "", "    ")
+	return json.MarshalIndent(converter.ToExternalList(ocs), "", "    ")
 }

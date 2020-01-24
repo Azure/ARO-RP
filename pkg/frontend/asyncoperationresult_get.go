@@ -4,6 +4,7 @@ package frontend
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -16,19 +17,20 @@ import (
 )
 
 func (f *frontend) getAsyncOperationResult(w http.ResponseWriter, r *http.Request) {
-	log := r.Context().Value(middleware.ContextKeyLog).(*logrus.Entry)
+	ctx := r.Context()
+	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	vars := mux.Vars(r)
 
 	header := http.Header{}
-	b, err := f._getAsyncOperationResult(r, header, api.APIs[vars["api-version"]]["OpenShiftCluster"].(api.OpenShiftClusterToExternal))
+	b, err := f._getAsyncOperationResult(ctx, r, header, f.apis[vars["api-version"]].OpenShiftClusterConverter())
 
 	reply(log, w, header, b, err)
 }
 
-func (f *frontend) _getAsyncOperationResult(r *http.Request, header http.Header, external api.OpenShiftClusterToExternal) ([]byte, error) {
+func (f *frontend) _getAsyncOperationResult(ctx context.Context, r *http.Request, header http.Header, converter api.OpenShiftClusterConverter) ([]byte, error) {
 	vars := mux.Vars(r)
 
-	asyncdoc, err := f.db.AsyncOperations.Get(vars["operationId"])
+	asyncdoc, err := f.db.AsyncOperations.Get(ctx, vars["operationId"])
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeNotFound, "", "The entity was not found.")
@@ -36,7 +38,7 @@ func (f *frontend) _getAsyncOperationResult(r *http.Request, header http.Header,
 		return nil, err
 	}
 
-	doc, err := f.db.OpenShiftClusters.Get(asyncdoc.OpenShiftClusterKey)
+	doc, err := f.db.OpenShiftClusters.Get(ctx, asyncdoc.OpenShiftClusterKey)
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil, err
 	}
@@ -54,5 +56,5 @@ func (f *frontend) _getAsyncOperationResult(r *http.Request, header http.Header,
 
 	asyncdoc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 
-	return json.MarshalIndent(external.OpenShiftClusterToExternal(asyncdoc.OpenShiftCluster), "", "    ")
+	return json.MarshalIndent(converter.ToExternal(asyncdoc.OpenShiftCluster), "", "    ")
 }

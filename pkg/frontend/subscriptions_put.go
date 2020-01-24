@@ -4,6 +4,7 @@ package frontend
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -16,23 +17,24 @@ import (
 )
 
 func (f *frontend) putSubscription(w http.ResponseWriter, r *http.Request) {
-	log := r.Context().Value(middleware.ContextKeyLog).(*logrus.Entry)
+	ctx := r.Context()
+	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 
 	var b []byte
 	err := cosmosdb.RetryOnPreconditionFailed(func() error {
 		var err error
-		b, err = f._putSubscription(r)
+		b, err = f._putSubscription(ctx, r)
 		return err
 	})
 
 	reply(log, w, nil, b, err)
 }
 
-func (f *frontend) _putSubscription(r *http.Request) ([]byte, error) {
+func (f *frontend) _putSubscription(ctx context.Context, r *http.Request) ([]byte, error) {
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 	vars := mux.Vars(r)
 
-	doc, err := f.db.Subscriptions.Get(vars["subscriptionId"])
+	doc, err := f.db.Subscriptions.Get(ctx, vars["subscriptionId"])
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil, err
 	}
@@ -78,9 +80,9 @@ func (f *frontend) _putSubscription(r *http.Request) ([]byte, error) {
 	}
 
 	if isCreate {
-		doc, err = f.db.Subscriptions.Create(doc)
+		doc, err = f.db.Subscriptions.Create(ctx, doc)
 	} else {
-		doc, err = f.db.Subscriptions.Update(doc)
+		doc, err = f.db.Subscriptions.Update(ctx, doc)
 	}
 	if err != nil {
 		return nil, err

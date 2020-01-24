@@ -13,6 +13,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
@@ -25,6 +26,7 @@ type backend struct {
 	baseLog *logrus.Entry
 	env     env.Interface
 	db      *database.Database
+	m       metrics.Interface
 
 	mu       sync.Mutex
 	cond     *sync.Cond
@@ -37,15 +39,16 @@ type backend struct {
 
 // Runnable represents a runnable object
 type Runnable interface {
-	Run(stop <-chan struct{})
+	Run(context.Context, <-chan struct{})
 }
 
 // NewBackend returns a new runnable backend
-func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, db *database.Database) (Runnable, error) {
+func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, db *database.Database, m metrics.Interface) (Runnable, error) {
 	b := &backend{
 		baseLog: log,
 		env:     env,
 		db:      db,
+		m:       m,
 	}
 
 	b.cond = sync.NewCond(&b.mu)
@@ -57,7 +60,7 @@ func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, db *d
 	return b, nil
 }
 
-func (b *backend) Run(stop <-chan struct{}) {
+func (b *backend) Run(ctx context.Context, stop <-chan struct{}) {
 	defer recover.Panic(b.baseLog)
 
 	t := time.NewTicker(time.Second)
@@ -83,12 +86,12 @@ func (b *backend) Run(stop <-chan struct{}) {
 			break
 		}
 
-		ocbDidWork, err := b.ocb.try()
+		ocbDidWork, err := b.ocb.try(ctx)
 		if err != nil {
 			b.baseLog.Error(err)
 		}
 
-		sbDidWork, err := b.sb.try()
+		sbDidWork, err := b.sb.try(ctx)
 		if err != nil {
 			b.baseLog.Error(err)
 		}

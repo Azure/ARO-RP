@@ -43,6 +43,7 @@ var (
 	CloudErrorCodeInvalidParameter                   = "InvalidParameter"
 	CloudErrorCodeInvalidRequestContent              = "InvalidRequestContent"
 	CloudErrorCodeInvalidResource                    = "InvalidResource"
+	CloudErrorCodeInvalidResourceGroup               = "InvalidResourceGroup"
 	CloudErrorCodeInvalidResourceNamespace           = "InvalidResourceNamespace"
 	CloudErrorCodeInvalidResourceType                = "InvalidResourceType"
 	CloudErrorCodeInvalidSubscriptionID              = "InvalidSubscriptionID"

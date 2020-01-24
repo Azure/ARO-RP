@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
@@ -27,6 +28,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/resources"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
+	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/privateendpoint"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
@@ -38,9 +40,6 @@ type Installer struct {
 	doc          *api.OpenShiftClusterDocument
 	fpAuthorizer autorest.Authorizer
 
-	privateendpoint privateendpoint.Manager
-	dns             dns.Manager
-
 	disks             compute.DisksClient
 	virtualmachines   compute.VirtualMachinesClient
 	interfaces        network.InterfacesClient
@@ -49,7 +48,10 @@ type Installer struct {
 	groups            resources.GroupsClient
 	accounts          storage.AccountsClient
 
-	subnets subnet.Manager
+	dns             dns.Manager
+	keyvault        keyvault.Manager
+	privateendpoint privateendpoint.Manager
+	subnet          subnet.Manager
 }
 
 func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClusters, doc *api.OpenShiftClusterDocument) (*Installer, error) {
@@ -59,6 +61,11 @@ func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClu
 	}
 
 	localFPAuthorizer, err := env.FPAuthorizer(env.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	localFPKVAuthorizer, err := env.FPAuthorizer(env.TenantID(), azure.PublicCloud.ResourceIdentifiers.KeyVault)
 	if err != nil {
 		return nil, err
 	}
@@ -75,9 +82,6 @@ func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClu
 		doc:          doc,
 		fpAuthorizer: fpAuthorizer,
 
-		privateendpoint: privateendpoint.NewManager(env, localFPAuthorizer),
-		dns:             dns.NewManager(env, localFPAuthorizer),
-
 		disks:             compute.NewDisksClient(r.SubscriptionID, fpAuthorizer),
 		virtualmachines:   compute.NewVirtualMachinesClient(r.SubscriptionID, fpAuthorizer),
 		interfaces:        network.NewInterfacesClient(r.SubscriptionID, fpAuthorizer),
@@ -86,14 +90,17 @@ func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClu
 		groups:            resources.NewGroupsClient(r.SubscriptionID, fpAuthorizer),
 		accounts:          storage.NewAccountsClient(r.SubscriptionID, fpAuthorizer),
 
-		subnets: subnet.NewManager(r.SubscriptionID, fpAuthorizer),
+		dns:             dns.NewManager(env, localFPAuthorizer),
+		keyvault:        keyvault.NewManager(env, localFPKVAuthorizer),
+		privateendpoint: privateendpoint.NewManager(env, localFPAuthorizer),
+		subnet:          subnet.NewManager(r.SubscriptionID, fpAuthorizer),
 	}, nil
 }
 
 func (i *Installer) Install(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) error {
 	var err error
 
-	i.doc, err = i.db.Patch(i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		if doc.OpenShiftCluster.Properties.Install == nil {
 			doc.OpenShiftCluster.Properties.Install = &api.Install{}
 		}
@@ -124,7 +131,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 				return err
 			}
 
-			i.doc, err = i.db.Patch(i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+			i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 				doc.OpenShiftCluster.Properties.Install = nil
 				return nil
 			})
@@ -134,7 +141,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			return fmt.Errorf("unrecognised phase %s", i.doc.OpenShiftCluster.Properties.Install.Phase)
 		}
 
-		i.doc, err = i.db.Patch(i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 			doc.OpenShiftCluster.Properties.Install.Phase++
 			return nil
 		})
@@ -145,9 +152,11 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 }
 
 func (i *Installer) getBlobService(ctx context.Context) (*azstorage.BlobStorageClient, error) {
+	resourceGroup := i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID[strings.LastIndexByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')+1:]
+
 	t := time.Now().UTC().Truncate(time.Second)
 
-	res, err := i.accounts.ListAccountSAS(ctx, i.doc.OpenShiftCluster.Properties.ResourceGroup, "cluster"+i.doc.OpenShiftCluster.Properties.StorageSuffix, mgmtstorage.AccountSasParameters{
+	res, err := i.accounts.ListAccountSAS(ctx, resourceGroup, "cluster"+i.doc.OpenShiftCluster.Properties.StorageSuffix, mgmtstorage.AccountSasParameters{
 		Services:               "b",
 		ResourceTypes:          "o",
 		Permissions:            "crw",
