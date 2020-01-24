@@ -17,8 +17,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift"
 )
 
-func writeKubeconfig(ctx context.Context, resourceid string) error {
-	res, err := azure.ParseResourceID(resourceid)
+func writeKubeconfig(ctx context.Context, resourceID string) error {
+	res, err := azure.ParseResourceID(resourceID)
 	if err != nil {
 		return err
 	}
@@ -27,27 +27,34 @@ func writeKubeconfig(ctx context.Context, resourceid string) error {
 	if err != nil {
 		return err
 	}
+
 	openshiftclusters := redhatopenshift.NewOpenShiftClustersClient(res.SubscriptionID, authorizer)
+
 	oc, err := openshiftclusters.Get(ctx, res.ResourceGroup, res.ResourceName)
 	if err != nil {
 		return err
 	}
+
 	creds, err := openshiftclusters.ListCredentials(ctx, res.ResourceGroup, res.ResourceName)
 	if err != nil {
 		return err
 	}
+
 	tokenURL, err := getTokenURLFromConsoleURL(*oc.Properties.ConsoleProfile.URL)
 	if err != nil {
 		return err
 	}
+
 	token, err := getAuthorizedToken(tokenURL, *creds.KubeadminUsername, *creds.KubeadminPassword)
 	if err != nil {
 		return err
 	}
+
 	adminKubeconfig, err := makeKubeconfig(strings.Replace(*oc.Properties.ApiserverProfile.URL, "https://", "", 1), *creds.KubeadminUsername, token, "kube-system")
 	if err != nil {
 		return err
 	}
+
 	h := &codec.JsonHandle{
 		Indent: 4,
 	}

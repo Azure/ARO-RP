@@ -23,6 +23,7 @@ func parseTokenResponse(location string) (string, error) {
 			return nameValue[1], nil
 		}
 	}
+
 	return "", fmt.Errorf("token not found in response")
 }
 
@@ -31,11 +32,14 @@ func getTokenURLFromConsoleURL(consoleURL string) (*url.URL, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	tokenURL.Path = "/oauth/authorize"
+
 	q := tokenURL.Query()
 	q.Set("response_type", "token")
 	q.Set("client_id", "openshift-challenging-client")
 	tokenURL.RawQuery = q.Encode()
+
 	return tokenURL, nil
 }
 
@@ -55,6 +59,7 @@ func getAuthorizedToken(tokenURL *url.URL, username, password string) (string, e
 		return "", err
 	}
 	defer resp.Body.Close()
+
 	if resp.StatusCode != 302 {
 		return "", err
 	}
@@ -63,5 +68,6 @@ func getAuthorizedToken(tokenURL *url.URL, username, password string) (string, e
 	if loc == nil {
 		return "", fmt.Errorf("no Location header found")
 	}
+
 	return parseTokenResponse(loc[0])
 }
