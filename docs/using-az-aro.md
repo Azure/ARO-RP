@@ -62,11 +62,9 @@ against a development RP running at https://localhost:8443/.
 ## Registering the resource provider
 
 If using the pre-GA Azure Red Hat OpenShift v4 service, ensure that the
-`Microsoft.RedHatOpenShift/preview` feature is registered and that the
 `Microsoft.RedHatOpenShift` resource provider is registered:
 
 ```
-az feature register --namespace Microsoft.RedHatOpenShift --name preview
 az provider register -n Microsoft.RedHatOpenShift --wait
 ```
 
