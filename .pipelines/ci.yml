@@ -12,9 +12,9 @@ jobs:
     strategy:
       matrix:
         Python27:
-          python.version: "2.7"
+          python.version: "2.7.17"
         Python35:
-          python.version: "3.5"
+          python.version: "3.5.9"
         Python36:
           python.version: "3.6.10"
         Python37:
