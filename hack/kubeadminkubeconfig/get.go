@@ -49,10 +49,7 @@ func writeKubeconfig(ctx context.Context, resourceID string) error {
 		return err
 	}
 
-	adminKubeconfig, err := makeKubeconfig(strings.Replace(*oc.Properties.ApiserverProfile.URL, "https://", "", 1), *creds.KubeadminUsername, token, "kube-system")
-	if err != nil {
-		return err
-	}
+	adminKubeconfig := makeKubeconfig(strings.Replace(*oc.Properties.ApiserverProfile.URL, "https://", "", 1), *creds.KubeadminUsername, token, "kube-system")
 
 	e := json.NewEncoder(os.Stdout)
 	e.SetIndent("", "    ")
