@@ -5,15 +5,14 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
-	"github.com/ugorji/go/codec"
 
-	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift"
 )
 
@@ -55,16 +54,9 @@ func writeKubeconfig(ctx context.Context, resourceID string) error {
 		return err
 	}
 
-	h := &codec.JsonHandle{
-		Indent: 4,
-	}
-
-	err = api.AddExtensions(&h.BasicHandle)
-	if err != nil {
-		return err
-	}
-
-	return codec.NewEncoder(os.Stdout, h).Encode(adminKubeconfig)
+	e := json.NewEncoder(os.Stdout)
+	e.SetIndent("", "    ")
+	return e.Encode(adminKubeconfig)
 }
 
 func main() {
