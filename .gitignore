@@ -18,3 +18,5 @@ __pycache__
 /mdm_statsd.socket
 uts.txt
 cover.out
+coverage.*
+report.xml
