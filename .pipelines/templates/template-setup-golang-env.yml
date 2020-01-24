@@ -13,7 +13,7 @@ steps:
     mv !(gopath) '${{ parameters.modulePath }}'
     export PATH=${{ parameters.gobin }}:$PATH
     export PATH=${{ parameters.goroot }}/bin:$PATH
-    echo "##vso[task.prependpath]{{ parameters.gobin }}"
+    echo "##vso[task.prependpath]${{ parameters.gobin }}"
     echo "##vso[task.prependpath]${{ parameters.goroot }}/bin"
     go get -v ithub.com/jstemmer/go-junit-report
     go get -v github.com/axw/gocov/gocov
