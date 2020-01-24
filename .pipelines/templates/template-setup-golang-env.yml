@@ -5,11 +5,6 @@ parameters:
   modulePath: ''
 steps:
 - script: |
-    export
-    echo ${{ parameters.gobin }}
-    echo ${{ parameters.gopath }}
-    echo ${{ parameters.modulePath }}
-    echo ${{ parameters.goroot }}
     mkdir -p '${{ parameters.gobin }}'
     mkdir -p '${{ parameters.gopath }}/pkg'
     mkdir -p '${{ parameters.modulePath }}'
@@ -18,14 +13,12 @@ steps:
     mv !(gopath) '${{ parameters.modulePath }}'
     export PATH=${{ parameters.gobin }}:$PATH
     export PATH=${{ parameters.goroot }}/bin:$PATH
-    echo "$PATH"
-    export
-    go version
-    go get github.com/jstemmer/go-junit-report
-    go get github.com/axw/gocov/gocov
-    go get github.com/AlekSi/gocov-xml
-    go get -u gopkg.in/matm/v1/gocov-html
+    go get -v ithub.com/jstemmer/go-junit-report
+    go get -v github.com/axw/gocov/gocov
+    go get -v github.com/AlekSi/gocov-xml
+    go get -v -u gopkg.in/matm/v1/gocov-html
     sudo add-apt-repository ppa:kubuntu-ppa/backports
     sudo apt-get update
     sudo apt-get install libgpgme-dev gcc -y
+    go version
   displayName: '⚙️Set up the workspace'

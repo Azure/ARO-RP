@@ -52,6 +52,9 @@ jobs:
       goroot: ${{ variables.GOROOT }}
       modulePath: ${{ variables.modulePath }}
   - script: |
+      export
+      echo $PATH
+      go version
       set -x
       make test-go
       [[ -z "$(git status -s)" ]]
