@@ -67,14 +67,12 @@ jobs:
         displayName: "🧪Run Golang Unit Tests"
       - task: PublishTestResults@2
         displayName: "🚀 Publish tests results"
-        workingDirectory: "${{ variables.modulePath }}"
         inputs:
           testResultsFiles: $(System.DefaultWorkingDirectory)/**/report.xml
         condition: succeededOrFailed()
 
       - task: PublishCodeCoverageResults@1
         displayName: "🚀 Publish code coverage"
-        workingDirectory: "${{ variables.modulePath }}"
         inputs:
           codeCoverageTool: Cobertura
           summaryFileLocation: "$(System.DefaultWorkingDirectory)/**/coverage.xml"
