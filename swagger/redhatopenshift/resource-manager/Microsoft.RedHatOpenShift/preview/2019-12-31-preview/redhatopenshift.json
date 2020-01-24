@@ -664,6 +664,7 @@
     "ProvisioningState": {
       "description": "ProvisioningState represents a provisioning state.",
       "enum": [
+        "AdminUpdating",
         "Creating",
         "Deleting",
         "Failed",

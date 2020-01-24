@@ -140,7 +140,13 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 		}
 
 	} else {
-		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateUpdating
+		// TODO: Get rid of the special case
+		vars := mux.Vars(r)
+		if vars["api-version"] == "admin" {
+			doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
+		} else {
+			doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateUpdating
+		}
 		doc.Dequeues = 0
 	}
 

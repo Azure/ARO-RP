@@ -33,6 +33,8 @@ const fqdn = "github.com/Azure/ARO-RP/pkg/client/services/preview/redhatopenshif
 type ProvisioningState string
 
 const (
+	// AdminUpdating ...
+	AdminUpdating ProvisioningState = "AdminUpdating"
 	// Creating ...
 	Creating ProvisioningState = "Creating"
 	// Deleting ...
@@ -47,7 +49,7 @@ const (
 
 // PossibleProvisioningStateValues returns an array of possible values for the ProvisioningState const type.
 func PossibleProvisioningStateValues() []ProvisioningState {
-	return []ProvisioningState{Creating, Deleting, Failed, Succeeded, Updating}
+	return []ProvisioningState{AdminUpdating, Creating, Deleting, Failed, Succeeded, Updating}
 }
 
 // Visibility enumerates the values for visibility.
@@ -423,7 +425,7 @@ type OperationList struct {
 
 // Properties properties represents an OpenShift cluster's properties.
 type Properties struct {
-	// ProvisioningState - The cluster provisioning state (immutable). Possible values include: 'Creating', 'Deleting', 'Failed', 'Succeeded', 'Updating'
+	// ProvisioningState - The cluster provisioning state (immutable). Possible values include: 'AdminUpdating', 'Creating', 'Deleting', 'Failed', 'Succeeded', 'Updating'
 	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"`
 	// ClusterProfile - The cluster profile.
 	ClusterProfile *ClusterProfile `json:"clusterProfile,omitempty"`
