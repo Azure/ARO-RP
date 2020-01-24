@@ -6,7 +6,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"os"
 	"strings"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
 func writeKubeconfig(ctx context.Context, resourceID string) error {
@@ -60,13 +60,15 @@ func writeKubeconfig(ctx context.Context, resourceID string) error {
 }
 
 func main() {
-	if len(os.Args) != 2 {
-		fmt.Printf("usage: %s resourceid\n", os.Args[0])
-		os.Exit(2)
-	}
 	ctx := context.Background()
+	log := utillog.GetLogger()
+
+	if len(os.Args) != 2 {
+		log.Fatalf("usage: %s resourceid\n", os.Args[0])
+	}
+
 	err := writeKubeconfig(ctx, os.Args[1])
 	if err != nil {
-		fmt.Printf("%v\n", err)
+		log.Fatal(err)
 	}
 }
