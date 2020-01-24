@@ -4,9 +4,7 @@ package e2e
 // Licensed under the Apache License 2.0.
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	. "github.com/onsi/ginkgo"
@@ -14,11 +12,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	kapi "k8s.io/client-go/tools/clientcmd/api"
-	"k8s.io/client-go/tools/clientcmd/api/latest"
-	v1 "k8s.io/client-go/tools/clientcmd/api/v1"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift"
 )
@@ -33,34 +27,18 @@ var (
 	Clients *ClientSet
 )
 
-func restConfigFromV1Config(kc *v1.Config) (*rest.Config, error) {
-	var c kapi.Config
-	err := latest.Scheme.Convert(kc, &c, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	kubeconfig := clientcmd.NewDefaultClientConfig(c, &clientcmd.ConfigOverrides{})
-	return kubeconfig.ClientConfig()
-}
-
 func newClientSet() (*ClientSet, error) {
 	authorizer, err := auth.NewAuthorizerFromEnvironment()
 	if err != nil {
 		return nil, err
 	}
 
-	d, err := ioutil.ReadFile("../../admin.kubeconfig")
-	if err != nil {
-		return nil, err
-	}
-	var config *v1.Config
-	json.Unmarshal(d, &config)
-	if err != nil {
-		return nil, err
-	}
+	kubeconfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		clientcmd.NewDefaultClientConfigLoadingRules(),
+		&clientcmd.ConfigOverrides{},
+	)
 
-	restconfig, err := restConfigFromV1Config(config)
+	restconfig, err := kubeconfig.ClientConfig()
 	if err != nil {
 		return nil, err
 	}
