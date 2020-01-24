@@ -19,11 +19,11 @@ var _ = Describe("Check nodes", func() {
 	Specify("node count should match the cluster resource and nodes should be ready", func() {
 		ctx := context.Background()
 
-		cs, err := Clients.OpenshiftClusters.Get(ctx, os.Getenv("RESOURCEGROUP"), os.Getenv("CLUSTER"))
+		oc, err := Clients.OpenshiftClusters.Get(ctx, os.Getenv("RESOURCEGROUP"), os.Getenv("CLUSTER"))
 		Expect(err).NotTo(HaveOccurred())
 
 		var expectedNodeCount int32 = 3 // for masters
-		for _, wp := range *cs.WorkerProfiles {
+		for _, wp := range *oc.WorkerProfiles {
 			expectedNodeCount += *wp.Count
 		}
 
