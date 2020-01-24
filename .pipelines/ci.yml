@@ -52,17 +52,12 @@ jobs:
           goroot: ${{ variables.GOROOT }}
           modulePath: ${{ variables.modulePath }}
       - script: |
-          export
-          echo $PATH
-          go version
           set -x
           make test-go
           [[ -z "$(git status -s)" ]]
           go-junit-report < uts.txt > report.xml
           gocov convert cover.out > coverage.json
           gocov-xml < coverage.json > coverage.xml
-          mkdir coverage
-          gocov-html < coverage.json > coverage/index.html
         workingDirectory: "${{ variables.modulePath }}"
         displayName: "🧪Run Golang Unit Tests"
       - task: PublishTestResults@2
