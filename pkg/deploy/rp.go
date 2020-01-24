@@ -554,6 +554,9 @@ func (g *generator) serviceKeyvault() *arm.Resource {
 						mgmtkeyvault.Import,
 						mgmtkeyvault.List,
 					},
+					Secrets: &[]mgmtkeyvault.SecretPermissions{
+						mgmtkeyvault.SecretPermissionsSet,
+					},
 				},
 			},
 		)

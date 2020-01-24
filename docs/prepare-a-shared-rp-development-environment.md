@@ -309,7 +309,7 @@ locations.
      --file secrets/localhost.pem \
      >/dev/null
    az keyvault secret set \
-     --vault-name  "$KEYVAULT_NAME" \
+     --vault-name  "$KEYVAULT_PREFIX-service" \
      --name "db-encryption-key" \
      --value $(openssl rand -base64 32) \
       >/dev/null
