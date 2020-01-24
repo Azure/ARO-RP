@@ -59,10 +59,12 @@ func newClientSet() (*ClientSet, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	restconfig, err := restConfigFromV1Config(config)
 	if err != nil {
 		return nil, err
 	}
+
 	cli, err := kubernetes.NewForConfig(restconfig)
 	if err != nil {
 		return nil, err
@@ -85,6 +87,7 @@ var _ = BeforeSuite(func() {
 			panic(fmt.Sprintf("environment variable %q unset", key))
 		}
 	}
+
 	var err error
 	Clients, err = newClientSet()
 	if err != nil {

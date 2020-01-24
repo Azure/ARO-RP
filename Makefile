@@ -81,7 +81,7 @@ secrets-update:
 	oc create secret generic aro-v4-dev --from-file=secrets --dry-run -o yaml | oc apply -f -
 
 e2e:
-	go test ./test/e2e -timeout "60m" -v -ginkgo.v -tags e2e
+	go test ./test/e2e -timeout 60m -v -ginkgo.v -tags e2e
 
 test-go: generate
 	go build ./...

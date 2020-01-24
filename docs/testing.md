@@ -1,16 +1,19 @@
 # Testing
 
-* unit tests
+* Unit tests
 
   ```
   make test
   ```
 
-* e2e tests
+* E2e tests
 
-  1. start the RP
-  1. run the e2e
-  ```
-  make e2e
-  ```
-  Note the test will tell you will what Environment variables to define
+  1. Start the RP
+
+  1. Run the e2e:
+
+     ```
+     make e2e
+     ```
+
+     The test will tell you what environment variables need to be defined.
