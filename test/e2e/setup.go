@@ -24,8 +24,8 @@ import (
 )
 
 type ClientSet struct {
-	openshiftclusters redhatopenshift.OpenShiftClustersClient
-	kubernetes        kubernetes.Interface
+	OpenshiftClusters redhatopenshift.OpenShiftClustersClient
+	Kubernetes        kubernetes.Interface
 }
 
 var (
@@ -69,12 +69,11 @@ func newClientSet() (*ClientSet, error) {
 	if err != nil {
 		return nil, err
 	}
-	cs := &ClientSet{
-		openshiftclusters: redhatopenshift.NewOpenShiftClustersClient(os.Getenv("AZURE_SUBSCRIPTION_ID"), authorizer),
-		kubernetes:        cli,
-	}
 
-	return cs, nil
+	return &ClientSet{
+		OpenshiftClusters: redhatopenshift.NewOpenShiftClustersClient(os.Getenv("AZURE_SUBSCRIPTION_ID"), authorizer),
+		Kubernetes:        cli,
+	}, nil
 }
 
 var _ = BeforeSuite(func() {

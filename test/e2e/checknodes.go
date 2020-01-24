@@ -19,7 +19,7 @@ var _ = Describe("Check nodes", func() {
 	Specify("node count should match the cluster resource and nodes should be ready", func() {
 		ctx := context.Background()
 
-		cs, err := Clients.openshiftclusters.Get(ctx, os.Getenv("RESOURCEGROUP"), os.Getenv("CLUSTER"))
+		cs, err := Clients.OpenshiftClusters.Get(ctx, os.Getenv("RESOURCEGROUP"), os.Getenv("CLUSTER"))
 		Expect(err).NotTo(HaveOccurred())
 
 		var expectedNodeCount int32 = 3 // for masters
@@ -27,7 +27,7 @@ var _ = Describe("Check nodes", func() {
 			expectedNodeCount += *wp.Count
 		}
 
-		nodes, err := Clients.kubernetes.CoreV1().Nodes().List(metav1.ListOptions{})
+		nodes, err := Clients.Kubernetes.CoreV1().Nodes().List(metav1.ListOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		var nodeCount int64
