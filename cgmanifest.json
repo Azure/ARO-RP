@@ -409,6 +409,15 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "a30252cb686a21eb2d0b98132633053ec2f7f1e5",
+                    "repositoryUrl": "https://github.com/hpcloud/tail/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "1afb36080aec31e0d1528973ebe6721b191b0369",
                     "repositoryUrl": "https://github.com/imdario/mergo/"
                 }
@@ -591,6 +600,24 @@
                 "git": {
                     "commitHash": "ce00817b8a3f5f0c7dfc5a50be6499b6b8c8c8b4",
                     "repositoryUrl": "https://github.com/mtrmac/gpgme/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "ce5d301e555bb672c693c099ba6ca5087b06c0b4",
+                    "repositoryUrl": "https://github.com/onsi/ginkgo/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "f9a52764bd5a0fd2d201bcca584351d03b72f8da",
+                    "repositoryUrl": "https://github.com/onsi/gomega/"
                 }
             }
         },
@@ -994,6 +1021,15 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9",
+                    "repositoryUrl": "https://gopkg.in/fsnotify.v1/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "d2d2541c53f18d2a059457998ce2876cc8e67cbf",
                     "repositoryUrl": "https://gopkg.in/inf.v0/"
                 }
@@ -1005,6 +1041,15 @@
                 "git": {
                     "commitHash": "94291fffe2b14f4632ec0e67c1bfecfc1287a168",
                     "repositoryUrl": "https://gopkg.in/ini.v1/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "dd632973f1e7218eb1089048e0798ec9ae7dceb8",
+                    "repositoryUrl": "https://gopkg.in/tomb.v1/"
                 }
             }
         },
