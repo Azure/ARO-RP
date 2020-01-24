@@ -1,3 +1,8 @@
+parameters:
+  GOBIN: $(GOBIN)
+  GOROOT: $(GOROOT)
+  GOPATH: $(GOPATH)
+  modulePath: $(modulePath)
 steps:
 - script: |
     mkdir -p '$(GOBIN)'
