@@ -66,7 +66,7 @@ proxy:
 	go build -ldflags "-X main.gitCommit=$(COMMIT)" ./hack/proxy
 
 pyenv${PYTHON_VERSION}:
-	virtualenv --python=/usr/bin/python${PYTHON_VERSION} pyenv${PYTHON_VERSION}
+	virtualenv pyenv${PYTHON_VERSION}
 	. pyenv${PYTHON_VERSION}/bin/activate && \
 		pip install azdev && \
 		azdev setup -r . && \
@@ -95,7 +95,7 @@ test-go: generate
 	@sha256sum --quiet -c .sha256sum || (echo error: client library is stale, please run make client; exit 1)
 
 	go vet ./...
-	go test ./...
+	go test ./... -coverprofile cover.out | tee uts.txt
 
 test-python: generate pyenv${PYTHON_VERSION}
 	. pyenv${PYTHON_VERSION}/bin/activate && \

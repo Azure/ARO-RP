@@ -16,3 +16,7 @@ __pycache__
 /python/az/aro/dist
 /secrets
 /mdm_statsd.socket
+uts.txt
+cover.out
+coverage.*
+report.xml 

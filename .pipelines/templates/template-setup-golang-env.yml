@@ -1,0 +1,25 @@
+parameters:
+  gobin: ""
+  gopath: ""
+  goroot: ""
+  modulePath: ""
+steps:
+  - script: |
+      mkdir -p '${{ parameters.gobin }}'
+      mkdir -p '${{ parameters.gopath }}/pkg'
+      mkdir -p '${{ parameters.modulePath }}'
+      shopt -s extglob
+      shopt -s dotglob
+      mv !(gopath) '${{ parameters.modulePath }}'
+      export PATH=${{ parameters.gobin }}:$PATH
+      export PATH=${{ parameters.goroot }}/bin:$PATH
+      echo "##vso[task.prependpath]${{ parameters.gobin }}"
+      echo "##vso[task.prependpath]${{ parameters.goroot }}/bin"
+      go get -v github.com/jstemmer/go-junit-report
+      go get -v github.com/axw/gocov/gocov
+      go get -v github.com/AlekSi/gocov-xml
+      sudo add-apt-repository ppa:kubuntu-ppa/backports
+      sudo apt-get update
+      sudo apt-get install libgpgme-dev gcc -y
+      go version
+    displayName: "⚙️ Set up the workspace"
