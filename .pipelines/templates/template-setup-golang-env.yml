@@ -16,8 +16,8 @@ steps:
     shopt -s extglob
     shopt -s dotglob
     mv !(gopath) '${{ parameters.modulePath }}'
-    echo '##vso[task.prependpath]${{ parameters.gobin }}'
-    echo '##vso[task.prependpath]${{ parameters.goroot }}/bin'
+    export PATH=$PATH:${{ parameters.gobin }}
+    export PATH=$PATH:${{ parameters.goroot }}/bin
     echo "$PATH"
     export
     go version
