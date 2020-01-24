@@ -18,6 +18,7 @@ steps:
     mv !(gopath) '${{ parameters.modulePath }}'
     echo '##vso[task.prependpath]${{ parameters.gobin }}'
     echo '##vso[task.prependpath]${{ parameters.goroot }}/bin'
+    echo "$PATH"
     export
     go version
     go get github.com/jstemmer/go-junit-report
