@@ -84,7 +84,7 @@ proxy:
 pyenv${PYTHON_VERSION}:
 	virtualenv pyenv${PYTHON_VERSION}
 	. pyenv${PYTHON_VERSION}/bin/activate && \
-		python --version \
+		python --version && \
 		pip install azdev && \
 		azdev setup -r . && \
 		sed -i -e "s|^dev_sources = $(PWD)$$|dev_sources = $(PWD)/python|" ~/.azure/config

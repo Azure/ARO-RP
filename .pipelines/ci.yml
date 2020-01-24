@@ -58,6 +58,9 @@ jobs:
           bash -c 'go-junit-report < uts.txt > report.xml'
           bash -c 'gocov convert cover.out > coverage.json'
           bash -c 'gocov-xml < coverage.json > coverage.xml'
+          ls -la
+          cat report.xml
+          pwd
         workingDirectory: "${{ variables.modulePath }}"
         displayName: "🧪Run Golang Unit Tests"
       - task: PublishTestResults@2
