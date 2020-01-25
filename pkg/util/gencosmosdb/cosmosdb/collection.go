@@ -19,16 +19,18 @@ type Collection struct {
 	Conflicts                string                    `json:"_conflicts,omitempty"`
 	IndexingPolicy           *IndexingPolicy           `json:"indexingPolicy,omitempty"`
 	PartitionKey             *PartitionKey             `json:"partitionKey,omitempty"`
+	UniqueKeyPolicy          *UniqueKeyPolicy          `json:"uniqueKeyPolicy,omitempty"`
 	ConflictResolutionPolicy *ConflictResolutionPolicy `json:"conflictResolutionPolicy,omitempty"`
 	GeospatialConfig         *GeospatialConfig         `json:"geospatialConfig,omitempty"`
 }
 
 // IndexingPolicy represents an indexing policy
 type IndexingPolicy struct {
-	Automatic     bool               `json:"automatic,omitempty"`
-	IndexingMode  IndexingPolicyMode `json:"indexingMode,omitempty"`
-	IncludedPaths []IncludedPath     `json:"includedPaths,omitempty"`
-	ExcludedPaths []IncludedPath     `json:"excludedPaths,omitempty"`
+	Automatic        bool               `json:"automatic,omitempty"`
+	IndexingMode     IndexingPolicyMode `json:"indexingMode,omitempty"`
+	IncludedPaths    []IncludedPath     `json:"includedPaths,omitempty"`
+	ExcludedPaths    []IncludedPath     `json:"excludedPaths,omitempty"`
+	CompositeIndexes []CompositeIndex   `json:"compositeIndexes,omitempty"`
 }
 
 // IndexingPolicyMode represents an indexing policy mode
@@ -80,6 +82,21 @@ type ExcludedPath struct {
 	Path string `json:"path,omitempty"`
 }
 
+// CompositeIndex represents a composite index
+type CompositeIndex []struct {
+	Path  string `json:"path,omitempty"`
+	Order Order  `json:"order,omitempty"`
+}
+
+// Order represents an order
+type Order string
+
+// Order constants
+const (
+	OrderAscending  Order = "ascending"
+	OrderDescending Order = "descending"
+)
+
 // PartitionKey represents a partition key
 type PartitionKey struct {
 	Paths   []string         `json:"paths,omitempty"`
@@ -94,6 +111,16 @@ type PartitionKeyKind string
 const (
 	PartitionKeyKindHash PartitionKeyKind = "Hash"
 )
+
+// UniqueKeyPolicy represents a unique key policy
+type UniqueKeyPolicy struct {
+	UniqueKeys []UniqueKey `json:"uniqueKeys,omitempty"`
+}
+
+// UniqueKey represents a unique key
+type UniqueKey struct {
+	Paths []string `json:"paths,omitempty"`
+}
 
 // ConflictResolutionPolicy represents a conflict resolution policy
 type ConflictResolutionPolicy struct {
@@ -148,7 +175,7 @@ type PartitionKeyRange struct {
 	MaxExclusive       string                  `json:"maxExclusive,omitempty"`
 	MinInclusive       string                  `json:"minInclusive,omitempty"`
 	ResourceIDPrefix   int                     `json:"ridPrefix,omitempty"`
-	ThroughputFraction int                     `json:"throughputFraction,omitempty"`
+	ThroughputFraction float64                 `json:"throughputFraction,omitempty"`
 	Status             PartitionKeyRangeStatus `json:"status,omitempty"`
 	Parents            []string                `json:"parents,omitempty"`
 }
