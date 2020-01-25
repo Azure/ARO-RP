@@ -9,6 +9,7 @@ We are aiming to limit the amount of shell scripting, etc. in the repository, in
 ```bash
 # GNU Utils
 brew install core-utils
+brew search findutils
 
 # Install Jq
 brew install jq
@@ -16,6 +17,9 @@ brew install jq
 # Install envsubst
 brew install gettext
 brew link --force gettext
+
+# Install
+brew install gpgme
 
 # GNU utils
 # Ref: https://web.archive.org/web/20190704110904/https://www.topbug.net/blog/2013/04/14/install-and-use-gnu-command-line-tools-in-mac-os-x
