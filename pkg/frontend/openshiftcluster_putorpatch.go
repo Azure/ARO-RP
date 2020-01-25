@@ -130,6 +130,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 
 	if isCreate {
 		doc.ClusterResourceGroupIDKey = strings.ToLower(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
+		doc.ClientIDKey = strings.ToLower(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientID)
 		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateCreating
 		doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.3.0"
 
@@ -144,6 +145,11 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 	}
 
 	err = validator.Dynamic(r.Context(), doc.OpenShiftCluster)
+	if err != nil {
+		return nil, err
+	}
+
+	err = f.validateOpenShiftClientIDUniqueKey(ctx, doc.ClientIDKey)
 	if err != nil {
 		return nil, err
 	}

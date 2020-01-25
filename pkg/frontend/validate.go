@@ -44,3 +44,16 @@ func (f *frontend) validateSubscriptionState(ctx context.Context, key string, al
 
 	return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionState, "", "Request is not allowed in subscription in state '%s'.", doc.Subscription.State)
 }
+
+// validateOpenShiftClientIDUniqueKey validate if the passed unique client id key is not already existing
+func (f *frontend) validateOpenShiftClientIDUniqueKey(ctx context.Context, key string) error {
+	_, err := f.db.OpenShiftClusters.Get(ctx, key)
+	switch {
+	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
+		return nil
+	case err != nil:
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidClientID, "", "Each ARO cluster must use a unique SPN and cannot be shared with other clusters. Please use a new service principal.")
+	}
+
+	return nil
+}

@@ -272,7 +272,7 @@
                 },
                 "accessPolicies": "[concat(variables('clustersKeyvaultAccessPolicies'), parameters('extraKeyvaultAccessPolicies'))]"
             },
-            "name": "[concat(parameters('keyvaultPrefix'), '-clusters')]",
+            "name": "[substring(concat(parameters('keyvaultPrefix'), '-clusters'), 0, 24)]",
             "type": "Microsoft.KeyVault/vaults",
             "location": "[resourceGroup().location]",
             "tags": {
@@ -289,7 +289,7 @@
                 },
                 "accessPolicies": "[concat(variables('serviceKeyvaultAccessPolicies'), parameters('extraKeyvaultAccessPolicies'))]"
             },
-            "name": "[concat(parameters('keyvaultPrefix'), '-service')]",
+            "name": "[substring(concat(parameters('keyvaultPrefix'), '-service'), 0, 24)]",
             "type": "Microsoft.KeyVault/vaults",
             "location": "[resourceGroup().location]",
             "tags": {
@@ -465,6 +465,11 @@
                             {
                                 "paths": [
                                     "/clusterResourceGroupIdKey"
+                                ]
+                            },
+                            {
+                                "paths": [
+                                    "/clientIdKey"
                                 ]
                             }
                         ]

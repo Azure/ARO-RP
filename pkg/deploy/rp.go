@@ -706,6 +706,11 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 										"/clusterResourceGroupIdKey",
 									},
 								},
+								{
+									Paths: &[]string{
+										"/clientIdKey",
+									},
+								},
 							},
 						},
 					},
