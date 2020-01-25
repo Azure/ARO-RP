@@ -52,7 +52,7 @@ func (f *frontend) validateOpenShiftClientIDUniqueKey(ctx context.Context, key s
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return nil
 	case err != nil:
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidClientID, "", "Each ARO cluster must use a unique SPN and cannot be shared with other clusters. Please use a new service principal.")
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidClientID, "", "Each ARO cluster must use an unique SPN and cannot be shared with other clusters. Please use a new service principal.")
 	}
 
 	return nil

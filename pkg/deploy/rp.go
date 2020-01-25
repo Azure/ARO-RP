@@ -498,7 +498,7 @@ func (g *generator) clustersKeyvault() *arm.Resource {
 			},
 			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{},
 		},
-		Name:     to.StringPtr("[concat(parameters('keyvaultPrefix'), '-clusters')]"),
+		Name:     to.StringPtr("[substring(concat(parameters('keyvaultPrefix'), '-clusters'), 0, 24)]"),
 		Type:     to.StringPtr("Microsoft.KeyVault/vaults"),
 		Location: to.StringPtr("[resourceGroup().location]"),
 		Tags: map[string]*string{
@@ -534,7 +534,7 @@ func (g *generator) serviceKeyvault() *arm.Resource {
 			},
 			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{},
 		},
-		Name:     to.StringPtr("[concat(parameters('keyvaultPrefix'), '-service')]"),
+		Name:     to.StringPtr("[substring(concat(parameters('keyvaultPrefix'), '-service'), 0, 24)]"),
 		Type:     to.StringPtr("Microsoft.KeyVault/vaults"),
 		Location: to.StringPtr("[resourceGroup().location]"),
 		Tags: map[string]*string{
