@@ -15,6 +15,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
@@ -28,7 +29,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	db, err := database.NewDatabase(ctx, log.WithField("component", "database"), env, "")
+	db, err := database.NewDatabase(ctx, log.WithField("component", "database"), env, &noop.Noop{}, "")
 	if err != nil {
 		return err
 	}

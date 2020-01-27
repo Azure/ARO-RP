@@ -24,16 +24,16 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	db, err := database.NewDatabase(ctx, log.WithField("component", "database"), env, uuid)
-	if err != nil {
-		return err
-	}
-
 	m, err := statsd.New(ctx, log.WithField("component", "metrics"), env)
 	if err != nil {
 		return err
 	}
 	defer m.Close()
+
+	db, err := database.NewDatabase(ctx, log.WithField("component", "database"), env, m, uuid)
+	if err != nil {
+		return err
+	}
 
 	mon := pkgmonitor.NewMonitor(log.WithField("component", "monitor"), env, db, m)
 

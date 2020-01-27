@@ -16,8 +16,9 @@ import (
 )
 
 type openShiftClusters struct {
-	c    cosmosdb.OpenShiftClusterDocumentClient
-	uuid string
+	c     cosmosdb.OpenShiftClusterDocumentClient
+	collc cosmosdb.CollectionClient
+	uuid  string
 }
 
 // OpenShiftClusters is the database interface for OpenShiftClusterDocuments
@@ -25,6 +26,7 @@ type OpenShiftClusters interface {
 	Create(context.Context, *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error)
 	ListAll(context.Context) (*api.OpenShiftClusterDocuments, error)
 	Get(context.Context, string) (*api.OpenShiftClusterDocument, error)
+	QueueLength(context.Context, string) (int, error)
 	Patch(context.Context, string, func(*api.OpenShiftClusterDocument) error) (*api.OpenShiftClusterDocument, error)
 	PatchWithLease(context.Context, string, func(*api.OpenShiftClusterDocument) error) (*api.OpenShiftClusterDocument, error)
 	Update(context.Context, *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error)
@@ -64,8 +66,9 @@ func NewOpenShiftClusters(ctx context.Context, uuid string, dbc cosmosdb.Databas
 	}
 
 	return &openShiftClusters{
-		c:    cosmosdb.NewOpenShiftClusterDocumentClient(collc, collid),
-		uuid: uuid,
+		c:     cosmosdb.NewOpenShiftClusterDocumentClient(collc, collid),
+		collc: collc,
+		uuid:  uuid,
 	}, nil
 }
 
@@ -124,6 +127,37 @@ func (c *openShiftClusters) Get(ctx context.Context, key string) (*api.OpenShift
 	default:
 		return nil, &cosmosdb.Error{StatusCode: http.StatusNotFound}
 	}
+}
+
+// QueueLength returns OpenShiftClusters un-queued document count.
+// If error occurs, 0 is returned with error message
+func (c *openShiftClusters) QueueLength(ctx context.Context, collid string) (int, error) {
+	partitions, err := c.collc.PartitionKeyRanges(ctx, collid)
+	if err != nil {
+		return 0, err
+	}
+
+	var countTotal int
+	for _, r := range partitions.PartitionKeyRanges {
+		result := c.c.Query("", &cosmosdb.Query{
+			Query: `SELECT VALUE COUNT(1) FROM OpenShiftClusters doc WHERE doc.openShiftCluster.properties.provisioningState IN ("Creating", "Deleting", "Updating") AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`,
+		}, &cosmosdb.Options{
+			PartitionKeyRangeID: r.ID,
+		})
+		// because we aggregate count we don't expect pagination in this query result,
+		// so we gonna call Next() only once per partition.
+		var data struct {
+			api.MissingFields
+			Document []int `json:"Documents,omitempty"`
+		}
+		err := result.NextRaw(ctx, &data)
+		if err != nil {
+			return 0, err
+		}
+
+		countTotal = countTotal + data.Document[0]
+	}
+	return countTotal, nil
 }
 
 func (c *openShiftClusters) Patch(ctx context.Context, key string, f func(*api.OpenShiftClusterDocument) error) (*api.OpenShiftClusterDocument, error) {
@@ -207,7 +241,7 @@ func (c *openShiftClusters) ListByPrefix(subscriptionID string, prefix string) (
 
 func (c *openShiftClusters) Dequeue(ctx context.Context) (*api.OpenShiftClusterDocument, error) {
 	i := c.c.Query("", &cosmosdb.Query{
-		Query: `SELECT * FROM OpenShiftClusters doc WHERE NOT (doc.openShiftCluster.properties.provisioningState IN ("Succeeded", "Failed")) AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`,
+		Query: `SELECT * FROM OpenShiftClusters doc WHERE doc.openShiftCluster.properties.provisioningState IN ("Creating", "Deleting", "Updating") AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`,
 	}, nil)
 
 	for {
