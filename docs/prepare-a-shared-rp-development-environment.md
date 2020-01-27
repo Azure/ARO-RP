@@ -310,7 +310,7 @@ locations.
      >/dev/null
    az keyvault secret set \
      --vault-name  "$KEYVAULT_PREFIX-service" \
-     --name "db-encryption-key" \
+     --name "encryption-key" \
      --value $(openssl rand -base64 32) \
       >/dev/null
    ```
