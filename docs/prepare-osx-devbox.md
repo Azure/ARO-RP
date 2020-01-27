@@ -8,11 +8,8 @@ We are aiming to limit the amount of shell scripting, etc. in the repository, in
 
 ```bash
 # GNU Utils
-brew install core-utils
-brew search findutils
-
-# Install Jq
-brew install jq
+brew install coreutils
+brew install findutils
 
 # Install envsubst
 brew install gettext
@@ -27,28 +24,6 @@ brew install gpgme
 export PATH="/usr/local/bin:$PATH"
 # coreutils
 export PATH="/usr/local/opt/coreutils/libexec/gnubin:$PATH"
-# ed
-export PATH="/usr/local/opt/ed/libexec/gnubin:$PATH"
 # findutils
 export PATH="/usr/local/opt/findutils/libexec/gnubin:$PATH"
-# gnu-indent
-export PATH="/usr/local/opt/gnu-indent/libexec/gnubin:$PATH"
-# gnu-sed
-export PATH="/usr/local/opt/gnu-sed/libexec/gnubin:$PATH"
-# gnu-tar
-export PATH="/usr/local/opt/gnu-tar/libexec/gnubin:$PATH"
-# gnu-which
-export PATH="/usr/local/opt/gnu-which/libexec/gnubin:$PATH"
-# grep
-export PATH="/usr/local/opt/grep/libexec/gnubin:$PATH"
-# openssh
-export PATH="/usr/local/opt/openssl/bin:$PATH"
-# binutils
-export PATH="/usr/local/opt/binutils/bin:$PATH"
-export LDFLAGS="-L/usr/local/opt/binutils/lib"
-export CPPFLAGS="-I/usr/local/opt/binutils/include"
-# gnu-time
-export PATH="/usr/local/opt/gnu-time/libexec/gnubin:$PATH"
-# base64
-alias base64='gbase64'
 ```
