@@ -18,6 +18,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 )
 
+// encryptionSecretName must match key name in the service keyvault
+const encryptionSecretName = "encryption-key"
+
 type Interface interface {
 	clientauthorizer.ClientAuthorizer
 	instancemetadata.InstanceMetadata
@@ -30,11 +33,11 @@ type Interface interface {
 	FPAuthorizer(string, string) (autorest.Authorizer, error)
 	ManagedDomain(string) (string, error)
 	GetSecret(context.Context, string) ([]byte, error)
+	GetEncryptionSecret(context.Context) (*string, error)
 	GetCertificateSecret(context.Context, string) (*rsa.PrivateKey, []*x509.Certificate, error)
 	Listen() (net.Listener, error)
 	VnetName() string
 	Zones(vmSize string) ([]string, error)
-	DatabaseEncryption() bool
 }
 
 func NewEnv(ctx context.Context, log *logrus.Entry, databaseEncryption bool) (Interface, error) {

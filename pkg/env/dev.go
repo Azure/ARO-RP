@@ -283,6 +283,13 @@ func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthor
 	})
 }
 
-func (d *dev) DatabaseEncryption() bool {
-	return d.databaseEncryption
+func (d *dev) GetEncryptionSecret(ctx context.Context) (*string, error) {
+	if !d.databaseEncryption {
+		return nil, nil
+	}
+	data, err := d.GetSecret(ctx, encryptionSecretName)
+	if err != nil {
+		return nil, err
+	}
+	return to.StringPtr(string(data)), err
 }

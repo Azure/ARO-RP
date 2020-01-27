@@ -4,10 +4,14 @@ package install
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/url"
+	"reflect"
 	"strings"
 	"time"
 
@@ -16,12 +20,14 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/date"
+	"github.com/openshift/installer/pkg/asset/ignition/bootstrap"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
+	"github.com/Azure/ARO-RP/pkg/encrypt"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
@@ -38,6 +44,7 @@ type Installer struct {
 	env          env.Interface
 	db           database.OpenShiftClusters
 	doc          *api.OpenShiftClusterDocument
+	cipher       encrypt.Cipher
 	fpAuthorizer autorest.Authorizer
 
 	disks             compute.DisksClient
@@ -75,10 +82,30 @@ func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClu
 		return nil, err
 	}
 
+	// TODO: propagate context
+	keybase64, err := env.GetEncryptionSecret(context.Background())
+	if err != nil {
+		return nil, err
+	}
+
+	var cipher encrypt.Cipher
+	if keybase64 != nil {
+		key, err := base64.StdEncoding.DecodeString(string(*keybase64))
+		if err != nil {
+			return nil, err
+		}
+
+		cipher, err = encrypt.New(key)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &Installer{
 		log:          log,
 		env:          env,
 		db:           db,
+		cipher:       cipher,
 		doc:          doc,
 		fpAuthorizer: fpAuthorizer,
 
@@ -194,11 +221,50 @@ func (i *Installer) getGraph(ctx context.Context) (graph, error) {
 	}
 	defer rc.Close()
 
+	encrypted, err := ioutil.ReadAll(rc)
+	output, err := i.cipher.Decrypt(encrypted)
+	if err != nil {
+		return nil, err
+	}
+
 	var g graph
-	err = json.NewDecoder(rc).Decode(&g)
+	err = json.NewDecoder(bytes.NewBuffer(output)).Decode(&g)
 	if err != nil {
 		return nil, err
 	}
 
 	return g, nil
+}
+
+func (i *Installer) saveGraph(ctx context.Context, g graph) error {
+	i.log.Print("storing graph")
+
+	blobService, err := i.getBlobService(ctx)
+	if err != nil {
+		return err
+	}
+
+	bootstrap := g[reflect.TypeOf(&bootstrap.Bootstrap{})].(*bootstrap.Bootstrap)
+	bootstrapIgn := blobService.GetContainerReference("ignition").GetBlobReference("bootstrap.ign")
+	err = bootstrapIgn.CreateBlockBlobFromReader(bytes.NewReader(bootstrap.File.Data), nil)
+	if err != nil {
+		return err
+	}
+
+	graph := blobService.GetContainerReference("aro").GetBlobReference("graph")
+	b, err := json.MarshalIndent(g, "", "    ")
+	if err != nil {
+		return err
+	}
+
+	output, err := i.cipher.Encrypt(b)
+	if err != nil {
+		return err
+	}
+
+	err = graph.CreateBlockBlobFromReader(bytes.NewReader(output), nil)
+	if err != nil {
+		return err
+	}
+	return nil
 }

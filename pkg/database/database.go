@@ -21,9 +21,6 @@ import (
 	dbmetrics "github.com/Azure/ARO-RP/pkg/metrics/statsd/cosmosdb"
 )
 
-// encryptionSecretName must match key name in the service keyvault
-const encryptionSecretName = "db-encryption-key"
-
 // Database represents a database
 type Database struct {
 	log *logrus.Entry
@@ -38,12 +35,12 @@ type Database struct {
 // NewDatabase returns a new Database
 func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Interface, m metrics.Interface, uuid string) (db *Database, err error) {
 	var cipher encrypt.Cipher
-	if env.DatabaseEncryption() {
-		keybase64, err := env.GetSecret(ctx, encryptionSecretName)
-		if err != nil {
-			return nil, err
-		}
-		key, err := base64.StdEncoding.DecodeString(string(keybase64))
+	keybase64, err := env.GetEncryptionSecret(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if keybase64 != nil {
+		key, err := base64.StdEncoding.DecodeString(string(*keybase64))
 		if err != nil {
 			return nil, err
 		}

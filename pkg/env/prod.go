@@ -18,6 +18,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
+	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/deploy"
@@ -351,6 +352,13 @@ func (p *prod) Zones(vmSize string) ([]string, error) {
 	return zones, nil
 }
 
-func (p *prod) DatabaseEncryption() bool {
-	return p.databaseEncryption
+func (p *prod) GetEncryptionSecret(ctx context.Context) (*string, error) {
+	if !p.databaseEncryption {
+		return nil, nil
+	}
+	data, err := p.GetSecret(ctx, encryptionSecretName)
+	if err != nil {
+		return nil, err
+	}
+	return to.StringPtr(string(data)), err
 }

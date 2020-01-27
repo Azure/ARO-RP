@@ -56,18 +56,18 @@ func (c *aeadCipher) Decrypt(input []byte) ([]byte, error) {
 	buf := &bytes.Buffer{}
 	_, err := io.Copy(buf, r)
 	if err != nil {
-		return []byte{}, err
+		return nil, err
 	}
 
 	if len(buf.Bytes()) < 24 {
-		return []byte{}, fmt.Errorf("failed to decrypt message")
+		return nil, fmt.Errorf("failed to decrypt message")
 	}
 	nonce := buf.Bytes()[0:24]
 	data := buf.Bytes()[24:]
 
 	plaintext, err := c.aead.Open(nil, nonce, data, nil)
 	if err != nil {
-		return []byte{}, fmt.Errorf("failed to decrypt or authenticate message: %s", err)
+		return nil, fmt.Errorf("failed to decrypt or authenticate message: %s", err)
 	}
 	return plaintext, nil
 }
