@@ -12,15 +12,9 @@ jobs:
     strategy:
       matrix:
         Python27:
-          python.version: "2.7.17"
+          python.version: "2.7"
         Python35:
-          python.version: "3.5.9"
-        Python36:
-          python.version: "3.6.10"
-        Python37:
-          python.version: "3.7.6"
-        Python38:
-          python.version: "3.8.1"
+          python.version: "3.5"
 
     steps:
       - task: UsePythonVersion@0
@@ -54,9 +48,9 @@ jobs:
           set -x
           make test-go
           [[ -z "$(git status -s)" ]]
-          bash -c 'go-junit-report < uts.txt > report.xml'
-          bash -c 'gocov convert cover.out > coverage.json'
-          bash -c 'gocov-xml < coverage.json > coverage.xml'
+          go run ./vendor/github.com/jstemmer/go-junit-report/go-junit-report.go < uts.txt > report.xml
+          go run ./vendor/github.com/axw/gocov/gocov/*.go convert cover.out > coverage.json
+          go run ./vendor/github.com/AlekSi/gocov-xml/gocov-xml.go < coverage.json > coverage.xml
         workingDirectory: "${{ variables.modulePath }}"
         displayName: "🧪Run Golang Unit Tests"
       - task: PublishTestResults@2

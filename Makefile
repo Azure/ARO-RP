@@ -66,7 +66,7 @@ proxy:
 	go build -ldflags "-X main.gitCommit=$(COMMIT)" ./hack/proxy
 
 pyenv${PYTHON_VERSION}:
-	virtualenv pyenv${PYTHON_VERSION}
+	virtualenv --python=/usr/bin/python${PYTHON_VERSION} pyenv${PYTHON_VERSION}
 	. pyenv${PYTHON_VERSION}/bin/activate && \
 		pip install azdev && \
 		azdev setup -r . && \
