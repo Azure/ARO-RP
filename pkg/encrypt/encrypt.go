@@ -1,10 +1,15 @@
 package encrypt
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
+	"bytes"
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"strings"
 
 	"golang.org/x/crypto/chacha20poly1305"
@@ -13,22 +18,19 @@ import (
 const prefix = "ENC*"
 
 type Cipher interface {
-	Decrypt(string) (string, error)
-	Encrypt(string) (string, error)
+	Decrypt([]byte) ([]byte, error)
+	Encrypt([]byte) ([]byte, error)
 }
 
-var _ Cipher = (*ChaChaCipher)(nil)
+var _ Cipher = (*aeadCipher)(nil)
 
-type ChaChaCipher struct {
+type aeadCipher struct {
 	aead cipher.AEAD
 }
 
-func New(key []byte) (*ChaChaCipher, error) {
-	i, err := rand.Read(key)
-	if err != nil {
-		return nil, err
-	}
-	if i != 32 {
+// New return new instance of ChaChaCiper
+func New(key []byte) (*aeadCipher, error) {
+	if len(key) != 32 {
 		return nil, fmt.Errorf("key length must me 32 byte")
 	}
 	aead, err := chacha20poly1305.NewX(key)
@@ -36,37 +38,51 @@ func New(key []byte) (*ChaChaCipher, error) {
 		return nil, err
 	}
 
-	return &ChaChaCipher{
+	return &aeadCipher{
 		aead: aead,
 	}, nil
 }
 
-func (c *ChaChaCipher) Decrypt(input string) (string, error) {
-	if !strings.HasPrefix(input, prefix) {
+// Decrypt decrypts input
+func (c *aeadCipher) Decrypt(input []byte) ([]byte, error) {
+	if !strings.HasPrefix(string(input), prefix) {
 		return input, nil
 	}
 
-	encoded, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(input, prefix))
+	// If we use base64.StdEncoding.Decode and base64.StdEncoding.DecodedLen
+	// for decoding, it will return slightly bigger slice and fill the
+	// rest with \x00 bytes. This invalidates the message and decryption failed
+	r := base64.NewDecoder(base64.StdEncoding, bytes.NewReader(input[4:]))
+	buf := &bytes.Buffer{}
+	_, err := io.Copy(buf, r)
 	if err != nil {
-		return "", err
+		return []byte{}, err
 	}
 
-	nonce := encoded[:24]
-	cipherText := encoded[24:]
-	plaintext, err := c.aead.Open(nil, nonce, cipherText, nil)
-	if err != nil {
-		return "", fmt.Errorf("failed to decrypt or authenticate message: %s", err)
+	if len(buf.Bytes()) < 24 {
+		return []byte{}, fmt.Errorf("failed to decrypt message")
 	}
+	nonce := buf.Bytes()[0:24]
+	data := buf.Bytes()[24:]
 
-	return string(plaintext), nil
+	plaintext, err := c.aead.Open(nil, nonce, data, nil)
+	if err != nil {
+		return []byte{}, fmt.Errorf("failed to decrypt or authenticate message: %s", err)
+	}
+	return plaintext, nil
 }
 
-func (c *ChaChaCipher) Encrypt(input string) (string, error) {
+// Encrypt encrypts input using 24 byte nonce
+func (c *aeadCipher) Encrypt(input []byte) ([]byte, error) {
 	nonce := make([]byte, chacha20poly1305.NonceSizeX)
-	encrypted := c.aead.Seal(nil, nonce, []byte(input), nil)
-	cipherText := append(nonce, encrypted...)
-	result := base64.StdEncoding.EncodeToString(append(cipherText))
-	result = prefix + result
+	rand.Read(nonce)
+	encrypted := c.aead.Seal(nil, nonce, input, nil)
 
-	return result, nil
+	cipherText := append(nonce, encrypted...)
+	result := make([]byte, base64.StdEncoding.EncodedLen(len(cipherText)))
+	base64.StdEncoding.Encode(result, cipherText)
+
+	// return prefix+base64(nonce+ciphertext)
+	final := append([]byte(prefix), result...)
+	return final, nil
 }

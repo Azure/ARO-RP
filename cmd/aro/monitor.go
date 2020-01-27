@@ -19,7 +19,7 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 	uuid := uuid.NewV4().String()
 	log.Printf("uuid %s", uuid)
 
-	env, err := env.NewEnv(ctx, log)
+	env, err := env.NewEnv(ctx, log, true)
 	if err != nil {
 		return err
 	}
@@ -29,11 +29,6 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 	defer m.Close()
-
-	db, err := database.NewDatabase(ctx, log.WithField("component", "database"), env, uuid, true)
-	if err != nil {
-		return err
-	}
 
 	db, err := database.NewDatabase(ctx, log.WithField("component", "database"), env, m, uuid)
 	if err != nil {

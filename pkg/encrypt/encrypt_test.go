@@ -1,29 +1,34 @@
 package encrypt
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
+	"bytes"
+	"crypto/rand"
 	"testing"
 )
 
-func TestCryptorRoundTrip(t *testing.T) {
+func TestEncryptRoundTrip(t *testing.T) {
 	key := make([]byte, 32)
-	chacha, err := New(key)
+	rand.Read(key)
+	cipher, err := New(key)
 	if err != nil {
 		t.Error(err)
 	}
 
-	test := "topSecret"
-	encrypted, err := chacha.Encrypt(test)
+	test := []byte("secert")
+	encrypted, err := cipher.Encrypt(test)
 	if err != nil {
 		t.Error(err)
 	}
 
-	decrypted, err := chacha.Decrypt(encrypted)
+	decrypted, err := cipher.Decrypt(encrypted)
 	if err != nil {
 		t.Error(err)
 	}
 
-	if test != decrypted {
+	if r := bytes.Compare(test, decrypted); r != 0 {
 		t.Error("encryption roundTrip failed")
 	}
-
 }

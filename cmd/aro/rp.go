@@ -25,7 +25,7 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 	uuid := uuid.NewV4().String()
 	log.Printf("uuid %s", uuid)
 
-	env, err := env.NewEnv(ctx, log)
+	env, err := env.NewEnv(ctx, log, true)
 	if err != nil {
 		return err
 	}

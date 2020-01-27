@@ -149,7 +149,7 @@ func (i *Installer) removeBootstrap(ctx context.Context) error {
 		doc.OpenShiftCluster.Properties.APIServerProfile.URL = "https://api." + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + ":6443/"
 		doc.OpenShiftCluster.Properties.IngressProfiles[0].IP = routerIP
 		doc.OpenShiftCluster.Properties.ConsoleProfile.URL = "https://console-openshift-console.apps." + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/"
-		doc.OpenShiftCluster.Properties.KubeadminPassword = kubeadminPassword.Password
+		doc.OpenShiftCluster.Properties.KubeadminPassword = api.SecureString(kubeadminPassword.Password)
 		return nil
 	})
 	return err

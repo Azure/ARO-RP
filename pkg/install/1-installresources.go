@@ -92,7 +92,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 	{
 		spp := &i.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
 
-		conf := auth.NewClientCredentialsConfig(spp.ClientID, spp.ClientSecret, spp.TenantID)
+		conf := auth.NewClientCredentialsConfig(spp.ClientID, string(spp.ClientSecret), spp.TenantID)
 		conf.Resource = azure.PublicCloud.GraphEndpoint
 
 		spGraphAuthorizer, err := conf.Authorizer()

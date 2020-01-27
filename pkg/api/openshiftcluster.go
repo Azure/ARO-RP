@@ -22,6 +22,9 @@ type OpenShiftCluster struct {
 	Properties Properties        `json:"properties,omitempty"`
 }
 
+type SecureByte []byte
+type SecureString string
+
 // Properties represents an OpenShift cluster's properties
 type Properties struct {
 	MissingFields
@@ -81,8 +84,8 @@ type Properties struct {
 	StorageSuffix string `json:"storageSuffix,omitempty"`
 
 	SSHKey            *rsa.PrivateKey `json:"sshKey,omitempty"`
-	AdminKubeconfig   []byte          `json:"adminKubeconfig,omitempty"`
-	KubeadminPassword string          `json:"kubeadminPassword,omitempty"`
+	AdminKubeconfig   SecureByte      `json:"adminKubeconfig,omitempty"`
+	KubeadminPassword SecureString    `json:"kubeadminPassword,omitempty"`
 }
 
 // ProvisioningState represents a provisioning state
@@ -117,9 +120,9 @@ type ConsoleProfile struct {
 type ServicePrincipalProfile struct {
 	MissingFields
 
-	TenantID     string `json:"tenantId,omitempty"`
-	ClientID     string `json:"clientId,omitempty"`
-	ClientSecret string `json:"clientSecret,omitempty"`
+	TenantID     string       `json:"tenantId,omitempty"`
+	ClientID     string       `json:"clientId,omitempty"`
+	ClientSecret SecureString `json:"clientSecret,omitempty"`
 }
 
 // NetworkProfile represents a network profile

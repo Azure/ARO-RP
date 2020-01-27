@@ -24,7 +24,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return fmt.Errorf("usage: %s resourceid", os.Args[0])
 	}
 
-	env, err := env.NewEnv(ctx, log)
+	env, err := env.NewEnv(ctx, log, false)
 	if err != nil {
 		return err
 	}
@@ -43,7 +43,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		Indent: 4,
 	}
 
-	err = api.AddExtensions(&h.BasicHandle)
+	err = api.AddExtensions(&h.BasicHandle, nil)
 	if err != nil {
 		return err
 	}

@@ -34,12 +34,13 @@ type Interface interface {
 	Listen() (net.Listener, error)
 	VnetName() string
 	Zones(vmSize string) ([]string, error)
+	DatabaseEncryption() bool
 }
 
-func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
+func NewEnv(ctx context.Context, log *logrus.Entry, databaseEncryption bool) (Interface, error) {
 	if strings.ToLower(os.Getenv("RP_MODE")) == "development" {
 		log.Warn("running in development mode")
-		return newDev(ctx, log, instancemetadata.NewDev(), clientauthorizer.NewAll())
+		return newDev(ctx, log, instancemetadata.NewDev(), clientauthorizer.NewAll(), databaseEncryption)
 	}
 
 	im, err := instancemetadata.NewProd()
@@ -47,5 +48,5 @@ func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
 		return nil, err
 	}
 
-	return newProd(ctx, log, im, clientauthorizer.NewARM(log))
+	return newProd(ctx, log, im, clientauthorizer.NewARM(log), databaseEncryption)
 }

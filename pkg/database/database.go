@@ -6,6 +6,7 @@ package database
 import (
 	"context"
 	"crypto/tls"
+	"encoding/base64"
 	"net/http"
 	"time"
 
@@ -32,12 +33,27 @@ type Database struct {
 	Monitors          Monitors
 	OpenShiftClusters OpenShiftClusters
 	Subscriptions     Subscriptions
-
-	cipher encrypt.Cipher
 }
 
 // NewDatabase returns a new Database
 func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Interface, m metrics.Interface, uuid string) (db *Database, err error) {
+	var cipher encrypt.Cipher
+	if env.DatabaseEncryption() {
+		keybase64, err := env.GetSecret(ctx, encryptionSecretName)
+		if err != nil {
+			return nil, err
+		}
+		key, err := base64.StdEncoding.DecodeString(string(keybase64))
+		if err != nil {
+			return nil, err
+		}
+
+		cipher, err = encrypt.New(key)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	databaseAccount, masterKey := env.CosmosDB()
 
 	h := &codec.JsonHandle{
@@ -48,7 +64,7 @@ func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Interface, m me
 		},
 	}
 
-	err = api.AddExtensions(&h.BasicHandle)
+	err = api.AddExtensions(&h.BasicHandle, cipher)
 	if err != nil {
 		return nil, err
 	}

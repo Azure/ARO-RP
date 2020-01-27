@@ -44,12 +44,13 @@ type prod struct {
 	serviceKeyvaultURI       string
 	vnetName                 string
 	zones                    map[string][]string
+	databaseEncryption       bool
 
 	fpCertificate *x509.Certificate
 	fpPrivateKey  *rsa.PrivateKey
 }
 
-func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata, clientauthorizer clientauthorizer.ClientAuthorizer) (*prod, error) {
+func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata, clientauthorizer clientauthorizer.ClientAuthorizer, databaseEncryption bool) (*prod, error) {
 	for _, key := range []string{
 		"PULL_SECRET",
 	} {
@@ -107,6 +108,7 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 
 	p.fpPrivateKey = fpPrivateKey
 	p.fpCertificate = fpCertificates[0]
+	p.databaseEncryption = databaseEncryption
 
 	return p, nil
 }
@@ -347,4 +349,8 @@ func (p *prod) Zones(vmSize string) ([]string, error) {
 		return nil, fmt.Errorf("zone information not found for vm size %q", vmSize)
 	}
 	return zones, nil
+}
+
+func (p *prod) DatabaseEncryption() bool {
+	return p.databaseEncryption
 }
