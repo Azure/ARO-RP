@@ -5,7 +5,6 @@ package main
 
 import (
 	"crypto/tls"
-	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -17,25 +16,28 @@ func parseTokenResponse(location string) (string, error) {
 		return "", err
 	}
 
-	for _, param := range strings.Split(locURL.Fragment, "&") {
-		nameValue := strings.Split(param, "=")
-		if nameValue[0] == "access_token" {
-			return nameValue[1], nil
-		}
+	v, err := url.ParseQuery(locURL.Fragment)
+	if err != nil {
+		return "", err
 	}
-	return "", fmt.Errorf("token not found in response")
+
+	return v.Get("access_token"), nil
 }
 
 func getTokenURLFromConsoleURL(consoleURL string) (*url.URL, error) {
-	tokenURL, err := url.Parse(strings.Replace(consoleURL, "console-openshift-console.apps.", "oauth-openshift.apps.", 1))
+	tokenURL, err := url.Parse(consoleURL)
 	if err != nil {
 		return nil, err
 	}
+
+	tokenURL.Host = strings.Replace(tokenURL.Host, "console-openshift-console", "oauth-openshift", 1)
 	tokenURL.Path = "/oauth/authorize"
+
 	q := tokenURL.Query()
 	q.Set("response_type", "token")
 	q.Set("client_id", "openshift-challenging-client")
 	tokenURL.RawQuery = q.Encode()
+
 	return tokenURL, nil
 }
 
@@ -44,24 +46,26 @@ func getAuthorizedToken(tokenURL *url.URL, username, password string) (string, e
 	req.SetBasicAuth(username, password)
 	req.Header.Add("X-CSRF-Token", "1")
 
-	resp, err := (&http.Client{
+	cli := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
 				InsecureSkipVerify: true,
 			},
 		},
-		CheckRedirect: func(req *http.Request, via []*http.Request) error { return http.ErrUseLastResponse }}).Do(req)
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	resp, err := cli.Do(req)
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != 302 {
+
+	if resp.StatusCode != http.StatusFound {
 		return "", err
 	}
 
-	loc := resp.Header["Location"]
-	if loc == nil {
-		return "", fmt.Errorf("no Location header found")
-	}
-	return parseTokenResponse(loc[0])
+	return parseTokenResponse(resp.Header.Get("Location"))
 }
