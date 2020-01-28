@@ -25,7 +25,9 @@ jobs:
       - script: |
           # az login -u $(ARO_CI_SPN_ID) -p $(ARO_CI_SPN_PASSWORD) --tenant $(ARO_CI_SPN_TENANT) --service-principal
           # az account set -s $(ARO_ACR_SUB_ID)
-          echo login az
+          # --> registry.access.redhat.com and arosvc.azurecr.io <--
+          # az keyvault secret show --id $(ARO_ACR_CI_SECRET) | jq -r .value > ~/.docker/config.json
+          echo az login + acr pull secret from KV
         displayName: 🔑 Authenticate and pull secrets
       - script: |
           echo build images $(makefile.target)
@@ -35,4 +37,4 @@ jobs:
       - script: |
           echo push images $(makefile.target)
         workingDirectory: "${{ variables.modulePath }}"
-        displayName: "🚀 Build : $(makefile.target)"
+        displayName: "🚀 Push : $(makefile.target)"
