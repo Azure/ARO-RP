@@ -10,6 +10,14 @@
   version = "v0.51.0"
 
 [[projects]]
+  branch = "master"
+  digest = "1:112418214e9ccdfdf047b8f1099e5b57ef44365460050dad349ac00b32405d10"
+  name = "github.com/AlekSi/gocov-xml"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "3a14fb1c4737b3995174c5f4d6d08a348b9b4180"
+
+[[projects]]
   digest = "1:e072b8b6e9ea2e1a1a119dc668f3e121b27b2a82b98f79d2b95006f78798462e"
   name = "github.com/Azure/azure-sdk-for-go"
   packages = [
@@ -175,6 +183,19 @@
   pruneopts = "UT"
   revision = "cd610ee76770524d9f1135bfdc241e1b60dfd00b"
   version = "v1.28.6"
+
+[[projects]]
+  digest = "1:853f8d8dae66462f0479a2aff520f02af6d9003d98bd476085f117d5b8daa20a"
+  name = "github.com/axw/gocov"
+  packages = [
+    ".",
+    "gocov",
+    "gocov/internal/testflag",
+    "gocovutil",
+  ]
+  pruneopts = "UT"
+  revision = "b6eca663ebb7e7ef9798914d19f53ba2c6f74c96"
+  version = "v1.0.0"
 
 [[projects]]
   digest = "1:d6afaeed1502aa28e80a4ed0981d570ad91b2579193404256ce672ed0a609e0d"
@@ -593,6 +614,18 @@
   pruneopts = "UT"
   revision = "acfec88f7a0d5140ace3dcdbee10184e3684a9e1"
   version = "v1.1.9"
+
+[[projects]]
+  digest = "1:076c531484852c227471112d49465873aaad47e5ad6e1aec3a5b092a436117ef"
+  name = "github.com/jstemmer/go-junit-report"
+  packages = [
+    ".",
+    "formatter",
+    "parser",
+  ]
+  pruneopts = "UT"
+  revision = "cc1f095d5cc5eca2844f5c5ea7bb37f6b9bf6cac"
+  version = "v0.9.1"
 
 [[projects]]
   branch = "master"
@@ -1231,7 +1264,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:835727a7ae21040542e69c98e140240055d2d264013b8fd41108826192e1b603"
+  digest = "1:0b579a0502f74c473b7ac8beb5aacaaa093594eab7df242ea9cd683b48028360"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -1333,10 +1366,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:3e7fbc517dc9fec1648669f7f171a362f4e25acac328a42788419e713dee8419"
+  digest = "1:8bb1d2f050249349dbaeda1ce06e22d9f185acda87c0a5c5a4c43da45d46ed69"
   name = "golang.org/x/tools"
   packages = [
     "cmd/goimports",
+    "cover",
     "go/ast/astutil",
     "go/gcexportdata",
     "go/internal/gcimporter",
@@ -1747,6 +1781,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/AlekSi/gocov-xml",
     "github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization",
     "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute",
     "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2015-04-08/documentdb",
@@ -1773,6 +1808,7 @@
     "github.com/BurntSushi/toml",
     "github.com/alvaroloes/enumer",
     "github.com/apparentlymart/go-cidr/cidr",
+    "github.com/axw/gocov/gocov",
     "github.com/containers/image/copy",
     "github.com/containers/image/docker",
     "github.com/containers/image/pkg/blobinfocache/memory",
@@ -1783,6 +1819,7 @@
     "github.com/golang/mock/mockgen",
     "github.com/gorilla/mux",
     "github.com/jim-minter/go-cosmosdb/cmd/gencosmosdb",
+    "github.com/jstemmer/go-junit-report",
     "github.com/onsi/ginkgo",
     "github.com/onsi/gomega",
     "github.com/onsi/gomega/format",
@@ -1827,12 +1864,13 @@
     "golang.org/x/tools/go/ast/astutil",
     "golang.org/x/tools/go/packages",
     "k8s.io/api/core/v1",
-    "k8s.io/apimachinery/pkg/api/errors",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/apimachinery/pkg/util/wait",
     "k8s.io/client-go/kubernetes",
     "k8s.io/client-go/rest",
     "k8s.io/client-go/tools/clientcmd",
+    "k8s.io/client-go/tools/clientcmd/api",
+    "k8s.io/client-go/tools/clientcmd/api/latest",
     "k8s.io/client-go/tools/clientcmd/api/v1",
     "k8s.io/client-go/tools/metrics",
     "k8s.io/client-go/util/retry",
