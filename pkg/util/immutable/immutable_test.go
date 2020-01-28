@@ -8,11 +8,12 @@ import (
 )
 
 type ts struct {
-	Mutable     string `json:"mutable,omitempty" mutable:"true"` // should be able to change
-	Case        string `json:"case,omitempty" mutable:"case"`    // should be case insensitive
-	Empty       string `json:"empty,omitempty" mutable:""`       // default to immutable
-	EmptyNoJSON string `mutable:"false"`                         // handle no json tag
-	None        string // default to immutable
+	Mutable     string            `json:"mutable,omitempty" mutable:"true"` // should be able to change
+	Case        string            `json:"case,omitempty" mutable:"case"`    // should be case insensitive
+	Empty       string            `json:"empty,omitempty" mutable:""`       // default to immutable
+	Map         map[string]string `json:"map,omitempty"`
+	EmptyNoJSON string            `mutable:"false"` // handle no json tag
+	None        string            // default to immutable
 }
 
 func TestValidate(t *testing.T) {
@@ -22,6 +23,9 @@ func TestValidate(t *testing.T) {
 		Empty:       "before",
 		EmptyNoJSON: "before",
 		None:        "before",
+		Map: map[string]string{
+			"key": "value",
+		},
 	}
 	tests := []struct {
 		name    string
@@ -56,6 +60,20 @@ func TestValidate(t *testing.T) {
 				s.Empty = "after"
 			},
 			wantErr: "400: PropertyChangeNotAllowed: empty: Changing property 'empty' is not allowed.",
+		},
+		{
+			name: "can NOT replace a map",
+			modify: func(s *ts) {
+				s.Map = map[string]string{"new": "value"}
+			},
+			wantErr: "400: PropertyChangeNotAllowed: map: Changing property 'map' is not allowed.",
+		},
+		{
+			name: "can NOT change a value in a map",
+			modify: func(s *ts) {
+				s.Map = map[string]string{"key": "new-value"}
+			},
+			wantErr: "400: PropertyChangeNotAllowed: map[\"key\"]: Changing property 'map[\"key\"]' is not allowed.",
 		},
 		{
 			name: "can NOT change EmptyNoJSON",
