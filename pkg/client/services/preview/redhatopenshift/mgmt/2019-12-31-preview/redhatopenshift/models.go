@@ -508,6 +508,6 @@ type WorkerProfile struct {
 	DiskSizeGB *int32 `json:"diskSizeGB,omitempty"`
 	// SubnetID - The Azure resource ID of the worker subnet (immutable).
 	SubnetID *string `json:"subnetId,omitempty"`
-	// Count - The number of worker VMs.  Must be between 3 and 20.
+	// Count - The number of worker VMs.  Must be between 3 and 20 (immutable).
 	Count *int32 `json:"count,omitempty"`
 }
