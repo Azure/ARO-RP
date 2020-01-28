@@ -34,6 +34,9 @@ func (t *tracerRoundTripper) RoundTrip(req *http.Request) (resp *http.Response, 
 	start := time.Now()
 
 	defer func() {
+		if resp == nil {
+			return
+		}
 		var ru float64
 		// Sometimes we get request-charge="" because pkranges API is free
 		// We log this on debug mode only and ignore
