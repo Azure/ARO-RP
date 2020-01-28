@@ -1,8 +1,12 @@
 # Prepare your development environment using MacOS X
 
-We are open to developers on OSX working on this repository. We are asking macOS users to setup GNU utils on their machines.
+We are open to developers on OSX working on this repository. We are asking
+ macOS users to setup GNU utils on their machines.
 
-We are aiming to limit the amount of shell scripting, etc. in the repository, installing the gnu utils on OSX will minimise the chances of unexpected differences in command line flags, usages, etc., and make it easier for everyone to ensure compatibility down the line.
+We are aiming to limit the amount of shell scripting, etc. in the repository,
+installing the GNU utils on OSX will minimise the chances of unexpected
+differences in command line flags, usages, etc., and make it easier for
+everyone to ensure compatibility down the line.
 
 ## Guidances
 
