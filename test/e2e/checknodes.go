@@ -29,8 +29,7 @@ var _ = Describe("Check nodes", func() {
 
 		nodes, err := Clients.Kubernetes.CoreV1().Nodes().List(metav1.ListOptions{})
 		Expect(err).NotTo(HaveOccurred())
-
-		var nodeCount int64
+		var nodeCount int32
 		for _, node := range nodes.Items {
 			if ready.NodeIsReady(&node) {
 				nodeCount++
