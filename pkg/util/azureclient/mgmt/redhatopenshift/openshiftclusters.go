@@ -22,6 +22,8 @@ import (
 type OpenShiftClustersClient interface {
 	ListCredentials(ctx context.Context, resourceGroupName string, resourceName string) (result redhatopenshift.OpenShiftClusterCredentials, err error)
 	Get(ctx context.Context, resourceGroupName string, resourceName string) (result redhatopenshift.OpenShiftCluster, err error)
+	List(ctx context.Context) (result redhatopenshift.OpenShiftClusterList, err error)
+	ListByResourceGroup(ctx context.Context, resourceGroupName string) (result redhatopenshift.OpenShiftClusterList, err error)
 }
 
 type openShiftClustersClient struct {
