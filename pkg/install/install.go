@@ -222,6 +222,7 @@ func (i *Installer) getGraph(ctx context.Context) (graph, error) {
 	defer rc.Close()
 
 	encrypted, err := ioutil.ReadAll(rc)
+	// Decrypt either return passthrough or decrypts
 	output, err := i.cipher.Decrypt(encrypted)
 	if err != nil {
 		return nil, err

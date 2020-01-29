@@ -6,14 +6,15 @@ package database
 import (
 	"context"
 	"crypto/tls"
+	"encoding/base64"
 	"net/http"
 	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
 
-	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/encrypt"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	dbmetrics "github.com/Azure/ARO-RP/pkg/metrics/statsd/cosmosdb"
@@ -42,7 +43,24 @@ func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Interface, m me
 		},
 	}
 
-	err = api.AddExtensions(&h.BasicHandle)
+	var cipher encrypt.Cipher
+	keybase64, err := env.GetEncryptionSecret(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if keybase64 != nil {
+		key, err := base64.StdEncoding.DecodeString(string(*keybase64))
+		if err != nil {
+			return nil, err
+		}
+
+		cipher, err = encrypt.New(key)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	err = encrypt.AddExtensions(&h.BasicHandle, cipher)
 	if err != nil {
 		return nil, err
 	}

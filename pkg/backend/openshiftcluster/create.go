@@ -111,7 +111,7 @@ func (m *Manager) Create(ctx context.Context) error {
 		Azure: &icazure.Credentials{
 			TenantID:       m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID,
 			ClientID:       m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientID,
-			ClientSecret:   string(m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret),
+			ClientSecret:   m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret,
 			SubscriptionID: r.SubscriptionID,
 		},
 	}

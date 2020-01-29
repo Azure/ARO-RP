@@ -92,7 +92,7 @@ func (c *openShiftClusters) Create(ctx context.Context, doc *api.OpenShiftCluste
 	}
 
 	// TODO: Copy here for shallow use
-	err = c.cipher.EncryptDocument(*doc)
+	err = c.cipher.EncryptDocument(doc)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +137,7 @@ func (c *openShiftClusters) Get(ctx context.Context, key string) (*api.OpenShift
 	case len(docs.OpenShiftClusterDocuments) > 1:
 		return nil, fmt.Errorf("read %d documents, expected <= 1", len(docs.OpenShiftClusterDocuments))
 	case len(docs.OpenShiftClusterDocuments) == 1:
-		err := c.cipher.DecryptDocument(*docs.OpenShiftClusterDocuments[0])
+		err := c.cipher.DecryptDocument(docs.OpenShiftClusterDocuments[0])
 		if err != nil {
 			return nil, err
 		}
@@ -196,12 +196,18 @@ func (c *openShiftClusters) patch(ctx context.Context, key string, f func(*api.O
 			return
 		}
 
-		err = c.cipher.EncryptDocument(*doc)
+		// TODO: Improve roundtrip here
+		err = c.cipher.EncryptDocument(doc)
 		if err != nil {
 			return
 		}
 
 		doc, err = c.update(ctx, doc, options)
+
+		err = c.cipher.DecryptDocument(doc)
+		if err != nil {
+			return
+		}
 		return
 	})
 
@@ -217,7 +223,6 @@ func (c *openShiftClusters) patchWithLease(ctx context.Context, key string, f fu
 		if doc.LeaseOwner != c.uuid {
 			return fmt.Errorf("lost lease")
 		}
-
 		return f(doc)
 	}, options)
 }
@@ -283,6 +288,12 @@ func (c *openShiftClusters) Dequeue(ctx context.Context) (*api.OpenShiftClusterD
 			if cosmosdb.IsErrorStatusCode(err, http.StatusPreconditionFailed) { // someone else got there first
 				continue
 			}
+
+			err := c.cipher.DecryptDocument(doc)
+			if err != nil {
+				return nil, err
+			}
+
 			return doc, err
 		}
 	}

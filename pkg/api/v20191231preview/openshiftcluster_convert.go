@@ -31,7 +31,7 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 			},
 			ServicePrincipalProfile: ServicePrincipalProfile{
 				ClientID:     oc.Properties.ServicePrincipalProfile.ClientID,
-				ClientSecret: string(oc.Properties.ServicePrincipalProfile.ClientSecret),
+				ClientSecret: oc.Properties.ServicePrincipalProfile.ClientSecret,
 			},
 			NetworkProfile: NetworkProfile{
 				PodCIDR:     oc.Properties.NetworkProfile.PodCIDR,

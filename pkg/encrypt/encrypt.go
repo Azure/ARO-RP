@@ -14,7 +14,6 @@ import (
 	"strings"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-
 	"github.com/Azure/ARO-RP/pkg/env"
 	"golang.org/x/crypto/chacha20poly1305"
 )
@@ -22,8 +21,8 @@ import (
 const prefix = "ENC*"
 
 type Cipher interface {
-	DecryptDocument(doc api.OpenShiftClusterDocument) error
-	EncryptDocument(doc api.OpenShiftClusterDocument) error
+	DecryptDocument(doc *api.OpenShiftClusterDocument) error
+	EncryptDocument(doc *api.OpenShiftClusterDocument) error
 
 	Decrypt([]byte) ([]byte, error)
 	Encrypt([]byte) ([]byte, error)
@@ -101,8 +100,17 @@ func (c *aeadCipher) Decrypt(input []byte) ([]byte, error) {
 	return plaintext, nil
 }
 
+// decryptString encrypts input using 24 byte nonce
+func (c *aeadCipher) decryptString(input string) (string, error) {
+	output, err := c.Decrypt([]byte(input))
+	return string(output), err
+}
+
 // Encrypt encrypts input using 24 byte nonce
 func (c *aeadCipher) Encrypt(input []byte) ([]byte, error) {
+	if strings.HasPrefix(string(input), prefix) {
+		return input, nil
+	}
 	nonce := make([]byte, chacha20poly1305.NonceSizeX)
 	rand.Read(nonce)
 	encrypted := c.aead.Seal(nil, nonce, input, nil)
@@ -116,32 +124,40 @@ func (c *aeadCipher) Encrypt(input []byte) ([]byte, error) {
 	return final, nil
 }
 
-func (c *aeadCipher) EncryptDocument(doc api.OpenShiftClusterDocument) (err error) {
-	clientSecretSecure, err := c.Encrypt([]byte(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret))
-	if err != nil {
-		return
-	}
-	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = string(clientSecretSecure)
+// encryptString encrypts input using 24 byte nonce
+func (c *aeadCipher) encryptString(input string) (string, error) {
+	output, err := c.Encrypt([]byte(input))
+	return string(output), err
+}
 
-	kubeadminPasswordSecure, err := c.Encrypt([]byte(doc.OpenShiftCluster.Properties.KubeadminPassword))
+func (c *aeadCipher) EncryptDocument(doc *api.OpenShiftClusterDocument) (err error) {
+	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret, err = c.encryptString(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret)
 	if err != nil {
-		return
+		return err
 	}
-	doc.OpenShiftCluster.Properties.KubeadminPassword = string(kubeadminPasswordSecure)
+	doc.OpenShiftCluster.Properties.KubeadminPassword, err = c.encryptString(doc.OpenShiftCluster.Properties.KubeadminPassword)
+	if err != nil {
+		return err
+	}
+	doc.OpenShiftCluster.Properties.AdminKubeconfig, err = c.Encrypt(doc.OpenShiftCluster.Properties.AdminKubeconfig)
+	if err != nil {
+		return err
+	}
 	return
 }
 
-func (c *aeadCipher) DecryptDocument(doc api.OpenShiftClusterDocument) (err error) {
-	clientSecretPlain, err := c.Decrypt([]byte(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret))
+func (c *aeadCipher) DecryptDocument(doc *api.OpenShiftClusterDocument) (err error) {
+	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret, err = c.decryptString(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret)
 	if err != nil {
-		return
+		return err
 	}
-	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = string(clientSecretPlain)
-
-	kubeadminPasswordPlain, err := c.Decrypt([]byte(doc.OpenShiftCluster.Properties.KubeadminPassword))
+	doc.OpenShiftCluster.Properties.KubeadminPassword, err = c.decryptString(doc.OpenShiftCluster.Properties.KubeadminPassword)
 	if err != nil {
-		return
+		return err
 	}
-	doc.OpenShiftCluster.Properties.KubeadminPassword = string(kubeadminPasswordPlain)
+	doc.OpenShiftCluster.Properties.AdminKubeconfig, err = c.Decrypt(doc.OpenShiftCluster.Properties.AdminKubeconfig)
+	if err != nil {
+		return err
+	}
 	return
 }

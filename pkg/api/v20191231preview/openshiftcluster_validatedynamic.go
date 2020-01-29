@@ -87,7 +87,7 @@ func (v *openShiftClusterValidator) Dynamic(ctx context.Context, oc *api.OpenShi
 
 func (dv *openShiftClusterDynamicValidator) validateServicePrincipalProfile() (autorest.Authorizer, error) {
 	spp := &dv.oc.Properties.ServicePrincipalProfile
-	conf := auth.NewClientCredentialsConfig(spp.ClientID, string(spp.ClientSecret), spp.TenantID)
+	conf := auth.NewClientCredentialsConfig(spp.ClientID, spp.ClientSecret, spp.TenantID)
 
 	token, err := conf.ServicePrincipalToken()
 	if err != nil {
@@ -107,7 +107,7 @@ func (dv *openShiftClusterDynamicValidator) validateServicePrincipalProfile() (a
 
 func (dv *openShiftClusterDynamicValidator) validateServicePrincipalRole() error {
 	spp := &dv.oc.Properties.ServicePrincipalProfile
-	conf := auth.NewClientCredentialsConfig(spp.ClientID, string(spp.ClientSecret), spp.TenantID)
+	conf := auth.NewClientCredentialsConfig(spp.ClientID, spp.ClientSecret, spp.TenantID)
 	conf.Resource = azure.PublicCloud.GraphEndpoint
 
 	token, err := conf.ServicePrincipalToken()
