@@ -11,11 +11,14 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/encrypt"
+	"github.com/Azure/ARO-RP/pkg/env"
 )
 
 type subscriptions struct {
-	c    cosmosdb.SubscriptionDocumentClient
-	uuid string
+	c      cosmosdb.SubscriptionDocumentClient
+	cipher encrypt.Cipher
+	uuid   string
 }
 
 // Subscriptions is the database interface for SubscriptionDocuments
@@ -29,8 +32,12 @@ type Subscriptions interface {
 }
 
 // NewSubscriptions returns a new Subscriptions
-func NewSubscriptions(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, dbid, collid string) (Subscriptions, error) {
-	collc := cosmosdb.NewCollectionClient(dbc, dbid)
+func NewSubscriptions(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, env env.Interface, collid string) (Subscriptions, error) {
+	collc := cosmosdb.NewCollectionClient(dbc, env.DatabaseName())
+	cipher, err := encrypt.NewFromEnv(env)
+	if err != nil {
+		return nil, err
+	}
 
 	triggers := []*cosmosdb.Trigger{
 		{
@@ -68,8 +75,9 @@ func NewSubscriptions(ctx context.Context, uuid string, dbc cosmosdb.DatabaseCli
 	}
 
 	return &subscriptions{
-		c:    cosmosdb.NewSubscriptionDocumentClient(collc, collid),
-		uuid: uuid,
+		c:      cosmosdb.NewSubscriptionDocumentClient(collc, collid),
+		cipher: cipher,
+		uuid:   uuid,
 	}, nil
 }
 

@@ -13,12 +13,15 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/encrypt"
+	"github.com/Azure/ARO-RP/pkg/env"
 )
 
 type openShiftClusters struct {
-	c     cosmosdb.OpenShiftClusterDocumentClient
-	collc cosmosdb.CollectionClient
-	uuid  string
+	c      cosmosdb.OpenShiftClusterDocumentClient
+	cipher encrypt.Cipher
+	collc  cosmosdb.CollectionClient
+	uuid   string
 }
 
 // OpenShiftClusters is the database interface for OpenShiftClusterDocuments
@@ -39,8 +42,12 @@ type OpenShiftClusters interface {
 }
 
 // NewOpenShiftClusters returns a new OpenShiftClusters
-func NewOpenShiftClusters(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, dbid, collid string) (OpenShiftClusters, error) {
-	collc := cosmosdb.NewCollectionClient(dbc, dbid)
+func NewOpenShiftClusters(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, env env.Interface, collid string) (OpenShiftClusters, error) {
+	collc := cosmosdb.NewCollectionClient(dbc, env.DatabaseName())
+	cipher, err := encrypt.NewFromEnv(env)
+	if err != nil {
+		return nil, err
+	}
 
 	triggers := []*cosmosdb.Trigger{
 		{
@@ -66,9 +73,10 @@ func NewOpenShiftClusters(ctx context.Context, uuid string, dbc cosmosdb.Databas
 	}
 
 	return &openShiftClusters{
-		c:     cosmosdb.NewOpenShiftClusterDocumentClient(collc, collid),
-		collc: collc,
-		uuid:  uuid,
+		c:      cosmosdb.NewOpenShiftClusterDocumentClient(collc, collid),
+		collc:  collc,
+		cipher: cipher,
+		uuid:   uuid,
 	}, nil
 }
 
@@ -79,6 +87,12 @@ func (c *openShiftClusters) Create(ctx context.Context, doc *api.OpenShiftCluste
 
 	var err error
 	doc.PartitionKey, err = c.partitionKey(doc.Key)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: Copy here for shallow use
+	err = c.cipher.EncryptDocument(*doc)
 	if err != nil {
 		return nil, err
 	}
@@ -123,6 +137,10 @@ func (c *openShiftClusters) Get(ctx context.Context, key string) (*api.OpenShift
 	case len(docs.OpenShiftClusterDocuments) > 1:
 		return nil, fmt.Errorf("read %d documents, expected <= 1", len(docs.OpenShiftClusterDocuments))
 	case len(docs.OpenShiftClusterDocuments) == 1:
+		err := c.cipher.DecryptDocument(*docs.OpenShiftClusterDocuments[0])
+		if err != nil {
+			return nil, err
+		}
 		return docs.OpenShiftClusterDocuments[0], nil
 	default:
 		return nil, &cosmosdb.Error{StatusCode: http.StatusNotFound}
@@ -174,6 +192,11 @@ func (c *openShiftClusters) patch(ctx context.Context, key string, f func(*api.O
 		}
 
 		err = f(doc)
+		if err != nil {
+			return
+		}
+
+		err = c.cipher.EncryptDocument(*doc)
 		if err != nil {
 			return
 		}

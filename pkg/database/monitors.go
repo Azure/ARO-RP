@@ -11,11 +11,14 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/encrypt"
+	"github.com/Azure/ARO-RP/pkg/env"
 )
 
 type monitors struct {
-	c    cosmosdb.MonitorDocumentClient
-	uuid string
+	c      cosmosdb.MonitorDocumentClient
+	cipher encrypt.Cipher
+	uuid   string
 }
 
 // Monitors is the database interface for MonitorDocuments
@@ -29,8 +32,12 @@ type Monitors interface {
 }
 
 // NewMonitors returns a new Monitors
-func NewMonitors(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, dbid, collid string) (Monitors, error) {
-	collc := cosmosdb.NewCollectionClient(dbc, dbid)
+func NewMonitors(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, env env.Interface, collid string) (Monitors, error) {
+	collc := cosmosdb.NewCollectionClient(dbc, env.DatabaseName())
+	cipher, err := encrypt.NewFromEnv(env)
+	if err != nil {
+		return nil, err
+	}
 
 	triggers := []*cosmosdb.Trigger{
 		{
@@ -56,8 +63,9 @@ func NewMonitors(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, 
 	}
 
 	return &monitors{
-		c:    cosmosdb.NewMonitorDocumentClient(collc, collid),
-		uuid: uuid,
+		c:      cosmosdb.NewMonitorDocumentClient(collc, collid),
+		cipher: cipher,
+		uuid:   uuid,
 	}, nil
 }
 

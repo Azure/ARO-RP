@@ -11,11 +11,14 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/encrypt"
+	"github.com/Azure/ARO-RP/pkg/env"
 )
 
 type asyncOperations struct {
-	c    cosmosdb.AsyncOperationDocumentClient
-	uuid string
+	c      cosmosdb.AsyncOperationDocumentClient
+	cipher encrypt.Cipher
+	uuid   string
 }
 
 // AsyncOperations is the database interface for AsyncOperationDocuments
@@ -26,12 +29,17 @@ type AsyncOperations interface {
 }
 
 // NewAsyncOperations returns a new AsyncOperations
-func NewAsyncOperations(uuid string, dbc cosmosdb.DatabaseClient, dbid, collid string) (AsyncOperations, error) {
-	collc := cosmosdb.NewCollectionClient(dbc, dbid)
+func NewAsyncOperations(uuid string, dbc cosmosdb.DatabaseClient, env env.Interface, collid string) (AsyncOperations, error) {
+	collc := cosmosdb.NewCollectionClient(dbc, env.DatabaseName())
+	cipher, err := encrypt.NewFromEnv(env)
+	if err != nil {
+		return nil, err
+	}
 
 	return &asyncOperations{
-		c:    cosmosdb.NewAsyncOperationDocumentClient(collc, collid),
-		uuid: uuid,
+		c:      cosmosdb.NewAsyncOperationDocumentClient(collc, collid),
+		cipher: cipher,
+		uuid:   uuid,
 	}, nil
 }
 

@@ -5,6 +5,7 @@ package encrypt
 
 import (
 	"bytes"
+	"context"
 	"crypto/cipher"
 	"crypto/rand"
 	"encoding/base64"
@@ -12,12 +13,18 @@ import (
 	"io"
 	"strings"
 
+	"github.com/Azure/ARO-RP/pkg/api"
+
+	"github.com/Azure/ARO-RP/pkg/env"
 	"golang.org/x/crypto/chacha20poly1305"
 )
 
 const prefix = "ENC*"
 
 type Cipher interface {
+	DecryptDocument(doc api.OpenShiftClusterDocument) error
+	EncryptDocument(doc api.OpenShiftClusterDocument) error
+
 	Decrypt([]byte) ([]byte, error)
 	Encrypt([]byte) ([]byte, error)
 }
@@ -26,6 +33,28 @@ var _ Cipher = (*aeadCipher)(nil)
 
 type aeadCipher struct {
 	aead cipher.AEAD
+}
+
+func NewFromEnv(env env.Interface) (*aeadCipher, error) {
+	keybase64, err := env.GetEncryptionSecret(context.Background())
+	if err != nil {
+		return nil, err
+	}
+	if keybase64 == nil {
+		return nil, fmt.Errorf("key not found")
+	}
+
+	key, err := base64.StdEncoding.DecodeString(string(*keybase64))
+	if err != nil {
+		return nil, err
+	}
+
+	cipher, err := New(key)
+	if err != nil {
+		return nil, err
+	}
+
+	return cipher, err
 }
 
 // New return new instance of ChaChaCiper
@@ -85,4 +114,34 @@ func (c *aeadCipher) Encrypt(input []byte) ([]byte, error) {
 	// return prefix+base64(nonce+ciphertext)
 	final := append([]byte(prefix), result...)
 	return final, nil
+}
+
+func (c *aeadCipher) EncryptDocument(doc api.OpenShiftClusterDocument) (err error) {
+	clientSecretSecure, err := c.Encrypt([]byte(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret))
+	if err != nil {
+		return
+	}
+	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = string(clientSecretSecure)
+
+	kubeadminPasswordSecure, err := c.Encrypt([]byte(doc.OpenShiftCluster.Properties.KubeadminPassword))
+	if err != nil {
+		return
+	}
+	doc.OpenShiftCluster.Properties.KubeadminPassword = string(kubeadminPasswordSecure)
+	return
+}
+
+func (c *aeadCipher) DecryptDocument(doc api.OpenShiftClusterDocument) (err error) {
+	clientSecretPlain, err := c.Decrypt([]byte(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret))
+	if err != nil {
+		return
+	}
+	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = string(clientSecretPlain)
+
+	kubeadminPasswordPlain, err := c.Decrypt([]byte(doc.OpenShiftCluster.Properties.KubeadminPassword))
+	if err != nil {
+		return
+	}
+	doc.OpenShiftCluster.Properties.KubeadminPassword = string(kubeadminPasswordPlain)
+	return
 }

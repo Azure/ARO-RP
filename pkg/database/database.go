@@ -6,7 +6,6 @@ package database
 import (
 	"context"
 	"crypto/tls"
-	"encoding/base64"
 	"net/http"
 	"time"
 
@@ -15,7 +14,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
-	"github.com/Azure/ARO-RP/pkg/encrypt"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	dbmetrics "github.com/Azure/ARO-RP/pkg/metrics/statsd/cosmosdb"
@@ -34,23 +32,6 @@ type Database struct {
 
 // NewDatabase returns a new Database
 func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Interface, m metrics.Interface, uuid string) (db *Database, err error) {
-	var cipher encrypt.Cipher
-	keybase64, err := env.GetEncryptionSecret(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if keybase64 != nil {
-		key, err := base64.StdEncoding.DecodeString(string(*keybase64))
-		if err != nil {
-			return nil, err
-		}
-
-		cipher, err = encrypt.New(key)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	databaseAccount, masterKey := env.CosmosDB()
 
 	h := &codec.JsonHandle{
@@ -61,7 +42,7 @@ func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Interface, m me
 		},
 	}
 
-	err = api.AddExtensions(&h.BasicHandle, cipher)
+	err = api.AddExtensions(&h.BasicHandle)
 	if err != nil {
 		return nil, err
 	}
@@ -85,22 +66,22 @@ func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Interface, m me
 		m:   m,
 	}
 
-	db.AsyncOperations, err = NewAsyncOperations(uuid, dbc, env.DatabaseName(), "AsyncOperations")
+	db.AsyncOperations, err = NewAsyncOperations(uuid, dbc, env, "AsyncOperations")
 	if err != nil {
 		return nil, err
 	}
 
-	db.Monitors, err = NewMonitors(ctx, uuid, dbc, env.DatabaseName(), "Monitors")
+	db.Monitors, err = NewMonitors(ctx, uuid, dbc, env, "Monitors")
 	if err != nil {
 		return nil, err
 	}
 
-	db.OpenShiftClusters, err = NewOpenShiftClusters(ctx, uuid, dbc, env.DatabaseName(), "OpenShiftClusters")
+	db.OpenShiftClusters, err = NewOpenShiftClusters(ctx, uuid, dbc, env, "OpenShiftClusters")
 	if err != nil {
 		return nil, err
 	}
 
-	db.Subscriptions, err = NewSubscriptions(ctx, uuid, dbc, env.DatabaseName(), "Subscriptions")
+	db.Subscriptions, err = NewSubscriptions(ctx, uuid, dbc, env, "Subscriptions")
 	if err != nil {
 		return nil, err
 	}
