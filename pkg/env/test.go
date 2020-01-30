@@ -24,7 +24,6 @@ type Test struct {
 	TestLocation       string
 	TestResourceGroup  string
 	TestDomain         string
-	TestVNetName       string
 	TestSecret         []byte
 
 	TLSKey   *rsa.PrivateKey
@@ -81,8 +80,4 @@ func (t *Test) ResourceGroup() string {
 
 func (t *Test) SubscriptionID() string {
 	return t.TestSubscriptionID
-}
-
-func (t *Test) VnetName() string {
-	return t.TestVNetName
 }

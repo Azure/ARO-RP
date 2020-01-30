@@ -27,7 +27,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/documentdb"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/keyvault"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 )
@@ -43,7 +42,6 @@ type prod struct {
 	cosmosDBPrimaryMasterKey string
 	domain                   string
 	serviceKeyvaultURI       string
-	vnetName                 string
 	zones                    map[string][]string
 
 	fpCertificate *x509.Certificate
@@ -87,11 +85,6 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 	}
 
 	err = p.populateVaultURIs(ctx, rpAuthorizer)
-	if err != nil {
-		return nil, err
-	}
-
-	err = p.populateVnet(ctx, rpAuthorizer)
 	if err != nil {
 		return nil, err
 	}
@@ -178,31 +171,6 @@ func (p *prod) populateVaultURIs(ctx context.Context, rpAuthorizer autorest.Auth
 	if p.serviceKeyvaultURI == "" {
 		return fmt.Errorf("service key vault not found")
 	}
-
-	return nil
-}
-
-func (p *prod) populateVnet(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
-	virtualnetworks := network.NewVirtualNetworksClient(p.SubscriptionID(), rpAuthorizer)
-
-	vnets, err := virtualnetworks.List(ctx, p.ResourceGroup())
-	if err != nil {
-		return err
-	}
-
-	for i := 0; i < len(vnets); {
-		if vnets[i].Tags["vnet"] == nil || *vnets[i].Tags["vnet"] != "rp" {
-			vnets = append(vnets[:i], vnets[i+1:]...)
-		} else {
-			i++
-		}
-	}
-
-	if len(vnets) != 1 {
-		return fmt.Errorf("found %d virtual networks, expected 1", len(vnets))
-	}
-
-	p.vnetName = *(vnets[0]).Name
 
 	return nil
 }
@@ -342,10 +310,6 @@ func (p *prod) ManagedDomain(domain string) (string, error) {
 		return "", nil
 	}
 	return domain + "." + p.Domain(), nil
-}
-
-func (p *prod) VnetName() string {
-	return p.vnetName
 }
 
 func (p *prod) Zones(vmSize string) ([]string, error) {

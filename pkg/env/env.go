@@ -32,7 +32,6 @@ type Interface interface {
 	GetSecret(context.Context, string) ([]byte, error)
 	Listen() (net.Listener, error)
 	ManagedDomain(string) (string, error)
-	VnetName() string
 	Zones(vmSize string) ([]string, error)
 }
 
