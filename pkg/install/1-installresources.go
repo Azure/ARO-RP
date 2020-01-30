@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"net"
 	"reflect"
 	"strings"
 	"time"
@@ -21,7 +20,6 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/apparentlymart/go-cidr/cidr"
 	"github.com/openshift/installer/pkg/asset/ignition/machine"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -49,22 +47,6 @@ func (i *Installer) installResources(ctx context.Context) error {
 	vnetID, _, err := subnet.Split(i.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return err
-	}
-
-	masterSubnet, err := i.subnet.Get(ctx, i.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
-	if err != nil {
-		return err
-	}
-
-	_, masterSubnetCIDR, err := net.ParseCIDR(*masterSubnet.AddressPrefix)
-	if err != nil {
-		return err
-	}
-
-	var lbIP net.IP
-	{
-		_, last := cidr.AddressRange(masterSubnetCIDR)
-		lbIP = cidr.Dec(cidr.Dec(last))
 	}
 
 	srvRecords := make([]mgmtprivatedns.SrvRecord, *installConfig.Config.ControlPlane.Replicas)
@@ -148,7 +130,13 @@ func (i *Installer) installResources(ctx context.Context) error {
 							TTL: to.Int64Ptr(300),
 							ARecords: &[]mgmtprivatedns.ARecord{
 								{
-									Ipv4Address: to.StringPtr(lbIP.String()),
+									Ipv4Address: to.StringPtr(
+										fmt.Sprintf(
+											"[reference('Microsoft.Network/loadBalancers/aro-internal-lb', '%s')"+
+												".frontendIpConfigurations[0].properties.privateIPAddress]",
+											apiVersions["network"],
+										),
+									),
 								},
 							},
 						},
@@ -156,6 +144,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 					APIVersion: apiVersions["privatedns"],
 					DependsOn: []string{
 						"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
+						"Microsoft.Network/loadBalancers/aro-internal-lb",
 					},
 				},
 				{
@@ -166,7 +155,13 @@ func (i *Installer) installResources(ctx context.Context) error {
 							TTL: to.Int64Ptr(300),
 							ARecords: &[]mgmtprivatedns.ARecord{
 								{
-									Ipv4Address: to.StringPtr(lbIP.String()),
+									Ipv4Address: to.StringPtr(
+										fmt.Sprintf(
+											"[reference('Microsoft.Network/loadBalancers/aro-internal-lb', '%s')"+
+												".frontendIpConfigurations[0].properties.privateIPAddress]",
+											apiVersions["network"],
+										),
+									),
 								},
 							},
 						},
@@ -174,6 +169,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 					APIVersion: apiVersions["privatedns"],
 					DependsOn: []string{
 						"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
+						"Microsoft.Network/loadBalancers/aro-internal-lb",
 					},
 				},
 				{
@@ -293,8 +289,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 							FrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
 								{
 									FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
-										PrivateIPAddress:          to.StringPtr(lbIP.String()),
-										PrivateIPAllocationMethod: mgmtnetwork.Static,
+										PrivateIPAllocationMethod: mgmtnetwork.Dynamic,
 										Subnet: &mgmtnetwork.Subnet{
 											ID: to.StringPtr(i.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 										},
@@ -668,17 +663,20 @@ func (i *Installer) installResources(ctx context.Context) error {
 			return err
 		}
 	}
-
 	{
-		ipAddress := lbIP.String()
-
+		var ipAddress string
 		if i.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {
 			ip, err := i.publicipaddresses.Get(ctx, resourceGroup, "aro-pip", "")
 			if err != nil {
 				return err
 			}
-
 			ipAddress = *ip.IPAddress
+		} else {
+			lb, err := i.loadbalancers.Get(ctx, resourceGroup, "aro-internal-lb", "")
+			if err != nil {
+				return err
+			}
+			ipAddress = *((*lb.FrontendIPConfigurations)[0].PrivateIPAddress)
 		}
 
 		err = i.dns.Update(ctx, i.doc.OpenShiftCluster, ipAddress)

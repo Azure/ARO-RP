@@ -38,6 +38,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
+// Installer contains information needed to install an ARO cluster
 type Installer struct {
 	log          *logrus.Entry
 	env          env.Interface
@@ -50,6 +51,7 @@ type Installer struct {
 	virtualmachines   compute.VirtualMachinesClient
 	interfaces        network.InterfacesClient
 	publicipaddresses network.PublicIPAddressesClient
+	loadbalancers     network.LoadBalancersClient
 	deployments       resources.DeploymentsClient
 	groups            resources.GroupsClient
 	accounts          storage.AccountsClient
@@ -60,6 +62,7 @@ type Installer struct {
 	subnet          subnet.Manager
 }
 
+// NewInstaller creates a new Installer
 func NewInstaller(ctx context.Context, log *logrus.Entry, env env.Interface, db database.OpenShiftClusters, doc *api.OpenShiftClusterDocument) (*Installer, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
@@ -98,6 +101,7 @@ func NewInstaller(ctx context.Context, log *logrus.Entry, env env.Interface, db 
 		virtualmachines:   compute.NewVirtualMachinesClient(r.SubscriptionID, fpAuthorizer),
 		interfaces:        network.NewInterfacesClient(r.SubscriptionID, fpAuthorizer),
 		publicipaddresses: network.NewPublicIPAddressesClient(r.SubscriptionID, fpAuthorizer),
+		loadbalancers:     network.NewLoadBalancersClient(r.SubscriptionID, fpAuthorizer),
 		deployments:       resources.NewDeploymentsClient(r.SubscriptionID, fpAuthorizer),
 		groups:            resources.NewGroupsClient(r.SubscriptionID, fpAuthorizer),
 		accounts:          storage.NewAccountsClient(r.SubscriptionID, fpAuthorizer),
@@ -109,6 +113,7 @@ func NewInstaller(ctx context.Context, log *logrus.Entry, env env.Interface, db 
 	}, nil
 }
 
+// Install installs an ARO cluster
 func (i *Installer) Install(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) error {
 	var err error
 
