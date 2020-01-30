@@ -8,7 +8,7 @@
    you don't have one installed already.  The `az` client supports Python 2.7
    and Python 3.5+.  A recent Python 3.x version is recommended.
 
-1. Install the `gpgme-devel` package.
+1. Install the `gpgme-devel`and `libassuan-devel` packages.
   > MacOSX user please check the [prepare-osx-devbox.md](./prepare-osx-devbox.md) documentation
 
 1. Install the [Azure
