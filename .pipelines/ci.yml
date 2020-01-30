@@ -28,7 +28,7 @@ jobs:
           modulePath: ${{ variables.modulePath }}
       - script: |
           set -x
-          sudo ln -s $USEPYTHONVERSION_PYTHONLOCATION /usr/bin/python$(python.version)
+          sudo ln -s $USEPYTHONVERSION_PYTHONLOCATION/bin/python(python.version) /usr/bin/python$(python.version)
           pip install virtualenv
           make test-python
         displayName: "🧪Run Python Unit Tests : $(python.version)"
