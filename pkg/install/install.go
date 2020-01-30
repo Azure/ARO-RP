@@ -113,14 +113,8 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 	for {
 		i.log.Printf("starting phase %s", i.doc.OpenShiftCluster.Properties.Install.Phase)
 		switch i.doc.OpenShiftCluster.Properties.Install.Phase {
-		case api.InstallPhaseDeployStorage:
-			err := i.installStorage(ctx, installConfig, platformCreds, image)
-			if err != nil {
-				return err
-			}
-
-		case api.InstallPhaseDeployResources:
-			err := i.installResources(ctx)
+		case api.InstallPhaseDeploy:
+			err := i.deploy(ctx, installConfig, platformCreds, image)
 			if err != nil {
 				return err
 			}

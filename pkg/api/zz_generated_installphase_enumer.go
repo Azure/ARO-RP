@@ -7,9 +7,9 @@ import (
 	"fmt"
 )
 
-const _InstallPhaseName = "InstallPhaseDeployStorageInstallPhaseDeployResourcesInstallPhaseRemoveBootstrap"
+const _InstallPhaseName = "InstallPhaseDeployInstallPhaseRemoveBootstrap"
 
-var _InstallPhaseIndex = [...]uint8{0, 25, 52, 79}
+var _InstallPhaseIndex = [...]uint8{0, 18, 45}
 
 func (i InstallPhase) String() string {
 	if i < 0 || i >= InstallPhase(len(_InstallPhaseIndex)-1) {
@@ -18,12 +18,11 @@ func (i InstallPhase) String() string {
 	return _InstallPhaseName[_InstallPhaseIndex[i]:_InstallPhaseIndex[i+1]]
 }
 
-var _InstallPhaseValues = []InstallPhase{0, 1, 2}
+var _InstallPhaseValues = []InstallPhase{0, 1}
 
 var _InstallPhaseNameToValueMap = map[string]InstallPhase{
-	_InstallPhaseName[0:25]:  0,
-	_InstallPhaseName[25:52]: 1,
-	_InstallPhaseName[52:79]: 2,
+	_InstallPhaseName[0:18]:  0,
+	_InstallPhaseName[18:45]: 1,
 }
 
 // InstallPhaseString retrieves an enum value from the enum constants string name.
