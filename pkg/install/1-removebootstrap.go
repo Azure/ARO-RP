@@ -27,13 +27,17 @@ import (
 )
 
 func (i *Installer) removeBootstrap(ctx context.Context) error {
-	g, err := i.getGraph(ctx)
+	blobService, err := i.getBlobService(ctx)
+	if err != nil {
+		return err
+	}
+	g, err := LoadGraph(blobService)
 	if err != nil {
 		return err
 	}
 
-	installConfig := g[reflect.TypeOf(&installconfig.InstallConfig{})].(*installconfig.InstallConfig)
-	kubeadminPassword := g[reflect.TypeOf(&password.KubeadminPassword{})].(*password.KubeadminPassword)
+	installConfig := g.GetMap()[reflect.TypeOf(&installconfig.InstallConfig{})].(*installconfig.InstallConfig)
+	kubeadminPassword := g.GetMap()[reflect.TypeOf(&password.KubeadminPassword{})].(*password.KubeadminPassword)
 
 	resourceGroup := i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID[strings.LastIndexByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')+1:]
 

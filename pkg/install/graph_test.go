@@ -26,7 +26,7 @@ import (
 
 // TestGraphRoundTrip builds a representative graph, then marshals and
 // unmarshals it.  It tests that registeredTypes isn't missing any obvious keys,
-// and along the way is a smoke test for graph.resolve, ensuring (among other
+// and along the way is a smoke test for graph.Resolve, ensuring (among other
 // things) that it does not attempt to read values from stdin and that it can
 // find its assets.
 func TestGraphRoundTrip(t *testing.T) {
@@ -105,7 +105,7 @@ func TestGraphRoundTrip(t *testing.T) {
 	}
 
 	for _, a := range targets.Cluster {
-		_, err := g.resolve(a)
+		_, err := g.Resolve(a)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -5,7 +5,6 @@ package install
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"strings"
@@ -170,29 +169,4 @@ func (i *Installer) getBlobService(ctx context.Context) (*azstorage.BlobStorageC
 	c := azstorage.NewAccountSASClient("cluster"+i.doc.OpenShiftCluster.Properties.StorageSuffix, v, azure.PublicCloud).GetBlobService()
 
 	return &c, nil
-}
-
-func (i *Installer) getGraph(ctx context.Context) (graph, error) {
-	i.log.Print("retrieving graph")
-
-	blobService, err := i.getBlobService(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	aro := blobService.GetContainerReference("aro")
-	cluster := aro.GetBlobReference("graph")
-	rc, err := cluster.Get(nil)
-	if err != nil {
-		return nil, err
-	}
-	defer rc.Close()
-
-	var g graph
-	err = json.NewDecoder(rc).Decode(&g)
-	if err != nil {
-		return nil, err
-	}
-
-	return g, nil
 }
