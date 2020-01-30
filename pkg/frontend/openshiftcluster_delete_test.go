@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"strings"
 	"testing"
@@ -220,8 +221,13 @@ func TestDeleteOpenShiftCluster(t *testing.T) {
 			}
 
 			if tt.wantError != "" {
+				b, err := ioutil.ReadAll(resp.Body)
+				if err != nil {
+					t.Fatal(err)
+				}
+
 				cloudErr := &api.CloudError{StatusCode: resp.StatusCode}
-				err = json.NewDecoder(resp.Body).Decode(&cloudErr)
+				err = json.Unmarshal(b, &cloudErr)
 				if err != nil {
 					t.Fatal(err)
 				}

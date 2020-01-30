@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"reflect"
 	"testing"
@@ -315,9 +316,14 @@ func TestPutSubscription(t *testing.T) {
 				t.Error(resp.StatusCode)
 			}
 
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				t.Fatal(err)
+			}
+
 			if tt.wantError == "" {
 				var sub *api.Subscription
-				err = json.NewDecoder(resp.Body).Decode(&sub)
+				err = json.Unmarshal(b, &sub)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -328,7 +334,7 @@ func TestPutSubscription(t *testing.T) {
 				}
 			} else {
 				cloudErr := &api.CloudError{StatusCode: resp.StatusCode}
-				err = json.NewDecoder(resp.Body).Decode(&cloudErr)
+				err = json.Unmarshal(b, &cloudErr)
 				if err != nil {
 					t.Fatal(err)
 				}
