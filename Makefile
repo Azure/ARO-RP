@@ -96,7 +96,7 @@ test-go: generate
 	go test -tags e2e -run ^$$ ./test/e2e/...
 
 	go vet ./...
-	go test ./... -coverprofile cover.out | tee uts.txt
+	go test -v ./... -coverprofile cover.out | tee uts.txt
 
 test-python: generate pyenv${PYTHON_VERSION}
 	. pyenv${PYTHON_VERSION}/bin/activate && \
