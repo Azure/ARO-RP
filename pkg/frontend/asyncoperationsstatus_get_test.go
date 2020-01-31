@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"reflect"
 	"testing"
@@ -261,9 +262,14 @@ func TestGetAsyncOperationsStatus(t *testing.T) {
 				t.Error(resp.StatusCode)
 			}
 
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				t.Fatal(err)
+			}
+
 			if tt.wantError == "" {
 				var op *api.AsyncOperation
-				err = json.NewDecoder(resp.Body).Decode(&op)
+				err = json.Unmarshal(b, &op)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -275,7 +281,7 @@ func TestGetAsyncOperationsStatus(t *testing.T) {
 
 			} else {
 				cloudErr := &api.CloudError{StatusCode: resp.StatusCode}
-				err = json.NewDecoder(resp.Body).Decode(&cloudErr)
+				err = json.Unmarshal(b, &cloudErr)
 				if err != nil {
 					t.Fatal(err)
 				}

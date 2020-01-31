@@ -98,7 +98,12 @@ func validate(path string, v, w reflect.Value, ignoreCase bool) error {
 		for i.Next() {
 			k := i.Key()
 
-			err := validate(fmt.Sprintf("%s[%q]", path, k.Interface()), v.MapIndex(k), w.MapIndex(k), ignoreCase)
+			mapW := w.MapIndex(k)
+			if !mapW.IsValid() {
+				return validationError(path)
+			}
+
+			err := validate(fmt.Sprintf("%s[%q]", path, k.Interface()), v.MapIndex(k), mapW, ignoreCase)
 			if err != nil {
 				return err
 			}

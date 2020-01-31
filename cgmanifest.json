@@ -13,6 +13,15 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "3a14fb1c4737b3995174c5f4d6d08a348b9b4180",
+                    "repositoryUrl": "https://github.com/AlekSi/gocov-xml/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "0820c0553d6c410603056869f7b0e52d61ce5bee",
                     "repositoryUrl": "https://github.com/Azure/azure-sdk-for-go/"
                 }
@@ -105,6 +114,15 @@
                 "git": {
                     "commitHash": "cd610ee76770524d9f1135bfdc241e1b60dfd00b",
                     "repositoryUrl": "https://github.com/aws/aws-sdk-go/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "b6eca663ebb7e7ef9798914d19f53ba2c6f74c96",
+                    "repositoryUrl": "https://github.com/axw/gocov/"
                 }
             }
         },
@@ -447,6 +465,15 @@
                 "git": {
                     "commitHash": "acfec88f7a0d5140ace3dcdbee10184e3684a9e1",
                     "repositoryUrl": "https://github.com/json-iterator/go/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "cc1f095d5cc5eca2844f5c5ea7bb37f6b9bf6cac",
+                    "repositoryUrl": "https://github.com/jstemmer/go-junit-report/"
                 }
             }
         },

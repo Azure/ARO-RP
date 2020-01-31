@@ -10,6 +10,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"reflect"
 	"strings"
@@ -613,9 +614,14 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				}
 			}
 
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				t.Fatal(err)
+			}
+
 			if tt.wantError == "" {
 				var oc *v20191231preview.OpenShiftCluster
-				err = json.NewDecoder(resp.Body).Decode(&oc)
+				err = json.Unmarshal(b, &oc)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -627,7 +633,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 
 			} else {
 				cloudErr := &api.CloudError{StatusCode: resp.StatusCode}
-				err = json.NewDecoder(resp.Body).Decode(&cloudErr)
+				err = json.Unmarshal(b, &cloudErr)
 				if err != nil {
 					t.Fatal(err)
 				}

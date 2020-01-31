@@ -14,7 +14,9 @@ against a development RP running at https://localhost:8443/.
 
 1. Install the
    [`az`](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) client,
-   if you haven't already.
+   if you haven't already.  You will need `az` version 2.0.72 or greater, as
+   this version includes the `az network vnet subnet update
+   --disable-private-link-service-network-policies` flag.
 
 1. Log in to Azure:
 

@@ -9,7 +9,7 @@ import (
 	v1 "k8s.io/client-go/tools/clientcmd/api/v1"
 )
 
-func makeKubeconfig(endpoint, username, token, namespace string) (*v1.Config, error) {
+func makeKubeconfig(endpoint, username, token, namespace string) *v1.Config {
 	clustername := strings.Replace(endpoint, ".", "-", -1)
 	authinfoname := username + "/" + clustername
 	contextname := namespace + "/" + clustername + "/" + username
@@ -45,5 +45,5 @@ func makeKubeconfig(endpoint, username, token, namespace string) (*v1.Config, er
 			},
 		},
 		CurrentContext: contextname,
-	}, nil
+	}
 }
