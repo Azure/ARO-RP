@@ -156,8 +156,20 @@ func (i *Installer) removeBootstrap(ctx context.Context) error {
 }
 
 func (i *Installer) updateConsoleBranding(ctx context.Context, cli operatorclient.Interface) error {
+	i.log.Print("waiting for console-operator config")
+	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
+	defer cancel()
+	err := wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+		_, err := cli.OperatorV1().Consoles().Get(consoleapi.ConfigResourceName, metav1.GetOptions{})
+		return err == nil, nil
+
+	}, timeoutCtx.Done())
+	if err != nil {
+		return err
+	}
+
 	i.log.Print("updating console branding")
-	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		operatorConfig, err := cli.OperatorV1().Consoles().Get(consoleapi.ConfigResourceName, metav1.GetOptions{})
 		if err != nil {
 			return err
@@ -173,7 +185,7 @@ func (i *Installer) updateConsoleBranding(ctx context.Context, cli operatorclien
 	}
 
 	i.log.Print("waiting for console to reload")
-	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	timeoutCtx, cancel = context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 		operatorConfig, err := cli.OperatorV1().Consoles().Get(consoleapi.ConfigResourceName, metav1.GetOptions{})
