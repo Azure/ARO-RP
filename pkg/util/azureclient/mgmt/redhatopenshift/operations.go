@@ -8,7 +8,6 @@ import (
 	"crypto/tls"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/Azure/go-autorest/autorest"
 
@@ -42,7 +41,6 @@ func NewOperationsClient(subscriptionID string, authorizer autorest.Authorizer) 
 		client = redhatopenshift.NewOperationsClient(subscriptionID)
 		client.Authorizer = authorizer
 	}
-	client.PollingDuration = time.Minute * 60
 
 	return &operationsClient{
 		OperationsClient: client,

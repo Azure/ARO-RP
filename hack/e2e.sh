@@ -22,8 +22,17 @@ aro_ci_setup() {
     go build ./cmd/aro
     ./aro rp &
     trap 'return_id=$?; aro_ci_teardown_handler; exit $return_id' EXIT
-    while [[ "$(curl -s -o /dev/null -w '%{http_code}' localhost:8443)" == "000" ]]; do
-        sleep 2
+    while true; do
+        http_code=$(curl -k -s -o /dev/null -w '%{http_code}' https://localhost:8443/healthz/ready)
+        case $http_code in
+            "200")
+            break
+            ;;
+            *)
+            echo "local RP is NOT up $http_code, waiting"
+            sleep 2
+            ;;
+        esac
     done
 
     if $CLUSTER_CREATE; then
@@ -68,28 +77,18 @@ aro_ci_teardown_handler() {
         done
     fi
     echo "====== kill the RP =========================="
-    kill $(lsof -t -i :8443)
-    wait $(lsof -t -i :8443)
+    rppid=$(lsof -t -i :8443)
+    kill $rppid
+    wait $rppid
 }
 
-# allow overriding these variables
-if [[ -z "$CLUSTER_CREATE" ]]; then
-    export CLUSTER_CREATE=true
-fi
-if [[ -z "$CLUSTER_DELETE" ]]; then
-    export CLUSTER_DELETE=true
-fi
-if [[ -z "$LOCATION" ]]; then
-    export LOCATION=$(get_random_location)
-fi
-if [[ -z "$CLUSTER" ]]; then
-    export CLUSTER=v4-e2e-$(git log --format=%h -n 1 HEAD)
-fi
+export CLUSTER_CREATE=true
+export CLUSTER_DELETE=true
 
+export LOCATION=$(get_random_location)
+export CLUSTER=v4-e2e-$(git log --format=%h -n 1 HEAD)
 export RESOURCEGROUP="v4-$LOCATION"
 export COSMOSDB_ACCOUNT="$RESOURCEGROUP"
-export DOMAIN_NAME="$RESOURCEGROUP"
-export KEYVAULT_NAME="$RESOURCEGROUP"
 export PROXY_HOSTNAME="vm0.aroproxy.$LOCATION.cloudapp.azure.com"
 export DATABASE_NAME="e2e-$(git log --format=%h -n 1 HEAD)"
 export KUBECONFIG=$(pwd)/$CLUSTER.kubeconfig
@@ -97,10 +96,4 @@ export KUBECONFIG=$(pwd)/$CLUSTER.kubeconfig
 echo "LOCATION=$LOCATION"
 echo "RESOURCEGROUP=$RESOURCEGROUP"
 echo "CLUSTER=$CLUSTER"
-if $CLUSTER_CREATE; then
-    echo " > will be created"
-fi
-if $CLUSTER_DELETE; then
-    echo " > will be deleted"
-fi
 echo "KUBECONFIG=$KUBECONFIG"
