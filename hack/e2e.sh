@@ -18,6 +18,16 @@ get_random_location() {
 }
 
 aro_ci_setup() {
+    echo "====== create dev DB =========================="
+    az group deployment create \
+     -g "$RESOURCEGROUP" \
+     -n "databases-development-$DATABASE_NAME" \
+     --template-file deploy/databases-development.json \
+     --parameters \
+       "databaseAccountName=$COSMOSDB_ACCOUNT" \
+       "databaseName=$DATABASE_NAME" \
+     >/dev/null
+
     echo "====== starting dev RP =========================="
     go build ./cmd/aro
     ./aro rp &
@@ -34,6 +44,11 @@ aro_ci_setup() {
             ;;
         esac
     done
+
+    curl -k -X PUT \
+      -H 'Content-Type: application/json' \
+      -d '{"state": "Registered", "properties": {"tenantId": "'"$AZURE_TENANT_ID"'"}}' \
+      "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID?api-version=2.0"
 
     if $CLUSTER_CREATE; then
         echo "====== setup subnets =========================="
