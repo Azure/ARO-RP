@@ -34,7 +34,8 @@
             "type": "string"
         },
         "keyvaultPrefix": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 20
         },
         "mdmCertificate": {
             "type": "string"
@@ -272,7 +273,7 @@
                 },
                 "accessPolicies": "[concat(variables('clustersKeyvaultAccessPolicies'), parameters('extraKeyvaultAccessPolicies'))]"
             },
-            "name": "[substring(concat(parameters('keyvaultPrefix'), '-clusters'), 0, 24)]",
+            "name": "[concat(parameters('keyvaultPrefix'), '-cls')]",
             "type": "Microsoft.KeyVault/vaults",
             "location": "[resourceGroup().location]",
             "tags": {
@@ -289,7 +290,7 @@
                 },
                 "accessPolicies": "[concat(variables('serviceKeyvaultAccessPolicies'), parameters('extraKeyvaultAccessPolicies'))]"
             },
-            "name": "[substring(concat(parameters('keyvaultPrefix'), '-service'), 0, 24)]",
+            "name": "[concat(parameters('keyvaultPrefix'), '-svc')]",
             "type": "Microsoft.KeyVault/vaults",
             "location": "[resourceGroup().location]",
             "tags": {

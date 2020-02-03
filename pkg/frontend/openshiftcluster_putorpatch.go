@@ -149,11 +149,6 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 		return nil, err
 	}
 
-	err = f.validateOpenShiftClientIDUniqueKey(ctx, doc.ClientIDKey)
-	if err != nil {
-		return nil, err
-	}
-
 	doc.AsyncOperationID, err = f.newAsyncOperation(ctx, r, doc)
 	if err != nil {
 		return nil, err
@@ -171,8 +166,10 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 
 	if isCreate {
 		newdoc, err := f.db.OpenShiftClusters.Create(ctx, doc)
+
 		if cosmosdb.IsErrorStatusCode(err, http.StatusPreconditionFailed) {
-			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidResourceGroup, "", "The provided resource group '%s' already contains a cluster.", doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
+			err = f.validateOpenShiftUniqueKey(ctx, doc)
+			return nil, err
 		}
 		doc = newdoc
 	} else {

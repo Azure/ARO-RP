@@ -15,7 +15,8 @@
             "type": "string"
         },
         "keyvaultPrefix": {
-            "type": "string"
+            "type": "string",
+            "maxLength": 20
         },
         "rpServicePrincipalId": {
             "type": "string"
@@ -38,7 +39,7 @@
                 },
                 "accessPolicies": []
             },
-            "name": "[substring(concat(parameters('keyvaultPrefix'), '-clusters'), 0, 24)]",
+            "name": "[concat(parameters('keyvaultPrefix'), '-cls')]",
             "type": "Microsoft.KeyVault/vaults",
             "location": "[resourceGroup().location]",
             "tags": {
@@ -77,7 +78,7 @@
                     }
                 ]
             },
-            "name": "[substring(concat(parameters('keyvaultPrefix'), '-service'), 0, 24)]",
+            "name": "[concat(parameters('keyvaultPrefix'), '-svc')]",
             "type": "Microsoft.KeyVault/vaults",
             "location": "[resourceGroup().location]",
             "tags": {

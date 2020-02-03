@@ -36,6 +36,7 @@ type OpenShiftClusters interface {
 	Dequeue(context.Context) (*api.OpenShiftClusterDocument, error)
 	Lease(context.Context, string) (*api.OpenShiftClusterDocument, error)
 	EndLease(context.Context, string, api.ProvisioningState, api.ProvisioningState) (*api.OpenShiftClusterDocument, error)
+	QueryAll(context.Context, string) (*api.OpenShiftClusterDocuments, error)
 }
 
 // NewOpenShiftClusters returns a new OpenShiftClusters
@@ -287,6 +288,19 @@ func (c *openShiftClusters) EndLease(ctx context.Context, key string, provisioni
 
 		return nil
 	}, nil)
+}
+
+func (c *openShiftClusters) QueryAll(ctx context.Context, partitionKey string) (*api.OpenShiftClusterDocuments, error) {
+	docs, err := c.c.QueryAll(ctx, partitionKey, &cosmosdb.Query{
+		Query: `SELECT * FROM OpenShiftClusters doc`,
+	}, nil)
+	if err != nil {
+		return nil, err
+	}
+	if docs == nil {
+		return nil, nil
+	}
+	return docs, nil
 }
 
 func (c *openShiftClusters) partitionKey(key string) (string, error) {
