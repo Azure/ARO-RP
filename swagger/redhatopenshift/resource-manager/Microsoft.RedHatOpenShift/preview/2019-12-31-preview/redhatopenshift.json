@@ -722,7 +722,7 @@
           "type": "string"
         },
         "count": {
-          "description": "The number of worker VMs.  Must be between 3 and 20.",
+          "description": "The number of worker VMs.  Must be between 3 and 20 (immutable).",
           "type": "integer"
         }
       }

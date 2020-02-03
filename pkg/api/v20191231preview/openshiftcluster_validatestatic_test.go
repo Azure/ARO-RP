@@ -631,8 +631,9 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles['worker'].subnetId: Changing property 'properties.workerProfiles['worker'].subnetId' is not allowed.",
 		},
 		{
-			name:   "valid count change",
-			modify: func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].Count++ },
+			name:    "workerProfiles count change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].Count++ },
+			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles['worker'].count: Changing property 'properties.workerProfiles['worker'].count' is not allowed.",
 		},
 	}
 

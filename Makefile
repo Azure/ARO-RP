@@ -1,3 +1,4 @@
+SHELL = /bin/bash
 COMMIT = $(shell git rev-parse --short HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
 
 aro: generate
@@ -96,7 +97,7 @@ test-go: generate
 	go test -tags e2e -run ^$$ ./test/e2e/...
 
 	go vet ./...
-	go test -v ./... -coverprofile cover.out | tee uts.txt
+	set -o pipefail && go test -v ./... -coverprofile cover.out | tee uts.txt
 
 test-python: generate pyenv${PYTHON_VERSION}
 	. pyenv${PYTHON_VERSION}/bin/activate && \
