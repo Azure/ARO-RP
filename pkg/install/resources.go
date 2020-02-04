@@ -11,7 +11,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 )
 
-func (i *Installer) apiServerPublicLoadBalancer(location string, visibility api.Visibility) *arm.Resource {
+func (i *installer) apiServerPublicLoadBalancer(location string, visibility api.Visibility) *arm.Resource {
 	lb := &mgmtnetwork.LoadBalancer{
 		Sku: &mgmtnetwork.LoadBalancerSku{
 			Name: mgmtnetwork.LoadBalancerSkuNameStandard,

@@ -33,10 +33,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
-func (m *Manager) Create(ctx context.Context) error {
+func (m *Manager) Create(ctx context.Context) (bool, error) {
 	var err error
-
-	resourceGroup := m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID[strings.LastIndexByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')+1:]
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		var err error
@@ -58,32 +56,78 @@ func (m *Manager) Create(ctx context.Context) error {
 		return nil
 	})
 	if err != nil {
-		return err
+		return false, err
 	}
+
+	platformCreds, err := m.getPlatformCredentials()
+	if err != nil {
+		return false, err
+	}
+
+	installConfig, err := m.getInstallConfig(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	image := &releaseimage.Image{}
+	switch m.doc.OpenShiftCluster.Properties.ClusterProfile.Version {
+	case "4.3.0":
+		image.PullSpec = "arosvc.azurecr.io/openshift-release-dev/ocp-release@sha256:3a516480dfd68e0f87f702b4d7bdd6f6a0acfdac5cd2e9767b838ceede34d70d"
+	default:
+		return false, fmt.Errorf("unimplemented version %q", m.doc.OpenShiftCluster.Properties.ClusterProfile.Version)
+	}
+
+	err = validation.ValidateInstallConfig(installConfig.Config, openstackvalidation.NewValidValuesFetcher()).ToAggregate()
+	if err != nil {
+		return false, err
+	}
+
+	i, err := install.NewInstaller(m.log, m.env, m.db, m.doc, installConfig, platformCreds, image)
+	if err != nil {
+		return false, err
+	}
+
+	return i.Install(ctx)
+}
+
+func (m *Manager) getPlatformCredentials() (*installconfig.PlatformCreds, error) {
 
 	r, err := azure.ParseResourceID(m.doc.OpenShiftCluster.ID)
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	return &installconfig.PlatformCreds{
+		Azure: &icazure.Credentials{
+			TenantID:       m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID,
+			ClientID:       m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientID,
+			ClientSecret:   m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret,
+			SubscriptionID: r.SubscriptionID,
+		},
+	}, nil
+
+}
+
+func (m *Manager) getInstallConfig(ctx context.Context) (*installconfig.InstallConfig, error) {
 
 	vnetID, masterSubnetName, err := subnet.Split(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	vnetID, workerSubnetName, err := subnet.Split(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	vnetr, err := azure.ParseResourceID(vnetID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	sshkey, err := ssh.NewPublicKey(&m.doc.OpenShiftCluster.Properties.SSHKey.PublicKey)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	domain := m.doc.OpenShiftCluster.Properties.ClusterProfile.Domain
@@ -93,7 +137,7 @@ func (m *Manager) Create(ctx context.Context) error {
 
 	masterZones, err := m.env.Zones(string(m.doc.OpenShiftCluster.Properties.MasterProfile.VMSize))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if len(masterZones) == 0 {
 		masterZones = []string{""}
@@ -101,20 +145,13 @@ func (m *Manager) Create(ctx context.Context) error {
 
 	workerZones, err := m.env.Zones(string(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].VMSize))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if len(workerZones) == 0 {
 		masterZones = []string{""}
 	}
 
-	platformCreds := &installconfig.PlatformCreds{
-		Azure: &icazure.Credentials{
-			TenantID:       m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID,
-			ClientID:       m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientID,
-			ClientSecret:   m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret,
-			SubscriptionID: r.SubscriptionID,
-		},
-	}
+	resourceGroup := m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID[strings.LastIndexByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')+1:]
 
 	installConfig := &installconfig.InstallConfig{
 		Config: &types.InstallConfig{
@@ -208,28 +245,11 @@ func (m *Manager) Create(ctx context.Context) error {
 
 	installConfig.Config.Azure.Image, err = getRHCOSImage(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	image := &releaseimage.Image{}
-	switch m.doc.OpenShiftCluster.Properties.ClusterProfile.Version {
-	case "4.3.0":
-		image.PullSpec = "arosvc.azurecr.io/openshift-release-dev/ocp-release@sha256:3a516480dfd68e0f87f702b4d7bdd6f6a0acfdac5cd2e9767b838ceede34d70d"
-	default:
-		return fmt.Errorf("unimplemented version %q", m.doc.OpenShiftCluster.Properties.ClusterProfile.Version)
-	}
+	return installConfig, nil
 
-	err = validation.ValidateInstallConfig(installConfig.Config, openstackvalidation.NewValidValuesFetcher()).ToAggregate()
-	if err != nil {
-		return err
-	}
-
-	i, err := install.NewInstaller(m.log, m.env, m.db, m.doc)
-	if err != nil {
-		return err
-	}
-
-	return i.Install(ctx, installConfig, platformCreds, image)
 }
 
 var rxRHCOS = regexp.MustCompile(`rhcos-((\d+)\.\d+\.\d{8})\d{4}\.\d+-azure\.x86_64\.vhd`)

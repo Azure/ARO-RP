@@ -33,12 +33,24 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
-type Installer struct {
+var _ Installer = (*installer)(nil)
+
+type Installer interface {
+	InstallStorage(context.Context) error
+	InstallResources(context.Context) error
+	RemoveBootstrap(context.Context) error
+}
+
+type installer struct {
 	log          *logrus.Entry
 	env          env.Interface
 	db           database.OpenShiftClusters
 	doc          *api.OpenShiftClusterDocument
 	fpAuthorizer autorest.Authorizer
+
+	installConfig *installconfig.InstallConfig
+	platformCreds *installconfig.PlatformCreds
+	image         *releaseimage.Image
 
 	disks             compute.DisksClient
 	virtualmachines   compute.VirtualMachinesClient
@@ -54,7 +66,7 @@ type Installer struct {
 	subnet          subnet.Manager
 }
 
-func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClusters, doc *api.OpenShiftClusterDocument) (*Installer, error) {
+func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClusters, doc *api.OpenShiftClusterDocument, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) (*installer, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
 		return nil, err
@@ -75,12 +87,16 @@ func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClu
 		return nil, err
 	}
 
-	return &Installer{
+	return &installer{
 		log:          log,
 		env:          env,
 		db:           db,
 		doc:          doc,
 		fpAuthorizer: fpAuthorizer,
+
+		installConfig: installConfig,
+		platformCreds: platformCreds,
+		image:         image,
 
 		disks:             compute.NewDisksClient(r.SubscriptionID, fpAuthorizer),
 		virtualmachines:   compute.NewVirtualMachinesClient(r.SubscriptionID, fpAuthorizer),
@@ -97,7 +113,7 @@ func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClu
 	}, nil
 }
 
-func (i *Installer) Install(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) error {
+func (i *installer) Install(ctx context.Context) (bool, error) {
 	var err error
 
 	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
@@ -107,51 +123,50 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 		return nil
 	})
 	if err != nil {
-		return err
+		return false, err
 	}
 
-	for {
-		i.log.Printf("starting phase %s", i.doc.OpenShiftCluster.Properties.Install.Phase)
-		switch i.doc.OpenShiftCluster.Properties.Install.Phase {
-		case api.InstallPhaseDeployStorage:
-			err := i.installStorage(ctx, installConfig, platformCreds, image)
-			if err != nil {
-				return err
-			}
+	i.log.Printf("starting phase %s", i.doc.OpenShiftCluster.Properties.Install.Phase)
+	switch i.doc.OpenShiftCluster.Properties.Install.Phase {
+	case api.InstallPhaseDeployStorage:
+		err := i.InstallStorage(ctx)
+		if err != nil {
+			return false, err
+		}
 
-		case api.InstallPhaseDeployResources:
-			err := i.installResources(ctx)
-			if err != nil {
-				return err
-			}
+	case api.InstallPhaseDeployResources:
+		err := i.InstallResources(ctx)
+		if err != nil {
+			return false, err
+		}
 
-		case api.InstallPhaseRemoveBootstrap:
-			err := i.removeBootstrap(ctx)
-			if err != nil {
-				return err
-			}
-
-			i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-				doc.OpenShiftCluster.Properties.Install = nil
-				return nil
-			})
-			return err
-
-		default:
-			return fmt.Errorf("unrecognised phase %s", i.doc.OpenShiftCluster.Properties.Install.Phase)
+	case api.InstallPhaseRemoveBootstrap:
+		err := i.RemoveBootstrap(ctx)
+		if err != nil {
+			return false, err
 		}
 
 		i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-			doc.OpenShiftCluster.Properties.Install.Phase++
+			doc.OpenShiftCluster.Properties.Install = nil
 			return nil
 		})
-		if err != nil {
-			return err
-		}
+		return true, err
+
+	default:
+		return false, fmt.Errorf("unrecognised phase %s", i.doc.OpenShiftCluster.Properties.Install.Phase)
 	}
+
+	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.Properties.Install.Phase++
+		return nil
+	})
+	if err != nil {
+		return false, err
+	}
+	return false, nil
 }
 
-func (i *Installer) getBlobService(ctx context.Context) (*azstorage.BlobStorageClient, error) {
+func (i *installer) getBlobService(ctx context.Context) (*azstorage.BlobStorageClient, error) {
 	resourceGroup := i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID[strings.LastIndexByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')+1:]
 
 	t := time.Now().UTC().Truncate(time.Second)
@@ -178,7 +193,7 @@ func (i *Installer) getBlobService(ctx context.Context) (*azstorage.BlobStorageC
 	return &c, nil
 }
 
-func (i *Installer) getGraph(ctx context.Context) (graph, error) {
+func (i *installer) getGraph(ctx context.Context) (graph, error) {
 	i.log.Print("retrieving graph")
 
 	blobService, err := i.getBlobService(ctx)

@@ -35,7 +35,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
-func (i *Installer) installResources(ctx context.Context) error {
+func (i *installer) InstallResources(ctx context.Context) error {
 	g, err := i.getGraph(ctx)
 	if err != nil {
 		return err
