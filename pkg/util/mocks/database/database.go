@@ -163,6 +163,21 @@ func (mr *MockOpenShiftClustersMockRecorder) Dequeue(arg0 interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Dequeue", reflect.TypeOf((*MockOpenShiftClusters)(nil).Dequeue), arg0)
 }
 
+// DequeueRaw mocks base method
+func (m *MockOpenShiftClusters) DequeueRaw(arg0 context.Context) (interface{}, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DequeueRaw", arg0)
+	ret0, _ := ret[0].(interface{})
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DequeueRaw indicates an expected call of DequeueRaw
+func (mr *MockOpenShiftClustersMockRecorder) DequeueRaw(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DequeueRaw", reflect.TypeOf((*MockOpenShiftClusters)(nil).DequeueRaw), arg0)
+}
+
 // EndLease mocks base method
 func (m *MockOpenShiftClusters) EndLease(arg0 context.Context, arg1 string, arg2, arg3 api.ProvisioningState) (*api.OpenShiftClusterDocument, error) {
 	m.ctrl.T.Helper()
@@ -349,6 +364,21 @@ func (m *MockSubscriptions) Dequeue(arg0 context.Context) (*api.SubscriptionDocu
 func (mr *MockSubscriptionsMockRecorder) Dequeue(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Dequeue", reflect.TypeOf((*MockSubscriptions)(nil).Dequeue), arg0)
+}
+
+// DequeueRaw mocks base method
+func (m *MockSubscriptions) DequeueRaw(arg0 context.Context) (interface{}, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DequeueRaw", arg0)
+	ret0, _ := ret[0].(interface{})
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DequeueRaw indicates an expected call of DequeueRaw
+func (mr *MockSubscriptionsMockRecorder) DequeueRaw(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DequeueRaw", reflect.TypeOf((*MockSubscriptions)(nil).DequeueRaw), arg0)
 }
 
 // EndLease mocks base method

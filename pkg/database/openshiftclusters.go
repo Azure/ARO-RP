@@ -34,6 +34,7 @@ type OpenShiftClusters interface {
 	ChangeFeed() cosmosdb.OpenShiftClusterDocumentIterator
 	ListByPrefix(string, string) (cosmosdb.OpenShiftClusterDocumentIterator, error)
 	Dequeue(context.Context) (*api.OpenShiftClusterDocument, error)
+	DequeueRaw(ctx context.Context) (interface{}, error)
 	Lease(context.Context, string) (*api.OpenShiftClusterDocument, error)
 	EndLease(context.Context, string, api.ProvisioningState, api.ProvisioningState) (*api.OpenShiftClusterDocument, error)
 }
@@ -240,6 +241,11 @@ func (c *openShiftClusters) ListByPrefix(subscriptionID string, prefix string) (
 }
 
 func (c *openShiftClusters) Dequeue(ctx context.Context) (*api.OpenShiftClusterDocument, error) {
+	docRaw, err := c.DequeueRaw(ctx)
+	return docRaw.(*api.OpenShiftClusterDocument), err
+}
+
+func (c *openShiftClusters) DequeueRaw(ctx context.Context) (interface{}, error) {
 	i := c.c.Query("", &cosmosdb.Query{
 		Query: `SELECT * FROM OpenShiftClusters doc WHERE doc.openShiftCluster.properties.provisioningState IN ("Creating", "Deleting", "Updating") AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`,
 	}, nil)

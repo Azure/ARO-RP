@@ -5,12 +5,15 @@ package backend
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/ARO-RP/pkg/backend/openshiftcluster"
+	"github.com/Azure/ARO-RP/pkg/backend/subscriptions"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
@@ -22,7 +25,7 @@ const (
 	maxDequeueCount = 5
 )
 
-type backend struct {
+type backendManager struct {
 	baseLog *logrus.Entry
 	env     env.Interface
 	db      *database.Database
@@ -30,21 +33,32 @@ type backend struct {
 
 	mu       sync.Mutex
 	cond     *sync.Cond
-	workers  int32
 	stopping atomic.Value
 
-	ocb *openShiftClusterBackend
-	sb  *subscriptionBackend
+	// registry contains all backends, registered to the manager
+	registry []instance
 }
 
-// Runnable represents a runnable object
+type instance struct {
+	name    string
+	backend Backend
+	workers int32
+}
+
+// Backend represents minimal interface for individual backends
+type Backend interface {
+	Handle(context.Context, *logrus.Entry, interface{}) error
+	Dequeue() func(context.Context) (interface{}, error)
+}
+
+// Runnable represents a runnable object for all backends
 type Runnable interface {
 	Run(context.Context, <-chan struct{})
 }
 
-// NewBackend returns a new runnable backend
-func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, db *database.Database, m metrics.Interface) (Runnable, error) {
-	b := &backend{
+// NewBackendManager returns a new runnable backend manager object
+func NewBackendManager(ctx context.Context, log *logrus.Entry, env env.Interface, db *database.Database, m metrics.Interface) (Runnable, error) {
+	b := &backendManager{
 		baseLog: log,
 		env:     env,
 		db:      db,
@@ -54,13 +68,23 @@ func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, db *d
 	b.cond = sync.NewCond(&b.mu)
 	b.stopping.Store(false)
 
-	b.ocb = &openShiftClusterBackend{backend: b}
-	b.sb = &subscriptionBackend{backend: b}
+	// register backends to the manager for management
+	b.registry = make([]instance, 2)
+	b.registry = []instance{
+		{
+			name:    "openshiftcluster",
+			backend: openshiftcluster.New(env, db, m),
+		},
+		{
+			name:    "subscriptions",
+			backend: subscriptions.New(env, db, m),
+		},
+	}
 
 	return b, nil
 }
 
-func (b *backend) Run(ctx context.Context, stop <-chan struct{}) {
+func (b *backendManager) Run(ctx context.Context, stop <-chan struct{}) {
 	defer recover.Panic(b.baseLog)
 
 	t := time.NewTicker(time.Second)
@@ -76,28 +100,68 @@ func (b *backend) Run(ctx context.Context, stop <-chan struct{}) {
 	}()
 
 	for {
-		b.mu.Lock()
-		for atomic.LoadInt32(&b.workers) >= maxWorkers && !b.stopping.Load().(bool) {
-			b.cond.Wait()
+		for _, backend := range b.registry {
+			b.mu.Lock()
+			for atomic.LoadInt32(&backend.workers) >= maxWorkers && !b.stopping.Load().(bool) {
+				b.cond.Wait()
+			}
+			b.mu.Unlock()
 		}
-		b.mu.Unlock()
 
 		if b.stopping.Load().(bool) {
 			break
 		}
 
-		ocbDidWork, err := b.ocb.try(ctx)
-		if err != nil {
-			b.baseLog.Error(err)
+		backendDidWork := make(map[string]bool, len(b.registry))
+		for _, backendInstance := range b.registry {
+			var err error
+			backendDidWork[backendInstance.name], err = b.try(ctx, backendInstance)
+			if err != nil {
+				b.baseLog.Error(err)
+			}
 		}
 
-		sbDidWork, err := b.sb.try(ctx)
-		if err != nil {
-			b.baseLog.Error(err)
-		}
-
-		if !(ocbDidWork || sbDidWork) {
-			<-t.C
+		for _, didWork := range backendDidWork {
+			if !didWork {
+				<-t.C
+			}
 		}
 	}
+}
+
+// try tries to dequeue an object for work, and works it on a
+// new goroutine.  It returns a boolean to the caller indicating whether it
+// succeeded in dequeuing anything - if this is false, the caller should sleep
+// before calling again
+func (b *backendManager) try(ctx context.Context, instance instance) (bool, error) {
+	log := b.baseLog.WithField("backend", instance.name)
+	atomic.AddInt32(&instance.workers, 1)
+	b.m.EmitGauge(fmt.Sprintf("backend.%s.workers.count", instance.name), int64(atomic.LoadInt32(&instance.workers)), nil)
+
+	docRaw, err := instance.backend.Dequeue()(ctx)
+	if err != nil || docRaw == nil {
+		return false, err
+	}
+
+	go func() {
+		defer recover.Panic(log)
+
+		t := time.Now()
+
+		defer func() {
+			atomic.AddInt32(&instance.workers, -1)
+			b.m.EmitGauge(fmt.Sprintf("backend.%s.workers.count", instance.name), int64(atomic.LoadInt32(&instance.workers)), nil)
+			b.cond.Signal()
+
+			log.WithField("duration", time.Now().Sub(t).Seconds()).Print("done")
+		}()
+
+		err = instance.backend.Handle(ctx, b.baseLog, docRaw)
+		if err != nil {
+			log.Error(err)
+		}
+
+	}()
+
+	return true, nil
 }

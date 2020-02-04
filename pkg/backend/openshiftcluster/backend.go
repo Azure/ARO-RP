@@ -1,85 +1,68 @@
-package backend
-
-// Copyright (c) Microsoft Corporation.
-// Licensed under the Apache License 2.0.
+package openshiftcluster
 
 import (
 	"context"
 	"fmt"
-	"sync/atomic"
 	"time"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/backend/openshiftcluster"
+	"github.com/Azure/ARO-RP/pkg/database"
+	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
-type openShiftClusterBackend struct {
-	*backend
+const maxDequeueCount = 5
+
+type OpenShiftBackend struct {
+	env env.Interface
+	db  *database.Database
+	m   metrics.Interface
 }
 
-// try tries to dequeue an OpenShiftClusterDocument for work, and works it on a
-// new goroutine.  It returns a boolean to the caller indicating whether it
-// succeeded in dequeuing anything - if this is false, the caller should sleep
-// before calling again
-func (ocb *openShiftClusterBackend) try(ctx context.Context) (bool, error) {
-	doc, err := ocb.db.OpenShiftClusters.Dequeue(ctx)
-	if err != nil || doc == nil {
-		return false, err
+func New(env env.Interface, db *database.Database, m metrics.Interface) *OpenShiftBackend {
+	return &OpenShiftBackend{
+		env: env,
+		db:  db,
+		m:   m,
 	}
+}
 
-	log := ocb.baseLog.WithField("resource", doc.OpenShiftCluster.ID)
-	if doc.Dequeues > maxDequeueCount {
-		log.Errorf("dequeued %d times, failing", doc.Dequeues)
-		return true, ocb.endLease(ctx, nil, doc, api.ProvisioningStateFailed)
-	}
+func (ocb *OpenShiftBackend) Dequeue() func(context.Context) (interface{}, error) {
+	return ocb.db.OpenShiftClusters.DequeueRaw
+}
 
-	log.Print("dequeued")
-	atomic.AddInt32(&ocb.workers, 1)
-	ocb.m.EmitGauge("backend.openshiftcluster.workers.count", int64(atomic.LoadInt32(&ocb.workers)), nil)
+// Handle is responsible for handling backend operation all related operations
+// to this backend
+func (ocb *OpenShiftBackend) Handle(ctx context.Context, baseLog *logrus.Entry, docRaw interface{}) error {
+	t := time.Now()
+	doc := docRaw.(*api.OpenShiftClusterDocument)
+	log := baseLog.WithField("resource", doc.OpenShiftCluster.ID)
 
-	go func() {
-		defer recover.Panic(log)
+	defer func() {
+		ocb.m.EmitFloat("backend.openshiftcluster.duration", time.Now().Sub(t).Seconds(), map[string]string{
+			"state": string(doc.OpenShiftCluster.Properties.ProvisioningState),
+		})
 
-		t := time.Now()
-
-		defer func() {
-			atomic.AddInt32(&ocb.workers, -1)
-			ocb.m.EmitGauge("backend.openshiftcluster.workers.count", int64(atomic.LoadInt32(&ocb.workers)), nil)
-			ocb.cond.Signal()
-
-			ocb.m.EmitFloat("backend.openshiftcluster.duration", time.Now().Sub(t).Seconds(), map[string]string{
-				"state": string(doc.OpenShiftCluster.Properties.ProvisioningState),
-			})
-
-			ocb.m.EmitGauge("backend.openshiftcluster.count", 1, map[string]string{
-				"state": string(doc.OpenShiftCluster.Properties.ProvisioningState),
-			})
-
-			log.WithField("duration", time.Now().Sub(t).Seconds()).Print("done")
-		}()
-
-		err := ocb.handle(context.Background(), log, doc)
-		if err != nil {
-			log.Error(err)
-		}
-
+		ocb.m.EmitGauge("backend.openshiftcluster.count", 1, map[string]string{
+			"state": string(doc.OpenShiftCluster.Properties.ProvisioningState),
+		})
 	}()
 
-	return true, nil
-}
+	if doc.Dequeues > maxDequeueCount {
+		log.Errorf("dequeued %d times, failing", doc.Dequeues)
+		return ocb.endLease(ctx, nil, doc, api.ProvisioningStateFailed)
+	}
 
-// handle is responsible for handling backend operation and lease
-func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	stop := ocb.heartbeat(ctx, cancel, log, doc)
 	defer stop()
 
-	m, err := openshiftcluster.NewManager(log, ocb.env, ocb.db.OpenShiftClusters, doc)
+	m, err := NewManager(log, ocb.env, ocb.db.OpenShiftClusters, doc)
 	if err != nil {
 		log.Error(err)
 		return ocb.endLease(ctx, stop, doc, api.ProvisioningStateFailed)
@@ -134,7 +117,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 	return fmt.Errorf("unexpected provisioningState %q", doc.OpenShiftCluster.Properties.ProvisioningState)
 }
 
-func (ocb *openShiftClusterBackend) heartbeat(ctx context.Context, cancel context.CancelFunc, log *logrus.Entry, doc *api.OpenShiftClusterDocument) func() {
+func (ocb *OpenShiftBackend) heartbeat(ctx context.Context, cancel context.CancelFunc, log *logrus.Entry, doc *api.OpenShiftClusterDocument) func() {
 	var stopped bool
 	stop, done := make(chan struct{}), make(chan struct{})
 
@@ -171,7 +154,7 @@ func (ocb *openShiftClusterBackend) heartbeat(ctx context.Context, cancel contex
 	}
 }
 
-func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, id string, oc *api.OpenShiftCluster, provisioningState, failedProvisioningState api.ProvisioningState) error {
+func (ocb *OpenShiftBackend) updateAsyncOperation(ctx context.Context, id string, oc *api.OpenShiftCluster, provisioningState, failedProvisioningState api.ProvisioningState) error {
 	if id != "" {
 		_, err := ocb.db.AsyncOperations.Patch(ctx, id, func(asyncdoc *api.AsyncOperationDocument) error {
 			asyncdoc.AsyncOperation.ProvisioningState = provisioningState
@@ -205,7 +188,7 @@ func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, id
 	return nil
 }
 
-func (ocb *openShiftClusterBackend) endLease(ctx context.Context, stop func(), doc *api.OpenShiftClusterDocument, provisioningState api.ProvisioningState) error {
+func (ocb *OpenShiftBackend) endLease(ctx context.Context, stop func(), doc *api.OpenShiftClusterDocument, provisioningState api.ProvisioningState) error {
 	var failedProvisioningState api.ProvisioningState
 	if provisioningState == api.ProvisioningStateFailed {
 		failedProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState

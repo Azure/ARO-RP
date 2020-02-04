@@ -24,6 +24,7 @@ type Subscriptions interface {
 	Get(context.Context, string) (*api.SubscriptionDocument, error)
 	Update(context.Context, *api.SubscriptionDocument) (*api.SubscriptionDocument, error)
 	Dequeue(context.Context) (*api.SubscriptionDocument, error)
+	DequeueRaw(context.Context) (interface{}, error)
 	Lease(context.Context, string) (*api.SubscriptionDocument, error)
 	EndLease(context.Context, string, bool, bool) (*api.SubscriptionDocument, error)
 }
@@ -138,7 +139,7 @@ func (c *subscriptions) update(ctx context.Context, doc *api.SubscriptionDocumen
 	return c.c.Replace(ctx, doc.ID, doc, options)
 }
 
-func (c *subscriptions) Dequeue(ctx context.Context) (*api.SubscriptionDocument, error) {
+func (c *subscriptions) DequeueRaw(ctx context.Context) (interface{}, error) {
 	i := c.c.Query("", &cosmosdb.Query{
 		Query: `SELECT * FROM Subscriptions doc WHERE (doc.deleting ?? false) AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`,
 	}, nil)
@@ -162,6 +163,11 @@ func (c *subscriptions) Dequeue(ctx context.Context) (*api.SubscriptionDocument,
 			return doc, err
 		}
 	}
+}
+
+func (c *subscriptions) Dequeue(ctx context.Context) (*api.SubscriptionDocument, error) {
+	docRaw, err := c.DequeueRaw(ctx)
+	return docRaw.(*api.SubscriptionDocument), err
 }
 
 func (c *subscriptions) Lease(ctx context.Context, id string) (*api.SubscriptionDocument, error) {

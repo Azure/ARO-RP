@@ -51,7 +51,7 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	b, err := backend.NewBackend(ctx, log.WithField("component", "backend"), env, db, m)
+	b, err := backend.NewBackendManager(ctx, log.WithField("component", "backend"), env, db, m)
 	if err != nil {
 		return err
 	}
