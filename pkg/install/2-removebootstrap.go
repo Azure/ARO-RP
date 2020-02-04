@@ -26,7 +26,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
 
-func (i *Installer) removeBootstrap(ctx context.Context) error {
+func (i *installer) RemoveBootstrap(ctx context.Context) error {
 	g, err := i.getGraph(ctx)
 	if err != nil {
 		return err
@@ -155,7 +155,7 @@ func (i *Installer) removeBootstrap(ctx context.Context) error {
 	return err
 }
 
-func (i *Installer) updateConsoleBranding(ctx context.Context, cli operatorclient.Interface) error {
+func (i *installer) updateConsoleBranding(ctx context.Context, cli operatorclient.Interface) error {
 	i.log.Print("waiting for console-operator config")
 	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
 	defer cancel()

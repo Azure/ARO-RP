@@ -21,7 +21,6 @@ import (
 	"github.com/openshift/installer/pkg/asset/ignition/bootstrap"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/kubeconfig"
-	"github.com/openshift/installer/pkg/asset/releaseimage"
 	"github.com/openshift/installer/pkg/asset/targets"
 	uuid "github.com/satori/go.uuid"
 
@@ -39,7 +38,7 @@ var apiVersions = map[string]string{
 	"storage":       "2019-04-01",
 }
 
-func (i *Installer) installStorage(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) error {
+func (i *installer) InstallStorage(ctx context.Context) error {
 	err := i.dns.Create(ctx, i.doc.OpenShiftCluster)
 	if err != nil {
 		return err
@@ -51,10 +50,10 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 	}
 
 	g := graph{
-		reflect.TypeOf(installConfig): installConfig,
-		reflect.TypeOf(platformCreds): platformCreds,
-		reflect.TypeOf(image):         image,
-		reflect.TypeOf(clusterID):     clusterID,
+		reflect.TypeOf(i.installConfig): i.installConfig,
+		reflect.TypeOf(i.platformCreds): i.platformCreds,
+		reflect.TypeOf(i.image):         i.image,
+		reflect.TypeOf(clusterID):       clusterID,
 	}
 
 	i.log.Print("resolving graph")
@@ -72,7 +71,7 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 
 	i.log.Print("creating resource group")
 	group := mgmtresources.Group{
-		Location:  &installConfig.Config.Azure.Region,
+		Location:  &i.installConfig.Config.Azure.Region,
 		ManagedBy: to.StringPtr(i.doc.OpenShiftCluster.ID),
 	}
 	if _, ok := i.env.(env.Dev); ok {
@@ -101,7 +100,7 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 							Name: "Standard_LRS",
 						},
 						Name:     to.StringPtr("cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix),
-						Location: &installConfig.Config.Azure.Region,
+						Location: &i.installConfig.Config.Azure.Region,
 						Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
 					},
 					APIVersion: apiVersions["storage"],
@@ -160,7 +159,7 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 						},
 						Name:     to.StringPtr("aro-controlplane-nsg"),
 						Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
-						Location: &installConfig.Config.Azure.Region,
+						Location: &i.installConfig.Config.Azure.Region,
 					},
 					APIVersion: apiVersions["network"],
 				},
@@ -168,7 +167,7 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 					Resource: &mgmtnetwork.SecurityGroup{
 						Name:     to.StringPtr("aro-node-nsg"),
 						Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
-						Location: &installConfig.Config.Azure.Region,
+						Location: &i.installConfig.Config.Azure.Region,
 					},
 					APIVersion: apiVersions["network"],
 				},
