@@ -1,0 +1,52 @@
+# Azure DevOps Pipeline running CI
+trigger:
+  - master
+
+variables:
+  - group: secrets
+  - name: GOBIN
+    value: "$(GOPATH)/bin"
+  - name: GOROOT
+    value: "/usr/local/go1.13"
+  - name: GOPATH
+    value: "$(system.defaultWorkingDirectory)/gopath"
+  - name: modulePath
+    value: "$(GOPATH)/src/github.com/Azure/ARO-RP"
+
+jobs:
+  - job: "e2e_tests"
+    pool:
+      vmImage: "ubuntu-latest"
+
+    steps:
+      - script: |
+          set -x
+
+          mkdir -p '${GOBIN}'
+          mkdir -p '${GOPATH}/pkg'
+          mkdir -p '${modulePath}'
+          ls -a | grep -v ${GOPATH} | xargs mv -t ${modulePath}
+          sudo add-apt-repository ppa:kubuntu-ppa/backports
+          sudo apt-get update
+          sudo apt-get install libgpgme-dev gcc ca-certificates curl apt-transport-https lsb-release gnupg -y
+          go version
+          # install "az"
+          curl -sL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/microsoft.asc.gpg > /dev/null
+          AZ_REPO=$(lsb_release -cs)
+          echo "deb [arch=amd64] https://packages.microsoft.com/repos/azure-cli/ $AZ_REPO main"| sudo tee /etc/apt/sources.list.d/azure-cli.list
+          sudo apt-get update
+          sudo apt-get install azure-cli -y
+
+          az login -u ${AZURE_CLIENT_ID} -p ${AZURE_CLIENT_SECRET} --tenant ${AZURE_TENANT_ID} --service-principal
+          az account set -s ${AZURE_SUBSCRIPTION_ID}
+
+          az cosmosdb list
+          cd $(modulePath)
+          make az
+          echo "[extension]" >>~/.azure/config
+          echo "   dev_sources = $PWD/python" >>~/.azure/config
+          az aro list
+          #. hack/e2e.sh
+          #aro_ci_setup
+          #make e2e
+        displayName: "E2E tests"
