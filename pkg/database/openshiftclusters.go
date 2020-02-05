@@ -297,9 +297,6 @@ func (c *openShiftClusters) QueryAll(ctx context.Context, partitionKey string) (
 	if err != nil {
 		return nil, err
 	}
-	if docs == nil {
-		return nil, nil
-	}
 	return docs, nil
 }
 

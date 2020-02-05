@@ -5,6 +5,7 @@ package frontend
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -52,6 +53,8 @@ func (f *frontend) validateOpenShiftUniqueKey(ctx context.Context, doc *api.Open
 		return err
 	}
 	for _, existingDoc := range docs.OpenShiftClusterDocuments {
+		fmt.Printf("DEBUG : %+v", *existingDoc)
+		fmt.Printf("DEBUG 2 : %+v", *doc)
 		if existingDoc.ClusterResourceGroupIDKey == doc.ClusterResourceGroupIDKey {
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidResourceGroup, "", "The provided resource group '%s' already contains a cluster.", doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
 		}
