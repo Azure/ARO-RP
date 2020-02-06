@@ -17,6 +17,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
@@ -142,7 +143,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 	} else {
 		// TODO: Get rid of the special case
 		vars := mux.Vars(r)
-		if vars["api-version"] == "admin" {
+		if vars["api-version"] == admin.APIVersion {
 			doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateAdminUpdating
 		} else {
 			doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateUpdating
