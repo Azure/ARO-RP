@@ -349,7 +349,7 @@ ExecStart=/usr/bin/docker run \
   -p 443:8443 \
   \$RPIMAGE \
   rp
-ExecStop=/usr/bin/docker stop -t 90 %N
+ExecStop=/usr/bin/docker stop -t 3600 %N
 Restart=always
 
 [Install]
