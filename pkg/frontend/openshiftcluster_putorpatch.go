@@ -166,10 +166,8 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 
 	if isCreate {
 		newdoc, err := f.db.OpenShiftClusters.Create(ctx, doc)
-
 		if cosmosdb.IsErrorStatusCode(err, http.StatusPreconditionFailed) {
-			err = f.validateOpenShiftUniqueKey(ctx, doc)
-			return nil, err
+			return nil, f.validateOpenShiftUniqueKey(ctx, doc)
 		}
 		doc = newdoc
 	} else {
