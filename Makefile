@@ -5,7 +5,7 @@ aro: generate
 	go build -ldflags "-X main.gitCommit=$(COMMIT)" ./cmd/aro
 
 az:
-	cd python/az/aro && python ./setup.py bdist_egg
+	cd python/az/aro && python3 ./setup.py bdist_egg
 
 clean:
 	rm -rf python/az/aro/{aro.egg-info,build,dist} aro
