@@ -30,11 +30,18 @@ type Test struct {
 	TLSCerts []*x509.Certificate
 }
 
-func (t *Test) SetClientAuthorizer(clientauthorizer clientauthorizer.ClientAuthorizer) {
+func (t *Test) SetARMClientAuthorizer(armClientAuthorizer clientauthorizer.ClientAuthorizer) {
 	if t.prod == nil {
 		t.prod = &prod{}
 	}
-	t.ClientAuthorizer = clientauthorizer
+	t.armClientAuthorizer = armClientAuthorizer
+}
+
+func (t *Test) SetAdminClientAuthorizer(adminClientAuthorizer clientauthorizer.ClientAuthorizer) {
+	if t.prod == nil {
+		t.prod = &prod{}
+	}
+	t.adminClientAuthorizer = adminClientAuthorizer
 }
 
 func (t *Test) Domain() string {

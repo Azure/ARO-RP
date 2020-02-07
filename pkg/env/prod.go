@@ -33,7 +33,8 @@ import (
 
 type prod struct {
 	instancemetadata.InstanceMetadata
-	clientauthorizer.ClientAuthorizer
+	armClientAuthorizer   clientauthorizer.ClientAuthorizer
+	adminClientAuthorizer clientauthorizer.ClientAuthorizer
 
 	keyvault basekeyvault.BaseClient
 
@@ -49,7 +50,7 @@ type prod struct {
 	fpServicePrincipalID string
 }
 
-func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata, clientauthorizer clientauthorizer.ClientAuthorizer) (*prod, error) {
+func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata, armClientAuthorizer, adminClientAuthorizer clientauthorizer.ClientAuthorizer) (*prod, error) {
 	for _, key := range []string{
 		"MDM_ACCOUNT",
 		"MDM_NAMESPACE",
@@ -65,8 +66,9 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 	}
 
 	p := &prod{
-		InstanceMetadata: instancemetadata,
-		ClientAuthorizer: clientauthorizer,
+		InstanceMetadata:      instancemetadata,
+		armClientAuthorizer:   armClientAuthorizer,
+		adminClientAuthorizer: adminClientAuthorizer,
 
 		keyvault: basekeyvault.New(kvAuthorizer),
 	}
@@ -106,6 +108,14 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 	p.fpServicePrincipalID = "f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875"
 
 	return p, nil
+}
+
+func (p *prod) ArmClientAuthorizer() clientauthorizer.ClientAuthorizer {
+	return p.armClientAuthorizer
+}
+
+func (p *prod) AdminClientAuthorizer() clientauthorizer.ClientAuthorizer {
+	return p.adminClientAuthorizer
 }
 
 func (p *prod) populateCosmosDB(ctx context.Context, rpAuthorizer autorest.Authorizer) error {

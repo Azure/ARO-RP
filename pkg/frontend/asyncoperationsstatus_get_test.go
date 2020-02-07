@@ -225,7 +225,7 @@ func TestGetAsyncOperationsStatus(t *testing.T) {
 				TLSKey:       serverkey,
 				TLSCerts:     servercerts,
 			}
-			env.SetClientAuthorizer(clientauthorizer.NewOne(clientcerts[0].Raw))
+			env.SetARMClientAuthorizer(clientauthorizer.NewOne(clientcerts[0].Raw))
 
 			cli.Transport.(*http.Transport).Dial = l.Dial
 
