@@ -4,6 +4,8 @@ package database
 // Licensed under the Apache License 2.0.
 
 import (
+	"encoding/base64"
+
 	"github.com/ugorji/go/codec"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -11,62 +13,60 @@ import (
 	encrypt "github.com/Azure/ARO-RP/pkg/util/encryption"
 )
 
-var _ codec.InterfaceExt = (*SecureBytesExt)(nil)
+var _ codec.InterfaceExt = (*secureBytesExt)(nil)
 
-type SecureBytesExt struct {
-	Cipher encryption.Cipher
+type secureBytesExt struct {
+	cipher encryption.Cipher
 }
 
-func (s SecureBytesExt) ConvertExt(v interface{}) interface{} {
-	data := v.(api.SecureBytes)
-	if s.Cipher != nil {
-		encrypted, err := s.Cipher.Encrypt(string(data))
-		if err != nil {
-			panic(err)
-		}
-		return encrypted
+func (s secureBytesExt) ConvertExt(v interface{}) interface{} {
+	encrypted, err := s.cipher.Encrypt(v.(api.SecureBytes))
+	if err != nil {
+		panic(err)
 	}
-	return string(data)
-}
-func (s SecureBytesExt) UpdateExt(dest interface{}, v interface{}) {
-	output := dest.(*api.SecureBytes)
-	if s.Cipher != nil {
-		decrypted, err := s.Cipher.Decrypt(v.(string))
-		if err != nil {
-			panic(err)
-		}
-		*output = api.SecureBytes(decrypted)
-		return
-	}
-	*output = api.SecureBytes(v.(string))
+
+	return base64.StdEncoding.EncodeToString([]byte(encrypted))
 }
 
-var _ codec.InterfaceExt = (*SecureStringExt)(nil)
+func (s secureBytesExt) UpdateExt(dest interface{}, v interface{}) {
+	b, err := base64.StdEncoding.DecodeString(v.(string))
+	if err != nil {
+		panic(err)
+	}
 
-type SecureStringExt struct {
-	Cipher encrypt.Cipher
+	b, err = s.cipher.Decrypt(b)
+	if err != nil {
+		panic(err)
+	}
+
+	*dest.(*api.SecureBytes) = b
 }
 
-func (s SecureStringExt) ConvertExt(v interface{}) interface{} {
-	data := v.(api.SecureString)
-	if s.Cipher != nil {
-		encrypted, err := s.Cipher.Encrypt(string(data))
-		if err != nil {
-			panic(err)
-		}
-		return encrypted
-	}
-	return string(data)
+var _ codec.InterfaceExt = (*secureStringExt)(nil)
+
+type secureStringExt struct {
+	cipher encrypt.Cipher
 }
-func (s SecureStringExt) UpdateExt(dest interface{}, v interface{}) {
-	output := dest.(*api.SecureString)
-	if s.Cipher != nil {
-		decrypted, err := s.Cipher.Decrypt(v.(string))
-		if err != nil {
-			panic(err)
-		}
-		*output = api.SecureString(decrypted)
-		return
+
+func (s secureStringExt) ConvertExt(v interface{}) interface{} {
+	encrypted, err := s.cipher.Encrypt([]byte(v.(api.SecureString)))
+	if err != nil {
+		panic(err)
 	}
-	*output = api.SecureString(v.(string))
+
+	return base64.StdEncoding.EncodeToString([]byte(encrypted))
+}
+
+func (s secureStringExt) UpdateExt(dest interface{}, v interface{}) {
+	b, err := base64.StdEncoding.DecodeString(v.(string))
+	if err != nil {
+		panic(err)
+	}
+
+	b, err = s.cipher.Decrypt(b)
+	if err != nil {
+		panic(err)
+	}
+
+	*dest.(*api.SecureString) = api.SecureString(b)
 }

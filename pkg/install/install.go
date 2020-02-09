@@ -81,7 +81,7 @@ func NewInstaller(ctx context.Context, log *logrus.Entry, env env.Interface, db 
 		return nil, err
 	}
 
-	cipher, err := encryption.NewCipher(ctx, env)
+	cipher, err := encryption.NewXChaCha20Poly1305(ctx, env)
 	if err != nil {
 		return nil, err
 	}
@@ -211,13 +211,13 @@ func (i *Installer) loadGraph(ctx context.Context) (graph, error) {
 		return nil, err
 	}
 
-	output, err := i.cipher.Decrypt(string(encrypted))
+	output, err := i.cipher.Decrypt(encrypted)
 	if err != nil {
 		return nil, err
 	}
 
 	var g graph
-	err = json.Unmarshal([]byte(output), &g)
+	err = json.Unmarshal(output, &g)
 	if err != nil {
 		return nil, err
 	}
@@ -246,7 +246,7 @@ func (i *Installer) saveGraph(ctx context.Context, g graph) error {
 		return err
 	}
 
-	output, err := i.cipher.Encrypt(string(b))
+	output, err := i.cipher.Encrypt(b)
 	if err != nil {
 		return err
 	}

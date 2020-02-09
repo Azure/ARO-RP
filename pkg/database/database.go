@@ -33,15 +33,7 @@ type Database struct {
 }
 
 // NewDatabase returns a new Database
-func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Interface, m metrics.Interface, uuid string, decryptDatabase bool) (db *Database, err error) {
-	var cipher encryption.Cipher
-	if decryptDatabase {
-		cipher, err = encryption.NewCipher(ctx, env)
-		if err != nil {
-			return nil, err
-		}
-	}
-
+func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Interface, m metrics.Interface, cipher encryption.Cipher, uuid string) (db *Database, err error) {
 	databaseAccount, masterKey := env.CosmosDB()
 
 	h := newJSONHandle(cipher)
@@ -99,7 +91,7 @@ func newJSONHandle(cipher encryption.Cipher) *codec.JsonHandle {
 		},
 	}
 
-	h.SetInterfaceExt(reflect.TypeOf(api.SecureBytes{}), 1, SecureBytesExt{Cipher: cipher})
-	h.SetInterfaceExt(reflect.TypeOf((*api.SecureString)(nil)), 1, SecureStringExt{Cipher: cipher})
+	h.SetInterfaceExt(reflect.TypeOf(api.SecureBytes{}), 1, secureBytesExt{cipher: cipher})
+	h.SetInterfaceExt(reflect.TypeOf((*api.SecureString)(nil)), 1, secureStringExt{cipher: cipher})
 	return h
 }

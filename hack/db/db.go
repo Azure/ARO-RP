@@ -15,6 +15,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
+	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
@@ -28,7 +29,12 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	db, err := database.NewDatabase(ctx, log.WithField("component", "database"), env, &noop.Noop{}, "", true)
+	cipher, err := encryption.NewXChaCha20Poly1305(ctx, env)
+	if err != nil {
+		return err
+	}
+
+	db, err := database.NewDatabase(ctx, log.WithField("component", "database"), env, &noop.Noop{}, cipher, "")
 	if err != nil {
 		return err
 	}

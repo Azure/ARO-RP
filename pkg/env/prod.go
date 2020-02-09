@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/pem"
 	"fmt"
 	"net"
@@ -265,16 +266,13 @@ func (p *prod) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, err
 	return autorest.NewBearerAuthorizer(sp), nil
 }
 
-func (p *prod) GetSecret(ctx context.Context, secretName string) ([]byte, error) {
-	bundle, err := p.keyvault.GetSecret(ctx, p.serviceKeyvaultURI, secretName, "")
-	return []byte(*bundle.Value), err
-}
-
 func (p *prod) GetCertificateSecret(ctx context.Context, secretName string) (key *rsa.PrivateKey, certs []*x509.Certificate, err error) {
-	b, err := p.GetSecret(ctx, secretName)
+	bundle, err := p.keyvault.GetSecret(ctx, p.serviceKeyvaultURI, secretName, "")
 	if err != nil {
 		return nil, nil, err
 	}
+
+	b := []byte(*bundle.Value)
 	for {
 		var block *pem.Block
 		block, b = pem.Decode(b)
@@ -312,6 +310,15 @@ func (p *prod) GetCertificateSecret(ctx context.Context, secretName string) (key
 	}
 
 	return key, certs, nil
+}
+
+func (p *prod) GetSecret(ctx context.Context, secretName string) ([]byte, error) {
+	bundle, err := p.keyvault.GetSecret(ctx, p.serviceKeyvaultURI, secretName, "")
+	if err != nil {
+		return nil, err
+	}
+
+	return base64.StdEncoding.DecodeString(*bundle.Value)
 }
 
 func (p *prod) Listen() (net.Listener, error) {

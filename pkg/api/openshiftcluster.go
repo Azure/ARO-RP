@@ -21,10 +21,10 @@ type OpenShiftCluster struct {
 	Properties Properties        `json:"properties,omitempty"`
 }
 
-// SecureBytes represents encrypted []byte
+// SecureBytes represents an encrypted []byte
 type SecureBytes []byte
 
-// SecureString represents encrypted string
+// SecureString represents an encrypted string
 type SecureString string
 
 // Properties represents an OpenShift cluster's properties

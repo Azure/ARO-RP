@@ -40,16 +40,13 @@ func (m *Manager) Create(ctx context.Context) error {
 	resourceGroup := m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID[strings.LastIndexByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')+1:]
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		var err error
 		if doc.OpenShiftCluster.Properties.SSHKey == nil {
 			sshKey, err := rsa.GenerateKey(rand.Reader, 2048)
 			if err != nil {
 				return err
 			}
+
 			doc.OpenShiftCluster.Properties.SSHKey = x509.MarshalPKCS1PrivateKey(sshKey)
-			if err != nil {
-				return err
-			}
 		}
 
 		if doc.OpenShiftCluster.Properties.StorageSuffix == "" {

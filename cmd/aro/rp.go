@@ -19,6 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
+	"github.com/Azure/ARO-RP/pkg/util/encryption"
 )
 
 func rp(ctx context.Context, log *logrus.Entry) error {
@@ -36,7 +37,12 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 	}
 	defer m.Close()
 
-	db, err := database.NewDatabase(ctx, log.WithField("component", "database"), env, m, uuid, true)
+	cipher, err := encryption.NewXChaCha20Poly1305(ctx, env)
+	if err != nil {
+		return err
+	}
+
+	db, err := database.NewDatabase(ctx, log.WithField("component", "database"), env, m, cipher, uuid)
 	if err != nil {
 		return err
 	}
