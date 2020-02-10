@@ -22,6 +22,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	utilpermissions "github.com/Azure/ARO-RP/pkg/util/permissions"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
@@ -69,6 +70,12 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context, oc *api
 
 	spPermissions := authorization.NewPermissionsClient(r.SubscriptionID, spAuthorizer)
 	err = dv.validateVnetPermissions(ctx, oc, spPermissions, api.CloudErrorCodeInvalidServicePrincipalPermissions, "provided service principal")
+	if err != nil {
+		return err
+	}
+
+	spUsage := compute.NewUsageClient(r.SubscriptionID, spAuthorizer)
+	err = dv.validateQuotas(ctx, oc, spUsage)
 	if err != nil {
 		return err
 	}
