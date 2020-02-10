@@ -369,10 +369,10 @@
                 "allowGatewayTransit": false,
                 "useRemoteGateways": false,
                 "remoteVirtualNetwork": {
-                    "id": "[resourceId('Microsoft.Network/virtualNetworks/', 'rp-pe-vnet-001')]"
+                    "id": "[resourceId('Microsoft.Network/virtualNetworks', 'rp-pe-vnet-001')]"
                 }
             },
-            "name": "'rp-vnet/peering-rp-pe-vnet-001'",
+            "name": "rp-vnet/peering-rp-pe-vnet-001",
             "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
             "apiVersion": "2019-07-01",
             "dependsOn": [
@@ -388,10 +388,10 @@
                 "allowGatewayTransit": false,
                 "useRemoteGateways": false,
                 "remoteVirtualNetwork": {
-                    "id": "[resourceId('Microsoft.Network/virtualNetworks/', 'rp-vnet')]"
+                    "id": "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]"
                 }
             },
-            "name": "'rp-pe-vnet-001/peering-rp-vnet'",
+            "name": "rp-pe-vnet-001/peering-rp-vnet",
             "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
             "apiVersion": "2019-07-01",
             "dependsOn": [

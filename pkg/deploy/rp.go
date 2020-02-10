@@ -58,10 +58,10 @@ func (g *generator) halfPeering(vnetA string, vnetB string) *arm.Resource {
 				AllowGatewayTransit:       to.BoolPtr(false),
 				UseRemoteGateways:         to.BoolPtr(false),
 				RemoteVirtualNetwork: &mgmtnetwork.SubResource{
-					ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/virtualNetworks/', '%s')]", vnetB)),
+					ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/virtualNetworks', '%s')]", vnetB)),
 				},
 			},
-			Name: to.StringPtr(fmt.Sprintf("'%s/peering-%s'", vnetA, vnetB)),
+			Name: to.StringPtr(fmt.Sprintf("%s/peering-%s", vnetA, vnetB)),
 		},
 		APIVersion: apiVersions["network"],
 		DependsOn: []string{
