@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/pem"
 	"fmt"
 	"net"
@@ -100,7 +101,7 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 		return nil, err
 	}
 
-	fpPrivateKey, fpCertificates, err := p.GetSecret(ctx, "rp-firstparty")
+	fpPrivateKey, fpCertificates, err := p.GetCertificateSecret(ctx, "rp-firstparty")
 	if err != nil {
 		return nil, err
 	}
@@ -265,7 +266,7 @@ func (p *prod) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, err
 	return autorest.NewBearerAuthorizer(sp), nil
 }
 
-func (p *prod) GetSecret(ctx context.Context, secretName string) (key *rsa.PrivateKey, certs []*x509.Certificate, err error) {
+func (p *prod) GetCertificateSecret(ctx context.Context, secretName string) (key *rsa.PrivateKey, certs []*x509.Certificate, err error) {
 	bundle, err := p.keyvault.GetSecret(ctx, p.serviceKeyvaultURI, secretName, "")
 	if err != nil {
 		return nil, nil, err
@@ -309,6 +310,15 @@ func (p *prod) GetSecret(ctx context.Context, secretName string) (key *rsa.Priva
 	}
 
 	return key, certs, nil
+}
+
+func (p *prod) GetSecret(ctx context.Context, secretName string) ([]byte, error) {
+	bundle, err := p.keyvault.GetSecret(ctx, p.serviceKeyvaultURI, secretName, "")
+	if err != nil {
+		return nil, err
+	}
+
+	return base64.StdEncoding.DecodeString(*bundle.Value)
 }
 
 func (p *prod) Listen() (net.Listener, error) {

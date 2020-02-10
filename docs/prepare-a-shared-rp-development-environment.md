@@ -308,6 +308,11 @@ locations.
      --name rp-server \
      --file secrets/localhost.pem \
      >/dev/null
+   az keyvault secret set \
+     --vault-name "$KEYVAULT_PREFIX-service" \
+     --name encryption-key \
+     --value "$(openssl rand -base64 32)" \
+     >/dev/null
    ```
 
 1. Create nameserver records in the parent DNS zone:

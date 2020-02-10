@@ -4,9 +4,7 @@ package install
 // Licensed under the Apache License 2.0.
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"strings"
@@ -18,7 +16,6 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/openshift/installer/pkg/asset/ignition/bootstrap"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/kubeconfig"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
@@ -66,7 +63,6 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 	}
 
 	adminClient := g[reflect.TypeOf(&kubeconfig.AdminClient{})].(*kubeconfig.AdminClient)
-	bootstrap := g[reflect.TypeOf(&bootstrap.Bootstrap{})].(*bootstrap.Bootstrap)
 
 	resourceGroup := i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID[strings.LastIndexByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')+1:]
 
@@ -198,26 +194,10 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 	}
 
 	{
-		blobService, err := i.getBlobService(ctx)
-		if err != nil {
-			return err
-		}
-
-		bootstrapIgn := blobService.GetContainerReference("ignition").GetBlobReference("bootstrap.ign")
-		err = bootstrapIgn.CreateBlockBlobFromReader(bytes.NewReader(bootstrap.File.Data), nil)
-		if err != nil {
-			return err
-		}
 
 		// the graph is quite big so we store it in a storage account instead of
 		// in cosmosdb
-		graph := blobService.GetContainerReference("aro").GetBlobReference("graph")
-		b, err := json.MarshalIndent(g, "", "    ")
-		if err != nil {
-			return err
-		}
-
-		err = graph.CreateBlockBlobFromReader(bytes.NewReader(b), nil)
+		err := i.saveGraph(ctx, g)
 		if err != nil {
 			return err
 		}

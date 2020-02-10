@@ -67,6 +67,10 @@
                         "tenantId": "[subscription().tenantId]",
                         "objectId": "[parameters('adminObjectId')]",
                         "permissions": {
+                            "secrets": [
+                                "set",
+                                "list"
+                            ],
                             "certificates": [
                                 "delete",
                                 "get",

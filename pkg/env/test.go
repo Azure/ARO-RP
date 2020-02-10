@@ -25,6 +25,7 @@ type Test struct {
 	TestResourceGroup  string
 	TestDomain         string
 	TestVNetName       string
+	TestSecret         []byte
 
 	TLSKey   *rsa.PrivateKey
 	TLSCerts []*x509.Certificate
@@ -45,13 +46,17 @@ func (t *Test) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, err
 	return nil, nil
 }
 
-func (t *Test) GetSecret(ctx context.Context, secretName string) (key *rsa.PrivateKey, certs []*x509.Certificate, err error) {
+func (t *Test) GetCertificateSecret(ctx context.Context, secretName string) (key *rsa.PrivateKey, certs []*x509.Certificate, err error) {
 	switch secretName {
 	case "rp-server":
 		return t.TLSKey, t.TLSCerts, nil
 	default:
 		return nil, nil, fmt.Errorf("secret %q not found", secretName)
 	}
+}
+
+func (t *Test) GetSecret(ctx context.Context, secretName string) ([]byte, error) {
+	return t.TestSecret, nil
 }
 
 func (t *Test) Listen() (net.Listener, error) {
