@@ -48,7 +48,32 @@ func newGenerator(production bool) *generator {
 	}
 }
 
-func (g *generator) vnet() *arm.Resource {
+// halfPeering configures vnetA to peer with vnetB, two symmetrical configurations have to be applied for a peering to work
+func (g *generator) halfPeering(vnetA string, vnetB string) *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtnetwork.VirtualNetworkPeering{
+			VirtualNetworkPeeringPropertiesFormat: &mgmtnetwork.VirtualNetworkPeeringPropertiesFormat{
+				AllowVirtualNetworkAccess: to.BoolPtr(true),
+				AllowForwardedTraffic:     to.BoolPtr(true),
+				AllowGatewayTransit:       to.BoolPtr(false),
+				UseRemoteGateways:         to.BoolPtr(false),
+				RemoteVirtualNetwork: &mgmtnetwork.SubResource{
+					ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/virtualNetworks', '%s')]", vnetB)),
+				},
+			},
+			Name: to.StringPtr(fmt.Sprintf("%s/peering-%s", vnetA, vnetB)),
+		},
+		APIVersion: apiVersions["network"],
+		DependsOn: []string{
+			fmt.Sprintf("[resourceId('Microsoft.Network/virtualNetworks', '%s')]", vnetA),
+			fmt.Sprintf("[resourceId('Microsoft.Network/virtualNetworks', '%s')]", vnetB),
+		},
+		Type:     "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+		Location: "[resourceGroup().location]",
+	}
+}
+
+func (g *generator) rpvnet() *arm.Resource {
 	subnet := mgmtnetwork.Subnet{
 		SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 			AddressPrefix: to.StringPtr("10.0.0.0/24"),
@@ -77,14 +102,34 @@ func (g *generator) vnet() *arm.Resource {
 			VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
 				AddressSpace: &mgmtnetwork.AddressSpace{
 					AddressPrefixes: &[]string{
-						"10.0.0.0/8",
+						"10.0.0.0/24",
 					},
 				},
 				Subnets: &[]mgmtnetwork.Subnet{
 					subnet,
+				},
+			},
+			Name:     to.StringPtr("rp-vnet"),
+			Type:     to.StringPtr("Microsoft.Network/virtualNetworks"),
+			Location: to.StringPtr("[resourceGroup().location]"),
+		},
+		APIVersion: apiVersions["network"],
+	}
+}
+
+func (g *generator) pevnet() *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtnetwork.VirtualNetwork{
+			VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
+				AddressSpace: &mgmtnetwork.AddressSpace{
+					AddressPrefixes: &[]string{
+						"10.0.4.0/22",
+					},
+				},
+				Subnets: &[]mgmtnetwork.Subnet{
 					{
 						SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-							AddressPrefix: to.StringPtr("10.1.0.0/16"),
+							AddressPrefix: to.StringPtr("10.0.4.0/22"),
 							NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
 								ID: to.StringPtr("[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]"),
 							},
@@ -94,12 +139,9 @@ func (g *generator) vnet() *arm.Resource {
 					},
 				},
 			},
-			Name:     to.StringPtr("rp-vnet"),
+			Name:     to.StringPtr("rp-pe-vnet-001"),
 			Type:     to.StringPtr("Microsoft.Network/virtualNetworks"),
 			Location: to.StringPtr("[resourceGroup().location]"),
-			Tags: map[string]*string{
-				"vnet": to.StringPtr("rp"),
-			},
 		},
 		APIVersion: apiVersions["network"],
 	}
@@ -887,7 +929,12 @@ func (g *generator) template() *arm.Template {
 		t.Resources = append(t.Resources, g.pip(), g.lb(), g.vmss())
 	}
 	// clustersKeyvault must preceed serviceKeyvault due to terrible bytes.Replace below
-	t.Resources = append(t.Resources, g.zone(), g.clustersKeyvault(), g.serviceKeyvault(), g.vnet())
+	t.Resources = append(t.Resources, g.zone(),
+		g.clustersKeyvault(), g.serviceKeyvault(),
+		g.rpvnet(), g.pevnet(),
+		g.halfPeering("rp-vnet", "rp-pe-vnet-001"),
+		g.halfPeering("rp-pe-vnet-001", "rp-vnet"))
+
 	if g.production {
 		t.Resources = append(t.Resources, g.cosmosdb("'ARO'")...)
 	} else {
