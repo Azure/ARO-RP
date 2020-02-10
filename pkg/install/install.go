@@ -127,45 +127,41 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 		return err
 	}
 
-	for {
-		i.log.Printf("starting phase %s", i.doc.OpenShiftCluster.Properties.Install.Phase)
-		switch i.doc.OpenShiftCluster.Properties.Install.Phase {
-		case api.InstallPhaseDeployStorage:
-			err := i.installStorage(ctx, installConfig, platformCreds, image)
-			if err != nil {
-				return err
-			}
-
-		case api.InstallPhaseDeployResources:
-			err := i.installResources(ctx)
-			if err != nil {
-				return err
-			}
-
-		case api.InstallPhaseRemoveBootstrap:
-			err := i.removeBootstrap(ctx)
-			if err != nil {
-				return err
-			}
-
-			i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-				doc.OpenShiftCluster.Properties.Install = nil
-				return nil
-			})
-			return err
-
-		default:
-			return fmt.Errorf("unrecognised phase %s", i.doc.OpenShiftCluster.Properties.Install.Phase)
-		}
-
-		i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-			doc.OpenShiftCluster.Properties.Install.Phase++
-			return nil
-		})
+	i.log.Printf("starting phase %s", i.doc.OpenShiftCluster.Properties.Install.Phase)
+	switch i.doc.OpenShiftCluster.Properties.Install.Phase {
+	case api.InstallPhaseDeployStorage:
+		err := i.installStorage(ctx, installConfig, platformCreds, image)
 		if err != nil {
 			return err
 		}
+
+	case api.InstallPhaseDeployResources:
+		err := i.installResources(ctx)
+		if err != nil {
+			return err
+		}
+
+	case api.InstallPhaseRemoveBootstrap:
+		err := i.removeBootstrap(ctx)
+		if err != nil {
+			return err
+		}
+
+		i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+			doc.OpenShiftCluster.Properties.Install = nil
+			return nil
+		})
+		return err
+
+	default:
+		return fmt.Errorf("unrecognised phase %s", i.doc.OpenShiftCluster.Properties.Install.Phase)
 	}
+
+	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.Properties.Install.Phase++
+		return nil
+	})
+	return err
 }
 
 func (i *Installer) getBlobService(ctx context.Context) (*azstorage.BlobStorageClient, error) {
