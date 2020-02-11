@@ -156,8 +156,8 @@ func (i *Installer) installResources(ctx context.Context) error {
 					},
 					APIVersion: apiVersions["privatedns"],
 					DependsOn: []string{
-						"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
 						"Microsoft.Network/loadBalancers/aro-internal-lb",
+						"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
 					},
 				},
 				{
