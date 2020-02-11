@@ -290,6 +290,45 @@ func (i *Installer) installResources(ctx context.Context) error {
 									Name: to.StringPtr("aro-internal-controlplane"),
 								},
 							},
+							InboundNatRules: &[]mgmtnetwork.InboundNatRule{
+								{
+									Name: to.StringPtr("aro-master-0"),
+									InboundNatRulePropertiesFormat: &mgmtnetwork.InboundNatRulePropertiesFormat{
+										FrontendIPConfiguration: &mgmtnetwork.SubResource{
+											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'aro-internal-lb', 'internal-lb-ip')]"),
+										},
+										Protocol:         mgmtnetwork.TransportProtocolTCP,
+										FrontendPort:     to.Int32Ptr(2200),
+										BackendPort:      to.Int32Ptr(22),
+										EnableFloatingIP: to.BoolPtr(false),
+									},
+								},
+								{
+									Name: to.StringPtr("aro-master-1"),
+									InboundNatRulePropertiesFormat: &mgmtnetwork.InboundNatRulePropertiesFormat{
+										FrontendIPConfiguration: &mgmtnetwork.SubResource{
+											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'aro-internal-lb', 'internal-lb-ip')]"),
+										},
+										Protocol:         mgmtnetwork.TransportProtocolTCP,
+										FrontendPort:     to.Int32Ptr(2201),
+										BackendPort:      to.Int32Ptr(22),
+										EnableFloatingIP: to.BoolPtr(false),
+									},
+								},
+								{
+									Name: to.StringPtr("aro-master-2"),
+									InboundNatRulePropertiesFormat: &mgmtnetwork.InboundNatRulePropertiesFormat{
+										FrontendIPConfiguration: &mgmtnetwork.SubResource{
+											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'aro-internal-lb', 'internal-lb-ip')]"),
+										},
+										Protocol:         mgmtnetwork.TransportProtocolTCP,
+										FrontendPort:     to.Int32Ptr(2202),
+										BackendPort:      to.Int32Ptr(22),
+										EnableFloatingIP: to.BoolPtr(false),
+									},
+								},
+							},
+
 							LoadBalancingRules: &[]mgmtnetwork.LoadBalancingRule{
 								{
 									LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
@@ -331,66 +370,6 @@ func (i *Installer) installResources(ctx context.Context) error {
 									Name: to.StringPtr("sint"),
 								},
 							},
-							{
-								LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
-									FrontendIPConfiguration: &mgmtnetwork.SubResource{
-										ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'aro-internal-lb', 'internal-lb-ip')]"),
-									},
-									BackendAddressPool: &mgmtnetwork.SubResource{
-										ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'aro-internal-lb', 'aro-internal-controlplane')]"),
-									},
-									Probe: &mgmtnetwork.SubResource{
-										ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'aro-internal-lb', 'aro-master-0-ssh-probe')]"),
-									},
-									Protocol:             mgmtnetwork.TransportProtocolTCP,
-									LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
-									FrontendPort:         to.Int32Ptr(22),
-									BackendPort:          to.Int32Ptr(2200),
-									IdleTimeoutInMinutes: to.Int32Ptr(5),
-									DisableOutboundSnat:  to.BoolPtr(true),
-								},
-								Name: to.StringPtr("aro-master-0-ssh"),
-							},
-							{
-								LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
-									FrontendIPConfiguration: &mgmtnetwork.SubResource{
-										ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'aro-internal-lb', 'internal-lb-ip')]"),
-									},
-									BackendAddressPool: &mgmtnetwork.SubResource{
-										ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'aro-internal-lb', 'aro-internal-controlplane')]"),
-									},
-									Probe: &mgmtnetwork.SubResource{
-										ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'aro-internal-lb', 'aro-master-2-ssh-probe')]"),
-									},
-									Protocol:             mgmtnetwork.TransportProtocolTCP,
-									LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
-									FrontendPort:         to.Int32Ptr(22),
-									BackendPort:          to.Int32Ptr(2201),
-									IdleTimeoutInMinutes: to.Int32Ptr(5),
-									DisableOutboundSnat:  to.BoolPtr(true),
-								},
-								Name: to.StringPtr("aro-master-1-ssh"),
-							},
-							{
-								LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
-									FrontendIPConfiguration: &mgmtnetwork.SubResource{
-										ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'aro-internal-lb', 'internal-lb-ip')]"),
-									},
-									BackendAddressPool: &mgmtnetwork.SubResource{
-										ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'aro-internal-lb', 'aro-internal-controlplane')]"),
-									},
-									Probe: &mgmtnetwork.SubResource{
-										ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'aro-internal-lb', 'aro-master-ssh-2-probe')]"),
-									},
-									Protocol:             mgmtnetwork.TransportProtocolTCP,
-									LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
-									FrontendPort:         to.Int32Ptr(22),
-									BackendPort:          to.Int32Ptr(2202),
-									IdleTimeoutInMinutes: to.Int32Ptr(5),
-									DisableOutboundSnat:  to.BoolPtr(true),
-								},
-								Name: to.StringPtr("aro-master-2-ssh"),
-							},
 							Probes: &[]mgmtnetwork.Probe{
 								{
 									ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
@@ -409,33 +388,6 @@ func (i *Installer) installResources(ctx context.Context) error {
 										NumberOfProbes:    to.Int32Ptr(3),
 									},
 									Name: to.StringPtr("sint-probe"),
-								},
-								{
-									ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
-										Protocol:          mgmtnetwork.ProbeProtocolTCP,
-										Port:              to.Int32Ptr(2200),
-										IntervalInSeconds: to.Int32Ptr(10),
-										NumberOfProbes:    to.Int32Ptr(3),
-									},
-									Name: to.StringPtr("aro-master-0-ssh-probe"),
-								},
-								{
-									ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
-										Protocol:          mgmtnetwork.ProbeProtocolTCP,
-										Port:              to.Int32Ptr(2201),
-										IntervalInSeconds: to.Int32Ptr(10),
-										NumberOfProbes:    to.Int32Ptr(3),
-									},
-									Name: to.StringPtr("aro-master-2-ssh-probe"),
-								},
-								{
-									ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
-										Protocol:          mgmtnetwork.ProbeProtocolTCP,
-										Port:              to.Int32Ptr(2202),
-										IntervalInSeconds: to.Int32Ptr(10),
-										NumberOfProbes:    to.Int32Ptr(3),
-									},
-									Name: to.StringPtr("aro-master-ssh-2-probe"),
 								},
 							},
 						},
