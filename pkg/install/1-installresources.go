@@ -130,21 +130,15 @@ func (i *Installer) installResources(ctx context.Context) error {
 							TTL: to.Int64Ptr(300),
 							ARecords: &[]mgmtprivatedns.ARecord{
 								{
-									Ipv4Address: to.StringPtr(
-										fmt.Sprintf(
-											"[reference('Microsoft.Network/loadBalancers/aro-internal-lb', '%s')"+
-												".frontendIpConfigurations[0].properties.privateIPAddress]",
-											apiVersions["network"],
-										),
-									),
+									Ipv4Address: to.StringPtr(fmt.Sprintf("[reference('Microsoft.Network/loadBalancers/aro-internal-lb', '%s').frontendIpConfigurations[0].properties.privateIPAddress]", apiVersions["network"])),
 								},
 							},
 						},
 					},
 					APIVersion: apiVersions["privatedns"],
 					DependsOn: []string{
-						"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
 						"Microsoft.Network/loadBalancers/aro-internal-lb",
+						"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
 					},
 				},
 				{
@@ -155,13 +149,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 							TTL: to.Int64Ptr(300),
 							ARecords: &[]mgmtprivatedns.ARecord{
 								{
-									Ipv4Address: to.StringPtr(
-										fmt.Sprintf(
-											"[reference('Microsoft.Network/loadBalancers/aro-internal-lb', '%s')"+
-												".frontendIpConfigurations[0].properties.privateIPAddress]",
-											apiVersions["network"],
-										),
-									),
+									Ipv4Address: to.StringPtr(fmt.Sprintf("[reference('Microsoft.Network/loadBalancers/aro-internal-lb', '%s').frontendIpConfigurations[0].properties.privateIPAddress]", apiVersions["network"])),
 								},
 							},
 						},
