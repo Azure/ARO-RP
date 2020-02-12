@@ -226,8 +226,9 @@ func (f *frontend) Run(ctx context.Context, stop <-chan struct{}, done chan<- st
 			if err != nil {
 				f.baseLog.Error(err)
 			}
+
+			f.baseLog.Print("exiting")
 			close(done)
-			f.baseLog.Info("frontend server exited. Terminating frontend mananger")
 		}()
 	}
 

@@ -86,30 +86,29 @@ func (b *backend) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 
 		if b.stopping.Load().(bool) {
 			break
-		} else {
-			ocbDidWork, err := b.ocb.try(ctx)
-			if err != nil {
-				b.baseLog.Error(err)
-			}
+		}
 
-			sbDidWork, err := b.sb.try(ctx)
-			if err != nil {
-				b.baseLog.Error(err)
-			}
+		ocbDidWork, err := b.ocb.try(ctx)
+		if err != nil {
+			b.baseLog.Error(err)
+		}
 
-			if !(ocbDidWork || sbDidWork) {
-				<-t.C
-			}
+		sbDidWork, err := b.sb.try(ctx)
+		if err != nil {
+			b.baseLog.Error(err)
+		}
+
+		if !(ocbDidWork || sbDidWork) {
+			<-t.C
 		}
 	}
 
-	for {
-		b.mu.Lock()
-		for atomic.LoadInt32(&b.workers) > 0 {
-			b.cond.Wait()
-		}
-		b.mu.Unlock()
-		break
+	b.mu.Lock()
+	for atomic.LoadInt32(&b.workers) > 0 {
+		b.cond.Wait()
 	}
+	b.mu.Unlock()
+
+	b.baseLog.Print("exiting")
 	close(done)
 }
