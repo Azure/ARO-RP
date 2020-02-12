@@ -227,6 +227,7 @@ func (f *frontend) Run(ctx context.Context, stop <-chan struct{}, done chan<- st
 				f.baseLog.Error(err)
 			}
 
+			f.baseLog.Print("exiting")
 			close(done)
 		}()
 	}

@@ -49,7 +49,8 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 
 	sigterm := make(chan os.Signal, 1)
 	stop := make(chan struct{})
-	done := make(chan struct{})
+	doneB := make(chan struct{})
+	doneF := make(chan struct{})
 	signal.Notify(sigterm, syscall.SIGTERM)
 
 	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), env, db, api.APIs, m)
@@ -64,13 +65,14 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 
 	log.Print("listening")
 
-	go b.Run(ctx, stop)
-	go f.Run(ctx, stop, done)
+	go b.Run(ctx, stop, doneB)
+	go f.Run(ctx, stop, doneF)
 
 	<-sigterm
 	log.Print("received SIGTERM")
 	close(stop)
-	<-done
+	<-doneF
+	<-doneB
 
 	return nil
 }
