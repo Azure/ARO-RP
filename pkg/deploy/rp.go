@@ -142,9 +142,6 @@ func (g *generator) pevnet() *arm.Resource {
 			Name:     to.StringPtr("rp-pe-vnet-001"),
 			Type:     to.StringPtr("Microsoft.Network/virtualNetworks"),
 			Location: to.StringPtr("[resourceGroup().location]"),
-			Tags: map[string]*string{
-				"vnet": to.StringPtr("rp-changedthetagtocausebadjson"),
-			},
 		},
 		APIVersion: apiVersions["network"],
 	}
