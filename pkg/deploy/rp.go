@@ -243,6 +243,7 @@ func (g *generator) vmss() *arm.Resource {
 		"pullSecret",
 		"rpImage",
 		"rpImageAuth",
+		"rpMode",
 	} {
 		parts = append(parts,
 			fmt.Sprintf("'%s=$(base64 -d <<<'''", strings.ToUpper(variable)),
@@ -301,6 +302,7 @@ EOF
 cat >/etc/sysconfig/arorp <<EOF
 PULL_SECRET='$PULLSECRET'
 RPIMAGE='$RPIMAGE'
+RP_MODE='$RPMODE'
 EOF
 
 cat >/etc/systemd/system/mdm.service <<EOF
@@ -343,6 +345,7 @@ ExecStart=/usr/bin/docker run \
   --name %N \
   --rm \
   -e PULL_SECRET \
+  -e RP_MODE \
   -p 443:8443 \
   \$RPIMAGE \
   rp
@@ -922,6 +925,10 @@ func (g *generator) template() *arm.Template {
 		t.Parameters["extraKeyvaultAccessPolicies"] = &arm.TemplateParameter{
 			Type:         "array",
 			DefaultValue: []mgmtkeyvault.AccessPolicyEntry{},
+		}
+		t.Parameters["rpMode"] = &arm.TemplateParameter{
+			Type:         "string",
+			DefaultValue: "",
 		}
 	}
 

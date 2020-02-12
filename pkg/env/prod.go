@@ -44,8 +44,9 @@ type prod struct {
 	serviceKeyvaultURI       string
 	zones                    map[string][]string
 
-	fpCertificate *x509.Certificate
-	fpPrivateKey  *rsa.PrivateKey
+	fpCertificate        *x509.Certificate
+	fpPrivateKey         *rsa.PrivateKey
+	fpServicePrincipalID string
 }
 
 func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata, clientauthorizer clientauthorizer.ClientAuthorizer) (*prod, error) {
@@ -101,6 +102,7 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 
 	p.fpPrivateKey = fpPrivateKey
 	p.fpCertificate = fpCertificates[0]
+	p.fpServicePrincipalID = "f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875"
 
 	return p, nil
 }
@@ -226,7 +228,7 @@ func (p *prod) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, err
 		return nil, err
 	}
 
-	sp, err := adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, "f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875", p.fpCertificate, p.fpPrivateKey, resource)
+	sp, err := adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, p.fpServicePrincipalID, p.fpCertificate, p.fpPrivateKey, resource)
 	if err != nil {
 		return nil, err
 	}
