@@ -1,0 +1,63 @@
+# Azure DevOps Pipeline deploying the int environment
+trigger: none
+pr: none
+
+variables:
+  - template: vars.yml
+
+jobs:
+  - job: "Deploy_int_env_or_build"
+    pool:
+      vmImage: "ubuntu-latest"
+
+    steps:
+      - template: ./templates/template-setup-golang-env.yml
+        parameters:
+          gobin: ${{ variables.GOBIN }}
+          gopath: ${{ variables.GOPATH }}
+          goroot: ${{ variables.GOROOT }}
+          modulePath: ${{ variables.modulePath }}
+      - template: ./templates/template-setup-azure-tools.yml
+        parameters:
+          workingDirectory: ${{ variables.modulePath }}
+      - template: ./templates/template-az-cli-login.yml
+        parameters:
+          workingDirectory: ${{ variables.modulePath }}
+          azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
+      - template: ./templates/template-pull-certs-from-kv.yml
+        parameters:
+          kvName: "aro-monitoring-int"
+          certName: "RP-Metrics"
+          outputPath: ${{ variables.modulePath }}/secrets/mdm
+      - template: ./templates/template-pull-pem-from-kv.yml
+        parameters:
+          kvName: "ARO-INT-RP"
+          certName: "RP-SP-Login"
+          outputPath: ${{ variables.modulePath }}/secrets/fp-client-cert
+      - template: ./templates/template-pull-pem-from-kv.yml
+        parameters:
+          kvName: "ARO-INT-RP"
+          certName: "int-ssl"
+          outputPath: ${{ variables.modulePath }}/secrets/ssl-cert
+      - template: ./templates/template-prepare-int-secrets-env.yml
+        parameters:
+          azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
+          parentDomainName: "dev.aroapp.io"
+          parentDomainRg: "global-infra"
+          pullSecret: $(aro-pullsecret)
+          azureFpClientId: $(aro-int-rp-app-id)
+          location: "eastus"
+          rgPrefix: "aro-int"
+          mdmFrontendUrl: "https://int2.int.microsoftmetrics.com/"
+          mdmMetricNamespace: "ARO-RP"
+          mdmMonitoringAccount: "AzureRedHatOpenShift"
+          rpImage: $(RP-IMAGE)
+          rpImagePullJSONSPN: $(aro-v4-int-image-pull-spn)
+          workingDirectory: ${{ variables.modulePath }}
+          encryptionKey: $(int-encryption-key)
+      - template: ./templates/template-deploy-int-env.yml
+        parameters:
+          azureFpClientSPNId: $(aro-int-rp-app-id)
+          workingDirectory: ${{ variables.modulePath }}
+          sshPublicKey: $(int-ssh-public-key)
+

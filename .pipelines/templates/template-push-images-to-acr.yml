@@ -1,0 +1,9 @@
+parameters:
+  workingDirectory: ""
+steps:
+  - script: |
+      cd ${{ parameters.workingDirectory }}
+
+      az acr login --name arointsvc
+      make publish-int-images
+    displayName: "⚙️ Build and push images to ACR"

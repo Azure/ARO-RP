@@ -1,0 +1,105 @@
+parameters:
+  workingDirectory: ""
+steps:
+  - script: |
+      set -eu
+      cd ${{ parameters.workingDirectory }}
+
+      . secrets/env
+
+      MDM_CERT="$(cat secrets/mdm-cert.pem)"
+      MDM_KEY="$(cat secrets/mdm-key.pem)"
+      SSH_PUBLIC_KEY="${{ parameters.sshPublicKey }}"
+
+      echo "########## Creating RG $RESOURCEGROUP in $LOCATION ##########"
+      az group create -g "$RESOURCEGROUP" -l "$LOCATION" >/dev/null
+      echo "## Done"
+      
+      RP_SPN_ID=$(az group deployment show -n rp-nsg -g $RESOURCEGROUP --query properties.outputs.rpServicePrincipalId.value -o tsv)
+
+      echo "########## Deploying rp-production in RG $RESOURCEGROUP ##########"
+      echo "### domainName            = $DOMAIN_NAME.$PARENT_DOMAIN_NAME"
+      echo "### keyvaultPrefix        = $KEYVAULT_PREFIX"
+      echo "### rpServicePrincipalId  = $RP_SPN_ID"
+      az group deployment create \
+        -g "$RESOURCEGROUP" \
+        -n rp-int \
+        --template-file deploy/rp-production.json \
+        --parameters "databaseAccountName=$COSMOSDB_ACCOUNT" \
+        --parameters "domainName=$DOMAIN_NAME.$PARENT_DOMAIN_NAME" \
+        --parameters "fpServicePrincipalId=$AZURE_FP_CLIENT_ID" \
+        --parameters "keyvaultPrefix=$KEYVAULT_PREFIX" \
+        --parameters "mdmCertificate=$MDM_CERT" \
+        --parameters "mdmFrontendUrl=$MDM_FRONTEND" \
+        --parameters "mdmMetricNamespace=$MDM_NAMESPACE" \
+        --parameters "mdmMonitoringAccount=$MDM_ACCOUNT" \
+        --parameters "mdmPrivateKey=$MDM_KEY" \
+        --parameters "pullSecret=$PULL_SECRET" \
+        --parameters "rpImage=$RP_IMAGE" \
+        --parameters "rpImageAuth=$RP_IMAGE_AUTH"\
+        --parameters "rpMode=int" \
+        --parameters "sshPublicKey=$SSH_PUBLIC_KEY" \
+        --parameters "vmssDomainNameLabel=aro-int" \
+        --parameters "vmssName=int" \
+        --parameters "rpServicePrincipalId=$RP_SPN_ID" >/dev/null
+      ARM_TEMPLATE_STATE=$(az group deployment show -n rp-int -g $RESOURCEGROUP --query properties.provisioningState -o tsv)
+      if [[ $ARM_TEMPLATE_STATE == "Failed" ]]; then
+        echo "##[error] Error deploying env-development $(az group deployment show -n rp-int -g $RESOURCEGROUP --query properties.error.details -o tsv)"
+        exit 1
+      fi
+      echo "## Done"
+
+      echo "########## Adding access polices to -svc keyvault to be able to upload secrets ##########"
+      az keyvault set-policy -n "$KEYVAULT_PREFIX-svc" --spn $DEVOPS_CLIENT_ID -g $RESOURCEGROUP --secret-permissions get set --certificate-permissions get import
+
+      echo "########## Uploading required runtime secrets to -svc keyvault ##########"
+      if $(az keyvault secret show  --vault-name "$KEYVAULT_PREFIX-svc" -n encryption-key >/dev/null) ; then
+        echo "## Encryption key found skipping uploading"
+      else
+        echo "## Encryption key not found uploading"
+        az keyvault secret set \
+          --vault-name "$KEYVAULT_PREFIX-svc" \
+          --name encryption-key \
+          --value $ENCRYPTION_KEY >/dev/null
+        echo "## Done"
+      fi
+
+      if $(az keyvault secret show  --vault-name "$KEYVAULT_PREFIX-svc" -n rp-firstparty >/dev/null) ; then
+        echo "## First party client Cert found skipping uploading"
+      else
+        echo "## First party client Cert not found uploading"
+        az keyvault certificate import \
+          --vault-name "$KEYVAULT_PREFIX-svc" \
+          --name rp-firstparty   \
+          --file secrets/fp-client-cert.pem >/dev/null
+        echo "## Done"
+      fi
+
+      if $(az keyvault secret show  --vault-name "$KEYVAULT_PREFIX-svc" -n rp-server >/dev/null) ; then
+        echo "## SSL Cert found skipping uploading"
+      else
+        echo "## SSL Cert not found uploading"
+        az keyvault certificate import \
+          --vault-name "$KEYVAULT_PREFIX-svc" \
+          --name rp-server   \
+          --file secrets/ssl-cert.pem >/dev/null
+        echo "## Done"
+      fi
+
+      echo "########## Creating NS record to DNS Zone $DOMAIN_NAME in $PARENT_DOMAIN_NAME | RG $PARENT_DOMAIN_RESOURCEGROUP ##########"
+      az network dns record-set ns create \
+        --resource-group "$PARENT_DOMAIN_RESOURCEGROUP" \
+        --zone "$PARENT_DOMAIN_NAME" \
+        --name "$DOMAIN_NAME" >/dev/null
+
+      for ns in $(az network dns zone show \
+        --resource-group "$RESOURCEGROUP" \
+        --name "$DOMAIN_NAME.$PARENT_DOMAIN_NAME" \
+        --query nameServers -o tsv); do
+        az network dns record-set ns add-record \
+          --resource-group "$PARENT_DOMAIN_RESOURCEGROUP" \
+          --zone "$PARENT_DOMAIN_NAME" \
+          --record-set-name "$DOMAIN_NAME" \
+          --nsdname "$ns" >/dev/null
+      done
+    displayName: "🚀 Buildout INT env"
