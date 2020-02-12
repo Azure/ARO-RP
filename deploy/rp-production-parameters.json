@@ -44,6 +44,9 @@
         "rpImageAuth": {
             "value": ""
         },
+        "rpMode": {
+            "value": ""
+        },
         "rpServicePrincipalId": {
             "value": ""
         },
