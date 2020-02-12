@@ -13,7 +13,7 @@ trap cleanup EXIT
 go run ./hack/db "$1" | jq -r .openShiftCluster.properties.sshKey | base64 -d | openssl rsa -inform der -outform pem >id_rsa 2>/dev/null
 chmod 0600 id_rsa
 
-RG=$(go run ./hack/db "$1" | jq -r .openShiftCluster.properties.resourceGroup)
+RG=$(go run ./hack/db "$1" | jq -r .openShiftCluster.properties.clusterProfile.resourceGroupId | cut -d/ -f5)
 
 IP=$(az network nic show -g "$RG" -n aro-bootstrap-nic --query 'ipConfigurations[0].privateIpAddress' -o tsv)
 
