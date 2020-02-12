@@ -34,6 +34,23 @@ jobs:
         displayName: "🧪Run Python Unit Tests : $(python.version)"
         workingDirectory: "${{ variables.modulePath }}"
 
+  - job: "Code_Validation"
+    pool:
+      vmImage: "ubuntu-latest"
+
+    steps:
+      - template: ./templates/template-setup-golang-env.yml
+        parameters:
+          gobin: ${{ variables.GOBIN }}
+          gopath: ${{ variables.GOPATH }}
+          goroot: ${{ variables.GOROOT }}
+          modulePath: ${{ variables.modulePath }}
+      - script: |
+          set -x
+          hack/validate-generated.sh
+        workingDirectory: "${{ variables.modulePath }}"
+        displayName: "🧪Run Code Validation"
+
   - job: "Golang_Unit_Tests"
     pool:
       vmImage: "ubuntu-latest"
