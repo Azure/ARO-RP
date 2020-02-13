@@ -5,17 +5,17 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/sirupsen/logrus"
-	"github.com/ugorji/go/codec"
 
-	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
+	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
@@ -29,7 +29,12 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	db, err := database.NewDatabase(ctx, log.WithField("component", "database"), env, &noop.Noop{}, "")
+	cipher, err := encryption.NewXChaCha20Poly1305(ctx, env)
+	if err != nil {
+		return err
+	}
+
+	db, err := database.NewDatabase(ctx, log.WithField("component", "database"), env, &noop.Noop{}, cipher, "")
 	if err != nil {
 		return err
 	}
@@ -39,16 +44,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	h := &codec.JsonHandle{
-		Indent: 4,
-	}
-
-	err = api.AddExtensions(&h.BasicHandle)
-	if err != nil {
-		return err
-	}
-
-	return codec.NewEncoder(os.Stdout, h).Encode(doc)
+	return json.NewEncoder(os.Stdout).Encode(doc)
 }
 
 func main() {

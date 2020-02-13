@@ -35,7 +35,6 @@ func TestCreate(t *testing.T) {
 	env := &env.Test{
 		TestSubscriptionID: "rpSubscriptionId",
 		TestResourceGroup:  "rpResourcegroup",
-		TestVNetName:       "rpVnet",
 	}
 
 	type test struct {
@@ -54,7 +53,7 @@ func TestCreate(t *testing.T) {
 					CreateOrUpdateAndWait(ctx, "rpResourcegroup", "rp-pe-id", mgmtnetwork.PrivateEndpoint{
 						PrivateEndpointProperties: &mgmtnetwork.PrivateEndpointProperties{
 							Subnet: &mgmtnetwork.Subnet{
-								ID: to.StringPtr("/subscriptions/rpSubscriptionId/resourceGroups/rpResourcegroup/providers/Microsoft.Network/virtualNetworks/rpVnet/subnets/rp-pe-subnet"),
+								ID: to.StringPtr("/subscriptions/rpSubscriptionId/resourceGroups/rpResourcegroup/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet"),
 							},
 							ManualPrivateLinkServiceConnections: &[]mgmtnetwork.PrivateLinkServiceConnection{
 								{
@@ -78,7 +77,7 @@ func TestCreate(t *testing.T) {
 					CreateOrUpdateAndWait(ctx, "rpResourcegroup", "rp-pe-id", mgmtnetwork.PrivateEndpoint{
 						PrivateEndpointProperties: &mgmtnetwork.PrivateEndpointProperties{
 							Subnet: &mgmtnetwork.Subnet{
-								ID: to.StringPtr("/subscriptions/rpSubscriptionId/resourceGroups/rpResourcegroup/providers/Microsoft.Network/virtualNetworks/rpVnet/subnets/rp-pe-subnet"),
+								ID: to.StringPtr("/subscriptions/rpSubscriptionId/resourceGroups/rpResourcegroup/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet"),
 							},
 							ManualPrivateLinkServiceConnections: &[]mgmtnetwork.PrivateLinkServiceConnection{
 								{

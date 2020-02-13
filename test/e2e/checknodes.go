@@ -22,15 +22,14 @@ var _ = Describe("Check nodes", func() {
 		oc, err := Clients.OpenshiftClusters.Get(ctx, os.Getenv("RESOURCEGROUP"), os.Getenv("CLUSTER"))
 		Expect(err).NotTo(HaveOccurred())
 
-		var expectedNodeCount int32 = 3 // for masters
+		var expectedNodeCount int = 3 // for masters
 		for _, wp := range *oc.WorkerProfiles {
-			expectedNodeCount += *wp.Count
+			expectedNodeCount += int(*wp.Count)
 		}
 
 		nodes, err := Clients.Kubernetes.CoreV1().Nodes().List(metav1.ListOptions{})
 		Expect(err).NotTo(HaveOccurred())
-
-		var nodeCount int64
+		var nodeCount int32
 		for _, node := range nodes.Items {
 			if ready.NodeIsReady(&node) {
 				nodeCount++
@@ -41,6 +40,6 @@ var _ = Describe("Check nodes", func() {
 			}
 		}
 
-		Expect(nodeCount).To(Equal(expectedNodeCount))
+		Expect(nodeCount).To(BeEquivalentTo(expectedNodeCount))
 	})
 })

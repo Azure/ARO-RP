@@ -41,7 +41,7 @@ func (m *manager) Create(ctx context.Context, doc *api.OpenShiftClusterDocument)
 	return m.privateendpoints.CreateOrUpdateAndWait(ctx, m.env.ResourceGroup(), prefix+doc.ID, mgmtnetwork.PrivateEndpoint{
 		PrivateEndpointProperties: &mgmtnetwork.PrivateEndpointProperties{
 			Subnet: &mgmtnetwork.Subnet{
-				ID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/" + m.env.VnetName() + "/subnets/rp-pe-subnet"),
+				ID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet"),
 			},
 			ManualPrivateLinkServiceConnections: &[]mgmtnetwork.PrivateLinkServiceConnection{
 				{

@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/x509"
 	"encoding/base64"
 	"fmt"
 	"math/big"
@@ -39,13 +40,13 @@ func (m *Manager) Create(ctx context.Context) error {
 	resourceGroup := m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID[strings.LastIndexByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')+1:]
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		var err error
-
 		if doc.OpenShiftCluster.Properties.SSHKey == nil {
-			doc.OpenShiftCluster.Properties.SSHKey, err = rsa.GenerateKey(rand.Reader, 2048)
+			sshKey, err := rsa.GenerateKey(rand.Reader, 2048)
 			if err != nil {
 				return err
 			}
+
+			doc.OpenShiftCluster.Properties.SSHKey = x509.MarshalPKCS1PrivateKey(sshKey)
 		}
 
 		if doc.OpenShiftCluster.Properties.StorageSuffix == "" {
@@ -81,7 +82,12 @@ func (m *Manager) Create(ctx context.Context) error {
 		return err
 	}
 
-	sshkey, err := ssh.NewPublicKey(&m.doc.OpenShiftCluster.Properties.SSHKey.PublicKey)
+	privateKey, err := x509.ParsePKCS1PrivateKey(m.doc.OpenShiftCluster.Properties.SSHKey)
+	if err != nil {
+		return err
+	}
+
+	sshkey, err := ssh.NewPublicKey(&privateKey.PublicKey)
 	if err != nil {
 		return err
 	}
@@ -111,7 +117,7 @@ func (m *Manager) Create(ctx context.Context) error {
 		Azure: &icazure.Credentials{
 			TenantID:       m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID,
 			ClientID:       m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientID,
-			ClientSecret:   m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret,
+			ClientSecret:   string(m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret),
 			SubscriptionID: r.SubscriptionID,
 		},
 	}
@@ -224,7 +230,7 @@ func (m *Manager) Create(ctx context.Context) error {
 		return err
 	}
 
-	i, err := install.NewInstaller(m.log, m.env, m.db, m.doc)
+	i, err := install.NewInstaller(ctx, m.log, m.env, m.db, m.doc)
 	if err != nil {
 		return err
 	}

@@ -294,6 +294,24 @@ locations.
        "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" \
      >/dev/null
    ```
+If you encounter "VirtualNetworkGatewayCannotUseStandardPublicIP" error when deploying env-development.json, you have to override two additional parameters:
+```
+    az group deployment create \
+     -g "$RESOURCEGROUP" \
+     --template-file deploy/env-development.json \
+     --parameters \
+       "proxyCert=$(base64 -w0 <secrets/proxy.crt)" \
+       "proxyClientCert=$(base64 -w0 <secrets/proxy-client.crt)" \
+       "proxyDomainNameLabel=$(cut -d. -f2 <<<$PROXY_HOSTNAME)" \
+       "proxyImage=arosvc.azurecr.io/proxy:latest" \
+       "proxyImageAuth=$(jq -r '.auths["arosvc.azurecr.io"].auth' <<<$PULL_SECRET)" \
+       "proxyKey=$(base64 -w0 <secrets/proxy.key)" \
+       "sshPublicKey=$(<secrets/proxy_id_rsa.pub)" \
+       "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" \
+       "publicIPAddressSkuName=Basic" \
+       "publicIPAddressAllocationMethod=Dynamic" \
+     > /dev/null
+```
 
 1. Load the keys/certificates into the key vault:
 
@@ -307,6 +325,11 @@ locations.
      --vault-name "$KEYVAULT_PREFIX-service" \
      --name rp-server \
      --file secrets/localhost.pem \
+     >/dev/null
+   az keyvault secret set \
+     --vault-name "$KEYVAULT_PREFIX-service" \
+     --name encryption-key \
+     --value "$(openssl rand -base64 32)" \
      >/dev/null
    ```
 

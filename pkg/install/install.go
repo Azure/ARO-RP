@@ -4,10 +4,13 @@ package install
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/url"
+	"reflect"
 	"strings"
 	"time"
 
@@ -16,6 +19,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/date"
+	"github.com/openshift/installer/pkg/asset/ignition/bootstrap"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
 	"github.com/sirupsen/logrus"
@@ -28,22 +32,26 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/resources"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
+	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/privateendpoint"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
+// Installer contains information needed to install an ARO cluster
 type Installer struct {
 	log          *logrus.Entry
 	env          env.Interface
 	db           database.OpenShiftClusters
 	doc          *api.OpenShiftClusterDocument
+	cipher       encryption.Cipher
 	fpAuthorizer autorest.Authorizer
 
 	disks             compute.DisksClient
 	virtualmachines   compute.VirtualMachinesClient
 	interfaces        network.InterfacesClient
 	publicipaddresses network.PublicIPAddressesClient
+	loadbalancers     network.LoadBalancersClient
 	deployments       resources.DeploymentsClient
 	groups            resources.GroupsClient
 	accounts          storage.AccountsClient
@@ -54,7 +62,8 @@ type Installer struct {
 	subnet          subnet.Manager
 }
 
-func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClusters, doc *api.OpenShiftClusterDocument) (*Installer, error) {
+// NewInstaller creates a new Installer
+func NewInstaller(ctx context.Context, log *logrus.Entry, env env.Interface, db database.OpenShiftClusters, doc *api.OpenShiftClusterDocument) (*Installer, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
 		return nil, err
@@ -75,10 +84,16 @@ func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClu
 		return nil, err
 	}
 
+	cipher, err := encryption.NewXChaCha20Poly1305(ctx, env)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Installer{
 		log:          log,
 		env:          env,
 		db:           db,
+		cipher:       cipher,
 		doc:          doc,
 		fpAuthorizer: fpAuthorizer,
 
@@ -86,6 +101,7 @@ func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClu
 		virtualmachines:   compute.NewVirtualMachinesClient(r.SubscriptionID, fpAuthorizer),
 		interfaces:        network.NewInterfacesClient(r.SubscriptionID, fpAuthorizer),
 		publicipaddresses: network.NewPublicIPAddressesClient(r.SubscriptionID, fpAuthorizer),
+		loadbalancers:     network.NewLoadBalancersClient(r.SubscriptionID, fpAuthorizer),
 		deployments:       resources.NewDeploymentsClient(r.SubscriptionID, fpAuthorizer),
 		groups:            resources.NewGroupsClient(r.SubscriptionID, fpAuthorizer),
 		accounts:          storage.NewAccountsClient(r.SubscriptionID, fpAuthorizer),
@@ -97,6 +113,7 @@ func NewInstaller(log *logrus.Entry, env env.Interface, db database.OpenShiftClu
 	}, nil
 }
 
+// Install installs an ARO cluster
 func (i *Installer) Install(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) error {
 	var err error
 
@@ -178,8 +195,8 @@ func (i *Installer) getBlobService(ctx context.Context) (*azstorage.BlobStorageC
 	return &c, nil
 }
 
-func (i *Installer) getGraph(ctx context.Context) (graph, error) {
-	i.log.Print("retrieving graph")
+func (i *Installer) loadGraph(ctx context.Context) (graph, error) {
+	i.log.Print("load graph")
 
 	blobService, err := i.getBlobService(ctx)
 	if err != nil {
@@ -194,11 +211,50 @@ func (i *Installer) getGraph(ctx context.Context) (graph, error) {
 	}
 	defer rc.Close()
 
+	encrypted, err := ioutil.ReadAll(rc)
+	if err != nil {
+		return nil, err
+	}
+
+	output, err := i.cipher.Decrypt(encrypted)
+	if err != nil {
+		return nil, err
+	}
+
 	var g graph
-	err = json.NewDecoder(rc).Decode(&g)
+	err = json.Unmarshal(output, &g)
 	if err != nil {
 		return nil, err
 	}
 
 	return g, nil
+}
+
+func (i *Installer) saveGraph(ctx context.Context, g graph) error {
+	i.log.Print("save graph")
+
+	blobService, err := i.getBlobService(ctx)
+	if err != nil {
+		return err
+	}
+
+	bootstrap := g[reflect.TypeOf(&bootstrap.Bootstrap{})].(*bootstrap.Bootstrap)
+	bootstrapIgn := blobService.GetContainerReference("ignition").GetBlobReference("bootstrap.ign")
+	err = bootstrapIgn.CreateBlockBlobFromReader(bytes.NewReader(bootstrap.File.Data), nil)
+	if err != nil {
+		return err
+	}
+
+	graph := blobService.GetContainerReference("aro").GetBlobReference("graph")
+	b, err := json.MarshalIndent(g, "", "    ")
+	if err != nil {
+		return err
+	}
+
+	output, err := i.cipher.Encrypt(b)
+	if err != nil {
+		return err
+	}
+
+	return graph.CreateBlockBlobFromReader(bytes.NewReader([]byte(output)), nil)
 }

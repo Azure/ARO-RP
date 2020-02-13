@@ -17,7 +17,7 @@ type openShiftClusterCredentialsConverter struct{}
 func (*openShiftClusterCredentialsConverter) ToExternal(oc *api.OpenShiftCluster) interface{} {
 	out := &OpenShiftClusterCredentials{
 		KubeadminUsername: "kubeadmin",
-		KubeadminPassword: oc.Properties.KubeadminPassword,
+		KubeadminPassword: string(oc.Properties.KubeadminPassword),
 	}
 
 	return out

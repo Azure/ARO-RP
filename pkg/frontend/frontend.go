@@ -70,7 +70,7 @@ func NewFrontend(ctx context.Context, baseLog *logrus.Entry, env env.Interface, 
 		return nil, err
 	}
 
-	key, certs, err := f.env.GetSecret(ctx, "rp-server")
+	key, certs, err := f.env.GetCertificateSecret(ctx, "rp-server")
 	if err != nil {
 		return nil, err
 	}
@@ -227,6 +227,7 @@ func (f *frontend) Run(ctx context.Context, stop <-chan struct{}, done chan<- st
 				f.baseLog.Error(err)
 			}
 
+			f.baseLog.Print("exiting")
 			close(done)
 		}()
 	}

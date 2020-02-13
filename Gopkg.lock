@@ -1236,13 +1236,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:7a48c44aca403a5ab50821bd3d24552c660435d3fbf0dbd2ddca71bd266275fd"
+  digest = "1:8e69bffa4d027deb67c9e301197ea7f0b0b9334caaffcb28bc4e69a47dc5f30d"
   name = "golang.org/x/crypto"
   packages = [
     "bcrypt",
     "blowfish",
     "cast5",
     "chacha20",
+    "chacha20poly1305",
     "curve25519",
     "ed25519",
     "ed25519/internal/edwards25519",
@@ -1859,6 +1860,7 @@
     "github.com/sirupsen/logrus",
     "github.com/sirupsen/logrus/hooks/test",
     "github.com/ugorji/go/codec",
+    "golang.org/x/crypto/chacha20poly1305",
     "golang.org/x/crypto/ssh",
     "golang.org/x/tools/cmd/goimports",
     "golang.org/x/tools/go/ast/astutil",

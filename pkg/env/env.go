@@ -28,10 +28,10 @@ type Interface interface {
 	DialContext(context.Context, string, string) (net.Conn, error)
 	Domain() string
 	FPAuthorizer(string, string) (autorest.Authorizer, error)
-	GetSecret(context.Context, string) (*rsa.PrivateKey, []*x509.Certificate, error)
-	ManagedDomain(string) (string, error)
+	GetCertificateSecret(context.Context, string) (*rsa.PrivateKey, []*x509.Certificate, error)
+	GetSecret(context.Context, string) ([]byte, error)
 	Listen() (net.Listener, error)
-	VnetName() string
+	ManagedDomain(string) (string, error)
 	Zones(vmSize string) ([]string, error)
 }
 
@@ -44,6 +44,11 @@ func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
 	im, err := instancemetadata.NewProd()
 	if err != nil {
 		return nil, err
+	}
+
+	if strings.ToLower(os.Getenv("RP_MODE")) == "int" {
+		log.Warn("running in INT mode")
+		return newInt(ctx, log, im, clientauthorizer.NewARM(log))
 	}
 
 	return newProd(ctx, log, im, clientauthorizer.NewARM(log))

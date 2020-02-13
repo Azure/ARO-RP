@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/pem"
 	"fmt"
 	"net"
@@ -26,7 +27,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/documentdb"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/keyvault"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 )
@@ -42,11 +42,11 @@ type prod struct {
 	cosmosDBPrimaryMasterKey string
 	domain                   string
 	serviceKeyvaultURI       string
-	vnetName                 string
 	zones                    map[string][]string
 
-	fpCertificate *x509.Certificate
-	fpPrivateKey  *rsa.PrivateKey
+	fpCertificate        *x509.Certificate
+	fpPrivateKey         *rsa.PrivateKey
+	fpServicePrincipalID string
 }
 
 func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata, clientauthorizer clientauthorizer.ClientAuthorizer) (*prod, error) {
@@ -90,23 +90,19 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 		return nil, err
 	}
 
-	err = p.populateVnet(ctx, rpAuthorizer)
-	if err != nil {
-		return nil, err
-	}
-
 	err = p.populateZones(ctx, rpAuthorizer)
 	if err != nil {
 		return nil, err
 	}
 
-	fpPrivateKey, fpCertificates, err := p.GetSecret(ctx, "rp-firstparty")
+	fpPrivateKey, fpCertificates, err := p.GetCertificateSecret(ctx, "rp-firstparty")
 	if err != nil {
 		return nil, err
 	}
 
 	p.fpPrivateKey = fpPrivateKey
 	p.fpCertificate = fpCertificates[0]
+	p.fpServicePrincipalID = "f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875"
 
 	return p, nil
 }
@@ -181,31 +177,6 @@ func (p *prod) populateVaultURIs(ctx context.Context, rpAuthorizer autorest.Auth
 	return nil
 }
 
-func (p *prod) populateVnet(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
-	virtualnetworks := network.NewVirtualNetworksClient(p.SubscriptionID(), rpAuthorizer)
-
-	vnets, err := virtualnetworks.List(ctx, p.ResourceGroup())
-	if err != nil {
-		return err
-	}
-
-	for i := 0; i < len(vnets); {
-		if vnets[i].Tags["vnet"] == nil || *vnets[i].Tags["vnet"] != "rp" {
-			vnets = append(vnets[:i], vnets[i+1:]...)
-		} else {
-			i++
-		}
-	}
-
-	if len(vnets) != 1 {
-		return fmt.Errorf("found %d virtual networks, expected 1", len(vnets))
-	}
-
-	p.vnetName = *(vnets[0]).Name
-
-	return nil
-}
-
 func (p *prod) populateZones(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
 	c := compute.NewResourceSkusClient(p.SubscriptionID(), rpAuthorizer)
 
@@ -257,7 +228,7 @@ func (p *prod) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, err
 		return nil, err
 	}
 
-	sp, err := adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, "f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875", p.fpCertificate, p.fpPrivateKey, resource)
+	sp, err := adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, p.fpServicePrincipalID, p.fpCertificate, p.fpPrivateKey, resource)
 	if err != nil {
 		return nil, err
 	}
@@ -265,7 +236,7 @@ func (p *prod) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, err
 	return autorest.NewBearerAuthorizer(sp), nil
 }
 
-func (p *prod) GetSecret(ctx context.Context, secretName string) (key *rsa.PrivateKey, certs []*x509.Certificate, err error) {
+func (p *prod) GetCertificateSecret(ctx context.Context, secretName string) (key *rsa.PrivateKey, certs []*x509.Certificate, err error) {
 	bundle, err := p.keyvault.GetSecret(ctx, p.serviceKeyvaultURI, secretName, "")
 	if err != nil {
 		return nil, nil, err
@@ -311,6 +282,15 @@ func (p *prod) GetSecret(ctx context.Context, secretName string) (key *rsa.Priva
 	return key, certs, nil
 }
 
+func (p *prod) GetSecret(ctx context.Context, secretName string) ([]byte, error) {
+	bundle, err := p.keyvault.GetSecret(ctx, p.serviceKeyvaultURI, secretName, "")
+	if err != nil {
+		return nil, err
+	}
+
+	return base64.StdEncoding.DecodeString(*bundle.Value)
+}
+
 func (p *prod) Listen() (net.Listener, error) {
 	return net.Listen("tcp", ":8443")
 }
@@ -332,10 +312,6 @@ func (p *prod) ManagedDomain(domain string) (string, error) {
 		return "", nil
 	}
 	return domain + "." + p.Domain(), nil
-}
-
-func (p *prod) VnetName() string {
-	return p.vnetName
 }
 
 func (p *prod) Zones(vmSize string) ([]string, error) {
