@@ -94,8 +94,19 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 			log.Error(err)
 			return ocb.endLease(ctx, stop, doc, api.ProvisioningStateFailed)
 		}
-
-		return ocb.endLease(ctx, stop, doc, api.ProvisioningStateSucceeded)
+		// re-get document and check the state:
+		// if Install = nil, we are done with the install.
+		// if Install != nil, we need to terminate, release lease and let other
+		// backend worker to pick up next install phase
+		doc, err = ocb.db.OpenShiftClusters.Get(ctx, doc.ID)
+		if err != nil {
+			log.Error(err)
+			return ocb.endLease(ctx, stop, doc, api.ProvisioningStateFailed)
+		}
+		if doc.OpenShiftCluster.Properties.Install == nil {
+			return ocb.endLease(ctx, stop, doc, api.ProvisioningStateSucceeded)
+		}
+		return ocb.endLease(ctx, stop, doc, api.ProvisioningStateCreating)
 
 	case api.ProvisioningStateUpdating:
 		log.Print("updating")
@@ -105,7 +116,6 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 			log.Error(err)
 			return ocb.endLease(ctx, stop, doc, api.ProvisioningStateFailed)
 		}
-
 		return ocb.endLease(ctx, stop, doc, api.ProvisioningStateSucceeded)
 
 	case api.ProvisioningStateDeleting:
