@@ -561,10 +561,20 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					Create(gomock.Any(), gomock.Any()).
 					Return(clusterdoc, &cosmosdb.Error{StatusCode: http.StatusPreconditionFailed})
 				openShiftClusters.EXPECT().
-					QueryAll(gomock.Any(), clusterdoc.PartitionKey).
+					ValidateUniqueKey(gomock.Any(), clusterdoc.PartitionKey, "clusterResourceGroupIdKey", fmt.Sprintf("/subscriptions/%s/resourcegroups/aro-vjb21wca", mockSubID)).
 					Return(&api.OpenShiftClusterDocuments{
 						OpenShiftClusterDocuments: []*api.OpenShiftClusterDocument{
 							&api.OpenShiftClusterDocument{
+								ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/aro-vjb21wca", mockSubID),
+							},
+						},
+					}, nil)
+				openShiftClusters.EXPECT().
+					ValidateUniqueKey(gomock.Any(), clusterdoc.PartitionKey, "clientIdKey", mockSubID).
+					Return(&api.OpenShiftClusterDocuments{
+						OpenShiftClusterDocuments: []*api.OpenShiftClusterDocument{
+							&api.OpenShiftClusterDocument{
+								ClientIDKey:               mockSubID,
 								ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/aro-vjb21wca", mockSubID),
 							},
 						},
@@ -610,7 +620,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					Create(gomock.Any(), gomock.Any()).
 					Return(clusterdoc, &cosmosdb.Error{StatusCode: http.StatusPreconditionFailed})
 				openShiftClusters.EXPECT().
-					QueryAll(gomock.Any(), clusterdoc.PartitionKey).
+					ValidateUniqueKey(gomock.Any(), clusterdoc.PartitionKey, "clientIdKey", mockSubID).
 					Return(&api.OpenShiftClusterDocuments{
 						OpenShiftClusterDocuments: []*api.OpenShiftClusterDocument{
 							&api.OpenShiftClusterDocument{

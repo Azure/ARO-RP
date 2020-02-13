@@ -8,4 +8,6 @@ const (
 	KeyVaultTagName          = "vault"
 	ClustersKeyVaultTagValue = "clusters"
 	ServiceKeyVaultTagValue  = "service"
+	kvClusterSuffix          = "-cls"
+	kvServiceSuffix          = "-svc"
 )

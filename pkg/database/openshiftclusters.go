@@ -36,7 +36,7 @@ type OpenShiftClusters interface {
 	Dequeue(context.Context) (*api.OpenShiftClusterDocument, error)
 	Lease(context.Context, string) (*api.OpenShiftClusterDocument, error)
 	EndLease(context.Context, string, api.ProvisioningState, api.ProvisioningState) (*api.OpenShiftClusterDocument, error)
-	QueryAll(context.Context, string) (*api.OpenShiftClusterDocuments, error)
+	ValidateUniqueKey(ctx context.Context, partitionKey, uniqueKeyName, uniqueKeyValue string) (*api.OpenShiftClusterDocuments, error)
 }
 
 // NewOpenShiftClusters returns a new OpenShiftClusters
@@ -290,17 +290,23 @@ func (c *openShiftClusters) EndLease(ctx context.Context, key string, provisioni
 	}, nil)
 }
 
-func (c *openShiftClusters) QueryAll(ctx context.Context, partitionKey string) (*api.OpenShiftClusterDocuments, error) {
+func (c *openShiftClusters) partitionKey(key string) (string, error) {
+	r, err := azure.ParseResourceID(key)
+	return r.SubscriptionID, err
+}
+
+func (c *openShiftClusters) ValidateUniqueKey(ctx context.Context, partitionKey, uniqueKeyName, uniqueKeyValue string) (*api.OpenShiftClusterDocuments, error) {
 	docs, err := c.c.QueryAll(ctx, partitionKey, &cosmosdb.Query{
-		Query: `SELECT * FROM OpenShiftClusters doc`,
+		Query: "SELECT * FROM OpenShiftClusters doc WHERE doc." + uniqueKeyName + " = @uniqueKeyValue",
+		Parameters: []cosmosdb.Parameter{
+			{
+				Name:  "@uniqueKeyValue",
+				Value: uniqueKeyValue,
+			},
+		},
 	}, nil)
 	if err != nil {
 		return nil, err
 	}
 	return docs, nil
-}
-
-func (c *openShiftClusters) partitionKey(key string) (string, error) {
-	r, err := azure.ParseResourceID(key)
-	return r.SubscriptionID, err
 }

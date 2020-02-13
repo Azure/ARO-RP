@@ -268,21 +268,6 @@ func (mr *MockOpenShiftClustersMockRecorder) PatchWithLease(arg0, arg1, arg2 int
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PatchWithLease", reflect.TypeOf((*MockOpenShiftClusters)(nil).PatchWithLease), arg0, arg1, arg2)
 }
 
-// QueryAll mocks base method
-func (m *MockOpenShiftClusters) QueryAll(arg0 context.Context, arg1 string) (*api.OpenShiftClusterDocuments, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "QueryAll", arg0, arg1)
-	ret0, _ := ret[0].(*api.OpenShiftClusterDocuments)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// QueryAll indicates an expected call of QueryAll
-func (mr *MockOpenShiftClustersMockRecorder) QueryAll(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "QueryAll", reflect.TypeOf((*MockOpenShiftClusters)(nil).QueryAll), arg0, arg1)
-}
-
 // QueueLength mocks base method
 func (m *MockOpenShiftClusters) QueueLength(arg0 context.Context, arg1 string) (int, error) {
 	m.ctrl.T.Helper()
@@ -311,6 +296,21 @@ func (m *MockOpenShiftClusters) Update(arg0 context.Context, arg1 *api.OpenShift
 func (mr *MockOpenShiftClustersMockRecorder) Update(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockOpenShiftClusters)(nil).Update), arg0, arg1)
+}
+
+// ValidateUniqueKey mocks base method
+func (m *MockOpenShiftClusters) ValidateUniqueKey(arg0 context.Context, arg1, arg2, arg3 string) (*api.OpenShiftClusterDocuments, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateUniqueKey", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(*api.OpenShiftClusterDocuments)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ValidateUniqueKey indicates an expected call of ValidateUniqueKey
+func (mr *MockOpenShiftClustersMockRecorder) ValidateUniqueKey(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateUniqueKey", reflect.TypeOf((*MockOpenShiftClusters)(nil).ValidateUniqueKey), arg0, arg1, arg2, arg3)
 }
 
 // MockSubscriptions is a mock of Subscriptions interface

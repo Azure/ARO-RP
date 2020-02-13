@@ -47,17 +47,19 @@ func (f *frontend) validateSubscriptionState(ctx context.Context, key string, al
 
 // validateOpenShiftUniqueKey returns which unique key if causing a 412 error
 func (f *frontend) validateOpenShiftUniqueKey(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
-	docs, err := f.db.OpenShiftClusters.QueryAll(ctx, doc.PartitionKey)
+	docs, err := f.db.OpenShiftClusters.ValidateUniqueKey(ctx, doc.PartitionKey, "clusterResourceGroupIdKey", doc.ClusterResourceGroupIDKey)
 	if err != nil {
 		return err
 	}
-	for _, existingDoc := range docs.OpenShiftClusterDocuments {
-		if existingDoc.ClusterResourceGroupIDKey == doc.ClusterResourceGroupIDKey {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidResourceGroup, "", "The provided resource group '%s' already contains a cluster.", doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
-		}
-		if existingDoc.ClientIDKey == doc.ClientIDKey {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeDuplicateClientID, "", "Each ARO cluster must use an unique SPN and cannot be shared with other clusters. Please use a new service principal.")
-		}
+	if docs.Count != 0 {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidResourceGroup, "", "The provided resource group '%s' already contains a cluster.", doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
+	}
+	docs, err = f.db.OpenShiftClusters.ValidateUniqueKey(ctx, doc.PartitionKey, "clientIdKey", doc.ClientIDKey)
+	if err != nil {
+		return err
+	}
+	if docs.Count != 0 {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeDuplicateClientID, "", "Each ARO cluster must use an unique SPN and cannot be shared with other clusters. Please use a new service principal.")
 	}
 	return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
 }

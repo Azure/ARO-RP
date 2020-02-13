@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"math"
 	"strings"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
@@ -37,11 +36,6 @@ var apiVersions = map[string]string{
 var (
 	tenantIDHack   = "13805ec3-a223-47ad-ad65-8b2baf92c0fb"
 	tenantUUIDHack = uuid.Must(uuid.FromString(tenantIDHack))
-)
-
-const (
-	KvClusterSuffix = "-cls"
-	KvServiceSuffix = "-svc"
 )
 
 type generator struct {
@@ -549,7 +543,7 @@ func (g *generator) clustersKeyvault() *arm.Resource {
 			},
 			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{},
 		},
-		Name:     to.StringPtr("[concat(parameters('keyvaultPrefix'), '" + KvClusterSuffix + "')]"),
+		Name:     to.StringPtr("[concat(parameters('keyvaultPrefix'), '" + kvClusterSuffix + "')]"),
 		Type:     to.StringPtr("Microsoft.KeyVault/vaults"),
 		Location: to.StringPtr("[resourceGroup().location]"),
 		Tags: map[string]*string{
@@ -585,7 +579,7 @@ func (g *generator) serviceKeyvault() *arm.Resource {
 			},
 			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{},
 		},
-		Name:     to.StringPtr("[concat(parameters('keyvaultPrefix'), '" + KvServiceSuffix + "')]"),
+		Name:     to.StringPtr("[concat(parameters('keyvaultPrefix'), '" + kvServiceSuffix + "')]"),
 		Type:     to.StringPtr("Microsoft.KeyVault/vaults"),
 		Location: to.StringPtr("[resourceGroup().location]"),
 		Tags: map[string]*string{
@@ -928,8 +922,13 @@ func (g *generator) template() *arm.Template {
 		t.Parameters[param] = &arm.TemplateParameter{Type: typ}
 		if param == "keyvaultPrefix" {
 			t.Parameters[param] = &arm.TemplateParameter{
-				Type:      typ,
-				MaxLength: 24 - int(math.Max(float64(len(KvClusterSuffix)), float64(len(KvServiceSuffix)))),
+				Type: typ,
+				MaxLength: 24 - func(a, b int) int {
+					if a > b {
+						return a
+					}
+					return b
+				}(len(kvClusterSuffix), len(kvServiceSuffix)),
 			}
 		}
 	}
