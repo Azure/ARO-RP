@@ -49,6 +49,7 @@
                             "Microsoft.Network/loadBalancers/backendAddressPools/join/action",
                             "Microsoft.Network/loadBalancers/read",
                             "Microsoft.Network/loadBalancers/write",
+			    "Microsoft.Network/loadBalancers/inboundNatRules/join/action",
                             "Microsoft.Network/networkInterfaces/delete",
                             "Microsoft.Network/networkInterfaces/join/action",
                             "Microsoft.Network/networkInterfaces/read",
