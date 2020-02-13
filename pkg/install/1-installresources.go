@@ -292,7 +292,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 							},
 							InboundNatRules: &[]mgmtnetwork.InboundNatRule{
 								{
-									Name: to.StringPtr("aro-master-0"),
+									Name: to.StringPtr("aro-master-ssh-0"),
 									InboundNatRulePropertiesFormat: &mgmtnetwork.InboundNatRulePropertiesFormat{
 										FrontendIPConfiguration: &mgmtnetwork.SubResource{
 											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'aro-internal-lb', 'internal-lb-ip')]"),
@@ -304,7 +304,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 									},
 								},
 								{
-									Name: to.StringPtr("aro-master-1"),
+									Name: to.StringPtr("aro-master-ssh-1"),
 									InboundNatRulePropertiesFormat: &mgmtnetwork.InboundNatRulePropertiesFormat{
 										FrontendIPConfiguration: &mgmtnetwork.SubResource{
 											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'aro-internal-lb', 'internal-lb-ip')]"),
@@ -316,7 +316,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 									},
 								},
 								{
-									Name: to.StringPtr("aro-master-2"),
+									Name: to.StringPtr("aro-master-ssh-2"),
 									InboundNatRulePropertiesFormat: &mgmtnetwork.InboundNatRulePropertiesFormat{
 										FrontendIPConfiguration: &mgmtnetwork.SubResource{
 											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'aro-internal-lb', 'internal-lb-ip')]"),
@@ -445,6 +445,20 @@ func (i *Installer) installResources(ctx context.Context) error {
 										},
 										Subnet: &mgmtnetwork.Subnet{
 											ID: to.StringPtr(i.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
+										},
+										LoadBalancerInboundNatRules: &[]mgmtnetwork.InboundNatRule{
+											{
+
+												ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/inboundNatRules','aro-internal-lb','aro-master-ssh-0')]"),
+											},
+											{
+
+												ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/inboundNatRules','aro-internal-lb','aro-master-ssh-1')]"),
+											},
+											{
+
+												ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/inboundNatRules','aro-internal-lb','aro-master-ssh-2')]"),
+											},
 										},
 									},
 									Name: to.StringPtr("pipConfig"),
