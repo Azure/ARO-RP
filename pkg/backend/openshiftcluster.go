@@ -6,6 +6,7 @@ package backend
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -98,7 +99,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 		// if Install = nil, we are done with the install.
 		// if Install != nil, we need to terminate, release lease and let other
 		// backend worker to pick up next install phase
-		doc, err = ocb.db.OpenShiftClusters.Get(ctx, doc.ID)
+		doc, err = ocb.db.OpenShiftClusters.Get(ctx, strings.ToLower(doc.OpenShiftCluster.ID))
 		if err != nil {
 			log.Error(err)
 			return ocb.endLease(ctx, stop, doc, api.ProvisioningStateFailed)
