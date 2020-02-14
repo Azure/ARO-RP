@@ -52,7 +52,7 @@ func (f *frontend) validateOpenShiftUniqueKey(ctx context.Context, doc *api.Open
 		return err
 	}
 	if docs.Count != 0 {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidResourceGroup, "", "The provided resource group '%s' already contains a cluster.", doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeDuplicateResourceGroup, "", "The provided resource group '%s' already contains a cluster.", doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
 	}
 	docs, err = f.db.OpenShiftClusters.ValidateUniqueKey(ctx, doc.PartitionKey, "clientIdKey", doc.ClientIDKey)
 	if err != nil {
