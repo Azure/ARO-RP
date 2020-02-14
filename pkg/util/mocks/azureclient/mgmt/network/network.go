@@ -295,6 +295,34 @@ func (m *MockVirtualNetworksClient) EXPECT() *MockVirtualNetworksClientMockRecor
 	return m.recorder
 }
 
+// CreateOrUpdateAndWait mocks base method
+func (m *MockVirtualNetworksClient) CreateOrUpdateAndWait(arg0 context.Context, arg1, arg2 string, arg3 network.VirtualNetwork) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateOrUpdateAndWait", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateOrUpdateAndWait indicates an expected call of CreateOrUpdateAndWait
+func (mr *MockVirtualNetworksClientMockRecorder) CreateOrUpdateAndWait(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockVirtualNetworksClient)(nil).CreateOrUpdateAndWait), arg0, arg1, arg2, arg3)
+}
+
+// DeleteAndWait mocks base method
+func (m *MockVirtualNetworksClient) DeleteAndWait(arg0 context.Context, arg1, arg2 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteAndWait", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteAndWait indicates an expected call of DeleteAndWait
+func (mr *MockVirtualNetworksClientMockRecorder) DeleteAndWait(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockVirtualNetworksClient)(nil).DeleteAndWait), arg0, arg1, arg2)
+}
+
 // List mocks base method
 func (m *MockVirtualNetworksClient) List(arg0 context.Context, arg1 string) ([]network.VirtualNetwork, error) {
 	m.ctrl.T.Helper()
