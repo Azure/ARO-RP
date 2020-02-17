@@ -152,11 +152,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 	i.log.Printf("starting phase %s", i.doc.OpenShiftCluster.Properties.Install.Phase)
 	for _, step := range steps[i.doc.OpenShiftCluster.Properties.Install.Phase] {
 		i.log.Printf("running step %s", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name())
-		err := step(ctx)
-		if i.doc.OpenShiftCluster.Properties.Install == nil && err == nil {
-			// sucessful end of the install process
-			break
-		}
+		err = step(ctx)
 		if err != nil {
 			break
 		}
