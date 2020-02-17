@@ -528,6 +528,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			name:       "creating cluster failing when provided cluster resource group already contains a cluster",
 			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName", mockSubID),
 			request: func(oc *v20191231preview.OpenShiftCluster) {
+				oc.Properties.ServicePrincipalProfile.ClientID = mockSubID
 				oc.Properties.ClusterProfile.ResourceGroupID = fmt.Sprintf("/subscriptions/%s/resourcegroups/aro-vjb21wca", mockSubID)
 			},
 			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters) {
@@ -561,7 +562,13 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					Create(gomock.Any(), gomock.Any()).
 					Return(clusterdoc, &cosmosdb.Error{StatusCode: http.StatusPreconditionFailed})
 				openShiftClusters.EXPECT().
-					ValidateUniqueKey(gomock.Any(), clusterdoc.PartitionKey, "clusterResourceGroupIdKey", fmt.Sprintf("/subscriptions/%s/resourcegroups/aro-vjb21wca", mockSubID)).
+					GetByClientID(gomock.Any(), clusterdoc.PartitionKey, mockSubID).
+					Return(&api.OpenShiftClusterDocuments{
+						Count:                     0,
+						OpenShiftClusterDocuments: []*api.OpenShiftClusterDocument{},
+					}, nil)
+				openShiftClusters.EXPECT().
+					GetByClusterResourceGroupID(gomock.Any(), clusterdoc.PartitionKey, fmt.Sprintf("/subscriptions/%s/resourcegroups/aro-vjb21wca", mockSubID)).
 					Return(&api.OpenShiftClusterDocuments{
 						Count: 1,
 						OpenShiftClusterDocuments: []*api.OpenShiftClusterDocument{
@@ -580,7 +587,6 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName", mockSubID),
 			request: func(oc *v20191231preview.OpenShiftCluster) {
 				oc.Properties.ServicePrincipalProfile.ClientID = mockSubID
-				oc.Properties.ClusterProfile.ResourceGroupID = fmt.Sprintf("/subscriptions/%s/resourcegroups/aro-vjb21wca", mockSubID)
 			},
 			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters) {
 				openShiftClusters.EXPECT().
@@ -612,26 +618,19 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					Create(gomock.Any(), gomock.Any()).
 					Return(clusterdoc, &cosmosdb.Error{StatusCode: http.StatusPreconditionFailed})
 				openShiftClusters.EXPECT().
-					ValidateUniqueKey(gomock.Any(), clusterdoc.PartitionKey, "clusterResourceGroupIdKey", fmt.Sprintf("/subscriptions/%s/resourcegroups/aro-vjb21wca", mockSubID)).
-					Return(&api.OpenShiftClusterDocuments{
-						Count:                     0,
-						OpenShiftClusterDocuments: []*api.OpenShiftClusterDocument{},
-					}, nil)
-				openShiftClusters.EXPECT().
-					ValidateUniqueKey(gomock.Any(), clusterdoc.PartitionKey, "clientIdKey", mockSubID).
+					GetByClientID(gomock.Any(), clusterdoc.PartitionKey, mockSubID).
 					Return(&api.OpenShiftClusterDocuments{
 						Count: 1,
 						OpenShiftClusterDocuments: []*api.OpenShiftClusterDocument{
 							&api.OpenShiftClusterDocument{
-								ClientIDKey:               mockSubID,
-								ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/aro-vjb21wca", mockSubID),
+								ClientIDKey: mockSubID,
 							},
 						},
 					}, nil)
 			},
 			wantAsync:      true,
 			wantStatusCode: http.StatusBadRequest,
-			wantError:      fmt.Sprintf("400: DuplicateClientID: : Each ARO cluster must use an unique SPN and cannot be shared with other clusters. Please use a new service principal."),
+			wantError:      fmt.Sprintf("400: DuplicateClientID: : The provided client ID '%s' is already in use by a cluster.", mockSubID),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

@@ -36,7 +36,8 @@ type OpenShiftClusters interface {
 	Dequeue(context.Context) (*api.OpenShiftClusterDocument, error)
 	Lease(context.Context, string) (*api.OpenShiftClusterDocument, error)
 	EndLease(context.Context, string, api.ProvisioningState, api.ProvisioningState) (*api.OpenShiftClusterDocument, error)
-	ValidateUniqueKey(ctx context.Context, partitionKey, uniqueKeyName, uniqueKeyValue string) (*api.OpenShiftClusterDocuments, error)
+	GetByClientID(ctx context.Context, partitionKey, clientID string) (*api.OpenShiftClusterDocuments, error)
+	GetByClusterResourceGroupID(ctx context.Context, partitionKey, resourceGroupID string) (*api.OpenShiftClusterDocuments, error)
 }
 
 // NewOpenShiftClusters returns a new OpenShiftClusters
@@ -295,13 +296,29 @@ func (c *openShiftClusters) partitionKey(key string) (string, error) {
 	return r.SubscriptionID, err
 }
 
-func (c *openShiftClusters) ValidateUniqueKey(ctx context.Context, partitionKey, uniqueKeyName, uniqueKeyValue string) (*api.OpenShiftClusterDocuments, error) {
+func (c *openShiftClusters) GetByClientID(ctx context.Context, partitionKey, clientID string) (*api.OpenShiftClusterDocuments, error) {
 	docs, err := c.c.QueryAll(ctx, partitionKey, &cosmosdb.Query{
-		Query: "SELECT * FROM OpenShiftClusters doc WHERE doc." + uniqueKeyName + " = @uniqueKeyValue",
+		Query: "SELECT * FROM OpenShiftClusters doc WHERE doc.clientIdKey = @clientID",
 		Parameters: []cosmosdb.Parameter{
 			{
-				Name:  "@uniqueKeyValue",
-				Value: uniqueKeyValue,
+				Name:  "@clientID",
+				Value: clientID,
+			},
+		},
+	}, nil)
+	if err != nil {
+		return nil, err
+	}
+	return docs, nil
+}
+
+func (c *openShiftClusters) GetByClusterResourceGroupID(ctx context.Context, partitionKey, resourceGroupID string) (*api.OpenShiftClusterDocuments, error) {
+	docs, err := c.c.QueryAll(ctx, partitionKey, &cosmosdb.Query{
+		Query: "SELECT * FROM OpenShiftClusters doc WHERE doc.clusterResourceGroupIdKey = @resourceGroupID",
+		Parameters: []cosmosdb.Parameter{
+			{
+				Name:  "@resourceGroupID",
+				Value: resourceGroupID,
 			},
 		},
 	}, nil)
