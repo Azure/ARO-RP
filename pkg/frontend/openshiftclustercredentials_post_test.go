@@ -64,8 +64,8 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 	apis := map[string]*api.Version{
 		"2019-12-31-preview": api.APIs["2019-12-31-preview"],
 		"no-credentials": {
-			OpenShiftClusterConverter: api.APIs["2019-12-31-preview"].OpenShiftClusterConverter,
-			OpenShiftClusterValidator: api.APIs["2019-12-31-preview"].OpenShiftClusterValidator,
+			OpenShiftClusterConverter:       api.APIs["2019-12-31-preview"].OpenShiftClusterConverter,
+			OpenShiftClusterStaticValidator: api.APIs["2019-12-31-preview"].OpenShiftClusterStaticValidator,
 		},
 	}
 

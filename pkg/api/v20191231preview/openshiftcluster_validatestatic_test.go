@@ -26,17 +26,15 @@ var (
 	subscriptionID = "af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1"
 	id             = fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/microsoft.redhatopenshift/openshiftclusters/resourceName", subscriptionID)
 
-	v = &openShiftClusterValidator{
-		sv: openShiftClusterStaticValidator{
-			location:   "location",
-			resourceID: id,
-			r: azure.Resource{
-				SubscriptionID: subscriptionID,
-				ResourceGroup:  "resourceGroup",
-				Provider:       "Microsoft.RedHatOpenShift",
-				ResourceType:   "openshiftClusters",
-				ResourceName:   "resourceName",
-			},
+	v = &openShiftClusterStaticValidator{
+		location:   "location",
+		resourceID: id,
+		r: azure.Resource{
+			SubscriptionID: subscriptionID,
+			ResourceGroup:  "resourceGroup",
+			Provider:       "Microsoft.RedHatOpenShift",
+			ResourceType:   "openshiftClusters",
+			ResourceName:   "resourceName",
 		},
 	}
 )

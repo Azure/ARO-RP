@@ -1,4 +1,4 @@
-package v20191231preview
+package validate
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -26,6 +26,16 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
+type OpenShiftClusterDynamicValidator interface {
+	Dynamic(context.Context, *api.OpenShiftCluster) error
+}
+
+func NewOpenShiftClusterDynamicValidator(env env.Interface) OpenShiftClusterDynamicValidator {
+	return &openShiftClusterDynamicValidator{
+		env: env,
+	}
+}
+
 type azureClaim struct {
 	Roles []string `json:"roles,omitempty"`
 }
@@ -36,16 +46,10 @@ func (*azureClaim) Valid() error {
 
 type openShiftClusterDynamicValidator struct {
 	env env.Interface
-
-	subnet subnet.Manager
-
-	oc *api.OpenShiftCluster
 }
 
 // Dynamic validates an OpenShift cluster
-func (v *openShiftClusterValidator) Dynamic(ctx context.Context, oc *api.OpenShiftCluster) error {
-	v.dv.oc = oc
-
+func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context, oc *api.OpenShiftCluster) error {
 	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
 		return err
@@ -53,40 +57,39 @@ func (v *openShiftClusterValidator) Dynamic(ctx context.Context, oc *api.OpenShi
 
 	// TODO: pre-check that the cluster domain doesn't already exist
 
-	spAuthorizer, err := v.dv.validateServicePrincipalProfile()
+	spAuthorizer, err := dv.validateServicePrincipalProfile(oc)
 	if err != nil {
 		return err
 	}
 
-	err = v.dv.validateServicePrincipalRole()
+	err = dv.validateServicePrincipalRole(oc)
 	if err != nil {
 		return err
 	}
 
 	spPermissions := authorization.NewPermissionsClient(r.SubscriptionID, spAuthorizer)
-	err = v.dv.validateVnetPermissions(ctx, spPermissions, api.CloudErrorCodeInvalidServicePrincipalPermissions, "provided service principal")
+	err = dv.validateVnetPermissions(ctx, oc, spPermissions, api.CloudErrorCodeInvalidServicePrincipalPermissions, "provided service principal")
 	if err != nil {
 		return err
 	}
 
-	fpAuthorizer, err := v.dv.env.FPAuthorizer(oc.Properties.ServicePrincipalProfile.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
+	fpAuthorizer, err := dv.env.FPAuthorizer(oc.Properties.ServicePrincipalProfile.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return err
 	}
 
 	fpPermissions := authorization.NewPermissionsClient(r.SubscriptionID, fpAuthorizer)
-	err = v.dv.validateVnetPermissions(ctx, fpPermissions, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
+	err = dv.validateVnetPermissions(ctx, oc, fpPermissions, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
 	if err != nil {
 		return err
 	}
 
-	v.dv.subnet = subnet.NewManager(r.SubscriptionID, spAuthorizer)
-
-	return v.dv.validateSubnets(ctx)
+	subnetManager := subnet.NewManager(r.SubscriptionID, spAuthorizer)
+	return dv.validateSubnets(ctx, subnetManager, oc)
 }
 
-func (dv *openShiftClusterDynamicValidator) validateServicePrincipalProfile() (autorest.Authorizer, error) {
-	spp := &dv.oc.Properties.ServicePrincipalProfile
+func (dv *openShiftClusterDynamicValidator) validateServicePrincipalProfile(oc *api.OpenShiftCluster) (autorest.Authorizer, error) {
+	spp := &oc.Properties.ServicePrincipalProfile
 	conf := auth.NewClientCredentialsConfig(spp.ClientID, string(spp.ClientSecret), spp.TenantID)
 
 	token, err := conf.ServicePrincipalToken()
@@ -105,8 +108,8 @@ func (dv *openShiftClusterDynamicValidator) validateServicePrincipalProfile() (a
 	return autorest.NewBearerAuthorizer(token), nil
 }
 
-func (dv *openShiftClusterDynamicValidator) validateServicePrincipalRole() error {
-	spp := &dv.oc.Properties.ServicePrincipalProfile
+func (dv *openShiftClusterDynamicValidator) validateServicePrincipalRole(oc *api.OpenShiftCluster) error {
+	spp := &oc.Properties.ServicePrincipalProfile
 	conf := auth.NewClientCredentialsConfig(spp.ClientID, string(spp.ClientSecret), spp.TenantID)
 	conf.Resource = azure.PublicCloud.GraphEndpoint
 
@@ -139,8 +142,8 @@ func (dv *openShiftClusterDynamicValidator) validateServicePrincipalRole() error
 	return nil
 }
 
-func (dv *openShiftClusterDynamicValidator) validateVnetPermissions(ctx context.Context, client authorization.PermissionsClient, code, typ string) error {
-	vnetID, _, err := subnet.Split(dv.oc.Properties.MasterProfile.SubnetID)
+func (dv *openShiftClusterDynamicValidator) validateVnetPermissions(ctx context.Context, oc *api.OpenShiftCluster, client authorization.PermissionsClient, code, typ string) error {
+	vnetID, _, err := subnet.Split(oc.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return err
 	}
@@ -176,23 +179,23 @@ func (dv *openShiftClusterDynamicValidator) validateVnetPermissions(ctx context.
 	return nil
 }
 
-func (dv *openShiftClusterDynamicValidator) validateSubnets(ctx context.Context) error {
-	master, err := dv.validateSubnet(ctx, "properties.masterProfile.subnetId", "master", dv.oc.Properties.MasterProfile.SubnetID)
+func (dv *openShiftClusterDynamicValidator) validateSubnets(ctx context.Context, subnetManager subnet.Manager, oc *api.OpenShiftCluster) error {
+	master, err := dv.validateSubnet(ctx, subnetManager, oc, "properties.masterProfile.subnetId", "master", oc.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return err
 	}
 
-	worker, err := dv.validateSubnet(ctx, `properties.workerProfiles["worker"].subnetId`, "worker", dv.oc.Properties.WorkerProfiles[0].SubnetID)
+	worker, err := dv.validateSubnet(ctx, subnetManager, oc, `properties.workerProfiles["worker"].subnetId`, "worker", oc.Properties.WorkerProfiles[0].SubnetID)
 	if err != nil {
 		return err
 	}
 
-	_, pod, err := net.ParseCIDR(dv.oc.Properties.NetworkProfile.PodCIDR)
+	_, pod, err := net.ParseCIDR(oc.Properties.NetworkProfile.PodCIDR)
 	if err != nil {
 		return err
 	}
 
-	_, service, err := net.ParseCIDR(dv.oc.Properties.NetworkProfile.ServiceCIDR)
+	_, service, err := net.ParseCIDR(oc.Properties.NetworkProfile.ServiceCIDR)
 	if err != nil {
 		return err
 	}
@@ -205,8 +208,8 @@ func (dv *openShiftClusterDynamicValidator) validateSubnets(ctx context.Context)
 	return nil
 }
 
-func (dv *openShiftClusterDynamicValidator) validateSubnet(ctx context.Context, path, typ, subnetID string) (*net.IPNet, error) {
-	s, err := dv.subnet.Get(ctx, subnetID)
+func (dv *openShiftClusterDynamicValidator) validateSubnet(ctx context.Context, subnetManager subnet.Manager, oc *api.OpenShiftCluster, path, typ, subnetID string) (*net.IPNet, error) {
+	s, err := subnetManager.Get(ctx, subnetID)
 	if detailedErr, ok := err.(autorest.DetailedError); ok &&
 		detailedErr.StatusCode == http.StatusNotFound {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The provided "+typ+" VM subnet '%s' could not be found.", subnetID)
@@ -215,7 +218,7 @@ func (dv *openShiftClusterDynamicValidator) validateSubnet(ctx context.Context, 
 		return nil, err
 	}
 
-	if strings.EqualFold(dv.oc.Properties.MasterProfile.SubnetID, subnetID) {
+	if strings.EqualFold(oc.Properties.MasterProfile.SubnetID, subnetID) {
 		if !strings.EqualFold(*s.PrivateLinkServiceNetworkPolicies, "Disabled") {
 			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The provided "+typ+" VM subnet '%s' is invalid: must have privateLinkServiceNetworkPolicies disabled.", subnetID)
 		}
@@ -233,14 +236,14 @@ func (dv *openShiftClusterDynamicValidator) validateSubnet(ctx context.Context, 
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The provided "+typ+" VM subnet '%s' is invalid: must have Microsoft.ContainerRegistry serviceEndpoint.", subnetID)
 	}
 
-	if dv.oc.Properties.ProvisioningState == api.ProvisioningStateCreating {
+	if oc.Properties.ProvisioningState == api.ProvisioningStateCreating {
 		if s.SubnetPropertiesFormat != nil &&
 			s.SubnetPropertiesFormat.NetworkSecurityGroup != nil {
 			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The provided "+typ+" VM subnet '%s' is invalid: must not have a network security group attached.", subnetID)
 		}
 
 	} else {
-		nsgID, err := subnet.NetworkSecurityGroupID(dv.oc, *s.ID)
+		nsgID, err := subnet.NetworkSecurityGroupID(oc, *s.ID)
 		if err != nil {
 			return nil, err
 		}

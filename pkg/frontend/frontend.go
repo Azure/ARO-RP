@@ -17,6 +17,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
@@ -37,6 +38,8 @@ type frontend struct {
 	db      *database.Database
 	apis    map[string]*api.Version
 	m       metrics.Interface
+
+	ocDynamicValidator validate.OpenShiftClusterDynamicValidator
 
 	l net.Listener
 	s *http.Server
@@ -61,6 +64,8 @@ func NewFrontend(ctx context.Context, baseLog *logrus.Entry, env env.Interface, 
 		db:      db,
 		apis:    apis,
 		m:       m,
+
+		ocDynamicValidator: validate.NewOpenShiftClusterDynamicValidator(env),
 
 		bucketAllocator: &bucket.Random{},
 	}
