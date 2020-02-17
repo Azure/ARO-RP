@@ -302,5 +302,11 @@ func (sv *openShiftClusterStaticValidator) validateIngressProfile(path string, p
 }
 
 func (sv *openShiftClusterStaticValidator) validateDelta(oc, current *OpenShiftCluster) error {
-	return immutable.Validate("", oc, current)
+	err := immutable.Validate("", oc, current)
+	if err != nil {
+		err := err.(*immutable.ValidationError)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, err.Target, err.Message)
+	}
+
+	return nil
 }
