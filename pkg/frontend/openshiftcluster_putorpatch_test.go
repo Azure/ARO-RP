@@ -62,7 +62,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 	apis := map[string]*api.Version{
 		"2019-12-31-preview": {
 			OpenShiftClusterConverter: api.APIs["2019-12-31-preview"].OpenShiftClusterConverter,
-			OpenShiftClusterValidator: func(env.Interface, string) api.OpenShiftClusterValidator {
+			OpenShiftClusterStaticValidator: func(string, string) api.OpenShiftClusterStaticValidator {
 				return &dummyOpenShiftClusterValidator{}
 			},
 			OpenShiftClusterCredentialsConverter: api.APIs["2019-12-31-preview"].OpenShiftClusterCredentialsConverter,
@@ -678,6 +678,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				t.Fatal(err)
 			}
 			f.(*frontend).bucketAllocator = bucket.Fixed(1)
+			f.(*frontend).ocDynamicValidator = &dummyOpenShiftClusterValidator{}
 
 			go f.Run(ctx, nil, nil)
 

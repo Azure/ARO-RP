@@ -22,14 +22,9 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/ignition/machine"
 	"github.com/openshift/installer/pkg/asset/installconfig"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/kubernetes"
 
-	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
-	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
@@ -641,73 +636,6 @@ func (i *Installer) installResources(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
-		}
-	}
-
-	{
-		i.log.Print("creating private endpoint")
-		err = i.privateendpoint.Create(ctx, i.doc)
-		if err != nil {
-			return err
-		}
-	}
-	{
-		var ipAddress string
-		if i.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {
-			ip, err := i.publicipaddresses.Get(ctx, resourceGroup, "aro-pip", "")
-			if err != nil {
-				return err
-			}
-			ipAddress = *ip.IPAddress
-		} else {
-			lb, err := i.loadbalancers.Get(ctx, resourceGroup, "aro-internal-lb", "")
-			if err != nil {
-				return err
-			}
-			ipAddress = *((*lb.FrontendIPConfigurations)[0].PrivateIPAddress)
-		}
-
-		err = i.dns.Update(ctx, i.doc.OpenShiftCluster, ipAddress)
-		if err != nil {
-			return err
-		}
-
-		privateEndpointIP, err := i.privateendpoint.GetIP(ctx, i.doc)
-		if err != nil {
-			return err
-		}
-
-		i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-			doc.OpenShiftCluster.Properties.NetworkProfile.PrivateEndpointIP = privateEndpointIP
-			doc.OpenShiftCluster.Properties.APIServerProfile.IP = ipAddress
-			return nil
-		})
-		if err != nil {
-			return err
-		}
-	}
-
-	{
-		restConfig, err := restconfig.RestConfig(ctx, i.env, i.doc.OpenShiftCluster)
-		if err != nil {
-			return err
-		}
-
-		cli, err := kubernetes.NewForConfig(restConfig)
-		if err != nil {
-			return err
-		}
-
-		i.log.Print("waiting for bootstrap configmap")
-		timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
-		defer cancel()
-		err = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-			cm, err := cli.CoreV1().ConfigMaps("kube-system").Get("bootstrap", metav1.GetOptions{})
-			return err == nil && cm.Data["status"] == "complete", nil
-
-		}, timeoutCtx.Done())
-		if err != nil {
-			return err
 		}
 	}
 

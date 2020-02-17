@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"net/url"
 	"reflect"
+	"runtime"
 	"strings"
 	"time"
 
@@ -115,50 +116,79 @@ func NewInstaller(ctx context.Context, log *logrus.Entry, env env.Interface, db 
 
 // Install installs an ARO cluster
 func (i *Installer) Install(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) error {
-	var err error
+	steps := map[api.InstallPhase][]func(context.Context) error{
+		api.InstallPhaseDeployStorage: {
+			i.createDNS,
+			func(ctx context.Context) error {
+				return i.installStorage(ctx, installConfig, platformCreds, image)
+			},
+			i.incrInstallPhase,
+		},
+		api.InstallPhaseDeployResources: {
+			i.installResources,
+			i.createPrivateEndpoint,
+			i.updateAPIIP,
+			i.waitForBootstrapConfigmap,
+			i.incrInstallPhase,
+		},
+		api.InstallPhaseRemoveBootstrap: {
+			i.removeBootstrap,
+			i.updateConsoleBranding,
+			i.waitForClusterVersion,
+			i.disableUpdates,
+			i.updateRouterIP,
+			i.endOfInstallPhase,
+		},
+	}
 
+	err := i.startInstallPhase(ctx)
+	if err != nil {
+		return err
+	}
+
+	if steps[i.doc.OpenShiftCluster.Properties.Install.Phase] == nil {
+		return fmt.Errorf("unrecognised phase %s", i.doc.OpenShiftCluster.Properties.Install.Phase)
+	}
+	i.log.Printf("starting phase %s", i.doc.OpenShiftCluster.Properties.Install.Phase)
+	for _, step := range steps[i.doc.OpenShiftCluster.Properties.Install.Phase] {
+		i.log.Printf("running step %s", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name())
+		err := step(ctx)
+		if i.doc.OpenShiftCluster.Properties.Install == nil && err == nil {
+			// sucessful end of the install process
+			break
+		}
+		if err != nil {
+			break
+		}
+	}
+
+	return err
+}
+
+func (i *Installer) startInstallPhase(ctx context.Context) error {
+	var err error
 	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		if doc.OpenShiftCluster.Properties.Install == nil {
 			doc.OpenShiftCluster.Properties.Install = &api.Install{}
 		}
 		return nil
 	})
-	if err != nil {
-		return err
-	}
+	return err
+}
 
-	i.log.Printf("starting phase %s", i.doc.OpenShiftCluster.Properties.Install.Phase)
-	switch i.doc.OpenShiftCluster.Properties.Install.Phase {
-	case api.InstallPhaseDeployStorage:
-		err := i.installStorage(ctx, installConfig, platformCreds, image)
-		if err != nil {
-			return err
-		}
-
-	case api.InstallPhaseDeployResources:
-		err := i.installResources(ctx)
-		if err != nil {
-			return err
-		}
-
-	case api.InstallPhaseRemoveBootstrap:
-		err := i.removeBootstrap(ctx)
-		if err != nil {
-			return err
-		}
-
-		i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-			doc.OpenShiftCluster.Properties.Install = nil
-			return nil
-		})
-		return err
-
-	default:
-		return fmt.Errorf("unrecognised phase %s", i.doc.OpenShiftCluster.Properties.Install.Phase)
-	}
-
+func (i *Installer) incrInstallPhase(ctx context.Context) error {
+	var err error
 	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		doc.OpenShiftCluster.Properties.Install.Phase++
+		return nil
+	})
+	return err
+}
+
+func (i *Installer) endOfInstallPhase(ctx context.Context) error {
+	var err error
+	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.Properties.Install = nil
 		return nil
 	})
 	return err

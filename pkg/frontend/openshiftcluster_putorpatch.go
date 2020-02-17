@@ -30,14 +30,14 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 	var b []byte
 	err := cosmosdb.RetryOnPreconditionFailed(func() error {
 		var err error
-		b, err = f._putOrPatchOpenShiftCluster(ctx, r, &header, f.apis[vars["api-version"]].OpenShiftClusterConverter(), f.apis[vars["api-version"]].OpenShiftClusterValidator(f.env, r.URL.Path))
+		b, err = f._putOrPatchOpenShiftCluster(ctx, r, &header, f.apis[vars["api-version"]].OpenShiftClusterConverter(), f.apis[vars["api-version"]].OpenShiftClusterStaticValidator(f.env.Location(), r.URL.Path))
 		return err
 	})
 
 	reply(log, w, header, b, err)
 }
 
-func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Request, header *http.Header, converter api.OpenShiftClusterConverter, validator api.OpenShiftClusterValidator) ([]byte, error) {
+func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Request, header *http.Header, converter api.OpenShiftClusterConverter, staticValidator api.OpenShiftClusterStaticValidator) ([]byte, error) {
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 
 	subdoc, err := f.validateSubscriptionState(ctx, r.URL.Path, api.SubscriptionStateRegistered)
@@ -116,9 +116,9 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 	}
 
 	if isCreate {
-		err = validator.Static(ext, nil)
+		err = staticValidator.Static(ext, nil)
 	} else {
-		err = validator.Static(ext, doc.OpenShiftCluster)
+		err = staticValidator.Static(ext, doc.OpenShiftCluster)
 	}
 	if err != nil {
 		return nil, err
@@ -144,7 +144,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 		doc.Dequeues = 0
 	}
 
-	err = validator.Dynamic(r.Context(), doc.OpenShiftCluster)
+	err = f.ocDynamicValidator.Dynamic(r.Context(), doc.OpenShiftCluster)
 	if err != nil {
 		return nil, err
 	}

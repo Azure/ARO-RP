@@ -5,7 +5,6 @@ package v20191231preview
 
 import (
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/env"
 )
 
 const (
@@ -18,15 +17,10 @@ func init() {
 		OpenShiftClusterConverter: func() api.OpenShiftClusterConverter {
 			return &openShiftClusterConverter{}
 		},
-		OpenShiftClusterValidator: func(env env.Interface, resourceID string) api.OpenShiftClusterValidator {
-			return &openShiftClusterValidator{
-				sv: openShiftClusterStaticValidator{
-					location:   env.Location(),
-					resourceID: resourceID,
-				},
-				dv: openShiftClusterDynamicValidator{
-					env: env,
-				},
+		OpenShiftClusterStaticValidator: func(location, resourceID string) api.OpenShiftClusterStaticValidator {
+			return &openShiftClusterStaticValidator{
+				location:   location,
+				resourceID: resourceID,
 			}
 		},
 		OpenShiftClusterCredentialsConverter: func() api.OpenShiftClusterCredentialsConverter {

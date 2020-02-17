@@ -5,12 +5,18 @@ package immutable
 
 import (
 	"fmt"
-	"net/http"
 	"reflect"
 	"strings"
-
-	"github.com/Azure/ARO-RP/pkg/api"
 )
+
+type ValidationError struct {
+	Target  string
+	Message string
+}
+
+func (e *ValidationError) Error() string {
+	return e.Message
+}
 
 // Validate returns nil if v and w are identical, bar any differences on any
 // struct fields explicitly tagged `mutable:"true"`.  Otherwise it returns a
@@ -21,7 +27,7 @@ func Validate(path string, v, w interface{}) error {
 
 func validate(path string, v, w reflect.Value, ignoreCase bool) error {
 	if v.Type() != w.Type() {
-		return validationError(path)
+		return newValidationError(path)
 	}
 
 	switch v.Kind() {
@@ -30,30 +36,30 @@ func validate(path string, v, w reflect.Value, ignoreCase bool) error {
 		reflect.Uint32, reflect.Uint64, reflect.Uintptr, reflect.Float32,
 		reflect.Float64, reflect.Complex64, reflect.Complex128:
 		if v.Interface() != w.Interface() {
-			return validationError(path)
+			return newValidationError(path)
 		}
 
 	case reflect.String:
 		if ignoreCase {
 			if !strings.EqualFold(v.String(), w.String()) {
-				return validationError(path)
+				return newValidationError(path)
 			}
 		} else {
 			if v.String() != w.String() {
-				return validationError(path)
+				return newValidationError(path)
 			}
 		}
 
 	case reflect.Slice:
 		if v.IsNil() != w.IsNil() {
-			return validationError(path)
+			return newValidationError(path)
 		}
 
 		fallthrough
 
 	case reflect.Array:
 		if v.Len() != w.Len() {
-			return validationError(path)
+			return newValidationError(path)
 		}
 
 		for i := 0; i < v.Len(); i++ {
@@ -73,7 +79,7 @@ func validate(path string, v, w reflect.Value, ignoreCase bool) error {
 
 	case reflect.Interface, reflect.Ptr:
 		if v.IsNil() != w.IsNil() {
-			return validationError(path)
+			return newValidationError(path)
 		}
 
 		if v.IsNil() {
@@ -87,11 +93,11 @@ func validate(path string, v, w reflect.Value, ignoreCase bool) error {
 
 	case reflect.Map:
 		if v.IsNil() != w.IsNil() {
-			return validationError(path)
+			return newValidationError(path)
 		}
 
 		if v.Len() != w.Len() {
-			return validationError(path)
+			return newValidationError(path)
 		}
 
 		i := v.MapRange()
@@ -100,7 +106,7 @@ func validate(path string, v, w reflect.Value, ignoreCase bool) error {
 
 			mapW := w.MapIndex(k)
 			if !mapW.IsValid() {
-				return validationError(path)
+				return newValidationError(path)
 			}
 
 			err := validate(fmt.Sprintf("%s[%q]", path, k.Interface()), v.MapIndex(k), mapW, ignoreCase)
@@ -141,6 +147,9 @@ func validate(path string, v, w reflect.Value, ignoreCase bool) error {
 	return nil
 }
 
-func validationError(path string) error {
-	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodePropertyChangeNotAllowed, path, fmt.Sprintf("Changing property '%s' is not allowed.", path))
+func newValidationError(path string) error {
+	return &ValidationError{
+		Target:  path,
+		Message: fmt.Sprintf("Changing property '%s' is not allowed.", path),
+	}
 }

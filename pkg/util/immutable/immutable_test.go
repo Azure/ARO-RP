@@ -52,42 +52,42 @@ func TestValidate(t *testing.T) {
 			modify: func(s *ts) {
 				s.Case = "after"
 			},
-			wantErr: "400: PropertyChangeNotAllowed: case: Changing property 'case' is not allowed.",
+			wantErr: "Changing property 'case' is not allowed.",
 		},
 		{
 			name: "can NOT change empty",
 			modify: func(s *ts) {
 				s.Empty = "after"
 			},
-			wantErr: "400: PropertyChangeNotAllowed: empty: Changing property 'empty' is not allowed.",
+			wantErr: "Changing property 'empty' is not allowed.",
 		},
 		{
 			name: "can NOT replace a map",
 			modify: func(s *ts) {
 				s.Map = map[string]string{"new": "value"}
 			},
-			wantErr: "400: PropertyChangeNotAllowed: map: Changing property 'map' is not allowed.",
+			wantErr: "Changing property 'map' is not allowed.",
 		},
 		{
 			name: "can NOT change a value in a map",
 			modify: func(s *ts) {
 				s.Map = map[string]string{"key": "new-value"}
 			},
-			wantErr: "400: PropertyChangeNotAllowed: map[\"key\"]: Changing property 'map[\"key\"]' is not allowed.",
+			wantErr: "Changing property 'map[\"key\"]' is not allowed.",
 		},
 		{
 			name: "can NOT change EmptyNoJSON",
 			modify: func(s *ts) {
 				s.EmptyNoJSON = "after"
 			},
-			wantErr: "400: PropertyChangeNotAllowed: EmptyNoJSON: Changing property 'EmptyNoJSON' is not allowed.",
+			wantErr: "Changing property 'EmptyNoJSON' is not allowed.",
 		},
 		{
 			name: "can NOT change None",
 			modify: func(s *ts) {
 				s.None = "after"
 			},
-			wantErr: "400: PropertyChangeNotAllowed: None: Changing property 'None' is not allowed.",
+			wantErr: "Changing property 'None' is not allowed.",
 		},
 	}
 	for _, tt := range tests {
@@ -106,6 +106,11 @@ func TestValidate(t *testing.T) {
 			} else {
 				if err.Error() != tt.wantErr {
 					t.Error(err)
+				}
+
+				_, ok := err.(*ValidationError)
+				if !ok {
+					t.Errorf("%T", err)
 				}
 			}
 		})
