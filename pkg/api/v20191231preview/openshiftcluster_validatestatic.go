@@ -27,11 +27,6 @@ var (
 		`$`)
 )
 
-type openShiftClusterValidator struct {
-	sv openShiftClusterStaticValidator
-	dv openShiftClusterDynamicValidator
-}
-
 type openShiftClusterStaticValidator struct {
 	location   string
 	resourceID string
@@ -40,7 +35,7 @@ type openShiftClusterStaticValidator struct {
 }
 
 // Validate validates an OpenShift cluster
-func (v *openShiftClusterValidator) Static(_oc interface{}, _current *api.OpenShiftCluster) error {
+func (sv *openShiftClusterStaticValidator) Static(_oc interface{}, _current *api.OpenShiftCluster) error {
 	oc := _oc.(*OpenShiftCluster)
 
 	var current *OpenShiftCluster
@@ -49,12 +44,12 @@ func (v *openShiftClusterValidator) Static(_oc interface{}, _current *api.OpenSh
 	}
 
 	var err error
-	v.sv.r, err = azure.ParseResourceID(v.sv.resourceID)
+	sv.r, err = azure.ParseResourceID(sv.resourceID)
 	if err != nil {
 		return err
 	}
 
-	err = v.sv.validate(oc)
+	err = sv.validate(oc)
 	if err != nil {
 		return err
 	}
@@ -63,7 +58,7 @@ func (v *openShiftClusterValidator) Static(_oc interface{}, _current *api.OpenSh
 		return nil
 	}
 
-	return v.sv.validateDelta(oc, current)
+	return sv.validateDelta(oc, current)
 }
 
 func (sv *openShiftClusterStaticValidator) validate(oc *OpenShiftCluster) error {
