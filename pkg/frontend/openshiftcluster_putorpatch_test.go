@@ -572,7 +572,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					Return(&api.OpenShiftClusterDocuments{
 						Count: 1,
 						OpenShiftClusterDocuments: []*api.OpenShiftClusterDocument{
-							&api.OpenShiftClusterDocument{
+							{
 								ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/aro-vjb21wca", mockSubID),
 							},
 						},
@@ -622,7 +622,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					Return(&api.OpenShiftClusterDocuments{
 						Count: 1,
 						OpenShiftClusterDocuments: []*api.OpenShiftClusterDocument{
-							&api.OpenShiftClusterDocument{
+							{
 								ClientIDKey: mockSubID,
 							},
 						},

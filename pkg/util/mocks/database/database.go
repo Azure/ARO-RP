@@ -193,6 +193,36 @@ func (mr *MockOpenShiftClustersMockRecorder) Get(arg0, arg1 interface{}) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockOpenShiftClusters)(nil).Get), arg0, arg1)
 }
 
+// GetByClientID mocks base method
+func (m *MockOpenShiftClusters) GetByClientID(arg0 context.Context, arg1, arg2 string) (*api.OpenShiftClusterDocuments, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByClientID", arg0, arg1, arg2)
+	ret0, _ := ret[0].(*api.OpenShiftClusterDocuments)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetByClientID indicates an expected call of GetByClientID
+func (mr *MockOpenShiftClustersMockRecorder) GetByClientID(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByClientID", reflect.TypeOf((*MockOpenShiftClusters)(nil).GetByClientID), arg0, arg1, arg2)
+}
+
+// GetByClusterResourceGroupID mocks base method
+func (m *MockOpenShiftClusters) GetByClusterResourceGroupID(arg0 context.Context, arg1, arg2 string) (*api.OpenShiftClusterDocuments, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByClusterResourceGroupID", arg0, arg1, arg2)
+	ret0, _ := ret[0].(*api.OpenShiftClusterDocuments)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetByClusterResourceGroupID indicates an expected call of GetByClusterResourceGroupID
+func (mr *MockOpenShiftClustersMockRecorder) GetByClusterResourceGroupID(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByClusterResourceGroupID", reflect.TypeOf((*MockOpenShiftClusters)(nil).GetByClusterResourceGroupID), arg0, arg1, arg2)
+}
+
 // Lease mocks base method
 func (m *MockOpenShiftClusters) Lease(arg0 context.Context, arg1 string) (*api.OpenShiftClusterDocument, error) {
 	m.ctrl.T.Helper()
@@ -296,21 +326,6 @@ func (m *MockOpenShiftClusters) Update(arg0 context.Context, arg1 *api.OpenShift
 func (mr *MockOpenShiftClustersMockRecorder) Update(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockOpenShiftClusters)(nil).Update), arg0, arg1)
-}
-
-// ValidateUniqueKey mocks base method
-func (m *MockOpenShiftClusters) ValidateUniqueKey(arg0 context.Context, arg1, arg2, arg3 string) (*api.OpenShiftClusterDocuments, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateUniqueKey", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(*api.OpenShiftClusterDocuments)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ValidateUniqueKey indicates an expected call of ValidateUniqueKey
-func (mr *MockOpenShiftClustersMockRecorder) ValidateUniqueKey(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateUniqueKey", reflect.TypeOf((*MockOpenShiftClusters)(nil).ValidateUniqueKey), arg0, arg1, arg2, arg3)
 }
 
 // MockSubscriptions is a mock of Subscriptions interface
