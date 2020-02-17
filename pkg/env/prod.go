@@ -8,7 +8,6 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
-	"encoding/pem"
 	"fmt"
 	"net"
 	"os"
@@ -29,6 +28,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
+	"github.com/Azure/ARO-RP/pkg/util/pem"
 )
 
 type prod struct {
@@ -242,44 +242,7 @@ func (p *prod) GetCertificateSecret(ctx context.Context, secretName string) (key
 		return nil, nil, err
 	}
 
-	b := []byte(*bundle.Value)
-	for {
-		var block *pem.Block
-		block, b = pem.Decode(b)
-		if block == nil {
-			break
-		}
-
-		switch block.Type {
-		case "PRIVATE KEY":
-			k, err := x509.ParsePKCS8PrivateKey(block.Bytes)
-			if err != nil {
-				return nil, nil, err
-			}
-			var ok bool
-			key, ok = k.(*rsa.PrivateKey)
-			if !ok {
-				return nil, nil, fmt.Errorf("found unimplemented private key type %T in PKCS#8 wrapping", k)
-			}
-
-		case "CERTIFICATE":
-			c, err := x509.ParseCertificate(block.Bytes)
-			if err != nil {
-				return nil, nil, err
-			}
-			certs = append(certs, c)
-		}
-	}
-
-	if key == nil {
-		return nil, nil, fmt.Errorf("no private key found")
-	}
-
-	if len(certs) == 0 {
-		return nil, nil, fmt.Errorf("no certificate found")
-	}
-
-	return key, certs, nil
+	return pem.Parse([]byte(*bundle.Value))
 }
 
 func (p *prod) GetSecret(ctx context.Context, secretName string) ([]byte, error) {
