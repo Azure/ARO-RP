@@ -1004,13 +1004,8 @@ func (g *generator) template() *arm.Template {
 		t.Parameters[param] = &arm.TemplateParameter{Type: typ}
 		if param == "keyvaultPrefix" {
 			t.Parameters[param] = &arm.TemplateParameter{
-				Type: typ,
-				MaxLength: 24 - func(a, b int) int {
-					if a > b {
-						return a
-					}
-					return b
-				}(len(kvClusterSuffix), len(kvServiceSuffix)),
+				Type:      typ,
+				MaxLength: 24 - max(len(kvClusterSuffix), len(kvServiceSuffix)),
 			}
 		}
 	}
@@ -1141,4 +1136,11 @@ func GenerateRPParameterTemplate() error {
 	}
 
 	return nil
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
