@@ -10,6 +10,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest"
 
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
@@ -60,6 +61,27 @@ func (m *Manager) Delete(ctx context.Context) error {
 	err = m.privateendpoint.Delete(ctx, m.doc)
 	if err != nil {
 		return err
+	}
+
+	if _, ok := m.env.(env.Dev); !ok {
+		managedDomain, err := m.env.ManagedDomain(m.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
+		if err != nil {
+			return err
+		}
+
+		if managedDomain != "" {
+			m.log.Print("deleting signed apiserver certificate")
+			err = m.keyvault.DeleteCertificate(ctx, m.doc.ID+"-apiserver")
+			if err != nil {
+				return err
+			}
+
+			m.log.Print("deleting signed ingress certificate")
+			err = m.keyvault.DeleteCertificate(ctx, m.doc.ID+"-ingress")
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	m.log.Printf("deleting resource group %s", resourceGroup)

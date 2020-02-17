@@ -128,15 +128,18 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			i.installResources,
 			i.createPrivateEndpoint,
 			i.updateAPIIP,
+			i.createCertificates,
 			i.waitForBootstrapConfigmap,
 			i.incrInstallPhase,
 		},
 		api.InstallPhaseRemoveBootstrap: {
 			i.removeBootstrap,
+			i.configureAPIServerCertificate,
 			i.updateConsoleBranding,
 			i.waitForClusterVersion,
 			i.disableUpdates,
 			i.updateRouterIP,
+			i.configureIngressCertificate,
 			i.endOfInstallPhase,
 		},
 	}
