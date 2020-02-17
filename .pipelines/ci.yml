@@ -46,14 +46,20 @@ jobs:
           goroot: ${{ variables.GOROOT }}
           modulePath: ${{ variables.modulePath }}
       - script: |
-          set -x
+          set -xe
           make test-go
           [[ -z "$(git status -s)" ]]
+        workingDirectory: "${{ variables.modulePath }}"
+        displayName: "🧪Run Golang Unit Tests"
+
+      - script: |
           go run ./vendor/github.com/jstemmer/go-junit-report/go-junit-report.go < uts.txt > report.xml
           go run ./vendor/github.com/axw/gocov/gocov/*.go convert cover.out > coverage.json
           go run ./vendor/github.com/AlekSi/gocov-xml/gocov-xml.go < coverage.json > coverage.xml
         workingDirectory: "${{ variables.modulePath }}"
-        displayName: "🧪Run Golang Unit Tests"
+        displayName: "⚙️ Process Reports"
+        condition: succeededOrFailed()
+
       - task: PublishTestResults@2
         displayName: "📊 Publish tests results"
         inputs:
