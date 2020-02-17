@@ -89,6 +89,11 @@
                                 "paths": [
                                     "/clusterResourceGroupIdKey"
                                 ]
+                            },
+                            {
+                                "paths": [
+                                    "/clientIdKey"
+                                ]
                             }
                         ]
                     }

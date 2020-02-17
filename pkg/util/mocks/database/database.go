@@ -298,6 +298,21 @@ func (mr *MockOpenShiftClustersMockRecorder) Update(arg0, arg1 interface{}) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockOpenShiftClusters)(nil).Update), arg0, arg1)
 }
 
+// ValidateUniqueKey mocks base method
+func (m *MockOpenShiftClusters) ValidateUniqueKey(arg0 context.Context, arg1, arg2, arg3 string) (*api.OpenShiftClusterDocuments, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateUniqueKey", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(*api.OpenShiftClusterDocuments)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ValidateUniqueKey indicates an expected call of ValidateUniqueKey
+func (mr *MockOpenShiftClustersMockRecorder) ValidateUniqueKey(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateUniqueKey", reflect.TypeOf((*MockOpenShiftClusters)(nil).ValidateUniqueKey), arg0, arg1, arg2, arg3)
+}
+
 // MockSubscriptions is a mock of Subscriptions interface
 type MockSubscriptions struct {
 	ctrl     *gomock.Controller

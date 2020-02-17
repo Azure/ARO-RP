@@ -543,7 +543,7 @@ func (g *generator) clustersKeyvault() *arm.Resource {
 			},
 			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{},
 		},
-		Name:     to.StringPtr("[concat(parameters('keyvaultPrefix'), '-clusters')]"),
+		Name:     to.StringPtr("[concat(parameters('keyvaultPrefix'), '" + kvClusterSuffix + "')]"),
 		Type:     to.StringPtr("Microsoft.KeyVault/vaults"),
 		Location: to.StringPtr("[resourceGroup().location]"),
 		Tags: map[string]*string{
@@ -579,7 +579,7 @@ func (g *generator) serviceKeyvault() *arm.Resource {
 			},
 			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{},
 		},
-		Name:     to.StringPtr("[concat(parameters('keyvaultPrefix'), '-service')]"),
+		Name:     to.StringPtr("[concat(parameters('keyvaultPrefix'), '" + kvServiceSuffix + "')]"),
 		Type:     to.StringPtr("Microsoft.KeyVault/vaults"),
 		Location: to.StringPtr("[resourceGroup().location]"),
 		Tags: map[string]*string{
@@ -755,6 +755,11 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 										"/clusterResourceGroupIdKey",
 									},
 								},
+								{
+									Paths: &[]string{
+										"/clientIdKey",
+									},
+								},
 							},
 						},
 					},
@@ -915,6 +920,17 @@ func (g *generator) template() *arm.Template {
 			typ = "securestring"
 		}
 		t.Parameters[param] = &arm.TemplateParameter{Type: typ}
+		if param == "keyvaultPrefix" {
+			t.Parameters[param] = &arm.TemplateParameter{
+				Type: typ,
+				MaxLength: 24 - func(a, b int) int {
+					if a > b {
+						return a
+					}
+					return b
+				}(len(kvClusterSuffix), len(kvServiceSuffix)),
+			}
+		}
 	}
 
 	if g.production {

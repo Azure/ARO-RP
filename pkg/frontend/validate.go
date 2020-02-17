@@ -44,3 +44,22 @@ func (f *frontend) validateSubscriptionState(ctx context.Context, key string, al
 
 	return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionState, "", "Request is not allowed in subscription in state '%s'.", doc.Subscription.State)
 }
+
+// validateOpenShiftUniqueKey returns which unique key if causing a 412 error
+func (f *frontend) validateOpenShiftUniqueKey(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
+	docs, err := f.db.OpenShiftClusters.GetByClientID(ctx, doc.PartitionKey, doc.ClientIDKey)
+	if err != nil {
+		return err
+	}
+	if docs.Count != 0 {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeDuplicateClientID, "", "The provided client ID '%s' is already in use by a cluster.", doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientID)
+	}
+	docs, err = f.db.OpenShiftClusters.GetByClusterResourceGroupID(ctx, doc.PartitionKey, doc.ClusterResourceGroupIDKey)
+	if err != nil {
+		return err
+	}
+	if docs.Count != 0 {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeDuplicateResourceGroup, "", "The provided resource group '%s' already contains a cluster.", doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
+	}
+	return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
+}

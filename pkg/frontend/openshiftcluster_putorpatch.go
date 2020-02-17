@@ -130,6 +130,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 
 	if isCreate {
 		doc.ClusterResourceGroupIDKey = strings.ToLower(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
+		doc.ClientIDKey = strings.ToLower(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientID)
 		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateCreating
 		doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.3.0"
 
@@ -166,7 +167,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 	if isCreate {
 		newdoc, err := f.db.OpenShiftClusters.Create(ctx, doc)
 		if cosmosdb.IsErrorStatusCode(err, http.StatusPreconditionFailed) {
-			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidResourceGroup, "", "The provided resource group '%s' already contains a cluster.", doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
+			return nil, f.validateOpenShiftUniqueKey(ctx, doc)
 		}
 		doc = newdoc
 	} else {

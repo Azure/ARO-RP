@@ -524,6 +524,114 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      "400: RequestNotAllowed: : Request is not allowed on cluster whose deletion failed. Delete the cluster.",
 		},
+		{
+			name:       "creating cluster failing when provided cluster resource group already contains a cluster",
+			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName", mockSubID),
+			request: func(oc *v20191231preview.OpenShiftCluster) {
+				oc.Properties.ServicePrincipalProfile.ClientID = mockSubID
+				oc.Properties.ClusterProfile.ResourceGroupID = fmt.Sprintf("/subscriptions/%s/resourcegroups/aro-vjb21wca", mockSubID)
+			},
+			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters) {
+				openShiftClusters.EXPECT().
+					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
+					Return(nil, &cosmosdb.Error{StatusCode: http.StatusNotFound})
+
+				expectAsyncOperationDocumentCreate(asyncOperations, strings.ToLower(tt.resourceID), api.ProvisioningStateCreating)
+
+				clusterdoc := &api.OpenShiftClusterDocument{
+					Key:    strings.ToLower(tt.resourceID),
+					Bucket: 1,
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   tt.resourceID,
+						Name: "resourceName",
+						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+						Properties: api.Properties{
+							ProvisioningState: api.ProvisioningStateCreating,
+							ClusterProfile: api.ClusterProfile{
+								Version:         "4.3.0",
+								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourcegroups/aro-vjb21wca", mockSubID),
+							},
+							ServicePrincipalProfile: api.ServicePrincipalProfile{
+								TenantID: "11111111-1111-1111-1111-111111111111",
+							},
+						},
+					},
+				}
+
+				openShiftClusters.EXPECT().
+					Create(gomock.Any(), gomock.Any()).
+					Return(clusterdoc, &cosmosdb.Error{StatusCode: http.StatusPreconditionFailed})
+				openShiftClusters.EXPECT().
+					GetByClientID(gomock.Any(), clusterdoc.PartitionKey, mockSubID).
+					Return(&api.OpenShiftClusterDocuments{
+						Count:                     0,
+						OpenShiftClusterDocuments: []*api.OpenShiftClusterDocument{},
+					}, nil)
+				openShiftClusters.EXPECT().
+					GetByClusterResourceGroupID(gomock.Any(), clusterdoc.PartitionKey, fmt.Sprintf("/subscriptions/%s/resourcegroups/aro-vjb21wca", mockSubID)).
+					Return(&api.OpenShiftClusterDocuments{
+						Count: 1,
+						OpenShiftClusterDocuments: []*api.OpenShiftClusterDocument{
+							&api.OpenShiftClusterDocument{
+								ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/aro-vjb21wca", mockSubID),
+							},
+						},
+					}, nil)
+			},
+			wantAsync:      true,
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      fmt.Sprintf("400: DuplicateResourceGroup: : The provided resource group '/subscriptions/%s/resourcegroups/aro-vjb21wca' already contains a cluster.", mockSubID),
+		},
+		{
+			name:       "creating cluster failing when provided client ID is not unique",
+			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName", mockSubID),
+			request: func(oc *v20191231preview.OpenShiftCluster) {
+				oc.Properties.ServicePrincipalProfile.ClientID = mockSubID
+			},
+			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters) {
+				openShiftClusters.EXPECT().
+					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
+					Return(nil, &cosmosdb.Error{StatusCode: http.StatusNotFound})
+
+				expectAsyncOperationDocumentCreate(asyncOperations, strings.ToLower(tt.resourceID), api.ProvisioningStateCreating)
+
+				clusterdoc := &api.OpenShiftClusterDocument{
+					Key:    strings.ToLower(tt.resourceID),
+					Bucket: 1,
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   tt.resourceID,
+						Name: "resourceName",
+						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+						Properties: api.Properties{
+							ProvisioningState: api.ProvisioningStateCreating,
+							ClusterProfile: api.ClusterProfile{
+								Version: "4.3.0",
+							},
+							ServicePrincipalProfile: api.ServicePrincipalProfile{
+								TenantID: "11111111-1111-1111-1111-111111111111",
+							},
+						},
+					},
+				}
+
+				openShiftClusters.EXPECT().
+					Create(gomock.Any(), gomock.Any()).
+					Return(clusterdoc, &cosmosdb.Error{StatusCode: http.StatusPreconditionFailed})
+				openShiftClusters.EXPECT().
+					GetByClientID(gomock.Any(), clusterdoc.PartitionKey, mockSubID).
+					Return(&api.OpenShiftClusterDocuments{
+						Count: 1,
+						OpenShiftClusterDocuments: []*api.OpenShiftClusterDocument{
+							&api.OpenShiftClusterDocument{
+								ClientIDKey: mockSubID,
+							},
+						},
+					}, nil)
+			},
+			wantAsync:      true,
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      fmt.Sprintf("400: DuplicateClientID: : The provided client ID '%s' is already in use by a cluster.", mockSubID),
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			defer cli.CloseIdleConnections()

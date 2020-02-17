@@ -43,7 +43,7 @@ var (
 	CloudErrorCodeInvalidParameter                   = "InvalidParameter"
 	CloudErrorCodeInvalidRequestContent              = "InvalidRequestContent"
 	CloudErrorCodeInvalidResource                    = "InvalidResource"
-	CloudErrorCodeInvalidResourceGroup               = "InvalidResourceGroup"
+	CloudErrorCodeDuplicateResourceGroup             = "DuplicateResourceGroup"
 	CloudErrorCodeInvalidResourceNamespace           = "InvalidResourceNamespace"
 	CloudErrorCodeInvalidResourceType                = "InvalidResourceType"
 	CloudErrorCodeInvalidSubscriptionID              = "InvalidSubscriptionID"
@@ -64,6 +64,7 @@ var (
 	CloudErrorCodeInvalidServicePrincipalPermissions = "InvalidServicePrincipalPermissions"
 	CloudErrorCodeInvalidLocation                    = "InvalidLocation"
 	CloudErrorCodeInvalidOperationID                 = "InvalidOperationID"
+	CloudErrorCodeDuplicateClientID                  = "DuplicateClientID"
 )
 
 // NewCloudError returns a new CloudError
