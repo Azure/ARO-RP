@@ -281,16 +281,13 @@ func (c *openShiftClusters) EndLease(ctx context.Context, key string, provisioni
 		doc.LeaseOwner = ""
 		doc.LeaseExpires = 0
 
-		if provisioningState == api.ProvisioningStateSucceeded {
+		if provisioningState != api.ProvisioningStateFailed {
 			doc.Dequeues = 0
 		}
-		// If EndLease is called while cluster is still in Creating phase,
-		// we flush dequeues count and don't clean AsyncOperationID as this is
-		// just handover between phases
-		if provisioningState != api.ProvisioningStateCreating {
+		// If EndLease is called while cluster is still in terminal phase,
+		// we clean AsyncOperationID. Otherwise it just handover between backends.
+		if provisioningState.IsTerminal() {
 			doc.AsyncOperationID = ""
-		} else {
-			doc.Dequeues = 0
 		}
 
 		return nil
