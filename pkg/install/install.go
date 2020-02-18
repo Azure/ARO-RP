@@ -21,6 +21,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/date"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
+	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	"github.com/openshift/installer/pkg/asset/ignition/bootstrap"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
@@ -69,6 +70,7 @@ type Installer struct {
 	kubernetescli kubernetes.Interface
 	operatorcli   operatorclient.Interface
 	configcli     configclient.Interface
+	securitycli   securityclient.Interface
 }
 
 // NewInstaller creates a new Installer
@@ -139,6 +141,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			i.createCertificates,
 			i.initializeKubernetesClients,
 			i.waitForBootstrapConfigmap,
+			i.ensureGenevaLogging,
 			i.incrInstallPhase,
 		},
 		api.InstallPhaseRemoveBootstrap: {
@@ -308,6 +311,11 @@ func (i *Installer) initializeKubernetesClients(ctx context.Context) error {
 	}
 
 	i.operatorcli, err = operatorclient.NewForConfig(restConfig)
+	if err != nil {
+		return err
+	}
+
+	i.securitycli, err = securityclient.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}

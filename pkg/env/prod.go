@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"strings"
 	"time"
@@ -47,6 +48,8 @@ type prod struct {
 	fpCertificate        *x509.Certificate
 	fpPrivateKey         *rsa.PrivateKey
 	fpServicePrincipalID string
+
+	genevaLoggingEnvironment string
 }
 
 func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata, armClientAuthorizer, adminClientAuthorizer clientauthorizer.ClientAuthorizer) (*prod, error) {
@@ -56,9 +59,10 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 	}
 
 	p := &prod{
-		InstanceMetadata:      instancemetadata,
-		armClientAuthorizer:   armClientAuthorizer,
-		adminClientAuthorizer: adminClientAuthorizer,
+		genevaLoggingEnvironment: "Diagnostics Prod",
+		InstanceMetadata:         instancemetadata,
+		armClientAuthorizer:      armClientAuthorizer,
+		adminClientAuthorizer:    adminClientAuthorizer,
 
 		keyvault: basekeyvault.New(kvAuthorizer),
 	}
@@ -244,6 +248,18 @@ func (p *prod) GetCertificateSecret(ctx context.Context, secretName string) (key
 	}
 
 	return pem.Parse([]byte(*bundle.Value))
+}
+
+func (p *prod) GenevaLoggingSecret() (*rsa.PrivateKey, []*x509.Certificate, error) {
+	b, err := ioutil.ReadFile("/etc/cluster-mdsd.pem")
+	if err != nil {
+		return nil, nil, err
+	}
+	return pem.Parse(b)
+}
+
+func (p *prod) GenevaLoggingEnvironment() string {
+	return p.genevaLoggingEnvironment
 }
 
 func (p *prod) GetSecret(ctx context.Context, secretName string) ([]byte, error) {
