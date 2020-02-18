@@ -68,11 +68,12 @@ type ProvisioningState string
 
 // ProvisioningState constants
 const (
-	ProvisioningStateCreating  ProvisioningState = "Creating"
-	ProvisioningStateUpdating  ProvisioningState = "Updating"
-	ProvisioningStateDeleting  ProvisioningState = "Deleting"
-	ProvisioningStateSucceeded ProvisioningState = "Succeeded"
-	ProvisioningStateFailed    ProvisioningState = "Failed"
+	ProvisioningStateCreating      ProvisioningState = "Creating"
+	ProvisioningStateUpdating      ProvisioningState = "Updating"
+	ProvisioningStateAdminUpdating ProvisioningState = "AdminUpdating"
+	ProvisioningStateDeleting      ProvisioningState = "Deleting"
+	ProvisioningStateSucceeded     ProvisioningState = "Succeeded"
+	ProvisioningStateFailed        ProvisioningState = "Failed"
 )
 
 type ClusterProfile struct {

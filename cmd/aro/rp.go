@@ -13,6 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	_ "github.com/Azure/ARO-RP/pkg/api/admin"
 	_ "github.com/Azure/ARO-RP/pkg/api/v20191231preview"
 	"github.com/Azure/ARO-RP/pkg/backend"
 	"github.com/Azure/ARO-RP/pkg/database"

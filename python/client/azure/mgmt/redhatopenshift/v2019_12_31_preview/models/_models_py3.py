@@ -341,8 +341,8 @@ class OpenShiftCluster(Resource):
     :param location: The geo-location where the resource lives
     :type location: str
     :param provisioning_state: The cluster provisioning state (immutable).
-     Possible values include: 'Creating', 'Deleting', 'Failed', 'Succeeded',
-     'Updating'
+     Possible values include: 'AdminUpdating', 'Creating', 'Deleting',
+     'Failed', 'Succeeded', 'Updating'
     :type provisioning_state: str or
      ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.enum
     :param cluster_profile: The cluster profile.
