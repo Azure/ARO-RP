@@ -117,6 +117,90 @@ func (g *generator) rpvnet() *arm.Resource {
 	}
 }
 
+func (g *generator) dummyVM() []*arm.Resource {
+	return []*arm.Resource{
+		&arm.Resource{
+			Resource: mgmtnetwork.Interface{
+				Location: to.StringPtr("[resourceGroup().location]"),
+				InterfacePropertiesFormat: &mgmtnetwork.InterfacePropertiesFormat{
+					IPConfigurations: &[]mgmtnetwork.InterfaceIPConfiguration{
+						{
+							Name: to.StringPtr("pipConfig"),
+							InterfaceIPConfigurationPropertiesFormat: &mgmtnetwork.InterfaceIPConfigurationPropertiesFormat{
+								Subnet: &mgmtnetwork.Subnet{
+									ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets','rp-pe-vnet-001','rp-pe-subnet')]"),
+								},
+								PublicIPAddress: nil,
+							},
+						},
+					},
+				},
+				Name: to.StringPtr("dummy-nic-001"),
+				Type: to.StringPtr("Microsoft.Network/networkInterfaces"),
+			},
+			DependsOn: []string{
+				"[resourceId('Microsoft.Network/virtualNetworks', 'rp-pe-vnet-001')]",
+			},
+			APIVersion: apiVersions["network"],
+		},
+		&arm.Resource{
+			Resource: mgmtcompute.VirtualMachine{
+				Location: to.StringPtr("[resourceGroup().location]"),
+				VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
+					HardwareProfile: &mgmtcompute.HardwareProfile{
+						VMSize: mgmtcompute.VirtualMachineSizeTypesStandardD2sV3,
+					},
+					StorageProfile: &mgmtcompute.StorageProfile{
+						ImageReference: &mgmtcompute.ImageReference{
+							Publisher: to.StringPtr("RedHat"),
+							Offer:     to.StringPtr("RHEL"),
+							Sku:       to.StringPtr("8"),
+							Version:   to.StringPtr("latest"),
+						},
+						OsDisk: &mgmtcompute.OSDisk{
+							CreateOption: mgmtcompute.DiskCreateOptionTypesFromImage,
+							ManagedDisk: &mgmtcompute.ManagedDiskParameters{
+								StorageAccountType: mgmtcompute.StorageAccountTypesPremiumLRS,
+							},
+						},
+					},
+					OsProfile: &mgmtcompute.OSProfile{
+						ComputerName:  to.StringPtr("dummy-001"),
+						AdminUsername: to.StringPtr("cloud-user"),
+						AdminPassword: nil,
+						LinuxConfiguration: &mgmtcompute.LinuxConfiguration{
+							SSH: &mgmtcompute.SSHConfiguration{
+								PublicKeys: &[]mgmtcompute.SSHPublicKey{
+									{ //dummy SSH key - no matching private key
+										Path:    to.StringPtr("/home/cloud-user/.ssh/authorized_keys"),
+										KeyData: to.StringPtr("[parameters('sshPublicKey')]"),
+									},
+								},
+							},
+						},
+					},
+					NetworkProfile: &mgmtcompute.NetworkProfile{
+						NetworkInterfaces: &[]mgmtcompute.NetworkInterfaceReference{
+							{
+								ID: to.StringPtr("[resourceId('Microsoft.Network/networkInterfaces','dummy-nic-001')]"),
+								NetworkInterfaceReferenceProperties: &mgmtcompute.NetworkInterfaceReferenceProperties{
+									Primary: to.BoolPtr(true),
+								},
+							},
+						},
+					},
+				},
+				Type: to.StringPtr("Microsoft.Compute/virtualMachines"),
+				Name: to.StringPtr("dummy-001"),
+			},
+			DependsOn: []string{
+				"[resourceId('Microsoft.Network/networkInterfaces','dummy-nic-001')]",
+			},
+			APIVersion: apiVersions["compute"],
+		},
+	}
+}
+
 func (g *generator) pevnet() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.VirtualNetwork{
@@ -905,6 +989,7 @@ func (g *generator) template() *arm.Template {
 	} else {
 		params = append(params,
 			"adminObjectId",
+			"sshPublicKey",
 		)
 	}
 
@@ -941,7 +1026,7 @@ func (g *generator) template() *arm.Template {
 		g.rpvnet(), g.pevnet(),
 		g.halfPeering("rp-vnet", "rp-pe-vnet-001"),
 		g.halfPeering("rp-pe-vnet-001", "rp-vnet"))
-
+	t.Resources = append(t.Resources, g.dummyVM()...)
 	if g.production {
 		t.Resources = append(t.Resources, g.cosmosdb("'ARO'")...)
 	} else {

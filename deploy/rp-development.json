@@ -19,6 +19,9 @@
         },
         "rpServicePrincipalId": {
             "type": "string"
+        },
+        "sshPublicKey": {
+            "type": "string"
         }
     },
     "resources": [
@@ -177,6 +180,79 @@
                 "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]"
             ],
             "location": "[resourceGroup().location]"
+        },
+        {
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "properties": {
+                            "subnet": {
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets','rp-pe-vnet-001','rp-pe-subnet')]"
+                            }
+                        },
+                        "name": "pipConfig"
+                    }
+                ]
+            },
+            "name": "dummy-nic-001",
+            "type": "Microsoft.Network/networkInterfaces",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2019-07-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', 'rp-pe-vnet-001')]"
+            ]
+        },
+        {
+            "properties": {
+                "hardwareProfile": {
+                    "vmSize": "Standard_D2s_v3"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "RedHat",
+                        "offer": "RHEL",
+                        "sku": "8",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "createOption": "FromImage",
+                        "managedDisk": {
+                            "storageAccountType": "Premium_LRS"
+                        }
+                    }
+                },
+                "osProfile": {
+                    "computerName": "dummy-001",
+                    "adminUsername": "cloud-user",
+                    "linuxConfiguration": {
+                        "ssh": {
+                            "publicKeys": [
+                                {
+                                    "path": "/home/cloud-user/.ssh/authorized_keys",
+                                    "keyData": "[parameters('sshPublicKey')]"
+                                }
+                            ]
+                        }
+                    }
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "properties": {
+                                "primary": true
+                            },
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces','dummy-nic-001')]"
+                        }
+                    ]
+                }
+            },
+            "name": "dummy-001",
+            "type": "Microsoft.Compute/virtualMachines",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2019-03-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkInterfaces','dummy-nic-001')]"
+            ]
         },
         {
             "kind": "GlobalDocumentDB",
