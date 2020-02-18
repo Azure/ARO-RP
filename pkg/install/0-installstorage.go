@@ -6,6 +6,7 @@ package install
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"reflect"
 	"strings"
 	"time"
@@ -37,7 +38,12 @@ var apiVersions = map[string]string{
 }
 
 func (i *Installer) createDNS(ctx context.Context) error {
-	return i.dns.Create(ctx, i.doc.OpenShiftCluster)
+	err := i.dns.Create(ctx, i.doc.OpenShiftCluster)
+	if detailedErr, ok := err.(autorest.DetailedError); ok &&
+		strings.Contains(detailedErr.Message, "already registered") {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeDuplicateDomain, "", "The provided domain '%s' is already in use by a cluster.", err)
+	}
+	return err
 }
 
 func (i *Installer) installStorage(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) error {

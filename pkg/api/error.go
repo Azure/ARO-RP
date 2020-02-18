@@ -65,6 +65,7 @@ var (
 	CloudErrorCodeInvalidLocation                    = "InvalidLocation"
 	CloudErrorCodeInvalidOperationID                 = "InvalidOperationID"
 	CloudErrorCodeDuplicateClientID                  = "DuplicateClientID"
+	CloudErrorCodeDuplicateDomain                    = "DuplicateDomain"
 )
 
 // NewCloudError returns a new CloudError
