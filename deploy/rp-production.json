@@ -73,6 +73,9 @@
         },
         "vmssDomainNameLabel": {
             "type": "string"
+        },
+        "vmssName": {
+            "type": "string"
         }
     },
     "resources": [
@@ -252,7 +255,7 @@
                     "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity')]": {}
                 }
             },
-            "name": "rp-vmss",
+            "name": "[concat('rp-vmss-', parameters('vmssName'))]",
             "type": "Microsoft.Compute/virtualMachineScaleSets",
             "location": "[resourceGroup().location]",
             "apiVersion": "2019-03-01",

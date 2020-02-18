@@ -565,7 +565,7 @@ rm /etc/motd.d/*
 					"[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity')]": {},
 				},
 			},
-			Name:     to.StringPtr("rp-vmss"),
+			Name:     to.StringPtr("[concat('rp-vmss-', parameters('vmssName'))]"),
 			Type:     to.StringPtr("Microsoft.Compute/virtualMachineScaleSets"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
@@ -988,6 +988,7 @@ func (g *generator) template() *arm.Template {
 			"rpImage",
 			"rpImageAuth",
 			"vmssDomainNameLabel",
+			"vmssName",
 		)
 	} else {
 		params = append(params,
