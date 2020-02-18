@@ -7,24 +7,15 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/util/immutable"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
-)
-
-var (
-	rxResourceGroupID = regexp.MustCompile(`(?i)^/subscriptions/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/resourceGroups/[-a-z0-9_().]{0,89}[-a-z0-9_()]$`)
-	rxSubnetID        = regexp.MustCompile(`(?i)^/subscriptions/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/resourceGroups/[-a-z0-9_().]{0,89}[-a-z0-9_()]/providers/Microsoft\.Network/virtualNetworks/[-a-z0-9_.]{2,64}/subnets/[-a-z0-9_.]{2,80}$`)
-	rxDomainName      = regexp.MustCompile(`^` +
-		`([a-z0-9]|[a-z0-9][-a-z0-9]{0,61}[a-z0-9])` +
-		`(\.([a-z0-9]|[a-z0-9][-a-z0-9]{0,61}[a-z0-9]))*` +
-		`$`)
 )
 
 type openShiftClusterStaticValidator struct {
@@ -121,7 +112,7 @@ func (sv *openShiftClusterStaticValidator) validateProperties(path string, p *Pr
 }
 
 func (sv *openShiftClusterStaticValidator) validateClusterProfile(path string, cp *ClusterProfile) error {
-	if !rxDomainName.MatchString(cp.Domain) {
+	if !validate.RxDomainName.MatchString(cp.Domain) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".domain", "The provided domain '%s' is invalid.", cp.Domain)
 	}
 	switch cp.Version {
@@ -129,7 +120,7 @@ func (sv *openShiftClusterStaticValidator) validateClusterProfile(path string, c
 	default:
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".version", "The provided version '%s' is invalid.", cp.Version)
 	}
-	if !rxResourceGroupID.MatchString(cp.ResourceGroupID) {
+	if !validate.RxResourceGroupID.MatchString(cp.ResourceGroupID) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".resourceGroupId", "The provided resource group '%s' is invalid.", cp.ResourceGroupID)
 	}
 	if strings.Split(cp.ResourceGroupID, "/")[2] != sv.r.SubscriptionID {
@@ -198,7 +189,7 @@ func (sv *openShiftClusterStaticValidator) validateMasterProfile(path string, mp
 	default:
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", "The provided master VM size '%s' is invalid.", mp.VMSize)
 	}
-	if !rxSubnetID.MatchString(mp.SubnetID) {
+	if !validate.RxSubnetID.MatchString(mp.SubnetID) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".subnetId", "The provided master VM subnet '%s' is invalid.", mp.SubnetID)
 	}
 	sr, err := azure.ParseResourceID(mp.SubnetID)
@@ -224,7 +215,7 @@ func (sv *openShiftClusterStaticValidator) validateWorkerProfile(path string, wp
 	if wp.DiskSizeGB < 128 {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".diskSizeGB", "The provided worker disk size '%d' is invalid.", wp.DiskSizeGB)
 	}
-	if !rxSubnetID.MatchString(wp.SubnetID) {
+	if !validate.RxSubnetID.MatchString(wp.SubnetID) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".subnetId", "The provided worker VM subnet '%s' is invalid.", wp.SubnetID)
 	}
 	workerVnetID, _, err := subnet.Split(wp.SubnetID)
