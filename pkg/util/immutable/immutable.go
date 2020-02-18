@@ -31,11 +31,30 @@ func validate(path string, v, w reflect.Value, ignoreCase bool) error {
 	}
 
 	switch v.Kind() {
-	case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32,
-		reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16,
-		reflect.Uint32, reflect.Uint64, reflect.Uintptr, reflect.Float32,
-		reflect.Float64, reflect.Complex64, reflect.Complex128:
-		if v.Interface() != w.Interface() {
+	case reflect.Bool:
+		if v.Bool() != w.Bool() {
+			return newValidationError(path)
+		}
+
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32,
+		reflect.Int64:
+		if v.Int() != w.Int() {
+			return newValidationError(path)
+		}
+
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32,
+		reflect.Uint64, reflect.Uintptr:
+		if v.Uint() != w.Uint() {
+			return newValidationError(path)
+		}
+
+	case reflect.Float32, reflect.Float64:
+		if v.Float() != w.Float() {
+			return newValidationError(path)
+		}
+
+	case reflect.Complex64, reflect.Complex128:
+		if v.Complex() != w.Complex() {
 			return newValidationError(path)
 		}
 
