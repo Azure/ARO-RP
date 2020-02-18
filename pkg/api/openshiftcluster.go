@@ -102,6 +102,11 @@ const (
 	ProvisioningStateFailed    ProvisioningState = "Failed"
 )
 
+// IsTerminal returns true if state is Terminal
+func (t ProvisioningState) IsTerminal() bool {
+	return ProvisioningStateFailed == t || ProvisioningStateSucceeded == t
+}
+
 // ClusterProfile represents a cluster profile.
 type ClusterProfile struct {
 	MissingFields

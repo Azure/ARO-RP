@@ -218,16 +218,19 @@ func (ocb *openShiftClusterBackend) endLease(ctx context.Context, stop func(), d
 	if provisioningState == api.ProvisioningStateFailed {
 		failedProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
 	}
-
-	err := ocb.updateAsyncOperation(ctx, doc.AsyncOperationID, doc.OpenShiftCluster, provisioningState, failedProvisioningState)
-	if err != nil {
-		return err
+	// If cluster is in the non-terminal state we are still in the same
+	// operational context and AsyncOperation should not be updated.
+	if provisioningState.IsTerminal() {
+		err := ocb.updateAsyncOperation(ctx, doc.AsyncOperationID, doc.OpenShiftCluster, provisioningState, failedProvisioningState)
+		if err != nil {
+			return err
+		}
 	}
 
 	if stop != nil {
 		stop()
 	}
 
-	_, err = ocb.db.OpenShiftClusters.EndLease(ctx, doc.Key, provisioningState, failedProvisioningState)
+	_, err := ocb.db.OpenShiftClusters.EndLease(ctx, doc.Key, provisioningState, failedProvisioningState)
 	return err
 }
