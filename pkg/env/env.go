@@ -36,6 +36,8 @@ type Interface interface {
 	ManagedDomain(string) (string, error)
 	MetricsSocketPath() string
 	Zones(vmSize string) ([]string, error)
+	GenevaLoggingSecret() (*rsa.PrivateKey, []*x509.Certificate, error)
+	GenevaLoggingEnvironment() string
 }
 
 func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {

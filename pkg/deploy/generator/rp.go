@@ -426,6 +426,9 @@ az keyvault secret download --file /etc/mdsd.pem --id "${SVCVAULTURI}secrets/rp-
 chown syslog:syslog /etc/mdsd.pem
 chmod 0600 /etc/mdsd.pem
 
+az keyvault secret download --file /etc/cluster-mdsd.pem --id "${SVCVAULTURI}secrets/cluster-mdsd"
+chmod 0600 /etc/cluster-mdsd.pem
+
 az logout
 
 cat >/etc/default/mdsd <<EOF
