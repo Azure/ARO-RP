@@ -436,7 +436,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				}
 			},
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.Install.Now = time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC).AddDate(1, 0, 0)
+				oc.Properties.Install.Now = time.Date(1971, 1, 1, 0, 0, 0, 0, time.UTC)
 			},
 			wantErr: "400: PropertyChangeNotAllowed: properties.install.now.ext: Changing property 'properties.install.now.ext' is not allowed.",
 		},
