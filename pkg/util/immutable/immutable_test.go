@@ -5,6 +5,7 @@ package immutable
 
 import (
 	"testing"
+	"time"
 )
 
 type ts struct {
@@ -14,6 +15,8 @@ type ts struct {
 	Map         map[string]string `json:"map,omitempty"`
 	EmptyNoJSON string            `mutable:"false"` // handle no json tag
 	None        string            // default to immutable
+	Time        time.Time         `json:"time,omitempty"`
+	MutableTime time.Time         `json:"mutableTime,omitempty" mutable:"true"`
 }
 
 func TestValidate(t *testing.T) {
@@ -88,6 +91,19 @@ func TestValidate(t *testing.T) {
 				s.None = "after"
 			},
 			wantErr: "Changing property 'None' is not allowed.",
+		},
+		{
+			name: "can NOT change Time",
+			modify: func(s *ts) {
+				s.Time = time.Unix(0, 0)
+			},
+			wantErr: "Changing property 'time.ext' is not allowed.",
+		},
+		{
+			name: "can change MutableTime",
+			modify: func(s *ts) {
+				s.MutableTime = time.Unix(0, 0)
+			},
 		},
 	}
 	for _, tt := range tests {
