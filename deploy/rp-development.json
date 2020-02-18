@@ -187,7 +187,7 @@
                     {
                         "properties": {
                             "subnet": {
-                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets','rp-pe-vnet-001','rp-pe-subnet')]"
+                                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-pe-vnet-001', 'rp-pe-subnet')]"
                             }
                         },
                         "name": "pipConfig"
@@ -222,7 +222,7 @@
                     }
                 },
                 "osProfile": {
-                    "computerName": "dummy-001",
+                    "computerName": "dummy-vm-001",
                     "adminUsername": "cloud-user",
                     "linuxConfiguration": {
                         "ssh": {
@@ -241,17 +241,17 @@
                             "properties": {
                                 "primary": true
                             },
-                            "id": "[resourceId('Microsoft.Network/networkInterfaces','dummy-nic-001')]"
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', 'dummy-nic-001')]"
                         }
                     ]
                 }
             },
-            "name": "dummy-001",
+            "name": "dummy-vm-001",
             "type": "Microsoft.Compute/virtualMachines",
             "location": "[resourceGroup().location]",
             "apiVersion": "2019-03-01",
             "dependsOn": [
-                "[resourceId('Microsoft.Network/networkInterfaces','dummy-nic-001')]"
+                "[resourceId('Microsoft.Network/networkInterfaces', 'dummy-nic-001')]"
             ]
         },
         {

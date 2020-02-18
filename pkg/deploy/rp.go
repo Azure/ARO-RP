@@ -119,33 +119,31 @@ func (g *generator) rpvnet() *arm.Resource {
 
 func (g *generator) dummyVM() []*arm.Resource {
 	return []*arm.Resource{
-		&arm.Resource{
+		{
 			Resource: mgmtnetwork.Interface{
-				Location: to.StringPtr("[resourceGroup().location]"),
 				InterfacePropertiesFormat: &mgmtnetwork.InterfacePropertiesFormat{
 					IPConfigurations: &[]mgmtnetwork.InterfaceIPConfiguration{
 						{
-							Name: to.StringPtr("pipConfig"),
 							InterfaceIPConfigurationPropertiesFormat: &mgmtnetwork.InterfaceIPConfigurationPropertiesFormat{
 								Subnet: &mgmtnetwork.Subnet{
-									ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets','rp-pe-vnet-001','rp-pe-subnet')]"),
+									ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-pe-vnet-001', 'rp-pe-subnet')]"),
 								},
-								PublicIPAddress: nil,
 							},
+							Name: to.StringPtr("pipConfig"),
 						},
 					},
 				},
-				Name: to.StringPtr("dummy-nic-001"),
-				Type: to.StringPtr("Microsoft.Network/networkInterfaces"),
+				Name:     to.StringPtr("dummy-nic-001"),
+				Type:     to.StringPtr("Microsoft.Network/networkInterfaces"),
+				Location: to.StringPtr("[resourceGroup().location]"),
 			},
 			DependsOn: []string{
 				"[resourceId('Microsoft.Network/virtualNetworks', 'rp-pe-vnet-001')]",
 			},
 			APIVersion: apiVersions["network"],
 		},
-		&arm.Resource{
+		{
 			Resource: mgmtcompute.VirtualMachine{
-				Location: to.StringPtr("[resourceGroup().location]"),
 				VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
 					HardwareProfile: &mgmtcompute.HardwareProfile{
 						VMSize: mgmtcompute.VirtualMachineSizeTypesStandardD2sV3,
@@ -165,13 +163,12 @@ func (g *generator) dummyVM() []*arm.Resource {
 						},
 					},
 					OsProfile: &mgmtcompute.OSProfile{
-						ComputerName:  to.StringPtr("dummy-001"),
+						ComputerName:  to.StringPtr("dummy-vm-001"),
 						AdminUsername: to.StringPtr("cloud-user"),
-						AdminPassword: nil,
 						LinuxConfiguration: &mgmtcompute.LinuxConfiguration{
 							SSH: &mgmtcompute.SSHConfiguration{
 								PublicKeys: &[]mgmtcompute.SSHPublicKey{
-									{ //dummy SSH key - no matching private key
+									{
 										Path:    to.StringPtr("/home/cloud-user/.ssh/authorized_keys"),
 										KeyData: to.StringPtr("[parameters('sshPublicKey')]"),
 									},
@@ -182,19 +179,20 @@ func (g *generator) dummyVM() []*arm.Resource {
 					NetworkProfile: &mgmtcompute.NetworkProfile{
 						NetworkInterfaces: &[]mgmtcompute.NetworkInterfaceReference{
 							{
-								ID: to.StringPtr("[resourceId('Microsoft.Network/networkInterfaces','dummy-nic-001')]"),
 								NetworkInterfaceReferenceProperties: &mgmtcompute.NetworkInterfaceReferenceProperties{
 									Primary: to.BoolPtr(true),
 								},
+								ID: to.StringPtr("[resourceId('Microsoft.Network/networkInterfaces', 'dummy-nic-001')]"),
 							},
 						},
 					},
 				},
-				Type: to.StringPtr("Microsoft.Compute/virtualMachines"),
-				Name: to.StringPtr("dummy-001"),
+				Name:     to.StringPtr("dummy-vm-001"),
+				Type:     to.StringPtr("Microsoft.Compute/virtualMachines"),
+				Location: to.StringPtr("[resourceGroup().location]"),
 			},
 			DependsOn: []string{
-				"[resourceId('Microsoft.Network/networkInterfaces','dummy-nic-001')]",
+				"[resourceId('Microsoft.Network/networkInterfaces', 'dummy-nic-001')]",
 			},
 			APIVersion: apiVersions["compute"],
 		},
@@ -972,6 +970,7 @@ func (g *generator) template() *arm.Template {
 		"fpServicePrincipalId",
 		"keyvaultPrefix",
 		"rpServicePrincipalId",
+		"sshPublicKey",
 	}
 	if g.production {
 		params = append(params,
@@ -983,13 +982,11 @@ func (g *generator) template() *arm.Template {
 			"pullSecret",
 			"rpImage",
 			"rpImageAuth",
-			"sshPublicKey",
 			"vmssDomainNameLabel",
 		)
 	} else {
 		params = append(params,
 			"adminObjectId",
-			"sshPublicKey",
 		)
 	}
 
