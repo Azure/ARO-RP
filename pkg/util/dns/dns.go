@@ -49,7 +49,7 @@ func (m *manager) Create(ctx context.Context, oc *api.OpenShiftCluster) error {
 	rs, err := m.recordsets.Get(ctx, m.env.ResourceGroup(), m.env.Domain(), "api."+prefix, mgmtdns.A)
 	if err == nil {
 		if rs.Metadata[resourceID] == nil || *rs.Metadata[resourceID] != oc.ID {
-			return fmt.Errorf("recordset %q already registered", "api."+prefix)
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeDuplicateDomain, "", "The provided domain '%s' is already in use by a cluster.", oc.Properties.ClusterProfile.Domain)
 		}
 
 		return nil

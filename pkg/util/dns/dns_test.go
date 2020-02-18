@@ -102,7 +102,7 @@ func TestCreate(t *testing.T) {
 						},
 					}, nil)
 			},
-			wantErr: `recordset "api.domain" already registered`,
+			wantErr: `400: DuplicateDomain: : The provided domain 'domain' is already in use by a cluster.`,
 		},
 		{
 			name: "managed, error",

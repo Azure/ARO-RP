@@ -35,7 +35,7 @@ func (ocb *openShiftClusterBackend) try(ctx context.Context) (bool, error) {
 	if doc.Dequeues > maxDequeueCount {
 		err := fmt.Errorf("dequeued %d times, failing", doc.Dequeues)
 		log.Error(err)
-		return true, ocb.endLease(ctx, nil, doc, api.ProvisioningStateFailed, fmt.Errorf("dequeued %d times, failing", err))
+		return true, ocb.endLease(ctx, nil, doc, api.ProvisioningStateFailed, err)
 	}
 
 	log.Print("dequeued")
@@ -188,7 +188,7 @@ func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, id
 			now := time.Now()
 			asyncdoc.AsyncOperation.EndTime = &now
 
-			if backendErr != nil {
+			if provisioningState == api.ProvisioningStateFailed {
 				// if type is CloudError - we want to propagate it to the
 				// asyncOperations errors. Otherwise - return generic error
 				err, ok := backendErr.(*api.CloudError)
