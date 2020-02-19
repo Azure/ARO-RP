@@ -20,10 +20,13 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/date"
+	configclient "github.com/openshift/client-go/config/clientset/versioned"
+	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	"github.com/openshift/installer/pkg/asset/ignition/bootstrap"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
 	"github.com/sirupsen/logrus"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -36,6 +39,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/privateendpoint"
+	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
@@ -61,6 +65,10 @@ type Installer struct {
 	keyvault        keyvault.Manager
 	privateendpoint privateendpoint.Manager
 	subnet          subnet.Manager
+
+	kubernetescli kubernetes.Interface
+	operatorcli   operatorclient.Interface
+	configcli     configclient.Interface
 }
 
 // NewInstaller creates a new Installer
@@ -129,10 +137,12 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			i.createPrivateEndpoint,
 			i.updateAPIIP,
 			i.createCertificates,
+			i.initializeKubernetesClients,
 			i.waitForBootstrapConfigmap,
 			i.incrInstallPhase,
 		},
 		api.InstallPhaseRemoveBootstrap: {
+			i.initializeKubernetesClients,
 			i.removeBootstrap,
 			i.configureAPIServerCertificate,
 			i.updateConsoleBranding,
@@ -282,4 +292,26 @@ func (i *Installer) saveGraph(ctx context.Context, g graph) error {
 	}
 
 	return graph.CreateBlockBlobFromReader(bytes.NewReader([]byte(output)), nil)
+}
+
+// initializeKubernetesClients initializes clients which are used
+// once the cluster is up later on in the install process.
+func (i *Installer) initializeKubernetesClients(ctx context.Context) error {
+	restConfig, err := restconfig.RestConfig(ctx, i.env, i.doc.OpenShiftCluster)
+	if err != nil {
+		return err
+	}
+
+	i.kubernetescli, err = kubernetes.NewForConfig(restConfig)
+	if err != nil {
+		return err
+	}
+
+	i.operatorcli, err = operatorclient.NewForConfig(restConfig)
+	if err != nil {
+		return err
+	}
+
+	i.configcli, err = configclient.NewForConfig(restConfig)
+	return err
 }
