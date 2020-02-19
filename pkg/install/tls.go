@@ -11,18 +11,14 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
-	configclient "github.com/openshift/client-go/config/clientset/versioned"
-	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/kubernetes"
 	coreclient "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
 
 func (i *Installer) createCertificates(ctx context.Context) error {
@@ -132,28 +128,13 @@ func (i *Installer) configureAPIServerCertificate(ctx context.Context) error {
 		return nil
 	}
 
-	restConfig, err := restconfig.RestConfig(ctx, i.env, i.doc.OpenShiftCluster)
-	if err != nil {
-		return err
-	}
-
-	cli, err := kubernetes.NewForConfig(restConfig)
-	if err != nil {
-		return err
-	}
-
-	err = i.ensureSecret(ctx, cli.CoreV1().Secrets("openshift-config"), i.doc.ID+"-apiserver")
-	if err != nil {
-		return err
-	}
-
-	ccli, err := configclient.NewForConfig(restConfig)
+	err = i.ensureSecret(ctx, i.kubernetescli.CoreV1().Secrets("openshift-config"), i.doc.ID+"-apiserver")
 	if err != nil {
 		return err
 	}
 
 	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		apiserver, err := ccli.ConfigV1().APIServers().Get("cluster", metav1.GetOptions{})
+		apiserver, err := i.configcli.ConfigV1().APIServers().Get("cluster", metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -169,14 +150,9 @@ func (i *Installer) configureAPIServerCertificate(ctx context.Context) error {
 			},
 		}
 
-		_, err = ccli.ConfigV1().APIServers().Update(apiserver)
+		_, err = i.configcli.ConfigV1().APIServers().Update(apiserver)
 		return err
 	})
-	if err != nil {
-		return err
-	}
-
-	ocli, err := operatorclient.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}
@@ -185,7 +161,7 @@ func (i *Installer) configureAPIServerCertificate(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
 	defer cancel()
 	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-		apiserver, err := ocli.OperatorV1().KubeAPIServers().Get("cluster", metav1.GetOptions{})
+		apiserver, err := i.operatorcli.OperatorV1().KubeAPIServers().Get("cluster", metav1.GetOptions{})
 		if err == nil {
 			m := make(map[string]operatorv1.ConditionStatus, len(apiserver.Status.Conditions))
 			for _, cond := range apiserver.Status.Conditions {
@@ -213,28 +189,13 @@ func (i *Installer) configureIngressCertificate(ctx context.Context) error {
 		return nil
 	}
 
-	restConfig, err := restconfig.RestConfig(ctx, i.env, i.doc.OpenShiftCluster)
-	if err != nil {
-		return err
-	}
-
-	cli, err := kubernetes.NewForConfig(restConfig)
-	if err != nil {
-		return err
-	}
-
-	err = i.ensureSecret(ctx, cli.CoreV1().Secrets("openshift-ingress"), i.doc.ID+"-ingress")
-	if err != nil {
-		return err
-	}
-
-	ocli, err := operatorclient.NewForConfig(restConfig)
+	err = i.ensureSecret(ctx, i.kubernetescli.CoreV1().Secrets("openshift-ingress"), i.doc.ID+"-ingress")
 	if err != nil {
 		return err
 	}
 
 	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		ic, err := ocli.OperatorV1().IngressControllers("openshift-ingress-operator").Get("default", metav1.GetOptions{})
+		ic, err := i.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Get("default", metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -243,7 +204,7 @@ func (i *Installer) configureIngressCertificate(ctx context.Context) error {
 			Name: i.doc.ID + "-ingress",
 		}
 
-		_, err = ocli.OperatorV1().IngressControllers("openshift-ingress-operator").Update(ic)
+		_, err = i.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Update(ic)
 		return err
 	})
 	if err != nil {
@@ -254,7 +215,7 @@ func (i *Installer) configureIngressCertificate(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
 	defer cancel()
 	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-		ic, err := ocli.OperatorV1().IngressControllers("openshift-ingress-operator").Get("default", metav1.GetOptions{})
+		ic, err := i.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Get("default", metav1.GetOptions{})
 		if err == nil && ic.Status.ObservedGeneration == ic.Generation {
 			for _, cond := range ic.Status.Conditions {
 				if cond.Type == operatorv1.OperatorStatusTypeAvailable && cond.Status == operatorv1.ConditionTrue {

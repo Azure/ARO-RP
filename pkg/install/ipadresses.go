@@ -12,10 +12,8 @@ import (
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/password"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
 
 func (i *Installer) updateRouterIP(ctx context.Context) error {
@@ -27,16 +25,7 @@ func (i *Installer) updateRouterIP(ctx context.Context) error {
 	installConfig := g[reflect.TypeOf(&installconfig.InstallConfig{})].(*installconfig.InstallConfig)
 	kubeadminPassword := g[reflect.TypeOf(&password.KubeadminPassword{})].(*password.KubeadminPassword)
 
-	restConfig, err := restconfig.RestConfig(ctx, i.env, i.doc.OpenShiftCluster)
-	if err != nil {
-		return err
-	}
-	cli, err := kubernetes.NewForConfig(restConfig)
-	if err != nil {
-		return err
-	}
-
-	svc, err := cli.CoreV1().Services("openshift-ingress").Get("router-default", metav1.GetOptions{})
+	svc, err := i.kubernetescli.CoreV1().Services("openshift-ingress").Get("router-default", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
