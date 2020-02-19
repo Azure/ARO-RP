@@ -23,7 +23,7 @@ type validateTest struct {
 }
 
 var (
-	subscriptionID = "af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1"
+	subscriptionID = "00000000-0000-0000-0000-000000000000"
 	id             = fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/microsoft.redhatopenshift/openshiftclusters/resourceName", subscriptionID)
 
 	v = &openShiftClusterStaticValidator{
@@ -40,12 +40,59 @@ var (
 )
 
 func validOpenShiftCluster() *OpenShiftCluster {
-	oc := exampleOpenShiftCluster()
-	oc.ID = id
-	oc.Properties.ClusterProfile.ResourceGroupID = fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", subscriptionID)
-	oc.Properties.ServicePrincipalProfile.ClientID = "2b5ba2c6-6205-4fc4-8b5d-9fea369ae1a2"
-	oc.Properties.MasterProfile.SubnetID = fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master", subscriptionID)
-	oc.Properties.WorkerProfiles[0].SubnetID = fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker", subscriptionID)
+	oc := &OpenShiftCluster{
+		ID:       id,
+		Name:     "resourceName",
+		Type:     "Microsoft.RedHatOpenShift/OpenShiftClusters",
+		Location: "location",
+		Tags: Tags{
+			"key": "value",
+		},
+		Properties: Properties{
+			ProvisioningState: ProvisioningStateSucceeded,
+			ClusterProfile: ClusterProfile{
+				Domain:          "cluster.location.aroapp.io",
+				Version:         "4.3.0",
+				ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", subscriptionID),
+			},
+			ConsoleProfile: ConsoleProfile{
+				URL: "https://console-openshift-console.apps.cluster.location.aroapp.io/",
+			},
+			ServicePrincipalProfile: ServicePrincipalProfile{
+				ClientSecret: "clientSecret",
+				ClientID:     "11111111-1111-1111-1111-111111111111",
+			},
+			NetworkProfile: NetworkProfile{
+				PodCIDR:     "10.128.0.0/14",
+				ServiceCIDR: "172.30.0.0/16",
+			},
+			MasterProfile: MasterProfile{
+				VMSize:   VMSizeStandardD8sV3,
+				SubnetID: fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master", subscriptionID),
+			},
+			WorkerProfiles: []WorkerProfile{
+				{
+					Name:       "worker",
+					VMSize:     VMSizeStandardD2sV3,
+					DiskSizeGB: 128,
+					SubnetID:   fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker", subscriptionID),
+					Count:      3,
+				},
+			},
+			APIServerProfile: APIServerProfile{
+				Visibility: VisibilityPublic,
+				URL:        "https://api.cluster.location.aroapp.io:6443/",
+				IP:         "1.2.3.4",
+			},
+			IngressProfiles: []IngressProfile{
+				{
+					Name:       "default",
+					Visibility: VisibilityPublic,
+					IP:         "1.2.3.4",
+				},
+			},
+		},
+	}
 
 	return oc
 }
@@ -100,7 +147,7 @@ func TestOpenShiftClusterStaticValidate(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.ID = "wrong"
 			},
-			wantErr: "400: MismatchingResourceID: id: The provided resource ID 'wrong' did not match the name in the Url '/subscriptions/af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1/resourcegroups/resourceGroup/providers/microsoft.redhatopenshift/openshiftclusters/resourceName'.",
+			wantErr: "400: MismatchingResourceID: id: The provided resource ID 'wrong' did not match the name in the Url '/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/microsoft.redhatopenshift/openshiftclusters/resourceName'.",
 		},
 		{
 			name: "name wrong",
@@ -380,14 +427,14 @@ func TestOpenShiftClusterStaticValidateWorkerProfile(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.WorkerProfiles[0].SubnetID = fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/different-vnet/subnets/worker", subscriptionID)
 			},
-			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].subnetId: The provided worker VM subnet '/subscriptions/af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/different-vnet/subnets/worker' is invalid: must be in the same vnet as master VM subnet '/subscriptions/af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master'.",
+			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].subnetId: The provided worker VM subnet '/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/different-vnet/subnets/worker' is invalid: must be in the same vnet as master VM subnet '/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master'.",
 		},
 		{
 			name: "master and worker subnets not different",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.WorkerProfiles[0].SubnetID = oc.Properties.MasterProfile.SubnetID
 			},
-			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].subnetId: The provided worker VM subnet '/subscriptions/af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master' is invalid: must be different to master VM subnet '/subscriptions/af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master'.",
+			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].subnetId: The provided worker VM subnet '/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master' is invalid: must be different to master VM subnet '/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master'.",
 		},
 		{
 			name: "count too small",
