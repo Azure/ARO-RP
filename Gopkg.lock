@@ -590,6 +590,14 @@
   version = "v0.3.8"
 
 [[projects]]
+  digest = "1:870d441fe217b8e689d7949fef6e43efbc787e50f200cb1e70dbca9204a1d6be"
+  name = "github.com/inconshreveable/mousetrap"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75"
+  version = "v1.0"
+
+[[projects]]
   branch = "master"
   digest = "1:3f73c461a36dec68394df0c694fbe3bec10ab8f60b1a280df1535c1596cf3ad1"
   name = "github.com/jim-minter/go-cosmosdb"
@@ -634,6 +642,14 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "95032a82bc518f77982ea72343cc1ade730072f0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:fd9bea48bbc5bba66d9891c72af7255fbebecdff845c37c679406174ece5ca1b"
+  name = "github.com/kelseyhightower/envconfig"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "0b417c4ec4a8a82eecc22a1459a504aa55163d61"
 
 [[projects]]
   digest = "1:833aadffa1abffb4c037611b682834fc8dffa8b800fb5940707392be143f275f"
@@ -896,15 +912,13 @@
 
 [[projects]]
   branch = "release-4.3"
-  digest = "1:ff4eea18a972166c1f93b2c1be7d3468f362379b95d516a29b2b8fc08efda207"
+  digest = "1:b64353f338d565767e216d8ca7b57d86a8b3da9d05b2caa42399d2388d05acd9"
   name = "github.com/openshift/cluster-api"
   packages = [
     "pkg/apis/cluster/common",
     "pkg/apis/cluster/v1alpha1",
     "pkg/apis/machine/common",
     "pkg/apis/machine/v1beta1",
-    "pkg/client/clientset_generated/clientset/scheme",
-    "pkg/client/clientset_generated/clientset/typed/machine/v1beta1",
   ]
   pruneopts = "UT"
   revision = "9a3a7bbe9258f5c3117cb2aba6a560babe0d59f8"
@@ -1150,6 +1164,14 @@
   pruneopts = "UT"
   revision = "839c75faf7f98a33d445d181f3018b5c3409a45e"
   version = "v1.4.2"
+
+[[projects]]
+  digest = "1:e096613fb7cf34743d49af87d197663cfccd61876e2219853005a57baedfa562"
+  name = "github.com/spf13/cobra"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "f2b07da1e2c38d5f12845a4f607e2e1018cbb1f5"
+  version = "v0.0.5"
 
 [[projects]]
   digest = "1:524b71991fc7d9246cc7dc2d9e0886ccb97648091c63e30eef619e6862c955dd"
@@ -1821,6 +1843,7 @@
     "github.com/gorilla/mux",
     "github.com/jim-minter/go-cosmosdb/cmd/gencosmosdb",
     "github.com/jstemmer/go-junit-report",
+    "github.com/kelseyhightower/envconfig",
     "github.com/onsi/ginkgo",
     "github.com/onsi/gomega",
     "github.com/onsi/gomega/format",
@@ -1829,8 +1852,6 @@
     "github.com/openshift/api/operator/v1",
     "github.com/openshift/client-go/config/clientset/versioned",
     "github.com/openshift/client-go/operator/clientset/versioned",
-    "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1",
-    "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset/typed/machine/v1beta1",
     "github.com/openshift/console-operator/pkg/api",
     "github.com/openshift/installer/data",
     "github.com/openshift/installer/pkg/asset",
@@ -1859,6 +1880,7 @@
     "github.com/shurcooL/vfsgen",
     "github.com/sirupsen/logrus",
     "github.com/sirupsen/logrus/hooks/test",
+    "github.com/spf13/cobra",
     "github.com/ugorji/go/codec",
     "golang.org/x/crypto/chacha20poly1305",
     "golang.org/x/crypto/ssh",
@@ -1866,13 +1888,13 @@
     "golang.org/x/tools/go/ast/astutil",
     "golang.org/x/tools/go/packages",
     "k8s.io/api/core/v1",
+    "k8s.io/apimachinery/pkg/api/errors",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/apimachinery/pkg/util/wait",
     "k8s.io/client-go/kubernetes",
+    "k8s.io/client-go/kubernetes/typed/core/v1",
     "k8s.io/client-go/rest",
     "k8s.io/client-go/tools/clientcmd",
-    "k8s.io/client-go/tools/clientcmd/api",
-    "k8s.io/client-go/tools/clientcmd/api/latest",
     "k8s.io/client-go/tools/clientcmd/api/v1",
     "k8s.io/client-go/tools/metrics",
     "k8s.io/client-go/util/retry",

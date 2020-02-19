@@ -16,6 +16,10 @@ required = [
   name = "github.com/Azure/azure-sdk-for-go"
   version = "36.2.0"
 
+[[constraint]]
+  name = "github.com/spf13/cobra"
+  version = "v0.0.5"
+
 [[override]]
   name = "github.com/containers/image"
   version = "v2.0.1"
@@ -27,6 +31,10 @@ required = [
 [[constraint]]
   name = "github.com/gorilla/mux"
   version = "1.7.3"
+
+[[constraint]]
+  name = "github.com/kelseyhightower/envconfig"
+  branch = "master"
 
 [[constraint]]
   name = "github.com/openshift/api"
