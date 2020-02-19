@@ -48,4 +48,11 @@ func (t *tracer) Increment(code string, verb string, host string) {
 		"verb": verb,
 		"code": code,
 	})
+
+	if code == "<error>" {
+		t.m.EmitGauge("client.k8s.errors", 1, map[string]string{
+			"verb": verb,
+			"code": code,
+		})
+	}
 }

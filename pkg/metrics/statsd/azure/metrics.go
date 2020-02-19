@@ -61,4 +61,11 @@ func (t *tracer) EndSpan(ctx context.Context, httpStatusCode int, err error) {
 		"client": metric.name,
 		"code":   strconv.Itoa(httpStatusCode),
 	})
+
+	if err != nil {
+		t.m.EmitGauge("client.azure.errors", 1, map[string]string{
+			"client": metric.name,
+			"code":   strconv.Itoa(httpStatusCode),
+		})
+	}
 }
