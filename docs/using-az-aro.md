@@ -161,14 +161,6 @@ cluster:
    az aro list-credentials -g "$RESOURCEGROUP" -n "$CLUSTER"
    ```
 
-1. Scale the number of cluster VMs:
-
-   ```
-   COUNT=4
-
-   az aro update -g "$RESOURCEGROUP" -n "$CLUSTER" --worker-count "$COUNT"
-   ```
-
 1. Delete a cluster:
 
    ```
