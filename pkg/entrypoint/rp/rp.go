@@ -1,4 +1,4 @@
-package main
+package rp
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -23,7 +23,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 )
 
-func rp(ctx context.Context, log *logrus.Entry) error {
+func start(ctx context.Context, log *logrus.Entry, cfg *Config) error {
 	uuid := uuid.NewV4().String()
 	log.Printf("uuid %s", uuid)
 

@@ -1,4 +1,4 @@
-package main
+package mirror
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"os"
 
 	"github.com/containers/image/types"
 	"github.com/sirupsen/logrus"
@@ -16,34 +15,13 @@ import (
 	pkgmirror "github.com/Azure/ARO-RP/pkg/mirror"
 )
 
-func getAuth(key string) (*types.DockerAuthConfig, error) {
-	b, err := base64.StdEncoding.DecodeString(os.Getenv(key))
-	if err != nil {
-		return nil, err
-	}
-
-	return &types.DockerAuthConfig{
-		Username: string(b[:bytes.IndexByte(b, ':')]),
-		Password: string(b[bytes.IndexByte(b, ':')+1:]),
-	}, nil
-}
-
-func mirror(ctx context.Context, log *logrus.Entry) error {
-	for _, key := range []string{
-		"DST_AUTH",
-		"SRC_AUTH",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return fmt.Errorf("environment variable %q unset", key)
-		}
-	}
-
-	dstauth, err := getAuth("DST_AUTH")
+func start(ctx context.Context, log *logrus.Entry, cfg *Config) error {
+	dstauth, err := getAuth(cfg.DstAuth)
 	if err != nil {
 		return err
 	}
 
-	srcauth, err := getAuth("SRC_AUTH")
+	srcauth, err := getAuth(cfg.DstAuth)
 	if err != nil {
 		return err
 	}
@@ -71,4 +49,17 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	return nil
+}
+
+func getAuth(value string) (*types.DockerAuthConfig, error) {
+	b, err := base64.StdEncoding.DecodeString(value)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.DockerAuthConfig{
+		Username: string(b[:bytes.IndexByte(b, ':')]),
+		Password: string(b[bytes.IndexByte(b, ':')+1:]),
+	}, nil
+
 }

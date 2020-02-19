@@ -48,7 +48,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 }
 
 func main() {
-	log := utillog.GetLogger()
+	log := utillog.GetLogger("debug")
 
 	if err := run(context.Background(), log); err != nil {
 		log.Fatal(err)

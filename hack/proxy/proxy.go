@@ -141,7 +141,7 @@ func proxy(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	log := utillog.GetLogger()
+	log := utillog.GetLogger("info")
 
 	log.Printf("starting, git commit %s", gitCommit)
 

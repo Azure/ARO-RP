@@ -58,7 +58,7 @@ func writeKubeconfig(ctx context.Context, resourceID string) error {
 
 func main() {
 	ctx := context.Background()
-	log := utillog.GetLogger()
+	log := utillog.GetLogger("debug")
 
 	if len(os.Args) != 2 {
 		log.Fatalf("usage: %s resourceid\n", os.Args[0])

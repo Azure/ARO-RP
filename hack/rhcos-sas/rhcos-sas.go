@@ -97,7 +97,7 @@ func run(ctx context.Context) error {
 }
 
 func main() {
-	log := utillog.GetLogger()
+	log := utillog.GetLogger("debug")
 
 	if err := run(context.Background()); err != nil {
 		log.Fatal(err)
