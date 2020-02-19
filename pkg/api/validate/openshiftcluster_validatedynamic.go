@@ -225,11 +225,13 @@ func (dv *openShiftClusterDynamicValidator) validateSubnet(ctx context.Context, 
 	}
 
 	var found bool
-	for _, se := range *s.ServiceEndpoints {
-		if strings.EqualFold(*se.Service, "Microsoft.ContainerRegistry") &&
-			se.ProvisioningState == mgmtnetwork.Succeeded {
-			found = true
-			break
+	if s.ServiceEndpoints != nil {
+		for _, se := range *s.ServiceEndpoints {
+			if strings.EqualFold(*se.Service, "Microsoft.ContainerRegistry") &&
+				se.ProvisioningState == mgmtnetwork.Succeeded {
+				found = true
+				break
+			}
 		}
 	}
 	if !found {
