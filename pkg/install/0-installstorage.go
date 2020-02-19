@@ -61,7 +61,7 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 		}
 	}
 
-	adminClient := g[reflect.TypeOf(&kubeconfig.AdminClient{})].(*kubeconfig.AdminClient)
+	adminInternalClient := g[reflect.TypeOf(&kubeconfig.AdminInternalClient{})].(*kubeconfig.AdminInternalClient)
 
 	resourceGroup := i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID[strings.LastIndexByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')+1:]
 
@@ -245,7 +245,7 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 		// used for the SAS token with which the bootstrap node retrieves its
 		// ignition payload
 		doc.OpenShiftCluster.Properties.Install.Now = time.Now().UTC()
-		doc.OpenShiftCluster.Properties.AdminKubeconfig = adminClient.File.Data
+		doc.OpenShiftCluster.Properties.AdminKubeconfig = adminInternalClient.File.Data
 		return nil
 	})
 	return err

@@ -161,9 +161,6 @@ cluster:
    az aro list-credentials -g "$RESOURCEGROUP" -n "$CLUSTER"
    ```
 
-   Note: the cluster console certificate is not yet signed by a CA: expect a
-   security warning in your browser.
-
 1. Scale the number of cluster VMs:
 
    ```

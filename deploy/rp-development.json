@@ -40,7 +40,31 @@
                     "family": "A",
                     "name": "standard"
                 },
-                "accessPolicies": []
+                "accessPolicies": [
+                    {
+                        "tenantId": "[subscription().tenantId]",
+                        "objectId": "[parameters('fpServicePrincipalId')]",
+                        "permissions": {
+                            "secrets": [
+                                "get"
+                            ],
+                            "certificates": [
+                                "create",
+                                "delete"
+                            ]
+                        }
+                    },
+                    {
+                        "tenantId": "[subscription().tenantId]",
+                        "objectId": "[parameters('adminObjectId')]",
+                        "permissions": {
+                            "certificates": [
+                                "get",
+                                "list"
+                            ]
+                        }
+                    }
+                ]
             },
             "name": "[concat(parameters('keyvaultPrefix'), '-cls')]",
             "type": "Microsoft.KeyVault/vaults",

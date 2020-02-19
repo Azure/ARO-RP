@@ -591,13 +591,19 @@ func (g *generator) zone() *arm.Resource {
 
 func (g *generator) clustersKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyEntry {
 	return []mgmtkeyvault.AccessPolicyEntry{
-		// TODO: uncomment when there are permissions we want to grant
-		/*
-			{
-				TenantID: &tenantUUIDHack,
-				ObjectID: to.StringPtr("[parameters('fpServicePrincipalId')]"),
+		{
+			TenantID: &tenantUUIDHack,
+			ObjectID: to.StringPtr("[parameters('fpServicePrincipalId')]"),
+			Permissions: &mgmtkeyvault.Permissions{
+				Secrets: &[]mgmtkeyvault.SecretPermissions{
+					mgmtkeyvault.SecretPermissionsGet,
+				},
+				Certificates: &[]mgmtkeyvault.CertificatePermissions{
+					mgmtkeyvault.Create,
+					mgmtkeyvault.Delete,
+				},
 			},
-		*/
+		},
 	}
 }
 
@@ -634,15 +640,18 @@ func (g *generator) clustersKeyvault() *arm.Resource {
 	}
 
 	if !g.production {
-		// TODO: uncomment when there are permissions we want to grant
-		/*
-			*vault.Properties.AccessPolicies = append(g.clustersKeyvaultAccessPolicies(),
-				mgmtkeyvault.AccessPolicyEntry{
-					TenantID: &tenantUUIDHack,
-					ObjectID: to.StringPtr("[parameters('adminObjectId')]"),
+		*vault.Properties.AccessPolicies = append(g.clustersKeyvaultAccessPolicies(),
+			mgmtkeyvault.AccessPolicyEntry{
+				TenantID: &tenantUUIDHack,
+				ObjectID: to.StringPtr("[parameters('adminObjectId')]"),
+				Permissions: &mgmtkeyvault.Permissions{
+					Certificates: &[]mgmtkeyvault.CertificatePermissions{
+						mgmtkeyvault.Get,
+						mgmtkeyvault.List,
+					},
 				},
-			)
-		*/
+			},
+		)
 	}
 
 	return &arm.Resource{
@@ -1005,13 +1014,8 @@ func (g *generator) template() *arm.Template {
 		t.Parameters[param] = &arm.TemplateParameter{Type: typ}
 		if param == "keyvaultPrefix" {
 			t.Parameters[param] = &arm.TemplateParameter{
-				Type: typ,
-				MaxLength: 24 - func(a, b int) int {
-					if a > b {
-						return a
-					}
-					return b
-				}(len(kvClusterSuffix), len(kvServiceSuffix)),
+				Type:      typ,
+				MaxLength: 24 - max(len(kvClusterSuffix), len(kvServiceSuffix)),
 			}
 		}
 	}
@@ -1142,4 +1146,11 @@ func GenerateRPParameterTemplate() error {
 	}
 
 	return nil
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
