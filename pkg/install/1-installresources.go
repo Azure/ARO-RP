@@ -575,6 +575,8 @@ func (i *Installer) installResources(ctx context.Context) error {
 									Name: to.StringPtr("aro"),
 								},
 							},
+							LoadBalancingRules: &[]mgmtnetwork.LoadBalancingRule{}, //required to override default LB rules for port 80 and 443
+							Probes:             &[]mgmtnetwork.Probe{},             //required to override default LB rules for port 80 and 443
 							OutboundRules: &[]mgmtnetwork.OutboundRule{
 								{
 									OutboundRulePropertiesFormat: &mgmtnetwork.OutboundRulePropertiesFormat{
