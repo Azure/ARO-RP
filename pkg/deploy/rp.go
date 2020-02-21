@@ -991,6 +991,8 @@ func (g *generator) template() *arm.Template {
 	}
 	if g.production {
 		params = append(params,
+			"extraCosmosDBIPs",
+			"extraKeyvaultAccessPolicies",
 			"mdmCertificate",
 			"mdmFrontendUrl",
 			"mdmMetricNamespace",
@@ -999,6 +1001,7 @@ func (g *generator) template() *arm.Template {
 			"pullSecret",
 			"rpImage",
 			"rpImageAuth",
+			"rpMode",
 			"vmssDomainNameLabel",
 			"vmssName",
 		)
@@ -1009,33 +1012,19 @@ func (g *generator) template() *arm.Template {
 	}
 
 	for _, param := range params {
-		typ := "string"
+		p := &arm.TemplateParameter{Type: "string"}
 		switch param {
+		case "extraCosmosDBIPs", "rpMode":
+			p.DefaultValue = ""
+		case "extraKeyvaultAccessPolicies":
+			p.Type = "array"
+			p.DefaultValue = []mgmtkeyvault.AccessPolicyEntry{}
 		case "mdmPrivateKey", "pullSecret", "rpImageAuth":
-			typ = "securestring"
+			p.Type = "securestring"
+		case "keyvaultPrefix":
+			p.MaxLength = 24 - max(len(kvClusterSuffix), len(kvServiceSuffix))
 		}
-		t.Parameters[param] = &arm.TemplateParameter{Type: typ}
-		if param == "keyvaultPrefix" {
-			t.Parameters[param] = &arm.TemplateParameter{
-				Type:      typ,
-				MaxLength: 24 - max(len(kvClusterSuffix), len(kvServiceSuffix)),
-			}
-		}
-	}
-
-	if g.production {
-		t.Parameters["extraCosmosDBIPs"] = &arm.TemplateParameter{
-			Type:         "string",
-			DefaultValue: "",
-		}
-		t.Parameters["extraKeyvaultAccessPolicies"] = &arm.TemplateParameter{
-			Type:         "array",
-			DefaultValue: []mgmtkeyvault.AccessPolicyEntry{},
-		}
-		t.Parameters["rpMode"] = &arm.TemplateParameter{
-			Type:         "string",
-			DefaultValue: "",
-		}
+		t.Parameters[param] = p
 	}
 
 	if g.production {
