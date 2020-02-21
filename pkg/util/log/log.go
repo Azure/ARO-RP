@@ -47,5 +47,5 @@ func GetLogger() *logrus.Entry {
 func relativeFilePathPrettier(f *runtime.Frame) (string, string) {
 	file := strings.TrimPrefix(f.File, repopath)
 	function := f.Function[strings.LastIndexByte(f.Function, '/')+1:]
-	return fmt.Sprintf("%s()", function), fmt.Sprintf(" %s:%d", file, f.Line)
+	return fmt.Sprintf("%s()", function), fmt.Sprintf("%s:%d", file, f.Line)
 }

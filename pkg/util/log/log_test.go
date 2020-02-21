@@ -26,13 +26,13 @@ func TestRelativeFilePathPrettier(t *testing.T) {
 			name:         "current function",
 			f:            &currentFunc,
 			wantFunction: "log.TestRelativeFilePathPrettier()",
-			wantFile:     " pkg/util/log/log_test.go:11",
+			wantFile:     "pkg/util/log/log_test.go:11",
 		},
 		{
 			name:         "empty",
 			f:            &runtime.Frame{},
 			wantFunction: "()",
-			wantFile:     " :0",
+			wantFile:     ":0",
 		},
 		{
 			name: "install",
@@ -42,7 +42,7 @@ func TestRelativeFilePathPrettier(t *testing.T) {
 				Line:     623,
 			},
 			wantFunction: "install.installResources()",
-			wantFile:     " pkg/install/1-installresources.go:623",
+			wantFile:     "pkg/install/1-installresources.go:623",
 		},
 	}
 
