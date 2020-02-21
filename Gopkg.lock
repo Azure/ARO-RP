@@ -257,9 +257,12 @@
   version = "v0.3.0"
 
 [[projects]]
-  digest = "1:027c348e13b5f924c925aebf0d2932545644c78da3f43cc82327220286084539"
+  digest = "1:9d9407c5f0001ea2252b16edbfb0ceadcaa17d690156146f83c6af7bca3d4f6e"
   name = "github.com/coreos/go-systemd"
-  packages = ["unit"]
+  packages = [
+    "journal",
+    "unit",
+  ]
   pruneopts = "UT"
   revision = "2d78030078ef61b3cae27f42ad6d0e46db51b339"
   version = "v22.0.0"
@@ -896,15 +899,13 @@
 
 [[projects]]
   branch = "release-4.3"
-  digest = "1:ff4eea18a972166c1f93b2c1be7d3468f362379b95d516a29b2b8fc08efda207"
+  digest = "1:b64353f338d565767e216d8ca7b57d86a8b3da9d05b2caa42399d2388d05acd9"
   name = "github.com/openshift/cluster-api"
   packages = [
     "pkg/apis/cluster/common",
     "pkg/apis/cluster/v1alpha1",
     "pkg/apis/machine/common",
     "pkg/apis/machine/v1beta1",
-    "pkg/client/clientset_generated/clientset/scheme",
-    "pkg/client/clientset_generated/clientset/typed/machine/v1beta1",
   ]
   pruneopts = "UT"
   revision = "9a3a7bbe9258f5c3117cb2aba6a560babe0d59f8"
@@ -1815,6 +1816,7 @@
     "github.com/containers/image/pkg/blobinfocache/memory",
     "github.com/containers/image/signature",
     "github.com/containers/image/types",
+    "github.com/coreos/go-systemd/journal",
     "github.com/dgrijalva/jwt-go",
     "github.com/golang/mock/gomock",
     "github.com/golang/mock/mockgen",
@@ -1829,8 +1831,6 @@
     "github.com/openshift/api/operator/v1",
     "github.com/openshift/client-go/config/clientset/versioned",
     "github.com/openshift/client-go/operator/clientset/versioned",
-    "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1",
-    "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset/typed/machine/v1beta1",
     "github.com/openshift/console-operator/pkg/api",
     "github.com/openshift/installer/data",
     "github.com/openshift/installer/pkg/asset",
@@ -1866,13 +1866,13 @@
     "golang.org/x/tools/go/ast/astutil",
     "golang.org/x/tools/go/packages",
     "k8s.io/api/core/v1",
+    "k8s.io/apimachinery/pkg/api/errors",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/apimachinery/pkg/util/wait",
     "k8s.io/client-go/kubernetes",
+    "k8s.io/client-go/kubernetes/typed/core/v1",
     "k8s.io/client-go/rest",
     "k8s.io/client-go/tools/clientcmd",
-    "k8s.io/client-go/tools/clientcmd/api",
-    "k8s.io/client-go/tools/clientcmd/api/latest",
     "k8s.io/client-go/tools/clientcmd/api/v1",
     "k8s.io/client-go/tools/metrics",
     "k8s.io/client-go/util/retry",
