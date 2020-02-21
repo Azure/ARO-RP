@@ -62,11 +62,6 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context, oc *api
 		return err
 	}
 
-	err = dv.validateServicePrincipalRole(oc)
-	if err != nil {
-		return err
-	}
-
 	spPermissions := authorization.NewPermissionsClient(r.SubscriptionID, spAuthorizer)
 	err = dv.validateVnetPermissions(ctx, oc, spPermissions, api.CloudErrorCodeInvalidServicePrincipalPermissions, "provided service principal")
 	if err != nil {
@@ -97,49 +92,35 @@ func (dv *openShiftClusterDynamicValidator) validateServicePrincipalProfile(oc *
 		return nil, err
 	}
 
-	wait.PollImmediate(time.Second, 30*time.Second, func() (done bool, err error) {
+	// get a token, retrying only on AADSTS700016 errors (slow AAD propagation).
+	// As we don't do `err = wait.PollImmediate()`, we won't ever see a "timed
+	// out waiting for the condition" error, but instead will always see the
+	// last error returned from token.EnsureFresh().
+	wait.PollImmediate(time.Second, 10*time.Second, func() (bool, error) {
 		err = token.EnsureFresh()
-		return err == nil, nil
+		return err == nil || !strings.Contains(err.Error(), "AADSTS700016"), nil
 	})
 	if err != nil {
+		if strings.Contains(err.Error(), "AADSTS700016") {
+			return nil, err
+		}
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalCredentials, "properties.servicePrincipalProfile", "The provided service principal credentials are invalid.")
-	}
-
-	return autorest.NewBearerAuthorizer(token), nil
-}
-
-func (dv *openShiftClusterDynamicValidator) validateServicePrincipalRole(oc *api.OpenShiftCluster) error {
-	spp := &oc.Properties.ServicePrincipalProfile
-	conf := auth.NewClientCredentialsConfig(spp.ClientID, string(spp.ClientSecret), spp.TenantID)
-	conf.Resource = azure.PublicCloud.GraphEndpoint
-
-	token, err := conf.ServicePrincipalToken()
-	if err != nil {
-		return err
-	}
-
-	wait.PollImmediate(time.Second, 30*time.Second, func() (done bool, err error) {
-		err = token.EnsureFresh()
-		return err == nil, nil
-	})
-	if err != nil {
-		return err
 	}
 
 	p := &jwt.Parser{}
 	c := &azureClaim{}
 	_, _, err = p.ParseUnverified(token.OAuthToken(), c)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	for _, role := range c.Roles {
 		if role == "Application.ReadWrite.OwnedBy" {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalCredentials, "properties.servicePrincipalProfile", "The provided service principal must not have the Application.ReadWrite.OwnedBy permission.")
+			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalCredentials, "properties.servicePrincipalProfile", "The provided service principal must not have the Application.ReadWrite.OwnedBy permission.")
 		}
 	}
 
-	return nil
+	return autorest.NewBearerAuthorizer(token), nil
 }
 
 func (dv *openShiftClusterDynamicValidator) validateVnetPermissions(ctx context.Context, oc *api.OpenShiftCluster, client authorization.PermissionsClient, code, typ string) error {
