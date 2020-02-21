@@ -318,17 +318,17 @@ If you encounter "VirtualNetworkGatewayCannotUseStandardPublicIP" error when dep
 
    ```
    az keyvault certificate import \
-     --vault-name "$KEYVAULT_PREFIX-service" \
+     --vault-name "$KEYVAULT_PREFIX-svc" \
      --name rp-firstparty \
      --file secrets/firstparty-development.pem \
      >/dev/null
    az keyvault certificate import \
-     --vault-name "$KEYVAULT_PREFIX-service" \
+     --vault-name "$KEYVAULT_PREFIX-svc" \
      --name rp-server \
      --file secrets/localhost.pem \
      >/dev/null
    az keyvault secret set \
-     --vault-name "$KEYVAULT_PREFIX-service" \
+     --vault-name "$KEYVAULT_PREFIX-svc" \
      --name encryption-key \
      --value "$(openssl rand -base64 32)" \
      >/dev/null
