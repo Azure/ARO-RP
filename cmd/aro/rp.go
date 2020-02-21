@@ -40,12 +40,29 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 	uuid := uuid.NewV4().String()
 	log.Printf("uuid %s", uuid)
 
-	env, err := env.NewEnv(ctx, log)
+	_env, err := env.NewEnv(ctx, log)
 	if err != nil {
 		return err
 	}
 
-	m, err := statsd.New(ctx, log.WithField("component", "metrics"), env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"))
+	if _, ok := _env.(env.Dev); !ok {
+		for _, key := range []string{
+			"MDM_ACCOUNT",
+			"MDM_NAMESPACE",
+			"ADMIN_API_CLIENT_CERT_COMMON_NAME",
+		} {
+			if _, found := os.LookupEnv(key); !found {
+				return fmt.Errorf("environment variable %q unset", key)
+			}
+		}
+	}
+
+	err = _env.InitializeAuthorizers()
+	if err != nil {
+		return err
+	}
+
+	m, err := statsd.New(ctx, log.WithField("component", "metrics"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"))
 	if err != nil {
 		return err
 	}
@@ -53,22 +70,22 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 	tracing.Register(azure.New(m))
 	metrics.Register(k8s.NewLatency(m), k8s.NewResult(m))
 
-	cipher, err := encryption.NewXChaCha20Poly1305(ctx, env)
+	cipher, err := encryption.NewXChaCha20Poly1305(ctx, _env)
 	if err != nil {
 		return err
 	}
 
-	db, err := database.NewDatabase(ctx, log.WithField("component", "database"), env, m, cipher, uuid)
+	db, err := database.NewDatabase(ctx, log.WithField("component", "database"), _env, m, cipher, uuid)
 	if err != nil {
 		return err
 	}
 
-	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), env, db, api.APIs, m)
+	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), _env, db, api.APIs, m)
 	if err != nil {
 		return err
 	}
 
-	b, err := backend.NewBackend(ctx, log.WithField("component", "backend"), env, db, m)
+	b, err := backend.NewBackend(ctx, log.WithField("component", "backend"), _env, db, m)
 	if err != nil {
 		return err
 	}
