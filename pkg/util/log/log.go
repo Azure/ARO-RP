@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/coreos/go-systemd/journal"
 	"github.com/sirupsen/logrus"
 )
 
@@ -26,6 +27,10 @@ func GetLogger() *logrus.Entry {
 		FullTimestamp:    true,
 		CallerPrettyfier: relativeFilePathPrettier,
 	})
+
+	if journal.Enabled() {
+		logrus.AddHook(&journaldHook{})
+	}
 
 	log := logrus.NewEntry(logrus.StandardLogger())
 
