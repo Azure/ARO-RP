@@ -317,11 +317,15 @@ func (g *generator) vmss() *arm.Resource {
 	}
 
 	for _, variable := range []string{
-		"mdmCertificate",
+		"mdmCertificateVaultId",
 		"mdmFrontendUrl",
 		"mdmMetricNamespace",
 		"mdmMonitoringAccount",
-		"mdmPrivateKey",
+		"mdsdAccount",
+		"mdsdCertificateVaultId",
+		"mdsdConfigVersion",
+		"mdsdEnvironment",
+		"mdsdNamespace",
 		"pullSecret",
 		"rpImage",
 		"rpImageAuth",
@@ -334,15 +338,27 @@ func (g *generator) vmss() *arm.Resource {
 		)
 	}
 
-	trailer := base64.StdEncoding.EncodeToString([]byte(`systemctl stop arorp.service || true
+	parts = append(parts,
+		fmt.Sprintf("'LOCATION=$(base64 -d <<<'''"),
+		fmt.Sprintf("base64(resourceGroup().location)"),
+		"''')\n'",
+	)
 
-yum -y update -x WALinuxAgent
+	trailer := base64.StdEncoding.EncodeToString([]byte(`yum -y update -x WALinuxAgent
 
 rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8
+rpm --import https://packages.microsoft.com/keys/microsoft.asc
+rpm --import https://packages.fluentbit.io/fluentbit.key
 
-yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm || true
+yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 
-cat >/etc/yum.repos.d/azure-cli.repo <<'EOF'
+cat >/etc/yum.repos.d/azure.repo <<'EOF'
+[azure-cli]
+name=azure-cli
+baseurl=https://packages.microsoft.com/yumrepos/azure-cli
+enabled=yes
+gpgcheck=yes
+
 [azurecore]
 name=azurecore
 baseurl=https://packages.microsoft.com/yumrepos/azurecore
@@ -350,17 +366,22 @@ enabled=yes
 gpgcheck=no
 EOF
 
-yum -y install azsec-clamav azsec-monitor azure-mdsd azure-security podman-docker
+cat >/etc/yum.repos.d/td-agent-bit.repo <<'EOF'
+[td-agent-bit]
+name=td-agent-bit
+baseurl=https://packages.fluentbit.io/centos/7
+enabled=yes
+gpgcheck=yes
+EOF
+
+yum -y install azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security podman-docker td-agent-bit
+
+firewall-cmd --add-port=443/tcp --permanent
 
 # https://bugzilla.redhat.com/show_bug.cgi?id=1805212
 sed -i -e 's/iptables/firewalld/' /etc/cni/net.d/87-podman-bridge.conflist
 
-firewall-cmd --add-port=443/tcp --permanent
-
-if [[ -n "$RPIMAGEAUTH" ]]; then
-  mkdir -p /root/.docker
-
-  cat >/root/.docker/config.json <<EOF
+cat >/root/.docker/config.json <<EOF
 {
 	"auths": {
 		"${RPIMAGE%%/*}": {
@@ -370,18 +391,80 @@ if [[ -n "$RPIMAGEAUTH" ]]; then
 }
 EOF
 
-else
-  rm -rf /root/.docker
-fi
+cat >/etc/td-agent-bit/td-agent-bit.conf <<'EOF'
+[INPUT]
+    Name systemd
+    Tag journald
 
-mkdir -p /etc/mdm
-echo "$MDMCERTIFICATE" >/etc/mdm/cert.pem
-echo "$MDMPRIVATEKEY" >/etc/mdm/key.pem
-chown -R 1000:1000 /etc/mdm
-chmod 0600 /etc/mdm/key.pem
+[OUTPUT]
+    Name forward
+    Port 29230
+EOF
+
+az login -i --allow-no-subscriptions
+
+az keyvault secret download --file /etc/mdm.pem --id "$MDMCERTIFICATEVAULTID"
+chown 1000:1000 /etc/mdm.pem
+chmod 0600 /etc/mdm.pem
+
+az keyvault secret download --file /etc/mdsd.pem --id "$MDSDCERTIFICATEVAULTID"
+chown syslog:syslog /etc/mdsd.pem
+chmod 0600 /etc/mdsd.pem
+
+az logout
+
+cat >/etc/default/mdsd <<EOF
+MDSD_ROLE_PREFIX=/var/run/mdsd/default
+MDSD_OPTIONS="-A -d -r \$MDSD_ROLE_PREFIX"
+
+export SSL_CERT_FILE=/etc/pki/tls/certs/ca-bundle.crt
+
+export MONITORING_GCS_ENVIRONMENT='$MDSDENVIRONMENT'
+export MONITORING_GCS_ACCOUNT='$MDSDACCOUNT'
+export MONITORING_GCS_REGION='$LOCATION'
+export MONITORING_GCS_CERT_CERTFILE=/etc/mdsd.pem
+export MONITORING_GCS_CERT_KEYFILE=/etc/mdsd.pem
+export MONITORING_GCS_NAMESPACE='$MDSDNAMESPACE'
+export MONITORING_CONFIG_VERSION='$MDSDCONFIGVERSION'
+export MONITORING_USE_GENEVA_CONFIG_SERVICE=true
+
+export MONITORING_TENANT='$LOCATION'
+export MONITORING_ROLE=rp
+export MONITORING_ROLE_INSTANCE='$(hostname)'
+EOF
 
 cat >/etc/sysconfig/mdm <<EOF
+MDMFRONTENDURL='$MDMFRONTENDURL'
 MDMIMAGE='arosvc.azurecr.io/mdm:2019.801.1228-66cac1'
+MDMMETRICNAMESPACE='$MDMMETRICNAMESPACE'
+MDMMONITORINGACCOUNT='$MDMMONITORINGACCOUNT'
+EOF
+
+cat >/etc/systemd/system/mdm.service <<'EOF'
+[Unit]
+After=network-online.target
+
+[Service]
+EnvironmentFile=/etc/sysconfig/mdm
+ExecStartPre=-/usr/bin/docker rm -f %N
+ExecStartPre=/usr/bin/docker pull $MDMIMAGE
+ExecStart=/usr/bin/docker run \
+  --hostname %H \
+  --name %N \
+  --rm \
+  -v /etc/mdm.pem:/etc/mdm.pem \
+  -v /var/etw:/var/etw \
+  $MDMIMAGE \
+  -FrontEndUrl $MDMFRONTENDURL \
+  -MonitoringAccount $MDMMONITORINGACCOUNT \
+  -MetricNamespace $MDMMETRICNAMESPACE \
+  -CertFile /etc/mdm.pem \
+  -PrivateKeyFile /etc/mdm.pem
+ExecStop=/usr/bin/docker stop %N
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
 EOF
 
 cat >/etc/sysconfig/arorp <<EOF
@@ -390,41 +473,14 @@ RPIMAGE='$RPIMAGE'
 RP_MODE='$RPMODE'
 EOF
 
-cat >/etc/systemd/system/mdm.service <<EOF
-[Unit]
-After=network-online.target
-
-[Service]
-EnvironmentFile=/etc/sysconfig/mdm
-ExecStartPre=-/usr/bin/docker rm -f %N
-ExecStartPre=/usr/bin/docker pull \$MDMIMAGE
-ExecStart=/usr/bin/docker run \
-  --hostname %H \
-  --name %N \
-  --rm \
-  -v /etc/mdm:/etc/mdm \
-  -v /var/etw:/var/etw \
-  \$MDMIMAGE \
-  -FrontEndUrl \$MDMFRONTENDURL \
-  -MonitoringAccount \$MDMMONITORINGACCOUNT \
-  -MetricNamespace \$MDMMETRICNAMESPACE \
-  -CertFile /etc/mdm/cert.pem \
-  -PrivateKeyFile /etc/mdm/key.pem
-ExecStop=/usr/bin/docker stop %N
-Restart=always
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-cat >/etc/systemd/system/arorp.service <<EOF
+cat >/etc/systemd/system/arorp.service <<'EOF'
 [Unit]
 After=network-online.target
 
 [Service]
 EnvironmentFile=/etc/sysconfig/arorp
 ExecStartPre=-/usr/bin/docker rm -f %N
-ExecStartPre=/usr/bin/docker pull \$RPIMAGE
+ExecStartPre=/usr/bin/docker pull $RPIMAGE
 ExecStart=/usr/bin/docker run \
   --hostname %H \
   --name %N \
@@ -432,7 +488,8 @@ ExecStart=/usr/bin/docker run \
   -e PULL_SECRET \
   -e RP_MODE \
   -p 443:8443 \
-  \$RPIMAGE \
+  -v /run/systemd/journal:/run/systemd/journal \
+  $RPIMAGE \
   rp
 ExecStop=/usr/bin/docker stop -t 3600 %N
 Restart=always
@@ -441,18 +498,9 @@ Restart=always
 WantedBy=multi-user.target
 EOF
 
-for service in arorp chronyd; do
+for service in arorp auoms azsecd azsecmond mdsd chronyd td-agent-bit; do
   systemctl enable $service.service
 done
-
-chcon -R system_u:object_r:var_log_t:s0 /var/opt/microsoft/linuxmonagent
-
-for service in auoms azsecd azsecmond mdsd; do
-  systemctl disable $service.service
-  systemctl mask $service.service
-done
-
-rm /etc/rsyslog.d/10-mdsd.conf
 
 rm /etc/motd.d/*
 >/etc/containers/nodocker
@@ -993,11 +1041,15 @@ func (g *generator) template() *arm.Template {
 		params = append(params,
 			"extraCosmosDBIPs",
 			"extraKeyvaultAccessPolicies",
-			"mdmCertificate",
+			"mdmCertificateVaultId",
 			"mdmFrontendUrl",
 			"mdmMetricNamespace",
 			"mdmMonitoringAccount",
-			"mdmPrivateKey",
+			"mdsdAccount",
+			"mdsdCertificateVaultId",
+			"mdsdConfigVersion",
+			"mdsdEnvironment",
+			"mdsdNamespace",
 			"pullSecret",
 			"rpImage",
 			"rpImageAuth",
@@ -1019,7 +1071,7 @@ func (g *generator) template() *arm.Template {
 		case "extraKeyvaultAccessPolicies":
 			p.Type = "array"
 			p.DefaultValue = []mgmtkeyvault.AccessPolicyEntry{}
-		case "mdmPrivateKey", "pullSecret", "rpImageAuth":
+		case "pullSecret", "rpImageAuth":
 			p.Type = "securestring"
 		case "keyvaultPrefix":
 			p.MaxLength = 24 - max(len(kvClusterSuffix), len(kvServiceSuffix))

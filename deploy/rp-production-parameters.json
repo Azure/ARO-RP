@@ -20,7 +20,7 @@
         "keyvaultPrefix": {
             "value": ""
         },
-        "mdmCertificate": {
+        "mdmCertificateVaultId": {
             "value": ""
         },
         "mdmFrontendUrl": {
@@ -32,7 +32,19 @@
         "mdmMonitoringAccount": {
             "value": ""
         },
-        "mdmPrivateKey": {
+        "mdsdAccount": {
+            "value": ""
+        },
+        "mdsdCertificateVaultId": {
+            "value": ""
+        },
+        "mdsdConfigVersion": {
+            "value": ""
+        },
+        "mdsdEnvironment": {
+            "value": ""
+        },
+        "mdsdNamespace": {
             "value": ""
         },
         "pullSecret": {
