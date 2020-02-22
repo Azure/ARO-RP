@@ -47,7 +47,7 @@ func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
 	}
 
 	if strings.ToLower(os.Getenv("RP_MODE")) == "int" {
-		log.Warn("running in INT mode")
+		log.Warn("running in int mode")
 		return newInt(ctx, log, im, clientauthorizer.NewARM(log))
 	}
 
