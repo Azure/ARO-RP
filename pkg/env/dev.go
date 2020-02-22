@@ -234,6 +234,10 @@ func (d *dev) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, erro
 	return &refreshableAuthorizer{autorest.NewBearerAuthorizer(sp), sp}, nil
 }
 
+func (d *dev) MetricsSocketPath() string {
+	return "mdm_statsd.socket"
+}
+
 func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthorizer autorest.Authorizer, resourceGroup string) error {
 	d.log.Print("development mode: applying resource group role assignment")
 

@@ -24,8 +24,6 @@ import (
 	statsdk8s "github.com/Azure/ARO-RP/pkg/metrics/statsd/k8s"
 )
 
-const defaultSocket = "mdm_statsd.socket"
-
 type statsd struct {
 	env  env.Interface
 	conn io.WriteCloser
@@ -53,11 +51,11 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface) (metrics.In
 	}
 	s.hostname = hostname
 
-	s.conn, err = net.Dial("unix", defaultSocket)
+	s.conn, err = net.Dial("unix", _env.MetricsSocketPath())
 	if _, ok := _env.(env.Dev); ok &&
 		err != nil &&
 		strings.HasSuffix(err.Error(), "connect: no such file or directory") {
-		log.Printf("%s does not exist; not outputting metrics", defaultSocket)
+		log.Printf("%s does not exist; not outputting metrics", _env.MetricsSocketPath())
 		return &noop.Noop{}, nil
 	}
 	if err != nil {
