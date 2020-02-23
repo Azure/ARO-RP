@@ -467,18 +467,18 @@ Restart=always
 WantedBy=multi-user.target
 EOF
 
-cat >/etc/sysconfig/arorp <<EOF
+cat >/etc/sysconfig/aro <<EOF
 PULL_SECRET='$PULLSECRET'
 RPIMAGE='$RPIMAGE'
 RP_MODE='$RPMODE'
 EOF
 
-cat >/etc/systemd/system/arorp.service <<'EOF'
+cat >/etc/systemd/system/aro-rp.service <<'EOF'
 [Unit]
 After=network-online.target
 
 [Service]
-EnvironmentFile=/etc/sysconfig/arorp
+EnvironmentFile=/etc/sysconfig/aro
 ExecStartPre=-/usr/bin/docker rm -f %N
 ExecStartPre=/usr/bin/docker pull $RPIMAGE
 ExecStart=/usr/bin/docker run \
@@ -499,7 +499,31 @@ Restart=always
 WantedBy=multi-user.target
 EOF
 
-for service in arorp auoms azsecd azsecmond mdsd mdm chronyd td-agent-bit; do
+cat >/etc/systemd/system/aro-monitor.service <<'EOF'
+[Unit]
+After=network-online.target
+
+[Service]
+EnvironmentFile=/etc/sysconfig/aro
+ExecStartPre=-/usr/bin/docker rm -f %N
+ExecStartPre=/usr/bin/docker pull $RPIMAGE
+ExecStart=/usr/bin/docker run \
+  --hostname %H \
+  --name %N \
+  --rm \
+  -e PULL_SECRET \
+  -e RP_MODE \
+  -v /run/systemd/journal:/run/systemd/journal \
+  -v /var/etw:/var/etw \
+  $RPIMAGE \
+  monitor
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+for service in aro-monitor aro-rp auoms azsecd azsecmond mdsd mdm chronyd td-agent-bit; do
   systemctl enable $service.service
 done
 
