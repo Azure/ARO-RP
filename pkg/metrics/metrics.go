@@ -5,7 +5,6 @@ package metrics
 
 // Interface represents metrics interface
 type Interface interface {
-	Close() error
-	EmitFloat(string, float64, map[string]string) error
-	EmitGauge(string, int64, map[string]string) error
+	EmitFloat(string, float64, map[string]string)
+	EmitGauge(string, int64, map[string]string)
 }

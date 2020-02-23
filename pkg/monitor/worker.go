@@ -161,8 +161,10 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 		return err
 	}
 
-	return mon.m.EmitGauge("monitoring.apiserver.health", 1, map[string]string{
+	mon.m.EmitGauge("monitoring.apiserver.health", 1, map[string]string{
 		"resource": doc.OpenShiftCluster.ID,
 		"code":     strconv.FormatInt(int64(statusCode), 10),
 	})
+
+	return nil
 }

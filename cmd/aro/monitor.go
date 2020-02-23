@@ -29,7 +29,6 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
-	defer m.Close()
 
 	cipher, err := encryption.NewXChaCha20Poly1305(ctx, env)
 	if err != nil {
