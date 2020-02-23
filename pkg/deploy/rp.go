@@ -489,6 +489,7 @@ ExecStart=/usr/bin/docker run \
   -e RP_MODE \
   -p 443:8443 \
   -v /run/systemd/journal:/run/systemd/journal \
+  -v /var/etw:/var/etw \
   $RPIMAGE \
   rp
 ExecStop=/usr/bin/docker stop -t 3600 %N
@@ -498,7 +499,7 @@ Restart=always
 WantedBy=multi-user.target
 EOF
 
-for service in arorp auoms azsecd azsecmond mdsd chronyd td-agent-bit; do
+for service in arorp auoms azsecd azsecmond mdsd mdm chronyd td-agent-bit; do
   systemctl enable $service.service
 done
 
