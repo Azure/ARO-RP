@@ -17,6 +17,7 @@ import (
 	_ "github.com/Azure/ARO-RP/pkg/install"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
 func run(ctx context.Context) error {
@@ -60,7 +61,7 @@ func run(ctx context.Context) error {
 		}
 	}
 
-	name := vhd[strings.LastIndexByte(vhd, '/')+1:]
+	name := stringutils.LastTokenByte(vhd, '/')
 
 	b := c.GetBlobReference(name)
 
