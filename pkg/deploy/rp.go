@@ -322,18 +322,18 @@ func (g *generator) vmss() *arm.Resource {
 	}
 
 	for _, variable := range []string{
-		"mdmCertificateVaultId",
-		"mdmFrontendUrl",
-		"mdmMetricNamespace",
-		"mdmMonitoringAccount",
-		"mdsdAccount",
-		"mdsdCertificateVaultId",
-		"mdsdConfigVersion",
-		"mdsdEnvironment",
-		"mdsdNamespace",
 		"pullSecret",
 		"rpImage",
 		"rpImageAuth",
+		"rpMdmCertificateVaultId",
+		"rpMdmFrontendUrl",
+		"rpMdmMetricNamespace",
+		"rpMdmMonitoringAccount",
+		"rpMdsdAccount",
+		"rpMdsdCertificateVaultId",
+		"rpMdsdConfigVersion",
+		"rpMdsdEnvironment",
+		"rpMdsdNamespace",
 		"rpMode",
 	} {
 		parts = append(parts,
@@ -408,10 +408,10 @@ EOF
 
 az login -i --allow-no-subscriptions
 
-az keyvault secret download --file /etc/mdm.pem --id "$MDMCERTIFICATEVAULTID"
+az keyvault secret download --file /etc/mdm.pem --id "$RPMDMCERTIFICATEVAULTID"
 chmod 0600 /etc/mdm.pem
 
-az keyvault secret download --file /etc/mdsd.pem --id "$MDSDCERTIFICATEVAULTID"
+az keyvault secret download --file /etc/mdsd.pem --id "$RPMDSDCERTIFICATEVAULTID"
 chown syslog:syslog /etc/mdsd.pem
 chmod 0600 /etc/mdsd.pem
 
@@ -423,13 +423,13 @@ MDSD_OPTIONS="-A -d -r \$MDSD_ROLE_PREFIX"
 
 export SSL_CERT_FILE=/etc/pki/tls/certs/ca-bundle.crt
 
-export MONITORING_GCS_ENVIRONMENT='$MDSDENVIRONMENT'
-export MONITORING_GCS_ACCOUNT='$MDSDACCOUNT'
+export MONITORING_GCS_ENVIRONMENT='$RPMDSDENVIRONMENT'
+export MONITORING_GCS_ACCOUNT='$RPMDSDACCOUNT'
 export MONITORING_GCS_REGION='$LOCATION'
 export MONITORING_GCS_CERT_CERTFILE=/etc/mdsd.pem
 export MONITORING_GCS_CERT_KEYFILE=/etc/mdsd.pem
-export MONITORING_GCS_NAMESPACE='$MDSDNAMESPACE'
-export MONITORING_CONFIG_VERSION='$MDSDCONFIGVERSION'
+export MONITORING_GCS_NAMESPACE='$RPMDSDNAMESPACE'
+export MONITORING_CONFIG_VERSION='$RPMDSDCONFIGVERSION'
 export MONITORING_USE_GENEVA_CONFIG_SERVICE=true
 
 export MONITORING_TENANT='$LOCATION'
@@ -438,10 +438,10 @@ export MONITORING_ROLE_INSTANCE='$(hostname)'
 EOF
 
 cat >/etc/sysconfig/mdm <<EOF
-MDMFRONTENDURL='$MDMFRONTENDURL'
-MDMIMAGE=arosvc.azurecr.io/genevamdm:master_31
-MDMMETRICNAMESPACE='$MDMMETRICNAMESPACE'
-MDMMONITORINGACCOUNT='$MDMMONITORINGACCOUNT'
+RPMDMFRONTENDURL='$RPMDMFRONTENDURL'
+RPMDMIMAGE=arosvc.azurecr.io/genevamdm:master_31
+RPMDMMETRICNAMESPACE='$RPMDMMETRICNAMESPACE'
+RPMDMMONITORINGACCOUNT='$RPMDMMONITORINGACCOUNT'
 EOF
 
 cat >/etc/systemd/system/mdm.service <<'EOF'
@@ -451,7 +451,7 @@ After=network-online.target
 [Service]
 EnvironmentFile=/etc/sysconfig/mdm
 ExecStartPre=-/usr/bin/docker rm -f %N
-ExecStartPre=/usr/bin/docker pull $MDMIMAGE
+ExecStartPre=/usr/bin/docker pull $RPMDMIMAGE
 ExecStart=/usr/bin/docker run \
   --entrypoint /usr/sbin/MetricsExtension \
   --hostname %H \
@@ -459,10 +459,10 @@ ExecStart=/usr/bin/docker run \
   --rm \
   -v /etc/mdm.pem:/etc/mdm.pem \
   -v /var/etw:/var/etw \
-  $MDMIMAGE \
-  -FrontEndUrl $MDMFRONTENDURL \
-  -MonitoringAccount $MDMMONITORINGACCOUNT \
-  -MetricNamespace $MDMMETRICNAMESPACE \
+  $RPMDMIMAGE \
+  -FrontEndUrl $RPMDMFRONTENDURL \
+  -MonitoringAccount $RPMDMMONITORINGACCOUNT \
+  -MetricNamespace $RPMDMMETRICNAMESPACE \
   -CertFile /etc/mdm.pem \
   -PrivateKeyFile /etc/mdm.pem
 ExecStop=/usr/bin/docker stop %N
@@ -1071,18 +1071,18 @@ func (g *generator) template() *arm.Template {
 		params = append(params,
 			"extraCosmosDBIPs",
 			"extraKeyvaultAccessPolicies",
-			"mdmCertificateVaultId",
-			"mdmFrontendUrl",
-			"mdmMetricNamespace",
-			"mdmMonitoringAccount",
-			"mdsdAccount",
-			"mdsdCertificateVaultId",
-			"mdsdConfigVersion",
-			"mdsdEnvironment",
-			"mdsdNamespace",
 			"pullSecret",
 			"rpImage",
 			"rpImageAuth",
+			"rpMdmCertificateVaultId",
+			"rpMdmFrontendUrl",
+			"rpMdmMetricNamespace",
+			"rpMdmMonitoringAccount",
+			"rpMdsdAccount",
+			"rpMdsdCertificateVaultId",
+			"rpMdsdConfigVersion",
+			"rpMdsdEnvironment",
+			"rpMdsdNamespace",
 			"rpMode",
 			"vmssCount",
 			"vmssDomainNameLabel",

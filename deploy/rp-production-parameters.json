@@ -20,33 +20,6 @@
         "keyvaultPrefix": {
             "value": ""
         },
-        "mdmCertificateVaultId": {
-            "value": ""
-        },
-        "mdmFrontendUrl": {
-            "value": ""
-        },
-        "mdmMetricNamespace": {
-            "value": ""
-        },
-        "mdmMonitoringAccount": {
-            "value": ""
-        },
-        "mdsdAccount": {
-            "value": ""
-        },
-        "mdsdCertificateVaultId": {
-            "value": ""
-        },
-        "mdsdConfigVersion": {
-            "value": ""
-        },
-        "mdsdEnvironment": {
-            "value": ""
-        },
-        "mdsdNamespace": {
-            "value": ""
-        },
         "pullSecret": {
             "value": ""
         },
@@ -54,6 +27,33 @@
             "value": ""
         },
         "rpImageAuth": {
+            "value": ""
+        },
+        "rpMdmCertificateVaultId": {
+            "value": ""
+        },
+        "rpMdmFrontendUrl": {
+            "value": ""
+        },
+        "rpMdmMetricNamespace": {
+            "value": ""
+        },
+        "rpMdmMonitoringAccount": {
+            "value": ""
+        },
+        "rpMdsdAccount": {
+            "value": ""
+        },
+        "rpMdsdCertificateVaultId": {
+            "value": ""
+        },
+        "rpMdsdConfigVersion": {
+            "value": ""
+        },
+        "rpMdsdEnvironment": {
+            "value": ""
+        },
+        "rpMdsdNamespace": {
             "value": ""
         },
         "rpMode": {
