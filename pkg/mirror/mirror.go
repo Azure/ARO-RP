@@ -17,7 +17,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func copyImage(ctx context.Context, dstreference, srcreference string, dstauth, srcauth *types.DockerAuthConfig) error {
+func Copy(ctx context.Context, dstreference, srcreference string, dstauth, srcauth *types.DockerAuthConfig) error {
 	policyctx, err := signature.NewPolicyContext(&signature.Policy{
 		Default: signature.PolicyRequirements{
 			signature.NewPRInsecureAcceptAnything(),
@@ -49,7 +49,7 @@ func copyImage(ctx context.Context, dstreference, srcreference string, dstauth, 
 	return err
 }
 
-func dst(repo, reference string) string {
+func Dest(repo, reference string) string {
 	return repo + reference[strings.IndexByte(reference, '/'):]
 }
 
@@ -78,7 +78,7 @@ func Mirror(ctx context.Context, log *logrus.Entry, dstrepo, srcrelease string, 
 		go func() {
 			for w := range ch {
 				log.Printf("mirroring %s", w.tag)
-				err := copyImage(ctx, w.dstreference, w.srcreference, w.dstauth, w.srcauth)
+				err := Copy(ctx, w.dstreference, w.srcreference, w.dstauth, w.srcauth)
 				if err != nil {
 					log.Errorf("%s: %s\n", w.tag, err)
 					errorOccurred.Store(true)
@@ -92,7 +92,7 @@ func Mirror(ctx context.Context, log *logrus.Entry, dstrepo, srcrelease string, 
 
 	ch <- &work{
 		tag:          "release",
-		dstreference: dst(dstrepo, srcrelease),
+		dstreference: Dest(dstrepo, srcrelease),
 		srcreference: srcrelease,
 		dstauth:      dstauth,
 		srcauth:      srcauth,
@@ -101,7 +101,7 @@ func Mirror(ctx context.Context, log *logrus.Entry, dstrepo, srcrelease string, 
 	for _, tag := range is.Spec.Tags {
 		ch <- &work{
 			tag:          tag.Name,
-			dstreference: dst(dstrepo, tag.From.Name),
+			dstreference: Dest(dstrepo, tag.From.Name),
 			srcreference: tag.From.Name,
 			dstauth:      dstauth,
 			srcauth:      srcauth,
