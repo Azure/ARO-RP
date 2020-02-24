@@ -114,6 +114,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		{
 			name:       "create a new cluster",
 			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName", mockSubID),
+			request: func(oc *v20191231preview.OpenShiftCluster) {
+				oc.Properties.ClusterProfile.Version = "4.3.0"
+			},
 			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters) {
 				openShiftClusters.EXPECT().
 					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
