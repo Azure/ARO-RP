@@ -6,6 +6,7 @@ package install
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"reflect"
 	"strings"
 	"time"
@@ -13,8 +14,6 @@ import (
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/kubeconfig"
@@ -179,17 +178,15 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 			},
 		})
 		if err != nil {
-			if detailedErr, ok := err.(autorest.DetailedError); ok {
-				if requestErr, ok := detailedErr.Original.(azure.RequestError); ok &&
-					requestErr.ServiceError != nil &&
-					requestErr.ServiceError.Code == "DeploymentActive" {
-					i.log.Print("waiting for storage template")
-					err = i.deployments.Wait(ctx, resourceGroup, "azuredeploy")
-				}
+			if isDeploymentActiveError(err) {
+				i.log.Print("waiting for storage template")
+				err = i.deployments.Wait(ctx, resourceGroup, "azuredeploy")
 			}
-			if err != nil {
-				return err
+			isQuota, errMsg := isResourceQuotaExceededError(err)
+			if isQuota {
+				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeQuotaExceeded, errMsg, "")
 			}
+			return err
 		}
 	}
 

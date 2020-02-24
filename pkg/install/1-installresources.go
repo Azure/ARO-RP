@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"net/http"
 	"reflect"
 	"time"
 
@@ -15,13 +16,13 @@ import (
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	mgmtprivatedns "github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
 	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
-	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/ignition/machine"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -627,17 +628,15 @@ func (i *Installer) installResources(ctx context.Context) error {
 			},
 		})
 		if err != nil {
-			if detailedErr, ok := err.(autorest.DetailedError); ok {
-				if requestErr, ok := detailedErr.Original.(azure.RequestError); ok &&
-					requestErr.ServiceError != nil &&
-					requestErr.ServiceError.Code == "DeploymentActive" {
-					i.log.Print("waiting for resources template")
-					err = i.deployments.Wait(ctx, resourceGroup, "azuredeploy")
-				}
+			if isDeploymentActiveError(err) {
+				i.log.Print("waiting for resource template")
+				err = i.deployments.Wait(ctx, resourceGroup, "azuredeploy")
 			}
-			if err != nil {
-				return err
+			isQuota, errMsg := isResourceQuotaExceededError(err)
+			if isQuota {
+				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeQuotaExceeded, errMsg, "")
 			}
+			return err
 		}
 	}
 
