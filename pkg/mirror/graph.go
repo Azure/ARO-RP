@@ -10,7 +10,13 @@ import (
 	"net/url"
 )
 
-func AddFromGraph(channel string, min Version) ([]string, error) {
+type Node struct {
+	Version  string                 `json:"version,omitempty"`
+	Payload  string                 `json:"payload,omitempty"`
+	Metadata map[string]interface{} `json:"metadata,omitempty"`
+}
+
+func AddFromGraph(channel string, min Version) ([]Node, error) {
 	req, err := http.NewRequest(http.MethodGet, "https://api.openshift.com/api/upgrades_info/v1/graph", nil)
 	if err != nil {
 		return nil, err
@@ -37,11 +43,7 @@ func AddFromGraph(channel string, min Version) ([]string, error) {
 	}
 
 	var g *struct {
-		Nodes []struct {
-			Version  string                 `json:"version,omitempty"`
-			Payload  string                 `json:"payload,omitempty"`
-			Metadata map[string]interface{} `json:"metadata,omitempty"`
-		} `json:"nodes,omitempty"`
+		Nodes []Node   `json:"nodes,omitempty"`
 		Edges [][2]int `json:"edges,omitempty"`
 	}
 
@@ -50,7 +52,7 @@ func AddFromGraph(channel string, min Version) ([]string, error) {
 		return nil, err
 	}
 
-	releases := make([]string, 0, len(g.Nodes))
+	releases := make([]Node, 0, len(g.Nodes))
 	for _, node := range g.Nodes {
 		version, err := newVersion(node.Version)
 		if err != nil {
@@ -61,7 +63,7 @@ func AddFromGraph(channel string, min Version) ([]string, error) {
 			continue
 		}
 
-		releases = append(releases, node.Payload)
+		releases = append(releases, node)
 	}
 
 	return releases, nil
