@@ -65,6 +65,9 @@
         "sshPublicKey": {
             "value": ""
         },
+        "vmssCount": {
+            "value": 3
+        },
         "vmssDomainNameLabel": {
             "value": ""
         },

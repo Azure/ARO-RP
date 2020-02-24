@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"strconv"
 	"strings"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
@@ -33,8 +34,12 @@ var apiVersions = map[string]string{
 	"network":       "2019-07-01",
 }
 
+const (
+	capacityHack = 12345
+	tenantIDHack = "13805ec3-a223-47ad-ad65-8b2baf92c0fb"
+)
+
 var (
-	tenantIDHack   = "13805ec3-a223-47ad-ad65-8b2baf92c0fb"
 	tenantUUIDHack = uuid.Must(uuid.FromString(tenantIDHack))
 )
 
@@ -542,7 +547,7 @@ rm /etc/motd.d/*
 			Sku: &mgmtcompute.Sku{
 				Name:     to.StringPtr(string(mgmtcompute.VirtualMachineSizeTypesStandardD2sV3)),
 				Tier:     to.StringPtr("Standard"),
-				Capacity: to.Int64Ptr(3),
+				Capacity: to.Int64Ptr(capacityHack),
 			},
 			VirtualMachineScaleSetProperties: &mgmtcompute.VirtualMachineScaleSetProperties{
 				UpgradePolicy: &mgmtcompute.UpgradePolicy{
@@ -1079,6 +1084,7 @@ func (g *generator) template() *arm.Template {
 			"rpImage",
 			"rpImageAuth",
 			"rpMode",
+			"vmssCount",
 			"vmssDomainNameLabel",
 			"vmssName",
 		)
@@ -1100,6 +1106,9 @@ func (g *generator) template() *arm.Template {
 			p.Type = "securestring"
 		case "keyvaultPrefix":
 			p.MaxLength = 24 - max(len(kvClusterSuffix), len(kvServiceSuffix))
+		case "vmssCount":
+			p.Type = "int"
+			p.DefaultValue = 3
 		}
 		t.Parameters[param] = p
 	}
@@ -1148,6 +1157,7 @@ func GenerateRPTemplates() error {
 		if i.g.production {
 			b = bytes.Replace(b, []byte(`"accessPolicies": []`), []byte(`"accessPolicies": "[concat(variables('clustersKeyvaultAccessPolicies'), parameters('extraKeyvaultAccessPolicies'))]"`), 1)
 			b = bytes.Replace(b, []byte(`"accessPolicies": []`), []byte(`"accessPolicies": "[concat(variables('serviceKeyvaultAccessPolicies'), parameters('extraKeyvaultAccessPolicies'))]"`), 1)
+			b = bytes.Replace(b, []byte(`"capacity": `+strconv.Itoa(capacityHack)), []byte(`"capacity": "[parameters('vmssCount')]"`), 1)
 		}
 
 		b = append(b, byte('\n'))
