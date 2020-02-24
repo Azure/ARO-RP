@@ -404,7 +404,6 @@ EOF
 az login -i --allow-no-subscriptions
 
 az keyvault secret download --file /etc/mdm.pem --id "$MDMCERTIFICATEVAULTID"
-chown 1000:1000 /etc/mdm.pem
 chmod 0600 /etc/mdm.pem
 
 az keyvault secret download --file /etc/mdsd.pem --id "$MDSDCERTIFICATEVAULTID"
@@ -435,7 +434,7 @@ EOF
 
 cat >/etc/sysconfig/mdm <<EOF
 MDMFRONTENDURL='$MDMFRONTENDURL'
-MDMIMAGE='arosvc.azurecr.io/mdm:2019.801.1228-66cac1'
+MDMIMAGE=arosvc.azurecr.io/genevamdm:master_31
 MDMMETRICNAMESPACE='$MDMMETRICNAMESPACE'
 MDMMONITORINGACCOUNT='$MDMMONITORINGACCOUNT'
 EOF
@@ -449,6 +448,7 @@ EnvironmentFile=/etc/sysconfig/mdm
 ExecStartPre=-/usr/bin/docker rm -f %N
 ExecStartPre=/usr/bin/docker pull $MDMIMAGE
 ExecStart=/usr/bin/docker run \
+  --entrypoint /usr/sbin/MetricsExtension \
   --hostname %H \
   --name %N \
   --rm \
