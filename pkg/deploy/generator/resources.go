@@ -550,11 +550,22 @@ func (g *generator) vmss() *arm.Resource {
 		"rpImage",
 		"rpImageAuth",
 		"rpMode",
+		"adminApiClientCertCommonName",
 	} {
 		parts = append(parts,
 			fmt.Sprintf("'%s=$(base64 -d <<<'''", strings.ToUpper(variable)),
 			fmt.Sprintf("base64(parameters('%s'))", variable),
 			"''')\n'",
+		)
+	}
+
+	for _, variable := range []string{
+		"adminApiCaBundle",
+	} {
+		parts = append(parts,
+			fmt.Sprintf("'%s='''", strings.ToUpper(variable)),
+			fmt.Sprintf("parameters('%s')", variable),
+			"'''\n'",
 		)
 	}
 
@@ -651,6 +662,11 @@ chmod 0600 /etc/mdsd.pem
 
 az logout
 
+mkdir /etc/aro-rp
+ADMIN_API_CA_BUNDLE_PATH=/etc/aro-rp/admin-ca-bundle.pem
+base64 -d <<<"$ADMINAPICABUNDLE" >$ADMIN_API_CA_BUNDLE_PATH
+chown -R 1000:1000 /etc/aro-rp
+
 mkdir /etc/systemd/system/mdsd.service.d
 cat >/etc/systemd/system/mdsd.service.d/override.conf <<'EOF'
 [Unit]
@@ -721,6 +737,7 @@ cat >/etc/sysconfig/aro-rp <<EOF
 MDM_ACCOUNT=AzureRedHatOpenShiftRP
 MDM_NAMESPACE=RP
 PULL_SECRET='$PULLSECRET'
+ADMIN_API_CLIENT_CERT_COMMON_NAME='$ADMINAPICLIENTCERTCOMMONNAME'
 RPIMAGE='$RPIMAGE'
 RP_MODE='$RPMODE'
 EOF
@@ -740,8 +757,10 @@ ExecStart=/usr/bin/docker run \
   -e MDM_ACCOUNT \
   -e MDM_NAMESPACE \
   -e PULL_SECRET \
+  -e ADMIN_API_CLIENT_CERT_COMMON_NAME \
   -e RP_MODE \
   -p 443:8443 \
+  -v ${ADMIN_API_CA_BUNDLE_PATH}:${ADMIN_API_CA_BUNDLE_PATH} \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
   $RPIMAGE \
