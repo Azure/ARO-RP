@@ -12,8 +12,6 @@ jobs:
           makefile.target: "image-aro"
         Proxy:
           makefile.target: "image-proxy"
-        MDM:
-          makefile.target: "image-mdm"
 
     steps:
       - template: ./templates/template-setup-golang-env.yml

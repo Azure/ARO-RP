@@ -4,57 +4,70 @@ package statsd
 // Licensed under the Apache License 2.0.
 
 import (
-	"bytes"
+	"bufio"
+	"net"
 	"testing"
 	"time"
 
 	"github.com/Azure/ARO-RP/pkg/env"
 )
 
-type writeCloser struct {
-	*bytes.Buffer
-}
-
-func (c *writeCloser) Close() error { return nil }
-
 func TestEmitGauge(t *testing.T) {
-	wc := &writeCloser{Buffer: &bytes.Buffer{}}
+	c1, c2 := net.Pipe()
 
 	s := &statsd{
 		env: &env.Test{
 			TestLocation: "eastus",
 		},
-		conn: wc,
-		now:  func() time.Time { return time.Time{} },
+
+		account:   "*",
+		namespace: "*",
+
+		conn: c1,
+		ch:   make(chan *metric),
+
+		now: func() time.Time { return time.Time{} },
 	}
 
-	err := s.EmitGauge("tests.test_key", 42, map[string]string{"key": "value"})
+	go s.run()
+
+	s.EmitGauge("tests.test_key", 42, map[string]string{"key": "value"})
+
+	m, err := bufio.NewReader(c2).ReadString('\n')
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	if wc.String() != `{"Metric":"tests.test_key","Account":"*","Namespace":"*","Dims":{"hostname":"","key":"value","location":"eastus"},"TS":"0001-01-01T00:00:00.000"}:42|g`+"\n" {
-		t.Error(wc.String())
+	if m != `{"Metric":"tests.test_key","Account":"*","Namespace":"*","Dims":{"hostname":"","key":"value","location":"eastus"},"TS":"0001-01-01T00:00:00.000"}:42|g`+"\n" {
+		t.Error(m)
 	}
 }
 
 func TestEmitFloat(t *testing.T) {
-	wc := &writeCloser{Buffer: &bytes.Buffer{}}
+	c1, c2 := net.Pipe()
 
 	s := &statsd{
 		env: &env.Test{
 			TestLocation: "eastus",
 		},
-		conn: wc,
-		now:  func() time.Time { return time.Time{} },
+
+		account:   "*",
+		namespace: "*",
+
+		conn: c1,
+		ch:   make(chan *metric),
+
+		now: func() time.Time { return time.Time{} },
 	}
 
-	err := s.EmitFloat("tests.test_key", 5, map[string]string{"key": "value"})
+	go s.run()
+
+	s.EmitFloat("tests.test_key", 5, map[string]string{"key": "value"})
+
+	m, err := bufio.NewReader(c2).ReadString('\n')
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	if wc.String() != `{"Metric":"tests.test_key","Account":"*","Namespace":"*","Dims":{"hostname":"","key":"value","location":"eastus"},"TS":"0001-01-01T00:00:00.000"}:5.000000|f`+"\n" {
-		t.Error(wc.String())
+	if m != `{"Metric":"tests.test_key","Account":"*","Namespace":"*","Dims":{"hostname":"","key":"value","location":"eastus"},"TS":"0001-01-01T00:00:00.000"}:5.000000|f`+"\n" {
+		t.Error(m)
 	}
 }

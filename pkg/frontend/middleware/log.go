@@ -56,31 +56,31 @@ func Log(baseLog *logrus.Entry) func(http.Handler) http.Handler {
 			requestID := uuid.NewV4().String()
 			w.Header().Set("X-Ms-Request-Id", requestID)
 
-			log := baseLog.WithFields(logrus.Fields{"correlation-id": correlationID, "request-id": requestID})
+			log := baseLog.WithFields(logrus.Fields{"correlation_id": correlationID, "request_id": requestID})
 			r = r.WithContext(context.WithValue(r.Context(), ContextKeyLog, log))
 
 			defer func() {
 				log.WithFields(logrus.Fields{
-					"access":             true,
-					"bodyReadBytes":      r.Body.(*logReadCloser).bytes,
-					"bodyWrittenBytes":   w.(*logResponseWriter).bytes,
-					"duration":           time.Now().Sub(t).Seconds(),
-					"requestMethod":      r.Method,
-					"requestPath":        r.URL.Path,
-					"requestProto":       r.Proto,
-					"requestRemoteAddr":  r.RemoteAddr,
-					"requestUserAgent":   r.UserAgent(),
-					"responseStatusCode": w.(*logResponseWriter).statusCode,
+					"access":               true,
+					"body_read_bytes":      r.Body.(*logReadCloser).bytes,
+					"body_written_bytes":   w.(*logResponseWriter).bytes,
+					"duration":             time.Now().Sub(t).Seconds(),
+					"request_method":       r.Method,
+					"request_path":         r.URL.Path,
+					"request_proto":        r.Proto,
+					"request_remote_addr":  r.RemoteAddr,
+					"request_user_agent":   r.UserAgent(),
+					"response_status_code": w.(*logResponseWriter).statusCode,
 				}).Print()
 			}()
 
 			log.WithFields(logrus.Fields{
-				"access":            true,
-				"requestMethod":     r.Method,
-				"requestPath":       r.URL.Path,
-				"requestProto":      r.Proto,
-				"requestRemoteAddr": r.RemoteAddr,
-				"requestUserAgent":  r.UserAgent(),
+				"access":              true,
+				"request_method":      r.Method,
+				"request_path":        r.URL.Path,
+				"request_proto":       r.Proto,
+				"request_remote_addr": r.RemoteAddr,
+				"request_user_agent":  r.UserAgent(),
 			}).Print()
 
 			h.ServeHTTP(w, r)

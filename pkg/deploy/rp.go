@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"strconv"
 	"strings"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
@@ -33,8 +34,12 @@ var apiVersions = map[string]string{
 	"network":       "2019-07-01",
 }
 
+const (
+	capacityHack = 12345
+	tenantIDHack = "13805ec3-a223-47ad-ad65-8b2baf92c0fb"
+)
+
 var (
-	tenantIDHack   = "13805ec3-a223-47ad-ad65-8b2baf92c0fb"
 	tenantUUIDHack = uuid.Must(uuid.FromString(tenantIDHack))
 )
 
@@ -317,14 +322,20 @@ func (g *generator) vmss() *arm.Resource {
 	}
 
 	for _, variable := range []string{
-		"mdmCertificate",
-		"mdmFrontendUrl",
-		"mdmMetricNamespace",
-		"mdmMonitoringAccount",
-		"mdmPrivateKey",
+		"clusterMdmMetricNamespace",
+		"clusterMdmMonitoringAccount",
 		"pullSecret",
 		"rpImage",
 		"rpImageAuth",
+		"rpMdmCertificateVaultId",
+		"rpMdmFrontendUrl",
+		"rpMdmMetricNamespace",
+		"rpMdmMonitoringAccount",
+		"rpMdsdAccount",
+		"rpMdsdCertificateVaultId",
+		"rpMdsdConfigVersion",
+		"rpMdsdEnvironment",
+		"rpMdsdNamespace",
 		"rpMode",
 	} {
 		parts = append(parts,
@@ -334,15 +345,30 @@ func (g *generator) vmss() *arm.Resource {
 		)
 	}
 
-	trailer := base64.StdEncoding.EncodeToString([]byte(`systemctl stop arorp.service || true
+	parts = append(parts,
+		fmt.Sprintf("'LOCATION=$(base64 -d <<<'''"),
+		fmt.Sprintf("base64(resourceGroup().location)"),
+		"''')\n'",
+	)
 
-yum -y update -x WALinuxAgent
+	trailer := base64.StdEncoding.EncodeToString([]byte(`yum -y update -x WALinuxAgent
+
+# avoid "error: db5 error(-30969) from dbenv->open: BDB0091 DB_VERSION_MISMATCH: Database environment version mismatch"
+rm -f /var/lib/rpm/__db*
 
 rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8
+rpm --import https://packages.microsoft.com/keys/microsoft.asc
+rpm --import https://packages.fluentbit.io/fluentbit.key
 
-yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm || true
+yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
 
-cat >/etc/yum.repos.d/azure-cli.repo <<'EOF'
+cat >/etc/yum.repos.d/azure.repo <<'EOF'
+[azure-cli]
+name=azure-cli
+baseurl=https://packages.microsoft.com/yumrepos/azure-cli
+enabled=yes
+gpgcheck=yes
+
 [azurecore]
 name=azurecore
 baseurl=https://packages.microsoft.com/yumrepos/azurecore
@@ -350,17 +376,23 @@ enabled=yes
 gpgcheck=no
 EOF
 
-yum -y install azsec-clamav azsec-monitor azure-mdsd azure-security podman-docker
+cat >/etc/yum.repos.d/td-agent-bit.repo <<'EOF'
+[td-agent-bit]
+name=td-agent-bit
+baseurl=https://packages.fluentbit.io/centos/7
+enabled=yes
+gpgcheck=yes
+EOF
+
+yum -y install azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security podman-docker td-agent-bit
+
+firewall-cmd --add-port=443/tcp --permanent
 
 # https://bugzilla.redhat.com/show_bug.cgi?id=1805212
 sed -i -e 's/iptables/firewalld/' /etc/cni/net.d/87-podman-bridge.conflist
 
-firewall-cmd --add-port=443/tcp --permanent
-
-if [[ -n "$RPIMAGEAUTH" ]]; then
-  mkdir -p /root/.docker
-
-  cat >/root/.docker/config.json <<EOF
+mkdir /root/.docker
+cat >/root/.docker/config.json <<EOF
 {
 	"auths": {
 		"${RPIMAGE%%/*}": {
@@ -370,46 +402,79 @@ if [[ -n "$RPIMAGEAUTH" ]]; then
 }
 EOF
 
-else
-  rm -rf /root/.docker
-fi
+cat >/etc/td-agent-bit/td-agent-bit.conf <<'EOF'
+[INPUT]
+    Name systemd
+    Tag journald
 
-mkdir -p /etc/mdm
-echo "$MDMCERTIFICATE" >/etc/mdm/cert.pem
-echo "$MDMPRIVATEKEY" >/etc/mdm/key.pem
-chown -R 1000:1000 /etc/mdm
-chmod 0600 /etc/mdm/key.pem
+[OUTPUT]
+    Name forward
+    Port 29230
+EOF
+
+az login -i --allow-no-subscriptions
+
+az keyvault secret download --file /etc/mdm.pem --id "$RPMDMCERTIFICATEVAULTID"
+chmod 0600 /etc/mdm.pem
+
+az keyvault secret download --file /etc/mdsd.pem --id "$RPMDSDCERTIFICATEVAULTID"
+chown syslog:syslog /etc/mdsd.pem
+chmod 0600 /etc/mdsd.pem
+
+az logout
+
+cat >/etc/default/mdsd <<EOF
+MDSD_ROLE_PREFIX=/var/run/mdsd/default
+MDSD_OPTIONS="-A -d -r \$MDSD_ROLE_PREFIX"
+
+export SSL_CERT_FILE=/etc/pki/tls/certs/ca-bundle.crt
+
+export MONITORING_GCS_ENVIRONMENT='$RPMDSDENVIRONMENT'
+export MONITORING_GCS_ACCOUNT='$RPMDSDACCOUNT'
+export MONITORING_GCS_REGION='$LOCATION'
+export MONITORING_GCS_CERT_CERTFILE=/etc/mdsd.pem
+export MONITORING_GCS_CERT_KEYFILE=/etc/mdsd.pem
+export MONITORING_GCS_NAMESPACE='$RPMDSDNAMESPACE'
+export MONITORING_CONFIG_VERSION='$RPMDSDCONFIGVERSION'
+export MONITORING_USE_GENEVA_CONFIG_SERVICE=true
+
+export MONITORING_TENANT='$LOCATION'
+export MONITORING_ROLE=rp
+export MONITORING_ROLE_INSTANCE='$(hostname)'
+EOF
 
 cat >/etc/sysconfig/mdm <<EOF
-MDMIMAGE='arosvc.azurecr.io/mdm:2019.801.1228-66cac1'
+RPMDMFRONTENDURL='$RPMDMFRONTENDURL'
+RPMDMIMAGE=arosvc.azurecr.io/genevamdm:master_31
+RPMDMSOURCEENVIRONMENT='$LOCATION'
+RPMDMSOURCEROLE=rp
+RPMDMSOURCEROLEINSTANCE='$(hostname)'
 EOF
 
-cat >/etc/sysconfig/arorp <<EOF
-PULL_SECRET='$PULLSECRET'
-RPIMAGE='$RPIMAGE'
-RP_MODE='$RPMODE'
-EOF
-
-cat >/etc/systemd/system/mdm.service <<EOF
+mkdir /var/etw
+cat >/etc/systemd/system/mdm.service <<'EOF'
 [Unit]
 After=network-online.target
 
 [Service]
 EnvironmentFile=/etc/sysconfig/mdm
 ExecStartPre=-/usr/bin/docker rm -f %N
-ExecStartPre=/usr/bin/docker pull \$MDMIMAGE
+ExecStartPre=/usr/bin/docker pull $RPMDMIMAGE
 ExecStart=/usr/bin/docker run \
+  --entrypoint /usr/sbin/MetricsExtension \
   --hostname %H \
   --name %N \
   --rm \
-  -v /etc/mdm:/etc/mdm \
-  -v /var/etw:/var/etw \
-  \$MDMIMAGE \
-  -FrontEndUrl \$MDMFRONTENDURL \
-  -MonitoringAccount \$MDMMONITORINGACCOUNT \
-  -MetricNamespace \$MDMMETRICNAMESPACE \
-  -CertFile /etc/mdm/cert.pem \
-  -PrivateKeyFile /etc/mdm/key.pem
+  -v /etc/mdm.pem:/etc/mdm.pem \
+  -v /var/etw:/var/etw:z \
+  $RPMDMIMAGE \
+  -CertFile /etc/mdm.pem \
+  -FrontEndUrl $RPMDMFRONTENDURL \
+  -Logger Console \
+  -PrivateKeyFile /etc/mdm.pem \
+  -SourceEnvironment $RPMDMSOURCEENVIRONMENT \
+  -SourceRole $RPMDMSOURCEROLE \
+  -SourceRoleInstance $RPMDMSOURCEROLEINSTANCE
 ExecStop=/usr/bin/docker stop %N
 Restart=always
 
@@ -417,22 +482,34 @@ Restart=always
 WantedBy=multi-user.target
 EOF
 
-cat >/etc/systemd/system/arorp.service <<EOF
+cat >/etc/sysconfig/aro-rp <<EOF
+MDM_ACCOUNT='$RPMDMMONITORINGACCOUNT'
+MDM_NAMESPACE='$RPMDMMETRICNAMESPACE'
+PULL_SECRET='$PULLSECRET'
+RPIMAGE='$RPIMAGE'
+RP_MODE='$RPMODE'
+EOF
+
+cat >/etc/systemd/system/aro-rp.service <<'EOF'
 [Unit]
 After=network-online.target
 
 [Service]
-EnvironmentFile=/etc/sysconfig/arorp
+EnvironmentFile=/etc/sysconfig/aro-rp
 ExecStartPre=-/usr/bin/docker rm -f %N
-ExecStartPre=/usr/bin/docker pull \$RPIMAGE
+ExecStartPre=/usr/bin/docker pull $RPIMAGE
 ExecStart=/usr/bin/docker run \
   --hostname %H \
   --name %N \
   --rm \
+  -e MDM_ACCOUNT \
+  -e MDM_NAMESPACE \
   -e PULL_SECRET \
   -e RP_MODE \
   -p 443:8443 \
-  \$RPIMAGE \
+  -v /run/systemd/journal:/run/systemd/journal \
+  -v /var/etw:/var/etw:z \
+  $RPIMAGE \
   rp
 ExecStop=/usr/bin/docker stop -t 3600 %N
 Restart=always
@@ -441,18 +518,43 @@ Restart=always
 WantedBy=multi-user.target
 EOF
 
-for service in arorp chronyd; do
-  systemctl enable $service.service
-done
+cat >/etc/sysconfig/aro-monitor <<EOF
+MDM_ACCOUNT='$CLUSTERMDMMONITORINGACCOUNT'
+MDM_NAMESPACE='$CLUSTERMDMMETRICNAMESPACE'
+RPIMAGE='$RPIMAGE'
+RP_MODE='$RPMODE'
+EOF
+
+cat >/etc/systemd/system/aro-monitor.service <<'EOF'
+[Unit]
+After=network-online.target
+
+[Service]
+EnvironmentFile=/etc/sysconfig/aro-monitor
+ExecStartPre=-/usr/bin/docker rm -f %N
+ExecStartPre=/usr/bin/docker pull $RPIMAGE
+ExecStart=/usr/bin/docker run \
+  --hostname %H \
+  --name %N \
+  --rm \
+  -e MDM_ACCOUNT \
+  -e MDM_NAMESPACE \
+  -e RP_MODE \
+  -v /run/systemd/journal:/run/systemd/journal \
+  -v /var/etw:/var/etw:z \
+  $RPIMAGE \
+  monitor
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
 
 chcon -R system_u:object_r:var_log_t:s0 /var/opt/microsoft/linuxmonagent
 
-for service in auoms azsecd azsecmond mdsd; do
-  systemctl disable $service.service
-  systemctl mask $service.service
+for service in aro-monitor aro-rp auoms azsecd azsecmond mdsd mdm chronyd td-agent-bit; do
+  systemctl enable $service.service
 done
-
-rm /etc/rsyslog.d/10-mdsd.conf
 
 rm /etc/motd.d/*
 >/etc/containers/nodocker
@@ -469,7 +571,7 @@ rm /etc/motd.d/*
 			Sku: &mgmtcompute.Sku{
 				Name:     to.StringPtr(string(mgmtcompute.VirtualMachineSizeTypesStandardD2sV3)),
 				Tier:     to.StringPtr("Standard"),
-				Capacity: to.Int64Ptr(3),
+				Capacity: to.Int64Ptr(capacityHack),
 			},
 			VirtualMachineScaleSetProperties: &mgmtcompute.VirtualMachineScaleSetProperties{
 				UpgradePolicy: &mgmtcompute.UpgradePolicy{
@@ -991,14 +1093,24 @@ func (g *generator) template() *arm.Template {
 	}
 	if g.production {
 		params = append(params,
-			"mdmCertificate",
-			"mdmFrontendUrl",
-			"mdmMetricNamespace",
-			"mdmMonitoringAccount",
-			"mdmPrivateKey",
+			"clusterMdmMetricNamespace",
+			"clusterMdmMonitoringAccount",
+			"extraCosmosDBIPs",
+			"extraKeyvaultAccessPolicies",
 			"pullSecret",
 			"rpImage",
 			"rpImageAuth",
+			"rpMdmCertificateVaultId",
+			"rpMdmFrontendUrl",
+			"rpMdmMetricNamespace",
+			"rpMdmMonitoringAccount",
+			"rpMdsdAccount",
+			"rpMdsdCertificateVaultId",
+			"rpMdsdConfigVersion",
+			"rpMdsdEnvironment",
+			"rpMdsdNamespace",
+			"rpMode",
+			"vmssCount",
 			"vmssDomainNameLabel",
 			"vmssName",
 		)
@@ -1009,33 +1121,22 @@ func (g *generator) template() *arm.Template {
 	}
 
 	for _, param := range params {
-		typ := "string"
+		p := &arm.TemplateParameter{Type: "string"}
 		switch param {
-		case "mdmPrivateKey", "pullSecret", "rpImageAuth":
-			typ = "securestring"
+		case "extraCosmosDBIPs", "rpMode":
+			p.DefaultValue = ""
+		case "extraKeyvaultAccessPolicies":
+			p.Type = "array"
+			p.DefaultValue = []mgmtkeyvault.AccessPolicyEntry{}
+		case "pullSecret", "rpImageAuth":
+			p.Type = "securestring"
+		case "keyvaultPrefix":
+			p.MaxLength = 24 - max(len(kvClusterSuffix), len(kvServiceSuffix))
+		case "vmssCount":
+			p.Type = "int"
+			p.DefaultValue = 3
 		}
-		t.Parameters[param] = &arm.TemplateParameter{Type: typ}
-		if param == "keyvaultPrefix" {
-			t.Parameters[param] = &arm.TemplateParameter{
-				Type:      typ,
-				MaxLength: 24 - max(len(kvClusterSuffix), len(kvServiceSuffix)),
-			}
-		}
-	}
-
-	if g.production {
-		t.Parameters["extraCosmosDBIPs"] = &arm.TemplateParameter{
-			Type:         "string",
-			DefaultValue: "",
-		}
-		t.Parameters["extraKeyvaultAccessPolicies"] = &arm.TemplateParameter{
-			Type:         "array",
-			DefaultValue: []mgmtkeyvault.AccessPolicyEntry{},
-		}
-		t.Parameters["rpMode"] = &arm.TemplateParameter{
-			Type:         "string",
-			DefaultValue: "",
-		}
+		t.Parameters[param] = p
 	}
 
 	if g.production {
@@ -1082,6 +1183,7 @@ func GenerateRPTemplates() error {
 		if i.g.production {
 			b = bytes.Replace(b, []byte(`"accessPolicies": []`), []byte(`"accessPolicies": "[concat(variables('clustersKeyvaultAccessPolicies'), parameters('extraKeyvaultAccessPolicies'))]"`), 1)
 			b = bytes.Replace(b, []byte(`"accessPolicies": []`), []byte(`"accessPolicies": "[concat(variables('serviceKeyvaultAccessPolicies'), parameters('extraKeyvaultAccessPolicies'))]"`), 1)
+			b = bytes.Replace(b, []byte(`"capacity": `+strconv.Itoa(capacityHack)), []byte(`"capacity": "[parameters('vmssCount')]"`), 1)
 		}
 
 		b = append(b, byte('\n'))

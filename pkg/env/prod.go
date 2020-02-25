@@ -51,7 +51,8 @@ type prod struct {
 
 func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata, clientauthorizer clientauthorizer.ClientAuthorizer) (*prod, error) {
 	for _, key := range []string{
-		"PULL_SECRET",
+		"MDM_ACCOUNT",
+		"MDM_NAMESPACE",
 	} {
 		if _, found := os.LookupEnv(key); !found {
 			return nil, fmt.Errorf("environment variable %q unset", key)
@@ -275,6 +276,10 @@ func (p *prod) ManagedDomain(domain string) (string, error) {
 		return "", nil
 	}
 	return domain + "." + p.Domain(), nil
+}
+
+func (p *prod) MetricsSocketPath() string {
+	return "/var/etw/mdm_statsd.socket"
 }
 
 func (p *prod) Zones(vmSize string) ([]string, error) {

@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/coreos/go-systemd/journal"
 	"github.com/sirupsen/logrus"
 )
 
@@ -27,6 +28,10 @@ func GetLogger() *logrus.Entry {
 		CallerPrettyfier: relativeFilePathPrettier,
 	})
 
+	if journal.Enabled() {
+		logrus.AddHook(&journaldHook{})
+	}
+
 	log := logrus.NewEntry(logrus.StandardLogger())
 
 	l, err := logrus.ParseLevel(*loglevel)
@@ -42,5 +47,5 @@ func GetLogger() *logrus.Entry {
 func relativeFilePathPrettier(f *runtime.Frame) (string, string) {
 	file := strings.TrimPrefix(f.File, repopath)
 	function := f.Function[strings.LastIndexByte(f.Function, '/')+1:]
-	return fmt.Sprintf("%s()", function), fmt.Sprintf(" %s:%d", file, f.Line)
+	return fmt.Sprintf("%s()", function), fmt.Sprintf("%s:%d", file, f.Line)
 }

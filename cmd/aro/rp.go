@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -24,6 +25,14 @@ import (
 )
 
 func rp(ctx context.Context, log *logrus.Entry) error {
+	for _, key := range []string{
+		"PULL_SECRET",
+	} {
+		if _, found := os.LookupEnv(key); !found {
+			return fmt.Errorf("environment variable %q unset", key)
+		}
+	}
+
 	uuid := uuid.NewV4().String()
 	log.Printf("uuid %s", uuid)
 
@@ -36,7 +45,6 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
-	defer m.Close()
 
 	cipher, err := encryption.NewXChaCha20Poly1305(ctx, env)
 	if err != nil {

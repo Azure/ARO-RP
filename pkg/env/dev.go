@@ -80,7 +80,6 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 		"DATABASE_NAME",
 		"LOCATION",
 		"PROXY_HOSTNAME",
-		"PULL_SECRET",
 		"RESOURCEGROUP",
 	} {
 		if _, found := os.LookupEnv(key); !found {
@@ -232,6 +231,10 @@ func (d *dev) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, erro
 	}
 
 	return &refreshableAuthorizer{autorest.NewBearerAuthorizer(sp), sp}, nil
+}
+
+func (d *dev) MetricsSocketPath() string {
+	return "mdm_statsd.socket"
 }
 
 func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthorizer autorest.Authorizer, resourceGroup string) error {

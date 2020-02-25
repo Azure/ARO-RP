@@ -2,6 +2,12 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
+        "clusterMdmMetricNamespace": {
+            "value": ""
+        },
+        "clusterMdmMonitoringAccount": {
+            "value": ""
+        },
         "databaseAccountName": {
             "value": ""
         },
@@ -20,21 +26,6 @@
         "keyvaultPrefix": {
             "value": ""
         },
-        "mdmCertificate": {
-            "value": ""
-        },
-        "mdmFrontendUrl": {
-            "value": ""
-        },
-        "mdmMetricNamespace": {
-            "value": ""
-        },
-        "mdmMonitoringAccount": {
-            "value": ""
-        },
-        "mdmPrivateKey": {
-            "value": ""
-        },
         "pullSecret": {
             "value": ""
         },
@@ -42,6 +33,33 @@
             "value": ""
         },
         "rpImageAuth": {
+            "value": ""
+        },
+        "rpMdmCertificateVaultId": {
+            "value": ""
+        },
+        "rpMdmFrontendUrl": {
+            "value": ""
+        },
+        "rpMdmMetricNamespace": {
+            "value": ""
+        },
+        "rpMdmMonitoringAccount": {
+            "value": ""
+        },
+        "rpMdsdAccount": {
+            "value": ""
+        },
+        "rpMdsdCertificateVaultId": {
+            "value": ""
+        },
+        "rpMdsdConfigVersion": {
+            "value": ""
+        },
+        "rpMdsdEnvironment": {
+            "value": ""
+        },
+        "rpMdsdNamespace": {
             "value": ""
         },
         "rpMode": {
@@ -52,6 +70,9 @@
         },
         "sshPublicKey": {
             "value": ""
+        },
+        "vmssCount": {
+            "value": 3
         },
         "vmssDomainNameLabel": {
             "value": ""
