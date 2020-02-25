@@ -413,6 +413,14 @@
   version = "v1.3.3"
 
 [[projects]]
+  digest = "1:2b5f431fa18891a2ac0e02353c83fb3bf458fced6ccecd664b429054e0c4ce3b"
+  name = "github.com/evanphx/json-patch"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "bf22ed9311622d93e213ba31e4ae7a5771e5d379"
+  version = "v4.6.0"
+
+[[projects]]
   digest = "1:2cd7915ab26ede7d95b8749e6b1f933f1c6d5398030684e6505940a10f31cfda"
   name = "github.com/ghodss/yaml"
   packages = ["."]
@@ -871,16 +879,21 @@
 
 [[projects]]
   branch = "release-4.3"
-  digest = "1:389e8899bcd32ef27c6ab649f2fd99153afee3d4f02090625047687e859ebcab"
+  digest = "1:3465cb9935ae6a0a2c2e9916115a6e9857755e0c32c6b45c3e0208cb781b61e4"
   name = "github.com/openshift/client-go"
   packages = [
     "config/clientset/versioned",
+    "config/clientset/versioned/fake",
     "config/clientset/versioned/scheme",
     "config/clientset/versioned/typed/config/v1",
+    "config/clientset/versioned/typed/config/v1/fake",
     "operator/clientset/versioned",
+    "operator/clientset/versioned/fake",
     "operator/clientset/versioned/scheme",
     "operator/clientset/versioned/typed/operator/v1",
+    "operator/clientset/versioned/typed/operator/v1/fake",
     "operator/clientset/versioned/typed/operator/v1alpha1",
+    "operator/clientset/versioned/typed/operator/v1alpha1/fake",
   ]
   pruneopts = "UT"
   revision = "f6563a70e19a12b2f240eaf4e716ef75baf7003e"
@@ -1583,7 +1596,7 @@
 
 [[projects]]
   branch = "origin-4.3-kubernetes-1.16.2"
-  digest = "1:cdcb015bfa5a065008eb54b8d02234b89c072737b649086979bad108e942ee34"
+  digest = "1:86f478c8a6903e47e6548df3e716188fef4a38d7949d60a79499362925ea4208"
   name = "k8s.io/apimachinery"
   packages = [
     "pkg/api/errors",
@@ -1611,17 +1624,20 @@
     "pkg/util/framer",
     "pkg/util/intstr",
     "pkg/util/json",
+    "pkg/util/mergepatch",
     "pkg/util/naming",
     "pkg/util/net",
     "pkg/util/rand",
     "pkg/util/runtime",
     "pkg/util/sets",
+    "pkg/util/strategicpatch",
     "pkg/util/validation",
     "pkg/util/validation/field",
     "pkg/util/wait",
     "pkg/util/yaml",
     "pkg/version",
     "pkg/watch",
+    "third_party/forked/golang/json",
     "third_party/forked/golang/reflect",
   ]
   pruneopts = "UT"
@@ -1630,10 +1646,11 @@
 
 [[projects]]
   branch = "origin-4.3-kubernetes-1.16.2"
-  digest = "1:35c232953a5866abb1afa0042cf2a49ddacd21fed19038486bee631b77a46927"
+  digest = "1:e71e465ba93c57c15194845e6153f412a35c173cd581044f405514c15b7b7f91"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
+    "discovery/fake",
     "kubernetes",
     "kubernetes/scheme",
     "kubernetes/typed/admissionregistration/v1",
@@ -1681,6 +1698,7 @@
     "plugin/pkg/client/auth/exec",
     "rest",
     "rest/watch",
+    "testing",
     "tools/auth",
     "tools/clientcmd",
     "tools/clientcmd/api",
@@ -1710,9 +1728,12 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:a25f899659892020bfbc94c5f9395a708fdbb7f9beeede9c286f4cd377bc5753"
+  digest = "1:4c2cbfb5ec9dc5612f8fb1c32343304efe5388c11367361b95b95c00653843c9"
   name = "k8s.io/kube-openapi"
-  packages = ["pkg/common"]
+  packages = [
+    "pkg/common",
+    "pkg/util/proto",
+  ]
   pruneopts = "UT"
   revision = "30be4d16710ac61bce31eb28a01054596fe6a9f1"
 
@@ -1830,7 +1851,9 @@
     "github.com/openshift/api/image/v1",
     "github.com/openshift/api/operator/v1",
     "github.com/openshift/client-go/config/clientset/versioned",
+    "github.com/openshift/client-go/config/clientset/versioned/fake",
     "github.com/openshift/client-go/operator/clientset/versioned",
+    "github.com/openshift/client-go/operator/clientset/versioned/fake",
     "github.com/openshift/console-operator/pkg/api",
     "github.com/openshift/installer/data",
     "github.com/openshift/installer/pkg/asset",
