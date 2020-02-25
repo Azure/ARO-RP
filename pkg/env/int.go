@@ -12,8 +12,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 )
 
-func newInt(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata, clientauthorizer clientauthorizer.ClientAuthorizer) (*prod, error) {
-	p, err := newProd(ctx, log, instancemetadata, clientauthorizer)
+func newInt(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata, armClientAuthorizer, adminClientAuthorizer clientauthorizer.ClientAuthorizer) (*prod, error) {
+	p, err := newProd(ctx, log, instancemetadata, armClientAuthorizer, adminClientAuthorizer)
 
 	if err != nil {
 		return nil, err

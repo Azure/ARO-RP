@@ -10,7 +10,7 @@ import (
 )
 
 func (f *frontend) getReady(w http.ResponseWriter, r *http.Request) {
-	if f.ready.Load().(bool) && f.env.IsReady() {
+	if f.ready.Load().(bool) && f.env.ArmClientAuthorizer().IsReady() && f.env.AdminClientAuthorizer().IsReady() {
 		api.WriteCloudError(w, &api.CloudError{StatusCode: http.StatusOK})
 	} else {
 		api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")

@@ -19,9 +19,10 @@ import (
 )
 
 type Interface interface {
-	clientauthorizer.ClientAuthorizer
 	instancemetadata.InstanceMetadata
 
+	ArmClientAuthorizer() clientauthorizer.ClientAuthorizer
+	AdminClientAuthorizer() clientauthorizer.ClientAuthorizer
 	ClustersKeyvaultURI() string
 	CosmosDB() (string, string)
 	DatabaseName() string
@@ -39,7 +40,7 @@ type Interface interface {
 func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
 	if strings.ToLower(os.Getenv("RP_MODE")) == "development" {
 		log.Warn("running in development mode")
-		return newDev(ctx, log, instancemetadata.NewDev(), clientauthorizer.NewAll())
+		return newDev(ctx, log, instancemetadata.NewDev(), clientauthorizer.NewAll(), clientauthorizer.NewAll())
 	}
 
 	im, err := instancemetadata.NewProd()
@@ -49,8 +50,8 @@ func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
 
 	if strings.ToLower(os.Getenv("RP_MODE")) == "int" {
 		log.Warn("running in int mode")
-		return newInt(ctx, log, im, clientauthorizer.NewARM(log))
+		return newInt(ctx, log, im, clientauthorizer.NewARM(log), clientauthorizer.NewAdmin(log))
 	}
 
-	return newProd(ctx, log, im, clientauthorizer.NewARM(log))
+	return newProd(ctx, log, im, clientauthorizer.NewARM(log), clientauthorizer.NewAdmin(log))
 }

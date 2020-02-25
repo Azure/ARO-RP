@@ -70,7 +70,7 @@ type dev struct {
 	proxyClientKey  *rsa.PrivateKey
 }
 
-func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata, clientauthorizer clientauthorizer.ClientAuthorizer) (*dev, error) {
+func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata, armClientAuthorizer, adminClientAuthorizer clientauthorizer.ClientAuthorizer) (*dev, error) {
 	for _, key := range []string{
 		"AZURE_ARM_CLIENT_ID",
 		"AZURE_ARM_CLIENT_SECRET",
@@ -97,7 +97,7 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 		roleassignments: authorization.NewRoleAssignmentsClient(instancemetadata.SubscriptionID(), armAuthorizer),
 	}
 
-	d.prod, err = newProd(ctx, log, instancemetadata, clientauthorizer)
+	d.prod, err = newProd(ctx, log, instancemetadata, armClientAuthorizer, adminClientAuthorizer)
 	if err != nil {
 		return nil, err
 	}

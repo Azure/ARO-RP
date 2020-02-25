@@ -29,13 +29,19 @@ func TestSecurity(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	validadminclientkey, validadminclientcerts, err := utiltls.GenerateKeyAndCertificate("validclient", nil, nil, false, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	l := listener.NewListener()
 	defer l.Close()
 
 	env := &env.Test{
 		L: l,
 	}
-	env.SetClientAuthorizer(clientauthorizer.NewOne(validclientcerts[0].Raw))
+	env.SetARMClientAuthorizer(clientauthorizer.NewOne(validclientcerts[0].Raw))
+	env.SetAdminClientAuthorizer(clientauthorizer.NewOne(validadminclientcerts[0].Raw))
 
 	env.TLSKey, env.TLSCerts, err = utiltls.GenerateKeyAndCertificate("server", nil, nil, false, false)
 	if err != nil {
@@ -80,6 +86,11 @@ func TestSecurity(t *testing.T) {
 			wantStatusCode: http.StatusForbidden,
 		},
 		{
+			name:           "admin operations url, no client certificate",
+			url:            "https://server/providers/Microsoft.RedHatOpenShift/operations?api-version=admin",
+			wantStatusCode: http.StatusForbidden,
+		},
+		{
 			name:           "ready url, no client certificate",
 			url:            "https://server/healthz/ready",
 			wantStatusCode: http.StatusOK,
@@ -106,6 +117,13 @@ func TestSecurity(t *testing.T) {
 			wantStatusCode: http.StatusForbidden,
 		},
 		{
+			name:           "admin operations url, invalid certificate",
+			url:            "https://server/providers/Microsoft.RedHatOpenShift/operations?api-version=admin",
+			key:            invalidclientkey,
+			cert:           invalidclientcerts[0],
+			wantStatusCode: http.StatusForbidden,
+		},
+		{
 			name:           "ready url, invalid certificate",
 			url:            "https://server/healthz/ready",
 			key:            invalidclientkey,
@@ -120,11 +138,25 @@ func TestSecurity(t *testing.T) {
 			wantStatusCode: http.StatusNotFound,
 		},
 		{
+			name:           "empty url, valid admin certificate",
+			url:            "https://server/",
+			key:            validadminclientkey,
+			cert:           validadminclientcerts[0],
+			wantStatusCode: http.StatusForbidden,
+		},
+		{
 			name:           "unknown url, valid certificate",
 			url:            "https://server/unknown",
 			key:            validclientkey,
 			cert:           validclientcerts[0],
 			wantStatusCode: http.StatusNotFound,
+		},
+		{
+			name:           "unknown url, valid admin certificate",
+			url:            "https://server/unknown",
+			key:            validadminclientkey,
+			cert:           validadminclientcerts[0],
+			wantStatusCode: http.StatusForbidden,
 		},
 		{
 			name:           "operations url, valid certificate",
@@ -134,10 +166,38 @@ func TestSecurity(t *testing.T) {
 			wantStatusCode: http.StatusOK,
 		},
 		{
+			name:           "operations url, valid admin certificate",
+			url:            "https://server/providers/Microsoft.RedHatOpenShift/operations?api-version=2019-12-31-preview",
+			key:            validadminclientkey,
+			cert:           validadminclientcerts[0],
+			wantStatusCode: http.StatusForbidden,
+		},
+		{
+			name:           "admin operations url, valid admin certificate",
+			url:            "https://server/providers/Microsoft.RedHatOpenShift/operations?api-version=admin",
+			key:            validadminclientkey,
+			cert:           validadminclientcerts[0],
+			wantStatusCode: http.StatusOK,
+		},
+		{
+			name:           "admin operations url, valid non-admin certificate",
+			url:            "https://server/providers/Microsoft.RedHatOpenShift/operations?api-version=admin",
+			key:            validclientkey,
+			cert:           validclientcerts[0],
+			wantStatusCode: http.StatusForbidden,
+		},
+		{
 			name:           "ready url, valid certificate",
 			url:            "https://server/healthz/ready",
 			key:            validclientkey,
 			cert:           validclientcerts[0],
+			wantStatusCode: http.StatusOK,
+		},
+		{
+			name:           "ready url, valid admin certificate",
+			url:            "https://server/healthz/ready",
+			key:            validadminclientkey,
+			cert:           validadminclientcerts[0],
 			wantStatusCode: http.StatusOK,
 		},
 	} {
