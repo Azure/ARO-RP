@@ -31,7 +31,8 @@ func getAuth(key string) (*types.DockerAuthConfig, error) {
 func mirror(ctx context.Context, log *logrus.Entry) error {
 	for _, key := range []string{
 		"DST_AUTH",
-		"SRC_AUTH",
+		"SRC_AUTH_GENEVA",
+		"SRC_AUTH_QUAY",
 	} {
 		if _, found := os.LookupEnv(key); !found {
 			return fmt.Errorf("environment variable %q unset", key)
@@ -43,7 +44,12 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	srcauth, err := getAuth("SRC_AUTH")
+	srcauthGeneva, err := getAuth("SRC_AUTH_GENEVA")
+	if err != nil {
+		return err
+	}
+
+	srcauthQuay, err := getAuth("SRC_AUTH_QUAY")
 	if err != nil {
 		return err
 	}
@@ -54,12 +60,24 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	log.Printf("mirroring %d release(s)", len(releases))
-
 	var errorOccurred bool
 	for _, release := range releases {
-		err := pkgmirror.Mirror(ctx, log, "arosvc.azurecr.io", release, dstauth, srcauth)
+		log.Printf("mirroring release %s", release.Version)
+		err = pkgmirror.Mirror(ctx, log, "arosvc.azurecr.io", release.Payload, dstauth, srcauthQuay)
 		if err != nil {
+			errorOccurred = true
+		}
+	}
+
+	for _, ref := range []string{
+		"linuxgeneva-microsoft.azurecr.io/genevamdsd:master_249",
+		"linuxgeneva-microsoft.azurecr.io/genevamdm:master_31",
+		"linuxgeneva-microsoft.azurecr.io/genevafluentd_td-agent:master_129",
+	} {
+		log.Printf("mirroring %s", ref)
+		err = pkgmirror.Copy(ctx, pkgmirror.Dest("arosvc.azurecr.io", ref), ref, dstauth, srcauthGeneva)
+		if err != nil {
+			log.Errorf("%s: %s\n", ref, err)
 			errorOccurred = true
 		}
 	}
