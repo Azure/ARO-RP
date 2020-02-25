@@ -80,7 +80,6 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 		"DATABASE_NAME",
 		"LOCATION",
 		"PROXY_HOSTNAME",
-		"PULL_SECRET",
 		"RESOURCEGROUP",
 	} {
 		if _, found := os.LookupEnv(key); !found {
