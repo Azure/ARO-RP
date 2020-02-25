@@ -353,6 +353,9 @@ func (g *generator) vmss() *arm.Resource {
 
 	trailer := base64.StdEncoding.EncodeToString([]byte(`yum -y update -x WALinuxAgent
 
+# avoid "error: db5 error(-30969) from dbenv->open: BDB0091 DB_VERSION_MISMATCH: Database environment version mismatch"
+rm -f /var/lib/rpm/__db*
+
 rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8
 rpm --import https://packages.microsoft.com/keys/microsoft.asc
 rpm --import https://packages.fluentbit.io/fluentbit.key
@@ -388,6 +391,7 @@ firewall-cmd --add-port=443/tcp --permanent
 # https://bugzilla.redhat.com/show_bug.cgi?id=1805212
 sed -i -e 's/iptables/firewalld/' /etc/cni/net.d/87-podman-bridge.conflist
 
+mkdir /root/.docker
 cat >/root/.docker/config.json <<EOF
 {
 	"auths": {
@@ -442,8 +446,12 @@ EOF
 cat >/etc/sysconfig/mdm <<EOF
 RPMDMFRONTENDURL='$RPMDMFRONTENDURL'
 RPMDMIMAGE=arosvc.azurecr.io/genevamdm:master_31
+RPMDMSOURCEENVIRONMENT='$LOCATION'
+RPMDMSOURCEROLE=rp
+RPMDMSOURCEROLEINSTANCE='$(hostname)'
 EOF
 
+mkdir /var/etw
 cat >/etc/systemd/system/mdm.service <<'EOF'
 [Unit]
 After=network-online.target
@@ -458,11 +466,15 @@ ExecStart=/usr/bin/docker run \
   --name %N \
   --rm \
   -v /etc/mdm.pem:/etc/mdm.pem \
-  -v /var/etw:/var/etw \
+  -v /var/etw:/var/etw:z \
   $RPMDMIMAGE \
-  -FrontEndUrl $RPMDMFRONTENDURL \
   -CertFile /etc/mdm.pem \
-  -PrivateKeyFile /etc/mdm.pem
+  -FrontEndUrl $RPMDMFRONTENDURL \
+  -Logger Console \
+  -PrivateKeyFile /etc/mdm.pem \
+  -SourceEnvironment $RPMDMSOURCEENVIRONMENT \
+  -SourceRole $RPMDMSOURCEROLE \
+  -SourceRoleInstance $RPMDMSOURCEROLEINSTANCE
 ExecStop=/usr/bin/docker stop %N
 Restart=always
 
@@ -490,11 +502,13 @@ ExecStart=/usr/bin/docker run \
   --hostname %H \
   --name %N \
   --rm \
+  -e MDM_ACCOUNT \
+  -e MDM_NAMESPACE \
   -e PULL_SECRET \
   -e RP_MODE \
   -p 443:8443 \
   -v /run/systemd/journal:/run/systemd/journal \
-  -v /var/etw:/var/etw \
+  -v /var/etw:/var/etw:z \
   $RPIMAGE \
   rp
 ExecStop=/usr/bin/docker stop -t 3600 %N
@@ -523,9 +537,11 @@ ExecStart=/usr/bin/docker run \
   --hostname %H \
   --name %N \
   --rm \
+  -e MDM_ACCOUNT \
+  -e MDM_NAMESPACE \
   -e RP_MODE \
   -v /run/systemd/journal:/run/systemd/journal \
-  -v /var/etw:/var/etw \
+  -v /var/etw:/var/etw:z \
   $RPIMAGE \
   monitor
 Restart=always
@@ -533,6 +549,8 @@ Restart=always
 [Install]
 WantedBy=multi-user.target
 EOF
+
+chcon -R system_u:object_r:var_log_t:s0 /var/opt/microsoft/linuxmonagent
 
 for service in aro-monitor aro-rp auoms azsecd azsecmond mdsd mdm chronyd td-agent-bit; do
   systemctl enable $service.service
