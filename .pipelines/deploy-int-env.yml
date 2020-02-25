@@ -29,6 +29,11 @@ jobs:
           kvName: "aro-monitoring-int"
           certName: "RP-Metrics"
           outputPath: ${{ variables.modulePath }}/secrets/mdm
+      - template: ./templates/template-pull-certs-from-kv.yml
+        parameters:
+          kvName: "aro-monitoring-int"
+          certName: "RP-Logging"
+          outputPath: ${{ variables.modulePath }}/secrets/mdsd
       - template: ./templates/template-pull-pem-from-kv.yml
         parameters:
           kvName: "ARO-INT-RP"
@@ -45,7 +50,7 @@ jobs:
           parentDomainName: "dev.aroapp.io"
           parentDomainRg: "global-infra"
           pullSecret: $(aro-pullsecret)
-          azureFpClientId: $(aro-int-rp-app-id)
+          azureFpClientId: $(aro-int-rp-object-id)
           location: "eastus"
           rgPrefix: "aro-int"
           mdmFrontendUrl: "https://int2.int.microsoftmetrics.com/"
