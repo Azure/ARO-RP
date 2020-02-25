@@ -44,8 +44,10 @@ jobs:
           location: "eastus"
           rgPrefix: "aro-int"
           mdmFrontendUrl: "https://int2.int.microsoftmetrics.com/"
-          mdmMetricNamespace: "ARO-RP"
-          mdmMonitoringAccount: "AzureRedHatOpenShift"
+          rpMdmMetricNamespace: "ARO-RP"
+          rpMdmMonitoringAccount: "AzureRedHatOpenShift"
+          clusterMdmMetricNamespace: "ARO-Clusters"
+          clusterMdmMonitoringAccount: "AzureRedHatOpenShiftClusters"
           rpImage: $(RP-IMAGE)
           rpImagePullJSONSPN: $(aro-v4-int-image-pull-spn)
           workingDirectory: ${{ variables.modulePath }}

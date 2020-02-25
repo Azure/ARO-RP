@@ -29,9 +29,11 @@ steps:
         --parameters "fpServicePrincipalId=$AZURE_FP_CLIENT_ID" \
         --parameters "keyvaultPrefix=$KEYVAULT_PREFIX" \
         --parameters "rpMdmFrontendUrl=$MDM_FRONTEND" \
-        --parameters "rpMdmMetricNamespace=$MDM_NAMESPACE" \
-        --parameters "rpMdmMonitoringAccount=$MDM_ACCOUNT" \
+        --parameters "rpMdmMetricNamespace=$RP_MDM_NAMESPACE" \
+        --parameters "rpMdmMonitoringAccount=$RP_MDM_ACCOUNT" \
         --parameters "rpMdmCertificateVaultId=$MDM_CERT_VAULT_ID" \
+        --parameters "clusterMdmMetricNamespace=$CLUSTER_MDM_NAMESPACE" \
+        --parameters "clusterMdmMonitoringAccount=$CLUSTER_MDM_ACCOUNT" \
         --parameters "pullSecret=$PULL_SECRET" \
         --parameters "rpImage=$RP_IMAGE" \
         --parameters "rpImageAuth=$RP_IMAGE_AUTH"\
