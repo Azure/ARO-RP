@@ -26,9 +26,12 @@ type statsd struct {
 	log *logrus.Entry
 	env env.Interface
 
-	hostname string
-	conn     net.Conn
-	ch       chan *metric
+	hostname  string
+	account   string
+	namespace string
+
+	conn net.Conn
+	ch   chan *metric
 
 	now func() time.Time
 }
@@ -38,6 +41,9 @@ func New(ctx context.Context, log *logrus.Entry, env env.Interface) (metrics.Int
 	s := &statsd{
 		log: log,
 		env: env,
+
+		account:   os.Getenv("MDM_ACCOUNT"),
+		namespace: os.Getenv("MDM_NAMESPACE"),
 
 		ch: make(chan *metric, 1024),
 
@@ -49,6 +55,14 @@ func New(ctx context.Context, log *logrus.Entry, env env.Interface) (metrics.Int
 		return nil, err
 	}
 	s.hostname = hostname
+
+	if s.account == "" {
+		s.account = "*"
+	}
+
+	if s.namespace == "" {
+		s.namespace = "*"
+	}
 
 	// register azure client tracer
 	tracing.Register(statsdazure.New(s))
@@ -80,8 +94,8 @@ func (s *statsd) EmitGauge(m string, value int64, dims map[string]string) {
 }
 
 func (s *statsd) emitMetric(m *metric) {
-	m.account = "*"
-	m.namespace = "*"
+	m.account = s.account
+	m.namespace = s.namespace
 	if m.dims == nil {
 		m.dims = map[string]string{}
 	}

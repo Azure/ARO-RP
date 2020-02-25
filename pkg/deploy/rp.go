@@ -322,6 +322,8 @@ func (g *generator) vmss() *arm.Resource {
 	}
 
 	for _, variable := range []string{
+		"clusterMdmMetricNamespace",
+		"clusterMdmMonitoringAccount",
 		"pullSecret",
 		"rpImage",
 		"rpImageAuth",
@@ -440,8 +442,6 @@ EOF
 cat >/etc/sysconfig/mdm <<EOF
 RPMDMFRONTENDURL='$RPMDMFRONTENDURL'
 RPMDMIMAGE=arosvc.azurecr.io/genevamdm:master_31
-RPMDMMETRICNAMESPACE='$RPMDMMETRICNAMESPACE'
-RPMDMMONITORINGACCOUNT='$RPMDMMONITORINGACCOUNT'
 EOF
 
 cat >/etc/systemd/system/mdm.service <<'EOF'
@@ -461,8 +461,6 @@ ExecStart=/usr/bin/docker run \
   -v /var/etw:/var/etw \
   $RPMDMIMAGE \
   -FrontEndUrl $RPMDMFRONTENDURL \
-  -MonitoringAccount $RPMDMMONITORINGACCOUNT \
-  -MetricNamespace $RPMDMMETRICNAMESPACE \
   -CertFile /etc/mdm.pem \
   -PrivateKeyFile /etc/mdm.pem
 ExecStop=/usr/bin/docker stop %N
@@ -472,7 +470,9 @@ Restart=always
 WantedBy=multi-user.target
 EOF
 
-cat >/etc/sysconfig/aro <<EOF
+cat >/etc/sysconfig/aro-rp <<EOF
+MDM_ACCOUNT='$RPMDMMONITORINGACCOUNT'
+MDM_NAMESPACE='$RPMDMMETRICNAMESPACE'
 PULL_SECRET='$PULLSECRET'
 RPIMAGE='$RPIMAGE'
 RP_MODE='$RPMODE'
@@ -483,7 +483,7 @@ cat >/etc/systemd/system/aro-rp.service <<'EOF'
 After=network-online.target
 
 [Service]
-EnvironmentFile=/etc/sysconfig/aro
+EnvironmentFile=/etc/sysconfig/aro-rp
 ExecStartPre=-/usr/bin/docker rm -f %N
 ExecStartPre=/usr/bin/docker pull $RPIMAGE
 ExecStart=/usr/bin/docker run \
@@ -504,19 +504,25 @@ Restart=always
 WantedBy=multi-user.target
 EOF
 
+cat >/etc/sysconfig/aro-monitor <<EOF
+MDM_ACCOUNT='$CLUSTERMDMMONITORINGACCOUNT'
+MDM_NAMESPACE='$CLUSTERMDMMETRICNAMESPACE'
+RPIMAGE='$RPIMAGE'
+RP_MODE='$RPMODE'
+EOF
+
 cat >/etc/systemd/system/aro-monitor.service <<'EOF'
 [Unit]
 After=network-online.target
 
 [Service]
-EnvironmentFile=/etc/sysconfig/aro
+EnvironmentFile=/etc/sysconfig/aro-monitor
 ExecStartPre=-/usr/bin/docker rm -f %N
 ExecStartPre=/usr/bin/docker pull $RPIMAGE
 ExecStart=/usr/bin/docker run \
   --hostname %H \
   --name %N \
   --rm \
-  -e PULL_SECRET \
   -e RP_MODE \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw \
@@ -1069,6 +1075,8 @@ func (g *generator) template() *arm.Template {
 	}
 	if g.production {
 		params = append(params,
+			"clusterMdmMetricNamespace",
+			"clusterMdmMonitoringAccount",
 			"extraCosmosDBIPs",
 			"extraKeyvaultAccessPolicies",
 			"pullSecret",

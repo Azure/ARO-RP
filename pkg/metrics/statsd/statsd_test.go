@@ -20,6 +20,9 @@ func TestEmitGauge(t *testing.T) {
 			TestLocation: "eastus",
 		},
 
+		account:   "*",
+		namespace: "*",
+
 		conn: c1,
 		ch:   make(chan *metric),
 
@@ -46,6 +49,9 @@ func TestEmitFloat(t *testing.T) {
 		env: &env.Test{
 			TestLocation: "eastus",
 		},
+
+		account:   "*",
+		namespace: "*",
 
 		conn: c1,
 		ch:   make(chan *metric),

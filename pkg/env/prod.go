@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net"
+	"os"
 	"strings"
 	"time"
 
@@ -49,6 +50,15 @@ type prod struct {
 }
 
 func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata, clientauthorizer clientauthorizer.ClientAuthorizer) (*prod, error) {
+	for _, key := range []string{
+		"MDM_ACCOUNT",
+		"MDM_NAMESPACE",
+	} {
+		if _, found := os.LookupEnv(key); !found {
+			return nil, fmt.Errorf("environment variable %q unset", key)
+		}
+	}
+
 	kvAuthorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(azure.PublicCloud.ResourceIdentifiers.KeyVault)
 	if err != nil {
 		return nil, err
