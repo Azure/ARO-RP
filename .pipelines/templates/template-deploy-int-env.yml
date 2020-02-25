@@ -1,5 +1,6 @@
 parameters:
   workingDirectory: ""
+  sshPublicKey: ""
 steps:
   - script: |
       set -eu
@@ -7,8 +8,6 @@ steps:
 
       . secrets/env
 
-      MDM_CERT="$(cat secrets/mdm-cert.pem)"
-      MDM_KEY="$(cat secrets/mdm-key.pem)"
       SSH_PUBLIC_KEY="${{ parameters.sshPublicKey }}"
 
       echo "########## Creating RG $RESOURCEGROUP in $LOCATION ##########"
@@ -29,11 +28,10 @@ steps:
         --parameters "domainName=$DOMAIN_NAME.$PARENT_DOMAIN_NAME" \
         --parameters "fpServicePrincipalId=$AZURE_FP_CLIENT_ID" \
         --parameters "keyvaultPrefix=$KEYVAULT_PREFIX" \
-        --parameters "mdmCertificate=$MDM_CERT" \
-        --parameters "mdmFrontendUrl=$MDM_FRONTEND" \
-        --parameters "mdmMetricNamespace=$MDM_NAMESPACE" \
-        --parameters "mdmMonitoringAccount=$MDM_ACCOUNT" \
-        --parameters "mdmPrivateKey=$MDM_KEY" \
+        --parameters "rpMdmFrontendUrl=$MDM_FRONTEND" \
+        --parameters "rpMdmMetricNamespace=$MDM_NAMESPACE" \
+        --parameters "rpMdmMonitoringAccount=$MDM_ACCOUNT" \
+        --parameters "rpMdmCertificateVaultId=$MDM_CERT_VAULT_ID" \
         --parameters "pullSecret=$PULL_SECRET" \
         --parameters "rpImage=$RP_IMAGE" \
         --parameters "rpImageAuth=$RP_IMAGE_AUTH"\
@@ -41,7 +39,12 @@ steps:
         --parameters "sshPublicKey=$SSH_PUBLIC_KEY" \
         --parameters "vmssDomainNameLabel=aro-int" \
         --parameters "vmssName=int" \
-        --parameters "rpServicePrincipalId=$RP_SPN_ID" >/dev/null
+        --parameters "rpServicePrincipalId=$RP_SPN_ID" \
+        --parameters "rpMdsdAccount=ARORPLogs" \
+        --parameters "rpMdsdCertificateVaultId=$MDSD_CERT_VAULT_ID" \
+        --parameters "rpMdsdConfigVersion=$MDSD_CONFIG_VERSION" \
+        --parameters "rpMdsdEnvironment=Test" \
+        --parameters "rpMdsdNamespace=ARORPLogs" >/dev/null
       ARM_TEMPLATE_STATE=$(az group deployment show -n rp-int -g $RESOURCEGROUP --query properties.provisioningState -o tsv)
       if [[ $ARM_TEMPLATE_STATE == "Failed" ]]; then
         echo "##[error] Error deploying env-development $(az group deployment show -n rp-int -g $RESOURCEGROUP --query properties.error.details -o tsv)"
@@ -54,9 +57,9 @@ steps:
 
       echo "########## Uploading required runtime secrets to -svc keyvault ##########"
       if $(az keyvault secret show  --vault-name "$KEYVAULT_PREFIX-svc" -n encryption-key >/dev/null) ; then
-        echo "## Encryption key found skipping uploading"
+        echo "## Encryption key found; skipping uploading"
       else
-        echo "## Encryption key not found uploading"
+        echo "## Encryption key not found; uploading"
         az keyvault secret set \
           --vault-name "$KEYVAULT_PREFIX-svc" \
           --name encryption-key \
@@ -65,9 +68,9 @@ steps:
       fi
 
       if $(az keyvault secret show  --vault-name "$KEYVAULT_PREFIX-svc" -n rp-firstparty >/dev/null) ; then
-        echo "## First party client Cert found skipping uploading"
+        echo "## First party client Cert found; skipping uploading"
       else
-        echo "## First party client Cert not found uploading"
+        echo "## First party client Cert not found; uploading"
         az keyvault certificate import \
           --vault-name "$KEYVAULT_PREFIX-svc" \
           --name rp-firstparty   \
@@ -76,9 +79,9 @@ steps:
       fi
 
       if $(az keyvault secret show  --vault-name "$KEYVAULT_PREFIX-svc" -n rp-server >/dev/null) ; then
-        echo "## SSL Cert found skipping uploading"
+        echo "## SSL Cert found; skipping uploading"
       else
-        echo "## SSL Cert not found uploading"
+        echo "## SSL Cert not found; uploading"
         az keyvault certificate import \
           --vault-name "$KEYVAULT_PREFIX-svc" \
           --name rp-server   \

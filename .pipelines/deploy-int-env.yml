@@ -24,16 +24,6 @@ jobs:
         parameters:
           workingDirectory: ${{ variables.modulePath }}
           azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
-      - template: ./templates/template-pull-certs-from-kv.yml
-        parameters:
-          kvName: "aro-monitoring-int"
-          certName: "RP-Metrics"
-          outputPath: ${{ variables.modulePath }}/secrets/mdm
-      - template: ./templates/template-pull-certs-from-kv.yml
-        parameters:
-          kvName: "aro-monitoring-int"
-          certName: "RP-Logging"
-          outputPath: ${{ variables.modulePath }}/secrets/mdsd
       - template: ./templates/template-pull-pem-from-kv.yml
         parameters:
           kvName: "ARO-INT-RP"
@@ -60,9 +50,12 @@ jobs:
           rpImagePullJSONSPN: $(aro-v4-int-image-pull-spn)
           workingDirectory: ${{ variables.modulePath }}
           encryptionKey: $(int-encryption-key)
+          mdsdNamespace: "ARORPLogs"
+          mdsdMonitoringAccount: "ARORPLogs"
+          mdsdMonitoringEnviroment: "Test"
+          mdsdConfigVersion: $(MDSD-CONFIG-VERSION)
       - template: ./templates/template-deploy-int-env.yml
         parameters:
-          azureFpClientSPNId: $(aro-int-rp-app-id)
           workingDirectory: ${{ variables.modulePath }}
           sshPublicKey: $(int-ssh-public-key)
 
