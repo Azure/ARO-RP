@@ -327,12 +327,10 @@ func (g *generator) vmss() *arm.Resource {
 		"pullSecret",
 		"rpImage",
 		"rpImageAuth",
-		"rpMdmCertificateVaultId",
 		"rpMdmFrontendUrl",
 		"rpMdmMetricNamespace",
 		"rpMdmMonitoringAccount",
 		"rpMdsdAccount",
-		"rpMdsdCertificateVaultId",
 		"rpMdsdConfigVersion",
 		"rpMdsdEnvironment",
 		"rpMdsdNamespace",
@@ -348,6 +346,12 @@ func (g *generator) vmss() *arm.Resource {
 	parts = append(parts,
 		fmt.Sprintf("'LOCATION=$(base64 -d <<<'''"),
 		fmt.Sprintf("base64(resourceGroup().location)"),
+		"''')\n'",
+	)
+
+	parts = append(parts,
+		fmt.Sprintf("'RESOURCEGROUPNAME=$(base64 -d <<<'''"),
+		fmt.Sprintf("base64(resourceGroup().name)"),
 		"''')\n'",
 	)
 
@@ -414,10 +418,11 @@ EOF
 
 az login -i --allow-no-subscriptions
 
-az keyvault secret download --file /etc/mdm.pem --id "$RPMDMCERTIFICATEVAULTID"
+SVCVAULTURI="$(az keyvault list -g "$RESOURCEGROUPNAME" --query "[?tags.vault=='service'].properties.vaultUri" -o tsv)"
+az keyvault secret download --file /etc/mdm.pem --id "${SVCVAULTURI}secrets/rp-mdm"
 chmod 0600 /etc/mdm.pem
 
-az keyvault secret download --file /etc/mdsd.pem --id "$RPMDSDCERTIFICATEVAULTID"
+az keyvault secret download --file /etc/mdsd.pem --id "${SVCVAULTURI}secrets/rp-mdsd"
 chown syslog:syslog /etc/mdsd.pem
 chmod 0600 /etc/mdsd.pem
 
@@ -1102,12 +1107,10 @@ func (g *generator) template() *arm.Template {
 			"pullSecret",
 			"rpImage",
 			"rpImageAuth",
-			"rpMdmCertificateVaultId",
 			"rpMdmFrontendUrl",
 			"rpMdmMetricNamespace",
 			"rpMdmMonitoringAccount",
 			"rpMdsdAccount",
-			"rpMdsdCertificateVaultId",
 			"rpMdsdConfigVersion",
 			"rpMdsdEnvironment",
 			"rpMdsdNamespace",

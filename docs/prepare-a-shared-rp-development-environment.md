@@ -334,6 +334,10 @@ If you encounter "VirtualNetworkGatewayCannotUseStandardPublicIP" error when dep
      >/dev/null
    ```
 
+   Note: in production, two additional keys/certificates (rp-mdm and rp-mdsd)
+   are also required in the $KEYVAULT_PREFIX-svc key vault.  These are client
+   certificates for metric and log forwarding (respectively) to Geneva.
+
 1. Create nameserver records in the parent DNS zone:
 
    ```
