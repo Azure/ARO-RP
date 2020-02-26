@@ -36,16 +36,15 @@ jobs:
           outputPath: ${{ variables.modulePath }}/secrets/ssl-cert
       - template: ./templates/template-prepare-int-secrets-env.yml
         parameters:
-          azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
+          domainName: "aro-int"
           parentDomainName: "dev.aroapp.io"
-          parentDomainRg: "global-infra"
-          pullSecret: $(aro-pullsecret)
           azureFpClientId: $(aro-int-rp-object-id)
           location: "eastus"
           rgPrefix: "aro-int"
           mdmFrontendUrl: "https://int2.int.microsoftmetrics.com/"
           rpMdmMetricNamespace: "ARO-RP"
           rpMdmMonitoringAccount: "AzureRedHatOpenShift"
+          rpMdmCertificateVaultId: "https://aro-monitoring-int.vault.azure.net/secrets/RP-Metrics"
           clusterMdmMetricNamespace: "ARO-Clusters"
           clusterMdmMonitoringAccount: "AzureRedHatOpenShiftClusters"
           rpImage: $(RP-IMAGE)
@@ -56,8 +55,18 @@ jobs:
           mdsdMonitoringAccount: "ARORPLogs"
           mdsdMonitoringEnviroment: "Test"
           mdsdConfigVersion: $(MDSD-CONFIG-VERSION)
+          rpMdsdCertificateVaultId: "https://aro-monitoring-int.vault.azure.net/secrets/RP-Logging"
+          vmssDomainNameLabel: "aro-int"
+          vmssName: "int"
+          rpMode: "int"
       - template: ./templates/template-deploy-int-env.yml
         parameters:
           workingDirectory: ${{ variables.modulePath }}
+          azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
+          pullSecret: $(aro-pullsecret)
           sshPublicKey: $(int-ssh-public-key)
-
+          domainName: "aro-int"
+          parentDomainName: "dev.aroapp.io"
+          parentDomainRg: "global-infra"
+          location: "eastus"
+          rgPrefix: "aro-int"
