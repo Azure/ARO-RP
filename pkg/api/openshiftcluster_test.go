@@ -6,12 +6,6 @@ package api
 import "testing"
 
 func TestIsTerminal(t *testing.T) {
-	type test struct {
-		name  string
-		want  bool
-		state ProvisioningState
-	}
-
 	for _, tt := range []struct {
 		name  string
 		want  bool

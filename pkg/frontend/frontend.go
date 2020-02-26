@@ -117,6 +117,7 @@ func NewFrontend(ctx context.Context, baseLog *logrus.Entry, env env.Interface, 
 }
 
 func (f *frontend) unauthenticatedRoutes(r *mux.Router) {
+	r.Path("/healthz").Methods(http.MethodGet).HandlerFunc(f.getHealthz)
 	r.Path("/healthz/ready").Methods(http.MethodGet).HandlerFunc(f.getReady)
 }
 
@@ -215,22 +216,11 @@ func (f *frontend) Run(ctx context.Context, stop <-chan struct{}, done chan<- st
 
 			<-stop
 
-			// mark not ready and wait for ((#probes + 1) * interval + margin) to
-			// stop receiving new connections
-			f.baseLog.Print("marking not ready and waiting 20 seconds")
+			// mark not ready and wait for ((#probes + 1) * interval + longest
+			// connection timeout + margin) to stop receiving new connections
+			f.baseLog.Print("marking not ready and waiting 80 seconds")
 			f.ready.Store(false)
-			time.Sleep(20 * time.Second)
-
-			// initiate server shutdown and wait for (longest connection timeout +
-			// margin) for connections to complete
-			f.baseLog.Print("shutting down and waiting up to 65 seconds")
-			ctx, cancel := context.WithTimeout(context.Background(), 65*time.Second)
-			defer cancel()
-
-			err := f.s.Shutdown(ctx)
-			if err != nil {
-				f.baseLog.Error(err)
-			}
+			time.Sleep(80 * time.Second)
 
 			f.baseLog.Print("exiting")
 			close(done)

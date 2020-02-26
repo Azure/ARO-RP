@@ -56,12 +56,6 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	sigterm := make(chan os.Signal, 1)
-	stop := make(chan struct{})
-	doneB := make(chan struct{})
-	doneF := make(chan struct{})
-	signal.Notify(sigterm, syscall.SIGTERM)
-
 	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), env, db, api.APIs, m)
 	if err != nil {
 		return err
@@ -72,16 +66,26 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	log.Print("listening")
+	// This part of the code orchestrates shutdown sequence. When sigterm is
+	// received, it will trigger backend to stop accepting new documents and
+	// finish old ones. Frontend will stop advertising itself to the loadbalancer.
+	// When shutdown completes for frontend and backend "/healthz" endpoint
+	// will go dark and external observer will know that shutdown sequence is finished
+	sigterm := make(chan os.Signal, 1)
+	stop := make(chan struct{})
+	doneF := make(chan struct{})
+	doneB := make(chan struct{})
+	signal.Notify(sigterm, syscall.SIGTERM)
 
+	log.Print("listening")
 	go b.Run(ctx, stop, doneB)
 	go f.Run(ctx, stop, doneF)
 
 	<-sigterm
 	log.Print("received SIGTERM")
 	close(stop)
-	<-doneF
 	<-doneB
+	<-doneF
 
 	return nil
 }
