@@ -37,13 +37,13 @@ type statsd struct {
 }
 
 // New returns a new metrics.Interface
-func New(ctx context.Context, log *logrus.Entry, env env.Interface) (metrics.Interface, error) {
+func New(ctx context.Context, log *logrus.Entry, env env.Interface, account, namespace string) (metrics.Interface, error) {
 	s := &statsd{
 		log: log,
 		env: env,
 
-		account:   os.Getenv("MDM_ACCOUNT"),
-		namespace: os.Getenv("MDM_NAMESPACE"),
+		account:   account,
+		namespace: namespace,
 
 		ch: make(chan *metric, 1024),
 
