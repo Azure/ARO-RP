@@ -6,6 +6,7 @@ aro: generate
 
 az:
 	cd python/az/aro && python ./setup.py bdist_egg
+	cd python/az/aro && python ./setup.py bdist_wheel || true
 
 clean:
 	rm -rf python/az/aro/{aro.egg-info,build,dist} aro
