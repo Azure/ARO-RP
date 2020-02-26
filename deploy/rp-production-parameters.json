@@ -35,9 +35,6 @@
         "rpImageAuth": {
             "value": ""
         },
-        "rpMdmCertificateVaultId": {
-            "value": ""
-        },
         "rpMdmFrontendUrl": {
             "value": ""
         },
@@ -48,9 +45,6 @@
             "value": ""
         },
         "rpMdsdAccount": {
-            "value": ""
-        },
-        "rpMdsdCertificateVaultId": {
             "value": ""
         },
         "rpMdsdConfigVersion": {
