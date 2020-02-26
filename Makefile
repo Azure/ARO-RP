@@ -17,7 +17,7 @@ client: generate
 	mkdir pkg/client python/client
 	sha256sum swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/preview/2019-12-31-preview/redhatopenshift.json >.sha256sum
 
-	sudo docker run \
+	docker run \
 		--rm \
 		-v $(PWD)/pkg/client:/github.com/Azure/ARO-RP/pkg/client:z \
 		-v $(PWD)/swagger:/swagger:z \
@@ -28,7 +28,7 @@ client: generate
 		--input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/preview/2019-12-31-preview/redhatopenshift.json \
 		--output-folder=/github.com/Azure/ARO-RP/pkg/client/services/preview/redhatopenshift/mgmt/2019-12-31-preview/redhatopenshift
 
-	sudo docker run \
+	docker run \
 		--rm \
 		-v $(PWD)/python/client:/python/client:z \
 		-v $(PWD)/swagger:/swagger:z \
@@ -41,7 +41,7 @@ client: generate
 		--input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/preview/2019-12-31-preview/redhatopenshift.json \
 		--output-folder=/python/client
 
-	sudo chown -R $$(id -un):$$(id -gn) pkg/client python/client
+	chown -R $$(id -un):$$(id -gn) pkg/client python/client
 	sed -i -e 's|azure/aro-rp|Azure/ARO-RP|g' pkg/client/services/preview/redhatopenshift/mgmt/2019-12-31-preview/redhatopenshift/models.go pkg/client/services/preview/redhatopenshift/mgmt/2019-12-31-preview/redhatopenshift/redhatopenshiftapi/interfaces.go
 	rm -rf python/client/azure/mgmt/redhatopenshift/v2019_12_31_preview/aio
 	>python/client/__init__.py
