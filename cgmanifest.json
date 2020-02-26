@@ -292,6 +292,15 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "bf22ed9311622d93e213ba31e4ae7a5771e5d379",
+                    "repositoryUrl": "https://github.com/evanphx/json-patch/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "0ca9ea5df5451ffdf184b4428c902747c2c11cd7",
                     "repositoryUrl": "https://github.com/ghodss/yaml/"
                 }
