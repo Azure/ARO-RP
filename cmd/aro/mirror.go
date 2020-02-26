@@ -65,6 +65,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		log.Printf("mirroring release %s", release.Version)
 		err = pkgmirror.Mirror(ctx, log, "arosvc.azurecr.io", release.Payload, dstauth, srcauthQuay)
 		if err != nil {
+			log.Errorf("%s: %s\n", release, err)
 			errorOccurred = true
 		}
 	}
