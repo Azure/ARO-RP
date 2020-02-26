@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
+	"fmt"
 	"net"
 	"os"
 	"strings"
@@ -51,6 +52,15 @@ func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
 	if strings.ToLower(os.Getenv("RP_MODE")) == "int" {
 		log.Warn("running in int mode")
 		return newInt(ctx, log, im, clientauthorizer.NewARM(log), clientauthorizer.NewAdmin(log))
+	}
+
+	for _, key := range []string{
+		"MDM_ACCOUNT",
+		"MDM_NAMESPACE",
+	} {
+		if _, found := os.LookupEnv(key); !found {
+			return nil, fmt.Errorf("environment variable %q unset", key)
+		}
 	}
 
 	return newProd(ctx, log, im, clientauthorizer.NewARM(log), clientauthorizer.NewAdmin(log))
