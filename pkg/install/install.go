@@ -12,7 +12,6 @@ import (
 	"net/url"
 	"reflect"
 	"runtime"
-	"strings"
 	"time"
 
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
@@ -40,6 +39,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/privateendpoint"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
@@ -204,7 +204,7 @@ func (i *Installer) endOfInstallPhase(ctx context.Context) error {
 }
 
 func (i *Installer) getBlobService(ctx context.Context) (*azstorage.BlobStorageClient, error) {
-	resourceGroup := i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID[strings.LastIndexByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')+1:]
+	resourceGroup := stringutils.LastTokenByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
 	t := time.Now().UTC().Truncate(time.Second)
 

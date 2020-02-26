@@ -7,13 +7,13 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"strings"
 
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/password"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
 func (i *Installer) updateRouterIP(ctx context.Context) error {
@@ -52,7 +52,7 @@ func (i *Installer) updateRouterIP(ctx context.Context) error {
 }
 
 func (i *Installer) updateAPIIP(ctx context.Context) error {
-	resourceGroup := i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID[strings.LastIndexByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')+1:]
+	resourceGroup := stringutils.LastTokenByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	var ipAddress string
 	if i.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {
 		ip, err := i.publicipaddresses.Get(ctx, resourceGroup, "aro-pip", "")

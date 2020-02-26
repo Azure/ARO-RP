@@ -5,11 +5,12 @@ package install
 
 import (
 	"context"
-	"strings"
+
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
 func (i *Installer) removeBootstrap(ctx context.Context) error {
-	resourceGroup := i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID[strings.LastIndexByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')+1:]
+	resourceGroup := stringutils.LastTokenByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	i.log.Print("removing bootstrap vm")
 	err := i.virtualmachines.DeleteAndWait(ctx, resourceGroup, "aro-bootstrap")
 	if err != nil {
