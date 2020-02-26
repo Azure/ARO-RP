@@ -21,12 +21,13 @@ import (
 )
 
 type monitor struct {
-	baseLog *logrus.Entry
-	env     env.Interface
-	db      *database.Database
-	m       metrics.Interface
-	mu      sync.Mutex
-	docs    sync.Map
+	baseLog  *logrus.Entry
+	env      env.Interface
+	db       *database.Database
+	m        metrics.Interface
+	clusterm metrics.Interface
+	mu       sync.Mutex
+	docs     sync.Map
 
 	isMaster    bool
 	bucketCount int
@@ -39,12 +40,13 @@ type Runnable interface {
 	Run(context.Context) error
 }
 
-func NewMonitor(log *logrus.Entry, env env.Interface, db *database.Database, m metrics.Interface) Runnable {
+func NewMonitor(log *logrus.Entry, env env.Interface, db *database.Database, m, clusterm metrics.Interface) Runnable {
 	return &monitor{
-		baseLog: log,
-		env:     env,
-		db:      db,
-		m:       m,
+		baseLog:  log,
+		env:      env,
+		db:       db,
+		m:        m,
+		clusterm: clusterm,
 
 		bucketCount: bucket.Buckets,
 		buckets:     map[int]struct{}{},
