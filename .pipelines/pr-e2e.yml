@@ -1,7 +1,4 @@
 # Azure DevOps Pipeline running e2e tests
-trigger: none
-pr: none
-
 variables:
   - template: vars.yml
 jobs:
