@@ -16,6 +16,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/util/immutable"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 type openShiftClusterStaticValidator struct {
@@ -40,7 +41,7 @@ func (sv *openShiftClusterStaticValidator) Static(_oc interface{}, _current *api
 		return err
 	}
 
-	err = sv.validate(oc)
+	err = sv.validate(oc, current == nil)
 	if err != nil {
 		return err
 	}
@@ -52,7 +53,7 @@ func (sv *openShiftClusterStaticValidator) Static(_oc interface{}, _current *api
 	return sv.validateDelta(oc, current)
 }
 
-func (sv *openShiftClusterStaticValidator) validate(oc *OpenShiftCluster) error {
+func (sv *openShiftClusterStaticValidator) validate(oc *OpenShiftCluster, isCreate bool) error {
 	if !strings.EqualFold(oc.ID, sv.resourceID) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeMismatchingResourceID, "id", "The provided resource ID '%s' did not match the name in the Url '%s'.", oc.ID, sv.resourceID)
 	}
@@ -66,10 +67,10 @@ func (sv *openShiftClusterStaticValidator) validate(oc *OpenShiftCluster) error 
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "location", "The provided location '%s' is invalid.", oc.Location)
 	}
 
-	return sv.validateProperties("properties", &oc.Properties)
+	return sv.validateProperties("properties", &oc.Properties, isCreate)
 }
 
-func (sv *openShiftClusterStaticValidator) validateProperties(path string, p *Properties) error {
+func (sv *openShiftClusterStaticValidator) validateProperties(path string, p *Properties, isCreate bool) error {
 	switch p.ProvisioningState {
 	case ProvisioningStateCreating, ProvisioningStateUpdating,
 		ProvisioningStateDeleting, ProvisioningStateSucceeded,
@@ -77,7 +78,7 @@ func (sv *openShiftClusterStaticValidator) validateProperties(path string, p *Pr
 	default:
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".provisioningState", "The provided provisioning state '%s' is invalid.", p.ProvisioningState)
 	}
-	if err := sv.validateClusterProfile(path+".clusterProfile", &p.ClusterProfile); err != nil {
+	if err := sv.validateClusterProfile(path+".clusterProfile", &p.ClusterProfile, isCreate); err != nil {
 		return err
 	}
 	if err := sv.validateConsoleProfile(path+".consoleProfile", &p.ConsoleProfile); err != nil {
@@ -111,13 +112,12 @@ func (sv *openShiftClusterStaticValidator) validateProperties(path string, p *Pr
 	return nil
 }
 
-func (sv *openShiftClusterStaticValidator) validateClusterProfile(path string, cp *ClusterProfile) error {
+func (sv *openShiftClusterStaticValidator) validateClusterProfile(path string, cp *ClusterProfile, isCreate bool) error {
 	if !validate.RxDomainName.MatchString(cp.Domain) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".domain", "The provided domain '%s' is invalid.", cp.Domain)
 	}
-	switch cp.Version {
-	case "", "4.3.0":
-	default:
+	if isCreate && cp.Version != version.OpenShiftVersion ||
+		!isCreate && !validate.RxOpenShiftVersion.MatchString(cp.Version) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".version", "The provided version '%s' is invalid.", cp.Version)
 	}
 	if !validate.RxResourceGroupID.MatchString(cp.ResourceGroupID) {

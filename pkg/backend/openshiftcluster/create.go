@@ -33,6 +33,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/install"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 func (m *Manager) Create(ctx context.Context) error {
@@ -219,10 +220,9 @@ func (m *Manager) Create(ctx context.Context) error {
 	}
 
 	image := &releaseimage.Image{}
-	switch m.doc.OpenShiftCluster.Properties.ClusterProfile.Version {
-	case "4.3.0":
-		image.PullSpec = "arosvc.azurecr.io/openshift-release-dev/ocp-release@sha256:3a516480dfd68e0f87f702b4d7bdd6f6a0acfdac5cd2e9767b838ceede34d70d"
-	default:
+	if m.doc.OpenShiftCluster.Properties.ClusterProfile.Version == version.OpenShiftVersion {
+		image.PullSpec = version.OpenShiftPullSpec
+	} else {
 		return fmt.Errorf("unimplemented version %q", m.doc.OpenShiftCluster.Properties.ClusterProfile.Version)
 	}
 

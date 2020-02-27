@@ -9,11 +9,13 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/containers/image/types"
 	"github.com/sirupsen/logrus"
 
 	pkgmirror "github.com/Azure/ARO-RP/pkg/mirror"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 func getAuth(key string) (*types.DockerAuthConfig, error) {
@@ -58,6 +60,23 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	releases, err := pkgmirror.AddFromGraph("stable", pkgmirror.Version{4, 3})
 	if err != nil {
 		return err
+	}
+
+	// ensure we mirror the version at which we are creating clusters, even if
+	// it isn't in the Cincinnati graph yet
+	var found bool
+	for _, release := range releases {
+		if release.Version == version.OpenShiftVersion {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		releases = append(releases, pkgmirror.Node{
+			Version: version.OpenShiftVersion,
+			Payload: strings.Replace(version.OpenShiftPullSpec, "arosvc.azurecr.io/", "quay.io/", 1),
+		})
 	}
 
 	var errorOccurred bool

@@ -20,6 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Request) {
@@ -69,6 +70,9 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 				Type: originalR.Provider + "/" + originalR.ResourceType,
 				Properties: api.Properties{
 					ProvisioningState: api.ProvisioningStateSucceeded,
+					ClusterProfile: api.ClusterProfile{
+						Version: version.OpenShiftVersion,
+					},
 					ServicePrincipalProfile: api.ServicePrincipalProfile{
 						TenantID: subdoc.Subscription.Properties.TenantID,
 					},
@@ -104,6 +108,9 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 			Type: doc.OpenShiftCluster.Type,
 			Properties: api.Properties{
 				ProvisioningState: doc.OpenShiftCluster.Properties.ProvisioningState,
+				ClusterProfile: api.ClusterProfile{
+					Version: doc.OpenShiftCluster.Properties.ClusterProfile.Version,
+				},
 			},
 		})
 
@@ -133,7 +140,6 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 		doc.ClusterResourceGroupIDKey = strings.ToLower(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
 		doc.ClientIDKey = strings.ToLower(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientID)
 		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateCreating
-		doc.OpenShiftCluster.Properties.ClusterProfile.Version = "4.3.0"
 
 		doc.Bucket, err = f.bucketAllocator.Allocate()
 		if err != nil {
