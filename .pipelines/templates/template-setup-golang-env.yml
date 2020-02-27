@@ -13,6 +13,6 @@ steps:
       echo "##vso[task.prependpath]${{ parameters.goroot }}/bin"
       sudo add-apt-repository ppa:kubuntu-ppa/backports
       sudo apt-get update
-      sudo apt-get install libgpgme-dev gcc -y
+      sudo apt-get install libgpgme-dev gcc curl -y
       go version
     displayName: "⚙️ Set up the workspace"

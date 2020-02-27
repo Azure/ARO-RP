@@ -37,8 +37,9 @@
    environment and secrets, follow [prepare a shared RP development
    environment](prepare-a-shared-rp-development-environment.md).
 
-1. Place your shared development environment secrets in `secrets` (Red Hat ARO
-   engineering: run `make secrets`).
+1. Place your shared development environment secrets in `secrets`
+      > ARO engineering run `make secrets`. Make sure you set the `SECRET_SA_ACCOUNT_NAME` variable to the storage
+       account containing the secrets you want to use (Ex: `SECRET_SA_ACCOUNT_NAME=storageaccountname`)
 
 1. Copy, edit (if necessary) and source your environment file.  The required
    environment variable configuration is documented immediately below:

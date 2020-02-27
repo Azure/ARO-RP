@@ -249,7 +249,7 @@ locations.
 1. Copy, edit (if necessary) and source your environment file.  The required
    environment variable configuration is documented immediately below:
 
-   ```
+   ```bash
    cp env.example env
    vi env
    . ./env
@@ -260,78 +260,26 @@ locations.
 
 1. Create the resource group and deploy the RP resources:
 
+   ```bash
+   source ./hack/devtools/deploy-shared-env.sh
+   # Create the RG
+   create_infra_rg
+   # Deploy NSG
+   deploy_rp_dev_nsg
+   # Deploy the infrastructure resources such as Cosmos, KV, Vnet...
+   deploy_rp_dev
+   # Deploy the proxy and VPN
+   deploy_env_dev
    ```
-   az group create -g "$RESOURCEGROUP" -l "$LOCATION" >/dev/null
-
-   az group deployment create \
-     -g "$RESOURCEGROUP" \
-     --template-file deploy/rp-development-nsg.json \
-     >/dev/null
-
-   az group deployment create \
-     -g "$RESOURCEGROUP" \
-     --template-file deploy/rp-development.json \
-     --parameters \
-       "adminObjectId=$ADMIN_OBJECT_ID" \
-       "databaseAccountName=$COSMOSDB_ACCOUNT" \
-       "domainName=$DOMAIN_NAME.$PARENT_DOMAIN_NAME" \
-       "fpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].objectId' -o tsv)" \
-       "keyvaultPrefix=$KEYVAULT_PREFIX" \
-       "sshPublicKey=$(<secrets/proxy_id_rsa.pub)" \
-       "rpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_CLIENT_ID'" --query '[].objectId' -o tsv)" \
-     >/dev/null
-
-   az group deployment create \
-     -g "$RESOURCEGROUP" \
-     --template-file deploy/env-development.json \
-     --parameters \
-       "proxyCert=$(base64 -w0 <secrets/proxy.crt)" \
-       "proxyClientCert=$(base64 -w0 <secrets/proxy-client.crt)" \
-       "proxyDomainNameLabel=$(cut -d. -f2 <<<$PROXY_HOSTNAME)" \
-       "proxyImage=arosvc.azurecr.io/proxy:latest" \
-       "proxyImageAuth=$(jq -r '.auths["arosvc.azurecr.io"].auth' <<<$PULL_SECRET)" \
-       "proxyKey=$(base64 -w0 <secrets/proxy.key)" \
-       "sshPublicKey=$(<secrets/proxy_id_rsa.pub)" \
-       "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" \
-     >/dev/null
+   If you encounter "VirtualNetworkGatewayCannotUseStandardPublicIP" error when running the `deploy_env_dev` command, you have to override two additional parameters, run this command instead:
+   ```bash
+   deploy_env_dev_override
    ```
-If you encounter "VirtualNetworkGatewayCannotUseStandardPublicIP" error when deploying env-development.json, you have to override two additional parameters:
-```
-    az group deployment create \
-     -g "$RESOURCEGROUP" \
-     --template-file deploy/env-development.json \
-     --parameters \
-       "proxyCert=$(base64 -w0 <secrets/proxy.crt)" \
-       "proxyClientCert=$(base64 -w0 <secrets/proxy-client.crt)" \
-       "proxyDomainNameLabel=$(cut -d. -f2 <<<$PROXY_HOSTNAME)" \
-       "proxyImage=arosvc.azurecr.io/proxy:latest" \
-       "proxyImageAuth=$(jq -r '.auths["arosvc.azurecr.io"].auth' <<<$PULL_SECRET)" \
-       "proxyKey=$(base64 -w0 <secrets/proxy.key)" \
-       "sshPublicKey=$(<secrets/proxy_id_rsa.pub)" \
-       "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" \
-       "publicIPAddressSkuName=Basic" \
-       "publicIPAddressAllocationMethod=Dynamic" \
-     > /dev/null
-```
 
 1. Load the keys/certificates into the key vault:
 
-   ```
-   az keyvault certificate import \
-     --vault-name "$KEYVAULT_PREFIX-svc" \
-     --name rp-firstparty \
-     --file secrets/firstparty-development.pem \
-     >/dev/null
-   az keyvault certificate import \
-     --vault-name "$KEYVAULT_PREFIX-svc" \
-     --name rp-server \
-     --file secrets/localhost.pem \
-     >/dev/null
-   az keyvault secret set \
-     --vault-name "$KEYVAULT_PREFIX-svc" \
-     --name encryption-key \
-     --value "$(openssl rand -base64 32)" \
-     >/dev/null
+   ```bash
+   import_certs_secrets
    ```
 
    Note: in production, two additional keys/certificates (rp-mdm and rp-mdsd)
@@ -341,36 +289,13 @@ If you encounter "VirtualNetworkGatewayCannotUseStandardPublicIP" error when dep
 1. Create nameserver records in the parent DNS zone:
 
    ```
-   az network dns record-set ns create \
-     --resource-group "$PARENT_DOMAIN_RESOURCEGROUP" \
-     --zone "$PARENT_DOMAIN_NAME" \
-     --name "$DOMAIN_NAME" \
-     >/dev/null
-
-   for ns in $(az network dns zone show \
-     --resource-group "$RESOURCEGROUP" \
-     --name "$DOMAIN_NAME.$PARENT_DOMAIN_NAME" \
-     --query nameServers -o tsv); do
-     az network dns record-set ns add-record \
-       --resource-group "$PARENT_DOMAIN_RESOURCEGROUP" \
-       --zone "$PARENT_DOMAIN_NAME" \
-       --record-set-name "$DOMAIN_NAME" \
-       --nsdname "$ns" \
-       >/dev/null
-   done
+   update_parent_domain_dns_zone
    ```
 
 1. Store the VPN client configuration:
 
    ```
-   curl -so vpnclientconfiguration.zip "$(az network vnet-gateway vpn-client generate \
-     -g "$RESOURCEGROUP" \
-     -n dev-vpn \
-     -o tsv)"
-   export CLIENTCERTIFICATE="$(openssl x509 -inform der -in secrets/vpn-client.crt)"
-   export PRIVATEKEY="$(openssl rsa -inform der -in secrets/vpn-client.key)"
-   unzip -qc vpnclientconfiguration.zip 'OpenVPN\\vpnconfig.ovpn' \
-     | envsubst \
-     | grep -v '^log ' >"secrets/vpn-$LOCATION.ovpn"
-   rm vpnclientconfiguration.zip
+   vpn_configuration
    ```
+
+> We encouraging you to look at the [helper file](../hack/devtools/deploy-shared-env.sh) to understand each of those functions.

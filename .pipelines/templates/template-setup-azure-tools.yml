@@ -1,0 +1,7 @@
+parameters:
+  workingDirectory: ""
+steps:
+  - script: |
+      cd ${{ parameters.workingDirectory }}
+      ./hack/devtools/setup-azure-tools.sh
+    displayName: "⚙️ Set up Azure CLI"

@@ -1,0 +1,12 @@
+parameters:
+  workingDirectory: ""
+steps:
+  - script: |
+      cd ${{ parameters.workingDirectory }}
+
+      . secrets/env
+
+      source ./hack/e2e/run-rp-and-e2e.sh
+
+      deploy_e2e_deps
+    displayName: "🚀 Create cluster RG and Vnet"

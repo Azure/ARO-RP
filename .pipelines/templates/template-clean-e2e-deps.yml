@@ -1,0 +1,16 @@
+parameters:
+  workingDirectory: ""
+steps:
+  - script: |
+      cd ${{ parameters.workingDirectory }}
+
+      . secrets/env
+
+      source ./hack/e2e/run-rp-and-e2e.sh
+
+      export DATABASE_NAME=v4-e2e-$(git log --format=%h -n 1 HEAD)
+
+      clean_e2e_db
+      clean_e2e
+    displayName: "🧹 Clean cluster RG, Vnet and DB"
+    condition: always()

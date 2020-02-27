@@ -71,12 +71,18 @@ pyenv${PYTHON_VERSION}:
 		sed -i -e "s|^dev_sources = $(PWD)$$|dev_sources = $(PWD)/python|" ~/.azure/config
 
 secrets:
+	@[ "${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 )
 	rm -rf secrets
 	mkdir secrets
-	oc extract -n azure secret/aro-v4-dev --to=secrets
+	az storage blob download --auth-mode login -n secrets.tar.gz -c secrets -f secrets/secrets.tar.gz --account-name ${SECRET_SA_ACCOUNT_NAME} >/dev/null
+	tar -zxf secrets/secrets.tar.gz --directory .
+	rm ./secrets/secrets.tar.gz
 
 secrets-update:
-	oc create secret generic aro-v4-dev --from-file=secrets --dry-run -o yaml | oc apply -f -
+	@[ "${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 )
+	tar -zcf secrets.tar.gz ./secrets/
+	az storage blob upload --auth-mode login -n secrets.tar.gz -c secrets -f secrets.tar.gz --account-name ${SECRET_SA_ACCOUNT_NAME} >/dev/null
+	rm secrets.tar.gz
 
 e2e:
 	go test ./test/e2e -timeout 60m -v -ginkgo.v -tags e2e
