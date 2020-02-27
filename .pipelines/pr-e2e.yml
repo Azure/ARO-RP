@@ -1,11 +1,8 @@
 # Azure DevOps Pipeline running e2e tests
-trigger: none
-pr: none
-
 variables:
   - template: vars.yml
 jobs:
-  - job: "e2e"
+  - job: "E2E"
     timeoutInMinutes: 120
     pool:
       name: ARO-E2E
