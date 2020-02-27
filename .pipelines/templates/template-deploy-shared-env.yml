@@ -5,8 +5,7 @@ steps:
       cd ${{ parameters.workingDirectory }}
 
       . secrets/env
-
-      source ./hack/devtools/deploy-shared-env.sh
+      . ./hack/devtools/deploy-shared-env.sh
 
       create_infra_rg
       deploy_rp_dev_nsg

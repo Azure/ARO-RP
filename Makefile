@@ -73,14 +73,13 @@ pyenv${PYTHON_VERSION}:
 secrets:
 	@[ "${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 )
 	rm -rf secrets
-	mkdir secrets
-	az storage blob download --auth-mode login -n secrets.tar.gz -c secrets -f secrets/secrets.tar.gz --account-name ${SECRET_SA_ACCOUNT_NAME} >/dev/null
-	tar -zxf secrets/secrets.tar.gz --directory .
-	rm ./secrets/secrets.tar.gz
+	az storage blob download --auth-mode login -n secrets.tar.gz -c secrets -f secrets.tar.gz --account-name ${SECRET_SA_ACCOUNT_NAME} >/dev/null
+	tar -xzf secrets.tar.gz
+	rm secrets.tar.gz
 
 secrets-update:
 	@[ "${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 )
-	tar -zcf secrets.tar.gz ./secrets/
+	tar -czf secrets.tar.gz secrets
 	az storage blob upload --auth-mode login -n secrets.tar.gz -c secrets -f secrets.tar.gz --account-name ${SECRET_SA_ACCOUNT_NAME} >/dev/null
 	rm secrets.tar.gz
 

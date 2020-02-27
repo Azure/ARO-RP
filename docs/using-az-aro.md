@@ -21,13 +21,13 @@ against a development RP running at https://localhost:8443/.
 
 1. Log in to Azure:
 
-   ```
+   ```bash
    az login
    ```
 
 1. Git clone this repository to your local machine:
 
-   ```
+   ```bash
    git clone https://github.com/Azure/ARO-RP
    cd ARO-RP
    ```
@@ -52,7 +52,7 @@ against a development RP running at https://localhost:8443/.
 
 1. Add the ARO extension path to your `az` configuration:
 
-   ```
+   ```bash
    cat >>~/.azure/config <<EOF
    [extension]
    dev_sources = $PWD/python
@@ -61,7 +61,7 @@ against a development RP running at https://localhost:8443/.
 
 1. Verify the ARO extension is registered:
 
-   ```
+   ```bash
    az -v
    ...
    Extensions:
@@ -78,7 +78,7 @@ against a development RP running at https://localhost:8443/.
 If using the pre-GA Azure Red Hat OpenShift v4 service, ensure that the
 `Microsoft.RedHatOpenShift` resource provider is registered:
 
-```
+```bash
 az provider register -n Microsoft.RedHatOpenShift --wait
 ```
 
@@ -91,7 +91,7 @@ cluster:
 1. A vnet containing two empty subnets, each with no network security group
    attached.  Your cluster will be deployed into these subnets.
 
-   ```
+   ```bash
    LOCATION=eastus
    RESOURCEGROUP="v4-$LOCATION"
    CLUSTER=cluster
@@ -133,7 +133,7 @@ cluster:
 
 1. Create a cluster:
 
-   ```
+   ```bash
    az aro create \
      -g "$RESOURCEGROUP" \
      -n "$CLUSTER" \
@@ -150,20 +150,20 @@ cluster:
    `https://console-openshift-console.apps.<random>.<location>.aroapp.io/`) in
    the Azure Red Hat OpenShift v4 cluster resource:
 
-   ```
+   ```bash
    az aro list -o table
    ```
 
    You can log into the cluster using the `kubeadmin` user.  The password for
    the `kubeadmin` user can be found as follows:
 
-   ```
+   ```bash
    az aro list-credentials -g "$RESOURCEGROUP" -n "$CLUSTER"
    ```
 
 1. Delete a cluster:
 
-   ```
+   ```bash
    az aro delete -g "$RESOURCEGROUP" -n "$CLUSTER"
 
    # (optionally)

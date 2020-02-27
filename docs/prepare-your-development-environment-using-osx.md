@@ -1,6 +1,6 @@
 # Prepare your development environment using OSX
 
-We are open to developers on OSX working on this repository. We are asking OSX
+We are open to developers on OSX working on this repository.  We are asking OSX
 users to setup GNU utils on their machines.
 
 We are aiming to limit the amount of shell scripting, etc. in the repository,
