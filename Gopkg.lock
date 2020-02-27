@@ -394,6 +394,17 @@
   revision = "aabc10ec26b754e797f9028f4589c5b7bd90dc20"
 
 [[projects]]
+  branch = "master"
+  digest = "1:ecdc8e0fe3bc7d549af1c9c36acf3820523b707d6c071b6d0c3860882c6f7b42"
+  name = "github.com/docker/spdystream"
+  packages = [
+    ".",
+    "spdy",
+  ]
+  pruneopts = "UT"
+  revision = "6480d4af844c189cf5dd913db24ddd339d3a4f85"
+
+[[projects]]
   digest = "1:e15b0065da1011473634ffa0dda17731ea1d5f6fb8bb87905216d95fa29eaec0"
   name = "github.com/emicklei/go-restful"
   packages = [
@@ -1596,7 +1607,7 @@
 
 [[projects]]
   branch = "origin-4.3-kubernetes-1.16.2"
-  digest = "1:86f478c8a6903e47e6548df3e716188fef4a38d7949d60a79499362925ea4208"
+  digest = "1:b499c1ca627563b5b9bc952a3aa5e0f298c41f1c092b096f6a4bd8b5aab4c2f7"
   name = "k8s.io/apimachinery"
   packages = [
     "pkg/api/errors",
@@ -1622,6 +1633,8 @@
     "pkg/util/clock",
     "pkg/util/errors",
     "pkg/util/framer",
+    "pkg/util/httpstream",
+    "pkg/util/httpstream/spdy",
     "pkg/util/intstr",
     "pkg/util/json",
     "pkg/util/mergepatch",
@@ -1638,6 +1651,7 @@
     "pkg/version",
     "pkg/watch",
     "third_party/forked/golang/json",
+    "third_party/forked/golang/netutil",
     "third_party/forked/golang/reflect",
   ]
   pruneopts = "UT"
@@ -1646,7 +1660,7 @@
 
 [[projects]]
   branch = "origin-4.3-kubernetes-1.16.2"
-  digest = "1:e71e465ba93c57c15194845e6153f412a35c173cd581044f405514c15b7b7f91"
+  digest = "1:0a1df4ad7aee881b3eebbcedf7fa947f39574a461a22987f75c647a8094bb0fe"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
@@ -1707,6 +1721,7 @@
     "tools/metrics",
     "tools/reference",
     "transport",
+    "transport/spdy",
     "util/cert",
     "util/connrotation",
     "util/flowcontrol",
@@ -1898,6 +1913,7 @@
     "k8s.io/client-go/tools/clientcmd",
     "k8s.io/client-go/tools/clientcmd/api/v1",
     "k8s.io/client-go/tools/metrics",
+    "k8s.io/client-go/transport/spdy",
     "k8s.io/client-go/util/retry",
   ]
   solver-name = "gps-cdcl"

@@ -274,6 +274,15 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "6480d4af844c189cf5dd913db24ddd339d3a4f85",
+                    "repositoryUrl": "https://github.com/docker/spdystream/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "99f05a26a0a1c71e664ebe6a76d29b2c80333056",
                     "repositoryUrl": "https://github.com/emicklei/go-restful/"
                 }
