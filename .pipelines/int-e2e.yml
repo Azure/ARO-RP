@@ -1,0 +1,45 @@
+# Azure DevOps Pipeline running e2e tests
+trigger: none
+pr: none
+
+variables:
+  - template: vars.yml
+jobs:
+  - job: "e2e"
+    timeoutInMinutes: 120
+    pool:
+      name: ARO-E2E
+    steps:
+      - template: ./templates/template-setup-golang-env.yml
+        parameters:
+          gobin: ${{ variables.GOBIN }}
+          gopath: ${{ variables.GOPATH }}
+          goroot: ${{ variables.GOROOT }}
+          modulePath: ${{ variables.modulePath }}
+      - template: ./templates/template-setup-azure-tools.yml
+        parameters:
+          workingDirectory: ${{ variables.modulePath }}
+      - template: ./templates/template-az-cli-login.yml
+        parameters:
+          workingDirectory: ${{ variables.modulePath }}
+          azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
+      - script: |
+          cd ${{ variables.modulePath }}
+          export SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME)
+          make secrets
+        displayName: "🔑 Downloading environment variables from storage account"
+      - template: ./templates/template-deploy-e2e-deps.yml
+        parameters:
+          workingDirectory: ${{ variables.modulePath }}
+      - template: ./templates/template-run-e2e.yml
+        parameters:
+          workingDirectory: ${{ variables.modulePath }}
+      - template: ./templates/template-clean-e2e-cluster.yml
+        parameters:
+          workingDirectory: ${{ variables.modulePath }}
+      - template: ./templates/template-clean-e2e-deps.yml
+        parameters:
+          workingDirectory: ${{ variables.modulePath }}
+      - template: ./templates/template-clean-agent.yml
+        parameters:
+          workingDirectory: ${{ variables.modulePath }}

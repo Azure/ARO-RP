@@ -110,6 +110,12 @@ run_e2e() {
     az aro delete -g "$RESOURCEGROUP" -n "$CLUSTER" --yes
 }
 
+clean_e2e_cluster() {
+    export RESOURCEGROUP=$CLUSTER_RESOURCEGROUP
+    echo "########## CLI : ARO delete cluster ##########"
+    az aro delete -g "$RESOURCEGROUP" -n "$CLUSTER" --yes
+}
+
 clean_e2e_db(){
     echo "########## 🧹 Deleting DB $DATABASE_NAME ##########"
     az cosmosdb sql database delete --name $DATABASE_NAME \
@@ -124,6 +130,10 @@ clean_e2e() {
     rm -f $KUBECONFIG
 }
 
+set_az_cli_sub(){
+    az account set -s $AZURE_SUBSCRIPTION_ID
+}
+
 export CLUSTER="v4-e2e-$(git log --format=%h -n 1 HEAD)"
 export CLUSTER_RESOURCEGROUP="v4-e2e-rg-$(git log --format=%h -n 1 HEAD)-$LOCATION"
 export KUBECONFIG=$(pwd)/$CLUSTER.kubeconfig
@@ -135,19 +145,30 @@ echo "######## Current settings : ##########"
 echo
 echo "LOCATION=$LOCATION"
 echo
-echo "COSMOSDB_ACCOUNT=$COSMOSDB_ACCOUNT"
-echo "DATABASE_NAME=$DATABASE_NAME"
-echo "RESOURCEGROUP=$RESOURCEGROUP"
+echo "RP_MODE=$RP_MODE"
+echo
+if [ $RP_MODE = "development" ] 
+then 
+    echo "COSMOSDB_ACCOUNT=$COSMOSDB_ACCOUNT"
+    echo "DATABASE_NAME=$DATABASE_NAME"
+    echo "RESOURCEGROUP=$RESOURCEGROUP"
+fi
 echo
 echo "CLUSTER=$CLUSTER"
 echo "CLUSTER_RESOURCEGROUP=$CLUSTER_RESOURCEGROUP"
 echo "KUBECONFIG=$KUBECONFIG"
 echo
-echo "PROXY_HOSTNAME=$PROXY_HOSTNAME"
+if [ $RP_MODE = "development" ]
+then 
+    echo "PROXY_HOSTNAME=$PROXY_HOSTNAME"
+fi
 echo "######################################"
 
 [ "$LOCATION" ] || ( echo ">> LOCATION is not set please validate your ./secrets/env"; exit 128 )
-[ "$RESOURCEGROUP" ] || ( echo ">> RESOURCEGROUP is not set please validate your ./secrets/env"; exit 128 )
-[ "$PROXY_HOSTNAME" ] || ( echo ">> PROXY_HOSTNAME is not set please validate your ./secrets/env"; exit 128 )
-[ "$COSMOSDB_ACCOUNT" ] || ( echo ">> COSMOSDB_ACCOUNT is not set please validate your ./secrets/env"; exit 128 )
-[ "$DATABASE_NAME" ] || ( echo ">> DATABASE_NAME is not set please validate your ./secrets/env"; exit 128 )
+if [ $RP_MODE = "development" ]
+then 
+    [ "$RESOURCEGROUP" ] || ( echo ">> RESOURCEGROUP is not set please validate your ./secrets/env"; exit 128 )
+    [ "$PROXY_HOSTNAME" ] || ( echo ">> PROXY_HOSTNAME is not set please validate your ./secrets/env"; exit 128 )
+    [ "$COSMOSDB_ACCOUNT" ] || ( echo ">> COSMOSDB_ACCOUNT is not set please validate your ./secrets/env"; exit 128 )
+    [ "$DATABASE_NAME" ] || ( echo ">> DATABASE_NAME is not set please validate your ./secrets/env"; exit 128 )
+fi
