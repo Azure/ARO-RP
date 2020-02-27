@@ -1,4 +1,5 @@
 #!/bin/bash -e
+mkdir -p secrets
 cat >secrets/parameters.json <<EOF
 {
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
@@ -37,9 +38,6 @@ cat >secrets/parameters.json <<EOF
         "rpImageAuth": {
             "value": "$RP_IMAGE_AUTH"
         },
-        "rpMdmCertificateVaultId": {
-            "value": "$RP_MDM_CERT_VAULT_ID"
-        },
         "rpMdmFrontendUrl": {
             "value": "$MDM_FRONTEND"
         },
@@ -51,9 +49,6 @@ cat >secrets/parameters.json <<EOF
         },
         "rpMdsdAccount": {
             "value": "$MDSD_ACCOUNT"
-        },
-        "rpMdsdCertificateVaultId": {
-            "value": "$RP_MDSD_CERT_VAULT_ID"
         },
         "rpMdsdConfigVersion": {
             "value": "$MDSD_CONFIG_VERSION"

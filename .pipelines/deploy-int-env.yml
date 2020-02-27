@@ -44,7 +44,6 @@ jobs:
           mdmFrontendUrl: "https://int2.int.microsoftmetrics.com/"
           rpMdmMetricNamespace: "ARO-RP"
           rpMdmMonitoringAccount: "AzureRedHatOpenShift"
-          rpMdmCertificateVaultId: "https://aro-monitoring-int.vault.azure.net/secrets/RP-Metrics"
           clusterMdmMetricNamespace: "ARO-Clusters"
           clusterMdmMonitoringAccount: "AzureRedHatOpenShiftClusters"
           rpImage: $(RP-IMAGE)
@@ -55,7 +54,6 @@ jobs:
           mdsdMonitoringAccount: "ARORPLogs"
           mdsdMonitoringEnviroment: "Test"
           mdsdConfigVersion: $(MDSD-CONFIG-VERSION)
-          rpMdsdCertificateVaultId: "https://aro-monitoring-int.vault.azure.net/secrets/RP-Logging"
           vmssDomainNameLabel: "aro-int"
           vmssName: "int"
           rpMode: "int"
