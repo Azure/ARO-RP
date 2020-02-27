@@ -3,60 +3,13 @@ package v20191231preview
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
+import (
+	"github.com/Azure/ARO-RP/pkg/api"
+)
+
 func exampleOpenShiftCluster() *OpenShiftCluster {
-	return &OpenShiftCluster{
-		ID:       "/subscriptions/subscriptionId/resourceGroups/resourceGroup/providers/Microsoft.RedHatOpenShift/OpenShiftClusters/resourceName",
-		Name:     "resourceName",
-		Type:     "Microsoft.RedHatOpenShift/OpenShiftClusters",
-		Location: "location",
-		Tags: Tags{
-			"key": "value",
-		},
-		Properties: Properties{
-			ProvisioningState: ProvisioningStateSucceeded,
-			ClusterProfile: ClusterProfile{
-				Domain:          "cluster.location.aroapp.io",
-				Version:         "4.3.0",
-				ResourceGroupID: "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup",
-			},
-			ConsoleProfile: ConsoleProfile{
-				URL: "https://console-openshift-console.apps.cluster.location.aroapp.io/",
-			},
-			ServicePrincipalProfile: ServicePrincipalProfile{
-				ClientSecret: "clientSecret",
-				ClientID:     "clientId",
-			},
-			NetworkProfile: NetworkProfile{
-				PodCIDR:     "10.128.0.0/14",
-				ServiceCIDR: "172.30.0.0/16",
-			},
-			MasterProfile: MasterProfile{
-				VMSize:   VMSizeStandardD8sV3,
-				SubnetID: "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/master",
-			},
-			WorkerProfiles: []WorkerProfile{
-				{
-					Name:       "worker",
-					VMSize:     VMSizeStandardD2sV3,
-					DiskSizeGB: 128,
-					SubnetID:   "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker",
-					Count:      3,
-				},
-			},
-			APIServerProfile: APIServerProfile{
-				Visibility: VisibilityPublic,
-				URL:        "https://api.cluster.location.aroapp.io:6443/",
-				IP:         "1.2.3.4",
-			},
-			IngressProfiles: []IngressProfile{
-				{
-					Name:       "default",
-					Visibility: VisibilityPublic,
-					IP:         "1.2.3.4",
-				},
-			},
-		},
-	}
+	doc := api.ExampleOpenShiftClusterDocument()
+	return (&openShiftClusterConverter{}).ToExternal(doc.OpenShiftCluster).(*OpenShiftCluster)
 }
 
 // ExampleOpenShiftClusterParameter returns an example OpenShiftCluster object
