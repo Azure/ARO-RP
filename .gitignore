@@ -15,6 +15,7 @@ __pycache__
 /python/az/aro/build
 /python/az/aro/dist
 /secrets
+/secrets.tar.gz
 /mdm_statsd.socket
 /uts.txt
 /cover.out

@@ -15,23 +15,33 @@ locations.
    subscription.  Set PARENT_DOMAIN_NAME and PARENT_DOMAIN_RESOURCEGROUP to the name and
    resource group of the DNS Zone resource:
 
-   ```
+   ```bash
    PARENT_DOMAIN_NAME=osadev.cloud
    PARENT_DOMAIN_RESOURCEGROUP=dns
+   ```
+
+1. You will need a storage account in your Azure subscription in which to store
+   shared development environment secrets.   The storage account must contain a
+   private container named `secrets`.  All team members must have `Storage Blob
+   Data Reader` or `Storage Blob Data Contributor` role on the storage account.
+   Set SECRET_SA_ACCOUNT_NAME to the name of the storage account:
+
+   ```bash
+   SECRET_SA_ACCOUNT_NAME=rharosecrets
    ```
 
 1. You will need an AAD object (this could be your AAD user, or an AAD group of
    which you are a member) which will be able to administer certificates in the
    development environment key vault(s).  Set ADMIN_OBJECT_ID to the object ID.
 
-   ```
+   ```bash
    ADMIN_OBJECT_ID="$(az ad group show -g Engineering --query objectId -o tsv)"
    ```
 
 1. You will need the ARO RP-specific pull secret (ask one of the
    @azure-red-hat-openshift GitHub team for this):
 
-   ```
+   ```bash
    PULL_SECRET=...
    ```
 
@@ -43,7 +53,7 @@ locations.
 
 1. Log in to Azure:
 
-   ```
+   ```bash
    az login
 
    AZURE_TENANT_ID=$(az account show --query tenantId -o tsv)
@@ -52,14 +62,14 @@ locations.
 
 1. Git clone this repository to your local machine:
 
-   ```
+   ```bash
    go get -u github.com/Azure/ARO-RP/...
    cd ${GOPATH:-$HOME/go}/src/github.com/Azure/ARO-RP
    ```
 
 1. Prepare the secrets directory:
 
-   ```
+   ```bash
    mkdir -p secrets
    ```
 
@@ -68,7 +78,7 @@ locations.
 
 1. Create an AAD application which will fake up the ARM layer:
 
-   ```
+   ```bash
    AZURE_ARM_CLIENT_SECRET="$(uuidgen)"
    AZURE_ARM_CLIENT_ID="$(az ad app create \
      --display-name aro-v4-arm-shared \
@@ -91,14 +101,14 @@ locations.
    suitable key/certificate file can be generated using the following helper
    utility:
 
-   ```
+   ```bash
    go run ./hack/genkey -client firstparty-development
    mv firstparty-development.* secrets
    ```
 
    Now create the application:
 
-   ```
+   ```bash
    AZURE_FP_CLIENT_ID="$(az ad app create \
      --display-name aro-v4-fp-shared \
      --identifier-uris "https://$(uuidgen)/" \
@@ -118,7 +128,7 @@ locations.
 
 1. Create an AAD application which will fake up the RP identity.
 
-   ```
+   ```bash
    AZURE_CLIENT_SECRET="$(uuidgen)"
    AZURE_CLIENT_ID="$(az ad app create \
      --display-name aro-v4-rp-shared \
@@ -141,7 +151,7 @@ locations.
    Azure subscription. This mimics the RBAC that ARM sets up.  With at least
    `User Access Administrator` permissions on your subscription, do:
 
-   ```
+   ```bash
    az deployment create \
      -l eastus \
      --template-file deploy/rbac-development.json \
@@ -157,7 +167,7 @@ locations.
 1. Create the VPN CA key/certificate.  A suitable key/certificate file can be
    generated using the following helper utility:
 
-   ```
+   ```bash
    go run ./hack/genkey -ca vpn-ca
    mv vpn-ca.* secrets
    ```
@@ -165,7 +175,7 @@ locations.
 1. Create the VPN client key/certificate.  A suitable key/certificate file can be
    generated using the following helper utility:
 
-   ```
+   ```bash
    go run ./hack/genkey -client -keyFile secrets/vpn-ca.key -certFile secrets/vpn-ca.crt vpn-client
    mv vpn-client.* secrets
    ```
@@ -173,7 +183,7 @@ locations.
 1. Create the proxy serving key/certificate.  A suitable key/certificate file
    can be generated using the following helper utility:
 
-   ```
+   ```bash
    go run ./hack/genkey proxy
    mv proxy.* secrets
    ```
@@ -181,7 +191,7 @@ locations.
 1. Create the proxy client key/certificate.  A suitable key/certificate file can
    be generated using the following helper utility:
 
-   ```
+   ```bash
    go run ./hack/genkey -client proxy-client
    mv proxy-client.* secrets
    ```
@@ -189,14 +199,14 @@ locations.
 1. Create the proxy ssh key/certificate.  A suitable key/certificate file can
    be generated using the following helper utility:
 
-   ```
+   ```bash
    ssh-keygen -f secrets/proxy_id_rsa -N ''
    ```
 
 1. Create an RP serving key/certificate.  A suitable key/certificate file
    can be generated using the following helper utility:
 
-   ```
+   ```bash
    go run ./hack/genkey localhost
    mv localhost.* secrets
    ```
@@ -207,20 +217,20 @@ locations.
 1. Choose the resource group prefix.  The resource group location will be
    appended to the prefix to make the resource group name.
 
-   ```
+   ```bash
    RESOURCEGROUP_PREFIX=v4
    ```
 
 1. Choose the proxy domain name label.  This final proxy hostname will be of the
    form `vm0.$PROXY_DOMAIN_NAME_LABEL.$LOCATION.cloudapp.azure.com`.
 
-   ```
+   ```bash
    PROXY_DOMAIN_NAME_LABEL=aroproxy
    ```
 
 1. Create the secrets/env file:
 
-   ```
+   ```bash
    cat >secrets/env <<EOF
    export AZURE_TENANT_ID='$AZURE_TENANT_ID'
    export AZURE_SUBSCRIPTION_ID='$AZURE_SUBSCRIPTION_ID'
@@ -234,6 +244,7 @@ locations.
    export DATABASE_NAME="\$USER"
    export RP_MODE='development'
    export PULL_SECRET='$PULL_SECRET'
+   export SECRET_SA_ACCOUNT_NAME='$SECRET_SA_ACCOUNT_NAME'
    ADMIN_OBJECT_ID='$ADMIN_OBJECT_ID'
    COSMOSDB_ACCOUNT="\$RESOURCEGROUP"
    DOMAIN_NAME="\$RESOURCEGROUP"
@@ -246,10 +257,13 @@ locations.
 
 ## Deploy shared RP development environment (once per location)
 
+Look at the [helper file](../hack/devtools/deploy-shared-env.sh) to understand
+each of the bash functions below.
+
 1. Copy, edit (if necessary) and source your environment file.  The required
    environment variable configuration is documented immediately below:
 
-   ```
+   ```bash
    cp env.example env
    vi env
    . ./env
@@ -260,78 +274,30 @@ locations.
 
 1. Create the resource group and deploy the RP resources:
 
+   ```bash
+   . ./hack/devtools/deploy-shared-env.sh
+   # Create the RG
+   create_infra_rg
+   # Deploy NSG
+   deploy_rp_dev_nsg
+   # Deploy the infrastructure resources such as Cosmos, KV, Vnet...
+   deploy_rp_dev
+   # Deploy the proxy and VPN
+   deploy_env_dev
    ```
-   az group create -g "$RESOURCEGROUP" -l "$LOCATION" >/dev/null
 
-   az group deployment create \
-     -g "$RESOURCEGROUP" \
-     --template-file deploy/rp-development-nsg.json \
-     >/dev/null
+   If you encounter a "VirtualNetworkGatewayCannotUseStandardPublicIP" error
+   when running the `deploy_env_dev` command, you have to override two
+   additional parameters.  Run this command instead:
 
-   az group deployment create \
-     -g "$RESOURCEGROUP" \
-     --template-file deploy/rp-development.json \
-     --parameters \
-       "adminObjectId=$ADMIN_OBJECT_ID" \
-       "databaseAccountName=$COSMOSDB_ACCOUNT" \
-       "domainName=$DOMAIN_NAME.$PARENT_DOMAIN_NAME" \
-       "fpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].objectId' -o tsv)" \
-       "keyvaultPrefix=$KEYVAULT_PREFIX" \
-       "sshPublicKey=$(<secrets/proxy_id_rsa.pub)" \
-       "rpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_CLIENT_ID'" --query '[].objectId' -o tsv)" \
-     >/dev/null
-
-   az group deployment create \
-     -g "$RESOURCEGROUP" \
-     --template-file deploy/env-development.json \
-     --parameters \
-       "proxyCert=$(base64 -w0 <secrets/proxy.crt)" \
-       "proxyClientCert=$(base64 -w0 <secrets/proxy-client.crt)" \
-       "proxyDomainNameLabel=$(cut -d. -f2 <<<$PROXY_HOSTNAME)" \
-       "proxyImage=arosvc.azurecr.io/proxy:latest" \
-       "proxyImageAuth=$(jq -r '.auths["arosvc.azurecr.io"].auth' <<<$PULL_SECRET)" \
-       "proxyKey=$(base64 -w0 <secrets/proxy.key)" \
-       "sshPublicKey=$(<secrets/proxy_id_rsa.pub)" \
-       "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" \
-     >/dev/null
+   ```bash
+   deploy_env_dev_override
    ```
-If you encounter "VirtualNetworkGatewayCannotUseStandardPublicIP" error when deploying env-development.json, you have to override two additional parameters:
-```
-    az group deployment create \
-     -g "$RESOURCEGROUP" \
-     --template-file deploy/env-development.json \
-     --parameters \
-       "proxyCert=$(base64 -w0 <secrets/proxy.crt)" \
-       "proxyClientCert=$(base64 -w0 <secrets/proxy-client.crt)" \
-       "proxyDomainNameLabel=$(cut -d. -f2 <<<$PROXY_HOSTNAME)" \
-       "proxyImage=arosvc.azurecr.io/proxy:latest" \
-       "proxyImageAuth=$(jq -r '.auths["arosvc.azurecr.io"].auth' <<<$PULL_SECRET)" \
-       "proxyKey=$(base64 -w0 <secrets/proxy.key)" \
-       "sshPublicKey=$(<secrets/proxy_id_rsa.pub)" \
-       "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" \
-       "publicIPAddressSkuName=Basic" \
-       "publicIPAddressAllocationMethod=Dynamic" \
-     > /dev/null
-```
 
 1. Load the keys/certificates into the key vault:
 
-   ```
-   az keyvault certificate import \
-     --vault-name "$KEYVAULT_PREFIX-svc" \
-     --name rp-firstparty \
-     --file secrets/firstparty-development.pem \
-     >/dev/null
-   az keyvault certificate import \
-     --vault-name "$KEYVAULT_PREFIX-svc" \
-     --name rp-server \
-     --file secrets/localhost.pem \
-     >/dev/null
-   az keyvault secret set \
-     --vault-name "$KEYVAULT_PREFIX-svc" \
-     --name encryption-key \
-     --value "$(openssl rand -base64 32)" \
-     >/dev/null
+   ```bash
+   import_certs_secrets
    ```
 
    Note: in production, two additional keys/certificates (rp-mdm and rp-mdsd)
@@ -340,37 +306,12 @@ If you encounter "VirtualNetworkGatewayCannotUseStandardPublicIP" error when dep
 
 1. Create nameserver records in the parent DNS zone:
 
-   ```
-   az network dns record-set ns create \
-     --resource-group "$PARENT_DOMAIN_RESOURCEGROUP" \
-     --zone "$PARENT_DOMAIN_NAME" \
-     --name "$DOMAIN_NAME" \
-     >/dev/null
-
-   for ns in $(az network dns zone show \
-     --resource-group "$RESOURCEGROUP" \
-     --name "$DOMAIN_NAME.$PARENT_DOMAIN_NAME" \
-     --query nameServers -o tsv); do
-     az network dns record-set ns add-record \
-       --resource-group "$PARENT_DOMAIN_RESOURCEGROUP" \
-       --zone "$PARENT_DOMAIN_NAME" \
-       --record-set-name "$DOMAIN_NAME" \
-       --nsdname "$ns" \
-       >/dev/null
-   done
+   ```bash
+   update_parent_domain_dns_zone
    ```
 
 1. Store the VPN client configuration:
 
-   ```
-   curl -so vpnclientconfiguration.zip "$(az network vnet-gateway vpn-client generate \
-     -g "$RESOURCEGROUP" \
-     -n dev-vpn \
-     -o tsv)"
-   export CLIENTCERTIFICATE="$(openssl x509 -inform der -in secrets/vpn-client.crt)"
-   export PRIVATEKEY="$(openssl rsa -inform der -in secrets/vpn-client.key)"
-   unzip -qc vpnclientconfiguration.zip 'OpenVPN\\vpnconfig.ovpn' \
-     | envsubst \
-     | grep -v '^log ' >"secrets/vpn-$LOCATION.ovpn"
-   rm vpnclientconfiguration.zip
+   ```bash
+   vpn_configuration
    ```

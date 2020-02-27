@@ -14,6 +14,7 @@ to ensure compatibility down the line.
 # GNU Utils
 brew install coreutils
 brew install findutils
+brew install gnu-tar
 
 # Install envsubst
 brew install gettext

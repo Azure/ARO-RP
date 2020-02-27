@@ -1,0 +1,34 @@
+# Azure DevOps Pipeline deploying a dev environement
+trigger: none
+pr: none
+
+variables:
+  - template: vars.yml
+
+jobs:
+  - job: "Deploy_new_shared_env"
+    pool:
+      vmImage: "ubuntu-latest"
+
+    steps:
+      - template: ./templates/template-setup-golang-env.yml
+        parameters:
+          gobin: ${{ variables.GOBIN }}
+          gopath: ${{ variables.GOPATH }}
+          goroot: ${{ variables.GOROOT }}
+          modulePath: ${{ variables.modulePath }}
+      - template: ./templates/template-setup-azure-tools.yml
+        parameters:
+          workingDirectory: ${{ variables.modulePath }}
+      - template: ./templates/template-az-cli-login.yml
+        parameters:
+          workingDirectory: ${{ variables.modulePath }}
+          azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
+      - script: |
+          export SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME)
+          make secrets
+        displayName: "🔑 Downloading certificates and secrets from storage account"
+        workingDirectory: "${{ variables.modulePath }}"
+      - template: ./templates/template-deploy-shared-env.yml
+        parameters:
+          workingDirectory: ${{ variables.modulePath }}

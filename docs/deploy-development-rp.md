@@ -22,28 +22,32 @@
 
 1. Log in to Azure:
 
-   ```
+   ```bash
    az login
    ```
 
 1. Git clone this repository to your local machine:
 
-   ```
+   ```bash
    go get -u github.com/Azure/ARO-RP/...
    cd ${GOPATH:-$HOME/go}/src/github.com/Azure/ARO-RP
    ```
 
-1. Non-Red Hat ARO engineering: if you don't have access to a shared development
-   environment and secrets, follow [prepare a shared RP development
+1. If you don't have access to a shared development environment and secrets,
+   follow [prepare a shared RP development
    environment](prepare-a-shared-rp-development-environment.md).
 
-1. Place your shared development environment secrets in `secrets` (Red Hat ARO
-   engineering: run `make secrets`).
+1. Set SECRET_SA_ACCOUNT_NAME to the name of the storage account containing your
+   shared development environment secrets and save them in `secrets`:
+
+   ```bash
+   SECRET_SA_ACCOUNT_NAME=rharosecrets make secrets
+   ```
 
 1. Copy, edit (if necessary) and source your environment file.  The required
    environment variable configuration is documented immediately below:
 
-   ```
+   ```bash
    cp env.example env
    vi env
    . ./env
@@ -54,7 +58,7 @@
 
 1. Create your own RP database:
 
-   ```
+   ```bash
    az group deployment create \
      -g "$RESOURCEGROUP" \
      -n "databases-development-$USER" \
@@ -70,20 +74,20 @@
 
 1. Source your environment file.
 
-   ```
+   ```bash
    . ./env
    ```
 
 1. Run the RP
 
-   ```
+   ```bash
    go run ./cmd/aro rp
    ```
 
 1. Before creating a cluster, it is necessary to fake up the step of registering
    the development resource provider to the subscription:
 
-   ```
+   ```bash
    curl -k -X PUT \
      -H 'Content-Type: application/json' \
      -d '{"state": "Registered", "properties": {"tenantId": "'"$AZURE_TENANT_ID"'"}}' \
@@ -100,7 +104,7 @@
 
    * Delete a subscription, cascading deletion to all its clusters:
 
-     ```
+     ```bash
      curl -k -X PUT \
        -H 'Content-Type: application/json' \
        -d '{"state": "Deleted", "properties": {"tenantId": "'"$AZURE_TENANT_ID"'"}}' \
@@ -109,7 +113,7 @@
 
    * List operations:
 
-     ```
+     ```bash
      curl -k \
        "https://localhost:8443/providers/Microsoft.RedHatOpenShift/operations?api-version=2019-12-31-preview"
      ```
@@ -119,14 +123,14 @@
 
 * SSH to the bootstrap node:
 
-  ```
+  ```bash
   sudo openvpn secrets/vpn-$LOCATION.ovpn &
   hack/ssh-bootstrap.sh "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER"
   ```
 
 * Get an admin kubeconfig:
 
-  ```
+  ```bash
   hack/get-admin-kubeconfig.sh "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER" >admin.kubeconfig
   export KUBECONFIG=admin.kubeconfig
   ```
@@ -135,13 +139,13 @@
 
   * First, get the admin kubeconfig and `export KUBECONFIG` as detailed above.
 
-  ```
+  ```bash
   hack/ssh.sh [aro-master-{0,1,2}]
   ```
 
 ### Metrics
 
 To run fake metrics socket:
-```
+```bash
 nc -U -l mdm_statsd.socket
 ```
