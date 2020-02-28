@@ -7,8 +7,9 @@ steps:
       . secrets/env
       . ./hack/e2e/run-rp-and-e2e.sh
 
-      set_az_cli_sub
-      clean_e2e_cluster
+      export DATABASE_NAME=v4-e2e-$(git log --format=%h -n 1 HEAD)
 
-    displayName: "🧹 Clean cluster"
+      set_az_cli_sub
+      clean_e2e_db
+    displayName: "🧹 Clean cluster DB"
     condition: always()
