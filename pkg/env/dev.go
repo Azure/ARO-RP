@@ -31,7 +31,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/resources"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
-	"github.com/Azure/ARO-RP/pkg/util/pem"
 )
 
 type conn struct {
@@ -102,7 +101,8 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 	if err != nil {
 		return nil, err
 	}
-	d.prod.genevaLoggingEnvironment = "Test"
+	d.prod.clustersGenevaLoggingEnvironment = "Test"
+	d.prod.clustersGenevaLoggingConfigVersion = "2.1"
 
 	fpGraphAuthorizer, err := d.FPAuthorizer(instancemetadata.TenantID(), azure.PublicCloud.GraphEndpoint)
 	if err != nil {
@@ -149,14 +149,6 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 	}
 
 	return d, nil
-}
-
-func (d *dev) GenevaLoggingSecret() (*rsa.PrivateKey, []*x509.Certificate, error) {
-	b, err := ioutil.ReadFile("secrets/cluster-logging-int.pem")
-	if err != nil {
-		return nil, nil, err
-	}
-	return pem.Parse(b)
 }
 
 func (d *dev) DatabaseName() string {

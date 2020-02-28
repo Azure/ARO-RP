@@ -29,10 +29,6 @@ func CertAsBytes(certs ...*x509.Certificate) (b []byte, err error) {
 	return buf.Bytes(), nil
 }
 
-func CertChainAsBytes(certs []*x509.Certificate) (b []byte, err error) {
-	return CertAsBytes(certs...)
-}
-
 func PrivateKeyAsBytes(key *rsa.PrivateKey) (b []byte, err error) {
 	defer func() {
 		if r := recover(); r != nil {

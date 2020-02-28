@@ -12,6 +12,8 @@ jobs:
           makefile.target: "image-aro"
         Proxy:
           makefile.target: "image-proxy"
+        FluentBit:
+          makefile.target: "image-fluentbit"
 
     steps:
       - template: ./templates/template-setup-golang-env.yml

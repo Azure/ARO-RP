@@ -302,7 +302,7 @@ each of the bash functions below.
 
    Note: in production, two additional keys/certificates (rp-mdm and rp-mdsd)
    are also required in the $KEYVAULT_PREFIX-svc key vault.  These are client
-   certificates for metric and log forwarding (respectively) to Geneva.
+   certificates for RP metric and log forwarding (respectively) to Geneva.
 
    If you need them in development:
 
