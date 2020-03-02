@@ -2,6 +2,7 @@ required = [
   "github.com/alvaroloes/enumer",
   "github.com/jim-minter/go-cosmosdb/cmd/gencosmosdb",
   "github.com/golang/mock/mockgen",
+  "github.com/go-bindata/go-bindata/go-bindata",
   "golang.org/x/tools/cmd/goimports",
   "github.com/jstemmer/go-junit-report",
   "github.com/axw/gocov/gocov",

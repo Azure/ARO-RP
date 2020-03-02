@@ -18,7 +18,7 @@ var (
 )
 
 func usage() {
-	fmt.Fprintf(flag.CommandLine.Output(), "usage: %s {rp,mirror,monitor}\n", os.Args[0])
+	fmt.Fprintf(flag.CommandLine.Output(), "usage: %s {rp,mirror,monitor,deploy}\n", os.Args[0])
 	flag.PrintDefaults()
 }
 
@@ -44,6 +44,8 @@ func main() {
 		err = monitor(ctx, log)
 	case "rp":
 		err = rp(ctx, log)
+	case "deploy":
+		err = deploy(ctx, log)
 	default:
 		usage()
 		os.Exit(2)

@@ -1,4 +1,4 @@
-package deploy
+package generator
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -20,10 +20,10 @@ func GenerateNSGTemplates() error {
 		production   bool
 	}{
 		{
-			templateFile: "rp-development-nsg.json",
+			templateFile: fileRPDevelopmentNSG,
 		},
 		{
-			templateFile: "rp-production-nsg.json",
+			templateFile: FileRPProductionNSG,
 			production:   true,
 		},
 	} {
