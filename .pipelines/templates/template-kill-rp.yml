@@ -7,7 +7,8 @@ steps:
       . secrets/env
       . ./hack/e2e/run-rp-and-e2e.sh
 
-      if [[ $RP_MODE == "development" ]] then
+      if [ $RP_MODE = "development" ] 
+      then
         kill_rp
       else
         echo "### skipping killing rp because not development rp"

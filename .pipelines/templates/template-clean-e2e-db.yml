@@ -9,7 +9,8 @@ steps:
 
       export DATABASE_NAME=v4-e2e-$(git log --format=%h -n 1 HEAD)
 
-      if [[ $RP_MODE == "development" ]] then
+      if [ $RP_MODE = "development" ] 
+      then
         set_az_cli_sub
         clean_e2e_db
       else

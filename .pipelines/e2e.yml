@@ -27,7 +27,8 @@ jobs:
         workingDirectory: "${{ variables.modulePath }}"
       - script: |
           . secrets/env
-          if [[ $RP_MODE == "development" ]] then
+          if [ $RP_MODE = "development" ] 
+          then
             make aro
           fi
         displayName: "⚙️ Building ARO RP Golang binary"
