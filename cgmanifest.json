@@ -319,6 +319,15 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "ff7109080027ec152dabb369e157c4f359b76f31",
+                    "repositoryUrl": "https://github.com/go-bindata/go-bindata/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "ed123515f087412cd7ef02e49b0b0a5e6a79a360",
                     "repositoryUrl": "https://github.com/go-openapi/jsonpointer/"
                 }

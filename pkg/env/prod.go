@@ -19,7 +19,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/sirupsen/logrus"
 
-	"github.com/Azure/ARO-RP/pkg/deploy"
+	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	basekeyvault "github.com/Azure/ARO-RP/pkg/util/azureclient/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
@@ -157,11 +157,11 @@ func (p *prod) populateVaultURIs(ctx context.Context, rpAuthorizer autorest.Auth
 	}
 
 	for _, v := range vs {
-		if v.Tags[deploy.KeyVaultTagName] != nil {
-			switch *v.Tags[deploy.KeyVaultTagName] {
-			case deploy.ClustersKeyVaultTagValue:
+		if v.Tags[generator.KeyVaultTagName] != nil {
+			switch *v.Tags[generator.KeyVaultTagName] {
+			case generator.ClustersKeyVaultTagValue:
 				p.clustersKeyvaultURI = *v.Properties.VaultURI
-			case deploy.ServiceKeyVaultTagValue:
+			case generator.ServiceKeyVaultTagValue:
 				p.serviceKeyvaultURI = *v.Properties.VaultURI
 			}
 		}

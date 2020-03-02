@@ -304,6 +304,19 @@ each of the bash functions below.
    are also required in the $KEYVAULT_PREFIX-svc key vault.  These are client
    certificates for metric and log forwarding (respectively) to Geneva.
 
+   If you need them in development:
+   ```bash
+   az keyvault certificate import \
+        --vault-name "$KEYVAULT_PREFIX-svc" \
+        --name rp-mdm \
+        --file secrets/rp-metrics-int.pem
+   az keyvault certificate import \
+        --vault-name "$KEYVAULT_PREFIX-svc" \
+        --name rp-mdsd \
+        --file secrets/rp-logging-int.pem
+
+   ```
+
 1. Create nameserver records in the parent DNS zone:
 
    ```bash

@@ -1,5 +1,7 @@
 package arm
 
+import "encoding/json"
+
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
@@ -62,6 +64,21 @@ type Parameters struct {
 	Schema         string                          `json:"$schema,omitempty"`
 	ContentVersion string                          `json:"contentVersion,omitempty"`
 	Parameters     map[string]*ParametersParameter `json:"parameters,omitempty"`
+}
+
+// GetParametersMapInterface returns map[string]interface{} of the parameters field
+// for ARM API to consume
+func (p Parameters) GetParametersMapInterface() (map[string]interface{}, error) {
+	var rawParameters map[string]interface{}
+	data, err := json.Marshal(p.Parameters)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(data, &rawParameters)
+	if err != nil {
+		return nil, err
+	}
+	return rawParameters, nil
 }
 
 // ParametersParameter represents an ARM parameters parameter

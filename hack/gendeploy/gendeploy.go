@@ -4,26 +4,26 @@ package main
 // Licensed under the Apache License 2.0.
 
 import (
-	"github.com/Azure/ARO-RP/pkg/deploy"
+	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 )
 
 func run() error {
-	err := deploy.GenerateRPTemplates()
+	err := generator.GenerateRPTemplates()
 	if err != nil {
 		return err
 	}
 
-	err = deploy.GenerateNSGTemplates()
+	err = generator.GenerateNSGTemplates()
 	if err != nil {
 		return err
 	}
 
-	err = deploy.GenerateRPParameterTemplate()
+	err = generator.GenerateRPParameterTemplate()
 	if err != nil {
 		return err
 	}
 
-	return deploy.GenerateDevelopmentTemplate()
+	return generator.GenerateDevelopmentTemplate()
 }
 
 func main() {

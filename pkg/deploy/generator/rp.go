@@ -1,4 +1,4 @@
-package deploy
+package generator
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -517,6 +517,7 @@ ExecStart=/usr/bin/docker run \
   $RPIMAGE \
   rp
 ExecStop=/usr/bin/docker stop -t 3600 %N
+TimeoutStopSec="3600"
 Restart=always
 
 [Install]
@@ -1170,11 +1171,11 @@ func GenerateRPTemplates() error {
 		g            *generator
 	}{
 		{
-			templateFile: "rp-development.json",
+			templateFile: fileRPDevelopment,
 			g:            newGenerator(false),
 		},
 		{
-			templateFile: "rp-production.json",
+			templateFile: FileRPProduction,
 			g:            newGenerator(true),
 		},
 	} {
@@ -1223,7 +1224,7 @@ func GenerateRPTemplates() error {
 
 	b = append(b, byte('\n'))
 
-	return ioutil.WriteFile("databases-development.json", b, 0666)
+	return ioutil.WriteFile(fileDatabaseDevelopment, b, 0666)
 }
 
 func GenerateRPParameterTemplate() error {
@@ -1250,7 +1251,7 @@ func GenerateRPParameterTemplate() error {
 
 	b = append(b, byte('\n'))
 
-	err = ioutil.WriteFile("rp-production-parameters.json", b, 0666)
+	err = ioutil.WriteFile(fileRPProductionParameters, b, 0666)
 	if err != nil {
 		return err
 	}

@@ -1,4 +1,4 @@
-package deploy
+package generator
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -143,5 +143,5 @@ func GenerateDevelopmentTemplate() error {
 
 	b = append(b, byte('\n'))
 
-	return ioutil.WriteFile("env-development.json", b, 0666)
+	return ioutil.WriteFile(fileEnvDevelopment, b, 0666)
 }
