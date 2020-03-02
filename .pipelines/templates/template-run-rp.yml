@@ -10,8 +10,9 @@ steps:
       if [[ $RP_MODE == "development" ]] then
         export DATABASE_NAME=v4-e2e-$(git log --format=%h -n 1 HEAD)
 
-        deploy_e2e_db
+        run_rp
+        validate_rp_running
       else
-        echo "### skipping db deployment because not development rp"
+        echo "### skipping running rp because not development rp"
       fi
-    displayName: "🚀 Deploy custom RP DB"
+    displayName: "🚀 Run ARO RP & E2E"

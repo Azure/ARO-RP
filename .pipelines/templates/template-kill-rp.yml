@@ -7,11 +7,9 @@ steps:
       . secrets/env
       . ./hack/e2e/run-rp-and-e2e.sh
 
-      export DATABASE_NAME=v4-e2e-$(git log --format=%h -n 1 HEAD)
-
-      run_rp
-      validate_rp_running
-      register_sub
-      run_e2e
-      kill_rp
+      if [[ $RP_MODE == "development" ]] then
+        kill_rp
+      else
+        echo "### skipping killing rp because not development rp"
+      fi
     displayName: "🚀 Run ARO RP & E2E"
