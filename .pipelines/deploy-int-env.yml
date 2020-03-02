@@ -34,6 +34,10 @@ jobs:
           kvName: "ARO-INT-RP"
           certName: "int-ssl"
           outputPath: ${{ variables.modulePath }}/secrets/ssl-cert
+      - script: |
+          make aro
+        displayName: "⚙️ Building ARO Deployer Golang binary"
+        workingDirectory: "${{ variables.modulePath }}"
       - template: ./templates/template-prepare-int-secrets-env.yml
         parameters:
           domainName: "aro-int"
@@ -55,14 +59,13 @@ jobs:
           mdsdMonitoringEnviroment: "Test"
           mdsdConfigVersion: $(MDSD-CONFIG-VERSION)
           vmssDomainNameLabel: "aro-int"
-          vmssName: "int"
           rpMode: "int"
+          pullSecret: $(aro-pullsecret)
+          sshPublicKey: $(int-ssh-public-key)
       - template: ./templates/template-deploy-int-env.yml
         parameters:
           workingDirectory: ${{ variables.modulePath }}
           azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
-          pullSecret: $(aro-pullsecret)
-          sshPublicKey: $(int-ssh-public-key)
           domainName: "aro-int"
           parentDomainName: "dev.aroapp.io"
           parentDomainRg: "global-infra"

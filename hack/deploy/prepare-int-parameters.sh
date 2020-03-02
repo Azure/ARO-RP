@@ -66,16 +66,16 @@ cat >secrets/parameters.json <<EOF
             "value": "SET-LATER"
         },
         "sshPublicKey": {
-            "value": "SET-LATER"
+            "value": "$SSH_PUBLIC_KEY"
         },
         "vmssCount": {
             "value": 3
         },
         "vmssDomainNameLabel": {
-            "value": "$VMSS_DOMAIN_NAME_LABEL"
+            "value": "SET-LATER"
         },
         "vmssName": {
-            "value": "$VMSS_NAME"
+            "value": "SET-LATER"
         }
     }
 }
