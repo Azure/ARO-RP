@@ -636,7 +636,7 @@ rm /etc/motd.d/*
 													Name: to.StringPtr("rp-vmss-pip"),
 													VirtualMachineScaleSetPublicIPAddressConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfigurationProperties{
 														DNSSettings: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfigurationDNSSettings{
-															DomainNameLabel: to.StringPtr("[parameters('vmssDomainNameLabel')]"),
+															DomainNameLabel: to.StringPtr("[concat('rp-vmss-', parameters('vmssDomainNameLabel'))]"),
 														},
 													},
 												},

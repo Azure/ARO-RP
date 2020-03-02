@@ -243,7 +243,7 @@
                                                     "name": "rp-vmss-pip",
                                                     "properties": {
                                                         "dnsSettings": {
-                                                            "domainNameLabel": "[parameters('vmssDomainNameLabel')]"
+                                                            "domainNameLabel": "[concat('rp-vmss-', parameters('vmssDomainNameLabel'))]"
                                                         }
                                                     }
                                                 },

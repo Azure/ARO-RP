@@ -12,7 +12,7 @@ const (
 	kvServiceSuffix          = "-svc"
 )
 
-//b74d372-338a-5534 Template file constants
+// Template file constants
 const (
 	FileRPProductionNSG        = "rp-production-nsg.json"
 	FileRPProduction           = "rp-production.json"
