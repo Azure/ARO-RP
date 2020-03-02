@@ -13,4 +13,4 @@ steps:
       else
         echo "### skipping killing rp because not development rp"
       fi
-    displayName: "🚀 Run ARO RP & E2E"
+    displayName: "🧹 Kill ARO RP"

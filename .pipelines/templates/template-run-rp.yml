@@ -16,4 +16,4 @@ steps:
       else
         echo "### skipping running rp because not development rp"
       fi
-    displayName: "🚀 Run ARO RP & E2E"
+    displayName: "🚀 Run ARO RP"
