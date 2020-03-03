@@ -59,15 +59,16 @@ image-aro: aro
 
 image-fluentbit:
 	docker build --build-arg VERSION=1.3.9-1 \
-	  -f Dockerfile.fluentbit -t arosvc.azurecr.io/fluentbit:1.3.9-1 .
+	  -f Dockerfile.fluentbit -t $(RP-IMAGE-ACR)/fluentbit:1.3.9-1 .
 
 image-proxy: proxy
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
 	docker build -f Dockerfile.proxy -t $(RP-IMAGE-ACR)/proxy:latest .
 
-publish-images: image-aro-int image-proxy-int
+publish-images: image-aro image-proxy fluentbit
 	docker push $(RP-IMAGE-ACR)/aro:$(COMMIT)
 	docker push $(RP-IMAGE-ACR)/proxy:latest
+	docker push $(RP-IMAGE-ACR)/fluentbit:1.3.9-1
 
 proxy:
 	go build -ldflags "-X main.gitCommit=$(COMMIT)" ./hack/proxy
