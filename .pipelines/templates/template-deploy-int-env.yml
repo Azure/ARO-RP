@@ -1,36 +1,64 @@
 parameters:
   workingDirectory: ""
+  
+  domainName: ""
+  rgPrefix: ""
+  workingDirectory: ""
+  location: ""
+  mdmFrontendUrl: ""
+  rpMdmMetricNamespace: ""
+  rpMdmMonitoringAccount: ""
+  clusterMdmMetricNamespace: ""
+  clusterMdmMonitoringAccount: ""
+  rpImageACR: ""
+  rpImagePullJSONSPN: ""
+  azureFpClientId: ""
+  encryptionKey: ""
+  azureDevOpsJSONSPN: ""
+  mdsdNamespace: ""
+  mdsdMonitoringAccount: ""
+  mdsdMonitoringEnviroment: ""
+  mdsdConfigVersion: ""
+  rpMode: ""
   sshPublicKey: ""
   pullSecret: ""
-  location: ""
-  rgPrefix: ""
-  parentDomainName: ""
-  parentDomainRg: ""
-  azureDevOpsJSONSPN: ""
-  domainName: ""
 steps:
   - script: |
       set -eu
       cd ${{ parameters.workingDirectory }}
 
-      echo ${{ parameters.azureDevOpsJSONSPN }} | base64 -d > devops-spn.json
-      export DEVOPS_CLIENT_ID=$(cat devops-spn.json | jq -r '.clientId')
-      RESOURCEGROUP_PREFIX=${{ parameters.rgPrefix }}
-      export LOCATION=${{ parameters.location }}
-      export RESOURCEGROUP="$RESOURCEGROUP_PREFIX-$LOCATION"
-      export KEYVAULT_PREFIX="$RESOURCEGROUP"
-      export DOMAIN_NAME=${{ parameters.domainName }}
-      export PARENT_DOMAIN_NAME=${{ parameters.parentDomainName }}
-      export PARENT_DOMAIN_RESOURCEGROUP=${{ parameters.parentDomainRg }}
-      
-      source ./hack/deploy/int-runtime-secrets-and-auth.sh
+      COMMIT=$(shell git rev-parse --short HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
 
-      echo "########## Creating RG $RESOURCEGROUP in $LOCATION ##########"
-      az group create -g "$RESOURCEGROUP" -l "$LOCATION" >/dev/null
+      echo ${{ parameters.rpImagePullJSONSPN }} | base64 -d -w 0 > pull-spn.json
+      pull_spn_client_id=$(cat pull-spn.json | jq -r '.clientId')
+      pull_spn_client_secret=$(cat pull-spn.json | jq -r '.clientSecret')
+      export RP_IMAGE_AUTH=$(echo "$pull_spn_client_id:$pull_spn_client_secret" | base64 -w 0)
+      export PULL_SECRET=$(echo ${{ parameters.pullSecret }} | sed 's/"/\\"/g')
+
+      export DOMAIN_NAME=${{ parameters.domainName }}
+      export AZURE_FP_CLIENT_ID=${{ parameters.azureFpClientId }}
+      export COSMOSDB_ACCOUNT=${{ parameters.databaseAccountName }}
+      export MDM_FRONTEND=${{ parameters.mdmFrontendUrl }}
+      export RP_MDM_NAMESPACE=${{ parameters.rpMdmMetricNamespace }}
+      export RP_MDM_ACCOUNT=${{ parameters.rpMdmMonitoringAccount }}
+      export CLUSTER_MDM_NAMESPACE=${{ parameters.clusterMdmMetricNamespace }}
+      export CLUSTER_MDM_ACCOUNT=${{ parameters.clusterMdmMonitoringAccount }}
+      export MDSD_NAMESPACE=${{ parameters.mdsdNamespace }}
+      export MDSD_ACCOUNT=${{ parameters.mdsdMonitoringAccount }}
+      export MDSD_ENVIROMENT=${{ parameters.mdsdMonitoringEnviroment }}
+      export MDSD_CONFIG_VERSION=${{ parameters.mdsdConfigVersion }}
+      export RP_IMAGE=${{ parameters.rpImageACR }}/aro:$(COMMIT)
+      export ENCRYPTION_KEY=${{ parameters.encryptionKey }}
+      RESOURCEGROUP_PREFIX=${{ parameters.rgPrefix }}
+      LOCATION=${{ parameters.location }}
+      RESOURCEGROUP="$RESOURCEGROUP_PREFIX-$LOCATION"
+      export COSMOSDB_ACCOUNT="$RESOURCEGROUP"
+      export KEYVAULT_PREFIX="$RESOURCEGROUP"
+      export RP_MODE=${{ parameters.rpMode }}
+      export SSH_PUBLIC_KEY="${{ parameters.sshPublicKey }}"
       
+      ./hack/deploy/prepare-int-parameters.sh
+
       export RP_PARAMETERS_FILE="secrets/parameters.json"
       aro deploy
-
-      upload-kv-secrets
-      add-ns-record-parent-dns-zone
     displayName: "🚀 Buildout INT env"

@@ -24,24 +24,14 @@ jobs:
         parameters:
           workingDirectory: ${{ variables.modulePath }}
           azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
-      - template: ./templates/template-pull-pem-from-kv.yml
-        parameters:
-          kvName: "ARO-INT-RP"
-          certName: "RP-SP-Login"
-          outputPath: ${{ variables.modulePath }}/secrets/fp-client-cert
-      - template: ./templates/template-pull-pem-from-kv.yml
-        parameters:
-          kvName: "ARO-INT-RP"
-          certName: "int-ssl"
-          outputPath: ${{ variables.modulePath }}/secrets/ssl-cert
       - script: |
           make aro
         displayName: "⚙️ Building ARO Deployer Golang binary"
         workingDirectory: "${{ variables.modulePath }}"
-      - template: ./templates/template-prepare-int-secrets-env.yml
+      - template: ./templates/template-deploy-int-env.yml
         parameters:
-          domainName: "aro-int"
-          parentDomainName: "dev.aroapp.io"
+          workingDirectory: ${{ variables.modulePath }}
+          domainName: "aro-int.dev.aroapp.io"
           azureFpClientId: $(aro-int-rp-object-id)
           location: "eastus"
           rgPrefix: "aro-int"
@@ -50,24 +40,13 @@ jobs:
           rpMdmMonitoringAccount: "AzureRedHatOpenShift"
           clusterMdmMetricNamespace: "ARO-Clusters"
           clusterMdmMonitoringAccount: "AzureRedHatOpenShiftClusters"
-          rpImage: $(RP-IMAGE)
+          rpImageACR: $(RP-IMAGE-ACR)
           rpImagePullJSONSPN: $(aro-v4-int-image-pull-spn)
-          workingDirectory: ${{ variables.modulePath }}
           encryptionKey: $(int-encryption-key)
           mdsdNamespace: "ARORPLogs"
           mdsdMonitoringAccount: "ARORPLogs"
           mdsdMonitoringEnviroment: "Test"
           mdsdConfigVersion: $(MDSD-CONFIG-VERSION)
-          vmssDomainNameLabel: "aro-int"
           rpMode: "int"
           pullSecret: $(aro-pullsecret)
           sshPublicKey: $(int-ssh-public-key)
-      - template: ./templates/template-deploy-int-env.yml
-        parameters:
-          workingDirectory: ${{ variables.modulePath }}
-          azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
-          domainName: "aro-int"
-          parentDomainName: "dev.aroapp.io"
-          parentDomainRg: "global-infra"
-          location: "eastus"
-          rgPrefix: "aro-int"
