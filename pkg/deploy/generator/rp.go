@@ -521,7 +521,6 @@ ExecStart=/usr/bin/docker run \
 ExecStop=/usr/bin/docker stop -t 3600 %N
 TimeoutStopSec="3600"
 Restart=always
-StandardError=null
 
 [Install]
 WantedBy=multi-user.target
@@ -556,7 +555,6 @@ ExecStart=/usr/bin/docker run \
   $RPIMAGE \
   monitor
 Restart=always
-StandardError=null
 
 [Install]
 WantedBy=multi-user.target
