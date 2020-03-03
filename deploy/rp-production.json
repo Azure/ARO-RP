@@ -79,10 +79,6 @@
         "sshPublicKey": {
             "type": "string"
         },
-        "vmssCount": {
-            "type": "int",
-            "defaultValue": 3
-        },
         "vmssName": {
             "type": "string"
         }
@@ -165,7 +161,7 @@
             "sku": {
                 "name": "Standard_D2s_v3",
                 "tier": "Standard",
-                "capacity": "[parameters('vmssCount')]"
+                "capacity": 3
             },
             "properties": {
                 "upgradePolicy": {

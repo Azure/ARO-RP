@@ -47,9 +47,6 @@
         "sshPublicKey": {
             "value": ""
         },
-        "vmssCount": {
-            "value": 3
-        },
         "vmssName": {
             "value": ""
         }
