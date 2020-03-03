@@ -10,8 +10,10 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/Azure/go-autorest/tracing"
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
+	"k8s.io/client-go/tools/metrics"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	_ "github.com/Azure/ARO-RP/pkg/api/admin"
@@ -21,6 +23,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
+	"github.com/Azure/ARO-RP/pkg/metrics/statsd/azure"
+	"github.com/Azure/ARO-RP/pkg/metrics/statsd/k8s"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 )
 
@@ -45,6 +49,9 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
+
+	tracing.Register(azure.New(m))
+	metrics.Register(k8s.NewLatency(m), k8s.NewResult(m))
 
 	cipher, err := encryption.NewXChaCha20Poly1305(ctx, env)
 	if err != nil {
