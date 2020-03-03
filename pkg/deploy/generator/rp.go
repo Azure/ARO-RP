@@ -591,7 +591,7 @@ rm /etc/motd.d/*
 				},
 				VirtualMachineProfile: &mgmtcompute.VirtualMachineScaleSetVMProfile{
 					OsProfile: &mgmtcompute.VirtualMachineScaleSetOSProfile{
-						ComputerNamePrefix: to.StringPtr("rp-"),
+						ComputerNamePrefix: to.StringPtr("[concat('rp-', parameters('vmssName'), '-')]"),
 						AdminUsername:      to.StringPtr("cloud-user"),
 						LinuxConfiguration: &mgmtcompute.LinuxConfiguration{
 							DisablePasswordAuthentication: to.BoolPtr(true),

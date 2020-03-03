@@ -191,7 +191,7 @@
                 },
                 "virtualMachineProfile": {
                     "osProfile": {
-                        "computerNamePrefix": "rp-",
+                        "computerNamePrefix": "[concat('rp-', parameters('vmssName'), '-')]",
                         "adminUsername": "cloud-user",
                         "linuxConfiguration": {
                             "disablePasswordAuthentication": true,
