@@ -20,6 +20,15 @@
         "keyvaultPrefix": {
             "value": ""
         },
+        "mdmFrontendUrl": {
+            "value": ""
+        },
+        "mdsdConfigVersion": {
+            "value": ""
+        },
+        "mdsdEnvironment": {
+            "value": ""
+        },
         "pullSecret": {
             "value": ""
         },
@@ -27,15 +36,6 @@
             "value": ""
         },
         "rpImageAuth": {
-            "value": ""
-        },
-        "rpMdmFrontendUrl": {
-            "value": ""
-        },
-        "rpMdsdConfigVersion": {
-            "value": ""
-        },
-        "rpMdsdEnvironment": {
             "value": ""
         },
         "rpMode": {

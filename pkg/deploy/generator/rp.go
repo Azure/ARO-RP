@@ -322,12 +322,12 @@ func (g *generator) vmss() *arm.Resource {
 	}
 
 	for _, variable := range []string{
+		"mdmFrontendUrl",
+		"mdsdConfigVersion",
+		"mdsdEnvironment",
 		"pullSecret",
 		"rpImage",
 		"rpImageAuth",
-		"rpMdmFrontendUrl",
-		"rpMdsdConfigVersion",
-		"rpMdsdEnvironment",
 		"rpMode",
 	} {
 		parts = append(parts,
@@ -436,13 +436,13 @@ MDSD_OPTIONS="-A -d -r \$MDSD_ROLE_PREFIX"
 
 export SSL_CERT_FILE=/etc/pki/tls/certs/ca-bundle.crt
 
-export MONITORING_GCS_ENVIRONMENT='$RPMDSDENVIRONMENT'
+export MONITORING_GCS_ENVIRONMENT='$MDSDENVIRONMENT'
 export MONITORING_GCS_ACCOUNT=ARORPLogs
 export MONITORING_GCS_REGION='$LOCATION'
 export MONITORING_GCS_CERT_CERTFILE=/etc/mdsd.pem
 export MONITORING_GCS_CERT_KEYFILE=/etc/mdsd.pem
 export MONITORING_GCS_NAMESPACE=ARORPLogs
-export MONITORING_CONFIG_VERSION='$RPMDSDCONFIGVERSION'
+export MONITORING_CONFIG_VERSION='$MDSDCONFIGVERSION'
 export MONITORING_USE_GENEVA_CONFIG_SERVICE=true
 
 export MONITORING_TENANT='$LOCATION'
@@ -451,11 +451,11 @@ export MONITORING_ROLE_INSTANCE='$(hostname)'
 EOF
 
 cat >/etc/sysconfig/mdm <<EOF
-RPMDMFRONTENDURL='$RPMDMFRONTENDURL'
-RPMDMIMAGE=arosvc.azurecr.io/genevamdm:master_31
-RPMDMSOURCEENVIRONMENT='$LOCATION'
-RPMDMSOURCEROLE=rp
-RPMDMSOURCEROLEINSTANCE='$(hostname)'
+MDMFRONTENDURL='$MDMFRONTENDURL'
+MDMIMAGE=arosvc.azurecr.io/genevamdm:master_31
+MDMSOURCEENVIRONMENT='$LOCATION'
+MDMSOURCEROLE=rp
+MDMSOURCEROLEINSTANCE='$(hostname)'
 EOF
 
 mkdir /var/etw
@@ -466,7 +466,7 @@ After=network-online.target
 [Service]
 EnvironmentFile=/etc/sysconfig/mdm
 ExecStartPre=-/usr/bin/docker rm -f %N
-ExecStartPre=/usr/bin/docker pull $RPMDMIMAGE
+ExecStartPre=/usr/bin/docker pull $MDMIMAGE
 ExecStart=/usr/bin/docker run \
   --entrypoint /usr/sbin/MetricsExtension \
   --hostname %H \
@@ -474,15 +474,15 @@ ExecStart=/usr/bin/docker run \
   --rm \
   -v /etc/mdm.pem:/etc/mdm.pem \
   -v /var/etw:/var/etw:z \
-  $RPMDMIMAGE \
+  $MDMIMAGE \
   -CertFile /etc/mdm.pem \
-  -FrontEndUrl $RPMDMFRONTENDURL \
+  -FrontEndUrl $MDMFRONTENDURL \
   -Logger Console \
   -LogLevel Warning \
   -PrivateKeyFile /etc/mdm.pem \
-  -SourceEnvironment $RPMDMSOURCEENVIRONMENT \
-  -SourceRole $RPMDMSOURCEROLE \
-  -SourceRoleInstance $RPMDMSOURCEROLEINSTANCE
+  -SourceEnvironment $MDMSOURCEENVIRONMENT \
+  -SourceRole $MDMSOURCEROLE \
+  -SourceRoleInstance $MDMSOURCEROLEINSTANCE
 ExecStop=/usr/bin/docker stop %N
 Restart=always
 
@@ -1106,12 +1106,12 @@ func (g *generator) template() *arm.Template {
 		params = append(params,
 			"extraCosmosDBIPs",
 			"extraKeyvaultAccessPolicies",
+			"mdmFrontendUrl",
+			"mdsdConfigVersion",
+			"mdsdEnvironment",
 			"pullSecret",
 			"rpImage",
 			"rpImageAuth",
-			"rpMdmFrontendUrl",
-			"rpMdsdConfigVersion",
-			"rpMdsdEnvironment",
 			"rpMode",
 			"vmssCount",
 			"vmssName",
