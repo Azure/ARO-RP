@@ -5,7 +5,6 @@ package monitor
 
 import (
 	"context"
-	"strconv"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -149,22 +148,11 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 		return err
 	}
 
-	var statusCode int
-	err = cli.RESTClient().
-		Get().
-		Context(ctx).
-		AbsPath("/healthz").
-		Do().
-		StatusCode(&statusCode).
-		Error()
-	if err != nil && statusCode == 0 {
+	// If API is not returning 200, don't need to run the next checks
+	err = mon.validateAPIHealth(ctx, cli, doc.OpenShiftCluster)
+	if err != nil {
 		return err
 	}
 
-	mon.clusterm.EmitGauge("monitoring.apiserver.health", 1, map[string]string{
-		"resource": doc.OpenShiftCluster.ID,
-		"code":     strconv.FormatInt(int64(statusCode), 10),
-	})
-
-	return nil
+	return mon.validateAlerts(ctx, doc.OpenShiftCluster)
 }
