@@ -5,7 +5,6 @@ package monitor
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 
 	"k8s.io/client-go/kubernetes"
@@ -13,7 +12,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
-func (mon *monitor) validateAPIHealth(ctx context.Context, cli kubernetes.Interface, oc *api.OpenShiftCluster) error {
+func (mon *monitor) emitAPIServerHealthCode(ctx context.Context, cli kubernetes.Interface, oc *api.OpenShiftCluster) (int, error) {
 	var statusCode int
 	err := cli.Discovery().RESTClient().
 		Get().
@@ -22,14 +21,11 @@ func (mon *monitor) validateAPIHealth(ctx context.Context, cli kubernetes.Interf
 		Do().
 		StatusCode(&statusCode).
 		Error()
-	if err != nil && statusCode == 0 {
-		return fmt.Errorf("API Server is Unhealthy - %s", err.Error())
-	}
 
-	mon.clusterm.EmitGauge(MetricAPIServerHeatlth, 1, map[string]string{
+	mon.clusterm.EmitGauge(metricAPIServerHealthCode, 1, map[string]string{
 		"resource": oc.ID,
 		"code":     strconv.FormatInt(int64(statusCode), 10),
 	})
 
-	return nil
+	return statusCode, err
 }

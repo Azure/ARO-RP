@@ -17,7 +17,16 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/portforward"
 )
 
-func (mon *monitor) validateAlerts(ctx context.Context, oc *api.OpenShiftCluster) error {
+const (
+	// alertNamespace is the namespace where the alert manager pod is living
+	alertNamespace string = "openshift-monitoring"
+	// alertPod is the pod to query
+	alertPod string = "alertmanager-main-0"
+	// alertServiceEndpoint is the service name to query
+	alertServiceEndpoint string = "http://alertmanager-main.openshift-monitoring.svc:9093/api/v2/alerts"
+)
+
+func (mon *monitor) emitPrometheusAlerts(ctx context.Context, oc *api.OpenShiftCluster) error {
 	hc := &http.Client{
 		Transport: &http.Transport{
 			DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
@@ -26,18 +35,13 @@ func (mon *monitor) validateAlerts(ctx context.Context, oc *api.OpenShiftCluster
 					return nil, err
 				}
 
-				return portforward.DialContext(ctx, mon.env, oc, AlertNamespace, AlertPodPrefix+"-0", port)
+				// TODO: try other pods if -0 isn't available?
+				return portforward.DialContext(ctx, mon.env, oc, alertNamespace, alertPod, port)
 			},
 		},
 	}
 
-	// TODO: try other pods if -0 isn't available?
-	req, err := http.NewRequest(http.MethodGet, AlertServiceEndpoint, nil)
-	if err != nil {
-		return err
-	}
-
-	resp, err := hc.Do(req)
+	resp, err := hc.Get(alertServiceEndpoint)
 	if err != nil {
 		return err
 	}
@@ -53,15 +57,20 @@ func (mon *monitor) validateAlerts(ctx context.Context, oc *api.OpenShiftCluster
 		return err
 	}
 
+	alertmap := map[string]int64{}
+
 	for _, alert := range alerts {
 		// If the alert is still happening we are emitting
 		if inTimeSpan(alert.StartsAt, alert.EndsAt, time.Now()) {
-			mon.clusterm.EmitGauge(MetricPrometheusAlert, 1, map[string]string{
-				"resource": oc.ID,
-				"alert":    string(alert.Labels["alertname"]),
-			})
+			alertmap[string(alert.Labels["alertname"])]++
 		}
+	}
 
+	for alert, count := range alertmap {
+		mon.clusterm.EmitGauge(metricPrometheusAlert, count, map[string]string{
+			"resource": oc.ID,
+			"alert":    alert,
+		})
 	}
 
 	return nil

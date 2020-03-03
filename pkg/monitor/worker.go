@@ -5,6 +5,7 @@ package monitor
 
 import (
 	"context"
+	"net/http"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -149,10 +150,10 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	}
 
 	// If API is not returning 200, don't need to run the next checks
-	err = mon.validateAPIHealth(ctx, cli, doc.OpenShiftCluster)
-	if err != nil {
+	statusCode, err := mon.emitAPIServerHealthCode(ctx, cli, doc.OpenShiftCluster)
+	if err != nil || statusCode != http.StatusOK {
 		return err
 	}
 
-	return mon.validateAlerts(ctx, doc.OpenShiftCluster)
+	return mon.emitPrometheusAlerts(ctx, doc.OpenShiftCluster)
 }
