@@ -1,6 +1,4 @@
 parameters:
-  workingDirectory: ""
-  
   domainName: ""
   rgPrefix: ""
   workingDirectory: ""
@@ -27,7 +25,7 @@ steps:
       set -eu
       cd ${{ parameters.workingDirectory }}
 
-      COMMIT=$(shell git rev-parse --short HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
+      COMMIT=$(git rev-parse --short HEAD)$([[ $(git status --porcelain) = "" ]] || echo -dirty)
 
       echo ${{ parameters.rpImagePullJSONSPN }} | base64 -d -w 0 > pull-spn.json
       pull_spn_client_id=$(cat pull-spn.json | jq -r '.clientId')
@@ -47,7 +45,7 @@ steps:
       export MDSD_ACCOUNT=${{ parameters.mdsdMonitoringAccount }}
       export MDSD_ENVIROMENT=${{ parameters.mdsdMonitoringEnviroment }}
       export MDSD_CONFIG_VERSION=${{ parameters.mdsdConfigVersion }}
-      export RP_IMAGE=${{ parameters.rpImageACR }}/aro:$(COMMIT)
+      export RP_IMAGE=${{ parameters.rpImageACR }}.azurecr.io/aro:${COMMIT}
       export ENCRYPTION_KEY=${{ parameters.encryptionKey }}
       RESOURCEGROUP_PREFIX=${{ parameters.rgPrefix }}
       LOCATION=${{ parameters.location }}
@@ -60,5 +58,5 @@ steps:
       ./hack/deploy/prepare-int-parameters.sh
 
       export RP_PARAMETERS_FILE="secrets/parameters.json"
-      aro deploy
+      ./aro deploy
     displayName: "🚀 Buildout INT env"

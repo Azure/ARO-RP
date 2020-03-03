@@ -27,3 +27,4 @@ jobs:
       - template: ./templates/template-push-images-to-acr.yml
         parameters:
           workingDirectory: ${{ variables.modulePath }}
+          rpImageACR: $(RP_IMAGE_ACR)
