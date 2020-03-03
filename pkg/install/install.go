@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/url"
@@ -26,6 +27,7 @@ import (
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
 	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -71,6 +73,14 @@ type Installer struct {
 	operatorcli   operatorclient.Interface
 	configcli     configclient.Interface
 	securitycli   securityclient.Interface
+}
+
+const pollInterval = 10 * time.Second
+
+type action func(context.Context) error
+type condition struct {
+	f       wait.ConditionFunc
+	timeout time.Duration
 }
 
 // NewInstaller creates a new Installer
@@ -126,34 +136,38 @@ func NewInstaller(ctx context.Context, log *logrus.Entry, env env.Interface, db 
 
 // Install installs an ARO cluster
 func (i *Installer) Install(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) error {
-	steps := map[api.InstallPhase][]func(context.Context) error{
+	steps := map[api.InstallPhase][]interface{}{
 		api.InstallPhaseDeployStorage: {
-			i.createDNS,
-			func(ctx context.Context) error {
+			action(i.createDNS),
+			action(func(ctx context.Context) error {
 				return i.installStorage(ctx, installConfig, platformCreds, image)
-			},
-			i.incrInstallPhase,
+			}),
+			action(i.incrInstallPhase),
 		},
 		api.InstallPhaseDeployResources: {
-			i.installResources,
-			i.createPrivateEndpoint,
-			i.updateAPIIP,
-			i.createCertificates,
-			i.initializeKubernetesClients,
-			i.waitForBootstrapConfigmap,
-			i.ensureGenevaLogging,
-			i.incrInstallPhase,
+			action(i.installResources),
+			action(i.createPrivateEndpoint),
+			action(i.updateAPIIP),
+			action(i.createCertificates),
+			action(i.initializeKubernetesClients),
+			condition{i.bootstrapConfigMapReady, 30 * time.Minute},
+			action(i.ensureGenevaLogging),
+			action(i.incrInstallPhase),
 		},
 		api.InstallPhaseRemoveBootstrap: {
-			i.initializeKubernetesClients,
-			i.removeBootstrap,
-			i.configureAPIServerCertificate,
-			i.updateConsoleBranding,
-			i.waitForClusterVersion,
-			i.disableUpdates,
-			i.updateRouterIP,
-			i.configureIngressCertificate,
-			i.endOfInstallPhase,
+			action(i.initializeKubernetesClients),
+			action(i.removeBootstrap),
+			action(i.configureAPIServerCertificate),
+			condition{i.apiServersReady, 30 * time.Minute},
+			condition{i.operatorConsoleExists, 30 * time.Minute},
+			action(i.updateConsoleBranding),
+			condition{i.operatorConsoleReady, 10 * time.Minute},
+			condition{i.clusterVersionReady, 30 * time.Minute},
+			action(i.disableUpdates),
+			action(i.updateRouterIP),
+			action(i.configureIngressCertificate),
+			condition{i.ingressControllerReady, 30 * time.Minute},
+			action(i.endOfInstallPhase),
 		},
 	}
 
@@ -167,14 +181,28 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 	}
 	i.log.Printf("starting phase %s", i.doc.OpenShiftCluster.Properties.Install.Phase)
 	for _, step := range steps[i.doc.OpenShiftCluster.Properties.Install.Phase] {
-		i.log.Printf("running step %s", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name())
-		err = step(ctx)
-		if err != nil {
-			break
+		switch step := step.(type) {
+		case action:
+			i.log.Printf("running step %s", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name())
+			err = step(ctx)
+			if err != nil {
+				return err
+			}
+		case condition:
+			i.log.Printf("waiting for %s", runtime.FuncForPC(reflect.ValueOf(step.f).Pointer()).Name())
+			func() {
+				timeoutCtx, cancel := context.WithTimeout(ctx, step.timeout)
+				defer cancel()
+				err = wait.PollImmediateUntil(pollInterval, step.f, timeoutCtx.Done())
+			}()
+			if err != nil {
+				return err
+			}
+		default:
+			return errors.New("install step must be an action or a condition")
 		}
 	}
-
-	return err
+	return nil
 }
 
 func (i *Installer) startInstallPhase(ctx context.Context) error {

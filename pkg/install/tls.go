@@ -7,14 +7,11 @@ import (
 	"context"
 	"crypto/x509"
 	"encoding/pem"
-	"time"
 
 	configv1 "github.com/openshift/api/config/v1"
-	operatorv1 "github.com/openshift/api/operator/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 	coreclient "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/util/retry"
 
@@ -133,7 +130,7 @@ func (i *Installer) configureAPIServerCertificate(ctx context.Context) error {
 		return err
 	}
 
-	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		apiserver, err := i.configcli.ConfigV1().APIServers().Get("cluster", metav1.GetOptions{})
 		if err != nil {
 			return err
@@ -153,26 +150,6 @@ func (i *Installer) configureAPIServerCertificate(ctx context.Context) error {
 		_, err = i.configcli.ConfigV1().APIServers().Update(apiserver)
 		return err
 	})
-	if err != nil {
-		return err
-	}
-
-	i.log.Print("waiting for apiservers")
-	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
-	defer cancel()
-	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-		apiserver, err := i.operatorcli.OperatorV1().KubeAPIServers().Get("cluster", metav1.GetOptions{})
-		if err == nil {
-			m := make(map[string]operatorv1.ConditionStatus, len(apiserver.Status.Conditions))
-			for _, cond := range apiserver.Status.Conditions {
-				m[cond.Type] = cond.Status
-			}
-			if m["Available"] == operatorv1.ConditionTrue && m["Progressing"] == operatorv1.ConditionFalse {
-				return true, nil
-			}
-		}
-		return false, nil
-	}, timeoutCtx.Done())
 }
 
 func (i *Installer) configureIngressCertificate(ctx context.Context) error {
@@ -194,7 +171,7 @@ func (i *Installer) configureIngressCertificate(ctx context.Context) error {
 		return err
 	}
 
-	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		ic, err := i.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Get("default", metav1.GetOptions{})
 		if err != nil {
 			return err
@@ -207,22 +184,4 @@ func (i *Installer) configureIngressCertificate(ctx context.Context) error {
 		_, err = i.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Update(ic)
 		return err
 	})
-	if err != nil {
-		return err
-	}
-
-	i.log.Print("waiting for ingress controller")
-	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
-	defer cancel()
-	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-		ic, err := i.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Get("default", metav1.GetOptions{})
-		if err == nil && ic.Status.ObservedGeneration == ic.Generation {
-			for _, cond := range ic.Status.Conditions {
-				if cond.Type == operatorv1.OperatorStatusTypeAvailable && cond.Status == operatorv1.ConditionTrue {
-					return true, nil
-				}
-			}
-		}
-		return false, nil
-	}, timeoutCtx.Done())
 }
