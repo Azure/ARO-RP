@@ -14,11 +14,14 @@ const (
 
 // Template file constants
 const (
-	FileRPProductionNSG        = "rp-production-nsg.json"
-	FileRPProduction           = "rp-production.json"
+	FileRPProductionPredeploy           = "rp-production-predeploy.json"
+	FileRPProduction                    = "rp-production.json"
+	FileRPProductionManagedIdentity     = "rp-production-managed-identity.json"
+	fileRPProductionParameters          = "rp-production-parameters.json"
+	fileRPProductionPredeployParameters = "rp-production-predeploy-parameters.json"
+
 	fileEnvDevelopment         = "env-development.json"
-	fileRPDevelopmentNSG       = "rp-development-nsg.json"
-	fileRPDevelopment          = "rp-development.json"
 	fileDatabaseDevelopment    = "databases-development.json"
-	fileRPProductionParameters = "rp-production-parameters.json"
+	fileRPDevelopmentPredeploy = "rp-development-predeploy.json"
+	fileRPDevelopment          = "rp-development.json"
 )

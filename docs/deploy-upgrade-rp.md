@@ -15,8 +15,8 @@ the following environment variables:
 
   * RESOURCEGROUP: RP resource group name
 
-  * RP_PARAMETERS_FILE: location of environment parameters file (if
-    RP_PREDEPLOY_ONLY is not set)
+  * RP_PARAMETERS_FILE: location of environment parameters file (same variable
+  used for PreDeploy and Deploy)
 
 * Optional:
 
@@ -32,8 +32,38 @@ Notes:
 
 * The new RP VMSS will be created with postfix `-short_gitcommit`.
 
-* Parameters file exampleL `deploy/rp-production-parameters.json`.
+* Parameters file example `deploy/rp-production-parameters.json`.
 
-* The utility will not re-deploy rp-production-nsg.json if the deployment
-  already exists. If you want to re-deploy rp-production-nsg.json, delete
+* The utility will not re-deploy rp-production-predeploy.json if the deployment
+  already exists. If you want to re-deploy rp-production-predeploy.json, delete
   existing deployment object.
+
+## Deployment logical order:
+
+* Deploy managed identity `rp-production-managed-identity.json`. This will produce
+  `rpServicePrincipalId` required by next deployments.
+
+* Deploy pre-deploy resources `rp-production-predeploy.json` with `rp-production-predeploy-parameters.json`
+
+* Deploy main deployment resources `rp-production.json` with `rp-production-parameters.json`
+
+
+## Utility example
+
+```bash
+# run pre-deploy phase only
+export RP_PREDEPLOY_ONLY=true
+export RP_PARAMETERS_FILE=parameters-predeploy.json
+go run ./cmd/aro deploy
+
+# deploy RP under name "test
+unset RP_PREDEPLOY_ONLY
+export RP_VERSION="test"
+export RP_PARAMETERS_FILE=parameters.json
+go run ./cmd/aro deploy
+
+# deploy second VMSS instance with name test2 and retire test
+export RP_VERSION="test2"
+export RP_PARAMETERS_FILE=parameters.json
+go run ./cmd/aro deploy
+```
