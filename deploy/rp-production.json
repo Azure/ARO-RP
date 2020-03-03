@@ -101,9 +101,6 @@
             "type": "int",
             "defaultValue": 3
         },
-        "vmssDomainNameLabel": {
-            "type": "string"
-        },
         "vmssName": {
             "type": "string"
         }
@@ -243,7 +240,7 @@
                                                     "name": "rp-vmss-pip",
                                                     "properties": {
                                                         "dnsSettings": {
-                                                            "domainNameLabel": "[concat('rp-vmss-', parameters('vmssDomainNameLabel'))]"
+                                                            "domainNameLabel": "[concat('rp-vmss-', parameters('vmssName'))]"
                                                         }
                                                     }
                                                 },

@@ -68,9 +68,6 @@
         "vmssCount": {
             "value": 3
         },
-        "vmssDomainNameLabel": {
-            "value": ""
-        },
         "vmssName": {
             "value": ""
         }

@@ -640,7 +640,7 @@ rm /etc/motd.d/*
 													Name: to.StringPtr("rp-vmss-pip"),
 													VirtualMachineScaleSetPublicIPAddressConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfigurationProperties{
 														DNSSettings: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfigurationDNSSettings{
-															DomainNameLabel: to.StringPtr("[concat('rp-vmss-', parameters('vmssDomainNameLabel'))]"),
+															DomainNameLabel: to.StringPtr("[concat('rp-vmss-', parameters('vmssName'))]"),
 														},
 													},
 												},
@@ -1121,7 +1121,6 @@ func (g *generator) template() *arm.Template {
 			"rpMdsdNamespace",
 			"rpMode",
 			"vmssCount",
-			"vmssDomainNameLabel",
 			"vmssName",
 		)
 	} else {

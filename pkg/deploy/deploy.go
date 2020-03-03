@@ -145,9 +145,6 @@ func (d *deployer) Deploy(ctx context.Context, rpServicePrincipalID string) erro
 	parameters.Parameters["rpServicePrincipalId"] = &arm.ParametersParameter{
 		Value: rpServicePrincipalID,
 	}
-	parameters.Parameters["vmssDomainNameLabel"] = &arm.ParametersParameter{
-		Value: d.version,
-	}
 
 	d.log.Printf("deploying rp version %s to %s", d.version, d.resourceGroup)
 	return d.deployments.CreateOrUpdateAndWait(ctx, d.resourceGroup, "rp-production-"+d.version, azresources.Deployment{
@@ -179,7 +176,6 @@ func (d *deployer) waitForRPReadiness(ctx context.Context, vmssName string) erro
 	d.log.Printf("waiting for %s instances to be healthy", vmssName)
 	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 		for _, vm := range scalesetVMs {
-			// note: vmssName matches vmssDomainNameLabel, so we can use it to construct URL
 			u := fmt.Sprintf("https://vm%s.%s.%s.cloudapp.azure.com/healthz/ready", *vm.InstanceID, vmssName, d.location)
 
 			resp, err := d.cli.Get(u)
@@ -226,7 +222,6 @@ func (d *deployer) removeOldScalesets(ctx context.Context) error {
 		d.log.Printf("waiting for %s instances to terminate", *vmss.Name)
 		err = wait.PollImmediateUntil(10*time.Second, func() (ready bool, err error) {
 			for _, vm := range scalesetVMs {
-				// note: vmssName matches vmssDomainNameLabel, so we can use it to construct URL
 				u := fmt.Sprintf("https://vm%s.%s.%s.cloudapp.azure.com/healthz/ready", *vm.InstanceID, *vmss.Name, d.location)
 
 				_, err := d.cli.Get(u)
