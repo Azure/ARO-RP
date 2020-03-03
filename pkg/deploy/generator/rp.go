@@ -421,6 +421,7 @@ az login -i --allow-no-subscriptions
 SVCVAULTURI="$(az keyvault list -g "$RESOURCEGROUPNAME" --query "[?tags.vault=='service'].properties.vaultUri" -o tsv)"
 az keyvault secret download --file /etc/mdm.pem --id "${SVCVAULTURI}secrets/rp-mdm"
 chmod 0600 /etc/mdm.pem
+sed -i -ne '1,/END CERTIFICATE/ p' /etc/mdm.pem
 
 az keyvault secret download --file /etc/mdsd.pem --id "${SVCVAULTURI}secrets/rp-mdsd"
 chown syslog:syslog /etc/mdsd.pem
