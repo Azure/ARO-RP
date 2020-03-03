@@ -110,12 +110,6 @@ run_e2e() {
     az aro delete -g "$RESOURCEGROUP" -n "$CLUSTER" --yes
 }
 
-clean_e2e_cluster() {
-    export RESOURCEGROUP=$CLUSTER_RESOURCEGROUP
-    echo "########## CLI : ARO delete cluster ##########"
-    az aro delete -g "$RESOURCEGROUP" -n "$CLUSTER" --yes
-}
-
 clean_e2e_db(){
     echo "########## 🧹 Deleting DB $DATABASE_NAME ##########"
     az cosmosdb sql database delete --name $DATABASE_NAME \
