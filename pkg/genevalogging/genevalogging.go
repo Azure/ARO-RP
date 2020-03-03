@@ -49,6 +49,12 @@ const (
 	Tag journald
 	DB /var/lib/fluent/journald
 
+[FILTER]
+    Name modify
+    Match journald
+    Remove_wildcard _
+    Remove TIMESTAMP
+
 [OUTPUT]
 	Name forward
 	Port 24224

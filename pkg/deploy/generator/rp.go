@@ -416,6 +416,7 @@ cat >/etc/td-agent-bit/td-agent-bit.conf <<'EOF'
     Name modify
     Match journald
     Remove_wildcard _
+    Remove TIMESTAMP
 
 [OUTPUT]
     Name forward
