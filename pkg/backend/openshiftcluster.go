@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -31,7 +32,17 @@ func (ocb *openShiftClusterBackend) try(ctx context.Context) (bool, error) {
 		return false, err
 	}
 
-	log := ocb.baseLog.WithField("resource", doc.OpenShiftCluster.ID)
+	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
+	if err != nil {
+		return false, err
+	}
+
+	log := ocb.baseLog.WithFields(logrus.Fields{
+		"resource_id":     doc.OpenShiftCluster.ID,
+		"subscription_id": r.SubscriptionID,
+		"resource_group":  r.ResourceGroup,
+		"resource_name":   r.ResourceName,
+	})
 	if doc.Dequeues > maxDequeueCount {
 		err := fmt.Errorf("dequeued %d times, failing", doc.Dequeues)
 		log.Error(err)
