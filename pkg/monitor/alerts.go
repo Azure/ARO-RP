@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/prometheus/common/model"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -27,6 +28,11 @@ const (
 )
 
 func (mon *monitor) emitPrometheusAlerts(ctx context.Context, oc *api.OpenShiftCluster) error {
+	r, err := azure.ParseResourceID(oc.ID)
+	if err != nil {
+		return err
+	}
+
 	hc := &http.Client{
 		Transport: &http.Transport{
 			DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
@@ -67,9 +73,12 @@ func (mon *monitor) emitPrometheusAlerts(ctx context.Context, oc *api.OpenShiftC
 	}
 
 	for alert, count := range alertmap {
-		mon.clusterm.EmitGauge(metricPrometheusAlert, count, map[string]string{
-			"resource": oc.ID,
-			"alert":    alert,
+		mon.clusterm.EmitGauge("prometheus.alerts", count, map[string]string{
+			"resourceId":     oc.ID,
+			"subscriptionId": r.SubscriptionID,
+			"resourceGroup":  r.ResourceGroup,
+			"resourceName":   r.ResourceName,
+			"alert":          alert,
 		})
 	}
 

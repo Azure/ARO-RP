@@ -53,7 +53,7 @@ func (sb *subscriptionBackend) try(ctx context.Context) (bool, error) {
 				"state": string(doc.Subscription.State),
 			})
 
-			sb.m.EmitGauge("backend.subscriptions.count", 1, map[string]string{})
+			sb.m.EmitGauge("backend.subscriptions.count", 1, nil)
 
 			log.WithField("duration", time.Now().Sub(t).Seconds()).Print("done")
 		}()

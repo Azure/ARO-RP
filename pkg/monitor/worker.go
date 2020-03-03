@@ -180,7 +180,7 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	}
 
 	// If API is not returning 200, don't need to run the next checks
-	statusCode, err := mon.emitAPIServerHealthCode(ctx, cli, doc.OpenShiftCluster)
+	statusCode, err := mon.emitAPIServerHealthzCode(ctx, cli, doc.OpenShiftCluster)
 	if err != nil || statusCode != http.StatusOK {
 		return err
 	}
