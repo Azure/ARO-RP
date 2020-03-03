@@ -322,18 +322,12 @@ func (g *generator) vmss() *arm.Resource {
 	}
 
 	for _, variable := range []string{
-		"clusterMdmMetricNamespace",
-		"clusterMdmMonitoringAccount",
 		"pullSecret",
 		"rpImage",
 		"rpImageAuth",
 		"rpMdmFrontendUrl",
-		"rpMdmMetricNamespace",
-		"rpMdmMonitoringAccount",
-		"rpMdsdAccount",
 		"rpMdsdConfigVersion",
 		"rpMdsdEnvironment",
-		"rpMdsdNamespace",
 		"rpMode",
 	} {
 		parts = append(parts,
@@ -443,11 +437,11 @@ MDSD_OPTIONS="-A -d -r \$MDSD_ROLE_PREFIX"
 export SSL_CERT_FILE=/etc/pki/tls/certs/ca-bundle.crt
 
 export MONITORING_GCS_ENVIRONMENT='$RPMDSDENVIRONMENT'
-export MONITORING_GCS_ACCOUNT='$RPMDSDACCOUNT'
+export MONITORING_GCS_ACCOUNT=ARORPLogs
 export MONITORING_GCS_REGION='$LOCATION'
 export MONITORING_GCS_CERT_CERTFILE=/etc/mdsd.pem
 export MONITORING_GCS_CERT_KEYFILE=/etc/mdsd.pem
-export MONITORING_GCS_NAMESPACE='$RPMDSDNAMESPACE'
+export MONITORING_GCS_NAMESPACE=ARORPLogs
 export MONITORING_CONFIG_VERSION='$RPMDSDCONFIGVERSION'
 export MONITORING_USE_GENEVA_CONFIG_SERVICE=true
 
@@ -497,8 +491,8 @@ WantedBy=multi-user.target
 EOF
 
 cat >/etc/sysconfig/aro-rp <<EOF
-MDM_ACCOUNT='$RPMDMMONITORINGACCOUNT'
-MDM_NAMESPACE='$RPMDMMETRICNAMESPACE'
+MDM_ACCOUNT=AzureRedHatOpenShiftRP
+MDM_NAMESPACE=RP
 PULL_SECRET='$PULLSECRET'
 RPIMAGE='$RPIMAGE'
 RP_MODE='$RPMODE'
@@ -534,10 +528,10 @@ WantedBy=multi-user.target
 EOF
 
 cat >/etc/sysconfig/aro-monitor <<EOF
-MDM_ACCOUNT='$RPMDMMONITORINGACCOUNT'
-MDM_NAMESPACE='$RPMDMMETRICNAMESPACE'
-CLUSTER_MDM_ACCOUNT='$CLUSTERMDMMONITORINGACCOUNT'
-CLUSTER_MDM_NAMESPACE='$CLUSTERMDMMETRICNAMESPACE'
+MDM_ACCOUNT=AzureRedHatOpenShiftRP
+MDM_NAMESPACE=BBM
+CLUSTER_MDM_ACCOUNT=AzureRedHatOpenShiftCluster
+CLUSTER_MDM_NAMESPACE=BBM
 RPIMAGE='$RPIMAGE'
 RP_MODE='$RPMODE'
 EOF
@@ -1110,20 +1104,14 @@ func (g *generator) template() *arm.Template {
 	}
 	if g.production {
 		params = append(params,
-			"clusterMdmMetricNamespace",
-			"clusterMdmMonitoringAccount",
 			"extraCosmosDBIPs",
 			"extraKeyvaultAccessPolicies",
 			"pullSecret",
 			"rpImage",
 			"rpImageAuth",
 			"rpMdmFrontendUrl",
-			"rpMdmMetricNamespace",
-			"rpMdmMonitoringAccount",
-			"rpMdsdAccount",
 			"rpMdsdConfigVersion",
 			"rpMdsdEnvironment",
-			"rpMdsdNamespace",
 			"rpMode",
 			"vmssCount",
 			"vmssName",
