@@ -11,14 +11,10 @@ import (
 	"os"
 	"time"
 
-	"github.com/Azure/go-autorest/tracing"
 	"github.com/sirupsen/logrus"
-	k8smetrics "k8s.io/client-go/tools/metrics"
 
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
-	statsdazure "github.com/Azure/ARO-RP/pkg/metrics/statsd/azure"
-	statsdk8s "github.com/Azure/ARO-RP/pkg/metrics/statsd/k8s"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
@@ -63,12 +59,6 @@ func New(ctx context.Context, log *logrus.Entry, env env.Interface, account, nam
 	if s.namespace == "" {
 		s.namespace = "*"
 	}
-
-	// register azure client tracer
-	tracing.Register(statsdazure.New(s))
-
-	// register k8s client tracer
-	k8smetrics.Register(statsdk8s.NewLatency(s), statsdk8s.NewResult(s))
 
 	go s.run()
 

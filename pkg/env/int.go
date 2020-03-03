@@ -21,7 +21,7 @@ func newInt(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 
 	p.fpServicePrincipalID = "71cfb175-ea3a-444e-8c03-b119b2752ce4"
 	p.clustersGenevaLoggingEnvironment = "Test"
-	p.clustersGenevaLoggingConfigVersion = "2.1"
+	p.clustersGenevaLoggingConfigVersion = "2.2"
 
 	return p, nil
 }

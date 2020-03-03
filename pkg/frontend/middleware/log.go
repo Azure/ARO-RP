@@ -56,7 +56,10 @@ func Log(baseLog *logrus.Entry) func(http.Handler) http.Handler {
 			requestID := uuid.NewV4().String()
 			w.Header().Set("X-Ms-Request-Id", requestID)
 
-			log := baseLog.WithFields(logrus.Fields{"correlation_id": correlationID, "request_id": requestID})
+			log := baseLog.WithFields(logrus.Fields{
+				"correlation_id": correlationID,
+				"request_id":     requestID,
+			})
 			r = r.WithContext(context.WithValue(r.Context(), ContextKeyLog, log))
 
 			defer func() {

@@ -7,14 +7,20 @@ import (
 	"context"
 	"strconv"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
-func (mon *monitor) emitAPIServerHealthCode(ctx context.Context, cli kubernetes.Interface, oc *api.OpenShiftCluster) (int, error) {
+func (mon *monitor) emitAPIServerHealthzCode(ctx context.Context, cli kubernetes.Interface, oc *api.OpenShiftCluster) (int, error) {
+	r, err := azure.ParseResourceID(oc.ID)
+	if err != nil {
+		return 0, err
+	}
+
 	var statusCode int
-	err := cli.Discovery().RESTClient().
+	err = cli.Discovery().RESTClient().
 		Get().
 		Context(ctx).
 		AbsPath("/healthz").
@@ -22,9 +28,12 @@ func (mon *monitor) emitAPIServerHealthCode(ctx context.Context, cli kubernetes.
 		StatusCode(&statusCode).
 		Error()
 
-	mon.clusterm.EmitGauge(metricAPIServerHealthCode, 1, map[string]string{
-		"resource": oc.ID,
-		"code":     strconv.FormatInt(int64(statusCode), 10),
+	mon.clusterm.EmitGauge("apiserver.healthz.code", 1, map[string]string{
+		"resourceID":     oc.ID,
+		"subscriptionID": r.SubscriptionID,
+		"resourceGroup":  r.ResourceGroup,
+		"resourceName":   r.ResourceName,
+		"code":           strconv.FormatInt(int64(statusCode), 10),
 	})
 
 	return statusCode, err

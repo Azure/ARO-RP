@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 
@@ -44,8 +45,8 @@ func (mon *monitor) listBuckets(ctx context.Context) error {
 // up-to-date.  We don't monitor clusters in Creating state, hence we don't add
 // them to mon.docs.  We also don't monitor clusters in Deleting state; when
 // this state is reached we delete from mon.docs
-func (mon *monitor) changefeed(ctx context.Context, log *logrus.Entry, stop <-chan struct{}) {
-	defer recover.Panic(log)
+func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop <-chan struct{}) {
+	defer recover.Panic(baseLog)
 
 	i := mon.db.OpenShiftClusters.ChangeFeed()
 
@@ -56,7 +57,7 @@ func (mon *monitor) changefeed(ctx context.Context, log *logrus.Entry, stop <-ch
 		for {
 			docs, err := i.Next(ctx)
 			if err != nil {
-				log.Error(err)
+				baseLog.Error(err)
 				break
 			}
 			if docs == nil {
@@ -64,7 +65,20 @@ func (mon *monitor) changefeed(ctx context.Context, log *logrus.Entry, stop <-ch
 			}
 
 			for _, doc := range docs.OpenShiftClusterDocuments {
-				mon.baseLog.WithField("resource", doc.OpenShiftCluster.ID).Debugf("cluster in provisioningState %s", doc.OpenShiftCluster.Properties.ProvisioningState)
+				r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
+				if err != nil {
+					baseLog.Error(err)
+					continue
+				}
+
+				log := baseLog.WithFields(logrus.Fields{
+					"resource_id":     doc.OpenShiftCluster.ID,
+					"subscription_id": r.SubscriptionID,
+					"resource_group":  r.ResourceGroup,
+					"resource_name":   r.ResourceName,
+				})
+
+				log.Debugf("cluster in provisioningState %s", doc.OpenShiftCluster.Properties.ProvisioningState)
 				switch doc.OpenShiftCluster.Properties.ProvisioningState {
 				case api.ProvisioningStateCreating:
 				case api.ProvisioningStateDeleting:
@@ -128,8 +142,20 @@ func (mon *monitor) worker(ctx context.Context, baseLog *logrus.Entry) {
 
 		doc := _doc.(*api.OpenShiftClusterDocument)
 
-		log := baseLog.WithField("resource", doc.OpenShiftCluster.ID)
-		err := mon.workOne(ctx, log, doc)
+		r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
+		if err != nil {
+			baseLog.Error(err)
+			continue
+		}
+
+		log := baseLog.WithFields(logrus.Fields{
+			"resource_id":     doc.OpenShiftCluster.ID,
+			"subscription_id": r.SubscriptionID,
+			"resource_group":  r.ResourceGroup,
+			"resource_name":   r.ResourceName,
+		})
+
+		err = mon.workOne(ctx, log, doc)
 		if err != nil {
 			log.Error(err)
 		}
@@ -154,7 +180,7 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	}
 
 	// If API is not returning 200, don't need to run the next checks
-	statusCode, err := mon.emitAPIServerHealthCode(ctx, cli, doc.OpenShiftCluster)
+	statusCode, err := mon.emitAPIServerHealthzCode(ctx, cli, doc.OpenShiftCluster)
 	if err != nil || statusCode != http.StatusOK {
 		return err
 	}

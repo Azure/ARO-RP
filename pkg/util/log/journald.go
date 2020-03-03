@@ -43,7 +43,7 @@ func (h *journaldHook) Fire(e *logrus.Entry) error {
 	}
 
 	if e.Caller != nil {
-		vars["FUNC"], vars["FILE"] = relativeFilePathPrettier(e.Caller)
+		vars["FUNCTION"], vars["FILE"] = relativeFilePathPrettier(e.Caller)
 	}
 
 	return journal.Send(e.Message, priority, vars)

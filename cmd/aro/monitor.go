@@ -8,12 +8,16 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/Azure/go-autorest/tracing"
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
+	"k8s.io/client-go/tools/metrics"
 
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
+	"github.com/Azure/ARO-RP/pkg/metrics/statsd/azure"
+	"github.com/Azure/ARO-RP/pkg/metrics/statsd/k8s"
 	pkgmonitor "github.com/Azure/ARO-RP/pkg/monitor"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 )
@@ -42,6 +46,9 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
+
+	tracing.Register(azure.New(m))
+	metrics.Register(k8s.NewLatency(m), k8s.NewResult(m))
 
 	clusterm, err := statsd.New(ctx, log.WithField("component", "metrics"), _env, os.Getenv("CLUSTER_MDM_ACCOUNT"), os.Getenv("CLUSTER_MDM_NAMESPACE"))
 	if err != nil {

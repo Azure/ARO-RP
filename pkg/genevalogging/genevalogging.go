@@ -49,6 +49,13 @@ const (
 	Tag journald
 	DB /var/lib/fluent/journald
 
+[FILTER]
+    Name modify
+    Match journald
+    Remove_wildcard _
+    Remove TIMESTAMP
+    Remove SYSLOG_FACILITY
+
 [OUTPUT]
 	Name forward
 	Port 24224
@@ -494,7 +501,7 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 									Value: r.SubscriptionID,
 								},
 								{
-									Name:  "RESOURCE_GROUP_NAME",
+									Name:  "RESOURCE_GROUP",
 									Value: r.ResourceGroup,
 								},
 								{
