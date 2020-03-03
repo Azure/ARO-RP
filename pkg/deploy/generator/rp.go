@@ -546,6 +546,8 @@ ExecStart=/usr/bin/docker run \
   --hostname %H \
   --name %N \
   --rm \
+  -e CLUSTER_MDM_ACCOUNT \
+  -e CLUSTER_MDM_NAMESPACE \
   -e MDM_ACCOUNT \
   -e MDM_NAMESPACE \
   -e RP_MODE \
