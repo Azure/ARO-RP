@@ -24,9 +24,5 @@ func (i *Installer) removeBootstrap(ctx context.Context) error {
 	}
 
 	i.log.Print("removing bootstrap nic")
-	err = i.interfaces.DeleteAndWait(ctx, resourceGroup, "aro-bootstrap-nic")
-	if err != nil {
-		return err
-	}
-	return nil
+	return i.interfaces.DeleteAndWait(ctx, resourceGroup, "aro-bootstrap-nic")
 }
