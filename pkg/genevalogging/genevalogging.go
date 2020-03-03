@@ -54,6 +54,7 @@ const (
     Match journald
     Remove_wildcard _
     Remove TIMESTAMP
+    Remove SYSLOG_FACILITY
 
 [OUTPUT]
 	Name forward
@@ -500,7 +501,7 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 									Value: r.SubscriptionID,
 								},
 								{
-									Name:  "RESOURCE_GROUP_NAME",
+									Name:  "RESOURCE_GROUP",
 									Value: r.ResourceGroup,
 								},
 								{

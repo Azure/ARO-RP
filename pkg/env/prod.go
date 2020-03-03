@@ -68,7 +68,7 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 		keyvault: basekeyvault.New(kvAuthorizer),
 
 		clustersGenevaLoggingEnvironment:   "DiagnosticsProd",
-		clustersGenevaLoggingConfigVersion: "2.0",
+		clustersGenevaLoggingConfigVersion: "2.1",
 	}
 
 	rpAuthorizer, err := auth.NewAuthorizerFromEnvironment()
