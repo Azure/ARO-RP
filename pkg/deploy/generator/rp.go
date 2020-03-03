@@ -421,6 +421,7 @@ az login -i --allow-no-subscriptions
 SVCVAULTURI="$(az keyvault list -g "$RESOURCEGROUPNAME" --query "[?tags.vault=='service'].properties.vaultUri" -o tsv)"
 az keyvault secret download --file /etc/mdm.pem --id "${SVCVAULTURI}secrets/rp-mdm"
 chmod 0600 /etc/mdm.pem
+sed -i -ne '1,/END CERTIFICATE/ p' /etc/mdm.pem
 
 az keyvault secret download --file /etc/mdsd.pem --id "${SVCVAULTURI}secrets/rp-mdsd"
 chown syslog:syslog /etc/mdsd.pem
@@ -476,6 +477,7 @@ ExecStart=/usr/bin/docker run \
   -CertFile /etc/mdm.pem \
   -FrontEndUrl $RPMDMFRONTENDURL \
   -Logger Console \
+  -LogLevel Warning \
   -PrivateKeyFile /etc/mdm.pem \
   -SourceEnvironment $RPMDMSOURCEENVIRONMENT \
   -SourceRole $RPMDMSOURCEROLE \
@@ -519,6 +521,7 @@ ExecStart=/usr/bin/docker run \
 ExecStop=/usr/bin/docker stop -t 3600 %N
 TimeoutStopSec="3600"
 Restart=always
+StandardError=null
 
 [Install]
 WantedBy=multi-user.target
@@ -553,6 +556,7 @@ ExecStart=/usr/bin/docker run \
   $RPIMAGE \
   monitor
 Restart=always
+StandardError=null
 
 [Install]
 WantedBy=multi-user.target

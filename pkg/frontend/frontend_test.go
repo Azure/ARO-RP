@@ -9,10 +9,13 @@ import (
 	"testing"
 
 	"github.com/gorilla/mux"
+	"github.com/sirupsen/logrus"
 )
 
 func TestURLPathsAreLowerCase(t *testing.T) {
-	f := &frontend{}
+	f := &frontend{
+		baseLog: logrus.NewEntry(logrus.StandardLogger()),
+	}
 	router := f.setupRouter()
 
 	varCleanupRe := regexp.MustCompile(`{.*?}`)

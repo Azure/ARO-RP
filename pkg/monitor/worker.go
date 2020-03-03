@@ -19,10 +19,13 @@ import (
 // listBuckets reads our bucket allocation from the master
 func (mon *monitor) listBuckets(ctx context.Context) error {
 	buckets, err := mon.db.Monitors.ListBuckets(ctx)
-	mon.baseLog.Printf("servicing %d buckets", len(buckets))
 
 	mon.mu.Lock()
 	defer mon.mu.Unlock()
+
+	if len(buckets) != len(mon.buckets) {
+		mon.baseLog.Printf("servicing %d buckets", len(buckets))
+	}
 
 	mon.buckets = map[int]struct{}{}
 
@@ -114,8 +117,8 @@ func (mon *monitor) schedule(ctx context.Context, log *logrus.Entry, stop <-chan
 }
 
 // worker reads clusters to be monitored and monitors them
-func (mon *monitor) worker(ctx context.Context, log *logrus.Entry) {
-	defer recover.Panic(log)
+func (mon *monitor) worker(ctx context.Context, baseLog *logrus.Entry) {
+	defer recover.Panic(baseLog)
 
 	for id := range mon.ch {
 		_doc, found := mon.docs.Load(id)
@@ -125,7 +128,8 @@ func (mon *monitor) worker(ctx context.Context, log *logrus.Entry) {
 
 		doc := _doc.(*api.OpenShiftClusterDocument)
 
-		err := mon.workOne(ctx, mon.baseLog.WithField("resource", doc.OpenShiftCluster.ID), doc)
+		log := baseLog.WithField("resource", doc.OpenShiftCluster.ID)
+		err := mon.workOne(ctx, log, doc)
 		if err != nil {
 			log.Error(err)
 		}
