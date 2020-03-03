@@ -124,10 +124,6 @@ clean_e2e() {
     rm -f $KUBECONFIG
 }
 
-set_az_cli_sub(){
-    az account set -s $AZURE_SUBSCRIPTION_ID
-}
-
 export CLUSTER="v4-e2e-$(git log --format=%h -n 1 HEAD)"
 export CLUSTER_RESOURCEGROUP="v4-e2e-rg-$(git log --format=%h -n 1 HEAD)-$LOCATION"
 export KUBECONFIG=$(pwd)/$CLUSTER.kubeconfig

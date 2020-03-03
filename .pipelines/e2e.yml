@@ -23,6 +23,8 @@ jobs:
       - script: |
           export SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME)
           make secrets
+          . secrets/env
+          az account set -s $AZURE_SUBSCRIPTION_ID
         displayName: "🔑 Downloading certificates and secrets from storage account"
         workingDirectory: "${{ variables.modulePath }}"
       - script: |

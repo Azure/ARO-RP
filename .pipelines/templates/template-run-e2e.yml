@@ -7,7 +7,6 @@ steps:
       . secrets/env
       . ./hack/e2e/run-rp-and-e2e.sh
 
-      set_az_cli_sub
       run_e2e
 
     displayName: "🚀 Run E2E"
