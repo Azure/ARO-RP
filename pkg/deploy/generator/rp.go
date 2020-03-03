@@ -410,6 +410,12 @@ cat >/etc/td-agent-bit/td-agent-bit.conf <<'EOF'
 [INPUT]
     Name systemd
     Tag journald
+    Systemd_Filter _COMM=aro
+
+[FILTER]
+    Name modify
+    Match journald
+    Remove_wildcard _
 
 [OUTPUT]
     Name forward
