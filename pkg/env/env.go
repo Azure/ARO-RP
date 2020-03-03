@@ -24,6 +24,9 @@ type Interface interface {
 
 	ArmClientAuthorizer() clientauthorizer.ClientAuthorizer
 	AdminClientAuthorizer() clientauthorizer.ClientAuthorizer
+	ClustersGenevaLoggingConfigVersion() string
+	ClustersGenevaLoggingEnvironment() string
+	ClustersGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate)
 	ClustersKeyvaultURI() string
 	CosmosDB() (string, string)
 	DatabaseName() string

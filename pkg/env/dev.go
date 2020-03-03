@@ -101,6 +101,8 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 	if err != nil {
 		return nil, err
 	}
+	d.prod.clustersGenevaLoggingEnvironment = "Test"
+	d.prod.clustersGenevaLoggingConfigVersion = "2.1"
 
 	fpGraphAuthorizer, err := d.FPAuthorizer(instancemetadata.TenantID(), azure.PublicCloud.GraphEndpoint)
 	if err != nil {

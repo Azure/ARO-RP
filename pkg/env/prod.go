@@ -47,6 +47,11 @@ type prod struct {
 	fpCertificate        *x509.Certificate
 	fpPrivateKey         *rsa.PrivateKey
 	fpServicePrincipalID string
+
+	clustersGenevaLoggingCertificate   *x509.Certificate
+	clustersGenevaLoggingPrivateKey    *rsa.PrivateKey
+	clustersGenevaLoggingConfigVersion string
+	clustersGenevaLoggingEnvironment   string
 }
 
 func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata, armClientAuthorizer, adminClientAuthorizer clientauthorizer.ClientAuthorizer) (*prod, error) {
@@ -61,6 +66,9 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 		adminClientAuthorizer: adminClientAuthorizer,
 
 		keyvault: basekeyvault.New(kvAuthorizer),
+
+		clustersGenevaLoggingEnvironment:   "DiagnosticsProd",
+		clustersGenevaLoggingConfigVersion: "2.0",
 	}
 
 	rpAuthorizer, err := auth.NewAuthorizerFromEnvironment()
@@ -96,6 +104,14 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 	p.fpPrivateKey = fpPrivateKey
 	p.fpCertificate = fpCertificates[0]
 	p.fpServicePrincipalID = "f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875"
+
+	clustersGenevaLoggingPrivateKey, clustersGenevaLoggingCertificates, err := p.GetCertificateSecret(ctx, "cluster-mdsd")
+	if err != nil {
+		return nil, err
+	}
+
+	p.clustersGenevaLoggingPrivateKey = clustersGenevaLoggingPrivateKey
+	p.clustersGenevaLoggingCertificate = clustersGenevaLoggingCertificates[0]
 
 	return p, nil
 }
@@ -198,6 +214,18 @@ func (p *prod) populateZones(ctx context.Context, rpAuthorizer autorest.Authoriz
 	}
 
 	return nil
+}
+
+func (p *prod) ClustersGenevaLoggingConfigVersion() string {
+	return p.clustersGenevaLoggingConfigVersion
+}
+
+func (p *prod) ClustersGenevaLoggingEnvironment() string {
+	return p.clustersGenevaLoggingEnvironment
+}
+
+func (p *prod) ClustersGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate) {
+	return p.clustersGenevaLoggingPrivateKey, p.clustersGenevaLoggingCertificate
 }
 
 func (p *prod) ClustersKeyvaultURI() string {

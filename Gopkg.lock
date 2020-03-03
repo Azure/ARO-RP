@@ -886,7 +886,7 @@
 
 [[projects]]
   branch = "release-4.3"
-  digest = "1:6674257733daeee74d6f00ab1a536298252f8b3c4d72869cb7d3d1b754dcf41d"
+  digest = "1:b15c7e34456686caaae5b1dfef5411825d5874fb1016bc84620b7b9ae8b62136"
   name = "github.com/openshift/api"
   packages = [
     "config/v1",
@@ -895,13 +895,14 @@
     "image/v1",
     "operator/v1",
     "operator/v1alpha1",
+    "security/v1",
   ]
   pruneopts = "UT"
   revision = "2987a591a72cee08898c93dcc09816783d39a5bc"
 
 [[projects]]
   branch = "release-4.3"
-  digest = "1:3465cb9935ae6a0a2c2e9916115a6e9857755e0c32c6b45c3e0208cb781b61e4"
+  digest = "1:6de9ac34b49d1d87c4280a12daa6f79da832067e9d72ccefca3f213bbbe472c2"
   name = "github.com/openshift/client-go"
   packages = [
     "config/clientset/versioned",
@@ -916,6 +917,9 @@
     "operator/clientset/versioned/typed/operator/v1/fake",
     "operator/clientset/versioned/typed/operator/v1alpha1",
     "operator/clientset/versioned/typed/operator/v1alpha1/fake",
+    "security/clientset/versioned",
+    "security/clientset/versioned/scheme",
+    "security/clientset/versioned/typed/security/v1",
   ]
   pruneopts = "UT"
   revision = "f6563a70e19a12b2f240eaf4e716ef75baf7003e"
@@ -1881,6 +1885,7 @@
     "github.com/openshift/client-go/config/clientset/versioned/fake",
     "github.com/openshift/client-go/operator/clientset/versioned",
     "github.com/openshift/client-go/operator/clientset/versioned/fake",
+    "github.com/openshift/client-go/security/clientset/versioned",
     "github.com/openshift/console-operator/pkg/api",
     "github.com/openshift/installer/data",
     "github.com/openshift/installer/pkg/asset",
@@ -1915,8 +1920,11 @@
     "golang.org/x/tools/cmd/goimports",
     "golang.org/x/tools/go/ast/astutil",
     "golang.org/x/tools/go/packages",
+    "k8s.io/api/apps/v1",
+    "k8s.io/api/authorization/v1",
     "k8s.io/api/core/v1",
     "k8s.io/apimachinery/pkg/api/errors",
+    "k8s.io/apimachinery/pkg/api/resource",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/apimachinery/pkg/util/httpstream",
     "k8s.io/apimachinery/pkg/util/httpstream/spdy",

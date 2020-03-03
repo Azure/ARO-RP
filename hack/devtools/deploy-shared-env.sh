@@ -76,6 +76,10 @@ import_certs_secrets() {
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --name rp-server \
         --file secrets/localhost.pem
+   az keyvault certificate import \
+        --vault-name "$KEYVAULT_PREFIX-svc" \
+        --name cluster-mdsd \
+        --file secrets/cluster-logging-int.pem
     az keyvault secret set \
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --name encryption-key \

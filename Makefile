@@ -56,6 +56,10 @@ image-aro: aro
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
 	docker build -f Dockerfile.aro -t arosvc.azurecr.io/aro:$(COMMIT) .
 
+image-fluentbit:
+	docker build --build-arg VERSION=1.3.9-1 \
+	  -f Dockerfile.fluentbit -t arosvc.azurecr.io/fluentbit:1.3.9-1 .
+
 image-proxy: proxy
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
 	docker build -f Dockerfile.proxy -t arosvc.azurecr.io/proxy:latest .
