@@ -1,5 +1,6 @@
 SHELL = /bin/bash
 COMMIT = $(shell git rev-parse --short HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
+RP_IMAGE_ACR = ${RP_IMAGE_ACR:-"arosvc.azurecr.io"}
 
 aro: generate
 	go build -ldflags "-X main.gitCommit=$(COMMIT)" ./cmd/aro
@@ -54,7 +55,7 @@ generate:
 
 image-aro: aro
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
-	docker build -f Dockerfile.aro -t arosvc.azurecr.io/aro:$(COMMIT) .
+	docker build -f Dockerfile.aro -t $(RP-IMAGE-ACR)/aro:$(COMMIT) .
 
 image-fluentbit:
 	docker build --build-arg VERSION=1.3.9-1 \
@@ -62,19 +63,11 @@ image-fluentbit:
 
 image-proxy: proxy
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
-	docker build -f Dockerfile.proxy -t arosvc.azurecr.io/proxy:latest .
+	docker build -f Dockerfile.proxy -t $(RP-IMAGE-ACR)/proxy:latest .
 
-image-aro-int: aro
-	docker pull registry.access.redhat.com/ubi8/ubi-minimal
-	docker build -f Dockerfile.aro -t arointsvc.azurecr.io/aro:$(COMMIT) .
-
-image-proxy-int: proxy
-	docker pull registry.access.redhat.com/ubi8/ubi-minimal
-	docker build -f Dockerfile.proxy -t arointsvc.azurecr.io/proxy:latest .
-
-publish-int-images: image-aro-int image-proxy-int
-	docker push arointsvc.azurecr.io/aro:$(COMMIT)
-	docker push arointsvc.azurecr.io/proxy:latest
+publish-images: image-aro-int image-proxy-int
+	docker push $(RP-IMAGE-ACR)/aro:$(COMMIT)
+	docker push $(RP-IMAGE-ACR)/proxy:latest
 
 proxy:
 	go build -ldflags "-X main.gitCommit=$(COMMIT)" ./hack/proxy

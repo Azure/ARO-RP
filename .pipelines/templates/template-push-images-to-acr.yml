@@ -1,9 +1,12 @@
 parameters:
   workingDirectory: ""
+  rpImageACR: ""
 steps:
   - script: |
       cd ${{ parameters.workingDirectory }}
 
-      az acr login --name arointsvc
-      make publish-int-images
+      export RP_IMAGE_ACR=${{ parameters.rpImageACR }}
+
+      az acr login --name $RP_IMAGE_ACR
+      make publish-images
     displayName: "⚙️ Build and push images to ACR"

@@ -40,7 +40,7 @@ jobs:
           rpMdmMonitoringAccount: "AzureRedHatOpenShift"
           clusterMdmMetricNamespace: "ARO-Clusters"
           clusterMdmMonitoringAccount: "AzureRedHatOpenShiftClusters"
-          rpImageACR: $(RP-IMAGE-ACR)
+          rpImageACR: $(RP_IMAGE_ACR)
           rpImagePullJSONSPN: $(aro-v4-int-image-pull-spn)
           encryptionKey: $(int-encryption-key)
           mdsdNamespace: "ARORPLogs"
