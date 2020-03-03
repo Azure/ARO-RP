@@ -4,50 +4,355 @@ package generator
 // Licensed under the Apache License 2.0.
 
 import (
-	"bytes"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"strings"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	mgmtdocumentdb "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2019-08-01/documentdb"
 	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2016-10-01/keyvault"
+	mgmtmsi "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	"github.com/Azure/go-autorest/autorest/to"
-	uuid "github.com/satori/go.uuid"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 )
 
-var apiVersions = map[string]string{
-	"authorization": "2018-09-01-preview",
-	"compute":       "2019-03-01",
-	"dns":           "2018-05-01",
-	"documentdb":    "2019-08-01",
-	"keyvault":      "2016-10-01",
-	"msi":           "2018-11-30",
-	"network":       "2019-07-01",
+func (g *generator) managedIdentity() *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtmsi.Identity{
+			Name:     to.StringPtr("rp-identity"),
+			Location: to.StringPtr("[resourceGroup().location]"),
+			Type:     "Microsoft.ManagedIdentity/userAssignedIdentities",
+		},
+		APIVersion: apiVersions["msi"],
+	}
 }
 
-const (
-	tenantIDHack = "13805ec3-a223-47ad-ad65-8b2baf92c0fb"
-)
+func (g *generator) securityGroupRP() *arm.Resource {
+	nsg := &mgmtnetwork.SecurityGroup{
+		SecurityGroupPropertiesFormat: &mgmtnetwork.SecurityGroupPropertiesFormat{
+			SecurityRules: &[]mgmtnetwork.SecurityRule{
+				{
+					SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
+						Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
+						SourcePortRange:          to.StringPtr("*"),
+						DestinationPortRange:     to.StringPtr("443"),
+						SourceAddressPrefix:      to.StringPtr("*"),
+						DestinationAddressPrefix: to.StringPtr("*"),
+						Access:                   mgmtnetwork.SecurityRuleAccessAllow,
+						Priority:                 to.Int32Ptr(120),
+						Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
+					},
+					Name: to.StringPtr("rp_in"),
+				},
+			},
+		},
+		Name:     to.StringPtr("rp-nsg"),
+		Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
+		Location: to.StringPtr("[resourceGroup().location]"),
+	}
 
-var (
-	tenantUUIDHack = uuid.Must(uuid.FromString(tenantIDHack))
-)
+	if !g.production {
+		*nsg.SecurityRules = append(*nsg.SecurityRules, mgmtnetwork.SecurityRule{
+			SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
+				Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
+				SourcePortRange:          to.StringPtr("*"),
+				DestinationPortRange:     to.StringPtr("22"),
+				SourceAddressPrefix:      to.StringPtr("*"),
+				DestinationAddressPrefix: to.StringPtr("*"),
+				Access:                   mgmtnetwork.SecurityRuleAccessAllow,
+				Priority:                 to.Int32Ptr(100),
+				Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
+			},
+			Name: to.StringPtr("ssh_in"),
+		})
+	}
 
-type generator struct {
-	production bool
+	return &arm.Resource{
+		Resource:   nsg,
+		APIVersion: apiVersions["network"],
+	}
 }
 
-func newGenerator(production bool) *generator {
-	return &generator{
-		production: production,
+func (g *generator) securityGroupPE() *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtnetwork.SecurityGroup{
+			SecurityGroupPropertiesFormat: &mgmtnetwork.SecurityGroupPropertiesFormat{},
+			Name:                          to.StringPtr("rp-pe-nsg"),
+			Type:                          to.StringPtr("Microsoft.Network/networkSecurityGroups"),
+			Location:                      to.StringPtr("[resourceGroup().location]"),
+		},
+		APIVersion: apiVersions["network"],
+	}
+}
+
+func (g *generator) proxyVmss() *arm.Resource {
+	parts := []string{
+		fmt.Sprintf("base64ToString('%s')", base64.StdEncoding.EncodeToString([]byte("set -ex\n\n"))),
+	}
+
+	for _, variable := range []string{"proxyImage", "proxyImageAuth"} {
+		parts = append(parts,
+			fmt.Sprintf("'%s=$(base64 -d <<<'''", strings.ToUpper(variable)),
+			fmt.Sprintf("base64(parameters('%s'))", variable),
+			"''')\n'",
+		)
+	}
+
+	for _, variable := range []string{"proxyCert", "proxyClientCert", "proxyKey"} {
+		parts = append(parts,
+			fmt.Sprintf("'%s='''", strings.ToUpper(variable)),
+			fmt.Sprintf("parameters('%s')", variable),
+			"'''\n'",
+		)
+	}
+
+	trailer := base64.StdEncoding.EncodeToString([]byte(`yum -y update -x WALinuxAgent
+
+yum -y install docker
+
+firewall-cmd --add-port=443/tcp --permanent
+
+mkdir /root/.docker
+cat >/root/.docker/config.json <<EOF
+{
+	"auths": {
+		"${PROXYIMAGE%%/*}": {
+			"auth": "$PROXYIMAGEAUTH"
+		}
+	}
+}
+EOF
+
+mkdir /etc/proxy
+base64 -d <<<"$PROXYCERT" >/etc/proxy/proxy.crt
+base64 -d <<<"$PROXYKEY" >/etc/proxy/proxy.key
+base64 -d <<<"$PROXYCLIENTCERT" >/etc/proxy/proxy-client.crt
+chown -R 1000:1000 /etc/proxy
+chmod 0600 /etc/proxy/proxy.key
+
+cat >/etc/sysconfig/proxy <<EOF
+PROXY_IMAGE='$PROXYIMAGE'
+EOF
+
+cat >/etc/systemd/system/proxy.service <<EOF
+[Unit]
+After=docker.service
+Requires=docker.service
+
+[Service]
+EnvironmentFile=/etc/sysconfig/proxy
+ExecStartPre=-/usr/bin/docker rm -f %n
+ExecStartPre=/usr/bin/docker pull \$PROXY_IMAGE
+ExecStart=/usr/bin/docker run --rm --name %n -p 443:8443 -v /etc/proxy:/secrets \$PROXY_IMAGE
+ExecStop=/usr/bin/docker stop %n
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl enable proxy.service
+
+(sleep 30; reboot) &
+`))
+
+	parts = append(parts, "'\n'", fmt.Sprintf("base64ToString('%s')", trailer))
+
+	script := fmt.Sprintf("[base64(concat(%s))]", strings.Join(parts, ","))
+
+	return &arm.Resource{
+		Resource: &mgmtcompute.VirtualMachineScaleSet{
+			Sku: &mgmtcompute.Sku{
+				Name:     to.StringPtr(string(mgmtcompute.VirtualMachineSizeTypesStandardD2sV3)),
+				Tier:     to.StringPtr("Standard"),
+				Capacity: to.Int64Ptr(1),
+			},
+			VirtualMachineScaleSetProperties: &mgmtcompute.VirtualMachineScaleSetProperties{
+				UpgradePolicy: &mgmtcompute.UpgradePolicy{
+					Mode: mgmtcompute.Manual,
+				},
+				VirtualMachineProfile: &mgmtcompute.VirtualMachineScaleSetVMProfile{
+					OsProfile: &mgmtcompute.VirtualMachineScaleSetOSProfile{
+						ComputerNamePrefix: to.StringPtr("dev-proxy-"),
+						AdminUsername:      to.StringPtr("cloud-user"),
+						LinuxConfiguration: &mgmtcompute.LinuxConfiguration{
+							DisablePasswordAuthentication: to.BoolPtr(true),
+							SSH: &mgmtcompute.SSHConfiguration{
+								PublicKeys: &[]mgmtcompute.SSHPublicKey{
+									{
+										Path:    to.StringPtr("/home/cloud-user/.ssh/authorized_keys"),
+										KeyData: to.StringPtr("[parameters('sshPublicKey')]"),
+									},
+								},
+							},
+						},
+					},
+					StorageProfile: &mgmtcompute.VirtualMachineScaleSetStorageProfile{
+						ImageReference: &mgmtcompute.ImageReference{
+							Publisher: to.StringPtr("RedHat"),
+							Offer:     to.StringPtr("RHEL"),
+							Sku:       to.StringPtr("7-RAW"),
+							Version:   to.StringPtr("latest"),
+						},
+						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
+							CreateOption: mgmtcompute.DiskCreateOptionTypesFromImage,
+							ManagedDisk: &mgmtcompute.VirtualMachineScaleSetManagedDiskParameters{
+								StorageAccountType: mgmtcompute.StorageAccountTypesPremiumLRS,
+							},
+						},
+					},
+					NetworkProfile: &mgmtcompute.VirtualMachineScaleSetNetworkProfile{
+						NetworkInterfaceConfigurations: &[]mgmtcompute.VirtualMachineScaleSetNetworkConfiguration{
+							{
+								Name: to.StringPtr("dev-proxy-vmss-nic"),
+								VirtualMachineScaleSetNetworkConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetNetworkConfigurationProperties{
+									Primary: to.BoolPtr(true),
+									IPConfigurations: &[]mgmtcompute.VirtualMachineScaleSetIPConfiguration{
+										{
+											Name: to.StringPtr("dev-proxy-vmss-ipconfig"),
+											VirtualMachineScaleSetIPConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetIPConfigurationProperties{
+												Subnet: &mgmtcompute.APIEntityReference{
+													ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"),
+												},
+												Primary: to.BoolPtr(true),
+												PublicIPAddressConfiguration: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfiguration{
+													Name: to.StringPtr("dev-proxy-vmss-pip"),
+													VirtualMachineScaleSetPublicIPAddressConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfigurationProperties{
+														DNSSettings: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfigurationDNSSettings{
+															DomainNameLabel: to.StringPtr("[parameters('proxyDomainNameLabel')]"),
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					ExtensionProfile: &mgmtcompute.VirtualMachineScaleSetExtensionProfile{
+						Extensions: &[]mgmtcompute.VirtualMachineScaleSetExtension{
+							{
+								Name: to.StringPtr("dev-proxy-vmss-cse"),
+								VirtualMachineScaleSetExtensionProperties: &mgmtcompute.VirtualMachineScaleSetExtensionProperties{
+									Publisher:               to.StringPtr("Microsoft.Azure.Extensions"),
+									Type:                    to.StringPtr("CustomScript"),
+									TypeHandlerVersion:      to.StringPtr("2.0"),
+									AutoUpgradeMinorVersion: to.BoolPtr(true),
+									Settings:                map[string]interface{}{},
+									ProtectedSettings: map[string]interface{}{
+										"script": script,
+									},
+								},
+							},
+						},
+					},
+				},
+				Overprovision: to.BoolPtr(false),
+			},
+			Name:     to.StringPtr("dev-proxy-vmss"),
+			Type:     to.StringPtr("Microsoft.Compute/virtualMachineScaleSets"),
+			Location: to.StringPtr("[resourceGroup().location]"),
+		},
+		APIVersion: apiVersions["compute"],
+	}
+}
+
+func (g *generator) devVpnPip() *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtnetwork.PublicIPAddress{
+			Sku: &mgmtnetwork.PublicIPAddressSku{
+				Name: "[parameters('publicIPAddressSkuName')]",
+			},
+			PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
+				PublicIPAllocationMethod: "[parameters('publicIPAddressAllocationMethod')]",
+			},
+			Name:     to.StringPtr("dev-vpn-pip"),
+			Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
+			Location: to.StringPtr("[resourceGroup().location]"),
+		},
+		APIVersion: apiVersions["network"],
+	}
+}
+
+func (g *generator) devVnet() *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtnetwork.VirtualNetwork{
+			VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
+				AddressSpace: &mgmtnetwork.AddressSpace{
+					AddressPrefixes: &[]string{
+						"10.0.0.0/9",
+					},
+				},
+				Subnets: &[]mgmtnetwork.Subnet{
+					{
+						SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+							AddressPrefix: to.StringPtr("10.0.0.0/24"),
+						},
+						Name: to.StringPtr("GatewaySubnet"),
+					},
+				},
+			},
+			Name:     to.StringPtr("dev-vnet"),
+			Type:     to.StringPtr("Microsoft.Network/virtualNetworks"),
+			Location: to.StringPtr("[resourceGroup().location]"),
+		},
+		APIVersion: apiVersions["network"],
+	}
+}
+
+func (g *generator) devVPN() *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtnetwork.VirtualNetworkGateway{
+			VirtualNetworkGatewayPropertiesFormat: &mgmtnetwork.VirtualNetworkGatewayPropertiesFormat{
+				IPConfigurations: &[]mgmtnetwork.VirtualNetworkGatewayIPConfiguration{
+					{
+						VirtualNetworkGatewayIPConfigurationPropertiesFormat: &mgmtnetwork.VirtualNetworkGatewayIPConfigurationPropertiesFormat{
+							Subnet: &mgmtnetwork.SubResource{
+								ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'dev-vnet', 'GatewaySubnet')]"),
+							},
+							PublicIPAddress: &mgmtnetwork.SubResource{
+								ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', 'dev-vpn-pip')]"),
+							},
+						},
+						Name: to.StringPtr("default"),
+					},
+				},
+				VpnType: mgmtnetwork.RouteBased,
+				Sku: &mgmtnetwork.VirtualNetworkGatewaySku{
+					Name: mgmtnetwork.VirtualNetworkGatewaySkuNameVpnGw1,
+					Tier: mgmtnetwork.VirtualNetworkGatewaySkuTierVpnGw1,
+				},
+				VpnClientConfiguration: &mgmtnetwork.VpnClientConfiguration{
+					VpnClientAddressPool: &mgmtnetwork.AddressSpace{
+						AddressPrefixes: &[]string{"192.168.255.0/24"},
+					},
+					VpnClientRootCertificates: &[]mgmtnetwork.VpnClientRootCertificate{
+						{
+							VpnClientRootCertificatePropertiesFormat: &mgmtnetwork.VpnClientRootCertificatePropertiesFormat{
+								PublicCertData: to.StringPtr("[parameters('vpnCACertificate')]"),
+							},
+							Name: to.StringPtr("dev-vpn-ca"),
+						},
+					},
+					VpnClientProtocols: &[]mgmtnetwork.VpnClientProtocol{
+						mgmtnetwork.OpenVPN,
+					},
+				},
+			},
+			Name:     to.StringPtr("dev-vpn"),
+			Type:     to.StringPtr("Microsoft.Network/virtualNetworkGateways"),
+			Location: to.StringPtr("[resourceGroup().location]"),
+		},
+		APIVersion: apiVersions["network"],
+		DependsOn: []string{
+			"[resourceId('Microsoft.Network/publicIPAddresses', 'dev-vpn-pip')]",
+			"[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]",
+		},
 	}
 }
 
@@ -996,180 +1301,4 @@ func (g *generator) rbac() []*arm.Resource {
 			},
 		},
 	}
-}
-
-func (g *generator) template() *arm.Template {
-	t := &arm.Template{
-		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-		ContentVersion: "1.0.0.0",
-		Parameters:     map[string]*arm.TemplateParameter{},
-	}
-
-	if g.production {
-		t.Variables = map[string]interface{}{
-			"clustersKeyvaultAccessPolicies": g.clustersKeyvaultAccessPolicies(),
-			"serviceKeyvaultAccessPolicies":  g.serviceKeyvaultAccessPolicies(),
-		}
-	}
-
-	params := []string{
-		"databaseAccountName",
-		"domainName",
-		"fpServicePrincipalId",
-		"keyvaultPrefix",
-		"rpServicePrincipalId",
-	}
-	if g.production {
-		params = append(params,
-			"extraCosmosDBIPs",
-			"extraKeyvaultAccessPolicies",
-			"mdmFrontendUrl",
-			"mdsdConfigVersion",
-			"mdsdEnvironment",
-			"pullSecret",
-			"rpImage",
-			"rpImageAuth",
-			"rpMode",
-			"sshPublicKey",
-			"vmssName",
-		)
-	} else {
-		params = append(params,
-			"adminObjectId",
-		)
-	}
-
-	for _, param := range params {
-		p := &arm.TemplateParameter{Type: "string"}
-		switch param {
-		case "extraCosmosDBIPs", "rpMode":
-			p.DefaultValue = ""
-		case "extraKeyvaultAccessPolicies":
-			p.Type = "array"
-			p.DefaultValue = []mgmtkeyvault.AccessPolicyEntry{}
-		case "pullSecret", "rpImageAuth":
-			p.Type = "securestring"
-		case "keyvaultPrefix":
-			p.MaxLength = 24 - max(len(kvClusterSuffix), len(kvServiceSuffix))
-		}
-		t.Parameters[param] = p
-	}
-
-	if g.production {
-		t.Resources = append(t.Resources, g.pip(), g.lb(), g.vmss())
-	}
-	// clustersKeyvault must preceed serviceKeyvault due to terrible bytes.Replace below
-	t.Resources = append(t.Resources, g.zone(),
-		g.clustersKeyvault(), g.serviceKeyvault(),
-		g.rpvnet(), g.pevnet(),
-		g.halfPeering("rp-vnet", "rp-pe-vnet-001"),
-		g.halfPeering("rp-pe-vnet-001", "rp-vnet"))
-	if g.production {
-		t.Resources = append(t.Resources, g.cosmosdb("'ARO'")...)
-	} else {
-		t.Resources = append(t.Resources, g.cosmosdb("parameters('databaseName')")...)
-	}
-	t.Resources = append(t.Resources, g.rbac()...)
-
-	return t
-}
-
-func GenerateRPTemplates() error {
-	for _, i := range []struct {
-		templateFile string
-		g            *generator
-	}{
-		{
-			templateFile: fileRPDevelopment,
-			g:            newGenerator(false),
-		},
-		{
-			templateFile: FileRPProduction,
-			g:            newGenerator(true),
-		},
-	} {
-		b, err := json.MarshalIndent(i.g.template(), "", "    ")
-		if err != nil {
-			return err
-		}
-
-		// :-(
-		b = bytes.ReplaceAll(b, []byte(tenantIDHack), []byte("[subscription().tenantId]"))
-		if i.g.production {
-			b = bytes.Replace(b, []byte(`"accessPolicies": []`), []byte(`"accessPolicies": "[concat(variables('clustersKeyvaultAccessPolicies'), parameters('extraKeyvaultAccessPolicies'))]"`), 1)
-			b = bytes.Replace(b, []byte(`"accessPolicies": []`), []byte(`"accessPolicies": "[concat(variables('serviceKeyvaultAccessPolicies'), parameters('extraKeyvaultAccessPolicies'))]"`), 1)
-		}
-
-		b = append(b, byte('\n'))
-
-		err = ioutil.WriteFile(i.templateFile, b, 0666)
-		if err != nil {
-			return err
-		}
-	}
-
-	t := &arm.Template{
-		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-		ContentVersion: "1.0.0.0",
-		Parameters: map[string]*arm.TemplateParameter{
-			"databaseAccountName": {
-				Type: "string",
-			},
-			"databaseName": {
-				Type: "string",
-			},
-		},
-	}
-
-	g := newGenerator(false)
-
-	t.Resources = append(t.Resources, g.database("parameters('databaseName')", false)...)
-
-	b, err := json.MarshalIndent(t, "", "    ")
-	if err != nil {
-		return err
-	}
-
-	b = append(b, byte('\n'))
-
-	return ioutil.WriteFile(fileDatabaseDevelopment, b, 0666)
-}
-
-func GenerateRPParameterTemplate() error {
-	t := newGenerator(true).template()
-
-	p := &arm.Parameters{
-		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
-		ContentVersion: "1.0.0.0",
-		Parameters:     map[string]*arm.ParametersParameter{},
-	}
-
-	for name, tp := range t.Parameters {
-		param := &arm.ParametersParameter{Value: tp.DefaultValue}
-		if param.Value == nil {
-			param.Value = ""
-		}
-		p.Parameters[name] = param
-	}
-
-	b, err := json.MarshalIndent(p, "", "    ")
-	if err != nil {
-		return err
-	}
-
-	b = append(b, byte('\n'))
-
-	err = ioutil.WriteFile(fileRPProductionParameters, b, 0666)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }
