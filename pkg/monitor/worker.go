@@ -19,10 +19,13 @@ import (
 // listBuckets reads our bucket allocation from the master
 func (mon *monitor) listBuckets(ctx context.Context) error {
 	buckets, err := mon.db.Monitors.ListBuckets(ctx)
-	mon.baseLog.Printf("servicing %d buckets", len(buckets))
 
 	mon.mu.Lock()
 	defer mon.mu.Unlock()
+
+	if len(buckets) != len(mon.buckets) {
+		mon.baseLog.Printf("servicing %d buckets", len(buckets))
+	}
 
 	mon.buckets = map[int]struct{}{}
 
