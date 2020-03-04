@@ -5,6 +5,7 @@ package genevalogging
 
 import (
 	"context"
+	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -14,6 +15,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
 
@@ -260,6 +262,17 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 			Namespace: kubeNamespace,
 		},
 	})
+	if err != nil {
+		return err
+	}
+
+	g.log.Print("waiting for privileged security context constraint")
+	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
+	defer cancel()
+	err = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+		_, err := g.seccli.SecurityV1().SecurityContextConstraints().Get("privileged", metav1.GetOptions{})
+		return err == nil, nil
+	}, timeoutCtx.Done())
 	if err != nil {
 		return err
 	}
