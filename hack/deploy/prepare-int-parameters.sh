@@ -15,7 +15,7 @@ cat >secrets/parameters.json <<EOF
             "value": "$COSMOSDB_ACCOUNT"
         },
         "domainName": {
-            "value": "$DOMAIN_NAME.$PARENT_DOMAIN_NAME"
+            "value": "$DOMAIN_NAME"
         },
         "extraCosmosDBIPs": {
             "value": ""

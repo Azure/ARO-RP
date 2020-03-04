@@ -50,3 +50,5 @@ jobs:
           rpMode: "int"
           pullSecret: $(aro-pullsecret)
           sshPublicKey: $(int-ssh-public-key)
+          subscriptionId: "0cc1cafa-578f-4fa5-8d6b-ddfd8d82e6ea"
+          azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
