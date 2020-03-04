@@ -4,6 +4,8 @@ package network
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
+
 	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/go-autorest/autorest"
 )
@@ -11,6 +13,7 @@ import (
 // VirtualNetworksClient is a minimal interface for azure VirtualNetworksClient
 type VirtualNetworksClient interface {
 	VirtualNetworksClientAddons
+	Get(ctx context.Context, resourceGroupName string, virtualNetworkName string, expand string) (vnet network.VirtualNetwork, err error)
 }
 
 type virtualNetworksClient struct {
