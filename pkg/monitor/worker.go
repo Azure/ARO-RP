@@ -78,10 +78,15 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 					"resource_name":   r.ResourceName,
 				})
 
-				log.Debugf("cluster in provisioningState %s", doc.OpenShiftCluster.Properties.ProvisioningState)
-				switch doc.OpenShiftCluster.Properties.ProvisioningState {
-				case api.ProvisioningStateCreating:
-				case api.ProvisioningStateDeleting:
+				ps := doc.OpenShiftCluster.Properties.ProvisioningState
+				fps := doc.OpenShiftCluster.Properties.FailedProvisioningState
+				log.Debugf("cluster in provisioningState %s", ps)
+				switch {
+				case ps == api.ProvisioningStateCreating,
+					ps == api.ProvisioningStateDeleting,
+					ps == api.ProvisioningStateFailed &&
+						(fps == api.ProvisioningStateCreating ||
+							fps == api.ProvisioningStateDeleting):
 					mon.docs.Delete(doc.ID)
 				default:
 					// TODO: improve memory usage by storing a subset of doc in mon.docs
