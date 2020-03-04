@@ -33,6 +33,8 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 
 	if _, ok := _env.(env.Dev); !ok {
 		for _, key := range []string{
+			"CLUSTER_MDM_ACCOUNT",
+			"CLUSTER_MDM_NAMESPACE",
 			"MDM_ACCOUNT",
 			"MDM_NAMESPACE",
 		} {
