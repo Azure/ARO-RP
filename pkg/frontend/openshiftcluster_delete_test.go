@@ -65,7 +65,7 @@ func TestDeleteOpenShiftCluster(t *testing.T) {
 	type test struct {
 		name           string
 		resourceID     string
-		mocks          func(*test, *mock_database.MockAsyncOperations, *mock_database.MockOpenShiftClusters, *mock_database.MockSubscriptions)
+		mocks          func(*test, *mock_database.MockAsyncOperations, *mock_database.MockBilling, *mock_database.MockOpenShiftClusters, *mock_database.MockSubscriptions)
 		wantStatusCode int
 		wantAsync      bool
 		wantError      string
@@ -75,7 +75,7 @@ func TestDeleteOpenShiftCluster(t *testing.T) {
 		{
 			name:       "cluster exists in db",
 			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters, subscriptions *mock_database.MockSubscriptions) {
+			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, billing *mock_database.MockBilling, openShiftClusters *mock_database.MockOpenShiftClusters, subscriptions *mock_database.MockSubscriptions) {
 				subscriptions.EXPECT().
 					Get(gomock.Any(), mockSubID).
 					Return(&api.SubscriptionDocument{
@@ -127,6 +127,10 @@ func TestDeleteOpenShiftCluster(t *testing.T) {
 
 						return doc, err
 					})
+
+				billing.EXPECT().
+					Patch(gomock.Any(), strings.ToLower(tt.resourceID), gomock.Any()).
+					Return(&api.BillingDocument{}, nil)
 			},
 			wantStatusCode: http.StatusAccepted,
 			wantAsync:      true,
@@ -134,7 +138,7 @@ func TestDeleteOpenShiftCluster(t *testing.T) {
 		{
 			name:       "cluster not found in db",
 			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-			mocks: func(tt *test, _ *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters, _ *mock_database.MockSubscriptions) {
+			mocks: func(tt *test, _ *mock_database.MockAsyncOperations, _ *mock_database.MockBilling, openShiftClusters *mock_database.MockOpenShiftClusters, _ *mock_database.MockSubscriptions) {
 				openShiftClusters.EXPECT().
 					Patch(gomock.Any(), strings.ToLower(tt.resourceID), gomock.Any()).
 					Return(nil, &cosmosdb.Error{StatusCode: http.StatusNotFound})
@@ -144,7 +148,7 @@ func TestDeleteOpenShiftCluster(t *testing.T) {
 		{
 			name:       "internal error",
 			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-			mocks: func(tt *test, _ *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters, _ *mock_database.MockSubscriptions) {
+			mocks: func(tt *test, _ *mock_database.MockAsyncOperations, _ *mock_database.MockBilling, openShiftClusters *mock_database.MockOpenShiftClusters, _ *mock_database.MockSubscriptions) {
 				openShiftClusters.EXPECT().
 					Patch(gomock.Any(), strings.ToLower(tt.resourceID), gomock.Any()).
 					Return(nil, errors.New("random error"))
@@ -172,13 +176,15 @@ func TestDeleteOpenShiftCluster(t *testing.T) {
 			defer controller.Finish()
 
 			asyncOperations := mock_database.NewMockAsyncOperations(controller)
+			billing := mock_database.NewMockBilling(controller)
 			openShiftClusters := mock_database.NewMockOpenShiftClusters(controller)
 			subscriptions := mock_database.NewMockSubscriptions(controller)
 
-			tt.mocks(tt, asyncOperations, openShiftClusters, subscriptions)
+			tt.mocks(tt, asyncOperations, billing, openShiftClusters, subscriptions)
 
 			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
 				AsyncOperations:   asyncOperations,
+				Billing:           billing,
 				OpenShiftClusters: openShiftClusters,
 				Subscriptions:     subscriptions,
 			}, api.APIs, &noop.Noop{})

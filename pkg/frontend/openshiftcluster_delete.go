@@ -48,8 +48,8 @@ func (f *frontend) _deleteOpenShiftCluster(ctx context.Context, r *http.Request,
 	doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateDeleting
 	doc.Dequeues = 0
 
-	_, err = f.db.Billing.Patch(ctx, r.URL.Path, func(billingdoc *api.BillingDocument) error {
-		now := time.Now()
+	_, err = f.db.Billing.Patch(ctx, doc.ID, func(billingdoc *api.BillingDocument) error {
+		now := time.Now().UTC()
 		billingdoc.Billing.DeletionTime = &now
 		return nil
 	})
