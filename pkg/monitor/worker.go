@@ -5,16 +5,14 @@ package monitor
 
 import (
 	"context"
-	"net/http"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
-	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/monitor/cluster"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
-	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
 
 // listBuckets reads our bucket allocation from the master
@@ -174,21 +172,10 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	restConfig, err := restconfig.RestConfig(ctx, mon.env, doc.OpenShiftCluster)
+	c, err := cluster.NewMonitor(ctx, mon.env, log, doc.OpenShiftCluster, mon.clusterm)
 	if err != nil {
 		return err
 	}
 
-	cli, err := kubernetes.NewForConfig(restConfig)
-	if err != nil {
-		return err
-	}
-
-	// If API is not returning 200, don't need to run the next checks
-	statusCode, err := mon.emitAPIServerHealthzCode(ctx, cli, doc.OpenShiftCluster)
-	if err != nil || statusCode != http.StatusOK {
-		return err
-	}
-
-	return mon.emitPrometheusAlerts(ctx, doc.OpenShiftCluster)
+	return c.Monitor(ctx)
 }

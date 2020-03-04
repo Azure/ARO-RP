@@ -1,4 +1,4 @@
-package monitor
+package cluster
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -8,19 +8,16 @@ import (
 	"strconv"
 
 	"github.com/Azure/go-autorest/autorest/azure"
-	"k8s.io/client-go/kubernetes"
-
-	"github.com/Azure/ARO-RP/pkg/api"
 )
 
-func (mon *monitor) emitAPIServerHealthzCode(ctx context.Context, cli kubernetes.Interface, oc *api.OpenShiftCluster) (int, error) {
-	r, err := azure.ParseResourceID(oc.ID)
+func (mon *Monitor) emitAPIServerHealthzCode(ctx context.Context) (int, error) {
+	r, err := azure.ParseResourceID(mon.oc.ID)
 	if err != nil {
 		return 0, err
 	}
 
 	var statusCode int
-	err = cli.Discovery().RESTClient().
+	err = mon.cli.Discovery().RESTClient().
 		Get().
 		Context(ctx).
 		AbsPath("/healthz").
@@ -28,8 +25,8 @@ func (mon *monitor) emitAPIServerHealthzCode(ctx context.Context, cli kubernetes
 		StatusCode(&statusCode).
 		Error()
 
-	mon.clusterm.EmitGauge("apiserver.healthz.code", 1, map[string]string{
-		"resourceID":     oc.ID,
+	mon.m.EmitGauge("apiserver.healthz.code", 1, map[string]string{
+		"resourceID":     mon.oc.ID,
 		"subscriptionID": r.SubscriptionID,
 		"resourceGroup":  r.ResourceGroup,
 		"resourceName":   r.ResourceName,
