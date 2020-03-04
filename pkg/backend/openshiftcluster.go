@@ -148,6 +148,16 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 
 		stop()
 
+		_, err = ocb.db.Billing.Patch(ctx, doc.ID, func(billingdoc *api.BillingDocument) error {
+			now := time.Now().UTC()
+			billingdoc.Billing.DeletionTime = &now
+			return nil
+		})
+
+		if err != nil {
+			return err
+		}
+
 		return ocb.db.OpenShiftClusters.Delete(ctx, doc)
 	}
 

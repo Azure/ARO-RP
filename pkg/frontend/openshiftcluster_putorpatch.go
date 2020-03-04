@@ -189,12 +189,15 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 
 		now := time.Now().UTC()
 		_, err = f.db.Billing.Create(ctx, &api.BillingDocument{
-			ID:                  doc.ID,
-			OpenShiftClusterKey: doc.Key,
+			ID:                              doc.ID,
+			OpenShiftClusterID:              doc.Key,
+			OpenShiftClusterResourceGroupID: doc.ClusterResourceGroupIDKey,
 			Billing: &api.Billing{
 				CreationTime:    now,
 				LastBillingTime: now,
 			},
+			TenantID: subdoc.Subscription.Properties.TenantID,
+			Location: doc.OpenShiftCluster.Location,
 		})
 
 		if err != nil {

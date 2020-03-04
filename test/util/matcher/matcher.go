@@ -71,14 +71,14 @@ func (m *BillingDocument) Matches(x interface{}) bool {
 		return false
 	}
 
-	id, openShiftClusterKey, creationTS, billingTS :=
-		doc.ID, doc.OpenShiftClusterKey, doc.Billing.CreationTime, doc.Billing.LastBillingTime
-	doc.ID, doc.OpenShiftClusterKey, doc.Billing.CreationTime, doc.Billing.LastBillingTime =
-		m.ID, m.OpenShiftClusterKey, m.Billing.CreationTime, m.Billing.LastBillingTime
+	id, openShiftClusterID, openShiftClusterRGID, creationTS, billingTS :=
+		doc.ID, doc.OpenShiftClusterID, doc.OpenShiftClusterResourceGroupID, doc.Billing.CreationTime, doc.Billing.LastBillingTime
+	doc.ID, doc.OpenShiftClusterID, doc.OpenShiftClusterResourceGroupID, doc.Billing.CreationTime, doc.Billing.LastBillingTime =
+		m.ID, m.OpenShiftClusterID, m.OpenShiftClusterResourceGroupID, m.Billing.CreationTime, m.Billing.LastBillingTime
 
 	defer func() {
-		doc.ID, doc.OpenShiftClusterKey, doc.Billing.CreationTime, doc.Billing.LastBillingTime =
-			id, openShiftClusterKey, creationTS, billingTS
+		doc.ID, doc.OpenShiftClusterID, doc.OpenShiftClusterResourceGroupID, doc.Billing.CreationTime, doc.Billing.LastBillingTime =
+			id, openShiftClusterID, openShiftClusterRGID, creationTS, billingTS
 	}()
 
 	return reflect.DeepEqual((*api.BillingDocument)(m), doc)
