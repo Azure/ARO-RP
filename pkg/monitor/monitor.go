@@ -5,7 +5,6 @@ package monitor
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -26,14 +25,12 @@ type monitor struct {
 	db       *database.Database
 	m        metrics.Interface
 	clusterm metrics.Interface
-	mu       sync.Mutex
-	docs     sync.Map
+	mu       sync.RWMutex
+	docs     map[string]*cacheDoc
 
 	isMaster    bool
 	bucketCount int
 	buckets     map[int]struct{}
-
-	ch chan string
 }
 
 type Runnable interface {
@@ -47,11 +44,10 @@ func NewMonitor(log *logrus.Entry, env env.Interface, db *database.Database, m, 
 		db:       db,
 		m:        m,
 		clusterm: clusterm,
+		docs:     map[string]*cacheDoc{},
 
 		bucketCount: bucket.Buckets,
 		buckets:     map[int]struct{}{},
-
-		ch: make(chan string),
 	}
 }
 
@@ -65,14 +61,6 @@ func (mon *monitor) Run(ctx context.Context) error {
 
 	// fill the cache from the database change feed
 	go mon.changefeed(ctx, mon.baseLog.WithField("component", "changefeed"), nil)
-
-	// schedule work across the workers
-	go mon.schedule(ctx, mon.baseLog.WithField("component", "schedule"), nil)
-
-	// populate the workers
-	for i := 0; i < 100; i++ {
-		go mon.worker(ctx, mon.baseLog.WithField("component", fmt.Sprintf("worker-%d", i)))
-	}
 
 	t := time.NewTicker(10 * time.Second)
 	defer t.Stop()
