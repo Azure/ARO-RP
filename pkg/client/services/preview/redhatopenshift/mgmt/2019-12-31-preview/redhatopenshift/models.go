@@ -630,6 +630,8 @@ type Operation struct {
 	Name *string `json:"name,omitempty"`
 	// Display - The object that describes the operation.
 	Display *Display `json:"display,omitempty"`
+	// Origin - Sources of requests to this operation.  Comma separated list with valid values user or system, e.g. "user,system".
+	Origin *string `json:"origin,omitempty"`
 }
 
 // OperationList operationList represents an RP operation list.

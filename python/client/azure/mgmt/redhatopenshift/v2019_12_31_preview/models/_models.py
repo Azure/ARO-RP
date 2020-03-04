@@ -544,17 +544,22 @@ class Operation(Model):
     :param display: The object that describes the operation.
     :type display:
      ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.Display
+    :param origin: Sources of requests to this operation.  Comma separated
+     list with valid values user or system, e.g. "user,system".
+    :type origin: str
     """
 
     _attribute_map = {
         'name': {'key': 'name', 'type': 'str'},
         'display': {'key': 'display', 'type': 'Display'},
+        'origin': {'key': 'origin', 'type': 'str'},
     }
 
     def __init__(self, **kwargs):
         super(Operation, self).__init__(**kwargs)
         self.name = kwargs.get('name', None)
         self.display = kwargs.get('display', None)
+        self.origin = kwargs.get('origin', None)
 
 
 class ProxyResource(Resource):

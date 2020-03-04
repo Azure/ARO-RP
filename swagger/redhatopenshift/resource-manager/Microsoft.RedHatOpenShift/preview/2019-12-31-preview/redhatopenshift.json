@@ -655,6 +655,10 @@
         "display": {
           "$ref": "#/definitions/Display",
           "description": "The object that describes the operation."
+        },
+        "origin": {
+          "description": "Sources of requests to this operation.  Comma separated list with valid values user or system, e.g. \"user,system\".",
+          "type": "string"
         }
       }
     },
