@@ -60,3 +60,30 @@ func (m *AsyncOperationDocument) Matches(x interface{}) bool {
 func (m *AsyncOperationDocument) String() string {
 	return fmt.Sprintf("is equal to %v without comparing IDs", (*api.AsyncOperationDocument)(m))
 }
+
+// BillingDocument compares api.BillingDocument objects
+// ignoring dynamic fields such as Time
+type BillingDocument api.BillingDocument
+
+func (m *BillingDocument) Matches(x interface{}) bool {
+	doc, ok := x.(*api.BillingDocument)
+	if !ok {
+		return false
+	}
+
+	id, openShiftClusterKey, creationTS, billingTS :=
+		doc.ID, doc.OpenShiftClusterKey, doc.Billing.CreationTime, doc.Billing.LastBillingTime
+	doc.ID, doc.OpenShiftClusterKey, doc.Billing.CreationTime, doc.Billing.LastBillingTime =
+		m.ID, m.OpenShiftClusterKey, m.Billing.CreationTime, m.Billing.LastBillingTime
+
+	defer func() {
+		doc.ID, doc.OpenShiftClusterKey, doc.Billing.CreationTime, doc.Billing.LastBillingTime =
+			id, openShiftClusterKey, creationTS, billingTS
+	}()
+
+	return reflect.DeepEqual((*api.BillingDocument)(m), doc)
+}
+
+func (m *BillingDocument) String() string {
+	return fmt.Sprintf("is equal to %v without comparing IDs", (*api.BillingDocument)(m))
+}

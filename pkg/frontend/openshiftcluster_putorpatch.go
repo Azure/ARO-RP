@@ -182,21 +182,25 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 	}
 
 	if isCreate {
-		_, err := f.db.Billing.Create(ctx, &api.BillingDocument{
-			ID:                  doc.ID,
-			OpenShiftClusterKey: doc.Key,
-			Billing: &api.Billing{
-				CreationTime:    time.Now().UTC(),
-				LastBillingTime: time.Now().UTC(),
-			},
-		})
-		if err != nil {
-			return nil, err
-		}
 		newdoc, err := f.db.OpenShiftClusters.Create(ctx, doc)
 		if cosmosdb.IsErrorStatusCode(err, http.StatusPreconditionFailed) {
 			return nil, f.validateOpenShiftUniqueKey(ctx, doc)
 		}
+
+		now := time.Now().UTC()
+		_, err = f.db.Billing.Create(ctx, &api.BillingDocument{
+			ID:                  doc.ID,
+			OpenShiftClusterKey: doc.Key,
+			Billing: &api.Billing{
+				CreationTime:    now,
+				LastBillingTime: now,
+			},
+		})
+
+		if err != nil {
+			return nil, err
+		}
+
 		doc = newdoc
 	} else {
 		doc, err = f.db.OpenShiftClusters.Update(ctx, doc)
