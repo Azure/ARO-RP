@@ -144,9 +144,11 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				}
 
 				billingDoc := &api.BillingDocument{
-					ID:                  clusterdoc.ID,
-					OpenShiftClusterKey: clusterdoc.Key,
-					Billing:             &api.Billing{},
+					ID:                              clusterdoc.ID,
+					OpenShiftClusterID:              clusterdoc.Key,
+					OpenShiftClusterResourceGroupID: clusterdoc.ClusterResourceGroupIDKey,
+					Billing:                         &api.Billing{},
+					TenantID:                        "11111111-1111-1111-1111-111111111111",
 				}
 
 				openShiftClusters.EXPECT().
