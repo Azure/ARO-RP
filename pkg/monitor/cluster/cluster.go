@@ -7,6 +7,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 
@@ -20,13 +21,26 @@ type Monitor struct {
 	env env.Interface
 	log *logrus.Entry
 
-	oc *api.OpenShiftCluster
+	oc   *api.OpenShiftCluster
+	dims map[string]string
 
 	cli kubernetes.Interface
 	m   metrics.Interface
 }
 
 func NewMonitor(ctx context.Context, env env.Interface, log *logrus.Entry, oc *api.OpenShiftCluster, m metrics.Interface) (*Monitor, error) {
+	r, err := azure.ParseResourceID(oc.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	dims := map[string]string{
+		"resourceId":     oc.ID,
+		"subscriptionId": r.SubscriptionID,
+		"resourceGroup":  r.ResourceGroup,
+		"resourceName":   r.ResourceName,
+	}
+
 	restConfig, err := restconfig.RestConfig(ctx, env, oc)
 	if err != nil {
 		return nil, err
@@ -41,7 +55,8 @@ func NewMonitor(ctx context.Context, env env.Interface, log *logrus.Entry, oc *a
 		env: env,
 		log: log,
 
-		oc: oc,
+		oc:   oc,
+		dims: dims,
 
 		cli: cli,
 		m:   m,
@@ -59,4 +74,18 @@ func (mon *Monitor) Monitor(ctx context.Context) error {
 	}
 
 	return mon.emitPrometheusAlerts(ctx)
+}
+
+func (mon *Monitor) emitFloat(m string, value float64, dims map[string]string) {
+	for k, v := range mon.dims {
+		dims[k] = v
+	}
+	mon.m.EmitFloat(m, value, dims)
+}
+
+func (mon *Monitor) emitGauge(m string, value int64, dims map[string]string) {
+	for k, v := range mon.dims {
+		dims[k] = v
+	}
+	mon.m.EmitGauge(m, value, dims)
 }

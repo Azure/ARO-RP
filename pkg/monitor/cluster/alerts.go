@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/prometheus/common/model"
 
 	"github.com/Azure/ARO-RP/pkg/util/portforward"
@@ -27,11 +26,6 @@ const (
 )
 
 func (mon *Monitor) emitPrometheusAlerts(ctx context.Context) error {
-	r, err := azure.ParseResourceID(mon.oc.ID)
-	if err != nil {
-		return err
-	}
-
 	hc := &http.Client{
 		Transport: &http.Transport{
 			DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
@@ -72,12 +66,8 @@ func (mon *Monitor) emitPrometheusAlerts(ctx context.Context) error {
 	}
 
 	for alert, count := range alertmap {
-		mon.m.EmitGauge("prometheus.alerts", count, map[string]string{
-			"resourceId":     mon.oc.ID,
-			"subscriptionId": r.SubscriptionID,
-			"resourceGroup":  r.ResourceGroup,
-			"resourceName":   r.ResourceName,
-			"alert":          alert,
+		mon.emitGauge("prometheus.alerts", count, map[string]string{
+			"alert": alert,
 		})
 	}
 
