@@ -26,7 +26,6 @@ deploy_rp_dev() {
             "domainName=$DOMAIN_NAME.$PARENT_DOMAIN_NAME" \
             "fpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].objectId' -o tsv)" \
             "keyvaultPrefix=$KEYVAULT_PREFIX" \
-            "sshPublicKey=$(<secrets/proxy_id_rsa.pub)" \
             "rpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_CLIENT_ID'" --query '[].objectId' -o tsv)" >/dev/null
 }
 
