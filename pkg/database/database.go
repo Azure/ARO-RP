@@ -27,6 +27,7 @@ type Database struct {
 	m   metrics.Interface
 
 	AsyncOperations   AsyncOperations
+	Billing           Billing
 	Monitors          Monitors
 	OpenShiftClusters OpenShiftClusters
 	Subscriptions     Subscriptions
@@ -58,6 +59,11 @@ func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Interface, m me
 	}
 
 	db.AsyncOperations, err = NewAsyncOperations(uuid, dbc, env.DatabaseName(), "AsyncOperations")
+	if err != nil {
+		return nil, err
+	}
+
+	db.Billing, err = NewBilling(uuid, dbc, env.DatabaseName(), "Billing")
 	if err != nil {
 		return nil, err
 	}

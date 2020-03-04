@@ -49,6 +49,27 @@
         {
             "properties": {
                 "resource": {
+                    "id": "Billing",
+                    "partitionKey": {
+                        "paths": [
+                            "/id"
+                        ],
+                        "kind": "Hash"
+                    }
+                },
+                "options": {}
+            },
+            "name": "[concat(parameters('databaseAccountName'), '/', parameters('databaseName'), '/Billing')]",
+            "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2019-08-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), parameters('databaseName'))]"
+            ]
+        },
+        {
+            "properties": {
+                "resource": {
                     "id": "Monitors",
                     "partitionKey": {
                         "paths": [
