@@ -7,6 +7,7 @@ import (
 	"context"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -46,6 +47,16 @@ func (f *frontend) _deleteOpenShiftCluster(ctx context.Context, r *http.Request,
 
 	doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateDeleting
 	doc.Dequeues = 0
+
+	_, err = f.db.Billing.Patch(ctx, r.URL.Path, func(billingdoc *api.BillingDocument) error {
+		now := time.Now()
+		billingdoc.Billing.DeletionTime = &now
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
 
 	doc.AsyncOperationID, err = f.newAsyncOperation(ctx, r, doc)
 	if err != nil {
