@@ -6,9 +6,11 @@ package install
 import (
 	"context"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/pem"
 
 	configv1 "github.com/openshift/api/config/v1"
+	"github.com/openshift/installer/pkg/asset/tls"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -184,4 +186,23 @@ func (i *Installer) configureIngressCertificate(ctx context.Context) error {
 		_, err = i.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Update(ic)
 		return err
 	})
+}
+
+func (i *Installer) generateNewClientKeyAndCert(ca *tls.AdminKubeConfigSignerCertKey, k *tls.AdminKubeConfigClientCertKey) error {
+	cfg := &tls.CertCfg{
+		Subject:      pkix.Name{CommonName: "system:aro-service", Organization: []string{"system:masters"}},
+		KeyUsages:    x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
+		Validity:     tls.ValidityTenYears,
+	}
+
+	// TODO replace last arg with const from tls/certkey.go:79:      DoNotAppendParent AppendParentChoice = false
+	// new keyand certificate will be stored in k.KeyRaw and k.CertRaw
+	err := k.SignedCertKey.Generate(cfg, ca, "admin-kubeconfig-client", false)
+
+	if err != nil {
+		i.log.Print("GGG-ERR: Error generating SignedCertKey: ", err)
+		return err
+	}
+	return nil
 }

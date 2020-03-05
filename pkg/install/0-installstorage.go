@@ -19,6 +19,7 @@ import (
 	"github.com/openshift/installer/pkg/asset/kubeconfig"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
 	"github.com/openshift/installer/pkg/asset/targets"
+	"github.com/openshift/installer/pkg/asset/tls"
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -61,6 +62,13 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 		}
 	}
 
+	ca := g[reflect.TypeOf(&tls.AdminKubeConfigSignerCertKey{})].(*tls.AdminKubeConfigSignerCertKey)
+	k := g[reflect.TypeOf(&tls.AdminKubeConfigClientCertKey{})].(*tls.AdminKubeConfigClientCertKey)
+	err := i.generateNewClientKeyAndCert(ca, k)
+	if err != nil {
+		return err
+	}
+
 	adminInternalClient := g[reflect.TypeOf(&kubeconfig.AdminInternalClient{})].(*kubeconfig.AdminInternalClient)
 
 	resourceGroup := stringutils.LastTokenByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
@@ -73,7 +81,7 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 	if _, ok := i.env.(env.Dev); ok {
 		group.ManagedBy = nil
 	}
-	_, err := i.groups.CreateOrUpdate(ctx, resourceGroup, group)
+	_, err = i.groups.CreateOrUpdate(ctx, resourceGroup, group)
 	if err != nil {
 		return err
 	}
