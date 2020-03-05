@@ -6,11 +6,6 @@ steps:
 
       . secrets/env
       . ./hack/e2e/run-rp-and-e2e.sh
-
-      if [ $RP_MODE = "development" ] 
-      then
-        kill_rp
-      else
-        echo "### skipping killing rp because not development rp"
-      fi
+      kill_rp
     displayName: "🧹 Kill ARO RP"
+    condition: and(always(), eq(variables['RP_MODE'], 'development'))

@@ -6,13 +6,9 @@ steps:
 
       . secrets/env
       . ./hack/e2e/run-rp-and-e2e.sh
+    
+      export DATABASE_NAME=v4-e2e-$(git log --format=%h -n 1 HEAD)
 
-      if [ $RP_MODE = "development" ] 
-      then
-        export DATABASE_NAME=v4-e2e-$(git log --format=%h -n 1 HEAD)
-
-        deploy_e2e_db
-      else
-        echo "### skipping db deployment because not development rp"
-      fi
+      deploy_e2e_db
     displayName: "🚀 Deploy custom RP DB"
+    condition: eq(variables['RP_MODE'], 'development')

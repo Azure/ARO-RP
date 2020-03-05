@@ -8,5 +8,4 @@ steps:
       . ./hack/e2e/run-rp-and-e2e.sh
 
       run_e2e
-
     displayName: "🚀 Run E2E"
