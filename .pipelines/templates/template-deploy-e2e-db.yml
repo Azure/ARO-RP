@@ -1,5 +1,6 @@
 parameters:
   workingDirectory: ""
+  rpMode: ""
 steps:
   - script: |
       cd ${{ parameters.workingDirectory }}
@@ -11,4 +12,4 @@ steps:
 
       deploy_e2e_db
     displayName: "🚀 Deploy custom RP DB"
-    condition: eq(variables['RP_MODE'], 'development')
+    condition: eq(parameters['rpMode'], 'development')
