@@ -16,31 +16,35 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/portforward"
 )
 
-const (
-	// alertNamespace is the namespace where the alert manager pod is living
-	alertNamespace string = "openshift-monitoring"
-	// alertPod is the pod to query
-	alertPod string = "alertmanager-main-0"
-	// alertServiceEndpoint is the service name to query
-	alertServiceEndpoint string = "http://alertmanager-main.openshift-monitoring.svc:9093/api/v2/alerts"
-)
-
 func (mon *Monitor) emitPrometheusAlerts(ctx context.Context) error {
-	hc := &http.Client{
-		Transport: &http.Transport{
-			DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
-				_, port, err := net.SplitHostPort(address)
-				if err != nil {
-					return nil, err
-				}
+	var resp *http.Response
+	var err error
 
-				// TODO: try other pods if -0 isn't available?
-				return portforward.DialContext(ctx, mon.env, mon.oc, alertNamespace, alertPod, port)
+	for i := 0; i < 3; i++ {
+		hc := &http.Client{
+			Transport: &http.Transport{
+				DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
+					_, port, err := net.SplitHostPort(address)
+					if err != nil {
+						return nil, err
+					}
+
+					return portforward.DialContext(ctx, mon.env, mon.oc, "openshift-monitoring", fmt.Sprintf("alertmanager-main-%d", i), port)
+				},
 			},
-		},
-	}
+		}
 
-	resp, err := hc.Get(alertServiceEndpoint)
+		var req *http.Request
+		req, err = http.NewRequestWithContext(ctx, http.MethodGet, "http://alertmanager-main.openshift-monitoring.svc:9093/api/v2/alerts", nil)
+		if err != nil {
+			return err
+		}
+
+		resp, err = hc.Do(req)
+		if err == nil {
+			break
+		}
+	}
 	if err != nil {
 		return err
 	}
