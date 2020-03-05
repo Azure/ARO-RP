@@ -41,7 +41,6 @@ jobs:
       - template: ./templates/template-deploy-e2e-db.yml
         parameters:
           workingDirectory: ${{ variables.modulePath }}
-          rpMode: ${{ variables.RP_MODE }}
       - template: ./templates/template-run-rp.yml
         parameters:
           workingDirectory: ${{ variables.modulePath }}
