@@ -281,11 +281,7 @@ func (dv *openShiftClusterDynamicValidator) validateVnet(ctx context.Context, vn
 		return err
 	}
 
-	if vnet.DhcpOptions == nil {
-		return nil
-	}
-
-	if vnet.DhcpOptions.DNSServers == nil || len(*vnet.DhcpOptions.DNSServers) == 0 {
+	if vnet.DhcpOptions == nil || vnet.DhcpOptions.DNSServers == nil || len(*vnet.DhcpOptions.DNSServers) == 0 {
 		return nil
 	}
 
