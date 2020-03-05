@@ -1,7 +1,6 @@
 # Azure DevOps Pipeline running e2e tests
 variables:
   - template: vars.yml
-  - RP_MODE: ""
 jobs:
   - job: "E2E"
     timeoutInMinutes: 120
