@@ -156,6 +156,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 		},
 		api.InstallPhaseRemoveBootstrap: {
 			action(i.initializeKubernetesClients),
+			action(i.addClusterAdminGroup),
 			action(i.removeBootstrap),
 			action(i.configureAPIServerCertificate),
 			condition{i.apiServersReady, 30 * time.Minute},
