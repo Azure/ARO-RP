@@ -78,11 +78,19 @@ func DialContext(ctx context.Context, env env.Interface, oc *api.OpenShiftCluste
 		return nil, err
 	}
 
-	if resp.StatusCode != http.StatusSwitchingProtocols ||
-		resp.Header.Get(httpstream.HeaderConnection) != httpstream.HeaderUpgrade ||
-		resp.Header.Get(httpstream.HeaderUpgrade) != spdy.HeaderSpdy31 {
+	if resp.StatusCode != http.StatusSwitchingProtocols {
 		tlsConn.Close()
-		return nil, fmt.Errorf("unexpected http response")
+		return nil, fmt.Errorf("unexpected http status code %d", resp.StatusCode)
+	}
+
+	if resp.Header.Get(httpstream.HeaderConnection) != httpstream.HeaderUpgrade {
+		tlsConn.Close()
+		return nil, fmt.Errorf("unexpected http header %s: %s", httpstream.HeaderConnection, resp.Header.Get(httpstream.HeaderConnection))
+	}
+
+	if resp.Header.Get(httpstream.HeaderUpgrade) != spdy.HeaderSpdy31 {
+		tlsConn.Close()
+		return nil, fmt.Errorf("unexpected http header %s: %s", httpstream.HeaderUpgrade, resp.Header.Get(httpstream.HeaderUpgrade))
 	}
 
 	// 5. Negotiate SPDY
