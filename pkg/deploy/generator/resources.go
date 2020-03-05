@@ -651,6 +651,12 @@ chmod 0600 /etc/mdsd.pem
 
 az logout
 
+mkdir /etc/systemd/system/mdsd.service.d
+cat >/etc/systemd/system/mdsd.service.d/override.conf <<'EOF'
+[Unit]
+After=network-online.target
+EOF
+
 cat >/etc/default/mdsd <<EOF
 MDSD_ROLE_PREFIX=/var/run/mdsd/default
 MDSD_OPTIONS="-A -d -r \$MDSD_ROLE_PREFIX"
@@ -741,7 +747,7 @@ ExecStart=/usr/bin/docker run \
   $RPIMAGE \
   rp
 ExecStop=/usr/bin/docker stop -t 3600 %N
-TimeoutStopSec="3600"
+TimeoutStopSec=3600
 Restart=always
 
 [Install]
