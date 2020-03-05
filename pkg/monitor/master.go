@@ -62,7 +62,7 @@ func (mon *monitor) balance(monitors []string, doc *api.MonitorDocument) {
 		doc.Monitor = &api.Monitor{}
 	}
 
-	// ensure len(doc.Monitor.Buckets) == m.bucketCount: this should only do
+	// ensure len(doc.Monitor.Buckets) == mon.bucketCount: this should only do
 	// anything on the very first run
 	if len(doc.Monitor.Buckets) < mon.bucketCount {
 		doc.Monitor.Buckets = append(doc.Monitor.Buckets, make([]string, mon.bucketCount-len(doc.Monitor.Buckets))...)

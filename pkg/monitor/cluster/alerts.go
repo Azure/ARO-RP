@@ -1,4 +1,4 @@
-package monitor
+package cluster
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -11,10 +11,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/prometheus/common/model"
 
-	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/portforward"
 )
 
@@ -27,12 +25,7 @@ const (
 	alertServiceEndpoint string = "http://alertmanager-main.openshift-monitoring.svc:9093/api/v2/alerts"
 )
 
-func (mon *monitor) emitPrometheusAlerts(ctx context.Context, oc *api.OpenShiftCluster) error {
-	r, err := azure.ParseResourceID(oc.ID)
-	if err != nil {
-		return err
-	}
-
+func (mon *Monitor) emitPrometheusAlerts(ctx context.Context) error {
 	hc := &http.Client{
 		Transport: &http.Transport{
 			DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
@@ -42,7 +35,7 @@ func (mon *monitor) emitPrometheusAlerts(ctx context.Context, oc *api.OpenShiftC
 				}
 
 				// TODO: try other pods if -0 isn't available?
-				return portforward.DialContext(ctx, mon.env, oc, alertNamespace, alertPod, port)
+				return portforward.DialContext(ctx, mon.env, mon.oc, alertNamespace, alertPod, port)
 			},
 		},
 	}
@@ -73,12 +66,8 @@ func (mon *monitor) emitPrometheusAlerts(ctx context.Context, oc *api.OpenShiftC
 	}
 
 	for alert, count := range alertmap {
-		mon.clusterm.EmitGauge("prometheus.alerts", count, map[string]string{
-			"resourceId":     oc.ID,
-			"subscriptionId": r.SubscriptionID,
-			"resourceGroup":  r.ResourceGroup,
-			"resourceName":   r.ResourceName,
-			"alert":          alert,
+		mon.emitGauge("prometheus.alerts", count, map[string]string{
+			"alert": alert,
 		})
 	}
 

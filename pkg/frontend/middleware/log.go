@@ -7,6 +7,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"regexp"
 	"time"
 
 	uuid "github.com/satori/go.uuid"
@@ -56,10 +57,15 @@ func Log(baseLog *logrus.Entry) func(http.Handler) http.Handler {
 			requestID := uuid.NewV4().String()
 			w.Header().Set("X-Ms-Request-Id", requestID)
 
-			log := baseLog.WithFields(logrus.Fields{
+			fields := logrus.Fields{
 				"correlation_id": correlationID,
 				"request_id":     requestID,
-			})
+			}
+
+			updateFieldsFromPath(r.URL.Path, fields)
+
+			log := baseLog.WithFields(fields)
+
 			r = r.WithContext(context.WithValue(r.Context(), ContextKeyLog, log))
 
 			defer func() {
@@ -86,5 +92,24 @@ func Log(baseLog *logrus.Entry) func(http.Handler) http.Handler {
 
 			h.ServeHTTP(w, r)
 		})
+	}
+}
+
+var rxTolerantResourceID = regexp.MustCompile(`(?i)^/subscriptions/([^/]+)(?:/resourceGroups/([^/]+)(?:/providers/([^/]+)/([^/]+)(?:/([^/]+))?)?)?`)
+
+func updateFieldsFromPath(path string, fields logrus.Fields) {
+	m := rxTolerantResourceID.FindStringSubmatch(path)
+	if m == nil {
+		return
+	}
+	if m[1] != "" {
+		fields["subscription_id"] = m[1]
+	}
+	if m[2] != "" {
+		fields["resource_group"] = m[2]
+	}
+	if m[5] != "" {
+		fields["resource_name"] = m[5]
+		fields["resource_id"] = "/subscriptions/" + m[1] + "/resourceGroups/" + m[2] + "/providers/" + m[3] + "/" + m[4] + "/" + m[5]
 	}
 }

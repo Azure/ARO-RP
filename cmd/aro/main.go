@@ -7,8 +7,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"math/rand"
 	"os"
 	"strings"
+	"time"
 
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
@@ -23,6 +25,8 @@ func usage() {
 }
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
+
 	flag.Usage = usage
 	flag.Parse()
 
@@ -37,7 +41,7 @@ func main() {
 	log.Printf("starting, git commit %s", gitCommit)
 
 	var err error
-	switch strings.ToLower(os.Args[1]) {
+	switch strings.ToLower(flag.Arg(0)) {
 	case "mirror":
 		err = mirror(ctx, log)
 	case "monitor":

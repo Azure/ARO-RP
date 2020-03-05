@@ -24,7 +24,7 @@ import (
 
 // DialContext returns a connection to the specified cluster/namespace/pod/port.
 func DialContext(ctx context.Context, env env.Interface, oc *api.OpenShiftCluster, namespace, pod, port string) (net.Conn, error) {
-	restconfig, err := restconfig.RestConfig(ctx, env, oc)
+	restconfig, err := restconfig.RestConfig(env, oc)
 	if err != nil {
 		return nil, err
 	}
