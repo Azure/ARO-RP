@@ -37,7 +37,7 @@ func main() {
 	log.Printf("starting, git commit %s", gitCommit)
 
 	var err error
-	switch strings.ToLower(os.Args[1]) {
+	switch strings.ToLower(flag.Arg(0)) {
 	case "mirror":
 		err = mirror(ctx, log)
 	case "monitor":
