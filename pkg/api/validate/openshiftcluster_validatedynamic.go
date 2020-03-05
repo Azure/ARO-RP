@@ -289,5 +289,5 @@ func (dv *openShiftClusterDynamicValidator) validateVnet(ctx context.Context, vn
 		return nil
 	}
 
-	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided vnetID  '%s' is invalid: custom DNS servers are not supported.", vnetID)
+	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided vnet '%s' is invalid: custom DNS servers are not supported.", vnetID)
 }
