@@ -837,7 +837,7 @@ rm /etc/motd.d/*
 						ImageReference: &mgmtcompute.ImageReference{
 							Publisher: to.StringPtr("RedHat"),
 							Offer:     to.StringPtr("RHEL"),
-							Sku:       to.StringPtr("8"),
+							Sku:       to.StringPtr("8.1"),
 							Version:   to.StringPtr("latest"),
 						},
 						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
