@@ -12,4 +12,4 @@ steps:
 
       deploy_e2e_db
     displayName: "🚀 Deploy custom RP DB"
-    condition: eq(parameters['rpMode'], 'development')
+    condition: eq('${{ parameters.rpMode }}', 'development')
