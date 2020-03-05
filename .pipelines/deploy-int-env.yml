@@ -17,13 +17,6 @@ jobs:
           gopath: ${{ variables.GOPATH }}
           goroot: ${{ variables.GOROOT }}
           modulePath: ${{ variables.modulePath }}
-      - template: ./templates/template-setup-azure-tools.yml
-        parameters:
-          workingDirectory: ${{ variables.modulePath }}
-      - template: ./templates/template-az-cli-login.yml
-        parameters:
-          workingDirectory: ${{ variables.modulePath }}
-          azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
       - script: |
           make aro
         displayName: "⚙️ Building ARO Deployer Golang binary"
