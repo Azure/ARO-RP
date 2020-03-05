@@ -52,11 +52,11 @@ const (
 	DB /var/lib/fluent/journald
 
 [FILTER]
-    Name modify
-    Match journald
-    Remove_wildcard _
-    Remove TIMESTAMP
-    Remove SYSLOG_FACILITY
+	Name modify
+	Match journald
+	Remove_wildcard _
+	Remove TIMESTAMP
+	Remove SYSLOG_FACILITY
 
 [OUTPUT]
 	Name forward
