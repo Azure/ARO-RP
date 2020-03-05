@@ -295,6 +295,21 @@ func (m *MockVirtualNetworksClient) EXPECT() *MockVirtualNetworksClientMockRecor
 	return m.recorder
 }
 
+// Get mocks base method
+func (m *MockVirtualNetworksClient) Get(arg0 context.Context, arg1, arg2, arg3 string) (network.VirtualNetwork, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(network.VirtualNetwork)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get
+func (mr *MockVirtualNetworksClientMockRecorder) Get(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockVirtualNetworksClient)(nil).Get), arg0, arg1, arg2, arg3)
+}
+
 // List mocks base method
 func (m *MockVirtualNetworksClient) List(arg0 context.Context, arg1 string) ([]network.VirtualNetwork, error) {
 	m.ctrl.T.Helper()

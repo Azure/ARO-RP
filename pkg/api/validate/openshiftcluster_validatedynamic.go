@@ -16,13 +16,14 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/apparentlymart/go-cidr/cidr"
-	"github.com/dgrijalva/jwt-go"
+	jwt "github.com/dgrijalva/jwt-go"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	utilpermissions "github.com/Azure/ARO-RP/pkg/util/permissions"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
@@ -82,6 +83,12 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context, oc *api
 
 	fpPermissions := authorization.NewPermissionsClient(r.SubscriptionID, fpAuthorizer)
 	err = dv.validateVnetPermissions(ctx, oc, fpPermissions, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
+	if err != nil {
+		return err
+	}
+
+	spVnet := network.NewVirtualNetworksClient(r.SubscriptionID, spAuthorizer)
+	err = dv.validateVnet(ctx, spVnet, oc)
 	if err != nil {
 		return err
 	}
@@ -257,4 +264,26 @@ func (dv *openShiftClusterDynamicValidator) validateSubnet(ctx context.Context, 
 	}
 
 	return net, nil
+}
+
+// validateVnet checks that the vnet does not have custom dns servers set
+func (dv *openShiftClusterDynamicValidator) validateVnet(ctx context.Context, vnetClient network.VirtualNetworksClient, oc *api.OpenShiftCluster) error {
+	vnetID, _, err := subnet.Split(oc.Properties.MasterProfile.SubnetID)
+	if err != nil {
+		return err
+	}
+	r, err := azure.ParseResourceID(vnetID)
+	if err != nil {
+		return err
+	}
+	vnet, err := vnetClient.Get(ctx, r.ResourceGroup, r.ResourceName, "")
+	if err != nil {
+		return err
+	}
+
+	if vnet.DhcpOptions == nil || vnet.DhcpOptions.DNSServers == nil || len(*vnet.DhcpOptions.DNSServers) == 0 {
+		return nil
+	}
+
+	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided vnet '%s' is invalid: custom DNS servers are not supported.", vnetID)
 }
