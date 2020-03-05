@@ -122,6 +122,7 @@ func (mon *monitor) worker(stop <-chan struct{}, delay time.Duration, id string)
 	t := time.NewTicker(time.Minute)
 	defer t.Stop()
 
+out:
 	for {
 		mon.mu.RLock()
 		v := mon.docs[id]
@@ -142,7 +143,7 @@ func (mon *monitor) worker(stop <-chan struct{}, delay time.Duration, id string)
 		select {
 		case <-t.C:
 		case <-stop:
-			break
+			break out
 		}
 	}
 
