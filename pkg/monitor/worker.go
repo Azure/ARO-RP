@@ -149,8 +149,6 @@ func (mon *monitor) worker(stop <-chan struct{}, id string) {
 
 // workOne checks the API server health of a cluster
 func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument) error {
-	log.Debug("polling cluster")
-
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
