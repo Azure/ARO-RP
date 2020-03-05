@@ -92,8 +92,10 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 }
 
 // worker reads clusters to be monitored and monitors them
-func (mon *monitor) worker(stop <-chan struct{}, id string) {
+func (mon *monitor) worker(stop <-chan struct{}, delay time.Duration, id string) {
 	defer recover.Panic(mon.baseLog)
+
+	time.Sleep(delay)
 
 	log := mon.baseLog
 	{
