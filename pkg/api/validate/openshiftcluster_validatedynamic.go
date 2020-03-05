@@ -87,8 +87,8 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context, oc *api
 		return err
 	}
 
-	spVnet := network.NewVirtualNetworksClient(r.SubscriptionID, spAuthorizer)
-	err = dv.validateVnet(ctx, spVnet, oc)
+	fpVnet := network.NewVirtualNetworksClient(r.SubscriptionID, fpAuthorizer)
+	err = dv.validateVnet(ctx, fpVnet, oc)
 	if err != nil {
 		return err
 	}
