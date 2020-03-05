@@ -56,7 +56,7 @@ func (mon *monitor) fixDocs() {
 // iff it is in a bucket owned by us.  Caller must hold mon.mu.Lock.
 func (mon *monitor) fixDoc(doc *api.OpenShiftClusterDocument) {
 	v := mon.docs[doc.ID]
-	_, ours := mon.buckets[mon.docs[doc.ID].doc.Bucket]
+	_, ours := mon.buckets[v.doc.Bucket]
 
 	if !ours && v.stop != nil {
 		close(v.stop)
