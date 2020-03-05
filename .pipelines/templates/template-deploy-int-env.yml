@@ -4,17 +4,10 @@ parameters:
   workingDirectory: ""
   location: ""
   mdmFrontendUrl: ""
-  rpMdmMetricNamespace: ""
-  rpMdmMonitoringAccount: ""
-  clusterMdmMetricNamespace: ""
-  clusterMdmMonitoringAccount: ""
   rpImageACR: ""
   rpImagePullJSONSPN: ""
   azureFpClientId: ""
-  encryptionKey: ""
   azureDevOpsJSONSPN: ""
-  mdsdNamespace: ""
-  mdsdMonitoringAccount: ""
   mdsdMonitoringEnviroment: ""
   mdsdConfigVersion: ""
   rpMode: ""
@@ -38,16 +31,9 @@ steps:
       export AZURE_FP_CLIENT_ID=${{ parameters.azureFpClientId }}
       export COSMOSDB_ACCOUNT=${{ parameters.databaseAccountName }}
       export MDM_FRONTEND=${{ parameters.mdmFrontendUrl }}
-      export RP_MDM_NAMESPACE=${{ parameters.rpMdmMetricNamespace }}
-      export RP_MDM_ACCOUNT=${{ parameters.rpMdmMonitoringAccount }}
-      export CLUSTER_MDM_NAMESPACE=${{ parameters.clusterMdmMetricNamespace }}
-      export CLUSTER_MDM_ACCOUNT=${{ parameters.clusterMdmMonitoringAccount }}
-      export MDSD_NAMESPACE=${{ parameters.mdsdNamespace }}
-      export MDSD_ACCOUNT=${{ parameters.mdsdMonitoringAccount }}
       export MDSD_ENVIROMENT=${{ parameters.mdsdMonitoringEnviroment }}
       export MDSD_CONFIG_VERSION=${{ parameters.mdsdConfigVersion }}
       export RP_IMAGE=${{ parameters.rpImageACR }}.azurecr.io/aro:${COMMIT}
-      export ENCRYPTION_KEY=${{ parameters.encryptionKey }}
       RESOURCEGROUP_PREFIX=${{ parameters.rgPrefix }}
       export LOCATION=${{ parameters.location }}
       export RESOURCEGROUP="$RESOURCEGROUP_PREFIX-$LOCATION"

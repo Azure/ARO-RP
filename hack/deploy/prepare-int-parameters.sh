@@ -5,12 +5,6 @@ cat >secrets/parameters.json <<EOF
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "clusterMdmMetricNamespace": {
-            "value": "$CLUSTER_MDM_NAMESPACE"
-        },
-        "clusterMdmMonitoringAccount": {
-            "value": "$CLUSTER_MDM_ACCOUNT"
-        },
         "databaseAccountName": {
             "value": "$COSMOSDB_ACCOUNT"
         },
@@ -30,7 +24,7 @@ cat >secrets/parameters.json <<EOF
             "value": "$KEYVAULT_PREFIX"
         },
         "pullSecret": {
-            "value": "SET-LATER"
+            "value": "$PULL_SECRET"
         },
         "rpImage": {
             "value": "$RP_IMAGE"
@@ -38,26 +32,14 @@ cat >secrets/parameters.json <<EOF
         "rpImageAuth": {
             "value": "$RP_IMAGE_AUTH"
         },
-        "rpMdmFrontendUrl": {
+        "mdmFrontendUrl": {
             "value": "$MDM_FRONTEND"
         },
-        "rpMdmMetricNamespace": {
-            "value": "$RP_MDM_NAMESPACE"
-        },
-        "rpMdmMonitoringAccount": {
-            "value": "$RP_MDM_ACCOUNT"
-        },
-        "rpMdsdAccount": {
-            "value": "$MDSD_ACCOUNT"
-        },
-        "rpMdsdConfigVersion": {
+        "mdsdConfigVersion": {
             "value": "$MDSD_CONFIG_VERSION"
         },
-        "rpMdsdEnvironment": {
+        "mdsdEnvironment": {
             "value": "$MDSD_ENVIROMENT"
-        },
-        "rpMdsdNamespace": {
-            "value": "$MDSD_NAMESPACE"
         },
         "rpMode": {
             "value": "$RP_MODE"
@@ -67,12 +49,6 @@ cat >secrets/parameters.json <<EOF
         },
         "sshPublicKey": {
             "value": "$SSH_PUBLIC_KEY"
-        },
-        "vmssCount": {
-            "value": 3
-        },
-        "vmssDomainNameLabel": {
-            "value": "SET-LATER"
         },
         "vmssName": {
             "value": "SET-LATER"
