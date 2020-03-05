@@ -328,7 +328,7 @@ func (i *Installer) saveGraph(ctx context.Context, g graph) error {
 // initializeKubernetesClients initializes clients which are used
 // once the cluster is up later on in the install process.
 func (i *Installer) initializeKubernetesClients(ctx context.Context) error {
-	restConfig, err := restconfig.RestConfig(ctx, i.env, i.doc.OpenShiftCluster)
+	restConfig, err := restconfig.RestConfig(i.env, i.doc.OpenShiftCluster)
 	if err != nil {
 		return err
 	}

@@ -28,7 +28,7 @@ type Monitor struct {
 	m   metrics.Interface
 }
 
-func NewMonitor(ctx context.Context, env env.Interface, log *logrus.Entry, oc *api.OpenShiftCluster, m metrics.Interface) (*Monitor, error) {
+func NewMonitor(env env.Interface, log *logrus.Entry, oc *api.OpenShiftCluster, m metrics.Interface) (*Monitor, error) {
 	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
 		return nil, err
@@ -41,7 +41,7 @@ func NewMonitor(ctx context.Context, env env.Interface, log *logrus.Entry, oc *a
 		"resourceName":   r.ResourceName,
 	}
 
-	restConfig, err := restconfig.RestConfig(ctx, env, oc)
+	restConfig, err := restconfig.RestConfig(env, oc)
 	if err != nil {
 		return nil, err
 	}
