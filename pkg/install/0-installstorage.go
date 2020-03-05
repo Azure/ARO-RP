@@ -70,6 +70,15 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 	}
 
 	adminInternalClient := g[reflect.TypeOf(&kubeconfig.AdminInternalClient{})].(*kubeconfig.AdminInternalClient)
+	err = i.addKubeconfigContext(adminInternalClient, k.CertRaw, k.KeyRaw, "system:aro-service")
+	if err != nil {
+		return err
+	}
+
+	err = i.generateKubeconfig(adminInternalClient)
+	if err != nil {
+		return err
+	}
 
 	resourceGroup := stringutils.LastTokenByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
