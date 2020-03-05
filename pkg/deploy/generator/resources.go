@@ -623,19 +623,19 @@ EOF
 
 cat >/etc/td-agent-bit/td-agent-bit.conf <<'EOF'
 [INPUT]
-    Name systemd
-    Tag journald
-    Systemd_Filter _COMM=aro
+	Name systemd
+	Tag journald
+	Systemd_Filter _COMM=aro
 
 [FILTER]
-    Name modify
-    Match journald
-    Remove_wildcard _
-    Remove TIMESTAMP
+	Name modify
+	Match journald
+	Remove_wildcard _
+	Remove TIMESTAMP
 
 [OUTPUT]
-    Name forward
-    Port 29230
+	Name forward
+	Port 29230
 EOF
 
 az login -i --allow-no-subscriptions
