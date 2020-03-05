@@ -29,12 +29,10 @@ jobs:
         workingDirectory: "${{ variables.modulePath }}"
       - script: |
           . secrets/env
-          if [ $RP_MODE = "development" ] 
-          then
-            make aro
-          fi
+          make aro
         displayName: "⚙️ Building ARO RP Golang binary"
         workingDirectory: "${{ variables.modulePath }}"
+        condition: eq(variables['RP_MODE'], 'development')
       - template: ./templates/template-deploy-e2e-deps.yml
         parameters:
           workingDirectory: ${{ variables.modulePath }}
