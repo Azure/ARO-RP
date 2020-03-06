@@ -66,9 +66,6 @@ image-proxy: proxy
 
 publish-image-aro: image-aro 
 	docker push ${RP_IMAGE_ACR}.azurecr.io/aro:$(COMMIT)
-	docker push ${RP_IMAGE_ACR}.azurecr.io/proxy:latest
-	docker push ${RP_IMAGE_ACR}.azurecr.io/fluentbit:1.3.9-1
-
 publish-image-fluentbit: image-fluentbit
 	docker push ${RP_IMAGE_ACR}.azurecr.io/fluentbit:1.3.9-1
 

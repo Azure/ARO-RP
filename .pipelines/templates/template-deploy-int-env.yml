@@ -25,7 +25,7 @@ steps:
       pull_spn_client_id=$(cat pull-spn.json | jq -r '.clientId')
       pull_spn_client_secret=$(cat pull-spn.json | jq -r '.clientSecret')
       export RP_IMAGE_AUTH=$(echo "$pull_spn_client_id:$pull_spn_client_secret" | base64 -w 0)
-      export PULL_SECRET=$(echo ${{ parameters.pullSecret }} | sed 's/"/\\"/g')
+      export PULL_SECRET=$(echo ${{ parameters.pullSecret }} | sed 's/"/\\\\\\"/g')
 
       export DOMAIN_NAME=${{ parameters.domainName }}
       export AZURE_FP_CLIENT_ID=${{ parameters.azureFpClientId }}
