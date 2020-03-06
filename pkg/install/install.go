@@ -137,14 +137,11 @@ func NewInstaller(ctx context.Context, log *logrus.Entry, env env.Interface, db 
 // Install installs an ARO cluster
 func (i *Installer) Install(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) error {
 	steps := map[api.InstallPhase][]interface{}{
-		api.InstallPhaseDeployStorage: {
+		api.InstallPhaseBootstrap: {
 			action(i.createDNS),
 			action(func(ctx context.Context) error {
 				return i.installStorage(ctx, installConfig, platformCreds, image)
 			}),
-			action(i.incrInstallPhase),
-		},
-		api.InstallPhaseDeployResources: {
 			action(i.installResources),
 			action(i.createPrivateEndpoint),
 			action(i.updateAPIIP),
@@ -167,11 +164,11 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			action(i.updateRouterIP),
 			action(i.configureIngressCertificate),
 			condition{i.ingressControllerReady, 30 * time.Minute},
-			action(i.endOfInstallPhase),
+			action(i.finishInstallation),
 		},
 	}
 
-	err := i.startInstallPhase(ctx)
+	err := i.startInstallation(ctx)
 	if err != nil {
 		return err
 	}
@@ -205,7 +202,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 	return nil
 }
 
-func (i *Installer) startInstallPhase(ctx context.Context) error {
+func (i *Installer) startInstallation(ctx context.Context) error {
 	var err error
 	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		if doc.OpenShiftCluster.Properties.Install == nil {
@@ -225,7 +222,7 @@ func (i *Installer) incrInstallPhase(ctx context.Context) error {
 	return err
 }
 
-func (i *Installer) endOfInstallPhase(ctx context.Context) error {
+func (i *Installer) finishInstallation(ctx context.Context) error {
 	var err error
 	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		doc.OpenShiftCluster.Properties.Install = nil

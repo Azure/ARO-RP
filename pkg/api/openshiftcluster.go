@@ -213,7 +213,6 @@ type InstallPhase int
 
 // InstallPhase constants
 const (
-	InstallPhaseDeployStorage InstallPhase = iota
-	InstallPhaseDeployResources
+	InstallPhaseBootstrap InstallPhase = iota
 	InstallPhaseRemoveBootstrap
 )
