@@ -20,7 +20,11 @@ var (
 )
 
 func usage() {
-	fmt.Fprintf(flag.CommandLine.Output(), "usage: %s {rp,mirror,monitor,deploy}\n", os.Args[0])
+	fmt.Fprint(flag.CommandLine.Output(), "usage: \n")
+	fmt.Fprintf(flag.CommandLine.Output(), "       %s rp \n", os.Args[0])
+	fmt.Fprintf(flag.CommandLine.Output(), "       %s mirror\n", os.Args[0])
+	fmt.Fprintf(flag.CommandLine.Output(), "       %s monitor\n", os.Args[0])
+	fmt.Fprintf(flag.CommandLine.Output(), "       %s deploy {name} {config_file_path}\n", os.Args[0])
 	flag.PrintDefaults()
 }
 
@@ -30,11 +34,6 @@ func main() {
 	flag.Usage = usage
 	flag.Parse()
 
-	if len(flag.Args()) != 1 {
-		usage()
-		os.Exit(2)
-	}
-
 	ctx := context.Background()
 	log := utillog.GetLogger()
 
@@ -43,12 +42,16 @@ func main() {
 	var err error
 	switch strings.ToLower(flag.Arg(0)) {
 	case "mirror":
+		checkArgs(1)
 		err = mirror(ctx, log)
 	case "monitor":
+		checkArgs(1)
 		err = monitor(ctx, log)
 	case "rp":
+		checkArgs(1)
 		err = rp(ctx, log)
 	case "deploy":
+		checkArgs(3)
 		err = deploy(ctx, log)
 	default:
 		usage()
@@ -57,5 +60,12 @@ func main() {
 
 	if err != nil {
 		log.Fatal(err)
+	}
+}
+
+func checkArgs(required int) {
+	if len(flag.Args()) != required {
+		usage()
+		os.Exit(2)
 	}
 }

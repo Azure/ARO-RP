@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"os"
 	"strings"
@@ -40,7 +41,12 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	deployer := deployer.New(ctx, log, authorizer, deployVersion)
+	config, err := deployer.GetConfig(strings.ToLower(flag.Arg(1)), strings.ToLower(flag.Arg(2)))
+	if err != nil {
+		return err
+	}
+
+	deployer := deployer.New(ctx, log, authorizer, config, deployVersion)
 
 	rpServicePrincipalID, err := deployer.PreDeploy(ctx)
 	if err != nil {

@@ -8,10 +8,9 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
+	"reflect"
 	"time"
 
 	azcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
@@ -47,24 +46,20 @@ type deployer struct {
 
 	cli *http.Client
 
-	version        string
-	resourceGroup  string
-	subscriptionID string
-	location       string
+	config  *RPConfig
+	version string
 }
 
 // New initiates new deploy utility object
-func New(ctx context.Context, log *logrus.Entry, authorizer autorest.Authorizer, version string) Deployer {
-	subscriptionID := os.Getenv("AZURE_SUBSCRIPTION_ID")
-
+func New(ctx context.Context, log *logrus.Entry, authorizer autorest.Authorizer, config *RPConfig, version string) Deployer {
 	return &deployer{
 		log: log,
 
-		deployments: resources.NewDeploymentsClient(subscriptionID, authorizer),
-		groups:      resources.NewGroupsClient(subscriptionID, authorizer),
-		vmss:        compute.NewVirtualMachineScaleSetsClient(subscriptionID, authorizer),
-		vmssvms:     compute.NewVirtualMachineScaleSetVMsClient(subscriptionID, authorizer),
-		network:     network.NewPublicIPAddressesClient(subscriptionID, authorizer),
+		deployments: resources.NewDeploymentsClient(config.SubscriptionID, authorizer),
+		groups:      resources.NewGroupsClient(config.SubscriptionID, authorizer),
+		vmss:        compute.NewVirtualMachineScaleSetsClient(config.SubscriptionID, authorizer),
+		vmssvms:     compute.NewVirtualMachineScaleSetVMsClient(config.SubscriptionID, authorizer),
+		network:     network.NewPublicIPAddressesClient(config.SubscriptionID, authorizer),
 
 		cli: &http.Client{
 			Timeout: 5 * time.Second,
@@ -73,18 +68,16 @@ func New(ctx context.Context, log *logrus.Entry, authorizer autorest.Authorizer,
 			},
 		},
 
-		version:        version,
-		resourceGroup:  os.Getenv("RESOURCEGROUP"),
-		subscriptionID: subscriptionID,
-		location:       os.Getenv("LOCATION"),
+		config:  config,
+		version: version,
 	}
 }
 
 // PreDeploy deploys managed identity, NSGs and keyvaults, needed for main
 // deployment
 func (d *deployer) PreDeploy(ctx context.Context) (string, error) {
-	_, err := d.groups.CreateOrUpdate(ctx, d.resourceGroup, azresources.Group{
-		Location: &d.location,
+	_, err := d.groups.CreateOrUpdate(ctx, d.config.ResourceGroupName, azresources.Group{
+		Location: &d.config.Location,
 	})
 	if err != nil {
 		return "", err
@@ -108,7 +101,7 @@ func (d *deployer) PreDeploy(ctx context.Context) (string, error) {
 func (d *deployer) deployManageIdentity(ctx context.Context) (string, error) {
 	deploymentName := "rp-production-managed-identity"
 
-	deployment, err := d.deployments.Get(ctx, d.resourceGroup, deploymentName)
+	deployment, err := d.deployments.Get(ctx, d.config.ResourceGroupName, deploymentName)
 	if isDeploymentNotFoundError(err) {
 		deployment, err = d._deployManageIdentity(ctx, deploymentName)
 	}
@@ -131,8 +124,8 @@ func (d *deployer) _deployManageIdentity(ctx context.Context, deploymentName str
 		return azresources.DeploymentExtended{}, nil
 	}
 
-	d.log.Infof("deploying managed identity to %s", d.resourceGroup)
-	err = d.deployments.CreateOrUpdateAndWait(ctx, d.resourceGroup, deploymentName, azresources.Deployment{
+	d.log.Infof("deploying managed identity to %s", d.config.ResourceGroupName)
+	err = d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, deploymentName, azresources.Deployment{
 		Properties: &azresources.DeploymentProperties{
 			Template: template,
 			Mode:     azresources.Incremental,
@@ -142,13 +135,13 @@ func (d *deployer) _deployManageIdentity(ctx context.Context, deploymentName str
 		return azresources.DeploymentExtended{}, nil
 	}
 
-	return d.deployments.Get(ctx, d.resourceGroup, deploymentName)
+	return d.deployments.Get(ctx, d.config.ResourceGroupName, deploymentName)
 }
 
 func (d *deployer) deployPreDeploy(ctx context.Context, rpServicePrincipalID string) error {
 	deploymentName := "rp-production-predeploy"
 
-	_, err := d.deployments.Get(ctx, d.resourceGroup, deploymentName)
+	_, err := d.deployments.Get(ctx, d.config.ResourceGroupName, deploymentName)
 	if err == nil || !isDeploymentNotFoundError(err) {
 		return err
 	}
@@ -164,7 +157,7 @@ func (d *deployer) deployPreDeploy(ctx context.Context, rpServicePrincipalID str
 		return err
 	}
 
-	parameters, err := getParameters()
+	parameters, err := d.getParameters(template)
 	if err != nil {
 		return err
 	}
@@ -172,15 +165,16 @@ func (d *deployer) deployPreDeploy(ctx context.Context, rpServicePrincipalID str
 	parameters.Parameters["rpServicePrincipalId"] = &arm.ParametersParameter{
 		Value: rpServicePrincipalID,
 	}
+	d.log.Infof("predeploying to %s", d.config.ResourceGroupName)
 
-	d.log.Infof("predeploying to %s", d.resourceGroup)
-	return d.deployments.CreateOrUpdateAndWait(ctx, d.resourceGroup, deploymentName, azresources.Deployment{
+	return d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, deploymentName, azresources.Deployment{
 		Properties: &azresources.DeploymentProperties{
 			Template:   template,
 			Mode:       azresources.Incremental,
 			Parameters: parameters.Parameters,
 		},
 	})
+
 }
 
 func (d *deployer) Deploy(ctx context.Context, rpServicePrincipalID string) error {
@@ -195,7 +189,7 @@ func (d *deployer) Deploy(ctx context.Context, rpServicePrincipalID string) erro
 		return err
 	}
 
-	parameters, err := getParameters()
+	parameters, err := d.getParameters(template)
 	if err != nil {
 		return err
 	}
@@ -207,8 +201,8 @@ func (d *deployer) Deploy(ctx context.Context, rpServicePrincipalID string) erro
 		Value: rpServicePrincipalID,
 	}
 
-	d.log.Printf("deploying rp version %s to %s", d.version, d.resourceGroup)
-	return d.deployments.CreateOrUpdateAndWait(ctx, d.resourceGroup, "rp-production-"+d.version, azresources.Deployment{
+	d.log.Printf("deploying rp version %s to %s", d.version, d.config.ResourceGroupName)
+	return d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, "rp-production-"+d.version, azresources.Deployment{
 		Properties: &azresources.DeploymentProperties{
 			Template:   template,
 			Mode:       azresources.Incremental,
@@ -229,7 +223,7 @@ func (d *deployer) Upgrade(ctx context.Context) error {
 }
 
 func (d *deployer) waitForRPReadiness(ctx context.Context, vmssName string) error {
-	scalesetVMs, err := d.vmssvms.List(ctx, d.resourceGroup, vmssName, "", "", "")
+	scalesetVMs, err := d.vmssvms.List(ctx, d.config.ResourceGroupName, vmssName, "", "", "")
 	if err != nil {
 		return err
 	}
@@ -237,7 +231,7 @@ func (d *deployer) waitForRPReadiness(ctx context.Context, vmssName string) erro
 	d.log.Printf("waiting for %s instances to be healthy", vmssName)
 	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 		for _, vm := range scalesetVMs {
-			u := fmt.Sprintf("https://vm%s.%s.%s.cloudapp.azure.com/healthz/ready", *vm.InstanceID, vmssName, d.location)
+			u := fmt.Sprintf("https://vm%s.%s.%s.cloudapp.azure.com/healthz/ready", *vm.InstanceID, vmssName, d.config.Location)
 			resp, err := d.cli.Get(u)
 			if err != nil || resp.StatusCode != http.StatusOK {
 				d.log.Printf("instance %s not ready", *vm.InstanceID)
@@ -251,7 +245,7 @@ func (d *deployer) waitForRPReadiness(ctx context.Context, vmssName string) erro
 
 func (d *deployer) removeOldScalesets(ctx context.Context) error {
 	d.log.Print("removing old scalesets")
-	scalesets, err := d.vmss.List(ctx, d.resourceGroup)
+	scalesets, err := d.vmss.List(ctx, d.config.ResourceGroupName)
 	if err != nil {
 		return err
 	}
@@ -262,7 +256,7 @@ func (d *deployer) removeOldScalesets(ctx context.Context) error {
 		}
 
 		d.log.Printf("stopping scaleset %s", *vmss.Name)
-		scalesetVMs, err := d.vmssvms.List(ctx, d.resourceGroup, *vmss.Name, "", "", "")
+		scalesetVMs, err := d.vmssvms.List(ctx, d.config.ResourceGroupName, *vmss.Name, "", "", "")
 		if err != nil {
 			return err
 		}
@@ -270,7 +264,7 @@ func (d *deployer) removeOldScalesets(ctx context.Context) error {
 		// execute individual VMs stop command
 		for _, vm := range scalesetVMs {
 			d.log.Printf("stopping instance %s", *vm.Name)
-			err := d.vmssvms.RunCommandAndWait(ctx, d.resourceGroup, *vmss.Name, *vm.InstanceID, azcompute.RunCommandInput{
+			err := d.vmssvms.RunCommandAndWait(ctx, d.config.ResourceGroupName, *vmss.Name, *vm.InstanceID, azcompute.RunCommandInput{
 				CommandID: to.StringPtr("RunShellScript"),
 				Script:    &[]string{"systemctl stop arorp --no-block"},
 			})
@@ -282,7 +276,7 @@ func (d *deployer) removeOldScalesets(ctx context.Context) error {
 		d.log.Printf("waiting for %s instances to terminate", *vmss.Name)
 		err = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 			for _, vm := range scalesetVMs {
-				u := fmt.Sprintf("https://vm%s.%s.%s.cloudapp.azure.com/healthz/ready", *vm.InstanceID, *vmss.Name, d.location)
+				u := fmt.Sprintf("https://vm%s.%s.%s.cloudapp.azure.com/healthz/ready", *vm.InstanceID, *vmss.Name, d.config.Location)
 
 				_, err := d.cli.Get(u)
 				if err, ok := err.(*url.Error); !ok || !err.Timeout() {
@@ -298,7 +292,7 @@ func (d *deployer) removeOldScalesets(ctx context.Context) error {
 		}
 
 		d.log.Printf("deleting scaleset %s" + *vmss.Name)
-		err = d.vmss.DeleteAndWait(ctx, d.resourceGroup, *vmss.Name)
+		err = d.vmss.DeleteAndWait(ctx, d.config.ResourceGroupName, *vmss.Name)
 		if err != nil {
 			return err
 		}
@@ -307,17 +301,21 @@ func (d *deployer) removeOldScalesets(ctx context.Context) error {
 	return nil
 }
 
-func getParameters() (*arm.Parameters, error) {
-	params, err := ioutil.ReadFile(os.Getenv("RP_PARAMETERS_FILE"))
-	if err != nil {
-		return nil, err
+func (d *deployer) getParameters(ps map[string]interface{}) (*arm.Parameters, error) {
+	parameters := &arm.Parameters{
+		Parameters: map[string]*arm.ParametersParameter{},
 	}
-
-	parameters := &arm.Parameters{}
-	err = json.Unmarshal(params, parameters)
-	if err != nil {
-		return nil, err
+	v := reflect.ValueOf(d.config.Configuration)
+	if len(ps) > 0 {
+		for paramName := range ps["parameters"].(map[string]interface{}) {
+			for i := 0; i < v.NumField(); i++ {
+				if v.Type().Field(i).Tag.Get("json") == paramName {
+					parameters.Parameters[paramName] = &arm.ParametersParameter{
+						Value: v.Field(i).Interface(),
+					}
+				}
+			}
+		}
 	}
-
 	return parameters, nil
 }

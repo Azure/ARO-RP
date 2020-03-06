@@ -1,0 +1,29 @@
+rps:
+ - name: eastus
+   location: eastus
+   subscriptionId: 225e02bc-43d0-43d1-a01a-1234567
+   resourceGroupName: aro-eastus
+ - name: westeurope
+   location: westeurope
+   subscriptionId: 225e02bc-43d0-43d1-a01a-1234567
+   resourceGroupName: aro-westeurope
+   configuration:
+    databaseAccountName: aro
+    domainName: example.com
+configuration:
+  adminApiClientCertCommonName:
+  databaseAccountName:
+  domainName:
+  extraCosmosDBIPs:
+  extraKeyvaultAccessPolicies:
+  fpServicePrincipalId:
+  mdmFrontendUrl :
+  mdsdConfigVersion:
+  mdsdEnvironment:
+  pullSecret:
+  rpImage:
+  rpImageAuth:
+  rpMode:
+  rpServicePrincipalId:
+  sshPublicKey:
+  vmssName:
