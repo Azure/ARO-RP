@@ -7,4 +7,5 @@ steps:
 
       echo ${{ parameters.azureDevOpsJSONSPN }} | base64 -d > devops-spn.json
       az login -u $(cat devops-spn.json | jq -r '.clientId') -p $(cat devops-spn.json | jq -r '.clientSecret') --tenant $(cat devops-spn.json | jq -r '.tenantId') --service-principal >/dev/null
+      rm devops-spn.json
     displayName: "🗝 AZ Login"

@@ -8,5 +8,5 @@ steps:
       export RP_IMAGE_ACR=${{ parameters.rpImageACR }}
 
       az acr login --name "$RP_IMAGE_ACR"
-      make publish-images
+      make publish-image-aro
     displayName: "⚙️ Build and push images to ACR"

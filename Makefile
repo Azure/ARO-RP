@@ -64,10 +64,16 @@ image-proxy: proxy
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
 	docker build -f Dockerfile.proxy -t ${RP_IMAGE_ACR}.azurecr.io/proxy:latest .
 
-publish-images: image-aro image-proxy image-fluentbit
+publish-image-aro: image-aro 
 	docker push ${RP_IMAGE_ACR}.azurecr.io/aro:$(COMMIT)
 	docker push ${RP_IMAGE_ACR}.azurecr.io/proxy:latest
 	docker push ${RP_IMAGE_ACR}.azurecr.io/fluentbit:1.3.9-1
+
+publish-image-fluentbit: image-fluentbit
+	docker push ${RP_IMAGE_ACR}.azurecr.io/fluentbit:1.3.9-1
+
+publish-image-proxy: image-proxy
+	docker push ${RP_IMAGE_ACR}.azurecr.io/proxy:latest
 
 proxy:
 	go build -ldflags "-X main.gitCommit=$(COMMIT)" ./hack/proxy
