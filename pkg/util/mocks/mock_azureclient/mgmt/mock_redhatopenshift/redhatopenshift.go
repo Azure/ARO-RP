@@ -36,6 +36,20 @@ func (m *MockOpenShiftClustersClient) EXPECT() *MockOpenShiftClustersClientMockR
 	return m.recorder
 }
 
+// CreateOrUpdateAndWait mocks base method
+func (m *MockOpenShiftClustersClient) CreateOrUpdateAndWait(arg0 context.Context, arg1, arg2 string, arg3 redhatopenshift.OpenShiftCluster) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateOrUpdateAndWait", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateOrUpdateAndWait indicates an expected call of CreateOrUpdateAndWait
+func (mr *MockOpenShiftClustersClientMockRecorder) CreateOrUpdateAndWait(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockOpenShiftClustersClient)(nil).CreateOrUpdateAndWait), arg0, arg1, arg2, arg3)
+}
+
 // Get mocks base method
 func (m *MockOpenShiftClustersClient) Get(arg0 context.Context, arg1, arg2 string) (redhatopenshift.OpenShiftCluster, error) {
 	m.ctrl.T.Helper()

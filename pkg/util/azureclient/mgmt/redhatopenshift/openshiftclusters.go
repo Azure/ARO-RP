@@ -24,6 +24,7 @@ type OpenShiftClustersClient interface {
 	Get(ctx context.Context, resourceGroupName string, resourceName string) (result redhatopenshift.OpenShiftCluster, err error)
 	List(ctx context.Context) (result redhatopenshift.OpenShiftClusterList, err error)
 	ListByResourceGroup(ctx context.Context, resourceGroupName string) (result redhatopenshift.OpenShiftClusterList, err error)
+	OpenShiftClustersClientAddons
 }
 
 type openShiftClustersClient struct {
@@ -48,7 +49,8 @@ func NewOpenShiftClustersClient(subscriptionID string, authorizer autorest.Autho
 		client = redhatopenshift.NewOpenShiftClustersClient(subscriptionID)
 		client.Authorizer = authorizer
 	}
-	client.PollingDuration = time.Minute * 60
+	client.PollingDelay = 10 * time.Second
+	client.PollingDuration = 60 * time.Minute
 
 	return &openShiftClustersClient{
 		OpenShiftClustersClient: client,

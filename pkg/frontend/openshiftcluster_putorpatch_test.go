@@ -183,6 +183,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 								ProvisioningState: api.ProvisioningStateSucceeded,
 								IngressProfiles:   []api.IngressProfile{{Name: "will-be-removed"}},
 								WorkerProfiles:    []api.WorkerProfile{{Name: "will-be-removed"}},
+								ServicePrincipalProfile: api.ServicePrincipalProfile{
+									ClientSecret: "will-be-kept",
+								},
 							},
 						},
 					}, nil)
@@ -199,6 +202,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							ProvisioningState: api.ProvisioningStateUpdating,
 							ClusterProfile: api.ClusterProfile{
 								Domain: "changed",
+							},
+							ServicePrincipalProfile: api.ServicePrincipalProfile{
+								ClientSecret: "will-be-kept",
 							},
 						},
 					},
