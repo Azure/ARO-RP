@@ -81,6 +81,11 @@ deploy_e2e_deps() {
       --disable-private-link-service-network-policies true >/dev/null
 }
 
+set_cli_context() {
+    echo "########## Setting az cli context ##########"
+    az account set -s $AZURE_SUBSCRIPTION_ID
+}
+
 register_sub() {
     echo "########## 🔑 Registering subscription ##########"
     curl -k -X PUT \
@@ -134,6 +139,7 @@ echo "######################################"
 echo "######## Current settings : ##########"
 echo
 echo "LOCATION=$LOCATION"
+echo "AZURE_SUBSCRIPTION_ID=$AZURE_SUBSCRIPTION_ID"
 echo
 echo "RP_MODE=$RP_MODE"
 echo

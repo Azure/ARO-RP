@@ -35,6 +35,9 @@ jobs:
         displayName: "⚙️ Building ARO RP Golang binary"
         workingDirectory: "${{ variables.modulePath }}"
         condition: eq(variables['RP_MODE'], 'development')
+      - template: ./templates/template-az-cli-set-context.yml
+        parameters:
+          workingDirectory: ${{ variables.modulePath }}
       - template: ./templates/template-deploy-e2e-deps.yml
         parameters:
           workingDirectory: ${{ variables.modulePath }}
