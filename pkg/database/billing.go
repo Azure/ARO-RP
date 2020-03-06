@@ -26,8 +26,32 @@ type Billing interface {
 }
 
 // NewBilling returns a new Billing
-func NewBilling(uuid string, dbc cosmosdb.DatabaseClient, dbid, collid string) (Billing, error) {
+func NewBilling(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, dbid, collid string) (Billing, error) {
 	collc := cosmosdb.NewCollectionClient(dbc, dbid)
+
+	triggers := []*cosmosdb.Trigger{
+		{
+			ID:               "setTimeStamp",
+			TriggerOperation: cosmosdb.TriggerOperationAll,
+			TriggerType:      cosmosdb.TriggerTypePre,
+			Body: `function trigger() {
+	var request = getContext().getRequest();
+	var body = request.getBody();
+	var date = new Date();
+	body["creationTime"] = Math.floor(date.getTime() / 1000);
+	body["lastBillingTime"] = Math.floor(date.getTime() / 1000);
+	request.setBody(body);
+}`,
+		},
+	}
+
+	triggerc := cosmosdb.NewTriggerClient(collc, collid)
+	for _, trigger := range triggers {
+		_, err := triggerc.Create(ctx, trigger)
+		if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusConflict) {
+			return nil, err
+		}
+	}
 
 	return &billing{
 		c:    cosmosdb.NewBillingDocumentClient(collc, collid),
@@ -35,15 +59,22 @@ func NewBilling(uuid string, dbc cosmosdb.DatabaseClient, dbid, collid string) (
 	}, nil
 }
 
+// Creating Billing Document or update existing one
 func (c *billing) Create(ctx context.Context, doc *api.BillingDocument) (*api.BillingDocument, error) {
 	if doc.ID != strings.ToLower(doc.ID) {
 		return nil, fmt.Errorf("id %q is not lower case", doc.ID)
 	}
 
-	doc, err := c.c.Create(ctx, doc.ID, doc, nil)
+	doc, err := c.c.Create(ctx, doc.ID, doc, &cosmosdb.Options{PreTriggers: []string{"setTimeStamp"}})
 
 	if err, ok := err.(*cosmosdb.Error); ok && err.StatusCode == http.StatusConflict {
-		err.StatusCode = http.StatusPreconditionFailed
+		// err.StatusCode = http.StatusPreconditionFailed
+		doc, err := c.Get(ctx, doc.ID)
+		if err != nil {
+			return nil, fmt.Errorf("Cannot Get Billing document : %s", doc.ID)
+		}
+
+		doc, err = c.c.Replace(ctx, doc.ID, doc, &cosmosdb.Options{PreTriggers: []string{"setTimeStamp"}})
 	}
 
 	return doc, err

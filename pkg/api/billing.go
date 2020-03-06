@@ -11,7 +11,10 @@ import (
 type Billing struct {
 	MissingFields
 
-	CreationTime    time.Time  `json:"creationTime,omitempty"`
+	CreationTime    int        `json:"creationTime,omitempty"`
 	DeletionTime    *time.Time `json:"deletionTime,omitempty"`
-	LastBillingTime time.Time  `json:"lastBillingTime,omitempty"`
+	LastBillingTime int        `json:"lastBillingTime,omitempty"`
+
+	Location string `json:"location,omitempty"`
+	TenantID string `json:"tenantID,omitempty"`
 }

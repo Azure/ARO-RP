@@ -7,9 +7,11 @@ import (
 	"context"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/Azure/go-autorest/autorest"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
@@ -91,5 +93,16 @@ func (m *Manager) Delete(ctx context.Context) error {
 		detailedErr.StatusCode == http.StatusForbidden {
 		err = nil
 	}
+
+	_, err = m.billing.Patch(ctx, m.doc.ID, func(billingdoc *api.BillingDocument) error {
+		now := time.Now().UTC()
+		billingdoc.Billing.DeletionTime = &now
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
 	return err
 }

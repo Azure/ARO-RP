@@ -92,7 +92,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 	stop := ocb.heartbeat(ctx, cancel, log, doc)
 	defer stop()
 
-	m, err := openshiftcluster.NewManager(log, ocb.env, ocb.db.OpenShiftClusters, doc)
+	m, err := openshiftcluster.NewManager(log, ocb.env, ocb.db.OpenShiftClusters, ocb.db.Billing, doc)
 	if err != nil {
 		log.Error(err)
 		return ocb.endLease(ctx, stop, doc, api.ProvisioningStateFailed, err)
@@ -147,16 +147,6 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 		}
 
 		stop()
-
-		_, err = ocb.db.Billing.Patch(ctx, doc.ID, func(billingdoc *api.BillingDocument) error {
-			now := time.Now().UTC()
-			billingdoc.Billing.DeletionTime = &now
-			return nil
-		})
-
-		if err != nil {
-			return err
-		}
 
 		return ocb.db.OpenShiftClusters.Delete(ctx, doc)
 	}

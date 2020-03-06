@@ -63,7 +63,7 @@ func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Interface, m me
 		return nil, err
 	}
 
-	db.Billing, err = NewBilling(uuid, dbc, env.DatabaseName(), "Billing")
+	db.Billing, err = NewBilling(ctx, uuid, dbc, env.DatabaseName(), "Billing")
 	if err != nil {
 		return nil, err
 	}

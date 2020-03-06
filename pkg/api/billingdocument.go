@@ -27,8 +27,6 @@ type BillingDocument struct {
 
 	Billing *Billing `json:"billing,omitempty"`
 
-	OpenShiftClusterID              string `json:"openShiftClusterId,omitempty"`
-	OpenShiftClusterResourceGroupID string `json:"openShiftClusterResourceGroupId,omitempty"`
-	Location                        string `json:"location,omitempty"`
-	TenantID                        string `json:"tenantID,omitempty"`
+	Key                       string `json:"key,omitempty"`
+	ClusterResourceGroupIDKey string `json:"clusterResourceGroupIDKey,omitempty"`
 }

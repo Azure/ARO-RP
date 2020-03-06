@@ -51,6 +51,7 @@ type Installer struct {
 	log          *logrus.Entry
 	env          env.Interface
 	db           database.OpenShiftClusters
+	billing      database.Billing
 	doc          *api.OpenShiftClusterDocument
 	cipher       encryption.Cipher
 	fpAuthorizer autorest.Authorizer
@@ -84,7 +85,7 @@ type condition struct {
 }
 
 // NewInstaller creates a new Installer
-func NewInstaller(ctx context.Context, log *logrus.Entry, env env.Interface, db database.OpenShiftClusters, doc *api.OpenShiftClusterDocument) (*Installer, error) {
+func NewInstaller(ctx context.Context, log *logrus.Entry, env env.Interface, db database.OpenShiftClusters, billing database.Billing, doc *api.OpenShiftClusterDocument) (*Installer, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
 		return nil, err
@@ -114,6 +115,7 @@ func NewInstaller(ctx context.Context, log *logrus.Entry, env env.Interface, db 
 		log:          log,
 		env:          env,
 		db:           db,
+		billing:      billing,
 		cipher:       cipher,
 		doc:          doc,
 		fpAuthorizer: fpAuthorizer,
@@ -142,6 +144,10 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			action(func(ctx context.Context) error {
 				return i.installStorage(ctx, installConfig, platformCreds, image)
 			}),
+			action(i.incrInstallPhase),
+			action(i.createBillingRecord),
+		},
+		api.InstallPhaseDeployResources: {
 			action(i.installResources),
 			action(i.createPrivateEndpoint),
 			action(i.updateAPIIP),
