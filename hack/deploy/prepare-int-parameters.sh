@@ -2,7 +2,7 @@
 mkdir -p secrets
 cat >secrets/parameters.json <<EOF
 {
-    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "\$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
         "databaseAccountName": {
@@ -10,12 +10,6 @@ cat >secrets/parameters.json <<EOF
         },
         "domainName": {
             "value": "$DOMAIN_NAME"
-        },
-        "extraCosmosDBIPs": {
-            "value": ""
-        },
-        "extraKeyvaultAccessPolicies": {
-            "value": []
         },
         "fpServicePrincipalId": {
             "value": "$AZURE_FP_CLIENT_ID"
@@ -44,14 +38,8 @@ cat >secrets/parameters.json <<EOF
         "rpMode": {
             "value": "$RP_MODE"
         },
-        "rpServicePrincipalId": {
-            "value": "SET-LATER"
-        },
         "sshPublicKey": {
             "value": "$SSH_PUBLIC_KEY"
-        },
-        "vmssName": {
-            "value": "SET-LATER"
         }
     }
 }

@@ -25,7 +25,9 @@ steps:
       pull_spn_client_id=$(cat pull-spn.json | jq -r '.clientId')
       pull_spn_client_secret=$(cat pull-spn.json | jq -r '.clientSecret')
       export RP_IMAGE_AUTH=$(echo "$pull_spn_client_id:$pull_spn_client_secret" | base64 -w 0)
-      export PULL_SECRET=$(echo ${{ parameters.pullSecret }} | sed 's/"/\\\\\\"/g')
+      rm pull-spn.json
+
+      export PULL_SECRET=$(echo ${{ parameters.pullSecret }} | base64 -d -w 0)
 
       export DOMAIN_NAME=${{ parameters.domainName }}
       export AZURE_FP_CLIENT_ID=${{ parameters.azureFpClientId }}
@@ -47,6 +49,7 @@ steps:
       export AZURE_CLIENT_ID=$(cat devops-spn.json | jq -r '.clientId') 
       export AZURE_CLIENT_SECRET=$(cat devops-spn.json | jq -r '.clientSecret') 
       export AZURE_TENANT_ID=$(cat devops-spn.json | jq -r '.tenantId')
+      rm devops-spn.json
 
       ./hack/deploy/prepare-int-parameters.sh
 

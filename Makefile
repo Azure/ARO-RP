@@ -66,6 +66,7 @@ image-proxy: proxy
 
 publish-image-aro: image-aro 
 	docker push ${RP_IMAGE_ACR}.azurecr.io/aro:$(COMMIT)
+
 publish-image-fluentbit: image-fluentbit
 	docker push ${RP_IMAGE_ACR}.azurecr.io/fluentbit:1.3.9-1
 
@@ -119,4 +120,4 @@ test-python: generate pyenv${PYTHON_VERSION}
 		azdev linter && \
 		azdev style
 
-.PHONY: aro az clean client generate image-aro proxy secrets secrets-update test-go test-python
+.PHONY: aro az clean client generate image-aro proxy secrets secrets-update test-go test-python image-fluentbit publish-image-proxy publish-image-aro publish-image-fluentbit publish-image-proxy

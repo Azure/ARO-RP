@@ -1,8 +1,0 @@
-parameters:
-   kvName: ''
-   certName: ''
-   outputPath: ''
-steps:
-   - script: |
-       az keyvault secret show --vault-name ${{ parameters.kvName }} -n ${{ parameters.certName }} --query value -o tsv > ${{ parameters.outputPath }}.pem
-     displayName: "🔑 Downloading certificate ${{ parameters.certName }} and creating .pem"
