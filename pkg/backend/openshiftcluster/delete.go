@@ -7,7 +7,6 @@ import (
 	"context"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/Azure/go-autorest/autorest"
 
@@ -95,8 +94,6 @@ func (m *Manager) Delete(ctx context.Context) error {
 	}
 
 	_, err = m.billing.Patch(ctx, m.doc.ID, func(billingdoc *api.BillingDocument) error {
-		now := time.Now().UTC()
-		billingdoc.Billing.DeletionTime = &now
 		return nil
 	})
 
