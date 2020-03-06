@@ -8,5 +8,5 @@ steps:
       . secrets/env
       . ./hack/e2e/run-rp-and-e2e.sh
 
-      set_cli_context()
+      set_cli_context
     displayName: "⚙️ AZ Context Setup"
