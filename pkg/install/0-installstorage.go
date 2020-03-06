@@ -7,20 +7,13 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"reflect"
 	"strings"
-	"time"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/installconfig"
-	"github.com/openshift/installer/pkg/asset/kubeconfig"
-	"github.com/openshift/installer/pkg/asset/releaseimage"
-	"github.com/openshift/installer/pkg/asset/targets"
-	"github.com/openshift/installer/pkg/asset/tls"
-	uuid "github.com/satori/go.uuid"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -41,45 +34,7 @@ func (i *Installer) createDNS(ctx context.Context) error {
 	return i.dns.Create(ctx, i.doc.OpenShiftCluster)
 }
 
-func (i *Installer) installStorage(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) error {
-	clusterID := &installconfig.ClusterID{
-		UUID:    uuid.NewV4().String(),
-		InfraID: "aro",
-	}
-
-	g := graph{
-		reflect.TypeOf(installConfig): installConfig,
-		reflect.TypeOf(platformCreds): platformCreds,
-		reflect.TypeOf(image):         image,
-		reflect.TypeOf(clusterID):     clusterID,
-	}
-
-	i.log.Print("resolving graph")
-	for _, a := range targets.Cluster {
-		_, err := g.resolve(a)
-		if err != nil {
-			return err
-		}
-	}
-
-	ca := g[reflect.TypeOf(&tls.AdminKubeConfigSignerCertKey{})].(*tls.AdminKubeConfigSignerCertKey)
-	k := g[reflect.TypeOf(&tls.AdminKubeConfigClientCertKey{})].(*tls.AdminKubeConfigClientCertKey)
-	err := i.generateNewClientKeyAndCert(ca, k)
-	if err != nil {
-		return err
-	}
-
-	adminInternalClient := g[reflect.TypeOf(&kubeconfig.AdminInternalClient{})].(*kubeconfig.AdminInternalClient)
-	err = i.addKubeconfigContext(adminInternalClient, k.CertRaw, k.KeyRaw, "system:aro-service")
-	if err != nil {
-		return err
-	}
-
-	err = i.generateKubeconfig(adminInternalClient)
-	if err != nil {
-		return err
-	}
-
+func (i *Installer) installStorage(ctx context.Context, installConfig *installconfig.InstallConfig) error {
 	resourceGroup := stringutils.LastTokenByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
 	i.log.Print("creating resource group")
@@ -90,7 +45,7 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 	if _, ok := i.env.(env.Dev); ok {
 		group.ManagedBy = nil
 	}
-	_, err = i.groups.CreateOrUpdate(ctx, resourceGroup, group)
+	_, err := i.groups.CreateOrUpdate(ctx, resourceGroup, group)
 	if err != nil {
 		return err
 	}
@@ -207,16 +162,6 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 		}
 	}
 
-	{
-
-		// the graph is quite big so we store it in a storage account instead of
-		// in cosmosdb
-		err := i.saveGraph(ctx, g)
-		if err != nil {
-			return err
-		}
-	}
-
 	for _, subnetID := range []string{
 		i.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
 		i.doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID,
@@ -256,12 +201,5 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 		}
 	}
 
-	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		// used for the SAS token with which the bootstrap node retrieves its
-		// ignition payload
-		doc.OpenShiftCluster.Properties.Install.Now = time.Now().UTC()
-		doc.OpenShiftCluster.Properties.AdminKubeconfig = adminInternalClient.File.Data
-		return nil
-	})
 	return err
 }

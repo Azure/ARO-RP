@@ -25,7 +25,11 @@ import (
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	"github.com/openshift/installer/pkg/asset/ignition/bootstrap"
 	"github.com/openshift/installer/pkg/asset/installconfig"
+	"github.com/openshift/installer/pkg/asset/kubeconfig"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
+	"github.com/openshift/installer/pkg/asset/targets"
+	"github.com/openshift/installer/pkg/asset/tls"
+	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -140,11 +144,14 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 		api.InstallPhaseDeployStorage: {
 			action(i.createDNS),
 			action(func(ctx context.Context) error {
-				return i.installStorage(ctx, installConfig, platformCreds, image)
+				return i.installStorage(ctx, installConfig)
 			}),
 			action(i.incrInstallPhase),
 		},
 		api.InstallPhaseDeployResources: {
+			action(func(ctx context.Context) error {
+				return i.createAndStoreGraph(ctx, installConfig, platformCreds, image)
+			}),
 			action(i.installResources),
 			action(i.createPrivateEndpoint),
 			action(i.updateAPIIP),
@@ -324,6 +331,65 @@ func (i *Installer) saveGraph(ctx context.Context, g graph) error {
 	}
 
 	return graph.CreateBlockBlobFromReader(bytes.NewReader([]byte(output)), nil)
+}
+
+func (i *Installer) createAndStoreGraph(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) error {
+	clusterID := &installconfig.ClusterID{
+		UUID:    uuid.NewV4().String(),
+		InfraID: "aro",
+	}
+
+	g := graph{
+		reflect.TypeOf(installConfig): installConfig,
+		reflect.TypeOf(platformCreds): platformCreds,
+		reflect.TypeOf(image):         image,
+		reflect.TypeOf(clusterID):     clusterID,
+	}
+
+	i.log.Print("resolving graph")
+	for _, a := range targets.Cluster {
+		_, err := g.resolve(a)
+		if err != nil {
+			return err
+		}
+	}
+
+	adminInternalClient := g[reflect.TypeOf(&kubeconfig.AdminInternalClient{})].(*kubeconfig.AdminInternalClient)
+
+	ca := g[reflect.TypeOf(&tls.AdminKubeConfigSignerCertKey{})].(*tls.AdminKubeConfigSignerCertKey)
+	clientCertKey := g[reflect.TypeOf(&tls.AdminKubeConfigClientCertKey{})].(*tls.AdminKubeConfigClientCertKey)
+
+	err := i.generateNewClientKeyAndCert(ca, clientCertKey)
+	if err != nil {
+		return err
+	}
+
+	err = i.addKubeconfigContext(adminInternalClient, clientCertKey.CertRaw, clientCertKey.KeyRaw, "system:aro-service")
+	if err != nil {
+		return err
+	}
+
+	err = i.generateKubeconfig(adminInternalClient)
+	if err != nil {
+		return err
+	}
+
+	// the graph is quite big so we store it in a storage account instead of
+	// in cosmosdb
+	err = i.saveGraph(ctx, g)
+	if err != nil {
+		return err
+	}
+
+	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		// used for the SAS token with which the bootstrap node retrieves its
+		// ignition payload
+		doc.OpenShiftCluster.Properties.Install.Now = time.Now().UTC()
+		doc.OpenShiftCluster.Properties.AdminKubeconfig = adminInternalClient.File.Data
+		return nil
+	})
+
+	return nil
 }
 
 // initializeKubernetesClients initializes clients which are used

@@ -1,5 +1,8 @@
 package install
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"context"
 
@@ -12,6 +15,8 @@ func (i *Installer) addClusterAdminGroup(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	//TODO func signature doesn't allow this atm, but we should pass `name` as a param, or array of names
 	subject := rbacv1.Subject{
 		Kind: rbacv1.GroupKind,
 		Name: "system:aro-service",

@@ -1,5 +1,8 @@
 package install
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"github.com/ghodss/yaml"
 	"github.com/openshift/installer/pkg/asset"
@@ -19,7 +22,6 @@ func (i *Installer) addKubeconfigContext(adminInternalClient *kubeconfig.AdminIn
 	aroNamedContext := clientcmd.NamedContext{
 		Name: name,
 		Context: clientcmd.Context{
-			// TODO - assumes length
 			Cluster:  adminInternalClient.Config.Contexts[0].Context.Cluster,
 			AuthInfo: name,
 		},
