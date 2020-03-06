@@ -36,7 +36,7 @@ func Metrics(m metrics.Interface) func(http.Handler) http.Handler {
 					"route":       routeName,
 				})
 
-				m.EmitFloat("frontend.duration", time.Now().Sub(t).Seconds(), map[string]string{
+				m.EmitGauge("frontend.duration", time.Now().Sub(t).Milliseconds(), map[string]string{
 					"verb":        r.Method,
 					"api-version": vars["api-version"],
 					"code":        strconv.Itoa(w.(*logResponseWriter).statusCode),

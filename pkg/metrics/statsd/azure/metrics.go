@@ -52,7 +52,7 @@ func (t *tracer) StartSpan(ctx context.Context, name string) context.Context {
 func (t *tracer) EndSpan(ctx context.Context, httpStatusCode int, err error) {
 	metric := ctx.Value(contextKeyMetric).(metric)
 
-	t.m.EmitFloat("client.azure.duration", time.Now().Sub(metric.t).Seconds(), map[string]string{
+	t.m.EmitGauge("client.azure.duration", time.Now().Sub(metric.t).Milliseconds(), map[string]string{
 		"client": metric.name,
 		"code":   strconv.Itoa(httpStatusCode),
 	})

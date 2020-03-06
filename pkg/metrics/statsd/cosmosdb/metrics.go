@@ -51,7 +51,7 @@ func (t *tracerRoundTripper) RoundTrip(req *http.Request) (resp *http.Response, 
 			"path": path,
 		})
 
-		t.m.EmitFloat("client.cosmosdb.duration", time.Now().Sub(start).Seconds(), map[string]string{
+		t.m.EmitGauge("client.cosmosdb.duration", time.Now().Sub(start).Milliseconds(), map[string]string{
 			"code": strconv.Itoa(statusCode),
 			"verb": req.Method,
 			"path": path,

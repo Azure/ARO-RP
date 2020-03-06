@@ -63,7 +63,7 @@ func (ocb *openShiftClusterBackend) try(ctx context.Context) (bool, error) {
 			ocb.m.EmitGauge("backend.openshiftcluster.workers.count", int64(atomic.LoadInt32(&ocb.workers)), nil)
 			ocb.cond.Signal()
 
-			ocb.m.EmitFloat("backend.openshiftcluster.duration", time.Now().Sub(t).Seconds(), map[string]string{
+			ocb.m.EmitGauge("backend.openshiftcluster.duration", time.Now().Sub(t).Milliseconds(), map[string]string{
 				"state": string(doc.OpenShiftCluster.Properties.ProvisioningState),
 			})
 
