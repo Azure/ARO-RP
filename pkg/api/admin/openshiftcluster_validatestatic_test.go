@@ -416,12 +416,12 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 				return &OpenShiftCluster{
 					Properties: Properties{
 						Install: &Install{
-							Phase: InstallPhaseDeployStorage,
+							Phase: InstallPhaseBootstrap,
 						},
 					},
 				}
 			},
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.Install.Phase = InstallPhaseDeployResources },
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.Install.Phase = InstallPhaseRemoveBootstrap },
 			wantErr: "400: PropertyChangeNotAllowed: properties.install.phase: Changing property 'properties.install.phase' is not allowed.",
 		},
 		{

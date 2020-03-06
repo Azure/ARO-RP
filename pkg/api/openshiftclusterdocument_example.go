@@ -66,7 +66,7 @@ func ExampleOpenShiftClusterDocument() *OpenShiftClusterDocument {
 				},
 				Install: &Install{
 					Now:   time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
-					Phase: InstallPhaseDeployStorage,
+					Phase: InstallPhaseBootstrap,
 				},
 				StorageSuffix:     "rexs1",
 				SSHKey:            SecureBytes("ssh-key"),
