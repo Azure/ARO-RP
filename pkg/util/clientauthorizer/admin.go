@@ -17,6 +17,10 @@ import (
 // contain a valid client certificate signed by `caBundlePath` and
 // the client certificate's CommonName equals `clientCertCommonName`.
 func NewAdmin(log *logrus.Entry, caBundlePath, clientCertCommonName string) (ClientAuthorizer, error) {
+	if clientCertCommonName == "" {
+		return nil, fmt.Errorf("client cert common name is empty")
+	}
+
 	authorizer := &admin{
 		clientCertCommonName: clientCertCommonName,
 
@@ -28,6 +32,7 @@ func NewAdmin(log *logrus.Entry, caBundlePath, clientCertCommonName string) (Cli
 	if err != nil {
 		return nil, err
 	}
+
 	return authorizer, nil
 }
 
@@ -57,8 +62,8 @@ func (a *admin) readCABundle(caBundlePath string) error {
 
 func (a *admin) IsAuthorized(cs *tls.ConnectionState) bool {
 	if a.roots == nil {
-		// Should never happen
-		a.log.Error("no CA certificate")
+		// Should never happen.  Do not fall back to system CA bundle.
+		a.log.Error("no CA certificate configured")
 		return false
 	}
 
