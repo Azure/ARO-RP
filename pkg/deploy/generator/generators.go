@@ -278,6 +278,8 @@ func (g *generator) rpTemplate() *arm.Template {
 			"rpMode",
 			"sshPublicKey",
 			"vmssName",
+			"adminApiCaBundle",
+			"adminApiClientCertCommonName",
 		)
 	} else {
 		params = append(params,

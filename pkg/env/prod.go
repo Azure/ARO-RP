@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net"
+	"os"
 	"strings"
 	"time"
 
@@ -52,23 +53,25 @@ type prod struct {
 	clustersGenevaLoggingPrivateKey    *rsa.PrivateKey
 	clustersGenevaLoggingConfigVersion string
 	clustersGenevaLoggingEnvironment   string
+
+	log *logrus.Entry
 }
 
-func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata, armClientAuthorizer, adminClientAuthorizer clientauthorizer.ClientAuthorizer) (*prod, error) {
+func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata) (*prod, error) {
 	kvAuthorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(azure.PublicCloud.ResourceIdentifiers.KeyVault)
 	if err != nil {
 		return nil, err
 	}
 
 	p := &prod{
-		InstanceMetadata:      instancemetadata,
-		armClientAuthorizer:   armClientAuthorizer,
-		adminClientAuthorizer: adminClientAuthorizer,
+		InstanceMetadata: instancemetadata,
 
 		keyvault: basekeyvault.New(kvAuthorizer),
 
 		clustersGenevaLoggingEnvironment:   "DiagnosticsProd",
 		clustersGenevaLoggingConfigVersion: "2.1",
+
+		log: log,
 	}
 
 	rpAuthorizer, err := auth.NewAuthorizerFromEnvironment()
@@ -114,6 +117,22 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 	p.clustersGenevaLoggingCertificate = clustersGenevaLoggingCertificates[0]
 
 	return p, nil
+}
+
+func (p *prod) InitializeAuthorizers() error {
+	p.armClientAuthorizer = clientauthorizer.NewARM(p.log)
+
+	adminClientAuthorizer, err := clientauthorizer.NewAdmin(
+		p.log,
+		"/etc/aro-rp/admin-ca-bundle.pem",
+		os.Getenv("ADMIN_API_CLIENT_CERT_COMMON_NAME"),
+	)
+	if err != nil {
+		return err
+	}
+
+	p.adminClientAuthorizer = adminClientAuthorizer
+	return nil
 }
 
 func (p *prod) ArmClientAuthorizer() clientauthorizer.ClientAuthorizer {
