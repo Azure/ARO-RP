@@ -5,7 +5,6 @@ package e2e
 
 import (
 	"context"
-	"os"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -13,9 +12,6 @@ import (
 
 var _ = Describe("List operations", func() {
 	Specify("the correct static operations are returned", func() {
-		if os.Getenv("RP_MODE") != "development" {
-			Skip("Operations api is unreachable calling through ARM. Skipping test.")
-		}
 		opList, err := Clients.Operations.List(context.Background())
 		Expect(err).NotTo(HaveOccurred())
 		Expect(len(opList) > 0).To(BeTrue())
