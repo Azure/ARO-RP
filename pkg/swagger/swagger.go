@@ -56,7 +56,7 @@ func Run(outputDir string) error {
 		Get: &Operation{
 			Tags:        []string{"Operations"},
 			Summary:     "Lists all of the available RP operations.",
-			Description: "Lists all of the available RP operations.  The operation returns the operations.",
+			Description: "Lists all of the available RP operations.  The operation returns the RP operations.",
 			OperationID: "Operations_List",
 			Parameters:  populateParameters(0, "Operation", "Operation"),
 			Responses:   populateResponses("OperationList", false, http.StatusOK),

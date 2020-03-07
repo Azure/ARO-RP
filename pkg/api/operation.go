@@ -3,13 +3,13 @@ package api
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-// OperationList represents an operation list.
+// OperationList represents an RP operation list.
 type OperationList struct {
 	// List of operations supported by the resource provider.
 	Operations []Operation `json:"value"`
 }
 
-// Operation represents an operation.
+// Operation represents an RP operation.
 type Operation struct {
 	// Operation name: {provider}/{resource}/{operation}.
 	Name string `json:"name,omitempty"`
