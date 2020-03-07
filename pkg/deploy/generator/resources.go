@@ -23,9 +23,9 @@ import (
 func (g *generator) managedIdentity() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtmsi.Identity{
+			Type:     "Microsoft.ManagedIdentity/userAssignedIdentities",
 			Name:     to.StringPtr("rp-identity"),
 			Location: to.StringPtr("[resourceGroup().location]"),
-			Type:     "Microsoft.ManagedIdentity/userAssignedIdentities",
 		},
 		APIVersion: apiVersions["msi"],
 	}
