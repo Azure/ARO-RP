@@ -24,7 +24,7 @@ func TestCreate(t *testing.T) {
 		ID: "id",
 		OpenShiftCluster: &api.OpenShiftCluster{
 			Location: "eastus",
-			Properties: api.Properties{
+			Properties: api.OpenShiftClusterProperties{
 				ClusterProfile: api.ClusterProfile{
 					ResourceGroupID: "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup",
 				},

@@ -82,7 +82,7 @@ func TestGetAsyncOperationResult(t *testing.T) {
 						ID:   "fakeClusterID",
 						Name: "resourceName",
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-						Properties: api.Properties{
+						Properties: api.OpenShiftClusterProperties{
 							ServicePrincipalProfile: api.ServicePrincipalProfile{
 								ClientSecret: "clientSecret",
 							},

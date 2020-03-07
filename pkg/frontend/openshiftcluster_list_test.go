@@ -82,7 +82,7 @@ func TestListOpenShiftCluster(t *testing.T) {
 								ID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1", mockSubID),
 								Name: "resourceName1",
 								Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-								Properties: api.Properties{
+								Properties: api.OpenShiftClusterProperties{
 									ServicePrincipalProfile: api.ServicePrincipalProfile{
 										ClientSecret: "clientSecret1",
 									},
@@ -94,7 +94,7 @@ func TestListOpenShiftCluster(t *testing.T) {
 								ID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName2", mockSubID),
 								Name: "resourceName2",
 								Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-								Properties: api.Properties{
+								Properties: api.OpenShiftClusterProperties{
 									ServicePrincipalProfile: api.ServicePrincipalProfile{
 										ClientSecret: "clientSecret2",
 									},

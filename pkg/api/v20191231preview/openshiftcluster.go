@@ -27,14 +27,14 @@ type OpenShiftCluster struct {
 	Tags Tags `json:"tags,omitempty" mutable:"true"`
 
 	// The cluster properties.
-	Properties Properties `json:"properties,omitempty"`
+	Properties OpenShiftClusterProperties `json:"properties,omitempty"`
 }
 
 // Tags represents an OpenShift cluster's tags.
 type Tags map[string]string
 
-// Properties represents an OpenShift cluster's properties.
-type Properties struct {
+// OpenShiftClusterProperties represents an OpenShift cluster's properties.
+type OpenShiftClusterProperties struct {
 	// The cluster provisioning state (immutable).
 	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"`
 

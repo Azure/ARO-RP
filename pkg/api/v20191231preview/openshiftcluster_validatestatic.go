@@ -70,7 +70,7 @@ func (sv *openShiftClusterStaticValidator) validate(oc *OpenShiftCluster, isCrea
 	return sv.validateProperties("properties", &oc.Properties, isCreate)
 }
 
-func (sv *openShiftClusterStaticValidator) validateProperties(path string, p *Properties, isCreate bool) error {
+func (sv *openShiftClusterStaticValidator) validateProperties(path string, p *OpenShiftClusterProperties, isCreate bool) error {
 	switch p.ProvisioningState {
 	case ProvisioningStateCreating, ProvisioningStateUpdating,
 		ProvisioningStateDeleting, ProvisioningStateSucceeded,

@@ -13,12 +13,12 @@ type OpenShiftCluster struct {
 
 	// ID, Name and Type are cased as the user provided them at create time.
 	// ID, Name, Type and Location are immutable.
-	ID         string            `json:"id,omitempty"`
-	Name       string            `json:"name,omitempty"`
-	Type       string            `json:"type,omitempty"`
-	Location   string            `json:"location,omitempty"`
-	Tags       map[string]string `json:"tags,omitempty"`
-	Properties Properties        `json:"properties,omitempty"`
+	ID         string                     `json:"id,omitempty"`
+	Name       string                     `json:"name,omitempty"`
+	Type       string                     `json:"type,omitempty"`
+	Location   string                     `json:"location,omitempty"`
+	Tags       map[string]string          `json:"tags,omitempty"`
+	Properties OpenShiftClusterProperties `json:"properties,omitempty"`
 }
 
 // SecureBytes represents an encrypted []byte
@@ -27,8 +27,8 @@ type SecureBytes []byte
 // SecureString represents an encrypted string
 type SecureString string
 
-// Properties represents an OpenShift cluster's properties
-type Properties struct {
+// OpenShiftClusterProperties represents an OpenShift cluster's properties
+type OpenShiftClusterProperties struct {
 	MissingFields
 
 	// Provisioning state machine:
