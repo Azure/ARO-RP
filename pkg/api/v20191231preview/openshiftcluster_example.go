@@ -12,9 +12,18 @@ func exampleOpenShiftCluster() *OpenShiftCluster {
 	return (&openShiftClusterConverter{}).ToExternal(doc.OpenShiftCluster).(*OpenShiftCluster)
 }
 
-// ExampleOpenShiftClusterParameter returns an example OpenShiftCluster object
-// that an end-user might send to create a cluster in a PUT or PATCH request
-func ExampleOpenShiftClusterParameter() *OpenShiftCluster {
+// ExampleOpenShiftClusterPatchParameter returns an example OpenShiftCluster
+// object that an end-user might send to create a cluster in a PATCH request
+func ExampleOpenShiftClusterPatchParameter() *OpenShiftCluster {
+	oc := ExampleOpenShiftClusterPutParameter()
+	oc.Location = ""
+
+	return oc
+}
+
+// ExampleOpenShiftClusterPutParameter returns an example OpenShiftCluster
+// object that an end-user might send to create a cluster in a PUT request
+func ExampleOpenShiftClusterPutParameter() *OpenShiftCluster {
 	oc := exampleOpenShiftCluster()
 	oc.ID = ""
 	oc.Name = ""

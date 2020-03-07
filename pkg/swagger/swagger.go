@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"reflect"
 )
 
 func Run(outputDir string) error {
@@ -76,13 +77,35 @@ func Run(outputDir string) error {
 	}
 
 	for _, azureResource := range []string{"OpenShiftCluster"} {
+		def, err := deepCopy(s.Definitions[azureResource])
+		if err != nil {
+			return err
+		}
+		update := def.(*Schema)
+
+		var properties []NameSchema
+
+		for _, property := range s.Definitions[azureResource].Properties {
+			switch property.Name {
+			case "id", "name", "type", "location":
+			case "properties":
+				property.Schema.ClientFlatten = true
+				fallthrough
+			default:
+				properties = append(properties, property)
+			}
+		}
+
+		update.Properties = properties
+		s.Definitions[azureResource+"Update"] = update
+
 		s.Definitions[azureResource].AllOf = []Schema{
 			{
 				Ref: "../../../../../common-types/resource-management/v1/types.json#/definitions/TrackedResource",
 			},
 		}
 
-		var properties []NameSchema
+		properties = nil
 
 		for _, property := range s.Definitions[azureResource].Properties {
 			if property.Name == "properties" {
@@ -93,8 +116,6 @@ func Run(outputDir string) error {
 
 		s.Definitions[azureResource].Properties = properties
 	}
-
-	delete(s.Definitions, "Tags")
 
 	b, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
@@ -109,4 +130,19 @@ func Run(outputDir string) error {
 	}
 
 	return ioutil.WriteFile(outputDir+"/redhatopenshift.json", b, 0666)
+}
+
+func deepCopy(v interface{}) (interface{}, error) {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+
+	w := reflect.New(reflect.TypeOf(v)).Interface()
+	err = json.Unmarshal(b, w)
+	if err != nil {
+		return nil, err
+	}
+
+	return reflect.ValueOf(w).Elem().Interface(), nil
 }
