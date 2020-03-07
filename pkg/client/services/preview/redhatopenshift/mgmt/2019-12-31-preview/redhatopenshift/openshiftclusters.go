@@ -112,9 +112,8 @@ func (client OpenShiftClustersClient) CreateOrUpdatePreparer(ctx context.Context
 // CreateOrUpdateSender sends the CreateOrUpdate request. The method will close the
 // http.Response Body if it receives an error.
 func (client OpenShiftClustersClient) CreateOrUpdateSender(req *http.Request) (future OpenShiftClustersCreateOrUpdateFuture, err error) {
-	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
 	var resp *http.Response
-	resp, err = autorest.SendWithSender(client, req, sd...)
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}
@@ -200,9 +199,8 @@ func (client OpenShiftClustersClient) DeletePreparer(ctx context.Context, resour
 // DeleteSender sends the Delete request. The method will close the
 // http.Response Body if it receives an error.
 func (client OpenShiftClustersClient) DeleteSender(req *http.Request) (future OpenShiftClustersDeleteFuture, err error) {
-	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
 	var resp *http.Response
-	resp, err = autorest.SendWithSender(client, req, sd...)
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}
@@ -293,8 +291,7 @@ func (client OpenShiftClustersClient) GetPreparer(ctx context.Context, resourceG
 // GetSender sends the Get request. The method will close the
 // http.Response Body if it receives an error.
 func (client OpenShiftClustersClient) GetSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // GetResponder handles the response to the Get request. The method always
@@ -312,13 +309,13 @@ func (client OpenShiftClustersClient) GetResponder(resp *http.Response) (result 
 
 // List lists OpenShift clusters in the specified subscription.  The operation returns properties of each OpenShift
 // cluster.
-func (client OpenShiftClustersClient) List(ctx context.Context) (result OpenShiftClusterList, err error) {
+func (client OpenShiftClustersClient) List(ctx context.Context) (result OpenShiftClusterListPage, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/OpenShiftClustersClient.List")
 		defer func() {
 			sc := -1
-			if result.Response.Response != nil {
-				sc = result.Response.Response.StatusCode
+			if result.oscl.Response.Response != nil {
+				sc = result.oscl.Response.Response.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -329,6 +326,7 @@ func (client OpenShiftClustersClient) List(ctx context.Context) (result OpenShif
 		return result, validation.NewError("redhatopenshift.OpenShiftClustersClient", "List", err.Error())
 	}
 
+	result.fn = client.listNextResults
 	req, err := client.ListPreparer(ctx)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "List", nil, "Failure preparing request")
@@ -337,12 +335,12 @@ func (client OpenShiftClustersClient) List(ctx context.Context) (result OpenShif
 
 	resp, err := client.ListSender(req)
 	if err != nil {
-		result.Response = autorest.Response{Response: resp}
+		result.oscl.Response = autorest.Response{Response: resp}
 		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "List", resp, "Failure sending request")
 		return
 	}
 
-	result, err = client.ListResponder(resp)
+	result.oscl, err = client.ListResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "List", resp, "Failure responding to request")
 	}
@@ -372,8 +370,7 @@ func (client OpenShiftClustersClient) ListPreparer(ctx context.Context) (*http.R
 // ListSender sends the List request. The method will close the
 // http.Response Body if it receives an error.
 func (client OpenShiftClustersClient) ListSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // ListResponder handles the response to the List request. The method always
@@ -389,17 +386,54 @@ func (client OpenShiftClustersClient) ListResponder(resp *http.Response) (result
 	return
 }
 
+// listNextResults retrieves the next set of results, if any.
+func (client OpenShiftClustersClient) listNextResults(ctx context.Context, lastResults OpenShiftClusterList) (result OpenShiftClusterList, err error) {
+	req, err := lastResults.openShiftClusterListPreparer(ctx)
+	if err != nil {
+		return result, autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "listNextResults", nil, "Failure preparing next results request")
+	}
+	if req == nil {
+		return
+	}
+	resp, err := client.ListSender(req)
+	if err != nil {
+		result.Response = autorest.Response{Response: resp}
+		return result, autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "listNextResults", resp, "Failure sending next results request")
+	}
+	result, err = client.ListResponder(resp)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "listNextResults", resp, "Failure responding to next results request")
+	}
+	return
+}
+
+// ListComplete enumerates all values, automatically crossing page boundaries as required.
+func (client OpenShiftClustersClient) ListComplete(ctx context.Context) (result OpenShiftClusterListIterator, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/OpenShiftClustersClient.List")
+		defer func() {
+			sc := -1
+			if result.Response().Response.Response != nil {
+				sc = result.page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	result.page, err = client.List(ctx)
+	return
+}
+
 // ListByResourceGroup lists OpenShift clusters in the specified subscription and resource group.  The operation
 // returns properties of each OpenShift cluster.
 // Parameters:
 // resourceGroupName - the name of the resource group. The name is case insensitive.
-func (client OpenShiftClustersClient) ListByResourceGroup(ctx context.Context, resourceGroupName string) (result OpenShiftClusterList, err error) {
+func (client OpenShiftClustersClient) ListByResourceGroup(ctx context.Context, resourceGroupName string) (result OpenShiftClusterListPage, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/OpenShiftClustersClient.ListByResourceGroup")
 		defer func() {
 			sc := -1
-			if result.Response.Response != nil {
-				sc = result.Response.Response.StatusCode
+			if result.oscl.Response.Response != nil {
+				sc = result.oscl.Response.Response.StatusCode
 			}
 			tracing.EndSpan(ctx, sc, err)
 		}()
@@ -414,6 +448,7 @@ func (client OpenShiftClustersClient) ListByResourceGroup(ctx context.Context, r
 		return result, validation.NewError("redhatopenshift.OpenShiftClustersClient", "ListByResourceGroup", err.Error())
 	}
 
+	result.fn = client.listByResourceGroupNextResults
 	req, err := client.ListByResourceGroupPreparer(ctx, resourceGroupName)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "ListByResourceGroup", nil, "Failure preparing request")
@@ -422,12 +457,12 @@ func (client OpenShiftClustersClient) ListByResourceGroup(ctx context.Context, r
 
 	resp, err := client.ListByResourceGroupSender(req)
 	if err != nil {
-		result.Response = autorest.Response{Response: resp}
+		result.oscl.Response = autorest.Response{Response: resp}
 		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "ListByResourceGroup", resp, "Failure sending request")
 		return
 	}
 
-	result, err = client.ListByResourceGroupResponder(resp)
+	result.oscl, err = client.ListByResourceGroupResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "ListByResourceGroup", resp, "Failure responding to request")
 	}
@@ -458,8 +493,7 @@ func (client OpenShiftClustersClient) ListByResourceGroupPreparer(ctx context.Co
 // ListByResourceGroupSender sends the ListByResourceGroup request. The method will close the
 // http.Response Body if it receives an error.
 func (client OpenShiftClustersClient) ListByResourceGroupSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // ListByResourceGroupResponder handles the response to the ListByResourceGroup request. The method always
@@ -472,6 +506,43 @@ func (client OpenShiftClustersClient) ListByResourceGroupResponder(resp *http.Re
 		autorest.ByUnmarshallingJSON(&result),
 		autorest.ByClosing())
 	result.Response = autorest.Response{Response: resp}
+	return
+}
+
+// listByResourceGroupNextResults retrieves the next set of results, if any.
+func (client OpenShiftClustersClient) listByResourceGroupNextResults(ctx context.Context, lastResults OpenShiftClusterList) (result OpenShiftClusterList, err error) {
+	req, err := lastResults.openShiftClusterListPreparer(ctx)
+	if err != nil {
+		return result, autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "listByResourceGroupNextResults", nil, "Failure preparing next results request")
+	}
+	if req == nil {
+		return
+	}
+	resp, err := client.ListByResourceGroupSender(req)
+	if err != nil {
+		result.Response = autorest.Response{Response: resp}
+		return result, autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "listByResourceGroupNextResults", resp, "Failure sending next results request")
+	}
+	result, err = client.ListByResourceGroupResponder(resp)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "redhatopenshift.OpenShiftClustersClient", "listByResourceGroupNextResults", resp, "Failure responding to next results request")
+	}
+	return
+}
+
+// ListByResourceGroupComplete enumerates all values, automatically crossing page boundaries as required.
+func (client OpenShiftClustersClient) ListByResourceGroupComplete(ctx context.Context, resourceGroupName string) (result OpenShiftClusterListIterator, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/OpenShiftClustersClient.ListByResourceGroup")
+		defer func() {
+			sc := -1
+			if result.Response().Response.Response != nil {
+				sc = result.page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	result.page, err = client.ListByResourceGroup(ctx, resourceGroupName)
 	return
 }
 
@@ -546,8 +617,7 @@ func (client OpenShiftClustersClient) ListCredentialsPreparer(ctx context.Contex
 // ListCredentialsSender sends the ListCredentials request. The method will close the
 // http.Response Body if it receives an error.
 func (client OpenShiftClustersClient) ListCredentialsSender(req *http.Request) (*http.Response, error) {
-	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
-	return autorest.SendWithSender(client, req, sd...)
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
 }
 
 // ListCredentialsResponder handles the response to the ListCredentials request. The method always
@@ -569,7 +639,7 @@ func (client OpenShiftClustersClient) ListCredentialsResponder(resp *http.Respon
 // resourceGroupName - the name of the resource group. The name is case insensitive.
 // resourceName - the name of the OpenShift cluster resource.
 // parameters - the OpenShift cluster resource.
-func (client OpenShiftClustersClient) Update(ctx context.Context, resourceGroupName string, resourceName string, parameters OpenShiftCluster) (result OpenShiftClustersUpdateFuture, err error) {
+func (client OpenShiftClustersClient) Update(ctx context.Context, resourceGroupName string, resourceName string, parameters OpenShiftClusterUpdate) (result OpenShiftClustersUpdateFuture, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/OpenShiftClustersClient.Update")
 		defer func() {
@@ -606,7 +676,7 @@ func (client OpenShiftClustersClient) Update(ctx context.Context, resourceGroupN
 }
 
 // UpdatePreparer prepares the Update request.
-func (client OpenShiftClustersClient) UpdatePreparer(ctx context.Context, resourceGroupName string, resourceName string, parameters OpenShiftCluster) (*http.Request, error) {
+func (client OpenShiftClustersClient) UpdatePreparer(ctx context.Context, resourceGroupName string, resourceName string, parameters OpenShiftClusterUpdate) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
 		"resourceGroupName": autorest.Encode("path", resourceGroupName),
 		"resourceName":      autorest.Encode("path", resourceName),
@@ -631,9 +701,8 @@ func (client OpenShiftClustersClient) UpdatePreparer(ctx context.Context, resour
 // UpdateSender sends the Update request. The method will close the
 // http.Response Body if it receives an error.
 func (client OpenShiftClustersClient) UpdateSender(req *http.Request) (future OpenShiftClustersUpdateFuture, err error) {
-	sd := autorest.GetSendDecorators(req.Context(), azure.DoRetryWithRegistration(client.Client))
 	var resp *http.Response
-	resp, err = autorest.SendWithSender(client, req, sd...)
+	resp, err = client.Send(req, azure.DoRetryWithRegistration(client.Client))
 	if err != nil {
 		return
 	}

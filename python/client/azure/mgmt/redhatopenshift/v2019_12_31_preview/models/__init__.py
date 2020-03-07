@@ -32,9 +32,8 @@ try:
     from ._models_py3 import NetworkProfile
     from ._models_py3 import OpenShiftCluster
     from ._models_py3 import OpenShiftClusterCredentials
-    from ._models_py3 import OpenShiftClusterList
+    from ._models_py3 import OpenShiftClusterUpdate
     from ._models_py3 import Operation
-    from ._models_py3 import OperationList
     from ._models_py3 import ProxyResource
     from ._models_py3 import Resource
     from ._models_py3 import ServicePrincipalProfile
@@ -53,14 +52,15 @@ except (SyntaxError, ImportError):
     from ._models import NetworkProfile
     from ._models import OpenShiftCluster
     from ._models import OpenShiftClusterCredentials
-    from ._models import OpenShiftClusterList
+    from ._models import OpenShiftClusterUpdate
     from ._models import Operation
-    from ._models import OperationList
     from ._models import ProxyResource
     from ._models import Resource
     from ._models import ServicePrincipalProfile
     from ._models import TrackedResource
     from ._models import WorkerProfile
+from ._paged_models import OpenShiftClusterPaged
+from ._paged_models import OperationPaged
 
 __all__ = [
     'APIServerProfile',
@@ -75,12 +75,13 @@ __all__ = [
     'NetworkProfile',
     'OpenShiftCluster',
     'OpenShiftClusterCredentials',
-    'OpenShiftClusterList',
+    'OpenShiftClusterUpdate',
     'Operation',
-    'OperationList',
     'ProxyResource',
     'Resource',
     'ServicePrincipalProfile',
     'TrackedResource',
     'WorkerProfile',
+    'OperationPaged',
+    'OpenShiftClusterPaged',
 ]
