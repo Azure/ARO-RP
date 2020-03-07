@@ -78,38 +78,11 @@ func Run(outputDir string) error {
 	for _, azureResource := range []string{"OpenShiftCluster"} {
 		s.Definitions[azureResource].AllOf = []Schema{
 			{
-				Ref: "../../../../../common-types/resource-management/v1/types.json#/definitions/Resource",
+				Ref: "../../../../../common-types/resource-management/v1/types.json#/definitions/TrackedResource",
 			},
 		}
 
-		properties := []NameSchema{
-			{
-				Name: "tags",
-				Schema: &Schema{
-					Description: "Resource tags.",
-					Type:        "object",
-					AdditionalProperties: &Schema{
-						Type: "string",
-					},
-					Mutability: []string{
-						"read",
-						"create",
-						"update",
-					},
-				},
-			},
-			{
-				Name: "location",
-				Schema: &Schema{
-					Description: "The geo-location where the resource lives",
-					Type:        "string",
-					Mutability: []string{
-						"read",
-						"create",
-					},
-				},
-			},
-		}
+		var properties []NameSchema
 
 		for _, property := range s.Definitions[azureResource].Properties {
 			if property.Name == "properties" {
