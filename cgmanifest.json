@@ -22,7 +22,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "0820c0553d6c410603056869f7b0e52d61ce5bee",
+                    "commitHash": "58f0a1b3cf842e1d702da8226e100f726ec26579",
                     "repositoryUrl": "https://github.com/Azure/azure-sdk-for-go/"
                 }
             }
@@ -31,7 +31,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "20a15b4e99645bc30a1cf8de518a6e8ac331c864",
+                    "commitHash": "327ff6ce8b902f9afe648d5ea8ff6dc26c26f150",
                     "repositoryUrl": "https://github.com/Azure/go-autorest/"
                 }
             }
