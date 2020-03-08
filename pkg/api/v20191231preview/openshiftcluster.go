@@ -76,6 +76,7 @@ const (
 	ProvisioningStateFailed        ProvisioningState = "Failed"
 )
 
+// ClusterProfile represents a cluster profile.
 type ClusterProfile struct {
 	// The domain for the cluster (immutable).
 	Domain string `json:"domain,omitempty"`
@@ -87,6 +88,7 @@ type ClusterProfile struct {
 	ResourceGroupID string `json:"resourceGroupId,omitempty"`
 }
 
+// ConsoleProfile represents a console profile.
 type ConsoleProfile struct {
 	// The URL to access the cluster console (immutable).
 	URL string `json:"url,omitempty"`
