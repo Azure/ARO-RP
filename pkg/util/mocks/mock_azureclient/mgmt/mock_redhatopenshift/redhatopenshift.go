@@ -66,10 +66,10 @@ func (mr *MockOpenShiftClustersClientMockRecorder) Get(arg0, arg1, arg2 interfac
 }
 
 // List mocks base method
-func (m *MockOpenShiftClustersClient) List(arg0 context.Context) (redhatopenshift.OpenShiftClusterList, error) {
+func (m *MockOpenShiftClustersClient) List(arg0 context.Context) ([]redhatopenshift.OpenShiftCluster, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List", arg0)
-	ret0, _ := ret[0].(redhatopenshift.OpenShiftClusterList)
+	ret0, _ := ret[0].([]redhatopenshift.OpenShiftCluster)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -81,10 +81,10 @@ func (mr *MockOpenShiftClustersClientMockRecorder) List(arg0 interface{}) *gomoc
 }
 
 // ListByResourceGroup mocks base method
-func (m *MockOpenShiftClustersClient) ListByResourceGroup(arg0 context.Context, arg1 string) (redhatopenshift.OpenShiftClusterList, error) {
+func (m *MockOpenShiftClustersClient) ListByResourceGroup(arg0 context.Context, arg1 string) ([]redhatopenshift.OpenShiftCluster, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListByResourceGroup", arg0, arg1)
-	ret0, _ := ret[0].(redhatopenshift.OpenShiftClusterList)
+	ret0, _ := ret[0].([]redhatopenshift.OpenShiftCluster)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -134,10 +134,10 @@ func (m *MockOperationsClient) EXPECT() *MockOperationsClientMockRecorder {
 }
 
 // List mocks base method
-func (m *MockOperationsClient) List(arg0 context.Context) (redhatopenshift.OperationList, error) {
+func (m *MockOperationsClient) List(arg0 context.Context) ([]redhatopenshift.Operation, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List", arg0)
-	ret0, _ := ret[0].(redhatopenshift.OperationList)
+	ret0, _ := ret[0].([]redhatopenshift.Operation)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

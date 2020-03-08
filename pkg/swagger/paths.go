@@ -107,6 +107,9 @@ func populateTopLevelPaths(resourceProviderNamespace, resourceType, friendlyName
 			OperationID: strings.Title(resourceType) + "s_List",
 			Parameters:  populateParameters(1, strings.Title(resourceType), friendlyName),
 			Responses:   populateResponses(strings.Title(resourceType)+"List", false, http.StatusOK),
+			Pageable: &Pageable{
+				NextLinkName: "nextLink",
+			},
 		},
 	}
 
@@ -118,6 +121,9 @@ func populateTopLevelPaths(resourceProviderNamespace, resourceType, friendlyName
 			OperationID: strings.Title(resourceType) + "s_ListByResourceGroup",
 			Parameters:  populateParameters(2, strings.Title(resourceType), friendlyName),
 			Responses:   populateResponses(strings.Title(resourceType)+"List", false, http.StatusOK),
+			Pageable: &Pageable{
+				NextLinkName: "nextLink",
+			},
 		},
 	}
 

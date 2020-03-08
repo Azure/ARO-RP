@@ -12,6 +12,8 @@ import (
 // OpenShiftClustersClientAddons contains addons for OpenShiftClustersClient
 type OpenShiftClustersClientAddons interface {
 	CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, resourceName string, parameters redhatopenshift.OpenShiftCluster) error
+	List(ctx context.Context) (clusters []redhatopenshift.OpenShiftCluster, err error)
+	ListByResourceGroup(ctx context.Context, resourceGroupName string) (clusters []redhatopenshift.OpenShiftCluster, err error)
 }
 
 func (c *openShiftClustersClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, resourceName string, parameters redhatopenshift.OpenShiftCluster) error {
@@ -21,4 +23,40 @@ func (c *openShiftClustersClient) CreateOrUpdateAndWait(ctx context.Context, res
 	}
 
 	return future.WaitForCompletionRef(ctx, c.Client)
+}
+
+func (c *openShiftClustersClient) List(ctx context.Context) (clusters []redhatopenshift.OpenShiftCluster, err error) {
+	page, err := c.OpenShiftClustersClient.List(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for page.NotDone() {
+		clusters = append(clusters, page.Values()...)
+
+		err = page.NextWithContext(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return clusters, nil
+}
+
+func (c *openShiftClustersClient) ListByResourceGroup(ctx context.Context, resourceGroupName string) (clusters []redhatopenshift.OpenShiftCluster, err error) {
+	page, err := c.OpenShiftClustersClient.ListByResourceGroup(ctx, resourceGroupName)
+	if err != nil {
+		return nil, err
+	}
+
+	for page.NotDone() {
+		clusters = append(clusters, page.Values()...)
+
+		err = page.NextWithContext(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return clusters, nil
 }

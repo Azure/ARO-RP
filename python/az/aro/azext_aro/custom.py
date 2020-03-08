@@ -120,8 +120,8 @@ def aro_delete(client, resource_group_name, resource_name, no_wait=False):
 
 def aro_list(client, resource_group_name=None):
     if resource_group_name:
-        return client.list_by_resource_group(resource_group_name).value
-    return client.list().value
+        return client.list_by_resource_group(resource_group_name)
+    return client.list()
 
 
 def aro_show(client, resource_group_name, resource_name):

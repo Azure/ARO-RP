@@ -61,6 +61,9 @@ func Run(outputDir string) error {
 			OperationID: "Operations_List",
 			Parameters:  populateParameters(0, "Operation", "Operation"),
 			Responses:   populateResponses("OperationList", false, http.StatusOK),
+			Pageable: &Pageable{
+				NextLinkName: "nextLink",
+			},
 		},
 	}
 

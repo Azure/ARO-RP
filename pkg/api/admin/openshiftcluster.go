@@ -11,6 +11,9 @@ import (
 type OpenShiftClusterList struct {
 	// The list of OpenShift clusters.
 	OpenShiftClusters []*OpenShiftCluster `json:"value"`
+
+	// The link used to get the next page of operations.
+	NextLink string `json:"nextLink,omitempty"`
 }
 
 // OpenShiftCluster represents an Azure Red Hat OpenShift cluster.

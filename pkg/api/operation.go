@@ -7,6 +7,9 @@ package api
 type OperationList struct {
 	// List of operations supported by the resource provider.
 	Operations []Operation `json:"value"`
+
+	// The link used to get the next page of operations.
+	NextLink string `json:"nextLink,omitempty"`
 }
 
 // Operation represents an RP operation.

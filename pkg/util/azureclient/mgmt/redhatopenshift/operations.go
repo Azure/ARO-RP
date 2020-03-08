@@ -4,7 +4,6 @@ package redhatopenshift
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
 	"crypto/tls"
 	"net/http"
 	"os"
@@ -16,7 +15,7 @@ import (
 
 // OperationsClient is a minimal interface for azure OperationsClient
 type OperationsClient interface {
-	List(ctx context.Context) (result redhatopenshift.OperationList, err error)
+	OperationsClientAddons
 }
 
 type operationsClient struct {

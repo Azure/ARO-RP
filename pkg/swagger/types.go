@@ -88,6 +88,7 @@ type Operation struct {
 
 	LongRunningOperation bool                 `json:"x-ms-long-running-operation,omitempty"`
 	Examples             map[string]Reference `json:"x-ms-examples,omitempty"`
+	Pageable             *Pageable            `json:"x-ms-pageable,omitempty"`
 }
 
 // ExternalDocumentation represents an External Documentation object
@@ -95,6 +96,11 @@ type Operation struct {
 type ExternalDocumentation struct {
 	Description string `json:"description,omitempty"`
 	URL         string `json:"url,omitempty"`
+}
+
+// Pageable represents a Pageable object
+type Pageable struct {
+	NextLinkName string `json:"nextLinkName,omitempty"`
 }
 
 // Parameter represents a Parameter object
@@ -239,8 +245,7 @@ type Schema struct {
 	ExternalDocs         *ExternalDocumentation `json:"externalDocs,omitempty"`
 	Example              interface{}            `json:"example,omitempty"`
 
-	ClientFlatten bool     `json:"x-ms-client-flatten,omitempty"`
-	Mutability    []string `json:"x-ms-mutability,omitempty"`
+	ClientFlatten bool `json:"x-ms-client-flatten,omitempty"`
 }
 
 // XML represents an XML object
