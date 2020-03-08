@@ -23,7 +23,7 @@ func (c *zonesClient) ListByResourceGroup(ctx context.Context, resourceGroupName
 	for page.NotDone() {
 		zones = append(zones, page.Values()...)
 
-		err = page.Next()
+		err = page.NextWithContext(ctx)
 		if err != nil {
 			return nil, err
 		}

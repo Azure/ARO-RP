@@ -23,7 +23,7 @@ func (u *usageClient) List(ctx context.Context, location string) (result []compu
 	for page.NotDone() {
 		result = append(result, page.Values()...)
 
-		err = page.Next()
+		err = page.NextWithContext(ctx)
 		if err != nil {
 			return nil, err
 		}

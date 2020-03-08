@@ -32,7 +32,7 @@ func (c *publicIPAddressesClient) List(ctx context.Context, resourceGroupName st
 	for page.NotDone() {
 		ips = append(ips, page.Values()...)
 
-		err = page.Next()
+		err = page.NextWithContext(ctx)
 		if err != nil {
 			return nil, err
 		}

@@ -23,7 +23,7 @@ func (c *vaultsClient) ListByResourceGroup(ctx context.Context, resourceGroupNam
 	for page.NotDone() {
 		vaults = append(vaults, page.Values()...)
 
-		err = page.Next()
+		err = page.NextWithContext(ctx)
 		if err != nil {
 			return nil, err
 		}
