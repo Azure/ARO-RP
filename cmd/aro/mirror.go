@@ -46,6 +46,16 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
+	mirrorToInt := false
+	var intdstauth *types.DockerAuthConfig
+	if _, found := os.LookupEnv("INT_DST_AUTH"); found {
+		mirrorToInt = true
+		intdstauth, err = getAuth("INT_DST_AUTH")
+		if err != nil {
+			return err
+		}
+	}
+
 	srcauthGeneva, err := getAuth("SRC_AUTH_GENEVA")
 	if err != nil {
 		return err
@@ -98,6 +108,13 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		if err != nil {
 			log.Errorf("%s: %s\n", ref, err)
 			errorOccurred = true
+		}
+		if mirrorToInt {
+			err = pkgmirror.Copy(ctx, pkgmirror.Dest("arointsvc.azurecr.io", ref), ref, intdstauth, srcauthGeneva)
+			if err != nil {
+				log.Errorf("%s: %s\n", ref, err)
+				errorOccurred = true
+			}
 		}
 	}
 

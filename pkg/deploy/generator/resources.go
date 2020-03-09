@@ -713,7 +713,7 @@ EOF
 
 cat >/etc/sysconfig/mdm <<EOF
 MDMFRONTENDURL='$MDMFRONTENDURL'
-MDMIMAGE=arosvc.azurecr.io/genevamdm:master_31
+MDMIMAGE=${RPIMAGE%%/*}/genevamdm:master_31
 MDMSOURCEENVIRONMENT='$LOCATION'
 MDMSOURCEROLE=rp
 MDMSOURCEROLEINSTANCE='$(hostname)'
