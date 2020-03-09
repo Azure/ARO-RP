@@ -32,6 +32,11 @@ func TestIsTerminal(t *testing.T) {
 			state: ProvisioningStateUpdating,
 		},
 		{
+			name:  "AdminUpdating is Non-Terminal",
+			want:  false,
+			state: ProvisioningStateAdminUpdating,
+		},
+		{
 			name:  "Deleting is Non-Terminal",
 			want:  false,
 			state: ProvisioningStateDeleting,
