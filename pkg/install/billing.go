@@ -19,10 +19,8 @@ func (i *Installer) createBillingRecord(ctx context.Context) error {
 			Key:                       i.doc.Key,
 			ClusterResourceGroupIDKey: i.doc.ClusterResourceGroupIDKey,
 			Billing: &api.Billing{
-				TenantID:        i.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID,
-				Location:        i.doc.OpenShiftCluster.Location,
-				CreationTime:    -1,
-				LastBillingTime: -1,
+				TenantID: i.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID,
+				Location: i.doc.OpenShiftCluster.Location,
 			},
 		})
 		// If create return a conflict, this means row is already present in database, updating timestamps

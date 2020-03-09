@@ -54,10 +54,8 @@ func TestCreateBillingEntry(t *testing.T) {
 					ClusterResourceGroupIDKey: tt.openshiftdoc.ClusterResourceGroupIDKey,
 					ID:                        mockSubID,
 					Billing: &api.Billing{
-						TenantID:        tt.openshiftdoc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID,
-						Location:        tt.openshiftdoc.OpenShiftCluster.Location,
-						CreationTime:    -1,
-						LastBillingTime: -1,
+						TenantID: tt.openshiftdoc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID,
+						Location: tt.openshiftdoc.OpenShiftCluster.Location,
 					},
 				}
 
@@ -87,10 +85,8 @@ func TestCreateBillingEntry(t *testing.T) {
 					ClusterResourceGroupIDKey: tt.openshiftdoc.ClusterResourceGroupIDKey,
 					ID:                        mockSubID,
 					Billing: &api.Billing{
-						TenantID:        tt.openshiftdoc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID,
-						Location:        tt.openshiftdoc.OpenShiftCluster.Location,
-						CreationTime:    -1,
-						LastBillingTime: -1,
+						TenantID: tt.openshiftdoc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID,
+						Location: tt.openshiftdoc.OpenShiftCluster.Location,
 					},
 				}
 
@@ -121,10 +117,8 @@ func TestCreateBillingEntry(t *testing.T) {
 					ClusterResourceGroupIDKey: tt.openshiftdoc.ClusterResourceGroupIDKey,
 					ID:                        mockSubID,
 					Billing: &api.Billing{
-						TenantID:        tt.openshiftdoc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID,
-						Location:        tt.openshiftdoc.OpenShiftCluster.Location,
-						CreationTime:    -1,
-						LastBillingTime: -1,
+						TenantID: tt.openshiftdoc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID,
+						Location: tt.openshiftdoc.OpenShiftCluster.Location,
 					},
 				}
 
@@ -160,10 +154,8 @@ func TestCreateBillingEntry(t *testing.T) {
 					ClusterResourceGroupIDKey: tt.openshiftdoc.ClusterResourceGroupIDKey,
 					ID:                        mockSubID,
 					Billing: &api.Billing{
-						TenantID:        tt.openshiftdoc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID,
-						Location:        tt.openshiftdoc.OpenShiftCluster.Location,
-						CreationTime:    -1,
-						LastBillingTime: -1,
+						TenantID: tt.openshiftdoc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID,
+						Location: tt.openshiftdoc.OpenShiftCluster.Location,
 					},
 				}
 
