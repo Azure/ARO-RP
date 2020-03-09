@@ -81,8 +81,8 @@ deploy_e2e_deps() {
       --disable-private-link-service-network-policies true >/dev/null
 
     echo "########## Create Cluster SPN ##########"
-    az ad sp create-for-rbac -n "$CLUSTER" --role f3fe7bc1-0ef9-4681-a68c-c1fa285d6128 \
-        --scopes /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.Network/virtualNetworks/dev-vnet >$CLUSTERSPN
+    az ad sp create-for-rbac -n "$CLUSTER" --role contributor \
+        --scopes /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP >$CLUSTERSPN
 
     echo "########## Sleep 120 secs for SPN creation"
     sleep 120
