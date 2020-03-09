@@ -79,7 +79,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name: "provisioningState change is not allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
-					Properties: Properties{
+					Properties: OpenShiftClusterProperties{
 						ProvisioningState: ProvisioningStateSucceeded,
 					},
 				}
@@ -91,7 +91,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name: "failedProvisioningState change is not allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
-					Properties: Properties{
+					Properties: OpenShiftClusterProperties{
 						ProvisioningState:       ProvisioningStateFailed,
 						FailedProvisioningState: ProvisioningStateCreating,
 					},
@@ -104,7 +104,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name: "console url change is not allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
-					Properties: Properties{
+					Properties: OpenShiftClusterProperties{
 						ConsoleProfile: ConsoleProfile{
 							URL: "https://console-openshift-console.apps.cluster.location.aroapp.io/",
 						},
@@ -118,7 +118,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name: "domain change is not allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
-					Properties: Properties{
+					Properties: OpenShiftClusterProperties{
 						ClusterProfile: ClusterProfile{
 							Domain: "cluster.location.aroapp.io",
 						},
@@ -132,7 +132,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name: "version change is not allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
-					Properties: Properties{
+					Properties: OpenShiftClusterProperties{
 						ClusterProfile: ClusterProfile{
 							Version: "4.3.0",
 						},
@@ -146,7 +146,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name: "resource group change is not allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
-					Properties: Properties{
+					Properties: OpenShiftClusterProperties{
 						ClusterProfile: ClusterProfile{
 							ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", subscriptionID),
 						},
@@ -162,7 +162,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name: "apiServer private change is not allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
-					Properties: Properties{
+					Properties: OpenShiftClusterProperties{
 						APIServerProfile: APIServerProfile{
 							Visibility: VisibilityPublic,
 						},
@@ -178,7 +178,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name: "apiServer url change is not allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
-					Properties: Properties{
+					Properties: OpenShiftClusterProperties{
 						APIServerProfile: APIServerProfile{
 							URL: "https://api.cluster.location.aroapp.io:6443/",
 						},
@@ -192,7 +192,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name: "apiServer ip change is not allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
-					Properties: Properties{
+					Properties: OpenShiftClusterProperties{
 						APIServerProfile: APIServerProfile{
 							IP: "1.2.3.4",
 						},
@@ -206,7 +206,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name: "ingress private change is not allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
-					Properties: Properties{
+					Properties: OpenShiftClusterProperties{
 						IngressProfiles: []IngressProfile{
 							{
 								Name:       "default",
@@ -225,7 +225,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name: "ingress ip change is not allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
-					Properties: Properties{
+					Properties: OpenShiftClusterProperties{
 						IngressProfiles: []IngressProfile{
 							{
 								Name: "default",
@@ -242,7 +242,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name: "clientId change is not allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
-					Properties: Properties{
+					Properties: OpenShiftClusterProperties{
 						ServicePrincipalProfile: ServicePrincipalProfile{
 							ClientID: "clientId",
 						},
@@ -256,7 +256,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name: "tenantId change is not allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
-					Properties: Properties{
+					Properties: OpenShiftClusterProperties{
 						ServicePrincipalProfile: ServicePrincipalProfile{
 							TenantID: "tenantId",
 						},
@@ -270,7 +270,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name: "podCidr change is not allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
-					Properties: Properties{
+					Properties: OpenShiftClusterProperties{
 						NetworkProfile: NetworkProfile{
 							PodCIDR: "10.128.0.0/14",
 						},
@@ -284,7 +284,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name: "serviceCidr change is not allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
-					Properties: Properties{
+					Properties: OpenShiftClusterProperties{
 						NetworkProfile: NetworkProfile{
 							PodCIDR: "172.30.0.0/16",
 						},
@@ -298,7 +298,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name: "privateEndpointIp change is not allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
-					Properties: Properties{
+					Properties: OpenShiftClusterProperties{
 						NetworkProfile: NetworkProfile{
 							PrivateEndpointIP: "1.2.3.4",
 						},
@@ -312,7 +312,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name: "master subnetId change is not allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
-					Properties: Properties{
+					Properties: OpenShiftClusterProperties{
 						MasterProfile: MasterProfile{
 							SubnetID: fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master", subscriptionID),
 						},
@@ -328,7 +328,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name: "master vmSize change is not allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
-					Properties: Properties{
+					Properties: OpenShiftClusterProperties{
 						MasterProfile: MasterProfile{
 							VMSize: VMSizeStandardD8sV3,
 						},
@@ -344,7 +344,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name: "worker vmSize change is not allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
-					Properties: Properties{
+					Properties: OpenShiftClusterProperties{
 						WorkerProfiles: []WorkerProfile{
 							{
 								Name:   "worker",
@@ -361,7 +361,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name: "worker diskSizeGB change is not allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
-					Properties: Properties{
+					Properties: OpenShiftClusterProperties{
 						WorkerProfiles: []WorkerProfile{
 							{
 								Name:       "worker",
@@ -378,7 +378,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name: "worker subnetId change is not allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
-					Properties: Properties{
+					Properties: OpenShiftClusterProperties{
 						WorkerProfiles: []WorkerProfile{
 							{
 								Name:     "worker",
@@ -397,7 +397,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name: "workerProfiles count change is not allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
-					Properties: Properties{
+					Properties: OpenShiftClusterProperties{
 						WorkerProfiles: []WorkerProfile{
 							{
 								Name:  "worker",
@@ -414,7 +414,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name: "install phase change is not allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
-					Properties: Properties{
+					Properties: OpenShiftClusterProperties{
 						Install: &Install{
 							Phase: InstallPhaseBootstrap,
 						},
@@ -428,7 +428,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name: "install now change is not allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
-					Properties: Properties{
+					Properties: OpenShiftClusterProperties{
 						Install: &Install{
 							Now: time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC),
 						},
@@ -444,7 +444,7 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name: "storageSuffix change is not allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
-					Properties: Properties{
+					Properties: OpenShiftClusterProperties{
 						StorageSuffix: "rexs1",
 					},
 				}

@@ -7,6 +7,9 @@ package v20191231preview
 type OpenShiftClusterList struct {
 	// The list of OpenShift clusters.
 	OpenShiftClusters []*OpenShiftCluster `json:"value"`
+
+	// The link used to get the next page of operations.
+	NextLink string `json:"nextLink,omitempty"`
 }
 
 // OpenShiftCluster represents an Azure Red Hat OpenShift cluster.
@@ -27,14 +30,14 @@ type OpenShiftCluster struct {
 	Tags Tags `json:"tags,omitempty" mutable:"true"`
 
 	// The cluster properties.
-	Properties Properties `json:"properties,omitempty"`
+	Properties OpenShiftClusterProperties `json:"properties,omitempty"`
 }
 
 // Tags represents an OpenShift cluster's tags.
 type Tags map[string]string
 
-// Properties represents an OpenShift cluster's properties.
-type Properties struct {
+// OpenShiftClusterProperties represents an OpenShift cluster's properties.
+type OpenShiftClusterProperties struct {
 	// The cluster provisioning state (immutable).
 	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"`
 
@@ -76,6 +79,7 @@ const (
 	ProvisioningStateFailed        ProvisioningState = "Failed"
 )
 
+// ClusterProfile represents a cluster profile.
 type ClusterProfile struct {
 	// The domain for the cluster (immutable).
 	Domain string `json:"domain,omitempty"`
@@ -87,6 +91,7 @@ type ClusterProfile struct {
 	ResourceGroupID string `json:"resourceGroupId,omitempty"`
 }
 
+// ConsoleProfile represents a console profile.
 type ConsoleProfile struct {
 	// The URL to access the cluster console (immutable).
 	URL string `json:"url,omitempty"`

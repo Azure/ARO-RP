@@ -18,7 +18,7 @@
   revision = "3a14fb1c4737b3995174c5f4d6d08a348b9b4180"
 
 [[projects]]
-  digest = "1:e072b8b6e9ea2e1a1a119dc668f3e121b27b2a82b98f79d2b95006f78798462e"
+  digest = "1:e4dc9e19d4ac2a0f4214525b12d0641a50374b0d36c6375f573875989ad8cee1"
   name = "github.com/Azure/azure-sdk-for-go"
   packages = [
     "profiles/latest/dns/mgmt/dns",
@@ -44,11 +44,11 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "0820c0553d6c410603056869f7b0e52d61ce5bee"
-  version = "v36.2.0"
+  revision = "58f0a1b3cf842e1d702da8226e100f726ec26579"
+  version = "v40.2.0"
 
 [[projects]]
-  digest = "1:46eaa8d8d35d2004f218ad6c48b6c81e0b1c3457915f55a40831b5af3fb43b76"
+  digest = "1:0f5cec94ea46ab37f6b95e52a4b70761ada57b809059aba2d332ec0813416920"
   name = "github.com/Azure/go-autorest"
   packages = [
     "autorest",
@@ -63,8 +63,8 @@
     "tracing",
   ]
   pruneopts = "UT"
-  revision = "20a15b4e99645bc30a1cf8de518a6e8ac331c864"
-  version = "v13.3.2"
+  revision = "327ff6ce8b902f9afe648d5ea8ff6dc26c26f150"
+  version = "v13.4.0"
 
 [[projects]]
   digest = "1:9f3b30d9f8e0d7040f729b82dcbc8f0dead820a133b3147ce355fc451f32d761"
@@ -1921,10 +1921,8 @@
     "golang.org/x/tools/go/ast/astutil",
     "golang.org/x/tools/go/packages",
     "k8s.io/api/apps/v1",
-    "k8s.io/api/authorization/v1",
     "k8s.io/api/core/v1",
     "k8s.io/apimachinery/pkg/api/errors",
-    "k8s.io/apimachinery/pkg/api/resource",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/apimachinery/pkg/util/httpstream",
     "k8s.io/apimachinery/pkg/util/httpstream/spdy",

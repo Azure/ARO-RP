@@ -16,6 +16,7 @@ import (
 // n==2 list across resource group
 // n==3 action on resource not expecting input payload
 // n==4 action on resource expecting input payload
+// n==5 patch action on resource expecting input payload
 func populateParameters(n int, typ, friendlyName string) (s []interface{}) {
 	s = []interface{}{
 		Reference{
@@ -55,6 +56,10 @@ func populateParameters(n int, typ, friendlyName string) (s []interface{}) {
 				Ref: "#/definitions/" + typ,
 			},
 		})
+	}
+
+	if n > 4 {
+		s[len(s)-1].(Parameter).Schema.Ref += "Update"
 	}
 
 	return
@@ -102,6 +107,9 @@ func populateTopLevelPaths(resourceProviderNamespace, resourceType, friendlyName
 			OperationID: strings.Title(resourceType) + "s_List",
 			Parameters:  populateParameters(1, strings.Title(resourceType), friendlyName),
 			Responses:   populateResponses(strings.Title(resourceType)+"List", false, http.StatusOK),
+			Pageable: &Pageable{
+				NextLinkName: "nextLink",
+			},
 		},
 	}
 
@@ -113,6 +121,9 @@ func populateTopLevelPaths(resourceProviderNamespace, resourceType, friendlyName
 			OperationID: strings.Title(resourceType) + "s_ListByResourceGroup",
 			Parameters:  populateParameters(2, strings.Title(resourceType), friendlyName),
 			Responses:   populateResponses(strings.Title(resourceType)+"List", false, http.StatusOK),
+			Pageable: &Pageable{
+				NextLinkName: "nextLink",
+			},
 		},
 	}
 
@@ -148,7 +159,7 @@ func populateTopLevelPaths(resourceProviderNamespace, resourceType, friendlyName
 			Summary:              "Creates or updates a " + friendlyName + " with the specified subscription, resource group and resource name.",
 			Description:          "Creates or updates a " + friendlyName + " with the specified subscription, resource group and resource name.  The operation returns properties of a " + friendlyName + ".",
 			OperationID:          strings.Title(resourceType) + "s_Update",
-			Parameters:           populateParameters(4, strings.Title(resourceType), friendlyName),
+			Parameters:           populateParameters(5, strings.Title(resourceType), friendlyName),
 			Responses:            populateResponses(strings.Title(resourceType), false, http.StatusOK, http.StatusCreated),
 			LongRunningOperation: true,
 		},

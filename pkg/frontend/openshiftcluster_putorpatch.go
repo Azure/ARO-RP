@@ -68,7 +68,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 				ID:   originalPath,
 				Name: originalR.ResourceName,
 				Type: originalR.Provider + "/" + originalR.ResourceType,
-				Properties: api.Properties{
+				Properties: api.OpenShiftClusterProperties{
 					ProvisioningState: api.ProvisioningStateSucceeded,
 					ClusterProfile: api.ClusterProfile{
 						Version: version.OpenShiftVersion,
@@ -106,7 +106,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 			ID:   doc.OpenShiftCluster.ID,
 			Name: doc.OpenShiftCluster.Name,
 			Type: doc.OpenShiftCluster.Type,
-			Properties: api.Properties{
+			Properties: api.OpenShiftClusterProperties{
 				ProvisioningState: doc.OpenShiftCluster.Properties.ProvisioningState,
 				ClusterProfile: api.ClusterProfile{
 					Version: doc.OpenShiftCluster.Properties.ClusterProfile.Version,

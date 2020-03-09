@@ -19,7 +19,7 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 		Name:     oc.Name,
 		Type:     oc.Type,
 		Location: oc.Location,
-		Properties: Properties{
+		Properties: OpenShiftClusterProperties{
 			ProvisioningState:       ProvisioningState(oc.Properties.ProvisioningState),
 			FailedProvisioningState: ProvisioningState(oc.Properties.FailedProvisioningState),
 			ClusterProfile: ClusterProfile{

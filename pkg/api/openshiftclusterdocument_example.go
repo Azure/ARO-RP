@@ -20,7 +20,7 @@ func ExampleOpenShiftClusterDocument() *OpenShiftClusterDocument {
 			Tags: map[string]string{
 				"key": "value",
 			},
-			Properties: Properties{
+			Properties: OpenShiftClusterProperties{
 				ProvisioningState: ProvisioningStateSucceeded,
 				ClusterProfile: ClusterProfile{
 					Domain:          "cluster.location.aroapp.io",

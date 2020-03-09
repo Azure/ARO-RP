@@ -39,7 +39,7 @@ func writeKubeconfig(ctx context.Context, resourceID string) error {
 		return err
 	}
 
-	tokenURL, err := getTokenURLFromConsoleURL(*oc.Properties.ConsoleProfile.URL)
+	tokenURL, err := getTokenURLFromConsoleURL(*oc.OpenShiftClusterProperties.ConsoleProfile.URL)
 	if err != nil {
 		return err
 	}
@@ -49,7 +49,7 @@ func writeKubeconfig(ctx context.Context, resourceID string) error {
 		return err
 	}
 
-	adminKubeconfig := makeKubeconfig(strings.Replace(*oc.Properties.ApiserverProfile.URL, "https://", "", 1), *creds.KubeadminUsername, token, "kube-system")
+	adminKubeconfig := makeKubeconfig(strings.Replace(*oc.OpenShiftClusterProperties.ApiserverProfile.URL, "https://", "", 1), *creds.KubeadminUsername, token, "kube-system")
 
 	e := json.NewEncoder(os.Stdout)
 	e.SetIndent("", "    ")

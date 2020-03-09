@@ -184,7 +184,7 @@ class CloudErrorBody(Model):
 
 
 class ClusterProfile(Model):
-    """ClusterProfile.
+    """ClusterProfile represents a cluster profile.
 
     :param domain: The domain for the cluster (immutable).
     :type domain: str
@@ -209,7 +209,7 @@ class ClusterProfile(Model):
 
 
 class ConsoleProfile(Model):
-    """ConsoleProfile.
+    """ConsoleProfile represents a console profile.
 
     :param url: The URL to access the cluster console (immutable).
     :type url: str
@@ -322,11 +322,13 @@ class NetworkProfile(Model):
         self.service_cidr = kwargs.get('service_cidr', None)
 
 
-class OpenShiftCluster(Resource):
-    """OpenShiftCluster represents an Azure Red Hat OpenShift cluster.
+class TrackedResource(Resource):
+    """The resource model definition for a ARM tracked top level resource.
 
     Variables are only populated by the server, and will be ignored when
     sending a request.
+
+    All required parameters must be populated in order to send to Azure.
 
     :ivar id: Fully qualified resource Id for the resource. Ex -
      /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
@@ -338,7 +340,50 @@ class OpenShiftCluster(Resource):
     :vartype type: str
     :param tags: Resource tags.
     :type tags: dict[str, str]
-    :param location: The geo-location where the resource lives
+    :param location: Required. The geo-location where the resource lives
+    :type location: str
+    """
+
+    _validation = {
+        'id': {'readonly': True},
+        'name': {'readonly': True},
+        'type': {'readonly': True},
+        'location': {'required': True},
+    }
+
+    _attribute_map = {
+        'id': {'key': 'id', 'type': 'str'},
+        'name': {'key': 'name', 'type': 'str'},
+        'type': {'key': 'type', 'type': 'str'},
+        'tags': {'key': 'tags', 'type': '{str}'},
+        'location': {'key': 'location', 'type': 'str'},
+    }
+
+    def __init__(self, **kwargs):
+        super(TrackedResource, self).__init__(**kwargs)
+        self.tags = kwargs.get('tags', None)
+        self.location = kwargs.get('location', None)
+
+
+class OpenShiftCluster(TrackedResource):
+    """OpenShiftCluster represents an Azure Red Hat OpenShift cluster.
+
+    Variables are only populated by the server, and will be ignored when
+    sending a request.
+
+    All required parameters must be populated in order to send to Azure.
+
+    :ivar id: Fully qualified resource Id for the resource. Ex -
+     /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
+    :vartype id: str
+    :ivar name: The name of the resource
+    :vartype name: str
+    :ivar type: The type of the resource. Ex-
+     Microsoft.Compute/virtualMachines or Microsoft.Storage/storageAccounts.
+    :vartype type: str
+    :param tags: Resource tags.
+    :type tags: dict[str, str]
+    :param location: Required. The geo-location where the resource lives
     :type location: str
     :param provisioning_state: The cluster provisioning state (immutable).
      Possible values include: 'AdminUpdating', 'Creating', 'Deleting',
@@ -375,6 +420,7 @@ class OpenShiftCluster(Resource):
         'id': {'readonly': True},
         'name': {'readonly': True},
         'type': {'readonly': True},
+        'location': {'required': True},
     }
 
     _attribute_map = {
@@ -396,8 +442,6 @@ class OpenShiftCluster(Resource):
 
     def __init__(self, **kwargs):
         super(OpenShiftCluster, self).__init__(**kwargs)
-        self.tags = kwargs.get('tags', None)
-        self.location = kwargs.get('location', None)
         self.provisioning_state = kwargs.get('provisioning_state', None)
         self.cluster_profile = kwargs.get('cluster_profile', None)
         self.console_profile = kwargs.get('console_profile', None)
@@ -429,25 +473,71 @@ class OpenShiftClusterCredentials(Model):
         self.kubeadmin_password = kwargs.get('kubeadmin_password', None)
 
 
-class OpenShiftClusterList(Model):
-    """OpenShiftClusterList represents a list of OpenShift clusters.
+class OpenShiftClusterUpdate(Model):
+    """OpenShiftCluster represents an Azure Red Hat OpenShift cluster.
 
-    :param value: The list of OpenShift clusters.
-    :type value:
-     list[~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.OpenShiftCluster]
+    :param tags: The resource tags.
+    :type tags: dict[str, str]
+    :param provisioning_state: The cluster provisioning state (immutable).
+     Possible values include: 'AdminUpdating', 'Creating', 'Deleting',
+     'Failed', 'Succeeded', 'Updating'
+    :type provisioning_state: str or
+     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.enum
+    :param cluster_profile: The cluster profile.
+    :type cluster_profile:
+     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.ClusterProfile
+    :param console_profile: The console profile.
+    :type console_profile:
+     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.ConsoleProfile
+    :param service_principal_profile: The cluster service principal profile.
+    :type service_principal_profile:
+     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.ServicePrincipalProfile
+    :param network_profile: The cluster network profile.
+    :type network_profile:
+     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.NetworkProfile
+    :param master_profile: The cluster master profile.
+    :type master_profile:
+     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.MasterProfile
+    :param worker_profiles: The cluster worker profiles.
+    :type worker_profiles:
+     list[~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.WorkerProfile]
+    :param apiserver_profile: The cluster API server profile.
+    :type apiserver_profile:
+     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.APIServerProfile
+    :param ingress_profiles: The cluster ingress profiles.
+    :type ingress_profiles:
+     list[~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.IngressProfile]
     """
 
     _attribute_map = {
-        'value': {'key': 'value', 'type': '[OpenShiftCluster]'},
+        'tags': {'key': 'tags', 'type': '{str}'},
+        'provisioning_state': {'key': 'properties.provisioningState', 'type': 'str'},
+        'cluster_profile': {'key': 'properties.clusterProfile', 'type': 'ClusterProfile'},
+        'console_profile': {'key': 'properties.consoleProfile', 'type': 'ConsoleProfile'},
+        'service_principal_profile': {'key': 'properties.servicePrincipalProfile', 'type': 'ServicePrincipalProfile'},
+        'network_profile': {'key': 'properties.networkProfile', 'type': 'NetworkProfile'},
+        'master_profile': {'key': 'properties.masterProfile', 'type': 'MasterProfile'},
+        'worker_profiles': {'key': 'properties.workerProfiles', 'type': '[WorkerProfile]'},
+        'apiserver_profile': {'key': 'properties.apiserverProfile', 'type': 'APIServerProfile'},
+        'ingress_profiles': {'key': 'properties.ingressProfiles', 'type': '[IngressProfile]'},
     }
 
     def __init__(self, **kwargs):
-        super(OpenShiftClusterList, self).__init__(**kwargs)
-        self.value = kwargs.get('value', None)
+        super(OpenShiftClusterUpdate, self).__init__(**kwargs)
+        self.tags = kwargs.get('tags', None)
+        self.provisioning_state = kwargs.get('provisioning_state', None)
+        self.cluster_profile = kwargs.get('cluster_profile', None)
+        self.console_profile = kwargs.get('console_profile', None)
+        self.service_principal_profile = kwargs.get('service_principal_profile', None)
+        self.network_profile = kwargs.get('network_profile', None)
+        self.master_profile = kwargs.get('master_profile', None)
+        self.worker_profiles = kwargs.get('worker_profiles', None)
+        self.apiserver_profile = kwargs.get('apiserver_profile', None)
+        self.ingress_profiles = kwargs.get('ingress_profiles', None)
 
 
 class Operation(Model):
-    """Operation represents an operation.
+    """Operation represents an RP operation.
 
     :param name: Operation name: {provider}/{resource}/{operation}.
     :type name: str
@@ -465,23 +555,6 @@ class Operation(Model):
         super(Operation, self).__init__(**kwargs)
         self.name = kwargs.get('name', None)
         self.display = kwargs.get('display', None)
-
-
-class OperationList(Model):
-    """OperationList represents an operation list.
-
-    :param value: List of operations supported by the resource provider.
-    :type value:
-     list[~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.Operation]
-    """
-
-    _attribute_map = {
-        'value': {'key': 'value', 'type': '[Operation]'},
-    }
-
-    def __init__(self, **kwargs):
-        super(OperationList, self).__init__(**kwargs)
-        self.value = kwargs.get('value', None)
 
 
 class ProxyResource(Resource):
@@ -535,49 +608,6 @@ class ServicePrincipalProfile(Model):
         super(ServicePrincipalProfile, self).__init__(**kwargs)
         self.client_id = kwargs.get('client_id', None)
         self.client_secret = kwargs.get('client_secret', None)
-
-
-class TrackedResource(Resource):
-    """The resource model definition for a ARM tracked top level resource.
-
-    Variables are only populated by the server, and will be ignored when
-    sending a request.
-
-    All required parameters must be populated in order to send to Azure.
-
-    :ivar id: Fully qualified resource Id for the resource. Ex -
-     /subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}
-    :vartype id: str
-    :ivar name: The name of the resource
-    :vartype name: str
-    :ivar type: The type of the resource. Ex-
-     Microsoft.Compute/virtualMachines or Microsoft.Storage/storageAccounts.
-    :vartype type: str
-    :param tags: Resource tags.
-    :type tags: dict[str, str]
-    :param location: Required. The geo-location where the resource lives
-    :type location: str
-    """
-
-    _validation = {
-        'id': {'readonly': True},
-        'name': {'readonly': True},
-        'type': {'readonly': True},
-        'location': {'required': True},
-    }
-
-    _attribute_map = {
-        'id': {'key': 'id', 'type': 'str'},
-        'name': {'key': 'name', 'type': 'str'},
-        'type': {'key': 'type', 'type': 'str'},
-        'tags': {'key': 'tags', 'type': '{str}'},
-        'location': {'key': 'location', 'type': 'str'},
-    }
-
-    def __init__(self, **kwargs):
-        super(TrackedResource, self).__init__(**kwargs)
-        self.tags = kwargs.get('tags', None)
-        self.location = kwargs.get('location', None)
 
 
 class WorkerProfile(Model):

@@ -28,7 +28,7 @@ func TestCreate(t *testing.T) {
 	}
 
 	managedOc := &api.OpenShiftCluster{
-		Properties: api.Properties{
+		Properties: api.OpenShiftClusterProperties{
 			ClusterProfile: api.ClusterProfile{
 				Domain: "domain",
 			},
@@ -36,7 +36,7 @@ func TestCreate(t *testing.T) {
 	}
 
 	unmanagedOc := &api.OpenShiftCluster{
-		Properties: api.Properties{
+		Properties: api.OpenShiftClusterProperties{
 			ClusterProfile: api.ClusterProfile{
 				Domain: "domain.notmanaged",
 			},
@@ -151,7 +151,7 @@ func TestUpdate(t *testing.T) {
 	}
 
 	managedOc := &api.OpenShiftCluster{
-		Properties: api.Properties{
+		Properties: api.OpenShiftClusterProperties{
 			ClusterProfile: api.ClusterProfile{
 				Domain: "test.domain",
 			},
@@ -159,7 +159,7 @@ func TestUpdate(t *testing.T) {
 	}
 
 	unmanagedOc := &api.OpenShiftCluster{
-		Properties: api.Properties{
+		Properties: api.OpenShiftClusterProperties{
 			ClusterProfile: api.ClusterProfile{
 				Domain: "domain.notmanaged",
 			},
@@ -269,7 +269,7 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 	}
 
 	managedOc := &api.OpenShiftCluster{
-		Properties: api.Properties{
+		Properties: api.OpenShiftClusterProperties{
 			ClusterProfile: api.ClusterProfile{
 				Domain: "domain",
 			},
@@ -277,7 +277,7 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 	}
 
 	unmanagedOc := &api.OpenShiftCluster{
-		Properties: api.Properties{
+		Properties: api.OpenShiftClusterProperties{
 			ClusterProfile: api.ClusterProfile{
 				Domain: "domain.notmanaged",
 			},
@@ -366,7 +366,7 @@ func TestDelete(t *testing.T) {
 	}
 
 	managedOc := &api.OpenShiftCluster{
-		Properties: api.Properties{
+		Properties: api.OpenShiftClusterProperties{
 			ClusterProfile: api.ClusterProfile{
 				Domain: "domain",
 			},
@@ -374,7 +374,7 @@ func TestDelete(t *testing.T) {
 	}
 
 	unmanagedOc := &api.OpenShiftCluster{
-		Properties: api.Properties{
+		Properties: api.OpenShiftClusterProperties{
 			ClusterProfile: api.ClusterProfile{
 				Domain: "domain.notmanaged",
 			},

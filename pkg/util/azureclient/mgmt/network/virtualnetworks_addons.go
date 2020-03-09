@@ -23,7 +23,7 @@ func (c *virtualNetworksClient) List(ctx context.Context, resourceGroupName stri
 	for page.NotDone() {
 		virtualnetworks = append(virtualnetworks, page.Values()...)
 
-		err = page.Next()
+		err = page.NextWithContext(ctx)
 		if err != nil {
 			return nil, err
 		}

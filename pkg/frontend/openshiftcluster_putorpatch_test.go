@@ -131,7 +131,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						ID:   tt.resourceID,
 						Name: "resourceName",
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-						Properties: api.Properties{
+						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState: api.ProvisioningStateCreating,
 							ClusterProfile: api.ClusterProfile{
 								Version: "4.3.0",
@@ -154,7 +154,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					ID:   tt.resourceID,
 					Name: "resourceName",
 					Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-					Properties: v20191231preview.Properties{
+					Properties: v20191231preview.OpenShiftClusterProperties{
 						ProvisioningState: v20191231preview.ProvisioningStateCreating,
 						ClusterProfile: v20191231preview.ClusterProfile{
 							Version: "4.3.0",
@@ -179,7 +179,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							Name: "resourceName",
 							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 							Tags: map[string]string{"tag": "will-be-removed"},
-							Properties: api.Properties{
+							Properties: api.OpenShiftClusterProperties{
 								ProvisioningState: api.ProvisioningStateSucceeded,
 								IngressProfiles:   []api.IngressProfile{{Name: "will-be-removed"}},
 								WorkerProfiles:    []api.WorkerProfile{{Name: "will-be-removed"}},
@@ -198,7 +198,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						ID:   tt.resourceID,
 						Name: "resourceName",
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-						Properties: api.Properties{
+						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState: api.ProvisioningStateUpdating,
 							ClusterProfile: api.ClusterProfile{
 								Domain: "changed",
@@ -221,7 +221,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					ID:   tt.resourceID,
 					Name: "resourceName",
 					Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-					Properties: v20191231preview.Properties{
+					Properties: v20191231preview.OpenShiftClusterProperties{
 						ProvisioningState: v20191231preview.ProvisioningStateUpdating,
 						ClusterProfile: v20191231preview.ClusterProfile{
 							Domain: "changed",
@@ -246,7 +246,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							Name: "resourceName",
 							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 							Tags: map[string]string{"tag": "will-be-removed"},
-							Properties: api.Properties{
+							Properties: api.OpenShiftClusterProperties{
 								ProvisioningState:       api.ProvisioningStateFailed,
 								FailedProvisioningState: api.ProvisioningStateUpdating,
 								IngressProfiles:         []api.IngressProfile{{Name: "will-be-removed"}},
@@ -263,7 +263,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						ID:   tt.resourceID,
 						Name: "resourceName",
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-						Properties: api.Properties{
+						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState: api.ProvisioningStateUpdating,
 							ClusterProfile: api.ClusterProfile{
 								Domain: "changed",
@@ -283,7 +283,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					ID:   tt.resourceID,
 					Name: "resourceName",
 					Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-					Properties: v20191231preview.Properties{
+					Properties: v20191231preview.OpenShiftClusterProperties{
 						ProvisioningState: v20191231preview.ProvisioningStateUpdating,
 						ClusterProfile: v20191231preview.ClusterProfile{
 							Domain: "changed",
@@ -307,7 +307,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							ID:   tt.resourceID,
 							Name: "resourceName",
 							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-							Properties: api.Properties{
+							Properties: api.OpenShiftClusterProperties{
 								ProvisioningState:       api.ProvisioningStateFailed,
 								FailedProvisioningState: api.ProvisioningStateCreating,
 							},
@@ -332,7 +332,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							ID:   tt.resourceID,
 							Name: "resourceName",
 							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-							Properties: api.Properties{
+							Properties: api.OpenShiftClusterProperties{
 								ProvisioningState:       api.ProvisioningStateFailed,
 								FailedProvisioningState: api.ProvisioningStateDeleting,
 							},
@@ -361,7 +361,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							Name: "resourceName",
 							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 							Tags: map[string]string{"tag": "will-be-kept"},
-							Properties: api.Properties{
+							Properties: api.OpenShiftClusterProperties{
 								ProvisioningState: api.ProvisioningStateSucceeded,
 								IngressProfiles:   []api.IngressProfile{{Name: "default"}},
 								WorkerProfiles:    []api.WorkerProfile{{Name: "default"}},
@@ -378,7 +378,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						Name: "resourceName",
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 						Tags: map[string]string{"tag": "will-be-kept"},
-						Properties: api.Properties{
+						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState: api.ProvisioningStateUpdating,
 							ClusterProfile: api.ClusterProfile{
 								Domain: "changed",
@@ -401,7 +401,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					Name: "resourceName",
 					Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 					Tags: map[string]string{"tag": "will-be-kept"},
-					Properties: v20191231preview.Properties{
+					Properties: v20191231preview.OpenShiftClusterProperties{
 						ProvisioningState: v20191231preview.ProvisioningStateUpdating,
 						ClusterProfile: v20191231preview.ClusterProfile{
 							Domain: "changed",
@@ -429,7 +429,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							Name: "resourceName",
 							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 							Tags: map[string]string{"tag": "will-be-kept"},
-							Properties: api.Properties{
+							Properties: api.OpenShiftClusterProperties{
 								ProvisioningState:       api.ProvisioningStateFailed,
 								FailedProvisioningState: api.ProvisioningStateUpdating,
 								IngressProfiles:         []api.IngressProfile{{Name: "will-be-kept"}},
@@ -447,7 +447,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						Name: "resourceName",
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 						Tags: map[string]string{"tag": "will-be-kept"},
-						Properties: api.Properties{
+						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState: api.ProvisioningStateUpdating,
 							ClusterProfile: api.ClusterProfile{
 								Domain: "changed",
@@ -470,7 +470,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					Name: "resourceName",
 					Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 					Tags: map[string]string{"tag": "will-be-kept"},
-					Properties: v20191231preview.Properties{
+					Properties: v20191231preview.OpenShiftClusterProperties{
 						ProvisioningState: v20191231preview.ProvisioningStateUpdating,
 						ClusterProfile: v20191231preview.ClusterProfile{
 							Domain: "changed",
@@ -497,7 +497,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							ID:   tt.resourceID,
 							Name: "resourceName",
 							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-							Properties: api.Properties{
+							Properties: api.OpenShiftClusterProperties{
 								ProvisioningState:       api.ProvisioningStateFailed,
 								FailedProvisioningState: api.ProvisioningStateCreating,
 							},
@@ -523,7 +523,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							ID:   tt.resourceID,
 							Name: "resourceName",
 							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-							Properties: api.Properties{
+							Properties: api.OpenShiftClusterProperties{
 								ProvisioningState:       api.ProvisioningStateFailed,
 								FailedProvisioningState: api.ProvisioningStateDeleting,
 							},
@@ -554,7 +554,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						ID:   tt.resourceID,
 						Name: "resourceName",
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-						Properties: api.Properties{
+						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState: api.ProvisioningStateCreating,
 							ClusterProfile: api.ClusterProfile{
 								Version:         "4.3.0",
@@ -611,7 +611,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						ID:   tt.resourceID,
 						Name: "resourceName",
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-						Properties: api.Properties{
+						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState: api.ProvisioningStateCreating,
 							ClusterProfile: api.ClusterProfile{
 								Version: "4.3.0",

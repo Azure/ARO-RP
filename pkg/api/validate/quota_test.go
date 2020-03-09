@@ -20,7 +20,7 @@ func TestQuotaCheck(t *testing.T) {
 
 	oc := &api.OpenShiftCluster{
 		Location: "ocLocation",
-		Properties: api.Properties{
+		Properties: api.OpenShiftClusterProperties{
 			MasterProfile: api.MasterProfile{
 				VMSize: "Standard_D8s_v3",
 			},

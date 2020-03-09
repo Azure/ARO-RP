@@ -24,7 +24,7 @@ func (c *permissionsClient) ListForResource(ctx context.Context, resourceGroupNa
 	for {
 		permissions = append(permissions, page.Values()...)
 
-		err = page.Next()
+		err = page.NextWithContext(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -46,7 +46,7 @@ func (c *permissionsClient) ListForResourceGroup(ctx context.Context, resourceGr
 	for {
 		permissions = append(permissions, page.Values()...)
 
-		err = page.Next()
+		err = page.NextWithContext(ctx)
 		if err != nil {
 			return nil, err
 		}

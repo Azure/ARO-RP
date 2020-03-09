@@ -11,20 +11,23 @@ import (
 type OpenShiftClusterList struct {
 	// The list of OpenShift clusters.
 	OpenShiftClusters []*OpenShiftCluster `json:"value"`
+
+	// The link used to get the next page of operations.
+	NextLink string `json:"nextLink,omitempty"`
 }
 
 // OpenShiftCluster represents an Azure Red Hat OpenShift cluster.
 type OpenShiftCluster struct {
-	ID         string            `json:"id,omitempty" mutable:"case"`
-	Name       string            `json:"name,omitempty" mutable:"case"`
-	Type       string            `json:"type,omitempty" mutable:"case"`
-	Location   string            `json:"location,omitempty"`
-	Tags       map[string]string `json:"tags,omitempty"`
-	Properties Properties        `json:"properties,omitempty"`
+	ID         string                     `json:"id,omitempty" mutable:"case"`
+	Name       string                     `json:"name,omitempty" mutable:"case"`
+	Type       string                     `json:"type,omitempty" mutable:"case"`
+	Location   string                     `json:"location,omitempty"`
+	Tags       map[string]string          `json:"tags,omitempty"`
+	Properties OpenShiftClusterProperties `json:"properties,omitempty"`
 }
 
-// Properties represents an OpenShift cluster's properties.
-type Properties struct {
+// OpenShiftClusterProperties represents an OpenShift cluster's properties.
+type OpenShiftClusterProperties struct {
 	ProvisioningState       ProvisioningState       `json:"provisioningState,omitempty"`
 	FailedProvisioningState ProvisioningState       `json:"failedProvisioningState,omitempty"`
 	ClusterProfile          ClusterProfile          `json:"clusterProfile,omitempty"`

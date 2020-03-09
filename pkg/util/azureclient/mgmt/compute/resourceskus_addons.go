@@ -23,7 +23,7 @@ func (c *resourceSkusClient) List(ctx context.Context, filter string) (resourceS
 	for page.NotDone() {
 		resourceSkus = append(resourceSkus, page.Values()...)
 
-		err = page.Next()
+		err = page.NextWithContext(ctx)
 		if err != nil {
 			return nil, err
 		}

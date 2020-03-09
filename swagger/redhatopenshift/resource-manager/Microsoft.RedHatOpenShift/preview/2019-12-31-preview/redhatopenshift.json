@@ -22,7 +22,7 @@
           "Operations"
         ],
         "summary": "Lists all of the available RP operations.",
-        "description": "Lists all of the available RP operations.  The operation returns the operations.",
+        "description": "Lists all of the available RP operations.  The operation returns the RP operations.",
         "operationId": "Operations_List",
         "parameters": [
           {
@@ -47,6 +47,9 @@
           "Lists all of the available RP operations.": {
             "$ref": "./examples/Operations_List.json"
           }
+        },
+        "x-ms-pageable": {
+          "nextLinkName": "nextLink"
         }
       }
     },
@@ -84,6 +87,9 @@
           "Lists OpenShift clusters in the specified subscription.": {
             "$ref": "./examples/OpenShiftClusters_List.json"
           }
+        },
+        "x-ms-pageable": {
+          "nextLinkName": "nextLink"
         }
       }
     },
@@ -124,6 +130,9 @@
           "Lists OpenShift clusters in the specified subscription and resource group.": {
             "$ref": "./examples/OpenShiftClusters_ListByResourceGroup.json"
           }
+        },
+        "x-ms-pageable": {
+          "nextLinkName": "nextLink"
         }
       }
     },
@@ -310,7 +319,7 @@
             "description": "The OpenShift cluster resource.",
             "required": true,
             "schema": {
-              "$ref": "#/definitions/OpenShiftCluster"
+              "$ref": "#/definitions/OpenShiftClusterUpdate"
             }
           }
         ],
@@ -442,6 +451,7 @@
       }
     },
     "ClusterProfile": {
+      "description": "ClusterProfile represents a cluster profile.",
       "properties": {
         "domain": {
           "description": "The domain for the cluster (immutable).",
@@ -458,6 +468,7 @@
       }
     },
     "ConsoleProfile": {
+      "description": "ConsoleProfile represents a console profile.",
       "properties": {
         "url": {
           "description": "The URL to access the cluster console (immutable).",
@@ -533,32 +544,12 @@
       "description": "OpenShiftCluster represents an Azure Red Hat OpenShift cluster.",
       "allOf": [
         {
-          "$ref": "../../../../../common-types/resource-management/v1/types.json#/definitions/Resource"
+          "$ref": "../../../../../common-types/resource-management/v1/types.json#/definitions/TrackedResource"
         }
       ],
       "properties": {
-        "tags": {
-          "description": "Resource tags.",
-          "type": "object",
-          "additionalProperties": {
-            "type": "string"
-          },
-          "x-ms-mutability": [
-            "read",
-            "create",
-            "update"
-          ]
-        },
-        "location": {
-          "description": "The geo-location where the resource lives",
-          "type": "string",
-          "x-ms-mutability": [
-            "read",
-            "create"
-          ]
-        },
         "properties": {
-          "$ref": "#/definitions/Properties",
+          "$ref": "#/definitions/OpenShiftClusterProperties",
           "description": "The cluster properties.",
           "x-ms-client-flatten": true
         }
@@ -586,36 +577,15 @@
           "items": {
             "$ref": "#/definitions/OpenShiftCluster"
           }
-        }
-      }
-    },
-    "Operation": {
-      "description": "Operation represents an operation.",
-      "properties": {
-        "name": {
-          "description": "Operation name: {provider}/{resource}/{operation}.",
-          "type": "string"
         },
-        "display": {
-          "$ref": "#/definitions/Display",
-          "description": "The object that describes the operation."
+        "nextLink": {
+          "description": "The link used to get the next page of operations.",
+          "type": "string"
         }
       }
     },
-    "OperationList": {
-      "description": "OperationList represents an operation list.",
-      "properties": {
-        "value": {
-          "description": "List of operations supported by the resource provider.",
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/Operation"
-          }
-        }
-      }
-    },
-    "Properties": {
-      "description": "Properties represents an OpenShift cluster's properties.",
+    "OpenShiftClusterProperties": {
+      "description": "OpenShiftClusterProperties represents an OpenShift cluster's properties.",
       "properties": {
         "provisioningState": {
           "$ref": "#/definitions/ProvisioningState",
@@ -661,6 +631,49 @@
         }
       }
     },
+    "OpenShiftClusterUpdate": {
+      "description": "OpenShiftCluster represents an Azure Red Hat OpenShift cluster.",
+      "properties": {
+        "tags": {
+          "$ref": "#/definitions/Tags",
+          "description": "The resource tags."
+        },
+        "properties": {
+          "$ref": "#/definitions/OpenShiftClusterProperties",
+          "description": "The cluster properties.",
+          "x-ms-client-flatten": true
+        }
+      }
+    },
+    "Operation": {
+      "description": "Operation represents an RP operation.",
+      "properties": {
+        "name": {
+          "description": "Operation name: {provider}/{resource}/{operation}.",
+          "type": "string"
+        },
+        "display": {
+          "$ref": "#/definitions/Display",
+          "description": "The object that describes the operation."
+        }
+      }
+    },
+    "OperationList": {
+      "description": "OperationList represents an RP operation list.",
+      "properties": {
+        "value": {
+          "description": "List of operations supported by the resource provider.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/Operation"
+          }
+        },
+        "nextLink": {
+          "description": "The link used to get the next page of operations.",
+          "type": "string"
+        }
+      }
+    },
     "ProvisioningState": {
       "description": "ProvisioningState represents a provisioning state.",
       "enum": [
@@ -684,6 +697,13 @@
           "description": "The client secret used for the cluster (immutable).",
           "type": "string"
         }
+      }
+    },
+    "Tags": {
+      "description": "Tags represents an OpenShift cluster's tags.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
       }
     },
     "VMSize": {

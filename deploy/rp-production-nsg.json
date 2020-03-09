@@ -33,9 +33,9 @@
             "apiVersion": "2019-07-01"
         },
         {
+            "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
             "name": "rp-identity",
             "location": "[resourceGroup().location]",
-            "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
             "apiVersion": "2018-11-30"
         }
     ],

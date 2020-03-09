@@ -153,7 +153,7 @@ func TestCreateOrUpdate(t *testing.T) {
 
 func TestNetworkSecurityGroupID(t *testing.T) {
 	oc := &api.OpenShiftCluster{
-		Properties: api.Properties{
+		Properties: api.OpenShiftClusterProperties{
 			ClusterProfile: api.ClusterProfile{
 				ResourceGroupID: "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup",
 			},

@@ -1,6 +1,6 @@
 // +build go1.9
 
-// Copyright 2019 Microsoft Corporation
+// Copyright 2020 Microsoft Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -45,6 +45,14 @@ const (
 	Enabled  State = original.Enabled
 	PastDue  State = original.PastDue
 	Warned   State = original.Warned
+)
+
+type TenantCategory = original.TenantCategory
+
+const (
+	Home        TenantCategory = original.Home
+	ManagedBy   TenantCategory = original.ManagedBy
+	ProjectedBy TenantCategory = original.ProjectedBy
 )
 
 type BaseClient = original.BaseClient
@@ -116,6 +124,9 @@ func PossibleSpendingLimitValues() []SpendingLimit {
 }
 func PossibleStateValues() []State {
 	return original.PossibleStateValues()
+}
+func PossibleTenantCategoryValues() []TenantCategory {
+	return original.PossibleTenantCategoryValues()
 }
 func UserAgent() string {
 	return original.UserAgent() + " profiles/latest"

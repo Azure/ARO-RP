@@ -48,7 +48,7 @@ func validOpenShiftCluster() *OpenShiftCluster {
 		Tags: Tags{
 			"key": "value",
 		},
-		Properties: Properties{
+		Properties: OpenShiftClusterProperties{
 			ProvisioningState: ProvisioningStateSucceeded,
 			ClusterProfile: ClusterProfile{
 				Domain:          "cluster.location.aroapp.io",

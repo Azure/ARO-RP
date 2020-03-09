@@ -64,10 +64,16 @@ func generateExamples(outputDir string, s *Swagger) error {
 							Parameter: "resourceName",
 						})
 					case "parameters":
-						if param.Schema.Ref == "#/definitions/OpenShiftCluster" {
+						switch param.Schema.Ref {
+						case "#/definitions/OpenShiftCluster":
 							example.Parameters = append(example.Parameters, NameParameter{
 								Name:      param.Name,
-								Parameter: v20191231preview.ExampleOpenShiftClusterParameter(),
+								Parameter: v20191231preview.ExampleOpenShiftClusterPutParameter(),
+							})
+						case "#/definitions/OpenShiftClusterUpdate":
+							example.Parameters = append(example.Parameters, NameParameter{
+								Name:      param.Name,
+								Parameter: v20191231preview.ExampleOpenShiftClusterPatchParameter(),
 							})
 						}
 					}

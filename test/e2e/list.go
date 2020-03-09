@@ -20,7 +20,7 @@ var _ = Describe("List clusters", func() {
 		//Expect(len(ocList.Value)).To(Greater(1)))
 
 		found := false
-		for _, oc := range *ocList.Value {
+		for _, oc := range ocList {
 			if *oc.Name == os.Getenv("CLUSTER") {
 				found = true
 				break
@@ -37,7 +37,7 @@ var _ = Describe("List clusters", func() {
 		//Expect(len(ocList.Value)).To(Greater(1)))
 
 		found := false
-		for _, oc := range *ocList.Value {
+		for _, oc := range ocList {
 			if *oc.Name == os.Getenv("CLUSTER") {
 				found = true
 				break
