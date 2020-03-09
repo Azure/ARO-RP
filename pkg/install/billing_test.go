@@ -98,7 +98,7 @@ func TestCreateBillingEntry(t *testing.T) {
 			wantError: fmt.Errorf("Error creating document"),
 		},
 		{
-			name: "update billing entry on create",
+			name: "billing document already existing on DB on create",
 			openshiftdoc: &api.OpenShiftClusterDocument{
 				Key:                       "11111111-1111-1111-1111-111111111111",
 				ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/rgName", mockSubID),
@@ -128,47 +128,8 @@ func TestCreateBillingEntry(t *testing.T) {
 					Return(nil, &cosmosdb.Error{
 						StatusCode: http.StatusConflict,
 					})
-				billing.EXPECT().
-					Patch(gomock.Any(), billingDoc.ID, gomock.Any()).
-					Return(nil, tt.wantError)
 			},
-			wantError: fmt.Errorf("Error creating document"),
-		},
-		{
-			name: "error on update billing entry on create",
-			openshiftdoc: &api.OpenShiftClusterDocument{
-				Key:                       "11111111-1111-1111-1111-111111111111",
-				ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/rgName", mockSubID),
-				ID:                        mockSubID,
-				OpenShiftCluster: &api.OpenShiftCluster{
-					Properties: api.OpenShiftClusterProperties{
-						ServicePrincipalProfile: api.ServicePrincipalProfile{
-							TenantID: mockTenantID,
-						},
-					},
-					Location: location,
-				},
-			},
-			mocks: func(tt *test, billing *mock_database.MockBilling) {
-				billingDoc := &api.BillingDocument{
-					Key:                       tt.openshiftdoc.Key,
-					ClusterResourceGroupIDKey: tt.openshiftdoc.ClusterResourceGroupIDKey,
-					ID:                        mockSubID,
-					Billing: &api.Billing{
-						TenantID: tt.openshiftdoc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID,
-						Location: tt.openshiftdoc.OpenShiftCluster.Location,
-					},
-				}
-
-				billing.EXPECT().
-					Create(gomock.Any(), billingDoc).
-					Return(nil, &cosmosdb.Error{
-						StatusCode: http.StatusConflict,
-					})
-				billing.EXPECT().
-					Patch(gomock.Any(), billingDoc.ID, gomock.Any()).
-					Return(billingDoc, nil)
-			},
+			wantError: nil,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

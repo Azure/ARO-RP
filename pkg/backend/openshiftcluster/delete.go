@@ -93,15 +93,14 @@ func (m *Manager) Delete(ctx context.Context) error {
 		err = nil
 	}
 
-	m.log.Printf("updating billing record")
-	_, err = m.billing.Patch(ctx, m.doc.ID, func(billingdoc *api.BillingDocument) (bool, error) {
-		// Returns true means we will update deletion timestamp
-		return true, nil
-	})
-
 	if err != nil {
 		return err
 	}
+
+	m.log.Printf("updating billing record")
+	_, err = m.billing.Patch(ctx, m.doc.ID, func(billingdoc *api.BillingDocument) error {
+		return nil
+	})
 
 	return err
 }

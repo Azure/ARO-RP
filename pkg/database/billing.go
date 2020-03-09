@@ -22,7 +22,7 @@ type billing struct {
 type Billing interface {
 	Create(context.Context, *api.BillingDocument) (*api.BillingDocument, error)
 	Get(context.Context, string) (*api.BillingDocument, error)
-	Patch(context.Context, string, func(*api.BillingDocument) (bool, error)) (*api.BillingDocument, error)
+	Patch(context.Context, string, func(*api.BillingDocument) error) (*api.BillingDocument, error)
 }
 
 // NewBilling returns a new Billing
@@ -32,7 +32,7 @@ func NewBilling(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, d
 	triggers := []*cosmosdb.Trigger{
 		{
 			ID:               "setCreationBillingTimeStamp",
-			TriggerOperation: cosmosdb.TriggerOperationAll,
+			TriggerOperation: cosmosdb.TriggerOperationCreate,
 			TriggerType:      cosmosdb.TriggerTypePre,
 			Body: `function trigger() {
 	var request = getContext().getRequest();
@@ -40,14 +40,18 @@ func NewBilling(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, d
 	var date = new Date();
 	var now = Math.floor(date.getTime() / 1000);
 	var billingBody = body["billing"];
-	billingBody["creationTime"] = now;
-	billingBody["lastBillingTime"] = now;
+	if (!billingBody["creationTime"]) {
+		billingBody["creationTime"] = now;
+	}
+	if (!billingBody["lastBillingTime"]) {
+		billingBody["lastBillingTime"] = now;
+	}
 	request.setBody(body);
 }`,
 		},
 		{
 			ID:               "setDeletionBillingTimeStamp",
-			TriggerOperation: cosmosdb.TriggerOperationAll,
+			TriggerOperation: cosmosdb.TriggerOperationReplace,
 			TriggerType:      cosmosdb.TriggerTypePre,
 			Body: `function trigger() {
 	var request = getContext().getRequest();
@@ -55,7 +59,9 @@ func NewBilling(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, d
 	var date = new Date();
 	var now = Math.floor(date.getTime() / 1000);
 	var billingBody = body["billing"];
-	billingBody["deletionTime"] = now;
+	if (!billingBody["deletionTime"]) {
+		billingBody["deletionTime"] = now;
+	}
 	request.setBody(body);
 }`,
 		},
@@ -98,8 +104,8 @@ func (c *billing) Get(ctx context.Context, id string) (*api.BillingDocument, err
 	return c.c.Get(ctx, id, id, nil)
 }
 
-// Patch Billing Document. Using trigger to create timestamp either for creation or deletion depending on the bool passed.
-func (c *billing) Patch(ctx context.Context, id string, f func(*api.BillingDocument) (bool, error)) (*api.BillingDocument, error) {
+// Patch Billing Document
+func (c *billing) Patch(ctx context.Context, id string, f func(*api.BillingDocument) error) (*api.BillingDocument, error) {
 	var doc *api.BillingDocument
 
 	err := cosmosdb.RetryOnPreconditionFailed(func() (err error) {
@@ -108,17 +114,12 @@ func (c *billing) Patch(ctx context.Context, id string, f func(*api.BillingDocum
 			return
 		}
 
-		deletion, err := f(doc)
+		err = f(doc)
 		if err != nil {
 			return
 		}
 
-		options := &cosmosdb.Options{PreTriggers: []string{"setCreationBillingTimeStamp"}}
-		if deletion {
-			options = &cosmosdb.Options{PreTriggers: []string{"setDeletionBillingTimeStamp"}}
-		}
-
-		doc, err = c.c.Replace(ctx, doc.ID, doc, options)
+		doc, err = c.c.Replace(ctx, doc.ID, doc, &cosmosdb.Options{PreTriggers: []string{"setDeletionBillingTimeStamp"}})
 		return
 	})
 
