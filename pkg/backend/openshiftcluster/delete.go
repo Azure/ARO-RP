@@ -93,9 +93,9 @@ func (m *Manager) Delete(ctx context.Context) error {
 		err = nil
 	}
 
-	_, err = m.billing.Patch(ctx, m.doc.ID, func(billingdoc *api.BillingDocument) error {
-		billingdoc.Billing.DeletionTime = -1
-		return nil
+	_, err = m.billing.Patch(ctx, m.doc.ID, func(billingdoc *api.BillingDocument) (bool, error) {
+		// Returns true means we will update deletion timestamp
+		return true, nil
 	})
 
 	if err != nil {

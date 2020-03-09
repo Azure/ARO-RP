@@ -136,7 +136,7 @@ func (mr *MockBillingMockRecorder) Get(arg0, arg1 interface{}) *gomock.Call {
 }
 
 // Patch mocks base method
-func (m *MockBilling) Patch(arg0 context.Context, arg1 string, arg2 func(*api.BillingDocument) error) (*api.BillingDocument, error) {
+func (m *MockBilling) Patch(arg0 context.Context, arg1 string, arg2 func(*api.BillingDocument) (bool, error)) (*api.BillingDocument, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Patch", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*api.BillingDocument)

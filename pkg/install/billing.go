@@ -25,12 +25,10 @@ func (i *Installer) createBillingRecord(ctx context.Context) error {
 				LastBillingTime: -1,
 			},
 		})
-		// If create return a conflict this means row is already present in database, updating timestamp
+		// If create return a conflict, this means row is already present in database, updating timestamps
 		if err, ok := err.(*cosmosdb.Error); ok && err.StatusCode == http.StatusConflict {
-			_, err := i.billing.Patch(ctx, i.doc.ID, func(billingdoc *api.BillingDocument) error {
-				billingdoc.Billing.CreationTime = -1
-				billingdoc.Billing.LastBillingTime = -1
-				return nil
+			_, err := i.billing.Patch(ctx, i.doc.ID, func(billingdoc *api.BillingDocument) (bool, error) {
+				return false, nil
 			})
 			if err != nil {
 				return err

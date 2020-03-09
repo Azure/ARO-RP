@@ -40,7 +40,7 @@ func TestCreateBillingEntry(t *testing.T) {
 				ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/rgName", mockSubID),
 				ID:                        mockSubID,
 				OpenShiftCluster: &api.OpenShiftCluster{
-					Properties: api.Properties{
+					Properties: api.OpenShiftClusterProperties{
 						ServicePrincipalProfile: api.ServicePrincipalProfile{
 							TenantID: mockTenantID,
 						},
@@ -73,7 +73,7 @@ func TestCreateBillingEntry(t *testing.T) {
 				ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/rgName", mockSubID),
 				ID:                        mockSubID,
 				OpenShiftCluster: &api.OpenShiftCluster{
-					Properties: api.Properties{
+					Properties: api.OpenShiftClusterProperties{
 						ServicePrincipalProfile: api.ServicePrincipalProfile{
 							TenantID: mockTenantID,
 						},
@@ -107,7 +107,7 @@ func TestCreateBillingEntry(t *testing.T) {
 				ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/rgName", mockSubID),
 				ID:                        mockSubID,
 				OpenShiftCluster: &api.OpenShiftCluster{
-					Properties: api.Properties{
+					Properties: api.OpenShiftClusterProperties{
 						ServicePrincipalProfile: api.ServicePrincipalProfile{
 							TenantID: mockTenantID,
 						},
@@ -146,7 +146,7 @@ func TestCreateBillingEntry(t *testing.T) {
 				ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/rgName", mockSubID),
 				ID:                        mockSubID,
 				OpenShiftCluster: &api.OpenShiftCluster{
-					Properties: api.Properties{
+					Properties: api.OpenShiftClusterProperties{
 						ServicePrincipalProfile: api.ServicePrincipalProfile{
 							TenantID: mockTenantID,
 						},
