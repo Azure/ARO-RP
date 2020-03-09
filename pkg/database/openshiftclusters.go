@@ -142,7 +142,7 @@ func (c *openShiftClusters) QueueLength(ctx context.Context, collid string) (int
 	var countTotal int
 	for _, r := range partitions.PartitionKeyRanges {
 		result := c.c.Query("", &cosmosdb.Query{
-			Query: `SELECT VALUE COUNT(1) FROM OpenShiftClusters doc WHERE doc.openShiftCluster.properties.provisioningState IN ("Creating", "Deleting", "Updating") AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`,
+			Query: `SELECT VALUE COUNT(1) FROM OpenShiftClusters doc WHERE doc.openShiftCluster.properties.provisioningState IN ("Creating", "Deleting", "Updating", "AdminUpdating") AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`,
 		}, &cosmosdb.Options{
 			PartitionKeyRangeID: r.ID,
 		})
