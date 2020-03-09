@@ -1,0 +1,59 @@
+parameters:
+  domainName: ""
+  rgPrefix: ""
+  workingDirectory: ""
+  location: ""
+  mdmFrontendUrl: ""
+  rpImageACR: ""
+  rpImagePullJSONSPN: ""
+  azureFpClientId: ""
+  azureDevOpsJSONSPN: ""
+  mdsdMonitoringEnviroment: ""
+  mdsdConfigVersion: ""
+  rpMode: ""
+  sshPublicKey: ""
+  pullSecret: ""
+  subscriptionId: ""
+steps:
+  - script: |
+      set -eu
+      cd ${{ parameters.workingDirectory }}
+      
+      COMMIT=$(git rev-parse --short HEAD)$([[ $(git status --porcelain) = "" ]] || echo -dirty)
+
+      echo ${{ parameters.rpImagePullJSONSPN }} | base64 -d -w 0 > pull-spn.json
+      pull_spn_client_id=$(cat pull-spn.json | jq -r '.clientId')
+      pull_spn_client_secret=$(cat pull-spn.json | jq -r '.clientSecret')
+      export RP_IMAGE_AUTH=$(echo "$pull_spn_client_id:$pull_spn_client_secret" | base64 -w 0)
+      rm pull-spn.json
+
+      export PULL_SECRET=$(echo ${{ parameters.pullSecret }} | base64 -d -w 0)
+
+      export DOMAIN_NAME=${{ parameters.domainName }}
+      export AZURE_FP_CLIENT_ID=${{ parameters.azureFpClientId }}
+      export COSMOSDB_ACCOUNT=${{ parameters.databaseAccountName }}
+      export MDM_FRONTEND=${{ parameters.mdmFrontendUrl }}
+      export MDSD_ENVIROMENT=${{ parameters.mdsdMonitoringEnviroment }}
+      export MDSD_CONFIG_VERSION=${{ parameters.mdsdConfigVersion }}
+      export RP_IMAGE=${{ parameters.rpImageACR }}.azurecr.io/aro:${COMMIT}
+      RESOURCEGROUP_PREFIX=${{ parameters.rgPrefix }}
+      export LOCATION=${{ parameters.location }}
+      export RESOURCEGROUP="$RESOURCEGROUP_PREFIX-$LOCATION"
+      export COSMOSDB_ACCOUNT="$RESOURCEGROUP"
+      export KEYVAULT_PREFIX="$RESOURCEGROUP"
+      export RP_MODE=${{ parameters.rpMode }}
+      export SSH_PUBLIC_KEY="${{ parameters.sshPublicKey }}"
+
+      echo ${{ parameters.azureDevOpsJSONSPN }} | base64 -d -w 0 > devops-spn.json
+      export AZURE_SUBSCRIPTION_ID="${{ parameters.subscriptionId }}"
+      export AZURE_CLIENT_ID=$(cat devops-spn.json | jq -r '.clientId') 
+      export AZURE_CLIENT_SECRET=$(cat devops-spn.json | jq -r '.clientSecret') 
+      export AZURE_TENANT_ID=$(cat devops-spn.json | jq -r '.tenantId')
+      rm devops-spn.json
+
+      ./hack/deploy/prepare-int-parameters.sh
+
+      export RP_PARAMETERS_FILE="secrets/parameters.json"
+      export RP_VERSION=$(git rev-parse --short HEAD)
+      ./aro deploy
+    displayName: "🚀 Buildout INT env"
