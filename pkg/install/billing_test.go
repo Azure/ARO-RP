@@ -9,11 +9,12 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/golang/mock/gomock"
+	"github.com/sirupsen/logrus"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
-	"github.com/golang/mock/gomock"
-	"github.com/sirupsen/logrus"
 )
 
 func TestCreateBillingEntry(t *testing.T) {
