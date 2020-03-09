@@ -14,6 +14,8 @@ parameters:
   sshPublicKey: ""
   pullSecret: ""
   subscriptionId: ""
+  adminApiCaBundle: ""
+  adminApiClientCertCN: ""
 steps:
   - script: |
       set -eu
@@ -43,6 +45,8 @@ steps:
       export KEYVAULT_PREFIX="$RESOURCEGROUP"
       export RP_MODE=${{ parameters.rpMode }}
       export SSH_PUBLIC_KEY="${{ parameters.sshPublicKey }}"
+      export ADMIN_API_CA_BUNDLE="${{ parameters.adminApiCaBundle }}"
+      export ADMIN_API_CLIENT_CERT_CN="${{ parameters.adminApiClientCertCN }}"
 
       echo ${{ parameters.azureDevOpsJSONSPN }} | base64 -d -w 0 > devops-spn.json
       export AZURE_SUBSCRIPTION_ID="${{ parameters.subscriptionId }}"

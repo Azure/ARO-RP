@@ -38,3 +38,5 @@ jobs:
           sshPublicKey: $(int-ssh-public-key)
           subscriptionId: "0cc1cafa-578f-4fa5-8d6b-ddfd8d82e6ea"
           azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
+          adminApiCaBundle: $(aro-geneva-action-cert-ca-bundle)
+          adminApiClientCertCN: "actions.int.aro.azure.com"
