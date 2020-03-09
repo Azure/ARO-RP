@@ -5,23 +5,41 @@ package install
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 )
 
 func (i *Installer) createBillingRecord(ctx context.Context) error {
-	_, err := i.billing.Create(ctx, &api.BillingDocument{
-		ID:                        i.doc.ID,
-		Key:                       i.doc.Key,
-		ClusterResourceGroupIDKey: i.doc.ClusterResourceGroupIDKey,
-		Billing: &api.Billing{
-			TenantID: i.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID,
-			Location: i.doc.OpenShiftCluster.Location,
-		},
+	return cosmosdb.RetryOnPreconditionFailed(func() error {
+		var err error
+		_, err = i.billing.Create(ctx, &api.BillingDocument{
+			ID:                        i.doc.ID,
+			Key:                       i.doc.Key,
+			ClusterResourceGroupIDKey: i.doc.ClusterResourceGroupIDKey,
+			Billing: &api.Billing{
+				TenantID:        i.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID,
+				Location:        i.doc.OpenShiftCluster.Location,
+				CreationTime:    -1,
+				LastBillingTime: -1,
+			},
+		})
+		// If create return a conflict this means row is already present in database, updating timestamp
+		if err, ok := err.(*cosmosdb.Error); ok && err.StatusCode == http.StatusConflict {
+			_, err := i.billing.Patch(ctx, i.doc.ID, func(billingdoc *api.BillingDocument) error {
+				billingdoc.Billing.CreationTime = -1
+				billingdoc.Billing.LastBillingTime = -1
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		return nil
 	})
-
-	if err != nil {
-		return err
-	}
-	return nil
 }

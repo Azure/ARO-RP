@@ -144,10 +144,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			action(func(ctx context.Context) error {
 				return i.installStorage(ctx, installConfig, platformCreds, image)
 			}),
-			action(i.incrInstallPhase),
 			action(i.createBillingRecord),
-		},
-		api.InstallPhaseDeployResources: {
 			action(i.installResources),
 			action(i.createPrivateEndpoint),
 			action(i.updateAPIIP),

@@ -31,31 +31,24 @@ func NewBilling(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, d
 
 	triggers := []*cosmosdb.Trigger{
 		{
-			ID:               "setCreationTimeStamp",
+			ID:               "setBillingTimeStamp",
 			TriggerOperation: cosmosdb.TriggerOperationAll,
-			TriggerType:      cosmosdb.TriggerTypePre,
+			TriggerType:      cosmosdb.TriggerTypePost,
 			Body: `function trigger() {
 	var request = getContext().getRequest();
 	var body = request.getBody();
 	var date = new Date();
-	var now = Math.floor(date.getTime() / 1000)
-	var billingBody = body["billing"]
-	billingBody["creationTime"] = now;
-	billingBody["lastBillingTime"] = now;
-	request.setBody(body);
-}`,
-		},
-		{
-			ID:               "setDeletionTimeStamp",
-			TriggerOperation: cosmosdb.TriggerOperationAll,
-			TriggerType:      cosmosdb.TriggerTypePre,
-			Body: `function trigger() {
-	var request = getContext().getRequest();
-	var body = request.getBody();
-	var date = new Date();
-	var now = Math.floor(date.getTime() / 1000)
-	var billingBody = body["billing"]
-	billingBody["deletionTime"] = now;
+	var now = Math.floor(date.getTime() / 1000);
+	var billingBody = body["billing"];
+	if (billingBody["creationTime"] > 0) {
+		billingBody["creationTime"] = now;
+	}
+	if (billingBody["lastBillingTime"] > 0) {
+		billingBody["lastBillingTime"] = now;
+	}
+	if (billingBody["deletionTime"] > 0) {
+		billingBody["deletionTime"] = now
+	}
 	request.setBody(body);
 }`,
 		},
@@ -81,15 +74,10 @@ func (c *billing) Create(ctx context.Context, doc *api.BillingDocument) (*api.Bi
 		return nil, fmt.Errorf("id %q is not lower case", doc.ID)
 	}
 
-	doc, err := c.c.Create(ctx, doc.ID, doc, &cosmosdb.Options{PreTriggers: []string{"setCreationTimeStamp"}})
+	doc, err := c.c.Create(ctx, doc.ID, doc, &cosmosdb.Options{PostTriggers: []string{"setBillingTimeStamp"}})
 
-	if err, ok := err.(*cosmosdb.Error); ok && err.StatusCode == http.StatusConflict {
-		doc, err := c.Get(ctx, doc.ID)
-		if err != nil {
-			return nil, fmt.Errorf("cannot Get Billing document : %s", doc.ID)
-		}
-
-		doc, err = c.c.Replace(ctx, doc.ID, doc, &cosmosdb.Options{PreTriggers: []string{"setCreationTimeStamp"}})
+	if err != nil {
+		return nil, err
 	}
 
 	return doc, err
@@ -117,7 +105,7 @@ func (c *billing) Patch(ctx context.Context, id string, f func(*api.BillingDocum
 			return
 		}
 
-		doc, err = c.c.Replace(ctx, doc.ID, doc, &cosmosdb.Options{PreTriggers: []string{"setDeletionTimeStamp"}})
+		doc, err = c.c.Replace(ctx, doc.ID, doc, &cosmosdb.Options{PostTriggers: []string{"setBillingTimeStamp"}})
 		return
 	})
 
