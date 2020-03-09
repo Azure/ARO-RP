@@ -243,7 +243,7 @@ func (c *openShiftClusters) ListByPrefix(subscriptionID string, prefix string) (
 
 func (c *openShiftClusters) Dequeue(ctx context.Context) (*api.OpenShiftClusterDocument, error) {
 	i := c.c.Query("", &cosmosdb.Query{
-		Query: `SELECT * FROM OpenShiftClusters doc WHERE doc.openShiftCluster.properties.provisioningState IN ("Creating", "Deleting", "Updating") AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`,
+		Query: `SELECT * FROM OpenShiftClusters doc WHERE doc.openShiftCluster.properties.provisioningState IN ("Creating", "Deleting", "Updating", "AdminUpdating") AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`,
 	}, nil)
 
 	for {

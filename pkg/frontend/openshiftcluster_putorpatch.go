@@ -90,7 +90,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 		switch doc.OpenShiftCluster.Properties.FailedProvisioningState {
 		case api.ProvisioningStateCreating:
 			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed on cluster whose creation failed. Delete the cluster.")
-		case api.ProvisioningStateUpdating:
+		case api.ProvisioningStateUpdating, api.ProvisioningStateAdminUpdating:
 			doc.OpenShiftCluster.Properties.FailedProvisioningState = "" // allow
 		case api.ProvisioningStateDeleting:
 			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed on cluster whose deletion failed. Delete the cluster.")

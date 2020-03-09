@@ -73,8 +73,8 @@ func (sv *openShiftClusterStaticValidator) validate(oc *OpenShiftCluster, isCrea
 func (sv *openShiftClusterStaticValidator) validateProperties(path string, p *OpenShiftClusterProperties, isCreate bool) error {
 	switch p.ProvisioningState {
 	case ProvisioningStateCreating, ProvisioningStateUpdating,
-		ProvisioningStateDeleting, ProvisioningStateSucceeded,
-		ProvisioningStateFailed:
+		ProvisioningStateAdminUpdating, ProvisioningStateDeleting,
+		ProvisioningStateSucceeded, ProvisioningStateFailed:
 	default:
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".provisioningState", "The provided provisioning state '%s' is invalid.", p.ProvisioningState)
 	}
