@@ -5,6 +5,7 @@ package deploy
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -67,6 +68,9 @@ func New(ctx context.Context, log *logrus.Entry, authorizer autorest.Authorizer,
 
 		cli: &http.Client{
 			Timeout: 5 * time.Second,
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			},
 		},
 
 		version:        version,
@@ -234,7 +238,6 @@ func (d *deployer) waitForRPReadiness(ctx context.Context, vmssName string) erro
 	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 		for _, vm := range scalesetVMs {
 			u := fmt.Sprintf("https://vm%s.%s.%s.cloudapp.azure.com/healthz/ready", *vm.InstanceID, vmssName, d.location)
-
 			resp, err := d.cli.Get(u)
 			if err != nil || resp.StatusCode != http.StatusOK {
 				d.log.Printf("instance %s not ready", *vm.InstanceID)
