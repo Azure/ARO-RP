@@ -33,6 +33,12 @@ const (
 
 	parsersConf = `
 [PARSER]
+	Name audit
+	Format json
+	Time_Key stageTimestamp
+	Time_Format %Y-%m-%dT%H:%M:%S.%L
+
+[PARSER]
 	Name containerpath
 	Format regex
 	Regex ^/var/log/containers/(?<POD>[^_]+)_(?<NAMESPACE>[^_]+)_(?<CONTAINER>.+)-(?<CONTAINER_ID>[0-9a-f]{64})\.log$
@@ -86,6 +92,23 @@ const (
 	Name grep
 	Match containers
 	Regex NAMESPACE ^(?:default|kube-.*|openshift|openshift-.*)$
+
+[OUTPUT]
+	Name forward
+	Port 24224
+`
+
+	auditConf = `
+[SERVICE]
+	Parsers_File /etc/td-agent-bit/parsers.conf
+
+[INPUT]
+	Name tail
+	Path /var/log/kube-apiserver/audit*
+	Path_Key path
+	Tag audit
+	DB /var/lib/fluent/audit
+	Parser audit
 
 [OUTPUT]
 	Name forward
@@ -233,6 +256,7 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 			Namespace: kubeNamespace,
 		},
 		Data: map[string]string{
+			"audit.conf":      auditConf,
 			"containers.conf": containersConf,
 			"journal.conf":    journalConf,
 			"parsers.conf":    parsersConf,
@@ -414,6 +438,43 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 							Args: []string{
 								"-c",
 								"/etc/td-agent-bit/containers.conf",
+							},
+							// TODO: specify requests/limits
+							SecurityContext: &v1.SecurityContext{
+								Privileged: to.BoolPtr(true),
+								RunAsUser:  to.Int64Ptr(0),
+							},
+							VolumeMounts: []v1.VolumeMount{
+								{
+									Name:      "fluent-config",
+									ReadOnly:  true,
+									MountPath: "/etc/td-agent-bit",
+								},
+								{
+									Name:      "machine-id",
+									ReadOnly:  true,
+									MountPath: "/etc/machine-id",
+								},
+								{
+									Name:      "log",
+									ReadOnly:  true,
+									MountPath: "/var/log",
+								},
+								{
+									Name:      "fluent",
+									MountPath: "/var/lib/fluent",
+								},
+							},
+						},
+						{
+							Name:  "fluentbit-audit",
+							Image: fluentbitImage,
+							Command: []string{
+								"/opt/td-agent-bit/bin/td-agent-bit",
+							},
+							Args: []string{
+								"-c",
+								"/etc/td-agent-bit/audit.conf",
 							},
 							// TODO: specify requests/limits
 							SecurityContext: &v1.SecurityContext{

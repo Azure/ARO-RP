@@ -69,7 +69,7 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 		keyvault: basekeyvault.New(kvAuthorizer),
 
 		clustersGenevaLoggingEnvironment:   "DiagnosticsProd",
-		clustersGenevaLoggingConfigVersion: "2.1",
+		clustersGenevaLoggingConfigVersion: "2.2",
 
 		log: log,
 	}
