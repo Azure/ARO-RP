@@ -9,6 +9,7 @@ steps:
 
       export DATABASE_NAME=v4-e2e-$(git log --format=%h -n 1 HEAD)
 
+      clean_e2e_db
       clean_e2e
-    displayName: "🧹 Clean cluster RG, and Vnet"
+    displayName: "🧹 Clean cluster RG, Vnet and DB"
     condition: always()

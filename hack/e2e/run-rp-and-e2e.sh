@@ -81,11 +81,6 @@ deploy_e2e_deps() {
       --disable-private-link-service-network-policies true >/dev/null
 }
 
-set_cli_context() {
-    echo "########## Setting az cli context ##########"
-    az account set -s $AZURE_SUBSCRIPTION_ID
-}
-
 register_sub() {
     echo "########## 🔑 Registering subscription ##########"
     curl -k -X PUT \
@@ -139,32 +134,20 @@ echo "######################################"
 echo "######## Current settings : ##########"
 echo
 echo "LOCATION=$LOCATION"
-echo "AZURE_SUBSCRIPTION_ID=$AZURE_SUBSCRIPTION_ID"
 echo
-echo "RP_MODE=$RP_MODE"
-echo
-if [ $RP_MODE = "development" ] 
-then 
-    echo "COSMOSDB_ACCOUNT=$COSMOSDB_ACCOUNT"
-    echo "DATABASE_NAME=$DATABASE_NAME"
-    echo "RESOURCEGROUP=$RESOURCEGROUP"
-fi
+echo "COSMOSDB_ACCOUNT=$COSMOSDB_ACCOUNT"
+echo "DATABASE_NAME=$DATABASE_NAME"
+echo "RESOURCEGROUP=$RESOURCEGROUP"
 echo
 echo "CLUSTER=$CLUSTER"
 echo "CLUSTER_RESOURCEGROUP=$CLUSTER_RESOURCEGROUP"
 echo "KUBECONFIG=$KUBECONFIG"
 echo
-if [ $RP_MODE = "development" ]
-then 
-    echo "PROXY_HOSTNAME=$PROXY_HOSTNAME"
-fi
+echo "PROXY_HOSTNAME=$PROXY_HOSTNAME"
 echo "######################################"
 
 [ "$LOCATION" ] || ( echo ">> LOCATION is not set please validate your ./secrets/env"; exit 128 )
-if [ $RP_MODE = "development" ]
-then 
-    [ "$RESOURCEGROUP" ] || ( echo ">> RESOURCEGROUP is not set please validate your ./secrets/env"; exit 128 )
-    [ "$PROXY_HOSTNAME" ] || ( echo ">> PROXY_HOSTNAME is not set please validate your ./secrets/env"; exit 128 )
-    [ "$COSMOSDB_ACCOUNT" ] || ( echo ">> COSMOSDB_ACCOUNT is not set please validate your ./secrets/env"; exit 128 )
-    [ "$DATABASE_NAME" ] || ( echo ">> DATABASE_NAME is not set please validate your ./secrets/env"; exit 128 )
-fi
+[ "$RESOURCEGROUP" ] || ( echo ">> RESOURCEGROUP is not set please validate your ./secrets/env"; exit 128 )
+[ "$PROXY_HOSTNAME" ] || ( echo ">> PROXY_HOSTNAME is not set please validate your ./secrets/env"; exit 128 )
+[ "$COSMOSDB_ACCOUNT" ] || ( echo ">> COSMOSDB_ACCOUNT is not set please validate your ./secrets/env"; exit 128 )
+[ "$DATABASE_NAME" ] || ( echo ">> DATABASE_NAME is not set please validate your ./secrets/env"; exit 128 )
