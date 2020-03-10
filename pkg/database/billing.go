@@ -22,7 +22,7 @@ type billing struct {
 type Billing interface {
 	Create(context.Context, *api.BillingDocument) (*api.BillingDocument, error)
 	Get(context.Context, string) (*api.BillingDocument, error)
-	Patch(context.Context, string, func(*api.BillingDocument) error) (*api.BillingDocument, error)
+	MarkForDeletion(context.Context, string) (*api.BillingDocument, error)
 }
 
 // NewBilling returns a new Billing
@@ -87,13 +87,7 @@ func (c *billing) Create(ctx context.Context, doc *api.BillingDocument) (*api.Bi
 		return nil, fmt.Errorf("id %q is not lower case", doc.ID)
 	}
 
-	doc, err := c.c.Create(ctx, doc.ID, doc, &cosmosdb.Options{PreTriggers: []string{"setCreationBillingTimeStamp"}})
-
-	if err != nil {
-		return nil, err
-	}
-
-	return doc, err
+	return c.c.Create(ctx, doc.ID, doc, &cosmosdb.Options{PreTriggers: []string{"setCreationBillingTimeStamp"}})
 }
 
 func (c *billing) Get(ctx context.Context, id string) (*api.BillingDocument, error) {
@@ -104,8 +98,7 @@ func (c *billing) Get(ctx context.Context, id string) (*api.BillingDocument, err
 	return c.c.Get(ctx, id, id, nil)
 }
 
-// Patch Billing Document
-func (c *billing) Patch(ctx context.Context, id string, f func(*api.BillingDocument) error) (*api.BillingDocument, error) {
+func (c *billing) patch(ctx context.Context, id string, f func(*api.BillingDocument) error, options *cosmosdb.Options) (*api.BillingDocument, error) {
 	var doc *api.BillingDocument
 
 	err := cosmosdb.RetryOnPreconditionFailed(func() (err error) {
@@ -119,9 +112,16 @@ func (c *billing) Patch(ctx context.Context, id string, f func(*api.BillingDocum
 			return
 		}
 
-		doc, err = c.c.Replace(ctx, doc.ID, doc, &cosmosdb.Options{PreTriggers: []string{"setDeletionBillingTimeStamp"}})
+		doc, err = c.c.Replace(ctx, doc.ID, doc, options)
 		return
 	})
 
 	return doc, err
+}
+
+// MarkForDeletion update the deletion timestamp field in the document
+func (c *billing) MarkForDeletion(ctx context.Context, id string) (*api.BillingDocument, error) {
+	return c.patch(ctx, id, func(billingdoc *api.BillingDocument) error {
+		return nil
+	}, &cosmosdb.Options{PreTriggers: []string{"setDeletionBillingTimeStamp"}})
 }

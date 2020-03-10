@@ -10,7 +10,6 @@ import (
 
 	"github.com/Azure/go-autorest/autorest"
 
-	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
@@ -97,10 +96,8 @@ func (m *Manager) Delete(ctx context.Context) error {
 		return err
 	}
 
-	m.log.Printf("updating billing record")
-	_, err = m.billing.Patch(ctx, m.doc.ID, func(billingdoc *api.BillingDocument) error {
-		return nil
-	})
+	m.log.Printf("updating billing record with deletion time")
+	_, err = m.billing.MarkForDeletion(ctx, m.doc.ID)
 
 	return err
 }

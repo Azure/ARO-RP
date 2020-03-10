@@ -135,19 +135,19 @@ func (mr *MockBillingMockRecorder) Get(arg0, arg1 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockBilling)(nil).Get), arg0, arg1)
 }
 
-// Patch mocks base method
-func (m *MockBilling) Patch(arg0 context.Context, arg1 string, arg2 func(*api.BillingDocument) error) (*api.BillingDocument, error) {
+// MarkForDeletion mocks base method
+func (m *MockBilling) MarkForDeletion(arg0 context.Context, arg1 string) (*api.BillingDocument, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Patch", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "MarkForDeletion", arg0, arg1)
 	ret0, _ := ret[0].(*api.BillingDocument)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Patch indicates an expected call of Patch
-func (mr *MockBillingMockRecorder) Patch(arg0, arg1, arg2 interface{}) *gomock.Call {
+// MarkForDeletion indicates an expected call of MarkForDeletion
+func (mr *MockBillingMockRecorder) MarkForDeletion(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Patch", reflect.TypeOf((*MockBilling)(nil).Patch), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkForDeletion", reflect.TypeOf((*MockBilling)(nil).MarkForDeletion), arg0, arg1)
 }
 
 // MockOpenShiftClusters is a mock of OpenShiftClusters interface
