@@ -25,6 +25,7 @@ func (f *frontend) getOperations(w http.ResponseWriter, r *http.Request) {
 					Resource:  "locations/operationresults",
 					Operation: "Read operation results",
 				},
+				Origin: "user,system",
 			},
 			{
 				Name: "Microsoft.RedHatOpenShift/locations/operationsstatus/read",
@@ -33,6 +34,7 @@ func (f *frontend) getOperations(w http.ResponseWriter, r *http.Request) {
 					Resource:  "locations/operationsstatus",
 					Operation: "Read operations status",
 				},
+				Origin: "user,system",
 			},
 			{
 				Name: "Microsoft.RedHatOpenShift/openShiftClusters/read",
@@ -41,6 +43,7 @@ func (f *frontend) getOperations(w http.ResponseWriter, r *http.Request) {
 					Resource:  "openShiftClusters",
 					Operation: "Read OpenShift cluster",
 				},
+				Origin: "user,system",
 			},
 			{
 				Name: "Microsoft.RedHatOpenShift/openShiftClusters/write",
@@ -49,6 +52,7 @@ func (f *frontend) getOperations(w http.ResponseWriter, r *http.Request) {
 					Resource:  "openShiftClusters",
 					Operation: "Write OpenShift cluster",
 				},
+				Origin: "user,system",
 			},
 			{
 				Name: "Microsoft.RedHatOpenShift/openShiftClusters/delete",
@@ -57,6 +61,7 @@ func (f *frontend) getOperations(w http.ResponseWriter, r *http.Request) {
 					Resource:  "openShiftClusters",
 					Operation: "Delete OpenShift cluster",
 				},
+				Origin: "user,system",
 			},
 			{
 				Name: "Microsoft.RedHatOpenShift/openShiftClusters/listCredentials/action",
@@ -65,6 +70,7 @@ func (f *frontend) getOperations(w http.ResponseWriter, r *http.Request) {
 					Resource:  "openShiftClusters",
 					Operation: "List credentials of an OpenShift cluster",
 				},
+				Origin: "user,system",
 			},
 			{
 				Name: "Microsoft.RedHatOpenShift/operations/read",
@@ -73,6 +79,7 @@ func (f *frontend) getOperations(w http.ResponseWriter, r *http.Request) {
 					Resource:  "operations",
 					Operation: "Read operations",
 				},
+				Origin: "user,system",
 			},
 		},
 	}
