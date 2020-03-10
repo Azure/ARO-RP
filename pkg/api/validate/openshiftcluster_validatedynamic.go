@@ -12,6 +12,7 @@ import (
 	"time"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
+	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
@@ -296,30 +297,26 @@ func (dv *openShiftClusterDynamicValidator) validateVnet(ctx context.Context, vn
 }
 
 func (dv *openShiftClusterDynamicValidator) validateProviders(ctx context.Context, providerClient resources.ProvidersClient) error {
-	providers := []string{
-		"Microsoft.Storage",
-		"Microsoft.Authorization",
-		"Microsoft.Compute",
-		"Microsoft.Network",
-	}
-
-	providersList, err := providerClient.List(ctx, nil, "")
+	providers, err := providerClient.List(ctx, nil, "")
 	if err != nil {
 		return err
 	}
-	for _, rp := range providersList {
-		found := false
-		for _, provider := range providers {
-			if provider == *rp.Namespace {
-				if *rp.RegistrationState != "Registered" {
-					return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidResourceProviderPermissions, "", "The resource provider '%s' is not registered.", *rp.Namespace)
-				}
-				found = true
-				break
-			}
-		}
-		if !found {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidResourceProviderPermissions, "", "The resource provider '%s' is missing.", *rp.Namespace)
+
+	providerMap := make(map[string]mgmtresources.Provider, len(providers))
+
+	for _, provider := range providers {
+		providerMap[*provider.Namespace] = provider
+	}
+
+	for _, provider := range []string{
+		"Microsoft.Authorization",
+		"Microsoft.Compute",
+		"Microsoft.Network",
+		"Microsoft.Storage",
+	} {
+		if providerMap[provider].RegistrationState == nil ||
+			*providerMap[provider].RegistrationState != "Registered" {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorResourceProviderNotRegistered, "", "The resource provider '%s' is not registered.", provider)
 		}
 	}
 
