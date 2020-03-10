@@ -1,0 +1,14 @@
+parameters:
+  workingDirectory: ""
+steps:
+  - script: |
+      cd ${{ parameters.workingDirectory }}
+
+      . secrets/env
+      . ./hack/e2e/run-rp-and-e2e.sh
+
+      export DATABASE_NAME=v4-e2e-$(git log --format=%h -n 1 HEAD)
+
+      register_sub
+    displayName: "🚀 Register Sub"
+    condition: eq(variables['RP_MODE'], 'development')

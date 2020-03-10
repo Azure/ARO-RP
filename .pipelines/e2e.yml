@@ -46,6 +46,9 @@ jobs:
       - template: ./templates/template-run-rp.yml
         parameters:
           workingDirectory: ${{ variables.modulePath }}
+      - template: ./templates/template-register-sub.yml
+        parameters:
+          workingDirectory: ${{ variables.modulePath }}
       - template: ./templates/template-run-e2e.yml
         parameters:
           workingDirectory: ${{ variables.modulePath }}
