@@ -160,9 +160,9 @@ echo "LOCATION=$LOCATION"
 echo "AZURE_SUBSCRIPTION_ID=$AZURE_SUBSCRIPTION_ID"
 echo
 echo "RP_MODE=$RP_MODE"
-echo
 if [ $RP_MODE = "development" ] 
 then 
+    echo
     echo "COSMOSDB_ACCOUNT=$COSMOSDB_ACCOUNT"
     echo "DATABASE_NAME=$DATABASE_NAME"
     echo "RESOURCEGROUP=$RESOURCEGROUP"
@@ -172,9 +172,9 @@ echo "CLUSTER=$CLUSTER"
 echo "CLUSTER_RESOURCEGROUP=$CLUSTER_RESOURCEGROUP"
 echo "KUBECONFIG=$KUBECONFIG"
 echo "CLUSTERSPN=$CLUSTERSPN"
-echo
 if [ $RP_MODE = "development" ]
 then 
+    echo
     echo "PROXY_HOSTNAME=$PROXY_HOSTNAME"
 fi
 echo "######################################"
