@@ -29,60 +29,6 @@
             }
         },
         {
-            "name": "c95361b8-cf7c-40a1-ad0a-df9f39a30225",
-            "apiVersion": "2017-09-01",
-            "type": "Microsoft.Authorization/roleDefinitions",
-            "properties": {
-                "assignableScopes": [
-                    "[concat('/subscriptions/', subscription().subscriptionId)]"
-                ],
-                "permissions": [
-                    {
-                        "actions": [
-                            "Microsoft.Authorization/roleAssignments/write",
-                            "Microsoft.Compute/disks/delete",
-                            "Microsoft.Compute/images/read",
-                            "Microsoft.Compute/images/write",
-                            "Microsoft.Compute/virtualMachines/delete",
-                            "Microsoft.Compute/virtualMachines/read",
-                            "Microsoft.Compute/virtualMachines/write",
-                            "Microsoft.Network/loadBalancers/backendAddressPools/join/action",
-                            "Microsoft.Network/loadBalancers/read",
-                            "Microsoft.Network/loadBalancers/write",
-                            "Microsoft.Network/networkInterfaces/delete",
-                            "Microsoft.Network/networkInterfaces/join/action",
-                            "Microsoft.Network/networkInterfaces/read",
-                            "Microsoft.Network/networkInterfaces/write",
-                            "Microsoft.Network/networkSecurityGroups/join/action",
-                            "Microsoft.Network/networkSecurityGroups/read",
-                            "Microsoft.Network/networkSecurityGroups/write",
-                            "Microsoft.Network/privateDnsZones/A/write",
-                            "Microsoft.Network/privateDnsZones/SRV/write",
-                            "Microsoft.Network/privateDnsZones/virtualNetworkLinks/write",
-                            "Microsoft.Network/privateDnsZones/write",
-                            "Microsoft.Network/privateLinkServices/read",
-                            "Microsoft.Network/privateLinkServices/write",
-                            "Microsoft.Network/publicIPAddresses/delete",
-                            "Microsoft.Network/publicIPAddresses/join/action",
-                            "Microsoft.Network/publicIPAddresses/read",
-                            "Microsoft.Network/publicIPAddresses/write",
-                            "Microsoft.Network/routeTables/read",
-                            "Microsoft.Network/routeTables/write",
-                            "Microsoft.Resources/deployments/operationStatuses/read",
-                            "Microsoft.Resources/deployments/read",
-                            "Microsoft.Resources/deployments/write",
-                            "Microsoft.Resources/subscriptions/resourceGroups/delete",
-                            "Microsoft.Resources/subscriptions/resourceGroups/read",
-                            "Microsoft.Storage/storageAccounts/blobServices/containers/write",
-                            "Microsoft.Storage/storageAccounts/listAccountSas/action",
-                            "Microsoft.Storage/storageAccounts/write"
-                        ]
-                    }
-                ],
-                "roleName": "ARO v4 Development First Party Managed Resource Group"
-            }
-        },
-        {
             "name": "f3fe7bc1-0ef9-4681-a68c-c1fa285d6128",
             "apiVersion": "2017-09-01",
             "type": "Microsoft.Authorization/roleDefinitions",
