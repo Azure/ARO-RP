@@ -663,8 +663,7 @@ chmod 0600 /etc/mdsd.pem
 az logout
 
 mkdir /etc/aro-rp
-ADMIN_API_CA_BUNDLE_PATH=/etc/aro-rp/admin-ca-bundle.pem
-base64 -d <<<"$ADMINAPICABUNDLE" >$ADMIN_API_CA_BUNDLE_PATH
+base64 -d <<<"$ADMINAPICABUNDLE" >/etc/aro-rp/admin-ca-bundle.pem
 chown -R 1000:1000 /etc/aro-rp
 
 mkdir /etc/systemd/system/mdsd.service.d
@@ -760,7 +759,7 @@ ExecStart=/usr/bin/docker run \
   -e ADMIN_API_CLIENT_CERT_COMMON_NAME \
   -e RP_MODE \
   -p 443:8443 \
-  -v ${ADMIN_API_CA_BUNDLE_PATH}:${ADMIN_API_CA_BUNDLE_PATH} \
+  -v /etc/aro-rp:/etc/aro-rp \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
   $RPIMAGE \
