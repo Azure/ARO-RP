@@ -43,9 +43,6 @@ func NewBilling(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, d
 	if (!billingBody["creationTime"]) {
 		billingBody["creationTime"] = now;
 	}
-	if (!billingBody["lastBillingTime"]) {
-		billingBody["lastBillingTime"] = now;
-	}
 	request.setBody(body);
 }`,
 		},
