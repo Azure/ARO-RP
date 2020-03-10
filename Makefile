@@ -64,7 +64,7 @@ image-proxy: proxy
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
 	docker build -f Dockerfile.proxy -t ${RP_IMAGE_ACR}.azurecr.io/proxy:latest .
 
-publish-image-aro: image-aro 
+publish-image-aro: image-aro
 	docker push ${RP_IMAGE_ACR}.azurecr.io/aro:$(COMMIT)
 
 publish-image-fluentbit: image-fluentbit
@@ -81,6 +81,7 @@ pyenv${PYTHON_VERSION}:
 	. pyenv${PYTHON_VERSION}/bin/activate && \
 		pip install azdev && \
 		azdev setup -r . && \
+		pip install azure-cli==2.0.81 && \
 		sed -i -e "s|^dev_sources = $(PWD)$$|dev_sources = $(PWD)/python|" ~/.azure/config
 
 secrets:
