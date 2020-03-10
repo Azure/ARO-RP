@@ -29,7 +29,6 @@ jobs:
         name: setEnv
         workingDirectory: "${{ variables.modulePath }}"
       - script: |
-          . secrets/env
           make aro
         displayName: "⚙️ Building ARO RP Golang binary"
         workingDirectory: "${{ variables.modulePath }}"
