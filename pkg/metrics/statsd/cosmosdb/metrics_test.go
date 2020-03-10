@@ -43,7 +43,7 @@ func TestTracerRoundTripperRoundTrip(t *testing.T) {
 					"path": "/foo",
 					"code": "0",
 				})
-				m.EXPECT().EmitFloat("client.cosmosdb.duration", gomock.Any(), map[string]string{
+				m.EXPECT().EmitGauge("client.cosmosdb.duration", gomock.Any(), map[string]string{
 					"verb": http.MethodGet,
 					"path": "/foo",
 					"code": "0",
@@ -72,7 +72,7 @@ func TestTracerRoundTripperRoundTrip(t *testing.T) {
 					"path": "/foo",
 					"code": "401",
 				})
-				m.EXPECT().EmitFloat("client.cosmosdb.duration", gomock.Any(), map[string]string{
+				m.EXPECT().EmitGauge("client.cosmosdb.duration", gomock.Any(), map[string]string{
 					"verb": http.MethodGet,
 					"path": "/foo",
 					"code": "401",
@@ -97,7 +97,7 @@ func TestTracerRoundTripperRoundTrip(t *testing.T) {
 					"path": "/docs/{id}",
 					"code": "200",
 				})
-				m.EXPECT().EmitFloat("client.cosmosdb.duration", gomock.Any(), map[string]string{
+				m.EXPECT().EmitGauge("client.cosmosdb.duration", gomock.Any(), map[string]string{
 					"verb": http.MethodGet,
 					"path": "/docs/{id}",
 					"code": "200",

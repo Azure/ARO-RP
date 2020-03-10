@@ -37,7 +37,7 @@ func NewResult(m metrics.Interface) k8smetrics.ResultMetric {
 }
 
 func (t *tracer) Observe(verb string, url url.URL, latency time.Duration) {
-	t.m.EmitFloat("client.k8s.duration", latency.Seconds(), map[string]string{
+	t.m.EmitGauge("client.k8s.duration", latency.Milliseconds(), map[string]string{
 		"path": url.Path,
 		"verb": verb,
 	})

@@ -49,7 +49,7 @@ func (sb *subscriptionBackend) try(ctx context.Context) (bool, error) {
 			sb.m.EmitGauge("backend.subscriptions.workers.count", int64(atomic.LoadInt32(&sb.workers)), nil)
 			sb.cond.Signal()
 
-			sb.m.EmitFloat("backend.subscriptions.duration", time.Now().Sub(t).Seconds(), map[string]string{
+			sb.m.EmitGauge("backend.subscriptions.duration", time.Now().Sub(t).Milliseconds(), map[string]string{
 				"state": string(doc.Subscription.State),
 			})
 

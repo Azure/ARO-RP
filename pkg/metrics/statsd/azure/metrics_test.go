@@ -20,7 +20,7 @@ func TestTracer(t *testing.T) {
 
 	m := mock_metrics.NewMockInterface(controller)
 
-	m.EXPECT().EmitFloat("client.azure.duration", gomock.Any(), map[string]string{
+	m.EXPECT().EmitGauge("client.azure.duration", gomock.Any(), map[string]string{
 		"client": "test",
 		"code":   "401",
 	})
