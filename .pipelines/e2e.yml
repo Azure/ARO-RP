@@ -43,13 +43,7 @@ jobs:
       - template: ./templates/template-deploy-e2e-db.yml
         parameters:
           workingDirectory: ${{ variables.modulePath }}
-      - template: ./templates/template-run-rp.yml
-        parameters:
-          workingDirectory: ${{ variables.modulePath }}
-      - template: ./templates/template-run-e2e.yml
-        parameters:
-          workingDirectory: ${{ variables.modulePath }}
-      - template: ./templates/template-kill-rp.yml
+      - template: ./templates/template-run-rp-and-e2e.yml
         parameters:
           workingDirectory: ${{ variables.modulePath }}
       - template: ./templates/template-clean-e2e-db.yml
