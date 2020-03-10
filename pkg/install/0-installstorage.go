@@ -9,12 +9,14 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
+	"time"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/installconfig"
+	"github.com/openshift/installer/pkg/asset/kubeconfig"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
 	"github.com/openshift/installer/pkg/asset/targets"
 	uuid "github.com/satori/go.uuid"
@@ -59,11 +61,6 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 		}
 	}
 
-	err := i.generateAndStoreKubeconfigs(ctx, g, "system:aro-service")
-	if err != nil {
-		return err
-	}
-
 	resourceGroup := stringutils.LastTokenByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
 	i.log.Print("creating resource group")
@@ -74,7 +71,7 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 	if _, ok := i.env.(env.Dev); ok {
 		group.ManagedBy = nil
 	}
-	_, err = i.groups.CreateOrUpdate(ctx, resourceGroup, group)
+	_, err := i.groups.CreateOrUpdate(ctx, resourceGroup, group)
 	if err != nil {
 		return err
 	}
@@ -239,6 +236,22 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 			return err
 		}
 	}
+
+	adminInternalClient := g[reflect.TypeOf(&kubeconfig.AdminInternalClient{})].(*kubeconfig.AdminInternalClient)
+	var aroServiceInternalClient kubeconfig.AdminInternalClient
+	err = i.generateAROServiceKubeconfig(ctx, g, "system:aro-service", &aroServiceInternalClient)
+	if err != nil {
+		return err
+	}
+
+	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		// used for the SAS token with which the bootstrap node retrieves its
+		// ignition payload
+		doc.OpenShiftCluster.Properties.Install.Now = time.Now().UTC()
+		doc.OpenShiftCluster.Properties.AdminKubeconfig = adminInternalClient.File.Data
+		doc.OpenShiftCluster.Properties.AROServiceKubeconfig = aroServiceInternalClient.File.Data
+		return nil
+	})
 
 	return err
 }

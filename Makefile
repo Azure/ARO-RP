@@ -121,4 +121,7 @@ test-python: generate pyenv${PYTHON_VERSION}
 		azdev linter && \
 		azdev style
 
-.PHONY: aro az clean client generate image-aro proxy secrets secrets-update test-go test-python image-fluentbit publish-image-proxy publish-image-aro publish-image-fluentbit publish-image-proxy
+delete-cluster:
+	az aro delete -g ${RESOURCEGROUP} -n ${CLUSTER} -y
+
+.PHONY: aro az clean client generate image-aro proxy secrets secrets-update test-go test-python image-fluentbit publish-image-proxy publish-image-aro publish-image-fluentbit publish-image-proxy delete-cluster
