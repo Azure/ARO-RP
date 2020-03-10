@@ -12,6 +12,7 @@ import (
 	"time"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
+	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
@@ -24,6 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/resources"
 	utilpermissions "github.com/Azure/ARO-RP/pkg/util/permissions"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
@@ -89,6 +91,12 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context, oc *api
 
 	spVnet := network.NewVirtualNetworksClient(r.SubscriptionID, spAuthorizer)
 	err = dv.validateVnet(ctx, spVnet, oc)
+	if err != nil {
+		return err
+	}
+
+	spProvider := resources.NewProvidersClient(r.SubscriptionID, spAuthorizer)
+	err = dv.validateProviders(ctx, spProvider)
 	if err != nil {
 		return err
 	}
@@ -286,4 +294,31 @@ func (dv *openShiftClusterDynamicValidator) validateVnet(ctx context.Context, vn
 	}
 
 	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided vnet '%s' is invalid: custom DNS servers are not supported.", vnetID)
+}
+
+func (dv *openShiftClusterDynamicValidator) validateProviders(ctx context.Context, providerClient resources.ProvidersClient) error {
+	providers, err := providerClient.List(ctx, nil, "")
+	if err != nil {
+		return err
+	}
+
+	providerMap := make(map[string]mgmtresources.Provider, len(providers))
+
+	for _, provider := range providers {
+		providerMap[*provider.Namespace] = provider
+	}
+
+	for _, provider := range []string{
+		"Microsoft.Authorization",
+		"Microsoft.Compute",
+		"Microsoft.Network",
+		"Microsoft.Storage",
+	} {
+		if providerMap[provider].RegistrationState == nil ||
+			*providerMap[provider].RegistrationState != "Registered" {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorResourceProviderNotRegistered, "", "The resource provider '%s' is not registered.", provider)
+		}
+	}
+
+	return nil
 }

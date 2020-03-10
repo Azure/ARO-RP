@@ -68,6 +68,7 @@ var (
 	CloudErrorCodeDuplicateDomain                    = "DuplicateDomain"
 	CloudErrorCodeResourceQuotaExceeded              = "ResourceQuotaExceeded"
 	CloudErrorCodeQuotaExceeded                      = "QuotaExceeded"
+	CloudErrorResourceProviderNotRegistered          = "ResourceProviderNotRegistered"
 )
 
 // NewCloudError returns a new CloudError
