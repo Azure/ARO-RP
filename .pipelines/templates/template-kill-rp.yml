@@ -1,0 +1,11 @@
+parameters:
+  workingDirectory: ""
+steps:
+  - script: |
+      cd ${{ parameters.workingDirectory }}
+
+      . secrets/env
+      . ./hack/e2e/run-rp-and-e2e.sh
+      kill_rp
+    displayName: "🧹 Kill ARO RP"
+    condition: and(always(), eq(variables['RP_MODE'], 'development'))

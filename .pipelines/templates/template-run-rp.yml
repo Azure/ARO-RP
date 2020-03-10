@@ -12,7 +12,5 @@ steps:
 
       run_rp
       validate_rp_running
-      register_sub
-      run_e2e
-      kill_rp
-    displayName: "🚀 Run ARO RP & E2E"
+    displayName: "🚀 Run ARO RP"
+    condition: eq(variables['RP_MODE'], 'development')
