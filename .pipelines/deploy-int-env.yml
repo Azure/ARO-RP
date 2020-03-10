@@ -9,7 +9,6 @@ jobs:
   - job: "Deploy_int_env_or_build"
     pool:
       vmImage: "ubuntu-latest"
-
     steps:
       - template: ./templates/template-setup-golang-env.yml
         parameters:
