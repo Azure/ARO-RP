@@ -9,6 +9,7 @@ steps:
 
       export DATABASE_NAME=v4-e2e-$(git log --format=%h -n 1 HEAD)
 
-      clean_e2e
-    displayName: "🧹 Clean cluster RG, and Vnet"
-    condition: always()
+      run_rp
+      validate_rp_running
+    displayName: "🚀 Run ARO RP"
+    condition: eq(variables['RP_MODE'], 'development')
