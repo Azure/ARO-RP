@@ -187,6 +187,6 @@ then
     [ "$COSMOSDB_ACCOUNT" ] || ( echo ">> COSMOSDB_ACCOUNT is not set; please validate your ./secrets/env"; exit 128 )
     [ "$DATABASE_NAME" ] || ( echo ">> DATABASE_NAME is not set; please validate your ./secrets/env"; exit 128 )
 fi
-[ "$AZURE_SUBSCRIPTION_ID" ] || ( echo ">> AZURE_SUBSCRIPTION_ID is not set please validate your ./secrets/env"; exit 128 )
+[ "$AZURE_SUBSCRIPTION_ID" ] || ( echo ">> AZURE_SUBSCRIPTION_ID is not set; please validate your ./secrets/env"; exit 128 )
 
 az account set -s $AZURE_SUBSCRIPTION_ID >/dev/null
