@@ -131,7 +131,7 @@
 * Get an admin kubeconfig:
 
   ```bash
-  hack/get-admin-kubeconfig.sh "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER" >admin.kubeconfig
+  make kubeconfig
   export KUBECONFIG=admin.kubeconfig
   ```
 

@@ -8,6 +8,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"reflect"
+	"strings"
 
 	"github.com/ghodss/yaml"
 	"github.com/openshift/installer/pkg/asset"
@@ -16,8 +17,8 @@ import (
 	clientcmd "k8s.io/client-go/tools/clientcmd/api/v1"
 )
 
-// generateAndStoreKubeconfigs generates additional admin credentials and kubeconfig based admin kubeconfig
-// found in graph and stores both to the database
+// generateAROServiceKubeconfig generates additional admin credentials and kubeconfig
+// based admin kubeconfig found in graph
 func (i *Installer) generateAROServiceKubeconfig(ctx context.Context, g graph, aroServiceName string, aroServiceInternalClient *kubeconfig.AdminInternalClient) error {
 	ca := g[reflect.TypeOf(&tls.AdminKubeConfigSignerCertKey{})].(*tls.AdminKubeConfigSignerCertKey)
 	cfg := &tls.CertCfg{
@@ -28,7 +29,11 @@ func (i *Installer) generateAROServiceKubeconfig(ctx context.Context, g graph, a
 	}
 
 	var clientCertKey tls.AdminKubeConfigClientCertKey
-	err := clientCertKey.SignedCertKey.Generate(cfg, ca, "admin-kubeconfig-client", tls.DoNotAppendParent)
+
+	// generated key and cert files are stored as filenameBase.key and filenameBase.crt
+	filenameBase := strings.ReplaceAll(":", "-", aroServiceName)
+
+	err := clientCertKey.SignedCertKey.Generate(cfg, ca, filenameBase, tls.DoNotAppendParent)
 	if err != nil {
 		return err
 	}
