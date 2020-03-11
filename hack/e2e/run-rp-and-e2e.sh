@@ -79,6 +79,13 @@ deploy_e2e_deps() {
       --vnet-name dev-vnet \
       -n "$CLUSTER-master" \
       --disable-private-link-service-network-policies true >/dev/null
+
+    echo "########## Create Cluster SPN ##########"
+    az ad sp create-for-rbac -n "$CLUSTER" --role contributor \
+        --scopes /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP >$CLUSTERSPN
+
+    echo "########## Sleep 120 secs for SPN creation"
+    sleep 120
 }
 
 register_sub() {
@@ -91,13 +98,18 @@ register_sub() {
 
 run_e2e() {
     export RESOURCEGROUP=$CLUSTER_RESOURCEGROUP
-    echo "########## 🚀 Create ARO Cluster $CLUSTER ##########"
+    CLUSTER_SPN_ID=$(cat $CLUSTERSPN | jq -r .appId)
+    CLUSTER_SPN_SECRET=$(cat $CLUSTERSPN | jq -r .password)
+
+    echo "########## 🚀 Create ARO Cluster $CLUSTER - Using client-id : $CLUSTER_SPN_ID ##########"
     az aro create \
       -g "$RESOURCEGROUP" \
       -n "$CLUSTER" \
       --vnet dev-vnet \
       --master-subnet "$CLUSTER-master" \
-      --worker-subnet "$CLUSTER-worker"
+      --worker-subnet "$CLUSTER-worker" \
+      --client-id $CLUSTER_SPN_ID \
+      --client-secret $CLUSTER_SPN_SECRET
 
     echo "########## CLI : ARO List ##########"
     az aro list -o table
@@ -106,6 +118,7 @@ run_e2e() {
     echo "########## Run E2E ##########"
     go run ./hack/kubeadminkubeconfig "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER" >$KUBECONFIG
     make e2e
+
     echo "########## CLI : ARO delete cluster ##########"
     az aro delete -g "$RESOURCEGROUP" -n "$CLUSTER" --yes
 }
@@ -121,12 +134,17 @@ clean_e2e() {
     export RESOURCEGROUP=$CLUSTER_RESOURCEGROUP
     echo "########## 🧹 Cleaning Cluster RG : $RESOURCEGROUP "
     az group delete -n $RESOURCEGROUP -y
+    echo "########## 🧹Deleting Cluster SPN "
+    az ad sp delete --id $(cat $CLUSTERSPN | jq -r .appId)
+    echo "########## 🧹 Cleaning files "
     rm -f $KUBECONFIG
+    rm -f $CLUSTERSPN
 }
 
 export CLUSTER="v4-e2e-$(git log --format=%h -n 1 HEAD)"
 export CLUSTER_RESOURCEGROUP="v4-e2e-rg-$(git log --format=%h -n 1 HEAD)-$LOCATION"
 export KUBECONFIG=$(pwd)/$CLUSTER.kubeconfig
+export CLUSTERSPN=$(pwd)/$CLUSTER.json
 
 echo "######################################"
 echo "##### ARO V4 E2e helper sourced ######"
@@ -143,6 +161,7 @@ echo
 echo "CLUSTER=$CLUSTER"
 echo "CLUSTER_RESOURCEGROUP=$CLUSTER_RESOURCEGROUP"
 echo "KUBECONFIG=$KUBECONFIG"
+echo "CLUSTERSPN=$CLUSTERSPN"
 echo
 echo "PROXY_HOSTNAME=$PROXY_HOSTNAME"
 echo "######################################"
