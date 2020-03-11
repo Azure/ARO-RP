@@ -27,7 +27,7 @@ validate_rp_running() {
 
 run_rp() {
     echo "########## 🚀 Run ARO RP in background ##########"
-    ./aro rp | tee e2erpoutput.txt &
+    ./aro rp &
 }
 
 kill_rp(){
@@ -117,18 +117,10 @@ run_e2e() {
     az aro list-credentials -g "$RESOURCEGROUP" -n "$CLUSTER"
     echo "########## Run E2E ##########"
     go run ./hack/kubeadminkubeconfig "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER" >$KUBECONFIG
-    make e2e | tee e2eoutput.txt
-    validate_e2e
+    make e2e
 
     echo "########## CLI : ARO delete cluster ##########"
     az aro delete -g "$RESOURCEGROUP" -n "$CLUSTER" --yes
-}
-
-validate_e2e(){
-    echo "########## Validating E2E commands output ##########"
-    if [[ "$(grep 'ERROR' e2erpoutput.txt)" || "$(grep 'Panic' e2eoutput.txt)" ]]; then
-        exit 1
-    fi
 }
 
 clean_e2e_db(){

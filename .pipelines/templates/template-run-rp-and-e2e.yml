@@ -2,6 +2,7 @@ parameters:
   workingDirectory: ""
 steps:
   - script: |
+      #!/bin/bash -e
       cd ${{ parameters.workingDirectory }}
 
       . secrets/env
