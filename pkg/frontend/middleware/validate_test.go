@@ -12,7 +12,7 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	_ "github.com/Azure/ARO-RP/pkg/api/v20191231preview"
+	_ "github.com/Azure/ARO-RP/pkg/api/v20200430"
 	"github.com/Azure/ARO-RP/test/validate"
 )
 
@@ -43,36 +43,36 @@ func TestValidate(t *testing.T) {
 	}{
 		{
 			name: "valid openShiftClusters",
-			path: "/subscriptions/42d9eac4-d29a-4d6e-9e26-3439758b1491/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/cluster?api-version=2019-12-31-preview",
+			path: "/subscriptions/42d9eac4-d29a-4d6e-9e26-3439758b1491/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/cluster?api-version=2020-04-30",
 		},
 		{
 			name:    "invalid openShiftClusters - case",
-			path:    "/subscriptions/42d9eac4-d29a-4d6e-9e26-3439758b1491/resourcegroups/Resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/cluster?api-version=2019-12-31-preview",
+			path:    "/subscriptions/42d9eac4-d29a-4d6e-9e26-3439758b1491/resourcegroups/Resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/cluster?api-version=2020-04-30",
 			wantErr: "500: InternalServerError: : Internal server error.",
 		},
 		{
 			name:    "invalid openShiftClusters - subscriptionId",
-			path:    "/subscriptions/invalid/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/cluster?api-version=2019-12-31-preview",
+			path:    "/subscriptions/invalid/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/cluster?api-version=2020-04-30",
 			wantErr: "404: InvalidSubscriptionID: : The provided subscription identifier 'invalid' is malformed or invalid.",
 		},
 		{
 			name:    "invalid openShiftClusters - resourceGroupName",
-			path:    "/subscriptions/42d9eac4-d29a-4d6e-9e26-3439758b1491/resourcegroups/$/providers/microsoft.redhatopenshift/openshiftclusters/cluster?api-version=2019-12-31-preview",
+			path:    "/subscriptions/42d9eac4-d29a-4d6e-9e26-3439758b1491/resourcegroups/$/providers/microsoft.redhatopenshift/openshiftclusters/cluster?api-version=2020-04-30",
 			wantErr: "404: ResourceGroupNotFound: : Resource group '$' could not be found.",
 		},
 		{
 			name:    "invalid openShiftClusters - resourceProviderNamespace",
-			path:    "/subscriptions/42d9eac4-d29a-4d6e-9e26-3439758b1491/resourcegroups/resourcegroup/providers/invalid/openshiftclusters/cluster?api-version=2019-12-31-preview",
+			path:    "/subscriptions/42d9eac4-d29a-4d6e-9e26-3439758b1491/resourcegroups/resourcegroup/providers/invalid/openshiftclusters/cluster?api-version=2020-04-30",
 			wantErr: "404: InvalidResourceNamespace: : The resource namespace 'invalid' is invalid.",
 		},
 		{
 			name:    "invalid openShiftClusters - resourceType",
-			path:    "/subscriptions/42d9eac4-d29a-4d6e-9e26-3439758b1491/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/invalid/cluster?api-version=2019-12-31-preview",
-			wantErr: "404: InvalidResourceType: : The resource type 'invalid' could not be found in the namespace 'microsoft.redhatopenshift' for api version '2019-12-31-preview'.",
+			path:    "/subscriptions/42d9eac4-d29a-4d6e-9e26-3439758b1491/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/invalid/cluster?api-version=2020-04-30",
+			wantErr: "404: InvalidResourceType: : The resource type 'invalid' could not be found in the namespace 'microsoft.redhatopenshift' for api version '2020-04-30'.",
 		},
 		{
 			name:    "invalid openShiftClusters - resourceName",
-			path:    "/subscriptions/42d9eac4-d29a-4d6e-9e26-3439758b1491/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/$?api-version=2019-12-31-preview",
+			path:    "/subscriptions/42d9eac4-d29a-4d6e-9e26-3439758b1491/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/$?api-version=2020-04-30",
 			wantErr: "404: ResourceNotFound: : The Resource 'microsoft.redhatopenshift/openshiftclusters/$' under resource group 'resourcegroup' was not found.",
 		},
 		{
@@ -82,11 +82,11 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name: "valid operations",
-			path: "/providers/microsoft.redhatopenshift/operations?api-version=2019-12-31-preview",
+			path: "/providers/microsoft.redhatopenshift/operations?api-version=2020-04-30",
 		},
 		{
 			name:    "invalid operations - resourceProviderNamespace",
-			path:    "/providers/invalid/operations?api-version=2019-12-31-preview",
+			path:    "/providers/invalid/operations?api-version=2020-04-30",
 			wantErr: "404: InvalidResourceNamespace: : The resource namespace 'invalid' is invalid.",
 		},
 		{

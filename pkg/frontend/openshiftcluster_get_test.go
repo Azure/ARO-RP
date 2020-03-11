@@ -19,7 +19,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/v20191231preview"
+	v20200430 "github.com/Azure/ARO-RP/pkg/api/v20200430"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -65,7 +65,7 @@ func TestGetOpenShiftCluster(t *testing.T) {
 		resourceID     string
 		mocks          func(*test, *mock_database.MockOpenShiftClusters)
 		wantStatusCode int
-		wantResponse   func(*test) *v20191231preview.OpenShiftCluster
+		wantResponse   func(*test) *v20200430.OpenShiftCluster
 		wantError      string
 	}
 
@@ -93,8 +93,8 @@ func TestGetOpenShiftCluster(t *testing.T) {
 					}, nil)
 			},
 			wantStatusCode: http.StatusOK,
-			wantResponse: func(tt *test) *v20191231preview.OpenShiftCluster {
-				return &v20191231preview.OpenShiftCluster{
+			wantResponse: func(tt *test) *v20200430.OpenShiftCluster {
+				return &v20200430.OpenShiftCluster{
 					ID:   tt.resourceID,
 					Name: "resourceName",
 					Type: "Microsoft.RedHatOpenShift/openshiftClusters",
@@ -153,7 +153,7 @@ func TestGetOpenShiftCluster(t *testing.T) {
 
 			go f.Run(ctx, nil, nil)
 
-			resp, err := cli.Get("https://server" + tt.resourceID + "?api-version=2019-12-31-preview")
+			resp, err := cli.Get("https://server" + tt.resourceID + "?api-version=2020-04-30")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -169,7 +169,7 @@ func TestGetOpenShiftCluster(t *testing.T) {
 			}
 
 			if tt.wantError == "" {
-				var oc *v20191231preview.OpenShiftCluster
+				var oc *v20200430.OpenShiftCluster
 				err = json.Unmarshal(b, &oc)
 				if err != nil {
 					t.Fatal(err)

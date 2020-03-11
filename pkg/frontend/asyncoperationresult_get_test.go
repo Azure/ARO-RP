@@ -19,7 +19,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/v20191231preview"
+	v20200430 "github.com/Azure/ARO-RP/pkg/api/v20200430"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -69,7 +69,7 @@ func TestGetAsyncOperationResult(t *testing.T) {
 		mocks          func(*mock_database.MockOpenShiftClusters, *mock_database.MockAsyncOperations)
 		wantStatusCode int
 		wantAsync      bool
-		wantResponse   func() *v20191231preview.OpenShiftCluster
+		wantResponse   func() *v20200430.OpenShiftCluster
 		wantError      string
 	}
 
@@ -105,8 +105,8 @@ func TestGetAsyncOperationResult(t *testing.T) {
 					Return(clusterDoc, nil)
 			},
 			wantStatusCode: http.StatusOK,
-			wantResponse: func() *v20191231preview.OpenShiftCluster {
-				return &v20191231preview.OpenShiftCluster{
+			wantResponse: func() *v20200430.OpenShiftCluster {
+				return &v20200430.OpenShiftCluster{
 					ID:   "fakeClusterID",
 					Name: "resourceName",
 					Type: "Microsoft.RedHatOpenShift/openshiftClusters",
@@ -204,7 +204,7 @@ func TestGetAsyncOperationResult(t *testing.T) {
 			referer := fmt.Sprintf("/subscriptions/%s/providers/microsoft.redhatopenshift/locations/%s/operationresults/%s", mockSubID, env.Location(), mockOpID)
 
 			req, err := http.NewRequest(http.MethodGet, fmt.Sprintf(
-				"https://server/subscriptions/%s/providers/Microsoft.RedHatOpenShift/locations/%s/operationresults/%s?api-version=2019-12-31-preview",
+				"https://server/subscriptions/%s/providers/Microsoft.RedHatOpenShift/locations/%s/operationresults/%s?api-version=2020-04-30",
 				mockSubID,
 				env.Location(),
 				mockOpID,
@@ -244,7 +244,7 @@ func TestGetAsyncOperationResult(t *testing.T) {
 
 			if tt.wantError == "" {
 				if tt.wantResponse != nil {
-					var oc *v20191231preview.OpenShiftCluster
+					var oc *v20200430.OpenShiftCluster
 					err = json.Unmarshal(b, &oc)
 					if err != nil {
 						t.Fatal(err)

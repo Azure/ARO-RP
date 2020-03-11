@@ -248,7 +248,7 @@ func TestGetAsyncOperationsStatus(t *testing.T) {
 			go f.Run(ctx, nil, nil)
 
 			resp, err := cli.Get(fmt.Sprintf(
-				"https://server/subscriptions/%s/providers/Microsoft.RedHatOpenShift/locations/%s/operationsstatus/%s?api-version=2019-12-31-preview",
+				"https://server/subscriptions/%s/providers/Microsoft.RedHatOpenShift/locations/%s/operationsstatus/%s?api-version=2020-04-30",
 				mockSubID,
 				env.Location(),
 				mockOpID,
