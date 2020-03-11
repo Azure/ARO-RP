@@ -400,6 +400,15 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "5a6f75716e1203a923a78c9efb94089d857df0f6",
+                    "repositoryUrl": "https://github.com/google/go-cmp/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "f140a6486e521aad38f5917de355cbf147cc0496",
                     "repositoryUrl": "https://github.com/google/gofuzz/"
                 }
@@ -742,7 +751,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "a3d66b635c55764669927e31a6ede041fd77347a",
+                    "commitHash": "86ecb23daa83c78761414a7abcb169c73c18a756",
                     "repositoryUrl": "https://github.com/openshift/cluster-api-provider-azure/"
                 }
             }
@@ -769,7 +778,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "17af9b24571d42421d258ded8073662d5dc8895f",
+                    "commitHash": "bfda4d3462fd7305573adb103137723d2bd4975c",
                     "repositoryUrl": "https://github.com/openshift/cluster-samples-operator/"
                 }
             }

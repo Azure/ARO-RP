@@ -18,7 +18,7 @@
   revision = "3a14fb1c4737b3995174c5f4d6d08a348b9b4180"
 
 [[projects]]
-  digest = "1:8db7950de8a0bdaf0cca5735099d070ec30a3ea9bebded7ebac4186603a2bf7f"
+  digest = "1:a437ccaa9b61d84f8bca9db9b75f306901c2244c95ed5d5e6112435752b68716"
   name = "github.com/Azure/azure-sdk-for-go"
   packages = [
     "profiles/latest/dns/mgmt/dns",
@@ -36,7 +36,6 @@
     "services/msi/mgmt/2018-11-30/msi",
     "services/network/mgmt/2018-12-01/network",
     "services/network/mgmt/2019-07-01/network",
-    "services/preview/authorization/mgmt/2018-09-01-preview/authorization",
     "services/privatedns/mgmt/2018-09-01/privatedns",
     "services/resources/mgmt/2018-05-01/resources",
     "services/resources/mgmt/2019-06-01/subscriptions",
@@ -529,6 +528,20 @@
   version = "v1.3.2"
 
 [[projects]]
+  digest = "1:0aeda02073125667ac6c9df50c7921cb22c08a4accdc54589c697a7e76be65c2"
+  name = "github.com/google/go-cmp"
+  packages = [
+    "cmp",
+    "cmp/internal/diff",
+    "cmp/internal/flags",
+    "cmp/internal/function",
+    "cmp/internal/value",
+  ]
+  pruneopts = "UT"
+  revision = "5a6f75716e1203a923a78c9efb94089d857df0f6"
+  version = "v0.4.0"
+
+[[projects]]
   digest = "1:a6181aca1fd5e27103f9a920876f29ac72854df7345a39f3b01e61c8c94cc8af"
   name = "github.com/google/gofuzz"
   packages = ["."]
@@ -940,7 +953,7 @@
 
 [[projects]]
   branch = "release-4.3"
-  digest = "1:e8de4916b8d3f71ab1486b9304ad73804dfe383be7c3ed51f4d1c32584fae071"
+  digest = "1:399e8d70371267705d306221880377d69fcb3650254b754a168370561d435b35"
   name = "github.com/openshift/cluster-api"
   packages = [
     "pkg/apis/cluster/common",
@@ -948,20 +961,23 @@
     "pkg/apis/machine/common",
     "pkg/apis/machine/v1beta1",
     "pkg/client/clientset_generated/clientset",
+    "pkg/client/clientset_generated/clientset/fake",
     "pkg/client/clientset_generated/clientset/scheme",
     "pkg/client/clientset_generated/clientset/typed/cluster/v1alpha1",
+    "pkg/client/clientset_generated/clientset/typed/cluster/v1alpha1/fake",
     "pkg/client/clientset_generated/clientset/typed/machine/v1beta1",
+    "pkg/client/clientset_generated/clientset/typed/machine/v1beta1/fake",
   ]
   pruneopts = "UT"
   revision = "9a3a7bbe9258f5c3117cb2aba6a560babe0d59f8"
 
 [[projects]]
-  branch = "master"
+  branch = "release-4.3"
   digest = "1:9d86fe2d97d035702ab624b98c8bdb64436bafcba5538b26f3263f7e1a053f41"
   name = "github.com/openshift/cluster-api-provider-azure"
   packages = ["pkg/apis/azureprovider/v1beta1"]
   pruneopts = "UT"
-  revision = "a3d66b635c55764669927e31a6ede041fd77347a"
+  revision = "86ecb23daa83c78761414a7abcb169c73c18a756"
 
 [[projects]]
   branch = "master"
@@ -995,7 +1011,7 @@
     "pkg/generated/clientset/versioned/typed/samples/v1",
   ]
   pruneopts = "UT"
-  revision = "17af9b24571d42421d258ded8073662d5dc8895f"
+  revision = "bfda4d3462fd7305573adb103137723d2bd4975c"
 
 [[projects]]
   branch = "release-4.3"
@@ -1910,7 +1926,6 @@
     "github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault",
     "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi",
     "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network",
-    "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization",
     "github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns",
     "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources",
     "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage",
@@ -1938,6 +1953,7 @@
     "github.com/go-bindata/go-bindata/go-bindata",
     "github.com/golang/mock/gomock",
     "github.com/golang/mock/mockgen",
+    "github.com/google/go-cmp/cmp",
     "github.com/gorilla/mux",
     "github.com/jim-minter/go-cosmosdb/cmd/gencosmosdb",
     "github.com/jstemmer/go-junit-report",
@@ -1954,7 +1970,9 @@
     "github.com/openshift/client-go/operator/clientset/versioned/fake",
     "github.com/openshift/client-go/security/clientset/versioned",
     "github.com/openshift/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1",
+    "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1",
     "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset",
+    "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset/fake",
     "github.com/openshift/cluster-samples-operator/pkg/generated/clientset/versioned",
     "github.com/openshift/console-operator/pkg/api",
     "github.com/openshift/installer/data",
@@ -2004,6 +2022,7 @@
     "k8s.io/client-go/kubernetes/fake",
     "k8s.io/client-go/kubernetes/typed/core/v1",
     "k8s.io/client-go/rest",
+    "k8s.io/client-go/testing",
     "k8s.io/client-go/tools/clientcmd",
     "k8s.io/client-go/tools/clientcmd/api/v1",
     "k8s.io/client-go/tools/metrics",
