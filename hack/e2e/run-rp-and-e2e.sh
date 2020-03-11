@@ -131,6 +131,7 @@ run_e2e() {
 clean_e2e_db(){
     echo "########## 🧹 Deleting DB $DATABASE_NAME ##########"
     az cosmosdb sql database delete --name $DATABASE_NAME \
+        --yes \
         --account-name $COSMOSDB_ACCOUNT \
         --resource-group $RESOURCEGROUP >/dev/null
 }
