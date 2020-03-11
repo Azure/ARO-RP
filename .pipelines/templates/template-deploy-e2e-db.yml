@@ -1,6 +1,5 @@
 parameters:
   workingDirectory: ""
-  rpMode: ""
 steps:
   - script: |
       cd ${{ parameters.workingDirectory }}

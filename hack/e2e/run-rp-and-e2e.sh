@@ -182,10 +182,10 @@ echo "######################################"
 [ "$LOCATION" ] || ( echo ">> LOCATION is not set please validate your ./secrets/env"; exit 128 )
 if [ $RP_MODE = "development" ]
 then 
-    [ "$RESOURCEGROUP" ] || ( echo ">> RESOURCEGROUP is not set please validate your ./secrets/env"; exit 128 )
-    [ "$PROXY_HOSTNAME" ] || ( echo ">> PROXY_HOSTNAME is not set please validate your ./secrets/env"; exit 128 )
-    [ "$COSMOSDB_ACCOUNT" ] || ( echo ">> COSMOSDB_ACCOUNT is not set please validate your ./secrets/env"; exit 128 )
-    [ "$DATABASE_NAME" ] || ( echo ">> DATABASE_NAME is not set please validate your ./secrets/env"; exit 128 )
+    [ "$RESOURCEGROUP" ] || ( echo ">> RESOURCEGROUP is not set; please validate your ./secrets/env"; exit 128 )
+    [ "$PROXY_HOSTNAME" ] || ( echo ">> PROXY_HOSTNAME is not set; please validate your ./secrets/env"; exit 128 )
+    [ "$COSMOSDB_ACCOUNT" ] || ( echo ">> COSMOSDB_ACCOUNT is not set; please validate your ./secrets/env"; exit 128 )
+    [ "$DATABASE_NAME" ] || ( echo ">> DATABASE_NAME is not set; please validate your ./secrets/env"; exit 128 )
 fi
 [ "$AZURE_SUBSCRIPTION_ID" ] || ( echo ">> AZURE_SUBSCRIPTION_ID is not set please validate your ./secrets/env"; exit 128 )
 
