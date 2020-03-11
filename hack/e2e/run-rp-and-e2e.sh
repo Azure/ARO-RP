@@ -134,6 +134,7 @@ echo "######################################"
 echo "######## Current settings : ##########"
 echo
 echo "LOCATION=$LOCATION"
+echo "AZURE_SUBSCRIPTION_ID=$AZURE_SUBSCRIPTION_ID"
 echo
 echo "COSMOSDB_ACCOUNT=$COSMOSDB_ACCOUNT"
 echo "DATABASE_NAME=$DATABASE_NAME"
@@ -151,3 +152,6 @@ echo "######################################"
 [ "$PROXY_HOSTNAME" ] || ( echo ">> PROXY_HOSTNAME is not set please validate your ./secrets/env"; exit 128 )
 [ "$COSMOSDB_ACCOUNT" ] || ( echo ">> COSMOSDB_ACCOUNT is not set please validate your ./secrets/env"; exit 128 )
 [ "$DATABASE_NAME" ] || ( echo ">> DATABASE_NAME is not set please validate your ./secrets/env"; exit 128 )
+[ "$AZURE_SUBSCRIPTION_ID" ] || ( echo ">> AZURE_SUBSCRIPTION_ID is not set please validate your ./secrets/env"; exit 128 )
+
+az account set -s $AZURE_SUBSCRIPTION_ID >/dev/null

@@ -91,5 +91,13 @@ func (m *Manager) Delete(ctx context.Context) error {
 		detailedErr.StatusCode == http.StatusForbidden {
 		err = nil
 	}
+
+	if err != nil {
+		return err
+	}
+
+	m.log.Printf("updating billing record with deletion time")
+	_, err = m.billing.MarkForDeletion(ctx, m.doc.ID)
+
 	return err
 }
