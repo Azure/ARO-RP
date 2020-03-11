@@ -10,6 +10,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/v20191231preview"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
 func generateExamples(outputDir string, s *Swagger) error {
@@ -43,7 +44,7 @@ func generateExamples(outputDir string, s *Swagger) error {
 					case "../../../../../common-types/resource-management/v1/types.json#/parameters/ApiVersionParameter":
 						example.Parameters = append(example.Parameters, NameParameter{
 							Name:      "api-version",
-							Parameter: "2019-12-31-preview",
+							Parameter: stringutils.LastTokenByte(outputDir, '/'),
 						})
 					case "../../../../../common-types/resource-management/v1/types.json#/parameters/SubscriptionIdParameter":
 						example.Parameters = append(example.Parameters, NameParameter{
