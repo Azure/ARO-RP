@@ -7,8 +7,6 @@ import (
 	"bytes"
 	"encoding/json"
 
-	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2016-10-01/keyvault"
-
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 )
 
@@ -25,6 +23,7 @@ func (g *generator) managedIdentityTemplate() *arm.Template {
 			Value: "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity'), '2018-11-30').principalId]",
 		},
 	}
+
 	return t
 }
 
@@ -52,10 +51,6 @@ func (g *generator) rpTemplate() *arm.Template {
 			"sshPublicKey",
 			"vmssName",
 		)
-	} else {
-		params = append(params,
-			"adminObjectId",
-		)
 	}
 
 	for _, param := range params {
@@ -77,11 +72,7 @@ func (g *generator) rpTemplate() *arm.Template {
 		g.rpvnet(), g.pevnet(),
 		g.halfPeering("rp-vnet", "rp-pe-vnet-001"),
 		g.halfPeering("rp-pe-vnet-001", "rp-vnet"))
-	if g.production {
-		t.Resources = append(t.Resources, g.cosmosdb("'ARO'")...)
-	} else {
-		t.Resources = append(t.Resources, g.cosmosdb("pparameters('databaseName')")...)
-	}
+	t.Resources = append(t.Resources, g.cosmosdb()...)
 	t.Resources = append(t.Resources, g.rbac()...)
 
 	return t
@@ -132,9 +123,18 @@ func (g *generator) preDeployTemplate() *arm.Template {
 
 	params := []string{
 		"keyvaultPrefix",
-		"extraKeyvaultAccessPolicies",
 		"rpServicePrincipalId",
 		"fpServicePrincipalId",
+	}
+
+	if g.production {
+		params = append(params,
+			"extraKeyvaultAccessPolicies",
+		)
+	} else {
+		params = append(params,
+			"adminObjectId",
+		)
 	}
 
 	for _, param := range params {
@@ -142,7 +142,7 @@ func (g *generator) preDeployTemplate() *arm.Template {
 		switch param {
 		case "extraKeyvaultAccessPolicies":
 			p.Type = "array"
-			p.DefaultValue = []mgmtkeyvault.AccessPolicyEntry{}
+			p.DefaultValue = []interface{}{}
 		case "keyvaultPrefix":
 			p.MaxLength = 24 - max(len(kvClusterSuffix), len(kvServiceSuffix))
 		}
@@ -212,6 +212,7 @@ func (g *generator) sharedDevelopmentEnvTemplate() *arm.Template {
 			DefaultValue: defaultValue,
 		}
 	}
+
 	return t
 }
 

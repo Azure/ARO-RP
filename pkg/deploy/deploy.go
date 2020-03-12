@@ -76,32 +76,79 @@ func New(ctx context.Context, log *logrus.Entry, authorizer autorest.Authorizer,
 	}
 }
 
-// PreDeploy deploys NSG and ManagedIdentity, needed for man deployment
-func (d *deployer) PreDeploy(ctx context.Context) (rpServicePrincipalID string, err error) {
-	group := azresources.Group{
+// PreDeploy deploys managed identity, NSGs and keyvaults, needed for main
+// deployment
+func (d *deployer) PreDeploy(ctx context.Context) (string, error) {
+	_, err := d.groups.CreateOrUpdate(ctx, d.resourceGroup, azresources.Group{
 		Location: &d.location,
-	}
-
-	_, err = d.groups.CreateOrUpdate(ctx, d.resourceGroup, group)
+	})
 	if err != nil {
 		return "", err
 	}
 
-	// deploy managed identity and set id
-	rpServicePrincipalID, err = d.deployManageIdentity(ctx)
+	// deploy managed identity if needed and get rpServicePrincipalID
+	rpServicePrincipalID, err := d.deployManageIdentity(ctx)
 	if err != nil {
 		return "", err
 	}
 
-	return rpServicePrincipalID, d.deployPreDeploy(ctx, rpServicePrincipalID)
+	// deploy NSGs, keyvaults
+	err = d.deployPreDeploy(ctx, rpServicePrincipalID)
+	if err != nil {
+		return "", err
+	}
+
+	return rpServicePrincipalID, nil
 }
 
-func (d *deployer) deployPreDeploy(ctx context.Context, rpServicePrincipalID string) (err error) {
+func (d *deployer) deployManageIdentity(ctx context.Context) (string, error) {
+	deploymentName := "rp-production-managed-identity"
+
+	deployment, err := d.deployments.Get(ctx, d.resourceGroup, deploymentName)
+	if isDeploymentNotFoundError(err) {
+		deployment, err = d._deployManageIdentity(ctx, deploymentName)
+	}
+	if err != nil {
+		return "", err
+	}
+
+	return deployment.Properties.Outputs.(map[string]interface{})["rpServicePrincipalId"].(map[string]interface{})["value"].(string), nil
+}
+
+func (d *deployer) _deployManageIdentity(ctx context.Context, deploymentName string) (azresources.DeploymentExtended, error) {
+	b, err := Asset(generator.FileRPProductionManagedIdentity)
+	if err != nil {
+		return azresources.DeploymentExtended{}, nil
+	}
+
+	var template map[string]interface{}
+	err = json.Unmarshal(b, &template)
+	if err != nil {
+		return azresources.DeploymentExtended{}, nil
+	}
+
+	d.log.Infof("deploying managed identity to %s", d.resourceGroup)
+	err = d.deployments.CreateOrUpdateAndWait(ctx, d.resourceGroup, deploymentName, azresources.Deployment{
+		Properties: &azresources.DeploymentProperties{
+			Template: template,
+			Mode:     azresources.Incremental,
+		},
+	})
+	if err != nil {
+		return azresources.DeploymentExtended{}, nil
+	}
+
+	return d.deployments.Get(ctx, d.resourceGroup, deploymentName)
+}
+
+func (d *deployer) deployPreDeploy(ctx context.Context, rpServicePrincipalID string) error {
 	deploymentName := "rp-production-predeploy"
-	_, err = d.deployments.Get(ctx, d.resourceGroup, deploymentName)
-	if !isDeploymentNotFoundError(err) {
+
+	_, err := d.deployments.Get(ctx, d.resourceGroup, deploymentName)
+	if err == nil || !isDeploymentNotFoundError(err) {
 		return err
 	}
+
 	b, err := Asset(generator.FileRPProductionPredeploy)
 	if err != nil {
 		return err
@@ -130,41 +177,6 @@ func (d *deployer) deployPreDeploy(ctx context.Context, rpServicePrincipalID str
 			Parameters: parameters.Parameters,
 		},
 	})
-}
-
-func (d *deployer) deployManageIdentity(ctx context.Context) (rpServicePrincipalID string, err error) {
-	deploymentName := "rp-production-managed-identity"
-	deployment, err := d.deployments.Get(ctx, d.resourceGroup, deploymentName)
-	if isDeploymentNotFoundError(err) {
-		deployment, err = d._deployManageIdentity(ctx, deploymentName)
-	}
-	return deployment.Properties.Outputs.(map[string]interface{})["rpServicePrincipalId"].(map[string]interface{})["value"].(string), nil
-}
-
-func (d *deployer) _deployManageIdentity(ctx context.Context, deploymentName string) (deployment azresources.DeploymentExtended, err error) {
-	b, err := Asset(generator.FileRPProductionManagedIdentity)
-	if err != nil {
-		return
-	}
-
-	var template map[string]interface{}
-	err = json.Unmarshal(b, &template)
-	if err != nil {
-		return
-	}
-
-	d.log.Infof("deploying managed identity to %s", d.resourceGroup)
-	err = d.deployments.CreateOrUpdateAndWait(ctx, d.resourceGroup, deploymentName, azresources.Deployment{
-		Properties: &azresources.DeploymentProperties{
-			Template: template,
-			Mode:     azresources.Incremental,
-		},
-	})
-	if err != nil {
-		return
-	}
-
-	return d.deployments.Get(ctx, d.resourceGroup, deploymentName)
 }
 
 func (d *deployer) Deploy(ctx context.Context, rpServicePrincipalID string) error {
@@ -265,7 +277,7 @@ func (d *deployer) removeOldScalesets(ctx context.Context) error {
 		}
 
 		d.log.Printf("waiting for %s instances to terminate", *vmss.Name)
-		err = wait.PollImmediateUntil(10*time.Second, func() (ready bool, err error) {
+		err = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 			for _, vm := range scalesetVMs {
 				u := fmt.Sprintf("https://vm%s.%s.%s.cloudapp.azure.com/healthz/ready", *vm.InstanceID, *vmss.Name, d.location)
 

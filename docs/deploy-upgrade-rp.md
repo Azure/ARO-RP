@@ -16,14 +16,13 @@ the following environment variables:
   * RESOURCEGROUP: RP resource group name
 
   * RP_PARAMETERS_FILE: location of environment parameters file (same variable
-  used for PreDeploy and Deploy)
+    used for predeploy and deploy)
 
 * Optional:
 
   * RP_VERSION: RP VM scaleset git commit version
 
   * RP_PREDEPLOY_ONLY: exit after pre-deploy step
-
 
 Notes:
 
@@ -40,30 +39,29 @@ Notes:
 
 ## Deployment logical order:
 
-* Deploy managed identity `rp-production-managed-identity.json`. This will produce
-  `rpServicePrincipalId` required by next deployments.
+* Deploy managed identity `rp-production-managed-identity.json`. This will
+  produce `rpServicePrincipalId` required by next deployments.
 
-* Deploy pre-deploy resources `rp-production-predeploy.json` with `rp-production-predeploy-parameters.json`
+* Deploy pre-deploy resources `rp-production-predeploy.json` with
+  `rp-production-predeploy-parameters.json`.
 
-* Deploy main deployment resources `rp-production.json` with `rp-production-parameters.json`
-
+* Deploy main deployment resources `rp-production.json` with
+  `rp-production-parameters.json`.
 
 ## Utility example
 
 ```bash
 # run pre-deploy phase only
-export RP_PREDEPLOY_ONLY=true
-export RP_PARAMETERS_FILE=parameters-predeploy.json
-go run ./cmd/aro deploy
+export RP_PARAMETERS_FILE=rp-production-predeploy-parameters.json
+RP_PREDEPLOY_ONLY=true go run ./cmd/aro deploy
 
-# deploy RP under name "test
-unset RP_PREDEPLOY_ONLY
+# deploy RP under name test
 export RP_VERSION="test"
-export RP_PARAMETERS_FILE=parameters.json
+export RP_PARAMETERS_FILE=rp-production-parameters.json
 go run ./cmd/aro deploy
 
 # deploy second VMSS instance with name test2 and retire test
 export RP_VERSION="test2"
-export RP_PARAMETERS_FILE=parameters.json
+export RP_PARAMETERS_FILE=rp-production-parameters.json
 go run ./cmd/aro deploy
 ```
