@@ -13,6 +13,7 @@ parameters:
   rpMode: ""
   sshPublicKey: ""
   pullSecret: ""
+  acrResourceId: ""
   subscriptionId: ""
   adminApiCaBundle: ""
   adminApiClientCertCN: ""
@@ -20,7 +21,7 @@ steps:
   - script: |
       set -eu
       cd ${{ parameters.workingDirectory }}
-      
+
       COMMIT=$(git rev-parse --short HEAD)$([[ $(git status --porcelain) = "" ]] || echo -dirty)
 
       echo ${{ parameters.rpImagePullJSONSPN }} | base64 -d -w 0 > pull-spn.json
@@ -50,9 +51,10 @@ steps:
 
       echo ${{ parameters.azureDevOpsJSONSPN }} | base64 -d -w 0 > devops-spn.json
       export AZURE_SUBSCRIPTION_ID="${{ parameters.subscriptionId }}"
-      export AZURE_CLIENT_ID=$(cat devops-spn.json | jq -r '.clientId') 
-      export AZURE_CLIENT_SECRET=$(cat devops-spn.json | jq -r '.clientSecret') 
+      export AZURE_CLIENT_ID=$(cat devops-spn.json | jq -r '.clientId')
+      export AZURE_CLIENT_SECRET=$(cat devops-spn.json | jq -r '.clientSecret')
       export AZURE_TENANT_ID=$(cat devops-spn.json | jq -r '.tenantId')
+      export ACR_RESOURCE_ID="${{ parameters.acrResourceId }}"
       rm devops-spn.json
 
       ./hack/deploy/prepare-int-parameters.sh

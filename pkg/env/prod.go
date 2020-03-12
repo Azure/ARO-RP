@@ -143,6 +143,10 @@ func (p *prod) AdminClientAuthorizer() clientauthorizer.ClientAuthorizer {
 	return p.adminClientAuthorizer
 }
 
+func (p *prod) ACRResourceID() string {
+	return os.Getenv("ACR_RESOURCE_ID")
+}
+
 func (p *prod) populateCosmosDB(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
 	databaseaccounts := documentdb.NewDatabaseAccountsClient(p.SubscriptionID(), rpAuthorizer)
 

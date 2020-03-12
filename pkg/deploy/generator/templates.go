@@ -45,6 +45,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"mdsdConfigVersion",
 			"mdsdEnvironment",
 			"pullSecret",
+			"acrResourceId",
 			"rpImage",
 			"rpImageAuth",
 			"rpMode",
@@ -150,6 +151,7 @@ func (g *generator) preDeployTemplate() *arm.Template {
 	}
 
 	t.Resources = append(t.Resources,
+		g.rbacPredeploy(),
 		g.securityGroupRP(),
 		g.securityGroupPE(),
 		// clustersKeyvault must preceed serviceKeyvault due to terrible
