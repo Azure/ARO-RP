@@ -76,50 +76,107 @@ func New(ctx context.Context, log *logrus.Entry, authorizer autorest.Authorizer,
 	}
 }
 
-// PreDeploy deploys NSG and ManagedIdentity, needed for man deployment
-func (d *deployer) PreDeploy(ctx context.Context) (rpServicePrincipalID string, err error) {
-	group := azresources.Group{
+// PreDeploy deploys managed identity, NSGs and keyvaults, needed for main
+// deployment
+func (d *deployer) PreDeploy(ctx context.Context) (string, error) {
+	_, err := d.groups.CreateOrUpdate(ctx, d.resourceGroup, azresources.Group{
 		Location: &d.location,
-	}
-
-	_, err = d.groups.CreateOrUpdate(ctx, d.resourceGroup, group)
+	})
 	if err != nil {
 		return "", err
 	}
 
-	deploymentName := "rp-production-nsg"
+	// deploy managed identity if needed and get rpServicePrincipalID
+	rpServicePrincipalID, err := d.deployManageIdentity(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	// deploy NSGs, keyvaults
+	err = d.deployPreDeploy(ctx, rpServicePrincipalID)
+	if err != nil {
+		return "", err
+	}
+
+	return rpServicePrincipalID, nil
+}
+
+func (d *deployer) deployManageIdentity(ctx context.Context) (string, error) {
+	deploymentName := "rp-production-managed-identity"
+
 	deployment, err := d.deployments.Get(ctx, d.resourceGroup, deploymentName)
 	if isDeploymentNotFoundError(err) {
-		var b []byte // must not shadow err
-		b, err = Asset(generator.FileRPProductionNSG)
-		if err != nil {
-			return "", err
-		}
-
-		var template map[string]interface{}
-		err = json.Unmarshal(b, &template)
-		if err != nil {
-			return "", err
-		}
-
-		d.log.Printf("predeploying to %s", d.resourceGroup)
-		err = d.deployments.CreateOrUpdateAndWait(ctx, d.resourceGroup, deploymentName, azresources.Deployment{
-			Properties: &azresources.DeploymentProperties{
-				Template: template,
-				Mode:     azresources.Incremental,
-			},
-		})
-		if err != nil {
-			return "", err
-		}
-
-		deployment, err = d.deployments.Get(ctx, d.resourceGroup, deploymentName)
+		deployment, err = d._deployManageIdentity(ctx, deploymentName)
 	}
 	if err != nil {
 		return "", err
 	}
 
 	return deployment.Properties.Outputs.(map[string]interface{})["rpServicePrincipalId"].(map[string]interface{})["value"].(string), nil
+}
+
+func (d *deployer) _deployManageIdentity(ctx context.Context, deploymentName string) (azresources.DeploymentExtended, error) {
+	b, err := Asset(generator.FileRPProductionManagedIdentity)
+	if err != nil {
+		return azresources.DeploymentExtended{}, nil
+	}
+
+	var template map[string]interface{}
+	err = json.Unmarshal(b, &template)
+	if err != nil {
+		return azresources.DeploymentExtended{}, nil
+	}
+
+	d.log.Infof("deploying managed identity to %s", d.resourceGroup)
+	err = d.deployments.CreateOrUpdateAndWait(ctx, d.resourceGroup, deploymentName, azresources.Deployment{
+		Properties: &azresources.DeploymentProperties{
+			Template: template,
+			Mode:     azresources.Incremental,
+		},
+	})
+	if err != nil {
+		return azresources.DeploymentExtended{}, nil
+	}
+
+	return d.deployments.Get(ctx, d.resourceGroup, deploymentName)
+}
+
+func (d *deployer) deployPreDeploy(ctx context.Context, rpServicePrincipalID string) error {
+	deploymentName := "rp-production-predeploy"
+
+	_, err := d.deployments.Get(ctx, d.resourceGroup, deploymentName)
+	if err == nil || !isDeploymentNotFoundError(err) {
+		return err
+	}
+
+	b, err := Asset(generator.FileRPProductionPredeploy)
+	if err != nil {
+		return err
+	}
+
+	var template map[string]interface{}
+	err = json.Unmarshal(b, &template)
+	if err != nil {
+		return err
+	}
+
+	parameters, err := getParameters()
+	if err != nil {
+		return err
+	}
+
+	parameters.Parameters["rpServicePrincipalId"] = &arm.ParametersParameter{
+		Value: rpServicePrincipalID,
+	}
+
+	d.log.Infof("predeploying to %s", d.resourceGroup)
+	return d.deployments.CreateOrUpdateAndWait(ctx, d.resourceGroup, deploymentName, azresources.Deployment{
+		Properties: &azresources.DeploymentProperties{
+			Template:   template,
+			Mode:       azresources.Incremental,
+			Parameters: parameters.Parameters,
+		},
+	})
 }
 
 func (d *deployer) Deploy(ctx context.Context, rpServicePrincipalID string) error {
@@ -220,7 +277,7 @@ func (d *deployer) removeOldScalesets(ctx context.Context) error {
 		}
 
 		d.log.Printf("waiting for %s instances to terminate", *vmss.Name)
-		err = wait.PollImmediateUntil(10*time.Second, func() (ready bool, err error) {
+		err = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 			for _, vm := range scalesetVMs {
 				u := fmt.Sprintf("https://vm%s.%s.%s.cloudapp.azure.com/healthz/ready", *vm.InstanceID, *vmss.Name, d.location)
 

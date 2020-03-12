@@ -8,22 +8,14 @@ import (
 )
 
 func run() error {
-	err := generator.GenerateRPTemplates()
+	// dev artifacts
+	err := generator.New(false).Artifacts()
 	if err != nil {
 		return err
 	}
 
-	err = generator.GenerateNSGTemplates()
-	if err != nil {
-		return err
-	}
-
-	err = generator.GenerateRPParameterTemplate()
-	if err != nil {
-		return err
-	}
-
-	return generator.GenerateDevelopmentTemplate()
+	// prod artifacts
+	return generator.New(true).Artifacts()
 }
 
 func main() {

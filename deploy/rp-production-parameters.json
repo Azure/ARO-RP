@@ -17,13 +17,7 @@
         "extraCosmosDBIPs": {
             "value": ""
         },
-        "extraKeyvaultAccessPolicies": {
-            "value": []
-        },
         "fpServicePrincipalId": {
-            "value": ""
-        },
-        "keyvaultPrefix": {
             "value": ""
         },
         "mdmFrontendUrl": {

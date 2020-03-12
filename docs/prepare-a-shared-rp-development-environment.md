@@ -278,8 +278,8 @@ each of the bash functions below.
    . ./hack/devtools/deploy-shared-env.sh
    # Create the RG
    create_infra_rg
-   # Deploy NSG
-   deploy_rp_dev_nsg
+   # Deploy the predeployment ARM template
+   deploy_rp_dev_predeploy
    # Deploy the infrastructure resources such as Cosmos, KV, Vnet...
    deploy_rp_dev
    # Deploy the proxy and VPN

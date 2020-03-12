@@ -6,12 +6,17 @@ create_infra_rg() {
     az group create -g "$RESOURCEGROUP" -l "$LOCATION" >/dev/null
 }
 
-deploy_rp_dev_nsg() {
-    echo "########## Deploying rp-development-nsg in RG $RESOURCEGROUP ##########"
+deploy_rp_dev_predeploy() {
+    echo "########## Deploying rp-development-predeploy in RG $RESOURCEGROUP ##########"
     az group deployment create \
         -g "$RESOURCEGROUP" \
-        -n rp-development-nsg \
-        --template-file deploy/rp-development-nsg.json
+        -n rp-development-predeploy \
+        --template-file deploy/rp-development-predeploy.json \
+        --parameters \
+            "adminObjectId=$ADMIN_OBJECT_ID" \
+            "fpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].objectId' -o tsv)" \
+            "keyvaultPrefix=$KEYVAULT_PREFIX" \
+            "rpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_CLIENT_ID'" --query '[].objectId' -o tsv)" >/dev/null
 }
 
 deploy_rp_dev() {
@@ -21,11 +26,9 @@ deploy_rp_dev() {
         -n rp-development \
         --template-file deploy/rp-development.json \
         --parameters \
-            "adminObjectId=$ADMIN_OBJECT_ID" \
             "databaseAccountName=$COSMOSDB_ACCOUNT" \
             "domainName=$DOMAIN_NAME.$PARENT_DOMAIN_NAME" \
             "fpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].objectId' -o tsv)" \
-            "keyvaultPrefix=$KEYVAULT_PREFIX" \
             "rpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_CLIENT_ID'" --query '[].objectId' -o tsv)" >/dev/null
 }
 

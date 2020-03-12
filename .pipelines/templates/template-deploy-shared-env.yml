@@ -8,8 +8,8 @@ steps:
       . ./hack/devtools/deploy-shared-env.sh
 
       create_infra_rg
-      deploy_rp_dev_nsg
-      validate_arm_template_state "rp-development-nsg"
+      deploy_rp_dev_predeploy
+      validate_arm_template_state "rp-development-predeploy"
       deploy_rp_dev
       validate_arm_template_state "rp-development"
       deploy_env_dev

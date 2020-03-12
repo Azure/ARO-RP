@@ -2,9 +2,6 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "adminObjectId": {
-            "type": "string"
-        },
         "databaseAccountName": {
             "type": "string"
         },
@@ -13,10 +10,6 @@
         },
         "fpServicePrincipalId": {
             "type": "string"
-        },
-        "keyvaultPrefix": {
-            "type": "string",
-            "maxLength": 20
         },
         "rpServicePrincipalId": {
             "type": "string"
@@ -29,90 +22,6 @@
             "type": "Microsoft.Network/dnsZones",
             "location": "global",
             "apiVersion": "2018-05-01"
-        },
-        {
-            "properties": {
-                "tenantId": "[subscription().tenantId]",
-                "sku": {
-                    "family": "A",
-                    "name": "standard"
-                },
-                "accessPolicies": [
-                    {
-                        "tenantId": "[subscription().tenantId]",
-                        "objectId": "[parameters('fpServicePrincipalId')]",
-                        "permissions": {
-                            "secrets": [
-                                "get"
-                            ],
-                            "certificates": [
-                                "create",
-                                "delete"
-                            ]
-                        }
-                    },
-                    {
-                        "tenantId": "[subscription().tenantId]",
-                        "objectId": "[parameters('adminObjectId')]",
-                        "permissions": {
-                            "certificates": [
-                                "get",
-                                "list"
-                            ]
-                        }
-                    }
-                ]
-            },
-            "name": "[concat(parameters('keyvaultPrefix'), '-cls')]",
-            "type": "Microsoft.KeyVault/vaults",
-            "location": "[resourceGroup().location]",
-            "tags": {
-                "vault": "clusters"
-            },
-            "apiVersion": "2016-10-01"
-        },
-        {
-            "properties": {
-                "tenantId": "[subscription().tenantId]",
-                "sku": {
-                    "family": "A",
-                    "name": "standard"
-                },
-                "accessPolicies": [
-                    {
-                        "tenantId": "[subscription().tenantId]",
-                        "objectId": "[parameters('rpServicePrincipalId')]",
-                        "permissions": {
-                            "secrets": [
-                                "get"
-                            ]
-                        }
-                    },
-                    {
-                        "tenantId": "[subscription().tenantId]",
-                        "objectId": "[parameters('adminObjectId')]",
-                        "permissions": {
-                            "secrets": [
-                                "set",
-                                "list"
-                            ],
-                            "certificates": [
-                                "delete",
-                                "get",
-                                "import",
-                                "list"
-                            ]
-                        }
-                    }
-                ]
-            },
-            "name": "[concat(parameters('keyvaultPrefix'), '-svc')]",
-            "type": "Microsoft.KeyVault/vaults",
-            "location": "[resourceGroup().location]",
-            "tags": {
-                "vault": "service"
-            },
-            "apiVersion": "2016-10-01"
         },
         {
             "properties": {
