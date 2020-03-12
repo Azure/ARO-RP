@@ -88,6 +88,8 @@ type OpenShiftClusterProperties struct {
 	SSHKey            SecureBytes  `json:"sshKey,omitempty"`
 	AdminKubeconfig   SecureBytes  `json:"adminKubeconfig,omitempty"`
 	KubeadminPassword SecureString `json:"kubeadminPassword,omitempty"`
+
+	RegistryProfiles []RegistryProfile `json:"registryProfiles,omitempty"`
 }
 
 // ProvisioningState represents a provisioning state
@@ -162,6 +164,14 @@ const (
 	VMSizeStandardD8sV3 VMSize = "Standard_D8s_v3"
 )
 
+// RegistryType represents the type of registry in the RegistryProfile
+type RegistryType string
+
+const (
+	RegistryTypeACR RegistryType = "ACR"
+	RegistryTypeRH  RegistryType = "RH"
+)
+
 // WorkerProfile represents a worker profile
 type WorkerProfile struct {
 	MissingFields
@@ -198,6 +208,16 @@ type IngressProfile struct {
 	Name       string     `json:"name,omitempty"`
 	Visibility Visibility `json:"visibility,omitempty"`
 	IP         string     `json:"ip,omitempty"`
+}
+
+// RegistryProfile represents a registry's login
+type RegistryProfile struct {
+	MissingFields
+
+	Name     string       `json:"name,omitempty"`
+	Type     RegistryType `json:"type,omitempty"`
+	Username string       `json:"username,omitempty"`
+	Password SecureString `json:"password,omitempty"`
 }
 
 // Install represents an install process
