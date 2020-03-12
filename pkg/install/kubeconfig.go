@@ -18,8 +18,8 @@ import (
 )
 
 // generateAROServiceKubeconfig generates additional admin credentials and kubeconfig
-// based admin kubeconfig found in graph
-func (i *Installer) generateAROServiceKubeconfig(ctx context.Context, g graph, aroServiceName string, aroServiceInternalClient *kubeconfig.AdminInternalClient) error {
+// based on admin kubeconfig found in graph
+func (i *Installer) generateAROServiceKubeconfig(ctx context.Context, g graph, aroServiceName string) (*kubeconfig.AdminInternalClient, error) {
 	ca := g[reflect.TypeOf(&tls.AdminKubeConfigSignerCertKey{})].(*tls.AdminKubeConfigSignerCertKey)
 	cfg := &tls.CertCfg{
 		Subject:      pkix.Name{CommonName: aroServiceName, Organization: []string{"system:masters"}},
@@ -35,11 +35,12 @@ func (i *Installer) generateAROServiceKubeconfig(ctx context.Context, g graph, a
 
 	err := clientCertKey.SignedCertKey.Generate(cfg, ca, filenameBase, tls.DoNotAppendParent)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// create a Config for the new service kubeconfig based on the generated cluster admin Config
 	adminInternalClient := g[reflect.TypeOf(&kubeconfig.AdminInternalClient{})].(*kubeconfig.AdminInternalClient)
+	aroServiceInternalClient := kubeconfig.AdminInternalClient{}
 	aroServiceInternalClient.Config = &clientcmd.Config{
 		Preferences: adminInternalClient.Config.Preferences,
 		Clusters:    adminInternalClient.Config.Clusters,
@@ -66,7 +67,7 @@ func (i *Installer) generateAROServiceKubeconfig(ctx context.Context, g graph, a
 
 	data, err := yaml.Marshal(aroServiceInternalClient.Config)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	aroServiceInternalClient.File = &asset.File{
@@ -74,5 +75,5 @@ func (i *Installer) generateAROServiceKubeconfig(ctx context.Context, g graph, a
 		Data:     data,
 	}
 
-	return nil
+	return &aroServiceInternalClient, nil
 }

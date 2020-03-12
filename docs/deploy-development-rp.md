@@ -131,7 +131,7 @@
 * Get an admin kubeconfig:
 
   ```bash
-  make kubeconfig
+  make admin.kubeconfig
   export KUBECONFIG=admin.kubeconfig
   ```
 

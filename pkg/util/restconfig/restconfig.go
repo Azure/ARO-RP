@@ -17,9 +17,12 @@ import (
 
 // RestConfig returns the Kubernetes *rest.Config for a kubeconfig
 func RestConfig(env env.Interface, oc *api.OpenShiftCluster) (*rest.Config, error) {
-	config, err := clientcmd.Load(oc.Properties.AdminKubeconfig)
+	config, err := clientcmd.Load(oc.Properties.AROServiceKubeconfig)
 	if err != nil {
-		return nil, err
+		config, err = clientcmd.Load(oc.Properties.AdminKubeconfig)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	restconfig, err := clientcmd.NewDefaultClientConfig(*config, &clientcmd.ConfigOverrides{}).ClientConfig()
