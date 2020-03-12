@@ -72,10 +72,12 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context, oc *api
 		return err
 	}
 
-	spUsage := compute.NewUsageClient(r.SubscriptionID, spAuthorizer)
-	err = dv.validateQuotas(ctx, oc, spUsage)
-	if err != nil {
-		return err
+	if oc.Properties.ProvisioningState == api.ProvisioningStateCreating {
+		spUsage := compute.NewUsageClient(r.SubscriptionID, spAuthorizer)
+		err = dv.validateQuotas(ctx, oc, spUsage)
+		if err != nil {
+			return err
+		}
 	}
 
 	fpAuthorizer, err := dv.env.FPAuthorizer(oc.Properties.ServicePrincipalProfile.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
