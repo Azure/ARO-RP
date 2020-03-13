@@ -2,7 +2,6 @@ parameters:
   workingDirectory: ""
 steps:
   - script: |
-      set -e
       cd ${{ parameters.workingDirectory }}
 
       . secrets/env
@@ -10,9 +9,17 @@ steps:
 
       export DATABASE_NAME=v4-e2e-$(git log --format=%h -n 1 HEAD)
 
-      run_rp
-      validate_rp_running
-      register_sub
+      if [ $RP_MODE = "development" ]
+      then
+        run_rp
+        validate_rp_running
+        register_sub
+      fi
+
       run_e2e
-      kill_rp
+
+      if [ $RP_MODE = "development" ]
+      then
+        kill_rp
+      fi
     displayName: "🚀 Run ARO RP & E2E"
