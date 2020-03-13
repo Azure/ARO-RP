@@ -33,6 +33,7 @@ func getAuth(key string) (*types.DockerAuthConfig, error) {
 func mirror(ctx context.Context, log *logrus.Entry) error {
 	for _, key := range []string{
 		"DST_AUTH",
+		"DST_ACR_NAME",
 		"SRC_AUTH_GENEVA",
 		"SRC_AUTH_QUAY",
 	} {
@@ -45,6 +46,8 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
+
+	dstAcr, _ := os.LookupEnv("DST_ACR_NAME")
 
 	srcauthGeneva, err := getAuth("SRC_AUTH_GENEVA")
 	if err != nil {
@@ -75,14 +78,14 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	if !found {
 		releases = append(releases, pkgmirror.Node{
 			Version: version.OpenShiftVersion,
-			Payload: strings.Replace(version.OpenShiftPullSpec, "arosvc.azurecr.io/", "quay.io/", 1),
+			Payload: strings.Replace(version.OpenShiftPullSpec, dstAcr+".azurecr.io/", "quay.io/", 1),
 		})
 	}
 
 	var errorOccurred bool
 	for _, release := range releases {
 		log.Printf("mirroring release %s", release.Version)
-		err = pkgmirror.Mirror(ctx, log, "arosvc.azurecr.io", release.Payload, dstauth, srcauthQuay)
+		err = pkgmirror.Mirror(ctx, log, dstAcr+".azurecr.io", release.Payload, dstauth, srcauthQuay)
 		if err != nil {
 			log.Errorf("%s: %s\n", release, err)
 			errorOccurred = true
@@ -94,7 +97,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		"linuxgeneva-microsoft.azurecr.io/genevamdm:master_31",
 	} {
 		log.Printf("mirroring %s", ref)
-		err = pkgmirror.Copy(ctx, pkgmirror.Dest("arosvc.azurecr.io", ref), ref, dstauth, srcauthGeneva)
+		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+".azurecr.io", ref), ref, dstauth, srcauthGeneva)
 		if err != nil {
 			log.Errorf("%s: %s\n", ref, err)
 			errorOccurred = true

@@ -5,6 +5,12 @@ cat >secrets/parameters.json <<EOF
     "\$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
+        "adminApiCaBundle": {
+            "value": "$ADMIN_API_CA_BUNDLE"
+        },
+        "adminApiClientCertCommonName": {
+            "value": "$ADMIN_API_CLIENT_CERT_CN"
+        },
         "databaseAccountName": {
             "value": "$COSMOSDB_ACCOUNT"
         },
