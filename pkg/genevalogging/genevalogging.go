@@ -110,6 +110,34 @@ const (
 	DB /var/lib/fluent/audit
 	Parser audit
 
+[FILTER]
+	Name nest
+	Match *
+	Operation lift
+	Nested_under user
+	Add_prefix user_
+
+[FILTER]
+	Name nest
+	Match *
+	Operation lift
+	Nested_under impersonatedUser
+	Add_prefix impersonatedUser_
+
+[FILTER]
+	Name nest
+	Match *
+	Operation lift
+	Nested_under responseStatus
+	Add_prefix responseStatus_
+
+[FILTER]
+	Name nest
+	Match *
+	Operation lift
+	Nested_under objectRef
+	Add_prefix objectRef_
+
 [OUTPUT]
 	Name forward
 	Port 24224
