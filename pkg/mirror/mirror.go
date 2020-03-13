@@ -78,7 +78,13 @@ func Mirror(ctx context.Context, log *logrus.Entry, dstrepo, srcrelease string, 
 		go func() {
 			for w := range ch {
 				log.Printf("mirroring %s", w.tag)
-				err := Copy(ctx, w.dstreference, w.srcreference, w.dstauth, w.srcauth)
+				var err error
+				for retry := 0; retry < 3; retry++ {
+					err = Copy(ctx, w.dstreference, w.srcreference, w.dstauth, w.srcauth)
+					if err == nil {
+						break
+					}
+				}
 				if err != nil {
 					log.Errorf("%s: %s\n", w.tag, err)
 					errorOccurred.Store(true)
