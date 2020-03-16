@@ -5,4 +5,6 @@ if [[ "$#" -ne 1 ]]; then
     exit 1
 fi
 
-go run ./hack/db "$1" | jq -r .openShiftCluster.properties.adminKubeconfig | base64 -d | sed -e 's|https://api-int\.|https://api\.|'
+RID="/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/${1}"
+
+go run ./hack/db "${RID}" | jq -r .openShiftCluster.properties.adminKubeconfig | base64 -d | sed -e 's|https://api-int\.|https://api\.|'
