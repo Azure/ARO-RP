@@ -23,6 +23,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
+	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
@@ -235,6 +236,8 @@ func (f *frontend) Run(ctx context.Context, stop <-chan struct{}, done chan<- st
 		ErrorLog:     log.New(f.baseLog.Writer(), "", 0),
 		BaseContext:  func(net.Listener) context.Context { return ctx },
 	}
+
+	go heartbeat.EmitHeartbeat(f.baseLog, f.m, "frontend.heartbeat", stop, f.checkReady)
 
 	err := f.s.Serve(f.l)
 	if err != http.ErrServerClosed {

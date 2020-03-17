@@ -17,6 +17,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
+	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
 )
 
 type monitor struct {
@@ -64,6 +65,8 @@ func (mon *monitor) Run(ctx context.Context) error {
 
 	t := time.NewTicker(10 * time.Second)
 	defer t.Stop()
+
+	go heartbeat.EmitHeartbeat(mon.baseLog, mon.m, "monitor.heartbeat", nil, func() bool { return true })
 
 	for {
 		// register ourself as a monitor
