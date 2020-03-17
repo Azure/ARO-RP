@@ -254,6 +254,4 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 		})
 		return err
 	}
-	return nil
-
 }
