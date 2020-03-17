@@ -120,6 +120,20 @@ func (mr *MockBillingMockRecorder) Create(arg0, arg1 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockBilling)(nil).Create), arg0, arg1)
 }
 
+// Delete mocks base method
+func (m *MockBilling) Delete(arg0 context.Context, arg1 *api.BillingDocument) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete
+func (mr *MockBillingMockRecorder) Delete(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockBilling)(nil).Delete), arg0, arg1)
+}
+
 // Get mocks base method
 func (m *MockBilling) Get(arg0 context.Context, arg1 string) (*api.BillingDocument, error) {
 	m.ctrl.T.Helper()
@@ -133,6 +147,21 @@ func (m *MockBilling) Get(arg0 context.Context, arg1 string) (*api.BillingDocume
 func (mr *MockBillingMockRecorder) Get(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockBilling)(nil).Get), arg0, arg1)
+}
+
+// ListAll mocks base method
+func (m *MockBilling) ListAll(arg0 context.Context) (*api.BillingDocuments, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListAll", arg0)
+	ret0, _ := ret[0].(*api.BillingDocuments)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListAll indicates an expected call of ListAll
+func (mr *MockBillingMockRecorder) ListAll(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAll", reflect.TypeOf((*MockBilling)(nil).ListAll), arg0)
 }
 
 // MarkForDeletion mocks base method
