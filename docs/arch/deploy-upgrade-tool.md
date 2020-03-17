@@ -51,20 +51,19 @@ configuration:
 -   Each region can have substructure of same configuration struct as root. Individual regional configuration structs act as overrides for global configurable
 -   For the start configuration sub-structure will be YAML representation of ARM parameters[1] files, used at the moment.
 
-Install:
-	-   PreDeploy:
-	-   Create ResourceGroup
-	-   Create ManagedIdentity
-	-   Create Vault
+PreDeploy:
+	-   Ensure ResourceGroup exists
+	-   Ensure ManagedIdentity exists
+	-   Ensure Vault exists
 Deploy:
 	-   Setup encryption keys
 	-   Submit a request for Certificates to be generated and wait for certificates
-	 -   Create new certificates and wait
+   -   Pull latest geneva certs from global KV and post them into the region-local KV
+	-   Create new certificates and wait
 	-   Create A and NS global records for RP
 	-   Initiate ACR new replica (optional for now)
 	-   Deploy RP infrastructure
 	-   Wait for RP to come online
-	-   Deploy external azure integration components (optional for now)
 Upgrade
 	-   If required run PreDeploy (configured via env hook)
 	-   Request new certificates for rotation (optional for now, requires RP core code changes)
