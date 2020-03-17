@@ -179,6 +179,21 @@ func (mr *MockBillingMockRecorder) MarkForDeletion(arg0, arg1 interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkForDeletion", reflect.TypeOf((*MockBilling)(nil).MarkForDeletion), arg0, arg1)
 }
 
+// UpdateLastBillingTimestamp mocks base method
+func (m *MockBilling) UpdateLastBillingTimestamp(arg0 context.Context, arg1 string) (*api.BillingDocument, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateLastBillingTimestamp", arg0, arg1)
+	ret0, _ := ret[0].(*api.BillingDocument)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateLastBillingTimestamp indicates an expected call of UpdateLastBillingTimestamp
+func (mr *MockBillingMockRecorder) UpdateLastBillingTimestamp(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateLastBillingTimestamp", reflect.TypeOf((*MockBilling)(nil).UpdateLastBillingTimestamp), arg0, arg1)
+}
+
 // MockOpenShiftClusters is a mock of OpenShiftClusters interface
 type MockOpenShiftClusters struct {
 	ctrl     *gomock.Controller
