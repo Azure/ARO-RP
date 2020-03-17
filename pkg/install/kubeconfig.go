@@ -42,8 +42,7 @@ func (i *Installer) generateAROServiceKubeconfig(ctx context.Context, g graph, a
 	adminInternalClient := g[reflect.TypeOf(&kubeconfig.AdminInternalClient{})].(*kubeconfig.AdminInternalClient)
 	aroServiceInternalClient := kubeconfig.AdminInternalClient{}
 	aroServiceInternalClient.Config = &clientcmd.Config{
-		Preferences: adminInternalClient.Config.Preferences,
-		Clusters:    adminInternalClient.Config.Clusters,
+		Clusters: adminInternalClient.Config.Clusters,
 		AuthInfos: []clientcmd.NamedAuthInfo{
 			{
 				Name: aroServiceName,
