@@ -23,6 +23,8 @@ type Billing interface {
 	Create(context.Context, *api.BillingDocument) (*api.BillingDocument, error)
 	Get(context.Context, string) (*api.BillingDocument, error)
 	MarkForDeletion(context.Context, string) (*api.BillingDocument, error)
+	ListAll(context.Context) (*api.BillingDocuments, error)
+	Delete(context.Context, *api.BillingDocument) error
 }
 
 // NewBilling returns a new Billing
@@ -121,4 +123,16 @@ func (c *billing) MarkForDeletion(ctx context.Context, id string) (*api.BillingD
 	return c.patch(ctx, id, func(billingdoc *api.BillingDocument) error {
 		return nil
 	}, &cosmosdb.Options{PreTriggers: []string{"setDeletionBillingTimeStamp"}})
+}
+
+func (c *billing) ListAll(ctx context.Context) (*api.BillingDocuments, error) {
+	return c.c.ListAll(ctx, nil)
+}
+
+func (c *billing) Delete(ctx context.Context, doc *api.BillingDocument) error {
+	if doc.Key != strings.ToLower(doc.Key) {
+		return fmt.Errorf("key %q is not lower case", doc.Key)
+	}
+
+	return c.c.Delete(ctx, doc.ID, doc, &cosmosdb.Options{NoETag: true})
 }
