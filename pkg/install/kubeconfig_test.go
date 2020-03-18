@@ -8,13 +8,15 @@ import (
 	"encoding/pem"
 	"reflect"
 	"testing"
+	"time"
 
-	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
-	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/ghodss/yaml"
 	"github.com/openshift/installer/pkg/asset/kubeconfig"
 	"github.com/openshift/installer/pkg/asset/tls"
 	clientcmd "k8s.io/client-go/tools/clientcmd/api/v1"
+
+	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
+	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 )
 
 func TestGenerateAROServiceKubeconfig(t *testing.T) {
@@ -83,6 +85,9 @@ func TestGenerateAROServiceKubeconfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if innerkey == nil {
+		t.Error("Client Key is invalid.")
+	}
 
 	// validate the result in 2 stages: first verify the key and certificate
 	// are valid (signed by CA, have proper validity period, etc)
@@ -97,22 +102,33 @@ func TestGenerateAROServiceKubeconfig(t *testing.T) {
 	issuer := innercert[0].Issuer.String()
 	expectedIssuer := "CN=validca"
 	if issuer != expectedIssuer {
-		t.Errorf("Invalid certificate issuer, want: %s, got %s", expectedIssuer, issuer)
+		t.Errorf("Invalid certificate issuer, want: %s, got %s.", expectedIssuer, issuer)
 	}
 
 	subject := innercert[0].Subject.String()
 	expectedSubject := "CN=system:aro-service,O=system:masters"
 	if subject != expectedSubject {
-		t.Errorf("Invalid subject want: %s, got %s", expectedSubject, subject)
+		t.Errorf("Invalid subject want: %s, got %s.", expectedSubject, subject)
 	}
 
-	// TODO - more data to validate notBefore, notAfter and add validation for the key
-	_ = innerkey
+	validity := innercert[0].NotAfter.Sub(innercert[0].NotBefore)
+	validityTenYears := time.Hour * 24 * 365 * 10
+	// truncate is needed because certificate validity can be slightly less or more than ten years
+	if validity.Truncate(24*time.Hour) != validityTenYears {
+		t.Errorf("Invalid validity duration. Want: %s, got %s.", validityTenYears, validity)
+	}
 
+	keyUsage := innercert[0].KeyUsage
+	expectedKeyUsage := x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature
+	if keyUsage != expectedKeyUsage {
+		t.Errorf("Invalid keyUsage.")
+	}
+
+	// validate the rest of the struct
 	got.AuthInfos = make([]clientcmd.NamedAuthInfo, 0, 0)
 	want := adminInternalClient.Config
 
 	if !reflect.DeepEqual(got, want) {
-		t.Fatal("invalid internal client")
+		t.Fatal("invalid internal client.")
 	}
 }
