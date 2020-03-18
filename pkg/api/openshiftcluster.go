@@ -115,9 +115,10 @@ func (t ProvisioningState) IsTerminal() bool {
 type ClusterProfile struct {
 	MissingFields
 
-	Domain          string `json:"domain,omitempty"`
-	Version         string `json:"version,omitempty"`
-	ResourceGroupID string `json:"resourceGroupId,omitempty"`
+	PullSecret      SecureString `json:"pullSecret,omitempty"`
+	Domain          string       `json:"domain,omitempty"`
+	Version         string       `json:"version,omitempty"`
+	ResourceGroupID string       `json:"resourceGroupId,omitempty"`
 }
 
 // ConsoleProfile represents a console profile.

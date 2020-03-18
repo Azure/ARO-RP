@@ -81,6 +81,9 @@ const (
 
 // ClusterProfile represents a cluster profile.
 type ClusterProfile struct {
+	// The pull secret for the cluster (immutable).
+	PullSecret string `json:"pullSecret,omitempty"`
+
 	// The domain for the cluster (immutable).
 	Domain string `json:"domain,omitempty"`
 

@@ -39,3 +39,13 @@ func SetRegistryProfiles(_ps string, rps ...*api.RegistryProfile) (string, error
 	b, err := json.Marshal(ps)
 	return string(b), err
 }
+
+func Validate(_ps string) error {
+	if _ps == "" {
+		_ps = "{}"
+	}
+
+	var ps *pullSecret
+
+	return json.Unmarshal([]byte(_ps), &ps)
+}
