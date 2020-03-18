@@ -88,7 +88,7 @@ func (m *Manager) Delete(ctx context.Context) error {
 	m.log.Printf("deleting resource group %s", resourceGroup)
 	err = m.groups.DeleteAndWait(ctx, resourceGroup)
 	if detailedErr, ok := err.(autorest.DetailedError); ok &&
-		detailedErr.StatusCode == http.StatusForbidden {
+		(detailedErr.StatusCode == http.StatusForbidden || detailedErr.StatusCode == http.StatusNotFound) {
 		err = nil
 	}
 
