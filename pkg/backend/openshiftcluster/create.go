@@ -104,9 +104,21 @@ func (m *Manager) Create(ctx context.Context) error {
 
 	pullSecret := os.Getenv("PULL_SECRET")
 
+	pullSecret, err = pullsecret.Merge(pullSecret, string(m.doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret))
+	if err != nil {
+		return err
+	}
+
 	pullSecret, err = pullsecret.SetRegistryProfiles(pullSecret, m.doc.OpenShiftCluster.Properties.RegistryProfiles...)
 	if err != nil {
 		return err
+	}
+
+	for _, key := range []string{"cloud.openshift.com", "quay.io"} {
+		pullSecret, err = pullsecret.RemoveKey(pullSecret, key)
+		if err != nil {
+			return err
+		}
 	}
 
 	r, err := azure.ParseResourceID(m.doc.OpenShiftCluster.ID)
