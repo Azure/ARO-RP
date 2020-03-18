@@ -19,7 +19,6 @@ configuration:
   mdmFrontendUrl: ''
   mdsdConfigVersion: ''
   mdsdEnvironment: ''
-  pullSecret: ''
   rpImage: ''
   rpImageAuth: ''
   rpMode: ''
