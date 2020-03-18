@@ -12,7 +12,6 @@ parameters:
   mdsdConfigVersion: ""
   rpMode: ""
   sshPublicKey: ""
-  pullSecret: ""
   acrResourceId: ""
   subscriptionId: ""
   adminApiCaBundle: ""
@@ -29,8 +28,6 @@ steps:
       pull_spn_client_secret=$(cat pull-spn.json | jq -r '.clientSecret')
       export RP_IMAGE_AUTH=$(echo "$pull_spn_client_id:$pull_spn_client_secret" | base64 -w 0)
       rm pull-spn.json
-
-      export PULL_SECRET=$(echo ${{ parameters.pullSecret }} | base64 -d -w 0)
 
       export DOMAIN_NAME=${{ parameters.domainName }}
       export AZURE_FP_CLIENT_ID=${{ parameters.azureFpClientId }}

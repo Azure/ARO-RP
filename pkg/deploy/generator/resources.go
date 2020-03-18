@@ -565,7 +565,6 @@ func (g *generator) vmss() *arm.Resource {
 		"mdmFrontendUrl",
 		"mdsdConfigVersion",
 		"mdsdEnvironment",
-		"pullSecret",
 		"acrResourceId",
 		"rpImage",
 		"rpImageAuth",
@@ -755,7 +754,6 @@ EOF
 cat >/etc/sysconfig/aro-rp <<EOF
 MDM_ACCOUNT=AzureRedHatOpenShiftRP
 MDM_NAMESPACE=RP
-PULL_SECRET='$PULLSECRET'
 ACR_RESOURCE_ID='$ACRRESOURCEID'
 ADMIN_API_CLIENT_CERT_COMMON_NAME='$ADMINAPICLIENTCERTCOMMONNAME'
 RPIMAGE='$RPIMAGE'
@@ -776,7 +774,6 @@ ExecStart=/usr/bin/docker run \
   --rm \
   -e MDM_ACCOUNT \
   -e MDM_NAMESPACE \
-  -e PULL_SECRET \
   -e ADMIN_API_CLIENT_CERT_COMMON_NAME \
   -e RP_MODE \
   -e ACR_RESOURCE_ID \

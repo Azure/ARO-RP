@@ -32,9 +32,6 @@
         "mdsdEnvironment": {
             "value": ""
         },
-        "pullSecret": {
-            "value": ""
-        },
         "rpImage": {
             "value": ""
         },
