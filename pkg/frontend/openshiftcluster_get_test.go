@@ -82,6 +82,9 @@ func TestGetOpenShiftCluster(t *testing.T) {
 							Name: "resourceName",
 							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 							Properties: api.OpenShiftClusterProperties{
+								ClusterProfile: api.ClusterProfile{
+									PullSecret: "{}",
+								},
 								ServicePrincipalProfile: api.ServicePrincipalProfile{
 									ClientSecret: "clientSecret",
 								},

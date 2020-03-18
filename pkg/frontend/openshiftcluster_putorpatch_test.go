@@ -181,8 +181,11 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							Tags: map[string]string{"tag": "will-be-removed"},
 							Properties: api.OpenShiftClusterProperties{
 								ProvisioningState: api.ProvisioningStateSucceeded,
-								IngressProfiles:   []api.IngressProfile{{Name: "will-be-removed"}},
-								WorkerProfiles:    []api.WorkerProfile{{Name: "will-be-removed"}},
+								ClusterProfile: api.ClusterProfile{
+									PullSecret: `{"will":"be-kept"}`,
+								},
+								IngressProfiles: []api.IngressProfile{{Name: "will-be-removed"}},
+								WorkerProfiles:  []api.WorkerProfile{{Name: "will-be-removed"}},
 								ServicePrincipalProfile: api.ServicePrincipalProfile{
 									ClientSecret: "will-be-kept",
 								},
@@ -201,7 +204,8 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState: api.ProvisioningStateUpdating,
 							ClusterProfile: api.ClusterProfile{
-								Domain: "changed",
+								PullSecret: `{"will":"be-kept"}`,
+								Domain:     "changed",
 							},
 							ServicePrincipalProfile: api.ServicePrincipalProfile{
 								ClientSecret: "will-be-kept",

@@ -50,6 +50,7 @@ func (f *frontend) _getOpenShiftClusters(ctx context.Context, r *http.Request, c
 		}
 
 		for _, doc := range docs.OpenShiftClusterDocuments {
+			doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret = ""
 			doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 			ocs = append(ocs, doc.OpenShiftCluster)
 		}

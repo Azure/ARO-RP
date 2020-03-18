@@ -54,6 +54,7 @@ func (f *frontend) _getAsyncOperationResult(ctx context.Context, r *http.Request
 		return nil, statusCodeError(http.StatusNoContent)
 	}
 
+	asyncdoc.OpenShiftCluster.Properties.ClusterProfile.PullSecret = ""
 	asyncdoc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 
 	return json.MarshalIndent(converter.ToExternal(asyncdoc.OpenShiftCluster), "", "    ")
