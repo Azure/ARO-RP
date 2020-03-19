@@ -105,7 +105,7 @@ func TestGenerateAROServiceKubeconfig(t *testing.T) {
 	}
 
 	subject := innercert[0].Subject.String()
-	if subject != ".CN=system:aro-service,O=system:masters" {
+	if subject != "CN=system:aro-service,O=system:masters" {
 		t.Error(subject)
 	}
 
