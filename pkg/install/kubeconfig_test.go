@@ -39,7 +39,7 @@ func TestGenerateAROServiceKubeconfig(t *testing.T) {
 		reflect.TypeOf(&kubeconfig.AdminInternalClient{}): &kubeconfig.AdminInternalClient{},
 	}
 
-	APIServerUrl := "https://api.hash.rg.mydomain:6443"
+	apiserverURL := "https://api.hash.rg.mydomain:6443"
 	clusterName := "api-hash-rg-mydomain:6443"
 	serviceName := "system:aro-service"
 
@@ -49,7 +49,7 @@ func TestGenerateAROServiceKubeconfig(t *testing.T) {
 			{
 				Name: clusterName,
 				Cluster: clientcmd.Cluster{
-					Server:                   APIServerUrl,
+					Server:                   apiserverURL,
 					CertificateAuthorityData: nil,
 				},
 			},
@@ -96,36 +96,31 @@ func TestGenerateAROServiceKubeconfig(t *testing.T) {
 
 	err = innercert[0].CheckSignatureFrom(validCaCerts[0])
 	if err != nil {
-		t.Error("Failed to parse certificate", err)
+		t.Fatal(err)
 	}
 
 	issuer := innercert[0].Issuer.String()
-	expectedIssuer := "CN=validca"
-	if issuer != expectedIssuer {
-		t.Errorf("Invalid certificate issuer, want: %s, got %s.", expectedIssuer, issuer)
+	if issuer != "CN=validca" {
+		t.Error(issuer)
 	}
 
 	subject := innercert[0].Subject.String()
-	expectedSubject := "CN=system:aro-service,O=system:masters"
-	if subject != expectedSubject {
-		t.Errorf("Invalid subject want: %s, got %s.", expectedSubject, subject)
+	if subject != ".CN=system:aro-service,O=system:masters" {
+		t.Error(subject)
 	}
 
-	validity := innercert[0].NotAfter.Sub(innercert[0].NotBefore)
-	validityTenYears := time.Hour * 24 * 365 * 10
-	// truncate is needed because certificate validity can be slightly less or more than ten years
-	if validity.Truncate(24*time.Hour) != validityTenYears {
-		t.Errorf("Invalid validity duration. Want: %s, got %s.", validityTenYears, validity)
+	if !innercert[0].NotAfter.After(time.Now().AddDate(9, 11, 0)) {
+		t.Error(innercert[0].NotAfter)
 	}
 
 	keyUsage := innercert[0].KeyUsage
 	expectedKeyUsage := x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature
 	if keyUsage != expectedKeyUsage {
-		t.Errorf("Invalid keyUsage.")
+		t.Error("Invalid keyUsage.")
 	}
 
 	// validate the rest of the struct
-	got.AuthInfos = make([]clientcmd.NamedAuthInfo, 0, 0)
+	got.AuthInfos = []clientcmd.NamedAuthInfo{}
 	want := adminInternalClient.Config
 
 	if !reflect.DeepEqual(got, want) {
