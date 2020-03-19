@@ -6,6 +6,7 @@ from azext_aro._validators import validate_client_id
 from azext_aro._validators import validate_client_secret
 from azext_aro._validators import validate_cluster_resource_group
 from azext_aro._validators import validate_domain
+from azext_aro._validators import validate_pull_secret
 from azext_aro._validators import validate_subnet
 from azext_aro._validators import validate_visibility
 from azext_aro._validators import validate_vnet
@@ -28,6 +29,9 @@ def load_arguments(self, _):
         c.argument('tags',
                    tags_type)
 
+        c.argument('pull_secret',
+                   help='Pull secret of cluster.',
+                   validator=validate_pull_secret)
         c.argument('domain',
                    help='Domain of cluster.',
                    validator=validate_domain)

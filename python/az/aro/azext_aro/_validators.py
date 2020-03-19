@@ -2,17 +2,21 @@
 # Licensed under the Apache License 2.0.
 
 import ipaddress
+import json
 import re
 import uuid
 
 from azure.cli.core.commands.client_factory import get_mgmt_service_client
 from azure.cli.core.commands.client_factory import get_subscription_id
 from azure.cli.core.profiles import ResourceType
+from knack.log import get_logger
 from knack.util import CLIError
 from msrestazure.azure_exceptions import CloudError
 from msrestazure.tools import is_valid_resource_id
 from msrestazure.tools import parse_resource_id
 from msrestazure.tools import resource_id
+
+logger = get_logger(__name__)
 
 
 def validate_cidr(key):
@@ -73,6 +77,18 @@ def _validate_int(key, i):
         raise CLIError("Invalid --%s '%s'." % (key.replace('_', '-'), i))
 
     return i
+
+
+def validate_pull_secret(namespace):
+    if namespace.pull_secret is None:
+        logger.warning("No --pull-secret provided: cluster will not include Red Hat or certified samples or operators.")
+
+    else:
+        try:
+            if not isinstance(json.loads(namespace.pull_secret), dict):
+                raise Exception()
+        except:
+            raise CLIError("Invalid --pull-secret.")
 
 
 def validate_subnet(key):
