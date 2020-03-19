@@ -3,7 +3,6 @@ package install
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 import (
-	"context"
 	"crypto/x509"
 	"encoding/pem"
 	"reflect"
@@ -20,7 +19,6 @@ import (
 )
 
 func TestGenerateAROServiceKubeconfig(t *testing.T) {
-	ctx := context.Background()
 	validCaKey, validCaCerts, err := utiltls.GenerateKeyAndCertificate("validca", nil, nil, true, false)
 	if err != nil {
 		t.Fatal(err)
@@ -69,7 +67,7 @@ func TestGenerateAROServiceKubeconfig(t *testing.T) {
 
 	i := &Installer{}
 
-	aroServiceInternalClient, err := i.generateAROServiceKubeconfig(ctx, g, serviceName)
+	aroServiceInternalClient, err := i.generateAROServiceKubeconfig(g, serviceName)
 	if err != nil {
 		t.Fatal(err)
 	}

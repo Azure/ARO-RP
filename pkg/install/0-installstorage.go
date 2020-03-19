@@ -239,7 +239,7 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 
 	{
 		adminInternalClient := g[reflect.TypeOf(&kubeconfig.AdminInternalClient{})].(*kubeconfig.AdminInternalClient)
-		aroServiceInternalClient, err := i.generateAROServiceKubeconfig(ctx, g, "system:aro-service")
+		aroServiceInternalClient, err := i.generateAROServiceKubeconfig(g, "system:aro-service")
 		if err != nil {
 			return err
 		}

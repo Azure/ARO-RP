@@ -4,7 +4,6 @@ package install
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"reflect"
@@ -19,7 +18,7 @@ import (
 
 // generateAROServiceKubeconfig generates additional admin credentials and kubeconfig
 // based on admin kubeconfig found in graph
-func (i *Installer) generateAROServiceKubeconfig(ctx context.Context, g graph, aroServiceName string) (*kubeconfig.AdminInternalClient, error) {
+func (i *Installer) generateAROServiceKubeconfig(g graph, aroServiceName string) (*kubeconfig.AdminInternalClient, error) {
 	ca := g[reflect.TypeOf(&tls.AdminKubeConfigSignerCertKey{})].(*tls.AdminKubeConfigSignerCertKey)
 	cfg := &tls.CertCfg{
 		Subject:      pkix.Name{CommonName: aroServiceName, Organization: []string{"system:masters"}},
