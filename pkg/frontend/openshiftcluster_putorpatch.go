@@ -32,7 +32,7 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 	var b []byte
 	err := cosmosdb.RetryOnPreconditionFailed(func() error {
 		var err error
-		b, err = f._putOrPatchOpenShiftCluster(ctx, r, &header, f.apis[vars["api-version"]].OpenShiftClusterConverter(), f.apis[vars["api-version"]].OpenShiftClusterStaticValidator(f.env.Location(), r.URL.Path))
+		b, err = f._putOrPatchOpenShiftCluster(ctx, r, &header, f.apis[vars["api-version"]].OpenShiftClusterConverter(), f.apis[vars["api-version"]].OpenShiftClusterStaticValidator(f.env.Location(), f.env.Domain(), r.URL.Path))
 		return err
 	})
 

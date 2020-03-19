@@ -20,7 +20,7 @@ func init() {
 		OpenShiftClusterConverter: func() api.OpenShiftClusterConverter {
 			return &openShiftClusterConverter{}
 		},
-		OpenShiftClusterStaticValidator: func(location, resourceID string) api.OpenShiftClusterStaticValidator {
+		OpenShiftClusterStaticValidator: func(location, domain, resourceID string) api.OpenShiftClusterStaticValidator {
 			return &openShiftClusterStaticValidator{}
 		},
 	}

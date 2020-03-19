@@ -20,7 +20,7 @@ type OpenShiftClusterCredentialsConverter interface {
 // Version is a set of endpoints implemented by each API version
 type Version struct {
 	OpenShiftClusterConverter            func() OpenShiftClusterConverter
-	OpenShiftClusterStaticValidator      func(string, string) OpenShiftClusterStaticValidator
+	OpenShiftClusterStaticValidator      func(string, string, string) OpenShiftClusterStaticValidator
 	OpenShiftClusterCredentialsConverter func() OpenShiftClusterCredentialsConverter
 }
 
