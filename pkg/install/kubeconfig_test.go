@@ -27,8 +27,8 @@ func TestGenerateAROServiceKubeconfig(t *testing.T) {
 
 	g := graph{
 		reflect.TypeOf(&tls.AdminKubeConfigSignerCertKey{}): &tls.AdminKubeConfigSignerCertKey{
-			tls.SelfSignedCertKey{
-				tls.CertKey{
+			SelfSignedCertKey: tls.SelfSignedCertKey{
+				CertKey: tls.CertKey{
 					CertRaw: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: validCaCerts[0].Raw}),
 					KeyRaw:  pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: b}),
 				},
