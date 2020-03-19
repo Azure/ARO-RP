@@ -887,7 +887,7 @@
 
 [[projects]]
   branch = "release-4.3"
-  digest = "1:b15c7e34456686caaae5b1dfef5411825d5874fb1016bc84620b7b9ae8b62136"
+  digest = "1:14b7de6170f03983718e52845912c445dddd8870d1fa48a0f1b46835e2eb5ba6"
   name = "github.com/openshift/api"
   packages = [
     "config/v1",
@@ -896,6 +896,7 @@
     "image/v1",
     "operator/v1",
     "operator/v1alpha1",
+    "samples/v1",
     "security/v1",
   ]
   pruneopts = "UT"
@@ -939,16 +940,28 @@
 
 [[projects]]
   branch = "release-4.3"
-  digest = "1:b64353f338d565767e216d8ca7b57d86a8b3da9d05b2caa42399d2388d05acd9"
+  digest = "1:e8de4916b8d3f71ab1486b9304ad73804dfe383be7c3ed51f4d1c32584fae071"
   name = "github.com/openshift/cluster-api"
   packages = [
     "pkg/apis/cluster/common",
     "pkg/apis/cluster/v1alpha1",
     "pkg/apis/machine/common",
     "pkg/apis/machine/v1beta1",
+    "pkg/client/clientset_generated/clientset",
+    "pkg/client/clientset_generated/clientset/scheme",
+    "pkg/client/clientset_generated/clientset/typed/cluster/v1alpha1",
+    "pkg/client/clientset_generated/clientset/typed/machine/v1beta1",
   ]
   pruneopts = "UT"
   revision = "9a3a7bbe9258f5c3117cb2aba6a560babe0d59f8"
+
+[[projects]]
+  branch = "master"
+  digest = "1:9d86fe2d97d035702ab624b98c8bdb64436bafcba5538b26f3263f7e1a053f41"
+  name = "github.com/openshift/cluster-api-provider-azure"
+  packages = ["pkg/apis/azureprovider/v1beta1"]
+  pruneopts = "UT"
+  revision = "a3d66b635c55764669927e31a6ede041fd77347a"
 
 [[projects]]
   branch = "master"
@@ -971,6 +984,18 @@
   ]
   pruneopts = "UT"
   revision = "2336783d460353458477aa9e181eca87e4db5d27"
+
+[[projects]]
+  branch = "release-4.3"
+  digest = "1:900bceaa6cc77aab2ec6088d9b298e7e54df69a5794afcf9e1ab8452f56c8409"
+  name = "github.com/openshift/cluster-samples-operator"
+  packages = [
+    "pkg/generated/clientset/versioned",
+    "pkg/generated/clientset/versioned/scheme",
+    "pkg/generated/clientset/versioned/typed/samples/v1",
+  ]
+  pruneopts = "UT"
+  revision = "17af9b24571d42421d258ded8073662d5dc8895f"
 
 [[projects]]
   branch = "release-4.3"
@@ -1870,6 +1895,7 @@
     "github.com/containers/image/types",
     "github.com/coreos/go-systemd/journal",
     "github.com/dgrijalva/jwt-go",
+    "github.com/ghodss/yaml",
     "github.com/go-bindata/go-bindata/go-bindata",
     "github.com/golang/mock/gomock",
     "github.com/golang/mock/mockgen",
@@ -1884,9 +1910,13 @@
     "github.com/openshift/api/operator/v1",
     "github.com/openshift/client-go/config/clientset/versioned",
     "github.com/openshift/client-go/config/clientset/versioned/fake",
+    "github.com/openshift/client-go/config/clientset/versioned/scheme",
     "github.com/openshift/client-go/operator/clientset/versioned",
     "github.com/openshift/client-go/operator/clientset/versioned/fake",
     "github.com/openshift/client-go/security/clientset/versioned",
+    "github.com/openshift/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1",
+    "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset",
+    "github.com/openshift/cluster-samples-operator/pkg/generated/clientset/versioned",
     "github.com/openshift/console-operator/pkg/api",
     "github.com/openshift/installer/data",
     "github.com/openshift/installer/pkg/asset",
@@ -1926,6 +1956,8 @@
     "k8s.io/api/core/v1",
     "k8s.io/apimachinery/pkg/api/errors",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
+    "k8s.io/apimachinery/pkg/runtime",
+    "k8s.io/apimachinery/pkg/runtime/serializer",
     "k8s.io/apimachinery/pkg/util/httpstream",
     "k8s.io/apimachinery/pkg/util/httpstream/spdy",
     "k8s.io/apimachinery/pkg/util/wait",

@@ -742,6 +742,15 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "a3d66b635c55764669927e31a6ede041fd77347a",
+                    "repositoryUrl": "https://github.com/openshift/cluster-api-provider-azure/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "1b09fd9e7156c5996ef674a4769dfbe4d85b2a19",
                     "repositoryUrl": "https://github.com/openshift/cluster-api-provider-gcp/"
                 }
@@ -753,6 +762,15 @@
                 "git": {
                     "commitHash": "2336783d460353458477aa9e181eca87e4db5d27",
                     "repositoryUrl": "https://github.com/openshift/cluster-api-provider-libvirt/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "17af9b24571d42421d258ded8073662d5dc8895f",
+                    "repositoryUrl": "https://github.com/openshift/cluster-samples-operator/"
                 }
             }
         },
