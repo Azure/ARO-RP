@@ -237,21 +237,19 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 		}
 	}
 
-	{
-		adminInternalClient := g[reflect.TypeOf(&kubeconfig.AdminInternalClient{})].(*kubeconfig.AdminInternalClient)
-		aroServiceInternalClient, err := i.generateAROServiceKubeconfig(g)
-		if err != nil {
-			return err
-		}
-
-		i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-			// used for the SAS token with which the bootstrap node retrieves its
-			// ignition payload
-			doc.OpenShiftCluster.Properties.Install.Now = time.Now().UTC()
-			doc.OpenShiftCluster.Properties.AdminKubeconfig = adminInternalClient.File.Data
-			doc.OpenShiftCluster.Properties.AROServiceKubeconfig = aroServiceInternalClient.File.Data
-			return nil
-		})
+	adminInternalClient := g[reflect.TypeOf(&kubeconfig.AdminInternalClient{})].(*kubeconfig.AdminInternalClient)
+	aroServiceInternalClient, err := i.generateAROServiceKubeconfig(g)
+	if err != nil {
 		return err
 	}
+
+	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		// used for the SAS token with which the bootstrap node retrieves its
+		// ignition payload
+		doc.OpenShiftCluster.Properties.Install.Now = time.Now().UTC()
+		doc.OpenShiftCluster.Properties.AdminKubeconfig = adminInternalClient.File.Data
+		doc.OpenShiftCluster.Properties.AROServiceKubeconfig = aroServiceInternalClient.File.Data
+		return nil
+	})
+	return err
 }
