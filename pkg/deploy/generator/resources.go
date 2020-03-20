@@ -1148,7 +1148,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 						ID: to.StringPtr("[" + databaseName + "]"),
 					},
 					Options: map[string]*string{
-						"throughput": to.StringPtr("400"),
+						"throughput": to.StringPtr("500"),
 					},
 				},
 				Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ")]"),
