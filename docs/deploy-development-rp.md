@@ -145,7 +145,8 @@
 
 ### Metrics
 
-To run fake metrics socket:
+You can watch the output of the cluster metrics:
+
 ```bash
-nc -U -l mdm_statsd.socket
+go run ./hack/monitor
 ```
