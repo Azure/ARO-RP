@@ -21,6 +21,7 @@ import (
 
 type openShiftClusterStaticValidator struct {
 	location   string
+	domain     string
 	resourceID string
 
 	r azure.Resource
@@ -114,6 +115,16 @@ func (sv *openShiftClusterStaticValidator) validateProperties(path string, p *Op
 
 func (sv *openShiftClusterStaticValidator) validateClusterProfile(path string, cp *ClusterProfile, isCreate bool) error {
 	if !validate.RxDomainName.MatchString(cp.Domain) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".domain", "The provided domain '%s' is invalid.", cp.Domain)
+	}
+	// domain ends .aroapp.io, but doesn't end .<rp-location>.aroapp.io
+	if strings.HasSuffix(cp.Domain, "."+strings.SplitN(sv.domain, ".", 2)[1]) &&
+		!strings.HasSuffix(cp.Domain, "."+sv.domain) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".domain", "The provided domain '%s' is invalid.", cp.Domain)
+	}
+	// domain is of form multiple.names.<rp-location>.aroapp.io
+	if strings.HasSuffix(cp.Domain, "."+sv.domain) &&
+		strings.ContainsRune(strings.TrimSuffix(cp.Domain, "."+sv.domain), '.') {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".domain", "The provided domain '%s' is invalid.", cp.Domain)
 	}
 	if isCreate && cp.Version != version.OpenShiftVersion ||

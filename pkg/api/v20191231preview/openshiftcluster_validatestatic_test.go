@@ -28,6 +28,7 @@ var (
 
 	v = &openShiftClusterStaticValidator{
 		location:   "location",
+		domain:     "location.aroapp.io",
 		resourceID: id,
 		r: azure.Resource{
 			SubscriptionID: subscriptionID,
@@ -231,6 +232,20 @@ func TestOpenShiftClusterStaticValidateClusterProfile(t *testing.T) {
 				oc.Properties.ClusterProfile.Domain = "!"
 			},
 			wantErr: "400: InvalidParameter: properties.clusterProfile.domain: The provided domain '!' is invalid.",
+		},
+		{
+			name: "wrong location managed domain invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterProfile.Domain = "cluster.wronglocation.aroapp.io"
+			},
+			wantErr: "400: InvalidParameter: properties.clusterProfile.domain: The provided domain 'cluster.wronglocation.aroapp.io' is invalid.",
+		},
+		{
+			name: "double part managed domain invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterProfile.Domain = "foo.bar.location.aroapp.io"
+			},
+			wantErr: "400: InvalidParameter: properties.clusterProfile.domain: The provided domain 'foo.bar.location.aroapp.io' is invalid.",
 		},
 		{
 			name: "version invalid",
