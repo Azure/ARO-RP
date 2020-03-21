@@ -566,6 +566,7 @@ func (g *generator) vmss() *arm.Resource {
 		"mdsdConfigVersion",
 		"mdsdEnvironment",
 		"pullSecret",
+		"acrResourceId",
 		"rpImage",
 		"rpImageAuth",
 		"rpMode",
@@ -755,6 +756,7 @@ cat >/etc/sysconfig/aro-rp <<EOF
 MDM_ACCOUNT=AzureRedHatOpenShiftRP
 MDM_NAMESPACE=RP
 PULL_SECRET='$PULLSECRET'
+ACR_RESOURCE_ID='$ACRRESOURCEID'
 ADMIN_API_CLIENT_CERT_COMMON_NAME='$ADMINAPICLIENTCERTCOMMONNAME'
 RPIMAGE='$RPIMAGE'
 RP_MODE='$RPMODE'
@@ -1304,6 +1306,31 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 	}
 
 	return rs
+}
+
+func (g *generator) rbacPredeploy() *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtauthorization.RoleDefinition{
+			Name: to.StringPtr("[guid(resourceGroup().id, 'Token Contributor')]"),
+			Type: to.StringPtr("Microsoft.Authorization/roleDefinitions"),
+			RoleDefinitionProperties: &mgmtauthorization.RoleDefinitionProperties{
+				RoleName:         to.StringPtr("ARO v4 ContainerRegistry Token Contributor"),
+				AssignableScopes: &[]string{"[concat('/subscriptions/', subscription().subscriptionId)]"},
+				Permissions: &[]mgmtauthorization.Permission{
+					{
+						Actions: &[]string{
+							"Microsoft.ContainerRegistry/registries/tokens/write",
+							"Microsoft.ContainerRegistry/registries/tokens/read",
+							"Microsoft.ContainerRegistry/registries/tokens/delete",
+							"Microsoft.ContainerRegistry/registries/scopeMaps/read",
+							"Microsoft.ContainerRegistry/registries/tokens/operationStatuses/read",
+							"Microsoft.ContainerRegistry/registries/generateCredentials/action",
+						},
+					},
+				},
+			},
+		},
+	}
 }
 
 func (g *generator) rbac() []*arm.Resource {

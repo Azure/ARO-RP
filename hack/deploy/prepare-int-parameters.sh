@@ -26,6 +26,9 @@ cat >secrets/parameters.json <<EOF
         "pullSecret": {
             "value": "$PULL_SECRET"
         },
+        "acrResourceId": {
+            "value": "$ACR_RESOURCE_ID"
+        },
         "rpImage": {
             "value": "$RP_IMAGE"
         },

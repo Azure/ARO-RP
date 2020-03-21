@@ -39,6 +39,7 @@ type Interface interface {
 	ManagedDomain(string) (string, error)
 	MetricsSocketPath() string
 	Zones(vmSize string) ([]string, error)
+	ACRResourceID() string
 }
 
 func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {

@@ -47,9 +47,10 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 
 	if _, ok := _env.(env.Dev); !ok {
 		for _, key := range []string{
+			"ACR_RESOURCE_ID",
+			"ADMIN_API_CLIENT_CERT_COMMON_NAME",
 			"MDM_ACCOUNT",
 			"MDM_NAMESPACE",
-			"ADMIN_API_CLIENT_CERT_COMMON_NAME",
 		} {
 			if _, found := os.LookupEnv(key); !found {
 				return fmt.Errorf("environment variable %q unset", key)

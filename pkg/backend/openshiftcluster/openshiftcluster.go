@@ -11,6 +11,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/resources"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
@@ -31,6 +32,7 @@ type Manager struct {
 	keyvault        keyvault.Manager
 	privateendpoint privateendpoint.Manager
 	subnet          subnet.Manager
+	acrtoken        acrtoken.Manager
 
 	doc *api.OpenShiftClusterDocument
 }
@@ -56,6 +58,11 @@ func NewManager(log *logrus.Entry, env env.Interface, db database.OpenShiftClust
 		return nil, err
 	}
 
+	acrtoken, err := acrtoken.NewManager(env, localFPAuthorizer)
+	if err != nil {
+		return nil, err
+	}
+
 	m := &Manager{
 		log:          log,
 		env:          env,
@@ -68,6 +75,7 @@ func NewManager(log *logrus.Entry, env env.Interface, db database.OpenShiftClust
 		dns:             dns.NewManager(env, localFPAuthorizer),
 		keyvault:        keyvault.NewManager(env, localFPKVAuthorizer),
 		privateendpoint: privateendpoint.NewManager(env, localFPAuthorizer),
+		acrtoken:        acrtoken,
 		subnet:          subnet.NewManager(r.SubscriptionID, fpAuthorizer),
 
 		doc: doc,

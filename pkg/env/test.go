@@ -88,3 +88,7 @@ func (t *Test) ResourceGroup() string {
 func (t *Test) SubscriptionID() string {
 	return t.TestSubscriptionID
 }
+
+func (t *Test) ACRResourceID() string {
+	return "/subscriptions/93aeba23-2f76-4307-be82-02921df010cf/resourceGroups/global/providers/Microsoft.ContainerRegistry/registries/arosvc"
+}

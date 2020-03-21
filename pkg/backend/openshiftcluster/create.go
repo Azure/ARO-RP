@@ -30,7 +30,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/install"
+	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -40,6 +42,42 @@ func (m *Manager) Create(ctx context.Context) error {
 	var err error
 
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+
+	if _, ok := m.env.(env.Dev); !ok {
+		rp := m.acrtoken.GetRegistryProfile(m.doc.OpenShiftCluster)
+		if rp == nil {
+			// 1. choose a name and establish the intent to create a token with
+			// that name
+			rp = m.acrtoken.NewRegistryProfile(m.doc.OpenShiftCluster)
+
+			m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+				m.acrtoken.PutRegistryProfile(doc.OpenShiftCluster, rp)
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+		}
+
+		if rp.Password == "" {
+			// 2. ensure a token with the chosen name exists, generate a
+			// password for it and store it in the database
+			password, err := m.acrtoken.EnsureTokenAndPassword(ctx, rp)
+			if err != nil {
+				return err
+			}
+
+			rp.Password = api.SecureString(password)
+
+			m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+				m.acrtoken.PutRegistryProfile(doc.OpenShiftCluster, rp)
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+		}
+	}
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		if doc.OpenShiftCluster.Properties.SSHKey == nil {
@@ -60,6 +98,13 @@ func (m *Manager) Create(ctx context.Context) error {
 
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+
+	pullSecret := os.Getenv("PULL_SECRET")
+
+	pullSecret, err = pullsecret.SetRegistryProfiles(pullSecret, m.doc.OpenShiftCluster.Properties.RegistryProfiles...)
 	if err != nil {
 		return err
 	}
@@ -185,7 +230,7 @@ func (m *Manager) Create(ctx context.Context) error {
 					ARO:                      true,
 				},
 			},
-			PullSecret: os.Getenv("PULL_SECRET"),
+			PullSecret: pullSecret,
 			ImageContentSources: []types.ImageContentSource{
 				{
 					Source: "quay.io/openshift-release-dev/ocp-release",

@@ -18,7 +18,7 @@
   revision = "3a14fb1c4737b3995174c5f4d6d08a348b9b4180"
 
 [[projects]]
-  digest = "1:e4dc9e19d4ac2a0f4214525b12d0641a50374b0d36c6375f573875989ad8cee1"
+  digest = "1:8db7950de8a0bdaf0cca5735099d070ec30a3ea9bebded7ebac4186603a2bf7f"
   name = "github.com/Azure/azure-sdk-for-go"
   packages = [
     "profiles/latest/dns/mgmt/dns",
@@ -26,6 +26,7 @@
     "services/authorization/mgmt/2015-07-01/authorization",
     "services/compute/mgmt/2018-10-01/compute",
     "services/compute/mgmt/2019-03-01/compute",
+    "services/containerregistry/mgmt/2019-06-01-preview/containerregistry",
     "services/cosmos-db/mgmt/2015-04-08/documentdb",
     "services/cosmos-db/mgmt/2019-08-01/documentdb",
     "services/dns/mgmt/2018-05-01/dns",
@@ -1836,6 +1837,7 @@
     "github.com/AlekSi/gocov-xml",
     "github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization",
     "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute",
+    "github.com/Azure/azure-sdk-for-go/services/containerregistry/mgmt/2019-06-01-preview/containerregistry",
     "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2015-04-08/documentdb",
     "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2019-08-01/documentdb",
     "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns",

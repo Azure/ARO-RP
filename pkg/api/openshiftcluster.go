@@ -88,6 +88,8 @@ type OpenShiftClusterProperties struct {
 	SSHKey            SecureBytes  `json:"sshKey,omitempty"`
 	AdminKubeconfig   SecureBytes  `json:"adminKubeconfig,omitempty"`
 	KubeadminPassword SecureString `json:"kubeadminPassword,omitempty"`
+
+	RegistryProfiles []*RegistryProfile `json:"registryProfiles,omitempty"`
 }
 
 // ProvisioningState represents a provisioning state
@@ -198,6 +200,15 @@ type IngressProfile struct {
 	Name       string     `json:"name,omitempty"`
 	Visibility Visibility `json:"visibility,omitempty"`
 	IP         string     `json:"ip,omitempty"`
+}
+
+// RegistryProfile represents a registry's login
+type RegistryProfile struct {
+	MissingFields
+
+	Name     string       `json:"name,omitempty"`
+	Username string       `json:"username,omitempty"`
+	Password SecureString `json:"password,omitempty"`
 }
 
 // Install represents an install process

@@ -1,0 +1,32 @@
+package containerregistry
+
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
+import (
+	"context"
+
+	azcontainerregistry "github.com/Azure/azure-sdk-for-go/services/containerregistry/mgmt/2019-06-01-preview/containerregistry"
+)
+
+// TokensAddons contains addons for TokensClient
+type TokensAddons interface {
+	CreateAndWait(ctx context.Context, resourceGroupName string, registryName string, tokenName string, tokenCreateParameters azcontainerregistry.Token) error
+	DeleteAndWait(ctx context.Context, resourceGroupName string, registryName string, tokenName string) error
+}
+
+func (t *tokensClient) CreateAndWait(ctx context.Context, resourceGroupName string, registryName string, tokenName string, tokenCreateParameters azcontainerregistry.Token) error {
+	future, err := t.TokensClient.Create(ctx, resourceGroupName, registryName, tokenName, tokenCreateParameters)
+	if err != nil {
+		return err
+	}
+	return future.WaitForCompletionRef(ctx, t.Client)
+}
+
+func (t *tokensClient) DeleteAndWait(ctx context.Context, resourceGroupName string, registryName string, tokenName string) error {
+	future, err := t.TokensClient.Delete(ctx, resourceGroupName, registryName, tokenName)
+	if err != nil {
+		return err
+	}
+	return future.WaitForCompletionRef(ctx, t.Client)
+}

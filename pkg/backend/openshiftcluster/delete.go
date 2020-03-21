@@ -96,8 +96,17 @@ func (m *Manager) Delete(ctx context.Context) error {
 		return err
 	}
 
+	if _, ok := m.env.(env.Dev); !ok {
+		rp := m.acrtoken.GetRegistryProfile(m.doc.OpenShiftCluster)
+		if rp != nil {
+			err = m.acrtoken.Delete(ctx, rp)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	m.log.Printf("updating billing record with deletion time")
 	_, err = m.billing.MarkForDeletion(ctx, m.doc.ID)
-
 	return err
 }
