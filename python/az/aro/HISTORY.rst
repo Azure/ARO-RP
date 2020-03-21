@@ -11,3 +11,7 @@ Release History
 ++++++
 * Use API paging.
 * Remove azext.maxCliCoreVersion.
+
+0.3.0
+++++++
+* Add --pull-secret argument to `az aro create`.
