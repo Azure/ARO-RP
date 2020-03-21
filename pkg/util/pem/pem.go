@@ -19,6 +19,12 @@ func Parse(b []byte) (key *rsa.PrivateKey, certs []*x509.Certificate, err error)
 		}
 
 		switch block.Type {
+		case "RSA PRIVATE KEY":
+			key, err = x509.ParsePKCS1PrivateKey(block.Bytes)
+			if err != nil {
+				return nil, nil, err
+			}
+
 		case "PRIVATE KEY":
 			k, err := x509.ParsePKCS8PrivateKey(block.Bytes)
 			if err != nil {

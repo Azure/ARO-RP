@@ -85,9 +85,10 @@ type OpenShiftClusterProperties struct {
 
 	StorageSuffix string `json:"storageSuffix,omitempty"`
 
-	SSHKey            SecureBytes  `json:"sshKey,omitempty"`
-	AdminKubeconfig   SecureBytes  `json:"adminKubeconfig,omitempty"`
-	KubeadminPassword SecureString `json:"kubeadminPassword,omitempty"`
+	SSHKey               SecureBytes  `json:"sshKey,omitempty"`
+	AdminKubeconfig      SecureBytes  `json:"adminKubeconfig,omitempty"`
+	AROServiceKubeconfig SecureBytes  `json:"aroServiceKubeconfig,omitempty"`
+	KubeadminPassword    SecureString `json:"kubeadminPassword,omitempty"`
 
 	RegistryProfiles []*RegistryProfile `json:"registryProfiles,omitempty"`
 }
