@@ -30,6 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/install"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -42,30 +43,43 @@ func (m *Manager) Create(ctx context.Context) error {
 
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
-	tokenName := m.acrtoken.GetTokenName(m.doc.OpenShiftCluster)
-	if tokenName != "" {
-		m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-			return m.acrtoken.SetRegistryProfileUsername(doc.OpenShiftCluster, tokenName)
-		})
-	}
+	if _, ok := m.env.(env.Dev); !ok {
+		rp := m.acrtoken.GetRegistryProfile(m.doc.OpenShiftCluster)
+		if rp == nil {
+			// 1. choose a name and establish the intent to create a token with
+			// that name
+			rp = m.acrtoken.NewRegistryProfile(m.doc.OpenShiftCluster)
 
-	err = m.acrtoken.CreateToken(ctx, tokenName)
-	if err != nil {
-		return err
-	}
-	tokenPassword, err := m.acrtoken.CreatePassword(ctx, m.doc.OpenShiftCluster)
-	if err != nil {
-		return err
-	}
-
-	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		if tokenPassword != "" {
-			err := m.acrtoken.SetRegistryProfilePassword(doc.OpenShiftCluster, tokenPassword)
+			m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+				m.acrtoken.PutRegistryProfile(doc.OpenShiftCluster, rp)
+				return nil
+			})
 			if err != nil {
 				return err
 			}
 		}
 
+		if rp.Password == "" {
+			// 2. ensure a token with the chosen name exists, generate a
+			// password for it and store it in the database
+			password, err := m.acrtoken.EnsureTokenAndPassword(ctx, rp)
+			if err != nil {
+				return err
+			}
+
+			rp.Password = api.SecureString(password)
+
+			m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+				m.acrtoken.PutRegistryProfile(doc.OpenShiftCluster, rp)
+				return nil
+			})
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		if doc.OpenShiftCluster.Properties.SSHKey == nil {
 			sshKey, err := rsa.GenerateKey(rand.Reader, 2048)
 			if err != nil {
@@ -87,12 +101,12 @@ func (m *Manager) Create(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
 	pullSecret := os.Getenv("PULL_SECRET")
-	for _, rp := range m.doc.OpenShiftCluster.Properties.RegistryProfiles {
-		pullSecret, err = pullsecret.SetRegistryAuth(pullSecret, &rp)
-		if err != nil {
-			return err
-		}
+
+	pullSecret, err = pullsecret.SetRegistryProfiles(pullSecret, m.doc.OpenShiftCluster.Properties.RegistryProfiles...)
+	if err != nil {
+		return err
 	}
 
 	r, err := azure.ParseResourceID(m.doc.OpenShiftCluster.ID)

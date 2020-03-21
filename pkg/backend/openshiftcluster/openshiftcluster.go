@@ -58,6 +58,11 @@ func NewManager(log *logrus.Entry, env env.Interface, db database.OpenShiftClust
 		return nil, err
 	}
 
+	acrtoken, err := acrtoken.NewManager(env, localFPAuthorizer)
+	if err != nil {
+		return nil, err
+	}
+
 	m := &Manager{
 		log:          log,
 		env:          env,
@@ -70,7 +75,7 @@ func NewManager(log *logrus.Entry, env env.Interface, db database.OpenShiftClust
 		dns:             dns.NewManager(env, localFPAuthorizer),
 		keyvault:        keyvault.NewManager(env, localFPKVAuthorizer),
 		privateendpoint: privateendpoint.NewManager(env, localFPAuthorizer),
-		acrtoken:        acrtoken.NewManager(env, localFPAuthorizer),
+		acrtoken:        acrtoken,
 		subnet:          subnet.NewManager(r.SubscriptionID, fpAuthorizer),
 
 		doc: doc,

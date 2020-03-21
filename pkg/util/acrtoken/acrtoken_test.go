@@ -5,104 +5,64 @@ package acrtoken
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
-	azcontainerregistry "github.com/Azure/azure-sdk-for-go/services/containerregistry/mgmt/2019-06-01-preview/containerregistry"
+	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/containerregistry/mgmt/2019-06-01-preview/containerregistry"
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
-	mockcr "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/containerregistry"
+	mock_containerregistry "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/containerregistry"
 )
 
-func TestManagerCreateToken(t *testing.T) {
+func TestEnsureTokenAndPassword(t *testing.T) {
 	ctx := context.Background()
-	e := &env.Test{}
-	m := &manager{
-		env:      e,
-		scopeMap: fmt.Sprintf("%s/scopeMap/_repositories_pull", e.ACRResourceID()),
-	}
+	env := &env.Test{}
 
-	gmc := gomock.NewController(t)
-	defer gmc.Finish()
+	controller := gomock.NewController(t)
+	defer controller.Finish()
 
-	mtc := mockcr.NewMockTokensClient(gmc)
-	mtc.EXPECT().CreateAndWait(ctx, "global", "arosvc", gomock.Any(), gomock.Any()).Return(nil)
-	m.tokens = mtc
-
-	err := m.CreateToken(ctx, "token-12345")
-	if err != nil {
-		t.Errorf("manager.CreateToken() error = %v", err)
-	}
-}
-
-func TestManagerCreatePassword(t *testing.T) {
-	ctx := context.Background()
-	e := &env.Test{}
-	m := &manager{
-		env:      e,
-		scopeMap: fmt.Sprintf("%s/scopeMap/_repositories_pull", e.ACRResourceID()),
-	}
-
-	gmc := gomock.NewController(t)
-	defer gmc.Finish()
-
-	mrc := mockcr.NewMockRegistriesClient(gmc)
-	gcr := azcontainerregistry.GenerateCredentialsResult{
-		Passwords: &[]azcontainerregistry.TokenPassword{
-			{
-				Value: to.StringPtr("foo"),
+	tokens := mock_containerregistry.NewMockTokensClient(controller)
+	tokens.EXPECT().
+		CreateAndWait(ctx, "global", "arosvc", gomock.Any(), mgmtcontainerregistry.Token{
+			TokenProperties: &mgmtcontainerregistry.TokenProperties{
+				ScopeMapID: to.StringPtr(env.ACRResourceID() + "/scopeMaps/_repositories_pull"),
+				Status:     mgmtcontainerregistry.TokenStatusEnabled,
 			},
-		},
-	}
-	mrc.EXPECT().GenerateCredentials(ctx, "global", "arosvc", gomock.Any()).Return(gcr, nil)
-	m.registries = mrc
+		}).
+		Return(nil)
 
-	oc := api.OpenShiftCluster{
-		Properties: api.OpenShiftClusterProperties{
-			RegistryProfiles: []api.RegistryProfile{
+	registries := mock_containerregistry.NewMockRegistriesClient(controller)
+	registries.EXPECT().
+		GenerateCredentials(ctx, "global", "arosvc", gomock.Any()).
+		Return(mgmtcontainerregistry.GenerateCredentialsResult{
+			Passwords: &[]mgmtcontainerregistry.TokenPassword{
 				{
-					Type:     api.RegistryTypeACR,
-					Username: "token-2345",
+					Value: to.StringPtr("foo"),
 				},
 			},
-		},
-	}
+		}, nil)
 
-	pass, err := m.CreatePassword(ctx, &oc)
+	r, err := azure.ParseResourceID(env.ACRResourceID())
 	if err != nil {
-		t.Errorf("manager.CreatePassword() error = %v", err)
+		t.Fatal(err)
 	}
-	if pass != "foo" {
-		t.Errorf("manager.CreatePassword() password = %v", pass)
-	}
-}
 
-func TestManagerCreatePasswordExisting(t *testing.T) {
-	ctx := context.Background()
-	e := &env.Test{}
 	m := &manager{
-		env: e,
-	}
-	oc := api.OpenShiftCluster{
-		Properties: api.OpenShiftClusterProperties{
-			RegistryProfiles: []api.RegistryProfile{
-				{
-					Type:     api.RegistryTypeACR,
-					Username: "token-2345",
-					Password: "foo",
-				},
-			},
-		},
+		env: env,
+		r:   r,
+
+		registries: registries,
+		tokens:     tokens,
 	}
 
-	pass, err := m.CreatePassword(ctx, &oc)
+	password, err := m.EnsureTokenAndPassword(ctx, &api.RegistryProfile{Username: "token-12345"})
 	if err != nil {
-		t.Errorf("manager.CreatePassword() error = %v", err)
+		t.Fatal(err)
 	}
-	if pass != "foo" {
-		t.Errorf("manager.CreatePassword() password = %v", pass)
+	if password != "foo" {
+		t.Error(password)
 	}
 }

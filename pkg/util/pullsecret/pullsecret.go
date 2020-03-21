@@ -10,23 +10,32 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
-type RegistryAuth struct {
-	Auth string `json:"auth,omitempty"`
+type pullSecret struct {
+	Auths map[string]map[string]interface{} `json:"auths,omitempty"`
 }
 
-type PullSecret struct {
-	Auths map[string]RegistryAuth `json:"auths,omitempty"`
-}
+func SetRegistryProfiles(_ps string, rps ...*api.RegistryProfile) (string, error) {
+	if _ps == "" {
+		_ps = "{}"
+	}
 
-func SetRegistryAuth(original string, rp *api.RegistryProfile) (string, error) {
-	var pr *PullSecret
-	err := json.Unmarshal([]byte(original), &pr)
+	var ps *pullSecret
+
+	err := json.Unmarshal([]byte(_ps), &ps)
 	if err != nil {
 		return "", err
 	}
-	pr.Auths[rp.Name] = RegistryAuth{
-		Auth: base64.StdEncoding.EncodeToString([]byte(rp.Username + ":" + string(rp.Password))),
+
+	if ps.Auths == nil {
+		ps.Auths = map[string]map[string]interface{}{}
 	}
-	data, err := json.Marshal(pr)
-	return string(data), err
+
+	for _, rp := range rps {
+		ps.Auths[rp.Name] = map[string]interface{}{
+			"auth": base64.StdEncoding.EncodeToString([]byte(rp.Username + ":" + string(rp.Password))),
+		}
+	}
+
+	b, err := json.Marshal(ps)
+	return string(b), err
 }

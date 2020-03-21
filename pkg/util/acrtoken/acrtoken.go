@@ -5,10 +5,9 @@ package acrtoken
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
-	azcontainerregistry "github.com/Azure/azure-sdk-for-go/services/containerregistry/mgmt/2019-06-01-preview/containerregistry"
+	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/containerregistry/mgmt/2019-06-01-preview/containerregistry"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -20,156 +19,100 @@ import (
 )
 
 type Manager interface {
-	GetTokenName(oc *api.OpenShiftCluster) string
-	CreateToken(ctx context.Context, tokenName string) error
-	CreatePassword(ctx context.Context, oc *api.OpenShiftCluster) (string, error)
-	SetRegistryProfileUsername(oc *api.OpenShiftCluster, username string) error
-	SetRegistryProfilePassword(oc *api.OpenShiftCluster, password string) error
-	Delete(ctx context.Context, oc *api.OpenShiftCluster) error
+	GetRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProfile
+	NewRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProfile
+	PutRegistryProfile(oc *api.OpenShiftCluster, rp *api.RegistryProfile)
+	EnsureTokenAndPassword(ctx context.Context, rp *api.RegistryProfile) (string, error)
+	Delete(ctx context.Context, rp *api.RegistryProfile) error
 }
 
 type manager struct {
 	env env.Interface
+	r   azure.Resource
 
 	tokens     containerregistry.TokensClient
 	registries containerregistry.RegistriesClient
-
-	scopeMap string
 }
 
-func NewManager(env env.Interface, fpAuthorizer autorest.Authorizer) Manager {
-	return &manager{
-		env: env,
-
-		tokens:     containerregistry.NewTokensClient(env.SubscriptionID(), fpAuthorizer),
-		registries: containerregistry.NewRegistriesClient(env.SubscriptionID(), fpAuthorizer),
-
-		scopeMap: fmt.Sprintf("%s/scopeMaps/_repositories_pull", env.ACRResourceID()),
-	}
-}
-
-// GetRegistryProfile get the registry profile of the type provided
-func (m *manager) getRegistryProfile(oc *api.OpenShiftCluster, rtype api.RegistryType) *api.RegistryProfile {
-	for ix, rp := range oc.Properties.RegistryProfiles {
-		if rp.Type == rtype {
-			return &oc.Properties.RegistryProfiles[ix]
-		}
-	}
-	return nil
-}
-
-func (m *manager) SetRegistryProfileUsername(oc *api.OpenShiftCluster, username string) error {
-	acrRP := m.getRegistryProfile(oc, api.RegistryTypeACR)
-	if acrRP == nil {
-		r, err := azure.ParseResourceID(m.env.ACRResourceID())
-		if err != nil {
-			return err
-		}
-		oc.Properties.RegistryProfiles = append(oc.Properties.RegistryProfiles, api.RegistryProfile{
-			Type: api.RegistryTypeACR,
-			Name: r.ResourceName + ".azurecr.io",
-		})
-		acrRP = m.getRegistryProfile(oc, api.RegistryTypeACR)
-	}
-	acrRP.Username = username
-	return nil
-}
-
-func (m *manager) SetRegistryProfilePassword(oc *api.OpenShiftCluster, password string) error {
-	acrRP := m.getRegistryProfile(oc, api.RegistryTypeACR)
-	if acrRP == nil {
-		return fmt.Errorf("registryProfile %s not found", api.RegistryTypeACR)
-	}
-	acrRP.Password = api.SecureString(password)
-	return nil
-}
-
-func (m *manager) GetTokenName(oc *api.OpenShiftCluster) string {
-	if m.env.ACRResourceID() == "" { // currently only dev will not have per cluster ACR tokens
-		return ""
-	}
-	acrRP := m.getRegistryProfile(oc, api.RegistryTypeACR)
-	if acrRP != nil && acrRP.Username != "" {
-		return acrRP.Username
-	}
-	return "token-" + uuid.NewV4().String()
-}
-
-// Create create a token on our registry
-// see https://docs.microsoft.com/en-us/azure/container-registry/container-registry-repository-scoped-permissions
-func (m *manager) CreateToken(ctx context.Context, tokenName string) error {
-	if m.env.ACRResourceID() == "" || tokenName == "" { // currently only dev will not have per cluster ACR tokens
-		return nil
-	}
-
-	r, err := azure.ParseResourceID(m.env.ACRResourceID())
+func NewManager(env env.Interface, localFPAuthorizer autorest.Authorizer) (Manager, error) {
+	r, err := azure.ParseResourceID(env.ACRResourceID())
 	if err != nil {
-		return err
+		return nil, err
 	}
-	err = m.tokens.CreateAndWait(ctx, r.ResourceGroup, r.ResourceName, tokenName, azcontainerregistry.Token{
-		TokenProperties: &azcontainerregistry.TokenProperties{
-			ScopeMapID: &m.scopeMap,
-			Status:     azcontainerregistry.TokenStatusEnabled,
+
+	m := &manager{
+		env: env,
+		r:   r,
+
+		tokens:     containerregistry.NewTokensClient(r.SubscriptionID, localFPAuthorizer),
+		registries: containerregistry.NewRegistriesClient(r.SubscriptionID, localFPAuthorizer),
+	}
+
+	return m, nil
+}
+
+func (m *manager) GetRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProfile {
+	for i, rp := range oc.Properties.RegistryProfiles {
+		if rp.Name == m.r.ResourceName+".azurecr.io" {
+			return oc.Properties.RegistryProfiles[i]
+		}
+	}
+
+	return nil
+}
+
+func (m *manager) NewRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProfile {
+	return &api.RegistryProfile{
+		Name:     m.r.ResourceName + ".azurecr.io",
+		Username: "token-" + uuid.NewV4().String(),
+	}
+}
+
+func (m *manager) PutRegistryProfile(oc *api.OpenShiftCluster, rp *api.RegistryProfile) {
+	for i, _rp := range oc.Properties.RegistryProfiles {
+		if _rp.Name == rp.Name {
+			oc.Properties.RegistryProfiles[i] = rp
+			return
+		}
+	}
+
+	oc.Properties.RegistryProfiles = append(oc.Properties.RegistryProfiles, rp)
+}
+
+// EnsureTokenAndPassword ensures a token exists with the given username,
+// generates a new password for it and returns it
+// https://docs.microsoft.com/en-us/azure/container-registry/container-registry-repository-scoped-permissions
+func (m *manager) EnsureTokenAndPassword(ctx context.Context, rp *api.RegistryProfile) (string, error) {
+	err := m.tokens.CreateAndWait(ctx, m.r.ResourceGroup, m.r.ResourceName, rp.Username, mgmtcontainerregistry.Token{
+		TokenProperties: &mgmtcontainerregistry.TokenProperties{
+			ScopeMapID: to.StringPtr(m.env.ACRResourceID() + "/scopeMaps/_repositories_pull"),
+			Status:     mgmtcontainerregistry.TokenStatusEnabled,
 		},
 	})
-	if err != nil {
-		if detailedErr, ok := err.(autorest.DetailedError); ok && (detailedErr.StatusCode == http.StatusConflict) {
-			return nil
-		}
-		return err
+	if detailedErr, ok := err.(autorest.DetailedError); ok &&
+		detailedErr.StatusCode == http.StatusConflict {
+		err = nil
 	}
-	return nil
-}
-
-func (m *manager) CreatePassword(ctx context.Context, oc *api.OpenShiftCluster) (string, error) {
-	if m.env.ACRResourceID() == "" { // currently only dev will not have per cluster ACR tokens
-		return "", nil
-	}
-	acrRP := m.getRegistryProfile(oc, api.RegistryTypeACR)
-	if acrRP == nil {
-		return "", fmt.Errorf("RegistryProfile not found")
-	}
-	if acrRP.Password != "" {
-		return string(acrRP.Password), nil
-	}
-	r, err := azure.ParseResourceID(m.env.ACRResourceID())
 	if err != nil {
 		return "", err
 	}
 
-	generateCredentialsParameters := azcontainerregistry.GenerateCredentialsParameters{
-		TokenID: to.StringPtr(fmt.Sprintf("%s/tokens/%s", m.env.ACRResourceID(), acrRP.Username)),
-		Name:    azcontainerregistry.TokenPasswordNamePassword1,
-	}
-	creds, err := m.registries.GenerateCredentials(ctx, r.ResourceGroup, r.ResourceName, generateCredentialsParameters)
+	creds, err := m.registries.GenerateCredentials(ctx, m.r.ResourceGroup, m.r.ResourceName, mgmtcontainerregistry.GenerateCredentialsParameters{
+		TokenID: to.StringPtr(m.env.ACRResourceID() + "/tokens/" + rp.Username),
+		Name:    mgmtcontainerregistry.TokenPasswordNamePassword1,
+	})
 	if err != nil {
 		return "", err
 	}
-	if creds.Passwords == nil || len(*creds.Passwords) < 1 || (*creds.Passwords)[0].Value == nil {
-		return "", fmt.Errorf("generateCredentials returned empty passwords")
-	}
+
 	return *(*creds.Passwords)[0].Value, nil
 }
 
-func (m *manager) Delete(ctx context.Context, oc *api.OpenShiftCluster) error {
-	if m.env.ACRResourceID() == "" { // currently only dev will not have per cluster ACR tokens
-		return nil
+func (m *manager) Delete(ctx context.Context, rp *api.RegistryProfile) error {
+	err := m.tokens.DeleteAndWait(ctx, m.r.ResourceGroup, m.r.ResourceName, rp.Username)
+	if detailedErr, ok := err.(autorest.DetailedError); ok &&
+		detailedErr.StatusCode == http.StatusNotFound {
+		err = nil
 	}
-	r, err := azure.ParseResourceID(m.env.ACRResourceID())
-	if err != nil {
-		return err
-	}
-
-	for _, rp := range oc.Properties.RegistryProfiles {
-		if rp.Type == api.RegistryTypeACR && rp.Username != "" {
-			err := m.tokens.DeleteAndWait(ctx, r.ResourceGroup, r.ResourceName, rp.Username)
-			if err != nil {
-				if detailedErr, ok := err.(autorest.DetailedError); ok && detailedErr.StatusCode == http.StatusNotFound {
-					return nil
-				}
-				return err
-			}
-		}
-	}
-	return nil
+	return err
 }
