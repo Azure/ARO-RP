@@ -41,7 +41,7 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	config, err := deployer.GetConfig(strings.ToLower(flag.Arg(1)), strings.ToLower(flag.Arg(2)))
+	config, err := deployer.GetConfig(flag.Arg(1), flag.Arg(2))
 	if err != nil {
 		return err
 	}

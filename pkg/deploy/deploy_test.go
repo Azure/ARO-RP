@@ -12,127 +12,66 @@ import (
 
 func TestGetParameters(t *testing.T) {
 	for _, tt := range []struct {
-		name        string
-		template    map[string]interface{}
-		expected    arm.Parameters
-		config      func(*RPConfig)
-		expectedErr error
+		name   string
+		ps     map[string]interface{}
+		config Configuration
+		want   arm.Parameters
 	}{
 		{
-			name:     "no parameters",
-			template: map[string]interface{}{},
-			expected: arm.Parameters{
+			name: "no parameters",
+			want: arm.Parameters{
 				Parameters: map[string]*arm.ParametersParameter{},
 			},
 		},
 		{
-			name: "empty json array",
-			template: map[string]interface{}{
-				"parameters": map[string]interface{}{
-					"extraKeyvaultAccessPolicies": map[string]interface{}{
-						"type": "array",
-					},
-				},
+			name: "valid",
+			ps: map[string]interface{}{
+				"adminApiCaBundle":            nil,
+				"databaseAccountName":         nil,
+				"extraKeyvaultAccessPolicies": nil,
 			},
-			config: func(c *RPConfig) {
-				c.Configuration.ExtraKeyvaultAccessPolicies = []interface{}{"[]"}
+			config: Configuration{
+				DatabaseAccountName:         "databaseAccountName",
+				ExtraKeyvaultAccessPolicies: []interface{}{"a", 1},
 			},
-			expected: arm.Parameters{
+			want: arm.Parameters{
 				Parameters: map[string]*arm.ParametersParameter{
-					"extraKeyvaultAccessPolicies": {
-						Value: []interface{}{"[]"},
-					},
-				},
-			},
-		},
-		{
-			name: "valid json array",
-			template: map[string]interface{}{
-				"parameters": map[string]interface{}{
-					"extraKeyvaultAccessPolicies": map[string]interface{}{
-						"type": "array",
-					},
-				},
-			},
-			config: func(c *RPConfig) {
-				c.Configuration.ExtraKeyvaultAccessPolicies = []interface{}{`[{"objectId":"bc46cb3a-xxxx-xxxx-xxxx-d2659a531a33"}]`}
-			},
-			expected: arm.Parameters{
-				Parameters: map[string]*arm.ParametersParameter{
-					"extraKeyvaultAccessPolicies": {
-						Value: []interface{}{`[{"objectId":"bc46cb3a-xxxx-xxxx-xxxx-d2659a531a33"}]`},
-					},
-				},
-			},
-		},
-		{
-			name: "empty string",
-			template: map[string]interface{}{
-				"parameters": map[string]interface{}{
-					"databaseAccountName": map[string]interface{}{
-						"type": "string",
-					},
-				},
-			},
-			config: func(c *RPConfig) {
-				c.Configuration.DatabaseAccountName = ""
-			},
-			expected: arm.Parameters{
-				Parameters: map[string]*arm.ParametersParameter{
-					"databaseAccountName": {
+					"adminApiCaBundle": {
 						Value: "",
 					},
+					"databaseAccountName": {
+						Value: "databaseAccountName",
+					},
+					"extraKeyvaultAccessPolicies": {
+						Value: []interface{}{"a", 1},
+					},
 				},
 			},
 		},
 		{
-			name: "valid string",
-			template: map[string]interface{}{
-				"parameters": map[string]interface{}{
-					"databaseAccountName": map[string]interface{}{
-						"type": "string",
-					},
-				},
+			name: "nil slice",
+			ps: map[string]interface{}{
+				"extraKeyvaultAccessPolicies": nil,
 			},
-			config: func(c *RPConfig) {
-				c.Configuration.DatabaseAccountName = "databaseAccountName"
-			},
-			expected: arm.Parameters{
+			config: Configuration{},
+			want: arm.Parameters{
 				Parameters: map[string]*arm.ParametersParameter{
-					"databaseAccountName": {
-						Value: "databaseAccountName",
+					"extraKeyvaultAccessPolicies": {
+						Value: []interface{}(nil),
 					},
 				},
 			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			config := &RPConfig{
-				Configuration: Configuration{
-					AdminAPICaBundle: "adminAPICaBundle",
-				},
-			}
-			if tt.config != nil {
-				tt.config(config)
-			}
 			d := deployer{
-				config: config,
+				config: &RPConfig{Configuration: &tt.config},
 			}
 
-			got, err := d.getParameters(tt.template)
-			// we test either error case or output.
-			if err != nil {
-				if err.Error() != tt.expectedErr.Error() {
-					t.Fatalf("\nexpected:\n%v \ngot:\n%v", tt.expectedErr, err)
-					t.FailNow()
-				}
-			} else {
-				if !reflect.DeepEqual(got, &tt.expected) {
-					t.Fatalf("\nexpected:\n%v \ngot:\n%v", tt.expected, *got)
-				}
+			got := d.getParameters(tt.ps)
+			if !reflect.DeepEqual(got, &tt.want) {
+				t.Errorf("%#v", got)
 			}
-
 		})
 	}
-
 }

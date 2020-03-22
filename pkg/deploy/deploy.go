@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
+	"strings"
 	"time"
 
 	azcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
@@ -157,16 +158,12 @@ func (d *deployer) deployPreDeploy(ctx context.Context, rpServicePrincipalID str
 		return err
 	}
 
-	parameters, err := d.getParameters(template)
-	if err != nil {
-		return err
-	}
-
+	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
 	parameters.Parameters["rpServicePrincipalId"] = &arm.ParametersParameter{
 		Value: rpServicePrincipalID,
 	}
-	d.log.Infof("predeploying to %s", d.config.ResourceGroupName)
 
+	d.log.Infof("predeploying to %s", d.config.ResourceGroupName)
 	return d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, deploymentName, azresources.Deployment{
 		Properties: &azresources.DeploymentProperties{
 			Template:   template,
@@ -174,7 +171,6 @@ func (d *deployer) deployPreDeploy(ctx context.Context, rpServicePrincipalID str
 			Parameters: parameters.Parameters,
 		},
 	})
-
 }
 
 func (d *deployer) Deploy(ctx context.Context, rpServicePrincipalID string) error {
@@ -189,11 +185,7 @@ func (d *deployer) Deploy(ctx context.Context, rpServicePrincipalID string) erro
 		return err
 	}
 
-	parameters, err := d.getParameters(template)
-	if err != nil {
-		return err
-	}
-
+	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
 	parameters.Parameters["vmssName"] = &arm.ParametersParameter{
 		Value: d.version,
 	}
@@ -301,21 +293,26 @@ func (d *deployer) removeOldScalesets(ctx context.Context) error {
 	return nil
 }
 
-func (d *deployer) getParameters(ps map[string]interface{}) (*arm.Parameters, error) {
+// getParameters returns an *arm.Parameters populated with parameter names and
+// values.  The names are taken from the ps argument and the values are taken
+// from d.config.Configuration.
+func (d *deployer) getParameters(ps map[string]interface{}) *arm.Parameters {
+	m := map[string]interface{}{}
+
+	v := reflect.ValueOf(*d.config.Configuration)
+	for i := 0; i < v.NumField(); i++ {
+		m[strings.SplitN(v.Type().Field(i).Tag.Get("json"), ",", 2)[0]] = v.Field(i).Interface()
+	}
+
 	parameters := &arm.Parameters{
 		Parameters: map[string]*arm.ParametersParameter{},
 	}
-	v := reflect.ValueOf(d.config.Configuration)
-	if len(ps) > 0 {
-		for paramName := range ps["parameters"].(map[string]interface{}) {
-			for i := 0; i < v.NumField(); i++ {
-				if v.Type().Field(i).Tag.Get("json") == paramName {
-					parameters.Parameters[paramName] = &arm.ParametersParameter{
-						Value: v.Field(i).Interface(),
-					}
-				}
-			}
+
+	for p := range ps {
+		parameters.Parameters[p] = &arm.ParametersParameter{
+			Value: m[p],
 		}
 	}
-	return parameters, nil
+
+	return parameters
 }

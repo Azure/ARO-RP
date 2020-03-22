@@ -1,29 +1,25 @@
 rps:
- - name: eastus
-   location: eastus
-   subscriptionId: 225e02bc-43d0-43d1-a01a-1234567
-   resourceGroupName: aro-eastus
- - name: westeurope
-   location: westeurope
-   subscriptionId: 225e02bc-43d0-43d1-a01a-1234567
-   resourceGroupName: aro-westeurope
-   configuration:
-    databaseAccountName: aro
-    domainName: example.com
+- location: eastus
+  subscriptionId: 00000000-0000-0000-0000-000000000000
+  resourceGroupName: aro-eastus
+  configuration:
+    adminApiCaBundle: overridden
 configuration:
-  adminApiClientCertCommonName:
-  databaseAccountName:
-  domainName:
-  extraCosmosDBIPs:
-  extraKeyvaultAccessPolicies:
-  fpServicePrincipalId:
-  mdmFrontendUrl :
-  mdsdConfigVersion:
-  mdsdEnvironment:
-  pullSecret:
-  rpImage:
-  rpImageAuth:
-  rpMode:
-  rpServicePrincipalId:
-  sshPublicKey:
-  vmssName:
+  adminApiCaBundle: ''
+  adminApiClientCertCommonName: ''
+  databaseAccountName: ''
+  domainName: ''
+  extraCosmosDBIPs: ''
+  extraKeyvaultAccessPolicies: []
+  fpServicePrincipalId: ''
+  keyvaultPrefix: ''
+  mdmFrontendUrl: ''
+  mdsdConfigVersion: ''
+  mdsdEnvironment: ''
+  pullSecret: ''
+  rpImage: ''
+  rpImageAuth: ''
+  rpMode: ''
+  rpServicePrincipalId: ''
+  sshPublicKey: ''
+  vmssName: ''

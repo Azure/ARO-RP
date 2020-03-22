@@ -16,7 +16,7 @@ parameters:
   acrResourceId: ""
   subscriptionId: ""
   adminApiCaBundle: ""
-  adminApiClientCertCN: ""
+  adminApiClientCertCommonName: ""
 steps:
   - script: |
       set -eu
@@ -47,7 +47,7 @@ steps:
       export RP_MODE=${{ parameters.rpMode }}
       export SSH_PUBLIC_KEY="${{ parameters.sshPublicKey }}"
       export ADMIN_API_CA_BUNDLE="${{ parameters.adminApiCaBundle }}"
-      export ADMIN_API_CLIENT_CERT_CN="${{ parameters.adminApiClientCertCN }}"
+      export ADMIN_API_CLIENT_CERT_COMMON_NAME="${{ parameters.adminApiClientCertCommonName }}"
 
       echo ${{ parameters.azureDevOpsJSONSPN }} | base64 -d -w 0 > devops-spn.json
       export AZURE_SUBSCRIPTION_ID="${{ parameters.subscriptionId }}"

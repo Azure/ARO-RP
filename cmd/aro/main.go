@@ -20,11 +20,11 @@ var (
 )
 
 func usage() {
-	fmt.Fprint(flag.CommandLine.Output(), "usage: \n")
-	fmt.Fprintf(flag.CommandLine.Output(), "       %s rp \n", os.Args[0])
-	fmt.Fprintf(flag.CommandLine.Output(), "       %s mirror\n", os.Args[0])
-	fmt.Fprintf(flag.CommandLine.Output(), "       %s monitor\n", os.Args[0])
-	fmt.Fprintf(flag.CommandLine.Output(), "       %s deploy {name} {config_file_path}\n", os.Args[0])
+	fmt.Fprint(flag.CommandLine.Output(), "usage:\n")
+	fmt.Fprintf(flag.CommandLine.Output(), "  %s deploy config.yaml location\n", os.Args[0])
+	fmt.Fprintf(flag.CommandLine.Output(), "  %s mirror\n", os.Args[0])
+	fmt.Fprintf(flag.CommandLine.Output(), "  %s monitor\n", os.Args[0])
+	fmt.Fprintf(flag.CommandLine.Output(), "  %s rp\n", os.Args[0])
 	flag.PrintDefaults()
 }
 

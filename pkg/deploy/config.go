@@ -13,44 +13,43 @@ import (
 
 // Config represents configuration object for deployer tooling
 type Config struct {
-	RPS           []RPConfig    `json:"rps"`
-	Configuration Configuration `json:"configuration"`
+	RPs           []RPConfig     `json:"rps,omitempty"`
+	Configuration *Configuration `json:"configuration,omitempty"`
 }
 
 // RPConfig represents individual RP configuration
 type RPConfig struct {
-	// Name is unique identifier of RP
-	Name              string        `json:"name"`
-	Location          string        `json:"location"`
-	ResourceGroupName string        `json:"resourceGroupName"`
-	SubscriptionID    string        `json:"subscriptionId"`
-	Configuration     Configuration `json:"configuration"`
+	Location          string         `json:"location,omitempty"`
+	SubscriptionID    string         `json:"subscriptionId,omitempty"`
+	ResourceGroupName string         `json:"resourceGroupName,omitempty"`
+	Configuration     *Configuration `json:"configuration,omitempty"`
 }
 
 // Configuration represents configuration structure
 type Configuration struct {
-	AdminAPIClientCertCommonName string        `json:"adminApiClientCertCommonName"`
-	AdminAPICaBundle             string        `json:"adminApiCaBundle"`
-	KeyvaultPrefix               string        `json:"keyvaultPrefix"`
-	RPServicePrincipalID         string        `json:"rpServicePrincipalId"`
-	FPServicePrincipalID         string        `json:"fpServicePrincipalId"`
-	ExtraKeyvaultAccessPolicies  []interface{} `json:"extraKeyvaultAccessPolicies"`
-	RpImage                      string        `json:"rpImage"`
-	RpMode                       string        `json:"rpMode"`
-	SSHPublicKey                 string        `json:"sshPublicKey"`
-	VMSSName                     string        `json:"vmssName"`
-	MDMFrontendURL               string        `json:"mdmFrontendUrl"`
-	DatabaseAccountName          string        `json:"databaseAccountName"`
-	ExtraCosmosDBIPs             string        `json:"extraCosmosDBIPs"`
-	PullSecret                   string        `json:"pullSecret"`
-	DomainName                   string        `json:"domainName"`
-	MDSDConfigVersion            string        `json:"mdsdConfigVersion"`
-	RPImageAuth                  string        `json:"rpImageAuth"`
-	MDSDEnvironment              string        `json:"mdsdEnvironment"`
+	ACRResourceID                string        `json:"acrResourceId,omitempty"`
+	AdminAPICABundle             string        `json:"adminApiCaBundle,omitempty"`
+	AdminAPIClientCertCommonName string        `json:"adminApiClientCertCommonName,omitempty"`
+	DatabaseAccountName          string        `json:"databaseAccountName,omitempty"`
+	DomainName                   string        `json:"domainName,omitempty"`
+	ExtraCosmosDBIPs             string        `json:"extraCosmosDBIPs,omitempty"`
+	ExtraKeyvaultAccessPolicies  []interface{} `json:"extraKeyvaultAccessPolicies,omitempty"`
+	FPServicePrincipalID         string        `json:"fpServicePrincipalId,omitempty"`
+	KeyvaultPrefix               string        `json:"keyvaultPrefix,omitempty"`
+	MDMFrontendURL               string        `json:"mdmFrontendUrl,omitempty"`
+	MDSDConfigVersion            string        `json:"mdsdConfigVersion,omitempty"`
+	MDSDEnvironment              string        `json:"mdsdEnvironment,omitempty"`
+	PullSecret                   string        `json:"pullSecret,omitempty"`
+	RPImage                      string        `json:"rpImage,omitempty"`
+	RPImageAuth                  string        `json:"rpImageAuth,omitempty"`
+	RPMode                       string        `json:"rpMode,omitempty"`
+	RPServicePrincipalID         string        `json:"rpServicePrincipalId,omitempty"`
+	SSHPublicKey                 string        `json:"sshPublicKey,omitempty"`
+	VMSSName                     string        `json:"vmssName,omitempty"`
 }
 
 // GetConfig return RP configuration from the file
-func GetConfig(region, path string) (*RPConfig, error) {
+func GetConfig(path, location string) (*RPConfig, error) {
 	data, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
@@ -62,28 +61,26 @@ func GetConfig(region, path string) (*RPConfig, error) {
 		return nil, err
 	}
 
-	for _, c := range config.RPS {
-		if c.Name == region {
-			configuration, err := mergeConfig(&c.Configuration, &config.Configuration)
+	for _, c := range config.RPs {
+		if c.Location == location {
+			configuration, err := mergeConfig(c.Configuration, config.Configuration)
 			if err != nil {
 				return nil, err
 			}
-			c.Configuration = *configuration
+
+			c.Configuration = configuration
 			return &c, nil
 		}
 	}
 
-	return nil, fmt.Errorf("region %s not found in the %s", region, path)
+	return nil, fmt.Errorf("location %s not found in %s", location, path)
 }
 
-// mergeConfig merges two Configuration structs, where Primary input
-// takes priority over secondary
-func mergeConfig(primary *Configuration, secondary *Configuration) (*Configuration, error) {
-	if reflect.ValueOf(primary).IsNil() || reflect.ValueOf(secondary).IsNil() {
-		return nil, fmt.Errorf("inputs can't be nil")
-	}
-	sValues := reflect.Indirect(reflect.ValueOf(secondary))
-	pValues := reflect.Indirect(reflect.ValueOf(primary))
+// mergeConfig merges two Configuration structs, replacing each zero field in
+// primary with the contents of the corresponding field in secondary
+func mergeConfig(primary, secondary *Configuration) (*Configuration, error) {
+	sValues := reflect.ValueOf(secondary).Elem()
+	pValues := reflect.ValueOf(primary).Elem()
 
 	for i := 0; i < pValues.NumField(); i++ {
 		if pValues.Field(i).IsZero() {
