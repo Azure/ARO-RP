@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"strings"
 
-	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/containerregistry/mgmt/2019-06-01-preview/containerregistry"
 	mgmtdocumentdb "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2019-08-01/documentdb"
@@ -16,6 +15,7 @@ import (
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2016-10-01/keyvault"
 	mgmtmsi "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
+	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	"github.com/Azure/go-autorest/autorest/to"
 	uuid "github.com/satori/go.uuid"
 
@@ -23,7 +23,7 @@ import (
 )
 
 var apiVersions = map[string]string{
-	"authorization":     "2015-07-01",
+	"authorization":     "2018-09-01-preview",
 	"compute":           "2019-03-01",
 	"containerregistry": "2019-05-01",
 	"dns":               "2018-05-01",
@@ -1344,7 +1344,7 @@ func (g *generator) rbac() []*arm.Resource {
 			Resource: &mgmtauthorization.RoleAssignment{
 				Name: to.StringPtr("[guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / Reader')]"),
 				Type: to.StringPtr("Microsoft.Authorization/roleAssignments"),
-				Properties: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+				RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 					Scope:            to.StringPtr("[resourceGroup().id]"),
 					RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')]"),
 					PrincipalID:      to.StringPtr("[parameters('rpServicePrincipalId')]"),
@@ -1356,7 +1356,7 @@ func (g *generator) rbac() []*arm.Resource {
 			Resource: &mgmtauthorization.RoleAssignment{
 				Name: to.StringPtr("[guid(resourceGroup().id, 'FP / Network Contributor')]"),
 				Type: to.StringPtr("Microsoft.Authorization/roleAssignments"),
-				Properties: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+				RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 					Scope:            to.StringPtr("[resourceGroup().id]"),
 					RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4d97b98b-1d4f-4787-a291-c67834d212e7')]"),
 					PrincipalID:      to.StringPtr("[parameters('fpServicePrincipalId')]"),
@@ -1368,7 +1368,7 @@ func (g *generator) rbac() []*arm.Resource {
 			Resource: &mgmtauthorization.RoleAssignment{
 				Name: to.StringPtr("[concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('rpServicePrincipalId'), 'RP / DocumentDB Account Contributor'))]"),
 				Type: to.StringPtr("Microsoft.DocumentDB/databaseAccounts/providers/roleAssignments"),
-				Properties: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+				RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 					Scope:            to.StringPtr("[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"),
 					RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '5bd9cd88-fe45-4216-938b-f97437e15450')]"),
 					PrincipalID:      to.StringPtr("[parameters('rpServicePrincipalId')]"),
@@ -1383,7 +1383,7 @@ func (g *generator) rbac() []*arm.Resource {
 			Resource: &mgmtauthorization.RoleAssignment{
 				Name: to.StringPtr("[concat(parameters('domainName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/dnsZones', parameters('domainName')), 'FP / DNS Zone Contributor'))]"),
 				Type: to.StringPtr("Microsoft.Network/dnsZones/providers/roleAssignments"),
-				Properties: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+				RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 					Scope:            to.StringPtr("[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]"),
 					RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'befefa01-2a29-4197-83a8-272ff33ce314')]"),
 					PrincipalID:      to.StringPtr("[parameters('fpServicePrincipalId')]"),
@@ -1414,7 +1414,7 @@ func (g *generator) acrRbac() []*arm.Resource {
 			Resource: &mgmtauthorization.RoleAssignment{
 				Name: to.StringPtr("[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), parameters('rpServicePrincipalId'), 'RP / AcrPull')))]"),
 				Type: to.StringPtr("Microsoft.ContainerRegistry/registries/providers/roleAssignments"),
-				Properties: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+				RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 					Scope:            to.StringPtr("[parameters('acrResourceId')]"),
 					RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]"),
 					PrincipalID:      to.StringPtr("[parameters('rpServicePrincipalId')]"),
@@ -1426,7 +1426,7 @@ func (g *generator) acrRbac() []*arm.Resource {
 			Resource: &mgmtauthorization.RoleAssignment{
 				Name: to.StringPtr("[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), 'FP / ARO v4 ContainerRegistry Token Contributor')))]"),
 				Type: to.StringPtr("Microsoft.ContainerRegistry/registries/providers/roleAssignments"),
-				Properties: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+				RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 					Scope:            to.StringPtr("[parameters('acrResourceId')]"),
 					RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '48983534-3d06-4dcb-a566-08a694eb1279')]"),
 					PrincipalID:      to.StringPtr("[parameters('fpServicePrincipalId')]"),

@@ -28,7 +28,7 @@ import (
 )
 
 var apiVersions = map[string]string{
-	"authorization": "2015-07-01",
+	"authorization": "2018-09-01-preview",
 	"compute":       "2019-03-01",
 	"network":       "2019-07-01",
 	"privatedns":    "2018-09-01",

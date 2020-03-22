@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
+	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 )
 
 // CanDoAction returns true if a given action is granted by a set of permissions
