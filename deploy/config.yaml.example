@@ -1,0 +1,25 @@
+rps:
+- location: eastus
+  subscriptionId: 00000000-0000-0000-0000-000000000000
+  resourceGroupName: aro-eastus
+  configuration:
+    adminApiCaBundle: overridden
+configuration:
+  adminApiCaBundle: ''
+  adminApiClientCertCommonName: ''
+  databaseAccountName: ''
+  domainName: ''
+  extraCosmosDBIPs: ''
+  extraKeyvaultAccessPolicies: []
+  fpServicePrincipalId: ''
+  keyvaultPrefix: ''
+  mdmFrontendUrl: ''
+  mdsdConfigVersion: ''
+  mdsdEnvironment: ''
+  pullSecret: ''
+  rpImage: ''
+  rpImageAuth: ''
+  rpMode: ''
+  rpServicePrincipalId: ''
+  sshPublicKey: ''
+  vmssName: ''

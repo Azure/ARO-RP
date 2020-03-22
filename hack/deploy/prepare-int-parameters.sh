@@ -9,7 +9,7 @@ cat >secrets/parameters.json <<EOF
             "value": "$ADMIN_API_CA_BUNDLE"
         },
         "adminApiClientCertCommonName": {
-            "value": "$ADMIN_API_CLIENT_CERT_CN"
+            "value": "$ADMIN_API_CLIENT_CERT_COMMON_NAME"
         },
         "databaseAccountName": {
             "value": "$COSMOSDB_ACCOUNT"
