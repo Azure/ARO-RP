@@ -25,10 +25,7 @@ import (
 	"net/http"
 )
 
-// PermissionsClient is the role based access control provides you a way to apply granular level policy administration
-// down to individual resources or resource groups. These operations enable you to manage role definitions and role
-// assignments. A role definition describes the set of actions that can be performed on resources. A role assignment
-// grants access to Azure Active Directory users.
+// PermissionsClient is the client for the Permissions methods of the Authorization service.
 type PermissionsClient struct {
 	BaseClient
 }
@@ -46,7 +43,7 @@ func NewPermissionsClientWithBaseURI(baseURI string, subscriptionID string) Perm
 
 // ListForResource gets all permissions the caller has for a resource.
 // Parameters:
-// resourceGroupName - the name of the resource group containing the resource. The name is case insensitive.
+// resourceGroupName - the name of the resource group.
 // resourceProviderNamespace - the namespace of the resource provider.
 // parentResourcePath - the parent resource identity.
 // resourceType - the resource type of the resource.
@@ -95,7 +92,7 @@ func (client PermissionsClient) ListForResourcePreparer(ctx context.Context, res
 		"subscriptionId":            autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2015-07-01"
+	const APIVersion = "2018-01-01-preview"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -166,7 +163,7 @@ func (client PermissionsClient) ListForResourceComplete(ctx context.Context, res
 
 // ListForResourceGroup gets all permissions the caller has for a resource group.
 // Parameters:
-// resourceGroupName - the name of the resource group to get the permissions for. The name is case insensitive.
+// resourceGroupName - the name of the resource group.
 func (client PermissionsClient) ListForResourceGroup(ctx context.Context, resourceGroupName string) (result PermissionGetResultPage, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/PermissionsClient.ListForResourceGroup")
@@ -207,7 +204,7 @@ func (client PermissionsClient) ListForResourceGroupPreparer(ctx context.Context
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2015-07-01"
+	const APIVersion = "2018-01-01-preview"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

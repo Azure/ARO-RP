@@ -25,10 +25,8 @@ import (
 	"net/http"
 )
 
-// ProviderOperationsMetadataClient is the role based access control provides you a way to apply granular level policy
-// administration down to individual resources or resource groups. These operations enable you to manage role
-// definitions and role assignments. A role definition describes the set of actions that can be performed on resources.
-// A role assignment grants access to Azure Active Directory users.
+// ProviderOperationsMetadataClient is the client for the ProviderOperationsMetadata methods of the Authorization
+// service.
 type ProviderOperationsMetadataClient struct {
 	BaseClient
 }
@@ -48,9 +46,8 @@ func NewProviderOperationsMetadataClientWithBaseURI(baseURI string, subscription
 // Get gets provider operations metadata for the specified resource provider.
 // Parameters:
 // resourceProviderNamespace - the namespace of the resource provider.
-// APIVersion - the API version to use for the operation.
 // expand - specifies whether to expand the values.
-func (client ProviderOperationsMetadataClient) Get(ctx context.Context, resourceProviderNamespace string, APIVersion string, expand string) (result ProviderOperationsMetadata, err error) {
+func (client ProviderOperationsMetadataClient) Get(ctx context.Context, resourceProviderNamespace string, expand string) (result ProviderOperationsMetadata, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/ProviderOperationsMetadataClient.Get")
 		defer func() {
@@ -61,7 +58,7 @@ func (client ProviderOperationsMetadataClient) Get(ctx context.Context, resource
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	req, err := client.GetPreparer(ctx, resourceProviderNamespace, APIVersion, expand)
+	req, err := client.GetPreparer(ctx, resourceProviderNamespace, expand)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "authorization.ProviderOperationsMetadataClient", "Get", nil, "Failure preparing request")
 		return
@@ -83,11 +80,12 @@ func (client ProviderOperationsMetadataClient) Get(ctx context.Context, resource
 }
 
 // GetPreparer prepares the Get request.
-func (client ProviderOperationsMetadataClient) GetPreparer(ctx context.Context, resourceProviderNamespace string, APIVersion string, expand string) (*http.Request, error) {
+func (client ProviderOperationsMetadataClient) GetPreparer(ctx context.Context, resourceProviderNamespace string, expand string) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
 		"resourceProviderNamespace": autorest.Encode("path", resourceProviderNamespace),
 	}
 
+	const APIVersion = "2018-01-01-preview"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -126,9 +124,8 @@ func (client ProviderOperationsMetadataClient) GetResponder(resp *http.Response)
 
 // List gets provider operations metadata for all resource providers.
 // Parameters:
-// APIVersion - the API version to use for this operation.
 // expand - specifies whether to expand the values.
-func (client ProviderOperationsMetadataClient) List(ctx context.Context, APIVersion string, expand string) (result ProviderOperationsMetadataListResultPage, err error) {
+func (client ProviderOperationsMetadataClient) List(ctx context.Context, expand string) (result ProviderOperationsMetadataListResultPage, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/ProviderOperationsMetadataClient.List")
 		defer func() {
@@ -140,7 +137,7 @@ func (client ProviderOperationsMetadataClient) List(ctx context.Context, APIVers
 		}()
 	}
 	result.fn = client.listNextResults
-	req, err := client.ListPreparer(ctx, APIVersion, expand)
+	req, err := client.ListPreparer(ctx, expand)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "authorization.ProviderOperationsMetadataClient", "List", nil, "Failure preparing request")
 		return
@@ -162,7 +159,8 @@ func (client ProviderOperationsMetadataClient) List(ctx context.Context, APIVers
 }
 
 // ListPreparer prepares the List request.
-func (client ProviderOperationsMetadataClient) ListPreparer(ctx context.Context, APIVersion string, expand string) (*http.Request, error) {
+func (client ProviderOperationsMetadataClient) ListPreparer(ctx context.Context, expand string) (*http.Request, error) {
+	const APIVersion = "2018-01-01-preview"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -221,7 +219,7 @@ func (client ProviderOperationsMetadataClient) listNextResults(ctx context.Conte
 }
 
 // ListComplete enumerates all values, automatically crossing page boundaries as required.
-func (client ProviderOperationsMetadataClient) ListComplete(ctx context.Context, APIVersion string, expand string) (result ProviderOperationsMetadataListResultIterator, err error) {
+func (client ProviderOperationsMetadataClient) ListComplete(ctx context.Context, expand string) (result ProviderOperationsMetadataListResultIterator, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/ProviderOperationsMetadataClient.List")
 		defer func() {
@@ -232,6 +230,6 @@ func (client ProviderOperationsMetadataClient) ListComplete(ctx context.Context,
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	result.page, err = client.List(ctx, APIVersion, expand)
+	result.page, err = client.List(ctx, expand)
 	return
 }

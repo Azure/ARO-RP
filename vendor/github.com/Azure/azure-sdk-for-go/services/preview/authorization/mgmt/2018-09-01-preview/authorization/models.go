@@ -27,7 +27,38 @@ import (
 )
 
 // The package's fully qualified name.
-const fqdn = "github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
+const fqdn = "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
+
+// PrincipalType enumerates the values for principal type.
+type PrincipalType string
+
+const (
+	// Application ...
+	Application PrincipalType = "Application"
+	// DirectoryObjectOrGroup ...
+	DirectoryObjectOrGroup PrincipalType = "DirectoryObjectOrGroup"
+	// DirectoryRoleTemplate ...
+	DirectoryRoleTemplate PrincipalType = "DirectoryRoleTemplate"
+	// Everyone ...
+	Everyone PrincipalType = "Everyone"
+	// ForeignGroup ...
+	ForeignGroup PrincipalType = "ForeignGroup"
+	// Group ...
+	Group PrincipalType = "Group"
+	// MSI ...
+	MSI PrincipalType = "MSI"
+	// ServicePrincipal ...
+	ServicePrincipal PrincipalType = "ServicePrincipal"
+	// Unknown ...
+	Unknown PrincipalType = "Unknown"
+	// User ...
+	User PrincipalType = "User"
+)
+
+// PossiblePrincipalTypeValues returns an array of possible values for the PrincipalType const type.
+func PossiblePrincipalTypeValues() []PrincipalType {
+	return []PrincipalType{Application, DirectoryObjectOrGroup, DirectoryRoleTemplate, Everyone, ForeignGroup, Group, MSI, ServicePrincipal, Unknown, User}
+}
 
 // ClassicAdministrator classic Administrators
 type ClassicAdministrator struct {
@@ -265,12 +296,277 @@ type ClassicAdministratorProperties struct {
 	Role *string `json:"role,omitempty"`
 }
 
+// DenyAssignment deny Assignment
+type DenyAssignment struct {
+	autorest.Response `json:"-"`
+	// ID - READ-ONLY; The deny assignment ID.
+	ID *string `json:"id,omitempty"`
+	// Name - READ-ONLY; The deny assignment name.
+	Name *string `json:"name,omitempty"`
+	// Type - READ-ONLY; The deny assignment type.
+	Type *string `json:"type,omitempty"`
+	// DenyAssignmentProperties - Deny assignment properties.
+	*DenyAssignmentProperties `json:"properties,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for DenyAssignment.
+func (da DenyAssignment) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if da.DenyAssignmentProperties != nil {
+		objectMap["properties"] = da.DenyAssignmentProperties
+	}
+	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for DenyAssignment struct.
+func (da *DenyAssignment) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "id":
+			if v != nil {
+				var ID string
+				err = json.Unmarshal(*v, &ID)
+				if err != nil {
+					return err
+				}
+				da.ID = &ID
+			}
+		case "name":
+			if v != nil {
+				var name string
+				err = json.Unmarshal(*v, &name)
+				if err != nil {
+					return err
+				}
+				da.Name = &name
+			}
+		case "type":
+			if v != nil {
+				var typeVar string
+				err = json.Unmarshal(*v, &typeVar)
+				if err != nil {
+					return err
+				}
+				da.Type = &typeVar
+			}
+		case "properties":
+			if v != nil {
+				var denyAssignmentProperties DenyAssignmentProperties
+				err = json.Unmarshal(*v, &denyAssignmentProperties)
+				if err != nil {
+					return err
+				}
+				da.DenyAssignmentProperties = &denyAssignmentProperties
+			}
+		}
+	}
+
+	return nil
+}
+
+// DenyAssignmentFilter deny Assignments filter
+type DenyAssignmentFilter struct {
+	// DenyAssignmentName - Return deny assignment with specified name.
+	DenyAssignmentName *string `json:"denyAssignmentName,omitempty"`
+	// PrincipalID - Return all deny assignments where the specified principal is listed in the principals list of deny assignments.
+	PrincipalID *string `json:"principalId,omitempty"`
+	// GdprExportPrincipalID - Return all deny assignments where the specified principal is listed either in the principals list or exclude principals list of deny assignments.
+	GdprExportPrincipalID *string `json:"gdprExportPrincipalId,omitempty"`
+}
+
+// DenyAssignmentListResult deny assignment list operation result.
+type DenyAssignmentListResult struct {
+	autorest.Response `json:"-"`
+	// Value - Deny assignment list.
+	Value *[]DenyAssignment `json:"value,omitempty"`
+	// NextLink - The URL to use for getting the next set of results.
+	NextLink *string `json:"nextLink,omitempty"`
+}
+
+// DenyAssignmentListResultIterator provides access to a complete listing of DenyAssignment values.
+type DenyAssignmentListResultIterator struct {
+	i    int
+	page DenyAssignmentListResultPage
+}
+
+// NextWithContext advances to the next value.  If there was an error making
+// the request the iterator does not advance and the error is returned.
+func (iter *DenyAssignmentListResultIterator) NextWithContext(ctx context.Context) (err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/DenyAssignmentListResultIterator.NextWithContext")
+		defer func() {
+			sc := -1
+			if iter.Response().Response.Response != nil {
+				sc = iter.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	iter.i++
+	if iter.i < len(iter.page.Values()) {
+		return nil
+	}
+	err = iter.page.NextWithContext(ctx)
+	if err != nil {
+		iter.i--
+		return err
+	}
+	iter.i = 0
+	return nil
+}
+
+// Next advances to the next value.  If there was an error making
+// the request the iterator does not advance and the error is returned.
+// Deprecated: Use NextWithContext() instead.
+func (iter *DenyAssignmentListResultIterator) Next() error {
+	return iter.NextWithContext(context.Background())
+}
+
+// NotDone returns true if the enumeration should be started or is not yet complete.
+func (iter DenyAssignmentListResultIterator) NotDone() bool {
+	return iter.page.NotDone() && iter.i < len(iter.page.Values())
+}
+
+// Response returns the raw server response from the last page request.
+func (iter DenyAssignmentListResultIterator) Response() DenyAssignmentListResult {
+	return iter.page.Response()
+}
+
+// Value returns the current value or a zero-initialized value if the
+// iterator has advanced beyond the end of the collection.
+func (iter DenyAssignmentListResultIterator) Value() DenyAssignment {
+	if !iter.page.NotDone() {
+		return DenyAssignment{}
+	}
+	return iter.page.Values()[iter.i]
+}
+
+// Creates a new instance of the DenyAssignmentListResultIterator type.
+func NewDenyAssignmentListResultIterator(page DenyAssignmentListResultPage) DenyAssignmentListResultIterator {
+	return DenyAssignmentListResultIterator{page: page}
+}
+
+// IsEmpty returns true if the ListResult contains no values.
+func (dalr DenyAssignmentListResult) IsEmpty() bool {
+	return dalr.Value == nil || len(*dalr.Value) == 0
+}
+
+// denyAssignmentListResultPreparer prepares a request to retrieve the next set of results.
+// It returns nil if no more results exist.
+func (dalr DenyAssignmentListResult) denyAssignmentListResultPreparer(ctx context.Context) (*http.Request, error) {
+	if dalr.NextLink == nil || len(to.String(dalr.NextLink)) < 1 {
+		return nil, nil
+	}
+	return autorest.Prepare((&http.Request{}).WithContext(ctx),
+		autorest.AsJSON(),
+		autorest.AsGet(),
+		autorest.WithBaseURL(to.String(dalr.NextLink)))
+}
+
+// DenyAssignmentListResultPage contains a page of DenyAssignment values.
+type DenyAssignmentListResultPage struct {
+	fn   func(context.Context, DenyAssignmentListResult) (DenyAssignmentListResult, error)
+	dalr DenyAssignmentListResult
+}
+
+// NextWithContext advances to the next page of values.  If there was an error making
+// the request the page does not advance and the error is returned.
+func (page *DenyAssignmentListResultPage) NextWithContext(ctx context.Context) (err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/DenyAssignmentListResultPage.NextWithContext")
+		defer func() {
+			sc := -1
+			if page.Response().Response.Response != nil {
+				sc = page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	next, err := page.fn(ctx, page.dalr)
+	if err != nil {
+		return err
+	}
+	page.dalr = next
+	return nil
+}
+
+// Next advances to the next page of values.  If there was an error making
+// the request the page does not advance and the error is returned.
+// Deprecated: Use NextWithContext() instead.
+func (page *DenyAssignmentListResultPage) Next() error {
+	return page.NextWithContext(context.Background())
+}
+
+// NotDone returns true if the page enumeration should be started or is not yet complete.
+func (page DenyAssignmentListResultPage) NotDone() bool {
+	return !page.dalr.IsEmpty()
+}
+
+// Response returns the raw server response from the last page request.
+func (page DenyAssignmentListResultPage) Response() DenyAssignmentListResult {
+	return page.dalr
+}
+
+// Values returns the slice of values for the current page or nil if there are no values.
+func (page DenyAssignmentListResultPage) Values() []DenyAssignment {
+	if page.dalr.IsEmpty() {
+		return nil
+	}
+	return *page.dalr.Value
+}
+
+// Creates a new instance of the DenyAssignmentListResultPage type.
+func NewDenyAssignmentListResultPage(getNextPage func(context.Context, DenyAssignmentListResult) (DenyAssignmentListResult, error)) DenyAssignmentListResultPage {
+	return DenyAssignmentListResultPage{fn: getNextPage}
+}
+
+// DenyAssignmentPermission deny assignment permissions.
+type DenyAssignmentPermission struct {
+	// Actions - Actions to which the deny assignment does not grant access.
+	Actions *[]string `json:"actions,omitempty"`
+	// NotActions - Actions to exclude from that the deny assignment does not grant access.
+	NotActions *[]string `json:"notActions,omitempty"`
+	// DataActions - Data actions to which the deny assignment does not grant access.
+	DataActions *[]string `json:"dataActions,omitempty"`
+	// NotDataActions - Data actions to exclude from that the deny assignment does not grant access.
+	NotDataActions *[]string `json:"notDataActions,omitempty"`
+}
+
+// DenyAssignmentProperties deny assignment properties.
+type DenyAssignmentProperties struct {
+	// DenyAssignmentName - The display name of the deny assignment.
+	DenyAssignmentName *string `json:"denyAssignmentName,omitempty"`
+	// Description - The description of the deny assignment.
+	Description *string `json:"description,omitempty"`
+	// Permissions - An array of permissions that are denied by the deny assignment.
+	Permissions *[]DenyAssignmentPermission `json:"permissions,omitempty"`
+	// Scope - The deny assignment scope.
+	Scope *string `json:"scope,omitempty"`
+	// DoNotApplyToChildScopes - Determines if the deny assignment applies to child scopes. Default value is false.
+	DoNotApplyToChildScopes *bool `json:"doNotApplyToChildScopes,omitempty"`
+	// Principals - Array of principals to which the deny assignment applies.
+	Principals *[]Principal `json:"principals,omitempty"`
+	// ExcludePrincipals - Array of principals to which the deny assignment does not apply.
+	ExcludePrincipals *[]Principal `json:"excludePrincipals,omitempty"`
+	// IsSystemProtected - Specifies whether this deny assignment was created by Azure and cannot be edited or deleted.
+	IsSystemProtected *bool `json:"isSystemProtected,omitempty"`
+}
+
 // Permission role definition permissions.
 type Permission struct {
 	// Actions - Allowed actions.
 	Actions *[]string `json:"actions,omitempty"`
 	// NotActions - Denied actions.
 	NotActions *[]string `json:"notActions,omitempty"`
+	// DataActions - Allowed Data actions.
+	DataActions *[]string `json:"dataActions,omitempty"`
+	// NotDataActions - Denied Data actions.
+	NotDataActions *[]string `json:"notDataActions,omitempty"`
 }
 
 // PermissionGetResult permissions information.
@@ -419,6 +715,14 @@ func NewPermissionGetResultPage(getNextPage func(context.Context, PermissionGetR
 	return PermissionGetResultPage{fn: getNextPage}
 }
 
+// Principal deny assignment principal.
+type Principal struct {
+	// ID - READ-ONLY; Object ID of the Azure AD principal (user, group, or service principal) to which the deny assignment applies. An empty guid '00000000-0000-0000-0000-000000000000' as principal id and principal type as 'Everyone' represents all users, groups and service principals.
+	ID *string `json:"id,omitempty"`
+	// Type - READ-ONLY; Type of object represented by principal id (user, group, or service principal). An empty guid '00000000-0000-0000-0000-000000000000' as principal id and principal type as 'Everyone' represents all users, groups and service principals.
+	Type *string `json:"type,omitempty"`
+}
+
 // ProviderOperation operation
 type ProviderOperation struct {
 	// Name - The operation name.
@@ -431,6 +735,8 @@ type ProviderOperation struct {
 	Origin *string `json:"origin,omitempty"`
 	// Properties - The operation properties.
 	Properties interface{} `json:"properties,omitempty"`
+	// IsDataAction - The dataAction flag to specify the operation type.
+	IsDataAction *bool `json:"isDataAction,omitempty"`
 }
 
 // ProviderOperationsMetadata provider Operations metadata
@@ -616,20 +922,115 @@ type RoleAssignment struct {
 	Name *string `json:"name,omitempty"`
 	// Type - READ-ONLY; The role assignment type.
 	Type *string `json:"type,omitempty"`
-	// Properties - Role assignment properties.
-	Properties *RoleAssignmentPropertiesWithScope `json:"properties,omitempty"`
+	// RoleAssignmentPropertiesWithScope - Role assignment properties.
+	*RoleAssignmentPropertiesWithScope `json:"properties,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for RoleAssignment.
+func (ra RoleAssignment) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if ra.RoleAssignmentPropertiesWithScope != nil {
+		objectMap["properties"] = ra.RoleAssignmentPropertiesWithScope
+	}
+	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for RoleAssignment struct.
+func (ra *RoleAssignment) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "id":
+			if v != nil {
+				var ID string
+				err = json.Unmarshal(*v, &ID)
+				if err != nil {
+					return err
+				}
+				ra.ID = &ID
+			}
+		case "name":
+			if v != nil {
+				var name string
+				err = json.Unmarshal(*v, &name)
+				if err != nil {
+					return err
+				}
+				ra.Name = &name
+			}
+		case "type":
+			if v != nil {
+				var typeVar string
+				err = json.Unmarshal(*v, &typeVar)
+				if err != nil {
+					return err
+				}
+				ra.Type = &typeVar
+			}
+		case "properties":
+			if v != nil {
+				var roleAssignmentPropertiesWithScope RoleAssignmentPropertiesWithScope
+				err = json.Unmarshal(*v, &roleAssignmentPropertiesWithScope)
+				if err != nil {
+					return err
+				}
+				ra.RoleAssignmentPropertiesWithScope = &roleAssignmentPropertiesWithScope
+			}
+		}
+	}
+
+	return nil
 }
 
 // RoleAssignmentCreateParameters role assignment create parameters.
 type RoleAssignmentCreateParameters struct {
-	// Properties - Role assignment properties.
-	Properties *RoleAssignmentProperties `json:"properties,omitempty"`
+	// RoleAssignmentProperties - Role assignment properties.
+	*RoleAssignmentProperties `json:"properties,omitempty"`
+}
+
+// MarshalJSON is the custom marshaler for RoleAssignmentCreateParameters.
+func (racp RoleAssignmentCreateParameters) MarshalJSON() ([]byte, error) {
+	objectMap := make(map[string]interface{})
+	if racp.RoleAssignmentProperties != nil {
+		objectMap["properties"] = racp.RoleAssignmentProperties
+	}
+	return json.Marshal(objectMap)
+}
+
+// UnmarshalJSON is the custom unmarshaler for RoleAssignmentCreateParameters struct.
+func (racp *RoleAssignmentCreateParameters) UnmarshalJSON(body []byte) error {
+	var m map[string]*json.RawMessage
+	err := json.Unmarshal(body, &m)
+	if err != nil {
+		return err
+	}
+	for k, v := range m {
+		switch k {
+		case "properties":
+			if v != nil {
+				var roleAssignmentProperties RoleAssignmentProperties
+				err = json.Unmarshal(*v, &roleAssignmentProperties)
+				if err != nil {
+					return err
+				}
+				racp.RoleAssignmentProperties = &roleAssignmentProperties
+			}
+		}
+	}
+
+	return nil
 }
 
 // RoleAssignmentFilter role Assignments filter
 type RoleAssignmentFilter struct {
 	// PrincipalID - Returns role assignment of the specific principal.
 	PrincipalID *string `json:"principalId,omitempty"`
+	// CanDelegate - The Delegation flag for the role assignment
+	CanDelegate *bool `json:"canDelegate,omitempty"`
 }
 
 // RoleAssignmentListResult role assignment list operation result.
@@ -784,6 +1185,10 @@ type RoleAssignmentProperties struct {
 	RoleDefinitionID *string `json:"roleDefinitionId,omitempty"`
 	// PrincipalID - The principal ID assigned to the role. This maps to the ID inside the Active Directory. It can point to a user, service principal, or security group.
 	PrincipalID *string `json:"principalId,omitempty"`
+	// PrincipalType - The principal type of the assigned principal ID. Possible values include: 'User', 'Group', 'ServicePrincipal', 'Unknown', 'DirectoryRoleTemplate', 'ForeignGroup', 'Application', 'MSI', 'DirectoryObjectOrGroup', 'Everyone'
+	PrincipalType PrincipalType `json:"principalType,omitempty"`
+	// CanDelegate - The delegation flag used for creating a role assignment
+	CanDelegate *bool `json:"canDelegate,omitempty"`
 }
 
 // RoleAssignmentPropertiesWithScope role assignment properties with scope.
@@ -794,6 +1199,10 @@ type RoleAssignmentPropertiesWithScope struct {
 	RoleDefinitionID *string `json:"roleDefinitionId,omitempty"`
 	// PrincipalID - The principal ID.
 	PrincipalID *string `json:"principalId,omitempty"`
+	// PrincipalType - The principal type of the assigned principal ID. Possible values include: 'User', 'Group', 'ServicePrincipal', 'Unknown', 'DirectoryRoleTemplate', 'ForeignGroup', 'Application', 'MSI', 'DirectoryObjectOrGroup', 'Everyone'
+	PrincipalType PrincipalType `json:"principalType,omitempty"`
+	// CanDelegate - The Delegation flag for the role assignment
+	CanDelegate *bool `json:"canDelegate,omitempty"`
 }
 
 // RoleDefinition role definition.
@@ -873,6 +1282,8 @@ func (rd *RoleDefinition) UnmarshalJSON(body []byte) error {
 type RoleDefinitionFilter struct {
 	// RoleName - Returns role definition with the specific name.
 	RoleName *string `json:"roleName,omitempty"`
+	// Type - Returns role definition with the specific type.
+	Type *string `json:"type,omitempty"`
 }
 
 // RoleDefinitionListResult role definition list operation result.

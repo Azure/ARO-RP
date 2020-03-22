@@ -25,10 +25,7 @@ import (
 	"net/http"
 )
 
-// RoleDefinitionsClient is the role based access control provides you a way to apply granular level policy
-// administration down to individual resources or resource groups. These operations enable you to manage role
-// definitions and role assignments. A role definition describes the set of actions that can be performed on resources.
-// A role assignment grants access to Azure Active Directory users.
+// RoleDefinitionsClient is the client for the RoleDefinitions methods of the Authorization service.
 type RoleDefinitionsClient struct {
 	BaseClient
 }
@@ -88,7 +85,7 @@ func (client RoleDefinitionsClient) CreateOrUpdatePreparer(ctx context.Context, 
 		"scope":            scope,
 	}
 
-	const APIVersion = "2015-07-01"
+	const APIVersion = "2018-01-01-preview"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -168,7 +165,7 @@ func (client RoleDefinitionsClient) DeletePreparer(ctx context.Context, scope st
 		"scope":            scope,
 	}
 
-	const APIVersion = "2015-07-01"
+	const APIVersion = "2018-01-01-preview"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -243,7 +240,7 @@ func (client RoleDefinitionsClient) GetPreparer(ctx context.Context, scope strin
 		"scope":            scope,
 	}
 
-	const APIVersion = "2015-07-01"
+	const APIVersion = "2018-01-01-preview"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -277,11 +274,11 @@ func (client RoleDefinitionsClient) GetResponder(resp *http.Response) (result Ro
 
 // GetByID gets a role definition by ID.
 // Parameters:
-// roleDefinitionID - the fully qualified role definition ID. Use the format,
+// roleID - the fully qualified role definition ID. Use the format,
 // /subscriptions/{guid}/providers/Microsoft.Authorization/roleDefinitions/{roleDefinitionId} for subscription
 // level role definitions, or /providers/Microsoft.Authorization/roleDefinitions/{roleDefinitionId} for tenant
 // level role definitions.
-func (client RoleDefinitionsClient) GetByID(ctx context.Context, roleDefinitionID string) (result RoleDefinition, err error) {
+func (client RoleDefinitionsClient) GetByID(ctx context.Context, roleID string) (result RoleDefinition, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/RoleDefinitionsClient.GetByID")
 		defer func() {
@@ -292,7 +289,7 @@ func (client RoleDefinitionsClient) GetByID(ctx context.Context, roleDefinitionI
 			tracing.EndSpan(ctx, sc, err)
 		}()
 	}
-	req, err := client.GetByIDPreparer(ctx, roleDefinitionID)
+	req, err := client.GetByIDPreparer(ctx, roleID)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "authorization.RoleDefinitionsClient", "GetByID", nil, "Failure preparing request")
 		return
@@ -314,12 +311,12 @@ func (client RoleDefinitionsClient) GetByID(ctx context.Context, roleDefinitionI
 }
 
 // GetByIDPreparer prepares the GetByID request.
-func (client RoleDefinitionsClient) GetByIDPreparer(ctx context.Context, roleDefinitionID string) (*http.Request, error) {
+func (client RoleDefinitionsClient) GetByIDPreparer(ctx context.Context, roleID string) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
-		"roleDefinitionId": roleDefinitionID,
+		"roleId": roleID,
 	}
 
-	const APIVersion = "2015-07-01"
+	const APIVersion = "2018-01-01-preview"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -327,7 +324,7 @@ func (client RoleDefinitionsClient) GetByIDPreparer(ctx context.Context, roleDef
 	preparer := autorest.CreatePreparer(
 		autorest.AsGet(),
 		autorest.WithBaseURL(client.BaseURI),
-		autorest.WithPathParameters("/{roleDefinitionId}", pathParameters),
+		autorest.WithPathParameters("/{roleId}", pathParameters),
 		autorest.WithQueryParameters(queryParameters))
 	return preparer.Prepare((&http.Request{}).WithContext(ctx))
 }
@@ -395,7 +392,7 @@ func (client RoleDefinitionsClient) ListPreparer(ctx context.Context, scope stri
 		"scope": scope,
 	}
 
-	const APIVersion = "2015-07-01"
+	const APIVersion = "2018-01-01-preview"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}

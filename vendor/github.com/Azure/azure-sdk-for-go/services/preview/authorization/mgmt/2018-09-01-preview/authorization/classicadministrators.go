@@ -25,10 +25,7 @@ import (
 	"net/http"
 )
 
-// ClassicAdministratorsClient is the role based access control provides you a way to apply granular level policy
-// administration down to individual resources or resource groups. These operations enable you to manage role
-// definitions and role assignments. A role definition describes the set of actions that can be performed on resources.
-// A role assignment grants access to Azure Active Directory users.
+// ClassicAdministratorsClient is the client for the ClassicAdministrators methods of the Authorization service.
 type ClassicAdministratorsClient struct {
 	BaseClient
 }
@@ -85,7 +82,7 @@ func (client ClassicAdministratorsClient) ListPreparer(ctx context.Context) (*ht
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2015-07-01"
+	const APIVersion = "2015-06-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
