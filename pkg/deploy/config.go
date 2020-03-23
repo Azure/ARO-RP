@@ -35,15 +35,18 @@ type Configuration struct {
 	ExtraCosmosDBIPs             string        `json:"extraCosmosDBIPs,omitempty"`
 	ExtraKeyvaultAccessPolicies  []interface{} `json:"extraKeyvaultAccessPolicies,omitempty"`
 	FPServicePrincipalID         string        `json:"fpServicePrincipalId,omitempty"`
+	GlobalMonitoringKeyVaultURI  string        `json:"globalMonitoringKeyVaultUri,omitempty"`
 	GlobalSubscriptionID         string        `json:"globalSubscriptionId,omitempty"`
 	KeyvaultPrefix               string        `json:"keyvaultPrefix,omitempty"`
 	MDMFrontendURL               string        `json:"mdmFrontendUrl,omitempty"`
 	MDSDConfigVersion            string        `json:"mdsdConfigVersion,omitempty"`
 	MDSDEnvironment              string        `json:"mdsdEnvironment,omitempty"`
 	PullSecret                   string        `json:"pullSecret,omitempty"`
+	RPFirstPartyCertCommonName   string        `json:"rpFirstPartyCertCommonName,omitempty"`
 	RPImage                      string        `json:"rpImage,omitempty"`
 	RPImageAuth                  string        `json:"rpImageAuth,omitempty"`
 	RPMode                       string        `json:"rpMode,omitempty"`
+	RPServerCertCommonName       string        `json:"rpServerCertCommonName,omitempty"`
 	RPServicePrincipalID         string        `json:"rpServicePrincipalId,omitempty"`
 	SSHPublicKey                 string        `json:"sshPublicKey,omitempty"`
 	VMSSName                     string        `json:"vmssName,omitempty"`

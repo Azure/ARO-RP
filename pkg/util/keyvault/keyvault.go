@@ -23,12 +23,14 @@ type Eku string
 
 const (
 	EkuServerAuth Eku = "1.3.6.1.5.5.7.3.1"
+	EkuClientAuth Eku = "1.3.6.1.5.5.7.3.2"
 )
 
 type Issuer string
 
 const (
 	IssuerDigicert Issuer = "digicert01"
+	IssuerOnecert  Issuer = "OneCert"
 )
 
 type Manager interface {

@@ -16,6 +16,7 @@ import (
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
@@ -25,6 +26,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/resources"
+	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
 
 var _ Deployer = (*deployer)(nil)
@@ -43,6 +45,7 @@ type deployer struct {
 	groups            resources.GroupsClient
 	vmss              compute.VirtualMachineScaleSetsClient
 	vmssvms           compute.VirtualMachineScaleSetVMsClient
+	keyvault          keyvault.Manager
 
 	cli *http.Client
 
@@ -57,6 +60,11 @@ func New(ctx context.Context, log *logrus.Entry, config *RPConfig, version strin
 		return nil, err
 	}
 
+	kvAuthorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(azure.PublicCloud.ResourceIdentifiers.KeyVault)
+	if err != nil {
+		return nil, err
+	}
+
 	return &deployer{
 		log: log,
 
@@ -65,6 +73,7 @@ func New(ctx context.Context, log *logrus.Entry, config *RPConfig, version strin
 		groups:            resources.NewGroupsClient(config.SubscriptionID, authorizer),
 		vmss:              compute.NewVirtualMachineScaleSetsClient(config.SubscriptionID, authorizer),
 		vmssvms:           compute.NewVirtualMachineScaleSetVMsClient(config.SubscriptionID, authorizer),
+		keyvault:          keyvault.NewManager(kvAuthorizer),
 
 		cli: &http.Client{
 			Timeout: 5 * time.Second,
