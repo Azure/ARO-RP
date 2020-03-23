@@ -3,19 +3,19 @@ rps:
   subscriptionId: 00000000-0000-0000-0000-000000000000
   resourceGroupName: aro-eastus
   configuration:
-    adminApiCaBundle: overridden
+    databaseAccountName: ''
+    domainName: ''
+    keyvaultPrefix: ''
+    rpServerCertCommonName: ''
 configuration:
   adminApiCaBundle: ''
   adminApiClientCertCommonName: ''
-  databaseAccountName: ''
-  domainName: ''
   extraCosmosDBIPs: ''
   extraKeyvaultAccessPolicies: []
   fpServicePrincipalId: ''
   globalMonitoringKeyVaultUri: ''
   globalResourceGroupName: ''
   globalSubscriptionId: ''
-  keyvaultPrefix: ''
   mdmFrontendUrl: ''
   mdsdConfigVersion: ''
   mdsdEnvironment: ''
@@ -24,5 +24,4 @@ configuration:
   rpImage: ''
   rpImageAuth: ''
   rpMode: ''
-  rpServerCertCommonName: ''
   sshPublicKey: ''
