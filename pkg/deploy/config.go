@@ -48,9 +48,7 @@ type Configuration struct {
 	RPImageAuth                  string        `json:"rpImageAuth,omitempty"`
 	RPMode                       string        `json:"rpMode,omitempty"`
 	RPServerCertCommonName       string        `json:"rpServerCertCommonName,omitempty"`
-	RPServicePrincipalID         string        `json:"rpServicePrincipalId,omitempty"`
 	SSHPublicKey                 string        `json:"sshPublicKey,omitempty"`
-	VMSSName                     string        `json:"vmssName,omitempty"`
 }
 
 // GetConfig return RP configuration from the file

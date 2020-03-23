@@ -25,6 +25,4 @@ configuration:
   rpImageAuth: ''
   rpMode: ''
   rpServerCertCommonName: ''
-  rpServicePrincipalId: ''
   sshPublicKey: ''
-  vmssName: ''
