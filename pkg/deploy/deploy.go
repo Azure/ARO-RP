@@ -24,7 +24,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/resources"
 )
 
@@ -44,7 +43,6 @@ type deployer struct {
 	groups            resources.GroupsClient
 	vmss              compute.VirtualMachineScaleSetsClient
 	vmssvms           compute.VirtualMachineScaleSetVMsClient
-	network           network.PublicIPAddressesClient
 
 	cli *http.Client
 
@@ -62,7 +60,6 @@ func New(ctx context.Context, log *logrus.Entry, authorizer autorest.Authorizer,
 		groups:            resources.NewGroupsClient(config.SubscriptionID, authorizer),
 		vmss:              compute.NewVirtualMachineScaleSetsClient(config.SubscriptionID, authorizer),
 		vmssvms:           compute.NewVirtualMachineScaleSetVMsClient(config.SubscriptionID, authorizer),
-		network:           network.NewPublicIPAddressesClient(config.SubscriptionID, authorizer),
 
 		cli: &http.Client{
 			Timeout: 5 * time.Second,
