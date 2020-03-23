@@ -37,7 +37,8 @@
                 "assignableScopes": [
                     "[concat('/subscriptions/', subscription().subscriptionId)]"
                 ]
-            }
+            },
+            "apiVersion": "2018-07-01"
         },
         {
             "properties": {
