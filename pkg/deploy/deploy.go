@@ -25,6 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/containerregistry"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/resources"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
@@ -40,12 +41,13 @@ type Deployer interface {
 type deployer struct {
 	log *logrus.Entry
 
-	globaldeployments resources.DeploymentsClient
-	deployments       resources.DeploymentsClient
-	groups            resources.GroupsClient
-	vmss              compute.VirtualMachineScaleSetsClient
-	vmssvms           compute.VirtualMachineScaleSetVMsClient
-	keyvault          keyvault.Manager
+	globaldeployments  resources.DeploymentsClient
+	globalreplications containerregistry.ReplicationsClient
+	deployments        resources.DeploymentsClient
+	groups             resources.GroupsClient
+	vmss               compute.VirtualMachineScaleSetsClient
+	vmssvms            compute.VirtualMachineScaleSetVMsClient
+	keyvault           keyvault.Manager
 
 	cli *http.Client
 
@@ -68,12 +70,13 @@ func New(ctx context.Context, log *logrus.Entry, config *RPConfig, version strin
 	return &deployer{
 		log: log,
 
-		globaldeployments: resources.NewDeploymentsClient(config.Configuration.GlobalSubscriptionID, authorizer),
-		deployments:       resources.NewDeploymentsClient(config.SubscriptionID, authorizer),
-		groups:            resources.NewGroupsClient(config.SubscriptionID, authorizer),
-		vmss:              compute.NewVirtualMachineScaleSetsClient(config.SubscriptionID, authorizer),
-		vmssvms:           compute.NewVirtualMachineScaleSetVMsClient(config.SubscriptionID, authorizer),
-		keyvault:          keyvault.NewManager(kvAuthorizer),
+		globaldeployments:  resources.NewDeploymentsClient(config.Configuration.GlobalSubscriptionID, authorizer),
+		globalreplications: containerregistry.NewReplicationsClient(config.Configuration.GlobalSubscriptionID, authorizer),
+		deployments:        resources.NewDeploymentsClient(config.SubscriptionID, authorizer),
+		groups:             resources.NewGroupsClient(config.SubscriptionID, authorizer),
+		vmss:               compute.NewVirtualMachineScaleSetsClient(config.SubscriptionID, authorizer),
+		vmssvms:            compute.NewVirtualMachineScaleSetVMsClient(config.SubscriptionID, authorizer),
+		keyvault:           keyvault.NewManager(kvAuthorizer),
 
 		cli: &http.Client{
 			Timeout: 5 * time.Second,

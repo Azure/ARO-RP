@@ -36,6 +36,7 @@ type Configuration struct {
 	ExtraKeyvaultAccessPolicies  []interface{} `json:"extraKeyvaultAccessPolicies,omitempty"`
 	FPServicePrincipalID         string        `json:"fpServicePrincipalId,omitempty"`
 	GlobalMonitoringKeyVaultURI  string        `json:"globalMonitoringKeyVaultUri,omitempty"`
+	GlobalResourceGroupName      string        `json:"globalResourceGroupName,omitempty"`
 	GlobalSubscriptionID         string        `json:"globalSubscriptionId,omitempty"`
 	KeyvaultPrefix               string        `json:"keyvaultPrefix,omitempty"`
 	MDMFrontendURL               string        `json:"mdmFrontendUrl,omitempty"`

@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"path/filepath"
 
+	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/containerregistry/mgmt/2019-06-01-preview/containerregistry"
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
 	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -48,6 +49,11 @@ func (d *deployer) PreDeploy(ctx context.Context) (string, error) {
 	}
 
 	err = d.configureServiceKV(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	err = d.ensureContainerRegistryReplication(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -255,4 +261,8 @@ func (d *deployer) ensureServiceCertificates(ctx context.Context, serviceKeyVaul
 	}
 
 	return nil
+}
+
+func (d *deployer) ensureContainerRegistryReplication(ctx context.Context) error {
+	return d.globalreplications.CreateAndWait(ctx, d.config.Configuration.GlobalResourceGroupName, "arosvc", d.config.Location, mgmtcontainerregistry.Replication{})
 }
