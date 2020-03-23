@@ -16,7 +16,7 @@ import (
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
-	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -51,7 +51,12 @@ type deployer struct {
 }
 
 // New initiates new deploy utility object
-func New(ctx context.Context, log *logrus.Entry, authorizer autorest.Authorizer, config *RPConfig, version string) Deployer {
+func New(ctx context.Context, log *logrus.Entry, config *RPConfig, version string) (Deployer, error) {
+	authorizer, err := auth.NewAuthorizerFromEnvironment()
+	if err != nil {
+		return nil, err
+	}
+
 	return &deployer{
 		log: log,
 
@@ -70,7 +75,7 @@ func New(ctx context.Context, log *logrus.Entry, authorizer autorest.Authorizer,
 
 		config:  config,
 		version: version,
-	}
+	}, nil
 }
 
 // PreDeploy deploys managed identity, NSGs and keyvaults, needed for main

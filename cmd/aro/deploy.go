@@ -10,7 +10,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/sirupsen/logrus"
 
 	deployer "github.com/Azure/ARO-RP/pkg/deploy"
@@ -36,17 +35,15 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 		return fmt.Errorf("invalid deploy version %q", deployVersion)
 	}
 
-	authorizer, err := auth.NewAuthorizerFromEnvironment()
-	if err != nil {
-		return err
-	}
-
 	config, err := deployer.GetConfig(flag.Arg(1), flag.Arg(2))
 	if err != nil {
 		return err
 	}
 
-	deployer := deployer.New(ctx, log, authorizer, config, deployVersion)
+	deployer, err := deployer.New(ctx, log, config, deployVersion)
+	if err != nil {
+		return err
+	}
 
 	rpServicePrincipalID, err := deployer.PreDeploy(ctx)
 	if err != nil {
