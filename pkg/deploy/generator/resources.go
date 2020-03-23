@@ -779,6 +779,7 @@ ExecStart=/usr/bin/docker run \
   -e PULL_SECRET \
   -e ADMIN_API_CLIENT_CERT_COMMON_NAME \
   -e RP_MODE \
+  -e ACR_RESOURCE_ID \
   -p 443:8443 \
   -v /etc/aro-rp:/etc/aro-rp \
   -v /run/systemd/journal:/run/systemd/journal \
