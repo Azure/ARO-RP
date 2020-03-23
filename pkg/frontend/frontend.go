@@ -56,17 +56,17 @@ type Runnable interface {
 }
 
 // NewFrontend returns a new runnable frontend
-func NewFrontend(ctx context.Context, baseLog *logrus.Entry, env env.Interface, db *database.Database, apis map[string]*api.Version, m metrics.Interface) (Runnable, error) {
+func NewFrontend(ctx context.Context, baseLog *logrus.Entry, _env env.Interface, db *database.Database, apis map[string]*api.Version, m metrics.Interface) (Runnable, error) {
 	var err error
 
 	f := &frontend{
 		baseLog: baseLog,
-		env:     env,
+		env:     _env,
 		db:      db,
 		apis:    apis,
 		m:       m,
 
-		ocDynamicValidator: validate.NewOpenShiftClusterDynamicValidator(env),
+		ocDynamicValidator: validate.NewOpenShiftClusterDynamicValidator(_env),
 
 		bucketAllocator: &bucket.Random{},
 	}
@@ -76,7 +76,7 @@ func NewFrontend(ctx context.Context, baseLog *logrus.Entry, env env.Interface, 
 		return nil, err
 	}
 
-	key, certs, err := f.env.GetCertificateSecret(ctx, "rp-server")
+	key, certs, err := f.env.GetCertificateSecret(ctx, env.RPServerSecretName)
 	if err != nil {
 		return nil, err
 	}

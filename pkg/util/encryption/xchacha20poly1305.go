@@ -14,10 +14,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 )
 
-const (
-	encryptionSecretName = "encryption-key" // must match key name in the service keyvault
-)
-
 var _ Cipher = (*aeadCipher)(nil)
 
 type Cipher interface {
@@ -30,8 +26,8 @@ type aeadCipher struct {
 	randRead func([]byte) (int, error)
 }
 
-func NewXChaCha20Poly1305(ctx context.Context, env env.Interface) (Cipher, error) {
-	key, err := env.GetSecret(ctx, encryptionSecretName)
+func NewXChaCha20Poly1305(ctx context.Context, _env env.Interface) (Cipher, error) {
+	key, err := _env.GetSecret(ctx, env.EncryptionSecretName)
 	if err != nil {
 		return nil, err
 	}
