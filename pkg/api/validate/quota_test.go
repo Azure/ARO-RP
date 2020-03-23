@@ -7,7 +7,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
 
@@ -45,30 +45,30 @@ func TestQuotaCheck(t *testing.T) {
 			mocks: func(tt *test, uc *mock_compute.MockUsageClient) {
 				uc.EXPECT().
 					List(ctx, "ocLocation").
-					Return([]compute.Usage{
+					Return([]mgmtcompute.Usage{
 						{
-							Name: &compute.UsageName{
+							Name: &mgmtcompute.UsageName{
 								Value: to.StringPtr("cores"),
 							},
 							CurrentValue: to.Int32Ptr(100),
 							Limit:        to.Int64Ptr(204),
 						},
 						{
-							Name: &compute.UsageName{
+							Name: &mgmtcompute.UsageName{
 								Value: to.StringPtr("virtualMachines"),
 							},
 							CurrentValue: to.Int32Ptr(100),
 							Limit:        to.Int64Ptr(113),
 						},
 						{
-							Name: &compute.UsageName{
+							Name: &mgmtcompute.UsageName{
 								Value: to.StringPtr("standardDSv3Family"),
 							},
 							CurrentValue: to.Int32Ptr(100),
 							Limit:        to.Int64Ptr(204),
 						},
 						{
-							Name: &compute.UsageName{
+							Name: &mgmtcompute.UsageName{
 								Value: to.StringPtr("PremiumDiskCount"),
 							},
 							CurrentValue: to.Int32Ptr(100),
@@ -83,9 +83,9 @@ func TestQuotaCheck(t *testing.T) {
 			mocks: func(tt *test, uc *mock_compute.MockUsageClient) {
 				uc.EXPECT().
 					List(ctx, "ocLocation").
-					Return([]compute.Usage{
+					Return([]mgmtcompute.Usage{
 						{
-							Name: &compute.UsageName{
+							Name: &mgmtcompute.UsageName{
 								Value: to.StringPtr("cores"),
 							},
 							CurrentValue: to.Int32Ptr(101),
@@ -100,9 +100,9 @@ func TestQuotaCheck(t *testing.T) {
 			mocks: func(tt *test, uc *mock_compute.MockUsageClient) {
 				uc.EXPECT().
 					List(ctx, "ocLocation").
-					Return([]compute.Usage{
+					Return([]mgmtcompute.Usage{
 						{
-							Name: &compute.UsageName{
+							Name: &mgmtcompute.UsageName{
 								Value: to.StringPtr("virtualMachines"),
 							},
 							CurrentValue: to.Int32Ptr(101),
@@ -117,9 +117,9 @@ func TestQuotaCheck(t *testing.T) {
 			mocks: func(tt *test, uc *mock_compute.MockUsageClient) {
 				uc.EXPECT().
 					List(ctx, "ocLocation").
-					Return([]compute.Usage{
+					Return([]mgmtcompute.Usage{
 						{
-							Name: &compute.UsageName{
+							Name: &mgmtcompute.UsageName{
 								Value: to.StringPtr("standardDSv3Family"),
 							},
 							CurrentValue: to.Int32Ptr(101),
@@ -134,9 +134,9 @@ func TestQuotaCheck(t *testing.T) {
 			mocks: func(tt *test, uc *mock_compute.MockUsageClient) {
 				uc.EXPECT().
 					List(ctx, "ocLocation").
-					Return([]compute.Usage{
+					Return([]mgmtcompute.Usage{
 						{
-							Name: &compute.UsageName{
+							Name: &mgmtcompute.UsageName{
 								Value: to.StringPtr("PremiumDiskCount"),
 							},
 							CurrentValue: to.Int32Ptr(101),

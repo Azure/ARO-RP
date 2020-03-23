@@ -4,7 +4,7 @@ package containerregistry
 // Licensed under the Apache License 2.0.
 
 import (
-	"github.com/Azure/azure-sdk-for-go/services/containerregistry/mgmt/2019-06-01-preview/containerregistry"
+	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/containerregistry/mgmt/2019-06-01-preview/containerregistry"
 	"github.com/Azure/go-autorest/autorest"
 )
 
@@ -14,14 +14,14 @@ type TokensClient interface {
 }
 
 type tokensClient struct {
-	containerregistry.TokensClient
+	mgmtcontainerregistry.TokensClient
 }
 
 var _ TokensClient = &tokensClient{}
 
 // NewTokensClient creates a new TokensClient
 func NewTokensClient(subscriptionID string, authorizer autorest.Authorizer) TokensClient {
-	client := containerregistry.NewTokensClient(subscriptionID)
+	client := mgmtcontainerregistry.NewTokensClient(subscriptionID)
 	client.Authorizer = authorizer
 
 	return &tokensClient{

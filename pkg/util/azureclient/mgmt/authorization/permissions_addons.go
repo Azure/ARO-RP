@@ -6,16 +6,16 @@ package authorization
 import (
 	"context"
 
-	"github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
+	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
 )
 
 // PermissionsClientAddons contains addons for PermissionsClient
 type PermissionsClientAddons interface {
-	ListForResource(ctx context.Context, resourceGroupName string, resourceProviderNamespace string, parentResourcePath string, resourceType string, resourceName string) (permissions []authorization.Permission, err error)
-	ListForResourceGroup(ctx context.Context, resourceGroupName string) (permissions []authorization.Permission, err error)
+	ListForResource(ctx context.Context, resourceGroupName string, resourceProviderNamespace string, parentResourcePath string, resourceType string, resourceName string) (permissions []mgmtauthorization.Permission, err error)
+	ListForResourceGroup(ctx context.Context, resourceGroupName string) (permissions []mgmtauthorization.Permission, err error)
 }
 
-func (c *permissionsClient) ListForResource(ctx context.Context, resourceGroupName string, resourceProviderNamespace string, parentResourcePath string, resourceType string, resourceName string) (permissions []authorization.Permission, err error) {
+func (c *permissionsClient) ListForResource(ctx context.Context, resourceGroupName string, resourceProviderNamespace string, parentResourcePath string, resourceType string, resourceName string) (permissions []mgmtauthorization.Permission, err error) {
 	page, err := c.PermissionsClient.ListForResource(ctx, resourceGroupName, resourceProviderNamespace, parentResourcePath, resourceType, resourceName)
 	if err != nil {
 		return nil, err
@@ -37,7 +37,7 @@ func (c *permissionsClient) ListForResource(ctx context.Context, resourceGroupNa
 	return permissions, nil
 }
 
-func (c *permissionsClient) ListForResourceGroup(ctx context.Context, resourceGroupName string) (permissions []authorization.Permission, error error) {
+func (c *permissionsClient) ListForResourceGroup(ctx context.Context, resourceGroupName string) (permissions []mgmtauthorization.Permission, error error) {
 	page, err := c.PermissionsClient.ListForResourceGroup(ctx, resourceGroupName)
 	if err != nil {
 		return nil, err

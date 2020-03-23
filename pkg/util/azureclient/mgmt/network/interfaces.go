@@ -4,7 +4,7 @@ package network
 // Licensed under the Apache License 2.0.
 
 import (
-	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/go-autorest/autorest"
 )
 
@@ -14,14 +14,14 @@ type InterfacesClient interface {
 }
 
 type interfacesClient struct {
-	network.InterfacesClient
+	mgmtnetwork.InterfacesClient
 }
 
 var _ InterfacesClient = &interfacesClient{}
 
 // NewInterfacesClient creates a new InterfacesClient
 func NewInterfacesClient(subscriptionID string, authorizer autorest.Authorizer) InterfacesClient {
-	client := network.NewInterfacesClient(subscriptionID)
+	client := mgmtnetwork.NewInterfacesClient(subscriptionID)
 	client.Authorizer = authorizer
 
 	return &interfacesClient{

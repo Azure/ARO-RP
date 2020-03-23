@@ -4,7 +4,7 @@ package compute
 // Licensed under the Apache License 2.0.
 
 import (
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	"github.com/Azure/go-autorest/autorest"
 )
 
@@ -14,14 +14,14 @@ type ResourceSkusClient interface {
 }
 
 type resourceSkusClient struct {
-	compute.ResourceSkusClient
+	mgmtcompute.ResourceSkusClient
 }
 
 var _ ResourceSkusClient = &resourceSkusClient{}
 
 // NewResourceSkusClient creates a new ResourceSkusClient
 func NewResourceSkusClient(subscriptionID string, authorizer autorest.Authorizer) ResourceSkusClient {
-	client := compute.NewResourceSkusClient(subscriptionID)
+	client := mgmtcompute.NewResourceSkusClient(subscriptionID)
 	client.Authorizer = authorizer
 
 	return &resourceSkusClient{

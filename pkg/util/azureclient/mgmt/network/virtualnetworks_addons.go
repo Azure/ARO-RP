@@ -6,15 +6,15 @@ package network
 import (
 	"context"
 
-	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 )
 
 // VirtualNetworksClientAddons contains addons for VirtualNetworksClient
 type VirtualNetworksClientAddons interface {
-	List(ctx context.Context, resourceGroupName string) (virtualnetworks []network.VirtualNetwork, err error)
+	List(ctx context.Context, resourceGroupName string) (virtualnetworks []mgmtnetwork.VirtualNetwork, err error)
 }
 
-func (c *virtualNetworksClient) List(ctx context.Context, resourceGroupName string) (virtualnetworks []network.VirtualNetwork, err error) {
+func (c *virtualNetworksClient) List(ctx context.Context, resourceGroupName string) (virtualnetworks []mgmtnetwork.VirtualNetwork, err error) {
 	page, err := c.VirtualNetworksClient.List(ctx, resourceGroupName)
 	if err != nil {
 		return nil, err

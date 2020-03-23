@@ -4,7 +4,7 @@ package compute
 // Licensed under the Apache License 2.0.
 
 import (
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	"github.com/Azure/go-autorest/autorest"
 )
 
@@ -14,14 +14,14 @@ type DisksClient interface {
 }
 
 type disksClient struct {
-	compute.DisksClient
+	mgmtcompute.DisksClient
 }
 
 var _ DisksClient = &disksClient{}
 
 // NewDisksClient creates a new DisksClient
 func NewDisksClient(subscriptionID string, authorizer autorest.Authorizer) DisksClient {
-	client := compute.NewDisksClient(subscriptionID)
+	client := mgmtcompute.NewDisksClient(subscriptionID)
 	client.Authorizer = authorizer
 
 	return &disksClient{

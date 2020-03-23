@@ -6,16 +6,16 @@ package compute
 import (
 	"context"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 )
 
 // VirtualMachinesClientAddons contains addons for VirtualMachinesClient
 type VirtualMachinesClientAddons interface {
-	CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, VMName string, parameters compute.VirtualMachine) error
+	CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, VMName string, parameters mgmtcompute.VirtualMachine) error
 	DeleteAndWait(ctx context.Context, resourceGroupName string, VMName string) error
 }
 
-func (c *virtualMachinesClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, VMName string, parameters compute.VirtualMachine) error {
+func (c *virtualMachinesClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, VMName string, parameters mgmtcompute.VirtualMachine) error {
 	future, err := c.CreateOrUpdate(ctx, resourceGroupName, VMName, parameters)
 	if err != nil {
 		return err
