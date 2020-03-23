@@ -5,8 +5,6 @@ package keyvault
 
 import (
 	"context"
-	"crypto/rsa"
-	"crypto/x509"
 	"crypto/x509/pkix"
 	"fmt"
 	"strings"
@@ -18,33 +16,41 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	"github.com/Azure/ARO-RP/pkg/env"
 	basekeyvault "github.com/Azure/ARO-RP/pkg/util/azureclient/keyvault"
-	"github.com/Azure/ARO-RP/pkg/util/pem"
+)
+
+type Eku string
+
+const (
+	EkuServerAuth Eku = "1.3.6.1.5.5.7.3.1"
+)
+
+type Issuer string
+
+const (
+	IssuerDigicert Issuer = "digicert01"
 )
 
 type Manager interface {
-	CreateCertificate(context.Context, string, string) error
-	DeleteCertificate(context.Context, string) error
-	GetSecret(context.Context, string) (*rsa.PrivateKey, []*x509.Certificate, error)
-	WaitForCertificateOperation(context.Context, string) error
+	basekeyvault.BaseClient
+
+	CreateSignedCertificate(ctx context.Context, keyvaultURI string, issuer Issuer, certificateName, commonName string, eku Eku) error
+	EnsureCertificateDeleted(ctx context.Context, keyvaultURI, certificateName string) error
+	WaitForCertificateOperation(ctx context.Context, keyvaultURI, certificateName string) error
 }
 
 type manager struct {
-	env      env.Interface
-	keyvault basekeyvault.BaseClient
+	basekeyvault.BaseClient
 }
 
-func NewManager(env env.Interface, localFPKVAuthorizer autorest.Authorizer) Manager {
+func NewManager(kvAuthorizer autorest.Authorizer) Manager {
 	return &manager{
-		env: env,
-
-		keyvault: basekeyvault.New(localFPKVAuthorizer),
+		BaseClient: basekeyvault.New(kvAuthorizer),
 	}
 }
 
-func (m *manager) CreateCertificate(ctx context.Context, certificateName, commonName string) error {
-	op, err := m.keyvault.CreateCertificate(ctx, m.env.ClustersKeyvaultURI(), certificateName, keyvault.CertificateCreateParameters{
+func (m *manager) CreateSignedCertificate(ctx context.Context, keyvaultURI string, issuer Issuer, certificateName, commonName string, eku Eku) error {
+	op, err := m.BaseClient.CreateCertificate(ctx, keyvaultURI, certificateName, keyvault.CertificateCreateParameters{
 		CertificatePolicy: &keyvault.CertificatePolicy{
 			KeyProperties: &keyvault.KeyProperties{
 				Exportable: to.BoolPtr(true),
@@ -57,7 +63,7 @@ func (m *manager) CreateCertificate(ctx context.Context, certificateName, common
 			X509CertificateProperties: &keyvault.X509CertificateProperties{
 				Subject: to.StringPtr(pkix.Name{CommonName: commonName}.String()),
 				Ekus: &[]string{
-					"1.3.6.1.5.5.7.3.1", // serverAuth
+					string(eku),
 				},
 				KeyUsage: &[]keyvault.KeyUsageType{
 					keyvault.DigitalSignature,
@@ -66,7 +72,7 @@ func (m *manager) CreateCertificate(ctx context.Context, certificateName, common
 				ValidityInMonths: to.Int32Ptr(12),
 			},
 			IssuerParameters: &keyvault.IssuerParameters{
-				Name: to.StringPtr("digicert01"),
+				Name: to.StringPtr(string(issuer)),
 			},
 		},
 	})
@@ -78,8 +84,8 @@ func (m *manager) CreateCertificate(ctx context.Context, certificateName, common
 	return err
 }
 
-func (m *manager) DeleteCertificate(ctx context.Context, certificateName string) error {
-	_, err := m.keyvault.DeleteCertificate(ctx, m.env.ClustersKeyvaultURI(), certificateName)
+func (m *manager) EnsureCertificateDeleted(ctx context.Context, keyvaultURI, certificateName string) error {
+	_, err := m.BaseClient.DeleteCertificate(ctx, keyvaultURI, certificateName)
 	if detailedError, ok := err.(autorest.DetailedError); ok {
 		if requestError, ok := detailedError.Original.(*azure.RequestError); ok &&
 			requestError.ServiceError != nil &&
@@ -91,21 +97,12 @@ func (m *manager) DeleteCertificate(ctx context.Context, certificateName string)
 	return err
 }
 
-func (m *manager) GetSecret(ctx context.Context, secretName string) (key *rsa.PrivateKey, certs []*x509.Certificate, err error) {
-	bundle, err := m.keyvault.GetSecret(ctx, m.env.ClustersKeyvaultURI(), secretName, "")
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return pem.Parse([]byte(*bundle.Value))
-}
-
-func (m *manager) WaitForCertificateOperation(ctx context.Context, certificateName string) error {
+func (m *manager) WaitForCertificateOperation(ctx context.Context, keyvaultURI, certificateName string) error {
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Minute)
 	defer cancel()
 
 	err := wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-		op, err := m.keyvault.GetCertificateOperation(ctx, m.env.ClustersKeyvaultURI(), certificateName)
+		op, err := m.BaseClient.GetCertificateOperation(ctx, keyvaultURI, certificateName)
 		if err != nil {
 			return false, err
 		}
@@ -143,6 +140,7 @@ func keyvaultError(err *keyvault.Error) string {
 
 	return sb.String()
 }
+
 func checkOperation(op *keyvault.CertificateOperation) (bool, error) {
 	switch *op.Status {
 	case "inProgress":

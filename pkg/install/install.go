@@ -130,7 +130,7 @@ func NewInstaller(ctx context.Context, log *logrus.Entry, env env.Interface, db 
 		accounts:          storage.NewAccountsClient(r.SubscriptionID, fpAuthorizer),
 
 		dns:             dns.NewManager(env, localFPAuthorizer),
-		keyvault:        keyvault.NewManager(env, localFPKVAuthorizer),
+		keyvault:        keyvault.NewManager(localFPKVAuthorizer),
 		privateendpoint: privateendpoint.NewManager(env, localFPAuthorizer),
 		subnet:          subnet.NewManager(r.SubscriptionID, fpAuthorizer),
 	}, nil
