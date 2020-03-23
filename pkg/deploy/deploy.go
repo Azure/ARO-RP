@@ -39,11 +39,12 @@ type Deployer interface {
 type deployer struct {
 	log *logrus.Entry
 
-	deployments resources.DeploymentsClient
-	groups      resources.GroupsClient
-	vmss        compute.VirtualMachineScaleSetsClient
-	vmssvms     compute.VirtualMachineScaleSetVMsClient
-	network     network.PublicIPAddressesClient
+	globaldeployments resources.DeploymentsClient
+	deployments       resources.DeploymentsClient
+	groups            resources.GroupsClient
+	vmss              compute.VirtualMachineScaleSetsClient
+	vmssvms           compute.VirtualMachineScaleSetVMsClient
+	network           network.PublicIPAddressesClient
 
 	cli *http.Client
 
@@ -56,11 +57,12 @@ func New(ctx context.Context, log *logrus.Entry, authorizer autorest.Authorizer,
 	return &deployer{
 		log: log,
 
-		deployments: resources.NewDeploymentsClient(config.SubscriptionID, authorizer),
-		groups:      resources.NewGroupsClient(config.SubscriptionID, authorizer),
-		vmss:        compute.NewVirtualMachineScaleSetsClient(config.SubscriptionID, authorizer),
-		vmssvms:     compute.NewVirtualMachineScaleSetVMsClient(config.SubscriptionID, authorizer),
-		network:     network.NewPublicIPAddressesClient(config.SubscriptionID, authorizer),
+		globaldeployments: resources.NewDeploymentsClient(config.Configuration.GlobalSubscriptionID, authorizer),
+		deployments:       resources.NewDeploymentsClient(config.SubscriptionID, authorizer),
+		groups:            resources.NewGroupsClient(config.SubscriptionID, authorizer),
+		vmss:              compute.NewVirtualMachineScaleSetsClient(config.SubscriptionID, authorizer),
+		vmssvms:           compute.NewVirtualMachineScaleSetVMsClient(config.SubscriptionID, authorizer),
+		network:           network.NewPublicIPAddressesClient(config.SubscriptionID, authorizer),
 
 		cli: &http.Client{
 			Timeout: 5 * time.Second,
@@ -77,7 +79,13 @@ func New(ctx context.Context, log *logrus.Entry, authorizer autorest.Authorizer,
 // PreDeploy deploys managed identity, NSGs and keyvaults, needed for main
 // deployment
 func (d *deployer) PreDeploy(ctx context.Context) (string, error) {
-	_, err := d.groups.CreateOrUpdate(ctx, d.config.ResourceGroupName, azresources.Group{
+	// deploy global rbac
+	err := d.deployGlobalSubscription(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	_, err = d.groups.CreateOrUpdate(ctx, d.config.ResourceGroupName, azresources.Group{
 		Location: &d.config.Location,
 	})
 	if err != nil {
@@ -97,6 +105,30 @@ func (d *deployer) PreDeploy(ctx context.Context) (string, error) {
 	}
 
 	return rpServicePrincipalID, nil
+}
+
+func (d *deployer) deployGlobalSubscription(ctx context.Context) error {
+	deploymentName := "rp-global-subscription"
+
+	b, err := Asset(generator.FileRPProductionGlobalSubscription)
+	if err != nil {
+		return err
+	}
+
+	var template map[string]interface{}
+	err = json.Unmarshal(b, &template)
+	if err != nil {
+		return err
+	}
+
+	d.log.Infof("deploying rbac")
+	return d.globaldeployments.CreateOrUpdateAtSubscriptionScopeAndWait(ctx, deploymentName, azresources.Deployment{
+		Properties: &azresources.DeploymentProperties{
+			Template: template,
+			Mode:     azresources.Incremental,
+		},
+		Location: to.StringPtr("centralus"),
+	})
 }
 
 func (d *deployer) deployManageIdentity(ctx context.Context) (string, error) {

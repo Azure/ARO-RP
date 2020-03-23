@@ -12,6 +12,7 @@ configuration:
   extraCosmosDBIPs: ''
   extraKeyvaultAccessPolicies: []
   fpServicePrincipalId: ''
+  globalSubscriptionId: ''
   keyvaultPrefix: ''
   mdmFrontendUrl: ''
   mdsdConfigVersion: ''

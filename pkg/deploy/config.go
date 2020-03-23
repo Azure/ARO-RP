@@ -35,6 +35,7 @@ type Configuration struct {
 	ExtraCosmosDBIPs             string        `json:"extraCosmosDBIPs,omitempty"`
 	ExtraKeyvaultAccessPolicies  []interface{} `json:"extraKeyvaultAccessPolicies,omitempty"`
 	FPServicePrincipalID         string        `json:"fpServicePrincipalId,omitempty"`
+	GlobalSubscriptionID         string        `json:"globalSubscriptionId,omitempty"`
 	KeyvaultPrefix               string        `json:"keyvaultPrefix,omitempty"`
 	MDMFrontendURL               string        `json:"mdmFrontendUrl,omitempty"`
 	MDSDConfigVersion            string        `json:"mdsdConfigVersion,omitempty"`
