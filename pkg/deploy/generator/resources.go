@@ -1308,23 +1308,23 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 	return rs
 }
 
-func (g *generator) rbacRoleTokenContributor() *arm.Resource {
+func (g *generator) roleDefinitionTokenContributor() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtauthorization.RoleDefinition{
-			Name: to.StringPtr("[guid(subscription().subscriptionId, 'Token Contributor')]"),
+			Name: to.StringPtr("48983534-3d06-4dcb-a566-08a694eb1279"),
 			Type: to.StringPtr("Microsoft.Authorization/roleDefinitions"),
 			RoleDefinitionProperties: &mgmtauthorization.RoleDefinitionProperties{
 				RoleName:         to.StringPtr("ARO v4 ContainerRegistry Token Contributor"),
-				AssignableScopes: &[]string{"[concat('/subscriptions/', subscription().subscriptionId)]"},
+				AssignableScopes: &[]string{"[subscription().id]"},
 				Permissions: &[]mgmtauthorization.Permission{
 					{
 						Actions: &[]string{
-							"Microsoft.ContainerRegistry/registries/tokens/write",
-							"Microsoft.ContainerRegistry/registries/tokens/read",
-							"Microsoft.ContainerRegistry/registries/tokens/delete",
-							"Microsoft.ContainerRegistry/registries/scopeMaps/read",
-							"Microsoft.ContainerRegistry/registries/tokens/operationStatuses/read",
 							"Microsoft.ContainerRegistry/registries/generateCredentials/action",
+							"Microsoft.ContainerRegistry/registries/scopeMaps/read",
+							"Microsoft.ContainerRegistry/registries/tokens/delete",
+							"Microsoft.ContainerRegistry/registries/tokens/operationStatuses/read",
+							"Microsoft.ContainerRegistry/registries/tokens/read",
+							"Microsoft.ContainerRegistry/registries/tokens/write",
 						},
 					},
 				},

@@ -79,11 +79,11 @@ func (g *generator) rpTemplate() *arm.Template {
 	return t
 }
 
-func (g *generator) rpGlobalTemplate() *arm.Template {
+func (g *generator) rpGlobalSubscriptionTemplate() *arm.Template {
 	t := templateStanza()
 
 	t.Resources = append(t.Resources,
-		g.rbacRoleTokenContributor(),
+		g.roleDefinitionTokenContributor(),
 	)
 
 	return t

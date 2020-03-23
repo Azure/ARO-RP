@@ -12,12 +12,9 @@
     "resources": [
         {
             "name": "79ed474a-7267-4ff8-b226-96140be062a2",
-            "apiVersion": "2017-09-01",
             "type": "Microsoft.Authorization/roleDefinitions",
             "properties": {
-                "assignableScopes": [
-                    "[concat('/subscriptions/', subscription().subscriptionId)]"
-                ],
+                "roleName": "ARO v4 Development First Party Subscription",
                 "permissions": [
                     {
                         "actions": [
@@ -25,17 +22,17 @@
                         ]
                     }
                 ],
-                "roleName": "ARO v4 Development First Party Subscription"
-            }
+                "assignableScopes": [
+                    "[subscription().id]"
+                ]
+            },
+            "apiVersion": "2015-07-01"
         },
         {
             "name": "f3fe7bc1-0ef9-4681-a68c-c1fa285d6128",
-            "apiVersion": "2017-09-01",
             "type": "Microsoft.Authorization/roleDefinitions",
             "properties": {
-                "assignableScopes": [
-                    "[concat('/subscriptions/', subscription().subscriptionId)]"
-                ],
+                "roleName": "ARO v4 Development Subnet Contributor",
                 "permissions": [
                     {
                         "actions": [
@@ -47,54 +44,34 @@
                         ]
                     }
                 ],
-                "roleName": "ARO v4 Development Subnet Contributor"
-            }
-        },
-        {
-            "name": "[guid(subscription().subscriptionId, 'Token Contributor')]",
-            "type": "Microsoft.Authorization/roleDefinitions",
-            "properties": {
-                "roleName": "ARO v4 ContainerRegistry Token Contributor",
-                "permissions": [
-                    {
-                        "actions": [
-                            "Microsoft.ContainerRegistry/registries/tokens/write",
-                            "Microsoft.ContainerRegistry/registries/tokens/read",
-                            "Microsoft.ContainerRegistry/registries/tokens/delete",
-                            "Microsoft.ContainerRegistry/registries/scopeMaps/read",
-                            "Microsoft.ContainerRegistry/registries/tokens/operationStatuses/read",
-                            "Microsoft.ContainerRegistry/registries/generateCredentials/action"
-                        ]
-                    }
-                ],
                 "assignableScopes": [
-                    "[concat('/subscriptions/', subscription().subscriptionId)]"
+                    "[subscription().id]"
                 ]
             },
-            "apiVersion": "2017-09-01"
+            "apiVersion": "2015-07-01"
         },
         {
             "name": "[guid(subscription().id, 'FP / ARO v4 FP Subscription')]",
-            "apiVersion": "2017-09-01",
             "type": "Microsoft.Authorization/roleAssignments",
             "dependsOn": [
                 "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '79ed474a-7267-4ff8-b226-96140be062a2')]"
             ],
             "properties": {
-                "principalId": "[parameters('fpServicePrincipalId')]",
+                "scope": "[subscription().id]",
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '79ed474a-7267-4ff8-b226-96140be062a2')]",
-                "scope": "[subscription().id]"
-            }
+                "principalId": "[parameters('fpServicePrincipalId')]"
+            },
+            "apiVersion": "2015-07-01"
         },
         {
             "name": "[guid(subscription().id, 'ARM / User Access Administrator')]",
-            "apiVersion": "2017-09-01",
             "type": "Microsoft.Authorization/roleAssignments",
             "properties": {
-                "principalId": "[parameters('armServicePrincipalId')]",
+                "scope": "[subscription().id]",
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '18d7d88d-d35e-4fb5-a5c3-7773c20a72d9')]",
-                "scope": "[subscription().id]"
-            }
+                "principalId": "[parameters('armServicePrincipalId')]"
+            },
+            "apiVersion": "2015-07-01"
         }
     ]
 }

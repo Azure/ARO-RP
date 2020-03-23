@@ -3,24 +3,24 @@
     "contentVersion": "1.0.0.0",
     "resources": [
         {
-            "name": "[guid(subscription().subscriptionId, 'Token Contributor')]",
+            "name": "48983534-3d06-4dcb-a566-08a694eb1279",
             "type": "Microsoft.Authorization/roleDefinitions",
             "properties": {
                 "roleName": "ARO v4 ContainerRegistry Token Contributor",
                 "permissions": [
                     {
                         "actions": [
-                            "Microsoft.ContainerRegistry/registries/tokens/write",
-                            "Microsoft.ContainerRegistry/registries/tokens/read",
-                            "Microsoft.ContainerRegistry/registries/tokens/delete",
+                            "Microsoft.ContainerRegistry/registries/generateCredentials/action",
                             "Microsoft.ContainerRegistry/registries/scopeMaps/read",
+                            "Microsoft.ContainerRegistry/registries/tokens/delete",
                             "Microsoft.ContainerRegistry/registries/tokens/operationStatuses/read",
-                            "Microsoft.ContainerRegistry/registries/generateCredentials/action"
+                            "Microsoft.ContainerRegistry/registries/tokens/read",
+                            "Microsoft.ContainerRegistry/registries/tokens/write"
                         ]
                     }
                 ],
                 "assignableScopes": [
-                    "[concat('/subscriptions/', subscription().subscriptionId)]"
+                    "[subscription().id]"
                 ]
             },
             "apiVersion": "2015-07-01"
