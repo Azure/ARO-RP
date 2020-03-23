@@ -38,6 +38,7 @@ type prod struct {
 
 	keyvault basekeyvault.BaseClient
 
+	acrName                  string
 	clustersKeyvaultURI      string
 	cosmosDBAccountName      string
 	cosmosDBPrimaryMasterKey string
@@ -116,6 +117,12 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 	p.clustersGenevaLoggingPrivateKey = clustersGenevaLoggingPrivateKey
 	p.clustersGenevaLoggingCertificate = clustersGenevaLoggingCertificates[0]
 
+	acrResource, err := azure.ParseResourceID(p.ACRResourceID())
+	if err != nil {
+		return nil, err
+	}
+	p.acrName = acrResource.ResourceName
+
 	return p, nil
 }
 
@@ -145,6 +152,10 @@ func (p *prod) AdminClientAuthorizer() clientauthorizer.ClientAuthorizer {
 
 func (p *prod) ACRResourceID() string {
 	return os.Getenv("ACR_RESOURCE_ID")
+}
+
+func (p *prod) ACRName() string {
+	return p.acrName
 }
 
 func (p *prod) populateCosmosDB(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
