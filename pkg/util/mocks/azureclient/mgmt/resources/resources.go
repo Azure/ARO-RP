@@ -49,6 +49,20 @@ func (mr *MockDeploymentsClientMockRecorder) CreateOrUpdateAndWait(arg0, arg1, a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockDeploymentsClient)(nil).CreateOrUpdateAndWait), arg0, arg1, arg2, arg3)
 }
 
+// CreateOrUpdateAtSubscriptionScopeAndWait mocks base method
+func (m *MockDeploymentsClient) CreateOrUpdateAtSubscriptionScopeAndWait(arg0 context.Context, arg1 string, arg2 resources.Deployment) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateOrUpdateAtSubscriptionScopeAndWait", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateOrUpdateAtSubscriptionScopeAndWait indicates an expected call of CreateOrUpdateAtSubscriptionScopeAndWait
+func (mr *MockDeploymentsClientMockRecorder) CreateOrUpdateAtSubscriptionScopeAndWait(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAtSubscriptionScopeAndWait", reflect.TypeOf((*MockDeploymentsClient)(nil).CreateOrUpdateAtSubscriptionScopeAndWait), arg0, arg1, arg2)
+}
+
 // Get mocks base method
 func (m *MockDeploymentsClient) Get(arg0 context.Context, arg1, arg2 string) (resources.DeploymentExtended, error) {
 	m.ctrl.T.Helper()

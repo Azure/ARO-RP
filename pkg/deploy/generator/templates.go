@@ -79,6 +79,16 @@ func (g *generator) rpTemplate() *arm.Template {
 	return t
 }
 
+func (g *generator) rpGlobalTemplate() *arm.Template {
+	t := templateStanza()
+
+	t.Resources = append(t.Resources,
+		g.rbacRoleTokenContributor(),
+	)
+
+	return t
+}
+
 func (g *generator) databaseTemplate() *arm.Template {
 	t := templateStanza()
 
@@ -151,7 +161,6 @@ func (g *generator) preDeployTemplate() *arm.Template {
 	}
 
 	t.Resources = append(t.Resources,
-		g.rbacPredeploy(),
 		g.securityGroupRP(),
 		g.securityGroupPE(),
 		// clustersKeyvault must preceed serviceKeyvault due to terrible

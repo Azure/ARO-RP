@@ -22,7 +22,7 @@ import (
 )
 
 var apiVersions = map[string]string{
-	"authorization": "2018-07-01",
+	"authorization": "2015-07-01",
 	"compute":       "2019-03-01",
 	"dns":           "2018-05-01",
 	"documentdb":    "2019-08-01",
@@ -1308,10 +1308,10 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 	return rs
 }
 
-func (g *generator) rbacPredeploy() *arm.Resource {
+func (g *generator) rbacRoleTokenContributor() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtauthorization.RoleDefinition{
-			Name: to.StringPtr("[guid(resourceGroup().id, 'Token Contributor')]"),
+			Name: to.StringPtr("[guid(subscription().subscriptionId, 'Token Contributor')]"),
 			Type: to.StringPtr("Microsoft.Authorization/roleDefinitions"),
 			RoleDefinitionProperties: &mgmtauthorization.RoleDefinitionProperties{
 				RoleName:         to.StringPtr("ARO v4 ContainerRegistry Token Contributor"),

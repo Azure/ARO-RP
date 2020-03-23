@@ -540,7 +540,7 @@
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')]",
                 "principalId": "[parameters('rpServicePrincipalId')]"
             },
-            "apiVersion": "2018-07-01"
+            "apiVersion": "2015-07-01"
         },
         {
             "name": "[guid(resourceGroup().id, 'FP / Network Contributor')]",
@@ -550,7 +550,7 @@
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4d97b98b-1d4f-4787-a291-c67834d212e7')]",
                 "principalId": "[parameters('fpServicePrincipalId')]"
             },
-            "apiVersion": "2018-07-01"
+            "apiVersion": "2015-07-01"
         },
         {
             "name": "[concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), 'RP / DocumentDB Account Contributor'))]",
@@ -560,7 +560,7 @@
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '5bd9cd88-fe45-4216-938b-f97437e15450')]",
                 "principalId": "[parameters('rpServicePrincipalId')]"
             },
-            "apiVersion": "2018-07-01",
+            "apiVersion": "2015-07-01",
             "dependsOn": [
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
             ]
@@ -573,7 +573,7 @@
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'befefa01-2a29-4197-83a8-272ff33ce314')]",
                 "principalId": "[parameters('fpServicePrincipalId')]"
             },
-            "apiVersion": "2018-07-01",
+            "apiVersion": "2015-07-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]"
             ]

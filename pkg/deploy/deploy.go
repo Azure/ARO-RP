@@ -84,6 +84,12 @@ func (d *deployer) PreDeploy(ctx context.Context) (string, error) {
 		return "", err
 	}
 
+	// deploy global rbac
+	err = d.deployRbacRoles(ctx)
+	if err != nil {
+		return "", err
+	}
+
 	// deploy managed identity if needed and get rpServicePrincipalID
 	rpServicePrincipalID, err := d.deployManageIdentity(ctx)
 	if err != nil {
@@ -97,6 +103,34 @@ func (d *deployer) PreDeploy(ctx context.Context) (string, error) {
 	}
 
 	return rpServicePrincipalID, nil
+}
+
+func (d *deployer) deployRbacRoles(ctx context.Context) error {
+	deploymentName := "rp-production-rbac"
+
+	_, err := d.deployments.Get(ctx, d.config.ResourceGroupName, deploymentName)
+	if isDeploymentNotFoundError(err) {
+		b, err := Asset(generator.FileRPProductionGlobalSubscription)
+		if err != nil {
+			return err
+		}
+
+		var template map[string]interface{}
+		err = json.Unmarshal(b, &template)
+		if err != nil {
+			return err
+		}
+
+		d.log.Infof("deploying rbac")
+		return d.deployments.CreateOrUpdateAtSubscriptionScopeAndWait(ctx, deploymentName, azresources.Deployment{
+			Properties: &azresources.DeploymentProperties{
+				Template: template,
+				Mode:     azresources.Incremental,
+			},
+			Location: to.StringPtr(d.config.Location),
+		})
+	}
+	return nil
 }
 
 func (d *deployer) deployManageIdentity(ctx context.Context) (string, error) {

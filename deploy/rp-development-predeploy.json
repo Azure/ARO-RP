@@ -18,29 +18,6 @@
     },
     "resources": [
         {
-            "name": "[guid(resourceGroup().id, 'Token Contributor')]",
-            "type": "Microsoft.Authorization/roleDefinitions",
-            "properties": {
-                "roleName": "ARO v4 ContainerRegistry Token Contributor",
-                "permissions": [
-                    {
-                        "actions": [
-                            "Microsoft.ContainerRegistry/registries/tokens/write",
-                            "Microsoft.ContainerRegistry/registries/tokens/read",
-                            "Microsoft.ContainerRegistry/registries/tokens/delete",
-                            "Microsoft.ContainerRegistry/registries/scopeMaps/read",
-                            "Microsoft.ContainerRegistry/registries/tokens/operationStatuses/read",
-                            "Microsoft.ContainerRegistry/registries/generateCredentials/action"
-                        ]
-                    }
-                ],
-                "assignableScopes": [
-                    "[concat('/subscriptions/', subscription().subscriptionId)]"
-                ]
-            },
-            "apiVersion": "2018-07-01"
-        },
-        {
             "properties": {
                 "securityRules": [
                     {

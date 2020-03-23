@@ -14,7 +14,17 @@ import (
 // DeploymentsClientAddons contains addons for DeploymentsClient
 type DeploymentsClientAddons interface {
 	CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, deploymentName string, parameters resources.Deployment) error
+	CreateOrUpdateAtSubscriptionScopeAndWait(ctx context.Context, deploymentName string, parameters resources.Deployment) error
 	Wait(ctx context.Context, resourceGroupName string, deploymentName string) error
+}
+
+func (c *deploymentsClient) CreateOrUpdateAtSubscriptionScopeAndWait(ctx context.Context, deploymentName string, parameters resources.Deployment) error {
+	future, err := c.CreateOrUpdateAtSubscriptionScope(ctx, deploymentName, parameters)
+	if err != nil {
+		return err
+	}
+
+	return future.WaitForCompletionRef(ctx, c.Client)
 }
 
 func (c *deploymentsClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, deploymentName string, parameters resources.Deployment) error {
