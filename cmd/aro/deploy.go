@@ -10,7 +10,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/sirupsen/logrus"
 
 	deployer "github.com/Azure/ARO-RP/pkg/deploy"
@@ -36,9 +35,8 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 		return fmt.Errorf("invalid deploy version %q", deployVersion)
 	}
 
-	authorizer, err := auth.NewAuthorizerFromEnvironment()
-	if err != nil {
-		return err
+	if strings.ToLower(flag.Arg(2)) != flag.Arg(2) {
+		return fmt.Errorf("location %s must be lower case", flag.Arg(2))
 	}
 
 	config, err := deployer.GetConfig(flag.Arg(1), flag.Arg(2))
@@ -46,7 +44,10 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	deployer := deployer.New(ctx, log, authorizer, config, deployVersion)
+	deployer, err := deployer.New(ctx, log, config, deployVersion)
+	if err != nil {
+		return err
+	}
 
 	rpServicePrincipalID, err := deployer.PreDeploy(ctx)
 	if err != nil {

@@ -16,6 +16,8 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/keyvault"
+	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 )
 
 func (i *Installer) createCertificates(ctx context.Context) error {
@@ -48,7 +50,7 @@ func (i *Installer) createCertificates(ctx context.Context) error {
 
 	for _, c := range certs {
 		i.log.Printf("creating certificate %s", c.certificateName)
-		err = i.keyvault.CreateCertificate(ctx, c.certificateName, c.commonName)
+		err = i.keyvault.CreateSignedCertificate(ctx, i.env.ClustersKeyvaultURI(), keyvault.IssuerDigicert, c.certificateName, c.commonName, keyvault.EkuServerAuth)
 		if err != nil {
 			return err
 		}
@@ -56,7 +58,7 @@ func (i *Installer) createCertificates(ctx context.Context) error {
 
 	for _, c := range certs {
 		i.log.Printf("waiting for certificate %s", c.certificateName)
-		err = i.keyvault.WaitForCertificateOperation(ctx, c.certificateName)
+		err = i.keyvault.WaitForCertificateOperation(ctx, i.env.ClustersKeyvaultURI(), c.certificateName)
 		if err != nil {
 			return err
 		}
@@ -66,7 +68,12 @@ func (i *Installer) createCertificates(ctx context.Context) error {
 }
 
 func (i *Installer) ensureSecret(ctx context.Context, secrets coreclient.SecretInterface, certificateName string) error {
-	key, certs, err := i.keyvault.GetSecret(ctx, certificateName)
+	bundle, err := i.keyvault.GetSecret(ctx, i.env.ClustersKeyvaultURI(), certificateName, "")
+	if err != nil {
+		return err
+	}
+
+	key, certs, err := utilpem.Parse([]byte(*bundle.Value))
 	if err != nil {
 		return err
 	}

@@ -77,7 +77,7 @@ func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClus
 		groups: resources.NewGroupsClient(r.SubscriptionID, fpAuthorizer),
 
 		dns:             dns.NewManager(_env, localFPAuthorizer),
-		keyvault:        keyvault.NewManager(_env, localFPKVAuthorizer),
+		keyvault:        keyvault.NewManager(localFPKVAuthorizer),
 		privateendpoint: privateendpoint.NewManager(_env, localFPAuthorizer),
 		acrtoken:        acrtoken,
 		subnet:          subnet.NewManager(r.SubscriptionID, fpAuthorizer),

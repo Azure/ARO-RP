@@ -94,3 +94,63 @@ func (mr *MockBaseClientMockRecorder) GetSecret(arg0, arg1, arg2, arg3 interface
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecret", reflect.TypeOf((*MockBaseClient)(nil).GetSecret), arg0, arg1, arg2, arg3)
 }
+
+// GetSecrets mocks base method
+func (m *MockBaseClient) GetSecrets(arg0 context.Context, arg1 string, arg2 *int32) ([]keyvault.SecretItem, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSecrets", arg0, arg1, arg2)
+	ret0, _ := ret[0].([]keyvault.SecretItem)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetSecrets indicates an expected call of GetSecrets
+func (mr *MockBaseClientMockRecorder) GetSecrets(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecrets", reflect.TypeOf((*MockBaseClient)(nil).GetSecrets), arg0, arg1, arg2)
+}
+
+// ImportCertificate mocks base method
+func (m *MockBaseClient) ImportCertificate(arg0 context.Context, arg1, arg2 string, arg3 keyvault.CertificateImportParameters) (keyvault.CertificateBundle, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ImportCertificate", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(keyvault.CertificateBundle)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ImportCertificate indicates an expected call of ImportCertificate
+func (mr *MockBaseClientMockRecorder) ImportCertificate(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ImportCertificate", reflect.TypeOf((*MockBaseClient)(nil).ImportCertificate), arg0, arg1, arg2, arg3)
+}
+
+// SetCertificateIssuer mocks base method
+func (m *MockBaseClient) SetCertificateIssuer(arg0 context.Context, arg1, arg2 string, arg3 keyvault.CertificateIssuerSetParameters) (keyvault.IssuerBundle, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetCertificateIssuer", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(keyvault.IssuerBundle)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SetCertificateIssuer indicates an expected call of SetCertificateIssuer
+func (mr *MockBaseClientMockRecorder) SetCertificateIssuer(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetCertificateIssuer", reflect.TypeOf((*MockBaseClient)(nil).SetCertificateIssuer), arg0, arg1, arg2, arg3)
+}
+
+// SetSecret mocks base method
+func (m *MockBaseClient) SetSecret(arg0 context.Context, arg1, arg2 string, arg3 keyvault.SecretSetParameters) (keyvault.SecretBundle, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetSecret", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(keyvault.SecretBundle)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SetSecret indicates an expected call of SetSecret
+func (mr *MockBaseClientMockRecorder) SetSecret(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSecret", reflect.TypeOf((*MockBaseClient)(nil).SetSecret), arg0, arg1, arg2, arg3)
+}
