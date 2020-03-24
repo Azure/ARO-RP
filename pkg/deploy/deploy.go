@@ -136,7 +136,7 @@ func (d *deployer) Deploy(ctx context.Context, rpServicePrincipalID string) erro
 
 	rpPipIPAddress := deployment.Properties.Outputs.(map[string]interface{})["rp-pip-ipAddress"].(map[string]interface{})["value"].(string)
 
-	_nameServers := deployment.Properties.Outputs.(map[string]interface{})[parameters.Parameters["domainName"].Value.(string)+"-nameServers"].(map[string]interface{})["value"].([]interface{})
+	_nameServers := deployment.Properties.Outputs.(map[string]interface{})["rp-nameServers"].(map[string]interface{})["value"].([]interface{})
 	nameServers := make([]string, 0, len(_nameServers))
 	for _, ns := range _nameServers {
 		nameServers = append(nameServers, ns.(string))

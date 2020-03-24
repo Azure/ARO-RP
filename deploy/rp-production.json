@@ -580,7 +580,7 @@
         }
     ],
     "outputs": {
-        "[concat(parameters('domainName'), '-nameServers')]": {
+        "rp-nameServers": {
             "type": "array",
             "value": "[reference(resourceId('Microsoft.Network/dnsZones', parameters('domainName')), '2019-07-01').nameServers]"
         },

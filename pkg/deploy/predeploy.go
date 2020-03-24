@@ -264,5 +264,7 @@ func (d *deployer) ensureServiceCertificates(ctx context.Context, serviceKeyVaul
 }
 
 func (d *deployer) ensureContainerRegistryReplication(ctx context.Context) error {
-	return d.globalreplications.CreateAndWait(ctx, d.config.Configuration.GlobalResourceGroupName, "arosvc", d.config.Location, mgmtcontainerregistry.Replication{})
+	return d.globalreplications.CreateAndWait(ctx, d.config.Configuration.GlobalResourceGroupName, "arosvc", d.config.Location, mgmtcontainerregistry.Replication{
+		Location: to.StringPtr(d.config.Location),
+	})
 }
