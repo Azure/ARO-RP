@@ -18,7 +18,7 @@
   revision = "3a14fb1c4737b3995174c5f4d6d08a348b9b4180"
 
 [[projects]]
-  digest = "1:9ca2dd340d23767b05c19bda3f6a9ef0e64e81af56e038735c6e3485def7ec9b"
+  digest = "1:bc0ab0b17f3677bb8cb0accb7cacbb3a9824d3e3913ef1a21a1fede9adedc7cf"
   name = "github.com/Azure/azure-sdk-for-go"
   packages = [
     "profiles/latest/dns/mgmt/dns",
@@ -36,6 +36,7 @@
     "services/network/mgmt/2018-12-01/network",
     "services/network/mgmt/2019-07-01/network",
     "services/preview/authorization/mgmt/2018-09-01-preview/authorization",
+    "services/preview/monitor/mgmt/2018-03-01/insights",
     "services/privatedns/mgmt/2018-09-01/privatedns",
     "services/resources/mgmt/2018-05-01/resources",
     "services/resources/mgmt/2019-06-01/subscriptions",
@@ -1928,6 +1929,7 @@
     "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi",
     "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network",
     "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization",
+    "github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights",
     "github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns",
     "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources",
     "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage",
