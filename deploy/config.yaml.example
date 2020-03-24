@@ -21,6 +21,5 @@ configuration:
   rpImage: ''
   rpImageAuth: ''
   rpMode: ''
-  rpServicePrincipalId: ''
   sshPublicKey: ''
   vmssName: ''

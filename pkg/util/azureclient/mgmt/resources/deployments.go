@@ -14,6 +14,7 @@ import (
 // DeploymentsClient is a minimal interface for azure DeploymentsClient
 type DeploymentsClient interface {
 	Get(ctx context.Context, resourceGroupName, deploymentName string) (mgmtresources.DeploymentExtended, error)
+	GetAtSubscriptionScope(ctx context.Context, deploymentName string) (mgmtresources.DeploymentExtended, error)
 	DeploymentsClientAddons
 }
 

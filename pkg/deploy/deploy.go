@@ -121,14 +121,20 @@ func (d *deployer) deployGlobalSubscription(ctx context.Context) error {
 		return err
 	}
 
-	d.log.Infof("deploying rbac")
-	return d.globaldeployments.CreateOrUpdateAtSubscriptionScopeAndWait(ctx, deploymentName, mgmtresources.Deployment{
-		Properties: &mgmtresources.DeploymentProperties{
-			Template: template,
-			Mode:     mgmtresources.Incremental,
-		},
-		Location: to.StringPtr("centralus"),
-	})
+	// Roles can't be updated with the same name. If you want to update those,
+	// do it manually via az ir UI as deleting would cause an issue.
+	_, err = d.globaldeployments.GetAtSubscriptionScope(ctx, deploymentName)
+	if isDeploymentNotFoundError(err) {
+		d.log.Infof("deploying rbac")
+		return d.globaldeployments.CreateOrUpdateAtSubscriptionScopeAndWait(ctx, deploymentName, mgmtresources.Deployment{
+			Properties: &mgmtresources.DeploymentProperties{
+				Template: template,
+				Mode:     mgmtresources.Incremental,
+			},
+			Location: to.StringPtr("centralus"),
+		})
+	}
+	return err
 }
 
 func (d *deployer) deployManageIdentity(ctx context.Context) (string, error) {

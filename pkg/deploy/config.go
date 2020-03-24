@@ -44,7 +44,6 @@ type Configuration struct {
 	RPImage                      string        `json:"rpImage,omitempty"`
 	RPImageAuth                  string        `json:"rpImageAuth,omitempty"`
 	RPMode                       string        `json:"rpMode,omitempty"`
-	RPServicePrincipalID         string        `json:"rpServicePrincipalId,omitempty"`
 	SSHPublicKey                 string        `json:"sshPublicKey,omitempty"`
 	VMSSName                     string        `json:"vmssName,omitempty"`
 }
