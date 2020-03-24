@@ -4,7 +4,7 @@ package dns
 // Licensed under the Apache License 2.0.
 
 import (
-	"github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
+	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	"github.com/Azure/go-autorest/autorest"
 )
 
@@ -14,14 +14,14 @@ type ZonesClient interface {
 }
 
 type zonesClient struct {
-	dns.ZonesClient
+	mgmtdns.ZonesClient
 }
 
 var _ ZonesClient = &zonesClient{}
 
 // NewZonesClient creates a new ZonesClient
 func NewZonesClient(subscriptionID string, authorizer autorest.Authorizer) ZonesClient {
-	client := dns.NewZonesClient(subscriptionID)
+	client := mgmtdns.NewZonesClient(subscriptionID)
 	client.Authorizer = authorizer
 
 	return &zonesClient{

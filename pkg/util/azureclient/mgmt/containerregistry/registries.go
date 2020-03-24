@@ -4,7 +4,7 @@ package containerregistry
 // Licensed under the Apache License 2.0.
 
 import (
-	"github.com/Azure/azure-sdk-for-go/services/containerregistry/mgmt/2019-06-01-preview/containerregistry"
+	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/containerregistry/mgmt/2019-06-01-preview/containerregistry"
 	"github.com/Azure/go-autorest/autorest"
 )
 
@@ -14,14 +14,14 @@ type RegistriesClient interface {
 }
 
 type registriesClient struct {
-	containerregistry.RegistriesClient
+	mgmtcontainerregistry.RegistriesClient
 }
 
 var _ RegistriesClient = &registriesClient{}
 
 // NewRegistriesClient creates a new RegistriesClient
 func NewRegistriesClient(subscriptionID string, authorizer autorest.Authorizer) RegistriesClient {
-	client := containerregistry.NewRegistriesClient(subscriptionID)
+	client := mgmtcontainerregistry.NewRegistriesClient(subscriptionID)
 	client.Authorizer = authorizer
 
 	return &registriesClient{

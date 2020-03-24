@@ -6,15 +6,15 @@ package compute
 import (
 	"context"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 )
 
 type VirtualMachineScaleSetVMsClientAddons interface {
-	List(ctx context.Context, resourceGroupName string, virtualMachineScaleSetName string, filter string, selectParameter string, expand string) ([]compute.VirtualMachineScaleSetVM, error)
-	RunCommandAndWait(ctx context.Context, resourceGroupName string, VMScaleSetName string, instanceID string, parameters compute.RunCommandInput) error
+	List(ctx context.Context, resourceGroupName string, virtualMachineScaleSetName string, filter string, selectParameter string, expand string) ([]mgmtcompute.VirtualMachineScaleSetVM, error)
+	RunCommandAndWait(ctx context.Context, resourceGroupName string, VMScaleSetName string, instanceID string, parameters mgmtcompute.RunCommandInput) error
 }
 
-func (c *virtualMachineScaleSetVMsClient) RunCommandAndWait(ctx context.Context, resourceGroupName string, VMScaleSetName string, instanceID string, parameters compute.RunCommandInput) error {
+func (c *virtualMachineScaleSetVMsClient) RunCommandAndWait(ctx context.Context, resourceGroupName string, VMScaleSetName string, instanceID string, parameters mgmtcompute.RunCommandInput) error {
 	future, err := c.VirtualMachineScaleSetVMsClient.RunCommand(ctx, resourceGroupName, VMScaleSetName, instanceID, parameters)
 	if err != nil {
 		return err
@@ -23,8 +23,8 @@ func (c *virtualMachineScaleSetVMsClient) RunCommandAndWait(ctx context.Context,
 	return future.WaitForCompletionRef(ctx, c.VirtualMachineScaleSetVMsClient.Client)
 }
 
-func (c *virtualMachineScaleSetVMsClient) List(ctx context.Context, resourceGroupName string, virtualMachineScaleSetName string, filter string, selectParameter string, expand string) ([]compute.VirtualMachineScaleSetVM, error) {
-	var scaleSetsVMs []compute.VirtualMachineScaleSetVM
+func (c *virtualMachineScaleSetVMsClient) List(ctx context.Context, resourceGroupName string, virtualMachineScaleSetName string, filter string, selectParameter string, expand string) ([]mgmtcompute.VirtualMachineScaleSetVM, error) {
+	var scaleSetsVMs []mgmtcompute.VirtualMachineScaleSetVM
 	result, err := c.VirtualMachineScaleSetVMsClient.List(ctx, resourceGroupName, virtualMachineScaleSetName, filter, selectParameter, expand)
 	if err != nil {
 		return nil, err

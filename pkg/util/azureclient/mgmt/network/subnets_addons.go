@@ -6,15 +6,15 @@ package network
 import (
 	"context"
 
-	"github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 )
 
 // SubnetsClientAddons contains addons for SubnetsClient
 type SubnetsClientAddons interface {
-	CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, virtualNetworkName string, subnetName string, subnetParameters network.Subnet) (err error)
+	CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, virtualNetworkName string, subnetName string, subnetParameters mgmtnetwork.Subnet) (err error)
 }
 
-func (c *subnetsClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, virtualNetworkName string, subnetName string, subnetParameters network.Subnet) error {
+func (c *subnetsClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, virtualNetworkName string, subnetName string, subnetParameters mgmtnetwork.Subnet) error {
 	future, err := c.CreateOrUpdate(ctx, resourceGroupName, virtualNetworkName, subnetName, subnetParameters)
 	if err != nil {
 		return err

@@ -6,11 +6,11 @@ package compute
 import (
 	"context"
 
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 )
 
 type VirtualMachineScaleSetsClientAddons interface {
-	List(ctx context.Context, resourceGroupName string) ([]compute.VirtualMachineScaleSet, error)
+	List(ctx context.Context, resourceGroupName string) ([]mgmtcompute.VirtualMachineScaleSet, error)
 	DeleteAndWait(ctx context.Context, resourceGroupName, VMScaleSetName string) error
 }
 
@@ -23,8 +23,8 @@ func (c *virtualMachineScaleSetsClient) DeleteAndWait(ctx context.Context, resou
 	return future.WaitForCompletionRef(ctx, c.VirtualMachineScaleSetsClient.Client)
 }
 
-func (c *virtualMachineScaleSetsClient) List(ctx context.Context, resourceGroupName string) ([]compute.VirtualMachineScaleSet, error) {
-	var scaleSets []compute.VirtualMachineScaleSet
+func (c *virtualMachineScaleSetsClient) List(ctx context.Context, resourceGroupName string) ([]mgmtcompute.VirtualMachineScaleSet, error) {
+	var scaleSets []mgmtcompute.VirtualMachineScaleSet
 	result, err := c.VirtualMachineScaleSetsClient.List(ctx, resourceGroupName)
 	if err != nil {
 		return nil, err

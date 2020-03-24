@@ -4,7 +4,7 @@ package compute
 // Licensed under the Apache License 2.0.
 
 import (
-	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	"github.com/Azure/go-autorest/autorest"
 )
 
@@ -14,14 +14,14 @@ type VirtualMachineScaleSetVMsClient interface {
 }
 
 type virtualMachineScaleSetVMsClient struct {
-	compute.VirtualMachineScaleSetVMsClient
+	mgmtcompute.VirtualMachineScaleSetVMsClient
 }
 
 var _ VirtualMachineScaleSetVMsClient = &virtualMachineScaleSetVMsClient{}
 
 // NewVirtualMachineScaleSetVMsClient creates a new VirtualMachineScaleSetVMsClient
 func NewVirtualMachineScaleSetVMsClient(subscriptionID string, authorizer autorest.Authorizer) VirtualMachineScaleSetVMsClient {
-	client := compute.NewVirtualMachineScaleSetVMsClient(subscriptionID)
+	client := mgmtcompute.NewVirtualMachineScaleSetVMsClient(subscriptionID)
 	client.Authorizer = authorizer
 
 	return &virtualMachineScaleSetVMsClient{

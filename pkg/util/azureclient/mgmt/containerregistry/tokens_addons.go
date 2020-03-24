@@ -6,16 +6,16 @@ package containerregistry
 import (
 	"context"
 
-	azcontainerregistry "github.com/Azure/azure-sdk-for-go/services/containerregistry/mgmt/2019-06-01-preview/containerregistry"
+	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/containerregistry/mgmt/2019-06-01-preview/containerregistry"
 )
 
 // TokensAddons contains addons for TokensClient
 type TokensAddons interface {
-	CreateAndWait(ctx context.Context, resourceGroupName string, registryName string, tokenName string, tokenCreateParameters azcontainerregistry.Token) error
+	CreateAndWait(ctx context.Context, resourceGroupName string, registryName string, tokenName string, tokenCreateParameters mgmtcontainerregistry.Token) error
 	DeleteAndWait(ctx context.Context, resourceGroupName string, registryName string, tokenName string) error
 }
 
-func (t *tokensClient) CreateAndWait(ctx context.Context, resourceGroupName string, registryName string, tokenName string, tokenCreateParameters azcontainerregistry.Token) error {
+func (t *tokensClient) CreateAndWait(ctx context.Context, resourceGroupName string, registryName string, tokenName string, tokenCreateParameters mgmtcontainerregistry.Token) error {
 	future, err := t.TokensClient.Create(ctx, resourceGroupName, registryName, tokenName, tokenCreateParameters)
 	if err != nil {
 		return err
