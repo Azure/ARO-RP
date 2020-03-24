@@ -15,6 +15,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/util/immutable"
+	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -114,6 +115,9 @@ func (sv *openShiftClusterStaticValidator) validateProperties(path string, p *Op
 }
 
 func (sv *openShiftClusterStaticValidator) validateClusterProfile(path string, cp *ClusterProfile, isCreate bool) error {
+	if pullsecret.Validate(cp.PullSecret) != nil {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".pullSecret", "The provided pull secret is invalid.")
+	}
 	if !validate.RxDomainName.MatchString(cp.Domain) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".domain", "The provided domain '%s' is invalid.", cp.Domain)
 	}

@@ -160,6 +160,8 @@ type CloudErrorBody struct {
 
 // ClusterProfile clusterProfile represents a cluster profile.
 type ClusterProfile struct {
+	// PullSecret - The pull secret for the cluster (immutable).
+	PullSecret *string `json:"pullSecret,omitempty"`
 	// Domain - The domain for the cluster (immutable).
 	Domain *string `json:"domain,omitempty"`
 	// Version - The version of the cluster (immutable).

@@ -42,6 +42,7 @@ func ExampleOpenShiftClusterPutParameter() *OpenShiftCluster {
 // that the RP might return to an end-user
 func ExampleOpenShiftClusterResponse() *OpenShiftCluster {
 	oc := exampleOpenShiftCluster()
+	oc.Properties.ClusterProfile.PullSecret = ""
 	oc.Properties.ServicePrincipalProfile.ClientSecret = ""
 
 	return oc

@@ -453,6 +453,10 @@
     "ClusterProfile": {
       "description": "ClusterProfile represents a cluster profile.",
       "properties": {
+        "pullSecret": {
+          "description": "The pull secret for the cluster (immutable).",
+          "type": "string"
+        },
         "domain": {
           "description": "The domain for the cluster (immutable).",
           "type": "string"

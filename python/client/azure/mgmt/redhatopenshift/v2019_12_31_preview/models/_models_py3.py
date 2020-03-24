@@ -186,6 +186,8 @@ class CloudErrorBody(Model):
 class ClusterProfile(Model):
     """ClusterProfile represents a cluster profile.
 
+    :param pull_secret: The pull secret for the cluster (immutable).
+    :type pull_secret: str
     :param domain: The domain for the cluster (immutable).
     :type domain: str
     :param version: The version of the cluster (immutable).
@@ -196,13 +198,15 @@ class ClusterProfile(Model):
     """
 
     _attribute_map = {
+        'pull_secret': {'key': 'pullSecret', 'type': 'str'},
         'domain': {'key': 'domain', 'type': 'str'},
         'version': {'key': 'version', 'type': 'str'},
         'resource_group_id': {'key': 'resourceGroupId', 'type': 'str'},
     }
 
-    def __init__(self, *, domain: str=None, version: str=None, resource_group_id: str=None, **kwargs) -> None:
+    def __init__(self, *, pull_secret: str=None, domain: str=None, version: str=None, resource_group_id: str=None, **kwargs) -> None:
         super(ClusterProfile, self).__init__(**kwargs)
+        self.pull_secret = pull_secret
         self.domain = domain
         self.version = version
         self.resource_group_id = resource_group_id

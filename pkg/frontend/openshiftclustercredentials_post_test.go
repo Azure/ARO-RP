@@ -95,6 +95,9 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 							Properties: api.OpenShiftClusterProperties{
 								ProvisioningState: api.ProvisioningStateSucceeded,
+								ClusterProfile: api.ClusterProfile{
+									PullSecret: "{}",
+								},
 								ServicePrincipalProfile: api.ServicePrincipalProfile{
 									ClientSecret: "clientSecret",
 								},
@@ -131,6 +134,9 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 							Properties: api.OpenShiftClusterProperties{
 								ProvisioningState: api.ProvisioningStateCreating,
+								ClusterProfile: api.ClusterProfile{
+									PullSecret: "{}",
+								},
 								ServicePrincipalProfile: api.ServicePrincipalProfile{
 									ClientSecret: "clientSecret",
 								},
@@ -154,6 +160,9 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 							Properties: api.OpenShiftClusterProperties{
 								ProvisioningState: api.ProvisioningStateDeleting,
+								ClusterProfile: api.ClusterProfile{
+									PullSecret: "{}",
+								},
 								ServicePrincipalProfile: api.ServicePrincipalProfile{
 									ClientSecret: "clientSecret",
 								},
@@ -176,7 +185,10 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 							Name: "resourceName",
 							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 							Properties: api.OpenShiftClusterProperties{
-								ProvisioningState:       api.ProvisioningStateFailed,
+								ProvisioningState: api.ProvisioningStateFailed,
+								ClusterProfile: api.ClusterProfile{
+									PullSecret: "{}",
+								},
 								FailedProvisioningState: api.ProvisioningStateCreating,
 								ServicePrincipalProfile: api.ServicePrincipalProfile{
 									ClientSecret: "clientSecret",
@@ -200,7 +212,10 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 							Name: "resourceName",
 							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 							Properties: api.OpenShiftClusterProperties{
-								ProvisioningState:       api.ProvisioningStateFailed,
+								ProvisioningState: api.ProvisioningStateFailed,
+								ClusterProfile: api.ClusterProfile{
+									PullSecret: "{}",
+								},
 								FailedProvisioningState: api.ProvisioningStateDeleting,
 								ServicePrincipalProfile: api.ServicePrincipalProfile{
 									ClientSecret: "clientSecret",

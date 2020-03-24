@@ -23,6 +23,7 @@ import (
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
+	samplesclient "github.com/openshift/cluster-samples-operator/pkg/generated/clientset/versioned"
 	"github.com/openshift/installer/pkg/asset/ignition/bootstrap"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
@@ -73,6 +74,7 @@ type Installer struct {
 	kubernetescli kubernetes.Interface
 	operatorcli   operatorclient.Interface
 	configcli     configclient.Interface
+	samplescli    samplesclient.Interface
 	securitycli   securityclient.Interface
 }
 
@@ -164,6 +166,8 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			condition{i.operatorConsoleReady, 10 * time.Minute},
 			condition{i.clusterVersionReady, 30 * time.Minute},
 			action(i.disableUpdates),
+			action(i.disableSamples),
+			action(i.disableOperatorHubSources),
 			action(i.updateRouterIP),
 			action(i.configureIngressCertificate),
 			condition{i.ingressControllerReady, 30 * time.Minute},
@@ -344,6 +348,11 @@ func (i *Installer) initializeKubernetesClients(ctx context.Context) error {
 	}
 
 	i.securitycli, err = securityclient.NewForConfig(restConfig)
+	if err != nil {
+		return err
+	}
+
+	i.samplescli, err = samplesclient.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}

@@ -52,6 +52,7 @@ func validOpenShiftCluster() *OpenShiftCluster {
 		Properties: OpenShiftClusterProperties{
 			ProvisioningState: ProvisioningStateSucceeded,
 			ClusterProfile: ClusterProfile{
+				PullSecret:      `{"auths":{"registry.connect.redhat.com":{"auth":""},"registry.redhat.io":{"auth":""}}}`,
 				Domain:          "cluster.location.aroapp.io",
 				Version:         "4.3.0",
 				ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", subscriptionID),
@@ -211,6 +212,26 @@ func TestOpenShiftClusterStaticValidateClusterProfile(t *testing.T) {
 	tests := []*validateTest{
 		{
 			name: "valid",
+		},
+		{
+			name: "empty pull secret valid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterProfile.PullSecret = ""
+			},
+		},
+		{
+			name: "pull secret not a map",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterProfile.PullSecret = "1"
+			},
+			wantErr: "400: InvalidParameter: properties.clusterProfile.pullSecret: The provided pull secret is invalid.",
+		},
+		{
+			name: "pull secret invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterProfile.PullSecret = "{"
+			},
+			wantErr: "400: InvalidParameter: properties.clusterProfile.pullSecret: The provided pull secret is invalid.",
 		},
 		{
 			name: "empty domain invalid",
@@ -599,6 +620,11 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name:    "console url change",
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.ConsoleProfile.URL = "invalid" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.consoleProfile.url: Changing property 'properties.consoleProfile.url' is not allowed.",
+		},
+		{
+			name:    "pull secret change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.ClusterProfile.PullSecret = `{"auths":{}}` },
+			wantErr: "400: PropertyChangeNotAllowed: properties.clusterProfile.pullSecret: Changing property 'properties.clusterProfile.pullSecret' is not allowed.",
 		},
 		{
 			name:    "domain change",

@@ -109,7 +109,8 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 			Properties: api.OpenShiftClusterProperties{
 				ProvisioningState: doc.OpenShiftCluster.Properties.ProvisioningState,
 				ClusterProfile: api.ClusterProfile{
-					Version: doc.OpenShiftCluster.Properties.ClusterProfile.Version,
+					PullSecret: doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret,
+					Version:    doc.OpenShiftCluster.Properties.ClusterProfile.Version,
 				},
 				ServicePrincipalProfile: api.ServicePrincipalProfile{
 					ClientSecret: doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret,
@@ -193,6 +194,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 		return nil, err
 	}
 
+	doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret = ""
 	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 
 	b, err := json.MarshalIndent(converter.ToExternal(doc.OpenShiftCluster), "", "    ")
