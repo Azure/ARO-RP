@@ -24,4 +24,5 @@ configuration:
   rpImagePrefix: ''
   rpMode: ''
   rpParentDomainName: ''
+  subscriptionResourceGroupName: ''
   sshPublicKey: ''

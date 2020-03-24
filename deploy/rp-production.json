@@ -46,6 +46,9 @@
         "sshPublicKey": {
             "type": "string"
         },
+        "subscriptionResourceGroupName": {
+            "type": "string"
+        },
         "vmssName": {
             "type": "string"
         }
@@ -228,6 +231,48 @@
             "apiVersion": "2019-03-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]",
+                "[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]"
+            ]
+        },
+        {
+            "properties": {
+                "severity": 4,
+                "enabled": true,
+                "scopes": [
+                    "[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]"
+                ],
+                "evaluationFrequency": "PT5M",
+                "windowSize": "PT1H",
+                "targetResourceType": "Microsoft.Network/loadBalancers",
+                "criteria": {
+                    "allOf": [
+                        {
+                            "operator": "LessThan",
+                            "threshold": 95,
+                            "AdditionalProperties": null,
+                            "name": "HealthProbeBelow95",
+                            "metricName": "DipAvailability",
+                            "metricNamespace": "microsoft.network/loadBalancers",
+                            "timeAggregation": "Average",
+                            "criterionType": "StaticThresholdCriterion"
+                        }
+                    ],
+                    "AdditionalProperties": null,
+                    "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria"
+                },
+                "autoMitigate": true,
+                "actions": [
+                    {
+                        "actionGroupId": "[resourceId(parameters('subscriptionResourceGroupName'), 'Microsoft.Insights/actionGroups', 'rp-health-ag')]",
+                        "webHookProperties": null
+                    }
+                ]
+            },
+            "name": "rp-availability-alert",
+            "type": "Microsoft.Insights/metricAlerts",
+            "location": "global",
+            "apiVersion": "2018-03-01",
+            "dependsOn": [
                 "[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]"
             ]
         },

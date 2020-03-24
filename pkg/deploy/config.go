@@ -48,6 +48,7 @@ type Configuration struct {
 	RPMode                             string        `json:"rpMode,omitempty"`
 	RPNSGSourceAddressPrefixes         []string      `json:"rpNsgSourceAddressPrefixes,omitempty"`
 	RPParentDomainName                 string        `json:"rpParentDomainName,omitempty"`
+	SubscriptionResourceGroupName      string        `json:"subscriptionResourceGroupName,omitempty"`
 	SSHPublicKey                       string        `json:"sshPublicKey,omitempty"`
 }
 

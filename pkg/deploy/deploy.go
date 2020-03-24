@@ -91,6 +91,9 @@ func (d *deployer) Deploy(ctx context.Context, rpServicePrincipalID string) erro
 	}
 
 	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
+	parameters.Parameters["subscriptionResourceGroupName"] = &arm.ParametersParameter{
+		Value: d.config.Configuration.SubscriptionResourceGroupName,
+	}
 	parameters.Parameters["adminApiCaBundle"] = &arm.ParametersParameter{
 		Value: base64.StdEncoding.EncodeToString([]byte(d.config.Configuration.AdminAPICABundle)),
 	}

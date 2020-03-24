@@ -16,6 +16,7 @@ import (
 	mgmtmsi "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
+	mgmtmonitor "github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights"
 	"github.com/Azure/go-autorest/autorest/to"
 	uuid "github.com/satori/go.uuid"
 
@@ -29,6 +30,7 @@ var apiVersions = map[string]string{
 	"containerregistry":            "2019-05-01",
 	"dns":                          "2018-05-01",
 	"documentdb":                   "2019-08-01",
+	"monitor":                      "2018-03-01",
 	"keyvault":                     "2016-10-01",
 	"msi":                          "2018-11-30",
 	"network":                      "2019-07-01",
@@ -584,6 +586,65 @@ func (g *generator) lb() *arm.Resource {
 		APIVersion: apiVersions["network"],
 		DependsOn: []string{
 			"[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip')]",
+		},
+	}
+}
+
+func (g *generator) actionGroup(name string, shortName string) *arm.Resource {
+	return &arm.Resource{
+		Resource: mgmtmonitor.ActionGroupResource{
+			ActionGroup: &mgmtmonitor.ActionGroup{
+				Enabled:        to.BoolPtr(true),
+				GroupShortName: to.StringPtr(shortName),
+			},
+			Name:     to.StringPtr(name),
+			Type:     to.StringPtr("Microsoft.Insights/actionGroups"),
+			Location: to.StringPtr("Global"),
+		},
+		APIVersion: apiVersions["monitor"],
+	}
+}
+
+func (g *generator) lbAlert() *arm.Resource {
+	return &arm.Resource{
+		Resource: mgmtmonitor.MetricAlertResource{
+			MetricAlertProperties: &mgmtmonitor.MetricAlertProperties{
+				Actions: &[]mgmtmonitor.MetricAlertAction{
+					{
+						ActionGroupID: to.StringPtr("[resourceId(parameters('subscriptionResourceGroupName'), 'Microsoft.Insights/actionGroups', 'rp-health-ag')]"),
+					},
+				},
+				Enabled:             to.BoolPtr(true),
+				EvaluationFrequency: to.StringPtr("PT5M"), //every 5min
+				Severity:            to.Int32Ptr(4),
+				Scopes: &[]string{
+					"[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]",
+				},
+				WindowSize:         to.StringPtr("PT1H"), //15min
+				TargetResourceType: to.StringPtr("Microsoft.Network/loadBalancers"),
+				AutoMitigate:       to.BoolPtr(true),
+				Criteria: mgmtmonitor.MetricAlertSingleResourceMultipleMetricCriteria{
+					AllOf: &[]mgmtmonitor.MetricCriteria{
+						{
+							CriterionType:   mgmtmonitor.CriterionTypeStaticThresholdCriterion,
+							MetricName:      to.StringPtr("DipAvailability"),
+							MetricNamespace: to.StringPtr("microsoft.network/loadBalancers"),
+							Name:            to.StringPtr("HealthProbeBelow95"),
+							Operator:        mgmtmonitor.LessThan,
+							Threshold:       to.Float64Ptr(95),
+							TimeAggregation: mgmtmonitor.Average,
+						},
+					},
+					OdataType: mgmtmonitor.OdataTypeMicrosoftAzureMonitorSingleResourceMultipleMetricCriteria,
+				},
+			},
+			Name:     to.StringPtr("rp-availability-alert"),
+			Type:     to.StringPtr("Microsoft.Insights/metricAlerts"),
+			Location: to.StringPtr("global"),
+		},
+		APIVersion: apiVersions["monitor"],
+		DependsOn: []string{
+			"[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]",
 		},
 	}
 }
