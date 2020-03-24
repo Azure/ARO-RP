@@ -4,12 +4,12 @@ rps:
   resourceGroupName: aro-eastus
   configuration:
     databaseAccountName: ''
-    domainName: ''
     keyvaultPrefix: ''
     rpServerCertCommonName: ''
 configuration:
   adminApiCaBundle: ''
   adminApiClientCertCommonName: ''
+  clusterParentDomainName: ''
   extraCosmosDBIPs: ''
   extraKeyvaultAccessPolicies: []
   fpServicePrincipalId: ''
@@ -24,4 +24,5 @@ configuration:
   rpImage: ''
   rpImageAuth: ''
   rpMode: ''
+  rpParentDomainName: ''
   sshPublicKey: ''

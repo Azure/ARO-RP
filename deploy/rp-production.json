@@ -578,5 +578,15 @@
                 "[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]"
             ]
         }
-    ]
+    ],
+    "outputs": {
+        "[concat(parameters('domainName'), '-nameServers')]": {
+            "type": "array",
+            "value": "[reference(resourceId('Microsoft.Network/dnsZones', parameters('domainName')), '2019-07-01').nameServers]"
+        },
+        "rp-pip-ipAddress": {
+            "type": "string",
+            "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip'), '2019-07-01').ipAddress]"
+        }
+    }
 }

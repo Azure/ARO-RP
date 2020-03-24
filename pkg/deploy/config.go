@@ -30,8 +30,8 @@ type Configuration struct {
 	ACRResourceID                string        `json:"acrResourceId,omitempty"`
 	AdminAPICABundle             string        `json:"adminApiCaBundle,omitempty"`
 	AdminAPIClientCertCommonName string        `json:"adminApiClientCertCommonName,omitempty"`
+	ClusterParentDomainName      string        `json:"clusterParentDomainName,omitempty"`
 	DatabaseAccountName          string        `json:"databaseAccountName,omitempty"`
-	DomainName                   string        `json:"domainName,omitempty"`
 	ExtraCosmosDBIPs             string        `json:"extraCosmosDBIPs,omitempty"`
 	ExtraKeyvaultAccessPolicies  []interface{} `json:"extraKeyvaultAccessPolicies,omitempty"`
 	FPServicePrincipalID         string        `json:"fpServicePrincipalId,omitempty"`
@@ -47,6 +47,7 @@ type Configuration struct {
 	RPImage                      string        `json:"rpImage,omitempty"`
 	RPImageAuth                  string        `json:"rpImageAuth,omitempty"`
 	RPMode                       string        `json:"rpMode,omitempty"`
+	RPParentDomainName           string        `json:"rpParentDomainName,omitempty"`
 	RPServerCertCommonName       string        `json:"rpServerCertCommonName,omitempty"`
 	SSHPublicKey                 string        `json:"sshPublicKey,omitempty"`
 }

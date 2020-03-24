@@ -15,6 +15,7 @@ import (
 	"time"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
+	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
@@ -26,6 +27,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/containerregistry"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/resources"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
@@ -42,6 +44,7 @@ type deployer struct {
 	log *logrus.Entry
 
 	globaldeployments  resources.DeploymentsClient
+	globalrecordsets   dns.RecordSetsClient
 	globalreplications containerregistry.ReplicationsClient
 	deployments        resources.DeploymentsClient
 	groups             resources.GroupsClient
@@ -71,6 +74,7 @@ func New(ctx context.Context, log *logrus.Entry, config *RPConfig, version strin
 		log: log,
 
 		globaldeployments:  resources.NewDeploymentsClient(config.Configuration.GlobalSubscriptionID, authorizer),
+		globalrecordsets:   dns.NewRecordSetsClient(config.Configuration.GlobalSubscriptionID, authorizer),
 		globalreplications: containerregistry.NewReplicationsClient(config.Configuration.GlobalSubscriptionID, authorizer),
 		deployments:        resources.NewDeploymentsClient(config.SubscriptionID, authorizer),
 		groups:             resources.NewGroupsClient(config.SubscriptionID, authorizer),
@@ -103,21 +107,47 @@ func (d *deployer) Deploy(ctx context.Context, rpServicePrincipalID string) erro
 	}
 
 	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
-	parameters.Parameters["vmssName"] = &arm.ParametersParameter{
-		Value: d.version,
+	parameters.Parameters["domainName"] = &arm.ParametersParameter{
+		Value: d.config.Location + "." + d.config.Configuration.ClusterParentDomainName,
 	}
 	parameters.Parameters["rpServicePrincipalId"] = &arm.ParametersParameter{
 		Value: rpServicePrincipalID,
 	}
+	parameters.Parameters["vmssName"] = &arm.ParametersParameter{
+		Value: d.version,
+	}
 
 	d.log.Printf("deploying rp version %s to %s", d.version, d.config.ResourceGroupName)
-	return d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, "rp-production-"+d.version, mgmtresources.Deployment{
+	err = d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, "rp-production-"+d.version, mgmtresources.Deployment{
 		Properties: &mgmtresources.DeploymentProperties{
 			Template:   template,
 			Mode:       mgmtresources.Incremental,
 			Parameters: parameters.Parameters,
 		},
 	})
+	if err != nil {
+		return err
+	}
+
+	deployment, err := d.deployments.Get(ctx, d.config.ResourceGroupName, "rp-production-"+d.version)
+	if err != nil {
+		return err
+	}
+
+	rpPipIPAddress := deployment.Properties.Outputs.(map[string]interface{})["rp-pip-ipAddress"].(map[string]interface{})["value"].(string)
+
+	_nameServers := deployment.Properties.Outputs.(map[string]interface{})[parameters.Parameters["domainName"].Value.(string)+"-nameServers"].(map[string]interface{})["value"].([]interface{})
+	nameServers := make([]string, 0, len(_nameServers))
+	for _, ns := range _nameServers {
+		nameServers = append(nameServers, ns.(string))
+	}
+
+	err = d.configureDNS(ctx, rpPipIPAddress, nameServers)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (d *deployer) Upgrade(ctx context.Context) error {
@@ -208,6 +238,37 @@ func (d *deployer) removeOldScalesets(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (d *deployer) configureDNS(ctx context.Context, rpPipIPAddress string, nameServers []string) error {
+	_, err := d.globalrecordsets.CreateOrUpdate(ctx, d.config.Configuration.GlobalResourceGroupName, d.config.Configuration.RPParentDomainName, d.config.Location, mgmtdns.A, mgmtdns.RecordSet{
+		RecordSetProperties: &mgmtdns.RecordSetProperties{
+			TTL: to.Int64Ptr(3600),
+			ARecords: &[]mgmtdns.ARecord{
+				{
+					Ipv4Address: &rpPipIPAddress,
+				},
+			},
+		},
+	}, "", "")
+	if err != nil {
+		return err
+	}
+
+	nsRecords := make([]mgmtdns.NsRecord, 0, len(nameServers))
+	for i := range nameServers {
+		nsRecords = append(nsRecords, mgmtdns.NsRecord{
+			Nsdname: &nameServers[i],
+		})
+	}
+
+	_, err = d.globalrecordsets.CreateOrUpdate(ctx, d.config.Configuration.GlobalResourceGroupName, d.config.Configuration.ClusterParentDomainName, d.config.Location, mgmtdns.NS, mgmtdns.RecordSet{
+		RecordSetProperties: &mgmtdns.RecordSetProperties{
+			TTL:       to.Int64Ptr(3600),
+			NsRecords: &nsRecords,
+		},
+	}, "", "")
+	return err
 }
 
 // getParameters returns an *arm.Parameters populated with parameter names and

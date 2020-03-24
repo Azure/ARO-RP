@@ -76,6 +76,17 @@ func (g *generator) rpTemplate() *arm.Template {
 	t.Resources = append(t.Resources, g.cosmosdb()...)
 	t.Resources = append(t.Resources, g.rbac()...)
 
+	t.Outputs = map[string]*arm.Output{
+		"[concat(parameters('domainName'), '-nameServers')]": {
+			Type:  "array",
+			Value: "[reference(resourceId('Microsoft.Network/dnsZones', parameters('domainName')), '2019-07-01').nameServers]",
+		},
+		"rp-pip-ipAddress": {
+			Type:  "string",
+			Value: "[reference(resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip'), '2019-07-01').ipAddress]",
+		},
+	}
+
 	return t
 }
 
