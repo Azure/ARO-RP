@@ -93,8 +93,9 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 	t := templateStanza()
 
 	params := []string{
-		"rpServicePrincipalId",
 		"acrResourceId",
+		"rpServicePrincipalId",
+		"location",
 	}
 
 	for _, param := range params {
@@ -102,7 +103,8 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 	}
 
 	t.Resources = append(t.Resources,
-		g.rpAcrRbac(),
+		g.acrReplica(),
+		g.acrRbac(),
 	)
 
 	return t

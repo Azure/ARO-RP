@@ -10,6 +10,7 @@ import (
 
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
+	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/containerregistry/mgmt/2019-06-01-preview/containerregistry"
 	mgmtdocumentdb "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2019-08-01/documentdb"
 	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2016-10-01/keyvault"
@@ -22,13 +23,14 @@ import (
 )
 
 var apiVersions = map[string]string{
-	"authorization": "2015-07-01",
-	"compute":       "2019-03-01",
-	"dns":           "2018-05-01",
-	"documentdb":    "2019-08-01",
-	"keyvault":      "2016-10-01",
-	"msi":           "2018-11-30",
-	"network":       "2019-07-01",
+	"authorization":     "2015-07-01",
+	"compute":           "2019-03-01",
+	"containerregistry": "2019-06-01-preview",
+	"dns":               "2018-05-01",
+	"documentdb":        "2019-08-01",
+	"keyvault":          "2016-10-01",
+	"msi":               "2018-11-30",
+	"network":           "2019-07-01",
 }
 
 const (
@@ -1393,7 +1395,18 @@ func (g *generator) rbac() []*arm.Resource {
 	}
 }
 
-func (g *generator) rpAcrRbac() *arm.Resource {
+func (g *generator) acrReplica() *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtcontainerregistry.Replication{
+			Name:     to.StringPtr("[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId')), 1)), '/', parameters('location'))]"),
+			Type:     to.StringPtr("Microsoft.ContainerRegistry/registries/replicas"),
+			Location: to.StringPtr("[parameters('location')]"),
+		},
+		APIVersion: apiVersions["containerregistry"],
+	}
+}
+
+func (g *generator) acrRbac() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtauthorization.RoleAssignment{
 			Name: to.StringPtr("[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId')), 1)), '/'), '/Microsoft.Authorization/', guid(parameters('acrResourceId'), parameters('rpServicePrincipalId'), 'RP / AcrPull'))]"),
