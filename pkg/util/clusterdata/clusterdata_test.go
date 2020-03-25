@@ -15,6 +15,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/test/util/cmp"
 )
 
@@ -219,6 +220,7 @@ func TestBestEffortEnricher(t *testing.T) {
 				env:              &env.Test{},
 				restConfig:       restConfig,
 				taskConstructors: taskConstructors,
+				m:                &noop.Noop{},
 			}
 
 			ctx := defaultMockCtx

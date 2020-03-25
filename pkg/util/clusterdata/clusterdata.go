@@ -6,14 +6,17 @@ package clusterdata
 // TODO: After OpenShift 4.4, replace github.com/openshift/cluster-api with github.com/openshift/machine-api-operator
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
 
@@ -31,10 +34,11 @@ type enricherTask interface {
 
 // NewBestEffortEnricher returns an enricher that attempts to populate
 // fields, but ignores errors in case of failures
-func NewBestEffortEnricher(log *logrus.Entry, env env.Interface) OpenShiftClusterEnricher {
+func NewBestEffortEnricher(log *logrus.Entry, env env.Interface, m metrics.Interface) OpenShiftClusterEnricher {
 	return &bestEffortEnricher{
 		log: log,
 		env: env,
+		m:   m,
 
 		restConfig: restconfig.RestConfig,
 		taskConstructors: []enricherTaskConstructor{
@@ -47,12 +51,15 @@ func NewBestEffortEnricher(log *logrus.Entry, env env.Interface) OpenShiftCluste
 type bestEffortEnricher struct {
 	log *logrus.Entry
 	env env.Interface
+	m   metrics.Interface
 
 	restConfig       func(env env.Interface, oc *api.OpenShiftCluster) (*rest.Config, error)
 	taskConstructors []enricherTaskConstructor
 }
 
 func (e *bestEffortEnricher) Enrich(ctx context.Context, ocs ...*api.OpenShiftCluster) {
+	e.m.EmitGauge("enricher.tasks.count", int64(len(e.taskConstructors)*len(ocs)), nil)
+
 	var wg sync.WaitGroup
 	wg.Add(len(ocs))
 	for i := range ocs {
@@ -71,6 +78,7 @@ func (e *bestEffortEnricher) enrichOne(ctx context.Context, oc *api.OpenShiftClu
 
 	restConfig, err := e.restConfig(e.env, oc)
 	if err != nil {
+		e.m.EmitGauge("enricher.tasks.errors", int64(len(e.taskConstructors)), nil)
 		e.log.Error(err)
 		return
 	}
@@ -87,6 +95,7 @@ func (e *bestEffortEnricher) enrichOne(ctx context.Context, oc *api.OpenShiftClu
 	for i := range e.taskConstructors {
 		task, err := e.taskConstructors[i](e.log, restConfig, oc)
 		if err != nil {
+			e.m.EmitGauge("enricher.tasks.errors", 1, nil)
 			e.log.Error(err)
 			continue
 		}
@@ -102,7 +111,16 @@ func (e *bestEffortEnricher) enrichOne(ctx context.Context, oc *api.OpenShiftClu
 	callbacks := make(chan func(), len(tasks))
 	errors := make(chan error, len(tasks))
 	for i := range tasks {
-		go tasks[i].FetchData(callbacks, errors)
+		go func(i int) {
+			t := time.Now()
+			defer func() {
+				e.m.EmitGauge("enricher.tasks.duration", time.Now().Sub(t).Milliseconds(), map[string]string{
+					"task": fmt.Sprintf("%T", tasks[i]),
+				})
+			}()
+
+			tasks[i].FetchData(callbacks, errors)
+		}(i) // https://golang.org/doc/faq#closures_and_goroutines
 	}
 
 out:
@@ -111,9 +129,10 @@ out:
 		case f := <-callbacks:
 			f()
 		case <-errors:
-			// Ignore errors. We log them in each task locally
-			continue
+			// No need to log errors. We log them in each task locally
+			e.m.EmitGauge("enricher.tasks.errors", 1, nil)
 		case <-ctx.Done():
+			e.m.EmitGauge("enricher.timeouts", 1, nil)
 			e.log.Warn("timeout expired")
 			break out
 		}
