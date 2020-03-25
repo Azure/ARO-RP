@@ -19,7 +19,7 @@ configuration:
   mdmFrontendUrl: ''
   mdsdConfigVersion: ''
   mdsdEnvironment: ''
-  rpImage: ''
+  rpImagePrefix: ''
   rpImageAuth: ''
   rpMode: ''
   rpParentDomainName: ''

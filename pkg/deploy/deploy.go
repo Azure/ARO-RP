@@ -110,6 +110,9 @@ func (d *deployer) Deploy(ctx context.Context, rpServicePrincipalID string) erro
 	parameters.Parameters["domainName"] = &arm.ParametersParameter{
 		Value: d.config.Location + "." + d.config.Configuration.ClusterParentDomainName,
 	}
+	parameters.Parameters["rpImage"] = &arm.ParametersParameter{
+		Value: d.config.Configuration.RPImagePrefix + ":" + d.version,
+	}
 	parameters.Parameters["rpServicePrincipalId"] = &arm.ParametersParameter{
 		Value: rpServicePrincipalID,
 	}
