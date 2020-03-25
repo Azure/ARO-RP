@@ -1,20 +1,20 @@
-# redhatopenshift
+# Azure Red Hat OpenShift
 
 > see https://aka.ms/autorest
 
-This is the AutoRest configuration file for redhatopenshift.
+This is the AutoRest configuration file for Azure Red Hat OpenShift.
+
+---
 
 ## Getting Started
 
-To build the SDKs for My API, simply install AutoRest via `npm` (`npm install -g autorest`) and then run:
+To build the SDK for Azure Red Hat OpenShift, simply [Install AutoRest](https://aka.ms/autorest/install) and in this folder, run:
 
-> `autorest readme.md`
+> `autorest`
 
 To see additional help and options, run:
 
 > `autorest --help`
-
-For other options on installation see [Installing AutoRest](https://aka.ms/autorest/install) on the AutoRest github page.
 
 ---
 
@@ -22,20 +22,20 @@ For other options on installation see [Installing AutoRest](https://aka.ms/autor
 
 ### Basic Information
 
-These are the global settings for the redhatopenshift.
+These are the global settings for the Azure Red Hat OpenShift API.
 
-```yaml
+``` yaml
 openapi-type: arm
-tag: package-2019-12-31-preview
+tag: package-2020-04-30
 ```
 
-### Tag: package-2019-12-31-preview
+### Tag: package-2020-04-30
 
-These settings apply only when `--tag=package-2019-12-31-preview` is specified on the command line.
+These settings apply only when `--tag=package-2020-04-30` is specified on the command line.
 
-```yaml $(tag) == 'package-2019-12-31-preview'
+``` yaml $(tag) == 'package-2020-04-30'
 input-file:
-  - Microsoft.RedHatOpenShift/preview/2019-12-31-preview/redhatopenshift.json
+  - Microsoft.RedHatOpenShift/stable/2020-04-30/redhatopenshift.json
 ```
 
 ---
@@ -50,12 +50,7 @@ This is not used by Autorest itself.
 ```yaml $(swagger-to-sdk)
 swagger-to-sdk:
   - repo: azure-sdk-for-python
-  - repo: azure-sdk-for-java
   - repo: azure-sdk-for-go
-  - repo: azure-sdk-for-js
-  - repo: azure-sdk-for-ruby
-    after_scripts:
-      - bundle install && rake arm:regen_all_profiles['azure_mgmt_redhatopenshift']
 ```
 
 ## Go
@@ -65,15 +60,3 @@ See configuration in [readme.go.md](./readme.go.md)
 ## Python
 
 See configuration in [readme.python.md](./readme.python.md)
-
-## Ruby
-
-See configuration in [readme.ruby.md](./readme.ruby.md)
-
-## TypeScript
-
-See configuration in [readme.typescript.md](./readme.typescript.md)
-
-## CSharp
-
-See configuration in [readme.csharp.md](./readme.csharp.md)

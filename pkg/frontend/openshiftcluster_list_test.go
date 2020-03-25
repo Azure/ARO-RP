@@ -19,7 +19,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/v20191231preview"
+	v20200430 "github.com/Azure/ARO-RP/pkg/api/v20200430"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
@@ -66,7 +66,7 @@ func TestListOpenShiftCluster(t *testing.T) {
 		name           string
 		mocks          func(*gomock.Controller, *mock_database.MockOpenShiftClusters, string)
 		wantStatusCode int
-		wantResponse   func() *v20191231preview.OpenShiftClusterList
+		wantResponse   func() *v20200430.OpenShiftClusterList
 		wantError      string
 	}
 
@@ -116,9 +116,9 @@ func TestListOpenShiftCluster(t *testing.T) {
 					Return(mockIter, nil)
 			},
 			wantStatusCode: http.StatusOK,
-			wantResponse: func() *v20191231preview.OpenShiftClusterList {
-				return &v20191231preview.OpenShiftClusterList{
-					OpenShiftClusters: []*v20191231preview.OpenShiftCluster{
+			wantResponse: func() *v20200430.OpenShiftClusterList {
+				return &v20200430.OpenShiftClusterList{
+					OpenShiftClusters: []*v20200430.OpenShiftCluster{
 						{
 							ID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1", mockSubID),
 							Name: "resourceName1",
@@ -144,9 +144,9 @@ func TestListOpenShiftCluster(t *testing.T) {
 					Return(mockIter, nil)
 			},
 			wantStatusCode: http.StatusOK,
-			wantResponse: func() *v20191231preview.OpenShiftClusterList {
-				return &v20191231preview.OpenShiftClusterList{
-					OpenShiftClusters: []*v20191231preview.OpenShiftCluster{},
+			wantResponse: func() *v20200430.OpenShiftClusterList {
+				return &v20200430.OpenShiftClusterList{
+					OpenShiftClusters: []*v20200430.OpenShiftCluster{},
 				}
 			},
 		},
@@ -207,7 +207,7 @@ func TestListOpenShiftCluster(t *testing.T) {
 
 					go f.Run(ctx, nil, nil)
 
-					resp, err := cli.Get(fmt.Sprintf("https://server%sproviders/Microsoft.RedHatOpenShift/openShiftClusters?api-version=2019-12-31-preview", listPrefix))
+					resp, err := cli.Get(fmt.Sprintf("https://server%sproviders/Microsoft.RedHatOpenShift/openShiftClusters?api-version=2020-04-30", listPrefix))
 					if err != nil {
 						t.Fatal(err)
 					}
@@ -223,7 +223,7 @@ func TestListOpenShiftCluster(t *testing.T) {
 					}
 
 					if tt.wantError == "" {
-						var oc *v20191231preview.OpenShiftClusterList
+						var oc *v20200430.OpenShiftClusterList
 						err = json.Unmarshal(b, &oc)
 						if err != nil {
 							t.Fatal(err)

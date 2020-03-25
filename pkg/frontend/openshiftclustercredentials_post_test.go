@@ -20,7 +20,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/v20191231preview"
+	v20200430 "github.com/Azure/ARO-RP/pkg/api/v20200430"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -62,10 +62,10 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 	}
 
 	apis := map[string]*api.Version{
-		"2019-12-31-preview": api.APIs["2019-12-31-preview"],
+		"2020-04-30": api.APIs["2020-04-30"],
 		"no-credentials": {
-			OpenShiftClusterConverter:       api.APIs["2019-12-31-preview"].OpenShiftClusterConverter,
-			OpenShiftClusterStaticValidator: api.APIs["2019-12-31-preview"].OpenShiftClusterStaticValidator,
+			OpenShiftClusterConverter:       api.APIs["2020-04-30"].OpenShiftClusterConverter,
+			OpenShiftClusterStaticValidator: api.APIs["2020-04-30"].OpenShiftClusterStaticValidator,
 		},
 	}
 
@@ -77,7 +77,7 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 		apiVersion     string
 		mocks          func(*test, *mock_database.MockOpenShiftClusters)
 		wantStatusCode int
-		wantResponse   func(*test) *v20191231preview.OpenShiftClusterCredentials
+		wantResponse   func(*test) *v20200430.OpenShiftClusterCredentials
 		wantError      string
 	}
 
@@ -107,8 +107,8 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 					}, nil)
 			},
 			wantStatusCode: http.StatusOK,
-			wantResponse: func(tt *test) *v20191231preview.OpenShiftClusterCredentials {
-				return &v20191231preview.OpenShiftClusterCredentials{
+			wantResponse: func(tt *test) *v20200430.OpenShiftClusterCredentials {
+				return &v20200430.OpenShiftClusterCredentials{
 					KubeadminUsername: "kubeadmin",
 					KubeadminPassword: "password",
 				}
@@ -296,7 +296,7 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 
 			go f.Run(ctx, nil, nil)
 
-			reqAPIVersion := "2019-12-31-preview"
+			reqAPIVersion := "2020-04-30"
 			if tt.apiVersion != "" {
 				reqAPIVersion = tt.apiVersion
 			}
@@ -321,7 +321,7 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 			}
 
 			if tt.wantError == "" {
-				var oc *v20191231preview.OpenShiftClusterCredentials
+				var oc *v20200430.OpenShiftClusterCredentials
 				err = json.Unmarshal(b, &oc)
 				if err != nil {
 					t.Fatal(err)
