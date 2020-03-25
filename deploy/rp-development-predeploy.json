@@ -19,6 +19,101 @@
     "resources": [
         {
             "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.0.0.0/24"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "properties": {
+                            "addressPrefix": "10.0.0.0/24",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]",
+                                "tags": null
+                            }
+                        },
+                        "name": "rp-subnet"
+                    }
+                ]
+            },
+            "name": "rp-vnet",
+            "type": "Microsoft.Network/virtualNetworks",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2019-07-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"
+            ]
+        },
+        {
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.0.4.0/22"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "properties": {
+                            "addressPrefix": "10.0.4.0/22",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]",
+                                "tags": null
+                            },
+                            "privateEndpointNetworkPolicies": "Disabled"
+                        },
+                        "name": "rp-pe-subnet"
+                    }
+                ]
+            },
+            "name": "rp-pe-vnet-001",
+            "type": "Microsoft.Network/virtualNetworks",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2019-07-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]"
+            ]
+        },
+        {
+            "properties": {
+                "allowVirtualNetworkAccess": true,
+                "allowForwardedTraffic": true,
+                "allowGatewayTransit": false,
+                "useRemoteGateways": false,
+                "remoteVirtualNetwork": {
+                    "id": "[resourceId('Microsoft.Network/virtualNetworks', 'rp-pe-vnet-001')]"
+                }
+            },
+            "name": "rp-vnet/peering-rp-pe-vnet-001",
+            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+            "apiVersion": "2019-07-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]",
+                "[resourceId('Microsoft.Network/virtualNetworks', 'rp-pe-vnet-001')]"
+            ],
+            "location": "[resourceGroup().location]"
+        },
+        {
+            "properties": {
+                "allowVirtualNetworkAccess": true,
+                "allowForwardedTraffic": true,
+                "allowGatewayTransit": false,
+                "useRemoteGateways": false,
+                "remoteVirtualNetwork": {
+                    "id": "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]"
+                }
+            },
+            "name": "rp-pe-vnet-001/peering-rp-vnet",
+            "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+            "apiVersion": "2019-07-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', 'rp-pe-vnet-001')]",
+                "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]"
+            ],
+            "location": "[resourceGroup().location]"
+        },
+        {
+            "properties": {
                 "securityRules": [
                     {
                         "properties": {
@@ -61,6 +156,12 @@
             "apiVersion": "2019-07-01"
         },
         {
+            "name": "[concat(parameters('keyvaultPrefix'), '-cls')]",
+            "type": "Microsoft.KeyVault/vaults",
+            "location": "[resourceGroup().location]",
+            "tags": {
+                "vault": "clusters"
+            },
             "properties": {
                 "tenantId": "[subscription().tenantId]",
                 "sku": {
@@ -91,17 +192,31 @@
                             ]
                         }
                     }
-                ]
+                ],
+                "enableSoftDelete": true,
+                "networkAcls": {
+                    "bypass": "AzureServices",
+                    "defaultAction": "Deny",
+                    "virtualNetworkRules": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"
+                        }
+                    ]
+                },
+                "privateEndpointConnections": []
             },
-            "name": "[concat(parameters('keyvaultPrefix'), '-cls')]",
+            "apiVersion": "2018-02-14",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]"
+            ]
+        },
+        {
+            "name": "[concat(parameters('keyvaultPrefix'), '-svc')]",
             "type": "Microsoft.KeyVault/vaults",
             "location": "[resourceGroup().location]",
             "tags": {
-                "vault": "clusters"
+                "vault": "service"
             },
-            "apiVersion": "2016-10-01"
-        },
-        {
             "properties": {
                 "tenantId": "[subscription().tenantId]",
                 "sku": {
@@ -134,15 +249,20 @@
                             ]
                         }
                     }
-                ]
+                ],
+                "enableSoftDelete": true,
+                "networkAcls": {
+                    "virtualNetworkRules": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"
+                        }
+                    ]
+                }
             },
-            "name": "[concat(parameters('keyvaultPrefix'), '-svc')]",
-            "type": "Microsoft.KeyVault/vaults",
-            "location": "[resourceGroup().location]",
-            "tags": {
-                "vault": "service"
-            },
-            "apiVersion": "2016-10-01"
+            "apiVersion": "2018-02-14",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]"
+            ]
         }
     ]
 }

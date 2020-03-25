@@ -69,10 +69,7 @@ func (g *generator) rpTemplate() *arm.Template {
 		t.Resources = append(t.Resources, g.pip(), g.lb(), g.vmss())
 	}
 
-	t.Resources = append(t.Resources, g.zone(),
-		g.rpvnet(), g.pevnet(),
-		g.halfPeering("rp-vnet", "rp-pe-vnet-001"),
-		g.halfPeering("rp-pe-vnet-001", "rp-vnet"))
+	t.Resources = append(t.Resources, g.zone())
 	t.Resources = append(t.Resources, g.cosmosdb()...)
 	t.Resources = append(t.Resources, g.rbac()...)
 
@@ -172,6 +169,9 @@ func (g *generator) preDeployTemplate() *arm.Template {
 	}
 
 	t.Resources = append(t.Resources,
+		g.rpvnet(), g.pevnet(),
+		g.halfPeering("rp-vnet", "rp-pe-vnet-001"),
+		g.halfPeering("rp-pe-vnet-001", "rp-vnet"),
 		g.securityGroupRP(),
 		g.securityGroupPE(),
 		// clustersKeyvault must preceed serviceKeyvault due to terrible

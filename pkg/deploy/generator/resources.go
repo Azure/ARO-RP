@@ -12,7 +12,7 @@ import (
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	mgmtdocumentdb "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2019-08-01/documentdb"
 	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
-	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2016-10-01/keyvault"
+	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2018-02-14/keyvault"
 	mgmtmsi "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -26,7 +26,7 @@ var apiVersions = map[string]string{
 	"compute":       "2019-03-01",
 	"dns":           "2018-05-01",
 	"documentdb":    "2019-08-01",
-	"keyvault":      "2016-10-01",
+	"keyvault":      "2018-02-14",
 	"msi":           "2018-11-30",
 	"network":       "2019-07-01",
 }
@@ -441,6 +441,9 @@ func (g *generator) rpvnet() *arm.Resource {
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
 		APIVersion: apiVersions["network"],
+		DependsOn: []string{
+			"[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]",
+		},
 	}
 }
 
@@ -471,6 +474,9 @@ func (g *generator) pevnet() *arm.Resource {
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
 		APIVersion: apiVersions["network"],
+		DependsOn: []string{
+			"[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-pe-nsg')]",
+		},
 	}
 }
 
@@ -1009,12 +1015,23 @@ func (g *generator) serviceKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyE
 func (g *generator) clustersKeyvault() *arm.Resource {
 	vault := &mgmtkeyvault.Vault{
 		Properties: &mgmtkeyvault.VaultProperties{
-			TenantID: &tenantUUIDHack,
+			EnableSoftDelete: to.BoolPtr(true),
+			TenantID:         &tenantUUIDHack,
 			Sku: &mgmtkeyvault.Sku{
 				Name:   mgmtkeyvault.Standard,
 				Family: to.StringPtr("A"),
 			},
-			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{},
+			AccessPolicies:             &[]mgmtkeyvault.AccessPolicyEntry{},
+			PrivateEndpointConnections: &[]mgmtkeyvault.PrivateEndpointConnectionItem{},
+			NetworkAcls: &mgmtkeyvault.NetworkRuleSet{
+				VirtualNetworkRules: &[]mgmtkeyvault.VirtualNetworkRule{
+					{
+						ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"),
+					},
+				},
+				Bypass:        mgmtkeyvault.AzureServices,
+				DefaultAction: mgmtkeyvault.Deny,
+			},
 		},
 		Name:     to.StringPtr("[concat(parameters('keyvaultPrefix'), '" + kvClusterSuffix + "')]"),
 		Type:     to.StringPtr("Microsoft.KeyVault/vaults"),
@@ -1042,18 +1059,29 @@ func (g *generator) clustersKeyvault() *arm.Resource {
 	return &arm.Resource{
 		Resource:   vault,
 		APIVersion: apiVersions["keyvault"],
+		DependsOn: []string{
+			"[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]",
+		},
 	}
 }
 
 func (g *generator) serviceKeyvault() *arm.Resource {
 	vault := &mgmtkeyvault.Vault{
 		Properties: &mgmtkeyvault.VaultProperties{
-			TenantID: &tenantUUIDHack,
+			EnableSoftDelete: to.BoolPtr(true),
+			TenantID:         &tenantUUIDHack,
 			Sku: &mgmtkeyvault.Sku{
 				Name:   mgmtkeyvault.Standard,
 				Family: to.StringPtr("A"),
 			},
 			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{},
+			NetworkAcls: &mgmtkeyvault.NetworkRuleSet{
+				VirtualNetworkRules: &[]mgmtkeyvault.VirtualNetworkRule{
+					{
+						ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'rp-vnet', 'rp-subnet')]"),
+					},
+				},
+			},
 		},
 		Name:     to.StringPtr("[concat(parameters('keyvaultPrefix'), '" + kvServiceSuffix + "')]"),
 		Type:     to.StringPtr("Microsoft.KeyVault/vaults"),
@@ -1087,6 +1115,9 @@ func (g *generator) serviceKeyvault() *arm.Resource {
 	return &arm.Resource{
 		Resource:   vault,
 		APIVersion: apiVersions["keyvault"],
+		DependsOn: []string{
+			"[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]",
+		},
 	}
 }
 
@@ -1126,8 +1157,6 @@ func (g *generator) cosmosdb() []*arm.Resource {
 			},
 		}
 		cosmosdb.DisableKeyBasedMetadataWriteAccess = to.BoolPtr(true)
-
-		r.DependsOn = append(r.DependsOn, "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]")
 	}
 
 	rs := []*arm.Resource{
