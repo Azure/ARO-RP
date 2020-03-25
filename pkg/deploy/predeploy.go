@@ -281,11 +281,6 @@ func (d *deployer) ensureContainerRegistryReplication(ctx context.Context) error
 		return nil
 	}
 
-	// INT acr isn't replicated and it can't be on it's sku. The sku can't be changed post create
-	if acrResource.ResourceName == "arointsvc" {
-		return nil
-	}
-
 	return d.globalreplications.CreateAndWait(ctx, d.config.Configuration.GlobalResourceGroupName, acrResource.ResourceName, d.config.Location, mgmtcontainerregistry.Replication{
 		Location: to.StringPtr(d.config.Location),
 	})
