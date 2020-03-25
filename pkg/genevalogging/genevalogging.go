@@ -10,6 +10,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
+	securityv1 "github.com/openshift/api/security/v1"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
@@ -330,30 +331,22 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 	g.log.Print("waiting for privileged security context constraint")
 	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
 	defer cancel()
+	var scc *securityv1.SecurityContextConstraints
 	err = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-		_, err := g.seccli.SecurityV1().SecurityContextConstraints().Get("privileged", metav1.GetOptions{})
+		scc, err = g.seccli.SecurityV1().SecurityContextConstraints().Get("privileged", metav1.GetOptions{})
 		return err == nil, nil
 	}, timeoutCtx.Done())
 	if err != nil {
 		return err
 	}
 
-	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		scc, err := g.seccli.SecurityV1().SecurityContextConstraints().Get("privileged", metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
+	scc.ObjectMeta = metav1.ObjectMeta{
+		Name: "privileged-genevalogging",
+	}
+	scc.Groups = nil
+	scc.Users = []string{kubeServiceAccount}
 
-		for _, user := range scc.Users {
-			if user == kubeServiceAccount {
-				return nil
-			}
-		}
-		scc.Users = append(scc.Users, kubeServiceAccount)
-
-		_, err = g.seccli.SecurityV1().SecurityContextConstraints().Update(scc)
-		return err
-	})
+	_, err = g.seccli.SecurityV1().SecurityContextConstraints().Create(scc)
 	if err != nil {
 		return err
 	}
