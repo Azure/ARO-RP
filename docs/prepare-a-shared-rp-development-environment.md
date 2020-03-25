@@ -293,6 +293,10 @@ each of the bash functions below.
    ```bash
    deploy_env_dev_override
    ```
+   
+   If you encounter a "SkuCannotBeChangedOnUpdate" error
+   when running the `deploy_env_dev_override` command, delete the `-pip` resource
+   and re-run.
 
 1. Load the keys/certificates into the key vault:
 
