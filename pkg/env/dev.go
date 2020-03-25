@@ -157,6 +157,10 @@ func (d *dev) InitializeAuthorizers() error {
 	return nil
 }
 
+func (d *dev) ACRName() string {
+	return "arosvc"
+}
+
 func (d *dev) DatabaseName() string {
 	return os.Getenv("DATABASE_NAME")
 }
