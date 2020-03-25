@@ -183,7 +183,7 @@
     "outputs": {
         "rp-nameServers": {
             "type": "array",
-            "value": "[reference(resourceId('Microsoft.Network/dnsZones', parameters('domainName')), '2019-07-01').nameServers]"
+            "value": "[reference(resourceId('Microsoft.Network/dnsZones', parameters('domainName')), '2018-05-01').nameServers]"
         },
         "rp-pip-ipAddress": {
             "type": "string",

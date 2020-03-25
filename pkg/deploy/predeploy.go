@@ -7,11 +7,13 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
+	"net/http"
 	"path/filepath"
 
 	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/containerregistry/mgmt/2019-06-01-preview/containerregistry"
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
 	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
@@ -246,14 +248,24 @@ func (d *deployer) ensureServiceCertificates(ctx context.Context, serviceKeyVaul
 		},
 	}
 
+	newCerts := []struct {
+		certificateName string
+		commonName      string
+		eku             utilkeyvault.Eku
+	}{}
 	for _, c := range certs {
-		err = d.keyvault.CreateSignedCertificate(ctx, serviceKeyVaultURI, utilkeyvault.IssuerOnecert, c.certificateName, c.commonName, c.eku)
-		if err != nil {
-			return err
+		bundle, err := d.keyvault.GetSecret(ctx, serviceKeyVaultURI, c.certificateName, "")
+
+		if bundle.StatusCode == http.StatusNotFound {
+			err = d.keyvault.CreateSignedCertificate(ctx, serviceKeyVaultURI, utilkeyvault.IssuerOnecert, c.certificateName, c.commonName, c.eku)
+			if err != nil {
+				return err
+			}
+			newCerts = append(newCerts, c)
 		}
 	}
 
-	for _, c := range certs {
+	for _, c := range newCerts {
 		err = d.keyvault.WaitForCertificateOperation(ctx, serviceKeyVaultURI, c.certificateName)
 		if err != nil {
 			return err
@@ -264,7 +276,17 @@ func (d *deployer) ensureServiceCertificates(ctx context.Context, serviceKeyVaul
 }
 
 func (d *deployer) ensureContainerRegistryReplication(ctx context.Context) error {
-	return d.globalreplications.CreateAndWait(ctx, d.config.Configuration.GlobalResourceGroupName, "arosvc", d.config.Location, mgmtcontainerregistry.Replication{
+	acrResource, err := azure.ParseResourceID(d.config.Configuration.ACRResourceID)
+	if err != nil {
+		return nil
+	}
+
+	// INT acr isn't replicated and it can't be on it's sku. The sku can't be changed post create
+	if acrResource.ResourceName == "arointsvc" {
+		return nil
+	}
+
+	return d.globalreplications.CreateAndWait(ctx, d.config.Configuration.GlobalResourceGroupName, acrResource.ResourceName, d.config.Location, mgmtcontainerregistry.Replication{
 		Location: to.StringPtr(d.config.Location),
 	})
 }
