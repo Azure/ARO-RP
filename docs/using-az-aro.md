@@ -94,7 +94,7 @@ cluster:
    ```bash
    LOCATION=eastus
    RESOURCEGROUP="v4-$LOCATION"
-   CLUSTER=cluster
+   export CLUSTER=cluster
 
    az group create -g "$RESOURCEGROUP" -l $LOCATION
    az network vnet create \
