@@ -1392,3 +1392,18 @@ func (g *generator) rbac() []*arm.Resource {
 		},
 	}
 }
+
+func (g *generator) rpAcrRbac() *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtauthorization.RoleAssignment{
+			Name: to.StringPtr("[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId')), 1)), '/'), '/Microsoft.Authorization/', guid(parameters('acrResourceId'), parameters('rpServicePrincipalId'), 'RP / AcrPull'))]"),
+			Type: to.StringPtr("Microsoft.ContainerRegistry/registries/providers/roleAssignments"),
+			Properties: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+				Scope:            to.StringPtr("[parameters('acrResourceId')]"),
+				RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]"),
+				PrincipalID:      to.StringPtr("[parameters('rpServicePrincipalId')]"),
+			},
+		},
+		APIVersion: apiVersions["authorization"],
+	}
+}

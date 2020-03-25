@@ -44,6 +44,11 @@ func (d *deployer) PreDeploy(ctx context.Context) (string, error) {
 		return "", err
 	}
 
+	err = d.deployGlobal(ctx, rpServicePrincipalID)
+	if err != nil {
+		return "", err
+	}
+
 	// deploy NSGs, keyvaults
 	err = d.deployPreDeploy(ctx, rpServicePrincipalID)
 	if err != nil {
@@ -61,6 +66,36 @@ func (d *deployer) PreDeploy(ctx context.Context) (string, error) {
 	}
 
 	return rpServicePrincipalID, nil
+}
+
+func (d *deployer) deployGlobal(ctx context.Context, rpServicePrincipalID string) error {
+	deploymentName := "rp-global"
+
+	b, err := Asset(generator.FileRPProductionGlobal)
+	if err != nil {
+		return err
+	}
+
+	var template map[string]interface{}
+	err = json.Unmarshal(b, &template)
+	if err != nil {
+		return err
+	}
+
+	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
+	parameters.Parameters["rpServicePrincipalId"] = &arm.ParametersParameter{
+		Value: rpServicePrincipalID,
+	}
+
+	d.log.Infof("deploying global")
+	return d.globaldeployments.CreateOrUpdateAndWait(ctx, d.config.Configuration.GlobalResourceGroupName, deploymentName, mgmtresources.Deployment{
+		Properties: &mgmtresources.DeploymentProperties{
+			Template:   template,
+			Mode:       mgmtresources.Incremental,
+			Parameters: parameters.Parameters,
+		},
+		Location: to.StringPtr("centralus"),
+	})
 }
 
 func (d *deployer) deployGlobalSubscription(ctx context.Context) error {

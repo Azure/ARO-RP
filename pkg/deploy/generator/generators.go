@@ -39,6 +39,10 @@ func (g *generator) Artifacts() error {
 		if err != nil {
 			return err
 		}
+		err = g.writeTemplate(g.rpGlobalTemplate(), FileRPProductionGlobal)
+		if err != nil {
+			return err
+		}
 		err = g.writeTemplate(g.rpGlobalSubscriptionTemplate(), FileRPProductionGlobalSubscription)
 		if err != nil {
 			return err

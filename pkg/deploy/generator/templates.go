@@ -89,6 +89,25 @@ func (g *generator) rpTemplate() *arm.Template {
 	return t
 }
 
+func (g *generator) rpGlobalTemplate() *arm.Template {
+	t := templateStanza()
+
+	params := []string{
+		"rpServicePrincipalId",
+		"acrResourceId",
+	}
+
+	for _, param := range params {
+		t.Parameters[param] = &arm.TemplateParameter{Type: "string"}
+	}
+
+	t.Resources = append(t.Resources,
+		g.rpAcrRbac(),
+	)
+
+	return t
+}
+
 func (g *generator) rpGlobalSubscriptionTemplate() *arm.Template {
 	t := templateStanza()
 
