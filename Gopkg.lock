@@ -18,7 +18,7 @@
   revision = "3a14fb1c4737b3995174c5f4d6d08a348b9b4180"
 
 [[projects]]
-  digest = "1:8db7950de8a0bdaf0cca5735099d070ec30a3ea9bebded7ebac4186603a2bf7f"
+  digest = "1:ed3dc4d45c0580c6ee2bf11280b6e7a31edbecbd720a4cfed7e3a89a21b79af3"
   name = "github.com/Azure/azure-sdk-for-go"
   packages = [
     "profiles/latest/dns/mgmt/dns",
@@ -32,11 +32,11 @@
     "services/dns/mgmt/2018-05-01/dns",
     "services/graphrbac/1.6/graphrbac",
     "services/keyvault/mgmt/2016-10-01/keyvault",
+    "services/keyvault/mgmt/2018-02-14/keyvault",
     "services/keyvault/v7.0/keyvault",
     "services/msi/mgmt/2018-11-30/msi",
     "services/network/mgmt/2018-12-01/network",
     "services/network/mgmt/2019-07-01/network",
-    "services/preview/authorization/mgmt/2018-09-01-preview/authorization",
     "services/privatedns/mgmt/2018-09-01/privatedns",
     "services/resources/mgmt/2018-05-01/resources",
     "services/resources/mgmt/2019-06-01/subscriptions",
@@ -1907,10 +1907,10 @@
     "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns",
     "github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac",
     "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2016-10-01/keyvault",
+    "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2018-02-14/keyvault",
     "github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault",
     "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi",
     "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network",
-    "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization",
     "github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns",
     "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources",
     "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage",

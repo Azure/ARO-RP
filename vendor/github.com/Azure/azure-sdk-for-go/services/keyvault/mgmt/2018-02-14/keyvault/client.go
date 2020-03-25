@@ -1,7 +1,7 @@
-// Package authorization implements the Azure ARM Authorization service API version .
+// Package keyvault implements the Azure ARM Keyvault service API version 2018-02-14.
 //
-//
-package authorization
+// The Azure management API provides a RESTful set of web services that interact with Azure Key Vault.
+package keyvault
 
 // Copyright (c) Microsoft and contributors.  All rights reserved.
 //
@@ -25,11 +25,11 @@ import (
 )
 
 const (
-	// DefaultBaseURI is the default URI used for the service Authorization
+	// DefaultBaseURI is the default URI used for the service Keyvault
 	DefaultBaseURI = "https://management.azure.com"
 )
 
-// BaseClient is the base client for Authorization.
+// BaseClient is the base client for Keyvault.
 type BaseClient struct {
 	autorest.Client
 	BaseURI        string
