@@ -95,6 +95,7 @@ cluster:
    LOCATION=eastus
    RESOURCEGROUP="v4-$LOCATION"
    export CLUSTER=cluster
+   USER_PULL_SECRET=<https://cloud.redhat.com/ pull secret content>
 
    az group create -g "$RESOURCEGROUP" -l $LOCATION
    az network vnet create \
@@ -140,6 +141,7 @@ cluster:
      --vnet dev-vnet \
      --master-subnet "$CLUSTER-master" \
      --worker-subnet "$CLUSTER-worker"
+     --pull-secret "$USER_PULL_SECRET"
    ```
 
    Note: cluster creation takes about 35 minutes.

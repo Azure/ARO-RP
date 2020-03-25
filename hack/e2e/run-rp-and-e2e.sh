@@ -161,8 +161,8 @@ echo "LOCATION=$LOCATION"
 echo "AZURE_SUBSCRIPTION_ID=$AZURE_SUBSCRIPTION_ID"
 echo
 echo "RP_MODE=$RP_MODE"
-if [ $RP_MODE = "development" ] 
-then 
+if [ $RP_MODE = "development" ]
+then
     echo
     echo "COSMOSDB_ACCOUNT=$COSMOSDB_ACCOUNT"
     echo "DATABASE_NAME=$DATABASE_NAME"
@@ -174,7 +174,7 @@ echo "CLUSTER_RESOURCEGROUP=$CLUSTER_RESOURCEGROUP"
 echo "KUBECONFIG=$KUBECONFIG"
 echo "CLUSTERSPN=$CLUSTERSPN"
 if [ $RP_MODE = "development" ]
-then 
+then
     echo
     echo "PROXY_HOSTNAME=$PROXY_HOSTNAME"
 fi
@@ -182,7 +182,7 @@ echo "######################################"
 
 [ "$LOCATION" ] || ( echo ">> LOCATION is not set please validate your ./secrets/env"; exit 128 )
 if [ $RP_MODE = "development" ]
-then 
+then
     [ "$RESOURCEGROUP" ] || ( echo ">> RESOURCEGROUP is not set; please validate your ./secrets/env"; exit 128 )
     [ "$PROXY_HOSTNAME" ] || ( echo ">> PROXY_HOSTNAME is not set; please validate your ./secrets/env"; exit 128 )
     [ "$COSMOSDB_ACCOUNT" ] || ( echo ">> COSMOSDB_ACCOUNT is not set; please validate your ./secrets/env"; exit 128 )
