@@ -165,6 +165,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			action(i.updateConsoleBranding),
 			condition{i.operatorConsoleReady, 10 * time.Minute},
 			condition{i.clusterVersionReady, 30 * time.Minute},
+			action(i.disableAlertManagerWarning),
 			action(i.disableUpdates),
 			action(i.disableSamples),
 			action(i.disableOperatorHubSources),
