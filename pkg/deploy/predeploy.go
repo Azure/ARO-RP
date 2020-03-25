@@ -7,8 +7,8 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
-	"net/http"
 	"path/filepath"
+	"strings"
 
 	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/containerregistry/mgmt/2019-06-01-preview/containerregistry"
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
@@ -235,6 +235,7 @@ func (d *deployer) ensureServiceCertificates(ctx context.Context, serviceKeyVaul
 		certificateName string
 		commonName      string
 		eku             utilkeyvault.Eku
+		created         bool
 	}{
 		{
 			certificateName: env.RPFirstPartySecretName,
@@ -248,24 +249,30 @@ func (d *deployer) ensureServiceCertificates(ctx context.Context, serviceKeyVaul
 		},
 	}
 
-	newCerts := []struct {
-		certificateName string
-		commonName      string
-		eku             utilkeyvault.Eku
-	}{}
-	for _, c := range certs {
-		bundle, err := d.keyvault.GetSecret(ctx, serviceKeyVaultURI, c.certificateName, "")
-
-		if bundle.StatusCode == http.StatusNotFound {
-			err = d.keyvault.CreateSignedCertificate(ctx, serviceKeyVaultURI, utilkeyvault.IssuerOnecert, c.certificateName, c.commonName, c.eku)
-			if err != nil {
-				return err
-			}
-			newCerts = append(newCerts, c)
-		}
+	keyVaultCerts, err := d.keyvault.GetCertificates(ctx, serviceKeyVaultURI, nil, nil)
+	if err != nil {
+		return err
 	}
 
-	for _, c := range newCerts {
+	for _, c := range certs {
+		for _, kc := range keyVaultCerts.Values() {
+			// sample id https://aro-int-eastus-svc.vault.azure.net/certificates/rp-server/d69c4682aee149858d362ece87ab0364
+			idParts := strings.Split(*kc.ID, "/")
+			if c.certificateName == idParts[4] {
+				continue
+			}
+		}
+		err = d.keyvault.CreateSignedCertificate(ctx, serviceKeyVaultURI, utilkeyvault.IssuerOnecert, c.certificateName, c.commonName, c.eku)
+		if err != nil {
+			return err
+		}
+		c.created = true
+	}
+
+	for _, c := range certs {
+		if !c.created {
+			continue
+		}
 		err = d.keyvault.WaitForCertificateOperation(ctx, serviceKeyVaultURI, c.certificateName)
 		if err != nil {
 			return err
