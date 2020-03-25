@@ -5,6 +5,7 @@ package genevalogging
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -28,8 +29,8 @@ const (
 	kubeNamespace      = "openshift-azure-logging"
 	kubeServiceAccount = "system:serviceaccount:" + kubeNamespace + ":geneva"
 
-	fluentbitImage = "arosvc.azurecr.io/fluentbit:1.3.9-1" //"docker.io/fluent/fluent-bit:0.12.19"
-	mdsdImage      = "arosvc.azurecr.io/genevamdsd:master_249"
+	fluentbitImageFormat = "%s.azurecr.io/fluentbit:1.3.9-1" //"docker.io/fluent/fluent-bit:0.12.19"
+	mdsdImageFormat      = "%s.azurecr.io/genevamdsd:master_249"
 
 	parsersConf = `
 [PARSER]
@@ -168,6 +169,14 @@ func New(log *logrus.Entry, e env.Interface, oc *api.OpenShiftCluster, cli kuber
 		cli:    cli,
 		seccli: seccli,
 	}
+}
+
+func (g *genevaLogging) fluentbitImage() string {
+	return fmt.Sprintf(fluentbitImageFormat, g.env.ACRName())
+}
+
+func (g *genevaLogging) mdsdImage() string {
+	return fmt.Sprintf(mdsdImageFormat, g.env.ACRName())
 }
 
 func (g *genevaLogging) ensureNamespace(ns string) error {
@@ -422,7 +431,7 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 					Containers: []v1.Container{
 						{
 							Name:  "fluentbit-journal",
-							Image: fluentbitImage,
+							Image: g.fluentbitImage(),
 							Command: []string{
 								"/opt/td-agent-bit/bin/td-agent-bit",
 							},
@@ -459,7 +468,7 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 						},
 						{
 							Name:  "fluentbit-containers",
-							Image: fluentbitImage,
+							Image: g.fluentbitImage(),
 							Command: []string{
 								"/opt/td-agent-bit/bin/td-agent-bit",
 							},
@@ -496,7 +505,7 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 						},
 						{
 							Name:  "fluentbit-audit",
-							Image: fluentbitImage,
+							Image: g.fluentbitImage(),
 							Command: []string{
 								"/opt/td-agent-bit/bin/td-agent-bit",
 							},
@@ -533,7 +542,7 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 						},
 						{
 							Name:  "mdsd",
-							Image: mdsdImage,
+							Image: g.mdsdImage(),
 							Command: []string{
 								"/usr/sbin/mdsd",
 							},

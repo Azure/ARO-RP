@@ -247,19 +247,19 @@ func (m *Manager) Create(ctx context.Context) error {
 				{
 					Source: "quay.io/openshift-release-dev/ocp-release",
 					Mirrors: []string{
-						"arosvc.azurecr.io/openshift-release-dev/ocp-release",
+						fmt.Sprintf("%s.azurecr.io/openshift-release-dev/ocp-release", m.env.ACRName()),
 					},
 				},
 				{
 					Source: "quay.io/openshift-release-dev/ocp-release-nightly",
 					Mirrors: []string{
-						"arosvc.azurecr.io/openshift-release-dev/ocp-release-nightly",
+						fmt.Sprintf("%s.azurecr.io/openshift-release-dev/ocp-release-nightly", m.env.ACRName()),
 					},
 				},
 				{
 					Source: "quay.io/openshift-release-dev/ocp-v4.0-art-dev",
 					Mirrors: []string{
-						"arosvc.azurecr.io/openshift-release-dev/ocp-v4.0-art-dev",
+						fmt.Sprintf("%s.azurecr.io/openshift-release-dev/ocp-v4.0-art-dev", m.env.ACRName()),
 					},
 				},
 			},
@@ -278,7 +278,7 @@ func (m *Manager) Create(ctx context.Context) error {
 
 	image := &releaseimage.Image{}
 	if m.doc.OpenShiftCluster.Properties.ClusterProfile.Version == version.OpenShiftVersion {
-		image.PullSpec = version.OpenShiftPullSpec
+		image.PullSpec = version.OpenShiftPullSpec(m.env.ACRName())
 	} else {
 		return fmt.Errorf("unimplemented version %q", m.doc.OpenShiftCluster.Properties.ClusterProfile.Version)
 	}
