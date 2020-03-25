@@ -44,7 +44,6 @@ type Configuration struct {
 	MDSDEnvironment              string        `json:"mdsdEnvironment,omitempty"`
 	PullSecret                   string        `json:"pullSecret,omitempty"`
 	RPImagePrefix                string        `json:"rpImagePrefix,omitempty"`
-	RPImageAuth                  string        `json:"rpImageAuth,omitempty"`
 	RPMode                       string        `json:"rpMode,omitempty"`
 	RPParentDomainName           string        `json:"rpParentDomainName,omitempty"`
 	RPServerCertCommonName       string        `json:"rpServerCertCommonName,omitempty"`

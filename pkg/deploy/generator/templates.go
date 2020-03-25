@@ -46,7 +46,6 @@ func (g *generator) rpTemplate() *arm.Template {
 			"mdsdEnvironment",
 			"acrResourceId",
 			"rpImage",
-			"rpImageAuth",
 			"rpMode",
 			"sshPublicKey",
 			"vmssName",
@@ -58,8 +57,6 @@ func (g *generator) rpTemplate() *arm.Template {
 		switch param {
 		case "extraCosmosDBIPs", "rpMode":
 			p.DefaultValue = ""
-		case "rpImageAuth":
-			p.Type = "securestring"
 		}
 		t.Parameters[param] = p
 	}

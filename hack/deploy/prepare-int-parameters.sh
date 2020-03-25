@@ -29,9 +29,6 @@ cat >secrets/parameters.json <<EOF
         "rpImage": {
             "value": "$RP_IMAGE"
         },
-        "rpImageAuth": {
-            "value": "$RP_IMAGE_AUTH"
-        },
         "mdmFrontendUrl": {
             "value": "$MDM_FRONTEND"
         },

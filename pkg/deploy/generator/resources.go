@@ -569,7 +569,6 @@ func (g *generator) vmss() *arm.Resource {
 		"mdsdEnvironment",
 		"acrResourceId",
 		"rpImage",
-		"rpImageAuth",
 		"rpMode",
 		"adminApiClientCertCommonName",
 	} {
@@ -642,17 +641,6 @@ firewall-cmd --add-port=443/tcp --permanent
 # https://bugzilla.redhat.com/show_bug.cgi?id=1805212
 sed -i -e 's/iptables/firewalld/' /etc/cni/net.d/87-podman-bridge.conflist
 
-mkdir /root/.docker
-cat >/root/.docker/config.json <<EOF
-{
-	"auths": {
-		"${RPIMAGE%%/*}": {
-			"auth": "$RPIMAGEAUTH"
-		}
-	}
-}
-EOF
-
 cat >/etc/td-agent-bit/td-agent-bit.conf <<'EOF'
 [INPUT]
 	Name systemd
@@ -671,6 +659,7 @@ cat >/etc/td-agent-bit/td-agent-bit.conf <<'EOF'
 EOF
 
 az login -i --allow-no-subscriptions
+az acr login --name "$(sed -e 's|.*/||' <"$ACRRESOURCEID")"
 
 SVCVAULTURI="$(az keyvault list -g "$RESOURCEGROUPNAME" --query "[?tags.vault=='service'].properties.vaultUri" -o tsv)"
 az keyvault secret download --file /etc/mdm.pem --id "${SVCVAULTURI}secrets/rp-mdm"

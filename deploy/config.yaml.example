@@ -20,7 +20,6 @@ configuration:
   mdsdConfigVersion: ''
   mdsdEnvironment: ''
   rpImagePrefix: ''
-  rpImageAuth: ''
   rpMode: ''
   rpParentDomainName: ''
   sshPublicKey: ''
