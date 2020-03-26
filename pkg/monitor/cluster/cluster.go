@@ -67,7 +67,7 @@ func NewMonitor(env env.Interface, log *logrus.Entry, oc *api.OpenShiftCluster, 
 func (mon *Monitor) Monitor(ctx context.Context) error {
 	mon.log.Debug("monitoring")
 
-	err := mon.emitClusterVersion(ctx)
+	err := mon.emitClusterVersion()
 	if err != nil {
 		return err
 	}

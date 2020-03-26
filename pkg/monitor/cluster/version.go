@@ -4,14 +4,12 @@ package cluster
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
-
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (mon *Monitor) emitClusterVersion(ctx context.Context) error {
+func (mon *Monitor) emitClusterVersion() error {
 	restConfig, err := restconfig.RestConfig(mon.env, mon.oc)
 	if err != nil {
 		return err
