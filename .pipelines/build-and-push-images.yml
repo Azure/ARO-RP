@@ -28,3 +28,8 @@ jobs:
         parameters:
           workingDirectory: ${{ variables.modulePath }}
           rpImageACR: $(RP_IMAGE_ACR)
+      - script: './hack/deploy/copy_artifacts.sh'
+        displayName: 'Copy artifacts'
+      - task: PublishBuildArtifacts@1
+        displayName: 'Publish Artifacts'
+        name: aro-deployer
