@@ -21,10 +21,13 @@ func (m *OpenShiftClusterDocument) Matches(x interface{}) bool {
 	}
 
 	id, asyncOperationID := doc.ID, doc.AsyncOperationID
+	correlationData := doc.CorrelationData
 	doc.ID, doc.AsyncOperationID = m.ID, m.AsyncOperationID
+	doc.CorrelationData = m.CorrelationData
 
 	defer func() {
 		doc.ID, doc.AsyncOperationID = id, asyncOperationID
+		doc.CorrelationData = correlationData
 	}()
 
 	return reflect.DeepEqual((*api.OpenShiftClusterDocument)(m), doc)

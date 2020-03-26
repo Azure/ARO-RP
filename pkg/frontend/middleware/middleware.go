@@ -9,4 +9,5 @@ const (
 	ContextKeyLog contextKey = iota
 	ContextKeyOriginalPath
 	ContextKeyBody
+	ContextKeyCorrelationData
 )

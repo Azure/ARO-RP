@@ -43,6 +43,13 @@ func (ocb *openShiftClusterBackend) try(ctx context.Context) (bool, error) {
 		"resource_group":  r.ResourceGroup,
 		"resource_name":   r.ResourceName,
 	})
+	if doc.CorrelationData != nil {
+		log = log.WithFields(logrus.Fields{
+			"correlation_id":    doc.CorrelationData.CorrelationID,
+			"client_request_id": doc.CorrelationData.ClientRequestID,
+			"request_id":        doc.CorrelationData.RequestID,
+		})
+	}
 	if doc.Dequeues > maxDequeueCount {
 		err := fmt.Errorf("dequeued %d times, failing", doc.Dequeues)
 		log.Error(err)

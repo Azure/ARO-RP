@@ -12,6 +12,8 @@ import (
 
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
+
+	"github.com/Azure/ARO-RP/pkg/api"
 )
 
 type logResponseWriter struct {
@@ -53,20 +55,27 @@ func Log(baseLog *logrus.Entry) func(http.Handler) http.Handler {
 			w = &logResponseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 
 			correlationID := r.Header.Get("X-Ms-Correlation-Request-Id")
+			clientRequestID := r.Header.Get("X-Ms-Client-Request-Id")
 
 			requestID := uuid.NewV4().String()
 			w.Header().Set("X-Ms-Request-Id", requestID)
 
 			fields := logrus.Fields{
-				"correlation_id": correlationID,
-				"request_id":     requestID,
+				"correlation_id":    correlationID,
+				"request_id":        requestID,
+				"client_request_id": clientRequestID,
 			}
 
 			updateFieldsFromPath(r.URL.Path, fields)
 
 			log := baseLog.WithFields(fields)
-
 			r = r.WithContext(context.WithValue(r.Context(), ContextKeyLog, log))
+
+			r = r.WithContext(context.WithValue(r.Context(), ContextKeyCorrelationData, api.CorrelationData{
+				ClientRequestID: clientRequestID,
+				CorrelationID:   correlationID,
+				RequestID:       requestID,
+			}))
 
 			defer func() {
 				log.WithFields(logrus.Fields{

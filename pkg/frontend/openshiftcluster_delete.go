@@ -34,6 +34,7 @@ func (f *frontend) deleteOpenShiftCluster(w http.ResponseWriter, r *http.Request
 }
 
 func (f *frontend) _deleteOpenShiftCluster(ctx context.Context, r *http.Request, header *http.Header, doc *api.OpenShiftClusterDocument) error {
+	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(api.CorrelationData)
 	_, err := f.validateSubscriptionState(ctx, doc.Key, api.SubscriptionStateRegistered, api.SubscriptionStateWarned, api.SubscriptionStateSuspended)
 	if err != nil {
 		return err
@@ -45,6 +46,7 @@ func (f *frontend) _deleteOpenShiftCluster(ctx context.Context, r *http.Request,
 	}
 
 	doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateDeleting
+	doc.CorrelationData = &correlationData
 	doc.Dequeues = 0
 
 	doc.AsyncOperationID, err = f.newAsyncOperation(ctx, r, doc)
