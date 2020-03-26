@@ -83,7 +83,8 @@
                     "family": "A",
                     "name": "standard"
                 },
-                "accessPolicies": "[concat(variables('clustersKeyvaultAccessPolicies'), parameters('extraKeyvaultAccessPolicies'))]"
+                "accessPolicies": "[concat(variables('clustersKeyvaultAccessPolicies'), parameters('extraKeyvaultAccessPolicies'))]",
+                "enableSoftDelete": true
             },
             "name": "[concat(parameters('keyvaultPrefix'), '-cls')]",
             "type": "Microsoft.KeyVault/vaults",
@@ -100,7 +101,8 @@
                     "family": "A",
                     "name": "standard"
                 },
-                "accessPolicies": "[concat(variables('serviceKeyvaultAccessPolicies'), parameters('extraKeyvaultAccessPolicies'))]"
+                "accessPolicies": "[concat(variables('serviceKeyvaultAccessPolicies'), parameters('extraKeyvaultAccessPolicies'))]",
+                "enableSoftDelete": true
             },
             "name": "[concat(parameters('keyvaultPrefix'), '-svc')]",
             "type": "Microsoft.KeyVault/vaults",
