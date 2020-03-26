@@ -80,8 +80,12 @@ pyenv${PYTHON_VERSION}:
 	virtualenv --python=/usr/bin/python${PYTHON_VERSION} pyenv${PYTHON_VERSION}
 	. pyenv${PYTHON_VERSION}/bin/activate && \
 		pip install azdev && \
+		pip install azure-keyvault && \
+		pip install azure-mgmt-rdbms && \
+		pip install azure-storage && \
 		azdev setup -r . && \
-		pip install azure-cli && \
+		pip install azure-mgmt-apimanagement==0.1.0 && \
+		pip install azure-cli==2.0.81 && \
 		sed -i -e "s|^dev_sources = $(PWD)$$|dev_sources = $(PWD)/python|" ~/.azure/config
 
 secrets:
