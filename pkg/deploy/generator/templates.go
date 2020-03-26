@@ -79,7 +79,7 @@ func (g *generator) rpTemplate() *arm.Template {
 	t.Outputs = map[string]*arm.Output{
 		"rp-nameServers": {
 			Type:  "array",
-			Value: "[reference(resourceId('Microsoft.Network/dnsZones', parameters('domainName')), '2019-07-01').nameServers]",
+			Value: "[reference(resourceId('Microsoft.Network/dnsZones', parameters('domainName')), '2018-05-01').nameServers]",
 		},
 		"rp-pip-ipAddress": {
 			Type:  "string",
