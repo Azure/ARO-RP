@@ -5,8 +5,8 @@
 1. Install [Go 1.13](https://golang.org/dl) or later, if you haven't already.
 
 1. Install a supported version of [Python](https://www.python.org/downloads), if
-   you don't have one installed already.  The `az` client supports Python 2.7
-   and Python 3.5+.  A recent Python 3.x version is recommended.
+   you don't have one installed already.  The `az` client supports Python 3.6+.
+   A recent Python 3.x version is recommended.
 
 1. Fedora users: install the `gpgme-devel` and `libassuan-devel` packages.
 

@@ -9,9 +9,9 @@ against a development RP running at https://localhost:8443/.
 ## Installing the extension
 
 1. Install a supported version of [Python](https://www.python.org/downloads), if
-   you don't have one installed already.  The `az` client supports Python 2.7
-   and Python 3.5+.  A recent Python 3.x version is recommended.  You will also
-   need setuptools installed, if you don't have it installed already.
+   you don't have one installed already.  The `az` client supports Python 3.6+.
+   A recent Python 3.x version is recommended.  You will also need setuptools
+   installed, if you don't have it installed already.
 
 1. Install the
    [`az`](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) client,
