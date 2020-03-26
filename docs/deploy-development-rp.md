@@ -148,5 +148,5 @@
 You can watch the output of the cluster metrics:
 
 ```bash
-go run ./hack/monitor
+nc -U -l mdm_statsd.socket
 ```
