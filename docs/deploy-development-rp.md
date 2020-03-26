@@ -147,5 +147,5 @@
 
 To run fake metrics socket:
 ```bash
-nc -U -l mdm_statsd.socket
+go run ./hack/monitor
 ```
