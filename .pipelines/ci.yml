@@ -11,8 +11,8 @@ jobs:
       vmImage: "ubuntu-latest"
     strategy:
       matrix:
-        Python35:
-          python.version: "3.5"
+        Python36:
+          python.version: "3.6"
 
     steps:
       - task: UsePythonVersion@0
