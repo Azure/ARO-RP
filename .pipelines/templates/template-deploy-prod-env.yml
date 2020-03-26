@@ -17,6 +17,9 @@ steps:
       export AZURE_TENANT_ID=$(cat devops-spn.json | jq -r '.tenantId')
       rm devops-spn.json
 
+      export LOCATION=${{ parameters.location }}
+      export RESOURCEGROUP="not-in-use-moved-to-config"
+
       export RP_VERSION=$(git rev-parse --short HEAD)
       chmod +x ${{ parameters.deployerDirectory }}/aro
 
