@@ -42,7 +42,6 @@ type Configuration struct {
 	MDMFrontendURL               string        `json:"mdmFrontendUrl,omitempty"`
 	MDSDConfigVersion            string        `json:"mdsdConfigVersion,omitempty"`
 	MDSDEnvironment              string        `json:"mdsdEnvironment,omitempty"`
-	PullSecret                   string        `json:"pullSecret,omitempty"`
 	RPImagePrefix                string        `json:"rpImagePrefix,omitempty"`
 	RPMode                       string        `json:"rpMode,omitempty"`
 	RPParentDomainName           string        `json:"rpParentDomainName,omitempty"`
