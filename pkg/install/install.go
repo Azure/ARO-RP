@@ -159,6 +159,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 		api.InstallPhaseRemoveBootstrap: {
 			action(i.initializeKubernetesClients),
 			action(i.removeBootstrap),
+			action(i.removeBootstrapIgnition),
 			action(i.configureAPIServerCertificate),
 			condition{i.apiServersReady, 30 * time.Minute},
 			condition{i.operatorConsoleExists, 30 * time.Minute},
@@ -239,15 +240,14 @@ func (i *Installer) finishInstallation(ctx context.Context) error {
 	return err
 }
 
-func (i *Installer) getBlobService(ctx context.Context) (*azstorage.BlobStorageClient, error) {
+func (i *Installer) getBlobService(ctx context.Context, p mgmtstorage.Permissions, r mgmtstorage.SignedResourceTypes) (*azstorage.BlobStorageClient, error) {
 	resourceGroup := stringutils.LastTokenByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
 	t := time.Now().UTC().Truncate(time.Second)
-
 	res, err := i.accounts.ListAccountSAS(ctx, resourceGroup, "cluster"+i.doc.OpenShiftCluster.Properties.StorageSuffix, mgmtstorage.AccountSasParameters{
 		Services:               "b",
-		ResourceTypes:          "o",
-		Permissions:            "crw",
+		ResourceTypes:          r,
+		Permissions:            p,
 		Protocols:              mgmtstorage.HTTPS,
 		SharedAccessStartTime:  &date.Time{Time: t},
 		SharedAccessExpiryTime: &date.Time{Time: t.Add(24 * time.Hour)},
@@ -269,7 +269,7 @@ func (i *Installer) getBlobService(ctx context.Context) (*azstorage.BlobStorageC
 func (i *Installer) loadGraph(ctx context.Context) (graph, error) {
 	i.log.Print("load graph")
 
-	blobService, err := i.getBlobService(ctx)
+	blobService, err := i.getBlobService(ctx, mgmtstorage.Permissions("r"), mgmtstorage.SignedResourceTypesO)
 	if err != nil {
 		return nil, err
 	}
@@ -304,7 +304,7 @@ func (i *Installer) loadGraph(ctx context.Context) (graph, error) {
 func (i *Installer) saveGraph(ctx context.Context, g graph) error {
 	i.log.Print("save graph")
 
-	blobService, err := i.getBlobService(ctx)
+	blobService, err := i.getBlobService(ctx, mgmtstorage.Permissions("cw"), mgmtstorage.SignedResourceTypesO)
 	if err != nil {
 		return err
 	}
