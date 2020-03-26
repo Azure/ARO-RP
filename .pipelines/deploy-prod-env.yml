@@ -2,11 +2,20 @@
 trigger: none
 pr: none
 
+variables:
+  - template: vars.yml
+
 jobs:
   - job: "Deploy"
     pool:
       vmImage: "ubuntu-latest"
     steps:
+      - template: ./templates/template-setup-golang-env.yml
+        parameters:
+          gobin: ${{ variables.GOBIN }}
+          gopath: ${{ variables.GOPATH }}
+          goroot: ${{ variables.GOROOT }}
+          modulePath: ${{ variables.modulePath }}
       - task: DownloadBuildArtifacts@0
         inputs:
           buildType: 'specific'
