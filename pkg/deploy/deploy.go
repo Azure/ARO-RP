@@ -241,7 +241,7 @@ func (d *deployer) removeOldScalesets(ctx context.Context) error {
 }
 
 func (d *deployer) configureDNS(ctx context.Context, rpPipIPAddress string, nameServers []string) error {
-	_, err := d.globalrecordsets.CreateOrUpdate(ctx, d.config.Configuration.GlobalResourceGroupName, d.config.Configuration.RPParentDomainName, d.config.Location, mgmtdns.A, mgmtdns.RecordSet{
+	_, err := d.globalrecordsets.CreateOrUpdate(ctx, d.config.Configuration.GlobalResourceGroupName, d.config.Configuration.RPParentDomainName, "rp."+d.config.Location, mgmtdns.A, mgmtdns.RecordSet{
 		RecordSetProperties: &mgmtdns.RecordSetProperties{
 			TTL: to.Int64Ptr(3600),
 			ARecords: &[]mgmtdns.ARecord{

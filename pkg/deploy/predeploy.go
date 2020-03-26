@@ -270,12 +270,12 @@ func (d *deployer) ensureServiceCertificates(ctx context.Context, serviceKeyVaul
 	}{
 		{
 			certificateName: env.RPFirstPartySecretName,
-			commonName:      d.config.Location + "." + d.config.Configuration.RPParentDomainName,
+			commonName:      d.config.Configuration.FPServerCertCommonName,
 			eku:             utilkeyvault.EkuClientAuth,
 		},
 		{
 			certificateName: env.RPServerSecretName,
-			commonName:      d.config.Configuration.RPServerCertCommonName,
+			commonName:      "rp." + d.config.Location + "." + d.config.Configuration.RPParentDomainName,
 			eku:             utilkeyvault.EkuServerAuth,
 		},
 	}

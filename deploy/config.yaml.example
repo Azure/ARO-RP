@@ -5,7 +5,6 @@ rps:
   configuration:
     databaseAccountName: ''
     keyvaultPrefix: ''
-    rpServerCertCommonName: ''
 configuration:
   acrResourceId: ''
   adminApiCaBundle: ''
@@ -13,6 +12,7 @@ configuration:
   clusterParentDomainName: ''
   extraCosmosDBIPs: ''
   extraKeyvaultAccessPolicies: []
+  fpServerCertCommonName: ''
   fpServicePrincipalId: ''
   globalMonitoringKeyVaultUri: ''
   globalResourceGroupName: ''

@@ -34,6 +34,7 @@ type Configuration struct {
 	DatabaseAccountName          string        `json:"databaseAccountName,omitempty"`
 	ExtraCosmosDBIPs             string        `json:"extraCosmosDBIPs,omitempty"`
 	ExtraKeyvaultAccessPolicies  []interface{} `json:"extraKeyvaultAccessPolicies,omitempty"`
+	FPServerCertCommonName       string        `json:"fpServerCertCommonName,omitempty"`
 	FPServicePrincipalID         string        `json:"fpServicePrincipalId,omitempty"`
 	GlobalMonitoringKeyVaultURI  string        `json:"globalMonitoringKeyVaultUri,omitempty"`
 	GlobalResourceGroupName      string        `json:"globalResourceGroupName,omitempty"`
@@ -45,7 +46,6 @@ type Configuration struct {
 	RPImagePrefix                string        `json:"rpImagePrefix,omitempty"`
 	RPMode                       string        `json:"rpMode,omitempty"`
 	RPParentDomainName           string        `json:"rpParentDomainName,omitempty"`
-	RPServerCertCommonName       string        `json:"rpServerCertCommonName,omitempty"`
 	SSHPublicKey                 string        `json:"sshPublicKey,omitempty"`
 }
 
