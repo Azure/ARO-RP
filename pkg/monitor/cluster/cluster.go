@@ -67,6 +67,11 @@ func NewMonitor(env env.Interface, log *logrus.Entry, oc *api.OpenShiftCluster, 
 func (mon *Monitor) Monitor(ctx context.Context) error {
 	mon.log.Debug("monitoring")
 
+	err := mon.emitClusterVersion(ctx)
+	if err != nil {
+		return err
+	}
+
 	// If API is not returning 200, don't need to run the next checks
 	statusCode, err := mon.emitAPIServerHealthzCode(ctx)
 	if err != nil || statusCode != http.StatusOK {
