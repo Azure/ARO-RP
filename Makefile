@@ -81,7 +81,6 @@ pyenv${PYTHON_VERSION}:
 	. pyenv${PYTHON_VERSION}/bin/activate && \
 		pip install azdev && \
 		azdev setup -r . && \
-		pip install azure-cli==2.0.81 && \
 		sed -i -e "s|^dev_sources = $(PWD)$$|dev_sources = $(PWD)/python|" ~/.azure/config
 
 secrets:
