@@ -30,8 +30,8 @@ const (
 	kubeNamespace      = "openshift-azure-logging"
 	kubeServiceAccount = "system:serviceaccount:" + kubeNamespace + ":geneva"
 
-	fluentbitImageFormat = "%s.azurecr.io/fluentbit:1.3.9-1" //"docker.io/fluent/fluent-bit:0.12.19"
-	mdsdImageFormat      = "%s.azurecr.io/genevamdsd:master_249"
+	fluentbitImageFormat = "%s.azurecr.io/fluentbit:1.3.9-1"
+	mdsdImageFormat      = "%s.azurecr.io/genevamdsd:master_266"
 
 	parsersConf = `
 [PARSER]
