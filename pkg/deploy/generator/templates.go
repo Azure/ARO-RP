@@ -155,8 +155,8 @@ func (g *generator) preDeployTemplate() *arm.Template {
 
 	if g.production {
 		t.Variables = map[string]interface{}{
-			"clustersKeyvaultAccessPolicies": g.clustersKeyvaultAccessPolicies(),
-			"serviceKeyvaultAccessPolicies":  g.serviceKeyvaultAccessPolicies(),
+			"clusterKeyvaultAccessPolicies": g.clusterKeyvaultAccessPolicies(),
+			"serviceKeyvaultAccessPolicies": g.serviceKeyvaultAccessPolicies(),
 		}
 	}
 
@@ -168,7 +168,8 @@ func (g *generator) preDeployTemplate() *arm.Template {
 
 	if g.production {
 		params = append(params,
-			"extraKeyvaultAccessPolicies",
+			"extraClusterKeyvaultAccessPolicies",
+			"extraServiceKeyvaultAccessPolicies",
 		)
 	} else {
 		params = append(params,
@@ -179,7 +180,7 @@ func (g *generator) preDeployTemplate() *arm.Template {
 	for _, param := range params {
 		p := &arm.TemplateParameter{Type: "string"}
 		switch param {
-		case "extraKeyvaultAccessPolicies":
+		case "extraClusterKeyvaultAccessPolicies", "extraServiceKeyvaultAccessPolicies":
 			p.Type = "array"
 			p.DefaultValue = []interface{}{}
 		case "keyvaultPrefix":
@@ -271,8 +272,8 @@ func (g *generator) templateFixup(t *arm.Template) ([]byte, error) {
 	// :-(
 	b = bytes.ReplaceAll(b, []byte(tenantIDHack), []byte("[subscription().tenantId]"))
 	if g.production {
-		b = bytes.Replace(b, []byte(`"accessPolicies": []`), []byte(`"accessPolicies": "[concat(variables('clustersKeyvaultAccessPolicies'), parameters('extraKeyvaultAccessPolicies'))]"`), 1)
-		b = bytes.Replace(b, []byte(`"accessPolicies": []`), []byte(`"accessPolicies": "[concat(variables('serviceKeyvaultAccessPolicies'), parameters('extraKeyvaultAccessPolicies'))]"`), 1)
+		b = bytes.Replace(b, []byte(`"accessPolicies": []`), []byte(`"accessPolicies": "[concat(variables('clusterKeyvaultAccessPolicies'), parameters('extraClusterKeyvaultAccessPolicies'))]"`), 1)
+		b = bytes.Replace(b, []byte(`"accessPolicies": []`), []byte(`"accessPolicies": "[concat(variables('serviceKeyvaultAccessPolicies'), parameters('extraServiceKeyvaultAccessPolicies'))]"`), 1)
 	}
 
 	return append(b, byte('\n')), nil

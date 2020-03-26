@@ -962,7 +962,7 @@ func (g *generator) zone() *arm.Resource {
 	}
 }
 
-func (g *generator) clustersKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyEntry {
+func (g *generator) clusterKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyEntry {
 	return []mgmtkeyvault.AccessPolicyEntry{
 		{
 			TenantID: &tenantUUIDHack,
@@ -1014,7 +1014,7 @@ func (g *generator) clustersKeyvault() *arm.Resource {
 	}
 
 	if !g.production {
-		*vault.Properties.AccessPolicies = append(g.clustersKeyvaultAccessPolicies(),
+		*vault.Properties.AccessPolicies = append(g.clusterKeyvaultAccessPolicies(),
 			mgmtkeyvault.AccessPolicyEntry{
 				TenantID: &tenantUUIDHack,
 				ObjectID: to.StringPtr("[parameters('adminObjectId')]"),
