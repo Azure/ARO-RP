@@ -20,7 +20,6 @@ steps:
       export LOCATION=${{ parameters.location }}
       export RESOURCEGROUP="not-in-use-moved-to-config"
 
-      export RP_VERSION=$(git rev-parse --short HEAD)
       chmod +x ${{ parameters.deployerDirectory }}/aro
 
       ${{ parameters.deployerDirectory }}/aro deploy ${{ parameters.configDirectory }}/${{ parameters.configFileName }} ${{ parameters.location }}
