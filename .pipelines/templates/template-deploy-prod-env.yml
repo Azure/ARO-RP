@@ -19,8 +19,5 @@ steps:
 
       export RP_VERSION=$(git rev-parse --short HEAD)
 
-      cp  ${{ parameters.configDirectory }} .
-      cp  ${{ parameters.deployerDirectory }} .
-
-      ./aro deploy ./${{ parameters.configFileName }} ${{ parameters.location }}
+      ${{ parameters.deployerDirectory }}/aro deploy ${{ parameters.configDirectory }}/${{ parameters.configFileName }} ${{ parameters.location }}
     displayName: "🚀 Buildout/Deploy env"
