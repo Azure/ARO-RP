@@ -145,8 +145,6 @@
 
 ### Metrics
 
-You can watch the output of the cluster metrics:
-
 ```bash
 nc -U -l mdm_statsd.socket
 ```
