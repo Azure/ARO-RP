@@ -18,9 +18,9 @@ const (
 	FileRPProductionPredeploy           = "rp-production-predeploy.json"
 	FileRPProductionPredeployParameters = "rp-production-predeploy-parameters.json"
 	FileRPProduction                    = "rp-production.json"
+	FileRPProductionGlobal              = "rp-production-global.json"
+	FileRPProductionGlobalSubscription  = "rp-production-global-subscription.json"
 	FileRPProductionParameters          = "rp-production-parameters.json"
-	FileRPProductionGlobal              = "rp-global.json"
-	FileRPProductionGlobalSubscription  = "rp-global-subscription-production.json"
 
 	fileEnvDevelopment         = "env-development.json"
 	fileDatabaseDevelopment    = "databases-development.json"
