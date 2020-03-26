@@ -30,14 +30,6 @@ import (
 )
 
 func rp(ctx context.Context, log *logrus.Entry) error {
-	for _, key := range []string{
-		"PULL_SECRET",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return fmt.Errorf("environment variable %q unset", key)
-		}
-	}
-
 	uuid := uuid.NewV4().String()
 	log.Printf("uuid %s", uuid)
 
@@ -46,16 +38,26 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	if _, ok := _env.(env.Dev); !ok {
-		for _, key := range []string{
+	var keys []string
+	if _, ok := _env.(env.Dev); ok {
+		keys = []string{
+			"PULL_SECRET",
+		}
+	} else {
+		keys = []string{
 			"ACR_RESOURCE_ID",
 			"ADMIN_API_CLIENT_CERT_COMMON_NAME",
 			"MDM_ACCOUNT",
 			"MDM_NAMESPACE",
-		} {
-			if _, found := os.LookupEnv(key); !found {
-				return fmt.Errorf("environment variable %q unset", key)
-			}
+		}
+
+		if _, found := os.LookupEnv("PULL_SECRET"); found {
+			return fmt.Errorf(`environment variable "PULL_SECRET" set`)
+		}
+	}
+	for _, key := range keys {
+		if _, found := os.LookupEnv(key); !found {
+			return fmt.Errorf("environment variable %q unset", key)
 		}
 	}
 

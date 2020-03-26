@@ -5,13 +5,14 @@ rps:
   configuration:
     databaseAccountName: ''
     keyvaultPrefix: ''
-    rpServerCertCommonName: ''
 configuration:
+  acrResourceId: ''
   adminApiCaBundle: ''
   adminApiClientCertCommonName: ''
   clusterParentDomainName: ''
   extraCosmosDBIPs: ''
   extraKeyvaultAccessPolicies: []
+  fpServerCertCommonName: ''
   fpServicePrincipalId: ''
   globalMonitoringKeyVaultUri: ''
   globalResourceGroupName: ''
@@ -19,9 +20,7 @@ configuration:
   mdmFrontendUrl: ''
   mdsdConfigVersion: ''
   mdsdEnvironment: ''
-  pullSecret: ''
-  rpImage: ''
-  rpImageAuth: ''
+  rpImagePrefix: ''
   rpMode: ''
   rpParentDomainName: ''
   sshPublicKey: ''

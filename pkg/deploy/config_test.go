@@ -40,7 +40,7 @@ func TestConfigurationFieldParity(t *testing.T) {
 		// check each parameter exists as a field in Configuration
 		for name := range params.Parameters {
 			switch name {
-			case "domainName", "rpServicePrincipalId", "vmssName":
+			case "domainName", "rpImage", "rpServicePrincipalId", "vmssName":
 			default:
 				if _, found := m[name]; !found {
 					t.Errorf("field %s not found in config.Configuration but exists in templates", name)
@@ -63,17 +63,17 @@ func TestMergeConfig(t *testing.T) {
 		{
 			name: "overrides",
 			primary: Configuration{
-				DatabaseAccountName: "primary accountname",
-				ExtraCosmosDBIPs:    "primary cosmosdb",
+				DatabaseAccountName:    "primary accountname",
+				FPServerCertCommonName: "primary fpcert",
 			},
 			secondary: Configuration{
-				ExtraCosmosDBIPs: "secondary cosmosdb",
-				KeyvaultPrefix:   "secondary kv",
+				FPServerCertCommonName: "secondary fpcert",
+				KeyvaultPrefix:         "secondary kv",
 			},
 			want: Configuration{
-				DatabaseAccountName: "primary accountname",
-				ExtraCosmosDBIPs:    "primary cosmosdb",
-				KeyvaultPrefix:      "secondary kv",
+				DatabaseAccountName:    "primary accountname",
+				FPServerCertCommonName: "primary fpcert",
+				KeyvaultPrefix:         "secondary kv",
 			},
 		},
 	} {

@@ -23,17 +23,11 @@ cat >secrets/parameters.json <<EOF
         "keyvaultPrefix": {
             "value": "$KEYVAULT_PREFIX"
         },
-        "pullSecret": {
-            "value": "$PULL_SECRET"
-        },
         "acrResourceId": {
             "value": "$ACR_RESOURCE_ID"
         },
         "rpImage": {
             "value": "$RP_IMAGE"
-        },
-        "rpImageAuth": {
-            "value": "$RP_IMAGE_AUTH"
         },
         "mdmFrontendUrl": {
             "value": "$MDM_FRONTEND"

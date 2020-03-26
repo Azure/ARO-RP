@@ -33,7 +33,6 @@ jobs:
           mdsdMonitoringEnviroment: "Test"
           mdsdConfigVersion: $(MDSD-CONFIG-VERSION)
           rpMode: "int"
-          pullSecret: $(aro-pullsecret)
           acrResourceId: "/subscriptions/0cc1cafa-578f-4fa5-8d6b-ddfd8d82e6ea/resourceGroups/global-infra/providers/Microsoft.ContainerRegistry/registries/arointsvc"
           sshPublicKey: $(int-ssh-public-key)
           subscriptionId: "0cc1cafa-578f-4fa5-8d6b-ddfd8d82e6ea"

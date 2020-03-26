@@ -10,6 +10,7 @@ import (
 
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
+	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/containerregistry/mgmt/2019-06-01-preview/containerregistry"
 	mgmtdocumentdb "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2019-08-01/documentdb"
 	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2016-10-01/keyvault"
@@ -22,13 +23,14 @@ import (
 )
 
 var apiVersions = map[string]string{
-	"authorization": "2015-07-01",
-	"compute":       "2019-03-01",
-	"dns":           "2018-05-01",
-	"documentdb":    "2019-08-01",
-	"keyvault":      "2016-10-01",
-	"msi":           "2018-11-30",
-	"network":       "2019-07-01",
+	"authorization":     "2015-07-01",
+	"compute":           "2019-03-01",
+	"containerregistry": "2019-06-01-preview",
+	"dns":               "2018-05-01",
+	"documentdb":        "2019-08-01",
+	"keyvault":          "2016-10-01",
+	"msi":               "2018-11-30",
+	"network":           "2019-07-01",
 }
 
 const (
@@ -565,10 +567,8 @@ func (g *generator) vmss() *arm.Resource {
 		"mdmFrontendUrl",
 		"mdsdConfigVersion",
 		"mdsdEnvironment",
-		"pullSecret",
 		"acrResourceId",
 		"rpImage",
-		"rpImageAuth",
 		"rpMode",
 		"adminApiClientCertCommonName",
 	} {
@@ -641,17 +641,6 @@ firewall-cmd --add-port=443/tcp --permanent
 # https://bugzilla.redhat.com/show_bug.cgi?id=1805212
 sed -i -e 's/iptables/firewalld/' /etc/cni/net.d/87-podman-bridge.conflist
 
-mkdir /root/.docker
-cat >/root/.docker/config.json <<EOF
-{
-	"auths": {
-		"${RPIMAGE%%/*}": {
-			"auth": "$RPIMAGEAUTH"
-		}
-	}
-}
-EOF
-
 cat >/etc/td-agent-bit/td-agent-bit.conf <<'EOF'
 [INPUT]
 	Name systemd
@@ -670,6 +659,7 @@ cat >/etc/td-agent-bit/td-agent-bit.conf <<'EOF'
 EOF
 
 az login -i --allow-no-subscriptions
+az acr login --name "$(sed -e 's|.*/||' <"$ACRRESOURCEID")"
 
 SVCVAULTURI="$(az keyvault list -g "$RESOURCEGROUPNAME" --query "[?tags.vault=='service'].properties.vaultUri" -o tsv)"
 az keyvault secret download --file /etc/mdm.pem --id "${SVCVAULTURI}secrets/rp-mdm"
@@ -755,7 +745,6 @@ EOF
 cat >/etc/sysconfig/aro-rp <<EOF
 MDM_ACCOUNT=AzureRedHatOpenShiftRP
 MDM_NAMESPACE=RP
-PULL_SECRET='$PULLSECRET'
 ACR_RESOURCE_ID='$ACRRESOURCEID'
 ADMIN_API_CLIENT_CERT_COMMON_NAME='$ADMINAPICLIENTCERTCOMMONNAME'
 RPIMAGE='$RPIMAGE'
@@ -776,7 +765,6 @@ ExecStart=/usr/bin/docker run \
   --rm \
   -e MDM_ACCOUNT \
   -e MDM_NAMESPACE \
-  -e PULL_SECRET \
   -e ADMIN_API_CLIENT_CERT_COMMON_NAME \
   -e RP_MODE \
   -e ACR_RESOURCE_ID \
@@ -1393,5 +1381,31 @@ func (g *generator) rbac() []*arm.Resource {
 				"[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]",
 			},
 		},
+	}
+}
+
+func (g *generator) acrReplica() *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtcontainerregistry.Replication{
+			Name:     to.StringPtr("[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId')), 1)), '/', parameters('location'))]"),
+			Type:     to.StringPtr("Microsoft.ContainerRegistry/registries/replicas"),
+			Location: to.StringPtr("[parameters('location')]"),
+		},
+		APIVersion: apiVersions["containerregistry"],
+	}
+}
+
+func (g *generator) acrRbac() *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtauthorization.RoleAssignment{
+			Name: to.StringPtr("[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId')), 1)), '/'), '/Microsoft.Authorization/', guid(parameters('acrResourceId'), parameters('rpServicePrincipalId'), 'RP / AcrPull'))]"),
+			Type: to.StringPtr("Microsoft.ContainerRegistry/registries/providers/roleAssignments"),
+			Properties: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+				Scope:            to.StringPtr("[parameters('acrResourceId')]"),
+				RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]"),
+				PrincipalID:      to.StringPtr("[parameters('rpServicePrincipalId')]"),
+			},
+		},
+		APIVersion: apiVersions["authorization"],
 	}
 }

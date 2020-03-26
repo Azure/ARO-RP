@@ -10,10 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/containerregistry/mgmt/2019-06-01-preview/containerregistry"
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
 	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
@@ -44,6 +42,11 @@ func (d *deployer) PreDeploy(ctx context.Context) (string, error) {
 		return "", err
 	}
 
+	err = d.deployGlobal(ctx, rpServicePrincipalID)
+	if err != nil {
+		return "", err
+	}
+
 	// deploy NSGs, keyvaults
 	err = d.deployPreDeploy(ctx, rpServicePrincipalID)
 	if err != nil {
@@ -55,12 +58,40 @@ func (d *deployer) PreDeploy(ctx context.Context) (string, error) {
 		return "", err
 	}
 
-	err = d.ensureContainerRegistryReplication(ctx)
+	return rpServicePrincipalID, nil
+}
+
+func (d *deployer) deployGlobal(ctx context.Context, rpServicePrincipalID string) error {
+	deploymentName := "rp-global"
+
+	b, err := Asset(generator.FileRPProductionGlobal)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	return rpServicePrincipalID, nil
+	var template map[string]interface{}
+	err = json.Unmarshal(b, &template)
+	if err != nil {
+		return err
+	}
+
+	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
+	parameters.Parameters["location"] = &arm.ParametersParameter{
+		Value: d.config.Location,
+	}
+	parameters.Parameters["rpServicePrincipalId"] = &arm.ParametersParameter{
+		Value: rpServicePrincipalID,
+	}
+
+	d.log.Infof("deploying global")
+	return d.globaldeployments.CreateOrUpdateAndWait(ctx, d.config.Configuration.GlobalResourceGroupName, deploymentName, mgmtresources.Deployment{
+		Properties: &mgmtresources.DeploymentProperties{
+			Template:   template,
+			Mode:       mgmtresources.Incremental,
+			Parameters: parameters.Parameters,
+		},
+		Location: to.StringPtr("centralus"),
+	})
 }
 
 func (d *deployer) deployGlobalSubscription(ctx context.Context) error {
@@ -239,12 +270,12 @@ func (d *deployer) ensureServiceCertificates(ctx context.Context, serviceKeyVaul
 	}{
 		{
 			certificateName: env.RPFirstPartySecretName,
-			commonName:      d.config.Location + "." + d.config.Configuration.RPParentDomainName,
+			commonName:      d.config.Configuration.FPServerCertCommonName,
 			eku:             utilkeyvault.EkuClientAuth,
 		},
 		{
 			certificateName: env.RPServerSecretName,
-			commonName:      d.config.Configuration.RPServerCertCommonName,
+			commonName:      "rp." + d.config.Location + "." + d.config.Configuration.RPParentDomainName,
 			eku:             utilkeyvault.EkuServerAuth,
 		},
 	}
@@ -280,15 +311,4 @@ func (d *deployer) ensureServiceCertificates(ctx context.Context, serviceKeyVaul
 	}
 
 	return nil
-}
-
-func (d *deployer) ensureContainerRegistryReplication(ctx context.Context) error {
-	acrResource, err := azure.ParseResourceID(d.config.Configuration.ACRResourceID)
-	if err != nil {
-		return nil
-	}
-
-	return d.globalreplications.CreateAndWait(ctx, d.config.Configuration.GlobalResourceGroupName, acrResource.ResourceName, d.config.Location, mgmtcontainerregistry.Replication{
-		Location: to.StringPtr(d.config.Location),
-	})
 }

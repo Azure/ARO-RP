@@ -44,10 +44,8 @@ func (g *generator) rpTemplate() *arm.Template {
 			"mdmFrontendUrl",
 			"mdsdConfigVersion",
 			"mdsdEnvironment",
-			"pullSecret",
 			"acrResourceId",
 			"rpImage",
-			"rpImageAuth",
 			"rpMode",
 			"sshPublicKey",
 			"vmssName",
@@ -59,8 +57,6 @@ func (g *generator) rpTemplate() *arm.Template {
 		switch param {
 		case "extraCosmosDBIPs", "rpMode":
 			p.DefaultValue = ""
-		case "pullSecret", "rpImageAuth":
-			p.Type = "securestring"
 		}
 		t.Parameters[param] = p
 	}
@@ -86,6 +82,27 @@ func (g *generator) rpTemplate() *arm.Template {
 			Value: "[reference(resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip'), '2019-07-01').ipAddress]",
 		},
 	}
+
+	return t
+}
+
+func (g *generator) rpGlobalTemplate() *arm.Template {
+	t := templateStanza()
+
+	params := []string{
+		"acrResourceId",
+		"rpServicePrincipalId",
+		"location",
+	}
+
+	for _, param := range params {
+		t.Parameters[param] = &arm.TemplateParameter{Type: "string"}
+	}
+
+	t.Resources = append(t.Resources,
+		g.acrReplica(),
+		g.acrRbac(),
+	)
 
 	return t
 }

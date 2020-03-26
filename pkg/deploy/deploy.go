@@ -6,6 +6,7 @@ package deploy
 import (
 	"context"
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -26,7 +27,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/containerregistry"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/resources"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
@@ -43,14 +43,13 @@ type Deployer interface {
 type deployer struct {
 	log *logrus.Entry
 
-	globaldeployments  resources.DeploymentsClient
-	globalrecordsets   dns.RecordSetsClient
-	globalreplications containerregistry.ReplicationsClient
-	deployments        resources.DeploymentsClient
-	groups             resources.GroupsClient
-	vmss               compute.VirtualMachineScaleSetsClient
-	vmssvms            compute.VirtualMachineScaleSetVMsClient
-	keyvault           keyvault.Manager
+	globaldeployments resources.DeploymentsClient
+	globalrecordsets  dns.RecordSetsClient
+	deployments       resources.DeploymentsClient
+	groups            resources.GroupsClient
+	vmss              compute.VirtualMachineScaleSetsClient
+	vmssvms           compute.VirtualMachineScaleSetVMsClient
+	keyvault          keyvault.Manager
 
 	cli *http.Client
 
@@ -73,14 +72,13 @@ func New(ctx context.Context, log *logrus.Entry, config *RPConfig, version strin
 	return &deployer{
 		log: log,
 
-		globaldeployments:  resources.NewDeploymentsClient(config.Configuration.GlobalSubscriptionID, authorizer),
-		globalrecordsets:   dns.NewRecordSetsClient(config.Configuration.GlobalSubscriptionID, authorizer),
-		globalreplications: containerregistry.NewReplicationsClient(config.Configuration.GlobalSubscriptionID, authorizer),
-		deployments:        resources.NewDeploymentsClient(config.SubscriptionID, authorizer),
-		groups:             resources.NewGroupsClient(config.SubscriptionID, authorizer),
-		vmss:               compute.NewVirtualMachineScaleSetsClient(config.SubscriptionID, authorizer),
-		vmssvms:            compute.NewVirtualMachineScaleSetVMsClient(config.SubscriptionID, authorizer),
-		keyvault:           keyvault.NewManager(kvAuthorizer),
+		globaldeployments: resources.NewDeploymentsClient(config.Configuration.GlobalSubscriptionID, authorizer),
+		globalrecordsets:  dns.NewRecordSetsClient(config.Configuration.GlobalSubscriptionID, authorizer),
+		deployments:       resources.NewDeploymentsClient(config.SubscriptionID, authorizer),
+		groups:            resources.NewGroupsClient(config.SubscriptionID, authorizer),
+		vmss:              compute.NewVirtualMachineScaleSetsClient(config.SubscriptionID, authorizer),
+		vmssvms:           compute.NewVirtualMachineScaleSetVMsClient(config.SubscriptionID, authorizer),
+		keyvault:          keyvault.NewManager(kvAuthorizer),
 
 		cli: &http.Client{
 			Timeout: 5 * time.Second,
@@ -107,8 +105,17 @@ func (d *deployer) Deploy(ctx context.Context, rpServicePrincipalID string) erro
 	}
 
 	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
+	parameters.Parameters["adminApiCaBundle"] = &arm.ParametersParameter{
+		Value: base64.StdEncoding.EncodeToString([]byte(d.config.Configuration.AdminAPICABundle)),
+	}
 	parameters.Parameters["domainName"] = &arm.ParametersParameter{
 		Value: d.config.Location + "." + d.config.Configuration.ClusterParentDomainName,
+	}
+	parameters.Parameters["extraCosmosDBIPs"] = &arm.ParametersParameter{
+		Value: strings.Join(d.config.Configuration.ExtraCosmosDBIPs, ","),
+	}
+	parameters.Parameters["rpImage"] = &arm.ParametersParameter{
+		Value: d.config.Configuration.RPImagePrefix + ":" + d.version,
 	}
 	parameters.Parameters["rpServicePrincipalId"] = &arm.ParametersParameter{
 		Value: rpServicePrincipalID,
@@ -241,7 +248,7 @@ func (d *deployer) removeOldScalesets(ctx context.Context) error {
 }
 
 func (d *deployer) configureDNS(ctx context.Context, rpPipIPAddress string, nameServers []string) error {
-	_, err := d.globalrecordsets.CreateOrUpdate(ctx, d.config.Configuration.GlobalResourceGroupName, d.config.Configuration.RPParentDomainName, d.config.Location, mgmtdns.A, mgmtdns.RecordSet{
+	_, err := d.globalrecordsets.CreateOrUpdate(ctx, d.config.Configuration.GlobalResourceGroupName, d.config.Configuration.RPParentDomainName, "rp."+d.config.Location, mgmtdns.A, mgmtdns.RecordSet{
 		RecordSetProperties: &mgmtdns.RecordSetProperties{
 			TTL: to.Int64Ptr(3600),
 			ARecords: &[]mgmtdns.ARecord{

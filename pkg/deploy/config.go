@@ -32,8 +32,9 @@ type Configuration struct {
 	AdminAPIClientCertCommonName string        `json:"adminApiClientCertCommonName,omitempty"`
 	ClusterParentDomainName      string        `json:"clusterParentDomainName,omitempty"`
 	DatabaseAccountName          string        `json:"databaseAccountName,omitempty"`
-	ExtraCosmosDBIPs             string        `json:"extraCosmosDBIPs,omitempty"`
+	ExtraCosmosDBIPs             []string      `json:"extraCosmosDBIPs,omitempty"`
 	ExtraKeyvaultAccessPolicies  []interface{} `json:"extraKeyvaultAccessPolicies,omitempty"`
+	FPServerCertCommonName       string        `json:"fpServerCertCommonName,omitempty"`
 	FPServicePrincipalID         string        `json:"fpServicePrincipalId,omitempty"`
 	GlobalMonitoringKeyVaultURI  string        `json:"globalMonitoringKeyVaultUri,omitempty"`
 	GlobalResourceGroupName      string        `json:"globalResourceGroupName,omitempty"`
@@ -42,12 +43,9 @@ type Configuration struct {
 	MDMFrontendURL               string        `json:"mdmFrontendUrl,omitempty"`
 	MDSDConfigVersion            string        `json:"mdsdConfigVersion,omitempty"`
 	MDSDEnvironment              string        `json:"mdsdEnvironment,omitempty"`
-	PullSecret                   string        `json:"pullSecret,omitempty"`
-	RPImage                      string        `json:"rpImage,omitempty"`
-	RPImageAuth                  string        `json:"rpImageAuth,omitempty"`
+	RPImagePrefix                string        `json:"rpImagePrefix,omitempty"`
 	RPMode                       string        `json:"rpMode,omitempty"`
 	RPParentDomainName           string        `json:"rpParentDomainName,omitempty"`
-	RPServerCertCommonName       string        `json:"rpServerCertCommonName,omitempty"`
 	SSHPublicKey                 string        `json:"sshPublicKey,omitempty"`
 }
 
