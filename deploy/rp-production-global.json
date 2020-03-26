@@ -14,13 +14,13 @@
     },
     "resources": [
         {
-            "name": "[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId')), 1)), '/', parameters('location'))]",
+            "name": "[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', parameters('location'))]",
             "type": "Microsoft.ContainerRegistry/registries/replicas",
             "location": "[parameters('location')]",
             "apiVersion": "2019-06-01-preview"
         },
         {
-            "name": "[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), 1))), '/', '/Microsoft.Authorization/', guid(parameters('acrResourceId')), parameters('rpServicePrincipalId'), 'RP / AcrPull')]",
+            "name": "[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(parameters('acrResourceId')), parameters('rpServicePrincipalId'), 'RP-AcrPull')]",
             "type": "Microsoft.ContainerRegistry/registries/providers/roleAssignments",
             "properties": {
                 "scope": "[parameters('acrResourceId')]",
