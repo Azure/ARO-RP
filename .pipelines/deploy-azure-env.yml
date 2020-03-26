@@ -1,4 +1,4 @@
-# Azure DevOps Pipeline deploying the int environment
+# Azure DevOps Pipeline deploying the azure hosted environment
 trigger: none
 pr: none
 
