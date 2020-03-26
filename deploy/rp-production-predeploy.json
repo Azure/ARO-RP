@@ -2,7 +2,7 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "variables": {
-        "clustersKeyvaultAccessPolicies": [
+        "clusterKeyvaultAccessPolicies": [
             {
                 "tenantId": "[subscription().tenantId]",
                 "objectId": "[parameters('fpServicePrincipalId')]",
@@ -83,7 +83,7 @@
                     "family": "A",
                     "name": "standard"
                 },
-                "accessPolicies": "[concat(variables('clustersKeyvaultAccessPolicies'), parameters('extraKeyvaultAccessPolicies'))]",
+                "accessPolicies": "[concat(variables('clusterKeyvaultAccessPolicies'), parameters('extraKeyvaultAccessPolicies'))]",
                 "enableSoftDelete": true
             },
             "name": "[concat(parameters('keyvaultPrefix'), '-cls')]",

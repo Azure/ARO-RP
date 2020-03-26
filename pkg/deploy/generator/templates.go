@@ -155,8 +155,8 @@ func (g *generator) preDeployTemplate() *arm.Template {
 
 	if g.production {
 		t.Variables = map[string]interface{}{
-			"clustersKeyvaultAccessPolicies": g.clustersKeyvaultAccessPolicies(),
-			"serviceKeyvaultAccessPolicies":  g.serviceKeyvaultAccessPolicies(),
+			"clusterKeyvaultAccessPolicies": g.clusterKeyvaultAccessPolicies(),
+			"serviceKeyvaultAccessPolicies": g.serviceKeyvaultAccessPolicies(),
 		}
 	}
 
@@ -271,7 +271,7 @@ func (g *generator) templateFixup(t *arm.Template) ([]byte, error) {
 	// :-(
 	b = bytes.ReplaceAll(b, []byte(tenantIDHack), []byte("[subscription().tenantId]"))
 	if g.production {
-		b = bytes.Replace(b, []byte(`"accessPolicies": []`), []byte(`"accessPolicies": "[concat(variables('clustersKeyvaultAccessPolicies'), parameters('extraKeyvaultAccessPolicies'))]"`), 1)
+		b = bytes.Replace(b, []byte(`"accessPolicies": []`), []byte(`"accessPolicies": "[concat(variables('clusterKeyvaultAccessPolicies'), parameters('extraKeyvaultAccessPolicies'))]"`), 1)
 		b = bytes.Replace(b, []byte(`"accessPolicies": []`), []byte(`"accessPolicies": "[concat(variables('serviceKeyvaultAccessPolicies'), parameters('extraKeyvaultAccessPolicies'))]"`), 1)
 	}
 
