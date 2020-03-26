@@ -32,7 +32,7 @@ type Configuration struct {
 	AdminAPIClientCertCommonName string        `json:"adminApiClientCertCommonName,omitempty"`
 	ClusterParentDomainName      string        `json:"clusterParentDomainName,omitempty"`
 	DatabaseAccountName          string        `json:"databaseAccountName,omitempty"`
-	ExtraCosmosDBIPs             string        `json:"extraCosmosDBIPs,omitempty"`
+	ExtraCosmosDBIPs             []string      `json:"extraCosmosDBIPs,omitempty"`
 	ExtraKeyvaultAccessPolicies  []interface{} `json:"extraKeyvaultAccessPolicies,omitempty"`
 	FPServerCertCommonName       string        `json:"fpServerCertCommonName,omitempty"`
 	FPServicePrincipalID         string        `json:"fpServicePrincipalId,omitempty"`

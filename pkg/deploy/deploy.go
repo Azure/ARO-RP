@@ -6,6 +6,7 @@ package deploy
 import (
 	"context"
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -104,8 +105,14 @@ func (d *deployer) Deploy(ctx context.Context, rpServicePrincipalID string) erro
 	}
 
 	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
+	parameters.Parameters["adminApiCaBundle"] = &arm.ParametersParameter{
+		Value: base64.StdEncoding.EncodeToString([]byte(d.config.Configuration.AdminAPICABundle)),
+	}
 	parameters.Parameters["domainName"] = &arm.ParametersParameter{
 		Value: d.config.Location + "." + d.config.Configuration.ClusterParentDomainName,
+	}
+	parameters.Parameters["extraCosmosDBIPs"] = &arm.ParametersParameter{
+		Value: strings.Join(d.config.Configuration.ExtraCosmosDBIPs, ","),
 	}
 	parameters.Parameters["rpImage"] = &arm.ParametersParameter{
 		Value: d.config.Configuration.RPImagePrefix + ":" + d.version,

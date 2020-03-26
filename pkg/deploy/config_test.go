@@ -63,17 +63,17 @@ func TestMergeConfig(t *testing.T) {
 		{
 			name: "overrides",
 			primary: Configuration{
-				DatabaseAccountName: "primary accountname",
-				ExtraCosmosDBIPs:    "primary cosmosdb",
+				DatabaseAccountName:    "primary accountname",
+				FPServerCertCommonName: "primary fpcert",
 			},
 			secondary: Configuration{
-				ExtraCosmosDBIPs: "secondary cosmosdb",
-				KeyvaultPrefix:   "secondary kv",
+				FPServerCertCommonName: "secondary fpcert",
+				KeyvaultPrefix:         "secondary kv",
 			},
 			want: Configuration{
-				DatabaseAccountName: "primary accountname",
-				ExtraCosmosDBIPs:    "primary cosmosdb",
-				KeyvaultPrefix:      "secondary kv",
+				DatabaseAccountName:    "primary accountname",
+				FPServerCertCommonName: "primary fpcert",
+				KeyvaultPrefix:         "secondary kv",
 			},
 		},
 	} {
