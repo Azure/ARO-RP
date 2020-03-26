@@ -1009,7 +1009,8 @@ func (g *generator) serviceKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyE
 func (g *generator) clustersKeyvault() *arm.Resource {
 	vault := &mgmtkeyvault.Vault{
 		Properties: &mgmtkeyvault.VaultProperties{
-			TenantID: &tenantUUIDHack,
+			EnableSoftDelete: to.BoolPtr(true),
+			TenantID:         &tenantUUIDHack,
 			Sku: &mgmtkeyvault.Sku{
 				Name:   mgmtkeyvault.Standard,
 				Family: to.StringPtr("A"),
@@ -1048,7 +1049,8 @@ func (g *generator) clustersKeyvault() *arm.Resource {
 func (g *generator) serviceKeyvault() *arm.Resource {
 	vault := &mgmtkeyvault.Vault{
 		Properties: &mgmtkeyvault.VaultProperties{
-			TenantID: &tenantUUIDHack,
+			EnableSoftDelete: to.BoolPtr(true),
+			TenantID:         &tenantUUIDHack,
 			Sku: &mgmtkeyvault.Sku{
 				Name:   mgmtkeyvault.Standard,
 				Family: to.StringPtr("A"),
