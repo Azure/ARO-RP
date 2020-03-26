@@ -32,4 +32,4 @@ jobs:
         displayName: 'Copy artifacts'
       - task: PublishBuildArtifacts@1
         displayName: 'Publish Artifacts'
-        name: aro-deployer
+        name: aro_deployer
