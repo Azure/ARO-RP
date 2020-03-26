@@ -16,16 +16,6 @@ import (
 )
 
 func deploy(ctx context.Context, log *logrus.Entry) error {
-	for _, key := range []string{
-		"AZURE_SUBSCRIPTION_ID",
-		"LOCATION",
-		"RESOURCEGROUP",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return fmt.Errorf("environment variable %q unset", key)
-		}
-	}
-
 	deployVersion := gitCommit
 	if os.Getenv("RP_VERSION") != "" {
 		deployVersion = os.Getenv("RP_VERSION")

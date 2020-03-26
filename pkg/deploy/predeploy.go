@@ -90,7 +90,6 @@ func (d *deployer) deployGlobal(ctx context.Context, rpServicePrincipalID string
 			Mode:       mgmtresources.Incremental,
 			Parameters: parameters.Parameters,
 		},
-		Location: to.StringPtr("centralus"),
 	})
 }
 

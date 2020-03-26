@@ -1398,7 +1398,7 @@ func (g *generator) acrReplica() *arm.Resource {
 func (g *generator) acrRbac() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtauthorization.RoleAssignment{
-			Name: to.StringPtr("[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId')), 1)), '/'), '/Microsoft.Authorization/', guid(parameters('acrResourceId'), parameters('rpServicePrincipalId'), 'RP / AcrPull'))]"),
+			Name: to.StringPtr("[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), 1))), '/', '/Microsoft.Authorization/', guid(parameters('acrResourceId')), parameters('rpServicePrincipalId'), 'RP / AcrPull')]"),
 			Type: to.StringPtr("Microsoft.ContainerRegistry/registries/providers/roleAssignments"),
 			Properties: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 				Scope:            to.StringPtr("[parameters('acrResourceId')]"),
