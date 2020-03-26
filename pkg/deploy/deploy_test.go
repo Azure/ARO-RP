@@ -26,13 +26,13 @@ func TestGetParameters(t *testing.T) {
 		{
 			name: "valid",
 			ps: map[string]interface{}{
-				"adminApiCaBundle":            nil,
-				"databaseAccountName":         nil,
-				"extraKeyvaultAccessPolicies": nil,
+				"adminApiCaBundle":                   nil,
+				"databaseAccountName":                nil,
+				"extraClusterKeyvaultAccessPolicies": nil,
 			},
 			config: Configuration{
-				DatabaseAccountName:         "databaseAccountName",
-				ExtraKeyvaultAccessPolicies: []interface{}{"a", 1},
+				DatabaseAccountName:                "databaseAccountName",
+				ExtraClusterKeyvaultAccessPolicies: []interface{}{"a", 1},
 			},
 			want: arm.Parameters{
 				Parameters: map[string]*arm.ParametersParameter{
@@ -42,7 +42,7 @@ func TestGetParameters(t *testing.T) {
 					"databaseAccountName": {
 						Value: "databaseAccountName",
 					},
-					"extraKeyvaultAccessPolicies": {
+					"extraClusterKeyvaultAccessPolicies": {
 						Value: []interface{}{"a", 1},
 					},
 				},
@@ -51,12 +51,12 @@ func TestGetParameters(t *testing.T) {
 		{
 			name: "nil slice",
 			ps: map[string]interface{}{
-				"extraKeyvaultAccessPolicies": nil,
+				"extraClusterKeyvaultAccessPolicies": nil,
 			},
 			config: Configuration{},
 			want: arm.Parameters{
 				Parameters: map[string]*arm.ParametersParameter{
-					"extraKeyvaultAccessPolicies": {
+					"extraClusterKeyvaultAccessPolicies": {
 						Value: []interface{}(nil),
 					},
 				},

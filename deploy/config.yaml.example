@@ -10,8 +10,9 @@ configuration:
   adminApiCaBundle: ''
   adminApiClientCertCommonName: ''
   clusterParentDomainName: ''
+  extraClusterKeyvaultAccessPolicies: []
   extraCosmosDBIPs: ''
-  extraKeyvaultAccessPolicies: []
+  extraServiceKeyvaultAccessPolicies: []
   fpServerCertCommonName: ''
   fpServicePrincipalId: ''
   globalMonitoringKeyVaultUri: ''

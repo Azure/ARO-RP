@@ -30,7 +30,11 @@
         ]
     },
     "parameters": {
-        "extraKeyvaultAccessPolicies": {
+        "extraClusterKeyvaultAccessPolicies": {
+            "type": "array",
+            "defaultValue": []
+        },
+        "extraServiceKeyvaultAccessPolicies": {
             "type": "array",
             "defaultValue": []
         },
@@ -83,7 +87,7 @@
                     "family": "A",
                     "name": "standard"
                 },
-                "accessPolicies": "[concat(variables('clusterKeyvaultAccessPolicies'), parameters('extraKeyvaultAccessPolicies'))]",
+                "accessPolicies": "[concat(variables('clusterKeyvaultAccessPolicies'), parameters('extraClusterKeyvaultAccessPolicies'))]",
                 "enableSoftDelete": true
             },
             "name": "[concat(parameters('keyvaultPrefix'), '-cls')]",
@@ -101,7 +105,7 @@
                     "family": "A",
                     "name": "standard"
                 },
-                "accessPolicies": "[concat(variables('serviceKeyvaultAccessPolicies'), parameters('extraKeyvaultAccessPolicies'))]",
+                "accessPolicies": "[concat(variables('serviceKeyvaultAccessPolicies'), parameters('extraServiceKeyvaultAccessPolicies'))]",
                 "enableSoftDelete": true
             },
             "name": "[concat(parameters('keyvaultPrefix'), '-svc')]",
