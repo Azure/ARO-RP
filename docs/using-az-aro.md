@@ -128,18 +128,27 @@ cluster:
    Administrator" role on the vnet, `az aro create` will set up the role
    assignments for you automatically.
 
+1. Optionally, a pull secret which enables your cluster to access Red Hat
+   container registries along with additional content.  Access your pull secret
+   by navigating to
+   https://cloud.redhat.com/openshift/install/azure/installer-provisioned and
+   clicking *Copy Pull Secret*.
+
 
 ## Using the extension
 
 1. Create a cluster:
 
    ```bash
+   USER_PULL_SECRET="https://cloud.redhat.com/ pull secret content"
+
    az aro create \
      -g "$RESOURCEGROUP" \
      -n "$CLUSTER" \
      --vnet dev-vnet \
      --master-subnet "$CLUSTER-master" \
-     --worker-subnet "$CLUSTER-worker"
+     --worker-subnet "$CLUSTER-worker" \
+     --pull-secret "$USER_PULL_SECRET"
    ```
 
    Note: cluster creation takes about 35 minutes.
