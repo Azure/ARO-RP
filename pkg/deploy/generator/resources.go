@@ -25,7 +25,7 @@ import (
 var apiVersions = map[string]string{
 	"authorization":     "2015-07-01",
 	"compute":           "2019-03-01",
-	"containerregistry": "2019-06-01-preview",
+	"containerregistry": "2019-05-01",
 	"dns":               "2018-05-01",
 	"documentdb":        "2019-08-01",
 	"keyvault":          "2016-10-01",
@@ -1398,7 +1398,7 @@ func (g *generator) acrReplica() *arm.Resource {
 func (g *generator) acrRbac() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtauthorization.RoleAssignment{
-			Name: to.StringPtr("[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(parameters('acrResourceId')), parameters('rpServicePrincipalId'), 'RP-AcrPull')]"),
+			Name: to.StringPtr("[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), parameters('rpServicePrincipalId'), 'RP / AcrPull')))]"),
 			Type: to.StringPtr("Microsoft.ContainerRegistry/registries/providers/roleAssignments"),
 			Properties: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 				Scope:            to.StringPtr("[parameters('acrResourceId')]"),
