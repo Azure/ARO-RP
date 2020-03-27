@@ -671,7 +671,9 @@ cat >/etc/td-agent-bit/td-agent-bit.conf <<'EOF'
 EOF
 
 az login -i --allow-no-subscriptions
-az acr login --name "$(sed -e 's|.*/||' <"$ACRRESOURCEID")"
+
+>/etc/containers/nodocker  # podman stderr output confuses az acr login
+az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
 
 SVCVAULTURI="$(az keyvault list -g "$RESOURCEGROUPNAME" --query "[?tags.vault=='service'].properties.vaultUri" -o tsv)"
 az keyvault secret download --file /etc/mdm.pem --id "${SVCVAULTURI}secrets/rp-mdm"
@@ -837,7 +839,6 @@ for service in aro-monitor aro-rp auoms azsecd azsecmond mdsd mdm chronyd td-age
 done
 
 rm /etc/motd.d/*
->/etc/containers/nodocker
 
 (sleep 30; reboot) &
 `))
