@@ -148,6 +148,8 @@ cluster:
      --vnet dev-vnet \
      --master-subnet "$CLUSTER-master" \
      --worker-subnet "$CLUSTER-worker" \
+     --cluster-resource-group "aro-$CLUSTER" \
+     --domain "$CLUSTER" \
      --pull-secret "$USER_PULL_SECRET"
    ```
 
