@@ -15,7 +15,7 @@
     "resources": [
         {
             "name": "[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', parameters('location'))]",
-            "type": "Microsoft.ContainerRegistry/registries/replicas",
+            "type": "Microsoft.ContainerRegistry/registries/replications",
             "location": "[parameters('location')]",
             "apiVersion": "2019-05-01"
         },

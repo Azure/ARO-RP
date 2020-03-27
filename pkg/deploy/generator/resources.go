@@ -1388,7 +1388,7 @@ func (g *generator) acrReplica() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtcontainerregistry.Replication{
 			Name:     to.StringPtr("[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', parameters('location'))]"),
-			Type:     to.StringPtr("Microsoft.ContainerRegistry/registries/replicas"),
+			Type:     to.StringPtr("Microsoft.ContainerRegistry/registries/replications"),
 			Location: to.StringPtr("[parameters('location')]"),
 		},
 		APIVersion: apiVersions["containerregistry"],
