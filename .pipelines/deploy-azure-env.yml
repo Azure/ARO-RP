@@ -5,6 +5,7 @@ pr: none
 jobs:
   - template: ./templates-job-deploy-azure-env.yml
     parameters: 
+      environment: $(environment)
       LOCATION: $(LOCATION)
       CONFIG_FILE_NAME: $(CONFIG_FILE_NAME)
       aro-v4-ci-devops-spn: $(aro-v4-ci-devops-spn)

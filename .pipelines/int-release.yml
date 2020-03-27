@@ -5,13 +5,13 @@ trigger: none
 stages:
   - stage: Deploy_INT
     displayName: 🚀 Deploy INT
-    environment: RP-INT
     jobs:
-      - template: ./.pipelines/template-job-deploy-azure-region.yml
+      - template: ./templates/template-job-deploy-azure-env.yml
         parameters:
+          environment: RP-INT
           LOCATION: eastus
           CONFIG_FILE_NAME: int-config.yaml
-          aro-v4-ci-devops-spn: $(aro-v4-ci-devops-spn)
-          vso-project-id: $(vso-project-id)
-          vso-config-build-id: $(vso-config-build-id)
-          vso-deployer-build-id: $(vso-deployer-build-id)
+          aro_v4_ci_devops_spn: $(aro-v4-ci-devops-spn)
+          vso_project_id: $(vso-project-id)
+          vso_config_pipeline_id: $(vso-config-pipeline-id)
+          vso_deployer_pipeline_id: $(vso-deployer-pipeline-id)
