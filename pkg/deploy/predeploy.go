@@ -7,8 +7,8 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
+	"net/url"
 	"path/filepath"
-	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
 	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
@@ -83,14 +83,13 @@ func (d *deployer) deployGlobal(ctx context.Context, rpServicePrincipalID string
 		Value: rpServicePrincipalID,
 	}
 
-	d.log.Infof("deploying global")
+	d.log.Infof("deploying %s", deploymentName)
 	return d.globaldeployments.CreateOrUpdateAndWait(ctx, d.config.Configuration.GlobalResourceGroupName, deploymentName, mgmtresources.Deployment{
 		Properties: &mgmtresources.DeploymentProperties{
 			Template:   template,
 			Mode:       mgmtresources.Incremental,
 			Parameters: parameters.Parameters,
 		},
-		Location: to.StringPtr("centralus"),
 	})
 }
 
@@ -108,7 +107,7 @@ func (d *deployer) deployGlobalSubscription(ctx context.Context) error {
 		return err
 	}
 
-	d.log.Infof("deploying rbac")
+	d.log.Infof("deploying %s", deploymentName)
 	return d.globaldeployments.CreateOrUpdateAtSubscriptionScopeAndWait(ctx, deploymentName, mgmtresources.Deployment{
 		Properties: &mgmtresources.DeploymentProperties{
 			Template: template,
@@ -121,30 +120,18 @@ func (d *deployer) deployGlobalSubscription(ctx context.Context) error {
 func (d *deployer) deployManageIdentity(ctx context.Context) (string, error) {
 	deploymentName := "rp-production-managed-identity"
 
-	deployment, err := d.deployments.Get(ctx, d.config.ResourceGroupName, deploymentName)
-	if isDeploymentNotFoundError(err) {
-		deployment, err = d._deployManageIdentity(ctx, deploymentName)
-	}
-	if err != nil {
-		return "", err
-	}
-
-	return deployment.Properties.Outputs.(map[string]interface{})["rpServicePrincipalId"].(map[string]interface{})["value"].(string), nil
-}
-
-func (d *deployer) _deployManageIdentity(ctx context.Context, deploymentName string) (mgmtresources.DeploymentExtended, error) {
 	b, err := Asset(generator.FileRPProductionManagedIdentity)
 	if err != nil {
-		return mgmtresources.DeploymentExtended{}, nil
+		return "", err
 	}
 
 	var template map[string]interface{}
 	err = json.Unmarshal(b, &template)
 	if err != nil {
-		return mgmtresources.DeploymentExtended{}, nil
+		return "", err
 	}
 
-	d.log.Infof("deploying managed identity to %s", d.config.ResourceGroupName)
+	d.log.Infof("deploying %s", deploymentName)
 	err = d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, deploymentName, mgmtresources.Deployment{
 		Properties: &mgmtresources.DeploymentProperties{
 			Template: template,
@@ -152,17 +139,27 @@ func (d *deployer) _deployManageIdentity(ctx context.Context, deploymentName str
 		},
 	})
 	if err != nil {
-		return mgmtresources.DeploymentExtended{}, nil
+		return "", err
 	}
 
-	return d.deployments.Get(ctx, d.config.ResourceGroupName, deploymentName)
+	deployment, err := d.deployments.Get(ctx, d.config.ResourceGroupName, deploymentName)
+	if err != nil {
+		return "", err
+	}
+
+	return deployment.Properties.Outputs.(map[string]interface{})["rpServicePrincipalId"].(map[string]interface{})["value"].(string), nil
 }
 
 func (d *deployer) deployPreDeploy(ctx context.Context, rpServicePrincipalID string) error {
 	deploymentName := "rp-production-predeploy"
 
+	var isCreate bool
 	_, err := d.deployments.Get(ctx, d.config.ResourceGroupName, deploymentName)
-	if err == nil || !isDeploymentNotFoundError(err) {
+	if isDeploymentNotFoundError(err) {
+		isCreate = true
+		err = nil
+	}
+	if err != nil {
 		return err
 	}
 
@@ -178,11 +175,14 @@ func (d *deployer) deployPreDeploy(ctx context.Context, rpServicePrincipalID str
 	}
 
 	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
+	parameters.Parameters["deployNSGs"] = &arm.ParametersParameter{
+		Value: isCreate,
+	}
 	parameters.Parameters["rpServicePrincipalId"] = &arm.ParametersParameter{
 		Value: rpServicePrincipalID,
 	}
 
-	d.log.Infof("predeploying to %s", d.config.ResourceGroupName)
+	d.log.Infof("deploying %s", deploymentName)
 	return d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, deploymentName, mgmtresources.Deployment{
 		Properties: &mgmtresources.DeploymentProperties{
 			Template:   template,
@@ -226,6 +226,7 @@ func (d *deployer) ensureEncryptionSecret(ctx context.Context, serviceKeyVaultUR
 		return err
 	}
 
+	d.log.Infof("setting %s", env.EncryptionSecretName)
 	_, err = d.keyvault.SetSecret(ctx, serviceKeyVaultURI, env.EncryptionSecretName, keyvault.SecretSetParameters{
 		Value: to.StringPtr(string(key)),
 	})
@@ -243,6 +244,7 @@ func (d *deployer) ensureMonitoringCertificates(ctx context.Context, serviceKeyV
 			return err
 		}
 
+		d.log.Infof("importing %s", certificateName)
 		_, err = d.keyvault.ImportCertificate(ctx, serviceKeyVaultURI, certificateName, keyvault.CertificateImportParameters{
 			Base64EncodedCertificate: bundle.Value,
 		})
@@ -285,14 +287,21 @@ func (d *deployer) ensureServiceCertificates(ctx context.Context, serviceKeyVaul
 		return err
 	}
 
+cert:
 	for _, c := range certs {
 		for _, kc := range keyVaultCerts.Values() {
-			// sample id https://aro-int-eastus-svc.vault.azure.net/certificates/rp-server/d69c4682aee149858d362ece87ab0364
-			idParts := strings.Split(*kc.ID, "/")
-			if c.certificateName == idParts[4] {
-				continue
+			// sample id https://aro-int-eastus-svc.vault.azure.net/certificates/rp-server
+			u, err := url.Parse(*kc.ID)
+			if err != nil {
+				return err
+			}
+
+			if u.Path == "/certificates/"+c.certificateName {
+				continue cert
 			}
 		}
+
+		d.log.Infof("creating %s", c.certificateName)
 		err = d.keyvault.CreateSignedCertificate(ctx, serviceKeyVaultURI, utilkeyvault.IssuerOnecert, c.certificateName, c.commonName, c.eku)
 		if err != nil {
 			return err
@@ -304,6 +313,7 @@ func (d *deployer) ensureServiceCertificates(ctx context.Context, serviceKeyVaul
 		if !c.created {
 			continue
 		}
+
 		err = d.keyvault.WaitForCertificateOperation(ctx, serviceKeyVaultURI, c.certificateName)
 		if err != nil {
 			return err

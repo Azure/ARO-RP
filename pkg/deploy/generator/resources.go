@@ -25,7 +25,7 @@ import (
 var apiVersions = map[string]string{
 	"authorization":     "2015-07-01",
 	"compute":           "2019-03-01",
-	"containerregistry": "2019-06-01-preview",
+	"containerregistry": "2019-05-01",
 	"dns":               "2018-05-01",
 	"documentdb":        "2019-08-01",
 	"keyvault":          "2016-10-01",
@@ -53,6 +53,11 @@ func (g *generator) managedIdentity() *arm.Resource {
 }
 
 func (g *generator) securityGroupRP() *arm.Resource {
+	var condition interface{}
+	if g.production {
+		condition = "[parameters('deployNSGs')]"
+	}
+
 	nsg := &mgmtnetwork.SecurityGroup{
 		SecurityGroupPropertiesFormat: &mgmtnetwork.SecurityGroupPropertiesFormat{
 			SecurityRules: &[]mgmtnetwork.SecurityRule{
@@ -94,11 +99,17 @@ func (g *generator) securityGroupRP() *arm.Resource {
 
 	return &arm.Resource{
 		Resource:   nsg,
+		Condition:  condition,
 		APIVersion: apiVersions["network"],
 	}
 }
 
 func (g *generator) securityGroupPE() *arm.Resource {
+	var condition interface{}
+	if g.production {
+		condition = "[parameters('deployNSGs')]"
+	}
+
 	return &arm.Resource{
 		Resource: &mgmtnetwork.SecurityGroup{
 			SecurityGroupPropertiesFormat: &mgmtnetwork.SecurityGroupPropertiesFormat{},
@@ -106,6 +117,7 @@ func (g *generator) securityGroupPE() *arm.Resource {
 			Type:                          to.StringPtr("Microsoft.Network/networkSecurityGroups"),
 			Location:                      to.StringPtr("[resourceGroup().location]"),
 		},
+		Condition:  condition,
 		APIVersion: apiVersions["network"],
 	}
 }
@@ -659,7 +671,9 @@ cat >/etc/td-agent-bit/td-agent-bit.conf <<'EOF'
 EOF
 
 az login -i --allow-no-subscriptions
-az acr login --name "$(sed -e 's|.*/||' <"$ACRRESOURCEID")"
+
+>/etc/containers/nodocker  # podman stderr output confuses az acr login
+az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
 
 SVCVAULTURI="$(az keyvault list -g "$RESOURCEGROUPNAME" --query "[?tags.vault=='service'].properties.vaultUri" -o tsv)"
 az keyvault secret download --file /etc/mdm.pem --id "${SVCVAULTURI}secrets/rp-mdm"
@@ -825,7 +839,6 @@ for service in aro-monitor aro-rp auoms azsecd azsecmond mdsd mdm chronyd td-age
 done
 
 rm /etc/motd.d/*
->/etc/containers/nodocker
 
 (sleep 30; reboot) &
 `))
@@ -1387,8 +1400,8 @@ func (g *generator) rbac() []*arm.Resource {
 func (g *generator) acrReplica() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtcontainerregistry.Replication{
-			Name:     to.StringPtr("[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId')), 1)), '/', parameters('location'))]"),
-			Type:     to.StringPtr("Microsoft.ContainerRegistry/registries/replicas"),
+			Name:     to.StringPtr("[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', parameters('location'))]"),
+			Type:     to.StringPtr("Microsoft.ContainerRegistry/registries/replications"),
 			Location: to.StringPtr("[parameters('location')]"),
 		},
 		APIVersion: apiVersions["containerregistry"],
@@ -1398,7 +1411,7 @@ func (g *generator) acrReplica() *arm.Resource {
 func (g *generator) acrRbac() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtauthorization.RoleAssignment{
-			Name: to.StringPtr("[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId')), 1)), '/'), '/Microsoft.Authorization/', guid(parameters('acrResourceId'), parameters('rpServicePrincipalId'), 'RP / AcrPull'))]"),
+			Name: to.StringPtr("[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), parameters('rpServicePrincipalId'), 'RP / AcrPull')))]"),
 			Type: to.StringPtr("Microsoft.ContainerRegistry/registries/providers/roleAssignments"),
 			Properties: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 				Scope:            to.StringPtr("[parameters('acrResourceId')]"),

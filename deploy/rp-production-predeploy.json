@@ -30,6 +30,10 @@
         ]
     },
     "parameters": {
+        "deployNSGs": {
+            "type": "bool",
+            "defaultValue": false
+        },
         "extraClusterKeyvaultAccessPolicies": {
             "type": "array",
             "defaultValue": []
@@ -71,6 +75,7 @@
             "name": "rp-nsg",
             "type": "Microsoft.Network/networkSecurityGroups",
             "location": "[resourceGroup().location]",
+            "condition": "[parameters('deployNSGs')]",
             "apiVersion": "2019-07-01"
         },
         {
@@ -78,6 +83,7 @@
             "name": "rp-pe-nsg",
             "type": "Microsoft.Network/networkSecurityGroups",
             "location": "[resourceGroup().location]",
+            "condition": "[parameters('deployNSGs')]",
             "apiVersion": "2019-07-01"
         },
         {
