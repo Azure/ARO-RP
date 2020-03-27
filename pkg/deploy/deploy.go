@@ -9,10 +9,13 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"reflect"
 	"strings"
+	"syscall"
 	"time"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
@@ -214,7 +217,7 @@ func (d *deployer) removeOldScalesets(ctx context.Context) error {
 			d.log.Printf("stopping instance %s", *vm.Name)
 			err := d.vmssvms.RunCommandAndWait(ctx, d.config.ResourceGroupName, *vmss.Name, *vm.InstanceID, mgmtcompute.RunCommandInput{
 				CommandID: to.StringPtr("RunShellScript"),
-				Script:    &[]string{"systemctl stop arorp --no-block"},
+				Script:    &[]string{"systemctl stop aro-rp --no-block"},
 			})
 			if err != nil {
 				return err
@@ -224,10 +227,22 @@ func (d *deployer) removeOldScalesets(ctx context.Context) error {
 		d.log.Printf("waiting for %s instances to terminate", *vmss.Name)
 		err = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 			for _, vm := range scalesetVMs {
-				u := fmt.Sprintf("https://vm%s.%s.%s.cloudapp.azure.com/healthz/ready", *vm.InstanceID, *vmss.Name, d.config.Location)
+				u := fmt.Sprintf("https://vm%s.%s.%s.cloudapp.azure.com/healthz", *vm.InstanceID, *vmss.Name, d.config.Location)
 
 				_, err := d.cli.Get(u)
-				if err, ok := err.(*url.Error); !ok || !err.Timeout() {
+
+				var terminated bool
+				if err, ok := err.(*url.Error); ok {
+					if err, ok := err.Err.(*net.OpError); ok {
+						if err, ok := err.Err.(*os.SyscallError); ok {
+							if err.Err == syscall.ECONNREFUSED {
+								terminated = true
+							}
+						}
+					}
+				}
+
+				if !terminated {
 					d.log.Printf("instance %s not terminated", *vm.InstanceID)
 					return false, nil
 				}
@@ -239,7 +254,7 @@ func (d *deployer) removeOldScalesets(ctx context.Context) error {
 			return err
 		}
 
-		d.log.Printf("deleting scaleset %s" + *vmss.Name)
+		d.log.Printf("deleting scaleset %s", *vmss.Name)
 		err = d.vmss.DeleteAndWait(ctx, d.config.ResourceGroupName, *vmss.Name)
 		if err != nil {
 			return err
