@@ -30,7 +30,7 @@ jobs:
           rpImageACR: $(RP_IMAGE_ACR)
       - script: |
           cd ${{ variables.modulePath }}
-          ./hack/deploy/copy_artifacts.sh
+          cp -a --parents aro "$(Build.ArtifactStagingDirectory)"
         displayName: 'Copy artifacts'
       - task: PublishBuildArtifacts@1
         displayName: 'Publish Artifacts'
