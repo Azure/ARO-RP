@@ -19,6 +19,9 @@ against a development RP running at https://localhost:8443/.
    this version includes the `az network vnet subnet update
    --disable-private-link-service-network-policies` flag.
 
+1. Install `virtualenv`, a tool for managing Python virtual environments. The
+   package is called `python-virtualenv` on both RHEL- and Debian-based systems.
+
 1. Log in to Azure:
 
    ```bash
@@ -38,11 +41,9 @@ against a development RP running at https://localhost:8443/.
 1. Prepare a Python development environment:
 
    ```
-   PYTHON_VERSION=3 make pyenv3  # Can also specify Python 2 if necessary
-   source pyenv3/bin/activate
+   make pyenv
+   source pyenv/bin/activate
    ```
-
-   Note: This has a system dependency on `virtualenv`.
 
 1. Build the development `az aro` extension:
 
@@ -62,10 +63,7 @@ against a development RP running at https://localhost:8443/.
 1. Verify that the ARO extension path is in your `az` configuration:
 
    ```bash
-   grep 'dev_sources' ~/.azure/config
-
-   # If not found,
-   cat >>~/.azure/config <<EOF
+   grep -q 'dev_sources' ~/.azure/config || cat >>~/.azure/config <<EOF
    [extension]
    dev_sources = $PWD/python
    EOF
