@@ -36,7 +36,7 @@ jobs:
           downloadType: 'specific'
           downloadPath: '$(System.ArtifactsDirectory)/deployer'
         displayName: "Download Deployer"
-      - template: ./templates/template-deploy-prod-env.yml
+      - template: ./templates/template-deploy-azure-env.yml
         parameters:
           workingDirectory: $(system.defaultWorkingDirectory)
           configDirectory: '$(System.ArtifactsDirectory)/config/drop/deploy'
@@ -44,4 +44,3 @@ jobs:
           configFileName: $(CONFIG_FILE_NAME)
           location: $(LOCATION)
           azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
-          
