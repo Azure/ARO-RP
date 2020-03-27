@@ -168,6 +168,7 @@ func (g *generator) preDeployTemplate() *arm.Template {
 
 	if g.production {
 		params = append(params,
+			"deployNSGs",
 			"extraClusterKeyvaultAccessPolicies",
 			"extraServiceKeyvaultAccessPolicies",
 		)
@@ -180,6 +181,9 @@ func (g *generator) preDeployTemplate() *arm.Template {
 	for _, param := range params {
 		p := &arm.TemplateParameter{Type: "string"}
 		switch param {
+		case "deployNSGs":
+			p.Type = "bool"
+			p.DefaultValue = false
 		case "extraClusterKeyvaultAccessPolicies", "extraServiceKeyvaultAccessPolicies":
 			p.Type = "array"
 			p.DefaultValue = []interface{}{}

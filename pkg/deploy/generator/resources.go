@@ -53,6 +53,11 @@ func (g *generator) managedIdentity() *arm.Resource {
 }
 
 func (g *generator) securityGroupRP() *arm.Resource {
+	var condition interface{}
+	if g.production {
+		condition = "[parameters('deployNSGs')]"
+	}
+
 	nsg := &mgmtnetwork.SecurityGroup{
 		SecurityGroupPropertiesFormat: &mgmtnetwork.SecurityGroupPropertiesFormat{
 			SecurityRules: &[]mgmtnetwork.SecurityRule{
@@ -94,11 +99,17 @@ func (g *generator) securityGroupRP() *arm.Resource {
 
 	return &arm.Resource{
 		Resource:   nsg,
+		Condition:  condition,
 		APIVersion: apiVersions["network"],
 	}
 }
 
 func (g *generator) securityGroupPE() *arm.Resource {
+	var condition interface{}
+	if g.production {
+		condition = "[parameters('deployNSGs')]"
+	}
+
 	return &arm.Resource{
 		Resource: &mgmtnetwork.SecurityGroup{
 			SecurityGroupPropertiesFormat: &mgmtnetwork.SecurityGroupPropertiesFormat{},
@@ -106,6 +117,7 @@ func (g *generator) securityGroupPE() *arm.Resource {
 			Type:                          to.StringPtr("Microsoft.Network/networkSecurityGroups"),
 			Location:                      to.StringPtr("[resourceGroup().location]"),
 		},
+		Condition:  condition,
 		APIVersion: apiVersions["network"],
 	}
 }

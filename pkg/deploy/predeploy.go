@@ -120,27 +120,15 @@ func (d *deployer) deployGlobalSubscription(ctx context.Context) error {
 func (d *deployer) deployManageIdentity(ctx context.Context) (string, error) {
 	deploymentName := "rp-production-managed-identity"
 
-	deployment, err := d.deployments.Get(ctx, d.config.ResourceGroupName, deploymentName)
-	if isDeploymentNotFoundError(err) {
-		deployment, err = d._deployManageIdentity(ctx, deploymentName)
-	}
-	if err != nil {
-		return "", err
-	}
-
-	return deployment.Properties.Outputs.(map[string]interface{})["rpServicePrincipalId"].(map[string]interface{})["value"].(string), nil
-}
-
-func (d *deployer) _deployManageIdentity(ctx context.Context, deploymentName string) (mgmtresources.DeploymentExtended, error) {
 	b, err := Asset(generator.FileRPProductionManagedIdentity)
 	if err != nil {
-		return mgmtresources.DeploymentExtended{}, nil
+		return "", err
 	}
 
 	var template map[string]interface{}
 	err = json.Unmarshal(b, &template)
 	if err != nil {
-		return mgmtresources.DeploymentExtended{}, nil
+		return "", err
 	}
 
 	d.log.Infof("deploying %s", deploymentName)
@@ -151,17 +139,27 @@ func (d *deployer) _deployManageIdentity(ctx context.Context, deploymentName str
 		},
 	})
 	if err != nil {
-		return mgmtresources.DeploymentExtended{}, nil
+		return "", err
 	}
 
-	return d.deployments.Get(ctx, d.config.ResourceGroupName, deploymentName)
+	deployment, err := d.deployments.Get(ctx, d.config.ResourceGroupName, deploymentName)
+	if err != nil {
+		return "", err
+	}
+
+	return deployment.Properties.Outputs.(map[string]interface{})["rpServicePrincipalId"].(map[string]interface{})["value"].(string), nil
 }
 
 func (d *deployer) deployPreDeploy(ctx context.Context, rpServicePrincipalID string) error {
 	deploymentName := "rp-production-predeploy"
 
+	var isCreate bool
 	_, err := d.deployments.Get(ctx, d.config.ResourceGroupName, deploymentName)
-	if err == nil || !isDeploymentNotFoundError(err) {
+	if isDeploymentNotFoundError(err) {
+		isCreate = true
+		err = nil
+	}
+	if err != nil {
 		return err
 	}
 
@@ -177,6 +175,9 @@ func (d *deployer) deployPreDeploy(ctx context.Context, rpServicePrincipalID str
 	}
 
 	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
+	parameters.Parameters["deployNSGs"] = &arm.ParametersParameter{
+		Value: isCreate,
+	}
 	parameters.Parameters["rpServicePrincipalId"] = &arm.ParametersParameter{
 		Value: rpServicePrincipalID,
 	}
