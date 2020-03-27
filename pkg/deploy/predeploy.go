@@ -7,8 +7,8 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
+	"net/url"
 	"path/filepath"
-	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
 	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
@@ -287,12 +287,17 @@ func (d *deployer) ensureServiceCertificates(ctx context.Context, serviceKeyVaul
 		return err
 	}
 
+cert:
 	for _, c := range certs {
 		for _, kc := range keyVaultCerts.Values() {
-			// sample id https://aro-int-eastus-svc.vault.azure.net/certificates/rp-server/d69c4682aee149858d362ece87ab0364
-			idParts := strings.Split(*kc.ID, "/")
-			if c.certificateName == idParts[4] {
-				continue
+			// sample id https://aro-int-eastus-svc.vault.azure.net/certificates/rp-server
+			u, err := url.Parse(*kc.ID)
+			if err != nil {
+				return err
+			}
+
+			if u.Path == "/certificates/"+c.certificateName {
+				continue cert
 			}
 		}
 
@@ -308,6 +313,7 @@ func (d *deployer) ensureServiceCertificates(ctx context.Context, serviceKeyVaul
 		if !c.created {
 			continue
 		}
+
 		err = d.keyvault.WaitForCertificateOperation(ctx, serviceKeyVaultURI, c.certificateName)
 		if err != nil {
 			return err
