@@ -25,6 +25,8 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 		return fmt.Errorf("invalid deploy version %q", deployVersion)
 	}
 
+	log.Printf("deploying version %s", deployVersion)
+
 	if strings.ToLower(flag.Arg(2)) != flag.Arg(2) {
 		return fmt.Errorf("location %s must be lower case", flag.Arg(2))
 	}
