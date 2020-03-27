@@ -5,6 +5,7 @@ package cosmosdb
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"strings"
 
 	pkg "github.com/Azure/ARO-RP/pkg/api"
@@ -52,13 +53,14 @@ type openShiftClusterDocumentQueryIterator struct {
 
 // OpenShiftClusterDocumentIterator is a openShiftClusterDocument iterator
 type OpenShiftClusterDocumentIterator interface {
-	Next(context.Context) (*pkg.OpenShiftClusterDocuments, error)
+	Next(context.Context, int) (*pkg.OpenShiftClusterDocuments, error)
+	Continuation() string
 }
 
 // OpenShiftClusterDocumentRawIterator is a openShiftClusterDocument raw iterator
 type OpenShiftClusterDocumentRawIterator interface {
 	OpenShiftClusterDocumentIterator
-	NextRaw(context.Context, interface{}) error
+	NextRaw(context.Context, int, interface{}) error
 }
 
 // NewOpenShiftClusterDocumentClient returns a new openShiftClusterDocument client
@@ -73,7 +75,7 @@ func (c *openShiftClusterDocumentClient) all(ctx context.Context, i OpenShiftClu
 	allopenShiftClusterDocuments := &pkg.OpenShiftClusterDocuments{}
 
 	for {
-		openShiftClusterDocuments, err := i.Next(ctx)
+		openShiftClusterDocuments, err := i.Next(ctx, -1)
 		if err != nil {
 			return nil, err
 		}
@@ -108,7 +110,12 @@ func (c *openShiftClusterDocumentClient) Create(ctx context.Context, partitionke
 }
 
 func (c *openShiftClusterDocumentClient) List(options *Options) OpenShiftClusterDocumentRawIterator {
-	return &openShiftClusterDocumentListIterator{openShiftClusterDocumentClient: c, options: options}
+	continuation := ""
+	if options != nil {
+		continuation = options.Continuation
+	}
+
+	return &openShiftClusterDocumentListIterator{openShiftClusterDocumentClient: c, options: options, continuation: continuation}
 }
 
 func (c *openShiftClusterDocumentClient) ListAll(ctx context.Context, options *Options) (*pkg.OpenShiftClusterDocuments, error) {
@@ -155,7 +162,12 @@ func (c *openShiftClusterDocumentClient) Delete(ctx context.Context, partitionke
 }
 
 func (c *openShiftClusterDocumentClient) Query(partitionkey string, query *Query, options *Options) OpenShiftClusterDocumentRawIterator {
-	return &openShiftClusterDocumentQueryIterator{openShiftClusterDocumentClient: c, partitionkey: partitionkey, query: query, options: options}
+	continuation := ""
+	if options != nil {
+		continuation = options.Continuation
+	}
+
+	return &openShiftClusterDocumentQueryIterator{openShiftClusterDocumentClient: c, partitionkey: partitionkey, query: query, options: options, continuation: continuation}
 }
 
 func (c *openShiftClusterDocumentClient) QueryAll(ctx context.Context, partitionkey string, query *Query, options *Options) (*pkg.OpenShiftClusterDocuments, error) {
@@ -163,7 +175,12 @@ func (c *openShiftClusterDocumentClient) QueryAll(ctx context.Context, partition
 }
 
 func (c *openShiftClusterDocumentClient) ChangeFeed(options *Options) OpenShiftClusterDocumentIterator {
-	return &openShiftClusterDocumentChangeFeedIterator{openShiftClusterDocumentClient: c}
+	continuation := ""
+	if options != nil {
+		continuation = options.Continuation
+	}
+
+	return &openShiftClusterDocumentChangeFeedIterator{openShiftClusterDocumentClient: c, options: options, continuation: continuation}
 }
 
 func (c *openShiftClusterDocumentClient) setOptions(options *Options, openShiftClusterDocument *pkg.OpenShiftClusterDocument, headers http.Header) error {
@@ -190,11 +207,11 @@ func (c *openShiftClusterDocumentClient) setOptions(options *Options, openShiftC
 	return nil
 }
 
-func (i *openShiftClusterDocumentChangeFeedIterator) Next(ctx context.Context) (openShiftClusterDocuments *pkg.OpenShiftClusterDocuments, err error) {
+func (i *openShiftClusterDocumentChangeFeedIterator) Next(ctx context.Context, maxItemCount int) (openShiftClusterDocuments *pkg.OpenShiftClusterDocuments, err error) {
 	headers := http.Header{}
 	headers.Set("A-IM", "Incremental feed")
 
-	headers.Set("X-Ms-Max-Item-Count", "-1")
+	headers.Set("X-Ms-Max-Item-Count", strconv.Itoa(maxItemCount))
 	if i.continuation != "" {
 		headers.Set("If-None-Match", i.continuation)
 	}
@@ -217,18 +234,22 @@ func (i *openShiftClusterDocumentChangeFeedIterator) Next(ctx context.Context) (
 	return
 }
 
-func (i *openShiftClusterDocumentListIterator) Next(ctx context.Context) (openShiftClusterDocuments *pkg.OpenShiftClusterDocuments, err error) {
-	err = i.NextRaw(ctx, &openShiftClusterDocuments)
+func (i *openShiftClusterDocumentChangeFeedIterator) Continuation() string {
+	return i.continuation
+}
+
+func (i *openShiftClusterDocumentListIterator) Next(ctx context.Context, maxItemCount int) (openShiftClusterDocuments *pkg.OpenShiftClusterDocuments, err error) {
+	err = i.NextRaw(ctx, maxItemCount, &openShiftClusterDocuments)
 	return
 }
 
-func (i *openShiftClusterDocumentListIterator) NextRaw(ctx context.Context, raw interface{}) (err error) {
+func (i *openShiftClusterDocumentListIterator) NextRaw(ctx context.Context, maxItemCount int, raw interface{}) (err error) {
 	if i.done {
 		return
 	}
 
 	headers := http.Header{}
-	headers.Set("X-Ms-Max-Item-Count", "-1")
+	headers.Set("X-Ms-Max-Item-Count", strconv.Itoa(maxItemCount))
 	if i.continuation != "" {
 		headers.Set("X-Ms-Continuation", i.continuation)
 	}
@@ -249,18 +270,22 @@ func (i *openShiftClusterDocumentListIterator) NextRaw(ctx context.Context, raw 
 	return
 }
 
-func (i *openShiftClusterDocumentQueryIterator) Next(ctx context.Context) (openShiftClusterDocuments *pkg.OpenShiftClusterDocuments, err error) {
-	err = i.NextRaw(ctx, &openShiftClusterDocuments)
+func (i *openShiftClusterDocumentListIterator) Continuation() string {
+	return i.continuation
+}
+
+func (i *openShiftClusterDocumentQueryIterator) Next(ctx context.Context, maxItemCount int) (openShiftClusterDocuments *pkg.OpenShiftClusterDocuments, err error) {
+	err = i.NextRaw(ctx, maxItemCount, &openShiftClusterDocuments)
 	return
 }
 
-func (i *openShiftClusterDocumentQueryIterator) NextRaw(ctx context.Context, raw interface{}) (err error) {
+func (i *openShiftClusterDocumentQueryIterator) NextRaw(ctx context.Context, maxItemCount int, raw interface{}) (err error) {
 	if i.done {
 		return
 	}
 
 	headers := http.Header{}
-	headers.Set("X-Ms-Max-Item-Count", "-1")
+	headers.Set("X-Ms-Max-Item-Count", strconv.Itoa(maxItemCount))
 	headers.Set("X-Ms-Documentdb-Isquery", "True")
 	headers.Set("Content-Type", "application/query+json")
 	if i.partitionkey != "" {
@@ -286,4 +311,8 @@ func (i *openShiftClusterDocumentQueryIterator) NextRaw(ctx context.Context, raw
 	i.done = i.continuation == ""
 
 	return
+}
+
+func (i *openShiftClusterDocumentQueryIterator) Continuation() string {
+	return i.continuation
 }

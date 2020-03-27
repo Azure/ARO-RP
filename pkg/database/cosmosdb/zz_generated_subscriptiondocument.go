@@ -5,6 +5,7 @@ package cosmosdb
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"strings"
 
 	pkg "github.com/Azure/ARO-RP/pkg/api"
@@ -52,13 +53,14 @@ type subscriptionDocumentQueryIterator struct {
 
 // SubscriptionDocumentIterator is a subscriptionDocument iterator
 type SubscriptionDocumentIterator interface {
-	Next(context.Context) (*pkg.SubscriptionDocuments, error)
+	Next(context.Context, int) (*pkg.SubscriptionDocuments, error)
+	Continuation() string
 }
 
 // SubscriptionDocumentRawIterator is a subscriptionDocument raw iterator
 type SubscriptionDocumentRawIterator interface {
 	SubscriptionDocumentIterator
-	NextRaw(context.Context, interface{}) error
+	NextRaw(context.Context, int, interface{}) error
 }
 
 // NewSubscriptionDocumentClient returns a new subscriptionDocument client
@@ -73,7 +75,7 @@ func (c *subscriptionDocumentClient) all(ctx context.Context, i SubscriptionDocu
 	allsubscriptionDocuments := &pkg.SubscriptionDocuments{}
 
 	for {
-		subscriptionDocuments, err := i.Next(ctx)
+		subscriptionDocuments, err := i.Next(ctx, -1)
 		if err != nil {
 			return nil, err
 		}
@@ -108,7 +110,12 @@ func (c *subscriptionDocumentClient) Create(ctx context.Context, partitionkey st
 }
 
 func (c *subscriptionDocumentClient) List(options *Options) SubscriptionDocumentRawIterator {
-	return &subscriptionDocumentListIterator{subscriptionDocumentClient: c, options: options}
+	continuation := ""
+	if options != nil {
+		continuation = options.Continuation
+	}
+
+	return &subscriptionDocumentListIterator{subscriptionDocumentClient: c, options: options, continuation: continuation}
 }
 
 func (c *subscriptionDocumentClient) ListAll(ctx context.Context, options *Options) (*pkg.SubscriptionDocuments, error) {
@@ -155,7 +162,12 @@ func (c *subscriptionDocumentClient) Delete(ctx context.Context, partitionkey st
 }
 
 func (c *subscriptionDocumentClient) Query(partitionkey string, query *Query, options *Options) SubscriptionDocumentRawIterator {
-	return &subscriptionDocumentQueryIterator{subscriptionDocumentClient: c, partitionkey: partitionkey, query: query, options: options}
+	continuation := ""
+	if options != nil {
+		continuation = options.Continuation
+	}
+
+	return &subscriptionDocumentQueryIterator{subscriptionDocumentClient: c, partitionkey: partitionkey, query: query, options: options, continuation: continuation}
 }
 
 func (c *subscriptionDocumentClient) QueryAll(ctx context.Context, partitionkey string, query *Query, options *Options) (*pkg.SubscriptionDocuments, error) {
@@ -163,7 +175,12 @@ func (c *subscriptionDocumentClient) QueryAll(ctx context.Context, partitionkey 
 }
 
 func (c *subscriptionDocumentClient) ChangeFeed(options *Options) SubscriptionDocumentIterator {
-	return &subscriptionDocumentChangeFeedIterator{subscriptionDocumentClient: c}
+	continuation := ""
+	if options != nil {
+		continuation = options.Continuation
+	}
+
+	return &subscriptionDocumentChangeFeedIterator{subscriptionDocumentClient: c, options: options, continuation: continuation}
 }
 
 func (c *subscriptionDocumentClient) setOptions(options *Options, subscriptionDocument *pkg.SubscriptionDocument, headers http.Header) error {
@@ -190,11 +207,11 @@ func (c *subscriptionDocumentClient) setOptions(options *Options, subscriptionDo
 	return nil
 }
 
-func (i *subscriptionDocumentChangeFeedIterator) Next(ctx context.Context) (subscriptionDocuments *pkg.SubscriptionDocuments, err error) {
+func (i *subscriptionDocumentChangeFeedIterator) Next(ctx context.Context, maxItemCount int) (subscriptionDocuments *pkg.SubscriptionDocuments, err error) {
 	headers := http.Header{}
 	headers.Set("A-IM", "Incremental feed")
 
-	headers.Set("X-Ms-Max-Item-Count", "-1")
+	headers.Set("X-Ms-Max-Item-Count", strconv.Itoa(maxItemCount))
 	if i.continuation != "" {
 		headers.Set("If-None-Match", i.continuation)
 	}
@@ -217,18 +234,22 @@ func (i *subscriptionDocumentChangeFeedIterator) Next(ctx context.Context) (subs
 	return
 }
 
-func (i *subscriptionDocumentListIterator) Next(ctx context.Context) (subscriptionDocuments *pkg.SubscriptionDocuments, err error) {
-	err = i.NextRaw(ctx, &subscriptionDocuments)
+func (i *subscriptionDocumentChangeFeedIterator) Continuation() string {
+	return i.continuation
+}
+
+func (i *subscriptionDocumentListIterator) Next(ctx context.Context, maxItemCount int) (subscriptionDocuments *pkg.SubscriptionDocuments, err error) {
+	err = i.NextRaw(ctx, maxItemCount, &subscriptionDocuments)
 	return
 }
 
-func (i *subscriptionDocumentListIterator) NextRaw(ctx context.Context, raw interface{}) (err error) {
+func (i *subscriptionDocumentListIterator) NextRaw(ctx context.Context, maxItemCount int, raw interface{}) (err error) {
 	if i.done {
 		return
 	}
 
 	headers := http.Header{}
-	headers.Set("X-Ms-Max-Item-Count", "-1")
+	headers.Set("X-Ms-Max-Item-Count", strconv.Itoa(maxItemCount))
 	if i.continuation != "" {
 		headers.Set("X-Ms-Continuation", i.continuation)
 	}
@@ -249,18 +270,22 @@ func (i *subscriptionDocumentListIterator) NextRaw(ctx context.Context, raw inte
 	return
 }
 
-func (i *subscriptionDocumentQueryIterator) Next(ctx context.Context) (subscriptionDocuments *pkg.SubscriptionDocuments, err error) {
-	err = i.NextRaw(ctx, &subscriptionDocuments)
+func (i *subscriptionDocumentListIterator) Continuation() string {
+	return i.continuation
+}
+
+func (i *subscriptionDocumentQueryIterator) Next(ctx context.Context, maxItemCount int) (subscriptionDocuments *pkg.SubscriptionDocuments, err error) {
+	err = i.NextRaw(ctx, maxItemCount, &subscriptionDocuments)
 	return
 }
 
-func (i *subscriptionDocumentQueryIterator) NextRaw(ctx context.Context, raw interface{}) (err error) {
+func (i *subscriptionDocumentQueryIterator) NextRaw(ctx context.Context, maxItemCount int, raw interface{}) (err error) {
 	if i.done {
 		return
 	}
 
 	headers := http.Header{}
-	headers.Set("X-Ms-Max-Item-Count", "-1")
+	headers.Set("X-Ms-Max-Item-Count", strconv.Itoa(maxItemCount))
 	headers.Set("X-Ms-Documentdb-Isquery", "True")
 	headers.Set("Content-Type", "application/query+json")
 	if i.partitionkey != "" {
@@ -286,4 +311,8 @@ func (i *subscriptionDocumentQueryIterator) NextRaw(ctx context.Context, raw int
 	i.done = i.continuation == ""
 
 	return
+}
+
+func (i *subscriptionDocumentQueryIterator) Continuation() string {
+	return i.continuation
 }

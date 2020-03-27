@@ -5,6 +5,7 @@ package cosmosdb
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"strings"
 
 	pkg "github.com/Azure/ARO-RP/pkg/api"
@@ -52,13 +53,14 @@ type asyncOperationDocumentQueryIterator struct {
 
 // AsyncOperationDocumentIterator is a asyncOperationDocument iterator
 type AsyncOperationDocumentIterator interface {
-	Next(context.Context) (*pkg.AsyncOperationDocuments, error)
+	Next(context.Context, int) (*pkg.AsyncOperationDocuments, error)
+	Continuation() string
 }
 
 // AsyncOperationDocumentRawIterator is a asyncOperationDocument raw iterator
 type AsyncOperationDocumentRawIterator interface {
 	AsyncOperationDocumentIterator
-	NextRaw(context.Context, interface{}) error
+	NextRaw(context.Context, int, interface{}) error
 }
 
 // NewAsyncOperationDocumentClient returns a new asyncOperationDocument client
@@ -73,7 +75,7 @@ func (c *asyncOperationDocumentClient) all(ctx context.Context, i AsyncOperation
 	allasyncOperationDocuments := &pkg.AsyncOperationDocuments{}
 
 	for {
-		asyncOperationDocuments, err := i.Next(ctx)
+		asyncOperationDocuments, err := i.Next(ctx, -1)
 		if err != nil {
 			return nil, err
 		}
@@ -108,7 +110,12 @@ func (c *asyncOperationDocumentClient) Create(ctx context.Context, partitionkey 
 }
 
 func (c *asyncOperationDocumentClient) List(options *Options) AsyncOperationDocumentRawIterator {
-	return &asyncOperationDocumentListIterator{asyncOperationDocumentClient: c, options: options}
+	continuation := ""
+	if options != nil {
+		continuation = options.Continuation
+	}
+
+	return &asyncOperationDocumentListIterator{asyncOperationDocumentClient: c, options: options, continuation: continuation}
 }
 
 func (c *asyncOperationDocumentClient) ListAll(ctx context.Context, options *Options) (*pkg.AsyncOperationDocuments, error) {
@@ -155,7 +162,12 @@ func (c *asyncOperationDocumentClient) Delete(ctx context.Context, partitionkey 
 }
 
 func (c *asyncOperationDocumentClient) Query(partitionkey string, query *Query, options *Options) AsyncOperationDocumentRawIterator {
-	return &asyncOperationDocumentQueryIterator{asyncOperationDocumentClient: c, partitionkey: partitionkey, query: query, options: options}
+	continuation := ""
+	if options != nil {
+		continuation = options.Continuation
+	}
+
+	return &asyncOperationDocumentQueryIterator{asyncOperationDocumentClient: c, partitionkey: partitionkey, query: query, options: options, continuation: continuation}
 }
 
 func (c *asyncOperationDocumentClient) QueryAll(ctx context.Context, partitionkey string, query *Query, options *Options) (*pkg.AsyncOperationDocuments, error) {
@@ -163,7 +175,12 @@ func (c *asyncOperationDocumentClient) QueryAll(ctx context.Context, partitionke
 }
 
 func (c *asyncOperationDocumentClient) ChangeFeed(options *Options) AsyncOperationDocumentIterator {
-	return &asyncOperationDocumentChangeFeedIterator{asyncOperationDocumentClient: c}
+	continuation := ""
+	if options != nil {
+		continuation = options.Continuation
+	}
+
+	return &asyncOperationDocumentChangeFeedIterator{asyncOperationDocumentClient: c, options: options, continuation: continuation}
 }
 
 func (c *asyncOperationDocumentClient) setOptions(options *Options, asyncOperationDocument *pkg.AsyncOperationDocument, headers http.Header) error {
@@ -190,11 +207,11 @@ func (c *asyncOperationDocumentClient) setOptions(options *Options, asyncOperati
 	return nil
 }
 
-func (i *asyncOperationDocumentChangeFeedIterator) Next(ctx context.Context) (asyncOperationDocuments *pkg.AsyncOperationDocuments, err error) {
+func (i *asyncOperationDocumentChangeFeedIterator) Next(ctx context.Context, maxItemCount int) (asyncOperationDocuments *pkg.AsyncOperationDocuments, err error) {
 	headers := http.Header{}
 	headers.Set("A-IM", "Incremental feed")
 
-	headers.Set("X-Ms-Max-Item-Count", "-1")
+	headers.Set("X-Ms-Max-Item-Count", strconv.Itoa(maxItemCount))
 	if i.continuation != "" {
 		headers.Set("If-None-Match", i.continuation)
 	}
@@ -217,18 +234,22 @@ func (i *asyncOperationDocumentChangeFeedIterator) Next(ctx context.Context) (as
 	return
 }
 
-func (i *asyncOperationDocumentListIterator) Next(ctx context.Context) (asyncOperationDocuments *pkg.AsyncOperationDocuments, err error) {
-	err = i.NextRaw(ctx, &asyncOperationDocuments)
+func (i *asyncOperationDocumentChangeFeedIterator) Continuation() string {
+	return i.continuation
+}
+
+func (i *asyncOperationDocumentListIterator) Next(ctx context.Context, maxItemCount int) (asyncOperationDocuments *pkg.AsyncOperationDocuments, err error) {
+	err = i.NextRaw(ctx, maxItemCount, &asyncOperationDocuments)
 	return
 }
 
-func (i *asyncOperationDocumentListIterator) NextRaw(ctx context.Context, raw interface{}) (err error) {
+func (i *asyncOperationDocumentListIterator) NextRaw(ctx context.Context, maxItemCount int, raw interface{}) (err error) {
 	if i.done {
 		return
 	}
 
 	headers := http.Header{}
-	headers.Set("X-Ms-Max-Item-Count", "-1")
+	headers.Set("X-Ms-Max-Item-Count", strconv.Itoa(maxItemCount))
 	if i.continuation != "" {
 		headers.Set("X-Ms-Continuation", i.continuation)
 	}
@@ -249,18 +270,22 @@ func (i *asyncOperationDocumentListIterator) NextRaw(ctx context.Context, raw in
 	return
 }
 
-func (i *asyncOperationDocumentQueryIterator) Next(ctx context.Context) (asyncOperationDocuments *pkg.AsyncOperationDocuments, err error) {
-	err = i.NextRaw(ctx, &asyncOperationDocuments)
+func (i *asyncOperationDocumentListIterator) Continuation() string {
+	return i.continuation
+}
+
+func (i *asyncOperationDocumentQueryIterator) Next(ctx context.Context, maxItemCount int) (asyncOperationDocuments *pkg.AsyncOperationDocuments, err error) {
+	err = i.NextRaw(ctx, maxItemCount, &asyncOperationDocuments)
 	return
 }
 
-func (i *asyncOperationDocumentQueryIterator) NextRaw(ctx context.Context, raw interface{}) (err error) {
+func (i *asyncOperationDocumentQueryIterator) NextRaw(ctx context.Context, maxItemCount int, raw interface{}) (err error) {
 	if i.done {
 		return
 	}
 
 	headers := http.Header{}
-	headers.Set("X-Ms-Max-Item-Count", "-1")
+	headers.Set("X-Ms-Max-Item-Count", strconv.Itoa(maxItemCount))
 	headers.Set("X-Ms-Documentdb-Isquery", "True")
 	headers.Set("Content-Type", "application/query+json")
 	if i.partitionkey != "" {
@@ -286,4 +311,8 @@ func (i *asyncOperationDocumentQueryIterator) NextRaw(ctx context.Context, raw i
 	i.done = i.continuation == ""
 
 	return
+}
+
+func (i *asyncOperationDocumentQueryIterator) Continuation() string {
+	return i.continuation
 }

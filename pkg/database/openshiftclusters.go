@@ -31,7 +31,7 @@ type OpenShiftClusters interface {
 	Update(context.Context, *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error)
 	Delete(context.Context, *api.OpenShiftClusterDocument) error
 	ChangeFeed() cosmosdb.OpenShiftClusterDocumentIterator
-	ListByPrefix(string, string) (cosmosdb.OpenShiftClusterDocumentIterator, error)
+	ListByPrefix(string, string, string) (cosmosdb.OpenShiftClusterDocumentIterator, error)
 	Dequeue(context.Context) (*api.OpenShiftClusterDocument, error)
 	Lease(context.Context, string) (*api.OpenShiftClusterDocument, error)
 	EndLease(context.Context, string, api.ProvisioningState, api.ProvisioningState) (*api.OpenShiftClusterDocument, error)
@@ -147,7 +147,7 @@ func (c *openShiftClusters) QueueLength(ctx context.Context, collid string) (int
 			api.MissingFields
 			Document []int `json:"Documents,omitempty"`
 		}
-		err := result.NextRaw(ctx, &data)
+		err := result.NextRaw(ctx, -1, &data)
 		if err != nil {
 			return 0, err
 		}
@@ -220,20 +220,24 @@ func (c *openShiftClusters) ChangeFeed() cosmosdb.OpenShiftClusterDocumentIterat
 	return c.c.ChangeFeed(nil)
 }
 
-func (c *openShiftClusters) ListByPrefix(subscriptionID string, prefix string) (cosmosdb.OpenShiftClusterDocumentIterator, error) {
+func (c *openShiftClusters) ListByPrefix(subscriptionID, prefix, continuation string) (cosmosdb.OpenShiftClusterDocumentIterator, error) {
 	if prefix != strings.ToLower(prefix) {
 		return nil, fmt.Errorf("prefix %q is not lower case", prefix)
 	}
 
-	return c.c.Query(subscriptionID, &cosmosdb.Query{
-		Query: "SELECT * FROM OpenShiftClusters doc WHERE STARTSWITH(doc.key, @prefix)",
-		Parameters: []cosmosdb.Parameter{
-			{
-				Name:  "@prefix",
-				Value: prefix,
+	return c.c.Query(
+		subscriptionID,
+		&cosmosdb.Query{
+			Query: "SELECT * FROM OpenShiftClusters doc WHERE STARTSWITH(doc.key, @prefix)",
+			Parameters: []cosmosdb.Parameter{
+				{
+					Name:  "@prefix",
+					Value: prefix,
+				},
 			},
 		},
-	}, nil), nil
+		&cosmosdb.Options{Continuation: continuation},
+	), nil
 }
 
 func (c *openShiftClusters) Dequeue(ctx context.Context) (*api.OpenShiftClusterDocument, error) {
@@ -242,7 +246,7 @@ func (c *openShiftClusters) Dequeue(ctx context.Context) (*api.OpenShiftClusterD
 	}, nil)
 
 	for {
-		docs, err := i.Next(ctx)
+		docs, err := i.Next(ctx, -1)
 		if err != nil {
 			return nil, err
 		}

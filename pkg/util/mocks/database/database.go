@@ -351,18 +351,18 @@ func (mr *MockOpenShiftClustersMockRecorder) Lease(arg0, arg1 interface{}) *gomo
 }
 
 // ListByPrefix mocks base method
-func (m *MockOpenShiftClusters) ListByPrefix(arg0, arg1 string) (cosmosdb.OpenShiftClusterDocumentIterator, error) {
+func (m *MockOpenShiftClusters) ListByPrefix(arg0, arg1, arg2 string) (cosmosdb.OpenShiftClusterDocumentIterator, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListByPrefix", arg0, arg1)
+	ret := m.ctrl.Call(m, "ListByPrefix", arg0, arg1, arg2)
 	ret0, _ := ret[0].(cosmosdb.OpenShiftClusterDocumentIterator)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListByPrefix indicates an expected call of ListByPrefix
-func (mr *MockOpenShiftClustersMockRecorder) ListByPrefix(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockOpenShiftClustersMockRecorder) ListByPrefix(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByPrefix", reflect.TypeOf((*MockOpenShiftClusters)(nil).ListByPrefix), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByPrefix", reflect.TypeOf((*MockOpenShiftClusters)(nil).ListByPrefix), arg0, arg1, arg2)
 }
 
 // Patch mocks base method
