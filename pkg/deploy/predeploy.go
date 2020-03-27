@@ -226,6 +226,7 @@ func (d *deployer) ensureEncryptionSecret(ctx context.Context, serviceKeyVaultUR
 		return err
 	}
 
+	d.log.Infof("setting %s", env.EncryptionSecretName)
 	_, err = d.keyvault.SetSecret(ctx, serviceKeyVaultURI, env.EncryptionSecretName, keyvault.SecretSetParameters{
 		Value: to.StringPtr(string(key)),
 	})
@@ -243,6 +244,7 @@ func (d *deployer) ensureMonitoringCertificates(ctx context.Context, serviceKeyV
 			return err
 		}
 
+		d.log.Infof("importing %s", certificateName)
 		_, err = d.keyvault.ImportCertificate(ctx, serviceKeyVaultURI, certificateName, keyvault.CertificateImportParameters{
 			Base64EncodedCertificate: bundle.Value,
 		})
@@ -293,6 +295,8 @@ func (d *deployer) ensureServiceCertificates(ctx context.Context, serviceKeyVaul
 				continue
 			}
 		}
+
+		d.log.Infof("creating %s", c.certificateName)
 		err = d.keyvault.CreateSignedCertificate(ctx, serviceKeyVaultURI, utilkeyvault.IssuerOnecert, c.certificateName, c.commonName, c.eku)
 		if err != nil {
 			return err
