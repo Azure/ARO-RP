@@ -673,7 +673,8 @@ EOF
 az login -i --allow-no-subscriptions
 
 >/etc/containers/nodocker  # podman stderr output confuses az acr login
-az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
+mkdir /root/.docker
+REGISTRY_AUTH_FILE=/root/.docker/config.json az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
 
 SVCVAULTURI="$(az keyvault list -g "$RESOURCEGROUPNAME" --query "[?tags.vault=='service'].properties.vaultUri" -o tsv)"
 az keyvault secret download --file /etc/mdm.pem --id "${SVCVAULTURI}secrets/rp-mdm"
