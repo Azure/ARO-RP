@@ -1,0 +1,22 @@
+parameters:
+  workingDirectory: ""
+  location: ""
+  configDirectory: ""
+  deployerDirectory: ""
+  configFileName: ""
+  azureDevOpsJSONSPN: ""
+steps:
+  - script: |
+      set -eu
+      cd ${{ parameters.workingDirectory }}
+      
+      echo ${{ parameters.azureDevOpsJSONSPN }} | base64 -d -w 0 > devops-spn.json
+      export AZURE_SUBSCRIPTION_ID="${{ parameters.subscriptionId }}"
+      export AZURE_CLIENT_ID=$(cat devops-spn.json | jq -r '.clientId')
+      export AZURE_CLIENT_SECRET=$(cat devops-spn.json | jq -r '.clientSecret')
+      export AZURE_TENANT_ID=$(cat devops-spn.json | jq -r '.tenantId')
+      rm devops-spn.json
+
+      chmod +x ${{ parameters.deployerDirectory }}/aro
+      ${{ parameters.deployerDirectory }}/aro deploy ${{ parameters.configDirectory }}/${{ parameters.configFileName }} ${{ parameters.location }}
+    displayName: "🚀 Buildout/Deploy env"
