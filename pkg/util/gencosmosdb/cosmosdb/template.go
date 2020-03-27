@@ -51,6 +51,7 @@ type templateQueryIterator struct {
 // TemplateIterator is a template iterator
 type TemplateIterator interface {
 	Next(context.Context) (*pkg.Templates, error)
+	Continuation() string
 }
 
 // TemplateRawIterator is a template raw iterator
@@ -215,6 +216,10 @@ func (i *templateChangeFeedIterator) Next(ctx context.Context) (templates *pkg.T
 	return
 }
 
+func (i *templateChangeFeedIterator) Continuation() string {
+	return i.continuation
+}
+
 func (i *templateListIterator) Next(ctx context.Context) (templates *pkg.Templates, err error) {
 	err = i.NextRaw(ctx, &templates)
 	return
@@ -245,6 +250,10 @@ func (i *templateListIterator) NextRaw(ctx context.Context, raw interface{}) (er
 	i.done = i.continuation == ""
 
 	return
+}
+
+func (i *templateListIterator) Continuation() string {
+	return i.continuation
 }
 
 func (i *templateQueryIterator) Next(ctx context.Context) (templates *pkg.Templates, err error) {
@@ -284,4 +293,8 @@ func (i *templateQueryIterator) NextRaw(ctx context.Context, raw interface{}) (e
 	i.done = i.continuation == ""
 
 	return
+}
+
+func (i *templateQueryIterator) Continuation() string {
+	return i.continuation
 }
