@@ -35,6 +35,15 @@ against a development RP running at https://localhost:8443/.
    Note: you will be able to update the `az aro` extension in the future by
    simply running `git pull`.
 
+1. Prepare a Python development environment:
+
+   ```
+   PYTHON_VERSION=3 make pyenv3  # Can also specify Python 2 if necessary
+   source pyenv3/bin/activate
+   ```
+
+   Note: This has a system dependency on `virtualenv`.
+
 1. Build the development `az aro` extension:
 
    `make az`
@@ -50,9 +59,12 @@ against a development RP running at https://localhost:8443/.
     SyntaxError: invalid syntax
     ```
 
-1. Add the ARO extension path to your `az` configuration:
+1. Verify that the ARO extension path is in your `az` configuration:
 
    ```bash
+   grep 'dev_sources' ~/.azure/config
+
+   # If not found,
    cat >>~/.azure/config <<EOF
    [extension]
    dev_sources = $PWD/python
@@ -97,11 +109,14 @@ cluster:
    export CLUSTER=cluster
 
    az group create -g "$RESOURCEGROUP" -l $LOCATION
+
+   # May already exist
    az network vnet create \
      -g "$RESOURCEGROUP" \
      -n dev-vnet \
      --address-prefixes 10.0.0.0/9 \
      >/dev/null
+
    for subnet in "$CLUSTER-master" "$CLUSTER-worker"; do
      az network vnet subnet create \
        -g "$RESOURCEGROUP" \
