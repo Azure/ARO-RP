@@ -93,6 +93,8 @@ func New(ctx context.Context, log *logrus.Entry, config *RPConfig, version strin
 }
 
 func (d *deployer) Deploy(ctx context.Context, rpServicePrincipalID string) error {
+	deploymentName := "rp-production-" + d.version
+
 	b, err := Asset(generator.FileRPProduction)
 	if err != nil {
 		return err
@@ -124,8 +126,8 @@ func (d *deployer) Deploy(ctx context.Context, rpServicePrincipalID string) erro
 		Value: d.version,
 	}
 
-	d.log.Printf("deploying rp version %s to %s", d.version, d.config.ResourceGroupName)
-	err = d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, "rp-production-"+d.version, mgmtresources.Deployment{
+	d.log.Printf("deploying %s", deploymentName)
+	err = d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, deploymentName, mgmtresources.Deployment{
 		Properties: &mgmtresources.DeploymentProperties{
 			Template:   template,
 			Mode:       mgmtresources.Incremental,
@@ -136,7 +138,7 @@ func (d *deployer) Deploy(ctx context.Context, rpServicePrincipalID string) erro
 		return err
 	}
 
-	deployment, err := d.deployments.Get(ctx, d.config.ResourceGroupName, "rp-production-"+d.version)
+	deployment, err := d.deployments.Get(ctx, d.config.ResourceGroupName, deploymentName)
 	if err != nil {
 		return err
 	}

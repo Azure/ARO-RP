@@ -83,7 +83,7 @@ func (d *deployer) deployGlobal(ctx context.Context, rpServicePrincipalID string
 		Value: rpServicePrincipalID,
 	}
 
-	d.log.Infof("deploying global")
+	d.log.Infof("deploying %s", deploymentName)
 	return d.globaldeployments.CreateOrUpdateAndWait(ctx, d.config.Configuration.GlobalResourceGroupName, deploymentName, mgmtresources.Deployment{
 		Properties: &mgmtresources.DeploymentProperties{
 			Template:   template,
@@ -107,7 +107,7 @@ func (d *deployer) deployGlobalSubscription(ctx context.Context) error {
 		return err
 	}
 
-	d.log.Infof("deploying rbac")
+	d.log.Infof("deploying %s", deploymentName)
 	return d.globaldeployments.CreateOrUpdateAtSubscriptionScopeAndWait(ctx, deploymentName, mgmtresources.Deployment{
 		Properties: &mgmtresources.DeploymentProperties{
 			Template: template,
@@ -143,7 +143,7 @@ func (d *deployer) _deployManageIdentity(ctx context.Context, deploymentName str
 		return mgmtresources.DeploymentExtended{}, nil
 	}
 
-	d.log.Infof("deploying managed identity to %s", d.config.ResourceGroupName)
+	d.log.Infof("deploying %s", deploymentName)
 	err = d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, deploymentName, mgmtresources.Deployment{
 		Properties: &mgmtresources.DeploymentProperties{
 			Template: template,
@@ -181,7 +181,7 @@ func (d *deployer) deployPreDeploy(ctx context.Context, rpServicePrincipalID str
 		Value: rpServicePrincipalID,
 	}
 
-	d.log.Infof("predeploying to %s", d.config.ResourceGroupName)
+	d.log.Infof("deploying %s", deploymentName)
 	return d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, deploymentName, mgmtresources.Deployment{
 		Properties: &mgmtresources.DeploymentProperties{
 			Template:   template,
