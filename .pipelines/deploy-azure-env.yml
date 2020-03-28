@@ -2,45 +2,13 @@
 trigger: none
 pr: none
 
-variables:
-  - template: vars.yml
-
 jobs:
-  - job: "Deploy"
-    pool:
-      vmImage: "ubuntu-latest"
-    steps:
-      - template: ./templates/template-setup-golang-env.yml
-        parameters:
-          gobin: ${{ variables.GOBIN }}
-          gopath: ${{ variables.GOPATH }}
-          goroot: ${{ variables.GOROOT }}
-          modulePath: ${{ variables.modulePath }}
-      - task: DownloadBuildArtifacts@0
-        inputs:
-          buildType: 'specific'
-          project: '5d69ab04-7ded-49dc-84d5-bbbcac4add8d'
-          pipeline: '129296'
-          buildVersionToDownload: 'latestFromBranch'
-          branchName: 'refs/heads/master'
-          downloadType: 'specific'
-          downloadPath: '$(System.ArtifactsDirectory)/config'
-        displayName: "Download Config"
-      - task: DownloadBuildArtifacts@0
-        inputs:
-          buildType: 'specific'
-          project: '5d69ab04-7ded-49dc-84d5-bbbcac4add8d'
-          pipeline: '120903'
-          buildVersionToDownload: 'latestFromBranch'
-          branchName: 'refs/heads/master'
-          downloadType: 'specific'
-          downloadPath: '$(System.ArtifactsDirectory)/deployer'
-        displayName: "Download Deployer"
-      - template: ./templates/template-deploy-azure-env.yml
-        parameters:
-          workingDirectory: $(system.defaultWorkingDirectory)
-          configDirectory: '$(System.ArtifactsDirectory)/config/drop/deploy'
-          deployerDirectory: '$(System.ArtifactsDirectory)/deployer/drop'
-          configFileName: $(CONFIG_FILE_NAME)
-          location: $(LOCATION)
-          azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
+  - template: ./templates-job-deploy-azure-env.yml
+    parameters: 
+      environment: $(environment)
+      LOCATION: $(LOCATION)
+      CONFIG_FILE_NAME: $(CONFIG_FILE_NAME)
+      aro-v4-ci-devops-spn: $(aro-v4-ci-devops-spn)
+      vso-project-id: $(vso-project-id)
+      vso-config-build-id: $(vso-config-build-id)
+      vso-deployer-build-id: $(vso-deployer-build-id)

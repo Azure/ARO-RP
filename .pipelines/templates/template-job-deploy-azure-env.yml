@@ -1,0 +1,64 @@
+# Azure DevOps Job deploying rp
+parameters:
+  - name: environment
+    default: ""
+  - name: LOCATION
+    default: ""
+  - name: CONFIG_FILE_NAME
+    default: ""
+  - name: aro_v4_ci_devops_spn
+    default: ""
+  - name: vso_project_id
+    default: ""
+  - name: vso_config_pipeline_id
+    default: ""
+  - name: vso_deployer_pipeline_id
+    default: ""
+
+
+
+jobs:
+  - deployment: "Deploy"
+    variables:
+      - template: ../vars.yml
+    pool:
+      vmImage: "ubuntu-latest"
+    environment: ${{ parameters.environment }}
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+            - template: ./template-setup-golang-env.yml
+              parameters:
+                gobin: ${{ variables.GOBIN }}
+                gopath: ${{ variables.GOPATH }}
+                goroot: ${{ variables.GOROOT }}
+                modulePath: ${{ variables.modulePath }}
+            - task: DownloadBuildArtifacts@0
+              inputs:
+                buildType: 'specific'
+                project: ${{ parameters.vso_project_id }}
+                pipeline: ${{ parameters.vso_config_pipeline_id }}
+                buildVersionToDownload: 'latestFromBranch'
+                branchName: 'refs/heads/master'
+                downloadType: 'specific'
+                downloadPath: '$(System.ArtifactsDirectory)/config'
+              displayName: "Download Config"
+            - task: DownloadBuildArtifacts@0
+              inputs:
+                buildType: 'specific'
+                project: ${{ parameters.vso_project_id }}
+                pipeline: ${{ parameters.vso_deployer_pipeline_id }}
+                buildVersionToDownload: 'latestFromBranch'
+                branchName: 'refs/heads/master'
+                downloadType: 'specific'
+                downloadPath: '$(System.ArtifactsDirectory)/deployer'
+              displayName: "Download Deployer"
+            - template: ./template-deploy-azure-env.yml
+              parameters:
+                workingDirectory: $(system.defaultWorkingDirectory)
+                configDirectory: '$(System.ArtifactsDirectory)/config/drop/deploy'
+                deployerDirectory: '$(System.ArtifactsDirectory)/deployer/drop'
+                configFileName: ${{ parameters.CONFIG_FILE_NAME }}
+                location: ${{ parameters.LOCATION }}
+                azureDevOpsJSONSPN: ${{ parameters.aro_v4_ci_devops_spn }}
