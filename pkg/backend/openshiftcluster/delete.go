@@ -10,6 +10,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest"
 
+	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
@@ -108,5 +109,8 @@ func (m *Manager) Delete(ctx context.Context) error {
 
 	m.log.Printf("updating billing record with deletion time")
 	_, err = m.billing.MarkForDeletion(ctx, m.doc.ID)
+	if cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
+		return nil
+	}
 	return err
 }
