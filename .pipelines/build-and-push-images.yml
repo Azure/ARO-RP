@@ -6,7 +6,7 @@ variables:
   - template: vars.yml
 
 jobs:
-  - job: "Deploy_int_env_or_build"
+  - job: "Build_and_push_images"
     pool:
       vmImage: "ubuntu-latest"
 
