@@ -7,13 +7,13 @@ import (
 	"context"
 	"io"
 	"net/http"
-	"regexp"
 	"time"
 
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
 type logResponseWriter struct {
@@ -54,28 +54,23 @@ func Log(baseLog *logrus.Entry) func(http.Handler) http.Handler {
 			r.Body = &logReadCloser{ReadCloser: r.Body}
 			w = &logResponseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 
-			correlationID := r.Header.Get("X-Ms-Correlation-Request-Id")
-			clientRequestID := r.Header.Get("X-Ms-Client-Request-Id")
-
-			requestID := uuid.NewV4().String()
-			w.Header().Set("X-Ms-Request-Id", requestID)
-
-			fields := logrus.Fields{
-				"correlation_id":    correlationID,
-				"request_id":        requestID,
-				"client_request_id": clientRequestID,
+			correlationData := &api.CorrelationData{
+				ClientRequestID: r.Header.Get("X-Ms-Client-Request-Id"),
+				CorrelationID:   r.Header.Get("X-Ms-Correlation-Request-Id"),
+				RequestID:       uuid.NewV4().String(),
 			}
 
-			updateFieldsFromPath(r.URL.Path, fields)
+			w.Header().Set("X-Ms-Request-Id", correlationData.RequestID)
 
-			log := baseLog.WithFields(fields)
-			r = r.WithContext(context.WithValue(r.Context(), ContextKeyLog, log))
+			log := baseLog
+			log = utillog.EnrichWithPath(log, r.URL.Path)
+			log = utillog.EnrichWithCorrelationData(log, correlationData)
 
-			r = r.WithContext(context.WithValue(r.Context(), ContextKeyCorrelationData, api.CorrelationData{
-				ClientRequestID: clientRequestID,
-				CorrelationID:   correlationID,
-				RequestID:       requestID,
-			}))
+			ctx := r.Context()
+			ctx = context.WithValue(ctx, ContextKeyLog, log)
+			ctx = context.WithValue(ctx, ContextKeyCorrelationData, correlationData)
+
+			r = r.WithContext(ctx)
 
 			defer func() {
 				log.WithFields(logrus.Fields{
@@ -101,24 +96,5 @@ func Log(baseLog *logrus.Entry) func(http.Handler) http.Handler {
 
 			h.ServeHTTP(w, r)
 		})
-	}
-}
-
-var rxTolerantResourceID = regexp.MustCompile(`(?i)^/subscriptions/([^/]+)(?:/resourceGroups/([^/]+)(?:/providers/([^/]+)/([^/]+)(?:/([^/]+))?)?)?`)
-
-func updateFieldsFromPath(path string, fields logrus.Fields) {
-	m := rxTolerantResourceID.FindStringSubmatch(path)
-	if m == nil {
-		return
-	}
-	if m[1] != "" {
-		fields["subscription_id"] = m[1]
-	}
-	if m[2] != "" {
-		fields["resource_group"] = m[2]
-	}
-	if m[5] != "" {
-		fields["resource_name"] = m[5]
-		fields["resource_id"] = "/subscriptions/" + m[1] + "/resourceGroups/" + m[2] + "/providers/" + m[3] + "/" + m[4] + "/" + m[5]
 	}
 }

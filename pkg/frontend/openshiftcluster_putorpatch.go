@@ -41,7 +41,7 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 
 func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Request, header *http.Header, converter api.OpenShiftClusterConverter, staticValidator api.OpenShiftClusterStaticValidator) ([]byte, error) {
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
-	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(api.CorrelationData)
+	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
 
 	subdoc, err := f.validateSubscriptionState(ctx, r.URL.Path, api.SubscriptionStateRegistered)
 	if err != nil {
@@ -81,7 +81,8 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 			},
 		}
 	}
-	doc.CorrelationData = &correlationData
+
+	doc.CorrelationData = correlationData
 
 	err = validateTerminalProvisioningState(doc.OpenShiftCluster.Properties.ProvisioningState)
 	if err != nil {
