@@ -19,6 +19,9 @@ against a development RP running at https://localhost:8443/.
    this version includes the `az network vnet subnet update
    --disable-private-link-service-network-policies` flag.
 
+1. Install `virtualenv`, a tool for managing Python virtual environments. The
+   package is called `python-virtualenv` on both RHEL- and Debian-based systems.
+
 1. Log in to Azure:
 
    ```bash
@@ -35,6 +38,13 @@ against a development RP running at https://localhost:8443/.
    Note: you will be able to update the `az aro` extension in the future by
    simply running `git pull`.
 
+1. Prepare a Python development environment:
+
+   ```
+   make pyenv
+   source pyenv/bin/activate
+   ```
+
 1. Build the development `az aro` extension:
 
    `make az`
@@ -50,10 +60,10 @@ against a development RP running at https://localhost:8443/.
     SyntaxError: invalid syntax
     ```
 
-1. Add the ARO extension path to your `az` configuration:
+1. Verify that the ARO extension path is in your `az` configuration:
 
    ```bash
-   cat >>~/.azure/config <<EOF
+   grep -q 'dev_sources' ~/.azure/config || cat >>~/.azure/config <<EOF
    [extension]
    dev_sources = $PWD/python
    EOF
@@ -97,11 +107,14 @@ cluster:
    export CLUSTER=cluster
 
    az group create -g "$RESOURCEGROUP" -l $LOCATION
+
+   # May already exist
    az network vnet create \
      -g "$RESOURCEGROUP" \
      -n dev-vnet \
      --address-prefixes 10.0.0.0/9 \
      >/dev/null
+
    for subnet in "$CLUSTER-master" "$CLUSTER-worker"; do
      az network vnet subnet create \
        -g "$RESOURCEGROUP" \

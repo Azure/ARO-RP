@@ -10,6 +10,8 @@
 
 1. Fedora users: install the `gpgme-devel` and `libassuan-devel` packages.
 
+   Debian users: install the `libgpgme-dev` package.
+
    OSX users: please follow [Prepare your development environment using
    OSX](./prepare-your-development-environment-using-osx.md).
 
