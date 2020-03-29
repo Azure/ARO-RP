@@ -24,6 +24,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
+	mock_clusterdata "github.com/Azure/ARO-RP/pkg/util/mocks/clusterdata"
 	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
 	mock_cosmosdb "github.com/Azure/ARO-RP/pkg/util/mocks/database/cosmosdb"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
@@ -64,7 +65,7 @@ func TestListOpenShiftCluster(t *testing.T) {
 
 	type test struct {
 		name           string
-		mocks          func(*gomock.Controller, *mock_database.MockOpenShiftClusters, string)
+		mocks          func(*gomock.Controller, *mock_database.MockOpenShiftClusters, *mock_clusterdata.MockOpenShiftClusterEnricher, string)
 		wantStatusCode int
 		wantResponse   func() *v20200430.OpenShiftClusterList
 		wantError      string
@@ -73,47 +74,49 @@ func TestListOpenShiftCluster(t *testing.T) {
 	for _, tt := range []*test{
 		{
 			name: "clusters exists in db",
-			mocks: func(controller *gomock.Controller, openshiftClusters *mock_database.MockOpenShiftClusters, listPrefix string) {
-				mockIter := mock_cosmosdb.NewMockOpenShiftClusterDocumentIterator(controller)
-				mockIter.EXPECT().Next(gomock.Any()).Return(&api.OpenShiftClusterDocuments{
-					OpenShiftClusterDocuments: []*api.OpenShiftClusterDocument{
-						{
-							OpenShiftCluster: &api.OpenShiftCluster{
-								ID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1", mockSubID),
-								Name: "resourceName1",
-								Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-								Properties: api.OpenShiftClusterProperties{
-									ClusterProfile: api.ClusterProfile{
-										PullSecret: "{}",
-									},
-									ServicePrincipalProfile: api.ServicePrincipalProfile{
-										ClientSecret: "clientSecret1",
-									},
+			mocks: func(controller *gomock.Controller, openshiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher, listPrefix string) {
+				clusterDocs := []*api.OpenShiftClusterDocument{
+					{
+						OpenShiftCluster: &api.OpenShiftCluster{
+							ID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1", mockSubID),
+							Name: "resourceName1",
+							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+							Properties: api.OpenShiftClusterProperties{
+								ClusterProfile: api.ClusterProfile{
+									PullSecret: "{}",
 								},
-							},
-						},
-						{
-							OpenShiftCluster: &api.OpenShiftCluster{
-								ID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName2", mockSubID),
-								Name: "resourceName2",
-								Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-								Properties: api.OpenShiftClusterProperties{
-									ClusterProfile: api.ClusterProfile{
-										PullSecret: "{}",
-									},
-									ServicePrincipalProfile: api.ServicePrincipalProfile{
-										ClientSecret: "clientSecret2",
-									},
+								ServicePrincipalProfile: api.ServicePrincipalProfile{
+									ClientSecret: "clientSecret1",
 								},
 							},
 						},
 					},
-				}, nil)
+					{
+						OpenShiftCluster: &api.OpenShiftCluster{
+							ID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName2", mockSubID),
+							Name: "resourceName2",
+							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+							Properties: api.OpenShiftClusterProperties{
+								ClusterProfile: api.ClusterProfile{
+									PullSecret: "{}",
+								},
+								ServicePrincipalProfile: api.ServicePrincipalProfile{
+									ClientSecret: "clientSecret2",
+								},
+							},
+						},
+					},
+				}
+
+				mockIter := mock_cosmosdb.NewMockOpenShiftClusterDocumentIterator(controller)
+				mockIter.EXPECT().Next(gomock.Any()).Return(&api.OpenShiftClusterDocuments{OpenShiftClusterDocuments: clusterDocs}, nil)
 				mockIter.EXPECT().Next(gomock.Any()).Return(nil, nil)
 
 				openshiftClusters.EXPECT().
 					ListByPrefix(mockSubID, listPrefix).
 					Return(mockIter, nil)
+
+				enricher.EXPECT().Enrich(gomock.Any(), clusterDocs[0].OpenShiftCluster, clusterDocs[1].OpenShiftCluster)
 			},
 			wantStatusCode: http.StatusOK,
 			wantResponse: func() *v20200430.OpenShiftClusterList {
@@ -135,13 +138,15 @@ func TestListOpenShiftCluster(t *testing.T) {
 		},
 		{
 			name: "no clusters found in db",
-			mocks: func(controller *gomock.Controller, openshiftClusters *mock_database.MockOpenShiftClusters, listPrefix string) {
+			mocks: func(controller *gomock.Controller, openshiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher, listPrefix string) {
 				mockIter := mock_cosmosdb.NewMockOpenShiftClusterDocumentIterator(controller)
 				mockIter.EXPECT().Next(gomock.Any()).Return(nil, nil)
 
 				openshiftClusters.EXPECT().
 					ListByPrefix(mockSubID, listPrefix).
 					Return(mockIter, nil)
+
+				enricher.EXPECT().Enrich(gomock.Any(), []*api.OpenShiftCluster{})
 			},
 			wantStatusCode: http.StatusOK,
 			wantResponse: func() *v20200430.OpenShiftClusterList {
@@ -152,7 +157,7 @@ func TestListOpenShiftCluster(t *testing.T) {
 		},
 		{
 			name: "internal error on list",
-			mocks: func(_ *gomock.Controller, openshiftClusters *mock_database.MockOpenShiftClusters, listPrefix string) {
+			mocks: func(_ *gomock.Controller, openshiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher, listPrefix string) {
 				openshiftClusters.EXPECT().
 					ListByPrefix(mockSubID, listPrefix).
 					Return(nil, errors.New("random error"))
@@ -162,7 +167,7 @@ func TestListOpenShiftCluster(t *testing.T) {
 		},
 		{
 			name: "internal error while iterating list",
-			mocks: func(controller *gomock.Controller, openshiftClusters *mock_database.MockOpenShiftClusters, listPrefix string) {
+			mocks: func(controller *gomock.Controller, openshiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher, listPrefix string) {
 				mockIter := mock_cosmosdb.NewMockOpenShiftClusterDocumentIterator(controller)
 				mockIter.EXPECT().Next(gomock.Any()).Return(nil, errors.New("random error"))
 
@@ -198,12 +203,15 @@ func TestListOpenShiftCluster(t *testing.T) {
 					defer controller.Finish()
 
 					openshiftClusters := mock_database.NewMockOpenShiftClusters(controller)
-					tt.mocks(controller, openshiftClusters, listPrefix)
+					enricher := mock_clusterdata.NewMockOpenShiftClusterEnricher(controller)
+
+					tt.mocks(controller, openshiftClusters, enricher, listPrefix)
 
 					f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{OpenShiftClusters: openshiftClusters}, api.APIs, &noop.Noop{})
 					if err != nil {
 						t.Fatal(err)
 					}
+					f.(*frontend).ocEnricher = enricher
 
 					go f.Run(ctx, nil, nil)
 

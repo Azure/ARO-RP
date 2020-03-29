@@ -23,6 +23,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
+	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
@@ -40,6 +41,7 @@ type frontend struct {
 	apis    map[string]*api.Version
 	m       metrics.Interface
 
+	ocEnricher         clusterdata.OpenShiftClusterEnricher
 	ocDynamicValidator validate.OpenShiftClusterDynamicValidator
 
 	l net.Listener
@@ -66,6 +68,7 @@ func NewFrontend(ctx context.Context, baseLog *logrus.Entry, _env env.Interface,
 		apis:    apis,
 		m:       m,
 
+		ocEnricher:         clusterdata.NewBestEffortEnricher(baseLog, _env),
 		ocDynamicValidator: validate.NewOpenShiftClusterDynamicValidator(_env),
 
 		bucketAllocator: &bucket.Random{},

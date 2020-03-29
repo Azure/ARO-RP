@@ -46,6 +46,10 @@ required = [
   branch = "release-4.3"
 
 [[constraint]]
+  name = "github.com/openshift/cluster-api-provider-azure"
+  branch = "release-4.3"
+
+[[constraint]]
   name = "github.com/openshift/installer"
   branch = "release-4.3-azure"
   source = "https://github.com/jim-minter/installer"
