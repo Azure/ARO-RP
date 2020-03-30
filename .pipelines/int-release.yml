@@ -9,9 +9,9 @@ stages:
       - template: ./templates/template-job-deploy-azure-env.yml
         parameters:
           environment: RP-INT
-          LOCATION: eastus
-          CONFIG_FILE_NAME: int-config.yaml
-          aro_v4_ci_devops_spn: $(aro-v4-ci-devops-spn)
-          vso_project_id: $(vso-project-id)
-          vso_config_pipeline_id: $(vso-config-pipeline-id)
-          vso_deployer_pipeline_id: $(vso-deployer-pipeline-id)
+          location: eastus
+          configFileName: int-config.yaml
+          azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
+          vsoProjectID: $(vso-project-id)
+          vsoConfigPipelineID: $(vso-config-pipeline-id)
+          vsoDeployerPipelineID: $(vso-deployer-build-id)

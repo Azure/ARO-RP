@@ -9,19 +9,19 @@ stages:
       - template: ./templates/template-job-deploy-azure-region.yml
         parameters:
           environment: RP-Prod
-          LOCATION: eastus
-          CONFIG_FILE_NAME: prod-config.yaml
-          aro_v4_ci_devops_spn: $(aro-v4-ci-devops-spn)
-          vso_project_id: $(vso-project-id)
-          vso_config_build_id: $(vso-config-build-id)
-          vso_deployer_build_id: $(vso-deployer-build-id)
+          location: eastus
+          configFileName: prod-config.yaml
+          azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
+          vsoProjectID: $(vso-project-id)
+          vsoConfigBuildID: $(vso-config-build-id)
+          vsoDeployerBuildID: $(vso-deployer-build-id)
       # - template: ./.pipelines/template-job-deploy-azure-region.yml
       #   parameters:
       #     environment: RP-Prod
-      #     LOCATION: eastus2
-      #     CONFIG_FILE_NAME: prod-config.yaml
-      #     aro_v4_ci_devops_spn: $(aro-v4-ci-devops-spn)
-      #     vso_project_id: $(vso-project-id)
-      #     vso_config_build_id: $(vso-config-build-id)
-      #     vso_deployer_build_id: $(vso-deployer-build-id)
+      #     location: eastus2
+      #     configFileName: prod-config.yaml
+      #     azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
+      #     vsoProjectID: $(vso-project-id)
+      #     vsoConfigBuildID: $(vso-config-build-id)
+      #     vsoDeployerBuildID: $(vso-deployer-build-id)
       #TODO Add e2e runs on each region after deployment

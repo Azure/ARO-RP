@@ -3,20 +3,19 @@ trigger: none
 pr: none
 
 parameters:
+- name: location
 - name: environment
-  default: ""
-- name: LOCATION
-  default: ""
-- name: CONFIG_FILE_NAME
-  default: ""
+  values:
+  - RP-INT
+  - RP-Prod
 
 jobs:
   - template: ./templates/template-job-deploy-azure-env.yml
     parameters:
-      environment: $(environment)
-      LOCATION: $(LOCATION)
-      CONFIG_FILE_NAME: $(CONFIG_FILE_NAME)
-      aro-v4-ci-devops-spn: $(aro-v4-ci-devops-spn)
-      vso-project-id: $(vso-project-id)
-      vso-config-build-id: $(vso-config-build-id)
-      vso-deployer-build-id: $(vso-deployer-build-id)
+      environment: ${{ parameters.environment }}
+      location: ${{ parameters.location }}
+      configFileName: $(config-file-name)
+      azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
+      vsoProjectID: $(vso-project-id)
+      vsoConfigPipelineID: $(vso-config-pipeline-id)
+      vsoDeployerPipelineID: $(vso-deployer-build-id)

@@ -1,19 +1,12 @@
 # Azure DevOps Job deploying rp
 parameters:
-  - name: environment
-    default: ""
-  - name: LOCATION
-    default: ""
-  - name: CONFIG_FILE_NAME
-    default: ""
-  - name: aro_v4_ci_devops_spn
-    default: ""
-  - name: vso_project_id
-    default: ""
-  - name: vso_config_pipeline_id
-    default: ""
-  - name: vso_deployer_pipeline_id
-    default: ""
+- name: environment
+- name: location
+- name: configFileName
+- name: azureDevOpsJSONSPN
+- name: vsoProjectID
+- name: vsoConfigPipelineID
+- name: vsoDeployerPipelineID
 
 jobs:
   - deployment: "Deploy"
@@ -35,8 +28,8 @@ jobs:
             - task: DownloadBuildArtifacts@0
               inputs:
                 buildType: 'specific'
-                project: ${{ parameters.vso_project_id }}
-                pipeline: ${{ parameters.vso_config_pipeline_id }}
+                project: ${{ parameters.vsoProjectID }}
+                pipeline: ${{ parameters.vsoConfigPipelineID }}
                 buildVersionToDownload: 'latestFromBranch'
                 branchName: 'refs/heads/master'
                 downloadType: 'specific'
@@ -45,8 +38,8 @@ jobs:
             - task: DownloadBuildArtifacts@0
               inputs:
                 buildType: 'specific'
-                project: ${{ parameters.vso_project_id }}
-                pipeline: ${{ parameters.vso_deployer_pipeline_id }}
+                project: ${{ parameters.vsoProjectID }}
+                pipeline: ${{ parameters.vsoDeployerPipelineID }}
                 buildVersionToDownload: 'latestFromBranch'
                 branchName: 'refs/heads/master'
                 downloadType: 'specific'
@@ -57,6 +50,6 @@ jobs:
                 workingDirectory: $(system.defaultWorkingDirectory)
                 configDirectory: '$(System.ArtifactsDirectory)/config/drop/deploy'
                 deployerDirectory: '$(System.ArtifactsDirectory)/deployer/drop'
-                configFileName: ${{ parameters.CONFIG_FILE_NAME }}
-                location: ${{ parameters.LOCATION }}
-                azureDevOpsJSONSPN: ${{ parameters.aro_v4_ci_devops_spn }}
+                configFileName: $(configFileName)
+                location: ${{ parameters.location }}
+                azureDevOpsJSONSPN: ${{ parameters.azureDevOpsJSONSPN }}
