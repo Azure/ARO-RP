@@ -6,7 +6,6 @@ package install
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"reflect"
 	"strings"
 	"time"
@@ -83,119 +82,98 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 		}
 	}
 
-	{
-		t := &arm.Template{
-			Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-			ContentVersion: "1.0.0.0",
-			Resources: []*arm.Resource{
-				{
-					Resource: &mgmtstorage.Account{
-						Sku: &mgmtstorage.Sku{
-							Name: "Standard_LRS",
-						},
-						Name:     to.StringPtr("cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix),
-						Location: &installConfig.Config.Azure.Region,
-						Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
+	t := &arm.Template{
+		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+		ContentVersion: "1.0.0.0",
+		Resources: []*arm.Resource{
+			{
+				Resource: &mgmtstorage.Account{
+					Sku: &mgmtstorage.Sku{
+						Name: "Standard_LRS",
 					},
-					APIVersion: apiVersions["storage"],
+					Name:     to.StringPtr("cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix),
+					Location: &installConfig.Config.Azure.Region,
+					Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
 				},
-				{
-					Resource: &mgmtstorage.BlobContainer{
-						Name: to.StringPtr("cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix + "/default/ignition"),
-						Type: to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
-					},
-					APIVersion: apiVersions["storage"],
-					DependsOn: []string{
-						"Microsoft.Storage/storageAccounts/cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix,
-					},
+				APIVersion: apiVersions["storage"],
+			},
+			{
+				Resource: &mgmtstorage.BlobContainer{
+					Name: to.StringPtr("cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix + "/default/ignition"),
+					Type: to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
 				},
-				{
-					Resource: &mgmtstorage.BlobContainer{
-						Name: to.StringPtr("cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix + "/default/aro"),
-						Type: to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
-					},
-					APIVersion: apiVersions["storage"],
-					DependsOn: []string{
-						"Microsoft.Storage/storageAccounts/cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix,
-					},
+				APIVersion: apiVersions["storage"],
+				DependsOn: []string{
+					"Microsoft.Storage/storageAccounts/cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix,
 				},
-				{
-					Resource: &mgmtnetwork.SecurityGroup{
-						SecurityGroupPropertiesFormat: &mgmtnetwork.SecurityGroupPropertiesFormat{
-							SecurityRules: &[]mgmtnetwork.SecurityRule{
-								{
-									SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
-										Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
-										SourcePortRange:          to.StringPtr("*"),
-										DestinationPortRange:     to.StringPtr("6443"),
-										SourceAddressPrefix:      to.StringPtr("*"),
-										DestinationAddressPrefix: to.StringPtr("*"),
-										Access:                   mgmtnetwork.SecurityRuleAccessAllow,
-										Priority:                 to.Int32Ptr(101),
-										Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
-									},
-									Name: to.StringPtr("apiserver_in"),
+			},
+			{
+				Resource: &mgmtstorage.BlobContainer{
+					Name: to.StringPtr("cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix + "/default/aro"),
+					Type: to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
+				},
+				APIVersion: apiVersions["storage"],
+				DependsOn: []string{
+					"Microsoft.Storage/storageAccounts/cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix,
+				},
+			},
+			{
+				Resource: &mgmtnetwork.SecurityGroup{
+					SecurityGroupPropertiesFormat: &mgmtnetwork.SecurityGroupPropertiesFormat{
+						SecurityRules: &[]mgmtnetwork.SecurityRule{
+							{
+								SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
+									Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
+									SourcePortRange:          to.StringPtr("*"),
+									DestinationPortRange:     to.StringPtr("6443"),
+									SourceAddressPrefix:      to.StringPtr("*"),
+									DestinationAddressPrefix: to.StringPtr("*"),
+									Access:                   mgmtnetwork.SecurityRuleAccessAllow,
+									Priority:                 to.Int32Ptr(101),
+									Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
 								},
-								{
-									SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
-										Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
-										SourcePortRange:          to.StringPtr("*"),
-										DestinationPortRange:     to.StringPtr("22"),
-										SourceAddressPrefix:      to.StringPtr("*"),
-										DestinationAddressPrefix: to.StringPtr("*"),
-										Access:                   mgmtnetwork.SecurityRuleAccessAllow,
-										Priority:                 to.Int32Ptr(103),
-										Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
-									},
-									Name: to.StringPtr("bootstrap_ssh_in"),
+								Name: to.StringPtr("apiserver_in"),
+							},
+							{
+								SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
+									Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
+									SourcePortRange:          to.StringPtr("*"),
+									DestinationPortRange:     to.StringPtr("22"),
+									SourceAddressPrefix:      to.StringPtr("*"),
+									DestinationAddressPrefix: to.StringPtr("*"),
+									Access:                   mgmtnetwork.SecurityRuleAccessAllow,
+									Priority:                 to.Int32Ptr(103),
+									Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
 								},
+								Name: to.StringPtr("bootstrap_ssh_in"),
 							},
 						},
-						Name:     to.StringPtr("aro-controlplane-nsg"),
-						Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
-						Location: &installConfig.Config.Azure.Region,
 					},
-					APIVersion: apiVersions["network"],
+					Name:     to.StringPtr("aro-controlplane-nsg"),
+					Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
+					Location: &installConfig.Config.Azure.Region,
 				},
-				{
-					Resource: &mgmtnetwork.SecurityGroup{
-						Name:     to.StringPtr("aro-node-nsg"),
-						Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
-						Location: &installConfig.Config.Azure.Region,
-					},
-					APIVersion: apiVersions["network"],
+				APIVersion: apiVersions["network"],
+			},
+			{
+				Resource: &mgmtnetwork.SecurityGroup{
+					Name:     to.StringPtr("aro-node-nsg"),
+					Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
+					Location: &installConfig.Config.Azure.Region,
 				},
+				APIVersion: apiVersions["network"],
 			},
-		}
-
-		i.log.Print("deploying storage template")
-		err = i.deployments.CreateOrUpdateAndWait(ctx, resourceGroup, "azuredeploy", mgmtresources.Deployment{
-			Properties: &mgmtresources.DeploymentProperties{
-				Template: t,
-				Mode:     mgmtresources.Incremental,
-			},
-		})
-		if err != nil {
-			if isDeploymentActiveError(err) {
-				i.log.Print("waiting for storage template")
-				err = i.deployments.Wait(ctx, resourceGroup, "azuredeploy")
-			}
-			isQuota, errMsg := isResourceQuotaExceededError(err)
-			if isQuota {
-				return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeQuotaExceeded, errMsg, "")
-			}
-			return err
-		}
+		},
+	}
+	err = i.deployARMTemplate(ctx, resourceGroup, "storage", t, nil)
+	if err != nil {
+		return err
 	}
 
-	{
-
-		// the graph is quite big so we store it in a storage account instead of
-		// in cosmosdb
-		err := i.saveGraph(ctx, g)
-		if err != nil {
-			return err
-		}
+	// the graph is quite big so we store it in a storage account instead of in cosmosdb
+	err = i.saveGraph(ctx, g)
+	if err != nil {
+		return err
 	}
 
 	for _, subnetID := range []string{

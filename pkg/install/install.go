@@ -10,11 +10,13 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"net/url"
 	"reflect"
 	"runtime"
 	"time"
 
+	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/Azure/go-autorest/autorest"
@@ -34,6 +36,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/resources"
@@ -78,7 +81,10 @@ type Installer struct {
 	securitycli   securityclient.Interface
 }
 
-const pollInterval = 10 * time.Second
+const (
+	deploymentName = "azuredeploy"
+	pollInterval   = 10 * time.Second
+)
 
 type action func(context.Context) error
 type condition struct {
@@ -359,5 +365,24 @@ func (i *Installer) initializeKubernetesClients(ctx context.Context) error {
 	}
 
 	i.configcli, err = configclient.NewForConfig(restConfig)
+	return err
+}
+
+func (i *Installer) deployARMTemplate(ctx context.Context, rg string, tName string, t *arm.Template, params map[string]interface{}) error {
+	i.log.Printf("deploying %s template", tName)
+	err := i.deployments.CreateOrUpdateAndWait(ctx, rg, deploymentName, mgmtresources.Deployment{
+		Properties: &mgmtresources.DeploymentProperties{
+			Template:   t,
+			Parameters: params,
+			Mode:       mgmtresources.Incremental,
+		},
+	})
+	if isDeploymentActiveError(err) {
+		i.log.Printf("waiting for %s template to be deployed", tName)
+		err = i.deployments.Wait(ctx, rg, deploymentName)
+	}
+	if isQuota, errMsg := isResourceQuotaExceededError(err); isQuota {
+		err = api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeQuotaExceeded, errMsg, "")
+	}
 	return err
 }
