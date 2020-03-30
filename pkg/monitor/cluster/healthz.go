@@ -4,15 +4,13 @@ package cluster
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
 	"strconv"
 )
 
-func (mon *Monitor) emitAPIServerHealthzCode(ctx context.Context) (int, error) {
+func (mon *Monitor) emitAPIServerHealthzCode() (int, error) {
 	var statusCode int
 	err := mon.cli.Discovery().RESTClient().
 		Get().
-		Context(ctx).
 		AbsPath("/healthz").
 		Do().
 		StatusCode(&statusCode).

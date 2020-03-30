@@ -81,7 +81,7 @@ func (mon *Monitor) Monitor(ctx context.Context) error {
 	}
 
 	// If API is not returning 200, don't need to run the next checks
-	statusCode, err := mon.emitAPIServerHealthzCode(ctx)
+	statusCode, err := mon.emitAPIServerHealthzCode()
 	if err != nil || statusCode != http.StatusOK {
 		return err
 	}
