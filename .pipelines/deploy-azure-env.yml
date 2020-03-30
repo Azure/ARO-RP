@@ -10,12 +10,6 @@ parameters:
 - name: CONFIG_FILE_NAME
   default: ""
 
-variables:
-- aro_v4_ci_devops_spn: ""
-- vso_project_id: ""
-- vso_config_pipeline_id: ""
-- vso_deployer_pipeline_id: ""
-
 jobs:
   - template: ./templates/template-job-deploy-azure-env.yml
     parameters:
