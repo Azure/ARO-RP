@@ -75,7 +75,7 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 	tracing.Register(azure.New(m))
 	metrics.Register(k8s.NewLatency(m), k8s.NewResult(m))
 
-	cipher, err := encryption.NewXChaCha20Poly1305(ctx, _env)
+	cipher, err := encryption.NewXChaCha20Poly1305(ctx, _env, env.EncryptionSecretName)
 	if err != nil {
 		return err
 	}
@@ -85,7 +85,11 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), _env, db, api.APIs, m, kubeactions.New(log, _env))
+	feCipher, err := encryption.NewXChaCha20Poly1305(ctx, _env, env.FrontendEncryptionSecretName)
+	if err != nil {
+		return err
+	}
+	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), _env, db, api.APIs, m, feCipher, kubeactions.New(log, _env))
 	if err != nil {
 		return err
 	}

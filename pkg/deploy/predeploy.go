@@ -229,8 +229,17 @@ func (d *deployer) deployPreDeploy(ctx context.Context, rpServicePrincipalID str
 
 func (d *deployer) configureServiceKV(ctx context.Context) error {
 	serviceKeyVaultURI := "https://" + d.config.Configuration.KeyvaultPrefix + "-svc.vault.azure.net/"
+	secrets, err := d.keyvault.GetSecrets(ctx, serviceKeyVaultURI, nil)
+	if err != nil {
+		return err
+	}
 
-	err := d.ensureEncryptionSecret(ctx, serviceKeyVaultURI)
+	err = d.ensureSecret(ctx, secrets, serviceKeyVaultURI, env.EncryptionSecretName)
+	if err != nil {
+		return err
+	}
+
+	err = d.ensureSecret(ctx, secrets, serviceKeyVaultURI, env.FrontendEncryptionSecretName)
 	if err != nil {
 		return err
 	}
@@ -238,26 +247,21 @@ func (d *deployer) configureServiceKV(ctx context.Context) error {
 	return d.ensureMonitoringCertificates(ctx, serviceKeyVaultURI)
 }
 
-func (d *deployer) ensureEncryptionSecret(ctx context.Context, serviceKeyVaultURI string) error {
-	secrets, err := d.keyvault.GetSecrets(ctx, serviceKeyVaultURI, nil)
-	if err != nil {
-		return err
-	}
-
-	for _, secret := range secrets {
-		if filepath.Base(*secret.ID) == env.EncryptionSecretName {
+func (d *deployer) ensureSecret(ctx context.Context, existingSecrets []keyvault.SecretItem, serviceKeyVaultURI, secretName string) error {
+	for _, secret := range existingSecrets {
+		if filepath.Base(*secret.ID) == secretName {
 			return nil
 		}
 	}
 
 	key := make([]byte, 32)
-	_, err = rand.Read(key)
+	_, err := rand.Read(key)
 	if err != nil {
 		return err
 	}
 
-	d.log.Infof("setting %s", env.EncryptionSecretName)
-	_, err = d.keyvault.SetSecret(ctx, serviceKeyVaultURI, env.EncryptionSecretName, keyvault.SecretSetParameters{
+	d.log.Infof("setting %s", secretName)
+	_, err = d.keyvault.SetSecret(ctx, serviceKeyVaultURI, secretName, keyvault.SecretSetParameters{
 		Value: to.StringPtr(base64.StdEncoding.EncodeToString(key)),
 	})
 	return err

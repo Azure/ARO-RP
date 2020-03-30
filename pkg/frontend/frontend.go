@@ -24,6 +24,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
+	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
@@ -40,6 +41,7 @@ type frontend struct {
 	db      *database.Database
 	apis    map[string]*api.Version
 	m       metrics.Interface
+	cipher  encryption.Cipher
 
 	ocEnricher  clusterdata.OpenShiftClusterEnricher
 	kubeActions kubeactions.Interface
@@ -58,15 +60,14 @@ type Runnable interface {
 }
 
 // NewFrontend returns a new runnable frontend
-func NewFrontend(ctx context.Context, baseLog *logrus.Entry, _env env.Interface, db *database.Database, apis map[string]*api.Version, m metrics.Interface, kubeActions kubeactions.Interface) (Runnable, error) {
-	var err error
-
+func NewFrontend(ctx context.Context, baseLog *logrus.Entry, _env env.Interface, db *database.Database, apis map[string]*api.Version, m metrics.Interface, cipher encryption.Cipher, kubeActions kubeactions.Interface) (Runnable, error) {
 	f := &frontend{
 		baseLog:     baseLog,
 		env:         _env,
 		db:          db,
 		apis:        apis,
 		m:           m,
+		cipher:      cipher,
 		kubeActions: kubeActions,
 
 		ocEnricher: clusterdata.NewBestEffortEnricher(baseLog, _env, m),

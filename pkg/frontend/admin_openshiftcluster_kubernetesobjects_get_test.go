@@ -179,7 +179,7 @@ func TestAdminGetKubernetesObjects(t *testing.T) {
 
 			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
 				OpenShiftClusters: openshiftClusters,
-			}, api.APIs, &noop.Noop{}, kactions)
+			}, api.APIs, &noop.Noop{}, nil, kactions)
 			if err != nil {
 				t.Fatal(err)
 			}
