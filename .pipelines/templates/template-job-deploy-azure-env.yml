@@ -50,6 +50,6 @@ jobs:
                 workingDirectory: $(system.defaultWorkingDirectory)
                 configDirectory: '$(System.ArtifactsDirectory)/config/drop/deploy'
                 deployerDirectory: '$(System.ArtifactsDirectory)/deployer/drop'
-                configFileName: $(configFileName)
+                configFileName: ${{ parameters.configFileName }}
                 location: ${{ parameters.location }}
                 azureDevOpsJSONSPN: ${{ parameters.azureDevOpsJSONSPN }}
