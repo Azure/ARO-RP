@@ -15,8 +15,6 @@ parameters:
   - name: vso_deployer_pipeline_id
     default: ""
 
-
-
 jobs:
   - deployment: "Deploy"
     variables:

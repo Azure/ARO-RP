@@ -2,6 +2,22 @@
 trigger: none
 pr: none
 
+parameters:
+- name: environment
+  default: ""
+- name: LOCATION
+  default: ""
+- name: CONFIG_FILE_NAME
+  default: ""
+- name: aro_v4_ci_devops_spn
+  default: ""
+- name: vso_project_id
+  default: ""
+- name: vso_config_pipeline_id
+  default: ""
+- name: vso_deployer_pipeline_id
+  default: ""
+
 jobs:
   - template: ./templates/template-job-deploy-azure-env.yml
     parameters:
