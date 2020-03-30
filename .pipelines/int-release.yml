@@ -12,6 +12,6 @@ stages:
           LOCATION: eastus
           CONFIG_FILE_NAME: int-config.yaml
           aro_v4_ci_devops_spn: $(aro-v4-ci-devops-spn)
-          vso_project_id: $(vso-project-id)
-          vso_config_pipeline_id: $(vso-config-pipeline-id)
-          vso_deployer_pipeline_id: $(vso-deployer-pipeline-id)
+          vso_project_id: $(vso_project_id)
+          vso_config_pipeline_id: $(vso_config_pipeline_id)
+          vso_deployer_pipeline_id: $(vso_deployer_pipeline_id)
