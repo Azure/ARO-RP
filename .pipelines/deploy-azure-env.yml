@@ -3,8 +3,8 @@ trigger: none
 pr: none
 
 jobs:
-  - template: ./templates-job-deploy-azure-env.yml
-    parameters: 
+  - template: ./templates/template-job-deploy-azure-env.yml
+    parameters:
       environment: $(environment)
       LOCATION: $(LOCATION)
       CONFIG_FILE_NAME: $(CONFIG_FILE_NAME)
