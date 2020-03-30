@@ -96,6 +96,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 						Scope:            to.StringPtr("[resourceGroup().id]"),
 						RoleDefinitionID: to.StringPtr("[resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]"),
 						PrincipalID:      to.StringPtr(objectID),
+						PrincipalType:    mgmtauthorization.ServicePrincipal,
 					},
 				},
 				APIVersion: apiVersions["authorization"],

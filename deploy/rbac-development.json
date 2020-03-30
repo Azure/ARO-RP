@@ -59,7 +59,8 @@
             "properties": {
                 "scope": "[subscription().id]",
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '79ed474a-7267-4ff8-b226-96140be062a2')]",
-                "principalId": "[parameters('fpServicePrincipalId')]"
+                "principalId": "[parameters('fpServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
             },
             "apiVersion": "2018-09-01-preview"
         },
@@ -69,7 +70,8 @@
             "properties": {
                 "scope": "[subscription().id]",
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '18d7d88d-d35e-4fb5-a5c3-7773c20a72d9')]",
-                "principalId": "[parameters('armServicePrincipalId')]"
+                "principalId": "[parameters('armServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
             },
             "apiVersion": "2018-09-01-preview"
         }
