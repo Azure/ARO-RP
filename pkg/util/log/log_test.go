@@ -4,10 +4,71 @@ package log
 // Licensed under the Apache License 2.0.
 
 import (
+	"reflect"
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/sirupsen/logrus"
 )
+
+func TestEnrichWithPath(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		path     string
+		wantData logrus.Fields
+	}{
+		{
+			name: "normal resource",
+			path: "/subscriptions/subscriptionid/resourceGroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/resourcename",
+			wantData: logrus.Fields{
+				"subscription_id": "subscriptionid",
+				"resource_group":  "resourcegroup",
+				"resource_name":   "resourcename",
+				"resource_id":     "/subscriptions/subscriptionid/resourceGroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/resourcename",
+			},
+		},
+		{
+			name: "normal resource and subresource",
+			path: "/subscriptions/subscriptionid/resourceGroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/resourcename/foo",
+			wantData: logrus.Fields{
+				"subscription_id": "subscriptionid",
+				"resource_group":  "resourcegroup",
+				"resource_name":   "resourcename",
+				"resource_id":     "/subscriptions/subscriptionid/resourceGroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/resourcename",
+			},
+		},
+		{
+			name: "list resources in resource group",
+			path: "/subscriptions/subscriptionid/resourceGroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters",
+			wantData: logrus.Fields{
+				"subscription_id": "subscriptionid",
+				"resource_group":  "resourcegroup",
+			},
+		},
+		{
+			name: "list resources in subscription",
+			path: "/subscriptions/subscriptionid/providers/microsoft.redhatopenshift/openshiftclusters",
+			wantData: logrus.Fields{
+				"subscription_id": "subscriptionid",
+			},
+		},
+		{
+			name: "non-resource",
+			path: "/healthz",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			log := &logrus.Entry{}
+
+			log = EnrichWithPath(log, tt.path)
+
+			if !reflect.DeepEqual(log.Data, tt.wantData) {
+				t.Error(log.Data)
+			}
+		})
+	}
+}
 
 func TestRelativeFilePathPrettier(t *testing.T) {
 	pc := make([]uintptr, 1)

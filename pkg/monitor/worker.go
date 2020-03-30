@@ -8,11 +8,11 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/monitor/cluster"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
@@ -103,18 +103,7 @@ func (mon *monitor) worker(stop <-chan struct{}, delay time.Duration, id string)
 		v := mon.docs[id]
 		mon.mu.RUnlock()
 
-		r, err := azure.ParseResourceID(v.doc.OpenShiftCluster.ID)
-		if err != nil {
-			log.Error(err)
-
-		} else {
-			log = log.WithFields(logrus.Fields{
-				"resource_id":     v.doc.OpenShiftCluster.ID,
-				"subscription_id": r.SubscriptionID,
-				"resource_group":  r.ResourceGroup,
-				"resource_name":   r.ResourceName,
-			})
-		}
+		log = utillog.EnrichWithResourceID(log, v.doc.OpenShiftCluster.ID)
 	}
 
 	log.Debug("starting monitoring")
