@@ -107,7 +107,12 @@ func (c *templateClient) Create(ctx context.Context, partitionkey string, newtem
 }
 
 func (c *templateClient) List(options *Options) TemplateRawIterator {
-	return &templateListIterator{templateClient: c, options: options}
+	continuation := ""
+	if options != nil {
+		continuation = options.Continuation
+	}
+
+	return &templateListIterator{templateClient: c, options: options, continuation: continuation}
 }
 
 func (c *templateClient) ListAll(ctx context.Context, options *Options) (*pkg.Templates, error) {
@@ -154,7 +159,12 @@ func (c *templateClient) Delete(ctx context.Context, partitionkey string, templa
 }
 
 func (c *templateClient) Query(partitionkey string, query *Query, options *Options) TemplateRawIterator {
-	return &templateQueryIterator{templateClient: c, partitionkey: partitionkey, query: query, options: options}
+	continuation := ""
+	if options != nil {
+		continuation = options.Continuation
+	}
+
+	return &templateQueryIterator{templateClient: c, partitionkey: partitionkey, query: query, options: options, continuation: continuation}
 }
 
 func (c *templateClient) QueryAll(ctx context.Context, partitionkey string, query *Query, options *Options) (*pkg.Templates, error) {
@@ -162,7 +172,12 @@ func (c *templateClient) QueryAll(ctx context.Context, partitionkey string, quer
 }
 
 func (c *templateClient) ChangeFeed(options *Options) TemplateIterator {
-	return &templateChangeFeedIterator{templateClient: c}
+	continuation := ""
+	if options != nil {
+		continuation = options.Continuation
+	}
+
+	return &templateChangeFeedIterator{templateClient: c, options: options, continuation: continuation}
 }
 
 func (c *templateClient) setOptions(options *Options, template *pkg.Template, headers http.Header) error {
