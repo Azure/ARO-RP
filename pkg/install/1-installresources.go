@@ -12,16 +12,12 @@ import (
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
-	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtprivatedns "github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
-	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/ignition/machine"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
@@ -57,28 +53,6 @@ func (i *Installer) installResources(ctx context.Context) error {
 		return err
 	}
 
-	var objectID string
-	{
-		spp := &i.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
-
-		conf := auth.NewClientCredentialsConfig(spp.ClientID, string(spp.ClientSecret), spp.TenantID)
-		conf.Resource = azure.PublicCloud.GraphEndpoint
-
-		spGraphAuthorizer, err := conf.Authorizer()
-		if err != nil {
-			return err
-		}
-
-		applications := graphrbac.NewApplicationsClient(spp.TenantID, spGraphAuthorizer)
-
-		res, err := applications.GetServicePrincipalsIDByAppID(ctx, spp.ClientID)
-		if err != nil {
-			return err
-		}
-
-		objectID = *res.Value
-	}
-
 	t := &arm.Template{
 		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 		ContentVersion: "1.0.0.0",
@@ -88,19 +62,6 @@ func (i *Installer) installResources(ctx context.Context) error {
 			},
 		},
 		Resources: []*arm.Resource{
-			{
-				Resource: &mgmtauthorization.RoleAssignment{
-					Name: to.StringPtr("[guid(resourceGroup().id, 'SP / Contributor')]"),
-					Type: to.StringPtr("Microsoft.Authorization/roleAssignments"),
-					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-						Scope:            to.StringPtr("[resourceGroup().id]"),
-						RoleDefinitionID: to.StringPtr("[resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]"),
-						PrincipalID:      to.StringPtr(objectID),
-						PrincipalType:    mgmtauthorization.ServicePrincipal,
-					},
-				},
-				APIVersion: apiVersions["authorization"],
-			},
 			{
 				Resource: &mgmtprivatedns.PrivateZone{
 					Name:     to.StringPtr(installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain),
