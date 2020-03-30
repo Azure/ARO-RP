@@ -155,7 +155,7 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	c, err := cluster.NewMonitor(mon.env, log, doc.OpenShiftCluster, mon.clusterm)
+	c, err := cluster.NewMonitor(ctx, mon.env, log, doc.OpenShiftCluster, mon.clusterm)
 	if err != nil {
 		return err
 	}
