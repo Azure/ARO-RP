@@ -174,12 +174,20 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 
 	s.Methods(http.MethodPost).HandlerFunc(f.postOpenShiftClusterCredentials).Name("postOpenShiftClusterCredentials")
 
+	// Admin actions
 	s = r.
 		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/kubernetesobjects").
 		Subrouter()
 
 	s.Methods(http.MethodGet).HandlerFunc(f.getAdminKubernetesObjects).Name("getAdminKubernetesObjects")
 
+	s = r.
+		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/upgrade").
+		Subrouter()
+
+	s.Methods(http.MethodPost).HandlerFunc(f.postAdminOpenShiftClusterUpgrade).Name("postAdminOpenShiftClusterUpgrade")
+
+	// Operations
 	s = r.
 		Path("/providers/{resourceProviderNamespace}/operations").
 		Queries("api-version", "{api-version}").

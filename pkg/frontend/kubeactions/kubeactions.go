@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"strings"
 
+	configv1 "github.com/openshift/api/config/v1"
+	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -19,11 +21,13 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 type Interface interface {
 	Get(ctx context.Context, oc *api.OpenShiftCluster, kind, namespace, name string) ([]byte, error)
 	List(ctx context.Context, oc *api.OpenShiftCluster, kind, namespace string) ([]byte, error)
+	ClusterUpgrade(ctx context.Context, oc *api.OpenShiftCluster) error
 }
 
 type kubeactions struct {
@@ -137,4 +141,31 @@ func (ka *kubeactions) List(ctx context.Context, oc *api.OpenShiftCluster, kind,
 		return nil, err
 	}
 	return ul.MarshalJSON()
+}
+
+// ClusterUpgrade posts the new version and image to the cluster-version-operator
+// which will effect the upgrade.
+func (ka *kubeactions) ClusterUpgrade(ctx context.Context, oc *api.OpenShiftCluster) error {
+	restconfig, err := restconfig.RestConfig(ka.env, oc)
+	if err != nil {
+		return err
+	}
+	configcli, err := configclient.NewForConfig(restconfig)
+	if err != nil {
+		return err
+	}
+
+	cv, err := configcli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	cv.Spec.DesiredUpdate = &configv1.Update{
+		Version: version.OpenShiftVersion,
+		Image:   version.OpenShiftPullSpec(ka.env.ACRName()),
+		Force:   true,
+	}
+
+	_, err = configcli.ConfigV1().ClusterVersions().Update(cv)
+	return err
 }
