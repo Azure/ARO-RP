@@ -3,6 +3,7 @@ parameters:
   rpImageACR: ''
 steps:
 - script: |
+    set -e
     cd ${{ parameters.workingDirectory }}
 
     export RP_IMAGE_ACR=${{ parameters.rpImageACR }}
