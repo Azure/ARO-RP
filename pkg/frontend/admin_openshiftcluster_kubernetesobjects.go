@@ -5,6 +5,7 @@ package frontend
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/url"
 	"path/filepath"
@@ -80,4 +81,37 @@ func validateGetAdminKubernetesObjects(q url.Values) error {
 	}
 
 	return nil
+}
+
+func (f *frontend) postAdminKubernetesObjects(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
+	r.URL.Path = filepath.Dir(r.URL.Path)
+
+	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
+	if len(body) == 0 || !json.Valid(body) {
+		api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized.")
+		return
+	}
+
+	err := f._postAdminKubernetesObjects(ctx, r)
+
+	reply(log, w, nil, nil, err)
+}
+
+func (f *frontend) _postAdminKubernetesObjects(ctx context.Context, r *http.Request) error {
+	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
+	vars := mux.Vars(r)
+
+	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
+
+	doc, err := f.db.OpenShiftClusters.Get(ctx, resourceID)
+	switch {
+	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
+		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
+	case err != nil:
+		return err
+	}
+
+	return f.kubeActions.CreateOrUpdate(ctx, doc.OpenShiftCluster, body)
 }
