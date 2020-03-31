@@ -296,7 +296,7 @@ cert:
 				return err
 			}
 
-			if u.Path == "/certificates/"+c.certificateName {
+			if u.Path == "/certificates/"+c.certificateName && *kc.Attributes.Enabled {
 				continue cert
 			}
 		}
