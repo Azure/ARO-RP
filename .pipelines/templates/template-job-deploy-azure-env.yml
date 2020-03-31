@@ -9,7 +9,7 @@ parameters:
 - name: vsoDeployerPipelineID
 
 jobs:
-  - deployment: "Deploy ${{ parameters.location }}"
+  - deployment: "Deploy_${{ parameters.location }}"
     variables:
       - template: ../vars.yml
     pool:
