@@ -117,7 +117,7 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 	p.clustersGenevaLoggingPrivateKey = clustersGenevaLoggingPrivateKey
 	p.clustersGenevaLoggingCertificate = clustersGenevaLoggingCertificates[0]
 
-	if os.Getenv("RP_MODE") != "development" { // TODO: ugh!
+	if p.ACRResourceID() != "" { // TODO: ugh!
 		acrResource, err := azure.ParseResourceID(p.ACRResourceID())
 		if err != nil {
 			return nil, err
