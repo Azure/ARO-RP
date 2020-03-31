@@ -6,6 +6,7 @@ package deploy
 import (
 	"context"
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"net/url"
 	"path/filepath"
@@ -228,7 +229,7 @@ func (d *deployer) ensureEncryptionSecret(ctx context.Context, serviceKeyVaultUR
 
 	d.log.Infof("setting %s", env.EncryptionSecretName)
 	_, err = d.keyvault.SetSecret(ctx, serviceKeyVaultURI, env.EncryptionSecretName, keyvault.SecretSetParameters{
-		Value: to.StringPtr(string(key)),
+		Value: to.StringPtr(base64.StdEncoding.EncodeToString(key)),
 	})
 	return err
 }
