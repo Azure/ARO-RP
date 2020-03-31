@@ -20,6 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/frontend/kubeactions"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
@@ -43,6 +44,7 @@ type frontend struct {
 
 	ocEnricher         clusterdata.OpenShiftClusterEnricher
 	ocDynamicValidator validate.OpenShiftClusterDynamicValidator
+	kubeActions        kubeactions.Interface
 
 	l net.Listener
 	s *http.Server
@@ -58,15 +60,16 @@ type Runnable interface {
 }
 
 // NewFrontend returns a new runnable frontend
-func NewFrontend(ctx context.Context, baseLog *logrus.Entry, _env env.Interface, db *database.Database, apis map[string]*api.Version, m metrics.Interface) (Runnable, error) {
+func NewFrontend(ctx context.Context, baseLog *logrus.Entry, _env env.Interface, db *database.Database, apis map[string]*api.Version, m metrics.Interface, kubeActions kubeactions.Interface) (Runnable, error) {
 	var err error
 
 	f := &frontend{
-		baseLog: baseLog,
-		env:     _env,
-		db:      db,
-		apis:    apis,
-		m:       m,
+		baseLog:     baseLog,
+		env:         _env,
+		db:          db,
+		apis:        apis,
+		m:           m,
+		kubeActions: kubeActions,
 
 		ocEnricher:         clusterdata.NewBestEffortEnricher(baseLog, _env),
 		ocDynamicValidator: validate.NewOpenShiftClusterDynamicValidator(_env),
@@ -171,6 +174,20 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 
 	s.Methods(http.MethodPost).HandlerFunc(f.postOpenShiftClusterCredentials).Name("postOpenShiftClusterCredentials")
 
+	// Admin actions
+	s = r.
+		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/kubernetesobjects").
+		Subrouter()
+
+	s.Methods(http.MethodGet).HandlerFunc(f.getAdminKubernetesObjects).Name("getAdminKubernetesObjects")
+
+	s = r.
+		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/upgrade").
+		Subrouter()
+
+	s.Methods(http.MethodPost).HandlerFunc(f.postAdminOpenShiftClusterUpgrade).Name("postAdminOpenShiftClusterUpgrade")
+
+	// Operations
 	s = r.
 		Path("/providers/{resourceProviderNamespace}/operations").
 		Queries("api-version", "{api-version}").

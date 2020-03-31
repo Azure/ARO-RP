@@ -181,7 +181,7 @@ func TestDeleteOpenShiftCluster(t *testing.T) {
 				AsyncOperations:   asyncOperations,
 				OpenShiftClusters: openShiftClusters,
 				Subscriptions:     subscriptions,
-			}, api.APIs, &noop.Noop{})
+			}, api.APIs, &noop.Noop{}, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
