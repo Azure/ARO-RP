@@ -62,18 +62,15 @@ func TestAdminUpdate(t *testing.T) {
 	type test struct {
 		name           string
 		resourceID     string
-		acceptHeader   string
 		mocks          func(*test, *mock_database.MockOpenShiftClusters, *mock_kubeactions.MockInterface)
 		wantStatusCode int
-		wantAsync      bool
 		wantError      string
 	}
 
 	for _, tt := range []*test{
 		{
-			name:         "basic coverage test",
-			resourceID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-			acceptHeader: "application/json",
+			name:       "basic coverage test",
+			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
 			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, kactions *mock_kubeactions.MockInterface) {
 				clusterDoc := &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{

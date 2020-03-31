@@ -4,6 +4,7 @@ package frontend
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -11,7 +12,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"reflect"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -68,7 +69,6 @@ func TestAdminGetKubernetesObjects(t *testing.T) {
 		objName        string
 		mocks          func(*test, *mock_database.MockOpenShiftClusters, *mock_kubeactions.MockInterface)
 		wantStatusCode int
-		wantAsync      bool
 		wantResponse   func() []byte
 		wantError      string
 	}
@@ -142,6 +142,7 @@ func TestAdminGetKubernetesObjects(t *testing.T) {
 			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, kactions *mock_kubeactions.MockInterface) {
 			},
 			wantStatusCode: http.StatusBadRequest,
+			wantError:      "400: InvalidParameter: : The provided kind '' is invalid.",
 		},
 		{
 			name:         "secret requested",
@@ -152,6 +153,7 @@ func TestAdminGetKubernetesObjects(t *testing.T) {
 			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, kactions *mock_kubeactions.MockInterface) {
 			},
 			wantStatusCode: http.StatusForbidden,
+			wantError:      "403: Forbidden: : Access to secrets is forbidden.",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -205,8 +207,8 @@ func TestAdminGetKubernetesObjects(t *testing.T) {
 
 			if tt.wantError == "" {
 				if tt.wantResponse != nil {
-					if !reflect.DeepEqual(b, tt.wantResponse()) {
-						t.Errorf("%s <> %s", string(b), string(tt.wantResponse()))
+					if !bytes.Equal(b, tt.wantResponse()) {
+						t.Error(string(b))
 					}
 				}
 			} else {
@@ -219,6 +221,65 @@ func TestAdminGetKubernetesObjects(t *testing.T) {
 				if cloudErr.Error() != tt.wantError {
 					t.Error(cloudErr)
 				}
+			}
+		})
+	}
+}
+
+func TestValidateGetAdminKubernetesObjects(t *testing.T) {
+	valid := func() url.Values {
+		return url.Values{
+			"kind":      []string{"Valid-kind"},
+			"namespace": []string{"Valid-namespace"},
+			"name":      []string{"Valid-NAME-01"},
+		}
+	}
+	longName := strings.Repeat("x", 256)
+
+	for _, tt := range []struct {
+		name    string
+		modify  func(url.Values)
+		wantErr string
+	}{
+		{
+			name: "valid",
+		},
+		{
+			name:    "invalid kind",
+			modify:  func(q url.Values) { q.Set("kind", "$") },
+			wantErr: "400: InvalidParameter: : The provided kind '$' is invalid.",
+		},
+		{
+			name:    "forbidden kind",
+			modify:  func(q url.Values) { q.Set("kind", "Secret") },
+			wantErr: "403: Forbidden: : Access to secrets is forbidden.",
+		},
+		{
+			name:    "empty kind",
+			modify:  func(q url.Values) { delete(q, "kind") },
+			wantErr: "400: InvalidParameter: : The provided kind '' is invalid.",
+		},
+		{
+			name:    "invalid namespace",
+			modify:  func(q url.Values) { q.Set("namespace", "/") },
+			wantErr: "400: InvalidParameter: : The provided namespace '/' is invalid.",
+		},
+		{
+			name:    "invalid name",
+			modify:  func(q url.Values) { q.Set("name", longName) },
+			wantErr: "400: InvalidParameter: : The provided name '" + longName + "' is invalid.",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			q := valid()
+			if tt.modify != nil {
+				tt.modify(q)
+			}
+
+			err := validateGetAdminKubernetesObjects(q)
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Error(err)
 			}
 		})
 	}

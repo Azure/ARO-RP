@@ -29,7 +29,9 @@ func (f *frontend) postAdminOpenShiftClusterUpgrade(w http.ResponseWriter, r *ht
 
 func (f *frontend) _postAdminOpenShiftClusterUpgrade(ctx context.Context, r *http.Request) error {
 	vars := mux.Vars(r)
+
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
+
 	doc, err := f.db.OpenShiftClusters.Get(ctx, resourceID)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
@@ -37,5 +39,6 @@ func (f *frontend) _postAdminOpenShiftClusterUpgrade(ctx context.Context, r *htt
 	case err != nil:
 		return err
 	}
+
 	return f.kubeActions.ClusterUpgrade(ctx, doc.OpenShiftCluster)
 }

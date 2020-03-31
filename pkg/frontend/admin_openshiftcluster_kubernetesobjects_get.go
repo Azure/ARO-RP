@@ -6,7 +6,9 @@ package frontend
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -22,23 +24,21 @@ func (f *frontend) getAdminKubernetesObjects(w http.ResponseWriter, r *http.Requ
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
-	jb, err := f._getAdminKubernetesObjects(ctx, r)
+	b, err := f._getAdminKubernetesObjects(ctx, r)
 
-	reply(log, w, nil, jb, err)
+	reply(log, w, nil, b, err)
 }
 
 func (f *frontend) _getAdminKubernetesObjects(ctx context.Context, r *http.Request) ([]byte, error) {
 	vars := mux.Vars(r)
 
-	kind := r.URL.Query().Get("kind")
-	if kind == "" {
-		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The request query was invalid: %q.", "kind is required")
+	err := validateGetAdminKubernetesObjects(r.URL.Query())
+	if err != nil {
+		return nil, err
 	}
-	if strings.EqualFold(kind, "secret") {
-		return nil, api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Access to Secrets are forbidden: %q.", "")
-	}
-	namespace := r.URL.Query().Get("namespace")
-	name := r.URL.Query().Get("name")
+
+	kind, namespace, name := r.URL.Query().Get("kind"), r.URL.Query().Get("namespace"), r.URL.Query().Get("name")
+
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 
 	doc, err := f.db.OpenShiftClusters.Get(ctx, resourceID)
@@ -49,8 +49,35 @@ func (f *frontend) _getAdminKubernetesObjects(ctx context.Context, r *http.Reque
 		return nil, err
 	}
 
-	if namespace != "" && name != "" {
+	if name != "" {
 		return f.kubeActions.Get(ctx, doc.OpenShiftCluster, kind, namespace, name)
 	}
 	return f.kubeActions.List(ctx, doc.OpenShiftCluster, kind, namespace)
+}
+
+// rxKubernetesString is weaker than Kubernetes validation, but strong enough to
+// prevent mischief
+var rxKubernetesString = regexp.MustCompile(`(?i)^[-a-z0-9]{0,255}$`)
+
+func validateGetAdminKubernetesObjects(q url.Values) error {
+	kind := q.Get("kind")
+	if kind == "" ||
+		!rxKubernetesString.MatchString(kind) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided kind '%s' is invalid.", kind)
+	}
+	if strings.EqualFold(kind, "secret") {
+		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Access to secrets is forbidden.")
+	}
+
+	namespace := q.Get("namespace")
+	if !rxKubernetesString.MatchString(namespace) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided namespace '%s' is invalid.", namespace)
+	}
+
+	name := q.Get("name")
+	if !rxKubernetesString.MatchString(name) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided name '%s' is invalid.", name)
+	}
+
+	return nil
 }
