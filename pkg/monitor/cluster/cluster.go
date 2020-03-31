@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/Azure/go-autorest/autorest/azure"
+	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 
@@ -24,8 +25,9 @@ type Monitor struct {
 	oc   *api.OpenShiftCluster
 	dims map[string]string
 
-	cli kubernetes.Interface
-	m   metrics.Interface
+	cli       kubernetes.Interface
+	configCli *configclient.Clientset
+	m         metrics.Interface
 }
 
 func NewMonitor(ctx context.Context, env env.Interface, log *logrus.Entry, oc *api.OpenShiftCluster, m metrics.Interface) (*Monitor, error) {
@@ -59,6 +61,11 @@ func NewMonitor(ctx context.Context, env env.Interface, log *logrus.Entry, oc *a
 		return nil, err
 	}
 
+	configCli, err := configclient.NewForConfig(restConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Monitor{
 		env: env,
 		log: log,
@@ -66,8 +73,9 @@ func NewMonitor(ctx context.Context, env env.Interface, log *logrus.Entry, oc *a
 		oc:   oc,
 		dims: dims,
 
-		cli: cli,
-		m:   m,
+		cli:       cli,
+		configCli: configCli,
+		m:         m,
 	}, nil
 }
 
@@ -84,6 +92,8 @@ func (mon *Monitor) Monitor(ctx context.Context) {
 	if statusCode != http.StatusOK {
 		return
 	}
+
+	mon.emitClusterVersion()
 
 	err = mon.emitNodesMetrics()
 	if err != nil {
