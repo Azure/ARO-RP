@@ -13,13 +13,14 @@ service, please see the following links:
 
 ## Quickstarts
 
-* If you have a whitelisted subscription and want to use `az aro` to create a
-  cluster using the production RP, follow [using `az
-  aro`](docs/using-az-aro.md).
+* If you are an end user and want to create an Azure Red Hat OpenShift 4
+  cluster, follow [Create, access, and manage an Azure Red Hat OpenShift 4.3
+  Cluster][1].
 
 * If you want to deploy a development RP, follow [deploy development
   RP](docs/deploy-development-rp.md).
 
+[1]: https://docs.microsoft.com/en-us/azure/openshift/howto-using-azure-redhat-openshift
 
 ## Contributing
 
@@ -43,7 +44,7 @@ questions or comments.
 
 ## Repository map
 
-* .github/workflows: CI workflows using GitHub Actions.
+* .pipelines: CI workflows using Azure pipelines.
 
 * cmd/aro: RP entrypoint.
 
@@ -70,11 +71,17 @@ questions or comments.
 
   * pkg/frontend: RP frontend webserver.
 
+  * pkg/genevalogging: Daemonset for Geneva logging.
+
   * pkg/install: OpenShift installer wrapper layer.
+
+  * pkg/metrics: Handles RP metrics via statsd.
 
   * pkg/mirror: OpenShift release mirror tooling.
 
-  * pkg/swagger: /swagger Swagger specification generation code.
+  * pkg/monitor: Monitors running clusters.
+
+  * pkg/swagger: Swagger specification generation code.
 
   * pkg/util: Utility libraries.
 
