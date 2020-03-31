@@ -16,22 +16,23 @@ import (
 )
 
 func deploy(ctx context.Context, log *logrus.Entry) error {
-	deployVersion := gitCommit
+	deployVersion, location := gitCommit, flag.Arg(2)
+
 	if os.Getenv("RP_VERSION") != "" {
 		deployVersion = os.Getenv("RP_VERSION")
 	}
+
+	log.Printf("deploying version %s to location %s", deployVersion, location)
 
 	if deployVersion == "unknown" || strings.Contains(deployVersion, "dirty") {
 		return fmt.Errorf("invalid deploy version %q", deployVersion)
 	}
 
-	log.Printf("deploying version %s", deployVersion)
-
-	if strings.ToLower(flag.Arg(2)) != flag.Arg(2) {
-		return fmt.Errorf("location %s must be lower case", flag.Arg(2))
+	if strings.ToLower(location) != location {
+		return fmt.Errorf("location %s must be lower case", location)
 	}
 
-	config, err := deployer.GetConfig(flag.Arg(1), flag.Arg(2))
+	config, err := deployer.GetConfig(flag.Arg(1), location)
 	if err != nil {
 		return err
 	}

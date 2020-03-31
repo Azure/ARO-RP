@@ -288,7 +288,7 @@ func (d *deployer) ensureServiceCertificates(ctx context.Context, serviceKeyVaul
 	}
 
 cert:
-	for _, c := range certs {
+	for i, c := range certs {
 		for _, kc := range keyVaultCerts.Values() {
 			// sample id https://aro-int-eastus-svc.vault.azure.net/certificates/rp-server
 			u, err := url.Parse(*kc.ID)
@@ -296,7 +296,7 @@ cert:
 				return err
 			}
 
-			if u.Path == "/certificates/"+c.certificateName {
+			if u.Path == "/certificates/"+c.certificateName && *kc.Attributes.Enabled {
 				continue cert
 			}
 		}
@@ -306,7 +306,8 @@ cert:
 		if err != nil {
 			return err
 		}
-		c.created = true
+
+		certs[i].created = true
 	}
 
 	for _, c := range certs {
