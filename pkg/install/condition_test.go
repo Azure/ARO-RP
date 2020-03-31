@@ -62,7 +62,7 @@ func TestBootstrapConfigMapReady(t *testing.T) {
 			t.Error(errMustBeNilMsg)
 		}
 		if ready != tt.want {
-			t.Error(tt.want)
+			t.Error(ready)
 		}
 	}
 }
@@ -136,7 +136,7 @@ func TestAPIServersReady(t *testing.T) {
 			t.Error(errMustBeNilMsg)
 		}
 		if ready != tt.want {
-			t.Error(tt.want)
+			t.Error(ready)
 		}
 	}
 }
@@ -168,7 +168,7 @@ func TestOperatorConsoleExists(t *testing.T) {
 			t.Error(errMustBeNilMsg)
 		}
 		if ready != tt.want {
-			t.Error(tt.want)
+			t.Error(ready)
 		}
 	}
 }
@@ -217,7 +217,7 @@ func TestOperatorConsoleReady(t *testing.T) {
 			t.Error(errMustBeNilMsg)
 		}
 		if ready != tt.want {
-			t.Error(tt.want)
+			t.Error(ready)
 		}
 	}
 }
@@ -264,7 +264,7 @@ func TestClusterVersionReady(t *testing.T) {
 			t.Error(errMustBeNilMsg)
 		}
 		if ready != tt.want {
-			t.Error(tt.want)
+			t.Error(ready)
 		}
 	}
 }
@@ -334,7 +334,7 @@ func TestIngressControllerReady(t *testing.T) {
 			t.Error(errMustBeNilMsg)
 		}
 		if ready != tt.want {
-			t.Error(tt.want)
+			t.Error(ready)
 		}
 	}
 }

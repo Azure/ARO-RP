@@ -20,7 +20,6 @@ func TestZones(t *testing.T) {
 		want    *[]string
 		wantErr string
 	}{
-
 		{
 			name:  "no zones, 3 replicas",
 			zones: []string{""},
@@ -61,7 +60,7 @@ func TestZones(t *testing.T) {
 				t.Error(err)
 			}
 			if !reflect.DeepEqual(tt.want, zones) {
-				t.Error(tt.want)
+				t.Error(zones)
 			}
 		})
 	}
