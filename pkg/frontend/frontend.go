@@ -13,6 +13,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 
@@ -22,6 +23,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/frontend/kubeactions"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/metrics"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
@@ -35,6 +37,8 @@ func (err statusCodeError) Error() string {
 	return fmt.Sprintf("%d", err)
 }
 
+type resourcesClientFactory func(subscriptionID string, authorizer autorest.Authorizer) features.ResourcesClient
+
 type frontend struct {
 	baseLog *logrus.Entry
 	env     env.Interface
@@ -43,8 +47,9 @@ type frontend struct {
 	m       metrics.Interface
 	cipher  encryption.Cipher
 
-	ocEnricher  clusterdata.OpenShiftClusterEnricher
-	kubeActions kubeactions.Interface
+	ocEnricher             clusterdata.OpenShiftClusterEnricher
+	kubeActions            kubeactions.Interface
+	resourcesClientFactory resourcesClientFactory
 
 	l net.Listener
 	s *http.Server
@@ -60,15 +65,16 @@ type Runnable interface {
 }
 
 // NewFrontend returns a new runnable frontend
-func NewFrontend(ctx context.Context, baseLog *logrus.Entry, _env env.Interface, db *database.Database, apis map[string]*api.Version, m metrics.Interface, cipher encryption.Cipher, kubeActions kubeactions.Interface) (Runnable, error) {
+func NewFrontend(ctx context.Context, baseLog *logrus.Entry, _env env.Interface, db *database.Database, apis map[string]*api.Version, m metrics.Interface, cipher encryption.Cipher, kubeActions kubeactions.Interface, resourcesClientFactory resourcesClientFactory) (Runnable, error) {
 	f := &frontend{
-		baseLog:     baseLog,
-		env:         _env,
-		db:          db,
-		apis:        apis,
-		m:           m,
-		cipher:      cipher,
-		kubeActions: kubeActions,
+		baseLog:                baseLog,
+		env:                    _env,
+		db:                     db,
+		apis:                   apis,
+		m:                      m,
+		cipher:                 cipher,
+		kubeActions:            kubeActions,
+		resourcesClientFactory: resourcesClientFactory,
 
 		ocEnricher: clusterdata.NewBestEffortEnricher(baseLog, _env, m),
 
@@ -117,7 +123,6 @@ func NewFrontend(ctx context.Context, baseLog *logrus.Entry, _env env.Interface,
 	f.l = tls.NewListener(l, config)
 
 	f.ready.Store(true)
-
 	return f, nil
 }
 
@@ -183,6 +188,12 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 		Subrouter()
 
 	s.Methods(http.MethodPost).HandlerFunc(f.postAdminOpenShiftClusterUpgrade).Name("postAdminOpenShiftClusterUpgrade")
+
+	s = r.
+		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/resources").
+		Subrouter()
+
+	s.Methods(http.MethodGet).HandlerFunc(f.listAdminOpenShiftClusterResources).Name("listAdminOpenShiftClusterResources")
 
 	// Operations
 	s = r.

@@ -3,6 +3,11 @@ package azureclient
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
+import (
+	"fmt"
+	"strings"
+)
+
 var APIVersions = map[string]string{
 	"Microsoft.Authorization":                 "2018-09-01-preview",
 	"Microsoft.Authorization/denyAssignments": "2018-07-01-preview",
@@ -17,4 +22,18 @@ var APIVersions = map[string]string{
 	"Microsoft.Network/dnsZones":              "2018-05-01",
 	"Microsoft.Network/privateDnsZones":       "2018-09-01",
 	"Microsoft.Storage":                       "2019-04-01",
+}
+
+// APIVersionForType gets the APIVersion from a full resource type
+func APIVersionForType(typ string) (string, error) {
+	for _, t := range []string{
+		typ,
+		typ[:strings.IndexByte(typ, '/')],
+	} {
+		if apiVersion, ok := APIVersions[t]; ok {
+			return apiVersion, nil
+		}
+	}
+
+	return "", fmt.Errorf("API version not found for type %s", typ)
 }
