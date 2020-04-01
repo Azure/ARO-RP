@@ -4,11 +4,39 @@ package install
 // Licensed under the Apache License 2.0.
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 )
+
+func TestIsAuthorizationFailedError(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		inputErr error
+		wantBool bool
+	}{
+		{
+			name:     "Another error",
+			inputErr: errors.New("Something happened"),
+		},
+		{
+			name: "Authorization Failed",
+			inputErr: autorest.NewErrorWithError(&azure.ServiceError{
+				Code: "AuthorizationFailed",
+			}, "", "", nil, ""),
+			wantBool: true,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			gotBool := isAuthorizationFailedError(tt.inputErr)
+			if gotBool != tt.wantBool {
+				t.Error(gotBool)
+			}
+		})
+	}
+}
 
 func TestIsResourceQuotaExceededError(t *testing.T) {
 	for _, tt := range []struct {
@@ -20,18 +48,24 @@ func TestIsResourceQuotaExceededError(t *testing.T) {
 		{
 			name: "Another error",
 			inputErr: autorest.NewErrorWithError(&azure.ServiceError{
-				Details: []map[string]interface{}{{
-					"code":    "AnotherCode",
-					"message": "Something happened",
-				}}}, "", "", nil, ""),
+				Details: []map[string]interface{}{
+					{
+						"code":    "AnotherCode",
+						"message": "Something happened",
+					},
+				},
+			}, "", "", nil, ""),
 		},
 		{
 			name: "Quota exceeded",
 			inputErr: autorest.NewErrorWithError(&azure.ServiceError{
-				Details: []map[string]interface{}{{
-					"code":    "QuotaExceeded",
-					"message": "Quota exceeded",
-				}}}, "", "", nil, ""),
+				Details: []map[string]interface{}{
+					{
+						"code":    "QuotaExceeded",
+						"message": "Quota exceeded",
+					},
+				},
+			}, "", "", nil, ""),
 			wantBool: true,
 			wantMsg:  "Quota exceeded",
 		},

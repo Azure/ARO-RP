@@ -369,20 +369,36 @@ func (i *Installer) initializeKubernetesClients(ctx context.Context) error {
 }
 
 func (i *Installer) deployARMTemplate(ctx context.Context, rg string, tName string, t *arm.Template, params map[string]interface{}) error {
-	i.log.Printf("deploying %s template", tName)
-	err := i.deployments.CreateOrUpdateAndWait(ctx, rg, deploymentName, mgmtresources.Deployment{
-		Properties: &mgmtresources.DeploymentProperties{
-			Template:   t,
-			Parameters: params,
-			Mode:       mgmtresources.Incremental,
-		},
-	})
-	if isDeploymentActiveError(err) {
-		i.log.Printf("waiting for %s template to be deployed", tName)
-		err = i.deployments.Wait(ctx, rg, deploymentName)
-	}
+	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	defer cancel()
+
+	err := wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+		i.log.Printf("deploying %s template", tName)
+
+		err := i.deployments.CreateOrUpdateAndWait(ctx, rg, deploymentName, mgmtresources.Deployment{
+			Properties: &mgmtresources.DeploymentProperties{
+				Template:   t,
+				Parameters: params,
+				Mode:       mgmtresources.Incremental,
+			},
+		})
+
+		if isDeploymentActiveError(err) {
+			i.log.Printf("waiting for %s template to be deployed", tName)
+			err = i.deployments.Wait(ctx, rg, deploymentName)
+		}
+
+		if isAuthorizationFailedError(err) {
+			i.log.Print(err)
+			return false, nil
+		}
+
+		return err == nil, err
+	}, timeoutCtx.Done())
+
 	if isQuota, errMsg := isResourceQuotaExceededError(err); isQuota {
 		err = api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeQuotaExceeded, errMsg, "")
 	}
+
 	return err
 }

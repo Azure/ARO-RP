@@ -8,8 +8,20 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 )
 
-// isResourceQuotaExceededError returns true if it is Quota error with the
-// original error message
+// isAuthorizationFailedError returns true it the error is an
+// AuthorizationFailed error
+func isAuthorizationFailedError(err error) bool {
+	if detailedErr, ok := err.(autorest.DetailedError); ok {
+		if serviceErr, ok := detailedErr.Original.(*azure.ServiceError); ok &&
+			serviceErr.Code == "AuthorizationFailed" {
+			return true
+		}
+	}
+	return false
+}
+
+// isResourceQuotaExceededError returns true and the original error message if
+// the error is a QuotaExceeded error
 func isResourceQuotaExceededError(err error) (bool, string) {
 	if detailedErr, ok := err.(autorest.DetailedError); ok {
 		// error format:
@@ -27,7 +39,7 @@ func isResourceQuotaExceededError(err error) (bool, string) {
 	return false, ""
 }
 
-// isDeploymentActiveError returns true it is deployment active error
+// isDeploymentActiveError returns true it the error is a DeploymentActive error
 func isDeploymentActiveError(err error) bool {
 	if detailedErr, ok := err.(autorest.DetailedError); ok {
 		if requestErr, ok := detailedErr.Original.(azure.RequestError); ok &&
