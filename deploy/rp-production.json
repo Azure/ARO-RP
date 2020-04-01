@@ -547,7 +547,7 @@
             "apiVersion": "2015-07-01"
         },
         {
-            "name": "[concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('rpServicePrincipalId'), parameters('databaseAccountName')), 'RP / DocumentDB Account Contributor'))]",
+            "name": "[concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('rpServicePrincipalId'), 'RP / DocumentDB Account Contributor'))]",
             "type": "Microsoft.DocumentDB/databaseAccounts/providers/roleAssignments",
             "properties": {
                 "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
