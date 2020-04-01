@@ -8,17 +8,20 @@ import (
 	"encoding/base64"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtprivatedns "github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
+	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/ignition/machine"
 	"github.com/openshift/installer/pkg/asset/installconfig"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
@@ -64,10 +67,32 @@ func (i *Installer) installResources(ctx context.Context) error {
 		conf := auth.NewClientCredentialsConfig(spp.ClientID, string(spp.ClientSecret), spp.TenantID)
 		conf.Resource = azure.PublicCloud.GraphEndpoint
 
-		spGraphAuthorizer, err := conf.Authorizer()
+		token, err := conf.ServicePrincipalToken()
 		if err != nil {
 			return err
 		}
+
+		timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+		defer cancel()
+
+		// get a token, retrying only on AADSTS700016 errors (slow AAD propagation).
+		err = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+			err = token.EnsureFresh()
+			switch {
+			case err == nil:
+				return true, nil
+			case strings.Contains(err.Error(), "AADSTS700016"):
+				i.log.Print(err)
+				return false, nil
+			default:
+				return false, err
+			}
+		}, timeoutCtx.Done())
+		if err != nil {
+			return err
+		}
+
+		spGraphAuthorizer := autorest.NewBearerAuthorizer(token)
 
 		applications := graphrbac.NewApplicationsClient(spp.TenantID, spGraphAuthorizer)
 
