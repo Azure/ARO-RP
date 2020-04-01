@@ -2,27 +2,15 @@
 
 The `deploy` directory contains artifacts for manual environment deployment.
 Production deployment and upgrade can be orchestrated using deployment tooling:
-`go run ./cmd/aro deploy`
+`go run ./cmd/aro deploy config.yaml location`
 
-The deploy utility is decoupled from the `env` package and is configured using
-the following environment variables:
+The deploy utility is decoupled from the `env` package and is configured with a
+config file (see config.yaml.example) and the following optional
+environment variables:
 
-* Required:
+* RP_VERSION: RP VM scaleset git commit version
 
-  * AZURE_SUBSCRIPTION_ID: RP subscription ID
-
-  * LOCATION: RP location
-
-  * RESOURCEGROUP: RP resource group name
-
-  * RP_PARAMETERS_FILE: location of environment parameters file (same variable
-    used for predeploy and deploy)
-
-* Optional:
-
-  * RP_VERSION: RP VM scaleset git commit version
-
-  * RP_PREDEPLOY_ONLY: exit after pre-deploy step
+* RP_PREDEPLOY_ONLY: exit after pre-deploy step
 
 Notes:
 
@@ -31,22 +19,29 @@ Notes:
 
 * The new RP VMSS will be created with postfix `-short_gitcommit`.
 
-* Parameters file example `deploy/rp-production-parameters.json`.
-
-* The utility will not re-deploy rp-production-predeploy.json if the deployment
-  already exists. If you want to re-deploy rp-production-predeploy.json, delete
-  existing deployment object.
-
 ## Deployment logical order:
+
+* Deploy global subscription-level resources
+  `rp-production-global-subscription.json`.
 
 * Deploy managed identity `rp-production-managed-identity.json`. This will
   produce `rpServicePrincipalId` required by next deployments.
 
+* Deploy global resources `rp-production-global.json`.
+
 * Deploy pre-deploy resources `rp-production-predeploy.json` with
   `rp-production-predeploy-parameters.json`.
 
+* Configure service key vault.
+
 * Deploy main deployment resources `rp-production.json` with
   `rp-production-parameters.json`.
+
+* Configure DNS.
+
+* Wait for new RP readiness.
+
+* Terminate all old RP VMSSes.
 
 ## Utility example
 
