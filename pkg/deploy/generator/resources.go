@@ -45,7 +45,7 @@ func (g *generator) managedIdentity() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtmsi.Identity{
 			Type:     "Microsoft.ManagedIdentity/userAssignedIdentities",
-			Name:     to.StringPtr("[concat('aro-v4-rp-identity-', resourceGroup().location)]"),
+			Name:     to.StringPtr("[concat('aro-rp-', resourceGroup().location)]"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
 		APIVersion: apiVersions["msi"],
@@ -949,7 +949,7 @@ rm /etc/motd.d/*
 			Identity: &mgmtcompute.VirtualMachineScaleSetIdentity{
 				Type: mgmtcompute.ResourceIdentityTypeUserAssigned,
 				UserAssignedIdentities: map[string]*mgmtcompute.VirtualMachineScaleSetIdentityUserAssignedIdentitiesValue{
-					"[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', concat('aro-v4-rp-identity-', resourceGroup().location))]": {},
+					"[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', concat('aro-rp-', resourceGroup().location))]": {},
 				},
 			},
 			Name:     to.StringPtr("[concat('rp-vmss-', parameters('vmssName'))]"),
