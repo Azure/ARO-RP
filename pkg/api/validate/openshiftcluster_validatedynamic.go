@@ -61,7 +61,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context, oc *api
 
 	// TODO: pre-check that the cluster domain doesn't already exist
 
-	spAuthorizer, err := dv.validateServicePrincipalProfile(oc)
+	spAuthorizer, err := dv.validateServicePrincipalProfile(ctx, oc)
 	if err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context, oc *api
 	return dv.validateSubnets(ctx, subnetManager, oc)
 }
 
-func (dv *openShiftClusterDynamicValidator) validateServicePrincipalProfile(oc *api.OpenShiftCluster) (autorest.Authorizer, error) {
+func (dv *openShiftClusterDynamicValidator) validateServicePrincipalProfile(ctx context.Context, oc *api.OpenShiftCluster) (autorest.Authorizer, error) {
 	spp := &oc.Properties.ServicePrincipalProfile
 	conf := auth.NewClientCredentialsConfig(spp.ClientID, string(spp.ClientSecret), spp.TenantID)
 
@@ -116,14 +116,17 @@ func (dv *openShiftClusterDynamicValidator) validateServicePrincipalProfile(oc *
 		return nil, err
 	}
 
+	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
+
 	// get a token, retrying only on AADSTS700016 errors (slow AAD propagation).
-	// As we don't do `err = wait.PollImmediate()`, we won't ever see a "timed
-	// out waiting for the condition" error, but instead will always see the
-	// last error returned from token.EnsureFresh().
-	wait.PollImmediate(time.Second, 10*time.Second, func() (bool, error) {
+	// As we don't do `err = wait.PollImmediateUntil()`, we won't ever see a
+	// "timed out waiting for the condition" error, but instead will always see
+	// the last error returned from token.EnsureFresh().
+	wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 		err = token.EnsureFresh()
 		return err == nil || !strings.Contains(err.Error(), "AADSTS700016"), nil
-	})
+	}, timeoutCtx.Done())
 	if err != nil {
 		if strings.Contains(err.Error(), "AADSTS700016") {
 			return nil, err
