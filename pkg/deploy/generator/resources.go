@@ -1342,7 +1342,7 @@ func (g *generator) rbac() []*arm.Resource {
 	return []*arm.Resource{
 		{
 			Resource: &mgmtauthorization.RoleAssignment{
-				Name: to.StringPtr("[guid(resourceGroup().id, 'RP / Reader')]"),
+				Name: to.StringPtr("[guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / Reader')]"),
 				Type: to.StringPtr("Microsoft.Authorization/roleAssignments"),
 				Properties: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 					Scope:            to.StringPtr("[resourceGroup().id]"),
@@ -1366,7 +1366,7 @@ func (g *generator) rbac() []*arm.Resource {
 		},
 		{
 			Resource: &mgmtauthorization.RoleAssignment{
-				Name: to.StringPtr("[concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), 'RP / DocumentDB Account Contributor'))]"),
+				Name: to.StringPtr("[concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('rpServicePrincipalId'), parameters('databaseAccountName')), 'RP / DocumentDB Account Contributor'))]"),
 				Type: to.StringPtr("Microsoft.DocumentDB/databaseAccounts/providers/roleAssignments"),
 				Properties: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 					Scope:            to.StringPtr("[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"),
