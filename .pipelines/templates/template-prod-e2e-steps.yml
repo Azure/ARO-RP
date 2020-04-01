@@ -35,7 +35,6 @@ steps:
     . ./hack/e2e/run-rp-and-e2e.sh
 
     deploy_e2e_deps
-    register_sub
     run_e2e
     clean_e2e
 
