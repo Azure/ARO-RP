@@ -85,9 +85,12 @@ type OpenShiftClusterProperties struct {
 
 	StorageSuffix string `json:"storageSuffix,omitempty"`
 
-	SSHKey            SecureBytes  `json:"sshKey,omitempty"`
-	AdminKubeconfig   SecureBytes  `json:"adminKubeconfig,omitempty"`
-	KubeadminPassword SecureString `json:"kubeadminPassword,omitempty"`
+	SSHKey               SecureBytes  `json:"sshKey,omitempty"`
+	AdminKubeconfig      SecureBytes  `json:"adminKubeconfig,omitempty"`
+	AROServiceKubeconfig SecureBytes  `json:"aroServiceKubeconfig,omitempty"`
+	KubeadminPassword    SecureString `json:"kubeadminPassword,omitempty"`
+
+	RegistryProfiles []*RegistryProfile `json:"registryProfiles,omitempty"`
 }
 
 // ProvisioningState represents a provisioning state
@@ -112,9 +115,10 @@ func (t ProvisioningState) IsTerminal() bool {
 type ClusterProfile struct {
 	MissingFields
 
-	Domain          string `json:"domain,omitempty"`
-	Version         string `json:"version,omitempty"`
-	ResourceGroupID string `json:"resourceGroupId,omitempty"`
+	PullSecret      SecureString `json:"pullSecret,omitempty"`
+	Domain          string       `json:"domain,omitempty"`
+	Version         string       `json:"version,omitempty"`
+	ResourceGroupID string       `json:"resourceGroupId,omitempty"`
 }
 
 // ConsoleProfile represents a console profile.
@@ -198,6 +202,15 @@ type IngressProfile struct {
 	Name       string     `json:"name,omitempty"`
 	Visibility Visibility `json:"visibility,omitempty"`
 	IP         string     `json:"ip,omitempty"`
+}
+
+// RegistryProfile represents a registry's login
+type RegistryProfile struct {
+	MissingFields
+
+	Name     string       `json:"name,omitempty"`
+	Username string       `json:"username,omitempty"`
+	Password SecureString `json:"password,omitempty"`
 }
 
 // Install represents an install process

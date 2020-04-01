@@ -5,6 +5,7 @@ package middleware
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
 
@@ -20,10 +21,9 @@ func Authenticated(env env.Interface) func(http.Handler) http.Handler {
 			vars := mux.Vars(r)
 
 			var clientAuthorizer clientauthorizer.ClientAuthorizer
-			switch vars["api-version"] {
-			case admin.APIVersion:
+			if vars["api-version"] == admin.APIVersion || strings.HasPrefix(r.URL.Path, "/admin") {
 				clientAuthorizer = env.AdminClientAuthorizer()
-			default:
+			} else {
 				clientAuthorizer = env.ArmClientAuthorizer()
 			}
 

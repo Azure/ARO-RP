@@ -15,12 +15,14 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/util/immutable"
+	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 type openShiftClusterStaticValidator struct {
 	location   string
+	domain     string
 	resourceID string
 
 	r azure.Resource
@@ -113,7 +115,20 @@ func (sv *openShiftClusterStaticValidator) validateProperties(path string, p *Op
 }
 
 func (sv *openShiftClusterStaticValidator) validateClusterProfile(path string, cp *ClusterProfile, isCreate bool) error {
+	if pullsecret.Validate(cp.PullSecret) != nil {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".pullSecret", "The provided pull secret is invalid.")
+	}
 	if !validate.RxDomainName.MatchString(cp.Domain) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".domain", "The provided domain '%s' is invalid.", cp.Domain)
+	}
+	// domain ends .aroapp.io, but doesn't end .<rp-location>.aroapp.io
+	if strings.HasSuffix(cp.Domain, "."+strings.SplitN(sv.domain, ".", 2)[1]) &&
+		!strings.HasSuffix(cp.Domain, "."+sv.domain) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".domain", "The provided domain '%s' is invalid.", cp.Domain)
+	}
+	// domain is of form multiple.names.<rp-location>.aroapp.io
+	if strings.HasSuffix(cp.Domain, "."+sv.domain) &&
+		strings.ContainsRune(strings.TrimSuffix(cp.Domain, "."+sv.domain), '.') {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".domain", "The provided domain '%s' is invalid.", cp.Domain)
 	}
 	if isCreate && cp.Version != version.OpenShiftVersion ||

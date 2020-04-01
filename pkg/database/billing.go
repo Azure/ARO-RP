@@ -23,7 +23,7 @@ type Billing interface {
 	Create(context.Context, *api.BillingDocument) (*api.BillingDocument, error)
 	Get(context.Context, string) (*api.BillingDocument, error)
 	MarkForDeletion(context.Context, string) (*api.BillingDocument, error)
-	UpdateLastBillingTimestamp(context.Context, string) (*api.BillingDocument, error)
+	UpdateLastBillingTimestamp(context.Context, string, int) (*api.BillingDocument, error)
 	ListAll(context.Context) (*api.BillingDocuments, error)
 	Delete(context.Context, *api.BillingDocument) error
 }
@@ -62,20 +62,6 @@ func NewBilling(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, d
 	if (!billingBody["deletionTime"]) {
 		billingBody["deletionTime"] = now;
 	}
-	request.setBody(body);
-}`,
-		},
-		{
-			ID:               "setLastBillingTime",
-			TriggerOperation: cosmosdb.TriggerOperationReplace,
-			TriggerType:      cosmosdb.TriggerTypePre,
-			Body: `function trigger() {
-	var request = getContext().getRequest();
-	var body = request.getBody();
-	var date = new Date();
-	var now = Math.floor(date.getTime() / 1000);
-	var billingBody = body["billing"];
-	billingBody["lastBillingTime"] = now;
 	request.setBody(body);
 }`,
 		},
@@ -154,9 +140,11 @@ func (c *billing) Delete(ctx context.Context, doc *api.BillingDocument) error {
 	return c.c.Delete(ctx, doc.ID, doc, &cosmosdb.Options{NoETag: true})
 }
 
-// UpdateLastBillingTimestamp update the last billing timestamp field in the document
-func (c *billing) UpdateLastBillingTimestamp(ctx context.Context, id string) (*api.BillingDocument, error) {
+// UpdateLastBillingTimestamp update the last billing timestamp field in the document with the time provided
+// This time will be provided by the billing service so we don't need to use trigger
+func (c *billing) UpdateLastBillingTimestamp(ctx context.Context, id string, time int) (*api.BillingDocument, error) {
 	return c.patch(ctx, id, func(billingdoc *api.BillingDocument) error {
+		billingdoc.Billing.LastBillingTime = time
 		return nil
-	}, &cosmosdb.Options{PreTriggers: []string{"setLastBillingTime"}})
+	}, nil)
 }

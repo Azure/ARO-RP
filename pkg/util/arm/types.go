@@ -33,7 +33,7 @@ type Resource struct {
 
 	Name       string                 `json:"name,omitempty"`
 	Type       string                 `json:"type,omitempty"`
-	Condition  bool                   `json:"condition,omitempty"`
+	Condition  interface{}            `json:"condition,omitempty"`
 	APIVersion string                 `json:"apiVersion,omitempty"`
 	DependsOn  []string               `json:"dependsOn,omitempty"`
 	Location   string                 `json:"location,omitempty"`

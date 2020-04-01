@@ -6,17 +6,23 @@ package deploy
 import (
 	"context"
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
+	"reflect"
+	"strings"
+	"syscall"
 	"time"
 
-	azcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
-	azresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
-	"github.com/Azure/go-autorest/autorest"
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
+	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
+	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
+	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -24,8 +30,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/resources"
+	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
 
 var _ Deployer = (*deployer)(nil)
@@ -39,32 +46,42 @@ type Deployer interface {
 type deployer struct {
 	log *logrus.Entry
 
-	deployments resources.DeploymentsClient
-	groups      resources.GroupsClient
-	vmss        compute.VirtualMachineScaleSetsClient
-	vmssvms     compute.VirtualMachineScaleSetVMsClient
-	network     network.PublicIPAddressesClient
+	globaldeployments resources.DeploymentsClient
+	globalrecordsets  dns.RecordSetsClient
+	deployments       resources.DeploymentsClient
+	groups            resources.GroupsClient
+	vmss              compute.VirtualMachineScaleSetsClient
+	vmssvms           compute.VirtualMachineScaleSetVMsClient
+	keyvault          keyvault.Manager
 
 	cli *http.Client
 
-	version        string
-	resourceGroup  string
-	subscriptionID string
-	location       string
+	config  *RPConfig
+	version string
 }
 
 // New initiates new deploy utility object
-func New(ctx context.Context, log *logrus.Entry, authorizer autorest.Authorizer, version string) Deployer {
-	subscriptionID := os.Getenv("AZURE_SUBSCRIPTION_ID")
+func New(ctx context.Context, log *logrus.Entry, config *RPConfig, version string) (Deployer, error) {
+	authorizer, err := auth.NewAuthorizerFromEnvironment()
+	if err != nil {
+		return nil, err
+	}
+
+	kvAuthorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(azure.PublicCloud.ResourceIdentifiers.KeyVault)
+	if err != nil {
+		return nil, err
+	}
 
 	return &deployer{
 		log: log,
 
-		deployments: resources.NewDeploymentsClient(subscriptionID, authorizer),
-		groups:      resources.NewGroupsClient(subscriptionID, authorizer),
-		vmss:        compute.NewVirtualMachineScaleSetsClient(subscriptionID, authorizer),
-		vmssvms:     compute.NewVirtualMachineScaleSetVMsClient(subscriptionID, authorizer),
-		network:     network.NewPublicIPAddressesClient(subscriptionID, authorizer),
+		globaldeployments: resources.NewDeploymentsClient(config.Configuration.GlobalSubscriptionID, authorizer),
+		globalrecordsets:  dns.NewRecordSetsClient(config.Configuration.GlobalSubscriptionID, authorizer),
+		deployments:       resources.NewDeploymentsClient(config.SubscriptionID, authorizer),
+		groups:            resources.NewGroupsClient(config.SubscriptionID, authorizer),
+		vmss:              compute.NewVirtualMachineScaleSetsClient(config.SubscriptionID, authorizer),
+		vmssvms:           compute.NewVirtualMachineScaleSetVMsClient(config.SubscriptionID, authorizer),
+		keyvault:          keyvault.NewManager(kvAuthorizer),
 
 		cli: &http.Client{
 			Timeout: 5 * time.Second,
@@ -73,117 +90,14 @@ func New(ctx context.Context, log *logrus.Entry, authorizer autorest.Authorizer,
 			},
 		},
 
-		version:        version,
-		resourceGroup:  os.Getenv("RESOURCEGROUP"),
-		subscriptionID: subscriptionID,
-		location:       os.Getenv("LOCATION"),
-	}
-}
-
-// PreDeploy deploys managed identity, NSGs and keyvaults, needed for main
-// deployment
-func (d *deployer) PreDeploy(ctx context.Context) (string, error) {
-	_, err := d.groups.CreateOrUpdate(ctx, d.resourceGroup, azresources.Group{
-		Location: &d.location,
-	})
-	if err != nil {
-		return "", err
-	}
-
-	// deploy managed identity if needed and get rpServicePrincipalID
-	rpServicePrincipalID, err := d.deployManageIdentity(ctx)
-	if err != nil {
-		return "", err
-	}
-
-	// deploy NSGs, keyvaults
-	err = d.deployPreDeploy(ctx, rpServicePrincipalID)
-	if err != nil {
-		return "", err
-	}
-
-	return rpServicePrincipalID, nil
-}
-
-func (d *deployer) deployManageIdentity(ctx context.Context) (string, error) {
-	deploymentName := "rp-production-managed-identity"
-
-	deployment, err := d.deployments.Get(ctx, d.resourceGroup, deploymentName)
-	if isDeploymentNotFoundError(err) {
-		deployment, err = d._deployManageIdentity(ctx, deploymentName)
-	}
-	if err != nil {
-		return "", err
-	}
-
-	return deployment.Properties.Outputs.(map[string]interface{})["rpServicePrincipalId"].(map[string]interface{})["value"].(string), nil
-}
-
-func (d *deployer) _deployManageIdentity(ctx context.Context, deploymentName string) (azresources.DeploymentExtended, error) {
-	b, err := Asset(generator.FileRPProductionManagedIdentity)
-	if err != nil {
-		return azresources.DeploymentExtended{}, nil
-	}
-
-	var template map[string]interface{}
-	err = json.Unmarshal(b, &template)
-	if err != nil {
-		return azresources.DeploymentExtended{}, nil
-	}
-
-	d.log.Infof("deploying managed identity to %s", d.resourceGroup)
-	err = d.deployments.CreateOrUpdateAndWait(ctx, d.resourceGroup, deploymentName, azresources.Deployment{
-		Properties: &azresources.DeploymentProperties{
-			Template: template,
-			Mode:     azresources.Incremental,
-		},
-	})
-	if err != nil {
-		return azresources.DeploymentExtended{}, nil
-	}
-
-	return d.deployments.Get(ctx, d.resourceGroup, deploymentName)
-}
-
-func (d *deployer) deployPreDeploy(ctx context.Context, rpServicePrincipalID string) error {
-	deploymentName := "rp-production-predeploy"
-
-	_, err := d.deployments.Get(ctx, d.resourceGroup, deploymentName)
-	if err == nil || !isDeploymentNotFoundError(err) {
-		return err
-	}
-
-	b, err := Asset(generator.FileRPProductionPredeploy)
-	if err != nil {
-		return err
-	}
-
-	var template map[string]interface{}
-	err = json.Unmarshal(b, &template)
-	if err != nil {
-		return err
-	}
-
-	parameters, err := getParameters()
-	if err != nil {
-		return err
-	}
-
-	parameters.Parameters["rpServicePrincipalId"] = &arm.ParametersParameter{
-		Value: rpServicePrincipalID,
-	}
-
-	d.log.Infof("predeploying to %s", d.resourceGroup)
-	return d.deployments.CreateOrUpdateAndWait(ctx, d.resourceGroup, deploymentName, azresources.Deployment{
-		Properties: &azresources.DeploymentProperties{
-			Template:   template,
-			Mode:       azresources.Incremental,
-			Parameters: parameters.Parameters,
-		},
-	})
+		config:  config,
+		version: version,
+	}, nil
 }
 
 func (d *deployer) Deploy(ctx context.Context, rpServicePrincipalID string) error {
+	deploymentName := "rp-production-" + d.version
+
 	b, err := Asset(generator.FileRPProduction)
 	if err != nil {
 		return err
@@ -195,26 +109,57 @@ func (d *deployer) Deploy(ctx context.Context, rpServicePrincipalID string) erro
 		return err
 	}
 
-	parameters, err := getParameters()
-	if err != nil {
-		return err
+	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
+	parameters.Parameters["adminApiCaBundle"] = &arm.ParametersParameter{
+		Value: base64.StdEncoding.EncodeToString([]byte(d.config.Configuration.AdminAPICABundle)),
 	}
-
-	parameters.Parameters["vmssName"] = &arm.ParametersParameter{
-		Value: d.version,
+	parameters.Parameters["domainName"] = &arm.ParametersParameter{
+		Value: d.config.Location + "." + d.config.Configuration.ClusterParentDomainName,
+	}
+	parameters.Parameters["extraCosmosDBIPs"] = &arm.ParametersParameter{
+		Value: strings.Join(d.config.Configuration.ExtraCosmosDBIPs, ","),
+	}
+	parameters.Parameters["rpImage"] = &arm.ParametersParameter{
+		Value: d.config.Configuration.RPImagePrefix + ":" + d.version,
 	}
 	parameters.Parameters["rpServicePrincipalId"] = &arm.ParametersParameter{
 		Value: rpServicePrincipalID,
 	}
+	parameters.Parameters["vmssName"] = &arm.ParametersParameter{
+		Value: d.version,
+	}
 
-	d.log.Printf("deploying rp version %s to %s", d.version, d.resourceGroup)
-	return d.deployments.CreateOrUpdateAndWait(ctx, d.resourceGroup, "rp-production-"+d.version, azresources.Deployment{
-		Properties: &azresources.DeploymentProperties{
+	d.log.Printf("deploying %s", deploymentName)
+	err = d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, deploymentName, mgmtresources.Deployment{
+		Properties: &mgmtresources.DeploymentProperties{
 			Template:   template,
-			Mode:       azresources.Incremental,
+			Mode:       mgmtresources.Incremental,
 			Parameters: parameters.Parameters,
 		},
 	})
+	if err != nil {
+		return err
+	}
+
+	deployment, err := d.deployments.Get(ctx, d.config.ResourceGroupName, deploymentName)
+	if err != nil {
+		return err
+	}
+
+	rpPipIPAddress := deployment.Properties.Outputs.(map[string]interface{})["rp-pip-ipAddress"].(map[string]interface{})["value"].(string)
+
+	_nameServers := deployment.Properties.Outputs.(map[string]interface{})["rp-nameServers"].(map[string]interface{})["value"].([]interface{})
+	nameServers := make([]string, 0, len(_nameServers))
+	for _, ns := range _nameServers {
+		nameServers = append(nameServers, ns.(string))
+	}
+
+	err = d.configureDNS(ctx, rpPipIPAddress, nameServers)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (d *deployer) Upgrade(ctx context.Context) error {
@@ -229,7 +174,7 @@ func (d *deployer) Upgrade(ctx context.Context) error {
 }
 
 func (d *deployer) waitForRPReadiness(ctx context.Context, vmssName string) error {
-	scalesetVMs, err := d.vmssvms.List(ctx, d.resourceGroup, vmssName, "", "", "")
+	scalesetVMs, err := d.vmssvms.List(ctx, d.config.ResourceGroupName, vmssName, "", "", "")
 	if err != nil {
 		return err
 	}
@@ -237,7 +182,7 @@ func (d *deployer) waitForRPReadiness(ctx context.Context, vmssName string) erro
 	d.log.Printf("waiting for %s instances to be healthy", vmssName)
 	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 		for _, vm := range scalesetVMs {
-			u := fmt.Sprintf("https://vm%s.%s.%s.cloudapp.azure.com/healthz/ready", *vm.InstanceID, vmssName, d.location)
+			u := fmt.Sprintf("https://vm%s.%s.%s.cloudapp.azure.com/healthz/ready", *vm.InstanceID, vmssName, d.config.Location)
 			resp, err := d.cli.Get(u)
 			if err != nil || resp.StatusCode != http.StatusOK {
 				d.log.Printf("instance %s not ready", *vm.InstanceID)
@@ -251,7 +196,7 @@ func (d *deployer) waitForRPReadiness(ctx context.Context, vmssName string) erro
 
 func (d *deployer) removeOldScalesets(ctx context.Context) error {
 	d.log.Print("removing old scalesets")
-	scalesets, err := d.vmss.List(ctx, d.resourceGroup)
+	scalesets, err := d.vmss.List(ctx, d.config.ResourceGroupName)
 	if err != nil {
 		return err
 	}
@@ -262,7 +207,7 @@ func (d *deployer) removeOldScalesets(ctx context.Context) error {
 		}
 
 		d.log.Printf("stopping scaleset %s", *vmss.Name)
-		scalesetVMs, err := d.vmssvms.List(ctx, d.resourceGroup, *vmss.Name, "", "", "")
+		scalesetVMs, err := d.vmssvms.List(ctx, d.config.ResourceGroupName, *vmss.Name, "", "", "")
 		if err != nil {
 			return err
 		}
@@ -270,9 +215,9 @@ func (d *deployer) removeOldScalesets(ctx context.Context) error {
 		// execute individual VMs stop command
 		for _, vm := range scalesetVMs {
 			d.log.Printf("stopping instance %s", *vm.Name)
-			err := d.vmssvms.RunCommandAndWait(ctx, d.resourceGroup, *vmss.Name, *vm.InstanceID, azcompute.RunCommandInput{
+			err := d.vmssvms.RunCommandAndWait(ctx, d.config.ResourceGroupName, *vmss.Name, *vm.InstanceID, mgmtcompute.RunCommandInput{
 				CommandID: to.StringPtr("RunShellScript"),
-				Script:    &[]string{"systemctl stop arorp --no-block"},
+				Script:    &[]string{"systemctl stop aro-rp --no-block"},
 			})
 			if err != nil {
 				return err
@@ -282,10 +227,22 @@ func (d *deployer) removeOldScalesets(ctx context.Context) error {
 		d.log.Printf("waiting for %s instances to terminate", *vmss.Name)
 		err = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 			for _, vm := range scalesetVMs {
-				u := fmt.Sprintf("https://vm%s.%s.%s.cloudapp.azure.com/healthz/ready", *vm.InstanceID, *vmss.Name, d.location)
+				u := fmt.Sprintf("https://vm%s.%s.%s.cloudapp.azure.com/healthz", *vm.InstanceID, *vmss.Name, d.config.Location)
 
 				_, err := d.cli.Get(u)
-				if err, ok := err.(*url.Error); !ok || !err.Timeout() {
+
+				var terminated bool
+				if err, ok := err.(*url.Error); ok {
+					if err, ok := err.Err.(*net.OpError); ok {
+						if err, ok := err.Err.(*os.SyscallError); ok {
+							if err.Err == syscall.ECONNREFUSED {
+								terminated = true
+							}
+						}
+					}
+				}
+
+				if !terminated {
 					d.log.Printf("instance %s not terminated", *vm.InstanceID)
 					return false, nil
 				}
@@ -297,8 +254,8 @@ func (d *deployer) removeOldScalesets(ctx context.Context) error {
 			return err
 		}
 
-		d.log.Printf("deleting scaleset %s" + *vmss.Name)
-		err = d.vmss.DeleteAndWait(ctx, d.resourceGroup, *vmss.Name)
+		d.log.Printf("deleting scaleset %s", *vmss.Name)
+		err = d.vmss.DeleteAndWait(ctx, d.config.ResourceGroupName, *vmss.Name)
 		if err != nil {
 			return err
 		}
@@ -307,17 +264,57 @@ func (d *deployer) removeOldScalesets(ctx context.Context) error {
 	return nil
 }
 
-func getParameters() (*arm.Parameters, error) {
-	params, err := ioutil.ReadFile(os.Getenv("RP_PARAMETERS_FILE"))
+func (d *deployer) configureDNS(ctx context.Context, rpPipIPAddress string, nameServers []string) error {
+	_, err := d.globalrecordsets.CreateOrUpdate(ctx, d.config.Configuration.GlobalResourceGroupName, d.config.Configuration.RPParentDomainName, "rp."+d.config.Location, mgmtdns.A, mgmtdns.RecordSet{
+		RecordSetProperties: &mgmtdns.RecordSetProperties{
+			TTL: to.Int64Ptr(3600),
+			ARecords: &[]mgmtdns.ARecord{
+				{
+					Ipv4Address: &rpPipIPAddress,
+				},
+			},
+		},
+	}, "", "")
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	parameters := &arm.Parameters{}
-	err = json.Unmarshal(params, parameters)
-	if err != nil {
-		return nil, err
+	nsRecords := make([]mgmtdns.NsRecord, 0, len(nameServers))
+	for i := range nameServers {
+		nsRecords = append(nsRecords, mgmtdns.NsRecord{
+			Nsdname: &nameServers[i],
+		})
 	}
 
-	return parameters, nil
+	_, err = d.globalrecordsets.CreateOrUpdate(ctx, d.config.Configuration.GlobalResourceGroupName, d.config.Configuration.ClusterParentDomainName, d.config.Location, mgmtdns.NS, mgmtdns.RecordSet{
+		RecordSetProperties: &mgmtdns.RecordSetProperties{
+			TTL:       to.Int64Ptr(3600),
+			NsRecords: &nsRecords,
+		},
+	}, "", "")
+	return err
+}
+
+// getParameters returns an *arm.Parameters populated with parameter names and
+// values.  The names are taken from the ps argument and the values are taken
+// from d.config.Configuration.
+func (d *deployer) getParameters(ps map[string]interface{}) *arm.Parameters {
+	m := map[string]interface{}{}
+
+	v := reflect.ValueOf(*d.config.Configuration)
+	for i := 0; i < v.NumField(); i++ {
+		m[strings.SplitN(v.Type().Field(i).Tag.Get("json"), ",", 2)[0]] = v.Field(i).Interface()
+	}
+
+	parameters := &arm.Parameters{
+		Parameters: map[string]*arm.ParametersParameter{},
+	}
+
+	for p := range ps {
+		parameters.Parameters[p] = &arm.ParametersParameter{
+			Value: m[p],
+		}
+	}
+
+	return parameters
 }

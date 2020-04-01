@@ -18,6 +18,15 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 )
 
+const (
+	RPFirstPartySecretName   = "rp-firstparty"
+	RPServerSecretName       = "rp-server"
+	ClusterLoggingSecretName = "cluster-mdsd"
+	EncryptionSecretName     = "encryption-key"
+	RPLoggingSecretName      = "rp-mdsd"
+	RPMonitoringSecretName   = "rp-mdm"
+)
+
 type Interface interface {
 	instancemetadata.InstanceMetadata
 
@@ -39,6 +48,8 @@ type Interface interface {
 	ManagedDomain(string) (string, error)
 	MetricsSocketPath() string
 	Zones(vmSize string) ([]string, error)
+	ACRResourceID() string
+	ACRName() string
 }
 
 func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {

@@ -39,11 +39,19 @@ func (g *generator) Artifacts() error {
 		if err != nil {
 			return err
 		}
-		err = g.writeParameters(g.rpPreDeployParameters(), fileRPProductionPredeployParameters)
+		err = g.writeTemplate(g.rpGlobalTemplate(), FileRPProductionGlobal)
 		if err != nil {
 			return err
 		}
-		err = g.writeParameters(g.rpParameters(), fileRPProductionParameters)
+		err = g.writeTemplate(g.rpGlobalSubscriptionTemplate(), FileRPProductionGlobalSubscription)
+		if err != nil {
+			return err
+		}
+		err = g.writeParameters(g.rpPreDeployParameters(), FileRPProductionPredeployParameters)
+		if err != nil {
+			return err
+		}
+		err = g.writeParameters(g.rpParameters(), FileRPProductionParameters)
 		if err != nil {
 			return err
 		}

@@ -54,7 +54,7 @@ func (t *Test) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, err
 
 func (t *Test) GetCertificateSecret(ctx context.Context, secretName string) (key *rsa.PrivateKey, certs []*x509.Certificate, err error) {
 	switch secretName {
-	case "rp-server":
+	case RPServerSecretName:
 		return t.TLSKey, t.TLSCerts, nil
 	default:
 		return nil, nil, fmt.Errorf("secret %q not found", secretName)
@@ -87,4 +87,12 @@ func (t *Test) ResourceGroup() string {
 
 func (t *Test) SubscriptionID() string {
 	return t.TestSubscriptionID
+}
+
+func (t *Test) ACRResourceID() string {
+	return "/subscriptions/93aeba23-2f76-4307-be82-02921df010cf/resourceGroups/global/providers/Microsoft.ContainerRegistry/registries/arosvc"
+}
+
+func (t *Test) ACRName() string {
+	return "arosvc"
 }

@@ -32,7 +32,7 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 	var b []byte
 	err := cosmosdb.RetryOnPreconditionFailed(func() error {
 		var err error
-		b, err = f._putOrPatchOpenShiftCluster(ctx, r, &header, f.apis[vars["api-version"]].OpenShiftClusterConverter(), f.apis[vars["api-version"]].OpenShiftClusterStaticValidator(f.env.Location(), r.URL.Path))
+		b, err = f._putOrPatchOpenShiftCluster(ctx, r, &header, f.apis[vars["api-version"]].OpenShiftClusterConverter(), f.apis[vars["api-version"]].OpenShiftClusterStaticValidator(f.env.Location(), f.env.Domain(), r.URL.Path))
 		return err
 	})
 
@@ -41,6 +41,7 @@ func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Req
 
 func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Request, header *http.Header, converter api.OpenShiftClusterConverter, staticValidator api.OpenShiftClusterStaticValidator) ([]byte, error) {
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
+	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
 
 	subdoc, err := f.validateSubscriptionState(ctx, r.URL.Path, api.SubscriptionStateRegistered)
 	if err != nil {
@@ -81,6 +82,8 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 		}
 	}
 
+	doc.CorrelationData = correlationData
+
 	err = validateTerminalProvisioningState(doc.OpenShiftCluster.Properties.ProvisioningState)
 	if err != nil {
 		return nil, err
@@ -109,7 +112,8 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 			Properties: api.OpenShiftClusterProperties{
 				ProvisioningState: doc.OpenShiftCluster.Properties.ProvisioningState,
 				ClusterProfile: api.ClusterProfile{
-					Version: doc.OpenShiftCluster.Properties.ClusterProfile.Version,
+					PullSecret: doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret,
+					Version:    doc.OpenShiftCluster.Properties.ClusterProfile.Version,
 				},
 				ServicePrincipalProfile: api.ServicePrincipalProfile{
 					ClientSecret: doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret,
@@ -193,6 +197,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 		return nil, err
 	}
 
+	doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret = ""
 	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 
 	b, err := json.MarshalIndent(converter.ToExternal(doc.OpenShiftCluster), "", "    ")

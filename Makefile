@@ -81,7 +81,6 @@ pyenv${PYTHON_VERSION}:
 	. pyenv${PYTHON_VERSION}/bin/activate && \
 		pip install azdev && \
 		azdev setup -r . && \
-		pip install azure-cli==2.0.81 && \
 		sed -i -e "s|^dev_sources = $(PWD)$$|dev_sources = $(PWD)/python|" ~/.azure/config
 
 secrets:
@@ -121,4 +120,7 @@ test-python: generate pyenv${PYTHON_VERSION}
 		azdev linter && \
 		azdev style
 
-.PHONY: aro az clean client generate image-aro proxy secrets secrets-update test-go test-python image-fluentbit publish-image-proxy publish-image-aro publish-image-fluentbit publish-image-proxy
+admin.kubeconfig:
+	hack/get-admin-kubeconfig.sh /subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}/providers/Microsoft.RedHatOpenShift/openShiftClusters/${CLUSTER} >admin.kubeconfig
+
+.PHONY: aro az clean client generate image-aro proxy secrets secrets-update test-go test-python image-fluentbit publish-image-proxy publish-image-aro publish-image-fluentbit publish-image-proxy admin.kubeconfig

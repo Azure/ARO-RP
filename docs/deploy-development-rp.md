@@ -5,10 +5,12 @@
 1. Install [Go 1.13](https://golang.org/dl) or later, if you haven't already.
 
 1. Install a supported version of [Python](https://www.python.org/downloads), if
-   you don't have one installed already.  The `az` client supports Python 2.7
-   and Python 3.5+.  A recent Python 3.x version is recommended.
+   you don't have one installed already.  The `az` client supports Python 3.6+.
+   A recent Python 3.x version is recommended.
 
 1. Fedora users: install the `gpgme-devel` and `libassuan-devel` packages.
+
+   Debian users: install the `libgpgme-dev` package.
 
    OSX users: please follow [Prepare your development environment using
    OSX](./prepare-your-development-environment-using-osx.md).
@@ -131,7 +133,7 @@
 * Get an admin kubeconfig:
 
   ```bash
-  hack/get-admin-kubeconfig.sh "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER" >admin.kubeconfig
+  make admin.kubeconfig
   export KUBECONFIG=admin.kubeconfig
   ```
 
@@ -147,5 +149,5 @@
 
 To run fake metrics socket:
 ```bash
-nc -U -l mdm_statsd.socket
+go run ./hack/monitor
 ```

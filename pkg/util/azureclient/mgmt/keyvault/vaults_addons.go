@@ -6,15 +6,15 @@ package keyvault
 import (
 	"context"
 
-	"github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2016-10-01/keyvault"
+	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2016-10-01/keyvault"
 )
 
 // VaultsClientAddons contains addons for VaultsClient
 type VaultsClientAddons interface {
-	ListByResourceGroup(ctx context.Context, resourceGroupName string, top *int32) (vaults []keyvault.Vault, err error)
+	ListByResourceGroup(ctx context.Context, resourceGroupName string, top *int32) (vaults []mgmtkeyvault.Vault, err error)
 }
 
-func (c *vaultsClient) ListByResourceGroup(ctx context.Context, resourceGroupName string, top *int32) (vaults []keyvault.Vault, err error) {
+func (c *vaultsClient) ListByResourceGroup(ctx context.Context, resourceGroupName string, top *int32) (vaults []mgmtkeyvault.Vault, err error) {
 	page, err := c.VaultsClient.ListByResourceGroup(ctx, resourceGroupName, top)
 	if err != nil {
 		return nil, err

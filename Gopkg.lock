@@ -18,14 +18,14 @@
   revision = "3a14fb1c4737b3995174c5f4d6d08a348b9b4180"
 
 [[projects]]
-  digest = "1:e4dc9e19d4ac2a0f4214525b12d0641a50374b0d36c6375f573875989ad8cee1"
+  digest = "1:9ca2dd340d23767b05c19bda3f6a9ef0e64e81af56e038735c6e3485def7ec9b"
   name = "github.com/Azure/azure-sdk-for-go"
   packages = [
     "profiles/latest/dns/mgmt/dns",
     "profiles/latest/resources/mgmt/subscriptions",
-    "services/authorization/mgmt/2015-07-01/authorization",
     "services/compute/mgmt/2018-10-01/compute",
     "services/compute/mgmt/2019-03-01/compute",
+    "services/containerregistry/mgmt/2019-06-01-preview/containerregistry",
     "services/cosmos-db/mgmt/2015-04-08/documentdb",
     "services/cosmos-db/mgmt/2019-08-01/documentdb",
     "services/dns/mgmt/2018-05-01/dns",
@@ -528,6 +528,20 @@
   version = "v1.3.2"
 
 [[projects]]
+  digest = "1:0aeda02073125667ac6c9df50c7921cb22c08a4accdc54589c697a7e76be65c2"
+  name = "github.com/google/go-cmp"
+  packages = [
+    "cmp",
+    "cmp/internal/diff",
+    "cmp/internal/flags",
+    "cmp/internal/function",
+    "cmp/internal/value",
+  ]
+  pruneopts = "UT"
+  revision = "5a6f75716e1203a923a78c9efb94089d857df0f6"
+  version = "v0.4.0"
+
+[[projects]]
   digest = "1:a6181aca1fd5e27103f9a920876f29ac72854df7345a39f3b01e61c8c94cc8af"
   name = "github.com/google/gofuzz"
   packages = ["."]
@@ -886,7 +900,7 @@
 
 [[projects]]
   branch = "release-4.3"
-  digest = "1:b15c7e34456686caaae5b1dfef5411825d5874fb1016bc84620b7b9ae8b62136"
+  digest = "1:14b7de6170f03983718e52845912c445dddd8870d1fa48a0f1b46835e2eb5ba6"
   name = "github.com/openshift/api"
   packages = [
     "config/v1",
@@ -895,6 +909,7 @@
     "image/v1",
     "operator/v1",
     "operator/v1alpha1",
+    "samples/v1",
     "security/v1",
   ]
   pruneopts = "UT"
@@ -938,16 +953,31 @@
 
 [[projects]]
   branch = "release-4.3"
-  digest = "1:b64353f338d565767e216d8ca7b57d86a8b3da9d05b2caa42399d2388d05acd9"
+  digest = "1:399e8d70371267705d306221880377d69fcb3650254b754a168370561d435b35"
   name = "github.com/openshift/cluster-api"
   packages = [
     "pkg/apis/cluster/common",
     "pkg/apis/cluster/v1alpha1",
     "pkg/apis/machine/common",
     "pkg/apis/machine/v1beta1",
+    "pkg/client/clientset_generated/clientset",
+    "pkg/client/clientset_generated/clientset/fake",
+    "pkg/client/clientset_generated/clientset/scheme",
+    "pkg/client/clientset_generated/clientset/typed/cluster/v1alpha1",
+    "pkg/client/clientset_generated/clientset/typed/cluster/v1alpha1/fake",
+    "pkg/client/clientset_generated/clientset/typed/machine/v1beta1",
+    "pkg/client/clientset_generated/clientset/typed/machine/v1beta1/fake",
   ]
   pruneopts = "UT"
   revision = "9a3a7bbe9258f5c3117cb2aba6a560babe0d59f8"
+
+[[projects]]
+  branch = "release-4.3"
+  digest = "1:9d86fe2d97d035702ab624b98c8bdb64436bafcba5538b26f3263f7e1a053f41"
+  name = "github.com/openshift/cluster-api-provider-azure"
+  packages = ["pkg/apis/azureprovider/v1beta1"]
+  pruneopts = "UT"
+  revision = "86ecb23daa83c78761414a7abcb169c73c18a756"
 
 [[projects]]
   branch = "master"
@@ -970,6 +1000,18 @@
   ]
   pruneopts = "UT"
   revision = "2336783d460353458477aa9e181eca87e4db5d27"
+
+[[projects]]
+  branch = "release-4.3"
+  digest = "1:900bceaa6cc77aab2ec6088d9b298e7e54df69a5794afcf9e1ab8452f56c8409"
+  name = "github.com/openshift/cluster-samples-operator"
+  packages = [
+    "pkg/generated/clientset/versioned",
+    "pkg/generated/clientset/versioned/scheme",
+    "pkg/generated/clientset/versioned/typed/samples/v1",
+  ]
+  pruneopts = "UT"
+  revision = "bfda4d3462fd7305573adb103137723d2bd4975c"
 
 [[projects]]
   branch = "release-4.3"
@@ -1675,51 +1717,91 @@
 
 [[projects]]
   branch = "origin-4.3-kubernetes-1.16.2"
-  digest = "1:e71e465ba93c57c15194845e6153f412a35c173cd581044f405514c15b7b7f91"
+  digest = "1:eeecff9055f0018aa0ee3c8b162cae14436bbfdaf7a3922fa171900d88cd5073"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
     "discovery/fake",
+    "dynamic",
     "kubernetes",
+    "kubernetes/fake",
     "kubernetes/scheme",
     "kubernetes/typed/admissionregistration/v1",
+    "kubernetes/typed/admissionregistration/v1/fake",
     "kubernetes/typed/admissionregistration/v1beta1",
+    "kubernetes/typed/admissionregistration/v1beta1/fake",
     "kubernetes/typed/apps/v1",
+    "kubernetes/typed/apps/v1/fake",
     "kubernetes/typed/apps/v1beta1",
+    "kubernetes/typed/apps/v1beta1/fake",
     "kubernetes/typed/apps/v1beta2",
+    "kubernetes/typed/apps/v1beta2/fake",
     "kubernetes/typed/auditregistration/v1alpha1",
+    "kubernetes/typed/auditregistration/v1alpha1/fake",
     "kubernetes/typed/authentication/v1",
+    "kubernetes/typed/authentication/v1/fake",
     "kubernetes/typed/authentication/v1beta1",
+    "kubernetes/typed/authentication/v1beta1/fake",
     "kubernetes/typed/authorization/v1",
+    "kubernetes/typed/authorization/v1/fake",
     "kubernetes/typed/authorization/v1beta1",
+    "kubernetes/typed/authorization/v1beta1/fake",
     "kubernetes/typed/autoscaling/v1",
+    "kubernetes/typed/autoscaling/v1/fake",
     "kubernetes/typed/autoscaling/v2beta1",
+    "kubernetes/typed/autoscaling/v2beta1/fake",
     "kubernetes/typed/autoscaling/v2beta2",
+    "kubernetes/typed/autoscaling/v2beta2/fake",
     "kubernetes/typed/batch/v1",
+    "kubernetes/typed/batch/v1/fake",
     "kubernetes/typed/batch/v1beta1",
+    "kubernetes/typed/batch/v1beta1/fake",
     "kubernetes/typed/batch/v2alpha1",
+    "kubernetes/typed/batch/v2alpha1/fake",
     "kubernetes/typed/certificates/v1beta1",
+    "kubernetes/typed/certificates/v1beta1/fake",
     "kubernetes/typed/coordination/v1",
+    "kubernetes/typed/coordination/v1/fake",
     "kubernetes/typed/coordination/v1beta1",
+    "kubernetes/typed/coordination/v1beta1/fake",
     "kubernetes/typed/core/v1",
+    "kubernetes/typed/core/v1/fake",
     "kubernetes/typed/discovery/v1alpha1",
+    "kubernetes/typed/discovery/v1alpha1/fake",
     "kubernetes/typed/events/v1beta1",
+    "kubernetes/typed/events/v1beta1/fake",
     "kubernetes/typed/extensions/v1beta1",
+    "kubernetes/typed/extensions/v1beta1/fake",
     "kubernetes/typed/networking/v1",
+    "kubernetes/typed/networking/v1/fake",
     "kubernetes/typed/networking/v1beta1",
+    "kubernetes/typed/networking/v1beta1/fake",
     "kubernetes/typed/node/v1alpha1",
+    "kubernetes/typed/node/v1alpha1/fake",
     "kubernetes/typed/node/v1beta1",
+    "kubernetes/typed/node/v1beta1/fake",
     "kubernetes/typed/policy/v1beta1",
+    "kubernetes/typed/policy/v1beta1/fake",
     "kubernetes/typed/rbac/v1",
+    "kubernetes/typed/rbac/v1/fake",
     "kubernetes/typed/rbac/v1alpha1",
+    "kubernetes/typed/rbac/v1alpha1/fake",
     "kubernetes/typed/rbac/v1beta1",
+    "kubernetes/typed/rbac/v1beta1/fake",
     "kubernetes/typed/scheduling/v1",
+    "kubernetes/typed/scheduling/v1/fake",
     "kubernetes/typed/scheduling/v1alpha1",
+    "kubernetes/typed/scheduling/v1alpha1/fake",
     "kubernetes/typed/scheduling/v1beta1",
+    "kubernetes/typed/scheduling/v1beta1/fake",
     "kubernetes/typed/settings/v1alpha1",
+    "kubernetes/typed/settings/v1alpha1/fake",
     "kubernetes/typed/storage/v1",
+    "kubernetes/typed/storage/v1/fake",
     "kubernetes/typed/storage/v1alpha1",
+    "kubernetes/typed/storage/v1alpha1/fake",
     "kubernetes/typed/storage/v1beta1",
+    "kubernetes/typed/storage/v1beta1/fake",
     "pkg/apis/clientauthentication",
     "pkg/apis/clientauthentication/v1alpha1",
     "pkg/apis/clientauthentication/v1beta1",
@@ -1727,6 +1809,7 @@
     "plugin/pkg/client/auth/exec",
     "rest",
     "rest/watch",
+    "restmapper",
     "testing",
     "tools/auth",
     "tools/clientcmd",
@@ -1834,8 +1917,8 @@
   analyzer-version = 1
   input-imports = [
     "github.com/AlekSi/gocov-xml",
-    "github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization",
     "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute",
+    "github.com/Azure/azure-sdk-for-go/services/containerregistry/mgmt/2019-06-01-preview/containerregistry",
     "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2015-04-08/documentdb",
     "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2019-08-01/documentdb",
     "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns",
@@ -1868,9 +1951,11 @@
     "github.com/containers/image/types",
     "github.com/coreos/go-systemd/journal",
     "github.com/dgrijalva/jwt-go",
+    "github.com/ghodss/yaml",
     "github.com/go-bindata/go-bindata/go-bindata",
     "github.com/golang/mock/gomock",
     "github.com/golang/mock/mockgen",
+    "github.com/google/go-cmp/cmp",
     "github.com/gorilla/mux",
     "github.com/jim-minter/go-cosmosdb/cmd/gencosmosdb",
     "github.com/jstemmer/go-junit-report",
@@ -1880,11 +1965,18 @@
     "github.com/openshift/api/config/v1",
     "github.com/openshift/api/image/v1",
     "github.com/openshift/api/operator/v1",
+    "github.com/openshift/api/security/v1",
     "github.com/openshift/client-go/config/clientset/versioned",
     "github.com/openshift/client-go/config/clientset/versioned/fake",
+    "github.com/openshift/client-go/config/clientset/versioned/scheme",
     "github.com/openshift/client-go/operator/clientset/versioned",
     "github.com/openshift/client-go/operator/clientset/versioned/fake",
     "github.com/openshift/client-go/security/clientset/versioned",
+    "github.com/openshift/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1",
+    "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1",
+    "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset",
+    "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset/fake",
+    "github.com/openshift/cluster-samples-operator/pkg/generated/clientset/versioned",
     "github.com/openshift/console-operator/pkg/api",
     "github.com/openshift/installer/data",
     "github.com/openshift/installer/pkg/asset",
@@ -1923,13 +2015,22 @@
     "k8s.io/api/apps/v1",
     "k8s.io/api/core/v1",
     "k8s.io/apimachinery/pkg/api/errors",
+    "k8s.io/apimachinery/pkg/api/resource",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
+    "k8s.io/apimachinery/pkg/runtime",
+    "k8s.io/apimachinery/pkg/runtime/schema",
+    "k8s.io/apimachinery/pkg/runtime/serializer",
     "k8s.io/apimachinery/pkg/util/httpstream",
     "k8s.io/apimachinery/pkg/util/httpstream/spdy",
     "k8s.io/apimachinery/pkg/util/wait",
+    "k8s.io/client-go/discovery",
+    "k8s.io/client-go/dynamic",
     "k8s.io/client-go/kubernetes",
+    "k8s.io/client-go/kubernetes/fake",
     "k8s.io/client-go/kubernetes/typed/core/v1",
     "k8s.io/client-go/rest",
+    "k8s.io/client-go/restmapper",
+    "k8s.io/client-go/testing",
     "k8s.io/client-go/tools/clientcmd",
     "k8s.io/client-go/tools/clientcmd/api/v1",
     "k8s.io/client-go/tools/metrics",

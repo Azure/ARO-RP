@@ -38,6 +38,7 @@ type prod struct {
 
 	keyvault basekeyvault.BaseClient
 
+	acrName                  string
 	clustersKeyvaultURI      string
 	cosmosDBAccountName      string
 	cosmosDBPrimaryMasterKey string
@@ -99,7 +100,7 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 		return nil, err
 	}
 
-	fpPrivateKey, fpCertificates, err := p.GetCertificateSecret(ctx, "rp-firstparty")
+	fpPrivateKey, fpCertificates, err := p.GetCertificateSecret(ctx, RPFirstPartySecretName)
 	if err != nil {
 		return nil, err
 	}
@@ -108,13 +109,21 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 	p.fpCertificate = fpCertificates[0]
 	p.fpServicePrincipalID = "f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875"
 
-	clustersGenevaLoggingPrivateKey, clustersGenevaLoggingCertificates, err := p.GetCertificateSecret(ctx, "cluster-mdsd")
+	clustersGenevaLoggingPrivateKey, clustersGenevaLoggingCertificates, err := p.GetCertificateSecret(ctx, ClusterLoggingSecretName)
 	if err != nil {
 		return nil, err
 	}
 
 	p.clustersGenevaLoggingPrivateKey = clustersGenevaLoggingPrivateKey
 	p.clustersGenevaLoggingCertificate = clustersGenevaLoggingCertificates[0]
+
+	if p.ACRResourceID() != "" { // TODO: ugh!
+		acrResource, err := azure.ParseResourceID(p.ACRResourceID())
+		if err != nil {
+			return nil, err
+		}
+		p.acrName = acrResource.ResourceName
+	}
 
 	return p, nil
 }
@@ -141,6 +150,14 @@ func (p *prod) ArmClientAuthorizer() clientauthorizer.ClientAuthorizer {
 
 func (p *prod) AdminClientAuthorizer() clientauthorizer.ClientAuthorizer {
 	return p.adminClientAuthorizer
+}
+
+func (p *prod) ACRResourceID() string {
+	return os.Getenv("ACR_RESOURCE_ID")
+}
+
+func (p *prod) ACRName() string {
+	return p.acrName
 }
 
 func (p *prod) populateCosmosDB(ctx context.Context, rpAuthorizer autorest.Authorizer) error {

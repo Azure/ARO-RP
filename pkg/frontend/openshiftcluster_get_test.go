@@ -19,12 +19,13 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/v20191231preview"
+	v20200430 "github.com/Azure/ARO-RP/pkg/api/v20200430"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
+	mock_clusterdata "github.com/Azure/ARO-RP/pkg/util/mocks/clusterdata"
 	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/test/util/listener"
@@ -63,9 +64,9 @@ func TestGetOpenShiftCluster(t *testing.T) {
 	type test struct {
 		name           string
 		resourceID     string
-		mocks          func(*test, *mock_database.MockOpenShiftClusters)
+		mocks          func(*test, *mock_database.MockOpenShiftClusters, *mock_clusterdata.MockOpenShiftClusterEnricher)
 		wantStatusCode int
-		wantResponse   func(*test) *v20191231preview.OpenShiftCluster
+		wantResponse   func(*test) *v20200430.OpenShiftCluster
 		wantError      string
 	}
 
@@ -73,25 +74,32 @@ func TestGetOpenShiftCluster(t *testing.T) {
 		{
 			name:       "cluster exists in db",
 			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName",
-			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters) {
-				openshiftClusters.EXPECT().
-					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
-					Return(&api.OpenShiftClusterDocument{
-						OpenShiftCluster: &api.OpenShiftCluster{
-							ID:   tt.resourceID,
-							Name: "resourceName",
-							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-							Properties: api.OpenShiftClusterProperties{
-								ServicePrincipalProfile: api.ServicePrincipalProfile{
-									ClientSecret: "clientSecret",
-								},
+			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher) {
+				clusterDoc := &api.OpenShiftClusterDocument{
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   tt.resourceID,
+						Name: "resourceName",
+						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+						Properties: api.OpenShiftClusterProperties{
+							ClusterProfile: api.ClusterProfile{
+								PullSecret: "{}",
+							},
+							ServicePrincipalProfile: api.ServicePrincipalProfile{
+								ClientSecret: "clientSecret",
 							},
 						},
-					}, nil)
+					},
+				}
+
+				openshiftClusters.EXPECT().
+					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
+					Return(clusterDoc, nil)
+
+				enricher.EXPECT().Enrich(gomock.Any(), clusterDoc.OpenShiftCluster)
 			},
 			wantStatusCode: http.StatusOK,
-			wantResponse: func(tt *test) *v20191231preview.OpenShiftCluster {
-				return &v20191231preview.OpenShiftCluster{
+			wantResponse: func(tt *test) *v20200430.OpenShiftCluster {
+				return &v20200430.OpenShiftCluster{
 					ID:   tt.resourceID,
 					Name: "resourceName",
 					Type: "Microsoft.RedHatOpenShift/openshiftClusters",
@@ -101,7 +109,7 @@ func TestGetOpenShiftCluster(t *testing.T) {
 		{
 			name:       "cluster not found in db",
 			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName",
-			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters) {
+			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher) {
 				openshiftClusters.EXPECT().
 					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
 					Return(nil, &cosmosdb.Error{StatusCode: http.StatusNotFound})
@@ -112,7 +120,7 @@ func TestGetOpenShiftCluster(t *testing.T) {
 		{
 			name:       "internal error",
 			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName",
-			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters) {
+			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher) {
 				openshiftClusters.EXPECT().
 					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
 					Return(nil, errors.New("random error"))
@@ -140,17 +148,19 @@ func TestGetOpenShiftCluster(t *testing.T) {
 			defer controller.Finish()
 
 			openshiftClusters := mock_database.NewMockOpenShiftClusters(controller)
+			enricher := mock_clusterdata.NewMockOpenShiftClusterEnricher(controller)
 
-			tt.mocks(tt, openshiftClusters)
+			tt.mocks(tt, openshiftClusters, enricher)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{OpenShiftClusters: openshiftClusters}, api.APIs, &noop.Noop{})
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{OpenShiftClusters: openshiftClusters}, api.APIs, &noop.Noop{}, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
+			f.(*frontend).ocEnricher = enricher
 
 			go f.Run(ctx, nil, nil)
 
-			resp, err := cli.Get("https://server" + tt.resourceID + "?api-version=2019-12-31-preview")
+			resp, err := cli.Get("https://server" + tt.resourceID + "?api-version=2020-04-30")
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -166,7 +176,7 @@ func TestGetOpenShiftCluster(t *testing.T) {
 			}
 
 			if tt.wantError == "" {
-				var oc *v20191231preview.OpenShiftCluster
+				var oc *v20200430.OpenShiftCluster
 				err = json.Unmarshal(b, &oc)
 				if err != nil {
 					t.Fatal(err)

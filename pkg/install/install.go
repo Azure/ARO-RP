@@ -10,11 +10,13 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"net/url"
 	"reflect"
 	"runtime"
 	"time"
 
+	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/Azure/go-autorest/autorest"
@@ -23,6 +25,7 @@ import (
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
+	samplesclient "github.com/openshift/cluster-samples-operator/pkg/generated/clientset/versioned"
 	"github.com/openshift/installer/pkg/asset/ignition/bootstrap"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
@@ -33,6 +36,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/resources"
@@ -73,10 +77,14 @@ type Installer struct {
 	kubernetescli kubernetes.Interface
 	operatorcli   operatorclient.Interface
 	configcli     configclient.Interface
+	samplescli    samplesclient.Interface
 	securitycli   securityclient.Interface
 }
 
-const pollInterval = 10 * time.Second
+const (
+	deploymentName = "azuredeploy"
+	pollInterval   = 10 * time.Second
+)
 
 type action func(context.Context) error
 type condition struct {
@@ -130,7 +138,7 @@ func NewInstaller(ctx context.Context, log *logrus.Entry, env env.Interface, db 
 		accounts:          storage.NewAccountsClient(r.SubscriptionID, fpAuthorizer),
 
 		dns:             dns.NewManager(env, localFPAuthorizer),
-		keyvault:        keyvault.NewManager(env, localFPKVAuthorizer),
+		keyvault:        keyvault.NewManager(localFPKVAuthorizer),
 		privateendpoint: privateendpoint.NewManager(env, localFPAuthorizer),
 		subnet:          subnet.NewManager(r.SubscriptionID, fpAuthorizer),
 	}, nil
@@ -157,13 +165,17 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 		api.InstallPhaseRemoveBootstrap: {
 			action(i.initializeKubernetesClients),
 			action(i.removeBootstrap),
+			action(i.removeBootstrapIgnition),
 			action(i.configureAPIServerCertificate),
 			condition{i.apiServersReady, 30 * time.Minute},
 			condition{i.operatorConsoleExists, 30 * time.Minute},
 			action(i.updateConsoleBranding),
 			condition{i.operatorConsoleReady, 10 * time.Minute},
 			condition{i.clusterVersionReady, 30 * time.Minute},
+			action(i.disableAlertManagerWarning),
 			action(i.disableUpdates),
+			action(i.disableSamples),
+			action(i.disableOperatorHubSources),
 			action(i.updateRouterIP),
 			action(i.configureIngressCertificate),
 			condition{i.ingressControllerReady, 30 * time.Minute},
@@ -234,15 +246,14 @@ func (i *Installer) finishInstallation(ctx context.Context) error {
 	return err
 }
 
-func (i *Installer) getBlobService(ctx context.Context) (*azstorage.BlobStorageClient, error) {
+func (i *Installer) getBlobService(ctx context.Context, p mgmtstorage.Permissions, r mgmtstorage.SignedResourceTypes) (*azstorage.BlobStorageClient, error) {
 	resourceGroup := stringutils.LastTokenByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
 	t := time.Now().UTC().Truncate(time.Second)
-
 	res, err := i.accounts.ListAccountSAS(ctx, resourceGroup, "cluster"+i.doc.OpenShiftCluster.Properties.StorageSuffix, mgmtstorage.AccountSasParameters{
 		Services:               "b",
-		ResourceTypes:          "o",
-		Permissions:            "crw",
+		ResourceTypes:          r,
+		Permissions:            p,
 		Protocols:              mgmtstorage.HTTPS,
 		SharedAccessStartTime:  &date.Time{Time: t},
 		SharedAccessExpiryTime: &date.Time{Time: t.Add(24 * time.Hour)},
@@ -264,7 +275,7 @@ func (i *Installer) getBlobService(ctx context.Context) (*azstorage.BlobStorageC
 func (i *Installer) loadGraph(ctx context.Context) (graph, error) {
 	i.log.Print("load graph")
 
-	blobService, err := i.getBlobService(ctx)
+	blobService, err := i.getBlobService(ctx, mgmtstorage.Permissions("r"), mgmtstorage.SignedResourceTypesO)
 	if err != nil {
 		return nil, err
 	}
@@ -299,7 +310,7 @@ func (i *Installer) loadGraph(ctx context.Context) (graph, error) {
 func (i *Installer) saveGraph(ctx context.Context, g graph) error {
 	i.log.Print("save graph")
 
-	blobService, err := i.getBlobService(ctx)
+	blobService, err := i.getBlobService(ctx, mgmtstorage.Permissions("cw"), mgmtstorage.SignedResourceTypesO)
 	if err != nil {
 		return err
 	}
@@ -348,6 +359,46 @@ func (i *Installer) initializeKubernetesClients(ctx context.Context) error {
 		return err
 	}
 
+	i.samplescli, err = samplesclient.NewForConfig(restConfig)
+	if err != nil {
+		return err
+	}
+
 	i.configcli, err = configclient.NewForConfig(restConfig)
+	return err
+}
+
+func (i *Installer) deployARMTemplate(ctx context.Context, rg string, tName string, t *arm.Template, params map[string]interface{}) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	defer cancel()
+
+	err := wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+		i.log.Printf("deploying %s template", tName)
+
+		err := i.deployments.CreateOrUpdateAndWait(ctx, rg, deploymentName, mgmtresources.Deployment{
+			Properties: &mgmtresources.DeploymentProperties{
+				Template:   t,
+				Parameters: params,
+				Mode:       mgmtresources.Incremental,
+			},
+		})
+
+		if isDeploymentActiveError(err) {
+			i.log.Printf("waiting for %s template to be deployed", tName)
+			err = i.deployments.Wait(ctx, rg, deploymentName)
+		}
+
+		if isAuthorizationFailedError(err) {
+			i.log.Print(err)
+			return false, nil
+		}
+
+		return err == nil, err
+	}, timeoutCtx.Done())
+
+	if isQuota, errMsg := isResourceQuotaExceededError(err); isQuota {
+		err = api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeQuotaExceeded, errMsg, "")
+	}
+
 	return err
 }

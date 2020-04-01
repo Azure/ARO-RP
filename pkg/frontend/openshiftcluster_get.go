@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
@@ -37,6 +38,11 @@ func (f *frontend) _getOpenShiftCluster(ctx context.Context, r *http.Request, co
 		return nil, err
 	}
 
+	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	f.ocEnricher.Enrich(timeoutCtx, doc.OpenShiftCluster)
+
+	doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret = ""
 	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 
 	return json.MarshalIndent(converter.ToExternal(doc.OpenShiftCluster), "", "    ")

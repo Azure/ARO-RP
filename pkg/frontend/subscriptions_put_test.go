@@ -282,7 +282,7 @@ func TestPutSubscription(t *testing.T) {
 
 			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
 				Subscriptions: subscriptions,
-			}, api.APIs, &noop.Noop{})
+			}, api.APIs, &noop.Noop{}, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

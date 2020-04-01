@@ -78,7 +78,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	if !found {
 		releases = append(releases, pkgmirror.Node{
 			Version: version.OpenShiftVersion,
-			Payload: strings.Replace(version.OpenShiftPullSpec, dstAcr+".azurecr.io/", "quay.io/", 1),
+			Payload: strings.Replace(version.OpenShiftPullSpec(dstAcr), dstAcr+".azurecr.io/", "quay.io/", 1),
 		})
 	}
 
@@ -93,8 +93,8 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	for _, ref := range []string{
-		"linuxgeneva-microsoft.azurecr.io/genevamdsd:master_249",
-		"linuxgeneva-microsoft.azurecr.io/genevamdm:master_31",
+		"linuxgeneva-microsoft.azurecr.io/genevamdsd:master_266",
+		"linuxgeneva-microsoft.azurecr.io/genevamdm:master_35",
 	} {
 		log.Printf("mirroring %s", ref)
 		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+".azurecr.io", ref), ref, dstauth, srcauthGeneva)

@@ -134,7 +134,7 @@
             "apiVersion": "2019-08-01"
         },
         {
-            "name": "[guid(resourceGroup().id, 'RP / Reader')]",
+            "name": "[guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / Reader')]",
             "type": "Microsoft.Authorization/roleAssignments",
             "properties": {
                 "scope": "[resourceGroup().id]",
@@ -156,7 +156,7 @@
             "apiVersion": "2018-09-01-preview"
         },
         {
-            "name": "[concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), 'RP / DocumentDB Account Contributor'))]",
+            "name": "[concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('rpServicePrincipalId'), 'RP / DocumentDB Account Contributor'))]",
             "type": "Microsoft.DocumentDB/databaseAccounts/providers/roleAssignments",
             "properties": {
                 "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
@@ -183,5 +183,15 @@
                 "[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]"
             ]
         }
-    ]
+    ],
+    "outputs": {
+        "rp-nameServers": {
+            "type": "array",
+            "value": "[reference(resourceId('Microsoft.Network/dnsZones', parameters('domainName')), '2018-05-01').nameServers]"
+        },
+        "rp-pip-ipAddress": {
+            "type": "string",
+            "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip'), '2019-07-01').ipAddress]"
+        }
+    }
 }

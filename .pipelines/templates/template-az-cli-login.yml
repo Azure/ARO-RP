@@ -3,9 +3,9 @@ parameters:
   azureDevOpsJSONSPN: ""
 steps:
   - script: |
+      set -e
       cd ${{ parameters.workingDirectory }}
-
-      echo ${{ parameters.azureDevOpsJSONSPN }} | base64 -d > devops-spn.json
-      az login -u $(cat devops-spn.json | jq -r '.clientId') -p $(cat devops-spn.json | jq -r '.clientSecret') --tenant $(cat devops-spn.json | jq -r '.tenantId') --service-principal >/dev/null
+      base64 -d >devops-spn.json <<<${{ parameters.azureDevOpsJSONSPN }}
+      az login --service-principal -u "$(jq -r .clientId <devops-spn.json)" -p "$(jq -r .clientSecret <devops-spn.json)" -t "$(jq -r .tenantId <devops-spn.json)" --allow-no-subscriptions >/dev/null
       rm devops-spn.json
     displayName: "🗝 AZ Login"

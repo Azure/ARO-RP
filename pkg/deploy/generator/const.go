@@ -16,9 +16,11 @@ const (
 const (
 	FileRPProductionManagedIdentity     = "rp-production-managed-identity.json"
 	FileRPProductionPredeploy           = "rp-production-predeploy.json"
-	fileRPProductionPredeployParameters = "rp-production-predeploy-parameters.json"
+	FileRPProductionPredeployParameters = "rp-production-predeploy-parameters.json"
 	FileRPProduction                    = "rp-production.json"
-	fileRPProductionParameters          = "rp-production-parameters.json"
+	FileRPProductionGlobal              = "rp-production-global.json"
+	FileRPProductionGlobalSubscription  = "rp-production-global-subscription.json"
+	FileRPProductionParameters          = "rp-production-parameters.json"
 
 	fileEnvDevelopment         = "env-development.json"
 	fileDatabaseDevelopment    = "databases-development.json"

@@ -18,10 +18,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	_ "github.com/Azure/ARO-RP/pkg/api/admin"
 	_ "github.com/Azure/ARO-RP/pkg/api/v20191231preview"
+	_ "github.com/Azure/ARO-RP/pkg/api/v20200430"
 	"github.com/Azure/ARO-RP/pkg/backend"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend"
+	"github.com/Azure/ARO-RP/pkg/frontend/kubeactions"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/azure"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/k8s"
@@ -29,14 +31,6 @@ import (
 )
 
 func rp(ctx context.Context, log *logrus.Entry) error {
-	for _, key := range []string{
-		"PULL_SECRET",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return fmt.Errorf("environment variable %q unset", key)
-		}
-	}
-
 	uuid := uuid.NewV4().String()
 	log.Printf("uuid %s", uuid)
 
@@ -45,15 +39,26 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	if _, ok := _env.(env.Dev); !ok {
-		for _, key := range []string{
+	var keys []string
+	if _, ok := _env.(env.Dev); ok {
+		keys = []string{
+			"PULL_SECRET",
+		}
+	} else {
+		keys = []string{
+			"ACR_RESOURCE_ID",
+			"ADMIN_API_CLIENT_CERT_COMMON_NAME",
 			"MDM_ACCOUNT",
 			"MDM_NAMESPACE",
-			"ADMIN_API_CLIENT_CERT_COMMON_NAME",
-		} {
-			if _, found := os.LookupEnv(key); !found {
-				return fmt.Errorf("environment variable %q unset", key)
-			}
+		}
+
+		if _, found := os.LookupEnv("PULL_SECRET"); found {
+			return fmt.Errorf(`environment variable "PULL_SECRET" set`)
+		}
+	}
+	for _, key := range keys {
+		if _, found := os.LookupEnv(key); !found {
+			return fmt.Errorf("environment variable %q unset", key)
 		}
 	}
 
@@ -80,7 +85,7 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), _env, db, api.APIs, m)
+	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), _env, db, api.APIs, m, kubeactions.New(log, _env))
 	if err != nil {
 		return err
 	}

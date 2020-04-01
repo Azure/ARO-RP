@@ -39,4 +39,6 @@ type OpenShiftClusterDocument struct {
 	AsyncOperationID string `json:"asyncOperationId,omitempty"`
 
 	OpenShiftCluster *OpenShiftCluster `json:"openShiftCluster,omitempty"`
+
+	CorrelationData *CorrelationData `json:"correlationData,omitempty"`
 }

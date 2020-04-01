@@ -21,3 +21,4 @@ __pycache__
 /cover.out
 /coverage.*
 /report.xml
+/deploy/config.yaml

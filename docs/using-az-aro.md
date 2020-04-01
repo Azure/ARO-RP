@@ -9,15 +9,18 @@ against a development RP running at https://localhost:8443/.
 ## Installing the extension
 
 1. Install a supported version of [Python](https://www.python.org/downloads), if
-   you don't have one installed already.  The `az` client supports Python 2.7
-   and Python 3.5+.  A recent Python 3.x version is recommended.  You will also
-   need setuptools installed, if you don't have it installed already.
+   you don't have one installed already.  The `az` client supports Python 3.6+.
+   A recent Python 3.x version is recommended.  You will also need setuptools
+   installed, if you don't have it installed already.
 
 1. Install the
    [`az`](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) client,
    if you haven't already.  You will need `az` version 2.0.72 or greater, as
    this version includes the `az network vnet subnet update
    --disable-private-link-service-network-policies` flag.
+
+1. Install `virtualenv`, a tool for managing Python virtual environments. The
+   package is called `python-virtualenv` on both RHEL- and Debian-based systems.
 
 1. Log in to Azure:
 
@@ -35,6 +38,13 @@ against a development RP running at https://localhost:8443/.
    Note: you will be able to update the `az aro` extension in the future by
    simply running `git pull`.
 
+1. Prepare a Python development environment:
+
+   ```
+   make pyenv
+   source pyenv/bin/activate
+   ```
+
 1. Build the development `az aro` extension:
 
    `make az`
@@ -50,10 +60,10 @@ against a development RP running at https://localhost:8443/.
     SyntaxError: invalid syntax
     ```
 
-1. Add the ARO extension path to your `az` configuration:
+1. Verify that the ARO extension path is in your `az` configuration:
 
    ```bash
-   cat >>~/.azure/config <<EOF
+   grep -q 'dev_sources' ~/.azure/config || cat >>~/.azure/config <<EOF
    [extension]
    dev_sources = $PWD/python
    EOF
@@ -65,7 +75,7 @@ against a development RP running at https://localhost:8443/.
    az -v
    ...
    Extensions:
-   aro                                0.2.0 (dev) /path/to/rp/python/az/aro
+   aro                                0.3.0 (dev) /path/to/rp/python/az/aro
    ...
    Development extension sources:
        /path/to/rp/python
@@ -94,14 +104,17 @@ cluster:
    ```bash
    LOCATION=eastus
    RESOURCEGROUP="v4-$LOCATION"
-   CLUSTER=cluster
+   export CLUSTER=cluster
 
    az group create -g "$RESOURCEGROUP" -l $LOCATION
+
+   # May already exist
    az network vnet create \
      -g "$RESOURCEGROUP" \
      -n dev-vnet \
      --address-prefixes 10.0.0.0/9 \
      >/dev/null
+
    for subnet in "$CLUSTER-master" "$CLUSTER-worker"; do
      az network vnet subnet create \
        -g "$RESOURCEGROUP" \
@@ -128,18 +141,29 @@ cluster:
    Administrator" role on the vnet, `az aro create` will set up the role
    assignments for you automatically.
 
+1. Optionally, a pull secret which enables your cluster to access Red Hat
+   container registries along with additional content.  Access your pull secret
+   by navigating to
+   https://cloud.redhat.com/openshift/install/azure/installer-provisioned and
+   clicking *Copy Pull Secret*.
+
 
 ## Using the extension
 
 1. Create a cluster:
 
    ```bash
+   USER_PULL_SECRET="https://cloud.redhat.com/ pull secret content"
+
    az aro create \
      -g "$RESOURCEGROUP" \
      -n "$CLUSTER" \
      --vnet dev-vnet \
      --master-subnet "$CLUSTER-master" \
-     --worker-subnet "$CLUSTER-worker"
+     --worker-subnet "$CLUSTER-worker" \
+     --cluster-resource-group "aro-$CLUSTER" \
+     --domain "$CLUSTER" \
+     --pull-secret "$USER_PULL_SECRET"
    ```
 
    Note: cluster creation takes about 35 minutes.

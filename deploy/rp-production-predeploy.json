@@ -2,7 +2,7 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "variables": {
-        "clustersKeyvaultAccessPolicies": [
+        "clusterKeyvaultAccessPolicies": [
             {
                 "tenantId": "[subscription().tenantId]",
                 "objectId": "[parameters('fpServicePrincipalId')]",
@@ -30,7 +30,15 @@
         ]
     },
     "parameters": {
-        "extraKeyvaultAccessPolicies": {
+        "deployNSGs": {
+            "type": "bool",
+            "defaultValue": false
+        },
+        "extraClusterKeyvaultAccessPolicies": {
+            "type": "array",
+            "defaultValue": []
+        },
+        "extraServiceKeyvaultAccessPolicies": {
             "type": "array",
             "defaultValue": []
         },
@@ -67,6 +75,7 @@
             "name": "rp-nsg",
             "type": "Microsoft.Network/networkSecurityGroups",
             "location": "[resourceGroup().location]",
+            "condition": "[parameters('deployNSGs')]",
             "apiVersion": "2019-07-01"
         },
         {
@@ -74,6 +83,7 @@
             "name": "rp-pe-nsg",
             "type": "Microsoft.Network/networkSecurityGroups",
             "location": "[resourceGroup().location]",
+            "condition": "[parameters('deployNSGs')]",
             "apiVersion": "2019-07-01"
         },
         {
@@ -83,7 +93,8 @@
                     "family": "A",
                     "name": "standard"
                 },
-                "accessPolicies": "[concat(variables('clustersKeyvaultAccessPolicies'), parameters('extraKeyvaultAccessPolicies'))]"
+                "accessPolicies": "[concat(variables('clusterKeyvaultAccessPolicies'), parameters('extraClusterKeyvaultAccessPolicies'))]",
+                "enableSoftDelete": true
             },
             "name": "[concat(parameters('keyvaultPrefix'), '-cls')]",
             "type": "Microsoft.KeyVault/vaults",
@@ -100,7 +111,8 @@
                     "family": "A",
                     "name": "standard"
                 },
-                "accessPolicies": "[concat(variables('serviceKeyvaultAccessPolicies'), parameters('extraKeyvaultAccessPolicies'))]"
+                "accessPolicies": "[concat(variables('serviceKeyvaultAccessPolicies'), parameters('extraServiceKeyvaultAccessPolicies'))]",
+                "enableSoftDelete": true
             },
             "name": "[concat(parameters('keyvaultPrefix'), '-svc')]",
             "type": "Microsoft.KeyVault/vaults",

@@ -1,6 +1,6 @@
 # Azure Red Hat OpenShift Resource Provider
 
-## Notice
+## :warning: Notice
 
 For information relating to the generally available Azure Red Hat OpenShift v3
 service, please see the following links:

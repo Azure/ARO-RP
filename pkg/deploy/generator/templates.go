@@ -20,7 +20,7 @@ func (g *generator) managedIdentityTemplate() *arm.Template {
 	t.Outputs = map[string]*arm.Output{
 		"rpServicePrincipalId": {
 			Type:  "string",
-			Value: "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity'), '2018-11-30').principalId]",
+			Value: "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', concat('aro-rp-', resourceGroup().location)), '2018-11-30').principalId]",
 		},
 	}
 
@@ -44,9 +44,8 @@ func (g *generator) rpTemplate() *arm.Template {
 			"mdmFrontendUrl",
 			"mdsdConfigVersion",
 			"mdsdEnvironment",
-			"pullSecret",
+			"acrResourceId",
 			"rpImage",
-			"rpImageAuth",
 			"rpMode",
 			"sshPublicKey",
 			"vmssName",
@@ -58,8 +57,6 @@ func (g *generator) rpTemplate() *arm.Template {
 		switch param {
 		case "extraCosmosDBIPs", "rpMode":
 			p.DefaultValue = ""
-		case "pullSecret", "rpImageAuth":
-			p.Type = "securestring"
 		}
 		t.Parameters[param] = p
 	}
@@ -74,6 +71,52 @@ func (g *generator) rpTemplate() *arm.Template {
 		g.halfPeering("rp-pe-vnet-001", "rp-vnet"))
 	t.Resources = append(t.Resources, g.cosmosdb()...)
 	t.Resources = append(t.Resources, g.rbac()...)
+
+	t.Outputs = map[string]*arm.Output{
+		"rp-nameServers": {
+			Type:  "array",
+			Value: "[reference(resourceId('Microsoft.Network/dnsZones', parameters('domainName')), '2018-05-01').nameServers]",
+		},
+		"rp-pip-ipAddress": {
+			Type:  "string",
+			Value: "[reference(resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip'), '2019-07-01').ipAddress]",
+		},
+	}
+
+	return t
+}
+
+func (g *generator) rpGlobalTemplate() *arm.Template {
+	t := templateStanza()
+
+	params := []string{
+		"acrResourceId",
+		"fpServicePrincipalId",
+		"location",
+		"rpServicePrincipalId",
+	}
+
+	for _, param := range params {
+		t.Parameters[param] = &arm.TemplateParameter{Type: "string"}
+	}
+
+	t.Resources = append(t.Resources,
+		g.acrReplica(),
+	)
+
+	t.Resources = append(t.Resources,
+		g.acrRbac()...,
+	)
+
+	return t
+}
+
+func (g *generator) rpGlobalSubscriptionTemplate() *arm.Template {
+	t := templateStanza()
+
+	t.Resources = append(t.Resources,
+		g.roleDefinitionTokenContributor(),
+	)
 
 	return t
 }
@@ -116,8 +159,8 @@ func (g *generator) preDeployTemplate() *arm.Template {
 
 	if g.production {
 		t.Variables = map[string]interface{}{
-			"clustersKeyvaultAccessPolicies": g.clustersKeyvaultAccessPolicies(),
-			"serviceKeyvaultAccessPolicies":  g.serviceKeyvaultAccessPolicies(),
+			"clusterKeyvaultAccessPolicies": g.clusterKeyvaultAccessPolicies(),
+			"serviceKeyvaultAccessPolicies": g.serviceKeyvaultAccessPolicies(),
 		}
 	}
 
@@ -129,7 +172,9 @@ func (g *generator) preDeployTemplate() *arm.Template {
 
 	if g.production {
 		params = append(params,
-			"extraKeyvaultAccessPolicies",
+			"deployNSGs",
+			"extraClusterKeyvaultAccessPolicies",
+			"extraServiceKeyvaultAccessPolicies",
 		)
 	} else {
 		params = append(params,
@@ -140,7 +185,10 @@ func (g *generator) preDeployTemplate() *arm.Template {
 	for _, param := range params {
 		p := &arm.TemplateParameter{Type: "string"}
 		switch param {
-		case "extraKeyvaultAccessPolicies":
+		case "deployNSGs":
+			p.Type = "bool"
+			p.DefaultValue = false
+		case "extraClusterKeyvaultAccessPolicies", "extraServiceKeyvaultAccessPolicies":
 			p.Type = "array"
 			p.DefaultValue = []interface{}{}
 		case "keyvaultPrefix":
@@ -232,8 +280,8 @@ func (g *generator) templateFixup(t *arm.Template) ([]byte, error) {
 	// :-(
 	b = bytes.ReplaceAll(b, []byte(tenantIDHack), []byte("[subscription().tenantId]"))
 	if g.production {
-		b = bytes.Replace(b, []byte(`"accessPolicies": []`), []byte(`"accessPolicies": "[concat(variables('clustersKeyvaultAccessPolicies'), parameters('extraKeyvaultAccessPolicies'))]"`), 1)
-		b = bytes.Replace(b, []byte(`"accessPolicies": []`), []byte(`"accessPolicies": "[concat(variables('serviceKeyvaultAccessPolicies'), parameters('extraKeyvaultAccessPolicies'))]"`), 1)
+		b = bytes.Replace(b, []byte(`"accessPolicies": []`), []byte(`"accessPolicies": "[concat(variables('clusterKeyvaultAccessPolicies'), parameters('extraClusterKeyvaultAccessPolicies'))]"`), 1)
+		b = bytes.Replace(b, []byte(`"accessPolicies": []`), []byte(`"accessPolicies": "[concat(variables('serviceKeyvaultAccessPolicies'), parameters('extraServiceKeyvaultAccessPolicies'))]"`), 1)
 	}
 
 	return append(b, byte('\n')), nil

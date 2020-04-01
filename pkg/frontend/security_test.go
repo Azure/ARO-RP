@@ -56,7 +56,7 @@ func TestSecurity(t *testing.T) {
 	pool := x509.NewCertPool()
 	pool.AddCert(env.TLSCerts[0])
 
-	f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, nil, api.APIs, &noop.Noop{})
+	f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, nil, api.APIs, &noop.Noop{}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +87,7 @@ func TestSecurity(t *testing.T) {
 		},
 		{
 			name:           "operations url, no client certificate",
-			url:            "https://server/providers/Microsoft.RedHatOpenShift/operations?api-version=2019-12-31-preview",
+			url:            "https://server/providers/Microsoft.RedHatOpenShift/operations?api-version=2020-04-30",
 			wantStatusCode: http.StatusForbidden,
 		},
 		{
@@ -123,7 +123,7 @@ func TestSecurity(t *testing.T) {
 		},
 		{
 			name:           "operations url, invalid certificate",
-			url:            "https://server/providers/Microsoft.RedHatOpenShift/operations?api-version=2019-12-31-preview",
+			url:            "https://server/providers/Microsoft.RedHatOpenShift/operations?api-version=2020-04-30",
 			key:            invalidclientkey,
 			cert:           invalidclientcerts[0],
 			wantStatusCode: http.StatusForbidden,
@@ -179,14 +179,14 @@ func TestSecurity(t *testing.T) {
 		},
 		{
 			name:           "operations url, valid certificate",
-			url:            "https://server/providers/Microsoft.RedHatOpenShift/operations?api-version=2019-12-31-preview",
+			url:            "https://server/providers/Microsoft.RedHatOpenShift/operations?api-version=2020-04-30",
 			key:            validclientkey,
 			cert:           validclientcerts[0],
 			wantStatusCode: http.StatusOK,
 		},
 		{
 			name:           "operations url, valid admin certificate",
-			url:            "https://server/providers/Microsoft.RedHatOpenShift/operations?api-version=2019-12-31-preview",
+			url:            "https://server/providers/Microsoft.RedHatOpenShift/operations?api-version=2020-04-30",
 			key:            validadminclientkey,
 			cert:           validadminclientcerts[0],
 			wantStatusCode: http.StatusForbidden,

@@ -5,15 +5,18 @@ package genevalogging
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
+	securityv1 "github.com/openshift/api/security/v1"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -28,8 +31,8 @@ const (
 	kubeNamespace      = "openshift-azure-logging"
 	kubeServiceAccount = "system:serviceaccount:" + kubeNamespace + ":geneva"
 
-	fluentbitImage = "arosvc.azurecr.io/fluentbit:1.3.9-1" //"docker.io/fluent/fluent-bit:0.12.19"
-	mdsdImage      = "arosvc.azurecr.io/genevamdsd:master_249"
+	fluentbitImageFormat = "%s.azurecr.io/fluentbit:1.3.9-1"
+	mdsdImageFormat      = "%s.azurecr.io/genevamdsd:master_266"
 
 	parsersConf = `
 [PARSER]
@@ -168,6 +171,14 @@ func New(log *logrus.Entry, e env.Interface, oc *api.OpenShiftCluster, cli kuber
 		cli:    cli,
 		seccli: seccli,
 	}
+}
+
+func (g *genevaLogging) fluentbitImage() string {
+	return fmt.Sprintf(fluentbitImageFormat, g.env.ACRName())
+}
+
+func (g *genevaLogging) mdsdImage() string {
+	return fmt.Sprintf(mdsdImageFormat, g.env.ACRName())
 }
 
 func (g *genevaLogging) ensureNamespace(ns string) error {
@@ -321,30 +332,22 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 	g.log.Print("waiting for privileged security context constraint")
 	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
 	defer cancel()
+	var scc *securityv1.SecurityContextConstraints
 	err = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-		_, err := g.seccli.SecurityV1().SecurityContextConstraints().Get("privileged", metav1.GetOptions{})
+		scc, err = g.seccli.SecurityV1().SecurityContextConstraints().Get("privileged", metav1.GetOptions{})
 		return err == nil, nil
 	}, timeoutCtx.Done())
 	if err != nil {
 		return err
 	}
 
-	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		scc, err := g.seccli.SecurityV1().SecurityContextConstraints().Get("privileged", metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
+	scc.ObjectMeta = metav1.ObjectMeta{
+		Name: "privileged-genevalogging",
+	}
+	scc.Groups = nil
+	scc.Users = []string{kubeServiceAccount}
 
-		for _, user := range scc.Users {
-			if user == kubeServiceAccount {
-				return nil
-			}
-		}
-		scc.Users = append(scc.Users, kubeServiceAccount)
-
-		_, err = g.seccli.SecurityV1().SecurityContextConstraints().Update(scc)
-		return err
-	})
+	_, err = g.seccli.SecurityV1().SecurityContextConstraints().Create(scc)
 	if err != nil {
 		return err
 	}
@@ -422,7 +425,7 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 					Containers: []v1.Container{
 						{
 							Name:  "fluentbit-journal",
-							Image: fluentbitImage,
+							Image: g.fluentbitImage(),
 							Command: []string{
 								"/opt/td-agent-bit/bin/td-agent-bit",
 							},
@@ -459,7 +462,7 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 						},
 						{
 							Name:  "fluentbit-containers",
-							Image: fluentbitImage,
+							Image: g.fluentbitImage(),
 							Command: []string{
 								"/opt/td-agent-bit/bin/td-agent-bit",
 							},
@@ -496,7 +499,7 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 						},
 						{
 							Name:  "fluentbit-audit",
-							Image: fluentbitImage,
+							Image: g.fluentbitImage(),
 							Command: []string{
 								"/opt/td-agent-bit/bin/td-agent-bit",
 							},
@@ -533,7 +536,7 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 						},
 						{
 							Name:  "mdsd",
-							Image: mdsdImage,
+							Image: g.mdsdImage(),
 							Command: []string{
 								"/usr/sbin/mdsd",
 							},
@@ -613,12 +616,12 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 							},
 							Resources: v1.ResourceRequirements{
 								Limits: v1.ResourceList{
-									//"cpu":    resource.MustParse("200m"),
-									//"memory": resource.MustParse("400Mi"),
+									v1.ResourceCPU:    resource.MustParse("200m"),
+									v1.ResourceMemory: resource.MustParse("500Mi"),
 								},
 								Requests: v1.ResourceList{
-									//"cpu":    resource.MustParse("50m"),
-									//"memory": resource.MustParse("400Mi"),
+									v1.ResourceCPU:    resource.MustParse("10m"),
+									v1.ResourceMemory: resource.MustParse("100Mi"),
 								},
 							},
 							SecurityContext: &v1.SecurityContext{

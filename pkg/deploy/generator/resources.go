@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
+	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/containerregistry/mgmt/2019-06-01-preview/containerregistry"
 	mgmtdocumentdb "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2019-08-01/documentdb"
 	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	mgmtkeyvault "github.com/Azure/azure-sdk-for-go/services/keyvault/mgmt/2016-10-01/keyvault"
@@ -22,13 +23,14 @@ import (
 )
 
 var apiVersions = map[string]string{
-	"authorization": "2018-09-01-preview",
-	"compute":       "2019-03-01",
-	"dns":           "2018-05-01",
-	"documentdb":    "2019-08-01",
-	"keyvault":      "2016-10-01",
-	"msi":           "2018-11-30",
-	"network":       "2019-07-01",
+	"authorization":     "2018-09-01-preview",
+	"compute":           "2019-03-01",
+	"containerregistry": "2019-05-01",
+	"dns":               "2018-05-01",
+	"documentdb":        "2019-08-01",
+	"keyvault":          "2016-10-01",
+	"msi":               "2018-11-30",
+	"network":           "2019-07-01",
 }
 
 const (
@@ -43,7 +45,7 @@ func (g *generator) managedIdentity() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtmsi.Identity{
 			Type:     "Microsoft.ManagedIdentity/userAssignedIdentities",
-			Name:     to.StringPtr("rp-identity"),
+			Name:     to.StringPtr("[concat('aro-rp-', resourceGroup().location)]"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
 		APIVersion: apiVersions["msi"],
@@ -51,6 +53,11 @@ func (g *generator) managedIdentity() *arm.Resource {
 }
 
 func (g *generator) securityGroupRP() *arm.Resource {
+	var condition interface{}
+	if g.production {
+		condition = "[parameters('deployNSGs')]"
+	}
+
 	nsg := &mgmtnetwork.SecurityGroup{
 		SecurityGroupPropertiesFormat: &mgmtnetwork.SecurityGroupPropertiesFormat{
 			SecurityRules: &[]mgmtnetwork.SecurityRule{
@@ -92,11 +99,17 @@ func (g *generator) securityGroupRP() *arm.Resource {
 
 	return &arm.Resource{
 		Resource:   nsg,
+		Condition:  condition,
 		APIVersion: apiVersions["network"],
 	}
 }
 
 func (g *generator) securityGroupPE() *arm.Resource {
+	var condition interface{}
+	if g.production {
+		condition = "[parameters('deployNSGs')]"
+	}
+
 	return &arm.Resource{
 		Resource: &mgmtnetwork.SecurityGroup{
 			SecurityGroupPropertiesFormat: &mgmtnetwork.SecurityGroupPropertiesFormat{},
@@ -104,6 +117,7 @@ func (g *generator) securityGroupPE() *arm.Resource {
 			Type:                          to.StringPtr("Microsoft.Network/networkSecurityGroups"),
 			Location:                      to.StringPtr("[resourceGroup().location]"),
 		},
+		Condition:  condition,
 		APIVersion: apiVersions["network"],
 	}
 }
@@ -565,9 +579,8 @@ func (g *generator) vmss() *arm.Resource {
 		"mdmFrontendUrl",
 		"mdsdConfigVersion",
 		"mdsdEnvironment",
-		"pullSecret",
+		"acrResourceId",
 		"rpImage",
-		"rpImageAuth",
 		"rpMode",
 		"adminApiClientCertCommonName",
 	} {
@@ -640,17 +653,6 @@ firewall-cmd --add-port=443/tcp --permanent
 # https://bugzilla.redhat.com/show_bug.cgi?id=1805212
 sed -i -e 's/iptables/firewalld/' /etc/cni/net.d/87-podman-bridge.conflist
 
-mkdir /root/.docker
-cat >/root/.docker/config.json <<EOF
-{
-	"auths": {
-		"${RPIMAGE%%/*}": {
-			"auth": "$RPIMAGEAUTH"
-		}
-	}
-}
-EOF
-
 cat >/etc/td-agent-bit/td-agent-bit.conf <<'EOF'
 [INPUT]
 	Name systemd
@@ -669,6 +671,10 @@ cat >/etc/td-agent-bit/td-agent-bit.conf <<'EOF'
 EOF
 
 az login -i --allow-no-subscriptions
+
+>/etc/containers/nodocker  # podman stderr output confuses az acr login
+mkdir /root/.docker
+REGISTRY_AUTH_FILE=/root/.docker/config.json az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
 
 SVCVAULTURI="$(az keyvault list -g "$RESOURCEGROUPNAME" --query "[?tags.vault=='service'].properties.vaultUri" -o tsv)"
 az keyvault secret download --file /etc/mdm.pem --id "${SVCVAULTURI}secrets/rp-mdm"
@@ -713,7 +719,7 @@ EOF
 
 cat >/etc/sysconfig/mdm <<EOF
 MDMFRONTENDURL='$MDMFRONTENDURL'
-MDMIMAGE=${RPIMAGE%%/*}/genevamdm:master_31
+MDMIMAGE=${RPIMAGE%%/*}/genevamdm:master_35
 MDMSOURCEENVIRONMENT='$LOCATION'
 MDMSOURCEROLE=rp
 MDMSOURCEROLEINSTANCE='$(hostname)'
@@ -754,7 +760,7 @@ EOF
 cat >/etc/sysconfig/aro-rp <<EOF
 MDM_ACCOUNT=AzureRedHatOpenShiftRP
 MDM_NAMESPACE=RP
-PULL_SECRET='$PULLSECRET'
+ACR_RESOURCE_ID='$ACRRESOURCEID'
 ADMIN_API_CLIENT_CERT_COMMON_NAME='$ADMINAPICLIENTCERTCOMMONNAME'
 RPIMAGE='$RPIMAGE'
 RP_MODE='$RPMODE'
@@ -774,9 +780,9 @@ ExecStart=/usr/bin/docker run \
   --rm \
   -e MDM_ACCOUNT \
   -e MDM_NAMESPACE \
-  -e PULL_SECRET \
   -e ADMIN_API_CLIENT_CERT_COMMON_NAME \
   -e RP_MODE \
+  -e ACR_RESOURCE_ID \
   -p 443:8443 \
   -v /etc/aro-rp:/etc/aro-rp \
   -v /run/systemd/journal:/run/systemd/journal \
@@ -834,7 +840,6 @@ for service in aro-monitor aro-rp auoms azsecd azsecmond mdsd mdm chronyd td-age
 done
 
 rm /etc/motd.d/*
->/etc/containers/nodocker
 
 (sleep 30; reboot) &
 `))
@@ -944,7 +949,7 @@ rm /etc/motd.d/*
 			Identity: &mgmtcompute.VirtualMachineScaleSetIdentity{
 				Type: mgmtcompute.ResourceIdentityTypeUserAssigned,
 				UserAssignedIdentities: map[string]*mgmtcompute.VirtualMachineScaleSetIdentityUserAssignedIdentitiesValue{
-					"[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity')]": {},
+					"[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', concat('aro-rp-', resourceGroup().location))]": {},
 				},
 			},
 			Name:     to.StringPtr("[concat('rp-vmss-', parameters('vmssName'))]"),
@@ -971,7 +976,7 @@ func (g *generator) zone() *arm.Resource {
 	}
 }
 
-func (g *generator) clustersKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyEntry {
+func (g *generator) clusterKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyEntry {
 	return []mgmtkeyvault.AccessPolicyEntry{
 		{
 			TenantID: &tenantUUIDHack,
@@ -1006,7 +1011,8 @@ func (g *generator) serviceKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyE
 func (g *generator) clustersKeyvault() *arm.Resource {
 	vault := &mgmtkeyvault.Vault{
 		Properties: &mgmtkeyvault.VaultProperties{
-			TenantID: &tenantUUIDHack,
+			EnableSoftDelete: to.BoolPtr(true),
+			TenantID:         &tenantUUIDHack,
 			Sku: &mgmtkeyvault.Sku{
 				Name:   mgmtkeyvault.Standard,
 				Family: to.StringPtr("A"),
@@ -1022,7 +1028,7 @@ func (g *generator) clustersKeyvault() *arm.Resource {
 	}
 
 	if !g.production {
-		*vault.Properties.AccessPolicies = append(g.clustersKeyvaultAccessPolicies(),
+		*vault.Properties.AccessPolicies = append(g.clusterKeyvaultAccessPolicies(),
 			mgmtkeyvault.AccessPolicyEntry{
 				TenantID: &tenantUUIDHack,
 				ObjectID: to.StringPtr("[parameters('adminObjectId')]"),
@@ -1045,7 +1051,8 @@ func (g *generator) clustersKeyvault() *arm.Resource {
 func (g *generator) serviceKeyvault() *arm.Resource {
 	vault := &mgmtkeyvault.Vault{
 		Properties: &mgmtkeyvault.VaultProperties{
-			TenantID: &tenantUUIDHack,
+			EnableSoftDelete: to.BoolPtr(true),
+			TenantID:         &tenantUUIDHack,
 			Sku: &mgmtkeyvault.Sku{
 				Name:   mgmtkeyvault.Standard,
 				Family: to.StringPtr("A"),
@@ -1139,7 +1146,6 @@ func (g *generator) cosmosdb() []*arm.Resource {
 }
 
 func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Resource {
-
 	rs := []*arm.Resource{
 		{
 			Resource: &mgmtdocumentdb.SQLDatabaseCreateUpdateParameters{
@@ -1306,11 +1312,37 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 	return rs
 }
 
+func (g *generator) roleDefinitionTokenContributor() *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtauthorization.RoleDefinition{
+			Name: to.StringPtr("48983534-3d06-4dcb-a566-08a694eb1279"),
+			Type: to.StringPtr("Microsoft.Authorization/roleDefinitions"),
+			RoleDefinitionProperties: &mgmtauthorization.RoleDefinitionProperties{
+				RoleName:         to.StringPtr("ARO v4 ContainerRegistry Token Contributor"),
+				AssignableScopes: &[]string{"[subscription().id]"},
+				Permissions: &[]mgmtauthorization.Permission{
+					{
+						Actions: &[]string{
+							"Microsoft.ContainerRegistry/registries/generateCredentials/action",
+							"Microsoft.ContainerRegistry/registries/scopeMaps/read",
+							"Microsoft.ContainerRegistry/registries/tokens/delete",
+							"Microsoft.ContainerRegistry/registries/tokens/operationStatuses/read",
+							"Microsoft.ContainerRegistry/registries/tokens/read",
+							"Microsoft.ContainerRegistry/registries/tokens/write",
+						},
+					},
+				},
+			},
+		},
+		APIVersion: apiVersions["authorization"],
+	}
+}
+
 func (g *generator) rbac() []*arm.Resource {
 	return []*arm.Resource{
 		{
 			Resource: &mgmtauthorization.RoleAssignment{
-				Name: to.StringPtr("[guid(resourceGroup().id, 'RP / Reader')]"),
+				Name: to.StringPtr("[guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / Reader')]"),
 				Type: to.StringPtr("Microsoft.Authorization/roleAssignments"),
 				RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 					Scope:            to.StringPtr("[resourceGroup().id]"),
@@ -1336,7 +1368,7 @@ func (g *generator) rbac() []*arm.Resource {
 		},
 		{
 			Resource: &mgmtauthorization.RoleAssignment{
-				Name: to.StringPtr("[concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), 'RP / DocumentDB Account Contributor'))]"),
+				Name: to.StringPtr("[concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('rpServicePrincipalId'), 'RP / DocumentDB Account Contributor'))]"),
 				Type: to.StringPtr("Microsoft.DocumentDB/databaseAccounts/providers/roleAssignments"),
 				RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 					Scope:            to.StringPtr("[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"),
@@ -1365,6 +1397,48 @@ func (g *generator) rbac() []*arm.Resource {
 			DependsOn: []string{
 				"[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]",
 			},
+		},
+	}
+}
+
+func (g *generator) acrReplica() *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtcontainerregistry.Replication{
+			Name:     to.StringPtr("[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', parameters('location'))]"),
+			Type:     to.StringPtr("Microsoft.ContainerRegistry/registries/replications"),
+			Location: to.StringPtr("[parameters('location')]"),
+		},
+		APIVersion: apiVersions["containerregistry"],
+	}
+}
+
+func (g *generator) acrRbac() []*arm.Resource {
+	return []*arm.Resource{
+		{
+			Resource: &mgmtauthorization.RoleAssignment{
+				Name: to.StringPtr("[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), parameters('rpServicePrincipalId'), 'RP / AcrPull')))]"),
+				Type: to.StringPtr("Microsoft.ContainerRegistry/registries/providers/roleAssignments"),
+				RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+					Scope:            to.StringPtr("[parameters('acrResourceId')]"),
+					RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]"),
+					PrincipalID:      to.StringPtr("[parameters('rpServicePrincipalId')]"),
+					PrincipalType:    mgmtauthorization.ServicePrincipal,
+				},
+			},
+			APIVersion: apiVersions["authorization"],
+		},
+		{
+			Resource: &mgmtauthorization.RoleAssignment{
+				Name: to.StringPtr("[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), 'FP / ARO v4 ContainerRegistry Token Contributor')))]"),
+				Type: to.StringPtr("Microsoft.ContainerRegistry/registries/providers/roleAssignments"),
+				RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+					Scope:            to.StringPtr("[parameters('acrResourceId')]"),
+					RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '48983534-3d06-4dcb-a566-08a694eb1279')]"),
+					PrincipalID:      to.StringPtr("[parameters('fpServicePrincipalId')]"),
+					PrincipalType:    mgmtauthorization.ServicePrincipal,
+				},
+			},
+			APIVersion: apiVersions["authorization"],
 		},
 	}
 }

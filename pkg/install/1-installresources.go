@@ -7,22 +7,19 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"net/http"
 	"reflect"
 	"time"
 
-	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
+	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtprivatedns "github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
-	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/ignition/machine"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 
-	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -95,10 +92,11 @@ func (i *Installer) installResources(ctx context.Context) error {
 				Resource: &mgmtauthorization.RoleAssignment{
 					Name: to.StringPtr("[guid(resourceGroup().id, 'SP / Contributor')]"),
 					Type: to.StringPtr("Microsoft.Authorization/roleAssignments"),
-					Properties: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 						Scope:            to.StringPtr("[resourceGroup().id]"),
 						RoleDefinitionID: to.StringPtr("[resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]"),
 						PrincipalID:      to.StringPtr(objectID),
+						PrincipalType:    mgmtauthorization.ServicePrincipal,
 					},
 				},
 				APIVersion: apiVersions["authorization"],
@@ -600,36 +598,18 @@ func (i *Installer) installResources(ctx context.Context) error {
 			},
 		},
 	}
-
-	i.log.Print("deploying resources template")
-	err = i.deployments.CreateOrUpdateAndWait(ctx, resourceGroup, "azuredeploy", mgmtresources.Deployment{
-		Properties: &mgmtresources.DeploymentProperties{
-			Template: t,
-			Parameters: map[string]interface{}{
-				"sas": map[string]interface{}{
-					"value": map[string]interface{}{
-						"signedStart":         i.doc.OpenShiftCluster.Properties.Install.Now.Format(time.RFC3339),
-						"signedExpiry":        i.doc.OpenShiftCluster.Properties.Install.Now.Add(24 * time.Hour).Format(time.RFC3339),
-						"signedPermission":    "rl",
-						"signedResourceTypes": "o",
-						"signedServices":      "b",
-						"signedProtocol":      "https",
-					},
-				},
+	return i.deployARMTemplate(ctx, resourceGroup, "resources", t, map[string]interface{}{
+		"sas": map[string]interface{}{
+			"value": map[string]interface{}{
+				"signedStart":         i.doc.OpenShiftCluster.Properties.Install.Now.Format(time.RFC3339),
+				"signedExpiry":        i.doc.OpenShiftCluster.Properties.Install.Now.Add(24 * time.Hour).Format(time.RFC3339),
+				"signedPermission":    "rl",
+				"signedResourceTypes": "o",
+				"signedServices":      "b",
+				"signedProtocol":      "https",
 			},
-			Mode: mgmtresources.Incremental,
 		},
 	})
-	if err != nil {
-		if isDeploymentActiveError(err) {
-			i.log.Print("waiting for resource template")
-			err = i.deployments.Wait(ctx, resourceGroup, "azuredeploy")
-		}
-		if isQuota, errMsg := isResourceQuotaExceededError(err); isQuota {
-			err = api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeQuotaExceeded, errMsg, "")
-		}
-	}
-	return err
 }
 
 // zones configures how master nodes are distributed across availability zones. In regions where the number of zones matches

@@ -8,6 +8,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"reflect"
+
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
 func Run(outputDir string) error {
@@ -16,7 +18,7 @@ func Run(outputDir string) error {
 		Info: &Info{
 			Title:       "Azure Red Hat OpenShift Client",
 			Description: "Rest API for Azure Red Hat OpenShift",
-			Version:     "2019-12-31-preview",
+			Version:     stringutils.LastTokenByte(outputDir, '/'),
 		},
 		Host:        "management.azure.com",
 		Schemes:     []string{"https"},

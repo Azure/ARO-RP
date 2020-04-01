@@ -400,6 +400,15 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "5a6f75716e1203a923a78c9efb94089d857df0f6",
+                    "repositoryUrl": "https://github.com/google/go-cmp/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "f140a6486e521aad38f5917de355cbf147cc0496",
                     "repositoryUrl": "https://github.com/google/gofuzz/"
                 }
@@ -742,6 +751,15 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "86ecb23daa83c78761414a7abcb169c73c18a756",
+                    "repositoryUrl": "https://github.com/openshift/cluster-api-provider-azure/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "1b09fd9e7156c5996ef674a4769dfbe4d85b2a19",
                     "repositoryUrl": "https://github.com/openshift/cluster-api-provider-gcp/"
                 }
@@ -753,6 +771,15 @@
                 "git": {
                     "commitHash": "2336783d460353458477aa9e181eca87e4db5d27",
                     "repositoryUrl": "https://github.com/openshift/cluster-api-provider-libvirt/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "bfda4d3462fd7305573adb103137723d2bd4975c",
+                    "repositoryUrl": "https://github.com/openshift/cluster-samples-operator/"
                 }
             }
         },

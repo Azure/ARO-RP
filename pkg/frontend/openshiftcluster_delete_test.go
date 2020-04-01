@@ -181,14 +181,14 @@ func TestDeleteOpenShiftCluster(t *testing.T) {
 				AsyncOperations:   asyncOperations,
 				OpenShiftClusters: openShiftClusters,
 				Subscriptions:     subscriptions,
-			}, api.APIs, &noop.Noop{})
+			}, api.APIs, &noop.Noop{}, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			go f.Run(ctx, nil, nil)
 
-			req, err := http.NewRequest(http.MethodDelete, "https://server"+tt.resourceID+"?api-version=2019-12-31-preview", nil)
+			req, err := http.NewRequest(http.MethodDelete, "https://server"+tt.resourceID+"?api-version=2020-04-30", nil)
 			if err != nil {
 				t.Fatal(err)
 			}

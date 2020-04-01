@@ -6,7 +6,7 @@ variables:
   - template: vars.yml
 
 jobs:
-  - job: "Deploy_int_env_or_build"
+  - job: "Build_and_push_images"
     pool:
       vmImage: "ubuntu-latest"
 
@@ -28,3 +28,10 @@ jobs:
         parameters:
           workingDirectory: ${{ variables.modulePath }}
           rpImageACR: $(RP_IMAGE_ACR)
+      - script: |
+          cd ${{ variables.modulePath }}
+          cp -a --parents aro "$(Build.ArtifactStagingDirectory)"
+        displayName: 'Copy artifacts'
+      - task: PublishBuildArtifacts@1
+        displayName: 'Publish Artifacts'
+        name: aro_deployer

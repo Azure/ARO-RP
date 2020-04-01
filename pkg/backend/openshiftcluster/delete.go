@@ -10,6 +10,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest"
 
+	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
@@ -72,13 +73,13 @@ func (m *Manager) Delete(ctx context.Context) error {
 
 		if managedDomain != "" {
 			m.log.Print("deleting signed apiserver certificate")
-			err = m.keyvault.DeleteCertificate(ctx, m.doc.ID+"-apiserver")
+			err = m.keyvault.EnsureCertificateDeleted(ctx, m.env.ClustersKeyvaultURI(), m.doc.ID+"-apiserver")
 			if err != nil {
 				return err
 			}
 
 			m.log.Print("deleting signed ingress certificate")
-			err = m.keyvault.DeleteCertificate(ctx, m.doc.ID+"-ingress")
+			err = m.keyvault.EnsureCertificateDeleted(ctx, m.env.ClustersKeyvaultURI(), m.doc.ID+"-ingress")
 			if err != nil {
 				return err
 			}
@@ -96,8 +97,20 @@ func (m *Manager) Delete(ctx context.Context) error {
 		return err
 	}
 
+	if _, ok := m.env.(env.Dev); !ok {
+		rp := m.acrtoken.GetRegistryProfile(m.doc.OpenShiftCluster)
+		if rp != nil {
+			err = m.acrtoken.Delete(ctx, rp)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	m.log.Printf("updating billing record with deletion time")
 	_, err = m.billing.MarkForDeletion(ctx, m.doc.ID)
-
+	if cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
+		return nil
+	}
 	return err
 }

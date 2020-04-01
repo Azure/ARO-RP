@@ -25,6 +25,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                vnet=None,
                vnet_resource_group_name=None,  # pylint: disable=unused-argument
                location=None,
+               pull_secret=None,
                domain=None,
                cluster_resource_group=None,
                client_id=None,
@@ -68,6 +69,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
         location=location,
         tags=tags,
         cluster_profile=v2019_12_31_preview.ClusterProfile(
+            pull_secret=pull_secret or "",
             domain=domain or random_id,
             resource_group_id='/subscriptions/%s/resourceGroups/%s' %
             (subscription_id, cluster_resource_group or "aro-" + random_id),
