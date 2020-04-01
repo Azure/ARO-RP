@@ -15,3 +15,8 @@ Release History
 0.3.0
 ++++++
 * Add --pull-secret argument to `az aro create`.
+
+0.4.0
+++++++
+* Stop advertising Python 2.7, 3.5 support.
+* Migrate to GA API.

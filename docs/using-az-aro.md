@@ -75,7 +75,7 @@ against a development RP running at https://localhost:8443/.
    az -v
    ...
    Extensions:
-   aro                                0.3.0 (dev) /path/to/rp/python/az/aro
+   aro                                0.4.0 (dev) /path/to/rp/python/az/aro
    ...
    Development extension sources:
        /path/to/rp/python
