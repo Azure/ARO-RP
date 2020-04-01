@@ -8,5 +8,5 @@ import (
 )
 
 func (m *Manager) Update(ctx context.Context) error {
-	return nil
+	return m.ocDynamicValidator.Dynamic(ctx, m.doc.OpenShiftCluster)
 }

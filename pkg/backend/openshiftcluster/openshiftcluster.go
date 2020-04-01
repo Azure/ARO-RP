@@ -9,6 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
@@ -26,6 +27,8 @@ type Manager struct {
 	db           database.OpenShiftClusters
 	billing      database.Billing
 	fpAuthorizer autorest.Authorizer
+
+	ocDynamicValidator validate.OpenShiftClusterDynamicValidator
 
 	groups resources.GroupsClient
 
@@ -73,6 +76,8 @@ func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClus
 		db:           db,
 		billing:      billing,
 		fpAuthorizer: fpAuthorizer,
+
+		ocDynamicValidator: validate.NewOpenShiftClusterDynamicValidator(_env),
 
 		groups: resources.NewGroupsClient(r.SubscriptionID, fpAuthorizer),
 

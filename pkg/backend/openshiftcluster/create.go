@@ -41,6 +41,13 @@ import (
 func (m *Manager) Create(ctx context.Context) error {
 	var err error
 
+	if m.doc.OpenShiftCluster.Properties.Install == nil {
+		err = m.ocDynamicValidator.Dynamic(ctx, m.doc.OpenShiftCluster)
+		if err != nil {
+			return err
+		}
+	}
+
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
 	if _, ok := m.env.(env.Dev); !ok {

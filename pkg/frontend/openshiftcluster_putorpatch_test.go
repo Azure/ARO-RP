@@ -40,10 +40,6 @@ func (*dummyOpenShiftClusterValidator) Static(interface{}, *api.OpenShiftCluster
 	return nil
 }
 
-func (*dummyOpenShiftClusterValidator) Dynamic(context.Context, *api.OpenShiftCluster) error {
-	return nil
-}
-
 func expectAsyncOperationDocumentCreate(asyncOperations *mock_database.MockAsyncOperations, key string, provisioningState api.ProvisioningState) {
 	asyncOperations.EXPECT().
 		Create(gomock.Any(), (*matcher.AsyncOperationDocument)(
@@ -704,7 +700,6 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				t.Fatal(err)
 			}
 			f.(*frontend).bucketAllocator = bucket.Fixed(1)
-			f.(*frontend).ocDynamicValidator = &dummyOpenShiftClusterValidator{}
 			f.(*frontend).ocEnricher = enricher
 
 			go f.Run(ctx, nil, nil)
