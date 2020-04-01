@@ -45,7 +45,7 @@ func (g *generator) managedIdentity() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtmsi.Identity{
 			Type:     "Microsoft.ManagedIdentity/userAssignedIdentities",
-			Name:     to.StringPtr("rp-identity"),
+			Name:     to.StringPtr("[concat('aro-v4-rp-identity-', resourceGroup().location)]"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
 		APIVersion: apiVersions["msi"],
@@ -949,7 +949,7 @@ rm /etc/motd.d/*
 			Identity: &mgmtcompute.VirtualMachineScaleSetIdentity{
 				Type: mgmtcompute.ResourceIdentityTypeUserAssigned,
 				UserAssignedIdentities: map[string]*mgmtcompute.VirtualMachineScaleSetIdentityUserAssignedIdentitiesValue{
-					"[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity')]": {},
+					"[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', concat('aro-v4-rp-identity-', resourceGroup().location))]": {},
 				},
 			},
 			Name:     to.StringPtr("[concat('rp-vmss-', parameters('vmssName'))]"),
@@ -1146,7 +1146,6 @@ func (g *generator) cosmosdb() []*arm.Resource {
 }
 
 func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Resource {
-
 	rs := []*arm.Resource{
 		{
 			Resource: &mgmtdocumentdb.SQLDatabaseCreateUpdateParameters{
@@ -1409,17 +1408,31 @@ func (g *generator) acrReplica() *arm.Resource {
 	}
 }
 
-func (g *generator) acrRbac() *arm.Resource {
-	return &arm.Resource{
-		Resource: &mgmtauthorization.RoleAssignment{
-			Name: to.StringPtr("[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), parameters('rpServicePrincipalId'), 'RP / AcrPull')))]"),
-			Type: to.StringPtr("Microsoft.ContainerRegistry/registries/providers/roleAssignments"),
-			Properties: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-				Scope:            to.StringPtr("[parameters('acrResourceId')]"),
-				RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]"),
-				PrincipalID:      to.StringPtr("[parameters('rpServicePrincipalId')]"),
+func (g *generator) acrRbac() []*arm.Resource {
+	return []*arm.Resource{
+		{
+			Resource: &mgmtauthorization.RoleAssignment{
+				Name: to.StringPtr("[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), parameters('rpServicePrincipalId'), 'RP / AcrPull')))]"),
+				Type: to.StringPtr("Microsoft.ContainerRegistry/registries/providers/roleAssignments"),
+				Properties: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+					Scope:            to.StringPtr("[parameters('acrResourceId')]"),
+					RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]"),
+					PrincipalID:      to.StringPtr("[parameters('rpServicePrincipalId')]"),
+				},
 			},
+			APIVersion: apiVersions["authorization"],
 		},
-		APIVersion: apiVersions["authorization"],
+		{
+			Resource: &mgmtauthorization.RoleAssignment{
+				Name: to.StringPtr("[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), 'FP / ARO v4 ContainerRegistry Token Contributor')))]"),
+				Type: to.StringPtr("Microsoft.ContainerRegistry/registries/providers/roleAssignments"),
+				Properties: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+					Scope:            to.StringPtr("[parameters('acrResourceId')]"),
+					RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '48983534-3d06-4dcb-a566-08a694eb1279')]"),
+					PrincipalID:      to.StringPtr("[parameters('fpServicePrincipalId')]"),
+				},
+			},
+			APIVersion: apiVersions["authorization"],
+		},
 	}
 }

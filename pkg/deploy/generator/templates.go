@@ -20,7 +20,7 @@ func (g *generator) managedIdentityTemplate() *arm.Template {
 	t.Outputs = map[string]*arm.Output{
 		"rpServicePrincipalId": {
 			Type:  "string",
-			Value: "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity'), '2018-11-30').principalId]",
+			Value: "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', concat('aro-v4-rp-identity-', resourceGroup().location)), '2018-11-30').principalId]",
 		},
 	}
 
@@ -91,8 +91,9 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 
 	params := []string{
 		"acrResourceId",
-		"rpServicePrincipalId",
+		"fpServicePrincipalId",
 		"location",
+		"rpServicePrincipalId",
 	}
 
 	for _, param := range params {
@@ -101,7 +102,10 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 
 	t.Resources = append(t.Resources,
 		g.acrReplica(),
-		g.acrRbac(),
+	)
+
+	t.Resources = append(t.Resources,
+		g.acrRbac()...,
 	)
 
 	return t
