@@ -4,7 +4,7 @@
     "resources": [
         {
             "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
-            "name": "rp-identity",
+            "name": "[concat('aro-v4-rp-identity-', resourceGroup().location)]",
             "location": "[resourceGroup().location]",
             "apiVersion": "2018-11-30"
         }
@@ -12,7 +12,7 @@
     "outputs": {
         "rpServicePrincipalId": {
             "type": "string",
-            "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'rp-identity'), '2018-11-30').principalId]"
+            "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', concat('aro-v4-rp-identity-', resourceGroup().location)), '2018-11-30').principalId]"
         }
     }
 }

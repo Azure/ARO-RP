@@ -5,6 +5,9 @@
         "acrResourceId": {
             "type": "string"
         },
+        "fpServicePrincipalId": {
+            "type": "string"
+        },
         "location": {
             "type": "string"
         },
