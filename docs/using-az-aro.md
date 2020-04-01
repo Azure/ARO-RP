@@ -53,8 +53,8 @@ against a development RP running at https://localhost:8443/.
    it:
 
    ```
-   byte-compiling build/bdist.linux-x86_64/egg/azext_aro/vendored_sdks/azure/mgmt/redhatopenshift/v2019_12_31_preview/models/_models_py3.py to _models_py3.pyc
-     File "build/bdist.linux-x86_64/egg/azext_aro/vendored_sdks/azure/mgmt/redhatopenshift/v2019_12_31_preview/models/_models_py3.py", line 45
+   byte-compiling build/bdist.linux-x86_64/egg/azext_aro/vendored_sdks/azure/mgmt/redhatopenshift/v2020_04_30/models/_models_py3.py to _models_py3.pyc
+     File "build/bdist.linux-x86_64/egg/azext_aro/vendored_sdks/azure/mgmt/redhatopenshift/v2020_04_30/models/_models_py3.py", line 45
        def __init__(self, *, visibility=None, url: str=None, ip: str=None, **kwargs) -> None:
                         ^
     SyntaxError: invalid syntax
