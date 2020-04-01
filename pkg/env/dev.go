@@ -16,7 +16,7 @@ import (
 	"os"
 	"time"
 
-	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
+	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -258,7 +258,7 @@ func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthor
 	}
 
 	_, err = d.roleassignments.Create(ctx, "/subscriptions/"+d.SubscriptionID()+"/resourceGroups/"+resourceGroup, uuid.NewV4().String(), mgmtauthorization.RoleAssignmentCreateParameters{
-		Properties: &mgmtauthorization.RoleAssignmentProperties{
+		RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
 			RoleDefinitionID: to.StringPtr("/subscriptions/" + d.SubscriptionID() + "/providers/Microsoft.Authorization/roleDefinitions/8e3af657-a8ff-443c-a75c-2fe8c4bcb635"),
 			PrincipalID:      res.Value,
 		},

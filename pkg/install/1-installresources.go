@@ -10,9 +10,9 @@ import (
 	"reflect"
 	"time"
 
-	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
+	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtprivatedns "github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
@@ -92,10 +92,11 @@ func (i *Installer) installResources(ctx context.Context) error {
 				Resource: &mgmtauthorization.RoleAssignment{
 					Name: to.StringPtr("[guid(resourceGroup().id, 'SP / Contributor')]"),
 					Type: to.StringPtr("Microsoft.Authorization/roleAssignments"),
-					Properties: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 						Scope:            to.StringPtr("[resourceGroup().id]"),
 						RoleDefinitionID: to.StringPtr("[resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]"),
 						PrincipalID:      to.StringPtr(objectID),
+						PrincipalType:    mgmtauthorization.ServicePrincipal,
 					},
 				},
 				APIVersion: apiVersions["authorization"],
