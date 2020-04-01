@@ -1,4 +1,4 @@
-// Package redhatopenshift implements the Azure ARM Redhatopenshift service API version 2019-12-31-preview.
+// Package redhatopenshift implements the Azure ARM Redhatopenshift service API version 2020-04-30.
 //
 // Rest API for Azure Red Hat OpenShift
 package redhatopenshift

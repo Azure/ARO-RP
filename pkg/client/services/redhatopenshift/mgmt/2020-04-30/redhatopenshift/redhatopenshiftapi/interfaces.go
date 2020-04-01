@@ -20,7 +20,7 @@ package redhatopenshiftapi
 import (
 	"context"
 
-	"github.com/Azure/ARO-RP/pkg/client/services/preview/redhatopenshift/mgmt/2019-12-31-preview/redhatopenshift"
+	"github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2020-04-30/redhatopenshift"
 )
 
 // OperationsClientAPI contains the set of methods on the OperationsClient type.

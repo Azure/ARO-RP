@@ -35,9 +35,9 @@ class AzureRedHatOpenShiftClient(SDKClient):
     :vartype config: AzureRedHatOpenShiftClientConfiguration
 
     :ivar operations: Operations operations
-    :vartype operations: azure.mgmt.redhatopenshift.v2019_12_31_preview.operations.Operations
+    :vartype operations: azure.mgmt.redhatopenshift.v2020_04_30.operations.Operations
     :ivar open_shift_clusters: OpenShiftClusters operations
-    :vartype open_shift_clusters: azure.mgmt.redhatopenshift.v2019_12_31_preview.operations.OpenShiftClustersOperations
+    :vartype open_shift_clusters: azure.mgmt.redhatopenshift.v2020_04_30.operations.OpenShiftClustersOperations
 
     :param credentials: Credentials needed for the client to connect to Azure.
     :type credentials: :mod:`A msrestazure Credentials
@@ -54,7 +54,7 @@ class AzureRedHatOpenShiftClient(SDKClient):
         super(AzureRedHatOpenShiftClient, self).__init__(self.config.credentials, self.config)
 
         client_models = {k: v for k, v in models.__dict__.items() if isinstance(v, type)}
-        self.api_version = '2019-12-31-preview'
+        self.api_version = '2020-04-30'
         self._serialize = Serializer(client_models)
         self._deserialize = Deserializer(client_models)
 
