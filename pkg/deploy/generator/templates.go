@@ -20,7 +20,7 @@ func (g *generator) managedIdentityTemplate() *arm.Template {
 	t.Outputs = map[string]*arm.Output{
 		"rpServicePrincipalId": {
 			Type:  "string",
-			Value: "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', concat('aro-v4-rp-identity-', resourceGroup().location)), '2018-11-30').principalId]",
+			Value: "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', concat('aro-rp-', resourceGroup().location)), '2018-11-30').principalId]",
 		},
 	}
 
