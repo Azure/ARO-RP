@@ -17,7 +17,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/kubeactions"
@@ -42,9 +41,8 @@ type frontend struct {
 	apis    map[string]*api.Version
 	m       metrics.Interface
 
-	ocEnricher         clusterdata.OpenShiftClusterEnricher
-	ocDynamicValidator validate.OpenShiftClusterDynamicValidator
-	kubeActions        kubeactions.Interface
+	ocEnricher  clusterdata.OpenShiftClusterEnricher
+	kubeActions kubeactions.Interface
 
 	l net.Listener
 	s *http.Server
@@ -71,8 +69,7 @@ func NewFrontend(ctx context.Context, baseLog *logrus.Entry, _env env.Interface,
 		m:           m,
 		kubeActions: kubeActions,
 
-		ocEnricher:         clusterdata.NewBestEffortEnricher(baseLog, _env),
-		ocDynamicValidator: validate.NewOpenShiftClusterDynamicValidator(_env),
+		ocEnricher: clusterdata.NewBestEffortEnricher(baseLog, _env),
 
 		bucketAllocator: &bucket.Random{},
 	}

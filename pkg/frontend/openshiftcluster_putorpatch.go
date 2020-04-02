@@ -171,11 +171,6 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 		doc.Dequeues = 0
 	}
 
-	err = f.ocDynamicValidator.Dynamic(r.Context(), doc.OpenShiftCluster)
-	if err != nil {
-		return nil, err
-	}
-
 	doc.AsyncOperationID, err = f.newAsyncOperation(ctx, r, doc)
 	if err != nil {
 		return nil, err

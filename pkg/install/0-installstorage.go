@@ -6,33 +6,41 @@ package install
 import (
 	"context"
 	"fmt"
+	"os"
 	"reflect"
 	"strings"
 	"time"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
+	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/kubeconfig"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
 	"github.com/openshift/installer/pkg/asset/targets"
 	uuid "github.com/satori/go.uuid"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 var apiVersions = map[string]string{
-	"authorization": "2018-09-01-preview",
-	"compute":       "2019-03-01",
-	"network":       "2019-07-01",
-	"privatedns":    "2018-09-01",
-	"storage":       "2019-04-01",
+	"authorization":                "2018-09-01-preview",
+	"authorization-denyassignment": "2018-07-01-preview",
+	"compute":                      "2019-03-01",
+	"network":                      "2019-07-01",
+	"privatedns":                   "2018-09-01",
+	"storage":                      "2019-04-01",
 }
 
 func (i *Installer) createDNS(ctx context.Context) error {
@@ -82,10 +90,67 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 		}
 	}
 
+	var clusterSPObjectID string
+	{
+		spp := &i.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
+
+		conf := auth.NewClientCredentialsConfig(spp.ClientID, string(spp.ClientSecret), spp.TenantID)
+		conf.Resource = azure.PublicCloud.GraphEndpoint
+
+		token, err := conf.ServicePrincipalToken()
+		if err != nil {
+			return err
+		}
+
+		timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+		defer cancel()
+
+		// get a token, retrying only on AADSTS700016 errors (slow AAD propagation).
+		err = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+			err = token.EnsureFresh()
+			switch {
+			case err == nil:
+				return true, nil
+			case strings.Contains(err.Error(), "AADSTS700016"):
+				i.log.Print(err)
+				return false, nil
+			default:
+				return false, err
+			}
+		}, timeoutCtx.Done())
+		if err != nil {
+			return err
+		}
+
+		spGraphAuthorizer := autorest.NewBearerAuthorizer(token)
+
+		applications := graphrbac.NewApplicationsClient(spp.TenantID, spGraphAuthorizer)
+
+		res, err := applications.GetServicePrincipalsIDByAppID(ctx, spp.ClientID)
+		if err != nil {
+			return err
+		}
+
+		clusterSPObjectID = *res.Value
+	}
+
 	t := &arm.Template{
 		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 		ContentVersion: "1.0.0.0",
 		Resources: []*arm.Resource{
+			{
+				Resource: &mgmtauthorization.RoleAssignment{
+					Name: to.StringPtr("[guid(resourceGroup().id, 'SP / Contributor')]"),
+					Type: to.StringPtr("Microsoft.Authorization/roleAssignments"),
+					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+						Scope:            to.StringPtr("[resourceGroup().id]"),
+						RoleDefinitionID: to.StringPtr("[resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]"), // Contributor
+						PrincipalID:      &clusterSPObjectID,
+						PrincipalType:    mgmtauthorization.ServicePrincipal,
+					},
+				},
+				APIVersion: apiVersions["authorization"],
+			},
 			{
 				Resource: &mgmtstorage.Account{
 					Sku: &mgmtstorage.Sku{
@@ -152,6 +217,43 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 			},
 		},
 	}
+
+	if os.Getenv("RP_MODE") == "" {
+		t.Resources = append(t.Resources, &arm.Resource{
+			Resource: &mgmtauthorization.DenyAssignment{
+				Name: to.StringPtr("[guid(resourceGroup().id, 'ARO cluster resource group deny assignment')]"),
+				Type: to.StringPtr("Microsoft.Authorization/denyAssignments"),
+				DenyAssignmentProperties: &mgmtauthorization.DenyAssignmentProperties{
+					DenyAssignmentName: to.StringPtr("ARO cluster resource group deny assignment"),
+					Permissions: &[]mgmtauthorization.DenyAssignmentPermission{
+						{
+							Actions: &[]string{
+								"*/action",
+								"*/delete",
+								"*/write",
+							},
+						},
+					},
+					Scope: &i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID,
+					Principals: &[]mgmtauthorization.Principal{
+						{
+							ID:   to.StringPtr("00000000-0000-0000-0000-000000000000"),
+							Type: to.StringPtr("SystemDefined"),
+						},
+					},
+					ExcludePrincipals: &[]mgmtauthorization.Principal{
+						{
+							ID:   &clusterSPObjectID,
+							Type: to.StringPtr("ServicePrincipal"),
+						},
+					},
+					IsSystemProtected: to.BoolPtr(true),
+				},
+			},
+			APIVersion: apiVersions["authorization-denyassignment"],
+		})
+	}
+
 	err = i.deployARMTemplate(ctx, resourceGroup, "storage", t, nil)
 	if err != nil {
 		return err
