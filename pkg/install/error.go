@@ -12,9 +12,20 @@ import (
 // AuthorizationFailed error
 func isAuthorizationFailedError(err error) bool {
 	if detailedErr, ok := err.(autorest.DetailedError); ok {
-		if serviceErr, ok := detailedErr.Original.(*azure.ServiceError); ok &&
-			serviceErr.Code == "AuthorizationFailed" {
-			return true
+		if serviceErr, ok := detailedErr.Original.(*azure.ServiceError); ok {
+			if serviceErr.Code == "AuthorizationFailed" {
+				return true
+			}
+
+			for _, d := range serviceErr.Details {
+				if message, ok := d["message"].(map[string]interface{}); ok {
+					if nestedErr, ok := message["error"].(map[string]interface{}); ok {
+						if code, ok := nestedErr["code"].(string); ok && code == "AuthorizationFailed" {
+							return true
+						}
+					}
+				}
+			}
 		}
 	}
 	return false
