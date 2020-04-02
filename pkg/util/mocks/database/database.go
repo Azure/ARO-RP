@@ -350,21 +350,6 @@ func (mr *MockOpenShiftClustersMockRecorder) Lease(arg0, arg1 interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Lease", reflect.TypeOf((*MockOpenShiftClusters)(nil).Lease), arg0, arg1)
 }
 
-// ListAll mocks base method
-func (m *MockOpenShiftClusters) ListAll(arg0 context.Context) (*api.OpenShiftClusterDocuments, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListAll", arg0)
-	ret0, _ := ret[0].(*api.OpenShiftClusterDocuments)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListAll indicates an expected call of ListAll
-func (mr *MockOpenShiftClustersMockRecorder) ListAll(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAll", reflect.TypeOf((*MockOpenShiftClusters)(nil).ListAll), arg0)
-}
-
 // ListByPrefix mocks base method
 func (m *MockOpenShiftClusters) ListByPrefix(arg0, arg1 string) (cosmosdb.OpenShiftClusterDocumentIterator, error) {
 	m.ctrl.T.Helper()
