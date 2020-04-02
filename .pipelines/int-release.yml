@@ -30,7 +30,6 @@ stages:
             useSameBranch: true
             waitForQueuedBuildsToFinish: true
             storeInEnvironmentVariable: false
-            authenticationMethod: 'Personal Access Token'
             enableBuildInQueueCondition: false
             dependentOnSuccessfulBuildCondition: true
             dependentOnFailedBuildCondition: true
