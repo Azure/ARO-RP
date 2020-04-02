@@ -67,13 +67,13 @@ func (g *generator) securityGroupRP() *arm.Resource {
 						Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
 						SourcePortRange:          to.StringPtr("*"),
 						DestinationPortRange:     to.StringPtr("443"),
-						SourceAddressPrefix:      to.StringPtr("*"),
+						SourceAddressPrefix:      to.StringPtr("AzureResourceManager"),
 						DestinationAddressPrefix: to.StringPtr("*"),
 						Access:                   mgmtnetwork.SecurityRuleAccessAllow,
 						Priority:                 to.Int32Ptr(120),
 						Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
 					},
-					Name: to.StringPtr("rp_in"),
+					Name: to.StringPtr("rp_in_arm"),
 				},
 			},
 		},
@@ -83,6 +83,9 @@ func (g *generator) securityGroupRP() *arm.Resource {
 	}
 
 	if !g.production {
+		// override production ARM flag for more open configuration in development
+		(*nsg.SecurityRules)[0].SecurityRulePropertiesFormat.SourceAddressPrefix = to.StringPtr("*")
+
 		*nsg.SecurityRules = append(*nsg.SecurityRules, mgmtnetwork.SecurityRule{
 			SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
 				Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
@@ -95,6 +98,20 @@ func (g *generator) securityGroupRP() *arm.Resource {
 				Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
 			},
 			Name: to.StringPtr("ssh_in"),
+		})
+	} else {
+		*nsg.SecurityRules = append(*nsg.SecurityRules, mgmtnetwork.SecurityRule{
+			SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
+				Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
+				SourcePortRange:          to.StringPtr("*"),
+				DestinationPortRange:     to.StringPtr("443"),
+				SourceAddressPrefixes:    to.StringSlicePtr([]string{}),
+				Access:                   mgmtnetwork.SecurityRuleAccessAllow,
+				DestinationAddressPrefix: to.StringPtr("*"),
+				Priority:                 to.Int32Ptr(130),
+				Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
+			},
+			Name: to.StringPtr("rp_in_geneva"),
 		})
 	}
 
