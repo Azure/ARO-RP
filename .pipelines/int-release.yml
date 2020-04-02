@@ -16,20 +16,23 @@ stages:
           vsoProjectID: $(vso-project-id)
           vsoConfigPipelineID: $(vso-config-pipeline-id)
           vsoDeployerPipelineID: $(vso-deployer-pipeline-id)
-      - task: TriggerBuild@3
-        inputs:
-          definitionIsInCurrentTeamProject: true
-          buildDefinition: 'Billing - CI'
-          queueBuildForUserThatTriggeredBuild: true
-          ignoreSslCertificateErrors: false
-          useSameSourceVersion: false
-          useCustomSourceVersion: false
-          useSameBranch: true
-          waitForQueuedBuildsToFinish: true
-          storeInEnvironmentVariable: false
-          authenticationMethod: 'Personal Access Token'
-          enableBuildInQueueCondition: false
-          dependentOnSuccessfulBuildCondition: true
-          dependentOnFailedBuildCondition: true
-          checkbuildsoncurrentbranch: false
-          failTaskIfConditionsAreNotFulfilled: true
+      - job: TriggerBillingBuild
+        displayName: 'Queue Production Builds'
+        steps:
+        - task: TriggerBuild@3
+          inputs:
+            definitionIsInCurrentTeamProject: true
+            buildDefinition: 'Billing - CI'
+            queueBuildForUserThatTriggeredBuild: true
+            ignoreSslCertificateErrors: false
+            useSameSourceVersion: false
+            useCustomSourceVersion: false
+            useSameBranch: true
+            waitForQueuedBuildsToFinish: true
+            storeInEnvironmentVariable: false
+            authenticationMethod: 'Personal Access Token'
+            enableBuildInQueueCondition: false
+            dependentOnSuccessfulBuildCondition: true
+            dependentOnFailedBuildCondition: true
+            checkbuildsoncurrentbranch: false
+            failTaskIfConditionsAreNotFulfilled: true
