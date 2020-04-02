@@ -5,6 +5,7 @@ package restconfig
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 
@@ -17,6 +18,14 @@ import (
 
 // RestConfig returns the Kubernetes *rest.Config for a kubeconfig
 func RestConfig(env env.Interface, oc *api.OpenShiftCluster) (*rest.Config, error) {
+	// must not proceed if PrivateEndpointIP is not set.  In
+	// k8s.io/client-go/transport/cache.go, k8s caches our transport, and it
+	// can't tell if data in the restconfig.Dial closure has changed.  We don't
+	// want it to cache a transport that can never work.
+	if oc.Properties.NetworkProfile.PrivateEndpointIP == "" {
+		return nil, errors.New("privateEndpointIP is empty")
+	}
+
 	kubeconfig := oc.Properties.AROServiceKubeconfig
 	if kubeconfig == nil {
 		kubeconfig = oc.Properties.AdminKubeconfig
