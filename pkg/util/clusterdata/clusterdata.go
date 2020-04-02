@@ -134,7 +134,7 @@ func (e *bestEffortEnricher) isValidProvisioningState(oc *api.OpenShiftCluster) 
 	case api.ProvisioningStateFailed:
 		switch oc.Properties.FailedProvisioningState {
 		case api.ProvisioningStateCreating, api.ProvisioningStateDeleting:
-			e.log.Infof("cluster is in failed %q provisioning state. Skiping enrichment...", oc.Properties.ProvisioningState)
+			e.log.Infof("cluster is in failed %q provisioning state. Skipping enrichment...", oc.Properties.ProvisioningState)
 			return false
 		}
 	}
