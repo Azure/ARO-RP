@@ -12,6 +12,7 @@ import (
 	"time"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
+	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -161,7 +162,21 @@ func (dv *openShiftClusterDynamicValidator) validateVnetPermissions(ctx context.
 		return err
 	}
 
-	permissions, err := client.ListForResource(ctx, r.ResourceGroup, r.Provider, r.ResourceType, "", r.ResourceName)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
+
+	// As we don't do `err = wait.PollImmediateUntil()`, we won't ever see a
+	// "timed out waiting for the condition" error, but instead will always see
+	// the last error returned from client.ListForResource().
+	var permissions []mgmtauthorization.Permission
+	wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+		permissions, err = client.ListForResource(ctx, r.ResourceGroup, r.Provider, r.ResourceType, "", r.ResourceName)
+		if detailedErr, ok := err.(autorest.DetailedError); ok &&
+			detailedErr.StatusCode == http.StatusForbidden {
+			return false, nil
+		}
+		return err == nil, err
+	}, timeoutCtx.Done())
 	if detailedErr, ok := err.(autorest.DetailedError); ok {
 		switch detailedErr.StatusCode {
 		case http.StatusForbidden:
