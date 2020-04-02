@@ -23,7 +23,7 @@
                     "[subscription().id]"
                 ]
             },
-            "apiVersion": "2018-09-01-preview"
+            "apiVersion": "2018-01-01-preview"
         }
     ]
 }
