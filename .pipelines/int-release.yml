@@ -31,8 +31,8 @@ stages:
             waitForQueuedBuildsToFinish: true
             storeInEnvironmentVariable: false
             authenticationMethod: 'Basic Authentication'
-            username: 'username'
-            password: 'password'
+            username: $(username)
+            password: $(password)
             enableBuildInQueueCondition: false
             dependentOnSuccessfulBuildCondition: true
             dependentOnFailedBuildCondition: true
