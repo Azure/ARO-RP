@@ -25,11 +25,11 @@ stages:
           useSameSourceVersion: false
           useCustomSourceVersion: false
           useSameBranch: true
-          waitForQueuedBuildsToFinish: false
+          waitForQueuedBuildsToFinish: true
           storeInEnvironmentVariable: false
           authenticationMethod: 'Personal Access Token'
           enableBuildInQueueCondition: false
-          dependentOnSuccessfulBuildCondition: false
-          dependentOnFailedBuildCondition: false
+          dependentOnSuccessfulBuildCondition: true
+          dependentOnFailedBuildCondition: true
           checkbuildsoncurrentbranch: false
-          failTaskIfConditionsAreNotFulfilled: false
+          failTaskIfConditionsAreNotFulfilled: true
