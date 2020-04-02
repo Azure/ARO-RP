@@ -108,6 +108,82 @@ func TestBestEffortEnricher(t *testing.T) {
 			wantOcs: []*api.OpenShiftCluster{{ID: "changed-id", Name: "old-name-1"}},
 		},
 		{
+			name:             "no changes - ProvisioningStateCreating",
+			taskConstructors: defaultMockTaskConstructors,
+			ocs: func() []*api.OpenShiftCluster {
+				return []*api.OpenShiftCluster{{
+					ID: "old-id-1",
+					Properties: api.OpenShiftClusterProperties{
+						ProvisioningState: api.ProvisioningStateCreating,
+					},
+				}}
+			},
+			wantOcs: []*api.OpenShiftCluster{{
+				ID: "old-id-1",
+				Properties: api.OpenShiftClusterProperties{
+					ProvisioningState: api.ProvisioningStateCreating,
+				},
+			}},
+		},
+		{
+			name:             "no changes - ProvisioningStateDeleting",
+			taskConstructors: defaultMockTaskConstructors,
+			ocs: func() []*api.OpenShiftCluster {
+				return []*api.OpenShiftCluster{{
+					ID: "old-id-1",
+					Properties: api.OpenShiftClusterProperties{
+						ProvisioningState: api.ProvisioningStateDeleting,
+					},
+				}}
+			},
+			wantOcs: []*api.OpenShiftCluster{{
+				ID: "old-id-1",
+				Properties: api.OpenShiftClusterProperties{
+					ProvisioningState: api.ProvisioningStateDeleting,
+				},
+			}},
+		},
+		{
+			name:             "no changes - Failed ProvisioningStateCreating",
+			taskConstructors: defaultMockTaskConstructors,
+			ocs: func() []*api.OpenShiftCluster {
+				return []*api.OpenShiftCluster{{
+					ID: "old-id-1",
+					Properties: api.OpenShiftClusterProperties{
+						ProvisioningState:       api.ProvisioningStateFailed,
+						FailedProvisioningState: api.ProvisioningStateCreating,
+					},
+				}}
+			},
+			wantOcs: []*api.OpenShiftCluster{{
+				ID: "old-id-1",
+				Properties: api.OpenShiftClusterProperties{
+					ProvisioningState:       api.ProvisioningStateFailed,
+					FailedProvisioningState: api.ProvisioningStateCreating,
+				},
+			}},
+		},
+		{
+			name:             "no changes - Failed ProvisioningStateDeleting",
+			taskConstructors: defaultMockTaskConstructors,
+			ocs: func() []*api.OpenShiftCluster {
+				return []*api.OpenShiftCluster{{
+					ID: "old-id-1",
+					Properties: api.OpenShiftClusterProperties{
+						ProvisioningState:       api.ProvisioningStateFailed,
+						FailedProvisioningState: api.ProvisioningStateDeleting,
+					},
+				}}
+			},
+			wantOcs: []*api.OpenShiftCluster{{
+				ID: "old-id-1",
+				Properties: api.OpenShiftClusterProperties{
+					ProvisioningState:       api.ProvisioningStateFailed,
+					FailedProvisioningState: api.ProvisioningStateDeleting,
+				},
+			}},
+		},
+		{
 			name:             "no changes - error loading the rest config",
 			taskConstructors: defaultMockTaskConstructors,
 			restConfig: func(env.Interface, *api.OpenShiftCluster) (*rest.Config, error) {
