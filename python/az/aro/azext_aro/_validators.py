@@ -81,7 +81,10 @@ def _validate_int(key, i):
 
 def validate_pull_secret(namespace):
     if namespace.pull_secret is None:
-        logger.warning("No --pull-secret provided: cluster will not include Red Hat or certified samples or operators.")
+        logger.warning("No --pull-secret provided: cluster will not include " +
+                       "access to Red Hat container ecosystem, " +
+                       "certified samples, or operators.\n" +
+                       "For more information: https://catalog.redhat.com/\n")
 
     else:
         try:
