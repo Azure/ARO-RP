@@ -28,6 +28,21 @@ func TestIsAuthorizationFailedError(t *testing.T) {
 			}, "", "", nil, ""),
 			wantBool: true,
 		},
+		{
+			name: "Nested authorization failed",
+			inputErr: autorest.NewErrorWithError(&azure.ServiceError{
+				Details: []map[string]interface{}{
+					{
+						"message": map[string]interface{}{
+							"error": map[string]interface{}{
+								"code": "AuthorizationFailed",
+							},
+						},
+					},
+				},
+			}, "", "", nil, ""),
+			wantBool: true,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			gotBool := isAuthorizationFailedError(tt.inputErr)
