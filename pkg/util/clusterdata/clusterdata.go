@@ -39,7 +39,6 @@ func NewBestEffortEnricher(log *logrus.Entry, env env.Interface) OpenShiftCluste
 		restConfig: restconfig.RestConfig,
 		taskConstructors: []enricherTaskConstructor{
 			newClusterVersionEnricherTask,
-			newServicePrincipalEnricherTask,
 			newWorkerProfilesEnricherTask,
 		},
 	}
