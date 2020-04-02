@@ -13,6 +13,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 	"github.com/Azure/ARO-RP/test/validate"
 )
 
@@ -54,7 +55,7 @@ func validOpenShiftCluster() *OpenShiftCluster {
 			ClusterProfile: ClusterProfile{
 				PullSecret:      `{"auths":{"registry.connect.redhat.com":{"auth":""},"registry.redhat.io":{"auth":""}}}`,
 				Domain:          "cluster.location.aroapp.io",
-				Version:         "4.3.0",
+				Version:         version.OpenShiftVersion,
 				ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", subscriptionID),
 			},
 			ConsoleProfile: ConsoleProfile{
@@ -107,12 +108,12 @@ func runTests(t *testing.T, tests []*validateTest, delta bool) {
 				tt.modify(oc)
 			}
 
-			current := &api.OpenShiftCluster{}
+			var current *api.OpenShiftCluster
 			if delta {
+				current = &api.OpenShiftCluster{}
 				(&openShiftClusterConverter{}).ToInternal(validOpenShiftCluster(), current)
-			} else {
-				(&openShiftClusterConverter{}).ToInternal(oc, current)
 			}
+
 			err := v.Static(oc, current)
 			if err == nil {
 				if tt.wantErr != "" {
@@ -700,6 +701,11 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			wantErr: "400: PropertyChangeNotAllowed: properties.masterProfile.subnetId: Changing property 'properties.masterProfile.subnetId' is not allowed.",
 		},
 		{
+			name:    "worker name change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].Name = "new-name" },
+			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles['new-name'].name: Changing property 'properties.workerProfiles['new-name'].name' is not allowed.",
+		},
+		{
 			name:    "worker vmSize change",
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].VMSize = VMSizeStandardD4sV3 },
 			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles['worker'].vmSize: Changing property 'properties.workerProfiles['worker'].vmSize' is not allowed.",
@@ -720,6 +726,16 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name:    "workerProfiles count change",
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].Count++ },
 			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles['worker'].count: Changing property 'properties.workerProfiles['worker'].count' is not allowed.",
+		},
+		{
+			name: "number of workerProfiles changes",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.WorkerProfiles = []WorkerProfile{
+					{Name: "worker"},
+					{Name: "worker-2"},
+				}
+			},
+			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles: Changing property 'properties.workerProfiles' is not allowed.",
 		},
 	}
 

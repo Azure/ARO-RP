@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/gorilla/mux"
@@ -100,6 +101,12 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 		default:
 			return nil, fmt.Errorf("unexpected failedProvisioningState %q", doc.OpenShiftCluster.Properties.FailedProvisioningState)
 		}
+	}
+
+	if !isCreate {
+		timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+		f.ocEnricher.Enrich(timeoutCtx, doc.OpenShiftCluster)
 	}
 
 	var ext interface{}
