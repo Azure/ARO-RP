@@ -120,7 +120,6 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 				ProvisioningState: doc.OpenShiftCluster.Properties.ProvisioningState,
 				ClusterProfile: api.ClusterProfile{
 					PullSecret: doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret,
-					Version:    doc.OpenShiftCluster.Properties.ClusterProfile.Version,
 				},
 				ServicePrincipalProfile: api.ServicePrincipalProfile{
 					ClientSecret: doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret,
