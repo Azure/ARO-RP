@@ -24,7 +24,6 @@ type openShiftClusters struct {
 // OpenShiftClusters is the database interface for OpenShiftClusterDocuments
 type OpenShiftClusters interface {
 	Create(context.Context, *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error)
-	ListAll(context.Context) (*api.OpenShiftClusterDocuments, error)
 	Get(context.Context, string) (*api.OpenShiftClusterDocument, error)
 	QueueLength(context.Context, string) (int, error)
 	Patch(context.Context, string, func(*api.OpenShiftClusterDocument) error) (*api.OpenShiftClusterDocument, error)
@@ -92,10 +91,6 @@ func (c *openShiftClusters) Create(ctx context.Context, doc *api.OpenShiftCluste
 	}
 
 	return doc, err
-}
-
-func (c *openShiftClusters) ListAll(ctx context.Context) (*api.OpenShiftClusterDocuments, error) {
-	return c.c.ListAll(ctx, nil)
 }
 
 func (c *openShiftClusters) Get(ctx context.Context, key string) (*api.OpenShiftClusterDocument, error) {
