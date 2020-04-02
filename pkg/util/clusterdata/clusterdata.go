@@ -66,6 +66,10 @@ func (e *bestEffortEnricher) Enrich(ctx context.Context, ocs ...*api.OpenShiftCl
 }
 
 func (e *bestEffortEnricher) enrichOne(ctx context.Context, oc *api.OpenShiftCluster) {
+	if !e.isValidProvisioningState(oc) {
+		return
+	}
+
 	restConfig, err := e.restConfig(e.env, oc)
 	if err != nil {
 		e.log.Error(err)
@@ -115,6 +119,26 @@ out:
 			break out
 		}
 	}
+}
+
+// isValidProvisioningState checks whether or not it is ok to run enrichment
+// of the object based on the ProvisioningState.
+// For example, when a user creates a new cluster kubeconfig for the cluster
+// will be missing from the object in the beginning of the creation process
+// and it will be not possible to make requests to the API server.
+func (e *bestEffortEnricher) isValidProvisioningState(oc *api.OpenShiftCluster) bool {
+	switch oc.Properties.ProvisioningState {
+	case api.ProvisioningStateCreating, api.ProvisioningStateDeleting:
+		e.log.Infof("cluster is in %q provisioning state. Skiping enrichment...", oc.Properties.ProvisioningState)
+		return false
+	case api.ProvisioningStateFailed:
+		switch oc.Properties.FailedProvisioningState {
+		case api.ProvisioningStateCreating, api.ProvisioningStateDeleting:
+			e.log.Infof("cluster is in failed %q provisioning state. Skiping enrichment...", oc.Properties.ProvisioningState)
+			return false
+		}
+	}
+	return true
 }
 
 type roundTripperFunc func(*http.Request) (*http.Response, error)
