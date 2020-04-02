@@ -27,6 +27,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
+	mock_clusterdata "github.com/Azure/ARO-RP/pkg/util/mocks/clusterdata"
 	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/test/util/listener"
@@ -103,7 +104,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 		resourceID     string
 		request        func(*v20200430.OpenShiftCluster)
 		isPatch        bool
-		mocks          func(*test, *mock_database.MockAsyncOperations, *mock_database.MockOpenShiftClusters)
+		mocks          func(*test, *mock_database.MockAsyncOperations, *mock_database.MockOpenShiftClusters, *mock_clusterdata.MockOpenShiftClusterEnricher)
 		wantStatusCode int
 		wantResponse   func(*test) *v20200430.OpenShiftCluster
 		wantAsync      bool
@@ -117,7 +118,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			request: func(oc *v20200430.OpenShiftCluster) {
 				oc.Properties.ClusterProfile.Version = "4.3.0"
 			},
-			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters) {
+			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher) {
 				openShiftClusters.EXPECT().
 					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
 					Return(nil, &cosmosdb.Error{StatusCode: http.StatusNotFound})
@@ -169,30 +170,33 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			request: func(oc *v20200430.OpenShiftCluster) {
 				oc.Properties.ClusterProfile.Domain = "changed"
 			},
-			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters) {
-				openShiftClusters.EXPECT().
-					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
-					Return(&api.OpenShiftClusterDocument{
-						Key: strings.ToLower(tt.resourceID),
-						OpenShiftCluster: &api.OpenShiftCluster{
-							ID:   tt.resourceID,
-							Name: "resourceName",
-							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-							Tags: map[string]string{"tag": "will-be-removed"},
-							Properties: api.OpenShiftClusterProperties{
-								ProvisioningState: api.ProvisioningStateSucceeded,
-								ClusterProfile: api.ClusterProfile{
-									PullSecret: `{"will":"be-kept"}`,
-								},
-								IngressProfiles: []api.IngressProfile{{Name: "will-be-removed"}},
-								WorkerProfiles:  []api.WorkerProfile{{Name: "will-be-removed"}},
-								ServicePrincipalProfile: api.ServicePrincipalProfile{
-									ClientSecret: "will-be-kept",
-								},
+			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher) {
+				currentClusterdoc := &api.OpenShiftClusterDocument{
+					Key: strings.ToLower(tt.resourceID),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   tt.resourceID,
+						Name: "resourceName",
+						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+						Tags: map[string]string{"tag": "will-be-removed"},
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState: api.ProvisioningStateSucceeded,
+							ClusterProfile: api.ClusterProfile{
+								PullSecret: `{"will":"be-kept"}`,
+							},
+							IngressProfiles: []api.IngressProfile{{Name: "will-be-removed"}},
+							WorkerProfiles:  []api.WorkerProfile{{Name: "will-be-removed"}},
+							ServicePrincipalProfile: api.ServicePrincipalProfile{
+								ClientSecret: "will-be-kept",
 							},
 						},
-					}, nil)
+					},
+				}
 
+				openShiftClusters.EXPECT().
+					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
+					Return(currentClusterdoc, nil)
+
+				enricher.EXPECT().Enrich(gomock.Any(), currentClusterdoc.OpenShiftCluster)
 				expectAsyncOperationDocumentCreate(asyncOperations, strings.ToLower(tt.resourceID), api.ProvisioningStateUpdating)
 
 				clusterdoc := &api.OpenShiftClusterDocument{
@@ -240,25 +244,28 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			request: func(oc *v20200430.OpenShiftCluster) {
 				oc.Properties.ClusterProfile.Domain = "changed"
 			},
-			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters) {
+			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher) {
+				currentClusterdoc := &api.OpenShiftClusterDocument{
+					Key: strings.ToLower(tt.resourceID),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   tt.resourceID,
+						Name: "resourceName",
+						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+						Tags: map[string]string{"tag": "will-be-removed"},
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState:       api.ProvisioningStateFailed,
+							FailedProvisioningState: api.ProvisioningStateUpdating,
+							IngressProfiles:         []api.IngressProfile{{Name: "will-be-removed"}},
+							WorkerProfiles:          []api.WorkerProfile{{Name: "will-be-removed"}},
+						},
+					},
+				}
+
 				openShiftClusters.EXPECT().
 					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
-					Return(&api.OpenShiftClusterDocument{
-						Key: strings.ToLower(tt.resourceID),
-						OpenShiftCluster: &api.OpenShiftCluster{
-							ID:   tt.resourceID,
-							Name: "resourceName",
-							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-							Tags: map[string]string{"tag": "will-be-removed"},
-							Properties: api.OpenShiftClusterProperties{
-								ProvisioningState:       api.ProvisioningStateFailed,
-								FailedProvisioningState: api.ProvisioningStateUpdating,
-								IngressProfiles:         []api.IngressProfile{{Name: "will-be-removed"}},
-								WorkerProfiles:          []api.WorkerProfile{{Name: "will-be-removed"}},
-							},
-						},
-					}, nil)
+					Return(currentClusterdoc, nil)
 
+				enricher.EXPECT().Enrich(gomock.Any(), currentClusterdoc.OpenShiftCluster)
 				expectAsyncOperationDocumentCreate(asyncOperations, strings.ToLower(tt.resourceID), api.ProvisioningStateUpdating)
 
 				clusterdoc := &api.OpenShiftClusterDocument{
@@ -302,7 +309,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			request: func(oc *v20200430.OpenShiftCluster) {
 				oc.Properties.ClusterProfile.Domain = "changed"
 			},
-			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters) {
+			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher) {
 				openShiftClusters.EXPECT().
 					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
 					Return(&api.OpenShiftClusterDocument{
@@ -327,7 +334,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			request: func(oc *v20200430.OpenShiftCluster) {
 				oc.Properties.ClusterProfile.Domain = "changed"
 			},
-			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters) {
+			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher) {
 				openShiftClusters.EXPECT().
 					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
 					Return(&api.OpenShiftClusterDocument{
@@ -355,24 +362,27 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				oc.Properties.WorkerProfiles = []v20200430.WorkerProfile{{Name: "changed"}}
 			},
 			isPatch: true,
-			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters) {
+			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher) {
+				currentClusterdoc := &api.OpenShiftClusterDocument{
+					Key: strings.ToLower(tt.resourceID),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   tt.resourceID,
+						Name: "resourceName",
+						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+						Tags: map[string]string{"tag": "will-be-kept"},
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState: api.ProvisioningStateSucceeded,
+							IngressProfiles:   []api.IngressProfile{{Name: "default"}},
+							WorkerProfiles:    []api.WorkerProfile{{Name: "default"}},
+						},
+					},
+				}
+
 				openShiftClusters.EXPECT().
 					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
-					Return(&api.OpenShiftClusterDocument{
-						Key: strings.ToLower(tt.resourceID),
-						OpenShiftCluster: &api.OpenShiftCluster{
-							ID:   tt.resourceID,
-							Name: "resourceName",
-							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-							Tags: map[string]string{"tag": "will-be-kept"},
-							Properties: api.OpenShiftClusterProperties{
-								ProvisioningState: api.ProvisioningStateSucceeded,
-								IngressProfiles:   []api.IngressProfile{{Name: "default"}},
-								WorkerProfiles:    []api.WorkerProfile{{Name: "default"}},
-							},
-						},
-					}, nil)
+					Return(currentClusterdoc, nil)
 
+				enricher.EXPECT().Enrich(gomock.Any(), currentClusterdoc.OpenShiftCluster)
 				expectAsyncOperationDocumentCreate(asyncOperations, strings.ToLower(tt.resourceID), api.ProvisioningStateUpdating)
 
 				clusterdoc := &api.OpenShiftClusterDocument{
@@ -423,25 +433,28 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				oc.Properties.ClusterProfile.Domain = "changed"
 			},
 			isPatch: true,
-			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters) {
+			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher) {
+				currentClusterdoc := &api.OpenShiftClusterDocument{
+					Key: strings.ToLower(tt.resourceID),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   tt.resourceID,
+						Name: "resourceName",
+						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+						Tags: map[string]string{"tag": "will-be-kept"},
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState:       api.ProvisioningStateFailed,
+							FailedProvisioningState: api.ProvisioningStateUpdating,
+							IngressProfiles:         []api.IngressProfile{{Name: "will-be-kept"}},
+							WorkerProfiles:          []api.WorkerProfile{{Name: "will-be-kept"}},
+						},
+					},
+				}
+
 				openShiftClusters.EXPECT().
 					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
-					Return(&api.OpenShiftClusterDocument{
-						Key: strings.ToLower(tt.resourceID),
-						OpenShiftCluster: &api.OpenShiftCluster{
-							ID:   tt.resourceID,
-							Name: "resourceName",
-							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-							Tags: map[string]string{"tag": "will-be-kept"},
-							Properties: api.OpenShiftClusterProperties{
-								ProvisioningState:       api.ProvisioningStateFailed,
-								FailedProvisioningState: api.ProvisioningStateUpdating,
-								IngressProfiles:         []api.IngressProfile{{Name: "will-be-kept"}},
-								WorkerProfiles:          []api.WorkerProfile{{Name: "will-be-kept"}},
-							},
-						},
-					}, nil)
+					Return(currentClusterdoc, nil)
 
+				enricher.EXPECT().Enrich(gomock.Any(), currentClusterdoc.OpenShiftCluster)
 				expectAsyncOperationDocumentCreate(asyncOperations, strings.ToLower(tt.resourceID), api.ProvisioningStateUpdating)
 
 				clusterdoc := &api.OpenShiftClusterDocument{
@@ -492,7 +505,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				oc.Properties.ClusterProfile.Domain = "changed"
 			},
 			isPatch: true,
-			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters) {
+			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher) {
 				openShiftClusters.EXPECT().
 					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
 					Return(&api.OpenShiftClusterDocument{
@@ -518,7 +531,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				oc.Properties.ClusterProfile.Domain = "changed"
 			},
 			isPatch: true,
-			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters) {
+			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher) {
 				openShiftClusters.EXPECT().
 					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
 					Return(&api.OpenShiftClusterDocument{
@@ -544,7 +557,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				oc.Properties.ServicePrincipalProfile.ClientID = mockSubID
 				oc.Properties.ClusterProfile.ResourceGroupID = fmt.Sprintf("/subscriptions/%s/resourcegroups/aro-vjb21wca", mockSubID)
 			},
-			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters) {
+			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher) {
 				openShiftClusters.EXPECT().
 					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
 					Return(nil, &cosmosdb.Error{StatusCode: http.StatusNotFound})
@@ -601,7 +614,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			request: func(oc *v20200430.OpenShiftCluster) {
 				oc.Properties.ServicePrincipalProfile.ClientID = mockSubID
 			},
-			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters) {
+			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher) {
 				openShiftClusters.EXPECT().
 					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
 					Return(nil, &cosmosdb.Error{StatusCode: http.StatusNotFound})
@@ -667,8 +680,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			asyncOperations := mock_database.NewMockAsyncOperations(controller)
 			openShiftClusters := mock_database.NewMockOpenShiftClusters(controller)
 			subscriptions := mock_database.NewMockSubscriptions(controller)
+			enricher := mock_clusterdata.NewMockOpenShiftClusterEnricher(controller)
 
-			tt.mocks(tt, asyncOperations, openShiftClusters)
+			tt.mocks(tt, asyncOperations, openShiftClusters, enricher)
 
 			subscriptions.EXPECT().
 				Get(gomock.Any(), mockSubID).
@@ -691,6 +705,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			}
 			f.(*frontend).bucketAllocator = bucket.Fixed(1)
 			f.(*frontend).ocDynamicValidator = &dummyOpenShiftClusterValidator{}
+			f.(*frontend).ocEnricher = enricher
 
 			go f.Run(ctx, nil, nil)
 

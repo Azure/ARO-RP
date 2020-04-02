@@ -95,11 +95,13 @@ func (sv *openShiftClusterStaticValidator) validateProperties(path string, p *Op
 	if err := sv.validateMasterProfile(path+".masterProfile", &p.MasterProfile); err != nil {
 		return err
 	}
-	if len(p.WorkerProfiles) != 1 {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".workerProfiles", "There should be exactly one worker profile.")
-	}
-	if err := sv.validateWorkerProfile(path+".workerProfiles['"+p.WorkerProfiles[0].Name+"']", &p.WorkerProfiles[0], &p.MasterProfile); err != nil {
-		return err
+	if isCreate {
+		if len(p.WorkerProfiles) != 1 {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".workerProfiles", "There should be exactly one worker profile.")
+		}
+		if err := sv.validateWorkerProfile(path+".workerProfiles['"+p.WorkerProfiles[0].Name+"']", &p.WorkerProfiles[0], &p.MasterProfile); err != nil {
+			return err
+		}
 	}
 	if err := sv.validateAPIServerProfile(path+".apiserverProfile", &p.APIServerProfile); err != nil {
 		return err
@@ -131,8 +133,7 @@ func (sv *openShiftClusterStaticValidator) validateClusterProfile(path string, c
 		strings.ContainsRune(strings.TrimSuffix(cp.Domain, "."+sv.domain), '.') {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".domain", "The provided domain '%s' is invalid.", cp.Domain)
 	}
-	if isCreate && cp.Version != version.OpenShiftVersion ||
-		!isCreate && !validate.RxOpenShiftVersion.MatchString(cp.Version) {
+	if isCreate && cp.Version != version.OpenShiftVersion {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".version", "The provided version '%s' is invalid.", cp.Version)
 	}
 	if !validate.RxResourceGroupID.MatchString(cp.ResourceGroupID) {
