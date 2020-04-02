@@ -86,10 +86,8 @@ func (sv *openShiftClusterStaticValidator) validateProperties(path string, p *Op
 	if err := sv.validateConsoleProfile(path+".consoleProfile", &p.ConsoleProfile); err != nil {
 		return err
 	}
-	if isCreate {
-		if err := sv.validateServicePrincipalProfile(path+".servicePrincipalProfile", &p.ServicePrincipalProfile); err != nil {
-			return err
-		}
+	if err := sv.validateServicePrincipalProfile(path+".servicePrincipalProfile", &p.ServicePrincipalProfile); err != nil {
+		return err
 	}
 	if err := sv.validateNetworkProfile(path+".networkProfile", &p.NetworkProfile); err != nil {
 		return err
