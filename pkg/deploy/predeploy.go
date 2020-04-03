@@ -8,7 +8,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
-	"net/url"
 	"path/filepath"
 
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
@@ -18,7 +17,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
-	utilkeyvault "github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
 
 // PreDeploy deploys managed identity, NSGs and keyvaults, needed for main
@@ -201,12 +199,7 @@ func (d *deployer) configureServiceKV(ctx context.Context) error {
 		return err
 	}
 
-	err = d.ensureMonitoringCertificates(ctx, serviceKeyVaultURI)
-	if err != nil {
-		return err
-	}
-
-	return d.ensureServiceCertificates(ctx, serviceKeyVaultURI)
+	return d.ensureMonitoringCertificates(ctx, serviceKeyVaultURI)
 }
 
 func (d *deployer) ensureEncryptionSecret(ctx context.Context, serviceKeyVaultURI string) error {
@@ -249,74 +242,6 @@ func (d *deployer) ensureMonitoringCertificates(ctx context.Context, serviceKeyV
 		_, err = d.keyvault.ImportCertificate(ctx, serviceKeyVaultURI, certificateName, keyvault.CertificateImportParameters{
 			Base64EncodedCertificate: bundle.Value,
 		})
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (d *deployer) ensureServiceCertificates(ctx context.Context, serviceKeyVaultURI string) error {
-	_, err := d.keyvault.SetCertificateIssuer(ctx, serviceKeyVaultURI, "OneCert", keyvault.CertificateIssuerSetParameters{
-		Provider: to.StringPtr("OneCert"),
-	})
-	if err != nil {
-		return err
-	}
-
-	certs := []struct {
-		certificateName string
-		commonName      string
-		eku             utilkeyvault.Eku
-		created         bool
-	}{
-		{
-			certificateName: env.RPFirstPartySecretName,
-			commonName:      d.config.Configuration.FPServerCertCommonName,
-			eku:             utilkeyvault.EkuClientAuth,
-		},
-		{
-			certificateName: env.RPServerSecretName,
-			commonName:      "rp." + d.config.Location + "." + d.config.Configuration.RPParentDomainName,
-			eku:             utilkeyvault.EkuServerAuth,
-		},
-	}
-
-	keyVaultCerts, err := d.keyvault.GetCertificates(ctx, serviceKeyVaultURI, nil, nil)
-	if err != nil {
-		return err
-	}
-
-cert:
-	for i, c := range certs {
-		for _, kc := range keyVaultCerts.Values() {
-			// sample id https://aro-int-eastus-svc.vault.azure.net/certificates/rp-server
-			u, err := url.Parse(*kc.ID)
-			if err != nil {
-				return err
-			}
-
-			if u.Path == "/certificates/"+c.certificateName && *kc.Attributes.Enabled {
-				continue cert
-			}
-		}
-
-		d.log.Infof("creating %s", c.certificateName)
-		err = d.keyvault.CreateSignedCertificate(ctx, serviceKeyVaultURI, utilkeyvault.IssuerOnecert, c.certificateName, c.commonName, c.eku)
-		if err != nil {
-			return err
-		}
-
-		certs[i].created = true
-	}
-
-	for _, c := range certs {
-		if !c.created {
-			continue
-		}
-
-		err = d.keyvault.WaitForCertificateOperation(ctx, serviceKeyVaultURI, c.certificateName)
 		if err != nil {
 			return err
 		}
