@@ -21,6 +21,6 @@ jobs:
       dstAuth: $(acr-push-auth)
       srcAuthGeneva: $(acr-geneva-pull-auth)
       srcAuthQuay: $(quay-pull-auth)
-      dstACRName: ${{ parameters.dstACRName }}
+      dstACRName: $(dstACRName )
       workingDirectory: ${{ variables.modulePath }}
       deployerDirectory: '$(System.ArtifactsDirectory)/deployer'
