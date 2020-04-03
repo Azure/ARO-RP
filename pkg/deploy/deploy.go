@@ -27,10 +27,6 @@ import (
 
 var _ Deployer = (*deployer)(nil)
 
-const (
-	vmssPrefix = "rp-vmss-"
-)
-
 type Deployer interface {
 	PreDeploy(context.Context) (string, error)
 	Deploy(context.Context, string) error

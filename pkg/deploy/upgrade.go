@@ -5,12 +5,15 @@ package deploy
 
 import (
 	"context"
-	"sync"
 	"time"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	"github.com/Azure/go-autorest/autorest/to"
 	"k8s.io/apimachinery/pkg/util/wait"
+)
+
+const (
+	vmssPrefix = "rp-vmss-"
 )
 
 func (d *deployer) Upgrade(ctx context.Context) error {
@@ -56,14 +59,7 @@ func (d *deployer) removeOldScalesets(ctx context.Context) error {
 			continue
 		}
 
-		d.log.Printf("stopping scaleset %s", *vmss.Name)
-		err = d.runCommand(ctx, *vmss.Name, "systemctl stop aro-rp")
-		if err != nil {
-			return err
-		}
-
-		d.log.Printf("deleting scaleset %s", *vmss.Name)
-		err = d.vmss.DeleteAndWait(ctx, d.config.ResourceGroupName, *vmss.Name)
+		err = d.removeOldScaleset(ctx, *vmss.Name)
 		if err != nil {
 			return err
 		}
@@ -72,41 +68,31 @@ func (d *deployer) removeOldScalesets(ctx context.Context) error {
 	return nil
 }
 
-func (d *deployer) runCommand(ctx context.Context, vmssName, command string) error {
-	errorsCh := make(chan error)
-	wgDone := make(chan bool)
-	var wg sync.WaitGroup
-
+func (d *deployer) removeOldScaleset(ctx context.Context, vmssName string) error {
 	scalesetVMs, err := d.vmssvms.List(ctx, d.config.ResourceGroupName, vmssName, "", "", "")
 	if err != nil {
 		return err
 	}
 
+	d.log.Printf("stopping scaleset %s", vmssName)
+	errors := make(chan error, len(scalesetVMs))
 	for _, vm := range scalesetVMs {
-		wg.Add(1)
 		go func(id string) {
-			err := d.vmssvms.RunCommandAndWait(ctx, d.config.ResourceGroupName, vmssName, id, mgmtcompute.RunCommandInput{
+			errors <- d.vmssvms.RunCommandAndWait(ctx, d.config.ResourceGroupName, vmssName, id, mgmtcompute.RunCommandInput{
 				CommandID: to.StringPtr("RunShellScript"),
-				Script:    &[]string{command},
+				Script:    &[]string{"systemctl stop aro-rp"},
 			})
-			if err != nil {
-				errorsCh <- err
-			}
-			wg.Done()
-		}(*vm.InstanceID)
+		}(*vm.InstanceID) // https://golang.org/doc/faq#closures_and_goroutines
+	}
 
-		go func() {
-			wg.Wait()
-			close(wgDone)
-		}()
-
-		select {
-		case <-wgDone:
-			break
-		case err := <-errorsCh:
-			close(errorsCh)
+	d.log.Print("waiting for instances to stop")
+	for range scalesetVMs {
+		err := <-errors
+		if err != nil {
 			return err
 		}
 	}
-	return nil
+
+	d.log.Printf("deleting scaleset %s", vmssName)
+	return d.vmss.DeleteAndWait(ctx, d.config.ResourceGroupName, vmssName)
 }
