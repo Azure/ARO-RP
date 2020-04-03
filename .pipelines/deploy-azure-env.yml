@@ -18,4 +18,4 @@ jobs:
     azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
     vsoProjectID: $(vso-project-id)
     vsoConfigPipelineID: $(vso-config-pipeline-id)
-    vsoDeployerPipelineID: $(vso-deployer-build-id)
+    vsoDeployerPipelineID: $(vso-deployer-pipeline-id)
