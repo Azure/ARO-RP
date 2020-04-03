@@ -9,47 +9,47 @@ parameters:
 - name: vsoDeployerPipelineID
 
 jobs:
-  - deployment: "Deploy_${{ parameters.location }}"
-    variables:
-      - template: ../vars.yml
-    pool:
-      vmImage: "ubuntu-latest"
-    environment: ${{ parameters.environment }}
-    strategy:
-      runOnce:
-        deploy:
-          steps:
-            - template: ./template-setup-golang-env.yml
-              parameters:
-                gobin: ${{ variables.GOBIN }}
-                gopath: ${{ variables.GOPATH }}
-                goroot: ${{ variables.GOROOT }}
-                modulePath: ${{ variables.modulePath }}
-            - task: DownloadBuildArtifacts@0
-              inputs:
-                buildType: 'specific'
-                project: ${{ parameters.vsoProjectID }}
-                pipeline: ${{ parameters.vsoConfigPipelineID }}
-                buildVersionToDownload: 'latestFromBranch'
-                branchName: 'refs/heads/master'
-                downloadType: 'specific'
-                downloadPath: '$(System.ArtifactsDirectory)/config'
-              displayName: "Download Config"
-            - task: DownloadBuildArtifacts@0
-              inputs:
-                buildType: 'specific'
-                project: ${{ parameters.vsoProjectID }}
-                pipeline: ${{ parameters.vsoDeployerPipelineID }}
-                buildVersionToDownload: 'latestFromBranch'
-                branchName: 'refs/heads/master'
-                downloadType: 'specific'
-                downloadPath: '$(System.ArtifactsDirectory)/deployer'
-              displayName: "Download Deployer"
-            - template: ./template-deploy-azure-env.yml
-              parameters:
-                workingDirectory: $(system.defaultWorkingDirectory)
-                configDirectory: '$(System.ArtifactsDirectory)/config/drop/deploy'
-                deployerDirectory: '$(System.ArtifactsDirectory)/deployer/drop'
-                configFileName: ${{ parameters.configFileName }}
-                location: ${{ parameters.location }}
-                azureDevOpsJSONSPN: ${{ parameters.azureDevOpsJSONSPN }}
+- deployment: Deploy_${{ parameters.location }}
+  variables:
+  - template: ../vars.yml
+  pool:
+    vmImage: ubuntu-latest
+  environment: ${{ parameters.environment }}
+  strategy:
+    runOnce:
+      deploy:
+        steps:
+        - template: ./template-setup-golang-env.yml
+          parameters:
+            gobin: ${{ variables.GOBIN }}
+            gopath: ${{ variables.GOPATH }}
+            goroot: ${{ variables.GOROOT }}
+            modulePath: ${{ variables.modulePath }}
+        - task: DownloadBuildArtifacts@0
+          inputs:
+            buildType: specific
+            project: ${{ parameters.vsoProjectID }}
+            pipeline: ${{ parameters.vsoConfigPipelineID }}
+            buildVersionToDownload: latestFromBranch
+            branchName: refs/heads/master
+            downloadType: specific
+            downloadPath: $(System.ArtifactsDirectory)/config
+          displayName: Download Config
+        - task: DownloadBuildArtifacts@0
+          inputs:
+            buildType: specific
+            project: ${{ parameters.vsoProjectID }}
+            pipeline: ${{ parameters.vsoDeployerPipelineID }}
+            buildVersionToDownload: latestFromBranch
+            branchName: refs/heads/master
+            downloadType: specific
+            downloadPath: $(System.ArtifactsDirectory)/deployer
+          displayName: Download Deployer
+        - template: ./template-deploy-azure-env.yml
+          parameters:
+            workingDirectory: $(system.defaultWorkingDirectory)
+            configDirectory: $(System.ArtifactsDirectory)/config/drop/deploy
+            deployerDirectory: $(System.ArtifactsDirectory)/deployer/drop
+            configFileName: ${{ parameters.configFileName }}
+            location: ${{ parameters.location }}
+            azureDevOpsJSONSPN: ${{ parameters.azureDevOpsJSONSPN }}

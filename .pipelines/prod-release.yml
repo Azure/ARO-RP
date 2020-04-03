@@ -3,18 +3,18 @@ pr: none
 trigger: none
 
 stages:
-  - stage: Deploy_US_Sector
-    displayName: 🚀 Deploy US Sector
-    jobs:
-      - template: ./templates/template-job-deploy-azure-region.yml
-        parameters:
-          environment: RP-Prod
-          location: eastus
-          configFileName: prod-config.yaml
-          azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
-          vsoProjectID: $(vso-project-id)
-          vsoConfigPipelineID: $(vso-config-pipeline-id)
-          vsoDeployerPipelineID: $(vso-deployer-pipeline-id)
+- stage: Deploy_US_Sector
+  displayName: 🚀 Deploy US Sector
+  jobs:
+  - template: ./templates/template-job-deploy-azure-region.yml
+    parameters:
+      environment: RP-Prod
+      location: eastus
+      configFileName: prod-config.yaml
+      azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
+      vsoProjectID: $(vso-project-id)
+      vsoConfigPipelineID: $(vso-config-pipeline-id)
+      vsoDeployerPipelineID: $(vso-deployer-pipeline-id)
       # - template: ./.pipelines/template-job-deploy-azure-region.yml
       #   parameters:
       #     environment: RP-Prod

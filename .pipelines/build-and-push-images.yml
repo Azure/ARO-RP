@@ -3,35 +3,35 @@ trigger: none
 pr: none
 
 variables:
-  - template: vars.yml
+- template: vars.yml
 
 jobs:
-  - job: "Build_and_push_images"
-    pool:
-      vmImage: "ubuntu-latest"
+- job: Build_and_push_images
+  pool:
+    vmImage: ubuntu-latest
 
-    steps:
-      - template: ./templates/template-setup-golang-env.yml
-        parameters:
-          gobin: ${{ variables.GOBIN }}
-          gopath: ${{ variables.GOPATH }}
-          goroot: ${{ variables.GOROOT }}
-          modulePath: ${{ variables.modulePath }}
-      - template: ./templates/template-setup-azure-tools.yml
-        parameters:
-          workingDirectory: ${{ variables.modulePath }}
-      - template: ./templates/template-az-cli-login.yml
-        parameters:
-          workingDirectory: ${{ variables.modulePath }}
-          azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
-      - template: ./templates/template-push-images-to-acr.yml
-        parameters:
-          workingDirectory: ${{ variables.modulePath }}
-          rpImageACR: $(RP_IMAGE_ACR)
-      - script: |
-          cd ${{ variables.modulePath }}
-          cp -a --parents aro "$(Build.ArtifactStagingDirectory)"
-        displayName: 'Copy artifacts'
-      - task: PublishBuildArtifacts@1
-        displayName: 'Publish Artifacts'
-        name: aro_deployer
+  steps:
+  - template: ./templates/template-setup-golang-env.yml
+    parameters:
+      gobin: ${{ variables.GOBIN }}
+      gopath: ${{ variables.GOPATH }}
+      goroot: ${{ variables.GOROOT }}
+      modulePath: ${{ variables.modulePath }}
+  - template: ./templates/template-setup-azure-tools.yml
+    parameters:
+      workingDirectory: ${{ variables.modulePath }}
+  - template: ./templates/template-az-cli-login.yml
+    parameters:
+      workingDirectory: ${{ variables.modulePath }}
+      azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
+  - template: ./templates/template-push-images-to-acr.yml
+    parameters:
+      workingDirectory: ${{ variables.modulePath }}
+      rpImageACR: $(RP_IMAGE_ACR)
+  - script: |
+      cd ${{ variables.modulePath }}
+      cp -a --parents aro "$(Build.ArtifactStagingDirectory)"
+    displayName: Copy artifacts
+  - task: PublishBuildArtifacts@1
+    displayName: Publish Artifacts
+    name: aro_deployer

@@ -3,15 +3,15 @@ pr: none
 trigger: none
 
 stages:
-  - stage: Deploy_INT
-    displayName: 🚀 Deploy INT
-    jobs:
-      - template: ./templates/template-job-deploy-azure-env.yml
-        parameters:
-          environment: RP-INT
-          location: eastus
-          configFileName: int-config.yaml
-          azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
-          vsoProjectID: $(vso-project-id)
-          vsoConfigPipelineID: $(vso-config-pipeline-id)
-          vsoDeployerPipelineID: $(vso-deployer-pipeline-id)
+- stage: Deploy_INT
+  displayName: 🚀 Deploy INT
+  jobs:
+  - template: ./templates/template-job-deploy-azure-env.yml
+    parameters:
+      environment: RP-INT
+      location: eastus
+      configFileName: int-config.yaml
+      azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
+      vsoProjectID: $(vso-project-id)
+      vsoConfigPipelineID: $(vso-config-pipeline-id)
+      vsoDeployerPipelineID: $(vso-deployer-pipeline-id)
