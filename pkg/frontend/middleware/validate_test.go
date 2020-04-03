@@ -53,32 +53,32 @@ func TestValidate(t *testing.T) {
 		{
 			name:    "invalid openShiftClusters - subscriptionId",
 			path:    "/subscriptions/invalid/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/cluster?api-version=2020-04-30",
-			wantErr: "404: InvalidSubscriptionID: : The provided subscription identifier 'invalid' is malformed or invalid.",
+			wantErr: "400: InvalidSubscriptionID: : The provided subscription identifier 'invalid' is malformed or invalid.",
 		},
 		{
 			name:    "invalid openShiftClusters - resourceGroupName",
 			path:    "/subscriptions/42d9eac4-d29a-4d6e-9e26-3439758b1491/resourcegroups/$/providers/microsoft.redhatopenshift/openshiftclusters/cluster?api-version=2020-04-30",
-			wantErr: "404: ResourceGroupNotFound: : Resource group '$' could not be found.",
+			wantErr: "400: ResourceGroupNotFound: : Resource group '$' could not be found.",
 		},
 		{
 			name:    "invalid openShiftClusters - resourceProviderNamespace",
 			path:    "/subscriptions/42d9eac4-d29a-4d6e-9e26-3439758b1491/resourcegroups/resourcegroup/providers/invalid/openshiftclusters/cluster?api-version=2020-04-30",
-			wantErr: "404: InvalidResourceNamespace: : The resource namespace 'invalid' is invalid.",
+			wantErr: "400: InvalidResourceNamespace: : The resource namespace 'invalid' is invalid.",
 		},
 		{
 			name:    "invalid openShiftClusters - resourceType",
 			path:    "/subscriptions/42d9eac4-d29a-4d6e-9e26-3439758b1491/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/invalid/cluster?api-version=2020-04-30",
-			wantErr: "404: InvalidResourceType: : The resource type 'invalid' could not be found in the namespace 'microsoft.redhatopenshift' for api version '2020-04-30'.",
+			wantErr: "400: InvalidResourceType: : The resource type 'invalid' could not be found in the namespace 'microsoft.redhatopenshift' for api version '2020-04-30'.",
 		},
 		{
 			name:    "invalid openShiftClusters - resourceName",
 			path:    "/subscriptions/42d9eac4-d29a-4d6e-9e26-3439758b1491/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/$?api-version=2020-04-30",
-			wantErr: "404: ResourceNotFound: : The Resource 'microsoft.redhatopenshift/openshiftclusters/$' under resource group 'resourcegroup' was not found.",
+			wantErr: "400: ResourceNotFound: : The Resource 'microsoft.redhatopenshift/openshiftclusters/$' under resource group 'resourcegroup' was not found.",
 		},
 		{
 			name:    "invalid openShiftClusters - api-version",
 			path:    "/subscriptions/42d9eac4-d29a-4d6e-9e26-3439758b1491/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/cluster?api-version=invalid",
-			wantErr: "404: InvalidResourceType: : The resource type 'openshiftclusters' could not be found in the namespace 'microsoft.redhatopenshift' for api version 'invalid'.",
+			wantErr: "400: InvalidResourceType: : The resource type 'openshiftclusters' could not be found in the namespace 'microsoft.redhatopenshift' for api version 'invalid'.",
 		},
 		{
 			name: "valid operations",
@@ -87,12 +87,12 @@ func TestValidate(t *testing.T) {
 		{
 			name:    "invalid operations - resourceProviderNamespace",
 			path:    "/providers/invalid/operations?api-version=2020-04-30",
-			wantErr: "404: InvalidResourceNamespace: : The resource namespace 'invalid' is invalid.",
+			wantErr: "400: InvalidResourceNamespace: : The resource namespace 'invalid' is invalid.",
 		},
 		{
 			name:    "invalid operations - api-version",
 			path:    "/providers/microsoft.redhatopenshift/operations?api-version=invalid",
-			wantErr: "404: InvalidResourceType: : The resource type '' could not be found in the namespace 'microsoft.redhatopenshift' for api version 'invalid'.",
+			wantErr: "400: InvalidResourceType: : The resource type '' could not be found in the namespace 'microsoft.redhatopenshift' for api version 'invalid'.",
 		},
 		{
 			name: "valid subscriptions",
@@ -101,7 +101,7 @@ func TestValidate(t *testing.T) {
 		{
 			name:    "invalid subscriptions - subscriptionId",
 			path:    "/subscriptions/invalid?api-version=2.0",
-			wantErr: "404: InvalidSubscriptionID: : The provided subscription identifier 'invalid' is malformed or invalid.",
+			wantErr: "400: InvalidSubscriptionID: : The provided subscription identifier 'invalid' is malformed or invalid.",
 		},
 	}
 
