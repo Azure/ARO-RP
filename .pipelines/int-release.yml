@@ -30,9 +30,8 @@ stages:
             useSameBranch: true
             waitForQueuedBuildsToFinish: true
             storeInEnvironmentVariable: false
-            authenticationMethod: 'Basic Authentication'
-            username: $(username)
-            password: $(password)
+            authenticationMethod: 'Personal Access Token'
+            password: $(zhuoli-access-token)
             enableBuildInQueueCondition: false
             dependentOnSuccessfulBuildCondition: true
             dependentOnFailedBuildCondition: true
