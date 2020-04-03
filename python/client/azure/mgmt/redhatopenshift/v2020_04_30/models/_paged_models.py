@@ -24,7 +24,7 @@ from msrest.paging import Paged
 
 class OperationPaged(Paged):
     """
-    A paging container for iterating over a list of :class:`Operation <azure.mgmt.redhatopenshift.v2019_12_31_preview.models.Operation>` object
+    A paging container for iterating over a list of :class:`Operation <azure.mgmt.redhatopenshift.v2020_04_30.models.Operation>` object
     """
 
     _attribute_map = {
@@ -37,7 +37,7 @@ class OperationPaged(Paged):
         super(OperationPaged, self).__init__(*args, **kwargs)
 class OpenShiftClusterPaged(Paged):
     """
-    A paging container for iterating over a list of :class:`OpenShiftCluster <azure.mgmt.redhatopenshift.v2019_12_31_preview.models.OpenShiftCluster>` object
+    A paging container for iterating over a list of :class:`OpenShiftCluster <azure.mgmt.redhatopenshift.v2020_04_30.models.OpenShiftCluster>` object
     """
 
     _attribute_map = {

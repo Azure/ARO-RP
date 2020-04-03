@@ -37,7 +37,7 @@ class OpenShiftClustersOperations(object):
     :param config: Configuration of service client.
     :param serializer: An object model serializer.
     :param deserializer: An object model deserializer.
-    :ivar api_version: The API version to use for this operation. Constant value: "2019-12-31-preview".
+    :ivar api_version: The API version to use for this operation. Constant value: "2020-04-30".
     """
 
     models = models
@@ -47,7 +47,7 @@ class OpenShiftClustersOperations(object):
         self._client = client
         self._serialize = serializer
         self._deserialize = deserializer
-        self.api_version = "2019-12-31-preview"
+        self.api_version = "2020-04-30"
 
         self.config = config
 
@@ -65,7 +65,7 @@ class OpenShiftClustersOperations(object):
          overrides<msrest:optionsforoperations>`.
         :return: An iterator like instance of OpenShiftCluster
         :rtype:
-         ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.OpenShiftClusterPaged[~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.OpenShiftCluster]
+         ~azure.mgmt.redhatopenshift.v2020_04_30.models.OpenShiftClusterPaged[~azure.mgmt.redhatopenshift.v2020_04_30.models.OpenShiftCluster]
         :raises: :class:`CloudError<msrestazure.azure_exceptions.CloudError>`
         """
         def prepare_request(next_link=None):
@@ -138,7 +138,7 @@ class OpenShiftClustersOperations(object):
          overrides<msrest:optionsforoperations>`.
         :return: An iterator like instance of OpenShiftCluster
         :rtype:
-         ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.OpenShiftClusterPaged[~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.OpenShiftCluster]
+         ~azure.mgmt.redhatopenshift.v2020_04_30.models.OpenShiftClusterPaged[~azure.mgmt.redhatopenshift.v2020_04_30.models.OpenShiftCluster]
         :raises: :class:`CloudError<msrestazure.azure_exceptions.CloudError>`
         """
         def prepare_request(next_link=None):
@@ -215,8 +215,8 @@ class OpenShiftClustersOperations(object):
          overrides<msrest:optionsforoperations>`.
         :return: OpenShiftCluster or ClientRawResponse if raw=true
         :rtype:
-         ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.OpenShiftCluster
-         or ~msrest.pipeline.ClientRawResponse
+         ~azure.mgmt.redhatopenshift.v2020_04_30.models.OpenShiftCluster or
+         ~msrest.pipeline.ClientRawResponse
         :raises: :class:`CloudError<msrestazure.azure_exceptions.CloudError>`
         """
         # Construct URL
@@ -330,7 +330,7 @@ class OpenShiftClustersOperations(object):
         :type resource_name: str
         :param parameters: The OpenShift cluster resource.
         :type parameters:
-         ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.OpenShiftCluster
+         ~azure.mgmt.redhatopenshift.v2020_04_30.models.OpenShiftCluster
         :param dict custom_headers: headers that will be added to the request
         :param bool raw: The poller return type is ClientRawResponse, the
          direct response alongside the deserialized response
@@ -339,9 +339,9 @@ class OpenShiftClustersOperations(object):
         :return: An instance of LROPoller that returns OpenShiftCluster or
          ClientRawResponse<OpenShiftCluster> if raw==True
         :rtype:
-         ~msrestazure.azure_operation.AzureOperationPoller[~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.OpenShiftCluster]
+         ~msrestazure.azure_operation.AzureOperationPoller[~azure.mgmt.redhatopenshift.v2020_04_30.models.OpenShiftCluster]
          or
-         ~msrestazure.azure_operation.AzureOperationPoller[~msrest.pipeline.ClientRawResponse[~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.OpenShiftCluster]]
+         ~msrestazure.azure_operation.AzureOperationPoller[~msrest.pipeline.ClientRawResponse[~azure.mgmt.redhatopenshift.v2020_04_30.models.OpenShiftCluster]]
         :raises: :class:`CloudError<msrestazure.azure_exceptions.CloudError>`
         """
         raw_result = self._create_or_update_initial(
@@ -523,7 +523,7 @@ class OpenShiftClustersOperations(object):
         :type resource_name: str
         :param parameters: The OpenShift cluster resource.
         :type parameters:
-         ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.OpenShiftClusterUpdate
+         ~azure.mgmt.redhatopenshift.v2020_04_30.models.OpenShiftClusterUpdate
         :param dict custom_headers: headers that will be added to the request
         :param bool raw: The poller return type is ClientRawResponse, the
          direct response alongside the deserialized response
@@ -532,9 +532,9 @@ class OpenShiftClustersOperations(object):
         :return: An instance of LROPoller that returns OpenShiftCluster or
          ClientRawResponse<OpenShiftCluster> if raw==True
         :rtype:
-         ~msrestazure.azure_operation.AzureOperationPoller[~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.OpenShiftCluster]
+         ~msrestazure.azure_operation.AzureOperationPoller[~azure.mgmt.redhatopenshift.v2020_04_30.models.OpenShiftCluster]
          or
-         ~msrestazure.azure_operation.AzureOperationPoller[~msrest.pipeline.ClientRawResponse[~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.OpenShiftCluster]]
+         ~msrestazure.azure_operation.AzureOperationPoller[~msrest.pipeline.ClientRawResponse[~azure.mgmt.redhatopenshift.v2020_04_30.models.OpenShiftCluster]]
         :raises: :class:`CloudError<msrestazure.azure_exceptions.CloudError>`
         """
         raw_result = self._update_initial(
@@ -585,7 +585,7 @@ class OpenShiftClustersOperations(object):
          overrides<msrest:optionsforoperations>`.
         :return: OpenShiftClusterCredentials or ClientRawResponse if raw=true
         :rtype:
-         ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.OpenShiftClusterCredentials
+         ~azure.mgmt.redhatopenshift.v2020_04_30.models.OpenShiftClusterCredentials
          or ~msrest.pipeline.ClientRawResponse
         :raises: :class:`CloudError<msrestazure.azure_exceptions.CloudError>`
         """

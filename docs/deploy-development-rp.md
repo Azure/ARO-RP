@@ -117,7 +117,7 @@
 
      ```bash
      curl -k \
-       "https://localhost:8443/providers/Microsoft.RedHatOpenShift/operations?api-version=2019-12-31-preview"
+       "https://localhost:8443/providers/Microsoft.RedHatOpenShift/operations?api-version=2020-04-30"
      ```
 
 

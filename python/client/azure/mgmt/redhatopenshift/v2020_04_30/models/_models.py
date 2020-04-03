@@ -29,7 +29,7 @@ class APIServerProfile(Model):
     :param visibility: API server visibility (immutable). Possible values
      include: 'Private', 'Public'
     :type visibility: str or
-     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.enum
+     ~azure.mgmt.redhatopenshift.v2020_04_30.models.enum
     :param url: The URL to access the cluster API server (immutable).
     :type url: str
     :param ip: The IP of the cluster API server (immutable).
@@ -42,11 +42,11 @@ class APIServerProfile(Model):
         'ip': {'key': 'ip', 'type': 'str'},
     }
 
-    def __init__(self, *, visibility=None, url: str=None, ip: str=None, **kwargs) -> None:
+    def __init__(self, **kwargs):
         super(APIServerProfile, self).__init__(**kwargs)
-        self.visibility = visibility
-        self.url = url
-        self.ip = ip
+        self.visibility = kwargs.get('visibility', None)
+        self.url = kwargs.get('url', None)
+        self.ip = kwargs.get('ip', None)
 
 
 class Resource(Model):
@@ -77,7 +77,7 @@ class Resource(Model):
         'type': {'key': 'type', 'type': 'str'},
     }
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs):
         super(Resource, self).__init__(**kwargs)
         self.id = None
         self.name = None
@@ -117,7 +117,7 @@ class AzureEntityResource(Resource):
         'etag': {'key': 'etag', 'type': 'str'},
     }
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs):
         super(AzureEntityResource, self).__init__(**kwargs)
         self.etag = None
 
@@ -126,17 +126,16 @@ class CloudError(Model):
     """CloudError represents a cloud error.
 
     :param error: An error response from the service.
-    :type error:
-     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.CloudErrorBody
+    :type error: ~azure.mgmt.redhatopenshift.v2020_04_30.models.CloudErrorBody
     """
 
     _attribute_map = {
         'error': {'key': 'error', 'type': 'CloudErrorBody'},
     }
 
-    def __init__(self, *, error=None, **kwargs) -> None:
+    def __init__(self, **kwargs):
         super(CloudError, self).__init__(**kwargs)
-        self.error = error
+        self.error = kwargs.get('error', None)
 
 
 class CloudErrorException(HttpOperationError):
@@ -165,7 +164,7 @@ class CloudErrorBody(Model):
     :type target: str
     :param details: A list of additional details about the error.
     :type details:
-     list[~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.CloudErrorBody]
+     list[~azure.mgmt.redhatopenshift.v2020_04_30.models.CloudErrorBody]
     """
 
     _attribute_map = {
@@ -175,12 +174,12 @@ class CloudErrorBody(Model):
         'details': {'key': 'details', 'type': '[CloudErrorBody]'},
     }
 
-    def __init__(self, *, code: str=None, message: str=None, target: str=None, details=None, **kwargs) -> None:
+    def __init__(self, **kwargs):
         super(CloudErrorBody, self).__init__(**kwargs)
-        self.code = code
-        self.message = message
-        self.target = target
-        self.details = details
+        self.code = kwargs.get('code', None)
+        self.message = kwargs.get('message', None)
+        self.target = kwargs.get('target', None)
+        self.details = kwargs.get('details', None)
 
 
 class ClusterProfile(Model):
@@ -204,12 +203,12 @@ class ClusterProfile(Model):
         'resource_group_id': {'key': 'resourceGroupId', 'type': 'str'},
     }
 
-    def __init__(self, *, pull_secret: str=None, domain: str=None, version: str=None, resource_group_id: str=None, **kwargs) -> None:
+    def __init__(self, **kwargs):
         super(ClusterProfile, self).__init__(**kwargs)
-        self.pull_secret = pull_secret
-        self.domain = domain
-        self.version = version
-        self.resource_group_id = resource_group_id
+        self.pull_secret = kwargs.get('pull_secret', None)
+        self.domain = kwargs.get('domain', None)
+        self.version = kwargs.get('version', None)
+        self.resource_group_id = kwargs.get('resource_group_id', None)
 
 
 class ConsoleProfile(Model):
@@ -223,9 +222,9 @@ class ConsoleProfile(Model):
         'url': {'key': 'url', 'type': 'str'},
     }
 
-    def __init__(self, *, url: str=None, **kwargs) -> None:
+    def __init__(self, **kwargs):
         super(ConsoleProfile, self).__init__(**kwargs)
-        self.url = url
+        self.url = kwargs.get('url', None)
 
 
 class Display(Model):
@@ -249,12 +248,12 @@ class Display(Model):
         'description': {'key': 'description', 'type': 'str'},
     }
 
-    def __init__(self, *, provider: str=None, resource: str=None, operation: str=None, description: str=None, **kwargs) -> None:
+    def __init__(self, **kwargs):
         super(Display, self).__init__(**kwargs)
-        self.provider = provider
-        self.resource = resource
-        self.operation = operation
-        self.description = description
+        self.provider = kwargs.get('provider', None)
+        self.resource = kwargs.get('resource', None)
+        self.operation = kwargs.get('operation', None)
+        self.description = kwargs.get('description', None)
 
 
 class IngressProfile(Model):
@@ -265,7 +264,7 @@ class IngressProfile(Model):
     :param visibility: Ingress visibility (immutable). Possible values
      include: 'Private', 'Public'
     :type visibility: str or
-     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.enum
+     ~azure.mgmt.redhatopenshift.v2020_04_30.models.enum
     :param ip: The IP of the ingress (immutable).
     :type ip: str
     """
@@ -276,11 +275,11 @@ class IngressProfile(Model):
         'ip': {'key': 'ip', 'type': 'str'},
     }
 
-    def __init__(self, *, name: str=None, visibility=None, ip: str=None, **kwargs) -> None:
+    def __init__(self, **kwargs):
         super(IngressProfile, self).__init__(**kwargs)
-        self.name = name
-        self.visibility = visibility
-        self.ip = ip
+        self.name = kwargs.get('name', None)
+        self.visibility = kwargs.get('visibility', None)
+        self.ip = kwargs.get('ip', None)
 
 
 class MasterProfile(Model):
@@ -288,8 +287,7 @@ class MasterProfile(Model):
 
     :param vm_size: The size of the master VMs (immutable). Possible values
      include: 'Standard_D2s_v3', 'Standard_D4s_v3', 'Standard_D8s_v3'
-    :type vm_size: str or
-     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.enum
+    :type vm_size: str or ~azure.mgmt.redhatopenshift.v2020_04_30.models.enum
     :param subnet_id: The Azure resource ID of the master subnet (immutable).
     :type subnet_id: str
     """
@@ -299,10 +297,10 @@ class MasterProfile(Model):
         'subnet_id': {'key': 'subnetId', 'type': 'str'},
     }
 
-    def __init__(self, *, vm_size=None, subnet_id: str=None, **kwargs) -> None:
+    def __init__(self, **kwargs):
         super(MasterProfile, self).__init__(**kwargs)
-        self.vm_size = vm_size
-        self.subnet_id = subnet_id
+        self.vm_size = kwargs.get('vm_size', None)
+        self.subnet_id = kwargs.get('subnet_id', None)
 
 
 class NetworkProfile(Model):
@@ -320,10 +318,10 @@ class NetworkProfile(Model):
         'service_cidr': {'key': 'serviceCidr', 'type': 'str'},
     }
 
-    def __init__(self, *, pod_cidr: str=None, service_cidr: str=None, **kwargs) -> None:
+    def __init__(self, **kwargs):
         super(NetworkProfile, self).__init__(**kwargs)
-        self.pod_cidr = pod_cidr
-        self.service_cidr = service_cidr
+        self.pod_cidr = kwargs.get('pod_cidr', None)
+        self.service_cidr = kwargs.get('service_cidr', None)
 
 
 class TrackedResource(Resource):
@@ -363,10 +361,10 @@ class TrackedResource(Resource):
         'location': {'key': 'location', 'type': 'str'},
     }
 
-    def __init__(self, *, location: str, tags=None, **kwargs) -> None:
+    def __init__(self, **kwargs):
         super(TrackedResource, self).__init__(**kwargs)
-        self.tags = tags
-        self.location = location
+        self.tags = kwargs.get('tags', None)
+        self.location = kwargs.get('location', None)
 
 
 class OpenShiftCluster(TrackedResource):
@@ -393,31 +391,31 @@ class OpenShiftCluster(TrackedResource):
      Possible values include: 'AdminUpdating', 'Creating', 'Deleting',
      'Failed', 'Succeeded', 'Updating'
     :type provisioning_state: str or
-     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.enum
+     ~azure.mgmt.redhatopenshift.v2020_04_30.models.enum
     :param cluster_profile: The cluster profile.
     :type cluster_profile:
-     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.ClusterProfile
+     ~azure.mgmt.redhatopenshift.v2020_04_30.models.ClusterProfile
     :param console_profile: The console profile.
     :type console_profile:
-     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.ConsoleProfile
+     ~azure.mgmt.redhatopenshift.v2020_04_30.models.ConsoleProfile
     :param service_principal_profile: The cluster service principal profile.
     :type service_principal_profile:
-     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.ServicePrincipalProfile
+     ~azure.mgmt.redhatopenshift.v2020_04_30.models.ServicePrincipalProfile
     :param network_profile: The cluster network profile.
     :type network_profile:
-     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.NetworkProfile
+     ~azure.mgmt.redhatopenshift.v2020_04_30.models.NetworkProfile
     :param master_profile: The cluster master profile.
     :type master_profile:
-     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.MasterProfile
+     ~azure.mgmt.redhatopenshift.v2020_04_30.models.MasterProfile
     :param worker_profiles: The cluster worker profiles.
     :type worker_profiles:
-     list[~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.WorkerProfile]
+     list[~azure.mgmt.redhatopenshift.v2020_04_30.models.WorkerProfile]
     :param apiserver_profile: The cluster API server profile.
     :type apiserver_profile:
-     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.APIServerProfile
+     ~azure.mgmt.redhatopenshift.v2020_04_30.models.APIServerProfile
     :param ingress_profiles: The cluster ingress profiles.
     :type ingress_profiles:
-     list[~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.IngressProfile]
+     list[~azure.mgmt.redhatopenshift.v2020_04_30.models.IngressProfile]
     """
 
     _validation = {
@@ -444,17 +442,17 @@ class OpenShiftCluster(TrackedResource):
         'ingress_profiles': {'key': 'properties.ingressProfiles', 'type': '[IngressProfile]'},
     }
 
-    def __init__(self, *, location: str, tags=None, provisioning_state=None, cluster_profile=None, console_profile=None, service_principal_profile=None, network_profile=None, master_profile=None, worker_profiles=None, apiserver_profile=None, ingress_profiles=None, **kwargs) -> None:
-        super(OpenShiftCluster, self).__init__(tags=tags, location=location, **kwargs)
-        self.provisioning_state = provisioning_state
-        self.cluster_profile = cluster_profile
-        self.console_profile = console_profile
-        self.service_principal_profile = service_principal_profile
-        self.network_profile = network_profile
-        self.master_profile = master_profile
-        self.worker_profiles = worker_profiles
-        self.apiserver_profile = apiserver_profile
-        self.ingress_profiles = ingress_profiles
+    def __init__(self, **kwargs):
+        super(OpenShiftCluster, self).__init__(**kwargs)
+        self.provisioning_state = kwargs.get('provisioning_state', None)
+        self.cluster_profile = kwargs.get('cluster_profile', None)
+        self.console_profile = kwargs.get('console_profile', None)
+        self.service_principal_profile = kwargs.get('service_principal_profile', None)
+        self.network_profile = kwargs.get('network_profile', None)
+        self.master_profile = kwargs.get('master_profile', None)
+        self.worker_profiles = kwargs.get('worker_profiles', None)
+        self.apiserver_profile = kwargs.get('apiserver_profile', None)
+        self.ingress_profiles = kwargs.get('ingress_profiles', None)
 
 
 class OpenShiftClusterCredentials(Model):
@@ -471,10 +469,10 @@ class OpenShiftClusterCredentials(Model):
         'kubeadmin_password': {'key': 'kubeadminPassword', 'type': 'str'},
     }
 
-    def __init__(self, *, kubeadmin_username: str=None, kubeadmin_password: str=None, **kwargs) -> None:
+    def __init__(self, **kwargs):
         super(OpenShiftClusterCredentials, self).__init__(**kwargs)
-        self.kubeadmin_username = kubeadmin_username
-        self.kubeadmin_password = kubeadmin_password
+        self.kubeadmin_username = kwargs.get('kubeadmin_username', None)
+        self.kubeadmin_password = kwargs.get('kubeadmin_password', None)
 
 
 class OpenShiftClusterUpdate(Model):
@@ -486,31 +484,31 @@ class OpenShiftClusterUpdate(Model):
      Possible values include: 'AdminUpdating', 'Creating', 'Deleting',
      'Failed', 'Succeeded', 'Updating'
     :type provisioning_state: str or
-     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.enum
+     ~azure.mgmt.redhatopenshift.v2020_04_30.models.enum
     :param cluster_profile: The cluster profile.
     :type cluster_profile:
-     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.ClusterProfile
+     ~azure.mgmt.redhatopenshift.v2020_04_30.models.ClusterProfile
     :param console_profile: The console profile.
     :type console_profile:
-     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.ConsoleProfile
+     ~azure.mgmt.redhatopenshift.v2020_04_30.models.ConsoleProfile
     :param service_principal_profile: The cluster service principal profile.
     :type service_principal_profile:
-     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.ServicePrincipalProfile
+     ~azure.mgmt.redhatopenshift.v2020_04_30.models.ServicePrincipalProfile
     :param network_profile: The cluster network profile.
     :type network_profile:
-     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.NetworkProfile
+     ~azure.mgmt.redhatopenshift.v2020_04_30.models.NetworkProfile
     :param master_profile: The cluster master profile.
     :type master_profile:
-     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.MasterProfile
+     ~azure.mgmt.redhatopenshift.v2020_04_30.models.MasterProfile
     :param worker_profiles: The cluster worker profiles.
     :type worker_profiles:
-     list[~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.WorkerProfile]
+     list[~azure.mgmt.redhatopenshift.v2020_04_30.models.WorkerProfile]
     :param apiserver_profile: The cluster API server profile.
     :type apiserver_profile:
-     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.APIServerProfile
+     ~azure.mgmt.redhatopenshift.v2020_04_30.models.APIServerProfile
     :param ingress_profiles: The cluster ingress profiles.
     :type ingress_profiles:
-     list[~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.IngressProfile]
+     list[~azure.mgmt.redhatopenshift.v2020_04_30.models.IngressProfile]
     """
 
     _attribute_map = {
@@ -526,18 +524,18 @@ class OpenShiftClusterUpdate(Model):
         'ingress_profiles': {'key': 'properties.ingressProfiles', 'type': '[IngressProfile]'},
     }
 
-    def __init__(self, *, tags=None, provisioning_state=None, cluster_profile=None, console_profile=None, service_principal_profile=None, network_profile=None, master_profile=None, worker_profiles=None, apiserver_profile=None, ingress_profiles=None, **kwargs) -> None:
+    def __init__(self, **kwargs):
         super(OpenShiftClusterUpdate, self).__init__(**kwargs)
-        self.tags = tags
-        self.provisioning_state = provisioning_state
-        self.cluster_profile = cluster_profile
-        self.console_profile = console_profile
-        self.service_principal_profile = service_principal_profile
-        self.network_profile = network_profile
-        self.master_profile = master_profile
-        self.worker_profiles = worker_profiles
-        self.apiserver_profile = apiserver_profile
-        self.ingress_profiles = ingress_profiles
+        self.tags = kwargs.get('tags', None)
+        self.provisioning_state = kwargs.get('provisioning_state', None)
+        self.cluster_profile = kwargs.get('cluster_profile', None)
+        self.console_profile = kwargs.get('console_profile', None)
+        self.service_principal_profile = kwargs.get('service_principal_profile', None)
+        self.network_profile = kwargs.get('network_profile', None)
+        self.master_profile = kwargs.get('master_profile', None)
+        self.worker_profiles = kwargs.get('worker_profiles', None)
+        self.apiserver_profile = kwargs.get('apiserver_profile', None)
+        self.ingress_profiles = kwargs.get('ingress_profiles', None)
 
 
 class Operation(Model):
@@ -546,8 +544,7 @@ class Operation(Model):
     :param name: Operation name: {provider}/{resource}/{operation}.
     :type name: str
     :param display: The object that describes the operation.
-    :type display:
-     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.Display
+    :type display: ~azure.mgmt.redhatopenshift.v2020_04_30.models.Display
     :param origin: Sources of requests to this operation.  Comma separated
      list with valid values user or system, e.g. "user,system".
     :type origin: str
@@ -559,11 +556,11 @@ class Operation(Model):
         'origin': {'key': 'origin', 'type': 'str'},
     }
 
-    def __init__(self, *, name: str=None, display=None, origin: str=None, **kwargs) -> None:
+    def __init__(self, **kwargs):
         super(Operation, self).__init__(**kwargs)
-        self.name = name
-        self.display = display
-        self.origin = origin
+        self.name = kwargs.get('name', None)
+        self.display = kwargs.get('display', None)
+        self.origin = kwargs.get('origin', None)
 
 
 class ProxyResource(Resource):
@@ -595,7 +592,7 @@ class ProxyResource(Resource):
         'type': {'key': 'type', 'type': 'str'},
     }
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs):
         super(ProxyResource, self).__init__(**kwargs)
 
 
@@ -613,10 +610,10 @@ class ServicePrincipalProfile(Model):
         'client_secret': {'key': 'clientSecret', 'type': 'str'},
     }
 
-    def __init__(self, *, client_id: str=None, client_secret: str=None, **kwargs) -> None:
+    def __init__(self, **kwargs):
         super(ServicePrincipalProfile, self).__init__(**kwargs)
-        self.client_id = client_id
-        self.client_secret = client_secret
+        self.client_id = kwargs.get('client_id', None)
+        self.client_secret = kwargs.get('client_secret', None)
 
 
 class WorkerProfile(Model):
@@ -626,8 +623,7 @@ class WorkerProfile(Model):
     :type name: str
     :param vm_size: The size of the worker VMs (immutable). Possible values
      include: 'Standard_D2s_v3', 'Standard_D4s_v3', 'Standard_D8s_v3'
-    :type vm_size: str or
-     ~azure.mgmt.redhatopenshift.v2019_12_31_preview.models.enum
+    :type vm_size: str or ~azure.mgmt.redhatopenshift.v2020_04_30.models.enum
     :param disk_size_gb: The disk size of the worker VMs.  Must be 128 or
      greater (immutable).
     :type disk_size_gb: int
@@ -646,10 +642,10 @@ class WorkerProfile(Model):
         'count': {'key': 'count', 'type': 'int'},
     }
 
-    def __init__(self, *, name: str=None, vm_size=None, disk_size_gb: int=None, subnet_id: str=None, count: int=None, **kwargs) -> None:
+    def __init__(self, **kwargs):
         super(WorkerProfile, self).__init__(**kwargs)
-        self.name = name
-        self.vm_size = vm_size
-        self.disk_size_gb = disk_size_gb
-        self.subnet_id = subnet_id
-        self.count = count
+        self.name = kwargs.get('name', None)
+        self.vm_size = kwargs.get('vm_size', None)
+        self.disk_size_gb = kwargs.get('disk_size_gb', None)
+        self.subnet_id = kwargs.get('subnet_id', None)
+        self.count = kwargs.get('count', None)

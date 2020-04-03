@@ -12,7 +12,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest"
 
-	"github.com/Azure/ARO-RP/pkg/client/services/preview/redhatopenshift/mgmt/2019-12-31-preview/redhatopenshift"
+	"github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2020-04-30/redhatopenshift"
 )
 
 // OpenShiftClustersClient is a minimal interface for azure OpenshiftClustersClient
