@@ -1,7 +1,7 @@
-// Package resources implements the Azure ARM Resources service API version 2018-05-01.
+// Package features implements the Azure ARM Features service API version 2019-07-01.
 //
 // Provides operations for working with resources and resource groups.
-package resources
+package features
 
 // Copyright (c) Microsoft and contributors.  All rights reserved.
 //
@@ -25,11 +25,11 @@ import (
 )
 
 const (
-	// DefaultBaseURI is the default URI used for the service Resources
+	// DefaultBaseURI is the default URI used for the service Features
 	DefaultBaseURI = "https://management.azure.com"
 )
 
-// BaseClient is the base client for Resources.
+// BaseClient is the base client for Features.
 type BaseClient struct {
 	autorest.Client
 	BaseURI        string
