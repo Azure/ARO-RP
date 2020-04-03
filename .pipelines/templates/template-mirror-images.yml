@@ -1,5 +1,4 @@
 parameters:
-  workingDirectory: ''
   deployerDirectory: ''
   dstAuth: ''
   dstACRName: ''
@@ -9,7 +8,6 @@ parameters:
 steps:
 - script: |
     set -eu
-    cd ${{ parameters.workingDirectory }}
 
     export DST_AUTH=${{ parameters.dstAuth }}
     export DST_ACR_NAME=${{ parameters.dstACRName }}
@@ -18,4 +16,4 @@ steps:
 
     chmod +x ${{ parameters.deployerDirectory }}/aro
     ${{ parameters.deployerDirectory }}/aro mirror
-  displayName: 🚀 Fetch and mirror latest aro build
+  displayName: 🚀 Fetch and mirror images
