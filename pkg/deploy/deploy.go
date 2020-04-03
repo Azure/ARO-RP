@@ -5,13 +5,10 @@ package deploy
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
-	"net/http"
 	"reflect"
 	"strings"
-	"time"
 
 	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
@@ -51,8 +48,6 @@ type deployer struct {
 	vmssvms           compute.VirtualMachineScaleSetVMsClient
 	keyvault          keyvault.Manager
 
-	cli *http.Client
-
 	config  *RPConfig
 	version string
 }
@@ -79,13 +74,6 @@ func New(ctx context.Context, log *logrus.Entry, config *RPConfig, version strin
 		vmss:              compute.NewVirtualMachineScaleSetsClient(config.SubscriptionID, authorizer),
 		vmssvms:           compute.NewVirtualMachineScaleSetVMsClient(config.SubscriptionID, authorizer),
 		keyvault:          keyvault.NewManager(kvAuthorizer),
-
-		cli: &http.Client{
-			Timeout: 5 * time.Second,
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-			},
-		},
 
 		config:  config,
 		version: version,
