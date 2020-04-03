@@ -1,0 +1,21 @@
+parameters:
+  workingDirectory: ""
+  deployerDirectory: ""
+  dstAuth: ""
+  dstACRName: ""
+  srcAuthGeneva: ""
+  srcAuthQuay: ""
+
+steps:
+  - script: |
+      set -eu
+      cd ${{ parameters.workingDirectory }}
+
+      export DST_AUTH=${{ parameters.dstAuth }}
+      export DST_ACR_NAME=${{ parameters.dstACRName }}
+      export SRC_AUTH_GENEVA=${{ parameters.srcAuthGeneva }}
+      export SRC_AUTH_QUAY=${{ parameters.srcAuthQuay }}
+
+      chmod +x ${{ parameters.deployerDirectory }}/aro
+      ${{ parameters.deployerDirectory }}/aro mirror
+    displayName: "🚀 Fetch and mirror latest aro build"
