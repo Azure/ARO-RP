@@ -1,5 +1,4 @@
 # No PR triggers to run it manually
-
 pr: none
 trigger: none
 
@@ -30,8 +29,8 @@ stages:
             useSameBranch: true
             waitForQueuedBuildsToFinish: true
             storeInEnvironmentVariable: false
-            authenticationMethod: 'Personal Access Token'
-            password: $(zhuoli-access-token)
+            authenticationMethod: 'OAuth Token'
+            password: '$(System.AccessToken)'
             enableBuildInQueueCondition: false
             dependentOnSuccessfulBuildCondition: true
             dependentOnFailedBuildCondition: true
