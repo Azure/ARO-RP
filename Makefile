@@ -79,7 +79,7 @@ proxy:
 pyenv${PYTHON_VERSION}:
 	virtualenv --python=/usr/bin/python${PYTHON_VERSION} pyenv${PYTHON_VERSION}
 	. pyenv${PYTHON_VERSION}/bin/activate && \
-		pip install azdev && \
+		pip install autopep8 azdev ruamel.yaml && \
 		azdev setup -r . && \
 		sed -i -e "s|^dev_sources = $(PWD)$$|dev_sources = $(PWD)/python|" ~/.azure/config
 
@@ -118,7 +118,8 @@ test-python: generate pyenv${PYTHON_VERSION}
 	. pyenv${PYTHON_VERSION}/bin/activate && \
 		$(MAKE) az && \
 		azdev linter && \
-		azdev style
+		azdev style && \
+		hack/format-yaml/format-yaml.py .pipelines
 
 admin.kubeconfig:
 	hack/get-admin-kubeconfig.sh /subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}/providers/Microsoft.RedHatOpenShift/openShiftClusters/${CLUSTER} >admin.kubeconfig

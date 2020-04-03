@@ -6,21 +6,21 @@ variables:
 - template: vars.yml
 
 jobs:
-  - task: DownloadBuildArtifacts@0
-    inputs:
-      buildType: 'specific'
-      project: $(vso-project-id)
-      pipeline: $(vso-deployer-pipeline-id)
-      buildVersionToDownload: 'latestFromBranch'
-      branchName: 'refs/heads/master'
-      downloadType: 'specific'
-      downloadPath: '$(System.ArtifactsDirectory)/deployer'
-    displayName: "Download Deployer"
-  - template: ./templates/template-run-mirror.yml
-    parameters:
-      dstAuth: $(acr-push-auth)
-      srcAuthGeneva: $(acr-geneva-pull-auth)
-      srcAuthQuay: $(quay-pull-auth)
-      dstACRName: $(dstACRName)
-      workingDirectory: ${{ variables.modulePath }}
-      deployerDirectory: '$(System.ArtifactsDirectory)/deployer'
+- task: DownloadBuildArtifacts@0
+  inputs:
+    buildType: specific
+    project: $(vso-project-id)
+    pipeline: $(vso-deployer-pipeline-id)
+    buildVersionToDownload: latestFromBranch
+    branchName: refs/heads/master
+    downloadType: specific
+    downloadPath: $(System.ArtifactsDirectory)/deployer
+  displayName: Download Deployer
+- template: ./templates/template-run-mirror.yml
+  parameters:
+    dstAuth: $(acr-push-auth)
+    srcAuthGeneva: $(acr-geneva-pull-auth)
+    srcAuthQuay: $(quay-pull-auth)
+    dstACRName: $(dstACRName)
+    workingDirectory: ${{ variables.modulePath }}
+    deployerDirectory: $(System.ArtifactsDirectory)/deployer

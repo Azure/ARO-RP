@@ -1,25 +1,25 @@
 parameters:
-  workingDirectory: ""
+  workingDirectory: ''
 steps:
-  - script: |
-      cd ${{ parameters.workingDirectory }}
+- script: |
+    cd ${{ parameters.workingDirectory }}
 
-      . secrets/env
-      . ./hack/e2e/run-rp-and-e2e.sh
+    . secrets/env
+    . ./hack/e2e/run-rp-and-e2e.sh
 
-      export DATABASE_NAME=v4-e2e-$(git log --format=%h -n 1 HEAD)
+    export DATABASE_NAME=v4-e2e-$(git log --format=%h -n 1 HEAD)
 
-      if [ $RP_MODE = "development" ]
-      then
-        run_rp
-        validate_rp_running
-        register_sub
-      fi
+    if [ $RP_MODE = "development" ]
+    then
+      run_rp
+      validate_rp_running
+      register_sub
+    fi
 
-      run_e2e
+    run_e2e
 
-      if [ $RP_MODE = "development" ]
-      then
-        kill_rp
-      fi
-    displayName: "🚀 Run ARO RP & E2E"
+    if [ $RP_MODE = "development" ]
+    then
+      kill_rp
+    fi
+  displayName: 🚀 Run ARO RP & E2E

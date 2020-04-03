@@ -1,7 +1,7 @@
 parameters:
-  workingDirectory: ""
+  workingDirectory: ''
 steps:
-  - script: |
-      rm -fr ${{ parameters.workingDirectory }}
-    displayName: "🧹 Clean agent"
-    condition: always()
+- script: |
+    rm -fr ${{ parameters.workingDirectory }}
+  displayName: 🧹 Clean agent
+  condition: always()
