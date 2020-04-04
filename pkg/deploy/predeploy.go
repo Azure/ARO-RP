@@ -162,8 +162,6 @@ func (d *deployer) deployPreDeploy(ctx context.Context, rpServicePrincipalID str
 		return err
 	}
 
-	isCreate = true
-
 	b, err := Asset(generator.FileRPProductionPredeploy)
 	if err != nil {
 		return err
