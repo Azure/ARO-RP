@@ -388,7 +388,7 @@ func (i *Installer) deployARMTemplate(ctx context.Context, rg string, tName stri
 			err = i.deployments.Wait(ctx, rg, deploymentName)
 		}
 
-		if isAuthorizationFailedError(err) {
+		if hasAuthorizationFailedError(err) {
 			i.log.Print(err)
 			return false, nil
 		}
@@ -396,7 +396,7 @@ func (i *Installer) deployARMTemplate(ctx context.Context, rg string, tName stri
 		return err == nil, err
 	}, timeoutCtx.Done())
 
-	if isQuota, errMsg := isResourceQuotaExceededError(err); isQuota {
+	if isQuota, errMsg := hasResourceQuotaExceededError(err); isQuota {
 		err = api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeQuotaExceeded, errMsg, "")
 	}
 
