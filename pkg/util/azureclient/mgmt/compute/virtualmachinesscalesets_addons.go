@@ -29,6 +29,7 @@ func (c *virtualMachineScaleSetsClient) List(ctx context.Context, resourceGroupN
 	if err != nil {
 		return nil, err
 	}
+
 	for result.NotDone() {
 		scaleSets = append(scaleSets, result.Values()...)
 		err = result.NextWithContext(ctx)

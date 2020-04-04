@@ -182,12 +182,7 @@
                                                 },
                                                 "primary": true,
                                                 "publicIPAddressConfiguration": {
-                                                    "name": "rp-vmss-pip",
-                                                    "properties": {
-                                                        "dnsSettings": {
-                                                            "domainNameLabel": "[concat('rp-vmss-', parameters('vmssName'))]"
-                                                        }
-                                                    }
+                                                    "name": "rp-vmss-pip"
                                                 },
                                                 "loadBalancerBackendAddressPools": [
                                                     {

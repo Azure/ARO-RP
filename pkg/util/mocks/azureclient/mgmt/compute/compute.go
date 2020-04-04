@@ -199,6 +199,21 @@ func (m *MockVirtualMachineScaleSetVMsClient) EXPECT() *MockVirtualMachineScaleS
 	return m.recorder
 }
 
+// GetInstanceView mocks base method
+func (m *MockVirtualMachineScaleSetVMsClient) GetInstanceView(arg0 context.Context, arg1, arg2, arg3 string) (compute.VirtualMachineScaleSetVMInstanceView, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetInstanceView", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(compute.VirtualMachineScaleSetVMInstanceView)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetInstanceView indicates an expected call of GetInstanceView
+func (mr *MockVirtualMachineScaleSetVMsClientMockRecorder) GetInstanceView(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetInstanceView", reflect.TypeOf((*MockVirtualMachineScaleSetVMsClient)(nil).GetInstanceView), arg0, arg1, arg2, arg3)
+}
+
 // List mocks base method
 func (m *MockVirtualMachineScaleSetVMsClient) List(arg0 context.Context, arg1, arg2, arg3, arg4, arg5 string) ([]compute.VirtualMachineScaleSetVM, error) {
 	m.ctrl.T.Helper()

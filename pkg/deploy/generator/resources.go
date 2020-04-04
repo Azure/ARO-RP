@@ -909,11 +909,6 @@ rm /etc/motd.d/*
 												Primary: to.BoolPtr(true),
 												PublicIPAddressConfiguration: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfiguration{
 													Name: to.StringPtr("rp-vmss-pip"),
-													VirtualMachineScaleSetPublicIPAddressConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfigurationProperties{
-														DNSSettings: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfigurationDNSSettings{
-															DomainNameLabel: to.StringPtr("[concat('rp-vmss-', parameters('vmssName'))]"),
-														},
-													},
 												},
 												LoadBalancerBackendAddressPools: &[]mgmtcompute.SubResource{
 													{

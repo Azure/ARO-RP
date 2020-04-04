@@ -5,27 +5,17 @@ package deploy
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
-	"net"
-	"net/http"
-	"net/url"
-	"os"
 	"reflect"
 	"strings"
-	"syscall"
-	"time"
 
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
@@ -54,8 +44,6 @@ type deployer struct {
 	vmssvms           compute.VirtualMachineScaleSetVMsClient
 	keyvault          keyvault.Manager
 
-	cli *http.Client
-
 	config  *RPConfig
 	version string
 }
@@ -82,13 +70,6 @@ func New(ctx context.Context, log *logrus.Entry, config *RPConfig, version strin
 		vmss:              compute.NewVirtualMachineScaleSetsClient(config.SubscriptionID, authorizer),
 		vmssvms:           compute.NewVirtualMachineScaleSetVMsClient(config.SubscriptionID, authorizer),
 		keyvault:          keyvault.NewManager(kvAuthorizer),
-
-		cli: &http.Client{
-			Timeout: 5 * time.Second,
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-			},
-		},
 
 		config:  config,
 		version: version,
@@ -157,108 +138,6 @@ func (d *deployer) Deploy(ctx context.Context, rpServicePrincipalID string) erro
 	err = d.configureDNS(ctx, rpPipIPAddress, nameServers)
 	if err != nil {
 		return err
-	}
-
-	return nil
-}
-
-func (d *deployer) Upgrade(ctx context.Context) error {
-	timeoutCtx, cancel := context.WithTimeout(ctx, 20*time.Minute)
-	defer cancel()
-	err := d.waitForRPReadiness(timeoutCtx, "rp-vmss-"+d.version)
-	if err != nil {
-		return err
-	}
-
-	return d.removeOldScalesets(ctx)
-}
-
-func (d *deployer) waitForRPReadiness(ctx context.Context, vmssName string) error {
-	scalesetVMs, err := d.vmssvms.List(ctx, d.config.ResourceGroupName, vmssName, "", "", "")
-	if err != nil {
-		return err
-	}
-
-	d.log.Printf("waiting for %s instances to be healthy", vmssName)
-	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-		for _, vm := range scalesetVMs {
-			u := fmt.Sprintf("https://vm%s.%s.%s.cloudapp.azure.com/healthz/ready", *vm.InstanceID, vmssName, d.config.Location)
-			resp, err := d.cli.Get(u)
-			if err != nil || resp.StatusCode != http.StatusOK {
-				d.log.Printf("instance %s not ready", *vm.InstanceID)
-				return false, nil
-			}
-		}
-
-		return true, nil
-	}, ctx.Done())
-}
-
-func (d *deployer) removeOldScalesets(ctx context.Context) error {
-	d.log.Print("removing old scalesets")
-	scalesets, err := d.vmss.List(ctx, d.config.ResourceGroupName)
-	if err != nil {
-		return err
-	}
-
-	for _, vmss := range scalesets {
-		if *vmss.Name == "rp-vmss-"+d.version {
-			continue
-		}
-
-		d.log.Printf("stopping scaleset %s", *vmss.Name)
-		scalesetVMs, err := d.vmssvms.List(ctx, d.config.ResourceGroupName, *vmss.Name, "", "", "")
-		if err != nil {
-			return err
-		}
-
-		// execute individual VMs stop command
-		for _, vm := range scalesetVMs {
-			d.log.Printf("stopping instance %s", *vm.Name)
-			err := d.vmssvms.RunCommandAndWait(ctx, d.config.ResourceGroupName, *vmss.Name, *vm.InstanceID, mgmtcompute.RunCommandInput{
-				CommandID: to.StringPtr("RunShellScript"),
-				Script:    &[]string{"systemctl stop aro-rp --no-block"},
-			})
-			if err != nil {
-				return err
-			}
-		}
-
-		d.log.Printf("waiting for %s instances to terminate", *vmss.Name)
-		err = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-			for _, vm := range scalesetVMs {
-				u := fmt.Sprintf("https://vm%s.%s.%s.cloudapp.azure.com/healthz", *vm.InstanceID, *vmss.Name, d.config.Location)
-
-				_, err := d.cli.Get(u)
-
-				var terminated bool
-				if err, ok := err.(*url.Error); ok {
-					if err, ok := err.Err.(*net.OpError); ok {
-						if err, ok := err.Err.(*os.SyscallError); ok {
-							if err.Err == syscall.ECONNREFUSED {
-								terminated = true
-							}
-						}
-					}
-				}
-
-				if !terminated {
-					d.log.Printf("instance %s not terminated", *vm.InstanceID)
-					return false, nil
-				}
-			}
-
-			return true, nil
-		}, ctx.Done())
-		if err != nil {
-			return err
-		}
-
-		d.log.Printf("deleting scaleset %s", *vmss.Name)
-		err = d.vmss.DeleteAndWait(ctx, d.config.ResourceGroupName, *vmss.Name)
-		if err != nil {
-			return err
-		}
 	}
 
 	return nil
