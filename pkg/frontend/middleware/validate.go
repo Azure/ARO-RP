@@ -33,7 +33,7 @@ func Validate(env env.Interface, apis map[string]*api.Version) func(http.Handler
 				if log, ok := r.Context().Value(ContextKeyLog).(*logrus.Entry); ok {
 					log.Error("route was nil")
 				}
-				api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
+				api.WriteError(w, http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
 				return
 			}
 
@@ -48,42 +48,42 @@ func Validate(env env.Interface, apis map[string]*api.Version) func(http.Handler
 			if _, found := vars["subscriptionId"]; found {
 				_, err := uuid.FromString(vars["subscriptionId"])
 				if err != nil {
-					api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeInvalidSubscriptionID, "", "The provided subscription identifier '%s' is malformed or invalid.", vars["subscriptionId"])
+					api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionID, "", "The provided subscription identifier '%s' is malformed or invalid.", vars["subscriptionId"])
 					return
 				}
 			}
 
 			if _, found := vars["resourceGroupName"]; found {
 				if !rxResourceGroupName.MatchString(vars["resourceGroupName"]) {
-					api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeResourceGroupNotFound, "", "Resource group '%s' could not be found.", vars["resourceGroupName"])
+					api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeResourceGroupNotFound, "", "Resource group '%s' could not be found.", vars["resourceGroupName"])
 					return
 				}
 			}
 
 			if _, found := vars["resourceProviderNamespace"]; found {
 				if vars["resourceProviderNamespace"] != strings.ToLower(resourceProviderNamespace) {
-					api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeInvalidResourceNamespace, "", "The resource namespace '%s' is invalid.", vars["resourceProviderNamespace"])
+					api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceNamespace, "", "The resource namespace '%s' is invalid.", vars["resourceProviderNamespace"])
 					return
 				}
 			}
 
 			if _, found := vars["resourceType"]; found {
 				if vars["resourceType"] != strings.ToLower(resourceType) {
-					api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], vars["api-version"])
+					api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], vars["api-version"])
 					return
 				}
 			}
 
 			if _, found := vars["resourceName"]; found {
 				if !rxResourceGroupName.MatchString(vars["resourceName"]) {
-					api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s/%s' under resource group '%s' was not found.", vars["resourceProviderNamespace"], vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
+					api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s/%s' under resource group '%s' was not found.", vars["resourceProviderNamespace"], vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
 					return
 				}
 			}
 
 			if _, found := vars["location"]; found {
 				if !strings.EqualFold(vars["location"], env.Location()) {
-					api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeInvalidLocation, "", "The provided location '%s' is malformed or invalid.", vars["location"])
+					api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidLocation, "", "The provided location '%s' is malformed or invalid.", vars["location"])
 					return
 				}
 			}
@@ -91,7 +91,7 @@ func Validate(env env.Interface, apis map[string]*api.Version) func(http.Handler
 			if _, found := vars["operationId"]; found {
 				_, err := uuid.FromString(vars["operationId"])
 				if err != nil {
-					api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeInvalidOperationID, "", "The provided operation identifier '%s' is malformed or invalid.", vars["operationId"])
+					api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidOperationID, "", "The provided operation identifier '%s' is malformed or invalid.", vars["operationId"])
 					return
 				}
 			}
@@ -108,7 +108,7 @@ func Validate(env env.Interface, apis map[string]*api.Version) func(http.Handler
 			if err != nil || hasVariableAPIVersion {
 				if _, found := vars["api-version"]; found {
 					if _, found := apis[vars["api-version"]]; !found {
-						api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], vars["api-version"])
+						api.WriteError(w, http.StatusBadRequest, api.CloudErrorCodeInvalidResourceType, "", "The resource type '%s' could not be found in the namespace '%s' for api version '%s'.", vars["resourceType"], vars["resourceProviderNamespace"], vars["api-version"])
 						return
 					}
 				}
