@@ -224,7 +224,7 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 				Name: to.StringPtr("[guid(resourceGroup().id, 'ARO cluster resource group deny assignment')]"),
 				Type: to.StringPtr("Microsoft.Authorization/denyAssignments"),
 				DenyAssignmentProperties: &mgmtauthorization.DenyAssignmentProperties{
-					DenyAssignmentName: to.StringPtr("ARO cluster resource group deny assignment"),
+					DenyAssignmentName: to.StringPtr("[guid(resourceGroup().id, 'ARO cluster resource group deny assignment')]"),
 					Permissions: &[]mgmtauthorization.DenyAssignmentPermission{
 						{
 							Actions: &[]string{
