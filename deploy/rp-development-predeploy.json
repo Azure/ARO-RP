@@ -31,7 +31,7 @@
                             "priority": 120,
                             "direction": "Inbound"
                         },
-                        "name": "rp_in"
+                        "name": "rp_in_arm"
                     },
                     {
                         "properties": {
