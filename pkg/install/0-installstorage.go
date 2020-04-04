@@ -232,6 +232,9 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 								"*/delete",
 								"*/write",
 							},
+							NotActions: &[]string{
+								"Microsoft.Network/networkSecurityGroups/join/action",
+							},
 						},
 					},
 					Scope: &i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID,
