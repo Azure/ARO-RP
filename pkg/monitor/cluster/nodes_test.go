@@ -51,15 +51,25 @@ func TestEmitNodesMetrics(t *testing.T) {
 
 	controller := gomock.NewController(t)
 	defer controller.Finish()
+
 	m := mock_metrics.NewMockInterface(controller)
+
 	mon := &Monitor{
 		dims: map[string]string{},
 		cli:  cli,
 		m:    m,
 	}
-	m.EXPECT().EmitGauge("cluster.nodes.total", int64(2), map[string]string{})
-	m.EXPECT().EmitGauge("cluster.nodes.condition", int64(1), map[string]string{"condition": "NotReady"})
-	m.EXPECT().EmitGauge("cluster.nodes.condition", int64(1), map[string]string{"condition": "MemoryPressure"})
 
-	mon.emitNodesMetrics()
+	m.EXPECT().EmitGauge("nodes.count", int64(2), map[string]string{})
+	m.EXPECT().EmitGauge("nodes.conditions.count", int64(1), map[string]string{
+		"condition": "NotReady",
+	})
+	m.EXPECT().EmitGauge("nodes.conditions.count", int64(1), map[string]string{
+		"condition": "MemoryPressure",
+	})
+
+	err := mon.emitNodesMetrics()
+	if err != nil {
+		t.Fatal(err)
+	}
 }

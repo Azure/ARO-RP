@@ -8,14 +8,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (mon *Monitor) emitNodesMetrics() {
+func (mon *Monitor) emitNodesMetrics() error {
 	nodes, err := mon.cli.CoreV1().Nodes().List(metav1.ListOptions{})
 	if err != nil {
-		mon.log.Error(err)
-		return
+		return err
 	}
 
-	mon.emitGauge("cluster.nodes.total", int64(len(nodes.Items)), nil)
+	mon.emitGauge("nodes.count", int64(len(nodes.Items)), nil)
 
 	counters := map[string]int64{}
 	for _, node := range nodes.Items {
@@ -32,7 +31,11 @@ func (mon *Monitor) emitNodesMetrics() {
 		}
 	}
 
-	for label, value := range counters {
-		mon.emitGauge("cluster.nodes.condition", value, map[string]string{"condition": string(label)})
+	for condition, count := range counters {
+		mon.emitGauge("nodes.conditions.count", count, map[string]string{
+			"condition": condition,
+		})
 	}
+
+	return nil
 }

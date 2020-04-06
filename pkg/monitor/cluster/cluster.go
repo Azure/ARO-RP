@@ -72,18 +72,30 @@ func NewMonitor(ctx context.Context, env env.Interface, log *logrus.Entry, oc *a
 }
 
 // Monitor checks the API server health of a cluster
-func (mon *Monitor) Monitor(ctx context.Context) error {
+func (mon *Monitor) Monitor(ctx context.Context) {
 	mon.log.Debug("monitoring")
 
 	// If API is not returning 200, don't need to run the next checks
 	statusCode, err := mon.emitAPIServerHealthzCode()
-	if err != nil || statusCode != http.StatusOK {
-		return err
+	if err != nil {
+		mon.log.Error(err)
+		return
+	}
+	if statusCode != http.StatusOK {
+		return
 	}
 
-	mon.emitNodesMetrics()
+	err = mon.emitNodesMetrics()
+	if err != nil {
+		mon.log.Error(err)
+		// keep going
+	}
 
-	return mon.emitPrometheusAlerts(ctx)
+	err = mon.emitPrometheusAlerts(ctx)
+	if err != nil {
+		mon.log.Error(err)
+		// keep going
+	}
 }
 
 func (mon *Monitor) emitFloat(m string, value float64, dims map[string]string) {
