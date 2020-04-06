@@ -26,7 +26,7 @@ type Monitor struct {
 	dims map[string]string
 
 	cli       kubernetes.Interface
-	configCli *configclient.Clientset
+	configcli configclient.Interface
 	m         metrics.Interface
 }
 
@@ -61,7 +61,7 @@ func NewMonitor(ctx context.Context, env env.Interface, log *logrus.Entry, oc *a
 		return nil, err
 	}
 
-	configCli, err := configclient.NewForConfig(restConfig)
+	configcli, err := configclient.NewForConfig(restConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func NewMonitor(ctx context.Context, env env.Interface, log *logrus.Entry, oc *a
 		dims: dims,
 
 		cli:       cli,
-		configCli: configCli,
+		configcli: configcli,
 		m:         m,
 	}, nil
 }
@@ -93,7 +93,11 @@ func (mon *Monitor) Monitor(ctx context.Context) {
 		return
 	}
 
-	mon.emitClusterVersion()
+	err = mon.emitClusterVersionMetrics()
+	if err != nil {
+		mon.log.Error(err)
+		// keep going
+	}
 
 	err = mon.emitNodesMetrics()
 	if err != nil {
