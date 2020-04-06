@@ -69,7 +69,7 @@ func NewFrontend(ctx context.Context, baseLog *logrus.Entry, _env env.Interface,
 		m:           m,
 		kubeActions: kubeActions,
 
-		ocEnricher: clusterdata.NewBestEffortEnricher(baseLog, _env),
+		ocEnricher: clusterdata.NewBestEffortEnricher(baseLog, _env, m),
 
 		bucketAllocator: &bucket.Random{},
 	}

@@ -76,10 +76,9 @@ func (ef *workerProfilesEnricherTask) FetchData(callbacks chan<- func(), errs ch
 			return
 		}
 
-		var machineProviderSpec *azureproviderv1beta1.AzureMachineProviderSpec
 		machineProviderSpec, ok := o.(*azureproviderv1beta1.AzureMachineProviderSpec)
 		if !ok {
-			ef.log.Errorf("failed to read provider spec from the machine set %q", machineset.Name)
+			ef.log.Errorf("failed to read provider spec from the machine set %q: %T", machineset.Name, o)
 			errs <- err
 			return
 		}
