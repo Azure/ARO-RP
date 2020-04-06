@@ -16,14 +16,10 @@ import (
 
 func TestEmitNodesMetrics(t *testing.T) {
 	cli := fake.NewSimpleClientset(&corev1.Node{
-		TypeMeta: metav1.TypeMeta{
-			Kind: "node",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "aro-master-0",
 		},
 		Status: corev1.NodeStatus{
-
 			Conditions: []corev1.NodeCondition{
 				{
 					Type:   corev1.NodeMemoryPressure,
@@ -32,14 +28,10 @@ func TestEmitNodesMetrics(t *testing.T) {
 			},
 		},
 	}, &corev1.Node{
-		TypeMeta: metav1.TypeMeta{
-			Kind: "node",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "aro-master-1",
 		},
 		Status: corev1.NodeStatus{
-
 			Conditions: []corev1.NodeCondition{
 				{
 					Type:   corev1.NodeReady,
@@ -55,9 +47,8 @@ func TestEmitNodesMetrics(t *testing.T) {
 	m := mock_metrics.NewMockInterface(controller)
 
 	mon := &Monitor{
-		dims: map[string]string{},
-		cli:  cli,
-		m:    m,
+		cli: cli,
+		m:   m,
 	}
 
 	m.EXPECT().EmitGauge("nodes.count", int64(2), map[string]string{})
