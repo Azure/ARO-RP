@@ -248,9 +248,9 @@
                     "allOf": [
                         {
                             "operator": "LessThan",
-                            "threshold": 95,
+                            "threshold": 99,
                             "AdditionalProperties": null,
-                            "name": "HealthProbeBelow95",
+                            "name": "HealthProbeBelow99",
                             "metricName": "DipAvailability",
                             "metricNamespace": "microsoft.network/loadBalancers",
                             "timeAggregation": "Average",

@@ -144,22 +144,12 @@ func (d *deployer) deploySubscription(ctx context.Context) error {
 	}
 
 	d.log.Infof("deploying %s", deploymentName)
-	err = d.deployments.CreateOrUpdateAndWait(ctx, d.config.Configuration.SubscriptionResourceGroupName, deploymentName, mgmtresources.Deployment{
+	return d.deployments.CreateOrUpdateAndWait(ctx, d.config.Configuration.SubscriptionResourceGroupName, deploymentName, mgmtresources.Deployment{
 		Properties: &mgmtresources.DeploymentProperties{
 			Template: template,
 			Mode:     mgmtresources.Incremental,
 		},
 	})
-	if err != nil {
-		return err
-	}
-
-	_, err = d.deployments.Get(ctx, d.config.Configuration.SubscriptionResourceGroupName, deploymentName)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (d *deployer) deployManageIdentity(ctx context.Context) (string, error) {
