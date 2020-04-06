@@ -16,12 +16,21 @@ func (g *generator) managedIdentityTemplate() *arm.Template {
 	t.Resources = append(t.Resources,
 		g.managedIdentity(),
 	)
+	params := []string{}
+	if g.production {
+		params = append(params,
+			"fullDeploy",
+		)
+	}
 
-	t.Outputs = map[string]*arm.Output{
-		"rpServicePrincipalId": {
-			Type:  "string",
-			Value: "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', concat('aro-rp-', resourceGroup().location)), '2018-11-30').principalId]",
-		},
+	for _, param := range params {
+		p := &arm.TemplateParameter{Type: "string"}
+		switch param {
+		case "fullDeploy":
+			p.Type = "bool"
+			p.DefaultValue = false
+		}
+		t.Parameters[param] = p
 	}
 
 	return t
@@ -41,6 +50,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"adminApiCaBundle",
 			"adminApiClientCertCommonName",
 			"extraCosmosDBIPs",
+			"fullDeploy",
 			"mdmFrontendUrl",
 			"mdsdConfigVersion",
 			"mdsdEnvironment",
@@ -58,6 +68,9 @@ func (g *generator) rpTemplate() *arm.Template {
 		switch param {
 		case "extraCosmosDBIPs", "rpMode":
 			p.DefaultValue = ""
+		case "fullDeploy":
+			p.Type = "bool"
+			p.DefaultValue = false
 		}
 		t.Parameters[param] = p
 	}
@@ -77,17 +90,6 @@ func (g *generator) rpTemplate() *arm.Template {
 	t.Resources = append(t.Resources, g.cosmosdb()...)
 	t.Resources = append(t.Resources, g.rbac()...)
 
-	t.Outputs = map[string]*arm.Output{
-		"rp-nameServers": {
-			Type:  "array",
-			Value: "[reference(resourceId('Microsoft.Network/dnsZones', parameters('domainName')), '2018-05-01').nameServers]",
-		},
-		"rp-pip-ipAddress": {
-			Type:  "string",
-			Value: "[reference(resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip'), '2019-07-01').ipAddress]",
-		},
-	}
-
 	return t
 }
 
@@ -97,12 +99,19 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 	params := []string{
 		"acrResourceId",
 		"fpServicePrincipalId",
+		"fullDeploy",
 		"location",
 		"rpServicePrincipalId",
 	}
 
 	for _, param := range params {
-		t.Parameters[param] = &arm.TemplateParameter{Type: "string"}
+		p := &arm.TemplateParameter{Type: "string"}
+		switch param {
+		case "fullDeploy":
+			p.Type = "bool"
+			p.DefaultValue = false
+		}
+		t.Parameters[param] = p
 	}
 
 	t.Resources = append(t.Resources,
@@ -119,6 +128,20 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 func (g *generator) rpGlobalSubscriptionTemplate() *arm.Template {
 	t := templateStanza()
 
+	params := []string{
+		"fullDeploy",
+	}
+
+	for _, param := range params {
+		p := &arm.TemplateParameter{Type: "string"}
+		switch param {
+		case "fullDeploy":
+			p.Type = "bool"
+			p.DefaultValue = false
+		}
+		t.Parameters[param] = p
+	}
+
 	t.Resources = append(t.Resources,
 		g.roleDefinitionTokenContributor(),
 	)
@@ -126,8 +149,22 @@ func (g *generator) rpGlobalSubscriptionTemplate() *arm.Template {
 	return t
 }
 
-func (g *generator) rpSubscriptionTemplate() *arm.Template {
+func (g *generator) rpActionGroupTemplate() *arm.Template {
 	t := templateStanza()
+
+	params := []string{
+		"fullDeploy",
+	}
+
+	for _, param := range params {
+		p := &arm.TemplateParameter{Type: "string"}
+		switch param {
+		case "fullDeploy":
+			p.Type = "bool"
+			p.DefaultValue = false
+		}
+		t.Parameters[param] = p
+	}
 
 	t.Resources = append(t.Resources, g.actionGroup("rp-health-ag", "rphealth"))
 
@@ -137,17 +174,29 @@ func (g *generator) rpSubscriptionTemplate() *arm.Template {
 func (g *generator) databaseTemplate() *arm.Template {
 	t := templateStanza()
 
+	params := []string{
+		"databaseAccountName",
+		"databaseName",
+	}
+
+	if g.production {
+		params = append(params,
+			"fullDeploy",
+		)
+	}
+
+	for _, param := range params {
+		p := &arm.TemplateParameter{Type: "string"}
+		switch param {
+		case "fullDeploy":
+			p.Type = "bool"
+			p.DefaultValue = false
+		}
+		t.Parameters[param] = p
+	}
+
 	t.Resources = append(t.Resources,
 		g.database("parameters('databaseName')", false)...)
-
-	t.Parameters = map[string]*arm.TemplateParameter{
-		"databaseAccountName": {
-			Type: "string",
-		},
-		"databaseName": {
-			Type: "string",
-		},
-	}
 
 	return t
 }
@@ -185,7 +234,7 @@ func (g *generator) preDeployTemplate() *arm.Template {
 
 	if g.production {
 		params = append(params,
-			"deployNSGs",
+			"fullDeploy",
 			"extraClusterKeyvaultAccessPolicies",
 			"extraServiceKeyvaultAccessPolicies",
 			"rpNsgSourceAddressPrefixes",
@@ -199,7 +248,7 @@ func (g *generator) preDeployTemplate() *arm.Template {
 	for _, param := range params {
 		p := &arm.TemplateParameter{Type: "string"}
 		switch param {
-		case "deployNSGs":
+		case "fullDeploy":
 			p.Type = "bool"
 			p.DefaultValue = false
 		case "extraClusterKeyvaultAccessPolicies", "extraServiceKeyvaultAccessPolicies":
@@ -303,6 +352,14 @@ func (g *generator) templateFixup(t *arm.Template) ([]byte, error) {
 	}
 
 	return append(b, byte('\n')), nil
+}
+
+func (g *generator) conditionStanza() interface{} {
+	var condition interface{}
+	if g.production {
+		condition = "[parameters('fullDeploy')]"
+	}
+	return condition
 }
 
 func templateStanza() *arm.Template {

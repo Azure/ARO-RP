@@ -15,49 +15,79 @@ import (
 	deployer "github.com/Azure/ARO-RP/pkg/deploy"
 )
 
+type mode int
+
+const (
+	modePreDeploy mode = iota
+	modeDeploy
+	modeUpgrade
+	modeFull
+)
+
+type flags struct {
+	configFile    string
+	deployVersion string
+	location      string
+	mode          string
+}
+
 func deploy(ctx context.Context, log *logrus.Entry) error {
-	deployVersion, location := gitCommit, flag.Arg(2)
+	f, err := parseFlags()
+	if err != nil {
+		return err
+	}
+
+	config, err := deployer.GetConfig(f.configFile, f.location)
+	if err != nil {
+		return err
+	}
+
+	log.Infof("FullDeploy mode status: %t", strings.Contains(f.mode, "f"))
+	d, err := deployer.New(ctx, log, config, f.deployVersion, strings.Contains(f.mode, "f"))
+	if err != nil {
+		return err
+	}
+
+	if strings.Contains(f.mode, "p") {
+		err := d.PreDeploy(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	if strings.Contains(f.mode, "d") {
+		err := d.Deploy(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	if strings.Contains(f.mode, "u") {
+		err := d.Upgrade(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func parseFlags() (*flags, error) {
+	deployVersion, location := gitCommit, flag.Arg(3)
 
 	if os.Getenv("RP_VERSION") != "" {
 		deployVersion = os.Getenv("RP_VERSION")
 	}
 
-	log.Printf("deploying version %s to location %s", deployVersion, location)
-
 	if deployVersion == "unknown" || strings.Contains(deployVersion, "dirty") {
-		return fmt.Errorf("invalid deploy version %q", deployVersion)
+		return nil, fmt.Errorf("invalid deploy version %q", deployVersion)
 	}
 
 	if strings.ToLower(location) != location {
-		return fmt.Errorf("location %s must be lower case", location)
+		return nil, fmt.Errorf("location %s must be lower case", location)
 	}
 
-	config, err := deployer.GetConfig(flag.Arg(1), location)
-	if err != nil {
-		return err
-	}
-
-	deployer, err := deployer.New(ctx, log, config, deployVersion)
-	if err != nil {
-		return err
-	}
-
-	rpServicePrincipalID, err := deployer.PreDeploy(ctx)
-	if err != nil {
-		return err
-	}
-
-	// if pre-deploy is set, we terminate early. This is so we could populate
-	// vault and other configurations, required for main deployment. This is usually
-	// day 1 deployment setting only
-	if os.Getenv("RP_PREDEPLOY_ONLY") != "" {
-		return nil
-	}
-
-	err = deployer.Deploy(ctx, rpServicePrincipalID)
-	if err != nil {
-		return err
-	}
-
-	return deployer.Upgrade(ctx)
+	return &flags{
+		location:      location,
+		deployVersion: deployVersion,
+		configFile:    flag.Arg(1),
+		mode:          flag.Arg(2),
+	}, nil
 }

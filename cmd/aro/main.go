@@ -21,7 +21,7 @@ var (
 
 func usage() {
 	fmt.Fprint(flag.CommandLine.Output(), "usage:\n")
-	fmt.Fprintf(flag.CommandLine.Output(), "  %s deploy config.yaml location\n", os.Args[0])
+	fmt.Fprintf(flag.CommandLine.Output(), "  %s deploy config.yaml {p,d,u,f} location\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s mirror\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s monitor\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s rp\n", os.Args[0])
@@ -51,7 +51,7 @@ func main() {
 		checkArgs(1)
 		err = rp(ctx, log)
 	case "deploy":
-		checkArgs(3)
+		checkArgs(4)
 		err = deploy(ctx, log)
 	default:
 		usage()

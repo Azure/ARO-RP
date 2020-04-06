@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -22,14 +23,16 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/msi"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
 
 var _ Deployer = (*deployer)(nil)
 
 type Deployer interface {
-	PreDeploy(context.Context) (string, error)
-	Deploy(context.Context, string) error
+	PreDeploy(context.Context) error
+	Deploy(context.Context) error
 	Upgrade(context.Context) error
 }
 
@@ -39,17 +42,21 @@ type deployer struct {
 	globaldeployments features.DeploymentsClient
 	globalrecordsets  dns.RecordSetsClient
 	deployments       features.DeploymentsClient
+	dns               dns.ZonesClient
 	groups            features.ResourceGroupsClient
 	vmss              compute.VirtualMachineScaleSetsClient
 	vmssvms           compute.VirtualMachineScaleSetVMsClient
+	publicipaddresses network.PublicIPAddressesClient
+	msi               msi.UserAssignedIdentitiesClient
 	keyvault          keyvault.Manager
 
-	config  *RPConfig
-	version string
+	config     *RPConfig
+	version    string
+	fullDeploy bool
 }
 
 // New initiates new deploy utility object
-func New(ctx context.Context, log *logrus.Entry, config *RPConfig, version string) (Deployer, error) {
+func New(ctx context.Context, log *logrus.Entry, config *RPConfig, version string, fullDeploy bool) (Deployer, error) {
 	authorizer, err := auth.NewAuthorizerFromEnvironment()
 	if err != nil {
 		return nil, err
@@ -60,23 +67,30 @@ func New(ctx context.Context, log *logrus.Entry, config *RPConfig, version strin
 		return nil, err
 	}
 
-	return &deployer{
+	d := &deployer{
 		log: log,
 
 		globaldeployments: features.NewDeploymentsClient(config.Configuration.GlobalSubscriptionID, authorizer),
 		globalrecordsets:  dns.NewRecordSetsClient(config.Configuration.GlobalSubscriptionID, authorizer),
 		deployments:       features.NewDeploymentsClient(config.SubscriptionID, authorizer),
+		dns:               dns.NewZonesClient(config.SubscriptionID, authorizer),
 		groups:            features.NewResourceGroupsClient(config.SubscriptionID, authorizer),
 		vmss:              compute.NewVirtualMachineScaleSetsClient(config.SubscriptionID, authorizer),
 		vmssvms:           compute.NewVirtualMachineScaleSetVMsClient(config.SubscriptionID, authorizer),
+		publicipaddresses: network.NewPublicIPAddressesClient(config.SubscriptionID, authorizer),
+		msi:               msi.NewUserAssignedIdentitiesClient(config.SubscriptionID, authorizer),
 		keyvault:          keyvault.NewManager(kvAuthorizer),
 
 		config:  config,
 		version: version,
-	}, nil
+
+		fullDeploy: fullDeploy,
+	}
+
+	return d, err
 }
 
-func (d *deployer) Deploy(ctx context.Context, rpServicePrincipalID string) error {
+func (d *deployer) Deploy(ctx context.Context) error {
 	deploymentName := "rp-production-" + d.version
 
 	b, err := Asset(generator.FileRPProduction)
@@ -86,6 +100,11 @@ func (d *deployer) Deploy(ctx context.Context, rpServicePrincipalID string) erro
 
 	var template map[string]interface{}
 	err = json.Unmarshal(b, &template)
+	if err != nil {
+		return err
+	}
+
+	rpServicePrincipalID, err := d.getRpServicePrincipalID(ctx)
 	if err != nil {
 		return err
 	}
@@ -109,6 +128,9 @@ func (d *deployer) Deploy(ctx context.Context, rpServicePrincipalID string) erro
 	parameters.Parameters["vmssName"] = &arm.ParametersParameter{
 		Value: d.version,
 	}
+	parameters.Parameters["fullDeploy"] = &arm.ParametersParameter{
+		Value: d.fullDeploy,
+	}
 
 	d.log.Printf("deploying %s", deploymentName)
 	err = d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, deploymentName, mgmtfeatures.Deployment{
@@ -122,22 +144,32 @@ func (d *deployer) Deploy(ctx context.Context, rpServicePrincipalID string) erro
 		return err
 	}
 
-	deployment, err := d.deployments.Get(ctx, d.config.ResourceGroupName, deploymentName)
-	if err != nil {
-		return err
-	}
+	if d.fullDeploy {
+		ip, err := d.publicipaddresses.Get(ctx, d.config.ResourceGroupName, "rp-pip", "")
+		if err != nil {
+			return err
+		}
 
-	rpPipIPAddress := deployment.Properties.Outputs.(map[string]interface{})["rp-pip-ipAddress"].(map[string]interface{})["value"].(string)
+		dnsZone, err := d.dns.ListByResourceGroup(ctx, d.config.ResourceGroupName, nil)
+		if err != nil {
+			return err
+		}
 
-	_nameServers := deployment.Properties.Outputs.(map[string]interface{})["rp-nameServers"].(map[string]interface{})["value"].([]interface{})
-	nameServers := make([]string, 0, len(_nameServers))
-	for _, ns := range _nameServers {
-		nameServers = append(nameServers, ns.(string))
-	}
+		var nameServers []string
+		dnsZoneName := fmt.Sprintf("%s.%s", d.config.Location, d.config.Configuration.ClusterParentDomainName)
+		for _, z := range dnsZone {
+			if *z.Name == dnsZoneName {
+				nameServers = *z.ZoneProperties.NameServers
+			}
+		}
+		if len(nameServers) == 0 {
+			return fmt.Errorf("no nameserver found for dns zone %s", dnsZoneName)
+		}
 
-	err = d.configureDNS(ctx, rpPipIPAddress, nameServers)
-	if err != nil {
-		return err
+		err = d.configureDNS(ctx, *ip.PublicIPAddressPropertiesFormat.IPAddress, nameServers)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

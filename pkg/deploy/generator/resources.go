@@ -39,16 +39,12 @@ func (g *generator) managedIdentity() *arm.Resource {
 			Name:     to.StringPtr("[concat('aro-rp-', resourceGroup().location)]"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
+		Condition:  g.conditionStanza(),
 		APIVersion: azureclient.APIVersions["Microsoft.ManagedIdentity"],
 	}
 }
 
 func (g *generator) securityGroupRP() *arm.Resource {
-	var condition interface{}
-	if g.production {
-		condition = "[parameters('deployNSGs')]"
-	}
-
 	nsg := &mgmtnetwork.SecurityGroup{
 		SecurityGroupPropertiesFormat: &mgmtnetwork.SecurityGroupPropertiesFormat{
 			SecurityRules: &[]mgmtnetwork.SecurityRule{
@@ -107,17 +103,12 @@ func (g *generator) securityGroupRP() *arm.Resource {
 
 	return &arm.Resource{
 		Resource:   nsg,
-		Condition:  condition,
+		Condition:  g.conditionStanza(),
 		APIVersion: azureclient.APIVersions["Microsoft.Network"],
 	}
 }
 
 func (g *generator) securityGroupPE() *arm.Resource {
-	var condition interface{}
-	if g.production {
-		condition = "[parameters('deployNSGs')]"
-	}
-
 	return &arm.Resource{
 		Resource: &mgmtnetwork.SecurityGroup{
 			SecurityGroupPropertiesFormat: &mgmtnetwork.SecurityGroupPropertiesFormat{},
@@ -125,7 +116,7 @@ func (g *generator) securityGroupPE() *arm.Resource {
 			Type:                          to.StringPtr("Microsoft.Network/networkSecurityGroups"),
 			Location:                      to.StringPtr("[resourceGroup().location]"),
 		},
-		Condition:  condition,
+		Condition:  g.conditionStanza(),
 		APIVersion: azureclient.APIVersions["Microsoft.Network"],
 	}
 }
@@ -412,6 +403,7 @@ func (g *generator) halfPeering(vnetA string, vnetB string) *arm.Resource {
 			Name: to.StringPtr(fmt.Sprintf("%s/peering-%s", vnetA, vnetB)),
 		},
 		APIVersion: azureclient.APIVersions["Microsoft.Network"],
+		Condition:  g.conditionStanza(),
 		DependsOn: []string{
 			fmt.Sprintf("[resourceId('Microsoft.Network/virtualNetworks', '%s')]", vnetA),
 			fmt.Sprintf("[resourceId('Microsoft.Network/virtualNetworks', '%s')]", vnetB),
@@ -462,6 +454,7 @@ func (g *generator) rpvnet() *arm.Resource {
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersions["Microsoft.Network"],
+		Condition:  g.conditionStanza(),
 	}
 }
 
@@ -492,6 +485,7 @@ func (g *generator) pevnet() *arm.Resource {
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersions["Microsoft.Network"],
+		Condition:  g.conditionStanza(),
 	}
 }
 
@@ -509,6 +503,7 @@ func (g *generator) pip() *arm.Resource {
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersions["Microsoft.Network"],
+		Condition:  g.conditionStanza(),
 	}
 }
 
@@ -571,6 +566,7 @@ func (g *generator) lb() *arm.Resource {
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
 		APIVersion: azureclient.APIVersions["Microsoft.Network"],
+		Condition:  g.conditionStanza(),
 		DependsOn: []string{
 			"[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip')]",
 		},
@@ -589,6 +585,7 @@ func (g *generator) actionGroup(name string, shortName string) *arm.Resource {
 			Location: to.StringPtr("Global"),
 		},
 		APIVersion: azureclient.APIVersions["Microsoft.Insights"],
+		Condition:  g.conditionStanza(),
 	}
 }
 
@@ -631,6 +628,7 @@ func (g *generator) lbAlert(threshold float64, severity int32, name string, eval
 			Location: to.StringPtr("global"),
 		},
 		APIVersion: azureclient.APIVersions["Microsoft.Insights"],
+		Condition:  g.conditionStanza(),
 		DependsOn: []string{
 			"[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]",
 		},
@@ -1086,6 +1084,7 @@ func (g *generator) zone() *arm.Resource {
 			Location:       to.StringPtr("global"),
 		},
 		APIVersion: azureclient.APIVersions["Microsoft.Network/dnsZones"],
+		Condition:  g.conditionStanza(),
 	}
 }
 
@@ -1158,6 +1157,7 @@ func (g *generator) clustersKeyvault() *arm.Resource {
 	return &arm.Resource{
 		Resource:   vault,
 		APIVersion: azureclient.APIVersions["Microsoft.KeyVault"],
+		Condition:  g.conditionStanza(),
 	}
 }
 
@@ -1204,6 +1204,7 @@ func (g *generator) serviceKeyvault() *arm.Resource {
 	return &arm.Resource{
 		Resource:   vault,
 		APIVersion: azureclient.APIVersions["Microsoft.KeyVault"],
+		Condition:  g.conditionStanza(),
 	}
 }
 
@@ -1232,6 +1233,7 @@ func (g *generator) cosmosdb() []*arm.Resource {
 	r := &arm.Resource{
 		Resource:   cosmosdb,
 		APIVersion: azureclient.APIVersions["Microsoft.DocumentDB"],
+		Condition:  g.conditionStanza(),
 	}
 
 	if g.production {
@@ -1275,6 +1277,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},
 			APIVersion: azureclient.APIVersions["Microsoft.DocumentDB"],
+			Condition:  g.conditionStanza(),
 		},
 		{
 			Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
@@ -1296,6 +1299,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},
 			APIVersion: azureclient.APIVersions["Microsoft.DocumentDB"],
+			Condition:  g.conditionStanza(),
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
@@ -1319,6 +1323,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},
 			APIVersion: azureclient.APIVersions["Microsoft.DocumentDB"],
+			Condition:  g.conditionStanza(),
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
@@ -1343,6 +1348,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},
 			APIVersion: azureclient.APIVersions["Microsoft.DocumentDB"],
+			Condition:  g.conditionStanza(),
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
@@ -1385,6 +1391,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},
 			APIVersion: azureclient.APIVersions["Microsoft.DocumentDB"],
+			Condition:  g.conditionStanza(),
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
@@ -1408,6 +1415,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},
 			APIVersion: azureclient.APIVersions["Microsoft.DocumentDB"],
+			Condition:  g.conditionStanza(),
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
@@ -1448,6 +1456,7 @@ func (g *generator) roleDefinitionTokenContributor() *arm.Resource {
 			},
 		},
 		APIVersion: azureclient.APIVersions["Microsoft.Authorization/roleDefinitions"],
+		Condition:  g.conditionStanza(),
 	}
 }
 
@@ -1465,6 +1474,7 @@ func (g *generator) rbac() []*arm.Resource {
 				},
 			},
 			APIVersion: azureclient.APIVersions["Microsoft.Authorization"],
+			Condition:  g.conditionStanza(),
 		},
 		{
 			Resource: &mgmtauthorization.RoleAssignment{
@@ -1478,6 +1488,7 @@ func (g *generator) rbac() []*arm.Resource {
 				},
 			},
 			APIVersion: azureclient.APIVersions["Microsoft.Authorization"],
+			Condition:  g.conditionStanza(),
 		},
 		{
 			Resource: &mgmtauthorization.RoleAssignment{
@@ -1491,6 +1502,7 @@ func (g *generator) rbac() []*arm.Resource {
 				},
 			},
 			APIVersion: azureclient.APIVersions["Microsoft.Authorization"],
+			Condition:  g.conditionStanza(),
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
 			},
@@ -1507,6 +1519,7 @@ func (g *generator) rbac() []*arm.Resource {
 				},
 			},
 			APIVersion: azureclient.APIVersions["Microsoft.Authorization"],
+			Condition:  g.conditionStanza(),
 			DependsOn: []string{
 				"[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]",
 			},
@@ -1522,6 +1535,7 @@ func (g *generator) acrReplica() *arm.Resource {
 			Location: to.StringPtr("[parameters('location')]"),
 		},
 		APIVersion: azureclient.APIVersions["Microsoft.ContainerRegistry"],
+		Condition:  g.conditionStanza(),
 	}
 }
 
@@ -1539,6 +1553,7 @@ func (g *generator) acrRbac() []*arm.Resource {
 				},
 			},
 			APIVersion: azureclient.APIVersions["Microsoft.Authorization"],
+			Condition:  g.conditionStanza(),
 		},
 		{
 			Resource: &mgmtauthorization.RoleAssignment{
@@ -1552,6 +1567,7 @@ func (g *generator) acrRbac() []*arm.Resource {
 				},
 			},
 			APIVersion: azureclient.APIVersions["Microsoft.Authorization"],
+			Condition:  g.conditionStanza(),
 		},
 	}
 }

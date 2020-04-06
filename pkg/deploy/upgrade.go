@@ -12,10 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
-const (
-	vmssPrefix = "rp-vmss-"
-)
-
 func (d *deployer) Upgrade(ctx context.Context) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, 20*time.Minute)
 	defer cancel()

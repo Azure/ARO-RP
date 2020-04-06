@@ -30,10 +30,6 @@
         ]
     },
     "parameters": {
-        "deployNSGs": {
-            "type": "bool",
-            "defaultValue": false
-        },
         "extraClusterKeyvaultAccessPolicies": {
             "type": "array",
             "defaultValue": []
@@ -44,6 +40,10 @@
         },
         "fpServicePrincipalId": {
             "type": "string"
+        },
+        "fullDeploy": {
+            "type": "bool",
+            "defaultValue": false
         },
         "keyvaultPrefix": {
             "type": "string",
@@ -92,7 +92,7 @@
             "name": "rp-nsg",
             "type": "Microsoft.Network/networkSecurityGroups",
             "location": "[resourceGroup().location]",
-            "condition": "[parameters('deployNSGs')]",
+            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2019-07-01"
         },
         {
@@ -100,7 +100,7 @@
             "name": "rp-pe-nsg",
             "type": "Microsoft.Network/networkSecurityGroups",
             "location": "[resourceGroup().location]",
-            "condition": "[parameters('deployNSGs')]",
+            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2019-07-01"
         },
         {
@@ -119,6 +119,7 @@
             "tags": {
                 "vault": "clusters"
             },
+            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2016-10-01"
         },
         {
@@ -137,6 +138,7 @@
             "tags": {
                 "vault": "service"
             },
+            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2016-10-01"
         }
     ]

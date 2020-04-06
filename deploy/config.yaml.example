@@ -7,6 +7,7 @@ rps:
     keyvaultPrefix: ''
 configuration:
   acrResourceId: ''
+  actionGroupSubscriptionResourceGroupName: ''
   adminApiCaBundle: ''
   adminApiClientCertCommonName: ''
   clusterParentDomainName: ''
@@ -24,5 +25,4 @@ configuration:
   rpImagePrefix: ''
   rpMode: ''
   rpParentDomainName: ''
-  subscriptionResourceGroupName: ''
   sshPublicKey: ''
