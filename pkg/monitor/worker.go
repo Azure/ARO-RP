@@ -52,7 +52,7 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 
 	for {
 		for {
-			docs, err := i.Next(ctx)
+			docs, err := i.Next(ctx, -1)
 			if err != nil {
 				baseLog.Error(err)
 				break

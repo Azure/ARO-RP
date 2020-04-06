@@ -638,14 +638,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:3f73c461a36dec68394df0c694fbe3bec10ab8f60b1a280df1535c1596cf3ad1"
+  digest = "1:11a561b078819a1cd5d9d9c52031e8476e9ee7622f2b3b054850940a7d167971"
   name = "github.com/jim-minter/go-cosmosdb"
   packages = [
     "cmd/gencosmosdb",
     "pkg/gencosmosdb",
   ]
   pruneopts = "UT"
-  revision = "691a7a9f56ae38b2109e491be76bc52175164cd7"
+  revision = "0e3ac7c97cf21cf5fcd6315b6ed273db35b3c531"
 
 [[projects]]
   digest = "1:bb81097a5b62634f3e9fec1014657855610c82d19b9a40c17612e32651e35dca"

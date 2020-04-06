@@ -36,17 +36,31 @@ func (m *MockOpenShiftClusterDocumentIterator) EXPECT() *MockOpenShiftClusterDoc
 	return m.recorder
 }
 
-// Next mocks base method
-func (m *MockOpenShiftClusterDocumentIterator) Next(arg0 context.Context) (*api.OpenShiftClusterDocuments, error) {
+// Continuation mocks base method
+func (m *MockOpenShiftClusterDocumentIterator) Continuation() string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Next", arg0)
+	ret := m.ctrl.Call(m, "Continuation")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Continuation indicates an expected call of Continuation
+func (mr *MockOpenShiftClusterDocumentIteratorMockRecorder) Continuation() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Continuation", reflect.TypeOf((*MockOpenShiftClusterDocumentIterator)(nil).Continuation))
+}
+
+// Next mocks base method
+func (m *MockOpenShiftClusterDocumentIterator) Next(arg0 context.Context, arg1 int) (*api.OpenShiftClusterDocuments, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Next", arg0, arg1)
 	ret0, _ := ret[0].(*api.OpenShiftClusterDocuments)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Next indicates an expected call of Next
-func (mr *MockOpenShiftClusterDocumentIteratorMockRecorder) Next(arg0 interface{}) *gomock.Call {
+func (mr *MockOpenShiftClusterDocumentIteratorMockRecorder) Next(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Next", reflect.TypeOf((*MockOpenShiftClusterDocumentIterator)(nil).Next), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Next", reflect.TypeOf((*MockOpenShiftClusterDocumentIterator)(nil).Next), arg0, arg1)
 }

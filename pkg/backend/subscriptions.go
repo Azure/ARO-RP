@@ -90,14 +90,14 @@ func (sb *subscriptionBackend) handle(ctx context.Context, log *logrus.Entry, do
 // caller indicating whether it this is the case - if this is false, the caller
 // should sleep before calling again
 func (sb *subscriptionBackend) handleDelete(ctx context.Context, log *logrus.Entry, subdoc *api.SubscriptionDocument) (bool, error) {
-	i, err := sb.db.OpenShiftClusters.ListByPrefix(subdoc.ID, "/subscriptions/"+subdoc.ID+"/")
+	i, err := sb.db.OpenShiftClusters.ListByPrefix(subdoc.ID, "/subscriptions/"+subdoc.ID+"/", "")
 	if err != nil {
 		return false, err
 	}
 
 	done := true
 	for {
-		docs, err := i.Next(ctx)
+		docs, err := i.Next(ctx, -1)
 		if err != nil {
 			return false, err
 		}

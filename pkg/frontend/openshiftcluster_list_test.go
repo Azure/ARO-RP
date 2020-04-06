@@ -109,11 +109,11 @@ func TestListOpenShiftCluster(t *testing.T) {
 				}
 
 				mockIter := mock_cosmosdb.NewMockOpenShiftClusterDocumentIterator(controller)
-				mockIter.EXPECT().Next(gomock.Any()).Return(&api.OpenShiftClusterDocuments{OpenShiftClusterDocuments: clusterDocs}, nil)
-				mockIter.EXPECT().Next(gomock.Any()).Return(nil, nil)
+				mockIter.EXPECT().Next(gomock.Any(), -1).Return(&api.OpenShiftClusterDocuments{OpenShiftClusterDocuments: clusterDocs}, nil)
+				mockIter.EXPECT().Next(gomock.Any(), -1).Return(nil, nil)
 
 				openshiftClusters.EXPECT().
-					ListByPrefix(mockSubID, listPrefix).
+					ListByPrefix(mockSubID, listPrefix, "").
 					Return(mockIter, nil)
 
 				enricher.EXPECT().Enrich(gomock.Any(), clusterDocs[0].OpenShiftCluster, clusterDocs[1].OpenShiftCluster)
@@ -140,10 +140,10 @@ func TestListOpenShiftCluster(t *testing.T) {
 			name: "no clusters found in db",
 			mocks: func(controller *gomock.Controller, openshiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher, listPrefix string) {
 				mockIter := mock_cosmosdb.NewMockOpenShiftClusterDocumentIterator(controller)
-				mockIter.EXPECT().Next(gomock.Any()).Return(nil, nil)
+				mockIter.EXPECT().Next(gomock.Any(), -1).Return(nil, nil)
 
 				openshiftClusters.EXPECT().
-					ListByPrefix(mockSubID, listPrefix).
+					ListByPrefix(mockSubID, listPrefix, "").
 					Return(mockIter, nil)
 
 				enricher.EXPECT().Enrich(gomock.Any(), []*api.OpenShiftCluster{})
@@ -159,7 +159,7 @@ func TestListOpenShiftCluster(t *testing.T) {
 			name: "internal error on list",
 			mocks: func(_ *gomock.Controller, openshiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher, listPrefix string) {
 				openshiftClusters.EXPECT().
-					ListByPrefix(mockSubID, listPrefix).
+					ListByPrefix(mockSubID, listPrefix, "").
 					Return(nil, errors.New("random error"))
 			},
 			wantStatusCode: http.StatusInternalServerError,
@@ -169,10 +169,10 @@ func TestListOpenShiftCluster(t *testing.T) {
 			name: "internal error while iterating list",
 			mocks: func(controller *gomock.Controller, openshiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher, listPrefix string) {
 				mockIter := mock_cosmosdb.NewMockOpenShiftClusterDocumentIterator(controller)
-				mockIter.EXPECT().Next(gomock.Any()).Return(nil, errors.New("random error"))
+				mockIter.EXPECT().Next(gomock.Any(), -1).Return(nil, errors.New("random error"))
 
 				openshiftClusters.EXPECT().
-					ListByPrefix(mockSubID, listPrefix).
+					ListByPrefix(mockSubID, listPrefix, "").
 					Return(mockIter, nil)
 			},
 			wantStatusCode: http.StatusInternalServerError,

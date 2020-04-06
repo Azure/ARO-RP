@@ -5,6 +5,7 @@ package cosmosdb
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"strings"
 
 	pkg "github.com/Azure/ARO-RP/pkg/api"
@@ -52,13 +53,14 @@ type monitorDocumentQueryIterator struct {
 
 // MonitorDocumentIterator is a monitorDocument iterator
 type MonitorDocumentIterator interface {
-	Next(context.Context) (*pkg.MonitorDocuments, error)
+	Next(context.Context, int) (*pkg.MonitorDocuments, error)
+	Continuation() string
 }
 
 // MonitorDocumentRawIterator is a monitorDocument raw iterator
 type MonitorDocumentRawIterator interface {
 	MonitorDocumentIterator
-	NextRaw(context.Context, interface{}) error
+	NextRaw(context.Context, int, interface{}) error
 }
 
 // NewMonitorDocumentClient returns a new monitorDocument client
@@ -73,7 +75,7 @@ func (c *monitorDocumentClient) all(ctx context.Context, i MonitorDocumentIterat
 	allmonitorDocuments := &pkg.MonitorDocuments{}
 
 	for {
-		monitorDocuments, err := i.Next(ctx)
+		monitorDocuments, err := i.Next(ctx, -1)
 		if err != nil {
 			return nil, err
 		}
@@ -108,7 +110,12 @@ func (c *monitorDocumentClient) Create(ctx context.Context, partitionkey string,
 }
 
 func (c *monitorDocumentClient) List(options *Options) MonitorDocumentRawIterator {
-	return &monitorDocumentListIterator{monitorDocumentClient: c, options: options}
+	continuation := ""
+	if options != nil {
+		continuation = options.Continuation
+	}
+
+	return &monitorDocumentListIterator{monitorDocumentClient: c, options: options, continuation: continuation}
 }
 
 func (c *monitorDocumentClient) ListAll(ctx context.Context, options *Options) (*pkg.MonitorDocuments, error) {
@@ -155,7 +162,12 @@ func (c *monitorDocumentClient) Delete(ctx context.Context, partitionkey string,
 }
 
 func (c *monitorDocumentClient) Query(partitionkey string, query *Query, options *Options) MonitorDocumentRawIterator {
-	return &monitorDocumentQueryIterator{monitorDocumentClient: c, partitionkey: partitionkey, query: query, options: options}
+	continuation := ""
+	if options != nil {
+		continuation = options.Continuation
+	}
+
+	return &monitorDocumentQueryIterator{monitorDocumentClient: c, partitionkey: partitionkey, query: query, options: options, continuation: continuation}
 }
 
 func (c *monitorDocumentClient) QueryAll(ctx context.Context, partitionkey string, query *Query, options *Options) (*pkg.MonitorDocuments, error) {
@@ -163,7 +175,12 @@ func (c *monitorDocumentClient) QueryAll(ctx context.Context, partitionkey strin
 }
 
 func (c *monitorDocumentClient) ChangeFeed(options *Options) MonitorDocumentIterator {
-	return &monitorDocumentChangeFeedIterator{monitorDocumentClient: c}
+	continuation := ""
+	if options != nil {
+		continuation = options.Continuation
+	}
+
+	return &monitorDocumentChangeFeedIterator{monitorDocumentClient: c, options: options, continuation: continuation}
 }
 
 func (c *monitorDocumentClient) setOptions(options *Options, monitorDocument *pkg.MonitorDocument, headers http.Header) error {
@@ -190,11 +207,11 @@ func (c *monitorDocumentClient) setOptions(options *Options, monitorDocument *pk
 	return nil
 }
 
-func (i *monitorDocumentChangeFeedIterator) Next(ctx context.Context) (monitorDocuments *pkg.MonitorDocuments, err error) {
+func (i *monitorDocumentChangeFeedIterator) Next(ctx context.Context, maxItemCount int) (monitorDocuments *pkg.MonitorDocuments, err error) {
 	headers := http.Header{}
 	headers.Set("A-IM", "Incremental feed")
 
-	headers.Set("X-Ms-Max-Item-Count", "-1")
+	headers.Set("X-Ms-Max-Item-Count", strconv.Itoa(maxItemCount))
 	if i.continuation != "" {
 		headers.Set("If-None-Match", i.continuation)
 	}
@@ -217,18 +234,22 @@ func (i *monitorDocumentChangeFeedIterator) Next(ctx context.Context) (monitorDo
 	return
 }
 
-func (i *monitorDocumentListIterator) Next(ctx context.Context) (monitorDocuments *pkg.MonitorDocuments, err error) {
-	err = i.NextRaw(ctx, &monitorDocuments)
+func (i *monitorDocumentChangeFeedIterator) Continuation() string {
+	return i.continuation
+}
+
+func (i *monitorDocumentListIterator) Next(ctx context.Context, maxItemCount int) (monitorDocuments *pkg.MonitorDocuments, err error) {
+	err = i.NextRaw(ctx, maxItemCount, &monitorDocuments)
 	return
 }
 
-func (i *monitorDocumentListIterator) NextRaw(ctx context.Context, raw interface{}) (err error) {
+func (i *monitorDocumentListIterator) NextRaw(ctx context.Context, maxItemCount int, raw interface{}) (err error) {
 	if i.done {
 		return
 	}
 
 	headers := http.Header{}
-	headers.Set("X-Ms-Max-Item-Count", "-1")
+	headers.Set("X-Ms-Max-Item-Count", strconv.Itoa(maxItemCount))
 	if i.continuation != "" {
 		headers.Set("X-Ms-Continuation", i.continuation)
 	}
@@ -249,18 +270,22 @@ func (i *monitorDocumentListIterator) NextRaw(ctx context.Context, raw interface
 	return
 }
 
-func (i *monitorDocumentQueryIterator) Next(ctx context.Context) (monitorDocuments *pkg.MonitorDocuments, err error) {
-	err = i.NextRaw(ctx, &monitorDocuments)
+func (i *monitorDocumentListIterator) Continuation() string {
+	return i.continuation
+}
+
+func (i *monitorDocumentQueryIterator) Next(ctx context.Context, maxItemCount int) (monitorDocuments *pkg.MonitorDocuments, err error) {
+	err = i.NextRaw(ctx, maxItemCount, &monitorDocuments)
 	return
 }
 
-func (i *monitorDocumentQueryIterator) NextRaw(ctx context.Context, raw interface{}) (err error) {
+func (i *monitorDocumentQueryIterator) NextRaw(ctx context.Context, maxItemCount int, raw interface{}) (err error) {
 	if i.done {
 		return
 	}
 
 	headers := http.Header{}
-	headers.Set("X-Ms-Max-Item-Count", "-1")
+	headers.Set("X-Ms-Max-Item-Count", strconv.Itoa(maxItemCount))
 	headers.Set("X-Ms-Documentdb-Isquery", "True")
 	headers.Set("Content-Type", "application/query+json")
 	if i.partitionkey != "" {
@@ -286,4 +311,8 @@ func (i *monitorDocumentQueryIterator) NextRaw(ctx context.Context, raw interfac
 	i.done = i.continuation == ""
 
 	return
+}
+
+func (i *monitorDocumentQueryIterator) Continuation() string {
+	return i.continuation
 }
