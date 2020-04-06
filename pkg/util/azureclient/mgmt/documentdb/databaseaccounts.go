@@ -6,7 +6,7 @@ package documentdb
 import (
 	"context"
 
-	mgmtdocumentdb "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2015-04-08/documentdb"
+	mgmtdocumentdb "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2019-08-01/documentdb"
 	"github.com/Azure/go-autorest/autorest"
 )
 
