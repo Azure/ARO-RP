@@ -72,5 +72,5 @@ jobs:
         workingDirectory: ${{ variables.modulePath }}
         location: ${{ location }}
         subscription: ${{ parameters.e2eSubscription }}
-        azureDevOpsJSONSPN: ${{ parameters.azureDevOpsE2EJSONSPN }}
+        azureDevOpsE2EJSONSPN: ${{ parameters.azureDevOpsE2EJSONSPN }}
     # trigger billing e2e after wait
