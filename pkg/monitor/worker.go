@@ -124,10 +124,7 @@ out:
 		// TODO: later can modify here to poll once per N minutes and re-issue
 		// cached metrics in the remaining minutes
 
-		err := mon.workOne(context.Background(), log, v.doc)
-		if err != nil {
-			log.Error(err)
-		}
+		mon.workOne(context.Background(), log, v.doc)
 
 		select {
 		case <-t.C:
@@ -140,14 +137,15 @@ out:
 }
 
 // workOne checks the API server health of a cluster
-func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument) error {
+func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument) {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	c, err := cluster.NewMonitor(mon.env, log, doc.OpenShiftCluster, mon.clusterm)
+	c, err := cluster.NewMonitor(ctx, mon.env, log, doc.OpenShiftCluster, mon.clusterm)
 	if err != nil {
-		return err
+		log.Error(err)
+		return
 	}
 
-	return c.Monitor(ctx)
+	c.Monitor(ctx)
 }
