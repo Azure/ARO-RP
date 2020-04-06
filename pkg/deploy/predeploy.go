@@ -28,6 +28,19 @@ func (d *deployer) PreDeploy(ctx context.Context) (string, error) {
 		return "", err
 	}
 
+	// deploy per subscription Action Group
+	_, err = d.groups.CreateOrUpdate(ctx, d.config.Configuration.SubscriptionResourceGroupName, mgmtresources.Group{
+		Location: to.StringPtr("centralus"),
+	})
+	if err != nil {
+		return "", err
+	}
+
+	err = d.deploySubscription(ctx)
+	if err != nil {
+		return "", err
+	}
+
 	_, err = d.groups.CreateOrUpdate(ctx, d.config.ResourceGroupName, mgmtresources.Group{
 		Location: &d.config.Location,
 	})
@@ -113,6 +126,29 @@ func (d *deployer) deployGlobalSubscription(ctx context.Context) error {
 			Mode:     mgmtresources.Incremental,
 		},
 		Location: to.StringPtr("centralus"),
+	})
+}
+
+func (d *deployer) deploySubscription(ctx context.Context) error {
+	deploymentName := "rp-production-subscription"
+
+	b, err := Asset(generator.FileRPProductionSubscription)
+	if err != nil {
+		return err
+	}
+
+	var template map[string]interface{}
+	err = json.Unmarshal(b, &template)
+	if err != nil {
+		return err
+	}
+
+	d.log.Infof("deploying %s", deploymentName)
+	return d.deployments.CreateOrUpdateAndWait(ctx, d.config.Configuration.SubscriptionResourceGroupName, deploymentName, mgmtresources.Deployment{
+		Properties: &mgmtresources.DeploymentProperties{
+			Template: template,
+			Mode:     mgmtresources.Incremental,
+		},
 	})
 }
 

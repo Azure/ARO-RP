@@ -47,6 +47,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"acrResourceId",
 			"rpImage",
 			"rpMode",
+			"subscriptionResourceGroupName",
 			"sshPublicKey",
 			"vmssName",
 		)
@@ -62,7 +63,7 @@ func (g *generator) rpTemplate() *arm.Template {
 	}
 
 	if g.production {
-		t.Resources = append(t.Resources, g.pip(), g.lb(), g.vmss())
+		t.Resources = append(t.Resources, g.pip(), g.lb(), g.vmss(), g.lbAlert())
 	}
 
 	t.Resources = append(t.Resources, g.zone(),
@@ -117,6 +118,14 @@ func (g *generator) rpGlobalSubscriptionTemplate() *arm.Template {
 	t.Resources = append(t.Resources,
 		g.roleDefinitionTokenContributor(),
 	)
+
+	return t
+}
+
+func (g *generator) rpSubscriptionTemplate() *arm.Template {
+	t := templateStanza()
+
+	t.Resources = append(t.Resources, g.actionGroup("rp-health-ag", "rphealth"))
 
 	return t
 }

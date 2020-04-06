@@ -44,6 +44,9 @@
         "sshPublicKey": {
             "value": ""
         },
+        "subscriptionResourceGroupName": {
+            "value": ""
+        },
         "vmssName": {
             "value": ""
         }
