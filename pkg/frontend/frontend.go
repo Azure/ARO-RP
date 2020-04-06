@@ -269,6 +269,7 @@ func reply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b []byt
 	if err != nil {
 		switch err := err.(type) {
 		case *api.CloudError:
+			log.Print(err)
 			api.WriteCloudError(w, err)
 			return
 		case statusCodeError:
