@@ -27,8 +27,8 @@ var _ DeploymentsClient = &deploymentsClient{}
 func NewDeploymentsClient(subscriptionID string, authorizer autorest.Authorizer) DeploymentsClient {
 	client := mgmtresources.NewDeploymentsClient(subscriptionID)
 	client.Authorizer = authorizer
-	client.PollingDuration = time.Hour
 	client.PollingDelay = 10 * time.Second
+	client.PollingDuration = time.Hour
 
 	return &deploymentsClient{
 		DeploymentsClient: client,
