@@ -150,18 +150,18 @@ func (mr *MockBillingMockRecorder) Get(arg0, arg1 interface{}) *gomock.Call {
 }
 
 // ListAll mocks base method
-func (m *MockBilling) ListAll(arg0 context.Context) (*api.BillingDocuments, error) {
+func (m *MockBilling) ListAll(arg0 context.Context, arg1 string) (*api.BillingDocuments, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListAll", arg0)
+	ret := m.ctrl.Call(m, "ListAll", arg0, arg1)
 	ret0, _ := ret[0].(*api.BillingDocuments)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListAll indicates an expected call of ListAll
-func (mr *MockBillingMockRecorder) ListAll(arg0 interface{}) *gomock.Call {
+func (mr *MockBillingMockRecorder) ListAll(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAll", reflect.TypeOf((*MockBilling)(nil).ListAll), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAll", reflect.TypeOf((*MockBilling)(nil).ListAll), arg0, arg1)
 }
 
 // MarkForDeletion mocks base method

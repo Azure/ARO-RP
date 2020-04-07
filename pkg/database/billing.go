@@ -24,7 +24,7 @@ type Billing interface {
 	Get(context.Context, string) (*api.BillingDocument, error)
 	MarkForDeletion(context.Context, string) (*api.BillingDocument, error)
 	UpdateLastBillingTimestamp(context.Context, string, int) (*api.BillingDocument, error)
-	ListAll(context.Context) (*api.BillingDocuments, error)
+	ListAll(context.Context, string) (*api.BillingDocuments, error)
 	Delete(context.Context, *api.BillingDocument) error
 }
 
@@ -127,8 +127,8 @@ func (c *billing) MarkForDeletion(ctx context.Context, id string) (*api.BillingD
 }
 
 // ListAll list all the billing documents
-func (c *billing) ListAll(ctx context.Context) (*api.BillingDocuments, error) {
-	return c.c.ListAll(ctx, nil)
+func (c *billing) ListAll(ctx context.Context, continuation string) (*api.BillingDocuments, error) {
+	return c.c.ListAll(ctx, &cosmosdb.Options{Continuation: continuation})
 }
 
 // Delete a billing document
