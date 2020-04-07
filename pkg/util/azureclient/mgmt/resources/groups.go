@@ -28,6 +28,7 @@ var _ GroupsClient = &groupsClient{}
 func NewGroupsClient(subscriptionID string, authorizer autorest.Authorizer) GroupsClient {
 	client := mgmtresources.NewGroupsClient(subscriptionID)
 	client.Authorizer = authorizer
+	client.PollingDelay = 10 * time.Second
 	client.PollingDuration = time.Hour
 
 	return &groupsClient{
