@@ -63,7 +63,11 @@ func (mon *Monitor) emitPrometheusAlerts(ctx context.Context) error {
 	alertmap := map[string]int64{}
 
 	for _, alert := range alerts {
-		// If the alert is still happening we are emitting
+		if alert.Name() == "UsingDeprecatedAPIExtensionsV1Beta1" {
+			continue
+		}
+
+		// If the alert we are emitting is still happening
 		if inTimeSpan(alert.StartsAt, alert.EndsAt, time.Now()) {
 			alertmap[string(alert.Labels["alertname"])]++
 		}
