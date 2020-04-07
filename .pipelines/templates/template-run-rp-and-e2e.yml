@@ -2,6 +2,9 @@ parameters:
   workingDirectory: ''
 steps:
 - script: |
+    set -e
+    set -o pipefail
+
     cd ${{ parameters.workingDirectory }}
 
     . secrets/env
