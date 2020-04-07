@@ -16,6 +16,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -348,7 +349,7 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 	scc.Users = []string{kubeServiceAccount}
 
 	_, err = g.seccli.SecurityV1().SecurityContextConstraints().Create(scc)
-	if err != nil {
+	if err != nil && !kerrors.IsAlreadyExists(err) {
 		return err
 	}
 
