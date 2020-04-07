@@ -24,7 +24,8 @@ type Billing interface {
 	Get(context.Context, string) (*api.BillingDocument, error)
 	MarkForDeletion(context.Context, string) (*api.BillingDocument, error)
 	UpdateLastBillingTimestamp(context.Context, string, int) (*api.BillingDocument, error)
-	ListAll(context.Context, string) (*api.BillingDocuments, error)
+	List(string) (*api.BillingDocuments, error)
+	ListAll(context.Context) (*api.BillingDocuments, error)
 	Delete(context.Context, *api.BillingDocument) error
 }
 
@@ -126,9 +127,14 @@ func (c *billing) MarkForDeletion(ctx context.Context, id string) (*api.BillingD
 	}, &cosmosdb.Options{PreTriggers: []string{"setDeletionBillingTimeStamp"}})
 }
 
+//List produces and iterator for paging through all billing documents.
+func (c *billing) List(continuation string) cosmosdb.BillingDocumentIterator {
+	return c.c.List(&cosmosdb.Options{Continuation: continuation})
+}
+
 // ListAll list all the billing documents
-func (c *billing) ListAll(ctx context.Context, continuation string) (*api.BillingDocuments, error) {
-	return c.c.ListAll(ctx, &cosmosdb.Options{Continuation: continuation})
+func (c *billing) ListAll(ctx context.Context) (*api.BillingDocuments, error) {
+	return c.c.ListAll(ctx, nil)
 }
 
 // Delete a billing document
