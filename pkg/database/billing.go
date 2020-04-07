@@ -24,7 +24,7 @@ type Billing interface {
 	Get(context.Context, string) (*api.BillingDocument, error)
 	MarkForDeletion(context.Context, string) (*api.BillingDocument, error)
 	UpdateLastBillingTimestamp(context.Context, string, int) (*api.BillingDocument, error)
-	List(string) (*api.BillingDocuments, error)
+	List(string) cosmosdb.BillingDocumentIterator
 	ListAll(context.Context) (*api.BillingDocuments, error)
 	Delete(context.Context, *api.BillingDocument) error
 }
