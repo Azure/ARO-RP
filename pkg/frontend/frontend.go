@@ -195,6 +195,12 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 
 	s.Methods(http.MethodGet).HandlerFunc(f.listAdminOpenShiftClusterResources).Name("listAdminOpenShiftClusterResources")
 
+	s = r.
+		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/mustgather").
+		Subrouter()
+
+	s.Methods(http.MethodPost).HandlerFunc(f.postAdminOpenShiftClusterMustGather).Name("postAdminOpenShiftClusterMustGather")
+
 	// Operations
 	s = r.
 		Path("/providers/{resourceProviderNamespace}/operations").
@@ -259,7 +265,7 @@ func (f *frontend) Run(ctx context.Context, stop <-chan struct{}, done chan<- st
 	f.s = &http.Server{
 		Handler:      middleware.Lowercase(f.setupRouter()),
 		ReadTimeout:  10 * time.Second,
-		WriteTimeout: time.Minute,
+		WriteTimeout: 15 * time.Minute,
 		IdleTimeout:  2 * time.Minute,
 		ErrorLog:     log.New(f.baseLog.Writer(), "", 0),
 		BaseContext:  func(net.Listener) context.Context { return ctx },
