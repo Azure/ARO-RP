@@ -4,11 +4,13 @@ package cluster
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
+
 	configv1 "github.com/openshift/api/config/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (mon *Monitor) emitClusterVersionMetrics() error {
+func (mon *Monitor) emitClusterVersionMetrics(ctx context.Context) error {
 	cv, err := mon.configcli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
 	if err != nil {
 		return err

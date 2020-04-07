@@ -4,6 +4,7 @@ package cluster
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -15,6 +16,8 @@ import (
 )
 
 func TestEmitNodesMetrics(t *testing.T) {
+	ctx := context.Background()
+
 	cli := fake.NewSimpleClientset(&corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "aro-master-0",
@@ -59,7 +62,7 @@ func TestEmitNodesMetrics(t *testing.T) {
 		"condition": "MemoryPressure",
 	})
 
-	err := mon.emitNodesMetrics()
+	err := mon.emitNodesMetrics(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
