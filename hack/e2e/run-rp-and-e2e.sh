@@ -83,9 +83,6 @@ deploy_e2e_deps() {
     echo "########## Create Cluster SPN ##########"
     az ad sp create-for-rbac -n "$CLUSTER" --role contributor \
         --scopes /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP >$CLUSTERSPN
-
-    echo "########## Sleep 120 secs for SPN creation"
-    sleep 120
 }
 
 set_cli_context() {
@@ -95,7 +92,7 @@ set_cli_context() {
 
 register_sub() {
     echo "########## 🔑 Registering subscription ##########"
-    curl -k -X PUT \
+    curl -sko /dev/null -X PUT \
       -H 'Content-Type: application/json' \
       -d '{"state": "Registered", "properties": {"tenantId": "'"$AZURE_TENANT_ID"'"}}' \
       "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID?api-version=2.0"

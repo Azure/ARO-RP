@@ -24,7 +24,6 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
@@ -40,15 +39,6 @@ type conn struct {
 
 func (c *conn) Read(b []byte) (int, error) {
 	return c.r.Read(b)
-}
-
-type refreshableAuthorizer struct {
-	autorest.Authorizer
-	sp *adal.ServicePrincipalToken
-}
-
-func (ra *refreshableAuthorizer) Refresh() error {
-	return ra.sp.Refresh()
 }
 
 type Dev interface {
@@ -242,7 +232,7 @@ func (d *dev) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, erro
 		return nil, err
 	}
 
-	return &refreshableAuthorizer{autorest.NewBearerAuthorizer(sp), sp}, nil
+	return autorest.NewBearerAuthorizer(sp), nil
 }
 
 func (d *dev) MetricsSocketPath() string {
@@ -270,30 +260,6 @@ func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthor
 			err = nil
 		}
 	}
-	if err != nil {
-		return err
-	}
 
-	// Issue: https://github.com/Azure/ARO-RP/issues/31
-	// rbac client returns right permissions, but access is not yet propagated
-	// in the azure backends. We test by trying to call API directly and check if
-	// role was applied.
-	d.log.Print("development mode: refreshing authorizer")
-	err = fpAuthorizer.(*refreshableAuthorizer).Refresh()
-	if err != nil {
-		return err
-	}
-
-	return wait.Poll(time.Second, time.Minute, func() (bool, error) {
-		// this should always error. Either 403 or 404
-		_, err := d.deployments.Get(ctx, resourceGroup, "dummy")
-		if detailedErr, ok := err.(autorest.DetailedError); ok {
-			if requestErr, ok := detailedErr.Original.(azure.RequestError); ok &&
-				requestErr.ServiceError != nil &&
-				requestErr.ServiceError.Code == "AuthorizationFailed" {
-				return false, nil
-			}
-		}
-		return true, nil
-	})
+	return err
 }
