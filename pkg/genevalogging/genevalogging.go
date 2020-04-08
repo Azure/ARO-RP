@@ -65,7 +65,6 @@ const (
 	Name modify
 	Match journald
 	Remove_wildcard _
-	Remove TIMESTAMP
 	Remove SYSLOG_FACILITY
 
 [OUTPUT]
