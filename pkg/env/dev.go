@@ -28,7 +28,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/resources"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 )
@@ -63,7 +63,7 @@ type dev struct {
 	permissions     authorization.PermissionsClient
 	roleassignments authorization.RoleAssignmentsClient
 	applications    graphrbac.ApplicationsClient
-	deployments     resources.DeploymentsClient
+	deployments     features.DeploymentsClient
 
 	proxyPool       *x509.CertPool
 	proxyClientCert []byte
@@ -118,7 +118,7 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 
 	d.permissions = authorization.NewPermissionsClient(instancemetadata.SubscriptionID(), fpAuthorizer)
 
-	d.deployments = resources.NewDeploymentsClient(instancemetadata.TenantID(), fpAuthorizer)
+	d.deployments = features.NewDeploymentsClient(instancemetadata.TenantID(), fpAuthorizer)
 
 	b, err := ioutil.ReadFile("secrets/proxy.crt")
 	if err != nil {

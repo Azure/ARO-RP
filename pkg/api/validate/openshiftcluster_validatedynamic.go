@@ -13,7 +13,7 @@ import (
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
-	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
+	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
@@ -25,8 +25,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/resources"
 	utilpermissions "github.com/Azure/ARO-RP/pkg/util/permissions"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
@@ -98,7 +98,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context, oc *api
 		return err
 	}
 
-	spProvider := resources.NewProvidersClient(r.SubscriptionID, spAuthorizer)
+	spProvider := features.NewProvidersClient(r.SubscriptionID, spAuthorizer)
 	err = dv.validateProviders(ctx, spProvider)
 	if err != nil {
 		return err
@@ -320,13 +320,13 @@ func (dv *openShiftClusterDynamicValidator) validateVnet(ctx context.Context, vn
 	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided vnet '%s' is invalid: custom DNS servers are not supported.", vnetID)
 }
 
-func (dv *openShiftClusterDynamicValidator) validateProviders(ctx context.Context, providerClient resources.ProvidersClient) error {
+func (dv *openShiftClusterDynamicValidator) validateProviders(ctx context.Context, providerClient features.ProvidersClient) error {
 	providers, err := providerClient.List(ctx, nil, "")
 	if err != nil {
 		return err
 	}
 
-	providerMap := make(map[string]mgmtresources.Provider, len(providers))
+	providerMap := make(map[string]mgmtfeatures.Provider, len(providers))
 
 	for _, provider := range providers {
 		providerMap[*provider.Namespace] = provider

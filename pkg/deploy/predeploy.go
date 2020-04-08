@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
-	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
+	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
@@ -29,7 +29,7 @@ func (d *deployer) PreDeploy(ctx context.Context) (string, error) {
 	}
 
 	// deploy per subscription Action Group
-	_, err = d.groups.CreateOrUpdate(ctx, d.config.Configuration.SubscriptionResourceGroupName, mgmtresources.Group{
+	_, err = d.groups.CreateOrUpdate(ctx, d.config.Configuration.SubscriptionResourceGroupName, mgmtfeatures.ResourceGroup{
 		Location: to.StringPtr("centralus"),
 	})
 	if err != nil {
@@ -41,7 +41,7 @@ func (d *deployer) PreDeploy(ctx context.Context) (string, error) {
 		return "", err
 	}
 
-	_, err = d.groups.CreateOrUpdate(ctx, d.config.ResourceGroupName, mgmtresources.Group{
+	_, err = d.groups.CreateOrUpdate(ctx, d.config.ResourceGroupName, mgmtfeatures.ResourceGroup{
 		Location: &d.config.Location,
 	})
 	if err != nil {
@@ -96,10 +96,10 @@ func (d *deployer) deployGlobal(ctx context.Context, rpServicePrincipalID string
 	}
 
 	d.log.Infof("deploying %s", deploymentName)
-	return d.globaldeployments.CreateOrUpdateAndWait(ctx, d.config.Configuration.GlobalResourceGroupName, deploymentName, mgmtresources.Deployment{
-		Properties: &mgmtresources.DeploymentProperties{
+	return d.globaldeployments.CreateOrUpdateAndWait(ctx, d.config.Configuration.GlobalResourceGroupName, deploymentName, mgmtfeatures.Deployment{
+		Properties: &mgmtfeatures.DeploymentProperties{
 			Template:   template,
-			Mode:       mgmtresources.Incremental,
+			Mode:       mgmtfeatures.Incremental,
 			Parameters: parameters.Parameters,
 		},
 	})
@@ -120,10 +120,10 @@ func (d *deployer) deployGlobalSubscription(ctx context.Context) error {
 	}
 
 	d.log.Infof("deploying %s", deploymentName)
-	return d.globaldeployments.CreateOrUpdateAtSubscriptionScopeAndWait(ctx, deploymentName, mgmtresources.Deployment{
-		Properties: &mgmtresources.DeploymentProperties{
+	return d.globaldeployments.CreateOrUpdateAtSubscriptionScopeAndWait(ctx, deploymentName, mgmtfeatures.Deployment{
+		Properties: &mgmtfeatures.DeploymentProperties{
 			Template: template,
-			Mode:     mgmtresources.Incremental,
+			Mode:     mgmtfeatures.Incremental,
 		},
 		Location: to.StringPtr("centralus"),
 	})
@@ -144,10 +144,10 @@ func (d *deployer) deploySubscription(ctx context.Context) error {
 	}
 
 	d.log.Infof("deploying %s", deploymentName)
-	return d.deployments.CreateOrUpdateAndWait(ctx, d.config.Configuration.SubscriptionResourceGroupName, deploymentName, mgmtresources.Deployment{
-		Properties: &mgmtresources.DeploymentProperties{
+	return d.deployments.CreateOrUpdateAndWait(ctx, d.config.Configuration.SubscriptionResourceGroupName, deploymentName, mgmtfeatures.Deployment{
+		Properties: &mgmtfeatures.DeploymentProperties{
 			Template: template,
-			Mode:     mgmtresources.Incremental,
+			Mode:     mgmtfeatures.Incremental,
 		},
 	})
 }
@@ -167,10 +167,10 @@ func (d *deployer) deployManageIdentity(ctx context.Context) (string, error) {
 	}
 
 	d.log.Infof("deploying %s", deploymentName)
-	err = d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, deploymentName, mgmtresources.Deployment{
-		Properties: &mgmtresources.DeploymentProperties{
+	err = d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, deploymentName, mgmtfeatures.Deployment{
+		Properties: &mgmtfeatures.DeploymentProperties{
 			Template: template,
-			Mode:     mgmtresources.Incremental,
+			Mode:     mgmtfeatures.Incremental,
 		},
 	})
 	if err != nil {
@@ -218,10 +218,10 @@ func (d *deployer) deployPreDeploy(ctx context.Context, rpServicePrincipalID str
 	}
 
 	d.log.Infof("deploying %s", deploymentName)
-	return d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, deploymentName, mgmtresources.Deployment{
-		Properties: &mgmtresources.DeploymentProperties{
+	return d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, deploymentName, mgmtfeatures.Deployment{
+		Properties: &mgmtfeatures.DeploymentProperties{
 			Template:   template,
-			Mode:       mgmtresources.Incremental,
+			Mode:       mgmtfeatures.Incremental,
 			Parameters: parameters.Parameters,
 		},
 	})

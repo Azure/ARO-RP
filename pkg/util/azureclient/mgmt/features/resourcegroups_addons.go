@@ -1,4 +1,4 @@
-package resources
+package features
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -7,12 +7,12 @@ import (
 	"context"
 )
 
-// GroupsClientAddons contains addons for GroupsClient
-type GroupsClientAddons interface {
+// ResourceGroupsClientAddons contains addons for ResourceGroupsClient
+type ResourceGroupsClientAddons interface {
 	DeleteAndWait(ctx context.Context, resourceGroupName string) (err error)
 }
 
-func (c *groupsClient) DeleteAndWait(ctx context.Context, resourceGroupName string) error {
+func (c *resourceGroupsClient) DeleteAndWait(ctx context.Context, resourceGroupName string) error {
 	future, err := c.Delete(ctx, resourceGroupName)
 	if err != nil {
 		return err

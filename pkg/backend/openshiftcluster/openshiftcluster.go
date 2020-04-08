@@ -14,7 +14,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
 	pkgacrtoken "github.com/Azure/ARO-RP/pkg/util/acrtoken"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/resources"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/privateendpoint"
@@ -30,7 +30,7 @@ type Manager struct {
 
 	ocDynamicValidator validate.OpenShiftClusterDynamicValidator
 
-	groups resources.GroupsClient
+	groups features.ResourceGroupsClient
 
 	dns             dns.Manager
 	keyvault        keyvault.Manager
@@ -79,7 +79,7 @@ func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClus
 
 		ocDynamicValidator: validate.NewOpenShiftClusterDynamicValidator(_env),
 
-		groups: resources.NewGroupsClient(r.SubscriptionID, fpAuthorizer),
+		groups: features.NewResourceGroupsClient(r.SubscriptionID, fpAuthorizer),
 
 		dns:             dns.NewManager(_env, localFPAuthorizer),
 		keyvault:        keyvault.NewManager(localFPKVAuthorizer),
