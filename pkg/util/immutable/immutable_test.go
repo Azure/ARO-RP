@@ -76,7 +76,7 @@ func TestValidate(t *testing.T) {
 			modify: func(s *ts) {
 				s.Map = map[string]string{"key": "new-value"}
 			},
-			wantErr: "Changing property 'map[\"key\"]' is not allowed.",
+			wantErr: `Changing property 'map["key"]' is not allowed.`,
 		},
 		{
 			name: "can NOT change EmptyNoJSON",
