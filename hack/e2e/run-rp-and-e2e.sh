@@ -119,7 +119,7 @@ run_e2e() {
     echo "########## CLI : ARO List ##########"
     az aro list -o table
     echo "########## CLI : ARO list-creds ##########"
-    az aro list-credentials -g "$RESOURCEGROUP" -n "$CLUSTER"
+    az aro list-credentials -g "$RESOURCEGROUP" -n "$CLUSTER" >/dev/null
     echo "########## Run E2E ##########"
     go run ./hack/kubeadminkubeconfig "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER" >$KUBECONFIG
     make e2e
