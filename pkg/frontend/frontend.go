@@ -16,6 +16,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -277,6 +278,28 @@ func (f *frontend) Run(ctx context.Context, stop <-chan struct{}, done chan<- st
 	if err != http.ErrServerClosed {
 		f.baseLog.Error(err)
 	}
+}
+
+func adminReply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b []byte, err error) {
+	var finalErr error = err
+	if err != nil {
+		switch err := err.(type) {
+		case errors.APIStatus:
+			cerr := &api.CloudError{
+				StatusCode: int(err.Status().Code),
+				CloudErrorBody: &api.CloudErrorBody{
+					Code:    string(err.Status().Reason),
+					Message: err.Status().Message,
+				},
+			}
+			if err.Status().Details != nil {
+				cerr.CloudErrorBody.Target = fmt.Sprintf("%s/%s", err.Status().Details.Kind, err.Status().Details.Name)
+			}
+			finalErr = cerr
+		}
+	}
+
+	reply(log, w, header, b, finalErr)
 }
 
 func reply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b []byte, err error) {
