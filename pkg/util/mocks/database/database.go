@@ -149,6 +149,20 @@ func (mr *MockBillingMockRecorder) Get(arg0, arg1 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockBilling)(nil).Get), arg0, arg1)
 }
 
+// List mocks base method
+func (m *MockBilling) List(arg0 string) cosmosdb.BillingDocumentIterator {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", arg0)
+	ret0, _ := ret[0].(cosmosdb.BillingDocumentIterator)
+	return ret0
+}
+
+// List indicates an expected call of List
+func (mr *MockBillingMockRecorder) List(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockBilling)(nil).List), arg0)
+}
+
 // ListAll mocks base method
 func (m *MockBilling) ListAll(arg0 context.Context) (*api.BillingDocuments, error) {
 	m.ctrl.T.Helper()
