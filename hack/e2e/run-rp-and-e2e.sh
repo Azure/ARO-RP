@@ -15,7 +15,7 @@ validate_rp_running() {
             echo "Attempt $ELAPSED - local RP is NOT up. Code : $http_code, waiting"
             sleep 2
             # after 20 secs return exit 1 to not block ci
-            (( ELAPSED++ ))
+            ELAPSED=$((ELAPSED+1))
             if [ $ELAPSED -eq 10 ]
             then
                 exit 1
