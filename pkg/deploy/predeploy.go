@@ -28,20 +28,19 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 		return err
 	}
 
-	_, err = d.groups.CreateOrUpdate(ctx, d.config.ResourceGroupName, mgmtfeatures.Group{
+	_, err = d.groups.CreateOrUpdate(ctx, d.config.ResourceGroupName, mgmtfeatures.ResourceGroup{
 		Location: &d.config.Location,
 	})
 	if d.fullDeploy { // upgrade does not have permission to create RG
-
 		// deploy per subscription Action Group
-		_, err = d.groups.CreateOrUpdate(ctx, d.config.Configuration.ActionGroupSubscriptionResourceGroupName, mgmtresources.Group{
+		_, err = d.groups.CreateOrUpdate(ctx, d.config.Configuration.ActionGroupSubscriptionResourceGroupName, mgmtfeatures.ResourceGroup{
 			Location: to.StringPtr("centralus"),
 		})
 		if err != nil {
 			return err
 		}
 
-		_, err = d.groups.CreateOrUpdate(ctx, d.config.ResourceGroupName, mgmtresources.Group{
+		_, err = d.groups.CreateOrUpdate(ctx, d.config.ResourceGroupName, mgmtfeatures.ResourceGroup{
 			Location: &d.config.Location,
 		})
 		if err != nil {
@@ -140,8 +139,9 @@ func (d *deployer) deployGlobalSubscription(ctx context.Context) error {
 	d.log.Infof("deploying %s", deploymentName)
 	return d.globaldeployments.CreateOrUpdateAtSubscriptionScopeAndWait(ctx, deploymentName, mgmtfeatures.Deployment{
 		Properties: &mgmtfeatures.DeploymentProperties{
-			Template: template,
-			Mode:     mgmtfeatures.Incremental,
+			Template:   template,
+			Mode:       mgmtfeatures.Incremental,
+			Parameters: parameters.Parameters,
 		},
 		Location: to.StringPtr("centralus"),
 	})
@@ -161,11 +161,17 @@ func (d *deployer) deploySubscription(ctx context.Context) error {
 		return err
 	}
 
+	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
+	parameters.Parameters["fullDeploy"] = &arm.ParametersParameter{
+		Value: d.fullDeploy,
+	}
+
 	d.log.Infof("deploying %s", deploymentName)
 	return d.deployments.CreateOrUpdateAndWait(ctx, d.config.Configuration.ActionGroupSubscriptionResourceGroupName, deploymentName, mgmtfeatures.Deployment{
 		Properties: &mgmtfeatures.DeploymentProperties{
-			Template: template,
-			Mode:     mgmtfeatures.Incremental,
+			Template:   template,
+			Mode:       mgmtfeatures.Incremental,
+			Parameters: parameters.Parameters,
 		},
 	})
 }
@@ -190,8 +196,9 @@ func (d *deployer) deployManageIdentity(ctx context.Context) error {
 	d.log.Infof("deploying %s", rpManagedIdentityDeploymentName)
 	return d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, rpManagedIdentityDeploymentName, mgmtfeatures.Deployment{
 		Properties: &mgmtfeatures.DeploymentProperties{
-			Template: template,
-			Mode:     mgmtfeatures.Incremental,
+			Template:   template,
+			Mode:       mgmtfeatures.Incremental,
+			Parameters: parameters.Parameters,
 		},
 	})
 }
