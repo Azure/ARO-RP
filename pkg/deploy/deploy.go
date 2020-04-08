@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
-	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
+	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -21,7 +21,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/resources"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
 
@@ -36,10 +36,10 @@ type Deployer interface {
 type deployer struct {
 	log *logrus.Entry
 
-	globaldeployments resources.DeploymentsClient
+	globaldeployments features.DeploymentsClient
 	globalrecordsets  dns.RecordSetsClient
-	deployments       resources.DeploymentsClient
-	groups            resources.GroupsClient
+	deployments       features.DeploymentsClient
+	groups            features.ResourceGroupsClient
 	vmss              compute.VirtualMachineScaleSetsClient
 	vmssvms           compute.VirtualMachineScaleSetVMsClient
 	keyvault          keyvault.Manager
@@ -63,10 +63,10 @@ func New(ctx context.Context, log *logrus.Entry, config *RPConfig, version strin
 	return &deployer{
 		log: log,
 
-		globaldeployments: resources.NewDeploymentsClient(config.Configuration.GlobalSubscriptionID, authorizer),
+		globaldeployments: features.NewDeploymentsClient(config.Configuration.GlobalSubscriptionID, authorizer),
 		globalrecordsets:  dns.NewRecordSetsClient(config.Configuration.GlobalSubscriptionID, authorizer),
-		deployments:       resources.NewDeploymentsClient(config.SubscriptionID, authorizer),
-		groups:            resources.NewGroupsClient(config.SubscriptionID, authorizer),
+		deployments:       features.NewDeploymentsClient(config.SubscriptionID, authorizer),
+		groups:            features.NewResourceGroupsClient(config.SubscriptionID, authorizer),
 		vmss:              compute.NewVirtualMachineScaleSetsClient(config.SubscriptionID, authorizer),
 		vmssvms:           compute.NewVirtualMachineScaleSetVMsClient(config.SubscriptionID, authorizer),
 		keyvault:          keyvault.NewManager(kvAuthorizer),
@@ -111,10 +111,10 @@ func (d *deployer) Deploy(ctx context.Context, rpServicePrincipalID string) erro
 	}
 
 	d.log.Printf("deploying %s", deploymentName)
-	err = d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, deploymentName, mgmtresources.Deployment{
-		Properties: &mgmtresources.DeploymentProperties{
+	err = d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, deploymentName, mgmtfeatures.Deployment{
+		Properties: &mgmtfeatures.DeploymentProperties{
 			Template:   template,
-			Mode:       mgmtresources.Incremental,
+			Mode:       mgmtfeatures.Incremental,
 			Parameters: parameters.Parameters,
 		},
 	})

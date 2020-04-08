@@ -1,4 +1,4 @@
-package resources
+package features
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -7,18 +7,18 @@ import (
 	"context"
 	"fmt"
 
-	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
+	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
 // DeploymentsClientAddons contains addons for DeploymentsClient
 type DeploymentsClientAddons interface {
-	CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, deploymentName string, parameters mgmtresources.Deployment) error
-	CreateOrUpdateAtSubscriptionScopeAndWait(ctx context.Context, deploymentName string, parameters mgmtresources.Deployment) error
+	CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, deploymentName string, parameters mgmtfeatures.Deployment) error
+	CreateOrUpdateAtSubscriptionScopeAndWait(ctx context.Context, deploymentName string, parameters mgmtfeatures.Deployment) error
 	Wait(ctx context.Context, resourceGroupName string, deploymentName string) error
 }
 
-func (c *deploymentsClient) CreateOrUpdateAtSubscriptionScopeAndWait(ctx context.Context, deploymentName string, parameters mgmtresources.Deployment) error {
+func (c *deploymentsClient) CreateOrUpdateAtSubscriptionScopeAndWait(ctx context.Context, deploymentName string, parameters mgmtfeatures.Deployment) error {
 	future, err := c.CreateOrUpdateAtSubscriptionScope(ctx, deploymentName, parameters)
 	if err != nil {
 		return err
@@ -27,7 +27,7 @@ func (c *deploymentsClient) CreateOrUpdateAtSubscriptionScopeAndWait(ctx context
 	return future.WaitForCompletionRef(ctx, c.Client)
 }
 
-func (c *deploymentsClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, deploymentName string, parameters mgmtresources.Deployment) error {
+func (c *deploymentsClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, deploymentName string, parameters mgmtfeatures.Deployment) error {
 	future, err := c.CreateOrUpdate(ctx, resourceGroupName, deploymentName, parameters)
 	if err != nil {
 		return err

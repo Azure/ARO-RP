@@ -94,14 +94,14 @@ func TestAdminGetKubernetesObjects(t *testing.T) {
 
 				kactions.EXPECT().
 					Get(gomock.Any(), clusterDoc.OpenShiftCluster, tt.objKind, tt.objNamespace, tt.objName).
-					Return([]byte("{\"Kind\": \"test\"}"), nil)
+					Return([]byte(`{"Kind": "test"}`), nil)
 
 				openshiftClusters.EXPECT().Get(gomock.Any(), strings.ToLower(tt.resourceID)).
 					Return(clusterDoc, nil)
 			},
 			wantStatusCode: http.StatusOK,
 			wantResponse: func() []byte {
-				return []byte("{\"Kind\": \"test\"}\n")
+				return []byte(`{"Kind": "test"}` + "\n")
 			},
 		},
 		{
@@ -123,14 +123,14 @@ func TestAdminGetKubernetesObjects(t *testing.T) {
 
 				kactions.EXPECT().
 					List(gomock.Any(), clusterDoc.OpenShiftCluster, tt.objKind, tt.objNamespace).
-					Return([]byte("{\"Kind\": \"test\"}"), nil)
+					Return([]byte(`{"Kind": "test"}`), nil)
 
 				openshiftClusters.EXPECT().Get(gomock.Any(), strings.ToLower(tt.resourceID)).
 					Return(clusterDoc, nil)
 			},
 			wantStatusCode: http.StatusOK,
 			wantResponse: func() []byte {
-				return []byte("{\"Kind\": \"test\"}\n")
+				return []byte(`{"Kind": "test"}` + "\n")
 			},
 		},
 		{
@@ -179,7 +179,7 @@ func TestAdminGetKubernetesObjects(t *testing.T) {
 
 			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
 				OpenShiftClusters: openshiftClusters,
-			}, api.APIs, &noop.Noop{}, nil, kactions)
+			}, api.APIs, &noop.Noop{}, nil, kactions, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

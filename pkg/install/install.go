@@ -16,7 +16,7 @@ import (
 	"runtime"
 	"time"
 
-	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
+	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/Azure/go-autorest/autorest"
@@ -38,8 +38,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/resources"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
@@ -65,8 +65,8 @@ type Installer struct {
 	interfaces        network.InterfacesClient
 	publicipaddresses network.PublicIPAddressesClient
 	loadbalancers     network.LoadBalancersClient
-	deployments       resources.DeploymentsClient
-	groups            resources.GroupsClient
+	deployments       features.DeploymentsClient
+	groups            features.ResourceGroupsClient
 	accounts          storage.AccountsClient
 
 	dns             dns.Manager
@@ -133,8 +133,8 @@ func NewInstaller(ctx context.Context, log *logrus.Entry, _env env.Interface, db
 		interfaces:        network.NewInterfacesClient(r.SubscriptionID, fpAuthorizer),
 		publicipaddresses: network.NewPublicIPAddressesClient(r.SubscriptionID, fpAuthorizer),
 		loadbalancers:     network.NewLoadBalancersClient(r.SubscriptionID, fpAuthorizer),
-		deployments:       resources.NewDeploymentsClient(r.SubscriptionID, fpAuthorizer),
-		groups:            resources.NewGroupsClient(r.SubscriptionID, fpAuthorizer),
+		deployments:       features.NewDeploymentsClient(r.SubscriptionID, fpAuthorizer),
+		groups:            features.NewResourceGroupsClient(r.SubscriptionID, fpAuthorizer),
 		accounts:          storage.NewAccountsClient(r.SubscriptionID, fpAuthorizer),
 
 		dns:             dns.NewManager(_env, localFPAuthorizer),
@@ -375,11 +375,11 @@ func (i *Installer) deployARMTemplate(ctx context.Context, rg string, tName stri
 	err := wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 		i.log.Printf("deploying %s template", tName)
 
-		err := i.deployments.CreateOrUpdateAndWait(ctx, rg, deploymentName, mgmtresources.Deployment{
-			Properties: &mgmtresources.DeploymentProperties{
+		err := i.deployments.CreateOrUpdateAndWait(ctx, rg, deploymentName, mgmtfeatures.Deployment{
+			Properties: &mgmtfeatures.DeploymentProperties{
 				Template:   t,
 				Parameters: params,
-				Mode:       mgmtresources.Incremental,
+				Mode:       mgmtfeatures.Incremental,
 			},
 		})
 

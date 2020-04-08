@@ -9,6 +9,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
 func (i *Installer) apiServerPublicLoadBalancer(location string, visibility api.Visibility) *arm.Resource {
@@ -94,7 +95,7 @@ func (i *Installer) apiServerPublicLoadBalancer(location string, visibility api.
 
 	return &arm.Resource{
 		Resource:   lb,
-		APIVersion: apiVersions["network"],
+		APIVersion: azureclient.APIVersions["Microsoft.Network"],
 		DependsOn: []string{
 			"Microsoft.Network/publicIPAddresses/aro-pip",
 		},

@@ -1,10 +1,10 @@
-package resources
+package features
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
 import (
-	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
+	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 )
 
@@ -14,14 +14,14 @@ type ProvidersClient interface {
 }
 
 type providersClient struct {
-	mgmtresources.ProvidersClient
+	mgmtfeatures.ProvidersClient
 }
 
 var _ ProvidersClient = &providersClient{}
 
 // NewProvidersClient creates a new ProvidersClient
 func NewProvidersClient(subscriptionID string, authorizer autorest.Authorizer) ProvidersClient {
-	client := mgmtresources.NewProvidersClient(subscriptionID)
+	client := mgmtfeatures.NewProvidersClient(subscriptionID)
 	client.Authorizer = authorizer
 
 	return &providersClient{

@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"testing"
 
-	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
+	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/golang/mock/gomock"
@@ -18,7 +18,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
-	mock_resources "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/resources"
+	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 )
 
 func TestDeployARMTemplate(t *testing.T) {
@@ -29,11 +29,11 @@ func TestDeployARMTemplate(t *testing.T) {
 	armTemplate := &arm.Template{}
 	params := map[string]interface{}{}
 
-	deployment := mgmtresources.Deployment{
-		Properties: &mgmtresources.DeploymentProperties{
+	deployment := mgmtfeatures.Deployment{
+		Properties: &mgmtfeatures.DeploymentProperties{
 			Template:   armTemplate,
 			Parameters: params,
-			Mode:       mgmtresources.Incremental,
+			Mode:       mgmtfeatures.Incremental,
 		},
 	}
 
@@ -52,12 +52,12 @@ func TestDeployARMTemplate(t *testing.T) {
 
 	for _, tt := range []struct {
 		name    string
-		mocks   func(*mock_resources.MockDeploymentsClient)
+		mocks   func(*mock_features.MockDeploymentsClient)
 		wantErr error
 	}{
 		{
 			name: "Deployment successful with no errors",
-			mocks: func(dc *mock_resources.MockDeploymentsClient) {
+			mocks: func(dc *mock_features.MockDeploymentsClient) {
 				dc.EXPECT().
 					CreateOrUpdateAndWait(ctx, resourceGroup, deploymentName, deployment).
 					Return(nil)
@@ -65,7 +65,7 @@ func TestDeployARMTemplate(t *testing.T) {
 		},
 		{
 			name: "Deployment active error, then wait successfully",
-			mocks: func(dc *mock_resources.MockDeploymentsClient) {
+			mocks: func(dc *mock_features.MockDeploymentsClient) {
 				dc.EXPECT().
 					CreateOrUpdateAndWait(ctx, resourceGroup, deploymentName, deployment).
 					Return(activeErr)
@@ -76,7 +76,7 @@ func TestDeployARMTemplate(t *testing.T) {
 		},
 		{
 			name: "Deployment active error, then timeout",
-			mocks: func(dc *mock_resources.MockDeploymentsClient) {
+			mocks: func(dc *mock_features.MockDeploymentsClient) {
 				dc.EXPECT().
 					CreateOrUpdateAndWait(ctx, resourceGroup, deploymentName, deployment).
 					Return(activeErr)
@@ -88,7 +88,7 @@ func TestDeployARMTemplate(t *testing.T) {
 		},
 		{
 			name: "Resource quota exceeded error",
-			mocks: func(dc *mock_resources.MockDeploymentsClient) {
+			mocks: func(dc *mock_features.MockDeploymentsClient) {
 				dc.EXPECT().
 					CreateOrUpdateAndWait(ctx, resourceGroup, deploymentName, deployment).
 					Return(quotaErr)
@@ -97,7 +97,7 @@ func TestDeployARMTemplate(t *testing.T) {
 		},
 		{
 			name: "Deployment active error, then resource quota exceeded error",
-			mocks: func(dc *mock_resources.MockDeploymentsClient) {
+			mocks: func(dc *mock_features.MockDeploymentsClient) {
 				dc.EXPECT().
 					CreateOrUpdateAndWait(ctx, resourceGroup, deploymentName, deployment).
 					Return(activeErr)
@@ -112,7 +112,7 @@ func TestDeployARMTemplate(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			deploymentsClient := mock_resources.NewMockDeploymentsClient(controller)
+			deploymentsClient := mock_features.NewMockDeploymentsClient(controller)
 			tt.mocks(deploymentsClient)
 
 			i := &Installer{
