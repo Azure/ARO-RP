@@ -369,7 +369,7 @@ func (i *Installer) initializeKubernetesClients(ctx context.Context) error {
 }
 
 func (i *Installer) deployARMTemplate(ctx context.Context, rg string, tName string, t *arm.Template, params map[string]interface{}) error {
-	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
 	err := wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
