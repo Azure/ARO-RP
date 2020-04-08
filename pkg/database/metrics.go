@@ -10,7 +10,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
-func (db *Database) emitMetrics(ctx context.Context) {
+func (db *Database) EmitMetrics(ctx context.Context) {
 	defer recover.Panic(db.log)
 	t := time.NewTicker(time.Minute)
 	defer t.Stop()

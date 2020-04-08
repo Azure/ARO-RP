@@ -6,6 +6,8 @@ package cluster
 import (
 	"context"
 	"net/http"
+	"reflect"
+	"runtime"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
@@ -93,22 +95,17 @@ func (mon *Monitor) Monitor(ctx context.Context) {
 		return
 	}
 
-	err = mon.emitClusterVersionMetrics()
-	if err != nil {
-		mon.log.Error(err)
-		// keep going
-	}
-
-	err = mon.emitNodesMetrics()
-	if err != nil {
-		mon.log.Error(err)
-		// keep going
-	}
-
-	err = mon.emitPrometheusAlerts(ctx)
-	if err != nil {
-		mon.log.Error(err)
-		// keep going
+	for _, f := range []func(ctx context.Context) error{
+		mon.emitClusterOperatorsMetrics,
+		mon.emitClusterVersionMetrics,
+		mon.emitNodesMetrics,
+		mon.emitPrometheusAlerts,
+	} {
+		err = f(ctx)
+		if err != nil {
+			mon.log.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name(), err)
+			// keep going
+		}
 	}
 }
 

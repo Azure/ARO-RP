@@ -85,10 +85,13 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
+	go db.EmitMetrics(ctx)
+
 	feCipher, err := encryption.NewXChaCha20Poly1305(ctx, _env, env.FrontendEncryptionSecretName)
 	if err != nil {
 		return err
 	}
+
 	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), _env, db, api.APIs, m, feCipher, kubeactions.New(log, _env))
 	if err != nil {
 		return err

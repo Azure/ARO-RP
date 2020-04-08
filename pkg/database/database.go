@@ -83,8 +83,6 @@ func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Interface, m me
 		return nil, err
 	}
 
-	go db.emitMetrics(ctx)
-
 	return db, nil
 }
 

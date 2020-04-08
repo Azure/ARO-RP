@@ -4,6 +4,7 @@ package cluster
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -15,6 +16,8 @@ import (
 )
 
 func TestEmitClusterVersionMetrics(t *testing.T) {
+	ctx := context.Background()
+
 	configcli := fake.NewSimpleClientset(&configv1.ClusterVersion{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "version",
@@ -55,7 +58,7 @@ func TestEmitClusterVersionMetrics(t *testing.T) {
 		"desiredVersion": "4.3.3",
 	})
 
-	err := mon.emitClusterVersionMetrics()
+	err := mon.emitClusterVersionMetrics(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
