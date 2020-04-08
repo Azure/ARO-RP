@@ -6,6 +6,7 @@ package mock_kubeactions
 
 import (
 	context "context"
+	io "io"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -78,4 +79,18 @@ func (m *MockInterface) List(arg0 context.Context, arg1 *api.OpenShiftCluster, a
 func (mr *MockInterfaceMockRecorder) List(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockInterface)(nil).List), arg0, arg1, arg2, arg3)
+}
+
+// MustGather mocks base method
+func (m *MockInterface) MustGather(arg0 context.Context, arg1 *api.OpenShiftCluster, arg2 io.Writer) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MustGather", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// MustGather indicates an expected call of MustGather
+func (mr *MockInterfaceMockRecorder) MustGather(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MustGather", reflect.TypeOf((*MockInterface)(nil).MustGather), arg0, arg1, arg2)
 }

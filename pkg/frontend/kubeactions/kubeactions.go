@@ -6,6 +6,7 @@ package kubeactions
 import (
 	"context"
 	"fmt"
+	"io"
 	"strings"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -28,6 +29,7 @@ type Interface interface {
 	Get(ctx context.Context, oc *api.OpenShiftCluster, kind, namespace, name string) ([]byte, error)
 	List(ctx context.Context, oc *api.OpenShiftCluster, kind, namespace string) ([]byte, error)
 	ClusterUpgrade(ctx context.Context, oc *api.OpenShiftCluster) error
+	MustGather(ctx context.Context, oc *api.OpenShiftCluster, w io.Writer) error
 }
 
 type kubeactions struct {
@@ -181,7 +183,7 @@ func (ka *kubeactions) ClusterUpgrade(ctx context.Context, oc *api.OpenShiftClus
 
 		cv.Spec.DesiredUpdate = &configv1.Update{
 			Version: version.OpenShiftVersion,
-			Image:   version.OpenShiftPullSpec(ka.env.ACRName()),
+			Image:   version.OpenShiftPullSpec,
 		}
 
 		_, err = configcli.ConfigV1().ClusterVersions().Update(cv)
