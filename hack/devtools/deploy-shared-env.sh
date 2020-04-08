@@ -86,6 +86,10 @@ import_certs_secrets() {
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --name encryption-key \
         --value "$(openssl rand -base64 32)"
+    az keyvault secret set \
+        --vault-name "$KEYVAULT_PREFIX-svc" \
+        --name fe-encryption-key \
+        --value "$(openssl rand -base64 32)"
 }
 
 update_parent_domain_dns_zone() {

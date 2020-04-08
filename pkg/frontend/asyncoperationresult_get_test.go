@@ -194,7 +194,7 @@ func TestGetAsyncOperationResult(t *testing.T) {
 			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
 				AsyncOperations:   asyncOperations,
 				OpenShiftClusters: openshiftClusters,
-			}, api.APIs, &noop.Noop{}, nil)
+			}, api.APIs, &noop.Noop{}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

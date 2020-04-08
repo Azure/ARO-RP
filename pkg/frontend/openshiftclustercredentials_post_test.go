@@ -289,7 +289,7 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
 				OpenShiftClusters: openshiftClusters,
 				Subscriptions:     subscriptions,
-			}, apis, &noop.Noop{}, nil)
+			}, apis, &noop.Noop{}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

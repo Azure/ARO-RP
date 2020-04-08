@@ -86,9 +86,10 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 
 // ToExternalList returns a slice of external representations of the internal
 // objects
-func (c *openShiftClusterConverter) ToExternalList(ocs []*api.OpenShiftCluster) interface{} {
+func (c *openShiftClusterConverter) ToExternalList(ocs []*api.OpenShiftCluster, nextLink string) interface{} {
 	l := &OpenShiftClusterList{
 		OpenShiftClusters: make([]*OpenShiftCluster, 0, len(ocs)),
+		NextLink:          nextLink,
 	}
 
 	for _, oc := range ocs {

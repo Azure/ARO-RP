@@ -695,7 +695,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				AsyncOperations:   asyncOperations,
 				OpenShiftClusters: openShiftClusters,
 				Subscriptions:     subscriptions,
-			}, apis, &noop.Noop{}, nil)
+			}, apis, &noop.Noop{}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

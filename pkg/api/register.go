@@ -5,7 +5,7 @@ package api
 
 type OpenShiftClusterConverter interface {
 	ToExternal(*OpenShiftCluster) interface{}
-	ToExternalList([]*OpenShiftCluster) interface{}
+	ToExternalList([]*OpenShiftCluster, string) interface{}
 	ToInternal(interface{}, *OpenShiftCluster)
 }
 
