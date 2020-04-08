@@ -29,19 +29,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
-
-var apiVersions = map[string]string{
-	"authorization":                "2018-09-01-preview",
-	"authorization-denyassignment": "2018-07-01-preview",
-	"compute":                      "2019-03-01",
-	"network":                      "2019-07-01",
-	"privatedns":                   "2018-09-01",
-	"storage":                      "2019-04-01",
-}
 
 func (i *Installer) createDNS(ctx context.Context) error {
 	return i.dns.Create(ctx, i.doc.OpenShiftCluster)
@@ -149,7 +141,7 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 						PrincipalType:    mgmtauthorization.ServicePrincipal,
 					},
 				},
-				APIVersion: apiVersions["authorization"],
+				APIVersion: azureclient.APIVersions["Microsoft.Authorization"],
 			},
 			{
 				Resource: &mgmtstorage.Account{
@@ -160,14 +152,14 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 					Location: &installConfig.Config.Azure.Region,
 					Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
 				},
-				APIVersion: apiVersions["storage"],
+				APIVersion: azureclient.APIVersions["Microsoft.Storage"],
 			},
 			{
 				Resource: &mgmtstorage.BlobContainer{
 					Name: to.StringPtr("cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix + "/default/ignition"),
 					Type: to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
 				},
-				APIVersion: apiVersions["storage"],
+				APIVersion: azureclient.APIVersions["Microsoft.Storage"],
 				DependsOn: []string{
 					"Microsoft.Storage/storageAccounts/cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix,
 				},
@@ -177,7 +169,7 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 					Name: to.StringPtr("cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix + "/default/aro"),
 					Type: to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
 				},
-				APIVersion: apiVersions["storage"],
+				APIVersion: azureclient.APIVersions["Microsoft.Storage"],
 				DependsOn: []string{
 					"Microsoft.Storage/storageAccounts/cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix,
 				},
@@ -205,7 +197,7 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 					Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
 					Location: &installConfig.Config.Azure.Region,
 				},
-				APIVersion: apiVersions["network"],
+				APIVersion: azureclient.APIVersions["Microsoft.Network"],
 			},
 			{
 				Resource: &mgmtnetwork.SecurityGroup{
@@ -213,7 +205,7 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 					Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
 					Location: &installConfig.Config.Azure.Region,
 				},
-				APIVersion: apiVersions["network"],
+				APIVersion: azureclient.APIVersions["Microsoft.Network"],
 			},
 		},
 	}
@@ -253,7 +245,7 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 					IsSystemProtected: to.BoolPtr(true),
 				},
 			},
-			APIVersion: apiVersions["authorization-denyassignment"],
+			APIVersion: azureclient.APIVersions["Microsoft.Authorization/denyAssignments"],
 		})
 	}
 
