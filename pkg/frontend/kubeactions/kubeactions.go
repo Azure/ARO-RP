@@ -183,7 +183,7 @@ func (ka *kubeactions) ClusterUpgrade(ctx context.Context, oc *api.OpenShiftClus
 
 		cv.Spec.DesiredUpdate = &configv1.Update{
 			Version: version.OpenShiftVersion,
-			Image:   version.OpenShiftPullSpec(ka.env.ACRName()),
+			Image:   version.OpenShiftPullSpec,
 		}
 
 		_, err = configcli.ConfigV1().ClusterVersions().Update(cv)

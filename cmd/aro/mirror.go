@@ -9,7 +9,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/containers/image/types"
 	"github.com/sirupsen/logrus"
@@ -78,7 +77,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	if !found {
 		releases = append(releases, pkgmirror.Node{
 			Version: version.OpenShiftVersion,
-			Payload: strings.Replace(version.OpenShiftPullSpec(dstAcr), dstAcr+".azurecr.io/", "quay.io/", 1),
+			Payload: version.OpenShiftPullSpec,
 		})
 	}
 
