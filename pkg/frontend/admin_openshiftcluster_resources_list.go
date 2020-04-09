@@ -29,7 +29,7 @@ func (f *frontend) listAdminOpenShiftClusterResources(w http.ResponseWriter, r *
 
 	b, err := f._listAdminOpenShiftClusterResources(ctx, r)
 
-	reply(log, w, nil, b, err)
+	adminReply(log, w, nil, b, err)
 }
 
 func (f *frontend) _listAdminOpenShiftClusterResources(ctx context.Context, r *http.Request) ([]byte, error) {

@@ -26,7 +26,7 @@ func (f *frontend) getAdminKubernetesObjects(w http.ResponseWriter, r *http.Requ
 
 	b, err := f._getAdminKubernetesObjects(ctx, r)
 
-	reply(log, w, nil, b, err)
+	adminReply(log, w, nil, b, err)
 }
 
 func (f *frontend) _getAdminKubernetesObjects(ctx context.Context, r *http.Request) ([]byte, error) {

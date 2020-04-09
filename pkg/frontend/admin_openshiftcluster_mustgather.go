@@ -24,7 +24,7 @@ func (f *frontend) postAdminOpenShiftClusterMustGather(w http.ResponseWriter, r 
 
 	err := f._postAdminOpenShiftClusterMustGather(ctx, w, r)
 
-	reply(log, w, nil, nil, err)
+	adminReply(log, w, nil, nil, err)
 }
 
 func (f *frontend) _postAdminOpenShiftClusterMustGather(ctx context.Context, w http.ResponseWriter, r *http.Request) error {

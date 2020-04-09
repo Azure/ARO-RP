@@ -24,7 +24,7 @@ func (f *frontend) postAdminOpenShiftClusterUpgrade(w http.ResponseWriter, r *ht
 
 	err := f._postAdminOpenShiftClusterUpgrade(ctx, r)
 
-	reply(log, w, nil, nil, err)
+	adminReply(log, w, nil, nil, err)
 }
 
 func (f *frontend) _postAdminOpenShiftClusterUpgrade(ctx context.Context, r *http.Request) error {

@@ -16,6 +16,8 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -279,6 +281,33 @@ func (f *frontend) Run(ctx context.Context, stop <-chan struct{}, done chan<- st
 	}
 }
 
+func adminReply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b []byte, err error) {
+	if apiErr, ok := err.(errors.APIStatus); ok {
+		status := apiErr.Status()
+
+		var target string
+		if status.Details != nil {
+			gk := schema.GroupKind{
+				Group: status.Details.Group,
+				Kind:  status.Details.Kind,
+			}
+
+			target = fmt.Sprintf("%s/%s", gk, status.Details.Name)
+		}
+
+		err = &api.CloudError{
+			StatusCode: int(status.Code),
+			CloudErrorBody: &api.CloudErrorBody{
+				Code:    string(status.Reason),
+				Message: status.Message,
+				Target:  target,
+			},
+		}
+	}
+
+	reply(log, w, header, b, err)
+}
+
 func reply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b []byte, err error) {
 	for k, v := range header {
 		w.Header()[k] = v
@@ -287,7 +316,7 @@ func reply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b []byt
 	if err != nil {
 		switch err := err.(type) {
 		case *api.CloudError:
-			log.Print(err)
+			log.Info(err)
 			api.WriteCloudError(w, err)
 			return
 		case statusCodeError:
