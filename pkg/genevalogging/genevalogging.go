@@ -618,7 +618,7 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 							Resources: v1.ResourceRequirements{
 								Limits: v1.ResourceList{
 									v1.ResourceCPU:    resource.MustParse("200m"),
-									v1.ResourceMemory: resource.MustParse("500Mi"),
+									v1.ResourceMemory: resource.MustParse("1000Mi"),
 								},
 								Requests: v1.ResourceList{
 									v1.ResourceCPU:    resource.MustParse("10m"),
