@@ -718,11 +718,49 @@ yum -y install azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security po
 firewall-cmd --add-port=443/tcp --permanent
 
 # https://bugzilla.redhat.com/show_bug.cgi?id=1805212
-sed -i -e '/^  "plugins": \[$/ a\
-    {\
-      "type": "firewall",\
-      "backend": "firewalld"\
-    },' /etc/cni/net.d/87-podman-bridge.conflist
+cat >/etc/cni/net.d/87-podman-bridge.conflist <<'EOF'
+{
+  "cniVersion": "0.4.0",
+  "name": "podman",
+  "plugins": [
+    {
+      "type": "bridge",
+      "bridge": "cni-podman0",
+      "isGateway": true,
+      "ipMasq": true,
+      "ipam": {
+        "type": "host-local",
+        "routes": [
+          {
+            "dst": "0.0.0.0/0"
+          }
+        ],
+        "ranges": [
+          [
+            {
+              "subnet": "10.88.0.0/16",
+              "gateway": "10.88.0.1"
+            }
+          ]
+        ]
+      }
+    },
+    {
+      "type": "portmap",
+      "capabilities": {
+        "portMappings": true
+      }
+    },
+    {
+      "type": "firewall",
+      "backend": "firewalld"
+    },
+    {
+      "type": "tuning"
+    }
+  ]
+}
+EOF
 
 cat >/etc/td-agent-bit/td-agent-bit.conf <<'EOF'
 [INPUT]
