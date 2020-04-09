@@ -120,17 +120,17 @@ func (dv *openShiftClusterDynamicValidator) validateServicePrincipalProfile(ctx 
 	defer cancel()
 
 	// get a token, retrying only on AADSTS700016 errors (slow AAD propagation).
-	// As we don't do `err = wait.PollImmediateUntil()`, we won't ever see a
-	// "timed out waiting for the condition" error, but instead will always see
-	// the last error returned from token.EnsureFresh().
-	wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+	err = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 		err = token.EnsureFresh()
-		return err == nil || !strings.Contains(err.Error(), "AADSTS700016"), nil
-	}, timeoutCtx.Done())
-	if err != nil {
-		if strings.Contains(err.Error(), "AADSTS700016") {
-			return nil, err
+		if err != nil && strings.Contains(err.Error(), "AADSTS700016") {
+			return false, nil
 		}
+		return err == nil, err
+	}, timeoutCtx.Done())
+	if err == wait.ErrWaitTimeout {
+		return nil, err
+	}
+	if err != nil {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalCredentials, "properties.servicePrincipalProfile", "The provided service principal credentials are invalid.")
 	}
 
