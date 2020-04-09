@@ -12,7 +12,6 @@ import (
 	"time"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
-	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -165,45 +164,41 @@ func (dv *openShiftClusterDynamicValidator) validateVnetPermissions(ctx context.
 	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 
-	// As we don't do `err = wait.PollImmediateUntil()`, we won't ever see a
-	// "timed out waiting for the condition" error, but instead will always see
-	// the last error returned from client.ListForResource().
-	var permissions []mgmtauthorization.Permission
-	wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-		permissions, err = client.ListForResource(ctx, r.ResourceGroup, r.Provider, r.ResourceType, "", r.ResourceName)
+	err = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+		permissions, err := client.ListForResource(ctx, r.ResourceGroup, r.Provider, r.ResourceType, "", r.ResourceName)
 		if detailedErr, ok := err.(autorest.DetailedError); ok &&
 			detailedErr.StatusCode == http.StatusForbidden {
 			return false, nil
 		}
-		return err == nil, err
-	}, timeoutCtx.Done())
-	if detailedErr, ok := err.(autorest.DetailedError); ok {
-		switch detailedErr.StatusCode {
-		case http.StatusForbidden:
-			return api.NewCloudError(http.StatusBadRequest, code, "", "The "+typ+" does not have Contributor permission on vnet '%s'.", vnetID)
-		case http.StatusNotFound:
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The vnet '%s' could not be found.", vnetID)
-		}
-	}
-	if err != nil {
-		return err
-	}
-
-	for _, action := range []string{
-		"Microsoft.Network/virtualNetworks/subnets/join/action",
-		"Microsoft.Network/virtualNetworks/subnets/read",
-		"Microsoft.Network/virtualNetworks/subnets/write",
-	} {
-		ok, err := utilpermissions.CanDoAction(permissions, action)
 		if err != nil {
-			return err
+			return false, err
 		}
-		if !ok {
-			return api.NewCloudError(http.StatusBadRequest, code, "", "The "+typ+" does not have Contributor permission on vnet '%s'.", vnetID)
+
+		for _, action := range []string{
+			"Microsoft.Network/virtualNetworks/subnets/join/action",
+			"Microsoft.Network/virtualNetworks/subnets/read",
+			"Microsoft.Network/virtualNetworks/subnets/write",
+		} {
+			ok, err := utilpermissions.CanDoAction(permissions, action)
+			if err != nil {
+				return false, err
+			}
+			if !ok {
+				return false, nil
+			}
 		}
+
+		return true, nil
+	}, timeoutCtx.Done())
+	if err == wait.ErrWaitTimeout {
+		return api.NewCloudError(http.StatusBadRequest, code, "", "The "+typ+" does not have Contributor permission on vnet '%s'.", vnetID)
+	}
+	if detailedErr, ok := err.(autorest.DetailedError); ok &&
+		detailedErr.StatusCode == http.StatusNotFound {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The vnet '%s' could not be found.", vnetID)
 	}
 
-	return nil
+	return err
 }
 
 func (dv *openShiftClusterDynamicValidator) validateSubnets(ctx context.Context, subnetManager subnet.Manager, oc *api.OpenShiftCluster) error {
