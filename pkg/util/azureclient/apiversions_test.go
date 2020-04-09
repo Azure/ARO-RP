@@ -22,6 +22,14 @@ func TestAPIVersionForType(t *testing.T) {
 			want: APIVersions["Microsoft.Network"],
 		},
 		{
+			typ:  "Microsoft.Network/privateDnsZones/virtualNetworkLinks",
+			want: APIVersions["Microsoft.Network/privateDnsZones"],
+		},
+		{
+			typ:  "Microsoft.ContainerRegistry/registries/replications",
+			want: APIVersions["Microsoft.ContainerRegistry"],
+		},
+		{
 			typ:     "Microsoft.Random/resources",
 			wantErr: "API version not found for type Microsoft.Random/resources",
 		},

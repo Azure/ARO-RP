@@ -26,13 +26,19 @@ var APIVersions = map[string]string{
 
 // APIVersionForType gets the APIVersion from a full resource type
 func APIVersionForType(typ string) (string, error) {
-	for _, t := range []string{
-		typ,
-		typ[:strings.IndexByte(typ, '/')],
-	} {
+	t := typ
+
+	for {
 		if apiVersion, ok := APIVersions[t]; ok {
 			return apiVersion, nil
 		}
+
+		i := strings.LastIndexByte(t, '/')
+		if i == -1 {
+			break
+		}
+
+		t = t[:i]
 	}
 
 	return "", fmt.Errorf("API version not found for type %s", typ)
