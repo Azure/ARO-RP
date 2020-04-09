@@ -53,18 +53,15 @@ func (f *frontend) _getOpenShiftClusters(ctx context.Context, r *http.Request, c
 
 	var ocs []*api.OpenShiftCluster
 	if docs != nil {
+		timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+		f.ocEnricher.EnrichAndPersist(timeoutCtx, docs.OpenShiftClusterDocuments...)
+
 		for _, doc := range docs.OpenShiftClusterDocuments {
+			doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret = ""
+			doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 			ocs = append(ocs, doc.OpenShiftCluster)
 		}
-	}
-
-	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-	f.ocEnricher.Enrich(timeoutCtx, ocs...)
-
-	for i := range ocs {
-		ocs[i].Properties.ClusterProfile.PullSecret = ""
-		ocs[i].Properties.ServicePrincipalProfile.ClientSecret = ""
 	}
 
 	nextLink, err := f.buildNextLink(r.Header.Get("Referer"), i.Continuation())

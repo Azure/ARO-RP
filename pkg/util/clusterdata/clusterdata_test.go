@@ -10,12 +10,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
+	mock_clusterdata "github.com/Azure/ARO-RP/pkg/util/mocks/clusterdata"
+	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
 	"github.com/Azure/ARO-RP/test/util/cmp"
 )
 
@@ -231,7 +235,11 @@ func TestBestEffortEnricher(t *testing.T) {
 			defer ctxCancel()
 
 			ocs := tt.ocs()
-			e.Enrich(ctx, ocs...)
+			docs := make([]*api.OpenShiftClusterDocument, len(ocs), len(ocs))
+			for i, oc := range ocs {
+				docs[i] = &api.OpenShiftClusterDocument{OpenShiftCluster: oc}
+			}
+			e.Enrich(ctx, docs...)
 
 			if !reflect.DeepEqual(ocs, tt.wantOcs) {
 				t.Error(cmp.Diff(ocs, tt.wantOcs))
@@ -246,3 +254,132 @@ func (m mockEnricherTaskFunc) FetchData(callbacks chan<- func(), errs chan<- err
 	m(callbacks, errs)
 }
 func (m mockEnricherTaskFunc) SetDefaults() {}
+
+func TestCachingEnricher(t *testing.T) {
+	log := logrus.NewEntry(logrus.StandardLogger())
+
+	cacheTTL := 5 * time.Minute
+	mockCurrentTime := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
+	mockCacheMissTime := mockCurrentTime.Add(-cacheTTL - 1)
+	mockCacheHitTime := mockCurrentTime.Add(cacheTTL - 1)
+
+	testCases := []struct {
+		name                  string
+		docs                  func() []*api.OpenShiftClusterDocument
+		mockOpenshiftClusters func(openshiftClusters *mock_database.MockOpenShiftClusters)
+		mockInnerEnricher     func(innerEnricher *mock_clusterdata.MockOpenShiftClusterEnricher)
+		wantDocs              []*api.OpenShiftClusterDocument
+	}{
+		{
+			name: "all docs hit cache",
+			docs: func() []*api.OpenShiftClusterDocument {
+				return []*api.OpenShiftClusterDocument{
+					{LastEnrichment: &mockCacheHitTime},
+				}
+			},
+			wantDocs: []*api.OpenShiftClusterDocument{
+				{LastEnrichment: &mockCacheHitTime},
+			},
+		},
+		{
+			name: "all docs miss cache",
+			docs: func() []*api.OpenShiftClusterDocument {
+				return []*api.OpenShiftClusterDocument{
+					{LastEnrichment: &mockCacheMissTime},
+				}
+			},
+			mockInnerEnricher: func(innerEnricher *mock_clusterdata.MockOpenShiftClusterEnricher) {
+				innerEnricher.EXPECT().Enrich(gomock.Any(), []*api.OpenShiftClusterDocument{
+					{LastEnrichment: &mockCacheMissTime},
+				})
+			},
+			mockOpenshiftClusters: func(openshiftClusters *mock_database.MockOpenShiftClusters) {
+				openshiftClusters.EXPECT().Update(gomock.Any(), &api.OpenShiftClusterDocument{LastEnrichment: &mockCurrentTime})
+			},
+			wantDocs: []*api.OpenShiftClusterDocument{
+				{LastEnrichment: &mockCurrentTime},
+			},
+		},
+		{
+			name: "some of the docs miss cache",
+			docs: func() []*api.OpenShiftClusterDocument {
+				return []*api.OpenShiftClusterDocument{
+					{ID: "fake-1", LastEnrichment: &mockCacheHitTime},
+					{ID: "fake-2", LastEnrichment: &mockCacheMissTime},
+				}
+			},
+			mockInnerEnricher: func(innerEnricher *mock_clusterdata.MockOpenShiftClusterEnricher) {
+				innerEnricher.EXPECT().Enrich(gomock.Any(), []*api.OpenShiftClusterDocument{
+					{ID: "fake-2", LastEnrichment: &mockCacheMissTime},
+				})
+			},
+			mockOpenshiftClusters: func(openshiftClusters *mock_database.MockOpenShiftClusters) {
+				openshiftClusters.EXPECT().Update(gomock.Any(), &api.OpenShiftClusterDocument{ID: "fake-2", LastEnrichment: &mockCurrentTime})
+			},
+			wantDocs: []*api.OpenShiftClusterDocument{
+				{ID: "fake-1", LastEnrichment: &mockCacheHitTime},
+				{ID: "fake-2", LastEnrichment: &mockCurrentTime},
+			},
+		},
+		{
+			name: "no docs",
+			docs: func() []*api.OpenShiftClusterDocument {
+				return nil
+			},
+		},
+	}
+
+	for _, variant := range []struct {
+		name                 string
+		callEnrichAndPersist bool
+	}{
+		{
+			name: "Enrich",
+		},
+		{
+			name:                 "EnrichAndPersist",
+			callEnrichAndPersist: true,
+		},
+	} {
+		t.Run(variant.name, func(t *testing.T) {
+			for _, tt := range testCases {
+				t.Run(tt.name, func(t *testing.T) {
+					controller := gomock.NewController(t)
+					defer controller.Finish()
+
+					openshiftClusters := mock_database.NewMockOpenShiftClusters(controller)
+					innerEnricher := mock_clusterdata.NewMockOpenShiftClusterEnricher(controller)
+
+					if tt.mockInnerEnricher != nil {
+						tt.mockInnerEnricher(innerEnricher)
+					}
+
+					if tt.mockOpenshiftClusters != nil && variant.callEnrichAndPersist {
+						tt.mockOpenshiftClusters(openshiftClusters)
+					}
+
+					e := &cachingEnricher{
+						now:      func() time.Time { return mockCurrentTime },
+						log:      log,
+						db:       &database.Database{OpenShiftClusters: openshiftClusters},
+						m:        &noop.Noop{},
+						inner:    innerEnricher,
+						cacheTTL: cacheTTL,
+					}
+
+					docs := tt.docs()
+					if variant.callEnrichAndPersist {
+						e.EnrichAndPersist(context.Background(), docs...)
+					} else {
+						e.Enrich(context.Background(), docs...)
+					}
+
+					if !reflect.DeepEqual(docs, tt.wantDocs) {
+						t.Error(cmp.Diff(docs, tt.wantDocs))
+					}
+				})
+			}
+		})
+	}
+
+}

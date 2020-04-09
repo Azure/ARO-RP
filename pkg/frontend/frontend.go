@@ -49,7 +49,8 @@ type frontend struct {
 	m       metrics.Interface
 	cipher  encryption.Cipher
 
-	ocEnricher             clusterdata.OpenShiftClusterEnricher
+	ocEnricher clusterdata.OpenShiftClusterPersistingEnricher
+
 	kubeActions            kubeactions.Interface
 	resourcesClientFactory resourcesClientFactory
 
@@ -78,7 +79,7 @@ func NewFrontend(ctx context.Context, baseLog *logrus.Entry, _env env.Interface,
 		kubeActions:            kubeActions,
 		resourcesClientFactory: resourcesClientFactory,
 
-		ocEnricher: clusterdata.NewBestEffortEnricher(baseLog, _env, m),
+		ocEnricher: clusterdata.NewCachingEnricher(baseLog, m, db, clusterdata.NewBestEffortEnricher(baseLog, _env, m), 5*time.Minute),
 
 		bucketAllocator: &bucket.Random{},
 	}

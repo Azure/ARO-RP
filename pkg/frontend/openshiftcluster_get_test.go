@@ -64,7 +64,7 @@ func TestGetOpenShiftCluster(t *testing.T) {
 	type test struct {
 		name           string
 		resourceID     string
-		mocks          func(*test, *mock_database.MockOpenShiftClusters, *mock_clusterdata.MockOpenShiftClusterEnricher)
+		mocks          func(*test, *mock_database.MockOpenShiftClusters, *mock_clusterdata.MockOpenShiftClusterPersistingEnricher)
 		wantStatusCode int
 		wantResponse   func(*test) *v20200430.OpenShiftCluster
 		wantError      string
@@ -74,7 +74,7 @@ func TestGetOpenShiftCluster(t *testing.T) {
 		{
 			name:       "cluster exists in db",
 			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName",
-			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher) {
+			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterPersistingEnricher) {
 				clusterDoc := &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID:   tt.resourceID,
@@ -95,7 +95,7 @@ func TestGetOpenShiftCluster(t *testing.T) {
 					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
 					Return(clusterDoc, nil)
 
-				enricher.EXPECT().Enrich(gomock.Any(), clusterDoc.OpenShiftCluster)
+				enricher.EXPECT().EnrichAndPersist(gomock.Any(), clusterDoc)
 			},
 			wantStatusCode: http.StatusOK,
 			wantResponse: func(tt *test) *v20200430.OpenShiftCluster {
@@ -109,7 +109,7 @@ func TestGetOpenShiftCluster(t *testing.T) {
 		{
 			name:       "cluster not found in db",
 			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName",
-			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher) {
+			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterPersistingEnricher) {
 				openshiftClusters.EXPECT().
 					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
 					Return(nil, &cosmosdb.Error{StatusCode: http.StatusNotFound})
@@ -120,7 +120,7 @@ func TestGetOpenShiftCluster(t *testing.T) {
 		{
 			name:       "internal error",
 			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName",
-			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher) {
+			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterPersistingEnricher) {
 				openshiftClusters.EXPECT().
 					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
 					Return(nil, errors.New("random error"))
@@ -148,7 +148,7 @@ func TestGetOpenShiftCluster(t *testing.T) {
 			defer controller.Finish()
 
 			openshiftClusters := mock_database.NewMockOpenShiftClusters(controller)
-			enricher := mock_clusterdata.NewMockOpenShiftClusterEnricher(controller)
+			enricher := mock_clusterdata.NewMockOpenShiftClusterPersistingEnricher(controller)
 
 			tt.mocks(tt, openshiftClusters, enricher)
 

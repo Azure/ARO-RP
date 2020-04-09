@@ -1,5 +1,7 @@
 package api
 
+import "time"
+
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
@@ -37,6 +39,8 @@ type OpenShiftClusterDocument struct {
 	Dequeues     int    `json:"dequeues,omitempty"`
 
 	AsyncOperationID string `json:"asyncOperationId,omitempty"`
+
+	LastEnrichment *time.Time `json:"lastEnrichment,omitempty"`
 
 	OpenShiftCluster *OpenShiftCluster `json:"openShiftCluster,omitempty"`
 

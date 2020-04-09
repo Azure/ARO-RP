@@ -109,7 +109,8 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 	if !isCreate {
 		timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
-		f.ocEnricher.Enrich(timeoutCtx, doc.OpenShiftCluster)
+		// Do not call EnrichAndPersist here to avoid unnecessary DB writes
+		f.ocEnricher.Enrich(timeoutCtx, doc)
 	}
 
 	var ext interface{}
