@@ -18,6 +18,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -62,7 +63,8 @@ func (f *frontend) _listAdminOpenShiftClusterResources(ctx context.Context, r *h
 		return nil, err
 	}
 
-	for i, res := range resources {
+	armResources := make([]arm.Resource, 0, len(resources))
+	for _, res := range resources {
 		apiVersion, err := azureclient.APIVersionForType(*res.Type)
 		if err != nil {
 			return nil, err
@@ -73,20 +75,10 @@ func (f *frontend) _listAdminOpenShiftClusterResources(ctx context.Context, r *h
 			return nil, err
 		}
 
-		res.ID = gr.ID
-		res.Name = gr.Name
-		res.Type = gr.Type
-		res.Location = gr.Location
-		res.Kind = gr.Kind
-		res.Identity = gr.Identity
-		res.Properties = gr.Properties
-		res.Plan = gr.Plan
-		res.Tags = gr.Tags
-		res.Sku = gr.Sku
-		res.ManagedBy = gr.ManagedBy
-
-		resources[i] = res
+		armResources = append(armResources, arm.Resource{
+			Resource: gr,
+		})
 	}
 
-	return json.Marshal(resources)
+	return json.Marshal(armResources)
 }

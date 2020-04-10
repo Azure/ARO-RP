@@ -104,12 +104,11 @@ func TestAdminListResourcesList(t *testing.T) {
 					ID:       to.StringPtr("/subscriptions/id"),
 					Type:     to.StringPtr("Microsoft.Compute/virtualMachines"),
 					Location: to.StringPtr("eastus2"),
-					Tags:     map[string]*string{},
 				}, nil)
 			},
 			wantStatusCode: http.StatusOK,
 			wantResponse: func() []byte {
-				return []byte(`[{"kind":"test2","location":"eastus2","tags":{}}]` + "\n")
+				return []byte(`[{"kind":"test2","id":"/subscriptions/id","type":"Microsoft.Compute/virtualMachines","location":"eastus2"}]` + "\n")
 			},
 		},
 	} {
