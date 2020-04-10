@@ -13,6 +13,7 @@ import (
 
 	"github.com/prometheus/common/model"
 
+	"github.com/Azure/ARO-RP/pkg/util/namespace"
 	"github.com/Azure/ARO-RP/pkg/util/portforward"
 )
 
@@ -61,28 +62,46 @@ func (mon *Monitor) emitPrometheusAlerts(ctx context.Context) error {
 	}
 
 	m := map[string]struct {
-		count    int64
-		severity string
+		count       int64
+		maskedCount int64
+		severity    string
 	}{}
 
 	for _, alert := range alerts {
-		if strings.HasPrefix(alert.Name(), "UsingDeprecatedAPI") {
+		if !namespace.IsOpenShift(string(alert.Labels["namespace"])) {
 			continue
 		}
+
+		masked := alert.Labels["namespace"] == "openshift-operators" ||
+			strings.HasPrefix(alert.Name(), "UsingDeprecatedAPI")
 
 		a := m[string(alert.Name())]
 
 		a.severity = string(alert.Labels["severity"])
-		a.count++
+		if masked {
+			a.maskedCount++
+		} else {
+			a.count++
+		}
 
 		m[string(alert.Name())] = a
 	}
 
 	for alertName, a := range m {
-		mon.emitGauge("prometheus.alerts", a.count, map[string]string{
-			"alert":    alertName,
-			"severity": a.severity,
-		})
+		if a.count > 0 {
+			mon.emitGauge("prometheus.alerts", a.count, map[string]string{
+				"alert":    alertName,
+				"severity": a.severity,
+				"masked":   "False",
+			})
+		}
+		if a.maskedCount > 0 {
+			mon.emitGauge("prometheus.alerts", a.count, map[string]string{
+				"alert":    alertName,
+				"severity": a.severity,
+				"masked":   "True",
+			})
+		}
 	}
 
 	return nil
