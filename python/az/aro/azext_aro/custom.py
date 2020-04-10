@@ -65,6 +65,11 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
     assign_contributor_to_vnet(cmd.cli_ctx, vnet, client_sp.object_id)
     assign_contributor_to_vnet(cmd.cli_ctx, vnet, rp_client_sp.object_id)
 
+    if rp_mode_development():
+        worker_vm_size = worker_vm_size or 'Standard_D2s_v3'
+    else:
+        worker_vm_size = worker_vm_size or 'Standard_D4s_v3'
+
     oc = v2020_04_30.OpenShiftCluster(
         location=location,
         tags=tags,
@@ -89,7 +94,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
         worker_profiles=[
             v2020_04_30.WorkerProfile(
                 name='worker',  # TODO: 'worker' should not be hard-coded
-                vm_size=worker_vm_size or 'Standard_D2s_v3',
+                vm_size=worker_vm_size,
                 disk_size_gb=worker_vm_disk_size_gb or 128,
                 subnet_id=worker_subnet,
                 count=worker_count or 3,

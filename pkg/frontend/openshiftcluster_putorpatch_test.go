@@ -59,7 +59,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 	apis := map[string]*api.Version{
 		"2020-04-30": {
 			OpenShiftClusterConverter: api.APIs["2020-04-30"].OpenShiftClusterConverter,
-			OpenShiftClusterStaticValidator: func(string, string, string) api.OpenShiftClusterStaticValidator {
+			OpenShiftClusterStaticValidator: func(string, string, bool, string) api.OpenShiftClusterStaticValidator {
 				return &dummyOpenShiftClusterValidator{}
 			},
 			OpenShiftClusterCredentialsConverter: api.APIs["2020-04-30"].OpenShiftClusterCredentialsConverter,

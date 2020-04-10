@@ -21,9 +21,10 @@ import (
 )
 
 type openShiftClusterStaticValidator struct {
-	location   string
-	domain     string
-	resourceID string
+	location        string
+	domain          string
+	developmentMode bool
+	resourceID      string
 
 	r azure.Resource
 }
@@ -223,10 +224,16 @@ func (sv *openShiftClusterStaticValidator) validateWorkerProfile(path string, wp
 	if wp.Name != "worker" {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".name", "The provided worker name '%s' is invalid.", wp.Name)
 	}
-	switch wp.VMSize {
-	case VMSizeStandardD2sV3, VMSizeStandardD4sV3, VMSizeStandardD8sV3:
-	default:
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", "The provided worker VM size '%s' is invalid.", wp.VMSize)
+	if sv.developmentMode {
+		if wp.VMSize != VMSizeStandardD2sV3 {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", "The provided worker VM size '%s' is invalid in development mode.", wp.VMSize)
+		}
+	} else {
+		switch wp.VMSize {
+		case VMSizeStandardD4sV3, VMSizeStandardD8sV3:
+		default:
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", "The provided worker VM size '%s' is invalid.", wp.VMSize)
+		}
 	}
 	if wp.DiskSizeGB < 128 {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".diskSizeGB", "The provided worker disk size '%d' is invalid.", wp.DiskSizeGB)
