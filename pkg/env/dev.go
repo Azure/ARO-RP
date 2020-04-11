@@ -263,3 +263,15 @@ func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthor
 
 	return err
 }
+
+func (d *dev) E2EStorageAccountName() string {
+	return "arov4e2eint"
+}
+
+func (d *dev) E2EStorageAccountRGName() string {
+	return "global-infra"
+}
+
+func (d *dev) E2EStorageAccountSubID() string {
+	return "0cc1cafa-578f-4fa5-8d6b-ddfd8d82e6ea"
+}

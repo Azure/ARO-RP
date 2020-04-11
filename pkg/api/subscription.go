@@ -28,5 +28,22 @@ const (
 type SubscriptionProperties struct {
 	MissingFields
 
-	TenantID string `json:"tenantId,omitempty"`
+	TenantID           string                     `json:"tenantId,omitempty"`
+	AccountOwner       *AccountOwnerProfile       `json:"accountOwner,omitempty"`
+	RegisteredFeatures []RegisteredFeatureProfile `json:"registeredFeatures,omitempty"`
+}
+
+// AccountOwnerProfile represents the subscription account owner information
+type AccountOwnerProfile struct {
+	MissingFields
+
+	Email string `json:"email,omitempty"`
+}
+
+// RegisteredFeatureProfile represents the features registered to the subscription
+type RegisteredFeatureProfile struct {
+	MissingFields
+
+	Name  string `json:"name,omitempty"`
+	State string `json:"state,omitempty"`
 }
