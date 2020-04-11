@@ -15,6 +15,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
 	pkgacrtoken "github.com/Azure/ARO-RP/pkg/util/acrtoken"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
+	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/privateendpoint"
@@ -25,7 +26,7 @@ type Manager struct {
 	log          *logrus.Entry
 	env          env.Interface
 	db           database.OpenShiftClusters
-	billing      database.Billing
+	billing      billing.Manager
 	fpAuthorizer autorest.Authorizer
 
 	ocDynamicValidator validate.OpenShiftClusterDynamicValidator
@@ -41,7 +42,7 @@ type Manager struct {
 	doc *api.OpenShiftClusterDocument
 }
 
-func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, billing database.Billing, doc *api.OpenShiftClusterDocument) (*Manager, error) {
+func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, billingDB database.Billing, sub database.Subscriptions, doc *api.OpenShiftClusterDocument) (*Manager, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
 		return nil, err
@@ -70,11 +71,16 @@ func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClus
 		}
 	}
 
+	billingManager, err := billing.NewManager(_env, billingDB, sub, log)
+	if err != nil {
+		return nil, err
+	}
+
 	m := &Manager{
 		log:          log,
 		env:          _env,
 		db:           db,
-		billing:      billing,
+		billing:      billingManager,
 		fpAuthorizer: fpAuthorizer,
 
 		ocDynamicValidator: validate.NewOpenShiftClusterDynamicValidator(_env),

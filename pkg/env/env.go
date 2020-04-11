@@ -51,6 +51,9 @@ type Interface interface {
 	Zones(vmSize string) ([]string, error)
 	ACRResourceID() string
 	ACRName() string
+	E2EStorageAccountName() string
+	E2EStorageAccountRGName() string
+	E2EStorageAccountSubID() string
 }
 
 func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
