@@ -176,7 +176,7 @@ func TestAdminReply(t *testing.T) {
 	}
 }
 
-func TestURLPathsAreLowerCase(t *testing.T) {
+func TestRoutesAreNamedWithLowerCasePaths(t *testing.T) {
 	f := &frontend{
 		baseLog: logrus.NewEntry(logrus.StandardLogger()),
 	}
@@ -184,11 +184,21 @@ func TestURLPathsAreLowerCase(t *testing.T) {
 
 	varCleanupRe := regexp.MustCompile(`{.*?}`)
 	err := router.Walk(func(route *mux.Route, _ *mux.Router, _ []*mux.Route) error {
+		_, err := route.GetMethods()
+		if err != nil {
+			if err.Error() == "mux: route doesn't have methods" {
+				err = nil
+			}
+			return err
+		}
+
 		pathTemplate, err := route.GetPathTemplate()
 		if err != nil {
-			// Ignore the error: it can occur when a route has no path,
-			// but there is no way to check it here
-			return nil
+			return err
+		}
+
+		if route.GetName() == "" {
+			t.Errorf("path %s has no name", pathTemplate)
 		}
 
 		cleanPathTemplate := varCleanupRe.ReplaceAllString(pathTemplate, "")
