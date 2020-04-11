@@ -47,7 +47,7 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 
 	i := mon.db.OpenShiftClusters.ChangeFeed()
 
-	t := time.NewTicker(time.Second)
+	t := time.NewTicker(10 * time.Second)
 	defer t.Stop()
 
 	for {
