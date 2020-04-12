@@ -5,8 +5,8 @@ package kubeactions
 
 import (
 	"context"
-	"fmt"
 	"io"
+	"net/http"
 	"strings"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -120,11 +120,11 @@ func (ka *kubeactions) Get(ctx context.Context, oc *api.OpenShiftCluster, kind, 
 	gvrs := ka.findGVR(grs, kind)
 
 	if len(gvrs) == 0 {
-		return nil, nil
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The kind '%s' was not found.", kind)
 	}
 
 	if len(gvrs) > 1 {
-		return nil, fmt.Errorf("kind %q matched multiple GroupKinds", kind)
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The kind '%s' matched multiple GroupKinds.", kind)
 	}
 
 	gvr := gvrs[0]
@@ -145,11 +145,11 @@ func (ka *kubeactions) List(ctx context.Context, oc *api.OpenShiftCluster, kind,
 
 	gvrs := ka.findGVR(grs, kind)
 	if len(gvrs) == 0 {
-		return nil, nil
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The kind '%s' was not found.", kind)
 	}
 
 	if len(gvrs) > 1 {
-		return nil, fmt.Errorf("kind %q matched multiple GroupKinds", kind)
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The kind '%s' matched multiple GroupKinds.", kind)
 	}
 
 	gvr := gvrs[0]
