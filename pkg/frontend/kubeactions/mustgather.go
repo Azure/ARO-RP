@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,7 +22,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-func (ka *kubeactions) MustGather(ctx context.Context, oc *api.OpenShiftCluster, w io.Writer) error {
+func (ka *kubeactions) MustGather(ctx context.Context, log *logrus.Entry, oc *api.OpenShiftCluster, w io.Writer) error {
 	restconfig, err := restconfig.RestConfig(ka.env, oc)
 	if err != nil {
 		return err
@@ -47,7 +48,7 @@ func (ka *kubeactions) MustGather(ctx context.Context, oc *api.OpenShiftCluster,
 	defer func() {
 		err = cli.CoreV1().Namespaces().Delete(ns.Name, nil)
 		if err != nil {
-			ka.log.Error(err)
+			log.Error(err)
 		}
 	}()
 
@@ -75,7 +76,7 @@ func (ka *kubeactions) MustGather(ctx context.Context, oc *api.OpenShiftCluster,
 	defer func() {
 		err = cli.RbacV1().ClusterRoleBindings().Delete(crb.Name, nil)
 		if err != nil {
-			ka.log.Error(err)
+			log.Error(err)
 		}
 	}()
 
@@ -136,11 +137,13 @@ func (ka *kubeactions) MustGather(ctx context.Context, oc *api.OpenShiftCluster,
 		return err
 	}
 
+	log.Info("waiting for must-gather pod")
 	err = ka.waitForPodRunning(ctx, cli, pod)
 	if err != nil {
 		return err
 	}
 
+	log.Info("must-gather pod running")
 	rc, err := portforward.ExecStdout(ctx, ka.env, oc, pod.Namespace, pod.Name, "copy", []string{"tar", "cz", "/must-gather"})
 	if err != nil {
 		return err

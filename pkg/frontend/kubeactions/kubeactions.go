@@ -29,17 +29,15 @@ type Interface interface {
 	Get(ctx context.Context, oc *api.OpenShiftCluster, kind, namespace, name string) ([]byte, error)
 	List(ctx context.Context, oc *api.OpenShiftCluster, kind, namespace string) ([]byte, error)
 	ClusterUpgrade(ctx context.Context, oc *api.OpenShiftCluster) error
-	MustGather(ctx context.Context, oc *api.OpenShiftCluster, w io.Writer) error
+	MustGather(ctx context.Context, log *logrus.Entry, oc *api.OpenShiftCluster, w io.Writer) error
 }
 
 type kubeactions struct {
-	log *logrus.Entry
 	env env.Interface
 }
 
-func New(log *logrus.Entry, env env.Interface) Interface {
+func New(env env.Interface) Interface {
 	return &kubeactions{
-		log: log,
 		env: env,
 	}
 }

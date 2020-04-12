@@ -22,12 +22,12 @@ func (f *frontend) postAdminOpenShiftClusterMustGather(w http.ResponseWriter, r 
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
-	err := f._postAdminOpenShiftClusterMustGather(ctx, w, r)
+	err := f._postAdminOpenShiftClusterMustGather(ctx, log, w, r)
 
 	adminReply(log, w, nil, nil, err)
 }
 
-func (f *frontend) _postAdminOpenShiftClusterMustGather(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
+func (f *frontend) _postAdminOpenShiftClusterMustGather(ctx context.Context, log *logrus.Entry, w http.ResponseWriter, r *http.Request) error {
 	vars := mux.Vars(r)
 
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
@@ -43,5 +43,5 @@ func (f *frontend) _postAdminOpenShiftClusterMustGather(ctx context.Context, w h
 	w.Header().Add("Content-Type", "application/gzip")
 	w.Header().Add("Content-Disposition", `attachment; filename="must-gather.tgz"`)
 
-	return f.kubeActions.MustGather(ctx, doc.OpenShiftCluster, w)
+	return f.kubeActions.MustGather(ctx, log, doc.OpenShiftCluster, w)
 }

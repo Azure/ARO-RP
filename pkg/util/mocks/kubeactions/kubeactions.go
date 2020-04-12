@@ -10,6 +10,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	logrus "github.com/sirupsen/logrus"
 
 	api "github.com/Azure/ARO-RP/pkg/api"
 )
@@ -82,15 +83,15 @@ func (mr *MockInterfaceMockRecorder) List(arg0, arg1, arg2, arg3 interface{}) *g
 }
 
 // MustGather mocks base method
-func (m *MockInterface) MustGather(arg0 context.Context, arg1 *api.OpenShiftCluster, arg2 io.Writer) error {
+func (m *MockInterface) MustGather(arg0 context.Context, arg1 *logrus.Entry, arg2 *api.OpenShiftCluster, arg3 io.Writer) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MustGather", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "MustGather", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // MustGather indicates an expected call of MustGather
-func (mr *MockInterfaceMockRecorder) MustGather(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) MustGather(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MustGather", reflect.TypeOf((*MockInterface)(nil).MustGather), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MustGather", reflect.TypeOf((*MockInterface)(nil).MustGather), arg0, arg1, arg2, arg3)
 }
