@@ -1062,6 +1062,7 @@ rm /etc/motd.d/*
 		},
 		APIVersion: azureclient.APIVersions["Microsoft.Compute"],
 		DependsOn: []string{
+			"[resourceId('Microsoft.Authorization/roleAssignments', guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / Reader'))]",
 			"[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]",
 			"[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]",
 		},

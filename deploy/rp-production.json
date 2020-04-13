@@ -230,6 +230,7 @@
             "location": "[resourceGroup().location]",
             "apiVersion": "2019-03-01",
             "dependsOn": [
+                "[resourceId('Microsoft.Authorization/roleAssignments', guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / Reader'))]",
                 "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]",
                 "[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]"
             ]
