@@ -35,14 +35,14 @@ func (mon *Monitor) emitClusterOperatorsMetrics(ctx context.Context) error {
 			}
 
 			if _, ok := clusterOperatorsNotConditions[c.Type]; ok {
-				if c.Status != configv1.ConditionTrue {
+				if c.Status == configv1.ConditionFalse {
 					mon.emitGauge("clusteroperators.conditions.count", 1, map[string]string{
 						"clusteroperator": co.Name,
 						"condition":       "Not" + string(c.Type),
 					})
 				}
 			} else {
-				if c.Status != configv1.ConditionFalse {
+				if c.Status == configv1.ConditionTrue {
 					mon.emitGauge("clusteroperators.conditions.count", 1, map[string]string{
 						"clusteroperator": co.Name,
 						"condition":       string(c.Type),
