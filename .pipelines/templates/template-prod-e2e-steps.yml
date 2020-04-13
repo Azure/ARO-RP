@@ -22,6 +22,7 @@ steps:
     workingDirectory: ${{ parameters.workingDirectory }}
     azureDevOpsJSONSPN: ${{ parameters.azureDevOpsE2EJSONSPN }}
 - script: |
+    set -e
     cd ${{ parameters.workingDirectory }}
 
     export LOCATION=${{ parameters.location }}
