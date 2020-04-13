@@ -675,6 +675,12 @@ func (g *generator) vmss() *arm.Resource {
 	)
 
 	parts = append(parts,
+		fmt.Sprintf("'SUBSCRIPTIONID=$(base64 -d <<<'''"),
+		fmt.Sprintf("base64(subscription().subscriptionId)"),
+		"''')\n'",
+	)
+
+	parts = append(parts,
 		fmt.Sprintf("'RESOURCEGROUPNAME=$(base64 -d <<<'''"),
 		fmt.Sprintf("base64(resourceGroup().name)"),
 		"''')\n'",
@@ -779,7 +785,8 @@ cat >/etc/td-agent-bit/td-agent-bit.conf <<'EOF'
 	Port 29230
 EOF
 
-az login -i --allow-no-subscriptions
+az login -i
+az account set -s "$SUBSCRIPTIONID"
 
 >/etc/containers/nodocker  # podman stderr output confuses az acr login
 mkdir /root/.docker
