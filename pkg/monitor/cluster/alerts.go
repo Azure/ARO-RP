@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-	"time"
 
 	"github.com/prometheus/common/model"
 
@@ -60,28 +59,30 @@ func (mon *Monitor) emitPrometheusAlerts(ctx context.Context) error {
 		return err
 	}
 
-	alertmap := map[string]int64{}
+	m := map[string]struct {
+		count    int64
+		severity string
+	}{}
 
 	for _, alert := range alerts {
 		if alert.Name() == "UsingDeprecatedAPIExtensionsV1Beta1" {
 			continue
 		}
 
-		// If the alert we are emitting is still happening
-		if inTimeSpan(alert.StartsAt, alert.EndsAt, time.Now()) {
-			alertmap[string(alert.Labels["alertname"])]++
-		}
+		a := m[string(alert.Name())]
+
+		a.severity = string(alert.Labels["severity"])
+		a.count++
+
+		m[string(alert.Name())] = a
 	}
 
-	for alert, count := range alertmap {
-		mon.emitGauge("prometheus.alerts", count, map[string]string{
-			"alert": alert,
+	for alertName, a := range m {
+		mon.emitGauge("prometheus.alerts", a.count, map[string]string{
+			"alert":    alertName,
+			"severity": a.severity,
 		})
 	}
 
 	return nil
-}
-
-func inTimeSpan(start, end, check time.Time) bool {
-	return check.After(start) && check.Before(end)
 }
