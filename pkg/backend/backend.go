@@ -63,7 +63,7 @@ func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, db *d
 func (b *backend) Run(ctx context.Context, stop <-chan struct{}, done chan<- struct{}) {
 	defer recover.Panic(b.baseLog)
 
-	t := time.NewTicker(time.Second)
+	t := time.NewTicker(10 * time.Second)
 	defer t.Stop()
 
 	if stop != nil {
