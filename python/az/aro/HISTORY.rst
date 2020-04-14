@@ -17,3 +17,7 @@ Release History
 * Add --pull-secret argument to `az aro create`.
 * Stop advertising Python 2.7, 3.5 support.
 * Migrate to GA API.
+
+0.4.0
+++++++
+* Default worker VM size to Standard_D4s_v3.
