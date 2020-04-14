@@ -121,7 +121,7 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 	p.clustersGenevaLoggingPrivateKey = clustersGenevaLoggingPrivateKey
 	p.clustersGenevaLoggingCertificate = clustersGenevaLoggingCertificates[0]
 
-	p.e2eStorageAccountName = "v4aroe2e"
+	p.e2eStorageAccountName = "arov4e2e"
 	p.e2eStorageAccountRGName = "global"
 	p.e2eStorageAccountSubID = "0923c7de-9fca-4d9e-baf3-131d0c5b2ea4"
 
