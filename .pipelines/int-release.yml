@@ -15,24 +15,27 @@ stages:
           vsoProjectID: $(vso-project-id)
           vsoConfigPipelineID: $(vso-config-pipeline-id)
           vsoDeployerPipelineID: $(vso-deployer-pipeline-id)
-      - job: TriggerBillingBuild
-        displayName: 'Queue Production Builds'
-        steps:
-        - task: TriggerBuild@3
-          inputs:
-            definitionIsInCurrentTeamProject: true
-            buildDefinition: 'Billing - CI'
-            queueBuildForUserThatTriggeredBuild: true
-            ignoreSslCertificateErrors: false
-            useSameSourceVersion: false
-            useCustomSourceVersion: false
-            useSameBranch: true
-            waitForQueuedBuildsToFinish: true
-            storeInEnvironmentVariable: false
-            authenticationMethod: 'OAuth Token'
-            password: '$(System.AccessToken)'
-            enableBuildInQueueCondition: false
-            dependentOnSuccessfulBuildCondition: true
-            dependentOnFailedBuildCondition: true
-            checkbuildsoncurrentbranch: false
-            failTaskIfConditionsAreNotFulfilled: true
+  - stage: Billing_E2E
+    displayName: Billing E2E
+    jobs:
+    - job: TriggerBillingBuild
+      displayName: 'Trigger Billing E2E pipeline'
+      steps:
+      - task: TriggerBuild@3
+        inputs:
+          definitionIsInCurrentTeamProject: true
+          buildDefinition: 'Billing - E2E'
+          queueBuildForUserThatTriggeredBuild: true
+          ignoreSslCertificateErrors: false
+          useSameSourceVersion: false
+          useCustomSourceVersion: false
+          useSameBranch: true
+          waitForQueuedBuildsToFinish: true
+          storeInEnvironmentVariable: false
+          authenticationMethod: 'OAuth Token'
+          password: '$(System.AccessToken)'
+          enableBuildInQueueCondition: false
+          dependentOnSuccessfulBuildCondition: true
+          dependentOnFailedBuildCondition: true
+          checkbuildsoncurrentbranch: false
+          failTaskIfConditionsAreNotFulfilled: true
