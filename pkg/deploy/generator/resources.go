@@ -1554,3 +1554,19 @@ func (g *generator) acrRbac() []*arm.Resource {
 		},
 	}
 }
+
+func (g *generator) billingRbac() *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtauthorization.RoleAssignment{
+			Name: to.StringPtr("[guid(resourceGroup().id, 'FP / Storage Account Contributor')]"),
+			Type: to.StringPtr("Microsoft.Authorization/roleAssignments"),
+			RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+				Scope:            to.StringPtr("[resourceGroup().id]"),
+				RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '17d1049b-9a84-46fb-8f53-869881c3d3ab')]"), // Storage account contributor
+				PrincipalID:      to.StringPtr("[parameters('fpServicePrincipalId')]"),
+				PrincipalType:    mgmtauthorization.ServicePrincipal,
+			},
+		},
+		APIVersion: azureclient.APIVersions["Microsoft.Authorization"],
+	}
+}

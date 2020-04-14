@@ -103,6 +103,7 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 
 	t.Resources = append(t.Resources,
 		g.acrReplica(),
+		g.billingRbac(),
 	)
 
 	t.Resources = append(t.Resources,
