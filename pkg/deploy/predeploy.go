@@ -129,10 +129,10 @@ func (d *deployer) deployGlobalSubscription(ctx context.Context) error {
 	})
 }
 
-func (d *deployer) deploySubscription(ctx context.Context) error {
+func (d *deployer) deployActionGroup(ctx context.Context) error {
 	deploymentName := "rp-production-subscription"
 
-	b, err := Asset(generator.FileRPProductionSubscription)
+	b, err := Asset(generator.FileRPProductionActionGroup)
 	if err != nil {
 		return err
 	}

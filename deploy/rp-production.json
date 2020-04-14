@@ -5,6 +5,9 @@
         "acrResourceId": {
             "type": "string"
         },
+        "actionGroupSubscriptionResourceGroupName": {
+            "type": "string"
+        },
         "adminApiCaBundle": {
             "type": "string"
         },
@@ -44,9 +47,6 @@
             "type": "string"
         },
         "sshPublicKey": {
-            "type": "string"
-        },
-        "subscriptionResourceGroupName": {
             "type": "string"
         },
         "vmssName": {
@@ -264,7 +264,7 @@
                 "autoMitigate": true,
                 "actions": [
                     {
-                        "actionGroupId": "[resourceId(parameters('subscriptionResourceGroupName'), 'Microsoft.Insights/actionGroups', 'rp-health-ag')]",
+                        "actionGroupId": "[resourceId(parameters('actionGroupSubscriptionResourceGroupName'), 'Microsoft.Insights/actionGroups', 'rp-health-ag')]",
                         "webHookProperties": null
                     }
                 ]

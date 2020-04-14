@@ -5,6 +5,9 @@
         "acrResourceId": {
             "value": ""
         },
+        "actionGroupSubscriptionResourceGroupName": {
+            "value": ""
+        },
         "adminApiCaBundle": {
             "value": ""
         },
@@ -42,9 +45,6 @@
             "value": ""
         },
         "sshPublicKey": {
-            "value": ""
-        },
-        "subscriptionResourceGroupName": {
             "value": ""
         },
         "vmssName": {

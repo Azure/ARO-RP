@@ -599,7 +599,7 @@ func (g *generator) lbAlert() *arm.Resource {
 			MetricAlertProperties: &mgmtmonitor.MetricAlertProperties{
 				Actions: &[]mgmtmonitor.MetricAlertAction{
 					{
-						ActionGroupID: to.StringPtr("[resourceId(parameters('subscriptionResourceGroupName'), 'Microsoft.Insights/actionGroups', 'rp-health-ag')]"),
+						ActionGroupID: to.StringPtr("[resourceId(parameters('actionGroupSubscriptionResourceGroupName'), 'Microsoft.Insights/actionGroups', 'rp-health-ag')]"),
 					},
 				},
 				Enabled:             to.BoolPtr(true),

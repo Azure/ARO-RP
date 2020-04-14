@@ -21,7 +21,7 @@ const (
 	FileRPProductionGlobal              = "rp-production-global.json"
 	FileRPProductionGlobalSubscription  = "rp-production-global-subscription.json"
 	FileRPProductionParameters          = "rp-production-parameters.json"
-	FileRPProductionSubscription        = "rp-production-subscription.json"
+	FileRPProductionActionGroup         = "rp-production-action-group.json"
 
 	fileEnvDevelopment         = "env-development.json"
 	fileDatabaseDevelopment    = "databases-development.json"

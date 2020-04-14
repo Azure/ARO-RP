@@ -47,7 +47,7 @@ func (g *generator) Artifacts() error {
 		if err != nil {
 			return err
 		}
-		err = g.writeTemplate(g.rpSubscriptionTemplate(), FileRPProductionSubscription)
+		err = g.writeTemplate(g.rpActionGroupTemplate(), FileRPProductionActionGroup)
 		if err != nil {
 			return err
 		}

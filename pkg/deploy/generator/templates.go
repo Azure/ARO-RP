@@ -38,6 +38,7 @@ func (g *generator) rpTemplate() *arm.Template {
 	}
 	if g.production {
 		params = append(params,
+			"actionGroupSubscriptionResourceGroupName",
 			"adminApiCaBundle",
 			"adminApiClientCertCommonName",
 			"extraCosmosDBIPs",
@@ -47,7 +48,6 @@ func (g *generator) rpTemplate() *arm.Template {
 			"acrResourceId",
 			"rpImage",
 			"rpMode",
-			"subscriptionResourceGroupName",
 			"sshPublicKey",
 			"vmssName",
 		)
@@ -122,7 +122,7 @@ func (g *generator) rpGlobalSubscriptionTemplate() *arm.Template {
 	return t
 }
 
-func (g *generator) rpSubscriptionTemplate() *arm.Template {
+func (g *generator) rpActionGroupTemplate() *arm.Template {
 	t := templateStanza()
 
 	t.Resources = append(t.Resources, g.actionGroup("rp-health-ag", "rphealth"))
