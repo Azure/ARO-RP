@@ -16,7 +16,7 @@ import (
 	"runtime"
 	"time"
 
-	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
+	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/Azure/go-autorest/autorest"
@@ -38,9 +38,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/resources"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
+	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
@@ -55,7 +56,7 @@ type Installer struct {
 	log          *logrus.Entry
 	env          env.Interface
 	db           database.OpenShiftClusters
-	billing      database.Billing
+	billing      billing.Manager
 	doc          *api.OpenShiftClusterDocument
 	cipher       encryption.Cipher
 	fpAuthorizer autorest.Authorizer
@@ -65,8 +66,8 @@ type Installer struct {
 	interfaces        network.InterfacesClient
 	publicipaddresses network.PublicIPAddressesClient
 	loadbalancers     network.LoadBalancersClient
-	deployments       resources.DeploymentsClient
-	groups            resources.GroupsClient
+	deployments       features.DeploymentsClient
+	groups            features.ResourceGroupsClient
 	accounts          storage.AccountsClient
 
 	dns             dns.Manager
@@ -93,35 +94,35 @@ type condition struct {
 }
 
 // NewInstaller creates a new Installer
-func NewInstaller(ctx context.Context, log *logrus.Entry, env env.Interface, db database.OpenShiftClusters, billing database.Billing, doc *api.OpenShiftClusterDocument) (*Installer, error) {
+func NewInstaller(ctx context.Context, log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, billing billing.Manager, doc *api.OpenShiftClusterDocument) (*Installer, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	localFPAuthorizer, err := env.FPAuthorizer(env.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
+	localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	localFPKVAuthorizer, err := env.FPAuthorizer(env.TenantID(), azure.PublicCloud.ResourceIdentifiers.KeyVault)
+	localFPKVAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), azure.PublicCloud.ResourceIdentifiers.KeyVault)
 	if err != nil {
 		return nil, err
 	}
 
-	fpAuthorizer, err := env.FPAuthorizer(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
+	fpAuthorizer, err := _env.FPAuthorizer(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	cipher, err := encryption.NewXChaCha20Poly1305(ctx, env)
+	cipher, err := encryption.NewXChaCha20Poly1305(ctx, _env, env.EncryptionSecretName)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Installer{
 		log:          log,
-		env:          env,
+		env:          _env,
 		db:           db,
 		billing:      billing,
 		cipher:       cipher,
@@ -133,13 +134,13 @@ func NewInstaller(ctx context.Context, log *logrus.Entry, env env.Interface, db 
 		interfaces:        network.NewInterfacesClient(r.SubscriptionID, fpAuthorizer),
 		publicipaddresses: network.NewPublicIPAddressesClient(r.SubscriptionID, fpAuthorizer),
 		loadbalancers:     network.NewLoadBalancersClient(r.SubscriptionID, fpAuthorizer),
-		deployments:       resources.NewDeploymentsClient(r.SubscriptionID, fpAuthorizer),
-		groups:            resources.NewGroupsClient(r.SubscriptionID, fpAuthorizer),
+		deployments:       features.NewDeploymentsClient(r.SubscriptionID, fpAuthorizer),
+		groups:            features.NewResourceGroupsClient(r.SubscriptionID, fpAuthorizer),
 		accounts:          storage.NewAccountsClient(r.SubscriptionID, fpAuthorizer),
 
-		dns:             dns.NewManager(env, localFPAuthorizer),
+		dns:             dns.NewManager(_env, localFPAuthorizer),
 		keyvault:        keyvault.NewManager(localFPKVAuthorizer),
-		privateendpoint: privateendpoint.NewManager(env, localFPAuthorizer),
+		privateendpoint: privateendpoint.NewManager(_env, localFPAuthorizer),
 		subnet:          subnet.NewManager(r.SubscriptionID, fpAuthorizer),
 	}, nil
 }
@@ -369,17 +370,17 @@ func (i *Installer) initializeKubernetesClients(ctx context.Context) error {
 }
 
 func (i *Installer) deployARMTemplate(ctx context.Context, rg string, tName string, t *arm.Template, params map[string]interface{}) error {
-	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
 	err := wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 		i.log.Printf("deploying %s template", tName)
 
-		err := i.deployments.CreateOrUpdateAndWait(ctx, rg, deploymentName, mgmtresources.Deployment{
-			Properties: &mgmtresources.DeploymentProperties{
+		err := i.deployments.CreateOrUpdateAndWait(ctx, rg, deploymentName, mgmtfeatures.Deployment{
+			Properties: &mgmtfeatures.DeploymentProperties{
 				Template:   t,
 				Parameters: params,
-				Mode:       mgmtresources.Incremental,
+				Mode:       mgmtfeatures.Incremental,
 			},
 		})
 
@@ -388,7 +389,7 @@ func (i *Installer) deployARMTemplate(ctx context.Context, rg string, tName stri
 			err = i.deployments.Wait(ctx, rg, deploymentName)
 		}
 
-		if isAuthorizationFailedError(err) {
+		if hasAuthorizationFailedError(err) {
 			i.log.Print(err)
 			return false, nil
 		}
@@ -396,7 +397,7 @@ func (i *Installer) deployARMTemplate(ctx context.Context, rg string, tName stri
 		return err == nil, err
 	}, timeoutCtx.Done())
 
-	if isQuota, errMsg := isResourceQuotaExceededError(err); isQuota {
+	if isQuota, errMsg := hasResourceQuotaExceededError(err); isQuota {
 		err = api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeQuotaExceeded, errMsg, "")
 	}
 

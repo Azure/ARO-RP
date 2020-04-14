@@ -13,18 +13,22 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/kubeactions"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/metrics"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
+	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
@@ -35,16 +39,19 @@ func (err statusCodeError) Error() string {
 	return fmt.Sprintf("%d", err)
 }
 
+type resourcesClientFactory func(subscriptionID string, authorizer autorest.Authorizer) features.ResourcesClient
+
 type frontend struct {
 	baseLog *logrus.Entry
 	env     env.Interface
 	db      *database.Database
 	apis    map[string]*api.Version
 	m       metrics.Interface
+	cipher  encryption.Cipher
 
-	ocEnricher         clusterdata.OpenShiftClusterEnricher
-	ocDynamicValidator validate.OpenShiftClusterDynamicValidator
-	kubeActions        kubeactions.Interface
+	ocEnricher             clusterdata.OpenShiftClusterEnricher
+	kubeActions            kubeactions.Interface
+	resourcesClientFactory resourcesClientFactory
 
 	l net.Listener
 	s *http.Server
@@ -60,19 +67,18 @@ type Runnable interface {
 }
 
 // NewFrontend returns a new runnable frontend
-func NewFrontend(ctx context.Context, baseLog *logrus.Entry, _env env.Interface, db *database.Database, apis map[string]*api.Version, m metrics.Interface, kubeActions kubeactions.Interface) (Runnable, error) {
-	var err error
-
+func NewFrontend(ctx context.Context, baseLog *logrus.Entry, _env env.Interface, db *database.Database, apis map[string]*api.Version, m metrics.Interface, cipher encryption.Cipher, kubeActions kubeactions.Interface, resourcesClientFactory resourcesClientFactory) (Runnable, error) {
 	f := &frontend{
-		baseLog:     baseLog,
-		env:         _env,
-		db:          db,
-		apis:        apis,
-		m:           m,
-		kubeActions: kubeActions,
+		baseLog:                baseLog,
+		env:                    _env,
+		db:                     db,
+		apis:                   apis,
+		m:                      m,
+		cipher:                 cipher,
+		kubeActions:            kubeActions,
+		resourcesClientFactory: resourcesClientFactory,
 
-		ocEnricher:         clusterdata.NewBestEffortEnricher(baseLog, _env),
-		ocDynamicValidator: validate.NewOpenShiftClusterDynamicValidator(_env),
+		ocEnricher: clusterdata.NewBestEffortEnricher(baseLog, _env, m),
 
 		bucketAllocator: &bucket.Random{},
 	}
@@ -119,13 +125,11 @@ func NewFrontend(ctx context.Context, baseLog *logrus.Entry, _env env.Interface,
 	f.l = tls.NewListener(l, config)
 
 	f.ready.Store(true)
-
 	return f, nil
 }
 
 func (f *frontend) unauthenticatedRoutes(r *mux.Router) {
-	r.Path("/healthz").Methods(http.MethodGet).HandlerFunc(f.getHealthz)
-	r.Path("/healthz/ready").Methods(http.MethodGet).HandlerFunc(f.getReady)
+	r.Path("/healthz/ready").Methods(http.MethodGet).HandlerFunc(f.getReady).Name("getReady")
 }
 
 func (f *frontend) authenticatedRoutes(r *mux.Router) {
@@ -186,6 +190,18 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 		Subrouter()
 
 	s.Methods(http.MethodPost).HandlerFunc(f.postAdminOpenShiftClusterUpgrade).Name("postAdminOpenShiftClusterUpgrade")
+
+	s = r.
+		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/resources").
+		Subrouter()
+
+	s.Methods(http.MethodGet).HandlerFunc(f.listAdminOpenShiftClusterResources).Name("listAdminOpenShiftClusterResources")
+
+	s = r.
+		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/mustgather").
+		Subrouter()
+
+	s.Methods(http.MethodPost).HandlerFunc(f.postAdminOpenShiftClusterMustGather).Name("postAdminOpenShiftClusterMustGather")
 
 	// Operations
 	s = r.
@@ -251,7 +267,7 @@ func (f *frontend) Run(ctx context.Context, stop <-chan struct{}, done chan<- st
 	f.s = &http.Server{
 		Handler:      middleware.Lowercase(f.setupRouter()),
 		ReadTimeout:  10 * time.Second,
-		WriteTimeout: time.Minute,
+		WriteTimeout: 15 * time.Minute,
 		IdleTimeout:  2 * time.Minute,
 		ErrorLog:     log.New(f.baseLog.Writer(), "", 0),
 		BaseContext:  func(net.Listener) context.Context { return ctx },
@@ -265,6 +281,33 @@ func (f *frontend) Run(ctx context.Context, stop <-chan struct{}, done chan<- st
 	}
 }
 
+func adminReply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b []byte, err error) {
+	if apiErr, ok := err.(errors.APIStatus); ok {
+		status := apiErr.Status()
+
+		var target string
+		if status.Details != nil {
+			gk := schema.GroupKind{
+				Group: status.Details.Group,
+				Kind:  status.Details.Kind,
+			}
+
+			target = fmt.Sprintf("%s/%s", gk, status.Details.Name)
+		}
+
+		err = &api.CloudError{
+			StatusCode: int(status.Code),
+			CloudErrorBody: &api.CloudErrorBody{
+				Code:    string(status.Reason),
+				Message: status.Message,
+				Target:  target,
+			},
+		}
+	}
+
+	reply(log, w, header, b, err)
+}
+
 func reply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b []byte, err error) {
 	for k, v := range header {
 		w.Header()[k] = v
@@ -273,6 +316,7 @@ func reply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b []byt
 	if err != nil {
 		switch err := err.(type) {
 		case *api.CloudError:
+			log.Info(err)
 			api.WriteCloudError(w, err)
 			return
 		case statusCodeError:

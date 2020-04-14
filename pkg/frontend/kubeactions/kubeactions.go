@@ -5,7 +5,8 @@ package kubeactions
 
 import (
 	"context"
-	"fmt"
+	"io"
+	"net/http"
 	"strings"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -28,6 +29,7 @@ type Interface interface {
 	Get(ctx context.Context, oc *api.OpenShiftCluster, kind, namespace, name string) ([]byte, error)
 	List(ctx context.Context, oc *api.OpenShiftCluster, kind, namespace string) ([]byte, error)
 	ClusterUpgrade(ctx context.Context, oc *api.OpenShiftCluster) error
+	MustGather(ctx context.Context, oc *api.OpenShiftCluster, w io.Writer) error
 }
 
 type kubeactions struct {
@@ -118,11 +120,11 @@ func (ka *kubeactions) Get(ctx context.Context, oc *api.OpenShiftCluster, kind, 
 	gvrs := ka.findGVR(grs, kind)
 
 	if len(gvrs) == 0 {
-		return nil, nil
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The kind '%s' was not found.", kind)
 	}
 
 	if len(gvrs) > 1 {
-		return nil, fmt.Errorf("kind %q matched multiple GroupKinds", kind)
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The kind '%s' matched multiple GroupKinds.", kind)
 	}
 
 	gvr := gvrs[0]
@@ -143,11 +145,11 @@ func (ka *kubeactions) List(ctx context.Context, oc *api.OpenShiftCluster, kind,
 
 	gvrs := ka.findGVR(grs, kind)
 	if len(gvrs) == 0 {
-		return nil, nil
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The kind '%s' was not found.", kind)
 	}
 
 	if len(gvrs) > 1 {
-		return nil, fmt.Errorf("kind %q matched multiple GroupKinds", kind)
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The kind '%s' matched multiple GroupKinds.", kind)
 	}
 
 	gvr := gvrs[0]
@@ -181,7 +183,7 @@ func (ka *kubeactions) ClusterUpgrade(ctx context.Context, oc *api.OpenShiftClus
 
 		cv.Spec.DesiredUpdate = &configv1.Update{
 			Version: version.OpenShiftVersion,
-			Image:   version.OpenShiftPullSpec(ka.env.ACRName()),
+			Image:   version.OpenShiftPullSpec,
 		}
 
 		_, err = configcli.ConfigV1().ClusterVersions().Update(cv)

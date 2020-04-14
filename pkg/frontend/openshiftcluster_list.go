@@ -5,8 +5,10 @@ package frontend
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -34,22 +36,23 @@ func (f *frontend) _getOpenShiftClusters(ctx context.Context, r *http.Request, c
 		prefix += "resourcegroups/" + vars["resourceGroupName"] + "/"
 	}
 
-	i, err := f.db.OpenShiftClusters.ListByPrefix(vars["subscriptionId"], prefix)
+	skipToken, err := f.parseSkipToken(r.URL.String())
+	if err != nil {
+		return nil, err
+	}
+
+	i, err := f.db.OpenShiftClusters.ListByPrefix(vars["subscriptionId"], prefix, skipToken)
+	if err != nil {
+		return nil, err
+	}
+
+	docs, err := i.Next(ctx, 10)
 	if err != nil {
 		return nil, err
 	}
 
 	var ocs []*api.OpenShiftCluster
-
-	for {
-		docs, err := i.Next(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if docs == nil {
-			break
-		}
-
+	if docs != nil {
 		for _, doc := range docs.OpenShiftClusterDocuments {
 			ocs = append(ocs, doc.OpenShiftCluster)
 		}
@@ -64,5 +67,60 @@ func (f *frontend) _getOpenShiftClusters(ctx context.Context, r *http.Request, c
 		ocs[i].Properties.ServicePrincipalProfile.ClientSecret = ""
 	}
 
-	return json.MarshalIndent(converter.ToExternalList(ocs), "", "    ")
+	nextLink, err := f.buildNextLink(r.Header.Get("Referer"), i.Continuation())
+	if err != nil {
+		return nil, err
+	}
+
+	return json.MarshalIndent(converter.ToExternalList(ocs, nextLink), "", "    ")
+}
+
+// parseSkipToken parses originalURL and retrieves skipToken.
+// Returns an empty string without an error, if there is no $skipToken parameter in originalURL
+func (f *frontend) parseSkipToken(originalURL string) (string, error) {
+	u, err := url.Parse(originalURL)
+	if err != nil {
+		return "", err
+	}
+
+	skipToken := u.Query().Get("$skipToken")
+	if skipToken == "" {
+		return "", nil
+	}
+
+	b, err := base64.StdEncoding.DecodeString(skipToken)
+	if err != nil {
+		return "", err
+	}
+
+	output, err := f.cipher.Decrypt(b)
+	if err != nil {
+		return "", err
+	}
+
+	return string(output), nil
+}
+
+// buildNextLink adds $skipToken parameter into baseURL.
+// Returns an empty string without an error, if skipToken is empty.
+func (f *frontend) buildNextLink(baseURL, skipToken string) (string, error) {
+	if skipToken == "" {
+		return "", nil
+	}
+
+	u, err := url.Parse(baseURL)
+	if err != nil {
+		return "", err
+	}
+
+	output, err := f.cipher.Encrypt([]byte(skipToken))
+	if err != nil {
+		return "", err
+	}
+
+	query := u.Query()
+	query.Set("$skipToken", base64.StdEncoding.EncodeToString(output))
+	u.RawQuery = query.Encode()
+
+	return u.String(), nil
 }

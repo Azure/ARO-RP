@@ -24,11 +24,10 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/resources"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 )
@@ -63,7 +62,7 @@ type dev struct {
 	permissions     authorization.PermissionsClient
 	roleassignments authorization.RoleAssignmentsClient
 	applications    graphrbac.ApplicationsClient
-	deployments     resources.DeploymentsClient
+	deployments     features.DeploymentsClient
 
 	proxyPool       *x509.CertPool
 	proxyClientCert []byte
@@ -118,7 +117,7 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 
 	d.permissions = authorization.NewPermissionsClient(instancemetadata.SubscriptionID(), fpAuthorizer)
 
-	d.deployments = resources.NewDeploymentsClient(instancemetadata.TenantID(), fpAuthorizer)
+	d.deployments = features.NewDeploymentsClient(instancemetadata.TenantID(), fpAuthorizer)
 
 	b, err := ioutil.ReadFile("secrets/proxy.crt")
 	if err != nil {
@@ -274,26 +273,18 @@ func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthor
 		return err
 	}
 
-	// Issue: https://github.com/Azure/ARO-RP/issues/31
-	// rbac client returns right permissions, but access is not yet propagated
-	// in the azure backends. We test by trying to call API directly and check if
-	// role was applied.
 	d.log.Print("development mode: refreshing authorizer")
-	err = fpAuthorizer.(*refreshableAuthorizer).Refresh()
-	if err != nil {
-		return err
-	}
+	return fpAuthorizer.(*refreshableAuthorizer).Refresh()
+}
 
-	return wait.Poll(time.Second, time.Minute, func() (bool, error) {
-		// this should always error. Either 403 or 404
-		_, err := d.deployments.Get(ctx, resourceGroup, "dummy")
-		if detailedErr, ok := err.(autorest.DetailedError); ok {
-			if requestErr, ok := detailedErr.Original.(azure.RequestError); ok &&
-				requestErr.ServiceError != nil &&
-				requestErr.ServiceError.Code == "AuthorizationFailed" {
-				return false, nil
-			}
-		}
-		return true, nil
-	})
+func (d *dev) E2EStorageAccountName() string {
+	return "arov4e2eint"
+}
+
+func (d *dev) E2EStorageAccountRGName() string {
+	return "global-infra"
+}
+
+func (d *dev) E2EStorageAccountSubID() string {
+	return "0cc1cafa-578f-4fa5-8d6b-ddfd8d82e6ea"
 }

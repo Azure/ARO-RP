@@ -35,11 +35,11 @@ func TestNewXChaCha20Poly1305(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			env := &env.Test{
+			_env := &env.Test{
 				TestSecret: tt.key,
 			}
 
-			_, err := NewXChaCha20Poly1305(context.Background(), env)
+			_, err := NewXChaCha20Poly1305(context.Background(), _env, env.EncryptionSecretName)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Fatal(err)
@@ -76,11 +76,11 @@ func TestXChaCha20Poly1305Decrypt(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			env := &env.Test{
+			_env := &env.Test{
 				TestSecret: tt.key,
 			}
 
-			cipher, err := NewXChaCha20Poly1305(context.Background(), env)
+			cipher, err := NewXChaCha20Poly1305(context.Background(), _env, env.EncryptionSecretName)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -128,11 +128,11 @@ func TestXChaCha20Poly1305Encrypt(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			env := &env.Test{
+			_env := &env.Test{
 				TestSecret: tt.key,
 			}
 
-			cipher, err := NewXChaCha20Poly1305(context.Background(), env)
+			cipher, err := NewXChaCha20Poly1305(context.Background(), _env, env.EncryptionSecretName)
 			if err != nil {
 				t.Fatal(err)
 			}

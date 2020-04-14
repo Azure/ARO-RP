@@ -6,8 +6,11 @@ package cluster
 import (
 	"context"
 	"net/http"
+	"reflect"
+	"runtime"
 
 	"github.com/Azure/go-autorest/autorest/azure"
+	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 
@@ -24,11 +27,12 @@ type Monitor struct {
 	oc   *api.OpenShiftCluster
 	dims map[string]string
 
-	cli kubernetes.Interface
-	m   metrics.Interface
+	cli       kubernetes.Interface
+	configcli configclient.Interface
+	m         metrics.Interface
 }
 
-func NewMonitor(env env.Interface, log *logrus.Entry, oc *api.OpenShiftCluster, m metrics.Interface) (*Monitor, error) {
+func NewMonitor(ctx context.Context, env env.Interface, log *logrus.Entry, oc *api.OpenShiftCluster, m metrics.Interface) (*Monitor, error) {
 	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
 		return nil, err
@@ -46,7 +50,20 @@ func NewMonitor(env env.Interface, log *logrus.Entry, oc *api.OpenShiftCluster, 
 		return nil, err
 	}
 
+	// TODO: Get rid of the wrapping RoundTripper once implementation of the KEP below lands into openshift/kubernetes-client-go:
+	//       https://github.com/kubernetes/enhancements/blob/master/keps/sig-api-machinery/20200123-client-go-ctx.md
+	restConfig.Wrap(func(rt http.RoundTripper) http.RoundTripper {
+		return roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+			return rt.RoundTrip(req.WithContext(ctx))
+		})
+	})
+
 	cli, err := kubernetes.NewForConfig(restConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	configcli, err := configclient.NewForConfig(restConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -58,25 +75,44 @@ func NewMonitor(env env.Interface, log *logrus.Entry, oc *api.OpenShiftCluster, 
 		oc:   oc,
 		dims: dims,
 
-		cli: cli,
-		m:   m,
+		cli:       cli,
+		configcli: configcli,
+		m:         m,
 	}, nil
 }
 
 // Monitor checks the API server health of a cluster
-func (mon *Monitor) Monitor(ctx context.Context) error {
+func (mon *Monitor) Monitor(ctx context.Context) {
 	mon.log.Debug("monitoring")
 
 	// If API is not returning 200, don't need to run the next checks
-	statusCode, err := mon.emitAPIServerHealthzCode(ctx)
-	if err != nil || statusCode != http.StatusOK {
-		return err
+	statusCode, err := mon.emitAPIServerHealthzCode()
+	if err != nil {
+		mon.log.Error(err)
+		return
+	}
+	if statusCode != http.StatusOK {
+		return
 	}
 
-	return mon.emitPrometheusAlerts(ctx)
+	for _, f := range []func(ctx context.Context) error{
+		mon.emitClusterOperatorsMetrics,
+		mon.emitClusterVersionMetrics,
+		mon.emitNodesMetrics,
+		mon.emitPrometheusAlerts,
+	} {
+		err = f(ctx)
+		if err != nil {
+			mon.log.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name(), err)
+			// keep going
+		}
+	}
 }
 
 func (mon *Monitor) emitFloat(m string, value float64, dims map[string]string) {
+	if dims == nil {
+		dims = map[string]string{}
+	}
 	for k, v := range mon.dims {
 		dims[k] = v
 	}
@@ -84,8 +120,17 @@ func (mon *Monitor) emitFloat(m string, value float64, dims map[string]string) {
 }
 
 func (mon *Monitor) emitGauge(m string, value int64, dims map[string]string) {
+	if dims == nil {
+		dims = map[string]string{}
+	}
 	for k, v := range mon.dims {
 		dims[k] = v
 	}
 	mon.m.EmitGauge(m, value, dims)
+}
+
+type roundTripperFunc func(*http.Request) (*http.Response, error)
+
+func (r roundTripperFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return r(req)
 }

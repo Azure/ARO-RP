@@ -4,28 +4,49 @@ package install
 // Licensed under the Apache License 2.0.
 
 import (
+	"encoding/json"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+
+	"github.com/Azure/ARO-RP/pkg/api"
 )
 
-// isAuthorizationFailedError returns true it the error is an
+// hasAuthorizationFailedError returns true it the error is, or contains, an
 // AuthorizationFailed error
-func isAuthorizationFailedError(err error) bool {
+func hasAuthorizationFailedError(err error) bool {
 	if detailedErr, ok := err.(autorest.DetailedError); ok {
-		if serviceErr, ok := detailedErr.Original.(*azure.ServiceError); ok &&
-			serviceErr.Code == "AuthorizationFailed" {
-			return true
+		if serviceErr, ok := detailedErr.Original.(*azure.ServiceError); ok {
+			if serviceErr.Code == "AuthorizationFailed" {
+				return true
+			}
 		}
 	}
+
+	if serviceErr, ok := err.(*azure.ServiceError); ok &&
+		serviceErr.Code == "DeploymentFailed" {
+		for _, d := range serviceErr.Details {
+			if code, ok := d["code"].(string); ok &&
+				code == "Forbidden" {
+				if message, ok := d["message"].(string); ok {
+					var ce *api.CloudError
+					if json.Unmarshal([]byte(message), &ce) == nil &&
+						ce.CloudErrorBody != nil &&
+						ce.CloudErrorBody.Code == "AuthorizationFailed" {
+						return true
+					}
+				}
+			}
+		}
+	}
+
 	return false
 }
 
-// isResourceQuotaExceededError returns true and the original error message if
-// the error is a QuotaExceeded error
-func isResourceQuotaExceededError(err error) (bool, string) {
+// hasResourceQuotaExceededError returns true and the original error message if
+// the error contains a QuotaExceeded error
+func hasResourceQuotaExceededError(err error) (bool, string) {
 	if detailedErr, ok := err.(autorest.DetailedError); ok {
-		// error format:
-		// (autorest.DetailedError).Original.(*azure.ServiceError).Details.([]map[string]interface{})
 		if serviceErr, ok := detailedErr.Original.(*azure.ServiceError); ok {
 			for _, d := range serviceErr.Details {
 				if code, ok := d["code"].(string); ok && code == "QuotaExceeded" {

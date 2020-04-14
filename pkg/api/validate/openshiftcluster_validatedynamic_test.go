@@ -10,13 +10,13 @@ import (
 	"testing"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
-	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
+	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	mockfeatures "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mocknetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
-	mockresources "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/resources"
 )
 
 func TestValidateProviders(t *testing.T) {
@@ -29,15 +29,15 @@ func TestValidateProviders(t *testing.T) {
 
 	for _, tt := range []struct {
 		name    string
-		mocks   func(*mockresources.MockProvidersClient)
+		mocks   func(*mockfeatures.MockProvidersClient)
 		wantErr string
 	}{
 		{
 			name: "all registered",
-			mocks: func(providersClient *mockresources.MockProvidersClient) {
+			mocks: func(providersClient *mockfeatures.MockProvidersClient) {
 				providersClient.EXPECT().
 					List(gomock.Any(), nil, "").
-					Return([]mgmtresources.Provider{
+					Return([]mgmtfeatures.Provider{
 						{
 							Namespace:         to.StringPtr("Microsoft.Authorization"),
 							RegistrationState: to.StringPtr("Registered"),
@@ -67,10 +67,10 @@ func TestValidateProviders(t *testing.T) {
 		},
 		{
 			name: "compute not registered",
-			mocks: func(providersClient *mockresources.MockProvidersClient) {
+			mocks: func(providersClient *mockfeatures.MockProvidersClient) {
 				providersClient.EXPECT().
 					List(gomock.Any(), nil, "").
-					Return([]mgmtresources.Provider{
+					Return([]mgmtfeatures.Provider{
 						{
 							Namespace:         to.StringPtr("Microsoft.Authorization"),
 							RegistrationState: to.StringPtr("Registered"),
@@ -101,10 +101,10 @@ func TestValidateProviders(t *testing.T) {
 		},
 		{
 			name: "storage missing",
-			mocks: func(providersClient *mockresources.MockProvidersClient) {
+			mocks: func(providersClient *mockfeatures.MockProvidersClient) {
 				providersClient.EXPECT().
 					List(gomock.Any(), nil, "").
-					Return([]mgmtresources.Provider{
+					Return([]mgmtfeatures.Provider{
 						{
 							Namespace:         to.StringPtr("Microsoft.Authorization"),
 							RegistrationState: to.StringPtr("Registered"),
@@ -131,7 +131,7 @@ func TestValidateProviders(t *testing.T) {
 		},
 		{
 			name: "error case",
-			mocks: func(providersClient *mockresources.MockProvidersClient) {
+			mocks: func(providersClient *mockfeatures.MockProvidersClient) {
 				providersClient.EXPECT().
 					List(gomock.Any(), nil, "").
 					Return(nil, errors.New("random error"))
@@ -140,7 +140,7 @@ func TestValidateProviders(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			providerClient := mockresources.NewMockProvidersClient(controller)
+			providerClient := mockfeatures.NewMockProvidersClient(controller)
 
 			tt.mocks(providerClient)
 

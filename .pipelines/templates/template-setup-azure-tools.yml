@@ -1,8 +1,9 @@
 parameters:
-  workingDirectory: ""
+  workingDirectory: ''
 steps:
-  - script: |
-      cd ${{ parameters.workingDirectory }}
+- script: |
+    set -e
+    cd ${{ parameters.workingDirectory }}
 
-      ./hack/devtools/setup-azure-tools.sh
-    displayName: "⚙️ Set up Azure CLI"
+    ./hack/devtools/setup-azure-tools.sh
+  displayName: ⚙️ Set up Azure CLI

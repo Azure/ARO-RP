@@ -24,17 +24,17 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return fmt.Errorf("usage: %s resourceid", os.Args[0])
 	}
 
-	env, err := env.NewEnv(ctx, log)
+	_env, err := env.NewEnv(ctx, log)
 	if err != nil {
 		return err
 	}
 
-	cipher, err := encryption.NewXChaCha20Poly1305(ctx, env)
+	cipher, err := encryption.NewXChaCha20Poly1305(ctx, _env, env.EncryptionSecretName)
 	if err != nil {
 		return err
 	}
 
-	db, err := database.NewDatabase(ctx, log.WithField("component", "database"), env, &noop.Noop{}, cipher, "")
+	db, err := database.NewDatabase(ctx, log.WithField("component", "database"), _env, &noop.Noop{}, cipher, "")
 	if err != nil {
 		return err
 	}

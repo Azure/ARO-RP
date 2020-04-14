@@ -13,31 +13,20 @@ import (
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 	"github.com/Azure/ARO-RP/test/validate"
 )
 
 type validateTest struct {
-	name    string
-	modify  func(oc *OpenShiftCluster)
-	wantErr string
+	name            string
+	modify          func(oc *OpenShiftCluster)
+	developmentMode bool
+	wantErr         string
 }
 
 var (
 	subscriptionID = "00000000-0000-0000-0000-000000000000"
 	id             = fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/microsoft.redhatopenshift/openshiftclusters/resourceName", subscriptionID)
-
-	v = &openShiftClusterStaticValidator{
-		location:   "location",
-		domain:     "location.aroapp.io",
-		resourceID: id,
-		r: azure.Resource{
-			SubscriptionID: subscriptionID,
-			ResourceGroup:  "resourceGroup",
-			Provider:       "Microsoft.RedHatOpenShift",
-			ResourceType:   "openshiftClusters",
-			ResourceName:   "resourceName",
-		},
-	}
 )
 
 func validOpenShiftCluster() *OpenShiftCluster {
@@ -54,7 +43,7 @@ func validOpenShiftCluster() *OpenShiftCluster {
 			ClusterProfile: ClusterProfile{
 				PullSecret:      `{"auths":{"registry.connect.redhat.com":{"auth":""},"registry.redhat.io":{"auth":""}}}`,
 				Domain:          "cluster.location.aroapp.io",
-				Version:         "4.3.0",
+				Version:         version.OpenShiftVersion,
 				ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", subscriptionID),
 			},
 			ConsoleProfile: ConsoleProfile{
@@ -75,7 +64,7 @@ func validOpenShiftCluster() *OpenShiftCluster {
 			WorkerProfiles: []WorkerProfile{
 				{
 					Name:       "worker",
-					VMSize:     VMSizeStandardD2sV3,
+					VMSize:     VMSizeStandardD4sV3,
 					DiskSizeGB: 128,
 					SubnetID:   fmt.Sprintf("/subscriptions/%s/resourceGroups/vnet/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/worker", subscriptionID),
 					Count:      3,
@@ -102,17 +91,31 @@ func validOpenShiftCluster() *OpenShiftCluster {
 func runTests(t *testing.T, tests []*validateTest, delta bool) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			v := &openShiftClusterStaticValidator{
+				location:        "location",
+				domain:          "location.aroapp.io",
+				developmentMode: tt.developmentMode,
+				resourceID:      id,
+				r: azure.Resource{
+					SubscriptionID: subscriptionID,
+					ResourceGroup:  "resourceGroup",
+					Provider:       "Microsoft.RedHatOpenShift",
+					ResourceType:   "openshiftClusters",
+					ResourceName:   "resourceName",
+				},
+			}
+
 			oc := validOpenShiftCluster()
 			if tt.modify != nil {
 				tt.modify(oc)
 			}
 
-			current := &api.OpenShiftCluster{}
+			var current *api.OpenShiftCluster
 			if delta {
+				current = &api.OpenShiftCluster{}
 				(&openShiftClusterConverter{}).ToInternal(validOpenShiftCluster(), current)
-			} else {
-				(&openShiftClusterConverter{}).ToInternal(oc, current)
 			}
+
 			err := v.Static(oc, current)
 			if err == nil {
 				if tt.wantErr != "" {
@@ -445,6 +448,21 @@ func TestOpenShiftClusterStaticValidateWorkerProfile(t *testing.T) {
 			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].vmSize: The provided worker VM size 'invalid' is invalid.",
 		},
 		{
+			name: "vmSize too small (prod)",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.WorkerProfiles[0].VMSize = "Standard_D2s_v3"
+			},
+			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].vmSize: The provided worker VM size 'Standard_D2s_v3' is invalid.",
+		},
+		{
+			name: "vmSize too big (dev)",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.WorkerProfiles[0].VMSize = "Standard_D4s_v3"
+			},
+			developmentMode: true,
+			wantErr:         "400: InvalidParameter: properties.workerProfiles['worker'].vmSize: The provided worker VM size 'Standard_D4s_v3' is invalid in development mode.",
+		},
+		{
 			name: "disk too small",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.WorkerProfiles[0].DiskSizeGB = 127
@@ -700,8 +718,13 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			wantErr: "400: PropertyChangeNotAllowed: properties.masterProfile.subnetId: Changing property 'properties.masterProfile.subnetId' is not allowed.",
 		},
 		{
+			name:    "worker name change",
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].Name = "new-name" },
+			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles['new-name'].name: Changing property 'properties.workerProfiles['new-name'].name' is not allowed.",
+		},
+		{
 			name:    "worker vmSize change",
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].VMSize = VMSizeStandardD4sV3 },
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].VMSize = VMSizeStandardD8sV3 },
 			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles['worker'].vmSize: Changing property 'properties.workerProfiles['worker'].vmSize' is not allowed.",
 		},
 		{
@@ -720,6 +743,16 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			name:    "workerProfiles count change",
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.WorkerProfiles[0].Count++ },
 			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles['worker'].count: Changing property 'properties.workerProfiles['worker'].count' is not allowed.",
+		},
+		{
+			name: "number of workerProfiles changes",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.WorkerProfiles = []WorkerProfile{
+					{Name: "worker"},
+					{Name: "worker-2"},
+				}
+			},
+			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles: Changing property 'properties.workerProfiles' is not allowed.",
 		},
 	}
 

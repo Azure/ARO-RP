@@ -4,17 +4,21 @@ trigger: none
 
 stages:
   - stage: Deploy_INT
+    dependsOn: []
     displayName: 🚀 Deploy INT
     jobs:
-      - template: ./templates/template-job-deploy-azure-env.yml
-        parameters:
-          environment: RP-INT
-          location: eastus
-          configFileName: int-config.yaml
-          azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
-          vsoProjectID: $(vso-project-id)
-          vsoConfigPipelineID: $(vso-config-pipeline-id)
-          vsoDeployerPipelineID: $(vso-deployer-pipeline-id)
+    - template: ./templates/template-job-deploy-azure-env.yml
+      parameters:
+        environment: RP-INT
+        locations:
+        - eastus
+        configFileName: int-config.yaml
+        azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
+        vsoProjectID: $(vso-project-id)
+        vsoConfigPipelineID: $(vso-config-pipeline-id)
+        vsoDeployerPipelineID: $(vso-deployer-pipeline-id)
+        azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
+        e2eSubscription: $(e2e-subscription)
   - stage: Billing_E2E
     displayName: Billing E2E
     jobs:

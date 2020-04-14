@@ -1,0 +1,42 @@
+parameters:
+  location: ''
+  subscription: ''
+  azureDevOpsE2EJSONSPN: ''
+  gobin: ''
+  gopath: ''
+  goroot: ''
+  workingDirectory: ''
+
+steps:
+- template: ./template-setup-golang-env.yml
+  parameters:
+    gobin: ${{ parameters.gobin }}
+    gopath: ${{ parameters.gopath }}
+    goroot: ${{ parameters.goroot }}
+    modulePath: ${{ parameters.workingDirectory }}
+- template: ./template-setup-azure-tools.yml
+  parameters:
+    workingDirectory: ${{ parameters.workingDirectory }}
+- template: ./template-az-cli-login.yml
+  parameters:
+    workingDirectory: ${{ parameters.workingDirectory }}
+    azureDevOpsJSONSPN: ${{ parameters.azureDevOpsE2EJSONSPN }}
+- script: |
+    set -e
+    cd ${{ parameters.workingDirectory }}
+
+    export LOCATION=${{ parameters.location }}
+    export AZURE_SUBSCRIPTION_ID=${{ parameters.subscription }}
+
+    echo ${{ parameters.azureDevOpsE2EJSONSPN }} | base64 -d -w 0 > devops-spn.json
+    export AZURE_CLIENT_ID=$(cat devops-spn.json | jq -r '.clientId')
+    export AZURE_CLIENT_SECRET=$(cat devops-spn.json | jq -r '.clientSecret')
+    export AZURE_TENANT_ID=$(cat devops-spn.json | jq -r '.tenantId')
+    rm devops-spn.json
+    . ./hack/e2e/run-rp-and-e2e.sh
+
+    deploy_e2e_deps
+    run_e2e
+    clean_e2e
+
+  displayName: 🚀 Run ${{ parameters.location }} E2E

@@ -56,7 +56,7 @@ func TestSecurity(t *testing.T) {
 	pool := x509.NewCertPool()
 	pool.AddCert(env.TLSCerts[0])
 
-	f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, nil, api.APIs, &noop.Noop{}, nil)
+	f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, nil, api.APIs, &noop.Noop{}, nil, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -81,11 +81,6 @@ func TestSecurity(t *testing.T) {
 			wantStatusCode: http.StatusForbidden,
 		},
 		{
-			name:           "healthz url, no client certificate",
-			url:            "https://server/healthz",
-			wantStatusCode: http.StatusOK,
-		},
-		{
 			name:           "operations url, no client certificate",
 			url:            "https://server/providers/Microsoft.RedHatOpenShift/operations?api-version=2020-04-30",
 			wantStatusCode: http.StatusForbidden,
@@ -98,13 +93,6 @@ func TestSecurity(t *testing.T) {
 		{
 			name:           "ready url, no client certificate",
 			url:            "https://server/healthz/ready",
-			wantStatusCode: http.StatusOK,
-		},
-		{
-			name:           "healthz url, invalid certificate",
-			url:            "https://server/healthz",
-			key:            invalidclientkey,
-			cert:           invalidclientcerts[0],
 			wantStatusCode: http.StatusOK,
 		},
 		{
@@ -140,13 +128,6 @@ func TestSecurity(t *testing.T) {
 			url:            "https://server/healthz/ready",
 			key:            invalidclientkey,
 			cert:           invalidclientcerts[0],
-			wantStatusCode: http.StatusOK,
-		},
-		{
-			name:           "healthz url, valid certificate",
-			url:            "https://server/healthz",
-			key:            validclientkey,
-			cert:           validclientcerts[0],
 			wantStatusCode: http.StatusOK,
 		},
 		{

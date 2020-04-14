@@ -4,9 +4,13 @@
 
 1. Install [Go 1.13](https://golang.org/dl) or later, if you haven't already.
 
-1. Install a supported version of [Python](https://www.python.org/downloads), if
-   you don't have one installed already.  The `az` client supports Python 3.6+.
-   A recent Python 3.x version is recommended.
+1. Install [Python 3.6+](https://www.python.org/downloads), if you haven't
+   already.  You will also need setuptools installed, if you don't have it
+   installed already.
+
+1. Install `virtualenv`, a tool for managing Python virtual environments. The
+   package is called `python-virtualenv` on both Fedora and Debian-based
+   systems.
 
 1. Fedora users: install the `gpgme-devel` and `libassuan-devel` packages.
 
@@ -15,12 +19,17 @@
    OSX users: please follow [Prepare your development environment using
    OSX](./prepare-your-development-environment-using-osx.md).
 
-1. Install the [Azure
-   CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli), if you
-   haven't already.
+1. Install the [az
+   client](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli), if you
+   haven't already. You will need `az` version 2.0.72 or greater, as this
+   version includes the `az network vnet subnet update
+   --disable-private-link-service-network-policies` flag.
 
 1. Install [OpenVPN](https://openvpn.net/community-downloads), if you haven't
    already.
+
+
+## Getting started
 
 1. Log in to Azure:
 
@@ -34,6 +43,48 @@
    go get -u github.com/Azure/ARO-RP/...
    cd ${GOPATH:-$HOME/go}/src/github.com/Azure/ARO-RP
    ```
+
+
+## Installing the extension
+
+1. Prepare a Python development environment:
+
+   ```
+   make pyenv
+   . pyenv/bin/activate
+   ```
+
+1. Build the development `az aro` extension:
+
+   `make az`
+
+1. Verify that the ARO extension path is in your `az` configuration:
+
+   ```bash
+   grep -q 'dev_sources' ~/.azure/config || cat >>~/.azure/config <<EOF
+   [extension]
+   dev_sources = $PWD/python
+   EOF
+   ```
+
+1. Verify the ARO extension is registered:
+
+   ```bash
+   az -v
+   ...
+   Extensions:
+   aro                                0.4.0 (dev) /path/to/rp/python/az/aro
+   ...
+   Development extension sources:
+       /path/to/rp/python
+   ...
+   ```
+
+   Note: you will be able to update your development `az aro` extension in the
+   future by simply running `git pull`.
+
+
+## Prepare your environment
 
 1. If you don't have access to a shared development environment and secrets,
    follow [prepare a shared RP development
@@ -55,8 +106,10 @@
    . ./env
    ```
 
-   * LOCATION: Location of the shared RP development environment (default:
+   * `LOCATION`: Location of the shared RP development environment (default:
      `eastus`).
+   * `RP_MODE`: Set to `development` to use a development RP running at
+     https://localhost:8443/.
 
 1. Create your own RP database:
 
@@ -96,10 +149,12 @@
      "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID?api-version=2.0"
    ```
 
-1. To create a cluster, follow the instructions in [using `az
-   aro`](using-az-aro.md).  Note that as long as the RP_MODE environment
-   variable is set to development, the `az aro` client will connect to your
-   local RP.
+1. To create a cluster, follow the instructions in [Create, access, and manage
+   an Azure Red Hat OpenShift 4.3 Cluster][1].  Note that as long as the
+   `RP_MODE` environment variable is set to `development`, the `az aro` client
+   will connect to your local RP.
+
+   [1]: https://docs.microsoft.com/en-us/azure/openshift/howto-using-azure-redhat-openshift
 
 1. The following additional RP endpoints are available but not exposed via `az
    aro`:
@@ -117,7 +172,7 @@
 
      ```bash
      curl -k \
-       "https://localhost:8443/providers/Microsoft.RedHatOpenShift/operations?api-version=2019-12-31-preview"
+       "https://localhost:8443/providers/Microsoft.RedHatOpenShift/operations?api-version=2020-04-30"
      ```
 
 
@@ -144,6 +199,7 @@
   ```bash
   hack/ssh.sh [aro-master-{0,1,2}]
   ```
+
 
 ### Metrics
 

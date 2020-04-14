@@ -16,7 +16,7 @@ clean:
 client: generate
 	rm -rf pkg/client python/client
 	mkdir pkg/client python/client
-	sha256sum swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/preview/2019-12-31-preview/redhatopenshift.json >.sha256sum
+	sha256sum swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/stable/2020-04-30/redhatopenshift.json >.sha256sum
 
 	sudo docker run \
 		--rm \
@@ -26,8 +26,8 @@ client: generate
 		--go \
 		--license-header=MICROSOFT_APACHE_NO_VERSION \
 		--namespace=redhatopenshift \
-		--input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/preview/2019-12-31-preview/redhatopenshift.json \
-		--output-folder=/github.com/Azure/ARO-RP/pkg/client/services/preview/redhatopenshift/mgmt/2019-12-31-preview/redhatopenshift
+		--input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/stable/2020-04-30/redhatopenshift.json \
+		--output-folder=/github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2020-04-30/redhatopenshift
 
 	sudo docker run \
 		--rm \
@@ -38,13 +38,13 @@ client: generate
 		--python \
 		--azure-arm \
 		--license-header=MICROSOFT_APACHE_NO_VERSION \
-		--namespace=azure.mgmt.redhatopenshift.v2019_12_31_preview \
-		--input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/preview/2019-12-31-preview/redhatopenshift.json \
+		--namespace=azure.mgmt.redhatopenshift.v2020_04_30 \
+		--input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/stable/2020-04-30/redhatopenshift.json \
 		--output-folder=/python/client
 
 	sudo chown -R $$(id -un):$$(id -gn) pkg/client python/client
-	sed -i -e 's|azure/aro-rp|Azure/ARO-RP|g' pkg/client/services/preview/redhatopenshift/mgmt/2019-12-31-preview/redhatopenshift/models.go pkg/client/services/preview/redhatopenshift/mgmt/2019-12-31-preview/redhatopenshift/redhatopenshiftapi/interfaces.go
-	rm -rf python/client/azure/mgmt/redhatopenshift/v2019_12_31_preview/aio
+	sed -i -e 's|azure/aro-rp|Azure/ARO-RP|g' pkg/client/services/redhatopenshift/mgmt/2020-04-30/redhatopenshift/models.go pkg/client/services/redhatopenshift/mgmt/2020-04-30/redhatopenshift/redhatopenshiftapi/interfaces.go
+	rm -rf python/client/azure/mgmt/redhatopenshift/v2020_04_30/aio
 	>python/client/__init__.py
 
 	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/Azure/ARO-RP pkg/client
@@ -79,7 +79,7 @@ proxy:
 pyenv${PYTHON_VERSION}:
 	virtualenv --python=/usr/bin/python${PYTHON_VERSION} pyenv${PYTHON_VERSION}
 	. pyenv${PYTHON_VERSION}/bin/activate && \
-		pip install azdev && \
+		pip install autopep8 azdev azure-mgmt-loganalytics==0.2.0 ruamel.yaml && \
 		azdev setup -r . && \
 		sed -i -e "s|^dev_sources = $(PWD)$$|dev_sources = $(PWD)/python|" ~/.azure/config
 
@@ -118,7 +118,8 @@ test-python: generate pyenv${PYTHON_VERSION}
 	. pyenv${PYTHON_VERSION}/bin/activate && \
 		$(MAKE) az && \
 		azdev linter && \
-		azdev style
+		azdev style && \
+		hack/format-yaml/format-yaml.py .pipelines
 
 admin.kubeconfig:
 	hack/get-admin-kubeconfig.sh /subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}/providers/Microsoft.RedHatOpenShift/openShiftClusters/${CLUSTER} >admin.kubeconfig

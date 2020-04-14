@@ -144,7 +144,7 @@ func (c *subscriptions) Dequeue(ctx context.Context) (*api.SubscriptionDocument,
 	}, nil)
 
 	for {
-		docs, err := i.Next(ctx)
+		docs, err := i.Next(ctx, -1)
 		if err != nil {
 			return nil, err
 		}

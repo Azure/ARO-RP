@@ -1,12 +1,13 @@
 parameters:
-  workingDirectory: ""
-  rpImageACR: ""
+  workingDirectory: ''
+  rpImageACR: ''
 steps:
-  - script: |
-      cd ${{ parameters.workingDirectory }}
+- script: |
+    set -e
+    cd ${{ parameters.workingDirectory }}
 
-      export RP_IMAGE_ACR=${{ parameters.rpImageACR }}
+    export RP_IMAGE_ACR=${{ parameters.rpImageACR }}
 
-      az acr login --name "$RP_IMAGE_ACR"
-      make publish-image-aro
-    displayName: "⚙️ Build and push images to ACR"
+    az acr login --name "$RP_IMAGE_ACR"
+    make publish-image-aro
+  displayName: ⚙️ Build and push images to ACR

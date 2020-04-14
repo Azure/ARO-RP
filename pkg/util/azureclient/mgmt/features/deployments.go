@@ -1,0 +1,36 @@
+package features
+
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
+import (
+	"context"
+	"time"
+
+	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+	"github.com/Azure/go-autorest/autorest"
+)
+
+// DeploymentsClient is a minimal interface for azure DeploymentsClient
+type DeploymentsClient interface {
+	Get(ctx context.Context, resourceGroupName, deploymentName string) (mgmtfeatures.DeploymentExtended, error)
+	DeploymentsClientAddons
+}
+
+type deploymentsClient struct {
+	mgmtfeatures.DeploymentsClient
+}
+
+var _ DeploymentsClient = &deploymentsClient{}
+
+// NewDeploymentsClient creates a new DeploymentsClient
+func NewDeploymentsClient(subscriptionID string, authorizer autorest.Authorizer) DeploymentsClient {
+	client := mgmtfeatures.NewDeploymentsClient(subscriptionID)
+	client.Authorizer = authorizer
+	client.PollingDelay = 10 * time.Second
+	client.PollingDuration = time.Hour
+
+	return &deploymentsClient{
+		DeploymentsClient: client,
+	}
+}

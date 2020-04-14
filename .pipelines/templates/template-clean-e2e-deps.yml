@@ -1,14 +1,14 @@
 parameters:
-  workingDirectory: ""
+  workingDirectory: ''
 steps:
-  - script: |
-      cd ${{ parameters.workingDirectory }}
+- script: |
+    cd ${{ parameters.workingDirectory }}
 
-      . secrets/env
-      . ./hack/e2e/run-rp-and-e2e.sh
+    . secrets/env
+    . ./hack/e2e/run-rp-and-e2e.sh
 
-      export DATABASE_NAME=v4-e2e-$(git log --format=%h -n 1 HEAD)
+    export DATABASE_NAME=v4-e2e-$(git log --format=%h -n 1 HEAD)
 
-      clean_e2e
-    displayName: "🧹 Clean cluster RG, and Vnet"
-    condition: always()
+    clean_e2e
+  displayName: 🧹 Clean cluster RG, and Vnet
+  condition: always()

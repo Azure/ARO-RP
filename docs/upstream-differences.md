@@ -73,7 +73,8 @@ upstream OCP.
 * ARO API server internal LB remains on highest available master subnet IP, like
   in 4.2.
 
-* ARO never creates aro-bootstrap-pip for bootstrap VM.
+* ARO never creates aro-bootstrap-pip for bootstrap VM, or the corresponding NSG
+  rule.
 
 * ARO API server LB uses Azure outboundRule rather than port 27627 inbound rule.
 

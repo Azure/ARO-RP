@@ -5,6 +5,7 @@ package cosmosdb
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"strings"
 
 	pkg "github.com/Azure/ARO-RP/pkg/api"
@@ -52,13 +53,14 @@ type billingDocumentQueryIterator struct {
 
 // BillingDocumentIterator is a billingDocument iterator
 type BillingDocumentIterator interface {
-	Next(context.Context) (*pkg.BillingDocuments, error)
+	Next(context.Context, int) (*pkg.BillingDocuments, error)
+	Continuation() string
 }
 
 // BillingDocumentRawIterator is a billingDocument raw iterator
 type BillingDocumentRawIterator interface {
 	BillingDocumentIterator
-	NextRaw(context.Context, interface{}) error
+	NextRaw(context.Context, int, interface{}) error
 }
 
 // NewBillingDocumentClient returns a new billingDocument client
@@ -73,7 +75,7 @@ func (c *billingDocumentClient) all(ctx context.Context, i BillingDocumentIterat
 	allbillingDocuments := &pkg.BillingDocuments{}
 
 	for {
-		billingDocuments, err := i.Next(ctx)
+		billingDocuments, err := i.Next(ctx, -1)
 		if err != nil {
 			return nil, err
 		}
@@ -108,7 +110,12 @@ func (c *billingDocumentClient) Create(ctx context.Context, partitionkey string,
 }
 
 func (c *billingDocumentClient) List(options *Options) BillingDocumentRawIterator {
-	return &billingDocumentListIterator{billingDocumentClient: c, options: options}
+	continuation := ""
+	if options != nil {
+		continuation = options.Continuation
+	}
+
+	return &billingDocumentListIterator{billingDocumentClient: c, options: options, continuation: continuation}
 }
 
 func (c *billingDocumentClient) ListAll(ctx context.Context, options *Options) (*pkg.BillingDocuments, error) {
@@ -155,7 +162,12 @@ func (c *billingDocumentClient) Delete(ctx context.Context, partitionkey string,
 }
 
 func (c *billingDocumentClient) Query(partitionkey string, query *Query, options *Options) BillingDocumentRawIterator {
-	return &billingDocumentQueryIterator{billingDocumentClient: c, partitionkey: partitionkey, query: query, options: options}
+	continuation := ""
+	if options != nil {
+		continuation = options.Continuation
+	}
+
+	return &billingDocumentQueryIterator{billingDocumentClient: c, partitionkey: partitionkey, query: query, options: options, continuation: continuation}
 }
 
 func (c *billingDocumentClient) QueryAll(ctx context.Context, partitionkey string, query *Query, options *Options) (*pkg.BillingDocuments, error) {
@@ -163,7 +175,12 @@ func (c *billingDocumentClient) QueryAll(ctx context.Context, partitionkey strin
 }
 
 func (c *billingDocumentClient) ChangeFeed(options *Options) BillingDocumentIterator {
-	return &billingDocumentChangeFeedIterator{billingDocumentClient: c}
+	continuation := ""
+	if options != nil {
+		continuation = options.Continuation
+	}
+
+	return &billingDocumentChangeFeedIterator{billingDocumentClient: c, options: options, continuation: continuation}
 }
 
 func (c *billingDocumentClient) setOptions(options *Options, billingDocument *pkg.BillingDocument, headers http.Header) error {
@@ -190,11 +207,11 @@ func (c *billingDocumentClient) setOptions(options *Options, billingDocument *pk
 	return nil
 }
 
-func (i *billingDocumentChangeFeedIterator) Next(ctx context.Context) (billingDocuments *pkg.BillingDocuments, err error) {
+func (i *billingDocumentChangeFeedIterator) Next(ctx context.Context, maxItemCount int) (billingDocuments *pkg.BillingDocuments, err error) {
 	headers := http.Header{}
 	headers.Set("A-IM", "Incremental feed")
 
-	headers.Set("X-Ms-Max-Item-Count", "-1")
+	headers.Set("X-Ms-Max-Item-Count", strconv.Itoa(maxItemCount))
 	if i.continuation != "" {
 		headers.Set("If-None-Match", i.continuation)
 	}
@@ -217,18 +234,22 @@ func (i *billingDocumentChangeFeedIterator) Next(ctx context.Context) (billingDo
 	return
 }
 
-func (i *billingDocumentListIterator) Next(ctx context.Context) (billingDocuments *pkg.BillingDocuments, err error) {
-	err = i.NextRaw(ctx, &billingDocuments)
+func (i *billingDocumentChangeFeedIterator) Continuation() string {
+	return i.continuation
+}
+
+func (i *billingDocumentListIterator) Next(ctx context.Context, maxItemCount int) (billingDocuments *pkg.BillingDocuments, err error) {
+	err = i.NextRaw(ctx, maxItemCount, &billingDocuments)
 	return
 }
 
-func (i *billingDocumentListIterator) NextRaw(ctx context.Context, raw interface{}) (err error) {
+func (i *billingDocumentListIterator) NextRaw(ctx context.Context, maxItemCount int, raw interface{}) (err error) {
 	if i.done {
 		return
 	}
 
 	headers := http.Header{}
-	headers.Set("X-Ms-Max-Item-Count", "-1")
+	headers.Set("X-Ms-Max-Item-Count", strconv.Itoa(maxItemCount))
 	if i.continuation != "" {
 		headers.Set("X-Ms-Continuation", i.continuation)
 	}
@@ -249,18 +270,22 @@ func (i *billingDocumentListIterator) NextRaw(ctx context.Context, raw interface
 	return
 }
 
-func (i *billingDocumentQueryIterator) Next(ctx context.Context) (billingDocuments *pkg.BillingDocuments, err error) {
-	err = i.NextRaw(ctx, &billingDocuments)
+func (i *billingDocumentListIterator) Continuation() string {
+	return i.continuation
+}
+
+func (i *billingDocumentQueryIterator) Next(ctx context.Context, maxItemCount int) (billingDocuments *pkg.BillingDocuments, err error) {
+	err = i.NextRaw(ctx, maxItemCount, &billingDocuments)
 	return
 }
 
-func (i *billingDocumentQueryIterator) NextRaw(ctx context.Context, raw interface{}) (err error) {
+func (i *billingDocumentQueryIterator) NextRaw(ctx context.Context, maxItemCount int, raw interface{}) (err error) {
 	if i.done {
 		return
 	}
 
 	headers := http.Header{}
-	headers.Set("X-Ms-Max-Item-Count", "-1")
+	headers.Set("X-Ms-Max-Item-Count", strconv.Itoa(maxItemCount))
 	headers.Set("X-Ms-Documentdb-Isquery", "True")
 	headers.Set("Content-Type", "application/query+json")
 	if i.partitionkey != "" {
@@ -286,4 +311,8 @@ func (i *billingDocumentQueryIterator) NextRaw(ctx context.Context, raw interfac
 	i.done = i.continuation == ""
 
 	return
+}
+
+func (i *billingDocumentQueryIterator) Continuation() string {
+	return i.continuation
 }

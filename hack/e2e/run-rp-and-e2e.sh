@@ -5,7 +5,7 @@ validate_rp_running() {
     echo "########## ？Checking ARO RP Status ##########"
     ELAPSED=0
     while true; do
-        http_code=$(curl -k -s -o /dev/null -w '%{http_code}' https://localhost:8443/healthz/ready)
+        http_code=$(curl -k -s -o /dev/null -w '%{http_code}' https://localhost:8443/healthz/ready || true)
         case $http_code in
             "200")
             echo "########## ✅ ARO RP Running ##########"
@@ -15,7 +15,7 @@ validate_rp_running() {
             echo "Attempt $ELAPSED - local RP is NOT up. Code : $http_code, waiting"
             sleep 2
             # after 20 secs return exit 1 to not block ci
-            (( ELAPSED++ ))
+            ELAPSED=$((ELAPSED+1))
             if [ $ELAPSED -eq 10 ]
             then
                 exit 1
@@ -83,9 +83,6 @@ deploy_e2e_deps() {
     echo "########## Create Cluster SPN ##########"
     az ad sp create-for-rbac -n "$CLUSTER" --role contributor \
         --scopes /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP >$CLUSTERSPN
-
-    echo "########## Sleep 120 secs for SPN creation"
-    sleep 120
 }
 
 set_cli_context() {
@@ -95,7 +92,7 @@ set_cli_context() {
 
 register_sub() {
     echo "########## 🔑 Registering subscription ##########"
-    curl -k -X PUT \
+    curl -sko /dev/null -X PUT \
       -H 'Content-Type: application/json' \
       -d '{"state": "Registered", "properties": {"tenantId": "'"$AZURE_TENANT_ID"'"}}' \
       "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID?api-version=2.0"
@@ -119,7 +116,7 @@ run_e2e() {
     echo "########## CLI : ARO List ##########"
     az aro list -o table
     echo "########## CLI : ARO list-creds ##########"
-    az aro list-credentials -g "$RESOURCEGROUP" -n "$CLUSTER"
+    az aro list-credentials -g "$RESOURCEGROUP" -n "$CLUSTER" >/dev/null
     echo "########## Run E2E ##########"
     go run ./hack/kubeadminkubeconfig "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER" >$KUBECONFIG
     make e2e
@@ -161,7 +158,7 @@ echo "LOCATION=$LOCATION"
 echo "AZURE_SUBSCRIPTION_ID=$AZURE_SUBSCRIPTION_ID"
 echo
 echo "RP_MODE=$RP_MODE"
-if [ $RP_MODE = "development" ]
+if [ "$RP_MODE" = "development" ]
 then
     echo
     echo "COSMOSDB_ACCOUNT=$COSMOSDB_ACCOUNT"
@@ -173,7 +170,7 @@ echo "CLUSTER=$CLUSTER"
 echo "CLUSTER_RESOURCEGROUP=$CLUSTER_RESOURCEGROUP"
 echo "KUBECONFIG=$KUBECONFIG"
 echo "CLUSTERSPN=$CLUSTERSPN"
-if [ $RP_MODE = "development" ]
+if [ "$RP_MODE" = "development" ]
 then
     echo
     echo "PROXY_HOSTNAME=$PROXY_HOSTNAME"
@@ -181,7 +178,7 @@ fi
 echo "######################################"
 
 [ "$LOCATION" ] || ( echo ">> LOCATION is not set please validate your ./secrets/env"; exit 128 )
-if [ $RP_MODE = "development" ]
+if [ "$RP_MODE" = "development" ]
 then
     [ "$RESOURCEGROUP" ] || ( echo ">> RESOURCEGROUP is not set; please validate your ./secrets/env"; exit 128 )
     [ "$PROXY_HOSTNAME" ] || ( echo ">> PROXY_HOSTNAME is not set; please validate your ./secrets/env"; exit 128 )

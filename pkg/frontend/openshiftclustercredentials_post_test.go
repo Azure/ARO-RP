@@ -118,8 +118,8 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 			name:           "credentials request is not allowed in the API version",
 			resourceID:     fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
 			apiVersion:     "no-credentials",
-			wantStatusCode: http.StatusNotFound,
-			wantError:      `404: InvalidResourceType: : The resource type 'openshiftclusters' could not be found in the namespace 'microsoft.redhatopenshift' for api version 'no-credentials'.`,
+			wantStatusCode: http.StatusBadRequest,
+			wantError:      `400: InvalidResourceType: : The resource type 'openshiftclusters' could not be found in the namespace 'microsoft.redhatopenshift' for api version 'no-credentials'.`,
 		},
 		{
 			name:       "cluster exists in db in creating state",
@@ -289,7 +289,7 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
 				OpenShiftClusters: openshiftClusters,
 				Subscriptions:     subscriptions,
-			}, apis, &noop.Noop{}, nil)
+			}, apis, &noop.Noop{}, nil, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

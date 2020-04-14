@@ -47,6 +47,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"acrResourceId",
 			"rpImage",
 			"rpMode",
+			"subscriptionResourceGroupName",
 			"sshPublicKey",
 			"vmssName",
 		)
@@ -62,7 +63,7 @@ func (g *generator) rpTemplate() *arm.Template {
 	}
 
 	if g.production {
-		t.Resources = append(t.Resources, g.pip(), g.lb(), g.vmss())
+		t.Resources = append(t.Resources, g.pip(), g.lb(), g.vmss(), g.lbAlert())
 	}
 
 	t.Resources = append(t.Resources, g.zone(),
@@ -121,6 +122,14 @@ func (g *generator) rpGlobalSubscriptionTemplate() *arm.Template {
 	return t
 }
 
+func (g *generator) rpSubscriptionTemplate() *arm.Template {
+	t := templateStanza()
+
+	t.Resources = append(t.Resources, g.actionGroup("rp-health-ag", "rphealth"))
+
+	return t
+}
+
 func (g *generator) databaseTemplate() *arm.Template {
 	t := templateStanza()
 
@@ -175,6 +184,7 @@ func (g *generator) preDeployTemplate() *arm.Template {
 			"deployNSGs",
 			"extraClusterKeyvaultAccessPolicies",
 			"extraServiceKeyvaultAccessPolicies",
+			"rpNsgSourceAddressPrefixes",
 		)
 	} else {
 		params = append(params,
@@ -191,6 +201,9 @@ func (g *generator) preDeployTemplate() *arm.Template {
 		case "extraClusterKeyvaultAccessPolicies", "extraServiceKeyvaultAccessPolicies":
 			p.Type = "array"
 			p.DefaultValue = []interface{}{}
+		case "rpNsgSourceAddressPrefixes":
+			p.Type = "array"
+			p.DefaultValue = []string{}
 		case "keyvaultPrefix":
 			p.MaxLength = 24 - max(len(kvClusterSuffix), len(kvServiceSuffix))
 		}
@@ -282,6 +295,7 @@ func (g *generator) templateFixup(t *arm.Template) ([]byte, error) {
 	if g.production {
 		b = bytes.Replace(b, []byte(`"accessPolicies": []`), []byte(`"accessPolicies": "[concat(variables('clusterKeyvaultAccessPolicies'), parameters('extraClusterKeyvaultAccessPolicies'))]"`), 1)
 		b = bytes.Replace(b, []byte(`"accessPolicies": []`), []byte(`"accessPolicies": "[concat(variables('serviceKeyvaultAccessPolicies'), parameters('extraServiceKeyvaultAccessPolicies'))]"`), 1)
+		b = bytes.Replace(b, []byte(`"sourceAddressPrefixes": []`), []byte(`"sourceAddressPrefixes": "[parameters('rpNsgSourceAddressPrefixes')]"`), 1)
 	}
 
 	return append(b, byte('\n')), nil

@@ -18,7 +18,7 @@
   revision = "3a14fb1c4737b3995174c5f4d6d08a348b9b4180"
 
 [[projects]]
-  digest = "1:9ca2dd340d23767b05c19bda3f6a9ef0e64e81af56e038735c6e3485def7ec9b"
+  digest = "1:46ac9b4cbd8bcada2ccf565a928f97dd4d4bff8e3f31580262d87c277b799e0a"
   name = "github.com/Azure/azure-sdk-for-go"
   packages = [
     "profiles/latest/dns/mgmt/dns",
@@ -26,7 +26,6 @@
     "services/compute/mgmt/2018-10-01/compute",
     "services/compute/mgmt/2019-03-01/compute",
     "services/containerregistry/mgmt/2019-06-01-preview/containerregistry",
-    "services/cosmos-db/mgmt/2015-04-08/documentdb",
     "services/cosmos-db/mgmt/2019-08-01/documentdb",
     "services/dns/mgmt/2018-05-01/dns",
     "services/graphrbac/1.6/graphrbac",
@@ -36,9 +35,10 @@
     "services/network/mgmt/2018-12-01/network",
     "services/network/mgmt/2019-07-01/network",
     "services/preview/authorization/mgmt/2018-09-01-preview/authorization",
+    "services/preview/monitor/mgmt/2018-03-01/insights",
     "services/privatedns/mgmt/2018-09-01/privatedns",
-    "services/resources/mgmt/2018-05-01/resources",
     "services/resources/mgmt/2019-06-01/subscriptions",
+    "services/resources/mgmt/2019-07-01/features",
     "services/storage/mgmt/2019-04-01/storage",
     "storage",
     "version",
@@ -638,14 +638,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:3f73c461a36dec68394df0c694fbe3bec10ab8f60b1a280df1535c1596cf3ad1"
+  digest = "1:11a561b078819a1cd5d9d9c52031e8476e9ee7622f2b3b054850940a7d167971"
   name = "github.com/jim-minter/go-cosmosdb"
   packages = [
     "cmd/gencosmosdb",
     "pkg/gencosmosdb",
   ]
   pruneopts = "UT"
-  revision = "691a7a9f56ae38b2109e491be76bc52175164cd7"
+  revision = "0e3ac7c97cf21cf5fcd6315b6ed273db35b3c531"
 
 [[projects]]
   digest = "1:bb81097a5b62634f3e9fec1014657855610c82d19b9a40c17612e32651e35dca"
@@ -1919,7 +1919,6 @@
     "github.com/AlekSi/gocov-xml",
     "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute",
     "github.com/Azure/azure-sdk-for-go/services/containerregistry/mgmt/2019-06-01-preview/containerregistry",
-    "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2015-04-08/documentdb",
     "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2019-08-01/documentdb",
     "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns",
     "github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac",
@@ -1928,8 +1927,9 @@
     "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi",
     "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network",
     "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization",
+    "github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights",
     "github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns",
-    "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources",
+    "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features",
     "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage",
     "github.com/Azure/azure-sdk-for-go/storage",
     "github.com/Azure/go-autorest/autorest",

@@ -32,6 +32,8 @@ Notes:
 * Deploy pre-deploy resources `rp-production-predeploy.json` with
   `rp-production-predeploy-parameters.json`.
 
+* Deploy per subscription resources in every subscription `rp-production-subscription.json`.
+
 * Configure service key vault.
 
 * Deploy main deployment resources `rp-production.json` with

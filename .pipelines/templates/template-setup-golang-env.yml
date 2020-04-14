@@ -1,18 +1,19 @@
 parameters:
-  gobin: ""
-  gopath: ""
-  goroot: ""
-  modulePath: ""
+  gobin: ''
+  gopath: ''
+  goroot: ''
+  modulePath: ''
 steps:
-  - script: |
-      mkdir -p '${{ parameters.gobin }}'
-      mkdir -p '${{ parameters.gopath }}/pkg'
-      mkdir -p '${{ parameters.modulePath }}'
-      ls -a | grep -v ${{ parameters.gopath }} | xargs mv -t ${{ parameters.modulePath }}
-      echo "##vso[task.prependpath]${{ parameters.gobin }}"
-      echo "##vso[task.prependpath]${{ parameters.goroot }}/bin"
-      sudo add-apt-repository ppa:kubuntu-ppa/backports
-      sudo apt-get update
-      sudo apt-get install libgpgme-dev gcc curl -y
-      go version
-    displayName: "⚙️ Set up the workspace"
+- script: |
+    set -e
+    mkdir -p '${{ parameters.modulePath }}'
+    set +e
+    (shopt -s dotglob; mv * ${{ parameters.modulePath }})
+    set -e
+    echo "##vso[task.prependpath]${{ parameters.gobin }}"
+    echo "##vso[task.prependpath]${{ parameters.goroot }}/bin"
+    sudo add-apt-repository ppa:kubuntu-ppa/backports
+    sudo apt-get update
+    sudo apt-get install libgpgme-dev gcc curl -y
+    go version
+  displayName: ⚙️ Set up the workspace

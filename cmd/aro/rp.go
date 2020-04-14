@@ -27,6 +27,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/azure"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/k8s"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 )
 
@@ -75,7 +76,7 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 	tracing.Register(azure.New(m))
 	metrics.Register(k8s.NewLatency(m), k8s.NewResult(m))
 
-	cipher, err := encryption.NewXChaCha20Poly1305(ctx, _env)
+	cipher, err := encryption.NewXChaCha20Poly1305(ctx, _env, env.EncryptionSecretName)
 	if err != nil {
 		return err
 	}
@@ -85,7 +86,14 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), _env, db, api.APIs, m, kubeactions.New(log, _env))
+	go db.EmitMetrics(ctx)
+
+	feCipher, err := encryption.NewXChaCha20Poly1305(ctx, _env, env.FrontendEncryptionSecretName)
+	if err != nil {
+		return err
+	}
+
+	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), _env, db, api.APIs, m, feCipher, kubeactions.New(log, _env), features.NewResourcesClient)
 	if err != nil {
 		return err
 	}

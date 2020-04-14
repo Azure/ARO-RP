@@ -26,6 +26,7 @@ type Options struct {
 	PreTriggers         []string
 	PostTriggers        []string
 	PartitionKeyRangeID string
+	Continuation        string
 }
 
 // Error represents an error

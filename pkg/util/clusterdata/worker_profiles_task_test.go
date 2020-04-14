@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/Azure/go-autorest/autorest/to"
 	machinev1beta1 "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
 	clusterapi "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset"
 	"github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset/fake"
@@ -82,7 +83,7 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 							Namespace: "openshift-machine-api",
 						},
 						Spec: machinev1beta1.MachineSetSpec{
-							Replicas: int32Ptr(2),
+							Replicas: to.Int32Ptr(2),
 							Template: machinev1beta1.MachineTemplateSpec{
 								Spec: machinev1beta1.MachineSpec{
 									ProviderSpec: machinev1beta1.ProviderSpec{
@@ -230,8 +231,4 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 			}
 		})
 	}
-}
-
-func int32Ptr(i int32) *int32 {
-	return &i
 }

@@ -8,17 +8,15 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
-	"net/url"
 	"path/filepath"
 
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
-	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
+	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
-	utilkeyvault "github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
 
 // PreDeploy deploys managed identity, NSGs and keyvaults, needed for main
@@ -30,7 +28,20 @@ func (d *deployer) PreDeploy(ctx context.Context) (string, error) {
 		return "", err
 	}
 
-	_, err = d.groups.CreateOrUpdate(ctx, d.config.ResourceGroupName, mgmtresources.Group{
+	// deploy per subscription Action Group
+	_, err = d.groups.CreateOrUpdate(ctx, d.config.Configuration.SubscriptionResourceGroupName, mgmtfeatures.ResourceGroup{
+		Location: to.StringPtr("centralus"),
+	})
+	if err != nil {
+		return "", err
+	}
+
+	err = d.deploySubscription(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	_, err = d.groups.CreateOrUpdate(ctx, d.config.ResourceGroupName, mgmtfeatures.ResourceGroup{
 		Location: &d.config.Location,
 	})
 	if err != nil {
@@ -85,10 +96,10 @@ func (d *deployer) deployGlobal(ctx context.Context, rpServicePrincipalID string
 	}
 
 	d.log.Infof("deploying %s", deploymentName)
-	return d.globaldeployments.CreateOrUpdateAndWait(ctx, d.config.Configuration.GlobalResourceGroupName, deploymentName, mgmtresources.Deployment{
-		Properties: &mgmtresources.DeploymentProperties{
+	return d.globaldeployments.CreateOrUpdateAndWait(ctx, d.config.Configuration.GlobalResourceGroupName, deploymentName, mgmtfeatures.Deployment{
+		Properties: &mgmtfeatures.DeploymentProperties{
 			Template:   template,
-			Mode:       mgmtresources.Incremental,
+			Mode:       mgmtfeatures.Incremental,
 			Parameters: parameters.Parameters,
 		},
 	})
@@ -109,12 +120,35 @@ func (d *deployer) deployGlobalSubscription(ctx context.Context) error {
 	}
 
 	d.log.Infof("deploying %s", deploymentName)
-	return d.globaldeployments.CreateOrUpdateAtSubscriptionScopeAndWait(ctx, deploymentName, mgmtresources.Deployment{
-		Properties: &mgmtresources.DeploymentProperties{
+	return d.globaldeployments.CreateOrUpdateAtSubscriptionScopeAndWait(ctx, deploymentName, mgmtfeatures.Deployment{
+		Properties: &mgmtfeatures.DeploymentProperties{
 			Template: template,
-			Mode:     mgmtresources.Incremental,
+			Mode:     mgmtfeatures.Incremental,
 		},
 		Location: to.StringPtr("centralus"),
+	})
+}
+
+func (d *deployer) deploySubscription(ctx context.Context) error {
+	deploymentName := "rp-production-subscription"
+
+	b, err := Asset(generator.FileRPProductionSubscription)
+	if err != nil {
+		return err
+	}
+
+	var template map[string]interface{}
+	err = json.Unmarshal(b, &template)
+	if err != nil {
+		return err
+	}
+
+	d.log.Infof("deploying %s", deploymentName)
+	return d.deployments.CreateOrUpdateAndWait(ctx, d.config.Configuration.SubscriptionResourceGroupName, deploymentName, mgmtfeatures.Deployment{
+		Properties: &mgmtfeatures.DeploymentProperties{
+			Template: template,
+			Mode:     mgmtfeatures.Incremental,
+		},
 	})
 }
 
@@ -133,10 +167,10 @@ func (d *deployer) deployManageIdentity(ctx context.Context) (string, error) {
 	}
 
 	d.log.Infof("deploying %s", deploymentName)
-	err = d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, deploymentName, mgmtresources.Deployment{
-		Properties: &mgmtresources.DeploymentProperties{
+	err = d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, deploymentName, mgmtfeatures.Deployment{
+		Properties: &mgmtfeatures.DeploymentProperties{
 			Template: template,
-			Mode:     mgmtresources.Incremental,
+			Mode:     mgmtfeatures.Incremental,
 		},
 	})
 	if err != nil {
@@ -184,10 +218,10 @@ func (d *deployer) deployPreDeploy(ctx context.Context, rpServicePrincipalID str
 	}
 
 	d.log.Infof("deploying %s", deploymentName)
-	return d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, deploymentName, mgmtresources.Deployment{
-		Properties: &mgmtresources.DeploymentProperties{
+	return d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, deploymentName, mgmtfeatures.Deployment{
+		Properties: &mgmtfeatures.DeploymentProperties{
 			Template:   template,
-			Mode:       mgmtresources.Incremental,
+			Mode:       mgmtfeatures.Incremental,
 			Parameters: parameters.Parameters,
 		},
 	})
@@ -195,40 +229,39 @@ func (d *deployer) deployPreDeploy(ctx context.Context, rpServicePrincipalID str
 
 func (d *deployer) configureServiceKV(ctx context.Context) error {
 	serviceKeyVaultURI := "https://" + d.config.Configuration.KeyvaultPrefix + "-svc.vault.azure.net/"
-
-	err := d.ensureEncryptionSecret(ctx, serviceKeyVaultURI)
-	if err != nil {
-		return err
-	}
-
-	err = d.ensureMonitoringCertificates(ctx, serviceKeyVaultURI)
-	if err != nil {
-		return err
-	}
-
-	return d.ensureServiceCertificates(ctx, serviceKeyVaultURI)
-}
-
-func (d *deployer) ensureEncryptionSecret(ctx context.Context, serviceKeyVaultURI string) error {
 	secrets, err := d.keyvault.GetSecrets(ctx, serviceKeyVaultURI, nil)
 	if err != nil {
 		return err
 	}
 
-	for _, secret := range secrets {
-		if filepath.Base(*secret.ID) == env.EncryptionSecretName {
+	err = d.ensureSecret(ctx, secrets, serviceKeyVaultURI, env.EncryptionSecretName)
+	if err != nil {
+		return err
+	}
+
+	err = d.ensureSecret(ctx, secrets, serviceKeyVaultURI, env.FrontendEncryptionSecretName)
+	if err != nil {
+		return err
+	}
+
+	return d.ensureMonitoringCertificates(ctx, serviceKeyVaultURI)
+}
+
+func (d *deployer) ensureSecret(ctx context.Context, existingSecrets []keyvault.SecretItem, serviceKeyVaultURI, secretName string) error {
+	for _, secret := range existingSecrets {
+		if filepath.Base(*secret.ID) == secretName {
 			return nil
 		}
 	}
 
 	key := make([]byte, 32)
-	_, err = rand.Read(key)
+	_, err := rand.Read(key)
 	if err != nil {
 		return err
 	}
 
-	d.log.Infof("setting %s", env.EncryptionSecretName)
-	_, err = d.keyvault.SetSecret(ctx, serviceKeyVaultURI, env.EncryptionSecretName, keyvault.SecretSetParameters{
+	d.log.Infof("setting %s", secretName)
+	_, err = d.keyvault.SetSecret(ctx, serviceKeyVaultURI, secretName, keyvault.SecretSetParameters{
 		Value: to.StringPtr(base64.StdEncoding.EncodeToString(key)),
 	})
 	return err
@@ -249,74 +282,6 @@ func (d *deployer) ensureMonitoringCertificates(ctx context.Context, serviceKeyV
 		_, err = d.keyvault.ImportCertificate(ctx, serviceKeyVaultURI, certificateName, keyvault.CertificateImportParameters{
 			Base64EncodedCertificate: bundle.Value,
 		})
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (d *deployer) ensureServiceCertificates(ctx context.Context, serviceKeyVaultURI string) error {
-	_, err := d.keyvault.SetCertificateIssuer(ctx, serviceKeyVaultURI, "OneCert", keyvault.CertificateIssuerSetParameters{
-		Provider: to.StringPtr("OneCert"),
-	})
-	if err != nil {
-		return err
-	}
-
-	certs := []struct {
-		certificateName string
-		commonName      string
-		eku             utilkeyvault.Eku
-		created         bool
-	}{
-		{
-			certificateName: env.RPFirstPartySecretName,
-			commonName:      d.config.Configuration.FPServerCertCommonName,
-			eku:             utilkeyvault.EkuClientAuth,
-		},
-		{
-			certificateName: env.RPServerSecretName,
-			commonName:      "rp." + d.config.Location + "." + d.config.Configuration.RPParentDomainName,
-			eku:             utilkeyvault.EkuServerAuth,
-		},
-	}
-
-	keyVaultCerts, err := d.keyvault.GetCertificates(ctx, serviceKeyVaultURI, nil, nil)
-	if err != nil {
-		return err
-	}
-
-cert:
-	for i, c := range certs {
-		for _, kc := range keyVaultCerts.Values() {
-			// sample id https://aro-int-eastus-svc.vault.azure.net/certificates/rp-server
-			u, err := url.Parse(*kc.ID)
-			if err != nil {
-				return err
-			}
-
-			if u.Path == "/certificates/"+c.certificateName && *kc.Attributes.Enabled {
-				continue cert
-			}
-		}
-
-		d.log.Infof("creating %s", c.certificateName)
-		err = d.keyvault.CreateSignedCertificate(ctx, serviceKeyVaultURI, utilkeyvault.IssuerOnecert, c.certificateName, c.commonName, c.eku)
-		if err != nil {
-			return err
-		}
-
-		certs[i].created = true
-	}
-
-	for _, c := range certs {
-		if !c.created {
-			continue
-		}
-
-		err = d.keyvault.WaitForCertificateOperation(ctx, serviceKeyVaultURI, c.certificateName)
 		if err != nil {
 			return err
 		}

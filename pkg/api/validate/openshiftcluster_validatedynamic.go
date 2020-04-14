@@ -12,7 +12,8 @@ import (
 	"time"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
-	mgmtresources "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-05-01/resources"
+	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
+	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
@@ -24,8 +25,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/resources"
 	utilpermissions "github.com/Azure/ARO-RP/pkg/util/permissions"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
@@ -61,7 +62,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context, oc *api
 
 	// TODO: pre-check that the cluster domain doesn't already exist
 
-	spAuthorizer, err := dv.validateServicePrincipalProfile(oc)
+	spAuthorizer, err := dv.validateServicePrincipalProfile(ctx, oc)
 	if err != nil {
 		return err
 	}
@@ -97,7 +98,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context, oc *api
 		return err
 	}
 
-	spProvider := resources.NewProvidersClient(r.SubscriptionID, spAuthorizer)
+	spProvider := features.NewProvidersClient(r.SubscriptionID, spAuthorizer)
 	err = dv.validateProviders(ctx, spProvider)
 	if err != nil {
 		return err
@@ -107,7 +108,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context, oc *api
 	return dv.validateSubnets(ctx, subnetManager, oc)
 }
 
-func (dv *openShiftClusterDynamicValidator) validateServicePrincipalProfile(oc *api.OpenShiftCluster) (autorest.Authorizer, error) {
+func (dv *openShiftClusterDynamicValidator) validateServicePrincipalProfile(ctx context.Context, oc *api.OpenShiftCluster) (autorest.Authorizer, error) {
 	spp := &oc.Properties.ServicePrincipalProfile
 	conf := auth.NewClientCredentialsConfig(spp.ClientID, string(spp.ClientSecret), spp.TenantID)
 
@@ -116,14 +117,17 @@ func (dv *openShiftClusterDynamicValidator) validateServicePrincipalProfile(oc *
 		return nil, err
 	}
 
+	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
+
 	// get a token, retrying only on AADSTS700016 errors (slow AAD propagation).
-	// As we don't do `err = wait.PollImmediate()`, we won't ever see a "timed
-	// out waiting for the condition" error, but instead will always see the
-	// last error returned from token.EnsureFresh().
-	wait.PollImmediate(time.Second, 10*time.Second, func() (bool, error) {
+	// As we don't do `err = wait.PollImmediateUntil()`, we won't ever see a
+	// "timed out waiting for the condition" error, but instead will always see
+	// the last error returned from token.EnsureFresh().
+	wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 		err = token.EnsureFresh()
 		return err == nil || !strings.Contains(err.Error(), "AADSTS700016"), nil
-	})
+	}, timeoutCtx.Done())
 	if err != nil {
 		if strings.Contains(err.Error(), "AADSTS700016") {
 			return nil, err
@@ -158,7 +162,21 @@ func (dv *openShiftClusterDynamicValidator) validateVnetPermissions(ctx context.
 		return err
 	}
 
-	permissions, err := client.ListForResource(ctx, r.ResourceGroup, r.Provider, r.ResourceType, "", r.ResourceName)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
+
+	// As we don't do `err = wait.PollImmediateUntil()`, we won't ever see a
+	// "timed out waiting for the condition" error, but instead will always see
+	// the last error returned from client.ListForResource().
+	var permissions []mgmtauthorization.Permission
+	wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+		permissions, err = client.ListForResource(ctx, r.ResourceGroup, r.Provider, r.ResourceType, "", r.ResourceName)
+		if detailedErr, ok := err.(autorest.DetailedError); ok &&
+			detailedErr.StatusCode == http.StatusForbidden {
+			return false, nil
+		}
+		return err == nil, err
+	}, timeoutCtx.Done())
 	if detailedErr, ok := err.(autorest.DetailedError); ok {
 		switch detailedErr.StatusCode {
 		case http.StatusForbidden:
@@ -302,13 +320,13 @@ func (dv *openShiftClusterDynamicValidator) validateVnet(ctx context.Context, vn
 	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided vnet '%s' is invalid: custom DNS servers are not supported.", vnetID)
 }
 
-func (dv *openShiftClusterDynamicValidator) validateProviders(ctx context.Context, providerClient resources.ProvidersClient) error {
+func (dv *openShiftClusterDynamicValidator) validateProviders(ctx context.Context, providerClient features.ProvidersClient) error {
 	providers, err := providerClient.List(ctx, nil, "")
 	if err != nil {
 		return err
 	}
 
-	providerMap := make(map[string]mgmtresources.Provider, len(providers))
+	providerMap := make(map[string]mgmtfeatures.Provider, len(providers))
 
 	for _, provider := range providers {
 		providerMap[*provider.Namespace] = provider

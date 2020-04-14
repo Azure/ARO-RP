@@ -21,9 +21,10 @@ import (
 )
 
 type openShiftClusterStaticValidator struct {
-	location   string
-	domain     string
-	resourceID string
+	location        string
+	domain          string
+	developmentMode bool
+	resourceID      string
 
 	r azure.Resource
 }
@@ -95,11 +96,13 @@ func (sv *openShiftClusterStaticValidator) validateProperties(path string, p *Op
 	if err := sv.validateMasterProfile(path+".masterProfile", &p.MasterProfile); err != nil {
 		return err
 	}
-	if len(p.WorkerProfiles) != 1 {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".workerProfiles", "There should be exactly one worker profile.")
-	}
-	if err := sv.validateWorkerProfile(path+".workerProfiles['"+p.WorkerProfiles[0].Name+"']", &p.WorkerProfiles[0], &p.MasterProfile); err != nil {
-		return err
+	if isCreate {
+		if len(p.WorkerProfiles) != 1 {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".workerProfiles", "There should be exactly one worker profile.")
+		}
+		if err := sv.validateWorkerProfile(path+".workerProfiles['"+p.WorkerProfiles[0].Name+"']", &p.WorkerProfiles[0], &p.MasterProfile); err != nil {
+			return err
+		}
 	}
 	if err := sv.validateAPIServerProfile(path+".apiserverProfile", &p.APIServerProfile); err != nil {
 		return err
@@ -131,8 +134,7 @@ func (sv *openShiftClusterStaticValidator) validateClusterProfile(path string, c
 		strings.ContainsRune(strings.TrimSuffix(cp.Domain, "."+sv.domain), '.') {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".domain", "The provided domain '%s' is invalid.", cp.Domain)
 	}
-	if isCreate && cp.Version != version.OpenShiftVersion ||
-		!isCreate && !validate.RxOpenShiftVersion.MatchString(cp.Version) {
+	if isCreate && cp.Version != version.OpenShiftVersion {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".version", "The provided version '%s' is invalid.", cp.Version)
 	}
 	if !validate.RxResourceGroupID.MatchString(cp.ResourceGroupID) {
@@ -222,10 +224,16 @@ func (sv *openShiftClusterStaticValidator) validateWorkerProfile(path string, wp
 	if wp.Name != "worker" {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".name", "The provided worker name '%s' is invalid.", wp.Name)
 	}
-	switch wp.VMSize {
-	case VMSizeStandardD2sV3, VMSizeStandardD4sV3, VMSizeStandardD8sV3:
-	default:
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", "The provided worker VM size '%s' is invalid.", wp.VMSize)
+	if sv.developmentMode {
+		if wp.VMSize != VMSizeStandardD2sV3 {
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", "The provided worker VM size '%s' is invalid in development mode.", wp.VMSize)
+		}
+	} else {
+		switch wp.VMSize {
+		case VMSizeStandardD4sV3, VMSizeStandardD8sV3:
+		default:
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", "The provided worker VM size '%s' is invalid.", wp.VMSize)
+		}
 	}
 	if wp.DiskSizeGB < 128 {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".diskSizeGB", "The provided worker disk size '%d' is invalid.", wp.DiskSizeGB)

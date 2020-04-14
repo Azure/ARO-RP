@@ -149,6 +149,20 @@ func (mr *MockBillingMockRecorder) Get(arg0, arg1 interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockBilling)(nil).Get), arg0, arg1)
 }
 
+// List mocks base method
+func (m *MockBilling) List(arg0 string) cosmosdb.BillingDocumentIterator {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", arg0)
+	ret0, _ := ret[0].(cosmosdb.BillingDocumentIterator)
+	return ret0
+}
+
+// List indicates an expected call of List
+func (mr *MockBillingMockRecorder) List(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockBilling)(nil).List), arg0)
+}
+
 // ListAll mocks base method
 func (m *MockBilling) ListAll(arg0 context.Context) (*api.BillingDocuments, error) {
 	m.ctrl.T.Helper()
@@ -350,34 +364,19 @@ func (mr *MockOpenShiftClustersMockRecorder) Lease(arg0, arg1 interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Lease", reflect.TypeOf((*MockOpenShiftClusters)(nil).Lease), arg0, arg1)
 }
 
-// ListAll mocks base method
-func (m *MockOpenShiftClusters) ListAll(arg0 context.Context) (*api.OpenShiftClusterDocuments, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListAll", arg0)
-	ret0, _ := ret[0].(*api.OpenShiftClusterDocuments)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ListAll indicates an expected call of ListAll
-func (mr *MockOpenShiftClustersMockRecorder) ListAll(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAll", reflect.TypeOf((*MockOpenShiftClusters)(nil).ListAll), arg0)
-}
-
 // ListByPrefix mocks base method
-func (m *MockOpenShiftClusters) ListByPrefix(arg0, arg1 string) (cosmosdb.OpenShiftClusterDocumentIterator, error) {
+func (m *MockOpenShiftClusters) ListByPrefix(arg0, arg1, arg2 string) (cosmosdb.OpenShiftClusterDocumentIterator, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListByPrefix", arg0, arg1)
+	ret := m.ctrl.Call(m, "ListByPrefix", arg0, arg1, arg2)
 	ret0, _ := ret[0].(cosmosdb.OpenShiftClusterDocumentIterator)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListByPrefix indicates an expected call of ListByPrefix
-func (mr *MockOpenShiftClustersMockRecorder) ListByPrefix(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockOpenShiftClustersMockRecorder) ListByPrefix(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByPrefix", reflect.TypeOf((*MockOpenShiftClusters)(nil).ListByPrefix), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByPrefix", reflect.TypeOf((*MockOpenShiftClusters)(nil).ListByPrefix), arg0, arg1, arg2)
 }
 
 // Patch mocks base method

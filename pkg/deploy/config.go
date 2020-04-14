@@ -46,7 +46,9 @@ type Configuration struct {
 	MDSDEnvironment                    string        `json:"mdsdEnvironment,omitempty"`
 	RPImagePrefix                      string        `json:"rpImagePrefix,omitempty"`
 	RPMode                             string        `json:"rpMode,omitempty"`
+	RPNSGSourceAddressPrefixes         []string      `json:"rpNsgSourceAddressPrefixes,omitempty"`
 	RPParentDomainName                 string        `json:"rpParentDomainName,omitempty"`
+	SubscriptionResourceGroupName      string        `json:"subscriptionResourceGroupName,omitempty"`
 	SSHPublicKey                       string        `json:"sshPublicKey,omitempty"`
 }
 

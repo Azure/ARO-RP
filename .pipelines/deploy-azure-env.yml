@@ -10,12 +10,15 @@ parameters:
   - RP-Prod
 
 jobs:
-  - template: ./templates/template-job-deploy-azure-env.yml
-    parameters:
-      environment: ${{ parameters.environment }}
-      location: ${{ parameters.location }}
-      configFileName: $(config-file-name)
-      azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
-      vsoProjectID: $(vso-project-id)
-      vsoConfigPipelineID: $(vso-config-pipeline-id)
-      vsoDeployerPipelineID: $(vso-deployer-build-id)
+- template: ./templates/template-job-deploy-azure-env.yml
+  parameters:
+    environment: ${{ parameters.environment }}
+    locations:
+    - ${{ parameters.location }}
+    configFileName: $(config-file-name)
+    azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
+    vsoProjectID: $(vso-project-id)
+    vsoConfigPipelineID: $(vso-config-pipeline-id)
+    vsoDeployerPipelineID: $(vso-deployer-pipeline-id)
+    azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
+    e2eSubscription: $(e2e-subscription)

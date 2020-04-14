@@ -1,0 +1,35 @@
+trigger: none
+pr: none
+
+variables:
+- template: vars.yml
+
+jobs:
+- job: Mirror_images
+  pool:
+    vmImage: ubuntu-latest
+
+  steps:
+  - template: ./templates/template-setup-golang-env.yml
+    parameters:
+      gobin: ${{ variables.GOBIN }}
+      gopath: ${{ variables.GOPATH }}
+      goroot: ${{ variables.GOROOT }}
+      modulePath: ${{ variables.modulePath }}
+  - task: DownloadBuildArtifacts@0
+    inputs:
+      buildType: specific
+      project: $(vso-project-id)
+      pipeline: $(vso-deployer-pipeline-id)
+      buildVersionToDownload: latestFromBranch
+      branchName: refs/heads/master
+      downloadType: specific
+      downloadPath: $(System.ArtifactsDirectory)/deployer
+    displayName: Download Deployer
+  - template: ./templates/template-mirror-images.yml
+    parameters:
+      dstAuth: $(acr-push-auth)
+      srcAuthGeneva: $(acr-geneva-pull-auth)
+      srcAuthQuay: $(quay-pull-auth)
+      dstACRName: $(dst-acr-name)
+      deployerDirectory: $(System.ArtifactsDirectory)/deployer/drop

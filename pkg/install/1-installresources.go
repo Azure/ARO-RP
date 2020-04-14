@@ -12,16 +12,13 @@ import (
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
-	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtprivatedns "github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
-	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/ignition/machine"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
@@ -57,28 +54,6 @@ func (i *Installer) installResources(ctx context.Context) error {
 		return err
 	}
 
-	var objectID string
-	{
-		spp := &i.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
-
-		conf := auth.NewClientCredentialsConfig(spp.ClientID, string(spp.ClientSecret), spp.TenantID)
-		conf.Resource = azure.PublicCloud.GraphEndpoint
-
-		spGraphAuthorizer, err := conf.Authorizer()
-		if err != nil {
-			return err
-		}
-
-		applications := graphrbac.NewApplicationsClient(spp.TenantID, spGraphAuthorizer)
-
-		res, err := applications.GetServicePrincipalsIDByAppID(ctx, spp.ClientID)
-		if err != nil {
-			return err
-		}
-
-		objectID = *res.Value
-	}
-
 	t := &arm.Template{
 		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 		ContentVersion: "1.0.0.0",
@@ -89,25 +64,12 @@ func (i *Installer) installResources(ctx context.Context) error {
 		},
 		Resources: []*arm.Resource{
 			{
-				Resource: &mgmtauthorization.RoleAssignment{
-					Name: to.StringPtr("[guid(resourceGroup().id, 'SP / Contributor')]"),
-					Type: to.StringPtr("Microsoft.Authorization/roleAssignments"),
-					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-						Scope:            to.StringPtr("[resourceGroup().id]"),
-						RoleDefinitionID: to.StringPtr("[resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]"),
-						PrincipalID:      to.StringPtr(objectID),
-						PrincipalType:    mgmtauthorization.ServicePrincipal,
-					},
-				},
-				APIVersion: apiVersions["authorization"],
-			},
-			{
 				Resource: &mgmtprivatedns.PrivateZone{
 					Name:     to.StringPtr(installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain),
 					Type:     to.StringPtr("Microsoft.Network/privateDnsZones"),
 					Location: to.StringPtr("global"),
 				},
-				APIVersion: apiVersions["privatedns"],
+				APIVersion: azureclient.APIVersions["Microsoft.Network/privateDnsZones"],
 			},
 			{
 				Resource: &mgmtprivatedns.RecordSet{
@@ -117,12 +79,12 @@ func (i *Installer) installResources(ctx context.Context) error {
 						TTL: to.Int64Ptr(300),
 						ARecords: &[]mgmtprivatedns.ARecord{
 							{
-								Ipv4Address: to.StringPtr(fmt.Sprintf("[reference('Microsoft.Network/loadBalancers/aro-internal-lb', '%s').frontendIpConfigurations[0].properties.privateIPAddress]", apiVersions["network"])),
+								Ipv4Address: to.StringPtr(fmt.Sprintf("[reference('Microsoft.Network/loadBalancers/aro-internal-lb', '%s').frontendIpConfigurations[0].properties.privateIPAddress]", azureclient.APIVersions["Microsoft.Network"])),
 							},
 						},
 					},
 				},
-				APIVersion: apiVersions["privatedns"],
+				APIVersion: azureclient.APIVersions["Microsoft.Network/privateDnsZones"],
 				DependsOn: []string{
 					"Microsoft.Network/loadBalancers/aro-internal-lb",
 					"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
@@ -136,12 +98,12 @@ func (i *Installer) installResources(ctx context.Context) error {
 						TTL: to.Int64Ptr(300),
 						ARecords: &[]mgmtprivatedns.ARecord{
 							{
-								Ipv4Address: to.StringPtr(fmt.Sprintf("[reference('Microsoft.Network/loadBalancers/aro-internal-lb', '%s').frontendIpConfigurations[0].properties.privateIPAddress]", apiVersions["network"])),
+								Ipv4Address: to.StringPtr(fmt.Sprintf("[reference('Microsoft.Network/loadBalancers/aro-internal-lb', '%s').frontendIpConfigurations[0].properties.privateIPAddress]", azureclient.APIVersions["Microsoft.Network"])),
 							},
 						},
 					},
 				},
-				APIVersion: apiVersions["privatedns"],
+				APIVersion: azureclient.APIVersions["Microsoft.Network/privateDnsZones"],
 				DependsOn: []string{
 					"Microsoft.Network/loadBalancers/aro-internal-lb",
 					"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
@@ -156,7 +118,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 						SrvRecords: &srvRecords,
 					},
 				},
-				APIVersion: apiVersions["privatedns"],
+				APIVersion: azureclient.APIVersions["Microsoft.Network/privateDnsZones"],
 				DependsOn: []string{
 					"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
 				},
@@ -174,7 +136,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 						},
 					},
 				},
-				APIVersion: apiVersions["privatedns"],
+				APIVersion: azureclient.APIVersions["Microsoft.Network/privateDnsZones"],
 				Copy: &arm.Copy{
 					Name:  "privatednscopy",
 					Count: int(*installConfig.Config.ControlPlane.Replicas),
@@ -196,7 +158,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 					Type:     to.StringPtr("Microsoft.Network/privateDnsZones/virtualNetworkLinks"),
 					Location: to.StringPtr("global"),
 				},
-				APIVersion: apiVersions["privatedns"],
+				APIVersion: azureclient.APIVersions["Microsoft.Network/privateDnsZones"],
 				DependsOn: []string{
 					"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
 					"privatednscopy",
@@ -235,7 +197,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 					Type:     to.StringPtr("Microsoft.Network/privateLinkServices"),
 					Location: &installConfig.Config.Azure.Region,
 				},
-				APIVersion: apiVersions["network"],
+				APIVersion: azureclient.APIVersions["Microsoft.Network"],
 				DependsOn: []string{
 					"Microsoft.Network/loadBalancers/aro-internal-lb",
 				},
@@ -252,7 +214,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 					Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
 					Location: &installConfig.Config.Azure.Region,
 				},
-				APIVersion: apiVersions["network"],
+				APIVersion: azureclient.APIVersions["Microsoft.Network"],
 			},
 			i.apiServerPublicLoadBalancer(installConfig.Config.Azure.Region, i.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility),
 			{
@@ -343,7 +305,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 					Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
 					Location: &installConfig.Config.Azure.Region,
 				},
-				APIVersion: apiVersions["network"],
+				APIVersion: azureclient.APIVersions["Microsoft.Network"],
 			},
 			{
 				Resource: &mgmtnetwork.Interface{
@@ -371,7 +333,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 					Type:     to.StringPtr("Microsoft.Network/networkInterfaces"),
 					Location: &installConfig.Config.Azure.Region,
 				},
-				APIVersion: apiVersions["network"],
+				APIVersion: azureclient.APIVersions["Microsoft.Network"],
 				DependsOn: []string{
 					"Microsoft.Network/loadBalancers/aro-internal-lb",
 					"Microsoft.Network/loadBalancers/aro-public-lb",
@@ -403,7 +365,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 					Type:     to.StringPtr("Microsoft.Network/networkInterfaces"),
 					Location: &installConfig.Config.Azure.Region,
 				},
-				APIVersion: apiVersions["network"],
+				APIVersion: azureclient.APIVersions["Microsoft.Network"],
 				Copy: &arm.Copy{
 					Name:  "networkcopy",
 					Count: int(*installConfig.Config.ControlPlane.Replicas),
@@ -463,9 +425,8 @@ func (i *Installer) installResources(ctx context.Context) error {
 					Type:     to.StringPtr("Microsoft.Compute/virtualMachines"),
 					Location: &installConfig.Config.Azure.Region,
 				},
-				APIVersion: apiVersions["compute"],
+				APIVersion: azureclient.APIVersions["Microsoft.Compute"],
 				DependsOn: []string{
-					"[concat('Microsoft.Authorization/roleAssignments/', guid(resourceGroup().id, 'SP / Contributor'))]",
 					"Microsoft.Network/networkInterfaces/aro-bootstrap-nic",
 					"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/virtualNetworkLinks/" + installConfig.Config.ObjectMeta.Name + "-network-link",
 				},
@@ -521,13 +482,12 @@ func (i *Installer) installResources(ctx context.Context) error {
 					Type:     to.StringPtr("Microsoft.Compute/virtualMachines"),
 					Location: &installConfig.Config.Azure.Region,
 				},
-				APIVersion: apiVersions["compute"],
+				APIVersion: azureclient.APIVersions["Microsoft.Compute"],
 				Copy: &arm.Copy{
 					Name:  "computecopy",
 					Count: int(*installConfig.Config.ControlPlane.Replicas),
 				},
 				DependsOn: []string{
-					"[concat('Microsoft.Authorization/roleAssignments/', guid(resourceGroup().id, 'SP / Contributor'))]",
 					"[concat('Microsoft.Network/networkInterfaces/aro-master', copyIndex(), '-nic')]",
 					"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/virtualNetworkLinks/" + installConfig.Config.ObjectMeta.Name + "-network-link",
 				},
@@ -544,7 +504,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 					Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
 					Location: &installConfig.Config.Azure.Region,
 				},
-				APIVersion: apiVersions["network"],
+				APIVersion: azureclient.APIVersions["Microsoft.Network"],
 			},
 			{
 				Resource: &mgmtnetwork.LoadBalancer{
@@ -591,7 +551,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 					Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
 					Location: &installConfig.Config.Azure.Region,
 				},
-				APIVersion: apiVersions["network"],
+				APIVersion: azureclient.APIVersions["Microsoft.Network"],
 				DependsOn: []string{
 					"Microsoft.Network/publicIPAddresses/aro-outbound-pip",
 				},

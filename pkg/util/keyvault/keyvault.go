@@ -30,7 +30,6 @@ type Issuer string
 
 const (
 	IssuerDigicert Issuer = "digicert01"
-	IssuerOnecert  Issuer = "OneCert"
 )
 
 type Manager interface {

@@ -1,55 +1,76 @@
 # Azure DevOps Job deploying rp
 parameters:
-- name: environment
-- name: location
-- name: configFileName
-- name: azureDevOpsJSONSPN
-- name: vsoProjectID
-- name: vsoConfigPipelineID
-- name: vsoDeployerPipelineID
+  environment: ''
+  locations: []
+  configFileName: ''
+  azureDevOpsJSONSPN: ''
+  vsoProjectID: ''
+  vsoConfigPipelineID: ''
+  vsoDeployerPipelineID: ''
+  azureDevOpsE2EJSONSPN: ''
+  e2eSubscription: ''
 
 jobs:
-  - deployment: "Deploy_${{ parameters.location }}"
+- ${{ each location in  parameters.locations }}:
+  - deployment: Deploy_${{ location }}
     variables:
-      - template: ../vars.yml
+    - template: ../vars.yml
     pool:
-      vmImage: "ubuntu-latest"
+      vmImage: ubuntu-latest
     environment: ${{ parameters.environment }}
     strategy:
       runOnce:
         deploy:
           steps:
-            - template: ./template-setup-golang-env.yml
-              parameters:
-                gobin: ${{ variables.GOBIN }}
-                gopath: ${{ variables.GOPATH }}
-                goroot: ${{ variables.GOROOT }}
-                modulePath: ${{ variables.modulePath }}
-            - task: DownloadBuildArtifacts@0
-              inputs:
-                buildType: 'specific'
-                project: ${{ parameters.vsoProjectID }}
-                pipeline: ${{ parameters.vsoConfigPipelineID }}
-                buildVersionToDownload: 'latestFromBranch'
-                branchName: 'refs/heads/master'
-                downloadType: 'specific'
-                downloadPath: '$(System.ArtifactsDirectory)/config'
-              displayName: "Download Config"
-            - task: DownloadBuildArtifacts@0
-              inputs:
-                buildType: 'specific'
-                project: ${{ parameters.vsoProjectID }}
-                pipeline: ${{ parameters.vsoDeployerPipelineID }}
-                buildVersionToDownload: 'latestFromBranch'
-                branchName: 'refs/heads/master'
-                downloadType: 'specific'
-                downloadPath: '$(System.ArtifactsDirectory)/deployer'
-              displayName: "Download Deployer"
-            - template: ./template-deploy-azure-env.yml
-              parameters:
-                workingDirectory: $(system.defaultWorkingDirectory)
-                configDirectory: '$(System.ArtifactsDirectory)/config/drop/deploy'
-                deployerDirectory: '$(System.ArtifactsDirectory)/deployer/drop'
-                configFileName: ${{ parameters.configFileName }}
-                location: ${{ parameters.location }}
-                azureDevOpsJSONSPN: ${{ parameters.azureDevOpsJSONSPN }}
+          - template: ./template-setup-golang-env.yml
+            parameters:
+              gobin: ${{ variables.GOBIN }}
+              gopath: ${{ variables.GOPATH }}
+              goroot: ${{ variables.GOROOT }}
+              modulePath: ${{ variables.modulePath }}
+          - task: DownloadBuildArtifacts@0
+            inputs:
+              buildType: specific
+              project: ${{ parameters.vsoProjectID }}
+              pipeline: ${{ parameters.vsoConfigPipelineID }}
+              buildVersionToDownload: latestFromBranch
+              branchName: refs/heads/master
+              downloadType: specific
+              downloadPath: $(System.ArtifactsDirectory)/config
+            displayName: Download Config
+          - task: DownloadBuildArtifacts@0
+            inputs:
+              buildType: specific
+              project: ${{ parameters.vsoProjectID }}
+              pipeline: ${{ parameters.vsoDeployerPipelineID }}
+              buildVersionToDownload: latestFromBranch
+              branchName: refs/heads/master
+              downloadType: specific
+              downloadPath: $(System.ArtifactsDirectory)/deployer
+            displayName: Download Deployer
+          - template: ./template-deploy-azure-env.yml
+            parameters:
+              workingDirectory: $(system.defaultWorkingDirectory)
+              configDirectory: $(System.ArtifactsDirectory)/config/drop/deploy
+              deployerDirectory: $(System.ArtifactsDirectory)/deployer/drop
+              configFileName: ${{ parameters.configFileName }}
+              location: ${{ location }}
+              azureDevOpsJSONSPN: ${{ parameters.azureDevOpsJSONSPN }}
+  - job: ${{ location }}_E2E
+    dependsOn: Deploy_${{ location }}
+    variables:
+    - template: ../vars.yml
+    timeoutInMinutes: 120
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - template: ./template-prod-e2e-steps.yml
+      parameters:
+        gobin: ${{ variables.GOBIN }}
+        gopath: ${{ variables.GOPATH }}
+        goroot: ${{ variables.GOROOT }}
+        workingDirectory: ${{ variables.modulePath }}
+        location: ${{ location }}
+        subscription: ${{ parameters.e2eSubscription }}
+        azureDevOpsE2EJSONSPN: ${{ parameters.azureDevOpsE2EJSONSPN }}
+    # trigger billing e2e after wait

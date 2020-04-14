@@ -152,7 +152,9 @@ func TestGetOpenShiftCluster(t *testing.T) {
 
 			tt.mocks(tt, openshiftClusters, enricher)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{OpenShiftClusters: openshiftClusters}, api.APIs, &noop.Noop{}, nil)
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
+				OpenShiftClusters: openshiftClusters,
+			}, api.APIs, &noop.Noop{}, nil, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
