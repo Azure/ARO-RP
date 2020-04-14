@@ -421,6 +421,12 @@ func (i *Installer) installResources(ctx context.Context) error {
 							},
 						},
 					},
+					Identity: &mgmtcompute.VirtualMachineIdentity{
+						Type: mgmtcompute.ResourceIdentityTypeUserAssigned,
+						UserAssignedIdentities: map[string]*mgmtcompute.VirtualMachineIdentityUserAssignedIdentitiesValue{
+							"[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'aro-control-plane-identity')]": {},
+						},
+					},
 					Name:     to.StringPtr("aro-bootstrap"),
 					Type:     to.StringPtr("Microsoft.Compute/virtualMachines"),
 					Location: &installConfig.Config.Azure.Region,
@@ -475,6 +481,12 @@ func (i *Installer) installResources(ctx context.Context) error {
 								Enabled:    to.BoolPtr(true),
 								StorageURI: to.StringPtr("https://cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix + ".blob.core.windows.net/"),
 							},
+						},
+					},
+					Identity: &mgmtcompute.VirtualMachineIdentity{
+						Type: mgmtcompute.ResourceIdentityTypeUserAssigned,
+						UserAssignedIdentities: map[string]*mgmtcompute.VirtualMachineIdentityUserAssignedIdentitiesValue{
+							"[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'aro-control-plane-identity')]": {},
 						},
 					},
 					Zones:    zones,

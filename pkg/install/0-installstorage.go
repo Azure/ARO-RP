@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	mgmtmsi "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -131,6 +132,54 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 		ContentVersion: "1.0.0.0",
 		Resources: []*arm.Resource{
 			{
+				Resource: &mgmtmsi.Identity{
+					Type:     "Microsoft.ManagedIdentity/userAssignedIdentities",
+					Name:     to.StringPtr("aro-identity"),
+					Location: &installConfig.Config.Azure.Region,
+				},
+				APIVersion: azureclient.APIVersions["Microsoft.ManagedIdentity"],
+			},
+			{
+				Resource: &mgmtmsi.Identity{
+					Type:     "Microsoft.ManagedIdentity/userAssignedIdentities",
+					Name:     to.StringPtr("aro-control-plane-identity"),
+					Location: &installConfig.Config.Azure.Region,
+				},
+				APIVersion: azureclient.APIVersions["Microsoft.ManagedIdentity"],
+			},
+			{
+				Resource: &mgmtauthorization.RoleAssignment{
+					Name: to.StringPtr("[guid(resourceGroup().id, 'MI / Contributor')]"),
+					Type: to.StringPtr("Microsoft.Authorization/roleAssignments"),
+					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+						Scope:            to.StringPtr("[resourceGroup().id]"),
+						RoleDefinitionID: to.StringPtr("[resourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')]"), // Reader
+						PrincipalID:      to.StringPtr("[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'aro-identity'), '" + azureclient.APIVersions["Microsoft.ManagedIdentity"] + "').principalId]"),
+						PrincipalType:    mgmtauthorization.ServicePrincipal,
+					},
+				},
+				APIVersion: azureclient.APIVersions["Microsoft.Authorization"],
+				DependsOn: []string{
+					"Microsoft.ManagedIdentity/userAssignedIdentities/aro-identity",
+				},
+			},
+			{
+				Resource: &mgmtauthorization.RoleAssignment{
+					Name: to.StringPtr("[guid(resourceGroup().id, 'CPMI / Contributor')]"),
+					Type: to.StringPtr("Microsoft.Authorization/roleAssignments"),
+					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+						Scope:            to.StringPtr("[resourceGroup().id]"),
+						RoleDefinitionID: to.StringPtr("[resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]"), // Contributor
+						PrincipalID:      to.StringPtr("[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'aro-control-plane-identity'), '" + azureclient.APIVersions["Microsoft.ManagedIdentity"] + "').principalId]"),
+						PrincipalType:    mgmtauthorization.ServicePrincipal,
+					},
+				},
+				APIVersion: azureclient.APIVersions["Microsoft.Authorization"],
+				DependsOn: []string{
+					"Microsoft.ManagedIdentity/userAssignedIdentities/aro-control-plane-identity",
+				},
+			},
+			{
 				Resource: &mgmtauthorization.RoleAssignment{
 					Name: to.StringPtr("[guid(resourceGroup().id, 'SP / Contributor')]"),
 					Type: to.StringPtr("Microsoft.Authorization/roleAssignments"),
@@ -241,11 +290,18 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 							ID:   &clusterSPObjectID,
 							Type: to.StringPtr("ServicePrincipal"),
 						},
+						{
+							ID:   to.StringPtr("[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', 'aro-control-plane-identity'), '" + azureclient.APIVersions["Microsoft.ManagedIdentity"] + "').principalId]"),
+							Type: to.StringPtr("ServicePrincipal"),
+						},
 					},
 					IsSystemProtected: to.BoolPtr(true),
 				},
 			},
 			APIVersion: azureclient.APIVersions["Microsoft.Authorization/denyAssignments"],
+			DependsOn: []string{
+				"Microsoft.ManagedIdentity/userAssignedIdentities/aro-control-plane-identity",
+			},
 		})
 	}
 

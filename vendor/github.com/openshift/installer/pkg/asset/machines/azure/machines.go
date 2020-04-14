@@ -132,10 +132,6 @@ func provider(platform *azure.Platform, mpool *azure.MachinePool, osImage string
 		}
 	}
 
-	if platform.ARO {
-		spec.ManagedIdentity = ""
-	}
-
 	return spec, nil
 }
 
