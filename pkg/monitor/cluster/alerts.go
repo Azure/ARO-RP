@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strings"
 
 	"github.com/prometheus/common/model"
 
@@ -65,7 +66,7 @@ func (mon *Monitor) emitPrometheusAlerts(ctx context.Context) error {
 	}{}
 
 	for _, alert := range alerts {
-		if alert.Name() == "UsingDeprecatedAPIExtensionsV1Beta1" {
+		if strings.HasPrefix(alert.Name(), "UsingDeprecatedAPI") {
 			continue
 		}
 
