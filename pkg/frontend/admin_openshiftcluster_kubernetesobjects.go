@@ -33,7 +33,7 @@ func (f *frontend) getAdminKubernetesObjects(w http.ResponseWriter, r *http.Requ
 func (f *frontend) _getAdminKubernetesObjects(ctx context.Context, r *http.Request) ([]byte, error) {
 	vars := mux.Vars(r)
 
-	err := validateGetAdminKubernetesObjects(r.URL.Query())
+	err := validateAdminKubernetesObjects(r.URL.Query(), r.Method)
 	if err != nil {
 		return nil, err
 	}
@@ -56,11 +56,44 @@ func (f *frontend) _getAdminKubernetesObjects(ctx context.Context, r *http.Reque
 	return f.kubeActions.List(ctx, doc.OpenShiftCluster, kind, namespace)
 }
 
+func (f *frontend) deleteAdminKubernetesObjects(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
+	r.URL.Path = filepath.Dir(r.URL.Path)
+
+	err := f._deleteAdminKubernetesObjects(ctx, r)
+
+	adminReply(log, w, nil, nil, err)
+}
+
+func (f *frontend) _deleteAdminKubernetesObjects(ctx context.Context, r *http.Request) error {
+	vars := mux.Vars(r)
+
+	err := validateAdminKubernetesObjects(r.URL.Query(), r.Method)
+	if err != nil {
+		return err
+	}
+
+	kind, namespace, name := r.URL.Query().Get("kind"), r.URL.Query().Get("namespace"), r.URL.Query().Get("name")
+
+	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
+
+	doc, err := f.db.OpenShiftClusters.Get(ctx, resourceID)
+	switch {
+	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
+		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
+	case err != nil:
+		return err
+	}
+
+	return f.kubeActions.Delete(ctx, doc.OpenShiftCluster, kind, namespace, name)
+}
+
 // rxKubernetesString is weaker than Kubernetes validation, but strong enough to
 // prevent mischief
 var rxKubernetesString = regexp.MustCompile(`(?i)^[-a-z0-9]{0,255}$`)
 
-func validateGetAdminKubernetesObjects(q url.Values) error {
+func validateAdminKubernetesObjects(q url.Values, method string) error {
 	kind := q.Get("kind")
 	if kind == "" ||
 		!rxKubernetesString.MatchString(kind) {
@@ -71,12 +104,14 @@ func validateGetAdminKubernetesObjects(q url.Values) error {
 	}
 
 	namespace := q.Get("namespace")
-	if !rxKubernetesString.MatchString(namespace) {
+	if (method == http.MethodDelete && namespace == "") ||
+		!rxKubernetesString.MatchString(namespace) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided namespace '%s' is invalid.", namespace)
 	}
 
 	name := q.Get("name")
-	if !rxKubernetesString.MatchString(name) {
+	if (method == http.MethodDelete && name == "") ||
+		!rxKubernetesString.MatchString(name) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided name '%s' is invalid.", name)
 	}
 

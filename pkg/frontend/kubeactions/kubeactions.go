@@ -32,6 +32,7 @@ type Interface interface {
 	Get(ctx context.Context, oc *api.OpenShiftCluster, kind, namespace, name string) ([]byte, error)
 	List(ctx context.Context, oc *api.OpenShiftCluster, kind, namespace string) ([]byte, error)
 	CreateOrUpdate(ctx context.Context, oc *api.OpenShiftCluster, body []byte) error
+	Delete(ctx context.Context, oc *api.OpenShiftCluster, kind, namespace, name string) error
 	ClusterUpgrade(ctx context.Context, oc *api.OpenShiftCluster) error
 	MustGather(ctx context.Context, oc *api.OpenShiftCluster, w io.Writer) error
 }
@@ -216,6 +217,28 @@ func (ka *kubeactions) CreateOrUpdate(ctx context.Context, oc *api.OpenShiftClus
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
 	}
 	return ka.createOrUpdateOne(ctx, dyn, grs, obj)
+}
+
+func (ka *kubeactions) Delete(ctx context.Context, oc *api.OpenShiftCluster, kind, namespace, name string) error {
+	dyn, grs, err := ka.getClient(oc)
+	if err != nil {
+		return err
+	}
+
+	gvrs := ka.findGVR(grs, kind)
+
+	if len(gvrs) == 0 {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The kind '%s' was not found.", kind)
+	}
+
+	if len(gvrs) > 1 {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The kind '%s' matched multiple GroupKinds.", kind)
+	}
+
+	gvr := gvrs[0]
+
+	// TODO log the deletion
+	return dyn.Resource(*gvr).Namespace(namespace).Delete(name, &metav1.DeleteOptions{})
 }
 
 // ClusterUpgrade posts the new version and image to the cluster-version-operator

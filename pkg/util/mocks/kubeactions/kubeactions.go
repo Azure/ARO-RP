@@ -65,6 +65,20 @@ func (mr *MockInterfaceMockRecorder) CreateOrUpdate(arg0, arg1, arg2 interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdate", reflect.TypeOf((*MockInterface)(nil).CreateOrUpdate), arg0, arg1, arg2)
 }
 
+// Delete mocks base method
+func (m *MockInterface) Delete(arg0 context.Context, arg1 *api.OpenShiftCluster, arg2, arg3, arg4 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", arg0, arg1, arg2, arg3, arg4)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete
+func (mr *MockInterfaceMockRecorder) Delete(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockInterface)(nil).Delete), arg0, arg1, arg2, arg3, arg4)
+}
+
 // Get mocks base method
 func (m *MockInterface) Get(arg0 context.Context, arg1 *api.OpenShiftCluster, arg2, arg3, arg4 string) ([]byte, error) {
 	m.ctrl.T.Helper()
