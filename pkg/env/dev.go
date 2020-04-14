@@ -41,6 +41,15 @@ func (c *conn) Read(b []byte) (int, error) {
 	return c.r.Read(b)
 }
 
+type refreshableAuthorizer struct {
+	autorest.Authorizer
+	sp *adal.ServicePrincipalToken
+}
+
+func (ra *refreshableAuthorizer) Refresh() error {
+	return ra.sp.Refresh()
+}
+
 type Dev interface {
 	CreateARMResourceGroupRoleAssignment(context.Context, autorest.Authorizer, string) error
 }
@@ -232,7 +241,7 @@ func (d *dev) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, erro
 		return nil, err
 	}
 
-	return autorest.NewBearerAuthorizer(sp), nil
+	return &refreshableAuthorizer{autorest.NewBearerAuthorizer(sp), sp}, nil
 }
 
 func (d *dev) MetricsSocketPath() string {
@@ -260,8 +269,12 @@ func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthor
 			err = nil
 		}
 	}
+	if err != nil {
+		return err
+	}
 
-	return err
+	d.log.Print("development mode: refreshing authorizer")
+	return fpAuthorizer.(*refreshableAuthorizer).Refresh()
 }
 
 func (d *dev) E2EStorageAccountName() string {
