@@ -23,7 +23,6 @@ import (
 	"github.com/openshift/installer/pkg/asset/kubeconfig"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
 	"github.com/openshift/installer/pkg/asset/targets"
-	uuid "github.com/satori/go.uuid"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -41,7 +40,7 @@ func (i *Installer) createDNS(ctx context.Context) error {
 
 func (i *Installer) installStorage(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) error {
 	clusterID := &installconfig.ClusterID{
-		UUID:    uuid.NewV4().String(),
+		UUID:    i.doc.ID,
 		InfraID: "aro",
 	}
 
