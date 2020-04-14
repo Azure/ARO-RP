@@ -9,6 +9,7 @@ configuration:
   acrResourceId: ''
   adminApiCaBundle: ''
   adminApiClientCertCommonName: ''
+  billingStorageAccountName: ''
   clusterParentDomainName: ''
   extraClusterKeyvaultAccessPolicies: []
   extraCosmosDBIPs: ''

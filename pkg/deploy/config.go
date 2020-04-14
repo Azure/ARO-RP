@@ -30,6 +30,7 @@ type Configuration struct {
 	ACRResourceID                      string        `json:"acrResourceId,omitempty"`
 	AdminAPICABundle                   string        `json:"adminApiCaBundle,omitempty"`
 	AdminAPIClientCertCommonName       string        `json:"adminApiClientCertCommonName,omitempty"`
+	BillingStorageAccountName          string        `json:"billingStorageAccountName,omitempty"`
 	ClusterParentDomainName            string        `json:"clusterParentDomainName,omitempty"`
 	DatabaseAccountName                string        `json:"databaseAccountName,omitempty"`
 	ExtraClusterKeyvaultAccessPolicies []interface{} `json:"extraClusterKeyvaultAccessPolicies,omitempty"`

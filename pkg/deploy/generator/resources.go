@@ -17,6 +17,7 @@ import (
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtmonitor "github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights"
+	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	"github.com/Azure/go-autorest/autorest/to"
 	uuid "github.com/satori/go.uuid"
 
@@ -1572,18 +1573,63 @@ func (g *generator) acrRbac() []*arm.Resource {
 	}
 }
 
+func (g *generator) billingStorageAccount() *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtstorage.Account{
+			Sku: &mgmtstorage.Sku{
+				Name: "Standard_LRS",
+				Kind: mgmtstorage.StorageV2,
+			},
+			Name:     to.StringPtr("[parameters('billingStorageAccountName')]"),
+			Location: to.StringPtr("[resourceGroup().location]"),
+			Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
+			AccountProperties: &mgmtstorage.AccountProperties{
+				AccessTier:             mgmtstorage.Cool,
+				EnableHTTPSTrafficOnly: to.BoolPtr(true),
+			},
+		},
+		APIVersion: azureclient.APIVersions["Microsoft.Storage"],
+	}
+}
+
+func (g *generator) roleDefinitionBillingStorageAccount() *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtauthorization.RoleDefinition{
+			Name: to.StringPtr("090f7c81-a188-43c8-80db-b70b4ba34a92"),
+			Type: to.StringPtr("Microsoft.Authorization/roleDefinitions"),
+			RoleDefinitionProperties: &mgmtauthorization.RoleDefinitionProperties{
+				RoleName:         to.StringPtr("ARO v4 Billing Account Contributor"),
+				AssignableScopes: &[]string{"[subscription().id]"},
+				Permissions: &[]mgmtauthorization.Permission{
+					{
+						Actions: &[]string{
+							"Microsoft.Storage/storageAccounts/listKeys/action",
+							"Microsoft.Storage/storageAccounts/blobServices/containers/read",
+							"Microsoft.Storage/storageAccounts/blobServices/containers/write",
+						},
+					},
+				},
+			},
+		},
+		APIVersion: azureclient.APIVersions["Microsoft.Authorization/roleDefinitions"],
+	}
+}
+
 func (g *generator) billingRbac() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtauthorization.RoleAssignment{
 			Name: to.StringPtr("[guid(resourceGroup().id, 'FP / Storage Account Contributor')]"),
 			Type: to.StringPtr("Microsoft.Authorization/roleAssignments"),
 			RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-				Scope:            to.StringPtr("[resourceGroup().id]"),
-				RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '17d1049b-9a84-46fb-8f53-869881c3d3ab')]"), // Storage account contributor
+				Scope:            to.StringPtr("[resourceId('Microsoft.Storage/storageAccounts', parameters('billingStorageAccountName'))]"),
+				RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '090f7c81-a188-43c8-80db-b70b4ba34a92')]"), // V4 Billing account account contributor
 				PrincipalID:      to.StringPtr("[parameters('fpServicePrincipalId')]"),
 				PrincipalType:    mgmtauthorization.ServicePrincipal,
 			},
 		},
 		APIVersion: azureclient.APIVersions["Microsoft.Authorization"],
+		DependsOn: []string{
+			"[resourceId('Microsoft.Storage/storageAccounts', parameters('billingStorageAccountName'))]",
+		},
 	}
 }

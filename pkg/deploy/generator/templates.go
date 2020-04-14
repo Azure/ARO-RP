@@ -96,6 +96,7 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 
 	params := []string{
 		"acrResourceId",
+		"billingStorageAccountName",
 		"fpServicePrincipalId",
 		"fullDeploy",
 		"location",
@@ -115,6 +116,7 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 	t.Resources = append(t.Resources,
 		g.acrReplica(),
 		g.billingRbac(),
+		g.billingStorageAccount(),
 	)
 
 	t.Resources = append(t.Resources,
@@ -143,6 +145,7 @@ func (g *generator) rpGlobalSubscriptionTemplate() *arm.Template {
 
 	t.Resources = append(t.Resources,
 		g.roleDefinitionTokenContributor(),
+		g.roleDefinitionBillingStorageAccount(),
 	)
 
 	return t
