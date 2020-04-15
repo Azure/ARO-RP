@@ -18,10 +18,11 @@
   version = "v0.4.11"
 
 [[projects]]
-  digest = "1:30bf7932616fd30848ac8f869c9bdf158ce4d099944f13d8dd8a15243c2cb1ea"
+  digest = "1:cb5a084abcd601226fd3fbc8e226aa4b6c5a8b90b8aa46266d6a27c9c4df984d"
   name = "github.com/Azure/azure-sdk-for-go"
   packages = [
     "profiles/latest/dns/mgmt/dns",
+    "profiles/latest/resources/mgmt/resources",
     "profiles/latest/resources/mgmt/subscriptions",
     "services/compute/mgmt/2018-10-01/compute",
     "services/dns/mgmt/2017-10-01/dns",
@@ -31,6 +32,7 @@
     "services/privatedns/mgmt/2018-09-01/privatedns",
     "services/resources/mgmt/2018-05-01/resources",
     "services/resources/mgmt/2018-06-01/subscriptions",
+    "services/resources/mgmt/2019-03-01/resources",
     "version",
   ]
   pruneopts = "NUT"
@@ -112,7 +114,7 @@
   version = "v2.0"
 
 [[projects]]
-  digest = "1:ef55f87a8efa6ed704f2477bd6ca696780ff56340d84cd4fc473b04134a03f1e"
+  digest = "1:607e6e0487464ad5194fde915e288ae705e2d5750e3e4058e5e4de6033397366"
   name = "github.com/aws/aws-sdk-go"
   packages = [
     "aws",
@@ -137,9 +139,11 @@
     "internal/ini",
     "internal/s3err",
     "internal/sdkio",
+    "internal/sdkmath",
     "internal/sdkrand",
     "internal/sdkuri",
     "internal/shareddefaults",
+    "internal/strings",
     "private/protocol",
     "private/protocol/ec2query",
     "private/protocol/eventstream",
@@ -160,13 +164,15 @@
     "service/resourcegroupstaggingapi",
     "service/route53",
     "service/s3",
+    "service/s3/internal/arn",
     "service/s3/s3iface",
     "service/s3/s3manager",
     "service/sts",
+    "service/sts/stsiface",
   ]
   pruneopts = "NUT"
-  revision = "fb5f514796fc4fdc6afdcf5a675a5b2baa714b9f"
-  version = "v1.16.14"
+  revision = "10653500713c229d4ef93175510476c3cc385299"
+  version = "v1.28.3"
 
 [[projects]]
   digest = "1:fdb4ed936abeecb46a8c27dcac83f75c05c87a46d9ec7711411eb785c213fa02"
@@ -670,8 +676,8 @@
   revision = "3b0e988f8cb09a07f375dfc304b86c1a81cbc82b"
 
 [[projects]]
-  branch = "master"
-  digest = "1:cd242e9cb5a2a75c6e6527828a698746225b397c8600f0d3f51d1f149fbeb28d"
+  branch = "release-4.3"
+  digest = "1:454f3ebed85be06f8ed32549474df4fb75624319314f222983d4bae6d4daa1cd"
   name = "github.com/openshift/cloud-credential-operator"
   packages = [
     "pkg/apis/cloudcredential/v1",
@@ -679,7 +685,7 @@
     "version",
   ]
   pruneopts = "NUT"
-  revision = "44ed18ef8496f9417af89f92539b8385b1cc9d51"
+  revision = "16ebd83fd5269c41983406dd11758a2601751188"
 
 [[projects]]
   branch = "openshift-4.2-cluster-api-0.1.0"
@@ -1069,7 +1075,7 @@
   version = "v1.19.1"
 
 [[projects]]
-  digest = "1:de19d3688bad66ab5567a2e0a12951a6323a48afca7a7e6582a2b9d3a7456c1c"
+  digest = "1:df052cd919be38ef71faa661921b7d1f1cb921c4eae9b6c6472695eaa08c99fd"
   name = "gopkg.in/AlecAivazis/survey.v1"
   packages = [
     ".",
@@ -1077,8 +1083,7 @@
     "terminal",
   ]
   pruneopts = "NUT"
-  revision = "e4af3b345125b0903edb492a33a99a23e9eb3487"
-  version = "v1.8.7"
+  revision = "6773bdf39b7fa13e6a40ece7ac2d01e0d469c205"
 
 [[projects]]
   digest = "1:2d1fbdc6777e5408cabeb02bf336305e724b925ff4546ded0fa8715a7267922a"
@@ -1362,6 +1367,7 @@
   analyzer-version = 1
   input-imports = [
     "github.com/Azure/azure-sdk-for-go/profiles/latest/dns/mgmt/dns",
+    "github.com/Azure/azure-sdk-for-go/profiles/latest/resources/mgmt/resources",
     "github.com/Azure/azure-sdk-for-go/profiles/latest/resources/mgmt/subscriptions",
     "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2018-10-01/compute",
     "github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac",

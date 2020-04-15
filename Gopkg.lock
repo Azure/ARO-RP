@@ -18,10 +18,11 @@
   revision = "3a14fb1c4737b3995174c5f4d6d08a348b9b4180"
 
 [[projects]]
-  digest = "1:46ac9b4cbd8bcada2ccf565a928f97dd4d4bff8e3f31580262d87c277b799e0a"
+  digest = "1:19dc0c29c96999771f65e935f640bee2d58445d7b024242f802621866c88812a"
   name = "github.com/Azure/azure-sdk-for-go"
   packages = [
     "profiles/latest/dns/mgmt/dns",
+    "profiles/latest/resources/mgmt/resources",
     "profiles/latest/resources/mgmt/subscriptions",
     "services/compute/mgmt/2018-10-01/compute",
     "services/compute/mgmt/2019-03-01/compute",
@@ -37,6 +38,7 @@
     "services/preview/authorization/mgmt/2018-09-01-preview/authorization",
     "services/preview/monitor/mgmt/2018-03-01/insights",
     "services/privatedns/mgmt/2018-09-01/privatedns",
+    "services/resources/mgmt/2019-05-01/resources",
     "services/resources/mgmt/2019-06-01/subscriptions",
     "services/resources/mgmt/2019-07-01/features",
     "services/storage/mgmt/2019-04-01/storage",
@@ -940,8 +942,8 @@
   revision = "f6563a70e19a12b2f240eaf4e716ef75baf7003e"
 
 [[projects]]
-  branch = "master"
-  digest = "1:fc1dc3a3bf4428fd72498feefbbd27b72f5e36e7aeec209534abeb1d59958b1a"
+  branch = "release-4.3"
+  digest = "1:454f3ebed85be06f8ed32549474df4fb75624319314f222983d4bae6d4daa1cd"
   name = "github.com/openshift/cloud-credential-operator"
   packages = [
     "pkg/apis/cloudcredential/v1",
@@ -949,7 +951,7 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "fa06f17ab6de64c341a4d7bbe58f0cb8265e6f9c"
+  revision = "02be5758f755d9da56cb4b37ae3ea52a9a0c436e"
 
 [[projects]]
   branch = "release-4.3"
@@ -1023,7 +1025,7 @@
 
 [[projects]]
   branch = "release-4.3-azure"
-  digest = "1:31739f170a9c7f52aa432017931ed12153797216981423cbf92f60169f24bc21"
+  digest = "1:5a21bb3a2985d4893a39eab4a7c8c19c0484fe49c4426320964be5ca96384f2c"
   name = "github.com/openshift/installer"
   packages = [
     "data",
@@ -1059,6 +1061,7 @@
     "pkg/asset/manifests/gcp",
     "pkg/asset/manifests/openstack",
     "pkg/asset/manifests/vsphere",
+    "pkg/asset/openshiftinstall",
     "pkg/asset/password",
     "pkg/asset/releaseimage",
     "pkg/asset/rhcos",
@@ -1108,7 +1111,7 @@
     "pkg/version",
   ]
   pruneopts = "T"
-  revision = "453c4e73d49e10dae4472a155f1b6e38a2abf1c9"
+  revision = "693fa39b89731b6f3f7a383a480151ccde57eb8a"
   source = "https://github.com/jim-minter/installer"
 
 [[projects]]
@@ -1562,7 +1565,7 @@
   version = "v1.26.0"
 
 [[projects]]
-  digest = "1:d95ba5ef55d8b2cdb896d1196efd1859b62c64829b1098c8b8cc395dd34fd25c"
+  digest = "1:e1d4c7eb8bf9417cf31234deae63ffaceb08603e82f46ac109047315f23228ff"
   name = "gopkg.in/AlecAivazis/survey.v1"
   packages = [
     ".",
@@ -1570,8 +1573,7 @@
     "terminal",
   ]
   pruneopts = "UT"
-  revision = "e4af3b345125b0903edb492a33a99a23e9eb3487"
-  version = "v1.8.7"
+  revision = "6773bdf39b7fa13e6a40ece7ac2d01e0d469c205"
 
 [[projects]]
   digest = "1:abeb38ade3f32a92943e5be54f55ed6d6e3b6602761d74b4aab4c9dd45c18abd"
@@ -1717,7 +1719,7 @@
 
 [[projects]]
   branch = "origin-4.3-kubernetes-1.16.2"
-  digest = "1:eeecff9055f0018aa0ee3c8b162cae14436bbfdaf7a3922fa171900d88cd5073"
+  digest = "1:121980454af2ecc796d3d5c7bf3a4e52773c5aa6b1d7e7528140f76ab70c2f5f"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
@@ -1809,7 +1811,6 @@
     "plugin/pkg/client/auth/exec",
     "rest",
     "rest/watch",
-    "restmapper",
     "testing",
     "tools/auth",
     "tools/clientcmd",
@@ -1988,6 +1989,7 @@
     "github.com/openshift/installer/pkg/asset/kubeconfig",
     "github.com/openshift/installer/pkg/asset/machines",
     "github.com/openshift/installer/pkg/asset/manifests",
+    "github.com/openshift/installer/pkg/asset/openshiftinstall",
     "github.com/openshift/installer/pkg/asset/password",
     "github.com/openshift/installer/pkg/asset/releaseimage",
     "github.com/openshift/installer/pkg/asset/rhcos",
@@ -2031,7 +2033,6 @@
     "k8s.io/client-go/kubernetes/fake",
     "k8s.io/client-go/kubernetes/typed/core/v1",
     "k8s.io/client-go/rest",
-    "k8s.io/client-go/restmapper",
     "k8s.io/client-go/testing",
     "k8s.io/client-go/tools/clientcmd",
     "k8s.io/client-go/tools/clientcmd/api/v1",

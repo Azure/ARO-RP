@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -28,9 +29,11 @@ import (
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	routeclient "github.com/openshift/client-go/route/clientset/versioned"
 	"github.com/openshift/installer/pkg/asset"
+	"github.com/openshift/installer/pkg/asset/installconfig"
 	assetstore "github.com/openshift/installer/pkg/asset/store"
 	targetassets "github.com/openshift/installer/pkg/asset/targets"
 	destroybootstrap "github.com/openshift/installer/pkg/destroy/bootstrap"
+	"github.com/openshift/installer/pkg/types/baremetal"
 	cov1helpers "github.com/openshift/library-go/pkg/config/clusteroperator/v1helpers"
 )
 
@@ -105,10 +108,15 @@ var (
 					logrus.Fatal("Bootstrap failed to complete: ", err)
 				}
 
-				logrus.Info("Destroying the bootstrap resources...")
-				err = destroybootstrap.Destroy(rootOpts.dir)
-				if err != nil {
-					logrus.Fatal(err)
+				if oi, ok := os.LookupEnv("OPENSHIFT_INSTALL_PRESERVE_BOOTSTRAP"); ok && oi != "" {
+					logrus.Warn("OPENSHIFT_INSTALL_PRESERVE_BOOTSTRAP is set, not destroying bootstrap resources. " +
+						"Warning: this should only be used for debugging purposes, and poses a risk to cluster stability.")
+				} else {
+					logrus.Info("Destroying the bootstrap resources...")
+					err = destroybootstrap.Destroy(rootOpts.dir)
+					if err != nil {
+						logrus.Fatal(err)
+					}
 				}
 
 				err = waitForInstallComplete(ctx, config, rootOpts.dir)
@@ -324,6 +332,17 @@ func waitForBootstrapConfigMap(ctx context.Context, client *kubernetes.Clientset
 // that the cluster has been initialized.
 func waitForInitializedCluster(ctx context.Context, config *rest.Config) error {
 	timeout := 30 * time.Minute
+
+	// Wait longer for baremetal, due to length of time it takes to boot
+	if assetStore, err := assetstore.NewStore(rootOpts.dir); err == nil {
+		installConfig := &installconfig.InstallConfig{}
+		if err := assetStore.Fetch(installConfig); err == nil {
+			if installConfig.Config.Platform.Name() == baremetal.Name {
+				timeout = 60 * time.Minute
+			}
+		}
+	}
+
 	logrus.Infof("Waiting up to %v for the cluster at %s to initialize...", timeout, config.Host)
 	cc, err := configclient.NewForConfig(config)
 	if err != nil {

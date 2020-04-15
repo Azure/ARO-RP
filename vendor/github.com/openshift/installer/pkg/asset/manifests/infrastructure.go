@@ -149,7 +149,7 @@ func (i *Infrastructure) Generate(dependencies asset.Parents) error {
 	if cloudproviderconfig.ConfigMap != nil {
 		// set the configmap reference.
 		config.Spec.CloudConfig = configv1.ConfigMapFileReference{Name: cloudproviderconfig.ConfigMap.Name, Key: cloudProviderConfigDataKey}
-		i.FileList = append(i.FileList, cloudproviderconfig.File)
+		i.FileList = append(i.FileList, cloudproviderconfig.Files()...)
 	}
 
 	if trustbundleconfig.ConfigMap != nil {
