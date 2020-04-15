@@ -1,5 +1,6 @@
 SHELL = /bin/bash
 COMMIT = $(shell git rev-parse --short HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
+DEV_VNET = dev-vnet
 
 aro: generate
 	go build -ldflags "-X main.gitCommit=$(COMMIT)" ./cmd/aro
@@ -124,4 +125,73 @@ test-python: generate pyenv${PYTHON_VERSION}
 admin.kubeconfig:
 	hack/get-admin-kubeconfig.sh /subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}/providers/Microsoft.RedHatOpenShift/openShiftClusters/${CLUSTER} >admin.kubeconfig
 
-.PHONY: aro az clean client generate image-aro proxy secrets secrets-update test-go test-python image-fluentbit publish-image-proxy publish-image-aro publish-image-fluentbit publish-image-proxy admin.kubeconfig
+check-dev-env:
+ifeq ($(AZURE_SUBSCRIPTION_ID),)
+ifeq ($(CLUSTER),)
+ifeq ($(LOCATION),)
+ifeq ($(PULL_SECRET),)
+	@echo "Need to source your env file first"
+	exit 1
+endif
+endif
+endif
+endif
+ifneq ("$(RP_MODE)", "development")
+	@echo "To run in development mode please set RP_MODE=development"
+	exit 1
+endif
+
+dev-rp: check-dev-env
+	go run -ldflags "-X main.gitCommit=$(COMMIT)" ./cmd/aro rp
+
+define SUBNET_ensure
+	az network vnet subnet list \
+		--resource-group "$(RESOURCEGROUP)" \
+		--vnet-name "$(DEV_VNET)" \
+		--query "[?name=='$(CLUSTER)-$(subnet)']" \
+		--output tsv | grep -q . || \
+	az network vnet subnet create \
+		--resource-group "$(RESOURCEGROUP)" \
+		--vnet-name "$(DEV_VNET)" \
+		--name "$(CLUSTER)-$(subnet)" \
+		--address-prefixes 10.$$(( $(shell echo $$RANDOM) & 127 )).$$(( $(shell echo $$RANDOM) & 255 )).0/24 \
+		--service-endpoints Microsoft.ContainerRegistry \
+		--output none;
+endef
+
+dev-subnet: check-dev-env
+	@echo "Ensuring subnets exist"
+	@$(foreach subnet,master worker,$(call SUBNET_ensure,$(subnet)))
+	@echo "Disabling PrivateLinkServiceNetworkPolicies on master subnet"
+	@az network vnet subnet update \
+		--resource-group "$(RESOURCEGROUP)" \
+		--vnet-name "$(DEV_VNET)" \
+		--name "$(CLUSTER)-master" \
+		--disable-private-link-service-network-policies true \
+		--output none
+	@az network vnet subnet list \
+		--resource-group "$(RESOURCEGROUP)" \
+		--vnet-name "$(DEV_VNET)" \
+		--query "[?starts_with(name, '$(CLUSTER)-')]" \
+		--output table
+
+dev-cluster: check-dev-env
+	@echo "Creating $(CLUSTER) cluster"
+	@az aro create \
+		--resource-group "$(RESOURCEGROUP)" \
+		--name "$(CLUSTER)" \
+		--vnet "$(DEV_VNET)" \
+		--master-subnet "$(CLUSTER)-master" \
+		--worker-subnet "$(CLUSTER)-worker" \
+		--cluster-resource-group "aro-$(CLUSTER)" \
+		--domain "$(CLUSTER)" \
+		--pull-secret '$(PULL_SECRET)' \
+		--no-wait \
+		--output none
+	@sleep 2
+	@az aro list \
+		--resource-group "$(RESOURCEGROUP)" \
+		--query "[?name=='$(CLUSTER)']" \
+		--output table
+
+.PHONY: aro az clean client generate image-aro proxy secrets secrets-update test-go test-python image-fluentbit publish-image-proxy publish-image-aro publish-image-fluentbit publish-image-proxy admin.kubeconfig check-dev-env dev-rp dev-subnet dev-cluster
