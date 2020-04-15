@@ -7,13 +7,13 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"net/url"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
@@ -33,12 +33,12 @@ func (f *frontend) getAdminKubernetesObjects(w http.ResponseWriter, r *http.Requ
 func (f *frontend) _getAdminKubernetesObjects(ctx context.Context, r *http.Request) ([]byte, error) {
 	vars := mux.Vars(r)
 
-	err := validateAdminKubernetesObjects(r.URL.Query(), r.Method)
+	kind, namespace, name := r.URL.Query().Get("kind"), r.URL.Query().Get("namespace"), r.URL.Query().Get("name")
+
+	err := validateAdminKubernetesObjects(r.Method, kind, namespace, name)
 	if err != nil {
 		return nil, err
 	}
-
-	kind, namespace, name := r.URL.Query().Get("kind"), r.URL.Query().Get("namespace"), r.URL.Query().Get("name")
 
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 
@@ -69,12 +69,12 @@ func (f *frontend) deleteAdminKubernetesObjects(w http.ResponseWriter, r *http.R
 func (f *frontend) _deleteAdminKubernetesObjects(ctx context.Context, r *http.Request) error {
 	vars := mux.Vars(r)
 
-	err := validateAdminKubernetesObjects(r.URL.Query(), r.Method)
+	kind, namespace, name := r.URL.Query().Get("kind"), r.URL.Query().Get("namespace"), r.URL.Query().Get("name")
+
+	err := validateAdminKubernetesObjectsNonCustomer(r.Method, kind, namespace, name)
 	if err != nil {
 		return err
 	}
-
-	kind, namespace, name := r.URL.Query().Get("kind"), r.URL.Query().Get("namespace"), r.URL.Query().Get("name")
 
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 
@@ -87,35 +87,6 @@ func (f *frontend) _deleteAdminKubernetesObjects(ctx context.Context, r *http.Re
 	}
 
 	return f.kubeActions.Delete(ctx, doc.OpenShiftCluster, kind, namespace, name)
-}
-
-// rxKubernetesString is weaker than Kubernetes validation, but strong enough to
-// prevent mischief
-var rxKubernetesString = regexp.MustCompile(`(?i)^[-a-z0-9]{0,255}$`)
-
-func validateAdminKubernetesObjects(q url.Values, method string) error {
-	kind := q.Get("kind")
-	if kind == "" ||
-		!rxKubernetesString.MatchString(kind) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided kind '%s' is invalid.", kind)
-	}
-	if strings.EqualFold(kind, "secret") {
-		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Access to secrets is forbidden.")
-	}
-
-	namespace := q.Get("namespace")
-	if (method == http.MethodDelete && namespace == "") ||
-		!rxKubernetesString.MatchString(namespace) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided namespace '%s' is invalid.", namespace)
-	}
-
-	name := q.Get("name")
-	if (method == http.MethodDelete && name == "") ||
-		!rxKubernetesString.MatchString(name) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided name '%s' is invalid.", name)
-	}
-
-	return nil
 }
 
 func (f *frontend) postAdminKubernetesObjects(w http.ResponseWriter, r *http.Request) {
@@ -131,7 +102,7 @@ func (f *frontend) postAdminKubernetesObjects(w http.ResponseWriter, r *http.Req
 
 	err := f._postAdminKubernetesObjects(ctx, r)
 
-	reply(log, w, nil, nil, err)
+	adminReply(log, w, nil, nil, err)
 }
 
 func (f *frontend) _postAdminKubernetesObjects(ctx context.Context, r *http.Request) error {
@@ -148,5 +119,53 @@ func (f *frontend) _postAdminKubernetesObjects(ctx context.Context, r *http.Requ
 		return err
 	}
 
-	return f.kubeActions.CreateOrUpdate(ctx, doc.OpenShiftCluster, body)
+	obj := &unstructured.Unstructured{}
+	err = obj.UnmarshalJSON(body)
+	if err != nil {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
+	}
+
+	err = validateAdminKubernetesObjectsNonCustomer(r.Method, obj.GroupVersionKind().GroupKind().String(), obj.GetNamespace(), obj.GetName())
+	if err != nil {
+		return err
+	}
+
+	return f.kubeActions.CreateOrUpdate(ctx, doc.OpenShiftCluster, obj)
+}
+
+// rxKubernetesString is weaker than Kubernetes validation, but strong enough to
+// prevent mischief
+var rxKubernetesString = regexp.MustCompile(`(?i)^[-a-z0-9]{0,255}$`)
+
+func validateAdminKubernetesObjectsNonCustomer(method, kind, namespace, name string) error {
+	if namespace != "" &&
+		namespace != "default" &&
+		namespace != "openshift" &&
+		!strings.HasPrefix(string(namespace), "kube-") &&
+		!strings.HasPrefix(string(namespace), "openshift-") {
+		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Access to the provided namespace '%s' is forbidden.", namespace)
+	}
+
+	return validateAdminKubernetesObjects(method, kind, namespace, name)
+}
+
+func validateAdminKubernetesObjects(method, kind, namespace, name string) error {
+	if kind == "" ||
+		!rxKubernetesString.MatchString(kind) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided kind '%s' is invalid.", kind)
+	}
+	if strings.EqualFold(kind, "secret") {
+		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Access to secrets is forbidden.")
+	}
+
+	if !rxKubernetesString.MatchString(namespace) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided namespace '%s' is invalid.", namespace)
+	}
+
+	if (method != http.MethodGet && name == "") ||
+		!rxKubernetesString.MatchString(name) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided name '%s' is invalid.", name)
+	}
+
+	return nil
 }

@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/google/go-cmp/cmp"
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	"github.com/sirupsen/logrus"
@@ -31,7 +30,7 @@ import (
 type Interface interface {
 	Get(ctx context.Context, oc *api.OpenShiftCluster, kind, namespace, name string) ([]byte, error)
 	List(ctx context.Context, oc *api.OpenShiftCluster, kind, namespace string) ([]byte, error)
-	CreateOrUpdate(ctx context.Context, oc *api.OpenShiftCluster, body []byte) error
+	CreateOrUpdate(ctx context.Context, oc *api.OpenShiftCluster, obj *unstructured.Unstructured) error
 	Delete(ctx context.Context, oc *api.OpenShiftCluster, kind, namespace, name string) error
 	ClusterUpgrade(ctx context.Context, oc *api.OpenShiftCluster) error
 	MustGather(ctx context.Context, oc *api.OpenShiftCluster, w io.Writer) error
@@ -149,6 +148,7 @@ func (ka *kubeactions) List(ctx context.Context, oc *api.OpenShiftCluster, kind,
 	}
 
 	gvrs := ka.findGVR(grs, kind)
+
 	if len(gvrs) == 0 {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The kind '%s' was not found.", kind)
 	}
@@ -167,59 +167,12 @@ func (ka *kubeactions) List(ctx context.Context, oc *api.OpenShiftCluster, kind,
 	return ul.MarshalJSON()
 }
 
-func printDiff(log *logrus.Entry, existing, o *unstructured.Unstructured) {
-	if diff := cmp.Diff(*existing, *o); diff != "" {
-		log.Info(diff)
-	}
-}
+func (ka *kubeactions) CreateOrUpdate(ctx context.Context, oc *api.OpenShiftCluster, obj *unstructured.Unstructured) error {
+	// TODO log changes
 
-func (ka *kubeactions) createOrUpdateOne(ctx context.Context, dyn dynamic.Interface, grs []*restmapper.APIGroupResources, un *unstructured.Unstructured) error {
-	if strings.EqualFold(un.GetKind(), "secret") {
-		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Access to secrets is forbidden.")
-	}
+	namespace := obj.GetNamespace()
+	kind := obj.GroupVersionKind().GroupKind().String()
 
-	gvrs := ka.findGVR(grs, un.GetKind())
-	if len(gvrs) == 0 {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The kind '%s' was not found.", un.GetKind())
-	}
-	if len(gvrs) > 1 {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The kind '%s' matched multiple GroupKinds.", un.GetKind())
-	}
-	gvr := gvrs[0]
-
-	_, err := dyn.Resource(*gvr).Namespace(un.GetNamespace()).Get(un.GetName(), metav1.GetOptions{})
-	if errors.IsNotFound(err) {
-		_, err = dyn.Resource(*gvr).Namespace(un.GetNamespace()).Create(un, metav1.CreateOptions{})
-		if err != nil {
-			return err
-		}
-		// TODO how to log the changes made : printDiff(ka.log, before, after)
-		return nil
-	}
-
-	_, err = dyn.Resource(*gvr).Namespace(un.GetNamespace()).Update(un, metav1.UpdateOptions{})
-	if err != nil {
-		return err
-	}
-	// TODO how to log the changes made : printDiff(ka.log, before, after)
-	return nil
-}
-
-func (ka *kubeactions) CreateOrUpdate(ctx context.Context, oc *api.OpenShiftCluster, body []byte) error {
-	dyn, grs, err := ka.getClient(oc)
-	if err != nil {
-		return err
-	}
-
-	obj := &unstructured.Unstructured{}
-	err = obj.UnmarshalJSON(body)
-	if err != nil {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidRequestContent, "", "The request content was invalid and could not be deserialized: %q.", err)
-	}
-	return ka.createOrUpdateOne(ctx, dyn, grs, obj)
-}
-
-func (ka *kubeactions) Delete(ctx context.Context, oc *api.OpenShiftCluster, kind, namespace, name string) error {
 	dyn, grs, err := ka.getClient(oc)
 	if err != nil {
 		return err
@@ -237,7 +190,35 @@ func (ka *kubeactions) Delete(ctx context.Context, oc *api.OpenShiftCluster, kin
 
 	gvr := gvrs[0]
 
-	// TODO log the deletion
+	_, err = dyn.Resource(*gvr).Namespace(namespace).Create(obj, metav1.CreateOptions{})
+	if !errors.IsAlreadyExists(err) {
+		return err
+	}
+
+	_, err = dyn.Resource(*gvr).Namespace(namespace).Update(obj, metav1.UpdateOptions{})
+	return err
+}
+
+func (ka *kubeactions) Delete(ctx context.Context, oc *api.OpenShiftCluster, kind, namespace, name string) error {
+	// TODO log changes
+
+	dyn, grs, err := ka.getClient(oc)
+	if err != nil {
+		return err
+	}
+
+	gvrs := ka.findGVR(grs, kind)
+
+	if len(gvrs) == 0 {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The kind '%s' was not found.", kind)
+	}
+
+	if len(gvrs) > 1 {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The kind '%s' matched multiple GroupKinds.", kind)
+	}
+
+	gvr := gvrs[0]
+
 	return dyn.Resource(*gvr).Namespace(namespace).Delete(name, &metav1.DeleteOptions{})
 }
 

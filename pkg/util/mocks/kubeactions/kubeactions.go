@@ -10,6 +10,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	api "github.com/Azure/ARO-RP/pkg/api"
 )
@@ -52,7 +53,7 @@ func (mr *MockInterfaceMockRecorder) ClusterUpgrade(arg0, arg1 interface{}) *gom
 }
 
 // CreateOrUpdate mocks base method
-func (m *MockInterface) CreateOrUpdate(arg0 context.Context, arg1 *api.OpenShiftCluster, arg2 []byte) error {
+func (m *MockInterface) CreateOrUpdate(arg0 context.Context, arg1 *api.OpenShiftCluster, arg2 *unstructured.Unstructured) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateOrUpdate", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)

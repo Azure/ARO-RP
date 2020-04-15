@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"strings"
 	"testing"
 
@@ -81,7 +80,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			name:         "cluster exist in db - get",
 			resourceID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
 			objKind:      "ConfigMap",
-			objNamespace: "projX",
+			objNamespace: "openshift-project",
 			objName:      "config",
 			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, kactions *mock_kubeactions.MockInterface) {
 				clusterDoc := &api.OpenShiftClusterDocument{
@@ -89,9 +88,6 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 						ID:   "fakeClusterID",
 						Name: "resourceName",
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-						Properties: api.OpenShiftClusterProperties{
-							AROServiceKubeconfig: api.SecureBytes(""),
-						},
 					},
 				}
 
@@ -112,16 +108,13 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			name:         "cluster exist in db - list",
 			resourceID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
 			objKind:      "ConfigMap",
-			objNamespace: "projX",
+			objNamespace: "openshift-project",
 			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, kactions *mock_kubeactions.MockInterface) {
 				clusterDoc := &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID:   "fakeClusterID",
 						Name: "resourceName",
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-						Properties: api.OpenShiftClusterProperties{
-							AROServiceKubeconfig: api.SecureBytes(""),
-						},
 					},
 				}
 
@@ -141,8 +134,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			method:       http.MethodGet,
 			name:         "no kind provided",
 			resourceID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-			objKind:      "",
-			objNamespace: "projX",
+			objNamespace: "openshift-project",
 			objName:      "config",
 			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, kactions *mock_kubeactions.MockInterface) {
 			},
@@ -154,7 +146,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			name:         "secret requested",
 			resourceID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
 			objKind:      "Secret",
-			objNamespace: "projX",
+			objNamespace: "openshift-project",
 			objName:      "config",
 			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, kactions *mock_kubeactions.MockInterface) {
 			},
@@ -166,7 +158,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			name:         "cluster exist in db",
 			resourceID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
 			objKind:      "ConfigMap",
-			objNamespace: "projX",
+			objNamespace: "openshift-project",
 			objName:      "config",
 			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, kactions *mock_kubeactions.MockInterface) {
 				clusterDoc := &api.OpenShiftClusterDocument{
@@ -174,9 +166,6 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 						ID:   "fakeClusterID",
 						Name: "resourceName",
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-						Properties: api.OpenShiftClusterProperties{
-							AROServiceKubeconfig: api.SecureBytes(""),
-						},
 					},
 				}
 
@@ -193,8 +182,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			method:       http.MethodDelete,
 			name:         "no kind provided",
 			resourceID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-			objKind:      "",
-			objNamespace: "projX",
+			objNamespace: "openshift-project",
 			objName:      "config",
 			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, kactions *mock_kubeactions.MockInterface) {
 			},
@@ -206,8 +194,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			name:         "no name provided",
 			resourceID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
 			objKind:      "this",
-			objNamespace: "projX",
-			objName:      "",
+			objNamespace: "openshift-project",
 			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, kactions *mock_kubeactions.MockInterface) {
 			},
 			wantStatusCode: http.StatusBadRequest,
@@ -215,22 +202,10 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 		},
 		{
 			method:       http.MethodDelete,
-			name:         "no namespace provided",
-			resourceID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-			objKind:      "this",
-			objNamespace: "",
-			objName:      "config",
-			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, kactions *mock_kubeactions.MockInterface) {
-			},
-			wantStatusCode: http.StatusBadRequest,
-			wantError:      "400: InvalidParameter: : The provided namespace '' is invalid.",
-		},
-		{
-			method:       http.MethodDelete,
 			name:         "secret requested",
 			resourceID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
 			objKind:      "Secret",
-			objNamespace: "projX",
+			objNamespace: "openshift-project",
 			objName:      "config",
 			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, kactions *mock_kubeactions.MockInterface) {
 			},
@@ -308,73 +283,108 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 	}
 }
 
-func TestValidateAdminKubernetesObjects(t *testing.T) {
-	valid := func() url.Values {
-		return url.Values{
-			"kind":      []string{"Valid-kind"},
-			"namespace": []string{"Valid-namespace"},
-			"name":      []string{"Valid-NAME-01"},
-		}
-	}
+func TestValidateAdminKubernetesObjectsNonCustomer(t *testing.T) {
 	longName := strings.Repeat("x", 256)
 
 	for _, tt := range []struct {
-		name    string
-		modify  func(url.Values)
-		wantErr string
-		method  string
+		test      string
+		method    string
+		kind      string
+		namespace string
+		name      string
+		wantErr   string
 	}{
 		{
-			name: "valid",
+			test:      "valid openshift-ns namespace",
+			kind:      "Valid-kind",
+			namespace: "openshift-ns",
+			name:      "Valid-NAME-01",
 		},
 		{
-			name:    "invalid kind",
-			modify:  func(q url.Values) { q.Set("kind", "$") },
-			wantErr: "400: InvalidParameter: : The provided kind '$' is invalid.",
+			test:      "valid openshift namespace",
+			kind:      "Valid-kind",
+			namespace: "openshift",
+			name:      "Valid-NAME-01",
 		},
 		{
-			name:    "forbidden kind",
-			modify:  func(q url.Values) { q.Set("kind", "Secret") },
-			wantErr: "403: Forbidden: : Access to secrets is forbidden.",
+			test:      "valid kube-ns namespace",
+			kind:      "Valid-kind",
+			namespace: "kube-ns",
+			name:      "Valid-NAME-01",
 		},
 		{
-			name:    "empty kind",
-			modify:  func(q url.Values) { delete(q, "kind") },
-			wantErr: "400: InvalidParameter: : The provided kind '' is invalid.",
+			test:      "valid default namespace",
+			kind:      "Valid-kind",
+			namespace: "default",
+			name:      "Valid-NAME-01",
 		},
 		{
-			name:    "invalid namespace",
-			modify:  func(q url.Values) { q.Set("namespace", "/") },
-			wantErr: "400: InvalidParameter: : The provided namespace '/' is invalid.",
+			test: "valid empty namespace",
+			kind: "Valid-kind",
+			name: "Valid-NAME-01",
 		},
 		{
-			name:    "invalid name",
-			modify:  func(q url.Values) { q.Set("name", longName) },
-			wantErr: "400: InvalidParameter: : The provided name '" + longName + "' is invalid.",
+			test:      "invalid customer namespace",
+			kind:      "Valid-kind",
+			namespace: "customer",
+			name:      "Valid-NAME-01",
+			wantErr:   "403: Forbidden: : Access to the provided namespace 'customer' is forbidden.",
 		},
 		{
-			name:    "delete: empty name",
-			modify:  func(q url.Values) { delete(q, "name") },
-			method:  http.MethodDelete,
-			wantErr: "400: InvalidParameter: : The provided name '' is invalid.",
+			test:      "invalid kind",
+			kind:      "$",
+			namespace: "openshift-ns",
+			name:      "Valid-NAME-01",
+			wantErr:   "400: InvalidParameter: : The provided kind '$' is invalid.",
 		},
 		{
-			name:    "delete: empty namespace",
-			modify:  func(q url.Values) { delete(q, "namespace") },
-			method:  http.MethodDelete,
-			wantErr: "400: InvalidParameter: : The provided namespace '' is invalid.",
+			test:      "forbidden kind",
+			kind:      "Secret",
+			namespace: "openshift-ns",
+			name:      "Valid-NAME-01",
+			wantErr:   "403: Forbidden: : Access to secrets is forbidden.",
+		},
+		{
+			test:      "empty kind",
+			namespace: "openshift-ns",
+			name:      "Valid-NAME-01",
+			wantErr:   "400: InvalidParameter: : The provided kind '' is invalid.",
+		},
+		{
+			test:      "invalid namespace",
+			kind:      "Valid-kind",
+			namespace: "openshift-/",
+			name:      "Valid-NAME-01",
+			wantErr:   "400: InvalidParameter: : The provided namespace 'openshift-/' is invalid.",
+		},
+		{
+			test:      "invalid name",
+			kind:      "Valid-kind",
+			namespace: "openshift-ns",
+			name:      longName,
+			wantErr:   "400: InvalidParameter: : The provided name '" + longName + "' is invalid.",
+		},
+		{
+			test:      "post: empty name",
+			method:    http.MethodPost,
+			kind:      "Valid-kind",
+			namespace: "openshift-ns",
+			wantErr:   "400: InvalidParameter: : The provided name '' is invalid.",
+		},
+		{
+			test:      "delete: empty name",
+			method:    http.MethodDelete,
+			kind:      "Valid-kind",
+			namespace: "openshift-ns",
+			wantErr:   "400: InvalidParameter: : The provided name '' is invalid.",
 		},
 	} {
-		t.Run(tt.name, func(t *testing.T) {
-			q := valid()
-			if tt.modify != nil {
-				tt.modify(q)
-			}
+		t.Run(tt.test, func(t *testing.T) {
 			if tt.method == "" {
 				tt.method = http.MethodGet
 			}
 
-			err := validateAdminKubernetesObjects(q, tt.method)
+			err := validateAdminKubernetesObjectsNonCustomer(tt.method, tt.kind, tt.namespace, tt.name)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
@@ -427,27 +437,48 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 		{
 			name:       "basic coverage",
 			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-			objInBody:  &unstructured.Unstructured{},
+			objInBody: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": "ConfigMap",
+					"metadata": map[string]interface{}{
+						"namespace": "openshift-azure-logging",
+						"name":      "config",
+					},
+				},
+			},
 			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, kactions *mock_kubeactions.MockInterface) {
 				clusterDoc := &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID:   "fakeClusterID",
 						Name: "resourceName",
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-						Properties: api.OpenShiftClusterProperties{
-							AROServiceKubeconfig: api.SecureBytes(""),
-						},
 					},
 				}
-				tt.objInBody.SetKind("ConfigMap")
-				tt.objInBody.SetName("config")
-				tt.objInBody.SetNamespace("openshift-azure-logging")
-				b, _ := tt.objInBody.MarshalJSON()
-
 				openshiftClusters.EXPECT().Get(gomock.Any(), strings.ToLower(tt.resourceID)).Return(clusterDoc, nil)
-				kactions.EXPECT().CreateOrUpdate(gomock.Any(), clusterDoc.OpenShiftCluster, b).Return(nil)
+				kactions.EXPECT().CreateOrUpdate(gomock.Any(), clusterDoc.OpenShiftCluster, tt.objInBody).Return(nil)
 			},
 			wantStatusCode: http.StatusOK,
+		},
+		{
+			name:       "secret requested",
+			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
+			objInBody: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind": "Secret",
+				},
+			},
+			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, kactions *mock_kubeactions.MockInterface) {
+				clusterDoc := &api.OpenShiftClusterDocument{
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   "fakeClusterID",
+						Name: "resourceName",
+						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+					},
+				}
+				openshiftClusters.EXPECT().Get(gomock.Any(), strings.ToLower(tt.resourceID)).Return(clusterDoc, nil)
+			},
+			wantStatusCode: http.StatusForbidden,
+			wantError:      "403: Forbidden: : Access to secrets is forbidden.",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
