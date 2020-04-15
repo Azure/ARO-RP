@@ -15,7 +15,7 @@ CONTRIBUTOR = 'b24988ac-6180-42a0-ab88-20f7382dd24c'
 DEVELOPMENT_CONTRIBUTOR = 'f3fe7bc1-0ef9-4681-a68c-c1fa285d6128'
 
 
-def assign_contributor_to_vnet(cli_ctx, vnet, object_id):
+def assign_contributor_to_vnet(cli_ctx, vnet, object_id, label):
     client = get_mgmt_service_client(cli_ctx, ResourceType.MGMT_AUTHORIZATION)
 
     RoleAssignmentCreateParameters = get_sdk(cli_ctx, ResourceType.MGMT_AUTHORIZATION,
@@ -34,7 +34,11 @@ def assign_contributor_to_vnet(cli_ctx, vnet, object_id):
                 assignment.principal_id.lower() == object_id.lower():
             return
 
-    client.role_assignments.create(vnet, uuid.uuid4(), RoleAssignmentCreateParameters(
+    # use object_id as a namespace and vnet and label as a salt for generating UUID to
+    # make it stable across calls
+    role_uuid = uuid.uuid5(uuid.UUID(object_id), ','.join(vnet + label))
+
+    client.role_assignments.create(vnet, role_uuid, RoleAssignmentCreateParameters(
         role_definition_id=role_definition_id,
         principal_id=object_id,
         principal_type='ServicePrincipal',
