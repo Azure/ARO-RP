@@ -592,7 +592,8 @@ func (g *generator) actionGroup(name string, shortName string) *arm.Resource {
 	}
 }
 
-func (g *generator) lbAlert() *arm.Resource {
+// lbAlert generates an alert resource for the rp-lb healthprobe metric
+func (g *generator) lbAlert(threshold float64, severity int32, name string, evalFreq string, windowSize string, metric string) *arm.Resource {
 	return &arm.Resource{
 		Resource: mgmtmonitor.MetricAlertResource{
 			MetricAlertProperties: &mgmtmonitor.MetricAlertProperties{
@@ -602,30 +603,30 @@ func (g *generator) lbAlert() *arm.Resource {
 					},
 				},
 				Enabled:             to.BoolPtr(true),
-				EvaluationFrequency: to.StringPtr("PT5M"), //every 5min
-				Severity:            to.Int32Ptr(4),
+				EvaluationFrequency: to.StringPtr(evalFreq),
+				Severity:            to.Int32Ptr(severity),
 				Scopes: &[]string{
 					"[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]",
 				},
-				WindowSize:         to.StringPtr("PT1H"), //15min
+				WindowSize:         to.StringPtr(windowSize),
 				TargetResourceType: to.StringPtr("Microsoft.Network/loadBalancers"),
 				AutoMitigate:       to.BoolPtr(true),
 				Criteria: mgmtmonitor.MetricAlertSingleResourceMultipleMetricCriteria{
 					AllOf: &[]mgmtmonitor.MetricCriteria{
 						{
 							CriterionType:   mgmtmonitor.CriterionTypeStaticThresholdCriterion,
-							MetricName:      to.StringPtr("DipAvailability"),
+							MetricName:      to.StringPtr(metric),
 							MetricNamespace: to.StringPtr("microsoft.network/loadBalancers"),
-							Name:            to.StringPtr("HealthProbeBelow99"),
+							Name:            to.StringPtr("HealthProbeCheck"),
 							Operator:        mgmtmonitor.LessThan,
-							Threshold:       to.Float64Ptr(99),
+							Threshold:       to.Float64Ptr(threshold),
 							TimeAggregation: mgmtmonitor.Average,
 						},
 					},
 					OdataType: mgmtmonitor.OdataTypeMicrosoftAzureMonitorSingleResourceMultipleMetricCriteria,
 				},
 			},
-			Name:     to.StringPtr("rp-availability-alert"),
+			Name:     to.StringPtr(name),
 			Type:     to.StringPtr("Microsoft.Insights/metricAlerts"),
 			Location: to.StringPtr("global"),
 		},
