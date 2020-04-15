@@ -58,7 +58,11 @@ func TestGraphRoundTrip(t *testing.T) {
 			SSHKey:     sshkey.Type() + " " + base64.StdEncoding.EncodeToString(sshkey.Marshal()),
 			BaseDomain: "dummy",
 			Networking: &types.Networking{
-				MachineCIDR: ipnet.MustParseCIDR("10.0.0.0/16"),
+				MachineNetwork: []types.MachineNetworkEntry{
+					{
+						CIDR: *ipnet.MustParseCIDR("10.0.0.0/16"),
+					},
+				},
 				NetworkType: "OpenShiftSDN",
 				ClusterNetwork: []types.ClusterNetworkEntry{
 					{
@@ -74,12 +78,14 @@ func TestGraphRoundTrip(t *testing.T) {
 				Name:           "master",
 				Replicas:       to.Int64Ptr(3),
 				Hyperthreading: "Enabled",
+				Architecture:   types.ArchitectureAMD64,
 			},
 			Compute: []types.MachinePool{
 				{
 					Name:           "worker",
 					Replicas:       to.Int64Ptr(3),
 					Hyperthreading: "Enabled",
+					Architecture:   types.ArchitectureAMD64,
 				},
 			},
 			Platform: types.Platform{

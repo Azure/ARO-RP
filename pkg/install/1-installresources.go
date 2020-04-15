@@ -174,7 +174,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 					PrivateLinkServiceProperties: &mgmtnetwork.PrivateLinkServiceProperties{
 						LoadBalancerFrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
 							{
-								ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '" + infraID + "-internal-lb', 'internal-lb-ip')]"),
+								ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '" + infraID + "-internal-lb', 'internal-lb-ip-v4')]"),
 							},
 						},
 						IPConfigurations: &[]mgmtnetwork.PrivateLinkServiceIPConfiguration{
@@ -215,7 +215,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 					PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
 						PublicIPAllocationMethod: mgmtnetwork.Static,
 					},
-					Name:     to.StringPtr(infraID + "-pip"),
+					Name:     to.StringPtr(infraID + "-pip-v4"),
 					Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
 					Location: &installConfig.Config.Azure.Region,
 				},
@@ -236,22 +236,22 @@ func (i *Installer) installResources(ctx context.Context) error {
 										ID: to.StringPtr(i.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 									},
 								},
-								Name: to.StringPtr("internal-lb-ip"),
+								Name: to.StringPtr("internal-lb-ip-v4"),
 							},
 						},
 						BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
 							{
-								Name: to.StringPtr(infraID + "-internal-controlplane"),
+								Name: to.StringPtr(infraID + "-internal-controlplane-v4"),
 							},
 						},
 						LoadBalancingRules: &[]mgmtnetwork.LoadBalancingRule{
 							{
 								LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
 									FrontendIPConfiguration: &mgmtnetwork.SubResource{
-										ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '" + infraID + "-internal-lb', 'internal-lb-ip')]"),
+										ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '" + infraID + "-internal-lb', 'internal-lb-ip-v4')]"),
 									},
 									BackendAddressPool: &mgmtnetwork.SubResource{
-										ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '" + infraID + "-internal-lb', '" + infraID + "-internal-controlplane')]"),
+										ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '" + infraID + "-internal-lb', '" + infraID + "-internal-controlplane-v4')]"),
 									},
 									Probe: &mgmtnetwork.SubResource{
 										ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/probes', '" + infraID + "-internal-lb', 'api-internal-probe')]"),
@@ -263,15 +263,15 @@ func (i *Installer) installResources(ctx context.Context) error {
 									IdleTimeoutInMinutes: to.Int32Ptr(30),
 									DisableOutboundSnat:  to.BoolPtr(true),
 								},
-								Name: to.StringPtr("api-internal"),
+								Name: to.StringPtr("api-internal-v4"),
 							},
 							{
 								LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
 									FrontendIPConfiguration: &mgmtnetwork.SubResource{
-										ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '" + infraID + "-internal-lb', 'internal-lb-ip')]"),
+										ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '" + infraID + "-internal-lb', 'internal-lb-ip-v4')]"),
 									},
 									BackendAddressPool: &mgmtnetwork.SubResource{
-										ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '" + infraID + "-internal-lb', '" + infraID + "-internal-controlplane')]"),
+										ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '" + infraID + "-internal-lb', '" + infraID + "-internal-controlplane-v4')]"),
 									},
 									Probe: &mgmtnetwork.SubResource{
 										ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/probes', '" + infraID + "-internal-lb', 'sint-probe')]"),
@@ -282,7 +282,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 									BackendPort:          to.Int32Ptr(22623),
 									IdleTimeoutInMinutes: to.Int32Ptr(30),
 								},
-								Name: to.StringPtr("sint"),
+								Name: to.StringPtr("sint-v4"),
 							},
 						},
 						Probes: &[]mgmtnetwork.Probe{
@@ -320,17 +320,17 @@ func (i *Installer) installResources(ctx context.Context) error {
 								InterfaceIPConfigurationPropertiesFormat: &mgmtnetwork.InterfaceIPConfigurationPropertiesFormat{
 									LoadBalancerBackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
 										{
-											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '" + infraID + "-public-lb', '" + infraID + "-public-lb-control-plane')]"),
+											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '" + infraID + "-public-lb', '" + infraID + "-public-lb-control-plane-v4')]"),
 										},
 										{
-											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '" + infraID + "-internal-lb', '" + infraID + "-internal-controlplane')]"),
+											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '" + infraID + "-internal-lb', '" + infraID + "-internal-controlplane-v4')]"),
 										},
 									},
 									Subnet: &mgmtnetwork.Subnet{
 										ID: to.StringPtr(i.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 									},
 								},
-								Name: to.StringPtr("bootstrap-nic-ip"),
+								Name: to.StringPtr("bootstrap-nic-ip-v4"),
 							},
 						},
 					},
@@ -352,10 +352,10 @@ func (i *Installer) installResources(ctx context.Context) error {
 								InterfaceIPConfigurationPropertiesFormat: &mgmtnetwork.InterfaceIPConfigurationPropertiesFormat{
 									LoadBalancerBackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
 										{
-											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '" + infraID + "-public-lb', '" + infraID + "-public-lb-control-plane')]"),
+											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '" + infraID + "-public-lb', '" + infraID + "-public-lb-control-plane-v4')]"),
 										},
 										{
-											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '" + infraID + "-internal-lb', '" + infraID + "-internal-controlplane')]"),
+											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '" + infraID + "-internal-lb', '" + infraID + "-internal-controlplane-v4')]"),
 										},
 									},
 									Subnet: &mgmtnetwork.Subnet{

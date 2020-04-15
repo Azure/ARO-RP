@@ -14,6 +14,7 @@ import (
 	"github.com/openshift/installer/pkg/asset/kubeconfig"
 	"github.com/openshift/installer/pkg/asset/machines"
 	"github.com/openshift/installer/pkg/asset/manifests"
+	"github.com/openshift/installer/pkg/asset/openshiftinstall"
 	"github.com/openshift/installer/pkg/asset/password"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
 	"github.com/openshift/installer/pkg/asset/rhcos"
@@ -71,6 +72,7 @@ var registeredTypes = map[string]asset.Asset{
 	"*openshift.NetworkCRDs":                                  &openshift.NetworkCRDs{},
 	"*openshift.PrivateClusterOutbound":                       &openshift.PrivateClusterOutbound{},
 	"*openshift.RoleCloudCredsSecretReader":                   &openshift.RoleCloudCredsSecretReader{},
+	"*openshiftinstall.Config":                                &openshiftinstall.Config{},
 	"*password.KubeadminPassword":                             &password.KubeadminPassword{},
 	"*releaseimage.Image":                                     &releaseimage.Image{},
 	"*rhcos.BootstrapImage":                                   new(rhcos.BootstrapImage),

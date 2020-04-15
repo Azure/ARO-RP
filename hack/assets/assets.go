@@ -20,7 +20,7 @@ var allowedPaths = []*regexp.Regexp{
 	regexp.MustCompile(`^/manifests$`),
 	regexp.MustCompile(`^/manifests/bootkube($|/)`),
 	regexp.MustCompile(`^/manifests/openshift($|/)`),
-	regexp.MustCompile(`^/rhcos.json$`),
+	regexp.MustCompile(`^/rhcos-amd64.json$`),
 }
 
 type fileSystem struct {

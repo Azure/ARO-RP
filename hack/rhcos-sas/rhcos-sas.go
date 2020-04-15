@@ -13,6 +13,7 @@ import (
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/openshift/installer/pkg/rhcos"
+	"github.com/openshift/installer/pkg/types"
 
 	_ "github.com/Azure/ARO-RP/pkg/install"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
@@ -55,7 +56,7 @@ func run(ctx context.Context) error {
 	if len(os.Args) == 2 {
 		vhd = os.Args[1]
 	} else {
-		vhd, err = rhcos.VHD(ctx)
+		vhd, err = rhcos.VHD(ctx, types.ArchitectureAMD64)
 		if err != nil {
 			return err
 		}
