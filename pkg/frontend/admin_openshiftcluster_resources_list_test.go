@@ -136,7 +136,7 @@ func TestAdminListResourcesList(t *testing.T) {
 				OpenShiftClusters: openshiftClusters,
 			}, api.APIs, &noop.Noop{}, nil, nil, func(subscriptionID string, authorizer autorest.Authorizer) features.ResourcesClient {
 				return resourcesClient
-			})
+			}, nil)
 
 			if err != nil {
 				t.Fatal(err)

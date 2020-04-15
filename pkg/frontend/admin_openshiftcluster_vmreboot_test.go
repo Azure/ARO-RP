@@ -4,6 +4,7 @@ package frontend
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -14,22 +15,23 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Azure/go-autorest/autorest"
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/frontend/kubeactions"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
+	mockcompute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
-	mock_kubeactions "github.com/Azure/ARO-RP/pkg/util/mocks/kubeactions"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/test/util/listener"
 )
 
-func TestAdminUpdate(t *testing.T) {
+func TestAdminVMReboot(t *testing.T) {
 	mockSubID := "00000000-0000-0000-0000-000000000000"
 	ctx := context.Background()
 
@@ -63,72 +65,72 @@ func TestAdminUpdate(t *testing.T) {
 	type test struct {
 		name           string
 		resourceID     string
-		mocks          func(*test, *mock_database.MockOpenShiftClusters, *mock_kubeactions.MockInterface)
+		vmName         string
+		mocks          func(*test, *mock_database.MockOpenShiftClusters, *mockcompute.MockVirtualMachinesClient)
 		wantStatusCode int
+		wantResponse   func() []byte
 		wantError      string
 	}
 
 	for _, tt := range []*test{
 		{
-			name:       "basic coverage test",
+			name:       "basic coverage",
+			vmName:     "aro-worker-australiasoutheast-7tcq7",
 			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, kactions *mock_kubeactions.MockInterface) {
+			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, vmc *mockcompute.MockVirtualMachinesClient) {
 				clusterDoc := &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:   "fakeClusterID",
-						Name: "resourceName",
-						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 						Properties: api.OpenShiftClusterProperties{
-							AROServiceKubeconfig: api.SecureBytes(""),
+							ClusterProfile: api.ClusterProfile{
+								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
+							},
 						},
 					},
 				}
 
-				openshiftClusters.EXPECT().Get(gomock.Any(), strings.ToLower(tt.resourceID)).Return(clusterDoc, nil)
-				kactions.EXPECT().ClusterUpgrade(gomock.Any(), clusterDoc.OpenShiftCluster).Return(nil)
+				openshiftClusters.EXPECT().Get(gomock.Any(), strings.ToLower(tt.resourceID)).
+					Return(clusterDoc, nil)
+
+				vmc.EXPECT().RestartAndWait(gomock.Any(), "test-cluster", tt.vmName).Return(nil)
 			},
 			wantStatusCode: http.StatusOK,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			defer cli.CloseIdleConnections()
-
 			l := listener.NewListener()
 			defer l.Close()
-			_env := &env.Test{
+			env := &env.Test{
 				L:            l,
 				TestLocation: "eastus",
 				TLSKey:       serverkey,
 				TLSCerts:     servercerts,
 			}
-			_env.SetAdminClientAuthorizer(clientauthorizer.NewOne(clientcerts[0].Raw))
+			env.SetAdminClientAuthorizer(clientauthorizer.NewOne(clientcerts[0].Raw))
 			cli.Transport.(*http.Transport).Dial = l.Dial
 
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			kactions := mock_kubeactions.NewMockInterface(controller)
+			vmClient := mockcompute.NewMockVirtualMachinesClient(controller)
 			openshiftClusters := mock_database.NewMockOpenShiftClusters(controller)
-			tt.mocks(tt, openshiftClusters, kactions)
+			tt.mocks(tt, openshiftClusters, vmClient)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), _env, &database.Database{
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
 				OpenShiftClusters: openshiftClusters,
-			}, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface) kubeactions.Interface {
-				return kactions
-			}, nil, nil)
+			}, api.APIs, &noop.Noop{}, nil, nil, nil, func(subscriptionID string, authorizer autorest.Authorizer) compute.VirtualMachinesClient {
+				return vmClient
+			})
+
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			go f.Run(ctx, nil, nil)
-
-			url := fmt.Sprintf("https://server/admin%s/upgrade", tt.resourceID)
+			url := fmt.Sprintf("https://server/admin%s/vmreboot?vmname=%s", tt.resourceID, tt.vmName)
 			req, err := http.NewRequest(http.MethodPost, url, nil)
 			if err != nil {
 				t.Fatal(err)
-			}
-			req.Header = http.Header{
-				"Content-Type": []string{"application/json"},
 			}
 			resp, err := cli.Do(req)
 			if err != nil {
@@ -145,7 +147,13 @@ func TestAdminUpdate(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			if tt.wantError != "" {
+			if tt.wantError == "" {
+				if tt.wantResponse != nil {
+					if !bytes.Equal(b, tt.wantResponse()) {
+						t.Error(string(b))
+					}
+				}
+			} else {
 				cloudErr := &api.CloudError{StatusCode: resp.StatusCode}
 				err = json.Unmarshal(b, &cloudErr)
 				if err != nil {

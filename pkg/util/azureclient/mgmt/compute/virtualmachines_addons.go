@@ -13,6 +13,16 @@ import (
 type VirtualMachinesClientAddons interface {
 	CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, VMName string, parameters mgmtcompute.VirtualMachine) error
 	DeleteAndWait(ctx context.Context, resourceGroupName string, VMName string) error
+	RestartAndWait(ctx context.Context, resourceGroupName string, VMName string) error
+}
+
+func (c *virtualMachinesClient) RestartAndWait(ctx context.Context, resourceGroupName string, VMName string) error {
+	future, err := c.Restart(ctx, resourceGroupName, VMName)
+	if err != nil {
+		return err
+	}
+
+	return future.WaitForCompletionRef(ctx, c.Client)
 }
 
 func (c *virtualMachinesClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, VMName string, parameters mgmtcompute.VirtualMachine) error {

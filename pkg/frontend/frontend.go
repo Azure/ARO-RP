@@ -27,6 +27,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/frontend/kubeactions"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/metrics"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
@@ -43,6 +44,7 @@ func (err statusCodeError) Error() string {
 
 type kubeActionsFactory func(*logrus.Entry, env.Interface) kubeactions.Interface
 type resourcesClientFactory func(subscriptionID string, authorizer autorest.Authorizer) features.ResourcesClient
+type computeClientFactory func(subscriptionID string, authorizer autorest.Authorizer) compute.VirtualMachinesClient
 
 type frontend struct {
 	baseLog *logrus.Entry
@@ -55,6 +57,7 @@ type frontend struct {
 	ocEnricher             clusterdata.OpenShiftClusterEnricher
 	kubeActionsFactory     kubeActionsFactory
 	resourcesClientFactory resourcesClientFactory
+	computeClientFactory   computeClientFactory
 
 	l net.Listener
 	s *http.Server
@@ -70,7 +73,7 @@ type Runnable interface {
 }
 
 // NewFrontend returns a new runnable frontend
-func NewFrontend(ctx context.Context, baseLog *logrus.Entry, _env env.Interface, db *database.Database, apis map[string]*api.Version, m metrics.Interface, cipher encryption.Cipher, kubeActionsFactory kubeActionsFactory, resourcesClientFactory resourcesClientFactory) (Runnable, error) {
+func NewFrontend(ctx context.Context, baseLog *logrus.Entry, _env env.Interface, db *database.Database, apis map[string]*api.Version, m metrics.Interface, cipher encryption.Cipher, kubeActionsFactory kubeActionsFactory, resourcesClientFactory resourcesClientFactory, computeClientFactory computeClientFactory) (Runnable, error) {
 	f := &frontend{
 		baseLog:                baseLog,
 		env:                    _env,
@@ -80,6 +83,7 @@ func NewFrontend(ctx context.Context, baseLog *logrus.Entry, _env env.Interface,
 		cipher:                 cipher,
 		kubeActionsFactory:     kubeActionsFactory,
 		resourcesClientFactory: resourcesClientFactory,
+		computeClientFactory:   computeClientFactory,
 
 		ocEnricher: clusterdata.NewBestEffortEnricher(baseLog, _env, m),
 
@@ -207,6 +211,12 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 		Subrouter()
 
 	s.Methods(http.MethodPost).HandlerFunc(f.postAdminOpenShiftClusterMustGather).Name("postAdminOpenShiftClusterMustGather")
+
+	s = r.
+		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/vmreboot").
+		Subrouter()
+
+	s.Methods(http.MethodPost).HandlerFunc(f.postAdminOpenShiftClusterVMReboot).Name("postAdminOpenShiftClusterVMReboot")
 
 	s = r.
 		Path("/admin/providers/{resourceProviderNamespace}/{resourceType}").
