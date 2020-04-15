@@ -14,8 +14,7 @@ import (
 )
 
 func validateTerminalProvisioningState(state api.ProvisioningState) error {
-	switch state {
-	case api.ProvisioningStateSucceeded, api.ProvisioningStateFailed:
+	if state.IsTerminal() {
 		return nil
 	}
 
