@@ -19,11 +19,13 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/kubeconfig"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
 	"github.com/openshift/installer/pkg/asset/targets"
-	uuid "github.com/satori/go.uuid"
+	"github.com/openshift/installer/pkg/types"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -40,9 +42,19 @@ func (i *Installer) createDNS(ctx context.Context) error {
 }
 
 func (i *Installer) installStorage(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) error {
-	clusterID := &installconfig.ClusterID{
-		UUID:    uuid.NewV4().String(),
-		InfraID: "aro",
+	clusterID := &installconfig.ClusterID{}
+
+	err := clusterID.Generate(asset.Parents{
+		reflect.TypeOf(installConfig): &installconfig.InstallConfig{
+			Config: &types.InstallConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: i.doc.OpenShiftCluster.Name,
+				},
+			},
+		},
+	})
+	if err != nil {
+		return err
 	}
 
 	g := graph{
@@ -60,6 +72,13 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 		}
 	}
 
+	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		clusterID := g[reflect.TypeOf(&installconfig.ClusterID{})].(*installconfig.ClusterID)
+		doc.OpenShiftCluster.Properties.InfraID = clusterID.InfraID
+		return nil
+	})
+	infraID := i.doc.OpenShiftCluster.Properties.InfraID
+
 	resourceGroup := stringutils.LastTokenByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
 	i.log.Print("creating resource group")
@@ -70,7 +89,7 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 	if _, ok := i.env.(env.Dev); ok {
 		group.ManagedBy = nil
 	}
-	_, err := i.groups.CreateOrUpdate(ctx, resourceGroup, group)
+	_, err = i.groups.CreateOrUpdate(ctx, resourceGroup, group)
 	if err != nil {
 		return err
 	}
@@ -193,7 +212,7 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 							},
 						},
 					},
-					Name:     to.StringPtr("aro-controlplane-nsg"),
+					Name:     to.StringPtr(infraID + "-controlplane-nsg"),
 					Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
 					Location: &installConfig.Config.Azure.Region,
 				},
@@ -201,7 +220,7 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 			},
 			{
 				Resource: &mgmtnetwork.SecurityGroup{
-					Name:     to.StringPtr("aro-node-nsg"),
+					Name:     to.StringPtr(infraID + "-node-nsg"),
 					Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
 					Location: &installConfig.Config.Azure.Region,
 				},

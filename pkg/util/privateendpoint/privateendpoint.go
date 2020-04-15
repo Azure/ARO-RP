@@ -38,6 +38,11 @@ func NewManager(env env.Interface, localFPAuthorizer autorest.Authorizer) Manage
 }
 
 func (m *manager) Create(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
+	infraID := doc.OpenShiftCluster.Properties.InfraID
+	if infraID == "" {
+		infraID = "aro" // TODO: remove after deploy
+	}
+
 	return m.privateendpoints.CreateOrUpdateAndWait(ctx, m.env.ResourceGroup(), prefix+doc.ID, mgmtnetwork.PrivateEndpoint{
 		PrivateEndpointProperties: &mgmtnetwork.PrivateEndpointProperties{
 			Subnet: &mgmtnetwork.Subnet{
@@ -47,7 +52,7 @@ func (m *manager) Create(ctx context.Context, doc *api.OpenShiftClusterDocument)
 				{
 					Name: to.StringPtr("rp-plsconnection"),
 					PrivateLinkServiceConnectionProperties: &mgmtnetwork.PrivateLinkServiceConnectionProperties{
-						PrivateLinkServiceID: to.StringPtr(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID + "/providers/Microsoft.Network/privateLinkServices/aro-pls"),
+						PrivateLinkServiceID: to.StringPtr(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID + "/providers/Microsoft.Network/privateLinkServices/" + infraID + "-pls"),
 					},
 				},
 			},

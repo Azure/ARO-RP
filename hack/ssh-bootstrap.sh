@@ -15,6 +15,6 @@ chmod 0600 id_rsa
 
 RG=$(go run ./hack/db "$1" | jq -r .openShiftCluster.properties.clusterProfile.resourceGroupId | cut -d/ -f5)
 
-IP=$(az network nic show -g "$RG" -n aro-bootstrap-nic --query 'ipConfigurations[0].privateIpAddress' -o tsv)
+IP=$(az network nic list -g "$RG" --query "[?ends_with(name, '-bootstrap-nic')].ipConfigurations[0].privateIpAddress" -o tsv)
 
 ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i id_rsa -l core "$IP"

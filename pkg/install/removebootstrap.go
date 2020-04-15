@@ -13,21 +13,26 @@ import (
 )
 
 func (i *Installer) removeBootstrap(ctx context.Context) error {
+	infraID := i.doc.OpenShiftCluster.Properties.InfraID
+	if infraID == "" {
+		infraID = "aro" // TODO: remove after deploy
+	}
+
 	resourceGroup := stringutils.LastTokenByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	i.log.Print("removing bootstrap vm")
-	err := i.virtualmachines.DeleteAndWait(ctx, resourceGroup, "aro-bootstrap")
+	err := i.virtualmachines.DeleteAndWait(ctx, resourceGroup, infraID+"-bootstrap")
 	if err != nil {
 		return err
 	}
 
 	i.log.Print("removing bootstrap disk")
-	err = i.disks.DeleteAndWait(ctx, resourceGroup, "aro-bootstrap_OSDisk")
+	err = i.disks.DeleteAndWait(ctx, resourceGroup, infraID+"-bootstrap_OSDisk")
 	if err != nil {
 		return err
 	}
 
 	i.log.Print("removing bootstrap nic")
-	return i.interfaces.DeleteAndWait(ctx, resourceGroup, "aro-bootstrap-nic")
+	return i.interfaces.DeleteAndWait(ctx, resourceGroup, infraID+"-bootstrap-nic")
 }
 
 func (i *Installer) removeBootstrapIgnition(ctx context.Context) error {
