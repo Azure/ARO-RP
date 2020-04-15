@@ -82,9 +82,10 @@ func EnrichWithCorrelationData(log *logrus.Entry, correlationData *api.Correlati
 	}
 
 	return log.WithFields(logrus.Fields{
-		"correlation_id":    correlationData.CorrelationID,
-		"client_request_id": correlationData.ClientRequestID,
-		"request_id":        correlationData.RequestID,
+		"correlation_id":        correlationData.CorrelationID,
+		"client_request_id":     correlationData.ClientRequestID,
+		"request_id":            correlationData.RequestID,
+		"client_principal_name": correlationData.ClientPrincipalName,
 	})
 }
 
