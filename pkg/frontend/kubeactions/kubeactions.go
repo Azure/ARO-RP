@@ -12,7 +12,9 @@ import (
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
@@ -28,6 +30,8 @@ import (
 type Interface interface {
 	Get(ctx context.Context, oc *api.OpenShiftCluster, kind, namespace, name string) ([]byte, error)
 	List(ctx context.Context, oc *api.OpenShiftCluster, kind, namespace string) ([]byte, error)
+	CreateOrUpdate(ctx context.Context, oc *api.OpenShiftCluster, obj *unstructured.Unstructured) error
+	Delete(ctx context.Context, oc *api.OpenShiftCluster, kind, namespace, name string) error
 	ClusterUpgrade(ctx context.Context, oc *api.OpenShiftCluster) error
 	MustGather(ctx context.Context, oc *api.OpenShiftCluster, w io.Writer) error
 }
@@ -144,6 +148,7 @@ func (ka *kubeactions) List(ctx context.Context, oc *api.OpenShiftCluster, kind,
 	}
 
 	gvrs := ka.findGVR(grs, kind)
+
 	if len(gvrs) == 0 {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The kind '%s' was not found.", kind)
 	}
@@ -160,6 +165,61 @@ func (ka *kubeactions) List(ctx context.Context, oc *api.OpenShiftCluster, kind,
 	}
 
 	return ul.MarshalJSON()
+}
+
+func (ka *kubeactions) CreateOrUpdate(ctx context.Context, oc *api.OpenShiftCluster, obj *unstructured.Unstructured) error {
+	// TODO log changes
+
+	namespace := obj.GetNamespace()
+	kind := obj.GroupVersionKind().GroupKind().String()
+
+	dyn, grs, err := ka.getClient(oc)
+	if err != nil {
+		return err
+	}
+
+	gvrs := ka.findGVR(grs, kind)
+
+	if len(gvrs) == 0 {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The kind '%s' was not found.", kind)
+	}
+
+	if len(gvrs) > 1 {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The kind '%s' matched multiple GroupKinds.", kind)
+	}
+
+	gvr := gvrs[0]
+
+	_, err = dyn.Resource(*gvr).Namespace(namespace).Create(obj, metav1.CreateOptions{})
+	if !errors.IsAlreadyExists(err) {
+		return err
+	}
+
+	_, err = dyn.Resource(*gvr).Namespace(namespace).Update(obj, metav1.UpdateOptions{})
+	return err
+}
+
+func (ka *kubeactions) Delete(ctx context.Context, oc *api.OpenShiftCluster, kind, namespace, name string) error {
+	// TODO log changes
+
+	dyn, grs, err := ka.getClient(oc)
+	if err != nil {
+		return err
+	}
+
+	gvrs := ka.findGVR(grs, kind)
+
+	if len(gvrs) == 0 {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The kind '%s' was not found.", kind)
+	}
+
+	if len(gvrs) > 1 {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The kind '%s' matched multiple GroupKinds.", kind)
+	}
+
+	gvr := gvrs[0]
+
+	return dyn.Resource(*gvr).Namespace(namespace).Delete(name, &metav1.DeleteOptions{})
 }
 
 // ClusterUpgrade posts the new version and image to the cluster-version-operator
