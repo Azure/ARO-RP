@@ -14,6 +14,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
+	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
@@ -27,6 +28,7 @@ type backend struct {
 	env     env.Interface
 	db      *database.Database
 	m       metrics.Interface
+	billing billing.Manager
 
 	mu       sync.Mutex
 	cond     *sync.Cond
@@ -56,6 +58,12 @@ func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, db *d
 
 	b.ocb = &openShiftClusterBackend{backend: b}
 	b.sb = &subscriptionBackend{backend: b}
+
+	var err error
+	b.billing, err = billing.NewManager(env, db.Billing, db.Subscriptions, log)
+	if err != nil {
+		return nil, err
+	}
 
 	return b, nil
 }
