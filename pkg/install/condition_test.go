@@ -277,6 +277,7 @@ func TestIngressControllerReady(t *testing.T) {
 		observedGeneration  int64
 		availableCondition  operatorv1.ConditionStatus
 		want                bool
+		defaultCertificate  *corev1.LocalObjectReference
 	}{
 		{
 			name: "Can't get ingress controllers for openshift-ingress-operator namespace",
@@ -290,6 +291,9 @@ func TestIngressControllerReady(t *testing.T) {
 			name:                "generation != observedGeneration",
 			controllerName:      "default",
 			controllerNamespace: "openshift-ingress-operator",
+			defaultCertificate: &corev1.LocalObjectReference{
+				Name: "test",
+			},
 		},
 		{
 			name:                "Ingress controller not ready",
@@ -297,6 +301,9 @@ func TestIngressControllerReady(t *testing.T) {
 			controllerNamespace: "openshift-ingress-operator",
 			observedGeneration:  1,
 			availableCondition:  operatorv1.ConditionFalse,
+			defaultCertificate: &corev1.LocalObjectReference{
+				Name: "test",
+			},
 		},
 		{
 			name:                "Ingress controller ready",
@@ -305,6 +312,17 @@ func TestIngressControllerReady(t *testing.T) {
 			observedGeneration:  1,
 			availableCondition:  operatorv1.ConditionTrue,
 			want:                true,
+			defaultCertificate: &corev1.LocalObjectReference{
+				Name: "test",
+			},
+		},
+		{
+			name:                "Ingress controller not ready certificate",
+			controllerName:      "default",
+			controllerNamespace: "openshift-ingress-operator",
+			observedGeneration:  1,
+			availableCondition:  operatorv1.ConditionTrue,
+			want:                false,
 		},
 	} {
 		i := &Installer{
@@ -324,6 +342,9 @@ func TestIngressControllerReady(t *testing.T) {
 									Status: tt.availableCondition,
 								},
 							},
+						},
+						Spec: operatorv1.IngressControllerSpec{
+							DefaultCertificate: tt.defaultCertificate,
 						},
 					},
 				},

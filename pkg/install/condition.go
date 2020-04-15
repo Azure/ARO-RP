@@ -8,6 +8,8 @@ import (
 	operatorv1 "github.com/openshift/api/operator/v1"
 	consoleapi "github.com/openshift/console-operator/pkg/api"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/Azure/ARO-RP/pkg/env"
 )
 
 func (i *Installer) bootstrapConfigMapReady() (bool, error) {
@@ -62,6 +64,11 @@ func (i *Installer) clusterVersionReady() (bool, error) {
 func (i *Installer) ingressControllerReady() (bool, error) {
 	ic, err := i.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Get("default", metav1.GetOptions{})
 	if err == nil && ic.Status.ObservedGeneration == ic.Generation {
+		if _, ok := i.env.(env.Dev); !ok {
+			if ic.Spec.DefaultCertificate == nil {
+				return false, nil
+			}
+		}
 		for _, cond := range ic.Status.Conditions {
 			if cond.Type == operatorv1.OperatorStatusTypeAvailable && cond.Status == operatorv1.ConditionTrue {
 				return true, nil
