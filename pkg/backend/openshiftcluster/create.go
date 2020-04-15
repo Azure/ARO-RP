@@ -97,7 +97,7 @@ func (m *Manager) Create(ctx context.Context) error {
 		}
 
 		if doc.OpenShiftCluster.Properties.StorageSuffix == "" {
-			doc.OpenShiftCluster.Properties.StorageSuffix, err = randomLowerCaseAlphanumericString(5)
+			doc.OpenShiftCluster.Properties.StorageSuffix, err = randomLowerCaseAlphanumericStringWithNoVowels(5)
 			if err != nil {
 				return err
 			}
@@ -325,8 +325,8 @@ func getRHCOSImage(ctx context.Context) (*azuretypes.Image, error) {
 	}, nil
 }
 
-func randomLowerCaseAlphanumericString(n int) (string, error) {
-	return randomString("abcdefghijklmnopqrstuvwxyz0123456789", n)
+func randomLowerCaseAlphanumericStringWithNoVowels(n int) (string, error) {
+	return randomString("bcdfghjklmnpqrstvwxyz0123456789", n)
 }
 
 func randomString(letterBytes string, n int) (string, error) {
