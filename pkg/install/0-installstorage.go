@@ -57,6 +57,8 @@ func (i *Installer) installStorage(ctx context.Context, installConfig *installco
 		return err
 	}
 
+	clusterID.UUID = i.doc.ID
+
 	g := graph{
 		reflect.TypeOf(installConfig): installConfig,
 		reflect.TypeOf(platformCreds): platformCreds,
