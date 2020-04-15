@@ -125,10 +125,6 @@ func (cpc *CloudProviderConfig) Generate(dependencies asset.Parents) error {
 			SubnetName:               subnet,
 			ARO:                      installConfig.Config.Azure.ARO,
 		}
-		if platformCreds.Azure != nil {
-			config.AADClientID = platformCreds.Azure.ClientID
-			config.AADClientSecret = platformCreds.Azure.ClientSecret
-		}
 		azureConfig, err := config.JSON()
 		if err != nil {
 			return errors.Wrap(err, "could not create cloud provider config")
