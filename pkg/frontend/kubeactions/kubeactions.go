@@ -191,12 +191,12 @@ func (ka *kubeactions) CreateOrUpdate(ctx context.Context, oc *api.OpenShiftClus
 
 	gvr := gvrs[0]
 
-	_, err = dyn.Resource(*gvr).Namespace(namespace).Create(obj, metav1.CreateOptions{})
-	if !errors.IsAlreadyExists(err) {
+	_, err = dyn.Resource(*gvr).Namespace(namespace).Update(obj, metav1.UpdateOptions{})
+	if !errors.IsNotFound(err) {
 		return err
 	}
 
-	_, err = dyn.Resource(*gvr).Namespace(namespace).Update(obj, metav1.UpdateOptions{})
+	_, err = dyn.Resource(*gvr).Namespace(namespace).Create(obj, metav1.CreateOptions{})
 	return err
 }
 
