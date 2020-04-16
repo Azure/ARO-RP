@@ -114,7 +114,7 @@
 1. Create your own RP database:
 
    ```bash
-   az group deployment create \
+   az deployment group create \
      -g "$RESOURCEGROUP" \
      -n "databases-development-$USER" \
      --template-file deploy/databases-development.json \
