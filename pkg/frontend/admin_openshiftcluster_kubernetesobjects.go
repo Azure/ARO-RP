@@ -135,7 +135,7 @@ func (f *frontend) _postAdminKubernetesObjects(ctx context.Context, r *http.Requ
 
 // rxKubernetesString is weaker than Kubernetes validation, but strong enough to
 // prevent mischief
-var rxKubernetesString = regexp.MustCompile(`(?i)^[-a-z0-9]{0,255}$`)
+var rxKubernetesString = regexp.MustCompile(`(?i)^[-a-z0-9.]{0,255}$`)
 
 func validateAdminKubernetesObjectsNonCustomer(method, groupKind, namespace, name string) error {
 	if namespace != "" &&
