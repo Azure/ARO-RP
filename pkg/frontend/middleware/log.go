@@ -7,12 +7,15 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/gorilla/mux"
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/admin"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
@@ -51,14 +54,20 @@ func Log(baseLog *logrus.Entry) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			t := time.Now()
 
+			vars := mux.Vars(r)
+
 			r.Body = &logReadCloser{ReadCloser: r.Body}
 			w = &logResponseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 
 			correlationData := &api.CorrelationData{
-				ClientRequestID:     r.Header.Get("X-Ms-Client-Request-Id"),
-				CorrelationID:       r.Header.Get("X-Ms-Correlation-Request-Id"),
-				RequestID:           uuid.NewV4().String(),
-				ClientPrincipalName: r.Header.Get("X-Ms-Client-Principal-Name"),
+				ClientRequestID: r.Header.Get("X-Ms-Client-Request-Id"),
+				CorrelationID:   r.Header.Get("X-Ms-Correlation-Request-Id"),
+				RequestID:       uuid.NewV4().String(),
+			}
+
+			if vars["api-version"] == admin.APIVersion ||
+				strings.HasPrefix(r.URL.Path, "/admin") {
+				correlationData.ClientPrincipalName = r.Header.Get("X-Ms-Client-Principal-Name")
 			}
 
 			w.Header().Set("X-Ms-Request-Id", correlationData.RequestID)
