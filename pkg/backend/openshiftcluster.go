@@ -193,7 +193,8 @@ func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, lo
 					log.Print(backendErr)
 					asyncdoc.AsyncOperation.Error = err.CloudErrorBody
 				} else {
-					log.Error(backendErr)
+					_log := utillog.EnrichWithErrorStackTrace(log, backendErr)
+					_log.Error(backendErr)
 					asyncdoc.AsyncOperation.Error = &api.CloudErrorBody{
 						Code:    api.CloudErrorCodeInternalServerError,
 						Message: "Internal server error.",

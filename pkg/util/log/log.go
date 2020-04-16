@@ -12,6 +12,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/coreos/go-systemd/journal"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -103,6 +104,16 @@ func EnrichWithResourceID(log *logrus.Entry, resourceID string) *logrus.Entry {
 		"resource_group":  r.ResourceGroup,
 		"resource_name":   r.ResourceName,
 	})
+}
+
+// EnrichWithErrorStackTrace sets stacktrace log field if the error has a stacktrace
+func EnrichWithErrorStackTrace(log *logrus.Entry, err error) *logrus.Entry {
+	if err, ok := err.(interface {
+		StackTrace() errors.StackTrace
+	}); ok {
+		return log.WithField("stacktrace", fmt.Sprintf("%v", err.StackTrace()))
+	}
+	return log
 }
 
 func relativeFilePathPrettier(f *runtime.Frame) (string, string) {
