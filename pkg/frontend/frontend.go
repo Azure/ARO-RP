@@ -203,6 +203,12 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 
 	s.Methods(http.MethodPost).HandlerFunc(f.postAdminOpenShiftClusterMustGather).Name("postAdminOpenShiftClusterMustGather")
 
+	s = r.
+		Path("/admin/providers/{resourceProviderNamespace}/{resourceType}").
+		Subrouter()
+
+	s.Methods(http.MethodGet).HandlerFunc(f.getAdminOpenShiftClusters).Name("getAdminOpenShiftClusters")
+
 	// Operations
 	s = r.
 		Path("/providers/{resourceProviderNamespace}/operations").
