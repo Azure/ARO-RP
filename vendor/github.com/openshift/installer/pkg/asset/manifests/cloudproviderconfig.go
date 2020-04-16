@@ -204,6 +204,10 @@ func (cpc *CloudProviderConfig) Load(f asset.FileFetcher) (bool, error) {
 
 func getRole(platformCreds *installconfig.PlatformCreds) ([]byte, error) {
 	return json.Marshal(&rbacv1.Role{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: rbacv1.SchemeGroupVersion.String(),
+			Kind:       "Role",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "aro-cloud-provider-secret-reader",
 			Namespace: "kube-system",
@@ -221,6 +225,10 @@ func getRole(platformCreds *installconfig.PlatformCreds) ([]byte, error) {
 
 func getRoleBinding(platformCreds *installconfig.PlatformCreds) ([]byte, error) {
 	return json.Marshal(&rbacv1.RoleBinding{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: rbacv1.SchemeGroupVersion.String(),
+			Kind:       "RoleBinding",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "aro-cloud-provider-secret-read",
 			Namespace: "kube-system",
@@ -242,6 +250,10 @@ func getRoleBinding(platformCreds *installconfig.PlatformCreds) ([]byte, error) 
 
 func getSecret(platformCreds *installconfig.PlatformCreds) ([]byte, error) {
 	secret := &v1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: corev1.SchemeGroupVersion.String(),
+			Kind:       "Secret",
+		},
 		Type: v1.SecretTypeOpaque,
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "azure-cloud-provider",
