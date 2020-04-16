@@ -4,7 +4,7 @@ package version
 // Licensed under the Apache License 2.0.
 
 const (
-	OpenShiftVersion    = "4.3.9"
-	OpenShiftPullSpec   = "quay.io/openshift-release-dev/ocp-release@sha256:f0fada3c8216dc17affdd3375ff845b838ef9f3d67787d3d42a88dcd0f328eea"
-	OpenShiftMustGather = "quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:97ea12139f980154850164233b34c8eb4622823bd6dbb8e7772f873cb157f221"
+	OpenShiftVersion    = "4.3.10"
+	OpenShiftPullSpec   = "quay.io/openshift-release-dev/ocp-release@sha256:edb4364367cff4f751ffdc032bc830a469548f998127b523047a8dd518c472cd"
+	OpenShiftMustGather = "quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:7b4b7938d33cc9f86d822cf6a4dbffb99444566ef93f45a313f600cad11cfee3"
 )
