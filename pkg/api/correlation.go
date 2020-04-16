@@ -15,4 +15,7 @@ type CorrelationData struct {
 
 	// RequestID contains value of x-ms-request-id
 	RequestID string `json:"requestID,omitempty"`
+
+	// ClientPrincipalName contains value of x-ms-client-principal-name
+	ClientPrincipalName string `json:"clientPrincipalName,omitempty"`
 }

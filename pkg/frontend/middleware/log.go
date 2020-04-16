@@ -55,9 +55,10 @@ func Log(baseLog *logrus.Entry) func(http.Handler) http.Handler {
 			w = &logResponseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 
 			correlationData := &api.CorrelationData{
-				ClientRequestID: r.Header.Get("X-Ms-Client-Request-Id"),
-				CorrelationID:   r.Header.Get("X-Ms-Correlation-Request-Id"),
-				RequestID:       uuid.NewV4().String(),
+				ClientRequestID:     r.Header.Get("X-Ms-Client-Request-Id"),
+				CorrelationID:       r.Header.Get("X-Ms-Correlation-Request-Id"),
+				RequestID:           uuid.NewV4().String(),
+				ClientPrincipalName: r.Header.Get("X-Ms-Client-Principal-Name"),
 			}
 
 			w.Header().Set("X-Ms-Request-Id", correlationData.RequestID)
