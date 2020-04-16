@@ -31,13 +31,21 @@ func (f *frontend) _getAdminOpenShiftClusters(ctx context.Context, r *http.Reque
 		return nil, err
 	}
 
-	docs, err := i.Next(ctx, 10)
 	if err != nil {
 		return nil, err
 	}
 
 	var ocs []*api.OpenShiftCluster
-	if docs != nil {
+
+	for {
+		docs, err := i.Next(ctx, -1)
+		if err != nil {
+			return nil, err
+		}
+		if docs == nil {
+			break
+		}
+
 		for _, doc := range docs.OpenShiftClusterDocuments {
 			ocs = append(ocs, doc.OpenShiftCluster)
 		}
@@ -48,10 +56,6 @@ func (f *frontend) _getAdminOpenShiftClusters(ctx context.Context, r *http.Reque
 		ocs[i].Properties.ServicePrincipalProfile.ClientSecret = ""
 	}
 
-	nextLink, err := f.buildNextLink(r.Header.Get("Referer"), i.Continuation())
-	if err != nil {
-		return nil, err
-	}
-
-	return json.MarshalIndent(converter.ToExternalList(ocs, nextLink), "", "    ")
+	// NOTE(ehashman): sort of a hack, must currently provide a nextPage link, so I left it blank
+	return json.MarshalIndent(converter.ToExternalList(ocs, ""), "", "    ")
 }

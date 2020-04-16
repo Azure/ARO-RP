@@ -111,8 +111,8 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 				}
 
 				mockIter := mock_cosmosdb.NewMockOpenShiftClusterDocumentIterator(controller)
-				mockIter.EXPECT().Next(gomock.Any(), 10).Return(&api.OpenShiftClusterDocuments{OpenShiftClusterDocuments: clusterDocs}, nil)
-				mockIter.EXPECT().Continuation().Return("")
+				mockIter.EXPECT().Next(gomock.Any(), -1).Return(&api.OpenShiftClusterDocuments{OpenShiftClusterDocuments: clusterDocs}, nil)
+				mockIter.EXPECT().Next(gomock.Any(), -1).Return(nil, nil)
 
 				openshiftClusters.EXPECT().
 					List().
@@ -137,103 +137,10 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 			},
 		},
 		{
-			name: "clusters exists in db - multiple pages",
-			mocks: func(controller *gomock.Controller, openshiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher, cipher *mock_encryption.MockCipher) {
-				clusterDocs := []*api.OpenShiftClusterDocument{
-					{
-						OpenShiftCluster: &api.OpenShiftCluster{
-							ID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1", mockSubID),
-							Name: "resourceName1",
-							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-							Properties: api.OpenShiftClusterProperties{
-								ClusterProfile: api.ClusterProfile{
-									PullSecret: "{}",
-								},
-								ServicePrincipalProfile: api.ServicePrincipalProfile{
-									ClientSecret: "clientSecret1",
-								},
-							},
-						},
-					},
-				}
-
-				mockIter := mock_cosmosdb.NewMockOpenShiftClusterDocumentIterator(controller)
-				mockIter.EXPECT().Next(gomock.Any(), 10).Return(&api.OpenShiftClusterDocuments{OpenShiftClusterDocuments: clusterDocs}, nil)
-				mockIter.EXPECT().Continuation().Return("mock-skip-token")
-				cipher.EXPECT().Encrypt([]byte("mock-skip-token")).Return([]byte("encrypted-mock-skip-token"), nil)
-
-				openshiftClusters.EXPECT().
-					List().
-					Return(mockIter, nil)
-
-				enricher.EXPECT().Enrich(gomock.Any(), clusterDocs[0].OpenShiftCluster)
-			},
-			wantStatusCode: http.StatusOK,
-			wantResponse: func() *admin.OpenShiftClusterList {
-				return &admin.OpenShiftClusterList{
-					OpenShiftClusters: []*admin.OpenShiftCluster{
-						{
-							ID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1", mockSubID),
-							Name: "resourceName1",
-							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-						},
-					},
-					NextLink: "https://mockrefererhost/?%24skipToken=ZW5jcnlwdGVkLW1vY2stc2tpcC10b2tlbg%3D%3D",
-				}
-			},
-		},
-		{
-			name: "request has pagination token",
-			mocks: func(controller *gomock.Controller, openshiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher, cipher *mock_encryption.MockCipher) {
-				clusterDocs := []*api.OpenShiftClusterDocument{
-					{
-						OpenShiftCluster: &api.OpenShiftCluster{
-							ID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1", mockSubID),
-							Name: "resourceName1",
-							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-							Properties: api.OpenShiftClusterProperties{
-								ClusterProfile: api.ClusterProfile{
-									PullSecret: "{}",
-								},
-								ServicePrincipalProfile: api.ServicePrincipalProfile{
-									ClientSecret: "clientSecret1",
-								},
-							},
-						},
-					},
-				}
-
-				mockIter := mock_cosmosdb.NewMockOpenShiftClusterDocumentIterator(controller)
-				mockIter.EXPECT().Next(gomock.Any(), 10).Return(&api.OpenShiftClusterDocuments{OpenShiftClusterDocuments: clusterDocs}, nil)
-				mockIter.EXPECT().Continuation().Return("")
-				cipher.EXPECT().Decrypt([]byte("encrypted-mock-skip-token")).Return([]byte("mock-skip-token"), nil)
-
-				openshiftClusters.EXPECT().
-					List().
-					Return(mockIter, nil)
-
-				enricher.EXPECT().Enrich(gomock.Any(), clusterDocs[0].OpenShiftCluster)
-			},
-			skipToken:      "ZW5jcnlwdGVkLW1vY2stc2tpcC10b2tlbg%3D%3D",
-			wantStatusCode: http.StatusOK,
-			wantResponse: func() *admin.OpenShiftClusterList {
-				return &admin.OpenShiftClusterList{
-					OpenShiftClusters: []*admin.OpenShiftCluster{
-						{
-							ID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1", mockSubID),
-							Name: "resourceName1",
-							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-						},
-					},
-				}
-			},
-		},
-		{
 			name: "no clusters found in db",
 			mocks: func(controller *gomock.Controller, openshiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher, cipher *mock_encryption.MockCipher) {
 				mockIter := mock_cosmosdb.NewMockOpenShiftClusterDocumentIterator(controller)
-				mockIter.EXPECT().Next(gomock.Any(), 10).Return(nil, nil)
-				mockIter.EXPECT().Continuation().Return("")
+				mockIter.EXPECT().Next(gomock.Any(), -1).Return(nil, nil)
 
 				openshiftClusters.EXPECT().
 					List().
@@ -260,7 +167,7 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 			name: "internal error while iterating list",
 			mocks: func(controller *gomock.Controller, openshiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher, cipher *mock_encryption.MockCipher) {
 				mockIter := mock_cosmosdb.NewMockOpenShiftClusterDocumentIterator(controller)
-				mockIter.EXPECT().Next(gomock.Any(), 10).Return(nil, errors.New("random error"))
+				mockIter.EXPECT().Next(gomock.Any(), -1).Return(nil, errors.New("random error"))
 
 				openshiftClusters.EXPECT().
 					List().
@@ -300,8 +207,7 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 
 			go f.Run(ctx, nil, nil)
 
-			requestURL := fmt.Sprintf("https://server/admin/providers/Microsoft.RedHatOpenShift/openShiftClusters?%%24skipToken=%s", tt.skipToken)
-			req, err := http.NewRequest(http.MethodGet, requestURL, nil)
+			req, err := http.NewRequest(http.MethodGet, "https://server/admin/providers/Microsoft.RedHatOpenShift/openShiftClusters", nil)
 			if err != nil {
 				t.Fatal(err)
 			}
