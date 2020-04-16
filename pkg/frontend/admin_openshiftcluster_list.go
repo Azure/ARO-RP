@@ -12,6 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
 
@@ -20,17 +21,13 @@ func (f *frontend) getAdminOpenShiftClusters(w http.ResponseWriter, r *http.Requ
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
-	b, err := f._getAdminOpenShiftClusters(ctx, r, f.apis["admin"].OpenShiftClusterConverter())
+	b, err := f._getAdminOpenShiftClusters(ctx, r, f.apis[admin.APIVersion].OpenShiftClusterConverter())
 
-	reply(log, w, nil, b, err)
+	adminReply(log, w, nil, b, err)
 }
 
 func (f *frontend) _getAdminOpenShiftClusters(ctx context.Context, r *http.Request, converter api.OpenShiftClusterConverter) ([]byte, error) {
 	i, err := f.db.OpenShiftClusters.List()
-	if err != nil {
-		return nil, err
-	}
-
 	if err != nil {
 		return nil, err
 	}
