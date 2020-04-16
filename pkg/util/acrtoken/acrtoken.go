@@ -11,6 +11,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -37,7 +38,7 @@ type manager struct {
 func NewManager(env env.Interface, localFPAuthorizer autorest.Authorizer) (Manager, error) {
 	r, err := azure.ParseResourceID(env.ACRResourceID())
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	m := &manager{

@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/pkg/errors"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
@@ -24,7 +25,7 @@ func validateTerminalProvisioningState(state api.ProvisioningState) error {
 func (f *frontend) validateSubscriptionState(ctx context.Context, key string, allowedStates ...api.SubscriptionState) (*api.SubscriptionDocument, error) {
 	r, err := azure.ParseResourceID(key)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	doc, err := f.db.Subscriptions.Get(ctx, r.SubscriptionID)

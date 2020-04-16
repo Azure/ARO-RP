@@ -11,6 +11,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
+	"github.com/pkg/errors"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
@@ -19,7 +20,7 @@ import (
 func writeKubeconfig(ctx context.Context, resourceID string) error {
 	res, err := azure.ParseResourceID(resourceID)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	authorizer, err := auth.NewAuthorizerFromEnvironment()

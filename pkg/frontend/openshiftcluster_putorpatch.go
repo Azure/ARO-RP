@@ -14,6 +14,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 
@@ -63,7 +64,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 		originalPath := r.Context().Value(middleware.ContextKeyOriginalPath).(string)
 		originalR, err := azure.ParseResourceID(originalPath)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 
 		doc = &api.OpenShiftClusterDocument{

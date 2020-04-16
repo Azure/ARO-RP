@@ -12,10 +12,10 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	securityv1 "github.com/openshift/api/security/v1"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -188,7 +188,7 @@ func (g *genevaLogging) ensureNamespace(ns string) error {
 			Name: ns,
 		},
 	})
-	if !errors.IsAlreadyExists(err) {
+	if !kerrors.IsAlreadyExists(err) {
 		return err
 	}
 
@@ -197,7 +197,7 @@ func (g *genevaLogging) ensureNamespace(ns string) error {
 
 func (g *genevaLogging) applyConfigMap(cm *v1.ConfigMap) error {
 	_, err := g.cli.CoreV1().ConfigMaps(cm.Namespace).Create(cm)
-	if !errors.IsAlreadyExists(err) {
+	if !kerrors.IsAlreadyExists(err) {
 		return err
 	}
 
@@ -215,7 +215,7 @@ func (g *genevaLogging) applyConfigMap(cm *v1.ConfigMap) error {
 
 func (g *genevaLogging) applySecret(s *v1.Secret) error {
 	_, err := g.cli.CoreV1().Secrets(s.Namespace).Create(s)
-	if !errors.IsAlreadyExists(err) {
+	if !kerrors.IsAlreadyExists(err) {
 		return err
 	}
 
@@ -233,7 +233,7 @@ func (g *genevaLogging) applySecret(s *v1.Secret) error {
 
 func (g *genevaLogging) applyServiceAccount(sa *v1.ServiceAccount) error {
 	_, err := g.cli.CoreV1().ServiceAccounts(sa.Namespace).Create(sa)
-	if !errors.IsAlreadyExists(err) {
+	if !kerrors.IsAlreadyExists(err) {
 		return err
 	}
 
@@ -251,7 +251,7 @@ func (g *genevaLogging) applyServiceAccount(sa *v1.ServiceAccount) error {
 
 func (g *genevaLogging) applyDaemonSet(ds *appsv1.DaemonSet) error {
 	_, err := g.cli.AppsV1().DaemonSets(ds.Namespace).Create(ds)
-	if !errors.IsAlreadyExists(err) {
+	if !kerrors.IsAlreadyExists(err) {
 		return err
 	}
 
@@ -270,7 +270,7 @@ func (g *genevaLogging) applyDaemonSet(ds *appsv1.DaemonSet) error {
 func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 	r, err := azure.ParseResourceID(g.oc.ID)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	key, cert := g.env.ClustersGenevaLoggingSecret()

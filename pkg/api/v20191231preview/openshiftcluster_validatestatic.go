@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -41,7 +42,7 @@ func (sv *openShiftClusterStaticValidator) Static(_oc interface{}, _current *api
 	var err error
 	sv.r, err = azure.ParseResourceID(sv.resourceID)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	err = sv.validate(oc, current == nil)
@@ -211,7 +212,7 @@ func (sv *openShiftClusterStaticValidator) validateMasterProfile(path string, mp
 	}
 	sr, err := azure.ParseResourceID(mp.SubnetID)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	if sr.SubscriptionID != sv.r.SubscriptionID {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".subnetId", "The provided master VM subnet '%s' is invalid: must be in same subscription as cluster.", mp.SubnetID)

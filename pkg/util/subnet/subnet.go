@@ -11,6 +11,7 @@ import (
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/pkg/errors"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
@@ -40,7 +41,7 @@ func (m *manager) Get(ctx context.Context, subnetID string) (*mgmtnetwork.Subnet
 
 	r, err := azure.ParseResourceID(vnetID)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	subnet, err := m.subnets.Get(ctx, r.ResourceGroup, r.ResourceName, subnetName, "")
@@ -60,7 +61,7 @@ func (m *manager) CreateOrUpdate(ctx context.Context, subnetID string, subnet *m
 
 	r, err := azure.ParseResourceID(vnetID)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	return m.subnets.CreateOrUpdateAndWait(ctx, r.ResourceGroup, r.ResourceName, subnetName, *subnet)

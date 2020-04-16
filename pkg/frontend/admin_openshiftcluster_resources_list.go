@@ -13,6 +13,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/gorilla/mux"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -47,7 +48,7 @@ func (f *frontend) _listAdminOpenShiftClusterResources(ctx context.Context, r *h
 
 	resource, err := azure.ParseResourceID(resourceID)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	fpAuthorizer, err := f.env.FPAuthorizer(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID, azure.PublicCloud.ResourceManagerEndpoint)

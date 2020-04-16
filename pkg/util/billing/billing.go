@@ -12,6 +12,7 @@ import (
 
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -146,7 +147,7 @@ func (m *manager) createOrUpdateE2EBlob(ctx context.Context, doc *api.BillingDoc
 	// Validate if E2E Feature is registered
 	resource, err := azure.ParseResourceID(doc.Key)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	subDocument, err := m.subDB.Get(ctx, resource.SubscriptionID)

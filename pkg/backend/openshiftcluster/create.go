@@ -26,6 +26,7 @@ import (
 	azuretypes "github.com/openshift/installer/pkg/types/azure"
 	openstackvalidation "github.com/openshift/installer/pkg/types/openstack/validation"
 	"github.com/openshift/installer/pkg/types/validation"
+	"github.com/pkg/errors"
 	"golang.org/x/crypto/ssh"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -130,7 +131,7 @@ func (m *Manager) Create(ctx context.Context) error {
 
 	r, err := azure.ParseResourceID(m.doc.OpenShiftCluster.ID)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	vnetID, masterSubnetName, err := subnet.Split(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
@@ -145,7 +146,7 @@ func (m *Manager) Create(ctx context.Context) error {
 
 	vnetr, err := azure.ParseResourceID(vnetID)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	privateKey, err := x509.ParsePKCS1PrivateKey(m.doc.OpenShiftCluster.Properties.SSHKey)

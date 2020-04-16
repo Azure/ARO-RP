@@ -19,6 +19,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/apparentlymart/go-cidr/cidr"
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -57,7 +58,7 @@ type openShiftClusterDynamicValidator struct {
 func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context, oc *api.OpenShiftCluster) error {
 	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	// TODO: pre-check that the cluster domain doesn't already exist
@@ -159,7 +160,7 @@ func (dv *openShiftClusterDynamicValidator) validateVnetPermissions(ctx context.
 
 	r, err := azure.ParseResourceID(vnetID)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
@@ -306,7 +307,7 @@ func (dv *openShiftClusterDynamicValidator) validateVnet(ctx context.Context, vn
 	}
 	r, err := azure.ParseResourceID(vnetID)
 	if err != nil {
-		return err
+		return errors.WithStack(err)
 	}
 	vnet, err := vnetClient.Get(ctx, r.ResourceGroup, r.ResourceName, "")
 	if err != nil {

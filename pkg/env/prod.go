@@ -18,6 +18,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
@@ -128,7 +129,7 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 	if p.ACRResourceID() != "" { // TODO: ugh!
 		acrResource, err := azure.ParseResourceID(p.ACRResourceID())
 		if err != nil {
-			return nil, err
+			return nil, errors.WithStack(err)
 		}
 		p.acrName = acrResource.ResourceName
 	}
