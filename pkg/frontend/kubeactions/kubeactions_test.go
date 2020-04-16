@@ -161,7 +161,7 @@ func TestKubeactionsFindGVR(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ka := &kubeactions{}
-			if got := ka.findGVR(tt.grs, tt.kind); !reflect.DeepEqual(got, tt.want) {
+			if got := ka.findGVR(tt.grs, tt.kind, ""); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("kubeactions.findGVR() = %v, want %v", got, tt.want)
 			}
 		})

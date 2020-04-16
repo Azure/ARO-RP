@@ -48,12 +48,13 @@ func New(log *logrus.Entry, env env.Interface) Interface {
 	}
 }
 
-func (ka *kubeactions) findGVR(grs []*restmapper.APIGroupResources, groupKind string) []*schema.GroupVersionResource {
+func (ka *kubeactions) findGVR(grs []*restmapper.APIGroupResources, groupKind, optionalVersion string) []*schema.GroupVersionResource {
 	var matches []*schema.GroupVersionResource
 
 	for _, gr := range grs {
 		for version, resources := range gr.VersionedResources {
-			if version != gr.Group.PreferredVersion.Version {
+			if optionalVersion == "" && version != gr.Group.PreferredVersion.Version ||
+				optionalVersion != "" && version != optionalVersion {
 				continue
 			}
 
@@ -121,7 +122,7 @@ func (ka *kubeactions) Get(ctx context.Context, oc *api.OpenShiftCluster, groupK
 		return nil, err
 	}
 
-	gvrs := ka.findGVR(grs, groupKind)
+	gvrs := ka.findGVR(grs, groupKind, "")
 
 	if len(gvrs) == 0 {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The groupKind '%s' was not found.", groupKind)
@@ -147,7 +148,7 @@ func (ka *kubeactions) List(ctx context.Context, oc *api.OpenShiftCluster, group
 		return nil, err
 	}
 
-	gvrs := ka.findGVR(grs, groupKind)
+	gvrs := ka.findGVR(grs, groupKind, "")
 
 	if len(gvrs) == 0 {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The groupKind '%s' was not found.", groupKind)
@@ -178,7 +179,7 @@ func (ka *kubeactions) CreateOrUpdate(ctx context.Context, oc *api.OpenShiftClus
 		return err
 	}
 
-	gvrs := ka.findGVR(grs, groupKind)
+	gvrs := ka.findGVR(grs, groupKind, obj.GroupVersionKind().Version)
 
 	if len(gvrs) == 0 {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The groupKind '%s' was not found.", groupKind)
@@ -207,7 +208,7 @@ func (ka *kubeactions) Delete(ctx context.Context, oc *api.OpenShiftCluster, gro
 		return err
 	}
 
-	gvrs := ka.findGVR(grs, groupKind)
+	gvrs := ka.findGVR(grs, groupKind, "")
 
 	if len(gvrs) == 0 {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The groupKind '%s' was not found.", groupKind)
