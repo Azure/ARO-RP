@@ -19,5 +19,6 @@ def load_command_table(self, _):
         g.custom_command('list', 'aro_list', table_transformer=aro_list_table_format)
         g.custom_show_command('show', 'aro_show', table_transformer=aro_show_table_format)
         g.custom_command('update', 'aro_update', supports_no_wait=True)
+        g.wait_command('wait')
 
         g.custom_command('list-credentials', 'aro_list_credentials')
