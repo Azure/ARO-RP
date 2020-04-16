@@ -130,6 +130,7 @@ func NewFrontend(ctx context.Context, baseLog *logrus.Entry, _env env.Interface,
 
 func (f *frontend) unauthenticatedRoutes(r *mux.Router) {
 	r.Path("/healthz/ready").Methods(http.MethodGet).HandlerFunc(f.getReady).Name("getReady")
+	r.Path("/version").Methods(http.MethodGet).HandlerFunc(f.getVersion).Name("getVersion")
 }
 
 func (f *frontend) authenticatedRoutes(r *mux.Router) {

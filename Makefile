@@ -2,7 +2,7 @@ SHELL = /bin/bash
 COMMIT = $(shell git rev-parse --short HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
 
 aro: generate
-	go build -ldflags "-X main.gitCommit=$(COMMIT)" ./cmd/aro
+	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.ProviderVersion=$(COMMIT)" ./cmd/aro
 
 az:
 	cd python/az/aro && python ./setup.py bdist_egg

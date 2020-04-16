@@ -13,10 +13,7 @@ import (
 	"time"
 
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
-)
-
-var (
-	gitCommit = "unknown"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 func usage() {
@@ -37,7 +34,7 @@ func main() {
 	ctx := context.Background()
 	log := utillog.GetLogger()
 
-	log.Printf("starting, git commit %s", gitCommit)
+	log.Printf("starting, git commit %s", version.ProviderVersion)
 
 	var err error
 	switch strings.ToLower(flag.Arg(0)) {
