@@ -5,9 +5,12 @@ package e2e
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"github.com/zhuoli/ARO-RP/test/e2e/testresources"
 
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/sirupsen/logrus"
@@ -73,4 +76,15 @@ var _ = BeforeSuite(func() {
 	if err != nil {
 		panic(err)
 	}
+
+	By("add cluster blob for billing e2es", func() {
+		subID := os.Getenv("AZURE_SUBSCRIPTION_ID")
+		resourceGroup := os.Getenv("RESOURCEGROUP")
+		resourceName := os.Getenv("CLUSTER")
+
+		log.Printf("Calling AddClusterBlobForBillingE2E with subID : %s, resourceGroup : %s, resourceName : %s", subID, resourceGroup, resourceName)
+		err := testresources.AddClusterBlobForBillingE2E(subID, resourceGroup, resourceName)
+		Expect(err).To(BeNil())
+	})
+
 })
