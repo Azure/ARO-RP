@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"path/filepath"
-	"time"
 
 	"github.com/sirupsen/logrus"
 
@@ -43,10 +42,6 @@ func (f *frontend) _getAdminOpenShiftClusters(ctx context.Context, r *http.Reque
 			ocs = append(ocs, doc.OpenShiftCluster)
 		}
 	}
-
-	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-	f.ocEnricher.Enrich(timeoutCtx, ocs...)
 
 	for i := range ocs {
 		ocs[i].Properties.ClusterProfile.PullSecret = ""

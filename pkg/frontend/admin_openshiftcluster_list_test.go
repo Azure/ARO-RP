@@ -117,8 +117,6 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 				openshiftClusters.EXPECT().
 					List().
 					Return(mockIter, nil)
-
-				enricher.EXPECT().Enrich(gomock.Any(), clusterDocs[0].OpenShiftCluster, clusterDocs[1].OpenShiftCluster)
 			},
 			wantStatusCode: http.StatusOK,
 			wantResponse: func() *admin.OpenShiftClusterList {
@@ -240,8 +238,6 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 				openshiftClusters.EXPECT().
 					List().
 					Return(mockIter, nil)
-
-				enricher.EXPECT().Enrich(gomock.Any(), []*api.OpenShiftCluster{})
 			},
 			wantStatusCode: http.StatusOK,
 			wantResponse: func() *admin.OpenShiftClusterList {
