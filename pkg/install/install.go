@@ -160,9 +160,6 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			action(i.createCertificates),
 			action(i.initializeKubernetesClients),
 			condition{i.bootstrapConfigMapReady, 30 * time.Minute},
-			action(func(ctx context.Context) error {
-				return i.ensureCloudCredentialConfiguration(ctx, platformCreds)
-			}),
 			action(i.ensureGenevaLogging),
 			action(i.incrInstallPhase),
 		},

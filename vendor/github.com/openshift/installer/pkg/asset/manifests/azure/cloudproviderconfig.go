@@ -16,7 +16,6 @@ type CloudProviderConfig struct {
 	NetworkSecurityGroupName string
 	VirtualNetworkName       string
 	SubnetName               string
-	ARO                      bool
 }
 
 // JSON generates the cloud provider json config for the azure platform.
@@ -27,7 +26,7 @@ func (params CloudProviderConfig) JSON() (string, error) {
 			Cloud:                       "AzurePublicCloud",
 			TenantID:                    params.TenantID,
 			SubscriptionID:              params.SubscriptionID,
-			UseManagedIdentityExtension: true,
+			UseManagedIdentityExtension: false, // ARO Carry-On patch
 			// The cloud provider needs the clientID which is only known after terraform has run.
 			// When left empty, the existing managed identity on the VM will be used.
 			// By leaving it empty, we don't have to create the identity before running the installer.
@@ -49,13 +48,6 @@ func (params CloudProviderConfig) JSON() (string, error) {
 		//default to standard load balancer, supports tcp resets on idle
 		//https://docs.microsoft.com/en-us/azure/load-balancer/load-balancer-tcp-reset
 		LoadBalancerSku: "standard",
-	}
-
-	if params.ARO {
-		// we use CloudConfigType and secret in kube-system namespace.
-		// default strategy is merge, so secret will be injected on
-		// cloud controller startup
-		config.authConfig.UseManagedIdentityExtension = false
 	}
 
 	buff := &bytes.Buffer{}
