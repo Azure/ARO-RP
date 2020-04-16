@@ -267,12 +267,11 @@ func (f *frontend) Run(ctx context.Context, stop <-chan struct{}, done chan<- st
 	}
 
 	f.s = &http.Server{
-		Handler:      middleware.Lowercase(f.setupRouter()),
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 15 * time.Minute,
-		IdleTimeout:  2 * time.Minute,
-		ErrorLog:     log.New(f.baseLog.Writer(), "", 0),
-		BaseContext:  func(net.Listener) context.Context { return ctx },
+		Handler:     middleware.Lowercase(f.setupRouter()),
+		ReadTimeout: 10 * time.Second,
+		IdleTimeout: 2 * time.Minute,
+		ErrorLog:    log.New(f.baseLog.Writer(), "", 0),
+		BaseContext: func(net.Listener) context.Context { return ctx },
 	}
 
 	go heartbeat.EmitHeartbeat(f.baseLog, f.m, "frontend.heartbeat", stop, f.checkReady)
