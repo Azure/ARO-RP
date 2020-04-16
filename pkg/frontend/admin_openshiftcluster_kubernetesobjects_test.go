@@ -132,14 +132,14 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 		},
 		{
 			method:       http.MethodGet,
-			name:         "no kind provided",
+			name:         "no groupKind provided",
 			resourceID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
 			objNamespace: "openshift-project",
 			objName:      "config",
 			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, kactions *mock_kubeactions.MockInterface) {
 			},
 			wantStatusCode: http.StatusBadRequest,
-			wantError:      "400: InvalidParameter: : The provided kind '' is invalid.",
+			wantError:      "400: InvalidParameter: : The provided groupKind '' is invalid.",
 		},
 		{
 			method:       http.MethodGet,
@@ -180,14 +180,14 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 		},
 		{
 			method:       http.MethodDelete,
-			name:         "no kind provided",
+			name:         "no groupKind provided",
 			resourceID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
 			objNamespace: "openshift-project",
 			objName:      "config",
 			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, kactions *mock_kubeactions.MockInterface) {
 			},
 			wantStatusCode: http.StatusBadRequest,
-			wantError:      "400: InvalidParameter: : The provided kind '' is invalid.",
+			wantError:      "400: InvalidParameter: : The provided groupKind '' is invalid.",
 		},
 		{
 			method:       http.MethodDelete,
@@ -289,77 +289,77 @@ func TestValidateAdminKubernetesObjectsNonCustomer(t *testing.T) {
 	for _, tt := range []struct {
 		test      string
 		method    string
-		kind      string
+		groupKind string
 		namespace string
 		name      string
 		wantErr   string
 	}{
 		{
 			test:      "valid openshift-ns namespace",
-			kind:      "Valid-kind",
+			groupKind: "Valid-groupKind",
 			namespace: "openshift-ns",
 			name:      "Valid-NAME-01",
 		},
 		{
 			test:      "valid openshift namespace",
-			kind:      "Valid-kind",
+			groupKind: "Valid-groupKind",
 			namespace: "openshift",
 			name:      "Valid-NAME-01",
 		},
 		{
 			test:      "valid kube-ns namespace",
-			kind:      "Valid-kind",
+			groupKind: "Valid-groupKind",
 			namespace: "kube-ns",
 			name:      "Valid-NAME-01",
 		},
 		{
 			test:      "valid default namespace",
-			kind:      "Valid-kind",
+			groupKind: "Valid-groupKind",
 			namespace: "default",
 			name:      "Valid-NAME-01",
 		},
 		{
-			test: "valid empty namespace",
-			kind: "Valid-kind",
-			name: "Valid-NAME-01",
+			test:      "valid empty namespace",
+			groupKind: "Valid-groupKind",
+			name:      "Valid-NAME-01",
 		},
 		{
 			test:      "invalid customer namespace",
-			kind:      "Valid-kind",
+			groupKind: "Valid-groupKind",
 			namespace: "customer",
 			name:      "Valid-NAME-01",
 			wantErr:   "403: Forbidden: : Access to the provided namespace 'customer' is forbidden.",
 		},
 		{
-			test:      "invalid kind",
-			kind:      "$",
+			test:      "invalid groupKind",
+			groupKind: "$",
 			namespace: "openshift-ns",
 			name:      "Valid-NAME-01",
-			wantErr:   "400: InvalidParameter: : The provided kind '$' is invalid.",
+			wantErr:   "400: InvalidParameter: : The provided groupKind '$' is invalid.",
 		},
 		{
-			test:      "forbidden kind",
-			kind:      "Secret",
+			test:      "forbidden groupKind",
+			groupKind: "Secret",
 			namespace: "openshift-ns",
 			name:      "Valid-NAME-01",
 			wantErr:   "403: Forbidden: : Access to secrets is forbidden.",
 		},
 		{
-			test:      "empty kind",
+			test:      "empty groupKind",
 			namespace: "openshift-ns",
 			name:      "Valid-NAME-01",
-			wantErr:   "400: InvalidParameter: : The provided kind '' is invalid.",
+			wantErr:   "400: InvalidParameter: : The provided groupKind '' is invalid.",
 		},
 		{
 			test:      "invalid namespace",
-			kind:      "Valid-kind",
+			groupKind: "Valid-groupKind",
 			namespace: "openshift-/",
 			name:      "Valid-NAME-01",
 			wantErr:   "400: InvalidParameter: : The provided namespace 'openshift-/' is invalid.",
 		},
 		{
 			test:      "invalid name",
-			kind:      "Valid-kind",
+			groupKind: "Valid-groupKind",
 			namespace: "openshift-ns",
 			name:      longName,
 			wantErr:   "400: InvalidParameter: : The provided name '" + longName + "' is invalid.",
@@ -367,14 +367,14 @@ func TestValidateAdminKubernetesObjectsNonCustomer(t *testing.T) {
 		{
 			test:      "post: empty name",
 			method:    http.MethodPost,
-			kind:      "Valid-kind",
+			groupKind: "Valid-groupKind",
 			namespace: "openshift-ns",
 			wantErr:   "400: InvalidParameter: : The provided name '' is invalid.",
 		},
 		{
 			test:      "delete: empty name",
 			method:    http.MethodDelete,
-			kind:      "Valid-kind",
+			groupKind: "Valid-groupKind",
 			namespace: "openshift-ns",
 			wantErr:   "400: InvalidParameter: : The provided name '' is invalid.",
 		},
@@ -384,7 +384,7 @@ func TestValidateAdminKubernetesObjectsNonCustomer(t *testing.T) {
 				tt.method = http.MethodGet
 			}
 
-			err := validateAdminKubernetesObjectsNonCustomer(tt.method, tt.kind, tt.namespace, tt.name)
+			err := validateAdminKubernetesObjectsNonCustomer(tt.method, tt.groupKind, tt.namespace, tt.name)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

@@ -28,10 +28,10 @@ import (
 )
 
 type Interface interface {
-	Get(ctx context.Context, oc *api.OpenShiftCluster, kind, namespace, name string) ([]byte, error)
-	List(ctx context.Context, oc *api.OpenShiftCluster, kind, namespace string) ([]byte, error)
+	Get(ctx context.Context, oc *api.OpenShiftCluster, groupKind, namespace, name string) ([]byte, error)
+	List(ctx context.Context, oc *api.OpenShiftCluster, groupKind, namespace string) ([]byte, error)
 	CreateOrUpdate(ctx context.Context, oc *api.OpenShiftCluster, obj *unstructured.Unstructured) error
-	Delete(ctx context.Context, oc *api.OpenShiftCluster, kind, namespace, name string) error
+	Delete(ctx context.Context, oc *api.OpenShiftCluster, groupKind, namespace, name string) error
 	ClusterUpgrade(ctx context.Context, oc *api.OpenShiftCluster) error
 	MustGather(ctx context.Context, oc *api.OpenShiftCluster, w io.Writer) error
 }
@@ -48,7 +48,7 @@ func New(log *logrus.Entry, env env.Interface) Interface {
 	}
 }
 
-func (ka *kubeactions) findGVR(grs []*restmapper.APIGroupResources, kind string) []*schema.GroupVersionResource {
+func (ka *kubeactions) findGVR(grs []*restmapper.APIGroupResources, groupKind string) []*schema.GroupVersionResource {
 	var matches []*schema.GroupVersionResource
 
 	for _, gr := range grs {
@@ -67,7 +67,7 @@ func (ka *kubeactions) findGVR(grs []*restmapper.APIGroupResources, kind string)
 					Kind:  resource.Kind,
 				}
 
-				if strings.EqualFold(gk.String(), kind) {
+				if strings.EqualFold(gk.String(), groupKind) {
 					return []*schema.GroupVersionResource{
 						{
 							Group:    gr.Group.Name,
@@ -77,7 +77,7 @@ func (ka *kubeactions) findGVR(grs []*restmapper.APIGroupResources, kind string)
 					}
 				}
 
-				if strings.EqualFold(resource.Kind, kind) {
+				if strings.EqualFold(resource.Kind, groupKind) {
 					matches = append(matches, &schema.GroupVersionResource{
 						Group:    gr.Group.Name,
 						Version:  version,
@@ -115,20 +115,20 @@ func (ka *kubeactions) getClient(oc *api.OpenShiftCluster) (dynamic.Interface, [
 	return dyn, grs, nil
 }
 
-func (ka *kubeactions) Get(ctx context.Context, oc *api.OpenShiftCluster, kind, namespace, name string) ([]byte, error) {
+func (ka *kubeactions) Get(ctx context.Context, oc *api.OpenShiftCluster, groupKind, namespace, name string) ([]byte, error) {
 	dyn, grs, err := ka.getClient(oc)
 	if err != nil {
 		return nil, err
 	}
 
-	gvrs := ka.findGVR(grs, kind)
+	gvrs := ka.findGVR(grs, groupKind)
 
 	if len(gvrs) == 0 {
-		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The kind '%s' was not found.", kind)
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The groupKind '%s' was not found.", groupKind)
 	}
 
 	if len(gvrs) > 1 {
-		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The kind '%s' matched multiple GroupKinds.", kind)
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The groupKind '%s' matched multiple groupKinds.", groupKind)
 	}
 
 	gvr := gvrs[0]
@@ -141,20 +141,20 @@ func (ka *kubeactions) Get(ctx context.Context, oc *api.OpenShiftCluster, kind, 
 	return un.MarshalJSON()
 }
 
-func (ka *kubeactions) List(ctx context.Context, oc *api.OpenShiftCluster, kind, namespace string) ([]byte, error) {
+func (ka *kubeactions) List(ctx context.Context, oc *api.OpenShiftCluster, groupKind, namespace string) ([]byte, error) {
 	dyn, grs, err := ka.getClient(oc)
 	if err != nil {
 		return nil, err
 	}
 
-	gvrs := ka.findGVR(grs, kind)
+	gvrs := ka.findGVR(grs, groupKind)
 
 	if len(gvrs) == 0 {
-		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The kind '%s' was not found.", kind)
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The groupKind '%s' was not found.", groupKind)
 	}
 
 	if len(gvrs) > 1 {
-		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The kind '%s' matched multiple GroupKinds.", kind)
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The groupKind '%s' matched multiple groupKinds.", groupKind)
 	}
 
 	gvr := gvrs[0]
@@ -171,21 +171,21 @@ func (ka *kubeactions) CreateOrUpdate(ctx context.Context, oc *api.OpenShiftClus
 	// TODO log changes
 
 	namespace := obj.GetNamespace()
-	kind := obj.GroupVersionKind().GroupKind().String()
+	groupKind := obj.GroupVersionKind().GroupKind().String()
 
 	dyn, grs, err := ka.getClient(oc)
 	if err != nil {
 		return err
 	}
 
-	gvrs := ka.findGVR(grs, kind)
+	gvrs := ka.findGVR(grs, groupKind)
 
 	if len(gvrs) == 0 {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The kind '%s' was not found.", kind)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The groupKind '%s' was not found.", groupKind)
 	}
 
 	if len(gvrs) > 1 {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The kind '%s' matched multiple GroupKinds.", kind)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The groupKind '%s' matched multiple groupKinds.", groupKind)
 	}
 
 	gvr := gvrs[0]
@@ -199,7 +199,7 @@ func (ka *kubeactions) CreateOrUpdate(ctx context.Context, oc *api.OpenShiftClus
 	return err
 }
 
-func (ka *kubeactions) Delete(ctx context.Context, oc *api.OpenShiftCluster, kind, namespace, name string) error {
+func (ka *kubeactions) Delete(ctx context.Context, oc *api.OpenShiftCluster, groupKind, namespace, name string) error {
 	// TODO log changes
 
 	dyn, grs, err := ka.getClient(oc)
@@ -207,14 +207,14 @@ func (ka *kubeactions) Delete(ctx context.Context, oc *api.OpenShiftCluster, kin
 		return err
 	}
 
-	gvrs := ka.findGVR(grs, kind)
+	gvrs := ka.findGVR(grs, groupKind)
 
 	if len(gvrs) == 0 {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The kind '%s' was not found.", kind)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The groupKind '%s' was not found.", groupKind)
 	}
 
 	if len(gvrs) > 1 {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The kind '%s' matched multiple GroupKinds.", kind)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The groupKind '%s' matched multiple groupKinds.", groupKind)
 	}
 
 	gvr := gvrs[0]
