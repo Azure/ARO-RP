@@ -19,12 +19,59 @@ func addRequiredResources(requiredResources map[string]int, vmSize api.VMSize, c
 	case api.VMSizeStandardD2sV3:
 		requiredResources["standardDSv3Family"] += (count * 2)
 		requiredResources["cores"] += (count * 2)
+
+	case api.VMSizeStandardD4asV4:
+		requiredResources["standardDASv4Family"] += (count * 4)
+		requiredResources["cores"] += (count * 4)
+	case api.VMSizeStandardD8asV4:
+		requiredResources["standardDASv4Family"] += (count * 8)
+		requiredResources["cores"] += (count * 8)
+	case api.VMSizeStandardD16asV4:
+		requiredResources["standardDASv4Family"] += (count * 16)
+		requiredResources["cores"] += (count * 16)
+	case api.VMSizeStandardD32asV4:
+		requiredResources["standardDASv4Family"] += (count * 32)
+		requiredResources["cores"] += (count * 32)
+
 	case api.VMSizeStandardD4sV3:
 		requiredResources["standardDSv3Family"] += (count * 4)
 		requiredResources["cores"] += (count * 4)
 	case api.VMSizeStandardD8sV3:
 		requiredResources["standardDSv3Family"] += (count * 8)
 		requiredResources["cores"] += (count * 8)
+	case api.VMSizeStandardD16sV3:
+		requiredResources["standardDSv3Family"] += (count * 16)
+		requiredResources["cores"] += (count * 16)
+	case api.VMSizeStandardD32sV3:
+		requiredResources["standardDSv3Family"] += (count * 32)
+		requiredResources["cores"] += (count * 32)
+
+	case api.VMSizeStandardE4sV3:
+		requiredResources["standardESv3Family"] += (count * 4)
+		requiredResources["cores"] += (count * 4)
+	case api.VMSizeStandardE8sV3:
+		requiredResources["standardESv3Family"] += (count * 8)
+		requiredResources["cores"] += (count * 8)
+	case api.VMSizeStandardE16sV3:
+		requiredResources["standardESv3Family"] += (count * 16)
+		requiredResources["cores"] += (count * 16)
+	case api.VMSizeStandardE32sV3:
+		requiredResources["standardESv3Family"] += (count * 32)
+		requiredResources["cores"] += (count * 32)
+
+	case api.VMSizeStandardF4sV2:
+		requiredResources["standardFSv2Family"] += (count * 4)
+		requiredResources["cores"] += (count * 4)
+	case api.VMSizeStandardF8sV2:
+		requiredResources["standardFSv2Family"] += (count * 8)
+		requiredResources["cores"] += (count * 8)
+	case api.VMSizeStandardF16sV2:
+		requiredResources["standardFSv2Family"] += (count * 16)
+		requiredResources["cores"] += (count * 16)
+	case api.VMSizeStandardF32sV2:
+		requiredResources["standardFSv2Family"] += (count * 32)
+		requiredResources["cores"] += (count * 32)
+
 	default:
 		//will only happen if pkg/api verification allows new VMSizes
 		return fmt.Errorf("unexpected node VMSize %s", vmSize)
