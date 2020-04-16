@@ -286,7 +286,12 @@ class MasterProfile(Model):
     """MasterProfile represents a master profile.
 
     :param vm_size: The size of the master VMs (immutable). Possible values
-     include: 'Standard_D2s_v3', 'Standard_D4s_v3', 'Standard_D8s_v3'
+     include: 'Standard_D16as_v4', 'Standard_D16s_v3', 'Standard_D2s_v3',
+     'Standard_D32as_v4', 'Standard_D32s_v3', 'Standard_D4as_v4',
+     'Standard_D4s_v3', 'Standard_D8as_v4', 'Standard_D8s_v3',
+     'Standard_E16s_v3', 'Standard_E32s_v3', 'Standard_E4s_v3',
+     'Standard_E8s_v3', 'Standard_F16s_v2', 'Standard_F32s_v2',
+     'Standard_F4s_v2', 'Standard_F8s_v2'
     :type vm_size: str or ~azure.mgmt.redhatopenshift.v2020_04_30.models.enum
     :param subnet_id: The Azure resource ID of the master subnet (immutable).
     :type subnet_id: str
@@ -622,7 +627,12 @@ class WorkerProfile(Model):
     :param name: The worker profile name.  Must be "worker" (immutable).
     :type name: str
     :param vm_size: The size of the worker VMs (immutable). Possible values
-     include: 'Standard_D2s_v3', 'Standard_D4s_v3', 'Standard_D8s_v3'
+     include: 'Standard_D16as_v4', 'Standard_D16s_v3', 'Standard_D2s_v3',
+     'Standard_D32as_v4', 'Standard_D32s_v3', 'Standard_D4as_v4',
+     'Standard_D4s_v3', 'Standard_D8as_v4', 'Standard_D8s_v3',
+     'Standard_E16s_v3', 'Standard_E32s_v3', 'Standard_E4s_v3',
+     'Standard_E8s_v3', 'Standard_F16s_v2', 'Standard_F32s_v2',
+     'Standard_F4s_v2', 'Standard_F8s_v2'
     :type vm_size: str or ~azure.mgmt.redhatopenshift.v2020_04_30.models.enum
     :param disk_size_gb: The disk size of the worker VMs.  Must be 128 or
      greater (immutable).

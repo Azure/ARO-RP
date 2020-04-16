@@ -202,7 +202,9 @@ func (sv *openShiftClusterStaticValidator) validateNetworkProfile(path string, n
 
 func (sv *openShiftClusterStaticValidator) validateMasterProfile(path string, mp *MasterProfile) error {
 	switch mp.VMSize {
-	case VMSizeStandardD8sV3:
+	case VMSizeStandardD8sV3,
+		VMSizeStandardD16sV3,
+		VMSizeStandardD32sV3:
 	default:
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", "The provided master VM size '%s' is invalid.", mp.VMSize)
 	}
@@ -230,7 +232,22 @@ func (sv *openShiftClusterStaticValidator) validateWorkerProfile(path string, wp
 		}
 	} else {
 		switch wp.VMSize {
-		case VMSizeStandardD4sV3, VMSizeStandardD8sV3:
+		case VMSizeStandardD4asV4,
+			VMSizeStandardD8asV4,
+			VMSizeStandardD16asV4,
+			VMSizeStandardD32asV4,
+			VMSizeStandardD4sV3,
+			VMSizeStandardD8sV3,
+			VMSizeStandardD16sV3,
+			VMSizeStandardD32sV3,
+			VMSizeStandardE4sV3,
+			VMSizeStandardE8sV3,
+			VMSizeStandardE16sV3,
+			VMSizeStandardE32sV3,
+			VMSizeStandardF4sV2,
+			VMSizeStandardF8sV2,
+			VMSizeStandardF16sV2,
+			VMSizeStandardF32sV2:
 		default:
 			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", "The provided worker VM size '%s' is invalid.", wp.VMSize)
 		}
