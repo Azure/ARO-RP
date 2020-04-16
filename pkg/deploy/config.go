@@ -12,12 +12,12 @@ import (
 )
 
 const (
-	globalRPDeploymentName                = "rp-global"
-	globalRPSubscriptionDeploymentName    = "rp-global-subscription"
-	rpManagedIdentityDeploymentName       = "rp-production-managed-identity"
-	rpPredeploymentName                   = "rp-productin-predeploy"
-	rpProductionActionGroupDeploymentName = "rp-production-action-group"
-	vmssPrefix                            = "rp-vmss-"
+	globalRPDeploymentName                 = "rp-global"
+	globalRPSubscriptionDeploymentName     = "rp-global-subscription"
+	rpManagedIdentityDeploymentName        = "rp-production-managed-identity"
+	rpPredeploymentName                    = "rp-productin-predeploy"
+	rpProductionSubscriptionDeploymentName = "rp-production-subscripton"
+	vmssPrefix                             = "rp-vmss-"
 )
 
 // Config represents configuration object for deployer tooling
@@ -36,29 +36,29 @@ type RPConfig struct {
 
 // Configuration represents configuration structure
 type Configuration struct {
-	ACRResourceID                            string        `json:"acrResourceId,omitempty"`
-	ActionGroupSubscriptionResourceGroupName string        `json:"actionGroupSubscriptionResourceGroupName,omitempty"`
-	AdminAPICABundle                         string        `json:"adminApiCaBundle,omitempty"`
-	AdminAPIClientCertCommonName             string        `json:"adminApiClientCertCommonName,omitempty"`
-	ClusterParentDomainName                  string        `json:"clusterParentDomainName,omitempty"`
-	DatabaseAccountName                      string        `json:"databaseAccountName,omitempty"`
-	ExtraClusterKeyvaultAccessPolicies       []interface{} `json:"extraClusterKeyvaultAccessPolicies,omitempty"`
-	ExtraCosmosDBIPs                         []string      `json:"extraCosmosDBIPs,omitempty"`
-	ExtraServiceKeyvaultAccessPolicies       []interface{} `json:"extraServiceKeyvaultAccessPolicies,omitempty"`
-	FPServerCertCommonName                   string        `json:"fpServerCertCommonName,omitempty"`
-	FPServicePrincipalID                     string        `json:"fpServicePrincipalId,omitempty"`
-	GlobalMonitoringKeyVaultURI              string        `json:"globalMonitoringKeyVaultUri,omitempty"`
-	GlobalResourceGroupName                  string        `json:"globalResourceGroupName,omitempty"`
-	GlobalSubscriptionID                     string        `json:"globalSubscriptionId,omitempty"`
-	KeyvaultPrefix                           string        `json:"keyvaultPrefix,omitempty"`
-	MDMFrontendURL                           string        `json:"mdmFrontendUrl,omitempty"`
-	MDSDConfigVersion                        string        `json:"mdsdConfigVersion,omitempty"`
-	MDSDEnvironment                          string        `json:"mdsdEnvironment,omitempty"`
-	RPImagePrefix                            string        `json:"rpImagePrefix,omitempty"`
-	RPMode                                   string        `json:"rpMode,omitempty"`
-	RPNSGSourceAddressPrefixes               []string      `json:"rpNsgSourceAddressPrefixes,omitempty"`
-	RPParentDomainName                       string        `json:"rpParentDomainName,omitempty"`
-	SSHPublicKey                             string        `json:"sshPublicKey,omitempty"`
+	ACRResourceID                      string        `json:"acrResourceId,omitempty"`
+	AdminAPICABundle                   string        `json:"adminApiCaBundle,omitempty"`
+	AdminAPIClientCertCommonName       string        `json:"adminApiClientCertCommonName,omitempty"`
+	ClusterParentDomainName            string        `json:"clusterParentDomainName,omitempty"`
+	DatabaseAccountName                string        `json:"databaseAccountName,omitempty"`
+	ExtraClusterKeyvaultAccessPolicies []interface{} `json:"extraClusterKeyvaultAccessPolicies,omitempty"`
+	ExtraCosmosDBIPs                   []string      `json:"extraCosmosDBIPs,omitempty"`
+	ExtraServiceKeyvaultAccessPolicies []interface{} `json:"extraServiceKeyvaultAccessPolicies,omitempty"`
+	FPServerCertCommonName             string        `json:"fpServerCertCommonName,omitempty"`
+	FPServicePrincipalID               string        `json:"fpServicePrincipalId,omitempty"`
+	GlobalMonitoringKeyVaultURI        string        `json:"globalMonitoringKeyVaultUri,omitempty"`
+	GlobalResourceGroupName            string        `json:"globalResourceGroupName,omitempty"`
+	GlobalSubscriptionID               string        `json:"globalSubscriptionId,omitempty"`
+	KeyvaultPrefix                     string        `json:"keyvaultPrefix,omitempty"`
+	MDMFrontendURL                     string        `json:"mdmFrontendUrl,omitempty"`
+	MDSDConfigVersion                  string        `json:"mdsdConfigVersion,omitempty"`
+	MDSDEnvironment                    string        `json:"mdsdEnvironment,omitempty"`
+	RPImagePrefix                      string        `json:"rpImagePrefix,omitempty"`
+	RPMode                             string        `json:"rpMode,omitempty"`
+	RPNSGSourceAddressPrefixes         []string      `json:"rpNsgSourceAddressPrefixes,omitempty"`
+	RPParentDomainName                 string        `json:"rpParentDomainName,omitempty"`
+	SubscriptionResourceGroupName      string        `json:"subscriptionResourceGroupName,omitempty"`
+	SSHPublicKey                       string        `json:"sshPublicKey,omitempty"`
 }
 
 // GetConfig return RP configuration from the file

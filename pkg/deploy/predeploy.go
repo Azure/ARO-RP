@@ -32,8 +32,8 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 		Location: &d.config.Location,
 	})
 	if d.fullDeploy { // upgrade does not have permission to create RG
-		// deploy per subscription Action Group
-		_, err = d.groups.CreateOrUpdate(ctx, d.config.Configuration.ActionGroupSubscriptionResourceGroupName, mgmtfeatures.ResourceGroup{
+		// deploy per subscription resources
+		_, err = d.groups.CreateOrUpdate(ctx, d.config.Configuration.SubscriptionResourceGroupName, mgmtfeatures.ResourceGroup{
 			Location: to.StringPtr("centralus"),
 		})
 		if err != nil {
@@ -48,7 +48,7 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 		}
 	}
 
-	err = d.deployActionGroup(ctx)
+	err = d.deploySubscription(ctx)
 	if err != nil {
 		return err
 	}
@@ -167,7 +167,7 @@ func (d *deployer) deploySubscription(ctx context.Context) error {
 	}
 
 	d.log.Infof("deploying %s", deploymentName)
-	return d.deployments.CreateOrUpdateAndWait(ctx, d.config.Configuration.ActionGroupSubscriptionResourceGroupName, deploymentName, mgmtfeatures.Deployment{
+	return d.deployments.CreateOrUpdateAndWait(ctx, d.config.Configuration.SubscriptionResourceGroupName, deploymentName, mgmtfeatures.Deployment{
 		Properties: &mgmtfeatures.DeploymentProperties{
 			Template:   template,
 			Mode:       mgmtfeatures.Incremental,

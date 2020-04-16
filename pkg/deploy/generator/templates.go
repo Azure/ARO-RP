@@ -149,7 +149,7 @@ func (g *generator) rpGlobalSubscriptionTemplate() *arm.Template {
 	return t
 }
 
-func (g *generator) rpActionGroupTemplate() *arm.Template {
+func (g *generator) rpSubscriptionTemplate() *arm.Template {
 	t := templateStanza()
 
 	params := []string{
