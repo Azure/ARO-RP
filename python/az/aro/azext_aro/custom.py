@@ -45,7 +45,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
     subscription_id = get_subscription_id(cmd.cli_ctx)
 
     random_id = ''.join(random.choice(
-        'abcdefghijklmnopqrstuvwxyz0123456789') for _ in range(8))
+        'bcdfghjklmnpqrstvwxyz0123456789') for _ in range(8))
 
     aad = AADManager(cmd.cli_ctx)
     if client_id is None:

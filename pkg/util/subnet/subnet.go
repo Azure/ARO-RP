@@ -79,11 +79,16 @@ func Split(subnetID string) (string, string, error) {
 // NetworkSecurityGroupID returns the NetworkSecurityGroup ID for a given subnet
 // ID
 func NetworkSecurityGroupID(oc *api.OpenShiftCluster, subnetID string) (string, error) {
+	infraID := oc.Properties.InfraID
+	if infraID == "" {
+		infraID = "aro"
+	}
+
 	switch {
 	case strings.EqualFold(subnetID, oc.Properties.MasterProfile.SubnetID):
-		return oc.Properties.ClusterProfile.ResourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/aro-controlplane-nsg", nil
+		return oc.Properties.ClusterProfile.ResourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/" + infraID + "-controlplane-nsg", nil
 	case strings.EqualFold(subnetID, oc.Properties.WorkerProfiles[0].SubnetID):
-		return oc.Properties.ClusterProfile.ResourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/aro-node-nsg", nil
+		return oc.Properties.ClusterProfile.ResourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/" + infraID + "-node-nsg", nil
 	default:
 		return "", fmt.Errorf("unknown subnetID %q", subnetID)
 	}

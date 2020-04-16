@@ -13,6 +13,11 @@ import (
 )
 
 func (i *Installer) apiServerPublicLoadBalancer(location string, visibility api.Visibility) *arm.Resource {
+	infraID := i.doc.OpenShiftCluster.Properties.InfraID
+	if infraID == "" {
+		infraID = "aro" // TODO: remove after deploy
+	}
+
 	lb := &mgmtnetwork.LoadBalancer{
 		Sku: &mgmtnetwork.LoadBalancerSku{
 			Name: mgmtnetwork.LoadBalancerSkuNameStandard,
@@ -22,7 +27,7 @@ func (i *Installer) apiServerPublicLoadBalancer(location string, visibility api.
 				{
 					FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
 						PublicIPAddress: &mgmtnetwork.PublicIPAddress{
-							ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', 'aro-pip')]"),
+							ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', '" + infraID + "-pip')]"),
 						},
 					},
 					Name: to.StringPtr("public-lb-ip"),
@@ -30,7 +35,7 @@ func (i *Installer) apiServerPublicLoadBalancer(location string, visibility api.
 			},
 			BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
 				{
-					Name: to.StringPtr("aro-public-lb-control-plane"),
+					Name: to.StringPtr(infraID + "-public-lb-control-plane"),
 				},
 			},
 			OutboundRules: &[]mgmtnetwork.OutboundRule{
@@ -38,11 +43,11 @@ func (i *Installer) apiServerPublicLoadBalancer(location string, visibility api.
 					OutboundRulePropertiesFormat: &mgmtnetwork.OutboundRulePropertiesFormat{
 						FrontendIPConfigurations: &[]mgmtnetwork.SubResource{
 							{
-								ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'aro-public-lb', 'public-lb-ip')]"),
+								ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '" + infraID + "-public-lb', 'public-lb-ip')]"),
 							},
 						},
 						BackendAddressPool: &mgmtnetwork.SubResource{
-							ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'aro-public-lb', 'aro-public-lb-control-plane')]"),
+							ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '" + infraID + "-public-lb', '" + infraID + "-public-lb-control-plane')]"),
 						},
 						Protocol:             mgmtnetwork.LoadBalancerOutboundRuleProtocolAll,
 						IdleTimeoutInMinutes: to.Int32Ptr(30),
@@ -51,7 +56,7 @@ func (i *Installer) apiServerPublicLoadBalancer(location string, visibility api.
 				},
 			},
 		},
-		Name:     to.StringPtr("aro-public-lb"),
+		Name:     to.StringPtr(infraID + "-public-lb"),
 		Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
 		Location: &location,
 	}
@@ -61,13 +66,13 @@ func (i *Installer) apiServerPublicLoadBalancer(location string, visibility api.
 			{
 				LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
 					FrontendIPConfiguration: &mgmtnetwork.SubResource{
-						ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'aro-public-lb', 'public-lb-ip')]"),
+						ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '" + infraID + "-public-lb', 'public-lb-ip')]"),
 					},
 					BackendAddressPool: &mgmtnetwork.SubResource{
-						ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'aro-public-lb', 'aro-public-lb-control-plane')]"),
+						ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '" + infraID + "-public-lb', '" + infraID + "-public-lb-control-plane')]"),
 					},
 					Probe: &mgmtnetwork.SubResource{
-						ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'aro-public-lb', 'api-internal-probe')]"),
+						ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/probes', '" + infraID + "-public-lb', 'api-internal-probe')]"),
 					},
 					Protocol:             mgmtnetwork.TransportProtocolTCP,
 					LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
@@ -97,7 +102,7 @@ func (i *Installer) apiServerPublicLoadBalancer(location string, visibility api.
 		Resource:   lb,
 		APIVersion: azureclient.APIVersions["Microsoft.Network"],
 		DependsOn: []string{
-			"Microsoft.Network/publicIPAddresses/aro-pip",
+			"Microsoft.Network/publicIPAddresses/" + infraID + "-pip",
 		},
 	}
 }

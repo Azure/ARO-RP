@@ -32,6 +32,11 @@ func (i *Installer) installResources(ctx context.Context) error {
 	installConfig := g[reflect.TypeOf(&installconfig.InstallConfig{})].(*installconfig.InstallConfig)
 	machineMaster := g[reflect.TypeOf(&machine.Master{})].(*machine.Master)
 
+	infraID := i.doc.OpenShiftCluster.Properties.InfraID
+	if infraID == "" {
+		infraID = "aro" // TODO: remove after deploy
+	}
+
 	resourceGroup := stringutils.LastTokenByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
 	vnetID, _, err := subnet.Split(i.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
@@ -79,14 +84,14 @@ func (i *Installer) installResources(ctx context.Context) error {
 						TTL: to.Int64Ptr(300),
 						ARecords: &[]mgmtprivatedns.ARecord{
 							{
-								Ipv4Address: to.StringPtr(fmt.Sprintf("[reference('Microsoft.Network/loadBalancers/aro-internal-lb', '%s').frontendIpConfigurations[0].properties.privateIPAddress]", azureclient.APIVersions["Microsoft.Network"])),
+								Ipv4Address: to.StringPtr(fmt.Sprintf("[reference('Microsoft.Network/loadBalancers/"+infraID+"-internal-lb', '%s').frontendIpConfigurations[0].properties.privateIPAddress]", azureclient.APIVersions["Microsoft.Network"])),
 							},
 						},
 					},
 				},
 				APIVersion: azureclient.APIVersions["Microsoft.Network/privateDnsZones"],
 				DependsOn: []string{
-					"Microsoft.Network/loadBalancers/aro-internal-lb",
+					"Microsoft.Network/loadBalancers/" + infraID + "-internal-lb",
 					"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
 				},
 			},
@@ -98,14 +103,14 @@ func (i *Installer) installResources(ctx context.Context) error {
 						TTL: to.Int64Ptr(300),
 						ARecords: &[]mgmtprivatedns.ARecord{
 							{
-								Ipv4Address: to.StringPtr(fmt.Sprintf("[reference('Microsoft.Network/loadBalancers/aro-internal-lb', '%s').frontendIpConfigurations[0].properties.privateIPAddress]", azureclient.APIVersions["Microsoft.Network"])),
+								Ipv4Address: to.StringPtr(fmt.Sprintf("[reference('Microsoft.Network/loadBalancers/"+infraID+"-internal-lb', '%s').frontendIpConfigurations[0].properties.privateIPAddress]", azureclient.APIVersions["Microsoft.Network"])),
 							},
 						},
 					},
 				},
 				APIVersion: azureclient.APIVersions["Microsoft.Network/privateDnsZones"],
 				DependsOn: []string{
-					"Microsoft.Network/loadBalancers/aro-internal-lb",
+					"Microsoft.Network/loadBalancers/" + infraID + "-internal-lb",
 					"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
 				},
 			},
@@ -131,7 +136,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 						TTL: to.Int64Ptr(60),
 						ARecords: &[]mgmtprivatedns.ARecord{
 							{
-								Ipv4Address: to.StringPtr("[reference(resourceId('Microsoft.Network/networkInterfaces', concat('aro-master', copyIndex(), '-nic')), '2019-07-01').ipConfigurations[0].properties.privateIPAddress]"),
+								Ipv4Address: to.StringPtr("[reference(resourceId('Microsoft.Network/networkInterfaces', concat('" + infraID + "-master', copyIndex(), '-nic')), '2019-07-01').ipConfigurations[0].properties.privateIPAddress]"),
 							},
 						},
 					},
@@ -142,7 +147,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 					Count: int(*installConfig.Config.ControlPlane.Replicas),
 				},
 				DependsOn: []string{
-					"[concat('Microsoft.Network/networkInterfaces/aro-master', copyIndex(), '-nic')]",
+					"[concat('Microsoft.Network/networkInterfaces/" + infraID + "-master', copyIndex(), '-nic')]",
 					"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
 				},
 			},
@@ -169,7 +174,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 					PrivateLinkServiceProperties: &mgmtnetwork.PrivateLinkServiceProperties{
 						LoadBalancerFrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
 							{
-								ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'aro-internal-lb', 'internal-lb-ip')]"),
+								ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '" + infraID + "-internal-lb', 'internal-lb-ip')]"),
 							},
 						},
 						IPConfigurations: &[]mgmtnetwork.PrivateLinkServiceIPConfiguration{
@@ -179,7 +184,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 										ID: to.StringPtr(i.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 									},
 								},
-								Name: to.StringPtr("aro-pls-nic"),
+								Name: to.StringPtr(infraID + "-pls-nic"),
 							},
 						},
 						Visibility: &mgmtnetwork.PrivateLinkServicePropertiesVisibility{
@@ -193,13 +198,13 @@ func (i *Installer) installResources(ctx context.Context) error {
 							},
 						},
 					},
-					Name:     to.StringPtr("aro-pls"),
+					Name:     to.StringPtr(infraID + "-pls"),
 					Type:     to.StringPtr("Microsoft.Network/privateLinkServices"),
 					Location: &installConfig.Config.Azure.Region,
 				},
 				APIVersion: azureclient.APIVersions["Microsoft.Network"],
 				DependsOn: []string{
-					"Microsoft.Network/loadBalancers/aro-internal-lb",
+					"Microsoft.Network/loadBalancers/" + infraID + "-internal-lb",
 				},
 			},
 			{
@@ -210,7 +215,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 					PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
 						PublicIPAllocationMethod: mgmtnetwork.Static,
 					},
-					Name:     to.StringPtr("aro-pip"),
+					Name:     to.StringPtr(infraID + "-pip"),
 					Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
 					Location: &installConfig.Config.Azure.Region,
 				},
@@ -236,20 +241,20 @@ func (i *Installer) installResources(ctx context.Context) error {
 						},
 						BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
 							{
-								Name: to.StringPtr("aro-internal-controlplane"),
+								Name: to.StringPtr(infraID + "-internal-controlplane"),
 							},
 						},
 						LoadBalancingRules: &[]mgmtnetwork.LoadBalancingRule{
 							{
 								LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
 									FrontendIPConfiguration: &mgmtnetwork.SubResource{
-										ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'aro-internal-lb', 'internal-lb-ip')]"),
+										ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '" + infraID + "-internal-lb', 'internal-lb-ip')]"),
 									},
 									BackendAddressPool: &mgmtnetwork.SubResource{
-										ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'aro-internal-lb', 'aro-internal-controlplane')]"),
+										ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '" + infraID + "-internal-lb', '" + infraID + "-internal-controlplane')]"),
 									},
 									Probe: &mgmtnetwork.SubResource{
-										ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'aro-internal-lb', 'api-internal-probe')]"),
+										ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/probes', '" + infraID + "-internal-lb', 'api-internal-probe')]"),
 									},
 									Protocol:             mgmtnetwork.TransportProtocolTCP,
 									LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
@@ -263,13 +268,13 @@ func (i *Installer) installResources(ctx context.Context) error {
 							{
 								LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
 									FrontendIPConfiguration: &mgmtnetwork.SubResource{
-										ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'aro-internal-lb', 'internal-lb-ip')]"),
+										ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '" + infraID + "-internal-lb', 'internal-lb-ip')]"),
 									},
 									BackendAddressPool: &mgmtnetwork.SubResource{
-										ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'aro-internal-lb', 'aro-internal-controlplane')]"),
+										ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '" + infraID + "-internal-lb', '" + infraID + "-internal-controlplane')]"),
 									},
 									Probe: &mgmtnetwork.SubResource{
-										ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'aro-internal-lb', 'sint-probe')]"),
+										ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/probes', '" + infraID + "-internal-lb', 'sint-probe')]"),
 									},
 									Protocol:             mgmtnetwork.TransportProtocolTCP,
 									LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
@@ -301,7 +306,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 							},
 						},
 					},
-					Name:     to.StringPtr("aro-internal-lb"),
+					Name:     to.StringPtr(infraID + "-internal-lb"),
 					Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
 					Location: &installConfig.Config.Azure.Region,
 				},
@@ -315,10 +320,10 @@ func (i *Installer) installResources(ctx context.Context) error {
 								InterfaceIPConfigurationPropertiesFormat: &mgmtnetwork.InterfaceIPConfigurationPropertiesFormat{
 									LoadBalancerBackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
 										{
-											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'aro-public-lb', 'aro-public-lb-control-plane')]"),
+											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '" + infraID + "-public-lb', '" + infraID + "-public-lb-control-plane')]"),
 										},
 										{
-											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'aro-internal-lb', 'aro-internal-controlplane')]"),
+											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '" + infraID + "-internal-lb', '" + infraID + "-internal-controlplane')]"),
 										},
 									},
 									Subnet: &mgmtnetwork.Subnet{
@@ -329,14 +334,14 @@ func (i *Installer) installResources(ctx context.Context) error {
 							},
 						},
 					},
-					Name:     to.StringPtr("aro-bootstrap-nic"),
+					Name:     to.StringPtr(infraID + "-bootstrap-nic"),
 					Type:     to.StringPtr("Microsoft.Network/networkInterfaces"),
 					Location: &installConfig.Config.Azure.Region,
 				},
 				APIVersion: azureclient.APIVersions["Microsoft.Network"],
 				DependsOn: []string{
-					"Microsoft.Network/loadBalancers/aro-internal-lb",
-					"Microsoft.Network/loadBalancers/aro-public-lb",
+					"Microsoft.Network/loadBalancers/" + infraID + "-internal-lb",
+					"Microsoft.Network/loadBalancers/" + infraID + "-public-lb",
 				},
 			},
 			{
@@ -347,10 +352,10 @@ func (i *Installer) installResources(ctx context.Context) error {
 								InterfaceIPConfigurationPropertiesFormat: &mgmtnetwork.InterfaceIPConfigurationPropertiesFormat{
 									LoadBalancerBackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
 										{
-											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'aro-public-lb', 'aro-public-lb-control-plane')]"),
+											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '" + infraID + "-public-lb', '" + infraID + "-public-lb-control-plane')]"),
 										},
 										{
-											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'aro-internal-lb', 'aro-internal-controlplane')]"),
+											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '" + infraID + "-internal-lb', '" + infraID + "-internal-controlplane')]"),
 										},
 									},
 									Subnet: &mgmtnetwork.Subnet{
@@ -361,7 +366,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 							},
 						},
 					},
-					Name:     to.StringPtr("[concat('aro-master', copyIndex(), '-nic')]"),
+					Name:     to.StringPtr("[concat('" + infraID + "-master', copyIndex(), '-nic')]"),
 					Type:     to.StringPtr("Microsoft.Network/networkInterfaces"),
 					Location: &installConfig.Config.Azure.Region,
 				},
@@ -371,8 +376,8 @@ func (i *Installer) installResources(ctx context.Context) error {
 					Count: int(*installConfig.Config.ControlPlane.Replicas),
 				},
 				DependsOn: []string{
-					"Microsoft.Network/loadBalancers/aro-internal-lb",
-					"Microsoft.Network/loadBalancers/aro-public-lb",
+					"Microsoft.Network/loadBalancers/" + infraID + "-internal-lb",
+					"Microsoft.Network/loadBalancers/" + infraID + "-public-lb",
 				},
 			},
 			{
@@ -389,7 +394,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 								Version:   &installConfig.Config.Azure.Image.Version,
 							},
 							OsDisk: &mgmtcompute.OSDisk{
-								Name:         to.StringPtr("aro-bootstrap_OSDisk"),
+								Name:         to.StringPtr(infraID + "-bootstrap_OSDisk"),
 								Caching:      mgmtcompute.CachingTypesReadWrite,
 								CreateOption: mgmtcompute.DiskCreateOptionTypesFromImage,
 								DiskSizeGB:   to.Int32Ptr(100),
@@ -399,7 +404,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 							},
 						},
 						OsProfile: &mgmtcompute.OSProfile{
-							ComputerName:  to.StringPtr("aro-bootstrap-vm"),
+							ComputerName:  to.StringPtr(infraID + "-bootstrap-vm"),
 							AdminUsername: to.StringPtr("core"),
 							AdminPassword: to.StringPtr("NotActuallyApplied!"),
 							CustomData:    to.StringPtr(`[base64(concat('{"ignition":{"version":"2.2.0","config":{"replace":{"source":"https://cluster` + i.doc.OpenShiftCluster.Properties.StorageSuffix + `.blob.core.windows.net/ignition/bootstrap.ign?', listAccountSas(resourceId('Microsoft.Storage/storageAccounts', 'cluster` + i.doc.OpenShiftCluster.Properties.StorageSuffix + `'), '2019-04-01', parameters('sas')).accountSasToken, '"}}}}'))]`),
@@ -410,7 +415,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 						NetworkProfile: &mgmtcompute.NetworkProfile{
 							NetworkInterfaces: &[]mgmtcompute.NetworkInterfaceReference{
 								{
-									ID: to.StringPtr("[resourceId('Microsoft.Network/networkInterfaces', 'aro-bootstrap-nic')]"),
+									ID: to.StringPtr("[resourceId('Microsoft.Network/networkInterfaces', '" + infraID + "-bootstrap-nic')]"),
 								},
 							},
 						},
@@ -421,13 +426,13 @@ func (i *Installer) installResources(ctx context.Context) error {
 							},
 						},
 					},
-					Name:     to.StringPtr("aro-bootstrap"),
+					Name:     to.StringPtr(infraID + "-bootstrap"),
 					Type:     to.StringPtr("Microsoft.Compute/virtualMachines"),
 					Location: &installConfig.Config.Azure.Region,
 				},
 				APIVersion: azureclient.APIVersions["Microsoft.Compute"],
 				DependsOn: []string{
-					"Microsoft.Network/networkInterfaces/aro-bootstrap-nic",
+					"Microsoft.Network/networkInterfaces/" + infraID + "-bootstrap-nic",
 					"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/virtualNetworkLinks/" + installConfig.Config.ObjectMeta.Name + "-network-link",
 				},
 			},
@@ -445,7 +450,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 								Version:   &installConfig.Config.Azure.Image.Version,
 							},
 							OsDisk: &mgmtcompute.OSDisk{
-								Name:         to.StringPtr("[concat('aro-master-', copyIndex(), '_OSDisk')]"),
+								Name:         to.StringPtr("[concat('" + infraID + "-master-', copyIndex(), '_OSDisk')]"),
 								Caching:      mgmtcompute.CachingTypesReadOnly,
 								CreateOption: mgmtcompute.DiskCreateOptionTypesFromImage,
 								DiskSizeGB:   &installConfig.Config.ControlPlane.Platform.Azure.OSDisk.DiskSizeGB,
@@ -455,7 +460,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 							},
 						},
 						OsProfile: &mgmtcompute.OSProfile{
-							ComputerName:  to.StringPtr("[concat('aro-master-', copyIndex())]"),
+							ComputerName:  to.StringPtr("[concat('" + infraID + "-master-', copyIndex())]"),
 							AdminUsername: to.StringPtr("core"),
 							AdminPassword: to.StringPtr("NotActuallyApplied!"),
 							CustomData:    to.StringPtr(base64.StdEncoding.EncodeToString(machineMaster.File.Data)),
@@ -466,7 +471,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 						NetworkProfile: &mgmtcompute.NetworkProfile{
 							NetworkInterfaces: &[]mgmtcompute.NetworkInterfaceReference{
 								{
-									ID: to.StringPtr("[resourceId('Microsoft.Network/networkInterfaces', concat('aro-master', copyIndex(), '-nic'))]"),
+									ID: to.StringPtr("[resourceId('Microsoft.Network/networkInterfaces', concat('" + infraID + "-master', copyIndex(), '-nic'))]"),
 								},
 							},
 						},
@@ -478,7 +483,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 						},
 					},
 					Zones:    zones,
-					Name:     to.StringPtr("[concat('aro-master-', copyIndex())]"),
+					Name:     to.StringPtr("[concat('" + infraID + "-master-', copyIndex())]"),
 					Type:     to.StringPtr("Microsoft.Compute/virtualMachines"),
 					Location: &installConfig.Config.Azure.Region,
 				},
@@ -488,7 +493,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 					Count: int(*installConfig.Config.ControlPlane.Replicas),
 				},
 				DependsOn: []string{
-					"[concat('Microsoft.Network/networkInterfaces/aro-master', copyIndex(), '-nic')]",
+					"[concat('Microsoft.Network/networkInterfaces/" + infraID + "-master', copyIndex(), '-nic')]",
 					"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/virtualNetworkLinks/" + installConfig.Config.ObjectMeta.Name + "-network-link",
 				},
 			},
@@ -500,7 +505,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 					PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
 						PublicIPAllocationMethod: mgmtnetwork.Static,
 					},
-					Name:     to.StringPtr("aro-outbound-pip"),
+					Name:     to.StringPtr(infraID + "-outbound-pip"),
 					Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
 					Location: &installConfig.Config.Azure.Region,
 				},
@@ -516,7 +521,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 							{
 								FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
 									PublicIPAddress: &mgmtnetwork.PublicIPAddress{
-										ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', 'aro-outbound-pip')]"),
+										ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', '" + infraID + "-outbound-pip')]"),
 									},
 								},
 								Name: to.StringPtr("outbound"),
@@ -524,7 +529,7 @@ func (i *Installer) installResources(ctx context.Context) error {
 						},
 						BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
 							{
-								Name: to.StringPtr("aro"),
+								Name: to.StringPtr(infraID),
 							},
 						},
 						LoadBalancingRules: &[]mgmtnetwork.LoadBalancingRule{}, //required to override default LB rules for port 80 and 443
@@ -534,11 +539,11 @@ func (i *Installer) installResources(ctx context.Context) error {
 								OutboundRulePropertiesFormat: &mgmtnetwork.OutboundRulePropertiesFormat{
 									FrontendIPConfigurations: &[]mgmtnetwork.SubResource{
 										{
-											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'aro', 'outbound')]"),
+											ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '" + infraID + "', 'outbound')]"),
 										},
 									},
 									BackendAddressPool: &mgmtnetwork.SubResource{
-										ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'aro', 'aro')]"),
+										ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '" + infraID + "', '" + infraID + "')]"),
 									},
 									Protocol:             mgmtnetwork.LoadBalancerOutboundRuleProtocolAll,
 									IdleTimeoutInMinutes: to.Int32Ptr(30),
@@ -547,13 +552,13 @@ func (i *Installer) installResources(ctx context.Context) error {
 							},
 						},
 					},
-					Name:     to.StringPtr("aro"),
+					Name:     to.StringPtr(infraID),
 					Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
 					Location: &installConfig.Config.Azure.Region,
 				},
 				APIVersion: azureclient.APIVersions["Microsoft.Network"],
 				DependsOn: []string{
-					"Microsoft.Network/publicIPAddresses/aro-outbound-pip",
+					"Microsoft.Network/publicIPAddresses/" + infraID + "-outbound-pip",
 				},
 			},
 		},

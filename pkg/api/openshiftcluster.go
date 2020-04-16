@@ -85,6 +85,7 @@ type OpenShiftClusterProperties struct {
 
 	StorageSuffix string `json:"storageSuffix,omitempty"`
 
+	InfraID              string       `json:"infraId,omitempty"`
 	SSHKey               SecureBytes  `json:"sshKey,omitempty"`
 	AdminKubeconfig      SecureBytes  `json:"adminKubeconfig,omitempty"`
 	AROServiceKubeconfig SecureBytes  `json:"aroServiceKubeconfig,omitempty"`

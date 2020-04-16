@@ -52,16 +52,21 @@ func (i *Installer) updateRouterIP(ctx context.Context) error {
 }
 
 func (i *Installer) updateAPIIP(ctx context.Context) error {
+	infraID := i.doc.OpenShiftCluster.Properties.InfraID
+	if infraID == "" {
+		infraID = "aro" // TODO: remove after deploy
+	}
+
 	resourceGroup := stringutils.LastTokenByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	var ipAddress string
 	if i.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {
-		ip, err := i.publicipaddresses.Get(ctx, resourceGroup, "aro-pip", "")
+		ip, err := i.publicipaddresses.Get(ctx, resourceGroup, infraID+"-pip", "")
 		if err != nil {
 			return err
 		}
 		ipAddress = *ip.IPAddress
 	} else {
-		lb, err := i.loadbalancers.Get(ctx, resourceGroup, "aro-internal-lb", "")
+		lb, err := i.loadbalancers.Get(ctx, resourceGroup, infraID+"-internal-lb", "")
 		if err != nil {
 			return err
 		}

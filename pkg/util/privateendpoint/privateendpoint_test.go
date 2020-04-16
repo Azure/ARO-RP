@@ -39,6 +39,7 @@ func TestCreate(t *testing.T) {
 
 	type test struct {
 		name     string
+		infraID  string
 		subnetID string
 		mocks    func(*test, *mock_network.MockPrivateEndpointsClient)
 		wantErr  string
@@ -71,6 +72,7 @@ func TestCreate(t *testing.T) {
 		},
 		{
 			name:     "internal error",
+			infraID:  "test-1234",
 			subnetID: "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/subnet",
 			mocks: func(tt *test, privateendpoints *mock_network.MockPrivateEndpointsClient) {
 				privateendpoints.EXPECT().
@@ -83,7 +85,7 @@ func TestCreate(t *testing.T) {
 								{
 									Name: to.StringPtr("rp-plsconnection"),
 									PrivateLinkServiceConnectionProperties: &mgmtnetwork.PrivateLinkServiceConnectionProperties{
-										PrivateLinkServiceID: to.StringPtr("/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup/providers/Microsoft.Network/privateLinkServices/aro-pls"),
+										PrivateLinkServiceID: to.StringPtr("/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup/providers/Microsoft.Network/privateLinkServices/test-1234-pls"),
 									},
 								},
 							},
@@ -108,6 +110,8 @@ func TestCreate(t *testing.T) {
 				env:              env,
 				privateendpoints: privateendpoints,
 			}
+
+			doc.OpenShiftCluster.Properties.InfraID = tt.infraID
 
 			err := m.Create(ctx, doc)
 			if err != nil && err.Error() != tt.wantErr ||

@@ -197,7 +197,7 @@
   * First, get the admin kubeconfig and `export KUBECONFIG` as detailed above.
 
   ```bash
-  hack/ssh.sh [aro-master-{0,1,2}]
+  hack/ssh.sh [xxxxx-master-{0,1,2}]
   ```
 
 

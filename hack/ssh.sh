@@ -8,7 +8,6 @@ while [[ $1 == -* ]]; do
   shift
 done
 
-NODENAME=aro-master-0
 if [[ "$#" -gt 0 ]]; then
   NODENAME=$1
   shift
@@ -34,6 +33,8 @@ kind: Pod
 apiVersion: v1
 metadata:
   generateName: debug
+  labels:
+    openshift.io/run-level: "0"
   namespace: default
 spec:
   containers:
@@ -94,7 +95,7 @@ spec:
   hostIPC: true
   hostNetwork: true
   hostPID: true
-  nodeName: $NODENAME
+  nodeName: "$NODENAME"
   restartPolicy: Never
   terminationGracePeriodSeconds: 0
   volumes:

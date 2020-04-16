@@ -170,6 +170,7 @@ func TestNetworkSecurityGroupID(t *testing.T) {
 
 	for _, tt := range []struct {
 		name      string
+		infraID   string
 		subnetID  string
 		wantNSGID string
 		wantErr   string
@@ -181,8 +182,9 @@ func TestNetworkSecurityGroupID(t *testing.T) {
 		},
 		{
 			name:      "worker",
+			infraID:   "test-1234",
 			subnetID:  "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker",
-			wantNSGID: "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup/providers/Microsoft.Network/networkSecurityGroups/aro-node-nsg",
+			wantNSGID: "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup/providers/Microsoft.Network/networkSecurityGroups/test-1234-node-nsg",
 		},
 		{
 			name:     "invalid",
@@ -191,6 +193,8 @@ func TestNetworkSecurityGroupID(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			oc.Properties.InfraID = tt.infraID
+
 			nsgID, err := NetworkSecurityGroupID(oc, tt.subnetID)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {

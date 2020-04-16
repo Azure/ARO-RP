@@ -64,21 +64,22 @@ upstream OCP.
 
 * No managed identity (for now).
 
-* installconfig.ClusterID.InfraID is hard-coded to "aro".
+* Upstream installer closely binds the installConfig (cluster) name, cluster
+  domain name, infra ID and Azure resource name prefix.  ARO separates these out
+  a little.  The installConfig (cluster) name and the domain name remain bound;
+  the infra ID and Azure resource name prefix are taken from the ARO resource
+  name.
 
 * API server public IP domain name label is not set.
 
 * ARO uses first party RHCOS OS images published by Microsoft.
 
-* ARO API server internal LB remains on highest available master subnet IP, like
-  in 4.2.
-
-* ARO never creates aro-bootstrap-pip for bootstrap VM, or the corresponding NSG
-  rule.
+* ARO never creates xxxxx-bootstrap-pip for bootstrap VM, or the corresponding
+  NSG rule.
 
 * ARO API server LB uses Azure outboundRule rather than port 27627 inbound rule.
 
-* `aro` LB uses Azure outboundRule and outbound IP `aro-outbound-pip`.
+* `xxxxx` LB uses Azure outboundRule and outbound IP `xxxxx-outbound-pip`.
 
 * ARO deploys a private link service in order for the RP to be able to
   communicate with the cluster.
