@@ -39,6 +39,7 @@ func (err statusCodeError) Error() string {
 	return fmt.Sprintf("%d", err)
 }
 
+type kubeActionsFactory func(*logrus.Entry, env.Interface) kubeactions.Interface
 type resourcesClientFactory func(subscriptionID string, authorizer autorest.Authorizer) features.ResourcesClient
 
 type frontend struct {
@@ -50,7 +51,7 @@ type frontend struct {
 	cipher  encryption.Cipher
 
 	ocEnricher             clusterdata.OpenShiftClusterEnricher
-	kubeActions            kubeactions.Interface
+	kubeActionsFactory     kubeActionsFactory
 	resourcesClientFactory resourcesClientFactory
 
 	l net.Listener
@@ -67,7 +68,7 @@ type Runnable interface {
 }
 
 // NewFrontend returns a new runnable frontend
-func NewFrontend(ctx context.Context, baseLog *logrus.Entry, _env env.Interface, db *database.Database, apis map[string]*api.Version, m metrics.Interface, cipher encryption.Cipher, kubeActions kubeactions.Interface, resourcesClientFactory resourcesClientFactory) (Runnable, error) {
+func NewFrontend(ctx context.Context, baseLog *logrus.Entry, _env env.Interface, db *database.Database, apis map[string]*api.Version, m metrics.Interface, cipher encryption.Cipher, kubeActionsFactory kubeActionsFactory, resourcesClientFactory resourcesClientFactory) (Runnable, error) {
 	f := &frontend{
 		baseLog:                baseLog,
 		env:                    _env,
@@ -75,7 +76,7 @@ func NewFrontend(ctx context.Context, baseLog *logrus.Entry, _env env.Interface,
 		apis:                   apis,
 		m:                      m,
 		cipher:                 cipher,
-		kubeActions:            kubeActions,
+		kubeActionsFactory:     kubeActionsFactory,
 		resourcesClientFactory: resourcesClientFactory,
 
 		ocEnricher: clusterdata.NewBestEffortEnricher(baseLog, _env, m),

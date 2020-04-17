@@ -22,6 +22,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/frontend/kubeactions"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
@@ -218,13 +219,13 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 
 			l := listener.NewListener()
 			defer l.Close()
-			env := &env.Test{
+			_env := &env.Test{
 				L:            l,
 				TestLocation: "eastus",
 				TLSKey:       serverkey,
 				TLSCerts:     servercerts,
 			}
-			env.SetAdminClientAuthorizer(clientauthorizer.NewOne(clientcerts[0].Raw))
+			_env.SetAdminClientAuthorizer(clientauthorizer.NewOne(clientcerts[0].Raw))
 			cli.Transport.(*http.Transport).Dial = l.Dial
 
 			controller := gomock.NewController(t)
@@ -234,9 +235,11 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			openshiftClusters := mock_database.NewMockOpenShiftClusters(controller)
 			tt.mocks(tt, openshiftClusters, kactions)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), _env, &database.Database{
 				OpenShiftClusters: openshiftClusters,
-			}, api.APIs, &noop.Noop{}, nil, kactions, nil)
+			}, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface) kubeactions.Interface {
+				return kactions
+			}, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -486,13 +489,13 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 
 			l := listener.NewListener()
 			defer l.Close()
-			env := &env.Test{
+			_env := &env.Test{
 				L:            l,
 				TestLocation: "eastus",
 				TLSKey:       serverkey,
 				TLSCerts:     servercerts,
 			}
-			env.SetAdminClientAuthorizer(clientauthorizer.NewOne(clientcerts[0].Raw))
+			_env.SetAdminClientAuthorizer(clientauthorizer.NewOne(clientcerts[0].Raw))
 			cli.Transport.(*http.Transport).Dial = l.Dial
 
 			controller := gomock.NewController(t)
@@ -502,9 +505,11 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 			openshiftClusters := mock_database.NewMockOpenShiftClusters(controller)
 			tt.mocks(tt, openshiftClusters, kactions)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), _env, &database.Database{
 				OpenShiftClusters: openshiftClusters,
-			}, api.APIs, &noop.Noop{}, nil, kactions, nil)
+			}, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface) kubeactions.Interface {
+				return kactions
+			}, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
