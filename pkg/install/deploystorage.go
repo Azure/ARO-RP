@@ -42,36 +42,43 @@ func (i *Installer) createDNS(ctx context.Context) error {
 }
 
 func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) error {
-	clusterID := &installconfig.ClusterID{}
+	// Attempt to load graph, in case it was saved already but the install phase was restarted
+	g, err := i.loadGraph(ctx)
+	if hasAuthorizationFailedError(err) { // true if graph has not been saved yet
+		// Create graph
+		clusterID := &installconfig.ClusterID{}
 
-	err := clusterID.Generate(asset.Parents{
-		reflect.TypeOf(installConfig): &installconfig.InstallConfig{
-			Config: &types.InstallConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: i.doc.OpenShiftCluster.Name,
+		err := clusterID.Generate(asset.Parents{
+			reflect.TypeOf(installConfig): &installconfig.InstallConfig{
+				Config: &types.InstallConfig{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: i.doc.OpenShiftCluster.Name,
+					},
 				},
 			},
-		},
-	})
-	if err != nil {
-		return err
-	}
-
-	clusterID.UUID = i.doc.ID
-
-	g := graph{
-		reflect.TypeOf(installConfig): installConfig,
-		reflect.TypeOf(platformCreds): platformCreds,
-		reflect.TypeOf(image):         image,
-		reflect.TypeOf(clusterID):     clusterID,
-	}
-
-	i.log.Print("resolving graph")
-	for _, a := range targets.Cluster {
-		_, err := g.resolve(a)
+		})
 		if err != nil {
 			return err
 		}
+
+		clusterID.UUID = i.doc.ID
+
+		g = graph{
+			reflect.TypeOf(installConfig): installConfig,
+			reflect.TypeOf(platformCreds): platformCreds,
+			reflect.TypeOf(image):         image,
+			reflect.TypeOf(clusterID):     clusterID,
+		}
+
+		i.log.Print("resolving graph")
+		for _, a := range targets.Cluster {
+			_, err := g.resolve(a)
+			if err != nil {
+				return err
+			}
+		}
+	} else if err != nil {
+		return err
 	}
 
 	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
@@ -329,7 +336,14 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		// used for the SAS token with which the bootstrap node retrieves its
 		// ignition payload
-		doc.OpenShiftCluster.Properties.Install.Now = time.Now().UTC()
+		var t time.Time
+		if doc.OpenShiftCluster.Properties.Install.Now == t {
+			// Only set this if it hasn't been set already, since it is used to
+			// create values for signedStart and signedExpiry in
+			// deployResourceTemplate, and if these are not stable a
+			// redeployment will fail.
+			doc.OpenShiftCluster.Properties.Install.Now = time.Now().UTC()
+		}
 		doc.OpenShiftCluster.Properties.AdminKubeconfig = adminInternalClient.File.Data
 		doc.OpenShiftCluster.Properties.AROServiceKubeconfig = aroServiceInternalClient.File.Data
 		return nil
