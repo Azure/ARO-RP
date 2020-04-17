@@ -214,7 +214,7 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 							},
 						},
 					},
-					Name:     to.StringPtr(infraID + "-controlplane-nsg"),
+					Name:     to.StringPtr(infraID + subnet.NSGControlPlaneSuffix),
 					Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
 					Location: &installConfig.Config.Azure.Region,
 				},
@@ -222,7 +222,7 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 			},
 			{
 				Resource: &mgmtnetwork.SecurityGroup{
-					Name:     to.StringPtr(infraID + "-node-nsg"),
+					Name:     to.StringPtr(infraID + subnet.NSGNodeSuffix),
 					Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
 					Location: &installConfig.Config.Azure.Region,
 				},
