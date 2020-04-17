@@ -16,6 +16,12 @@ func (mon *Monitor) emitClusterVersionMetrics(ctx context.Context) error {
 		return err
 	}
 
+	desiredVersion := cv.Status.Desired.Version
+	if cv.Spec.DesiredUpdate != nil &&
+		cv.Spec.DesiredUpdate.Version != "" {
+		desiredVersion = cv.Spec.DesiredUpdate.Version
+	}
+
 	// Find the actual current cluster state. The history is ordered by most
 	// recent first, so find the latest "Completed" status to get current
 	// cluster version
@@ -29,7 +35,7 @@ func (mon *Monitor) emitClusterVersionMetrics(ctx context.Context) error {
 
 	mon.emitGauge("cluster.version", 1, map[string]string{
 		"actualVersion":  actualVersion,
-		"desiredVersion": cv.Status.Desired.Version,
+		"desiredVersion": desiredVersion,
 	})
 
 	return nil

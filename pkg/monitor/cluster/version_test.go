@@ -18,48 +18,83 @@ import (
 func TestEmitClusterVersionMetrics(t *testing.T) {
 	ctx := context.Background()
 
-	configcli := fake.NewSimpleClientset(&configv1.ClusterVersion{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "version",
-		},
-		Status: configv1.ClusterVersionStatus{
-			Desired: configv1.Update{
-				Version: "4.3.3",
+	for _, tt := range []struct {
+		name               string
+		cv                 *configv1.ClusterVersion
+		wantActualVersion  string
+		wantDesiredVersion string
+	}{
+		{
+			name: "without spec",
+			cv: &configv1.ClusterVersion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "version",
+				},
+				Status: configv1.ClusterVersionStatus{
+					Desired: configv1.Update{
+						Version: "4.3.3",
+					},
+					History: []configv1.UpdateHistory{
+						{
+							State:   configv1.PartialUpdate,
+							Version: "4.3.2",
+						},
+						{
+							State:   configv1.CompletedUpdate,
+							Version: "4.3.1",
+						},
+						{
+							State:   configv1.CompletedUpdate,
+							Version: "4.3.0",
+						},
+					},
+				},
 			},
-			History: []configv1.UpdateHistory{
-				{
-					State:   configv1.PartialUpdate,
-					Version: "4.3.2",
+			wantActualVersion:  "4.3.1",
+			wantDesiredVersion: "4.3.3",
+		},
+		{
+			name: "with spec",
+			cv: &configv1.ClusterVersion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "version",
 				},
-				{
-					State:   configv1.CompletedUpdate,
-					Version: "4.3.1",
+				Spec: configv1.ClusterVersionSpec{
+					DesiredUpdate: &configv1.Update{
+						Version: "4.3.4",
+					},
 				},
-				{
-					State:   configv1.CompletedUpdate,
-					Version: "4.3.0",
+				Status: configv1.ClusterVersionStatus{
+					Desired: configv1.Update{
+						Version: "4.3.3",
+					},
 				},
 			},
+			wantDesiredVersion: "4.3.4",
 		},
-	})
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			configcli := fake.NewSimpleClientset(tt.cv)
 
-	controller := gomock.NewController(t)
-	defer controller.Finish()
+			controller := gomock.NewController(t)
+			defer controller.Finish()
 
-	m := mock_metrics.NewMockInterface(controller)
+			m := mock_metrics.NewMockInterface(controller)
 
-	mon := &Monitor{
-		configcli: configcli,
-		m:         m,
-	}
+			mon := &Monitor{
+				configcli: configcli,
+				m:         m,
+			}
 
-	m.EXPECT().EmitGauge("cluster.version", int64(1), map[string]string{
-		"actualVersion":  "4.3.1",
-		"desiredVersion": "4.3.3",
-	})
+			m.EXPECT().EmitGauge("cluster.version", int64(1), map[string]string{
+				"actualVersion":  tt.wantActualVersion,
+				"desiredVersion": tt.wantDesiredVersion,
+			})
 
-	err := mon.emitClusterVersionMetrics(ctx)
-	if err != nil {
-		t.Fatal(err)
+			err := mon.emitClusterVersionMetrics(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
 }
