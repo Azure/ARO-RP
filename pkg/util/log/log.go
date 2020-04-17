@@ -24,7 +24,7 @@ var (
 
 	loglevel = flag.String("loglevel", "info", "{panic,fatal,error,warning,info,debug,trace}")
 
-	rxTolerantResourceID = regexp.MustCompile(`(?i)^/subscriptions/([^/]+)(?:/resourceGroups/([^/]+)(?:/providers/([^/]+)/([^/]+)(?:/([^/]+))?)?)?`)
+	rxTolerantResourceID = regexp.MustCompile(`(?i)^(?:/admin)?/subscriptions/([^/]+)(?:/resourceGroups/([^/]+)(?:/providers/([^/]+)/([^/]+)(?:/([^/]+))?)?)?`)
 )
 
 // GetLogger returns a consistently configured log entry
