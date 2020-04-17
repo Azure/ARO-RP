@@ -505,7 +505,7 @@ func (i *Installer) deployResourceTemplate(ctx context.Context) error {
 					PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
 						PublicIPAllocationMethod: mgmtnetwork.Static,
 					},
-					Name:     to.StringPtr(infraID + "-outbound-pip"),
+					Name:     to.StringPtr(infraID + "-outbound-pip-v4"),
 					Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
 					Location: &installConfig.Config.Azure.Region,
 				},
@@ -521,7 +521,7 @@ func (i *Installer) deployResourceTemplate(ctx context.Context) error {
 							{
 								FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
 									PublicIPAddress: &mgmtnetwork.PublicIPAddress{
-										ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', '" + infraID + "-outbound-pip')]"),
+										ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', '" + infraID + "-outbound-pip-v4')]"),
 									},
 								},
 								Name: to.StringPtr("outbound"),
@@ -558,7 +558,7 @@ func (i *Installer) deployResourceTemplate(ctx context.Context) error {
 				},
 				APIVersion: azureclient.APIVersions["Microsoft.Network"],
 				DependsOn: []string{
-					"Microsoft.Network/publicIPAddresses/" + infraID + "-outbound-pip",
+					"Microsoft.Network/publicIPAddresses/" + infraID + "-outbound-pip-v4",
 				},
 			},
 		},
