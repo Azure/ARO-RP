@@ -27,15 +27,15 @@ func (i *Installer) apiServerPublicLoadBalancer(location string, visibility api.
 				{
 					FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
 						PublicIPAddress: &mgmtnetwork.PublicIPAddress{
-							ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', '" + infraID + "-pip')]"),
+							ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', '" + infraID + "-pip-v4')]"),
 						},
 					},
-					Name: to.StringPtr("public-lb-ip"),
+					Name: to.StringPtr("public-lb-ip-v4"),
 				},
 			},
 			BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
 				{
-					Name: to.StringPtr(infraID + "-public-lb-control-plane"),
+					Name: to.StringPtr(infraID + "-public-lb-control-plane-v4"),
 				},
 			},
 			OutboundRules: &[]mgmtnetwork.OutboundRule{
@@ -43,11 +43,11 @@ func (i *Installer) apiServerPublicLoadBalancer(location string, visibility api.
 					OutboundRulePropertiesFormat: &mgmtnetwork.OutboundRulePropertiesFormat{
 						FrontendIPConfigurations: &[]mgmtnetwork.SubResource{
 							{
-								ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '" + infraID + "-public-lb', 'public-lb-ip')]"),
+								ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '" + infraID + "-public-lb', 'public-lb-ip-v4')]"),
 							},
 						},
 						BackendAddressPool: &mgmtnetwork.SubResource{
-							ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '" + infraID + "-public-lb', '" + infraID + "-public-lb-control-plane')]"),
+							ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '" + infraID + "-public-lb', '" + infraID + "-public-lb-control-plane-v4')]"),
 						},
 						Protocol:             mgmtnetwork.LoadBalancerOutboundRuleProtocolAll,
 						IdleTimeoutInMinutes: to.Int32Ptr(30),
@@ -66,10 +66,10 @@ func (i *Installer) apiServerPublicLoadBalancer(location string, visibility api.
 			{
 				LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
 					FrontendIPConfiguration: &mgmtnetwork.SubResource{
-						ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '" + infraID + "-public-lb', 'public-lb-ip')]"),
+						ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '" + infraID + "-public-lb', 'public-lb-ip-v4')]"),
 					},
 					BackendAddressPool: &mgmtnetwork.SubResource{
-						ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '" + infraID + "-public-lb', '" + infraID + "-public-lb-control-plane')]"),
+						ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '" + infraID + "-public-lb', '" + infraID + "-public-lb-control-plane-v4')]"),
 					},
 					Probe: &mgmtnetwork.SubResource{
 						ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/probes', '" + infraID + "-public-lb', 'api-internal-probe')]"),
@@ -81,7 +81,7 @@ func (i *Installer) apiServerPublicLoadBalancer(location string, visibility api.
 					IdleTimeoutInMinutes: to.Int32Ptr(30),
 					DisableOutboundSnat:  to.BoolPtr(true),
 				},
-				Name: to.StringPtr("api-internal"),
+				Name: to.StringPtr("api-internal-v4"),
 			},
 		}
 		lb.Probes = &[]mgmtnetwork.Probe{
@@ -102,7 +102,7 @@ func (i *Installer) apiServerPublicLoadBalancer(location string, visibility api.
 		Resource:   lb,
 		APIVersion: azureclient.APIVersions["Microsoft.Network"],
 		DependsOn: []string{
-			"Microsoft.Network/publicIPAddresses/" + infraID + "-pip",
+			"Microsoft.Network/publicIPAddresses/" + infraID + "-pip-v4",
 		},
 	}
 }

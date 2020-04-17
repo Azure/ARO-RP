@@ -1,8 +1,8 @@
 package openstack
 
 import (
-	b64 "encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"strings"
 
@@ -85,7 +85,7 @@ dhcp=dhclient`
 		FileEmbedded1: ignition.FileEmbedded1{
 			Mode: &fileMode,
 			Contents: ignition.FileContents{
-				Source: fmt.Sprintf("data:text/plain;base64,%s", b64.StdEncoding.EncodeToString([]byte(contents))),
+				Source: dataurl.EncodeBytes([]byte(contents)),
 			},
 		},
 	}
@@ -102,7 +102,7 @@ prepend domain-name-servers 127.0.0.1;`
 		FileEmbedded1: ignition.FileEmbedded1{
 			Mode: &fileMode,
 			Contents: ignition.FileContents{
-				Source: fmt.Sprintf("data:text/plain;base64,%s", b64.StdEncoding.EncodeToString([]byte(contents))),
+				Source: dataurl.EncodeBytes([]byte(contents)),
 			},
 		},
 	}
@@ -118,18 +118,47 @@ prepend domain-name-servers 127.0.0.1;`
 		FileEmbedded1: ignition.FileEmbedded1{
 			Mode: &fileMode,
 			Contents: ignition.FileContents{
-				Source: fmt.Sprintf("data:text/plain;base64,%s", b64.StdEncoding.EncodeToString([]byte(contents))),
+				Source: dataurl.EncodeBytes([]byte(contents)),
+			},
+		},
+	}
+
+	// Openstack Ca Cert file
+	openstackCAFile := ignition.File{
+		Node: ignition.Node{
+			Filesystem: "root",
+			Path:       "/opt/openshift/tls/cloud-ca-cert.pem",
+		},
+		FileEmbedded1: ignition.FileEmbedded1{
+			Mode: &fileMode,
+			Contents: ignition.FileContents{
+				Source: dataurl.EncodeBytes([]byte(userCA)),
 			},
 		},
 	}
 
 	security := ignition.Security{}
 	if userCA != "" {
+		carefs := []ignition.CaReference{}
+		rest := []byte(userCA)
+
+		for {
+			var block *pem.Block
+			block, rest = pem.Decode(rest)
+			if block == nil {
+				return "", fmt.Errorf("unable to parse certificate, please check the cacert section of clouds.yaml")
+			}
+
+			carefs = append(carefs, ignition.CaReference{Source: dataurl.EncodeBytes(pem.EncodeToMemory(block))})
+
+			if len(rest) == 0 {
+				break
+			}
+		}
+
 		security = ignition.Security{
 			TLS: ignition.TLS{
-				CertificateAuthorities: []ignition.CaReference{{
-					Source: dataurl.EncodeBytes([]byte(userCA)),
-				}},
+				CertificateAuthorities: carefs,
 			},
 		}
 	}
@@ -151,6 +180,7 @@ prepend domain-name-servers 127.0.0.1;`
 				dhcpConfigFile,
 				dnsConfigFile,
 				hostnameConfigFile,
+				openstackCAFile,
 			},
 		},
 	}

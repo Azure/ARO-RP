@@ -4,9 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net"
 	"os"
 
 	igntypes "github.com/coreos/ignition/config/v2_2/types"
+	ospclientconfig "github.com/gophercloud/utils/openstack/clientconfig"
 	gcpprovider "github.com/openshift/cluster-api-provider-gcp/pkg/apis/gcpprovider/v1beta1"
 	libvirtprovider "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1beta1"
 	"github.com/pkg/errors"
@@ -23,6 +26,7 @@ import (
 	azureconfig "github.com/openshift/installer/pkg/asset/installconfig/azure"
 	gcpconfig "github.com/openshift/installer/pkg/asset/installconfig/gcp"
 	"github.com/openshift/installer/pkg/asset/machines"
+	"github.com/openshift/installer/pkg/asset/openshiftinstall"
 	"github.com/openshift/installer/pkg/asset/rhcos"
 	"github.com/openshift/installer/pkg/tfvars"
 	awstfvars "github.com/openshift/installer/pkg/tfvars/aws"
@@ -41,7 +45,6 @@ import (
 	"github.com/openshift/installer/pkg/types/openstack"
 	openstackdefaults "github.com/openshift/installer/pkg/types/openstack/defaults"
 	"github.com/openshift/installer/pkg/types/vsphere"
-	"github.com/openshift/installer/pkg/version"
 )
 
 const (
@@ -111,12 +114,23 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 		return errors.Wrap(err, "unable to inject installation info")
 	}
 
+	var useIPv4, useIPv6 bool
+	for _, network := range installConfig.Config.Networking.ServiceNetwork {
+		if network.IP.To4() != nil {
+			useIPv4 = true
+		} else {
+			useIPv6 = true
+		}
+	}
+
 	masterCount := len(mastersAsset.MachineFiles)
 	data, err := tfvars.TFVars(
 		clusterID.InfraID,
 		installConfig.Config.ClusterDomain(),
 		installConfig.Config.BaseDomain,
-		&installConfig.Config.Networking.MachineCIDR.IPNet,
+		&installConfig.Config.Networking.MachineNetwork[0].CIDR.IPNet,
+		useIPv4,
+		useIPv6,
 		bootstrapIgn,
 		masterIgn,
 		masterCount,
@@ -217,6 +231,19 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 		for i, w := range workers {
 			workerConfigs[i] = w.Spec.Template.Spec.ProviderSpec.Value.Object.(*azureprovider.AzureMachineProviderSpec)
 		}
+
+		var (
+			machineV4CIDRs []net.IPNet
+			machineV6CIDRs []net.IPNet
+		)
+		for _, network := range installConfig.Config.Networking.MachineNetwork {
+			if network.CIDR.IPNet.IP.To4() != nil {
+				machineV4CIDRs = append(machineV4CIDRs, network.CIDR.IPNet)
+			} else {
+				machineV6CIDRs = append(machineV6CIDRs, network.CIDR.IPNet)
+			}
+		}
+
 		preexistingnetwork := installConfig.Config.Azure.VirtualNetwork != ""
 		data, err := azuretfvars.TFVars(
 			azuretfvars.TFVarsSources{
@@ -227,6 +254,8 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 				ImageURL:                    string(*rhcosImage),
 				PreexistingNetwork:          preexistingnetwork,
 				Publish:                     installConfig.Config.Publish,
+				MachineV4CIDRs:              machineV4CIDRs,
+				MachineV6CIDRs:              machineV6CIDRs,
 			},
 		)
 		if err != nil {
@@ -294,7 +323,7 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 		data, err = libvirttfvars.TFVars(
 			masters[0].Spec.ProviderSpec.Value.Object.(*libvirtprovider.LibvirtMachineProviderConfig),
 			string(*rhcosImage),
-			&installConfig.Config.Networking.MachineCIDR.IPNet,
+			&installConfig.Config.Networking.MachineNetwork[0].CIDR.IPNet,
 			installConfig.Config.Platform.Libvirt.Network.IfName,
 			masterCount,
 		)
@@ -306,6 +335,22 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 			Data:     data,
 		})
 	case openstack.Name:
+		opts := &ospclientconfig.ClientOpts{}
+		opts.Cloud = installConfig.Config.Platform.OpenStack.Cloud
+		cloud, err := ospclientconfig.GetCloudFromYAML(opts)
+		if err != nil {
+			return errors.Wrap(err, "failed to get cloud config for openstack")
+		}
+		var caCert string
+		// Get the ca-cert-bundle key if there is a value for cacert in clouds.yaml
+		if caPath := cloud.CACertFile; caPath != "" {
+			caFile, err := ioutil.ReadFile(caPath)
+			if err != nil {
+				return errors.Wrap(err, "failed to read clouds.yaml ca-cert from disk")
+			}
+			caCert = string(caFile)
+		}
+
 		masters, err := mastersAsset.Machines()
 		if err != nil {
 			return err
@@ -335,7 +380,7 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 			installConfig.Config.Platform.OpenStack.OctaviaSupport,
 			string(*rhcosImage),
 			clusterID.InfraID,
-			installConfig.Config.AdditionalTrustBundle,
+			caCert,
 			bootstrapIgn,
 		)
 		if err != nil {
@@ -402,21 +447,12 @@ func injectInstallInfo(bootstrap []byte) (string, error) {
 		return "", errors.Wrap(err, "failed to unmarshal bootstrap Ignition config")
 	}
 
-	invoker := "user"
-	if env := os.Getenv("OPENSHIFT_INSTALL_INVOKER"); env != "" {
-		invoker = env
+	cm, err := openshiftinstall.CreateInstallConfigMap("openshift-install")
+	if err != nil {
+		return "", errors.Wrap(err, "failed to generate openshift-install config")
 	}
 
-	config.Storage.Files = append(config.Storage.Files, ignition.FileFromString("/opt/openshift/manifests/openshift-install.yml", "root", 0644, fmt.Sprintf(`---
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: openshift-install
-  namespace: openshift-config
-data:
-  version: "%s"
-  invoker: "%s"
-`, version.Raw, invoker)))
+	config.Storage.Files = append(config.Storage.Files, ignition.FileFromString("/opt/openshift/manifests/openshift-install.yaml", "root", 0644, cm))
 
 	ign, err := json.Marshal(config)
 	if err != nil {

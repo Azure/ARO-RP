@@ -60,7 +60,7 @@ func (i *Installer) updateAPIIP(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	var ipAddress string
 	if i.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {
-		ip, err := i.publicipaddresses.Get(ctx, resourceGroup, infraID+"-pip", "")
+		ip, err := i.publicipaddresses.Get(ctx, resourceGroup, infraID+"-pip-v4", "")
 		if err != nil {
 			return err
 		}

@@ -64,6 +64,8 @@ upstream OCP.
 
 * No managed identity (for now).
 
+* No IPv6 support (for now).
+
 * Upstream installer closely binds the installConfig (cluster) name, cluster
   domain name, infra ID and Azure resource name prefix.  ARO separates these out
   a little.  The installConfig (cluster) name and the domain name remain bound;

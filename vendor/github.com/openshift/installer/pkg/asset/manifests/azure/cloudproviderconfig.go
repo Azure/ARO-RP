@@ -16,8 +16,6 @@ type CloudProviderConfig struct {
 	NetworkSecurityGroupName string
 	VirtualNetworkName       string
 	SubnetName               string
-	AADClientID              string
-	AADClientSecret          string
 	ARO                      bool
 }
 
@@ -55,8 +53,6 @@ func (params CloudProviderConfig) JSON() (string, error) {
 
 	if params.ARO {
 		config.authConfig.UseManagedIdentityExtension = false
-		config.authConfig.AADClientID = params.AADClientID
-		config.authConfig.AADClientSecret = params.AADClientSecret
 	}
 
 	buff := &bytes.Buffer{}

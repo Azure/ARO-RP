@@ -199,7 +199,11 @@ func (m *Manager) Create(ctx context.Context) error {
 			SSHKey:     sshkey.Type() + " " + base64.StdEncoding.EncodeToString(sshkey.Marshal()),
 			BaseDomain: domain[strings.IndexByte(domain, '.')+1:],
 			Networking: &types.Networking{
-				MachineCIDR: ipnet.MustParseCIDR("127.0.0.0/8"), // dummy
+				MachineNetwork: []types.MachineNetworkEntry{
+					{
+						CIDR: *ipnet.MustParseCIDR("127.0.0.0/8"), // dummy
+					},
+				},
 				NetworkType: "OpenShiftSDN",
 				ClusterNetwork: []types.ClusterNetworkEntry{
 					{
@@ -221,6 +225,7 @@ func (m *Manager) Create(ctx context.Context) error {
 					},
 				},
 				Hyperthreading: "Enabled",
+				Architecture:   types.ArchitectureAMD64,
 			},
 			Compute: []types.MachinePool{
 				{
@@ -236,6 +241,7 @@ func (m *Manager) Create(ctx context.Context) error {
 						},
 					},
 					Hyperthreading: "Enabled",
+					Architecture:   types.ArchitectureAMD64,
 				},
 			},
 			Platform: types.Platform{
@@ -307,7 +313,7 @@ var rxRHCOS = regexp.MustCompile(`rhcos-((\d+)\.\d+\.\d{8})\d{4}\.\d+-azure\.x86
 
 func getRHCOSImage(ctx context.Context) (*azuretypes.Image, error) {
 	// https://rhcos.blob.core.windows.net/imagebucket/rhcos-43.81.201911221453.0-azure.x86_64.vhd
-	osImage, err := rhcos.VHD(ctx)
+	osImage, err := rhcos.VHD(ctx, types.ArchitectureAMD64)
 	if err != nil {
 		return nil, err
 	}
