@@ -116,7 +116,7 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 
 				openshiftClusters.EXPECT().
 					List().
-					Return(mockIter, nil)
+					Return(mockIter)
 			},
 			wantStatusCode: http.StatusOK,
 			wantResponse: func() *admin.OpenShiftClusterList {
@@ -144,7 +144,7 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 
 				openshiftClusters.EXPECT().
 					List().
-					Return(mockIter, nil)
+					Return(mockIter)
 			},
 			wantStatusCode: http.StatusOK,
 			wantResponse: func() *admin.OpenShiftClusterList {
@@ -154,16 +154,6 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 			},
 		},
 		{
-			name: "internal error on list",
-			mocks: func(controller *gomock.Controller, openshiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher, cipher *mock_encryption.MockCipher) {
-				openshiftClusters.EXPECT().
-					List().
-					Return(nil, errors.New("random error"))
-			},
-			wantStatusCode: http.StatusInternalServerError,
-			wantError:      `500: InternalServerError: : Internal server error.`,
-		},
-		{
 			name: "internal error while iterating list",
 			mocks: func(controller *gomock.Controller, openshiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher, cipher *mock_encryption.MockCipher) {
 				mockIter := mock_cosmosdb.NewMockOpenShiftClusterDocumentIterator(controller)
@@ -171,7 +161,7 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 
 				openshiftClusters.EXPECT().
 					List().
-					Return(mockIter, nil)
+					Return(mockIter)
 			},
 			wantStatusCode: http.StatusInternalServerError,
 			wantError:      `500: InternalServerError: : Internal server error.`,

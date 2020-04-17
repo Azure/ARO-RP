@@ -27,13 +27,9 @@ func (f *frontend) getAdminOpenShiftClusters(w http.ResponseWriter, r *http.Requ
 }
 
 func (f *frontend) _getAdminOpenShiftClusters(ctx context.Context, r *http.Request, converter api.OpenShiftClusterConverter) ([]byte, error) {
-	i, err := f.db.OpenShiftClusters.List()
-	if err != nil {
-		return nil, err
-	}
-
 	var ocs []*api.OpenShiftCluster
 
+	i := f.db.OpenShiftClusters.List()
 	for {
 		docs, err := i.Next(ctx, -1)
 		if err != nil {
