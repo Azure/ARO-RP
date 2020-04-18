@@ -5,15 +5,56 @@ package mirror
 
 import (
 	"fmt"
+	"regexp"
+	"strconv"
 )
 
-type Version [3]byte
+var rxVersion = regexp.MustCompile(`^(\d+)\.(\d+)\.(\d+)(.*)`)
 
-func newVersion(vsn string) (v Version, err error) {
-	_, err = fmt.Sscanf(vsn, "%d.%d.%d", &v[0], &v[1], &v[2])
-	return
+type Version struct {
+	V      [3]byte
+	Suffix string
 }
 
-func (v Version) Lt(w Version) bool {
-	return v[0] < w[0] || v[1] < w[1] || v[2] < w[2]
+func NewVersion(vs ...byte) *Version {
+	v := &Version{}
+
+	copy(v.V[:], vs)
+
+	return v
+}
+
+func ParseVersion(vsn string) (*Version, error) {
+	m := rxVersion.FindStringSubmatch(vsn)
+	if m == nil {
+		return nil, fmt.Errorf("could not parse version %q", vsn)
+	}
+
+	v := &Version{
+		Suffix: m[4],
+	}
+
+	for i := 0; i < 3; i++ {
+		b, err := strconv.ParseUint(m[i+1], 10, 8)
+		if err != nil {
+			return nil, err
+		}
+
+		v.V[i] = byte(b)
+	}
+
+	return v, nil
+}
+
+func (v *Version) Lt(w *Version) bool {
+	for i := 0; i < 3; i++ {
+		switch {
+		case v.V[i] < w.V[i]:
+			return true
+		case v.V[i] > w.V[i]:
+			return false
+		}
+	}
+
+	return false
 }
