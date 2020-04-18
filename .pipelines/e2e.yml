@@ -1,56 +1,97 @@
 # Azure DevOps Pipeline running e2e tests
 variables:
 - template: vars.yml
-jobs:
-- job: E2E
-  timeoutInMinutes: 120
-  pool:
-    name: ARO-E2E
-  steps:
-  - template: ./templates/template-setup-golang-env.yml
-    parameters:
-      gobin: ${{ variables.GOBIN }}
-      gopath: ${{ variables.GOPATH }}
-      goroot: ${{ variables.GOROOT }}
-      modulePath: ${{ variables.modulePath }}
-  - template: ./templates/template-setup-azure-tools.yml
-    parameters:
-      workingDirectory: ${{ variables.modulePath }}
-  - template: ./templates/template-az-cli-login.yml
-    parameters:
-      workingDirectory: ${{ variables.modulePath }}
-      azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
-  - script: |
-      export SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME)
-      make secrets
-      . secrets/env
-      echo "##vso[task.setvariable variable=RP_MODE]$RP_MODE"
-    displayName: 🔑 Downloading certificates and secrets from storage account
-    name: setEnv
-    workingDirectory: ${{ variables.modulePath }}
-  - script: |
-      make aro
-    displayName: ⚙️ Building ARO RP Golang binary
-    workingDirectory: ${{ variables.modulePath }}
-    condition: eq(variables['RP_MODE'], 'development')
-  - template: ./templates/template-az-cli-set-context.yml
-    parameters:
-      workingDirectory: ${{ variables.modulePath }}
-  - template: ./templates/template-deploy-e2e-deps.yml
-    parameters:
-      workingDirectory: ${{ variables.modulePath }}
-  - template: ./templates/template-deploy-e2e-db.yml
-    parameters:
-      workingDirectory: ${{ variables.modulePath }}
-  - template: ./templates/template-run-rp-and-e2e.yml
-    parameters:
-      workingDirectory: ${{ variables.modulePath }}
-  - template: ./templates/template-clean-e2e-db.yml
-    parameters:
-      workingDirectory: ${{ variables.modulePath }}
-  - template: ./templates/template-clean-e2e-deps.yml
-    parameters:
-      workingDirectory: ${{ variables.modulePath }}
-  - template: ./templates/template-clean-agent.yml
-    parameters:
-      workingDirectory: ${{ variables.modulePath }}
+stages:
+  - stage: RP_E2E
+    dependsOn: []
+    displayName: 🚀 RUN RP E2E
+    jobs:
+    - job: E2E
+      timeoutInMinutes: 120
+      pool:
+        name: ARO-E2E
+      steps:
+      - template: ./templates/template-setup-golang-env.yml
+        parameters:
+          gobin: ${{ variables.GOBIN }}
+          gopath: ${{ variables.GOPATH }}
+          goroot: ${{ variables.GOROOT }}
+          modulePath: ${{ variables.modulePath }}
+      - template: ./templates/template-setup-azure-tools.yml
+        parameters:
+          workingDirectory: ${{ variables.modulePath }}
+      - template: ./templates/template-az-cli-login.yml
+        parameters:
+          workingDirectory: ${{ variables.modulePath }}
+          azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
+      - script: |
+          export SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME)
+          make secrets
+          . secrets/env
+          echo "##vso[task.setvariable variable=RP_MODE]$RP_MODE"
+        displayName: 🔑 Downloading certificates and secrets from storage account
+        name: setEnv
+        workingDirectory: ${{ variables.modulePath }}
+      - script: |
+          make aro
+        displayName: ⚙️ Building ARO RP Golang binary
+        workingDirectory: ${{ variables.modulePath }}
+        condition: eq(variables['RP_MODE'], 'development')
+      - template: ./templates/template-az-cli-set-context.yml
+        parameters:
+          workingDirectory: ${{ variables.modulePath }}
+      - template: ./templates/template-deploy-e2e-deps.yml
+        parameters:
+          workingDirectory: ${{ variables.modulePath }}
+      - template: ./templates/template-deploy-e2e-db.yml
+        parameters:
+          workingDirectory: ${{ variables.modulePath }}
+      - template: ./templates/template-run-rp-and-e2e.yml
+        parameters:
+          workingDirectory: ${{ variables.modulePath }}
+      - template: ./templates/template-clean-e2e-db.yml
+        parameters:
+          workingDirectory: ${{ variables.modulePath }}
+      - template: ./templates/template-clean-e2e-deps.yml
+        parameters:
+          workingDirectory: ${{ variables.modulePath }}
+      - template: ./templates/template-clean-agent.yml
+        parameters:
+          workingDirectory: ${{ variables.modulePath }}
+  - stage: Billing_E2E
+    displayName: Billing E2E
+    jobs:
+    - job: TriggerBillingBuild
+      displayName: 'Trigger Billing E2E pipeline'
+      steps:
+      - script: |
+            # Pass variables between tasks: https://medium.com/microsoftazure/how-to-pass-variables-in-azure-pipelines-yaml-tasks-5c81c5d31763
+            echo "##vso[task.setvariable variable=REGION]$LOCATION"
+            CLUSTER="v4-e2e-$(git log --format=%h -n 1 HEAD)"
+            echo "##vso[task.setvariable variable=CLUSTER]$CLUSTER"
+            CLUSTER_RESOURCEGROUP="v4-e2e-rg-$(git log --format=%h -n 1 HEAD)-$LOCATION"
+            echo "##vso[task.setvariable variable=CLUSTER_RESOURCEGROUP]$CLUSTER_RESOURCEGROUP"
+            echo "E2E Cluster Resource Group Name:" $CLUSTER_RESOURCEGROUP
+            echo "E2E Cluster Name:" $CLUSTER
+        displayName: Pass variables into next Task
+      - task: TriggerBuild@3
+        inputs:
+          definitionIsInCurrentTeamProject: true
+          buildDefinition: 'Billing - E2E'
+          queueBuildForUserThatTriggeredBuild: true
+          ignoreSslCertificateErrors: false
+          useSameSourceVersion: false
+          useCustomSourceVersion: false
+          useSameBranch: false
+          branchToUse: 'master'
+          waitForQueuedBuildsToFinish: true
+          storeInEnvironmentVariable: false
+          delayBetweenBuilds: '14400'
+          buildParameters: 'CLUSTER_RESOURCEGROUP:$(CLUSTER_RESOURCEGROUP), CLUSTER:$(CLUSTER), REGION:$(REGION)'
+          authenticationMethod: 'OAuth Token'
+          password: '$(System.AccessToken)'
+          enableBuildInQueueCondition: false
+          dependentOnSuccessfulBuildCondition: true
+          dependentOnFailedBuildCondition: true
+          checkbuildsoncurrentbranch: false
+          failTaskIfConditionsAreNotFulfilled: true
