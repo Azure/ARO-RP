@@ -25,16 +25,12 @@ func (mon *Monitor) emitNodesMetrics(ctx context.Context) error {
 	counters := map[string]int64{}
 	for _, node := range nodes.Items {
 		for _, c := range node.Status.Conditions {
-			// count 'Unknown' status as unhealthy state for each condition. In this way
-			// we can flag issues without creating additional timeseries for each condition.
-			// for NodeReady count a node when the status is False (not ready) or Unknown
-			// for other conditions count when the status is True or Unknown
 			if _, ok := nodesNotConditions[c.Type]; ok {
-				if c.Status != corev1.ConditionTrue {
+				if c.Status == corev1.ConditionFalse {
 					counters["Not"+string(c.Type)]++
 				}
 			} else {
-				if c.Status != corev1.ConditionFalse {
+				if c.Status == corev1.ConditionTrue {
 					counters[string(c.Type)]++
 				}
 			}
