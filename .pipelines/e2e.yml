@@ -1,88 +1,87 @@
 # Azure DevOps Pipeline running e2e tests
 variables:
   - template: vars.yml
-  stages:
-    - stage: Deploy_INT
-      dependsOn: []
-      displayName: 🚀 Deploy INT
-      jobs:
-      - job: E2E
-        timeoutInMinutes: 120
-        pool:
-          name: ARO-E2E
-        steps:
-        - template: ./templates/template-setup-golang-env.yml
-          parameters:
-            gobin: ${{ variables.GOBIN }}
-            gopath: ${{ variables.GOPATH }}
-            goroot: ${{ variables.GOROOT }}
-            modulePath: ${{ variables.modulePath }}
-        - template: ./templates/template-setup-azure-tools.yml
-          parameters:
-            workingDirectory: ${{ variables.modulePath }}
-        - template: ./templates/template-az-cli-login.yml
-          parameters:
-            workingDirectory: ${{ variables.modulePath }}
-            azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
-        - script: |
-            export SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME)
-            make secrets
-            . secrets/env
-            echo "##vso[task.setvariable variable=RP_MODE]$RP_MODE"
-          displayName: 🔑 Downloading certificates and secrets from storage account
-          name: setEnv
+stages:
+  - stage: Deploy_INT
+    dependsOn: []
+    displayName: 🚀 Deploy INT
+    jobs:
+    - job: E2E
+      timeoutInMinutes: 120
+      pool:
+        name: ARO-E2E
+      steps:
+      - template: ./templates/template-setup-golang-env.yml
+        parameters:
+          gobin: ${{ variables.GOBIN }}
+          gopath: ${{ variables.GOPATH }}
+          goroot: ${{ variables.GOROOT }}
+          modulePath: ${{ variables.modulePath }}
+      - template: ./templates/template-setup-azure-tools.yml
+        parameters:
           workingDirectory: ${{ variables.modulePath }}
-        - script: |
-            make aro
-          displayName: ⚙️ Building ARO RP Golang binary
+      - template: ./templates/template-az-cli-login.yml
+        parameters:
           workingDirectory: ${{ variables.modulePath }}
-          condition: eq(variables['RP_MODE'], 'development')
-        - template: ./templates/template-az-cli-set-context.yml
-          parameters:
-            workingDirectory: ${{ variables.modulePath }}
-        - template: ./templates/template-deploy-e2e-deps.yml
-          parameters:
-            workingDirectory: ${{ variables.modulePath }}
-        - template: ./templates/template-deploy-e2e-db.yml
-          parameters:
-            workingDirectory: ${{ variables.modulePath }}
-        - template: ./templates/template-run-rp-and-e2e.yml
-          parameters:
-            workingDirectory: ${{ variables.modulePath }}
-        - template: ./templates/template-clean-e2e-db.yml
-          parameters:
-            workingDirectory: ${{ variables.modulePath }}
-        - template: ./templates/template-clean-e2e-deps.yml
-          parameters:
-            workingDirectory: ${{ variables.modulePath }}
-        - template: ./templates/template-clean-agent.yml
-          parameters:
-            workingDirectory: ${{ variables.modulePath }}
-    - stage: Billing_E2E
-      displayName: Billing E2E
-      jobs:
-      - job: TriggerBillingBuild
-        displayName: 'Trigger Billing E2E pipeline'
-        steps:
-        - task: TriggerBuild@3
-          inputs:
-            definitionIsInCurrentTeamProject: true
-            buildDefinition: 'Billing - E2E'
-            queueBuildForUserThatTriggeredBuild: true
-            ignoreSslCertificateErrors: false
-            useSameSourceVersion: false
-            useCustomSourceVersion: false
-            useSameBranch: false
-            branchToUse: 'zhuoli/e2e'
-            waitForQueuedBuildsToFinish: true
-            storeInEnvironmentVariable: false
-            delayBetweenBuilds: '10'
-            buildParameters: 'CLUSTER_RESOURCEGROUP:v4-e2e-rg-$(Build.BuildId), CLUSTER:v4-e2e-$(Build.BuildId)'
-            authenticationMethod: 'OAuth Token'
-            password: '$(System.AccessToken)'
-            enableBuildInQueueCondition: false
-            dependentOnSuccessfulBuildCondition: true
-            dependentOnFailedBuildCondition: true
-            checkbuildsoncurrentbranch: false
-            failTaskIfConditionsAreNotFulfilled: true
-  
+          azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
+      - script: |
+          export SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME)
+          make secrets
+          . secrets/env
+          echo "##vso[task.setvariable variable=RP_MODE]$RP_MODE"
+        displayName: 🔑 Downloading certificates and secrets from storage account
+        name: setEnv
+        workingDirectory: ${{ variables.modulePath }}
+      - script: |
+          make aro
+        displayName: ⚙️ Building ARO RP Golang binary
+        workingDirectory: ${{ variables.modulePath }}
+        condition: eq(variables['RP_MODE'], 'development')
+      - template: ./templates/template-az-cli-set-context.yml
+        parameters:
+          workingDirectory: ${{ variables.modulePath }}
+      - template: ./templates/template-deploy-e2e-deps.yml
+        parameters:
+          workingDirectory: ${{ variables.modulePath }}
+      - template: ./templates/template-deploy-e2e-db.yml
+        parameters:
+          workingDirectory: ${{ variables.modulePath }}
+      - template: ./templates/template-run-rp-and-e2e.yml
+        parameters:
+          workingDirectory: ${{ variables.modulePath }}
+      - template: ./templates/template-clean-e2e-db.yml
+        parameters:
+          workingDirectory: ${{ variables.modulePath }}
+      - template: ./templates/template-clean-e2e-deps.yml
+        parameters:
+          workingDirectory: ${{ variables.modulePath }}
+      - template: ./templates/template-clean-agent.yml
+        parameters:
+          workingDirectory: ${{ variables.modulePath }}
+  - stage: Billing_E2E
+    displayName: Billing E2E
+    jobs:
+    - job: TriggerBillingBuild
+      displayName: 'Trigger Billing E2E pipeline'
+      steps:
+      - task: TriggerBuild@3
+        inputs:
+          definitionIsInCurrentTeamProject: true
+          buildDefinition: 'Billing - E2E'
+          queueBuildForUserThatTriggeredBuild: true
+          ignoreSslCertificateErrors: false
+          useSameSourceVersion: false
+          useCustomSourceVersion: false
+          useSameBranch: false
+          branchToUse: 'zhuoli/e2e'
+          waitForQueuedBuildsToFinish: true
+          storeInEnvironmentVariable: false
+          delayBetweenBuilds: '10'
+          buildParameters: 'CLUSTER_RESOURCEGROUP:v4-e2e-rg-$(Build.BuildId), CLUSTER:v4-e2e-$(Build.BuildId)'
+          authenticationMethod: 'OAuth Token'
+          password: '$(System.AccessToken)'
+          enableBuildInQueueCondition: false
+          dependentOnSuccessfulBuildCondition: true
+          dependentOnFailedBuildCondition: true
+          checkbuildsoncurrentbranch: false
+          failTaskIfConditionsAreNotFulfilled: true
