@@ -2,7 +2,7 @@
 variables:
 - template: vars.yml
 stages:
-  - stage: Deploy_INT
+  - stage: RP_E2E
     dependsOn: []
     displayName: 🚀 Deploy INT
     jobs:
@@ -65,17 +65,15 @@ stages:
       displayName: 'Trigger Billing E2E pipeline'
       steps:
       - script: |
-            echo "E2E Cluster Resource Group Name:" $CLUSTER_RESOURCEGROUP
-            echo "E2E Cluster Name:" $CLUSTER
-        displayName: Before define rg cluster
-      - script: |
+            # Pass variables between tasks: https://medium.com/microsoftazure/how-to-pass-variables-in-azure-pipelines-yaml-tasks-5c81c5d31763
+            echo "##vso[task.setvariable variable=REGION]$LOCATION"
             CLUSTER="v4-e2e-$(git log --format=%h -n 1 HEAD)"
             echo "##vso[task.setvariable variable=CLUSTER]$CLUSTER"
             CLUSTER_RESOURCEGROUP="v4-e2e-rg-$(git log --format=%h -n 1 HEAD)-$LOCATION"
             echo "##vso[task.setvariable variable=CLUSTER_RESOURCEGROUP]$CLUSTER_RESOURCEGROUP"
             echo "E2E Cluster Resource Group Name:" $CLUSTER_RESOURCEGROUP
             echo "E2E Cluster Name:" $CLUSTER
-        displayName: Export RGName, ClusterName
+        displayName: Pass variables into next Task
       - task: TriggerBuild@3
         inputs:
           definitionIsInCurrentTeamProject: true
@@ -89,7 +87,7 @@ stages:
           waitForQueuedBuildsToFinish: true
           storeInEnvironmentVariable: false
           delayBetweenBuilds: '10'
-          buildParameters: 'CLUSTER_RESOURCEGROUP:$(CLUSTER_RESOURCEGROUP), CLUSTER:$(CLUSTER)'
+          buildParameters: 'CLUSTER_RESOURCEGROUP:$(CLUSTER_RESOURCEGROUP), CLUSTER:$(CLUSTER), REGION:$(REGION)'
           authenticationMethod: 'OAuth Token'
           password: '$(System.AccessToken)'
           enableBuildInQueueCondition: false
