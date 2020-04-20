@@ -25,8 +25,16 @@ func (f *frontend) getAdminKubernetesObjects(w http.ResponseWriter, r *http.Requ
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
-	b, err := f._getAdminKubernetesObjects(ctx, r, log)
+	jpath, err := adminJmespathFilterValidate(r.URL.Query().Get("filter"))
+	if err != nil {
+		adminReply(log, w, nil, nil, err)
+		return
+	}
 
+	b, err := f._getAdminKubernetesObjects(ctx, r, log)
+	if err == nil {
+		b, err = adminJmespathFilterResult(b, jpath)
+	}
 	adminReply(log, w, nil, b, err)
 }
 

@@ -6,6 +6,7 @@ package frontend
 import (
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/gorilla/mux"
+	"github.com/jmespath/go-jmespath"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -287,6 +289,61 @@ func (f *frontend) Run(ctx context.Context, stop <-chan struct{}, done chan<- st
 	if err != http.ErrServerClosed {
 		f.baseLog.Error(err)
 	}
+}
+
+func adminJmespathFilterValidate(filter string) (*jmespath.JMESPath, error) {
+	if filter == "" {
+		return nil, nil
+	}
+	jpath, err := jmespath.Compile(filter)
+	if err != nil {
+		return nil, jmeErrorToCloudError(err)
+	}
+	return jpath, nil
+}
+
+func adminJmespathFilterResult(result []byte, jpath *jmespath.JMESPath) ([]byte, error) {
+	if jpath == nil {
+		return result, nil
+	}
+
+	var o interface{}
+	err := json.Unmarshal(result, &o)
+	if err != nil {
+		return nil, err
+	}
+
+	filtered, err := jpath.Search(o)
+	if err != nil {
+		return nil, jmeErrorToCloudError(err)
+	}
+
+	return json.Marshal(filtered)
+}
+
+func jmeErrorToCloudError(err error) error {
+	switch jerr := err.(type) {
+	case jmespath.SyntaxError:
+		return &api.CloudError{
+			StatusCode: http.StatusBadRequest,
+			CloudErrorBody: &api.CloudErrorBody{
+				Code:    api.CloudErrorCodeInvalidParameter,
+				Message: jerr.Error(),
+				Target:  jerr.HighlightLocation(),
+			},
+		}
+
+	case *jmespath.SyntaxError:
+		return &api.CloudError{
+			StatusCode: http.StatusBadRequest,
+			CloudErrorBody: &api.CloudErrorBody{
+				Code:    api.CloudErrorCodeInvalidParameter,
+				Message: jerr.Error(),
+				Target:  jerr.HighlightLocation(),
+			},
+		}
+	}
+	return err
 }
 
 func adminReply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b []byte, err error) {
