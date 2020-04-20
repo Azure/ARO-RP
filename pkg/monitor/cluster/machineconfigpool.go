@@ -19,7 +19,7 @@ var machineConfigPoolConditionsExpected = map[v1.MachineConfigPoolConditionType]
 	v1.MachineConfigPoolUpdating:       corev1.ConditionFalse,
 }
 
-func (mon *Monitor) emitMachineConfigPoolMetrics(ctx context.Context) error {
+func (mon *Monitor) emitMachineConfigPool(ctx context.Context) error {
 	mcps, err := mon.mcocli.MachineconfigurationV1().MachineConfigPools().List(metav1.ListOptions{})
 	if err != nil {
 		return err

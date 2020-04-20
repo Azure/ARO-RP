@@ -104,11 +104,17 @@ func (mon *Monitor) Monitor(ctx context.Context) {
 	}
 
 	for _, f := range []func(ctx context.Context) error{
-		mon.emitClusterOperatorsMetrics,
-		mon.emitClusterVersionMetrics,
-		mon.emitNodesMetrics,
+		mon.emitClusterOperatorsConditions,
+		mon.emitClusterOperatorsVersions,
+		mon.emitClusterVersion,
+		mon.emitDaemonsetsConditions,
+		mon.emitDeploymentsConditions,
+		mon.emitNodesConditions,
+		mon.emitPodAllConditions,
 		mon.emitPrometheusAlerts,
-		mon.emitMachineConfigPoolMetrics,
+		mon.emitMachineConfigPool,
+		mon.emitReplicaSetsConditions,
+		mon.emitStatefulSetsConditions,
 	} {
 		err = f(ctx)
 		if err != nil {

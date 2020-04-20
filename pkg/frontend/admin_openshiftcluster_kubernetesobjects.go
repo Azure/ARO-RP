@@ -18,6 +18,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	pgknamespace "github.com/Azure/ARO-RP/pkg/util/namespace"
 )
 
 func (f *frontend) getAdminKubernetesObjects(w http.ResponseWriter, r *http.Request) {
@@ -138,11 +139,7 @@ func (f *frontend) _postAdminKubernetesObjects(ctx context.Context, r *http.Requ
 var rxKubernetesString = regexp.MustCompile(`(?i)^[-a-z0-9.]{0,255}$`)
 
 func validateAdminKubernetesObjectsNonCustomer(method, groupKind, namespace, name string) error {
-	if namespace != "" &&
-		namespace != "default" &&
-		namespace != "openshift" &&
-		!strings.HasPrefix(string(namespace), "kube-") &&
-		!strings.HasPrefix(string(namespace), "openshift-") {
+	if !pgknamespace.IsOpenShift(namespace) {
 		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Access to the provided namespace '%s' is forbidden.", namespace)
 	}
 

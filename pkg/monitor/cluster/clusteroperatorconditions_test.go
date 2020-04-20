@@ -15,7 +15,7 @@ import (
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 )
 
-func TestEmitClusterOperatorsMetrics(t *testing.T) {
+func TestEmitClusterOperatorsConditions(t *testing.T) {
 	ctx := context.Background()
 
 	configcli := fake.NewSimpleClientset(&configv1.ClusterOperator{
@@ -45,20 +45,6 @@ func TestEmitClusterOperatorsMetrics(t *testing.T) {
 					Status: configv1.ConditionTrue,
 				},
 			},
-			Versions: []configv1.OperandVersion{
-				{
-					Name:    "dummy",
-					Version: "4.3.2",
-				},
-				{
-					Name:    "operator",
-					Version: "4.3.1",
-				},
-				{
-					Name:    "operator",
-					Version: "4.3.0",
-				},
-			},
 		},
 	})
 
@@ -72,32 +58,37 @@ func TestEmitClusterOperatorsMetrics(t *testing.T) {
 		m:         m,
 	}
 
-	m.EXPECT().EmitGauge("clusteroperators.conditions.count", int64(1), map[string]string{
-		"clusteroperator": "console",
-		"condition":       "NotAvailable",
+	m.EXPECT().EmitGauge("clusteroperators.conditions", int64(1), map[string]string{
+		"name":   "console",
+		"type":   "Available",
+		"status": "False",
 	})
 
-	m.EXPECT().EmitGauge("clusteroperators.conditions.count", int64(1), map[string]string{
-		"clusteroperator": "console",
-		"condition":       "Degraded",
+	m.EXPECT().EmitGauge("clusteroperators.conditions", int64(1), map[string]string{
+		"name":   "console",
+		"type":   "Degraded",
+		"status": "True",
 	})
 
-	m.EXPECT().EmitGauge("clusteroperators.conditions.count", int64(1), map[string]string{
-		"clusteroperator": "console",
-		"condition":       "Progressing",
+	m.EXPECT().EmitGauge("clusteroperators.conditions", int64(1), map[string]string{
+		"name":   "console",
+		"type":   "Progressing",
+		"status": "True",
 	})
 
-	m.EXPECT().EmitGauge("clusteroperators.conditions.count", int64(1), map[string]string{
-		"clusteroperator": "console",
-		"condition":       "NotUpgradeable",
+	m.EXPECT().EmitGauge("clusteroperators.conditions", int64(1), map[string]string{
+		"name":   "console",
+		"type":   "Upgradeable",
+		"status": "False",
 	})
 
-	m.EXPECT().EmitGauge("clusteroperators.version", int64(1), map[string]string{
-		"clusteroperator": "console",
-		"version":         "4.3.1",
+	m.EXPECT().EmitGauge("clusteroperators.conditions", int64(1), map[string]string{
+		"name":   "console",
+		"type":   "dummy",
+		"status": "True",
 	})
 
-	err := mon.emitClusterOperatorsMetrics(ctx)
+	err := mon.emitClusterOperatorsConditions(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

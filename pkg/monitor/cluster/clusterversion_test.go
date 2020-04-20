@@ -15,7 +15,7 @@ import (
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 )
 
-func TestEmitClusterVersionMetrics(t *testing.T) {
+func TestEmitClusterVersion(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tt := range []struct {
@@ -91,7 +91,7 @@ func TestEmitClusterVersionMetrics(t *testing.T) {
 				"desiredVersion": tt.wantDesiredVersion,
 			})
 
-			err := mon.emitClusterVersionMetrics(ctx)
+			err := mon.emitClusterVersion(ctx)
 			if err != nil {
 				t.Fatal(err)
 			}

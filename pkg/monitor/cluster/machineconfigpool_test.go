@@ -16,7 +16,7 @@ import (
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 )
 
-func TestEmitMachineConfigPoolMetrics(t *testing.T) {
+func TestEmitMachineConfigPool(t *testing.T) {
 	ctx := context.Background()
 
 	mcocli := fake.NewSimpleClientset(&v1.MachineConfigPool{
@@ -89,7 +89,7 @@ func TestEmitMachineConfigPoolMetrics(t *testing.T) {
 		"status": "True",
 	})
 
-	err := mon.emitMachineConfigPoolMetrics(ctx)
+	err := mon.emitMachineConfigPool(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

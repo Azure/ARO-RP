@@ -10,7 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (mon *Monitor) emitClusterVersionMetrics(ctx context.Context) error {
+func (mon *Monitor) emitClusterVersion(ctx context.Context) error {
 	cv, err := mon.configcli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
 	if err != nil {
 		return err
