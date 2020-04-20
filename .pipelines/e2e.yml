@@ -83,7 +83,7 @@ stages:
           useSameSourceVersion: false
           useCustomSourceVersion: false
           useSameBranch: false
-          branchToUse: 'zhuoli/e2e'
+          branchToUse: 'master'
           waitForQueuedBuildsToFinish: true
           storeInEnvironmentVariable: false
           delayBetweenBuilds: '10'
