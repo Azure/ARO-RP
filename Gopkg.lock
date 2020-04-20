@@ -1127,9 +1127,16 @@
 
 [[projects]]
   branch = "release-4.3"
-  digest = "1:984213011d5efba011f598ddb50f39e1207d1bb04cc354c9877b4fecf1ab1c09"
+  digest = "1:4e5ae751b5ab70dafe0109f5edd432b142a8256c37ac348d8758eb18059dd07c"
   name = "github.com/openshift/machine-config-operator"
-  packages = ["pkg/apis/machineconfiguration.openshift.io/v1"]
+  packages = [
+    "pkg/apis/machineconfiguration.openshift.io/v1",
+    "pkg/generated/clientset/versioned",
+    "pkg/generated/clientset/versioned/fake",
+    "pkg/generated/clientset/versioned/scheme",
+    "pkg/generated/clientset/versioned/typed/machineconfiguration.openshift.io/v1",
+    "pkg/generated/clientset/versioned/typed/machineconfiguration.openshift.io/v1/fake",
+  ]
   pruneopts = "UT"
   revision = "25bb6aeb58135c38a667e849edf5244871be4992"
 
@@ -2003,6 +2010,9 @@
     "github.com/openshift/installer/pkg/types/azure",
     "github.com/openshift/installer/pkg/types/openstack/validation",
     "github.com/openshift/installer/pkg/types/validation",
+    "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1",
+    "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned",
+    "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake",
     "github.com/prometheus/common/model",
     "github.com/satori/go.uuid",
     "github.com/shurcooL/vfsgen",
