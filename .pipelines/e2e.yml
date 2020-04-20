@@ -65,7 +65,6 @@ stages:
       displayName: 'Trigger Billing E2E pipeline'
       steps:
       - script: |
-            # Pass variables between tasks: https://medium.com/microsoftazure/how-to-pass-variables-in-azure-pipelines-yaml-tasks-5c81c5d31763
             REGION=$LOCATION
             echo "##vso[task.setvariable variable=REGION]$REGION"
             CLUSTER="v4-e2e-$(git log --format=%h -n 1 HEAD)"
