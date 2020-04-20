@@ -22,12 +22,12 @@ func (f *frontend) postAdminOpenShiftClusterUpgrade(w http.ResponseWriter, r *ht
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
-	err := f._postAdminOpenShiftClusterUpgrade(ctx, r)
+	err := f._postAdminOpenShiftClusterUpgrade(ctx, r, log)
 
 	adminReply(log, w, nil, nil, err)
 }
 
-func (f *frontend) _postAdminOpenShiftClusterUpgrade(ctx context.Context, r *http.Request) error {
+func (f *frontend) _postAdminOpenShiftClusterUpgrade(ctx context.Context, r *http.Request, log *logrus.Entry) error {
 	vars := mux.Vars(r)
 
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
@@ -40,5 +40,5 @@ func (f *frontend) _postAdminOpenShiftClusterUpgrade(ctx context.Context, r *htt
 		return err
 	}
 
-	return f.kubeActions.ClusterUpgrade(ctx, doc.OpenShiftCluster)
+	return f.kubeActionsFactory(log, f.env).ClusterUpgrade(ctx, doc.OpenShiftCluster)
 }

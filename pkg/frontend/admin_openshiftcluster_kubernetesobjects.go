@@ -25,12 +25,12 @@ func (f *frontend) getAdminKubernetesObjects(w http.ResponseWriter, r *http.Requ
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
-	b, err := f._getAdminKubernetesObjects(ctx, r)
+	b, err := f._getAdminKubernetesObjects(ctx, r, log)
 
 	adminReply(log, w, nil, b, err)
 }
 
-func (f *frontend) _getAdminKubernetesObjects(ctx context.Context, r *http.Request) ([]byte, error) {
+func (f *frontend) _getAdminKubernetesObjects(ctx context.Context, r *http.Request, log *logrus.Entry) ([]byte, error) {
 	vars := mux.Vars(r)
 
 	groupKind, namespace, name := r.URL.Query().Get("kind"), r.URL.Query().Get("namespace"), r.URL.Query().Get("name")
@@ -51,9 +51,9 @@ func (f *frontend) _getAdminKubernetesObjects(ctx context.Context, r *http.Reque
 	}
 
 	if name != "" {
-		return f.kubeActions.Get(ctx, doc.OpenShiftCluster, groupKind, namespace, name)
+		return f.kubeActionsFactory(log, f.env).Get(ctx, doc.OpenShiftCluster, groupKind, namespace, name)
 	}
-	return f.kubeActions.List(ctx, doc.OpenShiftCluster, groupKind, namespace)
+	return f.kubeActionsFactory(log, f.env).List(ctx, doc.OpenShiftCluster, groupKind, namespace)
 }
 
 func (f *frontend) deleteAdminKubernetesObjects(w http.ResponseWriter, r *http.Request) {
@@ -61,12 +61,12 @@ func (f *frontend) deleteAdminKubernetesObjects(w http.ResponseWriter, r *http.R
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
-	err := f._deleteAdminKubernetesObjects(ctx, r)
+	err := f._deleteAdminKubernetesObjects(ctx, r, log)
 
 	adminReply(log, w, nil, nil, err)
 }
 
-func (f *frontend) _deleteAdminKubernetesObjects(ctx context.Context, r *http.Request) error {
+func (f *frontend) _deleteAdminKubernetesObjects(ctx context.Context, r *http.Request, log *logrus.Entry) error {
 	vars := mux.Vars(r)
 
 	groupKind, namespace, name := r.URL.Query().Get("kind"), r.URL.Query().Get("namespace"), r.URL.Query().Get("name")
@@ -86,7 +86,7 @@ func (f *frontend) _deleteAdminKubernetesObjects(ctx context.Context, r *http.Re
 		return err
 	}
 
-	return f.kubeActions.Delete(ctx, doc.OpenShiftCluster, groupKind, namespace, name)
+	return f.kubeActionsFactory(log, f.env).Delete(ctx, doc.OpenShiftCluster, groupKind, namespace, name)
 }
 
 func (f *frontend) postAdminKubernetesObjects(w http.ResponseWriter, r *http.Request) {
@@ -100,12 +100,12 @@ func (f *frontend) postAdminKubernetesObjects(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	err := f._postAdminKubernetesObjects(ctx, r)
+	err := f._postAdminKubernetesObjects(ctx, r, log)
 
 	adminReply(log, w, nil, nil, err)
 }
 
-func (f *frontend) _postAdminKubernetesObjects(ctx context.Context, r *http.Request) error {
+func (f *frontend) _postAdminKubernetesObjects(ctx context.Context, r *http.Request, log *logrus.Entry) error {
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 	vars := mux.Vars(r)
 
@@ -130,7 +130,7 @@ func (f *frontend) _postAdminKubernetesObjects(ctx context.Context, r *http.Requ
 		return err
 	}
 
-	return f.kubeActions.CreateOrUpdate(ctx, doc.OpenShiftCluster, obj)
+	return f.kubeActionsFactory(log, f.env).CreateOrUpdate(ctx, doc.OpenShiftCluster, obj)
 }
 
 // rxKubernetesString is weaker than Kubernetes validation, but strong enough to

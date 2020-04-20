@@ -93,7 +93,7 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), _env, db, api.APIs, m, feCipher, kubeactions.New(log, _env), features.NewResourcesClient)
+	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), _env, db, api.APIs, m, feCipher, kubeactions.New, features.NewResourcesClient)
 	if err != nil {
 		return err
 	}
