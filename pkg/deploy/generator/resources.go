@@ -151,8 +151,12 @@ func (g *generator) proxyVmss() *arm.Resource {
 		)
 	}
 
-	trailer := base64.StdEncoding.EncodeToString([]byte(`yum -y update -x WALinuxAgent
+	trailer := base64.StdEncoding.EncodeToString([]byte(`
+if [[ "$LOCATION" == southeastasia ]]; then
+	echo "$(dig +short australiaeast-cds.australiaeast.cloudapp.azure.com) rhui-1.microsoft.com" >>/etc/hosts
+fi
 
+yum -y update -x WALinuxAgent
 yum -y install docker
 
 firewall-cmd --add-port=443/tcp --permanent
