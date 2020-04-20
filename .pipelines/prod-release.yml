@@ -7,7 +7,7 @@ stages:
   dependsOn: []
   displayName: 🚀 Deploy USSector
   jobs:
-  - template: ./templates/template-job-deploy-azure-region.yml
+  - template: ./templates/template-job-deploy-azure-env.yml
     parameters:
       environment: RP-Prod
       locations:
