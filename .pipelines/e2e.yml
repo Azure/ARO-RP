@@ -87,7 +87,7 @@ stages:
           waitForQueuedBuildsToFinish: true
           storeInEnvironmentVariable: false
           delayBetweenBuilds: '5'
-          buildParameters: 'CLUSTER_RESOURCEGROUP:$(CLUSTER_RESOURCEGROUP), CLUSTER:$(CLUSTER)'
+          buildParameters: 'CLUSTER_RESOURCEGROUP:$(CLUSTER_RESOURCEGROUP), CLUSTER:$(CLUSTER), REGION:$(REGION)'
           authenticationMethod: 'OAuth Token'
           password: '$(System.AccessToken)'
           enableBuildInQueueCondition: false
