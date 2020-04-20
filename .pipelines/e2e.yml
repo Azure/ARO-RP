@@ -4,7 +4,7 @@ variables:
 stages:
   - stage: RP_E2E
     dependsOn: []
-    displayName: 🚀 Deploy INT
+    displayName: 🚀 Run RP E2E
     jobs:
     - job: E2E
       timeoutInMinutes: 120
@@ -87,7 +87,7 @@ stages:
           waitForQueuedBuildsToFinish: true
           storeInEnvironmentVariable: false
           delayBetweenBuilds: '10'
-          buildParameters: 'CLUSTER_RESOURCEGROUP:$(CLUSTER_RESOURCEGROUP), CLUSTER:$(CLUSTER), REGION:$(REGION)'
+          buildParameters: 'CLUSTER_RESOURCEGROUP:$(CLUSTER_RESOURCEGROUP), CLUSTER:$(CLUSTER)'
           authenticationMethod: 'OAuth Token'
           password: '$(System.AccessToken)'
           enableBuildInQueueCondition: false
