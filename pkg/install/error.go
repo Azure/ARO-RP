@@ -16,15 +16,10 @@ import (
 // AuthorizationFailed error
 func hasAuthorizationFailedError(err error) bool {
 	if detailedErr, ok := err.(autorest.DetailedError); ok {
-		var serviceErr *azure.ServiceError
-		switch detailedErr.Original.(type) {
-		case *azure.ServiceError:
-			serviceErr = detailedErr.Original.(*azure.ServiceError)
-		case *azure.RequestError:
-			serviceErr = detailedErr.Original.(*azure.RequestError).ServiceError
-		}
-		if serviceErr.Code == "AuthorizationFailed" {
-			return true
+		if serviceErr, ok := detailedErr.Original.(*azure.ServiceError); ok {
+			if serviceErr.Code == "AuthorizationFailed" {
+				return true
+			}
 		}
 	}
 
@@ -44,6 +39,7 @@ func hasAuthorizationFailedError(err error) bool {
 			}
 		}
 	}
+
 	return false
 }
 

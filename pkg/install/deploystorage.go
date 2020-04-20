@@ -42,10 +42,7 @@ func (i *Installer) createDNS(ctx context.Context) error {
 }
 
 func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) error {
-	// Attempt to load graph, in case it was saved already but the install phase was restarted
-	g, err := i.loadGraph(ctx)
-	if hasAuthorizationFailedError(err) { // true if graph has not been saved yet
-		// Create graph
+	if i.doc.OpenShiftCluster.Properties.InfraID == "" {
 		clusterID := &installconfig.ClusterID{}
 
 		err := clusterID.Generate(asset.Parents{
@@ -61,31 +58,14 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 			return err
 		}
 
-		clusterID.UUID = i.doc.ID
-
-		g = graph{
-			reflect.TypeOf(installConfig): installConfig,
-			reflect.TypeOf(platformCreds): platformCreds,
-			reflect.TypeOf(image):         image,
-			reflect.TypeOf(clusterID):     clusterID,
+		i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+			doc.OpenShiftCluster.Properties.InfraID = clusterID.InfraID
+			return nil
+		})
+		if err != nil {
+			return err
 		}
-
-		i.log.Print("resolving graph")
-		for _, a := range targets.Cluster {
-			_, err := g.resolve(a)
-			if err != nil {
-				return err
-			}
-		}
-	} else if err != nil {
-		return err
 	}
-
-	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		clusterID := g[reflect.TypeOf(&installconfig.ClusterID{})].(*installconfig.ClusterID)
-		doc.OpenShiftCluster.Properties.InfraID = clusterID.InfraID
-		return nil
-	})
 	infraID := i.doc.OpenShiftCluster.Properties.InfraID
 
 	resourceGroup := stringutils.LastTokenByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
@@ -98,7 +78,7 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 	if _, ok := i.env.(env.Dev); ok {
 		group.ManagedBy = nil
 	}
-	_, err = i.groups.CreateOrUpdate(ctx, resourceGroup, group)
+	_, err := i.groups.CreateOrUpdate(ctx, resourceGroup, group)
 	if err != nil {
 		return err
 	}
@@ -282,10 +262,45 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 		return err
 	}
 
-	// the graph is quite big so we store it in a storage account instead of in cosmosdb
-	err = i.saveGraph(ctx, g)
+	var g graph
+
+	exists, err := i.graphExists(ctx)
 	if err != nil {
 		return err
+	}
+
+	if exists {
+		g, err = i.loadGraph(ctx)
+		if err != nil {
+			return err
+		}
+
+	} else {
+		clusterID := &installconfig.ClusterID{
+			UUID:    i.doc.ID,
+			InfraID: infraID,
+		}
+
+		g = graph{
+			reflect.TypeOf(installConfig): installConfig,
+			reflect.TypeOf(platformCreds): platformCreds,
+			reflect.TypeOf(image):         image,
+			reflect.TypeOf(clusterID):     clusterID,
+		}
+
+		i.log.Print("resolving graph")
+		for _, a := range targets.Cluster {
+			_, err := g.resolve(a)
+			if err != nil {
+				return err
+			}
+		}
+
+		// the graph is quite big so we store it in a storage account instead of in cosmosdb
+		err = i.saveGraph(ctx, g)
+		if err != nil {
+			return err
+		}
 	}
 
 	for _, subnetID := range []string{

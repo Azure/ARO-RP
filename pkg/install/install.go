@@ -273,6 +273,18 @@ func (i *Installer) getBlobService(ctx context.Context, p mgmtstorage.Permission
 	return &c, nil
 }
 
+func (i *Installer) graphExists(ctx context.Context) (bool, error) {
+	i.log.Print("checking if graph exists")
+
+	blobService, err := i.getBlobService(ctx, mgmtstorage.Permissions("r"), mgmtstorage.SignedResourceTypesO)
+	if err != nil {
+		return false, err
+	}
+
+	aro := blobService.GetContainerReference("aro")
+	return aro.GetBlobReference("graph").Exists()
+}
+
 func (i *Installer) loadGraph(ctx context.Context) (graph, error) {
 	i.log.Print("load graph")
 
