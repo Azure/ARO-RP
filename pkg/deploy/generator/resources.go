@@ -151,12 +151,7 @@ func (g *generator) proxyVmss() *arm.Resource {
 		)
 	}
 
-	trailer := base64.StdEncoding.EncodeToString([]byte(`
-if [[ "$LOCATION" == southeastasia ]]; then
-	echo "$(dig +short australiaeast-cds.australiaeast.cloudapp.azure.com) rhui-1.microsoft.com" >>/etc/hosts
-fi
-
-yum -y update -x WALinuxAgent
+	trailer := base64.StdEncoding.EncodeToString([]byte(`yum -y update -x WALinuxAgent
 yum -y install docker
 
 firewall-cmd --add-port=443/tcp --permanent
@@ -690,7 +685,12 @@ func (g *generator) vmss() *arm.Resource {
 		"''')\n'",
 	)
 
-	trailer := base64.StdEncoding.EncodeToString([]byte(`yum -y update -x WALinuxAgent
+	trailer := base64.StdEncoding.EncodeToString([]byte(`
+if [[ "$LOCATION" == southeastasia ]]; then
+	echo "$(dig +short australiaeast-cds.australiaeast.cloudapp.azure.com) rhui-1.microsoft.com" >>/etc/hosts
+fi
+
+yum -y update -x WALinuxAgent
 
 # avoid "error: db5 error(-30969) from dbenv->open: BDB0091 DB_VERSION_MISMATCH: Database environment version mismatch"
 rm -f /var/lib/rpm/__db*
