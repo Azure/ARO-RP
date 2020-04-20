@@ -41,7 +41,7 @@ func (i *Installer) createDNS(ctx context.Context) error {
 	return i.dns.Create(ctx, i.doc.OpenShiftCluster)
 }
 
-func (i *Installer) installStorage(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) error {
+func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) error {
 	clusterID := &installconfig.ClusterID{}
 
 	err := clusterID.Generate(asset.Parents{

@@ -151,10 +151,10 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 		api.InstallPhaseBootstrap: {
 			action(i.createDNS),
 			action(func(ctx context.Context) error {
-				return i.installStorage(ctx, installConfig, platformCreds, image)
+				return i.deployStorageTemplate(ctx, installConfig, platformCreds, image)
 			}),
 			action(i.createBillingRecord),
-			action(i.installResources),
+			action(i.deployResourceTemplate),
 			action(i.createPrivateEndpoint),
 			action(i.updateAPIIP),
 			action(i.createCertificates),

@@ -98,11 +98,11 @@ func TestRelativeFilePathPrettier(t *testing.T) {
 		{
 			name: "install",
 			f: &runtime.Frame{
-				Function: "github.com/Azure/ARO-RP/pkg/install/install.installResources",
+				Function: "github.com/Azure/ARO-RP/pkg/install/install.deployResourceTemplate",
 				File:     goPath + "src/github.com/Azure/ARO-RP/pkg/install/1-installresources.go",
 				Line:     623,
 			},
-			wantFunction: "install.installResources()",
+			wantFunction: "install.deployResourceTemplate()",
 			wantFile:     "pkg/install/1-installresources.go:623",
 		},
 	}
