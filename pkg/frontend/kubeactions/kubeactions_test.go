@@ -17,17 +17,17 @@ func TestFindGVR(t *testing.T) {
 		resources []*metav1.APIResourceList
 		kind      string
 		want      []*schema.GroupVersionResource
+		wantError string
 	}{
 		{
 			name: "find one",
 			resources: []*metav1.APIResourceList{
 				{
+					GroupVersion: "v1",
 					APIResources: []metav1.APIResource{
 						{
-							Name:    "configmaps",
-							Group:   "",
-							Version: "v1",
-							Kind:    "ConfigMap",
+							Name: "configmaps",
+							Kind: "ConfigMap",
 						},
 					},
 				},
@@ -39,22 +39,20 @@ func TestFindGVR(t *testing.T) {
 			name: "find best version",
 			resources: []*metav1.APIResourceList{
 				{
+					GroupVersion: "v1",
 					APIResources: []metav1.APIResource{
 						{
-							Name:    "configmaps",
-							Group:   "",
-							Version: "v1",
-							Kind:    "ConfigMap",
+							Name: "configmaps",
+							Kind: "ConfigMap",
 						},
 					},
 				},
 				{
+					GroupVersion: "v1beta1",
 					APIResources: []metav1.APIResource{
 						{
-							Name:    "configmaps",
-							Group:   "",
-							Version: "v1beta1",
-							Kind:    "ConfigMap",
+							Name: "configmaps",
+							Kind: "ConfigMap",
 						},
 					},
 				},
@@ -66,12 +64,11 @@ func TestFindGVR(t *testing.T) {
 			name: "find full group.resource",
 			resources: []*metav1.APIResourceList{
 				{
+					GroupVersion: "metal3.io/v1alpha1",
 					APIResources: []metav1.APIResource{
 						{
-							Name:    "baremetalhosts",
-							Group:   "metal3.io",
-							Version: "v1alpha1",
-							Kind:    "BareMetalHost",
+							Name: "baremetalhosts",
+							Kind: "BareMetalHost",
 						},
 					},
 				},
@@ -83,12 +80,11 @@ func TestFindGVR(t *testing.T) {
 			name: "no sub.resources",
 			resources: []*metav1.APIResourceList{
 				{
+					GroupVersion: "metal3.io/v1alpha1",
 					APIResources: []metav1.APIResource{
 						{
-							Name:    "baremetalhosts/status",
-							Group:   "metal3.io",
-							Version: "v1alpha1",
-							Kind:    "BareMetalHost",
+							Name: "baremetalhosts/status",
+							Kind: "BareMetalHost",
 						},
 					},
 				},
@@ -103,22 +99,20 @@ func TestFindGVR(t *testing.T) {
 			name: "find all kinds",
 			resources: []*metav1.APIResourceList{
 				{
+					GroupVersion: "metal3.io/v1alpha1",
 					APIResources: []metav1.APIResource{
 						{
-							Name:    "baremetalhosts",
-							Group:   "metal3.io",
-							Version: "v1alpha1",
-							Kind:    "BareMetalHost",
+							Name: "baremetalhosts",
+							Kind: "BareMetalHost",
 						},
 					},
 				},
 				{
+					GroupVersion: "plastic.io/v1alpha1",
 					APIResources: []metav1.APIResource{
 						{
-							Name:    "plastichosts",
-							Group:   "plastic.io",
-							Version: "v1alpha1",
-							Kind:    "BareMetalHost",
+							Name: "plastichosts",
+							Kind: "BareMetalHost",
 						},
 					},
 				},
@@ -135,7 +129,10 @@ func TestFindGVR(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ka := &kubeactions{}
 
-			got := ka.findGVR(tt.resources, tt.kind, "")
+			got, err := ka.findGVR(tt.resources, tt.kind, "")
+			if err != nil && err.Error() != tt.wantError {
+				t.Error(err)
+			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Error(got)
 			}
