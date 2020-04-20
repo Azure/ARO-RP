@@ -19,7 +19,17 @@ type CloudError struct {
 }
 
 func (err *CloudError) Error() string {
-	return fmt.Sprintf("%d: %s: %s: %s", err.StatusCode, err.Code, err.Target, err.Message)
+	var details string
+	if len(err.Details) > 0 {
+		details = " Details: "
+		for i, innerErr := range err.Details {
+			details += (&CloudError{0, &innerErr}).Error()
+			if i < len(err.Details)-1 {
+				details += ", "
+			}
+		}
+	}
+	return fmt.Sprintf("%d: %s: %s: %s%s", err.StatusCode, err.Code, err.Target, err.Message, details)
 }
 
 // CloudErrorBody represents the body of a cloud error.
@@ -40,6 +50,7 @@ type CloudErrorBody struct {
 // CloudErrorCodes
 var (
 	CloudErrorCodeInternalServerError                = "InternalServerError"
+	CloudErrorCodeDeploymentFailed                   = "DeploymentFailed"
 	CloudErrorCodeInvalidParameter                   = "InvalidParameter"
 	CloudErrorCodeInvalidRequestContent              = "InvalidRequestContent"
 	CloudErrorCodeInvalidResource                    = "InvalidResource"
