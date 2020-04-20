@@ -5,14 +5,14 @@ trigger: none
 stages:
 - stage: Deploy_USSector
   dependsOn: []
-  displayName: 🚀 Deploy USSector
+  displayName: 🚀 Deploy EuropeSector
   jobs:
   - template: ./templates/template-job-deploy-azure-env.yml
     parameters:
       environment: RP-Prod
       locations:
-      - eastus
-      - eastus2
+      - northeurope
+      - westeurope
       configFileName: prod-config.yaml
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
       vsoProjectID: $(vso-project-id)
