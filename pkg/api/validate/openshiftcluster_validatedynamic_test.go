@@ -16,7 +16,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mockfeatures "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
-	mocknetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
 )
 
 func TestValidateProviders(t *testing.T) {
@@ -165,27 +164,26 @@ func TestValidateVnet(t *testing.T) {
 	subnetName := "testSubnet"
 	vnetName := "testVnet"
 	validSubnet := fmt.Sprintf("/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/%s/subnet/%s", resourceGroup, vnetName, subnetName)
+	validNetwork := fmt.Sprintf("/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/%s", resourceGroup, vnetName)
 
 	for _, tt := range []struct {
 		name    string
-		mocks   func(*mocknetwork.MockVirtualNetworksClient)
+		vnet    *mgmtnetwork.VirtualNetwork
 		oc      *api.OpenShiftCluster
 		wantErr string
 	}{
 		{
 			name: "fail: custom dns set",
-			mocks: func(networksClient *mocknetwork.MockVirtualNetworksClient) {
-				networksClient.EXPECT().
-					Get(gomock.Any(), resourceGroup, vnetName, "").
-					Return(mgmtnetwork.VirtualNetwork{
-						VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
-							DhcpOptions: &mgmtnetwork.DhcpOptions{
-								DNSServers: &[]string{
-									"172.16.1.1",
-								},
-							},
+			vnet: &mgmtnetwork.VirtualNetwork{
+				ID: &validNetwork,
+				VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
+
+					DhcpOptions: &mgmtnetwork.DhcpOptions{
+						DNSServers: &[]string{
+							"172.16.1.1",
 						},
-					}, nil)
+					},
+				},
 			},
 			wantErr: "400: InvalidLinkedVNet: : The provided vnet '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/virtualNetworks/testVnet' is invalid: custom DNS servers are not supported.",
 			oc: &api.OpenShiftCluster{
@@ -198,16 +196,13 @@ func TestValidateVnet(t *testing.T) {
 		},
 		{
 			name: "pass: default settings",
-			mocks: func(networksClient *mocknetwork.MockVirtualNetworksClient) {
-				networksClient.EXPECT().
-					Get(gomock.Any(), resourceGroup, vnetName, "").
-					Return(mgmtnetwork.VirtualNetwork{
-						VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
-							DhcpOptions: &mgmtnetwork.DhcpOptions{
-								DNSServers: &[]string{},
-							},
-						},
-					}, nil)
+			vnet: &mgmtnetwork.VirtualNetwork{
+				ID: &validNetwork,
+				VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
+					DhcpOptions: &mgmtnetwork.DhcpOptions{
+						DNSServers: &[]string{},
+					},
+				},
 			},
 			oc: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{
@@ -216,48 +211,14 @@ func TestValidateVnet(t *testing.T) {
 					},
 				},
 			},
-		},
-		{
-			name: "fail: vnet not found",
-			mocks: func(networksClient *mocknetwork.MockVirtualNetworksClient) {
-				networksClient.EXPECT().
-					Get(gomock.Any(), resourceGroup, vnetName, "").
-					Return(mgmtnetwork.VirtualNetwork{}, fmt.Errorf("The Resource 'Microsoft.Network/virtualNetworks/testVnet' under resource group 'testGroup' was not found."))
-			},
-			oc: &api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					MasterProfile: api.MasterProfile{
-						SubnetID: validSubnet,
-					},
-				},
-			},
-			wantErr: "The Resource 'Microsoft.Network/virtualNetworks/testVnet' under resource group 'testGroup' was not found.",
-		},
-		{
-			name: "fail: invalid subnet",
-			oc: &api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{
-					MasterProfile: api.MasterProfile{
-						SubnetID: "/invalid/subnet",
-					},
-				},
-			},
-			wantErr: `subnet ID "/invalid/subnet" has incorrect length`,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			networkClient := mocknetwork.NewMockVirtualNetworksClient(controller)
-
-			if tt.mocks != nil {
-				tt.mocks(networkClient)
-			}
-
 			dv := &openShiftClusterDynamicValidator{
-				oc:                tt.oc,
-				spVirtualNetworks: networkClient,
+				oc: tt.oc,
 			}
 
-			err := dv.validateVnet(ctx)
+			err := dv.validateVnet(ctx, tt.vnet)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

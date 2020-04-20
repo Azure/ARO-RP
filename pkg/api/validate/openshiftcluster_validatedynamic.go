@@ -31,10 +31,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
+// OpenShiftClusterDynamicValidator is an interface with a Dynamic validator
 type OpenShiftClusterDynamicValidator interface {
 	Dynamic(context.Context) error
 }
 
+// NewOpenShiftClusterDynamicValidator creates a new OpenShiftClusterDynamicValidator
 func NewOpenShiftClusterDynamicValidator(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster) (OpenShiftClusterDynamicValidator, error) {
 	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
@@ -97,17 +99,22 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	dv.spVirtualNetworks = network.NewVirtualNetworksClient(r.SubscriptionID, spAuthorizer)
 	dv.subnetManager = subnet.NewManager(r.SubscriptionID, spAuthorizer)
 
-	err = dv.validateVnetPermissions(ctx, dv.spPermissions, api.CloudErrorCodeInvalidServicePrincipalPermissions, "provided service principal")
+	vnet, err := dv.spVirtualNetworks.Get(ctx, r.ResourceGroup, r.ResourceName, "")
 	if err != nil {
 		return err
 	}
 
-	err = dv.validateVnetPermissions(ctx, dv.fpPermissions, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
+	err = dv.validateVnetPermissions(ctx, &vnet, dv.spPermissions, api.CloudErrorCodeInvalidServicePrincipalPermissions, "provided service principal")
 	if err != nil {
 		return err
 	}
 
-	err = dv.validateVnet(ctx)
+	err = dv.validateVnetPermissions(ctx, &vnet, dv.fpPermissions, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
+	if err != nil {
+		return err
+	}
+
+	err = dv.validateVnet(ctx, &vnet)
 	if err != nil {
 		return err
 	}
@@ -154,7 +161,7 @@ func (dv *openShiftClusterDynamicValidator) validateServicePrincipalProfile(ctx 
 	return autorest.NewBearerAuthorizer(token), nil
 }
 
-func (dv *openShiftClusterDynamicValidator) validateVnetPermissions(ctx context.Context, client authorization.PermissionsClient, code, typ string) error {
+func (dv *openShiftClusterDynamicValidator) validateVnetPermissions(ctx context.Context, vnet *mgmtnetwork.VirtualNetwork, client authorization.PermissionsClient, code, typ string) error {
 	vnetID, _, err := subnet.Split(dv.oc.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return err
@@ -165,42 +172,54 @@ func (dv *openShiftClusterDynamicValidator) validateVnetPermissions(ctx context.
 		return err
 	}
 
-	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
-	defer cancel()
+	err = validateActions(ctx, r, []string{
+		"Microsoft.Network/virtualNetworks/subnets/join/action",
+		"Microsoft.Network/virtualNetworks/subnets/read",
+		"Microsoft.Network/virtualNetworks/subnets/write",
+	}, client)
 
-	err = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-		permissions, err := client.ListForResource(ctx, r.ResourceGroup, r.Provider, r.ResourceType, "", r.ResourceName)
-		if detailedErr, ok := err.(autorest.DetailedError); ok &&
-			detailedErr.StatusCode == http.StatusForbidden {
-			dv.log.Print(err)
-			return false, nil
-		}
-		if err != nil {
-			return false, err
-		}
-
-		for _, action := range []string{
-			"Microsoft.Network/virtualNetworks/subnets/join/action",
-			"Microsoft.Network/virtualNetworks/subnets/read",
-			"Microsoft.Network/virtualNetworks/subnets/write",
-		} {
-			ok, err := utilpermissions.CanDoAction(permissions, action)
-			if err != nil {
-				return false, err
-			}
-			if !ok {
-				return false, nil
-			}
-		}
-
-		return true, nil
-	}, timeoutCtx.Done())
 	if err == wait.ErrWaitTimeout {
-		return api.NewCloudError(http.StatusBadRequest, code, "", "The "+typ+" does not have Contributor permission on vnet '%s'.", vnetID)
+		return api.NewCloudError(http.StatusBadRequest, code, "", "The "+typ+" does not have Contributor permission on vnet '%s'.", *vnet.ID)
 	}
 	if detailedErr, ok := err.(autorest.DetailedError); ok &&
 		detailedErr.StatusCode == http.StatusNotFound {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The vnet '%s' could not be found.", vnetID)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The vnet '%s' could not be found.", *vnet.ID)
+	}
+	if err != nil {
+		return err
+	}
+
+	// validate route table permissions
+	for _, sn := range *vnet.VirtualNetworkPropertiesFormat.Subnets {
+		if sn.RouteTable == nil {
+			continue
+		}
+		err = dv.validateRouteTablePermissions(ctx, *sn.RouteTable, client, code, typ)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (dv *openShiftClusterDynamicValidator) validateRouteTablePermissions(ctx context.Context, routeTable mgmtnetwork.RouteTable, client authorization.PermissionsClient, code, typ string) error {
+	r, err := azure.ParseResourceID(*routeTable.ID)
+	if err != nil {
+		return err
+	}
+
+	err = validateActions(ctx, r, []string{
+		"Microsoft.Network/routeTables/join/action",
+		"Microsoft.Network/routeTables/read",
+		"Microsoft.Network/routeTables/write",
+	}, client)
+	if err == wait.ErrWaitTimeout {
+		return api.NewCloudError(http.StatusBadRequest, code, "", "The "+typ+" does not have Contributor permission on route table '%s'.", *routeTable.ID)
+	}
+	if detailedErr, ok := err.(autorest.DetailedError); ok &&
+		detailedErr.StatusCode == http.StatusNotFound {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedRouteTable, "", "The route table '%s' could not be found.", *routeTable.ID)
 	}
 
 	return err
@@ -299,25 +318,12 @@ func (dv *openShiftClusterDynamicValidator) validateSubnet(ctx context.Context, 
 }
 
 // validateVnet checks that the vnet does not have custom dns servers set
-func (dv *openShiftClusterDynamicValidator) validateVnet(ctx context.Context) error {
-	vnetID, _, err := subnet.Split(dv.oc.Properties.MasterProfile.SubnetID)
-	if err != nil {
-		return err
-	}
-	r, err := azure.ParseResourceID(vnetID)
-	if err != nil {
-		return err
-	}
-	vnet, err := dv.spVirtualNetworks.Get(ctx, r.ResourceGroup, r.ResourceName, "")
-	if err != nil {
-		return err
-	}
-
+func (dv *openShiftClusterDynamicValidator) validateVnet(ctx context.Context, vnet *mgmtnetwork.VirtualNetwork) error {
 	if vnet.DhcpOptions == nil || vnet.DhcpOptions.DNSServers == nil || len(*vnet.DhcpOptions.DNSServers) == 0 {
 		return nil
 	}
 
-	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided vnet '%s' is invalid: custom DNS servers are not supported.", vnetID)
+	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided vnet '%s' is invalid: custom DNS servers are not supported.", *vnet.ID)
 }
 
 func (dv *openShiftClusterDynamicValidator) validateProviders(ctx context.Context) error {
@@ -345,4 +351,32 @@ func (dv *openShiftClusterDynamicValidator) validateProviders(ctx context.Contex
 	}
 
 	return nil
+}
+
+func validateActions(ctx context.Context, r azure.Resource, actions []string, client authorization.PermissionsClient) error {
+	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
+
+	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+		permissions, err := client.ListForResource(ctx, r.ResourceGroup, r.Provider, "", r.ResourceType, r.ResourceName)
+		if detailedErr, ok := err.(autorest.DetailedError); ok &&
+			detailedErr.StatusCode == http.StatusForbidden {
+			return false, nil
+		}
+		if err != nil {
+			return false, err
+		}
+
+		for _, action := range actions {
+			ok, err := utilpermissions.CanDoAction(permissions, action)
+			if err != nil {
+				return false, err
+			}
+			if !ok {
+				return false, nil
+			}
+		}
+
+		return true, nil
+	}, timeoutCtx.Done())
 }
