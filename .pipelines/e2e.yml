@@ -83,11 +83,11 @@ stages:
           useSameSourceVersion: false
           useCustomSourceVersion: false
           useSameBranch: false
-          branchToUse: 'master'
+          branchToUse: 'zhuoli/e2e'
           waitForQueuedBuildsToFinish: true
           storeInEnvironmentVariable: false
-          delayBetweenBuilds: '14400'
-          buildParameters: 'CLUSTER_RESOURCEGROUP:$(CLUSTER_RESOURCEGROUP), CLUSTER:$(CLUSTER), REGION:$(REGION)'
+          delayBetweenBuilds: '5'
+          buildParameters: 'CLUSTER_RESOURCEGROUP:$(CLUSTER_RESOURCEGROUP), CLUSTER:$(CLUSTER)'
           authenticationMethod: 'OAuth Token'
           password: '$(System.AccessToken)'
           enableBuildInQueueCondition: false
