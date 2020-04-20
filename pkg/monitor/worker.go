@@ -111,6 +111,8 @@ func (mon *monitor) worker(stop <-chan struct{}, delay time.Duration, id string)
 	t := time.NewTicker(time.Minute)
 	defer t.Stop()
 
+	h := time.Now().Hour()
+
 out:
 	for {
 		mon.mu.RLock()
@@ -121,27 +123,31 @@ out:
 			break
 		}
 
+		newh := time.Now().Hour()
+
 		// TODO: later can modify here to poll once per N minutes and re-issue
 		// cached metrics in the remaining minutes
 
-		mon.workOne(context.Background(), log, v.doc)
+		mon.workOne(context.Background(), log, v.doc, newh != h)
 
 		select {
 		case <-t.C:
 		case <-stop:
 			break out
 		}
+
+		h = newh
 	}
 
 	log.Debug("stopping monitoring")
 }
 
 // workOne checks the API server health of a cluster
-func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument) {
+func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument, logMessages bool) {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
-	c, err := cluster.NewMonitor(ctx, mon.env, log, doc.OpenShiftCluster, mon.clusterm)
+	c, err := cluster.NewMonitor(ctx, mon.env, log, doc.OpenShiftCluster, mon.clusterm, logMessages)
 	if err != nil {
 		log.Error(err)
 		return

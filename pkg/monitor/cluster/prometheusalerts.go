@@ -13,6 +13,7 @@ import (
 
 	"github.com/prometheus/common/model"
 
+	"github.com/Azure/ARO-RP/pkg/util/namespace"
 	"github.com/Azure/ARO-RP/pkg/util/portforward"
 )
 
@@ -66,6 +67,10 @@ func (mon *Monitor) emitPrometheusAlerts(ctx context.Context) error {
 	}{}
 
 	for _, alert := range alerts {
+		if !namespace.IsOpenShift(string(alert.Labels["namespace"])) {
+			continue
+		}
+
 		if strings.HasPrefix(alert.Name(), "UsingDeprecatedAPI") {
 			continue
 		}

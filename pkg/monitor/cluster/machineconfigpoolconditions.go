@@ -7,6 +7,7 @@ import (
 	"context"
 
 	v1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -19,7 +20,7 @@ var machineConfigPoolConditionsExpected = map[v1.MachineConfigPoolConditionType]
 	v1.MachineConfigPoolUpdating:       corev1.ConditionFalse,
 }
 
-func (mon *Monitor) emitMachineConfigPoolMetrics(ctx context.Context) error {
+func (mon *Monitor) emitMachineConfigPoolConditions(ctx context.Context) error {
 	mcps, err := mon.mcocli.MachineconfigurationV1().MachineConfigPools().List(metav1.ListOptions{})
 	if err != nil {
 		return err
@@ -31,11 +32,21 @@ func (mon *Monitor) emitMachineConfigPoolMetrics(ctx context.Context) error {
 				continue
 			}
 
-			mon.emitGauge("machineconfigpools.conditions", 1, map[string]string{
+			mon.emitGauge("machineconfigpool.conditions", 1, map[string]string{
 				"name":   mcp.Name,
-				"type":   string(c.Type),
 				"status": string(c.Status),
+				"type":   string(c.Type),
 			})
+
+			if mon.logMessages {
+				mon.log.WithFields(logrus.Fields{
+					"metric":  "machineconfigpool.conditions",
+					"name":    mcp.Name,
+					"status":  c.Status,
+					"type":    c.Type,
+					"message": c.Message,
+				}).Print()
+			}
 		}
 	}
 

@@ -10,16 +10,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (mon *Monitor) emitClusterVersionMetrics(ctx context.Context) error {
+func (mon *Monitor) emitClusterVersions(ctx context.Context) error {
 	cv, err := mon.configcli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
 	if err != nil {
 		return err
-	}
-
-	desiredVersion := cv.Status.Desired.Version
-	if cv.Spec.DesiredUpdate != nil &&
-		cv.Spec.DesiredUpdate.Version != "" {
-		desiredVersion = cv.Spec.DesiredUpdate.Version
 	}
 
 	// Find the actual current cluster state. The history is ordered by most
@@ -33,10 +27,19 @@ func (mon *Monitor) emitClusterVersionMetrics(ctx context.Context) error {
 		}
 	}
 
-	mon.emitGauge("cluster.version", 1, map[string]string{
+	mon.emitGauge("cluster.versions", 1, map[string]string{
 		"actualVersion":  actualVersion,
-		"desiredVersion": desiredVersion,
+		"desiredVersion": desiredVersion(cv),
 	})
 
 	return nil
+}
+
+func desiredVersion(cv *configv1.ClusterVersion) string {
+	if cv.Spec.DesiredUpdate != nil &&
+		cv.Spec.DesiredUpdate.Version != "" {
+		return cv.Spec.DesiredUpdate.Version
+	}
+
+	return cv.Status.Desired.Version
 }
