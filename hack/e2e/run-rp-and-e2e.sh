@@ -109,7 +109,8 @@ run_e2e() {
       --master-subnet "$CLUSTER-master" \
       --worker-subnet "$CLUSTER-worker" \
       --client-id $CLUSTER_SPN_ID \
-      --client-secret $CLUSTER_SPN_SECRET
+      --client-secret $CLUSTER_SPN_SECRET \
+      --cluster-resource-group $CLUSTER_RESOURCEGROUP
 
     echo "########## CLI : ARO List ##########"
     az aro list -o table
@@ -118,9 +119,6 @@ run_e2e() {
     echo "########## Run E2E ##########"
     go run ./hack/kubeadminkubeconfig "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$ARO_RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER" >$KUBECONFIG
     RESOURCEGROUP=$ARO_RESOURCEGROUP make e2e
-
-    echo "########## CLI : ARO delete cluster ##########"
-    az aro delete -g "$ARO_RESOURCEGROUP" -n "$CLUSTER" --yes
 }
 
 clean_e2e_db(){
@@ -132,7 +130,16 @@ clean_e2e_db(){
 }
 
 clean_e2e() {
-    echo "########## 🧹 Cleaning Cluster RG : $ARO_RESOURCEGROUP "
+    echo "########## CLI : ARO delete cluster ##########"
+    az aro delete -g "$ARO_RESOURCEGROUP" -n "$CLUSTER" --yes
+
+    # belt and braces
+    if [ "$RP_MODE" = "development" ]; then
+        echo "########## 🧹 Cleaning Cluster RG : $CLUSTER_RESOURCEGROUP"
+        az group delete -n $CLUSTER_RESOURCEGROUP -y
+    fi
+
+    echo "########## 🧹 Cleaning ARO RG : $ARO_RESOURCEGROUP"
     az group delete -n $ARO_RESOURCEGROUP -y
     echo "########## 🧹Deleting Cluster SPN "
     az ad sp delete --id $(cat $CLUSTERSPN | jq -r .appId)
@@ -143,6 +150,7 @@ clean_e2e() {
 
 export CLUSTER="v4-e2e-$(git log --format=%h -n 1 HEAD)"
 export ARO_RESOURCEGROUP="v4-e2e-rg-$(git log --format=%h -n 1 HEAD)-$LOCATION"
+export CLUSTER_RESOURCEGROUP="aro-$ARO_RESOURCEGROUP"
 export KUBECONFIG=$(pwd)/$CLUSTER.kubeconfig
 export CLUSTERSPN=$(pwd)/$CLUSTER.json
 
@@ -165,6 +173,7 @@ fi
 echo
 echo "CLUSTER=$CLUSTER"
 echo "ARO_RESOURCEGROUP=$ARO_RESOURCEGROUP"
+echo "CLUSTER_RESOURCEGROUP=$CLUSTER_RESOURCEGROUP"
 echo "KUBECONFIG=$KUBECONFIG"
 echo "CLUSTERSPN=$CLUSTERSPN"
 if [ "$RP_MODE" = "development" ]
