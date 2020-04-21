@@ -291,17 +291,6 @@ func (f *frontend) Run(ctx context.Context, stop <-chan struct{}, done chan<- st
 	}
 }
 
-func adminJmespathFilterValidate(filter string) (*jmespath.JMESPath, error) {
-	if filter == "" {
-		return nil, nil
-	}
-	jpath, err := jmespath.Compile(filter)
-	if err != nil {
-		return nil, jmeErrorToCloudError(err)
-	}
-	return jpath, nil
-}
-
 func adminJmespathFilterResult(result []byte, jpath *jmespath.JMESPath) ([]byte, error) {
 	if jpath == nil {
 		return result, nil

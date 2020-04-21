@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/jmespath/go-jmespath"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
@@ -63,6 +64,17 @@ func (f *frontend) validateOpenShiftUniqueKey(ctx context.Context, doc *api.Open
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeDuplicateResourceGroup, "", "The provided resource group '%s' already contains a cluster.", doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
 	}
 	return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
+}
+
+func adminJmespathFilterValidate(filter string) (*jmespath.JMESPath, error) {
+	if filter == "" {
+		return nil, nil
+	}
+	jpath, err := jmespath.Compile(filter)
+	if err != nil {
+		return nil, jmeErrorToCloudError(err)
+	}
+	return jpath, nil
 }
 
 // rxKubernetesString is weaker than Kubernetes validation, but strong enough to
