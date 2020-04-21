@@ -74,7 +74,7 @@ func (d *deployer) PreDeploy(ctx context.Context) (string, error) {
 }
 
 func (d *deployer) deployGlobal(ctx context.Context, rpServicePrincipalID string) error {
-	deploymentName := "rp-global"
+	deploymentName := "rp-global-" + d.config.Location
 
 	b, err := Asset(generator.FileRPProductionGlobal)
 	if err != nil {
@@ -106,7 +106,7 @@ func (d *deployer) deployGlobal(ctx context.Context, rpServicePrincipalID string
 }
 
 func (d *deployer) deployGlobalSubscription(ctx context.Context) error {
-	deploymentName := "rp-global-subscription"
+	deploymentName := "rp-global-subscription-" + d.config.Location
 
 	b, err := Asset(generator.FileRPProductionGlobalSubscription)
 	if err != nil {
@@ -130,7 +130,7 @@ func (d *deployer) deployGlobalSubscription(ctx context.Context) error {
 }
 
 func (d *deployer) deploySubscription(ctx context.Context) error {
-	deploymentName := "rp-production-subscription"
+	deploymentName := "rp-production-subscription-" + d.config.Location
 
 	b, err := Asset(generator.FileRPProductionSubscription)
 	if err != nil {
