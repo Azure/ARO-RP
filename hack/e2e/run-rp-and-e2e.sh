@@ -51,22 +51,21 @@ deploy_e2e_db() {
 }
 
 deploy_e2e_deps() {
-    export RESOURCEGROUP=$CLUSTER_RESOURCEGROUP
-    echo "🚀 Creating new RG: $RESOURCEGROUP and Vnet for cluster : $CLUSTER"
+    echo "🚀 Creating new RG: $ARO_RESOURCEGROUP and Vnet for cluster : $CLUSTER"
 
-    echo "########## Create ARO RG : $RESOURCEGROUP ##########"
-    az group create -g "$RESOURCEGROUP" -l $LOCATION >/dev/null
+    echo "########## Create ARO RG : $ARO_RESOURCEGROUP ##########"
+    az group create -g "$ARO_RESOURCEGROUP" -l $LOCATION >/dev/null
 
     echo "########## Create ARO Vnet ##########"
     az network vnet create \
-      -g "$RESOURCEGROUP" \
+      -g "$ARO_RESOURCEGROUP" \
       -n dev-vnet \
       --address-prefixes 10.0.0.0/9 >/dev/null
 
     echo "########## Create ARO Subnet ##########"
     for subnet in "$CLUSTER-master" "$CLUSTER-worker"; do
     az network vnet subnet create \
-        -g "$RESOURCEGROUP" \
+        -g "$ARO_RESOURCEGROUP" \
         --vnet-name dev-vnet \
         -n "$subnet" \
         --address-prefixes 10.$((RANDOM & 127)).$((RANDOM & 255)).0/24 \
@@ -75,14 +74,14 @@ deploy_e2e_deps() {
 
     echo "########## Update ARO Subnet ##########"
     az network vnet subnet update \
-      -g "$RESOURCEGROUP" \
+      -g "$ARO_RESOURCEGROUP" \
       --vnet-name dev-vnet \
       -n "$CLUSTER-master" \
       --disable-private-link-service-network-policies true >/dev/null
 
     echo "########## Create Cluster SPN ##########"
     az ad sp create-for-rbac -n "$CLUSTER" --role contributor \
-        --scopes /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP >$CLUSTERSPN
+        --scopes /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$ARO_RESOURCEGROUP >$CLUSTERSPN
 }
 
 set_cli_context() {
@@ -99,13 +98,12 @@ register_sub() {
 }
 
 run_e2e() {
-    export RESOURCEGROUP=$CLUSTER_RESOURCEGROUP
     CLUSTER_SPN_ID=$(cat $CLUSTERSPN | jq -r .appId)
     CLUSTER_SPN_SECRET=$(cat $CLUSTERSPN | jq -r .password)
 
     echo "########## 🚀 Create ARO Cluster $CLUSTER - Using client-id : $CLUSTER_SPN_ID ##########"
     az aro create \
-      -g "$RESOURCEGROUP" \
+      -g "$ARO_RESOURCEGROUP" \
       -n "$CLUSTER" \
       --vnet dev-vnet \
       --master-subnet "$CLUSTER-master" \
@@ -116,13 +114,13 @@ run_e2e() {
     echo "########## CLI : ARO List ##########"
     az aro list -o table
     echo "########## CLI : ARO list-creds ##########"
-    az aro list-credentials -g "$RESOURCEGROUP" -n "$CLUSTER" >/dev/null
+    az aro list-credentials -g "$ARO_RESOURCEGROUP" -n "$CLUSTER" >/dev/null
     echo "########## Run E2E ##########"
-    go run ./hack/kubeadminkubeconfig "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER" >$KUBECONFIG
-    make e2e
+    go run ./hack/kubeadminkubeconfig "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$ARO_RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER" >$KUBECONFIG
+    RESOURCEGROUP=$ARO_RESOURCEGROUP make e2e
 
     echo "########## CLI : ARO delete cluster ##########"
-    az aro delete -g "$RESOURCEGROUP" -n "$CLUSTER" --yes
+    az aro delete -g "$ARO_RESOURCEGROUP" -n "$CLUSTER" --yes
 }
 
 clean_e2e_db(){
@@ -134,9 +132,8 @@ clean_e2e_db(){
 }
 
 clean_e2e() {
-    export RESOURCEGROUP=$CLUSTER_RESOURCEGROUP
-    echo "########## 🧹 Cleaning Cluster RG : $RESOURCEGROUP "
-    az group delete -n $RESOURCEGROUP -y
+    echo "########## 🧹 Cleaning Cluster RG : $ARO_RESOURCEGROUP "
+    az group delete -n $ARO_RESOURCEGROUP -y
     echo "########## 🧹Deleting Cluster SPN "
     az ad sp delete --id $(cat $CLUSTERSPN | jq -r .appId)
     echo "########## 🧹 Cleaning files "
@@ -145,7 +142,7 @@ clean_e2e() {
 }
 
 export CLUSTER="v4-e2e-$(git log --format=%h -n 1 HEAD)"
-export CLUSTER_RESOURCEGROUP="v4-e2e-rg-$(git log --format=%h -n 1 HEAD)-$LOCATION"
+export ARO_RESOURCEGROUP="v4-e2e-rg-$(git log --format=%h -n 1 HEAD)-$LOCATION"
 export KUBECONFIG=$(pwd)/$CLUSTER.kubeconfig
 export CLUSTERSPN=$(pwd)/$CLUSTER.json
 
@@ -167,7 +164,7 @@ then
 fi
 echo
 echo "CLUSTER=$CLUSTER"
-echo "CLUSTER_RESOURCEGROUP=$CLUSTER_RESOURCEGROUP"
+echo "ARO_RESOURCEGROUP=$ARO_RESOURCEGROUP"
 echo "KUBECONFIG=$KUBECONFIG"
 echo "CLUSTERSPN=$CLUSTERSPN"
 if [ "$RP_MODE" = "development" ]
