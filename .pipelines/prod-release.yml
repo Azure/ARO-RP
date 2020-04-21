@@ -9,7 +9,7 @@ stages:
   jobs:
   - template: ./templates/template-job-deploy-azure-env.yml
     parameters:
-      environment: RP-Prod
+      environment: RP-Prod-LowTrafficSector
       locations:
       - australiaeast
       configFileName: prod-config.yaml
@@ -25,7 +25,7 @@ stages:
   jobs:
   - template: ./templates/template-job-deploy-azure-env.yml
     parameters:
-      environment: RP-Prod
+      environment: RP-Prod-USSector
       locations:
       - eastus
       - eastus2
@@ -44,7 +44,7 @@ stages:
   jobs:
   - template: ./templates/template-job-deploy-azure-env.yml
     parameters:
-      environment: RP-Prod
+      environment: RP-Prod-EuropeSector
       locations:
       - northeurope
       - westeurope
@@ -61,7 +61,7 @@ stages:
   jobs:
   - template: ./templates/template-job-deploy-azure-env.yml
     parameters:
-      environment: RP-Prod
+      environment: RP-Prod-ROWSector
       locations:
       - southeastasia
       # - southafricanorth
