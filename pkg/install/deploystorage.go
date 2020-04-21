@@ -42,43 +42,30 @@ func (i *Installer) createDNS(ctx context.Context) error {
 }
 
 func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) error {
-	clusterID := &installconfig.ClusterID{}
+	if i.doc.OpenShiftCluster.Properties.InfraID == "" {
+		clusterID := &installconfig.ClusterID{}
 
-	err := clusterID.Generate(asset.Parents{
-		reflect.TypeOf(installConfig): &installconfig.InstallConfig{
-			Config: &types.InstallConfig{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: i.doc.OpenShiftCluster.Name,
+		err := clusterID.Generate(asset.Parents{
+			reflect.TypeOf(installConfig): &installconfig.InstallConfig{
+				Config: &types.InstallConfig{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: i.doc.OpenShiftCluster.Name,
+					},
 				},
 			},
-		},
-	})
-	if err != nil {
-		return err
-	}
+		})
+		if err != nil {
+			return err
+		}
 
-	clusterID.UUID = i.doc.ID
-
-	g := graph{
-		reflect.TypeOf(installConfig): installConfig,
-		reflect.TypeOf(platformCreds): platformCreds,
-		reflect.TypeOf(image):         image,
-		reflect.TypeOf(clusterID):     clusterID,
-	}
-
-	i.log.Print("resolving graph")
-	for _, a := range targets.Cluster {
-		_, err := g.resolve(a)
+		i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+			doc.OpenShiftCluster.Properties.InfraID = clusterID.InfraID
+			return nil
+		})
 		if err != nil {
 			return err
 		}
 	}
-
-	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		clusterID := g[reflect.TypeOf(&installconfig.ClusterID{})].(*installconfig.ClusterID)
-		doc.OpenShiftCluster.Properties.InfraID = clusterID.InfraID
-		return nil
-	})
 	infraID := i.doc.OpenShiftCluster.Properties.InfraID
 
 	resourceGroup := stringutils.LastTokenByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
@@ -91,7 +78,7 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 	if _, ok := i.env.(env.Dev); ok {
 		group.ManagedBy = nil
 	}
-	_, err = i.groups.CreateOrUpdate(ctx, resourceGroup, group)
+	_, err := i.groups.CreateOrUpdate(ctx, resourceGroup, group)
 	if err != nil {
 		return err
 	}
@@ -275,10 +262,45 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 		return err
 	}
 
-	// the graph is quite big so we store it in a storage account instead of in cosmosdb
-	err = i.saveGraph(ctx, g)
+	var g graph
+
+	exists, err := i.graphExists(ctx)
 	if err != nil {
 		return err
+	}
+
+	if exists {
+		g, err = i.loadGraph(ctx)
+		if err != nil {
+			return err
+		}
+
+	} else {
+		clusterID := &installconfig.ClusterID{
+			UUID:    i.doc.ID,
+			InfraID: infraID,
+		}
+
+		g = graph{
+			reflect.TypeOf(installConfig): installConfig,
+			reflect.TypeOf(platformCreds): platformCreds,
+			reflect.TypeOf(image):         image,
+			reflect.TypeOf(clusterID):     clusterID,
+		}
+
+		i.log.Print("resolving graph")
+		for _, a := range targets.Cluster {
+			_, err := g.resolve(a)
+			if err != nil {
+				return err
+			}
+		}
+
+		// the graph is quite big so we store it in a storage account instead of in cosmosdb
+		err = i.saveGraph(ctx, g)
+		if err != nil {
+			return err
+		}
 	}
 
 	for _, subnetID := range []string{
@@ -329,7 +351,14 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		// used for the SAS token with which the bootstrap node retrieves its
 		// ignition payload
-		doc.OpenShiftCluster.Properties.Install.Now = time.Now().UTC()
+		var t time.Time
+		if doc.OpenShiftCluster.Properties.Install.Now == t {
+			// Only set this if it hasn't been set already, since it is used to
+			// create values for signedStart and signedExpiry in
+			// deployResourceTemplate, and if these are not stable a
+			// redeployment will fail.
+			doc.OpenShiftCluster.Properties.Install.Now = time.Now().UTC()
+		}
 		doc.OpenShiftCluster.Properties.AdminKubeconfig = adminInternalClient.File.Data
 		doc.OpenShiftCluster.Properties.AROServiceKubeconfig = aroServiceInternalClient.File.Data
 		return nil
