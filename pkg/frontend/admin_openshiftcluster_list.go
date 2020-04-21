@@ -21,7 +21,16 @@ func (f *frontend) getAdminOpenShiftClusters(w http.ResponseWriter, r *http.Requ
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
+	jpath, err := validateAdminJmespathFilter(r.URL.Query().Get("filter"))
+	if err != nil {
+		adminReply(log, w, nil, nil, err)
+		return
+	}
+
 	b, err := f._getAdminOpenShiftClusters(ctx, r, f.apis[admin.APIVersion].OpenShiftClusterConverter())
+	if err == nil {
+		b, err = adminJmespathFilter(b, jpath)
+	}
 
 	adminReply(log, w, nil, b, err)
 }
