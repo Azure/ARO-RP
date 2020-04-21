@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -139,41 +138,4 @@ func (f *frontend) _postAdminKubernetesObjects(ctx context.Context, r *http.Requ
 	}
 
 	return f.kubeActionsFactory(log, f.env).CreateOrUpdate(ctx, doc.OpenShiftCluster, obj)
-}
-
-// rxKubernetesString is weaker than Kubernetes validation, but strong enough to
-// prevent mischief
-var rxKubernetesString = regexp.MustCompile(`(?i)^[-a-z0-9.]{0,255}$`)
-
-func validateAdminKubernetesObjectsNonCustomer(method, groupKind, namespace, name string) error {
-	if namespace != "" &&
-		namespace != "default" &&
-		namespace != "openshift" &&
-		!strings.HasPrefix(string(namespace), "kube-") &&
-		!strings.HasPrefix(string(namespace), "openshift-") {
-		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Access to the provided namespace '%s' is forbidden.", namespace)
-	}
-
-	return validateAdminKubernetesObjects(method, groupKind, namespace, name)
-}
-
-func validateAdminKubernetesObjects(method, groupKind, namespace, name string) error {
-	if groupKind == "" ||
-		!rxKubernetesString.MatchString(groupKind) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided groupKind '%s' is invalid.", groupKind)
-	}
-	if strings.EqualFold(groupKind, "secret") {
-		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Access to secrets is forbidden.")
-	}
-
-	if !rxKubernetesString.MatchString(namespace) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided namespace '%s' is invalid.", namespace)
-	}
-
-	if (method != http.MethodGet && name == "") ||
-		!rxKubernetesString.MatchString(name) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided name '%s' is invalid.", name)
-	}
-
-	return nil
 }
