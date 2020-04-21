@@ -98,10 +98,10 @@ func EnrichWithResourceID(log *logrus.Entry, resourceID string) *logrus.Entry {
 	}
 
 	return log.WithFields(logrus.Fields{
-		"resource_id":     resourceID,
-		"subscription_id": r.SubscriptionID,
-		"resource_group":  r.ResourceGroup,
-		"resource_name":   r.ResourceName,
+		"resource_id":     strings.ToLower(resourceID),
+		"subscription_id": strings.ToLower(r.SubscriptionID),
+		"resource_group":  strings.ToLower(r.ResourceGroup),
+		"resource_name":   strings.ToLower(r.ResourceName),
 	})
 }
 

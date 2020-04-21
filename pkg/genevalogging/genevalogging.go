@@ -6,6 +6,7 @@ package genevalogging
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -600,19 +601,19 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 								},
 								{
 									Name:  "RESOURCE_ID",
-									Value: g.oc.ID,
+									Value: strings.ToLower(g.oc.ID),
 								},
 								{
 									Name:  "SUBSCRIPTION_ID",
-									Value: r.SubscriptionID,
+									Value: strings.ToLower(r.SubscriptionID),
 								},
 								{
 									Name:  "RESOURCE_GROUP",
-									Value: r.ResourceGroup,
+									Value: strings.ToLower(r.ResourceGroup),
 								},
 								{
 									Name:  "RESOURCE_NAME",
-									Value: r.ResourceName,
+									Value: strings.ToLower(r.ResourceName),
 								},
 							},
 							Resources: v1.ResourceRequirements{
