@@ -11,6 +11,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
+	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 
@@ -29,6 +30,7 @@ type Monitor struct {
 
 	cli       kubernetes.Interface
 	configcli configclient.Interface
+	mcocli    mcoclient.Interface
 	m         metrics.Interface
 }
 
@@ -68,6 +70,11 @@ func NewMonitor(ctx context.Context, env env.Interface, log *logrus.Entry, oc *a
 		return nil, err
 	}
 
+	mcocli, err := mcoclient.NewForConfig(restConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Monitor{
 		env: env,
 		log: log,
@@ -77,6 +84,7 @@ func NewMonitor(ctx context.Context, env env.Interface, log *logrus.Entry, oc *a
 
 		cli:       cli,
 		configcli: configcli,
+		mcocli:    mcocli,
 		m:         m,
 	}, nil
 }
@@ -100,6 +108,7 @@ func (mon *Monitor) Monitor(ctx context.Context) {
 		mon.emitClusterVersionMetrics,
 		mon.emitNodesMetrics,
 		mon.emitPrometheusAlerts,
+		mon.emitMachineConfigPoolMetrics,
 	} {
 		err = f(ctx)
 		if err != nil {
