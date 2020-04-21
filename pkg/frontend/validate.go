@@ -66,14 +66,16 @@ func (f *frontend) validateOpenShiftUniqueKey(ctx context.Context, doc *api.Open
 	return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Internal server error.")
 }
 
-func adminJmespathFilterValidate(filter string) (*jmespath.JMESPath, error) {
+func validateAdminJmespathFilter(filter string) (*jmespath.JMESPath, error) {
 	if filter == "" {
 		return nil, nil
 	}
+
 	jpath, err := jmespath.Compile(filter)
 	if err != nil {
-		return nil, jmeErrorToCloudError(err)
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided JMESPath filter '%s' is invalid: '%s'", filter, err)
 	}
+
 	return jpath, nil
 }
 

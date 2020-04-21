@@ -291,7 +291,7 @@ func (f *frontend) Run(ctx context.Context, stop <-chan struct{}, done chan<- st
 	}
 }
 
-func adminJmespathFilterResult(result []byte, jpath *jmespath.JMESPath) ([]byte, error) {
+func adminJmespathFilter(result []byte, jpath *jmespath.JMESPath) ([]byte, error) {
 	if jpath == nil {
 		return result, nil
 	}
@@ -304,35 +304,10 @@ func adminJmespathFilterResult(result []byte, jpath *jmespath.JMESPath) ([]byte,
 
 	filtered, err := jpath.Search(o)
 	if err != nil {
-		return nil, jmeErrorToCloudError(err)
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeJMESPathSearchFailed, "", "The JMESPath search returned an error: '%s'", err)
 	}
 
 	return json.Marshal(filtered)
-}
-
-func jmeErrorToCloudError(err error) error {
-	switch jerr := err.(type) {
-	case jmespath.SyntaxError:
-		return &api.CloudError{
-			StatusCode: http.StatusBadRequest,
-			CloudErrorBody: &api.CloudErrorBody{
-				Code:    api.CloudErrorCodeInvalidParameter,
-				Message: jerr.Error(),
-				Target:  jerr.HighlightLocation(),
-			},
-		}
-
-	case *jmespath.SyntaxError:
-		return &api.CloudError{
-			StatusCode: http.StatusBadRequest,
-			CloudErrorBody: &api.CloudErrorBody{
-				Code:    api.CloudErrorCodeInvalidParameter,
-				Message: jerr.Error(),
-				Target:  jerr.HighlightLocation(),
-			},
-		}
-	}
-	return err
 }
 
 func adminReply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b []byte, err error) {
