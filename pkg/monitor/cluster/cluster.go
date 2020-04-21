@@ -22,8 +22,9 @@ import (
 )
 
 type Monitor struct {
-	env env.Interface
-	log *logrus.Entry
+	env         env.Interface
+	log         *logrus.Entry
+	logMessages bool
 
 	oc   *api.OpenShiftCluster
 	dims map[string]string
@@ -34,7 +35,7 @@ type Monitor struct {
 	m         metrics.Interface
 }
 
-func NewMonitor(ctx context.Context, env env.Interface, log *logrus.Entry, oc *api.OpenShiftCluster, m metrics.Interface) (*Monitor, error) {
+func NewMonitor(ctx context.Context, env env.Interface, log *logrus.Entry, oc *api.OpenShiftCluster, m metrics.Interface, logMessages bool) (*Monitor, error) {
 	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
 		return nil, err
@@ -76,8 +77,9 @@ func NewMonitor(ctx context.Context, env env.Interface, log *logrus.Entry, oc *a
 	}
 
 	return &Monitor{
-		env: env,
-		log: log,
+		env:         env,
+		log:         log,
+		logMessages: logMessages,
 
 		oc:   oc,
 		dims: dims,
@@ -103,12 +105,18 @@ func (mon *Monitor) Monitor(ctx context.Context) {
 		return
 	}
 
-	for _, f := range []func(ctx context.Context) error{
-		mon.emitClusterOperatorsMetrics,
-		mon.emitClusterVersionMetrics,
-		mon.emitNodesMetrics,
+	for _, f := range []func(context.Context) error{
+		mon.emitClusterOperatorConditions,
+		mon.emitClusterOperatorVersions,
+		mon.emitClusterVersions,
+		mon.emitDaemonsetStatuses,
+		mon.emitDeploymentStatuses,
+		mon.emitMachineConfigPoolConditions,
+		mon.emitNodeConditions,
+		mon.emitPodConditions,
 		mon.emitPrometheusAlerts,
-		mon.emitMachineConfigPoolMetrics,
+		mon.emitReplicasetStatuses,
+		mon.emitStatefulsetStatuses,
 	} {
 		err = f(ctx)
 		if err != nil {

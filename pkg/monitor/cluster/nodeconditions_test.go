@@ -15,7 +15,7 @@ import (
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 )
 
-func TestEmitNodesMetrics(t *testing.T) {
+func TestEmitNodeConditions(t *testing.T) {
 	ctx := context.Background()
 
 	cli := fake.NewSimpleClientset(&corev1.Node{
@@ -55,14 +55,18 @@ func TestEmitNodesMetrics(t *testing.T) {
 	}
 
 	m.EXPECT().EmitGauge("nodes.count", int64(2), map[string]string{})
-	m.EXPECT().EmitGauge("nodes.conditions.count", int64(1), map[string]string{
-		"condition": "NotReady",
+	m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
+		"name":   "aro-master-0",
+		"status": "True",
+		"type":   "MemoryPressure",
 	})
-	m.EXPECT().EmitGauge("nodes.conditions.count", int64(1), map[string]string{
-		"condition": "MemoryPressure",
+	m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
+		"name":   "aro-master-1",
+		"status": "False",
+		"type":   "Ready",
 	})
 
-	err := mon.emitNodesMetrics(ctx)
+	err := mon.emitNodeConditions(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

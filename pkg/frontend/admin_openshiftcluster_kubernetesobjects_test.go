@@ -298,32 +298,9 @@ func TestValidateAdminKubernetesObjectsNonCustomer(t *testing.T) {
 		wantErr   string
 	}{
 		{
-			test:      "valid openshift-ns namespace",
-			groupKind: "Valid-kind.openshift.io",
-			namespace: "openshift-ns",
-			name:      "Valid-NAME-01",
-		},
-		{
 			test:      "valid openshift namespace",
 			groupKind: "Valid-kind.openshift.io",
 			namespace: "openshift",
-			name:      "Valid-NAME-01",
-		},
-		{
-			test:      "valid kube-ns namespace",
-			groupKind: "Valid-kind.openshift.io",
-			namespace: "kube-ns",
-			name:      "Valid-NAME-01",
-		},
-		{
-			test:      "valid default namespace",
-			groupKind: "Valid-kind.openshift.io",
-			namespace: "default",
-			name:      "Valid-NAME-01",
-		},
-		{
-			test:      "valid empty namespace",
-			groupKind: "Valid-kind.openshift.io",
 			name:      "Valid-NAME-01",
 		},
 		{

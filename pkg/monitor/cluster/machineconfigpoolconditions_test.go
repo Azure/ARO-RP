@@ -16,7 +16,7 @@ import (
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 )
 
-func TestEmitMachineConfigPoolMetrics(t *testing.T) {
+func TestEmitMachineConfigPoolConditions(t *testing.T) {
 	ctx := context.Background()
 
 	mcocli := fake.NewSimpleClientset(&v1.MachineConfigPool{
@@ -59,37 +59,37 @@ func TestEmitMachineConfigPoolMetrics(t *testing.T) {
 		m:      m,
 	}
 
-	m.EXPECT().EmitGauge("machineconfigpools.conditions", int64(1), map[string]string{
+	m.EXPECT().EmitGauge("machineconfigpool.conditions", int64(1), map[string]string{
 		"name":   "machine-config-pool",
 		"type":   "Degraded",
 		"status": "True",
 	})
 
-	m.EXPECT().EmitGauge("machineconfigpools.conditions", int64(1), map[string]string{
+	m.EXPECT().EmitGauge("machineconfigpool.conditions", int64(1), map[string]string{
 		"name":   "machine-config-pool",
 		"type":   "NodeDegraded",
 		"status": "True",
 	})
 
-	m.EXPECT().EmitGauge("machineconfigpools.conditions", int64(1), map[string]string{
+	m.EXPECT().EmitGauge("machineconfigpool.conditions", int64(1), map[string]string{
 		"name":   "machine-config-pool",
 		"type":   "RenderDegraded",
 		"status": "True",
 	})
 
-	m.EXPECT().EmitGauge("machineconfigpools.conditions", int64(1), map[string]string{
+	m.EXPECT().EmitGauge("machineconfigpool.conditions", int64(1), map[string]string{
 		"name":   "machine-config-pool",
 		"type":   "Updated",
 		"status": "False",
 	})
 
-	m.EXPECT().EmitGauge("machineconfigpools.conditions", int64(1), map[string]string{
+	m.EXPECT().EmitGauge("machineconfigpool.conditions", int64(1), map[string]string{
 		"name":   "machine-config-pool",
 		"type":   "Updating",
 		"status": "True",
 	})
 
-	err := mon.emitMachineConfigPoolMetrics(ctx)
+	err := mon.emitMachineConfigPoolConditions(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
