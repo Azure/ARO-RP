@@ -16,6 +16,10 @@ import (
 func EmitHeartbeat(log *logrus.Entry, m metrics.Interface, metricName string, stop <-chan struct{}, checkFunc func() bool) {
 	defer recover.Panic(log)
 
+	// We wait for 2 minutes before emitting the metric.  This ensures that
+	// there will be a gap in our health metric if we crash or restart.
+	time.Sleep(time.Minute)
+
 	t := time.NewTicker(time.Minute)
 	defer t.Stop()
 
@@ -24,12 +28,12 @@ func EmitHeartbeat(log *logrus.Entry, m metrics.Interface, metricName string, st
 	for {
 		select {
 		case <-t.C:
-			if checkFunc() {
-				m.EmitGauge(metricName, 1, nil)
-			}
-
 		case <-stop:
 			return
+		}
+
+		if checkFunc() {
+			m.EmitGauge(metricName, 1, nil)
 		}
 	}
 }
