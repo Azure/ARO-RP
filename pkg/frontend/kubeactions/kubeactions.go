@@ -47,7 +47,7 @@ func New(log *logrus.Entry, env env.Interface) Interface {
 	}
 }
 
-func (ka *kubeactions) findGVR(apiresourcelist []*metav1.APIResourceList, groupKind, optionalVersion string) ([]*schema.GroupVersionResource, error) {
+func (ka *kubeactions) findGVR(apiresourcelist []*metav1.APIResourceList, groupKind, optionalVersion string) (*schema.GroupVersionResource, error) {
 	var matches []*schema.GroupVersionResource
 	for _, apiresources := range apiresourcelist {
 		gv, err := schema.ParseGroupVersion(apiresources.GroupVersion)
@@ -70,12 +70,10 @@ func (ka *kubeactions) findGVR(apiresourcelist []*metav1.APIResourceList, groupK
 			}
 
 			if strings.EqualFold(gk.String(), groupKind) {
-				return []*schema.GroupVersionResource{
-					{
-						Group:    gv.Group,
-						Version:  gv.Version,
-						Resource: apiresource.Name,
-					},
+				return &schema.GroupVersionResource{
+					Group:    gv.Group,
+					Version:  gv.Version,
+					Resource: apiresource.Name,
 				}, nil
 			}
 
@@ -89,7 +87,19 @@ func (ka *kubeactions) findGVR(apiresourcelist []*metav1.APIResourceList, groupK
 		}
 	}
 
-	return matches, nil
+	if len(matches) == 0 {
+		return nil, api.NewCloudError(
+			http.StatusBadRequest, api.CloudErrorCodeInvalidParameter,
+			"", "The groupKind '%s' was not found.", groupKind)
+	}
+
+	if len(matches) > 1 {
+		return nil, api.NewCloudError(
+			http.StatusBadRequest, api.CloudErrorCodeInvalidParameter,
+			"", "The groupKind '%s' matched multiple groupKinds.", groupKind)
+	}
+
+	return matches[0], nil
 }
 
 func (ka *kubeactions) getClient(oc *api.OpenShiftCluster) (dynamic.Interface, []*metav1.APIResourceList, error) {
@@ -122,20 +132,10 @@ func (ka *kubeactions) Get(ctx context.Context, oc *api.OpenShiftCluster, groupK
 		return nil, err
 	}
 
-	gvrs, err := ka.findGVR(apiresources, groupKind, "")
+	gvr, err := ka.findGVR(apiresources, groupKind, "")
 	if err != nil {
 		return nil, err
 	}
-
-	if len(gvrs) == 0 {
-		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The groupKind '%s' was not found.", groupKind)
-	}
-
-	if len(gvrs) > 1 {
-		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The groupKind '%s' matched multiple groupKinds.", groupKind)
-	}
-
-	gvr := gvrs[0]
 
 	un, err := dyn.Resource(*gvr).Namespace(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
@@ -151,20 +151,10 @@ func (ka *kubeactions) List(ctx context.Context, oc *api.OpenShiftCluster, group
 		return nil, err
 	}
 
-	gvrs, err := ka.findGVR(apiresources, groupKind, "")
+	gvr, err := ka.findGVR(apiresources, groupKind, "")
 	if err != nil {
 		return nil, err
 	}
-
-	if len(gvrs) == 0 {
-		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The groupKind '%s' was not found.", groupKind)
-	}
-
-	if len(gvrs) > 1 {
-		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The groupKind '%s' matched multiple groupKinds.", groupKind)
-	}
-
-	gvr := gvrs[0]
 
 	ul, err := dyn.Resource(*gvr).Namespace(namespace).List(metav1.ListOptions{})
 	if err != nil {
@@ -185,20 +175,10 @@ func (ka *kubeactions) CreateOrUpdate(ctx context.Context, oc *api.OpenShiftClus
 		return err
 	}
 
-	gvrs, err := ka.findGVR(apiresources, groupKind, "")
+	gvr, err := ka.findGVR(apiresources, groupKind, "")
 	if err != nil {
 		return err
 	}
-
-	if len(gvrs) == 0 {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The groupKind '%s' was not found.", groupKind)
-	}
-
-	if len(gvrs) > 1 {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The groupKind '%s' matched multiple groupKinds.", groupKind)
-	}
-
-	gvr := gvrs[0]
 
 	_, err = dyn.Resource(*gvr).Namespace(namespace).Update(obj, metav1.UpdateOptions{})
 	if !errors.IsNotFound(err) {
@@ -217,20 +197,10 @@ func (ka *kubeactions) Delete(ctx context.Context, oc *api.OpenShiftCluster, gro
 		return err
 	}
 
-	gvrs, err := ka.findGVR(apiresources, groupKind, "")
+	gvr, err := ka.findGVR(apiresources, groupKind, "")
 	if err != nil {
 		return err
 	}
-
-	if len(gvrs) == 0 {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The groupKind '%s' was not found.", groupKind)
-	}
-
-	if len(gvrs) > 1 {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The groupKind '%s' matched multiple groupKinds.", groupKind)
-	}
-
-	gvr := gvrs[0]
 
 	return dyn.Resource(*gvr).Namespace(namespace).Delete(name, &metav1.DeleteOptions{})
 }

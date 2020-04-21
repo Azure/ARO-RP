@@ -4,11 +4,14 @@ package kubeactions
 // Licensed under the Apache License 2.0.
 
 import (
+	"net/http"
 	"reflect"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"github.com/Azure/ARO-RP/pkg/api"
 )
 
 func TestFindGVR(t *testing.T) {
@@ -16,8 +19,8 @@ func TestFindGVR(t *testing.T) {
 		name      string
 		resources []*metav1.APIResourceList
 		kind      string
-		want      []*schema.GroupVersionResource
-		wantError string
+		want      *schema.GroupVersionResource
+		wantErr   error
 	}{
 		{
 			name: "find one",
@@ -33,7 +36,7 @@ func TestFindGVR(t *testing.T) {
 				},
 			},
 			kind: "configmap",
-			want: []*schema.GroupVersionResource{{Group: "", Version: "v1", Resource: "configmaps"}},
+			want: &schema.GroupVersionResource{Group: "", Version: "v1", Resource: "configmaps"},
 		},
 		{
 			name: "find best version",
@@ -58,7 +61,7 @@ func TestFindGVR(t *testing.T) {
 				},
 			},
 			kind: "configmap",
-			want: []*schema.GroupVersionResource{{Group: "", Version: "v1", Resource: "configmaps"}},
+			want: &schema.GroupVersionResource{Group: "", Version: "v1", Resource: "configmaps"},
 		},
 		{
 			name: "find full group.resource",
@@ -74,7 +77,7 @@ func TestFindGVR(t *testing.T) {
 				},
 			},
 			kind: "baremetalhost.metal3.io",
-			want: []*schema.GroupVersionResource{{Group: "metal3.io", Version: "v1alpha1", Resource: "baremetalhosts"}},
+			want: &schema.GroupVersionResource{Group: "metal3.io", Version: "v1alpha1", Resource: "baremetalhosts"},
 		},
 		{
 			name: "no sub.resources",
@@ -90,10 +93,16 @@ func TestFindGVR(t *testing.T) {
 				},
 			},
 			kind: "baremetalhost/status",
+			wantErr: api.NewCloudError(
+				http.StatusBadRequest, api.CloudErrorCodeInvalidParameter,
+				"", "The groupKind '%s' was not found.", "baremetalhost/status"),
 		},
 		{
 			name: "empty resources",
 			kind: "configmap",
+			wantErr: api.NewCloudError(
+				http.StatusBadRequest, api.CloudErrorCodeInvalidParameter,
+				"", "The groupKind '%s' was not found.", "configmap"),
 		},
 		{
 			name: "find all kinds",
@@ -118,10 +127,10 @@ func TestFindGVR(t *testing.T) {
 				},
 			},
 			kind: "baremetalhost",
-			want: []*schema.GroupVersionResource{
-				{Group: "metal3.io", Version: "v1alpha1", Resource: "baremetalhosts"},
-				{Group: "plastic.io", Version: "v1alpha1", Resource: "plastichosts"},
-			},
+			want: nil,
+			wantErr: api.NewCloudError(
+				http.StatusBadRequest, api.CloudErrorCodeInvalidParameter,
+				"", "The groupKind '%s' matched multiple groupKinds.", "baremetalhost"),
 		},
 	}
 
@@ -130,8 +139,7 @@ func TestFindGVR(t *testing.T) {
 			ka := &kubeactions{}
 
 			got, err := ka.findGVR(tt.resources, tt.kind, "")
-			if err != nil && err.Error() != tt.wantError ||
-				err == nil && tt.wantError != "" {
+			if !reflect.DeepEqual(err, tt.wantErr) {
 				t.Error(err)
 			}
 			if !reflect.DeepEqual(got, tt.want) {
