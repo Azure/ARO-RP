@@ -130,7 +130,8 @@ func TestFindGVR(t *testing.T) {
 			ka := &kubeactions{}
 
 			got, err := ka.findGVR(tt.resources, tt.kind, "")
-			if err != nil && err.Error() != tt.wantError {
+			if err != nil && err.Error() != tt.wantError ||
+				err == nil && tt.wantError != "" {
 				t.Error(err)
 			}
 			if !reflect.DeepEqual(got, tt.want) {
