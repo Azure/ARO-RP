@@ -59,29 +59,34 @@ func TestEmitMachineConfigPoolMetrics(t *testing.T) {
 		m:      m,
 	}
 
-	m.EXPECT().EmitGauge("machineconfigpools.conditions.count", int64(1), map[string]string{
-		"machineconfigpool": "machine-config-pool",
-		"condition":         "Degraded",
+	m.EXPECT().EmitGauge("machineconfigpools.conditions", int64(1), map[string]string{
+		"name":   "machine-config-pool",
+		"type":   "Degraded",
+		"status": "True",
 	})
 
-	m.EXPECT().EmitGauge("machineconfigpools.conditions.count", int64(1), map[string]string{
-		"machineconfigpool": "machine-config-pool",
-		"condition":         "NodeDegraded",
+	m.EXPECT().EmitGauge("machineconfigpools.conditions", int64(1), map[string]string{
+		"name":   "machine-config-pool",
+		"type":   "NodeDegraded",
+		"status": "True",
 	})
 
-	m.EXPECT().EmitGauge("machineconfigpools.conditions.count", int64(1), map[string]string{
-		"machineconfigpool": "machine-config-pool",
-		"condition":         "RenderDegraded",
+	m.EXPECT().EmitGauge("machineconfigpools.conditions", int64(1), map[string]string{
+		"name":   "machine-config-pool",
+		"type":   "RenderDegraded",
+		"status": "True",
 	})
 
-	m.EXPECT().EmitGauge("machineconfigpools.conditions.count", int64(1), map[string]string{
-		"machineconfigpool": "machine-config-pool",
-		"condition":         "NotUpdated",
+	m.EXPECT().EmitGauge("machineconfigpools.conditions", int64(1), map[string]string{
+		"name":   "machine-config-pool",
+		"type":   "Updated",
+		"status": "False",
 	})
 
-	m.EXPECT().EmitGauge("machineconfigpools.conditions.count", int64(1), map[string]string{
-		"machineconfigpool": "machine-config-pool",
-		"condition":         "Updating",
+	m.EXPECT().EmitGauge("machineconfigpools.conditions", int64(1), map[string]string{
+		"name":   "machine-config-pool",
+		"type":   "Updating",
+		"status": "True",
 	})
 
 	err := mon.emitMachineConfigPoolMetrics(ctx)

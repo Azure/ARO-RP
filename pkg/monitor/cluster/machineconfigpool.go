@@ -19,10 +19,6 @@ var machineConfigPoolConditionsExpected = map[v1.MachineConfigPoolConditionType]
 	v1.MachineConfigPoolUpdating:       corev1.ConditionFalse,
 }
 
-var machineConfigPoolNotConditions = map[v1.MachineConfigPoolConditionType]struct{}{
-	v1.MachineConfigPoolUpdated: {},
-}
-
 func (mon *Monitor) emitMachineConfigPoolMetrics(ctx context.Context) error {
 	mcps, err := mon.mcocli.MachineconfigurationV1().MachineConfigPools().List(metav1.ListOptions{})
 	if err != nil {
@@ -35,21 +31,11 @@ func (mon *Monitor) emitMachineConfigPoolMetrics(ctx context.Context) error {
 				continue
 			}
 
-			if _, ok := machineConfigPoolNotConditions[c.Type]; ok {
-				if c.Status == corev1.ConditionFalse {
-					mon.emitGauge("machineconfigpools.conditions.count", 1, map[string]string{
-						"machineconfigpool": mcp.Name,
-						"condition":         "Not" + string(c.Type),
-					})
-				}
-			} else {
-				if c.Status == corev1.ConditionTrue {
-					mon.emitGauge("machineconfigpools.conditions.count", 1, map[string]string{
-						"machineconfigpool": mcp.Name,
-						"condition":         string(c.Type),
-					})
-				}
-			}
+			mon.emitGauge("machineconfigpools.conditions", 1, map[string]string{
+				"name":   mcp.Name,
+				"type":   string(c.Type),
+				"status": string(c.Status),
+			})
 		}
 	}
 
