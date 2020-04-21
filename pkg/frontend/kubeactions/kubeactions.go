@@ -47,45 +47,49 @@ func New(log *logrus.Entry, env env.Interface) Interface {
 	}
 }
 
-func (ka *kubeactions) findGVR(apiresourcelist []*metav1.APIResourceList, groupKind, optionalVersion string) []*schema.GroupVersionResource {
+func (ka *kubeactions) findGVR(apiresourcelist []*metav1.APIResourceList, groupKind, optionalVersion string) ([]*schema.GroupVersionResource, error) {
 	var matches []*schema.GroupVersionResource
-
 	for _, apiresources := range apiresourcelist {
+		gv, err := schema.ParseGroupVersion(apiresources.GroupVersion)
+		if err != nil {
+			// this returns a fmt.Errorf which will result in a 500
+			// in this case, this seems correct as the GV in kubernetes is wrong
+			return nil, err
+		}
+		if optionalVersion != "" && gv.Version != optionalVersion {
+			continue
+		}
 		for _, apiresource := range apiresources.APIResources {
-			if optionalVersion != "" && apiresource.Version != optionalVersion {
-				continue
-			}
-
 			if strings.ContainsRune(apiresource.Name, '/') { // no subresources
 				continue
 			}
 
 			gk := schema.GroupKind{
-				Group: apiresource.Group,
+				Group: gv.Group,
 				Kind:  apiresource.Kind,
 			}
 
 			if strings.EqualFold(gk.String(), groupKind) {
 				return []*schema.GroupVersionResource{
 					{
-						Group:    apiresource.Group,
-						Version:  apiresource.Version,
+						Group:    gv.Group,
+						Version:  gv.Version,
 						Resource: apiresource.Name,
 					},
-				}
+				}, nil
 			}
 
 			if strings.EqualFold(apiresource.Kind, groupKind) {
 				matches = append(matches, &schema.GroupVersionResource{
-					Group:    apiresource.Group,
-					Version:  apiresource.Version,
+					Group:    gv.Group,
+					Version:  gv.Version,
 					Resource: apiresource.Name,
 				})
 			}
 		}
 	}
 
-	return matches
+	return matches, nil
 }
 
 func (ka *kubeactions) getClient(oc *api.OpenShiftCluster) (dynamic.Interface, []*metav1.APIResourceList, error) {
@@ -118,7 +122,10 @@ func (ka *kubeactions) Get(ctx context.Context, oc *api.OpenShiftCluster, groupK
 		return nil, err
 	}
 
-	gvrs := ka.findGVR(apiresources, groupKind, "")
+	gvrs, err := ka.findGVR(apiresources, groupKind, "")
+	if err != nil {
+		return nil, err
+	}
 
 	if len(gvrs) == 0 {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The groupKind '%s' was not found.", groupKind)
@@ -144,7 +151,10 @@ func (ka *kubeactions) List(ctx context.Context, oc *api.OpenShiftCluster, group
 		return nil, err
 	}
 
-	gvrs := ka.findGVR(apiresources, groupKind, "")
+	gvrs, err := ka.findGVR(apiresources, groupKind, "")
+	if err != nil {
+		return nil, err
+	}
 
 	if len(gvrs) == 0 {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The groupKind '%s' was not found.", groupKind)
@@ -175,7 +185,10 @@ func (ka *kubeactions) CreateOrUpdate(ctx context.Context, oc *api.OpenShiftClus
 		return err
 	}
 
-	gvrs := ka.findGVR(apiresources, groupKind, obj.GroupVersionKind().Version)
+	gvrs, err := ka.findGVR(apiresources, groupKind, "")
+	if err != nil {
+		return err
+	}
 
 	if len(gvrs) == 0 {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The groupKind '%s' was not found.", groupKind)
@@ -204,7 +217,10 @@ func (ka *kubeactions) Delete(ctx context.Context, oc *api.OpenShiftCluster, gro
 		return err
 	}
 
-	gvrs := ka.findGVR(apiresources, groupKind, "")
+	gvrs, err := ka.findGVR(apiresources, groupKind, "")
+	if err != nil {
+		return err
+	}
 
 	if len(gvrs) == 0 {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The groupKind '%s' was not found.", groupKind)
