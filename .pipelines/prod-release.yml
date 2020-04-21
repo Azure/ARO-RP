@@ -11,10 +11,10 @@ stages:
     parameters:
       environment: RP-Prod
       locations:
-      - eastus
-      - eastus2
       - southcentralus
       - westus2
+      #- eastus
+      #- eastus2
       configFileName: prod-config.yaml
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
       vsoProjectID: $(vso-project-id)
