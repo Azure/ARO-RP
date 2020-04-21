@@ -10,9 +10,12 @@ import (
 	"runtime"
 
 	"github.com/Azure/go-autorest/autorest/azure"
+	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -32,6 +35,14 @@ type Monitor struct {
 	configcli configclient.Interface
 	mcocli    mcoclient.Interface
 	m         metrics.Interface
+
+	cache cache
+}
+
+type cache struct {
+	podList             *v1.PodList
+	clusterVersion      *configv1.ClusterVersion
+	clusterOperatorList *configv1.ClusterOperatorList
 }
 
 func NewMonitor(ctx context.Context, env env.Interface, log *logrus.Entry, oc *api.OpenShiftCluster, m metrics.Interface) (*Monitor, error) {
@@ -89,6 +100,26 @@ func NewMonitor(ctx context.Context, env env.Interface, log *logrus.Entry, oc *a
 	}, nil
 }
 
+func (mon *Monitor) initCache() error {
+	var err error
+	mon.cache.clusterVersion, err = mon.configcli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	mon.cache.clusterOperatorList, err = mon.configcli.ConfigV1().ClusterOperators().List(metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	mon.cache.podList, err = mon.cli.CoreV1().Pods("").List(metav1.ListOptions{})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Monitor checks the API server health of a cluster
 func (mon *Monitor) Monitor(ctx context.Context) {
 	mon.log.Debug("monitoring")
@@ -102,6 +133,13 @@ func (mon *Monitor) Monitor(ctx context.Context) {
 	if statusCode != http.StatusOK {
 		return
 	}
+	// if multiple metrics are using same data from the customer cluster,
+	// we make single call and persist this data into cache structure
+	err = mon.initCache()
+	if err != nil {
+		mon.log.Error(err)
+		return
+	}
 
 	for _, f := range []func(ctx context.Context) error{
 		mon.emitClusterOperatorsConditions,
@@ -110,7 +148,8 @@ func (mon *Monitor) Monitor(ctx context.Context) {
 		mon.emitDaemonsetsConditions,
 		mon.emitDeploymentsConditions,
 		mon.emitNodesConditions,
-		mon.emitPodAllConditions,
+		mon.emitPodConditions,
+		mon.emitPodContainersConditions,
 		mon.emitPrometheusAlerts,
 		mon.emitMachineConfigPool,
 		mon.emitReplicaSetsConditions,

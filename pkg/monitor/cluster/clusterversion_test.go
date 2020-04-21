@@ -85,6 +85,7 @@ func TestEmitClusterVersion(t *testing.T) {
 				configcli: configcli,
 				m:         m,
 			}
+			mon.cache.clusterVersion, _ = configcli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
 
 			m.EXPECT().EmitGauge("cluster.version", int64(1), map[string]string{
 				"actualVersion":  tt.wantActualVersion,

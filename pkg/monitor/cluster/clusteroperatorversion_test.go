@@ -56,6 +56,8 @@ func TestEmitClusterOperatorsVersion(t *testing.T) {
 		configcli: configcli,
 		m:         m,
 	}
+	mon.cache.clusterVersion, _ = configcli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
+	mon.cache.clusterOperatorList, _ = configcli.ConfigV1().ClusterOperators().List(metav1.ListOptions{})
 
 	m.EXPECT().EmitGauge("clusteroperators.version", int64(1), map[string]string{
 		"name":    "console",

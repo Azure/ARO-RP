@@ -6,19 +6,11 @@ package cluster
 import (
 	"context"
 	"sort"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (mon *Monitor) emitClusterOperatorsVersions(ctx context.Context) error {
-	cos, err := mon.configcli.ConfigV1().ClusterOperators().List(metav1.ListOptions{})
-	if err != nil {
-		return err
-	}
-	cv, err := mon.configcli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
+	cos := mon.cache.clusterOperatorList
+	cv := mon.cache.clusterVersion
 
 	desiredVersion := cv.Status.Desired.Version
 	if cv.Spec.DesiredUpdate != nil &&
