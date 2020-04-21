@@ -81,7 +81,7 @@ upstream OCP.
 
 * ARO API server LB uses Azure outboundRule rather than port 27627 inbound rule.
 
-* `xxxxx` LB uses Azure outboundRule and outbound IP `xxxxx-outbound-pip`.
+* `xxxxx` LB uses Azure outboundRule and outbound IP `xxxxx-outbound-pip-v4`.
 
 * ARO deploys a private link service in order for the RP to be able to
   communicate with the cluster.
