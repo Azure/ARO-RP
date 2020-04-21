@@ -8,14 +8,22 @@ import (
 	"sort"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 func (mon *Monitor) emitClusterOperatorsVersions(ctx context.Context) error {
 	cos, err := mon.configcli.ConfigV1().ClusterOperators().List(metav1.ListOptions{})
 	if err != nil {
 		return err
+	}
+	cv, err := mon.configcli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
+	desiredVersion := cv.Status.Desired.Version
+	if cv.Spec.DesiredUpdate != nil &&
+		cv.Spec.DesiredUpdate.Version != "" {
+		desiredVersion = cv.Spec.DesiredUpdate.Version
 	}
 
 	sort.Slice(cos.Items, func(i, j int) bool { return cos.Items[i].Name < cos.Items[j].Name })
@@ -25,7 +33,7 @@ func (mon *Monitor) emitClusterOperatorsVersions(ctx context.Context) error {
 				continue
 			}
 
-			if v.Version == version.OpenShiftVersion {
+			if v.Version == desiredVersion {
 				continue
 			}
 
