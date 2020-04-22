@@ -79,6 +79,12 @@ func (f *frontend) _putSubscription(ctx context.Context, r *http.Request) ([]byt
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionState, "", "Request is not allowed in subscription in state '%s'.", oldState)
 	}
 
+	if doc.Subscription.Properties != nil &&
+		doc.Subscription.Properties.AccountOwner != nil &&
+		doc.Subscription.Properties.AccountOwner.Email != "" {
+		doc.Subscription.Properties.AccountOwner.Email = ""
+	}
+
 	if isCreate {
 		doc, err = f.db.Subscriptions.Create(ctx, doc)
 	} else {
