@@ -190,7 +190,7 @@ func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, lo
 				// asyncOperations errors. Otherwise - return generic error
 				err, ok := backendErr.(*api.CloudError)
 				if ok {
-					log.Print(backendErr)
+					log.Error(backendErr)
 					asyncdoc.AsyncOperation.Error = err.CloudErrorBody
 				} else {
 					log.Error(backendErr)
