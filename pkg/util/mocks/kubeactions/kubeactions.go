@@ -11,8 +11,6 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	api "github.com/Azure/ARO-RP/pkg/api"
 )
 
 // MockInterface is a mock of Interface interface
@@ -39,87 +37,87 @@ func (m *MockInterface) EXPECT() *MockInterfaceMockRecorder {
 }
 
 // ClusterUpgrade mocks base method
-func (m *MockInterface) ClusterUpgrade(arg0 context.Context, arg1 *api.OpenShiftCluster) error {
+func (m *MockInterface) ClusterUpgrade(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ClusterUpgrade", arg0, arg1)
+	ret := m.ctrl.Call(m, "ClusterUpgrade", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // ClusterUpgrade indicates an expected call of ClusterUpgrade
-func (mr *MockInterfaceMockRecorder) ClusterUpgrade(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) ClusterUpgrade(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterUpgrade", reflect.TypeOf((*MockInterface)(nil).ClusterUpgrade), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterUpgrade", reflect.TypeOf((*MockInterface)(nil).ClusterUpgrade), arg0)
 }
 
 // CreateOrUpdate mocks base method
-func (m *MockInterface) CreateOrUpdate(arg0 context.Context, arg1 *api.OpenShiftCluster, arg2 *unstructured.Unstructured) error {
+func (m *MockInterface) CreateOrUpdate(arg0 context.Context, arg1 *unstructured.Unstructured) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateOrUpdate", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "CreateOrUpdate", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateOrUpdate indicates an expected call of CreateOrUpdate
-func (mr *MockInterfaceMockRecorder) CreateOrUpdate(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) CreateOrUpdate(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdate", reflect.TypeOf((*MockInterface)(nil).CreateOrUpdate), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdate", reflect.TypeOf((*MockInterface)(nil).CreateOrUpdate), arg0, arg1)
 }
 
 // Delete mocks base method
-func (m *MockInterface) Delete(arg0 context.Context, arg1 *api.OpenShiftCluster, arg2, arg3, arg4 string) error {
+func (m *MockInterface) Delete(arg0 context.Context, arg1, arg2, arg3 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "Delete", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete
-func (mr *MockInterfaceMockRecorder) Delete(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) Delete(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockInterface)(nil).Delete), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockInterface)(nil).Delete), arg0, arg1, arg2, arg3)
 }
 
 // Get mocks base method
-func (m *MockInterface) Get(arg0 context.Context, arg1 *api.OpenShiftCluster, arg2, arg3, arg4 string) ([]byte, error) {
+func (m *MockInterface) Get(arg0 context.Context, arg1, arg2, arg3 string) ([]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2, arg3, arg4)
+	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].([]byte)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get
-func (mr *MockInterfaceMockRecorder) Get(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) Get(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockInterface)(nil).Get), arg0, arg1, arg2, arg3, arg4)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockInterface)(nil).Get), arg0, arg1, arg2, arg3)
 }
 
 // List mocks base method
-func (m *MockInterface) List(arg0 context.Context, arg1 *api.OpenShiftCluster, arg2, arg3 string) ([]byte, error) {
+func (m *MockInterface) List(arg0 context.Context, arg1, arg2 string) ([]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2, arg3)
+	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2)
 	ret0, _ := ret[0].([]byte)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List
-func (mr *MockInterfaceMockRecorder) List(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) List(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockInterface)(nil).List), arg0, arg1, arg2, arg3)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockInterface)(nil).List), arg0, arg1, arg2)
 }
 
 // MustGather mocks base method
-func (m *MockInterface) MustGather(arg0 context.Context, arg1 *api.OpenShiftCluster, arg2 io.Writer) error {
+func (m *MockInterface) MustGather(arg0 context.Context, arg1 io.Writer) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MustGather", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "MustGather", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // MustGather indicates an expected call of MustGather
-func (mr *MockInterfaceMockRecorder) MustGather(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) MustGather(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MustGather", reflect.TypeOf((*MockInterface)(nil).MustGather), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MustGather", reflect.TypeOf((*MockInterface)(nil).MustGather), arg0, arg1)
 }

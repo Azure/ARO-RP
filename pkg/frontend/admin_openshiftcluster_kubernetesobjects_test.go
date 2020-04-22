@@ -93,7 +93,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 				}
 
 				kactions.EXPECT().
-					Get(gomock.Any(), clusterDoc.OpenShiftCluster, tt.objKind, tt.objNamespace, tt.objName).
+					Get(gomock.Any(), tt.objKind, tt.objNamespace, tt.objName).
 					Return([]byte(`{"Kind": "test"}`), nil)
 
 				openshiftClusters.EXPECT().Get(gomock.Any(), strings.ToLower(tt.resourceID)).
@@ -120,7 +120,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 				}
 
 				kactions.EXPECT().
-					List(gomock.Any(), clusterDoc.OpenShiftCluster, tt.objKind, tt.objNamespace).
+					List(gomock.Any(), tt.objKind, tt.objNamespace).
 					Return([]byte(`{"Kind": "test"}`), nil)
 
 				openshiftClusters.EXPECT().Get(gomock.Any(), strings.ToLower(tt.resourceID)).
@@ -171,7 +171,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 				}
 
 				kactions.EXPECT().
-					Delete(gomock.Any(), clusterDoc.OpenShiftCluster, tt.objKind, tt.objNamespace, tt.objName).
+					Delete(gomock.Any(), tt.objKind, tt.objNamespace, tt.objName).
 					Return(nil)
 
 				openshiftClusters.EXPECT().Get(gomock.Any(), strings.ToLower(tt.resourceID)).
@@ -237,8 +237,8 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 
 			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), _env, &database.Database{
 				OpenShiftClusters: openshiftClusters,
-			}, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface) kubeactions.Interface {
-				return kactions
+			}, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (kubeactions.Interface, error) {
+				return kactions, nil
 			}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
@@ -435,7 +435,7 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 					},
 				}
 				openshiftClusters.EXPECT().Get(gomock.Any(), strings.ToLower(tt.resourceID)).Return(clusterDoc, nil)
-				kactions.EXPECT().CreateOrUpdate(gomock.Any(), clusterDoc.OpenShiftCluster, tt.objInBody).Return(nil)
+				kactions.EXPECT().CreateOrUpdate(gomock.Any(), tt.objInBody).Return(nil)
 			},
 			wantStatusCode: http.StatusOK,
 		},
@@ -484,8 +484,8 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 
 			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), _env, &database.Database{
 				OpenShiftClusters: openshiftClusters,
-			}, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface) kubeactions.Interface {
-				return kactions
+			}, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (kubeactions.Interface, error) {
+				return kactions, nil
 			}, nil, nil)
 			if err != nil {
 				t.Fatal(err)

@@ -15,16 +15,33 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 )
 
-// ExecStdout executes a command in the given namespace/pod/container and
-// streams its stdout.
-func ExecStdout(ctx context.Context, env env.Interface, oc *api.OpenShiftCluster, namespace, pod, container string, command []string) (io.ReadCloser, error) {
+// Exec is the interface for portforward package with exec commands
+type Exec interface {
+	Stdout(ctx context.Context, namespace, pod, container string, command []string) (io.ReadCloser, error)
+}
+
+type exec struct {
+	env env.Interface
+	oc  *api.OpenShiftCluster
+}
+
+// NewExec creates and returns a new exec struct
+func NewExec(env env.Interface, oc *api.OpenShiftCluster) Exec {
+	return exec{
+		env: env,
+		oc:  oc,
+	}
+}
+
+// ExecStdout executes a command in the given namespace/pod/container and streams its stdout.
+func (e exec) Stdout(ctx context.Context, namespace, pod, container string, command []string) (io.ReadCloser, error) {
 	v := url.Values{
 		"container": []string{container},
 		"command":   command,
 		"stdout":    []string{"true"},
 	}
 
-	spdyConn, err := dialSpdy(ctx, env, oc, "/api/v1/namespaces/"+namespace+"/pods/"+pod+"/exec?"+v.Encode())
+	spdyConn, err := dialSpdy(ctx, e.env, e.oc, "/api/v1/namespaces/"+namespace+"/pods/"+pod+"/exec?"+v.Encode())
 	if err != nil {
 		return nil, err
 	}

@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -26,25 +27,41 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
+// Interface contains all the required methods for kubeactions
 type Interface interface {
-	Get(ctx context.Context, oc *api.OpenShiftCluster, groupKind, namespace, name string) ([]byte, error)
-	List(ctx context.Context, oc *api.OpenShiftCluster, groupKind, namespace string) ([]byte, error)
-	CreateOrUpdate(ctx context.Context, oc *api.OpenShiftCluster, obj *unstructured.Unstructured) error
-	Delete(ctx context.Context, oc *api.OpenShiftCluster, groupKind, namespace, name string) error
-	ClusterUpgrade(ctx context.Context, oc *api.OpenShiftCluster) error
-	MustGather(ctx context.Context, oc *api.OpenShiftCluster, w io.Writer) error
+	Get(ctx context.Context, groupKind, namespace, name string) ([]byte, error)
+	List(ctx context.Context, groupKind, namespace string) ([]byte, error)
+	CreateOrUpdate(ctx context.Context, obj *unstructured.Unstructured) error
+	Delete(ctx context.Context, groupKind, namespace, name string) error
+	ClusterUpgrade(ctx context.Context) error
+	MustGather(ctx context.Context, w io.Writer) error
 }
 
 type kubeactions struct {
 	log *logrus.Entry
 	env env.Interface
+	oc  *api.OpenShiftCluster
+	cli kubernetes.Interface
 }
 
-func New(log *logrus.Entry, env env.Interface) Interface {
+// New returns a kubeactions struct
+func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster) (Interface, error) {
+	restconfig, err := restconfig.RestConfig(env, oc)
+	if err != nil {
+		return nil, err
+	}
+
+	cli, err := kubernetes.NewForConfig(restconfig)
+	if err != nil {
+		return nil, err
+	}
+
 	return &kubeactions{
 		log: log,
 		env: env,
-	}
+		oc:  oc,
+		cli: cli,
+	}, nil
 }
 
 func (ka *kubeactions) findGVR(apiresourcelist []*metav1.APIResourceList, groupKind, optionalVersion string) (*schema.GroupVersionResource, error) {
@@ -102,8 +119,9 @@ func (ka *kubeactions) findGVR(apiresourcelist []*metav1.APIResourceList, groupK
 	return matches[0], nil
 }
 
-func (ka *kubeactions) getClient(oc *api.OpenShiftCluster) (dynamic.Interface, []*metav1.APIResourceList, error) {
-	restconfig, err := restconfig.RestConfig(ka.env, oc)
+// dynamicClient returns a dynamic client and discovered API resources
+func (ka *kubeactions) dynamicClient() (dynamic.Interface, []*metav1.APIResourceList, error) {
+	restconfig, err := restconfig.RestConfig(ka.env, ka.oc)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -126,8 +144,8 @@ func (ka *kubeactions) getClient(oc *api.OpenShiftCluster) (dynamic.Interface, [
 	return dyn, apiresources, nil
 }
 
-func (ka *kubeactions) Get(ctx context.Context, oc *api.OpenShiftCluster, groupKind, namespace, name string) ([]byte, error) {
-	dyn, apiresources, err := ka.getClient(oc)
+func (ka *kubeactions) Get(ctx context.Context, groupKind, namespace, name string) ([]byte, error) {
+	dyn, apiresources, err := ka.dynamicClient()
 	if err != nil {
 		return nil, err
 	}
@@ -145,8 +163,8 @@ func (ka *kubeactions) Get(ctx context.Context, oc *api.OpenShiftCluster, groupK
 	return un.MarshalJSON()
 }
 
-func (ka *kubeactions) List(ctx context.Context, oc *api.OpenShiftCluster, groupKind, namespace string) ([]byte, error) {
-	dyn, apiresources, err := ka.getClient(oc)
+func (ka *kubeactions) List(ctx context.Context, groupKind, namespace string) ([]byte, error) {
+	dyn, apiresources, err := ka.dynamicClient()
 	if err != nil {
 		return nil, err
 	}
@@ -164,13 +182,13 @@ func (ka *kubeactions) List(ctx context.Context, oc *api.OpenShiftCluster, group
 	return ul.MarshalJSON()
 }
 
-func (ka *kubeactions) CreateOrUpdate(ctx context.Context, oc *api.OpenShiftCluster, obj *unstructured.Unstructured) error {
+func (ka *kubeactions) CreateOrUpdate(ctx context.Context, obj *unstructured.Unstructured) error {
 	// TODO log changes
 
 	namespace := obj.GetNamespace()
 	groupKind := obj.GroupVersionKind().GroupKind().String()
 
-	dyn, apiresources, err := ka.getClient(oc)
+	dyn, apiresources, err := ka.dynamicClient()
 	if err != nil {
 		return err
 	}
@@ -189,10 +207,10 @@ func (ka *kubeactions) CreateOrUpdate(ctx context.Context, oc *api.OpenShiftClus
 	return err
 }
 
-func (ka *kubeactions) Delete(ctx context.Context, oc *api.OpenShiftCluster, groupKind, namespace, name string) error {
+func (ka *kubeactions) Delete(ctx context.Context, groupKind, namespace, name string) error {
 	// TODO log changes
 
-	dyn, apiresources, err := ka.getClient(oc)
+	dyn, apiresources, err := ka.dynamicClient()
 	if err != nil {
 		return err
 	}
@@ -207,8 +225,8 @@ func (ka *kubeactions) Delete(ctx context.Context, oc *api.OpenShiftCluster, gro
 
 // ClusterUpgrade posts the new version and image to the cluster-version-operator
 // which will effect the upgrade.
-func (ka *kubeactions) ClusterUpgrade(ctx context.Context, oc *api.OpenShiftCluster) error {
-	restconfig, err := restconfig.RestConfig(ka.env, oc)
+func (ka *kubeactions) ClusterUpgrade(ctx context.Context) error {
+	restconfig, err := restconfig.RestConfig(ka.env, ka.oc)
 	if err != nil {
 		return err
 	}

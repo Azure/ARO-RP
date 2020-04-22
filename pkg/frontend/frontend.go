@@ -42,7 +42,7 @@ func (err statusCodeError) Error() string {
 	return fmt.Sprintf("%d", err)
 }
 
-type kubeActionsFactory func(*logrus.Entry, env.Interface) kubeactions.Interface
+type kubeActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (kubeactions.Interface, error)
 type resourcesClientFactory func(subscriptionID string, authorizer autorest.Authorizer) features.ResourcesClient
 type computeClientFactory func(subscriptionID string, authorizer autorest.Authorizer) compute.VirtualMachinesClient
 

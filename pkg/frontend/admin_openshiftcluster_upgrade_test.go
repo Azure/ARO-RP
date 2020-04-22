@@ -85,7 +85,7 @@ func TestAdminUpdate(t *testing.T) {
 				}
 
 				openshiftClusters.EXPECT().Get(gomock.Any(), strings.ToLower(tt.resourceID)).Return(clusterDoc, nil)
-				kactions.EXPECT().ClusterUpgrade(gomock.Any(), clusterDoc.OpenShiftCluster).Return(nil)
+				kactions.EXPECT().ClusterUpgrade(gomock.Any()).Return(nil)
 			},
 			wantStatusCode: http.StatusOK,
 		},
@@ -113,8 +113,8 @@ func TestAdminUpdate(t *testing.T) {
 
 			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), _env, &database.Database{
 				OpenShiftClusters: openshiftClusters,
-			}, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface) kubeactions.Interface {
-				return kactions
+			}, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) (kubeactions.Interface, error) {
+				return kactions, nil
 			}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
