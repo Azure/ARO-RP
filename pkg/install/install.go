@@ -209,7 +209,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 				err = wait.PollImmediateUntil(pollInterval, step.f, timeoutCtx.Done())
 			}()
 			if err != nil {
-				return err
+				return fmt.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(step.f).Pointer()).Name(), err)
 			}
 		default:
 			return errors.New("install step must be an action or a condition")
