@@ -686,10 +686,6 @@ func (g *generator) vmss() *arm.Resource {
 	)
 
 	trailer := base64.StdEncoding.EncodeToString([]byte(`
-if [[ "$LOCATION" == southeastasia ]]; then
-	echo "$(dig +short australiaeast-cds.australiaeast.cloudapp.azure.com) rhui-1.microsoft.com" >>/etc/hosts
-fi
-
 yum -y update -x WALinuxAgent
 
 # avoid "error: db5 error(-30969) from dbenv->open: BDB0091 DB_VERSION_MISMATCH: Database environment version mismatch"
