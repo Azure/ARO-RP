@@ -6,6 +6,7 @@ package validate
 import (
 	"context"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"strings"
@@ -131,6 +132,7 @@ func (dv *openShiftClusterDynamicValidator) validateServicePrincipalProfile(ctx 
 		return nil, err
 	}
 	if err != nil {
+		log.Print(err)
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalCredentials, "properties.servicePrincipalProfile", "The provided service principal credentials are invalid.")
 	}
 
