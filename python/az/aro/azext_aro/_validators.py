@@ -70,15 +70,6 @@ def validate_domain(namespace):
                            namespace.domain)
 
 
-def _validate_int(key, i):
-    try:
-        i = int(i)
-    except ValueError:
-        raise CLIError("Invalid --%s '%s'." % (key.replace('_', '-'), i))
-
-    return i
-
-
 def validate_pull_secret(namespace):
     if namespace.pull_secret is None:
         # TODO: add aka.ms link here
@@ -203,20 +194,12 @@ def validate_vnet_resource_group_name(namespace):
 
 
 def validate_worker_count(namespace):
-    if namespace.worker_count:
-        namespace.worker_count = _validate_int(
-            'worker_count', namespace.worker_count)
-
-        if namespace.worker_count < 3:
-            raise CLIError(
-                '--worker-count must be greater than or equal to 3.')
+    if namespace.worker_count < 3:
+        raise CLIError(
+            '--worker-count must be greater than or equal to 3.')
 
 
 def validate_worker_vm_disk_size_gb(namespace):
-    if namespace.worker_vm_disk_size_gb:
-        namespace.worker_vm_disk_size_gb = _validate_int(
-            'worker_vm_disk_size_gb', namespace.worker_vm_disk_size_gb)
-
-        if namespace.worker_vm_disk_size_gb < 128:
-            raise CLIError(
-                '--worker_vm_disk_size_gb must be greater than or equal to 128.')
+    if namespace.worker_vm_disk_size_gb < 128:
+        raise CLIError(
+            '--worker_vm_disk_size_gb must be greater than or equal to 128.')
