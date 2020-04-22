@@ -121,7 +121,7 @@ func (m *Manager) Create(ctx context.Context) error {
 		return err
 	}
 
-	for _, key := range []string{"cloud.openshift.com", "quay.io"} {
+	for _, key := range []string{"cloud.openshift.com"} {
 		pullSecret, err = pullsecret.RemoveKey(pullSecret, key)
 		if err != nil {
 			return err
