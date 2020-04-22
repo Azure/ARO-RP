@@ -67,8 +67,8 @@ stages:
       environment: RP-Prod-ROWSector
       locations:
       - southeastasia
-      # - southafricanorth
-      # - uksouth
+      - southafricanorth
+      - uksouth
       configFileName: prod-config.yaml
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
       vsoProjectID: $(vso-project-id)
