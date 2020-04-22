@@ -24,7 +24,7 @@ func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 		return err
 	}
 
-	mon.emitGauge("nodes.count", int64(len(ns.Items)), nil)
+	mon.emitGauge("node.count", int64(len(ns.Items)), nil)
 
 	for _, n := range ns.Items {
 		for _, c := range n.Status.Conditions {

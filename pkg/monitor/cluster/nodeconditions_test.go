@@ -54,7 +54,7 @@ func TestEmitNodeConditions(t *testing.T) {
 		m:   m,
 	}
 
-	m.EXPECT().EmitGauge("nodes.count", int64(2), map[string]string{})
+	m.EXPECT().EmitGauge("node.count", int64(2), map[string]string{})
 	m.EXPECT().EmitGauge("node.conditions", int64(1), map[string]string{
 		"name":   "aro-master-0",
 		"status": "True",
