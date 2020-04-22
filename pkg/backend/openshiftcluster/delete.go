@@ -5,6 +5,7 @@ package openshiftcluster
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"strings"
 
@@ -32,7 +33,14 @@ func (m *Manager) Delete(ctx context.Context) error {
 		// TODO: there is probably an undesirable race condition here - check if etags can help.
 		s, err := m.subnet.Get(ctx, subnetID)
 		if err != nil {
-			return err
+			// It is possible that we never properly had access to the subnet,
+			// or that we never joined an NSG to it and it has subsequently been
+			// deleted.  As a result we cannot fail here.  If we do have an NSG
+			// joined to the subnet and an error here prevents us from removing
+			// it, we will fail later in the RG deletion; in principal the user
+			// can fix up and retry.
+			log.Print(err)
+			continue
 		}
 
 		nsgID, err := subnet.NetworkSecurityGroupID(m.doc.OpenShiftCluster, subnetID)
