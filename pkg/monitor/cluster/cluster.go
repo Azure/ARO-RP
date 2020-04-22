@@ -114,9 +114,9 @@ func (mon *Monitor) Monitor(ctx context.Context) {
 		mon.emitMachineConfigPoolConditions,
 		mon.emitNodeConditions,
 		mon.emitPodConditions,
-		mon.emitPrometheusAlerts,
 		mon.emitReplicasetStatuses,
 		mon.emitStatefulsetStatuses,
+		mon.emitPrometheusAlerts, // at the end for now because it's the slowest/least reliable
 	} {
 		err = f(ctx)
 		if err != nil {

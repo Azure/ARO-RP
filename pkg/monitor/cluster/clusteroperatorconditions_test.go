@@ -74,6 +74,8 @@ func TestEmitClusterOperatorConditions(t *testing.T) {
 		m:         m,
 	}
 
+	m.EXPECT().EmitGauge("clusteroperator.count", int64(1), map[string]string{})
+
 	m.EXPECT().EmitGauge("clusteroperator.conditions", int64(1), map[string]string{
 		"name":   "console",
 		"type":   "Available",

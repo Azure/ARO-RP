@@ -40,6 +40,8 @@ func (mon *Monitor) emitClusterOperatorConditions(ctx context.Context) error {
 		return err
 	}
 
+	mon.emitGauge("clusteroperator.count", int64(len(cos.Items)), nil)
+
 	for _, co := range cos.Items {
 		for _, c := range co.Status.Conditions {
 			if clusterOperatorConditionIsExpected(&co, &c) {
