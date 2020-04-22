@@ -70,6 +70,12 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
     else:
         worker_vm_size = worker_vm_size or 'Standard_D4s_v3'
 
+    if apiserver_visibility is not None:
+        apiserver_visibility = apiserver_visibility.capitalize()
+
+    if ingress_visibility is not None:
+        ingress_visibility = ingress_visibility.capitalize()
+
     oc = v2020_04_30.OpenShiftCluster(
         location=location,
         tags=tags,
