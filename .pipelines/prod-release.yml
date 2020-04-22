@@ -20,6 +20,7 @@ stages:
       azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
       e2eSubscription: $(e2e-subscription)
 - stage: Deploy_USSector
+  condition: succeededOrFailed()
   dependsOn: [Deploy_LowTrafficSector]
   displayName: 🚀 Deploy USSector
   jobs:
@@ -40,6 +41,7 @@ stages:
       e2eSubscription: $(e2e-subscription)
 - stage: Deploy_EuropeSector
   dependsOn: [Deploy_USSector]
+  condition: succeededOrFailed()
   displayName: 🚀 Deploy EuropeSector
   jobs:
   - template: ./templates/template-job-deploy-azure-env.yml
@@ -57,6 +59,7 @@ stages:
       e2eSubscription: $(e2e-subscription)
 - stage: Deploy_ROWSector
   dependsOn: [Deploy_EuropeSector]
+  condition: succeededOrFailed()
   displayName: 🚀 Deploy ROWSector
   jobs:
   - template: ./templates/template-job-deploy-azure-env.yml
