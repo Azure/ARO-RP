@@ -118,13 +118,13 @@ func TestAdminRestartVM(t *testing.T) {
 
 			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
 				OpenShiftClusters: openshiftClusters,
-			}, api.APIs, &noop.Noop{}, nil, nil, nil, func(subscriptionID string, authorizer autorest.Authorizer) compute.VirtualMachinesClient {
-				return vmClient
-			})
-
+			}, &noop.Noop{}, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
+			enrichFrontendForTest(f.(*frontend), api.APIs, nil, nil, func(subscriptionID string, authorizer autorest.Authorizer) compute.VirtualMachinesClient {
+				return vmClient
+			})
 
 			go f.Run(ctx, nil, nil)
 			url := fmt.Sprintf("https://server/admin%s/restartvm?vmName=%s", tt.resourceID, tt.vmName)

@@ -73,17 +73,13 @@ type Runnable interface {
 }
 
 // NewFrontend returns a new runnable frontend
-func NewFrontend(ctx context.Context, baseLog *logrus.Entry, _env env.Interface, db *database.Database, apis map[string]*api.Version, m metrics.Interface, cipher encryption.Cipher, kubeActionsFactory kubeActionsFactory, resourcesClientFactory resourcesClientFactory, computeClientFactory computeClientFactory) (Runnable, error) {
+func NewFrontend(ctx context.Context, baseLog *logrus.Entry, _env env.Interface, db *database.Database, m metrics.Interface, cipher encryption.Cipher) (Runnable, error) {
 	f := &frontend{
-		baseLog:                baseLog,
-		env:                    _env,
-		db:                     db,
-		apis:                   apis,
-		m:                      m,
-		cipher:                 cipher,
-		kubeActionsFactory:     kubeActionsFactory,
-		resourcesClientFactory: resourcesClientFactory,
-		computeClientFactory:   computeClientFactory,
+		baseLog: baseLog,
+		env:     _env,
+		db:      db,
+		m:       m,
+		cipher:  cipher,
 
 		ocEnricher: clusterdata.NewBestEffortEnricher(baseLog, _env, m),
 

@@ -695,10 +695,11 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				AsyncOperations:   asyncOperations,
 				OpenShiftClusters: openShiftClusters,
 				Subscriptions:     subscriptions,
-			}, apis, &noop.Noop{}, nil, nil, nil, nil)
+			}, &noop.Noop{}, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
+			enrichFrontendForTest(f.(*frontend), apis, nil, nil, nil)
 			f.(*frontend).bucketAllocator = bucket.Fixed(1)
 			f.(*frontend).ocEnricher = enricher
 

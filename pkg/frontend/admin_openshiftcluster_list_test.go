@@ -189,10 +189,11 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 
 			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
 				OpenShiftClusters: openshiftClusters,
-			}, api.APIs, &noop.Noop{}, cipher, nil, nil, nil)
+			}, &noop.Noop{}, cipher)
 			if err != nil {
 				t.Fatal(err)
 			}
+			enrichFrontendForTest(f.(*frontend), api.APIs, nil, nil, nil)
 			f.(*frontend).ocEnricher = enricher
 
 			go f.Run(ctx, nil, nil)

@@ -194,10 +194,11 @@ func TestGetAsyncOperationResult(t *testing.T) {
 			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
 				AsyncOperations:   asyncOperations,
 				OpenShiftClusters: openshiftClusters,
-			}, api.APIs, &noop.Noop{}, nil, nil, nil, nil)
+			}, &noop.Noop{}, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
+			enrichFrontendForTest(f.(*frontend), api.APIs, nil, nil, nil)
 
 			go f.Run(ctx, nil, nil)
 

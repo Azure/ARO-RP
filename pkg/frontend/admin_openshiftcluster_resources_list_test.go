@@ -134,13 +134,13 @@ func TestAdminListResourcesList(t *testing.T) {
 
 			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
 				OpenShiftClusters: openshiftClusters,
-			}, api.APIs, &noop.Noop{}, nil, nil, func(subscriptionID string, authorizer autorest.Authorizer) features.ResourcesClient {
-				return resourcesClient
-			}, nil)
-
+			}, &noop.Noop{}, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
+			enrichFrontendForTest(f.(*frontend), api.APIs, nil, func(subscriptionID string, authorizer autorest.Authorizer) features.ResourcesClient {
+				return resourcesClient
+			}, nil)
 
 			go f.Run(ctx, nil, nil)
 			url := fmt.Sprintf("https://server/admin/%s/resources", tt.resourceID)

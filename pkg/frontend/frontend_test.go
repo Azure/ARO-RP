@@ -23,6 +23,14 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
+// Enriches the previously instantiated frontend instance with fields optionally required by tests
+func enrichFrontendForTest(frontend *frontend, apis map[string]*api.Version, kubeActionsFactory kubeActionsFactory, resourcesClientFactory resourcesClientFactory, computeClientFactory computeClientFactory) {
+	frontend.apis = apis
+	frontend.kubeActionsFactory = kubeActionsFactory
+	frontend.resourcesClientFactory = resourcesClientFactory
+	frontend.computeClientFactory = computeClientFactory
+}
+
 func TestAdminReply(t *testing.T) {
 	for _, tt := range []struct {
 		name           string

@@ -237,12 +237,13 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 
 			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), _env, &database.Database{
 				OpenShiftClusters: openshiftClusters,
-			}, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface) kubeactions.Interface {
-				return kactions
-			}, nil, nil)
+			}, &noop.Noop{}, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
+			enrichFrontendForTest(f.(*frontend), api.APIs, func(*logrus.Entry, env.Interface) kubeactions.Interface {
+				return kactions
+			}, nil, nil)
 
 			go f.Run(ctx, nil, nil)
 			url := fmt.Sprintf("https://server/admin%s/kubernetesObjects?kind=%s&namespace=%s&name=%s", tt.resourceID, tt.objKind, tt.objNamespace, tt.objName)
@@ -484,12 +485,13 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 
 			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), _env, &database.Database{
 				OpenShiftClusters: openshiftClusters,
-			}, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface) kubeactions.Interface {
-				return kactions
-			}, nil, nil)
+			}, &noop.Noop{}, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
+			enrichFrontendForTest(f.(*frontend), api.APIs, func(*logrus.Entry, env.Interface) kubeactions.Interface {
+				return kactions
+			}, nil, nil)
 
 			buf := &bytes.Buffer{}
 			err = json.NewEncoder(buf).Encode(tt.objInBody)
