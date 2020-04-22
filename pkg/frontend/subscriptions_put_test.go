@@ -145,6 +145,22 @@ func TestPutSubscription(t *testing.T) {
 			wantStatusCode: http.StatusCreated,
 		},
 		{
+			name: "add a new subscription - request contains pii",
+			request: func(sub *api.Subscription) {
+				sub.State = api.SubscriptionStateRegistered
+				sub.Properties = &api.SubscriptionProperties{TenantID: "changed", AccountOwner: &api.AccountOwnerProfile{Email: "email@example.com"}}
+			},
+			dbGetErr: &cosmosdb.Error{StatusCode: http.StatusNotFound},
+			wantDbDoc: &api.SubscriptionDocument{
+				ID: mockSubID,
+				Subscription: &api.Subscription{
+					State:      api.SubscriptionStateRegistered,
+					Properties: &api.SubscriptionProperties{TenantID: "changed", AccountOwner: &api.AccountOwnerProfile{Email: ""}},
+				},
+			},
+			wantStatusCode: http.StatusCreated,
+		},
+		{
 			name: "update an existing subscription - registered",
 			request: func(sub *api.Subscription) {
 				sub.State = api.SubscriptionStateWarned
