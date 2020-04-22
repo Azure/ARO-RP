@@ -5,6 +5,7 @@ package frontend
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -21,7 +22,26 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database"
+	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/metrics"
+	"github.com/Azure/ARO-RP/pkg/util/encryption"
 )
+
+// Sets up a new frontend struct with additional test mocks
+func newTestFrontend(ctx context.Context, baseLog *logrus.Entry, _env env.Interface, db *database.Database, apis map[string]*api.Version, m metrics.Interface, cipher encryption.Cipher, kubeActionsFactory kubeActionsFactory, resourcesClientFactory resourcesClientFactory, computeClientFactory computeClientFactory) (Runnable, error) {
+	f, err := NewFrontend(ctx, baseLog, _env, db, m, cipher)
+	if err != nil {
+		return nil, err
+	}
+
+	f.(*frontend).apis = apis
+	f.(*frontend).kubeActionsFactory = kubeActionsFactory
+	f.(*frontend).resourcesClientFactory = resourcesClientFactory
+	f.(*frontend).computeClientFactory = computeClientFactory
+
+	return f, nil
+}
 
 func TestAdminReply(t *testing.T) {
 	for _, tt := range []struct {

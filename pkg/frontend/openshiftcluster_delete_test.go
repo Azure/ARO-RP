@@ -177,7 +177,7 @@ func TestDeleteOpenShiftCluster(t *testing.T) {
 
 			tt.mocks(tt, asyncOperations, openShiftClusters, subscriptions)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
+			f, err := newTestFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
 				AsyncOperations:   asyncOperations,
 				OpenShiftClusters: openShiftClusters,
 				Subscriptions:     subscriptions,

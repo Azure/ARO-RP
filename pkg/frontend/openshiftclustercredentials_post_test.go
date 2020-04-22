@@ -286,7 +286,7 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 				tt.mocks(tt, openshiftClusters)
 			}
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
+			f, err := newTestFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
 				OpenShiftClusters: openshiftClusters,
 				Subscriptions:     subscriptions,
 			}, apis, &noop.Noop{}, nil, nil, nil, nil)
