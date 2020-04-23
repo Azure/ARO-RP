@@ -58,6 +58,6 @@ func (f *frontend) _getAdminOpenShiftClusters(ctx context.Context, r *http.Reque
 		ocs[i].Properties.ServicePrincipalProfile.ClientSecret = ""
 	}
 
-	// NOTE(ehashman): sort of a hack, must currently provide a nextPage link, so I left it blank
-	return json.MarshalIndent(converter.ToExternalList(ocs, ""), "", "    ")
+	l := converter.ToExternalList(ocs, "").(*admin.OpenShiftClusterList)
+	return json.MarshalIndent(l.OpenShiftClusters, "", "    ")
 }

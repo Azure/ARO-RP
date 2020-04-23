@@ -69,7 +69,7 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 		mocks          func(*gomock.Controller, *mock_database.MockOpenShiftClusters, *mock_clusterdata.MockOpenShiftClusterEnricher, *mock_encryption.MockCipher)
 		skipToken      string
 		wantStatusCode int
-		wantResponse   func() *admin.OpenShiftClusterList
+		wantResponse   []*admin.OpenShiftCluster
 		wantError      string
 	}
 
@@ -119,21 +119,17 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 					Return(mockIter)
 			},
 			wantStatusCode: http.StatusOK,
-			wantResponse: func() *admin.OpenShiftClusterList {
-				return &admin.OpenShiftClusterList{
-					OpenShiftClusters: []*admin.OpenShiftCluster{
-						{
-							ID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1", mockSubID),
-							Name: "resourceName1",
-							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-						},
-						{
-							ID:   "/subscriptions/00000000-0000-0000-0000-000000000001/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName2",
-							Name: "resourceName2",
-							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-						},
-					},
-				}
+			wantResponse: []*admin.OpenShiftCluster{
+				{
+					ID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1", mockSubID),
+					Name: "resourceName1",
+					Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+				},
+				{
+					ID:   "/subscriptions/00000000-0000-0000-0000-000000000001/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName2",
+					Name: "resourceName2",
+					Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+				},
 			},
 		},
 		{
@@ -147,11 +143,7 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 					Return(mockIter)
 			},
 			wantStatusCode: http.StatusOK,
-			wantResponse: func() *admin.OpenShiftClusterList {
-				return &admin.OpenShiftClusterList{
-					OpenShiftClusters: []*admin.OpenShiftCluster{},
-				}
-			},
+			wantResponse:   []*admin.OpenShiftCluster{},
 		},
 		{
 			name: "internal error while iterating list",
@@ -220,13 +212,13 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 			}
 
 			if tt.wantError == "" {
-				var oc *admin.OpenShiftClusterList
+				var oc []*admin.OpenShiftCluster
 				err = json.Unmarshal(b, &oc)
 				if err != nil {
 					t.Fatal(err)
 				}
 
-				if !reflect.DeepEqual(oc, tt.wantResponse()) {
+				if !reflect.DeepEqual(oc, tt.wantResponse) {
 					b, _ := json.Marshal(oc)
 					t.Error(string(b))
 				}
