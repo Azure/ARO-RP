@@ -120,7 +120,8 @@ func (mon *Monitor) Monitor(ctx context.Context) {
 	} {
 		err = f(ctx)
 		if err != nil {
-			mon.log.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name(), err)
+			mon.log.Printf("%s: %s", runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name(), err)
+			mon.emitGauge("monitor.clustererrors", 1, map[string]string{"monitor": runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name()})
 			// keep going
 		}
 	}
