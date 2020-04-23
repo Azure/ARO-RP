@@ -31,7 +31,7 @@ import (
 	"github.com/Azure/ARO-RP/test/util/listener"
 )
 
-func TestAdminRestartVM(t *testing.T) {
+func TestAdminRedeployVM(t *testing.T) {
 	mockSubID := "00000000-0000-0000-0000-000000000000"
 	ctx := context.Background()
 
@@ -127,7 +127,7 @@ func TestAdminRestartVM(t *testing.T) {
 			}
 
 			go f.Run(ctx, nil, nil)
-			url := fmt.Sprintf("https://server/admin%s/restartvm?vmName=%s", tt.resourceID, tt.vmName)
+			url := fmt.Sprintf("https://server/admin%s/redeployvm?vmName=%s", tt.resourceID, tt.vmName)
 			req, err := http.NewRequest(http.MethodPost, url, nil)
 			if err != nil {
 				t.Fatal(err)

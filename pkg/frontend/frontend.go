@@ -214,9 +214,15 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 
 	s = r.
 		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/restartvm").
+		Subrouter() // remove after Geneva actions have been updated
+
+	s.Methods(http.MethodPost).HandlerFunc(f.postAdminOpenShiftClusterRedeployVM).Name("postAdminOpenShiftClusterRestartVM") // remove after Geneva actions have been updated
+
+	s = r.
+		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/redeployvm").
 		Subrouter()
 
-	s.Methods(http.MethodPost).HandlerFunc(f.postAdminOpenShiftClusterRestartVM).Name("postAdminOpenShiftClusterRestartVM")
+	s.Methods(http.MethodPost).HandlerFunc(f.postAdminOpenShiftClusterRedeployVM).Name("postAdminOpenShiftClusterRedeployVM")
 
 	s = r.
 		Path("/admin/providers/{resourceProviderNamespace}/{resourceType}").
