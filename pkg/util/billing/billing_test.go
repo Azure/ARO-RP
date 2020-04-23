@@ -261,6 +261,7 @@ func TestCreate(t *testing.T) {
 	ctx := context.Background()
 	mockSubID := "11111111-1111-1111-1111-111111111111"
 	mockTenantID := mockSubID
+	mockInfraID := "infra"
 	location := "eastus"
 
 	type test struct {
@@ -285,6 +286,7 @@ func TestCreate(t *testing.T) {
 						ServicePrincipalProfile: api.ServicePrincipalProfile{
 							TenantID: mockTenantID,
 						},
+						InfraID: mockInfraID,
 					},
 					Location: location,
 				},
@@ -298,6 +300,7 @@ func TestCreate(t *testing.T) {
 						TenantID: mockTenantID,
 						Location: location,
 					},
+					InfraID: mockInfraID,
 				}
 
 				billing.EXPECT().
@@ -331,6 +334,7 @@ func TestCreate(t *testing.T) {
 						ServicePrincipalProfile: api.ServicePrincipalProfile{
 							TenantID: mockTenantID,
 						},
+						InfraID: mockInfraID,
 					},
 					Location: location,
 				},
@@ -344,6 +348,7 @@ func TestCreate(t *testing.T) {
 						TenantID: tt.openshiftdoc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID,
 						Location: tt.openshiftdoc.OpenShiftCluster.Location,
 					},
+					InfraID: mockInfraID,
 				}
 
 				billing.EXPECT().
@@ -363,6 +368,7 @@ func TestCreate(t *testing.T) {
 						ServicePrincipalProfile: api.ServicePrincipalProfile{
 							TenantID: mockTenantID,
 						},
+						InfraID: mockInfraID,
 					},
 					Location: location,
 				},
@@ -376,6 +382,7 @@ func TestCreate(t *testing.T) {
 						TenantID: tt.openshiftdoc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID,
 						Location: tt.openshiftdoc.OpenShiftCluster.Location,
 					},
+					InfraID: mockInfraID,
 				}
 
 				billing.EXPECT().
