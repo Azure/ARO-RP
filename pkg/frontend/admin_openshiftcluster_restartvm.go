@@ -60,5 +60,5 @@ func (f *frontend) _postAdminOpenShiftClusterRestartVM(ctx context.Context, r *h
 
 	cli := f.computeClientFactory(resource.SubscriptionID, fpAuthorizer)
 	clusterResourceGroup := stringutils.LastTokenByte(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-	return cli.RestartAndWait(ctx, clusterResourceGroup, vmName)
+	return cli.RedeployAndWait(ctx, clusterResourceGroup, vmName)
 }

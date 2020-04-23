@@ -91,7 +91,7 @@ func TestAdminRestartVM(t *testing.T) {
 				openshiftClusters.EXPECT().Get(gomock.Any(), strings.ToLower(tt.resourceID)).
 					Return(clusterDoc, nil)
 
-				vmc.EXPECT().RestartAndWait(gomock.Any(), "test-cluster", tt.vmName).Return(nil)
+				vmc.EXPECT().RedeployAndWait(gomock.Any(), "test-cluster", tt.vmName).Return(nil)
 			},
 			wantStatusCode: http.StatusOK,
 		},

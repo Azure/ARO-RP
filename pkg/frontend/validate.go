@@ -114,7 +114,7 @@ func validateAdminKubernetesObjects(method, groupKind, namespace, name string) e
 }
 
 func validateAdminVMName(vmName string) error {
-	if !rxKubernetesString.MatchString(vmName) {
+	if vmName == "" || !rxKubernetesString.MatchString(vmName) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided vmName '%s' is invalid.", vmName)
 	}
 
