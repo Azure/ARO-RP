@@ -237,21 +237,21 @@
         },
         {
             "properties": {
-                "severity": 4,
+                "severity": 3,
                 "enabled": true,
                 "scopes": [
                     "[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]"
                 ],
-                "evaluationFrequency": "PT5M",
-                "windowSize": "PT1H",
+                "evaluationFrequency": "PT1M",
+                "windowSize": "PT1M",
                 "targetResourceType": "Microsoft.Network/loadBalancers",
                 "criteria": {
                     "allOf": [
                         {
                             "operator": "LessThan",
-                            "threshold": 99,
+                            "threshold": 33,
                             "AdditionalProperties": null,
-                            "name": "HealthProbeBelow99",
+                            "name": "HealthProbeCheck",
                             "metricName": "DipAvailability",
                             "metricNamespace": "microsoft.network/loadBalancers",
                             "timeAggregation": "Average",
@@ -270,6 +270,90 @@
                 ]
             },
             "name": "rp-availability-alert",
+            "type": "Microsoft.Insights/metricAlerts",
+            "location": "global",
+            "apiVersion": "2018-03-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]"
+            ]
+        },
+        {
+            "properties": {
+                "severity": 3,
+                "enabled": true,
+                "scopes": [
+                    "[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]"
+                ],
+                "evaluationFrequency": "PT15M",
+                "windowSize": "PT6H",
+                "targetResourceType": "Microsoft.Network/loadBalancers",
+                "criteria": {
+                    "allOf": [
+                        {
+                            "operator": "LessThan",
+                            "threshold": 67,
+                            "AdditionalProperties": null,
+                            "name": "HealthProbeCheck",
+                            "metricName": "DipAvailability",
+                            "metricNamespace": "microsoft.network/loadBalancers",
+                            "timeAggregation": "Average",
+                            "criterionType": "StaticThresholdCriterion"
+                        }
+                    ],
+                    "AdditionalProperties": null,
+                    "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria"
+                },
+                "autoMitigate": true,
+                "actions": [
+                    {
+                        "actionGroupId": "[resourceId(parameters('subscriptionResourceGroupName'), 'Microsoft.Insights/actionGroups', 'rp-health-ag')]",
+                        "webHookProperties": null
+                    }
+                ]
+            },
+            "name": "rp-degraded-alert",
+            "type": "Microsoft.Insights/metricAlerts",
+            "location": "global",
+            "apiVersion": "2018-03-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]"
+            ]
+        },
+        {
+            "properties": {
+                "severity": 3,
+                "enabled": true,
+                "scopes": [
+                    "[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]"
+                ],
+                "evaluationFrequency": "PT1M",
+                "windowSize": "PT1M",
+                "targetResourceType": "Microsoft.Network/loadBalancers",
+                "criteria": {
+                    "allOf": [
+                        {
+                            "operator": "LessThan",
+                            "threshold": 33,
+                            "AdditionalProperties": null,
+                            "name": "HealthProbeCheck",
+                            "metricName": "VipAvailability",
+                            "metricNamespace": "microsoft.network/loadBalancers",
+                            "timeAggregation": "Average",
+                            "criterionType": "StaticThresholdCriterion"
+                        }
+                    ],
+                    "AdditionalProperties": null,
+                    "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria"
+                },
+                "autoMitigate": true,
+                "actions": [
+                    {
+                        "actionGroupId": "[resourceId(parameters('subscriptionResourceGroupName'), 'Microsoft.Insights/actionGroups', 'rp-health-ag')]",
+                        "webHookProperties": null
+                    }
+                ]
+            },
+            "name": "rp-vnet-alert",
             "type": "Microsoft.Insights/metricAlerts",
             "location": "global",
             "apiVersion": "2018-03-01",

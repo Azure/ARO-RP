@@ -63,7 +63,11 @@ func (g *generator) rpTemplate() *arm.Template {
 	}
 
 	if g.production {
-		t.Resources = append(t.Resources, g.pip(), g.lb(), g.vmss(), g.lbAlert())
+		t.Resources = append(t.Resources, g.pip(), g.lb(), g.vmss(),
+			g.lbAlert(33.0, 3, "rp-availability-alert", "PT1M", "PT1M", "DipAvailability"), // this will trigger only on all backends down for at least 1min.
+			g.lbAlert(67.0, 3, "rp-degraded-alert", "PT15M", "PT6H", "DipAvailability"),    // 1/3 backend down for 1h or 2/3 down for 3h in the last 6h
+			g.lbAlert(33.0, 3, "rp-vnet-alert", "PT1M", "PT1M", "VipAvailability"))         //this will trigger only if the Azure network infrastructure between the loadBalancers and VMs is down for a minute
+		// more on alerts https://msazure.visualstudio.com/AzureRedHatOpenShift/_wiki/wikis/ARO.wiki/53765/WIP-Alerting
 	}
 
 	t.Resources = append(t.Resources, g.zone(),
