@@ -5,7 +5,7 @@ package install
 
 import (
 	"context"
-	"fmt"
+	"net/http"
 	"os"
 	"reflect"
 	"strings"
@@ -324,12 +324,16 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 			return err
 		}
 
+		// Sometimes we get into the race condition between external services modifying
+		// subnets and our validation code. We try to catch this early, but
+		// these errors is propagated to make the user-facing error more clear incase
+		// modification happened after we ran validation code and we lost the race
 		if s.SubnetPropertiesFormat.NetworkSecurityGroup != nil {
 			if strings.EqualFold(*s.SubnetPropertiesFormat.NetworkSecurityGroup.ID, nsgID) {
 				continue
 			}
 
-			return fmt.Errorf("tried to overwrite non-nil network security group")
+			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided subnet '%s' is invalid: must not have a network security group attached.", subnetID)
 		}
 
 		s.SubnetPropertiesFormat.NetworkSecurityGroup = &mgmtnetwork.SecurityGroup{
