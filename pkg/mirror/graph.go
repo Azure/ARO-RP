@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"mime"
 	"net/http"
+	"strings"
 )
 
 type Node struct {
@@ -65,6 +66,8 @@ func AddFromGraph(min, max *Version) ([]Node, error) {
 			version.Suffix != "" {
 			continue
 		}
+
+		node.Payload = strings.Replace(node.Payload, "registry.svc.ci.openshift.org/ocp/release", "quay.io/openshift-release-dev/ocp-release", 1)
 
 		releases = append(releases, node)
 	}
