@@ -138,18 +138,18 @@ func (mr *MockVirtualMachinesClientMockRecorder) DeleteAndWait(arg0, arg1, arg2 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockVirtualMachinesClient)(nil).DeleteAndWait), arg0, arg1, arg2)
 }
 
-// RestartAndWait mocks base method
-func (m *MockVirtualMachinesClient) RestartAndWait(arg0 context.Context, arg1, arg2 string) error {
+// RedeployAndWait mocks base method
+func (m *MockVirtualMachinesClient) RedeployAndWait(arg0 context.Context, arg1, arg2 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RestartAndWait", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "RedeployAndWait", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// RestartAndWait indicates an expected call of RestartAndWait
-func (mr *MockVirtualMachinesClientMockRecorder) RestartAndWait(arg0, arg1, arg2 interface{}) *gomock.Call {
+// RedeployAndWait indicates an expected call of RedeployAndWait
+func (mr *MockVirtualMachinesClientMockRecorder) RedeployAndWait(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RestartAndWait", reflect.TypeOf((*MockVirtualMachinesClient)(nil).RestartAndWait), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RedeployAndWait", reflect.TypeOf((*MockVirtualMachinesClient)(nil).RedeployAndWait), arg0, arg1, arg2)
 }
 
 // MockUsageClient is a mock of UsageClient interface

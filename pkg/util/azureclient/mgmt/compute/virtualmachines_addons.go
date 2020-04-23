@@ -13,11 +13,11 @@ import (
 type VirtualMachinesClientAddons interface {
 	CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, VMName string, parameters mgmtcompute.VirtualMachine) error
 	DeleteAndWait(ctx context.Context, resourceGroupName string, VMName string) error
-	RestartAndWait(ctx context.Context, resourceGroupName string, VMName string) error
+	RedeployAndWait(ctx context.Context, resourceGroupName string, VMName string) error
 }
 
-func (c *virtualMachinesClient) RestartAndWait(ctx context.Context, resourceGroupName string, VMName string) error {
-	future, err := c.Restart(ctx, resourceGroupName, VMName)
+func (c *virtualMachinesClient) RedeployAndWait(ctx context.Context, resourceGroupName string, VMName string) error {
+	future, err := c.Redeploy(ctx, resourceGroupName, VMName)
 	if err != nil {
 		return err
 	}

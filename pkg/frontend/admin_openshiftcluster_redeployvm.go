@@ -19,17 +19,17 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
-func (f *frontend) postAdminOpenShiftClusterRestartVM(w http.ResponseWriter, r *http.Request) {
+func (f *frontend) postAdminOpenShiftClusterRedeployVM(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
-	err := f._postAdminOpenShiftClusterRestartVM(ctx, r)
+	err := f._postAdminOpenShiftClusterRedeployVM(ctx, r)
 
 	adminReply(log, w, nil, nil, err)
 }
 
-func (f *frontend) _postAdminOpenShiftClusterRestartVM(ctx context.Context, r *http.Request) error {
+func (f *frontend) _postAdminOpenShiftClusterRedeployVM(ctx context.Context, r *http.Request) error {
 	vars := mux.Vars(r)
 
 	vmName := r.URL.Query().Get("vmName")
@@ -60,5 +60,5 @@ func (f *frontend) _postAdminOpenShiftClusterRestartVM(ctx context.Context, r *h
 
 	cli := f.computeClientFactory(resource.SubscriptionID, fpAuthorizer)
 	clusterResourceGroup := stringutils.LastTokenByte(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-	return cli.RestartAndWait(ctx, clusterResourceGroup, vmName)
+	return cli.RedeployAndWait(ctx, clusterResourceGroup, vmName)
 }
