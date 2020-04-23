@@ -57,7 +57,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	log.Print("reading Cincinnati graph")
+	log.Print("reading release graph")
 	releases, err := pkgmirror.AddFromGraph(pkgmirror.NewVersion(4, 3), pkgmirror.NewVersion(4, 4))
 	if err != nil {
 		return err
@@ -75,7 +75,9 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 
 	for _, ref := range []string{
 		"linuxgeneva-microsoft.azurecr.io/genevamdsd:master_266",
+		"linuxgeneva-microsoft.azurecr.io/genevamdsd:master_279",
 		"linuxgeneva-microsoft.azurecr.io/genevamdm:master_35",
+		"linuxgeneva-microsoft.azurecr.io/genevamdm:master_37",
 	} {
 		log.Printf("mirroring %s", ref)
 		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+".azurecr.io", ref), ref, dstauth, srcauthGeneva)
