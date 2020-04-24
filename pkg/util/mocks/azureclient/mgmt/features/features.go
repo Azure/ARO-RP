@@ -168,6 +168,21 @@ func (mr *MockResourceGroupsClientMockRecorder) CreateOrUpdate(arg0, arg1, arg2 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdate", reflect.TypeOf((*MockResourceGroupsClient)(nil).CreateOrUpdate), arg0, arg1, arg2)
 }
 
+// Delete mocks base method
+func (m *MockResourceGroupsClient) Delete(arg0 context.Context, arg1 string) (features.ResourceGroupsDeleteFuture, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", arg0, arg1)
+	ret0, _ := ret[0].(features.ResourceGroupsDeleteFuture)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Delete indicates an expected call of Delete
+func (mr *MockResourceGroupsClientMockRecorder) Delete(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockResourceGroupsClient)(nil).Delete), arg0, arg1)
+}
+
 // DeleteAndWait mocks base method
 func (m *MockResourceGroupsClient) DeleteAndWait(arg0 context.Context, arg1 string) error {
 	m.ctrl.T.Helper()
@@ -195,6 +210,21 @@ func (m *MockResourceGroupsClient) Get(arg0 context.Context, arg1 string) (featu
 func (mr *MockResourceGroupsClientMockRecorder) Get(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockResourceGroupsClient)(nil).Get), arg0, arg1)
+}
+
+// List mocks base method
+func (m *MockResourceGroupsClient) List(arg0 context.Context, arg1 string, arg2 *int32) ([]features.ResourceGroup, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2)
+	ret0, _ := ret[0].([]features.ResourceGroup)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List
+func (mr *MockResourceGroupsClientMockRecorder) List(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockResourceGroupsClient)(nil).List), arg0, arg1, arg2)
 }
 
 // MockResourcesClient is a mock of ResourcesClient interface
