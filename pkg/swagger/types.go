@@ -245,7 +245,16 @@ type Schema struct {
 	ExternalDocs         *ExternalDocumentation `json:"externalDocs,omitempty"`
 	Example              interface{}            `json:"example,omitempty"`
 
-	ClientFlatten bool `json:"x-ms-client-flatten,omitempty"`
+	ClientFlatten bool     `json:"x-ms-client-flatten,omitempty"`
+	XMSEnum       *XMSEnum `json:"x-ms-enum,omitempty"`
+}
+
+// XMSEnum represents x-ms-enum
+// https://github.com/Azure/autorest/tree/master/docs/extensions#x-ms-enum
+type XMSEnum struct {
+	Name          string        `json:"name,omitempty"`
+	ModelAsString bool          `json:"modelAsString,omitempty"`
+	Values        []interface{} `json:"values,omitempty"`
 }
 
 // XML represents an XML object

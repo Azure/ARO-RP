@@ -129,51 +129,6 @@ func PossibleVMSizeValues() []VMSize {
 	return []VMSize{StandardD16asV4, StandardD16sV3, StandardD2sV3, StandardD32asV4, StandardD32sV3, StandardD4asV4, StandardD4sV3, StandardD8asV4, StandardD8sV3, StandardE16sV3, StandardE32sV3, StandardE4sV3, StandardE8sV3, StandardF16sV2, StandardF32sV2, StandardF4sV2, StandardF8sV2}
 }
 
-// VMSize1 enumerates the values for vm size 1.
-type VMSize1 string
-
-const (
-	// VMSize1StandardD16asV4 ...
-	VMSize1StandardD16asV4 VMSize1 = "Standard_D16as_v4"
-	// VMSize1StandardD16sV3 ...
-	VMSize1StandardD16sV3 VMSize1 = "Standard_D16s_v3"
-	// VMSize1StandardD2sV3 ...
-	VMSize1StandardD2sV3 VMSize1 = "Standard_D2s_v3"
-	// VMSize1StandardD32asV4 ...
-	VMSize1StandardD32asV4 VMSize1 = "Standard_D32as_v4"
-	// VMSize1StandardD32sV3 ...
-	VMSize1StandardD32sV3 VMSize1 = "Standard_D32s_v3"
-	// VMSize1StandardD4asV4 ...
-	VMSize1StandardD4asV4 VMSize1 = "Standard_D4as_v4"
-	// VMSize1StandardD4sV3 ...
-	VMSize1StandardD4sV3 VMSize1 = "Standard_D4s_v3"
-	// VMSize1StandardD8asV4 ...
-	VMSize1StandardD8asV4 VMSize1 = "Standard_D8as_v4"
-	// VMSize1StandardD8sV3 ...
-	VMSize1StandardD8sV3 VMSize1 = "Standard_D8s_v3"
-	// VMSize1StandardE16sV3 ...
-	VMSize1StandardE16sV3 VMSize1 = "Standard_E16s_v3"
-	// VMSize1StandardE32sV3 ...
-	VMSize1StandardE32sV3 VMSize1 = "Standard_E32s_v3"
-	// VMSize1StandardE4sV3 ...
-	VMSize1StandardE4sV3 VMSize1 = "Standard_E4s_v3"
-	// VMSize1StandardE8sV3 ...
-	VMSize1StandardE8sV3 VMSize1 = "Standard_E8s_v3"
-	// VMSize1StandardF16sV2 ...
-	VMSize1StandardF16sV2 VMSize1 = "Standard_F16s_v2"
-	// VMSize1StandardF32sV2 ...
-	VMSize1StandardF32sV2 VMSize1 = "Standard_F32s_v2"
-	// VMSize1StandardF4sV2 ...
-	VMSize1StandardF4sV2 VMSize1 = "Standard_F4s_v2"
-	// VMSize1StandardF8sV2 ...
-	VMSize1StandardF8sV2 VMSize1 = "Standard_F8s_v2"
-)
-
-// PossibleVMSize1Values returns an array of possible values for the VMSize1 const type.
-func PossibleVMSize1Values() []VMSize1 {
-	return []VMSize1{VMSize1StandardD16asV4, VMSize1StandardD16sV3, VMSize1StandardD2sV3, VMSize1StandardD32asV4, VMSize1StandardD32sV3, VMSize1StandardD4asV4, VMSize1StandardD4sV3, VMSize1StandardD8asV4, VMSize1StandardD8sV3, VMSize1StandardE16sV3, VMSize1StandardE32sV3, VMSize1StandardE4sV3, VMSize1StandardE8sV3, VMSize1StandardF16sV2, VMSize1StandardF32sV2, VMSize1StandardF4sV2, VMSize1StandardF8sV2}
-}
-
 // APIServerProfile aPIServerProfile represents an API server profile.
 type APIServerProfile struct {
 	// Visibility - API server visibility (immutable). Possible values include: 'Private', 'Public'
@@ -897,8 +852,8 @@ func (tr TrackedResource) MarshalJSON() ([]byte, error) {
 type WorkerProfile struct {
 	// Name - The worker profile name.  Must be "worker" (immutable).
 	Name *string `json:"name,omitempty"`
-	// VMSize - The size of the worker VMs (immutable). Possible values include: 'VMSize1StandardD16asV4', 'VMSize1StandardD16sV3', 'VMSize1StandardD2sV3', 'VMSize1StandardD32asV4', 'VMSize1StandardD32sV3', 'VMSize1StandardD4asV4', 'VMSize1StandardD4sV3', 'VMSize1StandardD8asV4', 'VMSize1StandardD8sV3', 'VMSize1StandardE16sV3', 'VMSize1StandardE32sV3', 'VMSize1StandardE4sV3', 'VMSize1StandardE8sV3', 'VMSize1StandardF16sV2', 'VMSize1StandardF32sV2', 'VMSize1StandardF4sV2', 'VMSize1StandardF8sV2'
-	VMSize VMSize1 `json:"vmSize,omitempty"`
+	// VMSize - The size of the worker VMs (immutable). Possible values include: 'StandardD16asV4', 'StandardD16sV3', 'StandardD2sV3', 'StandardD32asV4', 'StandardD32sV3', 'StandardD4asV4', 'StandardD4sV3', 'StandardD8asV4', 'StandardD8sV3', 'StandardE16sV3', 'StandardE32sV3', 'StandardE4sV3', 'StandardE8sV3', 'StandardF16sV2', 'StandardF32sV2', 'StandardF4sV2', 'StandardF8sV2'
+	VMSize VMSize `json:"vmSize,omitempty"`
 	// DiskSizeGB - The disk size of the worker VMs.  Must be 128 or greater (immutable).
 	DiskSizeGB *int32 `json:"diskSizeGB,omitempty"`
 	// SubnetID - The Azure resource ID of the worker subnet (immutable).
