@@ -199,7 +199,8 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			i.log.Printf("running step %s", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name())
 			err = step(ctx)
 			if err != nil {
-				return err
+				i.gatherFailureLogs(ctx)
+				return fmt.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name(), err)
 			}
 		case condition:
 			i.log.Printf("waiting for %s", runtime.FuncForPC(reflect.ValueOf(step.f).Pointer()).Name())
@@ -209,6 +210,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 				err = wait.PollImmediateUntil(pollInterval, step.f, timeoutCtx.Done())
 			}()
 			if err != nil {
+				i.gatherFailureLogs(ctx)
 				return fmt.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(step.f).Pointer()).Name(), err)
 			}
 		default:
