@@ -122,10 +122,14 @@ func (dv *openShiftClusterDynamicValidator) validateServicePrincipalProfile(ctx 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 
-	// get a token, retrying only on AADSTS700016 errors (slow AAD propagation).
+	// get a token, retrying only on AADSTS700016 errors (slow AAD propagation)
+	// and AADSTS700215 errors (presumed slow AAD propagation).
 	err = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 		err = token.EnsureFresh()
-		if err != nil && strings.Contains(err.Error(), "AADSTS700016") {
+		if err != nil &&
+			(strings.Contains(err.Error(), "AADSTS700016") ||
+				strings.Contains(err.Error(), "AADSTS700215")) {
+			dv.log.Print(err)
 			return false, nil
 		}
 		return err == nil, err
