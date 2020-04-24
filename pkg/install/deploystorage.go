@@ -49,7 +49,7 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 			reflect.TypeOf(installConfig): &installconfig.InstallConfig{
 				Config: &types.InstallConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: i.doc.OpenShiftCluster.Name,
+						Name: strings.ToLower(i.doc.OpenShiftCluster.Name),
 					},
 				},
 			},
