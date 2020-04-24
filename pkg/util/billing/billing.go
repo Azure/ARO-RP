@@ -87,6 +87,7 @@ func (m *manager) Create(ctx context.Context, doc *api.OpenShiftClusterDocument)
 		ID:                        doc.ID,
 		Key:                       doc.Key,
 		ClusterResourceGroupIDKey: doc.ClusterResourceGroupIDKey,
+		InfraID:                   doc.OpenShiftCluster.Properties.InfraID,
 		Billing: &api.Billing{
 			TenantID: doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID,
 			Location: doc.OpenShiftCluster.Location,

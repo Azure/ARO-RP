@@ -29,4 +29,5 @@ type BillingDocument struct {
 
 	Key                       string `json:"key,omitempty"`
 	ClusterResourceGroupIDKey string `json:"clusterResourceGroupIDKey,omitempty"`
+	InfraID                   string `json:"infraId,omitempty"`
 }
