@@ -105,13 +105,15 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 		timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 		defer cancel()
 
-		// get a token, retrying only on AADSTS700016 errors (slow AAD propagation).
+		// get a token, retrying only on AADSTS700016 errors (slow AAD
+		// propagation) and AADSTS700215 errors (presumed slow AAD propagation).
 		err = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 			err = token.EnsureFresh()
 			switch {
 			case err == nil:
 				return true, nil
-			case strings.Contains(err.Error(), "AADSTS700016"):
+			case strings.Contains(err.Error(), "AADSTS700016"),
+				strings.Contains(err.Error(), "AADSTS700215"):
 				i.log.Print(err)
 				return false, nil
 			default:
