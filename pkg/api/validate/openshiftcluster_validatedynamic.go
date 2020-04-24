@@ -6,7 +6,6 @@ package validate
 import (
 	"context"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"strings"
@@ -19,6 +18,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/apparentlymart/go-cidr/cidr"
 	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -35,8 +35,9 @@ type OpenShiftClusterDynamicValidator interface {
 	Dynamic(context.Context, *api.OpenShiftCluster) error
 }
 
-func NewOpenShiftClusterDynamicValidator(env env.Interface) OpenShiftClusterDynamicValidator {
+func NewOpenShiftClusterDynamicValidator(log *logrus.Entry, env env.Interface) OpenShiftClusterDynamicValidator {
 	return &openShiftClusterDynamicValidator{
+		log: log,
 		env: env,
 	}
 }
@@ -50,6 +51,7 @@ func (*azureClaim) Valid() error {
 }
 
 type openShiftClusterDynamicValidator struct {
+	log *logrus.Entry
 	env env.Interface
 }
 
@@ -132,7 +134,7 @@ func (dv *openShiftClusterDynamicValidator) validateServicePrincipalProfile(ctx 
 		return nil, err
 	}
 	if err != nil {
-		log.Print(err)
+		dv.log.Print(err)
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalCredentials, "properties.servicePrincipalProfile", "The provided service principal credentials are invalid.")
 	}
 

@@ -5,7 +5,6 @@ package openshiftcluster
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"strings"
 
@@ -39,7 +38,7 @@ func (m *Manager) Delete(ctx context.Context) error {
 			// joined to the subnet and an error here prevents us from removing
 			// it, we will fail later in the RG deletion; in principal the user
 			// can fix up and retry.
-			log.Print(err)
+			m.log.Print(err)
 			continue
 		}
 
