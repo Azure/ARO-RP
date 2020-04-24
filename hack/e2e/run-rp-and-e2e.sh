@@ -80,7 +80,7 @@ deploy_e2e_deps() {
       --disable-private-link-service-network-policies true >/dev/null
 
     echo "########## Create Cluster SPN ##########"
-    az ad sp create-for-rbac -n "$CLUSTER" --role contributor \
+    az ad sp create-for-rbac -n "$CLUSTER-$LOCATION" --role contributor \
         --scopes /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$ARO_RESOURCEGROUP >$CLUSTERSPN
 }
 
