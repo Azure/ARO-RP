@@ -75,15 +75,28 @@ func TestDeployARMTemplate(t *testing.T) {
 			wantErr: "timed out waiting for the condition",
 		},
 		{
-			name: "Other DetailedError which should be returned to user",
+			name: "DetailedError which should be returned to user",
 			mocks: func(dc *mock_features.MockDeploymentsClient) {
 				dc.EXPECT().
 					CreateOrUpdateAndWait(ctx, resourceGroup, deploymentName, deployment).
-					Return(autorest.DetailedError{Original: &azure.ServiceError{
-						Code: "AccountIsDisabled",
-					}})
+					Return(autorest.DetailedError{
+						Original: &azure.ServiceError{
+							Code: "AccountIsDisabled",
+						},
+					})
 			},
-			wantErr: `400: DeploymentFailed: : ARM deployment failed. Details: 0: : : {"Original":{"code":"AccountIsDisabled","message":"","target":null,"details":null,"innererror":null,"additionalInfo":null},"PackageType":"","Method":"","StatusCode":null,"Message":"","ServiceError":null,"Response":null}`,
+			wantErr: `400: DeploymentFailed: : Deployment failed. Details: : : {"code":"AccountIsDisabled","message":"","target":null,"details":null,"innererror":null,"additionalInfo":null}`,
+		},
+		{
+			name: "ServiceError which should be returned to user",
+			mocks: func(dc *mock_features.MockDeploymentsClient) {
+				dc.EXPECT().
+					CreateOrUpdateAndWait(ctx, resourceGroup, deploymentName, deployment).
+					Return(&azure.ServiceError{
+						Code: "AccountIsDisabled",
+					})
+			},
+			wantErr: `400: DeploymentFailed: : Deployment failed. Details: : : {"code":"AccountIsDisabled","message":"","target":null,"details":null,"innererror":null,"additionalInfo":null}`,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

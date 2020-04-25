@@ -409,23 +409,29 @@ func (i *Installer) deployARMTemplate(ctx context.Context, rg string, tName stri
 		return err == nil, err
 	}, timeoutCtx.Done())
 
+	serviceErr, _ := err.(*azure.ServiceError) // futures return *azure.ServiceError directly
+
+	// CreateOrUpdate() returns a wrapped *azure.ServiceError
 	if detailedErr, ok := err.(autorest.DetailedError); ok {
-		errDetails, err := json.Marshal(detailedErr)
-		if err != nil {
-			return err
-		}
+		serviceErr, _ = detailedErr.Original.(*azure.ServiceError)
+	}
+
+	if serviceErr != nil {
+		b, _ := json.Marshal(serviceErr)
+
 		return &api.CloudError{
 			StatusCode: http.StatusBadRequest,
 			CloudErrorBody: &api.CloudErrorBody{
 				Code:    api.CloudErrorCodeDeploymentFailed,
-				Message: "ARM deployment failed.",
+				Message: "Deployment failed.",
 				Details: []api.CloudErrorBody{
 					{
-						Message: string(errDetails),
+						Message: string(b),
 					},
 				},
 			},
 		}
 	}
+
 	return err
 }
