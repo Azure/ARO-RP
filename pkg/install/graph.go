@@ -39,6 +39,7 @@ var registeredTypes = map[string]asset.Asset{
 	"*bootkube.KubeCloudConfig":                               &bootkube.KubeCloudConfig{},
 	"*bootkube.KubeSystemConfigmapRootCA":                     &bootkube.KubeSystemConfigmapRootCA{},
 	"*bootkube.MachineConfigServerTLSSecret":                  &bootkube.MachineConfigServerTLSSecret{},
+	"*bootkube.OpenshiftAPIServerNamespace":                   &bootkube.OpenshiftAPIServerNamespace{},
 	"*bootkube.OpenshiftConfigSecretPullSecret":               &bootkube.OpenshiftConfigSecretPullSecret{},
 	"*bootkube.OpenshiftMachineConfigOperator":                &bootkube.OpenshiftMachineConfigOperator{},
 	"*bootstrap.Bootstrap":                                    &bootstrap.Bootstrap{},

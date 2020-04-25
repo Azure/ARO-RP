@@ -56,6 +56,10 @@ upstream OCP.
   This prevents a validating failure when omitting a configurable which is never
   used in ARO.
 
+* CARRY: HACK: create openshift-apiserver namespace very early
+
+  Work around for https://bugzilla.redhat.com/show_bug.cgi?id=1825355
+
 
 ## Installation differences
 
