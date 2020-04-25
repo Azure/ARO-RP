@@ -21,3 +21,7 @@ Release History
 0.4.0
 ++++++
 * Default worker VM size to Standard_D4s_v3.
+
+1.0.0
+++++++
+* Remove preview flag.
