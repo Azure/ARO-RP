@@ -411,8 +411,28 @@ func (i *Installer) deployARMTemplate(ctx context.Context, rg string, tName stri
 		return err == nil, err
 	}, timeoutCtx.Done())
 
-	if isQuota, errMsg := hasResourceQuotaExceededError(err); isQuota {
-		err = api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeQuotaExceeded, errMsg, "")
+	serviceErr, _ := err.(*azure.ServiceError) // futures return *azure.ServiceError directly
+
+	// CreateOrUpdate() returns a wrapped *azure.ServiceError
+	if detailedErr, ok := err.(autorest.DetailedError); ok {
+		serviceErr, _ = detailedErr.Original.(*azure.ServiceError)
+	}
+
+	if serviceErr != nil {
+		b, _ := json.Marshal(serviceErr)
+
+		return &api.CloudError{
+			StatusCode: http.StatusBadRequest,
+			CloudErrorBody: &api.CloudErrorBody{
+				Code:    api.CloudErrorCodeDeploymentFailed,
+				Message: "Deployment failed.",
+				Details: []api.CloudErrorBody{
+					{
+						Message: string(b),
+					},
+				},
+			},
+		}
 	}
 
 	return err

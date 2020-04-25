@@ -43,23 +43,6 @@ func hasAuthorizationFailedError(err error) bool {
 	return false
 }
 
-// hasResourceQuotaExceededError returns true and the original error message if
-// the error contains a QuotaExceeded error
-func hasResourceQuotaExceededError(err error) (bool, string) {
-	if detailedErr, ok := err.(autorest.DetailedError); ok {
-		if serviceErr, ok := detailedErr.Original.(*azure.ServiceError); ok {
-			for _, d := range serviceErr.Details {
-				if code, ok := d["code"].(string); ok && code == "QuotaExceeded" {
-					if message, ok := d["message"].(string); ok {
-						return true, message
-					}
-				}
-			}
-		}
-	}
-	return false, ""
-}
-
 // isDeploymentActiveError returns true it the error is a DeploymentActive error
 func isDeploymentActiveError(err error) bool {
 	if detailedErr, ok := err.(autorest.DetailedError); ok {

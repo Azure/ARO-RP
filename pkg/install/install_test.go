@@ -5,8 +5,6 @@ package install
 
 import (
 	"context"
-	"net/http"
-	"reflect"
 	"testing"
 
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -16,7 +14,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
 
-	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 )
@@ -41,19 +38,10 @@ func TestDeployARMTemplate(t *testing.T) {
 		ServiceError: &azure.ServiceError{Code: "DeploymentActive"},
 	}, "", "", nil, "")
 
-	fakeQuotaErrMsg := "Quota exceeded"
-	quotaErr := autorest.NewErrorWithError(&azure.ServiceError{
-		Details: []map[string]interface{}{{
-			"code":    "QuotaExceeded",
-			"message": fakeQuotaErrMsg,
-		}}}, "", "", nil, "")
-
-	cloudQuotaErr := api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeQuotaExceeded, fakeQuotaErrMsg, "")
-
 	for _, tt := range []struct {
 		name    string
 		mocks   func(*mock_features.MockDeploymentsClient)
-		wantErr error
+		wantErr string
 	}{
 		{
 			name: "Deployment successful with no errors",
@@ -84,28 +72,31 @@ func TestDeployARMTemplate(t *testing.T) {
 					Wait(ctx, resourceGroup, deploymentName).
 					Return(wait.ErrWaitTimeout)
 			},
-			wantErr: wait.ErrWaitTimeout,
+			wantErr: "timed out waiting for the condition",
 		},
 		{
-			name: "Resource quota exceeded error",
+			name: "DetailedError which should be returned to user",
 			mocks: func(dc *mock_features.MockDeploymentsClient) {
 				dc.EXPECT().
 					CreateOrUpdateAndWait(ctx, resourceGroup, deploymentName, deployment).
-					Return(quotaErr)
+					Return(autorest.DetailedError{
+						Original: &azure.ServiceError{
+							Code: "AccountIsDisabled",
+						},
+					})
 			},
-			wantErr: cloudQuotaErr,
+			wantErr: `400: DeploymentFailed: : Deployment failed. Details: : : {"code":"AccountIsDisabled","message":"","target":null,"details":null,"innererror":null,"additionalInfo":null}`,
 		},
 		{
-			name: "Deployment active error, then resource quota exceeded error",
+			name: "ServiceError which should be returned to user",
 			mocks: func(dc *mock_features.MockDeploymentsClient) {
 				dc.EXPECT().
 					CreateOrUpdateAndWait(ctx, resourceGroup, deploymentName, deployment).
-					Return(activeErr)
-				dc.EXPECT().
-					Wait(ctx, resourceGroup, deploymentName).
-					Return(quotaErr)
+					Return(&azure.ServiceError{
+						Code: "AccountIsDisabled",
+					})
 			},
-			wantErr: cloudQuotaErr,
+			wantErr: `400: DeploymentFailed: : Deployment failed. Details: : : {"code":"AccountIsDisabled","message":"","target":null,"details":null,"innererror":null,"additionalInfo":null}`,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -121,7 +112,9 @@ func TestDeployARMTemplate(t *testing.T) {
 			}
 
 			err := i.deployARMTemplate(ctx, resourceGroup, "test", armTemplate, params)
-			if !reflect.DeepEqual(err, tt.wantErr) {
+
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
 				t.Error(err)
 			}
 		})

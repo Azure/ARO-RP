@@ -66,52 +66,6 @@ func TestHasAuthorizationFailedError(t *testing.T) {
 	}
 }
 
-func TestHasResourceQuotaExceededError(t *testing.T) {
-	for _, tt := range []struct {
-		name    string
-		err     error
-		want    bool
-		wantMsg string
-	}{
-		{
-			name: "Another error",
-			err:  errors.New("something happened"),
-		},
-		{
-			name: "Quota exceeded",
-			err: autorest.DetailedError{
-				Original: &azure.ServiceError{
-					Code:    "InvalidTemplateDeployment",
-					Message: "The template deployment 'deployment' is not valid according to the validation procedure. The tracking id is 'fbcb273b-d681-48b3-ab98-905d05fa8564'. See inner errors for details.",
-					Details: []map[string]interface{}{
-						{
-							"message": "Operation could not be completed as it results in exceeding approved standardMSFamily Cores quota. Additional details - Deployment Model: Resource Manager, Location: eastus, Current Limit: 0, Current Usage: 0, Additional Required: 128, (Minimum) New Limit Required: 128. Submit a request for Quota increase at https://aka.ms/ProdportalCRP/?#create/Microsoft.Support/Parameters/%7B%22subId%22:%22225e02bc-43d0-43d1-a01a-17e584a4ef69%22,%22pesId%22:%2206bfd9d3-516b-d5c6-5802-169c800dec89%22,%22supportTopicId%22:%22e12e3d1d-7fa0-af33-c6d0-3c50df9658a3%22%7D by specifying parameters listed in the ‘Details’ section for deployment to succeed. Please read more about quota limits at https://docs.microsoft.com/en-us/azure/azure-supportability/per-vm-quota-requests.",
-							"code":    "QuotaExceeded",
-						},
-					},
-				},
-				PackageType: "resources.DeploymentsClient",
-				Method:      "CreateOrUpdate",
-				StatusCode:  http.StatusBadRequest,
-				Message:     "Failure sending request",
-				// Response omitted for brevity
-			},
-			want:    true,
-			wantMsg: "Operation could not be completed as it results in exceeding approved standardMSFamily Cores quota. Additional details - Deployment Model: Resource Manager, Location: eastus, Current Limit: 0, Current Usage: 0, Additional Required: 128, (Minimum) New Limit Required: 128. Submit a request for Quota increase at https://aka.ms/ProdportalCRP/?#create/Microsoft.Support/Parameters/%7B%22subId%22:%22225e02bc-43d0-43d1-a01a-17e584a4ef69%22,%22pesId%22:%2206bfd9d3-516b-d5c6-5802-169c800dec89%22,%22supportTopicId%22:%22e12e3d1d-7fa0-af33-c6d0-3c50df9658a3%22%7D by specifying parameters listed in the ‘Details’ section for deployment to succeed. Please read more about quota limits at https://docs.microsoft.com/en-us/azure/azure-supportability/per-vm-quota-requests.",
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			got, gotMsg := hasResourceQuotaExceededError(tt.err)
-			if got != tt.want {
-				t.Error(got)
-			}
-			if gotMsg != tt.wantMsg {
-				t.Error(gotMsg)
-			}
-		})
-	}
-}
-
 func TestIsDeploymentActiveError(t *testing.T) {
 	for _, tt := range []struct {
 		name string
