@@ -237,7 +237,7 @@
         },
         {
             "properties": {
-                "severity": 3,
+                "severity": 2,
                 "enabled": true,
                 "scopes": [
                     "[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]"
@@ -321,7 +321,7 @@
         },
         {
             "properties": {
-                "severity": 3,
+                "severity": 2,
                 "enabled": true,
                 "scopes": [
                     "[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]"
