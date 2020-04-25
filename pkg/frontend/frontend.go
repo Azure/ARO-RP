@@ -64,7 +64,8 @@ type frontend struct {
 
 	bucketAllocator bucket.Allocator
 
-	ready atomic.Value
+	startTime time.Time
+	ready     atomic.Value
 }
 
 // Runnable represents a runnable object
@@ -88,6 +89,8 @@ func NewFrontend(ctx context.Context, baseLog *logrus.Entry, _env env.Interface,
 		ocEnricher: clusterdata.NewBestEffortEnricher(baseLog, _env, m),
 
 		bucketAllocator: &bucket.Random{},
+
+		startTime: time.Now(),
 	}
 
 	l, err := f.env.Listen()

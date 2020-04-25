@@ -32,6 +32,8 @@ type monitor struct {
 	isMaster    bool
 	bucketCount int
 	buckets     map[int]struct{}
+
+	startTime time.Time
 }
 
 type Runnable interface {
@@ -49,6 +51,8 @@ func NewMonitor(log *logrus.Entry, env env.Interface, db *database.Database, m, 
 
 		bucketCount: bucket.Buckets,
 		buckets:     map[int]struct{}{},
+
+		startTime: time.Now(),
 	}
 }
 
@@ -66,7 +70,7 @@ func (mon *monitor) Run(ctx context.Context) error {
 	t := time.NewTicker(10 * time.Second)
 	defer t.Stop()
 
-	go heartbeat.EmitHeartbeat(mon.baseLog, mon.m, "monitor.heartbeat", nil, func() bool { return true })
+	go heartbeat.EmitHeartbeat(mon.baseLog, mon.m, "monitor.heartbeat", nil, mon.checkReady)
 
 	for {
 		// register ourself as a monitor
@@ -89,4 +93,12 @@ func (mon *monitor) Run(ctx context.Context) error {
 
 		<-t.C
 	}
+}
+
+// checkReady checks the ready status of the frontend to make it consistent
+// across the /healthz/ready endpoint and emitted metrics.   We wait for 2
+// minutes before indicating health.  This ensures that there will be a gap in
+// our health metric if we crash or restart.
+func (mon *monitor) checkReady() bool {
+	return time.Now().Sub(mon.startTime) > 2*time.Minute
 }
