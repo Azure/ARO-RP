@@ -103,6 +103,10 @@ func (mon *monitor) worker(stop <-chan struct{}, delay time.Duration, id string)
 		v := mon.docs[id]
 		mon.mu.RUnlock()
 
+		if v == nil {
+			return
+		}
+
 		log = utillog.EnrichWithResourceID(log, v.doc.OpenShiftCluster.ID)
 	}
 
