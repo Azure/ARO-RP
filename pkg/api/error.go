@@ -83,6 +83,7 @@ var (
 	CloudErrorCodeForbidden                          = "Forbidden"
 	CloudErrorCodeInvalidSubscriptionState           = "InvalidSubscriptionState"
 	CloudErrorCodeInvalidServicePrincipalCredentials = "InvalidServicePrincipalCredentials"
+	CloudErrorCodeInvalidServicePrincipalClaims      = "InvalidServicePrincipalClaims"
 	CloudErrorCodeInvalidResourceProviderPermissions = "InvalidResourceProviderPermissions"
 	CloudErrorCodeInvalidServicePrincipalPermissions = "InvalidServicePrincipalPermissions"
 	CloudErrorCodeInvalidLocation                    = "InvalidLocation"

@@ -17,7 +17,6 @@ import (
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/installconfig"
@@ -30,6 +29,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
@@ -94,31 +94,7 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 	{
 		spp := &i.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
 
-		conf := auth.NewClientCredentialsConfig(spp.ClientID, string(spp.ClientSecret), spp.TenantID)
-		conf.Resource = azure.PublicCloud.GraphEndpoint
-
-		token, err := conf.ServicePrincipalToken()
-		if err != nil {
-			return err
-		}
-
-		timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
-		defer cancel()
-
-		// get a token, retrying only on AADSTS700016 errors (slow AAD
-		// propagation).
-		err = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-			err = token.RefreshWithContext(ctx)
-			switch {
-			case err == nil:
-				return true, nil
-			case strings.Contains(err.Error(), "AADSTS700016"):
-				i.log.Print(err)
-				return false, nil
-			default:
-				return false, err
-			}
-		}, timeoutCtx.Done())
+		token, err := aad.GetToken(ctx, i.log, i.doc.OpenShiftCluster, azure.PublicCloud.GraphEndpoint)
 		if err != nil {
 			return err
 		}
