@@ -98,8 +98,8 @@ func (mon *Monitor) Monitor(ctx context.Context) {
 	// If API is not returning 200, don't need to run the next checks
 	statusCode, err := mon.emitAPIServerHealthzCode()
 	if err != nil {
-		mon.log.Error(err)
-		return
+		mon.log.Printf("%s: %s", runtime.FuncForPC(reflect.ValueOf(mon.emitAPIServerHealthzCode).Pointer()).Name(), err)
+		mon.emitGauge("monitor.clustererrors", 1, map[string]string{"monitor": runtime.FuncForPC(reflect.ValueOf(mon.emitAPIServerHealthzCode).Pointer()).Name()})
 	}
 	if statusCode != http.StatusOK {
 		return
