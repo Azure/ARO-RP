@@ -108,7 +108,7 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 		// get a token, retrying only on AADSTS700016 errors (slow AAD
 		// propagation).
 		err = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-			err = token.EnsureFresh()
+			err = token.RefreshWithContext(ctx)
 			switch {
 			case err == nil:
 				return true, nil
