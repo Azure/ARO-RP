@@ -4,10 +4,12 @@ package main
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"crypto/tls"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 func parseTokenResponse(location string) (string, error) {
@@ -41,8 +43,8 @@ func getTokenURLFromConsoleURL(consoleURL string) (*url.URL, error) {
 	return tokenURL, nil
 }
 
-func getAuthorizedToken(tokenURL *url.URL, username, password string) (string, error) {
-	req, err := http.NewRequest("GET", tokenURL.String(), nil)
+func getAuthorizedToken(ctx context.Context, tokenURL *url.URL, username, password string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", tokenURL.String(), nil)
 	req.SetBasicAuth(username, password)
 	req.Header.Add("X-CSRF-Token", "1")
 
@@ -55,6 +57,7 @@ func getAuthorizedToken(tokenURL *url.URL, username, password string) (string, e
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
+		Timeout: 10 * time.Second,
 	}
 
 	resp, err := cli.Do(req)
