@@ -1,0 +1,65 @@
+# Running RP e2e and Billing e2e in all supported regions
+variables:
+  - template: vars.yml
+stages:
+  - stage: Low_Traffic_Region
+    displayName: Low traffic sector
+    dependsOn: []
+    jobs:
+      - template: ./templates/template-rp-and-billing-e2e.yml
+        parameters:
+          e2e_subscription: $(e2e-subscription)
+          aro_v4_e2e_devops_spn: $(aro-v4-e2e-devops-spn)
+          billingE2EPipelineName: $(BillingE2EPipelineName)
+          billingE2EBranchName: $(BillingE2EBranchName)
+          gobin: ${{ variables.GOBIN }}
+          gopath: ${{ variables.GOPATH }}
+          goroot: ${{ variables.GOROOT }}
+          modulePath: ${{ variables.modulePath }}
+          locations:
+          - australiaeast
+          - southeastasia
+  - stage: Europe_Sector
+    displayName: Europe sector
+    dependsOn: US_Sector
+    jobs:
+      - template: ./templates/template-rp-and-billing-e2e.yml
+        parameters:
+          e2e_subscription: $(e2e-subscription)
+          aro_v4_e2e_devops_spn: $(aro-v4-e2e-devops-spn)
+          billingE2EPipelineName: $(BillingE2EPipelineName)
+          billingE2EBranchName: $(BillingE2EBranchName)
+          gobin: ${{ variables.GOBIN }}
+          gopath: ${{ variables.GOPATH }}
+          goroot: ${{ variables.GOROOT }}
+          modulePath: ${{ variables.modulePath }}
+          locations:
+          - westeurope
+          - northeurope
+          - uksouth
+  - stage: US_Sector
+    displayName: US sector
+    dependsOn:  Low_Traffic_Region
+    jobs:
+      - template: ./templates/template-rp-and-billing-e2e.yml
+        parameters:
+          e2e_subscription: $(e2e-subscription)
+          aro_v4_e2e_devops_spn: $(aro-v4-e2e-devops-spn)
+          billingE2EPipelineName: $(BillingE2EPipelineName)
+          billingE2EBranchName: $(BillingE2EBranchName)
+          gobin: ${{ variables.GOBIN }}
+          gopath: ${{ variables.GOPATH }}
+          goroot: ${{ variables.GOROOT }}
+          modulePath: ${{ variables.modulePath }}
+          locations:
+          - eastus
+          - eastus2
+          - southcentralus
+          - westus2
+  - stage: Summary
+    displayName: E2E Summary
+    dependsOn: 
+    - Europe_Sector
+    - US_Sector
+    - Low_Traffic_Region
+    # Send summary or may be trigger ICM on failure?

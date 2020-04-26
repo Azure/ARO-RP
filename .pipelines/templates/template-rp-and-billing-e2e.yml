@@ -1,0 +1,76 @@
+# Azure DevOps Pipeline running RP e2e and Billing e2e
+
+parameters:
+  location: ""
+  e2e_subscription: ""
+  aro_v4_e2e_devops_spn: ""
+  billingE2EPipelineName: ""
+  billingE2EBranchName: ""
+  gobin: ""
+  gopath: ""
+  goroot: ""
+  modulePath: ""
+  locations: []
+
+jobs:
+  - ${{ each location in  parameters.locations }}:
+    - job: ${{ location }}_RP_E2E_Job
+      displayName: ${{ location }} RP E2E Job
+      timeoutInMinutes: 120
+      pool:
+          name: ARO-E2E
+      steps:
+      - template: ./template-prod-e2e-steps.yml
+        parameters:
+          gobin: ${{ parameters.GOBIN }}
+          gopath: ${{ parameters.GOPATH }}
+          goroot: ${{ parameters.GOROOT }}
+          workingDirectory: ${{ parameters.modulePath }}
+          location: ${{ location }}
+          subscription: ${{ parameters.e2e_subscription }}
+          azureDevOpsE2EJSONSPN: ${{ parameters.aro_v4_e2e_devops_spn }}
+    - job: ${{ location }}_JustWait
+      displayName: Wait for billing table ready in ${{ location }}
+      timeoutInMinutes: 400
+      pool: server
+      dependsOn: ${{ location }}_RP_E2E_Job
+      steps:
+      - task: Delay@1
+        inputs:
+          delayForMinutes: '360'
+    - job: TriggerBillingE2E_Pipeline_${{ location }}
+      displayName: 'Trigger Billing E2E pipeline in ${{ location }}' 
+      dependsOn: ${{ location }}_JustWait
+      pool:
+          name: ARO-E2E
+      steps:
+      - script: |
+              # Pass variables between tasks: https://medium.com/microsoftazure/how-to-pass-variables-in-azure-pipelines-yaml-tasks-5c81c5d31763
+              echo "##vso[task.setvariable variable=REGION]${{ location }}"
+              CLUSTER="v4-e2e-V$(git log --format=%h -n 1 HEAD)"
+              echo "##vso[task.setvariable variable=CLUSTER]$CLUSTER"
+              CLUSTER_RESOURCEGROUP="v4-e2e-rg-V$(git log --format=%h -n 1 HEAD)-${{ location }}"
+              echo "##vso[task.setvariable variable=CLUSTER_RESOURCEGROUP]$CLUSTER_RESOURCEGROUP"
+              echo "E2E Cluster Resource Group Name:" $CLUSTER_RESOURCEGROUP
+              echo "E2E Cluster Name:" $CLUSTER
+        displayName: Pass variables into next Task
+      - task: TriggerBuild@3
+        inputs:
+          definitionIsInCurrentTeamProject: true
+          buildDefinition: ${{ parameters.billingE2EPipelineName }}
+          queueBuildForUserThatTriggeredBuild: true
+          ignoreSslCertificateErrors: false
+          useSameSourceVersion: false
+          useCustomSourceVersion: false
+          useSameBranch: false
+          branchToUse: ${{ parameters.billingE2EBranchName }}
+          waitForQueuedBuildsToFinish: true
+          storeInEnvironmentVariable: false
+          buildParameters: 'CLUSTER_RESOURCEGROUP:$(CLUSTER_RESOURCEGROUP), CLUSTER:$(CLUSTER), REGION:$(REGION)'
+          authenticationMethod: 'OAuth Token'
+          password: '$(System.AccessToken)'
+          enableBuildInQueueCondition: false
+          dependentOnSuccessfulBuildCondition: true
+          dependentOnFailedBuildCondition: true
+          checkbuildsoncurrentbranch: false
+          failTaskIfConditionsAreNotFulfilled: true
