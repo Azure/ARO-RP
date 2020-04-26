@@ -5,13 +5,18 @@ package frontend
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
-//checkReady checks the ready status of the frontend to make it consistent across the /healthz/ready endpoint and emited metrics
+// checkReady checks the ready status of the frontend to make it consistent
+// across the /healthz/ready endpoint and emitted metrics.   We wait for 2
+// minutes before indicating health.  This ensures that there will be a gap in
+// our health metric if we crash or restart.
 func (f *frontend) checkReady() bool {
-	return f.ready.Load().(bool) &&
+	return time.Now().Sub(f.startTime) > 2*time.Minute &&
+		f.ready.Load().(bool) &&
 		f.env.ArmClientAuthorizer().IsReady() &&
 		f.env.AdminClientAuthorizer().IsReady()
 }
