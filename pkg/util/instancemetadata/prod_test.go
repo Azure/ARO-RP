@@ -4,6 +4,7 @@ package instancemetadata
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -130,6 +131,8 @@ func TestPopulateInstanceMetadata(t *testing.T) {
 }
 
 func TestPopulateTenantIDFromMSI(t *testing.T) {
+	ctx := context.Background()
+
 	for _, tt := range []struct {
 		name         string
 		mocks        func(*mock_instancemetadata.MockServicePrincipalToken)
@@ -140,7 +143,7 @@ func TestPopulateTenantIDFromMSI(t *testing.T) {
 			name: "valid",
 			mocks: func(token *mock_instancemetadata.MockServicePrincipalToken) {
 				token.EXPECT().
-					EnsureFresh().
+					RefreshWithContext(gomock.Any()).
 					Return(nil)
 
 				token.EXPECT().
@@ -154,7 +157,7 @@ func TestPopulateTenantIDFromMSI(t *testing.T) {
 			name: "fresh error",
 			mocks: func(token *mock_instancemetadata.MockServicePrincipalToken) {
 				token.EXPECT().
-					EnsureFresh().
+					RefreshWithContext(gomock.Any()).
 					Return(fmt.Errorf("random error"))
 			},
 			wantErr: "random error",
@@ -163,7 +166,7 @@ func TestPopulateTenantIDFromMSI(t *testing.T) {
 			name: "oauthtoken invalid",
 			mocks: func(token *mock_instancemetadata.MockServicePrincipalToken) {
 				token.EXPECT().
-					EnsureFresh().
+					RefreshWithContext(gomock.Any()).
 					Return(nil)
 
 				token.EXPECT().
@@ -194,7 +197,7 @@ func TestPopulateTenantIDFromMSI(t *testing.T) {
 				},
 			}
 
-			err := p.populateTenantIDFromMSI()
+			err := p.populateTenantIDFromMSI(ctx)
 
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {

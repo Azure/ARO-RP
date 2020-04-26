@@ -5,6 +5,7 @@
 package mock_instancemetadata
 
 import (
+	context "context"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -33,20 +34,6 @@ func (m *MockServicePrincipalToken) EXPECT() *MockServicePrincipalTokenMockRecor
 	return m.recorder
 }
 
-// EnsureFresh mocks base method
-func (m *MockServicePrincipalToken) EnsureFresh() error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "EnsureFresh")
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// EnsureFresh indicates an expected call of EnsureFresh
-func (mr *MockServicePrincipalTokenMockRecorder) EnsureFresh() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureFresh", reflect.TypeOf((*MockServicePrincipalToken)(nil).EnsureFresh))
-}
-
 // OAuthToken mocks base method
 func (m *MockServicePrincipalToken) OAuthToken() string {
 	m.ctrl.T.Helper()
@@ -59,4 +46,18 @@ func (m *MockServicePrincipalToken) OAuthToken() string {
 func (mr *MockServicePrincipalTokenMockRecorder) OAuthToken() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OAuthToken", reflect.TypeOf((*MockServicePrincipalToken)(nil).OAuthToken))
+}
+
+// RefreshWithContext mocks base method
+func (m *MockServicePrincipalToken) RefreshWithContext(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RefreshWithContext", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RefreshWithContext indicates an expected call of RefreshWithContext
+func (mr *MockServicePrincipalTokenMockRecorder) RefreshWithContext(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RefreshWithContext", reflect.TypeOf((*MockServicePrincipalToken)(nil).RefreshWithContext), arg0)
 }

@@ -15,7 +15,6 @@ import (
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/apparentlymart/go-cidr/cidr"
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/sirupsen/logrus"
@@ -23,6 +22,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
@@ -111,32 +111,9 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context, oc *api
 }
 
 func (dv *openShiftClusterDynamicValidator) validateServicePrincipalProfile(ctx context.Context, oc *api.OpenShiftCluster) (autorest.Authorizer, error) {
-	spp := &oc.Properties.ServicePrincipalProfile
-	conf := auth.NewClientCredentialsConfig(spp.ClientID, string(spp.ClientSecret), spp.TenantID)
-
-	token, err := conf.ServicePrincipalToken()
+	token, err := aad.GetToken(ctx, dv.log, oc, azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
-	}
-
-	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
-	defer cancel()
-
-	// get a token, retrying only on AADSTS700016 errors (slow AAD propagation).
-	err = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-		err = token.EnsureFresh()
-		if err != nil && strings.Contains(err.Error(), "AADSTS700016") {
-			dv.log.Print(err)
-			return false, nil
-		}
-		return err == nil, err
-	}, timeoutCtx.Done())
-	if err == wait.ErrWaitTimeout {
-		return nil, err
-	}
-	if err != nil {
-		dv.log.Print(err)
-		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalCredentials, "properties.servicePrincipalProfile", "The provided service principal credentials are invalid.")
 	}
 
 	p := &jwt.Parser{}

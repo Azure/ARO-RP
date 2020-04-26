@@ -4,6 +4,7 @@ package instancemetadata
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -23,7 +24,7 @@ func (*azureClaim) Valid() error {
 }
 
 type ServicePrincipalToken interface {
-	EnsureFresh() error
+	RefreshWithContext(context.Context) error
 	OAuthToken() string
 }
 
@@ -34,7 +35,7 @@ type prod struct {
 	newServicePrincipalTokenFromMSI func(string, string) (ServicePrincipalToken, error)
 }
 
-func NewProd() (InstanceMetadata, error) {
+func NewProd(ctx context.Context) (InstanceMetadata, error) {
 	p := &prod{
 		do: http.DefaultClient.Do,
 		newServicePrincipalTokenFromMSI: func(msiEndpoint, resource string) (ServicePrincipalToken, error) {
@@ -42,7 +43,7 @@ func NewProd() (InstanceMetadata, error) {
 		},
 	}
 
-	err := p.populateTenantIDFromMSI()
+	err := p.populateTenantIDFromMSI(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +56,7 @@ func NewProd() (InstanceMetadata, error) {
 	return p, nil
 }
 
-func (p *prod) populateTenantIDFromMSI() error {
+func (p *prod) populateTenantIDFromMSI(ctx context.Context) error {
 	msiEndpoint, err := adal.GetMSIVMEndpoint()
 	if err != nil {
 		return err
@@ -66,7 +67,7 @@ func (p *prod) populateTenantIDFromMSI() error {
 		return err
 	}
 
-	err = token.EnsureFresh()
+	err = token.RefreshWithContext(ctx)
 	if err != nil {
 		return err
 	}

@@ -46,8 +46,8 @@ type refreshableAuthorizer struct {
 	sp *adal.ServicePrincipalToken
 }
 
-func (ra *refreshableAuthorizer) Refresh() error {
-	return ra.sp.Refresh()
+func (ra *refreshableAuthorizer) RefreshWithContext(ctx context.Context) error {
+	return ra.sp.RefreshWithContext(ctx)
 }
 
 type Dev interface {
@@ -274,7 +274,7 @@ func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthor
 	}
 
 	d.log.Print("development mode: refreshing authorizer")
-	return fpAuthorizer.(*refreshableAuthorizer).Refresh()
+	return fpAuthorizer.(*refreshableAuthorizer).RefreshWithContext(ctx)
 }
 
 func (d *dev) E2EStorageAccountName() string {
