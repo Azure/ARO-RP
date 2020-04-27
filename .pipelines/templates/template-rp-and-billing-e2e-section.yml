@@ -1,26 +1,26 @@
 parameters:
-    last_stage_of_previous_section: ""
-    e2e_subscription: ""
-    aro_v4_e2e_devops_spn: ""
-    billingE2EPipelineName: ""
-    billingE2EBranchName: ""
-    gobin: ""
-    gopath: ""
-    goroot: ""
-    modulePath: ""
-    locations: []
+  last_stage_of_previous_section: ''
+  e2e_subscription: ''
+  aro_v4_e2e_devops_spn: ''
+  billing_e2e_pipeline_name: ''
+  billing_e2e_branch_name: ''
+  gobin: ''
+  gopath: ''
+  goroot: ''
+  modulePath: ''
+  locations: []
 
 stages:
 - ${{ each location in  parameters.locations }}:
-    - template: ./template-rp-and-billing-e2e.yml
-      parameters:
-        signOffStage: ${{ parameters.last_stage_of_previous_section }}
-        e2e_subscription: ${{ parameters.e2e_subscription }}
-        aro_v4_e2e_devops_spn: ${{ parameters.aro_v4_e2e_devops_spn }}
-        billingE2EPipelineName: ${{ parameters.billingE2EPipelineName }}
-        billingE2EBranchName: ${{ parameters.billingE2EBranchName }}
-        gobin: ${{ parameters.gobin }}
-        gopath: ${{ parameters.gopath }}
-        goroot: ${{ parameters.goroot }}
-        modulePath: ${{ parameters.modulePath }}
-        location: ${{ location }}
+  - template: ./template-rp-and-billing-e2e.yml
+    parameters:
+      sign_off_stage: ${{ parameters.last_stage_of_previous_section }}
+      e2e_subscription: ${{ parameters.e2e_subscription }}
+      aro_v4_e2e_devops_spn: ${{ parameters.aro_v4_e2e_devops_spn }}
+      billing_e2e_pipeline_name: ${{ parameters.billing_e2e_pipeline_name }}
+      billing_e2e_branch_name: ${{ parameters.billing_e2e_branch_name }}
+      gobin: ${{ parameters.gobin }}
+      gopath: ${{ parameters.gopath }}
+      goroot: ${{ parameters.goroot }}
+      modulePath: ${{ parameters.modulePath }}
+      location: ${{ location }}

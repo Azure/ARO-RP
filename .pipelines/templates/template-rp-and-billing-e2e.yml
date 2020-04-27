@@ -1,19 +1,19 @@
 # Azure DevOps Pipeline running RP e2e and Billing e2e
 parameters:
-  signOffStage: ""
-  e2e_subscription: ""
-  aro_v4_e2e_devops_spn: ""
-  billingE2EPipelineName: ""
-  billingE2EBranchName: ""
-  gobin: ""
-  gopath: ""
-  goroot: ""
-  modulePath: ""
-  location: ""
+  sign_off_stage: ''
+  e2e_subscription: ''
+  aro_v4_e2e_devops_spn: ''
+  billing_e2e_pipeline_name: ''
+  billing_e2e_branch_name: ''
+  gobin: ''
+  gopath: ''
+  goroot: ''
+  modulePath: ''
+  location: ''
 
 stages:
 - stage: ${{ parameters.location }}_RP_E2E
-  dependsOn: ${{ parameters.signOffStage }}
+  dependsOn: ${{ parameters.sign_off_stage }}
   displayName: ${{ parameters.location }} RP E2E
   jobs:
   - job: ${{ parameters.location }}_RP_E2E_Job
@@ -23,13 +23,13 @@ stages:
     steps:
     - template: ./template-prod-e2e-steps.yml
       parameters:
-          gobin: ${{ parameters.gobin }}
-          gopath: ${{ parameters.gopath }}
-          goroot: ${{ parameters.goroot }}
-          workingDirectory: ${{ parameters.modulePath }}
-          location: ${{ parameters.location }}
-          subscription: ${{ parameters.e2e_subscription }}
-          azureDevOpsE2EJSONSPN: ${{ parameters.aro_v4_e2e_devops_spn }}
+        gobin: ${{ parameters.gobin }}
+        gopath: ${{ parameters.gopath }}
+        goroot: ${{ parameters.goroot }}
+        workingDirectory: ${{ parameters.modulePath }}
+        location: ${{ parameters.location }}
+        subscription: ${{ parameters.e2e_subscription }}
+        azureDevOpsE2EJSONSPN: ${{ parameters.aro_v4_e2e_devops_spn }}
 - stage: ${{ parameters.location }}_Delay_For_Billing_Table
   displayName: ${{ parameters.location }} wait 6 hours for billing table ready
   jobs:
@@ -44,33 +44,34 @@ stages:
   displayName: ${{ parameters.location }} Billing E2E
   jobs:
   - job: ${{ parameters.location }}_TriggerBillingBuild
-    displayName: 'Trigger Billing E2E pipeline'
+    displayName: Trigger Billing E2E pipeline
     steps:
     - script: |
-          # Pass variables between tasks: https://medium.com/microsoftazure/how-to-pass-variables-in-azure-pipelines-yaml-tasks-5c81c5d31763
-          echo "##vso[task.setvariable variable=REGION]${{ parameters.location }}"
-          CLUSTER="v4-e2e-V$(git log --format=%h -n 1 HEAD)"
-          echo "##vso[task.setvariable variable=CLUSTER]$CLUSTER"
-          CLUSTER_RESOURCEGROUP="v4-e2e-rg-V$(git log --format=%h -n 1 HEAD)-${{ parameters.location }}"
-          echo "##vso[task.setvariable variable=CLUSTER_RESOURCEGROUP]$CLUSTER_RESOURCEGROUP"
-          echo "E2E Cluster Resource Group Name:" $CLUSTER_RESOURCEGROUP
-          echo "E2E Cluster Name:" $CLUSTER
+        # Pass variables between tasks: https://medium.com/microsoftazure/how-to-pass-variables-in-azure-pipelines-yaml-tasks-5c81c5d31763
+        echo "##vso[task.setvariable variable=REGION]${{ parameters.location }}"
+        CLUSTER="v4-e2e-V$(git log --format=%h -n 1 HEAD)"
+        echo "##vso[task.setvariable variable=CLUSTER]$CLUSTER"
+        CLUSTER_RESOURCEGROUP="v4-e2e-rg-V$(git log --format=%h -n 1 HEAD)-${{ parameters.location }}"
+        echo "##vso[task.setvariable variable=CLUSTER_RESOURCEGROUP]$CLUSTER_RESOURCEGROUP"
+        echo "E2E Cluster Resource Group Name:" $CLUSTER_RESOURCEGROUP
+        echo "E2E Cluster Name:" $CLUSTER
       displayName: Pass variables into next Task
     - task: TriggerBuild@3
       inputs:
         definitionIsInCurrentTeamProject: true
-        buildDefinition: ${{ parameters.BillingE2EPipelineName }}
+        buildDefinition: ${{ parameters.billing_e2e_pipeline_name }}
         queueBuildForUserThatTriggeredBuild: true
         ignoreSslCertificateErrors: false
         useSameSourceVersion: false
         useCustomSourceVersion: false
         useSameBranch: false
-        branchToUse: ${{ parameters.BillingE2EBranchName }}
+        branchToUse: ${{ parameters.billing_e2e_branch_name }}
         waitForQueuedBuildsToFinish: true
         storeInEnvironmentVariable: false
-        buildParameters: 'CLUSTER_RESOURCEGROUP:$(CLUSTER_RESOURCEGROUP), CLUSTER:$(CLUSTER), REGION:$(REGION)'
-        authenticationMethod: 'OAuth Token'
-        password: '$(System.AccessToken)'
+        buildParameters: CLUSTER_RESOURCEGROUP:$(CLUSTER_RESOURCEGROUP), CLUSTER:$(CLUSTER),
+          REGION:$(REGION)
+        authenticationMethod: OAuth Token
+        password: $(System.AccessToken)
         enableBuildInQueueCondition: false
         dependentOnSuccessfulBuildCondition: true
         dependentOnFailedBuildCondition: true
