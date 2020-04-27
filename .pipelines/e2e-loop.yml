@@ -1,0 +1,366 @@
+pr: none
+trigger: none
+
+variables:
+- template: vars.yml
+
+jobs:
+- job: E2E_1
+  condition: succeededOrFailed()
+  dependsOn: []
+  pool:
+    vmImage: ubuntu-latest
+  timeoutInMinutes: 120
+  strategy:
+    matrix:
+      australiaeast:
+        location: australiaeast
+      eastus:
+        location: eastus
+      eastus2:
+        location: eastus2
+      southeastasia:
+        location: southeastasia
+      southcentralus:
+        location: southcentralus
+      northeurope:
+        location: northeurope
+      uksouth:
+        location: uksouth
+      westeurope:
+        location: westeurope
+
+  steps:
+  - template: ./templates/template-prod-e2e-steps.yml
+    parameters:
+      gobin: ${{ variables.GOBIN }}
+      gopath: ${{ variables.GOPATH }}
+      goroot: ${{ variables.GOROOT }}
+      workingDirectory: ${{ variables.modulePath }}
+      location: $(location)
+      subscription: $(e2e-subscription)
+      azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
+
+- job: E2E_2
+  condition: succeededOrFailed()
+  dependsOn: [E2E_1]
+  pool:
+    vmImage: ubuntu-latest
+  timeoutInMinutes: 120
+  strategy:
+    matrix:
+      australiaeast:
+        location: australiaeast
+      eastus:
+        location: eastus
+      eastus2:
+        location: eastus2
+      southeastasia:
+        location: southeastasia
+      southcentralus:
+        location: southcentralus
+      northeurope:
+        location: northeurope
+      uksouth:
+        location: uksouth
+      westeurope:
+        location: westeurope
+
+  steps:
+  - template: ./templates/template-prod-e2e-steps.yml
+    parameters:
+      gobin: ${{ variables.GOBIN }}
+      gopath: ${{ variables.GOPATH }}
+      goroot: ${{ variables.GOROOT }}
+      workingDirectory: ${{ variables.modulePath }}
+      location: $(location)
+      subscription: $(e2e-subscription)
+      azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
+
+- job: E2E_3
+  condition: succeededOrFailed()
+  dependsOn: [E2E_2]
+  pool:
+    vmImage: ubuntu-latest
+  timeoutInMinutes: 120
+  strategy:
+    matrix:
+      australiaeast:
+        location: australiaeast
+      eastus:
+        location: eastus
+      eastus2:
+        location: eastus2
+      southeastasia:
+        location: southeastasia
+      southcentralus:
+        location: southcentralus
+      northeurope:
+        location: northeurope
+      uksouth:
+        location: uksouth
+      westeurope:
+        location: westeurope
+
+  steps:
+  - template: ./templates/template-prod-e2e-steps.yml
+    parameters:
+      gobin: ${{ variables.GOBIN }}
+      gopath: ${{ variables.GOPATH }}
+      goroot: ${{ variables.GOROOT }}
+      workingDirectory: ${{ variables.modulePath }}
+      location: $(location)
+      subscription: $(e2e-subscription)
+      azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
+
+- job: E2E_4
+  condition: succeededOrFailed()
+  dependsOn: [E2E_3]
+  pool:
+    vmImage: ubuntu-latest
+  timeoutInMinutes: 120
+  strategy:
+    matrix:
+      australiaeast:
+        location: australiaeast
+      eastus:
+        location: eastus
+      eastus2:
+        location: eastus2
+      southeastasia:
+        location: southeastasia
+      southcentralus:
+        location: southcentralus
+      northeurope:
+        location: northeurope
+      uksouth:
+        location: uksouth
+      westeurope:
+        location: westeurope
+
+  steps:
+  - template: ./templates/template-prod-e2e-steps.yml
+    parameters:
+      gobin: ${{ variables.GOBIN }}
+      gopath: ${{ variables.GOPATH }}
+      goroot: ${{ variables.GOROOT }}
+      workingDirectory: ${{ variables.modulePath }}
+      location: $(location)
+      subscription: $(e2e-subscription)
+      azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
+
+- job: E2E_5
+  condition: succeededOrFailed()
+  dependsOn: [E2E_4]
+  pool:
+    vmImage: ubuntu-latest
+  timeoutInMinutes: 120
+  strategy:
+    matrix:
+      australiaeast:
+        location: australiaeast
+      eastus:
+        location: eastus
+      eastus2:
+        location: eastus2
+      southeastasia:
+        location: southeastasia
+      southcentralus:
+        location: southcentralus
+      northeurope:
+        location: northeurope
+      uksouth:
+        location: uksouth
+      westeurope:
+        location: westeurope
+
+  steps:
+  - template: ./templates/template-prod-e2e-steps.yml
+    parameters:
+      gobin: ${{ variables.GOBIN }}
+      gopath: ${{ variables.GOPATH }}
+      goroot: ${{ variables.GOROOT }}
+      workingDirectory: ${{ variables.modulePath }}
+      location: $(location)
+      subscription: $(e2e-subscription)
+      azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
+
+- job: E2E_6
+  condition: succeededOrFailed()
+  dependsOn: [E2E_5]
+  pool:
+    vmImage: ubuntu-latest
+  timeoutInMinutes: 120
+  strategy:
+    matrix:
+      australiaeast:
+        location: australiaeast
+      eastus:
+        location: eastus
+      eastus2:
+        location: eastus2
+      southeastasia:
+        location: southeastasia
+      southcentralus:
+        location: southcentralus
+      northeurope:
+        location: northeurope
+      uksouth:
+        location: uksouth
+      westeurope:
+        location: westeurope
+
+  steps:
+  - template: ./templates/template-prod-e2e-steps.yml
+    parameters:
+      gobin: ${{ variables.GOBIN }}
+      gopath: ${{ variables.GOPATH }}
+      goroot: ${{ variables.GOROOT }}
+      workingDirectory: ${{ variables.modulePath }}
+      location: $(location)
+      subscription: $(e2e-subscription)
+      azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
+
+- job: E2E_7
+  condition: succeededOrFailed()
+  dependsOn: [E2E_6]
+  pool:
+    vmImage: ubuntu-latest
+  timeoutInMinutes: 120
+  strategy:
+    matrix:
+      australiaeast:
+        location: australiaeast
+      eastus:
+        location: eastus
+      eastus2:
+        location: eastus2
+      southeastasia:
+        location: southeastasia
+      southcentralus:
+        location: southcentralus
+      northeurope:
+        location: northeurope
+      uksouth:
+        location: uksouth
+      westeurope:
+        location: westeurope
+
+  steps:
+  - template: ./templates/template-prod-e2e-steps.yml
+    parameters:
+      gobin: ${{ variables.GOBIN }}
+      gopath: ${{ variables.GOPATH }}
+      goroot: ${{ variables.GOROOT }}
+      workingDirectory: ${{ variables.modulePath }}
+      location: $(location)
+      subscription: $(e2e-subscription)
+      azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
+
+- job: E2E_8
+  condition: succeededOrFailed()
+  dependsOn: [E2E_7]
+  pool:
+    vmImage: ubuntu-latest
+  timeoutInMinutes: 120
+  strategy:
+    matrix:
+      australiaeast:
+        location: australiaeast
+      eastus:
+        location: eastus
+      eastus2:
+        location: eastus2
+      southeastasia:
+        location: southeastasia
+      southcentralus:
+        location: southcentralus
+      northeurope:
+        location: northeurope
+      uksouth:
+        location: uksouth
+      westeurope:
+        location: westeurope
+
+  steps:
+  - template: ./templates/template-prod-e2e-steps.yml
+    parameters:
+      gobin: ${{ variables.GOBIN }}
+      gopath: ${{ variables.GOPATH }}
+      goroot: ${{ variables.GOROOT }}
+      workingDirectory: ${{ variables.modulePath }}
+      location: $(location)
+      subscription: $(e2e-subscription)
+      azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
+
+- job: E2E_9
+  condition: succeededOrFailed()
+  dependsOn: [E2E_8]
+  pool:
+    vmImage: ubuntu-latest
+  timeoutInMinutes: 120
+  strategy:
+    matrix:
+      australiaeast:
+        location: australiaeast
+      eastus:
+        location: eastus
+      eastus2:
+        location: eastus2
+      southeastasia:
+        location: southeastasia
+      southcentralus:
+        location: southcentralus
+      northeurope:
+        location: northeurope
+      uksouth:
+        location: uksouth
+      westeurope:
+        location: westeurope
+
+  steps:
+  - template: ./templates/template-prod-e2e-steps.yml
+    parameters:
+      gobin: ${{ variables.GOBIN }}
+      gopath: ${{ variables.GOPATH }}
+      goroot: ${{ variables.GOROOT }}
+      workingDirectory: ${{ variables.modulePath }}
+      location: $(location)
+      subscription: $(e2e-subscription)
+      azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
+
+- job: E2E_10
+  condition: succeededOrFailed()
+  dependsOn: [E2E_9]
+  pool:
+    vmImage: ubuntu-latest
+  timeoutInMinutes: 120
+  strategy:
+    matrix:
+      australiaeast:
+        location: australiaeast
+      eastus:
+        location: eastus
+      eastus2:
+        location: eastus2
+      southeastasia:
+        location: southeastasia
+      southcentralus:
+        location: southcentralus
+      northeurope:
+        location: northeurope
+      uksouth:
+        location: uksouth
+      westeurope:
+        location: westeurope
+
+  steps:
+  - template: ./templates/template-prod-e2e-steps.yml
+    parameters:
+      gobin: ${{ variables.GOBIN }}
+      gopath: ${{ variables.GOPATH }}
+      goroot: ${{ variables.GOROOT }}
+      workingDirectory: ${{ variables.modulePath }}
+      location: $(location)
+      subscription: $(e2e-subscription)
+      azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
