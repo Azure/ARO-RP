@@ -476,6 +476,20 @@ func (m *MockSubscriptions) EXPECT() *MockSubscriptionsMockRecorder {
 	return m.recorder
 }
 
+// ChangeFeed mocks base method
+func (m *MockSubscriptions) ChangeFeed() cosmosdb.SubscriptionDocumentIterator {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ChangeFeed")
+	ret0, _ := ret[0].(cosmosdb.SubscriptionDocumentIterator)
+	return ret0
+}
+
+// ChangeFeed indicates an expected call of ChangeFeed
+func (mr *MockSubscriptionsMockRecorder) ChangeFeed() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ChangeFeed", reflect.TypeOf((*MockSubscriptions)(nil).ChangeFeed))
+}
+
 // Create mocks base method
 func (m *MockSubscriptions) Create(arg0 context.Context, arg1 *api.SubscriptionDocument) (*api.SubscriptionDocument, error) {
 	m.ctrl.T.Helper()

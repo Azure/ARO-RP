@@ -23,6 +23,7 @@ type Subscriptions interface {
 	Create(context.Context, *api.SubscriptionDocument) (*api.SubscriptionDocument, error)
 	Get(context.Context, string) (*api.SubscriptionDocument, error)
 	Update(context.Context, *api.SubscriptionDocument) (*api.SubscriptionDocument, error)
+	ChangeFeed() cosmosdb.SubscriptionDocumentIterator
 	Dequeue(context.Context) (*api.SubscriptionDocument, error)
 	Lease(context.Context, string) (*api.SubscriptionDocument, error)
 	EndLease(context.Context, string, bool, bool) (*api.SubscriptionDocument, error)
@@ -136,6 +137,10 @@ func (c *subscriptions) update(ctx context.Context, doc *api.SubscriptionDocumen
 	}
 
 	return c.c.Replace(ctx, doc.ID, doc, options)
+}
+
+func (c *subscriptions) ChangeFeed() cosmosdb.SubscriptionDocumentIterator {
+	return c.c.ChangeFeed(nil)
 }
 
 func (c *subscriptions) Dequeue(ctx context.Context) (*api.SubscriptionDocument, error) {
