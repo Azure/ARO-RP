@@ -1,0 +1,96 @@
+# Azure DevOps Pipeline running RP e2e and Billing e2e in all supported regions
+variables:
+  - template: vars.yml
+stages:
+  - stage: Sign_Off_Stage
+    displayName: Sign Off
+    dependsOn: []
+    jobs:
+    - job: Sign_off_job
+      pool:
+        name: ARO-E2E
+      steps:
+      - script: echo "Kick off E2E"
+  - template: ./templates/template-rp-and-billing-e2e-section.yml
+    parameters:
+      last_stage_of_previous_section: Sign_Off_Stage
+      e2e_subscription: $(e2e-subscription)
+      aro_v4_e2e_devops_spn: $(aro-v4-e2e-devops-spn)
+      billingE2EPipelineName: $(BillingE2EPipelineName)
+      billingE2EBranchName: $(BillingE2EBranchName)
+      gobin: ${{ variables.GOBIN }}
+      gopath: ${{ variables.GOPATH }}
+      goroot: ${{ variables.GOROOT }}
+      modulePath: ${{ variables.modulePath }}
+      locations:
+      - australiaeast
+      - southeastasia
+      - southafricanorth
+  - stage: Low_traffic_section_Summary
+    displayName: Low Traffic Section Summary
+    dependsOn:
+      - australiaeast_Billing_E2E
+      - southeastasia_Billing_E2E
+      - southafricanorth_Billing_E2E
+    jobs:
+    - job: Summary
+      pool:
+        name: ARO-E2E
+      steps:
+      - script: echo "Low_traffic_section_Summary -- TODO -- Send notification?."
+  - template: ./templates/template-rp-and-billing-e2e-section.yml
+    parameters:
+      last_stage_of_previous_section: Low_traffic_section_Summary
+      e2e_subscription: $(e2e-subscription)
+      aro_v4_e2e_devops_spn: $(aro-v4-e2e-devops-spn)
+      billingE2EPipelineName: $(BillingE2EPipelineName)
+      billingE2EBranchName: $(BillingE2EBranchName)
+      gobin: ${{ variables.GOBIN }}
+      gopath: ${{ variables.GOPATH }}
+      goroot: ${{ variables.GOROOT }}
+      modulePath: ${{ variables.modulePath }}
+      locations:
+      - westeurope
+      - northeurope
+      - uksouth
+  - stage: Europe_Section_Summary
+    displayName: Europe Section Summary
+    dependsOn:
+      - westeurope_Billing_E2E
+      - northeurope_Billing_E2E
+      - uksouth_Billing_E2E
+    jobs:
+    - job: Summary
+      pool:
+        name: ARO-E2E
+      steps:
+      - script: echo "Europe_Section_Summary -- TODO -- Send notification?."
+  - template: ./templates/template-rp-and-billing-e2e-section.yml
+    parameters:
+      last_stage_of_previous_section: Europe_Section_Summary
+      e2e_subscription: $(e2e-subscription)
+      aro_v4_e2e_devops_spn: $(aro-v4-e2e-devops-spn)
+      billingE2EPipelineName: $(BillingE2EPipelineName)
+      billingE2EBranchName: $(BillingE2EBranchName)
+      gobin: ${{ variables.GOBIN }}
+      gopath: ${{ variables.GOPATH }}
+      goroot: ${{ variables.GOROOT }}
+      modulePath: ${{ variables.modulePath }}
+      locations:
+      - eastus
+      - eastus2
+      - southcentralus
+      - westus2
+  - stage: US_Section_Summary
+    displayName: US Section Summary
+    dependsOn:
+      - eastus_Billing_E2E
+      - eastus2_Billing_E2E
+      - southcentralus_Billing_E2E
+      - westus2_Billing_E2E
+    jobs:
+    - job: Summary
+      pool:
+        name: ARO-E2E
+      steps:
+      - script: echo "US_Section_Summary -- TODO -- Send notification?."
