@@ -34,7 +34,7 @@ const (
 	kubeServiceAccount = "system:serviceaccount:" + kubeNamespace + ":geneva"
 
 	fluentbitImageFormat = "%s.azurecr.io/fluentbit:1.3.9-1"
-	mdsdImageFormat      = "%s.azurecr.io/genevamdsd:master_266"
+	mdsdImageFormat      = "%s.azurecr.io/genevamdsd:master_279"
 
 	parsersConf = `
 [PARSER]
