@@ -108,6 +108,7 @@ func (mon *Monitor) Monitor(ctx context.Context) {
 	for _, f := range []func(context.Context) error{
 		mon.emitClusterOperatorConditions,
 		mon.emitClusterOperatorVersions,
+		mon.emitClusterVersionConditions,
 		mon.emitClusterVersions,
 		mon.emitDaemonsetStatuses,
 		mon.emitDeploymentStatuses,
