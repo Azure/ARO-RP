@@ -150,6 +150,7 @@ func (dv *openShiftClusterDynamicValidator) validateVnetPermissions(ctx context.
 		permissions, err := client.ListForResource(ctx, r.ResourceGroup, r.Provider, r.ResourceType, "", r.ResourceName)
 		if detailedErr, ok := err.(autorest.DetailedError); ok &&
 			detailedErr.StatusCode == http.StatusForbidden {
+			dv.log.Print(err)
 			return false, nil
 		}
 		if err != nil {
