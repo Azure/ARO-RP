@@ -8,15 +8,18 @@ import (
 	"encoding/json"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
+	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
-func writeKubeconfig(ctx context.Context, resourceID string) error {
+func writeKubeconfig(ctx context.Context, log *logrus.Entry, resourceID string) error {
 	res, err := azure.ParseResourceID(resourceID)
 	if err != nil {
 		return err
@@ -44,7 +47,20 @@ func writeKubeconfig(ctx context.Context, resourceID string) error {
 		return err
 	}
 
-	token, err := getAuthorizedToken(tokenURL, *creds.KubeadminUsername, *creds.KubeadminPassword)
+	var token string
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, time.Minute)
+	defer cancel()
+
+	err = wait.PollImmediateUntil(time.Second, func() (bool, error) {
+		token, err = getAuthorizedToken(ctx, tokenURL, *creds.KubeadminUsername, *creds.KubeadminPassword)
+		if err != nil {
+			log.Print(err)
+			return false, nil
+		}
+
+		return true, nil
+	}, timeoutCtx.Done())
 	if err != nil {
 		return err
 	}
@@ -64,7 +80,7 @@ func main() {
 		log.Fatalf("usage: %s resourceid\n", os.Args[0])
 	}
 
-	err := writeKubeconfig(ctx, os.Args[1])
+	err := writeKubeconfig(ctx, log, os.Args[1])
 	if err != nil {
 		log.Fatal(err)
 	}
