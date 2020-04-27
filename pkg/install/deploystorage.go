@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	azgraphrbac "github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -103,12 +104,28 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 
 		applications := graphrbac.NewApplicationsClient(spp.TenantID, spGraphAuthorizer)
 
-		res, err := applications.GetServicePrincipalsIDByAppID(ctx, spp.ClientID)
+		timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+		defer cancel()
+		// NOTE: Do not override err with the error returned by wait.PollImmediateUntil.
+		// Doing this will not propagate the latest error to the user in case when wait exceeds the timeout
+		wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+			var res azgraphrbac.ServicePrincipalObjectResult
+			res, err = applications.GetServicePrincipalsIDByAppID(ctx, spp.ClientID)
+			if err != nil {
+				if strings.Contains(err.Error(), "Authorization_IdentityNotFound") {
+					i.log.Info(err)
+					return false, nil
+				}
+
+				return false, err
+			}
+
+			clusterSPObjectID = *res.Value
+			return true, nil
+		}, timeoutCtx.Done())
 		if err != nil {
 			return err
 		}
-
-		clusterSPObjectID = *res.Value
 	}
 
 	t := &arm.Template{
