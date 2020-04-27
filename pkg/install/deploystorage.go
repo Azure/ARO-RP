@@ -348,7 +348,24 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 			ID: to.StringPtr(nsgID),
 		}
 
-		err = i.subnet.CreateOrUpdate(ctx, subnetID, s)
+		timeoutCtx, cancel = context.WithTimeout(ctx, 10*time.Minute)
+		defer cancel()
+
+		wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+			err = i.subnet.CreateOrUpdate(ctx, subnetID, s)
+
+			if err != nil {
+				if hasLinkedAuthorizationFailedError(err) {
+					i.log.Print(err)
+				}
+				// Retry until timeout. `err` is declared outside of PollImmediateUntil,
+				// so most recent error will be returned after timeout.
+				return false, nil
+			}
+
+			return true, nil
+		}, timeoutCtx.Done())
+
 		if err != nil {
 			return err
 		}

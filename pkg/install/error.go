@@ -43,6 +43,37 @@ func hasAuthorizationFailedError(err error) bool {
 	return false
 }
 
+// hasLinkedAuthorizationFailedError returns true it the error is, or contains, a
+// LinkedAuthorizationFailed error
+func hasLinkedAuthorizationFailedError(err error) bool {
+	if detailedErr, ok := err.(autorest.DetailedError); ok {
+		if serviceErr, ok := detailedErr.Original.(*azure.ServiceError); ok {
+			if serviceErr.Code == "LinkedAuthorizationFailed" {
+				return true
+			}
+		}
+	}
+
+	if serviceErr, ok := err.(*azure.ServiceError); ok &&
+		serviceErr.Code == "DeploymentFailed" {
+		for _, d := range serviceErr.Details {
+			if code, ok := d["code"].(string); ok &&
+				code == "Forbidden" {
+				if message, ok := d["message"].(string); ok {
+					var ce *api.CloudError
+					if json.Unmarshal([]byte(message), &ce) == nil &&
+						ce.CloudErrorBody != nil &&
+						ce.CloudErrorBody.Code == "LinkedAuthorizationFailed" {
+						return true
+					}
+				}
+			}
+		}
+	}
+
+	return false
+}
+
 // isDeploymentActiveError returns true it the error is a DeploymentActive error
 func isDeploymentActiveError(err error) bool {
 	if detailedErr, ok := err.(autorest.DetailedError); ok {

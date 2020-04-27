@@ -7,6 +7,10 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
+
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
@@ -88,7 +92,30 @@ func (dv *openShiftClusterDynamicValidator) validateQuotas(ctx context.Context, 
 		addRequiredResources(requiredResources, w.VMSize, w.Count)
 	}
 
-	usages, err := uc.List(ctx, oc.Location)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	defer cancel()
+
+	var usages []mgmtcompute.Usage
+	var err error
+	wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+		usages, err = uc.List(ctx, oc.Location)
+
+		if err != nil {
+			if hasAuthorizationFailedError(err) {
+				dv.log.Print(err)
+			}
+			// Retry until timeout. `err` is declared outside of PollImmediateUntil,
+			// so most recent error will be returned after timeout.
+			return false, nil
+		}
+
+		return true, nil
+	}, timeoutCtx.Done())
+
+	if err != nil {
+		return err
+	}
+
 	if err != nil {
 		return err
 	}
