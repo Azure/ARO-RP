@@ -194,12 +194,14 @@ def validate_vnet_resource_group_name(namespace):
 
 
 def validate_worker_count(namespace):
-    if namespace.worker_count < 3:
-        raise CLIError(
-            '--worker-count must be greater than or equal to 3.')
+    if namespace.worker_count:
+        if namespace.worker_count < 3:
+            raise CLIError(
+                '--worker-count must be greater than or equal to 3.')
 
 
 def validate_worker_vm_disk_size_gb(namespace):
-    if namespace.worker_vm_disk_size_gb < 128:
-        raise CLIError(
-            '--worker_vm_disk_size_gb must be greater than or equal to 128.')
+    if namespace.worker_vm_disk_size_gb:
+        if namespace.worker_vm_disk_size_gb < 128:
+            raise CLIError(
+                '--worker_vm_disk_size_gb must be greater than or equal to 128.')
