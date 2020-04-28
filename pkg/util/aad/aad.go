@@ -38,7 +38,7 @@ import (
 // tenant."`.  I think this can be returned when the service principal
 // associated with the application hasn't yet caught up with the application
 // itself.
-func GetToken(ctx context.Context, log *logrus.Entry, oc *api.OpenShiftCluster, resource string) (*adal.ServicePrincipalToken, error) {
+func GetToken(ctx context.Context, log *logrus.Entry, oc *api.OpenShiftCluster, resource string, retry bool) (*adal.ServicePrincipalToken, error) {
 	spp := &oc.Properties.ServicePrincipalProfile
 
 	conf := auth.NewClientCredentialsConfig(spp.ClientID, string(spp.ClientSecret), spp.TenantID)
@@ -49,12 +49,7 @@ func GetToken(ctx context.Context, log *logrus.Entry, oc *api.OpenShiftCluster, 
 		return nil, err
 	}
 
-	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
-	defer cancel()
-
-	// NOTE: Do not override err with the error returned by wait.PollImmediateUntil.
-	// Doing this will not propagate the latest error to the user in case when wait exceeds the timeout
-	wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+	f := func() (bool, error) {
 		err = token.RefreshWithContext(ctx)
 		if err != nil {
 			isAADSTS700016 := strings.Contains(err.Error(), "AADSTS700016")
@@ -90,10 +85,17 @@ func GetToken(ctx context.Context, log *logrus.Entry, oc *api.OpenShiftCluster, 
 		err = api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalClaims, "properties.servicePrincipalProfile", "The provided service principal does not give an access token with at least one of the claims 'altsecid', 'oid' or 'puid'.")
 
 		return false, nil
-	}, timeoutCtx.Done())
-	if err != nil {
-		return nil, err
 	}
 
-	return token, nil
+	// NOTE: Do not override err with the error returned by wait.PollImmediateUntil.
+	// Doing this will not propagate the latest error to the user in case when wait exceeds the timeout
+	if retry {
+		timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+		defer cancel()
+		wait.PollImmediateUntil(10*time.Second, f, timeoutCtx.Done())
+	} else {
+		// if no retry is requested we just execute auth retry
+		f()
+	}
+	return token, err
 }

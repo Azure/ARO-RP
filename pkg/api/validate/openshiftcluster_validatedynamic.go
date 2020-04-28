@@ -111,7 +111,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context, oc *api
 }
 
 func (dv *openShiftClusterDynamicValidator) validateServicePrincipalProfile(ctx context.Context, oc *api.OpenShiftCluster) (autorest.Authorizer, error) {
-	token, err := aad.GetToken(ctx, dv.log, oc, azure.PublicCloud.ResourceManagerEndpoint)
+	token, err := aad.GetToken(ctx, dv.log, oc, azure.PublicCloud.ResourceManagerEndpoint, true)
 	if err != nil {
 		return nil, err
 	}

@@ -117,6 +117,7 @@ func (mon *Monitor) Monitor(ctx context.Context) {
 		mon.emitPodConditions,
 		mon.emitReplicasetStatuses,
 		mon.emitStatefulsetStatuses,
+		mon.emitTokenVerify,
 		mon.emitPrometheusAlerts, // at the end for now because it's the slowest/least reliable
 	} {
 		err = f(ctx)
