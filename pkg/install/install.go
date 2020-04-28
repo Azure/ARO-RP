@@ -168,6 +168,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			action(i.removeBootstrap),
 			action(i.removeBootstrapIgnition),
 			action(i.configureAPIServerCertificate),
+			action(i.fixLBProbes),
 			condition{i.apiServersReady, 30 * time.Minute},
 			condition{i.operatorConsoleExists, 30 * time.Minute},
 			action(i.updateConsoleBranding),

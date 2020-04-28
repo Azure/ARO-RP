@@ -13,6 +13,7 @@ import (
 // LoadBalancersClient is a minimal interface for Azure LoadBalancersClient
 type LoadBalancersClient interface {
 	Get(ctx context.Context, resourceGroupName string, loadBalancerName string, expand string) (result mgmtnetwork.LoadBalancer, err error)
+	LoadBalancersClientAddons
 }
 
 type loadBalancersClient struct {
