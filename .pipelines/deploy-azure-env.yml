@@ -4,15 +4,11 @@ pr: none
 
 parameters:
 - name: location
-- name: environment
-  values:
-  - RP-INT
-  - RP-Prod
 
 jobs:
 - template: ./templates/template-job-deploy-azure-env.yml
   parameters:
-    environment: ${{ parameters.environment }}
+    environment: RP-Prod
     locations:
     - ${{ parameters.location }}
     configFileName: $(config-file-name)
