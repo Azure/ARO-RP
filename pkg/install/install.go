@@ -149,6 +149,7 @@ func (i *Installer) AdminUpgrade(ctx context.Context) error {
 	steps := []interface{}{
 		action(i.initializeKubernetesClients),
 		action(i.ensureBillingRecord), // belt and braces
+		action(i.fixLBProbes),
 		action(i.ensureGenevaLogging),
 		action(i.upgradeCluster),
 
