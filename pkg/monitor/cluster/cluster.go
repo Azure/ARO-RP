@@ -22,9 +22,9 @@ import (
 )
 
 type Monitor struct {
-	env         env.Interface
-	log         *logrus.Entry
-	logMessages bool
+	env       env.Interface
+	log       *logrus.Entry
+	hourlyRun bool
 
 	oc   *api.OpenShiftCluster
 	dims map[string]string
@@ -35,7 +35,7 @@ type Monitor struct {
 	m         metrics.Interface
 }
 
-func NewMonitor(ctx context.Context, env env.Interface, log *logrus.Entry, oc *api.OpenShiftCluster, m metrics.Interface, logMessages bool) (*Monitor, error) {
+func NewMonitor(ctx context.Context, env env.Interface, log *logrus.Entry, oc *api.OpenShiftCluster, m metrics.Interface, hourlyRun bool) (*Monitor, error) {
 	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
 		return nil, err
@@ -77,9 +77,9 @@ func NewMonitor(ctx context.Context, env env.Interface, log *logrus.Entry, oc *a
 	}
 
 	return &Monitor{
-		env:         env,
-		log:         log,
-		logMessages: logMessages,
+		env:       env,
+		log:       log,
+		hourlyRun: hourlyRun,
 
 		oc:   oc,
 		dims: dims,
