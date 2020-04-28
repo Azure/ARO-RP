@@ -275,7 +275,7 @@
                     }
                 ]
             },
-            "name": "rp-availability-alert",
+            "name": "[concat('rp-availability-alert-',resourceGroup().location)]",
             "type": "Microsoft.Insights/metricAlerts",
             "location": "global",
             "condition": "[parameters('fullDeploy')]",
@@ -318,7 +318,7 @@
                     }
                 ]
             },
-            "name": "rp-degraded-alert",
+            "name": "[concat('rp-degraded-alert-',resourceGroup().location)]",
             "type": "Microsoft.Insights/metricAlerts",
             "location": "global",
             "condition": "[parameters('fullDeploy')]",
@@ -361,7 +361,7 @@
                     }
                 ]
             },
-            "name": "rp-vnet-alert",
+            "name": "[concat('rp-vnet-alert-',resourceGroup().location)]",
             "type": "Microsoft.Insights/metricAlerts",
             "location": "global",
             "condition": "[parameters('fullDeploy')]",
