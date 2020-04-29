@@ -25,9 +25,10 @@ jobs:
       goroot: ${{ variables.GOROOT }}
       modulePath: ${{ variables.modulePath }}
   - script: |
-      set -xe
+      set -x
       sudo ln -s $USEPYTHONVERSION_PYTHONLOCATION/bin/python$(python.version) /usr/bin/python$(python.version)
       pip install virtualenv
+      set -e
       make test-python
       [[ -z "$(git status -s)" ]]
     displayName: '🧪Run Python Unit Tests : $(python.version)'
