@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -45,14 +46,15 @@ func (mon *monitor) listBuckets(ctx context.Context) error {
 func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop <-chan struct{}) {
 	defer recover.Panic(baseLog)
 
-	i := mon.db.OpenShiftClusters.ChangeFeed()
+	clustersIterator := mon.db.OpenShiftClusters.ChangeFeed()
+	subscriptionsIterator := mon.db.Subscriptions.ChangeFeed()
 
 	t := time.NewTicker(10 * time.Second)
 	defer t.Stop()
 
 	for {
 		for {
-			docs, err := i.Next(ctx, -1)
+			docs, err := clustersIterator.Next(ctx, -1)
 			if err != nil {
 				baseLog.Error(err)
 				break
@@ -83,6 +85,25 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 			mon.mu.Unlock()
 		}
 
+		for {
+			subs, err := subscriptionsIterator.Next(ctx, -1)
+			if err != nil {
+				baseLog.Error(err)
+				break
+			}
+			if subs == nil {
+				break
+			}
+
+			mon.mu.Lock()
+
+			for _, sub := range subs.SubscriptionDocuments {
+				mon.subs[sub.ID] = sub
+			}
+
+			mon.mu.Unlock()
+		}
+
 		select {
 		case <-t.C:
 		case <-stop:
@@ -97,6 +118,8 @@ func (mon *monitor) worker(stop <-chan struct{}, delay time.Duration, id string)
 
 	time.Sleep(delay)
 
+	var r azure.Resource
+
 	log := mon.baseLog
 	{
 		mon.mu.RLock()
@@ -108,6 +131,13 @@ func (mon *monitor) worker(stop <-chan struct{}, delay time.Duration, id string)
 		}
 
 		log = utillog.EnrichWithResourceID(log, v.doc.OpenShiftCluster.ID)
+
+		var err error
+		r, err = azure.ParseResourceID(v.doc.OpenShiftCluster.ID)
+		if err != nil {
+			log.Error(err)
+			return
+		}
 	}
 
 	log.Debug("starting monitoring")
@@ -121,6 +151,7 @@ out:
 	for {
 		mon.mu.RLock()
 		v := mon.docs[id]
+		sub := mon.subs[r.SubscriptionID]
 		mon.mu.RUnlock()
 
 		if v == nil {
@@ -132,7 +163,9 @@ out:
 		// TODO: later can modify here to poll once per N minutes and re-issue
 		// cached metrics in the remaining minutes
 
-		mon.workOne(context.Background(), log, v.doc, newh != h)
+		if sub != nil && sub.Subscription != nil && sub.Subscription.State != api.SubscriptionStateSuspended {
+			mon.workOne(context.Background(), log, v.doc, newh != h)
+		}
 
 		select {
 		case <-t.C:

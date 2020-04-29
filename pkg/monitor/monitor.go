@@ -28,6 +28,7 @@ type monitor struct {
 	clusterm metrics.Interface
 	mu       sync.RWMutex
 	docs     map[string]*cacheDoc
+	subs     map[string]*api.SubscriptionDocument
 
 	isMaster    bool
 	bucketCount int
@@ -48,6 +49,7 @@ func NewMonitor(log *logrus.Entry, env env.Interface, db *database.Database, m, 
 		m:        m,
 		clusterm: clusterm,
 		docs:     map[string]*cacheDoc{},
+		subs:     map[string]*api.SubscriptionDocument{},
 
 		bucketCount: bucket.Buckets,
 		buckets:     map[int]struct{}{},
