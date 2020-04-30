@@ -14,7 +14,7 @@ stages:
 - ${{ each location in  parameters.locations }}:
     - template: ./template-rp-and-billing-e2e.yml
       parameters:
-        singOffStage: ${{ parameters.last_stage_of_previous_section }}
+        signOffStage: ${{ parameters.last_stage_of_previous_section }}
         e2e_subscription: ${{ parameters.e2e_subscription }}
         aro_v4_e2e_devops_spn: ${{ parameters.aro_v4_e2e_devops_spn }}
         billingE2EPipelineName: ${{ parameters.billingE2EPipelineName }}

@@ -25,13 +25,11 @@ stages:
       locations:
       - australiaeast
       - southeastasia
-      - southafricanorth
   - stage: Low_traffic_section_Summary
     displayName: Low Traffic Section Summary
     dependsOn:
       - australiaeast_Billing_E2E
       - southeastasia_Billing_E2E
-      - southafricanorth_Billing_E2E
     jobs:
     - job: Summary
       pool:
