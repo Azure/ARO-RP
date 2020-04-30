@@ -39,9 +39,11 @@ jobs:
   - template: ./templates/template-deploy-e2e-deps.yml
     parameters:
       workingDirectory: ${{ variables.modulePath }}
+      buildID: $(Build.BuildID)
   - template: ./templates/template-deploy-e2e-db.yml
     parameters:
       workingDirectory: ${{ variables.modulePath }}
+      buildID: $(Build.BuildID)
   - template: ./templates/template-run-rp-and-e2e.yml
     parameters:
       workingDirectory: ${{ variables.modulePath }}
@@ -49,6 +51,7 @@ jobs:
   - template: ./templates/template-clean-e2e-db.yml
     parameters:
       workingDirectory: ${{ variables.modulePath }}
+      buildID: $(Build.BuildID)
   - template: ./templates/template-clean-e2e-deps.yml
     parameters:
       workingDirectory: ${{ variables.modulePath }}
