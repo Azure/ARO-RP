@@ -18,6 +18,7 @@ import (
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/installconfig"
@@ -34,6 +35,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
+	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
@@ -95,7 +97,15 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 	{
 		spp := &i.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
 
-		token, err := aad.GetToken(ctx, i.log, i.doc.OpenShiftCluster, azure.PublicCloud.GraphEndpoint)
+		tf := aad.TokenFactory{
+			NewToken: func(conf auth.ClientCredentialsConfig) (instancemetadata.ServicePrincipalToken, error) {
+				return conf.ServicePrincipalToken()
+			},
+			RetryInterval: 10 * time.Second,
+			Timeout:       2 * time.Minute,
+		}
+
+		token, err := tf.AuthenticateAndGetToken(ctx, i.log, i.doc.OpenShiftCluster, azure.PublicCloud.GraphEndpoint)
 		if err != nil {
 			return err
 		}

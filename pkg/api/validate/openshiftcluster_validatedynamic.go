@@ -35,10 +35,11 @@ type OpenShiftClusterDynamicValidator interface {
 	Dynamic(context.Context, *api.OpenShiftCluster) error
 }
 
-func NewOpenShiftClusterDynamicValidator(log *logrus.Entry, env env.Interface) OpenShiftClusterDynamicValidator {
+func NewOpenShiftClusterDynamicValidator(log *logrus.Entry, env env.Interface, tokenMaker aad.TokenMaker) OpenShiftClusterDynamicValidator {
 	return &openShiftClusterDynamicValidator{
-		log: log,
-		env: env,
+		log:        log,
+		env:        env,
+		tokenMaker: tokenMaker,
 	}
 }
 
@@ -51,8 +52,9 @@ func (*azureClaim) Valid() error {
 }
 
 type openShiftClusterDynamicValidator struct {
-	log *logrus.Entry
-	env env.Interface
+	log        *logrus.Entry
+	env        env.Interface
+	tokenMaker aad.TokenMaker
 }
 
 // Dynamic validates an OpenShift cluster
@@ -111,7 +113,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context, oc *api
 }
 
 func (dv *openShiftClusterDynamicValidator) validateServicePrincipalProfile(ctx context.Context, oc *api.OpenShiftCluster) (autorest.Authorizer, error) {
-	token, err := aad.GetToken(ctx, dv.log, oc, azure.PublicCloud.ResourceManagerEndpoint)
+	token, err := dv.tokenMaker.AuthenticateAndGetToken(ctx, dv.log, oc, azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}

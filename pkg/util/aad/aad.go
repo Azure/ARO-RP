@@ -9,16 +9,29 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 )
 
-// GetToken authenticates in the customer's tenant as the cluster service
+// TokenMaker is an interface which has an AuthenticateAndGetToken method
+type TokenMaker interface {
+	AuthenticateAndGetToken(ctx context.Context, log *logrus.Entry, oc *api.OpenShiftCluster,
+		resource string) (instancemetadata.ServicePrincipalToken, error)
+}
+
+// TokenFactory contains a NewToken function used to create a new token
+type TokenFactory struct {
+	NewToken      func(conf auth.ClientCredentialsConfig) (instancemetadata.ServicePrincipalToken, error)
+	RetryInterval time.Duration
+	Timeout       time.Duration
+}
+
+// AuthenticateAndGetToken authenticates in the customer's tenant as the cluster service
 // principal and returns a token.  It retries in the cases below.  Unfortunately
 // there doesn't seem to be a way to distinguish whether these cases occur due
 // to misconfiguration or AAD propagation delays.
@@ -38,23 +51,25 @@ import (
 // tenant."`.  I think this can be returned when the service principal
 // associated with the application hasn't yet caught up with the application
 // itself.
-func GetToken(ctx context.Context, log *logrus.Entry, oc *api.OpenShiftCluster, resource string) (*adal.ServicePrincipalToken, error) {
+func (tf TokenFactory) AuthenticateAndGetToken(ctx context.Context, log *logrus.Entry, oc *api.OpenShiftCluster,
+	resource string) (instancemetadata.ServicePrincipalToken, error) {
+
 	spp := &oc.Properties.ServicePrincipalProfile
 
 	conf := auth.NewClientCredentialsConfig(spp.ClientID, string(spp.ClientSecret), spp.TenantID)
 	conf.Resource = resource
 
-	token, err := conf.ServicePrincipalToken()
+	token, err := tf.NewToken(conf)
 	if err != nil {
 		return nil, err
 	}
 
-	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	timeoutCtx, cancel := context.WithTimeout(ctx, tf.Timeout)
 	defer cancel()
 
 	// NOTE: Do not override err with the error returned by wait.PollImmediateUntil.
 	// Doing this will not propagate the latest error to the user in case when wait exceeds the timeout
-	wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+	wait.PollImmediateUntil(tf.RetryInterval, func() (bool, error) {
 		err = token.RefreshWithContext(ctx)
 		if err != nil {
 			isAADSTS700016 := strings.Contains(err.Error(), "AADSTS700016")

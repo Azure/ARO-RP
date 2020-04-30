@@ -11,13 +11,91 @@ import (
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
+	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	mockaad "github.com/Azure/ARO-RP/pkg/util/mocks/aad"
 	mockfeatures "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mocknetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
+	mock_instancemetadata "github.com/Azure/ARO-RP/pkg/util/mocks/instancemetadata"
 )
+
+func TestValidateServicePrincipalProfile(t *testing.T) {
+	ctx := context.Background()
+
+	// Valid JWT
+	altsecidJWT := "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJUZXN0VmFsaWRhdGVTZXJ2aWNlUHJpbmNpcGFsUHJvZmlsZSIsImlhdCI6MTU4ODIxNzI1NiwiZXhwIjoxNjE5NzUzMjU2LCJhdWQiOiJ3d3cuZXhhbXBsZS5jb20iLCJzdWIiOiJ0ZXN0QGV4YW1wbGUuY29tIiwiYWx0c2VjaWQiOiJvayJ9.P4ETdlihD2YNGB9b4ARYX7IIEudP4f7a2xHcNCMzER8"
+
+	// Invalid JWT: has Application.ReadWrite.OwnedBy permission
+	// {
+	// 	"iss": "TestValidateServicePrincipalProfile",
+	// 	"iat": 1588217256,
+	// 	"exp": 1619753256,
+	// 	"aud": "www.example.com",
+	// 	"sub": "test@example.com",
+	// 	"altsecid": "ok",
+	// 	"Roles": [
+	// 		"Application.ReadWrite.OwnedBy",
+	// 		"Test"
+	// 	]
+	// }
+	invalidJWT := "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJUZXN0VmFsaWRhdGVTZXJ2aWNlUHJpbmNpcGFsUHJvZmlsZSIsImlhdCI6MTU4ODIxNzI1NiwiZXhwIjoxNjE5NzUzMjU2LCJhdWQiOiJ3d3cuZXhhbXBsZS5jb20iLCJzdWIiOiJ0ZXN0QGV4YW1wbGUuY29tIiwiYWx0c2VjaWQiOiJvayIsIlJvbGVzIjpbIkFwcGxpY2F0aW9uLlJlYWRXcml0ZS5Pd25lZEJ5IiwiVGVzdCJdfQ.zLwcvj4j07PG2IdiSXMJh-KL-uno9gndn0DY1GyzQbQ"
+
+	oc := &api.OpenShiftCluster{
+		Properties: api.OpenShiftClusterProperties{
+			ServicePrincipalProfile: api.ServicePrincipalProfile{
+				TenantID:     "1234",
+				ClientID:     "5678",
+				ClientSecret: api.SecureString("shhh"),
+			},
+		},
+	}
+
+	log := logrus.NewEntry(logrus.StandardLogger())
+
+	for _, tt := range []struct {
+		name    string
+		mocks   func(token *mock_instancemetadata.MockServicePrincipalToken, tokenMaker *mockaad.MockTokenMaker)
+		wantErr string
+	}{
+		{
+			name: "has Application.ReadWrite.OwnedBy permission",
+			mocks: func(token *mock_instancemetadata.MockServicePrincipalToken, tokenMaker *mockaad.MockTokenMaker) {
+				tokenMaker.EXPECT().AuthenticateAndGetToken(ctx, log, oc, azure.PublicCloud.ResourceManagerEndpoint).Return(token, nil)
+				token.EXPECT().OAuthToken().Return(invalidJWT)
+			},
+			wantErr: "400: InvalidServicePrincipalCredentials: properties.servicePrincipalProfile: The provided service principal must not have the Application.ReadWrite.OwnedBy permission.",
+		},
+		{
+			name: "success",
+			mocks: func(token *mock_instancemetadata.MockServicePrincipalToken, tokenMaker *mockaad.MockTokenMaker) {
+				tokenMaker.EXPECT().AuthenticateAndGetToken(ctx, log, oc, azure.PublicCloud.ResourceManagerEndpoint).Return(token, nil)
+				token.EXPECT().OAuthToken().Return(altsecidJWT)
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+			token := mock_instancemetadata.NewMockServicePrincipalToken(controller)
+			tokenMaker := mockaad.NewMockTokenMaker(controller)
+			tt.mocks(token, tokenMaker)
+
+			dv := &openShiftClusterDynamicValidator{
+				log:        log,
+				tokenMaker: tokenMaker,
+			}
+			_, err := dv.validateServicePrincipalProfile(ctx, oc)
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Error(err)
+			}
+		})
+	}
+}
 
 func TestValidateProviders(t *testing.T) {
 	ctx := context.Background()

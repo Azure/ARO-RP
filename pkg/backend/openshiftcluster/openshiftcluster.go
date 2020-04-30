@@ -4,19 +4,24 @@ package openshiftcluster
 // Licensed under the Apache License 2.0.
 
 import (
+	"time"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
 	pkgacrtoken "github.com/Azure/ARO-RP/pkg/util/acrtoken"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
+	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/privateendpoint"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
@@ -71,6 +76,14 @@ func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClus
 		}
 	}
 
+	tf := aad.TokenFactory{
+		NewToken: func(conf auth.ClientCredentialsConfig) (instancemetadata.ServicePrincipalToken, error) {
+			return conf.ServicePrincipalToken()
+		},
+		RetryInterval: 10 * time.Second,
+		Timeout:       2 * time.Minute,
+	}
+
 	m := &Manager{
 		log:          log,
 		env:          _env,
@@ -78,7 +91,7 @@ func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClus
 		billing:      billing,
 		fpAuthorizer: fpAuthorizer,
 
-		ocDynamicValidator: validate.NewOpenShiftClusterDynamicValidator(log, _env),
+		ocDynamicValidator: validate.NewOpenShiftClusterDynamicValidator(log, _env, tf),
 
 		groups: features.NewResourceGroupsClient(r.SubscriptionID, fpAuthorizer),
 
