@@ -2,35 +2,35 @@
 variables:
 - template: vars.yml
 stages:
-#- stage: RP_E2E
-#  dependsOn: []
-#  displayName: 🚀 RUN RP E2E
-#  jobs:
-#  - job: RP_E2E_Job
-#    timeoutInMinutes: 120
-#    pool:
-#      name: ARO-E2E
-#    steps:
-#    - template: ./templates/template-prod-e2e-steps.yml
-#      parameters:
-#        gobin: ${{ variables.GOBIN }}
-#        gopath: ${{ variables.GOPATH }}
-#        goroot: ${{ variables.GOROOT }}
-#        workingDirectory: ${{ variables.modulePath }}
-#        location: $(LOCATION)
-#        subscription: $(e2e-subscription)
-#        azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
-#        buildID: $(Build.BuildID)
-#- stage: Delay_For_Billing_Table
-#  displayName: Wait 6 hours for billing table ready
-#  jobs:
-#  - job: JustWait
-#    timeoutInMinutes: 400
-#    pool: server
-#    steps:
-#    - task: Delay@1
-#      inputs:
-#        delayForMinutes: '360'
+- stage: RP_E2E
+  dependsOn: []
+  displayName: 🚀 RUN RP E2E
+  jobs:
+  - job: RP_E2E_Job
+    timeoutInMinutes: 120
+    pool:
+      name: ARO-E2E
+    steps:
+    - template: ./templates/template-prod-e2e-steps.yml
+      parameters:
+        gobin: ${{ variables.GOBIN }}
+        gopath: ${{ variables.GOPATH }}
+        goroot: ${{ variables.GOROOT }}
+        workingDirectory: ${{ variables.modulePath }}
+        location: $(LOCATION)
+        subscription: $(e2e-subscription)
+        azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
+        buildID: $(Build.BuildID)
+- stage: Delay_For_Billing_Table
+  displayName: Wait 6 hours for billing table ready
+  jobs:
+  - job: JustWait
+    timeoutInMinutes: 400
+    pool: server
+    steps:
+    - task: Delay@1
+      inputs:
+        delayForMinutes: '360'
 - stage: Billing_E2E
   displayName: Billing E2E
   jobs:
