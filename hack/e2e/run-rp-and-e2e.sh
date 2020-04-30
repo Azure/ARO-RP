@@ -149,7 +149,7 @@ clean_e2e() {
 }
 
 export CLUSTER="v4-e2e-V$(git log --format=%h -n 1 HEAD)"
-export ARO_RESOURCEGROUP="v4-e2e-rg-V$(git log --format=%h -n 1 HEAD)-$LOCATION"
+export ARO_RESOURCEGROUP="v4-e2e-rg-V$BUILD_ID-$LOCATION"
 export CLUSTER_RESOURCEGROUP="aro-$ARO_RESOURCEGROUP"
 export KUBECONFIG=$(pwd)/$CLUSTER.kubeconfig
 export CLUSTERSPN=$(pwd)/$CLUSTER.json
