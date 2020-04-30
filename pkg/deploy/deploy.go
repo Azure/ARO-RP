@@ -22,6 +22,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/insights"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/msi"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
@@ -42,6 +43,7 @@ type deployer struct {
 	globalrecordsets       dns.RecordSetsClient
 	deployments            features.DeploymentsClient
 	groups                 features.ResourceGroupsClient
+	metricalerts           insights.MetricAlertsClient
 	userassignedidentities msi.UserAssignedIdentitiesClient
 	publicipaddresses      network.PublicIPAddressesClient
 	vmss                   compute.VirtualMachineScaleSetsClient
@@ -73,6 +75,7 @@ func New(ctx context.Context, log *logrus.Entry, config *RPConfig, version strin
 		globalrecordsets:       dns.NewRecordSetsClient(config.Configuration.GlobalSubscriptionID, authorizer),
 		deployments:            features.NewDeploymentsClient(config.SubscriptionID, authorizer),
 		groups:                 features.NewResourceGroupsClient(config.SubscriptionID, authorizer),
+		metricalerts:           insights.NewMetricAlertsClient(config.SubscriptionID, authorizer),
 		userassignedidentities: msi.NewUserAssignedIdentitiesClient(config.SubscriptionID, authorizer),
 		publicipaddresses:      network.NewPublicIPAddressesClient(config.SubscriptionID, authorizer),
 		vmss:                   compute.NewVirtualMachineScaleSetsClient(config.SubscriptionID, authorizer),

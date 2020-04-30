@@ -23,6 +23,10 @@ func (d *deployer) Upgrade(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	err = d.removeOldMetricAlerts(ctx)
+	if err != nil {
+		return err
+	}
 
 	return d.removeOldScalesets(ctx)
 }
@@ -45,6 +49,30 @@ func (d *deployer) waitForRPReadiness(ctx context.Context, vmssName string) erro
 
 		return true, nil
 	}, ctx.Done())
+}
+
+// removeOldMetricAlerts removes alert rules without the location in the name
+func (d *deployer) removeOldMetricAlerts(ctx context.Context) error {
+	d.log.Print("removing old alerts")
+	metricAlerts, err := d.metricalerts.ListByResourceGroup(ctx, d.config.ResourceGroupName)
+	if metricAlerts == nil {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	for _, metricAlert := range *metricAlerts {
+		switch *metricAlert.Name {
+		case "rp-availability-alert", "rp-degraded-alert", "rp-vnet-alert":
+			err = d.metricalerts.Delete(ctx, d.config.ResourceGroupName, *metricAlert.Name)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 func (d *deployer) removeOldScalesets(ctx context.Context) error {
