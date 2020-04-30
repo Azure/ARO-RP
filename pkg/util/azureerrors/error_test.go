@@ -1,4 +1,4 @@
-package install
+package azureerrors
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -58,7 +58,7 @@ func TestHasAuthorizationFailedError(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			got := hasAuthorizationFailedError(tt.err)
+			got := HasAuthorizationFailedError(tt.err)
 			if got != tt.want {
 				t.Error(got)
 			}
@@ -93,7 +93,7 @@ func TestIsDeploymentActiveError(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			got := isDeploymentActiveError(autorest.NewErrorWithError(tt.err, "", "", nil, ""))
+			got := IsDeploymentActiveError(autorest.NewErrorWithError(tt.err, "", "", nil, ""))
 			if got != tt.want {
 				t.Error(got)
 			}

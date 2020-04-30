@@ -256,46 +256,37 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 		return err
 	}
 
-	var g graph
-
 	exists, err := i.graphExists(ctx)
-	if err != nil {
+	if err != nil || exists {
 		return err
 	}
 
-	if exists {
-		g, err = i.loadGraph(ctx)
-		if err != nil {
-			return err
-		}
+	clusterID := &installconfig.ClusterID{
+		UUID:    i.doc.ID,
+		InfraID: infraID,
+	}
 
-	} else {
-		clusterID := &installconfig.ClusterID{
-			UUID:    i.doc.ID,
-			InfraID: infraID,
-		}
+	g := graph{
+		reflect.TypeOf(installConfig): installConfig,
+		reflect.TypeOf(platformCreds): platformCreds,
+		reflect.TypeOf(image):         image,
+		reflect.TypeOf(clusterID):     clusterID,
+	}
 
-		g = graph{
-			reflect.TypeOf(installConfig): installConfig,
-			reflect.TypeOf(platformCreds): platformCreds,
-			reflect.TypeOf(image):         image,
-			reflect.TypeOf(clusterID):     clusterID,
-		}
-
-		i.log.Print("resolving graph")
-		for _, a := range targets.Cluster {
-			_, err := g.resolve(a)
-			if err != nil {
-				return err
-			}
-		}
-
-		// the graph is quite big so we store it in a storage account instead of in cosmosdb
-		err = i.saveGraph(ctx, g)
+	i.log.Print("resolving graph")
+	for _, a := range targets.Cluster {
+		_, err := g.resolve(a)
 		if err != nil {
 			return err
 		}
 	}
+
+	// the graph is quite big so we store it in a storage account instead of in cosmosdb
+	return i.saveGraph(ctx, g)
+}
+
+func (i *Installer) attachNSGsAndPatch(ctx context.Context) error {
+	g, err := i.loadGraph(ctx)
 
 	for _, subnetID := range []string{
 		i.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
@@ -305,20 +296,8 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 
 		// TODO: there is probably an undesirable race condition here - check if etags can help.
 
-		timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
-		defer cancel()
+		s, err := i.subnet.Get(ctx, subnetID)
 
-		var s *mgmtnetwork.Subnet
-		err := wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-			s, err = i.subnet.Get(ctx, subnetID)
-
-			if hasAuthorizationFailedError(err) {
-				i.log.Print(err)
-				return false, nil
-			}
-
-			return err == nil, err
-		}, timeoutCtx.Done())
 		if err != nil {
 			return err
 		}
