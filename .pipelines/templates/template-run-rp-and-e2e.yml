@@ -6,6 +6,7 @@ steps:
     set -o pipefail
 
     cd ${{ parameters.workingDirectory }}
+    export BUILD_ID=${{ parameters.buildID }}
 
     . secrets/env
     . ./hack/e2e/run-rp-and-e2e.sh

@@ -25,6 +25,8 @@ steps:
     set -e
     cd ${{ parameters.workingDirectory }}
 
+    export BUILD_ID=${{ parameters.buildID }}
+
     export LOCATION=${{ parameters.location }}
     export AZURE_SUBSCRIPTION_ID=${{ parameters.subscription }}
 

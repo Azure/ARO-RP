@@ -45,12 +45,14 @@ jobs:
   - template: ./templates/template-run-rp-and-e2e.yml
     parameters:
       workingDirectory: ${{ variables.modulePath }}
+      buildID: $(Build.BuildID)
   - template: ./templates/template-clean-e2e-db.yml
     parameters:
       workingDirectory: ${{ variables.modulePath }}
   - template: ./templates/template-clean-e2e-deps.yml
     parameters:
       workingDirectory: ${{ variables.modulePath }}
+      buildID: $(Build.BuildID)
   - template: ./templates/template-clean-agent.yml
     parameters:
       workingDirectory: ${{ variables.modulePath }}

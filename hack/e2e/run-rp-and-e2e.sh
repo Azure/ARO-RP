@@ -161,6 +161,7 @@ echo "######## Current settings : ##########"
 echo
 echo "LOCATION=$LOCATION"
 echo "AZURE_SUBSCRIPTION_ID=$AZURE_SUBSCRIPTION_ID"
+echo "BUILD_ID=$BUILD_ID"
 echo
 echo "RP_MODE=$RP_MODE"
 if [ "$RP_MODE" = "development" ]
