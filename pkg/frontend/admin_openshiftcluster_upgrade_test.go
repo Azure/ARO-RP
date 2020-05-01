@@ -85,7 +85,12 @@ func TestAdminUpdate(t *testing.T) {
 				}
 
 				openshiftClusters.EXPECT().Get(gomock.Any(), strings.ToLower(tt.resourceID)).Return(clusterDoc, nil)
+
 				kactions.EXPECT().InitializeClients(gomock.Any()).Return(nil)
+				kactions.EXPECT().EnsureGenevaLogging(gomock.Any()).Return(nil)
+				kactions.EXPECT().DisableSamples(gomock.Any()).Return(nil)
+				kactions.EXPECT().DisableOperatorHubSources(gomock.Any()).Return(nil)
+				kactions.EXPECT().UpdateConsoleBranding(gomock.Any()).Return(nil)
 				kactions.EXPECT().ClusterUpgrade(gomock.Any()).Return(nil)
 			},
 			wantStatusCode: http.StatusOK,

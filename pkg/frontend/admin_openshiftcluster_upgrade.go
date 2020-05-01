@@ -46,5 +46,25 @@ func (f *frontend) _postAdminOpenShiftClusterUpgrade(ctx context.Context, r *htt
 		return err
 	}
 
+	err = actions.EnsureGenevaLogging(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = actions.DisableSamples(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = actions.DisableOperatorHubSources(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = actions.UpdateConsoleBranding(ctx)
+	if err != nil {
+		return err
+	}
+
 	return actions.ClusterUpgrade(ctx)
 }
