@@ -1,0 +1,93 @@
+# No PR triggers as it runs on a schedule
+pr: none
+trigger: none
+
+schedules:
+- cron: "0 1 * * Sun"
+  displayName: ⭕ Rebuild shared cluster Sun 1am (UTC)
+  always: true
+  branches:
+    include:
+    - master
+
+variables:
+  LOCATION: eastus
+  CLUSTER: aro-v4-shared
+
+jobs:
+- job: ⏬ Tear down shared cluster
+  pool:
+    vmImage: "Ubuntu-16.04"
+
+  container:
+    image: mcr.microsoft.com/azure-cli:latest
+
+  steps:
+  - template: ./templates/template-az-cli-login.yml
+    parameters:
+      workingDirectory: /
+      azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
+  - displayName: 📦 Install or update az aro extension
+    script: |
+      az extension update -n aro --index https://az.aroapp.io/stable || \
+      az extension add -n aro --index https://az.aroapp.io/stable"
+  - displayName: 🧹 Delete cluster
+    script: |
+      az aro delete --resource-group "$CLUSTER" --name "$CLUSTER"
+
+- job: ⏫ Set up shared cluster
+  pool:
+    vmImage: "Ubuntu-16.04"
+
+  container:
+    image: mcr.microsoft.com/azure-cli:latest
+
+  steps:
+  - template: ./templates/template-az-cli-login.yml
+    parameters:
+      workingDirectory: /
+      azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
+  - displayName: 📦 Install az aro extension
+    script: |
+      az extension update -n aro --index https://az.aroapp.io/stable || \
+      az extension add -n aro --index https://az.aroapp.io/stable"
+  - displayName: 🚀 Create RG
+    script: |
+      az group create --name "$CLUSTER" --location "$LOCATION"
+  - displayName: 🚀 Create VNet
+    script: |
+      az network vnet create \
+        --resource-group "$CLUSTER" \
+        --name vnet \
+        --address-prefixes 10.0.0.0/9
+  - displayName: 🚀 Create subnets
+    script: |
+      az network vnet subnet create \
+        --resource-group "$CLUSTER" \
+        --vnet-name vnet \
+        --name master-subnet \
+        --address-prefixes 10.0.0.0/23 \
+        --service-endpoints Microsoft.ContainerRegistry
+      az network vnet subnet create \
+        --resource-group "$CLUSTER" \
+        --vnet-name vnet \
+        --name worker-subnet \
+        --address-prefixes 10.0.2.0/23 \
+        --service-endpoints Microsoft.ContainerRegistry
+      az network vnet subnet update \
+        --name master-subnet \
+        --resource-group "$CLUSTER" \
+        --vnet-name vnet \
+        --disable-private-link-service-network-policies true
+  - displayName: 🚀 Create cluster
+    env:
+      USER_PULL_SECRET: $(aro-v4-e2e-pull-secret)
+    script: |
+      az aro create \
+        --resource-group "$CLUSTER" \
+        --name "$CLUSTER" \
+        --cluster-resource-group "$CLUSTER-cluster" \
+        --vnet vnet \
+        --master-subnet master-subnet \
+        --worker-subnet worker-subnet \
+        --pull-secret "$(echo $USER_PULL_SECRET | jq -c)"
