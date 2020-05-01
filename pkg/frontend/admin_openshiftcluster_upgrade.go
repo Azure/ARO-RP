@@ -40,5 +40,11 @@ func (f *frontend) _postAdminOpenShiftClusterUpgrade(ctx context.Context, r *htt
 		return err
 	}
 
-	return f.kubeActionsFactory(log, f.env).ClusterUpgrade(ctx, doc.OpenShiftCluster)
+	actions := f.adminactionsFactory(log, f.env, doc.OpenShiftCluster)
+	err = actions.InitializeClients(ctx)
+	if err != nil {
+		return err
+	}
+
+	return actions.ClusterUpgrade(ctx)
 }

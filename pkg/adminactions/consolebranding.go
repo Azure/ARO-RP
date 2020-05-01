@@ -1,4 +1,4 @@
-package install
+package adminactions
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -12,17 +12,17 @@ import (
 	"k8s.io/client-go/util/retry"
 )
 
-func (i *Installer) updateConsoleBranding(ctx context.Context) error {
-	i.log.Print("updating console-operator branding")
+func (a *adminactions) UpdateConsoleBranding(ctx context.Context) error {
+	a.log.Print("updating console-operator branding")
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		operatorConfig, err := i.operatorcli.OperatorV1().Consoles().Get(consoleapi.ConfigResourceName, metav1.GetOptions{})
+		operatorConfig, err := a.operatorcli.OperatorV1().Consoles().Get(consoleapi.ConfigResourceName, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
 
 		operatorConfig.Spec.Customization.Brand = operatorv1.BrandAzure
 
-		_, err = i.operatorcli.OperatorV1().Consoles().Update(operatorConfig)
+		_, err = a.operatorcli.OperatorV1().Consoles().Update(operatorConfig)
 		return err
 	})
 }

@@ -17,14 +17,14 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/ARO-RP/pkg/adminactions"
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/frontend/kubeactions"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
+	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
 	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
-	mock_kubeactions "github.com/Azure/ARO-RP/pkg/util/mocks/kubeactions"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/test/util/listener"
 )
@@ -63,7 +63,7 @@ func TestAdminUpdate(t *testing.T) {
 	type test struct {
 		name           string
 		resourceID     string
-		mocks          func(*test, *mock_database.MockOpenShiftClusters, *mock_kubeactions.MockInterface)
+		mocks          func(*test, *mock_database.MockOpenShiftClusters, *mock_adminactions.MockInterface)
 		wantStatusCode int
 		wantError      string
 	}
@@ -72,7 +72,7 @@ func TestAdminUpdate(t *testing.T) {
 		{
 			name:       "basic coverage test",
 			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, kactions *mock_kubeactions.MockInterface) {
+			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, kactions *mock_adminactions.MockInterface) {
 				clusterDoc := &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID:   "fakeClusterID",
@@ -85,7 +85,8 @@ func TestAdminUpdate(t *testing.T) {
 				}
 
 				openshiftClusters.EXPECT().Get(gomock.Any(), strings.ToLower(tt.resourceID)).Return(clusterDoc, nil)
-				kactions.EXPECT().ClusterUpgrade(gomock.Any(), clusterDoc.OpenShiftCluster).Return(nil)
+				kactions.EXPECT().InitializeClients(gomock.Any()).Return(nil)
+				kactions.EXPECT().ClusterUpgrade(gomock.Any()).Return(nil)
 			},
 			wantStatusCode: http.StatusOK,
 		},
@@ -107,13 +108,13 @@ func TestAdminUpdate(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			kactions := mock_kubeactions.NewMockInterface(controller)
+			kactions := mock_adminactions.NewMockInterface(controller)
 			openshiftClusters := mock_database.NewMockOpenShiftClusters(controller)
 			tt.mocks(tt, openshiftClusters, kactions)
 
 			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), _env, &database.Database{
 				OpenShiftClusters: openshiftClusters,
-			}, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface) kubeactions.Interface {
+			}, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) adminactions.Interface {
 				return kactions
 			}, nil, nil)
 			if err != nil {

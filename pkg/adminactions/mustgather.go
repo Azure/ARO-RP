@@ -1,4 +1,4 @@
-package kubeactions
+package adminactions
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -6,33 +6,18 @@ package kubeactions
 import (
 	"context"
 	"io"
-	"time"
 
 	"github.com/Azure/go-autorest/autorest/to"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/kubernetes"
 
-	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/portforward"
-	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-func (ka *kubeactions) MustGather(ctx context.Context, oc *api.OpenShiftCluster, w io.Writer) error {
-	restconfig, err := restconfig.RestConfig(ka.env, oc)
-	if err != nil {
-		return err
-	}
-
-	cli, err := kubernetes.NewForConfig(restconfig)
-	if err != nil {
-		return err
-	}
-
-	ns, err := cli.CoreV1().Namespaces().Create(&corev1.Namespace{
+func (a *adminactions) MustGather(ctx context.Context, w io.Writer) error {
+	ns, err := a.cli.CoreV1().Namespaces().Create(&corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "openshift-must-gather-",
 			Labels: map[string]string{
@@ -45,13 +30,13 @@ func (ka *kubeactions) MustGather(ctx context.Context, oc *api.OpenShiftCluster,
 	}
 
 	defer func() {
-		err = cli.CoreV1().Namespaces().Delete(ns.Name, nil)
+		err = a.cli.CoreV1().Namespaces().Delete(ns.Name, nil)
 		if err != nil {
-			ka.log.Error(err)
+			a.log.Error(err)
 		}
 	}()
 
-	crb, err := cli.RbacV1().ClusterRoleBindings().Create(&rbacv1.ClusterRoleBinding{
+	crb, err := a.cli.RbacV1().ClusterRoleBindings().Create(&rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "must-gather-",
 		},
@@ -73,13 +58,13 @@ func (ka *kubeactions) MustGather(ctx context.Context, oc *api.OpenShiftCluster,
 	}
 
 	defer func() {
-		err = cli.RbacV1().ClusterRoleBindings().Delete(crb.Name, nil)
+		err = a.cli.RbacV1().ClusterRoleBindings().Delete(crb.Name, nil)
 		if err != nil {
-			ka.log.Error(err)
+			a.log.Error(err)
 		}
 	}()
 
-	pod, err := cli.CoreV1().Pods(ns.Name).Create(&corev1.Pod{
+	pod, err := a.cli.CoreV1().Pods(ns.Name).Create(&corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "must-gather",
 		},
@@ -136,14 +121,14 @@ func (ka *kubeactions) MustGather(ctx context.Context, oc *api.OpenShiftCluster,
 		return err
 	}
 
-	ka.log.Info("waiting for must-gather pod")
-	err = ka.waitForPodRunning(ctx, cli, pod)
+	a.log.Info("waiting for must-gather pod")
+	err = a.waitForPodRunning(ctx, pod)
 	if err != nil {
 		return err
 	}
 
-	ka.log.Info("must-gather pod running")
-	rc, err := portforward.ExecStdout(ctx, ka.env, oc, pod.Namespace, pod.Name, "copy", []string{"tar", "cz", "/must-gather"})
+	a.log.Info("must-gather pod running")
+	rc, err := portforward.ExecStdout(ctx, a.env, a.oc, pod.Namespace, pod.Name, "copy", []string{"tar", "cz", "/must-gather"})
 	if err != nil {
 		return err
 	}
@@ -151,15 +136,4 @@ func (ka *kubeactions) MustGather(ctx context.Context, oc *api.OpenShiftCluster,
 
 	_, err = io.Copy(w, rc)
 	return err
-}
-
-func (ka *kubeactions) waitForPodRunning(ctx context.Context, cli kubernetes.Interface, pod *corev1.Pod) error {
-	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-		pod, err := cli.CoreV1().Pods(pod.Namespace).Get(pod.Name, metav1.GetOptions{})
-		if err != nil {
-			return false, err
-		}
-
-		return pod.Status.Phase == corev1.PodRunning, nil
-	}, ctx.Done())
 }

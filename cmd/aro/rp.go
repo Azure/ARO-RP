@@ -15,6 +15,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/tools/metrics"
 
+	"github.com/Azure/ARO-RP/pkg/adminactions"
 	"github.com/Azure/ARO-RP/pkg/api"
 	_ "github.com/Azure/ARO-RP/pkg/api/admin"
 	_ "github.com/Azure/ARO-RP/pkg/api/v20191231preview"
@@ -23,7 +24,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend"
-	"github.com/Azure/ARO-RP/pkg/frontend/kubeactions"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/azure"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/k8s"
@@ -94,7 +94,7 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), _env, db, api.APIs, m, feCipher, kubeactions.New, features.NewResourcesClient, compute.NewVirtualMachinesClient)
+	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), _env, db, api.APIs, m, feCipher, adminactions.New, features.NewResourcesClient, compute.NewVirtualMachinesClient)
 	if err != nil {
 		return err
 	}

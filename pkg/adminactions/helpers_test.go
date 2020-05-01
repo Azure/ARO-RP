@@ -1,4 +1,4 @@
-package kubeactions
+package adminactions
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -136,7 +136,7 @@ func TestFindGVR(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ka := &kubeactions{}
+			ka := &adminactions{}
 
 			got, err := ka.findGVR(tt.resources, tt.kind, "")
 			if !reflect.DeepEqual(err, tt.wantErr) {

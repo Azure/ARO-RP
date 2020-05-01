@@ -1,4 +1,4 @@
-package install
+package adminactions
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -11,11 +11,11 @@ import (
 	"k8s.io/client-go/util/retry"
 )
 
-// disableAlertManagerWarning is a hack to disable the
+// DisableAlertManagerWarning is a hack to disable the
 // AlertmanagerReceiversNotConfigured warning added in 4.3.8.
-func (i *Installer) disableAlertManagerWarning(ctx context.Context) error {
+func (a *adminactions) DisableAlertManagerWarning(ctx context.Context) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		s, err := i.kubernetescli.CoreV1().Secrets("openshift-monitoring").Get("alertmanager-main", metav1.GetOptions{})
+		s, err := a.cli.CoreV1().Secrets("openshift-monitoring").Get("alertmanager-main", metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -42,7 +42,7 @@ func (i *Installer) disableAlertManagerWarning(ctx context.Context) error {
 			return err
 		}
 
-		_, err = i.kubernetescli.CoreV1().Secrets("openshift-monitoring").Update(s)
+		_, err = a.cli.CoreV1().Secrets("openshift-monitoring").Update(s)
 		return err
 	})
 }

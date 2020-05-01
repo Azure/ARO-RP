@@ -21,10 +21,10 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	"github.com/Azure/ARO-RP/pkg/adminactions"
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/frontend/kubeactions"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
@@ -42,7 +42,7 @@ func (err statusCodeError) Error() string {
 	return fmt.Sprintf("%d", err)
 }
 
-type kubeActionsFactory func(*logrus.Entry, env.Interface) kubeactions.Interface
+type adminactionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster) adminactions.Interface
 type resourcesClientFactory func(subscriptionID string, authorizer autorest.Authorizer) features.ResourcesClient
 type computeClientFactory func(subscriptionID string, authorizer autorest.Authorizer) compute.VirtualMachinesClient
 
@@ -55,7 +55,7 @@ type frontend struct {
 	cipher  encryption.Cipher
 
 	ocEnricher             clusterdata.OpenShiftClusterEnricher
-	kubeActionsFactory     kubeActionsFactory
+	adminactionsFactory    adminactionsFactory
 	resourcesClientFactory resourcesClientFactory
 	computeClientFactory   computeClientFactory
 
@@ -74,7 +74,7 @@ type Runnable interface {
 }
 
 // NewFrontend returns a new runnable frontend
-func NewFrontend(ctx context.Context, baseLog *logrus.Entry, _env env.Interface, db *database.Database, apis map[string]*api.Version, m metrics.Interface, cipher encryption.Cipher, kubeActionsFactory kubeActionsFactory, resourcesClientFactory resourcesClientFactory, computeClientFactory computeClientFactory) (Runnable, error) {
+func NewFrontend(ctx context.Context, baseLog *logrus.Entry, _env env.Interface, db *database.Database, apis map[string]*api.Version, m metrics.Interface, cipher encryption.Cipher, adminactionsFactory adminactionsFactory, resourcesClientFactory resourcesClientFactory, computeClientFactory computeClientFactory) (Runnable, error) {
 	f := &frontend{
 		baseLog:                baseLog,
 		env:                    _env,
@@ -82,7 +82,7 @@ func NewFrontend(ctx context.Context, baseLog *logrus.Entry, _env env.Interface,
 		apis:                   apis,
 		m:                      m,
 		cipher:                 cipher,
-		kubeActionsFactory:     kubeActionsFactory,
+		adminactionsFactory:    adminactionsFactory,
 		resourcesClientFactory: resourcesClientFactory,
 		computeClientFactory:   computeClientFactory,
 

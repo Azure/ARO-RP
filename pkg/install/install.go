@@ -24,8 +24,6 @@ import (
 	"github.com/Azure/go-autorest/autorest/date"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
-	securityclient "github.com/openshift/client-go/security/clientset/versioned"
-	samplesclient "github.com/openshift/cluster-samples-operator/pkg/generated/clientset/versioned"
 	"github.com/openshift/installer/pkg/asset/ignition/bootstrap"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
@@ -33,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 
+	"github.com/Azure/ARO-RP/pkg/adminactions"
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -56,6 +55,7 @@ type Installer struct {
 	log          *logrus.Entry
 	env          env.Interface
 	db           database.OpenShiftClusters
+	adminactions adminactions.Interface
 	billing      billing.Manager
 	doc          *api.OpenShiftClusterDocument
 	cipher       encryption.Cipher
@@ -78,8 +78,6 @@ type Installer struct {
 	kubernetescli kubernetes.Interface
 	operatorcli   operatorclient.Interface
 	configcli     configclient.Interface
-	samplescli    samplesclient.Interface
-	securitycli   securityclient.Interface
 }
 
 const (
@@ -159,8 +157,8 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			action(i.updateAPIIP),
 			action(i.createCertificates),
 			action(i.initializeKubernetesClients),
-			condition{i.bootstrapConfigMapReady, 30 * time.Minute},
-			action(i.ensureGenevaLogging),
+			condition{i.adminactions.BootstrapConfigMapReady, 30 * time.Minute},
+			action(i.adminactions.EnsureGenevaLogging),
 			action(i.incrInstallPhase),
 		},
 		api.InstallPhaseRemoveBootstrap: {
@@ -168,18 +166,18 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			action(i.removeBootstrap),
 			action(i.removeBootstrapIgnition),
 			action(i.configureAPIServerCertificate),
-			condition{i.apiServersReady, 30 * time.Minute},
-			condition{i.operatorConsoleExists, 30 * time.Minute},
-			action(i.updateConsoleBranding),
-			condition{i.operatorConsoleReady, 10 * time.Minute},
-			condition{i.clusterVersionReady, 30 * time.Minute},
-			action(i.disableAlertManagerWarning),
-			action(i.disableUpdates),
-			action(i.disableSamples),
-			action(i.disableOperatorHubSources),
+			condition{i.adminactions.APIServersReady, 30 * time.Minute},
+			condition{i.adminactions.OperatorConsoleExists, 30 * time.Minute},
+			action(i.adminactions.UpdateConsoleBranding),
+			condition{i.adminactions.OperatorConsoleReady, 10 * time.Minute},
+			condition{i.adminactions.ClusterVersionReady, 30 * time.Minute},
+			action(i.adminactions.DisableAlertManagerWarning),
+			action(i.adminactions.DisableUpdates),
+			action(i.adminactions.DisableSamples),
+			action(i.adminactions.DisableOperatorHubSources),
 			action(i.updateRouterIP),
 			action(i.configureIngressCertificate),
-			condition{i.ingressControllerReady, 30 * time.Minute},
+			condition{i.adminactions.IngressControllerReady, 30 * time.Minute},
 			action(i.finishInstallation),
 		},
 	}
@@ -199,7 +197,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			i.log.Printf("running step %s", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name())
 			err = step(ctx)
 			if err != nil {
-				i.gatherFailureLogs(ctx)
+				i.adminactions.GatherFailureLogs(ctx)
 				return fmt.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name(), err)
 			}
 		case condition:
@@ -210,7 +208,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 				err = wait.PollImmediateUntil(pollInterval, step.f, timeoutCtx.Done())
 			}()
 			if err != nil {
-				i.gatherFailureLogs(ctx)
+				i.adminactions.GatherFailureLogs(ctx)
 				return fmt.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(step.f).Pointer()).Name(), err)
 			}
 		default:
@@ -369,18 +367,13 @@ func (i *Installer) initializeKubernetesClients(ctx context.Context) error {
 		return err
 	}
 
-	i.securitycli, err = securityclient.NewForConfig(restConfig)
-	if err != nil {
-		return err
-	}
-
-	i.samplescli, err = samplesclient.NewForConfig(restConfig)
-	if err != nil {
-		return err
-	}
-
 	i.configcli, err = configclient.NewForConfig(restConfig)
-	return err
+	if err != nil {
+		return err
+	}
+
+	i.adminactions = adminactions.New(i.log, i.env, i.doc.OpenShiftCluster)
+	return i.adminactions.InitializeClients(ctx)
 }
 
 func (i *Installer) deployARMTemplate(ctx context.Context, rg string, tName string, t *arm.Template, params map[string]interface{}) error {

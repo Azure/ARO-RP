@@ -1,4 +1,4 @@
-package install
+package adminactions
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -19,7 +19,7 @@ func TestUpdateConsoleBranding(t *testing.T) {
 
 	consoleName := "cluster"
 
-	i := &Installer{
+	i := &adminactions{
 		log: logrus.NewEntry(logrus.StandardLogger()),
 		operatorcli: fake.NewSimpleClientset(&v1.Console{
 			ObjectMeta: metav1.ObjectMeta{
@@ -38,7 +38,7 @@ func TestUpdateConsoleBranding(t *testing.T) {
 		}),
 	}
 
-	err := i.updateConsoleBranding(ctx)
+	err := i.UpdateConsoleBranding(ctx)
 	if err != nil {
 		t.Error(err)
 	}

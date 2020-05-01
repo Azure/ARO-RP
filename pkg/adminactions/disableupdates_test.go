@@ -1,4 +1,4 @@
-package install
+package adminactions
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -17,7 +17,7 @@ func TestDisableUpdates(t *testing.T) {
 
 	versionName := "version"
 
-	i := &Installer{
+	i := &adminactions{
 		configcli: fake.NewSimpleClientset(&v1.ClusterVersion{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: versionName,
@@ -29,7 +29,7 @@ func TestDisableUpdates(t *testing.T) {
 		}),
 	}
 
-	err := i.disableUpdates(ctx)
+	err := i.DisableUpdates(ctx)
 	if err != nil {
 		t.Error(err)
 	}

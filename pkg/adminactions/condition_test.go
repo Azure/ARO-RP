@@ -1,4 +1,4 @@
-package install
+package adminactions
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -46,8 +46,8 @@ func TestBootstrapConfigMapReady(t *testing.T) {
 			want:               true,
 		},
 	} {
-		i := &Installer{
-			kubernetescli: k8sfake.NewSimpleClientset(&corev1.ConfigMap{
+		i := &adminactions{
+			cli: k8sfake.NewSimpleClientset(&corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      tt.configMapName,
 					Namespace: tt.configMapNamespace,
@@ -57,7 +57,7 @@ func TestBootstrapConfigMapReady(t *testing.T) {
 				},
 			}),
 		}
-		ready, err := i.bootstrapConfigMapReady()
+		ready, err := i.BootstrapConfigMapReady()
 		if err != nil {
 			t.Error(errMustBeNilMsg)
 		}
@@ -104,7 +104,7 @@ func TestAPIServersReady(t *testing.T) {
 			progressingCondition: operatorv1.ConditionFalse,
 		},
 	} {
-		i := &Installer{
+		i := &adminactions{
 			operatorcli: operatorfake.NewSimpleClientset(&operatorv1.KubeAPIServerList{
 				Items: []operatorv1.KubeAPIServer{
 					{
@@ -131,7 +131,7 @@ func TestAPIServersReady(t *testing.T) {
 				},
 			}),
 		}
-		ready, err := i.apiServersReady()
+		ready, err := i.APIServersReady()
 		if err != nil {
 			t.Error(errMustBeNilMsg)
 		}
@@ -156,14 +156,14 @@ func TestOperatorConsoleExists(t *testing.T) {
 			want:        true,
 		},
 	} {
-		i := &Installer{
+		i := &adminactions{
 			operatorcli: operatorfake.NewSimpleClientset(&operatorv1.Console{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: tt.consoleName,
 				},
 			}),
 		}
-		ready, err := i.operatorConsoleExists()
+		ready, err := i.OperatorConsoleExists()
 		if err != nil {
 			t.Error(errMustBeNilMsg)
 		}
@@ -195,7 +195,7 @@ func TestOperatorConsoleReady(t *testing.T) {
 			want:               true,
 		},
 	} {
-		i := &Installer{
+		i := &adminactions{
 			operatorcli: operatorfake.NewSimpleClientset(&operatorv1.Console{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: tt.consoleName,
@@ -212,7 +212,7 @@ func TestOperatorConsoleReady(t *testing.T) {
 				},
 			}),
 		}
-		ready, err := i.operatorConsoleReady()
+		ready, err := i.OperatorConsoleReady()
 		if err != nil {
 			t.Error(errMustBeNilMsg)
 		}
@@ -244,7 +244,7 @@ func TestClusterVersionReady(t *testing.T) {
 			want:               true,
 		},
 	} {
-		i := &Installer{
+		i := &adminactions{
 			configcli: configfake.NewSimpleClientset(&configv1.ClusterVersion{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: tt.version,
@@ -259,7 +259,7 @@ func TestClusterVersionReady(t *testing.T) {
 				},
 			}),
 		}
-		ready, err := i.clusterVersionReady()
+		ready, err := i.ClusterVersionReady()
 		if err != nil {
 			t.Error(errMustBeNilMsg)
 		}
@@ -307,7 +307,7 @@ func TestIngressControllerReady(t *testing.T) {
 			want:                true,
 		},
 	} {
-		i := &Installer{
+		i := &adminactions{
 			operatorcli: operatorfake.NewSimpleClientset(&operatorv1.IngressControllerList{
 				Items: []operatorv1.IngressController{
 					{
@@ -329,7 +329,7 @@ func TestIngressControllerReady(t *testing.T) {
 				},
 			}),
 		}
-		ready, err := i.ingressControllerReady()
+		ready, err := i.IngressControllerReady()
 		if err != nil {
 			t.Error(errMustBeNilMsg)
 		}
