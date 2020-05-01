@@ -38,10 +38,13 @@ type Interface interface {
 }
 
 type kubeactions struct {
-	log *logrus.Entry
-	env env.Interface
-	oc  *api.OpenShiftCluster
-	cli kubernetes.Interface
+	log             *logrus.Entry
+	env             env.Interface
+	oc              *api.OpenShiftCluster
+	kubernetescli   kubernetes.Interface
+	configcli       *configclient.Clientset
+	dynamiccli      dynamic.Interface
+	apiresourcelist []*metav1.APIResourceList
 }
 
 // New returns a kubeactions struct
@@ -51,22 +54,45 @@ func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster) (Interf
 		return nil, err
 	}
 
-	cli, err := kubernetes.NewForConfig(restconfig)
+	kubernetescli, err := kubernetes.NewForConfig(restconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	configcli, err := configclient.NewForConfig(restconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	discoverycli, err := discovery.NewDiscoveryClientForConfig(restconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	_, apiresourcelist, err := discoverycli.ServerGroupsAndResources()
+	if err != nil {
+		return nil, err
+	}
+
+	dynamiccli, err := dynamic.NewForConfig(restconfig)
 	if err != nil {
 		return nil, err
 	}
 
 	return &kubeactions{
-		log: log,
-		env: env,
-		oc:  oc,
-		cli: cli,
+		log:             log,
+		env:             env,
+		oc:              oc,
+		kubernetescli:   kubernetescli,
+		configcli:       configcli,
+		dynamiccli:      dynamiccli,
+		apiresourcelist: apiresourcelist,
 	}, nil
 }
 
-func (ka *kubeactions) findGVR(apiresourcelist []*metav1.APIResourceList, groupKind, optionalVersion string) (*schema.GroupVersionResource, error) {
+func (ka *kubeactions) findGVR(groupKind, optionalVersion string) (*schema.GroupVersionResource, error) {
 	var matches []*schema.GroupVersionResource
-	for _, apiresources := range apiresourcelist {
+	for _, apiresources := range ka.apiresourcelist {
 		gv, err := schema.ParseGroupVersion(apiresources.GroupVersion)
 		if err != nil {
 			// this returns a fmt.Errorf which will result in a 500
@@ -119,43 +145,14 @@ func (ka *kubeactions) findGVR(apiresourcelist []*metav1.APIResourceList, groupK
 	return matches[0], nil
 }
 
-// dynamicClient returns a dynamic client and discovered API resources
-func (ka *kubeactions) dynamicClient() (dynamic.Interface, []*metav1.APIResourceList, error) {
-	restconfig, err := restconfig.RestConfig(ka.env, ka.oc)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	cli, err := discovery.NewDiscoveryClientForConfig(restconfig)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	_, apiresources, err := cli.ServerGroupsAndResources()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	dyn, err := dynamic.NewForConfig(restconfig)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return dyn, apiresources, nil
-}
-
 func (ka *kubeactions) Get(ctx context.Context, groupKind, namespace, name string) ([]byte, error) {
-	dyn, apiresources, err := ka.dynamicClient()
+
+	gvr, err := ka.findGVR(groupKind, "")
 	if err != nil {
 		return nil, err
 	}
 
-	gvr, err := ka.findGVR(apiresources, groupKind, "")
-	if err != nil {
-		return nil, err
-	}
-
-	un, err := dyn.Resource(*gvr).Namespace(namespace).Get(name, metav1.GetOptions{})
+	un, err := ka.dynamiccli.Resource(*gvr).Namespace(namespace).Get(name, metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -164,17 +161,13 @@ func (ka *kubeactions) Get(ctx context.Context, groupKind, namespace, name strin
 }
 
 func (ka *kubeactions) List(ctx context.Context, groupKind, namespace string) ([]byte, error) {
-	dyn, apiresources, err := ka.dynamicClient()
+
+	gvr, err := ka.findGVR(groupKind, "")
 	if err != nil {
 		return nil, err
 	}
 
-	gvr, err := ka.findGVR(apiresources, groupKind, "")
-	if err != nil {
-		return nil, err
-	}
-
-	ul, err := dyn.Resource(*gvr).Namespace(namespace).List(metav1.ListOptions{})
+	ul, err := ka.dynamiccli.Resource(*gvr).Namespace(namespace).List(metav1.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -188,56 +181,36 @@ func (ka *kubeactions) CreateOrUpdate(ctx context.Context, obj *unstructured.Uns
 	namespace := obj.GetNamespace()
 	groupKind := obj.GroupVersionKind().GroupKind().String()
 
-	dyn, apiresources, err := ka.dynamicClient()
+	gvr, err := ka.findGVR(groupKind, "")
 	if err != nil {
 		return err
 	}
 
-	gvr, err := ka.findGVR(apiresources, groupKind, "")
-	if err != nil {
-		return err
-	}
-
-	_, err = dyn.Resource(*gvr).Namespace(namespace).Update(obj, metav1.UpdateOptions{})
+	_, err = ka.dynamiccli.Resource(*gvr).Namespace(namespace).Update(obj, metav1.UpdateOptions{})
 	if !errors.IsNotFound(err) {
 		return err
 	}
 
-	_, err = dyn.Resource(*gvr).Namespace(namespace).Create(obj, metav1.CreateOptions{})
+	_, err = ka.dynamiccli.Resource(*gvr).Namespace(namespace).Create(obj, metav1.CreateOptions{})
 	return err
 }
 
 func (ka *kubeactions) Delete(ctx context.Context, groupKind, namespace, name string) error {
 	// TODO log changes
 
-	dyn, apiresources, err := ka.dynamicClient()
+	gvr, err := ka.findGVR(groupKind, "")
 	if err != nil {
 		return err
 	}
 
-	gvr, err := ka.findGVR(apiresources, groupKind, "")
-	if err != nil {
-		return err
-	}
-
-	return dyn.Resource(*gvr).Namespace(namespace).Delete(name, &metav1.DeleteOptions{})
+	return ka.dynamiccli.Resource(*gvr).Namespace(namespace).Delete(name, &metav1.DeleteOptions{})
 }
 
 // ClusterUpgrade posts the new version and image to the cluster-version-operator
 // which will effect the upgrade.
 func (ka *kubeactions) ClusterUpgrade(ctx context.Context) error {
-	restconfig, err := restconfig.RestConfig(ka.env, ka.oc)
-	if err != nil {
-		return err
-	}
-
-	configcli, err := configclient.NewForConfig(restconfig)
-	if err != nil {
-		return err
-	}
-
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		cv, err := configcli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
+		cv, err := ka.configcli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -247,7 +220,7 @@ func (ka *kubeactions) ClusterUpgrade(ctx context.Context) error {
 			Image:   version.OpenShiftPullSpec,
 		}
 
-		_, err = configcli.ConfigV1().ClusterVersions().Update(cv)
+		_, err = ka.configcli.ConfigV1().ClusterVersions().Update(cv)
 		return err
 	})
 }

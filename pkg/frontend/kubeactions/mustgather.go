@@ -25,7 +25,7 @@ func (ka *kubeactions) MustGather(ctx context.Context, w io.Writer) error {
 	}
 
 	defer func() {
-		err = ka.cli.CoreV1().Namespaces().Delete(ns.Name, nil)
+		err = ka.kubernetescli.CoreV1().Namespaces().Delete(ns.Name, nil)
 		if err != nil {
 			ka.log.Error(err)
 		}
@@ -37,7 +37,7 @@ func (ka *kubeactions) MustGather(ctx context.Context, w io.Writer) error {
 	}
 
 	defer func() {
-		err = ka.cli.RbacV1().ClusterRoleBindings().Delete(crb.Name, nil)
+		err = ka.kubernetescli.RbacV1().ClusterRoleBindings().Delete(crb.Name, nil)
 		if err != nil {
 			ka.log.Error(err)
 		}
@@ -57,7 +57,7 @@ func (ka *kubeactions) MustGather(ctx context.Context, w io.Writer) error {
 }
 
 func createMustGatherNamespace(ka *kubeactions) (*corev1.Namespace, error) {
-	return ka.cli.CoreV1().Namespaces().Create(&corev1.Namespace{
+	return ka.kubernetescli.CoreV1().Namespaces().Create(&corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "openshift-must-gather-",
 			Labels: map[string]string{
@@ -68,7 +68,7 @@ func createMustGatherNamespace(ka *kubeactions) (*corev1.Namespace, error) {
 }
 
 func createMustGatherClusterRoleBindings(ka *kubeactions, ns *corev1.Namespace) (*rbacv1.ClusterRoleBinding, error) {
-	return ka.cli.RbacV1().ClusterRoleBindings().Create(&rbacv1.ClusterRoleBinding{
+	return ka.kubernetescli.RbacV1().ClusterRoleBindings().Create(&rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "must-gather-",
 		},
@@ -90,7 +90,7 @@ func createMustGatherClusterRoleBindings(ka *kubeactions, ns *corev1.Namespace) 
 // createMustGatherPod attempts to create a pod containing a volume for output, a container,
 // for gathering logs and a container for copying the logs from the output volume
 func createMustGatherPod(ka *kubeactions, ns *corev1.Namespace) (*corev1.Pod, error) {
-	return ka.cli.CoreV1().Pods(ns.Name).Create(&corev1.Pod{
+	return ka.kubernetescli.CoreV1().Pods(ns.Name).Create(&corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "must-gather",
 		},
@@ -148,7 +148,7 @@ func createMustGatherPod(ka *kubeactions, ns *corev1.Namespace) (*corev1.Pod, er
 func waitForMustGatherPod(ctx context.Context, ka *kubeactions, pod *corev1.Pod) error {
 	ka.log.Info("waiting for must-gather pod")
 	err := wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-		pod, err := ka.cli.CoreV1().Pods(pod.Namespace).Get(pod.Name, metav1.GetOptions{})
+		pod, err := ka.kubernetescli.CoreV1().Pods(pod.Namespace).Get(pod.Name, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}

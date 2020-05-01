@@ -136,9 +136,11 @@ func TestFindGVR(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ka := &kubeactions{}
+			ka := &kubeactions{
+				apiresourcelist: tt.resources,
+			}
 
-			got, err := ka.findGVR(tt.resources, tt.kind, "")
+			got, err := ka.findGVR(tt.kind, "")
 			if !reflect.DeepEqual(err, tt.wantErr) {
 				t.Error(err)
 			}

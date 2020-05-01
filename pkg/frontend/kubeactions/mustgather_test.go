@@ -13,13 +13,13 @@ import (
 	"testing"
 	"time"
 
-	mockportforward "github.com/Azure/ARO-RP/pkg/util/mocks/portforward"
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	mockportforward "github.com/Azure/ARO-RP/pkg/util/mocks/portforward"
 )
 
 func TestWaitForMustGatherPod(t *testing.T) {
@@ -41,9 +41,9 @@ func TestWaitForMustGatherPod(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ka := &kubeactions{
-				log: logrus.NewEntry(logrus.StandardLogger()),
-				oc:  &api.OpenShiftCluster{},
-				cli: fake.NewSimpleClientset(),
+				log:           logrus.NewEntry(logrus.StandardLogger()),
+				oc:            &api.OpenShiftCluster{},
+				kubernetescli: fake.NewSimpleClientset(),
 			}
 
 			ns, err := createMustGatherNamespace(ka)
@@ -60,7 +60,7 @@ func TestWaitForMustGatherPod(t *testing.T) {
 				pod.Status = corev1.PodStatus{
 					Phase: corev1.PodRunning,
 				}
-				ka.cli.CoreV1().Pods(pod.Namespace).Update(pod)
+				ka.kubernetescli.CoreV1().Pods(pod.Namespace).Update(pod)
 			}
 
 			timeoutCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
@@ -103,8 +103,8 @@ func TestCopyMustGatherLogs(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ka := &kubeactions{
-				log: logrus.NewEntry(logrus.StandardLogger()),
-				cli: fake.NewSimpleClientset(),
+				log:           logrus.NewEntry(logrus.StandardLogger()),
+				kubernetescli: fake.NewSimpleClientset(),
 			}
 
 			ns, err := createMustGatherNamespace(ka)
