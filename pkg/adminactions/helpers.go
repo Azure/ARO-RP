@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	configv1 "github.com/openshift/api/config/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
@@ -118,7 +119,7 @@ func (a *adminactions) applyConfigMap(cm *v1.ConfigMap) error {
 	})
 }
 
-func (a *adminactions) applySecret(s *v1.Secret) error {
+func (a *adminactions) ApplySecret(s *v1.Secret) error {
 	_, err := a.cli.CoreV1().Secrets(s.Namespace).Create(s)
 	if !errors.IsAlreadyExists(err) {
 		return err
@@ -132,6 +133,34 @@ func (a *adminactions) applySecret(s *v1.Secret) error {
 
 		s.ResourceVersion = _s.ResourceVersion
 		_, err = a.cli.CoreV1().Secrets(s.Namespace).Update(s)
+		return err
+	})
+}
+
+func (a *adminactions) ApplyAPIServerNamedServingCert(cert *configv1.APIServerNamedServingCert) error {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		apiserver, err := a.configcli.ConfigV1().APIServers().Get("cluster", metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		apiserver.Spec.ServingCerts.NamedCertificates = []configv1.APIServerNamedServingCert{*cert}
+
+		_, err = a.configcli.ConfigV1().APIServers().Update(apiserver)
+		return err
+	})
+}
+
+func (a *adminactions) ApplyIngressControllerCertificate(cert *v1.LocalObjectReference) error {
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		ic, err := a.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Get("default", metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		ic.Spec.DefaultCertificate = cert
+
+		_, err = a.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Update(ic)
 		return err
 	})
 }

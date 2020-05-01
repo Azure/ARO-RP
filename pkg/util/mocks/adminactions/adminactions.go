@@ -10,6 +10,8 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	v1 "github.com/openshift/api/config/v1"
+	v10 "k8s.io/api/core/v1"
 	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -49,6 +51,48 @@ func (m *MockInterface) APIServersReady() (bool, error) {
 func (mr *MockInterfaceMockRecorder) APIServersReady() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "APIServersReady", reflect.TypeOf((*MockInterface)(nil).APIServersReady))
+}
+
+// ApplyAPIServerNamedServingCert mocks base method
+func (m *MockInterface) ApplyAPIServerNamedServingCert(arg0 *v1.APIServerNamedServingCert) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApplyAPIServerNamedServingCert", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ApplyAPIServerNamedServingCert indicates an expected call of ApplyAPIServerNamedServingCert
+func (mr *MockInterfaceMockRecorder) ApplyAPIServerNamedServingCert(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyAPIServerNamedServingCert", reflect.TypeOf((*MockInterface)(nil).ApplyAPIServerNamedServingCert), arg0)
+}
+
+// ApplyIngressControllerCertificate mocks base method
+func (m *MockInterface) ApplyIngressControllerCertificate(arg0 *v10.LocalObjectReference) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApplyIngressControllerCertificate", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ApplyIngressControllerCertificate indicates an expected call of ApplyIngressControllerCertificate
+func (mr *MockInterfaceMockRecorder) ApplyIngressControllerCertificate(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyIngressControllerCertificate", reflect.TypeOf((*MockInterface)(nil).ApplyIngressControllerCertificate), arg0)
+}
+
+// ApplySecret mocks base method
+func (m *MockInterface) ApplySecret(arg0 *v10.Secret) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ApplySecret", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ApplySecret indicates an expected call of ApplySecret
+func (mr *MockInterfaceMockRecorder) ApplySecret(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplySecret", reflect.TypeOf((*MockInterface)(nil).ApplySecret), arg0)
 }
 
 // BootstrapConfigMapReady mocks base method

@@ -189,7 +189,7 @@ func (a *adminactions) EnsureGenevaLogging(ctx context.Context) error {
 		return err
 	}
 
-	err = a.applySecret(&v1.Secret{
+	err = a.ApplySecret(&v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "certificates",
 			Namespace: kubeNamespace,

@@ -7,11 +7,13 @@ import (
 	"context"
 	"io"
 
+	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	samplesclient "github.com/openshift/cluster-samples-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -41,6 +43,9 @@ type Interface interface {
 	UpdateConsoleBranding(ctx context.Context) error
 
 	GatherFailureLogs(ctx context.Context)
+	ApplySecret(s *v1.Secret) error
+	ApplyAPIServerNamedServingCert(cert *configv1.APIServerNamedServingCert) error
+	ApplyIngressControllerCertificate(cert *v1.LocalObjectReference) error
 
 	APIServersReady() (bool, error)
 	OperatorConsoleExists() (bool, error)

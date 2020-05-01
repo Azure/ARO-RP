@@ -22,8 +22,6 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/date"
-	configclient "github.com/openshift/client-go/config/clientset/versioned"
-	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	"github.com/openshift/installer/pkg/asset/ignition/bootstrap"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
@@ -76,8 +74,6 @@ type Installer struct {
 	subnet          subnet.Manager
 
 	kubernetescli kubernetes.Interface
-	operatorcli   operatorclient.Interface
-	configcli     configclient.Interface
 }
 
 const (
@@ -358,16 +354,6 @@ func (i *Installer) initializeKubernetesClients(ctx context.Context) error {
 	}
 
 	i.kubernetescli, err = kubernetes.NewForConfig(restConfig)
-	if err != nil {
-		return err
-	}
-
-	i.operatorcli, err = operatorclient.NewForConfig(restConfig)
-	if err != nil {
-		return err
-	}
-
-	i.configcli, err = configclient.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}
