@@ -2,9 +2,17 @@
 
 ## Unit tests
 
-  ```bash
-  make test
-  ```
+To run RP unit tests:
+
+```bash
+make test-go
+```
+  
+To run python client and `az aro` CLI tests:
+
+```bash
+make test-python
+```
 
 ## E2e tests
 
