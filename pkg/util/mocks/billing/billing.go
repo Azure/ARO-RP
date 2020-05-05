@@ -36,20 +36,6 @@ func (m *MockManager) EXPECT() *MockManagerMockRecorder {
 	return m.recorder
 }
 
-// Create mocks base method
-func (m *MockManager) Create(arg0 context.Context, arg1 *api.OpenShiftClusterDocument) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Create indicates an expected call of Create
-func (mr *MockManagerMockRecorder) Create(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockManager)(nil).Create), arg0, arg1)
-}
-
 // Delete mocks base method
 func (m *MockManager) Delete(arg0 context.Context, arg1 *api.OpenShiftClusterDocument) error {
 	m.ctrl.T.Helper()
@@ -62,4 +48,18 @@ func (m *MockManager) Delete(arg0 context.Context, arg1 *api.OpenShiftClusterDoc
 func (mr *MockManagerMockRecorder) Delete(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockManager)(nil).Delete), arg0, arg1)
+}
+
+// Ensure mocks base method
+func (m *MockManager) Ensure(arg0 context.Context, arg1 *api.OpenShiftClusterDocument) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Ensure", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Ensure indicates an expected call of Ensure
+func (mr *MockManagerMockRecorder) Ensure(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ensure", reflect.TypeOf((*MockManager)(nil).Ensure), arg0, arg1)
 }

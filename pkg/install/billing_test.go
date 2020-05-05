@@ -14,7 +14,7 @@ import (
 	mock_billing "github.com/Azure/ARO-RP/pkg/util/mocks/billing"
 )
 
-func TestCreateBillingEntry(t *testing.T) {
+func TestEnsureBillingEntry(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tt := range []struct {
@@ -26,7 +26,7 @@ func TestCreateBillingEntry(t *testing.T) {
 			name: "manager create is called and doesn't return an error when create doesn't return an error",
 			mocks: func(billing *mock_billing.MockManager) {
 				billing.EXPECT().
-					Create(gomock.Any(), &api.OpenShiftClusterDocument{}).
+					Ensure(gomock.Any(), &api.OpenShiftClusterDocument{}).
 					Return(nil)
 			},
 		},
@@ -34,7 +34,7 @@ func TestCreateBillingEntry(t *testing.T) {
 			name: "manager create is called and returns an error on create returning an error",
 			mocks: func(billing *mock_billing.MockManager) {
 				billing.EXPECT().
-					Create(gomock.Any(), &api.OpenShiftClusterDocument{}).
+					Ensure(gomock.Any(), &api.OpenShiftClusterDocument{}).
 					Return(errors.New("random error"))
 			},
 			wantErr: "random error",
@@ -52,7 +52,7 @@ func TestCreateBillingEntry(t *testing.T) {
 				billing: billing,
 			}
 
-			err := i.createBillingRecord(ctx)
+			err := i.ensureBillingRecord(ctx)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
