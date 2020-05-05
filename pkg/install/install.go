@@ -153,7 +153,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			action(func(ctx context.Context) error {
 				return i.deployStorageTemplate(ctx, installConfig, platformCreds, image)
 			}),
-			action(i.createBillingRecord),
+			action(i.ensureBillingRecord),
 			action(i.deployResourceTemplate),
 			action(i.createPrivateEndpoint),
 			action(i.updateAPIIP),
