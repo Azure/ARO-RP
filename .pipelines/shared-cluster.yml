@@ -27,13 +27,10 @@ jobs:
     parameters:
       workingDirectory: /
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
-  - displayName: 📦 Install or update az aro extension
-    script: |
-      az extension update -n aro --index https://az.aroapp.io/stable || \
-      az extension add -n aro --index https://az.aroapp.io/stable"
+  - template: ./templates/template-az-aro-extension-prod.yml
   - displayName: 🧹 Delete cluster
     script: |
-      az aro delete --resource-group "$CLUSTER" --name "$CLUSTER"
+      az aro delete --yes --resource-group "$CLUSTER" --name "$CLUSTER"
 
 - job: ⏫ Set up shared cluster
   pool:
@@ -47,10 +44,7 @@ jobs:
     parameters:
       workingDirectory: /
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
-  - displayName: 📦 Install az aro extension
-    script: |
-      az extension update -n aro --index https://az.aroapp.io/stable || \
-      az extension add -n aro --index https://az.aroapp.io/stable"
+  - template: ./templates/template-az-aro-extension-prod.yml
   - displayName: 🚀 Create RG
     script: |
       az group create --name "$CLUSTER" --location "$LOCATION"
@@ -61,6 +55,7 @@ jobs:
         --name vnet \
         --address-prefixes 10.0.0.0/9
   - displayName: 🚀 Create subnets
+    condition: succeededOrFailed()
     script: |
       az network vnet subnet create \
         --resource-group "$CLUSTER" \

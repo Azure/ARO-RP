@@ -1,0 +1,5 @@
+steps:
+- displayName: 📦 Install or update az aro prod extension
+  script: |
+    az extension update -n aro --index https://az.aroapp.io/stable || \
+    az extension add -n aro --index https://az.aroapp.io/stable"
