@@ -198,12 +198,6 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	s.Methods(http.MethodDelete).HandlerFunc(f.deleteAdminKubernetesObjects).Name("deleteAdminKubernetesObjects")
 
 	s = r.
-		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/upgrade").
-		Subrouter()
-
-	s.Methods(http.MethodPost).HandlerFunc(f.postAdminOpenShiftClusterUpgrade).Name("postAdminOpenShiftClusterUpgrade")
-
-	s = r.
 		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/resources").
 		Subrouter()
 

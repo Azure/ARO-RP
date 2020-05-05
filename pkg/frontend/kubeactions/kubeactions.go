@@ -9,8 +9,6 @@ import (
 	"net/http"
 	"strings"
 
-	configv1 "github.com/openshift/api/config/v1"
-	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -18,12 +16,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
-	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
-	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 type Interface interface {
@@ -31,7 +27,6 @@ type Interface interface {
 	List(ctx context.Context, oc *api.OpenShiftCluster, groupKind, namespace string) ([]byte, error)
 	CreateOrUpdate(ctx context.Context, oc *api.OpenShiftCluster, obj *unstructured.Unstructured) error
 	Delete(ctx context.Context, oc *api.OpenShiftCluster, groupKind, namespace, name string) error
-	ClusterUpgrade(ctx context.Context, oc *api.OpenShiftCluster) error
 	MustGather(ctx context.Context, oc *api.OpenShiftCluster, w io.Writer) error
 }
 
@@ -203,33 +198,4 @@ func (ka *kubeactions) Delete(ctx context.Context, oc *api.OpenShiftCluster, gro
 	}
 
 	return dyn.Resource(*gvr).Namespace(namespace).Delete(name, &metav1.DeleteOptions{})
-}
-
-// ClusterUpgrade posts the new version and image to the cluster-version-operator
-// which will effect the upgrade.
-func (ka *kubeactions) ClusterUpgrade(ctx context.Context, oc *api.OpenShiftCluster) error {
-	restconfig, err := restconfig.RestConfig(ka.env, oc)
-	if err != nil {
-		return err
-	}
-
-	configcli, err := configclient.NewForConfig(restconfig)
-	if err != nil {
-		return err
-	}
-
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		cv, err := configcli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-
-		cv.Spec.DesiredUpdate = &configv1.Update{
-			Version: version.OpenShiftVersion,
-			Image:   version.OpenShiftPullSpec,
-		}
-
-		_, err = configcli.ConfigV1().ClusterVersions().Update(cv)
-		return err
-	})
 }
