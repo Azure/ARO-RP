@@ -145,6 +145,22 @@ func NewInstaller(ctx context.Context, log *logrus.Entry, _env env.Interface, db
 	}, nil
 }
 
+func (i *Installer) AdminUpgrade(ctx context.Context) error {
+	steps := []interface{}{
+		action(i.initializeKubernetesClients),
+		action(i.ensureBillingRecord), // belt and braces
+		action(i.ensureGenevaLogging),
+		action(i.upgradeCluster),
+
+		// TODO: later could use this flow to refresh certificates
+		// action(i.createCertificates),
+		// action(i.configureAPIServerCertificate),
+		// action(i.configureIngressCertificate),
+	}
+
+	return i.runSteps(ctx, steps)
+}
+
 // Install installs an ARO cluster
 func (i *Installer) Install(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) error {
 	steps := map[api.InstallPhase][]interface{}{
