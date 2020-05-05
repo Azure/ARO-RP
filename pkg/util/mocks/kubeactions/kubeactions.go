@@ -38,20 +38,6 @@ func (m *MockInterface) EXPECT() *MockInterfaceMockRecorder {
 	return m.recorder
 }
 
-// ClusterUpgrade mocks base method
-func (m *MockInterface) ClusterUpgrade(arg0 context.Context, arg1 *api.OpenShiftCluster) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ClusterUpgrade", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// ClusterUpgrade indicates an expected call of ClusterUpgrade
-func (mr *MockInterfaceMockRecorder) ClusterUpgrade(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClusterUpgrade", reflect.TypeOf((*MockInterface)(nil).ClusterUpgrade), arg0, arg1)
-}
-
 // CreateOrUpdate mocks base method
 func (m *MockInterface) CreateOrUpdate(arg0 context.Context, arg1 *api.OpenShiftCluster, arg2 *unstructured.Unstructured) error {
 	m.ctrl.T.Helper()
