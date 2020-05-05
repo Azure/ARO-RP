@@ -110,7 +110,16 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 		}
 		return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateCreating, nil)
 
-	case api.ProvisioningStateUpdating, api.ProvisioningStateAdminUpdating:
+	case api.ProvisioningStateAdminUpdating:
+		log.Print("admin updating")
+
+		err = m.AdminUpdate(ctx)
+		if err != nil {
+			return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err)
+		}
+		return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateSucceeded, nil)
+
+	case api.ProvisioningStateUpdating:
 		log.Print("updating")
 
 		err = m.Update(ctx)
