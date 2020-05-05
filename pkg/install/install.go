@@ -193,7 +193,13 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 		return fmt.Errorf("unrecognised phase %s", i.doc.OpenShiftCluster.Properties.Install.Phase)
 	}
 	i.log.Printf("starting phase %s", i.doc.OpenShiftCluster.Properties.Install.Phase)
-	for _, step := range steps[i.doc.OpenShiftCluster.Properties.Install.Phase] {
+	return i.runSteps(ctx, steps[i.doc.OpenShiftCluster.Properties.Install.Phase])
+}
+
+func (i *Installer) runSteps(ctx context.Context, steps []interface{}) error {
+	for _, step := range steps {
+		var err error
+
 		switch step := step.(type) {
 		case action:
 			i.log.Printf("running step %s", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name())
@@ -202,6 +208,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 				i.gatherFailureLogs(ctx)
 				return fmt.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name(), err)
 			}
+
 		case condition:
 			i.log.Printf("waiting for %s", runtime.FuncForPC(reflect.ValueOf(step.f).Pointer()).Name())
 			func() {
@@ -213,10 +220,12 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 				i.gatherFailureLogs(ctx)
 				return fmt.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(step.f).Pointer()).Name(), err)
 			}
+
 		default:
 			return errors.New("install step must be an action or a condition")
 		}
 	}
+
 	return nil
 }
 
