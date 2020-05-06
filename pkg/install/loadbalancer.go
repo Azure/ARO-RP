@@ -87,10 +87,11 @@ func (i *Installer) apiServerPublicLoadBalancer(location string, visibility api.
 		lb.Probes = &[]mgmtnetwork.Probe{
 			{
 				ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
-					Protocol:          mgmtnetwork.ProbeProtocolTCP,
+					Protocol:          mgmtnetwork.ProbeProtocolHTTPS,
 					Port:              to.Int32Ptr(6443),
 					IntervalInSeconds: to.Int32Ptr(10),
 					NumberOfProbes:    to.Int32Ptr(3),
+					RequestPath:       to.StringPtr("/readyz"),
 				},
 				Name: to.StringPtr("api-internal-probe"),
 				Type: to.StringPtr("Microsoft.Network/loadBalancers/probes"),
