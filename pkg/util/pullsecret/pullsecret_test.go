@@ -15,18 +15,26 @@ func TestSetRegistryProfiles(t *testing.T) {
 	original := `{"auths":{"arosvc.azurecr.io":{"auth":"x"},"registry.redhat.io":{"auth":"y"}}}`
 
 	for _, tt := range []struct {
-		name string
-		ps   string
-		rp   *api.RegistryProfile
-		want *pullSecret
+		name        string
+		ps          string
+		rps         []*api.RegistryProfile
+		want        *pullSecret
+		wantChanged bool
 	}{
 		{
-			name: "replace",
+			name: "add and replace",
 			ps:   original,
-			rp: &api.RegistryProfile{
-				Name:     "arosvc.azurecr.io",
-				Username: "fred",
-				Password: "enter",
+			rps: []*api.RegistryProfile{
+				{
+					Name:     "arosvc.azurecr.io",
+					Username: "fred",
+					Password: "enter",
+				},
+				{
+					Name:     "arosvc-int.azurecr.io",
+					Username: "fred",
+					Password: "enter",
+				},
 			},
 			want: &pullSecret{
 				Auths: map[string]map[string]interface{}{
@@ -36,21 +44,50 @@ func TestSetRegistryProfiles(t *testing.T) {
 					"registry.redhat.io": {
 						"auth": "y",
 					},
+					"arosvc-int.azurecr.io": {
+						"auth": "ZnJlZDplbnRlcg==",
+					},
 				},
 			},
+			wantChanged: true,
 		},
 		{
-			name: "add",
-			ps:   original,
-			rp: &api.RegistryProfile{
-				Name:     "arosvc-int.azurecr.io",
-				Username: "fred",
-				Password: "enter",
+			name: "new",
+			rps: []*api.RegistryProfile{
+				{
+					Name:     "arosvc.azurecr.io",
+					Username: "fred",
+					Password: "enter",
+				},
 			},
 			want: &pullSecret{
 				Auths: map[string]map[string]interface{}{
 					"arosvc.azurecr.io": {
-						"auth": "x",
+						"auth": "ZnJlZDplbnRlcg==",
+					},
+				},
+			},
+			wantChanged: true,
+		},
+		{
+			name: "no change",
+			ps:   `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"arosvc-int.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"y"}}}`,
+			rps: []*api.RegistryProfile{
+				{
+					Name:     "arosvc.azurecr.io",
+					Username: "fred",
+					Password: "enter",
+				},
+				{
+					Name:     "arosvc-int.azurecr.io",
+					Username: "fred",
+					Password: "enter",
+				},
+			},
+			want: &pullSecret{
+				Auths: map[string]map[string]interface{}{
+					"arosvc.azurecr.io": {
+						"auth": "ZnJlZDplbnRlcg==",
 					},
 					"registry.redhat.io": {
 						"auth": "y",
@@ -61,26 +98,15 @@ func TestSetRegistryProfiles(t *testing.T) {
 				},
 			},
 		},
-		{
-			name: "new",
-			rp: &api.RegistryProfile{
-				Name:     "arosvc.azurecr.io",
-				Username: "fred",
-				Password: "enter",
-			},
-			want: &pullSecret{
-				Auths: map[string]map[string]interface{}{
-					"arosvc.azurecr.io": {
-						"auth": "ZnJlZDplbnRlcg==",
-					},
-				},
-			},
-		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			ps, err := SetRegistryProfiles(tt.ps, tt.rp)
+			ps, changed, err := SetRegistryProfiles(tt.ps, tt.rps...)
 			if err != nil {
 				t.Fatal(err)
+			}
+
+			if changed != tt.wantChanged {
+				t.Error(changed)
 			}
 
 			var got *pullSecret

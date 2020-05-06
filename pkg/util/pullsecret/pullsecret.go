@@ -6,6 +6,7 @@ package pullsecret
 import (
 	"encoding/base64"
 	"encoding/json"
+	"reflect"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 )
@@ -14,7 +15,7 @@ type pullSecret struct {
 	Auths map[string]map[string]interface{} `json:"auths,omitempty"`
 }
 
-func SetRegistryProfiles(_ps string, rps ...*api.RegistryProfile) (string, error) {
+func SetRegistryProfiles(_ps string, rps ...*api.RegistryProfile) (string, bool, error) {
 	if _ps == "" {
 		_ps = "{}"
 	}
@@ -23,21 +24,29 @@ func SetRegistryProfiles(_ps string, rps ...*api.RegistryProfile) (string, error
 
 	err := json.Unmarshal([]byte(_ps), &ps)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 
 	if ps.Auths == nil {
 		ps.Auths = map[string]map[string]interface{}{}
 	}
 
+	var changed bool
+
 	for _, rp := range rps {
-		ps.Auths[rp.Name] = map[string]interface{}{
+		v := map[string]interface{}{
 			"auth": base64.StdEncoding.EncodeToString([]byte(rp.Username + ":" + string(rp.Password))),
 		}
+
+		if !reflect.DeepEqual(ps.Auths[rp.Name], v) {
+			changed = true
+		}
+
+		ps.Auths[rp.Name] = v
 	}
 
 	b, err := json.Marshal(ps)
-	return string(b), err
+	return string(b), changed, err
 }
 
 // Merge returns _ps over _base.  If both _ps and _base have a given key, the

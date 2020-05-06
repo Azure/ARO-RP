@@ -119,7 +119,7 @@ func (m *Manager) Create(ctx context.Context) error {
 		return err
 	}
 
-	pullSecret, err = pullsecret.SetRegistryProfiles(pullSecret, m.doc.OpenShiftCluster.Properties.RegistryProfiles...)
+	pullSecret, _, err = pullsecret.SetRegistryProfiles(pullSecret, m.doc.OpenShiftCluster.Properties.RegistryProfiles...)
 	if err != nil {
 		return err
 	}
