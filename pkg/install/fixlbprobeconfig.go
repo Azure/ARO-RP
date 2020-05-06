@@ -13,7 +13,13 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
-func (i *Installer) fixLBProbeConfig(ctx context.Context, resourceGroup, lbName, probeName string) error {
+type probe struct {
+	lbName    string
+	probeName string
+	httpsPath string
+}
+
+func (i *Installer) fixLBProbeConfig(ctx context.Context, resourceGroup, lbName, probeName, path string) error {
 	lb, err := i.loadbalancers.Get(ctx, resourceGroup, lbName, "")
 	if err != nil {
 		return err
@@ -22,7 +28,7 @@ func (i *Installer) fixLBProbeConfig(ctx context.Context, resourceGroup, lbName,
 	for pix, probe := range *lb.LoadBalancerPropertiesFormat.Probes {
 		if *probe.Name == probeName {
 			(*lb.LoadBalancerPropertiesFormat.Probes)[pix].ProbePropertiesFormat.Protocol = mgmtnetwork.ProbeProtocolHTTPS
-			(*lb.LoadBalancerPropertiesFormat.Probes)[pix].RequestPath = to.StringPtr("/readyz")
+			(*lb.LoadBalancerPropertiesFormat.Probes)[pix].RequestPath = to.StringPtr(path)
 		}
 	}
 
@@ -35,14 +41,31 @@ func (i *Installer) fixLBProbes(ctx context.Context) error {
 		infraID = "aro" // TODO: remove after deploy
 	}
 	resourceGroup := stringutils.LastTokenByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-	err := i.fixLBProbeConfig(ctx, resourceGroup, infraID+"-internal-lb", "api-internal-probe")
-	if err != nil {
-		return err
+
+	fixes := []probe{
+		{
+			lbName:    infraID + "-internal-lb",
+			probeName: "api-internal-probe",
+			httpsPath: "/readyz",
+		},
+		{
+			lbName:    infraID + "-internal-lb",
+			probeName: "sint-probe",
+			httpsPath: "/healthz",
+		},
 	}
 
 	// the public LB with visibility != api.VisibilityPublic has no probes
 	if i.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {
-		return i.fixLBProbeConfig(ctx, resourceGroup, infraID+"-public-lb", "api-internal-probe")
+		fixes = append(fixes, probe{lbName: infraID + "-public-lb", probeName: "api-internal-probe", httpsPath: "/readyz"})
 	}
+
+	for _, f := range fixes {
+		err := i.fixLBProbeConfig(ctx, resourceGroup, f.lbName, f.probeName, f.httpsPath)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }

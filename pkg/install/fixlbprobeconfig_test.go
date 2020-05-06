@@ -81,6 +81,62 @@ func TestFixLBProbes(t *testing.T) {
 							},
 						},
 					}).Return(nil)
+
+				lbc.EXPECT().Get(gomock.Any(), "test-cluster", "test-internal-lb", "").Return(
+					mgmtnetwork.LoadBalancer{
+						LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
+							Probes: &[]mgmtnetwork.Probe{
+								{
+									ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
+										Protocol:          mgmtnetwork.ProbeProtocolHTTPS,
+										Port:              to.Int32Ptr(6443),
+										IntervalInSeconds: to.Int32Ptr(10),
+										NumberOfProbes:    to.Int32Ptr(3),
+										RequestPath:       to.StringPtr("/readyz"),
+									},
+									Name: to.StringPtr("api-internal-probe"),
+								},
+								{
+									ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
+										Protocol:          mgmtnetwork.ProbeProtocolTCP,
+										Port:              to.Int32Ptr(22623),
+										IntervalInSeconds: to.Int32Ptr(10),
+										NumberOfProbes:    to.Int32Ptr(3),
+									},
+									Name: to.StringPtr("sint-probe"),
+								},
+							},
+						},
+					}, nil)
+
+				lbc.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "test-cluster", "test-internal-lb",
+					mgmtnetwork.LoadBalancer{
+						LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
+							Probes: &[]mgmtnetwork.Probe{
+								{
+									ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
+										Protocol:          mgmtnetwork.ProbeProtocolHTTPS,
+										Port:              to.Int32Ptr(6443),
+										IntervalInSeconds: to.Int32Ptr(10),
+										NumberOfProbes:    to.Int32Ptr(3),
+										RequestPath:       to.StringPtr("/readyz"),
+									},
+									Name: to.StringPtr("api-internal-probe"),
+								},
+								{
+									ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
+										Protocol:          mgmtnetwork.ProbeProtocolHTTPS,
+										Port:              to.Int32Ptr(22623),
+										IntervalInSeconds: to.Int32Ptr(10),
+										NumberOfProbes:    to.Int32Ptr(3),
+										RequestPath:       to.StringPtr("/healthz"),
+									},
+									Name: to.StringPtr("sint-probe"),
+								},
+							},
+						},
+					}).Return(nil)
+
 			},
 		},
 		{
@@ -133,6 +189,61 @@ func TestFixLBProbes(t *testing.T) {
 										Port:              to.Int32Ptr(22623),
 										IntervalInSeconds: to.Int32Ptr(10),
 										NumberOfProbes:    to.Int32Ptr(3),
+									},
+									Name: to.StringPtr("sint-probe"),
+								},
+							},
+						},
+					}).Return(nil)
+
+				lbc.EXPECT().Get(gomock.Any(), "test-cluster", "test-internal-lb", "").Return(
+					mgmtnetwork.LoadBalancer{
+						LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
+							Probes: &[]mgmtnetwork.Probe{
+								{
+									ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
+										Protocol:          mgmtnetwork.ProbeProtocolHTTPS,
+										Port:              to.Int32Ptr(6443),
+										IntervalInSeconds: to.Int32Ptr(10),
+										NumberOfProbes:    to.Int32Ptr(3),
+										RequestPath:       to.StringPtr("/readyz"),
+									},
+									Name: to.StringPtr("api-internal-probe"),
+								},
+								{
+									ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
+										Protocol:          mgmtnetwork.ProbeProtocolTCP,
+										Port:              to.Int32Ptr(22623),
+										IntervalInSeconds: to.Int32Ptr(10),
+										NumberOfProbes:    to.Int32Ptr(3),
+									},
+									Name: to.StringPtr("sint-probe"),
+								},
+							},
+						},
+					}, nil)
+
+				lbc.EXPECT().CreateOrUpdateAndWait(gomock.Any(), "test-cluster", "test-internal-lb",
+					mgmtnetwork.LoadBalancer{
+						LoadBalancerPropertiesFormat: &mgmtnetwork.LoadBalancerPropertiesFormat{
+							Probes: &[]mgmtnetwork.Probe{
+								{
+									ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
+										Protocol:          mgmtnetwork.ProbeProtocolHTTPS,
+										Port:              to.Int32Ptr(6443),
+										IntervalInSeconds: to.Int32Ptr(10),
+										NumberOfProbes:    to.Int32Ptr(3),
+										RequestPath:       to.StringPtr("/readyz"),
+									},
+									Name: to.StringPtr("api-internal-probe"),
+								},
+								{
+									ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
+										Protocol:          mgmtnetwork.ProbeProtocolHTTPS,
+										Port:              to.Int32Ptr(22623),
+										IntervalInSeconds: to.Int32Ptr(10),
+										NumberOfProbes:    to.Int32Ptr(3),
+										RequestPath:       to.StringPtr("/healthz"),
 									},
 									Name: to.StringPtr("sint-probe"),
 								},
