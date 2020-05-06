@@ -42,6 +42,9 @@ func (m *Manager) Create(ctx context.Context) error {
 	var err error
 
 	if m.doc.OpenShiftCluster.Properties.Install == nil {
+		// we don't re-call Dynamic on subsequent entries here.  One reason is
+		// that we would re-check quota *after* we had deployed our VMs, and
+		// could fail with a false positive.
 		err = m.ocDynamicValidator.Dynamic(ctx, m.doc.OpenShiftCluster)
 		if err != nil {
 			return err
