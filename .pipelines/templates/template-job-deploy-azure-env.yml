@@ -10,6 +10,7 @@ parameters:
   azureDevOpsE2EJSONSPN: ''
   e2eSubscription: ''
   billingE2EPipelineName: ''
+  billingE2EBranchName: ''
 
 jobs:
 - ${{ each location in  parameters.locations }}:
