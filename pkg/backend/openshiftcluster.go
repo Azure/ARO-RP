@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -213,6 +214,7 @@ func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, lo
 			if oc != nil {
 				ocCopy := *oc
 				ocCopy.Properties.ProvisioningState = provisioningState
+				ocCopy.Properties.LastProvisioningState = ""
 				ocCopy.Properties.FailedProvisioningState = failedProvisioningState
 
 				asyncdoc.OpenShiftCluster = &ocCopy
@@ -230,8 +232,11 @@ func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, lo
 }
 
 func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.Entry, stop func(), doc *api.OpenShiftClusterDocument, provisioningState api.ProvisioningState, backendErr error) error {
+	var adminUpdateError *string
 	var failedProvisioningState api.ProvisioningState
-	if provisioningState == api.ProvisioningStateFailed {
+
+	if doc.OpenShiftCluster.Properties.ProvisioningState != api.ProvisioningStateAdminUpdating &&
+		provisioningState == api.ProvisioningStateFailed {
 		failedProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
 	}
 
@@ -244,10 +249,21 @@ func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.En
 		}
 	}
 
+	if doc.OpenShiftCluster.Properties.ProvisioningState == api.ProvisioningStateAdminUpdating {
+		provisioningState = doc.OpenShiftCluster.Properties.LastProvisioningState
+		failedProvisioningState = doc.OpenShiftCluster.Properties.FailedProvisioningState
+
+		if backendErr == nil {
+			adminUpdateError = to.StringPtr("")
+		} else {
+			adminUpdateError = to.StringPtr(backendErr.Error())
+		}
+	}
+
 	if stop != nil {
 		stop()
 	}
 
-	_, err := ocb.db.OpenShiftClusters.EndLease(ctx, doc.Key, provisioningState, failedProvisioningState)
+	_, err := ocb.db.OpenShiftClusters.EndLease(ctx, doc.Key, provisioningState, failedProvisioningState, adminUpdateError)
 	return err
 }

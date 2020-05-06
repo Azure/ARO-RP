@@ -46,6 +46,7 @@ func (f *frontend) _deleteOpenShiftCluster(ctx context.Context, r *http.Request,
 		return err
 	}
 
+	doc.OpenShiftCluster.Properties.LastProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
 	doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateDeleting
 	doc.CorrelationData = correlationData
 	doc.Dequeues = 0
