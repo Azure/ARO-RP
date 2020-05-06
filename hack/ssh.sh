@@ -1,4 +1,5 @@
-#!/bin/bash -eo pipefail
+#!/bin/bash
+set -eo pipefail
 
 while [[ $1 == -* ]]; do
   if [[ $1 == -- ]]; then
