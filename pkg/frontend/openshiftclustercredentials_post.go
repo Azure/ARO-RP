@@ -15,6 +15,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
 
 func (f *frontend) postOpenShiftClusterCredentials(w http.ResponseWriter, r *http.Request) {
@@ -63,7 +64,12 @@ func (f *frontend) _postOpenShiftClusterCredentials(ctx context.Context, r *http
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeRequestNotAllowed, "", "Request is not allowed in provisioningState '%s'.", doc.OpenShiftCluster.Properties.ProvisioningState)
 	}
 
-	doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret = ""
+	redactedPS, err := pullsecret.Redacted(string(doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret))
+	if err != nil {
+		doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret = ""
+	} else {
+		doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret = api.SecureString(redactedPS)
+	}
 	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 
 	return json.MarshalIndent(converter.ToExternal(doc.OpenShiftCluster), "", "    ")

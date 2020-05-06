@@ -15,6 +15,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
 
 func (f *frontend) getOpenShiftCluster(w http.ResponseWriter, r *http.Request) {
@@ -42,7 +43,12 @@ func (f *frontend) _getOpenShiftCluster(ctx context.Context, r *http.Request, co
 	defer cancel()
 	f.ocEnricher.Enrich(timeoutCtx, doc.OpenShiftCluster)
 
-	doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret = ""
+	redactedPS, err := pullsecret.Redacted(string(doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret))
+	if err != nil {
+		doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret = ""
+	} else {
+		doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret = api.SecureString(redactedPS)
+	}
 	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 
 	return json.MarshalIndent(converter.ToExternal(doc.OpenShiftCluster), "", "    ")

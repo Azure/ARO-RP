@@ -22,6 +22,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
+	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -202,7 +203,13 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 		return nil, err
 	}
 
-	doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret = ""
+	redactedPS, err := pullsecret.Redacted(string(doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret))
+	if err != nil {
+		doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret = ""
+	} else {
+		doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret = api.SecureString(redactedPS)
+	}
+
 	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 
 	b, err := json.MarshalIndent(converter.ToExternal(doc.OpenShiftCluster), "", "    ")

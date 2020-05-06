@@ -14,6 +14,36 @@ type pullSecret struct {
 	Auths map[string]map[string]interface{} `json:"auths,omitempty"`
 }
 
+func Redacted(_ps string) (string, error) {
+	if _ps == "" {
+		return "", nil
+	}
+
+	var ps *pullSecret
+
+	err := json.Unmarshal([]byte(_ps), &ps)
+	if err != nil {
+		return "", err
+	}
+
+	if ps.Auths == nil {
+		return "", nil
+	}
+
+	for k, v := range ps.Auths {
+		if v == nil || v["auth"] == nil {
+			continue
+		}
+		auth := v["auth"].(string)
+		if len(auth) > 0 {
+			ps.Auths[k]["auth"] = "#redacted"
+		}
+	}
+
+	b, err := json.Marshal(ps)
+	return string(b), err
+}
+
 func SetRegistryProfiles(_ps string, rps ...*api.RegistryProfile) (string, error) {
 	if _ps == "" {
 		_ps = "{}"

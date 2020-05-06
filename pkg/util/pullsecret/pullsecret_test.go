@@ -95,3 +95,45 @@ func TestSetRegistryProfiles(t *testing.T) {
 		})
 	}
 }
+
+func TestRedacted(t *testing.T) {
+	tests := []struct {
+		name    string
+		ps      string
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "normal",
+			ps:   `{"auths":{"arosvc.azurecr.io":{"auth":"x"},"registry.redhat.io":{"auth":"y"}}}`,
+			want: `{"auths":{"arosvc.azurecr.io":{"auth":"#redacted"},"registry.redhat.io":{"auth":"#redacted"}}}`,
+		},
+		{
+			name: "auth empty",
+			ps:   `{"auths":{"arosvc.azurecr.io":{"auth":""},"registry.redhat.io":{"auth":"y"}}}`,
+			want: `{"auths":{"arosvc.azurecr.io":{"auth":""},"registry.redhat.io":{"auth":"#redacted"}}}`,
+		},
+		{
+			name: "missing auth",
+			ps:   `{"auths":{"arosvc.azurecr.io":{},"registry.redhat.io":{"auth":"y"}}}`,
+			want: `{"auths":{"arosvc.azurecr.io":{},"registry.redhat.io":{"auth":"#redacted"}}}`,
+		},
+		{
+			name: "just brackets",
+			ps:   `{}`,
+			want: ``,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := Redacted(tt.ps)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Redacted() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("Redacted() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
