@@ -88,6 +88,14 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			wantErr: "400: PropertyChangeNotAllowed: properties.provisioningState: Changing property 'properties.provisioningState' is not allowed.",
 		},
 		{
+			name: "lastProvisioningState change is not allowed",
+			oc: func() *OpenShiftCluster {
+				return &OpenShiftCluster{}
+			},
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.LastProvisioningState = ProvisioningStateSucceeded },
+			wantErr: "400: PropertyChangeNotAllowed: properties.lastProvisioningState: Changing property 'properties.lastProvisioningState' is not allowed.",
+		},
+		{
 			name: "failedProvisioningState change is not allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
@@ -99,6 +107,14 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			},
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.FailedProvisioningState = ProvisioningStateUpdating },
 			wantErr: "400: PropertyChangeNotAllowed: properties.failedProvisioningState: Changing property 'properties.failedProvisioningState' is not allowed.",
+		},
+		{
+			name: "lastAdminUpdateError change is not allowed",
+			oc: func() *OpenShiftCluster {
+				return &OpenShiftCluster{}
+			},
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.LastAdminUpdateError = "error" },
+			wantErr: "400: PropertyChangeNotAllowed: properties.lastAdminUpdateError: Changing property 'properties.lastAdminUpdateError' is not allowed.",
 		},
 		{
 			name: "console url change is not allowed",
