@@ -150,6 +150,7 @@ func (i *Installer) AdminUpgrade(ctx context.Context) error {
 		action(i.initializeKubernetesClients),
 		action(i.ensureBillingRecord), // belt and braces
 		action(i.fixLBProbes),
+		action(i.fixPullSecret),
 		action(i.ensureGenevaLogging),
 		action(i.upgradeCluster),
 
