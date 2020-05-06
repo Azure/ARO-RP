@@ -60,6 +60,9 @@ upstream OCP.
 
   Work around for https://bugzilla.redhat.com/show_bug.cgi?id=1825355
 
+* CARRY: use the correct public key for certificate SubjectKeyId
+
+  Work around for https://bugzilla.redhat.com/show_bug.cgi?id=1831760
 
 ## Installation differences
 
