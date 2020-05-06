@@ -26,7 +26,7 @@ func (i *Installer) fixLBProbeConfig(ctx context.Context, resourceGroup, lbName,
 	}
 
 	for pix, probe := range *lb.LoadBalancerPropertiesFormat.Probes {
-		if *probe.Name == probeName {
+		if *probe.Name == probeName && probe.ProbePropertiesFormat.Protocol == mgmtnetwork.ProbeProtocolTCP {
 			(*lb.LoadBalancerPropertiesFormat.Probes)[pix].ProbePropertiesFormat.Protocol = mgmtnetwork.ProbeProtocolHTTPS
 			(*lb.LoadBalancerPropertiesFormat.Probes)[pix].RequestPath = to.StringPtr(path)
 		}
