@@ -19,15 +19,40 @@ import (
 func TestFixPullSecret(t *testing.T) {
 	ctx := context.Background()
 
+	newFakecli := func(data map[string][]byte) *fake.Clientset {
+		return fake.NewSimpleClientset(&v1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "pull-secret",
+				Namespace: "openshift-config",
+			},
+			Data: data,
+		})
+	}
+
 	for _, tt := range []struct {
 		name        string
-		current     []byte
+		fakecli     *fake.Clientset
 		rps         []*api.RegistryProfile
 		want        string
+		wantCreated bool
 		wantUpdated bool
 	}{
 		{
-			name: "missing pull secret",
+			name:    "deleted pull secret",
+			fakecli: fake.NewSimpleClientset(),
+			rps: []*api.RegistryProfile{
+				{
+					Name:     "arosvc.azurecr.io",
+					Username: "fred",
+					Password: "enter",
+				},
+			},
+			want:        `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
+			wantCreated: true,
+		},
+		{
+			name:    "missing arosvc pull secret",
+			fakecli: newFakecli(nil),
 			rps: []*api.RegistryProfile{
 				{
 					Name:     "arosvc.azurecr.io",
@@ -39,8 +64,10 @@ func TestFixPullSecret(t *testing.T) {
 			wantUpdated: true,
 		},
 		{
-			name:    "modified pull secret",
-			current: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":""}}}`),
+			name: "modified arosvc pull secret",
+			fakecli: newFakecli(map[string][]byte{
+				v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":""}}}`),
+			}),
 			rps: []*api.RegistryProfile{
 				{
 					Name:     "arosvc.azurecr.io",
@@ -52,8 +79,10 @@ func TestFixPullSecret(t *testing.T) {
 			wantUpdated: true,
 		},
 		{
-			name:    "no change",
-			current: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+			name: "no change",
+			fakecli: newFakecli(map[string][]byte{
+				v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+			}),
 			rps: []*api.RegistryProfile{
 				{
 					Name:     "arosvc.azurecr.io",
@@ -65,25 +94,20 @@ func TestFixPullSecret(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			var updated bool
+			var created, updated bool
 
-			fakecli := fake.NewSimpleClientset(&v1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "pull-secret",
-					Namespace: "openshift-config",
-				},
-				Data: map[string][]byte{
-					v1.DockerConfigJsonKey: tt.current,
-				},
+			tt.fakecli.PrependReactor("create", "secrets", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
+				created = true
+				return false, nil, nil
 			})
 
-			fakecli.PrependReactor("update", "secrets", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
+			tt.fakecli.PrependReactor("update", "secrets", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
 				updated = true
 				return false, nil, nil
 			})
 
 			i := &Installer{
-				kubernetescli: fakecli,
+				kubernetescli: tt.fakecli,
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
 						Properties: api.OpenShiftClusterProperties{
@@ -96,6 +120,10 @@ func TestFixPullSecret(t *testing.T) {
 			err := i.fixPullSecret(ctx)
 			if err != nil {
 				t.Error(err)
+			}
+
+			if created != tt.wantCreated {
+				t.Fatal(created)
 			}
 
 			if updated != tt.wantUpdated {
