@@ -257,7 +257,7 @@ func TestDelete(t *testing.T) {
 	}
 }
 
-func TestCreate(t *testing.T) {
+func TestEnsure(t *testing.T) {
 	ctx := context.Background()
 	mockSubID := "11111111-1111-1111-1111-111111111111"
 	mockTenantID := mockSubID
@@ -410,7 +410,7 @@ func TestCreate(t *testing.T) {
 				subDB:     subsDB,
 			}
 
-			err := m.Create(ctx, tt.openshiftdoc)
+			err := m.Ensure(ctx, tt.openshiftdoc)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

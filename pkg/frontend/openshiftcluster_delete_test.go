@@ -115,7 +115,8 @@ func TestDeleteOpenShiftCluster(t *testing.T) {
 								Name: "resourceName",
 								Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 								Properties: api.OpenShiftClusterProperties{
-									ProvisioningState: api.ProvisioningStateDeleting,
+									ProvisioningState:     api.ProvisioningStateDeleting,
+									LastProvisioningState: api.ProvisioningStateSucceeded,
 								},
 							},
 						})

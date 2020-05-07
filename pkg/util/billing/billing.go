@@ -33,7 +33,7 @@ const (
 )
 
 type Manager interface {
-	Create(context.Context, *api.OpenShiftClusterDocument) error
+	Ensure(context.Context, *api.OpenShiftClusterDocument) error
 	Delete(context.Context, *api.OpenShiftClusterDocument) error
 }
 
@@ -82,7 +82,7 @@ func NewManager(_env env.Interface, billing database.Billing, sub database.Subsc
 	}, nil
 }
 
-func (m *manager) Create(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
+func (m *manager) Ensure(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
 	billingDoc, err := m.billingDB.Create(ctx, &api.BillingDocument{
 		ID:                        doc.ID,
 		Key:                       doc.Key,

@@ -202,7 +202,8 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						Name: "resourceName",
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState: api.ProvisioningStateUpdating,
+							ProvisioningState:     api.ProvisioningStateUpdating,
+							LastProvisioningState: api.ProvisioningStateSucceeded,
 							ClusterProfile: api.ClusterProfile{
 								PullSecret: `{"will":"be-kept"}`,
 								Domain:     "changed",
@@ -271,7 +272,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						Name: "resourceName",
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState: api.ProvisioningStateUpdating,
+							ProvisioningState:       api.ProvisioningStateUpdating,
+							LastProvisioningState:   api.ProvisioningStateFailed,
+							FailedProvisioningState: api.ProvisioningStateUpdating,
 							ClusterProfile: api.ClusterProfile{
 								Domain: "changed",
 							},
@@ -389,7 +392,8 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 						Tags: map[string]string{"tag": "will-be-kept"},
 						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState: api.ProvisioningStateUpdating,
+							ProvisioningState:     api.ProvisioningStateUpdating,
+							LastProvisioningState: api.ProvisioningStateSucceeded,
 							ClusterProfile: api.ClusterProfile{
 								Domain: "changed",
 							},
@@ -461,7 +465,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 						Tags: map[string]string{"tag": "will-be-kept"},
 						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState: api.ProvisioningStateUpdating,
+							ProvisioningState:       api.ProvisioningStateUpdating,
+							LastProvisioningState:   api.ProvisioningStateFailed,
+							FailedProvisioningState: api.ProvisioningStateUpdating,
 							ClusterProfile: api.ClusterProfile{
 								Domain: "changed",
 							},

@@ -145,6 +145,24 @@ func NewInstaller(ctx context.Context, log *logrus.Entry, _env env.Interface, db
 	}, nil
 }
 
+func (i *Installer) AdminUpgrade(ctx context.Context) error {
+	steps := []interface{}{
+		action(i.initializeKubernetesClients),
+		action(i.ensureBillingRecord), // belt and braces
+		action(i.fixLBProbes),
+		action(i.fixPullSecret),
+		action(i.ensureGenevaLogging),
+		action(i.upgradeCluster),
+
+		// TODO: later could use this flow to refresh certificates
+		// action(i.createCertificates),
+		// action(i.configureAPIServerCertificate),
+		// action(i.configureIngressCertificate),
+	}
+
+	return i.runSteps(ctx, steps)
+}
+
 // Install installs an ARO cluster
 func (i *Installer) Install(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) error {
 	steps := map[api.InstallPhase][]interface{}{
@@ -153,7 +171,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			action(func(ctx context.Context) error {
 				return i.deployStorageTemplate(ctx, installConfig, platformCreds, image)
 			}),
-			action(i.createBillingRecord),
+			action(i.ensureBillingRecord),
 			action(i.deployResourceTemplate),
 			action(i.createPrivateEndpoint),
 			action(i.updateAPIIP),
@@ -193,7 +211,13 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 		return fmt.Errorf("unrecognised phase %s", i.doc.OpenShiftCluster.Properties.Install.Phase)
 	}
 	i.log.Printf("starting phase %s", i.doc.OpenShiftCluster.Properties.Install.Phase)
-	for _, step := range steps[i.doc.OpenShiftCluster.Properties.Install.Phase] {
+	return i.runSteps(ctx, steps[i.doc.OpenShiftCluster.Properties.Install.Phase])
+}
+
+func (i *Installer) runSteps(ctx context.Context, steps []interface{}) error {
+	for _, step := range steps {
+		var err error
+
 		switch step := step.(type) {
 		case action:
 			i.log.Printf("running step %s", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name())
@@ -202,6 +226,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 				i.gatherFailureLogs(ctx)
 				return fmt.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name(), err)
 			}
+
 		case condition:
 			i.log.Printf("waiting for %s", runtime.FuncForPC(reflect.ValueOf(step.f).Pointer()).Name())
 			func() {
@@ -213,10 +238,12 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 				i.gatherFailureLogs(ctx)
 				return fmt.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(step.f).Pointer()).Name(), err)
 			}
+
 		default:
 			return errors.New("install step must be an action or a condition")
 		}
 	}
+
 	return nil
 }
 

@@ -7,6 +7,6 @@ import (
 	"context"
 )
 
-func (i *Installer) createBillingRecord(ctx context.Context) error {
-	return i.billing.Create(ctx, i.doc)
+func (i *Installer) ensureBillingRecord(ctx context.Context) error {
+	return i.billing.Ensure(ctx, i.doc)
 }

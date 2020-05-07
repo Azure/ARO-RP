@@ -35,7 +35,7 @@ type OpenShiftClusters interface {
 	ListByPrefix(string, string, string) (cosmosdb.OpenShiftClusterDocumentIterator, error)
 	Dequeue(context.Context) (*api.OpenShiftClusterDocument, error)
 	Lease(context.Context, string) (*api.OpenShiftClusterDocument, error)
-	EndLease(context.Context, string, api.ProvisioningState, api.ProvisioningState) (*api.OpenShiftClusterDocument, error)
+	EndLease(context.Context, string, api.ProvisioningState, api.ProvisioningState, *string) (*api.OpenShiftClusterDocument, error)
 	GetByClientID(ctx context.Context, partitionKey, clientID string) (*api.OpenShiftClusterDocuments, error)
 	GetByClusterResourceGroupID(ctx context.Context, partitionKey, resourceGroupID string) (*api.OpenShiftClusterDocuments, error)
 }
@@ -277,7 +277,7 @@ func (c *openShiftClusters) Lease(ctx context.Context, key string) (*api.OpenShi
 	}, &cosmosdb.Options{PreTriggers: []string{"renewLease"}})
 }
 
-func (c *openShiftClusters) EndLease(ctx context.Context, key string, provisioningState, failedProvisioningState api.ProvisioningState) (*api.OpenShiftClusterDocument, error) {
+func (c *openShiftClusters) EndLease(ctx context.Context, key string, provisioningState, failedProvisioningState api.ProvisioningState, adminUpdateError *string) (*api.OpenShiftClusterDocument, error) {
 	return c.patchWithLease(ctx, key, func(doc *api.OpenShiftClusterDocument) error {
 		doc.OpenShiftCluster.Properties.ProvisioningState = provisioningState
 		doc.OpenShiftCluster.Properties.FailedProvisioningState = failedProvisioningState
@@ -292,6 +292,10 @@ func (c *openShiftClusters) EndLease(ctx context.Context, key string, provisioni
 		// If EndLease is called while cluster is still in terminal phase,
 		// we clean AsyncOperationID. Otherwise it just handover between backends.
 		if provisioningState.IsTerminal() {
+			if adminUpdateError != nil {
+				doc.OpenShiftCluster.Properties.LastAdminUpdateError = *adminUpdateError
+			}
+			doc.OpenShiftCluster.Properties.LastProvisioningState = ""
 			doc.AsyncOperationID = ""
 		}
 

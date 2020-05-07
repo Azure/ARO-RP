@@ -1,5 +1,7 @@
 #!/bin/bash -e
 
+set -o pipefail
+
 while [[ $1 == -* ]]; do
   if [[ $1 == -- ]]; then
     shift

@@ -61,8 +61,14 @@ type OpenShiftClusterProperties struct {
 	// i.e. if a cluster creation or deletion fails, there is no remedy but to
 	// delete the cluster.
 
+	// LastProvisioningState allows the backend to see the last terminal
+	// ProvisioningState.  When they complete, regardless of success, admin
+	// updates always reset the ProvisioningState to LastProvisioningState.
+
 	ProvisioningState       ProvisioningState `json:"provisioningState,omitempty"`
+	LastProvisioningState   ProvisioningState `json:"lastProvisioningState,omitempty"`
 	FailedProvisioningState ProvisioningState `json:"failedProvisioningState,omitempty"`
+	LastAdminUpdateError    string            `json:"lastAdminUpdateError,omitempty"`
 
 	ClusterProfile ClusterProfile `json:"clusterProfile,omitempty"`
 
