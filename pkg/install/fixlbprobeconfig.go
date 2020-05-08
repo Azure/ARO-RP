@@ -7,6 +7,7 @@ import (
 	"context"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
+	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -22,18 +23,13 @@ func (i *Installer) fixLBProbeConfig(ctx context.Context, resourceGroup, lbName 
 	}
 
 	var changed bool
-
-loop:
+	pathFromName := map[string]string{
+		"api-internal-probe": "/readyz",
+		"sint-probe":         "/healthz",
+	}
 	for pix, probe := range *lb.LoadBalancerPropertiesFormat.Probes {
-		var path string
-
-		switch *probe.Name {
-		case "api-internal-probe":
-			path = "/readyz"
-		case "sint-probe":
-			path = "/healthz"
-		default:
-			continue loop
+		if _, ok := pathFromName[*probe.Name]; !ok {
+			continue
 		}
 
 		if probe.ProbePropertiesFormat.Protocol != mgmtnetwork.ProbeProtocolHTTPS {
@@ -41,8 +37,8 @@ loop:
 			changed = true
 		}
 
-		if probe.RequestPath == nil || *probe.RequestPath != path {
-			(*lb.LoadBalancerPropertiesFormat.Probes)[pix].RequestPath = &path
+		if probe.RequestPath == nil || *probe.RequestPath != pathFromName[*probe.Name] {
+			(*lb.LoadBalancerPropertiesFormat.Probes)[pix].RequestPath = to.StringPtr(pathFromName[*probe.Name])
 			changed = true
 		}
 	}
