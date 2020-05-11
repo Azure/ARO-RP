@@ -49,7 +49,7 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 		return err
 	}
 
-	err = d.deployManageIdentity(ctx)
+	err = d.deployManagedIdentity(ctx)
 	if err != nil {
 		return err
 	}
@@ -165,7 +165,7 @@ func (d *deployer) deploySubscription(ctx context.Context) error {
 	})
 }
 
-func (d *deployer) deployManageIdentity(ctx context.Context) error {
+func (d *deployer) deployManagedIdentity(ctx context.Context) error {
 	deploymentName := "rp-production-managed-identity"
 
 	b, err := Asset(generator.FileRPProductionManagedIdentity)
