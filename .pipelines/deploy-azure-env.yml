@@ -6,6 +6,9 @@ parameters:
 - name: location
 - name: vsoConfigBuildID
 - name: vsoDeployerBuildID
+- name: fullDeploy
+  type: boolean
+  default: false
 
 jobs:
 - template: ./templates/template-job-deploy-azure-env.yml
@@ -24,3 +27,4 @@ jobs:
     e2eSubscription: $(e2e-subscription)
     billingE2EPipelineName: $(billing-e2e-pipeline-name)
     billingE2EBranchName: $(billing-e2e-branch-name)
+    fullDeploy: ${{ parameters.fullDeploy }}

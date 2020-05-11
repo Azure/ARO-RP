@@ -13,6 +13,7 @@ parameters:
   e2eSubscription: ''
   billingE2EPipelineName: ''
   billingE2EBranchName: ''
+  fullDeploy: ''
 
 jobs:
 - ${{ each location in  parameters.locations }}:
@@ -68,6 +69,7 @@ jobs:
               configFileName: ${{ parameters.configFileName }}
               location: ${{ location }}
               azureDevOpsJSONSPN: ${{ parameters.azureDevOpsJSONSPN }}
+              fullDeploy: ${{ parameters.fullDeploy }}
   - job: RP_E2E_${{ location }}
     dependsOn: Deploy_${{ location }}
     variables:
