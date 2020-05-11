@@ -24,6 +24,13 @@ type validateTest struct {
 	wantErr         string
 }
 
+type testMode string
+
+const (
+	testModeCreate testMode = "Create"
+	testModeUpdate testMode = "Update"
+)
+
 var (
 	subscriptionID = "00000000-0000-0000-0000-000000000000"
 	id             = fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/microsoft.redhatopenshift/openshiftclusters/resourceName", subscriptionID)
@@ -88,58 +95,60 @@ func validOpenShiftCluster() *OpenShiftCluster {
 	return oc
 }
 
-func runTests(t *testing.T, tests []*validateTest, delta bool) {
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			v := &openShiftClusterStaticValidator{
-				location:        "location",
-				domain:          "location.aroapp.io",
-				developmentMode: tt.developmentMode,
-				resourceID:      id,
-				r: azure.Resource{
-					SubscriptionID: subscriptionID,
-					ResourceGroup:  "resourceGroup",
-					Provider:       "Microsoft.RedHatOpenShift",
-					ResourceType:   "openshiftClusters",
-					ResourceName:   "resourceName",
-				},
-			}
-
-			oc := validOpenShiftCluster()
-			if tt.modify != nil {
-				tt.modify(oc)
-			}
-
-			var current *api.OpenShiftCluster
-			if delta {
-				current = &api.OpenShiftCluster{}
-				(&openShiftClusterConverter{}).ToInternal(validOpenShiftCluster(), current)
-			}
-
-			err := v.Static(oc, current)
-			if err == nil {
-				if tt.wantErr != "" {
-					t.Error(err)
+func runTests(t *testing.T, mode testMode, tests []*validateTest) {
+	t.Run(string(mode), func(t *testing.T) {
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				v := &openShiftClusterStaticValidator{
+					location:        "location",
+					domain:          "location.aroapp.io",
+					developmentMode: tt.developmentMode,
+					resourceID:      id,
+					r: azure.Resource{
+						SubscriptionID: subscriptionID,
+						ResourceGroup:  "resourceGroup",
+						Provider:       "Microsoft.RedHatOpenShift",
+						ResourceType:   "openshiftClusters",
+						ResourceName:   "resourceName",
+					},
 				}
 
-			} else {
-				if err.Error() != tt.wantErr {
-					t.Error(err)
+				oc := validOpenShiftCluster()
+				if tt.modify != nil {
+					tt.modify(oc)
 				}
 
-				cloudErr := err.(*api.CloudError)
-
-				if cloudErr.StatusCode != http.StatusBadRequest {
-					t.Error(cloudErr.StatusCode)
-				}
-				if cloudErr.Target == "" {
-					t.Error("target is required")
+				var current *api.OpenShiftCluster
+				if mode == testModeUpdate {
+					current = &api.OpenShiftCluster{}
+					(&openShiftClusterConverter{}).ToInternal(validOpenShiftCluster(), current)
 				}
 
-				validate.CloudError(t, err)
-			}
-		})
-	}
+				err := v.Static(oc, current)
+				if err == nil {
+					if tt.wantErr != "" {
+						t.Error(err)
+					}
+
+				} else {
+					if err.Error() != tt.wantErr {
+						t.Error(err)
+					}
+
+					cloudErr := err.(*api.CloudError)
+
+					if cloudErr.StatusCode != http.StatusBadRequest {
+						t.Error(cloudErr.StatusCode)
+					}
+					if cloudErr.Target == "" {
+						t.Error("target is required")
+					}
+
+					validate.CloudError(t, err)
+				}
+			})
+		}
+	})
 }
 
 func TestOpenShiftClusterStaticValidate(t *testing.T) {
@@ -177,11 +186,12 @@ func TestOpenShiftClusterStaticValidate(t *testing.T) {
 		},
 	}
 
-	runTests(t, tests, false)
+	runTests(t, testModeCreate, tests)
+	runTests(t, testModeUpdate, tests)
 }
 
 func TestOpenShiftClusterStaticValidateProperties(t *testing.T) {
-	tests := []*validateTest{
+	commonTests := []*validateTest{
 		{
 			name: "valid",
 		},
@@ -192,6 +202,8 @@ func TestOpenShiftClusterStaticValidateProperties(t *testing.T) {
 			},
 			wantErr: "400: InvalidParameter: properties.provisioningState: The provided provisioning state 'invalid' is invalid.",
 		},
+	}
+	createTests := []*validateTest{
 		{
 			name: "no workerProfiles invalid",
 			modify: func(oc *OpenShiftCluster) {
@@ -208,19 +220,15 @@ func TestOpenShiftClusterStaticValidateProperties(t *testing.T) {
 		},
 	}
 
-	runTests(t, tests, false)
+	runTests(t, testModeCreate, createTests)
+	runTests(t, testModeCreate, commonTests)
+	runTests(t, testModeUpdate, commonTests)
 }
 
 func TestOpenShiftClusterStaticValidateClusterProfile(t *testing.T) {
-	tests := []*validateTest{
+	commonTests := []*validateTest{
 		{
 			name: "valid",
-		},
-		{
-			name: "empty pull secret valid",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ClusterProfile.PullSecret = ""
-			},
 		},
 		{
 			name: "pull secret not a map",
@@ -272,13 +280,6 @@ func TestOpenShiftClusterStaticValidateClusterProfile(t *testing.T) {
 			wantErr: "400: InvalidParameter: properties.clusterProfile.domain: The provided domain 'foo.bar.location.aroapp.io' is invalid.",
 		},
 		{
-			name: "version invalid",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ClusterProfile.Version = "invalid"
-			},
-			wantErr: "400: InvalidParameter: properties.clusterProfile.version: The provided version 'invalid' is invalid.",
-		},
-		{
 			name: "resourceGroupId invalid",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.ClusterProfile.ResourceGroupID = "invalid"
@@ -294,19 +295,31 @@ func TestOpenShiftClusterStaticValidateClusterProfile(t *testing.T) {
 		},
 	}
 
-	runTests(t, tests, false)
+	createTests := []*validateTest{
+		{
+			name: "empty pull secret valid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterProfile.PullSecret = ""
+			},
+		},
+		{
+			name: "version invalid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ClusterProfile.Version = "invalid"
+			},
+			wantErr: "400: InvalidParameter: properties.clusterProfile.version: The provided version 'invalid' is invalid.",
+		},
+	}
+
+	runTests(t, testModeCreate, createTests)
+	runTests(t, testModeCreate, commonTests)
+	runTests(t, testModeUpdate, commonTests)
 }
 
 func TestOpenShiftClusterStaticValidateConsoleProfile(t *testing.T) {
-	tests := []*validateTest{
+	commonTests := []*validateTest{
 		{
 			name: "valid",
-		},
-		{
-			name: "empty console url valid",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.ConsoleProfile.URL = ""
-			},
 		},
 		{
 			name: "console url invalid",
@@ -317,8 +330,18 @@ func TestOpenShiftClusterStaticValidateConsoleProfile(t *testing.T) {
 		},
 	}
 
-	runTests(t, tests, false)
+	createTests := []*validateTest{
+		{
+			name: "empty console url valid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.ConsoleProfile.URL = ""
+			},
+		},
+	}
 
+	runTests(t, testModeCreate, createTests)
+	runTests(t, testModeCreate, commonTests)
+	runTests(t, testModeUpdate, commonTests)
 }
 
 func TestOpenShiftClusterStaticValidateServicePrincipalProfile(t *testing.T) {
@@ -342,7 +365,8 @@ func TestOpenShiftClusterStaticValidateServicePrincipalProfile(t *testing.T) {
 		},
 	}
 
-	runTests(t, tests, false)
+	runTests(t, testModeCreate, tests)
+	runTests(t, testModeUpdate, tests)
 }
 
 func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
@@ -394,7 +418,8 @@ func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
 		},
 	}
 
-	runTests(t, tests, false)
+	runTests(t, testModeCreate, tests)
+	runTests(t, testModeUpdate, tests)
 }
 
 func TestOpenShiftClusterStaticValidateMasterProfile(t *testing.T) {
@@ -425,7 +450,8 @@ func TestOpenShiftClusterStaticValidateMasterProfile(t *testing.T) {
 		},
 	}
 
-	runTests(t, tests, false)
+	runTests(t, testModeCreate, tests)
+	runTests(t, testModeUpdate, tests)
 }
 
 func TestOpenShiftClusterStaticValidateWorkerProfile(t *testing.T) {
@@ -506,11 +532,12 @@ func TestOpenShiftClusterStaticValidateWorkerProfile(t *testing.T) {
 		},
 	}
 
-	runTests(t, tests, false)
+	// We do not perform this validation on update
+	runTests(t, testModeCreate, tests)
 }
 
 func TestOpenShiftClusterStaticValidateAPIServerProfile(t *testing.T) {
-	tests := []*validateTest{
+	commonTests := []*validateTest{
 		{
 			name: "valid",
 		},
@@ -522,23 +549,11 @@ func TestOpenShiftClusterStaticValidateAPIServerProfile(t *testing.T) {
 			wantErr: "400: InvalidParameter: properties.apiserverProfile.visibility: The provided visibility 'invalid' is invalid.",
 		},
 		{
-			name: "empty url valid",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.APIServerProfile.URL = ""
-			},
-		},
-		{
 			name: "url invalid",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.APIServerProfile.URL = "\x00"
 			},
 			wantErr: "400: InvalidParameter: properties.apiserverProfile.url: The provided URL '\x00' is invalid.",
-		},
-		{
-			name: "empty ip valid",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.APIServerProfile.IP = ""
-			},
 		},
 		{
 			name: "ip invalid",
@@ -556,11 +571,28 @@ func TestOpenShiftClusterStaticValidateAPIServerProfile(t *testing.T) {
 		},
 	}
 
-	runTests(t, tests, false)
+	createTests := []*validateTest{
+		{
+			name: "empty url valid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.APIServerProfile.URL = ""
+			},
+		},
+		{
+			name: "empty ip valid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.APIServerProfile.IP = ""
+			},
+		},
+	}
+
+	runTests(t, testModeCreate, createTests)
+	runTests(t, testModeCreate, commonTests)
+	runTests(t, testModeUpdate, commonTests)
 }
 
 func TestOpenShiftClusterStaticValidateIngressProfile(t *testing.T) {
-	tests := []*validateTest{
+	commonTests := []*validateTest{
 		{
 			name: "valid",
 		},
@@ -579,12 +611,6 @@ func TestOpenShiftClusterStaticValidateIngressProfile(t *testing.T) {
 			wantErr: "400: InvalidParameter: properties.ingressProfiles['default'].visibility: The provided visibility 'invalid' is invalid.",
 		},
 		{
-			name: "empty ip valid",
-			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.IngressProfiles[0].IP = ""
-			},
-		},
-		{
 			name: "ip invalid",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Properties.IngressProfiles[0].IP = "invalid"
@@ -600,7 +626,18 @@ func TestOpenShiftClusterStaticValidateIngressProfile(t *testing.T) {
 		},
 	}
 
-	runTests(t, tests, false)
+	createTests := []*validateTest{
+		{
+			name: "empty ip valid",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.IngressProfiles[0].IP = ""
+			},
+		},
+	}
+
+	runTests(t, testModeCreate, createTests)
+	runTests(t, testModeCreate, commonTests)
+	runTests(t, testModeUpdate, commonTests)
 }
 
 func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
@@ -747,14 +784,18 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 		{
 			name: "number of workerProfiles changes",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.WorkerProfiles = []WorkerProfile{
-					{Name: "worker"},
-					{Name: "worker-2"},
-				}
+				oc.Properties.WorkerProfiles = []WorkerProfile{{}, {}}
+			},
+			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles: Changing property 'properties.workerProfiles' is not allowed.",
+		},
+		{
+			name: "workerProfiles set to nil",
+			modify: func(oc *OpenShiftCluster) {
+				oc.Properties.WorkerProfiles = nil
 			},
 			wantErr: "400: PropertyChangeNotAllowed: properties.workerProfiles: Changing property 'properties.workerProfiles' is not allowed.",
 		},
 	}
 
-	runTests(t, tests, true)
+	runTests(t, testModeUpdate, tests)
 }
