@@ -22,27 +22,32 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/msi"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
 
 var _ Deployer = (*deployer)(nil)
 
 type Deployer interface {
-	PreDeploy(context.Context) (string, error)
-	Deploy(context.Context, string) error
+	PreDeploy(context.Context) error
+	Deploy(context.Context) error
 	Upgrade(context.Context) error
 }
 
 type deployer struct {
 	log *logrus.Entry
 
-	globaldeployments features.DeploymentsClient
-	globalrecordsets  dns.RecordSetsClient
-	deployments       features.DeploymentsClient
-	groups            features.ResourceGroupsClient
-	vmss              compute.VirtualMachineScaleSetsClient
-	vmssvms           compute.VirtualMachineScaleSetVMsClient
-	keyvault          keyvault.Manager
+	globaldeployments      features.DeploymentsClient
+	globalrecordsets       dns.RecordSetsClient
+	deployments            features.DeploymentsClient
+	groups                 features.ResourceGroupsClient
+	userassignedidentities msi.UserAssignedIdentitiesClient
+	publicips              network.PublicIPAddressesClient
+	vmss                   compute.VirtualMachineScaleSetsClient
+	vmssvms                compute.VirtualMachineScaleSetVMsClient
+	zones                  dns.ZonesClient
+	keyvault               keyvault.Manager
 
 	config  *RPConfig
 	version string
@@ -63,20 +68,28 @@ func New(ctx context.Context, log *logrus.Entry, config *RPConfig, version strin
 	return &deployer{
 		log: log,
 
-		globaldeployments: features.NewDeploymentsClient(config.Configuration.GlobalSubscriptionID, authorizer),
-		globalrecordsets:  dns.NewRecordSetsClient(config.Configuration.GlobalSubscriptionID, authorizer),
-		deployments:       features.NewDeploymentsClient(config.SubscriptionID, authorizer),
-		groups:            features.NewResourceGroupsClient(config.SubscriptionID, authorizer),
-		vmss:              compute.NewVirtualMachineScaleSetsClient(config.SubscriptionID, authorizer),
-		vmssvms:           compute.NewVirtualMachineScaleSetVMsClient(config.SubscriptionID, authorizer),
-		keyvault:          keyvault.NewManager(kvAuthorizer),
+		globaldeployments:      features.NewDeploymentsClient(config.Configuration.GlobalSubscriptionID, authorizer),
+		globalrecordsets:       dns.NewRecordSetsClient(config.Configuration.GlobalSubscriptionID, authorizer),
+		deployments:            features.NewDeploymentsClient(config.SubscriptionID, authorizer),
+		groups:                 features.NewResourceGroupsClient(config.SubscriptionID, authorizer),
+		userassignedidentities: msi.NewUserAssignedIdentitiesClient(config.SubscriptionID, authorizer),
+		publicips:              network.NewPublicIPAddressesClient(config.SubscriptionID, authorizer),
+		vmss:                   compute.NewVirtualMachineScaleSetsClient(config.SubscriptionID, authorizer),
+		vmssvms:                compute.NewVirtualMachineScaleSetVMsClient(config.SubscriptionID, authorizer),
+		zones:                  dns.NewZonesClient(config.SubscriptionID, authorizer),
+		keyvault:               keyvault.NewManager(kvAuthorizer),
 
 		config:  config,
 		version: version,
 	}, nil
 }
 
-func (d *deployer) Deploy(ctx context.Context, rpServicePrincipalID string) error {
+func (d *deployer) Deploy(ctx context.Context) error {
+	msi, err := d.userassignedidentities.Get(ctx, d.config.ResourceGroupName, "aro-rp-"+d.config.Location)
+	if err != nil {
+		return err
+	}
+
 	deploymentName := "rp-production-" + d.version
 
 	b, err := Asset(generator.FileRPProduction)
@@ -104,7 +117,7 @@ func (d *deployer) Deploy(ctx context.Context, rpServicePrincipalID string) erro
 		Value: d.config.Configuration.RPImagePrefix + ":" + d.version,
 	}
 	parameters.Parameters["rpServicePrincipalId"] = &arm.ParametersParameter{
-		Value: rpServicePrincipalID,
+		Value: msi.PrincipalID.String(),
 	}
 	parameters.Parameters["vmssName"] = &arm.ParametersParameter{
 		Value: d.version,
@@ -122,34 +135,26 @@ func (d *deployer) Deploy(ctx context.Context, rpServicePrincipalID string) erro
 		return err
 	}
 
-	deployment, err := d.deployments.Get(ctx, d.config.ResourceGroupName, deploymentName)
-	if err != nil {
-		return err
-	}
-
-	rpPipIPAddress := deployment.Properties.Outputs.(map[string]interface{})["rp-pip-ipAddress"].(map[string]interface{})["value"].(string)
-
-	_nameServers := deployment.Properties.Outputs.(map[string]interface{})["rp-nameServers"].(map[string]interface{})["value"].([]interface{})
-	nameServers := make([]string, 0, len(_nameServers))
-	for _, ns := range _nameServers {
-		nameServers = append(nameServers, ns.(string))
-	}
-
-	err = d.configureDNS(ctx, rpPipIPAddress, nameServers)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return d.configureDNS(ctx)
 }
 
-func (d *deployer) configureDNS(ctx context.Context, rpPipIPAddress string, nameServers []string) error {
-	_, err := d.globalrecordsets.CreateOrUpdate(ctx, d.config.Configuration.GlobalResourceGroupName, d.config.Configuration.RPParentDomainName, "rp."+d.config.Location, mgmtdns.A, mgmtdns.RecordSet{
+func (d *deployer) configureDNS(ctx context.Context) error {
+	rpPip, err := d.publicips.Get(ctx, d.config.ResourceGroupName, "rp-pip", "")
+	if err != nil {
+		return err
+	}
+
+	zone, err := d.zones.Get(ctx, d.config.ResourceGroupName, d.config.Location+"."+d.config.Configuration.ClusterParentDomainName)
+	if err != nil {
+		return err
+	}
+
+	_, err = d.globalrecordsets.CreateOrUpdate(ctx, d.config.Configuration.GlobalResourceGroupName, d.config.Configuration.RPParentDomainName, "rp."+d.config.Location, mgmtdns.A, mgmtdns.RecordSet{
 		RecordSetProperties: &mgmtdns.RecordSetProperties{
 			TTL: to.Int64Ptr(3600),
 			ARecords: &[]mgmtdns.ARecord{
 				{
-					Ipv4Address: &rpPipIPAddress,
+					Ipv4Address: rpPip.IPAddress,
 				},
 			},
 		},
@@ -158,10 +163,10 @@ func (d *deployer) configureDNS(ctx context.Context, rpPipIPAddress string, name
 		return err
 	}
 
-	nsRecords := make([]mgmtdns.NsRecord, 0, len(nameServers))
-	for i := range nameServers {
+	nsRecords := make([]mgmtdns.NsRecord, 0, len(*zone.NameServers))
+	for i := range *zone.NameServers {
 		nsRecords = append(nsRecords, mgmtdns.NsRecord{
-			Nsdname: &nameServers[i],
+			Nsdname: &(*zone.NameServers)[i],
 		})
 	}
 

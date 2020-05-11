@@ -21,11 +21,11 @@ import (
 
 // PreDeploy deploys managed identity, NSGs and keyvaults, needed for main
 // deployment
-func (d *deployer) PreDeploy(ctx context.Context) (string, error) {
+func (d *deployer) PreDeploy(ctx context.Context) error {
 	// deploy global rbac
 	err := d.deployGlobalSubscription(ctx)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	// deploy per subscription Action Group
@@ -33,44 +33,43 @@ func (d *deployer) PreDeploy(ctx context.Context) (string, error) {
 		Location: to.StringPtr("centralus"),
 	})
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	err = d.deploySubscription(ctx)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	_, err = d.groups.CreateOrUpdate(ctx, d.config.ResourceGroupName, mgmtfeatures.ResourceGroup{
 		Location: &d.config.Location,
 	})
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	// deploy managed identity if needed and get rpServicePrincipalID
-	rpServicePrincipalID, err := d.deployManageIdentity(ctx)
+	err = d.deployManageIdentity(ctx)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	err = d.deployGlobal(ctx, rpServicePrincipalID)
+	msi, err := d.userassignedidentities.Get(ctx, d.config.ResourceGroupName, "aro-rp-"+d.config.Location)
 	if err != nil {
-		return "", err
+		return err
+	}
+
+	err = d.deployGlobal(ctx, msi.PrincipalID.String())
+	if err != nil {
+		return err
 	}
 
 	// deploy NSGs, keyvaults
-	err = d.deployPreDeploy(ctx, rpServicePrincipalID)
+	err = d.deployPreDeploy(ctx, msi.PrincipalID.String())
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	err = d.configureServiceKV(ctx)
-	if err != nil {
-		return "", err
-	}
-
-	return rpServicePrincipalID, nil
+	return d.configureServiceKV(ctx)
 }
 
 func (d *deployer) deployGlobal(ctx context.Context, rpServicePrincipalID string) error {
@@ -152,37 +151,27 @@ func (d *deployer) deploySubscription(ctx context.Context) error {
 	})
 }
 
-func (d *deployer) deployManageIdentity(ctx context.Context) (string, error) {
+func (d *deployer) deployManageIdentity(ctx context.Context) error {
 	deploymentName := "rp-production-managed-identity"
 
 	b, err := Asset(generator.FileRPProductionManagedIdentity)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	var template map[string]interface{}
 	err = json.Unmarshal(b, &template)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	d.log.Infof("deploying %s", deploymentName)
-	err = d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, deploymentName, mgmtfeatures.Deployment{
+	return d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, deploymentName, mgmtfeatures.Deployment{
 		Properties: &mgmtfeatures.DeploymentProperties{
 			Template: template,
 			Mode:     mgmtfeatures.Incremental,
 		},
 	})
-	if err != nil {
-		return "", err
-	}
-
-	deployment, err := d.deployments.Get(ctx, d.config.ResourceGroupName, deploymentName)
-	if err != nil {
-		return "", err
-	}
-
-	return deployment.Properties.Outputs.(map[string]interface{})["rpServicePrincipalId"].(map[string]interface{})["value"].(string), nil
 }
 
 func (d *deployer) deployPreDeploy(ctx context.Context, rpServicePrincipalID string) error {

@@ -8,11 +8,5 @@
             "location": "[resourceGroup().location]",
             "apiVersion": "2018-11-30"
         }
-    ],
-    "outputs": {
-        "rpServicePrincipalId": {
-            "type": "string",
-            "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', concat('aro-rp-', resourceGroup().location)), '2018-11-30').principalId]"
-        }
-    }
+    ]
 }

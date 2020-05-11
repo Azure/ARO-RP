@@ -42,12 +42,12 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	rpServicePrincipalID, err := deployer.PreDeploy(ctx)
+	err = deployer.PreDeploy(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = deployer.Deploy(ctx, rpServicePrincipalID)
+	err = deployer.Deploy(ctx)
 	if err != nil {
 		return err
 	}

@@ -17,13 +17,6 @@ func (g *generator) managedIdentityTemplate() *arm.Template {
 		g.managedIdentity(),
 	)
 
-	t.Outputs = map[string]*arm.Output{
-		"rpServicePrincipalId": {
-			Type:  "string",
-			Value: "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', concat('aro-rp-', resourceGroup().location)), '2018-11-30').principalId]",
-		},
-	}
-
 	return t
 }
 
@@ -76,17 +69,6 @@ func (g *generator) rpTemplate() *arm.Template {
 		g.halfPeering("rp-pe-vnet-001", "rp-vnet"))
 	t.Resources = append(t.Resources, g.cosmosdb()...)
 	t.Resources = append(t.Resources, g.rbac()...)
-
-	t.Outputs = map[string]*arm.Output{
-		"rp-nameServers": {
-			Type:  "array",
-			Value: "[reference(resourceId('Microsoft.Network/dnsZones', parameters('domainName')), '2018-05-01').nameServers]",
-		},
-		"rp-pip-ipAddress": {
-			Type:  "string",
-			Value: "[reference(resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip'), '2019-07-01').ipAddress]",
-		},
-	}
 
 	return t
 }
