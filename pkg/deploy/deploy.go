@@ -136,7 +136,11 @@ func (d *deployer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	return d.configureDNS(ctx)
+	if os.Getenv("FULL_DEPLOY") != "" {
+		err = d.configureDNS(ctx)
+	}
+
+	return err
 }
 
 func (d *deployer) configureDNS(ctx context.Context) error {

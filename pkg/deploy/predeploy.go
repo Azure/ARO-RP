@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"os"
 	"path/filepath"
 
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
@@ -28,22 +29,23 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 		return err
 	}
 
-	// deploy per subscription Action Group
-	_, err = d.groups.CreateOrUpdate(ctx, d.config.Configuration.SubscriptionResourceGroupName, mgmtfeatures.ResourceGroup{
-		Location: to.StringPtr("centralus"),
-	})
-	if err != nil {
-		return err
+	if os.Getenv("FULL_DEPLOY") != "" {
+		_, err = d.groups.CreateOrUpdate(ctx, d.config.Configuration.SubscriptionResourceGroupName, mgmtfeatures.ResourceGroup{
+			Location: to.StringPtr("centralus"),
+		})
+		if err != nil {
+			return err
+		}
+
+		_, err = d.groups.CreateOrUpdate(ctx, d.config.ResourceGroupName, mgmtfeatures.ResourceGroup{
+			Location: &d.config.Location,
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	err = d.deploySubscription(ctx)
-	if err != nil {
-		return err
-	}
-
-	_, err = d.groups.CreateOrUpdate(ctx, d.config.ResourceGroupName, mgmtfeatures.ResourceGroup{
-		Location: &d.config.Location,
-	})
 	if err != nil {
 		return err
 	}
@@ -69,7 +71,14 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 		return err
 	}
 
-	return d.configureServiceKV(ctx)
+	if os.Getenv("FULL_DEPLOY") != "" {
+		err = d.configureServiceSecrets(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
+	return d.ensureMonitoringCertificates(ctx)
 }
 
 func (d *deployer) deployGlobal(ctx context.Context, rpServicePrincipalID string) error {
@@ -225,7 +234,7 @@ func (d *deployer) deployPreDeploy(ctx context.Context, rpServicePrincipalID str
 	})
 }
 
-func (d *deployer) configureServiceKV(ctx context.Context) error {
+func (d *deployer) configureServiceSecrets(ctx context.Context) error {
 	serviceKeyVaultURI := "https://" + d.config.Configuration.KeyvaultPrefix + "-svc.vault.azure.net/"
 	secrets, err := d.keyvault.GetSecrets(ctx, serviceKeyVaultURI, nil)
 	if err != nil {
@@ -237,12 +246,7 @@ func (d *deployer) configureServiceKV(ctx context.Context) error {
 		return err
 	}
 
-	err = d.ensureSecret(ctx, secrets, serviceKeyVaultURI, env.FrontendEncryptionSecretName)
-	if err != nil {
-		return err
-	}
-
-	return d.ensureMonitoringCertificates(ctx, serviceKeyVaultURI)
+	return d.ensureSecret(ctx, secrets, serviceKeyVaultURI, env.FrontendEncryptionSecretName)
 }
 
 func (d *deployer) ensureSecret(ctx context.Context, existingSecrets []keyvault.SecretItem, serviceKeyVaultURI, secretName string) error {
@@ -265,7 +269,9 @@ func (d *deployer) ensureSecret(ctx context.Context, existingSecrets []keyvault.
 	return err
 }
 
-func (d *deployer) ensureMonitoringCertificates(ctx context.Context, serviceKeyVaultURI string) error {
+func (d *deployer) ensureMonitoringCertificates(ctx context.Context) error {
+	serviceKeyVaultURI := "https://" + d.config.Configuration.KeyvaultPrefix + "-svc.vault.azure.net/"
+
 	for _, certificateName := range []string{
 		env.ClusterLoggingSecretName,
 		env.RPLoggingSecretName,
