@@ -9,8 +9,11 @@ import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2020_04_30.models as 
 from azext_aro._aad import AADManager
 from azext_aro._rbac import assign_contributor_to_vnet
 from azext_aro._validators import validate_subnets
+from azure.cli.core.commands.client_factory import get_mgmt_service_client
 from azure.cli.core.commands.client_factory import get_subscription_id
+from azure.cli.core.profiles import ResourceType
 from azure.cli.core.util import sdk_no_wait
+from knack.util import CLIError
 
 
 FP_CLIENT_ID = 'f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875'
@@ -40,6 +43,14 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                ingress_visibility=None,
                tags=None,
                no_wait=False):
+    if not rp_mode_development():
+        resource_client = get_mgmt_service_client(
+            cmd.cli_ctx, ResourceType.MGMT_RESOURCE_RESOURCES)
+        provider = resource_client.providers.get('Microsoft.RedHatOpenShift')
+        if provider.registration_state != 'Registered':
+            raise CLIError('Microsoft.RedHatOpenShift provider is not registered.  Run `az provider ' +
+                           'register -n Microsoft.RedHatOpenShift --wait`.')
+
     vnet = validate_subnets(master_subnet, worker_subnet)
 
     subscription_id = get_subscription_id(cmd.cli_ctx)
