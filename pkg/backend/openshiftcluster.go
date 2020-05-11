@@ -56,14 +56,6 @@ func (ocb *openShiftClusterBackend) try(ctx context.Context) (bool, error) {
 			ocb.m.EmitGauge("backend.openshiftcluster.workers.count", int64(atomic.LoadInt32(&ocb.workers)), nil)
 			ocb.cond.Signal()
 
-			ocb.m.EmitGauge("backend.openshiftcluster.duration", time.Now().Sub(t).Milliseconds(), map[string]string{
-				"state": string(doc.OpenShiftCluster.Properties.ProvisioningState),
-			})
-
-			ocb.m.EmitGauge("backend.openshiftcluster.count", 1, map[string]string{
-				"state": string(doc.OpenShiftCluster.Properties.ProvisioningState),
-			})
-
 			log.WithField("duration", time.Now().Sub(t).Seconds()).Print("done")
 		}()
 
@@ -71,7 +63,6 @@ func (ocb *openShiftClusterBackend) try(ctx context.Context) (bool, error) {
 		if err != nil {
 			log.Error(err)
 		}
-
 	}()
 
 	return true, nil
@@ -247,6 +238,8 @@ func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.En
 		if err != nil {
 			return err
 		}
+
+		ocb.emitMetrics(doc, provisioningState)
 	}
 
 	if doc.OpenShiftCluster.Properties.ProvisioningState == api.ProvisioningStateAdminUpdating {
@@ -266,4 +259,22 @@ func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.En
 
 	_, err := ocb.db.OpenShiftClusters.EndLease(ctx, doc.Key, provisioningState, failedProvisioningState, adminUpdateError)
 	return err
+}
+
+func (ocb *openShiftClusterBackend) emitMetrics(doc *api.OpenShiftClusterDocument, provisioningState api.ProvisioningState) {
+	if doc.CorrelationData == nil {
+		return
+	}
+
+	duration := time.Now().Sub(doc.CorrelationData.RequestTime).Milliseconds()
+
+	ocb.m.EmitGauge("backend.openshiftcluster.duration", duration, map[string]string{
+		"oldProvisioningState": string(doc.OpenShiftCluster.Properties.ProvisioningState),
+		"newProvisioningState": string(provisioningState),
+	})
+
+	ocb.m.EmitGauge("backend.openshiftcluster.count", 1, map[string]string{
+		"oldProvisioningState": string(doc.OpenShiftCluster.Properties.ProvisioningState),
+		"newProvisioningState": string(provisioningState),
+	})
 }
