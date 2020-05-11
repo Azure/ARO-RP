@@ -89,9 +89,13 @@ func (ka *kubeactions) findGVR(apiresourcelist []*metav1.APIResourceList, groupK
 	}
 
 	if len(matches) > 1 {
+		var matchesGK []string
+		for _, match := range matches {
+			matchesGK = append(matchesGK, groupKind+"."+match.Group)
+		}
 		return nil, api.NewCloudError(
 			http.StatusBadRequest, api.CloudErrorCodeInvalidParameter,
-			"", "The groupKind '%s' matched multiple groupKinds.", groupKind)
+			"", "The groupKind '%s' matched multiple groupKinds (%s).", groupKind, strings.Join(matchesGK, ", "))
 	}
 
 	return matches[0], nil

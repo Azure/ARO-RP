@@ -130,7 +130,7 @@ func TestFindGVR(t *testing.T) {
 			want: nil,
 			wantErr: api.NewCloudError(
 				http.StatusBadRequest, api.CloudErrorCodeInvalidParameter,
-				"", "The groupKind '%s' matched multiple groupKinds.", "baremetalhost"),
+				"", "The groupKind '%s' matched multiple groupKinds (baremetalhost.metal3.io, baremetalhost.plastic.io).", "baremetalhost"),
 		},
 	}
 
