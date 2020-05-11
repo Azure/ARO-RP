@@ -23,6 +23,9 @@
         "fpServicePrincipalId": {
             "value": ""
         },
+        "fullDeploy": {
+            "value": false
+        },
         "mdmFrontendUrl": {
             "value": ""
         },

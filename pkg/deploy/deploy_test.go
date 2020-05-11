@@ -20,7 +20,11 @@ func TestGetParameters(t *testing.T) {
 		{
 			name: "no parameters",
 			want: arm.Parameters{
-				Parameters: map[string]*arm.ParametersParameter{},
+				Parameters: map[string]*arm.ParametersParameter{
+					"fullDeploy": &arm.ParametersParameter{
+						Value: false,
+					},
+				},
 			},
 		},
 		{
@@ -45,6 +49,9 @@ func TestGetParameters(t *testing.T) {
 					"extraClusterKeyvaultAccessPolicies": {
 						Value: []interface{}{"a", 1},
 					},
+					"fullDeploy": &arm.ParametersParameter{
+						Value: false,
+					},
 				},
 			},
 		},
@@ -58,6 +65,9 @@ func TestGetParameters(t *testing.T) {
 				Parameters: map[string]*arm.ParametersParameter{
 					"extraClusterKeyvaultAccessPolicies": {
 						Value: []interface{}(nil),
+					},
+					"fullDeploy": &arm.ParametersParameter{
+						Value: false,
 					},
 				},
 			},

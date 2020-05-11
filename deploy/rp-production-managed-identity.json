@@ -1,11 +1,18 @@
 {
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
+    "parameters": {
+        "fullDeploy": {
+            "type": "bool",
+            "defaultValue": false
+        }
+    },
     "resources": [
         {
             "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
             "name": "[concat('aro-rp-', resourceGroup().location)]",
             "location": "[resourceGroup().location]",
+            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2018-11-30"
         }
     ]

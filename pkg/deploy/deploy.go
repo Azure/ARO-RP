@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"os"
 	"reflect"
 	"strings"
 
@@ -43,7 +44,7 @@ type deployer struct {
 	deployments            features.DeploymentsClient
 	groups                 features.ResourceGroupsClient
 	userassignedidentities msi.UserAssignedIdentitiesClient
-	publicips              network.PublicIPAddressesClient
+	publicipaddresses      network.PublicIPAddressesClient
 	vmss                   compute.VirtualMachineScaleSetsClient
 	vmssvms                compute.VirtualMachineScaleSetVMsClient
 	zones                  dns.ZonesClient
@@ -73,7 +74,7 @@ func New(ctx context.Context, log *logrus.Entry, config *RPConfig, version strin
 		deployments:            features.NewDeploymentsClient(config.SubscriptionID, authorizer),
 		groups:                 features.NewResourceGroupsClient(config.SubscriptionID, authorizer),
 		userassignedidentities: msi.NewUserAssignedIdentitiesClient(config.SubscriptionID, authorizer),
-		publicips:              network.NewPublicIPAddressesClient(config.SubscriptionID, authorizer),
+		publicipaddresses:      network.NewPublicIPAddressesClient(config.SubscriptionID, authorizer),
 		vmss:                   compute.NewVirtualMachineScaleSetsClient(config.SubscriptionID, authorizer),
 		vmssvms:                compute.NewVirtualMachineScaleSetVMsClient(config.SubscriptionID, authorizer),
 		zones:                  dns.NewZonesClient(config.SubscriptionID, authorizer),
@@ -139,7 +140,7 @@ func (d *deployer) Deploy(ctx context.Context) error {
 }
 
 func (d *deployer) configureDNS(ctx context.Context) error {
-	rpPip, err := d.publicips.Get(ctx, d.config.ResourceGroupName, "rp-pip", "")
+	rpPip, err := d.publicipaddresses.Get(ctx, d.config.ResourceGroupName, "rp-pip", "")
 	if err != nil {
 		return err
 	}
@@ -198,6 +199,10 @@ func (d *deployer) getParameters(ps map[string]interface{}) *arm.Parameters {
 		parameters.Parameters[p] = &arm.ParametersParameter{
 			Value: m[p],
 		}
+	}
+
+	parameters.Parameters["fullDeploy"] = &arm.ParametersParameter{
+		Value: os.Getenv("FULL_DEPLOY") != "",
 	}
 
 	return parameters
