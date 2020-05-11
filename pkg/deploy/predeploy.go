@@ -8,7 +8,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
-	"os"
 	"path/filepath"
 
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
@@ -29,7 +28,7 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 		return err
 	}
 
-	if os.Getenv("FULL_DEPLOY") != "" {
+	if d.fullDeploy {
 		_, err = d.groups.CreateOrUpdate(ctx, d.config.Configuration.SubscriptionResourceGroupName, mgmtfeatures.ResourceGroup{
 			Location: to.StringPtr("centralus"),
 		})
@@ -71,7 +70,7 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 		return err
 	}
 
-	if os.Getenv("FULL_DEPLOY") != "" {
+	if d.fullDeploy {
 		err = d.configureServiceSecrets(ctx)
 		if err != nil {
 			return err

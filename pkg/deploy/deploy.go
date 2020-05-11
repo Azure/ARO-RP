@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
-	"os"
 	"reflect"
 	"strings"
 
@@ -50,12 +49,13 @@ type deployer struct {
 	zones                  dns.ZonesClient
 	keyvault               keyvault.Manager
 
-	config  *RPConfig
-	version string
+	fullDeploy bool
+	config     *RPConfig
+	version    string
 }
 
 // New initiates new deploy utility object
-func New(ctx context.Context, log *logrus.Entry, config *RPConfig, version string) (Deployer, error) {
+func New(ctx context.Context, log *logrus.Entry, config *RPConfig, version string, fullDeploy bool) (Deployer, error) {
 	authorizer, err := auth.NewAuthorizerFromEnvironment()
 	if err != nil {
 		return nil, err
@@ -80,8 +80,9 @@ func New(ctx context.Context, log *logrus.Entry, config *RPConfig, version strin
 		zones:                  dns.NewZonesClient(config.SubscriptionID, authorizer),
 		keyvault:               keyvault.NewManager(kvAuthorizer),
 
-		config:  config,
-		version: version,
+		fullDeploy: fullDeploy,
+		config:     config,
+		version:    version,
 	}, nil
 }
 
@@ -136,11 +137,14 @@ func (d *deployer) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	if os.Getenv("FULL_DEPLOY") != "" {
+	if d.fullDeploy {
 		err = d.configureDNS(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
-	return err
+	return nil
 }
 
 func (d *deployer) configureDNS(ctx context.Context) error {
@@ -206,7 +210,7 @@ func (d *deployer) getParameters(ps map[string]interface{}) *arm.Parameters {
 	}
 
 	parameters.Parameters["fullDeploy"] = &arm.ParametersParameter{
-		Value: os.Getenv("FULL_DEPLOY") != "",
+		Value: d.fullDeploy,
 	}
 
 	return parameters

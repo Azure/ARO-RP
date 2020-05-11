@@ -37,7 +37,7 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	deployer, err := deployer.New(ctx, log, config, deployVersion)
+	deployer, err := deployer.New(ctx, log, config, deployVersion, os.Getenv("FULL_DEPLOY") != "")
 	if err != nil {
 		return err
 	}
