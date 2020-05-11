@@ -10,8 +10,6 @@ environment variables:
 
 * RP_VERSION: RP VM scaleset git commit version
 
-* RP_PREDEPLOY_ONLY: exit after pre-deploy step
-
 Notes:
 
 * If the deployment tool is run on an existing resource group, it will update
@@ -48,10 +46,6 @@ Notes:
 ## Utility example
 
 ```bash
-# run pre-deploy phase only
-export RP_PARAMETERS_FILE=rp-production-predeploy-parameters.json
-RP_PREDEPLOY_ONLY=true go run ./cmd/aro deploy
-
 # deploy RP under name test
 export RP_VERSION="test"
 export RP_PARAMETERS_FILE=rp-production-parameters.json
