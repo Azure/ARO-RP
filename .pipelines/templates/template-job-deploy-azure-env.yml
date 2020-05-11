@@ -100,7 +100,7 @@ jobs:
     - task: TriggerBuild@3
       inputs:
         definitionIsInCurrentTeamProject: true
-        buildDefinition: $(billingE2EPipelineName)
+        buildDefinition: ${{ parameters.billingE2EPipelineName }}
         queueBuildForUserThatTriggeredBuild: true
         ignoreSslCertificateErrors: false
         useSameSourceVersion: false
