@@ -42,17 +42,3 @@ Notes:
 * Wait for new RP readiness.
 
 * Terminate all old RP VMSSes.
-
-## Utility example
-
-```bash
-# deploy RP under name test
-export RP_VERSION="test"
-export RP_PARAMETERS_FILE=rp-production-parameters.json
-go run ./cmd/aro deploy
-
-# deploy second VMSS instance with name test2 and retire test
-export RP_VERSION="test2"
-export RP_PARAMETERS_FILE=rp-production-parameters.json
-go run ./cmd/aro deploy
-```
