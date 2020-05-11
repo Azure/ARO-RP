@@ -24,11 +24,11 @@ type validateTest struct {
 	wantErr         string
 }
 
-type testMode int
+type testMode string
 
 const (
-	createTestMode testMode = iota
-	updateTestMode
+	testModeCreate testMode = "Create"
+	testModeUpdate testMode = "Update"
 )
 
 var (
@@ -96,12 +96,7 @@ func validOpenShiftCluster() *OpenShiftCluster {
 }
 
 func runTests(t *testing.T, mode testMode, tests []*validateTest) {
-	variant := "Create"
-	if mode == updateTestMode {
-		variant = "Update"
-	}
-
-	t.Run(variant, func(t *testing.T) {
+	t.Run(string(mode), func(t *testing.T) {
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
 				v := &openShiftClusterStaticValidator{
@@ -124,7 +119,7 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 				}
 
 				var current *api.OpenShiftCluster
-				if mode == updateTestMode {
+				if mode == testModeUpdate {
 					current = &api.OpenShiftCluster{}
 					(&openShiftClusterConverter{}).ToInternal(validOpenShiftCluster(), current)
 				}
@@ -191,8 +186,8 @@ func TestOpenShiftClusterStaticValidate(t *testing.T) {
 		},
 	}
 
-	runTests(t, createTestMode, tests)
-	runTests(t, updateTestMode, tests)
+	runTests(t, testModeCreate, tests)
+	runTests(t, testModeUpdate, tests)
 }
 
 func TestOpenShiftClusterStaticValidateProperties(t *testing.T) {
@@ -225,9 +220,9 @@ func TestOpenShiftClusterStaticValidateProperties(t *testing.T) {
 		},
 	}
 
-	runTests(t, createTestMode, createTests)
-	runTests(t, createTestMode, commonTests)
-	runTests(t, updateTestMode, commonTests)
+	runTests(t, testModeCreate, createTests)
+	runTests(t, testModeCreate, commonTests)
+	runTests(t, testModeUpdate, commonTests)
 }
 
 func TestOpenShiftClusterStaticValidateClusterProfile(t *testing.T) {
@@ -316,9 +311,9 @@ func TestOpenShiftClusterStaticValidateClusterProfile(t *testing.T) {
 		},
 	}
 
-	runTests(t, createTestMode, createTests)
-	runTests(t, createTestMode, commonTests)
-	runTests(t, updateTestMode, commonTests)
+	runTests(t, testModeCreate, createTests)
+	runTests(t, testModeCreate, commonTests)
+	runTests(t, testModeUpdate, commonTests)
 }
 
 func TestOpenShiftClusterStaticValidateConsoleProfile(t *testing.T) {
@@ -344,9 +339,9 @@ func TestOpenShiftClusterStaticValidateConsoleProfile(t *testing.T) {
 		},
 	}
 
-	runTests(t, createTestMode, createTests)
-	runTests(t, createTestMode, commonTests)
-	runTests(t, updateTestMode, commonTests)
+	runTests(t, testModeCreate, createTests)
+	runTests(t, testModeCreate, commonTests)
+	runTests(t, testModeUpdate, commonTests)
 }
 
 func TestOpenShiftClusterStaticValidateServicePrincipalProfile(t *testing.T) {
@@ -370,8 +365,8 @@ func TestOpenShiftClusterStaticValidateServicePrincipalProfile(t *testing.T) {
 		},
 	}
 
-	runTests(t, createTestMode, tests)
-	runTests(t, updateTestMode, tests)
+	runTests(t, testModeCreate, tests)
+	runTests(t, testModeUpdate, tests)
 }
 
 func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
@@ -423,8 +418,8 @@ func TestOpenShiftClusterStaticValidateNetworkProfile(t *testing.T) {
 		},
 	}
 
-	runTests(t, createTestMode, tests)
-	runTests(t, updateTestMode, tests)
+	runTests(t, testModeCreate, tests)
+	runTests(t, testModeUpdate, tests)
 }
 
 func TestOpenShiftClusterStaticValidateMasterProfile(t *testing.T) {
@@ -455,8 +450,8 @@ func TestOpenShiftClusterStaticValidateMasterProfile(t *testing.T) {
 		},
 	}
 
-	runTests(t, createTestMode, tests)
-	runTests(t, updateTestMode, tests)
+	runTests(t, testModeCreate, tests)
+	runTests(t, testModeUpdate, tests)
 }
 
 func TestOpenShiftClusterStaticValidateWorkerProfile(t *testing.T) {
@@ -538,7 +533,7 @@ func TestOpenShiftClusterStaticValidateWorkerProfile(t *testing.T) {
 	}
 
 	// We do not perform this validation on update
-	runTests(t, createTestMode, tests)
+	runTests(t, testModeCreate, tests)
 }
 
 func TestOpenShiftClusterStaticValidateAPIServerProfile(t *testing.T) {
@@ -591,9 +586,9 @@ func TestOpenShiftClusterStaticValidateAPIServerProfile(t *testing.T) {
 		},
 	}
 
-	runTests(t, createTestMode, createTests)
-	runTests(t, createTestMode, commonTests)
-	runTests(t, updateTestMode, commonTests)
+	runTests(t, testModeCreate, createTests)
+	runTests(t, testModeCreate, commonTests)
+	runTests(t, testModeUpdate, commonTests)
 }
 
 func TestOpenShiftClusterStaticValidateIngressProfile(t *testing.T) {
@@ -640,9 +635,9 @@ func TestOpenShiftClusterStaticValidateIngressProfile(t *testing.T) {
 		},
 	}
 
-	runTests(t, createTestMode, createTests)
-	runTests(t, createTestMode, commonTests)
-	runTests(t, updateTestMode, commonTests)
+	runTests(t, testModeCreate, createTests)
+	runTests(t, testModeCreate, commonTests)
+	runTests(t, testModeUpdate, commonTests)
 }
 
 func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
@@ -802,5 +797,5 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 		},
 	}
 
-	runTests(t, updateTestMode, tests)
+	runTests(t, testModeUpdate, tests)
 }
