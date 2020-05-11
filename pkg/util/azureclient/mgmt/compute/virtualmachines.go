@@ -4,6 +4,8 @@ package compute
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
+
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	"github.com/Azure/go-autorest/autorest"
 )
@@ -11,6 +13,7 @@ import (
 // VirtualMachinesClient is a minimal interface for azure VirtualMachinesClient
 type VirtualMachinesClient interface {
 	VirtualMachinesClientAddons
+	Get(ctx context.Context, resourceGroupName string, VMName string, expand mgmtcompute.InstanceViewTypes) (result mgmtcompute.VirtualMachine, err error)
 }
 
 type virtualMachinesClient struct {

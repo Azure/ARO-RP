@@ -15,6 +15,7 @@ import (
 	"strings"
 	"testing"
 
+	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -26,8 +27,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
+	mockcompute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 	mockfeatures "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
@@ -68,7 +71,7 @@ func TestAdminListResourcesList(t *testing.T) {
 	type test struct {
 		name           string
 		resourceID     string
-		mocks          func(*test, *mock_database.MockOpenShiftClusters, *mockfeatures.MockResourcesClient)
+		mocks          func(*test, *mock_database.MockOpenShiftClusters, *mockfeatures.MockResourcesClient, *mockcompute.MockVirtualMachinesClient)
 		wantStatusCode int
 		wantResponse   func() []byte
 		wantError      string
@@ -78,7 +81,7 @@ func TestAdminListResourcesList(t *testing.T) {
 		{
 			name:       "basic coverage",
 			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, resources *mockfeatures.MockResourcesClient) {
+			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, resources *mockfeatures.MockResourcesClient, compute *mockcompute.MockVirtualMachinesClient) {
 				clusterDoc := &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
 						Properties: api.OpenShiftClusterProperties{
@@ -94,21 +97,35 @@ func TestAdminListResourcesList(t *testing.T) {
 
 				resources.EXPECT().List(gomock.Any(), "resourceGroup eq 'test-cluster'", "", nil).Return([]mgmtfeatures.GenericResourceExpanded{
 					{
+						Name: to.StringPtr("vm-1"),
 						ID:   to.StringPtr("/subscriptions/id"),
 						Type: to.StringPtr("Microsoft.Compute/virtualMachines"),
 					},
+					{
+						Name: to.StringPtr("storage"),
+						ID:   to.StringPtr("/subscriptions/id"),
+						Type: to.StringPtr("Microsoft.Storage/storageAccounts"),
+					},
 				}, nil)
 
-				resources.EXPECT().GetByID(gomock.Any(), "/subscriptions/id", azureclient.APIVersions["Microsoft.Compute"]).Return(mgmtfeatures.GenericResource{
-					Kind:     to.StringPtr("test2"),
+				resources.EXPECT().GetByID(gomock.Any(), "/subscriptions/id", azureclient.APIVersions["Microsoft.Storage"]).Return(mgmtfeatures.GenericResource{
+					Name:     to.StringPtr("storage"),
 					ID:       to.StringPtr("/subscriptions/id"),
-					Type:     to.StringPtr("Microsoft.Compute/virtualMachines"),
-					Location: to.StringPtr("eastus2"),
+					Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
+					Location: to.StringPtr("eastus"),
+				}, nil)
+
+				compute.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mgmtcompute.VirtualMachine{
+					ID:   to.StringPtr("/subscriptions/id"),
+					Type: to.StringPtr("Microsoft.Compute/virtualMachines"),
+					VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
+						ProvisioningState: to.StringPtr("Succeeded"),
+					},
 				}, nil)
 			},
 			wantStatusCode: http.StatusOK,
 			wantResponse: func() []byte {
-				return []byte(`[{"kind":"test2","id":"/subscriptions/id","type":"Microsoft.Compute/virtualMachines","location":"eastus2"}]` + "\n")
+				return []byte(`[{"properties":{"provisioningState":"Succeeded"},"id":"/subscriptions/id","type":"Microsoft.Compute/virtualMachines"},{"id":"/subscriptions/id","name":"storage","type":"Microsoft.Storage/storageAccounts","location":"eastus"}]` + "\n")
 			},
 		},
 	} {
@@ -130,13 +147,19 @@ func TestAdminListResourcesList(t *testing.T) {
 
 			resourcesClient := mockfeatures.NewMockResourcesClient(controller)
 			openshiftClusters := mock_database.NewMockOpenShiftClusters(controller)
-			tt.mocks(tt, openshiftClusters, resourcesClient)
+			computeClient := mockcompute.NewMockVirtualMachinesClient(controller)
+			tt.mocks(tt, openshiftClusters, resourcesClient, computeClient)
 
 			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
 				OpenShiftClusters: openshiftClusters,
-			}, api.APIs, &noop.Noop{}, nil, nil, func(subscriptionID string, authorizer autorest.Authorizer) features.ResourcesClient {
-				return resourcesClient
-			}, nil)
+			}, api.APIs, &noop.Noop{}, nil, nil,
+				func(subscriptionID string, authorizer autorest.Authorizer) features.ResourcesClient {
+					return resourcesClient
+				},
+				func(subscriptionID string, authorizer autorest.Authorizer) compute.VirtualMachinesClient {
+					return computeClient
+				},
+			)
 
 			if err != nil {
 				t.Fatal(err)
