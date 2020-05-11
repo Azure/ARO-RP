@@ -8,6 +8,8 @@ The deploy utility is decoupled from the `env` package and is configured with a
 config file (see config.yaml.example) and the following optional
 environment variables:
 
+* FULL_DEPLOY: deploy all ARM resources (requires elevated permissions)
+
 * RP_VERSION: RP VM scaleset git commit version
 
 Notes:
