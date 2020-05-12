@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aro-operator
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: aro-operator
+  template:
+    metadata:
+      labels:
+        name: aro-operator
+    spec:
+      serviceAccountName: aro-operator
+      volumes:
+        - name: acrsvc-azurecr-io
+          volumeSource:
+            secret: acrsvc-azurecr-io
+      containers:
+        - name: aro-operator
+          # Replace this with the built image name
+          image: REPLACE_IMAGE
+          command:
+          - aro-operator
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: acrsvc-azurecr-io
+              mountPath: /pull-secrets/acrsvc.azurecr.io
+          env:
+            - name: WATCH_NAMESPACE
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: "aro-operator"

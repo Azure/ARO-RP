@@ -4,6 +4,9 @@ COMMIT = $(shell git rev-parse --short HEAD)$(shell [[ $$(git status --porcelain
 aro: generate
 	go build -ldflags "-X main.gitCommit=$(COMMIT)" ./cmd/aro
 
+aro-operator:
+	go build -o aro-operator -ldflags "-X github.com/Azure/ARO-RP/operator/pkg/version.Version=$(COMMIT)" ./operator/cmd/manager
+
 az:
 	cd python/az/aro && python ./setup.py bdist_egg
 	cd python/az/aro && python ./setup.py bdist_wheel || true
@@ -56,6 +59,10 @@ image-aro: aro
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
 	docker build -f Dockerfile.aro -t ${RP_IMAGE_ACR}.azurecr.io/aro:$(COMMIT) .
 
+image-aro-operator: aro-operator
+	docker pull registry.access.redhat.com/ubi8/ubi-minimal
+	docker build -f operator/build/Dockerfile -t quay.io/asalkeld/aos-init:$(COMMIT) .
+
 image-fluentbit:
 	docker build --build-arg VERSION=1.3.9-1 \
 	  -f Dockerfile.fluentbit -t ${RP_IMAGE_ACR}.azurecr.io/fluentbit:1.3.9-1 .
@@ -102,9 +109,9 @@ e2e:
 test-go: generate
 	go build ./...
 
-	gofmt -s -w cmd hack pkg test
-	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/Azure/ARO-RP cmd hack pkg test
-	go run ./hack/validate-imports cmd hack pkg test
+	gofmt -s -w cmd hack pkg test operator
+	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/Azure/ARO-RP cmd hack pkg test operator
+	go run ./hack/validate-imports cmd hack pkg test operator
 	go run ./hack/licenses
 	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
 	@[ -z "$$(find -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
@@ -124,4 +131,4 @@ test-python: generate pyenv${PYTHON_VERSION}
 admin.kubeconfig:
 	hack/get-admin-kubeconfig.sh /subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}/providers/Microsoft.RedHatOpenShift/openShiftClusters/${CLUSTER} >admin.kubeconfig
 
-.PHONY: aro az clean client generate image-aro proxy secrets secrets-update test-go test-python image-fluentbit publish-image-proxy publish-image-aro publish-image-fluentbit publish-image-proxy admin.kubeconfig
+.PHONY: aro aro-operator az clean client generate image-aro proxy secrets secrets-update test-go test-python image-fluentbit publish-image-proxy publish-image-aro publish-image-fluentbit publish-image-proxy admin.kubeconfig
