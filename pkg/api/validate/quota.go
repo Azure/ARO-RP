@@ -9,7 +9,6 @@ import (
 	"net/http"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 )
 
 func addRequiredResources(requiredResources map[string]int, vmSize api.VMSize, count int) error {
@@ -80,7 +79,7 @@ func addRequiredResources(requiredResources map[string]int, vmSize api.VMSize, c
 }
 
 // validateQuotas checks usage quotas vs. resources required by cluster before cluster creation
-func (dv *openShiftClusterDynamicValidator) validateQuotas(ctx context.Context, uc compute.UsageClient) error {
+func (dv *openShiftClusterDynamicValidator) validateQuotas(ctx context.Context) error {
 	requiredResources := map[string]int{}
 	addRequiredResources(requiredResources, dv.oc.Properties.MasterProfile.VMSize, 3)
 	//worker node resource calculation
@@ -88,7 +87,7 @@ func (dv *openShiftClusterDynamicValidator) validateQuotas(ctx context.Context, 
 		addRequiredResources(requiredResources, w.VMSize, w.Count)
 	}
 
-	usages, err := uc.List(ctx, dv.oc.Location)
+	usages, err := dv.spUsage.List(ctx, dv.oc.Location)
 	if err != nil {
 		return err
 	}

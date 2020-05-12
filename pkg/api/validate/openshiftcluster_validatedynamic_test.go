@@ -25,8 +25,6 @@ func TestValidateProviders(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	dv := &openShiftClusterDynamicValidator{}
-
 	for _, tt := range []struct {
 		name    string
 		mocks   func(*mockfeatures.MockProvidersClient)
@@ -144,7 +142,11 @@ func TestValidateProviders(t *testing.T) {
 
 			tt.mocks(providerClient)
 
-			err := dv.validateProviders(ctx, providerClient)
+			dv := &openShiftClusterDynamicValidator{
+				spProviders: providerClient,
+			}
+
+			err := dv.validateProviders(ctx)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
@@ -251,10 +253,11 @@ func TestValidateVnet(t *testing.T) {
 			}
 
 			dv := &openShiftClusterDynamicValidator{
-				oc: tt.oc,
+				oc:                tt.oc,
+				spVirtualNetworks: networkClient,
 			}
 
-			err := dv.validateVnet(ctx, networkClient)
+			err := dv.validateVnet(ctx)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

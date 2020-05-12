@@ -57,6 +57,12 @@ type openShiftClusterDynamicValidator struct {
 	env env.Interface
 
 	oc *api.OpenShiftCluster
+
+	fpPermissions     authorization.PermissionsClient
+	spPermissions     authorization.PermissionsClient
+	spProviders       features.ProvidersClient
+	spUsage           compute.UsageClient
+	spVirtualNetworks network.VirtualNetworksClient
 }
 
 // Dynamic validates an OpenShift cluster
@@ -68,44 +74,45 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 
 	// TODO: pre-check that the cluster domain doesn't already exist
 
-	spAuthorizer, err := dv.validateServicePrincipalProfile(ctx)
-	if err != nil {
-		return err
-	}
-
-	spPermissions := authorization.NewPermissionsClient(r.SubscriptionID, spAuthorizer)
-	err = dv.validateVnetPermissions(ctx, spPermissions, api.CloudErrorCodeInvalidServicePrincipalPermissions, "provided service principal")
-	if err != nil {
-		return err
-	}
-
-	if dv.oc.Properties.ProvisioningState == api.ProvisioningStateCreating {
-		spUsage := compute.NewUsageClient(r.SubscriptionID, spAuthorizer)
-		err = dv.validateQuotas(ctx, spUsage)
-		if err != nil {
-			return err
-		}
-	}
-
 	fpAuthorizer, err := dv.env.FPAuthorizer(dv.oc.Properties.ServicePrincipalProfile.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return err
 	}
 
-	fpPermissions := authorization.NewPermissionsClient(r.SubscriptionID, fpAuthorizer)
-	err = dv.validateVnetPermissions(ctx, fpPermissions, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
+	spAuthorizer, err := dv.validateServicePrincipalProfile(ctx)
 	if err != nil {
 		return err
 	}
 
-	spVnet := network.NewVirtualNetworksClient(r.SubscriptionID, spAuthorizer)
-	err = dv.validateVnet(ctx, spVnet)
+	dv.fpPermissions = authorization.NewPermissionsClient(r.SubscriptionID, fpAuthorizer)
+	dv.spPermissions = authorization.NewPermissionsClient(r.SubscriptionID, spAuthorizer)
+	dv.spProviders = features.NewProvidersClient(r.SubscriptionID, spAuthorizer)
+	dv.spUsage = compute.NewUsageClient(r.SubscriptionID, spAuthorizer)
+	dv.spVirtualNetworks = network.NewVirtualNetworksClient(r.SubscriptionID, spAuthorizer)
+
+	err = dv.validateVnetPermissions(ctx, dv.spPermissions, api.CloudErrorCodeInvalidServicePrincipalPermissions, "provided service principal")
 	if err != nil {
 		return err
 	}
 
-	spProvider := features.NewProvidersClient(r.SubscriptionID, spAuthorizer)
-	err = dv.validateProviders(ctx, spProvider)
+	if dv.oc.Properties.ProvisioningState == api.ProvisioningStateCreating {
+		err = dv.validateQuotas(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = dv.validateVnetPermissions(ctx, dv.fpPermissions, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
+	if err != nil {
+		return err
+	}
+
+	err = dv.validateVnet(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = dv.validateProviders(ctx)
 	if err != nil {
 		return err
 	}
@@ -281,7 +288,7 @@ func (dv *openShiftClusterDynamicValidator) validateSubnet(ctx context.Context, 
 }
 
 // validateVnet checks that the vnet does not have custom dns servers set
-func (dv *openShiftClusterDynamicValidator) validateVnet(ctx context.Context, vnetClient network.VirtualNetworksClient) error {
+func (dv *openShiftClusterDynamicValidator) validateVnet(ctx context.Context) error {
 	vnetID, _, err := subnet.Split(dv.oc.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return err
@@ -290,7 +297,7 @@ func (dv *openShiftClusterDynamicValidator) validateVnet(ctx context.Context, vn
 	if err != nil {
 		return err
 	}
-	vnet, err := vnetClient.Get(ctx, r.ResourceGroup, r.ResourceName, "")
+	vnet, err := dv.spVirtualNetworks.Get(ctx, r.ResourceGroup, r.ResourceName, "")
 	if err != nil {
 		return err
 	}
@@ -302,8 +309,8 @@ func (dv *openShiftClusterDynamicValidator) validateVnet(ctx context.Context, vn
 	return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided vnet '%s' is invalid: custom DNS servers are not supported.", vnetID)
 }
 
-func (dv *openShiftClusterDynamicValidator) validateProviders(ctx context.Context, providerClient features.ProvidersClient) error {
-	providers, err := providerClient.List(ctx, nil, "")
+func (dv *openShiftClusterDynamicValidator) validateProviders(ctx context.Context) error {
+	providers, err := dv.spProviders.List(ctx, nil, "")
 	if err != nil {
 		return err
 	}
