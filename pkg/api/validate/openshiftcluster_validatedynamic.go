@@ -35,13 +35,25 @@ type OpenShiftClusterDynamicValidator interface {
 	Dynamic(context.Context) error
 }
 
-func NewOpenShiftClusterDynamicValidator(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster) OpenShiftClusterDynamicValidator {
+func NewOpenShiftClusterDynamicValidator(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster) (OpenShiftClusterDynamicValidator, error) {
+	r, err := azure.ParseResourceID(oc.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	fpAuthorizer, err := env.FPAuthorizer(oc.Properties.ServicePrincipalProfile.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
+	if err != nil {
+		return nil, err
+	}
+
 	return &openShiftClusterDynamicValidator{
 		log: log,
 		env: env,
 
 		oc: oc,
-	}
+
+		fpPermissions: authorization.NewPermissionsClient(r.SubscriptionID, fpAuthorizer),
+	}, nil
 }
 
 type azureClaim struct {
@@ -74,17 +86,11 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 
 	// TODO: pre-check that the cluster domain doesn't already exist
 
-	fpAuthorizer, err := dv.env.FPAuthorizer(dv.oc.Properties.ServicePrincipalProfile.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
-	if err != nil {
-		return err
-	}
-
 	spAuthorizer, err := dv.validateServicePrincipalProfile(ctx)
 	if err != nil {
 		return err
 	}
 
-	dv.fpPermissions = authorization.NewPermissionsClient(r.SubscriptionID, fpAuthorizer)
 	dv.spPermissions = authorization.NewPermissionsClient(r.SubscriptionID, spAuthorizer)
 	dv.spProviders = features.NewProvidersClient(r.SubscriptionID, spAuthorizer)
 	dv.spUsage = compute.NewUsageClient(r.SubscriptionID, spAuthorizer)
