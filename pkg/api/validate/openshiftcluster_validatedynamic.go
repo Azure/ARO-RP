@@ -75,6 +75,8 @@ type openShiftClusterDynamicValidator struct {
 	spProviders       features.ProvidersClient
 	spUsage           compute.UsageClient
 	spVirtualNetworks network.VirtualNetworksClient
+
+	subnetManager subnet.Manager
 }
 
 // Dynamic validates an OpenShift cluster
@@ -93,6 +95,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	dv.spProviders = features.NewProvidersClient(r.SubscriptionID, spAuthorizer)
 	dv.spUsage = compute.NewUsageClient(r.SubscriptionID, spAuthorizer)
 	dv.spVirtualNetworks = network.NewVirtualNetworksClient(r.SubscriptionID, spAuthorizer)
+	dv.subnetManager = subnet.NewManager(r.SubscriptionID, spAuthorizer)
 
 	err = dv.validateVnetPermissions(ctx, dv.spPermissions, api.CloudErrorCodeInvalidServicePrincipalPermissions, "provided service principal")
 	if err != nil {
@@ -121,8 +124,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		return err
 	}
 
-	subnetManager := subnet.NewManager(r.SubscriptionID, spAuthorizer)
-	return dv.validateSubnets(ctx, subnetManager)
+	return dv.validateSubnets(ctx)
 }
 
 func (dv *openShiftClusterDynamicValidator) validateServicePrincipalProfile(ctx context.Context) (autorest.Authorizer, error) {
@@ -199,13 +201,13 @@ func (dv *openShiftClusterDynamicValidator) validateVnetPermissions(ctx context.
 	return err
 }
 
-func (dv *openShiftClusterDynamicValidator) validateSubnets(ctx context.Context, subnetManager subnet.Manager) error {
-	master, err := dv.validateSubnet(ctx, subnetManager, "properties.masterProfile.subnetId", "master", dv.oc.Properties.MasterProfile.SubnetID)
+func (dv *openShiftClusterDynamicValidator) validateSubnets(ctx context.Context) error {
+	master, err := dv.validateSubnet(ctx, "properties.masterProfile.subnetId", "master", dv.oc.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return err
 	}
 
-	worker, err := dv.validateSubnet(ctx, subnetManager, `properties.workerProfiles["worker"].subnetId`, "worker", dv.oc.Properties.WorkerProfiles[0].SubnetID)
+	worker, err := dv.validateSubnet(ctx, `properties.workerProfiles["worker"].subnetId`, "worker", dv.oc.Properties.WorkerProfiles[0].SubnetID)
 	if err != nil {
 		return err
 	}
@@ -228,8 +230,8 @@ func (dv *openShiftClusterDynamicValidator) validateSubnets(ctx context.Context,
 	return nil
 }
 
-func (dv *openShiftClusterDynamicValidator) validateSubnet(ctx context.Context, subnetManager subnet.Manager, path, typ, subnetID string) (*net.IPNet, error) {
-	s, err := subnetManager.Get(ctx, subnetID)
+func (dv *openShiftClusterDynamicValidator) validateSubnet(ctx context.Context, path, typ, subnetID string) (*net.IPNet, error) {
+	s, err := dv.subnetManager.Get(ctx, subnetID)
 	if detailedErr, ok := err.(autorest.DetailedError); ok &&
 		detailedErr.StatusCode == http.StatusNotFound {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The provided "+typ+" VM subnet '%s' could not be found.", subnetID)
