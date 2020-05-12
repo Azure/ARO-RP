@@ -84,8 +84,6 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		return err
 	}
 
-	// TODO: pre-check that the cluster domain doesn't already exist
-
 	spAuthorizer, err := dv.validateServicePrincipalProfile(ctx)
 	if err != nil {
 		return err
