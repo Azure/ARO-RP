@@ -35,7 +35,7 @@ var (
 func (g *generator) managedIdentity() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtmsi.Identity{
-			Type:     "Microsoft.ManagedIdentity/userAssignedIdentities",
+			Type:     to.StringPtr("Microsoft.ManagedIdentity/userAssignedIdentities"),
 			Name:     to.StringPtr("[concat('aro-rp-', resourceGroup().location)]"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
@@ -618,7 +618,7 @@ func (g *generator) lbAlert(threshold float64, severity int32, name string, eval
 							MetricName:      to.StringPtr(metric),
 							MetricNamespace: to.StringPtr("microsoft.network/loadBalancers"),
 							Name:            to.StringPtr("HealthProbeCheck"),
-							Operator:        mgmtmonitor.LessThan,
+							Operator:        mgmtmonitor.OperatorLessThan,
 							Threshold:       to.Float64Ptr(threshold),
 							TimeAggregation: mgmtmonitor.Average,
 						},
