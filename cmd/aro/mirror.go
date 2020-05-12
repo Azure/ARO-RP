@@ -58,7 +58,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	log.Print("reading release graph")
-	releases, err := pkgmirror.AddFromGraph(pkgmirror.NewVersion(4, 3), pkgmirror.NewVersion(4, 4))
+	releases, err := pkgmirror.AddFromGraph(pkgmirror.NewVersion(4, 3))
 	if err != nil {
 		return err
 	}
