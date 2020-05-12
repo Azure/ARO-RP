@@ -69,26 +69,26 @@ func TestParseVersion(t *testing.T) {
 
 func TestLt(t *testing.T) {
 	for i, tt := range []struct {
-		a    *Version
-		b    *Version
-		want bool
+		input *Version
+		min   *Version
+		want  bool
 	}{
 		{
-			a:    NewVersion(4, 1),
-			b:    NewVersion(4, 3),
-			want: true,
+			input: NewVersion(4, 1),
+			min:   NewVersion(4, 3),
+			want:  true,
 		},
 		{
-			a: NewVersion(4, 4),
-			b: NewVersion(4, 3, 1),
+			input: NewVersion(4, 4),
+			min:   NewVersion(4, 3, 1),
 		},
 		{
-			a: NewVersion(4, 4),
-			b: NewVersion(4, 4),
+			input: NewVersion(4, 4),
+			min:   NewVersion(4, 4),
 		},
 	} {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
-			got := tt.a.Lt(tt.b)
+			got := tt.input.Lt(tt.min)
 			if got != tt.want {
 				t.Error(got)
 			}

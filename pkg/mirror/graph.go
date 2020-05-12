@@ -18,8 +18,8 @@ type Node struct {
 }
 
 // AddFromGraph adds all nodes whose version is of the form x.y.z (no suffix)
-// and lies in the range [min, max)
-func AddFromGraph(min, max *Version) ([]Node, error) {
+// and >= min
+func AddFromGraph(min *Version) ([]Node, error) {
 	req, err := http.NewRequest(http.MethodGet, "https://openshift-release.svc.ci.openshift.org/graph", nil)
 	if err != nil {
 		return nil, err
@@ -61,9 +61,8 @@ func AddFromGraph(min, max *Version) ([]Node, error) {
 			return nil, err
 		}
 
-		if version.Lt(min) ||
-			!version.Lt(max) ||
-			version.Suffix != "" {
+		// if incoming version < min - skip
+		if version.Lt(min) || version.Suffix != "" {
 			continue
 		}
 
