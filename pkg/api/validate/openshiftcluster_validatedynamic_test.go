@@ -164,8 +164,6 @@ func TestValidateVnet(t *testing.T) {
 	vnetName := "testVnet"
 	validSubnet := fmt.Sprintf("/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/%s/subnet/%s", resourceGroup, vnetName, subnetName)
 
-	dv := &openShiftClusterDynamicValidator{}
-
 	for _, tt := range []struct {
 		name    string
 		mocks   func(*mocknetwork.MockVirtualNetworksClient)
@@ -252,7 +250,11 @@ func TestValidateVnet(t *testing.T) {
 				tt.mocks(networkClient)
 			}
 
-			err := dv.validateVnet(ctx, networkClient, tt.oc)
+			dv := &openShiftClusterDynamicValidator{
+				oc: tt.oc,
+			}
+
+			err := dv.validateVnet(ctx, networkClient)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

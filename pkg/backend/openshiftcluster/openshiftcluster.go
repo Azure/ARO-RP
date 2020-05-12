@@ -78,7 +78,7 @@ func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClus
 		billing:      billing,
 		fpAuthorizer: fpAuthorizer,
 
-		ocDynamicValidator: validate.NewOpenShiftClusterDynamicValidator(log, _env),
+		ocDynamicValidator: validate.NewOpenShiftClusterDynamicValidator(log, _env, doc.OpenShiftCluster),
 
 		groups: features.NewResourceGroupsClient(r.SubscriptionID, fpAuthorizer),
 

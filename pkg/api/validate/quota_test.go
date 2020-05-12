@@ -18,22 +18,23 @@ import (
 func TestQuotaCheck(t *testing.T) {
 	ctx := context.Background()
 
-	oc := &api.OpenShiftCluster{
-		Location: "ocLocation",
-		Properties: api.OpenShiftClusterProperties{
-			MasterProfile: api.MasterProfile{
-				VMSize: "Standard_D8s_v3",
-			},
-			WorkerProfiles: []api.WorkerProfile{
-				{
+	dv := openShiftClusterDynamicValidator{
+		oc: &api.OpenShiftCluster{
+			Location: "ocLocation",
+			Properties: api.OpenShiftClusterProperties{
+				MasterProfile: api.MasterProfile{
 					VMSize: "Standard_D8s_v3",
-					Count:  10,
+				},
+				WorkerProfiles: []api.WorkerProfile{
+					{
+						VMSize: "Standard_D8s_v3",
+						Count:  10,
+					},
 				},
 			},
 		},
 	}
 
-	dv := openShiftClusterDynamicValidator{}
 	type test struct {
 		name    string
 		mocks   func(*test, *mock_compute.MockUsageClient)
@@ -155,7 +156,7 @@ func TestQuotaCheck(t *testing.T) {
 				tt.mocks(tt, usageClient)
 			}
 
-			err := dv.validateQuotas(ctx, oc, usageClient)
+			err := dv.validateQuotas(ctx, usageClient)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

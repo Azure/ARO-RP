@@ -51,7 +51,7 @@ func (m *Manager) Create(ctx context.Context) error {
 		timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 		defer cancel()
 		wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-			err = m.ocDynamicValidator.Dynamic(ctx, m.doc.OpenShiftCluster)
+			err = m.ocDynamicValidator.Dynamic(ctx)
 			if azureerrors.HasAuthorizationFailedError(err) {
 				m.log.Print(err)
 				return false, nil
