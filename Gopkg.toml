@@ -6,7 +6,11 @@ required = [
   "golang.org/x/tools/cmd/goimports",
   "github.com/jstemmer/go-junit-report",
   "github.com/axw/gocov/gocov",
-  "github.com/AlekSi/gocov-xml"
+  "github.com/AlekSi/gocov-xml",
+  "github.com/coreos/prometheus-operator/pkg/apis/monitoring/v1",
+  "k8s.io/code-generator/cmd/client-gen",
+  "k8s.io/code-generator/cmd/deepcopy-gen",
+  "k8s.io/gengo/generator"
 ]
 
 [[constraint]]
@@ -16,6 +20,14 @@ required = [
 [[override]]
   name = "github.com/Azure/azure-sdk-for-go"
   version = "40.2.0"
+
+[[override]]
+  name = "k8s.io/code-generator"
+  version = "kubernetes-1.16.0-beta.0"
+
+[[constraint]]
+  name = "k8s.io/gengo"
+  revision = "f8a0810f38afb8478882b3835a615aebfda39afa"
 
 [[override]]
   name = "github.com/containers/image"
@@ -49,6 +61,10 @@ required = [
   name = "github.com/openshift/cluster-api-provider-azure"
   branch = "release-4.3"
 
+[[override]]
+  name = "sigs.k8s.io/controller-runtime"
+  branch = "release-0.5"
+
 [[constraint]]
   name = "github.com/openshift/installer"
   branch = "release-4.3-azure"
@@ -63,6 +79,10 @@ required = [
   branch = "release-4.3"
 
 [[constraint]]
+  name = "github.com/coreos/prometheus-operator"
+  branch = "release-0.38"
+
+[[constraint]]
   name = "github.com/satori/go.uuid"
   version = "1.2.0"
 
@@ -73,6 +93,10 @@ required = [
 [[constraint]]
   name = "golang.org/x/crypto"
   branch = "master"
+
+[[override]]
+  name = "k8s.io/apiextensions-apiserver"
+  branch = "release-1.17"
 
 [[override]]
   name = "k8s.io/api"

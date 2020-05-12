@@ -184,6 +184,15 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "00cbd4911f931380cf9e19d771d7ebae1ec0a807",
+                    "repositoryUrl": "https://github.com/coreos/prometheus-operator/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "8991bc29aa16c548c550c7ff78260e27b9ab7c73",
                     "repositoryUrl": "https://github.com/davecgh/go-spew/"
                 }
@@ -328,6 +337,24 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "9fb12b3b21c5415d16ac18dc5cd42c1cfdd40c4e",
+                    "repositoryUrl": "https://github.com/go-logr/logr/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "03f06a783fbb7dfaf3f629c7825480e43a7105e6",
+                    "repositoryUrl": "https://github.com/go-logr/zapr/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "ed123515f087412cd7ef02e49b0b0a5e6a79a360",
                     "repositoryUrl": "https://github.com/go-openapi/jsonpointer/"
                 }
@@ -456,6 +483,15 @@
                 "git": {
                     "commitHash": "00bdffe0f3c77e27d2cf6f5c70232a2d3e4d9c15",
                     "repositoryUrl": "https://github.com/gorilla/mux/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "14eae340515388ca95aa8e7b86f0de668e981f54",
+                    "repositoryUrl": "https://github.com/hashicorp/golang-lru/"
                 }
             }
         },
@@ -823,6 +859,15 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "2fd7019f856cdb6f6618e2c3c80d15c3c79d1b6c",
+                    "repositoryUrl": "https://github.com/operator-framework/operator-sdk/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "1a74cd989213e86be80d47f103f31ed7a8054850",
                     "repositoryUrl": "https://github.com/pascaldekloe/name/"
                 }
@@ -850,7 +895,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "170205fb58decfd011f1550d4cfb737230d7ae4f",
+                    "commitHash": "2641b987480bca71fb39738eb8c8b0d577cb1d76",
                     "repositoryUrl": "https://github.com/prometheus/client_golang/"
                 }
             }
@@ -976,6 +1021,33 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "845920076a298bdb984fb0f1b86052e4ca0a281c",
+                    "repositoryUrl": "https://go.uber.org/atomic/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "b587143a48b62b01d337824eab43700af6ffe222",
+                    "repositoryUrl": "https://go.uber.org/multierr/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "feeb9a050b31b40eec6f2470e7599eeeadfe5bdd",
+                    "repositoryUrl": "https://go.uber.org/zap/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "c7e774b10ea04ad8fe5241e62ac4bf676c1d6b16",
                     "repositoryUrl": "https://go4.org/"
                 }
@@ -1050,6 +1122,15 @@
                 "git": {
                     "commitHash": "dbc83e6dc05ede08439f32f7024b36e4e9e5b406",
                     "repositoryUrl": "https://golang.org/x/tools/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "1c2a0262323edc27502942d9727c95646b1c3cbe",
+                    "repositoryUrl": "https://gomodules.xyz/jsonpatch/"
                 }
             }
         },
@@ -1156,6 +1237,15 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "88d23e1d281b9aa0cb534c4cdf3ed01af4b180b9",
+                    "repositoryUrl": "https://github.com/kubernetes/apiextensions-apiserver/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "46c5f7baf5456058e6999b176e1bdb87668c7c9d",
                     "repositoryUrl": "https://github.com/kubernetes/apimachinery/"
                 }
@@ -1167,6 +1257,24 @@
                 "git": {
                     "commitHash": "1f3b2931966858d724e363b2707cb87da322fd45",
                     "repositoryUrl": "https://github.com/kubernetes/client-go/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "d0071a11938089926a0faeb94ab9a934850250fd",
+                    "repositoryUrl": "https://github.com/kubernetes/code-generator/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "f8a0810f38afb8478882b3835a615aebfda39afa",
+                    "repositoryUrl": "https://github.com/kubernetes/gengo/"
                 }
             }
         },
@@ -1228,7 +1336,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "fc5542c693e3340f8abbe91c6345bd64c494a60c",
+                    "commitHash": "67ee49a35456387c35b01aaaf26a6add1fe49c32",
                     "repositoryUrl": "https://sigs.k8s.io/controller-runtime/"
                 }
             }
