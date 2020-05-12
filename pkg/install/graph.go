@@ -68,6 +68,7 @@ var registeredTypes = map[string]asset.Asset{
 	"*manifests.Openshift":                                    &manifests.Openshift{},
 	"*manifests.Proxy":                                        &manifests.Proxy{},
 	"*manifests.Scheduler":                                    &manifests.Scheduler{},
+	"*openshift.BaremetalConfig":                              &openshift.BaremetalConfig{},
 	"*openshift.CloudCredsSecret":                             &openshift.CloudCredsSecret{},
 	"*openshift.KubeadminPasswordSecret":                      &openshift.KubeadminPasswordSecret{},
 	"*openshift.NetworkCRDs":                                  &openshift.NetworkCRDs{},
