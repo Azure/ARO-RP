@@ -12,6 +12,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/coreos/go-systemd/journal"
+	"github.com/go-logr/logr"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -26,6 +27,76 @@ var (
 
 	rxTolerantResourceID = regexp.MustCompile(`(?i)^(?:/admin)?/subscriptions/([^/]+)(?:/resourceGroups/([^/]+)(?:/providers/([^/]+)/([^/]+)(?:/([^/]+))?)?)?`)
 )
+
+type logrusWrapper struct {
+	entry *logrus.Entry
+	level int
+}
+
+func (lw *logrusWrapper) Enabled() bool {
+	return lw.level <= int(logrus.GetLevel())
+}
+
+func (lw *logrusWrapper) Error(err error, msg string, keysAndValues ...interface{}) {
+	lw.withKeysAndValues(keysAndValues).Error(msg, err)
+}
+
+func (lw *logrusWrapper) withKeysAndValues(keysAndValues []interface{}) *logrus.Entry {
+	if len(keysAndValues) == 0 {
+		return lw.entry
+	}
+	key := ""
+	fields := logrus.Fields{}
+	for _, item := range keysAndValues {
+		if key == "" {
+			key = fmt.Sprint(item)
+		} else {
+			fields[key] = fmt.Sprint(item)
+			key = ""
+		}
+	}
+	if key != "" {
+		// key with no value
+		fields[key] = ""
+	}
+
+	return lw.entry.WithFields(fields)
+}
+
+func (lw *logrusWrapper) Info(msg string, keysAndValues ...interface{}) {
+	if !lw.Enabled() {
+		return
+	}
+	lw.withKeysAndValues(keysAndValues).Info(msg)
+}
+
+func (lw *logrusWrapper) V(level int) logr.InfoLogger {
+	return &logrusWrapper{
+		entry: lw.entry,
+		level: level,
+	}
+}
+
+func (lw *logrusWrapper) WithValues(keysAndValues ...interface{}) logr.Logger {
+	return &logrusWrapper{
+		entry: lw.withKeysAndValues(keysAndValues),
+		level: lw.level,
+	}
+}
+
+func (lw *logrusWrapper) WithName(name string) logr.Logger {
+	return &logrusWrapper{
+		entry: lw.withKeysAndValues([]interface{}{name, ""}),
+		level: lw.level,
+	}
+}
+
+func GetRLogger(logger *logrus.Entry) logr.Logger {
+	return &logrusWrapper{
+		entry: logger,
+		level: int(logrus.GetLevel()),
+	}
+}
 
 // GetLogger returns a consistently configured log entry
 func GetLogger() *logrus.Entry {

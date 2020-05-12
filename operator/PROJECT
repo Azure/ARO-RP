@@ -1,0 +1,7 @@
+domain: openshift.io
+repo: github.com/Azure/ARO-RP/operator
+resources:
+- group: aro
+  kind: Cluster
+  version: v1alpha1
+version: "2"
