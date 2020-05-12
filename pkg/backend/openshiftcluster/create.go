@@ -325,10 +325,10 @@ func (m *Manager) Create(ctx context.Context) error {
 	return i.Install(ctx, installConfig, platformCreds, image)
 }
 
-var rxRHCOS = regexp.MustCompile(`rhcos-((\d+)\.\d+\.\d{8})\d{4}\.\d+-azure\.x86_64\.vhd`)
+var rxRHCOS = regexp.MustCompile(`rhcos-((\d+)\.\d+\.\d{8})\d{4}\-\d+-azure\.x86_64\.vhd`)
 
 func getRHCOSImage(ctx context.Context) (*azuretypes.Image, error) {
-	// https://rhcos.blob.core.windows.net/imagebucket/rhcos-43.81.201911221453.0-azure.x86_64.vhd
+	// https://rhcos.blob.core.windows.net/imagebucket/rhcos-44.81.202004250133-0-azure.x86_64.vhd
 	osImage, err := rhcos.VHD(ctx, types.ArchitectureAMD64)
 	if err != nil {
 		return nil, err
@@ -342,8 +342,8 @@ func getRHCOSImage(ctx context.Context) (*azuretypes.Image, error) {
 	return &azuretypes.Image{
 		Publisher: "azureopenshift",
 		Offer:     "aro4",
-		SKU:       "aro_" + m[2], // "aro_43"
-		Version:   m[1],          // "43.81.20191122"
+		SKU:       "aro_" + m[2], // "aro_44"
+		Version:   m[1],          // "44.81.20200425"
 	}, nil
 }
 
