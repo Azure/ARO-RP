@@ -224,24 +224,26 @@ func (i *Installer) runSteps(ctx context.Context, steps []interface{}) error {
 		case action:
 			i.log.Printf("running step %s", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name())
 
-			timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
-			defer cancel()
+			func() {
+				timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+				defer cancel()
 
-			wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-				err = step(ctx)
-				if azureerrors.HasAuthorizationFailedError(err) || azureerrors.HasLinkedAuthorizationFailedError(err) {
-					i.log.Print(err)
-					// https://github.com/Azure/ARO-RP/issues/541: it is unclear if this refresh helps or not
-					if development, ok := i.env.(env.Dev); ok {
-						err = development.RefreshFPAuthorizer(ctx, i.fpAuthorizer)
-						if err != nil {
-							return false, err
+				wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+					err = step(ctx)
+					if azureerrors.HasAuthorizationFailedError(err) || azureerrors.HasLinkedAuthorizationFailedError(err) {
+						i.log.Print(err)
+						// https://github.com/Azure/ARO-RP/issues/541: it is unclear if this refresh helps or not
+						if development, ok := i.env.(env.Dev); ok {
+							err = development.RefreshFPAuthorizer(ctx, i.fpAuthorizer)
+							if err != nil {
+								return false, err
+							}
 						}
+						return false, nil
 					}
-					return false, nil
-				}
-				return err == nil, err
-			}, timeoutCtx.Done())
+					return err == nil, err
+				}, timeoutCtx.Done())
+			}()
 
 			if err != nil {
 				i.gatherFailureLogs(ctx)
