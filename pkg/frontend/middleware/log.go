@@ -63,6 +63,7 @@ func Log(baseLog *logrus.Entry) func(http.Handler) http.Handler {
 				ClientRequestID: r.Header.Get("X-Ms-Client-Request-Id"),
 				CorrelationID:   r.Header.Get("X-Ms-Correlation-Request-Id"),
 				RequestID:       uuid.NewV4().String(),
+				RequestTime:     t,
 			}
 
 			if vars["api-version"] == admin.APIVersion ||

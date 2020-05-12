@@ -1,5 +1,9 @@
 package api
 
+import (
+	"time"
+)
+
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
@@ -18,4 +22,7 @@ type CorrelationData struct {
 
 	// ClientPrincipalName contains value of x-ms-client-principal-name
 	ClientPrincipalName string `json:"clientPrincipalName,omitempty"`
+
+	// RequestTime is the time that the request was received
+	RequestTime time.Time `json:"requestTime,omitempty"`
 }

@@ -282,7 +282,6 @@ func (c *openShiftClusters) EndLease(ctx context.Context, key string, provisioni
 		doc.OpenShiftCluster.Properties.ProvisioningState = provisioningState
 		doc.OpenShiftCluster.Properties.FailedProvisioningState = failedProvisioningState
 
-		doc.CorrelationData = nil
 		doc.LeaseOwner = ""
 		doc.LeaseExpires = 0
 
@@ -295,6 +294,8 @@ func (c *openShiftClusters) EndLease(ctx context.Context, key string, provisioni
 			if adminUpdateError != nil {
 				doc.OpenShiftCluster.Properties.LastAdminUpdateError = *adminUpdateError
 			}
+
+			doc.CorrelationData = nil
 			doc.OpenShiftCluster.Properties.LastProvisioningState = ""
 			doc.AsyncOperationID = ""
 		}
