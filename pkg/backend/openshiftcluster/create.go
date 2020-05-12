@@ -20,12 +20,12 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	icazure "github.com/openshift/installer/pkg/asset/installconfig/azure"
+	icopenstack "github.com/openshift/installer/pkg/asset/installconfig/openstack"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
 	"github.com/openshift/installer/pkg/ipnet"
 	"github.com/openshift/installer/pkg/rhcos"
 	"github.com/openshift/installer/pkg/types"
 	azuretypes "github.com/openshift/installer/pkg/types/azure"
-	openstackvalidation "github.com/openshift/installer/pkg/types/openstack/validation"
 	"github.com/openshift/installer/pkg/types/validation"
 	"golang.org/x/crypto/ssh"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -312,7 +312,7 @@ func (m *Manager) Create(ctx context.Context) error {
 		return fmt.Errorf("unimplemented version %q", m.doc.OpenShiftCluster.Properties.ClusterProfile.Version)
 	}
 
-	err = validation.ValidateInstallConfig(installConfig.Config, openstackvalidation.NewValidValuesFetcher()).ToAggregate()
+	err = validation.ValidateInstallConfig(installConfig.Config, icopenstack.NewValidValuesFetcher()).ToAggregate()
 	if err != nil {
 		return err
 	}
