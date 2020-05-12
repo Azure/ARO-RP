@@ -297,7 +297,6 @@ func (i *Installer) attachNSGsAndPatch(ctx context.Context) error {
 		// TODO: there is probably an undesirable race condition here - check if etags can help.
 
 		s, err := i.subnet.Get(ctx, subnetID)
-
 		if err != nil {
 			return err
 		}
