@@ -245,7 +245,10 @@ func (i *Installer) runSteps(ctx context.Context, steps []interface{}) error {
 
 			if err != nil {
 				i.gatherFailureLogs(ctx)
-				return fmt.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name(), err)
+				if _, ok := err.(*api.CloudError); !ok {
+					err = fmt.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name(), err)
+				}
+				return err
 			}
 
 		case condition:
@@ -257,7 +260,10 @@ func (i *Installer) runSteps(ctx context.Context, steps []interface{}) error {
 			}()
 			if err != nil {
 				i.gatherFailureLogs(ctx)
-				return fmt.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(step.f).Pointer()).Name(), err)
+				if _, ok := err.(*api.CloudError); !ok {
+					err = fmt.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name(), err)
+				}
+				return err
 			}
 
 		default:
