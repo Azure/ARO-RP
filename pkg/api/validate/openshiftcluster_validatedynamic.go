@@ -102,13 +102,6 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		return err
 	}
 
-	if dv.oc.Properties.ProvisioningState == api.ProvisioningStateCreating {
-		err = dv.validateQuotas(ctx)
-		if err != nil {
-			return err
-		}
-	}
-
 	err = dv.validateVnetPermissions(ctx, dv.fpPermissions, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
 	if err != nil {
 		return err
@@ -119,12 +112,24 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		return err
 	}
 
+	err = dv.validateSubnets(ctx)
+	if err != nil {
+		return err
+	}
+
 	err = dv.validateProviders(ctx)
 	if err != nil {
 		return err
 	}
 
-	return dv.validateSubnets(ctx)
+	if dv.oc.Properties.ProvisioningState == api.ProvisioningStateCreating {
+		err = dv.validateQuotas(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (dv *openShiftClusterDynamicValidator) validateServicePrincipalProfile(ctx context.Context) (autorest.Authorizer, error) {
