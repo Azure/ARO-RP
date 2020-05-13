@@ -6,7 +6,9 @@ parameters:
   azureDevOpsJSONSPN: ''
   vsoProjectID: ''
   vsoConfigPipelineID: ''
+  vsoConfigBuildID: ''
   vsoDeployerPipelineID: ''
+  vsoDeployerBuildID: ''
   azureDevOpsE2EJSONSPN: ''
   e2eSubscription: ''
   billingE2EPipelineName: ''
@@ -35,8 +37,12 @@ jobs:
               buildType: specific
               project: ${{ parameters.vsoProjectID }}
               pipeline: ${{ parameters.vsoConfigPipelineID }}
-              buildVersionToDownload: latestFromBranch
-              branchName: refs/heads/master
+              ${{ if eq(parameters.vsoConfigBuildID, '') }}:
+                buildVersionToDownload: latestFromBranch
+                branchName: refs/heads/master
+              ${{ if ne(parameters.vsoConfigBuildID, '') }}:
+                buildVersionToDownload: specific
+                buildId: ${{ parameters.vsoConfigBuildID }}
               downloadType: specific
               downloadPath: $(System.ArtifactsDirectory)/config
             displayName: Download Config
@@ -45,8 +51,12 @@ jobs:
               buildType: specific
               project: ${{ parameters.vsoProjectID }}
               pipeline: ${{ parameters.vsoDeployerPipelineID }}
-              buildVersionToDownload: latestFromBranch
-              branchName: refs/heads/master
+              ${{ if eq(parameters.vsoDeployerBuildID, '') }}:
+                buildVersionToDownload: latestFromBranch
+                branchName: refs/heads/master
+              ${{ if ne(parameters.vsoDeployerBuildID, '') }}:
+                buildVersionToDownload: specific
+                buildId: ${{ parameters.vsoDeployerBuildID }}
               downloadType: specific
               downloadPath: $(System.ArtifactsDirectory)/deployer
             displayName: Download Deployer
