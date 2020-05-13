@@ -287,6 +287,9 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 
 func (i *Installer) attachNSGsAndPatch(ctx context.Context) error {
 	g, err := i.loadGraph(ctx)
+	if err != nil {
+		return err
+	}
 
 	for _, subnetID := range []string{
 		i.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
