@@ -62,8 +62,8 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
 
     rp_client_sp = aad.get_service_principal(rp_client_id)
 
-    assign_contributor_to_vnet(cmd.cli_ctx, vnet, client_sp.object_id, 'client')
-    assign_contributor_to_vnet(cmd.cli_ctx, vnet, rp_client_sp.object_id, 'rp_client')
+    assign_contributor_to_vnet(cmd.cli_ctx, vnet, client_sp.object_id)
+    assign_contributor_to_vnet(cmd.cli_ctx, vnet, rp_client_sp.object_id)
 
     if rp_mode_development():
         worker_vm_size = worker_vm_size or 'Standard_D2s_v3'
