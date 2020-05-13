@@ -109,7 +109,7 @@ func runTests(t *testing.T, mode testMode, tests []*validateTest) {
 						ResourceGroup:  "resourceGroup",
 						Provider:       "Microsoft.RedHatOpenShift",
 						ResourceType:   "openshiftClusters",
-						ResourceName:   "resourceName",
+						ResourceName:   "resource-name",
 					},
 				}
 

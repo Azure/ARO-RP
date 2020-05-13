@@ -19,7 +19,7 @@ import (
 func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 	var (
 		subscriptionID = "af848f0a-dbe3-449f-9ccd-6f23ac6ef9f1"
-		id             = fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/microsoft.redhatopenshift/openshiftclusters/resourceName", subscriptionID)
+		id             = fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/microsoft.redhatopenshift/openshiftclusters/resource-name", subscriptionID)
 	)
 
 	tests := []struct {

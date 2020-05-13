@@ -15,4 +15,6 @@ var (
 		`([a-z0-9]|[a-z0-9][-a-z0-9]{0,61}[a-z0-9])` +
 		`(\.([a-z0-9]|[a-z0-9][-a-z0-9]{0,61}[a-z0-9]))*` +
 		`$`)
+	// https://tools.ietf.org/html/rfc1035
+	RxRFC1035 = regexp.MustCompile(`^[a-z]([-a-z0-9]*[a-z0-9])?$`)
 )

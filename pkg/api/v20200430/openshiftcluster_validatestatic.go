@@ -63,6 +63,9 @@ func (sv *openShiftClusterStaticValidator) validate(oc *OpenShiftCluster, isCrea
 	if !strings.EqualFold(oc.Name, sv.r.ResourceName) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeMismatchingResourceName, "name", "The provided resource name '%s' did not match the name in the Url '%s'.", oc.Name, sv.r.ResourceName)
 	}
+	if !validate.RxRFC1035.MatchString(oc.Name) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "name", "The provided resource name '%s' is invalid. The name should conform to RFC1035.", oc.Name)
+	}
 	if !strings.EqualFold(oc.Type, resourceProviderNamespace+"/"+resourceType) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeMismatchingResourceType, "type", "The provided resource type '%s' did not match the name in the Url '%s'.", oc.Type, resourceProviderNamespace+"/"+resourceType)
 	}

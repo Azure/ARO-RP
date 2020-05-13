@@ -197,7 +197,7 @@ func (m *Manager) Create(ctx context.Context) error {
 				APIVersion: "v1",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name: domain[:strings.IndexByte(domain, '.')],
+				Name: m.doc.OpenShiftCluster.Name,
 			},
 			SSHKey:     sshkey.Type() + " " + base64.StdEncoding.EncodeToString(sshkey.Marshal()),
 			BaseDomain: domain[strings.IndexByte(domain, '.')+1:],

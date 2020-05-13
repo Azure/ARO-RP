@@ -33,13 +33,13 @@ const (
 
 var (
 	subscriptionID = "00000000-0000-0000-0000-000000000000"
-	id             = fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/microsoft.redhatopenshift/openshiftclusters/resourceName", subscriptionID)
+	id             = fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/microsoft.redhatopenshift/openshiftclusters/resource-name", subscriptionID)
 )
 
 func validOpenShiftCluster() *OpenShiftCluster {
 	oc := &OpenShiftCluster{
 		ID:       id,
-		Name:     "resourceName",
+		Name:     "resource-name",
 		Type:     "Microsoft.RedHatOpenShift/OpenShiftClusters",
 		Location: "location",
 		Tags: Tags{
@@ -161,14 +161,14 @@ func TestOpenShiftClusterStaticValidate(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) {
 				oc.ID = "wrong"
 			},
-			wantErr: "400: MismatchingResourceID: id: The provided resource ID 'wrong' did not match the name in the Url '/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/microsoft.redhatopenshift/openshiftclusters/resourceName'.",
+			wantErr: "400: MismatchingResourceID: id: The provided resource ID 'wrong' did not match the name in the Url '/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/microsoft.redhatopenshift/openshiftclusters/resource-name'.",
 		},
 		{
 			name: "name wrong",
 			modify: func(oc *OpenShiftCluster) {
 				oc.Name = "wrong"
 			},
-			wantErr: "400: MismatchingResourceName: name: The provided resource name 'wrong' did not match the name in the Url 'resourceName'.",
+			wantErr: "400: MismatchingResourceName: name: The provided resource name 'wrong' did not match the name in the Url 'resource-name'.",
 		},
 		{
 			name: "type wrong",
@@ -650,8 +650,9 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			modify: func(oc *OpenShiftCluster) { oc.ID = strings.ToUpper(oc.ID) },
 		},
 		{
-			name:   "valid name case change",
-			modify: func(oc *OpenShiftCluster) { oc.Name = strings.ToUpper(oc.Name) },
+			name:    "not valid name case change",
+			modify:  func(oc *OpenShiftCluster) { oc.Name = strings.ToUpper(oc.Name) },
+			wantErr: "400: InvalidParameter: name: The provided resource name 'RESOURCE-NAME' is invalid. The name should conform to RFC1035.",
 		},
 		{
 			name:   "valid type case change",
