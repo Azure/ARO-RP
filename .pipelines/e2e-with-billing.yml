@@ -1,8 +1,6 @@
 # Azure DevOps Pipeline running RP e2e and Billing e2e
 variables:
 - template: vars.yml
-parameters:
-- name: location
 stages:
 - stage: RP_E2E
   dependsOn: []
