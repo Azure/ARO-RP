@@ -28,7 +28,7 @@ func (i *Installer) ensureGenevaLogging(ctx context.Context) error {
 		return err
 	}
 
-	err := gl.ApplySecret(&v1.Secret{
+	err = gl.ApplySecret(&v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "certificates",
 			Namespace: genevalogging.KubeNamespace,

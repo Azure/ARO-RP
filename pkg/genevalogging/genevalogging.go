@@ -30,6 +30,7 @@ import (
 
 type GenevaLogging interface {
 	CreateOrUpdate(ctx context.Context) error
+	ApplySecret(s *v1.Secret) error
 }
 
 type genevaLogging struct {
