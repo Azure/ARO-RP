@@ -5,6 +5,7 @@ package install
 
 import (
 	"context"
+	"encoding/json"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -39,9 +40,36 @@ func (i *Installer) fixPullSecret(ctx context.Context) error {
 			ps.Data = map[string][]byte{}
 		}
 
+		if !json.Valid(ps.Data[v1.DockerConfigJsonKey]) {
+			delete(ps.Data, v1.DockerConfigJsonKey)
+		}
+
 		pullSecret, changed, err := pullsecret.SetRegistryProfiles(string(ps.Data[v1.DockerConfigJsonKey]), i.doc.OpenShiftCluster.Properties.RegistryProfiles...)
 		if err != nil {
 			return err
+		}
+
+		if ps.Type != v1.SecretTypeDockerConfigJson {
+			ps = &v1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "pull-secret",
+					Namespace: "openshift-config",
+				},
+				Type: v1.SecretTypeDockerConfigJson,
+				Data: map[string][]byte{},
+			}
+			isCreate = true
+			changed = true
+
+			// unfortunately the type field is immutable.
+			err = i.kubernetescli.CoreV1().Secrets(ps.Namespace).Delete(ps.Name, nil)
+			if err != nil {
+				return err
+			}
+
+			// there is a small risk of crashing here: if that happens, we will
+			// restart, create a new pull secret, and will have dropped the rest
+			// of the customer's pull secret on the floor :-(
 		}
 
 		if !changed {
@@ -51,9 +79,9 @@ func (i *Installer) fixPullSecret(ctx context.Context) error {
 		ps.Data[v1.DockerConfigJsonKey] = []byte(pullSecret)
 
 		if isCreate {
-			_, err = i.kubernetescli.CoreV1().Secrets("openshift-config").Create(ps)
+			_, err = i.kubernetescli.CoreV1().Secrets(ps.Namespace).Create(ps)
 		} else {
-			_, err = i.kubernetescli.CoreV1().Secrets("openshift-config").Update(ps)
+			_, err = i.kubernetescli.CoreV1().Secrets(ps.Namespace).Update(ps)
 		}
 		return err
 	})
