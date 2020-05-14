@@ -25,8 +25,7 @@ import (
 const SingletonClusterName = "cluster"
 
 var (
-	InternetReachable  status.ConditionType = "InternetReachable"
-	ClusterSupportable status.ConditionType = "ClusterSupportable"
+	InternetReachable status.ConditionType = "InternetReachable"
 )
 
 type GenevaLoggingSpec struct {
