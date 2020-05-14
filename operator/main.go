@@ -38,7 +38,9 @@ func main() {
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.Parse()
 
-	ctrl.SetLogger(utillog.GetRLogger())
+	log := utillog.GetLogger()
+
+	ctrl.SetLogger(utillog.GetRLogger(log))
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
@@ -54,7 +56,7 @@ func main() {
 
 	if err = (&controllers.GenevaloggingReconciler{
 		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithValues("controller", "Genevalogging"),
+		Log:    log.WithField("controller", "Genevalogging"),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Genevalogging")
@@ -62,7 +64,7 @@ func main() {
 	}
 	if err = (&controllers.PullsecretReconciler{
 		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithValues("controller", "Pullsecret"),
+		Log:    log.WithField("controller", "PullSecret"),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Pullsecret")
@@ -70,7 +72,7 @@ func main() {
 	}
 	if err = (&controllers.InternetChecker{
 		Client: mgr.GetClient(),
-		Log:    ctrl.Log.WithValues("controller", "InternetChecker"),
+		Log:    log.WithField("controller", "InternetChecker"),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "InternetChecker")

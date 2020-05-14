@@ -7,7 +7,7 @@ import (
 	"context"
 	"os"
 
-	"github.com/go-logr/logr"
+	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,7 +25,7 @@ var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "opens
 // PullsecretReconciler reconciles a Cluster object
 type PullsecretReconciler struct {
 	client.Client
-	Log    logr.Logger
+	Log    *logrus.Entry
 	Scheme *runtime.Scheme
 }
 
