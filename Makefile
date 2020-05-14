@@ -97,7 +97,7 @@ secrets-update:
 	rm secrets.tar.gz
 
 e2e:
-	go test ./test/e2e -timeout 60m -v -ginkgo.v -tags e2e
+	go test ./test/e2e -timeout 60m -v -ginkgo.v -tags e2e 2>&1 | go run ./hack/filter_e2e
 
 test-go: generate
 	go build ./...

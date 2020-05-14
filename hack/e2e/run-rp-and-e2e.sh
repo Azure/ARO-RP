@@ -1,4 +1,4 @@
-#!/bin/bash -e
+#!/bin/bash -ex
 ######## Helper file to run E2e either locally or using Azure DevOps Pipelines ########
 
 validate_rp_running() {
@@ -148,6 +148,7 @@ clean_e2e() {
     rm -f $CLUSTERSPN
 }
 
+export E2E_VAR_NAMES_TO_REMOVE="PULL_SECRET,USER_PULL_SECRET,AZURE_CLIENT_SECRET"
 export CLUSTER="v4-e2e-V$BUILD_BUILDID"
 export ARO_RESOURCEGROUP="v4-e2e-rg-V$BUILD_BUILDID-$LOCATION"
 export CLUSTER_RESOURCEGROUP="aro-$ARO_RESOURCEGROUP"
