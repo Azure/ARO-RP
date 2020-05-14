@@ -13,11 +13,13 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	aro "github.com/Azure/ARO-RP/operator/apis/aro.openshift.io/v1alpha1"
+	aroclient "github.com/Azure/ARO-RP/pkg/util/aro-operator-client/clientset/versioned/typed/aro.openshift.io/v1alpha1"
 )
 
 // InternetChecker reconciles a Cluster object
 type InternetChecker struct {
 	Kubernetescli kubernetes.Interface
+	AROCli        aroclient.AroV1alpha1Interface
 	Log           *logrus.Entry
 	Scheme        *runtime.Scheme
 }
@@ -47,7 +49,7 @@ func (r *InternetChecker) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	req.Header.Set("Content-Type", "application/json")
 
 	ctx := context.TODO()
-	sr := NewStatusReporter(r.Client, request.Namespace, request.Name)
+	sr := NewStatusReporter(r.AROCli, request.Namespace, request.Name)
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	r.Log.Debugf("response code %s, err %s", resp.Status, err)

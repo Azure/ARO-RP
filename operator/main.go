@@ -15,6 +15,7 @@ import (
 
 	aro "github.com/Azure/ARO-RP/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/operator/controllers"
+	aroclient "github.com/Azure/ARO-RP/pkg/util/aro-operator-client/clientset/versioned/typed/aro.openshift.io/v1alpha1"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	// +kubebuilder:scaffold:imports
 )
@@ -66,10 +67,16 @@ func main() {
 		setupLog.Error(err, "unable to create clients")
 		os.Exit(1)
 	}
+	arocli, err := aroclient.NewForConfig(mgr.GetConfig())
+	if err != nil {
+		setupLog.Error(err, "unable to create clients")
+		os.Exit(1)
+	}
 
 	if err = (&controllers.GenevaloggingReconciler{
 		Kubernetescli: kubernetescli,
 		Securitycli:   securitycli,
+		AROCli:        arocli,
 		Log:           log.WithField("controller", "Genevalogging"),
 		Scheme:        mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
@@ -78,6 +85,7 @@ func main() {
 	}
 	if err = (&controllers.PullsecretReconciler{
 		Kubernetescli: kubernetescli,
+		AROCli:        arocli,
 		Log:           log.WithField("controller", "PullSecret"),
 		Scheme:        mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
@@ -86,6 +94,7 @@ func main() {
 	}
 	if err = (&controllers.InternetChecker{
 		Kubernetescli: kubernetescli,
+		AROCli:        arocli,
 		Log:           log.WithField("controller", "InternetChecker"),
 		Scheme:        mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
