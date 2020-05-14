@@ -9,17 +9,17 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/operator/api/v1alpha1"
 )
 
 // InternetChecker reconciles a Cluster object
 type InternetChecker struct {
-	client.Client
-	Log    *logrus.Entry
-	Scheme *runtime.Scheme
+	Kubernetescli kubernetes.Interface
+	Log           *logrus.Entry
+	Scheme        *runtime.Scheme
 }
 
 // +kubebuilder:rbac:groups=aro.openshift.io,resources=clusters,verbs=get;list;watch;create;update;patch;delete

@@ -7,7 +7,9 @@ import (
 	"flag"
 	"os"
 
+	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -54,26 +56,38 @@ func main() {
 		os.Exit(1)
 	}
 
+	kubernetescli, err := kubernetes.NewForConfig(mgr.GetConfig())
+	if err != nil {
+		setupLog.Error(err, "unable to create clients")
+		os.Exit(1)
+	}
+	securitycli, err := securityclient.NewForConfig(mgr.GetConfig())
+	if err != nil {
+		setupLog.Error(err, "unable to create clients")
+		os.Exit(1)
+	}
+
 	if err = (&controllers.GenevaloggingReconciler{
-		Client: mgr.GetClient(),
-		Log:    log.WithField("controller", "Genevalogging"),
-		Scheme: mgr.GetScheme(),
+		Kubernetescli: kubernetescli,
+		Securitycli:   securitycli,
+		Log:           log.WithField("controller", "Genevalogging"),
+		Scheme:        mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Genevalogging")
 		os.Exit(1)
 	}
 	if err = (&controllers.PullsecretReconciler{
-		Client: mgr.GetClient(),
-		Log:    log.WithField("controller", "PullSecret"),
-		Scheme: mgr.GetScheme(),
+		Kubernetescli: kubernetescli,
+		Log:           log.WithField("controller", "PullSecret"),
+		Scheme:        mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Pullsecret")
 		os.Exit(1)
 	}
 	if err = (&controllers.InternetChecker{
-		Client: mgr.GetClient(),
-		Log:    log.WithField("controller", "InternetChecker"),
-		Scheme: mgr.GetScheme(),
+		Kubernetescli: kubernetescli,
+		Log:           log.WithField("controller", "InternetChecker"),
+		Scheme:        mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "InternetChecker")
 		os.Exit(1)
