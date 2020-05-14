@@ -37,9 +37,11 @@ type ClusterStatus struct {
 	RelatedObjects []corev1.ObjectReference `json:"relatedObjects,omitempty"`
 }
 
-// Cluster is the Schema for the clusters API
 // +kubebuilder:object:root=true
+
+// Cluster is the Schema for the clusters API
 // +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type Cluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -51,6 +53,7 @@ type Cluster struct {
 // +kubebuilder:object:root=true
 
 // ClusterList contains a list of Cluster
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type ClusterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
