@@ -26,9 +26,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/operator/api/v1alpha1"
-	"github.com/Azure/ARO-RP/operator/controllers/consts"
-	"github.com/Azure/ARO-RP/operator/controllers/deploy"
-	"github.com/Azure/ARO-RP/operator/controllers/statusreporter"
 )
 
 // InternetChecker reconciles a Cluster object
@@ -42,14 +39,14 @@ type InternetChecker struct {
 // +kubebuilder:rbac:groups=aro.openshift.io,resources=clusters/status,verbs=get;update;patch
 
 func (r *InternetChecker) Reconcile(request ctrl.Request) (ctrl.Result, error) {
-	operatorNs, err := deploy.OperatorNamespace()
+	operatorNs, err := OperatorNamespace()
 	if err != nil {
-		r.Log.Error(err, "deploy.OperatorNamespace")
-		return consts.ReconcileResultError, err
+		r.Log.Error(err, "OperatorNamespace")
+		return ReconcileResultError, err
 	}
 
 	if request.Name != arov1alpha1.SingletonClusterName || request.Namespace != operatorNs {
-		return consts.ReconcileResultIgnore, nil
+		return ReconcileResultIgnore, nil
 	}
 	r.Log.Info("Polling outgoing internet connection")
 
@@ -58,12 +55,12 @@ func (r *InternetChecker) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	req, err := http.NewRequest("GET", "https://management.azure.com", nil)
 	if err != nil {
 		r.Log.Error(err, "failed building request")
-		return consts.ReconcileResultError, err
+		return ReconcileResultError, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 
 	ctx := context.TODO()
-	sr := statusreporter.NewStatusReporter(r.Client, request.Namespace, request.Name)
+	sr := NewStatusReporter(r.Client, request.Namespace, request.Name)
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	r.Log.Info("response", "code", resp.Status, "err", err)
@@ -74,11 +71,11 @@ func (r *InternetChecker) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	}
 	if err != nil {
 		r.Log.Error(err, "StatusReporter")
-		return consts.ReconcileResultError, err
+		return ReconcileResultError, err
 	}
 
 	r.Log.Info("done, requeueing")
-	return consts.ReconcileResultRequeue, nil
+	return ReconcileResultRequeue, nil
 }
 
 func (r *InternetChecker) SetupWithManager(mgr ctrl.Manager) error {
