@@ -10,11 +10,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
-	aro "github.com/Azure/ARO-RP/operator/api/v1alpha1"
+	aro "github.com/Azure/ARO-RP/operator/apis/aro.openshift.io/v1alpha1"
+	aroclient "github.com/Azure/ARO-RP/pkg/util/aro-operator-client/clientset/versioned/typed/aro.openshift.io/v1alpha1"
 )
 
 var (
@@ -22,7 +23,7 @@ var (
 )
 
 type StatusReporter struct {
-	client client.Client
+	arocli aroclient.AroV1alpha1Interface
 	name   types.NamespacedName
 }
 
@@ -37,21 +38,20 @@ var (
 	}
 )
 
-func NewStatusReporter(client_ client.Client, namespace, name string) *StatusReporter {
+func NewStatusReporter(arocli aroclient.AroV1alpha1Interface, namespace, name string) *StatusReporter {
 	return &StatusReporter{
-		client: client_,
+		arocli: arocli,
 		name:   types.NamespacedName{Name: name, Namespace: namespace},
 	}
 }
 
 func (r *StatusReporter) SetNoInternetConnection(ctx context.Context, connectionErr error) error {
-	co := &aro.Cluster{}
-	err := r.client.Get(ctx, r.name, co)
+	co, err := r.arocli.Clusters(r.name.Namespace).Get(r.name.Name, v1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		co = r.newCluster()
-		err = r.client.Create(ctx, co)
+		_, err = r.arocli.Clusters(r.name.Namespace).Create(co)
 	}
-	if err != nil && !apierrors.IsNotFound(err) {
+	if err != nil {
 		return err
 	}
 
@@ -68,15 +68,15 @@ func (r *StatusReporter) SetNoInternetConnection(ctx context.Context, connection
 		LastTransitionTime: time})
 
 	// TODO handle conflicts
-	return r.client.Status().Update(ctx, co)
+	_, err = r.arocli.Clusters(r.name.Namespace).UpdateStatus(co)
+	return err
 }
 
 func (r *StatusReporter) SetInternetConnected(ctx context.Context) error {
-	co := &aro.Cluster{}
-	err := r.client.Get(ctx, r.name, co)
+	co, err := r.arocli.Clusters(r.name.Namespace).Get(r.name.Name, v1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		co = r.newCluster()
-		err = r.client.Create(ctx, co)
+		_, err = r.arocli.Clusters(r.name.Namespace).Create(co)
 	}
 	if err != nil {
 		return err
@@ -91,8 +91,8 @@ func (r *StatusReporter) SetInternetConnected(ctx context.Context) error {
 		LastTransitionTime: time})
 
 	// TODO handle conflicts
-	log.Info("updating cluster status")
-	return r.client.Status().Update(ctx, co)
+	_, err = r.arocli.Clusters(r.name.Namespace).UpdateStatus(co)
+	return err
 }
 
 func newRelatedObjects(namespace string) []corev1.ObjectReference {

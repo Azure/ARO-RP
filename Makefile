@@ -1,3 +1,5 @@
+include Makefile.preflight
+
 SHELL = /bin/bash
 COMMIT = $(shell git rev-parse --short HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
 
@@ -108,9 +110,9 @@ e2e:
 test-go: generate
 	go build ./...
 
-	gofmt -s -w cmd hack pkg test
-	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/Azure/ARO-RP cmd hack pkg test
-	go run ./hack/validate-imports cmd hack pkg test
+	gofmt -s -w cmd hack pkg test operator
+	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/Azure/ARO-RP cmd hack pkg test operator
+	go run ./hack/validate-imports cmd hack pkg test operator
 	go run ./hack/licenses
 	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
 	@[ -z "$$(find -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
@@ -130,4 +132,49 @@ test-python: generate pyenv${PYTHON_VERSION}
 admin.kubeconfig:
 	hack/get-admin-kubeconfig.sh /subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}/providers/Microsoft.RedHatOpenShift/openShiftClusters/${CLUSTER} >admin.kubeconfig
 
-.PHONY: aro az clean client generate image-aro image-ifreload proxy secrets secrets-update test-go test-python image-fluentbit publish-image-proxy publish-image-aro publish-image-fluentbit publish-image-ifreload publish-image-proxy admin.kubeconfig
+.PHONY: aro az clean client generate image-aro image-ifreload proxy secrets secrets-update test-go test-python image-fluentbit publish-image-proxy publish-image-aro publish-image-fluentbit publish-image-proxy admin.kubeconfig
+
+# Image URL to use all building/pushing image targets
+ARO_OPERATOR_IMG ?= ${RP_IMAGE_ACR}.azurecr.io/aro-operator:$(COMMIT)
+
+image-operator: operator
+	docker pull registry.access.redhat.com/ubi8/ubi-minimal
+	docker build -f Dockerfile.operator -t $(ARO_OPERATOR_IMG) .
+
+publish-image-operator: image-operator
+	docker push $(ARO_OPERATOR_IMG)
+
+operator-generate:
+	go generate ./operator/...
+	gofmt -s -w  operator cmd/operator
+	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/Azure/ARO-RP operator cmd/operator
+	go run ./hack/validate-imports operator cmd/operator
+	pushd operator ; go run ../hack/licenses ; popd
+
+# Generate manifests e.g. CRD, RBAC etc.
+CRD_OPTIONS ?= "crd:trivialVersions=true"
+operator-manifests: controller-gen
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./operator/..." output:crd:artifacts:config=operator/config/crd/bases
+
+operator-run: operator-generate operator-manifests
+	go run ./cmd/operator/main.go
+
+operator: operator-generate
+	go build -o aro-operator ./cmd/operator/main.go
+
+# Install CRDs into a cluster
+operator-install: kustomize operator-manifests
+	$(KUSTOMIZE) build operator/config/crd | kubectl apply -f -
+
+# Uninstall CRDs from a cluster
+operator-uninstall: kustomize operator-manifests
+	$(KUSTOMIZE) build operator/config/crd | kubectl delete -f -
+
+# Deploy controller in the configured Kubernetes cluster in ~/.kube/config
+operator-deploy: kustomize operator-manifests
+	cd operator/config/manager && $(KUSTOMIZE) edit set image controller=${ARO_OPERATOR_IMG}
+	$(KUSTOMIZE) build operator/config/default | kubectl apply -f -
+
+# TODO operator image push
+
+.PHONY: aro az clean client generate image-aro image-ifreload proxy secrets secrets-update test-go test-python image-fluentbit publish-image-proxy publish-image-aro publish-image-fluentbit publish-image-proxy admin.kubeconfig operator-generate operator-manifests operator-install operator-uninstall operator-run operator-deploy operator-all

@@ -15,6 +15,9 @@ var (
 	// GroupVersion is group version used to register these objects
 	GroupVersion = schema.GroupVersion{Group: "aro.openshift.io", Version: "v1alpha1"}
 
+	// SchemeGroupVersion manual hack
+	SchemeGroupVersion = GroupVersion
+
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
 	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}
 

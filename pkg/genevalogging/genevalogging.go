@@ -23,151 +23,60 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
 
+	aro "github.com/Azure/ARO-RP/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/tls"
 )
 
-const (
-	kubeNamespace      = "openshift-azure-logging"
-	kubeServiceAccount = "system:serviceaccount:" + kubeNamespace + ":geneva"
-
-	fluentbitImageFormat = "%s.azurecr.io/fluentbit:1.3.9-1"
-	mdsdImageFormat      = "%s.azurecr.io/genevamdsd:master_285"
-
-	parsersConf = `
-[PARSER]
-	Name audit
-	Format json
-	Time_Key stageTimestamp
-	Time_Format %Y-%m-%dT%H:%M:%S.%L
-
-[PARSER]
-	Name containerpath
-	Format regex
-	Regex ^/var/log/containers/(?<POD>[^_]+)_(?<NAMESPACE>[^_]+)_(?<CONTAINER>.+)-(?<CONTAINER_ID>[0-9a-f]{64})\.log$
-
-[PARSER]
-	Name crio
-	Format regex
-	Regex ^(?<TIMESTAMP>[^ ]+) [^ ]+ [^ ]+ (?<MESSAGE>.*)$
-	Time_Key TIMESTAMP
-	Time_Format %Y-%m-%dT%H:%M:%S.%L
-`
-
-	journalConf = `
-[INPUT]
-	Name systemd
-	Tag journald
-	DB /var/lib/fluent/journald
-
-[FILTER]
-	Name modify
-	Match journald
-	Remove_wildcard _
-	Remove TIMESTAMP
-	Remove SYSLOG_FACILITY
-
-[OUTPUT]
-	Name forward
-	Port 24224
-`
-
-	containersConf = `
-[SERVICE]
-	Parsers_File /etc/td-agent-bit/parsers.conf
-
-[INPUT]
-	Name tail
-	Path /var/log/containers/*
-	Path_Key path
-	Tag containers
-	DB /var/lib/fluent/containers
-	Parser crio
-
-[FILTER]
-	Name parser
-	Match containers
-	Key_Name path
-	Parser containerpath
-	Reserve_Data true
-
-[FILTER]
-	Name grep
-	Match containers
-	Regex NAMESPACE ^(?:default|kube-.*|openshift|openshift-.*)$
-
-[OUTPUT]
-	Name forward
-	Port 24224
-`
-
-	auditConf = `
-[SERVICE]
-	Parsers_File /etc/td-agent-bit/parsers.conf
-
-[INPUT]
-	Name tail
-	Path /var/log/kube-apiserver/audit*
-	Path_Key path
-	Tag audit
-	DB /var/lib/fluent/audit
-	Parser audit
-
-[FILTER]
-	Name nest
-	Match *
-	Operation lift
-	Nested_under user
-	Add_prefix user_
-
-[FILTER]
-	Name nest
-	Match *
-	Operation lift
-	Nested_under impersonatedUser
-	Add_prefix impersonatedUser_
-
-[FILTER]
-	Name nest
-	Match *
-	Operation lift
-	Nested_under responseStatus
-	Add_prefix responseStatus_
-
-[FILTER]
-	Name nest
-	Match *
-	Operation lift
-	Nested_under objectRef
-	Add_prefix objectRef_
-
-[OUTPUT]
-	Name forward
-	Port 24224
-`
-)
-
 type GenevaLogging interface {
 	CreateOrUpdate(ctx context.Context) error
+	ApplySecret(s *v1.Secret) error
 }
 
 type genevaLogging struct {
 	log *logrus.Entry
-	env env.Interface
 
-	oc *api.OpenShiftCluster
+	resourceID               string
+	acrName                  string
+	namespace                string
+	configVersion            string
+	monitoringTenant         string
+	monitoringGCSRegion      string
+	monitoringGCSEnvironment string
 
 	cli    kubernetes.Interface
 	seccli securityclient.Interface
 }
 
-func New(log *logrus.Entry, e env.Interface, oc *api.OpenShiftCluster, cli kubernetes.Interface, seccli securityclient.Interface) GenevaLogging {
+func NewForRP(log *logrus.Entry, e env.Interface, oc *api.OpenShiftCluster, cli kubernetes.Interface, seccli securityclient.Interface) GenevaLogging {
 	return &genevaLogging{
 		log: log,
-		env: e,
 
-		oc: oc,
+		resourceID:               oc.ID,
+		acrName:                  e.ACRName(),
+		namespace:                KubeNamespace,
+		configVersion:            e.ClustersGenevaLoggingConfigVersion(),
+		monitoringGCSEnvironment: e.ClustersGenevaLoggingEnvironment(),
+		monitoringGCSRegion:      e.Location(),
+		monitoringTenant:         e.Location(),
+
+		cli:    cli,
+		seccli: seccli,
+	}
+}
+
+func NewForOperator(log *logrus.Entry, cs *aro.ClusterSpec, cli kubernetes.Interface, seccli securityclient.Interface) GenevaLogging {
+	return &genevaLogging{
+		log: log,
+
+		resourceID:               cs.ResourceID,
+		acrName:                  cs.ACRName,
+		namespace:                cs.GenevaLogging.Namespace,
+		configVersion:            cs.GenevaLogging.ConfigVersion,
+		monitoringGCSEnvironment: cs.GenevaLogging.MonitoringGCSEnvironment,
+		monitoringGCSRegion:      cs.GenevaLogging.MonitoringGCSRegion,
+		monitoringTenant:         cs.GenevaLogging.MonitoringTenant,
 
 		cli:    cli,
 		seccli: seccli,
@@ -175,11 +84,11 @@ func New(log *logrus.Entry, e env.Interface, oc *api.OpenShiftCluster, cli kuber
 }
 
 func (g *genevaLogging) fluentbitImage() string {
-	return fmt.Sprintf(fluentbitImageFormat, g.env.ACRName())
+	return fmt.Sprintf(fluentbitImageFormat, g.acrName)
 }
 
 func (g *genevaLogging) mdsdImage() string {
-	return fmt.Sprintf(mdsdImageFormat, g.env.ACRName())
+	return fmt.Sprintf(mdsdImageFormat, g.acrName)
 }
 
 func (g *genevaLogging) ensureNamespace(ns string) error {
@@ -213,7 +122,7 @@ func (g *genevaLogging) applyConfigMap(cm *v1.ConfigMap) error {
 	})
 }
 
-func (g *genevaLogging) applySecret(s *v1.Secret) error {
+func (g *genevaLogging) ApplySecret(s *v1.Secret) error {
 	_, err := g.cli.CoreV1().Secrets(s.Namespace).Create(s)
 	if !errors.IsAlreadyExists(err) {
 		return err
@@ -268,24 +177,12 @@ func (g *genevaLogging) applyDaemonSet(ds *appsv1.DaemonSet) error {
 }
 
 func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
-	r, err := azure.ParseResourceID(g.oc.ID)
+	r, err := azure.ParseResourceID(g.resourceID)
 	if err != nil {
 		return err
 	}
 
-	key, cert := g.env.ClustersGenevaLoggingSecret()
-
-	gcsKeyBytes, err := tls.PrivateKeyAsBytes(key)
-	if err != nil {
-		return err
-	}
-
-	gcsCertBytes, err := tls.CertAsBytes(cert)
-	if err != nil {
-		return err
-	}
-
-	err = g.ensureNamespace(kubeNamespace)
+	err = g.ensureNamespace(g.namespace)
 	if err != nil {
 		return err
 	}
@@ -293,7 +190,7 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 	err = g.applyConfigMap(&v1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "fluent-config",
-			Namespace: kubeNamespace,
+			Namespace: g.namespace,
 		},
 		Data: map[string]string{
 			"audit.conf":      auditConf,
@@ -306,24 +203,10 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 		return err
 	}
 
-	err = g.applySecret(&v1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "certificates",
-			Namespace: kubeNamespace,
-		},
-		StringData: map[string]string{
-			"gcscert.pem": string(gcsCertBytes),
-			"gcskey.pem":  string(gcsKeyBytes),
-		},
-	})
-	if err != nil {
-		return err
-	}
-
 	err = g.applyServiceAccount(&v1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "geneva",
-			Namespace: kubeNamespace,
+			Namespace: g.namespace,
 		},
 	})
 	if err != nil {
@@ -356,7 +239,7 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 	return g.applyDaemonSet(&appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "mdsd",
-			Namespace: kubeNamespace,
+			Namespace: g.namespace,
 		},
 		Spec: appsv1.DaemonSetSpec{
 			Selector: &metav1.LabelSelector{
@@ -552,7 +435,7 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 							Env: []v1.EnvVar{
 								{
 									Name:  "MONITORING_GCS_ENVIRONMENT",
-									Value: g.env.ClustersGenevaLoggingEnvironment(),
+									Value: g.monitoringGCSEnvironment,
 								},
 								{
 									Name:  "MONITORING_GCS_ACCOUNT",
@@ -560,7 +443,7 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 								},
 								{
 									Name:  "MONITORING_GCS_REGION",
-									Value: g.env.Location(),
+									Value: g.monitoringGCSRegion,
 								},
 								{
 									Name:  "MONITORING_GCS_CERT_CERTFILE",
@@ -576,7 +459,7 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 								},
 								{
 									Name:  "MONITORING_CONFIG_VERSION",
-									Value: g.env.ClustersGenevaLoggingConfigVersion(),
+									Value: g.configVersion,
 								},
 								{
 									Name:  "MONITORING_USE_GENEVA_CONFIG_SERVICE",
@@ -584,7 +467,7 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 								},
 								{
 									Name:  "MONITORING_TENANT",
-									Value: g.env.Location(),
+									Value: g.monitoringTenant,
 								},
 								{
 									Name:  "MONITORING_ROLE",
@@ -600,7 +483,7 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 								},
 								{
 									Name:  "RESOURCE_ID",
-									Value: strings.ToLower(g.oc.ID),
+									Value: strings.ToLower(g.resourceID),
 								},
 								{
 									Name:  "SUBSCRIPTION_ID",

@@ -7,12 +7,15 @@ import (
 	"flag"
 	"os"
 
+	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	arov1alpha1 "github.com/Azure/ARO-RP/operator/api/v1alpha1"
-	"github.com/Azure/ARO-RP/operator/controllers"
+	aro "github.com/Azure/ARO-RP/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/controllers"
+	aroclient "github.com/Azure/ARO-RP/pkg/util/aro-operator-client/clientset/versioned/typed/aro.openshift.io/v1alpha1"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	// +kubebuilder:scaffold:imports
 )
@@ -25,7 +28,7 @@ var (
 func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
 
-	_ = arov1alpha1.AddToScheme(scheme)
+	_ = aro.AddToScheme(scheme)
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -54,26 +57,46 @@ func main() {
 		os.Exit(1)
 	}
 
+	kubernetescli, err := kubernetes.NewForConfig(mgr.GetConfig())
+	if err != nil {
+		setupLog.Error(err, "unable to create clients")
+		os.Exit(1)
+	}
+	securitycli, err := securityclient.NewForConfig(mgr.GetConfig())
+	if err != nil {
+		setupLog.Error(err, "unable to create clients")
+		os.Exit(1)
+	}
+	arocli, err := aroclient.NewForConfig(mgr.GetConfig())
+	if err != nil {
+		setupLog.Error(err, "unable to create clients")
+		os.Exit(1)
+	}
+
 	if err = (&controllers.GenevaloggingReconciler{
-		Client: mgr.GetClient(),
-		Log:    log.WithField("controller", "Genevalogging"),
-		Scheme: mgr.GetScheme(),
+		Kubernetescli: kubernetescli,
+		Securitycli:   securitycli,
+		AROCli:        arocli,
+		Log:           log.WithField("controller", "Genevalogging"),
+		Scheme:        mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Genevalogging")
 		os.Exit(1)
 	}
 	if err = (&controllers.PullsecretReconciler{
-		Client: mgr.GetClient(),
-		Log:    log.WithField("controller", "PullSecret"),
-		Scheme: mgr.GetScheme(),
+		Kubernetescli: kubernetescli,
+		AROCli:        arocli,
+		Log:           log.WithField("controller", "PullSecret"),
+		Scheme:        mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Pullsecret")
 		os.Exit(1)
 	}
 	if err = (&controllers.InternetChecker{
-		Client: mgr.GetClient(),
-		Log:    log.WithField("controller", "InternetChecker"),
-		Scheme: mgr.GetScheme(),
+		Kubernetescli: kubernetescli,
+		AROCli:        arocli,
+		Log:           log.WithField("controller", "InternetChecker"),
+		Scheme:        mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "InternetChecker")
 		os.Exit(1)
