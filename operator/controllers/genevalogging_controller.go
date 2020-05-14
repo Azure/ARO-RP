@@ -6,20 +6,23 @@ package controllers
 import (
 	"context"
 
+	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	aro "github.com/Azure/ARO-RP/operator/api/v1alpha1"
 	arov1alpha1 "github.com/Azure/ARO-RP/operator/api/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/genevalogging"
 )
 
 // GenevaloggingReconciler reconciles a Cluster object
 type GenevaloggingReconciler struct {
-	client.Client
-	Log    *logrus.Entry
-	Scheme *runtime.Scheme
+	Kubernetescli kubernetes.Interface
+	Securitycli   securityclient.Interface
+	Log           *logrus.Entry
+	Scheme        *runtime.Scheme
 }
 
 // +kubebuilder:rbac:groups=aro.openshift.io,resources=clusters,verbs=get;list;watch;create;update;patch;delete
@@ -38,7 +41,7 @@ func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 
 	ctx := context.TODO()
 	instance := &aro.Cluster{}
-	err = r.Client.Get(ctx, request.NamespacedName, instance)
+	err := r.Client.Get(ctx, request.NamespacedName, instance)
 	if err != nil {
 		// Error reading the object or not found - requeue the request.
 		return ReconcileResultError, err
@@ -48,7 +51,9 @@ func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		r.Log.Info("Skipping as ClusterSpec not set")
 		return ReconcileResultRequeue, nil
 	}
-	err = r.reconsileGenevaLogging(ctx, instance)
+
+	gl := genevalogging.NewForOperator(r.Log, &instance.Spec, r.Kubernetescli, r.Securitycli)
+	err = gl.CreateOrUpdate(ctx)
 	if err != nil {
 		r.Log.Error(err, "reconsileGenevaLogging")
 		return ReconcileResultError, err
