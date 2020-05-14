@@ -1,3 +1,5 @@
+include Makefile.preflight
+
 SHELL = /bin/bash
 COMMIT = $(shell git rev-parse --short HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
 
@@ -102,9 +104,9 @@ e2e:
 test-go: generate
 	go build ./...
 
-	gofmt -s -w cmd hack pkg test
-	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/Azure/ARO-RP cmd hack pkg test
-	go run ./hack/validate-imports cmd hack pkg test
+	gofmt -s -w cmd hack pkg test operator
+	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/Azure/ARO-RP cmd hack pkg test operator
+	go run ./hack/validate-imports cmd hack pkg test operator
 	go run ./hack/licenses
 	@[ -z "$$(ls pkg/util/*.go 2>/dev/null)" ] || (echo error: go files are not allowed in pkg/util, use a subpackage; exit 1)
 	@[ -z "$$(find -name "*:*")" ] || (echo error: filenames with colons are not allowed on Windows, please rename; exit 1)
@@ -124,4 +126,41 @@ test-python: generate pyenv${PYTHON_VERSION}
 admin.kubeconfig:
 	hack/get-admin-kubeconfig.sh /subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}/providers/Microsoft.RedHatOpenShift/openShiftClusters/${CLUSTER} >admin.kubeconfig
 
-.PHONY: aro az clean client generate image-aro proxy secrets secrets-update test-go test-python image-fluentbit publish-image-proxy publish-image-aro publish-image-fluentbit publish-image-proxy admin.kubeconfig
+# Image URL to use all building/pushing image targets
+IMG ?= controller:latest
+# Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
+operator-all: operator-manager
+
+# Build manager binary
+# Generate aro-operator code
+operator-generate: controller-gen
+	$(CONTROLLER_GEN) object:headerFile="operator/hack/boilerplate.go.txt" paths="./operator/..."
+
+# Generate manifests e.g. CRD, RBAC etc.
+CRD_OPTIONS ?= "crd:trivialVersions=true"
+operator-manifests: controller-gen
+	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./operator/..." output:crd:artifacts:config=operator/config/crd/bases
+
+# Run against the configured Kubernetes cluster in ~/.kube/config
+operator-run: operator-generate operator-manifests
+	go run ./operator/main.go
+
+operator-manager: operator-generate
+	go build -o operator/bin/manager main.go
+
+# Install CRDs into a cluster
+operator-install: kustomize operator-manifests
+	$(KUSTOMIZE) build operator/config/crd | kubectl apply -f -
+
+# Uninstall CRDs from a cluster
+operator-uninstall: kustomize operator-manifests
+	$(KUSTOMIZE) build operator/config/crd | kubectl delete -f -
+
+# Deploy controller in the configured Kubernetes cluster in ~/.kube/config
+operator-deploy: kustomize operator-manifests
+	cd operator/config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build operator/config/default | kubectl apply -f -
+
+# TODO operator build/push
+
+.PHONY: aro az clean client generate image-aro proxy secrets secrets-update test-go test-python image-fluentbit publish-image-proxy publish-image-aro publish-image-fluentbit publish-image-proxy admin.kubeconfig operator-generate operator-manifests operator-install operator-uninstall operator-run operator-deploy operator-all
