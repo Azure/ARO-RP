@@ -1,0 +1,27 @@
+parameters:
+  purgeTTL: ''
+  purgeCreatedTag: ''
+  subscriptionCredentialsJSON: ''
+  subscriptionId: ''
+  workingDirectory: ''
+  dryRun: ''
+  resourceGroupDeletePrefixes: ''
+
+steps:
+- script: |
+    set -e
+
+    base64 -d >spn.json <<<${{ parameters.subscriptionCredentialsJSON }}
+    export AZURE_CLIENT_ID=$(cat spn.json | jq -r '.clientId')
+    export AZURE_CLIENT_SECRET=$(cat spn.json | jq -r '.clientSecret')
+    export AZURE_TENANT_ID=$(cat spn.json | jq -r '.tenantId')
+    export AZURE_SUBSCRIPTION_ID="${{ parameters.subscriptionId }}"
+
+    export AZURE_PURGE_TTL="${{ parameters.purgeTTL }}"
+    export AZURE_PURGE_CREATED_TAG="${{ parameters.purgeCreatedTag }}"
+    export AZURE_PURGE_RESOURCEGROUP_PREFIXES="${{ parameters.resourceGroupDeletePrefixes }}"
+    rm spn.json
+
+    go run ./hack/clean -dryRun=${{ parameters.dryRun }}
+  workingDirectory: ${{ parameters.workingDirectory }}
+  displayName: 🧹 Clean subscription

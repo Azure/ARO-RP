@@ -1,0 +1,34 @@
+trigger: none
+pr: none
+
+parameters:
+- name: dryRun
+  type: boolean
+  default: true
+
+variables:
+- template: vars.yml
+
+jobs:
+- job: Clean_subscription
+  pool:
+    name: ARO-CI
+
+  steps:
+  - template: ./templates/template-setup-golang-env.yml
+    parameters:
+      gobin: ${{ variables.GOBIN }}
+      gopath: ${{ variables.GOPATH }}
+      goroot: ${{ variables.GOROOT }}
+      modulePath: ${{ variables.modulePath }}
+
+  - template: ./templates/template-clean-subscription.yml
+    parameters:
+      dryRun: ${{ parameters.dryRun }}
+      subscriptionCredentialsJSON: $(aro-v4-e2e-devops-spn)
+      subscriptionId: $(subscriptionId)
+      purgeCreatedTag: $(purgeCreatedTag)
+      resourceGroupDeletePrefixes: $(resourceGroupDeletePrefixes)
+      purgeTTL: $(purgeTTL)
+      workingDirectory: ${{ variables.modulePath }}
+
