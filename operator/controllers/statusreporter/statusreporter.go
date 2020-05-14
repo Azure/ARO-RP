@@ -34,24 +34,6 @@ var (
 			Reason:  "",
 			Message: "",
 		},
-		{
-			Type:    aro.ClusterSupportable,
-			Status:  corev1.ConditionUnknown,
-			Reason:  "",
-			Message: "",
-		},
-	}
-	supportable = map[bool]status.Condition{
-		true: {
-			Type:    aro.ClusterSupportable,
-			Status:  corev1.ConditionTrue,
-			Message: "Cluster is supportable.",
-			Reason:  "AllChecksDone"},
-		false: {
-			Type:    aro.ClusterSupportable,
-			Status:  corev1.ConditionFalse,
-			Message: "Cluster is NOT supportable.",
-			Reason:  "SomeChecksFailed"},
 	}
 )
 
@@ -60,27 +42,6 @@ func NewStatusReporter(client_ client.Client, namespace, name string) *StatusRep
 		client: client_,
 		name:   types.NamespacedName{Name: name, Namespace: namespace},
 	}
-}
-
-func (r *StatusReporter) setSupportable(status_ *aro.ClusterStatus, now metav1.Time) {
-	isSupportable := true
-	reason := supportable[true].Reason
-	for _, cond := range status_.Conditions {
-		if cond.Type != aro.ClusterSupportable && !cond.IsTrue() {
-			isSupportable = false
-			reason = status.ConditionReason(cond.Type + "Failed")
-		}
-	}
-
-	sup := status_.Conditions.GetCondition(aro.ClusterSupportable)
-	newSup := supportable[isSupportable]
-
-	if isSupportable != sup.IsTrue() {
-		newSup.LastTransitionTime = now
-		log.Info("cluster supportable condition transition", "current", sup, "new", newSup)
-	}
-	newSup.Reason = reason
-	status_.Conditions.SetCondition(newSup)
 }
 
 func (r *StatusReporter) SetNoInternetConnection(ctx context.Context, connectionErr error) error {
@@ -106,7 +67,6 @@ func (r *StatusReporter) SetNoInternetConnection(ctx context.Context, connection
 		Reason:             "CheckFailed",
 		LastTransitionTime: time})
 
-	r.setSupportable(&co.Status, time)
 	// TODO handle conflicts
 	return r.client.Status().Update(ctx, co)
 }
@@ -130,7 +90,6 @@ func (r *StatusReporter) SetInternetConnected(ctx context.Context) error {
 		Reason:             "CheckDone",
 		LastTransitionTime: time})
 
-	r.setSupportable(&co.Status, time)
 	// TODO handle conflicts
 	log.Info("updating cluster status")
 	return r.client.Status().Update(ctx, co)
