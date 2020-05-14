@@ -9,12 +9,15 @@ import (
 
 	. "github.com/onsi/ginkgo"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	machineapiclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
+	mgmtcompute "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift"
 )
 
@@ -23,6 +26,8 @@ type ClientSet struct {
 	Operations        redhatopenshift.OperationsClient
 	Kubernetes        kubernetes.Interface
 	MachineAPI        machineapiclient.Interface
+	VirtualMachines   mgmtcompute.VirtualMachinesClient
+	Resources         features.ResourcesClient
 }
 
 var (
@@ -32,6 +37,12 @@ var (
 
 func newClientSet() (*ClientSet, error) {
 	authorizer, err := auth.NewAuthorizerFromEnvironment()
+	if err != nil {
+		return nil, err
+	}
+
+	// The ResourcesClient uses this authorizer
+	fpAuthorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -56,11 +67,15 @@ func newClientSet() (*ClientSet, error) {
 		return nil, err
 	}
 
+	subscriptionID := os.Getenv("AZURE_SUBSCRIPTION_ID")
+
 	return &ClientSet{
-		OpenshiftClusters: redhatopenshift.NewOpenShiftClustersClient(os.Getenv("AZURE_SUBSCRIPTION_ID"), authorizer),
-		Operations:        redhatopenshift.NewOperationsClient(os.Getenv("AZURE_SUBSCRIPTION_ID"), authorizer),
+		OpenshiftClusters: redhatopenshift.NewOpenShiftClustersClient(subscriptionID, authorizer),
+		Operations:        redhatopenshift.NewOperationsClient(subscriptionID, authorizer),
 		Kubernetes:        cli,
 		MachineAPI:        machineapicli,
+		VirtualMachines:   mgmtcompute.NewVirtualMachinesClient(subscriptionID, authorizer),
+		Resources:         features.NewResourcesClient(subscriptionID, fpAuthorizer),
 	}, nil
 }
 
