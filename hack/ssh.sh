@@ -107,5 +107,5 @@ spec:
 EOF
 )
 
-oc wait --for=condition=Ready -n default "pod/$POD" >/dev/null
+oc wait --timeout=300s --for=condition=Ready -n default "pod/$POD" >/dev/null
 oc attach -i $TTYOPT -n default -c debug "pod/$POD"
