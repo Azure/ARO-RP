@@ -20,9 +20,9 @@ parameters:
 - name: dryRun
   type: bool
   default: false
-- name: purgeEnvironment
+- name: resourceGroupDeletePrefixes
   type: string
-  default: e2e
+  default: v4-e2e-rg-,aro-v4-e2e-rg-
 
 jobs:
 - job: Clean_Subscription
@@ -48,7 +48,7 @@ jobs:
 
       export AZURE_PURGE_TTL="${{ parameters.purgeTTL }}""
       export AZURE_PURGE_CREATED_TAG="${{ parameters.purgeCreatedTag }}"
-      export AZURE_PURGE_ENVIRONMENT="${{ parameters.purgeEnvironment }}"
+      export AZURE_PURGE_RESOURCEGROUP_PREFIXES="${{ parameters.resourceGroupDeletePrefixes }}"
       rm spn.json
 
       go run ./hack/clean.go -dryRun=${{ parameters.dryRun }}

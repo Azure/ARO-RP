@@ -57,14 +57,21 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		createdTag = os.Getenv("AZURE_PURGE_CREATED_TAG")
 	}
 
-	purgeEnvironment := os.Getenv("AZURE_PURGE_ENVIRONMENT")
+	deleteGroupPrefixes := []string{}
+	if os.Getenv("AZURE_PURGE_RESOURCEGROUP_PREFIXES") != "" {
+		deleteGroupPrefixes = strings.Split(os.Getenv("AZURE_PURGE_RESOURCEGROUP_PREFIXES"), ",")
+	}
 
 	shouldDelete := func(resourceGroup mgmtfeatures.ResourceGroup, log *logrus.Entry) bool {
-		if purgeEnvironment == "e2e" {
-			// in e2e environment, we only want to work on marked groups
-			if _, ok := resourceGroup.Tags["aroe2e"]; !ok {
-				return false
+		isDeleteGroup := false
+		for _, deleteGroupPrefix := range deleteGroupPrefixes {
+			if strings.HasPrefix(*resourceGroup.Name, deleteGroupPrefix) {
+				isDeleteGroup = true
+				break
 			}
+		}
+		if isDeleteGroup {
+			return false
 		}
 
 		for t := range resourceGroup.Tags {

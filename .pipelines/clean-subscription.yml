@@ -17,6 +17,6 @@ jobs:
       subscriptionId: $(subscriptionId)
       purgeTTL: $(purgeTTL)
       purgeCreatedTag: $(purgeCreatedTag)
-      purgeEnvironment: $(purgeEnvironment)
+      resourceGroupDeletePrefixes: $(resourceGroupDeletePrefixes)
       workingDirectory: ${{ variables.modulePath }}
 
