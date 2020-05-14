@@ -17,7 +17,7 @@ import (
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	arov1alpha1 "github.com/Azure/ARO-RP/operator/api/v1alpha1"
+	aro "github.com/Azure/ARO-RP/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/operator/controllers/pullsecret"
 )
 
@@ -110,6 +110,6 @@ func (r *PullsecretReconciler) pullSecretRepair(cr *corev1.Secret) (bool, error)
 
 func (r *PullsecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&arov1alpha1.Cluster{}).
+		For(&aro.Cluster{}).
 		Complete(r)
 }

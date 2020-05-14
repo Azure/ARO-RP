@@ -12,8 +12,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	aro "github.com/Azure/ARO-RP/operator/api/v1alpha1"
-	arov1alpha1 "github.com/Azure/ARO-RP/operator/api/v1alpha1"
+	aro "github.com/Azure/ARO-RP/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/genevalogging"
 )
 
@@ -34,7 +33,7 @@ func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		return ReconcileResultError, err
 	}
 
-	if request.Name != arov1alpha1.SingletonClusterName || request.Namespace != operatorNs {
+	if request.Name != aro.SingletonClusterName || request.Namespace != operatorNs {
 		return ReconcileResultIgnore, nil
 	}
 	r.Log.Info("Reconsiling genevalogging deployment")
@@ -65,6 +64,6 @@ func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 
 func (r *GenevaloggingReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&arov1alpha1.Cluster{}).
+		For(&aro.Cluster{}).
 		Complete(r)
 }

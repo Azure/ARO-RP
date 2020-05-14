@@ -37,9 +37,9 @@ type ClusterStatus struct {
 	RelatedObjects []corev1.ObjectReference `json:"relatedObjects,omitempty"`
 }
 
-// +kubebuilder:object:root=true
-
 // Cluster is the Schema for the clusters API
+// +kubebuilder:object:root=true
+// +genclient
 type Cluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
