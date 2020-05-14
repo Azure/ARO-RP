@@ -127,14 +127,20 @@ admin.kubeconfig:
 	hack/get-admin-kubeconfig.sh /subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}/providers/Microsoft.RedHatOpenShift/openShiftClusters/${CLUSTER} >admin.kubeconfig
 
 # Image URL to use all building/pushing image targets
-IMG ?= controller:latest
-# Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
-operator-all: operator-manager
+ARO_OPERATOR_IMG ?= ${RP_IMAGE_ACR}.azurecr.io/aro-operator:$(COMMIT)
+
+image-operator: operator
+	docker pull registry.access.redhat.com/ubi8/ubi-minimal
+	docker build -f Dockerfile.operator -t $(ARO_OPERATOR_IMG) .
 
 # Build manager binary
-# Generate aro-operator code
-operator-generate: controller-gen
-	$(CONTROLLER_GEN) object:headerFile="operator/hack/boilerplate.go.txt" paths="./operator/..."
+# Generate operator code
+operator-generate:
+	go generate ./operator/...
+	gofmt -s -w  operator
+	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/Azure/ARO-RP operator
+	go run ./hack/validate-imports operator
+	pushd operator ; go run ../hack/licenses ; popd
 
 # Generate manifests e.g. CRD, RBAC etc.
 CRD_OPTIONS ?= "crd:trivialVersions=true"
@@ -145,8 +151,8 @@ operator-manifests: controller-gen
 operator-run: operator-generate operator-manifests
 	go run ./operator/main.go
 
-operator-manager: operator-generate
-	go build -o operator/bin/manager main.go
+operator: operator-generate
+	go build -o operator/bin/aro-operator operator/main.go
 
 # Install CRDs into a cluster
 operator-install: kustomize operator-manifests
@@ -158,9 +164,9 @@ operator-uninstall: kustomize operator-manifests
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 operator-deploy: kustomize operator-manifests
-	cd operator/config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	cd operator/config/manager && $(KUSTOMIZE) edit set image controller=${ARO_OPERATOR_IMG}
 	$(KUSTOMIZE) build operator/config/default | kubectl apply -f -
 
-# TODO operator build/push
+# TODO operator image push
 
 .PHONY: aro az clean client generate image-aro proxy secrets secrets-update test-go test-python image-fluentbit publish-image-proxy publish-image-aro publish-image-fluentbit publish-image-proxy admin.kubeconfig operator-generate operator-manifests operator-install operator-uninstall operator-run operator-deploy operator-all
