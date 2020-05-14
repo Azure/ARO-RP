@@ -6,7 +6,7 @@ package controllers
 import (
 	"context"
 
-	"github.com/go-logr/logr"
+	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -18,7 +18,7 @@ import (
 // GenevaloggingReconciler reconciles a Cluster object
 type GenevaloggingReconciler struct {
 	client.Client
-	Log    logr.Logger
+	Log    *logrus.Entry
 	Scheme *runtime.Scheme
 }
 

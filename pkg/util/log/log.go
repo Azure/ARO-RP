@@ -91,9 +91,9 @@ func (lw *logrusWrapper) WithName(name string) logr.Logger {
 	}
 }
 
-func GetRLogger() logr.Logger {
+func GetRLogger(logger *logrus.Entry) logr.Logger {
 	return &logrusWrapper{
-		entry: GetLogger(),
+		entry: logger,
 		level: int(logrus.GetLevel()),
 	}
 }

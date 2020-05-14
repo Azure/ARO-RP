@@ -7,7 +7,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/go-logr/logr"
+	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -18,7 +18,7 @@ import (
 // InternetChecker reconciles a Cluster object
 type InternetChecker struct {
 	client.Client
-	Log    logr.Logger
+	Log    *logrus.Entry
 	Scheme *runtime.Scheme
 }
 
@@ -50,7 +50,7 @@ func (r *InternetChecker) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	sr := NewStatusReporter(r.Client, request.Namespace, request.Name)
 	client := &http.Client{}
 	resp, err := client.Do(req)
-	r.Log.Info("response", "code", resp.Status, "err", err)
+	r.Log.Debugf("response code %s, err %s", resp.Status, err)
 	if err != nil || resp.StatusCode != http.StatusOK {
 		err = sr.SetNoInternetConnection(ctx, err)
 	} else {
