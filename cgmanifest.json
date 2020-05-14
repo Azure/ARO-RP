@@ -1237,6 +1237,15 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "88d23e1d281b9aa0cb534c4cdf3ed01af4b180b9",
+                    "repositoryUrl": "https://github.com/kubernetes/apiextensions-apiserver/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "46c5f7baf5456058e6999b176e1bdb87668c7c9d",
                     "repositoryUrl": "https://github.com/kubernetes/apimachinery/"
                 }
@@ -1266,15 +1275,6 @@
                 "git": {
                     "commitHash": "30be4d16710ac61bce31eb28a01054596fe6a9f1",
                     "repositoryUrl": "https://github.com/kubernetes/kube-openapi/"
-                }
-            }
-        },
-        {
-            "component": {
-                "type": "git",
-                "git": {
-                    "commitHash": "7710f43536611dfbd4eba64483baa8d1af39e404",
-                    "repositoryUrl": "https://github.com/kubernetes/kube-state-metrics/"
                 }
             }
         },
