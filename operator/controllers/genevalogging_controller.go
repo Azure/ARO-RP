@@ -26,8 +26,6 @@ import (
 
 	aro "github.com/Azure/ARO-RP/operator/api/v1alpha1"
 	arov1alpha1 "github.com/Azure/ARO-RP/operator/api/v1alpha1"
-	"github.com/Azure/ARO-RP/operator/controllers/consts"
-	"github.com/Azure/ARO-RP/operator/controllers/deploy"
 )
 
 // GenevaloggingReconciler reconciles a Cluster object
@@ -41,13 +39,13 @@ type GenevaloggingReconciler struct {
 // +kubebuilder:rbac:groups=aro.openshift.io,resources=clusters/status,verbs=get;update;patch
 
 func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
-	operatorNs, err := deploy.OperatorNamespace()
+	operatorNs, err := OperatorNamespace()
 	if err != nil {
-		return consts.ReconcileResultError, err
+		return ReconcileResultError, err
 	}
 
 	if request.Name != arov1alpha1.SingletonClusterName || request.Namespace != operatorNs {
-		return consts.ReconcileResultIgnore, nil
+		return ReconcileResultIgnore, nil
 	}
 	r.Log.Info("Reconsiling genevalogging deployment")
 
@@ -56,21 +54,21 @@ func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	err = r.Client.Get(ctx, request.NamespacedName, instance)
 	if err != nil {
 		// Error reading the object or not found - requeue the request.
-		return consts.ReconcileResultError, err
+		return ReconcileResultError, err
 	}
 
 	if instance.Spec.ResourceID == "" {
 		r.Log.Info("Skipping as ClusterSpec not set")
-		return consts.ReconcileResultRequeue, nil
+		return ReconcileResultRequeue, nil
 	}
 	err = r.reconsileGenevaLogging(ctx, instance)
 	if err != nil {
 		r.Log.Error(err, "reconsileGenevaLogging")
-		return consts.ReconcileResultError, err
+		return ReconcileResultError, err
 	}
 
 	r.Log.Info("done, requeueing")
-	return consts.ReconcileResultRequeue, nil
+	return ReconcileResultRequeue, nil
 }
 
 func (r *GenevaloggingReconciler) SetupWithManager(mgr ctrl.Manager) error {

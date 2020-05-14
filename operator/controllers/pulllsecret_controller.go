@@ -30,7 +30,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/operator/api/v1alpha1"
-	"github.com/Azure/ARO-RP/operator/controllers/consts"
 	"github.com/Azure/ARO-RP/operator/controllers/pullsecret"
 )
 
@@ -49,7 +48,7 @@ type PullsecretReconciler struct {
 func (r *PullsecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	if request.NamespacedName != pullSecretName {
 		// filter out other secrets.
-		return consts.ReconcileResultIgnore, nil
+		return ReconcileResultIgnore, nil
 	}
 
 	r.Log.Info("Reconciling pull-secret")
@@ -69,16 +68,16 @@ func (r *PullsecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 		}
 	} else if err != nil {
 		r.Log.Error(err, "failed to Get pull secret")
-		return consts.ReconcileResultError, err
+		return ReconcileResultError, err
 	}
 
 	changed, err := r.pullSecretRepair(ps)
 	if err != nil {
-		return consts.ReconcileResultError, err
+		return ReconcileResultError, err
 	}
 	if !isCreate && !changed {
 		r.Log.Info("Skip reconcile: Pull Secret repair not required")
-		return consts.ReconcileResultDone, nil
+		return ReconcileResultDone, nil
 	}
 	if isCreate {
 		r.Log.Info("Re-creating the Pull Secret")
@@ -89,10 +88,10 @@ func (r *PullsecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 	}
 	if err != nil {
 		r.Log.Error(err, "Failed to repair the Pull Secret")
-		return consts.ReconcileResultError, err
+		return ReconcileResultError, err
 	}
 	r.Log.Info("done, requeueing")
-	return consts.ReconcileResultDone, nil
+	return ReconcileResultDone, nil
 }
 
 func (r *PullsecretReconciler) pullSecretRepair(cr *corev1.Secret) (bool, error) {
