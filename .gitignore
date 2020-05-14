@@ -22,4 +22,4 @@ __pycache__
 /coverage.*
 /report.xml
 /deploy/config.yaml
-/operator/bin/aro-operator
+/aro-operator

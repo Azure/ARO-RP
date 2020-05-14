@@ -140,9 +140,9 @@ publish-image-operator: image-operator
 
 operator-generate:
 	go generate ./operator/...
-	gofmt -s -w  operator
-	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/Azure/ARO-RP operator
-	go run ./hack/validate-imports operator
+	gofmt -s -w  operator cmd/operator
+	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/Azure/ARO-RP operator cmd/operator
+	go run ./hack/validate-imports operator cmd/operator
 	pushd operator ; go run ../hack/licenses ; popd
 
 # Generate manifests e.g. CRD, RBAC etc.
@@ -151,10 +151,10 @@ operator-manifests: controller-gen
 	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./operator/..." output:crd:artifacts:config=operator/config/crd/bases
 
 operator-run: operator-generate operator-manifests
-	go run ./operator/main.go
+	go run ./cmd/operator/main.go
 
 operator: operator-generate
-	go build -o operator/bin/aro-operator operator/main.go
+	go build -o aro-operator ./cmd/operator/main.go
 
 # Install CRDs into a cluster
 operator-install: kustomize operator-manifests
