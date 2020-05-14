@@ -1,0 +1,56 @@
+parameters:
+- name: purgeTTL
+  displayName: Timeout before resources are force cleaned.
+  type: string
+  default: 6h
+- name: purgeCreatedTag
+  displayName: Name of the tag used in subscription marking created at
+  type: string
+- name: subscriptionCredentials
+  displayName: Subscription properties required to login
+  type: string
+  default: ''
+- name: subscriptionId
+  displayName: SubscriptionId to clean
+  type: string
+  default: ''
+- name: workingDirectory
+  type: string
+  default: ''
+- name: dryRun
+  type: bool
+  default: false
+- name: purgeEnvironment
+  type: string
+  default: e2e
+
+jobs:
+- job: Clean_Subscription
+  pool:
+    vmImage: ubuntu-latest
+
+  steps:
+  - template: ./template-setup-golang-env.yml
+    parameters:
+      gobin: ${{ variables.GOBIN }}
+      gopath: ${{ variables.GOPATH }}
+      goroot: ${{ variables.GOROOT }}
+      modulePath: ${{ variables.modulePath }}
+
+  - script: |
+      set -e
+
+      echo ${{ parameters.subscriptionCredentials }} | base64 -d -w 0 > spn.json
+      export AZURE_CLIENT_ID=$(cat spn.json | jq -r '.clientId')
+      export AZURE_CLIENT_SECRET=$(cat spn.json | jq -r '.clientSecret')
+      export AZURE_TENANT_ID=$(cat spn.json | jq -r '.tenantId')
+      export AZURE_SUBSCRIPTION_ID=$(parameters.subscriptionId)
+
+      export AZURE_PURGE_TTL="${{ parameters.purgeTTL }}""
+      export AZURE_PURGE_CREATED_TAG="${{ parameters.purgeCreatedTag }}"
+      export AZURE_PURGE_ENVIRONMENT="${{ parameters.purgeEnvironment }}"
+      rm spn.json
+
+      go run ./hack/clean.go -dryRun=${{ parameters.dryRun }}
+    workingDirectory: ${{ parameters.workingDirectory }}
+    displayName: 🧹 Clean subscription

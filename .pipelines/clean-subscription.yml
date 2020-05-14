@@ -1,0 +1,22 @@
+trigger: none
+pr: none
+
+variables:
+- template: vars.yml
+
+jobs:
+- job: Clean subscription
+  pool:
+    vmImage: ubuntu-latest
+
+  steps:
+  - template: ./templates/template-clean-subscription.yml
+    parameters:
+      dryRun: $(dryRun)
+      subscriptionCredentials: $(subscriptionCredentials)
+      subscriptionId: $(subscriptionId)
+      purgeTTL: $(purgeTTL)
+      purgeCreatedTag: $(purgeCreatedTag)
+      purgeEnvironment: $(purgeEnvironment)
+      workingDirectory: ${{ variables.modulePath }}
+
