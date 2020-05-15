@@ -6,6 +6,30 @@ metadata:
   creationTimestamp: null
   name: manager-role
 rules:
+- resources:
+  - configmaps
+  - namespaces
+  - serviceaccounts
+  verbs:
+  - create
+  - get
+  - update
+- resources:
+  - secrets
+  verbs:
+  - create
+  - get
+  - patch
+  - update
+- apiGroups:
+  - apps.v1
+  resources:
+  - daemonsets
+  verbs:
+  - create
+  - get
+  - patch
+  - update
 - apiGroups:
   - aro.openshift.io
   resources:
