@@ -6,7 +6,7 @@ There are currently two codebases for the `az aro` command:
   aro` extension in this repo
 
 * The
-  [downstream][https://github.com/Azure/azure-cli/tree/dev/src/azure-cli/azure/cli/command_modules/aro]
+  [downstream](https://github.com/Azure/azure-cli/tree/dev/src/azure-cli/azure/cli/command_modules/aro)
   `az aro` module.
 
 The downstream `az aro` module is distributed with `az` and is automatically

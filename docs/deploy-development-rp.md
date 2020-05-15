@@ -154,7 +154,7 @@
    `RP_MODE` environment variable is set to `development`, the `az aro` client
    will connect to your local RP.
 
-   [1]: https://docs.microsoft.com/en-us/azure/openshift/howto-using-azure-redhat-openshift
+   [1]: https://docs.microsoft.com/en-us/azure/openshift/tutorial-create-cluster
 
 1. The following additional RP endpoints are available but not exposed via `az
    aro`:
