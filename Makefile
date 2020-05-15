@@ -164,14 +164,14 @@ operator: operator-generate
 
 # Install CRDs into a cluster
 operator-install: operator-manifests
-	kubectl apply -f operator/config/output/crd.yaml
+	oc apply -f operator/config/output/crd.yaml
 
 # Uninstall CRDs from a cluster
 operator-uninstall: operator-manifests
-	kubectl delete -f operator/config/output/crd.yaml
+	oc delete -f operator/config/output/crd.yaml
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 operator-deploy: operator-manifests
-	kubectl apply -f operator/config/output/resources.yaml
+	oc apply -f operator/config/output/resources.yaml
 
 .PHONY: operator operator-generate operator-manifests operator-install operator-uninstall operator-run operator-deploy

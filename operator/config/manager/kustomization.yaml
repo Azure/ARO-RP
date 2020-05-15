@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: arosvc.azurecr.io/aro-operator
-  newTag: 42f455ab-dirty
+  newTag: 93b0c67f-dirty
