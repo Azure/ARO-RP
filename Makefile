@@ -130,6 +130,7 @@ admin.kubeconfig:
 
 # Image URL to use all building/pushing image targets
 ARO_OPERATOR_IMG ?= ${RP_IMAGE_ACR}.azurecr.io/aro-operator:$(COMMIT)
+ARO_OPERATOR_DIRS=pkg/util/aro-operator-client operator cmd/operator pkg/controllers
 
 image-operator: operator
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
@@ -139,10 +140,11 @@ publish-image-operator: image-operator
 	docker push $(ARO_OPERATOR_IMG)
 
 operator-generate:
-	go generate ./operator/...
-	gofmt -s -w  operator cmd/operator
-	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/Azure/ARO-RP operator cmd/operator
-	go run ./hack/validate-imports operator cmd/operator
+	go run ./vendor/k8s.io/code-generator/cmd/deepcopy-gen --input-dirs github.com/Azure/ARO-RP/operator/apis/aro.openshift.io/v1alpha1 -O zz_generated.deepcopy --bounding-dirs github.com/Azure/ARO-RP/operator/apis --go-header-file hack/licenses/boilerplate.go.txt
+	go run ./vendor/k8s.io/code-generator/cmd/client-gen --clientset-name versioned --input-base '' --input github.com/Azure/ARO-RP/operator/apis/aro.openshift.io/v1alpha1 --output-package github.com/Azure/ARO-RP/pkg/util/aro-operator-client/clientset --go-header-file hack/licenses/boilerplate.go.txt
+	gofmt -s -w $(ARO_OPERATOR_DIRS)
+	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/Azure/ARO-RP $(ARO_OPERATOR_DIRS)
+	go run ./hack/validate-imports $(ARO_OPERATOR_DIRS)
 	pushd operator ; go run ../hack/licenses ; popd
 
 # Generate manifests e.g. CRD, RBAC etc.
