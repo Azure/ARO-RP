@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	aro "github.com/Azure/ARO-RP/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/util/aro-operator-client/clientset/versioned/typed/aro.openshift.io/v1alpha1"
@@ -29,7 +30,7 @@ type InternetChecker struct {
 
 func (r *InternetChecker) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	if request.Name != aro.SingletonClusterName || request.Namespace != OperatorNamespace {
-		return ReconcileResultIgnore, nil
+		return reconcile.Result{}, nil
 	}
 	r.Log.Info("Polling outgoing internet connection")
 
@@ -38,7 +39,7 @@ func (r *InternetChecker) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	req, err := http.NewRequest("GET", "https://management.azure.com", nil)
 	if err != nil {
 		r.Log.Error(err, "failed building request")
-		return ReconcileResultError, err
+		return reconcile.Result{}, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 
@@ -54,7 +55,7 @@ func (r *InternetChecker) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	}
 	if err != nil {
 		r.Log.Errorf("StatusReporter request:%v err:%v", request, err)
-		return ReconcileResultError, err
+		return reconcile.Result{}, err
 	}
 
 	r.Log.Info("done, requeueing")
