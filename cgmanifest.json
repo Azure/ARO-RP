@@ -1264,6 +1264,24 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "d0071a11938089926a0faeb94ab9a934850250fd",
+                    "repositoryUrl": "https://github.com/kubernetes/code-generator/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "f8a0810f38afb8478882b3835a615aebfda39afa",
+                    "repositoryUrl": "https://github.com/kubernetes/gengo/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "2ca9ad30301bf30a8a6e0fa2110db6b8df699a91",
                     "repositoryUrl": "https://github.com/kubernetes/klog/"
                 }
