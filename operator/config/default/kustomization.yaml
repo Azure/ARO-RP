@@ -1,4 +1,4 @@
 namespace: openshift-azure-operator
 bases:
 - ../crd
-- ../rbac
+- ../resources

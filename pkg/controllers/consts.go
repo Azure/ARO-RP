@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	LocalNamespace = "default"
+	OperatorNamespace = "openshift-azure-operator"
 )
 
 var (

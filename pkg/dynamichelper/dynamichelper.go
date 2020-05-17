@@ -12,7 +12,7 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/openshift/openshift-azure/pkg/util/cmp"
 	"github.com/sirupsen/logrus"
-	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -175,16 +175,16 @@ func (dh *dynamicHelper) List(ctx context.Context, groupKind, namespace string) 
 }
 
 func (dh *dynamicHelper) CreateOrUpdate(ctx context.Context, o *unstructured.Unstructured) error {
-	gvr, err := dh.findGVR(o.GroupVersionKind().GroupKind().String(), "")
+	gvr, err := dh.findGVR(o.GroupVersionKind().GroupKind().String(), o.GroupVersionKind().Version)
 	if err != nil {
 		return err
 	}
 
 	err = retry.OnError(retry.DefaultRetry, func(err error) bool {
-		return dh.retryOnConflict && kerrors.ReasonForError(err) == metav1.StatusReasonConflict
+		return dh.retryOnConflict && apierrors.ReasonForError(err) == metav1.StatusReasonConflict
 	}, func() error {
 		existing, err := dh.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Get(o.GetName(), metav1.GetOptions{})
-		if kerrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) {
 			dh.log.Info("Create " + keyFunc(o.GroupVersionKind().GroupKind(), o.GetNamespace(), o.GetName()))
 			_, err = dh.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Create(o, metav1.CreateOptions{})
 			return err
@@ -209,6 +209,11 @@ func (dh *dynamicHelper) CreateOrUpdate(ctx context.Context, o *unstructured.Uns
 }
 
 func (dh *dynamicHelper) needsUpdate(existing, o *unstructured.Unstructured) bool {
+	if o.GetKind() == "Namespace" {
+		// don't need updating
+		return false
+	}
+
 	if reflect.DeepEqual(*existing, *o) {
 		return false
 	}
