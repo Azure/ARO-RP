@@ -7,12 +7,11 @@ import (
 	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-)
 
-const (
-	OperatorNamespace = "openshift-azure-operator"
+	"github.com/Azure/ARO-RP/operator/deploy"
 )
 
 var (
 	ReconcileResultRequeue = reconcile.Result{RequeueAfter: 5 * time.Minute, Requeue: true}
+	OperatorNamespace      = deploy.KubeNamespace
 )

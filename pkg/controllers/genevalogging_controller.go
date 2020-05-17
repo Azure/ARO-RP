@@ -8,6 +8,7 @@ import (
 
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	"github.com/sirupsen/logrus"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -45,10 +46,23 @@ func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		return reconcile.Result{}, err
 	}
 
-	gl := genevalogging.NewForOperator(r.Log, &instance.Spec, r.Kubernetescli, r.Securitycli)
+	newCert, err := r.Kubernetescli.CoreV1().Secrets(instance.Spec.GenevaLogging.Namespace).Get("certificates", v1.GetOptions{})
+	if err != nil && apierrors.IsNotFound(err) {
+		// copy the certificates from our namespace into the genevalogging one.
+		certs, err := r.Kubernetescli.CoreV1().Secrets(OperatorNamespace).Get("certificates", v1.GetOptions{})
+		if err != nil {
+			r.Log.Errorf("Error reading the certificates secret: %v", err)
+			return reconcile.Result{}, err
+		}
+		newCert = certs.DeepCopy()
+		newCert.Namespace = instance.Spec.GenevaLogging.Namespace
+		newCert.ResourceVersion = ""
+	}
+
+	gl := genevalogging.NewForOperator(r.Log, &instance.Spec, r.Kubernetescli, r.Securitycli, newCert)
 	err = gl.CreateOrUpdate(ctx)
 	if err != nil {
-		r.Log.Error(err, "reconsileGenevaLogging")
+		r.Log.Error(err)
 		return reconcile.Result{}, err
 	}
 

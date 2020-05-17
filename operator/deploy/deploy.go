@@ -5,6 +5,8 @@ package deploy
 
 import (
 	"context"
+	"crypto/rsa"
+	"crypto/x509"
 	"fmt"
 	"os"
 	"strings"
@@ -31,6 +33,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/genevalogging"
 	aroclient "github.com/Azure/ARO-RP/pkg/util/aro-operator-client/clientset/versioned/typed/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
+	"github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -48,12 +51,14 @@ type Operator interface {
 type operator struct {
 	log *logrus.Entry
 
-	resourceID   string
-	namespace    string
-	imageVersion string
-	acrToken     string
-	acrRegName   string
-	acrName      string
+	resourceID        string
+	namespace         string
+	imageVersion      string
+	acrToken          string
+	acrRegName        string
+	acrName           string
+	genevaloggingKey  *rsa.PrivateKey
+	genevaloggingCert *x509.Certificate
 
 	genevaloggingSpec *aro.GenevaLoggingSpec
 
@@ -76,15 +81,19 @@ func New(log *logrus.Entry, e env.Interface, oc *api.OpenShiftCluster, cli kuber
 		return nil, err
 	}
 
+	key, cert := e.ClustersGenevaLoggingSecret()
+
 	return &operator{
 		log: log,
 
-		resourceID:   oc.ID,
-		namespace:    KubeNamespace,
-		imageVersion: version.GitCommit,
-		acrName:      e.ACRName(),
-		acrToken:     acrToken,
-		acrRegName:   acrRegName,
+		resourceID:        oc.ID,
+		namespace:         KubeNamespace,
+		imageVersion:      version.GitCommit,
+		acrName:           e.ACRName(),
+		acrToken:          acrToken,
+		acrRegName:        acrRegName,
+		genevaloggingKey:  key,
+		genevaloggingCert: cert,
 
 		genevaloggingSpec: &aro.GenevaLoggingSpec{
 			Namespace:                genevalogging.KubeNamespace,
@@ -191,6 +200,32 @@ func (o *operator) applyAssets(ctx context.Context) error {
 
 func (o *operator) CreateOrUpdate(ctx context.Context) error {
 	err := o.applyAssets(ctx)
+	if err != nil {
+		return err
+	}
+
+	// create a secret here for genevalogging, later we will copy it to
+	// the genevalogging namespace.
+	gcsKeyBytes, err := tls.PrivateKeyAsBytes(o.genevaloggingKey)
+	if err != nil {
+		return err
+	}
+
+	gcsCertBytes, err := tls.CertAsBytes(o.genevaloggingCert)
+	if err != nil {
+		return err
+	}
+
+	err = o.applySecret(&v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "certificates",
+			Namespace: o.namespace,
+		},
+		StringData: map[string]string{
+			"gcscert.pem": string(gcsCertBytes),
+			"gcskey.pem":  string(gcsKeyBytes),
+		},
+	})
 	if err != nil {
 		return err
 	}
