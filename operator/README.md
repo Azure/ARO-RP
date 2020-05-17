@@ -48,5 +48,7 @@ go run ./cmd/aro rp &
 curl -X PATCH -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER?api-version=admin" --header "Content-Type: application/json" -d "{}"
 
 #check on the deployment
-oc get -n openshift-azure-operator all
+oc -n openshift-azure-operator get all
+oc -n openshift-azure-operator get clusters.aro.openshift.io/cluster -o yaml
+oc -n openshift-azure-operator logs deployment.apps/aro-operator
 ```
