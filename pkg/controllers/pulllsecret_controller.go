@@ -16,8 +16,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	aro "github.com/Azure/ARO-RP/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/controllers/pullsecret"
 	aroclient "github.com/Azure/ARO-RP/pkg/util/aro-operator-client/clientset/versioned/typed/aro.openshift.io/v1alpha1"
 )
@@ -38,7 +40,7 @@ type PullsecretReconciler struct {
 func (r *PullsecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	if request.NamespacedName != pullSecretName {
 		// filter out other secrets.
-		return ReconcileResultIgnore, nil
+		return reconcile.Result{}, nil
 	}
 
 	r.Log.Info("Reconciling pull-secret")
@@ -81,10 +83,10 @@ func (r *PullsecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 	})
 	if err != nil {
 		r.Log.Error(err, "Failed to repair the Pull Secret")
-		return ReconcileResultError, err
+		return reconcile.Result{}, err
 	}
 	r.Log.Info("done, requeueing")
-	return ReconcileResultDone, nil
+	return reconcile.Result{}, nil
 }
 
 func (r *PullsecretReconciler) pullSecretRepair(cr *corev1.Secret) (bool, error) {
@@ -111,7 +113,35 @@ func (r *PullsecretReconciler) pullSecretRepair(cr *corev1.Secret) (bool, error)
 }
 
 func (r *PullsecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	isPullSecret := predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldSecret, ok := e.ObjectOld.(*corev1.Secret)
+			if !ok {
+				return false
+			}
+			newSecret, ok := e.ObjectNew.(*corev1.Secret)
+			if !ok {
+				return false
+			}
+			return (oldSecret.Name == pullSecretName.Name && oldSecret.Namespace == pullSecretName.Namespace ||
+				newSecret.Name == pullSecretName.Name && newSecret.Namespace == pullSecretName.Namespace)
+		},
+		CreateFunc: func(e event.CreateEvent) bool {
+			secret, ok := e.Object.(*corev1.Secret)
+			if !ok {
+				return false
+			}
+			return secret.Name == pullSecretName.Name && secret.Namespace == pullSecretName.Namespace
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			secret, ok := e.Object.(*corev1.Secret)
+			if !ok {
+				return false
+			}
+			return secret.Name == pullSecretName.Name && secret.Namespace == pullSecretName.Namespace
+		},
+	}
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&aro.Cluster{}).
+		For(&v1.Secret{}).WithEventFilter(isPullSecret).
 		Complete(r)
 }
