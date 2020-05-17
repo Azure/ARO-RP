@@ -23,8 +23,10 @@ rules:
   verbs:
   - create
   - get
+  - list
   - patch
   - update
+  - watch
 - apiGroups:
   - apps.v1
   resources:

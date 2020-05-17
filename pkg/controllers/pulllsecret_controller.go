@@ -4,7 +4,11 @@ package controllers
 // Licensed under the Apache License 2.0.
 
 import (
+	"encoding/base64"
+	"io/ioutil"
 	"os"
+	"path"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -20,8 +24,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/Azure/ARO-RP/pkg/controllers/pullsecret"
 	aroclient "github.com/Azure/ARO-RP/pkg/util/aro-operator-client/clientset/versioned/typed/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
 
 var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "openshift-config"}
@@ -35,7 +39,7 @@ type PullsecretReconciler struct {
 }
 
 // +kubebuilder:rbac:groups=aro.openshift.io,resources=clusters,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;update;patch;create
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;update;patch;create
 
 func (r *PullsecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	if request.NamespacedName != pullSecretName {
@@ -82,7 +86,7 @@ func (r *PullsecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 		return err
 	})
 	if err != nil {
-		r.Log.Error(err, "Failed to repair the Pull Secret")
+		r.Log.Errorf("Failed to repair the Pull Secret : %v", err)
 		return reconcile.Result{}, err
 	}
 	r.Log.Info("done, requeueing")
@@ -101,8 +105,26 @@ func (r *PullsecretReconciler) pullSecretRepair(cr *corev1.Secret) (bool, error)
 	if pathOverride != "" {
 		psPath = pathOverride
 	}
+	secrets := map[string]string{}
 
-	newPS, changed, err := pullsecret.Repair(cr.Data[corev1.DockerConfigJsonKey], psPath)
+	files, err := ioutil.ReadDir(psPath)
+	if err != nil {
+		return false, err
+	}
+	for _, fName := range files {
+		fpath := path.Join(psPath, fName.Name())
+		if fName.IsDir() || strings.HasPrefix(fName.Name(), "..") {
+			continue
+		}
+		r.Log.Infof("pullSecretRepair: %s", fpath)
+		data, err := ioutil.ReadFile(fpath)
+		if err != nil {
+			return false, err
+		}
+		secrets[fName.Name()] = base64.StdEncoding.EncodeToString(data)
+	}
+
+	newPS, changed, err := pullsecret.Replace(cr.Data[corev1.DockerConfigJsonKey], secrets)
 	if err != nil {
 		return false, err
 	}
