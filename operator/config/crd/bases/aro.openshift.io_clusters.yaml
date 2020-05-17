@@ -9,6 +9,9 @@ metadata:
   name: clusters.aro.openshift.io
 spec:
   group: aro.openshift.io
+  conversion:
+    strategy: None
+  preserveUnknownFields: true
   names:
     kind: Cluster
     listKind: ClusterList

@@ -94,14 +94,14 @@ func TestFindGVR(t *testing.T) {
 			},
 			kind: "baremetalhost/status",
 			wantErr: api.NewCloudError(
-				http.StatusBadRequest, api.CloudErrorCodeInvalidParameter,
+				http.StatusBadRequest, api.CloudErrorCodeNotFound,
 				"", "The groupKind '%s' was not found.", "baremetalhost/status"),
 		},
 		{
 			name: "empty resources",
 			kind: "configmap",
 			wantErr: api.NewCloudError(
-				http.StatusBadRequest, api.CloudErrorCodeInvalidParameter,
+				http.StatusBadRequest, api.CloudErrorCodeNotFound,
 				"", "The groupKind '%s' was not found.", "configmap"),
 		},
 		{

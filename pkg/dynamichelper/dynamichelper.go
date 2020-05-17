@@ -8,20 +8,23 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/ghodss/yaml"
-	"github.com/openshift/openshift-azure/pkg/util/cmp"
 	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/cmp"
 )
 
 type DynamicHelper interface {
@@ -29,43 +32,50 @@ type DynamicHelper interface {
 	List(ctx context.Context, groupKind, namespace string) ([]byte, error)
 	CreateOrUpdate(ctx context.Context, obj *unstructured.Unstructured) error
 	Delete(ctx context.Context, groupKind, namespace, name string) error
-	UnmarshalYAML(b []byte) (unstructured.Unstructured, error)
+	ToUnstructured(ro runtime.Object) (*unstructured.Unstructured, error)
+}
+
+type UpdatePolicy struct {
+	LogChanges                    bool
+	RetryOnConflict               bool
+	IgnoreDefaults                bool
+	RefreshAPIResourcesOnNotFound bool
 }
 
 type dynamicHelper struct {
 	log *logrus.Entry
 
-	logChanges      bool
-	retryOnConflict bool
+	updatePolicy UpdatePolicy
 
-	restconfig *rest.Config
-
+	restconfig   *rest.Config
 	dyn          dynamic.Interface
 	apiresources []*metav1.APIResourceList
 }
 
-func New(log *logrus.Entry, restconfig *rest.Config, logChanges, retryOnConflict bool) (DynamicHelper, error) {
+func New(log *logrus.Entry, restconfig *rest.Config, updatePolicy UpdatePolicy) (DynamicHelper, error) {
 	dh := &dynamicHelper{
-		log:             log,
-		logChanges:      logChanges,
-		retryOnConflict: retryOnConflict,
-		restconfig:      restconfig,
+		log:          log,
+		updatePolicy: updatePolicy,
+		restconfig:   restconfig,
 	}
-	cli, err := discovery.NewDiscoveryClientForConfig(dh.restconfig)
-	if err != nil {
-		return nil, err
-	}
-
-	_, dh.apiresources, err = cli.ServerGroupsAndResources()
-	if err != nil {
-		return nil, err
-	}
-
-	dh.dyn, err = dynamic.NewForConfig(dh.restconfig)
+	err := dh.refreshAPIResources()
 	if err != nil {
 		return nil, err
 	}
 	return dh, nil
+}
+
+func (dh *dynamicHelper) refreshAPIResources() error {
+	cli, err := discovery.NewDiscoveryClientForConfig(dh.restconfig)
+	if err != nil {
+		return err
+	}
+	_, dh.apiresources, err = cli.ServerGroupsAndResources()
+	if err != nil {
+		return err
+	}
+	dh.dyn, err = dynamic.NewForConfig(dh.restconfig)
+	return err
 }
 
 func (dh *dynamicHelper) findGVR(groupKind, optionalVersion string) (*schema.GroupVersionResource, error) {
@@ -110,7 +120,7 @@ func (dh *dynamicHelper) findGVR(groupKind, optionalVersion string) (*schema.Gro
 
 	if len(matches) == 0 {
 		return nil, api.NewCloudError(
-			http.StatusBadRequest, api.CloudErrorCodeInvalidParameter,
+			http.StatusBadRequest, api.CloudErrorCodeNotFound,
 			"", "The groupKind '%s' was not found.", groupKind)
 	}
 
@@ -125,25 +135,6 @@ func (dh *dynamicHelper) findGVR(groupKind, optionalVersion string) (*schema.Gro
 	}
 
 	return matches[0], nil
-}
-
-// unmarshal has to reimplement yaml.unmarshal because it universally mangles yaml
-// integers into float64s, whereas the Kubernetes client library uses int64s
-// wherever it can.  Such a difference can cause us to update objects when
-// we don't actually need to.
-func (dh *dynamicHelper) UnmarshalYAML(b []byte) (unstructured.Unstructured, error) {
-	json, err := yaml.YAMLToJSON(b)
-	if err != nil {
-		return unstructured.Unstructured{}, err
-	}
-
-	var o unstructured.Unstructured
-	_, _, err = unstructured.UnstructuredJSONScheme.Decode(json, nil, &o)
-	if err != nil {
-		return unstructured.Unstructured{}, err
-	}
-
-	return o, nil
 }
 
 func (dh *dynamicHelper) Get(ctx context.Context, groupKind, namespace, name string) ([]byte, error) {
@@ -174,18 +165,74 @@ func (dh *dynamicHelper) List(ctx context.Context, groupKind, namespace string) 
 	return ul.MarshalJSON()
 }
 
+// ToUnstructured converts a runtime.Object into an Unstructured
+func (dh *dynamicHelper) ToUnstructured(ro runtime.Object) (*unstructured.Unstructured, error) {
+	obj, ok := ro.(*unstructured.Unstructured)
+	if !ok {
+		b, err := yaml.Marshal(ro)
+		if err != nil {
+			return nil, err
+		}
+		obj = &unstructured.Unstructured{}
+		err = yaml.Unmarshal(b, obj)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	cleanNewObject(*obj)
+	return obj, nil
+}
+
+func (dh *dynamicHelper) retryableError(err error) bool {
+	if err == nil {
+		return false
+	}
+	switch typeOfErr := err.(type) {
+	case (*api.CloudError):
+		return (typeOfErr.Code == api.CloudErrorCodeNotFound)
+	case (*discovery.ErrGroupDiscoveryFailed):
+		return true
+	default:
+		return false
+	}
+}
+
+func (dh *dynamicHelper) findGVRWithRefresh(groupKind, optionalVersion string) (*schema.GroupVersionResource, error) {
+	if !dh.updatePolicy.RefreshAPIResourcesOnNotFound {
+		return dh.findGVR(groupKind, optionalVersion)
+	}
+	var gvr *schema.GroupVersionResource
+	err := retry.OnError(wait.Backoff{Steps: 4, Duration: 30 * time.Second, Factor: 2.0}, dh.retryableError, func() error {
+		// this is used at cluster start up when kinds are still getting
+		// registered.
+		var gvrErr error
+		gvr, gvrErr = dh.findGVR(groupKind, optionalVersion)
+		if dh.retryableError(gvrErr) {
+			dh.log.Infof("refreshAPIResources retrying")
+			if refErr := dh.refreshAPIResources(); refErr != nil {
+				dh.log.Infof("refreshAPIResources error: %v", refErr)
+				return refErr
+			}
+		}
+		return gvrErr
+	})
+	return gvr, err
+}
+
 func (dh *dynamicHelper) CreateOrUpdate(ctx context.Context, o *unstructured.Unstructured) error {
-	gvr, err := dh.findGVR(o.GroupVersionKind().GroupKind().String(), o.GroupVersionKind().Version)
+	dh.log.Infof("CreateOrUpdate: %s", keyFuncO(o))
+	gvr, err := dh.findGVRWithRefresh(o.GroupVersionKind().GroupKind().String(), o.GroupVersionKind().Version)
 	if err != nil {
 		return err
 	}
 
 	err = retry.OnError(retry.DefaultRetry, func(err error) bool {
-		return dh.retryOnConflict && apierrors.ReasonForError(err) == metav1.StatusReasonConflict
+		return dh.updatePolicy.RetryOnConflict && apierrors.ReasonForError(err) == metav1.StatusReasonConflict
 	}, func() error {
 		existing, err := dh.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Get(o.GetName(), metav1.GetOptions{})
 		if apierrors.IsNotFound(err) {
-			dh.log.Info("Create " + keyFunc(o.GroupVersionKind().GroupKind(), o.GetNamespace(), o.GetName()))
+			dh.log.Info("Create " + keyFuncO(o))
 			_, err = dh.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Create(o, metav1.CreateOptions{})
 			return err
 		}
@@ -195,10 +242,21 @@ func (dh *dynamicHelper) CreateOrUpdate(ctx context.Context, o *unstructured.Uns
 
 		rv := existing.GetResourceVersion()
 
-		if !dh.needsUpdate(existing, o) {
-			return err
+		if dh.updatePolicy.IgnoreDefaults {
+			err := clean(*existing)
+			if err != nil {
+				return err
+			}
+			defaults(*existing)
 		}
-		dh.logDiff(existing, o)
+
+		if !dh.needsUpdate(existing, o) {
+			return nil
+		}
+
+		if dh.updatePolicy.LogChanges {
+			dh.logDiff(existing, o)
+		}
 
 		o.SetResourceVersion(rv)
 		_, err = dh.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Update(o, metav1.UpdateOptions{})
@@ -209,24 +267,16 @@ func (dh *dynamicHelper) CreateOrUpdate(ctx context.Context, o *unstructured.Uns
 }
 
 func (dh *dynamicHelper) needsUpdate(existing, o *unstructured.Unstructured) bool {
-	if o.GetKind() == "Namespace" {
-		// don't need updating
-		return false
-	}
-
 	if reflect.DeepEqual(*existing, *o) {
 		return false
 	}
 
-	dh.log.Info("Update " + keyFunc(o.GroupVersionKind().GroupKind(), o.GetNamespace(), o.GetName()))
+	dh.log.Info("Update " + keyFuncO(o))
 
 	return true
 }
 
 func (dh *dynamicHelper) logDiff(existing, o *unstructured.Unstructured) bool {
-	if !dh.logChanges {
-		return false
-	}
 	// TODO: we should have tests that monitor these diffs:
 	// 1) when a cluster is created
 	// 2) when sync is run twice back-to-back on the same cluster
@@ -250,6 +300,10 @@ func (dh *dynamicHelper) Delete(ctx context.Context, groupKind, namespace, name 
 	}
 
 	return dh.dyn.Resource(*gvr).Namespace(namespace).Delete(name, &metav1.DeleteOptions{})
+}
+
+func keyFuncO(o *unstructured.Unstructured) string {
+	return keyFunc(o.GroupVersionKind().GroupKind(), o.GetNamespace(), o.GetName())
 }
 
 func keyFunc(gk schema.GroupKind, namespace, name string) string {
