@@ -11,12 +11,15 @@ metadata:
   creationTimestamp: null
   name: clusters.aro.openshift.io
 spec:
+  conversion:
+    strategy: None
   group: aro.openshift.io
   names:
     kind: Cluster
     listKind: ClusterList
     plural: clusters
     singular: cluster
+  preserveUnknownFields: true
   scope: Namespaced
   validation:
     openAPIV3Schema:
