@@ -28,13 +28,7 @@ type InternetChecker struct {
 // +kubebuilder:rbac:groups=aro.openshift.io,resources=clusters/status,verbs=get;update;patch
 
 func (r *InternetChecker) Reconcile(request ctrl.Request) (ctrl.Result, error) {
-	operatorNs, err := OperatorNamespace()
-	if err != nil {
-		r.Log.Error(err, "OperatorNamespace")
-		return ReconcileResultError, err
-	}
-
-	if request.Name != aro.SingletonClusterName || request.Namespace != operatorNs {
+	if request.Name != aro.SingletonClusterName || request.Namespace != OperatorNamespace {
 		return ReconcileResultIgnore, nil
 	}
 	r.Log.Info("Polling outgoing internet connection")
@@ -49,17 +43,17 @@ func (r *InternetChecker) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	req.Header.Set("Content-Type", "application/json")
 
 	ctx := context.TODO()
-	sr := NewStatusReporter(r.AROCli, request.Namespace, request.Name)
+	sr := NewStatusReporter(r.Log, r.AROCli, request.Namespace, request.Name)
 	client := &http.Client{}
 	resp, err := client.Do(req)
-	r.Log.Debugf("response code %s, err %s", resp.Status, err)
+	r.Log.Infof("response code %v, err %v", resp.Status, err)
 	if err != nil || resp.StatusCode != http.StatusOK {
 		err = sr.SetNoInternetConnection(ctx, err)
 	} else {
 		err = sr.SetInternetConnected(ctx)
 	}
 	if err != nil {
-		r.Log.Error(err, "StatusReporter")
+		r.Log.Errorf("StatusReporter request:%v err:%v", request, err)
 		return ReconcileResultError, err
 	}
 

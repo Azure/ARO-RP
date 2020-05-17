@@ -28,15 +28,11 @@ type GenevaloggingReconciler struct {
 }
 
 // +kubebuilder:rbac:groups=aro.openshift.io,resources=clusters,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=aro.openshift.io,resources=clusters/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=apps.v1,resources=daemonsets,verbs=get;update;patch;create
+// +kubebuilder:rbac:groups="",resources=namespaces;serviceaccounts;configmaps,verbs=get;create;update
 
 func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
-	operatorNs, err := OperatorNamespace()
-	if err != nil {
-		return ReconcileResultError, err
-	}
-
-	if request.Name != aro.SingletonClusterName || request.Namespace != operatorNs {
+	if request.Name != aro.SingletonClusterName || request.Namespace != OperatorNamespace {
 		return ReconcileResultIgnore, nil
 	}
 	r.Log.Info("Reconsiling genevalogging deployment")
