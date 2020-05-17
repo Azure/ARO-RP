@@ -208,13 +208,30 @@ func (dh *dynamicHelper) CreateOrUpdate(ctx context.Context, o *unstructured.Uns
 	return err
 }
 
+func removeDynamicFields(existing, o *unstructured.Unstructured) *unstructured.Unstructured {
+	new := o.DeepCopy()
+	for _, field := range []string{"creationTimestamp", "generation", "resourceVersion", "uid", "selfLink"} {
+		old, ok, err := unstructured.NestedFieldCopy(existing.Object, "metadata", field)
+		if err == nil && ok {
+			unstructured.SetNestedField(new.Object, old, "metadata", field)
+		}
+	}
+
+	status, ok := existing.Object["status"]
+	if ok {
+		new.Object["status"] = status
+	}
+	return new
+}
+
 func (dh *dynamicHelper) needsUpdate(existing, o *unstructured.Unstructured) bool {
-	if o.GetKind() == "Namespace" {
+	if o.GetKind() == "Namespace" || o.GetKind() == "ServiceAccount" {
 		// don't need updating
 		return false
 	}
-
-	if reflect.DeepEqual(*existing, *o) {
+	// so we don't update unneccessairly
+	new := removeDynamicFields(existing, o)
+	if reflect.DeepEqual(*existing, *new) {
 		return false
 	}
 
@@ -235,7 +252,8 @@ func (dh *dynamicHelper) logDiff(existing, o *unstructured.Unstructured) bool {
 	gk := o.GroupVersionKind().GroupKind()
 	diffShown := false
 	if gk.String() != "Secret" {
-		if diff := cmp.Diff(*existing, *o); diff != "" {
+		new := removeDynamicFields(existing, o)
+		if diff := cmp.Diff(*existing, *new); diff != "" {
 			dh.log.Info(diff)
 			diffShown = true
 		}
