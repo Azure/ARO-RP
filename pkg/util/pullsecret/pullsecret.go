@@ -15,16 +15,16 @@ type pullSecret struct {
 	Auths map[string]map[string]interface{} `json:"auths,omitempty"`
 }
 
-func SetRegistryProfiles(_ps string, rps ...*api.RegistryProfile) (string, bool, error) {
-	if _ps == "" {
-		_ps = "{}"
+func Replace(_ps []byte, secrets map[string]string) ([]byte, bool, error) {
+	if _ps == nil || len(_ps) == 0 {
+		_ps = []byte("{}")
 	}
 
 	var ps *pullSecret
 
-	err := json.Unmarshal([]byte(_ps), &ps)
+	err := json.Unmarshal(_ps, &ps)
 	if err != nil {
-		return "", false, err
+		return nil, false, err
 	}
 
 	if ps.Auths == nil {
@@ -32,20 +32,28 @@ func SetRegistryProfiles(_ps string, rps ...*api.RegistryProfile) (string, bool,
 	}
 
 	var changed bool
-
-	for _, rp := range rps {
+	for repo, secret := range secrets {
 		v := map[string]interface{}{
-			"auth": base64.StdEncoding.EncodeToString([]byte(rp.Username + ":" + string(rp.Password))),
+			"auth": secret,
 		}
 
-		if !reflect.DeepEqual(ps.Auths[rp.Name], v) {
+		if !reflect.DeepEqual(ps.Auths[repo], v) {
 			changed = true
 		}
-
-		ps.Auths[rp.Name] = v
+		ps.Auths[repo] = v
 	}
 
 	b, err := json.Marshal(ps)
+	return b, changed, err
+}
+
+func SetRegistryProfiles(_ps string, rps ...*api.RegistryProfile) (string, bool, error) {
+	secrets := map[string]string{}
+	for _, rp := range rps {
+		secrets[rp.Name] = base64.StdEncoding.EncodeToString([]byte(rp.Username + ":" + string(rp.Password)))
+	}
+
+	b, changed, err := Replace([]byte(_ps), secrets)
 	return string(b), changed, err
 }
 
