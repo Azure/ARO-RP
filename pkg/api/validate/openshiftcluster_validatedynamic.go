@@ -215,6 +215,10 @@ func (dv *openShiftClusterDynamicValidator) validateRouteTablePermissionsSubnet(
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The subnet '%s' could not be found.", subnetID)
 	}
 
+	if s.RouteTable == nil {
+		return nil
+	}
+
 	rtr, err := azure.ParseResourceID(*s.RouteTable.ID)
 	if err != nil {
 		return err

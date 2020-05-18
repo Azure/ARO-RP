@@ -502,6 +502,7 @@ func TestValidateRouteTablePermissionsSubnet(t *testing.T) {
 	for _, tt := range []struct {
 		name    string
 		mocks   func(*mockauthorization.MockPermissionsClient, func())
+		vnet    func(*mgmtnetwork.VirtualNetwork)
 		subnet  string
 		wantErr string
 	}{
@@ -520,6 +521,13 @@ func TestValidateRouteTablePermissionsSubnet(t *testing.T) {
 							NotActions: &[]string{},
 						},
 					}, nil)
+			},
+			subnet: masterSubnet,
+		},
+		{
+			name: "pass (no route table)",
+			vnet: func(vnet *mgmtnetwork.VirtualNetwork) {
+				(*vnet.Subnets)[0].RouteTable = nil
 			},
 			subnet: masterSubnet,
 		},
@@ -572,13 +580,7 @@ func TestValidateRouteTablePermissionsSubnet(t *testing.T) {
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
 
-			permissionsClient := mockauthorization.NewMockPermissionsClient(controller)
-
-			if tt.mocks != nil {
-				tt.mocks(permissionsClient, cancel)
-			}
-
-			err := dv.validateRouteTablePermissionsSubnet(ctx, permissionsClient, &mgmtnetwork.VirtualNetwork{
+			vnet := &mgmtnetwork.VirtualNetwork{
 				VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
 					Subnets: &[]mgmtnetwork.Subnet{
 						{
@@ -591,7 +593,19 @@ func TestValidateRouteTablePermissionsSubnet(t *testing.T) {
 						},
 					},
 				},
-			}, tt.subnet, "properties.masterProfile.subnetId", api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
+			}
+
+			permissionsClient := mockauthorization.NewMockPermissionsClient(controller)
+
+			if tt.mocks != nil {
+				tt.mocks(permissionsClient, cancel)
+			}
+
+			if tt.vnet != nil {
+				tt.vnet(vnet)
+			}
+
+			err := dv.validateRouteTablePermissionsSubnet(ctx, permissionsClient, vnet, tt.subnet, "properties.masterProfile.subnetId", api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
