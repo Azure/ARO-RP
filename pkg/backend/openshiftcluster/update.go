@@ -8,5 +8,9 @@ import (
 )
 
 func (m *Manager) Update(ctx context.Context) error {
-	return m.ocDynamicValidator.Dynamic(ctx)
+	// TODO: m.ocDynamicValidator.Dynamic is not called because it should run on
+	// an enriched oc.  Neither are we enriching oc here currently, nor does
+	// Dynamic() support running on an enriched oc.
+
+	return nil
 }
