@@ -16,6 +16,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
+	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	mockauthorization "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/authorization"
@@ -146,6 +147,7 @@ func TestValidateProviders(t *testing.T) {
 			tt.mocks(providerClient)
 
 			dv := &openShiftClusterDynamicValidator{
+				log:         logrus.NewEntry(logrus.StandardLogger()),
 				spProviders: providerClient,
 			}
 
@@ -386,7 +388,8 @@ func TestValidateVnet(t *testing.T) {
 			}
 
 			dv := &openShiftClusterDynamicValidator{
-				oc: oc,
+				log: logrus.NewEntry(logrus.StandardLogger()),
+				oc:  oc,
 			}
 
 			err := dv.validateVnet(ctx, vnet)
@@ -407,7 +410,9 @@ func TestValidateVnetPermissions(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	dv := &openShiftClusterDynamicValidator{}
+	dv := &openShiftClusterDynamicValidator{
+		log: logrus.NewEntry(logrus.StandardLogger()),
+	}
 
 	for _, tt := range []struct {
 		name    string
@@ -497,7 +502,9 @@ func TestValidateRouteTablePermissionsSubnet(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	dv := &openShiftClusterDynamicValidator{}
+	dv := &openShiftClusterDynamicValidator{
+		log: logrus.NewEntry(logrus.StandardLogger()),
+	}
 
 	for _, tt := range []struct {
 		name    string

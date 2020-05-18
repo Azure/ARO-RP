@@ -157,6 +157,8 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 }
 
 func (dv *openShiftClusterDynamicValidator) validateServicePrincipalProfile(ctx context.Context) (autorest.Authorizer, error) {
+	dv.log.Print("validateServicePrincipalProfile")
+
 	token, err := aad.GetToken(ctx, dv.log, dv.oc, azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
@@ -179,6 +181,8 @@ func (dv *openShiftClusterDynamicValidator) validateServicePrincipalProfile(ctx 
 }
 
 func (dv *openShiftClusterDynamicValidator) validateVnetPermissions(ctx context.Context, client authorization.PermissionsClient, vnetID string, vnetr *azure.Resource, code, typ string) error {
+	dv.log.Printf("validateVnetPermissions (%s)", typ)
+
 	err := validateActions(ctx, vnetr, []string{
 		"Microsoft.Network/virtualNetworks/subnets/join/action",
 		"Microsoft.Network/virtualNetworks/subnets/read",
@@ -204,6 +208,8 @@ func (dv *openShiftClusterDynamicValidator) validateRouteTablePermissions(ctx co
 }
 
 func (dv *openShiftClusterDynamicValidator) validateRouteTablePermissionsSubnet(ctx context.Context, client authorization.PermissionsClient, vnet *mgmtnetwork.VirtualNetwork, subnetID, path, code, typ string) error {
+	dv.log.Printf("validateRouteTablePermissionsSubnet(%s, %s)", typ, path)
+
 	var s *mgmtnetwork.Subnet
 	for _, ss := range *vnet.Subnets {
 		if strings.EqualFold(*ss.ID, subnetID) {
@@ -240,6 +246,8 @@ func (dv *openShiftClusterDynamicValidator) validateRouteTablePermissionsSubnet(
 }
 
 func (dv *openShiftClusterDynamicValidator) validateSubnet(ctx context.Context, vnet *mgmtnetwork.VirtualNetwork, path, subnetID string) (*net.IPNet, error) {
+	dv.log.Printf("validateSubnet (%s)", path)
+
 	var s *mgmtnetwork.Subnet
 	if vnet.Subnets != nil {
 		for _, ss := range *vnet.Subnets {
@@ -309,6 +317,8 @@ func (dv *openShiftClusterDynamicValidator) validateSubnet(ctx context.Context, 
 
 // validateVnet checks that the vnet does not have custom dns servers set
 func (dv *openShiftClusterDynamicValidator) validateVnet(ctx context.Context, vnet *mgmtnetwork.VirtualNetwork) error {
+	dv.log.Print("validateVnet")
+
 	master, err := dv.validateSubnet(ctx, vnet, "properties.masterProfile.subnetId", dv.oc.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return err
@@ -344,6 +354,8 @@ func (dv *openShiftClusterDynamicValidator) validateVnet(ctx context.Context, vn
 }
 
 func (dv *openShiftClusterDynamicValidator) validateProviders(ctx context.Context) error {
+	dv.log.Print("validateProviders")
+
 	providers, err := dv.spProviders.List(ctx, nil, "")
 	if err != nil {
 		return err
