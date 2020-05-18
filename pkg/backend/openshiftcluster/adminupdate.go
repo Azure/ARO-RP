@@ -10,7 +10,8 @@ import (
 )
 
 func (m *Manager) AdminUpdate(ctx context.Context) error {
-	// m.ocDynamicValidator.Dynamic is not called
+	// m.ocDynamicValidator.Dynamic is not called so that it doesn't block an
+	// admin update
 
 	i, err := install.NewInstaller(ctx, m.log, m.env, m.db, m.billing, m.doc)
 	if err != nil {

@@ -80,6 +80,8 @@ func addRequiredResources(requiredResources map[string]int, vmSize api.VMSize, c
 
 // validateQuotas checks usage quotas vs. resources required by cluster before cluster creation
 func (dv *openShiftClusterDynamicValidator) validateQuotas(ctx context.Context) error {
+	dv.log.Print("validateQuotas")
+
 	requiredResources := map[string]int{}
 	addRequiredResources(requiredResources, dv.oc.Properties.MasterProfile.VMSize, 3)
 	//worker node resource calculation
