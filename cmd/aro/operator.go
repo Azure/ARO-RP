@@ -4,10 +4,11 @@ package main
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"flag"
-	"os"
 
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
+	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -21,8 +22,7 @@ import (
 )
 
 var (
-	scheme   = runtime.NewScheme()
-	setupLog = ctrl.Log.WithValues("controller", "setup")
+	scheme = runtime.NewScheme()
 )
 
 func init() {
@@ -32,7 +32,7 @@ func init() {
 	// +kubebuilder:scaffold:scheme
 }
 
-func main() {
+func operator(ctx context.Context, log *logrus.Entry) error {
 	var metricsAddr string
 	var enableLeaderElection bool
 	flag.StringVar(&metricsAddr, "metrics-addr", ":8080", "The address the metric endpoint binds to.")
@@ -40,8 +40,6 @@ func main() {
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 	flag.Parse()
-
-	log := utillog.GetLogger()
 
 	ctrl.SetLogger(utillog.GetRLogger(log))
 
@@ -53,24 +51,24 @@ func main() {
 		LeaderElectionID:   "965fa11c.openshift.io",
 	})
 	if err != nil {
-		setupLog.Error(err, "unable to start manager")
-		os.Exit(1)
+		log.Errorf("unable to start manager %v", err)
+		return err
 	}
 
 	kubernetescli, err := kubernetes.NewForConfig(mgr.GetConfig())
 	if err != nil {
-		setupLog.Error(err, "unable to create clients")
-		os.Exit(1)
+		log.Errorf("unable to create clients %v", err)
+		return err
 	}
 	securitycli, err := securityclient.NewForConfig(mgr.GetConfig())
 	if err != nil {
-		setupLog.Error(err, "unable to create clients")
-		os.Exit(1)
+		log.Errorf("unable to create clients %v", err)
+		return err
 	}
 	arocli, err := aroclient.NewForConfig(mgr.GetConfig())
 	if err != nil {
-		setupLog.Error(err, "unable to create clients")
-		os.Exit(1)
+		log.Errorf("unable to create clients %v", err)
+		return err
 	}
 
 	if err = (&controllers.GenevaloggingReconciler{
@@ -80,8 +78,8 @@ func main() {
 		Log:           log.WithField("controller", "Genevalogging"),
 		Scheme:        mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Genevalogging")
-		os.Exit(1)
+		log.Errorf("unable to create controller: Genevalogging %v", err)
+		return err
 	}
 	if err = (&controllers.PullsecretReconciler{
 		Kubernetescli: kubernetescli,
@@ -89,8 +87,8 @@ func main() {
 		Log:           log.WithField("controller", "PullSecret"),
 		Scheme:        mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "Pullsecret")
-		os.Exit(1)
+		log.Errorf("unable to create controller: PullSecret %v", err)
+		return err
 	}
 	if err = (&controllers.InternetChecker{
 		Kubernetescli: kubernetescli,
@@ -98,14 +96,11 @@ func main() {
 		Log:           log.WithField("controller", "InternetChecker"),
 		Scheme:        mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "InternetChecker")
-		os.Exit(1)
+		log.Errorf("unable to create controller: InternetChecker %v", err)
+		return err
 	}
 	// +kubebuilder:scaffold:builder
 
-	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		setupLog.Error(err, "problem running manager")
-		os.Exit(1)
-	}
+	log.Info("starting manager")
+	return mgr.Start(ctrl.SetupSignalHandler())
 }

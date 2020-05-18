@@ -13,6 +13,7 @@ import (
 	"net/http"
 
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 var (
@@ -20,8 +21,6 @@ var (
 	keyFile        = flag.String("keyFile", "secrets/proxy.key", "file containing server key")
 	clientCertFile = flag.String("clientCertFile", "secrets/proxy-client.crt", "file containing client certificate")
 	subnet         = flag.String("subnet", "10.0.0.0/8", "allowed subnet")
-
-	gitCommit = "unknown"
 )
 
 func run() error {
@@ -143,7 +142,7 @@ func proxy(w http.ResponseWriter, r *http.Request) {
 func main() {
 	log := utillog.GetLogger()
 
-	log.Printf("starting, git commit %s", gitCommit)
+	log.Printf("starting, git commit %s", version.GitCommit)
 
 	flag.Parse()
 

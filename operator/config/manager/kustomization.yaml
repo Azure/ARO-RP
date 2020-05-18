@@ -1,8 +1,0 @@
-resources:
-- manager.yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-images:
-- name: controller
-  newName: arosvc.azurecr.io/aro-operator
-  newTag: 93b0c67f-dirty

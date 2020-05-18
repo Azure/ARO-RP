@@ -4,22 +4,28 @@ package controllers
 // Licensed under the Apache License 2.0.
 
 import (
+	"encoding/base64"
+	"io/ioutil"
 	"os"
+	"path"
+	"strings"
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	aro "github.com/Azure/ARO-RP/operator/apis/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/controllers/pullsecret"
 	aroclient "github.com/Azure/ARO-RP/pkg/util/aro-operator-client/clientset/versioned/typed/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
 
 var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "openshift-config"}
@@ -33,12 +39,12 @@ type PullsecretReconciler struct {
 }
 
 // +kubebuilder:rbac:groups=aro.openshift.io,resources=clusters,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=aro.openshift.io,resources=clusters/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;update;patch;create
 
 func (r *PullsecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	if request.NamespacedName != pullSecretName {
 		// filter out other secrets.
-		return ReconcileResultIgnore, nil
+		return reconcile.Result{}, nil
 	}
 
 	r.Log.Info("Reconciling pull-secret")
@@ -47,7 +53,7 @@ func (r *PullsecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 		var isCreate bool
 		ps, err := r.Kubernetescli.CoreV1().Secrets(request.Namespace).Get(request.Name, metav1.GetOptions{})
 		switch {
-		case errors.IsNotFound(err):
+		case apierrors.IsNotFound(err):
 			ps = &v1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      request.Name,
@@ -80,11 +86,11 @@ func (r *PullsecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 		return err
 	})
 	if err != nil {
-		r.Log.Error(err, "Failed to repair the Pull Secret")
-		return ReconcileResultError, err
+		r.Log.Errorf("Failed to repair the Pull Secret : %v", err)
+		return reconcile.Result{}, err
 	}
 	r.Log.Info("done, requeueing")
-	return ReconcileResultDone, nil
+	return reconcile.Result{}, nil
 }
 
 func (r *PullsecretReconciler) pullSecretRepair(cr *corev1.Secret) (bool, error) {
@@ -99,8 +105,26 @@ func (r *PullsecretReconciler) pullSecretRepair(cr *corev1.Secret) (bool, error)
 	if pathOverride != "" {
 		psPath = pathOverride
 	}
+	secrets := map[string]string{}
 
-	newPS, changed, err := pullsecret.Repair(cr.Data[corev1.DockerConfigJsonKey], psPath)
+	files, err := ioutil.ReadDir(psPath)
+	if err != nil {
+		return false, err
+	}
+	for _, fName := range files {
+		fpath := path.Join(psPath, fName.Name())
+		if fName.IsDir() || strings.HasPrefix(fName.Name(), "..") {
+			continue
+		}
+		r.Log.Infof("pullSecretRepair: %s", fpath)
+		data, err := ioutil.ReadFile(fpath)
+		if err != nil {
+			return false, err
+		}
+		secrets[fName.Name()] = base64.StdEncoding.EncodeToString(data)
+	}
+
+	newPS, changed, err := pullsecret.Replace(cr.Data[corev1.DockerConfigJsonKey], secrets)
 	if err != nil {
 		return false, err
 	}
@@ -111,7 +135,35 @@ func (r *PullsecretReconciler) pullSecretRepair(cr *corev1.Secret) (bool, error)
 }
 
 func (r *PullsecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	isPullSecret := predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldSecret, ok := e.ObjectOld.(*corev1.Secret)
+			if !ok {
+				return false
+			}
+			newSecret, ok := e.ObjectNew.(*corev1.Secret)
+			if !ok {
+				return false
+			}
+			return (oldSecret.Name == pullSecretName.Name && oldSecret.Namespace == pullSecretName.Namespace ||
+				newSecret.Name == pullSecretName.Name && newSecret.Namespace == pullSecretName.Namespace)
+		},
+		CreateFunc: func(e event.CreateEvent) bool {
+			secret, ok := e.Object.(*corev1.Secret)
+			if !ok {
+				return false
+			}
+			return secret.Name == pullSecretName.Name && secret.Namespace == pullSecretName.Namespace
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			secret, ok := e.Object.(*corev1.Secret)
+			if !ok {
+				return false
+			}
+			return secret.Name == pullSecretName.Name && secret.Namespace == pullSecretName.Namespace
+		},
+	}
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&aro.Cluster{}).
+		For(&v1.Secret{}).WithEventFilter(isPullSecret).
 		Complete(r)
 }

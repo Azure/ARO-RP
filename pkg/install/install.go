@@ -37,6 +37,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	aroclient "github.com/Azure/ARO-RP/pkg/util/aro-operator-client/clientset/versioned/typed/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
@@ -80,6 +81,7 @@ type Installer struct {
 	configcli     configclient.Interface
 	samplescli    samplesclient.Interface
 	securitycli   securityclient.Interface
+	arocli        aroclient.AroV1alpha1Interface
 }
 
 const (
@@ -150,10 +152,8 @@ func (i *Installer) AdminUpgrade(ctx context.Context) error {
 		action(i.initializeKubernetesClients),
 		action(i.ensureBillingRecord), // belt and braces
 		action(i.fixLBProbes),
-		action(i.fixPullSecret),
-		action(i.ensureGenevaLogging),
+		action(i.ensureAroOperator),
 		action(i.upgradeCluster),
-
 		// TODO: later could use this flow to refresh certificates
 		// action(i.createCertificates),
 		// action(i.configureAPIServerCertificate),
@@ -178,7 +178,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			action(i.createCertificates),
 			action(i.initializeKubernetesClients),
 			condition{i.bootstrapConfigMapReady, 30 * time.Minute},
-			action(i.ensureGenevaLogging),
+			action(i.ensureAroOperator),
 			action(i.incrInstallPhase),
 		},
 		api.InstallPhaseRemoveBootstrap: {
@@ -188,13 +188,13 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			action(i.configureAPIServerCertificate),
 			condition{i.apiServersReady, 30 * time.Minute},
 			condition{i.operatorConsoleExists, 30 * time.Minute},
-			action(i.updateConsoleBranding),
+			action(i.updateConsoleBranding), // TODO move into operator
 			condition{i.operatorConsoleReady, 10 * time.Minute},
 			condition{i.clusterVersionReady, 30 * time.Minute},
-			action(i.disableAlertManagerWarning),
-			action(i.disableUpdates),
-			action(i.disableSamples),
-			action(i.disableOperatorHubSources),
+			action(i.disableAlertManagerWarning), // TODO move into operator
+			action(i.disableUpdates),             // TODO move into operator
+			action(i.disableSamples),             // TODO move into operator
+			action(i.disableOperatorHubSources),  // TODO move into operator
 			action(i.updateRouterIP),
 			action(i.configureIngressCertificate),
 			condition{i.ingressControllerReady, 30 * time.Minute},
@@ -402,6 +402,11 @@ func (i *Installer) initializeKubernetesClients(ctx context.Context) error {
 	}
 
 	i.samplescli, err = samplesclient.NewForConfig(restConfig)
+	if err != nil {
+		return err
+	}
+
+	i.arocli, err = aroclient.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}

@@ -7,15 +7,11 @@ import (
 	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-)
 
-const (
-	LocalNamespace = "default"
+	"github.com/Azure/ARO-RP/operator/deploy"
 )
 
 var (
-	ReconcileResultRequeue = reconcile.Result{RequeueAfter: 2 * time.Minute, Requeue: true}
-	ReconcileResultError   = reconcile.Result{RequeueAfter: time.Minute, Requeue: true}
-	ReconcileResultIgnore  = reconcile.Result{Requeue: false}
-	ReconcileResultDone    = reconcile.Result{Requeue: false}
+	ReconcileResultRequeue = reconcile.Result{RequeueAfter: 5 * time.Minute, Requeue: true}
+	OperatorNamespace      = deploy.KubeNamespace
 )

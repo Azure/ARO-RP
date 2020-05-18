@@ -1,3 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openshift-azure-operator
+---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
@@ -6,12 +11,15 @@ metadata:
   creationTimestamp: null
   name: clusters.aro.openshift.io
 spec:
+  conversion:
+    strategy: None
   group: aro.openshift.io
   names:
     kind: Cluster
     listKind: ClusterList
     plural: clusters
     singular: cluster
+  preserveUnknownFields: true
   scope: Namespaced
   validation:
     openAPIV3Schema:
@@ -146,3 +154,79 @@ status:
     plural: ""
   conditions: []
   storedVersions: []
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: aro-operator
+  namespace: openshift-azure-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - namespaces
+  - serviceaccounts
+  verbs:
+  - create
+  - get
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps.v1
+  resources:
+  - daemonsets
+  verbs:
+  - create
+  - get
+  - patch
+  - update
+- apiGroups:
+  - aro.openshift.io
+  resources:
+  - clusters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - aro.openshift.io
+  resources:
+  - clusters/status
+  verbs:
+  - get
+  - patch
+  - update
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: manager-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: manager-role
+subjects:
+- kind: ServiceAccount
+  name: aro-operator
+  namespace: openshift-azure-operator

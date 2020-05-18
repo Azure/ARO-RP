@@ -13,10 +13,7 @@ import (
 	"time"
 
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
-)
-
-var (
-	gitCommit = "unknown"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 func usage() {
@@ -25,6 +22,7 @@ func usage() {
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s mirror\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s monitor\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s rp\n", os.Args[0])
+	fmt.Fprintf(flag.CommandLine.Output(), "  %s operator\n", os.Args[0])
 	flag.PrintDefaults()
 }
 
@@ -37,7 +35,7 @@ func main() {
 	ctx := context.Background()
 	log := utillog.GetLogger()
 
-	log.Printf("starting, git commit %s", gitCommit)
+	log.Printf("starting, git commit %s", version.GitCommit)
 
 	var err error
 	switch strings.ToLower(flag.Arg(0)) {
@@ -53,6 +51,9 @@ func main() {
 	case "deploy":
 		checkArgs(3)
 		err = deploy(ctx, log)
+	case "operator":
+		checkArgs(1)
+		err = operator(ctx, log)
 	default:
 		usage()
 		os.Exit(2)

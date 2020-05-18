@@ -7,6 +7,36 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
+  - ""
+  resources:
+  - configmaps
+  - namespaces
+  - serviceaccounts
+  verbs:
+  - create
+  - get
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - create
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - apps.v1
+  resources:
+  - daemonsets
+  verbs:
+  - create
+  - get
+  - patch
+  - update
+- apiGroups:
   - aro.openshift.io
   resources:
   - clusters
