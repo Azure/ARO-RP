@@ -230,7 +230,8 @@ func (i *Installer) runSteps(ctx context.Context, steps []interface{}) error {
 
 				wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 					err = step(ctx)
-					if azureerrors.HasAuthorizationFailedError(err) || azureerrors.HasLinkedAuthorizationFailedError(err) {
+					if azureerrors.HasAuthorizationFailedError(err) ||
+						azureerrors.HasLinkedAuthorizationFailedError(err) {
 						i.log.Print(err)
 						// https://github.com/Azure/ARO-RP/issues/541: it is unclear if this refresh helps or not
 						if development, ok := i.env.(env.Dev); ok {
@@ -455,7 +456,8 @@ func (i *Installer) deployARMTemplate(ctx context.Context, rg string, tName stri
 		err = i.deployments.Wait(ctx, rg, deploymentName)
 	}
 
-	if azureerrors.HasAuthorizationFailedError(err) {
+	if azureerrors.HasAuthorizationFailedError(err) ||
+		azureerrors.HasLinkedAuthorizationFailedError(err) {
 		return err
 	}
 

@@ -52,7 +52,8 @@ func (m *Manager) Create(ctx context.Context) error {
 		defer cancel()
 		wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 			err = m.ocDynamicValidator.Dynamic(ctx)
-			if azureerrors.HasAuthorizationFailedError(err) {
+			if azureerrors.HasAuthorizationFailedError(err) ||
+				azureerrors.HasLinkedAuthorizationFailedError(err) {
 				m.log.Print(err)
 				return false, nil
 			}
