@@ -149,6 +149,8 @@ func NewInstaller(ctx context.Context, log *logrus.Entry, _env env.Interface, db
 func (i *Installer) AdminUpgrade(ctx context.Context) error {
 	steps := []interface{}{
 		action(i.initializeKubernetesClients),
+		action(i.startVMs),
+		condition{i.apiServersReady, 30 * time.Minute},
 		action(i.ensureBillingRecord), // belt and braces
 		action(i.fixLBProbes),
 		action(i.fixPullSecret),
