@@ -22,8 +22,8 @@ type AroV1alpha1Client struct {
 	restClient rest.Interface
 }
 
-func (c *AroV1alpha1Client) Clusters(namespace string) ClusterInterface {
-	return newClusters(c, namespace)
+func (c *AroV1alpha1Client) Clusters() ClusterInterface {
+	return newClusters(c)
 }
 
 // NewForConfig creates a new AroV1alpha1Client for the given config.

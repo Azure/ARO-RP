@@ -11,16 +11,16 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 
 	aro "github.com/Azure/ARO-RP/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/util/aro-operator-client/clientset/versioned/typed/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 type StatusReporter struct {
 	arocli aroclient.AroV1alpha1Interface
-	name   types.NamespacedName
+	name   string
 	log    *logrus.Entry
 }
 
@@ -35,11 +35,11 @@ var (
 	}
 )
 
-func NewStatusReporter(log *logrus.Entry, arocli aroclient.AroV1alpha1Interface, namespace, name string) *StatusReporter {
+func NewStatusReporter(log *logrus.Entry, arocli aroclient.AroV1alpha1Interface, name string) *StatusReporter {
 	return &StatusReporter{
 		log:    log.WithField("manager", "StatusReporter"),
 		arocli: arocli,
-		name:   types.NamespacedName{Name: name, Namespace: namespace},
+		name:   name,
 	}
 }
 
@@ -50,7 +50,7 @@ func (r *StatusReporter) SetNoInternetConnection(ctx context.Context, connection
 		msg += ": " + connectionErr.Error()
 	}
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		co, err := r.arocli.Clusters(r.name.Namespace).Get(r.name.Name, v1.GetOptions{})
+		co, err := r.arocli.Clusters().Get(r.name, v1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -61,11 +61,10 @@ func (r *StatusReporter) SetNoInternetConnection(ctx context.Context, connection
 			Message:            msg,
 			Reason:             "CheckFailed",
 			LastTransitionTime: time})
-		if len(co.Status.RelatedObjects) == 0 {
-			co.Status.RelatedObjects = newRelatedObjects(r.name.Namespace)
-		}
 
-		_, err = r.arocli.Clusters(r.name.Namespace).Update(co)
+		setStaticStatus(&co.Status)
+
+		_, err = r.arocli.Clusters().UpdateStatus(co)
 		return err
 	})
 }
@@ -73,7 +72,7 @@ func (r *StatusReporter) SetNoInternetConnection(ctx context.Context, connection
 func (r *StatusReporter) SetInternetConnected(ctx context.Context) error {
 	time := metav1.Now()
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		co, err := r.arocli.Clusters(r.name.Namespace).Get(r.name.Name, v1.GetOptions{})
+		co, err := r.arocli.Clusters().Get(r.name, v1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -84,18 +83,20 @@ func (r *StatusReporter) SetInternetConnected(ctx context.Context) error {
 			Message:            "Outgoing connection successful.",
 			Reason:             "CheckDone",
 			LastTransitionTime: time})
-		if len(co.Status.RelatedObjects) == 0 {
-			co.Status.RelatedObjects = newRelatedObjects(r.name.Namespace)
-		}
 
-		_, err = r.arocli.Clusters(r.name.Namespace).Update(co)
+		setStaticStatus(&co.Status)
+
+		_, err = r.arocli.Clusters().UpdateStatus(co)
 		return err
 	})
 }
 
-func newRelatedObjects(namespace string) []corev1.ObjectReference {
-	return []corev1.ObjectReference{
-		{Kind: "Namespace", Name: namespace},
-		{Kind: "Secret", Name: "pull-secret", Namespace: "openshift-config"},
+func setStaticStatus(status *aro.ClusterStatus) {
+	if len(status.RelatedObjects) == 0 {
+		status.RelatedObjects = []corev1.ObjectReference{
+			{Kind: "Namespace", Name: OperatorNamespace},
+			{Kind: "Secret", Name: "pull-secret", Namespace: "openshift-config"},
+		}
 	}
+	status.OperatorVersion = version.GitCommit
 }

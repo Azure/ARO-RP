@@ -34,13 +34,13 @@ type GenevaloggingReconciler struct {
 // +kubebuilder:rbac:groups="",resources=namespaces;serviceaccounts;configmaps,verbs=get;create;update
 
 func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
-	if request.Name != aro.SingletonClusterName || request.Namespace != OperatorNamespace {
+	if request.Name != aro.SingletonClusterName {
 		return reconcile.Result{}, nil
 	}
 	r.Log.Info("Reconsiling genevalogging deployment")
 
 	ctx := context.TODO()
-	instance, err := r.AROCli.Clusters(request.Namespace).Get(request.Name, v1.GetOptions{})
+	instance, err := r.AROCli.Clusters().Get(request.Name, v1.GetOptions{})
 	if err != nil {
 		// Error reading the object or not found - requeue the request.
 		return reconcile.Result{}, err
