@@ -5,6 +5,9 @@ trigger: none
 parameters:
 - name: vsoConfigBuildID
 - name: vsoDeployerBuildID
+- name: fullDeploy
+  type: boolean
+  default: false
 
 stages:
 - stage: Deploy_LowTrafficSector
@@ -27,6 +30,7 @@ stages:
       e2eSubscription: $(e2e-subscription)
       billingE2EPipelineName: $(billing-e2e-pipeline-name)
       billingE2EBranchName: $(billing-e2e-branch-name)
+      fullDeploy: ${{ parameters.fullDeploy }}
 - stage: Deploy_USSector
   condition: succeededOrFailed()
   dependsOn: [Deploy_LowTrafficSector]
@@ -51,6 +55,7 @@ stages:
       e2eSubscription: $(e2e-subscription)
       billingE2EPipelineName: $(billing-e2e-pipeline-name)
       billingE2EBranchName: $(billing-e2e-branch-name)
+      fullDeploy: ${{ parameters.fullDeploy }}
 - stage: Deploy_EuropeSector
   dependsOn: [Deploy_USSector]
   condition: succeededOrFailed()
@@ -73,6 +78,7 @@ stages:
       e2eSubscription: $(e2e-subscription)
       billingE2EPipelineName: $(billing-e2e-pipeline-name)
       billingE2EBranchName: $(billing-e2e-branch-name)
+      fullDeploy: ${{ parameters.fullDeploy }}
 - stage: Deploy_ROWSector
   dependsOn: [Deploy_EuropeSector]
   condition: succeededOrFailed()
@@ -96,3 +102,4 @@ stages:
       e2eSubscription: $(e2e-subscription)
       billingE2EPipelineName: $(billing-e2e-pipeline-name)
       billingE2EBranchName: $(billing-e2e-branch-name)
+      fullDeploy: ${{ parameters.fullDeploy }}

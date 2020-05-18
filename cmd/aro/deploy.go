@@ -37,24 +37,17 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	deployer, err := deployer.New(ctx, log, config, deployVersion)
+	deployer, err := deployer.New(ctx, log, config, deployVersion, os.Getenv("FULL_DEPLOY") != "")
 	if err != nil {
 		return err
 	}
 
-	rpServicePrincipalID, err := deployer.PreDeploy(ctx)
+	err = deployer.PreDeploy(ctx)
 	if err != nil {
 		return err
 	}
 
-	// if pre-deploy is set, we terminate early. This is so we could populate
-	// vault and other configurations, required for main deployment. This is usually
-	// day 1 deployment setting only
-	if os.Getenv("RP_PREDEPLOY_ONLY") != "" {
-		return nil
-	}
-
-	err = deployer.Deploy(ctx, rpServicePrincipalID)
+	err = deployer.Deploy(ctx)
 	if err != nil {
 		return err
 	}

@@ -104,6 +104,21 @@ func (m *MockZonesClient) EXPECT() *MockZonesClientMockRecorder {
 	return m.recorder
 }
 
+// Get mocks base method
+func (m *MockZonesClient) Get(arg0 context.Context, arg1, arg2 string) (dns.Zone, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2)
+	ret0, _ := ret[0].(dns.Zone)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get
+func (mr *MockZonesClientMockRecorder) Get(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockZonesClient)(nil).Get), arg0, arg1, arg2)
+}
+
 // ListByResourceGroup mocks base method
 func (m *MockZonesClient) ListByResourceGroup(arg0 context.Context, arg1 string, arg2 *int32) ([]dns.Zone, error) {
 	m.ctrl.T.Helper()

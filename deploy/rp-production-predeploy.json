@@ -45,6 +45,10 @@
         "fpServicePrincipalId": {
             "type": "string"
         },
+        "fullDeploy": {
+            "type": "bool",
+            "defaultValue": false
+        },
         "keyvaultPrefix": {
             "type": "string",
             "maxLength": 20
@@ -119,6 +123,7 @@
             "tags": {
                 "vault": "clusters"
             },
+            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2016-10-01"
         },
         {
@@ -137,6 +142,7 @@
             "tags": {
                 "vault": "service"
             },
+            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2016-10-01"
         }
     ]

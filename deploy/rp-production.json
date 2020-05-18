@@ -24,6 +24,10 @@
         "fpServicePrincipalId": {
             "type": "string"
         },
+        "fullDeploy": {
+            "type": "bool",
+            "defaultValue": false
+        },
         "mdmFrontendUrl": {
             "type": "string"
         },
@@ -64,6 +68,7 @@
             "name": "rp-pip",
             "type": "Microsoft.Network/publicIPAddresses",
             "location": "[resourceGroup().location]",
+            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2019-07-01"
         },
         {
@@ -122,6 +127,7 @@
             "name": "rp-lb",
             "type": "Microsoft.Network/loadBalancers",
             "location": "[resourceGroup().location]",
+            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2019-07-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip')]"
@@ -272,6 +278,7 @@
             "name": "rp-availability-alert",
             "type": "Microsoft.Insights/metricAlerts",
             "location": "global",
+            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2018-03-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]"
@@ -314,6 +321,7 @@
             "name": "rp-degraded-alert",
             "type": "Microsoft.Insights/metricAlerts",
             "location": "global",
+            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2018-03-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]"
@@ -356,6 +364,7 @@
             "name": "rp-vnet-alert",
             "type": "Microsoft.Insights/metricAlerts",
             "location": "global",
+            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2018-03-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]"
@@ -366,6 +375,7 @@
             "name": "[parameters('domainName')]",
             "type": "Microsoft.Network/dnsZones",
             "location": "global",
+            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2018-05-01"
         },
         {
@@ -405,6 +415,7 @@
             "name": "rp-vnet",
             "type": "Microsoft.Network/virtualNetworks",
             "location": "[resourceGroup().location]",
+            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2019-07-01"
         },
         {
@@ -431,6 +442,7 @@
             "name": "rp-pe-vnet-001",
             "type": "Microsoft.Network/virtualNetworks",
             "location": "[resourceGroup().location]",
+            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2019-07-01"
         },
         {
@@ -445,6 +457,7 @@
             },
             "name": "rp-vnet/peering-rp-pe-vnet-001",
             "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2019-07-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]",
@@ -464,6 +477,7 @@
             },
             "name": "rp-pe-vnet-001/peering-rp-vnet",
             "type": "Microsoft.Network/virtualNetworks/virtualNetworkPeerings",
+            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2019-07-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/virtualNetworks', 'rp-pe-vnet-001')]",
@@ -498,6 +512,7 @@
             "tags": {
                 "defaultExperience": "Core (SQL)"
             },
+            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2019-08-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]"
@@ -515,6 +530,7 @@
             "name": "[concat(parameters('databaseAccountName'), '/', 'ARO')]",
             "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
             "location": "[resourceGroup().location]",
+            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2019-08-01",
             "dependsOn": [
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
@@ -537,6 +553,7 @@
             "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/AsyncOperations')]",
             "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
             "location": "[resourceGroup().location]",
+            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2019-08-01",
             "dependsOn": [
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
@@ -559,6 +576,7 @@
             "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Billing')]",
             "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
             "location": "[resourceGroup().location]",
+            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2019-08-01",
             "dependsOn": [
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
@@ -582,6 +600,7 @@
             "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Monitors')]",
             "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
             "location": "[resourceGroup().location]",
+            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2019-08-01",
             "dependsOn": [
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
@@ -623,6 +642,7 @@
             "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/OpenShiftClusters')]",
             "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
             "location": "[resourceGroup().location]",
+            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2019-08-01",
             "dependsOn": [
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
@@ -645,6 +665,7 @@
             "name": "[concat(parameters('databaseAccountName'), '/', 'ARO', '/Subscriptions')]",
             "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
             "location": "[resourceGroup().location]",
+            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2019-08-01",
             "dependsOn": [
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), 'ARO')]",
@@ -660,6 +681,7 @@
                 "principalId": "[parameters('rpServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
+            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2018-09-01-preview"
         },
         {
@@ -671,6 +693,7 @@
                 "principalId": "[parameters('fpServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
+            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2018-09-01-preview"
         },
         {
@@ -682,6 +705,7 @@
                 "principalId": "[parameters('rpServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
+            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2018-09-01-preview",
             "dependsOn": [
                 "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"
@@ -696,20 +720,11 @@
                 "principalId": "[parameters('fpServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
+            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2018-09-01-preview",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]"
             ]
         }
-    ],
-    "outputs": {
-        "rp-nameServers": {
-            "type": "array",
-            "value": "[reference(resourceId('Microsoft.Network/dnsZones', parameters('domainName')), '2018-05-01').nameServers]"
-        },
-        "rp-pip-ipAddress": {
-            "type": "string",
-            "value": "[reference(resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip'), '2019-07-01').ipAddress]"
-        }
-    }
+    ]
 }
