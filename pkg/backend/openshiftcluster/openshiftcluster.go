@@ -71,6 +71,11 @@ func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClus
 		}
 	}
 
+	ocDynamicValidator, err := validate.NewOpenShiftClusterDynamicValidator(log, _env, doc.OpenShiftCluster)
+	if err != nil {
+		return nil, err
+	}
+
 	m := &Manager{
 		log:          log,
 		env:          _env,
@@ -78,7 +83,7 @@ func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClus
 		billing:      billing,
 		fpAuthorizer: fpAuthorizer,
 
-		ocDynamicValidator: validate.NewOpenShiftClusterDynamicValidator(log, _env),
+		ocDynamicValidator: ocDynamicValidator,
 
 		groups: features.NewResourceGroupsClient(r.SubscriptionID, fpAuthorizer),
 

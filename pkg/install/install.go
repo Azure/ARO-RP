@@ -41,6 +41,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
+	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
@@ -171,6 +172,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			action(func(ctx context.Context) error {
 				return i.deployStorageTemplate(ctx, installConfig, platformCreds, image)
 			}),
+			action(i.attachNSGsAndPatch),
 			action(i.ensureBillingRecord),
 			action(i.deployResourceTemplate),
 			action(i.createPrivateEndpoint),
@@ -221,10 +223,35 @@ func (i *Installer) runSteps(ctx context.Context, steps []interface{}) error {
 		switch step := step.(type) {
 		case action:
 			i.log.Printf("running step %s", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name())
-			err = step(ctx)
+
+			func() {
+				timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+				defer cancel()
+
+				wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+					err = step(ctx)
+					if azureerrors.HasAuthorizationFailedError(err) ||
+						azureerrors.HasLinkedAuthorizationFailedError(err) {
+						i.log.Print(err)
+						// https://github.com/Azure/ARO-RP/issues/541: it is unclear if this refresh helps or not
+						if development, ok := i.env.(env.Dev); ok {
+							err = development.RefreshFPAuthorizer(ctx, i.fpAuthorizer)
+							if err != nil {
+								return false, err
+							}
+						}
+						return false, nil
+					}
+					return err == nil, err
+				}, timeoutCtx.Done())
+			}()
+
 			if err != nil {
 				i.gatherFailureLogs(ctx)
-				return fmt.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name(), err)
+				if _, ok := err.(*api.CloudError); !ok {
+					err = fmt.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name(), err)
+				}
+				return err
 			}
 
 		case condition:
@@ -236,7 +263,10 @@ func (i *Installer) runSteps(ctx context.Context, steps []interface{}) error {
 			}()
 			if err != nil {
 				i.gatherFailureLogs(ctx)
-				return fmt.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(step.f).Pointer()).Name(), err)
+				if _, ok := err.(*api.CloudError); !ok {
+					err = fmt.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name(), err)
+				}
+				return err
 			}
 
 		default:
@@ -411,42 +441,25 @@ func (i *Installer) initializeKubernetesClients(ctx context.Context) error {
 }
 
 func (i *Installer) deployARMTemplate(ctx context.Context, rg string, tName string, t *arm.Template, params map[string]interface{}) error {
-	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
-	defer cancel()
+	i.log.Printf("deploying %s template", tName)
 
-	err := wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-		i.log.Printf("deploying %s template", tName)
+	err := i.deployments.CreateOrUpdateAndWait(ctx, rg, deploymentName, mgmtfeatures.Deployment{
+		Properties: &mgmtfeatures.DeploymentProperties{
+			Template:   t,
+			Parameters: params,
+			Mode:       mgmtfeatures.Incremental,
+		},
+	})
 
-		err := i.deployments.CreateOrUpdateAndWait(ctx, rg, deploymentName, mgmtfeatures.Deployment{
-			Properties: &mgmtfeatures.DeploymentProperties{
-				Template:   t,
-				Parameters: params,
-				Mode:       mgmtfeatures.Incremental,
-			},
-		})
+	if azureerrors.IsDeploymentActiveError(err) {
+		i.log.Printf("waiting for %s template to be deployed", tName)
+		err = i.deployments.Wait(ctx, rg, deploymentName)
+	}
 
-		if isDeploymentActiveError(err) {
-			i.log.Printf("waiting for %s template to be deployed", tName)
-			err = i.deployments.Wait(ctx, rg, deploymentName)
-		}
-
-		if hasAuthorizationFailedError(err) {
-			i.log.Print(err)
-
-			// https://github.com/Azure/ARO-RP/issues/541: it is unclear if
-			// this refresh helps or not
-			if development, ok := i.env.(env.Dev); ok {
-				err = development.RefreshFPAuthorizer(ctx, i.fpAuthorizer)
-				if err != nil {
-					return false, err
-				}
-			}
-
-			return false, nil
-		}
-
-		return err == nil, err
-	}, timeoutCtx.Done())
+	if azureerrors.HasAuthorizationFailedError(err) ||
+		azureerrors.HasLinkedAuthorizationFailedError(err) {
+		return err
+	}
 
 	serviceErr, _ := err.(*azure.ServiceError) // futures return *azure.ServiceError directly
 

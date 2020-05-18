@@ -14,6 +14,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -28,10 +29,12 @@ import (
 	"github.com/openshift/installer/pkg/types/validation"
 	"golang.org/x/crypto/ssh"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/install"
+	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
@@ -45,7 +48,17 @@ func (m *Manager) Create(ctx context.Context) error {
 		// we don't re-call Dynamic on subsequent entries here.  One reason is
 		// that we would re-check quota *after* we had deployed our VMs, and
 		// could fail with a false positive.
-		err = m.ocDynamicValidator.Dynamic(ctx, m.doc.OpenShiftCluster)
+		timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+		defer cancel()
+		wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+			err = m.ocDynamicValidator.Dynamic(ctx)
+			if azureerrors.HasAuthorizationFailedError(err) ||
+				azureerrors.HasLinkedAuthorizationFailedError(err) {
+				m.log.Print(err)
+				return false, nil
+			}
+			return err == nil, err
+		}, timeoutCtx.Done())
 		if err != nil {
 			return err
 		}

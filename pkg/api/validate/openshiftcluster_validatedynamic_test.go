@@ -25,8 +25,6 @@ func TestValidateProviders(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	dv := &openShiftClusterDynamicValidator{}
-
 	for _, tt := range []struct {
 		name    string
 		mocks   func(*mockfeatures.MockProvidersClient)
@@ -144,7 +142,11 @@ func TestValidateProviders(t *testing.T) {
 
 			tt.mocks(providerClient)
 
-			err := dv.validateProviders(ctx, providerClient)
+			dv := &openShiftClusterDynamicValidator{
+				spProviders: providerClient,
+			}
+
+			err := dv.validateProviders(ctx)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
@@ -163,8 +165,6 @@ func TestValidateVnet(t *testing.T) {
 	subnetName := "testSubnet"
 	vnetName := "testVnet"
 	validSubnet := fmt.Sprintf("/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/%s/subnet/%s", resourceGroup, vnetName, subnetName)
-
-	dv := &openShiftClusterDynamicValidator{}
 
 	for _, tt := range []struct {
 		name    string
@@ -252,7 +252,12 @@ func TestValidateVnet(t *testing.T) {
 				tt.mocks(networkClient)
 			}
 
-			err := dv.validateVnet(ctx, networkClient, tt.oc)
+			dv := &openShiftClusterDynamicValidator{
+				oc:                tt.oc,
+				spVirtualNetworks: networkClient,
+			}
+
+			err := dv.validateVnet(ctx)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
