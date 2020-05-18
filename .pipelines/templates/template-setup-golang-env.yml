@@ -5,6 +5,10 @@ parameters:
   modulePath: ''
 steps:
 - script: |
+    echo 'Available GOROOTs'
+    ls -d /usr/local/go*
+    echo 'Selected go version'
+    go version
     set -e
     mkdir -p '${{ parameters.modulePath }}'
     set +e
