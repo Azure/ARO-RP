@@ -1,10 +1,12 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the Apache License 2.0.
 
-import unittest, mock
-from azure.cli.command_modules.aro.custom import generate_random_id
+import unittest
+import mock
+from azext_aro.custom import generate_random_id
 
-@mock.patch('azure.cli.command_modules.aro.custom.random.choice', return_value='r')
+
+@mock.patch('azext_aro.custom.random.choice', return_value='r')
 class TestGenerateRandomIdHelper(unittest.TestCase):
     def test_random_id_length(self, mock_random_id):
         random_id = generate_random_id()
