@@ -3,9 +3,12 @@ parameters:
   azureDevOpsJSONSPN: ''
 steps:
 - script: |
+    set -x
     cd ${{ parameters.workingDirectory }}
 
+    set +x
     . secrets/env
+    set -x
     . ./hack/e2e/run-rp-and-e2e.sh
 
     set_cli_context

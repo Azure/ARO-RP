@@ -2,9 +2,12 @@ parameters:
   workingDirectory: ''
 steps:
 - script: |
+    set -x
     cd ${{ parameters.workingDirectory }}
 
+    set +x
     . secrets/env
+    set -x
     . ./hack/e2e/run-rp-and-e2e.sh
 
     export DATABASE_NAME=v4-e2e-V$BUILD_BUILDID

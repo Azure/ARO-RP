@@ -22,33 +22,38 @@ steps:
     workingDirectory: ${{ parameters.workingDirectory }}
     azureDevOpsJSONSPN: ${{ parameters.azureDevOpsE2EJSONSPN }}
 - script: |
-    set -e
+    set -ex
     cd ${{ parameters.workingDirectory }}
 
     export LOCATION=${{ parameters.location }}
     export AZURE_SUBSCRIPTION_ID=${{ parameters.subscription }}
 
+    set +x
     echo ${{ parameters.azureDevOpsE2EJSONSPN }} | base64 -d -w 0 > devops-spn.json
     export AZURE_CLIENT_ID=$(cat devops-spn.json | jq -r '.clientId')
     export AZURE_CLIENT_SECRET=$(cat devops-spn.json | jq -r '.clientSecret')
     export AZURE_TENANT_ID=$(cat devops-spn.json | jq -r '.tenantId')
     rm devops-spn.json
+    set -x
     . ./hack/e2e/run-rp-and-e2e.sh
 
     deploy_e2e_deps
     run_e2e
   displayName: 🚀 Run ${{ parameters.location }} E2E
 - script: |
+    set -x
     cd ${{ parameters.workingDirectory }}
 
     export LOCATION=${{ parameters.location }}
     export AZURE_SUBSCRIPTION_ID=${{ parameters.subscription }}
 
+    set +x
     echo ${{ parameters.azureDevOpsE2EJSONSPN }} | base64 -d -w 0 > devops-spn.json
     export AZURE_CLIENT_ID=$(cat devops-spn.json | jq -r '.clientId')
     export AZURE_CLIENT_SECRET=$(cat devops-spn.json | jq -r '.clientSecret')
     export AZURE_TENANT_ID=$(cat devops-spn.json | jq -r '.tenantId')
     rm devops-spn.json
+    set -x
     . ./hack/e2e/run-rp-and-e2e.sh
 
     clean_e2e

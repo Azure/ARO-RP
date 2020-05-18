@@ -8,14 +8,16 @@ parameters:
   fullDeploy: ''
 steps:
 - script: |
-    set -eu
+    set -eux
     cd ${{ parameters.workingDirectory }}
 
+    set +x
     echo ${{ parameters.azureDevOpsJSONSPN }} | base64 -d -w 0 > devops-spn.json
     export AZURE_SUBSCRIPTION_ID="${{ parameters.subscriptionId }}"
     export AZURE_CLIENT_ID=$(cat devops-spn.json | jq -r '.clientId')
     export AZURE_CLIENT_SECRET=$(cat devops-spn.json | jq -r '.clientSecret')
     export AZURE_TENANT_ID=$(cat devops-spn.json | jq -r '.tenantId')
+    set -x
     rm devops-spn.json
 
     if [[ "${{ parameters.fullDeploy }}" == "true" ]]; then
