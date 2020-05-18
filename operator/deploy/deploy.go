@@ -119,19 +119,19 @@ func (o *operator) aroOperatorImage() string {
 }
 
 func (o *operator) applyClusterCR(cluster *aro.Cluster) error {
-	_, err := o.arocli.Clusters(KubeNamespace).Create(cluster)
+	_, err := o.arocli.Clusters().Create(cluster)
 	if !apierrors.IsAlreadyExists(err) {
 		return err
 	}
 
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		_c, err := o.arocli.Clusters(KubeNamespace).Get(cluster.Name, metav1.GetOptions{})
+		_c, err := o.arocli.Clusters().Get(cluster.Name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
 
 		cluster.ResourceVersion = _c.ResourceVersion
-		_, err = o.arocli.Clusters(KubeNamespace).Update(cluster)
+		_, err = o.arocli.Clusters().Update(cluster)
 		return err
 	})
 }
@@ -344,8 +344,7 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 
 	return o.applyClusterCR(&aro.Cluster{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cluster",
-			Namespace: KubeNamespace,
+			Name: "cluster",
 		},
 		Spec: aro.ClusterSpec{
 			ResourceID:    o.resourceID,

@@ -29,7 +29,7 @@ type InternetChecker struct {
 // +kubebuilder:rbac:groups=aro.openshift.io,resources=clusters/status,verbs=get;update;patch
 
 func (r *InternetChecker) Reconcile(request ctrl.Request) (ctrl.Result, error) {
-	if request.Name != aro.SingletonClusterName || request.Namespace != OperatorNamespace {
+	if request.Name != aro.SingletonClusterName {
 		return reconcile.Result{}, nil
 	}
 	r.Log.Info("Polling outgoing internet connection")
@@ -44,7 +44,7 @@ func (r *InternetChecker) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	req.Header.Set("Content-Type", "application/json")
 
 	ctx := context.TODO()
-	sr := NewStatusReporter(r.Log, r.AROCli, request.Namespace, request.Name)
+	sr := NewStatusReporter(r.Log, r.AROCli, request.Name)
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	r.Log.Infof("response code %v, err %v", resp.Status, err)
