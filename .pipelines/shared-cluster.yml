@@ -12,7 +12,9 @@ schedules:
 
 variables:
   LOCATION: eastus
-  CLUSTER: aro-v4-shared
+  RESOURCEGROUP: v4-eastus
+  CLUSTER: aro-shared
+  VNET: dev-vnet
 
 jobs:
 - job: ⏬ Tear down shared cluster
@@ -25,12 +27,12 @@ jobs:
   steps:
   - template: ./templates/template-az-cli-login.yml
     parameters:
-      workingDirectory: /
+      workingDirectory: /tmp
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
   - template: ./templates/template-az-aro-extension-prod.yml
   - displayName: 🧹 Delete cluster
     script: |
-      az aro delete --yes --resource-group "$CLUSTER" --name "$CLUSTER"
+      az aro delete --yes --resource-group "$RESOURCEGROUP" --name "$CLUSTER"
 
 - job: ⏫ Set up shared cluster
   pool:
@@ -45,44 +47,34 @@ jobs:
       workingDirectory: /
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
   - template: ./templates/template-az-aro-extension-prod.yml
-  - displayName: 🚀 Create RG
-    script: |
-      az group create --name "$CLUSTER" --location "$LOCATION"
-  - displayName: 🚀 Create VNet
-    script: |
-      az network vnet create \
-        --resource-group "$CLUSTER" \
-        --name vnet \
-        --address-prefixes 10.0.0.0/9
-  - displayName: 🚀 Create subnets
-    condition: succeededOrFailed()
+  - displayName: 🚀 Create/update subnets
     script: |
       az network vnet subnet create \
-        --resource-group "$CLUSTER" \
-        --vnet-name vnet \
-        --name master-subnet \
-        --address-prefixes 10.0.0.0/23 \
+        --resource-group "$RESOURCEGROUP" \
+        --vnet-name "$VNET" \
+        --name "$CLUSTER-master" \
+        --address-prefixes 10.200.0.0/24 \
         --service-endpoints Microsoft.ContainerRegistry
       az network vnet subnet create \
-        --resource-group "$CLUSTER" \
-        --vnet-name vnet \
-        --name worker-subnet \
-        --address-prefixes 10.0.2.0/23 \
+        --resource-group "$RESOURCEGROUP" \
+        --vnet-name "$VNET" \
+        --name "$CLUSTER-worker" \
+        --address-prefixes 10.201.0.0/24 \
         --service-endpoints Microsoft.ContainerRegistry
       az network vnet subnet update \
-        --name master-subnet \
-        --resource-group "$CLUSTER" \
-        --vnet-name vnet \
+        --name "$CLUSTER-master" \
+        --resource-group "$RESOURCEGROUP" \
+        --vnet-name "$VNET" \
         --disable-private-link-service-network-policies true
   - displayName: 🚀 Create cluster
     env:
       USER_PULL_SECRET: $(aro-v4-e2e-pull-secret)
     script: |
       az aro create \
-        --resource-group "$CLUSTER" \
+        --resource-group "$RESOURCEGROUP" \
         --name "$CLUSTER" \
         --cluster-resource-group "$CLUSTER-cluster" \
-        --vnet vnet \
-        --master-subnet master-subnet \
-        --worker-subnet worker-subnet \
+        --vnet "$VNET" \
+        --master-subnet "$CLUSTER-master" \
+        --worker-subnet "$CLUSTER-worker" \
         --pull-secret "$(echo $USER_PULL_SECRET | jq -c)"
