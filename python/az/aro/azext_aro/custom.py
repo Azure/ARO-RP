@@ -169,7 +169,7 @@ def rp_mode_development():
 
 
 def generate_random_id():
-    random_id = (''.join(random.choice('abcdefghijklmnopqrstuvwxyz')) +
+    random_id = (random.choice('abcdefghijklmnopqrstuvwxyz') +
                  ''.join(random.choice('abcdefghijklmnopqrstuvwxyz1234567890')
                          for _ in range(7)))
     return random_id
