@@ -1,5 +1,5 @@
 variables:
   GOBIN: $(GOPATH)/bin   # Go binaries path
-  GOROOT: /usr/local/go1.13.10   # Go installation path
+  GOROOT: /usr/local/go1.13   # Go installation path
   GOPATH: $(system.defaultWorkingDirectory)/gopath   # Go workspace path
   modulePath: $(GOPATH)/src/github.com/Azure/ARO-RP   # Path to the module's code
