@@ -3,8 +3,58 @@ package version
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-const (
-	OpenShiftVersion    = "4.3.18"
-	OpenShiftPullSpec   = "quay.io/openshift-release-dev/ocp-release@sha256:1f0fd38ac0640646ab8e7fec6821c8928341ad93ac5ca3a48c513ab1fb63bc4b"
-	OpenShiftMustGather = "quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:2e10ad0fc17f39c7a83aac32a725c78d7dd39cd9bbe3ec5ca0b76dcaa98416fa"
+import (
+	"fmt"
+	"regexp"
+	"strconv"
 )
+
+var rxVersion = regexp.MustCompile(`^(\d+)\.(\d+)\.(\d+)(.*)`)
+
+type Version struct {
+	V      [3]byte
+	Suffix string
+}
+
+func NewVersion(vs ...byte) *Version {
+	v := &Version{}
+
+	copy(v.V[:], vs)
+
+	return v
+}
+
+func ParseVersion(vsn string) (*Version, error) {
+	m := rxVersion.FindStringSubmatch(vsn)
+	if m == nil {
+		return nil, fmt.Errorf("could not parse version %q", vsn)
+	}
+
+	v := &Version{
+		Suffix: m[4],
+	}
+
+	for i := 0; i < 3; i++ {
+		b, err := strconv.ParseUint(m[i+1], 10, 8)
+		if err != nil {
+			return nil, err
+		}
+
+		v.V[i] = byte(b)
+	}
+
+	return v, nil
+}
+
+func (v *Version) Lt(w *Version) bool {
+	for i := 0; i < 3; i++ {
+		switch {
+		case v.V[i] < w.V[i]:
+			return true
+		case v.V[i] > w.V[i]:
+			return false
+		}
+	}
+
+	return false
+}
