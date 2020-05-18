@@ -16,10 +16,12 @@ var (
 )
 
 type GenevaLoggingSpec struct {
-	Namespace                string `json:"namespace,omitempty"`
-	ConfigVersion            string `json:"configVersion,omitempty"`
-	MonitoringTenant         string `json:"monitoringTenant,omitempty"`
-	MonitoringGCSRegion      string `json:"monitoringGCSRegion,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
+	// +kubebuilder:validation:Pattern:=`[0-9]+.[0-9]+`
+	ConfigVersion       string `json:"configVersion,omitempty"`
+	MonitoringTenant    string `json:"monitoringTenant,omitempty"`
+	MonitoringGCSRegion string `json:"monitoringGCSRegion,omitempty"`
+	// +kubebuilder:validation:Enum=DiagnosticsProd;Test
 	MonitoringGCSEnvironment string `json:"monitoringGCSEnvironment,omitempty"`
 }
 
@@ -33,15 +35,19 @@ type ClusterSpec struct {
 
 // ClusterStatus defines the observed state of Cluster
 type ClusterStatus struct {
+	OperatorVersion string            `json:"operatorVersion,omitempty"`
 	Conditions     status.Conditions        `json:"conditions,omitempty"`
 	RelatedObjects []corev1.ObjectReference `json:"relatedObjects,omitempty"`
 }
 
 // +kubebuilder:object:root=true
+// +genclient
+// +genclient:nonNamespaced
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:scope=Cluster
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // Cluster is the Schema for the clusters API
-// +genclient
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 type Cluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

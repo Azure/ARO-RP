@@ -17,7 +17,9 @@ spec:
     listKind: ClusterList
     plural: clusters
     singular: cluster
-  scope: Namespaced
+  scope: Cluster
+  subresources:
+    status: {}
   validation:
     openAPIV3Schema:
       description: Cluster is the Schema for the clusters API
@@ -42,8 +44,12 @@ spec:
             genevaLogging:
               properties:
                 configVersion:
+                  pattern: '[0-9]+.[0-9]+'
                   type: string
                 monitoringGCSEnvironment:
+                  enum:
+                  - DiagnosticsProd
+                  - Test
                   type: string
                 monitoringGCSRegion:
                   type: string
