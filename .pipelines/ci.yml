@@ -25,6 +25,9 @@ jobs:
       goroot: ${{ variables.GOROOT }}
       modulePath: ${{ variables.modulePath }}
   - script: |
+      echo $USEPYTHONVERSION_PYTHONLOCATION
+      sudo apt-get install tree
+      tree $USEPYTHONVERSION_PYTHONLOCATION
       set -xe
       sudo ln -s $USEPYTHONVERSION_PYTHONLOCATION/bin/python$(python.version) /usr/bin/python$(python.version) || true
       pip install virtualenv
