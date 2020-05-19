@@ -445,6 +445,14 @@
   version = "v4.6.0"
 
 [[projects]]
+  digest = "1:bde2a1ce1de28312f165a88926c12f4acd19dc4d7da96a445dfa5a29eae07a93"
+  name = "github.com/fatih/color"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "daf2830f2741ebb735b21709a520c5f37d642d85"
+  version = "v1.9.0"
+
+[[projects]]
   digest = "1:2cd7915ab26ede7d95b8749e6b1f933f1c6d5398030684e6505940a10f31cfda"
   name = "github.com/ghodss/yaml"
   packages = ["."]
@@ -470,14 +478,6 @@
   pruneopts = "UT"
   revision = "9fb12b3b21c5415d16ac18dc5cd42c1cfdd40c4e"
   version = "v0.1.0"
-
-[[projects]]
-  digest = "1:d81dfed1aa731d8e4a45d87154ec15ef18da2aa80fa9a2f95bec38577a244a99"
-  name = "github.com/go-logr/zapr"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "03f06a783fbb7dfaf3f629c7825480e43a7105e6"
-  version = "v0.1.1"
 
 [[projects]]
   digest = "1:ed15647db08b6d63666bf9755d337725960c302bbfa5e23754b4b915a4797e42"
@@ -510,6 +510,14 @@
   pruneopts = "UT"
   revision = "8a84ec635f1b280a7062edeab609f0667a053248"
   version = "v0.19.6"
+
+[[projects]]
+  digest = "1:eec9b9a9f07a9b0de09431545481e22c233181b1af40170d0bc1f50b83690738"
+  name = "github.com/gobuffalo/flect"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "7a04ff140e0fd2ea77adfd5b8bd2b0c80ab739a9"
+  version = "v0.2.1"
 
 [[projects]]
   digest = "1:582e25eccee928dc12416ea4c23b6dae8f3b5687730632aa1473ebebe80a2359"
@@ -675,6 +683,14 @@
   pruneopts = "UT"
   revision = "1afb36080aec31e0d1528973ebe6721b191b0369"
   version = "v0.3.8"
+
+[[projects]]
+  digest = "1:870d441fe217b8e689d7949fef6e43efbc787e50f200cb1e70dbca9204a1d6be"
+  name = "github.com/inconshreveable/mousetrap"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75"
+  version = "v1.0"
 
 [[projects]]
   branch = "master"
@@ -891,13 +907,11 @@
   version = "v1.10.3"
 
 [[projects]]
-  digest = "1:efc62d2e73d79a07c5d0cd8e11258123a4bb042a83b6a07feb3dea8d75fe997c"
+  digest = "1:7e57cd10c5424b2abf91f29354796a2468720396419585fef5a2d346c5a0f24d"
   name = "github.com/onsi/gomega"
   packages = [
     ".",
     "format",
-    "gbytes",
-    "gexec",
     "internal/assertion",
     "internal/asyncassertion",
     "internal/oraclematcher",
@@ -1184,12 +1198,9 @@
   revision = "25bb6aeb58135c38a667e849edf5244871be4992"
 
 [[projects]]
-  digest = "1:b4e8506321f1bba065f3e2d1da46a70d114984a54c89b5d8b979e64e00655642"
+  digest = "1:7a8874002044d748dd5ec9f4f1cb6053d8125e7a29ab9665ef64f7628f910141"
   name = "github.com/operator-framework/operator-sdk"
-  packages = [
-    "pkg/k8sutil",
-    "pkg/status",
-  ]
+  packages = ["pkg/status"]
   pruneopts = "UT"
   revision = "2fd7019f856cdb6f6618e2c3c80d15c3c79d1b6c"
   version = "v0.17.0"
@@ -1298,6 +1309,14 @@
   version = "v1.4.2"
 
 [[projects]]
+  digest = "1:f6adcf4df6c030a53a14a8fdbb3fade7cac3d014ff78a4e0de500b4c0cf5154f"
+  name = "github.com/spf13/cobra"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "a684a6d7f5e37385d954dd3b5a14fc6912c6ab9d"
+  version = "v1.0.0"
+
+[[projects]]
   digest = "1:524b71991fc7d9246cc7dc2d9e0886ccb97648091c63e30eef619e6862c955dd"
   name = "github.com/spf13/pflag"
   packages = ["."]
@@ -1371,37 +1390,6 @@
   pruneopts = "UT"
   revision = "aad2c527c5defcf89b5afab7f37274304195a6b2"
   version = "v0.22.2"
-
-[[projects]]
-  digest = "1:19525e48b45af69339bd7c2812137dbd1e650a78fc09c7c75482e307d51aa28d"
-  name = "go.uber.org/atomic"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "845920076a298bdb984fb0f1b86052e4ca0a281c"
-  version = "v1.6.0"
-
-[[projects]]
-  digest = "1:a23ddd39502ba94e2a72815a946d0edec801defcf0a0c0530d04acee1f455128"
-  name = "go.uber.org/multierr"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "b587143a48b62b01d337824eab43700af6ffe222"
-  version = "v1.5.0"
-
-[[projects]]
-  digest = "1:8e22fc6a99b3054c643f020c29a8e5c7809e75292b4960b26b60f717a201b6dc"
-  name = "go.uber.org/zap"
-  packages = [
-    ".",
-    "buffer",
-    "internal/bufferpool",
-    "internal/color",
-    "internal/exit",
-    "zapcore",
-  ]
-  pruneopts = "UT"
-  revision = "feeb9a050b31b40eec6f2470e7599eeeadfe5bdd"
-  version = "v1.15.0"
 
 [[projects]]
   branch = "master"
@@ -1721,6 +1709,14 @@
   version = "v2.2.7"
 
 [[projects]]
+  branch = "v3"
+  digest = "1:f87d6c8edf5e57ae4a355abc05aca1dbf38b073068bba96c1fbbff852a1e2fd3"
+  name = "gopkg.in/yaml.v3"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "2ff61e1afc866138abf1a8adf3cc89721090ac31"
+
+[[projects]]
   branch = "origin-4.3-kubernetes-1.16.2"
   digest = "1:07ac50e8a151b47143ee8ba564106807f6e10a4557cb9ac256372ae514bb46c2"
   name = "k8s.io/api"
@@ -1771,16 +1767,12 @@
 
 [[projects]]
   branch = "release-1.17"
-  digest = "1:f0b431fe72d7510dfe7f3f177317391621ddb500843f5661dab7520d22735a66"
+  digest = "1:97d68e1b4c043da3a358cbfb4076e416199452c06e326b2ca0eef721b52aa1a4"
   name = "k8s.io/apiextensions-apiserver"
   packages = [
     "pkg/apis/apiextensions",
     "pkg/apis/apiextensions/v1",
     "pkg/apis/apiextensions/v1beta1",
-    "pkg/client/clientset/clientset",
-    "pkg/client/clientset/clientset/scheme",
-    "pkg/client/clientset/clientset/typed/apiextensions/v1",
-    "pkg/client/clientset/clientset/typed/apiextensions/v1beta1",
   ]
   pruneopts = "UT"
   revision = "88d23e1d281b9aa0cb534c4cdf3ed01af4b180b9"
@@ -2072,7 +2064,7 @@
 
 [[projects]]
   branch = "release-0.5"
-  digest = "1:06873bbf11ef1371aff8a426ef94e4810af5cb5534ac909dd8cb981f7d617046"
+  digest = "1:43fff2ac0dd9cbedc1cb6696f5f07369cd1675c22889007a75e01eb75da68e60"
   name = "sigs.k8s.io/controller-runtime"
   packages = [
     ".",
@@ -2085,8 +2077,6 @@
     "pkg/controller",
     "pkg/controller/controllerutil",
     "pkg/conversion",
-    "pkg/envtest",
-    "pkg/envtest/printer",
     "pkg/event",
     "pkg/handler",
     "pkg/healthz",
@@ -2094,12 +2084,8 @@
     "pkg/internal/controller/metrics",
     "pkg/internal/log",
     "pkg/internal/recorder",
-    "pkg/internal/testing/integration",
-    "pkg/internal/testing/integration/addr",
-    "pkg/internal/testing/integration/internal",
     "pkg/leaderelection",
     "pkg/log",
-    "pkg/log/zap",
     "pkg/manager",
     "pkg/manager/signals",
     "pkg/metrics",
@@ -2119,6 +2105,29 @@
   ]
   pruneopts = "UT"
   revision = "67ee49a35456387c35b01aaaf26a6add1fe49c32"
+
+[[projects]]
+  digest = "1:a2ae73d1f36d28a2936c672c0976782c506562ee21a07fb8f589136c5cef3fd2"
+  name = "sigs.k8s.io/controller-tools"
+  packages = [
+    "cmd/controller-gen",
+    "pkg/crd",
+    "pkg/crd/markers",
+    "pkg/deepcopy",
+    "pkg/genall",
+    "pkg/genall/help",
+    "pkg/genall/help/pretty",
+    "pkg/loader",
+    "pkg/markers",
+    "pkg/rbac",
+    "pkg/schemapatcher",
+    "pkg/schemapatcher/internal/yaml",
+    "pkg/version",
+    "pkg/webhook",
+  ]
+  pruneopts = "UT"
+  revision = "93a4eed983cf9670deabcf3cfa837a4b69988c6e"
+  version = "v0.2.9"
 
 [[projects]]
   digest = "1:7719608fe0b52a4ece56c2dde37bedd95b938677d1ab0f84b8a7852e4c59f849"
@@ -2225,7 +2234,6 @@
     "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1",
     "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned",
     "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake",
-    "github.com/operator-framework/operator-sdk/pkg/k8sutil",
     "github.com/operator-framework/operator-sdk/pkg/status",
     "github.com/prometheus/common/model",
     "github.com/satori/go.uuid",
@@ -2274,13 +2282,12 @@
     "k8s.io/code-generator/cmd/deepcopy-gen",
     "k8s.io/gengo/generator",
     "sigs.k8s.io/controller-runtime",
-    "sigs.k8s.io/controller-runtime/pkg/client",
-    "sigs.k8s.io/controller-runtime/pkg/envtest",
-    "sigs.k8s.io/controller-runtime/pkg/envtest/printer",
-    "sigs.k8s.io/controller-runtime/pkg/log",
-    "sigs.k8s.io/controller-runtime/pkg/log/zap",
+    "sigs.k8s.io/controller-runtime/pkg/event",
+    "sigs.k8s.io/controller-runtime/pkg/predicate",
     "sigs.k8s.io/controller-runtime/pkg/reconcile",
     "sigs.k8s.io/controller-runtime/pkg/scheme",
+    "sigs.k8s.io/controller-tools/cmd/controller-gen",
+    "sigs.k8s.io/yaml",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -319,6 +319,15 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "daf2830f2741ebb735b21709a520c5f37d642d85",
+                    "repositoryUrl": "https://github.com/fatih/color/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "0ca9ea5df5451ffdf184b4428c902747c2c11cd7",
                     "repositoryUrl": "https://github.com/ghodss/yaml/"
                 }
@@ -339,15 +348,6 @@
                 "git": {
                     "commitHash": "9fb12b3b21c5415d16ac18dc5cd42c1cfdd40c4e",
                     "repositoryUrl": "https://github.com/go-logr/logr/"
-                }
-            }
-        },
-        {
-            "component": {
-                "type": "git",
-                "git": {
-                    "commitHash": "03f06a783fbb7dfaf3f629c7825480e43a7105e6",
-                    "repositoryUrl": "https://github.com/go-logr/zapr/"
                 }
             }
         },
@@ -384,6 +384,15 @@
                 "git": {
                     "commitHash": "8a84ec635f1b280a7062edeab609f0667a053248",
                     "repositoryUrl": "https://github.com/go-openapi/swag/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "7a04ff140e0fd2ea77adfd5b8bd2b0c80ab739a9",
+                    "repositoryUrl": "https://github.com/gobuffalo/flect/"
                 }
             }
         },
@@ -510,6 +519,15 @@
                 "git": {
                     "commitHash": "1afb36080aec31e0d1528973ebe6721b191b0369",
                     "repositoryUrl": "https://github.com/imdario/mergo/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75",
+                    "repositoryUrl": "https://github.com/inconshreveable/mousetrap/"
                 }
             }
         },
@@ -967,6 +985,15 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "a684a6d7f5e37385d954dd3b5a14fc6912c6ab9d",
+                    "repositoryUrl": "https://github.com/spf13/cobra/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "2e9d26c8c37aae03e3f9d4e90b7116f5accb7cab",
                     "repositoryUrl": "https://github.com/spf13/pflag/"
                 }
@@ -1014,33 +1041,6 @@
                 "git": {
                     "commitHash": "aad2c527c5defcf89b5afab7f37274304195a6b2",
                     "repositoryUrl": "https://go.opencensus.io/"
-                }
-            }
-        },
-        {
-            "component": {
-                "type": "git",
-                "git": {
-                    "commitHash": "845920076a298bdb984fb0f1b86052e4ca0a281c",
-                    "repositoryUrl": "https://go.uber.org/atomic/"
-                }
-            }
-        },
-        {
-            "component": {
-                "type": "git",
-                "git": {
-                    "commitHash": "b587143a48b62b01d337824eab43700af6ffe222",
-                    "repositoryUrl": "https://go.uber.org/multierr/"
-                }
-            }
-        },
-        {
-            "component": {
-                "type": "git",
-                "git": {
-                    "commitHash": "feeb9a050b31b40eec6f2470e7599eeeadfe5bdd",
-                    "repositoryUrl": "https://go.uber.org/zap/"
                 }
             }
         },
@@ -1228,6 +1228,15 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "2ff61e1afc866138abf1a8adf3cc89721090ac31",
+                    "repositoryUrl": "https://gopkg.in/yaml.v3/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "b2607acfca124f576c98e5e9ad8d22184518b6dd",
                     "repositoryUrl": "https://github.com/kubernetes/api/"
                 }
@@ -1338,6 +1347,15 @@
                 "git": {
                     "commitHash": "67ee49a35456387c35b01aaaf26a6add1fe49c32",
                     "repositoryUrl": "https://sigs.k8s.io/controller-runtime/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "93a4eed983cf9670deabcf3cfa837a4b69988c6e",
+                    "repositoryUrl": "https://sigs.k8s.io/controller-tools/"
                 }
             }
         },
