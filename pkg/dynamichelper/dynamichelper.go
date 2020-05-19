@@ -29,27 +29,29 @@ type DynamicHelper interface {
 	List(ctx context.Context, groupKind, namespace string) ([]byte, error)
 	CreateOrUpdate(ctx context.Context, obj *unstructured.Unstructured) error
 	Delete(ctx context.Context, groupKind, namespace, name string) error
-	UnmarshalYAML(b []byte) (unstructured.Unstructured, error)
+}
+
+type UpdatePolicy struct {
+	LogChanges      bool
+	RetryOnConflict bool
+	IgnoreDefaults  bool
 }
 
 type dynamicHelper struct {
 	log *logrus.Entry
 
-	logChanges      bool
-	retryOnConflict bool
+	updatePolicy UpdatePolicy
 
-	restconfig *rest.Config
-
+	restconfig   *rest.Config
 	dyn          dynamic.Interface
 	apiresources []*metav1.APIResourceList
 }
 
-func New(log *logrus.Entry, restconfig *rest.Config, logChanges, retryOnConflict bool) (DynamicHelper, error) {
+func New(log *logrus.Entry, restconfig *rest.Config, updatePolicy UpdatePolicy) (DynamicHelper, error) {
 	dh := &dynamicHelper{
-		log:             log,
-		logChanges:      logChanges,
-		retryOnConflict: retryOnConflict,
-		restconfig:      restconfig,
+		log:          log,
+		updatePolicy: updatePolicy,
+		restconfig:   restconfig,
 	}
 	cli, err := discovery.NewDiscoveryClientForConfig(dh.restconfig)
 	if err != nil {
@@ -127,11 +129,11 @@ func (dh *dynamicHelper) findGVR(groupKind, optionalVersion string) (*schema.Gro
 	return matches[0], nil
 }
 
-// unmarshal has to reimplement yaml.unmarshal because it universally mangles yaml
+// UnmarshalYAML has to reimplement yaml.unmarshal because it universally mangles yaml
 // integers into float64s, whereas the Kubernetes client library uses int64s
 // wherever it can.  Such a difference can cause us to update objects when
 // we don't actually need to.
-func (dh *dynamicHelper) UnmarshalYAML(b []byte) (unstructured.Unstructured, error) {
+func UnmarshalYAML(b []byte) (unstructured.Unstructured, error) {
 	json, err := yaml.YAMLToJSON(b)
 	if err != nil {
 		return unstructured.Unstructured{}, err
@@ -181,7 +183,7 @@ func (dh *dynamicHelper) CreateOrUpdate(ctx context.Context, o *unstructured.Uns
 	}
 
 	err = retry.OnError(retry.DefaultRetry, func(err error) bool {
-		return dh.retryOnConflict && apierrors.ReasonForError(err) == metav1.StatusReasonConflict
+		return dh.updatePolicy.RetryOnConflict && apierrors.ReasonForError(err) == metav1.StatusReasonConflict
 	}, func() error {
 		existing, err := dh.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Get(o.GetName(), metav1.GetOptions{})
 		if apierrors.IsNotFound(err) {
@@ -195,10 +197,21 @@ func (dh *dynamicHelper) CreateOrUpdate(ctx context.Context, o *unstructured.Uns
 
 		rv := existing.GetResourceVersion()
 
+		if dh.updatePolicy.IgnoreDefaults {
+			err := clean(*existing)
+			if err != nil {
+				return err
+			}
+			defaults(*existing)
+		}
+
 		if !dh.needsUpdate(existing, o) {
 			return err
 		}
-		dh.logDiff(existing, o)
+
+		if dh.updatePolicy.LogChanges {
+			dh.logDiff(existing, o)
+		}
 
 		o.SetResourceVersion(rv)
 		_, err = dh.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Update(o, metav1.UpdateOptions{})
@@ -208,30 +221,8 @@ func (dh *dynamicHelper) CreateOrUpdate(ctx context.Context, o *unstructured.Uns
 	return err
 }
 
-func removeDynamicFields(existing, o *unstructured.Unstructured) *unstructured.Unstructured {
-	new := o.DeepCopy()
-	for _, field := range []string{"creationTimestamp", "generation", "resourceVersion", "uid", "selfLink"} {
-		old, ok, err := unstructured.NestedFieldCopy(existing.Object, "metadata", field)
-		if err == nil && ok {
-			unstructured.SetNestedField(new.Object, old, "metadata", field)
-		}
-	}
-
-	status, ok := existing.Object["status"]
-	if ok {
-		new.Object["status"] = status
-	}
-	return new
-}
-
 func (dh *dynamicHelper) needsUpdate(existing, o *unstructured.Unstructured) bool {
-	if o.GetKind() == "Namespace" || o.GetKind() == "ServiceAccount" {
-		// don't need updating
-		return false
-	}
-	// so we don't update unneccessairly
-	new := removeDynamicFields(existing, o)
-	if reflect.DeepEqual(*existing, *new) {
+	if reflect.DeepEqual(*existing, *o) {
 		return false
 	}
 
@@ -241,9 +232,6 @@ func (dh *dynamicHelper) needsUpdate(existing, o *unstructured.Unstructured) boo
 }
 
 func (dh *dynamicHelper) logDiff(existing, o *unstructured.Unstructured) bool {
-	if !dh.logChanges {
-		return false
-	}
 	// TODO: we should have tests that monitor these diffs:
 	// 1) when a cluster is created
 	// 2) when sync is run twice back-to-back on the same cluster
@@ -252,8 +240,7 @@ func (dh *dynamicHelper) logDiff(existing, o *unstructured.Unstructured) bool {
 	gk := o.GroupVersionKind().GroupKind()
 	diffShown := false
 	if gk.String() != "Secret" {
-		new := removeDynamicFields(existing, o)
-		if diff := cmp.Diff(*existing, *new); diff != "" {
+		if diff := cmp.Diff(*existing, *o); diff != "" {
 			dh.log.Info(diff)
 			diffShown = true
 		}
