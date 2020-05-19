@@ -2,3 +2,6 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: openshift-azure-operator
+spec:
+  finalizers:
+  - kubernetes
