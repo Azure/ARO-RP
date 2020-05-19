@@ -15,6 +15,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
@@ -28,6 +29,7 @@ type DynamicHelper interface {
 	Get(ctx context.Context, groupKind, namespace, name string) ([]byte, error)
 	List(ctx context.Context, groupKind, namespace string) ([]byte, error)
 	CreateOrUpdate(ctx context.Context, obj *unstructured.Unstructured) error
+	CreateOrUpdateObject(ctx context.Context, ro runtime.Object) error
 	Delete(ctx context.Context, groupKind, namespace, name string) error
 }
 
@@ -129,25 +131,6 @@ func (dh *dynamicHelper) findGVR(groupKind, optionalVersion string) (*schema.Gro
 	return matches[0], nil
 }
 
-// UnmarshalYAML has to reimplement yaml.unmarshal because it universally mangles yaml
-// integers into float64s, whereas the Kubernetes client library uses int64s
-// wherever it can.  Such a difference can cause us to update objects when
-// we don't actually need to.
-func UnmarshalYAML(b []byte) (unstructured.Unstructured, error) {
-	json, err := yaml.YAMLToJSON(b)
-	if err != nil {
-		return unstructured.Unstructured{}, err
-	}
-
-	var o unstructured.Unstructured
-	_, _, err = unstructured.UnstructuredJSONScheme.Decode(json, nil, &o)
-	if err != nil {
-		return unstructured.Unstructured{}, err
-	}
-
-	return o, nil
-}
-
 func (dh *dynamicHelper) Get(ctx context.Context, groupKind, namespace, name string) ([]byte, error) {
 	gvr, err := dh.findGVR(groupKind, "")
 	if err != nil {
@@ -174,6 +157,24 @@ func (dh *dynamicHelper) List(ctx context.Context, groupKind, namespace string) 
 	}
 
 	return ul.MarshalJSON()
+}
+
+func (dh *dynamicHelper) CreateOrUpdateObject(ctx context.Context, ro runtime.Object) error {
+	obj, ok := ro.(*unstructured.Unstructured)
+	if !ok {
+		b, err := yaml.Marshal(ro)
+		if err != nil {
+			return err
+		}
+		obj = &unstructured.Unstructured{}
+		err = yaml.Unmarshal(b, obj)
+		if err != nil {
+			return err
+		}
+	}
+	cleanNewObject(*obj)
+
+	return dh.CreateOrUpdate(ctx, obj)
 }
 
 func (dh *dynamicHelper) CreateOrUpdate(ctx context.Context, o *unstructured.Unstructured) error {

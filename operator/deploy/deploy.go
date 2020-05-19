@@ -33,7 +33,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/genevalogging"
 	aroclient "github.com/Azure/ARO-RP/pkg/util/aro-operator-client/clientset/versioned/typed/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/util/jsonpath"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	"github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -147,10 +146,10 @@ func (o *operator) securityContextConstraints(ctx context.Context, name, service
 		APIVersion: "security.openshift.io/v1",
 	}
 	scc.ObjectMeta = metav1.ObjectMeta{
-		Name: "privileged-operator",
+		Name: name,
 	}
 	scc.Groups = []string{}
-	scc.Users = []string{kubeServiceAccount}
+	scc.Users = []string{serviceAccountName}
 	return scc, nil
 }
 
@@ -213,34 +212,6 @@ func (o *operator) deployment() *appsv1.Deployment {
 			},
 		},
 	}
-}
-
-func clean(o unstructured.Unstructured) {
-	gk := o.GroupVersionKind().GroupKind()
-
-	jsonpath.MustCompile("$.status").Delete(o.Object)
-	jsonpath.MustCompile("$.metadata.creationTimestamp").Delete(o.Object)
-
-	switch gk.String() {
-	case "Deployment.apps":
-		jsonpath.MustCompile("$.spec.template.metadata.creationTimestamp").Delete(o.Object)
-	}
-}
-
-func (o *operator) apply(ctx context.Context, ro runtime.Object) error {
-	b, err := yaml.Marshal(ro)
-	if err != nil {
-		return err
-	}
-	obj := &unstructured.Unstructured{}
-	err = yaml.Unmarshal(b, obj)
-	if err != nil {
-		return err
-	}
-	clean(*obj)
-
-	o.log.Infof("applyAsset %s %s %s", obj.GetKind(), obj.GetNamespace(), obj.GetName())
-	return o.dh.CreateOrUpdate(ctx, obj)
 }
 
 func (o *operator) resources(ctx context.Context) ([]runtime.Object, error) {
@@ -337,7 +308,7 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 		return err
 	}
 	for _, res := range resources {
-		err = o.apply(ctx, res)
+		err = o.dh.CreateOrUpdateObject(ctx, res)
 		if err != nil {
 			return err
 		}

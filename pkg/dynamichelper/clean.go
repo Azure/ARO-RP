@@ -72,6 +72,22 @@ func convertSecretData(o unstructured.Unstructured) error {
 	return nil
 }
 
+// cleanNewObject cleans newly defined objects
+// this is a much simpler clean.
+func cleanNewObject(o unstructured.Unstructured) {
+	gk := o.GroupVersionKind().GroupKind()
+
+	jsonpath.MustCompile("$.status").Delete(o.Object)
+	jsonpath.MustCompile("$.metadata.creationTimestamp").Delete(o.Object)
+
+	switch gk.String() {
+	case "Deployment.apps":
+		jsonpath.MustCompile("$.spec.template.metadata.creationTimestamp").Delete(o.Object)
+	case "DaemonSet.apps":
+		jsonpath.MustCompile("$.spec.template.metadata.creationTimestamp").Delete(o.Object)
+	}
+}
+
 // clean removes object entries which should not be persisted.
 func clean(o unstructured.Unstructured) error {
 	gk := o.GroupVersionKind().GroupKind()

@@ -16,14 +16,13 @@ import (
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/util/retry"
 
 	aro "github.com/Azure/ARO-RP/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/dynamichelper"
 )
 
 type GenevaLogging interface {
@@ -43,11 +42,15 @@ type genevaLogging struct {
 
 	certs *v1.Secret
 
-	cli    kubernetes.Interface
+	dh     dynamichelper.DynamicHelper
 	seccli securityclient.Interface
 }
 
-func NewForOperator(log *logrus.Entry, cs *aro.ClusterSpec, cli kubernetes.Interface, seccli securityclient.Interface, certs *v1.Secret) GenevaLogging {
+func New(log *logrus.Entry, cs *aro.ClusterSpec, dh dynamichelper.DynamicHelper, seccli securityclient.Interface, certs *v1.Secret) GenevaLogging {
+	certs.TypeMeta = metav1.TypeMeta{
+		Kind:       "Secret",
+		APIVersion: "v1",
+	}
 	return &genevaLogging{
 		log: log,
 
@@ -61,7 +64,7 @@ func NewForOperator(log *logrus.Entry, cs *aro.ClusterSpec, cli kubernetes.Inter
 
 		certs: certs,
 
-		cli:    cli,
+		dh:     dh,
 		seccli: seccli,
 	}
 }
@@ -74,157 +77,38 @@ func (g *genevaLogging) mdsdImage() string {
 	return fmt.Sprintf(mdsdImageFormat, g.acrName)
 }
 
-func (g *genevaLogging) ensureNamespace(ns string) error {
-	_, err := g.cli.CoreV1().Namespaces().Create(&v1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: ns,
-		},
-	})
-	if !errors.IsAlreadyExists(err) {
-		return err
-	}
-
-	return nil
-}
-
-func (g *genevaLogging) applyConfigMap(cm *v1.ConfigMap) error {
-	_, err := g.cli.CoreV1().ConfigMaps(cm.Namespace).Create(cm)
-	if !errors.IsAlreadyExists(err) {
-		return err
-	}
-
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		_cm, err := g.cli.CoreV1().ConfigMaps(cm.Namespace).Get(cm.Name, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-
-		cm.ResourceVersion = _cm.ResourceVersion
-		_, err = g.cli.CoreV1().ConfigMaps(cm.Namespace).Update(cm)
-		return err
-	})
-}
-
-func (g *genevaLogging) applySecret(s *v1.Secret) error {
-	_, err := g.cli.CoreV1().Secrets(s.Namespace).Create(s)
-	if !errors.IsAlreadyExists(err) {
-		return err
-	}
-
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		_s, err := g.cli.CoreV1().Secrets(s.Namespace).Get(s.Name, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-
-		s.ResourceVersion = _s.ResourceVersion
-		_, err = g.cli.CoreV1().Secrets(s.Namespace).Update(s)
-		return err
-	})
-}
-
-func (g *genevaLogging) applyServiceAccount(sa *v1.ServiceAccount) error {
-	_, err := g.cli.CoreV1().ServiceAccounts(sa.Namespace).Create(sa)
-	if !errors.IsAlreadyExists(err) {
-		return err
-	}
-
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		_sa, err := g.cli.CoreV1().ServiceAccounts(sa.Namespace).Get(sa.Name, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-
-		sa.ResourceVersion = _sa.ResourceVersion
-		_, err = g.cli.CoreV1().ServiceAccounts(sa.Namespace).Update(sa)
-		return err
-	})
-}
-
-func (g *genevaLogging) applyDaemonSet(ds *appsv1.DaemonSet) error {
-	_, err := g.cli.AppsV1().DaemonSets(ds.Namespace).Create(ds)
-	if !errors.IsAlreadyExists(err) {
-		return err
-	}
-
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		_ds, err := g.cli.AppsV1().DaemonSets(ds.Namespace).Get(ds.Name, metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-
-		ds.ResourceVersion = _ds.ResourceVersion
-		_, err = g.cli.AppsV1().DaemonSets(ds.Namespace).Update(ds)
-		return err
-	})
-}
-
-func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
-	r, err := azure.ParseResourceID(g.resourceID)
-	if err != nil {
-		return err
-	}
-
-	err = g.ensureNamespace(g.namespace)
-	if err != nil {
-		return err
-	}
-
-	err = g.applySecret(g.certs)
-	if err != nil {
-		return err
-	}
-
-	err = g.applyConfigMap(&v1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "fluent-config",
-			Namespace: g.namespace,
-		},
-		Data: map[string]string{
-			"audit.conf":      auditConf,
-			"containers.conf": containersConf,
-			"journal.conf":    journalConf,
-			"parsers.conf":    parsersConf,
-		},
-	})
-	if err != nil {
-		return err
-	}
-
-	err = g.applyServiceAccount(&v1.ServiceAccount{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "geneva",
-			Namespace: g.namespace,
-		},
-	})
-	if err != nil {
-		return err
-	}
-
+func (g *genevaLogging) securityContextConstraints(ctx context.Context, name, serviceAccountName string) (*securityv1.SecurityContextConstraints, error) {
 	g.log.Print("waiting for privileged security context constraint")
 	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
 	defer cancel()
 	var scc *securityv1.SecurityContextConstraints
+	var err error
 	err = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 		scc, err = g.seccli.SecurityV1().SecurityContextConstraints().Get("privileged", metav1.GetOptions{})
 		return err == nil, nil
 	}, timeoutCtx.Done())
 	if err != nil {
-		return err
+		return nil, err
 	}
 
+	scc.TypeMeta = metav1.TypeMeta{
+		Kind:       "SecurityContextConstraints",
+		APIVersion: "security.openshift.io/v1",
+	}
 	scc.ObjectMeta = metav1.ObjectMeta{
-		Name: "privileged-genevalogging",
+		Name: name,
 	}
-	scc.Groups = nil
-	scc.Users = []string{kubeServiceAccount}
+	scc.Groups = []string{}
+	scc.Users = []string{serviceAccountName}
+	return scc, nil
+}
 
-	_, err = g.seccli.SecurityV1().SecurityContextConstraints().Create(scc)
-	if err != nil && !errors.IsAlreadyExists(err) {
-		return err
-	}
-
-	return g.applyDaemonSet(&appsv1.DaemonSet{
+func (g *genevaLogging) daemonset(r azure.Resource) *appsv1.DaemonSet {
+	return &appsv1.DaemonSet{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "DaemonSet",
+			APIVersion: "apps/v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "mdsd",
 			Namespace: g.namespace,
@@ -465,7 +349,8 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 									Name: "MONITORING_ROLE_INSTANCE",
 									ValueFrom: &v1.EnvVarSource{
 										FieldRef: &v1.ObjectFieldSelector{
-											FieldPath: "spec.nodeName",
+											APIVersion: "v1",
+											FieldPath:  "spec.nodeName",
 										},
 									},
 								},
@@ -511,5 +396,80 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 				},
 			},
 		},
-	})
+	}
+}
+
+func (g *genevaLogging) resources(ctx context.Context) ([]runtime.Object, error) {
+	results := []runtime.Object{}
+	r, err := azure.ParseResourceID(g.resourceID)
+	if err != nil {
+		return nil, err
+	}
+
+	scc, err := g.securityContextConstraints(ctx, "privileged-genevalogging", kubeServiceAccount)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, obj := range []runtime.Object{
+		&v1.Namespace{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Namespace",
+				APIVersion: "v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: g.namespace,
+			},
+			Spec: v1.NamespaceSpec{
+				Finalizers: []v1.FinalizerName{v1.FinalizerKubernetes},
+			},
+		},
+		g.certs,
+		&v1.ConfigMap{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "ConfigMap",
+				APIVersion: "v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "fluent-config",
+				Namespace: g.namespace,
+			},
+			Data: map[string]string{
+				"audit.conf":      auditConf,
+				"containers.conf": containersConf,
+				"journal.conf":    journalConf,
+				"parsers.conf":    parsersConf,
+			},
+		},
+		&v1.ServiceAccount{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "ServiceAccount",
+				APIVersion: "v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "geneva",
+				Namespace: g.namespace,
+			},
+		},
+		scc,
+		g.daemonset(r),
+	} {
+		results = append(results, obj)
+	}
+
+	return results, nil
+}
+
+func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
+	resources, err := g.resources(ctx)
+	if err != nil {
+		return err
+	}
+	for _, res := range resources {
+		err = g.dh.CreateOrUpdateObject(ctx, res)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

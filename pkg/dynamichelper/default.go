@@ -54,11 +54,6 @@ func defaults(o unstructured.Unstructured) {
 		jsonpath.MustCompile("$.spec.successfulJobsHistoryLimit").DeleteIfMatch(o.Object, int64(3))
 		jsonpath.MustCompile("$.spec.suspend").DeleteIfMatch(o.Object, false)
 
-	case "CustomResourceDefinition.apiextensions.k8s.io":
-		jsonpath.MustCompile("$.spec.conversion.strategy").DeleteIfMatch(o.Object, "None")
-		jsonpath.MustCompile("$.spec.conversion").DeleteIfMatch(o.Object, map[string]interface{}{})
-		jsonpath.MustCompile("$.spec.preserveUnknownFields").DeleteIfMatch(o.Object, true)
-
 	case "DaemonSet.apps":
 		jsonpath.MustCompile("$.spec.revisionHistoryLimit").DeleteIfMatch(o.Object, int64(10))
 
@@ -69,7 +64,6 @@ func defaults(o unstructured.Unstructured) {
 		jsonpath.MustCompile("$.spec.updateStrategy.rollingUpdate.maxUnavailable").DeleteIfMatch(o.Object, int64(1))
 		jsonpath.MustCompile("$.spec.updateStrategy.rollingUpdate").DeleteIfMatch(o.Object, map[string]interface{}{})
 		jsonpath.MustCompile("$.spec.updateStrategy.type").DeleteIfMatch(o.Object, "RollingUpdate")
-		jsonpath.MustCompile("$.spec.updateStrategy").DeleteIfMatch(o.Object, map[string]interface{}{})
 
 	case "Deployment.apps":
 		jsonpath.MustCompile("$.spec.progressDeadlineSeconds").DeleteIfMatch(o.Object, int64(600))
@@ -104,7 +98,6 @@ func defaults(o unstructured.Unstructured) {
 		jsonpath.MustCompile("$.spec.updateStrategy.rollingUpdate.partition").DeleteIfMatch(o.Object, int64(0))
 		jsonpath.MustCompile("$.spec.updateStrategy.rollingUpdate").DeleteIfMatch(o.Object, map[string]interface{}{})
 		jsonpath.MustCompile("$.spec.updateStrategy.type").DeleteIfMatch(o.Object, "RollingUpdate")
-		jsonpath.MustCompile("$.spec.updateStrategy").DeleteIfMatch(o.Object, map[string]interface{}{})
 
 		for _, c := range jsonpath.MustCompile("$.spec.template.spec").Get(o.Object) {
 			defaultPodSpec(c.(map[string]interface{}))

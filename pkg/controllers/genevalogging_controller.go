@@ -6,6 +6,8 @@ package controllers
 import (
 	"context"
 
+	"github.com/Azure/ARO-RP/pkg/dynamichelper"
+
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -58,8 +60,21 @@ func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		newCert.Namespace = instance.Spec.GenevaLogging.Namespace
 		newCert.ResourceVersion = ""
 	}
-
-	gl := genevalogging.NewForOperator(r.Log, &instance.Spec, r.Kubernetescli, r.Securitycli, newCert)
+	restConfig, err := ctrl.GetConfig()
+	if err != nil {
+		r.Log.Error(err)
+		return reconcile.Result{}, err
+	}
+	dh, err := dynamichelper.New(r.Log, restConfig, dynamichelper.UpdatePolicy{
+		IgnoreDefaults:  true,
+		LogChanges:      true,
+		RetryOnConflict: true,
+	})
+	if err != nil {
+		r.Log.Error(err)
+		return reconcile.Result{}, err
+	}
+	gl := genevalogging.New(r.Log, &instance.Spec, dh, r.Securitycli, newCert)
 	err = gl.CreateOrUpdate(ctx)
 	if err != nil {
 		r.Log.Error(err)
