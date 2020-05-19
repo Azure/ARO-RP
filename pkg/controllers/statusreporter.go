@@ -64,7 +64,7 @@ func (r *StatusReporter) SetNoInternetConnection(ctx context.Context, connection
 
 		setStaticStatus(&co.Status)
 
-		_, err = r.arocli.Clusters().Update(co)
+		_, err = r.arocli.Clusters().UpdateStatus(co)
 		return err
 	})
 }
@@ -86,7 +86,7 @@ func (r *StatusReporter) SetInternetConnected(ctx context.Context) error {
 
 		setStaticStatus(&co.Status)
 
-		_, err = r.arocli.Clusters().Update(co)
+		_, err = r.arocli.Clusters().UpdateStatus(co)
 		return err
 	})
 }
