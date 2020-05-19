@@ -16,6 +16,10 @@ type Version struct {
 	Suffix string
 }
 
+func (v *Version) String() string {
+	return fmt.Sprintf("%d.%d.%d", v.V[0], v.V[1], v.V[2])
+}
+
 func NewVersion(vs ...byte) *Version {
 	v := &Version{}
 

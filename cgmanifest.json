@@ -742,7 +742,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "02be5758f755d9da56cb4b37ae3ea52a9a0c436e",
+                    "commitHash": "a443c1b9c73a79a25c8fd3c37bfdd08c009b7d6d",
                     "repositoryUrl": "https://github.com/openshift/cloud-credential-operator/"
                 }
             }
@@ -787,7 +787,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "281b4db96607c474f73161c49aab80528f517c26",
+                    "commitHash": "0966db28bce37ca97ada41c69f48ffa7c4d02493",
                     "repositoryUrl": "https://github.com/openshift/cluster-api-provider-ovirt/"
                 }
             }
@@ -805,7 +805,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "22ff4d7c7ac673b63a33f1baa5abd7316f99cbf3",
+                    "commitHash": "a0e667861e217d48fe14806a5f0c1d751503d9a6",
                     "repositoryUrl": "https://github.com/openshift/installer/"
                 }
             }
@@ -832,7 +832,16 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "9bcc4fd4e6c0921d07d328036c73abbea369e023",
+                    "commitHash": "dfc5841ab94d2a2b221d1cba1de040e2c552ef3f",
+                    "repositoryUrl": "https://github.com/ovirt/cluster-api-provider-ovirt/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "8bc00b120cb3b205906623f621b7008e49ed7732",
                     "repositoryUrl": "https://github.com/ovirt/go-ovirt/"
                 }
             }
@@ -1003,7 +1012,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "7650349cbb310500918819d5e29708ef17fca8ee",
+                    "commitHash": "277d221a5b9910eceaa3a1bd2dff82b9f5436c6a",
                     "repositoryUrl": "https://github.com/vmware/govmomi/"
                 }
             }

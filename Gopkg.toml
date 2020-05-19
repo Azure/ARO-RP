@@ -51,6 +51,8 @@ required = [
   branch = "release-4.4-azure"
   source = "https://github.com/jim-minter/installer"
 
+# Matches Installer used version (master)
+# Should go away in 4.5 with move to go modules
 [[override]]
   name = "github.com/openshift/cloud-credential-operator"
   revision = "a443c1b9c73a79a25c8fd3c37bfdd08c009b7d6d"

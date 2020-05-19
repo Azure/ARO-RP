@@ -2053,6 +2053,7 @@
     "github.com/go-bindata/go-bindata/go-bindata",
     "github.com/golang/mock/gomock",
     "github.com/golang/mock/mockgen",
+    "github.com/golang/mock/mockgen/model",
     "github.com/google/go-cmp/cmp",
     "github.com/googleapis/gnostic/OpenAPIv2",
     "github.com/gorilla/mux",

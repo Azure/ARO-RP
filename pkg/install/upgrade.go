@@ -14,11 +14,6 @@ import (
 )
 
 func (i *Installer) upgradeCluster(ctx context.Context) error {
-	vsn, err := version.ParseVersion(version.OpenShiftVersion)
-	if err != nil {
-		return err
-	}
-
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		cv, err := i.configcli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
 		if err != nil {
@@ -30,16 +25,20 @@ func (i *Installer) upgradeCluster(ctx context.Context) error {
 			return err
 		}
 
-		if !desired.Lt(vsn) {
-			i.log.Printf("not upgrading: cvo desired version is %s", cv.Status.Desired.Version)
+		// Get Cluster upgrade version based on desired version
+		// If desired is 4.3.x we return 4.3 channel update
+		// If desired is 4.4.x we return 4.4 channel update
+		stream, err := version.GetStream(desired)
+		if err != nil {
+			i.log.Info(err)
 			return nil
 		}
 
-		i.log.Printf("initiating cluster upgrade, target version %s", version.OpenShiftVersion)
+		i.log.Printf("initiating cluster upgrade, target version %s", stream.Version.String())
 
 		cv.Spec.DesiredUpdate = &configv1.Update{
-			Version: version.OpenShiftVersion,
-			Image:   version.OpenShiftPullSpec,
+			Version: stream.Version.String(),
+			Image:   stream.PullSpec,
 		}
 
 		_, err = i.configcli.ConfigV1().ClusterVersions().Update(cv)

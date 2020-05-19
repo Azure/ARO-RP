@@ -96,7 +96,7 @@ func (ka *kubeactions) MustGather(ctx context.Context, oc *api.OpenShiftCluster,
 			InitContainers: []corev1.Container{
 				{
 					Name:  "gather",
-					Image: version.OpenShiftMustGather,
+					Image: version.InstallStream.MustGather, // TODO(mjudeikis): We should try get y-version image first and default to latest if not found.
 					Command: []string{
 						"/usr/bin/gather",
 					},
@@ -111,7 +111,7 @@ func (ka *kubeactions) MustGather(ctx context.Context, oc *api.OpenShiftCluster,
 			Containers: []corev1.Container{
 				{
 					Name:  "copy",
-					Image: version.OpenShiftMustGather,
+					Image: version.InstallStream.MustGather,
 					Command: []string{
 						"sleep",
 						"infinity",

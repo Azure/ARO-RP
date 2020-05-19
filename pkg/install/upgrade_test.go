@@ -20,6 +20,15 @@ import (
 func TestUpgradeCluster(t *testing.T) {
 	ctx := context.Background()
 
+	Stream43 := version.Stream{
+		Version: version.NewVersion(4, 3, 18),
+	}
+	Stream44 := version.Stream{
+		Version: version.NewVersion(4, 4, 3),
+	}
+
+	version.Streams = append([]version.Stream{}, Stream43, Stream44)
+
 	newFakecli := func(channel, version string) *fake.Clientset {
 		return fake.NewSimpleClientset(&configv1.ClusterVersion{
 			ObjectMeta: metav1.ObjectMeta{
@@ -37,22 +46,40 @@ func TestUpgradeCluster(t *testing.T) {
 	}
 
 	for _, tt := range []struct {
-		name        string
-		fakecli     *fake.Clientset
-		wantUpdated bool
+		name           string
+		fakecli        *fake.Clientset
+		desiredVersion string
+		wantUpdated    bool
+		wantErr        string
 	}{
 		{
-			name:        "needs update",
+			name:        "non-existing version - no update",
 			fakecli:     newFakecli("", "0.0.0"),
-			wantUpdated: true,
+			wantUpdated: false,
 		},
 		{
 			name:    "right version, no update needed",
-			fakecli: newFakecli("", version.OpenShiftVersion),
+			fakecli: newFakecli("", Stream44.Version.String()),
 		},
 		{
-			name:    "later version, no update needed",
-			fakecli: newFakecli("", "99.99.99"),
+			name:    "higher version, no update needed",
+			fakecli: newFakecli("", "4.4.5"),
+		},
+		{
+			name:           "lower version, update needed (4.4)",
+			fakecli:        newFakecli("", "4.4.1"),
+			wantUpdated:    true,
+			desiredVersion: Stream44.Version.String(),
+		},
+		{
+			name:    "higher version, no update needed",
+			fakecli: newFakecli("", "4.3.19"),
+		},
+		{
+			name:           "lower version, update needed (3.3)",
+			fakecli:        newFakecli("", "4.3.14"),
+			wantUpdated:    true,
+			desiredVersion: Stream43.Version.String(),
 		},
 		{
 			name:        "on a channel, update needed",
@@ -78,7 +105,8 @@ func TestUpgradeCluster(t *testing.T) {
 			}
 
 			err := i.upgradeCluster(ctx)
-			if err != nil {
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
 				t.Error(err)
 			}
 
@@ -95,7 +123,7 @@ func TestUpgradeCluster(t *testing.T) {
 				if cv.Spec.DesiredUpdate == nil {
 					t.Fatal(cv.Spec.DesiredUpdate)
 				}
-				if cv.Spec.DesiredUpdate.Version != version.OpenShiftVersion {
+				if cv.Spec.DesiredUpdate.Version != tt.desiredVersion {
 					t.Error(cv.Spec.DesiredUpdate.Version)
 				}
 			}
