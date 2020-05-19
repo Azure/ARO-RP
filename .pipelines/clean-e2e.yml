@@ -7,7 +7,7 @@ variables:
 jobs:
 - job: Clean_E2E
   pool:
-    vmImage: ubuntu-latest
+    name: ARO-E2E
 
   steps:
   - template: ./templates/template-setup-golang-env.yml
