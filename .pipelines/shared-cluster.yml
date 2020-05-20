@@ -19,15 +19,21 @@ variables:
 jobs:
 - job: ⏬ Tear down shared cluster
   pool:
-    vmImage: "Ubuntu-16.04"
-
-  container:
-    image: mcr.microsoft.com/azure-cli:latest
+    vmImage: ARO-RP
 
   steps:
+  - template: ./templates/template-setup-golang-env.yml
+    parameters:
+      gobin: ${{ variables.GOBIN }}
+      gopath: ${{ variables.GOPATH }}
+      goroot: ${{ variables.GOROOT }}
+      modulePath: ${{ variables.modulePath }}
+  - template: ./templates/template-setup-azure-tools.yml
+    parameters:
+      workingDirectory: ${{ variables.modulePath }}
   - template: ./templates/template-az-cli-login.yml
     parameters:
-      workingDirectory: /tmp
+      workingDirectory: ${{ variables.modulePath }}
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
   - template: ./templates/template-az-aro-extension-prod.yml
   - displayName: 🧹 Delete cluster
@@ -36,15 +42,21 @@ jobs:
 
 - job: ⏫ Set up shared cluster
   pool:
-    vmImage: "Ubuntu-16.04"
-
-  container:
-    image: mcr.microsoft.com/azure-cli:latest
+    vmImage: ARO-RP
 
   steps:
+  - template: ./templates/template-setup-golang-env.yml
+    parameters:
+      gobin: ${{ variables.GOBIN }}
+      gopath: ${{ variables.GOPATH }}
+      goroot: ${{ variables.GOROOT }}
+      modulePath: ${{ variables.modulePath }}
+  - template: ./templates/template-setup-azure-tools.yml
+    parameters:
+      workingDirectory: ${{ variables.modulePath }}
   - template: ./templates/template-az-cli-login.yml
     parameters:
-      workingDirectory: /
+      workingDirectory: ${{ variables.modulePath }}
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
   - template: ./templates/template-az-aro-extension-prod.yml
   - displayName: 🚀 Create/update subnets
