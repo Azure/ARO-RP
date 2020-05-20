@@ -54,6 +54,11 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		log.Errorf("unable to start manager %v", err)
 		return err
 	}
+	restConfig, err := ctrl.GetConfig()
+	if err != nil {
+		log.Errorf("unable to get rest config %v", err)
+		return err
+	}
 
 	kubernetescli, err := kubernetes.NewForConfig(mgr.GetConfig())
 	if err != nil {
@@ -75,6 +80,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		Kubernetescli: kubernetescli,
 		Securitycli:   securitycli,
 		AROCli:        arocli,
+		RestConfig:    restConfig,
 		Log:           log.WithField("controller", "Genevalogging"),
 		Scheme:        mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {

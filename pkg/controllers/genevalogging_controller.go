@@ -10,10 +10,12 @@ import (
 
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	"github.com/sirupsen/logrus"
+	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -27,6 +29,7 @@ type GenevaloggingReconciler struct {
 	Kubernetescli kubernetes.Interface
 	Securitycli   securityclient.Interface
 	AROCli        aroclient.AroV1alpha1Interface
+	RestConfig    *rest.Config
 	Log           *logrus.Entry
 	Scheme        *runtime.Scheme
 }
@@ -42,30 +45,18 @@ func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	r.Log.Info("Reconsiling genevalogging deployment")
 
 	ctx := context.TODO()
-	instance, err := r.AROCli.Clusters().Get(request.Name, v1.GetOptions{})
+	instance, err := r.AROCli.Clusters().Get(request.Name, metav1.GetOptions{})
 	if err != nil {
 		// Error reading the object or not found - requeue the request.
 		return reconcile.Result{}, err
 	}
 
-	newCert, err := r.Kubernetescli.CoreV1().Secrets(instance.Spec.GenevaLogging.Namespace).Get("certificates", v1.GetOptions{})
-	if err != nil && apierrors.IsNotFound(err) {
-		// copy the certificates from our namespace into the genevalogging one.
-		certs, err := r.Kubernetescli.CoreV1().Secrets(OperatorNamespace).Get("certificates", v1.GetOptions{})
-		if err != nil {
-			r.Log.Errorf("Error reading the certificates secret: %v", err)
-			return reconcile.Result{}, err
-		}
-		newCert = certs.DeepCopy()
-		newCert.Namespace = instance.Spec.GenevaLogging.Namespace
-		newCert.ResourceVersion = ""
-	}
-	restConfig, err := ctrl.GetConfig()
+	newCert, err := r.certificatesSecret(instance)
 	if err != nil {
 		r.Log.Error(err)
 		return reconcile.Result{}, err
 	}
-	dh, err := dynamichelper.New(r.Log, restConfig, dynamichelper.UpdatePolicy{
+	dh, err := dynamichelper.New(r.Log, r.RestConfig, dynamichelper.UpdatePolicy{
 		IgnoreDefaults:  true,
 		LogChanges:      true,
 		RetryOnConflict: true,
@@ -85,8 +76,25 @@ func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	return ReconcileResultRequeue, nil
 }
 
+func (r *GenevaloggingReconciler) certificatesSecret(instance *aro.Cluster) (*v1.Secret, error) {
+	newCert, err := r.Kubernetescli.CoreV1().Secrets(instance.Spec.GenevaLogging.Namespace).Get("certificates", metav1.GetOptions{})
+	if err != nil && apierrors.IsNotFound(err) {
+		// copy the certificates from our namespace into the genevalogging one.
+		certs, err := r.Kubernetescli.CoreV1().Secrets(OperatorNamespace).Get("certificates", metav1.GetOptions{})
+		if err != nil {
+			r.Log.Errorf("Error reading the certificates secret: %v", err)
+			return nil, err
+		}
+		newCert = certs.DeepCopy()
+		newCert.Namespace = instance.Spec.GenevaLogging.Namespace
+		newCert.ResourceVersion = ""
+	}
+	return newCert, nil
+}
+
 func (r *GenevaloggingReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&aro.Cluster{}).
 		Complete(r)
+	// TODO can we watch the genevalogging resources?
 }
