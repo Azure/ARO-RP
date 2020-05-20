@@ -153,6 +153,21 @@ func (mr *MockVirtualMachinesClientMockRecorder) Get(arg0, arg1, arg2, arg3 inte
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockVirtualMachinesClient)(nil).Get), arg0, arg1, arg2, arg3)
 }
 
+// List mocks base method
+func (m *MockVirtualMachinesClient) List(arg0 context.Context, arg1 string) ([]compute.VirtualMachine, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", arg0, arg1)
+	ret0, _ := ret[0].([]compute.VirtualMachine)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List
+func (mr *MockVirtualMachinesClientMockRecorder) List(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockVirtualMachinesClient)(nil).List), arg0, arg1)
+}
+
 // RedeployAndWait mocks base method
 func (m *MockVirtualMachinesClient) RedeployAndWait(arg0 context.Context, arg1, arg2 string) error {
 	m.ctrl.T.Helper()
@@ -165,6 +180,20 @@ func (m *MockVirtualMachinesClient) RedeployAndWait(arg0 context.Context, arg1, 
 func (mr *MockVirtualMachinesClientMockRecorder) RedeployAndWait(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RedeployAndWait", reflect.TypeOf((*MockVirtualMachinesClient)(nil).RedeployAndWait), arg0, arg1, arg2)
+}
+
+// StartAndWait mocks base method
+func (m *MockVirtualMachinesClient) StartAndWait(arg0 context.Context, arg1, arg2 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "StartAndWait", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// StartAndWait indicates an expected call of StartAndWait
+func (mr *MockVirtualMachinesClientMockRecorder) StartAndWait(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartAndWait", reflect.TypeOf((*MockVirtualMachinesClient)(nil).StartAndWait), arg0, arg1, arg2)
 }
 
 // MockUsageClient is a mock of UsageClient interface
