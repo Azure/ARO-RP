@@ -43,11 +43,11 @@ func NewStatusReporter(log *logrus.Entry, arocli aroclient.AroV1alpha1Interface,
 	}
 }
 
-func (r *StatusReporter) SetNoInternetConnection(ctx context.Context, connectionErr error) error {
+func (r *StatusReporter) SetNoInternetConnection(ctx context.Context, sitesNotAvailable map[string]string) error {
 	time := metav1.Now()
-	msg := "Outgoing connection failed"
-	if connectionErr != nil {
-		msg += ": " + connectionErr.Error()
+	msg := ""
+	for k, v := range sitesNotAvailable {
+		msg += "[" + k + "] " + v + "\n"
 	}
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		co, err := r.arocli.Clusters().Get(r.name, v1.GetOptions{})
