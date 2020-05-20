@@ -1,4 +1,4 @@
-package controllers
+package deploy
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -42,8 +42,10 @@ var _ = BeforeSuite(func(done Done) {
 	logf.SetLogger(zap.LoggerTo(GinkgoWriter, true))
 
 	By("bootstrapping test environment")
+	crdbase := filepath.Join("..", "config", "crd", "bases")
+	Expect(crdbase).Should(BeADirectory())
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths: []string{filepath.Join("..", "config", "crd", "bases")},
+		CRDDirectoryPaths: []string{crdbase},
 	}
 
 	var err error
