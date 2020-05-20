@@ -14,6 +14,7 @@ from azext_aro._validators import validate_vnet_resource_group_name
 from azext_aro._validators import validate_worker_count
 from azext_aro._validators import validate_worker_vm_disk_size_gb
 from azure.cli.core.commands.parameters import name_type
+from azure.cli.core.commands.parameters import get_enum_type
 from azure.cli.core.commands.parameters import resource_group_name_type
 from azure.cli.core.commands.parameters import tags_type
 from azure.cli.core.commands.validators import get_default_location_from_resource_group
@@ -67,12 +68,12 @@ def load_arguments(self, _):
                    help='Count of worker VMs.',
                    validator=validate_worker_count)
 
-        c.argument('apiserver_visibility',
-                   help='API server visibility. Allowed Values: Private, Public',
+        c.argument('apiserver_visibility', arg_type=get_enum_type(['Private', 'Public']),
+                   help='API server visibility.',
                    validator=validate_visibility('apiserver_visibility'))
 
-        c.argument('ingress_visibility',
-                   help='Ingress visibility. Allowed Values: Private, Public',
+        c.argument('ingress_visibility', arg_type=get_enum_type(['Private', 'Public']),
+                   help='Ingress visibility.',
                    validator=validate_visibility('ingress_visibility'))
 
         c.argument('vnet_resource_group_name',
