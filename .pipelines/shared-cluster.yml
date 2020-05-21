@@ -11,6 +11,7 @@ schedules:
     - master
 
 variables:
+- template: vars.yml
   LOCATION: eastus
   RESOURCEGROUP: v4-eastus
   CLUSTER: aro-shared
