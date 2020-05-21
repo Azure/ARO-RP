@@ -26,7 +26,7 @@ func TestEnsureTokenAndPassword(t *testing.T) {
 
 	tokens := mock_containerregistry.NewMockTokensClient(controller)
 	tokens.EXPECT().
-		CreateAndWait(ctx, "global", "arosvc", gomock.Any(), mgmtcontainerregistry.Token{
+		CreateAndWait(ctx, "global", "arointsvc", gomock.Any(), mgmtcontainerregistry.Token{
 			TokenProperties: &mgmtcontainerregistry.TokenProperties{
 				ScopeMapID: to.StringPtr(env.ACRResourceID() + "/scopeMaps/_repositories_pull"),
 				Status:     mgmtcontainerregistry.TokenStatusEnabled,
@@ -36,7 +36,7 @@ func TestEnsureTokenAndPassword(t *testing.T) {
 
 	registries := mock_containerregistry.NewMockRegistriesClient(controller)
 	registries.EXPECT().
-		GenerateCredentials(ctx, "global", "arosvc", gomock.Any()).
+		GenerateCredentials(ctx, "global", "arointsvc", gomock.Any()).
 		Return(mgmtcontainerregistry.GenerateCredentialsResult{
 			Passwords: &[]mgmtcontainerregistry.TokenPassword{
 				{
