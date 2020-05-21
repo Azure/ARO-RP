@@ -8,7 +8,7 @@ steps:
     set -e
     mkdir -p '${{ parameters.modulePath }}'
     set +e
-    sudo ln -s /usr/local/go1.13.10 /usr/local/go1.13
+    sudo ln -s /usr/local/go1.13.* /usr/local/go1.13
     (shopt -s dotglob; mv * ${{ parameters.modulePath }})
     set -e
     echo "##vso[task.prependpath]${{ parameters.gobin }}"
