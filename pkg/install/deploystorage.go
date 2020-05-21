@@ -75,7 +75,12 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 	group := mgmtfeatures.ResourceGroup{
 		Location:  &installConfig.Config.Azure.Region,
 		ManagedBy: to.StringPtr(i.doc.OpenShiftCluster.ID),
+		Tags:      map[string]*string{},
 	}
+	for tk, tv := range i.doc.OpenShiftCluster.Tags {
+		group.Tags[tk] = &tv
+	}
+
 	if _, ok := i.env.(env.Dev); ok {
 		group.ManagedBy = nil
 	}
