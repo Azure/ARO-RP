@@ -148,7 +148,7 @@ func (d *dev) InitializeAuthorizers() error {
 }
 
 func (d *dev) ACRName() string {
-	return "arosvc"
+	return "arointsvc"
 }
 
 func (d *dev) DatabaseName() string {

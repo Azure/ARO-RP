@@ -89,9 +89,9 @@ func (t *Test) SubscriptionID() string {
 }
 
 func (t *Test) ACRResourceID() string {
-	return "/subscriptions/93aeba23-2f76-4307-be82-02921df010cf/resourceGroups/global/providers/Microsoft.ContainerRegistry/registries/arosvc"
+	return "/subscriptions/93aeba23-2f76-4307-be82-02921df010cf/resourceGroups/global/providers/Microsoft.ContainerRegistry/registries/arointsvc"
 }
 
 func (t *Test) ACRName() string {
-	return "arosvc"
+	return "arointsvc"
 }
