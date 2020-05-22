@@ -306,7 +306,11 @@ func (p *prod) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, err
 		return nil, err
 	}
 
-	return autorest.NewBearerAuthorizer(sp), nil
+	return &refreshableAuthorizer{autorest.NewBearerAuthorizer(sp), sp}, nil
+}
+
+func (p *prod) RefreshFPAuthorizer(ctx context.Context, fpAuthorizer autorest.Authorizer) error {
+	return fpAuthorizer.(*refreshableAuthorizer).RefreshWithContext(ctx)
 }
 
 func (p *prod) GetCertificateSecret(ctx context.Context, secretName string) (key *rsa.PrivateKey, certs []*x509.Certificate, err error) {

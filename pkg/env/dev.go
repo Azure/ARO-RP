@@ -52,7 +52,6 @@ func (ra *refreshableAuthorizer) RefreshWithContext(ctx context.Context) error {
 
 type Dev interface {
 	CreateARMResourceGroupRoleAssignment(context.Context, autorest.Authorizer, string) error
-	RefreshFPAuthorizer(ctx context.Context, fpAuthorizer autorest.Authorizer) error
 }
 
 type dev struct {
@@ -274,11 +273,6 @@ func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthor
 		return err
 	}
 
-	d.log.Print("development mode: refreshing authorizer")
-	return fpAuthorizer.(*refreshableAuthorizer).RefreshWithContext(ctx)
-}
-
-func (d *dev) RefreshFPAuthorizer(ctx context.Context, fpAuthorizer autorest.Authorizer) error {
 	d.log.Print("development mode: refreshing authorizer")
 	return fpAuthorizer.(*refreshableAuthorizer).RefreshWithContext(ctx)
 }
