@@ -33,7 +33,7 @@ def assign_contributor_to_vnet(cli_ctx, vnet, object_id):
         type='roleDefinitions',
         name=DEVELOPMENT_CONTRIBUTOR if rp_mode_development() else CONTRIBUTOR,
     )
-    if has_assignment(list(client.role_assignments.list_for_scope(vnet)), role_definition_id, object_id):
+    if has_assignment(client.role_assignments.list_for_scope(vnet), role_definition_id, object_id):
         return
 
     # generate random uuid for role assignment
@@ -46,7 +46,7 @@ def assign_contributor_to_vnet(cli_ctx, vnet, object_id):
     ))
 
 
-def assign_permissions_to_routetable(cli_ctx, master_subnet, worker_subnet, object_id):
+def assign_contributor_to_routetable(cli_ctx, master_subnet, worker_subnet, object_id):
     auth_client = get_mgmt_service_client(cli_ctx, ResourceType.MGMT_AUTHORIZATION)
     client = get_mgmt_service_client(cli_ctx, ResourceType.MGMT_NETWORK)
 
@@ -57,16 +57,16 @@ def assign_permissions_to_routetable(cli_ctx, master_subnet, worker_subnet, obje
         name=DEVELOPMENT_CONTRIBUTOR if rp_mode_development() else CONTRIBUTOR,
     )
 
-    route_tables = []
+    route_tables = set()
     for sn in [master_subnet, worker_subnet]:
         sid = parse_resource_id(sn)
         subnet = client.subnets.get(resource_group_name=sid['resource_group'],
                                     virtual_network_name=sid['name'],
                                     subnet_name=sid['resource_name'])
         if subnet.route_table is not None and \
-           not has_assignment(list(auth_client.role_assignments.list_for_scope(subnet.route_table.id)),
+           not has_assignment(auth_client.role_assignments.list_for_scope(subnet.route_table.id),
                               role_definition_id, object_id):
-            route_tables.append(subnet.route_table)
+            route_tables.add(subnet.route_table)
 
     if not route_tables:
         return
@@ -74,13 +74,6 @@ def assign_permissions_to_routetable(cli_ctx, master_subnet, worker_subnet, obje
     RoleAssignmentCreateParameters = get_sdk(cli_ctx, ResourceType.MGMT_AUTHORIZATION,
                                              'RoleAssignmentCreateParameters', mod='models',
                                              operation_group='role_assignments')
-
-    role_definition_id = resource_id(
-        subscription=get_subscription_id(cli_ctx),
-        namespace='Microsoft.Authorization',
-        type='roleDefinitions',
-        name=DEVELOPMENT_CONTRIBUTOR if rp_mode_development() else CONTRIBUTOR,
-    )
 
     for rt in route_tables:
         role_uuid = _gen_uuid()

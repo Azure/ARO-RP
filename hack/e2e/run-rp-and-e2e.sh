@@ -66,7 +66,7 @@ deploy_e2e_deps() {
     az network route-table create \
       -g "$ARO_RESOURCEGROUP" \
       -l "$LOCATION" \
-      -n "$CLUSTER-rt"
+      -n "$CLUSTER-rt" >/dev/null
 
     echo "########## Create ARO Subnet ##########"
     for subnet in "$CLUSTER-master" "$CLUSTER-worker"; do
@@ -83,8 +83,8 @@ deploy_e2e_deps() {
       -g "$ARO_RESOURCEGROUP" \
       --vnet-name dev-vnet \
       -n "$CLUSTER-master" \
-      --disable-private-link-service-network-policies true >/dev/null \
-      --route-table "$CLUSTER-rt"
+      --route-table "$CLUSTER-rt" \
+      --disable-private-link-service-network-policies true >/dev/null
 
     echo "########## Create Cluster SPN ##########"
     az ad sp create-for-rbac -n "$CLUSTER-$LOCATION" --role contributor \
