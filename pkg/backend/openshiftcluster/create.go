@@ -262,7 +262,7 @@ func (m *Manager) Create(ctx context.Context) error {
 			},
 			Platform: types.Platform{
 				Azure: &azuretypes.Platform{
-					Region:                   m.doc.OpenShiftCluster.Location,
+					Region:                   strings.ToLower(m.doc.OpenShiftCluster.Location), // Used in k8s object names, so must pass DNS-1123 validation
 					ResourceGroupName:        resourceGroup,
 					NetworkResourceGroupName: vnetr.ResourceGroup,
 					VirtualNetwork:           vnetr.ResourceName,
