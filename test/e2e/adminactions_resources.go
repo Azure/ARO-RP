@@ -6,7 +6,9 @@ package e2e
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
+	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -29,7 +31,7 @@ var _ = Describe("Admin actions", func() {
 		Expect(err).NotTo(HaveOccurred())
 		var resourceIDs []string
 		for _, r := range resources {
-			resourceIDs = append(resourceIDs, *r.ID)
+			resourceIDs = append(resourceIDs, strings.ToLower(*r.ID))
 		}
 
 		// Get Azure resource names via admin actions API
@@ -41,7 +43,7 @@ var _ = Describe("Admin actions", func() {
 		err = json.Unmarshal(result, &data)
 		Expect(err).NotTo(HaveOccurred())
 		for _, resource := range data {
-			Expect(resource["id"]).To(BeElementOf(resourceIDs))
+			Expect(strings.ToLower(fmt.Sprintf("%s", resource["id"]))).To(BeElementOf(resourceIDs))
 		}
 	})
 })
