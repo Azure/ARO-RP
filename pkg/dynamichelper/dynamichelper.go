@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/ghodss/yaml"
-	"github.com/openshift/openshift-azure/pkg/util/cmp"
 	"github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,6 +22,7 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/cmp"
 )
 
 type DynamicHelper interface {

@@ -7,7 +7,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/openshift/openshift-azure/pkg/util/jsonpath"
+	"github.com/Azure/ARO-RP/pkg/util/jsonpath"
 )
 
 // cleanMetadata cleans an ObjectMeta structure

@@ -445,6 +445,14 @@
   version = "v4.6.0"
 
 [[projects]]
+  digest = "1:bde2a1ce1de28312f165a88926c12f4acd19dc4d7da96a445dfa5a29eae07a93"
+  name = "github.com/fatih/color"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "daf2830f2741ebb735b21709a520c5f37d642d85"
+  version = "v1.9.0"
+
+[[projects]]
   digest = "1:2cd7915ab26ede7d95b8749e6b1f933f1c6d5398030684e6505940a10f31cfda"
   name = "github.com/ghodss/yaml"
   packages = ["."]
@@ -510,6 +518,14 @@
   pruneopts = "UT"
   revision = "8a84ec635f1b280a7062edeab609f0667a053248"
   version = "v0.19.6"
+
+[[projects]]
+  digest = "1:eec9b9a9f07a9b0de09431545481e22c233181b1af40170d0bc1f50b83690738"
+  name = "github.com/gobuffalo/flect"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "7a04ff140e0fd2ea77adfd5b8bd2b0c80ab739a9"
+  version = "v0.2.1"
 
 [[projects]]
   digest = "1:582e25eccee928dc12416ea4c23b6dae8f3b5687730632aa1473ebebe80a2359"
@@ -675,6 +691,14 @@
   pruneopts = "UT"
   revision = "1afb36080aec31e0d1528973ebe6721b191b0369"
   version = "v0.3.8"
+
+[[projects]]
+  digest = "1:870d441fe217b8e689d7949fef6e43efbc787e50f200cb1e70dbca9204a1d6be"
+  name = "github.com/inconshreveable/mousetrap"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75"
+  version = "v1.0"
 
 [[projects]]
   branch = "master"
@@ -1181,12 +1205,9 @@
   revision = "25bb6aeb58135c38a667e849edf5244871be4992"
 
 [[projects]]
-  digest = "1:b4e8506321f1bba065f3e2d1da46a70d114984a54c89b5d8b979e64e00655642"
+  digest = "1:7a8874002044d748dd5ec9f4f1cb6053d8125e7a29ab9665ef64f7628f910141"
   name = "github.com/operator-framework/operator-sdk"
-  packages = [
-    "pkg/k8sutil",
-    "pkg/status",
-  ]
+  packages = ["pkg/status"]
   pruneopts = "UT"
   revision = "2fd7019f856cdb6f6618e2c3c80d15c3c79d1b6c"
   version = "v0.17.0"
@@ -1293,6 +1314,14 @@
   pruneopts = "UT"
   revision = "839c75faf7f98a33d445d181f3018b5c3409a45e"
   version = "v1.4.2"
+
+[[projects]]
+  digest = "1:f6adcf4df6c030a53a14a8fdbb3fade7cac3d014ff78a4e0de500b4c0cf5154f"
+  name = "github.com/spf13/cobra"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "a684a6d7f5e37385d954dd3b5a14fc6912c6ab9d"
+  version = "v1.0.0"
 
 [[projects]]
   digest = "1:524b71991fc7d9246cc7dc2d9e0886ccb97648091c63e30eef619e6862c955dd"
@@ -1718,6 +1747,14 @@
   version = "v2.2.7"
 
 [[projects]]
+  branch = "v3"
+  digest = "1:f87d6c8edf5e57ae4a355abc05aca1dbf38b073068bba96c1fbbff852a1e2fd3"
+  name = "gopkg.in/yaml.v3"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "2ff61e1afc866138abf1a8adf3cc89721090ac31"
+
+[[projects]]
   branch = "origin-4.3-kubernetes-1.16.2"
   digest = "1:07ac50e8a151b47143ee8ba564106807f6e10a4557cb9ac256372ae514bb46c2"
   name = "k8s.io/api"
@@ -1784,13 +1821,14 @@
 
 [[projects]]
   branch = "origin-4.3-kubernetes-1.16.2"
-  digest = "1:f0753135e665d2abd1cd896db5d1c00e156698e2b4e66a9af56f09ea112e855b"
+  digest = "1:f48a4d72df9b62072679d58f1f591f9dc5e5e628e973b8b836c399fcb6b7061b"
   name = "k8s.io/apimachinery"
   packages = [
     "pkg/api/equality",
     "pkg/api/errors",
     "pkg/api/meta",
     "pkg/api/resource",
+    "pkg/api/validation",
     "pkg/apis/meta/internalversion",
     "pkg/apis/meta/v1",
     "pkg/apis/meta/v1/unstructured",
@@ -2118,6 +2156,82 @@
   revision = "67ee49a35456387c35b01aaaf26a6add1fe49c32"
 
 [[projects]]
+  digest = "1:a2ae73d1f36d28a2936c672c0976782c506562ee21a07fb8f589136c5cef3fd2"
+  name = "sigs.k8s.io/controller-tools"
+  packages = [
+    "cmd/controller-gen",
+    "pkg/crd",
+    "pkg/crd/markers",
+    "pkg/deepcopy",
+    "pkg/genall",
+    "pkg/genall/help",
+    "pkg/genall/help/pretty",
+    "pkg/loader",
+    "pkg/markers",
+    "pkg/rbac",
+    "pkg/schemapatcher",
+    "pkg/schemapatcher/internal/yaml",
+    "pkg/version",
+    "pkg/webhook",
+  ]
+  pruneopts = "UT"
+  revision = "93a4eed983cf9670deabcf3cfa837a4b69988c6e"
+  version = "v0.2.9"
+
+[[projects]]
+  branch = "release-kustomize-v4.0"
+  digest = "1:f833e92709de5f4ec4b0061528735bdaf0be7de13833031d346dbd50dadf9c63"
+  name = "sigs.k8s.io/kustomize"
+  packages = [
+    "api/filesys",
+    "api/git",
+    "api/hasher",
+    "api/ifc",
+    "api/internal/accumulator",
+    "api/internal/accumulator/expansion",
+    "api/internal/kusterr",
+    "api/inventory",
+    "api/k8sdeps/configmapandsecret",
+    "api/k8sdeps/kunstruct",
+    "api/k8sdeps/transformer",
+    "api/k8sdeps/transformer/patch",
+    "api/k8sdeps/validator",
+    "api/kv",
+    "api/loader",
+    "api/pgmconfig",
+    "api/plugins/builtinconfig",
+    "api/plugins/builtinconfig/consts",
+    "api/plugins/builtinhelpers",
+    "api/plugins/builtins",
+    "api/plugins/config",
+    "api/plugins/execplugin",
+    "api/plugins/loader",
+    "api/provenance",
+    "api/resid",
+    "api/resmap",
+    "api/resource",
+    "api/target",
+    "api/transform",
+    "api/types",
+    "kustomize",
+    "kustomize/internal/commands",
+    "kustomize/internal/commands/build",
+    "kustomize/internal/commands/config",
+    "kustomize/internal/commands/create",
+    "kustomize/internal/commands/edit",
+    "kustomize/internal/commands/edit/add",
+    "kustomize/internal/commands/edit/fix",
+    "kustomize/internal/commands/edit/patch",
+    "kustomize/internal/commands/edit/remove",
+    "kustomize/internal/commands/edit/set",
+    "kustomize/internal/commands/kustfile",
+    "kustomize/internal/commands/util",
+    "kustomize/internal/commands/version",
+  ]
+  pruneopts = "UT"
+  revision = "fcee91eafdb9afd6bc9105c18813d839a1269994"
+
+[[projects]]
   digest = "1:7719608fe0b52a4ece56c2dde37bedd95b938677d1ab0f84b8a7852e4c59f849"
   name = "sigs.k8s.io/yaml"
   packages = ["."]
@@ -2221,7 +2335,6 @@
     "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1",
     "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned",
     "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake",
-    "github.com/operator-framework/operator-sdk/pkg/k8sutil",
     "github.com/operator-framework/operator-sdk/pkg/status",
     "github.com/prometheus/common/model",
     "github.com/satori/go.uuid",
@@ -2273,10 +2386,15 @@
     "sigs.k8s.io/controller-runtime/pkg/client",
     "sigs.k8s.io/controller-runtime/pkg/envtest",
     "sigs.k8s.io/controller-runtime/pkg/envtest/printer",
+    "sigs.k8s.io/controller-runtime/pkg/event",
     "sigs.k8s.io/controller-runtime/pkg/log",
     "sigs.k8s.io/controller-runtime/pkg/log/zap",
+    "sigs.k8s.io/controller-runtime/pkg/predicate",
     "sigs.k8s.io/controller-runtime/pkg/reconcile",
     "sigs.k8s.io/controller-runtime/pkg/scheme",
+    "sigs.k8s.io/controller-tools/cmd/controller-gen",
+    "sigs.k8s.io/kustomize/kustomize",
+    "sigs.k8s.io/yaml",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

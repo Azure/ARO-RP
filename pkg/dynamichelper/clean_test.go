@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/openshift/openshift-azure/pkg/util/cmp"
+	"github.com/Azure/ARO-RP/pkg/util/cmp"
 )
 
 func TestClean(t *testing.T) {
