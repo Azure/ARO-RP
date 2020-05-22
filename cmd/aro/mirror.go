@@ -75,9 +75,8 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	for _, ref := range []string{
-		"linuxgeneva-microsoft.azurecr.io/genevamdsd:master_266",
 		"linuxgeneva-microsoft.azurecr.io/genevamdsd:master_279",
-		"linuxgeneva-microsoft.azurecr.io/genevamdm:master_35",
+		"linuxgeneva-microsoft.azurecr.io/genevamdsd:master_285",
 		"linuxgeneva-microsoft.azurecr.io/genevamdm:master_37",
 	} {
 		log.Printf("mirroring %s", ref)
