@@ -48,7 +48,10 @@ func (r *PullsecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 		// filter out other secrets.
 		return reconcile.Result{}, nil
 	}
-
+	if len(r.requiredRepoTokensStore) == 0 {
+		// nothing to do.
+		return reconcile.Result{}, nil
+	}
 	r.Log.Info("Reconciling pull-secret")
 
 	return reconcile.Result{}, retry.RetryOnConflict(retry.DefaultRetry, func() error {
@@ -135,9 +138,15 @@ func (r *PullsecretReconciler) requiredRepoTokens() (map[string]string, error) {
 	// The idea here is you mount a secret as a file under /pull-secrets with
 	// the same name as the registry in the pull secret.
 	psPath := "/pull-secrets"
-	pathOverride := os.Getenv("PULL_SECRET_PATH") // for development
-	if pathOverride != "" {
-		psPath = pathOverride
+	if os.Getenv("RP_MODE") == "development" {
+		pathOverride := os.Getenv("PULL_SECRET_PATH") // for development
+		if pathOverride != "" {
+			psPath = pathOverride
+			r.Log.Warnf("running outside the cluster, using override path %s", pathOverride)
+		} else {
+			r.Log.Warnf("running outside the cluster, disabling pull secret controller")
+			return map[string]string{}, nil
+		}
 	}
 	repoTokens := map[string]string{}
 
