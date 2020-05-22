@@ -9,6 +9,7 @@ from azure.cli.core.commands.client_factory import get_subscription_id
 from azure.cli.core.profiles import get_sdk
 from azure.cli.core.profiles import ResourceType
 from msrestazure.tools import resource_id
+from msrestazure.tools import parse_resource_id
 
 
 CONTRIBUTOR = 'b24988ac-6180-42a0-ab88-20f7382dd24c'
@@ -32,11 +33,8 @@ def assign_contributor_to_vnet(cli_ctx, vnet, object_id):
         type='roleDefinitions',
         name=DEVELOPMENT_CONTRIBUTOR if rp_mode_development() else CONTRIBUTOR,
     )
-
-    for assignment in list(client.role_assignments.list_for_scope(vnet)):
-        if assignment.role_definition_id.lower() == role_definition_id.lower() and \
-                assignment.principal_id.lower() == object_id.lower():
-            return
+    if has_assignment(list(client.role_assignments.list_for_scope(vnet)), role_definition_id, object_id):
+        return
 
     # generate random uuid for role assignment
     role_uuid = _gen_uuid()
@@ -46,6 +44,60 @@ def assign_contributor_to_vnet(cli_ctx, vnet, object_id):
         principal_id=object_id,
         principal_type='ServicePrincipal',
     ))
+
+
+def assign_permissions_to_routetable(cli_ctx, master_subnet, worker_subnet, object_id):
+    auth_client = get_mgmt_service_client(cli_ctx, ResourceType.MGMT_AUTHORIZATION)
+    client = get_mgmt_service_client(cli_ctx, ResourceType.MGMT_NETWORK)
+
+    role_definition_id = resource_id(
+        subscription=get_subscription_id(cli_ctx),
+        namespace='Microsoft.Authorization',
+        type='roleDefinitions',
+        name=DEVELOPMENT_CONTRIBUTOR if rp_mode_development() else CONTRIBUTOR,
+    )
+
+    route_tables = []
+    for sn in [master_subnet, worker_subnet]:
+        sid = parse_resource_id(sn)
+        subnet = client.subnets.get(resource_group_name=sid['resource_group'],
+                                    virtual_network_name=sid['name'],
+                                    subnet_name=sid['resource_name'])
+        if subnet.route_table is not None and \
+           not has_assignment(list(auth_client.role_assignments.list_for_scope(subnet.route_table.id)),
+                              role_definition_id, object_id):
+            route_tables.append(subnet.route_table)
+
+    if not route_tables:
+        return
+
+    RoleAssignmentCreateParameters = get_sdk(cli_ctx, ResourceType.MGMT_AUTHORIZATION,
+                                             'RoleAssignmentCreateParameters', mod='models',
+                                             operation_group='role_assignments')
+
+    role_definition_id = resource_id(
+        subscription=get_subscription_id(cli_ctx),
+        namespace='Microsoft.Authorization',
+        type='roleDefinitions',
+        name=DEVELOPMENT_CONTRIBUTOR if rp_mode_development() else CONTRIBUTOR,
+    )
+
+    for rt in route_tables:
+        role_uuid = _gen_uuid()
+        auth_client.role_assignments.create(rt.id, role_uuid, RoleAssignmentCreateParameters(
+            role_definition_id=role_definition_id,
+            principal_id=object_id,
+            principal_type='ServicePrincipal',
+        ))
+
+
+def has_assignment(assignments, role_definition_id, object_id):
+    for assignment in assignments:
+        if assignment.role_definition_id.lower() == role_definition_id.lower() and \
+                assignment.principal_id.lower() == object_id.lower():
+            return True
+
+    return False
 
 
 def rp_mode_development():
