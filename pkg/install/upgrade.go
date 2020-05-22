@@ -40,6 +40,8 @@ func (i *Installer) upgradeCluster(ctx context.Context) error {
 			return nil
 		}
 
+		i.log.Printf("initiating cluster upgrade, target version %s", version.OpenShiftVersion)
+
 		cv.Spec.DesiredUpdate = &configv1.Update{
 			Version: version.OpenShiftVersion,
 			Image:   version.OpenShiftPullSpec,
