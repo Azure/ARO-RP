@@ -40,7 +40,7 @@ func pollUntilProvisioningState(ctx context.Context, resourceGroup string, vmNam
 
 	var err error
 
-	wait.PollImmediateUntil(5*time.Second, func() (bool, error) {
+	err = wait.PollImmediateUntil(5*time.Second, func() (bool, error) {
 		vm, err := Clients.VirtualMachines.Get(ctx, resourceGroup, vmName, mgmtcompute.InstanceView)
 		if err != nil {
 			return true, err
@@ -64,11 +64,13 @@ var _ = Describe("Admin actions", func() {
 
 		// Get the resourcegroup that the VM instances live in
 		oc, err := Clients.OpenshiftClusters.Get(ctx, os.Getenv("RESOURCEGROUP"), os.Getenv("CLUSTER"))
+		Expect(err).NotTo(HaveOccurred())
 		rg := stringutils.LastTokenByte(*oc.OpenShiftClusterProperties.ClusterProfile.ResourceGroupID, '/')
 
 		// Pick the first worker VM to redeploy
 		vm, err := pickFirstWorkerVM(ctx, rg)
 		Expect(err).NotTo(HaveOccurred())
+		Expect(vm).NotTo(Equal(nil))
 
 		// Trigger a redeploy action
 		_, err = adminRequest("POST", "redeployvm", "", nil, "vmName="+*vm.Name)

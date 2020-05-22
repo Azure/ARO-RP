@@ -7,6 +7,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -21,23 +22,17 @@ var _ = Describe("Admin actions", func() {
 		err = obj.UnmarshalJSON(result)
 		Expect(err).NotTo(HaveOccurred())
 
-		objs, err := obj.ToList()
-		Expect(err).NotTo(HaveOccurred())
-
-		var validNames = []string{
-			"cluster-autoscaler-operator-ca",
-			"cluster-autoscaler-operator-leader",
-			"kube-rbac-proxy",
-			"kube-rbac-proxy-cluster-autoscaler-operator",
-			"machine-api-operator",
-			"machine-api-operator-images",
+		// Build list of valid names from the kubeclient
+		configMaps, err := Clients.Kubernetes.CoreV1().ConfigMaps("openshift-machine-api").List(metav1.ListOptions{})
+		var validNames []string
+		for _, c := range configMaps.Items {
+			validNames = append(validNames, c.Name)
 		}
 
-		// get objects with kubeclient and compare
-		cm, err := Clients.Kubernetes.CoreV1().ConfigMaps("openshift-machine-api").Get("cluster-autoscaler-operator-leader", metav1.GetOptions{})
+		// Compare names from kubernetesobjects API with valid names from kubeclient
+		objs, err := obj.ToList()
 		Expect(err).NotTo(HaveOccurred())
 		for _, o := range objs.Items {
-			Expect(o.GetNamespace()).To(BeEquivalentTo(cm.Namespace))
 			Expect(o.GetName()).To(BeElementOf(validNames))
 		}
 	})
@@ -81,7 +76,7 @@ var _ = Describe("Admin actions", func() {
 		_, err = adminRequest("DELETE", "kubernetesobjects", "", nil, "kind=configmap", "namespace=default", "name=e2e-test-configmap")
 		Expect(err).NotTo(HaveOccurred())
 		cm, err = Clients.Kubernetes.CoreV1().ConfigMaps("default").Get("e2e-test-configmap", metav1.GetOptions{})
-		Expect(err).To(HaveOccurred())
+		Expect(errors.IsNotFound(err)).To(Equal(true))
 	})
 
 	Specify("kubernetesobjects update", func() {

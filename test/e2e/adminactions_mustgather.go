@@ -27,5 +27,7 @@ var _ = Describe("Admin actions", func() {
 				Expect(val).To(BeElementOf("application/json", "application/gzip"))
 			}
 		}
+
+		// The body of mustgather is very large. Presently the content/structure is not tested.
 	})
 })
