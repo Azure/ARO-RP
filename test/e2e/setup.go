@@ -41,8 +41,14 @@ func newClientSet() (*ClientSet, error) {
 		return nil, err
 	}
 
+	// The VirtualMachinesClient uses this authorizer
+	vmAuthorizer, err := auth.NewAuthorizerFromCLI()
+	if err != nil {
+		return nil, err
+	}
+
 	// The ResourcesClient uses this authorizer
-	fpAuthorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(azure.PublicCloud.ResourceManagerEndpoint)
+	rmAuthorizer, err := auth.NewAuthorizerFromCLIWithResource(azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -74,8 +80,8 @@ func newClientSet() (*ClientSet, error) {
 		Operations:        redhatopenshift.NewOperationsClient(subscriptionID, authorizer),
 		Kubernetes:        cli,
 		MachineAPI:        machineapicli,
-		VirtualMachines:   mgmtcompute.NewVirtualMachinesClient(subscriptionID, authorizer),
-		Resources:         features.NewResourcesClient(subscriptionID, fpAuthorizer),
+		VirtualMachines:   mgmtcompute.NewVirtualMachinesClient(subscriptionID, vmAuthorizer),
+		Resources:         features.NewResourcesClient(subscriptionID, rmAuthorizer),
 	}, nil
 }
 
