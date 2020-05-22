@@ -105,6 +105,7 @@ run_e2e() {
     az aro create \
       -g "$ARO_RESOURCEGROUP" \
       -n "$CLUSTER" \
+      -l ${LOCATION^} \
       --vnet dev-vnet \
       --master-subnet "$CLUSTER-master" \
       --worker-subnet "$CLUSTER-worker" \
