@@ -5,6 +5,7 @@ package e2e
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 
 	. "github.com/onsi/ginkgo"
@@ -22,14 +23,25 @@ var _ = Describe("Admin actions", func() {
 		oc, err := Clients.OpenshiftClusters.Get(ctx, os.Getenv("RESOURCEGROUP"), os.Getenv("CLUSTER"))
 		Expect(err).NotTo(HaveOccurred())
 
-		// Get Azure resources via admin actions API
-		_, err = adminRequest("GET", "resources", "", nil)
-		Expect(err).NotTo(HaveOccurred())
-
-		// Get Azure resources via Azure API
+		// Build a list of valid Azure resource ID's via the Azure API
 		clusterRG := stringutils.LastTokenByte(*oc.OpenShiftClusterProperties.ClusterProfile.ResourceGroupID, '/')
 		resources, err := Clients.Resources.ListByResourceGroup(ctx, clusterRG, "", "", nil)
 		Expect(err).NotTo(HaveOccurred())
-		Log.Debugln(resources)
+		var resourceIDs []string
+		for _, r := range resources {
+			resourceIDs = append(resourceIDs, *r.ID)
+		}
+
+		// Get Azure resource names via admin actions API
+		result, err := adminRequest("GET", "resources", "", nil)
+		Expect(err).NotTo(HaveOccurred())
+
+		// Unmarshal the JSON and assert the ID's are expected
+		var data []map[string]interface{}
+		err = json.Unmarshal(result, &data)
+		Expect(err).NotTo(HaveOccurred())
+		for _, resource := range data {
+			Expect(resource["id"]).To(BeElementOf(resourceIDs))
+		}
 	})
 })
