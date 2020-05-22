@@ -43,6 +43,7 @@ type Interface interface {
 	DialContext(context.Context, string, string) (net.Conn, error)
 	Domain() string
 	FPAuthorizer(string, string) (autorest.Authorizer, error)
+	RefreshFPAuthorizer(ctx context.Context, fpAuthorizer autorest.Authorizer) error
 	GetCertificateSecret(context.Context, string) (*rsa.PrivateKey, []*x509.Certificate, error)
 	GetSecret(context.Context, string) ([]byte, error)
 	Listen() (net.Listener, error)
