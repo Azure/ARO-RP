@@ -234,7 +234,7 @@ func (i *Installer) runSteps(ctx context.Context, steps []interface{}) error {
 					err = step(ctx)
 					if azureerrors.HasAuthorizationFailedError(err) ||
 						azureerrors.HasLinkedAuthorizationFailedError(err) {
-						i.log.Print(err)
+						i.log.Warnf("found link authorization errors, will retry (%s)", err)
 						// https://github.com/Azure/ARO-RP/issues/541: it is unclear if this refresh helps or not
 						if development, ok := i.env.(env.Dev); ok {
 							err = development.RefreshFPAuthorizer(ctx, i.fpAuthorizer)
@@ -253,7 +253,10 @@ func (i *Installer) runSteps(ctx context.Context, steps []interface{}) error {
 				if _, ok := err.(*api.CloudError); !ok {
 					err = fmt.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name(), err)
 				}
+				i.log.Warnf("ran step but got an error (%s)", err)
 				return err
+			} else {
+				i.log.Infof("ran step %s successfully", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name())
 			}
 
 		case condition:
@@ -266,9 +269,12 @@ func (i *Installer) runSteps(ctx context.Context, steps []interface{}) error {
 			if err != nil {
 				i.gatherFailureLogs(ctx)
 				if _, ok := err.(*api.CloudError); !ok {
-					err = fmt.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name(), err)
+					err = fmt.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(step.f).Pointer()).Name(), err)
 				}
+				i.log.Warnf("waited for condition but got an error (%s)", err)
 				return err
+			} else {
+				i.log.Infof("condition %s met", runtime.FuncForPC(reflect.ValueOf(step.f).Pointer()).Name())
 			}
 
 		default:
