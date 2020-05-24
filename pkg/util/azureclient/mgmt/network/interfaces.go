@@ -4,6 +4,8 @@ package network
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
+
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/go-autorest/autorest"
 )
@@ -11,6 +13,7 @@ import (
 // InterfacesClient is a minimal interface for azure InterfacesClient
 type InterfacesClient interface {
 	InterfacesClientAddons
+	Get(ctx context.Context, resourceGroupName string, networkInterfaceName string, expand string) (result mgmtnetwork.Interface, err error)
 }
 
 type interfacesClient struct {
