@@ -1328,7 +1328,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:8e69bffa4d027deb67c9e301197ea7f0b0b9334caaffcb28bc4e69a47dc5f30d"
+  digest = "1:a47904c455eb81c2e2e911ca2e95d21d50e6e9060d1b15d3acdd5f8af6f934c6"
   name = "golang.org/x/crypto"
   packages = [
     "bcrypt",
@@ -1350,6 +1350,7 @@
     "pkcs12/internal/rc2",
     "poly1305",
     "ssh",
+    "ssh/agent",
     "ssh/terminal",
   ]
   pruneopts = "UT"
@@ -2025,6 +2026,7 @@
     "github.com/ugorji/go/codec",
     "golang.org/x/crypto/chacha20poly1305",
     "golang.org/x/crypto/ssh",
+    "golang.org/x/crypto/ssh/agent",
     "golang.org/x/sync/errgroup",
     "golang.org/x/tools/cmd/goimports",
     "golang.org/x/tools/go/ast/astutil",
@@ -2052,6 +2054,7 @@
     "k8s.io/client-go/tools/clientcmd",
     "k8s.io/client-go/tools/clientcmd/api/v1",
     "k8s.io/client-go/tools/metrics",
+    "k8s.io/client-go/util/flowcontrol",
     "k8s.io/client-go/util/retry",
   ]
   solver-name = "gps-cdcl"
