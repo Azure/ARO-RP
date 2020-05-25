@@ -9,7 +9,6 @@ import (
 	"crypto/x509"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/to"
@@ -222,15 +221,12 @@ func (o *operator) resources(ctx context.Context) ([]runtime.Object, error) {
 		if err != nil {
 			return nil, err
 		}
-		manifests := strings.Split(string(b), "---")
-		for _, manifeststr := range manifests {
-			obj := &unstructured.Unstructured{}
-			err := yaml.Unmarshal([]byte(manifeststr), obj)
-			if err != nil {
-				return nil, err
-			}
-			results = append(results, obj)
+		obj := &unstructured.Unstructured{}
+		err = yaml.Unmarshal(b, obj)
+		if err != nil {
+			return nil, err
 		}
+		results = append(results, obj)
 	}
 	// then dynamic resources
 	gcsKeyBytes, err := tls.PrivateKeyAsBytes(o.genevaloggingKey)
