@@ -1821,14 +1821,13 @@
 
 [[projects]]
   branch = "origin-4.3-kubernetes-1.16.2"
-  digest = "1:f48a4d72df9b62072679d58f1f591f9dc5e5e628e973b8b836c399fcb6b7061b"
+  digest = "1:f0753135e665d2abd1cd896db5d1c00e156698e2b4e66a9af56f09ea112e855b"
   name = "k8s.io/apimachinery"
   packages = [
     "pkg/api/equality",
     "pkg/api/errors",
     "pkg/api/meta",
     "pkg/api/resource",
-    "pkg/api/validation",
     "pkg/apis/meta/internalversion",
     "pkg/apis/meta/v1",
     "pkg/apis/meta/v1/unstructured",
@@ -2179,59 +2178,6 @@
   version = "v0.2.9"
 
 [[projects]]
-  branch = "release-kustomize-v4.0"
-  digest = "1:f833e92709de5f4ec4b0061528735bdaf0be7de13833031d346dbd50dadf9c63"
-  name = "sigs.k8s.io/kustomize"
-  packages = [
-    "api/filesys",
-    "api/git",
-    "api/hasher",
-    "api/ifc",
-    "api/internal/accumulator",
-    "api/internal/accumulator/expansion",
-    "api/internal/kusterr",
-    "api/inventory",
-    "api/k8sdeps/configmapandsecret",
-    "api/k8sdeps/kunstruct",
-    "api/k8sdeps/transformer",
-    "api/k8sdeps/transformer/patch",
-    "api/k8sdeps/validator",
-    "api/kv",
-    "api/loader",
-    "api/pgmconfig",
-    "api/plugins/builtinconfig",
-    "api/plugins/builtinconfig/consts",
-    "api/plugins/builtinhelpers",
-    "api/plugins/builtins",
-    "api/plugins/config",
-    "api/plugins/execplugin",
-    "api/plugins/loader",
-    "api/provenance",
-    "api/resid",
-    "api/resmap",
-    "api/resource",
-    "api/target",
-    "api/transform",
-    "api/types",
-    "kustomize",
-    "kustomize/internal/commands",
-    "kustomize/internal/commands/build",
-    "kustomize/internal/commands/config",
-    "kustomize/internal/commands/create",
-    "kustomize/internal/commands/edit",
-    "kustomize/internal/commands/edit/add",
-    "kustomize/internal/commands/edit/fix",
-    "kustomize/internal/commands/edit/patch",
-    "kustomize/internal/commands/edit/remove",
-    "kustomize/internal/commands/edit/set",
-    "kustomize/internal/commands/kustfile",
-    "kustomize/internal/commands/util",
-    "kustomize/internal/commands/version",
-  ]
-  pruneopts = "UT"
-  revision = "fcee91eafdb9afd6bc9105c18813d839a1269994"
-
-[[projects]]
   digest = "1:7719608fe0b52a4ece56c2dde37bedd95b938677d1ab0f84b8a7852e4c59f849"
   name = "sigs.k8s.io/yaml"
   packages = ["."]
@@ -2393,7 +2339,6 @@
     "sigs.k8s.io/controller-runtime/pkg/reconcile",
     "sigs.k8s.io/controller-runtime/pkg/scheme",
     "sigs.k8s.io/controller-tools/cmd/controller-gen",
-    "sigs.k8s.io/kustomize/kustomize",
     "sigs.k8s.io/yaml",
   ]
   solver-name = "gps-cdcl"

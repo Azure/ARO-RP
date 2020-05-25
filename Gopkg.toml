@@ -12,7 +12,6 @@ required = [
   "k8s.io/code-generator/cmd/deepcopy-gen",
   "k8s.io/gengo/generator",
   "sigs.k8s.io/controller-tools/cmd/controller-gen",
-  "sigs.k8s.io/kustomize/kustomize",
 ]
 
 [[constraint]]

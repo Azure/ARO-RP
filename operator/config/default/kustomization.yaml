@@ -1,4 +1,0 @@
-namespace: openshift-azure-operator
-bases:
-- ../crd
-- ../resources

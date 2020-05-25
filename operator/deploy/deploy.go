@@ -216,21 +216,22 @@ func (o *operator) deployment() *appsv1.Deployment {
 
 func (o *operator) resources(ctx context.Context) ([]runtime.Object, error) {
 	// first static resources from Assets
-	b, err := Asset("resources.yaml")
-	if err != nil {
-		return nil, err
-	}
 	results := []runtime.Object{}
-	manifests := strings.Split(string(b), "---")
-	for _, manifeststr := range manifests {
-		obj := &unstructured.Unstructured{}
-		err := yaml.Unmarshal([]byte(manifeststr), obj)
+	for _, assetName := range AssetNames() {
+		b, err := Asset(assetName)
 		if err != nil {
 			return nil, err
 		}
-		results = append(results, obj)
+		manifests := strings.Split(string(b), "---")
+		for _, manifeststr := range manifests {
+			obj := &unstructured.Unstructured{}
+			err := yaml.Unmarshal([]byte(manifeststr), obj)
+			if err != nil {
+				return nil, err
+			}
+			results = append(results, obj)
+		}
 	}
-
 	// then dynamic resources
 	gcsKeyBytes, err := tls.PrivateKeyAsBytes(o.genevaloggingKey)
 	if err != nil {

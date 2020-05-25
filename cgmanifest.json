@@ -1399,15 +1399,6 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "fcee91eafdb9afd6bc9105c18813d839a1269994",
-                    "repositoryUrl": "https://sigs.k8s.io/kustomize/"
-                }
-            }
-        },
-        {
-            "component": {
-                "type": "git",
-                "git": {
                     "commitHash": "fd68e9863619f6ec2fdd8625fe1f02e7c877e480",
                     "repositoryUrl": "https://sigs.k8s.io/yaml/"
                 }
