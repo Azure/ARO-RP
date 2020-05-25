@@ -307,6 +307,10 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	err = o.dh.RefreshAPIResources()
+	if err != nil {
+		return err
+	}
 	for _, res := range resources {
 		err = o.dh.CreateOrUpdateObject(ctx, res)
 		if err != nil {

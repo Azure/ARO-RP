@@ -31,6 +31,7 @@ type DynamicHelper interface {
 	CreateOrUpdate(ctx context.Context, obj *unstructured.Unstructured) error
 	CreateOrUpdateObject(ctx context.Context, ro runtime.Object) error
 	Delete(ctx context.Context, groupKind, namespace, name string) error
+	RefreshAPIResources() error
 }
 
 type UpdatePolicy struct {
@@ -55,21 +56,27 @@ func New(log *logrus.Entry, restconfig *rest.Config, updatePolicy UpdatePolicy) 
 		updatePolicy: updatePolicy,
 		restconfig:   restconfig,
 	}
-	cli, err := discovery.NewDiscoveryClientForConfig(dh.restconfig)
-	if err != nil {
-		return nil, err
-	}
-
-	_, dh.apiresources, err = cli.ServerGroupsAndResources()
-	if err != nil {
-		return nil, err
-	}
-
-	dh.dyn, err = dynamic.NewForConfig(dh.restconfig)
+	err := dh.RefreshAPIResources()
 	if err != nil {
 		return nil, err
 	}
 	return dh, nil
+}
+
+func (dh *dynamicHelper) RefreshAPIResources() error {
+	cli, err := discovery.NewDiscoveryClientForConfig(dh.restconfig)
+	if err != nil {
+		return err
+	}
+
+	_, dh.apiresources, err = cli.ServerGroupsAndResources()
+	if err != nil {
+		return err
+	}
+
+	dh.dyn, err = dynamic.NewForConfig(dh.restconfig)
+	return err
+
 }
 
 func (dh *dynamicHelper) findGVR(groupKind, optionalVersion string) (*schema.GroupVersionResource, error) {
