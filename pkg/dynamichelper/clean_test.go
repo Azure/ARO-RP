@@ -1,5 +1,8 @@
 package dynamichelper
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"io/ioutil"
 	"path/filepath"
@@ -7,8 +10,17 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ghodss/yaml"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
 	"github.com/Azure/ARO-RP/pkg/util/cmp"
 )
+
+func unmarshal(b []byte) (unstructured.Unstructured, error) {
+	obj := &unstructured.Unstructured{}
+	err := yaml.Unmarshal(b, obj)
+	return *obj, err
+}
 
 func TestClean(t *testing.T) {
 	matches, err := filepath.Glob("testdata/clean/*-in.yaml")

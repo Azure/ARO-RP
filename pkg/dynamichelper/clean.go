@@ -1,5 +1,8 @@
 package dynamichelper
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"encoding/base64"
 	"regexp"

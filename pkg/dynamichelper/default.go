@@ -1,5 +1,8 @@
 package dynamichelper
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
