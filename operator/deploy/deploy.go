@@ -81,9 +81,10 @@ func New(log *logrus.Entry, e env.Interface, oc *api.OpenShiftCluster, cli kuber
 		return nil, err
 	}
 	dh, err := dynamichelper.New(log, restConfig, dynamichelper.UpdatePolicy{
-		IgnoreDefaults:  true,
-		LogChanges:      true,
-		RetryOnConflict: true,
+		IgnoreDefaults:                true,
+		LogChanges:                    true,
+		RetryOnConflict:               true,
+		RefreshAPIResourcesOnNotFound: true,
 	})
 	if err != nil {
 		return nil, err
@@ -239,7 +240,7 @@ func (o *operator) resources(ctx context.Context) ([]runtime.Object, error) {
 		return nil, err
 	}
 
-	ssc, err := o.securityContextConstraints(ctx, "privileged-operator", kubeServiceAccount)
+	ssc, err := o.securityContextConstraints(ctx, "privileged-aro-operator", kubeServiceAccount)
 	if err != nil {
 		return nil, err
 	}
@@ -301,10 +302,6 @@ func (o *operator) resources(ctx context.Context) ([]runtime.Object, error) {
 
 func (o *operator) CreateOrUpdate(ctx context.Context) error {
 	resources, err := o.resources(ctx)
-	if err != nil {
-		return err
-	}
-	err = o.dh.RefreshAPIResources()
 	if err != nil {
 		return err
 	}

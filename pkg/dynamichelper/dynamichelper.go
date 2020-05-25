@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/ghodss/yaml"
 	"github.com/sirupsen/logrus"
@@ -16,6 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
@@ -31,13 +33,13 @@ type DynamicHelper interface {
 	CreateOrUpdate(ctx context.Context, obj *unstructured.Unstructured) error
 	CreateOrUpdateObject(ctx context.Context, ro runtime.Object) error
 	Delete(ctx context.Context, groupKind, namespace, name string) error
-	RefreshAPIResources() error
 }
 
 type UpdatePolicy struct {
-	LogChanges      bool
-	RetryOnConflict bool
-	IgnoreDefaults  bool
+	LogChanges                    bool
+	RetryOnConflict               bool
+	IgnoreDefaults                bool
+	RefreshAPIResourcesOnNotFound bool
 }
 
 type dynamicHelper struct {
@@ -56,27 +58,30 @@ func New(log *logrus.Entry, restconfig *rest.Config, updatePolicy UpdatePolicy) 
 		updatePolicy: updatePolicy,
 		restconfig:   restconfig,
 	}
-	err := dh.RefreshAPIResources()
+	err := dh.refreshAPIResources()
 	if err != nil {
 		return nil, err
 	}
 	return dh, nil
 }
 
-func (dh *dynamicHelper) RefreshAPIResources() error {
+func (dh *dynamicHelper) refreshAPIResources() error {
+	dh.log.Info("refreshAPIResources")
 	cli, err := discovery.NewDiscoveryClientForConfig(dh.restconfig)
 	if err != nil {
+		dh.log.Warnf("discovery.NewDiscoveryClientForConfig %v", err)
 		return err
 	}
-
 	_, dh.apiresources, err = cli.ServerGroupsAndResources()
 	if err != nil {
+		dh.log.Warnf("cli.ServerGroupsAndResources %v", err)
 		return err
 	}
-
 	dh.dyn, err = dynamic.NewForConfig(dh.restconfig)
+	if err != nil {
+		dh.log.Warnf("dynamic.NewForConfig %v", err)
+	}
 	return err
-
 }
 
 func (dh *dynamicHelper) findGVR(groupKind, optionalVersion string) (*schema.GroupVersionResource, error) {
@@ -121,7 +126,7 @@ func (dh *dynamicHelper) findGVR(groupKind, optionalVersion string) (*schema.Gro
 
 	if len(matches) == 0 {
 		return nil, api.NewCloudError(
-			http.StatusBadRequest, api.CloudErrorCodeInvalidParameter,
+			http.StatusBadRequest, api.CloudErrorCodeNotFound,
 			"", "The groupKind '%s' was not found.", groupKind)
 	}
 
@@ -179,13 +184,44 @@ func (dh *dynamicHelper) CreateOrUpdateObject(ctx context.Context, ro runtime.Ob
 			return err
 		}
 	}
+
 	cleanNewObject(*obj)
 
 	return dh.CreateOrUpdate(ctx, obj)
 }
 
+func cloudErrorNotFound(err error) bool {
+	if err == nil {
+		return false
+	}
+	if cloudErr, ok := err.(*api.CloudError); ok {
+		return (cloudErr.Code == api.CloudErrorCodeNotFound)
+	}
+	return false
+}
+
 func (dh *dynamicHelper) CreateOrUpdate(ctx context.Context, o *unstructured.Unstructured) error {
-	gvr, err := dh.findGVR(o.GroupVersionKind().GroupKind().String(), o.GroupVersionKind().Version)
+	dh.log.Infof("CreateOrUpdate: %s", keyFunc(o.GroupVersionKind().GroupKind(), o.GetNamespace(), o.GetName()))
+	var gvr *schema.GroupVersionResource
+	threeTimesTheCharm := wait.Backoff{
+		Steps:    3,
+		Duration: 1 * time.Minute,
+		Factor:   4.0,
+		Jitter:   0.1,
+	}
+	err := retry.OnError(threeTimesTheCharm, cloudErrorNotFound, func() error {
+		// this is mostly used at cluster start up when kinds are still getting
+		// registered.
+		var err error
+		gvr, err = dh.findGVR(o.GroupVersionKind().GroupKind().String(), o.GroupVersionKind().Version)
+		if cloudErrorNotFound(err) && dh.updatePolicy.RefreshAPIResourcesOnNotFound {
+			if err = dh.refreshAPIResources(); err != nil {
+				dh.log.Warnf("refreshAPIResources %v", err)
+				return err
+			}
+		}
+		return err
+	})
 	if err != nil {
 		return err
 	}
@@ -214,7 +250,7 @@ func (dh *dynamicHelper) CreateOrUpdate(ctx context.Context, o *unstructured.Uns
 		}
 
 		if !dh.needsUpdate(existing, o) {
-			return err
+			return nil
 		}
 
 		if dh.updatePolicy.LogChanges {
