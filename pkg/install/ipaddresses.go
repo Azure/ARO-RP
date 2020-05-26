@@ -8,6 +8,9 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/Azure/go-autorest/autorest/to"
+
+	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/password"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -78,7 +81,7 @@ func (i *Installer) updateAPIIP(ctx context.Context) error {
 		return err
 	}
 
-	privateEndpointIP, err := i.privateendpoint.GetIP(ctx, i.doc)
+	privateEndpointIP, err := i.privateendpoint.GetRPPEIP(ctx, i.doc)
 	if err != nil {
 		return err
 	}
@@ -91,6 +94,63 @@ func (i *Installer) updateAPIIP(ctx context.Context) error {
 	return err
 }
 
-func (i *Installer) createPrivateEndpoint(ctx context.Context) error {
-	return i.privateendpoint.Create(ctx, i.doc)
+func (i *Installer) createRPPrivateEndpoint(ctx context.Context) error {
+	return i.privateendpoint.CreateRPPrivateEndpoint(ctx, i.doc)
+}
+
+func (i *Installer) createACRPrivateEndpoint(ctx context.Context) error {
+	return i.privateendpoint.CreateACRPrivateEndpoint(ctx, i.doc)
+}
+
+func (i *Installer) updateACRIP(ctx context.Context) error {
+	infraID := i.doc.OpenShiftCluster.Properties.InfraID
+	if infraID == "" {
+		infraID = "aro" // TODO: remove after deploy
+	}
+
+	resourceGroup := stringutils.LastTokenByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	ipAddress, err := i.privateendpoint.GetACRPEIP(ctx, i.doc)
+	if err != nil {
+		return err
+	}
+
+	_, err = i.dnscli.CreateOrUpdate(ctx, resourceGroup, "privatelink.azurecr.io", "", mgmtdns.A, mgmtdns.RecordSet{
+		Name: to.StringPtr("acrsvc"),
+		RecordSetProperties: &mgmtdns.RecordSetProperties{
+			ARecords: &[]mgmtdns.ARecord{
+				{
+					Ipv4Address: to.StringPtr(ipAddress),
+				},
+			},
+		},
+	}, "", "")
+	if err != nil {
+		return err
+	}
+
+	_, err = i.dnscli.CreateOrUpdate(ctx, resourceGroup, "privatelink.azurecr.io", "", mgmtdns.A, mgmtdns.RecordSet{
+		Name: to.StringPtr(fmt.Sprint("arosvc.%s.data", i.doc.OpenShiftCluster.Location)),
+		RecordSetProperties: &mgmtdns.RecordSetProperties{
+			ARecords: &[]mgmtdns.ARecord{
+				{
+					Ipv4Address: to.StringPtr(ipAddress),
+				},
+			},
+		},
+	}, "", "")
+	if err != nil {
+		return err
+	}
+
+	privateEndpointIP, err := i.privateendpoint.GetRPPEIP(ctx, i.doc)
+	if err != nil {
+		return err
+	}
+
+	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.Properties.NetworkProfile.PrivateEndpointIP = privateEndpointIP
+		doc.OpenShiftCluster.Properties.APIServerProfile.IP = ipAddress
+		return nil
+	})
+	return err
 }

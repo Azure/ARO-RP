@@ -15,12 +15,19 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 )
 
-const prefix = "rp-pe-"
+const (
+	rpPEPrefix  = "rp-pe-"
+	acrPEPrefix = "acr-pe-"
+)
 
 type Manager interface {
-	Create(context.Context, *api.OpenShiftClusterDocument) error
-	Delete(context.Context, *api.OpenShiftClusterDocument) error
-	GetIP(context.Context, *api.OpenShiftClusterDocument) (string, error)
+	// RP PrivateEndpoint methods
+	CreateRPPrivateEndpoint(context.Context, *api.OpenShiftClusterDocument) error
+	DeleteRPPrivateEndpoint(context.Context, *api.OpenShiftClusterDocument) error
+	GetRPPEIP(context.Context, *api.OpenShiftClusterDocument) (string, error)
+
+	CreateACRPrivateEndpoint(context.Context, *api.OpenShiftClusterDocument) error
+	GetACRPEIP(context.Context, *api.OpenShiftClusterDocument) (string, error)
 }
 
 type manager struct {
@@ -37,13 +44,13 @@ func NewManager(env env.Interface, localFPAuthorizer autorest.Authorizer) Manage
 	}
 }
 
-func (m *manager) Create(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
+func (m *manager) CreateRPPrivateEndpoint(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
 	infraID := doc.OpenShiftCluster.Properties.InfraID
 	if infraID == "" {
 		infraID = "aro" // TODO: remove after deploy
 	}
 
-	return m.privateendpoints.CreateOrUpdateAndWait(ctx, m.env.ResourceGroup(), prefix+doc.ID, mgmtnetwork.PrivateEndpoint{
+	return m.create(ctx, rpPEPrefix+doc.ID, mgmtnetwork.PrivateEndpoint{
 		PrivateEndpointProperties: &mgmtnetwork.PrivateEndpointProperties{
 			Subnet: &mgmtnetwork.Subnet{
 				ID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet"),
@@ -61,12 +68,52 @@ func (m *manager) Create(ctx context.Context, doc *api.OpenShiftClusterDocument)
 	})
 }
 
-func (m *manager) Delete(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
-	return m.privateendpoints.DeleteAndWait(ctx, m.env.ResourceGroup(), prefix+doc.ID)
+func (m *manager) DeleteRPPrivateEndpoint(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
+	return m.delete(ctx, rpPEPrefix+doc.ID)
 }
 
-func (m *manager) GetIP(ctx context.Context, doc *api.OpenShiftClusterDocument) (string, error) {
-	pe, err := m.privateendpoints.Get(ctx, m.env.ResourceGroup(), prefix+doc.ID, "networkInterfaces")
+func (m *manager) GetRPPEIP(ctx context.Context, doc *api.OpenShiftClusterDocument) (string, error) {
+	return m.getIP(ctx, rpPEPrefix+doc.ID)
+}
+
+func (m *manager) CreateACRPrivateEndpoint(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
+	infraID := doc.OpenShiftCluster.Properties.InfraID
+	if infraID == "" {
+		infraID = "aro" // TODO: remove after deploy
+	}
+
+	return m.create(ctx, acrPEPrefix+doc.ID, mgmtnetwork.PrivateEndpoint{
+		PrivateEndpointProperties: &mgmtnetwork.PrivateEndpointProperties{
+			Subnet: &mgmtnetwork.Subnet{
+				ID: to.StringPtr("/subscriptions/" + m.env.SubscriptionID() + "/resourceGroups/" + m.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet"),
+			},
+			ManualPrivateLinkServiceConnections: &[]mgmtnetwork.PrivateLinkServiceConnection{
+				{
+					Name: to.StringPtr("acr-plsconnection"),
+					PrivateLinkServiceConnectionProperties: &mgmtnetwork.PrivateLinkServiceConnectionProperties{
+						PrivateLinkServiceID: to.StringPtr(m.env.ACRResourceID()),
+					},
+				},
+			},
+		},
+		Location: &doc.OpenShiftCluster.Location,
+	})
+}
+
+func (m *manager) GetACRPEIP(ctx context.Context, doc *api.OpenShiftClusterDocument) (string, error) {
+	return m.getIP(ctx, acrPEPrefix+doc.ID)
+}
+
+func (m *manager) create(ctx context.Context, name string, pe mgmtnetwork.PrivateEndpoint) error {
+	return m.privateendpoints.CreateOrUpdateAndWait(ctx, m.env.ResourceGroup(), name, pe)
+}
+
+func (m *manager) delete(ctx context.Context, name string) error {
+	return m.privateendpoints.DeleteAndWait(ctx, m.env.ResourceGroup(), name)
+}
+
+func (m *manager) getIP(ctx context.Context, name string) (string, error) {
+	pe, err := m.privateendpoints.Get(ctx, m.env.ResourceGroup(), name, "networkInterfaces")
 	if err != nil {
 		return "", err
 	}

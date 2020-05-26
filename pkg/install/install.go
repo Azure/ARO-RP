@@ -38,6 +38,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
+	dnscli "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
@@ -70,6 +71,7 @@ type Installer struct {
 	deployments       features.DeploymentsClient
 	groups            features.ResourceGroupsClient
 	accounts          storage.AccountsClient
+	dnscli            dnscli.RecordSetsClient
 
 	dns             dns.Manager
 	keyvault        keyvault.Manager
@@ -138,6 +140,7 @@ func NewInstaller(ctx context.Context, log *logrus.Entry, _env env.Interface, db
 		deployments:       features.NewDeploymentsClient(r.SubscriptionID, fpAuthorizer),
 		groups:            features.NewResourceGroupsClient(r.SubscriptionID, fpAuthorizer),
 		accounts:          storage.NewAccountsClient(r.SubscriptionID, fpAuthorizer),
+		dnscli:            dnscli.NewRecordSetsClient(r.SubscriptionID, fpAuthorizer),
 
 		dns:             dns.NewManager(_env, localFPAuthorizer),
 		keyvault:        keyvault.NewManager(localFPKVAuthorizer),
@@ -175,8 +178,10 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			action(i.attachNSGsAndPatch),
 			action(i.ensureBillingRecord),
 			action(i.deployResourceTemplate),
-			action(i.createPrivateEndpoint),
+			action(i.createRPPrivateEndpoint),
 			action(i.updateAPIIP),
+			action(i.createACRPrivateEndpoint),
+			action(i.updateACRIP),
 			action(i.createCertificates),
 			action(i.initializeKubernetesClients),
 			condition{i.bootstrapConfigMapReady, 30 * time.Minute},

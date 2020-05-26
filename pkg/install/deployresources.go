@@ -77,6 +77,31 @@ func (i *Installer) deployResourceTemplate(ctx context.Context) error {
 				APIVersion: azureclient.APIVersions["Microsoft.Network/privateDnsZones"],
 			},
 			{
+				Resource: &mgmtprivatedns.PrivateZone{
+					Name:     to.StringPtr("privatelink.azurecr.io"),
+					Type:     to.StringPtr("Microsoft.Network/privateDnsZones"),
+					Location: to.StringPtr("global"),
+				},
+				APIVersion: azureclient.APIVersions["Microsoft.Network/privateDnsZones"],
+			},
+			{
+				Resource: &mgmtprivatedns.VirtualNetworkLink{
+					Name:     to.StringPtr("privatelink.azurecr.io/arosvc_vnl"),
+					Type:     to.StringPtr("Microsoft.Network/privateDnsZones/virtualNetworkLinks"),
+					Location: to.StringPtr("global"),
+					VirtualNetworkLinkProperties: &mgmtprivatedns.VirtualNetworkLinkProperties{
+						RegistrationEnabled: to.BoolPtr(false),
+						VirtualNetwork: &mgmtprivatedns.SubResource{
+							ID: to.StringPtr(vnetID),
+						},
+					},
+				},
+				APIVersion: azureclient.APIVersions["Microsoft.Network/privateDnsZones"],
+				DependsOn: []string{
+					"Microsoft.Network/privateDnsZones/privatelink.azurecr.io",
+				},
+			},
+			{
 				Resource: &mgmtprivatedns.RecordSet{
 					Name: to.StringPtr(installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/api-int"),
 					Type: to.StringPtr("Microsoft.Network/privateDnsZones/A"),
