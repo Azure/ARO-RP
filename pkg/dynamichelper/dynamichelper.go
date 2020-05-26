@@ -66,21 +66,15 @@ func New(log *logrus.Entry, restconfig *rest.Config, updatePolicy UpdatePolicy) 
 }
 
 func (dh *dynamicHelper) refreshAPIResources() error {
-	dh.log.Info("refreshAPIResources")
 	cli, err := discovery.NewDiscoveryClientForConfig(dh.restconfig)
 	if err != nil {
-		dh.log.Warnf("discovery.NewDiscoveryClientForConfig %v", err)
 		return err
 	}
 	_, dh.apiresources, err = cli.ServerGroupsAndResources()
 	if err != nil {
-		dh.log.Warnf("cli.ServerGroupsAndResources %v", err)
 		return err
 	}
 	dh.dyn, err = dynamic.NewForConfig(dh.restconfig)
-	if err != nil {
-		dh.log.Warnf("dynamic.NewForConfig %v", err)
-	}
 	return err
 }
 
@@ -190,37 +184,48 @@ func (dh *dynamicHelper) CreateOrUpdateObject(ctx context.Context, ro runtime.Ob
 	return dh.CreateOrUpdate(ctx, obj)
 }
 
-func cloudErrorNotFound(err error) bool {
-	if err == nil {
+func (dh *dynamicHelper) retryableError(err error) bool {
+	if err == nil || !dh.updatePolicy.RefreshAPIResourcesOnNotFound {
 		return false
 	}
-	if cloudErr, ok := err.(*api.CloudError); ok {
-		return (cloudErr.Code == api.CloudErrorCodeNotFound)
+	switch typeOfErr := err.(type) {
+	case (*api.CloudError):
+		return (typeOfErr.Code == api.CloudErrorCodeNotFound)
+	case (*discovery.ErrGroupDiscoveryFailed):
+		return true
+	default:
+		return false
 	}
-	return false
+}
+
+func (dh *dynamicHelper) findGVRBackoff() wait.Backoff {
+	retries := 1
+	if dh.updatePolicy.RefreshAPIResourcesOnNotFound {
+		retries = 4
+	}
+	return wait.Backoff{
+		Steps:    retries,
+		Duration: 30 * time.Second,
+		Factor:   2.0,
+	}
 }
 
 func (dh *dynamicHelper) CreateOrUpdate(ctx context.Context, o *unstructured.Unstructured) error {
 	dh.log.Infof("CreateOrUpdate: %s", keyFunc(o.GroupVersionKind().GroupKind(), o.GetNamespace(), o.GetName()))
 	var gvr *schema.GroupVersionResource
-	threeTimesTheCharm := wait.Backoff{
-		Steps:    3,
-		Duration: 1 * time.Minute,
-		Factor:   4.0,
-		Jitter:   0.1,
-	}
-	err := retry.OnError(threeTimesTheCharm, cloudErrorNotFound, func() error {
-		// this is mostly used at cluster start up when kinds are still getting
+	err := retry.OnError(dh.findGVRBackoff(), dh.retryableError, func() error {
+		// this is used at cluster start up when kinds are still getting
 		// registered.
-		var err error
-		gvr, err = dh.findGVR(o.GroupVersionKind().GroupKind().String(), o.GroupVersionKind().Version)
-		if cloudErrorNotFound(err) && dh.updatePolicy.RefreshAPIResourcesOnNotFound {
-			if err = dh.refreshAPIResources(); err != nil {
-				dh.log.Warnf("refreshAPIResources %v", err)
-				return err
+		var gvrErr error
+		gvr, gvrErr = dh.findGVR(o.GroupVersionKind().GroupKind().String(), o.GroupVersionKind().Version)
+		if dh.retryableError(gvrErr) {
+			dh.log.Infof("refreshAPIResources retrying")
+			if refErr := dh.refreshAPIResources(); refErr != nil {
+				dh.log.Infof("refreshAPIResources error: %v", refErr)
+				return refErr
 			}
 		}
-		return err
+		return gvrErr
 	})
 	if err != nil {
 		return err

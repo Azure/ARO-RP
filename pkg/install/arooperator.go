@@ -18,13 +18,9 @@ func (i *Installer) readyToDeployAroOperator() (bool, error) {
 	}
 	dh, err := dynamichelper.New(i.log, restConfig, dynamichelper.UpdatePolicy{})
 	if err != nil {
-		i.log.Warnf("dynamichelper.New %v", err)
 		return false, nil
 	}
 	_, err = dh.Get(context.TODO(), "SecurityContextConstraints", "", "privileged")
-	if err != nil {
-		i.log.Warnf("dynamichelper.Get %v", err)
-	}
 	return err == nil, nil
 }
 
