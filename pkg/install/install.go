@@ -235,11 +235,9 @@ func (i *Installer) runSteps(ctx context.Context, steps []interface{}) error {
 					if azureerrors.HasAuthorizationFailedError(err) ||
 						azureerrors.HasLinkedAuthorizationFailedError(err) {
 						i.log.Print(err)
+						// https://github.com/Azure/ARO-RP/issues/541: it is unclear if this refresh helps or not
 						err = i.env.RefreshFPAuthorizer(ctx, i.fpAuthorizer)
-						if err != nil {
-							return false, err
-						}
-						return false, nil
+						return false, err
 					}
 					return err == nil, err
 				}, timeoutCtx.Done())
