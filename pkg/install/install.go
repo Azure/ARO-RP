@@ -155,12 +155,10 @@ func (i *Installer) AdminUpgrade(ctx context.Context) error {
 		action(i.fixLBProbes),
 		action(i.fixPullSecret),
 		action(i.ensureGenevaLogging),
+		action(i.upgradeCertificates),
+		action(i.configureAPIServerCertificate),
+		action(i.configureIngressCertificate),
 		action(i.upgradeCluster),
-
-		// TODO: later could use this flow to refresh certificates
-		// action(i.createCertificates),
-		// action(i.configureAPIServerCertificate),
-		// action(i.configureIngressCertificate),
 	}
 
 	return i.runSteps(ctx, steps)

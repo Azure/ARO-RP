@@ -37,6 +37,7 @@ type Manager interface {
 
 	CreateSignedCertificate(ctx context.Context, keyvaultURI string, issuer Issuer, certificateName, commonName string, eku Eku) error
 	EnsureCertificateDeleted(ctx context.Context, keyvaultURI, certificateName string) error
+	UpgradeCertificatePolicy(ctx context.Context, keyvaultURI, certificateName string) error
 	WaitForCertificateOperation(ctx context.Context, keyvaultURI, certificateName string) error
 }
 
@@ -120,6 +121,27 @@ func (m *manager) WaitForCertificateOperation(ctx context.Context, keyvaultURI, 
 
 		return checkOperation(&op)
 	}, ctx.Done())
+	return err
+}
+
+func (m *manager) UpgradeCertificatePolicy(ctx context.Context, keyvaultURI, certificateName string) error {
+	policy, err := m.BaseClient.GetCertificatePolicy(ctx, keyvaultURI, certificateName)
+	if err != nil {
+		return err
+	}
+
+	policy.LifetimeActions = &[]keyvault.LifetimeAction{
+		{
+			Trigger: &keyvault.Trigger{
+				DaysBeforeExpiry: to.Int32Ptr(365 - 90),
+			},
+			Action: &keyvault.Action{
+				ActionType: keyvault.AutoRenew,
+			},
+		},
+	}
+
+	_, err = m.BaseClient.UpdateCertificatePolicy(ctx, keyvaultURI, certificateName, policy)
 	return err
 }
 
