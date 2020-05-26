@@ -31,8 +31,8 @@ type DynamicHelper interface {
 	Get(ctx context.Context, groupKind, namespace, name string) ([]byte, error)
 	List(ctx context.Context, groupKind, namespace string) ([]byte, error)
 	CreateOrUpdate(ctx context.Context, obj *unstructured.Unstructured) error
-	CreateOrUpdateObject(ctx context.Context, ro runtime.Object) error
 	Delete(ctx context.Context, groupKind, namespace, name string) error
+	ToUnstructured(ro runtime.Object) (*unstructured.Unstructured, error)
 }
 
 type UpdatePolicy struct {
@@ -165,27 +165,27 @@ func (dh *dynamicHelper) List(ctx context.Context, groupKind, namespace string) 
 	return ul.MarshalJSON()
 }
 
-func (dh *dynamicHelper) CreateOrUpdateObject(ctx context.Context, ro runtime.Object) error {
+// ToUnstructured converts a runtime.Object into an Unstructured
+func (dh *dynamicHelper) ToUnstructured(ro runtime.Object) (*unstructured.Unstructured, error) {
 	obj, ok := ro.(*unstructured.Unstructured)
 	if !ok {
 		b, err := yaml.Marshal(ro)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		obj = &unstructured.Unstructured{}
 		err = yaml.Unmarshal(b, obj)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	cleanNewObject(*obj)
-
-	return dh.CreateOrUpdate(ctx, obj)
+	return obj, nil
 }
 
 func (dh *dynamicHelper) retryableError(err error) bool {
-	if err == nil || !dh.updatePolicy.RefreshAPIResourcesOnNotFound {
+	if err == nil {
 		return false
 	}
 	switch typeOfErr := err.(type) {
@@ -198,26 +198,16 @@ func (dh *dynamicHelper) retryableError(err error) bool {
 	}
 }
 
-func (dh *dynamicHelper) findGVRBackoff() wait.Backoff {
-	retries := 1
-	if dh.updatePolicy.RefreshAPIResourcesOnNotFound {
-		retries = 4
+func (dh *dynamicHelper) findGVRWithRefresh(groupKind, optionalVersion string) (*schema.GroupVersionResource, error) {
+	if !dh.updatePolicy.RefreshAPIResourcesOnNotFound {
+		return dh.findGVR(groupKind, optionalVersion)
 	}
-	return wait.Backoff{
-		Steps:    retries,
-		Duration: 30 * time.Second,
-		Factor:   2.0,
-	}
-}
-
-func (dh *dynamicHelper) CreateOrUpdate(ctx context.Context, o *unstructured.Unstructured) error {
-	dh.log.Infof("CreateOrUpdate: %s", keyFunc(o.GroupVersionKind().GroupKind(), o.GetNamespace(), o.GetName()))
 	var gvr *schema.GroupVersionResource
-	err := retry.OnError(dh.findGVRBackoff(), dh.retryableError, func() error {
+	err := retry.OnError(wait.Backoff{Steps: 4, Duration: 30 * time.Second, Factor: 2.0}, dh.retryableError, func() error {
 		// this is used at cluster start up when kinds are still getting
 		// registered.
 		var gvrErr error
-		gvr, gvrErr = dh.findGVR(o.GroupVersionKind().GroupKind().String(), o.GroupVersionKind().Version)
+		gvr, gvrErr = dh.findGVR(groupKind, optionalVersion)
 		if dh.retryableError(gvrErr) {
 			dh.log.Infof("refreshAPIResources retrying")
 			if refErr := dh.refreshAPIResources(); refErr != nil {
@@ -227,6 +217,12 @@ func (dh *dynamicHelper) CreateOrUpdate(ctx context.Context, o *unstructured.Uns
 		}
 		return gvrErr
 	})
+	return gvr, err
+}
+
+func (dh *dynamicHelper) CreateOrUpdate(ctx context.Context, o *unstructured.Unstructured) error {
+	dh.log.Infof("CreateOrUpdate: %s", keyFuncO(o))
+	gvr, err := dh.findGVRWithRefresh(o.GroupVersionKind().GroupKind().String(), o.GroupVersionKind().Version)
 	if err != nil {
 		return err
 	}
@@ -236,7 +232,7 @@ func (dh *dynamicHelper) CreateOrUpdate(ctx context.Context, o *unstructured.Uns
 	}, func() error {
 		existing, err := dh.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Get(o.GetName(), metav1.GetOptions{})
 		if apierrors.IsNotFound(err) {
-			dh.log.Info("Create " + keyFunc(o.GroupVersionKind().GroupKind(), o.GetNamespace(), o.GetName()))
+			dh.log.Info("Create " + keyFuncO(o))
 			_, err = dh.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Create(o, metav1.CreateOptions{})
 			return err
 		}
@@ -275,7 +271,7 @@ func (dh *dynamicHelper) needsUpdate(existing, o *unstructured.Unstructured) boo
 		return false
 	}
 
-	dh.log.Info("Update " + keyFunc(o.GroupVersionKind().GroupKind(), o.GetNamespace(), o.GetName()))
+	dh.log.Info("Update " + keyFuncO(o))
 
 	return true
 }
@@ -304,6 +300,10 @@ func (dh *dynamicHelper) Delete(ctx context.Context, groupKind, namespace, name 
 	}
 
 	return dh.dyn.Resource(*gvr).Namespace(namespace).Delete(name, &metav1.DeleteOptions{})
+}
+
+func keyFuncO(o *unstructured.Unstructured) string {
+	return keyFunc(o.GroupVersionKind().GroupKind(), o.GetNamespace(), o.GetName())
 }
 
 func keyFunc(gk schema.GroupKind, namespace, name string) string {

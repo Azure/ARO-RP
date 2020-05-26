@@ -306,7 +306,11 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 		return err
 	}
 	for _, res := range resources {
-		err = o.dh.CreateOrUpdateObject(ctx, res)
+		un, err := o.dh.ToUnstructured(res)
+		if err != nil {
+			return err
+		}
+		err = o.dh.CreateOrUpdate(ctx, un)
 		if err != nil {
 			return err
 		}
