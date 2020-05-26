@@ -10,8 +10,6 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/Azure/go-autorest/autorest"
-
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 )
 
@@ -48,7 +46,7 @@ func (t *Test) Domain() string {
 	return t.TestDomain
 }
 
-func (t *Test) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, error) {
+func (t *Test) FPAuthorizer(tenantID, resource string) (RefreshableAuthorizer, error) {
 	return nil, nil
 }
 

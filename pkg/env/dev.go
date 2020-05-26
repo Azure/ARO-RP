@@ -41,15 +41,6 @@ func (c *conn) Read(b []byte) (int, error) {
 	return c.r.Read(b)
 }
 
-type refreshableAuthorizer struct {
-	autorest.Authorizer
-	sp *adal.ServicePrincipalToken
-}
-
-func (ra *refreshableAuthorizer) RefreshWithContext(ctx context.Context) error {
-	return ra.sp.RefreshWithContext(ctx)
-}
-
 type Dev interface {
 	CreateARMResourceGroupRoleAssignment(context.Context, autorest.Authorizer, string) error
 }
@@ -227,7 +218,7 @@ func (d *dev) Listen() (net.Listener, error) {
 	return net.Listen("tcp", "localhost:8443")
 }
 
-func (d *dev) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, error) {
+func (d *dev) FPAuthorizer(tenantID, resource string) (RefreshableAuthorizer, error) {
 	oauthConfig, err := adal.NewOAuthConfig(azure.PublicCloud.ActiveDirectoryEndpoint, tenantID)
 	if err != nil {
 		return nil, err
@@ -245,7 +236,7 @@ func (d *dev) MetricsSocketPath() string {
 	return "mdm_statsd.socket"
 }
 
-func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthorizer autorest.Authorizer, resourceGroup string) error {
+func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthorizer RefreshableAuthorizer, resourceGroup string) error {
 	d.log.Print("development mode: applying resource group role assignment")
 
 	res, err := d.applications.GetServicePrincipalsIDByAppID(ctx, os.Getenv("AZURE_FP_CLIENT_ID"))

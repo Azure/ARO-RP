@@ -60,7 +60,7 @@ type Installer struct {
 	billing      billing.Manager
 	doc          *api.OpenShiftClusterDocument
 	cipher       encryption.Cipher
-	fpAuthorizer autorest.Authorizer
+	fpAuthorizer env.RefreshableAuthorizer
 
 	disks             compute.DisksClient
 	virtualmachines   compute.VirtualMachinesClient

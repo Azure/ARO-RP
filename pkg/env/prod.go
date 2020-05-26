@@ -295,7 +295,7 @@ func (p *prod) Domain() string {
 	return p.domain
 }
 
-func (p *prod) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, error) {
+func (p *prod) FPAuthorizer(tenantID, resource string) (RefreshableAuthorizer, error) {
 	oauthConfig, err := adal.NewOAuthConfig(azure.PublicCloud.ActiveDirectoryEndpoint, tenantID)
 	if err != nil {
 		return nil, err
@@ -309,9 +309,9 @@ func (p *prod) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, err
 	return &refreshableAuthorizer{autorest.NewBearerAuthorizer(sp), sp}, nil
 }
 
-func (p *prod) RefreshFPAuthorizer(ctx context.Context, fpAuthorizer autorest.Authorizer) error {
+func (p *prod) RefreshFPAuthorizer(ctx context.Context, fpAuthorizer RefreshableAuthorizer) error {
 	p.log.Print("refreshing authorizer")
-	return fpAuthorizer.(*refreshableAuthorizer).RefreshWithContext(ctx)
+	return fpAuthorizer.RefreshWithContext(ctx)
 }
 
 func (p *prod) GetCertificateSecret(ctx context.Context, secretName string) (key *rsa.PrivateKey, certs []*x509.Certificate, err error) {
