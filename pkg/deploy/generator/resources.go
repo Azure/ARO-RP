@@ -157,6 +157,7 @@ cat >/root/.docker/config.json <<EOF
 	}
 }
 EOF
+docker pull "$PROXYIMAGE"
 
 mkdir /etc/proxy
 base64 -d <<<"$PROXYCERT" >/etc/proxy/proxy.crt
@@ -169,7 +170,7 @@ cat >/etc/sysconfig/proxy <<EOF
 PROXY_IMAGE='$PROXYIMAGE'
 EOF
 
-cat >/etc/systemd/system/proxy.service <<EOF
+cat >/etc/systemd/system/proxy.service <<'EOF'
 [Unit]
 After=docker.service
 Requires=docker.service
@@ -177,8 +178,7 @@ Requires=docker.service
 [Service]
 EnvironmentFile=/etc/sysconfig/proxy
 ExecStartPre=-/usr/bin/docker rm -f %n
-ExecStartPre=/usr/bin/docker pull \$PROXY_IMAGE
-ExecStart=/usr/bin/docker run --rm --name %n -p 443:8443 -v /etc/proxy:/secrets \$PROXY_IMAGE
+ExecStart=/usr/bin/docker run --rm --name %n -p 443:8443 -v /etc/proxy:/secrets $PROXY_IMAGE
 ExecStop=/usr/bin/docker stop %n
 Restart=always
 
@@ -791,6 +791,10 @@ az account set -s "$SUBSCRIPTIONID"
 mkdir /root/.docker
 REGISTRY_AUTH_FILE=/root/.docker/config.json az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
 
+MDMIMAGE="${RPIMAGE%%/*}/genevamdm:master_37"
+docker pull "$MDMIMAGE"
+docker pull "$RPIMAGE"
+
 SVCVAULTURI="$(az keyvault list -g "$RESOURCEGROUPNAME" --query "[?tags.vault=='service'].properties.vaultUri" -o tsv)"
 az keyvault secret download --file /etc/mdm.pem --id "${SVCVAULTURI}secrets/rp-mdm"
 chmod 0600 /etc/mdm.pem
@@ -834,7 +838,7 @@ EOF
 
 cat >/etc/sysconfig/mdm <<EOF
 MDMFRONTENDURL='$MDMFRONTENDURL'
-MDMIMAGE=${RPIMAGE%%/*}/genevamdm:master_37
+MDMIMAGE='$MDMIMAGE'
 MDMSOURCEENVIRONMENT='$LOCATION'
 MDMSOURCEROLE=rp
 MDMSOURCEROLEINSTANCE='$(hostname)'
@@ -848,7 +852,6 @@ After=network-online.target
 [Service]
 EnvironmentFile=/etc/sysconfig/mdm
 ExecStartPre=-/usr/bin/docker rm -f %N
-ExecStartPre=/usr/bin/docker pull $MDMIMAGE
 ExecStart=/usr/bin/docker run \
   --entrypoint /usr/sbin/MetricsExtension \
   --hostname %H \
@@ -888,7 +891,6 @@ After=network-online.target
 [Service]
 EnvironmentFile=/etc/sysconfig/aro-rp
 ExecStartPre=-/usr/bin/docker rm -f %N
-ExecStartPre=/usr/bin/docker pull $RPIMAGE
 ExecStart=/usr/bin/docker run \
   --hostname %H \
   --name %N \
@@ -928,7 +930,6 @@ After=network-online.target
 [Service]
 EnvironmentFile=/etc/sysconfig/aro-monitor
 ExecStartPre=-/usr/bin/docker rm -f %N
-ExecStartPre=/usr/bin/docker pull $RPIMAGE
 ExecStart=/usr/bin/docker run \
   --hostname %H \
   --name %N \
