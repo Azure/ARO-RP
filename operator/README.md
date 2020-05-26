@@ -29,7 +29,7 @@
 ```sh
 oc delete -n openshift-azure-operator deployment/aro-operator
 make generate
-oc apply -f operator/deploy/resources.yaml
+oc apply -f operator/deploy/staticresources/*.yaml
 # [optional] to test pullsecrets
   export PULL_SECRET_PATH=operator/pull-secrets
   mkdir $PULL_SECRET_PATH
@@ -46,7 +46,7 @@ make publish-image-aro
 go run ./cmd/aro rp &
 
 #Then run an update
-curl -X PATCH -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER?api-version=admin" --header "Content-Type: application/json" -d "{}"
+curl -X PATCH -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER?api-version=admin" --header "Content-Type: application/json" -d "{}"
 
 #check on the deployment
 oc -n openshift-azure-operator get all
