@@ -125,16 +125,32 @@ func (d *deployer) Deploy(ctx context.Context) error {
 		Value: d.version,
 	}
 
-	d.log.Printf("deploying %s", deploymentName)
-	err = d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, deploymentName, mgmtfeatures.Deployment{
-		Properties: &mgmtfeatures.DeploymentProperties{
-			Template:   template,
-			Mode:       mgmtfeatures.Incremental,
-			Parameters: parameters.Parameters,
-		},
-	})
-	if err != nil {
-		return err
+	for i := 0; i < 2; i++ {
+		d.log.Printf("deploying %s", deploymentName)
+		err = d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, deploymentName, mgmtfeatures.Deployment{
+			Properties: &mgmtfeatures.DeploymentProperties{
+				Template:   template,
+				Mode:       mgmtfeatures.Incremental,
+				Parameters: parameters.Parameters,
+			},
+		})
+		if serviceErr, ok := err.(*azure.ServiceError); ok &&
+			serviceErr.Code == "DeploymentFailed" &&
+			d.fullDeploy &&
+			i == 0 {
+			// on new RP deployments, we get a spurious DeploymentFailed error
+			// from the Microsoft.Insights/metricAlerts resources indicating
+			// that rp-lb can't be found, even though it exists and the
+			// resources correctly have a dependsOn stanza referring to it.
+			// Retry once.
+			d.log.Print(err)
+			continue
+		}
+		if err != nil {
+			return err
+		}
+
+		break
 	}
 
 	if d.fullDeploy {
