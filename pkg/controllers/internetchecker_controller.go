@@ -39,6 +39,11 @@ type InternetChecker struct {
 	sr            *StatusReporter
 }
 
+// SimpleHTTPClient to aid in mocking
+type SimpleHTTPClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
 // +kubebuilder:rbac:groups=aro.openshift.io,resources=clusters,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=aro.openshift.io,resources=clusters/status,verbs=get;update;patch
 
@@ -62,7 +67,7 @@ func (r *InternetChecker) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 
 	sitesNotAvailable := map[string]string{}
 	for _, testurl := range r.testurls {
-		checkErr := r.check(testurl)
+		checkErr := r.check(&http.Client{}, testurl)
 		if checkErr != nil {
 			sitesNotAvailable[testurl] = checkErr.Error()
 		}
@@ -83,13 +88,12 @@ func (r *InternetChecker) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	return ReconcileResultRequeue, nil
 }
 
-func (r *InternetChecker) check(testurl string) error {
+func (r *InternetChecker) check(client SimpleHTTPClient, testurl string) error {
 	req, err := http.NewRequest("GET", testurl, nil)
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
 		return err
