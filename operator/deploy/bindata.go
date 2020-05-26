@@ -3,6 +3,7 @@
 // staticresources/aro.openshift.io_clusters.yaml
 // staticresources/namespace.yaml
 // staticresources/role.yaml
+// staticresources/rolebinding.yaml
 // staticresources/serviceaccount.yaml
 package deploy
 
@@ -140,6 +141,26 @@ func staticresourcesRoleYaml() (*asset, error) {
 	return a, nil
 }
 
+var _staticresourcesRolebindingYaml = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x7c\x8d\x31\x4e\xc4\x40\x0c\x45\x7b\x9f\xc2\x17\x98\x20\x3a\x34\x1d\x50\xd0\x2f\x12\xbd\x33\xf1\xee\x9a\x24\xf6\xc8\xe3\x49\x91\xd3\xa3\x48\x11\x14\x20\x3a\xcb\x7a\xef\x3f\x48\x29\x01\x55\xf9\x60\x6f\x62\x9a\xd1\x47\x2a\x03\xf5\xb8\x9b\xcb\x4e\x21\xa6\xc3\xfc\xd4\x06\xb1\x87\xed\x11\x66\xd1\x29\xe3\xeb\xd2\x5b\xb0\x5f\x6c\xe1\x17\xd1\x49\xf4\x06\x2b\x07\x4d\x14\x94\x01\x51\x69\xe5\x8c\x2b\x29\xdd\xd8\x93\xdb\xc2\xe3\x49\x1d\xf7\x85\xaf\x07\x44\x55\xde\xdc\x7a\xfd\x27\x08\x88\xbf\x7a\x7f\xce\x43\xeb\xe3\x27\x97\x68\x19\xd2\xa9\xbc\xb3\x6f\x52\xf8\xb9\x14\xeb\x1a\xdf\x16\xb9\x25\xab\xec\x14\xe6\xe7\xb3\x55\x2a\x9c\xd1\x2a\x6b\xbb\xcb\x35\x12\xed\xdd\xf9\x87\xfa\x0a\x00\x00\xff\xff\x11\x26\x0d\x90\x21\x01\x00\x00")
+
+func staticresourcesRolebindingYamlBytes() ([]byte, error) {
+	return bindataRead(
+		_staticresourcesRolebindingYaml,
+		"staticresources/rolebinding.yaml",
+	)
+}
+
+func staticresourcesRolebindingYaml() (*asset, error) {
+	bytes, err := staticresourcesRolebindingYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "staticresources/rolebinding.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
 var _staticresourcesServiceaccountYaml = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x44\xca\x31\x0e\x02\x41\x08\x05\xd0\x9e\x53\x70\x01\x0a\x5b\x3a\xcf\x60\x62\x4f\x66\xbf\x91\x98\x85\x09\xc3\x6e\xe1\xe9\x6d\x4c\xb6\x7d\x79\x24\x22\x64\xd3\x9f\xa8\xe5\x19\xca\xe7\x8d\x3e\x1e\x9b\xf2\x03\x75\xfa\xc0\x7d\x8c\x3c\xa2\x69\x47\xdb\x66\x6d\x4a\xcc\x61\x3b\x94\xad\x52\x72\xa2\xac\xb3\xfe\xb8\xa6\x0d\x28\xe7\x44\xac\xb7\xbf\x5a\xec\x7b\x14\xae\xf5\x0b\x00\x00\xff\xff\xf6\x4a\x0e\x0f\x6e\x00\x00\x00")
 
 func staticresourcesServiceaccountYamlBytes() ([]byte, error) {
@@ -215,6 +236,7 @@ var _bindata = map[string]func() (*asset, error){
 	"staticresources/aro.openshift.io_clusters.yaml": staticresourcesAroOpenshiftIo_clustersYaml,
 	"staticresources/namespace.yaml":                 staticresourcesNamespaceYaml,
 	"staticresources/role.yaml":                      staticresourcesRoleYaml,
+	"staticresources/rolebinding.yaml":               staticresourcesRolebindingYaml,
 	"staticresources/serviceaccount.yaml":            staticresourcesServiceaccountYaml,
 }
 
@@ -263,6 +285,7 @@ var _bintree = &bintree{nil, map[string]*bintree{
 		"aro.openshift.io_clusters.yaml": {staticresourcesAroOpenshiftIo_clustersYaml, map[string]*bintree{}},
 		"namespace.yaml":                 {staticresourcesNamespaceYaml, map[string]*bintree{}},
 		"role.yaml":                      {staticresourcesRoleYaml, map[string]*bintree{}},
+		"rolebinding.yaml":               {staticresourcesRolebindingYaml, map[string]*bintree{}},
 		"serviceaccount.yaml":            {staticresourcesServiceaccountYaml, map[string]*bintree{}},
 	}},
 }}
