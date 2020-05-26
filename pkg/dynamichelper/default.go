@@ -57,6 +57,10 @@ func defaults(o unstructured.Unstructured) {
 		jsonpath.MustCompile("$.spec.successfulJobsHistoryLimit").DeleteIfMatch(o.Object, int64(3))
 		jsonpath.MustCompile("$.spec.suspend").DeleteIfMatch(o.Object, false)
 
+	case "CustomResourceDefinition.apiextensions.k8s.io":
+		jsonpath.MustCompile("$.spec.conversion").DeleteIfMatch(o.Object, map[string]interface{}{"strategy": string("None")})
+		jsonpath.MustCompile("$.spec.preserveUnknownFields").DeleteIfMatch(o.Object, true)
+
 	case "DaemonSet.apps":
 		jsonpath.MustCompile("$.spec.revisionHistoryLimit").DeleteIfMatch(o.Object, int64(10))
 
