@@ -234,7 +234,7 @@ func (i *Installer) runSteps(ctx context.Context, steps []interface{}) error {
 					err = step(ctx)
 					if azureerrors.HasAuthorizationFailedError(err) ||
 						azureerrors.HasLinkedAuthorizationFailedError(err) {
-						i.log.Warnf("found link authorization errors, will retry (%s)", err)
+						i.log.Printf("found link authorization errors, will retry (%s)", err)
 						// https://github.com/Azure/ARO-RP/issues/541: it is unclear if this refresh helps or not
 						if development, ok := i.env.(env.Dev); ok {
 							err = development.RefreshFPAuthorizer(ctx, i.fpAuthorizer)
@@ -253,11 +253,11 @@ func (i *Installer) runSteps(ctx context.Context, steps []interface{}) error {
 				if _, ok := err.(*api.CloudError); !ok {
 					err = fmt.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name(), err)
 				}
-				i.log.Warnf("ran step but got an error (%s)", err)
+				i.log.Printf("ran step but got an error (%s)", err)
 				return err
-			} else {
-				i.log.Infof("ran step %s successfully", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name())
 			}
+
+			i.log.Printf("ran step %s successfully", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name())
 
 		case condition:
 			i.log.Printf("waiting for %s", runtime.FuncForPC(reflect.ValueOf(step.f).Pointer()).Name())
@@ -271,11 +271,11 @@ func (i *Installer) runSteps(ctx context.Context, steps []interface{}) error {
 				if _, ok := err.(*api.CloudError); !ok {
 					err = fmt.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(step.f).Pointer()).Name(), err)
 				}
-				i.log.Warnf("waited for condition but got an error (%s)", err)
+				i.log.Printf("waited for condition but got an error (%s)", err)
 				return err
-			} else {
-				i.log.Infof("condition %s met", runtime.FuncForPC(reflect.ValueOf(step.f).Pointer()).Name())
 			}
+
+			i.log.Printf("condition %s met", runtime.FuncForPC(reflect.ValueOf(step.f).Pointer()).Name())
 
 		default:
 			return errors.New("install step must be an action or a condition")
