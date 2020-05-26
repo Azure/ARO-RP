@@ -57,8 +57,6 @@ type Dev interface {
 type dev struct {
 	*prod
 
-	log *logrus.Entry
-
 	permissions     authorization.PermissionsClient
 	roleassignments authorization.RoleAssignmentsClient
 	applications    graphrbac.ApplicationsClient
@@ -92,7 +90,6 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 	}
 
 	d := &dev{
-		log:             log,
 		roleassignments: authorization.NewRoleAssignmentsClient(instancemetadata.SubscriptionID(), armAuthorizer),
 	}
 
