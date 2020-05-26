@@ -310,6 +310,7 @@ func (p *prod) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, err
 }
 
 func (p *prod) RefreshFPAuthorizer(ctx context.Context, fpAuthorizer autorest.Authorizer) error {
+	p.log.Print("refreshing authorizer")
 	return fpAuthorizer.(*refreshableAuthorizer).RefreshWithContext(ctx)
 }
 
