@@ -72,6 +72,16 @@ func (m *manager) CreateSignedCertificate(ctx context.Context, keyvaultURI strin
 				},
 				ValidityInMonths: to.Int32Ptr(12),
 			},
+			LifetimeActions: &[]keyvault.LifetimeAction{
+				{
+					Trigger: &keyvault.Trigger{
+						DaysBeforeExpiry: to.Int32Ptr(365 - 90),
+					},
+					Action: &keyvault.Action{
+						ActionType: keyvault.AutoRenew,
+					},
+				},
+			},
 			IssuerParameters: &keyvault.IssuerParameters{
 				Name: to.StringPtr(string(issuer)),
 			},
