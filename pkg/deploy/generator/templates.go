@@ -145,7 +145,6 @@ func (g *generator) rpGlobalSubscriptionTemplate() *arm.Template {
 
 	t.Resources = append(t.Resources,
 		g.roleDefinitionTokenContributor(),
-		g.roleDefinitionBillingStorageAccount(),
 	)
 
 	return t

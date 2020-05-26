@@ -31,11 +31,11 @@
             "apiVersion": "2019-05-01"
         },
         {
-            "name": "[guid(resourceGroup().id, 'FP / Storage Account Contributor')]",
+            "name": "[guid(resourceGroup().id, 'FP / Storage Account Reader and Data Access')]",
             "type": "Microsoft.Authorization/roleAssignments",
             "properties": {
                 "scope": "[resourceId('Microsoft.Storage/storageAccounts', parameters('billingStorageAccountName'))]",
-                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '090f7c81-a188-43c8-80db-b70b4ba34a92')]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'c12c1c16-33a1-487b-954d-41c89c60f34')]",
                 "principalId": "[parameters('fpServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
@@ -46,12 +46,7 @@
         },
         {
             "sku": {
-                "name": "Standard_LRS",
-                "kind": "StorageV2"
-            },
-            "properties": {
-                "accessTier": "Cool",
-                "supportsHttpsTrafficOnly": true
+                "name": "Standard_LRS"
             },
             "location": "[resourceGroup().location]",
             "name": "[parameters('billingStorageAccountName')]",

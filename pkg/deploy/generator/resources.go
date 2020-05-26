@@ -1578,51 +1578,23 @@ func (g *generator) billingStorageAccount() *arm.Resource {
 		Resource: &mgmtstorage.Account{
 			Sku: &mgmtstorage.Sku{
 				Name: "Standard_LRS",
-				Kind: mgmtstorage.StorageV2,
 			},
 			Name:     to.StringPtr("[parameters('billingStorageAccountName')]"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 			Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
-			AccountProperties: &mgmtstorage.AccountProperties{
-				AccessTier:             mgmtstorage.Cool,
-				EnableHTTPSTrafficOnly: to.BoolPtr(true),
-			},
 		},
 		APIVersion: azureclient.APIVersions["Microsoft.Storage"],
-	}
-}
-
-func (g *generator) roleDefinitionBillingStorageAccount() *arm.Resource {
-	return &arm.Resource{
-		Resource: &mgmtauthorization.RoleDefinition{
-			Name: to.StringPtr("090f7c81-a188-43c8-80db-b70b4ba34a92"),
-			Type: to.StringPtr("Microsoft.Authorization/roleDefinitions"),
-			RoleDefinitionProperties: &mgmtauthorization.RoleDefinitionProperties{
-				RoleName:         to.StringPtr("ARO v4 Billing Account Contributor"),
-				AssignableScopes: &[]string{"[subscription().id]"},
-				Permissions: &[]mgmtauthorization.Permission{
-					{
-						Actions: &[]string{
-							"Microsoft.Storage/storageAccounts/listKeys/action",
-							"Microsoft.Storage/storageAccounts/blobServices/containers/read",
-							"Microsoft.Storage/storageAccounts/blobServices/containers/write",
-						},
-					},
-				},
-			},
-		},
-		APIVersion: azureclient.APIVersions["Microsoft.Authorization/roleDefinitions"],
 	}
 }
 
 func (g *generator) billingRbac() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtauthorization.RoleAssignment{
-			Name: to.StringPtr("[guid(resourceGroup().id, 'FP / Storage Account Contributor')]"),
+			Name: to.StringPtr("[guid(resourceGroup().id, 'FP / Storage Account Reader and Data Access')]"),
 			Type: to.StringPtr("Microsoft.Authorization/roleAssignments"),
 			RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 				Scope:            to.StringPtr("[resourceId('Microsoft.Storage/storageAccounts', parameters('billingStorageAccountName'))]"),
-				RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '090f7c81-a188-43c8-80db-b70b4ba34a92')]"), // V4 Billing account account contributor
+				RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'c12c1c16-33a1-487b-954d-41c89c60f34')]"), // // Reader and Data Access role
 				PrincipalID:      to.StringPtr("[parameters('fpServicePrincipalId')]"),
 				PrincipalType:    mgmtauthorization.ServicePrincipal,
 			},

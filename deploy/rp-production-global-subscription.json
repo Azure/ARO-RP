@@ -31,26 +31,6 @@
             },
             "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2018-01-01-preview"
-        },
-        {
-            "name": "090f7c81-a188-43c8-80db-b70b4ba34a92",
-            "type": "Microsoft.Authorization/roleDefinitions",
-            "properties": {
-                "roleName": "ARO v4 Billing Account Contributor",
-                "permissions": [
-                    {
-                        "actions": [
-                            "Microsoft.Storage/storageAccounts/listKeys/action",
-                            "Microsoft.Storage/storageAccounts/blobServices/containers/read",
-                            "Microsoft.Storage/storageAccounts/blobServices/containers/write"
-                        ]
-                    }
-                ],
-                "assignableScopes": [
-                    "[subscription().id]"
-                ]
-            },
-            "apiVersion": "2018-01-01-preview"
         }
     ]
 }
