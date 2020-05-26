@@ -140,21 +140,6 @@ func (mr *MockBaseClientMockRecorder) GetSecrets(arg0, arg1, arg2 interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecrets", reflect.TypeOf((*MockBaseClient)(nil).GetSecrets), arg0, arg1, arg2)
 }
 
-// ImportCertificate mocks base method
-func (m *MockBaseClient) ImportCertificate(arg0 context.Context, arg1, arg2 string, arg3 keyvault.CertificateImportParameters) (keyvault.CertificateBundle, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ImportCertificate", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(keyvault.CertificateBundle)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ImportCertificate indicates an expected call of ImportCertificate
-func (mr *MockBaseClientMockRecorder) ImportCertificate(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ImportCertificate", reflect.TypeOf((*MockBaseClient)(nil).ImportCertificate), arg0, arg1, arg2, arg3)
-}
-
 // SetSecret mocks base method
 func (m *MockBaseClient) SetSecret(arg0 context.Context, arg1, arg2 string, arg3 keyvault.SecretSetParameters) (keyvault.SecretBundle, error) {
 	m.ctrl.T.Helper()
