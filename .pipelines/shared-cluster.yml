@@ -20,7 +20,7 @@ variables:
 jobs:
 - job: ⏬ Tear down shared cluster
   pool:
-    vmImage: ARO-RP
+    vmImage: ARO-CI
 
   steps:
   - template: ./templates/template-setup-golang-env.yml
@@ -43,7 +43,7 @@ jobs:
 
 - job: ⏫ Set up shared cluster
   pool:
-    vmImage: ARO-RP
+    vmImage: ARO-CI
 
   steps:
   - template: ./templates/template-setup-golang-env.yml
@@ -81,8 +81,9 @@ jobs:
         --disable-private-link-service-network-policies true
   - displayName: 🚀 Create cluster
     env:
-      USER_PULL_SECRET: $(aro-v4-e2e-pull-secret)
+      USER_PULL_SECRET: $(aro-v4-rh-pull-secret)
     script: |
+      echo "$USER_PULL_SECRET" | jq -c > pull-secret.json
       az aro create \
         --resource-group "$RESOURCEGROUP" \
         --name "$CLUSTER" \
@@ -90,4 +91,4 @@ jobs:
         --vnet "$VNET" \
         --master-subnet "$CLUSTER-master" \
         --worker-subnet "$CLUSTER-worker" \
-        --pull-secret "$(echo $USER_PULL_SECRET | jq -c)"
+        --pull-secret @pull-secret.json
