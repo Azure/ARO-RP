@@ -42,8 +42,10 @@ func (c *conn) Read(b []byte) (int, error) {
 }
 
 type Dev interface {
-	CreateARMResourceGroupRoleAssignment(context.Context, autorest.Authorizer, string) error
+	CreateARMResourceGroupRoleAssignment(context.Context, RefreshableAuthorizer, string) error
 }
+
+var _ Dev = &dev{}
 
 type dev struct {
 	*prod
