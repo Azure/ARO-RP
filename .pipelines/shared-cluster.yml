@@ -59,6 +59,11 @@ jobs:
     parameters:
       workingDirectory: ${{ variables.modulePath }}
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
+  - displayName: 🔑 Download secrets from storage account
+    workingDirectory: ${{ variables.modulePath }}
+    script:
+      export SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME)
+      make secrets
   - template: ./templates/template-az-aro-extension-prod.yml
   - displayName: 🚀 Create/update subnets
     script: |
@@ -83,7 +88,8 @@ jobs:
     env:
       USER_PULL_SECRET: $(aro-v4-rh-pull-secret)
     script: |
-      echo "$USER_PULL_SECRET" | jq -c > pull-secret.json
+      set +x
+      grep "^export USER_PULL_SECRET=" secrets/env | sed -e "s/.*'\([^']\+\)'.*/\1/" > pull-secret.json
       az aro create \
         --resource-group "$RESOURCEGROUP" \
         --name "$CLUSTER" \
