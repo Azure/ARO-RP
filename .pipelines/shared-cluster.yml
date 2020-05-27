@@ -59,11 +59,6 @@ jobs:
     parameters:
       workingDirectory: ${{ variables.modulePath }}
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
-  - displayName: 🔑 Download secrets from storage account
-    workingDirectory: ${{ variables.modulePath }}
-    script:
-      export SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME)
-      make secrets
   - template: ./templates/template-az-aro-extension-prod.yml
   - displayName: 🚀 Create/update subnets
     script: |
@@ -85,10 +80,10 @@ jobs:
         --vnet-name "$VNET" \
         --disable-private-link-service-network-policies true
   - displayName: 🚀 Create cluster
-    env:
-      USER_PULL_SECRET: $(aro-v4-rh-pull-secret)
     script: |
       set +x
+      export SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME)
+      make secrets
       grep "^export USER_PULL_SECRET=" secrets/env | sed -e "s/.*'\([^']\+\)'.*/\1/" > pull-secret.json
       az aro create \
         --resource-group "$RESOURCEGROUP" \
