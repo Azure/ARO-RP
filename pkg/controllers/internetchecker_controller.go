@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -88,12 +89,16 @@ func (r *InternetChecker) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 }
 
 func (r *InternetChecker) check(client SimpleHTTPClient, testurl string) error {
+	ctx := context.TODO()
+	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
 	req, err := http.NewRequest("GET", testurl, nil)
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := client.Do(req)
+	resp, err := client.Do(req.WithContext(timeoutCtx))
 	if err != nil {
 		return err
 	}
