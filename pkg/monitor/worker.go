@@ -53,9 +53,11 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 	defer t.Stop()
 
 	for {
+		successful := true
 		for {
 			docs, err := clustersIterator.Next(ctx, -1)
 			if err != nil {
+				successful = false
 				baseLog.Error(err)
 				break
 			}
@@ -88,6 +90,7 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 		for {
 			subs, err := subscriptionsIterator.Next(ctx, -1)
 			if err != nil {
+				successful = false
 				baseLog.Error(err)
 				break
 			}
@@ -102,6 +105,10 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 			}
 
 			mon.mu.Unlock()
+		}
+
+		if successful {
+			mon.lastChangefeed.Store(time.Now())
 		}
 
 		select {
