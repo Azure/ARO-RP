@@ -1,11 +1,10 @@
-package install
+package controllers
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
 import (
 	"bytes"
-	"context"
 	"testing"
 
 	v1 "k8s.io/api/core/v1"
@@ -53,11 +52,9 @@ route:
 `)
 )
 
-func TestDisableAlertManagerWarning(t *testing.T) {
-	ctx := context.Background()
-
-	i := &Installer{
-		kubernetescli: fake.NewSimpleClientset(&v1.Secret{
+func TestSetAlertManagerWebhook(t *testing.T) {
+	i := &AlertWebhookReconciler{
+		Kubernetescli: fake.NewSimpleClientset(&v1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "alertmanager-main",
 				Namespace: "openshift-monitoring",
@@ -68,12 +65,12 @@ func TestDisableAlertManagerWarning(t *testing.T) {
 		}),
 	}
 
-	err := i.disableAlertManagerWarning(ctx)
+	err := i.setAlertManagerWebhook("http://localhost:1234/")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	s, err := i.kubernetescli.CoreV1().Secrets("openshift-monitoring").Get("alertmanager-main", metav1.GetOptions{})
+	s, err := i.Kubernetescli.CoreV1().Secrets("openshift-monitoring").Get("alertmanager-main", metav1.GetOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}

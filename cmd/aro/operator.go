@@ -105,6 +105,14 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		log.Errorf("unable to create controller: InternetChecker %v", err)
 		return err
 	}
+	if err = (&controllers.AlertWebhookReconciler{
+		Kubernetescli: kubernetescli,
+		Log:           log.WithField("controller", "AlertWebhook"),
+		Scheme:        mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		log.Errorf("unable to create controller: AlertWebhook %v", err)
+		return err
+	}
 	// +kubebuilder:scaffold:builder
 
 	log.Info("starting manager")

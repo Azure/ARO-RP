@@ -195,13 +195,12 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			action(i.configureAPIServerCertificate),
 			condition{i.apiServersReady, 30 * time.Minute},
 			condition{i.operatorConsoleExists, 30 * time.Minute},
-			action(i.updateConsoleBranding), // TODO move into operator
+			action(i.updateConsoleBranding),
 			condition{i.operatorConsoleReady, 10 * time.Minute},
 			condition{i.clusterVersionReady, 30 * time.Minute},
-			action(i.disableAlertManagerWarning), // TODO move into operator
-			action(i.disableUpdates),             // TODO move into operator
-			action(i.disableSamples),             // TODO move into operator
-			action(i.disableOperatorHubSources),  // TODO move into operator
+			action(i.disableUpdates),
+			action(i.disableSamples),
+			action(i.disableOperatorHubSources),
 			action(i.updateRouterIP),
 			action(i.configureIngressCertificate),
 			condition{i.ingressControllerReady, 30 * time.Minute},
