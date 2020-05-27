@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/x509/pkix"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -130,7 +131,7 @@ func (m *manager) UpgradeCertificatePolicy(ctx context.Context, keyvaultURI, cer
 		return err
 	}
 
-	policy.LifetimeActions = &[]keyvault.LifetimeAction{
+	lifetimeActions := &[]keyvault.LifetimeAction{
 		{
 			Trigger: &keyvault.Trigger{
 				DaysBeforeExpiry: to.Int32Ptr(365 - 90),
@@ -140,6 +141,12 @@ func (m *manager) UpgradeCertificatePolicy(ctx context.Context, keyvaultURI, cer
 			},
 		},
 	}
+
+	if reflect.DeepEqual(policy.LifetimeActions, lifetimeActions) {
+		return nil
+	}
+
+	policy.LifetimeActions = lifetimeActions
 
 	_, err = m.BaseClient.UpdateCertificatePolicy(ctx, keyvaultURI, certificateName, policy)
 	return err
