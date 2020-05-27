@@ -38,8 +38,8 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 
 	for _, tt := range []*test{
 		{
-			name: "clusters exists in db",
-			mocks: func(controller *gomock.Controller, oc *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher, cipher *mock_encryption.MockCipher) {
+			name: "clusters exist in db",
+			mocks: func(controller *gomock.Controller, openshiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher, cipher *mock_encryption.MockCipher) {
 				clusterDocs := []*api.OpenShiftClusterDocument{
 					{
 						OpenShiftCluster: &api.OpenShiftCluster{
@@ -74,48 +74,62 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 				}
 
 				mockIter := mock_cosmosdb.NewMockOpenShiftClusterDocumentIterator(controller)
-				mockIter.EXPECT().Next(gomock.Any(), -1).Return(&api.OpenShiftClusterDocuments{OpenShiftClusterDocuments: clusterDocs}, nil)
-				mockIter.EXPECT().Next(gomock.Any(), -1).Return(nil, nil)
+				mockIter.EXPECT().Next(gomock.Any(), 10).Return(&api.OpenShiftClusterDocuments{OpenShiftClusterDocuments: clusterDocs}, nil)
+				mockIter.EXPECT().Continuation().Return("mock-skip-token")
 
-				oc.EXPECT().
-					List().
+				openshiftClusters.EXPECT().
+					List("").
 					Return(mockIter)
+
+				cipher.EXPECT().
+					Encrypt([]byte("mock-skip-token")).
+					Return([]byte("encrypted-mock-skip-token"), nil)
+
+				enricher.EXPECT().Enrich(gomock.Any(), clusterDocs[0].OpenShiftCluster, clusterDocs[1].OpenShiftCluster)
 			},
 			wantStatusCode: http.StatusOK,
-			wantResponse: &[]*admin.OpenShiftCluster{
-				{
-					ID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1", mockSubID),
-					Name: "resourceName1",
-					Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+			wantResponse: &admin.OpenShiftClusterList{
+				OpenShiftClusters: []*admin.OpenShiftCluster{
+					{
+						ID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1", mockSubID),
+						Name: "resourceName1",
+						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+					},
+					{
+						ID:   "/subscriptions/00000000-0000-0000-0000-000000000001/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName2",
+						Name: "resourceName2",
+						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+					},
 				},
-				{
-					ID:   "/subscriptions/00000000-0000-0000-0000-000000000001/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName2",
-					Name: "resourceName2",
-					Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-				},
+				NextLink: "https://mockrefererhost/?%24skipToken=ZW5jcnlwdGVkLW1vY2stc2tpcC10b2tlbg%3D%3D",
 			},
 		},
 		{
 			name: "no clusters found in db",
 			mocks: func(controller *gomock.Controller, oc *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher, cipher *mock_encryption.MockCipher) {
 				mockIter := mock_cosmosdb.NewMockOpenShiftClusterDocumentIterator(controller)
-				mockIter.EXPECT().Next(gomock.Any(), -1).Return(nil, nil)
+				mockIter.EXPECT().Next(gomock.Any(), 10).Return(nil, nil)
+				mockIter.EXPECT().Continuation().Return("")
 
-				oc.EXPECT().
-					List().
+				openshiftClusters.EXPECT().
+					List("").
 					Return(mockIter)
+
+				enricher.EXPECT().Enrich(gomock.Any())
 			},
 			wantStatusCode: http.StatusOK,
-			wantResponse:   &[]*admin.OpenShiftCluster{},
+			wantResponse: &admin.OpenShiftClusterList{
+				OpenShiftClusters: []*admin.OpenShiftCluster{},
+			},
 		},
 		{
 			name: "internal error while iterating list",
 			mocks: func(controller *gomock.Controller, oc *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher, cipher *mock_encryption.MockCipher) {
 				mockIter := mock_cosmosdb.NewMockOpenShiftClusterDocumentIterator(controller)
-				mockIter.EXPECT().Next(gomock.Any(), -1).Return(nil, errors.New("random error"))
+				mockIter.EXPECT().Next(gomock.Any(), 10).Return(nil, errors.New("random error"))
 
-				oc.EXPECT().
-					List().
+				openshiftClusters.EXPECT().
+					List("").
 					Return(mockIter)
 			},
 			wantStatusCode: http.StatusInternalServerError,
@@ -156,6 +170,30 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 			err = validateResponse(resp, b, tt.wantStatusCode, tt.wantError, tt.wantResponse)
 			if err != nil {
 				t.Error(err)
+			}
+
+			if tt.wantError == "" {
+				var ocs *admin.OpenShiftClusterList
+				err = json.Unmarshal(b, &ocs)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if !reflect.DeepEqual(ocs, tt.wantResponse) {
+					b, _ := json.Marshal(ocs)
+					t.Error(string(b))
+				}
+
+			} else {
+				cloudErr := &api.CloudError{StatusCode: resp.StatusCode}
+				err = json.Unmarshal(b, &cloudErr)
+				if err != nil {
+					t.Fatal(err)
+				}
+
+				if cloudErr.Error() != tt.wantError {
+					t.Error(cloudErr)
+				}
 			}
 		})
 	}
