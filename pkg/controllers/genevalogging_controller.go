@@ -86,7 +86,6 @@ func (r *GenevaloggingReconciler) certificatesSecret(instance *aro.Cluster) (*v1
 		}
 		newCert = certs.DeepCopy()
 		newCert.Namespace = instance.Spec.GenevaLogging.Namespace
-		newCert.ResourceVersion = ""
 	}
 	return newCert, nil
 }

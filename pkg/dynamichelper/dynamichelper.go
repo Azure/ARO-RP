@@ -254,6 +254,7 @@ func (dh *dynamicHelper) CreateOrUpdate(ctx context.Context, o *unstructured.Uns
 			return nil
 		}
 
+		dh.log.Info("Update " + keyFuncO(o))
 		if dh.updatePolicy.LogChanges {
 			dh.logDiff(existing, o)
 		}
@@ -270,8 +271,6 @@ func (dh *dynamicHelper) needsUpdate(existing, o *unstructured.Unstructured) boo
 	if reflect.DeepEqual(*existing, *o) {
 		return false
 	}
-
-	dh.log.Info("Update " + keyFuncO(o))
 
 	return true
 }

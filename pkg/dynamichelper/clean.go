@@ -81,7 +81,7 @@ func cleanNewObject(o unstructured.Unstructured) {
 	gk := o.GroupVersionKind().GroupKind()
 
 	jsonpath.MustCompile("$.status").Delete(o.Object)
-	jsonpath.MustCompile("$.metadata.creationTimestamp").Delete(o.Object)
+	cleanMetadata(o.Object)
 
 	switch gk.String() {
 	case "Deployment.apps":
