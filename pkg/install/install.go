@@ -156,6 +156,7 @@ func (i *Installer) AdminUpgrade(ctx context.Context) error {
 		action(i.ensureBillingRecord), // belt and braces
 		action(i.fixLBProbes),
 		action(i.ensureAroOperator),
+		condition{i.aroDeploymentReady, 10 * time.Minute},
 		action(i.upgradeCluster),
 		// TODO: later could use this flow to refresh certificates
 		// action(i.createCertificates),
@@ -184,6 +185,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			condition{i.bootstrapConfigMapReady, 30 * time.Minute},
 			condition{i.readyToDeployAroOperator, 10 * time.Minute},
 			action(i.ensureAroOperator),
+			condition{i.aroDeploymentReady, 15 * time.Minute},
 			action(i.incrInstallPhase),
 		},
 		api.InstallPhaseRemoveBootstrap: {

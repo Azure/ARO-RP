@@ -32,6 +32,14 @@ func (i *Installer) ensureAroOperator(ctx context.Context) error {
 		i.log.Warnf("deploy.New %v", err)
 		return err
 	}
-	i.log.Print("deploy.CreateOrUpdate")
 	return dep.CreateOrUpdate(ctx)
+}
+
+func (i *Installer) aroDeploymentReady() (bool, error) {
+	dep, err := deploy.New(i.log, i.env, i.doc.OpenShiftCluster, i.kubernetescli, i.securitycli, i.arocli)
+	if err != nil {
+		i.log.Warnf("deploy.New %v", err)
+		return false, err
+	}
+	return dep.IsReady()
 }

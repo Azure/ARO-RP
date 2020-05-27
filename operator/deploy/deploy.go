@@ -18,7 +18,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -46,6 +45,7 @@ const (
 
 type Operator interface {
 	CreateOrUpdate(ctx context.Context) error
+	IsReady() (bool, error)
 }
 
 type operator struct {
@@ -315,18 +315,16 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 			return err
 		}
 	}
+	return nil
+}
 
-	o.log.Print("waiting for operator to come up")
-	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
-	defer cancel()
-	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-		dep, err := o.cli.AppsV1().Deployments(o.namespace).Get("aro-operator", metav1.GetOptions{})
-		if err != nil && !apierrors.IsNotFound(err) {
-			return false, nil
-		} else if err != nil {
-			return false, err
-		}
+func (o *operator) IsReady() (bool, error) {
+	dc, err := o.cli.AppsV1().Deployments(o.namespace).Get("aro-operator", metav1.GetOptions{})
+	if err != nil {
+		return false, err
+	}
 
-		return dep.Status.AvailableReplicas == 1, nil
-	}, timeoutCtx.Done())
+	return (*dc.Spec.Replicas == dc.Status.AvailableReplicas &&
+		*dc.Spec.Replicas == dc.Status.UpdatedReplicas &&
+		dc.Generation == dc.Status.ObservedGeneration), nil
 }
