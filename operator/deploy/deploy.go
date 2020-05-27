@@ -8,7 +8,9 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/to"
@@ -71,9 +73,19 @@ type operator struct {
 func New(log *logrus.Entry, e env.Interface, oc *api.OpenShiftCluster, cli kubernetes.Interface, seccli securityclient.Interface, arocli aroclient.AroV1alpha1Interface) (Operator, error) {
 	var acrToken string
 	acrRegName := e.ACRName() + ".azurecr.io"
-	for i, rp := range oc.Properties.RegistryProfiles {
-		if rp.Name == acrRegName {
-			acrToken = oc.Properties.RegistryProfiles[i].Username + ":" + string(oc.Properties.RegistryProfiles[i].Password)
+	if _, ok := e.(env.Dev); ok {
+		psPath := os.Getenv("PULL_SECRET_PATH")
+		fpath := path.Join(psPath, acrRegName)
+		data, err := ioutil.ReadFile(fpath)
+		if err != nil {
+			return nil, err
+		}
+		acrToken = string(data)
+	} else {
+		for i, rp := range oc.Properties.RegistryProfiles {
+			if rp.Name == acrRegName {
+				acrToken = oc.Properties.RegistryProfiles[i].Username + ":" + string(oc.Properties.RegistryProfiles[i].Password)
+			}
 		}
 	}
 	restConfig, err := restconfig.RestConfig(e, oc)
