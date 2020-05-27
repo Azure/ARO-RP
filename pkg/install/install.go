@@ -60,7 +60,7 @@ type Installer struct {
 	billing      billing.Manager
 	doc          *api.OpenShiftClusterDocument
 	cipher       encryption.Cipher
-	fpAuthorizer autorest.Authorizer
+	fpAuthorizer env.RefreshableAuthorizer
 
 	disks             compute.DisksClient
 	virtualmachines   compute.VirtualMachinesClient
@@ -236,13 +236,8 @@ func (i *Installer) runSteps(ctx context.Context, steps []interface{}) error {
 						azureerrors.HasLinkedAuthorizationFailedError(err) {
 						i.log.Print(err)
 						// https://github.com/Azure/ARO-RP/issues/541: it is unclear if this refresh helps or not
-						if development, ok := i.env.(env.Dev); ok {
-							err = development.RefreshFPAuthorizer(ctx, i.fpAuthorizer)
-							if err != nil {
-								return false, err
-							}
-						}
-						return false, nil
+						err = i.fpAuthorizer.RefreshWithContext(ctx)
+						return false, err
 					}
 					return err == nil, err
 				}, timeoutCtx.Done())

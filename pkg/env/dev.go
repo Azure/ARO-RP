@@ -41,24 +41,12 @@ func (c *conn) Read(b []byte) (int, error) {
 	return c.r.Read(b)
 }
 
-type refreshableAuthorizer struct {
-	autorest.Authorizer
-	sp *adal.ServicePrincipalToken
-}
-
-func (ra *refreshableAuthorizer) RefreshWithContext(ctx context.Context) error {
-	return ra.sp.RefreshWithContext(ctx)
-}
-
 type Dev interface {
 	CreateARMResourceGroupRoleAssignment(context.Context, autorest.Authorizer, string) error
-	RefreshFPAuthorizer(ctx context.Context, fpAuthorizer autorest.Authorizer) error
 }
 
 type dev struct {
 	*prod
-
-	log *logrus.Entry
 
 	permissions     authorization.PermissionsClient
 	roleassignments authorization.RoleAssignmentsClient
@@ -93,7 +81,6 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 	}
 
 	d := &dev{
-		log:             log,
 		roleassignments: authorization.NewRoleAssignmentsClient(instancemetadata.SubscriptionID(), armAuthorizer),
 	}
 
@@ -231,7 +218,7 @@ func (d *dev) Listen() (net.Listener, error) {
 	return net.Listen("tcp", "localhost:8443")
 }
 
-func (d *dev) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, error) {
+func (d *dev) FPAuthorizer(tenantID, resource string) (RefreshableAuthorizer, error) {
 	oauthConfig, err := adal.NewOAuthConfig(azure.PublicCloud.ActiveDirectoryEndpoint, tenantID)
 	if err != nil {
 		return nil, err
@@ -249,7 +236,7 @@ func (d *dev) MetricsSocketPath() string {
 	return "mdm_statsd.socket"
 }
 
-func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthorizer autorest.Authorizer, resourceGroup string) error {
+func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthorizer RefreshableAuthorizer, resourceGroup string) error {
 	d.log.Print("development mode: applying resource group role assignment")
 
 	res, err := d.applications.GetServicePrincipalsIDByAppID(ctx, os.Getenv("AZURE_FP_CLIENT_ID"))
@@ -270,17 +257,7 @@ func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthor
 			err = nil
 		}
 	}
-	if err != nil {
-		return err
-	}
-
-	d.log.Print("development mode: refreshing authorizer")
-	return fpAuthorizer.(*refreshableAuthorizer).RefreshWithContext(ctx)
-}
-
-func (d *dev) RefreshFPAuthorizer(ctx context.Context, fpAuthorizer autorest.Authorizer) error {
-	d.log.Print("development mode: refreshing authorizer")
-	return fpAuthorizer.(*refreshableAuthorizer).RefreshWithContext(ctx)
+	return err
 }
 
 func (d *dev) E2EStorageAccountName() string {

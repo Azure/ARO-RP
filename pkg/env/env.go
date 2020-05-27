@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
@@ -42,7 +43,7 @@ type Interface interface {
 	DatabaseName() string
 	DialContext(context.Context, string, string) (net.Conn, error)
 	Domain() string
-	FPAuthorizer(string, string) (autorest.Authorizer, error)
+	FPAuthorizer(string, string) (RefreshableAuthorizer, error)
 	GetCertificateSecret(context.Context, string) (*rsa.PrivateKey, []*x509.Certificate, error)
 	GetSecret(context.Context, string) ([]byte, error)
 	Listen() (net.Listener, error)
@@ -73,4 +74,18 @@ func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
 	}
 
 	return newProd(ctx, log, im)
+}
+
+type RefreshableAuthorizer interface {
+	autorest.Authorizer
+	RefreshWithContext(ctx context.Context) error
+}
+
+type refreshableAuthorizer struct {
+	autorest.Authorizer
+	sp *adal.ServicePrincipalToken
+}
+
+func (ra *refreshableAuthorizer) RefreshWithContext(ctx context.Context) error {
+	return ra.sp.RefreshWithContext(ctx)
 }
