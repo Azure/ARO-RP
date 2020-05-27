@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/x509/pkix"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -37,6 +38,7 @@ type Manager interface {
 
 	CreateSignedCertificate(ctx context.Context, keyvaultURI string, issuer Issuer, certificateName, commonName string, eku Eku) error
 	EnsureCertificateDeleted(ctx context.Context, keyvaultURI, certificateName string) error
+	UpgradeCertificatePolicy(ctx context.Context, keyvaultURI, certificateName string) error
 	WaitForCertificateOperation(ctx context.Context, keyvaultURI, certificateName string) error
 }
 
@@ -71,6 +73,16 @@ func (m *manager) CreateSignedCertificate(ctx context.Context, keyvaultURI strin
 					keyvault.KeyEncipherment,
 				},
 				ValidityInMonths: to.Int32Ptr(12),
+			},
+			LifetimeActions: &[]keyvault.LifetimeAction{
+				{
+					Trigger: &keyvault.Trigger{
+						DaysBeforeExpiry: to.Int32Ptr(365 - 90),
+					},
+					Action: &keyvault.Action{
+						ActionType: keyvault.AutoRenew,
+					},
+				},
 			},
 			IssuerParameters: &keyvault.IssuerParameters{
 				Name: to.StringPtr(string(issuer)),
@@ -110,6 +122,33 @@ func (m *manager) WaitForCertificateOperation(ctx context.Context, keyvaultURI, 
 
 		return checkOperation(&op)
 	}, ctx.Done())
+	return err
+}
+
+func (m *manager) UpgradeCertificatePolicy(ctx context.Context, keyvaultURI, certificateName string) error {
+	policy, err := m.BaseClient.GetCertificatePolicy(ctx, keyvaultURI, certificateName)
+	if err != nil {
+		return err
+	}
+
+	lifetimeActions := &[]keyvault.LifetimeAction{
+		{
+			Trigger: &keyvault.Trigger{
+				DaysBeforeExpiry: to.Int32Ptr(365 - 90),
+			},
+			Action: &keyvault.Action{
+				ActionType: keyvault.AutoRenew,
+			},
+		},
+	}
+
+	if reflect.DeepEqual(policy.LifetimeActions, lifetimeActions) {
+		return nil
+	}
+
+	policy.LifetimeActions = lifetimeActions
+
+	_, err = m.BaseClient.UpdateCertificatePolicy(ctx, keyvaultURI, certificateName, policy)
 	return err
 }
 
