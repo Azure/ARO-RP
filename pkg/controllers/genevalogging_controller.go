@@ -34,7 +34,7 @@ type GenevaloggingReconciler struct {
 }
 
 // +kubebuilder:rbac:groups=aro.openshift.io,resources=clusters,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=apps.v1,resources=daemonsets,verbs=get;update;patch;create
+// +kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=get;update;patch;create
 // +kubebuilder:rbac:groups="",resources=namespaces;serviceaccounts;configmaps,verbs=get;create;update
 
 func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
