@@ -5,14 +5,16 @@ package openshiftcluster
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
-	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 func (m *Manager) Delete(ctx context.Context) error {
@@ -24,41 +26,67 @@ func (m *Manager) Delete(ctx context.Context) error {
 		return err
 	}
 
+	m.log.Print("looking for network security groups to remove from subnets")
+	nsgs, err := m.securityGroups.List(ctx, resourceGroup)
+	if err != nil {
+		return err
+	}
+
 	// TODO: ideally we would do this after all the VMs have been deleted
-	for _, subnetID := range []string{
-		m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
-		m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID,
-	} {
-		// TODO: there is probably an undesirable race condition here - check if etags can help.
-		s, err := m.subnet.Get(ctx, subnetID)
-		if err != nil {
-			// It is possible that we never properly had access to the subnet,
-			// or that we never joined an NSG to it and it has subsequently been
-			// deleted.  As a result we cannot fail here.  If we do have an NSG
-			// joined to the subnet and an error here prevents us from removing
-			// it, we will fail later in the RG deletion; in principal the user
-			// can fix up and retry.
-			m.log.Print(err)
+	for _, nsg := range nsgs {
+		if nsg.SecurityGroupPropertiesFormat == nil ||
+			nsg.SecurityGroupPropertiesFormat.Subnets == nil {
 			continue
 		}
 
-		nsgID, err := subnet.NetworkSecurityGroupID(m.doc.OpenShiftCluster, subnetID)
-		if err != nil {
-			return err
-		}
+		for _, subnet := range *nsg.SecurityGroupPropertiesFormat.Subnets {
+			// Note: subnet only has value in the ID field,
+			// so we have to make another API request to get full subnet struct
+			// TODO: there is probably an undesirable race condition here - check if etags can help.
+			s, err := m.subnet.Get(ctx, *subnet.ID)
+			if err != nil {
+				b, _ := json.Marshal(err)
 
-		if s.SubnetPropertiesFormat == nil ||
-			s.SubnetPropertiesFormat.NetworkSecurityGroup == nil ||
-			!strings.EqualFold(*s.SubnetPropertiesFormat.NetworkSecurityGroup.ID, nsgID) {
-			continue
-		}
+				return &api.CloudError{
+					StatusCode: http.StatusBadRequest,
+					CloudErrorBody: &api.CloudErrorBody{
+						Code:    api.CloudErrorCodeInvalidLinkedVNet,
+						Message: fmt.Sprintf("Failed to get subnet '%s'.", *subnet.ID),
+						Details: []api.CloudErrorBody{
+							{
+								Message: string(b),
+							},
+						},
+					},
+				}
+			}
 
-		s.SubnetPropertiesFormat.NetworkSecurityGroup = nil
+			if s.SubnetPropertiesFormat == nil ||
+				s.SubnetPropertiesFormat.NetworkSecurityGroup == nil ||
+				!strings.EqualFold(*s.SubnetPropertiesFormat.NetworkSecurityGroup.ID, *nsg.ID) {
+				continue
+			}
 
-		m.log.Printf("removing network security group from subnet %s", subnetID)
-		err = m.subnet.CreateOrUpdate(ctx, subnetID, s)
-		if err != nil {
-			return err
+			s.SubnetPropertiesFormat.NetworkSecurityGroup = nil
+
+			m.log.Printf("removing network security group from subnet %s", *s.ID)
+			err = m.subnet.CreateOrUpdate(ctx, *s.ID, s)
+			if err != nil {
+				b, _ := json.Marshal(err)
+
+				return &api.CloudError{
+					StatusCode: http.StatusBadRequest,
+					CloudErrorBody: &api.CloudErrorBody{
+						Code:    api.CloudErrorCodeInvalidLinkedVNet,
+						Message: fmt.Sprintf("Failed to update subnet '%s'.", *subnet.ID),
+						Details: []api.CloudErrorBody{
+							{
+								Message: string(b),
+							},
+						},
+					},
+				}
+			}
 		}
 	}
 
