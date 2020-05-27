@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -19,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	aro "github.com/Azure/ARO-RP/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/dynamichelper"
@@ -78,15 +76,7 @@ func (g *genevaLogging) mdsdImage() string {
 }
 
 func (g *genevaLogging) securityContextConstraints(ctx context.Context, name, serviceAccountName string) (*securityv1.SecurityContextConstraints, error) {
-	g.log.Print("waiting for privileged security context constraint")
-	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
-	defer cancel()
-	var scc *securityv1.SecurityContextConstraints
-	var err error
-	err = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-		scc, err = g.seccli.SecurityV1().SecurityContextConstraints().Get("privileged", metav1.GetOptions{})
-		return err == nil, nil
-	}, timeoutCtx.Done())
+	scc, err := g.seccli.SecurityV1().SecurityContextConstraints().Get("privileged", metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
