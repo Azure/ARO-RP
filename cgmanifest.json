@@ -355,15 +355,6 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "03f06a783fbb7dfaf3f629c7825480e43a7105e6",
-                    "repositoryUrl": "https://github.com/go-logr/zapr/"
-                }
-            }
-        },
-        {
-            "component": {
-                "type": "git",
-                "git": {
                     "commitHash": "ed123515f087412cd7ef02e49b0b0a5e6a79a360",
                     "repositoryUrl": "https://github.com/go-openapi/jsonpointer/"
                 }
@@ -1050,33 +1041,6 @@
                 "git": {
                     "commitHash": "aad2c527c5defcf89b5afab7f37274304195a6b2",
                     "repositoryUrl": "https://go.opencensus.io/"
-                }
-            }
-        },
-        {
-            "component": {
-                "type": "git",
-                "git": {
-                    "commitHash": "845920076a298bdb984fb0f1b86052e4ca0a281c",
-                    "repositoryUrl": "https://go.uber.org/atomic/"
-                }
-            }
-        },
-        {
-            "component": {
-                "type": "git",
-                "git": {
-                    "commitHash": "b587143a48b62b01d337824eab43700af6ffe222",
-                    "repositoryUrl": "https://go.uber.org/multierr/"
-                }
-            }
-        },
-        {
-            "component": {
-                "type": "git",
-                "git": {
-                    "commitHash": "feeb9a050b31b40eec6f2470e7599eeeadfe5bdd",
-                    "repositoryUrl": "https://go.uber.org/zap/"
                 }
             }
         },

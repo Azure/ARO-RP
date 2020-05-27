@@ -480,14 +480,6 @@
   version = "v0.1.0"
 
 [[projects]]
-  digest = "1:d81dfed1aa731d8e4a45d87154ec15ef18da2aa80fa9a2f95bec38577a244a99"
-  name = "github.com/go-logr/zapr"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "03f06a783fbb7dfaf3f629c7825480e43a7105e6"
-  version = "v0.1.1"
-
-[[projects]]
   digest = "1:ed15647db08b6d63666bf9755d337725960c302bbfa5e23754b4b915a4797e42"
   name = "github.com/go-openapi/jsonpointer"
   packages = ["."]
@@ -915,13 +907,11 @@
   version = "v1.10.3"
 
 [[projects]]
-  digest = "1:efc62d2e73d79a07c5d0cd8e11258123a4bb042a83b6a07feb3dea8d75fe997c"
+  digest = "1:7e57cd10c5424b2abf91f29354796a2468720396419585fef5a2d346c5a0f24d"
   name = "github.com/onsi/gomega"
   packages = [
     ".",
     "format",
-    "gbytes",
-    "gexec",
     "internal/assertion",
     "internal/asyncassertion",
     "internal/oraclematcher",
@@ -1399,37 +1389,6 @@
   version = "v0.22.2"
 
 [[projects]]
-  digest = "1:19525e48b45af69339bd7c2812137dbd1e650a78fc09c7c75482e307d51aa28d"
-  name = "go.uber.org/atomic"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "845920076a298bdb984fb0f1b86052e4ca0a281c"
-  version = "v1.6.0"
-
-[[projects]]
-  digest = "1:a23ddd39502ba94e2a72815a946d0edec801defcf0a0c0530d04acee1f455128"
-  name = "go.uber.org/multierr"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "b587143a48b62b01d337824eab43700af6ffe222"
-  version = "v1.5.0"
-
-[[projects]]
-  digest = "1:8e22fc6a99b3054c643f020c29a8e5c7809e75292b4960b26b60f717a201b6dc"
-  name = "go.uber.org/zap"
-  packages = [
-    ".",
-    "buffer",
-    "internal/bufferpool",
-    "internal/color",
-    "internal/exit",
-    "zapcore",
-  ]
-  pruneopts = "UT"
-  revision = "feeb9a050b31b40eec6f2470e7599eeeadfe5bdd"
-  version = "v1.15.0"
-
-[[projects]]
   branch = "master"
   digest = "1:91ed6116b126ec7fa7b9f9460356ee6b3005e5ed320b8e85510937f44d3d62d5"
   name = "go4.org"
@@ -1805,16 +1764,12 @@
 
 [[projects]]
   branch = "release-1.17"
-  digest = "1:f0b431fe72d7510dfe7f3f177317391621ddb500843f5661dab7520d22735a66"
+  digest = "1:97d68e1b4c043da3a358cbfb4076e416199452c06e326b2ca0eef721b52aa1a4"
   name = "k8s.io/apiextensions-apiserver"
   packages = [
     "pkg/apis/apiextensions",
     "pkg/apis/apiextensions/v1",
     "pkg/apis/apiextensions/v1beta1",
-    "pkg/client/clientset/clientset",
-    "pkg/client/clientset/clientset/scheme",
-    "pkg/client/clientset/clientset/typed/apiextensions/v1",
-    "pkg/client/clientset/clientset/typed/apiextensions/v1beta1",
   ]
   pruneopts = "UT"
   revision = "88d23e1d281b9aa0cb534c4cdf3ed01af4b180b9"
@@ -2106,7 +2061,7 @@
 
 [[projects]]
   branch = "release-0.5"
-  digest = "1:06873bbf11ef1371aff8a426ef94e4810af5cb5534ac909dd8cb981f7d617046"
+  digest = "1:43fff2ac0dd9cbedc1cb6696f5f07369cd1675c22889007a75e01eb75da68e60"
   name = "sigs.k8s.io/controller-runtime"
   packages = [
     ".",
@@ -2119,8 +2074,6 @@
     "pkg/controller",
     "pkg/controller/controllerutil",
     "pkg/conversion",
-    "pkg/envtest",
-    "pkg/envtest/printer",
     "pkg/event",
     "pkg/handler",
     "pkg/healthz",
@@ -2128,12 +2081,8 @@
     "pkg/internal/controller/metrics",
     "pkg/internal/log",
     "pkg/internal/recorder",
-    "pkg/internal/testing/integration",
-    "pkg/internal/testing/integration/addr",
-    "pkg/internal/testing/integration/internal",
     "pkg/leaderelection",
     "pkg/log",
-    "pkg/log/zap",
     "pkg/manager",
     "pkg/manager/signals",
     "pkg/metrics",
@@ -2329,12 +2278,7 @@
     "k8s.io/code-generator/cmd/deepcopy-gen",
     "k8s.io/gengo/generator",
     "sigs.k8s.io/controller-runtime",
-    "sigs.k8s.io/controller-runtime/pkg/client",
-    "sigs.k8s.io/controller-runtime/pkg/envtest",
-    "sigs.k8s.io/controller-runtime/pkg/envtest/printer",
     "sigs.k8s.io/controller-runtime/pkg/event",
-    "sigs.k8s.io/controller-runtime/pkg/log",
-    "sigs.k8s.io/controller-runtime/pkg/log/zap",
     "sigs.k8s.io/controller-runtime/pkg/predicate",
     "sigs.k8s.io/controller-runtime/pkg/reconcile",
     "sigs.k8s.io/controller-runtime/pkg/scheme",
