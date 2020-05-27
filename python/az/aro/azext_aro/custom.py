@@ -59,7 +59,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
 
     aad = AADManager(cmd.cli_ctx)
     if client_id is None:
-        app, client_secret = aad.create_application('aro-%s' % random_id)
+        app, client_secret = aad.create_application(cluster_resource_group or 'aro-' + random_id)
         client_id = app.app_id
 
     client_sp = aad.get_service_principal(client_id)
