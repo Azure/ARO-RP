@@ -12,7 +12,9 @@
                     ],
                     "certificates": [
                         "create",
-                        "delete"
+                        "delete",
+                        "get",
+                        "update"
                     ]
                 }
             }

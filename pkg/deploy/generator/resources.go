@@ -1109,6 +1109,8 @@ func (g *generator) clusterKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyE
 				Certificates: &[]mgmtkeyvault.CertificatePermissions{
 					mgmtkeyvault.Create,
 					mgmtkeyvault.Delete,
+					mgmtkeyvault.Get,
+					mgmtkeyvault.Update,
 				},
 			},
 		},
