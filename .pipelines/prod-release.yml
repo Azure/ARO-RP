@@ -19,6 +19,8 @@ stages:
       environment: RP-Prod-LowTrafficSector
       locations:
       - australiaeast
+      - japaneast
+      - japanwest
       configFileName: prod-config.yaml
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
       vsoProjectID: $(vso-project-id)
@@ -40,9 +42,12 @@ stages:
     parameters:
       environment: RP-Prod-USSector
       locations:
+      - centralus
       - eastus
       - eastus2
+      - northcentralus
       - southcentralus
+      - westus
       - westus2
       configFileName: prod-config.yaml
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
@@ -65,7 +70,10 @@ stages:
     parameters:
       environment: RP-Prod-EuropeSector
       locations:
+      - canadacentral
+      - canadaeast
       - northeurope
+      - switzerlandnorth
       - westeurope
       configFileName: prod-config.yaml
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
@@ -88,9 +96,11 @@ stages:
     parameters:
       environment: RP-Prod-ROWSector
       locations:
+      - brazilsouth
       - southeastasia
       - southafricanorth
       - uksouth
+      - ukwest
       configFileName: prod-config.yaml
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
       vsoProjectID: $(vso-project-id)
