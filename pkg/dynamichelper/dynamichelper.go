@@ -203,7 +203,7 @@ func (dh *dynamicHelper) findGVRWithRefresh(groupKind, optionalVersion string) (
 		return dh.findGVR(groupKind, optionalVersion)
 	}
 	var gvr *schema.GroupVersionResource
-	err := retry.OnError(wait.Backoff{Steps: 4, Duration: 30 * time.Second, Factor: 2.0}, dh.retryableError, func() error {
+	err := retry.OnError(wait.Backoff{Steps: 5, Duration: 30 * time.Second, Factor: 1.5}, dh.retryableError, func() error {
 		// this is used at cluster start up when kinds are still getting
 		// registered.
 		var gvrErr error
