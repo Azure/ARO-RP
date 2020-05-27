@@ -261,7 +261,7 @@ func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthor
 		return err
 	}
 
-	return d.RefreshFPAuthorizer(ctx, fpAuthorizer)
+	return fpAuthorizer.RefreshWithContext(ctx)
 }
 
 func (d *dev) E2EStorageAccountName() string {

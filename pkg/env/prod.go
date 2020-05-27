@@ -309,11 +309,6 @@ func (p *prod) FPAuthorizer(tenantID, resource string) (RefreshableAuthorizer, e
 	return &refreshableAuthorizer{autorest.NewBearerAuthorizer(sp), sp}, nil
 }
 
-func (p *prod) RefreshFPAuthorizer(ctx context.Context, fpAuthorizer RefreshableAuthorizer) error {
-	p.log.Print("refreshing authorizer")
-	return fpAuthorizer.RefreshWithContext(ctx)
-}
-
 func (p *prod) GetCertificateSecret(ctx context.Context, secretName string) (key *rsa.PrivateKey, certs []*x509.Certificate, err error) {
 	bundle, err := p.keyvault.GetSecret(ctx, p.serviceKeyvaultURI, secretName, "")
 	if err != nil {

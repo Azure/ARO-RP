@@ -44,7 +44,6 @@ type Interface interface {
 	DialContext(context.Context, string, string) (net.Conn, error)
 	Domain() string
 	FPAuthorizer(string, string) (RefreshableAuthorizer, error)
-	RefreshFPAuthorizer(context.Context, RefreshableAuthorizer) error
 	GetCertificateSecret(context.Context, string) (*rsa.PrivateKey, []*x509.Certificate, error)
 	GetSecret(context.Context, string) ([]byte, error)
 	Listen() (net.Listener, error)
