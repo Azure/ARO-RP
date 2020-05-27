@@ -26,7 +26,6 @@ var sites = []string{
 	"https://sso.redhat.com",
 	"https://mirror.openshift.com",
 	"https://api.openshift.com",
-	"https://registry.access.redhat.com",
 }
 
 // InternetChecker reconciles a Cluster object
