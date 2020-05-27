@@ -625,7 +625,7 @@ func (g *generator) lbAlert(threshold float64, severity int32, name string, eval
 					OdataType: mgmtmonitor.OdataTypeMicrosoftAzureMonitorSingleResourceMultipleMetricCriteria,
 				},
 			},
-			Name:     to.StringPtr(name),
+			Name:     to.StringPtr("[concat('" + name + "-', resourceGroup().location)]"),
 			Type:     to.StringPtr("Microsoft.Insights/metricAlerts"),
 			Location: to.StringPtr("global"),
 		},
