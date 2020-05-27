@@ -159,12 +159,14 @@ func (r *PullsecretReconciler) requiredRepoTokens() (map[string]string, error) {
 		if fName.IsDir() || strings.HasPrefix(fName.Name(), "..") {
 			continue
 		}
-		r.Log.Infof("requiredRepo: %s", fpath)
 		data, err := ioutil.ReadFile(fpath)
 		if err != nil {
 			return nil, err
 		}
-		repoTokens[fName.Name()] = base64.StdEncoding.EncodeToString(data)
+		if len(data) > 0 {
+			r.Log.Infof("requiredRepo: %s", fpath)
+			repoTokens[fName.Name()] = base64.StdEncoding.EncodeToString(data)
+		}
 	}
 	return repoTokens, nil
 }
