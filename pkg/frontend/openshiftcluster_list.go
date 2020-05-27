@@ -15,6 +15,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 )
 
@@ -23,25 +24,25 @@ func (f *frontend) getOpenShiftClusters(w http.ResponseWriter, r *http.Request) 
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	vars := mux.Vars(r)
 
-	b, err := f._getOpenShiftClusters(ctx, r, f.apis[vars["api-version"]].OpenShiftClusterConverter())
+	b, err := f._getOpenShiftClusters(ctx, r, f.apis[vars["api-version"]].OpenShiftClusterConverter(), func(skipToken string) (cosmosdb.OpenShiftClusterDocumentIterator, error) {
+		prefix := "/subscriptions/" + vars["subscriptionId"] + "/"
+		if vars["resourceGroupName"] != "" {
+			prefix += "resourcegroups/" + vars["resourceGroupName"] + "/"
+		}
+
+		return f.db.OpenShiftClusters.ListByPrefix(vars["subscriptionId"], prefix, skipToken)
+	})
 
 	reply(log, w, nil, b, err)
 }
 
-func (f *frontend) _getOpenShiftClusters(ctx context.Context, r *http.Request, converter api.OpenShiftClusterConverter) ([]byte, error) {
-	vars := mux.Vars(r)
-
-	prefix := "/subscriptions/" + vars["subscriptionId"] + "/"
-	if vars["resourceGroupName"] != "" {
-		prefix += "resourcegroups/" + vars["resourceGroupName"] + "/"
-	}
-
+func (f *frontend) _getOpenShiftClusters(ctx context.Context, r *http.Request, converter api.OpenShiftClusterConverter, lister func(string) (cosmosdb.OpenShiftClusterDocumentIterator, error)) ([]byte, error) {
 	skipToken, err := f.parseSkipToken(r.URL.String())
 	if err != nil {
 		return nil, err
 	}
 
-	i, err := f.db.OpenShiftClusters.ListByPrefix(vars["subscriptionId"], prefix, skipToken)
+	i, err := lister(skipToken)
 	if err != nil {
 		return nil, err
 	}
