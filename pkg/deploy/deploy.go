@@ -161,6 +161,11 @@ func (d *deployer) Deploy(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+
+		err = d.removeOldMetricAlerts(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -205,6 +210,31 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 		},
 	}, "", "")
 	return err
+}
+
+// removeOldMetricAlerts removes alert rules without the location in the name
+func (d *deployer) removeOldMetricAlerts(ctx context.Context) error {
+	d.log.Print("removing old alerts")
+	metricAlerts, err := d.metricalerts.ListByResourceGroup(ctx, d.config.ResourceGroupName)
+	if err != nil {
+		return err
+	}
+
+	if metricAlerts.Value == nil {
+		return nil
+	}
+
+	for _, metricAlert := range *metricAlerts.Value {
+		switch *metricAlert.Name {
+		case "rp-availability-alert", "rp-degraded-alert", "rp-vnet-alert":
+			_, err = d.metricalerts.Delete(ctx, d.config.ResourceGroupName, *metricAlert.Name)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 // getParameters returns an *arm.Parameters populated with parameter names and

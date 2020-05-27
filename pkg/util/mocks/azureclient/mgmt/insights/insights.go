@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 
 	insights "github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights"
+	autorest "github.com/Azure/go-autorest/autorest"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -36,11 +37,12 @@ func (m *MockMetricAlertsClient) EXPECT() *MockMetricAlertsClientMockRecorder {
 }
 
 // Delete mocks base method
-func (m *MockMetricAlertsClient) Delete(arg0 context.Context, arg1, arg2 string) error {
+func (m *MockMetricAlertsClient) Delete(arg0 context.Context, arg1, arg2 string) (autorest.Response, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Delete", arg0, arg1, arg2)
-	ret0, _ := ret[0].(error)
-	return ret0
+	ret0, _ := ret[0].(autorest.Response)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
 // Delete indicates an expected call of Delete
@@ -50,10 +52,10 @@ func (mr *MockMetricAlertsClientMockRecorder) Delete(arg0, arg1, arg2 interface{
 }
 
 // ListByResourceGroup mocks base method
-func (m *MockMetricAlertsClient) ListByResourceGroup(arg0 context.Context, arg1 string) (*[]insights.MetricAlertResource, error) {
+func (m *MockMetricAlertsClient) ListByResourceGroup(arg0 context.Context, arg1 string) (insights.MetricAlertResourceCollection, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ListByResourceGroup", arg0, arg1)
-	ret0, _ := ret[0].(*[]insights.MetricAlertResource)
+	ret0, _ := ret[0].(insights.MetricAlertResourceCollection)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
