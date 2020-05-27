@@ -8,9 +8,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"os"
-	"path"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/to"
@@ -33,6 +31,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/genevalogging"
 	aroclient "github.com/Azure/ARO-RP/pkg/util/aro-operator-client/clientset/versioned/typed/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	"github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -56,7 +55,7 @@ type operator struct {
 	resourceID        string
 	namespace         string
 	imageVersion      string
-	acrToken          string
+	regTokens         map[string]string
 	acrRegName        string
 	acrName           string
 	genevaloggingKey  *rsa.PrivateKey
@@ -71,23 +70,6 @@ type operator struct {
 }
 
 func New(log *logrus.Entry, e env.Interface, oc *api.OpenShiftCluster, cli kubernetes.Interface, seccli securityclient.Interface, arocli aroclient.AroV1alpha1Interface) (Operator, error) {
-	var acrToken string
-	acrRegName := e.ACRName() + ".azurecr.io"
-	if _, ok := e.(env.Dev); ok {
-		psPath := os.Getenv("PULL_SECRET_PATH")
-		fpath := path.Join(psPath, acrRegName)
-		data, err := ioutil.ReadFile(fpath)
-		if err != nil {
-			return nil, err
-		}
-		acrToken = string(data)
-	} else {
-		for i, rp := range oc.Properties.RegistryProfiles {
-			if rp.Name == acrRegName {
-				acrToken = oc.Properties.RegistryProfiles[i].Username + ":" + string(oc.Properties.RegistryProfiles[i].Password)
-			}
-		}
-	}
 	restConfig, err := restconfig.RestConfig(e, oc)
 	if err != nil {
 		return nil, err
@@ -104,15 +86,15 @@ func New(log *logrus.Entry, e env.Interface, oc *api.OpenShiftCluster, cli kuber
 
 	key, cert := e.ClustersGenevaLoggingSecret()
 
-	return &operator{
+	o := &operator{
 		log: log,
 
 		resourceID:        oc.ID,
 		namespace:         KubeNamespace,
 		imageVersion:      version.GitCommit,
 		acrName:           e.ACRName(),
-		acrToken:          acrToken,
-		acrRegName:        acrRegName,
+		acrRegName:        e.ACRName() + ".azurecr.io",
+		regTokens:         map[string]string{},
 		genevaloggingKey:  key,
 		genevaloggingCert: cert,
 
@@ -128,7 +110,21 @@ func New(log *logrus.Entry, e env.Interface, oc *api.OpenShiftCluster, cli kuber
 		cli:    cli,
 		seccli: seccli,
 		arocli: arocli,
-	}, nil
+	}
+
+	for _, reg := range oc.Properties.RegistryProfiles {
+		if reg.Name == o.acrRegName && string(reg.Password) != "" {
+			o.regTokens[o.acrRegName] = reg.Username + ":" + string(reg.Password)
+		}
+	}
+	if _, ok := e.(env.Dev); ok {
+		auths, err := pullsecret.Auths([]byte(os.Getenv("PULL_SECRET")))
+		if err != nil {
+			return nil, err
+		}
+		o.regTokens[o.acrRegName] = auths[o.acrRegName]["auth"].(string)
+	}
+	return o, nil
 }
 
 func (o *operator) aroOperatorImage() string {
@@ -284,10 +280,8 @@ func (o *operator) resources(ctx context.Context) ([]runtime.Object, error) {
 				Name:      "pullsecret-tokens",
 				Namespace: o.namespace,
 			},
-			Type: corev1.SecretTypeOpaque,
-			StringData: map[string]string{
-				o.acrRegName: o.acrToken,
-			},
+			Type:       corev1.SecretTypeOpaque,
+			StringData: o.regTokens,
 		},
 		ssc,
 		o.deployment(),

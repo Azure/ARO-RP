@@ -30,10 +30,6 @@
 oc delete -n openshift-azure-operator deployment/aro-operator
 make generate
 oc apply -f operator/deploy/staticresources/*.yaml
-# [optional] to test pullsecrets
-  export PULL_SECRET_PATH=operator/pull-secrets
-  mkdir $PULL_SECRET_PATH
-  #get the acr "username:pass" >> $PULL_SECRET_PATH/arosvc.azurecr.io
 go run ./cmd/aro operator
 ```
 
