@@ -8,9 +8,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"os"
-	"path"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/to"
@@ -33,6 +31,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/genevalogging"
 	aroclient "github.com/Azure/ARO-RP/pkg/util/aro-operator-client/clientset/versioned/typed/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	"github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -95,6 +94,7 @@ func New(log *logrus.Entry, e env.Interface, oc *api.OpenShiftCluster, cli kuber
 		imageVersion:      version.GitCommit,
 		acrName:           e.ACRName(),
 		acrRegName:        e.ACRName() + ".azurecr.io",
+		regTokens:         map[string]string{},
 		genevaloggingKey:  key,
 		genevaloggingCert: cert,
 
@@ -111,33 +111,20 @@ func New(log *logrus.Entry, e env.Interface, oc *api.OpenShiftCluster, cli kuber
 		seccli: seccli,
 		arocli: arocli,
 	}
-	overridePath := ""
-	if _, ok := e.(env.Dev); ok {
-		overridePath = os.Getenv("PULL_SECRET_PATH")
-	}
-	o.setAcrToken(oc, overridePath)
-
-	return o, nil
-}
-
-func (o *operator) setAcrToken(oc *api.OpenShiftCluster, overridePath string) {
-	o.regTokens = map[string]string{}
 
 	for _, reg := range oc.Properties.RegistryProfiles {
 		if reg.Name == o.acrRegName && string(reg.Password) != "" {
 			o.regTokens[o.acrRegName] = reg.Username + ":" + string(reg.Password)
 		}
 	}
-
-	// in dev, allow the developer to override the acrtoken using a locally defined directory
-	// see operator/README.md for more on this.
-	if overridePath != "" {
-		fpath := path.Join(overridePath, o.acrRegName)
-		data, err := ioutil.ReadFile(fpath)
-		if err == nil && len(data) > 0 {
-			o.regTokens[o.acrRegName] = string(data)
+	if _, ok := e.(env.Dev); ok {
+		auths, err := pullsecret.Auths([]byte(os.Getenv("PULL_SECRET")))
+		if err != nil {
+			return nil, err
 		}
+		o.regTokens[o.acrRegName] = auths[o.acrRegName]["auth"].(string)
 	}
+	return o, nil
 }
 
 func (o *operator) aroOperatorImage() string {

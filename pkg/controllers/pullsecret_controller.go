@@ -135,21 +135,22 @@ func (r *PullsecretReconciler) pullsecret(request ctrl.Request) (*v1.Secret, boo
 }
 
 func (r *PullsecretReconciler) requiredRepoTokens() (map[string]string, error) {
+	repoTokens := map[string]string{}
+	if os.Getenv("RP_MODE") == "development" {
+		r.Log.Warnf("running outside the cluster, using PULL_SECRET")
+		auths, err := pullsecret.Auths([]byte(os.Getenv("PULL_SECRET")))
+		if err != nil {
+			return nil, err
+		}
+		for regName := range auths {
+			repoTokens[regName] = auths[regName]["auth"].(string)
+		}
+		return repoTokens, err
+	}
+
 	// The idea here is you mount a secret as a file under /pull-secrets with
 	// the same name as the registry in the pull secret.
 	psPath := "/pull-secrets"
-	if os.Getenv("RP_MODE") == "development" {
-		pathOverride := os.Getenv("PULL_SECRET_PATH") // for development
-		if pathOverride != "" {
-			psPath = pathOverride
-			r.Log.Warnf("running outside the cluster, using override path %s", pathOverride)
-		} else {
-			r.Log.Warnf("running outside the cluster, disabling pull secret controller")
-			return map[string]string{}, nil
-		}
-	}
-	repoTokens := map[string]string{}
-
 	files, err := ioutil.ReadDir(psPath)
 	if err != nil {
 		return nil, err

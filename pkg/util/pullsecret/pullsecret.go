@@ -47,6 +47,21 @@ func Replace(_ps []byte, secrets map[string]string) ([]byte, bool, error) {
 	return b, changed, err
 }
 
+func Auths(_ps []byte) (map[string]map[string]interface{}, error) {
+	if _ps == nil || len(_ps) == 0 {
+		return nil, nil
+	}
+
+	var ps *pullSecret
+
+	err := json.Unmarshal(_ps, &ps)
+	if err != nil {
+		return nil, err
+	}
+
+	return ps.Auths, nil
+}
+
 func SetRegistryProfiles(_ps string, rps ...*api.RegistryProfile) (string, bool, error) {
 	secrets := map[string]string{}
 	for _, rp := range rps {
