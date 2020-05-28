@@ -6,6 +6,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
@@ -18,9 +19,24 @@ func parseTokenResponse(location string) (string, error) {
 		return "", err
 	}
 
-	v, err := url.ParseQuery(locURL.Fragment)
+	// wow, sometimes openshift-oauth returns us errors via the query and not
+	// the fragment.  I don't know if that's spec-compliant but we check it...
+	v, err := url.ParseQuery(locURL.RawQuery)
 	if err != nil {
 		return "", err
+	}
+
+	if v.Get("error") != "" {
+		return "", fmt.Errorf(v.Get("error_description"))
+	}
+
+	v, err = url.ParseQuery(locURL.Fragment)
+	if err != nil {
+		return "", err
+	}
+
+	if v.Get("error") != "" {
+		return "", fmt.Errorf(v.Get("error_description"))
 	}
 
 	return v.Get("access_token"), nil
@@ -67,7 +83,7 @@ func getAuthorizedToken(ctx context.Context, tokenURL *url.URL, username, passwo
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusFound {
-		return "", err
+		return "", fmt.Errorf("unexpected status code %d", resp.StatusCode)
 	}
 
 	return parseTokenResponse(resp.Header.Get("Location"))
