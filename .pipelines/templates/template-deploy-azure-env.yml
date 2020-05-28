@@ -18,7 +18,7 @@ steps:
     export AZURE_TENANT_ID=$(cat devops-spn.json | jq -r '.tenantId')
     rm devops-spn.json
 
-    if [[ "${{ parameters.fullDeploy }}" == "true" ]]; then
+    if [[ "${{ parameters.fullDeploy }}" == "True" ]]; then
       export FULL_DEPLOY=true
     fi
 
