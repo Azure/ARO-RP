@@ -29,6 +29,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 	"github.com/Azure/ARO-RP/pkg/util/pem"
+	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
 type prod struct {
@@ -295,7 +296,7 @@ func (p *prod) Domain() string {
 	return p.domain
 }
 
-func (p *prod) FPAuthorizer(tenantID, resource string) (RefreshableAuthorizer, error) {
+func (p *prod) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, error) {
 	oauthConfig, err := adal.NewOAuthConfig(azure.PublicCloud.ActiveDirectoryEndpoint, tenantID)
 	if err != nil {
 		return nil, err
@@ -306,7 +307,7 @@ func (p *prod) FPAuthorizer(tenantID, resource string) (RefreshableAuthorizer, e
 		return nil, err
 	}
 
-	return &refreshableAuthorizer{autorest.NewBearerAuthorizer(sp), sp}, nil
+	return refreshable.NewAuthorizer(sp), nil
 }
 
 func (p *prod) GetCertificateSecret(ctx context.Context, secretName string) (key *rsa.PrivateKey, certs []*x509.Certificate, err error) {
