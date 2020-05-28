@@ -28,6 +28,10 @@ func (m *Manager) Delete(ctx context.Context) error {
 
 	m.log.Print("looking for network security groups to remove from subnets")
 	nsgs, err := m.securityGroups.List(ctx, resourceGroup)
+	if detailedErr, ok := err.(autorest.DetailedError); ok &&
+		detailedErr.StatusCode == http.StatusNotFound {
+		err = nil
+	}
 	if err != nil {
 		return err
 	}

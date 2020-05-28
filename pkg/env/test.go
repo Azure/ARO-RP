@@ -11,6 +11,7 @@ import (
 	"net"
 
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
+	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
 type Test struct {
@@ -46,7 +47,7 @@ func (t *Test) Domain() string {
 	return t.TestDomain
 }
 
-func (t *Test) FPAuthorizer(tenantID, resource string) (RefreshableAuthorizer, error) {
+func (t *Test) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, error) {
 	return nil, nil
 }
 

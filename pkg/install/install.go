@@ -47,6 +47,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/privateendpoint"
+	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
@@ -60,7 +61,7 @@ type Installer struct {
 	billing      billing.Manager
 	doc          *api.OpenShiftClusterDocument
 	cipher       encryption.Cipher
-	fpAuthorizer env.RefreshableAuthorizer
+	fpAuthorizer refreshable.Authorizer
 
 	disks             compute.DisksClient
 	virtualmachines   compute.VirtualMachinesClient

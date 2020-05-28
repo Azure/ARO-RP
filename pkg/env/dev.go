@@ -30,6 +30,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
+	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
 type conn struct {
@@ -42,7 +43,7 @@ func (c *conn) Read(b []byte) (int, error) {
 }
 
 type Dev interface {
-	CreateARMResourceGroupRoleAssignment(context.Context, RefreshableAuthorizer, string) error
+	CreateARMResourceGroupRoleAssignment(context.Context, refreshable.Authorizer, string) error
 }
 
 var _ Dev = &dev{}
@@ -220,7 +221,7 @@ func (d *dev) Listen() (net.Listener, error) {
 	return net.Listen("tcp", "localhost:8443")
 }
 
-func (d *dev) FPAuthorizer(tenantID, resource string) (RefreshableAuthorizer, error) {
+func (d *dev) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, error) {
 	oauthConfig, err := adal.NewOAuthConfig(azure.PublicCloud.ActiveDirectoryEndpoint, tenantID)
 	if err != nil {
 		return nil, err
@@ -231,14 +232,14 @@ func (d *dev) FPAuthorizer(tenantID, resource string) (RefreshableAuthorizer, er
 		return nil, err
 	}
 
-	return &refreshableAuthorizer{autorest.NewBearerAuthorizer(sp), sp}, nil
+	return refreshable.NewAuthorizer(sp), nil
 }
 
 func (d *dev) MetricsSocketPath() string {
 	return "mdm_statsd.socket"
 }
 
-func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthorizer RefreshableAuthorizer, resourceGroup string) error {
+func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthorizer refreshable.Authorizer, resourceGroup string) error {
 	d.log.Print("development mode: applying resource group role assignment")
 
 	res, err := d.applications.GetServicePrincipalsIDByAppID(ctx, os.Getenv("AZURE_FP_CLIENT_ID"))
