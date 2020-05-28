@@ -21,6 +21,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	mockauthorization "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/authorization"
 	mockfeatures "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
+	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
 func TestValidateProviders(t *testing.T) {
@@ -482,7 +483,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 
 			tt.mocks(permissionsClient, cancel)
 
-			err := dv.validateVnetPermissions(ctx, permissionsClient, vnetID, &azure.Resource{}, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
+			err := dv.validateVnetPermissions(ctx, &refreshable.TestAuthorizer{}, permissionsClient, vnetID, &azure.Resource{}, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
@@ -612,7 +613,7 @@ func TestValidateRouteTablePermissionsSubnet(t *testing.T) {
 				tt.vnet(vnet)
 			}
 
-			err := dv.validateRouteTablePermissionsSubnet(ctx, permissionsClient, vnet, tt.subnet, "properties.masterProfile.subnetId", api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
+			err := dv.validateRouteTablePermissionsSubnet(ctx, &refreshable.TestAuthorizer{}, permissionsClient, vnet, tt.subnet, "properties.masterProfile.subnetId", api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
