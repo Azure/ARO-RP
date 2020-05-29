@@ -669,20 +669,20 @@ func (g *generator) vmss() *arm.Resource {
 	}
 
 	parts = append(parts,
-		fmt.Sprintf("'LOCATION=$(base64 -d <<<'''"),
-		fmt.Sprintf("base64(resourceGroup().location)"),
+		"'LOCATION=$(base64 -d <<<'''",
+		"base64(resourceGroup().location)",
 		"''')\n'",
 	)
 
 	parts = append(parts,
-		fmt.Sprintf("'SUBSCRIPTIONID=$(base64 -d <<<'''"),
-		fmt.Sprintf("base64(subscription().subscriptionId)"),
+		"'SUBSCRIPTIONID=$(base64 -d <<<'''",
+		"base64(subscription().subscriptionId)",
 		"''')\n'",
 	)
 
 	parts = append(parts,
-		fmt.Sprintf("'RESOURCEGROUPNAME=$(base64 -d <<<'''"),
-		fmt.Sprintf("base64(resourceGroup().name)"),
+		"'RESOURCEGROUPNAME=$(base64 -d <<<'''",
+		"base64(resourceGroup().name)",
 		"''')\n'",
 	)
 
