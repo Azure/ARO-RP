@@ -4,6 +4,7 @@ package controllers
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -58,6 +59,14 @@ func TestInternetCheckerCheck(t *testing.T) {
 				StatusCode: http.StatusServiceUnavailable,
 				Status:     http.StatusText(http.StatusServiceUnavailable),
 				Body:       ioutil.NopCloser(strings.NewReader("oops sorry"))}, err: nil},
+			wantErr: true,
+		},
+		{
+			name: "timeout",
+			cli: &fakeClient{resp: &http.Response{
+				StatusCode: http.StatusRequestTimeout,
+				Status:     http.StatusText(http.StatusRequestTimeout)},
+				err: context.DeadlineExceeded},
 			wantErr: true,
 		},
 	}
