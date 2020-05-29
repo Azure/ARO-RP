@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -15,7 +16,7 @@ import (
 )
 
 // DialContext returns a connection to the specified cluster/namespace/pod/port.
-func DialContext(ctx context.Context, env env.Interface, oc *api.OpenShiftCluster, namespace, pod, port string) (net.Conn, error) {
+func DialContext(ctx context.Context, log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, namespace, pod, port string) (net.Conn, error) {
 	spdyConn, err := dialSpdy(ctx, env, oc, "/api/v1/namespaces/"+namespace+"/pods/"+pod+"/portforward")
 	if err != nil {
 		return nil, err
@@ -44,5 +45,5 @@ func DialContext(ctx context.Context, env env.Interface, oc *api.OpenShiftCluste
 		return nil, err
 	}
 
-	return newStreamConn(spdyConn, dataStream, errorStream), nil
+	return newStreamConn(log, spdyConn, dataStream, errorStream), nil
 }
