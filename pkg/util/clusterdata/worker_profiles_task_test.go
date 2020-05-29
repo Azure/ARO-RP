@@ -130,7 +130,8 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 					},
 				},
 			},
-		}, {
+		},
+		{
 			name: "machine set objects exists - invalid provider spec JSON",
 			client: func() clusterapi.Interface {
 				return fake.NewSimpleClientset(
@@ -155,8 +156,57 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 			},
 			wantOc: &api.OpenShiftCluster{
 				ID: clusterID,
+				Properties: api.OpenShiftClusterProperties{
+					WorkerProfiles: []api.WorkerProfile{{Name: "fake-worker-profile-1", Count: 1}},
+				},
 			},
-			wantErr: `couldn't get version/kind; json parse error: json: cannot unmarshal string into Go value of type struct { APIVersion string "json:\"apiVersion,omitempty\""; Kind string "json:\"kind,omitempty\"" }`,
+		},
+		{
+			name: "machine set objects exists - provider spec is missing",
+			client: func() clusterapi.Interface {
+				return fake.NewSimpleClientset(
+					&machinev1beta1.MachineSet{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake-worker-profile-1",
+							Namespace: "openshift-machine-api",
+						},
+					},
+				)
+			},
+			wantOc: &api.OpenShiftCluster{
+				ID: clusterID,
+				Properties: api.OpenShiftClusterProperties{
+					WorkerProfiles: []api.WorkerProfile{{Name: "fake-worker-profile-1", Count: 1}},
+				},
+			},
+		},
+		{
+			name: "machine set objects exists - provider spec is missing raw value",
+			client: func() clusterapi.Interface {
+				return fake.NewSimpleClientset(
+					&machinev1beta1.MachineSet{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "fake-worker-profile-1",
+							Namespace: "openshift-machine-api",
+						},
+						Spec: machinev1beta1.MachineSetSpec{
+							Template: machinev1beta1.MachineTemplateSpec{
+								Spec: machinev1beta1.MachineSpec{
+									ProviderSpec: machinev1beta1.ProviderSpec{
+										Value: &runtime.RawExtension{},
+									},
+								},
+							},
+						},
+					},
+				)
+			},
+			wantOc: &api.OpenShiftCluster{
+				ID: clusterID,
+				Properties: api.OpenShiftClusterProperties{
+					WorkerProfiles: []api.WorkerProfile{{Name: "fake-worker-profile-1", Count: 1}},
+				},
+			},
 		},
 		{
 			name: "machine set objects do not exist",

@@ -69,39 +69,41 @@ func (ef *workerProfilesEnricherTask) FetchData(callbacks chan<- func(), errs ch
 
 	workerProfiles := make([]api.WorkerProfile, len(machinesets.Items))
 	for i, machineset := range machinesets.Items {
-		if machineset.Spec.Template.Spec.ProviderSpec.Value == nil {
-			continue
-		}
-
-		o, _, err := codecs.UniversalDeserializer().Decode(machineset.Spec.Template.Spec.ProviderSpec.Value.Raw, nil, nil)
-		if err != nil {
-			ef.log.Error(err)
-			errs <- err
-			return
-		}
-
-		machineProviderSpec, ok := o.(*azureproviderv1beta1.AzureMachineProviderSpec)
-		if !ok {
-			ef.log.Errorf("failed to read provider spec from the machine set %q: %T", machineset.Name, o)
-			errs <- err
-			return
-		}
-
 		workerCount := 1
 		if machineset.Spec.Replicas != nil {
 			workerCount = int(*machineset.Spec.Replicas)
 		}
 
 		workerProfiles[i] = api.WorkerProfile{
-			Name:       machineset.Name,
-			VMSize:     api.VMSize(machineProviderSpec.VMSize),
-			DiskSizeGB: int(machineProviderSpec.OSDisk.DiskSizeGB),
-			SubnetID: fmt.Sprintf(
-				"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/%s/subnets/%s",
-				r.SubscriptionID, machineProviderSpec.NetworkResourceGroup, machineProviderSpec.Vnet, machineProviderSpec.Subnet,
-			),
+			Name:  machineset.Name,
 			Count: workerCount,
 		}
+
+		if machineset.Spec.Template.Spec.ProviderSpec.Value == nil {
+			ef.log.Infof("provider spec is missing in the machine set %q", machineset.Name)
+			continue
+		}
+
+		o, _, err := codecs.UniversalDeserializer().Decode(machineset.Spec.Template.Spec.ProviderSpec.Value.Raw, nil, nil)
+		if err != nil {
+			ef.log.Info(err)
+			continue
+		}
+
+		machineProviderSpec, ok := o.(*azureproviderv1beta1.AzureMachineProviderSpec)
+		if !ok {
+			// This should never happen: codecs uses scheme that has only one registered type
+			// and if something is wrong with the provider spec - decoding should fail
+			ef.log.Infof("failed to read provider spec from the machine set %q: %T", machineset.Name, o)
+			continue
+		}
+
+		workerProfiles[i].VMSize = api.VMSize(machineProviderSpec.VMSize)
+		workerProfiles[i].DiskSizeGB = int(machineProviderSpec.OSDisk.DiskSizeGB)
+		workerProfiles[i].SubnetID = fmt.Sprintf(
+			"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/%s/subnets/%s",
+			r.SubscriptionID, machineProviderSpec.NetworkResourceGroup, machineProviderSpec.Vnet, machineProviderSpec.Subnet,
+		)
 	}
 
 	sort.Sort(byName(workerProfiles))
