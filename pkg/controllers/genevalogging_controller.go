@@ -8,6 +8,8 @@ import (
 
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	"github.com/sirupsen/logrus"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,6 +17,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	aro "github.com/Azure/ARO-RP/operator/apis/aro.openshift.io/v1alpha1"
@@ -69,15 +72,38 @@ func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		r.Log.Error(err)
 		return reconcile.Result{}, err
 	}
-	gl := genevalogging.New(r.Log, &instance.Spec, dh, r.Securitycli, newCert)
-	err = gl.CreateOrUpdate(ctx)
+	gl := genevalogging.New(r.Log, &instance.Spec, r.Securitycli, newCert)
+
+	resources, err := gl.Resources(ctx)
 	if err != nil {
 		r.Log.Error(err)
 		return reconcile.Result{}, err
 	}
+	for _, res := range resources {
+		un, err := dh.ToUnstructured(res)
+		if err != nil {
+			r.Log.Error(err)
+			return reconcile.Result{}, err
+		}
+		// This sets the reference on all objects that we create
+		// to our cluster instance. This causes the Owns() below to work and
+		// to get Reconcile events when anything happens to our objects.
+		err = controllerutil.SetControllerReference(instance, un, r.Scheme)
+		if err != nil {
+			r.Log.Error(err)
+			return reconcile.Result{}, err
+		}
+
+		err = dh.CreateOrUpdate(ctx, un)
+		if err != nil {
+			r.Log.Error(err)
+			return reconcile.Result{}, err
+		}
+	}
 
 	r.Log.Info("done, requeueing")
-	return ReconcileResultRequeue, nil
+	// watching should catch all changes, but double check later..
+	return ReconcileResultRequeueLong, nil
 }
 
 func (r *GenevaloggingReconciler) certificatesSecret(instance *aro.Cluster) (*v1.Secret, error) {
@@ -89,8 +115,22 @@ func (r *GenevaloggingReconciler) certificatesSecret(instance *aro.Cluster) (*v1
 			r.Log.Errorf("Error reading the certificates secret: %v", err)
 			return nil, err
 		}
-		newCert = certs.DeepCopy()
-		newCert.Namespace = instance.Spec.GenevaLogging.Namespace
+
+		newCert = &corev1.Secret{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Secret",
+				APIVersion: "v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "certificates",
+				Namespace: instance.Spec.GenevaLogging.Namespace,
+			},
+		}
+		for k, v := range certs.StringData {
+			newCert.StringData[k] = v
+		}
+	} else if err != nil {
+		return nil, err
 	}
 	return newCert, nil
 }
@@ -98,7 +138,6 @@ func (r *GenevaloggingReconciler) certificatesSecret(instance *aro.Cluster) (*v1
 // SetupWithManager setup our mananger
 func (r *GenevaloggingReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&aro.Cluster{}).
+		For(&aro.Cluster{}).Owns(&appsv1.DaemonSet{}).Owns(&corev1.Secret{}).
 		Complete(r)
-	// TODO can we watch the genevalogging resources?
 }

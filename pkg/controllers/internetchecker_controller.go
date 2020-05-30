@@ -62,7 +62,7 @@ func (r *InternetChecker) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 			return reconcile.Result{}, err
 		}
 		if instance.Spec.ResourceID == "" {
-			return ReconcileResultRequeue, nil
+			return ReconcileResultRequeueShort, nil
 		}
 		r.testurls = sites
 		r.testurls = append(r.testurls, "https://management.azure.com"+instance.Spec.ResourceID+"?api-version=2020-04-30")
@@ -89,7 +89,7 @@ func (r *InternetChecker) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	}
 
 	r.Log.Info("done, requeueing")
-	return ReconcileResultRequeue, nil
+	return ReconcileResultRequeueShort, nil
 }
 
 func (r *InternetChecker) check(client SimpleHTTPClient, testurl string) error {
