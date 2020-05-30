@@ -12,6 +12,7 @@ import (
 )
 
 var (
-	ReconcileResultRequeue = reconcile.Result{RequeueAfter: 5 * time.Minute, Requeue: true}
-	OperatorNamespace      = deploy.KubeNamespace
+	ReconcileResultRequeueShort = reconcile.Result{RequeueAfter: 5 * time.Minute, Requeue: true}
+	ReconcileResultRequeueLong  = reconcile.Result{RequeueAfter: 5 * time.Hour, Requeue: true}
+	OperatorNamespace           = deploy.KubeNamespace
 )

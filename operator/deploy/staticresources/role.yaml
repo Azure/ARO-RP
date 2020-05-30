@@ -34,11 +34,26 @@ rules:
   verbs:
   - create
   - get
+  - list
   - update
+  - watch
 - apiGroups:
   - aro.openshift.io
   resources:
   - clusters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - aro.openshift.io
+  resources:
+  - clusters
+  - clusters/finalizers
   verbs:
   - create
   - delete
