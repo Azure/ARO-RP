@@ -33,11 +33,15 @@ type GenevaloggingReconciler struct {
 	Scheme        *runtime.Scheme
 }
 
+// This is the permissions that this controller needs to work.
+// "make generate" will run kubebuilder and cause operator/deploy/staticresources/role.yaml to be updated
+// from the annotation below.
 // +kubebuilder:rbac:groups=aro.openshift.io,resources=clusters,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=get;create;update
 // +kubebuilder:rbac:groups="",resources=namespaces;serviceaccounts;configmaps,verbs=get;create;update
 // +kubebuilder:rbac:groups=security.openshift.io,resources=securitycontextconstraints,verbs=get;create;update
 
+// Reconcile the genevalogging deployment.
 func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	if request.Name != aro.SingletonClusterName {
 		return reconcile.Result{}, nil
@@ -91,6 +95,7 @@ func (r *GenevaloggingReconciler) certificatesSecret(instance *aro.Cluster) (*v1
 	return newCert, nil
 }
 
+// SetupWithManager setup our mananger
 func (r *GenevaloggingReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&aro.Cluster{}).

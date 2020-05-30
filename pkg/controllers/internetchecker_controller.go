@@ -44,9 +44,13 @@ type SimpleHTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
 
+// This is the permissions that this controller needs to work.
+// "make generate" will run kubebuilder and cause operator/deploy/staticresources/role.yaml to be updated
+// from the annotation below.
 // +kubebuilder:rbac:groups=aro.openshift.io,resources=clusters,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=aro.openshift.io,resources=clusters/status,verbs=get;update;patch
 
+// Reconcile will keep checking that the cluster can connect to essential services.
 func (r *InternetChecker) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	if request.Name != aro.SingletonClusterName {
 		return reconcile.Result{}, nil
@@ -114,6 +118,7 @@ func (r *InternetChecker) check(client SimpleHTTPClient, testurl string) error {
 	return nil
 }
 
+// SetupWithManager setup our mananger
 func (r *InternetChecker) SetupWithManager(mgr ctrl.Manager) error {
 	r.sr = NewStatusReporter(r.Log, r.AROCli, aro.SingletonClusterName)
 

@@ -40,9 +40,13 @@ type PullsecretReconciler struct {
 	requiredRepoTokensStore map[string]string
 }
 
+// This is the permissions that this controller needs to work.
+// "make generate" will run kubebuilder and cause operator/deploy/staticresources/role.yaml to be updated
+// from the annotation below.
 // +kubebuilder:rbac:groups=aro.openshift.io,resources=clusters,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;update;patch;create
 
+// Reconcile will make sure that the ACR part of the pull secret is correct
 func (r *PullsecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	if request.NamespacedName != pullSecretName {
 		// filter out other secrets.
@@ -176,6 +180,7 @@ func triggerReconcile(secret *corev1.Secret) bool {
 	return secret.Name == pullSecretName.Name && secret.Namespace == pullSecretName.Namespace
 }
 
+// SetupWithManager setup our mananger
 func (r *PullsecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	var err error
 	r.requiredRepoTokensStore, err = r.requiredRepoTokens()

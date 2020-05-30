@@ -28,8 +28,12 @@ type AlertWebhookReconciler struct {
 	Scheme        *runtime.Scheme
 }
 
+// This is the permissions that this controller needs to work.
+// "make generate" will run kubebuilder and cause operator/deploy/staticresources/role.yaml to be updated
+// from the annotation below.
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;update;patch;create
 
+// Reconcile makes sure that the Alertmanager default webhook is set.
 func (r *AlertWebhookReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	if request.NamespacedName != alertManagerName {
 		// filter out other secrets.
@@ -81,6 +85,7 @@ func triggerAlertReconcile(secret *corev1.Secret) bool {
 	return secret.Name == alertManagerName.Name && secret.Namespace == alertManagerName.Namespace
 }
 
+// SetupWithManager setup our mananger
 func (r *AlertWebhookReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	isAlertManager := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
