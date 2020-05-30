@@ -1,45 +1,66 @@
 # Azure Red Hat OpenShift Operator
 
-## MVP
-
-* monitor and repair pull secret (acr part)
-* periodically check for internet connectivity and mark as supported/unsupported
-* monitor and repair mdsd as needed
-
-## Future responsibilities
+## Responsibilities
 
 ### Decentralizing service monitoring
 
-* periodically check for internet connectivity and mark as supported/unsupported
+This has the advantage of moving a proportion of monitoring effort to the edge,
+giving headroom (and the corresponding potential disadvantage of increased
+management complexity).  Doing this helps avoid bloat and complexity risks in
+central monitoring as well as enabling additional and more complex monitoring
+use cases.  Note that not all monitoring can be decentralised.
+
+In all cases below the status.Conditions will be set.
+
+* periodically check for outbound internet connectivity from both the master and worker nodes.
+* [TODO] Enumerate daemonset statuses, pod statuses, etc.  We currently log diagnostic information associated with these checks in service logs; moving the checks to the edge will make these cluster logs, which is preferable.
+* [TODO] periodically validate the cluster service principle permissions.
 
 ### Automatic service remediation
 
+There will be use cases where we may want to remediate end user decisions automatically.
+Carrying out remediation locally is advantageous because it is likely to be simpler,
+more reliable, and with a shorter time to remediate.
+
 * monitor and repair pull secret (acr part)
-* monitor and repair mdsd as needed
 
 ### End user warnings
 
+* [TODO] see https://docs.openshift.com/container-platform/4.4/web_console/customizing-the-web-console.html#creating-custom-notification-banners_customizing-web-console
+
 ### Decentralizing ARO customization management
 
-* take over install customizations
+A cluster agent provides a centralized location to handle this use case.  Many
+post-install configurations should probably move here.
 
-## dev help
+* monitor and repair mdsd as needed
+* set the alertmanager webhook
 
-### run controller locally
+## Developer documentation
+
+### How to Run the operator locally (out of cluster)
+
+Make sure KUBECONFIG is set:
 ```sh
+make admin.kubeconfig
+export KUBECONFIG=$(pwd)/admin.kubeconfig
 oc delete -n openshift-azure-operator deployment/aro-operator
 make generate
-oc apply -f operator/deploy/staticresources/*.yaml
 go run ./cmd/aro operator
 ```
 
-### test a new controller image
+### How to run a custom operator image
 
+In one terminal
+```sh
+export ARO_IMAGE=quay.io/asalkeld/aos-init:latest #(change to yours)
+go run ./cmd/aro rp
+```
+
+In a second terminal
 ```sh
 export ARO_IMAGE=quay.io/asalkeld/aos-init:latest #(change to yours)
 make publish-image-aro
-
-go run ./cmd/aro rp &
 
 #Then run an update
 curl -X PATCH -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER?api-version=admin" --header "Content-Type: application/json" -d "{}"
