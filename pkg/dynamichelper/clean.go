@@ -88,6 +88,8 @@ func cleanNewObject(o unstructured.Unstructured) {
 		jsonpath.MustCompile("$.spec.template.metadata.creationTimestamp").Delete(o.Object)
 	case "DaemonSet.apps":
 		jsonpath.MustCompile("$.spec.template.metadata.creationTimestamp").Delete(o.Object)
+	case "Secret":
+		jsonpath.MustCompile("$.type").DeleteIfMatch(o.Object, "Opaque")
 	}
 }
 
