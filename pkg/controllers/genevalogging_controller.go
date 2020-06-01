@@ -39,10 +39,10 @@ type GenevaloggingReconciler struct {
 // This is the permissions that this controller needs to work.
 // "make generate" will run kubebuilder and cause operator/deploy/staticresources/role.yaml to be updated
 // from the annotation below.
-// +kubebuilder:rbac:groups=aro.openshift.io,resources=clusters,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=get;create;update
-// +kubebuilder:rbac:groups="",resources=namespaces;serviceaccounts;configmaps,verbs=get;create;update
-// +kubebuilder:rbac:groups=security.openshift.io,resources=securitycontextconstraints,verbs=get;create;update
+// +kubebuilder:rbac:groups=aro.openshift.io,resources=clusters;clusters/finalizers,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps,resources=daemonsets;daemonsets,verbs=list;watch;get;create;update
+// +kubebuilder:rbac:groups="",resources=namespaces;namespaces;serviceaccounts;serviceaccounts;configmaps;configmaps,verbs=get;create;update
+// +kubebuilder:rbac:groups=security.openshift.io,resources=securitycontextconstraints;securitycontextconstraints,verbs=get;create;update
 
 // Reconcile the genevalogging deployment.
 func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
@@ -85,13 +85,16 @@ func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 			r.Log.Error(err)
 			return reconcile.Result{}, err
 		}
-		// This sets the reference on all objects that we create
-		// to our cluster instance. This causes the Owns() below to work and
-		// to get Reconcile events when anything happens to our objects.
-		err = controllerutil.SetControllerReference(instance, un, r.Scheme)
-		if err != nil {
-			r.Log.Error(err)
-			return reconcile.Result{}, err
+
+		if un.GetKind() != "Namespace" {
+			// This sets the reference on all objects that we create
+			// to our cluster instance. This causes the Owns() below to work and
+			// to get Reconcile events when anything happens to our objects.
+			err = controllerutil.SetControllerReference(instance, un, r.Scheme)
+			if err != nil {
+				r.Log.Errorf("SetControllerReference %s/%s: %v", instance.Kind, instance.Name, err)
+				return reconcile.Result{}, err
+			}
 		}
 
 		err = dh.CreateOrUpdate(ctx, un)
