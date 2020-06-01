@@ -38,9 +38,7 @@ import (
 // tenant."`.  I think this can be returned when the service principal
 // associated with the application hasn't yet caught up with the application
 // itself.
-func GetToken(ctx context.Context, log *logrus.Entry, oc *api.OpenShiftCluster, resource string) (*adal.ServicePrincipalToken, error) {
-	spp := &oc.Properties.ServicePrincipalProfile
-
+func GetToken(ctx context.Context, log *logrus.Entry, spp *api.ServicePrincipalProfile, resource string) (*adal.ServicePrincipalToken, error) {
 	conf := auth.NewClientCredentialsConfig(spp.ClientID, string(spp.ClientSecret), spp.TenantID)
 	conf.Resource = resource
 
