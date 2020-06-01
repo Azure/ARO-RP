@@ -310,13 +310,26 @@ func (p *prod) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, 
 	return refreshable.NewAuthorizer(sp), nil
 }
 
-func (p *prod) GetCertificateSecret(ctx context.Context, secretName string) (key *rsa.PrivateKey, certs []*x509.Certificate, err error) {
+func (p *prod) GetCertificateSecret(ctx context.Context, secretName string) (*rsa.PrivateKey, []*x509.Certificate, error) {
 	bundle, err := p.keyvault.GetSecret(ctx, p.serviceKeyvaultURI, secretName, "")
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return pem.Parse([]byte(*bundle.Value))
+	key, certs, err := pem.Parse([]byte(*bundle.Value))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if key == nil {
+		return nil, nil, fmt.Errorf("no private key found")
+	}
+
+	if len(certs) == 0 {
+		return nil, nil, fmt.Errorf("no certificate found")
+	}
+
+	return key, certs, nil
 }
 
 func (p *prod) GetSecret(ctx context.Context, secretName string) ([]byte, error) {

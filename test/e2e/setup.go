@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/ginkgo"
 
 	"github.com/Azure/go-autorest/autorest/azure/auth"
+	machineapiclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -21,6 +22,7 @@ type ClientSet struct {
 	OpenshiftClusters redhatopenshift.OpenShiftClustersClient
 	Operations        redhatopenshift.OperationsClient
 	Kubernetes        kubernetes.Interface
+	MachineAPI        machineapiclient.Interface
 }
 
 var (
@@ -49,10 +51,16 @@ func newClientSet() (*ClientSet, error) {
 		return nil, err
 	}
 
+	machineapicli, err := machineapiclient.NewForConfig(restconfig)
+	if err != nil {
+		return nil, err
+	}
+
 	return &ClientSet{
 		OpenshiftClusters: redhatopenshift.NewOpenShiftClustersClient(os.Getenv("AZURE_SUBSCRIPTION_ID"), authorizer),
 		Operations:        redhatopenshift.NewOperationsClient(os.Getenv("AZURE_SUBSCRIPTION_ID"), authorizer),
 		Kubernetes:        cli,
+		MachineAPI:        machineapicli,
 	}, nil
 }
 

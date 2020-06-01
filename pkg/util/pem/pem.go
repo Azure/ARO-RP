@@ -48,13 +48,5 @@ func Parse(b []byte) (key *rsa.PrivateKey, certs []*x509.Certificate, err error)
 		}
 	}
 
-	if key == nil {
-		return nil, nil, fmt.Errorf("no private key found")
-	}
-
-	if len(certs) == 0 {
-		return nil, nil, fmt.Errorf("no certificate found")
-	}
-
 	return key, certs, nil
 }
