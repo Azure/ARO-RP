@@ -77,7 +77,7 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 		}
 	}
 
-	return d.ensureMonitoringCertificates(ctx)
+	return nil
 }
 
 func (d *deployer) deployGlobal(ctx context.Context, rpServicePrincipalID string) error {
@@ -266,29 +266,4 @@ func (d *deployer) ensureSecret(ctx context.Context, existingSecrets []keyvault.
 		Value: to.StringPtr(base64.StdEncoding.EncodeToString(key)),
 	})
 	return err
-}
-
-func (d *deployer) ensureMonitoringCertificates(ctx context.Context) error {
-	serviceKeyVaultURI := "https://" + d.config.Configuration.KeyvaultPrefix + "-svc.vault.azure.net/"
-
-	for _, certificateName := range []string{
-		env.ClusterLoggingSecretName,
-		env.RPLoggingSecretName,
-		env.RPMonitoringSecretName,
-	} {
-		bundle, err := d.keyvault.GetSecret(ctx, d.config.Configuration.GlobalMonitoringKeyVaultURI, certificateName, "")
-		if err != nil {
-			return err
-		}
-
-		d.log.Infof("importing %s", certificateName)
-		_, err = d.keyvault.ImportCertificate(ctx, serviceKeyVaultURI, certificateName, keyvault.CertificateImportParameters{
-			Base64EncodedCertificate: bundle.Value,
-		})
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
