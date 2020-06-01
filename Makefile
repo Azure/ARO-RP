@@ -117,7 +117,7 @@ test-go: generate
 test-python: generate pyenv${PYTHON_VERSION}
 	. pyenv${PYTHON_VERSION}/bin/activate && \
 		$(MAKE) az && \
-		azdev linter && \
+		azdev linter EXT && \
 		azdev style && \
 		hack/format-yaml/format-yaml.py .pipelines
 
