@@ -12,11 +12,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics"
 )
 
-type metric struct {
-	t    time.Time
-	name string
-}
-
 var _ k8smetrics.LatencyMetric = (*tracer)(nil)
 var _ k8smetrics.ResultMetric = (*tracer)(nil)
 

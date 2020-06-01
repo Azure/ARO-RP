@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	operatorv1 "github.com/openshift/api/operator/v1"
-	v1 "github.com/openshift/api/operator/v1"
 	"github.com/openshift/client-go/operator/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,16 +20,16 @@ func TestUpdateConsoleBranding(t *testing.T) {
 
 	i := &Installer{
 		log: logrus.NewEntry(logrus.StandardLogger()),
-		operatorcli: fake.NewSimpleClientset(&v1.Console{
+		operatorcli: fake.NewSimpleClientset(&operatorv1.Console{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: consoleName,
 			},
-			Status: v1.ConsoleStatus{
-				OperatorStatus: v1.OperatorStatus{
-					Conditions: []v1.OperatorCondition{
+			Status: operatorv1.ConsoleStatus{
+				OperatorStatus: operatorv1.OperatorStatus{
+					Conditions: []operatorv1.OperatorCondition{
 						{
 							Type:   "DeploymentAvailable",
-							Status: v1.ConditionTrue,
+							Status: operatorv1.ConditionTrue,
 						},
 					},
 				},

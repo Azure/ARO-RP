@@ -67,8 +67,12 @@ func (ef *workerProfilesEnricherTask) FetchData(callbacks chan<- func(), errs ch
 		return
 	}
 
-	workerProfiles := make([]api.WorkerProfile, len(machinesets.Items), len(machinesets.Items))
+	workerProfiles := make([]api.WorkerProfile, len(machinesets.Items))
 	for i, machineset := range machinesets.Items {
+		if machineset.Spec.Template.Spec.ProviderSpec.Value == nil {
+			continue
+		}
+
 		o, _, err := codecs.UniversalDeserializer().Decode(machineset.Spec.Template.Spec.ProviderSpec.Value.Raw, nil, nil)
 		if err != nil {
 			ef.log.Error(err)

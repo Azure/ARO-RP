@@ -55,9 +55,6 @@ func NewManager(_env env.Interface, billing database.Billing, sub database.Subsc
 		}
 
 		e2estorage := storage.NewAccountsClient(_env.E2EStorageAccountSubID(), localFPAuthorizer)
-		if err != nil {
-			return nil, err
-		}
 
 		keys, err := e2estorage.ListKeys(context.Background(), _env.E2EStorageAccountRGName(), _env.E2EStorageAccountName(), "")
 		if err != nil {

@@ -67,7 +67,6 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 	type test struct {
 		name           string
 		mocks          func(*gomock.Controller, *mock_database.MockOpenShiftClusters, *mock_clusterdata.MockOpenShiftClusterEnricher, *mock_encryption.MockCipher)
-		skipToken      string
 		wantStatusCode int
 		wantResponse   []*admin.OpenShiftCluster
 		wantError      string

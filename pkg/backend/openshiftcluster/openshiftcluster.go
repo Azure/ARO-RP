@@ -12,7 +12,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
 	pkgacrtoken "github.com/Azure/ARO-RP/pkg/util/acrtoken"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
@@ -39,7 +38,7 @@ type Manager struct {
 	keyvault        keyvault.Manager
 	privateendpoint privateendpoint.Manager
 	subnet          subnet.Manager
-	acrtoken        acrtoken.Manager
+	acrtoken        pkgacrtoken.Manager
 
 	doc *api.OpenShiftClusterDocument
 }
