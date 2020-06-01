@@ -95,7 +95,7 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 	{
 		spp := &i.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
 
-		token, err := aad.GetToken(ctx, i.log, i.doc.OpenShiftCluster, azure.PublicCloud.GraphEndpoint)
+		token, err := aad.GetToken(ctx, i.log, &i.doc.OpenShiftCluster.Properties.ServicePrincipalProfile, azure.PublicCloud.GraphEndpoint)
 		if err != nil {
 			return err
 		}

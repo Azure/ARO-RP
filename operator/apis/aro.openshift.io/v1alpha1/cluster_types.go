@@ -12,7 +12,8 @@ import (
 const SingletonClusterName = "cluster"
 
 var (
-	InternetReachable status.ConditionType = "InternetReachable"
+	InternetReachable                 status.ConditionType = "InternetReachable"
+	ClusterServicePrincipleAuthorized status.ConditionType = "ClusterServicePrincipleAuthorized"
 )
 
 type GenevaLoggingSpec struct {
@@ -28,9 +29,11 @@ type GenevaLoggingSpec struct {
 // ClusterSpec defines the desired state of Cluster
 type ClusterSpec struct {
 	// ResourceID is the Azure resourceId of the cluster
-	ResourceID    string            `json:"resourceId,omitempty"`
-	ACRName       string            `json:"acrName,omitempty"`
-	GenevaLogging GenevaLoggingSpec `json:"genevaLogging,omitempty"`
+	ResourceID      string            `json:"resourceId,omitempty"`
+	ACRName         string            `json:"acrName,omitempty"`
+	GenevaLogging   GenevaLoggingSpec `json:"genevaLogging,omitempty"`
+	MasterSubnetID  string            `json:"masterSubnetId,omitempty"`
+	WorkerSubnetIDs []string          `json:"workerSubnetIds,omitempty"`
 }
 
 // ClusterStatus defines the observed state of Cluster
