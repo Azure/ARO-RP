@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
@@ -52,16 +53,15 @@ type Operator interface {
 type operator struct {
 	log *logrus.Entry
 
-	resourceID        string
 	namespace         string
 	imageVersion      string
 	regTokens         map[string]string
 	acrRegName        string
-	acrName           string
 	genevaloggingKey  *rsa.PrivateKey
 	genevaloggingCert *x509.Certificate
+	servicePrincipal  []byte
 
-	genevaloggingSpec *aro.GenevaLoggingSpec
+	cluserSpec *aro.ClusterSpec
 
 	dh     dynamichelper.DynamicHelper
 	cli    kubernetes.Interface
@@ -86,30 +86,42 @@ func New(log *logrus.Entry, e env.Interface, oc *api.OpenShiftCluster, cli kuber
 
 	key, cert := e.ClustersGenevaLoggingSecret()
 
+	sp, err := json.Marshal(oc.Properties.ServicePrincipalProfile)
+	if err != nil {
+		return nil, err
+	}
+
 	o := &operator{
 		log: log,
 
-		resourceID:        oc.ID,
 		namespace:         KubeNamespace,
 		imageVersion:      version.GitCommit,
-		acrName:           e.ACRName(),
 		acrRegName:        e.ACRName() + ".azurecr.io",
 		regTokens:         map[string]string{},
 		genevaloggingKey:  key,
 		genevaloggingCert: cert,
+		servicePrincipal:  sp,
 
-		genevaloggingSpec: &aro.GenevaLoggingSpec{
-			Namespace:                genevalogging.KubeNamespace,
-			ConfigVersion:            e.ClustersGenevaLoggingConfigVersion(),
-			MonitoringGCSEnvironment: e.ClustersGenevaLoggingEnvironment(),
-			MonitoringGCSRegion:      e.Location(),
-			MonitoringTenant:         e.Location(),
+		cluserSpec: &aro.ClusterSpec{
+			ResourceID:     oc.ID,
+			ACRName:        e.ACRName(),
+			MasterSubnetID: oc.Properties.MasterProfile.SubnetID,
+			GenevaLogging: aro.GenevaLoggingSpec{
+				Namespace:                genevalogging.KubeNamespace,
+				ConfigVersion:            e.ClustersGenevaLoggingConfigVersion(),
+				MonitoringGCSEnvironment: e.ClustersGenevaLoggingEnvironment(),
+				MonitoringGCSRegion:      e.Location(),
+				MonitoringTenant:         e.Location(),
+			},
 		},
 
 		dh:     dh,
 		cli:    cli,
 		seccli: seccli,
 		arocli: arocli,
+	}
+	for _, wp := range oc.Properties.WorkerProfiles {
+		o.cluserSpec.WorkerSubnetIDs = append(o.cluserSpec.WorkerSubnetIDs, wp.SubnetID)
 	}
 
 	for _, reg := range oc.Properties.RegistryProfiles {
@@ -283,6 +295,18 @@ func (o *operator) resources(ctx context.Context) ([]runtime.Object, error) {
 			Type:       corev1.SecretTypeOpaque,
 			StringData: o.regTokens,
 		},
+		&corev1.Secret{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "Secret",
+				APIVersion: "v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "service-principal",
+				Namespace: o.namespace,
+			},
+			Type: corev1.SecretTypeOpaque,
+			Data: map[string][]byte{"servicePrincipal": o.servicePrincipal},
+		},
 		ssc,
 		o.deployment(),
 		&aro.Cluster{
@@ -293,11 +317,7 @@ func (o *operator) resources(ctx context.Context) ([]runtime.Object, error) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "cluster",
 			},
-			Spec: aro.ClusterSpec{
-				ResourceID:    o.resourceID,
-				ACRName:       o.acrName,
-				GenevaLogging: *o.genevaloggingSpec,
-			},
+			Spec: *o.cluserSpec,
 		},
 	} {
 		results = append(results, obj)

@@ -38,6 +38,9 @@ func (i *Installer) ensureAroOperator(ctx context.Context) error {
 func (i *Installer) aroDeploymentReady() (bool, error) {
 	dep, err := deploy.New(i.log, i.env, i.doc.OpenShiftCluster, i.kubernetescli, i.securitycli, i.arocli)
 	if err != nil {
+		if dynamichelper.IsRetryableError(err) {
+			return false, nil
+		}
 		i.log.Warnf("deploy.New %v", err)
 		return false, err
 	}

@@ -13,8 +13,8 @@ use cases.  Note that not all monitoring can be decentralised.
 In all cases below the status.Conditions will be set.
 
 * periodically check for outbound internet connectivity from both the master and worker nodes.
+* periodically validate the cluster Service Principal permissions.
 * [TODO] Enumerate daemonset statuses, pod statuses, etc.  We currently log diagnostic information associated with these checks in service logs; moving the checks to the edge will make these cluster logs, which is preferable.
-* [TODO] periodically validate the cluster service principle permissions.
 
 ### Automatic service remediation
 

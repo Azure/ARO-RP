@@ -411,10 +411,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	dv := &openShiftClusterDynamicValidator{
-		log: logrus.NewEntry(logrus.StandardLogger()),
-	}
-
+	log := logrus.NewEntry(logrus.StandardLogger())
 	for _, tt := range []struct {
 		name    string
 		mocks   func(*mockauthorization.MockPermissionsClient, func())
@@ -483,7 +480,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 
 			tt.mocks(permissionsClient, cancel)
 
-			err := dv.validateVnetPermissions(ctx, &refreshable.TestAuthorizer{}, permissionsClient, vnetID, &azure.Resource{}, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
+			err := validateVnetPermissions(ctx, log, &refreshable.TestAuthorizer{}, permissionsClient, vnetID, &azure.Resource{}, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
@@ -503,9 +500,7 @@ func TestValidateRouteTablePermissionsSubnet(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	dv := &openShiftClusterDynamicValidator{
-		log: logrus.NewEntry(logrus.StandardLogger()),
-	}
+	log := logrus.NewEntry(logrus.StandardLogger())
 
 	for _, tt := range []struct {
 		name    string
@@ -613,7 +608,7 @@ func TestValidateRouteTablePermissionsSubnet(t *testing.T) {
 				tt.vnet(vnet)
 			}
 
-			err := dv.validateRouteTablePermissionsSubnet(ctx, &refreshable.TestAuthorizer{}, permissionsClient, vnet, tt.subnet, "properties.masterProfile.subnetId", api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
+			err := validateRouteTablePermissionsSubnet(ctx, log, &refreshable.TestAuthorizer{}, permissionsClient, vnet, tt.subnet, "properties.masterProfile.subnetId", api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

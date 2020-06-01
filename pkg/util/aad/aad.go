@@ -42,9 +42,7 @@ import (
 //
 // 3. Network failures.  If the error is not an adal.TokenRefreshError,
 // then it's likely a transient failure. For example, connection reset by peer.
-func GetToken(ctx context.Context, log *logrus.Entry, oc *api.OpenShiftCluster, resource string) (*adal.ServicePrincipalToken, error) {
-	spp := &oc.Properties.ServicePrincipalProfile
-
+func GetToken(ctx context.Context, log *logrus.Entry, spp *api.ServicePrincipalProfile, resource string) (*adal.ServicePrincipalToken, error) {
 	conf := auth.NewClientCredentialsConfig(spp.ClientID, string(spp.ClientSecret), spp.TenantID)
 	conf.Resource = resource
 

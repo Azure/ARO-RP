@@ -43,12 +43,8 @@ func NewStatusReporter(log *logrus.Entry, arocli aroclient.AroV1alpha1Interface,
 	}
 }
 
-func (r *StatusReporter) SetNoInternetConnection(ctx context.Context, sitesNotAvailable map[string]string) error {
+func (r *StatusReporter) SetConditionFalse(ctx context.Context, cType status.ConditionType, message string) error {
 	time := metav1.Now()
-	msg := ""
-	for k, v := range sitesNotAvailable {
-		msg += "[" + k + "] " + v + "\n"
-	}
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		co, err := r.arocli.Clusters().Get(r.name, v1.GetOptions{})
 		if err != nil {
@@ -56,9 +52,9 @@ func (r *StatusReporter) SetNoInternetConnection(ctx context.Context, sitesNotAv
 		}
 
 		co.Status.Conditions.SetCondition(status.Condition{
-			Type:               aro.InternetReachable,
+			Type:               cType,
 			Status:             corev1.ConditionFalse,
-			Message:            msg,
+			Message:            message,
 			Reason:             "CheckFailed",
 			LastTransitionTime: time})
 
@@ -69,18 +65,17 @@ func (r *StatusReporter) SetNoInternetConnection(ctx context.Context, sitesNotAv
 	})
 }
 
-func (r *StatusReporter) SetInternetConnected(ctx context.Context) error {
+func (r *StatusReporter) SetConditionTrue(ctx context.Context, cType status.ConditionType, message string) error {
 	time := metav1.Now()
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		co, err := r.arocli.Clusters().Get(r.name, v1.GetOptions{})
 		if err != nil {
 			return err
 		}
-
 		co.Status.Conditions.SetCondition(status.Condition{
-			Type:               aro.InternetReachable,
+			Type:               cType,
 			Status:             corev1.ConditionTrue,
-			Message:            "Outgoing connection successful.",
+			Message:            message,
 			Reason:             "CheckDone",
 			LastTransitionTime: time})
 
@@ -89,6 +84,7 @@ func (r *StatusReporter) SetInternetConnected(ctx context.Context) error {
 		_, err = r.arocli.Clusters().UpdateStatus(co)
 		return err
 	})
+
 }
 
 func setStaticStatus(status *aro.ClusterStatus) {

@@ -79,9 +79,13 @@ func (r *InternetChecker) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 
 	var err error
 	if len(sitesNotAvailable) > 0 {
-		err = r.sr.SetNoInternetConnection(ctx, sitesNotAvailable)
+		msg := ""
+		for k, v := range sitesNotAvailable {
+			msg += "[" + k + "] " + v + "\n"
+		}
+		err = r.sr.SetConditionFalse(ctx, aro.InternetReachable, msg)
 	} else {
-		err = r.sr.SetInternetConnected(ctx)
+		err = r.sr.SetConditionTrue(ctx, aro.InternetReachable, "Outgoing connection successful.")
 	}
 	if err != nil {
 		r.Log.Errorf("StatusReporter request:%v err:%v", request, err)

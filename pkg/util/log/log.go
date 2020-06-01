@@ -38,7 +38,7 @@ func (lw *logrusWrapper) Enabled() bool {
 }
 
 func (lw *logrusWrapper) Error(err error, msg string, keysAndValues ...interface{}) {
-	lw.withKeysAndValues(keysAndValues).Error(msg, err)
+	lw.withKeysAndValues(keysAndValues).Error(msg, " ", err)
 }
 
 func (lw *logrusWrapper) withKeysAndValues(keysAndValues []interface{}) *logrus.Entry {

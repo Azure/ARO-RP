@@ -184,7 +184,7 @@ func (dh *dynamicHelper) ToUnstructured(ro runtime.Object) (*unstructured.Unstru
 	return obj, nil
 }
 
-func (dh *dynamicHelper) retryableError(err error) bool {
+func IsRetryableError(err error) bool {
 	if err == nil {
 		return false
 	}
@@ -203,12 +203,12 @@ func (dh *dynamicHelper) findGVRWithRefresh(groupKind, optionalVersion string) (
 		return dh.findGVR(groupKind, optionalVersion)
 	}
 	var gvr *schema.GroupVersionResource
-	err := retry.OnError(wait.Backoff{Steps: 5, Duration: 30 * time.Second, Factor: 1.5}, dh.retryableError, func() error {
+	err := retry.OnError(wait.Backoff{Steps: 5, Duration: 30 * time.Second, Factor: 1.5}, IsRetryableError, func() error {
 		// this is used at cluster start up when kinds are still getting
 		// registered.
 		var gvrErr error
 		gvr, gvrErr = dh.findGVR(groupKind, optionalVersion)
-		if dh.retryableError(gvrErr) {
+		if IsRetryableError(gvrErr) {
 			dh.log.Infof("refreshAPIResources retrying")
 			if refErr := dh.refreshAPIResources(); refErr != nil {
 				dh.log.Infof("refreshAPIResources error: %v", refErr)
