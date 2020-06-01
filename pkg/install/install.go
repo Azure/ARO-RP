@@ -156,6 +156,7 @@ func (i *Installer) AdminUpgrade(ctx context.Context) error {
 		action(i.fixLBProbes),
 		action(i.fixPullSecret),
 		action(i.ensureGenevaLogging),
+		action(i.ensureIfReload),
 		action(i.upgradeCertificates),
 		action(i.configureAPIServerCertificate),
 		action(i.configureIngressCertificate),
@@ -182,6 +183,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			action(i.initializeKubernetesClients),
 			condition{i.bootstrapConfigMapReady, 30 * time.Minute},
 			action(i.ensureGenevaLogging),
+			action(i.ensureIfReload),
 			action(i.incrInstallPhase),
 		},
 		api.InstallPhaseRemoveBootstrap: {
