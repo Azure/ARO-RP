@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -17,7 +18,7 @@ import (
 
 // ExecStdout executes a command in the given namespace/pod/container and
 // streams its stdout.
-func ExecStdout(ctx context.Context, env env.Interface, oc *api.OpenShiftCluster, namespace, pod, container string, command []string) (io.ReadCloser, error) {
+func ExecStdout(ctx context.Context, log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, namespace, pod, container string, command []string) (io.ReadCloser, error) {
 	v := url.Values{
 		"container": []string{container},
 		"command":   command,
@@ -49,5 +50,5 @@ func ExecStdout(ctx context.Context, env env.Interface, oc *api.OpenShiftCluster
 	}
 	stdoutStream.Close() // this actually means CloseWrite()
 
-	return newStreamConn(spdyConn, stdoutStream, errorStream), nil
+	return newStreamConn(log, spdyConn, stdoutStream, errorStream), nil
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
+	"github.com/Azure/ARO-RP/pkg/util/recover"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
 
@@ -64,6 +65,8 @@ func (e *bestEffortEnricher) Enrich(ctx context.Context, ocs ...*api.OpenShiftCl
 	wg.Add(len(ocs))
 	for i := range ocs {
 		go func(i int) {
+			defer recover.Panic(e.log)
+
 			defer wg.Done()
 			e.enrichOne(ctx, ocs[i])
 		}(i) // https://golang.org/doc/faq#closures_and_goroutines
@@ -112,6 +115,8 @@ func (e *bestEffortEnricher) enrichOne(ctx context.Context, oc *api.OpenShiftClu
 	errors := make(chan error, len(tasks))
 	for i := range tasks {
 		go func(i int) {
+			defer recover.Panic(e.log)
+
 			t := time.Now()
 			defer func() {
 				e.m.EmitGauge("enricher.tasks.duration", time.Now().Sub(t).Milliseconds(), map[string]string{
