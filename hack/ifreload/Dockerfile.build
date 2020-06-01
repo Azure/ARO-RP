@@ -1,0 +1,2 @@
+FROM tools
+RUN make -C /build clean ifreload

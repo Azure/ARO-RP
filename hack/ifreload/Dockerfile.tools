@@ -1,0 +1,4 @@
+FROM registry.access.redhat.com/ubi8/ubi
+RUN dnf -y update \
+  && dnf -y install libnl3-devel make gcc \
+  && dnf clean all

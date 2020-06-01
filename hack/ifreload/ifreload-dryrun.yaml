@@ -1,0 +1,20 @@
+kind: Pod
+apiVersion: v1
+metadata:
+  name: ifreload-dryrun
+  namespace: default
+spec:
+  restartPolicy: Never
+  hostNetwork: true
+  nodeName: XXXXX
+  containers:
+  - args:
+    - dryrun
+    name: ifreload-dryrun
+    image: arosvc.azurecr.io/ifreload:latest
+    imagePullPolicy: Always
+  tolerations:
+    - operator: Exists
+      effect: NoExecute
+    - operator: Exists
+      effect: NoSchedule
