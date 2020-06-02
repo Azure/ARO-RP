@@ -194,6 +194,16 @@ func (r *PullsecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if err != nil {
 		return err
 	}
+
+	// The pull secret may already need repairing when controller starts, so run it once here
+	initialRequest := ctrl.Request{
+		NamespacedName: types.NamespacedName{
+			Namespace: pullSecretName.Namespace,
+			Name:      pullSecretName.Name,
+		},
+	}
+	r.Reconcile(initialRequest)
+
 	isPullSecret := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			oldSecret, ok := e.ObjectOld.(*corev1.Secret)
