@@ -36,6 +36,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	dnscli "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
@@ -73,6 +74,7 @@ type Installer struct {
 	accounts          storage.AccountsClient
 	dnscli            dnscli.RecordSetsClient
 
+	acr             acrtoken.Manager
 	dns             dns.Manager
 	keyvault        keyvault.Manager
 	privateendpoint privateendpoint.Manager
@@ -123,6 +125,11 @@ func NewInstaller(ctx context.Context, log *logrus.Entry, _env env.Interface, db
 		return nil, err
 	}
 
+	acrManager, err := acrtoken.NewManager(_env, localFPAuthorizer)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Installer{
 		log:          log,
 		env:          _env,
@@ -142,6 +149,7 @@ func NewInstaller(ctx context.Context, log *logrus.Entry, _env env.Interface, db
 		accounts:          storage.NewAccountsClient(r.SubscriptionID, fpAuthorizer),
 		dnscli:            dnscli.NewRecordSetsClient(r.SubscriptionID, fpAuthorizer),
 
+		acr:             acrManager,
 		dns:             dns.NewManager(_env, localFPAuthorizer),
 		keyvault:        keyvault.NewManager(localFPKVAuthorizer),
 		privateendpoint: privateendpoint.NewManager(_env, localFPAuthorizer),
@@ -180,8 +188,8 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			action(i.deployResourceTemplate),
 			action(i.createRPPrivateEndpoint),
 			action(i.updateAPIIP),
-			action(i.createACRPrivateEndpoint),
-			action(i.updateACRIP),
+			action(i.approveACRPrivateEndpoint),
+			//action(i.updateACRIP),
 			action(i.createCertificates),
 			action(i.initializeKubernetesClients),
 			condition{i.bootstrapConfigMapReady, 30 * time.Minute},

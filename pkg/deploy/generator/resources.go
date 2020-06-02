@@ -1450,6 +1450,7 @@ func (g *generator) roleDefinitionTokenContributor() *arm.Resource {
 							"Microsoft.ContainerRegistry/registries/tokens/operationStatuses/read",
 							"Microsoft.ContainerRegistry/registries/tokens/read",
 							"Microsoft.ContainerRegistry/registries/tokens/write",
+							"Microsoft.ContainerRegistry/registries/read", // TODO: need to think where to put these
 						},
 					},
 				},

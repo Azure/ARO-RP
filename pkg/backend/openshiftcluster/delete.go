@@ -63,7 +63,7 @@ func (m *Manager) Delete(ctx context.Context) error {
 	}
 
 	m.log.Print("deleting private endpoint")
-	err = m.privateendpoint.DeleteRPPrivateEndpoint(ctx, m.doc)
+	err = m.privateendpoint.Delete(ctx, m.doc)
 	if err != nil {
 		return err
 	}

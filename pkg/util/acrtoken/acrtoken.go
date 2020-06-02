@@ -6,6 +6,9 @@ package acrtoken
 import (
 	"context"
 	"net/http"
+	"os"
+
+	"github.com/davecgh/go-spew/spew"
 
 	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/containerregistry/mgmt/2019-06-01-preview/containerregistry"
 	"github.com/Azure/go-autorest/autorest"
@@ -24,6 +27,7 @@ type Manager interface {
 	PutRegistryProfile(oc *api.OpenShiftCluster, rp *api.RegistryProfile)
 	EnsureTokenAndPassword(ctx context.Context, rp *api.RegistryProfile) (string, error)
 	Delete(ctx context.Context, rp *api.RegistryProfile) error
+	ApprovePrivateEndpoint(ctx context.Context, oc *api.OpenShiftCluster) error
 }
 
 type manager struct {
@@ -115,4 +119,15 @@ func (m *manager) Delete(ctx context.Context, rp *api.RegistryProfile) error {
 		err = nil
 	}
 	return err
+}
+
+func (m *manager) ApprovePrivateEndpoint(ctx context.Context, oc *api.OpenShiftCluster) error {
+	acr, err := m.registries.Get(ctx, m.r.ResourceGroup, m.r.ResourceName)
+	if err != nil {
+		spew.Dump(err)
+		return err
+	}
+	spew.Dump(acr.RegistryProperties)
+	os.Exit(1)
+	return nil
 }

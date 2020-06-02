@@ -102,6 +102,31 @@ func (i *Installer) deployResourceTemplate(ctx context.Context) error {
 				},
 			},
 			{
+				Resource: &mgmtnetwork.PrivateEndpoint{
+					PrivateEndpointProperties: &mgmtnetwork.PrivateEndpointProperties{
+						Subnet: &mgmtnetwork.Subnet{
+							ID: to.StringPtr("/subscriptions/" + i.env.SubscriptionID() + "/resourceGroups/" + i.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet"),
+						},
+						ManualPrivateLinkServiceConnections: &[]mgmtnetwork.PrivateLinkServiceConnection{
+							{
+								Name: to.StringPtr("acr-plsconnection"),
+								PrivateLinkServiceConnectionProperties: &mgmtnetwork.PrivateLinkServiceConnectionProperties{
+									PrivateLinkServiceID: to.StringPtr(i.env.ACRResourceID()),
+									GroupIds:             &[]string{"registry"},
+								},
+							},
+						},
+					},
+					Name:     to.StringPtr(infraID + "-arosvc-pe"),
+					Type:     to.StringPtr("Microsoft.Network/privateEndpoints"),
+					Location: &installConfig.Config.Azure.Region,
+				},
+				APIVersion: azureclient.APIVersions["Microsoft.Network"],
+				DependsOn: []string{
+					"Microsoft.Network/privateDnsZones/privatelink.azurecr.io",
+				},
+			},
+			{
 				Resource: &mgmtprivatedns.RecordSet{
 					Name: to.StringPtr(installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/api-int"),
 					Type: to.StringPtr("Microsoft.Network/privateDnsZones/A"),

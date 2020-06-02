@@ -81,7 +81,7 @@ func (i *Installer) updateAPIIP(ctx context.Context) error {
 		return err
 	}
 
-	privateEndpointIP, err := i.privateendpoint.GetRPPEIP(ctx, i.doc)
+	privateEndpointIP, err := i.privateendpoint.GetIP(ctx, i.doc)
 	if err != nil {
 		return err
 	}
@@ -95,13 +95,14 @@ func (i *Installer) updateAPIIP(ctx context.Context) error {
 }
 
 func (i *Installer) createRPPrivateEndpoint(ctx context.Context) error {
-	return i.privateendpoint.CreateRPPrivateEndpoint(ctx, i.doc)
+	return i.privateendpoint.Create(ctx, i.doc)
 }
 
-func (i *Installer) createACRPrivateEndpoint(ctx context.Context) error {
-	return i.privateendpoint.CreateACRPrivateEndpoint(ctx, i.doc)
+func (i *Installer) approveACRPrivateEndpoint(ctx context.Context) error {
+	return i.acr.ApprovePrivateEndpoint(ctx, i.doc.OpenShiftCluster)
 }
 
+// TODO: This needs changing. This is not working yet
 func (i *Installer) updateACRIP(ctx context.Context) error {
 	infraID := i.doc.OpenShiftCluster.Properties.InfraID
 	if infraID == "" {
@@ -109,7 +110,7 @@ func (i *Installer) updateACRIP(ctx context.Context) error {
 	}
 
 	resourceGroup := stringutils.LastTokenByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-	ipAddress, err := i.privateendpoint.GetACRPEIP(ctx, i.doc)
+	ipAddress, err := i.privateendpoint.GetIP(ctx, i.doc)
 	if err != nil {
 		return err
 	}
@@ -142,7 +143,7 @@ func (i *Installer) updateACRIP(ctx context.Context) error {
 		return err
 	}
 
-	privateEndpointIP, err := i.privateendpoint.GetRPPEIP(ctx, i.doc)
+	privateEndpointIP, err := i.privateendpoint.GetIP(ctx, i.doc)
 	if err != nil {
 		return err
 	}
