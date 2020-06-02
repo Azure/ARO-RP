@@ -48,7 +48,7 @@ func NewOpenShiftClusterDynamicValidator(log *logrus.Entry, env env.Interface, o
 		env: env,
 
 		oc:          oc,
-		spValidator: NewServicePrincipleValidator(log, &oc.Properties.ServicePrincipalProfile, oc.ID, oc.Properties.MasterProfile.SubnetID, oc.Properties.WorkerProfiles[0].SubnetID),
+		spValidator: NewServicePrincipalValidator(log, &oc.Properties.ServicePrincipalProfile, oc.ID, oc.Properties.MasterProfile.SubnetID, oc.Properties.WorkerProfiles[0].SubnetID),
 
 		fpPermissions: authorization.NewPermissionsClient(r.SubscriptionID, fpAuthorizer),
 	}, nil
@@ -65,7 +65,7 @@ type openShiftClusterDynamicValidator struct {
 	spUsage           compute.UsageClient
 	spVirtualNetworks network.VirtualNetworksClient
 
-	spValidator ServicePrincipleValidator
+	spValidator ServicePrincipalValidator
 }
 
 // Dynamic validates an OpenShift cluster

@@ -30,24 +30,24 @@ type CPValidator struct {
 	sr            *StatusReporter
 }
 
-func (r *CPValidator) validateClusterServicePrinciple(ctx context.Context, instance *aro.Cluster) error {
-	s, err := r.Kubernetescli.CoreV1().Secrets(OperatorNamespace).Get("service-principle", metav1.GetOptions{})
+func (r *CPValidator) validateClusterServicePrincipal(ctx context.Context, instance *aro.Cluster) error {
+	s, err := r.Kubernetescli.CoreV1().Secrets(OperatorNamespace).Get("service-principal", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
 
 	spp := &api.ServicePrincipalProfile{}
-	err = json.Unmarshal(s.Data["servicePrinciple"], spp)
+	err = json.Unmarshal(s.Data["servicePrincipal"], spp)
 	if err != nil {
 		return err
 	}
 
-	spnV := validate.NewServicePrincipleValidator(r.Log, spp, instance.Spec.ResourceID, instance.Spec.MasterSubnetID, instance.Spec.WorkerSubnetIDs[0])
+	spnV := validate.NewServicePrincipalValidator(r.Log, spp, instance.Spec.ResourceID, instance.Spec.MasterSubnetID, instance.Spec.WorkerSubnetIDs[0])
 	err = spnV.Validate(ctx)
 	if err != nil {
-		return r.sr.SetConditionFalse(ctx, aro.ClusterServicePrincipleAuthorized, err.Error())
+		return r.sr.SetConditionFalse(ctx, aro.ClusterServicePrincipalAuthorized, err.Error())
 	}
-	return r.sr.SetConditionTrue(ctx, aro.ClusterServicePrincipleAuthorized, "can perfrom the required actions")
+	return r.sr.SetConditionTrue(ctx, aro.ClusterServicePrincipalAuthorized, "can perfrom the required actions")
 }
 
 // This is the permissions that this controller needs to work.
@@ -71,7 +71,7 @@ func (r *CPValidator) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	}
 	r.Log.Info("Period cluster checks")
 
-	err = r.validateClusterServicePrinciple(ctx, instance)
+	err = r.validateClusterServicePrincipal(ctx, instance)
 	if err != nil {
 		return reconcile.Result{}, err
 	}

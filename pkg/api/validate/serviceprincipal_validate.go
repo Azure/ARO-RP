@@ -25,15 +25,15 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
-// ServicePrincipleValidator validates that the SPP has the correct permissions
-type ServicePrincipleValidator interface {
+// ServicePrincipalValidator validates that the SPP has the correct permissions
+type ServicePrincipalValidator interface {
 	Validate(context.Context) error
 	Authorizer() autorest.Authorizer
 }
 
-// NewServicePrincipleValidator creates a new ServicePrincipleValidator
-func NewServicePrincipleValidator(log *logrus.Entry, spp *api.ServicePrincipalProfile, clusterID, masterSubnetID, workerSubnetID string) ServicePrincipleValidator {
-	return &servicePrincipleValidator{
+// NewServicePrincipalValidator creates a new ServicePrincipalValidator
+func NewServicePrincipalValidator(log *logrus.Entry, spp *api.ServicePrincipalProfile, clusterID, masterSubnetID, workerSubnetID string) ServicePrincipalValidator {
+	return &servicePrincipalValidator{
 		log: log,
 
 		spp:            spp,
@@ -51,7 +51,7 @@ func (*azureClaim) Valid() error {
 	return fmt.Errorf("unimplemented")
 }
 
-type servicePrincipleValidator struct {
+type servicePrincipalValidator struct {
 	log *logrus.Entry
 
 	spp            *api.ServicePrincipalProfile
@@ -64,8 +64,8 @@ type servicePrincipleValidator struct {
 	spVirtualNetworks network.VirtualNetworksClient
 }
 
-// validates a service principle
-func (dv *servicePrincipleValidator) Validate(ctx context.Context) error {
+// validates a service principal
+func (dv *servicePrincipalValidator) Validate(ctx context.Context) error {
 	r, err := azure.ParseResourceID(dv.clusterID)
 	if err != nil {
 		return err
@@ -103,11 +103,11 @@ func (dv *servicePrincipleValidator) Validate(ctx context.Context) error {
 	return dv.validateRouteTablePermissions(ctx, dv.spPermissions, &vnet, api.CloudErrorCodeInvalidServicePrincipalPermissions, "provided service principal")
 }
 
-func (dv *servicePrincipleValidator) Authorizer() autorest.Authorizer {
+func (dv *servicePrincipalValidator) Authorizer() autorest.Authorizer {
 	return dv.authorizer
 }
 
-func (dv *servicePrincipleValidator) validateServicePrincipalProfile(ctx context.Context) (autorest.Authorizer, error) {
+func (dv *servicePrincipalValidator) validateServicePrincipalProfile(ctx context.Context) (autorest.Authorizer, error) {
 	dv.log.Print("validateServicePrincipalProfile")
 
 	token, err := aad.GetToken(ctx, dv.log, dv.spp, azure.PublicCloud.ResourceManagerEndpoint)
@@ -130,7 +130,7 @@ func (dv *servicePrincipleValidator) validateServicePrincipalProfile(ctx context
 	return autorest.NewBearerAuthorizer(token), nil
 }
 
-func (dv *servicePrincipleValidator) validateVnetPermissions(ctx context.Context, client authorization.PermissionsClient, vnetID string, vnetr *azure.Resource, code, typ string) error {
+func (dv *servicePrincipalValidator) validateVnetPermissions(ctx context.Context, client authorization.PermissionsClient, vnetID string, vnetr *azure.Resource, code, typ string) error {
 	dv.log.Printf("validateVnetPermissions (%s)", typ)
 
 	err := validateActions(ctx, vnetr, []string{
@@ -148,7 +148,7 @@ func (dv *servicePrincipleValidator) validateVnetPermissions(ctx context.Context
 	return err
 }
 
-func (dv *servicePrincipleValidator) validateRouteTablePermissions(ctx context.Context, client authorization.PermissionsClient, vnet *mgmtnetwork.VirtualNetwork, code, typ string) error {
+func (dv *servicePrincipalValidator) validateRouteTablePermissions(ctx context.Context, client authorization.PermissionsClient, vnet *mgmtnetwork.VirtualNetwork, code, typ string) error {
 	err := dv.validateRouteTablePermissionsSubnet(ctx, client, vnet, dv.masterSubnetID, "properties.masterProfile.subnetId", code, typ)
 	if err != nil {
 		return err
@@ -157,7 +157,7 @@ func (dv *servicePrincipleValidator) validateRouteTablePermissions(ctx context.C
 	return dv.validateRouteTablePermissionsSubnet(ctx, client, vnet, dv.workerSubnetID, `properties.workerProfiles["worker"].subnetId`, code, typ)
 }
 
-func (dv *servicePrincipleValidator) validateRouteTablePermissionsSubnet(ctx context.Context, client authorization.PermissionsClient, vnet *mgmtnetwork.VirtualNetwork, subnetID, path, code, typ string) error {
+func (dv *servicePrincipalValidator) validateRouteTablePermissionsSubnet(ctx context.Context, client authorization.PermissionsClient, vnet *mgmtnetwork.VirtualNetwork, subnetID, path, code, typ string) error {
 	dv.log.Printf("validateRouteTablePermissionsSubnet(%s, %s)", typ, path)
 
 	var s *mgmtnetwork.Subnet

@@ -13,7 +13,7 @@ const SingletonClusterName = "cluster"
 
 var (
 	InternetReachable                 status.ConditionType = "InternetReachable"
-	ClusterServicePrincipleAuthorized status.ConditionType = "ClusterServicePrincipleAuthorized"
+	ClusterServicePrincipalAuthorized status.ConditionType = "ClusterServicePrincipalAuthorized"
 )
 
 type GenevaLoggingSpec struct {
