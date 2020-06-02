@@ -67,7 +67,6 @@ func (r *InternetChecker) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 		r.testurls = sites
 		r.testurls = append(r.testurls, "https://management.azure.com"+instance.Spec.ResourceID+"?api-version=2020-04-30")
 	}
-	r.Log.Info("Polling outgoing internet connection")
 
 	sitesNotAvailable := map[string]string{}
 	for _, testurl := range r.testurls {
@@ -92,7 +91,6 @@ func (r *InternetChecker) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 		return reconcile.Result{}, err
 	}
 
-	r.Log.Info("done, requeueing")
 	return ReconcileResultRequeueShort, nil
 }
 
@@ -127,6 +125,6 @@ func (r *InternetChecker) SetupWithManager(mgr ctrl.Manager) error {
 	r.sr = NewStatusReporter(r.Log, r.AROCli, aro.SingletonClusterName)
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&aro.Cluster{}).
+		For(&aro.Cluster{}).Named(InternetCheckerControllerName).
 		Complete(r)
 }

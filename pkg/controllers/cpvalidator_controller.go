@@ -69,14 +69,13 @@ func (r *CPValidator) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	if instance.Spec.ResourceID == "" {
 		return ReconcileResultRequeueShort, nil
 	}
-	r.Log.Info("Period cluster checks")
 
 	err = r.validateClusterServicePrincipal(ctx, instance)
 	if err != nil {
+		r.Log.Warn(err)
 		return reconcile.Result{}, err
 	}
 
-	r.Log.Info("done, requeueing")
 	return ReconcileResultRequeueShort, nil
 }
 
@@ -85,6 +84,6 @@ func (r *CPValidator) SetupWithManager(mgr ctrl.Manager) error {
 	r.sr = NewStatusReporter(r.Log, r.AROCli, aro.SingletonClusterName)
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&aro.Cluster{}).
+		For(&aro.Cluster{}).Named(CPValidatorControllerName).
 		Complete(r)
 }

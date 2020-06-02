@@ -202,6 +202,7 @@ func (dh *dynamicHelper) findGVRWithRefresh(groupKind, optionalVersion string) (
 	if !dh.updatePolicy.RefreshAPIResourcesOnNotFound {
 		return dh.findGVR(groupKind, optionalVersion)
 	}
+	// this is ugly and will get removed in favour of https://github.com/Azure/ARO-RP/pull/769
 	var gvr *schema.GroupVersionResource
 	err := retry.OnError(wait.Backoff{Steps: 5, Duration: 30 * time.Second, Factor: 1.5}, IsRetryableError, func() error {
 		// this is used at cluster start up when kinds are still getting
@@ -221,7 +222,6 @@ func (dh *dynamicHelper) findGVRWithRefresh(groupKind, optionalVersion string) (
 }
 
 func (dh *dynamicHelper) CreateOrUpdate(ctx context.Context, o *unstructured.Unstructured) error {
-	dh.log.Infof("CreateOrUpdate: %s", keyFuncO(o))
 	gvr, err := dh.findGVRWithRefresh(o.GroupVersionKind().GroupKind().String(), o.GroupVersionKind().Version)
 	if err != nil {
 		return err
@@ -254,9 +254,10 @@ func (dh *dynamicHelper) CreateOrUpdate(ctx context.Context, o *unstructured.Uns
 			return nil
 		}
 
-		dh.log.Info("Update " + keyFuncO(o))
 		if dh.updatePolicy.LogChanges {
 			dh.logDiff(existing, o)
+		} else {
+			dh.log.Info("Update " + keyFuncO(o))
 		}
 
 		o.SetResourceVersion(rv)
@@ -278,14 +279,14 @@ func (dh *dynamicHelper) needsUpdate(existing, o *unstructured.Unstructured) boo
 func (dh *dynamicHelper) logDiff(existing, o *unstructured.Unstructured) bool {
 	// TODO: we should have tests that monitor these diffs:
 	// 1) when a cluster is created
-	// 2) when sync is run twice back-to-back on the same cluster
+	// 2) when an update is run twice back-to-back on the same cluster
 
 	// Don't show a diff if kind is Secret
 	gk := o.GroupVersionKind().GroupKind()
 	diffShown := false
 	if gk.String() != "Secret" {
 		if diff := cmp.Diff(*existing, *o); diff != "" {
-			dh.log.Info(diff)
+			dh.log.Info("Update "+keyFuncO(o), diff)
 			diffShown = true
 		}
 	}

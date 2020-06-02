@@ -15,7 +15,9 @@ type pullSecret struct {
 	Auths map[string]map[string]interface{} `json:"auths,omitempty"`
 }
 
-func Replace(_ps []byte, secrets map[string]string) ([]byte, bool, error) {
+// Replace will replace the secrets in the 'secrets' map and return the new
+// pull secrets, a list of repositories that changed or an error.
+func Replace(_ps []byte, secrets map[string]string) ([]byte, []string, error) {
 	if _ps == nil || len(_ps) == 0 {
 		_ps = []byte("{}")
 	}
@@ -24,21 +26,21 @@ func Replace(_ps []byte, secrets map[string]string) ([]byte, bool, error) {
 
 	err := json.Unmarshal(_ps, &ps)
 	if err != nil {
-		return nil, false, err
+		return nil, nil, err
 	}
 
 	if ps.Auths == nil {
 		ps.Auths = map[string]map[string]interface{}{}
 	}
 
-	var changed bool
+	changed := []string{}
 	for repo, secret := range secrets {
 		v := map[string]interface{}{
 			"auth": secret,
 		}
 
 		if !reflect.DeepEqual(ps.Auths[repo], v) {
-			changed = true
+			changed = append(changed, repo)
 		}
 		ps.Auths[repo] = v
 	}
@@ -69,7 +71,7 @@ func SetRegistryProfiles(_ps string, rps ...*api.RegistryProfile) (string, bool,
 	}
 
 	b, changed, err := Replace([]byte(_ps), secrets)
-	return string(b), changed, err
+	return string(b), len(changed) > 0, err
 }
 
 // Merge returns _ps over _base.  If both _ps and _base have a given key, the

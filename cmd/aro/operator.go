@@ -81,7 +81,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		Securitycli:   securitycli,
 		AROCli:        arocli,
 		RestConfig:    restConfig,
-		Log:           log.WithField("controller", "Genevalogging"),
+		Log:           log.WithField("controller", controllers.GenevaLoggingControllerName),
 		Scheme:        mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		log.Errorf("unable to create controller: Genevalogging %v", err)
@@ -90,7 +90,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 	if err = (&controllers.PullsecretReconciler{
 		Kubernetescli: kubernetescli,
 		AROCli:        arocli,
-		Log:           log.WithField("controller", "PullSecret"),
+		Log:           log.WithField("controller", controllers.PullSecretControllerName),
 		Scheme:        mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		log.Errorf("unable to create controller: PullSecret %v", err)
@@ -99,7 +99,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 	if err = (&controllers.InternetChecker{
 		Kubernetescli: kubernetescli,
 		AROCli:        arocli,
-		Log:           log.WithField("controller", "InternetChecker"),
+		Log:           log.WithField("controller", controllers.InternetCheckerControllerName),
 		Scheme:        mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		log.Errorf("unable to create controller: InternetChecker %v", err)
@@ -108,7 +108,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 	if err = (&controllers.CPValidator{
 		Kubernetescli: kubernetescli,
 		AROCli:        arocli,
-		Log:           log.WithField("controller", "CPValidator"),
+		Log:           log.WithField("controller", controllers.CPValidatorControllerName),
 		Scheme:        mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		log.Errorf("unable to create controller: CPValidator %v", err)
@@ -116,7 +116,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 	}
 	if err = (&controllers.AlertWebhookReconciler{
 		Kubernetescli: kubernetescli,
-		Log:           log.WithField("controller", "AlertWebhook"),
+		Log:           log.WithField("controller", controllers.AlertwebhookControllerName),
 		Scheme:        mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		log.Errorf("unable to create controller: AlertWebhook %v", err)
