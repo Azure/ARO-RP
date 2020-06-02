@@ -49,11 +49,16 @@ func (rc *ResourceCleaner) cleanResourceGroup(ctx context.Context, resourceGroup
 			return err
 		}
 
+		err = rc.cleanAad(ctx, resourceGroup)
+		if err != nil {
+			return err
+		}
+
 		if !rc.dryRun {
-			_, err := rc.resourcegroupscli.Delete(ctx, *resourceGroup.Name)
-			if err != nil {
-				return err
-			}
+			// _, err := rc.resourcegroupscli.Delete(ctx, *resourceGroup.Name)
+			// if err != nil {
+			// 	return err
+			// }
 		}
 	}
 
@@ -81,16 +86,16 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 			rc.log.Debugf("Removing security group from subnet: %s/%s/%s", *resourceGroup.Name, *secGroup.Name, *subnet.Name)
 
 			if !rc.dryRun {
-				if subnet.NetworkSecurityGroup == nil {
-					continue
-				}
+				// if subnet.NetworkSecurityGroup == nil {
+				// 	continue
+				// }
 
-				subnet.NetworkSecurityGroup = nil
+				// subnet.NetworkSecurityGroup = nil
 
-				err = rc.subnetManager.CreateOrUpdate(ctx, *subnet.ID, subnet)
-				if err != nil {
-					return err
-				}
+				// err = rc.subnetManager.CreateOrUpdate(ctx, *subnet.ID, subnet)
+				// if err != nil {
+				// 	return err
+				// }
 			}
 		}
 
@@ -113,10 +118,10 @@ func (rc *ResourceCleaner) cleanPrivateLink(ctx context.Context, resourceGroup m
 		for _, peconn := range *pls.PrivateEndpointConnections {
 			rc.log.Debugf("Deleting private endpoint connection %s/%s/%s", *resourceGroup.Name, *pls.Name, *peconn.Name)
 			if !rc.dryRun {
-				_, err := rc.privatelinkservicescli.DeletePrivateEndpointConnection(ctx, *resourceGroup.Name, *pls.Name, *peconn.Name)
-				if err != nil {
-					return err
-				}
+				// _, err := rc.privatelinkservicescli.DeletePrivateEndpointConnection(ctx, *resourceGroup.Name, *pls.Name, *peconn.Name)
+				// if err != nil {
+				// 	return err
+				// }
 			}
 		}
 	}

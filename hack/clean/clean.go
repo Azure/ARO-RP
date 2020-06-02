@@ -52,8 +52,6 @@ func main() {
 }
 
 func run(ctx context.Context, log *logrus.Entry) error {
-	subscriptionID := os.Getenv("AZURE_SUBSCRIPTION_ID")
-
 	var ttl time.Duration
 	if os.Getenv("AZURE_PURGE_TTL") != "" {
 		var err error
@@ -125,7 +123,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 
 	log.Infof("Starting the resource cleaner, DryRun: %t", *dryRun)
 
-	rc, err := purge.NewResourceCleaner(log, subscriptionID, shouldDelete, *dryRun)
+	rc, err := purge.NewResourceCleaner(log, shouldDelete, *dryRun)
 	if err != nil {
 		return err
 	}
