@@ -26,7 +26,7 @@ import (
 const (
 	kubeNamespace       = "openshift-azure-ifreload"
 	kubeServiceAccount  = "system:serviceaccount:" + kubeNamespace + ":default"
-	ifreloadImageFormat = "%s.azurecr.io/ifreload:6dd7a73c"
+	ifreloadImageFormat = "%s.azurecr.io/ifreload:109810fe"
 )
 
 type IfReload interface {
