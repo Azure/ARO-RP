@@ -4,6 +4,8 @@ package e2e
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
+	"os"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -13,9 +15,40 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
+
+	"github.com/Azure/ARO-RP/test/util/ready"
 )
 
 var _ = Describe("Scale nodes", func() {
+	// hack: do this before we scale down, because it takes a while for the
+	// nodes to settle after scale down
+	Specify("node count should match the cluster resource and nodes should be ready", func() {
+		ctx := context.Background()
+
+		oc, err := Clients.OpenshiftClusters.Get(ctx, os.Getenv("RESOURCEGROUP"), os.Getenv("CLUSTER"))
+		Expect(err).NotTo(HaveOccurred())
+
+		var expectedNodeCount int = 3 // for masters
+		for _, wp := range *oc.WorkerProfiles {
+			expectedNodeCount += int(*wp.Count)
+		}
+
+		nodes, err := Clients.Kubernetes.CoreV1().Nodes().List(metav1.ListOptions{})
+		Expect(err).NotTo(HaveOccurred())
+		var nodeCount int32
+		for _, node := range nodes.Items {
+			if ready.NodeIsReady(&node) {
+				nodeCount++
+			} else {
+				for _, c := range node.Status.Conditions {
+					Log.Warnf("node %s status %s", node.Name, c.String())
+				}
+			}
+		}
+
+		Expect(nodeCount).To(BeEquivalentTo(expectedNodeCount))
+	})
+
 	Specify("nodes should scale up and down", func() {
 		mss, err := Clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").List(metav1.ListOptions{})
 		Expect(err).NotTo(HaveOccurred())
