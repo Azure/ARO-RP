@@ -11,6 +11,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
+	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
@@ -29,10 +30,11 @@ type Monitor struct {
 	oc   *api.OpenShiftCluster
 	dims map[string]string
 
-	cli       kubernetes.Interface
-	configcli configclient.Interface
-	mcocli    mcoclient.Interface
-	m         metrics.Interface
+	cli         kubernetes.Interface
+	configcli   configclient.Interface
+	mcocli      mcoclient.Interface
+	operatorcli operatorclient.Interface
+	m           metrics.Interface
 }
 
 func NewMonitor(ctx context.Context, env env.Interface, log *logrus.Entry, oc *api.OpenShiftCluster, m metrics.Interface, logMessages bool) (*Monitor, error) {
@@ -76,6 +78,11 @@ func NewMonitor(ctx context.Context, env env.Interface, log *logrus.Entry, oc *a
 		return nil, err
 	}
 
+	operatorcli, err := operatorclient.NewForConfig(restConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Monitor{
 		env:         env,
 		log:         log,
@@ -84,10 +91,11 @@ func NewMonitor(ctx context.Context, env env.Interface, log *logrus.Entry, oc *a
 		oc:   oc,
 		dims: dims,
 
-		cli:       cli,
-		configcli: configcli,
-		mcocli:    mcocli,
-		m:         m,
+		cli:         cli,
+		configcli:   configcli,
+		mcocli:      mcocli,
+		operatorcli: operatorcli,
+		m:           m,
 	}, nil
 }
 
@@ -110,6 +118,7 @@ func (mon *Monitor) Monitor(ctx context.Context) {
 		mon.emitClusterOperatorVersions,
 		mon.emitClusterVersionConditions,
 		mon.emitClusterVersions,
+		mon.emitAPIServerCount,
 		mon.emitDaemonsetStatuses,
 		mon.emitDeploymentStatuses,
 		mon.emitMachineConfigPoolConditions,
