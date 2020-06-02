@@ -59,7 +59,7 @@ type operator struct {
 	acrRegName        string
 	genevaloggingKey  *rsa.PrivateKey
 	genevaloggingCert *x509.Certificate
-	servicePrinciple  []byte
+	servicePrincipal  []byte
 
 	cluserSpec *aro.ClusterSpec
 
@@ -100,7 +100,7 @@ func New(log *logrus.Entry, e env.Interface, oc *api.OpenShiftCluster, cli kuber
 		regTokens:         map[string]string{},
 		genevaloggingKey:  key,
 		genevaloggingCert: cert,
-		servicePrinciple:  sp,
+		servicePrincipal:  sp,
 
 		cluserSpec: &aro.ClusterSpec{
 			ResourceID:     oc.ID,
@@ -301,11 +301,11 @@ func (o *operator) resources(ctx context.Context) ([]runtime.Object, error) {
 				APIVersion: "v1",
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "service-principle",
+				Name:      "service-principal",
 				Namespace: o.namespace,
 			},
 			Type: corev1.SecretTypeOpaque,
-			Data: map[string][]byte{"servicePrinciple": o.servicePrinciple},
+			Data: map[string][]byte{"servicePrincipal": o.servicePrincipal},
 		},
 		ssc,
 		o.deployment(),
