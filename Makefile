@@ -60,6 +60,9 @@ image-fluentbit:
 	docker build --build-arg VERSION=1.3.9-1 \
 	  -f Dockerfile.fluentbit -t ${RP_IMAGE_ACR}.azurecr.io/fluentbit:1.3.9-1 .
 
+image-ifreload:
+	cd hack/ifreload && $(MAKE) clean ifreload.rhel8
+
 image-proxy: proxy
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
 	docker build -f Dockerfile.proxy -t ${RP_IMAGE_ACR}.azurecr.io/proxy:latest .
@@ -69,6 +72,9 @@ publish-image-aro: image-aro
 
 publish-image-fluentbit: image-fluentbit
 	docker push ${RP_IMAGE_ACR}.azurecr.io/fluentbit:1.3.9-1
+
+publish-image-ifreload: image-ifreload
+	docker push ${RP_IMAGE_ACR}.azurecr.io/ifreload:$(COMMIT)
 
 publish-image-proxy: image-proxy
 	docker push ${RP_IMAGE_ACR}.azurecr.io/proxy:latest
@@ -124,4 +130,4 @@ test-python: generate pyenv${PYTHON_VERSION}
 admin.kubeconfig:
 	hack/get-admin-kubeconfig.sh /subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}/providers/Microsoft.RedHatOpenShift/openShiftClusters/${CLUSTER} >admin.kubeconfig
 
-.PHONY: aro az clean client generate image-aro proxy secrets secrets-update test-go test-python image-fluentbit publish-image-proxy publish-image-aro publish-image-fluentbit publish-image-proxy admin.kubeconfig
+.PHONY: aro az clean client generate image-aro image-ifreload proxy secrets secrets-update test-go test-python image-fluentbit publish-image-proxy publish-image-aro publish-image-fluentbit publish-image-ifreload publish-image-proxy admin.kubeconfig
