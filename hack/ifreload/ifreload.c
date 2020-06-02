@@ -105,7 +105,7 @@ int main(int argc, char **argv) {
 	}
 
 	if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-		perror("socket");
+		logger_error("socket");
 		return 1;
 	}
 
@@ -161,6 +161,15 @@ int main(int argc, char **argv) {
 	logger("queue length: %ld", qlen);
 
 	if (argc > 1) {
+		FILE *f = fopen("/dev/termination-log", "w");
+		if (!f) {
+			logger_error("fopen");
+			return 1;
+		}
+
+		fprintf(f, "queue length: %ld\n", qlen);
+		fclose(f);
+
 		return 0;
 	}
 
