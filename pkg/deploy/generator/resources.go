@@ -157,6 +157,7 @@ cat >/root/.docker/config.json <<EOF
 	}
 }
 EOF
+systemctl start docker.service
 docker pull "$PROXYIMAGE"
 
 mkdir /etc/proxy
@@ -174,7 +175,7 @@ cat >/etc/systemd/system/proxy.service <<'EOF'
 [Unit]
 After=docker.service
 Requires=docker.service
-StartLimitIntervalSec=0
+StartLimitInterval=0
 
 [Service]
 EnvironmentFile=/etc/sysconfig/proxy
@@ -692,11 +693,11 @@ yum -y update -x WALinuxAgent
 # avoid "error: db5 error(-30969) from dbenv->open: BDB0091 DB_VERSION_MISMATCH: Database environment version mismatch"
 rm -f /var/lib/rpm/__db*
 
-rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8
+rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
 rpm --import https://packages.microsoft.com/keys/microsoft.asc
 rpm --import https://packages.fluentbit.io/fluentbit.key
 
-yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
 cat >/etc/yum.repos.d/azure.repo <<'EOF'
 [azure-cli]
@@ -720,54 +721,9 @@ enabled=yes
 gpgcheck=yes
 EOF
 
-yum -y install azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security podman-docker td-agent-bit
+yum -y install azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security docker td-agent-bit
 
 firewall-cmd --add-port=443/tcp --permanent
-
-# https://bugzilla.redhat.com/show_bug.cgi?id=1805212
-cat >/etc/cni/net.d/87-podman-bridge.conflist <<'EOF'
-{
-  "cniVersion": "0.4.0",
-  "name": "podman",
-  "plugins": [
-    {
-      "type": "bridge",
-      "bridge": "cni-podman0",
-      "isGateway": true,
-      "ipMasq": true,
-      "ipam": {
-        "type": "host-local",
-        "routes": [
-          {
-            "dst": "0.0.0.0/0"
-          }
-        ],
-        "ranges": [
-          [
-            {
-              "subnet": "10.88.0.0/16",
-              "gateway": "10.88.0.1"
-            }
-          ]
-        ]
-      }
-    },
-    {
-      "type": "portmap",
-      "capabilities": {
-        "portMappings": true
-      }
-    },
-    {
-      "type": "firewall",
-      "backend": "firewalld"
-    },
-    {
-      "type": "tuning"
-    }
-  ]
-}
-EOF
 
 cat >/etc/td-agent-bit/td-agent-bit.conf <<'EOF'
 [INPUT]
@@ -789,9 +745,8 @@ EOF
 az login -i
 az account set -s "$SUBSCRIPTIONID"
 
->/etc/containers/nodocker  # podman stderr output confuses az acr login
-mkdir /root/.docker
-REGISTRY_AUTH_FILE=/root/.docker/config.json az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
+systemctl start docker.service
+az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
 
 MDMIMAGE="${RPIMAGE%%/*}/genevamdm:master_37"
 docker pull "$MDMIMAGE"
@@ -849,8 +804,9 @@ EOF
 mkdir /var/etw
 cat >/etc/systemd/system/mdm.service <<'EOF'
 [Unit]
-After=network-online.target
-StartLimitIntervalSec=0
+After=docker.service
+Requires=docker.service
+StartLimitInterval=0
 
 [Service]
 EnvironmentFile=/etc/sysconfig/mdm
@@ -890,8 +846,9 @@ EOF
 
 cat >/etc/systemd/system/aro-rp.service <<'EOF'
 [Unit]
-After=network-online.target
-StartLimitIntervalSec=0
+After=docker.service
+Requires=docker.service
+StartLimitInterval=0
 
 [Service]
 EnvironmentFile=/etc/sysconfig/aro-rp
@@ -931,8 +888,9 @@ EOF
 
 cat >/etc/systemd/system/aro-monitor.service <<'EOF'
 [Unit]
-After=network-online.target
-StartLimitIntervalSec=0
+After=docker.service
+Requires=docker.service
+StartLimitInterval=0
 
 [Service]
 EnvironmentFile=/etc/sysconfig/aro-monitor
@@ -963,7 +921,9 @@ for service in aro-monitor aro-rp auoms azsecd azsecmond mdsd mdm chronyd td-age
   systemctl enable $service.service
 done
 
-rm /etc/motd.d/*
+for scan in baseline clamav software; do
+  /usr/local/bin/azsecd config -s $scan -d P1D
+done
 
 (sleep 30; reboot) &
 `))
@@ -1003,7 +963,7 @@ rm /etc/motd.d/*
 						ImageReference: &mgmtcompute.ImageReference{
 							Publisher: to.StringPtr("RedHat"),
 							Offer:     to.StringPtr("RHEL"),
-							Sku:       to.StringPtr("8.1"),
+							Sku:       to.StringPtr("7-RAW"),
 							Version:   to.StringPtr("latest"),
 						},
 						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
