@@ -88,15 +88,8 @@ func (r *StatusReporter) SetConditionTrue(ctx context.Context, cType status.Cond
 }
 
 func setStaticStatus(status *aro.ClusterStatus) {
-	if len(status.RelatedObjects) == 0 {
-		status.RelatedObjects = []corev1.ObjectReference{
-			{Kind: "Secret", Name: "pull-secret", Namespace: "openshift-config"},
-			{Kind: "Namespace", Name: "openshift-azure-logging"},
-			{Kind: "ConfigMap", Name: "fluent-config", Namespace: "openshift-azure-logging"},
-			{Kind: "ServiceAccount", Name: "geneva", Namespace: "openshift-azure-logging"},
-			{Kind: "SecurityContextConstraints", Name: "privileged-genevalogging"},
-			{Kind: "DaemonSet", Name: "mdsd", Namespace: "openshift-azure-logging"},
-		}
-	}
+	status.RelatedObjects = pullsecretRelatedObjects()
+	status.RelatedObjects = append(status.RelatedObjects, genevaloggingRelatedObjects()...)
+	status.RelatedObjects = append(status.RelatedObjects, alertwebhookRelatedObjects()...)
 	status.OperatorVersion = version.GitCommit
 }
