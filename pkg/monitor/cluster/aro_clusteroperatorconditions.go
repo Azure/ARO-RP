@@ -15,7 +15,8 @@ import (
 )
 
 var aroOperatorConditionsExpected = map[status.ConditionType]corev1.ConditionStatus{
-	aro.InternetReachable: corev1.ConditionTrue,
+	aro.InternetReachableFromMaster: corev1.ConditionTrue,
+	aro.InternetReachableFromWorker: corev1.ConditionTrue,
 }
 
 func (mon *Monitor) emitAroOperatorConditions(ctx context.Context) error {

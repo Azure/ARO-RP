@@ -39,10 +39,10 @@ import (
 )
 
 const (
-	KubeNamespace          = "openshift-azure-operator"
-	kubeServiceAccountName = "aro-operator"
-	kubeServiceAccount     = "system:serviceaccount:" + KubeNamespace + ":" + kubeServiceAccountName
-	aroOperatorImageFormat = "%s/aro:%s"
+	KubeNamespace              = "openshift-azure-operator"
+	kubeServiceAccountNameBase = "aro-operator-"
+	kubeServiceAccountBase     = "system:serviceaccount:" + KubeNamespace + ":" + kubeServiceAccountNameBase
+	aroOperatorImageFormat     = "%s/aro:%s"
 )
 
 type Operator interface {
@@ -173,14 +173,14 @@ func (o *operator) securityContextConstraints(ctx context.Context, name, service
 	return scc, nil
 }
 
-func (o *operator) deployment() *appsv1.Deployment {
-	return &appsv1.Deployment{
+func (o *operator) deployment(role string) *appsv1.Deployment {
+	deployment := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Deployment",
 			APIVersion: "apps/v1",
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "aro-operator",
+			Name:      "aro-operator-" + role,
 			Namespace: o.namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -193,18 +193,8 @@ func (o *operator) deployment() *appsv1.Deployment {
 					Labels: map[string]string{"app": "aro"},
 				},
 				Spec: v1.PodSpec{
-					PriorityClassName: "system-cluster-critical",
-					Volumes: []v1.Volume{
-						{
-							Name: "pullsecret-tokens",
-							VolumeSource: v1.VolumeSource{
-								Secret: &v1.SecretVolumeSource{
-									SecretName: "pullsecret-tokens",
-								},
-							},
-						},
-					},
-					ServiceAccountName: kubeServiceAccountName,
+					PriorityClassName:  "system-cluster-critical",
+					ServiceAccountName: kubeServiceAccountNameBase + role,
 					Containers: []v1.Container{
 						{
 							Name:  "aro-operator",
@@ -215,15 +205,15 @@ func (o *operator) deployment() *appsv1.Deployment {
 							Args: []string{
 								"operator",
 							},
-							SecurityContext: &v1.SecurityContext{
-								Privileged: to.BoolPtr(true),
-								RunAsUser:  to.Int64Ptr(0),
-							},
-							VolumeMounts: []v1.VolumeMount{
+							Env: []v1.EnvVar{
 								{
-									Name:      "pullsecret-tokens",
-									ReadOnly:  true,
-									MountPath: "/pull-secrets",
+									Name: "NODE_NAME",
+									ValueFrom: &v1.EnvVarSource{
+										FieldRef: &v1.ObjectFieldSelector{
+											// TODO - ApiVersion
+											FieldPath: "spec.nodeName",
+										},
+									},
 								},
 							},
 						},
@@ -232,6 +222,38 @@ func (o *operator) deployment() *appsv1.Deployment {
 			},
 		},
 	}
+	if role == "master" {
+		deployment.Spec.Template.Spec.Volumes = []v1.Volume{
+			{
+				Name: "pullsecret-tokens",
+				VolumeSource: v1.VolumeSource{
+					Secret: &v1.SecretVolumeSource{
+						SecretName: "pullsecret-tokens",
+					},
+				},
+			},
+		}
+		deployment.Spec.Template.Spec.NodeSelector = map[string]string{"node-role.kubernetes.io/master": ""}
+		deployment.Spec.Template.Spec.Tolerations = []v1.Toleration{
+			{
+				Operator: v1.TolerationOpExists,
+				Key:      "node-role.kubernetes.io/master",
+				Effect:   v1.TaintEffectNoSchedule,
+			},
+		}
+		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = []v1.VolumeMount{
+			{
+				Name:      "pullsecret-tokens",
+				ReadOnly:  true,
+				MountPath: "/pull-secrets",
+			},
+		}
+		deployment.Spec.Template.Spec.Containers[0].SecurityContext = &v1.SecurityContext{
+			Privileged: to.BoolPtr(true),
+			RunAsUser:  to.Int64Ptr(0),
+		}
+	}
+	return deployment
 }
 
 func (o *operator) resources(ctx context.Context) ([]runtime.Object, error) {
@@ -260,7 +282,7 @@ func (o *operator) resources(ctx context.Context) ([]runtime.Object, error) {
 		return nil, err
 	}
 
-	ssc, err := o.securityContextConstraints(ctx, "privileged-aro-operator", kubeServiceAccount)
+	ssc, err := o.securityContextConstraints(ctx, "privileged-aro-operator", kubeServiceAccountBase+"master")
 	if err != nil {
 		return nil, err
 	}
@@ -308,7 +330,8 @@ func (o *operator) resources(ctx context.Context) ([]runtime.Object, error) {
 			Data: map[string][]byte{"servicePrincipal": o.servicePrincipal},
 		},
 		ssc,
-		o.deployment(),
+		o.deployment("master"),
+		o.deployment("worker"),
 		&aro.Cluster{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Cluster",
@@ -345,12 +368,20 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 }
 
 func (o *operator) IsReady() (bool, error) {
-	dc, err := o.cli.AppsV1().Deployments(o.namespace).Get("aro-operator", metav1.GetOptions{})
-	if err != nil {
-		return false, err
+	dm, errMaster := o.cli.AppsV1().Deployments(o.namespace).Get("aro-operator-master", metav1.GetOptions{})
+	if errMaster != nil {
+		return false, errMaster
 	}
 
-	return (*dc.Spec.Replicas == dc.Status.AvailableReplicas &&
-		*dc.Spec.Replicas == dc.Status.UpdatedReplicas &&
-		dc.Generation == dc.Status.ObservedGeneration), nil
+	dw, errWorker := o.cli.AppsV1().Deployments(o.namespace).Get("aro-operator-worker", metav1.GetOptions{})
+	if errWorker != nil {
+		return false, errWorker
+	}
+
+	return (*dm.Spec.Replicas == dm.Status.AvailableReplicas &&
+		*dm.Spec.Replicas == dm.Status.UpdatedReplicas &&
+		dm.Generation == dm.Status.ObservedGeneration &&
+		*dw.Spec.Replicas == dw.Status.AvailableReplicas &&
+		*dw.Spec.Replicas == dw.Status.UpdatedReplicas &&
+		dw.Generation == dw.Status.ObservedGeneration), nil
 }
