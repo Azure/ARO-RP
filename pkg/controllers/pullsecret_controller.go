@@ -177,6 +177,12 @@ func (r *PullsecretReconciler) requiredRepoTokens() (map[string]string, error) {
 	return repoTokens, nil
 }
 
+func pullsecretRelatedObjects() []corev1.ObjectReference {
+	return []corev1.ObjectReference{
+		{Kind: "Secret", Name: pullSecretName.Name, Namespace: pullSecretName.Namespace},
+	}
+}
+
 func triggerReconcile(secret *corev1.Secret) bool {
 	return secret.Name == pullSecretName.Name && secret.Namespace == pullSecretName.Namespace
 }

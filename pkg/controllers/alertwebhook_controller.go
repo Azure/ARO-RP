@@ -48,7 +48,7 @@ func (r *AlertWebhookReconciler) Reconcile(request ctrl.Request) (ctrl.Result, e
 // AlertmanagerReceiversNotConfigured warning added in 4.3.8.
 func (r *AlertWebhookReconciler) setAlertManagerWebhook(addr string) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		s, err := r.Kubernetescli.CoreV1().Secrets("openshift-monitoring").Get("alertmanager-main", metav1.GetOptions{})
+		s, err := r.Kubernetescli.CoreV1().Secrets(alertManagerName.Namespace).Get(alertManagerName.Name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -75,9 +75,15 @@ func (r *AlertWebhookReconciler) setAlertManagerWebhook(addr string) error {
 			return err
 		}
 
-		_, err = r.Kubernetescli.CoreV1().Secrets("openshift-monitoring").Update(s)
+		_, err = r.Kubernetescli.CoreV1().Secrets(alertManagerName.Namespace).Update(s)
 		return err
 	})
+}
+
+func alertwebhookRelatedObjects() []corev1.ObjectReference {
+	return []corev1.ObjectReference{
+		{Kind: "Secret", Name: alertManagerName.Name, Namespace: alertManagerName.Namespace},
+	}
 }
 
 func triggerAlertReconcile(secret *corev1.Secret) bool {
