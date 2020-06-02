@@ -135,8 +135,12 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 	return mgr.Start(ctrl.SetupSignalHandler())
 }
 
-// Parses `nodeName` environment variable to retrieve pod's placement - master or worker
+// Parses `NODE_NAME` environment variable to retrieve pod's placement - master or worker
 func getPlacement(log *logrus.Entry) (string, error) {
+	if rpMode, found := os.LookupEnv("RP_MODE"); !found || rpMode == "development" {
+		// when running aro-operator locally assume it is in "master" mode
+		return "master", nil
+	}
 	nodeName, found := os.LookupEnv("NODE_NAME")
 	if !found {
 		log.Errorf("environment variable NODE_NAME is unset, exiting")

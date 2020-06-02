@@ -195,6 +195,7 @@ func (o *operator) deployment(role string) *appsv1.Deployment {
 				Spec: v1.PodSpec{
 					PriorityClassName:  "system-cluster-critical",
 					ServiceAccountName: kubeServiceAccountNameBase + role,
+					NodeSelector:       map[string]string{"node-role.kubernetes.io/worker": ""},
 					Containers: []v1.Container{
 						{
 							Name:  "aro-operator",
@@ -210,7 +211,6 @@ func (o *operator) deployment(role string) *appsv1.Deployment {
 									Name: "NODE_NAME",
 									ValueFrom: &v1.EnvVarSource{
 										FieldRef: &v1.ObjectFieldSelector{
-											// TODO - ApiVersion
 											FieldPath: "spec.nodeName",
 										},
 									},
@@ -368,14 +368,14 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 }
 
 func (o *operator) IsReady() (bool, error) {
-	dm, errMaster := o.cli.AppsV1().Deployments(o.namespace).Get("aro-operator-master", metav1.GetOptions{})
-	if errMaster != nil {
-		return false, errMaster
+	dm, err := o.cli.AppsV1().Deployments(o.namespace).Get("aro-operator-master", metav1.GetOptions{})
+	if err != nil {
+		return false, err
 	}
 
-	dw, errWorker := o.cli.AppsV1().Deployments(o.namespace).Get("aro-operator-worker", metav1.GetOptions{})
-	if errWorker != nil {
-		return false, errWorker
+	dw, err := o.cli.AppsV1().Deployments(o.namespace).Get("aro-operator-worker", metav1.GetOptions{})
+	if err != nil {
+		return false, err
 	}
 
 	return (*dm.Spec.Replicas == dm.Status.AvailableReplicas &&
