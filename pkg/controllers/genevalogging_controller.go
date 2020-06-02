@@ -49,7 +49,6 @@ func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	if request.Name != aro.SingletonClusterName {
 		return reconcile.Result{}, nil
 	}
-	r.Log.Info("Reconciling genevalogging deployment")
 
 	ctx := context.TODO()
 	instance, err := r.AROCli.Clusters().Get(request.Name, metav1.GetOptions{})
@@ -104,7 +103,6 @@ func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		}
 	}
 
-	r.Log.Info("done, requeueing")
 	// watching should catch all changes, but double check later..
 	return ReconcileResultRequeueLong, nil
 }
@@ -141,6 +139,6 @@ func (r *GenevaloggingReconciler) certificatesSecret(instance *aro.Cluster) (*v1
 // SetupWithManager setup our mananger
 func (r *GenevaloggingReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&aro.Cluster{}).Owns(&appsv1.DaemonSet{}).Owns(&corev1.Secret{}).
+		For(&aro.Cluster{}).Owns(&appsv1.DaemonSet{}).Owns(&corev1.Secret{}).Named(GenevaLoggingControllerName).
 		Complete(r)
 }

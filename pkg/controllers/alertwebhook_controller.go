@@ -39,7 +39,6 @@ func (r *AlertWebhookReconciler) Reconcile(request ctrl.Request) (ctrl.Result, e
 		// filter out other secrets.
 		return reconcile.Result{}, nil
 	}
-	r.Log.Info("Reconciling alertmananger webhook")
 
 	// TODO run our own web server and use that address
 	return reconcile.Result{}, r.setAlertManagerWebhook("http://localhost:1234/")
@@ -115,6 +114,6 @@ func (r *AlertWebhookReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		},
 	}
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1.Secret{}).WithEventFilter(isAlertManager).
+		For(&v1.Secret{}).WithEventFilter(isAlertManager).Named(AlertwebhookControllerName).
 		Complete(r)
 }

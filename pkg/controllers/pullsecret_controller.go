@@ -56,7 +56,6 @@ func (r *PullsecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 		// nothing to do.
 		return reconcile.Result{}, nil
 	}
-	r.Log.Info("Reconciling pull-secret")
 
 	return reconcile.Result{}, retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		ps, isCreate, err := r.pullsecret(request)
@@ -66,6 +65,7 @@ func (r *PullsecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 
 		// validate
 		if !json.Valid(ps.Data[v1.DockerConfigJsonKey]) {
+			r.Log.Info("Pull Secret is not valid json - recreating")
 			delete(ps.Data, v1.DockerConfigJsonKey)
 		}
 		if ps.Data == nil {
@@ -76,6 +76,8 @@ func (r *PullsecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 		newPS, changed, err := pullsecret.Replace(ps.Data[corev1.DockerConfigJsonKey], r.requiredRepoTokensStore)
 		if err != nil {
 			return err
+		} else if len(changed) > 0 {
+			r.Log.Info("Repaired the following repositories ", changed)
 		}
 
 		// repair Secret type
@@ -89,7 +91,7 @@ func (r *PullsecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 				Data: map[string][]byte{},
 			}
 			isCreate = true
-			changed = true
+			r.Log.Info("Pull Secret has the wrong secret type - recreating")
 
 			// unfortunately the type field is immutable.
 			err = r.Kubernetescli.CoreV1().Secrets(ps.Namespace).Delete(ps.Name, nil)
@@ -101,8 +103,7 @@ func (r *PullsecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 			// restart, create a new pull secret, and will have dropped the rest
 			// of the customer's pull secret on the floor :-(
 		}
-		if !changed {
-			r.Log.Info("Skip reconcile: Pull Secret repair not required")
+		if !isCreate && len(changed) == 0 {
 			return nil
 		}
 
@@ -215,6 +216,6 @@ func (r *PullsecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		},
 	}
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&v1.Secret{}).WithEventFilter(isPullSecret).
+		For(&v1.Secret{}).WithEventFilter(isPullSecret).Named(PullSecretControllerName).
 		Complete(r)
 }

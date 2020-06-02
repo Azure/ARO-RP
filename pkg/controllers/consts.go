@@ -12,7 +12,12 @@ import (
 )
 
 var (
-	ReconcileResultRequeueShort = reconcile.Result{RequeueAfter: 5 * time.Minute, Requeue: true}
-	ReconcileResultRequeueLong  = reconcile.Result{RequeueAfter: 5 * time.Hour, Requeue: true}
-	OperatorNamespace           = deploy.KubeNamespace
+	ReconcileResultRequeueShort   = reconcile.Result{RequeueAfter: 5 * time.Minute, Requeue: true}
+	ReconcileResultRequeueLong    = reconcile.Result{RequeueAfter: 5 * time.Hour, Requeue: true}
+	OperatorNamespace             = deploy.KubeNamespace
+	AlertwebhookControllerName    = "Alertwebhook"
+	CPValidatorControllerName     = "CPValidator"
+	GenevaLoggingControllerName   = "GenevaLogging"
+	PullSecretControllerName      = "PullSecret"
+	InternetCheckerControllerName = "InternetChecker"
 )
