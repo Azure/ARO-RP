@@ -6,6 +6,8 @@ package main
 import (
 	"context"
 	"flag"
+	"os"
+	"regexp"
 
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	"github.com/sirupsen/logrus"
@@ -76,54 +78,87 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	if err = (&controllers.GenevaloggingReconciler{
-		Kubernetescli: kubernetescli,
-		Securitycli:   securitycli,
-		AROCli:        arocli,
-		RestConfig:    restConfig,
-		Log:           log.WithField("controller", controllers.GenevaLoggingControllerName),
-		Scheme:        mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		log.Errorf("unable to create controller: Genevalogging %v", err)
-		return err
+	placement, err := getPlacement(log)
+	if placement == "master" {
+		if err = (&controllers.GenevaloggingReconciler{
+			Kubernetescli: kubernetescli,
+			Securitycli:   securitycli,
+			AROCli:        arocli,
+			RestConfig:    restConfig,
+			Log:           log.WithField("controller", controllers.GenevaLoggingControllerName),
+			Scheme:        mgr.GetScheme(),
+		}).SetupWithManager(mgr); err != nil {
+			log.Errorf("unable to create controller: Genevalogging %v", err)
+			return err
+		}
+		if err = (&controllers.PullsecretReconciler{
+			Kubernetescli: kubernetescli,
+			AROCli:        arocli,
+			Log:           log.WithField("controller", controllers.PullSecretControllerName),
+			Scheme:        mgr.GetScheme(),
+		}).SetupWithManager(mgr); err != nil {
+			log.Errorf("unable to create controller: PullSecret %v", err)
+			return err
+		}
+		if err = (&controllers.CPValidator{
+			Kubernetescli: kubernetescli,
+			AROCli:        arocli,
+			Log:           log.WithField("controller", controllers.CPValidatorControllerName),
+			Scheme:        mgr.GetScheme(),
+		}).SetupWithManager(mgr); err != nil {
+			log.Errorf("unable to create controller: CPValidator %v", err)
+			return err
+		}
+		if err = (&controllers.AlertWebhookReconciler{
+			Kubernetescli: kubernetescli,
+			Log:           log.WithField("controller", controllers.AlertwebhookControllerName),
+			Scheme:        mgr.GetScheme(),
+		}).SetupWithManager(mgr); err != nil {
+			log.Errorf("unable to create controller: AlertWebhook %v", err)
+			return err
+		}
 	}
-	if err = (&controllers.PullsecretReconciler{
-		Kubernetescli: kubernetescli,
-		AROCli:        arocli,
-		Log:           log.WithField("controller", controllers.PullSecretControllerName),
-		Scheme:        mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		log.Errorf("unable to create controller: PullSecret %v", err)
-		return err
-	}
+
 	if err = (&controllers.InternetChecker{
 		Kubernetescli: kubernetescli,
 		AROCli:        arocli,
 		Log:           log.WithField("controller", controllers.InternetCheckerControllerName),
 		Scheme:        mgr.GetScheme(),
+		Placement:     placement,
 	}).SetupWithManager(mgr); err != nil {
 		log.Errorf("unable to create controller: InternetChecker %v", err)
-		return err
-	}
-	if err = (&controllers.CPValidator{
-		Kubernetescli: kubernetescli,
-		AROCli:        arocli,
-		Log:           log.WithField("controller", controllers.CPValidatorControllerName),
-		Scheme:        mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		log.Errorf("unable to create controller: CPValidator %v", err)
-		return err
-	}
-	if err = (&controllers.AlertWebhookReconciler{
-		Kubernetescli: kubernetescli,
-		Log:           log.WithField("controller", controllers.AlertwebhookControllerName),
-		Scheme:        mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		log.Errorf("unable to create controller: AlertWebhook %v", err)
 		return err
 	}
 	// +kubebuilder:scaffold:builder
 
 	log.Info("starting manager")
 	return mgr.Start(ctrl.SetupSignalHandler())
+}
+
+// Parses `NODE_NAME` environment variable to retrieve pod's placement - master or worker
+func getPlacement(log *logrus.Entry) (string, error) {
+	nodeName, found := os.LookupEnv("NODE_NAME")
+	if !found {
+		if os.Getenv("RP_MODE") == "development" {
+			return "master", nil
+		}
+		log.Errorf("environment variable NODE_NAME is unset, exiting")
+		os.Exit(2)
+	}
+
+	isMaster, err := regexp.MatchString(".*-master-[0-2]{1}$", nodeName)
+	if err != nil {
+		log.Errorf("unable to parse node name %v", err)
+		return "", err
+	}
+	if isMaster {
+		return "master", nil
+	}
+
+	isWorker, err := regexp.MatchString(".*-worker-[a-z0-9]+-[a-z0-9]+$", nodeName)
+	if err != nil || !isWorker {
+		log.Errorf("unable to parse node name or unexpected node name value %v", err)
+		return "", err
+	}
+	return "worker", nil
 }

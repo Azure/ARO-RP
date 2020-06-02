@@ -27,7 +27,13 @@ type StatusReporter struct {
 var (
 	emptyConditions = []status.Condition{
 		{
-			Type:    aro.InternetReachable,
+			Type:    aro.InternetReachableFromMaster,
+			Status:  corev1.ConditionUnknown,
+			Reason:  "",
+			Message: "",
+		},
+		{
+			Type:    aro.InternetReachableFromWorker,
 			Status:  corev1.ConditionUnknown,
 			Reason:  "",
 			Message: "",
