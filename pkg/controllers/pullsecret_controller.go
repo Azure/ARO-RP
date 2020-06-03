@@ -4,7 +4,6 @@ package controllers
 // Licensed under the Apache License 2.0.
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"io/ioutil"
 	"os"
@@ -171,7 +170,7 @@ func (r *PullsecretReconciler) requiredRepoTokens() (map[string]string, error) {
 		}
 		if len(data) > 0 {
 			r.Log.Infof("requiredRepo: %s", fpath)
-			repoTokens[fName.Name()] = base64.StdEncoding.EncodeToString(data)
+			repoTokens[fName.Name()] = string(data)
 		}
 	}
 	return repoTokens, nil

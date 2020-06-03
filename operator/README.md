@@ -69,4 +69,5 @@ curl -X PATCH -k "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID/re
 oc -n openshift-azure-operator get all
 oc -n openshift-azure-operator get clusters.aro.openshift.io/cluster -o yaml
 oc -n openshift-azure-operator logs deployment.apps/aro-operator
+oc -n openshift-config get secrets/pull-secret -o template='{{index .data ".dockerconfigjson"}}' | base64 -d
 ```
