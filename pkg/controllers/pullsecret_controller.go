@@ -196,14 +196,14 @@ func (r *PullsecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	// The pull secret may already be deleted when controller starts
+	initialRequest := ctrl.Request{
+		NamespacedName: types.NamespacedName{
+			Namespace: pullSecretName.Namespace,
+			Name:      pullSecretName.Name,
+		},
+	}
 	_, isCreate, err := r.pullsecret(initialRequest)
 	if err == nil && isCreate {
-		initialRequest := ctrl.Request{
-			NamespacedName: types.NamespacedName{
-				Namespace: pullSecretName.Namespace,
-				Name:      pullSecretName.Name,
-			},
-		}
 		r.Reconcile(initialRequest)
 	}
 
