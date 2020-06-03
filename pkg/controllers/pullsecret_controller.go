@@ -195,14 +195,17 @@ func (r *PullsecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 
-	// The pull secret may already need repairing when controller starts, so run it once here
-	initialRequest := ctrl.Request{
-		NamespacedName: types.NamespacedName{
-			Namespace: pullSecretName.Namespace,
-			Name:      pullSecretName.Name,
-		},
+	// The pull secret may already be deleted when controller starts
+	_, isCreate, err := r.pullsecret(initialRequest)
+	if err == nil && isCreate {
+		initialRequest := ctrl.Request{
+			NamespacedName: types.NamespacedName{
+				Namespace: pullSecretName.Namespace,
+				Name:      pullSecretName.Name,
+			},
+		}
+		r.Reconcile(initialRequest)
 	}
-	r.Reconcile(initialRequest)
 
 	isPullSecret := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
