@@ -1,6 +1,3 @@
-include Makefile.preflight
-.DEFAULT_GOAL := aro
-
 SHELL = /bin/bash
 COMMIT = $(shell git rev-parse --short HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
 ARO_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/aro:$(COMMIT)
@@ -53,18 +50,7 @@ client: generate
 
 	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/Azure/ARO-RP pkg/client
 
-CRD_OPTIONS ?= "crd:trivialVersions=true"
-generate: controller-gen kustomize
-	# build the operator's rbac based on in-code tags (search for "+kubebuilder:rbac")
-	$(CONTROLLER_GEN) $(CRD_OPTIONS) rbac:roleName=manager-role webhook paths="./pkg/controllers/..." output:crd:artifacts:config=operator/config/crd/bases output:dir=operator/config/resources
-	# build the operator's static resources
-	$(KUSTOMIZE) build operator/config/default > operator/deploy/resources.yaml
-	# build the operator's custom client (doesn't seem to work within a generate header)
-	go run ./vendor/k8s.io/code-generator/cmd/deepcopy-gen --input-dirs github.com/Azure/ARO-RP/operator/apis/aro.openshift.io/v1alpha1 -O zz_generated.deepcopy --bounding-dirs github.com/Azure/ARO-RP/operator/apis --go-header-file hack/licenses/boilerplate.go.txt
-	go run ./vendor/k8s.io/code-generator/cmd/client-gen --clientset-name versioned --input-base '' --input github.com/Azure/ARO-RP/operator/apis/aro.openshift.io/v1alpha1 --output-package github.com/Azure/ARO-RP/pkg/util/aro-operator-client/clientset --go-header-file hack/licenses/boilerplate.go.txt
-	gofmt -s -w pkg/util/aro-operator-client
-	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/Azure/ARO-RP pkg/util/aro-operator-client
-	# remaining generation
+generate:
 	go generate ./...
 
 image-aro: aro
