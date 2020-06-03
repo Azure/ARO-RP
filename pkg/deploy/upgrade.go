@@ -24,6 +24,12 @@ func (d *deployer) Upgrade(ctx context.Context) error {
 		return err
 	}
 
+	// maybe starting the new RP and stopping all the old ones in the same
+	// minute is causing some of our alert noisiness.  Let's try a sleep and see
+	// if that helps.
+	d.log.Print("sleeping 5 minutes")
+	time.Sleep(5 * time.Minute)
+
 	return d.removeOldScalesets(ctx)
 }
 
