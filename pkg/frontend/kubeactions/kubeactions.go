@@ -19,6 +19,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
+	kadiscovery "github.com/Azure/ARO-RP/pkg/frontend/kubeactions/discovery"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
 
@@ -107,10 +108,12 @@ func (ka *kubeactions) getClient(oc *api.OpenShiftCluster) (dynamic.Interface, [
 		return nil, nil, err
 	}
 
-	cli, err := discovery.NewDiscoveryClientForConfig(restconfig)
+	var cli discovery.DiscoveryInterface
+	cli, err = discovery.NewDiscoveryClientForConfig(restconfig)
 	if err != nil {
 		return nil, nil, err
 	}
+	cli = kadiscovery.NewCacheFallbackDiscoveryClient(ka.log, cli)
 
 	_, apiresources, err := cli.ServerGroupsAndResources()
 	if err != nil {

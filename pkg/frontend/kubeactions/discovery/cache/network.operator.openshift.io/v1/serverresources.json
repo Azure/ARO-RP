@@ -1,0 +1,1 @@
+{"kind":"APIResourceList","apiVersion":"v1","groupVersion":"network.operator.openshift.io/v1","resources":[{"name":"operatorpkis","singularName":"operatorpki","namespaced":true,"kind":"OperatorPKI","verbs":["delete","deletecollection","get","list","patch","create","update","watch"],"storageVersionHash":"05e+cURVIcw="}]}
