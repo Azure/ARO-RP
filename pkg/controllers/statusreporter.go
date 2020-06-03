@@ -43,11 +43,11 @@ func NewStatusReporter(log *logrus.Entry, arocli aroclient.AroV1alpha1Interface,
 	}
 }
 
-func (r *StatusReporter) SetNoInternetConnection(ctx context.Context, connectionErr error) error {
+func (r *StatusReporter) SetNoInternetConnection(ctx context.Context, sitesNotAvailable map[string]string) error {
 	time := metav1.Now()
-	msg := "Outgoing connection failed"
-	if connectionErr != nil {
-		msg += ": " + connectionErr.Error()
+	msg := ""
+	for k, v := range sitesNotAvailable {
+		msg += "[" + k + "] " + v + "\n"
 	}
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		co, err := r.arocli.Clusters().Get(r.name, v1.GetOptions{})
@@ -94,8 +94,12 @@ func (r *StatusReporter) SetInternetConnected(ctx context.Context) error {
 func setStaticStatus(status *aro.ClusterStatus) {
 	if len(status.RelatedObjects) == 0 {
 		status.RelatedObjects = []corev1.ObjectReference{
-			{Kind: "Namespace", Name: OperatorNamespace},
 			{Kind: "Secret", Name: "pull-secret", Namespace: "openshift-config"},
+			{Kind: "Namespace", Name: "openshift-azure-logging"},
+			{Kind: "ConfigMap", Name: "fluent-config", Namespace: "openshift-azure-logging"},
+			{Kind: "ServiceAccount", Name: "geneva", Namespace: "openshift-azure-logging"},
+			{Kind: "SecurityContextConstraints", Name: "privileged-genevalogging"},
+			{Kind: "DaemonSet", Name: "mdsd", Namespace: "openshift-azure-logging"},
 		}
 	}
 	status.OperatorVersion = version.GitCommit

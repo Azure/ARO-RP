@@ -466,7 +466,11 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 		return err
 	}
 	for _, res := range resources {
-		err = g.dh.CreateOrUpdateObject(ctx, res)
+		un, err := g.dh.ToUnstructured(res)
+		if err != nil {
+			return err
+		}
+		err = g.dh.CreateOrUpdate(ctx, un)
 		if err != nil {
 			return err
 		}

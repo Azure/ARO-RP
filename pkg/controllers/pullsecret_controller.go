@@ -5,6 +5,7 @@ package controllers
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"io/ioutil"
 	"os"
 	"path"
@@ -32,10 +33,11 @@ var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "opens
 
 // PullsecretReconciler reconciles a Cluster object
 type PullsecretReconciler struct {
-	Kubernetescli kubernetes.Interface
-	AROCli        aroclient.AroV1alpha1Interface
-	Log           *logrus.Entry
-	Scheme        *runtime.Scheme
+	Kubernetescli           kubernetes.Interface
+	AROCli                  aroclient.AroV1alpha1Interface
+	Log                     *logrus.Entry
+	Scheme                  *runtime.Scheme
+	requiredRepoTokensStore map[string]string
 }
 
 // +kubebuilder:rbac:groups=aro.openshift.io,resources=clusters,verbs=get;list;watch;create;update;patch;delete
@@ -46,35 +48,61 @@ func (r *PullsecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 		// filter out other secrets.
 		return reconcile.Result{}, nil
 	}
-
+	if len(r.requiredRepoTokensStore) == 0 {
+		// nothing to do.
+		return reconcile.Result{}, nil
+	}
 	r.Log.Info("Reconciling pull-secret")
 
-	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		var isCreate bool
-		ps, err := r.Kubernetescli.CoreV1().Secrets(request.Namespace).Get(request.Name, metav1.GetOptions{})
-		switch {
-		case apierrors.IsNotFound(err):
-			ps = &v1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      request.Name,
-					Namespace: request.Namespace,
-				},
-				Type: v1.SecretTypeDockerConfigJson,
-			}
-			isCreate = true
-		case err != nil:
-			return err
-		}
-
-		changed, err := r.pullSecretRepair(ps)
+	return reconcile.Result{}, retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		ps, isCreate, err := r.pullsecret(request)
 		if err != nil {
 			return err
 		}
 
+		// validate
+		if !json.Valid(ps.Data[v1.DockerConfigJsonKey]) {
+			delete(ps.Data, v1.DockerConfigJsonKey)
+		}
+		if ps.Data == nil {
+			ps.Data = map[string][]byte{}
+		}
+
+		// repair data
+		newPS, changed, err := pullsecret.Replace(ps.Data[corev1.DockerConfigJsonKey], r.requiredRepoTokensStore)
+		if err != nil {
+			return err
+		}
+
+		// repair Secret type
+		if ps.Type != v1.SecretTypeDockerConfigJson {
+			ps = &v1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "pull-secret",
+					Namespace: "openshift-config",
+				},
+				Type: v1.SecretTypeDockerConfigJson,
+				Data: map[string][]byte{},
+			}
+			isCreate = true
+			changed = true
+
+			// unfortunately the type field is immutable.
+			err = r.Kubernetescli.CoreV1().Secrets(ps.Namespace).Delete(ps.Name, nil)
+			if err != nil {
+				return err
+			}
+
+			// there is a small risk of crashing here: if that happens, we will
+			// restart, create a new pull secret, and will have dropped the rest
+			// of the customer's pull secret on the floor :-(
+		}
 		if !changed {
 			r.Log.Info("Skip reconcile: Pull Secret repair not required")
 			return nil
 		}
+
+		ps.Data[corev1.DockerConfigJsonKey] = newPS
 
 		if isCreate {
 			r.Log.Info("Re-creating the Pull Secret")
@@ -85,56 +113,72 @@ func (r *PullsecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 		}
 		return err
 	})
-	if err != nil {
-		r.Log.Errorf("Failed to repair the Pull Secret : %v", err)
-		return reconcile.Result{}, err
-	}
-	r.Log.Info("done, requeueing")
-	return reconcile.Result{}, nil
 }
 
-func (r *PullsecretReconciler) pullSecretRepair(cr *corev1.Secret) (bool, error) {
-	if cr.Data == nil {
-		cr.Data = map[string][]byte{}
+func (r *PullsecretReconciler) pullsecret(request ctrl.Request) (*v1.Secret, bool, error) {
+	var isCreate bool
+	ps, err := r.Kubernetescli.CoreV1().Secrets(request.Namespace).Get(request.Name, metav1.GetOptions{})
+	switch {
+	case apierrors.IsNotFound(err):
+		ps = &v1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      request.Name,
+				Namespace: request.Namespace,
+			},
+			Type: v1.SecretTypeDockerConfigJson,
+		}
+		isCreate = true
+	case err != nil:
+		return nil, false, err
 	}
+	return ps, isCreate, nil
+}
 
+func (r *PullsecretReconciler) requiredRepoTokens() (map[string]string, error) {
 	// The idea here is you mount a secret as a file under /pull-secrets with
 	// the same name as the registry in the pull secret.
 	psPath := "/pull-secrets"
-	pathOverride := os.Getenv("PULL_SECRET_PATH") // for development
-	if pathOverride != "" {
-		psPath = pathOverride
+	if os.Getenv("RP_MODE") == "development" {
+		pathOverride := os.Getenv("PULL_SECRET_PATH") // for development
+		if pathOverride != "" {
+			psPath = pathOverride
+			r.Log.Warnf("running outside the cluster, using override path %s", pathOverride)
+		} else {
+			r.Log.Warnf("running outside the cluster, disabling pull secret controller")
+			return map[string]string{}, nil
+		}
 	}
-	secrets := map[string]string{}
+	repoTokens := map[string]string{}
 
 	files, err := ioutil.ReadDir(psPath)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 	for _, fName := range files {
 		fpath := path.Join(psPath, fName.Name())
 		if fName.IsDir() || strings.HasPrefix(fName.Name(), "..") {
 			continue
 		}
-		r.Log.Infof("pullSecretRepair: %s", fpath)
+		r.Log.Infof("requiredRepo: %s", fpath)
 		data, err := ioutil.ReadFile(fpath)
 		if err != nil {
-			return false, err
+			return nil, err
 		}
-		secrets[fName.Name()] = base64.StdEncoding.EncodeToString(data)
+		repoTokens[fName.Name()] = base64.StdEncoding.EncodeToString(data)
 	}
+	return repoTokens, nil
+}
 
-	newPS, changed, err := pullsecret.Replace(cr.Data[corev1.DockerConfigJsonKey], secrets)
-	if err != nil {
-		return false, err
-	}
-	if changed {
-		cr.Data[corev1.DockerConfigJsonKey] = newPS
-	}
-	return changed, nil
+func triggerReconcile(secret *corev1.Secret) bool {
+	return secret.Name == pullSecretName.Name && secret.Namespace == pullSecretName.Namespace
 }
 
 func (r *PullsecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	var err error
+	r.requiredRepoTokensStore, err = r.requiredRepoTokens()
+	if err != nil {
+		return err
+	}
 	isPullSecret := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			oldSecret, ok := e.ObjectOld.(*corev1.Secret)
@@ -145,22 +189,21 @@ func (r *PullsecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			if !ok {
 				return false
 			}
-			return (oldSecret.Name == pullSecretName.Name && oldSecret.Namespace == pullSecretName.Namespace ||
-				newSecret.Name == pullSecretName.Name && newSecret.Namespace == pullSecretName.Namespace)
+			return (triggerReconcile(oldSecret) || triggerReconcile(newSecret))
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
 			secret, ok := e.Object.(*corev1.Secret)
 			if !ok {
 				return false
 			}
-			return secret.Name == pullSecretName.Name && secret.Namespace == pullSecretName.Namespace
+			return triggerReconcile(secret)
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
 			secret, ok := e.Object.(*corev1.Secret)
 			if !ok {
 				return false
 			}
-			return secret.Name == pullSecretName.Name && secret.Namespace == pullSecretName.Namespace
+			return triggerReconcile(secret)
 		},
 	}
 	return ctrl.NewControllerManagedBy(mgr).

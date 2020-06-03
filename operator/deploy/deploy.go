@@ -9,7 +9,6 @@ import (
 	"crypto/x509"
 	"fmt"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/to"
@@ -19,7 +18,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -47,6 +45,7 @@ const (
 
 type Operator interface {
 	CreateOrUpdate(ctx context.Context) error
+	IsReady() (bool, error)
 }
 
 type operator struct {
@@ -82,9 +81,10 @@ func New(log *logrus.Entry, e env.Interface, oc *api.OpenShiftCluster, cli kuber
 		return nil, err
 	}
 	dh, err := dynamichelper.New(log, restConfig, dynamichelper.UpdatePolicy{
-		IgnoreDefaults:  true,
-		LogChanges:      true,
-		RetryOnConflict: true,
+		IgnoreDefaults:                true,
+		LogChanges:                    true,
+		RetryOnConflict:               true,
+		RefreshAPIResourcesOnNotFound: true,
 	})
 	if err != nil {
 		return nil, err
@@ -216,21 +216,19 @@ func (o *operator) deployment() *appsv1.Deployment {
 
 func (o *operator) resources(ctx context.Context) ([]runtime.Object, error) {
 	// first static resources from Assets
-	b, err := Asset("resources.yaml")
-	if err != nil {
-		return nil, err
-	}
 	results := []runtime.Object{}
-	manifests := strings.Split(string(b), "---")
-	for _, manifeststr := range manifests {
+	for _, assetName := range AssetNames() {
+		b, err := Asset(assetName)
+		if err != nil {
+			return nil, err
+		}
 		obj := &unstructured.Unstructured{}
-		err := yaml.Unmarshal([]byte(manifeststr), obj)
+		err = yaml.Unmarshal(b, obj)
 		if err != nil {
 			return nil, err
 		}
 		results = append(results, obj)
 	}
-
 	// then dynamic resources
 	gcsKeyBytes, err := tls.PrivateKeyAsBytes(o.genevaloggingKey)
 	if err != nil {
@@ -242,7 +240,7 @@ func (o *operator) resources(ctx context.Context) ([]runtime.Object, error) {
 		return nil, err
 	}
 
-	ssc, err := o.securityContextConstraints(ctx, "privileged-operator", kubeServiceAccount)
+	ssc, err := o.securityContextConstraints(ctx, "privileged-aro-operator", kubeServiceAccount)
 	if err != nil {
 		return nil, err
 	}
@@ -308,23 +306,25 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 		return err
 	}
 	for _, res := range resources {
-		err = o.dh.CreateOrUpdateObject(ctx, res)
+		un, err := o.dh.ToUnstructured(res)
+		if err != nil {
+			return err
+		}
+		err = o.dh.CreateOrUpdate(ctx, un)
 		if err != nil {
 			return err
 		}
 	}
+	return nil
+}
 
-	o.log.Print("waiting for operator to come up")
-	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
-	defer cancel()
-	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-		dep, err := o.cli.AppsV1().Deployments(o.namespace).Get("aro-operator", metav1.GetOptions{})
-		if err != nil && !apierrors.IsNotFound(err) {
-			return false, nil
-		} else if err != nil {
-			return false, err
-		}
+func (o *operator) IsReady() (bool, error) {
+	dc, err := o.cli.AppsV1().Deployments(o.namespace).Get("aro-operator", metav1.GetOptions{})
+	if err != nil {
+		return false, err
+	}
 
-		return dep.Status.AvailableReplicas == 1, nil
-	}, timeoutCtx.Done())
+	return (*dc.Spec.Replicas == dc.Status.AvailableReplicas &&
+		*dc.Spec.Replicas == dc.Status.UpdatedReplicas &&
+		dc.Generation == dc.Status.ObservedGeneration), nil
 }
