@@ -18,7 +18,7 @@
   revision = "3a14fb1c4737b3995174c5f4d6d08a348b9b4180"
 
 [[projects]]
-  digest = "1:19dc0c29c96999771f65e935f640bee2d58445d7b024242f802621866c88812a"
+  digest = "1:d0bbb471e62fc58cec4e6a2ef4ce1494859bfe0214abfa71a5ef092d5d0bf067"
   name = "github.com/Azure/azure-sdk-for-go"
   packages = [
     "profiles/latest/dns/mgmt/dns",
@@ -36,21 +36,22 @@
     "services/network/mgmt/2018-12-01/network",
     "services/network/mgmt/2019-07-01/network",
     "services/preview/authorization/mgmt/2018-09-01-preview/authorization",
+    "services/preview/containerregistry/mgmt/2019-12-01-preview/containerregistry",
     "services/preview/monitor/mgmt/2018-03-01/insights",
     "services/privatedns/mgmt/2018-09-01/privatedns",
     "services/resources/mgmt/2019-05-01/resources",
-    "services/resources/mgmt/2019-06-01/subscriptions",
     "services/resources/mgmt/2019-07-01/features",
+    "services/resources/mgmt/2019-11-01/subscriptions",
     "services/storage/mgmt/2019-04-01/storage",
     "storage",
     "version",
   ]
   pruneopts = "UT"
-  revision = "58f0a1b3cf842e1d702da8226e100f726ec26579"
-  version = "v40.2.0"
+  revision = "7da5bb2d5ffd1a370c899d15fac9b59f4332c5bd"
+  version = "v41.3.0"
 
 [[projects]]
-  digest = "1:0f5cec94ea46ab37f6b95e52a4b70761ada57b809059aba2d332ec0813416920"
+  digest = "1:4621d189edcc3acfc8f9e1b98513f24d9b318574df1406b28cde265d598e8c85"
   name = "github.com/Azure/go-autorest"
   packages = [
     "autorest",
@@ -65,8 +66,8 @@
     "tracing",
   ]
   pruneopts = "UT"
-  revision = "327ff6ce8b902f9afe648d5ea8ff6dc26c26f150"
-  version = "v13.4.0"
+  revision = "778ae565bde392f58e04c3c8ff07c2ac506d00c9"
+  version = "v14.1.1"
 
 [[projects]]
   digest = "1:9f3b30d9f8e0d7040f729b82dcbc8f0dead820a133b3147ce355fc451f32d761"
@@ -1935,6 +1936,7 @@
     "github.com/Azure/azure-sdk-for-go/services/msi/mgmt/2018-11-30/msi",
     "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network",
     "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization",
+    "github.com/Azure/azure-sdk-for-go/services/preview/containerregistry/mgmt/2019-12-01-preview/containerregistry",
     "github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights",
     "github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns",
     "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features",
@@ -1958,6 +1960,7 @@
     "github.com/containers/image/signature",
     "github.com/containers/image/types",
     "github.com/coreos/go-systemd/journal",
+    "github.com/davecgh/go-spew/spew",
     "github.com/dgrijalva/jwt-go",
     "github.com/ghodss/yaml",
     "github.com/go-bindata/go-bindata/go-bindata",

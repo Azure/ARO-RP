@@ -84,7 +84,7 @@ func (client Client) GetPreparer(ctx context.Context, subscriptionID string) (*h
 		"subscriptionId": autorest.Encode("path", subscriptionID),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2019-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -152,7 +152,7 @@ func (client Client) List(ctx context.Context) (result ListResultPage, err error
 
 // ListPreparer prepares the List request.
 func (client Client) ListPreparer(ctx context.Context) (*http.Request, error) {
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2019-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -263,7 +263,7 @@ func (client Client) ListLocationsPreparer(ctx context.Context, subscriptionID s
 		"subscriptionId": autorest.Encode("path", subscriptionID),
 	}
 
-	const APIVersion = "2019-06-01"
+	const APIVersion = "2019-11-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
