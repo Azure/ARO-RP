@@ -6,11 +6,8 @@ package acrtoken
 import (
 	"context"
 	"net/http"
-	"os"
 
-	"github.com/davecgh/go-spew/spew"
-
-	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/containerregistry/mgmt/2019-06-01-preview/containerregistry"
+	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/preview/containerregistry/mgmt/2019-12-01-preview/containerregistry"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -36,6 +33,7 @@ type manager struct {
 
 	tokens     containerregistry.TokensClient
 	registries containerregistry.RegistriesClient
+	pec        containerregistry.PrivateEndpointConnectionsClient
 }
 
 func NewManager(env env.Interface, localFPAuthorizer autorest.Authorizer) (Manager, error) {
@@ -50,6 +48,7 @@ func NewManager(env env.Interface, localFPAuthorizer autorest.Authorizer) (Manag
 
 		tokens:     containerregistry.NewTokensClient(r.SubscriptionID, localFPAuthorizer),
 		registries: containerregistry.NewRegistriesClient(r.SubscriptionID, localFPAuthorizer),
+		pec:        containerregistry.NewPrivateEndpointConnectionsClient(r.SubscriptionID, localFPAuthorizer),
 	}
 
 	return m, nil
@@ -122,12 +121,30 @@ func (m *manager) Delete(ctx context.Context, rp *api.RegistryProfile) error {
 }
 
 func (m *manager) ApprovePrivateEndpoint(ctx context.Context, oc *api.OpenShiftCluster) error {
-	acr, err := m.registries.Get(ctx, m.r.ResourceGroup, m.r.ResourceName)
+	infraID := oc.Properties.InfraID
+	if infraID == "" {
+		infraID = "aro" // TODO: remove after deploy
+	}
+	peName := infraID + "-arosvc-pe"
+	// Private endpoint name is not primary input for pec.Get. We have to list :/
+	pecs, err := m.pec.List(ctx, m.r.ResourceGroup, m.r.ResourceName)
 	if err != nil {
-		spew.Dump(err)
 		return err
 	}
-	spew.Dump(acr.RegistryProperties)
-	os.Exit(1)
+
+	for _, pec := range pecs {
+		r, err := azure.ParseResourceID(*pec.PrivateEndpointConnectionProperties.PrivateEndpoint.ID)
+		if err != nil {
+			return err
+		}
+		if r.ResourceName == peName {
+			pec.PrivateEndpointConnectionProperties.PrivateLinkServiceConnectionState.Status = mgmtcontainerregistry.Approved
+			_, err := m.pec.CreateOrUpdate(ctx, m.r.ResourceGroup, m.r.ResourceName, *pec.Name, pec)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }

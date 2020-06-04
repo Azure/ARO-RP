@@ -19,7 +19,7 @@
                     {
                         "actions": [
                             "Microsoft.Resources/subscriptions/resourceGroups/write",
-                            "Microsoft.ContainerRegistry/registries/read"
+                            "Microsoft.ContainerRegistry/registries/*"
                         ]
                     }
                 ],

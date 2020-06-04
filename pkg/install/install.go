@@ -39,9 +39,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
-	dnscli "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/privatedns"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
@@ -72,13 +72,14 @@ type Installer struct {
 	deployments       features.DeploymentsClient
 	groups            features.ResourceGroupsClient
 	accounts          storage.AccountsClient
-	dnscli            dnscli.RecordSetsClient
+	recordsets        privatedns.RecordSetsClient
 
-	acr             acrtoken.Manager
-	dns             dns.Manager
-	keyvault        keyvault.Manager
-	privateendpoint privateendpoint.Manager
-	subnet          subnet.Manager
+	acr                    acrtoken.Manager
+	dns                    dns.Manager
+	keyvault               keyvault.Manager
+	privateendpointRp      privateendpoint.Manager
+	privateendpointCluster privateendpoint.Manager
+	subnet                 subnet.Manager
 
 	kubernetescli kubernetes.Interface
 	operatorcli   operatorclient.Interface
@@ -147,13 +148,14 @@ func NewInstaller(ctx context.Context, log *logrus.Entry, _env env.Interface, db
 		deployments:       features.NewDeploymentsClient(r.SubscriptionID, fpAuthorizer),
 		groups:            features.NewResourceGroupsClient(r.SubscriptionID, fpAuthorizer),
 		accounts:          storage.NewAccountsClient(r.SubscriptionID, fpAuthorizer),
-		dnscli:            dnscli.NewRecordSetsClient(r.SubscriptionID, fpAuthorizer),
+		recordsets:        privatedns.NewRecordSetsClient(r.SubscriptionID, fpAuthorizer),
 
-		acr:             acrManager,
-		dns:             dns.NewManager(_env, localFPAuthorizer),
-		keyvault:        keyvault.NewManager(localFPKVAuthorizer),
-		privateendpoint: privateendpoint.NewManager(_env, localFPAuthorizer),
-		subnet:          subnet.NewManager(r.SubscriptionID, fpAuthorizer),
+		acr:                    acrManager,
+		dns:                    dns.NewManager(_env, localFPAuthorizer),
+		keyvault:               keyvault.NewManager(localFPKVAuthorizer),
+		privateendpointRp:      privateendpoint.NewManager(_env.SubscriptionID(), _env.ResourceGroup(), localFPAuthorizer),
+		privateendpointCluster: privateendpoint.NewManager(r.SubscriptionID, r.ResourceGroup, fpAuthorizer),
+		subnet:                 subnet.NewManager(r.SubscriptionID, fpAuthorizer),
 	}, nil
 }
 
@@ -189,7 +191,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			action(i.createRPPrivateEndpoint),
 			action(i.updateAPIIP),
 			action(i.approveACRPrivateEndpoint),
-			//action(i.updateACRIP),
+			action(i.updateACRIP),
 			action(i.createCertificates),
 			action(i.initializeKubernetesClients),
 			condition{i.bootstrapConfigMapReady, 30 * time.Minute},

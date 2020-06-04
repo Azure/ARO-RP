@@ -7,10 +7,10 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 
+	mgmtprivatedns "github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
 	"github.com/Azure/go-autorest/autorest/to"
-
-	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/password"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -81,7 +81,7 @@ func (i *Installer) updateAPIIP(ctx context.Context) error {
 		return err
 	}
 
-	privateEndpointIP, err := i.privateendpoint.GetIP(ctx, i.doc)
+	privateEndpointIP, err := i.privateendpointRp.GetIPRP(ctx, i.doc)
 	if err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func (i *Installer) updateAPIIP(ctx context.Context) error {
 }
 
 func (i *Installer) createRPPrivateEndpoint(ctx context.Context) error {
-	return i.privateendpoint.Create(ctx, i.doc)
+	return i.privateendpointRp.CreateRP(ctx, i.doc)
 }
 
 func (i *Installer) approveACRPrivateEndpoint(ctx context.Context) error {
@@ -109,49 +109,51 @@ func (i *Installer) updateACRIP(ctx context.Context) error {
 		infraID = "aro" // TODO: remove after deploy
 	}
 
+	//resourceGroup := stringutils.LastTokenByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	ips, err := i.privateendpointCluster.GetIPsACR(ctx, i.doc)
+	if err != nil {
+		return err
+	}
+
+	// TODO: We need to make sure we update existing cluster DNS records
+	// with new ACR replicas when added
 	resourceGroup := stringutils.LastTokenByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-	ipAddress, err := i.privateendpoint.GetIP(ctx, i.doc)
-	if err != nil {
-		return err
-	}
-
-	_, err = i.dnscli.CreateOrUpdate(ctx, resourceGroup, "privatelink.azurecr.io", "", mgmtdns.A, mgmtdns.RecordSet{
-		Name: to.StringPtr("acrsvc"),
-		RecordSetProperties: &mgmtdns.RecordSetProperties{
-			ARecords: &[]mgmtdns.ARecord{
+	rs := mgmtprivatedns.RecordSet{
+		RecordSetProperties: &mgmtprivatedns.RecordSetProperties{
+			TTL: to.Int64Ptr(300),
+			ARecords: &[]mgmtprivatedns.ARecord{
 				{
-					Ipv4Address: to.StringPtr(ipAddress),
+					Ipv4Address: to.StringPtr(ips["registry-registry.privateEndpoint"]),
 				},
 			},
 		},
-	}, "", "")
+	}
+
+	_, err = i.recordsets.CreateOrUpdate(ctx, resourceGroup, "privatelink.azurecr.io", mgmtprivatedns.A, "acrdev", rs, "", "*")
 	if err != nil {
 		return err
 	}
 
-	_, err = i.dnscli.CreateOrUpdate(ctx, resourceGroup, "privatelink.azurecr.io", "", mgmtdns.A, mgmtdns.RecordSet{
-		Name: to.StringPtr(fmt.Sprint("arosvc.%s.data", i.doc.OpenShiftCluster.Location)),
-		RecordSetProperties: &mgmtdns.RecordSetProperties{
-			ARecords: &[]mgmtdns.ARecord{
-				{
-					Ipv4Address: to.StringPtr(ipAddress),
+	delete(ips, "registry-registry.privateEndpoint")
+
+	// construct registry-registry_data_region.privateEndpoint -> registry-name.region.data
+	for key, ip := range ips {
+		k := strings.Trim(key, "registry-registry_data_")
+		k = strings.Trim(k, ".privateEndpoint")
+		_, err = i.recordsets.CreateOrUpdate(ctx, resourceGroup, "privatelink.azurecr.io", mgmtprivatedns.A, "acrdev."+k+".data", mgmtprivatedns.RecordSet{
+			RecordSetProperties: &mgmtprivatedns.RecordSetProperties{
+				ARecords: &[]mgmtprivatedns.ARecord{
+					{
+						Ipv4Address: to.StringPtr(ip),
+					},
 				},
 			},
-		},
-	}, "", "")
-	if err != nil {
-		return err
+		}, "", "*")
+		if err != nil {
+			return err
+		}
+
 	}
 
-	privateEndpointIP, err := i.privateendpoint.GetIP(ctx, i.doc)
-	if err != nil {
-		return err
-	}
-
-	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.NetworkProfile.PrivateEndpointIP = privateEndpointIP
-		doc.OpenShiftCluster.Properties.APIServerProfile.IP = ipAddress
-		return nil
-	})
-	return err
+	return nil
 }
