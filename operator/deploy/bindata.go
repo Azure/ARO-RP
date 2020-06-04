@@ -4,6 +4,7 @@
 // deploy/staticresources/aro.openshift.io_clusters.yaml
 // deploy/staticresources/master/role.yaml
 // deploy/staticresources/master/rolebinding.yaml
+// deploy/staticresources/master/service.yaml
 // deploy/staticresources/master/serviceaccount.yaml
 // deploy/staticresources/namespace.yaml
 // deploy/staticresources/worker/role.yaml
@@ -141,6 +142,26 @@ func masterRolebindingYaml() (*asset, error) {
 	}
 
 	info := bindataFileInfo{name: "master/rolebinding.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _masterServiceYaml = []byte("\x1f\x8b\x08\x00\x00\x00\x00\x00\x00\xff\x74\x8d\x31\x0a\xc3\x30\x0c\x45\x77\x9f\x42\x17\x30\x34\x5b\xf0\x35\x0a\xdd\x85\xf3\x4b\x4c\x6b\x4b\x48\x6a\x86\x9e\xbe\xa4\x09\xdd\xba\x09\xbd\xc7\xfb\xac\xed\x06\xf3\x26\xa3\xd0\x36\xa5\x47\x1b\x4b\xa1\x2b\x6c\x6b\x15\xa9\x23\x78\xe1\xe0\x92\x88\x06\x77\x14\x62\x93\x2c\x0a\xe3\x10\xcb\x9d\x3d\x60\x27\x73\xe5\x8a\x42\xa2\x18\xbe\xb6\x7b\x64\x7e\xbf\x0c\x3f\x39\xb9\xa2\xee\x1d\xc7\x13\x35\xc4\xf6\x9b\x88\x55\xff\x45\x55\x2c\xfc\xb0\xf2\xb9\xbe\x46\xe8\xf7\x71\xd0\x42\xf3\x65\x9e\xd2\x27\x00\x00\xff\xff\x04\x58\x19\xc2\xc3\x00\x00\x00")
+
+func masterServiceYamlBytes() ([]byte, error) {
+	return bindataRead(
+		_masterServiceYaml,
+		"master/service.yaml",
+	)
+}
+
+func masterServiceYaml() (*asset, error) {
+	bytes, err := masterServiceYamlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "master/service.yaml", size: 0, mode: os.FileMode(0), modTime: time.Unix(0, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -300,6 +321,7 @@ var _bindata = map[string]func() (*asset, error){
 	"aro.openshift.io_clusters.yaml": aroOpenshiftIo_clustersYaml,
 	"master/role.yaml":               masterRoleYaml,
 	"master/rolebinding.yaml":        masterRolebindingYaml,
+	"master/service.yaml":            masterServiceYaml,
 	"master/serviceaccount.yaml":     masterServiceaccountYaml,
 	"namespace.yaml":                 namespaceYaml,
 	"worker/role.yaml":               workerRoleYaml,
@@ -352,6 +374,7 @@ var _bintree = &bintree{nil, map[string]*bintree{
 	"master": {nil, map[string]*bintree{
 		"role.yaml":           {masterRoleYaml, map[string]*bintree{}},
 		"rolebinding.yaml":    {masterRolebindingYaml, map[string]*bintree{}},
+		"service.yaml":        {masterServiceYaml, map[string]*bintree{}},
 		"serviceaccount.yaml": {masterServiceaccountYaml, map[string]*bintree{}},
 	}},
 	"namespace.yaml": {namespaceYaml, map[string]*bintree{}},

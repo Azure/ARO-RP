@@ -40,8 +40,7 @@ func (r *AlertWebhookReconciler) Reconcile(request ctrl.Request) (ctrl.Result, e
 		return reconcile.Result{}, nil
 	}
 
-	// TODO run our own web server and use that address
-	return reconcile.Result{}, r.setAlertManagerWebhook("http://localhost:1234/")
+	return reconcile.Result{}, r.setAlertManagerWebhook("http://aro-operator-master.openshift-azure-operator:8081")
 }
 
 // setAlertManagerWebhook is a hack to disable the

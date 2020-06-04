@@ -37,7 +37,7 @@ global:
 receivers:
 - name: "null"
   webhook_configs:
-  - url: http://localhost:1234/
+  - url: "http://aro-operator-master.openshift-azure-operator:8081"
 route:
   group_by:
   - job
@@ -65,7 +65,7 @@ func TestSetAlertManagerWebhook(t *testing.T) {
 		}),
 	}
 
-	err := i.setAlertManagerWebhook("http://localhost:1234/")
+	err := i.setAlertManagerWebhook("http://aro-operator-master.openshift-azure-operator:8081")
 	if err != nil {
 		t.Fatal(err)
 	}
