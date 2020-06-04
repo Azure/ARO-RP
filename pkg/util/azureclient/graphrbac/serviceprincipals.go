@@ -14,6 +14,8 @@ import (
 type ServicePrincipalClient interface {
 	ServicePrincipalClientAddons
 	Create(ctx context.Context, parameters graphrbac.ServicePrincipalCreateParameters) (result graphrbac.ServicePrincipal, err error)
+	Get(ctx context.Context, objectID string) (result graphrbac.ServicePrincipal, err error)
+	Delete(ctx context.Context, objectID string) (result autorest.Response, err error)
 }
 
 type servicePrincipalClient struct {
