@@ -42,7 +42,10 @@ func (r *CPValidator) validateClusterServicePrincipal(ctx context.Context, insta
 		return err
 	}
 
-	spnV := validate.NewServicePrincipalValidator(r.Log, spp, instance.Spec.ResourceID, instance.Spec.MasterSubnetID, instance.Spec.WorkerSubnetIDs[0])
+	spnV := validate.NewServicePrincipalValidator(r.Log, spp,
+		instance.Spec.ResourceID,
+		instance.Spec.ServicePrincipalValidation.MasterSubnetID,
+		instance.Spec.ServicePrincipalValidation.WorkerSubnetIDs[0])
 	err = spnV.Validate(ctx)
 	if err != nil {
 		return r.sr.SetConditionFalse(ctx, aro.ClusterServicePrincipalAuthorized, err.Error())

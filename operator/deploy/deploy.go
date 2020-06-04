@@ -102,15 +102,17 @@ func New(log *logrus.Entry, e env.Interface, oc *api.OpenShiftCluster, cli kuber
 		servicePrincipal:  sp,
 
 		cluserSpec: &aro.ClusterSpec{
-			ResourceID:     oc.ID,
-			ACRName:        e.ACRName(),
-			MasterSubnetID: oc.Properties.MasterProfile.SubnetID,
+			ResourceID: oc.ID,
 			GenevaLogging: aro.GenevaLoggingSpec{
 				Namespace:                genevalogging.KubeNamespace,
+				ACRName:                  e.ACRName(),
 				ConfigVersion:            e.ClustersGenevaLoggingConfigVersion(),
 				MonitoringGCSEnvironment: e.ClustersGenevaLoggingEnvironment(),
 				MonitoringGCSRegion:      e.Location(),
 				MonitoringTenant:         e.Location(),
+			},
+			ServicePrincipalValidation: aro.ServicePrincipalValidationSpec{
+				MasterSubnetID: oc.Properties.MasterProfile.SubnetID,
 			},
 		},
 
@@ -120,7 +122,7 @@ func New(log *logrus.Entry, e env.Interface, oc *api.OpenShiftCluster, cli kuber
 		arocli: arocli,
 	}
 	for _, wp := range oc.Properties.WorkerProfiles {
-		o.cluserSpec.WorkerSubnetIDs = append(o.cluserSpec.WorkerSubnetIDs, wp.SubnetID)
+		o.cluserSpec.ServicePrincipalValidation.WorkerSubnetIDs = append(o.cluserSpec.ServicePrincipalValidation.WorkerSubnetIDs, wp.SubnetID)
 	}
 
 	for _, reg := range oc.Properties.RegistryProfiles {

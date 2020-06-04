@@ -50,7 +50,7 @@ func New(log *logrus.Entry, cs *aro.ClusterSpec, seccli securityclient.Interface
 		log: log,
 
 		resourceID:               cs.ResourceID,
-		acrName:                  cs.ACRName,
+		acrName:                  cs.GenevaLogging.ACRName,
 		namespace:                cs.GenevaLogging.Namespace,
 		configVersion:            cs.GenevaLogging.ConfigVersion,
 		monitoringGCSEnvironment: cs.GenevaLogging.MonitoringGCSEnvironment,

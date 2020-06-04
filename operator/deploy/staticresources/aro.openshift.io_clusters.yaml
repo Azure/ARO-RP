@@ -36,10 +36,10 @@ spec:
         spec:
           description: ClusterSpec defines the desired state of Cluster
           properties:
-            acrName:
-              type: string
             genevaLogging:
               properties:
+                acrName:
+                  type: string
                 configVersion:
                   pattern: '[0-9]+.[0-9]+'
                   type: string
@@ -55,9 +55,25 @@ spec:
                 namespace:
                   type: string
               type: object
+            internetChecker:
+              properties:
+                customSites:
+                  items:
+                    type: string
+                  type: array
+              type: object
             resourceId:
               description: ResourceID is the Azure resourceId of the cluster
               type: string
+            servicePrincipal:
+              properties:
+                masterSubnetId:
+                  type: string
+                workerSubnetIds:
+                  items:
+                    type: string
+                  type: array
+              type: object
           type: object
         status:
           description: ClusterStatus defines the observed state of Cluster

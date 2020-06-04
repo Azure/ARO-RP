@@ -19,6 +19,7 @@ var (
 
 type GenevaLoggingSpec struct {
 	Namespace string `json:"namespace,omitempty"`
+	ACRName   string `json:"acrName,omitempty"`
 	// +kubebuilder:validation:Pattern:=`[0-9]+.[0-9]+`
 	ConfigVersion       string `json:"configVersion,omitempty"`
 	MonitoringTenant    string `json:"monitoringTenant,omitempty"`
@@ -27,14 +28,22 @@ type GenevaLoggingSpec struct {
 	MonitoringGCSEnvironment string `json:"monitoringGCSEnvironment,omitempty"`
 }
 
+type ServicePrincipalValidationSpec struct {
+	MasterSubnetID  string   `json:"masterSubnetId,omitempty"`
+	WorkerSubnetIDs []string `json:"workerSubnetIds,omitempty"`
+}
+
+type InternetCheckerSpec struct {
+	CustomSites []string `json:"customSites,omitempty"`
+}
+
 // ClusterSpec defines the desired state of Cluster
 type ClusterSpec struct {
 	// ResourceID is the Azure resourceId of the cluster
-	ResourceID      string            `json:"resourceId,omitempty"`
-	ACRName         string            `json:"acrName,omitempty"`
-	GenevaLogging   GenevaLoggingSpec `json:"genevaLogging,omitempty"`
-	MasterSubnetID  string            `json:"masterSubnetId,omitempty"`
-	WorkerSubnetIDs []string          `json:"workerSubnetIds,omitempty"`
+	ResourceID                 string                         `json:"resourceId,omitempty"`
+	GenevaLogging              GenevaLoggingSpec              `json:"genevaLogging,omitempty"`
+	ServicePrincipalValidation ServicePrincipalValidationSpec `json:"servicePrincipal,omitempty"`
+	InternetChecker            InternetCheckerSpec            `json:"internetChecker,omitempty"`
 }
 
 // ClusterStatus defines the observed state of Cluster
