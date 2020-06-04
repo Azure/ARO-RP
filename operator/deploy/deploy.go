@@ -10,7 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"time"
+	"sort"
 
 	"github.com/Azure/go-autorest/autorest/to"
 	securityv1 "github.com/openshift/api/security/v1"
@@ -22,7 +22,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/yaml"
 
@@ -148,15 +147,7 @@ func (o *operator) aroOperatorImage() string {
 }
 
 func (o *operator) securityContextConstraints(ctx context.Context, name, serviceAccountName string) (*securityv1.SecurityContextConstraints, error) {
-	o.log.Print("waiting for privileged security context constraint")
-	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
-	defer cancel()
-	var scc *securityv1.SecurityContextConstraints
-	var err error
-	err = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-		scc, err = o.seccli.SecurityV1().SecurityContextConstraints().Get("privileged", metav1.GetOptions{})
-		return err == nil, nil
-	}, timeoutCtx.Done())
+	scc, err := o.seccli.SecurityV1().SecurityContextConstraints().Get("privileged", metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -351,11 +342,27 @@ func (o *operator) resources(ctx context.Context) ([]runtime.Object, error) {
 	return results, nil
 }
 
+var kindOrder = map[string]int{
+	"CustomResourceDefinition":   1,
+	"Namespace":                  2,
+	"ClusterRole":                3,
+	"ClusterRoleBinding":         4,
+	"SecurityContextConstraints": 5,
+	"ServiceAccount":             6,
+	"Secret":                     7,
+	"Deployment":                 8,
+	"Cluster":                    9,
+}
+
 func (o *operator) CreateOrUpdate(ctx context.Context) error {
 	resources, err := o.resources(ctx)
 	if err != nil {
 		return err
 	}
+	sort.Slice(resources, func(i, j int) bool {
+		return kindOrder[resources[i].GetObjectKind().GroupVersionKind().Kind] < kindOrder[resources[j].GetObjectKind().GroupVersionKind().Kind]
+	})
+
 	for _, res := range resources {
 		un, err := o.dh.ToUnstructured(res)
 		if err != nil {
