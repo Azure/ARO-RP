@@ -19,6 +19,7 @@ import (
 
 	aro "github.com/Azure/ARO-RP/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/util/aro-operator-client/clientset/versioned/typed/aro.openshift.io/v1alpha1"
+	"github.com/operator-framework/operator-sdk/pkg/status"
 )
 
 var sites = []string{
@@ -37,6 +38,7 @@ type InternetChecker struct {
 	Scheme        *runtime.Scheme
 	testurls      []string
 	sr            *StatusReporter
+	Placement     string
 }
 
 // SimpleHTTPClient to aid in mocking
@@ -77,14 +79,18 @@ func (r *InternetChecker) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	}
 
 	var err error
+	cTypeMap := map[string]status.ConditionType{
+		"master": aro.InternetReachableFromMaster,
+		"worker": aro.InternetReachableFromWorker,
+	}
 	if len(sitesNotAvailable) > 0 {
 		msg := ""
 		for k, v := range sitesNotAvailable {
 			msg += "[" + k + "] " + v + "\n"
 		}
-		err = r.sr.SetConditionFalse(ctx, aro.InternetReachable, msg)
+		err = r.sr.SetConditionFalse(ctx, cTypeMap[r.Placement], msg)
 	} else {
-		err = r.sr.SetConditionTrue(ctx, aro.InternetReachable, "Outgoing connection successful.")
+		err = r.sr.SetConditionTrue(ctx, cTypeMap[r.Placement], "Outgoing connection successful.")
 	}
 	if err != nil {
 		r.Log.Errorf("StatusReporter request:%v err:%v", request, err)

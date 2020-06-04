@@ -12,7 +12,8 @@ import (
 const SingletonClusterName = "cluster"
 
 var (
-	InternetReachable                 status.ConditionType = "InternetReachable"
+	InternetReachableFromMaster       status.ConditionType = "InternetReachableFromMaster"
+	InternetReachableFromWorker       status.ConditionType = "InternetReachableFromWorker"
 	ClusterServicePrincipalAuthorized status.ConditionType = "ClusterServicePrincipalAuthorized"
 )
 
