@@ -32,6 +32,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/genevalogging"
 	aroclient "github.com/Azure/ARO-RP/pkg/util/aro-operator-client/clientset/versioned/typed/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
+	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	"github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -361,15 +362,22 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	sort.Slice(resources, func(i, j int) bool {
-		return kindOrder[resources[i].GetObjectKind().GroupVersionKind().Kind] < kindOrder[resources[j].GetObjectKind().GroupVersionKind().Kind]
-	})
 
+	objects := []*unstructured.Unstructured{}
 	for _, res := range resources {
-		un, err := o.dh.ToUnstructured(res)
+		un, err := dynamichelper.ToUnstructured(res)
 		if err != nil {
 			return err
 		}
+		objects = append(objects, un)
+	}
+
+	dynamichelper.HashWorkloadConfigs(objects)
+
+	sort.Slice(objects, func(i, j int) bool {
+		return kindOrder[objects[i].GetKind()] < kindOrder[objects[j].GetKind()]
+	})
+	for _, un := range objects {
 		err = o.dh.CreateOrUpdate(ctx, un)
 		if err != nil {
 			return err

@@ -13,6 +13,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -78,8 +79,10 @@ func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		r.Log.Error(err)
 		return reconcile.Result{}, err
 	}
+
+	var objects []*unstructured.Unstructured
 	for _, res := range resources {
-		un, err := dh.ToUnstructured(res)
+		un, err := dynamichelper.ToUnstructured(res)
 		if err != nil {
 			r.Log.Error(err)
 			return reconcile.Result{}, err
@@ -95,7 +98,10 @@ func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 				return reconcile.Result{}, err
 			}
 		}
-
+		objects = append(objects, un)
+	}
+	dynamichelper.HashWorkloadConfigs(objects)
+	for _, un := range objects {
 		err = dh.CreateOrUpdate(ctx, un)
 		if err != nil {
 			r.Log.Error(err)
@@ -148,6 +154,6 @@ func genevaloggingRelatedObjects() []corev1.ObjectReference {
 // SetupWithManager setup our mananger
 func (r *GenevaloggingReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&aro.Cluster{}).Owns(&appsv1.DaemonSet{}).Owns(&corev1.Secret{}).Named(GenevaLoggingControllerName).
+		For(&aro.Cluster{}).Owns(&appsv1.DaemonSet{}).Owns(&corev1.Secret{}).Owns(&corev1.ConfigMap{}).Named(GenevaLoggingControllerName).
 		Complete(r)
 }

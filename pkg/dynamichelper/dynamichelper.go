@@ -32,7 +32,6 @@ type DynamicHelper interface {
 	List(ctx context.Context, groupKind, namespace string) ([]byte, error)
 	CreateOrUpdate(ctx context.Context, obj *unstructured.Unstructured) error
 	Delete(ctx context.Context, groupKind, namespace, name string) error
-	ToUnstructured(ro runtime.Object) (*unstructured.Unstructured, error)
 }
 
 type UpdatePolicy struct {
@@ -166,7 +165,7 @@ func (dh *dynamicHelper) List(ctx context.Context, groupKind, namespace string) 
 }
 
 // ToUnstructured converts a runtime.Object into an Unstructured
-func (dh *dynamicHelper) ToUnstructured(ro runtime.Object) (*unstructured.Unstructured, error) {
+func ToUnstructured(ro runtime.Object) (*unstructured.Unstructured, error) {
 	obj, ok := ro.(*unstructured.Unstructured)
 	if !ok {
 		b, err := yaml.Marshal(ro)
