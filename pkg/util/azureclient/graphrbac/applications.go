@@ -14,6 +14,7 @@ import (
 type ApplicationsClient interface {
 	ApplicationsClientAddons
 	Create(ctx context.Context, parameters graphrbac.ApplicationCreateParameters) (result graphrbac.Application, err error)
+	Get(ctx context.Context, applicationObjectID string) (result graphrbac.Application, err error)
 	GetServicePrincipalsIDByAppID(ctx context.Context, applicationID string) (result graphrbac.ServicePrincipalObjectResult, err error)
 	Delete(ctx context.Context, applicationObjectID string) (result autorest.Response, err error)
 }
