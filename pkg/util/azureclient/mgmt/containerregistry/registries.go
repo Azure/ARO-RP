@@ -4,16 +4,13 @@ package containerregistry
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
-
-	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/containerregistry/mgmt/2019-06-01-preview/containerregistry"
+	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/preview/containerregistry/mgmt/2019-12-01-preview/containerregistry"
 	"github.com/Azure/go-autorest/autorest"
 )
 
 // RegistriesClient is a minimal interface for azure RegistriesClient
 type RegistriesClient interface {
 	RegistriesAddons
-	Get(ctx context.Context, resourceGroupName string, registryName string) (result mgmtcontainerregistry.Registry, err error)
 }
 
 type registriesClient struct {
