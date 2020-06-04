@@ -16,7 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 
-	"github.com/Azure/ARO-RP/test/util/ready"
+	"github.com/Azure/ARO-RP/pkg/util/ready"
 )
 
 var _ = Describe("Scale nodes", func() {

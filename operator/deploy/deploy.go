@@ -379,20 +379,9 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 }
 
 func (o *operator) IsReady() (bool, error) {
-	dm, err := o.cli.AppsV1().Deployments(o.namespace).Get("aro-operator-master", metav1.GetOptions{})
-	if err != nil {
-		return false, err
+	ok, err := ready.CheckDeploymentIsReady(o.cli.AppsV1().Deployments(o.namespace), "aro-operator-master")()
+	if !ok || err != nil {
+		return ok, err
 	}
-
-	dw, err := o.cli.AppsV1().Deployments(o.namespace).Get("aro-operator-worker", metav1.GetOptions{})
-	if err != nil {
-		return false, err
-	}
-
-	return (*dm.Spec.Replicas == dm.Status.AvailableReplicas &&
-		*dm.Spec.Replicas == dm.Status.UpdatedReplicas &&
-		dm.Generation == dm.Status.ObservedGeneration &&
-		*dw.Spec.Replicas == dw.Status.AvailableReplicas &&
-		*dw.Spec.Replicas == dw.Status.UpdatedReplicas &&
-		dw.Generation == dw.Status.ObservedGeneration), nil
+	return ready.CheckDeploymentIsReady(o.cli.AppsV1().Deployments(o.namespace), "aro-operator-worker")()
 }

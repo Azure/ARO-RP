@@ -126,9 +126,7 @@ func (r *GenevaloggingReconciler) certificatesSecret(instance *aro.Cluster) (*v1
 				Name:      "certificates",
 				Namespace: instance.Spec.GenevaLogging.Namespace,
 			},
-		}
-		for k, v := range certs.StringData {
-			newCert.StringData[k] = v
+			Data: certs.Data,
 		}
 	} else if err != nil {
 		return nil, err
