@@ -5,6 +5,7 @@ package controllers
 
 import (
 	"context"
+	"sort"
 
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	"github.com/sirupsen/logrus"
@@ -101,6 +102,11 @@ func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		objects = append(objects, un)
 	}
 	dynamichelper.HashWorkloadConfigs(objects)
+
+	sort.Slice(objects, func(i, j int) bool {
+		return dynamichelper.KindLess(objects[i].GetKind(), objects[j].GetKind())
+	})
+
 	for _, un := range objects {
 		err = dh.CreateOrUpdate(ctx, un)
 		if err != nil {

@@ -355,18 +355,6 @@ func (o *operator) resources(ctx context.Context) ([]runtime.Object, error) {
 	return results, nil
 }
 
-var kindOrder = map[string]int{
-	"CustomResourceDefinition":   1,
-	"Namespace":                  2,
-	"ClusterRole":                3,
-	"ClusterRoleBinding":         4,
-	"SecurityContextConstraints": 5,
-	"ServiceAccount":             6,
-	"Secret":                     7,
-	"Deployment":                 8,
-	"Cluster":                    9,
-}
-
 func (o *operator) CreateOrUpdate(ctx context.Context) error {
 	resources, err := o.resources(ctx)
 	if err != nil {
@@ -385,7 +373,7 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 	dynamichelper.HashWorkloadConfigs(objects)
 
 	sort.Slice(objects, func(i, j int) bool {
-		return kindOrder[objects[i].GetKind()] < kindOrder[objects[j].GetKind()]
+		return dynamichelper.KindLess(objects[i].GetKind(), objects[j].GetKind())
 	})
 	for _, un := range objects {
 		err = o.dh.CreateOrUpdate(ctx, un)
