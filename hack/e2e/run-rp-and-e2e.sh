@@ -54,7 +54,7 @@ deploy_e2e_deps() {
     echo "🚀 Creating new RG: $ARO_RESOURCEGROUP and Vnet for cluster : $CLUSTER"
 
     echo "########## Create ARO RG : $ARO_RESOURCEGROUP ##########"
-    az group create -g "$ARO_RESOURCEGROUP" -l $LOCATION >/dev/null
+    az group create -g "$ARO_RESOURCEGROUP" -l $LOCATION --tags aroe2e >/dev/null
 
     echo "########## Create ARO Vnet ##########"
     az network vnet create \
