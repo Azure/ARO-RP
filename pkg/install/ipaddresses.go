@@ -129,7 +129,7 @@ func (i *Installer) updateACRIP(ctx context.Context) error {
 		},
 	}
 
-	_, err = i.recordsets.CreateOrUpdate(ctx, resourceGroup, "privatelink.azurecr.io", mgmtprivatedns.A, "acrdev", rs, "", "*")
+	_, err = i.recordsets.CreateOrUpdate(ctx, resourceGroup, "privatelink.azurecr.io", mgmtprivatedns.A, "arodev", rs, "", "")
 	if err != nil {
 		return err
 	}
@@ -140,15 +140,16 @@ func (i *Installer) updateACRIP(ctx context.Context) error {
 	for key, ip := range ips {
 		k := strings.Trim(key, "registry-registry_data_")
 		k = strings.Trim(k, ".privateEndpoint")
-		_, err = i.recordsets.CreateOrUpdate(ctx, resourceGroup, "privatelink.azurecr.io", mgmtprivatedns.A, "acrdev."+k+".data", mgmtprivatedns.RecordSet{
+		_, err = i.recordsets.CreateOrUpdate(ctx, resourceGroup, "privatelink.azurecr.io", mgmtprivatedns.A, "arodev."+k+".data", mgmtprivatedns.RecordSet{
 			RecordSetProperties: &mgmtprivatedns.RecordSetProperties{
+				TTL: to.Int64Ptr(300),
 				ARecords: &[]mgmtprivatedns.ARecord{
 					{
 						Ipv4Address: to.StringPtr(ip),
 					},
 				},
 			},
-		}, "", "*")
+		}, "", "")
 		if err != nil {
 			return err
 		}

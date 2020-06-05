@@ -137,7 +137,8 @@ func (m *manager) ApprovePrivateEndpoint(ctx context.Context, oc *api.OpenShiftC
 		if err != nil {
 			return err
 		}
-		if r.ResourceName == peName {
+		if r.ResourceName == peName &&
+			pec.PrivateEndpointConnectionProperties.PrivateLinkServiceConnectionState.Status != mgmtcontainerregistry.Approved {
 			pec.PrivateEndpointConnectionProperties.PrivateLinkServiceConnectionState.Status = mgmtcontainerregistry.Approved
 			_, err := m.pec.CreateOrUpdate(ctx, m.r.ResourceGroup, m.r.ResourceName, *pec.Name, pec)
 			if err != nil {
