@@ -40,7 +40,7 @@ type PullsecretReconciler struct {
 }
 
 // This is the permissions that this controller needs to work.
-// "make generate" will run kubebuilder and cause operator/deploy/staticresources/role.yaml to be updated
+// "make generate" will run kubebuilder and cause operator/deploy/staticresources/*/role.yaml to be updated
 // from the annotation below.
 // +kubebuilder:rbac:groups=aro.openshift.io,resources=clusters,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;update;patch;create

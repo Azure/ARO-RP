@@ -29,7 +29,7 @@ type AlertWebhookReconciler struct {
 }
 
 // This is the permissions that this controller needs to work.
-// "make generate" will run kubebuilder and cause operator/deploy/staticresources/role.yaml to be updated
+// "make generate" will run kubebuilder and cause operator/deploy/staticresources/*/role.yaml to be updated
 // from the annotation below.
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;update;patch;create
 

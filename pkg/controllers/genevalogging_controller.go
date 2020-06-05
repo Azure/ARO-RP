@@ -38,12 +38,12 @@ type GenevaloggingReconciler struct {
 }
 
 // This is the permissions that this controller needs to work.
-// "make generate" will run kubebuilder and cause operator/deploy/staticresources/role.yaml to be updated
+// "make generate" will run kubebuilder and cause operator/deploy/staticresources/*/role.yaml to be updated
 // from the annotation below.
 // +kubebuilder:rbac:groups=aro.openshift.io,resources=clusters;clusters/finalizers,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=apps,resources=daemonsets;daemonsets,verbs=list;watch;get;create;update
-// +kubebuilder:rbac:groups="",resources=namespaces;namespaces;serviceaccounts;serviceaccounts;configmaps;configmaps,verbs=get;create;update
-// +kubebuilder:rbac:groups=security.openshift.io,resources=securitycontextconstraints;securitycontextconstraints,verbs=get;create;update
+// +kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=list;watch;get;create;update
+// +kubebuilder:rbac:groups="",resources=namespaces;serviceaccounts;configmaps,verbs=list;watch;get;create;update
+// +kubebuilder:rbac:groups=security.openshift.io,resources=securitycontextconstraints,verbs=get;create;update
 
 // Reconcile the genevalogging deployment.
 func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {

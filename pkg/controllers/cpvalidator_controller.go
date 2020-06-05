@@ -54,7 +54,7 @@ func (r *CPValidator) validateClusterServicePrincipal(ctx context.Context, insta
 }
 
 // This is the permissions that this controller needs to work.
-// "make generate" will run kubebuilder and cause operator/deploy/staticresources/role.yaml to be updated
+// "make generate" will run kubebuilder and cause operator/deploy/staticresources/*/role.yaml to be updated
 // from the annotation below.
 // +kubebuilder:rbac:groups=aro.openshift.io,resources=clusters,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=aro.openshift.io,resources=clusters/status,verbs=get;update;patch
