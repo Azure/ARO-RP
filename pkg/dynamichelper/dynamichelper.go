@@ -268,6 +268,7 @@ func (dh *dynamicHelper) CreateOrUpdate(ctx context.Context, o *unstructured.Uns
 }
 
 func (dh *dynamicHelper) needsUpdate(existing, o *unstructured.Unstructured) bool {
+	handleSpecialObjects(*existing, *o)
 	if reflect.DeepEqual(*existing, *o) {
 		return false
 	}

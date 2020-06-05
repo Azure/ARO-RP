@@ -42,9 +42,9 @@ type GenevaloggingReconciler struct {
 // "make generate" will run kubebuilder and cause operator/deploy/staticresources/*/role.yaml to be updated
 // from the annotation below.
 // +kubebuilder:rbac:groups=aro.openshift.io,resources=clusters;clusters/finalizers,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=list;watch;get;create;update
-// +kubebuilder:rbac:groups="",resources=namespaces;serviceaccounts;configmaps,verbs=list;watch;get;create;update
-// +kubebuilder:rbac:groups=security.openshift.io,resources=securitycontextconstraints,verbs=get;create;update
+// +kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=list;watch;get;create;update;delete
+// +kubebuilder:rbac:groups="",resources=namespaces;serviceaccounts;configmaps,verbs=list;watch;get;create;update;delete
+// +kubebuilder:rbac:groups=security.openshift.io,resources=securitycontextconstraints,verbs=get;create;update;delete
 
 // Reconcile the genevalogging deployment.
 func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
@@ -89,15 +89,13 @@ func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 			return reconcile.Result{}, err
 		}
 
-		if un.GetKind() != "Namespace" {
-			// This sets the reference on all objects that we create
-			// to our cluster instance. This causes the Owns() below to work and
-			// to get Reconcile events when anything happens to our objects.
-			err = controllerutil.SetControllerReference(instance, un, r.Scheme)
-			if err != nil {
-				r.Log.Errorf("SetControllerReference %s/%s: %v", instance.Kind, instance.Name, err)
-				return reconcile.Result{}, err
-			}
+		// This sets the reference on all objects that we create
+		// to our cluster instance. This causes the Owns() below to work and
+		// to get Reconcile events when anything happens to our objects.
+		err = controllerutil.SetControllerReference(instance, un, r.Scheme)
+		if err != nil {
+			r.Log.Errorf("SetControllerReference %s/%s: %v", instance.Kind, instance.Name, err)
+			return reconcile.Result{}, err
 		}
 		objects = append(objects, un)
 	}
