@@ -748,7 +748,7 @@ az account set -s "$SUBSCRIPTIONID"
 systemctl start docker.service
 az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
 
-MDMIMAGE="${RPIMAGE%%/*}/genevamdm:master_37"
+MDMIMAGE="${RPIMAGE%%/*}/genevamdm:master_39"
 docker pull "$MDMIMAGE"
 docker pull "$RPIMAGE"
 
