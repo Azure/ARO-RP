@@ -37,6 +37,7 @@ func (r *StatusReporter) SetConditionFalse(ctx context.Context, cType status.Con
 		if err != nil {
 			return err
 		}
+
 		if co.Status.Conditions.SetCondition(
 			status.Condition{
 				Type:    cType,
@@ -73,6 +74,15 @@ func (r *StatusReporter) SetConditionTrue(ctx context.Context, cType status.Cond
 }
 
 func setStaticStatus(status *aro.ClusterStatus) {
+	// cleanup any old conditions
+	for _, cond := range status.Conditions {
+		switch cond.Type {
+		case aro.InternetReachableFromMaster, aro.InternetReachableFromWorker, aro.ClusterServicePrincipalAuthorized:
+		default:
+			status.Conditions.RemoveCondition(cond.Type)
+		}
+	}
+
 	status.RelatedObjects = pullsecretRelatedObjects()
 	status.RelatedObjects = append(status.RelatedObjects, genevaloggingRelatedObjects()...)
 	status.RelatedObjects = append(status.RelatedObjects, alertwebhookRelatedObjects()...)

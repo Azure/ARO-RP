@@ -22,14 +22,6 @@ import (
 	aroclient "github.com/Azure/ARO-RP/pkg/util/aro-operator-client/clientset/versioned/typed/aro.openshift.io/v1alpha1"
 )
 
-var sites = []string{
-	"https://registry.redhat.io",
-	"https://quay.io",
-	"https://sso.redhat.com",
-	"https://mirror.openshift.com",
-	"https://api.openshift.com",
-}
-
 // InternetChecker reconciles a Cluster object
 type InternetChecker struct {
 	Kubernetescli kubernetes.Interface
@@ -58,27 +50,22 @@ func (r *InternetChecker) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 		return reconcile.Result{}, nil
 	}
 	ctx := context.TODO()
-	if r.testurls == nil {
-		instance, err := r.AROCli.Clusters().Get(request.Name, v1.GetOptions{})
-		if err != nil {
-			return reconcile.Result{}, err
-		}
-		if instance.Spec.ResourceID == "" {
-			return ReconcileResultRequeueShort, nil
-		}
-		r.testurls = sites
-		r.testurls = append(r.testurls, "https://management.azure.com"+instance.Spec.ResourceID+"?api-version=2020-04-30")
+	instance, err := r.AROCli.Clusters().Get(request.Name, v1.GetOptions{})
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+	if len(instance.Spec.InternetChecker.Sites) == 0 {
+		return ReconcileResultRequeueShort, nil
 	}
 
 	sitesNotAvailable := map[string]string{}
-	for _, testurl := range r.testurls {
+	for _, testurl := range instance.Spec.InternetChecker.Sites {
 		checkErr := r.check(&http.Client{}, testurl)
 		if checkErr != nil {
 			sitesNotAvailable[testurl] = checkErr.Error()
 		}
 	}
 
-	var err error
 	cTypeMap := map[string]status.ConditionType{
 		"master": aro.InternetReachableFromMaster,
 		"worker": aro.InternetReachableFromWorker,

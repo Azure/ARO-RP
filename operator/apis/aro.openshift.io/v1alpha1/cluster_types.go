@@ -34,7 +34,7 @@ type ServicePrincipalValidationSpec struct {
 }
 
 type InternetCheckerSpec struct {
-	CustomSites []string `json:"customSites,omitempty"`
+	Sites []string `json:"sites,omitempty"`
 }
 
 // ClusterSpec defines the desired state of Cluster

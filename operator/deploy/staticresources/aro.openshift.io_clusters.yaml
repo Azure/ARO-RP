@@ -57,7 +57,7 @@ spec:
               type: object
             internetChecker:
               properties:
-                customSites:
+                sites:
                   items:
                     type: string
                   type: array

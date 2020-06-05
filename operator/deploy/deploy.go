@@ -115,6 +115,16 @@ func New(log *logrus.Entry, e env.Interface, oc *api.OpenShiftCluster, cli kuber
 			ServicePrincipalValidation: aro.ServicePrincipalValidationSpec{
 				MasterSubnetID: oc.Properties.MasterProfile.SubnetID,
 			},
+			InternetChecker: aro.InternetCheckerSpec{
+				Sites: []string{
+					"https://registry.redhat.io",
+					"https://quay.io",
+					"https://sso.redhat.com",
+					"https://mirror.openshift.com",
+					"https://api.openshift.com",
+					"https://management.azure.com" + oc.ID + "?api-version=2020-04-30",
+				},
+			},
 		},
 
 		dh:     dh,

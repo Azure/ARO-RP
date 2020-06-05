@@ -15,6 +15,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
+	aroclient "github.com/Azure/ARO-RP/pkg/util/aro-operator-client/clientset/versioned/typed/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift"
 )
 
@@ -23,6 +24,7 @@ type ClientSet struct {
 	Operations        redhatopenshift.OperationsClient
 	Kubernetes        kubernetes.Interface
 	MachineAPI        machineapiclient.Interface
+	AROClusters       aroclient.AroV1alpha1Interface
 }
 
 var (
@@ -56,11 +58,17 @@ func newClientSet() (*ClientSet, error) {
 		return nil, err
 	}
 
+	arocli, err := aroclient.NewForConfig(restconfig)
+	if err != nil {
+		return nil, err
+	}
+
 	return &ClientSet{
 		OpenshiftClusters: redhatopenshift.NewOpenShiftClustersClient(os.Getenv("AZURE_SUBSCRIPTION_ID"), authorizer),
 		Operations:        redhatopenshift.NewOperationsClient(os.Getenv("AZURE_SUBSCRIPTION_ID"), authorizer),
 		Kubernetes:        cli,
 		MachineAPI:        machineapicli,
+		AROClusters:       arocli,
 	}, nil
 }
 
