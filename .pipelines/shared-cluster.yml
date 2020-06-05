@@ -3,7 +3,7 @@ pr: none
 trigger: none
 
 schedules:
-- cron: "0 1 * * Sun"
+- cron: 0 1 * * Sun
   displayName: ⭕ Rebuild shared cluster Sun 1am (UTC)
   always: true
   branches:
