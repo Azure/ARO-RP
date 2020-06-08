@@ -105,7 +105,7 @@ func (i *Installer) deployResourceTemplate(ctx context.Context) error {
 				Resource: &mgmtnetwork.PrivateEndpoint{
 					PrivateEndpointProperties: &mgmtnetwork.PrivateEndpointProperties{
 						Subnet: &mgmtnetwork.Subnet{
-							ID: to.StringPtr("/subscriptions/" + i.env.SubscriptionID() + "/resourceGroups/" + i.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/rp-pe-vnet-001/subnets/rp-pe-subnet"),
+							ID: to.StringPtr(i.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 						},
 						ManualPrivateLinkServiceConnections: &[]mgmtnetwork.PrivateLinkServiceConnection{
 							{
