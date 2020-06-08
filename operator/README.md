@@ -71,3 +71,9 @@ oc -n openshift-azure-operator get clusters.aro.openshift.io/cluster -o yaml
 oc -n openshift-azure-operator logs deployment.apps/aro-operator-master
 oc -n openshift-config get secrets/pull-secret -o template='{{index .data ".dockerconfigjson"}}' | base64 -d
 ```
+
+### How to run operator e2e tests
+
+```sh
+go test ./test/e2e -v -ginkgo.v -ginkgo.focus="ARO Operator"  -tags e2e
+```

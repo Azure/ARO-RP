@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -24,23 +25,25 @@ var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "opens
 
 func pullSecretExists(namespace string, name string) (done bool, err error) {
 	_, err = Clients.Kubernetes.CoreV1().Secrets(pullSecretName.Namespace).Get(pullSecretName.Name, metav1.GetOptions{})
-	if err != nil {
-		return false, err
+	if err != nil && apierrors.IsNotFound(err) {
+		return false, nil
 	}
-	return true, nil
+
+	return err == nil, err
 }
 
 var _ = Describe("ARO Operator", func() {
 	Specify("the pull secret should be re-added when deleted", func() {
 		// Verify pull secret exists
-		_, err := pullSecretExists(pullSecretName.Namespace, pullSecretName.Name)
+		exists, err := pullSecretExists(pullSecretName.Namespace, pullSecretName.Name)
 		Expect(err).NotTo(HaveOccurred())
+		Expect(exists).To(BeTrue())
 
 		// Delete pull secret
 		err = Clients.Kubernetes.CoreV1().Secrets(pullSecretName.Namespace).Delete(pullSecretName.Name, &metav1.DeleteOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
-		// Verify operator has re-added\
+		// Wait for it to be fixed
 		err = wait.PollImmediate(5*time.Second, 5*time.Minute, func() (bool, error) {
 			return pullSecretExists(pullSecretName.Namespace, pullSecretName.Name)
 		})
@@ -100,12 +103,12 @@ var _ = Describe("ARO Operator", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(isReady).To(Equal(true))
 
-		// delete the daemonset
+		// delete the mdsd daemonset
 		err = Clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-logging").Delete("mdsd", nil)
 		Expect(err).NotTo(HaveOccurred())
 
-		// wait for it to be fixed
-		err = wait.PollImmediate(10*time.Second, 10*time.Minute, mdsdReady)
+		// Wait for it to be fixed
+		err = wait.PollImmediate(30*time.Second, 10*time.Minute, mdsdReady)
 		Expect(err).NotTo(HaveOccurred())
 	})
 })
