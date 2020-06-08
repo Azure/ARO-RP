@@ -10,11 +10,5 @@ steps:
 
     az acr login --name "$RP_IMAGE_ACR"
     make publish-image-aro
-    branch=$(git rev-parse --abbrev-ref HEAD)
-    if [[ "$RP_IMAGE_ACR" == "arointsvc" && "$branch" == "master" ]]; then
-      # tag and push the :latest tag as well
-      docker tag $(make get-aro-image) arointsvc.azurecr.io/aro:latest
-      docker push arointsvc.azurecr.io/aro:latest
-    fi
 
   displayName: ⚙️ Build and push images to ACR

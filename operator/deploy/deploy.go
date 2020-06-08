@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strings"
 
 	"github.com/Azure/go-autorest/autorest/to"
 	securityv1 "github.com/openshift/api/security/v1"
@@ -54,7 +55,7 @@ type operator struct {
 	log *logrus.Entry
 
 	namespace         string
-	imageVersion      string
+	image             string
 	regTokens         map[string]string
 	acrRegName        string
 	genevaloggingKey  *rsa.PrivateKey
@@ -70,6 +71,12 @@ type operator struct {
 }
 
 func New(log *logrus.Entry, e env.Interface, oc *api.OpenShiftCluster, cli kubernetes.Interface, seccli securityclient.Interface, arocli aroclient.AroV1alpha1Interface) (Operator, error) {
+	image, err := aroOperatorImage(log, e)
+	if err != nil {
+		return nil, err
+	}
+	log.Infof("using operator image=%s", image)
+
 	restConfig, err := restconfig.RestConfig(e, oc)
 	if err != nil {
 		return nil, err
@@ -95,7 +102,7 @@ func New(log *logrus.Entry, e env.Interface, oc *api.OpenShiftCluster, cli kuber
 		log: log,
 
 		namespace:         KubeNamespace,
-		imageVersion:      version.GitCommit,
+		image:             image,
 		acrRegName:        e.ACRName() + ".azurecr.io",
 		regTokens:         map[string]string{},
 		genevaloggingKey:  key,
@@ -151,12 +158,32 @@ func New(log *logrus.Entry, e env.Interface, oc *api.OpenShiftCluster, cli kuber
 	return o, nil
 }
 
-func (o *operator) aroOperatorImage() string {
-	override := os.Getenv("ARO_IMAGE")
-	if override != "" {
-		return override
+func aroOperatorImage(log *logrus.Entry, e env.Interface) (string, error) {
+	imageTag := version.GitCommit
+	if _, ok := e.(env.Dev); ok {
+		override := os.Getenv("ARO_IMAGE")
+		if override != "" {
+			log.Warnf("overriding ARO Image=%s", override)
+			return override, nil
+		}
+
+		// in dev we may not have version.GitCommit set as the rp is run as "go run ./cmd/aro rp"
+		// for a developer it needs to be ARO_IMAGE_TAG else "latest"
+		imageTag = os.Getenv("ARO_IMAGE_TAG")
+		if imageTag == "" {
+			imageTag = "latest"
+			log.Warnf("defaulting ARO ImageTag=%s", imageTag)
+		} else {
+			log.Warnf("overriding ARO ImageTag=%s", imageTag)
+		}
 	}
-	return fmt.Sprintf(aroOperatorImageFormat, o.acrRegName, o.imageVersion)
+	if imageTag == version.GitCommitUnknown {
+		return "", fmt.Errorf("GitCommit not set, can not have unknow image tag")
+	}
+	if strings.HasSuffix(imageTag, "-dirty") {
+		log.Warnf("using non-standard imageTag=%s", imageTag)
+	}
+	return fmt.Sprintf(aroOperatorImageFormat, e.ACRName()+".azurecr.io", imageTag), nil
 }
 
 func (o *operator) securityContextConstraints(ctx context.Context, name, serviceAccountName string) (*securityv1.SecurityContextConstraints, error) {
@@ -204,7 +231,7 @@ func (o *operator) deployment(role string) *appsv1.Deployment {
 					Containers: []v1.Container{
 						{
 							Name:  "aro-operator",
-							Image: o.aroOperatorImage(),
+							Image: o.image,
 							Command: []string{
 								"aro",
 							},

@@ -1,5 +1,6 @@
 SHELL = /bin/bash
 COMMIT = $(shell git rev-parse --short HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
+BRANCH = $(shell git rev-parse --abbrev-ref HEAD)
 ARO_IMAGE_TAG ?= $(COMMIT)
 ARO_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/aro:$(ARO_IMAGE_TAG)
 
@@ -74,6 +75,10 @@ get-aro-image:
 
 publish-image-aro: image-aro
 	docker push $(ARO_IMAGE)
+	if [ "${RP_IMAGE_ACR}" == "arointsvc" && "$(BRANCH)" == "master" ]; then\
+		docker tag $(ARO_IMAGE) arointsvc.azurecr.io/aro:latest\
+		docker push arointsvc.azurecr.io/aro:latest\
+	fi
 
 publish-image-fluentbit: image-fluentbit
 	docker push ${RP_IMAGE_ACR}.azurecr.io/fluentbit:1.3.9-1
