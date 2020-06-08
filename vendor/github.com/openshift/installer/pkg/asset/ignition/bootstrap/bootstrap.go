@@ -21,6 +21,7 @@ import (
 
 	"github.com/openshift/installer/data"
 	"github.com/openshift/installer/pkg/asset"
+	"github.com/openshift/installer/pkg/asset/genevacredentials"
 	"github.com/openshift/installer/pkg/asset/ignition"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/kubeconfig"
@@ -30,6 +31,7 @@ import (
 	"github.com/openshift/installer/pkg/asset/rhcos"
 	"github.com/openshift/installer/pkg/asset/tls"
 	"github.com/openshift/installer/pkg/types"
+	"github.com/openshift/installer/pkg/types/azure"
 )
 
 const (
@@ -41,14 +43,16 @@ const (
 // bootstrapTemplateData is the data to use to replace values in bootstrap
 // template files.
 type bootstrapTemplateData struct {
-	AdditionalTrustBundle string
-	FIPS                  bool
-	EtcdCluster           string
-	PullSecret            string
-	ReleaseImage          string
-	Proxy                 *configv1.ProxyStatus
-	Registries            []sysregistriesv2.Registry
-	BootImage             string
+	AdditionalTrustBundle    string
+	FIPS                     bool
+	EtcdCluster              string
+	PullSecret               string
+	ReleaseImage             string
+	Proxy                    *configv1.ProxyStatus
+	Registries               []sysregistriesv2.Registry
+	BootImage                string
+	AzurePlatform            *azure.Platform
+	GenevaLoggingCredentials *types.GenevaClusterLoggingCredentials
 }
 
 // Bootstrap is an asset that generates the ignition config for bootstrap nodes.
@@ -63,6 +67,7 @@ var _ asset.WritableAsset = (*Bootstrap)(nil)
 func (a *Bootstrap) Dependencies() []asset.Asset {
 	return []asset.Asset{
 		&installconfig.InstallConfig{},
+		&genevacredentials.GenevaCredentials{},
 		&kubeconfig.AdminInternalClient{},
 		&kubeconfig.Kubelet{},
 		&kubeconfig.LoopbackClient{},
@@ -122,9 +127,11 @@ func (a *Bootstrap) Generate(dependencies asset.Parents) error {
 	proxy := &manifests.Proxy{}
 	releaseImage := &releaseimage.Image{}
 	rhcosImage := new(rhcos.Image)
-	dependencies.Get(installConfig, proxy, releaseImage, rhcosImage)
+	genevaCredentials := &genevacredentials.GenevaCredentials{}
 
-	templateData, err := a.getTemplateData(installConfig.Config, releaseImage.PullSpec, installConfig.Config.ImageContentSources, proxy.Config, rhcosImage)
+	dependencies.Get(installConfig, proxy, releaseImage, rhcosImage, genevaCredentials)
+
+	templateData, err := a.getTemplateData(installConfig.Config, releaseImage.PullSpec, installConfig.Config.ImageContentSources, proxy.Config, rhcosImage, genevaCredentials.ClusterLoggingCredentials)
 
 	if err != nil {
 		return errors.Wrap(err, "failed to get bootstrap templates")
@@ -135,7 +142,6 @@ func (a *Bootstrap) Generate(dependencies asset.Parents) error {
 			Version: igntypes.MaxVersion.String(),
 		},
 	}
-
 	err = a.addStorageFiles("/", "bootstrap/files", templateData)
 	if err != nil {
 		return err
@@ -200,7 +206,7 @@ func (a *Bootstrap) Files() []*asset.File {
 }
 
 // getTemplateData returns the data to use to execute bootstrap templates.
-func (a *Bootstrap) getTemplateData(installConfig *types.InstallConfig, releaseImage string, imageSources []types.ImageContentSource, proxy *configv1.Proxy, rhcosImage *rhcos.Image) (*bootstrapTemplateData, error) {
+func (a *Bootstrap) getTemplateData(installConfig *types.InstallConfig, releaseImage string, imageSources []types.ImageContentSource, proxy *configv1.Proxy, rhcosImage *rhcos.Image, genevaLoggingCredentials *types.GenevaClusterLoggingCredentials) (*bootstrapTemplateData, error) {
 	etcdEndpoints := make([]string, *installConfig.ControlPlane.Replicas)
 
 	for i := range etcdEndpoints {
@@ -223,14 +229,16 @@ func (a *Bootstrap) getTemplateData(installConfig *types.InstallConfig, releaseI
 	}
 
 	return &bootstrapTemplateData{
-		AdditionalTrustBundle: installConfig.AdditionalTrustBundle,
-		FIPS:                  installConfig.FIPS,
-		PullSecret:            installConfig.PullSecret,
-		ReleaseImage:          releaseImage,
-		EtcdCluster:           strings.Join(etcdEndpoints, ","),
-		Proxy:                 &proxy.Status,
-		Registries:            registries,
-		BootImage:             string(*rhcosImage),
+		AdditionalTrustBundle:    installConfig.AdditionalTrustBundle,
+		FIPS:                     installConfig.FIPS,
+		PullSecret:               installConfig.PullSecret,
+		ReleaseImage:             releaseImage,
+		EtcdCluster:              strings.Join(etcdEndpoints, ","),
+		Proxy:                    &proxy.Status,
+		Registries:               registries,
+		BootImage:                string(*rhcosImage),
+		AzurePlatform:            installConfig.Platform.Azure,
+		GenevaLoggingCredentials: genevaLoggingCredentials,
 	}, nil
 }
 
@@ -302,8 +310,9 @@ func (a *Bootstrap) addSystemdUnits(uri string, templateData *bootstrapTemplateD
 		"keepalived.service": {},
 		"coredns.service":    {},
 		"ironic.service":     {},
+		"fluentbit.service":  {},
+		"mdsd.service":       {},
 	}
-
 	directory, err := data.Assets.Open(uri)
 	if err != nil {
 		return err
@@ -394,6 +403,7 @@ func (a *Bootstrap) addSystemdUnits(uri string, templateData *bootstrapTemplateD
 // '.template', strip that extension from the name and render the
 // template.
 func readFile(name string, reader io.Reader, templateData interface{}) (finalName string, data []byte, err error) {
+	logrus.Debugf("readFile %s", name)
 	data, err = ioutil.ReadAll(reader)
 	if err != nil {
 		return name, []byte{}, err

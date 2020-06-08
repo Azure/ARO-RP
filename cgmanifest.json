@@ -796,7 +796,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "f90508187f1541ca43fca89843f5f26a8ccf34a0",
+                    "commitHash": "c962bfbcc668f98298bb6072f69a8105175955d7",
                     "repositoryUrl": "https://github.com/openshift/installer/"
                 }
             }

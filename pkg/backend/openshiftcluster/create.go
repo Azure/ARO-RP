@@ -18,6 +18,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/openshift/installer/pkg/asset/genevacredentials"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	icazure "github.com/openshift/installer/pkg/asset/installconfig/azure"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
@@ -38,6 +39,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
+	"github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -269,6 +271,9 @@ func (m *Manager) Create(ctx context.Context) error {
 					ControlPlaneSubnet:       masterSubnetName,
 					ComputeSubnet:            workerSubnetName,
 					ARO:                      true,
+					SubscriptionID:           r.SubscriptionID,
+					ResourceName:             r.ResourceName,
+					ResourceID:               m.doc.OpenShiftCluster.ID,
 				},
 			},
 			PullSecret: pullSecret,
@@ -322,7 +327,26 @@ func (m *Manager) Create(ctx context.Context) error {
 		return err
 	}
 
-	return i.Install(ctx, installConfig, platformCreds, image)
+	gcskey, gcscert := m.env.ClustersGenevaLoggingSecret()
+
+	gcsKeyBytes, err := tls.PrivateKeyAsBytes(gcskey)
+	if err != nil {
+		return err
+	}
+
+	gcsCertBytes, err := tls.CertAsBytes(gcscert)
+	if err != nil {
+		return err
+	}
+
+	genevaCreds := &genevacredentials.GenevaCredentials{
+		ClusterLoggingCredentials: &types.GenevaClusterLoggingCredentials{
+			Certificate: string(gcsCertBytes),
+			Key:         string(gcsKeyBytes),
+		},
+	}
+
+	return i.Install(ctx, installConfig, platformCreds, image, genevaCreds)
 }
 
 var rxRHCOS = regexp.MustCompile(`rhcos-((\d+)\.\d+\.\d{8})\d{4}\.\d+-azure\.x86_64\.vhd`)
