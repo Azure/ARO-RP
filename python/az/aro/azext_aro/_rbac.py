@@ -63,10 +63,8 @@ def assign_contributor_to_routetable(cli_ctx, master_subnet, worker_subnet, obje
         subnet = client.subnets.get(resource_group_name=sid['resource_group'],
                                     virtual_network_name=sid['name'],
                                     subnet_name=sid['resource_name'])
-        if subnet.route_table is not None and \
-           not has_assignment(auth_client.role_assignments.list_for_scope(subnet.route_table.id),
-                              role_definition_id, object_id):
-            route_tables.add(subnet.route_table)
+        if subnet.route_table is not None:
+            route_tables.add(subnet.route_table.id)
 
     if not route_tables:
         return
@@ -76,8 +74,11 @@ def assign_contributor_to_routetable(cli_ctx, master_subnet, worker_subnet, obje
                                              operation_group='role_assignments')
 
     for rt in route_tables:
+        if has_assignment(auth_client.role_assignments.list_for_scope(subnet.route_table.id),
+                          role_definition_id, object_id):
+            continue
         role_uuid = _gen_uuid()
-        auth_client.role_assignments.create(rt.id, role_uuid, RoleAssignmentCreateParameters(
+        auth_client.role_assignments.create(rt, role_uuid, RoleAssignmentCreateParameters(
             role_definition_id=role_definition_id,
             principal_id=object_id,
             principal_type='ServicePrincipal',
