@@ -25,7 +25,7 @@ var _ = Describe("Scale nodes", func() {
 	Specify("node count should match the cluster resource and nodes should be ready", func() {
 		ctx := context.Background()
 
-		oc, err := Clients.OpenshiftClusters.Get(ctx, os.Getenv("RESOURCEGROUP"), os.Getenv("CLUSTER"))
+		oc, err := clients.OpenshiftClusters.Get(ctx, os.Getenv("RESOURCEGROUP"), os.Getenv("CLUSTER"))
 		Expect(err).NotTo(HaveOccurred())
 
 		var expectedNodeCount int = 3 // for masters
@@ -33,7 +33,7 @@ var _ = Describe("Scale nodes", func() {
 			expectedNodeCount += int(*wp.Count)
 		}
 
-		nodes, err := Clients.Kubernetes.CoreV1().Nodes().List(metav1.ListOptions{})
+		nodes, err := clients.Kubernetes.CoreV1().Nodes().List(metav1.ListOptions{})
 		Expect(err).NotTo(HaveOccurred())
 		var nodeCount int32
 		for _, node := range nodes.Items {
@@ -41,7 +41,7 @@ var _ = Describe("Scale nodes", func() {
 				nodeCount++
 			} else {
 				for _, c := range node.Status.Conditions {
-					Log.Warnf("node %s status %s", node.Name, c.String())
+					log.Warnf("node %s status %s", node.Name, c.String())
 				}
 			}
 		}
@@ -50,7 +50,7 @@ var _ = Describe("Scale nodes", func() {
 	})
 
 	Specify("nodes should scale up and down", func() {
-		mss, err := Clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").List(metav1.ListOptions{})
+		mss, err := clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").List(metav1.ListOptions{})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(mss.Items).NotTo(BeEmpty())
 
@@ -70,7 +70,7 @@ var _ = Describe("Scale nodes", func() {
 
 func scale(name string, delta int32) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		ms, err := Clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").Get(name, metav1.GetOptions{})
+		ms, err := clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").Get(name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -80,14 +80,14 @@ func scale(name string, delta int32) error {
 		}
 		*ms.Spec.Replicas += delta
 
-		_, err = Clients.MachineAPI.MachineV1beta1().MachineSets(ms.Namespace).Update(ms)
+		_, err = clients.MachineAPI.MachineV1beta1().MachineSets(ms.Namespace).Update(ms)
 		return err
 	})
 }
 
 func waitForScale(name string) error {
 	return wait.PollImmediate(10*time.Second, 30*time.Minute, func() (bool, error) {
-		ms, err := Clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").Get(name, metav1.GetOptions{})
+		ms, err := clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").Get(name, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}

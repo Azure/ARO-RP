@@ -29,8 +29,8 @@ func TestE2E(t *testing.T) {
 
 	flag.Parse()
 	logrus.SetOutput(GinkgoWriter)
-	Log = utillog.GetLogger()
-	Log.Infof("e2e tests starting, git commit %s\n", gitCommit)
+	log = utillog.GetLogger()
+	log.Infof("e2e tests starting, git commit %s\n", gitCommit)
 	RegisterFailHandler(Fail)
 	format.TruncatedDiff = false
 	RunSpecs(t, "e2e tests")

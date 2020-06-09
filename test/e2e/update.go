@@ -20,7 +20,7 @@ var _ = Describe("Update clusters", func() {
 		ctx := context.Background()
 		value := strconv.Itoa(rand.Int())
 
-		oc, err := Clients.OpenshiftClusters.Get(ctx, os.Getenv("RESOURCEGROUP"), os.Getenv("CLUSTER"))
+		oc, err := clients.OpenshiftClusters.Get(ctx, os.Getenv("RESOURCEGROUP"), os.Getenv("CLUSTER"))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(oc.Tags).NotTo(HaveKeyWithValue("key", &value))
 
@@ -29,10 +29,10 @@ var _ = Describe("Update clusters", func() {
 		}
 		oc.Tags["key"] = &value
 
-		err = Clients.OpenshiftClusters.CreateOrUpdateAndWait(ctx, os.Getenv("RESOURCEGROUP"), os.Getenv("CLUSTER"), oc)
+		err = clients.OpenshiftClusters.CreateOrUpdateAndWait(ctx, os.Getenv("RESOURCEGROUP"), os.Getenv("CLUSTER"), oc)
 		Expect(err).NotTo(HaveOccurred())
 
-		oc, err = Clients.OpenshiftClusters.Get(ctx, os.Getenv("RESOURCEGROUP"), os.Getenv("CLUSTER"))
+		oc, err = clients.OpenshiftClusters.Get(ctx, os.Getenv("RESOURCEGROUP"), os.Getenv("CLUSTER"))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(oc.Tags).To(HaveKeyWithValue("key", &value))
 	})
