@@ -4,7 +4,11 @@ package controllers
 // Licensed under the Apache License 2.0.
 
 import (
+	"io"
+	"net/http"
+
 	"github.com/ghodss/yaml"
+	"github.com/openshift/backup/pkg/log"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
@@ -89,8 +93,23 @@ func triggerAlertReconcile(secret *corev1.Secret) bool {
 	return secret.Name == alertManagerName.Name && secret.Namespace == alertManagerName.Namespace
 }
 
+func aroserverRun(log *logrus.Entry) {
+	http.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
+		io.WriteString(w, "")
+	})
+	go func() {
+		if err := http.ListenAndServe(":8081", nil); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("aro-operator webserver failed to start: %s\n", err)
+		}
+	}()
+	log.Info("Webserver is listening on 8081")
+}
+
 // SetupWithManager setup our mananger
 func (r *AlertWebhookReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	log.Info("Starting alertmanager sink")
+	aroserverRun(r.Log)
+
 	isAlertManager := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			oldSecret, ok := e.ObjectOld.(*corev1.Secret)

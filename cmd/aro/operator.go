@@ -18,7 +18,6 @@ import (
 
 	aro "github.com/Azure/ARO-RP/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/controllers"
-	aroserver "github.com/Azure/ARO-RP/pkg/operatorserver"
 	aroclient "github.com/Azure/ARO-RP/pkg/util/aro-operator-client/clientset/versioned/typed/aro.openshift.io/v1alpha1"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	// +kubebuilder:scaffold:imports
@@ -131,9 +130,6 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 	// +kubebuilder:scaffold:builder
-
-	log.Info("Starting alertmanager sink")
-	aroserver.Run(log)
 
 	log.Info("starting manager")
 	return mgr.Start(ctrl.SetupSignalHandler())
