@@ -37,7 +37,7 @@ global:
 receivers:
 - name: "null"
   webhook_configs:
-  - url: "http://aro-operator-master.openshift-azure-operator:8081"
+  - url: http://aro-operator-master.openshift-azure-operator:8081
 route:
   group_by:
   - job

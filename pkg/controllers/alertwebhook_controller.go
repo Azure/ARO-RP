@@ -8,7 +8,6 @@ import (
 	"net/http"
 
 	"github.com/ghodss/yaml"
-	"github.com/openshift/backup/pkg/log"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
@@ -107,7 +106,7 @@ func aroserverRun(log *logrus.Entry) {
 
 // SetupWithManager setup our mananger
 func (r *AlertWebhookReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	log.Info("Starting alertmanager sink")
+	r.Log.Info("Starting alertmanager sink")
 	aroserverRun(r.Log)
 
 	isAlertManager := predicate.Funcs{
