@@ -285,6 +285,11 @@ func (o *operator) deployment(role string) *appsv1.Deployment {
 			Privileged: to.BoolPtr(true),
 			RunAsUser:  to.Int64Ptr(0),
 		}
+		deployment.Spec.Template.Spec.Containers[0].Ports = []v1.ContainerPort{
+			{
+				ContainerPort: 8081,
+			},
+		}
 	}
 	return deployment
 }
