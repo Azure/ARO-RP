@@ -9,25 +9,27 @@ import (
 
 	. "github.com/onsi/ginkgo"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	machineapiclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 
-	mgmtcompute "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/insights"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift"
 )
 
 type clientSet struct {
 	OpenshiftClusters redhatopenshift.OpenShiftClustersClient
 	Operations        redhatopenshift.OperationsClient
-	Kubernetes        kubernetes.Interface
-	MachineAPI        machineapiclient.Interface
-	VirtualMachines   mgmtcompute.VirtualMachinesClient
+	VirtualMachines   compute.VirtualMachinesClient
 	Resources         features.ResourcesClient
+	ActivityLogs      insights.ActivityLogsClient
+
+	Kubernetes kubernetes.Interface
+	MachineAPI machineapiclient.Interface
 }
 
 var (
@@ -35,20 +37,21 @@ var (
 	clients *clientSet
 )
 
-func newClientSet() (*clientSet, error) {
+func skipIfNotInDevelopmentEnv() {
+	if os.Getenv("RP_MODE") != "development" {
+		Skip("skipping tests in non-development environment")
+	}
+}
+
+func resourceIDFromEnv() string {
+	subscriptionID := os.Getenv("AZURE_SUBSCRIPTION_ID")
+	resourceGroup := os.Getenv("RESOURCEGROUP")
+	clusterName := os.Getenv("CLUSTER")
+	return fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s", subscriptionID, resourceGroup, clusterName)
+}
+
+func newClientSet(subscriptionID string) (*clientSet, error) {
 	authorizer, err := auth.NewAuthorizerFromEnvironment()
-	if err != nil {
-		return nil, err
-	}
-
-	// The VirtualMachinesClient uses this authorizer
-	vmAuthorizer, err := auth.NewAuthorizerFromCLI()
-	if err != nil {
-		return nil, err
-	}
-
-	// The ResourcesClient uses this authorizer
-	rmAuthorizer, err := auth.NewAuthorizerFromCLIWithResource(azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -73,15 +76,15 @@ func newClientSet() (*clientSet, error) {
 		return nil, err
 	}
 
-	subscriptionID := os.Getenv("AZURE_SUBSCRIPTION_ID")
-
-	return &ClientSet{
+	return &clientSet{
 		OpenshiftClusters: redhatopenshift.NewOpenShiftClustersClient(subscriptionID, authorizer),
 		Operations:        redhatopenshift.NewOperationsClient(subscriptionID, authorizer),
-		Kubernetes:        cli,
-		MachineAPI:        machineapicli,
-		VirtualMachines:   mgmtcompute.NewVirtualMachinesClient(subscriptionID, vmAuthorizer),
-		Resources:         features.NewResourcesClient(subscriptionID, rmAuthorizer),
+		VirtualMachines:   compute.NewVirtualMachinesClient(subscriptionID, authorizer),
+		Resources:         features.NewResourcesClient(subscriptionID, authorizer),
+		ActivityLogs:      insights.NewActivityLogsClient(subscriptionID, authorizer),
+
+		Kubernetes: cli,
+		MachineAPI: machineapicli,
 	}, nil
 }
 
@@ -97,8 +100,10 @@ var _ = BeforeSuite(func() {
 		}
 	}
 
+	subscriptionID := os.Getenv("AZURE_SUBSCRIPTION_ID")
+
 	var err error
-	clients, err = newClientSet()
+	clients, err = newClientSet(subscriptionID)
 	if err != nil {
 		panic(err)
 	}
