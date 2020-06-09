@@ -75,10 +75,10 @@ get-aro-image:
 
 publish-image-aro: image-aro
 	docker push $(ARO_IMAGE)
-	if [ "${RP_IMAGE_ACR}" == "arointsvc" && "$(BRANCH)" == "master" ]; then\
-		docker tag $(ARO_IMAGE) arointsvc.azurecr.io/aro:latest\
-		docker push arointsvc.azurecr.io/aro:latest\
-	fi
+ifeq ("${RP_IMAGE_ACR}-$(BRANCH)","arointsvc-master")
+		docker tag $(ARO_IMAGE) arointsvc.azurecr.io/aro:latest
+		docker push arointsvc.azurecr.io/aro:latest
+endif
 
 publish-image-fluentbit: image-fluentbit
 	docker push ${RP_IMAGE_ACR}.azurecr.io/fluentbit:1.3.9-1

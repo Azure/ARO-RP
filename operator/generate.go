@@ -15,6 +15,5 @@ package operator
 //go:generate go run ../vendor/sigs.k8s.io/controller-tools/cmd/controller-gen rbac:roleName=aro-operator-worker paths="../pkg/controllers/internetchecker_controller.go" output:dir=deploy/staticresources/worker
 
 // bindata for the above yaml files
-//go:generate go get github.com/go-bindata/go-bindata/go-bindata
-//go:generate go-bindata -nometadata -pkg deploy -prefix deploy/staticresources/ -o deploy/bindata.go deploy/staticresources/...
+//go:generate go run ../vendor/github.com/go-bindata/go-bindata/go-bindata -nometadata -pkg deploy -prefix deploy/staticresources/ -o deploy/bindata.go deploy/staticresources/...
 //go:generate gofmt -s -l -w deploy/bindata.go
