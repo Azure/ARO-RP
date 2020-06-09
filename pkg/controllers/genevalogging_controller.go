@@ -45,6 +45,7 @@ type GenevaloggingReconciler struct {
 // +kubebuilder:rbac:groups=apps,resources=daemonsets,verbs=list;watch;get;create;update;delete
 // +kubebuilder:rbac:groups="",resources=namespaces;serviceaccounts;configmaps,verbs=list;watch;get;create;update;delete
 // +kubebuilder:rbac:groups=security.openshift.io,resources=securitycontextconstraints,verbs=get;create;update;delete
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;update;patch;create;delete
 
 // Reconcile the genevalogging deployment.
 func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {

@@ -43,7 +43,7 @@ type PullsecretReconciler struct {
 // "make generate" will run kubebuilder and cause operator/deploy/staticresources/*/role.yaml to be updated
 // from the annotation below.
 // +kubebuilder:rbac:groups=aro.openshift.io,resources=clusters,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;update;patch;create
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;update;patch;create;delete
 
 // Reconcile will make sure that the ACR part of the pull secret is correct
 func (r *PullsecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
