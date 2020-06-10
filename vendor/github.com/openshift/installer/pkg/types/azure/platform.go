@@ -37,15 +37,6 @@ type Platform struct {
 
 	// ARO is a flag that indicates specialisations for the ARO platform
 	ARO bool `json:"aro,omitempty"`
-
-	// ARO SubscriptionID
-	SubscriptionID string
-
-	// ARO ResourceName
-	ResourceName string
-
-	// ARO ResourceID
-	ResourceID string
 }
 
 // Image specifies the image parameters with which a cluster should be built.

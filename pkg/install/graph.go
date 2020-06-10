@@ -7,8 +7,8 @@ import (
 	"reflect"
 
 	"github.com/openshift/installer/pkg/asset"
+	"github.com/openshift/installer/pkg/asset/bootstraplogging"
 	"github.com/openshift/installer/pkg/asset/cluster"
-	"github.com/openshift/installer/pkg/asset/genevacredentials"
 	"github.com/openshift/installer/pkg/asset/ignition/bootstrap"
 	"github.com/openshift/installer/pkg/asset/ignition/machine"
 	"github.com/openshift/installer/pkg/asset/installconfig"
@@ -46,7 +46,7 @@ var registeredTypes = map[string]asset.Asset{
 	"*bootstrap.Bootstrap":                                    &bootstrap.Bootstrap{},
 	"*cluster.Metadata":                                       &cluster.Metadata{},
 	"*cluster.TerraformVariables":                             &cluster.TerraformVariables{},
-	"*genevacredentials.GenevaCredentials":                    &genevacredentials.GenevaCredentials{},
+	"*bootstraplogging.BootstrapLoggingConfig":                &bootstraplogging.BootstrapLoggingConfig{},
 	"*installconfig.ClusterID":                                &installconfig.ClusterID{},
 	"*installconfig.InstallConfig":                            &installconfig.InstallConfig{},
 	"*installconfig.PlatformCreds":                            &installconfig.PlatformCreds{},

@@ -18,7 +18,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/openshift/installer/pkg/asset/genevacredentials"
+	"github.com/openshift/installer/pkg/asset/bootstraplogging"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	icazure "github.com/openshift/installer/pkg/asset/installconfig/azure"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
@@ -271,9 +271,6 @@ func (m *Manager) Create(ctx context.Context) error {
 					ControlPlaneSubnet:       masterSubnetName,
 					ComputeSubnet:            workerSubnetName,
 					ARO:                      true,
-					SubscriptionID:           r.SubscriptionID,
-					ResourceName:             r.ResourceName,
-					ResourceID:               m.doc.OpenShiftCluster.ID,
 				},
 			},
 			PullSecret: pullSecret,
@@ -327,26 +324,12 @@ func (m *Manager) Create(ctx context.Context) error {
 		return err
 	}
 
-	gcskey, gcscert := m.env.ClustersGenevaLoggingSecret()
-
-	gcsKeyBytes, err := tls.PrivateKeyAsBytes(gcskey)
+	bootstrapLoggingConfig, err := m.getBootstrapLoggingConfig()
 	if err != nil {
 		return err
 	}
 
-	gcsCertBytes, err := tls.CertAsBytes(gcscert)
-	if err != nil {
-		return err
-	}
-
-	genevaCreds := &genevacredentials.GenevaCredentials{
-		ClusterLoggingCredentials: &types.GenevaClusterLoggingCredentials{
-			Certificate: string(gcsCertBytes),
-			Key:         string(gcsKeyBytes),
-		},
-	}
-
-	return i.Install(ctx, installConfig, platformCreds, image, genevaCreds)
+	return i.Install(ctx, installConfig, platformCreds, image, bootstrapLoggingConfig)
 }
 
 var rxRHCOS = regexp.MustCompile(`rhcos-((\d+)\.\d+\.\d{8})\d{4}\.\d+-azure\.x86_64\.vhd`)
@@ -368,6 +351,38 @@ func getRHCOSImage(ctx context.Context) (*azuretypes.Image, error) {
 		Offer:     "aro4",
 		SKU:       "aro_" + m[2], // "aro_43"
 		Version:   m[1],          // "43.81.20191122"
+	}, nil
+}
+
+func (m *Manager) getBootstrapLoggingConfig() (*bootstraplogging.BootstrapLoggingConfig, error) {
+	gcskey, gcscert := m.env.ClustersGenevaLoggingSecret()
+
+	gcsKeyBytes, err := tls.PrivateKeyAsBytes(gcskey)
+	if err != nil {
+		return nil, err
+	}
+
+	gcsCertBytes, err := tls.CertAsBytes(gcscert)
+	if err != nil {
+		return nil, err
+	}
+
+	r, err := azure.ParseResourceID(m.doc.OpenShiftCluster.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &bootstraplogging.BootstrapLoggingConfig{
+		Credentials: &types.GenevaClusterLoggingCredentials{
+			Certificate: string(gcsCertBytes),
+			Key:         string(gcsKeyBytes),
+		},
+		Environment:       m.env.ClustersGenevaLoggingEnvironment(),
+		ConfigVersion:     m.env.ClustersGenevaLoggingConfigVersion(),
+		ResourceID:        m.doc.OpenShiftCluster.ID,
+		SubscriptionID:    r.SubscriptionID,
+		ResourceName:      r.ResourceName,
+		ResourceGroupName: r.ResourceGroup,
 	}, nil
 }
 
