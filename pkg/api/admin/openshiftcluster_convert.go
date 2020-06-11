@@ -92,6 +92,14 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 		}
 	}
 
+	if oc.Properties.RegistryProfiles != nil {
+		out.Properties.RegistryProfiles = make([]RegistryProfile, len(oc.Properties.RegistryProfiles))
+		for i, v := range oc.Properties.RegistryProfiles {
+			out.Properties.RegistryProfiles[i].Name = v.Name
+			out.Properties.RegistryProfiles[i].UserName = v.Username
+		}
+	}
+
 	return out
 }
 
