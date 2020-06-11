@@ -23,7 +23,7 @@ func (mon *Monitor) emitDeploymentStatuses(ctx context.Context) error {
 			continue
 		}
 
-		if d.Status.Replicas == d.Status.AvailableReplicas {
+		if d.Status.Replicas == d.Status.AvailableReplicas && !mon.hourlyRun {
 			continue
 		}
 

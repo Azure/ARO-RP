@@ -23,7 +23,7 @@ func (mon *Monitor) emitReplicasetStatuses(ctx context.Context) error {
 			continue
 		}
 
-		if rs.Status.Replicas == rs.Status.AvailableReplicas {
+		if rs.Status.Replicas == rs.Status.AvailableReplicas && !mon.hourlyRun {
 			continue
 		}
 

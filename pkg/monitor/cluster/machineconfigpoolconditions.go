@@ -28,7 +28,7 @@ func (mon *Monitor) emitMachineConfigPoolConditions(ctx context.Context) error {
 
 	for _, mcp := range mcps.Items {
 		for _, c := range mcp.Status.Conditions {
-			if c.Status == machineConfigPoolConditionsExpected[c.Type] {
+			if c.Status == machineConfigPoolConditionsExpected[c.Type] && !mon.hourlyRun {
 				continue
 			}
 

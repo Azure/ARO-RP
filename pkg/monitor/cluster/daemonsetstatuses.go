@@ -23,7 +23,7 @@ func (mon *Monitor) emitDaemonsetStatuses(ctx context.Context) error {
 			continue
 		}
 
-		if ds.Status.DesiredNumberScheduled == ds.Status.NumberAvailable {
+		if ds.Status.DesiredNumberScheduled == ds.Status.NumberAvailable && !mon.hourlyRun {
 			continue
 		}
 

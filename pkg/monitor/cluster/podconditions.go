@@ -80,7 +80,7 @@ func (mon *Monitor) _emitPodContainerStatuses(ps *v1.PodList) {
 		}
 
 		for _, cs := range p.Status.ContainerStatuses {
-			if cs.State.Waiting == nil {
+			if cs.State.Waiting == nil && !mon.hourlyRun {
 				continue
 			}
 

@@ -28,7 +28,7 @@ func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 
 	for _, n := range ns.Items {
 		for _, c := range n.Status.Conditions {
-			if c.Status == nodeConditionsExpected[c.Type] {
+			if c.Status == nodeConditionsExpected[c.Type] && !mon.hourlyRun {
 				continue
 			}
 

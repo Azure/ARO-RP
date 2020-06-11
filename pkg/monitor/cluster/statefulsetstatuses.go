@@ -23,7 +23,7 @@ func (mon *Monitor) emitStatefulsetStatuses(ctx context.Context) error {
 			continue
 		}
 
-		if ss.Status.Replicas == ss.Status.ReadyReplicas {
+		if ss.Status.Replicas == ss.Status.ReadyReplicas && !mon.hourlyRun {
 			continue
 		}
 
