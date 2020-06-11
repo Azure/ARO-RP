@@ -168,5 +168,5 @@ const (
 // RegistryProfile represents a registry profile
 type RegistryProfile struct {
 	Name     string `json:"name,omitempty"`
-	UserName string `json:"userName,omitempty"`
+	Username string `json:"username,omitempty"`
 }
