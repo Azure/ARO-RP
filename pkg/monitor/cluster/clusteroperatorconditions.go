@@ -54,7 +54,7 @@ func (mon *Monitor) emitClusterOperatorConditions(ctx context.Context) error {
 				"type":   string(c.Type),
 			})
 
-			if mon.logMessages {
+			if mon.hourlyRun {
 				mon.log.WithFields(logrus.Fields{
 					"metric":  "clusteroperator.conditions",
 					"name":    co.Name,
