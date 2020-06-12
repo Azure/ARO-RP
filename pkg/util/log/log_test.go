@@ -25,7 +25,7 @@ func TestEnrichWithPath(t *testing.T) {
 				"subscription_id": "subscriptionid",
 				"resource_group":  "resourcegroup",
 				"resource_name":   "resourcename",
-				"resource_id":     "/subscriptions/subscriptionid/resourceGroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/resourcename",
+				"resource_id":     "/subscriptions/subscriptionid/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/resourcename",
 			},
 		},
 		{
@@ -35,7 +35,7 @@ func TestEnrichWithPath(t *testing.T) {
 				"subscription_id": "subscriptionid",
 				"resource_group":  "resourcegroup",
 				"resource_name":   "resourcename",
-				"resource_id":     "/subscriptions/subscriptionid/resourceGroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/resourcename",
+				"resource_id":     "/subscriptions/subscriptionid/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/resourcename",
 			},
 		},
 		{
