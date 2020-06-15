@@ -33,6 +33,8 @@ steps:
     export AZURE_CLIENT_SECRET=$(cat devops-spn.json | jq -r '.clientSecret')
     export AZURE_TENANT_ID=$(cat devops-spn.json | jq -r '.tenantId')
     rm devops-spn.json
+
+    set -x
     . ./hack/e2e/run-rp-and-e2e.sh
 
     deploy_e2e_deps
@@ -49,6 +51,8 @@ steps:
     export AZURE_CLIENT_SECRET=$(cat devops-spn.json | jq -r '.clientSecret')
     export AZURE_TENANT_ID=$(cat devops-spn.json | jq -r '.tenantId')
     rm devops-spn.json
+
+    set -x
     . ./hack/e2e/run-rp-and-e2e.sh
 
     clean_e2e

@@ -48,6 +48,7 @@ deploy_e2e_db() {
         "databaseAccountName=$COSMOSDB_ACCOUNT" \
         "databaseName=$DATABASE_NAME" \
         >/dev/null
+
 }
 
 deploy_e2e_deps() {
@@ -98,10 +99,16 @@ register_sub() {
 }
 
 run_e2e() {
+    # get the original value of set, this is sensitive function,
+    # lets not leak any credentials
+    ORIGINAL_SET_OPT=${-//[^x]/}
+    set +x
+
     CLUSTER_SPN_ID=$(cat $CLUSTERSPN | jq -r .appId)
     CLUSTER_SPN_SECRET=$(cat $CLUSTERSPN | jq -r .password)
 
     echo "########## 🚀 Create ARO Cluster $CLUSTER - Using client-id : $CLUSTER_SPN_ID ##########"
+
     az aro create \
       -g "$ARO_RESOURCEGROUP" \
       -n "$CLUSTER" \
@@ -113,6 +120,7 @@ run_e2e() {
       --client-secret "$CLUSTER_SPN_SECRET" \
       --cluster-resource-group "$CLUSTER_RESOURCEGROUP"
 
+    set -x
     echo "########## CLI : ARO List ##########"
     az aro list -o table
     echo "########## CLI : ARO list-creds ##########"
@@ -120,6 +128,9 @@ run_e2e() {
     echo "########## Run E2E ##########"
     go run ./hack/kubeadminkubeconfig "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$ARO_RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER" >$KUBECONFIG
     RESOURCEGROUP=$ARO_RESOURCEGROUP make e2e
+
+    # set to original state
+    if [[ -n "$ORIGINAL_SET_OPT" ]]; then set -x; else set +x; fi
 }
 
 clean_e2e_db(){
