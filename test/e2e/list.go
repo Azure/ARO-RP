@@ -15,7 +15,7 @@ var _ = Describe("List clusters", func() {
 	Specify("the test cluster should be in the returned list", func() {
 		ctx := context.Background()
 
-		ocList, err := Clients.OpenshiftClusters.List(ctx)
+		ocList, err := clients.OpenshiftClusters.List(ctx)
 		Expect(err).NotTo(HaveOccurred())
 		//Expect(len(ocList.Value)).To(Greater(1)))
 
@@ -32,7 +32,7 @@ var _ = Describe("List clusters", func() {
 	Specify("the test cluster should be in the returned listByResourceGroup", func() {
 		ctx := context.Background()
 
-		ocList, err := Clients.OpenshiftClusters.ListByResourceGroup(ctx, os.Getenv("RESOURCEGROUP"))
+		ocList, err := clients.OpenshiftClusters.ListByResourceGroup(ctx, os.Getenv("RESOURCEGROUP"))
 		Expect(err).NotTo(HaveOccurred())
 		//Expect(len(ocList.Value)).To(Greater(1)))
 

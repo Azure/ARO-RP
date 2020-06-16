@@ -18,7 +18,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift"
 )
 
-type ClientSet struct {
+type clientSet struct {
 	OpenshiftClusters redhatopenshift.OpenShiftClustersClient
 	Operations        redhatopenshift.OperationsClient
 	Kubernetes        kubernetes.Interface
@@ -26,11 +26,11 @@ type ClientSet struct {
 }
 
 var (
-	Log     *logrus.Entry
-	Clients *ClientSet
+	log     *logrus.Entry
+	clients *clientSet
 )
 
-func newClientSet() (*ClientSet, error) {
+func newClientSet() (*clientSet, error) {
 	authorizer, err := auth.NewAuthorizerFromEnvironment()
 	if err != nil {
 		return nil, err
@@ -56,7 +56,7 @@ func newClientSet() (*ClientSet, error) {
 		return nil, err
 	}
 
-	return &ClientSet{
+	return &clientSet{
 		OpenshiftClusters: redhatopenshift.NewOpenShiftClustersClient(os.Getenv("AZURE_SUBSCRIPTION_ID"), authorizer),
 		Operations:        redhatopenshift.NewOperationsClient(os.Getenv("AZURE_SUBSCRIPTION_ID"), authorizer),
 		Kubernetes:        cli,
@@ -65,7 +65,7 @@ func newClientSet() (*ClientSet, error) {
 }
 
 var _ = BeforeSuite(func() {
-	Log.Info("BeforeSuite")
+	log.Info("BeforeSuite")
 	for _, key := range []string{
 		"AZURE_SUBSCRIPTION_ID",
 		"CLUSTER",
@@ -77,7 +77,7 @@ var _ = BeforeSuite(func() {
 	}
 
 	var err error
-	Clients, err = newClientSet()
+	clients, err = newClientSet()
 	if err != nil {
 		panic(err)
 	}
