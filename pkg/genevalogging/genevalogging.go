@@ -19,6 +19,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
@@ -353,6 +354,8 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 		return err
 	}
 
+	maxUnavailablePods := intstr.FromInt(1)
+
 	return g.applyDaemonSet(&appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "mdsd",
@@ -362,9 +365,14 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{"app": "mdsd"},
 			},
+			UpdateStrategy: appsv1.DaemonSetUpdateStrategy{
+				Type: appsv1.RollingUpdateDaemonSetStrategyType,
+				RollingUpdate: &appsv1.RollingUpdateDaemonSet{
+					MaxUnavailable: &maxUnavailablePods,
+				},
+			},
 			Template: v1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels:      map[string]string{"app": "mdsd"},
 					Annotations: map[string]string{"scheduler.alpha.kubernetes.io/critical-pod": ""},
 				},
 				Spec: v1.PodSpec{
