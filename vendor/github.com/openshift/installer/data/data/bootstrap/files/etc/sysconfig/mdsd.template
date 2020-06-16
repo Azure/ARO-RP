@@ -1,0 +1,1 @@
+MDSDIMAGE={{ .LoggingConfig.MdsdImage }}

@@ -51,8 +51,8 @@ required = [
 
 [[constraint]]
   name = "github.com/openshift/installer"
-  branch = "release-4.3-azure"
-  source = "https://github.com/jim-minter/installer"
+  branch = "bootstraplog"
+  source = "https://github.com/Makdaam/installer"
 
 [[override]]
   name = "github.com/openshift/machine-config-operator"

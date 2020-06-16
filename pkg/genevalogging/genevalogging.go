@@ -28,10 +28,13 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/tls"
 )
 
+// note: any changes to MDSD or Fluentbit config should also be applied in openshift/installer config or unit files.
+
 const (
 	kubeNamespace      = "openshift-azure-logging"
 	kubeServiceAccount = "system:serviceaccount:" + kubeNamespace + ":geneva"
 
+	//when replacing these two image formats also replace the one in /pkg/backend/openshiftcluster/create.go getBootstrapLoggingConfig()
 	fluentbitImageFormat = "%s.azurecr.io/fluentbit:1.3.9-1"
 	mdsdImageFormat      = "%s.azurecr.io/genevamdsd:master_285"
 

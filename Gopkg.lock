@@ -1024,12 +1024,13 @@
   revision = "cb47e810bee8c56f0738f0723c98cf3192ea7736"
 
 [[projects]]
-  branch = "release-4.3-azure"
-  digest = "1:d4ce1ba9a20b111f05db15385114677ac28646fe1e92db4647229be457bd3789"
+  branch = "bootstraplog"
+  digest = "1:5df4f34c2a01d7e486a870b21d155585a8e4805399d06e375b829e0978c61ccf"
   name = "github.com/openshift/installer"
   packages = [
     "data",
     "pkg/asset",
+    "pkg/asset/bootstraplogging",
     "pkg/asset/cluster",
     "pkg/asset/cluster/aws",
     "pkg/asset/cluster/azure",
@@ -1111,8 +1112,8 @@
     "pkg/version",
   ]
   pruneopts = "T"
-  revision = "f90508187f1541ca43fca89843f5f26a8ccf34a0"
-  source = "https://github.com/jim-minter/installer"
+  revision = "4a68e1709df2595cd0d2ace5dc0512f5ba8d1572"
+  source = "https://github.com/Makdaam/installer"
 
 [[projects]]
   branch = "master"
@@ -1995,6 +1996,7 @@
     "github.com/openshift/console-operator/pkg/api",
     "github.com/openshift/installer/data",
     "github.com/openshift/installer/pkg/asset",
+    "github.com/openshift/installer/pkg/asset/bootstraplogging",
     "github.com/openshift/installer/pkg/asset/cluster",
     "github.com/openshift/installer/pkg/asset/ignition/bootstrap",
     "github.com/openshift/installer/pkg/asset/ignition/machine",
@@ -2056,7 +2058,6 @@
     "k8s.io/client-go/tools/clientcmd",
     "k8s.io/client-go/tools/clientcmd/api/v1",
     "k8s.io/client-go/tools/metrics",
-    "k8s.io/client-go/util/flowcontrol",
     "k8s.io/client-go/util/retry",
   ]
   solver-name = "gps-cdcl"

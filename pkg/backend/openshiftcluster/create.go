@@ -18,6 +18,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/openshift/installer/pkg/asset/bootstraplogging"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	icazure "github.com/openshift/installer/pkg/asset/installconfig/azure"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
@@ -38,6 +39,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
+	"github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -321,11 +323,49 @@ func (m *Manager) Create(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	bootstrapLoggingConfig, err := m.getBootstrapLoggingConfig()
+	if err != nil {
+		return err
+	}
 
-	return i.Install(ctx, installConfig, platformCreds, image)
+	return i.Install(ctx, installConfig, platformCreds, image, bootstrapLoggingConfig)
 }
 
 var rxRHCOS = regexp.MustCompile(`rhcos-((\d+)\.\d+\.\d{8})\d{4}\.\d+-azure\.x86_64\.vhd`)
+
+func (m *Manager) getBootstrapLoggingConfig() (*bootstraplogging.Config, error) {
+	gcskey, gcscert := m.env.ClustersGenevaLoggingSecret()
+
+	gcsKeyBytes, err := tls.PrivateKeyAsBytes(gcskey)
+	if err != nil {
+		return nil, err
+	}
+
+	gcsCertBytes, err := tls.CertAsBytes(gcscert)
+	if err != nil {
+		return nil, err
+	}
+
+	r, err := azure.ParseResourceID(m.doc.OpenShiftCluster.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &bootstraplogging.Config{
+		Certificate:       string(gcsCertBytes),
+		Key:               string(gcsKeyBytes),
+		Namespace:         "AROClusterLogs",
+		Environment:       m.env.ClustersGenevaLoggingEnvironment(),
+		ConfigVersion:     m.env.ClustersGenevaLoggingConfigVersion(),
+		ResourceID:        m.doc.OpenShiftCluster.ID,
+		SubscriptionID:    r.SubscriptionID,
+		ResourceName:      r.ResourceName,
+		ResourceGroupName: r.ResourceGroup,
+		//when changing these two container images, also change /pkg/genevalogging/genevalogging.go
+		MdsdImage:      fmt.Sprintf("%s.azurecr.io/genevamdsd:master_285", m.env.ACRName()),
+		FluentbitImage: fmt.Sprintf("%s.azurecr.io/fluentbit:1.3.9-1", m.env.ACRName()),
+	}, nil
+}
 
 func getRHCOSImage(ctx context.Context) (*azuretypes.Image, error) {
 	// https://rhcos.blob.core.windows.net/imagebucket/rhcos-43.81.201911221453.0-azure.x86_64.vhd

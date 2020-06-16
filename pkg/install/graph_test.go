@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/openshift/installer/pkg/asset/bootstraplogging"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	icazure "github.com/openshift/installer/pkg/asset/installconfig/azure"
 	"github.com/openshift/installer/pkg/asset/targets"
@@ -39,6 +40,8 @@ func TestGraphRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	loggingConfig := &bootstraplogging.Config{}
 
 	platformCreds := &installconfig.PlatformCreds{
 		Azure: &icazure.Credentials{
@@ -106,6 +109,7 @@ func TestGraphRoundTrip(t *testing.T) {
 	}
 
 	g := graph{
+		reflect.TypeOf(loggingConfig): loggingConfig,
 		reflect.TypeOf(installConfig): installConfig,
 		reflect.TypeOf(platformCreds): platformCreds,
 	}
