@@ -72,3 +72,28 @@ jobs:
       summaryFileLocation: $(System.DefaultWorkingDirectory)/**/coverage.xml
       failIfCoverageEmpty: false
     condition: succeededOrFailed()
+
+- job: Golang_Lint
+  pool:
+    vmImage: ubuntu-latest
+
+  steps:
+  - template: ./templates/template-setup-golang-env.yml
+    parameters:
+      gobin: ${{ variables.GOBIN }}
+      gopath: ${{ variables.GOPATH }}
+      goroot: ${{ variables.GOROOT }}
+      modulePath: ${{ variables.modulePath }}
+  - script: |
+      set -xe
+      curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.27.0
+      make lint-ci
+      [[ -z "$(git status -s)" ]]
+    workingDirectory: ${{ variables.modulePath }}
+    displayName: 🧪Run Linting
+
+    - task: PublishTestResults@2
+    displayName: 📊 Publish lint results
+    inputs:
+      testResultsFiles: $(System.DefaultWorkingDirectory)/**/lint.xml
+    condition: succeededOrFailed()
