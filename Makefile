@@ -51,6 +51,7 @@ client: generate
 
 generate:
 	go generate ./...
+	find . -type f -name "zz_generated_*.go" -exec chmod 0664 {} +
 
 image-aro: aro
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
