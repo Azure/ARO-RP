@@ -92,7 +92,7 @@ jobs:
     workingDirectory: ${{ variables.modulePath }}
     displayName: 🧪Run Linting
 
-    - task: PublishTestResults@2
+  - task: PublishTestResults@2
     displayName: 📊 Publish lint results
     inputs:
       testResultsFiles: $(System.DefaultWorkingDirectory)/**/lint.xml
