@@ -50,6 +50,9 @@
         "subscriptionResourceGroupName": {
             "value": ""
         },
+        "vmSize": {
+            "value": "Standard_D2s_v3"
+        },
         "vmssName": {
             "value": ""
         }

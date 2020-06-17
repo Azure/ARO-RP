@@ -50,6 +50,7 @@ type Configuration struct {
 	RPParentDomainName                 string        `json:"rpParentDomainName,omitempty"`
 	SubscriptionResourceGroupName      string        `json:"subscriptionResourceGroupName,omitempty"`
 	SSHPublicKey                       string        `json:"sshPublicKey,omitempty"`
+	VMSize                             string        `json:"vmSize,omitempty"`
 }
 
 // GetConfig return RP configuration from the file

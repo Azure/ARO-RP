@@ -58,6 +58,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"sshPublicKey",
 			"subscriptionResourceGroupName",
 			"vmssName",
+			"vmSize",
 		)
 	}
 
@@ -69,6 +70,8 @@ func (g *generator) rpTemplate() *arm.Template {
 		case "fullDeploy":
 			p.Type = "bool"
 			p.DefaultValue = false
+		case "vmSize":
+			p.DefaultValue = "Standard_D2s_v3"
 		}
 		t.Parameters[param] = p
 	}

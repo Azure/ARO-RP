@@ -53,6 +53,10 @@
         "subscriptionResourceGroupName": {
             "type": "string"
         },
+        "vmSize": {
+            "type": "string",
+            "defaultValue": "Standard_D2s_v3"
+        },
         "vmssName": {
             "type": "string"
         }
@@ -135,7 +139,7 @@
         },
         {
             "sku": {
-                "name": "Standard_D2s_v3",
+                "name": "[parameters('vmSize')]",
                 "tier": "Standard",
                 "capacity": 3
             },
