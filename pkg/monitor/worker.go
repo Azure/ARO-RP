@@ -170,7 +170,7 @@ out:
 		// TODO: later can modify here to poll once per N minutes and re-issue
 		// cached metrics in the remaining minutes
 
-		if sub != nil && sub.Subscription != nil && sub.Subscription.State != api.SubscriptionStateSuspended {
+		if sub != nil && sub.Subscription != nil && sub.Subscription.State != api.SubscriptionStateSuspended && sub.Subscription.State != api.SubscriptionStateWarned {
 			mon.workOne(context.Background(), log, v.doc, newh != h)
 		}
 
