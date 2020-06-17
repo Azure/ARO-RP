@@ -262,7 +262,7 @@ func (i *Installer) runSteps(ctx context.Context, steps []interface{}) error {
 			if err != nil {
 				i.gatherFailureLogs(ctx)
 				if _, ok := err.(*api.CloudError); !ok {
-					err = fmt.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name(), err)
+					err = fmt.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(step.f).Pointer()).Name(), err)
 				}
 				return err
 			}
