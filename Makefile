@@ -120,6 +120,16 @@ test-go: generate
 	go vet ./...
 	set -o pipefail && go test -v ./... -coverprofile cover.out | tee uts.txt
 
+lint: generate
+	BUILT=$$(docker build -q --build-arg GOLANGCILINT_VERSION=v1.27.0 -f Dockerfile.lint); \
+	docker run --security-opt label=disable --rm -v $(PWD):/opt/app-root/src/go/src/github.com/Azure/ARO-RP -w /opt/app-root/src/go/src/github.com/Azure/ARO-RP $$BUILT
+
+lint-local: generate
+	golangci-lint run
+
+lint-ci: generate
+	golangci-lint run -v --out-format junit-xml > lint.xml
+
 test-python: generate pyenv${PYTHON_VERSION}
 	. pyenv${PYTHON_VERSION}/bin/activate && \
 		$(MAKE) az && \

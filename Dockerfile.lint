@@ -1,0 +1,11 @@
+FROM registry.access.redhat.com/ubi8/go-toolset:1.13.4
+ARG GOLANGCILINT_VERSION
+
+USER 0
+RUN \
+  dnf install -y gpgme-devel libassuan-devel && \
+  curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin $GOLANGCILINT_VERSION
+  
+USER 1001
+
+CMD "$(go env GOPATH)/bin/golangci-lint" "run" "-v"
