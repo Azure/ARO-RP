@@ -175,6 +175,11 @@
        "https://localhost:8443/providers/Microsoft.RedHatOpenShift/operations?api-version=2020-04-30"
      ```
 
+   * View RP logs in a friendly format:
+
+     ```bash
+     journalctl _COMM=aro -o json --since "15 min ago" -f | jq -r 'select (.COMPONENT != null and (.COMPONENT | contains("access"))|not) | .MESSAGE'
+     ```
 
 ## Debugging
 
