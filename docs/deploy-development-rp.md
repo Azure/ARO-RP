@@ -187,7 +187,7 @@
 
   ```bash
   sudo openvpn secrets/vpn-$LOCATION.ovpn &
-  hack/ssh-bootstrap.sh "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER"
+  hack/ssh-agent.sh bootstrap
   ```
 
 * Get an admin kubeconfig:
@@ -202,7 +202,7 @@
   * First, get the admin kubeconfig and `export KUBECONFIG` as detailed above.
 
   ```bash
-  hack/ssh.sh [xxxxx-master-{0,1,2}]
+  hack/ssh-agent.sh [master-{0,1,2}]
   ```
 
 
