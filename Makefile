@@ -120,6 +120,9 @@ test-go: generate
 	go vet ./...
 	set -o pipefail && go test -v ./... -coverprofile cover.out | tee uts.txt
 
+lint-go: generate
+	golangci-lint run
+
 test-python: generate pyenv${PYTHON_VERSION}
 	. pyenv${PYTHON_VERSION}/bin/activate && \
 		$(MAKE) az && \
