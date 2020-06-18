@@ -40,7 +40,7 @@ kill_rp(){
 deploy_e2e_db() {
     echo "########## 📦 Creating new DB $DATABASE_NAME in $COSMOSDB_ACCOUNT ##########"
 
-    az group deployment create \
+    az deployment group create \
       -g "$RESOURCEGROUP" \
       -n "databases-development-$DATABASE_NAME" \
       --template-file deploy/databases-development.json \
