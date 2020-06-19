@@ -28,10 +28,10 @@ const (
 )
 
 func main() {
+	flag.Parse()
+
 	ctx := context.Background()
 	log := utillog.GetLogger()
-
-	flag.Parse()
 
 	if err := run(ctx, log); err != nil {
 		log.Fatal(err)
@@ -94,6 +94,11 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		}
 		if time.Now().Sub(createdAt) < ttl {
 			log.Debugf("Group %s is still less than TTL. SKIP.", *resourceGroup.Name)
+			return false
+		}
+
+		// TODO: Remove me once shared cluster tags is fixed
+		if strings.HasPrefix(*resourceGroup.Name, "aro-v4-shared") {
 			return false
 		}
 
