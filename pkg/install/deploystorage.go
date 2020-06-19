@@ -205,6 +205,13 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 							},
 							NotActions: &[]string{
 								"Microsoft.Network/networkSecurityGroups/join/action",
+								"Microsoft.Compute/disks/beginGetAccess/action",
+								"Microsoft.Compute/disks/write",
+								"Microsoft.Compute/disks/endGetAccess/action",
+								"Microsoft.Compute/snapshots/write",
+								"Microsoft.Compute/snapshots/delete",
+								"Microsoft.Compute/snapshots/beginGetAccess/action",
+								"Microsoft.Compute/snapshots/endGetAccess/action",
 							},
 						},
 					},
