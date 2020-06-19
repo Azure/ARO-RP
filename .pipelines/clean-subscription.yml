@@ -1,6 +1,16 @@
 trigger: none
 pr: none
 
+parameters:
+- name: purgeTTL
+- name: subscriptionId
+- name: purgeCreatedTag
+- name: subscriptionCredentials
+- name: resourceGroupDeletePrefixes
+- name: dryRun
+  type: boolean
+  default: true
+
 variables:
 - template: vars.yml
 
@@ -19,11 +29,11 @@ jobs:
 
   - template: ./templates/template-clean-subscription.yml
     parameters:
-      dryRun: $(dryRun)
-      subscriptionCredentials: $(subscriptionCredentials)
-      subscriptionId: $(subscriptionId)
-      purgeTTL: $(purgeTTL)
-      purgeCreatedTag: $(purgeCreatedTag)
-      resourceGroupDeletePrefixes: $(resourceGroupDeletePrefixes)
+      dryRun: ${{ parameters.dryRun }}
+      subscriptionCredentials: ${{ parameters.subscriptionCredentials }}
+      subscriptionId: ${{ parameters.subscriptionId }}
+      purgeTTL: ${{ parameters.purgeTTL }}
+      purgeCreatedTag:  ${{ parameters.purgeCreatedTag }}
+      resourceGroupDeletePrefixes: ${{ parameters.resourceGroupDeletePrefixes }}
       workingDirectory: ${{ variables.modulePath }}
 
