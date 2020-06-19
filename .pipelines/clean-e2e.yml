@@ -1,0 +1,32 @@
+trigger: none
+pr: none
+
+variables:
+- template: vars.yml
+
+jobs:
+- job: Clean_E2E
+  pool:
+    vmImage: ubuntu-latest
+
+  steps:
+  - template: ./templates/template-setup-golang-env.yml
+    parameters:
+      gobin: ${{ variables.GOBIN }}
+      gopath: ${{ variables.GOPATH }}
+      goroot: ${{ variables.GOROOT }}
+      modulePath: ${{ variables.modulePath }}
+
+  - script: |
+      set -e
+
+      echo $(aro-v4-e2e-devops-spn) | base64 -d -w 0 > devops-spn.json
+      export AZURE_CLIENT_ID=$(cat devops-spn.json | jq -r '.clientId')
+      export AZURE_CLIENT_SECRET=$(cat devops-spn.json | jq -r '.clientSecret')
+      export AZURE_TENANT_ID=$(cat devops-spn.json | jq -r '.tenantId')
+      export AZURE_SUBSCRIPTION_ID=$(e2e-subscription)
+      rm devops-spn.json
+
+      go run ./hack/cleane2e
+    workingDirectory: ${{ variables.modulePath }}
+    displayName: 🧹 Clean E2E subscription
