@@ -10,6 +10,13 @@ jobs:
     vmImage: ubuntu-latest
 
   steps:
+  - template: ./templates/template-setup-golang-env.yml
+    parameters:
+      gobin: ${{ variables.GOBIN }}
+      gopath: ${{ variables.GOPATH }}
+      goroot: ${{ variables.GOROOT }}
+      modulePath: ${{ variables.modulePath }}
+
   - template: ./templates/template-clean-subscription.yml
     parameters:
       dryRun: $(dryRun)

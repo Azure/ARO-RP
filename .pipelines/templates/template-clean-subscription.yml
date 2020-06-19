@@ -18,39 +18,27 @@ parameters:
   type: string
   default: ''
 - name: dryRun
-  type: bool
+  type: boolean
   default: false
 - name: resourceGroupDeletePrefixes
   type: string
   default: v4-e2e-rg-,aro-v4-e2e-rg-
 
-jobs:
-- job: Clean_Subscription
-  pool:
-    vmImage: ubuntu-latest
+steps:
+- script: |
+    set -e
 
-  steps:
-  - template: ./template-setup-golang-env.yml
-    parameters:
-      gobin: ${{ variables.GOBIN }}
-      gopath: ${{ variables.GOPATH }}
-      goroot: ${{ variables.GOROOT }}
-      modulePath: ${{ variables.modulePath }}
+    echo ${{ parameters.subscriptionCredentials }} | base64 -d -w 0 > spn.json
+    export AZURE_CLIENT_ID=$(cat spn.json | jq -r '.clientId')
+    export AZURE_CLIENT_SECRET=$(cat spn.json | jq -r '.clientSecret')
+    export AZURE_TENANT_ID=$(cat spn.json | jq -r '.tenantId')
+    export AZURE_SUBSCRIPTION_ID=$(parameters.subscriptionId)
 
-  - script: |
-      set -e
+    export AZURE_PURGE_TTL="${{ parameters.purgeTTL }}""
+    export AZURE_PURGE_CREATED_TAG="${{ parameters.purgeCreatedTag }}"
+    export AZURE_PURGE_RESOURCEGROUP_PREFIXES="${{ parameters.resourceGroupDeletePrefixes }}"
+    rm spn.json
 
-      echo ${{ parameters.subscriptionCredentials }} | base64 -d -w 0 > spn.json
-      export AZURE_CLIENT_ID=$(cat spn.json | jq -r '.clientId')
-      export AZURE_CLIENT_SECRET=$(cat spn.json | jq -r '.clientSecret')
-      export AZURE_TENANT_ID=$(cat spn.json | jq -r '.tenantId')
-      export AZURE_SUBSCRIPTION_ID=$(parameters.subscriptionId)
-
-      export AZURE_PURGE_TTL="${{ parameters.purgeTTL }}""
-      export AZURE_PURGE_CREATED_TAG="${{ parameters.purgeCreatedTag }}"
-      export AZURE_PURGE_RESOURCEGROUP_PREFIXES="${{ parameters.resourceGroupDeletePrefixes }}"
-      rm spn.json
-
-      go run ./hack/clean.go -dryRun=${{ parameters.dryRun }}
-    workingDirectory: ${{ parameters.workingDirectory }}
-    displayName: 🧹 Clean subscription
+    go run ./hack/clean.go -dryRun=${{ parameters.dryRun }}
+  workingDirectory: ${{ parameters.workingDirectory }}
+  displayName: 🧹 Clean subscription
