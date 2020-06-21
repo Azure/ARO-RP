@@ -94,7 +94,7 @@ required = [
 
 [[override]]
   name = "sigs.k8s.io/cluster-api-provider-azure"
-  branch = "release-4.3"
+  branch = "release-4.4"
   source = "https://github.com/openshift/cluster-api-provider-azure"
 
 [[override]]
