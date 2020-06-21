@@ -920,8 +920,8 @@
   version = "v0.1.1"
 
 [[projects]]
-  branch = "release-4.3"
-  digest = "1:14b7de6170f03983718e52845912c445dddd8870d1fa48a0f1b46835e2eb5ba6"
+  branch = "release-4.4"
+  digest = "1:5a3061ac5914af3cef6ea2807e78d0b378850a47990a205c0bc3e14594f67938"
   name = "github.com/openshift/api"
   packages = [
     "config/v1",
@@ -934,7 +934,7 @@
     "security/v1",
   ]
   pruneopts = "UT"
-  revision = "2987a591a72cee08898c93dcc09816783d39a5bc"
+  revision = "7192180f496aab1f7659d8660fc360498bab498b"
 
 [[projects]]
   branch = "release-4.3"

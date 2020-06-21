@@ -32,7 +32,7 @@ required = [
 
 [[constraint]]
   name = "github.com/openshift/api"
-  branch = "release-4.3"
+  branch = "release-4.4"
 
 [[constraint]]
   name = "github.com/openshift/client-go"
