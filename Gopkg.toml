@@ -57,7 +57,7 @@ required = [
 
 [[constraint]]
   name = "github.com/openshift/console-operator"
-  branch = "release-4.3"
+  branch = "release-4.4"
 
 [[constraint]]
   name = "github.com/satori/go.uuid"
