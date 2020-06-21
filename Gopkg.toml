@@ -6,7 +6,8 @@ required = [
   "golang.org/x/tools/cmd/goimports",
   "github.com/jstemmer/go-junit-report",
   "github.com/axw/gocov/gocov",
-  "github.com/AlekSi/gocov-xml"
+   "github.com/AlekSi/gocov-xml",
+  "github.com/metal3-io/baremetal-operator/pkg/apis/metal3/v1alpha1"
 ]
 
 [[constraint]]
@@ -73,6 +74,12 @@ required = [
 [[constraint]]
   name = "golang.org/x/crypto"
   branch = "master"
+
+[[override]]
+  branch = "release-4.4"
+  name = "github.com/metal3-io/baremetal-operator"
+  source = "https://github.com/openshift/baremetal-operator"
+
 
 [[override]]
   name = "k8s.io/api"
