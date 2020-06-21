@@ -6,7 +6,7 @@ import (
 	"time"
 
 	v1 "github.com/openshift/api/samples/v1"
-	scheme "github.com/openshift/cluster-samples-operator/pkg/generated/clientset/versioned/scheme"
+	scheme "github.com/openshift/client-go/samples/clientset/versioned/scheme"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"

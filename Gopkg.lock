@@ -938,7 +938,7 @@
 
 [[projects]]
   branch = "release-4.4"
-  digest = "1:9881a7758b2afa3ffdc0503f6e32ac63d7369a4c4c1747278baf62729b09d241"
+  digest = "1:dfa5f5b132f57a26ba1007bcc5dc1ec1230a043507d2c2ec7d1d9c05edf58151"
   name = "github.com/openshift/client-go"
   packages = [
     "config/clientset/versioned",
@@ -953,6 +953,9 @@
     "operator/clientset/versioned/typed/operator/v1/fake",
     "operator/clientset/versioned/typed/operator/v1alpha1",
     "operator/clientset/versioned/typed/operator/v1alpha1/fake",
+    "samples/clientset/versioned",
+    "samples/clientset/versioned/scheme",
+    "samples/clientset/versioned/typed/samples/v1",
     "security/clientset/versioned",
     "security/clientset/versioned/scheme",
     "security/clientset/versioned/typed/security/v1",
@@ -1021,18 +1024,6 @@
   ]
   pruneopts = "UT"
   revision = "2336783d460353458477aa9e181eca87e4db5d27"
-
-[[projects]]
-  branch = "release-4.3"
-  digest = "1:900bceaa6cc77aab2ec6088d9b298e7e54df69a5794afcf9e1ab8452f56c8409"
-  name = "github.com/openshift/cluster-samples-operator"
-  packages = [
-    "pkg/generated/clientset/versioned",
-    "pkg/generated/clientset/versioned/scheme",
-    "pkg/generated/clientset/versioned/typed/samples/v1",
-  ]
-  pruneopts = "UT"
-  revision = "bfda4d3462fd7305573adb103137723d2bd4975c"
 
 [[projects]]
   branch = "release-4.3"
@@ -2024,12 +2015,12 @@
     "github.com/openshift/client-go/config/clientset/versioned/scheme",
     "github.com/openshift/client-go/operator/clientset/versioned",
     "github.com/openshift/client-go/operator/clientset/versioned/fake",
+    "github.com/openshift/client-go/samples/clientset/versioned",
     "github.com/openshift/client-go/security/clientset/versioned",
     "github.com/openshift/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1",
     "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1",
     "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset",
     "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset/fake",
-    "github.com/openshift/cluster-samples-operator/pkg/generated/clientset/versioned",
     "github.com/openshift/console-operator/pkg/api",
     "github.com/openshift/installer/data",
     "github.com/openshift/installer/pkg/asset",

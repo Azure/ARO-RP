@@ -42,10 +42,6 @@ required = [
   name = "github.com/openshift/cluster-api"
   branch = "release-4.3"
 
-[[override]]
-  name = "github.com/openshift/cluster-samples-operator"
-  branch = "release-4.3"
-
 [[constraint]]
   name = "github.com/openshift/cluster-api-provider-azure"
   branch = "release-4.3"
