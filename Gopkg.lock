@@ -1714,8 +1714,8 @@
   source = "https://github.com/openshift/kubernetes-api"
 
 [[projects]]
-  branch = "origin-4.3-kubernetes-1.16.2"
-  digest = "1:b499c1ca627563b5b9bc952a3aa5e0f298c41f1c092b096f6a4bd8b5aab4c2f7"
+  branch = "origin-4.4-kubernetes-1.17.1"
+  digest = "1:fac15195ebd43a8833c5cabfcfe87a6497fa12cf04df21b3a797bfcb933a4181"
   name = "k8s.io/apimachinery"
   packages = [
     "pkg/api/errors",
@@ -1763,7 +1763,7 @@
     "third_party/forked/golang/reflect",
   ]
   pruneopts = "UT"
-  revision = "46c5f7baf5456058e6999b176e1bdb87668c7c9d"
+  revision = "79c2a76c473a20cdc4ce59cae4b72529b5d9d16b"
   source = "https://github.com/openshift/kubernetes-apimachinery"
 
 [[projects]]
