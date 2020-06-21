@@ -937,8 +937,8 @@
   revision = "7192180f496aab1f7659d8660fc360498bab498b"
 
 [[projects]]
-  branch = "release-4.3"
-  digest = "1:6de9ac34b49d1d87c4280a12daa6f79da832067e9d72ccefca3f213bbbe472c2"
+  branch = "release-4.4"
+  digest = "1:9881a7758b2afa3ffdc0503f6e32ac63d7369a4c4c1747278baf62729b09d241"
   name = "github.com/openshift/client-go"
   packages = [
     "config/clientset/versioned",
@@ -958,7 +958,7 @@
     "security/clientset/versioned/typed/security/v1",
   ]
   pruneopts = "UT"
-  revision = "f6563a70e19a12b2f240eaf4e716ef75baf7003e"
+  revision = "92a2713fa240ea8a375a982d60b43ef5119f85ba"
 
 [[projects]]
   branch = "release-4.3"
@@ -2038,6 +2038,7 @@
     "github.com/openshift/installer/pkg/asset/ignition/machine",
     "github.com/openshift/installer/pkg/asset/installconfig",
     "github.com/openshift/installer/pkg/asset/installconfig/azure",
+    "github.com/openshift/installer/pkg/asset/installconfig/openstack",
     "github.com/openshift/installer/pkg/asset/kubeconfig",
     "github.com/openshift/installer/pkg/asset/machines",
     "github.com/openshift/installer/pkg/asset/manifests",
@@ -2053,7 +2054,6 @@
     "github.com/openshift/installer/pkg/rhcos",
     "github.com/openshift/installer/pkg/types",
     "github.com/openshift/installer/pkg/types/azure",
-    "github.com/openshift/installer/pkg/types/openstack/validation",
     "github.com/openshift/installer/pkg/types/validation",
     "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned",
     "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1",

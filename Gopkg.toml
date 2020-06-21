@@ -36,7 +36,7 @@ required = [
 
 [[constraint]]
   name = "github.com/openshift/client-go"
-  branch = "release-4.3"
+  branch = "release-4.4"
 
 [[override]]
   name = "github.com/openshift/cluster-api"
