@@ -79,7 +79,7 @@ required = [
 
 [[override]]
   name = "k8s.io/api"
-  branch = "origin-4.3-kubernetes-1.16.2"
+  branch = "origin-4.4-kubernetes-1.17.1"
   source = "https://github.com/openshift/kubernetes-api"
 
 [[override]]

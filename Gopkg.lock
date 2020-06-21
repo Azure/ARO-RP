@@ -1666,8 +1666,8 @@
   version = "v2.2.7"
 
 [[projects]]
-  branch = "origin-4.3-kubernetes-1.16.2"
-  digest = "1:551482dd26801d0494f7e1f0e9c744c3fe120d29cb21ad6e10ed40c84a94fb3a"
+  branch = "origin-4.4-kubernetes-1.17.1"
+  digest = "1:17cead3c012417dd2dd336113138c19de2537062a0f7a08085c7adede5e464b4"
   name = "k8s.io/api"
   packages = [
     "admissionregistration/v1",
@@ -1710,7 +1710,7 @@
     "storage/v1beta1",
   ]
   pruneopts = "UT"
-  revision = "b2607acfca124f576c98e5e9ad8d22184518b6dd"
+  revision = "7643814f1c97f24ccfb38c2b85a7bb3c7f494346"
   source = "https://github.com/openshift/kubernetes-api"
 
 [[projects]]
