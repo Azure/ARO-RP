@@ -16,7 +16,7 @@ required = [
 
 [[override]]
   name = "github.com/Azure/azure-sdk-for-go"
-  version = "40.2.0"
+  version = "42.1.0"
 
 [[override]]
   name = "github.com/containers/image"
