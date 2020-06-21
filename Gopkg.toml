@@ -40,7 +40,7 @@ required = [
 
 [[override]]
   name = "github.com/openshift/cluster-api"
-  branch = "release-4.3"
+  branch = "release-4.4"
 
 [[constraint]]
   name = "github.com/openshift/cluster-api-provider-azure"

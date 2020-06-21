@@ -22,7 +22,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "58f0a1b3cf842e1d702da8226e100f726ec26579",
+                    "commitHash": "c444986936ce426843fddc90ffb9d2749ff497bd",
                     "repositoryUrl": "https://github.com/Azure/azure-sdk-for-go/"
                 }
             }
@@ -31,7 +31,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "327ff6ce8b902f9afe648d5ea8ff6dc26c26f150",
+                    "commitHash": "778ae565bde392f58e04c3c8ff07c2ac506d00c9",
                     "repositoryUrl": "https://github.com/Azure/go-autorest/"
                 }
             }
@@ -175,7 +175,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "76107251acd117c6d3e5b4dae2b47f82f944984b",
+                    "commitHash": "7afbeba044a8bf5762609fbb5f352291eeb7ad9a",
                     "repositoryUrl": "https://github.com/coreos/ignition/"
                 }
             }
@@ -382,7 +382,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "9fa652df1129bef0e734c9cf9bf6dbae9ef3b9fa",
+                    "commitHash": "3a35fb6e3e18b9dbfee291262260dee7372d2a92",
                     "repositoryUrl": "https://github.com/golang/mock/"
                 }
             }
@@ -463,7 +463,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "00bdffe0f3c77e27d2cf6f5c70232a2d3e4d9c15",
+                    "commitHash": "75dcda0896e109a2a22c9315bca3bb21b87b2ba5",
                     "repositoryUrl": "https://github.com/gorilla/mux/"
                 }
             }
@@ -571,15 +571,6 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "79c2a76c473a20cdc4ce59cae4b72529b5d9d16b",
-                    "repositoryUrl": "https://github.com/kubernetes/apimachinery/"
-                }
-            }
-        },
-        {
-            "component": {
-                "type": "git",
-                "git": {
                     "commitHash": "fcf300cf5543bbd7fb57e08b38ad519c910b59c4",
                     "repositoryUrl": "https://github.com/libvirt/libvirt-go/"
                 }
@@ -625,7 +616,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "81ee999993403b111183ca496ba2a987cc7e59e6",
+                    "commitHash": "e4aebc7ac9d7b0b1b7f754bebf2a4a3d727861bc",
                     "repositoryUrl": "https://github.com/metal3-io/baremetal-operator/"
                 }
             }
@@ -733,7 +724,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "2987a591a72cee08898c93dcc09816783d39a5bc",
+                    "commitHash": "7192180f496aab1f7659d8660fc360498bab498b",
                     "repositoryUrl": "https://github.com/openshift/api/"
                 }
             }
@@ -742,7 +733,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "f6563a70e19a12b2f240eaf4e716ef75baf7003e",
+                    "commitHash": "92a2713fa240ea8a375a982d60b43ef5119f85ba",
                     "repositoryUrl": "https://github.com/openshift/client-go/"
                 }
             }
@@ -760,7 +751,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "9a3a7bbe9258f5c3117cb2aba6a560babe0d59f8",
+                    "commitHash": "b09907ac666894610ad44787def00be738c8a2f1",
                     "repositoryUrl": "https://github.com/openshift/cluster-api/"
                 }
             }
@@ -769,7 +760,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "86ecb23daa83c78761414a7abcb169c73c18a756",
+                    "commitHash": "81d7d701e070ce2759126392999ff27f5eeeb3a0",
                     "repositoryUrl": "https://github.com/openshift/cluster-api-provider-azure/"
                 }
             }
@@ -796,8 +787,8 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "bfda4d3462fd7305573adb103137723d2bd4975c",
-                    "repositoryUrl": "https://github.com/openshift/cluster-samples-operator/"
+                    "commitHash": "281b4db96607c474f73161c49aab80528f517c26",
+                    "repositoryUrl": "https://github.com/openshift/cluster-api-provider-ovirt/"
                 }
             }
         },
@@ -805,7 +796,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "cb47e810bee8c56f0738f0723c98cf3192ea7736",
+                    "commitHash": "14ef97f64c5da4ffd4f34d25454d2813b1b07015",
                     "repositoryUrl": "https://github.com/openshift/console-operator/"
                 }
             }
@@ -814,7 +805,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "f90508187f1541ca43fca89843f5f26a8ccf34a0",
+                    "commitHash": "22ff4d7c7ac673b63a33f1baa5abd7316f99cbf3",
                     "repositoryUrl": "https://github.com/openshift/installer/"
                 }
             }
@@ -823,7 +814,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "a3345f5a437a8ca82be683c7c38fe49de64c2b5f",
+                    "commitHash": "b1554c0714123dec050dd0df07b9a2064f088a87",
                     "repositoryUrl": "https://github.com/openshift/machine-api-operator/"
                 }
             }
@@ -832,8 +823,17 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "25bb6aeb58135c38a667e849edf5244871be4992",
+                    "commitHash": "da87dd6d947d66eb810d74622fb7664289148423",
                     "repositoryUrl": "https://github.com/openshift/machine-config-operator/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "9bcc4fd4e6c0921d07d328036c73abbea369e023",
+                    "repositoryUrl": "https://github.com/ovirt/go-ovirt/"
                 }
             }
         },
@@ -996,6 +996,15 @@
                 "git": {
                     "commitHash": "d1553a71de50473073e188aa79cebf7f993f20fe",
                     "repositoryUrl": "https://github.com/vincent-petithory/dataurl/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "7650349cbb310500918819d5e29708ef17fca8ee",
+                    "repositoryUrl": "https://github.com/vmware/govmomi/"
                 }
             }
         },
@@ -1183,7 +1192,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "b2607acfca124f576c98e5e9ad8d22184518b6dd",
+                    "commitHash": "7643814f1c97f24ccfb38c2b85a7bb3c7f494346",
                     "repositoryUrl": "https://github.com/kubernetes/api/"
                 }
             }
@@ -1192,7 +1201,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "46c5f7baf5456058e6999b176e1bdb87668c7c9d",
+                    "commitHash": "79c2a76c473a20cdc4ce59cae4b72529b5d9d16b",
                     "repositoryUrl": "https://github.com/kubernetes/apimachinery/"
                 }
             }
@@ -1201,7 +1210,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "1f3b2931966858d724e363b2707cb87da322fd45",
+                    "commitHash": "bb38286aebfbd8b39c317114442ed28d37c7617e",
                     "repositoryUrl": "https://github.com/kubernetes/client-go/"
                 }
             }
@@ -1246,7 +1255,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "86ecb23daa83c78761414a7abcb169c73c18a756",
+                    "commitHash": "81d7d701e070ce2759126392999ff27f5eeeb3a0",
                     "repositoryUrl": "https://sigs.k8s.io/cluster-api-provider-azure/"
                 }
             }

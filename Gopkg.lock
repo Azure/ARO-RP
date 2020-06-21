@@ -976,7 +976,7 @@
   revision = "02be5758f755d9da56cb4b37ae3ea52a9a0c436e"
 
 [[projects]]
-  branch = "release-4.3"
+  branch = "release-4.4"
   digest = "1:399e8d70371267705d306221880377d69fcb3650254b754a168370561d435b35"
   name = "github.com/openshift/cluster-api"
   packages = [
@@ -993,7 +993,7 @@
     "pkg/client/clientset_generated/clientset/typed/machine/v1beta1/fake",
   ]
   pruneopts = "UT"
-  revision = "9a3a7bbe9258f5c3117cb2aba6a560babe0d59f8"
+  revision = "b09907ac666894610ad44787def00be738c8a2f1"
 
 [[projects]]
   branch = "release-4.4"
