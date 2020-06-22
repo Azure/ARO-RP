@@ -225,7 +225,7 @@ func (i *Installer) runSteps(ctx context.Context, steps []interface{}) error {
 
 		switch step := step.(type) {
 		case action:
-			i.log.Printf("running step %s", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name())
+			i.log.Printf("running step %s", runtime.FuncForPC(reflect.ValueOf(step.f).Pointer()).Name())
 
 			func() {
 				timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
@@ -247,7 +247,7 @@ func (i *Installer) runSteps(ctx context.Context, steps []interface{}) error {
 			if err != nil {
 				i.gatherFailureLogs(ctx)
 				if _, ok := err.(*api.CloudError); !ok {
-					err = fmt.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name(), err)
+					err = fmt.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(step.f).Pointer()).Name(), err)
 				}
 				return err
 			}
