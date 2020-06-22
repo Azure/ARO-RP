@@ -60,6 +60,7 @@ stages:
     - northeurope
     - uksouth
     - ukwest
+    - francecentral
 - stage: PhaseThree
   displayName: wait 2 hour to avoid resource threshold
   dependsOn: []
