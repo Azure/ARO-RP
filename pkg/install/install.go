@@ -197,7 +197,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			condition{i.operatorConsoleReady, 10 * time.Minute},
 			condition{i.clusterVersionReady, 30 * time.Minute},
 			action(i.disableAlertManagerWarning),
-			action(i.fixCloudConfig), // TODO(mjudeikis): Remove me when pvc fix lands
+			action(i.fixCloudConfig), // TODO(mjudeikis): Write and add a different remediation
 			action(i.disableUpdates),
 			action(i.disableSamples),
 			action(i.disableOperatorHubSources),

@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/ghodss/yaml"
+	"github.com/google/go-cmp/cmp"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,116 +23,55 @@ func getTestSecret() *corev1.Secret {
 			Namespace: "kube-system",
 		},
 		Data: map[string][]byte{
-			"cloud-config": []byte(`aadClientId: 123e4567-e89b-12d3-a456-426614174000
-aadClientSecret: 123e4567-e89b-12d3-a456-426614174000`),
+			"cloud-config": []byte(`aadClientId: foo
+aadClientSecret: bar`),
 		},
 	}
 }
 
-func getTestConfigMap() *corev1.ConfigMap {
+func getTestConfigMap(clientID, secret string) *corev1.ConfigMap {
+	config := make(map[string]interface{}, 2)
+
+	config["aadClientId"] = clientID
+	config["aadClientSecret"] = secret
+
+	b, _ := json.MarshalIndent(config, "", "\t")
+
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "cloud-provider-config",
 			Namespace: "openshift-config",
 		},
 		Data: map[string]string{
-			"config": `{"aadClientCertPath": "",
-				"aadClientId": "",
-				"aadClientSecret": ""
-		}`,
+			"config": string(b),
 		},
 	}
 }
 
 func TestFixCloudConfig(t *testing.T) {
 	for _, tt := range []struct {
-		name      string
-		configMap func() *corev1.ConfigMap
-		modify    func(cm *corev1.ConfigMap)
+		name     string
+		input    *corev1.ConfigMap
+		expected *corev1.ConfigMap
 	}{
 		{
-			name: "enrich",
-			configMap: func() *corev1.ConfigMap {
-				return getTestConfigMap()
-			},
-			modify: func(cm *corev1.ConfigMap) {
-				if _, ok := cm.Data["config"]; ok {
-					var config map[string]interface{}
-					err := yaml.Unmarshal([]byte(cm.Data["config"]), &config)
-					if err != nil {
-						t.Error(err)
-						t.FailNow()
-					}
-					config["aadClientId"] = "123e4567-e89b-12d3-a456-426614174000"
-					config["aadClientSecret"] = "123e4567-e89b-12d3-a456-426614174000"
-
-					b, err := json.MarshalIndent(config, "", "\t")
-					if err != nil {
-						t.Error(err)
-						t.FailNow()
-					}
-					cm.Data["config"] = string(b)
-				}
-			},
+			name:     "enrich",
+			input:    getTestConfigMap("", ""),
+			expected: getTestConfigMap("foo", "bar"),
 		},
 		{
-			name: "skip",
-			configMap: func() *corev1.ConfigMap {
-				cm := getTestConfigMap()
-				if _, ok := cm.Data["config"]; ok {
-					var config map[string]interface{}
-					err := yaml.Unmarshal([]byte(cm.Data["config"]), &config)
-					if err != nil {
-						t.Error(err)
-						t.FailNow()
-					}
-					config["aadClientSecret"] = "123e4567-e89b-12d3-a456-426614174000"
-
-					b, err := json.MarshalIndent(config, "", "\t")
-					if err != nil {
-						t.Error(err)
-						t.FailNow()
-					}
-					cm.Data["config"] = string(b)
-				}
-				return cm
-			},
-			modify: func(cm *corev1.ConfigMap) {
-				if _, ok := cm.Data["config"]; ok {
-					var config map[string]interface{}
-					err := yaml.Unmarshal([]byte(cm.Data["config"]), &config)
-					if err != nil {
-						t.Error(err)
-						t.FailNow()
-					}
-					config["aadClientSecret"] = "123e4567-e89b-12d3-a456-426614174000"
-
-					b, err := json.MarshalIndent(config, "", "\t")
-					if err != nil {
-						t.Error(err)
-						t.FailNow()
-					}
-					cm.Data["config"] = string(b)
-				}
-			},
+			name:     "skip",
+			input:    getTestConfigMap("", "bar"),
+			expected: getTestConfigMap("", "bar"),
 		},
 	} {
-		cm := tt.configMap()
-
-		// modify expected result after fixup
-		expected := getTestConfigMap()
-		if tt.modify != nil {
-			tt.modify(expected)
-		}
-
 		i := &Installer{
-			kubernetescli: k8sfake.NewSimpleClientset(getTestSecret(), cm),
+			kubernetescli: k8sfake.NewSimpleClientset(getTestSecret(), tt.input),
 			log:           logrus.NewEntry(logrus.StandardLogger()),
 		}
 		err := i.fixCloudConfig(context.Background())
 		if err != nil {
-			t.Error(err)
-			t.FailNow()
+			t.Fatal(err)
 		}
 
 		result, err := i.kubernetescli.CoreV1().ConfigMaps("openshift-config").Get("cloud-provider-config", metav1.GetOptions{})
@@ -140,8 +79,8 @@ func TestFixCloudConfig(t *testing.T) {
 			t.Error(err)
 		}
 
-		if !reflect.DeepEqual(expected, result) {
-			t.Errorf("want:\n %w \n got: \n %w", expected, result)
+		if !reflect.DeepEqual(tt.expected, result) {
+			t.Error(cmp.Diff(tt.expected, result))
 		}
 	}
 }

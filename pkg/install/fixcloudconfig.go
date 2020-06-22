@@ -13,6 +13,11 @@ import (
 )
 
 func (i *Installer) fixCloudConfig(ctx context.Context) error {
+	s, err := i.kubernetescli.CoreV1().Secrets("kube-system").Get("azure-cloud-provider", metav1.GetOptions{})
+	if err != nil {
+		return err
+	}
+
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		cm, err := i.kubernetescli.CoreV1().ConfigMaps("openshift-config").Get("cloud-provider-config", metav1.GetOptions{})
 		if err != nil {
@@ -25,14 +30,9 @@ func (i *Installer) fixCloudConfig(ctx context.Context) error {
 			return err
 		}
 
-		if _, ok := config["aadClientSecret"]; ok && config["aadClientSecret"].(string) != "" {
+		if s, ok := config["aadClientSecret"].(string); ok && s != "" {
 			i.log.Info("skip fixCloudConfig")
 			return nil
-		}
-
-		s, err := i.kubernetescli.CoreV1().Secrets("kube-system").Get("azure-cloud-provider", metav1.GetOptions{})
-		if err != nil {
-			return err
 		}
 
 		// merge secret contents over configmap
@@ -53,6 +53,6 @@ func (i *Installer) fixCloudConfig(ctx context.Context) error {
 			return err
 		}
 
-		return nil
+		return err
 	})
 }
