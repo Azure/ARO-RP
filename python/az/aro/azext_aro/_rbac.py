@@ -21,7 +21,7 @@ def _gen_uuid():
 
 
 def assign_contributor_to_vnet(cli_ctx, vnet, object_id):
-    client = get_mgmt_service_client(cli_ctx, ResourceType.MGMT_AUTHORIZATION)
+    auth_client = get_mgmt_service_client(cli_ctx, ResourceType.MGMT_AUTHORIZATION)
 
     RoleAssignmentCreateParameters = get_sdk(cli_ctx, ResourceType.MGMT_AUTHORIZATION,
                                              'RoleAssignmentCreateParameters', mod='models',
@@ -33,13 +33,14 @@ def assign_contributor_to_vnet(cli_ctx, vnet, object_id):
         type='roleDefinitions',
         name=DEVELOPMENT_CONTRIBUTOR if rp_mode_development() else CONTRIBUTOR,
     )
-    if has_assignment(client.role_assignments.list_for_scope(vnet), role_definition_id, object_id):
+
+    if has_assignment(auth_client.role_assignments.list_for_scope(vnet), role_definition_id, object_id):
         return
 
     # generate random uuid for role assignment
     role_uuid = _gen_uuid()
 
-    client.role_assignments.create(vnet, role_uuid, RoleAssignmentCreateParameters(
+    auth_client.role_assignments.create(vnet, role_uuid, RoleAssignmentCreateParameters(
         role_definition_id=role_definition_id,
         principal_id=object_id,
         principal_type='ServicePrincipal',
@@ -48,7 +49,11 @@ def assign_contributor_to_vnet(cli_ctx, vnet, object_id):
 
 def assign_contributor_to_routetable(cli_ctx, master_subnet, worker_subnet, object_id):
     auth_client = get_mgmt_service_client(cli_ctx, ResourceType.MGMT_AUTHORIZATION)
-    client = get_mgmt_service_client(cli_ctx, ResourceType.MGMT_NETWORK)
+    network_client = get_mgmt_service_client(cli_ctx, ResourceType.MGMT_NETWORK)
+
+    RoleAssignmentCreateParameters = get_sdk(cli_ctx, ResourceType.MGMT_AUTHORIZATION,
+                                             'RoleAssignmentCreateParameters', mod='models',
+                                             operation_group='role_assignments')
 
     role_definition_id = resource_id(
         subscription=get_subscription_id(cli_ctx),
@@ -60,24 +65,21 @@ def assign_contributor_to_routetable(cli_ctx, master_subnet, worker_subnet, obje
     route_tables = set()
     for sn in [master_subnet, worker_subnet]:
         sid = parse_resource_id(sn)
-        subnet = client.subnets.get(resource_group_name=sid['resource_group'],
-                                    virtual_network_name=sid['name'],
-                                    subnet_name=sid['resource_name'])
+
+        subnet = network_client.subnets.get(resource_group_name=sid['resource_group'],
+                                            virtual_network_name=sid['name'],
+                                            subnet_name=sid['resource_name'])
+
         if subnet.route_table is not None:
             route_tables.add(subnet.route_table.id)
-
-    if not route_tables:
-        return
-
-    RoleAssignmentCreateParameters = get_sdk(cli_ctx, ResourceType.MGMT_AUTHORIZATION,
-                                             'RoleAssignmentCreateParameters', mod='models',
-                                             operation_group='role_assignments')
 
     for rt in route_tables:
         if has_assignment(auth_client.role_assignments.list_for_scope(subnet.route_table.id),
                           role_definition_id, object_id):
             continue
+
         role_uuid = _gen_uuid()
+
         auth_client.role_assignments.create(rt, role_uuid, RoleAssignmentCreateParameters(
             role_definition_id=role_definition_id,
             principal_id=object_id,
