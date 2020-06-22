@@ -47,12 +47,8 @@ func (i *Installer) fixCloudConfig(ctx context.Context) error {
 		}
 
 		cm.Data["config"] = string(b)
-		_, err = i.kubernetescli.CoreV1().ConfigMaps("openshift-config").Update(cm)
-		if err != nil {
-			i.log.Error(err)
-			return err
-		}
 
+		_, err = i.kubernetescli.CoreV1().ConfigMaps("openshift-config").Update(cm)
 		return err
 	})
 }
