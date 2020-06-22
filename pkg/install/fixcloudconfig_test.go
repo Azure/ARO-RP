@@ -30,10 +30,11 @@ aadClientSecret: bar`),
 }
 
 func getTestConfigMap(clientID, secret string) *corev1.ConfigMap {
-	config := make(map[string]interface{}, 2)
-
-	config["aadClientId"] = clientID
-	config["aadClientSecret"] = secret
+	config := map[string]interface{}{
+		"aadClientId":     clientID,
+		"aadClientSecret": secret,
+		"otherKey":        "value",
+	}
 
 	b, _ := json.MarshalIndent(config, "", "\t")
 
