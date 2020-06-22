@@ -10,7 +10,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
-	encrypt "github.com/Azure/ARO-RP/pkg/util/encryption"
 )
 
 var _ codec.InterfaceExt = (*secureBytesExt)(nil)
@@ -45,7 +44,7 @@ func (s secureBytesExt) UpdateExt(dest interface{}, v interface{}) {
 var _ codec.InterfaceExt = (*secureStringExt)(nil)
 
 type secureStringExt struct {
-	cipher encrypt.Cipher
+	cipher encryption.Cipher
 }
 
 func (s secureStringExt) ConvertExt(v interface{}) interface{} {

@@ -26,3 +26,4 @@ configuration:
   rpParentDomainName: ''
   subscriptionResourceGroupName: ''
   sshPublicKey: ''
+  vmSize: ''

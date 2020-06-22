@@ -5,6 +5,7 @@ parameters:
   deployerDirectory: ''
   configFileName: ''
   azureDevOpsJSONSPN: ''
+  fullDeploy: ''
 steps:
 - script: |
     set -eu
@@ -16,6 +17,10 @@ steps:
     export AZURE_CLIENT_SECRET=$(cat devops-spn.json | jq -r '.clientSecret')
     export AZURE_TENANT_ID=$(cat devops-spn.json | jq -r '.tenantId')
     rm devops-spn.json
+
+    if [[ "${{ parameters.fullDeploy }}" == "True" ]]; then
+      export FULL_DEPLOY=true
+    fi
 
     chmod +x ${{ parameters.deployerDirectory }}/aro
     ${{ parameters.deployerDirectory }}/aro deploy ${{ parameters.configDirectory }}/${{ parameters.configFileName }} ${{ parameters.location }}

@@ -105,12 +105,13 @@ run_e2e() {
     az aro create \
       -g "$ARO_RESOURCEGROUP" \
       -n "$CLUSTER" \
+      -l "$LOCATION" \
       --vnet dev-vnet \
       --master-subnet "$CLUSTER-master" \
       --worker-subnet "$CLUSTER-worker" \
-      --client-id $CLUSTER_SPN_ID \
-      --client-secret $CLUSTER_SPN_SECRET \
-      --cluster-resource-group $CLUSTER_RESOURCEGROUP
+      --client-id "$CLUSTER_SPN_ID" \
+      --client-secret "$CLUSTER_SPN_SECRET" \
+      --cluster-resource-group "$CLUSTER_RESOURCEGROUP"
 
     echo "########## CLI : ARO List ##########"
     az aro list -o table

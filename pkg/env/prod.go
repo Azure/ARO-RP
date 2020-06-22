@@ -29,6 +29,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 	"github.com/Azure/ARO-RP/pkg/util/pem"
+	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
 type prod struct {
@@ -295,7 +296,7 @@ func (p *prod) Domain() string {
 	return p.domain
 }
 
-func (p *prod) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, error) {
+func (p *prod) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, error) {
 	oauthConfig, err := adal.NewOAuthConfig(azure.PublicCloud.ActiveDirectoryEndpoint, tenantID)
 	if err != nil {
 		return nil, err
@@ -306,16 +307,29 @@ func (p *prod) FPAuthorizer(tenantID, resource string) (autorest.Authorizer, err
 		return nil, err
 	}
 
-	return autorest.NewBearerAuthorizer(sp), nil
+	return refreshable.NewAuthorizer(sp), nil
 }
 
-func (p *prod) GetCertificateSecret(ctx context.Context, secretName string) (key *rsa.PrivateKey, certs []*x509.Certificate, err error) {
+func (p *prod) GetCertificateSecret(ctx context.Context, secretName string) (*rsa.PrivateKey, []*x509.Certificate, error) {
 	bundle, err := p.keyvault.GetSecret(ctx, p.serviceKeyvaultURI, secretName, "")
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return pem.Parse([]byte(*bundle.Value))
+	key, certs, err := pem.Parse([]byte(*bundle.Value))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if key == nil {
+		return nil, nil, fmt.Errorf("no private key found")
+	}
+
+	if len(certs) == 0 {
+		return nil, nil, fmt.Errorf("no certificate found")
+	}
+
+	return key, certs, nil
 }
 
 func (p *prod) GetSecret(ctx context.Context, secretName string) ([]byte, error) {

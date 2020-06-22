@@ -12,7 +12,9 @@
                     ],
                     "certificates": [
                         "create",
-                        "delete"
+                        "delete",
+                        "get",
+                        "update"
                     ]
                 }
             }
@@ -44,6 +46,10 @@
         },
         "fpServicePrincipalId": {
             "type": "string"
+        },
+        "fullDeploy": {
+            "type": "bool",
+            "defaultValue": false
         },
         "keyvaultPrefix": {
             "type": "string",
@@ -119,6 +125,7 @@
             "tags": {
                 "vault": "clusters"
             },
+            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2016-10-01"
         },
         {
@@ -137,6 +144,7 @@
             "tags": {
                 "vault": "service"
             },
+            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2016-10-01"
         }
     ]

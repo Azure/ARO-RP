@@ -2,6 +2,11 @@
 pr: none
 trigger: none
 
+parameters:
+- name: fullDeploy
+  type: boolean
+  default: false
+
 stages:
 - stage: Deploy_INT
   dependsOn: []
@@ -21,3 +26,4 @@ stages:
       e2eSubscription: $(e2e-subscription)
       billingE2EPipelineName: $(billing-e2e-pipeline-name)
       billingE2EBranchName: $(billing-e2e-branch-name)
+      fullDeploy: ${{ parameters.fullDeploy }}

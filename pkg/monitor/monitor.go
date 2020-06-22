@@ -7,6 +7,7 @@ import (
 	"context"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -34,7 +35,9 @@ type monitor struct {
 	bucketCount int
 	buckets     map[int]struct{}
 
-	startTime time.Time
+	lastBucketlist atomic.Value //time.Time
+	lastChangefeed atomic.Value //time.Time
+	startTime      time.Time
 }
 
 type Runnable interface {
@@ -91,16 +94,28 @@ func (mon *monitor) Run(ctx context.Context) error {
 		err = mon.listBuckets(ctx)
 		if err != nil {
 			mon.baseLog.Error(err)
+		} else {
+			mon.lastBucketlist.Store(time.Now())
 		}
 
 		<-t.C
 	}
 }
 
-// checkReady checks the ready status of the frontend to make it consistent
+// checkReady checks the ready status of the monitor to make it consistent
 // across the /healthz/ready endpoint and emitted metrics.   We wait for 2
 // minutes before indicating health.  This ensures that there will be a gap in
 // our health metric if we crash or restart.
 func (mon *monitor) checkReady() bool {
-	return time.Now().Sub(mon.startTime) > 2*time.Minute
+	lastBucketTime, ok := mon.lastBucketlist.Load().(time.Time)
+	if !ok {
+		return false
+	}
+	lastChangefeedTime, ok := mon.lastChangefeed.Load().(time.Time)
+	if !ok {
+		return false
+	}
+	return (time.Now().Sub(lastBucketTime) < time.Minute) && // did we list buckets successfully recently?
+		(time.Now().Sub(lastChangefeedTime) < time.Minute) && // did we process the change feed recently?
+		(time.Now().Sub(mon.startTime) > 2*time.Minute) // are we running for at least 2 minutes?
 }

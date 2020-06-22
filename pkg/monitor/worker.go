@@ -53,9 +53,11 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 	defer t.Stop()
 
 	for {
+		successful := true
 		for {
 			docs, err := clustersIterator.Next(ctx, -1)
 			if err != nil {
+				successful = false
 				baseLog.Error(err)
 				break
 			}
@@ -88,6 +90,7 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 		for {
 			subs, err := subscriptionsIterator.Next(ctx, -1)
 			if err != nil {
+				successful = false
 				baseLog.Error(err)
 				break
 			}
@@ -102,6 +105,10 @@ func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop 
 			}
 
 			mon.mu.Unlock()
+		}
+
+		if successful {
+			mon.lastChangefeed.Store(time.Now())
 		}
 
 		select {
@@ -163,7 +170,7 @@ out:
 		// TODO: later can modify here to poll once per N minutes and re-issue
 		// cached metrics in the remaining minutes
 
-		if sub != nil && sub.Subscription != nil && sub.Subscription.State != api.SubscriptionStateSuspended {
+		if sub != nil && sub.Subscription != nil && sub.Subscription.State != api.SubscriptionStateSuspended && sub.Subscription.State != api.SubscriptionStateWarned {
 			mon.workOne(context.Background(), log, v.doc, newh != h)
 		}
 

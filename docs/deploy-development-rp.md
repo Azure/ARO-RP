@@ -154,7 +154,7 @@
    `RP_MODE` environment variable is set to `development`, the `az aro` client
    will connect to your local RP.
 
-   [1]: https://docs.microsoft.com/en-us/azure/openshift/howto-using-azure-redhat-openshift
+   [1]: https://docs.microsoft.com/en-us/azure/openshift/tutorial-create-cluster
 
 1. The following additional RP endpoints are available but not exposed via `az
    aro`:
@@ -175,6 +175,11 @@
        "https://localhost:8443/providers/Microsoft.RedHatOpenShift/operations?api-version=2020-04-30"
      ```
 
+   * View RP logs in a friendly format:
+
+     ```bash
+     journalctl _COMM=aro -o json --since "15 min ago" -f | jq -r 'select (.COMPONENT != null and (.COMPONENT | contains("access"))|not) | .MESSAGE'
+     ```
 
 ## Debugging
 
@@ -182,7 +187,7 @@
 
   ```bash
   sudo openvpn secrets/vpn-$LOCATION.ovpn &
-  hack/ssh-bootstrap.sh "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER"
+  hack/ssh-agent.sh bootstrap
   ```
 
 * Get an admin kubeconfig:
@@ -197,7 +202,7 @@
   * First, get the admin kubeconfig and `export KUBECONFIG` as detailed above.
 
   ```bash
-  hack/ssh.sh [xxxxx-master-{0,1,2}]
+  hack/ssh-agent.sh [master-{0,1,2}]
   ```
 
 

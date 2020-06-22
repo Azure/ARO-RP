@@ -7,12 +7,20 @@ To run RP unit tests:
 ```bash
 make test-go
 ```
-  
+
 To run python client and `az aro` CLI tests:
 
 ```bash
 make test-python
 ```
+
+To run Go linting tasks (requires [golanglint-ci](https://golangci-lint.run/usage/install/) to be installed):
+
+```bash
+make lint-go
+```
+
+For faster feedback, you may want to set up [golanglint-ci's editor integration](https://golangci-lint.run/usage/integrations/).
 
 ## E2e tests
 

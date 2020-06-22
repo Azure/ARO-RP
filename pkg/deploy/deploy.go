@@ -22,34 +22,42 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/insights"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/msi"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
 
 var _ Deployer = (*deployer)(nil)
 
 type Deployer interface {
-	PreDeploy(context.Context) (string, error)
-	Deploy(context.Context, string) error
+	PreDeploy(context.Context) error
+	Deploy(context.Context) error
 	Upgrade(context.Context) error
 }
 
 type deployer struct {
 	log *logrus.Entry
 
-	globaldeployments features.DeploymentsClient
-	globalrecordsets  dns.RecordSetsClient
-	deployments       features.DeploymentsClient
-	groups            features.ResourceGroupsClient
-	vmss              compute.VirtualMachineScaleSetsClient
-	vmssvms           compute.VirtualMachineScaleSetVMsClient
-	keyvault          keyvault.Manager
+	globaldeployments      features.DeploymentsClient
+	globalrecordsets       dns.RecordSetsClient
+	deployments            features.DeploymentsClient
+	groups                 features.ResourceGroupsClient
+	metricalerts           insights.MetricAlertsClient
+	userassignedidentities msi.UserAssignedIdentitiesClient
+	publicipaddresses      network.PublicIPAddressesClient
+	vmss                   compute.VirtualMachineScaleSetsClient
+	vmssvms                compute.VirtualMachineScaleSetVMsClient
+	zones                  dns.ZonesClient
+	keyvault               keyvault.Manager
 
-	config  *RPConfig
-	version string
+	fullDeploy bool
+	config     *RPConfig
+	version    string
 }
 
 // New initiates new deploy utility object
-func New(ctx context.Context, log *logrus.Entry, config *RPConfig, version string) (Deployer, error) {
+func New(ctx context.Context, log *logrus.Entry, config *RPConfig, version string, fullDeploy bool) (Deployer, error) {
 	authorizer, err := auth.NewAuthorizerFromEnvironment()
 	if err != nil {
 		return nil, err
@@ -63,20 +71,30 @@ func New(ctx context.Context, log *logrus.Entry, config *RPConfig, version strin
 	return &deployer{
 		log: log,
 
-		globaldeployments: features.NewDeploymentsClient(config.Configuration.GlobalSubscriptionID, authorizer),
-		globalrecordsets:  dns.NewRecordSetsClient(config.Configuration.GlobalSubscriptionID, authorizer),
-		deployments:       features.NewDeploymentsClient(config.SubscriptionID, authorizer),
-		groups:            features.NewResourceGroupsClient(config.SubscriptionID, authorizer),
-		vmss:              compute.NewVirtualMachineScaleSetsClient(config.SubscriptionID, authorizer),
-		vmssvms:           compute.NewVirtualMachineScaleSetVMsClient(config.SubscriptionID, authorizer),
-		keyvault:          keyvault.NewManager(kvAuthorizer),
+		globaldeployments:      features.NewDeploymentsClient(config.Configuration.GlobalSubscriptionID, authorizer),
+		globalrecordsets:       dns.NewRecordSetsClient(config.Configuration.GlobalSubscriptionID, authorizer),
+		deployments:            features.NewDeploymentsClient(config.SubscriptionID, authorizer),
+		groups:                 features.NewResourceGroupsClient(config.SubscriptionID, authorizer),
+		metricalerts:           insights.NewMetricAlertsClient(config.SubscriptionID, authorizer),
+		userassignedidentities: msi.NewUserAssignedIdentitiesClient(config.SubscriptionID, authorizer),
+		publicipaddresses:      network.NewPublicIPAddressesClient(config.SubscriptionID, authorizer),
+		vmss:                   compute.NewVirtualMachineScaleSetsClient(config.SubscriptionID, authorizer),
+		vmssvms:                compute.NewVirtualMachineScaleSetVMsClient(config.SubscriptionID, authorizer),
+		zones:                  dns.NewZonesClient(config.SubscriptionID, authorizer),
+		keyvault:               keyvault.NewManager(kvAuthorizer),
 
-		config:  config,
-		version: version,
+		fullDeploy: fullDeploy,
+		config:     config,
+		version:    version,
 	}, nil
 }
 
-func (d *deployer) Deploy(ctx context.Context, rpServicePrincipalID string) error {
+func (d *deployer) Deploy(ctx context.Context) error {
+	msi, err := d.userassignedidentities.Get(ctx, d.config.ResourceGroupName, "aro-rp-"+d.config.Location)
+	if err != nil {
+		return err
+	}
+
 	deploymentName := "rp-production-" + d.version
 
 	b, err := Asset(generator.FileRPProduction)
@@ -104,52 +122,72 @@ func (d *deployer) Deploy(ctx context.Context, rpServicePrincipalID string) erro
 		Value: d.config.Configuration.RPImagePrefix + ":" + d.version,
 	}
 	parameters.Parameters["rpServicePrincipalId"] = &arm.ParametersParameter{
-		Value: rpServicePrincipalID,
+		Value: msi.PrincipalID.String(),
 	}
 	parameters.Parameters["vmssName"] = &arm.ParametersParameter{
 		Value: d.version,
 	}
 
-	d.log.Printf("deploying %s", deploymentName)
-	err = d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, deploymentName, mgmtfeatures.Deployment{
-		Properties: &mgmtfeatures.DeploymentProperties{
-			Template:   template,
-			Mode:       mgmtfeatures.Incremental,
-			Parameters: parameters.Parameters,
-		},
-	})
-	if err != nil {
-		return err
+	for i := 0; i < 2; i++ {
+		d.log.Printf("deploying %s", deploymentName)
+		err = d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, deploymentName, mgmtfeatures.Deployment{
+			Properties: &mgmtfeatures.DeploymentProperties{
+				Template:   template,
+				Mode:       mgmtfeatures.Incremental,
+				Parameters: parameters.Parameters,
+			},
+		})
+		if serviceErr, ok := err.(*azure.ServiceError); ok &&
+			serviceErr.Code == "DeploymentFailed" &&
+			d.fullDeploy &&
+			i == 0 {
+			// on new RP deployments, we get a spurious DeploymentFailed error
+			// from the Microsoft.Insights/metricAlerts resources indicating
+			// that rp-lb can't be found, even though it exists and the
+			// resources correctly have a dependsOn stanza referring to it.
+			// Retry once.
+			d.log.Print(err)
+			continue
+		}
+		if err != nil {
+			return err
+		}
+
+		break
 	}
 
-	deployment, err := d.deployments.Get(ctx, d.config.ResourceGroupName, deploymentName)
-	if err != nil {
-		return err
-	}
+	if d.fullDeploy {
+		err = d.configureDNS(ctx)
+		if err != nil {
+			return err
+		}
 
-	rpPipIPAddress := deployment.Properties.Outputs.(map[string]interface{})["rp-pip-ipAddress"].(map[string]interface{})["value"].(string)
-
-	_nameServers := deployment.Properties.Outputs.(map[string]interface{})["rp-nameServers"].(map[string]interface{})["value"].([]interface{})
-	nameServers := make([]string, 0, len(_nameServers))
-	for _, ns := range _nameServers {
-		nameServers = append(nameServers, ns.(string))
-	}
-
-	err = d.configureDNS(ctx, rpPipIPAddress, nameServers)
-	if err != nil {
-		return err
+		err = d.removeOldMetricAlerts(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
-func (d *deployer) configureDNS(ctx context.Context, rpPipIPAddress string, nameServers []string) error {
-	_, err := d.globalrecordsets.CreateOrUpdate(ctx, d.config.Configuration.GlobalResourceGroupName, d.config.Configuration.RPParentDomainName, "rp."+d.config.Location, mgmtdns.A, mgmtdns.RecordSet{
+func (d *deployer) configureDNS(ctx context.Context) error {
+	rpPip, err := d.publicipaddresses.Get(ctx, d.config.ResourceGroupName, "rp-pip", "")
+	if err != nil {
+		return err
+	}
+
+	zone, err := d.zones.Get(ctx, d.config.ResourceGroupName, d.config.Location+"."+d.config.Configuration.ClusterParentDomainName)
+	if err != nil {
+		return err
+	}
+
+	_, err = d.globalrecordsets.CreateOrUpdate(ctx, d.config.Configuration.GlobalResourceGroupName, d.config.Configuration.RPParentDomainName, "rp."+d.config.Location, mgmtdns.A, mgmtdns.RecordSet{
 		RecordSetProperties: &mgmtdns.RecordSetProperties{
 			TTL: to.Int64Ptr(3600),
 			ARecords: &[]mgmtdns.ARecord{
 				{
-					Ipv4Address: &rpPipIPAddress,
+					Ipv4Address: rpPip.IPAddress,
 				},
 			},
 		},
@@ -158,10 +196,10 @@ func (d *deployer) configureDNS(ctx context.Context, rpPipIPAddress string, name
 		return err
 	}
 
-	nsRecords := make([]mgmtdns.NsRecord, 0, len(nameServers))
-	for i := range nameServers {
+	nsRecords := make([]mgmtdns.NsRecord, 0, len(*zone.NameServers))
+	for i := range *zone.NameServers {
 		nsRecords = append(nsRecords, mgmtdns.NsRecord{
-			Nsdname: &nameServers[i],
+			Nsdname: &(*zone.NameServers)[i],
 		})
 	}
 
@@ -172,6 +210,31 @@ func (d *deployer) configureDNS(ctx context.Context, rpPipIPAddress string, name
 		},
 	}, "", "")
 	return err
+}
+
+// removeOldMetricAlerts removes alert rules without the location in the name
+func (d *deployer) removeOldMetricAlerts(ctx context.Context) error {
+	d.log.Print("removing old alerts")
+	metricAlerts, err := d.metricalerts.ListByResourceGroup(ctx, d.config.ResourceGroupName)
+	if err != nil {
+		return err
+	}
+
+	if metricAlerts.Value == nil {
+		return nil
+	}
+
+	for _, metricAlert := range *metricAlerts.Value {
+		switch *metricAlert.Name {
+		case "rp-availability-alert", "rp-degraded-alert", "rp-vnet-alert":
+			_, err = d.metricalerts.Delete(ctx, d.config.ResourceGroupName, *metricAlert.Name)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 // getParameters returns an *arm.Parameters populated with parameter names and
@@ -193,6 +256,10 @@ func (d *deployer) getParameters(ps map[string]interface{}) *arm.Parameters {
 		parameters.Parameters[p] = &arm.ParametersParameter{
 			Value: m[p],
 		}
+	}
+
+	parameters.Parameters["fullDeploy"] = &arm.ParametersParameter{
+		Value: d.fullDeploy,
 	}
 
 	return parameters

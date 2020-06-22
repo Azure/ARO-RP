@@ -11,11 +11,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Azure/go-autorest/autorest"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
+	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
 const (
@@ -42,7 +42,7 @@ type Interface interface {
 	DatabaseName() string
 	DialContext(context.Context, string, string) (net.Conn, error)
 	Domain() string
-	FPAuthorizer(string, string) (autorest.Authorizer, error)
+	FPAuthorizer(string, string) (refreshable.Authorizer, error)
 	GetCertificateSecret(context.Context, string) (*rsa.PrivateKey, []*x509.Certificate, error)
 	GetSecret(context.Context, string) ([]byte, error)
 	Listen() (net.Listener, error)

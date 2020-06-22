@@ -14,6 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	pkgmirror "github.com/Azure/ARO-RP/pkg/mirror"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 func getAuth(key string) (*types.DockerAuthConfig, error) {
@@ -58,7 +59,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	log.Print("reading release graph")
-	releases, err := pkgmirror.AddFromGraph(pkgmirror.NewVersion(4, 3))
+	releases, err := pkgmirror.AddFromGraph(version.NewVersion(4, 3))
 	if err != nil {
 		return err
 	}
@@ -74,10 +75,8 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	for _, ref := range []string{
-		"linuxgeneva-microsoft.azurecr.io/genevamdsd:master_266",
-		"linuxgeneva-microsoft.azurecr.io/genevamdsd:master_279",
-		"linuxgeneva-microsoft.azurecr.io/genevamdm:master_35",
-		"linuxgeneva-microsoft.azurecr.io/genevamdm:master_37",
+		"linuxgeneva-microsoft.azurecr.io/genevamdsd:master_285",
+		"linuxgeneva-microsoft.azurecr.io/genevamdm:master_39",
 	} {
 		log.Printf("mirroring %s", ref)
 		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+".azurecr.io", ref), ref, dstauth, srcauthGeneva)

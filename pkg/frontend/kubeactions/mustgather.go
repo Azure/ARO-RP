@@ -143,7 +143,7 @@ func (ka *kubeactions) MustGather(ctx context.Context, oc *api.OpenShiftCluster,
 	}
 
 	ka.log.Info("must-gather pod running")
-	rc, err := portforward.ExecStdout(ctx, ka.env, oc, pod.Namespace, pod.Name, "copy", []string{"tar", "cz", "/must-gather"})
+	rc, err := portforward.ExecStdout(ctx, ka.log, ka.env, oc, pod.Namespace, pod.Name, "copy", []string{"tar", "cz", "/must-gather"})
 	if err != nil {
 		return err
 	}

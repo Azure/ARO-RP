@@ -13,16 +13,23 @@ import (
 func (g *generator) managedIdentityTemplate() *arm.Template {
 	t := templateStanza()
 
+	params := []string{
+		"fullDeploy",
+	}
+
+	for _, param := range params {
+		p := &arm.TemplateParameter{Type: "string"}
+		switch param {
+		case "fullDeploy":
+			p.Type = "bool"
+			p.DefaultValue = false
+		}
+		t.Parameters[param] = p
+	}
+
 	t.Resources = append(t.Resources,
 		g.managedIdentity(),
 	)
-
-	t.Outputs = map[string]*arm.Output{
-		"rpServicePrincipalId": {
-			Type:  "string",
-			Value: "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', concat('aro-rp-', resourceGroup().location)), '2018-11-30').principalId]",
-		},
-	}
 
 	return t
 }
@@ -38,18 +45,20 @@ func (g *generator) rpTemplate() *arm.Template {
 	}
 	if g.production {
 		params = append(params,
+			"acrResourceId",
 			"adminApiCaBundle",
 			"adminApiClientCertCommonName",
 			"extraCosmosDBIPs",
+			"fullDeploy",
 			"mdmFrontendUrl",
 			"mdsdConfigVersion",
 			"mdsdEnvironment",
-			"acrResourceId",
 			"rpImage",
 			"rpMode",
-			"subscriptionResourceGroupName",
 			"sshPublicKey",
+			"subscriptionResourceGroupName",
 			"vmssName",
+			"vmSize",
 		)
 	}
 
@@ -58,6 +67,11 @@ func (g *generator) rpTemplate() *arm.Template {
 		switch param {
 		case "extraCosmosDBIPs", "rpMode":
 			p.DefaultValue = ""
+		case "fullDeploy":
+			p.Type = "bool"
+			p.DefaultValue = false
+		case "vmSize":
+			p.DefaultValue = "Standard_D2s_v3"
 		}
 		t.Parameters[param] = p
 	}
@@ -77,17 +91,6 @@ func (g *generator) rpTemplate() *arm.Template {
 	t.Resources = append(t.Resources, g.cosmosdb()...)
 	t.Resources = append(t.Resources, g.rbac()...)
 
-	t.Outputs = map[string]*arm.Output{
-		"rp-nameServers": {
-			Type:  "array",
-			Value: "[reference(resourceId('Microsoft.Network/dnsZones', parameters('domainName')), '2018-05-01').nameServers]",
-		},
-		"rp-pip-ipAddress": {
-			Type:  "string",
-			Value: "[reference(resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip'), '2019-07-01').ipAddress]",
-		},
-	}
-
 	return t
 }
 
@@ -97,12 +100,19 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 	params := []string{
 		"acrResourceId",
 		"fpServicePrincipalId",
+		"fullDeploy",
 		"location",
 		"rpServicePrincipalId",
 	}
 
 	for _, param := range params {
-		t.Parameters[param] = &arm.TemplateParameter{Type: "string"}
+		p := &arm.TemplateParameter{Type: "string"}
+		switch param {
+		case "fullDeploy":
+			p.Type = "bool"
+			p.DefaultValue = false
+		}
+		t.Parameters[param] = p
 	}
 
 	t.Resources = append(t.Resources,
@@ -119,6 +129,20 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 func (g *generator) rpGlobalSubscriptionTemplate() *arm.Template {
 	t := templateStanza()
 
+	params := []string{
+		"fullDeploy",
+	}
+
+	for _, param := range params {
+		p := &arm.TemplateParameter{Type: "string"}
+		switch param {
+		case "fullDeploy":
+			p.Type = "bool"
+			p.DefaultValue = false
+		}
+		t.Parameters[param] = p
+	}
+
 	t.Resources = append(t.Resources,
 		g.roleDefinitionTokenContributor(),
 	)
@@ -128,6 +152,20 @@ func (g *generator) rpGlobalSubscriptionTemplate() *arm.Template {
 
 func (g *generator) rpSubscriptionTemplate() *arm.Template {
 	t := templateStanza()
+
+	params := []string{
+		"fullDeploy",
+	}
+
+	for _, param := range params {
+		p := &arm.TemplateParameter{Type: "string"}
+		switch param {
+		case "fullDeploy":
+			p.Type = "bool"
+			p.DefaultValue = false
+		}
+		t.Parameters[param] = p
+	}
 
 	t.Resources = append(t.Resources, g.actionGroup("rp-health-ag", "rphealth"))
 
@@ -188,6 +226,7 @@ func (g *generator) preDeployTemplate() *arm.Template {
 			"deployNSGs",
 			"extraClusterKeyvaultAccessPolicies",
 			"extraServiceKeyvaultAccessPolicies",
+			"fullDeploy",
 			"rpNsgSourceAddressPrefixes",
 		)
 	} else {
@@ -205,6 +244,9 @@ func (g *generator) preDeployTemplate() *arm.Template {
 		case "extraClusterKeyvaultAccessPolicies", "extraServiceKeyvaultAccessPolicies":
 			p.Type = "array"
 			p.DefaultValue = []interface{}{}
+		case "fullDeploy":
+			p.Type = "bool"
+			p.DefaultValue = false
 		case "rpNsgSourceAddressPrefixes":
 			p.Type = "array"
 			p.DefaultValue = []string{}
@@ -303,6 +345,14 @@ func (g *generator) templateFixup(t *arm.Template) ([]byte, error) {
 	}
 
 	return append(b, byte('\n')), nil
+}
+
+func (g *generator) conditionStanza(parameterName string) interface{} {
+	if g.production {
+		return "[parameters('" + parameterName + "')]"
+	}
+
+	return nil
 }
 
 func templateStanza() *arm.Template {

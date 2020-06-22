@@ -8,6 +8,10 @@
         "fpServicePrincipalId": {
             "type": "string"
         },
+        "fullDeploy": {
+            "type": "bool",
+            "defaultValue": false
+        },
         "location": {
             "type": "string"
         },
@@ -20,6 +24,7 @@
             "name": "[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', parameters('location'))]",
             "type": "Microsoft.ContainerRegistry/registries/replications",
             "location": "[parameters('location')]",
+            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2019-05-01"
         },
         {
@@ -31,6 +36,7 @@
                 "principalId": "[parameters('rpServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
+            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2018-09-01-preview"
         },
         {
@@ -42,6 +48,7 @@
                 "principalId": "[parameters('fpServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
+            "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2018-09-01-preview"
         }
     ]

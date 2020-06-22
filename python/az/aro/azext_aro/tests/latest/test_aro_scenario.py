@@ -3,6 +3,7 @@
 
 import os
 import unittest
+import mock
 
 from azure_devtools.scenario_tests import AllowLargeResponse
 from azure.cli.testsdk import ResourceGroupPreparer
@@ -19,10 +20,12 @@ class AroScenarioTest(ScenarioTest):
             'name': 'test1'
         })
 
-        self.cmd('aro create -g {rg} -n {name} --tags foo=doo', checks=[
-            self.check('tags.foo', 'doo'),
-            self.check('name', '{name}')
-        ])
+        # test aro create
+        with mock.patch('azure.cli.command_modules.aro._rbac._gen_uuid', side_effect=self.create_guid):
+            self.cmd('aro create -g {rg} -n {name} --tags foo=doo', checks=[
+                self.check('tags.foo', 'doo'),
+                self.check('name', '{name}')
+            ])
 
         self.cmd('aro update -g {rg} -n {name} --tags foo=boo', checks=[
             self.check('tags.foo', 'boo')

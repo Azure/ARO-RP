@@ -1,4 +1,4 @@
-package install
+package azureerrors
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -12,12 +12,22 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
-// hasAuthorizationFailedError returns true it the error is, or contains, an
+// HasAuthorizationFailedError returns true it the error is, or contains, an
 // AuthorizationFailed error
-func hasAuthorizationFailedError(err error) bool {
+func HasAuthorizationFailedError(err error) bool {
+	return deploymentFailedDueToAuthError(err, "AuthorizationFailed")
+}
+
+// HasLinkedAuthorizationFailedError returns true it the error is, or contains, a
+// LinkedAuthorizationFailed error
+func HasLinkedAuthorizationFailedError(err error) bool {
+	return deploymentFailedDueToAuthError(err, "LinkedAuthorizationFailed")
+}
+
+func deploymentFailedDueToAuthError(err error, authCode string) bool {
 	if detailedErr, ok := err.(autorest.DetailedError); ok {
 		if serviceErr, ok := detailedErr.Original.(*azure.ServiceError); ok {
-			if serviceErr.Code == "AuthorizationFailed" {
+			if serviceErr.Code == authCode {
 				return true
 			}
 		}
@@ -32,7 +42,7 @@ func hasAuthorizationFailedError(err error) bool {
 					var ce *api.CloudError
 					if json.Unmarshal([]byte(message), &ce) == nil &&
 						ce.CloudErrorBody != nil &&
-						ce.CloudErrorBody.Code == "AuthorizationFailed" {
+						ce.CloudErrorBody.Code == authCode {
 						return true
 					}
 				}
@@ -43,8 +53,8 @@ func hasAuthorizationFailedError(err error) bool {
 	return false
 }
 
-// isDeploymentActiveError returns true it the error is a DeploymentActive error
-func isDeploymentActiveError(err error) bool {
+// IsDeploymentActiveError returns true it the error is a DeploymentActive error
+func IsDeploymentActiveError(err error) bool {
 	if detailedErr, ok := err.(autorest.DetailedError); ok {
 		if requestErr, ok := detailedErr.Original.(azure.RequestError); ok &&
 			requestErr.ServiceError != nil &&

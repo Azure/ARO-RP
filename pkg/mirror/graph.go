@@ -9,6 +9,8 @@ import (
 	"mime"
 	"net/http"
 	"strings"
+
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 type Node struct {
@@ -19,7 +21,7 @@ type Node struct {
 
 // AddFromGraph adds all nodes whose version is of the form x.y.z (no suffix)
 // and >= min
-func AddFromGraph(min *Version) ([]Node, error) {
+func AddFromGraph(min *version.Version) ([]Node, error) {
 	req, err := http.NewRequest(http.MethodGet, "https://openshift-release.svc.ci.openshift.org/graph", nil)
 	if err != nil {
 		return nil, err
@@ -55,14 +57,20 @@ func AddFromGraph(min *Version) ([]Node, error) {
 	}
 
 	releases := make([]Node, 0, len(g.Nodes))
+loop:
 	for _, node := range g.Nodes {
-		version, err := ParseVersion(node.Version)
+		switch node.Version {
+		case "4.3.20":
+			continue loop
+		}
+
+		vsn, err := version.ParseVersion(node.Version)
 		if err != nil {
 			return nil, err
 		}
 
 		// if incoming version < min - skip
-		if version.Lt(min) || version.Suffix != "" {
+		if vsn.Lt(min) || vsn.Suffix != "" {
 			continue
 		}
 

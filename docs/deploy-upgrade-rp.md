@@ -8,9 +8,9 @@ The deploy utility is decoupled from the `env` package and is configured with a
 config file (see config.yaml.example) and the following optional
 environment variables:
 
-* RP_VERSION: RP VM scaleset git commit version
+* FULL_DEPLOY: deploy all ARM resources (requires elevated permissions)
 
-* RP_PREDEPLOY_ONLY: exit after pre-deploy step
+* RP_VERSION: RP VM scaleset git commit version
 
 Notes:
 
@@ -44,21 +44,3 @@ Notes:
 * Wait for new RP readiness.
 
 * Terminate all old RP VMSSes.
-
-## Utility example
-
-```bash
-# run pre-deploy phase only
-export RP_PARAMETERS_FILE=rp-production-predeploy-parameters.json
-RP_PREDEPLOY_ONLY=true go run ./cmd/aro deploy
-
-# deploy RP under name test
-export RP_VERSION="test"
-export RP_PARAMETERS_FILE=rp-production-parameters.json
-go run ./cmd/aro deploy
-
-# deploy second VMSS instance with name test2 and retire test
-export RP_VERSION="test2"
-export RP_PARAMETERS_FILE=rp-production-parameters.json
-go run ./cmd/aro deploy
-```

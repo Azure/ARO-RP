@@ -26,7 +26,11 @@ stages:
     modulePath: ${{ variables.modulePath }}
     locations:
     - australiaeast
+    - brazilsouth
+    - japaneast
+    - japanwest
     - southeastasia
+    - switzerlandnorth
 - stage: PhaseTwo
   displayName: wait 1 hour to avoid resource threshold
   dependsOn: []
@@ -50,9 +54,12 @@ stages:
     goroot: ${{ variables.GOROOT }}
     modulePath: ${{ variables.modulePath }}
     locations:
+    - canadacentral
+    - canadaeast
     - westeurope
     - northeurope
     - uksouth
+    - ukwest
     - francecentral
 - stage: PhaseThree
   displayName: wait 2 hour to avoid resource threshold
@@ -77,7 +84,11 @@ stages:
     goroot: ${{ variables.GOROOT }}
     modulePath: ${{ variables.modulePath }}
     locations:
+    - centralus
     - eastus
     - eastus2
+    - northcentralus
     - southcentralus
+    - westus
     - westus2
+    - southafricanorth

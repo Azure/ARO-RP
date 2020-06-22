@@ -39,16 +39,12 @@ func (g *generator) managedIdentity() *arm.Resource {
 			Name:     to.StringPtr("[concat('aro-rp-', resourceGroup().location)]"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
+		Condition:  g.conditionStanza("fullDeploy"),
 		APIVersion: azureclient.APIVersions["Microsoft.ManagedIdentity"],
 	}
 }
 
 func (g *generator) securityGroupRP() *arm.Resource {
-	var condition interface{}
-	if g.production {
-		condition = "[parameters('deployNSGs')]"
-	}
-
 	nsg := &mgmtnetwork.SecurityGroup{
 		SecurityGroupPropertiesFormat: &mgmtnetwork.SecurityGroupPropertiesFormat{
 			SecurityRules: &[]mgmtnetwork.SecurityRule{
@@ -107,17 +103,12 @@ func (g *generator) securityGroupRP() *arm.Resource {
 
 	return &arm.Resource{
 		Resource:   nsg,
-		Condition:  condition,
+		Condition:  g.conditionStanza("deployNSGs"),
 		APIVersion: azureclient.APIVersions["Microsoft.Network"],
 	}
 }
 
 func (g *generator) securityGroupPE() *arm.Resource {
-	var condition interface{}
-	if g.production {
-		condition = "[parameters('deployNSGs')]"
-	}
-
 	return &arm.Resource{
 		Resource: &mgmtnetwork.SecurityGroup{
 			SecurityGroupPropertiesFormat: &mgmtnetwork.SecurityGroupPropertiesFormat{},
@@ -125,7 +116,7 @@ func (g *generator) securityGroupPE() *arm.Resource {
 			Type:                          to.StringPtr("Microsoft.Network/networkSecurityGroups"),
 			Location:                      to.StringPtr("[resourceGroup().location]"),
 		},
-		Condition:  condition,
+		Condition:  g.conditionStanza("deployNSGs"),
 		APIVersion: azureclient.APIVersions["Microsoft.Network"],
 	}
 }
@@ -166,6 +157,8 @@ cat >/root/.docker/config.json <<EOF
 	}
 }
 EOF
+systemctl start docker.service
+docker pull "$PROXYIMAGE"
 
 mkdir /etc/proxy
 base64 -d <<<"$PROXYCERT" >/etc/proxy/proxy.crt
@@ -178,18 +171,19 @@ cat >/etc/sysconfig/proxy <<EOF
 PROXY_IMAGE='$PROXYIMAGE'
 EOF
 
-cat >/etc/systemd/system/proxy.service <<EOF
+cat >/etc/systemd/system/proxy.service <<'EOF'
 [Unit]
 After=docker.service
 Requires=docker.service
+StartLimitInterval=0
 
 [Service]
 EnvironmentFile=/etc/sysconfig/proxy
 ExecStartPre=-/usr/bin/docker rm -f %n
-ExecStartPre=/usr/bin/docker pull \$PROXY_IMAGE
-ExecStart=/usr/bin/docker run --rm --name %n -p 443:8443 -v /etc/proxy:/secrets \$PROXY_IMAGE
+ExecStart=/usr/bin/docker run --rm --name %n -p 443:8443 -v /etc/proxy:/secrets $PROXY_IMAGE
 ExecStop=/usr/bin/docker stop %n
 Restart=always
+RestartSec=1
 
 [Install]
 WantedBy=multi-user.target
@@ -411,6 +405,7 @@ func (g *generator) halfPeering(vnetA string, vnetB string) *arm.Resource {
 			},
 			Name: to.StringPtr(fmt.Sprintf("%s/peering-%s", vnetA, vnetB)),
 		},
+		Condition:  g.conditionStanza("fullDeploy"),
 		APIVersion: azureclient.APIVersions["Microsoft.Network"],
 		DependsOn: []string{
 			fmt.Sprintf("[resourceId('Microsoft.Network/virtualNetworks', '%s')]", vnetA),
@@ -461,6 +456,7 @@ func (g *generator) rpvnet() *arm.Resource {
 			Type:     to.StringPtr("Microsoft.Network/virtualNetworks"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
+		Condition:  g.conditionStanza("fullDeploy"),
 		APIVersion: azureclient.APIVersions["Microsoft.Network"],
 	}
 }
@@ -491,6 +487,7 @@ func (g *generator) pevnet() *arm.Resource {
 			Type:     to.StringPtr("Microsoft.Network/virtualNetworks"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
+		Condition:  g.conditionStanza("fullDeploy"),
 		APIVersion: azureclient.APIVersions["Microsoft.Network"],
 	}
 }
@@ -508,6 +505,7 @@ func (g *generator) pip() *arm.Resource {
 			Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
+		Condition:  g.conditionStanza("fullDeploy"),
 		APIVersion: azureclient.APIVersions["Microsoft.Network"],
 	}
 }
@@ -570,6 +568,7 @@ func (g *generator) lb() *arm.Resource {
 			Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
+		Condition:  g.conditionStanza("fullDeploy"),
 		APIVersion: azureclient.APIVersions["Microsoft.Network"],
 		DependsOn: []string{
 			"[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip')]",
@@ -588,6 +587,7 @@ func (g *generator) actionGroup(name string, shortName string) *arm.Resource {
 			Type:     to.StringPtr("Microsoft.Insights/actionGroups"),
 			Location: to.StringPtr("Global"),
 		},
+		Condition:  g.conditionStanza("fullDeploy"),
 		APIVersion: azureclient.APIVersions["Microsoft.Insights"],
 	}
 }
@@ -626,10 +626,11 @@ func (g *generator) lbAlert(threshold float64, severity int32, name string, eval
 					OdataType: mgmtmonitor.OdataTypeMicrosoftAzureMonitorSingleResourceMultipleMetricCriteria,
 				},
 			},
-			Name:     to.StringPtr(name),
+			Name:     to.StringPtr("[concat('" + name + "-', resourceGroup().location)]"),
 			Type:     to.StringPtr("Microsoft.Insights/metricAlerts"),
 			Location: to.StringPtr("global"),
 		},
+		Condition:  g.conditionStanza("fullDeploy"),
 		APIVersion: azureclient.APIVersions["Microsoft.Insights"],
 		DependsOn: []string{
 			"[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]",
@@ -669,20 +670,20 @@ func (g *generator) vmss() *arm.Resource {
 	}
 
 	parts = append(parts,
-		fmt.Sprintf("'LOCATION=$(base64 -d <<<'''"),
-		fmt.Sprintf("base64(resourceGroup().location)"),
+		"'LOCATION=$(base64 -d <<<'''",
+		"base64(resourceGroup().location)",
 		"''')\n'",
 	)
 
 	parts = append(parts,
-		fmt.Sprintf("'SUBSCRIPTIONID=$(base64 -d <<<'''"),
-		fmt.Sprintf("base64(subscription().subscriptionId)"),
+		"'SUBSCRIPTIONID=$(base64 -d <<<'''",
+		"base64(subscription().subscriptionId)",
 		"''')\n'",
 	)
 
 	parts = append(parts,
-		fmt.Sprintf("'RESOURCEGROUPNAME=$(base64 -d <<<'''"),
-		fmt.Sprintf("base64(resourceGroup().name)"),
+		"'RESOURCEGROUPNAME=$(base64 -d <<<'''",
+		"base64(resourceGroup().name)",
 		"''')\n'",
 	)
 
@@ -692,11 +693,11 @@ yum -y update -x WALinuxAgent
 # avoid "error: db5 error(-30969) from dbenv->open: BDB0091 DB_VERSION_MISMATCH: Database environment version mismatch"
 rm -f /var/lib/rpm/__db*
 
-rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8
+rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
 rpm --import https://packages.microsoft.com/keys/microsoft.asc
 rpm --import https://packages.fluentbit.io/fluentbit.key
 
-yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
 cat >/etc/yum.repos.d/azure.repo <<'EOF'
 [azure-cli]
@@ -720,54 +721,9 @@ enabled=yes
 gpgcheck=yes
 EOF
 
-yum -y install azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security podman-docker td-agent-bit
+yum -y install azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security docker td-agent-bit
 
 firewall-cmd --add-port=443/tcp --permanent
-
-# https://bugzilla.redhat.com/show_bug.cgi?id=1805212
-cat >/etc/cni/net.d/87-podman-bridge.conflist <<'EOF'
-{
-  "cniVersion": "0.4.0",
-  "name": "podman",
-  "plugins": [
-    {
-      "type": "bridge",
-      "bridge": "cni-podman0",
-      "isGateway": true,
-      "ipMasq": true,
-      "ipam": {
-        "type": "host-local",
-        "routes": [
-          {
-            "dst": "0.0.0.0/0"
-          }
-        ],
-        "ranges": [
-          [
-            {
-              "subnet": "10.88.0.0/16",
-              "gateway": "10.88.0.1"
-            }
-          ]
-        ]
-      }
-    },
-    {
-      "type": "portmap",
-      "capabilities": {
-        "portMappings": true
-      }
-    },
-    {
-      "type": "firewall",
-      "backend": "firewalld"
-    },
-    {
-      "type": "tuning"
-    }
-  ]
-}
-EOF
 
 cat >/etc/td-agent-bit/td-agent-bit.conf <<'EOF'
 [INPUT]
@@ -789,9 +745,12 @@ EOF
 az login -i
 az account set -s "$SUBSCRIPTIONID"
 
->/etc/containers/nodocker  # podman stderr output confuses az acr login
-mkdir /root/.docker
-REGISTRY_AUTH_FILE=/root/.docker/config.json az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
+systemctl start docker.service
+az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
+
+MDMIMAGE="${RPIMAGE%%/*}/genevamdm:master_39"
+docker pull "$MDMIMAGE"
+docker pull "$RPIMAGE"
 
 SVCVAULTURI="$(az keyvault list -g "$RESOURCEGROUPNAME" --query "[?tags.vault=='service'].properties.vaultUri" -o tsv)"
 az keyvault secret download --file /etc/mdm.pem --id "${SVCVAULTURI}secrets/rp-mdm"
@@ -836,7 +795,7 @@ EOF
 
 cat >/etc/sysconfig/mdm <<EOF
 MDMFRONTENDURL='$MDMFRONTENDURL'
-MDMIMAGE=${RPIMAGE%%/*}/genevamdm:master_37
+MDMIMAGE='$MDMIMAGE'
 MDMSOURCEENVIRONMENT='$LOCATION'
 MDMSOURCEROLE=rp
 MDMSOURCEROLEINSTANCE='$(hostname)'
@@ -845,12 +804,13 @@ EOF
 mkdir /var/etw
 cat >/etc/systemd/system/mdm.service <<'EOF'
 [Unit]
-After=network-online.target
+After=docker.service
+Requires=docker.service
+StartLimitInterval=0
 
 [Service]
 EnvironmentFile=/etc/sysconfig/mdm
 ExecStartPre=-/usr/bin/docker rm -f %N
-ExecStartPre=/usr/bin/docker pull $MDMIMAGE
 ExecStart=/usr/bin/docker run \
   --entrypoint /usr/sbin/MetricsExtension \
   --hostname %H \
@@ -869,6 +829,7 @@ ExecStart=/usr/bin/docker run \
   -SourceRoleInstance $MDMSOURCEROLEINSTANCE
 ExecStop=/usr/bin/docker stop %N
 Restart=always
+RestartSec=1
 
 [Install]
 WantedBy=multi-user.target
@@ -885,12 +846,13 @@ EOF
 
 cat >/etc/systemd/system/aro-rp.service <<'EOF'
 [Unit]
-After=network-online.target
+After=docker.service
+Requires=docker.service
+StartLimitInterval=0
 
 [Service]
 EnvironmentFile=/etc/sysconfig/aro-rp
 ExecStartPre=-/usr/bin/docker rm -f %N
-ExecStartPre=/usr/bin/docker pull $RPIMAGE
 ExecStart=/usr/bin/docker run \
   --hostname %H \
   --name %N \
@@ -909,6 +871,7 @@ ExecStart=/usr/bin/docker run \
 ExecStop=/usr/bin/docker stop -t 3600 %N
 TimeoutStopSec=3600
 Restart=always
+RestartSec=1
 
 [Install]
 WantedBy=multi-user.target
@@ -925,12 +888,13 @@ EOF
 
 cat >/etc/systemd/system/aro-monitor.service <<'EOF'
 [Unit]
-After=network-online.target
+After=docker.service
+Requires=docker.service
+StartLimitInterval=0
 
 [Service]
 EnvironmentFile=/etc/sysconfig/aro-monitor
 ExecStartPre=-/usr/bin/docker rm -f %N
-ExecStartPre=/usr/bin/docker pull $RPIMAGE
 ExecStart=/usr/bin/docker run \
   --hostname %H \
   --name %N \
@@ -945,6 +909,7 @@ ExecStart=/usr/bin/docker run \
   $RPIMAGE \
   monitor
 Restart=always
+RestartSec=1
 
 [Install]
 WantedBy=multi-user.target
@@ -956,7 +921,9 @@ for service in aro-monitor aro-rp auoms azsecd azsecmond mdsd mdm chronyd td-age
   systemctl enable $service.service
 done
 
-rm /etc/motd.d/*
+for scan in baseline clamav software; do
+  /usr/local/bin/azsecd config -s $scan -d P1D
+done
 
 (sleep 30; reboot) &
 `))
@@ -968,7 +935,7 @@ rm /etc/motd.d/*
 	return &arm.Resource{
 		Resource: &mgmtcompute.VirtualMachineScaleSet{
 			Sku: &mgmtcompute.Sku{
-				Name:     to.StringPtr(string(mgmtcompute.VirtualMachineSizeTypesStandardD2sV3)),
+				Name:     to.StringPtr("[parameters('vmSize')]"),
 				Tier:     to.StringPtr("Standard"),
 				Capacity: to.Int64Ptr(3),
 			},
@@ -996,7 +963,7 @@ rm /etc/motd.d/*
 						ImageReference: &mgmtcompute.ImageReference{
 							Publisher: to.StringPtr("RedHat"),
 							Offer:     to.StringPtr("RHEL"),
-							Sku:       to.StringPtr("8.1"),
+							Sku:       to.StringPtr("7-RAW"),
 							Version:   to.StringPtr("latest"),
 						},
 						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
@@ -1085,6 +1052,7 @@ func (g *generator) zone() *arm.Resource {
 			Type:           to.StringPtr("Microsoft.Network/dnsZones"),
 			Location:       to.StringPtr("global"),
 		},
+		Condition:  g.conditionStanza("fullDeploy"),
 		APIVersion: azureclient.APIVersions["Microsoft.Network/dnsZones"],
 	}
 }
@@ -1101,6 +1069,8 @@ func (g *generator) clusterKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyE
 				Certificates: &[]mgmtkeyvault.CertificatePermissions{
 					mgmtkeyvault.Create,
 					mgmtkeyvault.Delete,
+					mgmtkeyvault.Get,
+					mgmtkeyvault.Update,
 				},
 			},
 		},
@@ -1157,6 +1127,7 @@ func (g *generator) clustersKeyvault() *arm.Resource {
 
 	return &arm.Resource{
 		Resource:   vault,
+		Condition:  g.conditionStanza("fullDeploy"),
 		APIVersion: azureclient.APIVersions["Microsoft.KeyVault"],
 	}
 }
@@ -1203,6 +1174,7 @@ func (g *generator) serviceKeyvault() *arm.Resource {
 
 	return &arm.Resource{
 		Resource:   vault,
+		Condition:  g.conditionStanza("fullDeploy"),
 		APIVersion: azureclient.APIVersions["Microsoft.KeyVault"],
 	}
 }
@@ -1231,6 +1203,7 @@ func (g *generator) cosmosdb() []*arm.Resource {
 
 	r := &arm.Resource{
 		Resource:   cosmosdb,
+		Condition:  g.conditionStanza("fullDeploy"),
 		APIVersion: azureclient.APIVersions["Microsoft.DocumentDB"],
 	}
 
@@ -1274,6 +1247,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases"),
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},
+			Condition:  g.conditionStanza("fullDeploy"),
 			APIVersion: azureclient.APIVersions["Microsoft.DocumentDB"],
 		},
 		{
@@ -1295,6 +1269,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},
+			Condition:  g.conditionStanza("fullDeploy"),
 			APIVersion: azureclient.APIVersions["Microsoft.DocumentDB"],
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
@@ -1318,6 +1293,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},
+			Condition:  g.conditionStanza("fullDeploy"),
 			APIVersion: azureclient.APIVersions["Microsoft.DocumentDB"],
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
@@ -1342,6 +1318,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},
+			Condition:  g.conditionStanza("fullDeploy"),
 			APIVersion: azureclient.APIVersions["Microsoft.DocumentDB"],
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
@@ -1384,6 +1361,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},
+			Condition:  g.conditionStanza("fullDeploy"),
 			APIVersion: azureclient.APIVersions["Microsoft.DocumentDB"],
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
@@ -1407,6 +1385,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 				Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},
+			Condition:  g.conditionStanza("fullDeploy"),
 			APIVersion: azureclient.APIVersions["Microsoft.DocumentDB"],
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
@@ -1447,6 +1426,7 @@ func (g *generator) roleDefinitionTokenContributor() *arm.Resource {
 				},
 			},
 		},
+		Condition:  g.conditionStanza("fullDeploy"),
 		APIVersion: azureclient.APIVersions["Microsoft.Authorization/roleDefinitions"],
 	}
 }
@@ -1464,6 +1444,7 @@ func (g *generator) rbac() []*arm.Resource {
 					PrincipalType:    mgmtauthorization.ServicePrincipal,
 				},
 			},
+			Condition:  g.conditionStanza("fullDeploy"),
 			APIVersion: azureclient.APIVersions["Microsoft.Authorization"],
 		},
 		{
@@ -1477,6 +1458,7 @@ func (g *generator) rbac() []*arm.Resource {
 					PrincipalType:    mgmtauthorization.ServicePrincipal,
 				},
 			},
+			Condition:  g.conditionStanza("fullDeploy"),
 			APIVersion: azureclient.APIVersions["Microsoft.Authorization"],
 		},
 		{
@@ -1490,6 +1472,7 @@ func (g *generator) rbac() []*arm.Resource {
 					PrincipalType:    mgmtauthorization.ServicePrincipal,
 				},
 			},
+			Condition:  g.conditionStanza("fullDeploy"),
 			APIVersion: azureclient.APIVersions["Microsoft.Authorization"],
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
@@ -1506,6 +1489,7 @@ func (g *generator) rbac() []*arm.Resource {
 					PrincipalType:    mgmtauthorization.ServicePrincipal,
 				},
 			},
+			Condition:  g.conditionStanza("fullDeploy"),
 			APIVersion: azureclient.APIVersions["Microsoft.Authorization"],
 			DependsOn: []string{
 				"[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]",
@@ -1521,6 +1505,7 @@ func (g *generator) acrReplica() *arm.Resource {
 			Type:     to.StringPtr("Microsoft.ContainerRegistry/registries/replications"),
 			Location: to.StringPtr("[parameters('location')]"),
 		},
+		Condition:  g.conditionStanza("fullDeploy"),
 		APIVersion: azureclient.APIVersions["Microsoft.ContainerRegistry"],
 	}
 }
@@ -1538,6 +1523,7 @@ func (g *generator) acrRbac() []*arm.Resource {
 					PrincipalType:    mgmtauthorization.ServicePrincipal,
 				},
 			},
+			Condition:  g.conditionStanza("fullDeploy"),
 			APIVersion: azureclient.APIVersions["Microsoft.Authorization"],
 		},
 		{
@@ -1551,6 +1537,7 @@ func (g *generator) acrRbac() []*arm.Resource {
 					PrincipalType:    mgmtauthorization.ServicePrincipal,
 				},
 			},
+			Condition:  g.conditionStanza("fullDeploy"),
 			APIVersion: azureclient.APIVersions["Microsoft.Authorization"],
 		},
 	}

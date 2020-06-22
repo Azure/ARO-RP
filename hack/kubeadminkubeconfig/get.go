@@ -6,8 +6,8 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"net/url"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -65,7 +65,12 @@ func writeKubeconfig(ctx context.Context, log *logrus.Entry, resourceID string) 
 		return err
 	}
 
-	adminKubeconfig := makeKubeconfig(strings.Replace(*oc.OpenShiftClusterProperties.ApiserverProfile.URL, "https://", "", 1), *creds.KubeadminUsername, token, "kube-system")
+	u, err := url.Parse(*oc.OpenShiftClusterProperties.ApiserverProfile.URL)
+	if err != nil {
+		return err
+	}
+
+	adminKubeconfig := makeKubeconfig(u.Host, *creds.KubeadminUsername, token, "kube-system")
 
 	e := json.NewEncoder(os.Stdout)
 	e.SetIndent("", "    ")

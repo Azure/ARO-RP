@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/ginkgo"
 
 	"github.com/Azure/go-autorest/autorest/azure/auth"
+	machineapiclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -17,18 +18,19 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift"
 )
 
-type ClientSet struct {
+type clientSet struct {
 	OpenshiftClusters redhatopenshift.OpenShiftClustersClient
 	Operations        redhatopenshift.OperationsClient
 	Kubernetes        kubernetes.Interface
+	MachineAPI        machineapiclient.Interface
 }
 
 var (
-	Log     *logrus.Entry
-	Clients *ClientSet
+	log     *logrus.Entry
+	clients *clientSet
 )
 
-func newClientSet() (*ClientSet, error) {
+func newClientSet() (*clientSet, error) {
 	authorizer, err := auth.NewAuthorizerFromEnvironment()
 	if err != nil {
 		return nil, err
@@ -49,15 +51,21 @@ func newClientSet() (*ClientSet, error) {
 		return nil, err
 	}
 
-	return &ClientSet{
+	machineapicli, err := machineapiclient.NewForConfig(restconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return &clientSet{
 		OpenshiftClusters: redhatopenshift.NewOpenShiftClustersClient(os.Getenv("AZURE_SUBSCRIPTION_ID"), authorizer),
 		Operations:        redhatopenshift.NewOperationsClient(os.Getenv("AZURE_SUBSCRIPTION_ID"), authorizer),
 		Kubernetes:        cli,
+		MachineAPI:        machineapicli,
 	}, nil
 }
 
 var _ = BeforeSuite(func() {
-	Log.Info("BeforeSuite")
+	log.Info("BeforeSuite")
 	for _, key := range []string{
 		"AZURE_SUBSCRIPTION_ID",
 		"CLUSTER",
@@ -69,7 +77,7 @@ var _ = BeforeSuite(func() {
 	}
 
 	var err error
-	Clients, err = newClientSet()
+	clients, err = newClientSet()
 	if err != nil {
 		panic(err)
 	}

@@ -23,6 +23,9 @@
         "fpServicePrincipalId": {
             "value": ""
         },
+        "fullDeploy": {
+            "value": false
+        },
         "mdmFrontendUrl": {
             "value": ""
         },
@@ -46,6 +49,9 @@
         },
         "subscriptionResourceGroupName": {
             "value": ""
+        },
+        "vmSize": {
+            "value": "Standard_D2s_v3"
         },
         "vmssName": {
             "value": ""

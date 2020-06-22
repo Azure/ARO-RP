@@ -9,8 +9,11 @@ import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2020_04_30.models as 
 from azext_aro._aad import AADManager
 from azext_aro._rbac import assign_contributor_to_vnet
 from azext_aro._validators import validate_subnets
+from azure.cli.core.commands.client_factory import get_mgmt_service_client
 from azure.cli.core.commands.client_factory import get_subscription_id
+from azure.cli.core.profiles import ResourceType
 from azure.cli.core.util import sdk_no_wait
+from knack.util import CLIError
 
 
 FP_CLIENT_ID = 'f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875'
@@ -40,16 +43,23 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                ingress_visibility=None,
                tags=None,
                no_wait=False):
+    if not rp_mode_development():
+        resource_client = get_mgmt_service_client(
+            cmd.cli_ctx, ResourceType.MGMT_RESOURCE_RESOURCES)
+        provider = resource_client.providers.get('Microsoft.RedHatOpenShift')
+        if provider.registration_state != 'Registered':
+            raise CLIError('Microsoft.RedHatOpenShift provider is not registered.  Run `az provider ' +
+                           'register -n Microsoft.RedHatOpenShift --wait`.')
+
     vnet = validate_subnets(master_subnet, worker_subnet)
 
     subscription_id = get_subscription_id(cmd.cli_ctx)
 
-    random_id = ''.join(random.choice(
-        'bcdfghjklmnpqrstvwxyz0123456789') for _ in range(8))
+    random_id = generate_random_id()
 
     aad = AADManager(cmd.cli_ctx)
     if client_id is None:
-        app, client_secret = aad.create_application('aro-%s' % random_id)
+        app, client_secret = aad.create_application(cluster_resource_group or 'aro-' + random_id)
         client_id = app.app_id
 
     client_sp = aad.get_service_principal(client_id)
@@ -62,8 +72,8 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
 
     rp_client_sp = aad.get_service_principal(rp_client_id)
 
-    assign_contributor_to_vnet(cmd.cli_ctx, vnet, client_sp.object_id, 'client')
-    assign_contributor_to_vnet(cmd.cli_ctx, vnet, rp_client_sp.object_id, 'rp_client')
+    assign_contributor_to_vnet(cmd.cli_ctx, vnet, client_sp.object_id)
+    assign_contributor_to_vnet(cmd.cli_ctx, vnet, rp_client_sp.object_id)
 
     if rp_mode_development():
         worker_vm_size = worker_vm_size or 'Standard_D2s_v3'
@@ -156,3 +166,10 @@ def aro_update(client, resource_group_name, resource_name, no_wait=False):
 
 def rp_mode_development():
     return os.environ.get('RP_MODE', '').lower() == 'development'
+
+
+def generate_random_id():
+    random_id = (random.choice('abcdefghijklmnopqrstuvwxyz') +
+                 ''.join(random.choice('abcdefghijklmnopqrstuvwxyz1234567890')
+                         for _ in range(7)))
+    return random_id

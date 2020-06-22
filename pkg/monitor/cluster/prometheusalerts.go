@@ -30,7 +30,7 @@ func (mon *Monitor) emitPrometheusAlerts(ctx context.Context) error {
 						return nil, err
 					}
 
-					return portforward.DialContext(ctx, mon.env, mon.oc, "openshift-monitoring", fmt.Sprintf("alertmanager-main-%d", i), port)
+					return portforward.DialContext(ctx, mon.log, mon.env, mon.oc, "openshift-monitoring", fmt.Sprintf("alertmanager-main-%d", i), port)
 				},
 			},
 		}

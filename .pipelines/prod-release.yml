@@ -5,6 +5,9 @@ trigger: none
 parameters:
 - name: vsoConfigBuildID
 - name: vsoDeployerBuildID
+- name: fullDeploy
+  type: boolean
+  default: false
 
 stages:
 - stage: Deploy_LowTrafficSector
@@ -16,6 +19,8 @@ stages:
       environment: RP-Prod-LowTrafficSector
       locations:
       - australiaeast
+      - japaneast
+      - japanwest
       configFileName: prod-config.yaml
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
       vsoProjectID: $(vso-project-id)
@@ -27,6 +32,7 @@ stages:
       e2eSubscription: $(e2e-subscription)
       billingE2EPipelineName: $(billing-e2e-pipeline-name)
       billingE2EBranchName: $(billing-e2e-branch-name)
+      fullDeploy: ${{ parameters.fullDeploy }}
 - stage: Deploy_USSector
   condition: succeededOrFailed()
   dependsOn: [Deploy_LowTrafficSector]
@@ -36,9 +42,12 @@ stages:
     parameters:
       environment: RP-Prod-USSector
       locations:
+      - centralus
       - eastus
       - eastus2
+      - northcentralus
       - southcentralus
+      - westus
       - westus2
       configFileName: prod-config.yaml
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
@@ -51,6 +60,7 @@ stages:
       e2eSubscription: $(e2e-subscription)
       billingE2EPipelineName: $(billing-e2e-pipeline-name)
       billingE2EBranchName: $(billing-e2e-branch-name)
+      fullDeploy: ${{ parameters.fullDeploy }}
 - stage: Deploy_EuropeSector
   dependsOn: [Deploy_USSector]
   condition: succeededOrFailed()
@@ -60,7 +70,10 @@ stages:
     parameters:
       environment: RP-Prod-EuropeSector
       locations:
+      - canadacentral
+      - canadaeast
       - northeurope
+      - switzerlandnorth
       - westeurope
       - francecentral
       configFileName: prod-config.yaml
@@ -74,6 +87,7 @@ stages:
       e2eSubscription: $(e2e-subscription)
       billingE2EPipelineName: $(billing-e2e-pipeline-name)
       billingE2EBranchName: $(billing-e2e-branch-name)
+      fullDeploy: ${{ parameters.fullDeploy }}
 - stage: Deploy_ROWSector
   dependsOn: [Deploy_EuropeSector]
   condition: succeededOrFailed()
@@ -83,9 +97,11 @@ stages:
     parameters:
       environment: RP-Prod-ROWSector
       locations:
+      - brazilsouth
       - southeastasia
       - southafricanorth
       - uksouth
+      - ukwest
       configFileName: prod-config.yaml
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
       vsoProjectID: $(vso-project-id)
@@ -97,3 +113,4 @@ stages:
       e2eSubscription: $(e2e-subscription)
       billingE2EPipelineName: $(billing-e2e-pipeline-name)
       billingE2EBranchName: $(billing-e2e-branch-name)
+      fullDeploy: ${{ parameters.fullDeploy }}

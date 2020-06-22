@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/dgrijalva/jwt-go"
@@ -38,6 +39,9 @@ import (
 // tenant."`.  I think this can be returned when the service principal
 // associated with the application hasn't yet caught up with the application
 // itself.
+//
+// 3. Network failures.  If the error is not an adal.TokenRefreshError,
+// then it's likely a transient failure. For example, connection reset by peer.
 func GetToken(ctx context.Context, log *logrus.Entry, oc *api.OpenShiftCluster, resource string) (*adal.ServicePrincipalToken, error) {
 	spp := &oc.Properties.ServicePrincipalProfile
 
@@ -58,13 +62,14 @@ func GetToken(ctx context.Context, log *logrus.Entry, oc *api.OpenShiftCluster, 
 		err = token.RefreshWithContext(ctx)
 		if err != nil {
 			isAADSTS700016 := strings.Contains(err.Error(), "AADSTS700016")
+			isTokenRefreshError := autorest.IsTokenRefreshError(err)
 
 			// populate err with a user-facing error that will be visible if
 			// we're not successful.
 			log.Info(err)
 			err = api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalCredentials, "properties.servicePrincipalProfile", "The provided service principal credentials are invalid.")
 
-			if isAADSTS700016 {
+			if !isTokenRefreshError || isAADSTS700016 {
 				return false, nil
 			}
 

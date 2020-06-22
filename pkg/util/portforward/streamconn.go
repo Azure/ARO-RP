@@ -10,11 +10,15 @@ import (
 	"net"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/httpstream"
+
+	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
 // streamConn wraps a pair of SPDY streams and pretends to be a net.Conn
 type streamConn struct {
+	log         *logrus.Entry
 	c           httpstream.Connection
 	dataStream  httpstream.Stream
 	errorStream httpstream.Stream
@@ -23,8 +27,9 @@ type streamConn struct {
 
 var _ net.Conn = (*streamConn)(nil)
 
-func newStreamConn(c httpstream.Connection, dataStream, errorStream httpstream.Stream) *streamConn {
+func newStreamConn(log *logrus.Entry, c httpstream.Connection, dataStream, errorStream httpstream.Stream) *streamConn {
 	s := &streamConn{
+		log:         log,
 		errch:       make(chan error, 1),
 		c:           c,
 		dataStream:  dataStream,
@@ -37,6 +42,8 @@ func newStreamConn(c httpstream.Connection, dataStream, errorStream httpstream.S
 }
 
 func (s *streamConn) readErrorStream() {
+	defer recover.Panic(s.log)
+
 	message, err := ioutil.ReadAll(s.errorStream)
 	if err != nil {
 		s.errch <- err

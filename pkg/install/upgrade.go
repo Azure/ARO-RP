@@ -14,11 +14,33 @@ import (
 )
 
 func (i *Installer) upgradeCluster(ctx context.Context) error {
+	vsn, err := version.ParseVersion(version.OpenShiftVersion)
+	if err != nil {
+		return err
+	}
+
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		cv, err := i.configcli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
+
+		if cv.Spec.Channel != "" {
+			i.log.Printf("not upgrading: cvo channel is %s", cv.Spec.Channel)
+			return nil
+		}
+
+		desired, err := version.ParseVersion(cv.Status.Desired.Version)
+		if err != nil {
+			return err
+		}
+
+		if !desired.Lt(vsn) {
+			i.log.Printf("not upgrading: cvo desired version is %s", cv.Status.Desired.Version)
+			return nil
+		}
+
+		i.log.Printf("initiating cluster upgrade, target version %s", version.OpenShiftVersion)
 
 		cv.Spec.DesiredUpdate = &configv1.Update{
 			Version: version.OpenShiftVersion,

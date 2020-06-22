@@ -4,6 +4,8 @@ package dns
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
+
 	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	"github.com/Azure/go-autorest/autorest"
 )
@@ -11,6 +13,7 @@ import (
 // ZonesClient is a minimal interface for azure ZonesClient
 type ZonesClient interface {
 	ZonesClientAddons
+	Get(ctx context.Context, resourceGroupName string, zoneName string) (result mgmtdns.Zone, err error)
 }
 
 type zonesClient struct {

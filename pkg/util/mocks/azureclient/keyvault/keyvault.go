@@ -80,6 +80,21 @@ func (mr *MockBaseClientMockRecorder) GetCertificateOperation(arg0, arg1, arg2 i
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCertificateOperation", reflect.TypeOf((*MockBaseClient)(nil).GetCertificateOperation), arg0, arg1, arg2)
 }
 
+// GetCertificatePolicy mocks base method
+func (m *MockBaseClient) GetCertificatePolicy(arg0 context.Context, arg1, arg2 string) (keyvault.CertificatePolicy, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCertificatePolicy", arg0, arg1, arg2)
+	ret0, _ := ret[0].(keyvault.CertificatePolicy)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCertificatePolicy indicates an expected call of GetCertificatePolicy
+func (mr *MockBaseClientMockRecorder) GetCertificatePolicy(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCertificatePolicy", reflect.TypeOf((*MockBaseClient)(nil).GetCertificatePolicy), arg0, arg1, arg2)
+}
+
 // GetCertificates mocks base method
 func (m *MockBaseClient) GetCertificates(arg0 context.Context, arg1 string, arg2 *int32, arg3 *bool) (keyvault.CertificateListResultPage, error) {
 	m.ctrl.T.Helper()
@@ -125,36 +140,6 @@ func (mr *MockBaseClientMockRecorder) GetSecrets(arg0, arg1, arg2 interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecrets", reflect.TypeOf((*MockBaseClient)(nil).GetSecrets), arg0, arg1, arg2)
 }
 
-// ImportCertificate mocks base method
-func (m *MockBaseClient) ImportCertificate(arg0 context.Context, arg1, arg2 string, arg3 keyvault.CertificateImportParameters) (keyvault.CertificateBundle, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ImportCertificate", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(keyvault.CertificateBundle)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ImportCertificate indicates an expected call of ImportCertificate
-func (mr *MockBaseClientMockRecorder) ImportCertificate(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ImportCertificate", reflect.TypeOf((*MockBaseClient)(nil).ImportCertificate), arg0, arg1, arg2, arg3)
-}
-
-// SetCertificateIssuer mocks base method
-func (m *MockBaseClient) SetCertificateIssuer(arg0 context.Context, arg1, arg2 string, arg3 keyvault.CertificateIssuerSetParameters) (keyvault.IssuerBundle, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SetCertificateIssuer", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].(keyvault.IssuerBundle)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// SetCertificateIssuer indicates an expected call of SetCertificateIssuer
-func (mr *MockBaseClientMockRecorder) SetCertificateIssuer(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetCertificateIssuer", reflect.TypeOf((*MockBaseClient)(nil).SetCertificateIssuer), arg0, arg1, arg2, arg3)
-}
-
 // SetSecret mocks base method
 func (m *MockBaseClient) SetSecret(arg0 context.Context, arg1, arg2 string, arg3 keyvault.SecretSetParameters) (keyvault.SecretBundle, error) {
 	m.ctrl.T.Helper()
@@ -168,4 +153,19 @@ func (m *MockBaseClient) SetSecret(arg0 context.Context, arg1, arg2 string, arg3
 func (mr *MockBaseClientMockRecorder) SetSecret(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSecret", reflect.TypeOf((*MockBaseClient)(nil).SetSecret), arg0, arg1, arg2, arg3)
+}
+
+// UpdateCertificatePolicy mocks base method
+func (m *MockBaseClient) UpdateCertificatePolicy(arg0 context.Context, arg1, arg2 string, arg3 keyvault.CertificatePolicy) (keyvault.CertificatePolicy, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateCertificatePolicy", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(keyvault.CertificatePolicy)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateCertificatePolicy indicates an expected call of UpdateCertificatePolicy
+func (mr *MockBaseClientMockRecorder) UpdateCertificatePolicy(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCertificatePolicy", reflect.TypeOf((*MockBaseClient)(nil).UpdateCertificatePolicy), arg0, arg1, arg2, arg3)
 }

@@ -21,56 +21,63 @@ import (
 
 // PreDeploy deploys managed identity, NSGs and keyvaults, needed for main
 // deployment
-func (d *deployer) PreDeploy(ctx context.Context) (string, error) {
+func (d *deployer) PreDeploy(ctx context.Context) error {
 	// deploy global rbac
 	err := d.deployGlobalSubscription(ctx)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	// deploy per subscription Action Group
-	_, err = d.groups.CreateOrUpdate(ctx, d.config.Configuration.SubscriptionResourceGroupName, mgmtfeatures.ResourceGroup{
-		Location: to.StringPtr("centralus"),
-	})
-	if err != nil {
-		return "", err
+	if d.fullDeploy {
+		_, err = d.groups.CreateOrUpdate(ctx, d.config.Configuration.SubscriptionResourceGroupName, mgmtfeatures.ResourceGroup{
+			Location: to.StringPtr("centralus"),
+		})
+		if err != nil {
+			return err
+		}
+
+		_, err = d.groups.CreateOrUpdate(ctx, d.config.ResourceGroupName, mgmtfeatures.ResourceGroup{
+			Location: &d.config.Location,
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	err = d.deploySubscription(ctx)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	_, err = d.groups.CreateOrUpdate(ctx, d.config.ResourceGroupName, mgmtfeatures.ResourceGroup{
-		Location: &d.config.Location,
-	})
+	err = d.deployManagedIdentity(ctx)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	// deploy managed identity if needed and get rpServicePrincipalID
-	rpServicePrincipalID, err := d.deployManageIdentity(ctx)
+	msi, err := d.userassignedidentities.Get(ctx, d.config.ResourceGroupName, "aro-rp-"+d.config.Location)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	err = d.deployGlobal(ctx, rpServicePrincipalID)
+	err = d.deployGlobal(ctx, msi.PrincipalID.String())
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	// deploy NSGs, keyvaults
-	err = d.deployPreDeploy(ctx, rpServicePrincipalID)
+	err = d.deployPreDeploy(ctx, msi.PrincipalID.String())
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	err = d.configureServiceKV(ctx)
-	if err != nil {
-		return "", err
+	if d.fullDeploy {
+		err = d.configureServiceSecrets(ctx)
+		if err != nil {
+			return err
+		}
 	}
 
-	return rpServicePrincipalID, nil
+	return nil
 }
 
 func (d *deployer) deployGlobal(ctx context.Context, rpServicePrincipalID string) error {
@@ -119,11 +126,14 @@ func (d *deployer) deployGlobalSubscription(ctx context.Context) error {
 		return err
 	}
 
+	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
+
 	d.log.Infof("deploying %s", deploymentName)
 	return d.globaldeployments.CreateOrUpdateAtSubscriptionScopeAndWait(ctx, deploymentName, mgmtfeatures.Deployment{
 		Properties: &mgmtfeatures.DeploymentProperties{
-			Template: template,
-			Mode:     mgmtfeatures.Incremental,
+			Template:   template,
+			Mode:       mgmtfeatures.Incremental,
+			Parameters: parameters.Parameters,
 		},
 		Location: to.StringPtr("centralus"),
 	})
@@ -143,46 +153,42 @@ func (d *deployer) deploySubscription(ctx context.Context) error {
 		return err
 	}
 
+	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
+
 	d.log.Infof("deploying %s", deploymentName)
 	return d.deployments.CreateOrUpdateAndWait(ctx, d.config.Configuration.SubscriptionResourceGroupName, deploymentName, mgmtfeatures.Deployment{
 		Properties: &mgmtfeatures.DeploymentProperties{
-			Template: template,
-			Mode:     mgmtfeatures.Incremental,
+			Template:   template,
+			Mode:       mgmtfeatures.Incremental,
+			Parameters: parameters.Parameters,
 		},
 	})
 }
 
-func (d *deployer) deployManageIdentity(ctx context.Context) (string, error) {
+func (d *deployer) deployManagedIdentity(ctx context.Context) error {
 	deploymentName := "rp-production-managed-identity"
 
 	b, err := Asset(generator.FileRPProductionManagedIdentity)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	var template map[string]interface{}
 	err = json.Unmarshal(b, &template)
 	if err != nil {
-		return "", err
+		return err
 	}
+
+	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
 
 	d.log.Infof("deploying %s", deploymentName)
-	err = d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, deploymentName, mgmtfeatures.Deployment{
+	return d.deployments.CreateOrUpdateAndWait(ctx, d.config.ResourceGroupName, deploymentName, mgmtfeatures.Deployment{
 		Properties: &mgmtfeatures.DeploymentProperties{
-			Template: template,
-			Mode:     mgmtfeatures.Incremental,
+			Template:   template,
+			Mode:       mgmtfeatures.Incremental,
+			Parameters: parameters.Parameters,
 		},
 	})
-	if err != nil {
-		return "", err
-	}
-
-	deployment, err := d.deployments.Get(ctx, d.config.ResourceGroupName, deploymentName)
-	if err != nil {
-		return "", err
-	}
-
-	return deployment.Properties.Outputs.(map[string]interface{})["rpServicePrincipalId"].(map[string]interface{})["value"].(string), nil
 }
 
 func (d *deployer) deployPreDeploy(ctx context.Context, rpServicePrincipalID string) error {
@@ -227,7 +233,7 @@ func (d *deployer) deployPreDeploy(ctx context.Context, rpServicePrincipalID str
 	})
 }
 
-func (d *deployer) configureServiceKV(ctx context.Context) error {
+func (d *deployer) configureServiceSecrets(ctx context.Context) error {
 	serviceKeyVaultURI := "https://" + d.config.Configuration.KeyvaultPrefix + "-svc.vault.azure.net/"
 	secrets, err := d.keyvault.GetSecrets(ctx, serviceKeyVaultURI, nil)
 	if err != nil {
@@ -239,12 +245,7 @@ func (d *deployer) configureServiceKV(ctx context.Context) error {
 		return err
 	}
 
-	err = d.ensureSecret(ctx, secrets, serviceKeyVaultURI, env.FrontendEncryptionSecretName)
-	if err != nil {
-		return err
-	}
-
-	return d.ensureMonitoringCertificates(ctx, serviceKeyVaultURI)
+	return d.ensureSecret(ctx, secrets, serviceKeyVaultURI, env.FrontendEncryptionSecretName)
 }
 
 func (d *deployer) ensureSecret(ctx context.Context, existingSecrets []keyvault.SecretItem, serviceKeyVaultURI, secretName string) error {
@@ -265,27 +266,4 @@ func (d *deployer) ensureSecret(ctx context.Context, existingSecrets []keyvault.
 		Value: to.StringPtr(base64.StdEncoding.EncodeToString(key)),
 	})
 	return err
-}
-
-func (d *deployer) ensureMonitoringCertificates(ctx context.Context, serviceKeyVaultURI string) error {
-	for _, certificateName := range []string{
-		env.ClusterLoggingSecretName,
-		env.RPLoggingSecretName,
-		env.RPMonitoringSecretName,
-	} {
-		bundle, err := d.keyvault.GetSecret(ctx, d.config.Configuration.GlobalMonitoringKeyVaultURI, certificateName, "")
-		if err != nil {
-			return err
-		}
-
-		d.log.Infof("importing %s", certificateName)
-		_, err = d.keyvault.ImportCertificate(ctx, serviceKeyVaultURI, certificateName, keyvault.CertificateImportParameters{
-			Base64EncodedCertificate: bundle.Value,
-		})
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }

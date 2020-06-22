@@ -36,6 +36,9 @@
                 "permissions": [
                     {
                         "actions": [
+                            "Microsoft.Network/routeTables/join/action",
+                            "Microsoft.Network/routeTables/read",
+                            "Microsoft.Network/routeTables/write",
                             "Microsoft.Network/virtualNetworks/join/action",
                             "Microsoft.Network/virtualNetworks/read",
                             "Microsoft.Network/virtualNetworks/subnets/join/action",

@@ -10,11 +10,6 @@ import (
 // APIVersion contains a version string as it will be used by clients
 const APIVersion = "admin"
 
-const (
-	resourceProviderNamespace = "Microsoft.RedHatOpenShift"
-	resourceType              = "openShiftClusters"
-)
-
 func init() {
 	api.APIs[APIVersion] = &api.Version{
 		OpenShiftClusterConverter: func() api.OpenShiftClusterConverter {

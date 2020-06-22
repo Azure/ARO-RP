@@ -41,11 +41,13 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
+	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/privateendpoint"
+	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
@@ -59,7 +61,7 @@ type Installer struct {
 	billing      billing.Manager
 	doc          *api.OpenShiftClusterDocument
 	cipher       encryption.Cipher
-	fpAuthorizer autorest.Authorizer
+	fpAuthorizer refreshable.Authorizer
 
 	disks             compute.DisksClient
 	virtualmachines   compute.VirtualMachinesClient
@@ -148,16 +150,17 @@ func NewInstaller(ctx context.Context, log *logrus.Entry, _env env.Interface, db
 func (i *Installer) AdminUpgrade(ctx context.Context) error {
 	steps := []interface{}{
 		action(i.initializeKubernetesClients),
+		action(i.startVMs),
+		condition{i.apiServersReady, 30 * time.Minute},
 		action(i.ensureBillingRecord), // belt and braces
 		action(i.fixLBProbes),
 		action(i.fixPullSecret),
 		action(i.ensureGenevaLogging),
+		action(i.ensureIfReload),
+		action(i.upgradeCertificates),
+		action(i.configureAPIServerCertificate),
+		action(i.configureIngressCertificate),
 		action(i.upgradeCluster),
-
-		// TODO: later could use this flow to refresh certificates
-		// action(i.createCertificates),
-		// action(i.configureAPIServerCertificate),
-		// action(i.configureIngressCertificate),
 	}
 
 	return i.runSteps(ctx, steps)
@@ -171,6 +174,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			action(func(ctx context.Context) error {
 				return i.deployStorageTemplate(ctx, installConfig, platformCreds, image)
 			}),
+			action(i.attachNSGsAndPatch),
 			action(i.ensureBillingRecord),
 			action(i.deployResourceTemplate),
 			action(i.createPrivateEndpoint),
@@ -179,6 +183,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			action(i.initializeKubernetesClients),
 			condition{i.bootstrapConfigMapReady, 30 * time.Minute},
 			action(i.ensureGenevaLogging),
+			action(i.ensureIfReload),
 			action(i.incrInstallPhase),
 		},
 		api.InstallPhaseRemoveBootstrap: {
@@ -221,10 +226,30 @@ func (i *Installer) runSteps(ctx context.Context, steps []interface{}) error {
 		switch step := step.(type) {
 		case action:
 			i.log.Printf("running step %s", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name())
-			err = step(ctx)
+
+			func() {
+				timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+				defer cancel()
+
+				wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+					err = step(ctx)
+					if azureerrors.HasAuthorizationFailedError(err) ||
+						azureerrors.HasLinkedAuthorizationFailedError(err) {
+						i.log.Print(err)
+						// https://github.com/Azure/ARO-RP/issues/541: it is unclear if this refresh helps or not
+						err = i.fpAuthorizer.RefreshWithContext(ctx)
+						return false, err
+					}
+					return err == nil, err
+				}, timeoutCtx.Done())
+			}()
+
 			if err != nil {
 				i.gatherFailureLogs(ctx)
-				return fmt.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name(), err)
+				if _, ok := err.(*api.CloudError); !ok {
+					err = fmt.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name(), err)
+				}
+				return err
 			}
 
 		case condition:
@@ -236,7 +261,10 @@ func (i *Installer) runSteps(ctx context.Context, steps []interface{}) error {
 			}()
 			if err != nil {
 				i.gatherFailureLogs(ctx)
-				return fmt.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(step.f).Pointer()).Name(), err)
+				if _, ok := err.(*api.CloudError); !ok {
+					err = fmt.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(step.f).Pointer()).Name(), err)
+				}
+				return err
 			}
 
 		default:
@@ -411,42 +439,25 @@ func (i *Installer) initializeKubernetesClients(ctx context.Context) error {
 }
 
 func (i *Installer) deployARMTemplate(ctx context.Context, rg string, tName string, t *arm.Template, params map[string]interface{}) error {
-	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
-	defer cancel()
+	i.log.Printf("deploying %s template", tName)
 
-	err := wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-		i.log.Printf("deploying %s template", tName)
+	err := i.deployments.CreateOrUpdateAndWait(ctx, rg, deploymentName, mgmtfeatures.Deployment{
+		Properties: &mgmtfeatures.DeploymentProperties{
+			Template:   t,
+			Parameters: params,
+			Mode:       mgmtfeatures.Incremental,
+		},
+	})
 
-		err := i.deployments.CreateOrUpdateAndWait(ctx, rg, deploymentName, mgmtfeatures.Deployment{
-			Properties: &mgmtfeatures.DeploymentProperties{
-				Template:   t,
-				Parameters: params,
-				Mode:       mgmtfeatures.Incremental,
-			},
-		})
+	if azureerrors.IsDeploymentActiveError(err) {
+		i.log.Printf("waiting for %s template to be deployed", tName)
+		err = i.deployments.Wait(ctx, rg, deploymentName)
+	}
 
-		if isDeploymentActiveError(err) {
-			i.log.Printf("waiting for %s template to be deployed", tName)
-			err = i.deployments.Wait(ctx, rg, deploymentName)
-		}
-
-		if hasAuthorizationFailedError(err) {
-			i.log.Print(err)
-
-			// https://github.com/Azure/ARO-RP/issues/541: it is unclear if
-			// this refresh helps or not
-			if development, ok := i.env.(env.Dev); ok {
-				err = development.RefreshFPAuthorizer(ctx, i.fpAuthorizer)
-				if err != nil {
-					return false, err
-				}
-			}
-
-			return false, nil
-		}
-
-		return err == nil, err
-	}, timeoutCtx.Done())
+	if azureerrors.HasAuthorizationFailedError(err) ||
+		azureerrors.HasLinkedAuthorizationFailedError(err) {
+		return err
+	}
 
 	serviceErr, _ := err.(*azure.ServiceError) // futures return *azure.ServiceError directly
 
