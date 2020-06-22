@@ -62,6 +62,12 @@ deploy_e2e_deps() {
       -n dev-vnet \
       --address-prefixes 10.0.0.0/9 >/dev/null
 
+    echo "########## Create route table ##########"
+    az network route-table create \
+      -g "$ARO_RESOURCEGROUP" \
+      -l "$LOCATION" \
+      -n "$CLUSTER-rt" >/dev/null
+
     echo "########## Create ARO Subnet ##########"
     for subnet in "$CLUSTER-master" "$CLUSTER-worker"; do
     az network vnet subnet create \
@@ -77,6 +83,7 @@ deploy_e2e_deps() {
       -g "$ARO_RESOURCEGROUP" \
       --vnet-name dev-vnet \
       -n "$CLUSTER-master" \
+      --route-table "$CLUSTER-rt" \
       --disable-private-link-service-network-policies true >/dev/null
 
     echo "########## Create Cluster SPN ##########"
