@@ -52,6 +52,10 @@ required = [
   source = "https://github.com/jim-minter/installer"
 
 [[override]]
+  name = "github.com/openshift/cloud-credential-operator"
+  revision = "a443c1b9c73a79a25c8fd3c37bfdd08c009b7d6d"
+
+[[override]]
   branch = "release-4.4"
   name = "github.com/openshift/machine-api-operator"
   source = "github.com/openshift/machine-api-operator"

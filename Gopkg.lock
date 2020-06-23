@@ -953,8 +953,7 @@
   revision = "92a2713fa240ea8a375a982d60b43ef5119f85ba"
 
 [[projects]]
-  branch = "release-4.3"
-  digest = "1:454f3ebed85be06f8ed32549474df4fb75624319314f222983d4bae6d4daa1cd"
+  digest = "1:b5571e94625ed635a0f0753a3b8a8f6a285be136b28e627de60f0b1229841c4e"
   name = "github.com/openshift/cloud-credential-operator"
   packages = [
     "pkg/apis/cloudcredential/v1",
@@ -962,7 +961,7 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "02be5758f755d9da56cb4b37ae3ea52a9a0c436e"
+  revision = "a443c1b9c73a79a25c8fd3c37bfdd08c009b7d6d"
 
 [[projects]]
   branch = "release-4.4"
