@@ -74,7 +74,7 @@ def assign_contributor_to_routetable(cli_ctx, master_subnet, worker_subnet, obje
             route_tables.add(subnet.route_table.id)
 
     for rt in route_tables:
-        if has_assignment(auth_client.role_assignments.list_for_scope(subnet.route_table.id),
+        if has_assignment(auth_client.role_assignments.list_for_scope(rt),
                           role_definition_id, object_id):
             continue
 
