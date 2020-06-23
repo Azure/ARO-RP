@@ -164,8 +164,7 @@ func (ka *kubeactions) List(ctx context.Context, oc *api.OpenShiftCluster, group
 }
 
 func (ka *kubeactions) CreateOrUpdate(ctx context.Context, oc *api.OpenShiftCluster, obj *unstructured.Unstructured) error {
-	// TODO log changes
-
+	createaction := false
 	namespace := obj.GetNamespace()
 	groupKind := obj.GroupVersionKind().GroupKind().String()
 
@@ -179,13 +178,31 @@ func (ka *kubeactions) CreateOrUpdate(ctx context.Context, oc *api.OpenShiftClus
 		return err
 	}
 
+	objbytes, err := obj.MarshalJSON()
+	if err != nil {
+		return err
+	}
+
 	_, err = dyn.Resource(*gvr).Namespace(namespace).Update(obj, metav1.UpdateOptions{})
 	if !errors.IsNotFound(err) {
 		return err
 	}
 
+	if errors.IsNotFound(err) {
+		createaction = true
+	}
+
 	_, err = dyn.Resource(*gvr).Namespace(namespace).Create(obj, metav1.CreateOptions{})
-	return err
+	if err != nil {
+		return err
+	}
+
+	if createaction {
+		ka.log.Infof("Creating obj: %s", objbytes)
+	} else {
+		ka.log.Infof("Updating obj: %s", objbytes)
+	}
+	return nil
 }
 
 func (ka *kubeactions) Delete(ctx context.Context, oc *api.OpenShiftCluster, groupKind, namespace, name string) error {
