@@ -2,6 +2,16 @@
 
 Beyond the [platform-agnostic `install-config.yaml` properties](../customization.md#platform-customization), the installer supports additional, OpenStack-specific properties.
 
+## Table of Contents
+
+* [Cluster-scoped properties](#cluster-scoped-properties)
+* [Machine pools](#machine-pools)
+* [Examples](#examples)
+  * [Minimal](#minimal)
+  * [Custom-machine-pools](#custom-machine-pools)
+* [Image Overrides](#image-overrides)
+* [Further customization](#further-customization)
+
 ## Cluster-scoped properties
 
 * `cloud` (required string): The name of the OpenStack cloud to use from `clouds.yaml`.
@@ -20,6 +30,8 @@ Beyond the [platform-agnostic `install-config.yaml` properties](../customization
 * `rootVolume` (optional object): Defines the root volume for instances in the machine pool. The instances use ephemeral disks if not set.
   * `size` (required integer): Size of the root volume in GB.
   * `type` (required string): The volume pool to create the volume from.
+
+**NOTE:** The bootstrap node follows the `type` and `rootVolume` parameters from the `controlPlane` machine pool.
 
 ## Examples
 
@@ -108,3 +120,7 @@ platform:
   openstack:
       clusterOSImage: my-rhcos
 ```
+
+## Further customization
+
+For customizing the installation beyond what is possible with `openshift-install`, refer to the [UPI (User Provided Infrastructure) documentation](./install_upi.md).

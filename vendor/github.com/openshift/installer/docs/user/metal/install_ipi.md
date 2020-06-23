@@ -46,10 +46,20 @@ purposes:
     * `*.apps.<cluster-name>.<base-domain>` - pointing to the Ingress VIP
 
 * **NIC #2 - Provisioning Network**
-  * A private, non-routed network, used for PXE based provisioning.
-  * DHCP is automated for this network.
-  * Addressing for this network is currently hard coded as `172.22.0.0/24`, but
-    will be made configurable in the future.
+  * A private network used for PXE based provisioning.
+  * You must specify `provisioningNetworkInterface` to indicate which
+    interface is connected to this network.
+  * DHCP is automated for this network by default, to rely on external
+    DHCP, set the platform's `provisioningDHCPExternal` option to `true`
+  * Addressing for this network defaults to `172.22.0.0/24`, but is
+    configurable by setting the `provisioningNetworkCIDR` option.
+  * Two IP's are required to be available for use, one for the bootstrap
+    host, and one as a provisioning IP in the running cluster. By
+    default, these are the 2nd and 3rd addresses in the
+    `provisioningNetworkCIDR` (e.g. 172.22.0.2, and 172.22.0.3).
+  * To specify the name of the provisioning network interface,
+    set the `provisioningNetworkInterface` option. This is the network interface
+    on a master that is connected to the provisioning network.
 
 * **Out-of-band Management Network**
   * Servers will typically have an additional NIC used by the onboard
@@ -89,7 +99,8 @@ containing all of the details of the bare metal hosts to be provisioned.
 
 The `install-config.yaml` file requires some additional details.  Most of the
 information is teaching the installer and the resulting cluster enough about
-the available hardware so that it is able to fully manage it.
+the available hardware so that it is able to fully manage it. There are
+[additional customizations](customization_ipi.md) possible.
 
 Here is an example `install-config.yaml` with the required `baremetal` platform
 details.
@@ -128,6 +139,7 @@ platform:
     apiVIP: 192.168.111.5
     ingressVIP: 192.168.111.4
     dnsVIP: 192.168.111.3
+    provisioningNetworkInterface: enp1s0
     hosts:
       - name: openshift-master-0
         role: master
@@ -196,3 +208,82 @@ network configuration, but fully supporting alternative subnets for the
 provisioning network is incomplete.
 
 https://github.com/openshift/installer/issues/2091
+
+## Troubleshooting
+
+General troubleshooting for OpenShift installations can be found
+[here](/docs/user/troubleshooting.md).
+
+### Bootstrap
+
+The bootstrap VM by default runs on the same host as the installer. This
+bootstrap VM runs the Ironic services needed to provision the control
+plane. Ironic being available is dependent on having successfully
+downloaded the machine OS and Ironic agent images. In some cases, this
+may fail, and the installer will report a timeout waiting for the Ironic
+API.
+
+To login to the bootstrap VM, you will need to ssh to the VM using the
+`core` user, and the SSH key defined in your install config.
+
+The VM obtains an IP address from your DHCP server on the external
+network. When using a development environment with
+[dev-scripts](https://github.com/openshift-metal3/dev-scripts), it uses
+the `baremetal` libvirt network unless an override is specified. The IP
+can be retrieved with `virsh net-dhcp-leases baremetal`. If the install
+is far enough along to have brought up the provisioning network, you may
+use the provisioning bootstrap IP which defaults to 172.22.0.2.
+
+Viewing the virtual machine's console with virt-manager may also be
+helpful.
+
+You can view the Ironic logs by sshing to the bootstrap VM, and
+examining the logs of the `ironic` service, `journalctl -u ironic`. You
+may also view the logs of the individual containers:
+
+  - `podman logs ipa-downloader`
+  - `podman logs coreos-downloader`
+  - `podman logs ironic`
+  - `podman logs ironic-inspector`
+  - `podman logs ironic-dnsmasq`
+
+
+
+### Control Plane
+
+Once Ironic is available, the installer will provision the three control
+plane hosts. For early failures, it may be useful to look at the console
+(using virt-manager if emulating baremetal with vbmc, or through the BMC
+like iDRAC) and see if there are any errors reported.
+
+Additionally, if the cluster comes up enough that the bootstrap is destroyed,
+but commands like `oc get clusteroperators` shows degraded operators, it
+may be useful to examine the logs of the pods within the
+`openshift-kni-infra` namespace.
+
+### Ironic
+
+You may want to examine Ironic itself and look at the state of the
+hosts. The below file, when named clouds.yaml and placed in the current
+working directory, can be used to communicate with Ironic using the
+openstack commandline utilities.
+
+```yaml
+clouds:
+  metal3-bootstrap:
+    auth_type: none
+    baremetal_endpoint_override: http://172.22.0.2:6385
+    baremetal_introspection_endpoint_override: http://172.22.0.2:5050
+  metal3:
+    auth_type: none
+    baremetal_endpoint_override: http://172.22.0.3:6385
+    baremetal_introspection_endpoint_override: http://172.22.0.3:5050
+```
+
+If bootstrap is still up, you can use metal3-bootstrap, otherwise use
+metal3 to examine Ironic running in the control plane:
+
+```
+export OS_CLOUD=metal3-bootstrap
+/usr/local/bin/openstack baremetal node list
+```

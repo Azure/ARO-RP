@@ -6,59 +6,51 @@ import (
 	"fmt"
 	"strings"
 
-	ignition "github.com/coreos/ignition/config/v2_2/types"
-	"github.com/gophercloud/gophercloud/openstack/objectstorage/v1/containers"
-	"github.com/gophercloud/gophercloud/openstack/objectstorage/v1/objects"
+	ignition "github.com/coreos/ignition/config/v2_4/types"
+	"github.com/gophercloud/gophercloud/openstack/imageservice/v2/imagedata"
+	"github.com/gophercloud/gophercloud/openstack/imageservice/v2/images"
 	"github.com/gophercloud/utils/openstack/clientconfig"
-	"github.com/kubernetes/apimachinery/pkg/util/rand"
 	"github.com/sirupsen/logrus"
 	"github.com/vincent-petithory/dataurl"
 )
 
-// createBootstrapSwiftObject creates a container and object in swift with the bootstrap ignition config.
-func createBootstrapSwiftObject(cloud string, bootstrapIgn string, clusterID string) (string, error) {
-	logrus.Debugln("Creating a Swift container for your bootstrap ignition...")
+// Starting from OpenShift 4.4 we store bootstrap Ignition configs in Glance.
+
+// uploadBootstrapConfig uploads the bootstrap Ignition config in Glance and returns its location
+func uploadBootstrapConfig(cloud string, bootstrapIgn string, clusterID string) (string, error) {
+	logrus.Debugln("Creating a Glance image for your bootstrap ignition config...")
 	opts := clientconfig.ClientOpts{
 		Cloud: cloud,
 	}
 
-	conn, err := clientconfig.NewServiceClient("object-store", &opts)
+	conn, err := clientconfig.NewServiceClient("image", &opts)
 	if err != nil {
 		return "", err
 	}
 
-	containerCreateOpts := containers.CreateOpts{
-		ContainerRead: ".r:*",
-
-		// "kubernetes.io/cluster/${var.cluster_id}" = "owned"
-		Metadata: map[string]string{
-			"Name":               fmt.Sprintf("%s-ignition", clusterID),
-			"openshiftClusterID": clusterID,
-		},
+	imageCreateOpts := images.CreateOpts{
+		Name:            fmt.Sprintf("%s-ignition", clusterID),
+		ContainerFormat: "bare",
+		DiskFormat:      "raw",
+		Tags:            []string{fmt.Sprintf("openshiftClusterID=%s", clusterID)},
+		// TODO(mfedosin): add Description when gophercloud supports it.
 	}
 
-	_, err = containers.Create(conn, clusterID, containerCreateOpts).Extract()
+	img, err := images.Create(conn, imageCreateOpts).Extract()
 	if err != nil {
 		return "", err
 	}
-	logrus.Debugf("Container %s was created.", clusterID)
+	logrus.Debugf("Image %s was created.", img.Name)
 
-	logrus.Debugf("Creating a Swift object in container %s containing your bootstrap ignition...", clusterID)
-	objectCreateOpts := objects.CreateOpts{
-		ContentType: "text/plain",
-		Content:     strings.NewReader(bootstrapIgn),
-		DeleteAfter: 3600,
+	logrus.Debugf("Uploading bootstrap config to the image %v with ID %v", img.Name, img.ID)
+	res := imagedata.Upload(conn, img.ID, strings.NewReader(bootstrapIgn))
+	if res.Err != nil {
+		return "", res.Err
 	}
+	logrus.Debugf("The config was uploaded.")
 
-	objID := rand.String(16)
-
-	_, err = objects.Create(conn, clusterID, objID, objectCreateOpts).Extract()
-	if err != nil {
-		return "", err
-	}
-	logrus.Debugf("The object was created.")
-
-	return objID, nil
+	// img.File contains location of the uploaded data
+	return img.File, nil
 }
 
 // To allow Ignition to download its config on the bootstrap machine from a location secured by a
@@ -70,45 +62,11 @@ func createBootstrapSwiftObject(cloud string, bootstrapIgn string, clusterID str
 
 // generateIgnitionShim is used to generate an ignition file that contains a user ca bundle
 // in its Security section.
-func generateIgnitionShim(userCA string, clusterID string, swiftObject string) (string, error) {
+func generateIgnitionShim(userCA string, clusterID string, bootstrapConfigURL string, tokenID string) (string, error) {
 	fileMode := 420
 
-	// DHCP Config
-	contents := `[main]
-dhcp=dhclient`
-
-	dhcpConfigFile := ignition.File{
-		Node: ignition.Node{
-			Filesystem: "root",
-			Path:       "/etc/NetworkManager/conf.d/dhcp-client.conf",
-		},
-		FileEmbedded1: ignition.FileEmbedded1{
-			Mode: &fileMode,
-			Contents: ignition.FileContents{
-				Source: dataurl.EncodeBytes([]byte(contents)),
-			},
-		},
-	}
-
-	// DNS Config
-	contents = `send dhcp-client-identifier = hardware;
-prepend domain-name-servers 127.0.0.1;`
-
-	dnsConfigFile := ignition.File{
-		Node: ignition.Node{
-			Filesystem: "root",
-			Path:       "/etc/dhcp/dhclient.conf",
-		},
-		FileEmbedded1: ignition.FileEmbedded1{
-			Mode: &fileMode,
-			Contents: ignition.FileContents{
-				Source: dataurl.EncodeBytes([]byte(contents)),
-			},
-		},
-	}
-
 	// Hostname Config
-	contents = fmt.Sprintf("%s-bootstrap", clusterID)
+	contents := fmt.Sprintf("%s-bootstrap", clusterID)
 
 	hostnameConfigFile := ignition.File{
 		Node: ignition.Node{
@@ -163,6 +121,13 @@ prepend domain-name-servers 127.0.0.1;`
 		}
 	}
 
+	headers := []ignition.HTTPHeader{
+		{
+			Name:  "X-Auth-Token",
+			Value: tokenID,
+		},
+	}
+
 	ign := ignition.Config{
 		Ignition: ignition.Ignition{
 			Version:  ignition.MaxVersion.String(),
@@ -170,15 +135,14 @@ prepend domain-name-servers 127.0.0.1;`
 			Config: ignition.IgnitionConfig{
 				Append: []ignition.ConfigReference{
 					{
-						Source: swiftObject,
+						Source:      bootstrapConfigURL,
+						HTTPHeaders: headers,
 					},
 				},
 			},
 		},
 		Storage: ignition.Storage{
 			Files: []ignition.File{
-				dhcpConfigFile,
-				dnsConfigFile,
 				hostnameConfigFile,
 				openstackCAFile,
 			},
@@ -191,4 +155,23 @@ prepend domain-name-servers 127.0.0.1;`
 	}
 
 	return string(data), nil
+}
+
+// getAuthToken fetches valid OpenStack authentication token ID
+func getAuthToken(cloud string) (string, error) {
+	opts := &clientconfig.ClientOpts{
+		Cloud: cloud,
+	}
+
+	conn, err := clientconfig.NewServiceClient("identity", opts)
+	if err != nil {
+		return "", err
+	}
+
+	token, err := conn.GetAuthResult().ExtractTokenID()
+	if err != nil {
+		return "", err
+	}
+
+	return token, nil
 }

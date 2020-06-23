@@ -21,12 +21,12 @@ type OpenshiftAPIServerNamespace struct {
 
 // Dependencies returns all of the dependencies directly needed by the asset
 func (t *OpenshiftAPIServerNamespace) Dependencies() []asset.Asset {
-	return []asset.Asset{}
+	return nil
 }
 
 // Name returns the human-friendly name of the asset.
 func (t *OpenshiftAPIServerNamespace) Name() string {
-	return "OpenshiftAPIServerNamespace"
+	return "Openshift API Server Namespace"
 }
 
 // Generate generates the actual files by this asset

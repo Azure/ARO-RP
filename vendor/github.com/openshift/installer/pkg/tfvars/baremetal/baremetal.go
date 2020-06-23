@@ -52,7 +52,7 @@ func TFVars(libvirtURI, bootstrapProvisioningIP, bootstrapOSImage, externalBridg
 		}
 
 		// BMC Driver Info
-		accessDetails, err := bmc.NewAccessDetails(host.BMC.Address)
+		accessDetails, err := bmc.NewAccessDetails(host.BMC.Address, host.BMC.DisableCertificateVerification)
 		if err != nil {
 			return nil, err
 		}
@@ -66,15 +66,21 @@ func TFVars(libvirtURI, bootstrapProvisioningIP, bootstrapOSImage, externalBridg
 
 		// Host Details
 		hostMap := map[string]interface{}{
-			"name":         host.Name,
-			"port_address": host.BootMACAddress,
-			"driver":       accessDetails.Type(),
+			"name":                 host.Name,
+			"port_address":         host.BootMACAddress,
+			"driver":               accessDetails.Driver(),
+			"boot_interface":       accessDetails.BootInterface(),
+			"management_interface": accessDetails.ManagementInterface(),
+			"power_interface":      accessDetails.PowerInterface(),
+			"raid_interface":       accessDetails.RAIDInterface(),
+			"vendor_interface":     accessDetails.VendorInterface(),
 		}
 
 		// Properties
 		propertiesMap := map[string]interface{}{
-			"local_gb": profile.LocalGB,
-			"cpu_arch": profile.CPUArch,
+			"local_gb":     profile.LocalGB,
+			"cpu_arch":     profile.CPUArch,
+			"capabilities": "boot_mode:uefi",
 		}
 
 		// Root device hints

@@ -22,8 +22,6 @@
   name = "github.com/Azure/azure-sdk-for-go"
   packages = [
     "profiles/latest/dns/mgmt/dns",
-    "profiles/latest/resources/mgmt/resources",
-    "profiles/latest/resources/mgmt/subscriptions",
     "services/compute/mgmt/2018-10-01/compute",
     "services/compute/mgmt/2019-03-01/compute",
     "services/containerregistry/mgmt/2019-06-01-preview/containerregistry",
@@ -38,8 +36,8 @@
     "services/preview/authorization/mgmt/2018-09-01-preview/authorization",
     "services/preview/monitor/mgmt/2018-03-01/insights",
     "services/privatedns/mgmt/2018-09-01/privatedns",
-    "services/resources/mgmt/2019-05-01/resources",
-    "services/resources/mgmt/2019-06-01/subscriptions",
+    "services/resources/mgmt/2018-06-01/subscriptions",
+    "services/resources/mgmt/2019-03-01/resources",
     "services/resources/mgmt/2019-07-01/features",
     "services/storage/mgmt/2019-04-01/storage",
     "storage",
@@ -270,7 +268,7 @@
   version = "v22.0.0"
 
 [[projects]]
-  digest = "1:fb5b2aed0d774e210c1f2c0893e620cb3fa98957d3b925d0378f93b9613eb605"
+  digest = "1:b3ff820a2b867b5140ac8e6c84a1124affe7d671296b7648d06b61d0834617cf"
   name = "github.com/coreos/ignition"
   packages = [
     "config/shared/errors",
@@ -284,15 +282,16 @@
     "config/v2_1/types",
     "config/v2_2",
     "config/v2_2/types",
-    "config/v2_3_experimental/types",
+    "config/v2_4/types",
+    "config/v2_5_experimental/types",
     "config/validate",
     "config/validate/astjson",
     "config/validate/astnode",
     "config/validate/report",
   ]
   pruneopts = "UT"
-  revision = "76107251acd117c6d3e5b4dae2b47f82f944984b"
-  version = "v0.26.0"
+  revision = "7afbeba044a8bf5762609fbb5f352291eeb7ad9a"
+  version = "v0.35.0"
 
 [[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
@@ -581,7 +580,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:53002d95f4d0a6e8fdf76ce71f684102c2d5f30f05655d1ccaad4cd3f9ba5eff"
+  digest = "1:bede3e67da47bb189f1e45138dd7d62ec75847081207397380c469f2d990d34b"
   name = "github.com/gophercloud/gophercloud"
   packages = [
     ".",
@@ -592,13 +591,11 @@
     "openstack/identity/v2/tenants",
     "openstack/identity/v2/tokens",
     "openstack/identity/v3/tokens",
+    "openstack/imageservice/v2/imagedata",
     "openstack/imageservice/v2/images",
     "openstack/networking/v2/extensions",
     "openstack/networking/v2/extensions/layer3/floatingips",
     "openstack/networking/v2/networks",
-    "openstack/objectstorage/v1/accounts",
-    "openstack/objectstorage/v1/containers",
-    "openstack/objectstorage/v1/objects",
     "openstack/utils",
     "pagination",
   ]
@@ -726,14 +723,6 @@
   pruneopts = "UT"
   revision = "f55edac94c9bbba5d6182a4be46d86a2c9b5b50e"
   version = "v1.0.2"
-
-[[projects]]
-  digest = "1:c26b841ff18d8b7fa1606f869ec66eedd6327469e33f9ee3dcb8bef800fdad50"
-  name = "github.com/kubernetes/apimachinery"
-  packages = ["pkg/util/rand"]
-  pruneopts = "UT"
-  revision = "79c2a76c473a20cdc4ce59cae4b72529b5d9d16b"
-  version = "v0.17.1"
 
 [[projects]]
   digest = "1:a2bfa52d08ed3100f934a39a3f927e9279f8a106633ff97e47bad7120a1ad07e"
@@ -1026,14 +1015,14 @@
   revision = "2336783d460353458477aa9e181eca87e4db5d27"
 
 [[projects]]
-  digest = "1:dd679bbc885d6f58bfc92eabbdb62c9755295b116ed7ced1a622ecc3255a8643"
+  digest = "1:34cebaa53b25a1ca69b5f1a2e062019ed450e4b876c9df8d2a915a4525d39766"
   name = "github.com/openshift/cluster-api-provider-ovirt"
   packages = [
     "pkg/apis",
     "pkg/apis/ovirtprovider/v1beta1",
   ]
   pruneopts = "UT"
-  revision = "281b4db96607c474f73161c49aab80528f517c26"
+  revision = "0966db28bce37ca97ada41c69f48ffa7c4d02493"
 
 [[projects]]
   branch = "release-4.4"
@@ -1044,8 +1033,8 @@
   revision = "14ef97f64c5da4ffd4f34d25454d2813b1b07015"
 
 [[projects]]
-  branch = "release-4.3-azure"
-  digest = "1:d4ce1ba9a20b111f05db15385114677ac28646fe1e92db4647229be457bd3789"
+  branch = "release-4.4-azure"
+  digest = "1:b7ba4c626ab42f0ac5c53d389bd4458e1d9a9b74b99afb5b50bc4e9fad06b1d5"
   name = "github.com/openshift/installer"
   packages = [
     "data",
@@ -1057,8 +1046,11 @@
     "pkg/asset/cluster/gcp",
     "pkg/asset/cluster/libvirt",
     "pkg/asset/cluster/openstack",
+    "pkg/asset/cluster/ovirt",
+    "pkg/asset/cluster/vsphere",
     "pkg/asset/ignition",
     "pkg/asset/ignition/bootstrap",
+    "pkg/asset/ignition/bootstrap/baremetal",
     "pkg/asset/ignition/machine",
     "pkg/asset/installconfig",
     "pkg/asset/installconfig/aws",
@@ -1066,6 +1058,7 @@
     "pkg/asset/installconfig/gcp",
     "pkg/asset/installconfig/libvirt",
     "pkg/asset/installconfig/openstack",
+    "pkg/asset/installconfig/ovirt",
     "pkg/asset/installconfig/vsphere",
     "pkg/asset/kubeconfig",
     "pkg/asset/machines",
@@ -1076,6 +1069,8 @@
     "pkg/asset/machines/libvirt",
     "pkg/asset/machines/machineconfig",
     "pkg/asset/machines/openstack",
+    "pkg/asset/machines/ovirt",
+    "pkg/asset/machines/vsphere",
     "pkg/asset/manifests",
     "pkg/asset/manifests/azure",
     "pkg/asset/manifests/gcp",
@@ -1100,6 +1095,8 @@
     "pkg/tfvars/internal/cache",
     "pkg/tfvars/libvirt",
     "pkg/tfvars/openstack",
+    "pkg/tfvars/ovirt",
+    "pkg/tfvars/vsphere",
     "pkg/types",
     "pkg/types/aws",
     "pkg/types/aws/defaults",
@@ -1123,6 +1120,7 @@
     "pkg/types/openstack",
     "pkg/types/openstack/defaults",
     "pkg/types/openstack/validation",
+    "pkg/types/ovirt",
     "pkg/types/validation",
     "pkg/types/vsphere",
     "pkg/types/vsphere/defaults",
@@ -1131,22 +1129,25 @@
     "pkg/version",
   ]
   pruneopts = "T"
-  revision = "f90508187f1541ca43fca89843f5f26a8ccf34a0"
+  revision = "a0e667861e217d48fe14806a5f0c1d751503d9a6"
   source = "https://github.com/jim-minter/installer"
 
 [[projects]]
-  branch = "master"
-  digest = "1:104cff75e431cc7578b2477bcf0ffacb7b08df5c80dee1799f73dd9f745428ba"
+  branch = "release-4.4"
+  digest = "1:85cac328d8e1e244bc3e4801ad6562eb41b0c28ff18f8e374a10a647bb557489"
   name = "github.com/openshift/machine-api-operator"
   packages = [
     "pkg/apis/machine",
     "pkg/apis/machine/v1beta1",
+    "pkg/apis/vsphereprovider",
+    "pkg/apis/vsphereprovider/v1alpha1",
     "pkg/generated/clientset/versioned",
     "pkg/generated/clientset/versioned/scheme",
     "pkg/generated/clientset/versioned/typed/machine/v1beta1",
   ]
   pruneopts = "UT"
-  revision = "a3345f5a437a8ca82be683c7c38fe49de64c2b5f"
+  revision = "b1554c0714123dec050dd0df07b9a2064f088a87"
+  source = "github.com/openshift/machine-api-operator"
 
 [[projects]]
   branch = "release-4.4"
@@ -1162,6 +1163,22 @@
   ]
   pruneopts = "UT"
   revision = "da87dd6d947d66eb810d74622fb7664289148423"
+
+[[projects]]
+  branch = "master"
+  digest = "1:78a8e7c73f3409bc2a9361e12ccfe0dee905f292e514400122299a5079348bea"
+  name = "github.com/ovirt/cluster-api-provider-ovirt"
+  packages = ["pkg/apis/ovirtprovider/v1beta1"]
+  pruneopts = "UT"
+  revision = "dfc5841ab94d2a2b221d1cba1de040e2c552ef3f"
+
+[[projects]]
+  digest = "1:959d0eb7e9b59e575f25582178094976ab3e9a9c46a20e82b9b0800035e8d235"
+  name = "github.com/ovirt/go-ovirt"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "8bc00b120cb3b205906623f621b7008e49ed7732"
+  version = "v4.4.1"
 
 [[projects]]
   digest = "1:c7d8ecc4e8f2843096c784e55a221446cb944b9e728fb42e9272a9ad2996c780"
@@ -1331,6 +1348,30 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "d1553a71de50473073e188aa79cebf7f993f20fe"
+
+[[projects]]
+  branch = "master"
+  digest = "1:0d91f4dc8c9e42f42a50e49f18d58297d0596f5585d84c4b3a39dad42311121f"
+  name = "github.com/vmware/govmomi"
+  packages = [
+    ".",
+    "property",
+    "session",
+    "session/keepalive",
+    "vapi/internal",
+    "vapi/rest",
+    "vim25",
+    "vim25/debug",
+    "vim25/methods",
+    "vim25/mo",
+    "vim25/progress",
+    "vim25/soap",
+    "vim25/types",
+    "vim25/xml",
+  ]
+  pruneopts = "UT"
+  revision = "277d221a5b9910eceaa3a1bd2dff82b9f5436c6a"
+  source = "https://github.com/vmware/govmomi"
 
 [[projects]]
   digest = "1:7b6ca9454e8d16e34b251f181a4ae430a25805acca64ea46b0448583b44fcfe6"

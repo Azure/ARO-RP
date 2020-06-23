@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 
 	"github.com/ghodss/yaml"
-	ospclientconfig "github.com/gophercloud/utils/openstack/clientconfig"
 	"github.com/pkg/errors"
 
 	corev1 "k8s.io/api/core/v1"
@@ -17,6 +16,7 @@ import (
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	icazure "github.com/openshift/installer/pkg/asset/installconfig/azure"
+	icopenstack "github.com/openshift/installer/pkg/asset/installconfig/openstack"
 	"github.com/openshift/installer/pkg/asset/manifests/azure"
 	gcpmanifests "github.com/openshift/installer/pkg/asset/manifests/gcp"
 	openstackmanifests "github.com/openshift/installer/pkg/asset/manifests/openstack"
@@ -28,6 +28,7 @@ import (
 	libvirttypes "github.com/openshift/installer/pkg/types/libvirt"
 	nonetypes "github.com/openshift/installer/pkg/types/none"
 	openstacktypes "github.com/openshift/installer/pkg/types/openstack"
+	ovirttypes "github.com/openshift/installer/pkg/types/ovirt"
 	vspheretypes "github.com/openshift/installer/pkg/types/vsphere"
 )
 
@@ -89,20 +90,18 @@ func (cpc *CloudProviderConfig) Generate(dependencies asset.Parents) error {
 	}
 
 	switch installConfig.Config.Platform.Name() {
-	case awstypes.Name, libvirttypes.Name, nonetypes.Name, baremetaltypes.Name:
+	case awstypes.Name, libvirttypes.Name, nonetypes.Name, baremetaltypes.Name, ovirttypes.Name:
 		return nil
 	case openstacktypes.Name:
-		opts := &ospclientconfig.ClientOpts{}
-		opts.Cloud = installConfig.Config.Platform.OpenStack.Cloud
-		cloud, err := ospclientconfig.GetCloudFromYAML(opts)
+		cloud, err := icopenstack.GetSession(installConfig.Config.Platform.OpenStack.Cloud)
 		if err != nil {
 			return errors.Wrap(err, "failed to get cloud config for openstack")
 		}
 
-		cm.Data[cloudProviderConfigDataKey] = openstackmanifests.CloudProviderConfig(cloud)
+		cm.Data[cloudProviderConfigDataKey] = openstackmanifests.CloudProviderConfig(cloud.CloudConfig)
 
 		// Get the ca-cert-bundle key if there is a value for cacert in clouds.yaml
-		if caPath := cloud.CACertFile; caPath != "" {
+		if caPath := cloud.CloudConfig.CACertFile; caPath != "" {
 			caFile, err := ioutil.ReadFile(caPath)
 			if err != nil {
 				return errors.Wrap(err, "failed to read clouds.yaml ca-cert from disk")

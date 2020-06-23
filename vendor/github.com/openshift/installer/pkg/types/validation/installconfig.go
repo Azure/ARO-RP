@@ -63,7 +63,7 @@ func ValidateInstallConfig(c *types.InstallConfig, openStackValidValuesFetcher o
 		}
 	}
 	nameErr := validate.ClusterName(c.ObjectMeta.Name)
-	if c.Platform.GCP != nil {
+	if c.Platform.GCP != nil || c.Platform.Azure != nil {
 		nameErr = validate.ClusterName1035(c.ObjectMeta.Name)
 	}
 	if nameErr != nil {

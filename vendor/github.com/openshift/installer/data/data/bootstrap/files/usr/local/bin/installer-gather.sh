@@ -119,19 +119,16 @@ if [ "$#" -ne 0 ]; then
 elif test -s "${ARTIFACTS}/resources/masters.list"; then
     mapfile -t MASTERS < "${ARTIFACTS}/resources/masters.list"
 else
-    # Find out master IPs from etcd discovery record
-    DOMAIN=$(sudo oc --config=/opt/openshift/auth/kubeconfig whoami --show-server | grep -oP "api.\\K([a-z\\.]*)")
-    dig -t SRV "_etcd-server-ssl._tcp.${DOMAIN}" +short | cut -f 4 -d ' ' | sed 's/.$//' >"${ARTIFACTS}/resources/masters.list"
-    mapfile -t MASTERS < "${ARTIFACTS}/resources/masters.list"
+    echo "No masters found!"
 fi
 
 for master in "${MASTERS[@]}"
 do
   echo "Collecting info from ${master}"
-  scp -o PreferredAuthentications=publickey -o StrictHostKeyChecking=false -o UserKnownHostsFile=/dev/null -q /usr/local/bin/installer-masters-gather.sh "core@${master}:"
+  scp -o PreferredAuthentications=publickey -o StrictHostKeyChecking=false -o UserKnownHostsFile=/dev/null -q /usr/local/bin/installer-masters-gather.sh "core@[${master}]:"
   mkdir -p "${ARTIFACTS}/control-plane/${master}"
   ssh -o PreferredAuthentications=publickey -o StrictHostKeyChecking=false -o UserKnownHostsFile=/dev/null "core@${master}" -C "sudo ./installer-masters-gather.sh --id '${GATHER_ID}'" </dev/null
-  scp -o PreferredAuthentications=publickey -o StrictHostKeyChecking=false -o UserKnownHostsFile=/dev/null -r -q "core@${master}:/tmp/artifacts-${GATHER_ID}/*" "${ARTIFACTS}/control-plane/${master}/"
+  scp -o PreferredAuthentications=publickey -o StrictHostKeyChecking=false -o UserKnownHostsFile=/dev/null -r -q "core@[${master}]:/tmp/artifacts-${GATHER_ID}/*" "${ARTIFACTS}/control-plane/${master}/"
 done
 TAR_FILE="${TAR_FILE:-${HOME}/log-bundle-${GATHER_ID}.tar.gz}"
 tar cz -C "${ARTIFACTS}" . >"${TAR_FILE}"
