@@ -9,7 +9,7 @@ jobs:
   condition: succeededOrFailed()
   dependsOn: []
   pool:
-    vmImage: ubuntu-latest
+    name: ARO-E2E
   timeoutInMinutes: 120
   strategy:
     matrix:
@@ -45,7 +45,7 @@ jobs:
   condition: succeededOrFailed()
   dependsOn: [E2E_1]
   pool:
-    vmImage: ubuntu-latest
+    name: ARO-E2E
   timeoutInMinutes: 120
   strategy:
     matrix:
@@ -81,7 +81,7 @@ jobs:
   condition: succeededOrFailed()
   dependsOn: [E2E_2]
   pool:
-    vmImage: ubuntu-latest
+    name: ARO-E2E
   timeoutInMinutes: 120
   strategy:
     matrix:
@@ -117,7 +117,7 @@ jobs:
   condition: succeededOrFailed()
   dependsOn: [E2E_3]
   pool:
-    vmImage: ubuntu-latest
+    name: ARO-E2E
   timeoutInMinutes: 120
   strategy:
     matrix:
@@ -153,7 +153,7 @@ jobs:
   condition: succeededOrFailed()
   dependsOn: [E2E_4]
   pool:
-    vmImage: ubuntu-latest
+    name: ARO-E2E
   timeoutInMinutes: 120
   strategy:
     matrix:
@@ -189,7 +189,7 @@ jobs:
   condition: succeededOrFailed()
   dependsOn: [E2E_5]
   pool:
-    vmImage: ubuntu-latest
+    name: ARO-E2E
   timeoutInMinutes: 120
   strategy:
     matrix:
@@ -225,7 +225,7 @@ jobs:
   condition: succeededOrFailed()
   dependsOn: [E2E_6]
   pool:
-    vmImage: ubuntu-latest
+    name: ARO-E2E
   timeoutInMinutes: 120
   strategy:
     matrix:
@@ -261,7 +261,7 @@ jobs:
   condition: succeededOrFailed()
   dependsOn: [E2E_7]
   pool:
-    vmImage: ubuntu-latest
+    name: ARO-E2E
   timeoutInMinutes: 120
   strategy:
     matrix:
@@ -297,7 +297,7 @@ jobs:
   condition: succeededOrFailed()
   dependsOn: [E2E_8]
   pool:
-    vmImage: ubuntu-latest
+    name: ARO-E2E
   timeoutInMinutes: 120
   strategy:
     matrix:
@@ -333,7 +333,7 @@ jobs:
   condition: succeededOrFailed()
   dependsOn: [E2E_9]
   pool:
-    vmImage: ubuntu-latest
+    name: ARO-E2E
   timeoutInMinutes: 120
   strategy:
     matrix:

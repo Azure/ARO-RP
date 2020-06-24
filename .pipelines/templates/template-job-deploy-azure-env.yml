@@ -21,7 +21,7 @@ jobs:
     variables:
     - template: ../vars.yml
     pool:
-      vmImage: ubuntu-latest
+      name: ARO-Release
     environment: ${{ parameters.environment }}
     strategy:
       runOnce:
@@ -76,7 +76,7 @@ jobs:
     - template: ../vars.yml
     timeoutInMinutes: 120
     pool:
-      vmImage: ubuntu-latest
+      name: ARO-Release
     steps:
     - template: ./template-prod-e2e-steps.yml
       parameters:
