@@ -4,15 +4,17 @@
 # worker hostname that you want to connect to, along with any other ssh options
 # you want to pass in
 
+usage() {
+    echo "usage: $0 hostname_pattern" >&2
+    echo "       Examples: $0 master1" >&2
+    echo "                 $0 bootstrap" >&2
+    exit 1
+}
+
+
 if [[ "$#" -ne 1 ]]; then
    usage
 fi
-
-usage() {
-    echo "usage: $0 hostname_pattern" >&2
-    echo "       Example: $0 master1" >&2
-    exit 1
-}
 
 cleanup() {
     rm -rf id_rsa
