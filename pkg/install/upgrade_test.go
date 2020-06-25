@@ -82,13 +82,15 @@ func TestUpgradeCluster(t *testing.T) {
 			desiredVersion: Stream43.Version.String(),
 		},
 		{
-			name:        "on a channel, update needed",
-			fakecli:     newFakecli("my-channel", "0.0.0"),
-			wantUpdated: true,
+			name:           "on a channel, update needed",
+			fakecli:        newFakecli("my-channel", "4.3.14"),
+			desiredVersion: Stream43.Version.String(),
+			wantUpdated:    true,
 		},
 		{
-			name:    "on a channel, no update needed",
-			fakecli: newFakecli("my-channel", "99.99.99"),
+			name:           "on a channel, no update needed",
+			fakecli:        newFakecli("my-channel", "4.4.4"),
+			desiredVersion: Stream44.Version.String(),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
