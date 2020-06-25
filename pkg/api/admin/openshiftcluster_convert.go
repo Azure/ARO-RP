@@ -92,6 +92,14 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 		}
 	}
 
+	if oc.Properties.RegistryProfiles != nil {
+		out.Properties.RegistryProfiles = make([]RegistryProfile, len(oc.Properties.RegistryProfiles))
+		for i, v := range oc.Properties.RegistryProfiles {
+			out.Properties.RegistryProfiles[i].Name = v.Name
+			out.Properties.RegistryProfiles[i].Username = v.Username
+		}
+	}
+
 	return out
 }
 
@@ -173,6 +181,17 @@ func (c *openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShi
 		out.Properties.Install = &api.Install{
 			Now:   oc.Properties.Install.Now,
 			Phase: api.InstallPhase(oc.Properties.Install.Phase),
+		}
+	}
+
+	out.Properties.RegistryProfiles = nil
+	if oc.Properties.RegistryProfiles != nil {
+		out.Properties.RegistryProfiles = make([]*api.RegistryProfile, len(oc.Properties.RegistryProfiles))
+		for i, v := range oc.Properties.RegistryProfiles {
+			out.Properties.RegistryProfiles[i] = &api.RegistryProfile{
+				Name:     v.Name,
+				Username: v.Username,
+			}
 		}
 	}
 }
