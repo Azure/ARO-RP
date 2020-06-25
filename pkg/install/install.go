@@ -157,6 +157,7 @@ func (i *Installer) AdminUpgrade(ctx context.Context) error {
 		action(i.fixPullSecret),
 		action(i.ensureGenevaLogging),
 		action(i.ensureIfReload),
+		action(i.ensureRouteFix),
 		action(i.upgradeCertificates),
 		action(i.configureAPIServerCertificate),
 		action(i.configureIngressCertificate),
@@ -184,6 +185,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			condition{i.bootstrapConfigMapReady, 30 * time.Minute},
 			action(i.ensureGenevaLogging),
 			action(i.ensureIfReload),
+			action(i.ensureRouteFix),
 			action(i.incrInstallPhase),
 		},
 		api.InstallPhaseRemoveBootstrap: {
