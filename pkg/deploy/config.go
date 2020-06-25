@@ -27,32 +27,32 @@ type RPConfig struct {
 
 // Configuration represents configuration structure
 type Configuration struct {
-	ACRResourceID                      string        `json:"acrResourceId,omitempty"`
-	RPVersionStorageAccountName        string        `json:"rpVersionStorageAccountName,omitempty"`
-	ACRReplicaDisabled                 bool          `json:"acrReplicaDisabled,omitempty"`
-	AdminAPICABundle                   string        `json:"adminApiCaBundle,omitempty"`
-	AdminAPIClientCertCommonName       string        `json:"adminApiClientCertCommonName,omitempty"`
-	ClusterParentDomainName            string        `json:"clusterParentDomainName,omitempty"`
-	DatabaseAccountName                string        `json:"databaseAccountName,omitempty"`
+	ACRResourceID                      *string       `json:"acrResourceId,omitempty"`
+	RPVersionStorageAccountName        *string       `json:"rpVersionStorageAccountName,omitempty"`
+	ACRReplicaDisabled                 *bool         `json:"acrReplicaDisabled,omitempty"`
+	AdminAPICABundle                   *string       `json:"adminApiCaBundle,omitempty"`
+	AdminAPIClientCertCommonName       *string       `json:"adminApiClientCertCommonName,omitempty"`
+	ClusterParentDomainName            *string       `json:"clusterParentDomainName,omitempty"`
+	DatabaseAccountName                *string       `json:"databaseAccountName,omitempty"`
 	ExtraClusterKeyvaultAccessPolicies []interface{} `json:"extraClusterKeyvaultAccessPolicies,omitempty"`
 	ExtraCosmosDBIPs                   []string      `json:"extraCosmosDBIPs,omitempty"`
 	ExtraServiceKeyvaultAccessPolicies []interface{} `json:"extraServiceKeyvaultAccessPolicies,omitempty"`
-	FPServerCertCommonName             string        `json:"fpServerCertCommonName,omitempty"`
-	FPServicePrincipalID               string        `json:"fpServicePrincipalId,omitempty"`
-	GlobalMonitoringKeyVaultURI        string        `json:"globalMonitoringKeyVaultUri,omitempty"`
-	GlobalResourceGroupName            string        `json:"globalResourceGroupName,omitempty"`
-	GlobalSubscriptionID               string        `json:"globalSubscriptionId,omitempty"`
-	KeyvaultPrefix                     string        `json:"keyvaultPrefix,omitempty"`
-	MDMFrontendURL                     string        `json:"mdmFrontendUrl,omitempty"`
-	MDSDConfigVersion                  string        `json:"mdsdConfigVersion,omitempty"`
-	MDSDEnvironment                    string        `json:"mdsdEnvironment,omitempty"`
-	RPImagePrefix                      string        `json:"rpImagePrefix,omitempty"`
-	RPMode                             string        `json:"rpMode,omitempty"`
+	FPServerCertCommonName             *string       `json:"fpServerCertCommonName,omitempty"`
+	FPServicePrincipalID               *string       `json:"fpServicePrincipalId,omitempty"`
+	GlobalMonitoringKeyVaultURI        *string       `json:"globalMonitoringKeyVaultUri,omitempty"`
+	GlobalResourceGroupName            *string       `json:"globalResourceGroupName,omitempty"`
+	GlobalSubscriptionID               *string       `json:"globalSubscriptionId,omitempty"`
+	KeyvaultPrefix                     *string       `json:"keyvaultPrefix,omitempty"`
+	MDMFrontendURL                     *string       `json:"mdmFrontendUrl,omitempty"`
+	MDSDConfigVersion                  *string       `json:"mdsdConfigVersion,omitempty"`
+	MDSDEnvironment                    *string       `json:"mdsdEnvironment,omitempty"`
+	RPImagePrefix                      *string       `json:"rpImagePrefix,omitempty"`
+	RPMode                             *string       `json:"rpMode,omitempty"`
 	RPNSGSourceAddressPrefixes         []string      `json:"rpNsgSourceAddressPrefixes,omitempty"`
-	RPParentDomainName                 string        `json:"rpParentDomainName,omitempty"`
-	SubscriptionResourceGroupName      string        `json:"subscriptionResourceGroupName,omitempty"`
-	SSHPublicKey                       string        `json:"sshPublicKey,omitempty"`
-	VMSize                             string        `json:"vmSize,omitempty"`
+	RPParentDomainName                 *string       `json:"rpParentDomainName,omitempty"`
+	SubscriptionResourceGroupName      *string       `json:"subscriptionResourceGroupName,omitempty"`
+	SSHPublicKey                       *string       `json:"sshPublicKey,omitempty"`
+	VMSize                             *string       `json:"vmSize,omitempty"`
 }
 
 // GetConfig return RP configuration from the file
