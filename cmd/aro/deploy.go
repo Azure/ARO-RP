@@ -13,10 +13,11 @@ import (
 	"github.com/sirupsen/logrus"
 
 	deployer "github.com/Azure/ARO-RP/pkg/deploy"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 func deploy(ctx context.Context, log *logrus.Entry) error {
-	deployVersion, location := gitCommit, flag.Arg(2)
+	deployVersion, location := version.GitCommit, flag.Arg(2)
 
 	if os.Getenv("RP_VERSION") != "" {
 		deployVersion = os.Getenv("RP_VERSION")

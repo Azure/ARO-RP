@@ -2,7 +2,7 @@ SHELL = /bin/bash
 COMMIT = $(shell git rev-parse --short HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
 
 aro: generate
-	go build -ldflags "-X main.gitCommit=$(COMMIT)" ./cmd/aro
+	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro
 
 az:
 	cd python/az/aro && python ./setup.py bdist_egg
@@ -80,7 +80,7 @@ publish-image-proxy: image-proxy
 	docker push ${RP_IMAGE_ACR}.azurecr.io/proxy:latest
 
 proxy:
-	go build -ldflags "-X main.gitCommit=$(COMMIT)" ./hack/proxy
+	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./hack/proxy
 
 pyenv${PYTHON_VERSION}:
 	virtualenv --python=/usr/bin/python${PYTHON_VERSION} pyenv${PYTHON_VERSION}
