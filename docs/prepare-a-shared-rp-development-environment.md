@@ -152,7 +152,7 @@ locations.
    `User Access Administrator` permissions on your subscription, do:
 
    ```bash
-   az deployment create \
+   az deployment sub create \
      -l eastus \
      --template-file deploy/rbac-development.json \
      --parameters \
@@ -293,7 +293,7 @@ each of the bash functions below.
    ```bash
    deploy_env_dev_override
    ```
-   
+
    If you encounter a "SkuCannotBeChangedOnUpdate" error
    when running the `deploy_env_dev_override` command, delete the `-pip` resource
    and re-run.
