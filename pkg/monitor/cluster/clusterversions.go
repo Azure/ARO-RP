@@ -27,9 +27,17 @@ func (mon *Monitor) emitClusterVersions(ctx context.Context) error {
 		}
 	}
 
+	var rpVersion string
+	if mon.oc.Properties.ProvisionedBy != "" {
+		rpVersion = mon.oc.Properties.ProvisionedBy
+	} else {
+		rpVersion = "unknown"
+	}
+
 	mon.emitGauge("cluster.versions", 1, map[string]string{
-		"actualVersion":  actualVersion,
-		"desiredVersion": desiredVersion(cv),
+		"actualVersion":           actualVersion,
+		"desiredVersion":          desiredVersion(cv),
+		"resourceProviderVersion": rpVersion,
 	})
 
 	return nil

@@ -12,6 +12,7 @@ import (
 	"github.com/openshift/client-go/config/clientset/versioned/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 )
 
@@ -19,10 +20,12 @@ func TestEmitClusterVersion(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tt := range []struct {
-		name               string
-		cv                 *configv1.ClusterVersion
-		wantActualVersion  string
-		wantDesiredVersion string
+		name                        string
+		cv                          *configv1.ClusterVersion
+		oc                          *api.OpenShiftCluster
+		wantActualVersion           string
+		wantDesiredVersion          string
+		wantResourceProviderVersion string
 	}{
 		{
 			name: "without spec",
@@ -50,8 +53,12 @@ func TestEmitClusterVersion(t *testing.T) {
 					},
 				},
 			},
-			wantActualVersion:  "4.3.1",
-			wantDesiredVersion: "4.3.3",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{},
+			},
+			wantActualVersion:           "4.3.1",
+			wantDesiredVersion:          "4.3.3",
+			wantResourceProviderVersion: "unknown",
 		},
 		{
 			name: "with spec",
@@ -70,7 +77,25 @@ func TestEmitClusterVersion(t *testing.T) {
 					},
 				},
 			},
-			wantDesiredVersion: "4.3.4",
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{},
+			},
+			wantDesiredVersion:          "4.3.4",
+			wantResourceProviderVersion: "unknown",
+		},
+		{
+			name: "with ProvisionedBy",
+			cv: &configv1.ClusterVersion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "version",
+				},
+			},
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ProvisionedBy: "somesha",
+				},
+			},
+			wantResourceProviderVersion: "somesha",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -84,11 +109,13 @@ func TestEmitClusterVersion(t *testing.T) {
 			mon := &Monitor{
 				configcli: configcli,
 				m:         m,
+				oc:        tt.oc,
 			}
 
 			m.EXPECT().EmitGauge("cluster.versions", int64(1), map[string]string{
-				"actualVersion":  tt.wantActualVersion,
-				"desiredVersion": tt.wantDesiredVersion,
+				"actualVersion":           tt.wantActualVersion,
+				"desiredVersion":          tt.wantDesiredVersion,
+				"resourceProviderVersion": tt.wantResourceProviderVersion,
 			})
 
 			err := mon.emitClusterVersions(ctx)
