@@ -21,6 +21,7 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 		Location: oc.Location,
 		Properties: OpenShiftClusterProperties{
 			ProvisioningState:       ProvisioningState(oc.Properties.ProvisioningState),
+			ProvisionedBy:           oc.Properties.ProvisionedBy,
 			LastProvisioningState:   ProvisioningState(oc.Properties.LastProvisioningState),
 			FailedProvisioningState: ProvisioningState(oc.Properties.FailedProvisioningState),
 			LastAdminUpdateError:    oc.Properties.LastAdminUpdateError,
@@ -129,6 +130,7 @@ func (c *openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShi
 		}
 	}
 	out.Properties.ProvisioningState = api.ProvisioningState(oc.Properties.ProvisioningState)
+	out.Properties.ProvisionedBy = oc.Properties.ProvisionedBy
 	out.Properties.LastProvisioningState = api.ProvisioningState(oc.Properties.LastProvisioningState)
 	out.Properties.FailedProvisioningState = api.ProvisioningState(oc.Properties.FailedProvisioningState)
 	out.Properties.LastAdminUpdateError = oc.Properties.LastAdminUpdateError

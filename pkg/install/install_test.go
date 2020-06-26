@@ -14,8 +14,10 @@ import (
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 func TestDeployARMTemplate(t *testing.T) {
@@ -119,4 +121,23 @@ func TestDeployARMTemplate(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestResourceProviderVersion(t *testing.T) {
+	ctx := context.Background()
+
+	i := &Installer{
+		doc: &api.OpenShiftClusterDocument{
+			OpenShiftCluster: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{},
+			},
+		},
+	}
+
+	i.addResourceProviderVersion(ctx)
+
+	if i.doc.OpenShiftCluster.Properties.ProvisionedBy != version.GitCommit {
+		t.Error("version was not added")
+	}
+
 }
