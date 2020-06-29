@@ -468,61 +468,6 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			modify:  func(oc *OpenShiftCluster) { oc.Properties.StorageSuffix = "invalid" },
 			wantErr: "400: PropertyChangeNotAllowed: properties.storageSuffix: Changing property 'properties.storageSuffix' is not allowed.",
 		},
-		{
-			name: "registry profile should be converted",
-			oc: func() *OpenShiftCluster {
-				return &OpenShiftCluster{
-					Properties: OpenShiftClusterProperties{
-						RegistryProfiles: []RegistryProfile{
-							{
-								Name:     "testName",
-								Username: "testUserName",
-							},
-						},
-					},
-				}
-			},
-		},
-		{
-			name: "changing registry profile name property should not be allowed",
-			oc: func() *OpenShiftCluster {
-				return &OpenShiftCluster{
-					Properties: OpenShiftClusterProperties{
-						RegistryProfiles: []RegistryProfile{
-							{
-								Name: "testName",
-							},
-						},
-					},
-				}
-			},
-			modify: func(oc *OpenShiftCluster) {
-				for k := range oc.Properties.RegistryProfiles {
-					oc.Properties.RegistryProfiles[k].Name = strings.ToUpper(oc.Properties.RegistryProfiles[k].Name)
-				}
-			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.registryProfile['TESTNAME'].name: Changing property 'properties.registryProfile['TESTNAME'].name' is not allowed.",
-		},
-		{
-			name: "changing registry profile username property should not be allowed",
-			oc: func() *OpenShiftCluster {
-				return &OpenShiftCluster{
-					Properties: OpenShiftClusterProperties{
-						RegistryProfiles: []RegistryProfile{
-							{
-								Username: "testName",
-							},
-						},
-					},
-				}
-			},
-			modify: func(oc *OpenShiftCluster) {
-				for k := range oc.Properties.RegistryProfiles {
-					oc.Properties.RegistryProfiles[k].Username = strings.ToUpper(oc.Properties.RegistryProfiles[k].Username)
-				}
-			},
-			wantErr: "400: PropertyChangeNotAllowed: properties.registryProfile[''].username: Changing property 'properties.registryProfile[''].username' is not allowed.",
-		},
 	}
 
 	for _, tt := range tests {
