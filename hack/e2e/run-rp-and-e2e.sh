@@ -40,7 +40,7 @@ kill_rp(){
 deploy_e2e_db() {
     echo "########## 📦 Creating new DB $DATABASE_NAME in $COSMOSDB_ACCOUNT ##########"
 
-    az group deployment create \
+    az deployment group create \
       -g "$RESOURCEGROUP" \
       -n "databases-development-$DATABASE_NAME" \
       --template-file deploy/databases-development.json \
@@ -112,7 +112,7 @@ run_e2e() {
     az aro create \
       -g "$ARO_RESOURCEGROUP" \
       -n "$CLUSTER" \
-      -l "$LOCATION" \
+      -l ${LOCATION^} \
       --vnet dev-vnet \
       --master-subnet "$CLUSTER-master" \
       --worker-subnet "$CLUSTER-worker" \

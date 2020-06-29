@@ -8,7 +8,7 @@ create_infra_rg() {
 
 deploy_rp_dev_predeploy() {
     echo "########## Deploying rp-development-predeploy in RG $RESOURCEGROUP ##########"
-    az group deployment create \
+    az deployment group create \
         -g "$RESOURCEGROUP" \
         -n rp-development-predeploy \
         --template-file deploy/rp-development-predeploy.json \
@@ -21,7 +21,7 @@ deploy_rp_dev_predeploy() {
 
 deploy_rp_dev() {
     echo "########## Deploying rp-development in RG $RESOURCEGROUP ##########"
-    az group deployment create \
+    az deployment group create \
         -g "$RESOURCEGROUP" \
         -n rp-development \
         --template-file deploy/rp-development.json \
@@ -34,7 +34,7 @@ deploy_rp_dev() {
 
 deploy_env_dev() {
     echo "########## Deploying env-development in RG $RESOURCEGROUP ##########"
-    az group deployment create \
+    az deployment group create \
         -g "$RESOURCEGROUP" \
         -n env-development \
         --template-file deploy/env-development.json \
@@ -51,7 +51,7 @@ deploy_env_dev() {
 
 deploy_env_dev_override() {
     echo "########## Deploying env-development in RG $RESOURCEGROUP ##########"
-    az group deployment create \
+    az deployment group create \
         -g "$RESOURCEGROUP" \
         -n env-development \
         --template-file deploy/env-development.json \
@@ -125,9 +125,9 @@ vpn_configuration() {
 }
 
 validate_arm_template_state() {
-    ARM_TEMPLATE_STATE=$(az group deployment show -n $1 -g $RESOURCEGROUP --query properties.provisioningState -o tsv)
+    ARM_TEMPLATE_STATE=$(az deployment group show -n $1 -g $RESOURCEGROUP --query properties.provisioningState -o tsv)
     if [[ $ARM_TEMPLATE_STATE == "Failed" ]]; then
-        echo "##[error] Error deploying $1 $(az group deployment show -n $1 -g $RESOURCEGROUP --query properties.error.details -o tsv)"
+        echo "##[error] Error deploying $1 $(az deployment group show -n $1 -g $RESOURCEGROUP --query properties.error.details -o tsv)"
         exit 1
     fi
 }

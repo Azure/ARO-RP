@@ -400,6 +400,15 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "4030bb1f1f0c35b30ca7009e9ebd06849dd45306",
+                    "repositoryUrl": "https://github.com/google/btree/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "5a6f75716e1203a923a78c9efb94089d857df0f6",
                     "repositoryUrl": "https://github.com/google/go-cmp/"
                 }
@@ -456,6 +465,15 @@
                 "git": {
                     "commitHash": "00bdffe0f3c77e27d2cf6f5c70232a2d3e4d9c15",
                     "repositoryUrl": "https://github.com/gorilla/mux/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "901d90724c7919163f472a9812253fb26761123d",
+                    "repositoryUrl": "https://github.com/gregjones/httpcache/"
                 }
             }
         },
@@ -834,6 +852,24 @@
                 "git": {
                     "commitHash": "adf5a7427709b9deb95d29d3fa8a2bf9cfd388f1",
                     "repositoryUrl": "https://github.com/pborman/uuid/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "33fb24c13b99c46c93183c291836c573ac382536",
+                    "repositoryUrl": "https://github.com/petar/GoLLRB/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "0be1b92a6df0e4f5cb0a5d15fb7f643d0ad93ce6",
+                    "repositoryUrl": "https://github.com/peterbourgon/diskv/"
                 }
             }
         },

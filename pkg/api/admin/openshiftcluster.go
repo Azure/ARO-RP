@@ -43,6 +43,7 @@ type OpenShiftClusterProperties struct {
 	IngressProfiles         []IngressProfile        `json:"ingressProfiles,omitempty"`
 	Install                 *Install                `json:"install,omitempty"`
 	StorageSuffix           string                  `json:"storageSuffix,omitempty"`
+	RegistryProfiles        []RegistryProfile       `json:"registryProfile,omitempty"`
 }
 
 // ProvisioningState represents a provisioning state.
@@ -164,3 +165,9 @@ const (
 	InstallPhaseBootstrap InstallPhase = iota
 	InstallPhaseRemoveBootstrap
 )
+
+// RegistryProfile represents a registry profile
+type RegistryProfile struct {
+	Name     string `json:"name,omitempty"`
+	Username string `json:"username,omitempty"`
+}

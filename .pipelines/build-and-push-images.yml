@@ -8,7 +8,7 @@ variables:
 jobs:
 - job: Build_and_push_images
   pool:
-    vmImage: ubuntu-latest
+    name: ARO-CI
 
   steps:
   - template: ./templates/template-setup-golang-env.yml

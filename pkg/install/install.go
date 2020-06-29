@@ -156,9 +156,9 @@ func (i *Installer) AdminUpgrade(ctx context.Context) error {
 		action(i.ensureBillingRecord), // belt and braces
 		action(i.fixLBProbes),
 		action(i.fixPullSecret),
-		action(i.fixCloudConfig),
 		action(i.ensureGenevaLogging),
 		action(i.ensureIfReload),
+		action(i.ensureRouteFix),
 		action(i.upgradeCertificates),
 		action(i.configureAPIServerCertificate),
 		action(i.configureIngressCertificate),
@@ -187,7 +187,8 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			condition{i.bootstrapConfigMapReady, 30 * time.Minute},
 			action(i.ensureGenevaLogging),
 			action(i.ensureIfReload),
-			action(i.incrInstallPhase), // Must be last
+			action(i.ensureRouteFix),
+			action(i.incrInstallPhase),
 		},
 		api.InstallPhaseRemoveBootstrap: {
 			action(i.initializeKubernetesClients),
@@ -200,7 +201,6 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			condition{i.operatorConsoleReady, 10 * time.Minute},
 			condition{i.clusterVersionReady, 30 * time.Minute},
 			action(i.disableAlertManagerWarning),
-			action(i.fixCloudConfig), // TODO(mjudeikis): Write and add a different remediation
 			action(i.disableUpdates),
 			action(i.disableSamples),
 			action(i.disableOperatorHubSources),
