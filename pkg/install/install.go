@@ -163,7 +163,7 @@ func (i *Installer) AdminUpgrade(ctx context.Context) error {
 		action(i.configureAPIServerCertificate),
 		action(i.configureIngressCertificate),
 		action(i.upgradeCluster),
-		action(i.addResourceProviderVersion),
+		action(i.addResourceProviderVersion), // Must be last
 	}
 
 	return i.runSteps(ctx, steps)
@@ -187,7 +187,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			condition{i.bootstrapConfigMapReady, 30 * time.Minute},
 			action(i.ensureGenevaLogging),
 			action(i.ensureIfReload),
-			action(i.incrInstallPhase),
+			action(i.incrInstallPhase), // Must be last
 		},
 		api.InstallPhaseRemoveBootstrap: {
 			action(i.initializeKubernetesClients),
@@ -208,7 +208,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			action(i.configureIngressCertificate),
 			condition{i.ingressControllerReady, 30 * time.Minute},
 			action(i.finishInstallation),
-			action(i.addResourceProviderVersion),
+			action(i.addResourceProviderVersion), // Must be last
 		},
 	}
 
@@ -491,8 +491,12 @@ func (i *Installer) deployARMTemplate(ctx context.Context, rg string, tName stri
 	return err
 }
 
-// addResourceProviderVersion sets the deploying resource provider version in the cluster document for deployment-tracking purposes.
+// addResourceProviderVersion sets the deploying resource provider version in the cluster document for deployment-tracking purposes. This function must be run last.
 func (i *Installer) addResourceProviderVersion(ctx context.Context) error {
-	i.doc.OpenShiftCluster.Properties.ProvisionedBy = version.GitCommit
-	return nil
+	var err error
+	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		i.doc.OpenShiftCluster.Properties.ProvisionedBy = version.GitCommit
+		return nil
+	})
+	return err
 }

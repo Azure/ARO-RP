@@ -58,7 +58,7 @@ func TestEmitClusterVersion(t *testing.T) {
 			},
 			wantActualVersion:           "4.3.1",
 			wantDesiredVersion:          "4.3.3",
-			wantResourceProviderVersion: "unknown",
+			wantResourceProviderVersion: "",
 		},
 		{
 			name: "with spec",
@@ -81,7 +81,7 @@ func TestEmitClusterVersion(t *testing.T) {
 				Properties: api.OpenShiftClusterProperties{},
 			},
 			wantDesiredVersion:          "4.3.4",
-			wantResourceProviderVersion: "unknown",
+			wantResourceProviderVersion: "",
 		},
 		{
 			name: "with ProvisionedBy",

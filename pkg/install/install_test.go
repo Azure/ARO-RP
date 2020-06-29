@@ -17,6 +17,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
+	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -123,21 +124,61 @@ func TestDeployARMTemplate(t *testing.T) {
 	}
 }
 
-func TestResourceProviderVersion(t *testing.T) {
+func TestAddResourceProviderVersion(t *testing.T) {
+
 	ctx := context.Background()
 
-	i := &Installer{
-		doc: &api.OpenShiftClusterDocument{
-			OpenShiftCluster: &api.OpenShiftCluster{
-				Properties: api.OpenShiftClusterProperties{},
-			},
-		},
+	type test struct {
+		name       string
+		clusterdoc *api.OpenShiftClusterDocument
+		mocks      func(*test, *mock_database.MockOpenShiftClusters)
+		wantErr    string
 	}
 
-	i.addResourceProviderVersion(ctx)
+	for _, tt := range []*test{
+		{
+			name: "Cluster document patched with current version",
+			clusterdoc: &api.OpenShiftClusterDocument{
+				Key: "test",
+				OpenShiftCluster: &api.OpenShiftCluster{
+					Properties: api.OpenShiftClusterProperties{},
+				},
+			},
+			mocks: func(tt *test, dc *mock_database.MockOpenShiftClusters) {
+				dc.EXPECT().
+					PatchWithLease(gomock.Any(), tt.clusterdoc.Key, gomock.Any()).
+					DoAndReturn(func(ctx context.Context, key string, f func(doc *api.OpenShiftClusterDocument) error) (*api.OpenShiftClusterDocument, error) {
+						err := f(tt.clusterdoc)
+						return tt.clusterdoc, err
+					})
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
 
-	if i.doc.OpenShiftCluster.Properties.ProvisionedBy != version.GitCommit {
-		t.Error("version was not added")
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			openshiftClusters := mock_database.NewMockOpenShiftClusters(controller)
+			tt.mocks(tt, openshiftClusters)
+
+			i := &Installer{
+				doc: tt.clusterdoc,
+				db:  openshiftClusters,
+			}
+
+			err := i.addResourceProviderVersion(ctx)
+
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Error(err)
+			}
+
+			// Check it was set to the correct value
+			if i.doc.OpenShiftCluster.Properties.ProvisionedBy != version.GitCommit {
+				t.Error("version was not added")
+			}
+		})
 	}
 
 }
