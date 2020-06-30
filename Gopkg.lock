@@ -1767,7 +1767,7 @@
 
 [[projects]]
   branch = "origin-4.3-kubernetes-1.16.2"
-  digest = "1:812e13dc35a042fcdddb85d9392e3746d86878ebe0c5f4e67fdc8700c276757f"
+  digest = "1:7b169c5f3a36333975384dfe8b06a7178fbf269bcae037c67a3deee3af301d70"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
@@ -1859,6 +1859,7 @@
     "pkg/version",
     "plugin/pkg/client/auth/exec",
     "rest",
+    "rest/fake",
     "rest/watch",
     "testing",
     "tools/auth",
@@ -2005,6 +2006,7 @@
     "github.com/go-bindata/go-bindata/go-bindata",
     "github.com/golang/mock/gomock",
     "github.com/golang/mock/mockgen",
+    "github.com/golang/mock/mockgen/model",
     "github.com/google/go-cmp/cmp",
     "github.com/googleapis/gnostic/OpenAPIv2",
     "github.com/gorilla/mux",
@@ -2066,7 +2068,6 @@
     "github.com/ugorji/go/codec",
     "golang.org/x/crypto/chacha20poly1305",
     "golang.org/x/crypto/ssh",
-    "golang.org/x/net/context",
     "golang.org/x/sync/errgroup",
     "golang.org/x/tools/cmd/goimports",
     "golang.org/x/tools/go/ast/astutil",
@@ -2093,6 +2094,7 @@
     "k8s.io/client-go/kubernetes/scheme",
     "k8s.io/client-go/kubernetes/typed/core/v1",
     "k8s.io/client-go/rest",
+    "k8s.io/client-go/rest/fake",
     "k8s.io/client-go/testing",
     "k8s.io/client-go/tools/clientcmd",
     "k8s.io/client-go/tools/clientcmd/api/v1",
