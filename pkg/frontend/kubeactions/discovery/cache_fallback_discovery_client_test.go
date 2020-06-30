@@ -4,18 +4,15 @@ package discovery
 // Licensed under the Apache License 2.0.
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
 	"testing"
 
-	openapi_v2 "github.com/googleapis/gnostic/OpenAPIv2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kversion "k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/discovery"
-	restclient "k8s.io/client-go/rest"
 
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
+	mock_discovery "github.com/Azure/ARO-RP/pkg/util/mocks/kube"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	"github.com/Azure/ARO-RP/test/util/cmp"
 )
@@ -84,17 +81,17 @@ func TestCacheFallbackDiscoveryClient(t *testing.T) {
 	}{
 		{
 			name: "no error from delegate client",
-			delegateClient: &fakeDiscoveryClient{
-				fakeServerGroups:    fakeServerGroups,
-				fakeServerResources: fakeServerResources,
+			delegateClient: &mock_discovery.FakeDiscoveryClient{
+				FakeServerGroups:    fakeServerGroups,
+				FakeServerResources: fakeServerResources,
 			},
 			wantGroups:    wantGroups,
 			wantResources: wantResources,
 		},
 		{
 			name: "error from ServerGroups in delegate client, but ServerGroups cache exists",
-			delegateClient: &fakeDiscoveryClient{
-				fakeServerResources: fakeServerResources,
+			delegateClient: &mock_discovery.FakeDiscoveryClient{
+				FakeServerResources: fakeServerResources,
 			},
 			assets: map[string][]byte{
 				"servergroups.json": fakeServerGroupsCache,
@@ -104,8 +101,8 @@ func TestCacheFallbackDiscoveryClient(t *testing.T) {
 		},
 		{
 			name: "error from ServerResourcesForGroupVersion in delegate client, but ServerResourcesForGroupVersion cache exists",
-			delegateClient: &fakeDiscoveryClient{
-				fakeServerGroups: fakeServerGroups,
+			delegateClient: &mock_discovery.FakeDiscoveryClient{
+				FakeServerGroups: fakeServerGroups,
 			},
 			assets: map[string][]byte{
 				"foo/v1/serverresources.json": fakeServerResourcesCache,
@@ -115,13 +112,13 @@ func TestCacheFallbackDiscoveryClient(t *testing.T) {
 		},
 		{
 			name:           "error from ServerGroups in delegate client, cache doesn't exists",
-			delegateClient: &fakeDiscoveryClient{},
+			delegateClient: &mock_discovery.FakeDiscoveryClient{},
 			wantErr:        "error from ServerGroups",
 		},
 		{
 			name: "error from ServerResourcesForGroupVersion in delegate client, cache doesn't exists",
-			delegateClient: &fakeDiscoveryClient{
-				fakeServerGroups: fakeServerGroups,
+			delegateClient: &mock_discovery.FakeDiscoveryClient{
+				FakeServerGroups: fakeServerGroups,
 			},
 			wantGroups:    wantGroups,
 			wantResources: []*metav1.APIResourceList{},
@@ -156,62 +153,4 @@ func TestCacheFallbackDiscoveryClient(t *testing.T) {
 			}
 		})
 	}
-}
-
-type fakeDiscoveryClient struct {
-	fakeServerGroups    *metav1.APIGroupList
-	fakeServerResources *metav1.APIResourceList
-}
-
-var _ discovery.DiscoveryInterface = &fakeDiscoveryClient{}
-
-func (c *fakeDiscoveryClient) RESTClient() restclient.Interface {
-	return nil
-}
-
-func (c *fakeDiscoveryClient) ServerGroups() (*metav1.APIGroupList, error) {
-	if c.fakeServerGroups != nil {
-		return c.fakeServerGroups, nil
-	}
-	return nil, errors.New("error from ServerGroups")
-}
-
-func (c *fakeDiscoveryClient) ServerResourcesForGroupVersion(groupVersion string) (*metav1.APIResourceList, error) {
-	if c.fakeServerResources != nil {
-		return c.fakeServerResources, nil
-	}
-
-	return nil, errors.New("error from ServerResourcesForGroupVersion")
-}
-
-// Deprecated: use ServerGroupsAndResources instead.
-func (c *fakeDiscoveryClient) ServerResources() ([]*metav1.APIResourceList, error) {
-	_, rs, err := c.ServerGroupsAndResources()
-	return rs, err
-}
-
-func (c *fakeDiscoveryClient) ServerGroupsAndResources() ([]*metav1.APIGroup, []*metav1.APIResourceList, error) {
-	gs, _ := c.ServerGroups()
-	resultGroups := []*metav1.APIGroup{}
-	for i := range gs.Groups {
-		resultGroups = append(resultGroups, &gs.Groups[i])
-	}
-
-	return resultGroups, []*metav1.APIResourceList{}, nil
-}
-
-func (c *fakeDiscoveryClient) ServerPreferredResources() ([]*metav1.APIResourceList, error) {
-	return nil, nil
-}
-
-func (c *fakeDiscoveryClient) ServerPreferredNamespacedResources() ([]*metav1.APIResourceList, error) {
-	return nil, nil
-}
-
-func (c *fakeDiscoveryClient) ServerVersion() (*kversion.Info, error) {
-	return &kversion.Info{}, nil
-}
-
-func (c *fakeDiscoveryClient) OpenAPISchema() (*openapi_v2.Document, error) {
-	return &openapi_v2.Document{}, nil
 }
