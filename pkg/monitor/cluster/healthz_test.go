@@ -1,6 +1,7 @@
 package cluster
 
 import (
+	"errors"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -30,7 +31,6 @@ func (c *fakeCLI) Discovery() discovery.DiscoveryInterface {
 }
 
 func TestEmitAPIServerStatus(t *testing.T) {
-
 	type gauge struct {
 		key  string
 		code int64
@@ -39,17 +39,18 @@ func TestEmitAPIServerStatus(t *testing.T) {
 
 	type test struct {
 		name        string
-		errorCode   int
+		statusCode  int
 		response    string
 		expected    []gauge
+		err         error
 		errExpected bool
 	}
 
 	for _, tt := range []*test{
 		{
-			name:      "valid",
-			errorCode: 200,
-			response:  "bal",
+			name:       "valid",
+			statusCode: 200,
+			response:   "health ok",
 			expected: []gauge{
 				{
 					"apiserver.healthz.code",
@@ -66,12 +67,78 @@ func TestEmitAPIServerStatus(t *testing.T) {
 			},
 			errExpected: false,
 		},
+		{
+			name:       "error, no subchecks",
+			statusCode: 500,
+			response:   "health not ok",
+			expected: []gauge{
+				{
+					"apiserver.healthz.code",
+					1,
+					map[string]string{
+						"code": "500",
+					},
+				},
+				{
+					"apiserver.ready",
+					0,
+					map[string]string{},
+				},
+			},
+			errExpected: false,
+		},
+		{
+			name:       "error, with subchecks",
+			statusCode: 500,
+			response:   "[-]test1 not ok\n[-]test2 very bad\n[+]test3 ok\nhealth not ok",
+			expected: []gauge{
+				{
+					"apiserver.healthz.code",
+					1,
+					map[string]string{
+						"code": "500",
+					},
+				},
+				{
+					"apiserver.ready",
+					0,
+					map[string]string{"failedUnit": "test1"},
+				},
+				{
+					"apiserver.ready",
+					0,
+					map[string]string{"failedUnit": "test2"},
+				},
+			},
+			errExpected: false,
+		},
+		{
+			name:       "error, timeout",
+			statusCode: 0,
+			err:        errors.New("big timeout :("),
+			expected: []gauge{
+				{
+					"apiserver.healthz.code",
+					1,
+					map[string]string{
+						"code": "0",
+					},
+				},
+				{
+					"apiserver.ready",
+					0,
+					map[string]string{},
+				},
+			},
+			errExpected: true,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			client := &fakerestclient.RESTClient{
+				Err:                  tt.err,
 				NegotiatedSerializer: serializer.NegotiatedSerializerWrapper(runtime.SerializerInfo{}),
 				Resp: &http.Response{
-					StatusCode: 200,
+					StatusCode: tt.statusCode,
 					Body:       ioutil.NopCloser(strings.NewReader(tt.response)),
 				},
 			}
@@ -84,7 +151,6 @@ func TestEmitAPIServerStatus(t *testing.T) {
 
 			controller := gomock.NewController(t)
 			defer controller.Finish()
-
 			m := mock_metrics.NewMockInterface(controller)
 
 			mon := &Monitor{
@@ -98,14 +164,13 @@ func TestEmitAPIServerStatus(t *testing.T) {
 
 			code, err := mon.emitAPIServerHealthzCode()
 
-			if code != tt.errorCode {
+			if code != tt.statusCode {
 				t.Error("unexpected error code")
 			}
 
 			if err != nil && !tt.errExpected {
 				t.Error(err)
 			}
-
 		})
 	}
 }

@@ -6,6 +6,8 @@ package cluster
 import (
 	"strconv"
 	"strings"
+
+	"k8s.io/apimachinery/pkg/api/errors"
 )
 
 func (mon *Monitor) emitAPIServerHealthzCode() (int, error) {
@@ -17,14 +19,18 @@ func (mon *Monitor) emitAPIServerHealthzCode() (int, error) {
 		StatusCode(&statusCode).
 		Raw()
 
+	// HTTP 500s are expected behaviour (e.g. on startup/shutdown of the API server) and should not cause this function to return an error. Therefore, silence it.
+	if err != nil && errors.IsUnexpectedServerError(err) {
+		err = nil
+	}
+
 	if statusCode == 200 && err == nil {
-		// apiserver is healthy
+		// apiserver is ready
 		mon.emitGauge("apiserver.ready", 1, nil)
-	} else if err == nil {
-		// apiserver is unhealthy, but is reporting what's wrong
-		var content strings.Builder
-		content.Write(raw)
-		failures := strings.Split(content.String(), "\n")
+	} else if statusCode != 200 && err == nil {
+		// apiserver is not ready, but is still reporting status
+		var emitted bool
+		failures := strings.Split(string(raw), "\n")
 
 		for _, failure := range failures {
 			if strings.HasPrefix(failure, "[-]") {
@@ -32,14 +38,20 @@ func (mon *Monitor) emitAPIServerHealthzCode() (int, error) {
 				mon.emitGauge("apiserver.ready", 0, map[string]string{
 					"failedUnit": failedUnit,
 				})
+				emitted = true
 			}
 		}
 
+		if !emitted {
+			// If we can't emit any failed units in particular, just emit a blank one
+			mon.emitGauge("apiserver.ready", 0, nil)
+		}
 	} else {
 		// apiserver cannot be reached
 		mon.emitGauge("apiserver.ready", 0, nil)
 	}
 
+	// compat?
 	mon.emitGauge("apiserver.healthz.code", 1, map[string]string{
 		"code": strconv.FormatInt(int64(statusCode), 10),
 	})
