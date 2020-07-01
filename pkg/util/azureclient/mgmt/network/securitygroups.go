@@ -4,12 +4,15 @@ package network
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
+
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/go-autorest/autorest"
 )
 
 // SecurityGroupsClient is a minimal interface for azure SecurityGroupsClient
 type SecurityGroupsClient interface {
+	Get(ctx context.Context, resourceGroupName string, networkSecurityGroupName string, expand string) (result mgmtnetwork.SecurityGroup, err error)
 	SecurityGroupsClientAddons
 }
 

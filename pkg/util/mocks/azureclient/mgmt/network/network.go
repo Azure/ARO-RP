@@ -430,6 +430,35 @@ func (m *MockSecurityGroupsClient) EXPECT() *MockSecurityGroupsClientMockRecorde
 	return m.recorder
 }
 
+// CreateOrUpdateAndWait mocks base method
+func (m *MockSecurityGroupsClient) CreateOrUpdateAndWait(arg0 context.Context, arg1, arg2 string, arg3 network.SecurityGroup) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateOrUpdateAndWait", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateOrUpdateAndWait indicates an expected call of CreateOrUpdateAndWait
+func (mr *MockSecurityGroupsClientMockRecorder) CreateOrUpdateAndWait(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockSecurityGroupsClient)(nil).CreateOrUpdateAndWait), arg0, arg1, arg2, arg3)
+}
+
+// Get mocks base method
+func (m *MockSecurityGroupsClient) Get(arg0 context.Context, arg1, arg2, arg3 string) (network.SecurityGroup, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(network.SecurityGroup)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get
+func (mr *MockSecurityGroupsClientMockRecorder) Get(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockSecurityGroupsClient)(nil).Get), arg0, arg1, arg2, arg3)
+}
+
 // List mocks base method
 func (m *MockSecurityGroupsClient) List(arg0 context.Context, arg1 string) ([]network.SecurityGroup, error) {
 	m.ctrl.T.Helper()
