@@ -495,7 +495,7 @@ func (i *Installer) deployARMTemplate(ctx context.Context, rg string, tName stri
 func (i *Installer) addResourceProviderVersion(ctx context.Context) error {
 	var err error
 	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		i.doc.OpenShiftCluster.Properties.ProvisionedBy = version.GitCommit
+		doc.OpenShiftCluster.Properties.ProvisionedBy = version.GitCommit
 		return nil
 	})
 	return err
