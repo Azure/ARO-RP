@@ -144,15 +144,23 @@ func TestAddResourceProviderVersion(t *testing.T) {
 	openshiftClusters.EXPECT().
 		PatchWithLease(gomock.Any(), clusterdoc.Key, gomock.Any()).
 		DoAndReturn(func(ctx context.Context, key string, f func(doc *api.OpenShiftClusterDocument) error) (*api.OpenShiftClusterDocument, error) {
-
 			// Load what the database would have right now
 			docFromDatabase := &api.OpenShiftClusterDocument{}
 			json.Unmarshal(databaseDoc, &docFromDatabase)
 
 			err := f(docFromDatabase)
+			if err != nil {
+				t.Error("PatchWithLease failed")
+				return nil, err
+			}
 
 			// Save what would be stored in the db
-			databaseDoc, _ = json.Marshal(docFromDatabase)
+			databaseDoc, err = json.Marshal(docFromDatabase)
+			if err != nil {
+				t.Error("Failed serialisation")
+				return nil, err
+			}
+
 			return docFromDatabase, err
 		})
 
@@ -161,9 +169,9 @@ func TestAddResourceProviderVersion(t *testing.T) {
 		db:  openshiftClusters,
 	}
 	err := i.addResourceProviderVersion(ctx)
-
 	if err != nil {
 		t.Error(err)
+		return
 	}
 
 	// Check it was set to the correct value in the database
