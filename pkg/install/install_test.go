@@ -5,6 +5,7 @@ package install
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -136,12 +137,23 @@ func TestAddResourceProviderVersion(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
+	// The original, as-in-database version of clusterdoc
+	databaseDoc, _ := json.Marshal(clusterdoc)
+
 	openshiftClusters := mock_database.NewMockOpenShiftClusters(controller)
 	openshiftClusters.EXPECT().
 		PatchWithLease(gomock.Any(), clusterdoc.Key, gomock.Any()).
 		DoAndReturn(func(ctx context.Context, key string, f func(doc *api.OpenShiftClusterDocument) error) (*api.OpenShiftClusterDocument, error) {
-			err := f(clusterdoc)
-			return clusterdoc, err
+
+			// Load what the database would have right now
+			docFromDatabase := &api.OpenShiftClusterDocument{}
+			json.Unmarshal(databaseDoc, &docFromDatabase)
+
+			err := f(docFromDatabase)
+
+			// Save what would be stored in the db
+			databaseDoc, _ = json.Marshal(docFromDatabase)
+			return docFromDatabase, err
 		})
 
 	i := &Installer{
@@ -154,8 +166,10 @@ func TestAddResourceProviderVersion(t *testing.T) {
 		t.Error(err)
 	}
 
-	// Check it was set to the correct value
-	if i.doc.OpenShiftCluster.Properties.ProvisionedBy != version.GitCommit {
+	// Check it was set to the correct value in the database
+	updatedClusterDoc := &api.OpenShiftClusterDocument{}
+	json.Unmarshal(databaseDoc, &updatedClusterDoc)
+	if updatedClusterDoc.OpenShiftCluster.Properties.ProvisionedBy != version.GitCommit {
 		t.Error("version was not added")
 	}
 }
