@@ -68,6 +68,7 @@ type Installer struct {
 	interfaces        network.InterfacesClient
 	publicipaddresses network.PublicIPAddressesClient
 	loadbalancers     network.LoadBalancersClient
+	securitygroups    network.SecurityGroupsClient
 	deployments       features.DeploymentsClient
 	groups            features.ResourceGroupsClient
 	accounts          storage.AccountsClient
@@ -136,6 +137,7 @@ func NewInstaller(ctx context.Context, log *logrus.Entry, _env env.Interface, db
 		interfaces:        network.NewInterfacesClient(r.SubscriptionID, fpAuthorizer),
 		publicipaddresses: network.NewPublicIPAddressesClient(r.SubscriptionID, fpAuthorizer),
 		loadbalancers:     network.NewLoadBalancersClient(r.SubscriptionID, fpAuthorizer),
+		securitygroups:    network.NewSecurityGroupsClient(r.SubscriptionID, fpAuthorizer),
 		deployments:       features.NewDeploymentsClient(r.SubscriptionID, fpAuthorizer),
 		groups:            features.NewResourceGroupsClient(r.SubscriptionID, fpAuthorizer),
 		accounts:          storage.NewAccountsClient(r.SubscriptionID, fpAuthorizer),
@@ -154,6 +156,7 @@ func (i *Installer) AdminUpgrade(ctx context.Context) error {
 		condition{i.apiServersReady, 30 * time.Minute},
 		action(i.ensureBillingRecord), // belt and braces
 		action(i.fixLBProbes),
+		action(i.fixNSG),
 		action(i.fixPullSecret),
 		action(i.ensureGenevaLogging),
 		action(i.ensureIfReload),
