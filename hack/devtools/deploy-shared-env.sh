@@ -16,7 +16,7 @@ deploy_rp_dev_predeploy() {
             "adminObjectId=$ADMIN_OBJECT_ID" \
             "fpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].objectId' -o tsv)" \
             "keyvaultPrefix=$KEYVAULT_PREFIX" \
-            "rpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_CLIENT_ID'" --query '[].objectId' -o tsv)" >/dev/null
+            "rpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_RP_CLIENT_ID'" --query '[].objectId' -o tsv)" >/dev/null
 }
 
 deploy_rp_dev() {
@@ -29,7 +29,7 @@ deploy_rp_dev() {
             "databaseAccountName=$COSMOSDB_ACCOUNT" \
             "domainName=$DOMAIN_NAME.$PARENT_DOMAIN_NAME" \
             "fpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].objectId' -o tsv)" \
-            "rpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_CLIENT_ID'" --query '[].objectId' -o tsv)" >/dev/null
+            "rpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_RP_CLIENT_ID'" --query '[].objectId' -o tsv)" >/dev/null
 }
 
 deploy_env_dev() {
@@ -163,7 +163,7 @@ echo "COSMOSDB_ACCOUNT=$COSMOSDB_ACCOUNT"
 echo "DATABASE_NAME=$DATABASE_NAME"
 echo
 echo "ADMIN_OBJECT_ID=$ADMIN_OBJECT_ID"
-echo "AZURE_CLIENT_ID=$AZURE_CLIENT_ID"
+echo "AZURE_RP_CLIENT_ID=$AZURE_RP_CLIENT_ID"
 echo "AZURE_FP_CLIENT_ID=$AZURE_FP_CLIENT_ID"
 echo
 echo "DOMAIN_NAME=$DOMAIN_NAME"
@@ -185,6 +185,6 @@ echo "######################################"
 [ "$PARENT_DOMAIN_NAME" ] || ( echo ">> PARENT_DOMAIN_NAME is not set please validate your ./secrets/env"; exit 128 )
 [ "$AZURE_FP_CLIENT_ID" ] || ( echo ">> AZURE_FP_CLIENT_ID is not set please validate your ./secrets/env"; exit 128 )
 [ "$KEYVAULT_PREFIX" ] || ( echo ">> KEYVAULT_PREFIX is not set please validate your ./secrets/env"; exit 128 )
-[ "$AZURE_CLIENT_ID" ] || ( echo ">> AZURE_CLIENT_ID is not set please validate your ./secrets/env"; exit 128 )
+[ "$AZURE_RP_CLIENT_ID" ] || ( echo ">> AZURE_RP_CLIENT_ID is not set please validate your ./secrets/env"; exit 128 )
 [ "$PULL_SECRET" ] || ( echo ">> PULL_SECRET is not set please validate your ./secrets/env"; exit 128 )
 [ "$PARENT_DOMAIN_RESOURCEGROUP" ] || ( echo ">> PARENT_DOMAIN_RESOURCEGROUP is not set please validate your ./secrets/env"; exit 128 )

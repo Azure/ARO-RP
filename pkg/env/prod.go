@@ -17,7 +17,6 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
@@ -63,12 +62,7 @@ type prod struct {
 	log *logrus.Entry
 }
 
-func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata) (*prod, error) {
-	kvAuthorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(azure.PublicCloud.ResourceIdentifiers.KeyVault)
-	if err != nil {
-		return nil, err
-	}
-
+func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata, rpAuthorizer, kvAuthorizer autorest.Authorizer) (*prod, error) {
 	p := &prod{
 		InstanceMetadata: instancemetadata,
 
@@ -80,12 +74,7 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 		log: log,
 	}
 
-	rpAuthorizer, err := auth.NewAuthorizerFromEnvironment()
-	if err != nil {
-		return nil, err
-	}
-
-	err = p.populateCosmosDB(ctx, rpAuthorizer)
+	err := p.populateCosmosDB(ctx, rpAuthorizer)
 	if err != nil {
 		return nil, err
 	}

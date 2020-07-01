@@ -129,9 +129,30 @@ locations.
 1. Create an AAD application which will fake up the RP identity.
 
    ```bash
+   AZURE_RP_CLIENT_SECRET="$(uuidgen)"
+   AZURE_RP_CLIENT_ID="$(az ad app create \
+     --display-name aro-v4-rp-shared \
+     --end-date '2299-12-31T11:59:59+00:00' \
+     --identifier-uris "https://$(uuidgen)/" \
+     --key-type password \
+     --password "$AZURE_CLIENT_SECRET" \
+     --query appId \
+     -o tsv)"
+   az ad sp create --id "$AZURE_RP_CLIENT_ID" >/dev/null
+   ```
+
+   Later this application will be granted:
+
+   * `Reader` on RESOURCEGROUP.
+   * `Secrets / Get` on the key vault in RESOURCEGROUP.
+   * `DocumentDB Account Contributor` on the CosmosDB resource in RESOURCEGROUP.
+
+1. Create an AAD application which will be used by E2E and tooling.
+
+   ```bash
    AZURE_CLIENT_SECRET="$(uuidgen)"
    AZURE_CLIENT_ID="$(az ad app create \
-     --display-name aro-v4-rp-shared \
+     --display-name aro-v4-tooling-shared \
      --end-date '2299-12-31T11:59:59+00:00' \
      --identifier-uris "https://$(uuidgen)/" \
      --key-type password \
@@ -143,9 +164,8 @@ locations.
 
    Later this application will be granted:
 
-   * `Reader` on RESOURCEGROUP.
-   * `Secrets / Get` on the key vault in RESOURCEGROUP.
-   * `DocumentDB Account Contributor` on the CosmosDB resource in RESOURCEGROUP.
+   * `Contributor`  on your subscription.
+   * `User Access Administrator` on your subscription.
 
 1. Set up the RP role definitions and subscription role assignments in your
    Azure subscription. This mimics the RBAC that ARM sets up.  With at least
@@ -158,6 +178,7 @@ locations.
      --parameters \
        "armServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_ARM_CLIENT_ID'" --query '[].objectId' -o tsv)" \
        "fpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].objectId' -o tsv)" \
+       "devServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_CLIENT_ID'" --query '[].objectId' -o tsv)" \
      >/dev/null
    ```
 
@@ -239,6 +260,8 @@ locations.
    export AZURE_FP_CLIENT_ID='$AZURE_FP_CLIENT_ID'
    export AZURE_CLIENT_ID='$AZURE_CLIENT_ID'
    export AZURE_CLIENT_SECRET='$AZURE_CLIENT_SECRET'
+   export AZURE_RP_CLIENT_ID='$AZURE_RP_CLIENT_ID'
+   export AZURE_RP_CLIENT_SECRET='$AZURE_RP_CLIENT_SECRET'
    export RESOURCEGROUP="$RESOURCEGROUP_PREFIX-\$LOCATION"
    export PROXY_HOSTNAME="vm0.$PROXY_DOMAIN_NAME_LABEL.\$LOCATION.cloudapp.azure.com"
    export DATABASE_NAME="\$USER"
