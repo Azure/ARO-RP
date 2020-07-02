@@ -12,7 +12,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
-func (i *Installer) apiServerPublicLoadBalancer(location string, visibility api.Visibility) *arm.Resource {
+func (i *Installer) apiServerPublicLoadBalancer(location string) *arm.Resource {
 	infraID := i.doc.OpenShiftCluster.Properties.InfraID
 	if infraID == "" {
 		infraID = "aro" // TODO: remove after deploy
@@ -61,7 +61,7 @@ func (i *Installer) apiServerPublicLoadBalancer(location string, visibility api.
 		Location: &location,
 	}
 
-	if visibility == api.VisibilityPublic {
+	if i.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {
 		lb.LoadBalancingRules = &[]mgmtnetwork.LoadBalancingRule{
 			{
 				LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{

@@ -176,31 +176,7 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 					"Microsoft.Storage/storageAccounts/cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix,
 				},
 			},
-			{
-				Resource: &mgmtnetwork.SecurityGroup{
-					SecurityGroupPropertiesFormat: &mgmtnetwork.SecurityGroupPropertiesFormat{
-						SecurityRules: &[]mgmtnetwork.SecurityRule{
-							{
-								SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{
-									Protocol:                 mgmtnetwork.SecurityRuleProtocolTCP,
-									SourcePortRange:          to.StringPtr("*"),
-									DestinationPortRange:     to.StringPtr("6443"),
-									SourceAddressPrefix:      to.StringPtr("*"),
-									DestinationAddressPrefix: to.StringPtr("*"),
-									Access:                   mgmtnetwork.SecurityRuleAccessAllow,
-									Priority:                 to.Int32Ptr(101),
-									Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
-								},
-								Name: to.StringPtr("apiserver_in"),
-							},
-						},
-					},
-					Name:     to.StringPtr(infraID + subnet.NSGControlPlaneSuffix),
-					Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
-					Location: &installConfig.Config.Azure.Region,
-				},
-				APIVersion: azureclient.APIVersions["Microsoft.Network"],
-			},
+			i.apiServerNSG(installConfig.Config.Azure.Region),
 			{
 				Resource: &mgmtnetwork.SecurityGroup{
 					Name:     to.StringPtr(infraID + subnet.NSGNodeSuffix),

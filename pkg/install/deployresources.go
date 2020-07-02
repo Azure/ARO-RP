@@ -221,7 +221,7 @@ func (i *Installer) deployResourceTemplate(ctx context.Context) error {
 				},
 				APIVersion: azureclient.APIVersions["Microsoft.Network"],
 			},
-			i.apiServerPublicLoadBalancer(installConfig.Config.Azure.Region, i.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility),
+			i.apiServerPublicLoadBalancer(installConfig.Config.Azure.Region),
 			{
 				Resource: &mgmtnetwork.LoadBalancer{
 					Sku: &mgmtnetwork.LoadBalancerSku{
