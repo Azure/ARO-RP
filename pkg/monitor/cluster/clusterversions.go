@@ -28,8 +28,9 @@ func (mon *Monitor) emitClusterVersions(ctx context.Context) error {
 	}
 
 	mon.emitGauge("cluster.versions", 1, map[string]string{
-		"actualVersion":  actualVersion,
-		"desiredVersion": desiredVersion(cv),
+		"actualVersion":           actualVersion,
+		"desiredVersion":          desiredVersion(cv),
+		"resourceProviderVersion": mon.oc.Properties.ProvisionedBy,
 	})
 
 	return nil

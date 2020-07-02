@@ -66,6 +66,7 @@ type OpenShiftClusterProperties struct {
 	// updates always reset the ProvisioningState to LastProvisioningState.
 
 	ProvisioningState       ProvisioningState `json:"provisioningState,omitempty"`
+	ProvisionedBy           string            `json:"provisionedBy,omitempty"`
 	LastProvisioningState   ProvisioningState `json:"lastProvisioningState,omitempty"`
 	FailedProvisioningState ProvisioningState `json:"failedProvisioningState,omitempty"`
 	LastAdminUpdateError    string            `json:"lastAdminUpdateError,omitempty"`

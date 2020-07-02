@@ -51,6 +51,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 // Installer contains information needed to install an ARO cluster
@@ -165,6 +166,7 @@ func (i *Installer) AdminUpgrade(ctx context.Context) error {
 		action(i.configureAPIServerCertificate),
 		action(i.configureIngressCertificate),
 		action(i.upgradeCluster),
+		action(i.addResourceProviderVersion), // Run this last so we capture the resource provider only once the upgrade has been fully performed
 	}
 
 	return i.runSteps(ctx, steps)
@@ -209,6 +211,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			action(i.configureIngressCertificate),
 			condition{i.ingressControllerReady, 30 * time.Minute},
 			action(i.finishInstallation),
+			action(i.addResourceProviderVersion),
 		},
 	}
 
@@ -488,5 +491,15 @@ func (i *Installer) deployARMTemplate(ctx context.Context, rg string, tName stri
 		}
 	}
 
+	return err
+}
+
+// addResourceProviderVersion sets the deploying resource provider version in the cluster document for deployment-tracking purposes.
+func (i *Installer) addResourceProviderVersion(ctx context.Context) error {
+	var err error
+	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.Properties.ProvisionedBy = version.GitCommit
+		return nil
+	})
 	return err
 }
