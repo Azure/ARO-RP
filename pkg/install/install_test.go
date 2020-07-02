@@ -138,7 +138,11 @@ func TestAddResourceProviderVersion(t *testing.T) {
 	defer controller.Finish()
 
 	// The original, as-in-database version of clusterdoc
-	databaseDoc, _ := json.Marshal(clusterdoc)
+	databaseDoc, err := json.Marshal(clusterdoc)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 
 	openshiftClusters := mock_database.NewMockOpenShiftClusters(controller)
 	openshiftClusters.EXPECT().
@@ -146,9 +150,13 @@ func TestAddResourceProviderVersion(t *testing.T) {
 		DoAndReturn(func(ctx context.Context, key string, f func(doc *api.OpenShiftClusterDocument) error) (*api.OpenShiftClusterDocument, error) {
 			// Load what the database would have right now
 			docFromDatabase := &api.OpenShiftClusterDocument{}
-			json.Unmarshal(databaseDoc, &docFromDatabase)
+			err := json.Unmarshal(databaseDoc, &docFromDatabase)
+			if err != nil {
+				t.Error(err)
+				return nil, err
+			}
 
-			err := f(docFromDatabase)
+			err = f(docFromDatabase)
 			if err != nil {
 				t.Error("PatchWithLease failed")
 				return nil, err
@@ -157,7 +165,7 @@ func TestAddResourceProviderVersion(t *testing.T) {
 			// Save what would be stored in the db
 			databaseDoc, err = json.Marshal(docFromDatabase)
 			if err != nil {
-				t.Error("Failed serialisation")
+				t.Error(err)
 				return nil, err
 			}
 
@@ -168,7 +176,7 @@ func TestAddResourceProviderVersion(t *testing.T) {
 		doc: clusterdoc,
 		db:  openshiftClusters,
 	}
-	err := i.addResourceProviderVersion(ctx)
+	err = i.addResourceProviderVersion(ctx)
 	if err != nil {
 		t.Error(err)
 		return
@@ -176,7 +184,11 @@ func TestAddResourceProviderVersion(t *testing.T) {
 
 	// Check it was set to the correct value in the database
 	updatedClusterDoc := &api.OpenShiftClusterDocument{}
-	json.Unmarshal(databaseDoc, &updatedClusterDoc)
+	err = json.Unmarshal(databaseDoc, &updatedClusterDoc)
+	if err != nil {
+		t.Error(err)
+		return
+	}
 	if updatedClusterDoc.OpenShiftCluster.Properties.ProvisionedBy != version.GitCommit {
 		t.Error("version was not added")
 	}
