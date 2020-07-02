@@ -30,7 +30,7 @@ func (f *frontend) listAdminOpenShiftClusterResources(w http.ResponseWriter, r *
 
 	b, err := f._listAdminOpenShiftClusterResources(ctx, r, log)
 	if err == nil {
-		b, err = adminJmespathFilter(b, jpath)
+		b, err = adminJmespathFilter(b, jpath, "")
 	}
 
 	adminReply(log, w, nil, b, err)

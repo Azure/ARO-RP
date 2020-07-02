@@ -5,9 +5,11 @@ package frontend
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
+	"reflect"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -32,14 +34,14 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 		name           string
 		mocks          func(*gomock.Controller, *mock_database.MockOpenShiftClusters, *mock_clusterdata.MockOpenShiftClusterEnricher, *mock_encryption.MockCipher)
 		wantStatusCode int
-		wantResponse   *[]*admin.OpenShiftCluster
+		wantResponse   *admin.OpenShiftClusterList
 		wantError      string
 	}
 
 	for _, tt := range []*test{
 		{
 			name: "clusters exist in db",
-			mocks: func(controller *gomock.Controller, openshiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher, cipher *mock_encryption.MockCipher) {
+			mocks: func(controller *gomock.Controller, oc *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher, cipher *mock_encryption.MockCipher) {
 				clusterDocs := []*api.OpenShiftClusterDocument{
 					{
 						OpenShiftCluster: &api.OpenShiftCluster{
@@ -77,7 +79,7 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 				mockIter.EXPECT().Next(gomock.Any(), 10).Return(&api.OpenShiftClusterDocuments{OpenShiftClusterDocuments: clusterDocs}, nil)
 				mockIter.EXPECT().Continuation().Return("mock-skip-token")
 
-				openshiftClusters.EXPECT().
+				oc.EXPECT().
 					List("").
 					Return(mockIter)
 
@@ -111,7 +113,7 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 				mockIter.EXPECT().Next(gomock.Any(), 10).Return(nil, nil)
 				mockIter.EXPECT().Continuation().Return("")
 
-				openshiftClusters.EXPECT().
+				oc.EXPECT().
 					List("").
 					Return(mockIter)
 
@@ -128,7 +130,7 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 				mockIter := mock_cosmosdb.NewMockOpenShiftClusterDocumentIterator(controller)
 				mockIter.EXPECT().Next(gomock.Any(), 10).Return(nil, errors.New("random error"))
 
-				openshiftClusters.EXPECT().
+				oc.EXPECT().
 					List("").
 					Return(mockIter)
 			},

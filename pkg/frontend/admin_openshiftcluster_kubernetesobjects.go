@@ -32,7 +32,7 @@ func (f *frontend) getAdminKubernetesObjects(w http.ResponseWriter, r *http.Requ
 
 	b, err := f._getAdminKubernetesObjects(ctx, r, log)
 	if err == nil {
-		b, err = adminJmespathFilter(b, jpath)
+		b, err = adminJmespathFilter(b, jpath, "")
 	}
 
 	adminReply(log, w, nil, b, err)

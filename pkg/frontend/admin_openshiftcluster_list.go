@@ -29,7 +29,7 @@ func (f *frontend) getAdminOpenShiftClusters(w http.ResponseWriter, r *http.Requ
 		return f.db.OpenShiftClusters.List(skipToken), nil
 	})
 	if err == nil {
-		b, err = adminJmespathFilter(b, jpath)
+		b, err = adminJmespathFilter(b, jpath, "value")
 	}
 
 	adminReply(log, w, nil, b, err)
