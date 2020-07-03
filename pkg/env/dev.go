@@ -63,6 +63,8 @@ type dev struct {
 
 func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata) (*dev, error) {
 	for _, key := range []string{
+		"AZURE_RP_CLIENT_ID",
+		"AZURE_RP_CLIENT_SECRET",
 		"AZURE_ARM_CLIENT_ID",
 		"AZURE_ARM_CLIENT_SECRET",
 		"AZURE_FP_CLIENT_ID",
@@ -87,7 +89,19 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 		roleassignments: authorization.NewRoleAssignmentsClient(instancemetadata.SubscriptionID(), armAuthorizer),
 	}
 
-	d.prod, err = newProd(ctx, log, instancemetadata)
+	config := auth.NewClientCredentialsConfig(os.Getenv("AZURE_RP_CLIENT_ID"), os.Getenv("AZURE_RP_CLIENT_SECRET"), os.Getenv("AZURE_TENANT_ID"))
+	config.Resource = azure.PublicCloud.ResourceIdentifiers.KeyVault
+	kvAuthorizer, err := config.Authorizer()
+	if err != nil {
+		return nil, err
+	}
+
+	rpAuthorizer, err := auth.NewClientCredentialsConfig(os.Getenv("AZURE_RP_CLIENT_ID"), os.Getenv("AZURE_RP_CLIENT_SECRET"), os.Getenv("AZURE_TENANT_ID")).Authorizer()
+	if err != nil {
+		return nil, err
+	}
+
+	d.prod, err = newProd(ctx, log, instancemetadata, rpAuthorizer, kvAuthorizer)
 	if err != nil {
 		return nil, err
 	}
