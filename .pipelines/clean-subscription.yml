@@ -4,7 +4,7 @@ pr: none
 parameters:
 - name: dryRun
   type: boolean
-  default: true
+  default: false
 
 variables:
 - template: vars.yml
