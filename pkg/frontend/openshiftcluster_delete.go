@@ -36,7 +36,7 @@ func (f *frontend) deleteOpenShiftCluster(w http.ResponseWriter, r *http.Request
 func (f *frontend) _deleteOpenShiftCluster(ctx context.Context, r *http.Request, header *http.Header, doc *api.OpenShiftClusterDocument) error {
 	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
 
-	_, err := f.validateSubscriptionState(ctx, doc.Key, api.SubscriptionStateRegistered, api.SubscriptionStateWarned, api.SubscriptionStateSuspended)
+	sub, err := f.validateSubscriptionState(ctx, doc.Key, api.SubscriptionStateRegistered, api.SubscriptionStateWarned, api.SubscriptionStateSuspended)
 	if err != nil {
 		return err
 	}
@@ -46,6 +46,8 @@ func (f *frontend) _deleteOpenShiftCluster(ctx context.Context, r *http.Request,
 		return err
 	}
 
+	// Enable deletion of cluster in subscription which changed tenant
+	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID = sub.Subscription.Properties.TenantID
 	doc.OpenShiftCluster.Properties.LastProvisioningState = doc.OpenShiftCluster.Properties.ProvisioningState
 	doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateDeleting
 	doc.CorrelationData = correlationData

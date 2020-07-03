@@ -61,6 +61,8 @@ func TestDeleteOpenShiftCluster(t *testing.T) {
 	}
 
 	mockSubID := "00000000-0000-0000-0000-000000000000"
+	mockTenantID := "11111111-1111-1111-1111-111111111111"
+	mockTenantID2 := "11111111-1111-1111-1111-111111111112"
 
 	type test struct {
 		name           string
@@ -82,7 +84,7 @@ func TestDeleteOpenShiftCluster(t *testing.T) {
 						Subscription: &api.Subscription{
 							State: api.SubscriptionStateRegistered,
 							Properties: &api.SubscriptionProperties{
-								TenantID: "11111111-1111-1111-1111-111111111111",
+								TenantID: mockTenantID,
 							},
 						},
 					}, nil)
@@ -101,6 +103,9 @@ func TestDeleteOpenShiftCluster(t *testing.T) {
 								Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 								Properties: api.OpenShiftClusterProperties{
 									ProvisioningState: api.ProvisioningStateSucceeded,
+									ServicePrincipalProfile: api.ServicePrincipalProfile{
+										TenantID: mockTenantID,
+									},
 								},
 							},
 						}
@@ -117,6 +122,75 @@ func TestDeleteOpenShiftCluster(t *testing.T) {
 								Properties: api.OpenShiftClusterProperties{
 									ProvisioningState:     api.ProvisioningStateDeleting,
 									LastProvisioningState: api.ProvisioningStateSucceeded,
+									ServicePrincipalProfile: api.ServicePrincipalProfile{
+										TenantID: mockTenantID,
+									},
+								},
+							},
+						})
+
+						if !m.Matches(doc) {
+							b, _ := json.MarshalIndent(doc, "", "    ")
+							t.Fatal(string(b))
+						}
+
+						return doc, err
+					})
+			},
+			wantStatusCode: http.StatusAccepted,
+			wantAsync:      true,
+		},
+		{
+			name:       "cluster with changed TenantID",
+			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
+			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters, subscriptions *mock_database.MockSubscriptions) {
+				subscriptions.EXPECT().
+					Get(gomock.Any(), mockSubID).
+					Return(&api.SubscriptionDocument{
+						Subscription: &api.Subscription{
+							State: api.SubscriptionStateRegistered,
+							Properties: &api.SubscriptionProperties{
+								TenantID: mockTenantID2,
+							},
+						},
+					}, nil)
+
+				expectAsyncOperationDocumentCreate(asyncOperations, strings.ToLower(tt.resourceID), api.ProvisioningStateDeleting)
+
+				openShiftClusters.EXPECT().
+					Patch(gomock.Any(), strings.ToLower(tt.resourceID), gomock.Any()).
+					DoAndReturn(func(ctx context.Context, key string, f func(doc *api.OpenShiftClusterDocument) error) (*api.OpenShiftClusterDocument, error) {
+						doc := &api.OpenShiftClusterDocument{
+							Key:      key,
+							Dequeues: 1,
+							OpenShiftCluster: &api.OpenShiftCluster{
+								ID:   tt.resourceID,
+								Name: "resourceName",
+								Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+								Properties: api.OpenShiftClusterProperties{
+									ProvisioningState: api.ProvisioningStateSucceeded,
+									ServicePrincipalProfile: api.ServicePrincipalProfile{
+										TenantID: mockTenantID,
+									},
+								},
+							},
+						}
+
+						// doc gets modified in the callback
+						err := f(doc)
+
+						m := (*matcher.OpenShiftClusterDocument)(&api.OpenShiftClusterDocument{
+							Key: key,
+							OpenShiftCluster: &api.OpenShiftCluster{
+								ID:   tt.resourceID,
+								Name: "resourceName",
+								Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+								Properties: api.OpenShiftClusterProperties{
+									ProvisioningState:     api.ProvisioningStateDeleting,
+									LastProvisioningState: api.ProvisioningStateSucceeded,
+									ServicePrincipalProfile: api.ServicePrincipalProfile{
+										TenantID: mockTenantID2,
+									},
 								},
 							},
 						})
