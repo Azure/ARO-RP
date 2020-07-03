@@ -25,11 +25,6 @@ func (i *Installer) upgradeCluster(ctx context.Context) error {
 			return err
 		}
 
-		if cv.Spec.Channel != "" {
-			i.log.Printf("not upgrading: cvo channel is %s", cv.Spec.Channel)
-			return nil
-		}
-
 		desired, err := version.ParseVersion(cv.Status.Desired.Version)
 		if err != nil {
 			return err

@@ -55,8 +55,13 @@ func TestUpgradeCluster(t *testing.T) {
 			fakecli: newFakecli("", "99.99.99"),
 		},
 		{
+			name:        "on a channel, update needed",
+			fakecli:     newFakecli("my-channel", "0.0.0"),
+			wantUpdated: true,
+		},
+		{
 			name:    "on a channel, no update needed",
-			fakecli: newFakecli("my-channel", ""),
+			fakecli: newFakecli("my-channel", "99.99.99"),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
