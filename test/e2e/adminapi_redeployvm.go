@@ -41,7 +41,7 @@ var _ = Describe("[Admin API] VM redeploy action", func() {
 
 		By("triggering the redeploy action")
 		startTime := time.Now()
-		resp, err := adminRequest(ctx, http.MethodPost, resourceID+"/redeployvm", url.Values{"vmName": []string{*vm.Name}}, nil, nil)
+		resp, err := adminRequest(ctx, http.MethodPost, "/admin"+resourceID+"/redeployvm", url.Values{"vmName": []string{*vm.Name}}, nil, nil)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 

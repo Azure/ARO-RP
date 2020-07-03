@@ -13,6 +13,8 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+
+	"github.com/Azure/ARO-RP/pkg/api/admin"
 )
 
 func adminRequest(ctx context.Context, method, path string, params url.Values, in, out interface{}) (*http.Response, error) {
@@ -20,7 +22,13 @@ func adminRequest(ctx context.Context, method, path string, params url.Values, i
 		return nil, errors.New("only development RP mode is supported")
 	}
 
-	adminAPIBaseURI := "https://localhost:8443/admin"
+	if params == nil {
+		params = url.Values{}
+	}
+
+	params.Add("api-version", admin.APIVersion)
+
+	adminAPIBaseURI := "https://localhost:8443"
 	adminURL, err := url.Parse(adminAPIBaseURI + path)
 	if err != nil {
 		return nil, err

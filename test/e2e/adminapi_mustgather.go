@@ -19,7 +19,7 @@ var _ = Describe("[Admin API] Must gather action", func() {
 		resourceID := resourceIDFromEnv()
 
 		By("triggering the mustgather action")
-		resp, err := adminRequest(ctx, http.MethodPost, resourceID+"/mustgather", nil, nil, nil)
+		resp, err := adminRequest(ctx, http.MethodPost, "/admin"+resourceID+"/mustgather", nil, nil, nil)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
