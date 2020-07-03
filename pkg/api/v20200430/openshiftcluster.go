@@ -102,11 +102,11 @@ type ConsoleProfile struct {
 
 // ServicePrincipalProfile represents a service principal profile.
 type ServicePrincipalProfile struct {
-	// The client ID used for the cluster (immutable).
-	ClientID string `json:"clientId,omitempty"`
+	// The client ID used for the cluster (mutable).
+	ClientID string `json:"clientId,omitempty" mutable:"true"`
 
-	// The client secret used for the cluster (immutable).
-	ClientSecret string `json:"clientSecret,omitempty"`
+	// The client secret used for the cluster (mutable).
+	ClientSecret string `json:"clientSecret,omitempty" mutable:"true"`
 }
 
 // NetworkProfile represents a network profile.

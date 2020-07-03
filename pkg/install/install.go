@@ -150,6 +150,17 @@ func NewInstaller(ctx context.Context, log *logrus.Entry, _env env.Interface, db
 	}, nil
 }
 
+func (i *Installer) Update(ctx context.Context) error {
+	steps := []interface{}{
+		action(i.initializeKubernetesClients),
+		action(i.updateAzureCloudProvider),
+		action(i.updateOpenShiftCloudProviderConfig),
+		action(i.updateRoleAssignments),
+	}
+
+	return i.runSteps(ctx, steps)
+}
+
 func (i *Installer) AdminUpgrade(ctx context.Context) error {
 	steps := []interface{}{
 		action(i.initializeKubernetesClients),

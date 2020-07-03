@@ -5,6 +5,8 @@ package openshiftcluster
 
 import (
 	"context"
+
+	"github.com/Azure/ARO-RP/pkg/install"
 )
 
 func (m *Manager) Update(ctx context.Context) error {
@@ -12,5 +14,10 @@ func (m *Manager) Update(ctx context.Context) error {
 	// an enriched oc.  Neither are we enriching oc here currently, nor does
 	// Dynamic() support running on an enriched oc.
 
-	return nil
+	i, err := install.NewInstaller(ctx, m.log, m.env, m.db, m.billing, m.doc)
+	if err != nil {
+		return err
+	}
+
+	return i.Update(ctx)
 }
