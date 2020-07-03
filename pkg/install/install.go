@@ -149,6 +149,18 @@ func NewInstaller(ctx context.Context, log *logrus.Entry, _env env.Interface, db
 	}, nil
 }
 
+// Update updates an ARO cluster
+func (i *Installer) Update(ctx context.Context) error {
+	steps := []interface{}{
+		action(i.initializeKubernetesClients),
+		action(i.updateAzureCloudProvider),
+		action(i.updateOpenShiftCloudProviderConfig),
+		action(i.updateRoleAssignments),
+	}
+
+	return i.runSteps(ctx, steps)
+}
+
 // AdminUpgrade performs an admin upgrade of an ARO cluster
 func (i *Installer) AdminUpgrade(ctx context.Context) error {
 	steps := []steps.Step{
