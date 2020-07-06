@@ -4,12 +4,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gophercloud/utils/openstack/clientconfig"
 	"github.com/pkg/errors"
 
 	"github.com/openshift/installer/pkg/asset"
 	azureconfig "github.com/openshift/installer/pkg/asset/installconfig/azure"
 	gcpconfig "github.com/openshift/installer/pkg/asset/installconfig/gcp"
+	openstackconfig "github.com/openshift/installer/pkg/asset/installconfig/openstack"
+	ovirtconfig "github.com/openshift/installer/pkg/asset/installconfig/ovirt"
 	"github.com/openshift/installer/pkg/types/aws"
 	"github.com/openshift/installer/pkg/types/azure"
 	"github.com/openshift/installer/pkg/types/baremetal"
@@ -17,6 +18,7 @@ import (
 	"github.com/openshift/installer/pkg/types/libvirt"
 	"github.com/openshift/installer/pkg/types/none"
 	"github.com/openshift/installer/pkg/types/openstack"
+	"github.com/openshift/installer/pkg/types/ovirt"
 	"github.com/openshift/installer/pkg/types/vsphere"
 )
 
@@ -56,15 +58,26 @@ func (a *PlatformCredsCheck) Generate(dependencies asset.Parents) error {
 			return errors.Wrap(err, "creating GCP session")
 		}
 	case openstack.Name:
-		opts := new(clientconfig.ClientOpts)
-		opts.Cloud = ic.Config.Platform.OpenStack.Cloud
-		_, err = clientconfig.GetCloudFromYAML(opts)
+		_, err = openstackconfig.GetSession(ic.Config.Platform.OpenStack.Cloud)
 	case baremetal.Name, libvirt.Name, none.Name, vsphere.Name:
 		// no creds to check
 	case azure.Name:
 		_, err = azureconfig.GetSession(platformCreds.Azure)
 		if err != nil {
 			return errors.Wrap(err, "creating Azure session")
+		}
+	case ovirt.Name:
+		ovirtConfig, err := ovirtconfig.NewConfig()
+		if err != nil {
+			return errors.Wrap(err, "getting ovirt configuration")
+		}
+		con, err := ovirtconfig.GetConnection(ovirtConfig)
+		if err != nil {
+			return errors.Wrap(err, "establishing ovirt connection")
+		}
+		err = con.Test()
+		if err != nil {
+			return errors.Wrap(err, "testing ovirt connection")
 		}
 	default:
 		err = fmt.Errorf("unknown platform type %q", platform)

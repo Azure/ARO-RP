@@ -6,7 +6,8 @@ required = [
   "golang.org/x/tools/cmd/goimports",
   "github.com/jstemmer/go-junit-report",
   "github.com/axw/gocov/gocov",
-  "github.com/AlekSi/gocov-xml"
+   "github.com/AlekSi/gocov-xml",
+  "github.com/metal3-io/baremetal-operator/pkg/apis/metal3/v1alpha1"
 ]
 
 [[constraint]]
@@ -15,7 +16,7 @@ required = [
 
 [[override]]
   name = "github.com/Azure/azure-sdk-for-go"
-  version = "40.2.0"
+  version = "42.1.0"
 
 [[override]]
   name = "github.com/containers/image"
@@ -23,44 +24,51 @@ required = [
 
 [[constraint]]
   name = "github.com/golang/mock"
-  version = "1.3.1"
+  version = "1.4.3"
 
 [[constraint]]
   name = "github.com/gorilla/mux"
-  version = "1.7.3"
+  version = "1.7.4"
 
 [[constraint]]
   name = "github.com/openshift/api"
-  branch = "release-4.3"
+  branch = "release-4.4"
 
 [[constraint]]
   name = "github.com/openshift/client-go"
-  branch = "release-4.3"
+  branch = "release-4.4"
 
 [[override]]
   name = "github.com/openshift/cluster-api"
-  branch = "release-4.3"
-
-[[override]]
-  name = "github.com/openshift/cluster-samples-operator"
-  branch = "release-4.3"
+  branch = "release-4.4"
 
 [[constraint]]
   name = "github.com/openshift/cluster-api-provider-azure"
-  branch = "release-4.3"
+  branch = "release-4.4"
 
 [[constraint]]
   name = "github.com/openshift/installer"
-  branch = "release-4.3-azure"
+  branch = "release-4.4-azure"
   source = "https://github.com/jim-minter/installer"
+
+# Matches Installer used version (master)
+# Should go away in 4.5 with move to go modules
+[[override]]
+  name = "github.com/openshift/cloud-credential-operator"
+  revision = "a443c1b9c73a79a25c8fd3c37bfdd08c009b7d6d"
+
+[[override]]
+  branch = "release-4.4"
+  name = "github.com/openshift/machine-api-operator"
+  source = "github.com/openshift/machine-api-operator"
 
 [[override]]
   name = "github.com/openshift/machine-config-operator"
-  branch = "release-4.3"
+  branch = "release-4.4"
 
 [[constraint]]
   name = "github.com/openshift/console-operator"
-  branch = "release-4.3"
+  branch = "release-4.4"
 
 [[constraint]]
   name = "github.com/satori/go.uuid"
@@ -75,23 +83,29 @@ required = [
   branch = "master"
 
 [[override]]
+  branch = "release-4.4"
+  name = "github.com/metal3-io/baremetal-operator"
+  source = "https://github.com/openshift/baremetal-operator"
+
+
+[[override]]
   name = "k8s.io/api"
-  branch = "origin-4.3-kubernetes-1.16.2"
+  branch = "origin-4.4-kubernetes-1.17.1"
   source = "https://github.com/openshift/kubernetes-api"
 
 [[override]]
   name = "k8s.io/apimachinery"
-  branch = "origin-4.3-kubernetes-1.16.2"
+  branch = "origin-4.4-kubernetes-1.17.1"
   source = "https://github.com/openshift/kubernetes-apimachinery"
 
 [[override]]
   name = "k8s.io/client-go"
-  branch = "origin-4.3-kubernetes-1.16.2"
+  branch = "origin-4.4-kubernetes-1.17.1"
   source = "https://github.com/openshift/kubernetes-client-go"
 
 [[override]]
   name = "sigs.k8s.io/cluster-api-provider-azure"
-  branch = "release-4.3"
+  branch = "release-4.4"
   source = "https://github.com/openshift/cluster-api-provider-azure"
 
 [[override]]

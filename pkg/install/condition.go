@@ -16,13 +16,13 @@ func (i *Installer) bootstrapConfigMapReady() (bool, error) {
 }
 
 func (i *Installer) apiServersReady() (bool, error) {
-	apiserver, err := i.operatorcli.OperatorV1().KubeAPIServers().Get("cluster", metav1.GetOptions{})
+	apiserver, err := i.configcli.ConfigV1().ClusterOperators().Get("kube-apiserver", metav1.GetOptions{})
 	if err == nil {
-		m := make(map[string]operatorv1.ConditionStatus, len(apiserver.Status.Conditions))
+		m := make(map[configv1.ClusterStatusConditionType]configv1.ConditionStatus, len(apiserver.Status.Conditions))
 		for _, cond := range apiserver.Status.Conditions {
 			m[cond.Type] = cond.Status
 		}
-		if m["Available"] == operatorv1.ConditionTrue && m["Progressing"] == operatorv1.ConditionFalse {
+		if m[configv1.OperatorAvailable] == configv1.ConditionTrue && m[configv1.OperatorProgressing] == configv1.ConditionFalse {
 			return true, nil
 		}
 	}

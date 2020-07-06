@@ -71,8 +71,8 @@ func TestAPIServersReady(t *testing.T) {
 	for _, tt := range []struct {
 		name                 string
 		serverName           string
-		availableCondition   operatorv1.ConditionStatus
-		progressingCondition operatorv1.ConditionStatus
+		availableCondition   configv1.ConditionStatus
+		progressingCondition configv1.ConditionStatus
 		want                 bool
 	}{
 		{
@@ -80,50 +80,46 @@ func TestAPIServersReady(t *testing.T) {
 		},
 		{
 			name:                 "Available && Progressing; API servers not ready",
-			serverName:           "cluster",
-			availableCondition:   operatorv1.ConditionTrue,
-			progressingCondition: operatorv1.ConditionTrue,
+			serverName:           "kube-apiserver",
+			availableCondition:   configv1.ConditionTrue,
+			progressingCondition: configv1.ConditionTrue,
 		},
 		{
 			name:                 "Available && !Progressing; API servers ready",
-			serverName:           "cluster",
-			availableCondition:   operatorv1.ConditionTrue,
-			progressingCondition: operatorv1.ConditionFalse,
+			serverName:           "kube-apiserver",
+			availableCondition:   configv1.ConditionTrue,
+			progressingCondition: configv1.ConditionFalse,
 			want:                 true,
 		},
 		{
 			name:                 "!Available && Progressing; API servers not ready",
-			serverName:           "cluster",
-			availableCondition:   operatorv1.ConditionFalse,
-			progressingCondition: operatorv1.ConditionTrue,
+			serverName:           "kube-apiserver",
+			availableCondition:   configv1.ConditionFalse,
+			progressingCondition: configv1.ConditionTrue,
 		},
 		{
 			name:                 "!Available && !Progressing; API servers not ready",
-			serverName:           "cluster",
-			availableCondition:   operatorv1.ConditionFalse,
-			progressingCondition: operatorv1.ConditionFalse,
+			serverName:           "kube-apiserver",
+			availableCondition:   configv1.ConditionFalse,
+			progressingCondition: configv1.ConditionFalse,
 		},
 	} {
 		i := &Installer{
-			operatorcli: operatorfake.NewSimpleClientset(&operatorv1.KubeAPIServerList{
-				Items: []operatorv1.KubeAPIServer{
+			configcli: configfake.NewSimpleClientset(&configv1.ClusterOperatorList{
+				Items: []configv1.ClusterOperator{
 					{
 						ObjectMeta: metav1.ObjectMeta{
 							Name: tt.serverName,
 						},
-						Status: operatorv1.KubeAPIServerStatus{
-							StaticPodOperatorStatus: operatorv1.StaticPodOperatorStatus{
-								OperatorStatus: operatorv1.OperatorStatus{
-									Conditions: []operatorv1.OperatorCondition{
-										{
-											Type:   "Available",
-											Status: tt.availableCondition,
-										},
-										{
-											Type:   "Progressing",
-											Status: tt.progressingCondition,
-										},
-									},
+						Status: configv1.ClusterOperatorStatus{
+							Conditions: []configv1.ClusterOperatorStatusCondition{
+								{
+									Type:   configv1.OperatorAvailable,
+									Status: tt.availableCondition,
+								},
+								{
+									Type:   configv1.OperatorProgressing,
+									Status: tt.progressingCondition,
 								},
 							},
 						},

@@ -3,9 +3,10 @@ package validation
 import (
 	"regexp"
 
+	"k8s.io/apimachinery/pkg/util/validation/field"
+
 	"github.com/openshift/installer/pkg/types"
 	"github.com/openshift/installer/pkg/types/azure"
-	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 // https://docs.microsoft.com/en-us/azure/architecture/best-practices/resource-naming#general

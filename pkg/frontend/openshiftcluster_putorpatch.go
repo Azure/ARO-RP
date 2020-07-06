@@ -76,7 +76,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 				Properties: api.OpenShiftClusterProperties{
 					ProvisioningState: api.ProvisioningStateSucceeded,
 					ClusterProfile: api.ClusterProfile{
-						Version: version.OpenShiftVersion,
+						Version: version.InstallStream.Version.String(),
 					},
 					ServicePrincipalProfile: api.ServicePrincipalProfile{
 						TenantID: subdoc.Subscription.Properties.TenantID,

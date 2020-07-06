@@ -274,13 +274,15 @@ func deletePorts(opts *clientconfig.ClientOpts, filter Filter, logger logrus.Fie
 			logger.Errorf("%v", err)
 			return false, nil
 		}
+		// If a user provisioned floating ip was used, it needs to be dissociated.
+		// Any floating Ip's associated with ports that are going to be deleted will be dissociated.
 		for _, fip := range allFIPs {
-			logger.Debugf("Deleting Floating IP %q", fip.ID)
-			err = floatingips.Delete(conn, fip.ID).ExtractErr()
+			logger.Debugf("Dissociating Floating IP %q", fip.ID)
+			_, err := floatingips.Update(conn, fip.ID, floatingips.UpdateOpts{}).Extract()
 			if err != nil {
 				// Ignore the error if the floating ip cannot be found and return with an appropriate message if it's another type of error
 				if _, ok := err.(gophercloud.ErrDefault404); !ok {
-					logger.Errorf("While deleting port %q, the deletion of the floating IP %q failed with error: %v", port.ID, fip.ID, err)
+					logger.Errorf("While deleting port %q, the update of the floating IP %q failed with error: %v", port.ID, fip.ID, err)
 					return false, nil
 				}
 				logger.Debugf("Cannot find floating ip %q. It's probably already been deleted.", fip.ID)
@@ -544,6 +546,11 @@ func deleteContainers(opts *clientconfig.ClientOpts, filter Filter, logger logru
 
 	conn, err := clientconfig.NewServiceClient("object-store", opts)
 	if err != nil {
+		// Ignore the error if Swift is not available for the cloud
+		if _, ok := err.(*gophercloud.ErrEndpointNotFound); ok {
+			logger.Debug("Skip container deletion because Swift endpoint is not found")
+			return true, nil
+		}
 		logger.Errorf("%v", err)
 		return false, nil
 	}
@@ -551,6 +558,11 @@ func deleteContainers(opts *clientconfig.ClientOpts, filter Filter, logger logru
 
 	allPages, err := containers.List(conn, listOpts).AllPages()
 	if err != nil {
+		// Ignore the error if the user doesn't have the swiftoperator role
+		if _, ok := err.(gophercloud.ErrDefault403); ok {
+			logger.Debug("Skip container deletion because the user doesn't have the `swiftoperator` role")
+			return true, nil
+		}
 		logger.Errorf("%v", err)
 		return false, nil
 	}
@@ -628,7 +640,11 @@ func deleteTrunks(opts *clientconfig.ClientOpts, filter Filter, logger logrus.Fi
 	}
 	allPages, err := trunks.List(conn, listOpts).AllPages()
 	if err != nil {
-		logger.Errorf("%v", err)
+		if _, ok := err.(gophercloud.ErrDefault404); ok {
+			logger.Debug("Skip trunk deletion because the cloud doesn't support trunk ports")
+			return true, nil
+		}
+		logger.Error(err)
 		return false, nil
 	}
 

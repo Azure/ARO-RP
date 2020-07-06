@@ -15,6 +15,7 @@ import (
 	"github.com/openshift/installer/pkg/types/libvirt"
 	"github.com/openshift/installer/pkg/types/none"
 	"github.com/openshift/installer/pkg/types/openstack"
+	"github.com/openshift/installer/pkg/types/ovirt"
 	"github.com/openshift/installer/pkg/types/vsphere"
 )
 
@@ -57,7 +58,7 @@ func (a *PlatformPermsCheck) Generate(dependencies asset.Parents) error {
 		if err != nil {
 			return errors.Wrap(err, "validate AWS credentials")
 		}
-	case azure.Name, baremetal.Name, gcp.Name, libvirt.Name, none.Name, openstack.Name, vsphere.Name:
+	case azure.Name, baremetal.Name, gcp.Name, libvirt.Name, none.Name, openstack.Name, ovirt.Name, vsphere.Name:
 		// no permissions to check
 	default:
 		err = fmt.Errorf("unknown platform type %q", platform)

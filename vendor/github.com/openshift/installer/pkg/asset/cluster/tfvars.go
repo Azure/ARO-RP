@@ -9,9 +9,9 @@ import (
 	"os"
 
 	igntypes "github.com/coreos/ignition/config/v2_2/types"
-	ospclientconfig "github.com/gophercloud/utils/openstack/clientconfig"
 	gcpprovider "github.com/openshift/cluster-api-provider-gcp/pkg/apis/gcpprovider/v1beta1"
 	libvirtprovider "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1beta1"
+	vsphereprovider "github.com/openshift/machine-api-operator/pkg/apis/vsphereprovider/v1alpha1"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	awsprovider "sigs.k8s.io/cluster-api-provider-aws/pkg/apis/awsproviderconfig/v1beta1"
@@ -25,6 +25,8 @@ import (
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	azureconfig "github.com/openshift/installer/pkg/asset/installconfig/azure"
 	gcpconfig "github.com/openshift/installer/pkg/asset/installconfig/gcp"
+	openstackconfig "github.com/openshift/installer/pkg/asset/installconfig/openstack"
+	ovirtconfig "github.com/openshift/installer/pkg/asset/installconfig/ovirt"
 	"github.com/openshift/installer/pkg/asset/machines"
 	"github.com/openshift/installer/pkg/asset/openshiftinstall"
 	"github.com/openshift/installer/pkg/asset/rhcos"
@@ -35,6 +37,8 @@ import (
 	gcptfvars "github.com/openshift/installer/pkg/tfvars/gcp"
 	libvirttfvars "github.com/openshift/installer/pkg/tfvars/libvirt"
 	openstacktfvars "github.com/openshift/installer/pkg/tfvars/openstack"
+	ovirttfvars "github.com/openshift/installer/pkg/tfvars/ovirt"
+	vspheretfvars "github.com/openshift/installer/pkg/tfvars/vsphere"
 	"github.com/openshift/installer/pkg/types"
 	"github.com/openshift/installer/pkg/types/aws"
 	"github.com/openshift/installer/pkg/types/azure"
@@ -44,6 +48,7 @@ import (
 	"github.com/openshift/installer/pkg/types/none"
 	"github.com/openshift/installer/pkg/types/openstack"
 	openstackdefaults "github.com/openshift/installer/pkg/types/openstack/defaults"
+	"github.com/openshift/installer/pkg/types/ovirt"
 	"github.com/openshift/installer/pkg/types/vsphere"
 )
 
@@ -104,7 +109,7 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 
 	platform := installConfig.Config.Platform.Name()
 	switch platform {
-	case none.Name, vsphere.Name:
+	case none.Name:
 		return errors.Errorf("cannot create the cluster because %q is a UPI platform", platform)
 	}
 
@@ -326,6 +331,7 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 			&installConfig.Config.Networking.MachineNetwork[0].CIDR.IPNet,
 			installConfig.Config.Platform.Libvirt.Network.IfName,
 			masterCount,
+			installConfig.Config.ControlPlane.Architecture,
 		)
 		if err != nil {
 			return errors.Wrapf(err, "failed to get %s Terraform variables", platform)
@@ -335,15 +341,13 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 			Data:     data,
 		})
 	case openstack.Name:
-		opts := &ospclientconfig.ClientOpts{}
-		opts.Cloud = installConfig.Config.Platform.OpenStack.Cloud
-		cloud, err := ospclientconfig.GetCloudFromYAML(opts)
+		cloud, err := openstackconfig.GetSession(installConfig.Config.Platform.OpenStack.Cloud)
 		if err != nil {
 			return errors.Wrap(err, "failed to get cloud config for openstack")
 		}
 		var caCert string
 		// Get the ca-cert-bundle key if there is a value for cacert in clouds.yaml
-		if caPath := cloud.CACertFile; caPath != "" {
+		if caPath := cloud.CloudConfig.CACertFile; caPath != "" {
 			caFile, err := ioutil.ReadFile(caPath)
 			if err != nil {
 				return errors.Wrap(err, "failed to read clouds.yaml ca-cert from disk")
@@ -399,6 +403,54 @@ func (t *TerraformVariables) Generate(parents asset.Parents) error {
 			installConfig.Config.Platform.BareMetal.ProvisioningBridge,
 			installConfig.Config.Platform.BareMetal.Hosts,
 			string(*rhcosImage),
+		)
+		if err != nil {
+			return errors.Wrapf(err, "failed to get %s Terraform variables", platform)
+		}
+		t.FileList = append(t.FileList, &asset.File{
+			Filename: fmt.Sprintf(TfPlatformVarsFileName, platform),
+			Data:     data,
+		})
+	case ovirt.Name:
+		config, err := ovirtconfig.NewConfig()
+		if err != nil {
+			return err
+		}
+
+		data, err := ovirttfvars.TFVars(
+			config.URL,
+			config.Username,
+			config.Password,
+			config.CAFile,
+			installConfig.Config.Platform.Ovirt.ClusterID,
+			installConfig.Config.Platform.Ovirt.StorageDomainID,
+			installConfig.Config.Platform.Ovirt.NetworkName,
+			string(*rhcosImage),
+			clusterID.InfraID,
+		)
+		if err != nil {
+			return errors.Wrapf(err, "failed to get %s Terraform variables", platform)
+		}
+		t.FileList = append(t.FileList, &asset.File{
+			Filename: fmt.Sprintf(TfPlatformVarsFileName, platform),
+			Data:     data,
+		})
+	case vsphere.Name:
+		controlPlanes, err := mastersAsset.Machines()
+		if err != nil {
+			return err
+		}
+		controlPlaneConfigs := make([]*vsphereprovider.VSphereMachineProviderSpec, len(controlPlanes))
+		for i, c := range controlPlanes {
+			controlPlaneConfigs[i] = c.Spec.ProviderSpec.Value.Object.(*vsphereprovider.VSphereMachineProviderSpec)
+		}
+		data, err = vspheretfvars.TFVars(
+			vspheretfvars.TFVarsSources{
+				ControlPlaneConfigs: controlPlaneConfigs,
+				Username:            installConfig.Config.VSphere.Username,
+				Password:            installConfig.Config.VSphere.Password,
+				Cluster:             installConfig.Config.VSphere.Cluster,
+			},
 		)
 		if err != nil {
 			return errors.Wrapf(err, "failed to get %s Terraform variables", platform)

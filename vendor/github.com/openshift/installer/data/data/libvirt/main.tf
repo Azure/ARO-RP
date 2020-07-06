@@ -19,13 +19,14 @@ module "volume" {
 module "bootstrap" {
   source = "./bootstrap"
 
-  cluster_domain = var.cluster_domain
-  addresses      = [var.libvirt_bootstrap_ip]
-  base_volume_id = module.volume.coreos_base_volume_id
-  cluster_id     = var.cluster_id
-  ignition       = var.ignition_bootstrap
-  network_id     = libvirt_network.net.id
-  pool           = libvirt_pool.storage_pool.name
+  cluster_domain   = var.cluster_domain
+  addresses        = [var.libvirt_bootstrap_ip]
+  base_volume_id   = module.volume.coreos_base_volume_id
+  cluster_id       = var.cluster_id
+  ignition         = var.ignition_bootstrap
+  network_id       = libvirt_network.net.id
+  pool             = libvirt_pool.storage_pool.name
+  bootstrap_memory = var.libvirt_bootstrap_memory
 }
 
 resource "libvirt_volume" "master" {
@@ -54,25 +55,12 @@ resource "libvirt_network" "net" {
   dns {
     local_only = true
 
-    dynamic "srvs" {
-      for_each = data.libvirt_network_dns_srv_template.etcd_cluster.*.rendered
-      content {
-        domain   = srvs.value.domain
-        port     = srvs.value.port
-        protocol = srvs.value.protocol
-        service  = srvs.value.service
-        target   = srvs.value.target
-        weight   = srvs.value.weight
-      }
-    }
-
     dynamic "hosts" {
       for_each = concat(
         data.libvirt_network_dns_host_template.bootstrap.*.rendered,
         data.libvirt_network_dns_host_template.bootstrap_int.*.rendered,
         data.libvirt_network_dns_host_template.masters.*.rendered,
         data.libvirt_network_dns_host_template.masters_int.*.rendered,
-        data.libvirt_network_dns_host_template.etcds.*.rendered,
       )
       content {
         hostname = hosts.value.hostname
@@ -136,21 +124,5 @@ data "libvirt_network_dns_host_template" "masters_int" {
   count    = var.master_count
   ip       = var.libvirt_master_ips[count.index]
   hostname = "api-int.${var.cluster_domain}"
-}
-
-data "libvirt_network_dns_host_template" "etcds" {
-  count    = var.master_count
-  ip       = var.libvirt_master_ips[count.index]
-  hostname = "etcd-${count.index}.${var.cluster_domain}"
-}
-
-data "libvirt_network_dns_srv_template" "etcd_cluster" {
-  count    = var.master_count
-  service  = "etcd-server-ssl"
-  protocol = "tcp"
-  domain   = var.cluster_domain
-  port     = 2380
-  weight   = 10
-  target   = "etcd-${count.index}.${var.cluster_domain}"
 }
 

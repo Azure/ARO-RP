@@ -9,9 +9,9 @@
     },
     "resources": [
         {
-            "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
-            "name": "[concat('aro-rp-', resourceGroup().location)]",
             "location": "[resourceGroup().location]",
+            "name": "[concat('aro-rp-', resourceGroup().location)]",
+            "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
             "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2018-11-30"
         }

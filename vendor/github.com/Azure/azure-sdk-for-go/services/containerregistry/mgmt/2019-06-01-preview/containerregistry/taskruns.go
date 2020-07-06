@@ -308,6 +308,94 @@ func (client TaskRunsClient) GetResponder(resp *http.Response) (result TaskRun, 
 	return
 }
 
+// GetDetails gets the detailed information for a given task run that includes all secrets.
+// Parameters:
+// resourceGroupName - the name of the resource group to which the container registry belongs.
+// registryName - the name of the container registry.
+// taskRunName - the run request name.
+func (client TaskRunsClient) GetDetails(ctx context.Context, resourceGroupName string, registryName string, taskRunName string) (result TaskRun, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/TaskRunsClient.GetDetails")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	if err := validation.Validate([]validation.Validation{
+		{TargetValue: resourceGroupName,
+			Constraints: []validation.Constraint{{Target: "resourceGroupName", Name: validation.MinLength, Rule: 1, Chain: nil}}},
+		{TargetValue: registryName,
+			Constraints: []validation.Constraint{{Target: "registryName", Name: validation.MaxLength, Rule: 50, Chain: nil},
+				{Target: "registryName", Name: validation.MinLength, Rule: 5, Chain: nil},
+				{Target: "registryName", Name: validation.Pattern, Rule: `^[a-zA-Z0-9]*$`, Chain: nil}}}}); err != nil {
+		return result, validation.NewError("containerregistry.TaskRunsClient", "GetDetails", err.Error())
+	}
+
+	req, err := client.GetDetailsPreparer(ctx, resourceGroupName, registryName, taskRunName)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "containerregistry.TaskRunsClient", "GetDetails", nil, "Failure preparing request")
+		return
+	}
+
+	resp, err := client.GetDetailsSender(req)
+	if err != nil {
+		result.Response = autorest.Response{Response: resp}
+		err = autorest.NewErrorWithError(err, "containerregistry.TaskRunsClient", "GetDetails", resp, "Failure sending request")
+		return
+	}
+
+	result, err = client.GetDetailsResponder(resp)
+	if err != nil {
+		err = autorest.NewErrorWithError(err, "containerregistry.TaskRunsClient", "GetDetails", resp, "Failure responding to request")
+	}
+
+	return
+}
+
+// GetDetailsPreparer prepares the GetDetails request.
+func (client TaskRunsClient) GetDetailsPreparer(ctx context.Context, resourceGroupName string, registryName string, taskRunName string) (*http.Request, error) {
+	pathParameters := map[string]interface{}{
+		"registryName":      autorest.Encode("path", registryName),
+		"resourceGroupName": autorest.Encode("path", resourceGroupName),
+		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
+		"taskRunName":       autorest.Encode("path", taskRunName),
+	}
+
+	const APIVersion = "2019-06-01-preview"
+	queryParameters := map[string]interface{}{
+		"api-version": APIVersion,
+	}
+
+	preparer := autorest.CreatePreparer(
+		autorest.AsPost(),
+		autorest.WithBaseURL(client.BaseURI),
+		autorest.WithPathParameters("/subscriptions/{subscriptionId}/resourceGroups/{resourceGroupName}/providers/Microsoft.ContainerRegistry/registries/{registryName}/taskRuns/{taskRunName}/listDetails", pathParameters),
+		autorest.WithQueryParameters(queryParameters))
+	return preparer.Prepare((&http.Request{}).WithContext(ctx))
+}
+
+// GetDetailsSender sends the GetDetails request. The method will close the
+// http.Response Body if it receives an error.
+func (client TaskRunsClient) GetDetailsSender(req *http.Request) (*http.Response, error) {
+	return client.Send(req, azure.DoRetryWithRegistration(client.Client))
+}
+
+// GetDetailsResponder handles the response to the GetDetails request. The method always
+// closes the http.Response Body.
+func (client TaskRunsClient) GetDetailsResponder(resp *http.Response) (result TaskRun, err error) {
+	err = autorest.Respond(
+		resp,
+		client.ByInspecting(),
+		azure.WithErrorUnlessStatusCode(http.StatusOK),
+		autorest.ByUnmarshallingJSON(&result),
+		autorest.ByClosing())
+	result.Response = autorest.Response{Response: resp}
+	return
+}
+
 // List lists all the task runs for a specified container registry.
 // Parameters:
 // resourceGroupName - the name of the resource group to which the container registry belongs.

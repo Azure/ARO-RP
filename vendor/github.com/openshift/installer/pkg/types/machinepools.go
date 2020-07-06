@@ -7,6 +7,7 @@ import (
 	"github.com/openshift/installer/pkg/types/gcp"
 	"github.com/openshift/installer/pkg/types/libvirt"
 	"github.com/openshift/installer/pkg/types/openstack"
+	"github.com/openshift/installer/pkg/types/ovirt"
 	"github.com/openshift/installer/pkg/types/vsphere"
 )
 
@@ -26,10 +27,6 @@ type Architecture string
 const (
 	// ArchitectureAMD64 indicates AMD64 (x86_64).
 	ArchitectureAMD64 = "amd64"
-	// ArchitectureS390X indicates s390x (IBM System Z).
-	ArchitectureS390X = "s390x"
-	// ArchitecturePPC64LE indicates ppc64 little endian (Power PC)
-	ArchitecturePPC64LE = "ppc64le"
 )
 
 // MachinePool is a pool of machines to be installed.
@@ -79,6 +76,9 @@ type MachinePoolPlatform struct {
 
 	// VSphere is the configuration used when installing on vSphere.
 	VSphere *vsphere.MachinePool `json:"vsphere,omitempty"`
+
+	// Ovirt is the configuration used when installing on oVirt.
+	Ovirt *ovirt.MachinePool `json:"ovirt,omitempty"`
 }
 
 // Name returns a string representation of the platform (e.g. "aws" if
@@ -102,6 +102,8 @@ func (p *MachinePoolPlatform) Name() string {
 		return openstack.Name
 	case p.VSphere != nil:
 		return vsphere.Name
+	case p.Ovirt != nil:
+		return ovirt.Name
 	default:
 		return ""
 	}

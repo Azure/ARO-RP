@@ -50,7 +50,7 @@ func validOpenShiftCluster() *OpenShiftCluster {
 			ClusterProfile: ClusterProfile{
 				PullSecret:      `{"auths":{"registry.connect.redhat.com":{"auth":""},"registry.redhat.io":{"auth":""}}}`,
 				Domain:          "cluster.location.aroapp.io",
-				Version:         version.OpenShiftVersion,
+				Version:         version.InstallStream.Version.String(),
 				ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", subscriptionID),
 			},
 			ConsoleProfile: ConsoleProfile{

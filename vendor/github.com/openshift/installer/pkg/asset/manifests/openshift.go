@@ -4,18 +4,22 @@ import (
 	"context"
 	"encoding/base64"
 	"path/filepath"
+	"strconv"
 
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/ghodss/yaml"
 
 	"github.com/gophercloud/utils/openstack/clientconfig"
+
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/installconfig/azure"
 	"github.com/openshift/installer/pkg/asset/installconfig/gcp"
+	"github.com/openshift/installer/pkg/asset/installconfig/ovirt"
 	"github.com/openshift/installer/pkg/asset/machines"
 	openstackmanifests "github.com/openshift/installer/pkg/asset/manifests/openstack"
 	"github.com/openshift/installer/pkg/asset/openshiftinstall"
+	"github.com/openshift/installer/pkg/asset/rhcos"
 
 	osmachine "github.com/openshift/installer/pkg/asset/machines/openstack"
 	"github.com/openshift/installer/pkg/asset/password"
@@ -23,8 +27,10 @@ import (
 	"github.com/openshift/installer/pkg/types"
 	awstypes "github.com/openshift/installer/pkg/types/aws"
 	azuretypes "github.com/openshift/installer/pkg/types/azure"
+	baremetaltypes "github.com/openshift/installer/pkg/types/baremetal"
 	gcptypes "github.com/openshift/installer/pkg/types/gcp"
 	openstacktypes "github.com/openshift/installer/pkg/types/openstack"
+	ovirttypes "github.com/openshift/installer/pkg/types/ovirt"
 	vspheretypes "github.com/openshift/installer/pkg/types/vsphere"
 )
 
@@ -60,6 +66,8 @@ func (o *Openshift) Dependencies() []asset.Asset {
 		&openshift.KubeadminPasswordSecret{},
 		&openshift.RoleCloudCredsSecretReader{},
 		&openshift.PrivateClusterOutbound{},
+		&openshift.BaremetalConfig{},
+		new(rhcos.Image),
 	}
 }
 
@@ -155,6 +163,22 @@ func (o *Openshift) Generate(dependencies asset.Parents) error {
 				Base64encodePassword: base64.StdEncoding.EncodeToString([]byte(installConfig.Config.VSphere.Password)),
 			},
 		}
+	case ovirttypes.Name:
+		conf, err := ovirt.NewConfig()
+		if err != nil {
+			return err
+		}
+
+		cloudCreds = cloudCredsSecretData{
+			Ovirt: &OvirtCredsSecretData{
+				Base64encodeURL:      base64.StdEncoding.EncodeToString([]byte(conf.URL)),
+				Base64encodeUsername: base64.StdEncoding.EncodeToString([]byte(conf.Username)),
+				Base64encodePassword: base64.StdEncoding.EncodeToString([]byte(conf.Password)),
+				Base64encodeCAFile:   base64.StdEncoding.EncodeToString([]byte(conf.CAFile)),
+				Base64encodeInsecure: base64.StdEncoding.EncodeToString([]byte(strconv.FormatBool(conf.Insecure))),
+				Base64encodeCABundle: base64.StdEncoding.EncodeToString([]byte(conf.CABundle)),
+			},
+		}
 	}
 
 	templateData := &openshiftTemplateData{
@@ -165,19 +189,30 @@ func (o *Openshift) Generate(dependencies asset.Parents) error {
 	cloudCredsSecret := &openshift.CloudCredsSecret{}
 	kubeadminPasswordSecret := &openshift.KubeadminPasswordSecret{}
 	roleCloudCredsSecretReader := &openshift.RoleCloudCredsSecretReader{}
+	baremetalConfig := &openshift.BaremetalConfig{}
+	rhcosImage := new(rhcos.Image)
+
 	dependencies.Get(
 		cloudCredsSecret,
 		kubeadminPasswordSecret,
-		roleCloudCredsSecretReader)
+		roleCloudCredsSecretReader,
+		baremetalConfig,
+		rhcosImage)
 
 	assetData := map[string][]byte{
 		"99_kubeadmin-password-secret.yaml": applyTemplateData(kubeadminPasswordSecret.Files()[0].Data, templateData),
 	}
 
 	switch platform {
-	case awstypes.Name, openstacktypes.Name, vspheretypes.Name, azuretypes.Name, gcptypes.Name:
+	case awstypes.Name, openstacktypes.Name, vspheretypes.Name, azuretypes.Name, gcptypes.Name, ovirttypes.Name:
 		assetData["99_cloud-creds-secret.yaml"] = applyTemplateData(cloudCredsSecret.Files()[0].Data, templateData)
 		assetData["99_role-cloud-creds-secret-reader.yaml"] = applyTemplateData(roleCloudCredsSecretReader.Files()[0].Data, templateData)
+	case baremetaltypes.Name:
+		bmTemplateData := baremetalTemplateData{
+			Baremetal:                 installConfig.Config.Platform.BareMetal,
+			ProvisioningOSDownloadURL: string(*rhcosImage),
+		}
+		assetData["99_baremetal-provisioning-config.yaml"] = applyTemplateData(baremetalConfig.Files()[0].Data, bmTemplateData)
 	}
 
 	if platform == azuretypes.Name && !installConfig.Config.Azure.ARO && installConfig.Config.Publish == types.InternalPublishingStrategy {

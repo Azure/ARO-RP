@@ -3,6 +3,7 @@ package rhcos
 
 import (
 	"context"
+	"github.com/openshift/installer/pkg/types/ovirt"
 	"os"
 	"time"
 
@@ -85,6 +86,8 @@ func osImage(config *types.InstallConfig) (string, error) {
 			break
 		}
 		osimage, err = rhcos.OpenStack(ctx, arch)
+	case ovirt.Name:
+		osimage, err = rhcos.OpenStack(ctx, arch)
 	case azure.Name:
 		osimage, err = rhcos.VHD(ctx, arch)
 	case baremetal.Name:
@@ -99,6 +102,7 @@ func osImage(config *types.InstallConfig) (string, error) {
 		// ignition support, which isn't enabled in the UPI BM images
 		osimage, err = rhcos.OpenStack(ctx, arch)
 	case none.Name, vsphere.Name:
+
 	default:
 		return "", errors.New("invalid Platform")
 	}

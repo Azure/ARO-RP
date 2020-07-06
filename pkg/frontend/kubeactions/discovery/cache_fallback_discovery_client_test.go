@@ -34,7 +34,7 @@ func TestVersion(t *testing.T) {
 	}
 
 	assetsVersion := string(b)
-	if assetsVersion != version.OpenShiftVersion {
+	if assetsVersion != version.InstallStream.Version.String() {
 		t.Error(assetsVersion)
 	}
 }

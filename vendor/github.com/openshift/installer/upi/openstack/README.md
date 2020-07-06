@@ -1,45 +1,14 @@
-# Openstack User Provided Infrastructure installation
+# Ansible Playbooks for Openstack UPI
 
-This directory contains the Ansible scripts that automate part of the work in the [UPI installation](../../docs/user/openstack/install_upi.md).
-
-## Rationale
-
-The tool for automated installation (IPI - Installer-Provided Infrastructure) cover the general case where all the OpenStack resources can be created ad-hoc.
-
-The UPI case (User-Provided Infrastructure) instead lets complete freedom to the end-user of customizing the cluster and its underpinning OpenStack resources.
-
-The installation process is detailed step by step in the relative [documentation](../../docs/user/openstack/install_upi.md).
-
-These Ansible playbooks in this directory automate some of those steps. They are provided as a template: edit them to match your needs.
-
-## Requirements
-
-* Python
-* Ansible
-* Python dependencies listed in the playbooks. Namely:
-  * openstacksdk
-  * netaddr
-
-This command installs all required rependencies on a Fedora-derived Linux distribution:
-
-```shell
-yum install python-openstackclient ansible python-openstacksdk python-netaddr
-```
-
-Alternatively, the included `requirements.txt` helps using `pip` for gathering the required dependencies in a Python virtual environment:
-
-```shell
-python3 -m venv venv
-source venv/bin/activate
-pip install -U pip
-pip install -r requirements.txt
-```
+This directory contains the Ansible scripts expected to automate most of the command-line work in the [User-Provided-Infrastructure installation](../../docs/user/openstack/install_upi.md).
 
 ## How to use
 
 Customize the cluster properties in the [Inventory](./inventory.yaml) file.
 
-The playbooks are designed to reproduce an installation equivalent to IPI. Customize them as needed. It is advised to customize the teardown playbooks symmetrically.
+**NOTE:** To deploy with Kuryr SDN, update the `os_networking_type` field to `Kuryr`.
+
+The playbooks in this directory are designed to reproduce an IPI installation, but are highly customizable. Please be aware of changes made to the install playbooks that may require changes to the teardown playbooks.
 
 Every step can be run like this:
 
@@ -54,3 +23,5 @@ For every script, a symmetrical teardown playbook is provided:
 ```
 
 A full teardown can be achieved by running all the `down` scripts in reverse order.
+
+Please refer to the [UPI documentation](../../docs/user/openstack/install_upi.md) for step-by-step instructions.

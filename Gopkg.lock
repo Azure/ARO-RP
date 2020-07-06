@@ -18,12 +18,10 @@
   revision = "3a14fb1c4737b3995174c5f4d6d08a348b9b4180"
 
 [[projects]]
-  digest = "1:19dc0c29c96999771f65e935f640bee2d58445d7b024242f802621866c88812a"
+  digest = "1:df0547e3857332f466bafd3cfe5ac3b305d1921cfba0372187fcd6db9e48eb90"
   name = "github.com/Azure/azure-sdk-for-go"
   packages = [
     "profiles/latest/dns/mgmt/dns",
-    "profiles/latest/resources/mgmt/resources",
-    "profiles/latest/resources/mgmt/subscriptions",
     "services/compute/mgmt/2018-10-01/compute",
     "services/compute/mgmt/2019-03-01/compute",
     "services/containerregistry/mgmt/2019-06-01-preview/containerregistry",
@@ -38,19 +36,19 @@
     "services/preview/authorization/mgmt/2018-09-01-preview/authorization",
     "services/preview/monitor/mgmt/2018-03-01/insights",
     "services/privatedns/mgmt/2018-09-01/privatedns",
-    "services/resources/mgmt/2019-05-01/resources",
-    "services/resources/mgmt/2019-06-01/subscriptions",
+    "services/resources/mgmt/2018-06-01/subscriptions",
+    "services/resources/mgmt/2019-03-01/resources",
     "services/resources/mgmt/2019-07-01/features",
     "services/storage/mgmt/2019-04-01/storage",
     "storage",
     "version",
   ]
   pruneopts = "UT"
-  revision = "58f0a1b3cf842e1d702da8226e100f726ec26579"
-  version = "v40.2.0"
+  revision = "c444986936ce426843fddc90ffb9d2749ff497bd"
+  version = "v42.3.0"
 
 [[projects]]
-  digest = "1:0f5cec94ea46ab37f6b95e52a4b70761ada57b809059aba2d332ec0813416920"
+  digest = "1:4621d189edcc3acfc8f9e1b98513f24d9b318574df1406b28cde265d598e8c85"
   name = "github.com/Azure/go-autorest"
   packages = [
     "autorest",
@@ -65,8 +63,8 @@
     "tracing",
   ]
   pruneopts = "UT"
-  revision = "327ff6ce8b902f9afe648d5ea8ff6dc26c26f150"
-  version = "v13.4.0"
+  revision = "778ae565bde392f58e04c3c8ff07c2ac506d00c9"
+  version = "v14.1.1"
 
 [[projects]]
   digest = "1:9f3b30d9f8e0d7040f729b82dcbc8f0dead820a133b3147ce355fc451f32d761"
@@ -270,7 +268,7 @@
   version = "v22.0.0"
 
 [[projects]]
-  digest = "1:fb5b2aed0d774e210c1f2c0893e620cb3fa98957d3b925d0378f93b9613eb605"
+  digest = "1:b3ff820a2b867b5140ac8e6c84a1124affe7d671296b7648d06b61d0834617cf"
   name = "github.com/coreos/ignition"
   packages = [
     "config/shared/errors",
@@ -284,15 +282,16 @@
     "config/v2_1/types",
     "config/v2_2",
     "config/v2_2/types",
-    "config/v2_3_experimental/types",
+    "config/v2_4/types",
+    "config/v2_5_experimental/types",
     "config/validate",
     "config/validate/astjson",
     "config/validate/astnode",
     "config/validate/report",
   ]
   pruneopts = "UT"
-  revision = "76107251acd117c6d3e5b4dae2b47f82f944984b"
-  version = "v0.26.0"
+  revision = "7afbeba044a8bf5762609fbb5f352291eeb7ad9a"
+  version = "v0.35.0"
 
 [[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
@@ -504,7 +503,7 @@
   revision = "8c9f03a8e57eb486e42badaed3fb287da51807ba"
 
 [[projects]]
-  digest = "1:5e14df5b9539151b485eeb3ebea90a2823347516732978b0911ff17acea2842c"
+  digest = "1:47efa624cbd92fac2f84f5f287df57575ceab403470b915ef987668278e3dabc"
   name = "github.com/golang/mock"
   packages = [
     "gomock",
@@ -512,8 +511,8 @@
     "mockgen/model",
   ]
   pruneopts = "UT"
-  revision = "9fa652df1129bef0e734c9cf9bf6dbae9ef3b9fa"
-  version = "1.3.1"
+  revision = "3a35fb6e3e18b9dbfee291262260dee7372d2a92"
+  version = "v1.4.3"
 
 [[projects]]
   digest = "1:f5ce1529abc1204444ec73779f44f94e2fa8fcdb7aca3c355b0c95947e4005c6"
@@ -581,7 +580,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:53002d95f4d0a6e8fdf76ce71f684102c2d5f30f05655d1ccaad4cd3f9ba5eff"
+  digest = "1:bede3e67da47bb189f1e45138dd7d62ec75847081207397380c469f2d990d34b"
   name = "github.com/gophercloud/gophercloud"
   packages = [
     ".",
@@ -592,13 +591,11 @@
     "openstack/identity/v2/tenants",
     "openstack/identity/v2/tokens",
     "openstack/identity/v3/tokens",
+    "openstack/imageservice/v2/imagedata",
     "openstack/imageservice/v2/images",
     "openstack/networking/v2/extensions",
     "openstack/networking/v2/extensions/layer3/floatingips",
     "openstack/networking/v2/networks",
-    "openstack/objectstorage/v1/accounts",
-    "openstack/objectstorage/v1/containers",
-    "openstack/objectstorage/v1/objects",
     "openstack/utils",
     "pagination",
   ]
@@ -617,12 +614,12 @@
   revision = "cb37ab634bffc7c150154d1a60192e926d2eddbf"
 
 [[projects]]
-  digest = "1:cbec35fe4d5a4fba369a656a8cd65e244ea2c743007d8f6c1ccb132acf9d1296"
+  digest = "1:25ebe6496abb289ef977c081b2d49f56dd97c32db4ca083d37f95923909ced02"
   name = "github.com/gorilla/mux"
   packages = ["."]
   pruneopts = "UT"
-  revision = "00bdffe0f3c77e27d2cf6f5c70232a2d3e4d9c15"
-  version = "v1.7.3"
+  revision = "75dcda0896e109a2a22c9315bca3bb21b87b2ba5"
+  version = "v1.7.4"
 
 [[projects]]
   branch = "master"
@@ -728,14 +725,6 @@
   version = "v1.0.2"
 
 [[projects]]
-  digest = "1:c26b841ff18d8b7fa1606f869ec66eedd6327469e33f9ee3dcb8bef800fdad50"
-  name = "github.com/kubernetes/apimachinery"
-  packages = ["pkg/util/rand"]
-  pruneopts = "UT"
-  revision = "79c2a76c473a20cdc4ce59cae4b72529b5d9d16b"
-  version = "v0.17.1"
-
-[[projects]]
   digest = "1:a2bfa52d08ed3100f934a39a3f927e9279f8a106633ff97e47bad7120a1ad07e"
   name = "github.com/libvirt/libvirt-go"
   packages = ["."]
@@ -780,8 +769,8 @@
   version = "v1.0.1"
 
 [[projects]]
-  branch = "master"
-  digest = "1:b79e6a0ba1e0e21024ba285da0c16b72be2f154844fb16fb9ce0402e758003cf"
+  branch = "release-4.4"
+  digest = "1:05c59ec10037e3b6410b5f967e4f684faa0478d54c456f13cb64f6e32f1afcb7"
   name = "github.com/metal3-io/baremetal-operator"
   packages = [
     "pkg/apis/metal3/v1alpha1",
@@ -789,7 +778,7 @@
     "pkg/hardware",
   ]
   pruneopts = "UT"
-  revision = "81ee999993403b111183ca496ba2a987cc7e59e6"
+  revision = "e4aebc7ac9d7b0b1b7f754bebf2a4a3d727861bc"
   source = "https://github.com/openshift/baremetal-operator"
 
 [[projects]]
@@ -920,8 +909,8 @@
   version = "v0.1.1"
 
 [[projects]]
-  branch = "release-4.3"
-  digest = "1:14b7de6170f03983718e52845912c445dddd8870d1fa48a0f1b46835e2eb5ba6"
+  branch = "release-4.4"
+  digest = "1:5a3061ac5914af3cef6ea2807e78d0b378850a47990a205c0bc3e14594f67938"
   name = "github.com/openshift/api"
   packages = [
     "config/v1",
@@ -934,11 +923,11 @@
     "security/v1",
   ]
   pruneopts = "UT"
-  revision = "2987a591a72cee08898c93dcc09816783d39a5bc"
+  revision = "7192180f496aab1f7659d8660fc360498bab498b"
 
 [[projects]]
-  branch = "release-4.3"
-  digest = "1:6de9ac34b49d1d87c4280a12daa6f79da832067e9d72ccefca3f213bbbe472c2"
+  branch = "release-4.4"
+  digest = "1:dfa5f5b132f57a26ba1007bcc5dc1ec1230a043507d2c2ec7d1d9c05edf58151"
   name = "github.com/openshift/client-go"
   packages = [
     "config/clientset/versioned",
@@ -953,16 +942,18 @@
     "operator/clientset/versioned/typed/operator/v1/fake",
     "operator/clientset/versioned/typed/operator/v1alpha1",
     "operator/clientset/versioned/typed/operator/v1alpha1/fake",
+    "samples/clientset/versioned",
+    "samples/clientset/versioned/scheme",
+    "samples/clientset/versioned/typed/samples/v1",
     "security/clientset/versioned",
     "security/clientset/versioned/scheme",
     "security/clientset/versioned/typed/security/v1",
   ]
   pruneopts = "UT"
-  revision = "f6563a70e19a12b2f240eaf4e716ef75baf7003e"
+  revision = "92a2713fa240ea8a375a982d60b43ef5119f85ba"
 
 [[projects]]
-  branch = "release-4.3"
-  digest = "1:454f3ebed85be06f8ed32549474df4fb75624319314f222983d4bae6d4daa1cd"
+  digest = "1:b5571e94625ed635a0f0753a3b8a8f6a285be136b28e627de60f0b1229841c4e"
   name = "github.com/openshift/cloud-credential-operator"
   packages = [
     "pkg/apis/cloudcredential/v1",
@@ -970,10 +961,10 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "02be5758f755d9da56cb4b37ae3ea52a9a0c436e"
+  revision = "a443c1b9c73a79a25c8fd3c37bfdd08c009b7d6d"
 
 [[projects]]
-  branch = "release-4.3"
+  branch = "release-4.4"
   digest = "1:399e8d70371267705d306221880377d69fcb3650254b754a168370561d435b35"
   name = "github.com/openshift/cluster-api"
   packages = [
@@ -990,15 +981,15 @@
     "pkg/client/clientset_generated/clientset/typed/machine/v1beta1/fake",
   ]
   pruneopts = "UT"
-  revision = "9a3a7bbe9258f5c3117cb2aba6a560babe0d59f8"
+  revision = "b09907ac666894610ad44787def00be738c8a2f1"
 
 [[projects]]
-  branch = "release-4.3"
+  branch = "release-4.4"
   digest = "1:9d86fe2d97d035702ab624b98c8bdb64436bafcba5538b26f3263f7e1a053f41"
   name = "github.com/openshift/cluster-api-provider-azure"
   packages = ["pkg/apis/azureprovider/v1beta1"]
   pruneopts = "UT"
-  revision = "86ecb23daa83c78761414a7abcb169c73c18a756"
+  revision = "81d7d701e070ce2759126392999ff27f5eeeb3a0"
 
 [[projects]]
   branch = "master"
@@ -1023,28 +1014,26 @@
   revision = "2336783d460353458477aa9e181eca87e4db5d27"
 
 [[projects]]
-  branch = "release-4.3"
-  digest = "1:900bceaa6cc77aab2ec6088d9b298e7e54df69a5794afcf9e1ab8452f56c8409"
-  name = "github.com/openshift/cluster-samples-operator"
+  digest = "1:34cebaa53b25a1ca69b5f1a2e062019ed450e4b876c9df8d2a915a4525d39766"
+  name = "github.com/openshift/cluster-api-provider-ovirt"
   packages = [
-    "pkg/generated/clientset/versioned",
-    "pkg/generated/clientset/versioned/scheme",
-    "pkg/generated/clientset/versioned/typed/samples/v1",
+    "pkg/apis",
+    "pkg/apis/ovirtprovider/v1beta1",
   ]
   pruneopts = "UT"
-  revision = "bfda4d3462fd7305573adb103137723d2bd4975c"
+  revision = "0966db28bce37ca97ada41c69f48ffa7c4d02493"
 
 [[projects]]
-  branch = "release-4.3"
-  digest = "1:4221f7b123b05d8ece2b79a3cd6891e3a421c8b2f2e6f2ab8abe3be0f7ef0fee"
+  branch = "release-4.4"
+  digest = "1:31ccb0fd33f3d71a3fd126e43a77273bb7c8304e4623d4960f45664fc4174d46"
   name = "github.com/openshift/console-operator"
   packages = ["pkg/api"]
   pruneopts = "UT"
-  revision = "cb47e810bee8c56f0738f0723c98cf3192ea7736"
+  revision = "14ef97f64c5da4ffd4f34d25454d2813b1b07015"
 
 [[projects]]
-  branch = "release-4.3-azure"
-  digest = "1:d4ce1ba9a20b111f05db15385114677ac28646fe1e92db4647229be457bd3789"
+  branch = "release-4.4-azure"
+  digest = "1:b7ba4c626ab42f0ac5c53d389bd4458e1d9a9b74b99afb5b50bc4e9fad06b1d5"
   name = "github.com/openshift/installer"
   packages = [
     "data",
@@ -1056,8 +1045,11 @@
     "pkg/asset/cluster/gcp",
     "pkg/asset/cluster/libvirt",
     "pkg/asset/cluster/openstack",
+    "pkg/asset/cluster/ovirt",
+    "pkg/asset/cluster/vsphere",
     "pkg/asset/ignition",
     "pkg/asset/ignition/bootstrap",
+    "pkg/asset/ignition/bootstrap/baremetal",
     "pkg/asset/ignition/machine",
     "pkg/asset/installconfig",
     "pkg/asset/installconfig/aws",
@@ -1065,6 +1057,7 @@
     "pkg/asset/installconfig/gcp",
     "pkg/asset/installconfig/libvirt",
     "pkg/asset/installconfig/openstack",
+    "pkg/asset/installconfig/ovirt",
     "pkg/asset/installconfig/vsphere",
     "pkg/asset/kubeconfig",
     "pkg/asset/machines",
@@ -1075,6 +1068,8 @@
     "pkg/asset/machines/libvirt",
     "pkg/asset/machines/machineconfig",
     "pkg/asset/machines/openstack",
+    "pkg/asset/machines/ovirt",
+    "pkg/asset/machines/vsphere",
     "pkg/asset/manifests",
     "pkg/asset/manifests/azure",
     "pkg/asset/manifests/gcp",
@@ -1099,6 +1094,8 @@
     "pkg/tfvars/internal/cache",
     "pkg/tfvars/libvirt",
     "pkg/tfvars/openstack",
+    "pkg/tfvars/ovirt",
+    "pkg/tfvars/vsphere",
     "pkg/types",
     "pkg/types/aws",
     "pkg/types/aws/defaults",
@@ -1122,6 +1119,7 @@
     "pkg/types/openstack",
     "pkg/types/openstack/defaults",
     "pkg/types/openstack/validation",
+    "pkg/types/ovirt",
     "pkg/types/validation",
     "pkg/types/vsphere",
     "pkg/types/vsphere/defaults",
@@ -1130,26 +1128,29 @@
     "pkg/version",
   ]
   pruneopts = "T"
-  revision = "f90508187f1541ca43fca89843f5f26a8ccf34a0"
+  revision = "a0e667861e217d48fe14806a5f0c1d751503d9a6"
   source = "https://github.com/jim-minter/installer"
 
 [[projects]]
-  branch = "master"
-  digest = "1:104cff75e431cc7578b2477bcf0ffacb7b08df5c80dee1799f73dd9f745428ba"
+  branch = "release-4.4"
+  digest = "1:85cac328d8e1e244bc3e4801ad6562eb41b0c28ff18f8e374a10a647bb557489"
   name = "github.com/openshift/machine-api-operator"
   packages = [
     "pkg/apis/machine",
     "pkg/apis/machine/v1beta1",
+    "pkg/apis/vsphereprovider",
+    "pkg/apis/vsphereprovider/v1alpha1",
     "pkg/generated/clientset/versioned",
     "pkg/generated/clientset/versioned/scheme",
     "pkg/generated/clientset/versioned/typed/machine/v1beta1",
   ]
   pruneopts = "UT"
-  revision = "a3345f5a437a8ca82be683c7c38fe49de64c2b5f"
+  revision = "b1554c0714123dec050dd0df07b9a2064f088a87"
+  source = "github.com/openshift/machine-api-operator"
 
 [[projects]]
-  branch = "release-4.3"
-  digest = "1:4e5ae751b5ab70dafe0109f5edd432b142a8256c37ac348d8758eb18059dd07c"
+  branch = "release-4.4"
+  digest = "1:9e7c4a0c38718e50afa2b68af42898ee83d2a8802443b065e0d08f8d3b8ef27e"
   name = "github.com/openshift/machine-config-operator"
   packages = [
     "pkg/apis/machineconfiguration.openshift.io/v1",
@@ -1160,7 +1161,23 @@
     "pkg/generated/clientset/versioned/typed/machineconfiguration.openshift.io/v1/fake",
   ]
   pruneopts = "UT"
-  revision = "25bb6aeb58135c38a667e849edf5244871be4992"
+  revision = "da87dd6d947d66eb810d74622fb7664289148423"
+
+[[projects]]
+  branch = "master"
+  digest = "1:78a8e7c73f3409bc2a9361e12ccfe0dee905f292e514400122299a5079348bea"
+  name = "github.com/ovirt/cluster-api-provider-ovirt"
+  packages = ["pkg/apis/ovirtprovider/v1beta1"]
+  pruneopts = "UT"
+  revision = "dfc5841ab94d2a2b221d1cba1de040e2c552ef3f"
+
+[[projects]]
+  digest = "1:959d0eb7e9b59e575f25582178094976ab3e9a9c46a20e82b9b0800035e8d235"
+  name = "github.com/ovirt/go-ovirt"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "8bc00b120cb3b205906623f621b7008e49ed7732"
+  version = "v4.4.1"
 
 [[projects]]
   digest = "1:c7d8ecc4e8f2843096c784e55a221446cb944b9e728fb42e9272a9ad2996c780"
@@ -1330,6 +1347,30 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "d1553a71de50473073e188aa79cebf7f993f20fe"
+
+[[projects]]
+  branch = "master"
+  digest = "1:0d91f4dc8c9e42f42a50e49f18d58297d0596f5585d84c4b3a39dad42311121f"
+  name = "github.com/vmware/govmomi"
+  packages = [
+    ".",
+    "property",
+    "session",
+    "session/keepalive",
+    "vapi/internal",
+    "vapi/rest",
+    "vim25",
+    "vim25/debug",
+    "vim25/methods",
+    "vim25/mo",
+    "vim25/progress",
+    "vim25/soap",
+    "vim25/types",
+    "vim25/xml",
+  ]
+  pruneopts = "UT"
+  revision = "277d221a5b9910eceaa3a1bd2dff82b9f5436c6a"
+  source = "https://github.com/vmware/govmomi"
 
 [[projects]]
   digest = "1:7b6ca9454e8d16e34b251f181a4ae430a25805acca64ea46b0448583b44fcfe6"
@@ -1665,8 +1706,8 @@
   version = "v2.2.7"
 
 [[projects]]
-  branch = "origin-4.3-kubernetes-1.16.2"
-  digest = "1:551482dd26801d0494f7e1f0e9c744c3fe120d29cb21ad6e10ed40c84a94fb3a"
+  branch = "origin-4.4-kubernetes-1.17.1"
+  digest = "1:cd7322a2669aba7fe506383dc31ece3881fc3e39ccac5334360c50f946a8ade4"
   name = "k8s.io/api"
   packages = [
     "admissionregistration/v1",
@@ -1690,8 +1731,10 @@
     "coordination/v1beta1",
     "core/v1",
     "discovery/v1alpha1",
+    "discovery/v1beta1",
     "events/v1beta1",
     "extensions/v1beta1",
+    "flowcontrol/v1alpha1",
     "networking/v1",
     "networking/v1beta1",
     "node/v1alpha1",
@@ -1709,12 +1752,12 @@
     "storage/v1beta1",
   ]
   pruneopts = "UT"
-  revision = "b2607acfca124f576c98e5e9ad8d22184518b6dd"
+  revision = "7643814f1c97f24ccfb38c2b85a7bb3c7f494346"
   source = "https://github.com/openshift/kubernetes-api"
 
 [[projects]]
-  branch = "origin-4.3-kubernetes-1.16.2"
-  digest = "1:b499c1ca627563b5b9bc952a3aa5e0f298c41f1c092b096f6a4bd8b5aab4c2f7"
+  branch = "origin-4.4-kubernetes-1.17.1"
+  digest = "1:fac15195ebd43a8833c5cabfcfe87a6497fa12cf04df21b3a797bfcb933a4181"
   name = "k8s.io/apimachinery"
   packages = [
     "pkg/api/errors",
@@ -1762,12 +1805,12 @@
     "third_party/forked/golang/reflect",
   ]
   pruneopts = "UT"
-  revision = "46c5f7baf5456058e6999b176e1bdb87668c7c9d"
+  revision = "79c2a76c473a20cdc4ce59cae4b72529b5d9d16b"
   source = "https://github.com/openshift/kubernetes-apimachinery"
 
 [[projects]]
-  branch = "origin-4.3-kubernetes-1.16.2"
-  digest = "1:812e13dc35a042fcdddb85d9392e3746d86878ebe0c5f4e67fdc8700c276757f"
+  branch = "origin-4.4-kubernetes-1.17.1"
+  digest = "1:df0cc86f0f9a6330a62dd0305bbf3837c4438237aa212710483e1e5f47943cb2"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
@@ -1819,10 +1862,14 @@
     "kubernetes/typed/core/v1/fake",
     "kubernetes/typed/discovery/v1alpha1",
     "kubernetes/typed/discovery/v1alpha1/fake",
+    "kubernetes/typed/discovery/v1beta1",
+    "kubernetes/typed/discovery/v1beta1/fake",
     "kubernetes/typed/events/v1beta1",
     "kubernetes/typed/events/v1beta1/fake",
     "kubernetes/typed/extensions/v1beta1",
     "kubernetes/typed/extensions/v1beta1/fake",
+    "kubernetes/typed/flowcontrol/v1alpha1",
+    "kubernetes/typed/flowcontrol/v1alpha1/fake",
     "kubernetes/typed/networking/v1",
     "kubernetes/typed/networking/v1/fake",
     "kubernetes/typed/networking/v1beta1",
@@ -1875,9 +1922,10 @@
     "util/homedir",
     "util/keyutil",
     "util/retry",
+    "util/workqueue",
   ]
   pruneopts = "UT"
-  revision = "1f3b2931966858d724e363b2707cb87da322fd45"
+  revision = "bb38286aebfbd8b39c317114442ed28d37c7617e"
   source = "https://github.com/openshift/kubernetes-client-go"
 
 [[projects]]
@@ -1922,8 +1970,8 @@
   source = "https://github.com/openshift/cluster-api-provider-aws.git"
 
 [[projects]]
-  branch = "release-4.3"
-  digest = "1:5dc07e3d2d2da55fa7ba51682cd52a6d1328cf8b8a87f48f29491798a7a0386d"
+  branch = "release-4.4"
+  digest = "1:9d5a7c70fc21dd15d31576022bb6dddbeccd447722e33a9afc5a71bb8b7688fe"
   name = "sigs.k8s.io/cluster-api-provider-azure"
   packages = [
     "pkg/apis",
@@ -1931,7 +1979,7 @@
     "pkg/apis/azureprovider/v1beta1",
   ]
   pruneopts = "UT"
-  revision = "86ecb23daa83c78761414a7abcb169c73c18a756"
+  revision = "81d7d701e070ce2759126392999ff27f5eeeb3a0"
   source = "https://github.com/openshift/cluster-api-provider-azure"
 
 [[projects]]
@@ -2005,12 +2053,14 @@
     "github.com/go-bindata/go-bindata/go-bindata",
     "github.com/golang/mock/gomock",
     "github.com/golang/mock/mockgen",
+    "github.com/golang/mock/mockgen/model",
     "github.com/google/go-cmp/cmp",
     "github.com/googleapis/gnostic/OpenAPIv2",
     "github.com/gorilla/mux",
     "github.com/jim-minter/go-cosmosdb/cmd/gencosmosdb",
     "github.com/jmespath/go-jmespath",
     "github.com/jstemmer/go-junit-report",
+    "github.com/metal3-io/baremetal-operator/pkg/apis/metal3/v1alpha1",
     "github.com/onsi/ginkgo",
     "github.com/onsi/gomega",
     "github.com/onsi/gomega/format",
@@ -2023,12 +2073,12 @@
     "github.com/openshift/client-go/config/clientset/versioned/scheme",
     "github.com/openshift/client-go/operator/clientset/versioned",
     "github.com/openshift/client-go/operator/clientset/versioned/fake",
+    "github.com/openshift/client-go/samples/clientset/versioned",
     "github.com/openshift/client-go/security/clientset/versioned",
     "github.com/openshift/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1",
     "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1",
     "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset",
     "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset/fake",
-    "github.com/openshift/cluster-samples-operator/pkg/generated/clientset/versioned",
     "github.com/openshift/console-operator/pkg/api",
     "github.com/openshift/installer/data",
     "github.com/openshift/installer/pkg/asset",
@@ -2037,6 +2087,7 @@
     "github.com/openshift/installer/pkg/asset/ignition/machine",
     "github.com/openshift/installer/pkg/asset/installconfig",
     "github.com/openshift/installer/pkg/asset/installconfig/azure",
+    "github.com/openshift/installer/pkg/asset/installconfig/openstack",
     "github.com/openshift/installer/pkg/asset/kubeconfig",
     "github.com/openshift/installer/pkg/asset/machines",
     "github.com/openshift/installer/pkg/asset/manifests",
@@ -2052,7 +2103,6 @@
     "github.com/openshift/installer/pkg/rhcos",
     "github.com/openshift/installer/pkg/types",
     "github.com/openshift/installer/pkg/types/azure",
-    "github.com/openshift/installer/pkg/types/openstack/validation",
     "github.com/openshift/installer/pkg/types/validation",
     "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned",
     "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1",
