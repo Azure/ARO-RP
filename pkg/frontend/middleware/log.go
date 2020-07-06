@@ -73,6 +73,10 @@ func Log(baseLog *logrus.Entry) func(http.Handler) http.Handler {
 
 			w.Header().Set("X-Ms-Request-Id", correlationData.RequestID)
 
+			if strings.EqualFold(r.Header.Get("X-Ms-Return-Client-Request-Id"), "true") {
+				w.Header().Set("X-Ms-Client-Request-Id", correlationData.ClientRequestID)
+			}
+
 			log := baseLog
 			log = utillog.EnrichWithPath(log, r.URL.Path)
 			log = utillog.EnrichWithCorrelationData(log, correlationData)
