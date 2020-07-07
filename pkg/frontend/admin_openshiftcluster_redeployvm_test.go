@@ -33,6 +33,8 @@ import (
 
 func TestAdminRedeployVM(t *testing.T) {
 	mockSubID := "00000000-0000-0000-0000-000000000000"
+	mockTenantID := "00000000-0000-0000-0000-000000000000"
+
 	ctx := context.Background()
 
 	clientkey, clientcerts, err := utiltls.GenerateKeyAndCertificate("client", nil, nil, false, true)
@@ -66,7 +68,7 @@ func TestAdminRedeployVM(t *testing.T) {
 		name           string
 		resourceID     string
 		vmName         string
-		mocks          func(*test, *mock_database.MockOpenShiftClusters, *mockcompute.MockVirtualMachinesClient)
+		mocks          func(*test, *mock_database.MockOpenShiftClusters, *mock_database.MockSubscriptions, *mockcompute.MockVirtualMachinesClient)
 		wantStatusCode int
 		wantResponse   func() []byte
 		wantError      string
@@ -77,7 +79,7 @@ func TestAdminRedeployVM(t *testing.T) {
 			name:       "basic coverage",
 			vmName:     "aro-worker-australiasoutheast-7tcq7",
 			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, vmc *mockcompute.MockVirtualMachinesClient) {
+			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, subscriptions *mock_database.MockSubscriptions, vmc *mockcompute.MockVirtualMachinesClient) {
 				clusterDoc := &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
 						Properties: api.OpenShiftClusterProperties{
@@ -87,13 +89,35 @@ func TestAdminRedeployVM(t *testing.T) {
 						},
 					},
 				}
+				subscriptionDoc := &api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: mockTenantID,
+						},
+					},
+				}
 
 				openshiftClusters.EXPECT().Get(gomock.Any(), strings.ToLower(tt.resourceID)).
 					Return(clusterDoc, nil)
 
+				subscriptions.EXPECT().Get(gomock.Any(), strings.ToLower(mockSubID)).
+					Return(subscriptionDoc, nil)
+
 				vmc.EXPECT().RedeployAndWait(gomock.Any(), "test-cluster", tt.vmName).Return(nil)
 			},
 			wantStatusCode: http.StatusOK,
+		},
+		{
+			name:       "Subscription doesn't exist",
+			vmName:     "aro-worker-australiasoutheast-7tcq7",
+			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
+			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, subscriptions *mock_database.MockSubscriptions, vmc *mockcompute.MockVirtualMachinesClient) {
+				subscriptions.EXPECT().Get(gomock.Any(), mockSubID).
+					Return(nil, nil)
+			},
+			wantStatusCode: http.StatusNotFound,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -114,10 +138,12 @@ func TestAdminRedeployVM(t *testing.T) {
 
 			vmClient := mockcompute.NewMockVirtualMachinesClient(controller)
 			openshiftClusters := mock_database.NewMockOpenShiftClusters(controller)
-			tt.mocks(tt, openshiftClusters, vmClient)
+			subscriptions := mock_database.NewMockSubscriptions(controller)
+			tt.mocks(tt, openshiftClusters, subscriptions, vmClient)
 
 			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
 				OpenShiftClusters: openshiftClusters,
+				Subscriptions:     subscriptions,
 			}, api.APIs, &noop.Noop{}, nil, nil, nil, func(subscriptionID string, authorizer autorest.Authorizer) compute.VirtualMachinesClient {
 				return vmClient
 			})

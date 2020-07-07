@@ -32,8 +32,17 @@ func (f *frontend) postAdminOpenShiftClusterRedeployVM(w http.ResponseWriter, r 
 func (f *frontend) _postAdminOpenShiftClusterRedeployVM(ctx context.Context, r *http.Request) error {
 	vars := mux.Vars(r)
 
+	subscriptionDoc, err := f.db.Subscriptions.Get(ctx, vars["subscriptionId"])
+	if err != nil {
+		return err
+	}
+
+	if subscriptionDoc == nil {
+		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeSubscriptionNotFound, "", "The subscription '%s' was not found.", vars["subscriptionId"])
+	}
+
 	vmName := r.URL.Query().Get("vmName")
-	err := validateAdminVMName(vmName)
+	err = validateAdminVMName(vmName)
 	if err != nil {
 		return err
 	}
@@ -53,7 +62,7 @@ func (f *frontend) _postAdminOpenShiftClusterRedeployVM(ctx context.Context, r *
 		return err
 	}
 
-	fpAuthorizer, err := f.env.FPAuthorizer(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
+	fpAuthorizer, err := f.env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return err
 	}

@@ -77,6 +77,7 @@ var (
 	CloudErrorCodeRequestNotAllowed                  = "RequestNotAllowed"
 	CloudErrorCodeResourceGroupNotFound              = "ResourceGroupNotFound"
 	CloudErrorCodeResourceNotFound                   = "ResourceNotFound"
+	CloudErrorCodeSubscriptionNotFound               = "SubscriptionNotFound"
 	CloudErrorCodeUnsupportedMediaType               = "UnsupportedMediaType"
 	CloudErrorCodeInvalidLinkedVNet                  = "InvalidLinkedVNet"
 	CloudErrorCodeInvalidLinkedRouteTable            = "InvalidLinkedRouteTable"

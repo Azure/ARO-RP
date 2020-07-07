@@ -45,8 +45,17 @@ func (f *frontend) listAdminOpenShiftClusterResources(w http.ResponseWriter, r *
 
 func (f *frontend) _listAdminOpenShiftClusterResources(ctx context.Context, r *http.Request) ([]byte, error) {
 	vars := mux.Vars(r)
-	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 
+	subscriptionDoc, err := f.db.Subscriptions.Get(ctx, vars["subscriptionId"])
+	if err != nil {
+		return nil, err
+	}
+
+	if subscriptionDoc == nil {
+		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeSubscriptionNotFound, "", "The subscription '%s' was not found.", vars["subscriptionId"])
+	}
+
+	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 	doc, err := f.db.OpenShiftClusters.Get(ctx, resourceID)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
@@ -60,7 +69,7 @@ func (f *frontend) _listAdminOpenShiftClusterResources(ctx context.Context, r *h
 		return nil, err
 	}
 
-	fpAuthorizer, err := f.env.FPAuthorizer(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
+	fpAuthorizer, err := f.env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}

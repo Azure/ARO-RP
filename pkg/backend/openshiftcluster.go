@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
 
@@ -76,7 +77,21 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 	stop := ocb.heartbeat(ctx, cancel, log, doc)
 	defer stop()
 
-	m, err := openshiftcluster.NewManager(log, ocb.env, ocb.db.OpenShiftClusters, ocb.billing, doc)
+	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
+	if err != nil {
+		return err
+	}
+
+	subscriptionDoc, err := ocb.db.Subscriptions.Get(ctx, r.SubscriptionID)
+	if err != nil {
+		return err
+	}
+
+	if subscriptionDoc == nil {
+		return fmt.Errorf("Subscription document for '%s' not found", r.SubscriptionID)
+	}
+
+	m, err := openshiftcluster.NewManager(log, ocb.env, ocb.db.OpenShiftClusters, ocb.billing, doc, subscriptionDoc)
 	if err != nil {
 		return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err)
 	}
