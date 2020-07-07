@@ -8,6 +8,7 @@ gomock_reflect_*
 /*.kubeconfig
 /*.pem
 /aro
+/e2e.test
 /env*
 !/env.example
 /id_rsa

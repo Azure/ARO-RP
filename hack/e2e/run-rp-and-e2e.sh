@@ -134,7 +134,7 @@ run_e2e() {
     az aro list-credentials -g "$ARO_RESOURCEGROUP" -n "$CLUSTER" >/dev/null
     echo "########## Run E2E ##########"
     go run ./hack/kubeadminkubeconfig "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$ARO_RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER" >$KUBECONFIG
-    RESOURCEGROUP=$ARO_RESOURCEGROUP make e2e
+    RESOURCEGROUP=$ARO_RESOURCEGROUP make test-e2e
 
     # set to original state
     if [[ -n "$ORIGINAL_SET_OPT" ]]; then set -x; else set +x; fi
