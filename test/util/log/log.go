@@ -4,10 +4,10 @@ package log
 // Licensed under the Apache License 2.0.
 
 import (
-	"errors"
 	"fmt"
 	"regexp"
 
+	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	logrus_test "github.com/sirupsen/logrus/hooks/test"
 )
@@ -25,37 +25,37 @@ type ExpectedLogEntry struct {
 	Level logrus.Level
 }
 
-// AssertMatches compares the expected entry with an actual Entry. An error is
+// assertMatches compares the expected entry with an actual Entry. An error is
 // returned if they do not match.
-func (ex ExpectedLogEntry) AssertMatches(e logrus.Entry) error {
+func (ex ExpectedLogEntry) assertMatches(e logrus.Entry) string {
 	if ex.Message != "" && ex.MessageRegex != "" {
-		return errors.New("ExpectedLogEntry has both Message and MessageRegex set!")
+		return "ExpectedLogEntry has both Message and MessageRegex set!"
 	}
 
 	if e.Level != ex.Level {
-		return fmt.Errorf("level: found %s, expected %s", e.Level, ex.Level)
+		return fmt.Sprintf("level: found %s, expected %s", e.Level, ex.Level)
 	}
 
 	if ex.Message != "" {
 		if e.Message != ex.Message {
-			return fmt.Errorf("message: found `%s`, expected `%s`", e.Message, ex.Message)
+			return fmt.Sprintf("message: found `%s`, expected `%s`", e.Message, ex.Message)
 		}
 
-		return nil
+		return ""
 
 	} else if ex.MessageRegex != "" {
-		matched, err := regexp.MatchString(ex.Message, e.Message)
+		matched, err := regexp.MatchString(ex.MessageRegex, e.Message)
 		if err != nil {
-			return err
+			return err.Error()
 		}
 		if matched != true {
-			return fmt.Errorf("message: found `%s`, expected to match `%s`", e.Message, ex.MessageRegex)
+			return fmt.Sprintf("message: found `%s`, expected to match `%s`", e.Message, ex.MessageRegex)
 		}
 
-		return nil
+		return ""
 
 	} else {
-		return errors.New("ExpectedLogEntry has neither Message or MessageRegex set!")
+		return fmt.Sprintf("ExpectedLogEntry has neither Message or MessageRegex set!")
 	}
 
 }
@@ -73,17 +73,17 @@ func NewCapturingLogger() (*logrus_test.Hook, *logrus.Entry) {
 // no assertions failed.
 func AssertLoggingOutput(h *logrus_test.Hook, expected []ExpectedLogEntry) []error {
 	// We might need up to h.Entries errors, so just allocate as a block
-	errors := make([]error, 0, len(h.Entries))
+	errs := make([]error, 0, len(h.Entries))
 
 	if len(h.Entries) != len(expected) {
-		errors = append(errors, fmt.Errorf("Got %d logs, expected %d", len(h.Entries), len(expected)))
+		errs = append(errs, fmt.Errorf("Got %d logs, expected %d", len(h.Entries), len(expected)))
 	} else {
 		for i, e := range h.Entries {
-			err := expected[i].AssertMatches(e)
-			if err != nil {
-				errors = append(errors, err)
+			errText := expected[i].assertMatches(e)
+			if errText != "" {
+				errs = append(errs, errors.Errorf("log #%d - %s", i, errText))
 			}
 		}
 	}
-	return errors
+	return errs
 }
