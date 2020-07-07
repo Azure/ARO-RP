@@ -16,11 +16,11 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
-	"github.com/sirupsen/logrus/hooks/test"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	test_log "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestAdminReply(t *testing.T) {
@@ -31,7 +31,7 @@ func TestAdminReply(t *testing.T) {
 		err            error
 		wantStatusCode int
 		wantBody       interface{}
-		wantEntries    []logrus.Entry
+		wantEntries    []test_log.ExpectedLogEntry
 	}{
 		{
 			name: "kubernetes error",
@@ -55,7 +55,7 @@ func TestAdminReply(t *testing.T) {
 					"target":  "routes.route.openshift.io/doesntexist",
 				},
 			},
-			wantEntries: []logrus.Entry{
+			wantEntries: []test_log.ExpectedLogEntry{
 				{
 					Level:   logrus.InfoLevel,
 					Message: `404: NotFound: routes.route.openshift.io/doesntexist: routes.route.openshift.io "doesntexist" not found`,
@@ -80,7 +80,7 @@ func TestAdminReply(t *testing.T) {
 					"target":  "thing",
 				},
 			},
-			wantEntries: []logrus.Entry{
+			wantEntries: []test_log.ExpectedLogEntry{
 				{
 					Level:   logrus.InfoLevel,
 					Message: `400: RequestNotAllowed: thing: You can't do that.`,
@@ -102,7 +102,7 @@ func TestAdminReply(t *testing.T) {
 					"message": "Internal server error.",
 				},
 			},
-			wantEntries: []logrus.Entry{
+			wantEntries: []test_log.ExpectedLogEntry{
 				{
 					Level:   logrus.ErrorLevel,
 					Message: `random error`,
@@ -124,9 +124,7 @@ func TestAdminReply(t *testing.T) {
 				tt.header = http.Header{}
 			}
 
-			logger, h := test.NewNullLogger()
-			log := logrus.NewEntry(logger)
-
+			h, log := test_log.NewCapturingLogger()
 			w := &httptest.ResponseRecorder{
 				Body: &bytes.Buffer{},
 			}
@@ -160,17 +158,8 @@ func TestAdminReply(t *testing.T) {
 				}
 			}
 
-			if len(h.Entries) != len(tt.wantEntries) {
-				t.Error(h.Entries)
-			} else {
-				for i, e := range h.Entries {
-					if e.Level != tt.wantEntries[i].Level {
-						t.Error(e.Level)
-					}
-					if e.Message != tt.wantEntries[i].Message {
-						t.Error(e.Message)
-					}
-				}
+			for _, e := range test_log.AssertLoggingOutput(h, tt.wantEntries) {
+				t.Error(e)
 			}
 		})
 	}
