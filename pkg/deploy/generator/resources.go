@@ -697,7 +697,10 @@ rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
 rpm --import https://packages.microsoft.com/keys/microsoft.asc
 rpm --import https://packages.fluentbit.io/fluentbit.key
 
-yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+for attempt in {1..5}; do
+  yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm && break
+  if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
+done
 
 cat >/etc/yum.repos.d/azure.repo <<'EOF'
 [azure-cli]
@@ -721,7 +724,11 @@ enabled=yes
 gpgcheck=yes
 EOF
 
-yum -y install azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security docker td-agent-bit
+for attempt in {1..5}; do
+yum -y install azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security docker td-agent-bit && break
+  if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
+done
+
 
 firewall-cmd --add-port=443/tcp --permanent
 
