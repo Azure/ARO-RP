@@ -41,7 +41,7 @@ var _ = Describe("[Admin API] List Azure resources action", func() {
 
 		By("getting the Azure resource IDs via admin actions API")
 		var actualResources []mgmtfeatures.GenericResourceExpanded
-		resp, err := adminRequest(ctx, http.MethodGet, resourceID+"/resources", nil, nil, &actualResources)
+		resp, err := adminRequest(ctx, http.MethodGet, "/admin"+resourceID+"/resources", nil, nil, &actualResources)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
