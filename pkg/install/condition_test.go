@@ -67,76 +67,6 @@ func TestBootstrapConfigMapReady(t *testing.T) {
 	}
 }
 
-func TestAPIServersReady(t *testing.T) {
-	for _, tt := range []struct {
-		name                 string
-		serverName           string
-		availableCondition   configv1.ConditionStatus
-		progressingCondition configv1.ConditionStatus
-		want                 bool
-	}{
-		{
-			name: "Can't get Kubernetes API server object",
-		},
-		{
-			name:                 "Available && Progressing; API servers not ready",
-			serverName:           "kube-apiserver",
-			availableCondition:   configv1.ConditionTrue,
-			progressingCondition: configv1.ConditionTrue,
-		},
-		{
-			name:                 "Available && !Progressing; API servers ready",
-			serverName:           "kube-apiserver",
-			availableCondition:   configv1.ConditionTrue,
-			progressingCondition: configv1.ConditionFalse,
-			want:                 true,
-		},
-		{
-			name:                 "!Available && Progressing; API servers not ready",
-			serverName:           "kube-apiserver",
-			availableCondition:   configv1.ConditionFalse,
-			progressingCondition: configv1.ConditionTrue,
-		},
-		{
-			name:                 "!Available && !Progressing; API servers not ready",
-			serverName:           "kube-apiserver",
-			availableCondition:   configv1.ConditionFalse,
-			progressingCondition: configv1.ConditionFalse,
-		},
-	} {
-		i := &Installer{
-			configcli: configfake.NewSimpleClientset(&configv1.ClusterOperatorList{
-				Items: []configv1.ClusterOperator{
-					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: tt.serverName,
-						},
-						Status: configv1.ClusterOperatorStatus{
-							Conditions: []configv1.ClusterOperatorStatusCondition{
-								{
-									Type:   configv1.OperatorAvailable,
-									Status: tt.availableCondition,
-								},
-								{
-									Type:   configv1.OperatorProgressing,
-									Status: tt.progressingCondition,
-								},
-							},
-						},
-					},
-				},
-			}),
-		}
-		ready, err := i.apiServersReady()
-		if err != nil {
-			t.Error(errMustBeNilMsg)
-		}
-		if ready != tt.want {
-			t.Error(ready)
-		}
-	}
-}
-
 func TestOperatorConsoleExists(t *testing.T) {
 	for _, tt := range []struct {
 		name        string
@@ -169,51 +99,56 @@ func TestOperatorConsoleExists(t *testing.T) {
 	}
 }
 
-func TestOperatorConsoleReady(t *testing.T) {
+func TestIsOperatorAvailable(t *testing.T) {
 	for _, tt := range []struct {
-		name               string
-		consoleName        string
-		availableCondition operatorv1.ConditionStatus
-		want               bool
+		name                 string
+		availableCondition   configv1.ConditionStatus
+		progressingCondition configv1.ConditionStatus
+		want                 bool
 	}{
 		{
-			name: "Can't get operator console",
+			name:                 "Available && Progressing; not available",
+			availableCondition:   configv1.ConditionTrue,
+			progressingCondition: configv1.ConditionTrue,
 		},
 		{
-			name:               "Operator console not ready yet",
-			consoleName:        consoleapi.ConfigResourceName,
-			availableCondition: operatorv1.ConditionFalse,
+			name:                 "Available && !Progressing; available",
+			availableCondition:   configv1.ConditionTrue,
+			progressingCondition: configv1.ConditionFalse,
+			want:                 true,
 		},
 		{
-			name:               "Operator console ready",
-			consoleName:        consoleapi.ConfigResourceName,
-			availableCondition: operatorv1.ConditionTrue,
-			want:               true,
+			name:                 "!Available && Progressing; not available",
+			availableCondition:   configv1.ConditionFalse,
+			progressingCondition: configv1.ConditionTrue,
+		},
+		{
+			name:                 "!Available && !Progressing; not available",
+			availableCondition:   configv1.ConditionFalse,
+			progressingCondition: configv1.ConditionFalse,
 		},
 	} {
-		i := &Installer{
-			operatorcli: operatorfake.NewSimpleClientset(&operatorv1.Console{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: tt.consoleName,
-				},
-				Status: operatorv1.ConsoleStatus{
-					OperatorStatus: operatorv1.OperatorStatus{
-						Conditions: []operatorv1.OperatorCondition{
-							{
-								Type:   "DeploymentAvailable",
-								Status: tt.availableCondition,
-							},
-						},
+
+		operator := &configv1.ClusterOperator{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "name",
+			},
+			Status: configv1.ClusterOperatorStatus{
+				Conditions: []configv1.ClusterOperatorStatusCondition{
+					{
+						Type:   configv1.OperatorAvailable,
+						Status: tt.availableCondition,
+					},
+					{
+						Type:   configv1.OperatorProgressing,
+						Status: tt.progressingCondition,
 					},
 				},
-			}),
+			},
 		}
-		ready, err := i.operatorConsoleReady()
-		if err != nil {
-			t.Error(errMustBeNilMsg)
-		}
-		if ready != tt.want {
-			t.Error(ready)
+		available := isOperatorAvailable(operator)
+		if available != tt.want {
+			t.Error(available)
 		}
 	}
 }
@@ -256,76 +191,6 @@ func TestClusterVersionReady(t *testing.T) {
 			}),
 		}
 		ready, err := i.clusterVersionReady()
-		if err != nil {
-			t.Error(errMustBeNilMsg)
-		}
-		if ready != tt.want {
-			t.Error(ready)
-		}
-	}
-}
-
-func TestIngressControllerReady(t *testing.T) {
-	for _, tt := range []struct {
-		name                string
-		controllerName      string
-		controllerNamespace string
-		observedGeneration  int64
-		availableCondition  operatorv1.ConditionStatus
-		want                bool
-	}{
-		{
-			name: "Can't get ingress controllers for openshift-ingress-operator namespace",
-		},
-
-		{
-			name:                "Can't get default ingress controller",
-			controllerNamespace: "openshift-ingress-operator",
-		},
-		{
-			name:                "generation != observedGeneration",
-			controllerName:      "default",
-			controllerNamespace: "openshift-ingress-operator",
-		},
-		{
-			name:                "Ingress controller not ready",
-			controllerName:      "default",
-			controllerNamespace: "openshift-ingress-operator",
-			observedGeneration:  1,
-			availableCondition:  operatorv1.ConditionFalse,
-		},
-		{
-			name:                "Ingress controller ready",
-			controllerName:      "default",
-			controllerNamespace: "openshift-ingress-operator",
-			observedGeneration:  1,
-			availableCondition:  operatorv1.ConditionTrue,
-			want:                true,
-		},
-	} {
-		i := &Installer{
-			operatorcli: operatorfake.NewSimpleClientset(&operatorv1.IngressControllerList{
-				Items: []operatorv1.IngressController{
-					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:       tt.controllerName,
-							Namespace:  tt.controllerNamespace,
-							Generation: 1,
-						},
-						Status: operatorv1.IngressControllerStatus{
-							ObservedGeneration: tt.observedGeneration,
-							Conditions: []operatorv1.OperatorCondition{
-								{
-									Type:   operatorv1.OperatorStatusTypeAvailable,
-									Status: tt.availableCondition,
-								},
-							},
-						},
-					},
-				},
-			}),
-		}
-		ready, err := i.ingressControllerReady()
 		if err != nil {
 			t.Error(errMustBeNilMsg)
 		}

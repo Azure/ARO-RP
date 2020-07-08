@@ -5,10 +5,12 @@ package install
 
 import (
 	configv1 "github.com/openshift/api/config/v1"
-	operatorv1 "github.com/openshift/api/operator/v1"
 	consoleapi "github.com/openshift/console-operator/pkg/api"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+// condition functions should return an error only if it's not retryable
+// if a condition function encounters a retryable error it should return false, nil.
 
 func (i *Installer) bootstrapConfigMapReady() (bool, error) {
 	cm, err := i.kubernetescli.CoreV1().ConfigMaps("kube-system").Get("bootstrap", metav1.GetOptions{})
@@ -17,16 +19,10 @@ func (i *Installer) bootstrapConfigMapReady() (bool, error) {
 
 func (i *Installer) apiServersReady() (bool, error) {
 	apiserver, err := i.configcli.ConfigV1().ClusterOperators().Get("kube-apiserver", metav1.GetOptions{})
-	if err == nil {
-		m := make(map[configv1.ClusterStatusConditionType]configv1.ConditionStatus, len(apiserver.Status.Conditions))
-		for _, cond := range apiserver.Status.Conditions {
-			m[cond.Type] = cond.Status
-		}
-		if m[configv1.OperatorAvailable] == configv1.ConditionTrue && m[configv1.OperatorProgressing] == configv1.ConditionFalse {
-			return true, nil
-		}
+	if err != nil {
+		return false, nil
 	}
-	return false, nil
+	return isOperatorAvailable(apiserver), nil
 }
 
 func (i *Installer) operatorConsoleExists() (bool, error) {
@@ -35,16 +31,11 @@ func (i *Installer) operatorConsoleExists() (bool, error) {
 }
 
 func (i *Installer) operatorConsoleReady() (bool, error) {
-	operatorConfig, err := i.operatorcli.OperatorV1().Consoles().Get(consoleapi.ConfigResourceName, metav1.GetOptions{})
-	if err == nil && operatorConfig.Status.ObservedGeneration == operatorConfig.Generation {
-		for _, cond := range operatorConfig.Status.Conditions {
-			if cond.Type == "Deployment"+operatorv1.OperatorStatusTypeAvailable &&
-				cond.Status == operatorv1.ConditionTrue {
-				return true, nil
-			}
-		}
+	consoleOperator, err := i.configcli.ConfigV1().ClusterOperators().Get("console", metav1.GetOptions{})
+	if err != nil {
+		return false, nil
 	}
-	return false, nil
+	return isOperatorAvailable(consoleOperator), nil
 }
 
 func (i *Installer) clusterVersionReady() (bool, error) {
@@ -60,13 +51,17 @@ func (i *Installer) clusterVersionReady() (bool, error) {
 }
 
 func (i *Installer) ingressControllerReady() (bool, error) {
-	ic, err := i.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Get("default", metav1.GetOptions{})
-	if err == nil && ic.Status.ObservedGeneration == ic.Generation {
-		for _, cond := range ic.Status.Conditions {
-			if cond.Type == operatorv1.OperatorStatusTypeAvailable && cond.Status == operatorv1.ConditionTrue {
-				return true, nil
-			}
-		}
+	ingressOperator, err := i.configcli.ConfigV1().ClusterOperators().Get("ingress", metav1.GetOptions{})
+	if err != nil {
+		return false, nil
 	}
-	return false, nil
+	return isOperatorAvailable(ingressOperator), nil
+}
+
+func isOperatorAvailable(operator *configv1.ClusterOperator) bool {
+	m := make(map[configv1.ClusterStatusConditionType]configv1.ConditionStatus, len(operator.Status.Conditions))
+	for _, cond := range operator.Status.Conditions {
+		m[cond.Type] = cond.Status
+	}
+	return m[configv1.OperatorAvailable] == configv1.ConditionTrue && m[configv1.OperatorProgressing] == configv1.ConditionFalse
 }
