@@ -31,7 +31,6 @@ func (ex ExpectedLogEntry) assertMatches(e logrus.Entry) error {
 	if ex.Message != "" && ex.MessageRegex != "" {
 		return errors.New("ExpectedLogEntry has both Message and MessageRegex set!")
 	}
-
 	if e.Level != ex.Level {
 		return fmt.Errorf("level: found %s, expected %s", e.Level, ex.Level)
 	}
@@ -40,7 +39,6 @@ func (ex ExpectedLogEntry) assertMatches(e logrus.Entry) error {
 		if e.Message != ex.Message {
 			return fmt.Errorf("message: found `%s`, expected `%s`", e.Message, ex.Message)
 		}
-
 		return nil
 
 	} else if ex.MessageRegex != "" {
@@ -51,8 +49,8 @@ func (ex ExpectedLogEntry) assertMatches(e logrus.Entry) error {
 		if matched != true {
 			return fmt.Errorf("message: found `%s`, expected to match `%s`", e.Message, ex.MessageRegex)
 		}
-
 		return nil
+
 	} else {
 		return fmt.Errorf("ExpectedLogEntry has neither Message or MessageRegex set!")
 	}
