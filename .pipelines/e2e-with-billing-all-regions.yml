@@ -29,6 +29,7 @@ stages:
     - brazilsouth
     - japaneast
     - japanwest
+    - koreacentral
     - southeastasia
     - switzerlandnorth
 - stage: PhaseTwo

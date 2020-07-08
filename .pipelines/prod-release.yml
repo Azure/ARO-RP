@@ -21,6 +21,7 @@ stages:
       - australiaeast
       - japaneast
       - japanwest
+      - koreacentral
       configFileName: prod-config.yaml
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
       vsoProjectID: $(vso-project-id)
