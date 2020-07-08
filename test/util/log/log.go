@@ -27,37 +27,35 @@ type ExpectedLogEntry struct {
 
 // assertMatches compares the expected entry with an actual Entry. An error is
 // returned if they do not match.
-func (ex ExpectedLogEntry) assertMatches(e logrus.Entry) string {
+func (ex ExpectedLogEntry) assertMatches(e logrus.Entry) error {
 	if ex.Message != "" && ex.MessageRegex != "" {
-		return "ExpectedLogEntry has both Message and MessageRegex set!"
+		return errors.New("ExpectedLogEntry has both Message and MessageRegex set!")
 	}
 
 	if e.Level != ex.Level {
-		return fmt.Sprintf("level: found %s, expected %s", e.Level, ex.Level)
+		return fmt.Errorf("level: found %s, expected %s", e.Level, ex.Level)
 	}
 
 	if ex.Message != "" {
 		if e.Message != ex.Message {
-			return fmt.Sprintf("message: found `%s`, expected `%s`", e.Message, ex.Message)
+			return fmt.Errorf("message: found `%s`, expected `%s`", e.Message, ex.Message)
 		}
 
-		return ""
+		return nil
 
 	} else if ex.MessageRegex != "" {
 		matched, err := regexp.MatchString(ex.MessageRegex, e.Message)
 		if err != nil {
-			return err.Error()
+			return err
 		}
 		if matched != true {
-			return fmt.Sprintf("message: found `%s`, expected to match `%s`", e.Message, ex.MessageRegex)
+			return fmt.Errorf("message: found `%s`, expected to match `%s`", e.Message, ex.MessageRegex)
 		}
 
-		return ""
-
+		return nil
 	} else {
-		return fmt.Sprintf("ExpectedLogEntry has neither Message or MessageRegex set!")
+		return fmt.Errorf("ExpectedLogEntry has neither Message or MessageRegex set!")
 	}
-
 }
 
 // NewCapturingLogger creates a logging hook and entry suitable for passing to
@@ -79,9 +77,9 @@ func AssertLoggingOutput(h *logrus_test.Hook, expected []ExpectedLogEntry) []err
 		errs = append(errs, fmt.Errorf("Got %d logs, expected %d", len(h.Entries), len(expected)))
 	} else {
 		for i, e := range h.Entries {
-			errText := expected[i].assertMatches(e)
-			if errText != "" {
-				errs = append(errs, errors.Errorf("log #%d - %s", i, errText))
+			matchErr := expected[i].assertMatches(e)
+			if matchErr != nil {
+				errs = append(errs, errors.Errorf("log #%d - %s", i, matchErr.Error()))
 			}
 		}
 	}
