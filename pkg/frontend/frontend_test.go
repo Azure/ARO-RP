@@ -20,7 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	test_log "github.com/Azure/ARO-RP/test/util/log"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestAdminReply(t *testing.T) {
@@ -31,7 +31,7 @@ func TestAdminReply(t *testing.T) {
 		err            error
 		wantStatusCode int
 		wantBody       interface{}
-		wantEntries    []test_log.ExpectedLogEntry
+		wantEntries    []testlog.ExpectedLogEntry
 	}{
 		{
 			name: "kubernetes error",
@@ -55,7 +55,7 @@ func TestAdminReply(t *testing.T) {
 					"target":  "routes.route.openshift.io/doesntexist",
 				},
 			},
-			wantEntries: []test_log.ExpectedLogEntry{
+			wantEntries: []testlog.ExpectedLogEntry{
 				{
 					Level:   logrus.InfoLevel,
 					Message: `404: NotFound: routes.route.openshift.io/doesntexist: routes.route.openshift.io "doesntexist" not found`,
@@ -80,7 +80,7 @@ func TestAdminReply(t *testing.T) {
 					"target":  "thing",
 				},
 			},
-			wantEntries: []test_log.ExpectedLogEntry{
+			wantEntries: []testlog.ExpectedLogEntry{
 				{
 					Level:   logrus.InfoLevel,
 					Message: `400: RequestNotAllowed: thing: You can't do that.`,
@@ -102,7 +102,7 @@ func TestAdminReply(t *testing.T) {
 					"message": "Internal server error.",
 				},
 			},
-			wantEntries: []test_log.ExpectedLogEntry{
+			wantEntries: []testlog.ExpectedLogEntry{
 				{
 					Level:   logrus.ErrorLevel,
 					Message: `random error`,
@@ -124,7 +124,7 @@ func TestAdminReply(t *testing.T) {
 				tt.header = http.Header{}
 			}
 
-			h, log := test_log.NewCapturingLogger()
+			h, log := testlog.NewCapturingLogger()
 			w := &httptest.ResponseRecorder{
 				Body: &bytes.Buffer{},
 			}
@@ -158,7 +158,7 @@ func TestAdminReply(t *testing.T) {
 				}
 			}
 
-			for _, e := range test_log.AssertLoggingOutput(h, tt.wantEntries) {
+			for _, e := range testlog.AssertLoggingOutput(h, tt.wantEntries) {
 				t.Error(e)
 			}
 		})

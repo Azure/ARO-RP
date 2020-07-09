@@ -8,19 +8,19 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	test_log "github.com/Azure/ARO-RP/test/util/log"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestPanic(t *testing.T) {
 
-	h, log := test_log.NewCapturingLogger()
+	h, log := testlog.NewCapturingLogger()
 
 	func() {
 		defer Panic(log)
 		panic("random error")
 	}()
 
-	expected := []test_log.ExpectedLogEntry{
+	expected := []testlog.ExpectedLogEntry{
 		{
 			Message: "random error",
 			Level:   logrus.ErrorLevel,
@@ -31,7 +31,7 @@ func TestPanic(t *testing.T) {
 		},
 	}
 
-	for _, e := range test_log.AssertLoggingOutput(h, expected) {
+	for _, e := range testlog.AssertLoggingOutput(h, expected) {
 		t.Error(e)
 	}
 }
