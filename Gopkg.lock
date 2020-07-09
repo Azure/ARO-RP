@@ -971,7 +971,7 @@
 
 [[projects]]
   branch = "release-4.4"
-  digest = "1:dfa5f5b132f57a26ba1007bcc5dc1ec1230a043507d2c2ec7d1d9c05edf58151"
+  digest = "1:9cc805fe0db9d72f23f54e0d3f3af55908d9b8a99b020714379e2c89ca0b07b2"
   name = "github.com/openshift/client-go"
   packages = [
     "config/clientset/versioned",
@@ -990,8 +990,10 @@
     "samples/clientset/versioned/scheme",
     "samples/clientset/versioned/typed/samples/v1",
     "security/clientset/versioned",
+    "security/clientset/versioned/fake",
     "security/clientset/versioned/scheme",
     "security/clientset/versioned/typed/security/v1",
+    "security/clientset/versioned/typed/security/v1/fake",
   ]
   pruneopts = "UT"
   revision = "92a2713fa240ea8a375a982d60b43ef5119f85ba"
@@ -2282,6 +2284,7 @@
     "github.com/openshift/client-go/operator/clientset/versioned/fake",
     "github.com/openshift/client-go/samples/clientset/versioned",
     "github.com/openshift/client-go/security/clientset/versioned",
+    "github.com/openshift/client-go/security/clientset/versioned/fake",
     "github.com/openshift/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1",
     "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1",
     "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset",
