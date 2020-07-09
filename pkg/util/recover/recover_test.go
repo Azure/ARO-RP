@@ -26,7 +26,7 @@ func TestPanic(t *testing.T) {
 			Level:   logrus.ErrorLevel,
 		},
 		{
-			MessageRegex: `runtime\/debug\.Stack`,
+			MessageRegex: `runtime/debug\.Stack`,
 			Level:        logrus.InfoLevel,
 		},
 	}
