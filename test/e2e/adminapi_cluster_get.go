@@ -5,12 +5,9 @@ package e2e
 
 import (
 	"context"
-	"net/http"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"github.com/Azure/ARO-RP/pkg/api/admin"
 )
 
 var _ = Describe("[Admin API] Get cluster action", func() {
@@ -21,10 +18,7 @@ var _ = Describe("[Admin API] Get cluster action", func() {
 		resourceID := resourceIDFromEnv()
 
 		By("requesting the cluster document via RP admin API")
-		var oc admin.OpenShiftCluster
-		resp, err := adminRequest(ctx, http.MethodGet, resourceID, nil, nil, &oc)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(resp.StatusCode).To(Equal(http.StatusOK))
+		oc := getCluster(ctx, resourceID)
 
 		By("checking that we received the expected cluster")
 		Expect(oc.ID).To(Equal(resourceID))
