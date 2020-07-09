@@ -5,83 +5,39 @@ package ifreload
 
 import (
 	"context"
-	"fmt"
-	"time"
+	"testing"
 
 	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/golang/mock/gomock"
 	securityv1 "github.com/openshift/api/security/v1"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/ensure"
+	mock_ensure "github.com/Azure/ARO-RP/pkg/util/mocks/ensure"
 )
 
-const (
-	kubeNamespace       = "openshift-azure-ifreload"
-	kubeServiceAccount  = "system:serviceaccount:" + kubeNamespace + ":default"
-	ifreloadImageFormat = "%s.azurecr.io/ifreload:109810fe"
-)
+func TestIfReloadCreateOrUpdate(t *testing.T) {
+	ctx := context.Background()
 
-type IfReload interface {
-	CreateOrUpdate(ctx context.Context) error
-}
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+	m := mock_ensure.NewMockInterface(controller)
 
-type ifReload struct {
-	log     *logrus.Entry
-	env     env.Interface
-	ensurer ensure.Interface
-}
-
-func New(log *logrus.Entry, e env.Interface, ensurer ensure.Interface) IfReload {
-	return &ifReload{
-		log: log,
-		env: e,
-
-		ensurer: ensurer,
+	ifreload := &ifReload{
+		env:     &env.Test{},
+		log:     logrus.NewEntry(logrus.StandardLogger()),
+		ensurer: m,
 	}
-}
-
-func (i *ifReload) ifreloadImage() string {
-	return fmt.Sprintf(ifreloadImageFormat, i.env.ACRName())
-}
-
-func (i *ifReload) CreateOrUpdate(ctx context.Context) error {
-	err := i.ensurer.Namespace(kubeNamespace)
-	if err != nil {
-		return err
+	scc := &securityv1.SecurityContextConstraints{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "privileged",
+		},
 	}
-
-	i.log.Print("waiting for privileged security context constraint")
-	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
-	defer cancel()
-	var scc *securityv1.SecurityContextConstraints
-	err = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-		var errx error
-		scc, errx = i.ensurer.SccGet()
-		return errx == nil, nil
-	}, timeoutCtx.Done())
-
-	if err != nil {
-		return err
-	}
-
-	scc.ObjectMeta = metav1.ObjectMeta{
-		Name: "privileged-ifreload",
-	}
-	scc.Groups = nil
-	scc.Users = []string{kubeServiceAccount}
-
-	err = i.ensurer.SccCreate(scc)
-	if err != nil {
-		return err
-	}
-
-	return i.ensurer.DaemonSet(&appsv1.DaemonSet{
+	ds := &appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "ifreload",
 			Namespace: kubeNamespace,
@@ -98,7 +54,7 @@ func (i *ifReload) CreateOrUpdate(ctx context.Context) error {
 					Containers: []v1.Container{
 						{
 							Name:  "ifreload",
-							Image: i.ifreloadImage(),
+							Image: ifreload.ifreloadImage(),
 							Resources: v1.ResourceRequirements{
 								Limits: v1.ResourceList{
 									v1.ResourceCPU:    resource.MustParse("100m"),
@@ -128,5 +84,15 @@ func (i *ifReload) CreateOrUpdate(ctx context.Context) error {
 				},
 			},
 		},
-	})
+	}
+	m.EXPECT().Namespace("openshift-azure-ifreload").Return(nil)
+	m.EXPECT().SccGet().Return(scc, nil)
+	m.EXPECT().SccCreate(scc).Return(nil)
+	m.EXPECT().DaemonSet(ds).Return(nil)
+
+	err := ifreload.CreateOrUpdate(ctx)
+
+	if err != nil {
+		t.Fatal(err)
+	}
 }

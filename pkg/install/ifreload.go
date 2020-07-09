@@ -10,6 +10,6 @@ import (
 )
 
 func (i *Installer) ensureIfReload(ctx context.Context) error {
-	ir := ifreload.New(i.log, i.env, i.kubernetescli, i.securitycli)
+	ir := ifreload.New(i.log, i.env, i.ensurer)
 	return ir.CreateOrUpdate(ctx)
 }

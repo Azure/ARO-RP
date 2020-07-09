@@ -48,6 +48,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
+	"github.com/Azure/ARO-RP/pkg/util/ensure"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/privateendpoint"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
@@ -90,6 +91,7 @@ type Installer struct {
 	samplescli    samplesclient.Interface
 	securitycli   securityclient.Interface
 	arocli        aroclient.AroV1alpha1Interface
+	ensurer       ensure.Interface
 }
 
 const (
@@ -459,6 +461,7 @@ func (i *Installer) initializeKubernetesClients(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	i.ensurer = ensure.New(i.kubernetescli, i.securitycli)
 
 	i.configcli, err = configclient.NewForConfig(restConfig)
 	return err
