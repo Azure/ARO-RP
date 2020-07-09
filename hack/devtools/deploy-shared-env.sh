@@ -48,9 +48,12 @@ deploy_env_dev() {
             "proxyDomainNameLabel=$(cut -d. -f2 <<<$PROXY_HOSTNAME)" \
             "proxyImage=arointsvc.azurecr.io/proxy:latest" \
             "proxyImageAuth=$(jq -r '.auths["arointsvc.azurecr.io"].auth' <<<$PULL_SECRET)" \
+            "borderDomainNameLabel=$(cut -d. -f2 <<<$BORDER_HOSTNAME)" \
             "proxyKey=$(base64 -w0 <secrets/proxy.key)" \
             "sshPublicKey=$(<secrets/proxy_id_rsa.pub)" \
-            "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" >/dev/null
+            "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" \
+            "borderCert=$(base64 -w0 <secrets/border-ca-cert.pem)" \
+            "borderKey=$(base64 -w0 <secrets/border-ca-key.pem)" >/dev/null
 }
 
 deploy_env_dev_override() {
@@ -69,11 +72,14 @@ deploy_env_dev_override() {
             "proxyDomainNameLabel=$(cut -d. -f2 <<<$PROXY_HOSTNAME)" \
             "proxyImage=arointsvc.azurecr.io/proxy:latest" \
             "proxyImageAuth=$(jq -r '.auths["arointsvc.azurecr.io"].auth' <<<$PULL_SECRET)" \
+            "borderDomainNameLabel=$(cut -d. -f2 <<<$BORDER_HOSTNAME)" \
             "proxyKey=$(base64 -w0 <secrets/proxy.key)" \
             "sshPublicKey=$(<secrets/proxy_id_rsa.pub)" \
             "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" \
             "publicIPAddressSkuName=Basic" \
             "publicIPAddressAllocationMethod=Dynamic" >/dev/null
+            "borderCert=$(base64 -w0 <secrets/border-ca-cert.pem)" \
+            "borderKey=$(base64 -w0 <secrets/border-ca-key.pem)" >/dev/null
 }
 
 import_certs_secrets() {
@@ -184,11 +190,13 @@ echo
 echo "KEYVAULT_PREFIX=$KEYVAULT_PREFIX"
 echo
 echo "PROXY_HOSTNAME=$PROXY_HOSTNAME"
+echo "BORDER_HOSTNAME=$BORDER_HOSTNAME"
 echo "######################################"
 
 [ "$LOCATION" ] || ( echo ">> LOCATION is not set please validate your ./secrets/env"; exit 128 )
 [ "$RESOURCEGROUP" ] || ( echo ">> RESOURCEGROUP is not set please validate your ./secrets/env"; exit 128 )
 [ "$PROXY_HOSTNAME" ] || ( echo ">> PROXY_HOSTNAME is not set please validate your ./secrets/env"; exit 128 )
+[ "$BORDER_HOSTNAME" ] || ( echo ">> BORDER_HOSTNAME is not set please validate your ./secrets/env"; exit 128 )
 [ "$COSMOSDB_ACCOUNT" ] || ( echo ">> COSMOSDB_ACCOUNT is not set please validate your ./secrets/env"; exit 128 )
 [ "$DATABASE_NAME" ] || ( echo ">> DATABASE_NAME is not set please validate your ./secrets/env"; exit 128 )
 [ "$ADMIN_OBJECT_ID" ] || ( echo ">> ADMIN_OBJECT_ID is not set please validate your ./secrets/env"; exit 128 )

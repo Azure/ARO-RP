@@ -2,6 +2,15 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
+        "borderCert": {
+            "type": "string"
+        },
+        "borderDomainNameLabel": {
+            "type": "string"
+        },
+        "borderKey": {
+            "type": "string"
+        },
         "ciAzpToken": {
             "type": "string"
         },
@@ -331,6 +340,124 @@
             "type": "Microsoft.Compute/virtualMachineScaleSets",
             "location": "[resourceGroup().location]",
             "apiVersion": "2019-03-01"
+        },
+        {
+            "properties": {
+                "routes": [
+                    {
+                        "properties": {
+                            "addressPrefix": "0.0.0.0/0",
+                            "nextHopType": "VirtualAppliance",
+                            "nextHopIpAddress": "[reference(concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Compute/virtualMachineScaleSets/dev-border-vmss/virtualMachines/0/networkInterfaces/dev-border-vmss-nic'), '2019-03-01', 'FULL').properties.ipConfigurations[0].properties.privateIPAddress]"
+                        },
+                        "name": "to-border"
+                    }
+                ]
+            },
+            "name": "border-rt",
+            "type": "Microsoft.Network/routeTables",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2019-07-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Compute/virtualMachineScaleSets', 'dev-border-vmss')]"
+            ]
+        },
+        {
+            "sku": {
+                "name": "Standard_D2s_v3",
+                "tier": "Standard",
+                "capacity": 1
+            },
+            "properties": {
+                "upgradePolicy": {
+                    "mode": "Manual"
+                },
+                "virtualMachineProfile": {
+                    "osProfile": {
+                        "computerNamePrefix": "dev-border-",
+                        "adminUsername": "cloud-user",
+                        "linuxConfiguration": {
+                            "disablePasswordAuthentication": true,
+                            "ssh": {
+                                "publicKeys": [
+                                    {
+                                        "path": "/home/cloud-user/.ssh/authorized_keys",
+                                        "keyData": "[parameters('sshPublicKey')]"
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    "storageProfile": {
+                        "imageReference": {
+                            "publisher": "RedHat",
+                            "offer": "RHEL",
+                            "sku": "7-RAW",
+                            "version": "latest"
+                        },
+                        "osDisk": {
+                            "createOption": "FromImage",
+                            "managedDisk": {
+                                "storageAccountType": "Premium_LRS"
+                            }
+                        }
+                    },
+                    "networkProfile": {
+                        "networkInterfaceConfigurations": [
+                            {
+                                "name": "dev-border-vmss-nic",
+                                "properties": {
+                                    "primary": true,
+                                    "ipConfigurations": [
+                                        {
+                                            "name": "dev-border-vmss-ipconfig",
+                                            "properties": {
+                                                "subnet": {
+                                                    "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'dev-vnet', 'ToolingSubnet')]"
+                                                },
+                                                "primary": true,
+                                                "publicIPAddressConfiguration": {
+                                                    "name": "dev-border-vmss-pip",
+                                                    "properties": {
+                                                        "dnsSettings": {
+                                                            "domainNameLabel": "[parameters('borderDomainNameLabel')]"
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    },
+                    "extensionProfile": {
+                        "extensions": [
+                            {
+                                "name": "dev-border-vmss-cse",
+                                "properties": {
+                                    "publisher": "Microsoft.Azure.Extensions",
+                                    "type": "CustomScript",
+                                    "typeHandlerVersion": "2.0",
+                                    "autoUpgradeMinorVersion": true,
+                                    "settings": {},
+                                    "protectedSettings": {
+                                        "script": "[base64(concat(base64ToString('IyEvYmluL3NoCnNldCAtZXgKCg=='),'BORDERCERT=''',parameters('borderCert'),'''\n','BORDERKEY=''',parameters('borderKey'),'''\n','\n',base64ToString('eXVtIGluc3RhbGwgLXkgZ2l0CgojIGluc3RhbGwgZ29sYW5nCkdPX1ZFUlNJT049MS4xMy4xNQpjdXJsIC1zTCBodHRwczovL2RsLmdvb2dsZS5jb20vZ28vZ28ke0dPX1ZFUlNJT059LmxpbnV4LWFtZDY0LnRhci5neiAtbyAvdG1wL2dvJHtHT19WRVJTSU9OfS5saW51eC1hbWQ2NC50YXIuZ3oKbWtkaXIgLXAgL3Vzci9sb2NhbC9nbwp0YXIgLUMgL3Vzci9sb2NhbC9nbyAteHpmIC90bXAvZ28ke0dPX1ZFUlNJT059LmxpbnV4LWFtZDY0LnRhci5neiAtLXN0cmlwLWNvbXBvbmVudHM9MSBnbwpsbiAtcyAvdXNyL2xvY2FsL2dvL2Jpbi8qIC91c3IvYmluLwoKbWtkaXIgLXAgL3Jvb3QvZ28vc3JjL2dpdGh1Yi5jb20vamltLW1pbnRlci8KY2QgL3Jvb3QvZ28vc3JjL2dpdGh1Yi5jb20vamltLW1pbnRlcgpnaXQgY2xvbmUgaHR0cHM6Ly9naXRodWIuY29tL2ppbS1taW50ZXIvbWl0bS1wcm94eS5naXQKCmNkIC9yb290L2dvL3NyYy9naXRodWIuY29tL2ppbS1taW50ZXIvbWl0bS1wcm94eS8KZXhwb3J0IEhPTUU9L3Jvb3QKL3Vzci9sb2NhbC9nby9iaW4vZ28gYnVpbGQgLi9taXRtLXByb3h5LmdvCgpiYXNlNjQgLWQgPDw8IiRCT1JERVJDRVJUIiA+IGJvcmRlci1jYS1jZXJ0LnBlbQpvcGVuc3NsIHg1MDkgLWluIGJvcmRlci1jYS1jZXJ0LnBlbSAtb3V0Zm9ybSBkZXIgLW91dCBjYS1jZXJ0LmRlcgpiYXNlNjQgLWQgPDw8IiRCT1JERVJLRVkiID4gYm9yZGVyLWNhLWtleS5wZW0Kb3BlbnNzbCByc2EgLWluZm9ybSBwZW0gLWluIGJvcmRlci1jYS1rZXkucGVtIC1vdXRmb3JtIGRlciAtb3V0IGNhLWtleS5kZXIKCmNhdCA8PEVPTCA+Li9jb25maWcueW1sCmhhbmRsZXJzOgotIHJlZ2V4cDogKC4qXC4pP2Jsb2IuY29yZS53aW5kb3dzLm5ldAogIGhhbmRsZXI6IHJhdwotIHJlZ2V4cDogbG9naW4ubWljcm9zb2Z0b25saW5lLmNvbQogIGhhbmRsZXI6IHJhdwotIHJlZ2V4cDogbWFuYWdlbWVudC5henVyZS5jb20KICBoYW5kbGVyOiByYXcKLSByZWdleHA6IGdjcy5wcGUubW9uaXRvcmluZy5jb3JlLndpbmRvd3MubmV0CiAgaGFuZGxlcjogcmF3Ci0gcmVnZXhwOiBxdWF5LmlvCiAgaGFuZGxlcjogcmF3Ci0gcmVnZXhwOiByZWdpc3RyeS5yZWRoYXQuaW8KICBoYW5kbGVyOiByYXcKLSByZWdleHA6ICguKlwuKT9zZXJ2aWNlYnVzLndpbmRvd3MubmV0CiAgaGFuZGxlcjogcmF3Ci0gcmVnZXhwOiAoLipcLik/dGFibGUuY29yZS53aW5kb3dzLm5ldAogIGhhbmRsZXI6IHJhdwpFT0wKCiMgcmVxdWlyZWQgb3IgdHJhZmZpYyBpcyBub3QgYWxsb3dlZAppcHRhYmxlcyAtLWZsdXNoCgovcm9vdC9nby9zcmMvZ2l0aHViLmNvbS9qaW0tbWludGVyL21pdG0tcHJveHkvbWl0bS1wcm94eSB8JiB0ZWUgLWEgbWl0bS1wcm94eS5sb2cgJgo=')))]"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                },
+                "overprovision": false
+            },
+            "name": "dev-border-vmss",
+            "type": "Microsoft.Compute/virtualMachineScaleSets",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2019-03-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]"
+            ]
         }
     ]
 }

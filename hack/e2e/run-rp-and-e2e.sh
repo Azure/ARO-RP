@@ -80,16 +80,57 @@ deploy_e2e_deps() {
     done
 
     echo "########## Update ARO Subnet ##########"
+    for subnet in "$CLUSTER-master" "$CLUSTER-worker"; do
     az network vnet subnet update \
       -g "$ARO_RESOURCEGROUP" \
       --vnet-name dev-vnet \
-      -n "$CLUSTER-master" \
+      -n "$subnet" \
       --route-table "$CLUSTER-rt" \
       --disable-private-link-service-network-policies true >/dev/null
+    done
 
     echo "########## Create Cluster SPN ##########"
     az ad sp create-for-rbac -n "$CLUSTER-$LOCATION" --role contributor \
         --scopes /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$ARO_RESOURCEGROUP >$CLUSTERSPN
+}
+
+run_e2e_border() {
+    BORDER_PRIVATE_IP=$(az vmss nic list -g $RESOURCEGROUP --vmss-name dev-border-vmss --query '[].ipConfigurations[].privateIpAddress' -o tsv)
+
+    echo "########## Create outbound route in $CLUSTER-rt ##########"
+    az network route-table route create \
+      -n "all-outbound-traffic" \
+      -g "$ARO_RESOURCEGROUP" \
+      --address-prefix "0.0.0.0/0" \
+      --next-hop-type "VirtualAppliance" \
+      --route-table-name "$CLUSTER-rt" \
+      --next-hop-ip-address "$BORDER_PRIVATE_IP" > /dev/null
+
+    CLUSTER_SPN_ID=$(cat $CLUSTERSPN | jq -r .appId)
+    CLUSTER_SPN_SECRET=$(cat $CLUSTERSPN | jq -r .password)
+
+    echo "########## 🚀 Create ARO Private Border Cluster $CLUSTER - Using client-id : $CLUSTER_SPN_ID ##########"
+    az aro create \
+      -g "$ARO_RESOURCEGROUP" \
+      -n "$CLUSTER" \
+      -l "${LOCATION}" \
+      --vnet dev-vnet \
+      --vnet-resource-group $RESOURCEGROUP \
+      --master-subnet "$CLUSTER-master" \
+      --worker-subnet "$CLUSTER-worker" \
+      --client-id "$CLUSTER_SPN_ID" \
+      --client-secret "$CLUSTER_SPN_SECRET" \
+      --cluster-resource-group "$CLUSTER_RESOURCEGROUP" \
+      --ingress-visibility Private \
+      --apiserver-visibility Private 
+
+    echo "########## CLI : ARO List ##########"
+    az aro list -o table
+    echo "########## CLI : ARO list-creds ##########"
+    az aro list-credentials -g "$ARO_RESOURCEGROUP" -n "$CLUSTER" >/dev/null
+    echo "########## Run E2E ##########"
+    go run ./hack/kubeadminkubeconfig "/subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$ARO_RESOURCEGROUP/providers/Microsoft.RedHatOpenShift/openShiftClusters/$CLUSTER" >$KUBECONFIG
+    RESOURCEGROUP=$ARO_RESOURCEGROUP make e2e
 }
 
 set_cli_context() {

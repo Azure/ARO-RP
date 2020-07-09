@@ -123,6 +123,32 @@ func (g *generator) securityGroupPE() *arm.Resource {
 	}
 }
 
+func (g *generator) borderRouteTable() *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtnetwork.RouteTable{
+			RouteTablePropertiesFormat: &mgmtnetwork.RouteTablePropertiesFormat{
+				Routes: &[]mgmtnetwork.Route{
+					{
+						Name: to.StringPtr("to-border"),
+						RoutePropertiesFormat: &mgmtnetwork.RoutePropertiesFormat{
+							AddressPrefix:    to.StringPtr("0.0.0.0/0"),
+							NextHopType:      mgmtnetwork.RouteNextHopTypeVirtualAppliance,
+							NextHopIPAddress: to.StringPtr("[reference(concat('/subscriptions/', subscription().subscriptionId, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Compute/virtualMachineScaleSets/dev-border-vmss/virtualMachines/0/networkInterfaces/dev-border-vmss-nic'), '2019-03-01', 'FULL').properties.ipConfigurations[0].properties.privateIPAddress]"),
+						},
+					},
+				},
+			},
+			Name:     to.StringPtr("border-rt"),
+			Type:     to.StringPtr("Microsoft.Network/routeTables"),
+			Location: to.StringPtr("[resourceGroup().location]"),
+		},
+		APIVersion: azureclient.APIVersions["Microsoft.Network"],
+		DependsOn: []string{
+			"[resourceId('Microsoft.Compute/virtualMachineScaleSets', 'dev-border-vmss')]",
+		},
+	}
+}
+
 func (g *generator) proxyVmss() *arm.Resource {
 	parts := []string{
 		fmt.Sprintf("base64ToString('%s')", base64.StdEncoding.EncodeToString([]byte("set -ex\n\n"))),
@@ -298,6 +324,173 @@ systemctl enable proxy.service
 	}
 }
 
+func (g *generator) borderVmss() *arm.Resource {
+
+	parts := []string{
+		fmt.Sprintf("base64ToString('%s')", base64.StdEncoding.EncodeToString([]byte("#!/bin/sh\nset -ex\n\n"))),
+	}
+
+	for _, variable := range []string{"borderCert", "borderKey"} {
+		parts = append(parts,
+			fmt.Sprintf("'%s='''", strings.ToUpper(variable)),
+			fmt.Sprintf("parameters('%s')", variable),
+			"'''\n'",
+		)
+	}
+
+	trailer := base64.StdEncoding.EncodeToString([]byte(`yum install -y git
+
+# install golang
+GO_VERSION=1.13.15
+curl -sL https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz -o /tmp/go${GO_VERSION}.linux-amd64.tar.gz
+mkdir -p /usr/local/go
+tar -C /usr/local/go -xzf /tmp/go${GO_VERSION}.linux-amd64.tar.gz --strip-components=1 go
+ln -s /usr/local/go/bin/* /usr/bin/
+
+mkdir -p /root/go/src/github.com/jim-minter/
+cd /root/go/src/github.com/jim-minter
+git clone https://github.com/jim-minter/mitm-proxy.git
+
+cd /root/go/src/github.com/jim-minter/mitm-proxy/
+export HOME=/root
+/usr/local/go/bin/go build ./mitm-proxy.go
+
+base64 -d <<<"$BORDERCERT" > border-ca-cert.pem
+openssl x509 -in border-ca-cert.pem -outform der -out ca-cert.der
+base64 -d <<<"$BORDERKEY" > border-ca-key.pem
+openssl rsa -inform pem -in border-ca-key.pem -outform der -out ca-key.der
+
+cat <<EOL >./config.yml
+handlers:
+- regexp: (.*\.)?blob.core.windows.net
+  handler: raw
+- regexp: login.microsoftonline.com
+  handler: raw
+- regexp: management.azure.com
+  handler: raw
+- regexp: gcs.ppe.monitoring.core.windows.net
+  handler: raw
+- regexp: quay.io
+  handler: raw
+- regexp: registry.redhat.io
+  handler: raw
+- regexp: (.*\.)?servicebus.windows.net
+  handler: raw
+- regexp: (.*\.)?table.core.windows.net
+  handler: raw
+EOL
+
+# required or traffic is not allowed
+iptables --flush
+
+/root/go/src/github.com/jim-minter/mitm-proxy/mitm-proxy |& tee -a mitm-proxy.log &
+`))
+
+	parts = append(parts, "'\n'", fmt.Sprintf("base64ToString('%s')", trailer))
+
+	script := fmt.Sprintf("[base64(concat(%s))]", strings.Join(parts, ","))
+
+	return &arm.Resource{
+		Resource: &mgmtcompute.VirtualMachineScaleSet{
+			Sku: &mgmtcompute.Sku{
+				Name:     to.StringPtr(string(mgmtcompute.VirtualMachineSizeTypesStandardD2sV3)),
+				Tier:     to.StringPtr("Standard"),
+				Capacity: to.Int64Ptr(1),
+			},
+			VirtualMachineScaleSetProperties: &mgmtcompute.VirtualMachineScaleSetProperties{
+				UpgradePolicy: &mgmtcompute.UpgradePolicy{
+					Mode: mgmtcompute.Manual,
+				},
+				VirtualMachineProfile: &mgmtcompute.VirtualMachineScaleSetVMProfile{
+					OsProfile: &mgmtcompute.VirtualMachineScaleSetOSProfile{
+						ComputerNamePrefix: to.StringPtr("dev-border-"),
+						AdminUsername:      to.StringPtr("cloud-user"),
+						LinuxConfiguration: &mgmtcompute.LinuxConfiguration{
+							DisablePasswordAuthentication: to.BoolPtr(true),
+							SSH: &mgmtcompute.SSHConfiguration{
+								PublicKeys: &[]mgmtcompute.SSHPublicKey{
+									{
+										Path:    to.StringPtr("/home/cloud-user/.ssh/authorized_keys"),
+										KeyData: to.StringPtr("[parameters('sshPublicKey')]"),
+									},
+								},
+							},
+						},
+					},
+					StorageProfile: &mgmtcompute.VirtualMachineScaleSetStorageProfile{
+						ImageReference: &mgmtcompute.ImageReference{
+							Publisher: to.StringPtr("RedHat"),
+							Offer:     to.StringPtr("RHEL"),
+							Sku:       to.StringPtr("7-RAW"),
+							Version:   to.StringPtr("latest"),
+						},
+						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
+							CreateOption: mgmtcompute.DiskCreateOptionTypesFromImage,
+							ManagedDisk: &mgmtcompute.VirtualMachineScaleSetManagedDiskParameters{
+								StorageAccountType: mgmtcompute.StorageAccountTypesPremiumLRS,
+							},
+						},
+					},
+					NetworkProfile: &mgmtcompute.VirtualMachineScaleSetNetworkProfile{
+						NetworkInterfaceConfigurations: &[]mgmtcompute.VirtualMachineScaleSetNetworkConfiguration{
+							{
+								Name: to.StringPtr("dev-border-vmss-nic"),
+								VirtualMachineScaleSetNetworkConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetNetworkConfigurationProperties{
+									Primary: to.BoolPtr(true),
+									IPConfigurations: &[]mgmtcompute.VirtualMachineScaleSetIPConfiguration{
+										{
+											Name: to.StringPtr("dev-border-vmss-ipconfig"),
+											VirtualMachineScaleSetIPConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetIPConfigurationProperties{
+												Subnet: &mgmtcompute.APIEntityReference{
+													ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'dev-vnet', 'ToolingSubnet')]"),
+												},
+												Primary: to.BoolPtr(true),
+												PublicIPAddressConfiguration: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfiguration{
+													Name: to.StringPtr("dev-border-vmss-pip"),
+													VirtualMachineScaleSetPublicIPAddressConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfigurationProperties{
+														DNSSettings: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfigurationDNSSettings{
+															DomainNameLabel: to.StringPtr("[parameters('borderDomainNameLabel')]"),
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					ExtensionProfile: &mgmtcompute.VirtualMachineScaleSetExtensionProfile{
+						Extensions: &[]mgmtcompute.VirtualMachineScaleSetExtension{
+							{
+								Name: to.StringPtr("dev-border-vmss-cse"),
+								VirtualMachineScaleSetExtensionProperties: &mgmtcompute.VirtualMachineScaleSetExtensionProperties{
+									Publisher:               to.StringPtr("Microsoft.Azure.Extensions"),
+									Type:                    to.StringPtr("CustomScript"),
+									TypeHandlerVersion:      to.StringPtr("2.0"),
+									AutoUpgradeMinorVersion: to.BoolPtr(true),
+									Settings:                map[string]interface{}{},
+									ProtectedSettings: map[string]interface{}{
+										"script": script,
+									},
+								},
+							},
+						},
+					},
+				},
+				Overprovision: to.BoolPtr(false),
+			},
+			Name:     to.StringPtr("dev-border-vmss"),
+			Type:     to.StringPtr("Microsoft.Compute/virtualMachineScaleSets"),
+			Location: to.StringPtr("[resourceGroup().location]"),
+		},
+		APIVersion: azureclient.APIVersions["Microsoft.Compute"],
+		DependsOn: []string{
+			"[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]",
+		},
+	}
+}
+
 func (g *generator) devVpnPip() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.PublicIPAddress{
@@ -333,6 +526,7 @@ func (g *generator) devVnet() *arm.Resource {
 					},
 					{
 						SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+
 							AddressPrefix: to.StringPtr("10.0.1.0/24"),
 							NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
 								ID: to.StringPtr("[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"),

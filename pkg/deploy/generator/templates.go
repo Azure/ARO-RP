@@ -314,7 +314,9 @@ func (g *generator) sharedDevelopmentEnvTemplate() *arm.Template {
 		g.devVnet(),
 		g.devVPN(),
 		g.devCIPool(),
-		g.proxyVmss())
+		g.proxyVmss(),
+		g.borderRouteTable(),
+		g.borderVmss())
 
 	for _, param := range []string{
 		"ciAzpToken",
@@ -324,6 +326,9 @@ func (g *generator) sharedDevelopmentEnvTemplate() *arm.Template {
 		"proxyCert",
 		"proxyClientCert",
 		"proxyDomainNameLabel",
+		"borderDomainNameLabel",
+		"borderCert",
+		"borderKey",
 		"proxyImage",
 		"proxyImageAuth",
 		"proxyKey",
