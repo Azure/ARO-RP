@@ -26,6 +26,7 @@ import (
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	samplesclient "github.com/openshift/client-go/samples/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
+	"github.com/openshift/installer/pkg/asset/bootstraplogging"
 	"github.com/openshift/installer/pkg/asset/ignition/bootstrap"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
@@ -173,12 +174,12 @@ func (i *Installer) AdminUpgrade(ctx context.Context) error {
 }
 
 // Install installs an ARO cluster
-func (i *Installer) Install(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) error {
+func (i *Installer) Install(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image, bootstrapLoggingConfig *bootstraplogging.Config) error {
 	steps := map[api.InstallPhase][]interface{}{
 		api.InstallPhaseBootstrap: {
 			action(i.createDNS),
 			action(func(ctx context.Context) error {
-				return i.deployStorageTemplate(ctx, installConfig, platformCreds, image)
+				return i.deployStorageTemplate(ctx, installConfig, platformCreds, image, bootstrapLoggingConfig)
 			}),
 			action(i.attachNSGsAndPatch),
 			action(i.ensureBillingRecord),

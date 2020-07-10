@@ -33,6 +33,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/genevalogging"
 	"github.com/Azure/ARO-RP/pkg/install"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
@@ -322,7 +323,12 @@ func (m *Manager) Create(ctx context.Context) error {
 		return err
 	}
 
-	return i.Install(ctx, installConfig, platformCreds, image)
+	bootstrapLoggingConfig, err := genevalogging.GetBootstrapLoggingConfig(m.env, m.doc)
+	if err != nil {
+		return err
+	}
+
+	return i.Install(ctx, installConfig, platformCreds, image, bootstrapLoggingConfig)
 }
 
 var rxRHCOS = regexp.MustCompile(`rhcos-((\d+)\.\d+\.\d{8})\d{4}\-\d+-azure\.x86_64\.vhd`)

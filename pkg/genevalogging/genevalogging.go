@@ -29,8 +29,9 @@ import (
 )
 
 const (
-	kubeNamespace      = "openshift-azure-logging"
-	kubeServiceAccount = "system:serviceaccount:" + kubeNamespace + ":geneva"
+	genevaClusterLogsNamespace = "AROClusterLogs"
+	kubeNamespace              = "openshift-azure-logging"
+	kubeServiceAccount         = "system:serviceaccount:" + kubeNamespace + ":geneva"
 
 	parsersConf = `
 [PARSER]
@@ -561,7 +562,7 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 								},
 								{
 									Name:  "MONITORING_GCS_NAMESPACE",
-									Value: "AROClusterLogs",
+									Value: genevaClusterLogsNamespace,
 								},
 								{
 									Name:  "MONITORING_CONFIG_VERSION",
