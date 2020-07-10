@@ -1033,11 +1033,12 @@
 
 [[projects]]
   branch = "release-4.4-azure"
-  digest = "1:b7ba4c626ab42f0ac5c53d389bd4458e1d9a9b74b99afb5b50bc4e9fad06b1d5"
+  digest = "1:47349ceeeb4ce82dc7322817833124b035224e0193ee1734569feb12bc0aa073"
   name = "github.com/openshift/installer"
   packages = [
     "data",
     "pkg/asset",
+    "pkg/asset/bootstraplogging",
     "pkg/asset/cluster",
     "pkg/asset/cluster/aws",
     "pkg/asset/cluster/azure",
@@ -1128,7 +1129,7 @@
     "pkg/version",
   ]
   pruneopts = "T"
-  revision = "a0e667861e217d48fe14806a5f0c1d751503d9a6"
+  revision = "14f0f151ebf05c943977216f417a42a15a57e021"
   source = "https://github.com/jim-minter/installer"
 
 [[projects]]
@@ -1810,7 +1811,7 @@
 
 [[projects]]
   branch = "origin-4.4-kubernetes-1.17.1"
-  digest = "1:df0cc86f0f9a6330a62dd0305bbf3837c4438237aa212710483e1e5f47943cb2"
+  digest = "1:f51508c5ebfc8da2cb944a2aeb3c6a9f321a6b76c9cafd5c3464bbca1f4004e2"
   name = "k8s.io/client-go"
   packages = [
     "discovery",
@@ -2053,7 +2054,6 @@
     "github.com/go-bindata/go-bindata/go-bindata",
     "github.com/golang/mock/gomock",
     "github.com/golang/mock/mockgen",
-    "github.com/golang/mock/mockgen/model",
     "github.com/google/go-cmp/cmp",
     "github.com/googleapis/gnostic/OpenAPIv2",
     "github.com/gorilla/mux",
@@ -2082,6 +2082,7 @@
     "github.com/openshift/console-operator/pkg/api",
     "github.com/openshift/installer/data",
     "github.com/openshift/installer/pkg/asset",
+    "github.com/openshift/installer/pkg/asset/bootstraplogging",
     "github.com/openshift/installer/pkg/asset/cluster",
     "github.com/openshift/installer/pkg/asset/ignition/bootstrap",
     "github.com/openshift/installer/pkg/asset/ignition/machine",
@@ -2116,7 +2117,6 @@
     "github.com/ugorji/go/codec",
     "golang.org/x/crypto/chacha20poly1305",
     "golang.org/x/crypto/ssh",
-    "golang.org/x/net/context",
     "golang.org/x/sync/errgroup",
     "golang.org/x/tools/cmd/goimports",
     "golang.org/x/tools/go/ast/astutil",
