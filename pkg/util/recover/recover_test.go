@@ -4,31 +4,34 @@ package recover
 // Licensed under the Apache License 2.0.
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/sirupsen/logrus"
-	"github.com/sirupsen/logrus/hooks/test"
+
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestPanic(t *testing.T) {
-	logger, hook := test.NewNullLogger()
-	log := logrus.NewEntry(logger)
+
+	h, log := testlog.NewCapturingLogger()
 
 	func() {
 		defer Panic(log)
 		panic("random error")
 	}()
 
-	if len(hook.Entries) != 2 {
-		t.Fatal(len(hook.Entries))
+	expected := []testlog.ExpectedLogEntry{
+		{
+			Message: "random error",
+			Level:   logrus.ErrorLevel,
+		},
+		{
+			MessageRegex: `runtime/debug\.Stack`,
+			Level:        logrus.InfoLevel,
+		},
 	}
 
-	if hook.Entries[0].Message != "random error" {
-		t.Error(hook.Entries[0].Message)
-	}
-
-	if !strings.Contains(hook.Entries[1].Message, "runtime/debug.Stack") {
-		t.Error(hook.Entries[1].Message)
+	for _, e := range testlog.AssertLoggingOutput(h, expected) {
+		t.Error(e)
 	}
 }
