@@ -6,10 +6,13 @@ package e2e
 import (
 	"fmt"
 	"os"
+	"time"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 
 	"github.com/Azure/go-autorest/autorest/azure/auth"
+	projectv1client "github.com/openshift/client-go/project/clientset/versioned/typed/project/v1"
 	machineapiclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
@@ -32,6 +35,7 @@ type clientSet struct {
 	Kubernetes  kubernetes.Interface
 	MachineAPI  machineapiclient.Interface
 	AROClusters aroclient.AroV1alpha1Interface
+	Project     projectv1client.ProjectV1Interface
 }
 
 var (
@@ -63,20 +67,13 @@ func newClientSet(subscriptionID string) (*clientSet, error) {
 		&clientcmd.ConfigOverrides{},
 	)
 
-	restconfig, err := kubeconfig.ClientConfig()
+	restConfig, err := kubeconfig.ClientConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	cli, err := kubernetes.NewForConfig(restconfig)
-	if err != nil {
-		return nil, err
-	}
-
-	machineapicli, err := machineapiclient.NewForConfig(restconfig)
-	if err != nil {
-		return nil, err
-	}
+	cli := kubernetes.NewForConfigOrDie(restConfig)
+	machineapicli := machineapiclient.NewForConfigOrDie(restConfig)
 
 	arocli, err := aroclient.NewForConfig(restconfig)
 	if err != nil {
@@ -93,11 +90,16 @@ func newClientSet(subscriptionID string) (*clientSet, error) {
 		Kubernetes:  cli,
 		MachineAPI:  machineapicli,
 		AROClusters: arocli,
+		Project:     projectv1client.NewForConfigOrDie(restConfig),
 	}, nil
 }
 
 var _ = BeforeSuite(func() {
 	log.Info("BeforeSuite")
+
+	SetDefaultEventuallyTimeout(1 * time.Minute)
+	SetDefaultEventuallyPollingInterval(100 * time.Millisecond)
+
 	for _, key := range []string{
 		"AZURE_SUBSCRIPTION_ID",
 		"CLUSTER",
