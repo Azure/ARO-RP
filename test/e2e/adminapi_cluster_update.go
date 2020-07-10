@@ -42,11 +42,3 @@ var _ = Describe("[Admin API] Cluster admin update action", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 })
-
-func getCluster(ctx context.Context, resourceID string) *admin.OpenShiftCluster {
-	var oc admin.OpenShiftCluster
-	resp, err := adminRequest(ctx, http.MethodGet, resourceID, nil, nil, &oc)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(resp.StatusCode).To(Equal(http.StatusOK))
-	return &oc
-}

@@ -14,6 +14,8 @@ import (
 	"net/url"
 	"os"
 
+	. "github.com/onsi/gomega"
+
 	"github.com/Azure/ARO-RP/pkg/api/admin"
 )
 
@@ -71,4 +73,12 @@ func adminRequest(ctx context.Context, method, path string, params url.Values, i
 	}
 
 	return resp, nil
+}
+
+func getCluster(ctx context.Context, resourceID string) *admin.OpenShiftCluster {
+	var oc admin.OpenShiftCluster
+	resp, err := adminRequest(ctx, http.MethodGet, resourceID, nil, nil, &oc)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(resp.StatusCode).To(Equal(http.StatusOK))
+	return &oc
 }
