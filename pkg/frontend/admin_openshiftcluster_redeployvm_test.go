@@ -81,6 +81,7 @@ func TestAdminRedeployVM(t *testing.T) {
 			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
 			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, subscriptions *mock_database.MockSubscriptions, vmc *mockcompute.MockVirtualMachinesClient) {
 				clusterDoc := &api.OpenShiftClusterDocument{
+					Key: tt.resourceID,
 					OpenShiftCluster: &api.OpenShiftCluster{
 						Properties: api.OpenShiftClusterProperties{
 							ClusterProfile: api.ClusterProfile{
@@ -108,16 +109,6 @@ func TestAdminRedeployVM(t *testing.T) {
 				vmc.EXPECT().RedeployAndWait(gomock.Any(), "test-cluster", tt.vmName).Return(nil)
 			},
 			wantStatusCode: http.StatusOK,
-		},
-		{
-			name:       "Subscription doesn't exist",
-			vmName:     "aro-worker-australiasoutheast-7tcq7",
-			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, subscriptions *mock_database.MockSubscriptions, vmc *mockcompute.MockVirtualMachinesClient) {
-				subscriptions.EXPECT().Get(gomock.Any(), mockSubID).
-					Return(nil, nil)
-			},
-			wantStatusCode: http.StatusNotFound,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

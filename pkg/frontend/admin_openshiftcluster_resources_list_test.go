@@ -84,6 +84,7 @@ func TestAdminListResourcesList(t *testing.T) {
 			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
 			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, subscriptions *mock_database.MockSubscriptions, resources *mockfeatures.MockResourcesClient, compute *mockcompute.MockVirtualMachinesClient) {
 				clusterDoc := &api.OpenShiftClusterDocument{
+					Key: tt.resourceID,
 					OpenShiftCluster: &api.OpenShiftCluster{
 						Properties: api.OpenShiftClusterProperties{
 							ClusterProfile: api.ClusterProfile{

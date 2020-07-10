@@ -87,10 +87,6 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 		return err
 	}
 
-	if subscriptionDoc == nil {
-		return fmt.Errorf("Subscription document for '%s' not found", r.SubscriptionID)
-	}
-
 	m, err := openshiftcluster.NewManager(log, ocb.env, ocb.db.OpenShiftClusters, ocb.billing, doc, subscriptionDoc)
 	if err != nil {
 		return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err)

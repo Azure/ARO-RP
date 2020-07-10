@@ -32,17 +32,8 @@ func (f *frontend) postAdminOpenShiftClusterRedeployVM(w http.ResponseWriter, r 
 func (f *frontend) _postAdminOpenShiftClusterRedeployVM(ctx context.Context, r *http.Request) error {
 	vars := mux.Vars(r)
 
-	subscriptionDoc, err := f.db.Subscriptions.Get(ctx, vars["subscriptionId"])
-	if err != nil {
-		return err
-	}
-
-	if subscriptionDoc == nil {
-		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeSubscriptionNotFound, "", "The subscription '%s' was not found.", vars["subscriptionId"])
-	}
-
 	vmName := r.URL.Query().Get("vmName")
-	err = validateAdminVMName(vmName)
+	err := validateAdminVMName(vmName)
 	if err != nil {
 		return err
 	}
@@ -57,7 +48,7 @@ func (f *frontend) _postAdminOpenShiftClusterRedeployVM(ctx context.Context, r *
 		return err
 	}
 
-	resource, err := azure.ParseResourceID(resourceID)
+	subscriptionDoc, err := f.getSubscriptionDocument(ctx, doc.Key)
 	if err != nil {
 		return err
 	}
@@ -67,7 +58,7 @@ func (f *frontend) _postAdminOpenShiftClusterRedeployVM(ctx context.Context, r *
 		return err
 	}
 
-	cli := f.computeClientFactory(resource.SubscriptionID, fpAuthorizer)
+	cli := f.computeClientFactory(subscriptionDoc.ID, fpAuthorizer)
 	clusterResourceGroup := stringutils.LastTokenByte(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	return cli.RedeployAndWait(ctx, clusterResourceGroup, vmName)
 }
