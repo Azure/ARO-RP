@@ -48,17 +48,17 @@ func (f *frontend) _postAdminOpenShiftClusterRedeployVM(ctx context.Context, r *
 		return err
 	}
 
-	resource, err := azure.ParseResourceID(resourceID)
+	subscriptionDoc, err := f.getSubscriptionDocument(ctx, doc.Key)
 	if err != nil {
 		return err
 	}
 
-	fpAuthorizer, err := f.env.FPAuthorizer(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
+	fpAuthorizer, err := f.env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return err
 	}
 
-	cli := f.computeClientFactory(resource.SubscriptionID, fpAuthorizer)
+	cli := f.computeClientFactory(subscriptionDoc.ID, fpAuthorizer)
 	clusterResourceGroup := stringutils.LastTokenByte(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	return cli.RedeployAndWait(ctx, clusterResourceGroup, vmName)
 }

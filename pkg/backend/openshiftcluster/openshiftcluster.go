@@ -43,12 +43,7 @@ type Manager struct {
 	doc *api.OpenShiftClusterDocument
 }
 
-func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, billing billing.Manager, doc *api.OpenShiftClusterDocument) (*Manager, error) {
-	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
-	if err != nil {
-		return nil, err
-	}
-
+func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (*Manager, error) {
 	localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
@@ -59,7 +54,7 @@ func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClus
 		return nil, err
 	}
 
-	fpAuthorizer, err := _env.FPAuthorizer(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
+	fpAuthorizer, err := _env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +67,7 @@ func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClus
 		}
 	}
 
-	ocDynamicValidator, err := validate.NewOpenShiftClusterDynamicValidator(log, _env, doc.OpenShiftCluster)
+	ocDynamicValidator, err := validate.NewOpenShiftClusterDynamicValidator(log, _env, doc.OpenShiftCluster, subscriptionDoc)
 	if err != nil {
 		return nil, err
 	}
@@ -86,14 +81,14 @@ func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClus
 
 		ocDynamicValidator: ocDynamicValidator,
 
-		groups:         features.NewResourceGroupsClient(r.SubscriptionID, fpAuthorizer),
-		securityGroups: network.NewSecurityGroupsClient(r.SubscriptionID, fpAuthorizer),
+		groups:         features.NewResourceGroupsClient(subscriptionDoc.ID, fpAuthorizer),
+		securityGroups: network.NewSecurityGroupsClient(subscriptionDoc.ID, fpAuthorizer),
 
 		dns:             dns.NewManager(_env, localFPAuthorizer),
 		keyvault:        keyvault.NewManager(localFPKVAuthorizer),
 		privateendpoint: privateendpoint.NewManager(_env, localFPAuthorizer),
 		acrtoken:        acrtoken,
-		subnet:          subnet.NewManager(r.SubscriptionID, fpAuthorizer),
+		subnet:          subnet.NewManager(subscriptionDoc.ID, fpAuthorizer),
 
 		doc: doc,
 	}

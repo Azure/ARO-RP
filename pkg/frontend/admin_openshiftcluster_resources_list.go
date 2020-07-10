@@ -55,18 +55,18 @@ func (f *frontend) _listAdminOpenShiftClusterResources(ctx context.Context, r *h
 		return nil, err
 	}
 
-	resource, err := azure.ParseResourceID(resourceID)
+	subscriptionDoc, err := f.getSubscriptionDocument(ctx, doc.Key)
 	if err != nil {
 		return nil, err
 	}
 
-	fpAuthorizer, err := f.env.FPAuthorizer(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
+	fpAuthorizer, err := f.env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	resourcesClient := f.resourcesClientFactory(resource.SubscriptionID, fpAuthorizer)
-	vmClient := f.computeClientFactory(resource.SubscriptionID, fpAuthorizer)
+	resourcesClient := f.resourcesClientFactory(subscriptionDoc.ID, fpAuthorizer)
+	vmClient := f.computeClientFactory(subscriptionDoc.ID, fpAuthorizer)
 
 	clusterResourceGroup := stringutils.LastTokenByte(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	resources, err := resourcesClient.List(ctx, fmt.Sprintf("resourceGroup eq '%s'", clusterResourceGroup), "", nil)

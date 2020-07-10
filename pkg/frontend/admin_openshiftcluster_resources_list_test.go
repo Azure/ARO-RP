@@ -39,6 +39,7 @@ import (
 
 func TestAdminListResourcesList(t *testing.T) {
 	mockSubID := "00000000-0000-0000-0000-000000000000"
+	mockTenantID := "00000000-0000-0000-0000-000000000000"
 	ctx := context.Background()
 
 	clientkey, clientcerts, err := utiltls.GenerateKeyAndCertificate("client", nil, nil, false, true)
@@ -71,7 +72,7 @@ func TestAdminListResourcesList(t *testing.T) {
 	type test struct {
 		name           string
 		resourceID     string
-		mocks          func(*test, *mock_database.MockOpenShiftClusters, *mockfeatures.MockResourcesClient, *mockcompute.MockVirtualMachinesClient)
+		mocks          func(*test, *mock_database.MockOpenShiftClusters, *mock_database.MockSubscriptions, *mockfeatures.MockResourcesClient, *mockcompute.MockVirtualMachinesClient)
 		wantStatusCode int
 		wantResponse   func() []byte
 		wantError      string
@@ -81,8 +82,9 @@ func TestAdminListResourcesList(t *testing.T) {
 		{
 			name:       "basic coverage",
 			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, resources *mockfeatures.MockResourcesClient, compute *mockcompute.MockVirtualMachinesClient) {
+			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, subscriptions *mock_database.MockSubscriptions, resources *mockfeatures.MockResourcesClient, compute *mockcompute.MockVirtualMachinesClient) {
 				clusterDoc := &api.OpenShiftClusterDocument{
+					Key: tt.resourceID,
 					OpenShiftCluster: &api.OpenShiftCluster{
 						Properties: api.OpenShiftClusterProperties{
 							ClusterProfile: api.ClusterProfile{
@@ -91,9 +93,21 @@ func TestAdminListResourcesList(t *testing.T) {
 						},
 					},
 				}
+				subscriptionDoc := &api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: mockTenantID,
+						},
+					},
+				}
 
 				openshiftClusters.EXPECT().Get(gomock.Any(), strings.ToLower(tt.resourceID)).
 					Return(clusterDoc, nil)
+
+				subscriptions.EXPECT().Get(gomock.Any(), mockSubID).
+					Return(subscriptionDoc, nil)
 
 				resources.EXPECT().List(gomock.Any(), "resourceGroup eq 'test-cluster'", "", nil).Return([]mgmtfeatures.GenericResourceExpanded{
 					{
@@ -147,11 +161,13 @@ func TestAdminListResourcesList(t *testing.T) {
 
 			resourcesClient := mockfeatures.NewMockResourcesClient(controller)
 			openshiftClusters := mock_database.NewMockOpenShiftClusters(controller)
+			subscriptions := mock_database.NewMockSubscriptions(controller)
 			computeClient := mockcompute.NewMockVirtualMachinesClient(controller)
-			tt.mocks(tt, openshiftClusters, resourcesClient, computeClient)
+			tt.mocks(tt, openshiftClusters, subscriptions, resourcesClient, computeClient)
 
 			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
 				OpenShiftClusters: openshiftClusters,
+				Subscriptions:     subscriptions,
 			}, api.APIs, &noop.Noop{}, nil, nil,
 				func(subscriptionID string, authorizer autorest.Authorizer) features.ResourcesClient {
 					return resourcesClient
