@@ -5,7 +5,6 @@ package genevalogging
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
 
@@ -26,14 +25,13 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/tls"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 const (
-	kubeNamespace      = "openshift-azure-logging"
-	kubeServiceAccount = "system:serviceaccount:" + kubeNamespace + ":geneva"
-
-	fluentbitImageFormat = "%s.azurecr.io/fluentbit:1.3.9-1"
-	mdsdImageFormat      = "%s.azurecr.io/genevamdsd:master_295"
+	genevaClusterLogsNamespace = "AROClusterLogs"
+	kubeNamespace              = "openshift-azure-logging"
+	kubeServiceAccount         = "system:serviceaccount:" + kubeNamespace + ":geneva"
 
 	parsersConf = `
 [PARSER]
@@ -172,14 +170,6 @@ func New(log *logrus.Entry, e env.Interface, oc *api.OpenShiftCluster, cli kuber
 		cli:    cli,
 		seccli: seccli,
 	}
-}
-
-func (g *genevaLogging) fluentbitImage() string {
-	return fmt.Sprintf(fluentbitImageFormat, g.env.ACRName())
-}
-
-func (g *genevaLogging) mdsdImage() string {
-	return fmt.Sprintf(mdsdImageFormat, g.env.ACRName())
 }
 
 func (g *genevaLogging) ensureNamespace(ns string) error {
@@ -426,7 +416,7 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 					Containers: []v1.Container{
 						{
 							Name:  "fluentbit-journal",
-							Image: g.fluentbitImage(),
+							Image: version.FluentbitImage(g.env.ACRName()),
 							Command: []string{
 								"/opt/td-agent-bit/bin/td-agent-bit",
 							},
@@ -463,7 +453,7 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 						},
 						{
 							Name:  "fluentbit-containers",
-							Image: g.fluentbitImage(),
+							Image: version.FluentbitImage(g.env.ACRName()),
 							Command: []string{
 								"/opt/td-agent-bit/bin/td-agent-bit",
 							},
@@ -500,7 +490,7 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 						},
 						{
 							Name:  "fluentbit-audit",
-							Image: g.fluentbitImage(),
+							Image: version.FluentbitImage(g.env.ACRName()),
 							Command: []string{
 								"/opt/td-agent-bit/bin/td-agent-bit",
 							},
@@ -537,7 +527,7 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 						},
 						{
 							Name:  "mdsd",
-							Image: g.mdsdImage(),
+							Image: version.MdsdImage(g.env.ACRName()),
 							Command: []string{
 								"/usr/sbin/mdsd",
 							},
@@ -572,7 +562,7 @@ func (g *genevaLogging) CreateOrUpdate(ctx context.Context) error {
 								},
 								{
 									Name:  "MONITORING_GCS_NAMESPACE",
-									Value: "AROClusterLogs",
+									Value: genevaClusterLogsNamespace,
 								},
 								{
 									Name:  "MONITORING_CONFIG_VERSION",

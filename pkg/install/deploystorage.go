@@ -20,6 +20,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset"
+	"github.com/openshift/installer/pkg/asset/bootstraplogging"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/kubeconfig"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
@@ -42,7 +43,7 @@ func (i *Installer) createDNS(ctx context.Context) error {
 	return i.dns.Create(ctx, i.doc.OpenShiftCluster)
 }
 
-func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) error {
+func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image, bootstrapLoggingConfig *bootstraplogging.Config) error {
 	if i.doc.OpenShiftCluster.Properties.InfraID == "" {
 		clusterID := &installconfig.ClusterID{}
 
@@ -243,10 +244,11 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 	}
 
 	g := graph{
-		reflect.TypeOf(installConfig): installConfig,
-		reflect.TypeOf(platformCreds): platformCreds,
-		reflect.TypeOf(image):         image,
-		reflect.TypeOf(clusterID):     clusterID,
+		reflect.TypeOf(installConfig):          installConfig,
+		reflect.TypeOf(platformCreds):          platformCreds,
+		reflect.TypeOf(image):                  image,
+		reflect.TypeOf(clusterID):              clusterID,
+		reflect.TypeOf(bootstrapLoggingConfig): bootstrapLoggingConfig,
 	}
 
 	i.log.Print("resolving graph")

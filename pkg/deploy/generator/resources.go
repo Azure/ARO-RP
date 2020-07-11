@@ -22,6 +22,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 const (
@@ -670,6 +671,10 @@ func (g *generator) vmss() *arm.Resource {
 	}
 
 	parts = append(parts,
+		"'MDMIMAGE=''"+version.MdmImage("")+"''\n'",
+	)
+
+	parts = append(parts,
 		"'LOCATION=$(base64 -d <<<'''",
 		"base64(resourceGroup().location)",
 		"''')\n'",
@@ -755,7 +760,7 @@ az account set -s "$SUBSCRIPTIONID"
 systemctl start docker.service
 az acr login --name "$(sed -e 's|.*/||' <<<"$ACRRESOURCEID")"
 
-MDMIMAGE="${RPIMAGE%%/*}/genevamdm:master_41"
+MDMIMAGE="${RPIMAGE%%/*}/${MDMIMAGE##*/}"
 docker pull "$MDMIMAGE"
 docker pull "$RPIMAGE"
 
