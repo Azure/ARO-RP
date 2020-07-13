@@ -147,12 +147,12 @@ func (m *manager) createOrUpdateE2EBlob(ctx context.Context, doc *api.BillingDoc
 		return err
 	}
 
-	subDocument, err := m.subDB.Get(ctx, resource.SubscriptionID)
+	subscriptionDoc, err := m.subDB.Get(ctx, resource.SubscriptionID)
 	if err != nil {
 		return err
 	}
 
-	if !isSubscriptionRegisteredForE2E(subDocument.Subscription.Properties) {
+	if !isSubscriptionRegisteredForE2E(subscriptionDoc.Subscription.Properties) {
 		return nil
 	}
 
