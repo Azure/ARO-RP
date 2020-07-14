@@ -7,13 +7,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"reflect"
-	"runtime"
 	"time"
 
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -32,7 +30,6 @@ import (
 	"github.com/openshift/installer/pkg/asset/releaseimage"
 	"github.com/sirupsen/logrus"
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -52,6 +49,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/privateendpoint"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
+	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -152,24 +150,24 @@ func NewInstaller(ctx context.Context, log *logrus.Entry, _env env.Interface, db
 
 // AdminUpgrade performs an admin upgrade of an ARO cluster
 func (i *Installer) AdminUpgrade(ctx context.Context) error {
-	steps := []interface{}{
-		action(i.initializeKubernetesClients), // must be first
-		action(i.deploySnapshotUpgradeTemplate),
-		action(i.startVMs),
-		condition{i.apiServersReady, 30 * time.Minute},
-		action(i.ensureBillingRecord), // belt and braces
-		action(i.fixLBProbes),
-		action(i.fixNSG),
-		action(i.ensureIfReload),
-		action(i.ensureRouteFix),
-		action(i.ensureAROOperator),
-		condition{i.aroDeploymentReady, 10 * time.Minute},
-		action(i.upgradeCertificates),
-		action(i.configureAPIServerCertificate),
-		action(i.configureIngressCertificate),
-		action(i.preUpgradeChecks), // Run this before Upgrade cluster
-		action(i.upgradeCluster),
-		action(i.addResourceProviderVersion), // Run this last so we capture the resource provider only once the upgrade has been fully performed
+	steps := []steps.Step{
+		steps.Action(i.initializeKubernetesClients), // must be first
+		steps.Action(i.deploySnapshotUpgradeTemplate),
+		steps.Action(i.startVMs),
+		steps.Condition(i.apiServersReady, 30*time.Minute),
+		steps.Action(i.ensureBillingRecord), // belt and braces
+		steps.Action(i.fixLBProbes),
+		steps.Action(i.fixNSG),
+		steps.Action(i.ensureIfReload),
+		steps.Action(i.ensureRouteFix),
+		steps.Action(i.ensureAROOperator),
+		steps.Condition(i.aroDeploymentReady, 10*time.Minute),
+		steps.Action(i.upgradeCertificates),
+		steps.Action(i.configureAPIServerCertificate),
+		steps.Action(i.configureIngressCertificate),
+		steps.Action(i.preUpgradeChecks), // Run this before Upgrade cluster
+		steps.Action(i.upgradeCluster),
+		steps.Action(i.addResourceProviderVersion), // Run this last so we capture the resource provider only once the upgrade has been fully performed
 	}
 
 	return i.runSteps(ctx, steps)
@@ -177,44 +175,45 @@ func (i *Installer) AdminUpgrade(ctx context.Context) error {
 
 // Install installs an ARO cluster
 func (i *Installer) Install(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image, bootstrapLoggingConfig *bootstraplogging.Config) error {
-	steps := map[api.InstallPhase][]interface{}{
+	steps := map[api.InstallPhase][]steps.Step{
 		api.InstallPhaseBootstrap: {
-			action(i.createDNS),
-			action(func(ctx context.Context) error {
+			steps.Action(i.createDNS),
+			steps.AuthorizationRefreshingAction(i.fpAuthorizer, steps.Action(func(ctx context.Context) error {
 				return i.deployStorageTemplate(ctx, installConfig, platformCreds, image, bootstrapLoggingConfig)
-			}),
-			action(i.attachNSGsAndPatch),
-			action(i.ensureBillingRecord),
-			action(i.deployResourceTemplate),
-			action(i.createPrivateEndpoint),
-			action(i.updateAPIIP),
-			action(i.createCertificates),
-			action(i.initializeKubernetesClients),
-			condition{i.bootstrapConfigMapReady, 30 * time.Minute},
-			action(i.ensureIfReload),
-			action(i.ensureRouteFix),
-			action(i.ensureAROOperator),
-			action(i.incrInstallPhase),
+			})),
+			steps.AuthorizationRefreshingAction(i.fpAuthorizer, steps.Action(i.attachNSGsAndPatch)),
+			steps.Action(i.ensureBillingRecord),
+			steps.AuthorizationRefreshingAction(i.fpAuthorizer, steps.Action(i.deployResourceTemplate)),
+			steps.Action(i.deployResourceTemplate),
+			steps.Action(i.createPrivateEndpoint),
+			steps.Action(i.updateAPIIP),
+			steps.Action(i.createCertificates),
+			steps.Action(i.initializeKubernetesClients),
+			steps.Condition(i.bootstrapConfigMapReady, 30*time.Minute),
+			steps.Action(i.ensureIfReload),
+			steps.Action(i.ensureRouteFix),
+			steps.Action(i.ensureAROOperator),
+			steps.Action(i.incrInstallPhase),
 		},
 		api.InstallPhaseRemoveBootstrap: {
-			action(i.initializeKubernetesClients),
-			action(i.removeBootstrap),
-			action(i.removeBootstrapIgnition),
-			action(i.configureAPIServerCertificate),
-			condition{i.apiServersReady, 30 * time.Minute},
-			condition{i.operatorConsoleExists, 30 * time.Minute},
-			action(i.updateConsoleBranding),
-			condition{i.operatorConsoleReady, 10 * time.Minute},
-			condition{i.clusterVersionReady, 30 * time.Minute},
-			condition{i.aroDeploymentReady, 10 * time.Minute},
-			action(i.disableUpdates),
-			action(i.disableSamples),
-			action(i.disableOperatorHubSources),
-			action(i.updateRouterIP),
-			action(i.configureIngressCertificate),
-			condition{i.ingressControllerReady, 30 * time.Minute},
-			action(i.finishInstallation),
-			action(i.addResourceProviderVersion),
+			steps.Action(i.initializeKubernetesClients),
+			steps.Action(i.removeBootstrap),
+			steps.Action(i.removeBootstrapIgnition),
+			steps.Action(i.configureAPIServerCertificate),
+			steps.Condition(i.apiServersReady, 30*time.Minute),
+			steps.Condition(i.operatorConsoleExists, 30*time.Minute),
+			steps.Action(i.updateConsoleBranding),
+			steps.Condition(i.operatorConsoleReady, 10*time.Minute),
+			steps.Condition(i.clusterVersionReady, 30*time.Minute),
+			steps.Condition(i.aroDeploymentReady, 10*time.Minute),
+			steps.Action(i.disableUpdates),
+			steps.Action(i.disableSamples),
+			steps.Action(i.disableOperatorHubSources),
+			steps.Action(i.updateRouterIP),
+			steps.Action(i.configureIngressCertificate),
+			steps.Condition(i.ingressControllerReady, 30*time.Minute),
+			steps.Action(i.finishInstallation),
+			steps.Action(i.addResourceProviderVersion),
 		},
 	}
 
@@ -232,11 +231,11 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 
 func (i *Installer) runSteps(ctx context.Context, s []steps.Step) error {
 	err := steps.Run(ctx, i.log, 10*time.Second, s)
-			if err != nil {
-				i.gatherFailureLogs(ctx)
-				}
-				return err
-			}
+	if err != nil {
+		i.gatherFailureLogs(ctx)
+	}
+	return err
+}
 
 func (i *Installer) startInstallation(ctx context.Context) error {
 	var err error
@@ -459,7 +458,8 @@ func (i *Installer) deployARMTemplate(ctx context.Context, rg string, tName stri
 	return err
 }
 
-// addResourceProviderVersion sets the deploying resource provider version in the cluster document for deployment-tracking purposes.
+// addResourceProviderVersion sets the deploying resource provider version in
+// the cluster document for deployment-tracking purposes.
 func (i *Installer) addResourceProviderVersion(ctx context.Context) error {
 	var err error
 	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
