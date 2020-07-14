@@ -67,7 +67,25 @@ func (i *ifReload) ensureNamespace(ns string) error {
 		return err
 	}
 
-	return nil
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		_ns, err := i.cli.CoreV1().Namespaces().Get(ns, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		if _ns.Annotations == nil {
+			_ns.Annotations = map[string]string{}
+		}
+
+		if annotation, ok := _ns.Annotations[projectv1.ProjectNodeSelector]; annotation == "" && ok {
+			return nil
+		}
+
+		_ns.Annotations[projectv1.ProjectNodeSelector] = ""
+
+		_, err = i.cli.CoreV1().Namespaces().Update(_ns)
+		return err
+	})
 }
 
 func (i *ifReload) applyDaemonSet(ds *appsv1.DaemonSet) error {
