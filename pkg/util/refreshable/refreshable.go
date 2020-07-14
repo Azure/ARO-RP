@@ -30,13 +30,3 @@ func NewAuthorizer(sp *adal.ServicePrincipalToken) Authorizer {
 		sp:         sp,
 	}
 }
-
-type TestAuthorizer struct{}
-
-func (a *TestAuthorizer) RefreshWithContext(ctx context.Context) error {
-	return nil
-}
-
-func (a *TestAuthorizer) WithAuthorization() autorest.PrepareDecorator {
-	return nil
-}
