@@ -88,16 +88,7 @@ type Installer struct {
 	securitycli   securityclient.Interface
 }
 
-const (
-	deploymentName = "azuredeploy"
-	pollInterval   = 10 * time.Second
-)
-
-type action func(context.Context) error
-type condition struct {
-	f       wait.ConditionFunc
-	timeout time.Duration
-}
+const deploymentName = "azuredeploy"
 
 // NewInstaller creates a new Installer
 func NewInstaller(ctx context.Context, log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, billing billing.Manager, doc *api.OpenShiftClusterDocument) (*Installer, error) {
@@ -231,61 +222,13 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 	return i.runSteps(ctx, steps[i.doc.OpenShiftCluster.Properties.Install.Phase])
 }
 
-func (i *Installer) runSteps(ctx context.Context, steps []interface{}) error {
-	for _, step := range steps {
-		var err error
-
-		switch step := step.(type) {
-		case action:
-			i.log.Printf("running step %s", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name())
-
-			func() {
-				timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
-				defer cancel()
-
-				wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-					err = step(ctx)
-					if azureerrors.HasAuthorizationFailedError(err) ||
-						azureerrors.HasLinkedAuthorizationFailedError(err) {
-						i.log.Print(err)
-						// https://github.com/Azure/ARO-RP/issues/541: it is unclear if this refresh helps or not
-						err = i.fpAuthorizer.RefreshWithContext(ctx)
-						return false, err
-					}
-					return err == nil, err
-				}, timeoutCtx.Done())
-			}()
-
+func (i *Installer) runSteps(ctx context.Context, s []steps.Step) error {
+	err := steps.Run(ctx, i.log, 10*time.Second, s)
 			if err != nil {
 				i.gatherFailureLogs(ctx)
-				if _, ok := err.(*api.CloudError); !ok {
-					err = fmt.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(step).Pointer()).Name(), err)
 				}
 				return err
 			}
-
-		case condition:
-			i.log.Printf("waiting for %s", runtime.FuncForPC(reflect.ValueOf(step.f).Pointer()).Name())
-			func() {
-				timeoutCtx, cancel := context.WithTimeout(ctx, step.timeout)
-				defer cancel()
-				err = wait.PollImmediateUntil(pollInterval, step.f, timeoutCtx.Done())
-			}()
-			if err != nil {
-				i.gatherFailureLogs(ctx)
-				if _, ok := err.(*api.CloudError); !ok {
-					err = fmt.Errorf("%s: %s", runtime.FuncForPC(reflect.ValueOf(step.f).Pointer()).Name(), err)
-				}
-				return err
-			}
-
-		default:
-			return errors.New("install step must be an action or a condition")
-		}
-	}
-
-	return nil
-}
 
 func (i *Installer) startInstallation(ctx context.Context) error {
 	var err error
