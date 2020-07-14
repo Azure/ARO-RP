@@ -43,6 +43,7 @@ func (c *conn) Read(b []byte) (int, error) {
 }
 
 type Dev interface {
+	Interface
 	CreateARMResourceGroupRoleAssignment(context.Context, refreshable.Authorizer, string) error
 }
 
