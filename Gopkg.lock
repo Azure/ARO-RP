@@ -910,7 +910,7 @@
 
 [[projects]]
   branch = "release-4.4"
-  digest = "1:5a3061ac5914af3cef6ea2807e78d0b378850a47990a205c0bc3e14594f67938"
+  digest = "1:22c3eaaa5c01ae4e5f04aae75e13f241bd1de2d580d0424397ea8eeb439ff3e9"
   name = "github.com/openshift/api"
   packages = [
     "config/v1",
@@ -919,6 +919,7 @@
     "image/v1",
     "operator/v1",
     "operator/v1alpha1",
+    "project/v1",
     "samples/v1",
     "security/v1",
   ]
@@ -2067,6 +2068,7 @@
     "github.com/openshift/api/config/v1",
     "github.com/openshift/api/image/v1",
     "github.com/openshift/api/operator/v1",
+    "github.com/openshift/api/project/v1",
     "github.com/openshift/api/security/v1",
     "github.com/openshift/client-go/config/clientset/versioned",
     "github.com/openshift/client-go/config/clientset/versioned/fake",
@@ -2109,6 +2111,7 @@
     "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1",
     "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned",
     "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake",
+    "github.com/pkg/errors",
     "github.com/prometheus/common/model",
     "github.com/satori/go.uuid",
     "github.com/shurcooL/vfsgen",
