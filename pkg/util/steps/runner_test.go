@@ -14,6 +14,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 
+	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_refreshable "github.com/Azure/ARO-RP/pkg/util/mocks/refreshable"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
@@ -287,6 +288,60 @@ func TestStepRunner(t *testing.T) {
 				},
 			},
 			wantErr: "timed out waiting for the condition",
+		},
+		{
+			name: "OnlyInProd runs steps when the provided environment is a prod env",
+			steps: func(controller *gomock.Controller) []Step {
+				myenv := mock_env.NewMockInterface(controller)
+				return []Step{
+					Action(successfulFunc),
+					OnlyInProd(myenv, Action(successfulFunc)),
+					Action(successfulFunc),
+				}
+			},
+			wantEntries: []testlog.ExpectedLogEntry{
+				{
+					Message: "running step [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]",
+					Level:   logrus.InfoLevel,
+				},
+				{
+					Message: "running step [OnlyInProd [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]]",
+					Level:   logrus.InfoLevel,
+				},
+				{
+					Message: "running step [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]",
+					Level:   logrus.InfoLevel,
+				},
+			},
+		},
+		{
+			name: "OnlyInProd does not run steps when the provided environment is a dev env",
+			steps: func(controller *gomock.Controller) []Step {
+				myenv := mock_env.NewMockDev(controller)
+				return []Step{
+					Action(successfulFunc),
+					OnlyInProd(myenv, Action(successfulFunc)),
+					Action(successfulFunc),
+				}
+			},
+			wantEntries: []testlog.ExpectedLogEntry{
+				{
+					Message: "running step [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]",
+					Level:   logrus.InfoLevel,
+				},
+				{
+					Message: "running step [OnlyInProd [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]]",
+					Level:   logrus.InfoLevel,
+				},
+				{
+					Message: "skipping [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc] as not in production",
+					Level:   logrus.InfoLevel,
+				},
+				{
+					Message: "running step [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]",
+					Level:   logrus.InfoLevel,
+				},
+			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

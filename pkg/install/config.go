@@ -1,0 +1,265 @@
+package install
+
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
+import (
+	"context"
+	"crypto/x509"
+	"encoding/base64"
+	"fmt"
+	"os"
+	"regexp"
+	"strings"
+
+	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/openshift/installer/pkg/asset/installconfig"
+	icazure "github.com/openshift/installer/pkg/asset/installconfig/azure"
+	icopenstack "github.com/openshift/installer/pkg/asset/installconfig/openstack"
+	"github.com/openshift/installer/pkg/asset/releaseimage"
+	"github.com/openshift/installer/pkg/ipnet"
+	"github.com/openshift/installer/pkg/rhcos"
+	"github.com/openshift/installer/pkg/types"
+	azuretypes "github.com/openshift/installer/pkg/types/azure"
+	"github.com/openshift/installer/pkg/types/validation"
+	"golang.org/x/crypto/ssh"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/genevalogging"
+	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
+	"github.com/Azure/ARO-RP/pkg/util/stringutils"
+	"github.com/Azure/ARO-RP/pkg/util/subnet"
+	"github.com/Azure/ARO-RP/pkg/util/version"
+)
+
+func (i *Installer) initializeConfig(ctx context.Context) error {
+	var err error
+	resourceGroup := stringutils.LastTokenByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+
+	pullSecret := os.Getenv("PULL_SECRET")
+
+	pullSecret, err = pullsecret.Merge(pullSecret, string(i.doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret))
+	if err != nil {
+		return err
+	}
+
+	pullSecret, _, err = pullsecret.SetRegistryProfiles(pullSecret, i.doc.OpenShiftCluster.Properties.RegistryProfiles...)
+	if err != nil {
+		return err
+	}
+
+	for _, key := range []string{"cloud.openshift.com"} {
+		pullSecret, err = pullsecret.RemoveKey(pullSecret, key)
+		if err != nil {
+			return err
+		}
+	}
+
+	r, err := azure.ParseResourceID(i.doc.OpenShiftCluster.ID)
+	if err != nil {
+		return err
+	}
+
+	_, masterSubnetName, err := subnet.Split(i.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
+	if err != nil {
+		return err
+	}
+
+	vnetID, workerSubnetName, err := subnet.Split(i.doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID)
+	if err != nil {
+		return err
+	}
+
+	vnetr, err := azure.ParseResourceID(vnetID)
+	if err != nil {
+		return err
+	}
+
+	privateKey, err := x509.ParsePKCS1PrivateKey(i.doc.OpenShiftCluster.Properties.SSHKey)
+	if err != nil {
+		return err
+	}
+
+	sshkey, err := ssh.NewPublicKey(&privateKey.PublicKey)
+	if err != nil {
+		return err
+	}
+
+	domain := i.doc.OpenShiftCluster.Properties.ClusterProfile.Domain
+	if !strings.ContainsRune(domain, '.') {
+		domain += "." + i.env.Domain()
+	}
+
+	masterZones, err := i.env.Zones(string(i.doc.OpenShiftCluster.Properties.MasterProfile.VMSize))
+	if err != nil {
+		return err
+	}
+	if len(masterZones) == 0 {
+		masterZones = []string{""}
+	}
+
+	workerZones, err := i.env.Zones(string(i.doc.OpenShiftCluster.Properties.WorkerProfiles[0].VMSize))
+	if err != nil {
+		return err
+	}
+	if len(workerZones) == 0 {
+		masterZones = []string{""}
+	}
+
+	bootstrapLoggingConfig, err := genevalogging.GetBootstrapLoggingConfig(i.env, i.doc)
+	if err != nil {
+		return err
+	}
+
+	platformCreds := &installconfig.PlatformCreds{
+		Azure: &icazure.Credentials{
+			TenantID:       i.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID,
+			ClientID:       i.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientID,
+			ClientSecret:   string(i.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret),
+			SubscriptionID: r.SubscriptionID,
+		},
+	}
+
+	installConfig := &installconfig.InstallConfig{
+		Config: &types.InstallConfig{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: domain[:strings.IndexByte(domain, '.')],
+			},
+			SSHKey:     sshkey.Type() + " " + base64.StdEncoding.EncodeToString(sshkey.Marshal()),
+			BaseDomain: domain[strings.IndexByte(domain, '.')+1:],
+			Networking: &types.Networking{
+				MachineNetwork: []types.MachineNetworkEntry{
+					{
+						CIDR: *ipnet.MustParseCIDR("127.0.0.0/8"), // dummy
+					},
+				},
+				NetworkType: "OpenShiftSDN",
+				ClusterNetwork: []types.ClusterNetworkEntry{
+					{
+						CIDR:       *ipnet.MustParseCIDR(i.doc.OpenShiftCluster.Properties.NetworkProfile.PodCIDR),
+						HostPrefix: 23,
+					},
+				},
+				ServiceNetwork: []ipnet.IPNet{
+					*ipnet.MustParseCIDR(i.doc.OpenShiftCluster.Properties.NetworkProfile.ServiceCIDR),
+				},
+			},
+			ControlPlane: &types.MachinePool{
+				Name:     "master",
+				Replicas: to.Int64Ptr(3),
+				Platform: types.MachinePoolPlatform{
+					Azure: &azuretypes.MachinePool{
+						Zones:        masterZones,
+						InstanceType: string(i.doc.OpenShiftCluster.Properties.MasterProfile.VMSize),
+					},
+				},
+				Hyperthreading: "Enabled",
+				Architecture:   types.ArchitectureAMD64,
+			},
+			Compute: []types.MachinePool{
+				{
+					Name:     i.doc.OpenShiftCluster.Properties.WorkerProfiles[0].Name,
+					Replicas: to.Int64Ptr(int64(i.doc.OpenShiftCluster.Properties.WorkerProfiles[0].Count)),
+					Platform: types.MachinePoolPlatform{
+						Azure: &azuretypes.MachinePool{
+							Zones:        workerZones,
+							InstanceType: string(i.doc.OpenShiftCluster.Properties.WorkerProfiles[0].VMSize),
+							OSDisk: azuretypes.OSDisk{
+								DiskSizeGB: int32(i.doc.OpenShiftCluster.Properties.WorkerProfiles[0].DiskSizeGB),
+							},
+						},
+					},
+					Hyperthreading: "Enabled",
+					Architecture:   types.ArchitectureAMD64,
+				},
+			},
+			Platform: types.Platform{
+				Azure: &azuretypes.Platform{
+					Region:                   strings.ToLower(i.doc.OpenShiftCluster.Location), // Used in k8s object names, so must pass DNS-1123 validation
+					ResourceGroupName:        resourceGroup,
+					NetworkResourceGroupName: vnetr.ResourceGroup,
+					VirtualNetwork:           vnetr.ResourceName,
+					ControlPlaneSubnet:       masterSubnetName,
+					ComputeSubnet:            workerSubnetName,
+					ARO:                      true,
+				},
+			},
+			PullSecret: pullSecret,
+			ImageContentSources: []types.ImageContentSource{
+				{
+					Source: "quay.io/openshift-release-dev/ocp-release",
+					Mirrors: []string{
+						fmt.Sprintf("%s.azurecr.io/openshift-release-dev/ocp-release", i.env.ACRName()),
+					},
+				},
+				{
+					Source: "quay.io/openshift-release-dev/ocp-release-nightly",
+					Mirrors: []string{
+						fmt.Sprintf("%s.azurecr.io/openshift-release-dev/ocp-release-nightly", i.env.ACRName()),
+					},
+				},
+				{
+					Source: "quay.io/openshift-release-dev/ocp-v4.0-art-dev",
+					Mirrors: []string{
+						fmt.Sprintf("%s.azurecr.io/openshift-release-dev/ocp-v4.0-art-dev", i.env.ACRName()),
+					},
+				},
+			},
+			Publish: types.ExternalPublishingStrategy,
+		},
+	}
+
+	if i.doc.OpenShiftCluster.Properties.IngressProfiles[0].Visibility == api.VisibilityPrivate {
+		installConfig.Config.Publish = types.InternalPublishingStrategy
+	}
+
+	installConfig.Config.Azure.Image, err = getRHCOSImage(ctx)
+	if err != nil {
+		return err
+	}
+
+	image := &releaseimage.Image{}
+	if i.doc.OpenShiftCluster.Properties.ClusterProfile.Version == version.InstallStream.Version.String() {
+		image.PullSpec = version.InstallStream.PullSpec
+	} else {
+		return fmt.Errorf("unimplemented version %q", i.doc.OpenShiftCluster.Properties.ClusterProfile.Version)
+	}
+
+	err = validation.ValidateInstallConfig(installConfig.Config, icopenstack.NewValidValuesFetcher()).ToAggregate()
+	if err != nil {
+		return err
+	}
+
+	i.installconfig = installConfig
+	i.platformcreds = platformCreds
+	i.image = image
+	i.bootstraploggingconfig = bootstrapLoggingConfig
+	return nil
+}
+
+var rxRHCOS = regexp.MustCompile(`rhcos-((\d+)\.\d+\.\d{8})\d{4}\-\d+-azure\.x86_64\.vhd`)
+
+func getRHCOSImage(ctx context.Context) (*azuretypes.Image, error) {
+	// https://rhcos.blob.core.windows.net/imagebucket/rhcos-44.81.202004250133-0-azure.x86_64.vhd
+	osImage, err := rhcos.VHD(ctx, types.ArchitectureAMD64)
+	if err != nil {
+		return nil, err
+	}
+
+	m := rxRHCOS.FindStringSubmatch(osImage)
+	if m == nil {
+		return nil, fmt.Errorf("couldn't match osImage %q", osImage)
+	}
+
+	return &azuretypes.Image{
+		Publisher: "azureopenshift",
+		Offer:     "aro4",
+		SKU:       "aro_" + m[2], // "aro_44"
+		Version:   m[1],          // "44.81.20200425"
+	}, nil
+}

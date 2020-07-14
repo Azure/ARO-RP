@@ -5,6 +5,8 @@ package install
 
 import (
 	"context"
+	"crypto/rand"
+	"math/big"
 	"net/http"
 	"os"
 	"reflect"
@@ -20,10 +22,8 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset"
-	"github.com/openshift/installer/pkg/asset/bootstraplogging"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/kubeconfig"
-	"github.com/openshift/installer/pkg/asset/releaseimage"
 	"github.com/openshift/installer/pkg/asset/targets"
 	"github.com/openshift/installer/pkg/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,12 +43,23 @@ func (i *Installer) createDNS(ctx context.Context) error {
 	return i.dns.Create(ctx, i.doc.OpenShiftCluster)
 }
 
-func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image, bootstrapLoggingConfig *bootstraplogging.Config) error {
+func (i *Installer) ensureStorageSuffix(ctx context.Context) error {
+	var err error
+	if i.doc.OpenShiftCluster.Properties.StorageSuffix == "" {
+		i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+			doc.OpenShiftCluster.Properties.StorageSuffix, err = randomLowerCaseAlphanumericStringWithNoVowels(5)
+			return err
+		})
+	}
+	return err
+}
+
+func (i *Installer) deployStorageTemplate(ctx context.Context) error {
 	if i.doc.OpenShiftCluster.Properties.InfraID == "" {
 		clusterID := &installconfig.ClusterID{}
 
 		err := clusterID.Generate(asset.Parents{
-			reflect.TypeOf(installConfig): &installconfig.InstallConfig{
+			reflect.TypeOf(i.installconfig): &installconfig.InstallConfig{
 				Config: &types.InstallConfig{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: strings.ToLower(i.doc.OpenShiftCluster.Name),
@@ -74,7 +85,7 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 
 	i.log.Print("creating resource group")
 	group := mgmtfeatures.ResourceGroup{
-		Location:  &installConfig.Config.Azure.Region,
+		Location:  &i.installconfig.Config.Azure.Region,
 		ManagedBy: to.StringPtr(i.doc.OpenShiftCluster.ID),
 	}
 	if _, ok := i.env.(env.Dev); ok {
@@ -152,7 +163,7 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 						Name: "Standard_LRS",
 					},
 					Name:     to.StringPtr("cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix),
-					Location: &installConfig.Config.Azure.Region,
+					Location: &i.installconfig.Config.Azure.Region,
 					Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
 				},
 				APIVersion: azureclient.APIVersions["Microsoft.Storage"],
@@ -177,12 +188,12 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 					"Microsoft.Storage/storageAccounts/cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix,
 				},
 			},
-			i.apiServerNSG(installConfig.Config.Azure.Region),
+			i.apiServerNSG(i.installconfig.Config.Azure.Region),
 			{
 				Resource: &mgmtnetwork.SecurityGroup{
 					Name:     to.StringPtr(infraID + subnet.NSGNodeSuffix),
 					Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
-					Location: &installConfig.Config.Azure.Region,
+					Location: &i.installconfig.Config.Azure.Region,
 				},
 				APIVersion: azureclient.APIVersions["Microsoft.Network"],
 			},
@@ -244,11 +255,11 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 	}
 
 	g := graph{
-		reflect.TypeOf(installConfig):          installConfig,
-		reflect.TypeOf(platformCreds):          platformCreds,
-		reflect.TypeOf(image):                  image,
-		reflect.TypeOf(clusterID):              clusterID,
-		reflect.TypeOf(bootstrapLoggingConfig): bootstrapLoggingConfig,
+		reflect.TypeOf(i.installconfig):          i.installconfig,
+		reflect.TypeOf(i.platformcreds):          i.platformcreds,
+		reflect.TypeOf(i.image):                  i.image,
+		reflect.TypeOf(clusterID):                clusterID,
+		reflect.TypeOf(i.bootstraploggingconfig): i.bootstraploggingconfig,
 	}
 
 	i.log.Print("resolving graph")
@@ -335,4 +346,21 @@ func (i *Installer) attachNSGsAndPatch(ctx context.Context) error {
 		return nil
 	})
 	return err
+}
+
+func randomLowerCaseAlphanumericStringWithNoVowels(n int) (string, error) {
+	return randomString("bcdfghjklmnpqrstvwxyz0123456789", n)
+}
+
+func randomString(letterBytes string, n int) (string, error) {
+	b := make([]byte, n)
+	for i := range b {
+		o, err := rand.Int(rand.Reader, big.NewInt(int64(len(letterBytes))))
+		if err != nil {
+			return "", err
+		}
+		b[i] = letterBytes[o.Int64()]
+	}
+
+	return string(b), nil
 }

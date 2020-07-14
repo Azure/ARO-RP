@@ -5,6 +5,8 @@ package install
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
 
@@ -15,6 +17,7 @@ import (
 	coreclient "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/util/retry"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
@@ -216,4 +219,21 @@ func (i *Installer) configureIngressCertificate(ctx context.Context) error {
 		_, err = i.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Update(ic)
 		return err
 	})
+}
+
+func (i *Installer) ensureSSHKey(ctx context.Context) error {
+	var err error
+
+	if i.doc.OpenShiftCluster.Properties.SSHKey == nil {
+		i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+			sshKey, err := rsa.GenerateKey(rand.Reader, 2048)
+			if err != nil {
+				return err
+			}
+
+			doc.OpenShiftCluster.Properties.SSHKey = x509.MarshalPKCS1PrivateKey(sshKey)
+			return nil
+		})
+	}
+	return err
 }

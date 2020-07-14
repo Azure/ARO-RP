@@ -40,7 +40,8 @@ type Manager struct {
 	subnet          subnet.Manager
 	acrtoken        pkgacrtoken.Manager
 
-	doc *api.OpenShiftClusterDocument
+	doc             *api.OpenShiftClusterDocument
+	subscriptionDoc *api.SubscriptionDocument
 }
 
 func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (*Manager, error) {
@@ -90,7 +91,8 @@ func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClus
 		acrtoken:        acrtoken,
 		subnet:          subnet.NewManager(subscriptionDoc.ID, fpAuthorizer),
 
-		doc: doc,
+		doc:             doc,
+		subscriptionDoc: subscriptionDoc,
 	}
 
 	return m, nil

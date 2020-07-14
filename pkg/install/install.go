@@ -32,6 +32,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
@@ -55,13 +56,20 @@ import (
 
 // Installer contains information needed to install an ARO cluster
 type Installer struct {
-	log          *logrus.Entry
-	env          env.Interface
-	db           database.OpenShiftClusters
-	billing      billing.Manager
-	doc          *api.OpenShiftClusterDocument
-	cipher       encryption.Cipher
-	fpAuthorizer refreshable.Authorizer
+	log               *logrus.Entry
+	env               env.Interface
+	db                database.OpenShiftClusters
+	billing           billing.Manager
+	doc               *api.OpenShiftClusterDocument
+	subscriptiondoc   *api.SubscriptionDocument
+	cipher            encryption.Cipher
+	fpAuthorizer      refreshable.Authorizer
+	localFPAuthorizer refreshable.Authorizer
+
+	image                  *releaseimage.Image
+	installconfig          *installconfig.InstallConfig
+	platformcreds          *installconfig.PlatformCreds
+	bootstraploggingconfig *bootstraplogging.Config
 
 	disks             compute.DisksClient
 	virtualmachines   compute.VirtualMachinesClient
@@ -89,7 +97,7 @@ type Installer struct {
 const deploymentName = "azuredeploy"
 
 // NewInstaller creates a new Installer
-func NewInstaller(ctx context.Context, log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, billing billing.Manager, doc *api.OpenShiftClusterDocument) (*Installer, error) {
+func NewInstaller(ctx context.Context, log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (*Installer, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
 		return nil, err
@@ -116,13 +124,15 @@ func NewInstaller(ctx context.Context, log *logrus.Entry, _env env.Interface, db
 	}
 
 	return &Installer{
-		log:          log,
-		env:          _env,
-		db:           db,
-		billing:      billing,
-		cipher:       cipher,
-		doc:          doc,
-		fpAuthorizer: fpAuthorizer,
+		log:               log,
+		env:               _env,
+		db:                db,
+		billing:           billing,
+		cipher:            cipher,
+		doc:               doc,
+		subscriptiondoc:   subscriptionDoc,
+		fpAuthorizer:      fpAuthorizer,
+		localFPAuthorizer: localFPAuthorizer,
 
 		disks:             compute.NewDisksClient(r.SubscriptionID, fpAuthorizer),
 		virtualmachines:   compute.NewVirtualMachinesClient(r.SubscriptionID, fpAuthorizer),
@@ -166,13 +176,16 @@ func (i *Installer) AdminUpgrade(ctx context.Context) error {
 }
 
 // Install installs an ARO cluster
-func (i *Installer) Install(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image, bootstrapLoggingConfig *bootstraplogging.Config) error {
+func (i *Installer) Install(ctx context.Context) error {
 	steps := map[api.InstallPhase][]steps.Step{
 		api.InstallPhaseBootstrap: {
+			steps.Condition(i.dynamicValidate, 10*time.Minute),
+			steps.Action(i.ensureSSHKey),
+			steps.Action(i.ensureStorageSuffix),
+			steps.OnlyInProd(i.env, steps.Action(i.ensureAcrToken)),
+			steps.Action(i.initializeConfig),
 			steps.Action(i.createDNS),
-			steps.AuthorizationRefreshingAction(i.fpAuthorizer, steps.Action(func(ctx context.Context) error {
-				return i.deployStorageTemplate(ctx, installConfig, platformCreds, image, bootstrapLoggingConfig)
-			})),
+			steps.AuthorizationRefreshingAction(i.fpAuthorizer, steps.Action(i.deployStorageTemplate)),
 			steps.AuthorizationRefreshingAction(i.fpAuthorizer, steps.Action(i.attachNSGsAndPatch)),
 			steps.Action(i.ensureBillingRecord),
 			steps.AuthorizationRefreshingAction(i.fpAuthorizer, steps.Action(i.deployResourceTemplate)),
@@ -187,6 +200,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			steps.Action(i.incrInstallPhase),
 		},
 		api.InstallPhaseRemoveBootstrap: {
+			steps.Action(i.initializeConfig),
 			steps.Action(i.initializeKubernetesClients),
 			steps.Action(i.removeBootstrap),
 			steps.Action(i.removeBootstrapIgnition),
@@ -437,6 +451,24 @@ func (i *Installer) deployARMTemplate(ctx context.Context, rg string, tName stri
 	}
 
 	return err
+}
+
+func (i *Installer) dynamicValidate(ctx context.Context) (bool, error) {
+	// we don't re-call Dynamic on subsequent entries here.  One reason is
+	// that we would re-check quota *after* we had deployed our VMs, and
+	// could fail with a false positive.
+	ocDynamicValidator, err := validate.NewOpenShiftClusterDynamicValidator(i.log, i.env, i.doc.OpenShiftCluster, i.subscriptiondoc)
+	if err != nil {
+		return false, err
+	}
+
+	err = ocDynamicValidator.Dynamic(ctx)
+	if azureerrors.HasAuthorizationFailedError(err) ||
+		azureerrors.HasLinkedAuthorizationFailedError(err) {
+		i.log.Print(err)
+		return false, nil
+	}
+	return err == nil, err
 }
 
 // addResourceProviderVersion sets the deploying resource provider version in
