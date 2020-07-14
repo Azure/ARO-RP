@@ -4,6 +4,7 @@ package install
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"testing"
 
 	configv1 "github.com/openshift/api/config/v1"
@@ -19,6 +20,8 @@ import (
 const errMustBeNilMsg = "err must be nil; condition is retried until timeout"
 
 func TestBootstrapConfigMapReady(t *testing.T) {
+	ctx := context.Background()
+
 	for _, tt := range []struct {
 		name               string
 		configMapName      string
@@ -57,7 +60,7 @@ func TestBootstrapConfigMapReady(t *testing.T) {
 				},
 			}),
 		}
-		ready, err := i.bootstrapConfigMapReady()
+		ready, err := i.bootstrapConfigMapReady(ctx)
 		if err != nil {
 			t.Error(errMustBeNilMsg)
 		}
@@ -68,6 +71,8 @@ func TestBootstrapConfigMapReady(t *testing.T) {
 }
 
 func TestOperatorConsoleExists(t *testing.T) {
+	ctx := context.Background()
+
 	for _, tt := range []struct {
 		name        string
 		consoleName string
@@ -89,7 +94,7 @@ func TestOperatorConsoleExists(t *testing.T) {
 				},
 			}),
 		}
-		ready, err := i.operatorConsoleExists()
+		ready, err := i.operatorConsoleExists(ctx)
 		if err != nil {
 			t.Error(errMustBeNilMsg)
 		}
@@ -154,6 +159,8 @@ func TestIsOperatorAvailable(t *testing.T) {
 }
 
 func TestClusterVersionReady(t *testing.T) {
+	ctx := context.Background()
+
 	for _, tt := range []struct {
 		name               string
 		version            string
@@ -190,7 +197,7 @@ func TestClusterVersionReady(t *testing.T) {
 				},
 			}),
 		}
-		ready, err := i.clusterVersionReady()
+		ready, err := i.clusterVersionReady(ctx)
 		if err != nil {
 			t.Error(errMustBeNilMsg)
 		}
