@@ -10,6 +10,7 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
+	projectv1 "github.com/openshift/api/project/v1"
 	securityv1 "github.com/openshift/api/security/v1"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
 	"github.com/sirupsen/logrus"
@@ -175,7 +176,8 @@ func New(log *logrus.Entry, e env.Interface, oc *api.OpenShiftCluster, cli kuber
 func (g *genevaLogging) ensureNamespace(ns string) error {
 	_, err := g.cli.CoreV1().Namespaces().Create(&v1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: ns,
+			Name:        ns,
+			Annotations: map[string]string{projectv1.ProjectNodeSelector: ""},
 		},
 	})
 	if !errors.IsAlreadyExists(err) {
