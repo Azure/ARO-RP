@@ -11,19 +11,19 @@ import (
 
 func TestNewVersion(t *testing.T) {
 	for i, tt := range []struct {
-		vs   []byte
+		vs   []uint32
 		want *Version
 	}{
 		{
-			vs:   []byte{1, 2},
-			want: &Version{V: [3]byte{1, 2}},
+			vs:   []uint32{1, 2},
+			want: &Version{V: [3]uint32{1, 2}},
 		},
 		{
 			want: &Version{},
 		},
 		{
-			vs:   []byte{1, 2, 3, 4},
-			want: &Version{V: [3]byte{1, 2, 3}},
+			vs:   []uint32{1, 2, 3, 4},
+			want: &Version{V: [3]uint32{1, 2, 3}},
 		},
 	} {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
@@ -43,11 +43,15 @@ func TestParseVersion(t *testing.T) {
 	}{
 		{
 			vsn:  "4.3.0-0.nightly-2020-04-17-062811",
-			want: &Version{V: [3]byte{4, 3}, Suffix: "-0.nightly-2020-04-17-062811"},
+			want: &Version{V: [3]uint32{4, 3}, Suffix: "-0.nightly-2020-04-17-062811"},
 		},
 		{
 			vsn:  "40.30.10",
-			want: &Version{V: [3]byte{40, 30, 10}},
+			want: &Version{V: [3]uint32{40, 30, 10}},
+		},
+		{
+			vsn:  "4000.3000.1000",
+			want: &Version{V: [3]uint32{4000, 3000, 1000}},
 		},
 		{
 			vsn:     "bad",
