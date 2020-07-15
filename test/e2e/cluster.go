@@ -36,7 +36,6 @@ var _ = Describe("Cluster smoke test", func() {
 
 		Eventually(func() error {
 			return project.Verify()
-
 		}).Should(BeNil())
 	})
 
@@ -46,7 +45,6 @@ var _ = Describe("Cluster smoke test", func() {
 
 		Eventually(func() error {
 			return project.VerifyProjectIsDeleted()
-
 		}, 5*time.Minute, 1*time.Second).Should(BeNil())
 	})
 
@@ -60,7 +58,6 @@ var _ = Describe("Cluster smoke test", func() {
 
 		Eventually(func() error {
 			return verifyPodSucceeded(clients.Kubernetes)
-
 		}).Should(BeNil())
 	})
 
@@ -76,11 +73,11 @@ var _ = Describe("Cluster smoke test", func() {
 
 		Eventually(func() error {
 			return verifyServiceIsReady(ctx, clients.Kubernetes, "elb")
-		}).Should(BeNil())
+		}, 5*time.Minute, 10*time.Second).Should(BeNil())
 
 		Eventually(func() error {
 			return verifyServiceIsReady(ctx, clients.Kubernetes, "ilb")
-		}, 5*time.Minute, 1*time.Second).Should(BeNil())
+		}, 5*time.Minute, 10*time.Second).Should(BeNil())
 	})
 })
 

@@ -97,8 +97,8 @@ func newClientSet(subscriptionID string) (*clientSet, error) {
 var _ = BeforeSuite(func() {
 	log.Info("BeforeSuite")
 
-	SetDefaultEventuallyTimeout(1 * time.Minute)
-	SetDefaultEventuallyPollingInterval(100 * time.Millisecond)
+	SetDefaultEventuallyTimeout(2 * time.Minute)
+	SetDefaultEventuallyPollingInterval(1 * time.Second)
 
 	for _, key := range []string{
 		"AZURE_SUBSCRIPTION_ID",
