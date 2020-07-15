@@ -20,6 +20,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	admin "github.com/Azure/ARO-RP/pkg/api/admin"
 	v20200430 "github.com/Azure/ARO-RP/pkg/api/v20200430"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
@@ -57,12 +58,12 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 	ctx := context.Background()
 
 	apis := map[string]*api.Version{
-		"2020-04-30": {
-			OpenShiftClusterConverter: api.APIs["2020-04-30"].OpenShiftClusterConverter,
+		"admin": {
+			OpenShiftClusterConverter: api.APIs["admin"].OpenShiftClusterConverter,
 			OpenShiftClusterStaticValidator: func(string, string, bool, string) api.OpenShiftClusterStaticValidator {
 				return &dummyOpenShiftClusterValidator{}
 			},
-			OpenShiftClusterCredentialsConverter: api.APIs["2020-04-30"].OpenShiftClusterCredentialsConverter,
+			OpenShiftClusterCredentialsConverter: api.APIs["admin"].OpenShiftClusterCredentialsConverter,
 		},
 	}
 
@@ -98,20 +99,87 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 	type test struct {
 		name           string
 		resourceID     string
-		request        func(*v20200430.OpenShiftCluster)
+		request        func(*admin.OpenShiftCluster)
 		isPatch        bool
 		mocks          func(*test, *mock_database.MockAsyncOperations, *mock_database.MockOpenShiftClusters, *mock_clusterdata.MockOpenShiftClusterEnricher)
 		wantStatusCode int
-		wantResponse   func(*test) *v20200430.OpenShiftCluster
+		wantResponse   func(*test) *admin.OpenShiftCluster
 		wantAsync      bool
 		wantError      string
 	}
 
 	for _, tt := range []*test{
 		{
-			name:       "empty request is submitted nothing should happen",
+			name:       "patch with empty request",
 			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName", mockSubID),
-			request:    nil,
+			request: func(oc *admin.OpenShiftCluster) {
+			},
+			isPatch: true,
+			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher) {
+				currentClusterdoc := &api.OpenShiftClusterDocument{
+					Key: strings.ToLower(tt.resourceID),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   tt.resourceID,
+						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+						Tags: map[string]string{"tag": "will-be-kept"},
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState: api.ProvisioningStateSucceeded,
+						},
+					},
+				}
+
+				openShiftClusters.EXPECT().
+					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
+					Return(currentClusterdoc, nil)
+
+				enricher.EXPECT().Enrich(gomock.Any(), currentClusterdoc.OpenShiftCluster)
+				expectAsyncOperationDocumentCreate(asyncOperations, strings.ToLower(tt.resourceID), api.ProvisioningStateAdminUpdating)
+
+				clusterdoc := &api.OpenShiftClusterDocument{
+					Key: strings.ToLower(tt.resourceID),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   tt.resourceID,
+						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+						Tags: map[string]string{"tag": "will-be-kept"},
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState:     api.ProvisioningStateAdminUpdating,
+							LastProvisioningState: api.ProvisioningStateSucceeded,
+						},
+					},
+				}
+
+				openShiftClusters.EXPECT().
+					Update(gomock.Any(), (*matcher.OpenShiftClusterDocument)(clusterdoc)).
+					Return(clusterdoc, nil)
+			},
+			wantAsync:      true,
+			wantStatusCode: http.StatusOK,
+			wantResponse: func(tt *test) *admin.OpenShiftCluster {
+				return &admin.OpenShiftCluster{
+					ID:   tt.resourceID,
+					Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+					Tags: map[string]string{"tag": "will-be-kept"},
+					Properties: admin.OpenShiftClusterProperties{
+						ProvisioningState:     admin.ProvisioningStateAdminUpdating,
+						LastProvisioningState: admin.ProvisioningStateSucceeded,
+					},
+				}
+			},
+		},
+		{
+			name:       "patch a cluster with registry profile should ignore registry profile",
+			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName", mockSubID),
+			request: func(oc *admin.OpenShiftCluster) {
+				oc.Properties.ClusterProfile.Domain = "changed"
+				oc.Name = "resourceName"
+				oc.Properties.RegistryProfiles = []admin.RegistryProfile{
+					{
+						Name:     "TestUser",
+						Username: "TestUserName",
+					},
+				}
+			},
+			isPatch: true,
 			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher) {
 				currentClusterdoc := &api.OpenShiftClusterDocument{
 					Key: strings.ToLower(tt.resourceID),
@@ -122,8 +190,6 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 						Tags: map[string]string{"tag": "will-be-kept"},
 						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState: api.ProvisioningStateSucceeded,
-							IngressProfiles:   []api.IngressProfile{{Name: "default"}},
-							WorkerProfiles:    []api.WorkerProfile{{Name: "default"}},
 						},
 					},
 				}
@@ -133,7 +199,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					Return(currentClusterdoc, nil)
 
 				enricher.EXPECT().Enrich(gomock.Any(), currentClusterdoc.OpenShiftCluster)
-				expectAsyncOperationDocumentCreate(asyncOperations, strings.ToLower(tt.resourceID), api.ProvisioningStateUpdating)
+				expectAsyncOperationDocumentCreate(asyncOperations, strings.ToLower(tt.resourceID), api.ProvisioningStateAdminUpdating)
 
 				clusterdoc := &api.OpenShiftClusterDocument{
 					Key: strings.ToLower(tt.resourceID),
@@ -143,10 +209,11 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 						Tags: map[string]string{"tag": "will-be-kept"},
 						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState:     api.ProvisioningStateUpdating,
+							ProvisioningState:     api.ProvisioningStateAdminUpdating,
 							LastProvisioningState: api.ProvisioningStateSucceeded,
-							IngressProfiles:       []api.IngressProfile{{Name: "default"}},
-							WorkerProfiles:        []api.WorkerProfile{{Name: "default"}},
+							ClusterProfile: api.ClusterProfile{
+								Domain: "changed",
+							},
 						},
 					},
 				}
@@ -155,22 +222,22 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					Update(gomock.Any(), (*matcher.OpenShiftClusterDocument)(clusterdoc)).
 					Return(clusterdoc, nil)
 			},
-			isPatch:        true,
 			wantAsync:      true,
 			wantStatusCode: http.StatusOK,
-			wantResponse: func(tt *test) *v20200430.OpenShiftCluster {
-				response := &v20200430.OpenShiftCluster{
+			wantResponse: func(tt *test) *admin.OpenShiftCluster {
+				return &admin.OpenShiftCluster{
 					ID:   tt.resourceID,
 					Name: "resourceName",
 					Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 					Tags: map[string]string{"tag": "will-be-kept"},
-					Properties: v20200430.OpenShiftClusterProperties{
-						ProvisioningState: v20200430.ProvisioningStateUpdating,
-						IngressProfiles:   []v20200430.IngressProfile{{Name: "default"}},
-						WorkerProfiles:    []v20200430.WorkerProfile{{Name: "default"}},
+					Properties: admin.OpenShiftClusterProperties{
+						ProvisioningState:     admin.ProvisioningStateAdminUpdating,
+						LastProvisioningState: admin.ProvisioningStateSucceeded,
+						ClusterProfile: admin.ClusterProfile{
+							Domain: "changed",
+						},
 					},
 				}
-				return response
 			},
 		},
 	} {
@@ -186,6 +253,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 				TLSCerts: servercerts,
 			}
 			env.SetARMClientAuthorizer(clientauthorizer.NewOne(clientcerts[0].Raw))
+			env.SetAdminClientAuthorizer(clientauthorizer.NewOne(clientcerts[0].Raw))
 
 			cli.Transport.(*http.Transport).Dial = l.Dial
 
@@ -224,7 +292,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			go f.Run(ctx, nil, nil)
 
 			buf := &bytes.Buffer{}
-			oc := &v20200430.OpenShiftCluster{}
+			oc := &admin.OpenShiftCluster{}
 			if tt.request != nil {
 				tt.request(oc)
 			}
@@ -237,13 +305,14 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			if tt.isPatch {
 				method = http.MethodPatch
 			}
-			req, err := http.NewRequest(method, "https://server"+tt.resourceID+"?api-version=2020-04-30", buf)
+			req, err := http.NewRequest(method, "https://server"+tt.resourceID+"?api-version=admin", buf)
 			if err != nil {
 				t.Fatal(err)
 			}
 			req.Header = http.Header{
 				"Content-Type": []string{"application/json"},
 			}
+
 			resp, err := cli.Do(req)
 			if err != nil {
 				t.Fatal(err)
@@ -271,12 +340,11 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			}
 
 			if tt.wantError == "" {
-				var oc *v20200430.OpenShiftCluster
+				var oc *admin.OpenShiftCluster
 				err = json.Unmarshal(b, &oc)
 				if err != nil {
 					t.Fatal(err)
 				}
-
 				if !reflect.DeepEqual(oc, tt.wantResponse(tt)) {
 					b, _ := json.Marshal(oc)
 					t.Error(string(b))
@@ -295,6 +363,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			}
 		})
 	}
+
 }
 
 func TestPutOrPatchOpenShiftCluster(t *testing.T) {
@@ -904,71 +973,6 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      fmt.Sprintf("400: DuplicateClientID: : The provided client ID '%s' is already in use by a cluster.", mockSubID),
 		},
-		{
-			name:       "empty request is submitted nothing should happen",
-			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openshiftClusters/resourceName", mockSubID),
-			request:    nil,
-			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher) {
-				currentClusterdoc := &api.OpenShiftClusterDocument{
-					Key: strings.ToLower(tt.resourceID),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:   tt.resourceID,
-						Name: "resourceName",
-						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-						Tags: map[string]string{"tag": "will-be-kept"},
-						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState: api.ProvisioningStateSucceeded,
-							IngressProfiles:   []api.IngressProfile{{Name: "default"}},
-							WorkerProfiles:    []api.WorkerProfile{{Name: "default"}},
-						},
-					},
-				}
-
-				openShiftClusters.EXPECT().
-					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
-					Return(currentClusterdoc, nil)
-
-				enricher.EXPECT().Enrich(gomock.Any(), currentClusterdoc.OpenShiftCluster)
-				expectAsyncOperationDocumentCreate(asyncOperations, strings.ToLower(tt.resourceID), api.ProvisioningStateUpdating)
-
-				clusterdoc := &api.OpenShiftClusterDocument{
-					Key: strings.ToLower(tt.resourceID),
-					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:   tt.resourceID,
-						Name: "resourceName",
-						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-						Tags: map[string]string{"tag": "will-be-kept"},
-						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState:     api.ProvisioningStateUpdating,
-							LastProvisioningState: api.ProvisioningStateSucceeded,
-							IngressProfiles:       []api.IngressProfile{{Name: "default"}},
-							WorkerProfiles:        []api.WorkerProfile{{Name: "default"}},
-						},
-					},
-				}
-
-				openShiftClusters.EXPECT().
-					Update(gomock.Any(), (*matcher.OpenShiftClusterDocument)(clusterdoc)).
-					Return(clusterdoc, nil)
-			},
-			isPatch:        true,
-			wantAsync:      true,
-			wantStatusCode: http.StatusOK,
-			wantResponse: func(tt *test) *v20200430.OpenShiftCluster {
-				response := &v20200430.OpenShiftCluster{
-					ID:   tt.resourceID,
-					Name: "resourceName",
-					Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-					Tags: map[string]string{"tag": "will-be-kept"},
-					Properties: v20200430.OpenShiftClusterProperties{
-						ProvisioningState: v20200430.ProvisioningStateUpdating,
-						IngressProfiles:   []v20200430.IngressProfile{{Name: "default"}},
-						WorkerProfiles:    []v20200430.WorkerProfile{{Name: "default"}},
-					},
-				}
-				return response
-			},
-		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			defer cli.CloseIdleConnections()
@@ -1033,7 +1037,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			if tt.isPatch {
 				method = http.MethodPatch
 			}
-			req, err := http.NewRequest(method, "https://server"+tt.resourceID+"?api-version=admin", buf)
+			req, err := http.NewRequest(method, "https://server"+tt.resourceID+"?api-version=2020-04-30", buf)
 			if err != nil {
 				t.Fatal(err)
 			}
