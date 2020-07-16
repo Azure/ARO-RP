@@ -10,18 +10,32 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/Azure/ARO-RP/pkg/util/encryption"
+
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/backend/openshiftcluster"
+	"github.com/Azure/ARO-RP/pkg/database"
+	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/billing"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
 type openShiftClusterBackend struct {
 	*backend
+
+	newManager func(log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, cipher encryption.Cipher, billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (openshiftcluster.ManagerInterface, error)
+}
+
+func NewOpenShiftClusterBackend(b *backend) *openShiftClusterBackend {
+	return &openShiftClusterBackend{
+		backend:    b,
+		newManager: openshiftcluster.NewManager,
+	}
 }
 
 // try tries to dequeue an OpenShiftClusterDocument for work, and works it on a
@@ -87,7 +101,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 		return err
 	}
 
-	m, err := openshiftcluster.NewManager(log, ocb.env, ocb.dbOpenShiftClusters, ocb.cipher, ocb.billing, doc, subscriptionDoc)
+	m, err := ocb.newManager(log, ocb.env, ocb.dbOpenShiftClusters, ocb.cipher, ocb.billing, doc, subscriptionDoc)
 	if err != nil {
 		return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err)
 	}

@@ -69,7 +69,7 @@ func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, dbAsy
 	b.cond = sync.NewCond(&b.mu)
 	b.stopping.Store(false)
 
-	b.ocb = &openShiftClusterBackend{backend: b}
+	b.ocb = NewOpenShiftClusterBackend(b)
 	b.sb = &subscriptionBackend{backend: b}
 
 	var err error
