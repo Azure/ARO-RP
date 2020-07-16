@@ -4,6 +4,8 @@ package openshiftcluster
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
+
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
@@ -21,6 +23,15 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/privateendpoint"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
+
+type ManagerInterface interface {
+	Create(ctx context.Context) error
+	Update(ctx context.Context) error
+	AdminUpdate(ctx context.Context) error
+	Delete(ctx context.Context) error
+}
+
+var _ ManagerInterface = &Manager{}
 
 type Manager struct {
 	log          *logrus.Entry
@@ -43,7 +54,7 @@ type Manager struct {
 	doc *api.OpenShiftClusterDocument
 }
 
-func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (*Manager, error) {
+func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (ManagerInterface, error) {
 	localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
