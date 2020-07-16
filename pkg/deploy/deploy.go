@@ -6,7 +6,6 @@ package deploy
 import (
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"reflect"
 	"strings"
 
@@ -51,6 +50,7 @@ type deployer struct {
 	zones                  dns.ZonesClient
 	keyvault               keyvault.Manager
 
+	generator  generator.Generator
 	fullDeploy bool
 	config     *RPConfig
 	version    string
@@ -83,6 +83,7 @@ func New(ctx context.Context, log *logrus.Entry, config *RPConfig, version strin
 		zones:                  dns.NewZonesClient(config.SubscriptionID, authorizer),
 		keyvault:               keyvault.NewManager(kvAuthorizer),
 
+		generator:  generator.New(true),
 		fullDeploy: fullDeploy,
 		config:     config,
 		version:    version,
@@ -97,13 +98,7 @@ func (d *deployer) Deploy(ctx context.Context) error {
 
 	deploymentName := "rp-production-" + d.version
 
-	b, err := Asset(generator.FileRPProduction)
-	if err != nil {
-		return err
-	}
-
-	var template map[string]interface{}
-	err = json.Unmarshal(b, &template)
+	template, err := d.generator.RPTemplate()
 	if err != nil {
 		return err
 	}

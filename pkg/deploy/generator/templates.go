@@ -10,7 +10,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 )
 
-func (g *generator) managedIdentityTemplate() *arm.Template {
+func (g *generator) ManagedIdentityTemplate() (map[string]interface{}, error) {
 	t := templateStanza()
 
 	params := []string{
@@ -30,11 +30,10 @@ func (g *generator) managedIdentityTemplate() *arm.Template {
 	t.Resources = append(t.Resources,
 		g.managedIdentity(),
 	)
-
-	return t
+	return g.templateFixup(t)
 }
 
-func (g *generator) rpTemplate() *arm.Template {
+func (g *generator) RPTemplate() (map[string]interface{}, error) {
 	t := templateStanza()
 
 	params := []string{
@@ -91,10 +90,10 @@ func (g *generator) rpTemplate() *arm.Template {
 	t.Resources = append(t.Resources, g.cosmosdb()...)
 	t.Resources = append(t.Resources, g.rbac()...)
 
-	return t
+	return g.templateFixup(t)
 }
 
-func (g *generator) rpGlobalTemplate() *arm.Template {
+func (g *generator) RPGlobalTemplate() (map[string]interface{}, error) {
 	t := templateStanza()
 
 	params := []string{
@@ -123,10 +122,10 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 		g.acrRbac()...,
 	)
 
-	return t
+	return g.templateFixup(t)
 }
 
-func (g *generator) rpGlobalSubscriptionTemplate() *arm.Template {
+func (g *generator) RPGlobalSubscriptionTemplate() (map[string]interface{}, error) {
 	t := templateStanza()
 
 	params := []string{
@@ -147,10 +146,10 @@ func (g *generator) rpGlobalSubscriptionTemplate() *arm.Template {
 		g.roleDefinitionTokenContributor(),
 	)
 
-	return t
+	return g.templateFixup(t)
 }
 
-func (g *generator) rpSubscriptionTemplate() *arm.Template {
+func (g *generator) RPSubscriptionTemplate() (map[string]interface{}, error) {
 	t := templateStanza()
 
 	params := []string{
@@ -169,10 +168,10 @@ func (g *generator) rpSubscriptionTemplate() *arm.Template {
 
 	t.Resources = append(t.Resources, g.actionGroup("rp-health-ag", "rphealth"))
 
-	return t
+	return g.templateFixup(t)
 }
 
-func (g *generator) databaseTemplate() *arm.Template {
+func (g *generator) DatabaseTemplate() (map[string]interface{}, error) {
 	t := templateStanza()
 
 	t.Resources = append(t.Resources,
@@ -187,25 +186,10 @@ func (g *generator) databaseTemplate() *arm.Template {
 		},
 	}
 
-	return t
+	return g.templateFixup(t)
 }
 
-func (g *generator) rpParameters() *arm.Parameters {
-	t := g.rpTemplate()
-	p := parametersStanza()
-
-	for name, tp := range t.Parameters {
-		param := &arm.ParametersParameter{Value: tp.DefaultValue}
-		if param.Value == nil {
-			param.Value = ""
-		}
-		p.Parameters[name] = param
-	}
-
-	return p
-}
-
-func (g *generator) preDeployTemplate() *arm.Template {
+func (g *generator) PreDeployTemplate() (map[string]interface{}, error) {
 	t := templateStanza()
 
 	if g.production {
@@ -265,25 +249,10 @@ func (g *generator) preDeployTemplate() *arm.Template {
 		g.serviceKeyvault(),
 	)
 
-	return t
+	return g.templateFixup(t)
 }
 
-func (g *generator) rpPreDeployParameters() *arm.Parameters {
-	t := g.preDeployTemplate()
-	p := parametersStanza()
-
-	for name, tp := range t.Parameters {
-		param := &arm.ParametersParameter{Value: tp.DefaultValue}
-		if param.Value == nil {
-			param.Value = ""
-		}
-		p.Parameters[name] = param
-	}
-
-	return p
-}
-
-func (g *generator) sharedDevelopmentEnvTemplate() *arm.Template {
+func (g *generator) SharedDevelopmentEnvTemplate() (map[string]interface{}, error) {
 	t := templateStanza()
 
 	t.Resources = append(t.Resources,
@@ -320,7 +289,7 @@ func (g *generator) sharedDevelopmentEnvTemplate() *arm.Template {
 		}
 	}
 
-	return t
+	return g.templateFixup(t)
 }
 
 func max(a, b int) int {
@@ -330,7 +299,7 @@ func max(a, b int) int {
 	return b
 }
 
-func (g *generator) templateFixup(t *arm.Template) ([]byte, error) {
+func (g *generator) templateFixup(t *arm.Template) (map[string]interface{}, error) {
 	b, err := json.MarshalIndent(t, "", "    ")
 	if err != nil {
 		return nil, err
@@ -344,7 +313,13 @@ func (g *generator) templateFixup(t *arm.Template) ([]byte, error) {
 		b = bytes.Replace(b, []byte(`"sourceAddressPrefixes": []`), []byte(`"sourceAddressPrefixes": "[parameters('rpNsgSourceAddressPrefixes')]"`), 1)
 	}
 
-	return append(b, byte('\n')), nil
+	var template map[string]interface{}
+	err = json.Unmarshal(b, &template)
+	if err != nil {
+		return nil, err
+	}
+
+	return template, nil
 }
 
 func (g *generator) conditionStanza(parameterName string) interface{} {

@@ -7,14 +7,12 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
-	"encoding/json"
 	"path/filepath"
 
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/to"
 
-	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 )
@@ -30,6 +28,13 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 
 	if d.fullDeploy {
 		_, err = d.groups.CreateOrUpdate(ctx, d.config.Configuration.SubscriptionResourceGroupName, mgmtfeatures.ResourceGroup{
+			Location: to.StringPtr("centralus"),
+		})
+		if err != nil {
+			return err
+		}
+
+		_, err = d.groups.CreateOrUpdate(ctx, d.config.Configuration.GlobalResourceGroupName, mgmtfeatures.ResourceGroup{
 			Location: to.StringPtr("centralus"),
 		})
 		if err != nil {
@@ -83,13 +88,7 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 func (d *deployer) deployGlobal(ctx context.Context, rpServicePrincipalID string) error {
 	deploymentName := "rp-global-" + d.config.Location
 
-	b, err := Asset(generator.FileRPProductionGlobal)
-	if err != nil {
-		return err
-	}
-
-	var template map[string]interface{}
-	err = json.Unmarshal(b, &template)
+	template, err := d.generator.RPGlobalTemplate()
 	if err != nil {
 		return err
 	}
@@ -115,13 +114,7 @@ func (d *deployer) deployGlobal(ctx context.Context, rpServicePrincipalID string
 func (d *deployer) deployGlobalSubscription(ctx context.Context) error {
 	deploymentName := "rp-global-subscription-" + d.config.Location
 
-	b, err := Asset(generator.FileRPProductionGlobalSubscription)
-	if err != nil {
-		return err
-	}
-
-	var template map[string]interface{}
-	err = json.Unmarshal(b, &template)
+	template, err := d.generator.RPGlobalSubscriptionTemplate()
 	if err != nil {
 		return err
 	}
@@ -142,13 +135,7 @@ func (d *deployer) deployGlobalSubscription(ctx context.Context) error {
 func (d *deployer) deploySubscription(ctx context.Context) error {
 	deploymentName := "rp-production-subscription-" + d.config.Location
 
-	b, err := Asset(generator.FileRPProductionSubscription)
-	if err != nil {
-		return err
-	}
-
-	var template map[string]interface{}
-	err = json.Unmarshal(b, &template)
+	template, err := d.generator.RPSubscriptionTemplate()
 	if err != nil {
 		return err
 	}
@@ -168,13 +155,7 @@ func (d *deployer) deploySubscription(ctx context.Context) error {
 func (d *deployer) deployManagedIdentity(ctx context.Context) error {
 	deploymentName := "rp-production-managed-identity"
 
-	b, err := Asset(generator.FileRPProductionManagedIdentity)
-	if err != nil {
-		return err
-	}
-
-	var template map[string]interface{}
-	err = json.Unmarshal(b, &template)
+	template, err := d.generator.ManagedIdentityTemplate()
 	if err != nil {
 		return err
 	}
@@ -204,13 +185,7 @@ func (d *deployer) deployPreDeploy(ctx context.Context, rpServicePrincipalID str
 		return err
 	}
 
-	b, err := Asset(generator.FileRPProductionPredeploy)
-	if err != nil {
-		return err
-	}
-
-	var template map[string]interface{}
-	err = json.Unmarshal(b, &template)
+	template, err := d.generator.PreDeployTemplate()
 	if err != nil {
 		return err
 	}
