@@ -12,7 +12,7 @@ import (
 var rxVersion = regexp.MustCompile(`^(\d+)\.(\d+)\.(\d+)(.*)`)
 
 type Version struct {
-	V      [3]byte
+	V      [3]uint32
 	Suffix string
 }
 
@@ -20,7 +20,7 @@ func (v *Version) String() string {
 	return fmt.Sprintf("%d.%d.%d", v.V[0], v.V[1], v.V[2])
 }
 
-func NewVersion(vs ...byte) *Version {
+func NewVersion(vs ...uint32) *Version {
 	v := &Version{}
 
 	copy(v.V[:], vs)
@@ -39,12 +39,12 @@ func ParseVersion(vsn string) (*Version, error) {
 	}
 
 	for i := 0; i < 3; i++ {
-		b, err := strconv.ParseUint(m[i+1], 10, 8)
+		d, err := strconv.ParseUint(m[i+1], 10, 32)
 		if err != nil {
 			return nil, err
 		}
 
-		v.V[i] = byte(b)
+		v.V[i] = uint32(d)
 	}
 
 	return v, nil
