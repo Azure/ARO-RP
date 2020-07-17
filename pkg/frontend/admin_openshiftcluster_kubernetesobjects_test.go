@@ -239,7 +239,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 				OpenShiftClusters: openshiftClusters,
 			}, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface) kubeactions.Interface {
 				return kactions
-			}, nil, nil)
+			}, nil, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -486,7 +486,7 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 				OpenShiftClusters: openshiftClusters,
 			}, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface) kubeactions.Interface {
 				return kactions
-			}, nil, nil)
+			}, nil, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

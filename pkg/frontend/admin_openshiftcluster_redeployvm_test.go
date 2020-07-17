@@ -137,7 +137,7 @@ func TestAdminRedeployVM(t *testing.T) {
 				Subscriptions:     subscriptions,
 			}, api.APIs, &noop.Noop{}, nil, nil, nil, func(subscriptionID string, authorizer autorest.Authorizer) compute.VirtualMachinesClient {
 				return vmClient
-			})
+			}, nil)
 
 			if err != nil {
 				t.Fatal(err)
