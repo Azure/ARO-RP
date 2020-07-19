@@ -25,7 +25,7 @@ import (
 )
 
 func (i *Installer) updateAzureCloudProvider(ctx context.Context) error {
-	ssp := i.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
+	spp := i.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
 
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		acp, err := i.kubernetescli.CoreV1().Secrets("kube-system").Get("azure-cloud-provider", metav1.GetOptions{})
@@ -37,13 +37,15 @@ func (i *Installer) updateAzureCloudProvider(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		clientID, idok := config["aadClientId"].(string)
-		clientSecret, secok := config["aadClientSecret"].(string)
-		if idok && secok && clientID == ssp.ClientID && clientSecret == string(ssp.ClientSecret) {
+
+		// don't panic if aadClientId or aadClientSecret is not a string
+		clientID, _ := config["aadClientId"].(string)
+		clientSecret, _ := config["aadClientSecret"].(string)
+		if clientID == spp.ClientID && clientSecret == string(spp.ClientSecret) {
 			return nil
 		}
-		config["aadClientId"] = ssp.ClientID
-		config["aadClientSecret"] = ssp.ClientSecret
+		config["aadClientId"] = spp.ClientID
+		config["aadClientSecret"] = spp.ClientSecret
 		acp.Data["cloud-config"], err = json.Marshal(config)
 		if err != nil {
 			return err
@@ -55,7 +57,7 @@ func (i *Installer) updateAzureCloudProvider(ctx context.Context) error {
 }
 
 func (i *Installer) updateOpenShiftCloudProviderConfig(ctx context.Context) error {
-	ssp := i.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
+	spp := i.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
 
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		cpc, err := i.kubernetescli.CoreV1().ConfigMaps("openshift-config").Get("cloud-provider-config", metav1.GetOptions{})
@@ -69,10 +71,10 @@ func (i *Installer) updateOpenShiftCloudProviderConfig(ctx context.Context) erro
 			return err
 		}
 		tenantID, ok := config["tenantId"].(string)
-		if ok && tenantID == ssp.TenantID {
+		if ok && tenantID == spp.TenantID {
 			return nil
 		}
-		config["tenantID"] = ssp.TenantID
+		config["tenantID"] = spp.TenantID
 		b, err := json.Marshal(config)
 		if err != nil {
 			return err
