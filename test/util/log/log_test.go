@@ -71,6 +71,9 @@ func TestAssertLoggingOutput(t *testing.T) {
 			},
 			wantErrs: []string{
 				"Got 2 logs, expected 1",
+				"--- emitted logs ---",
+				"level: info, log text: Bar!",
+				"level: error, log text: Baz!",
 			},
 		},
 		{
