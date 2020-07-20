@@ -67,11 +67,16 @@ func NewOpenShiftClusters(ctx context.Context, uuid string, dbc cosmosdb.Databas
 		}
 	}
 
+	documentClient := cosmosdb.NewOpenShiftClusterDocumentClient(collc, collid)
+	return NewOpenShiftClustersWithProvidedClient(uuid, documentClient, collc), nil
+}
+
+func NewOpenShiftClustersWithProvidedClient(uuid string, client cosmosdb.OpenShiftClusterDocumentClient, collectionClient cosmosdb.CollectionClient) OpenShiftClusters {
 	return &openShiftClusters{
-		c:     cosmosdb.NewOpenShiftClusterDocumentClient(collc, collid),
-		collc: collc,
+		c:     client,
+		collc: collectionClient,
 		uuid:  uuid,
-	}, nil
+	}
 }
 
 func (c *openShiftClusters) Create(ctx context.Context, doc *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error) {

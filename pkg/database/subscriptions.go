@@ -68,10 +68,15 @@ func NewSubscriptions(ctx context.Context, uuid string, dbc cosmosdb.DatabaseCli
 		}
 	}
 
+	documentClient := cosmosdb.NewSubscriptionDocumentClient(collc, collid)
+	return NewSubscriptionsWithProvidedClient(uuid, documentClient), nil
+}
+
+func NewSubscriptionsWithProvidedClient(uuid string, client cosmosdb.SubscriptionDocumentClient) Subscriptions {
 	return &subscriptions{
-		c:    cosmosdb.NewSubscriptionDocumentClient(collc, collid),
+		c:    client,
 		uuid: uuid,
-	}, nil
+	}
 }
 
 func (c *subscriptions) Create(ctx context.Context, doc *api.SubscriptionDocument) (*api.SubscriptionDocument, error) {
