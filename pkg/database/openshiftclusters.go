@@ -15,6 +15,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 )
 
+const OpenShiftClustersDequeueQuery string = `SELECT * FROM OpenShiftClusters doc WHERE doc.openShiftCluster.properties.provisioningState IN ("Creating", "Deleting", "Updating", "AdminUpdating") AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`
+
 type openShiftClusters struct {
 	c     cosmosdb.OpenShiftClusterDocumentClient
 	collc cosmosdb.CollectionClient
@@ -252,7 +254,7 @@ func (c *openShiftClusters) ListByPrefix(subscriptionID, prefix, continuation st
 
 func (c *openShiftClusters) Dequeue(ctx context.Context) (*api.OpenShiftClusterDocument, error) {
 	i := c.c.Query("", &cosmosdb.Query{
-		Query: `SELECT * FROM OpenShiftClusters doc WHERE doc.openShiftCluster.properties.provisioningState IN ("Creating", "Deleting", "Updating", "AdminUpdating") AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`,
+		Query: OpenShiftClustersDequeueQuery,
 	}, nil)
 
 	for {
