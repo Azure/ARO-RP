@@ -73,6 +73,10 @@ func AssertLoggingOutput(h *logrus_test.Hook, expected []ExpectedLogEntry) []err
 
 	if len(h.Entries) != len(expected) {
 		errs = append(errs, fmt.Errorf("Got %d logs, expected %d", len(h.Entries), len(expected)))
+		errs = append(errs, errors.New("--- emitted logs ---"))
+		for _, l := range h.Entries {
+			errs = append(errs, fmt.Errorf("level: %s, log text: %s", l.Level, l.Message))
+		}
 	} else {
 		for i, e := range h.Entries {
 			matchErr := expected[i].assertMatches(e)
