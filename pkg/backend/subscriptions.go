@@ -19,6 +19,10 @@ type subscriptionBackend struct {
 	*backend
 }
 
+func newSubscriptionBackend(b *backend) *subscriptionBackend {
+	return &subscriptionBackend{backend: b}
+}
+
 // try tries to dequeue an SubscriptionDocument for work, and works it on a new
 // goroutine.  It returns a boolean to the caller indicating whether it
 // succeeded in dequeuing anything - if this is false, the caller should sleep

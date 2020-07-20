@@ -46,25 +46,31 @@ type Runnable interface {
 
 // NewBackend returns a new runnable backend
 func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, db *database.Database, m metrics.Interface) (Runnable, error) {
+	b, err := newBackend(ctx, log, env, db, m)
+	if err != nil {
+		return nil, err
+	}
+
+	b.ocb = newOpenShiftClusterBackend(b)
+	b.sb = newSubscriptionBackend(b)
+	return b, nil
+}
+
+func newBackend(ctx context.Context, log *logrus.Entry, env env.Interface, db *database.Database, m metrics.Interface) (*backend, error) {
+	billing, err := billing.NewManager(env, db.Billing, db.Subscriptions, log)
+	if err != nil {
+		return nil, err
+	}
+
 	b := &backend{
 		baseLog: log,
 		env:     env,
 		db:      db,
 		m:       m,
+		billing: billing,
 	}
-
 	b.cond = sync.NewCond(&b.mu)
 	b.stopping.Store(false)
-
-	b.ocb = NewOpenShiftClusterBackend(b)
-	b.sb = &subscriptionBackend{backend: b}
-
-	var err error
-	b.billing, err = billing.NewManager(env, db.Billing, db.Subscriptions, log)
-	if err != nil {
-		return nil, err
-	}
-
 	return b, nil
 }
 
