@@ -93,6 +93,14 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 		}
 	}
 
+	if oc.Properties.RegistryProfiles != nil {
+		out.Properties.RegistryProfiles = make([]RegistryProfile, len(oc.Properties.RegistryProfiles))
+		for i, v := range oc.Properties.RegistryProfiles {
+			out.Properties.RegistryProfiles[i].Name = v.Name
+			out.Properties.RegistryProfiles[i].Username = v.Username
+		}
+	}
+
 	return out
 }
 
@@ -177,4 +185,9 @@ func (c *openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShi
 			Phase: api.InstallPhase(oc.Properties.Install.Phase),
 		}
 	}
+
+	// out.Properties.RegistryProfiles is not converted. The field is immutable and does not have to be converted.
+	// Other fields are converted and this breaks the pattern, however this converting this field creates an issue
+	// with filling the out.Properties.RegistryProfiles[i].Password as default is "" which erases the original value.
+	// Workaround would be filling the password when receiving request, but it is array and the logic would be to complex.
 }
