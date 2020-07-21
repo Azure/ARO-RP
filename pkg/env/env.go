@@ -20,6 +20,14 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
+type EnvironmentType uint8
+
+const (
+	EnvironmentTypeProduction EnvironmentType = 1 << iota
+	EnvironmentTypeIntegration
+	EnvironmentTypeDevelopment
+)
+
 const (
 	RPFirstPartySecretName       = "rp-firstparty"
 	RPServerSecretName           = "rp-server"
@@ -32,6 +40,8 @@ const (
 
 type Interface interface {
 	instancemetadata.InstanceMetadata
+
+	Type() EnvironmentType
 
 	InitializeAuthorizers() error
 	ArmClientAuthorizer() clientauthorizer.ClientAuthorizer
