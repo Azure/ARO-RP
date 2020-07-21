@@ -22,6 +22,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
+	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 func (f *frontend) listAdminOpenShiftClusterResources(w http.ResponseWriter, r *http.Request) {
@@ -67,6 +68,7 @@ func (f *frontend) _listAdminOpenShiftClusterResources(ctx context.Context, r *h
 
 	resourcesClient := f.resourcesClientFactory(subscriptionDoc.ID, fpAuthorizer)
 	vmClient := f.computeClientFactory(subscriptionDoc.ID, fpAuthorizer)
+	vnetClient := f.vnetClientFactory(subscriptionDoc.ID, fpAuthorizer)
 
 	clusterResourceGroup := stringutils.LastTokenByte(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	resources, err := resourcesClient.List(ctx, fmt.Sprintf("resourceGroup eq '%s'", clusterResourceGroup), "", nil)
@@ -75,6 +77,26 @@ func (f *frontend) _listAdminOpenShiftClusterResources(ctx context.Context, r *h
 	}
 
 	armResources := make([]arm.Resource, 0, len(resources))
+	{ // get customer vnet and append it to the list
+		vnetID, _, err := subnet.Split(doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
+		if err != nil {
+			return nil, err
+		}
+
+		r, err := azure.ParseResourceID(vnetID)
+		if err != nil {
+			return nil, err
+		}
+
+		vnet, err := vnetClient.Get(ctx, r.ResourceGroup, r.ResourceName, "")
+		if err != nil {
+			return nil, err
+		}
+		armResources = append(armResources, arm.Resource{
+			Resource: vnet,
+		})
+	}
+
 	for _, res := range resources {
 		apiVersion, err := azureclient.APIVersionForType(*res.Type)
 		if err != nil {

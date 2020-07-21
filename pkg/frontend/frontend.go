@@ -29,6 +29,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
@@ -45,6 +46,7 @@ func (err statusCodeError) Error() string {
 type kubeActionsFactory func(*logrus.Entry, env.Interface) kubeactions.Interface
 type resourcesClientFactory func(subscriptionID string, authorizer autorest.Authorizer) features.ResourcesClient
 type computeClientFactory func(subscriptionID string, authorizer autorest.Authorizer) compute.VirtualMachinesClient
+type vnetClientFactory func(subscriptionID string, authorizer autorest.Authorizer) network.VirtualNetworksClient
 
 type frontend struct {
 	baseLog *logrus.Entry
@@ -58,6 +60,7 @@ type frontend struct {
 	kubeActionsFactory     kubeActionsFactory
 	resourcesClientFactory resourcesClientFactory
 	computeClientFactory   computeClientFactory
+	vnetClientFactory      vnetClientFactory
 
 	l net.Listener
 	s *http.Server
@@ -74,7 +77,17 @@ type Runnable interface {
 }
 
 // NewFrontend returns a new runnable frontend
-func NewFrontend(ctx context.Context, baseLog *logrus.Entry, _env env.Interface, db *database.Database, apis map[string]*api.Version, m metrics.Interface, cipher encryption.Cipher, kubeActionsFactory kubeActionsFactory, resourcesClientFactory resourcesClientFactory, computeClientFactory computeClientFactory) (Runnable, error) {
+func NewFrontend(ctx context.Context,
+	baseLog *logrus.Entry,
+	_env env.Interface,
+	db *database.Database,
+	apis map[string]*api.Version,
+	m metrics.Interface,
+	cipher encryption.Cipher,
+	kubeActionsFactory kubeActionsFactory,
+	resourcesClientFactory resourcesClientFactory,
+	computeClientFactory computeClientFactory,
+	vnetClientFactory vnetClientFactory) (Runnable, error) {
 	f := &frontend{
 		baseLog:                baseLog,
 		env:                    _env,
@@ -85,6 +98,7 @@ func NewFrontend(ctx context.Context, baseLog *logrus.Entry, _env env.Interface,
 		kubeActionsFactory:     kubeActionsFactory,
 		resourcesClientFactory: resourcesClientFactory,
 		computeClientFactory:   computeClientFactory,
+		vnetClientFactory:      vnetClientFactory,
 
 		ocEnricher: clusterdata.NewBestEffortEnricher(baseLog, _env, m),
 
