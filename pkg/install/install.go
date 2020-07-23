@@ -182,7 +182,7 @@ func (i *Installer) Install(ctx context.Context) error {
 			steps.Condition(i.dynamicValidate, 10*time.Minute),
 			steps.Action(i.ensureSSHKey),
 			steps.Action(i.ensureStorageSuffix),
-			steps.OnlyInProd(i.env, steps.Action(i.ensureAcrToken)),
+			steps.OnlyInEnv(i.env, env.EnvironmentTypeProduction|env.EnvironmentTypeIntegration, steps.Action(i.ensureAcrToken)),
 			steps.Action(i.initializeConfig),
 			steps.Action(i.createDNS),
 			steps.AuthorizationRefreshingAction(i.fpAuthorizer, steps.Action(i.deployStorageTemplate)),

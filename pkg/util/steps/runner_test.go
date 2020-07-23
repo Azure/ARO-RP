@@ -14,6 +14,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/ARO-RP/pkg/env"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_refreshable "github.com/Azure/ARO-RP/pkg/util/mocks/refreshable"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
@@ -290,12 +291,13 @@ func TestStepRunner(t *testing.T) {
 			wantErr: "timed out waiting for the condition",
 		},
 		{
-			name: "OnlyInProd runs steps when the provided environment is a prod env",
+			name: "OnlyInEnv wanting prod runs steps when the provided environment is a prod env",
 			steps: func(controller *gomock.Controller) []Step {
 				myenv := mock_env.NewMockInterface(controller)
+				myenv.EXPECT().Type().Return(env.EnvironmentTypeProduction)
 				return []Step{
 					Action(successfulFunc),
-					OnlyInProd(myenv, Action(successfulFunc)),
+					OnlyInEnv(myenv, env.EnvironmentTypeProduction, Action(successfulFunc)),
 					Action(successfulFunc),
 				}
 			},
@@ -305,7 +307,7 @@ func TestStepRunner(t *testing.T) {
 					Level:   logrus.InfoLevel,
 				},
 				{
-					Message: "running step [OnlyInProd [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]]",
+					Message: "running step [OnlyInEnv Production [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]]",
 					Level:   logrus.InfoLevel,
 				},
 				{
@@ -315,12 +317,13 @@ func TestStepRunner(t *testing.T) {
 			},
 		},
 		{
-			name: "OnlyInProd does not run steps when the provided environment is a dev env",
+			name: "OnlyInEnv does not run steps when the provided environment does not match",
 			steps: func(controller *gomock.Controller) []Step {
-				myenv := mock_env.NewMockDev(controller)
+				myenv := mock_env.NewMockInterface(controller)
+				myenv.EXPECT().Type().AnyTimes().Return(env.EnvironmentTypeProduction)
 				return []Step{
 					Action(successfulFunc),
-					OnlyInProd(myenv, Action(successfulFunc)),
+					OnlyInEnv(myenv, env.EnvironmentTypeDevelopment, Action(successfulFunc)),
 					Action(successfulFunc),
 				}
 			},
@@ -330,11 +333,41 @@ func TestStepRunner(t *testing.T) {
 					Level:   logrus.InfoLevel,
 				},
 				{
-					Message: "running step [OnlyInProd [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]]",
+					Message: "running step [OnlyInEnv Development [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]]",
 					Level:   logrus.InfoLevel,
 				},
 				{
-					Message: "skipping [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc] as not in production",
+					Message: "skipping [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc] as Production != Development",
+					Level:   logrus.InfoLevel,
+				},
+				{
+					Message: "running step [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]",
+					Level:   logrus.InfoLevel,
+				},
+			},
+		},
+		{
+			name: "OnlyInEnv accepts bitmasks",
+			steps: func(controller *gomock.Controller) []Step {
+				myenv := mock_env.NewMockInterface(controller)
+				myenv.EXPECT().Type().AnyTimes().Return(env.EnvironmentTypeProduction)
+				return []Step{
+					Action(successfulFunc),
+					OnlyInEnv(myenv, env.EnvironmentTypeDevelopment|env.EnvironmentTypeIntegration, Action(successfulFunc)),
+					Action(successfulFunc),
+				}
+			},
+			wantEntries: []testlog.ExpectedLogEntry{
+				{
+					Message: "running step [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]",
+					Level:   logrus.InfoLevel,
+				},
+				{
+					Message: "running step [OnlyInEnv Development | Integration [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]]",
+					Level:   logrus.InfoLevel,
+				},
+				{
+					Message: "skipping [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc] as Production != Development | Integration",
 					Level:   logrus.InfoLevel,
 				},
 				{
