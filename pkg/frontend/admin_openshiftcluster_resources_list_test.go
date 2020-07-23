@@ -18,7 +18,6 @@ import (
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
-	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
@@ -28,9 +27,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	mockcompute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 	mockfeatures "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
@@ -178,30 +174,22 @@ func TestAdminListResourcesList(t *testing.T) {
 			resourcesClient := mockfeatures.NewMockResourcesClient(controller)
 			openshiftClusters := mockdatabase.NewMockOpenShiftClusters(controller)
 			subscriptions := mockdatabase.NewMockSubscriptions(controller)
-			computeClient := mockcompute.NewMockVirtualMachinesClient(controller)
-			vnetClientFactory := mocknetwork.NewMockVirtualNetworksClient(controller)
-			tt.mocks(tt, openshiftClusters, subscriptions, resourcesClient, computeClient, vnetClientFactory)
+			vmClient := mockcompute.NewMockVirtualMachinesClient(controller)
+			vNetClient := mocknetwork.NewMockVirtualNetworksClient(controller)
+			tt.mocks(tt, openshiftClusters, subscriptions, resourcesClient, vmClient, vNetClient)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
+			f, err := New(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
 				OpenShiftClusters: openshiftClusters,
 				Subscriptions:     subscriptions,
-			}, api.APIs, &noop.Noop{}, nil, nil,
-				func(subscriptionID string, authorizer autorest.Authorizer) features.ResourcesClient {
-					return resourcesClient
-				},
-				func(subscriptionID string, authorizer autorest.Authorizer) compute.VirtualMachinesClient {
-					return computeClient
-				},
-				func(subscriptionID string, authorizer autorest.Authorizer) network.VirtualNetworksClient {
-					return vnetClientFactory
-				},
-			)
-
+			}, api.APIs, &noop.Noop{}, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			go f.Run(ctx, nil, nil)
+			go f.WithResourcesClientFactory(resourcesClient).
+				WithVMClientFactory(vmClient).
+				WithVNetClientFactory(vNetClient).
+				Run(ctx, nil, nil)
 			url := fmt.Sprintf("https://server/admin/%s/resources", tt.resourceID)
 			req, err := http.NewRequest(http.MethodGet, url, nil)
 			if err != nil {

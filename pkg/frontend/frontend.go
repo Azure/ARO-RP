@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -18,8 +19,9 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/jmespath/go-jmespath"
 	"github.com/sirupsen/logrus"
-	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
@@ -30,11 +32,13 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
+	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
 
 type statusCodeError int
@@ -45,8 +49,10 @@ func (err statusCodeError) Error() string {
 
 type kubeActionsFactory func(*logrus.Entry, env.Interface) kubeactions.Interface
 type resourcesClientFactory func(subscriptionID string, authorizer autorest.Authorizer) features.ResourcesClient
-type computeClientFactory func(subscriptionID string, authorizer autorest.Authorizer) compute.VirtualMachinesClient
-type vnetClientFactory func(subscriptionID string, authorizer autorest.Authorizer) network.VirtualNetworksClient
+type vmClientFactory func(subscriptionID string, authorizer autorest.Authorizer) compute.VirtualMachinesClient
+type vNetClientFactory func(subscriptionID string, authorizer autorest.Authorizer) network.VirtualNetworksClient
+type accountsClientFactory func(subscriptionID string, authorizer autorest.Authorizer) storage.AccountsClient
+type kubernetesClientFactory func(args ...interface{}) (kubernetes.Interface, error)
 
 type frontend struct {
 	baseLog *logrus.Entry
@@ -56,11 +62,14 @@ type frontend struct {
 	m       metrics.Interface
 	cipher  encryption.Cipher
 
-	ocEnricher             clusterdata.OpenShiftClusterEnricher
-	kubeActionsFactory     kubeActionsFactory
-	resourcesClientFactory resourcesClientFactory
-	computeClientFactory   computeClientFactory
-	vnetClientFactory      vnetClientFactory
+	ocEnricher clusterdata.OpenShiftClusterEnricher
+
+	kubeActionsFactory      kubeActionsFactory
+	resourcesClientFactory  resourcesClientFactory
+	vmClientFactory         vmClientFactory
+	vNetClientFactory       vNetClientFactory
+	accountsClientFactory   accountsClientFactory
+	kubernetesClientFactory kubernetesClientFactory
 
 	l net.Listener
 	s *http.Server
@@ -74,33 +83,39 @@ type frontend struct {
 // Runnable represents a runnable object
 type Runnable interface {
 	Run(context.Context, <-chan struct{}, chan<- struct{})
+	WithKubeActionsFactory(ka kubeactions.Interface) *frontend
+	WithResourcesClientFactory(client features.ResourcesClient) *frontend
+	WithVMClientFactory(client compute.VirtualMachinesClient) *frontend
+	WithVNetClientFactory(client network.VirtualNetworksClient) *frontend
+	WithAccountsClientFactory(client storage.AccountsClient) *frontend
+	WithKubernetesClientFactory(client kubernetes.Interface) *frontend
 }
 
-// NewFrontend returns a new runnable frontend
-func NewFrontend(ctx context.Context,
+// New returns a new runnable frontend
+func New(ctx context.Context,
 	baseLog *logrus.Entry,
 	_env env.Interface,
 	db *database.Database,
-	apis map[string]*api.Version,
+	apis map[string]*api.Version, // TODO: Give "apis" a default and override it in tests by modifying struct
 	m metrics.Interface,
-	cipher encryption.Cipher,
-	kubeActionsFactory kubeActionsFactory,
-	resourcesClientFactory resourcesClientFactory,
-	computeClientFactory computeClientFactory,
-	vnetClientFactory vnetClientFactory) (Runnable, error) {
+	cipher encryption.Cipher) (Runnable, error) {
+
 	f := &frontend{
-		baseLog:                baseLog,
-		env:                    _env,
-		db:                     db,
-		apis:                   apis,
-		m:                      m,
-		cipher:                 cipher,
-		kubeActionsFactory:     kubeActionsFactory,
-		resourcesClientFactory: resourcesClientFactory,
-		computeClientFactory:   computeClientFactory,
-		vnetClientFactory:      vnetClientFactory,
+		baseLog: baseLog,
+		env:     _env,
+		db:      db,
+		apis:    apis,
+		m:       m,
+		cipher:  cipher,
 
 		ocEnricher: clusterdata.NewBestEffortEnricher(baseLog, _env, m),
+
+		kubeActionsFactory:      kubeactions.New,
+		resourcesClientFactory:  features.NewResourcesClient,
+		vmClientFactory:         compute.NewVirtualMachinesClient,
+		vNetClientFactory:       network.NewVirtualNetworksClient,
+		accountsClientFactory:   storage.NewAccountsClient,
+		kubernetesClientFactory: NewKubernetesClient,
 
 		bucketAllocator: &bucket.Random{},
 
@@ -150,6 +165,77 @@ func NewFrontend(ctx context.Context,
 
 	f.ready.Store(true)
 	return f, nil
+}
+
+// NewKubernetesClient is a wrapper for restconfig.RestConfig and kubernetes.NewForConfig
+// which returns (kubernetes.Interface, error) instead of (*kubernetes.Clientset, error),
+// which allows it to be used as a kubernetesClientFactory
+func NewKubernetesClient(args ...interface{}) (kubernetes.Interface, error) {
+	if len(args) != 2 {
+		return nil, errors.New("Required arguments: (env.Interface, *api.OpenShiftCluster)")
+	}
+	env, ok := args[0].(env.Interface)
+	if !ok {
+		return nil, errors.New("First argument must be of type env.Interface")
+
+	}
+	oc, ok := args[1].(*api.OpenShiftCluster)
+	if !ok {
+		return nil, errors.New("Second argument must be of type *api.OpenShiftCluster")
+	}
+	restConfig, err := restconfig.RestConfig(env, oc)
+	if err != nil {
+		return nil, err
+	}
+	return kubernetes.NewForConfig(restConfig)
+}
+
+// WithKubeActionsFactory sets kubeActionsFactory to func which returns ka
+func (f *frontend) WithKubeActionsFactory(ka kubeactions.Interface) *frontend {
+	f.kubeActionsFactory = func(*logrus.Entry, env.Interface) kubeactions.Interface {
+		return ka
+	}
+	return f
+}
+
+// WithResourcesClientFactory sets resourcesClientFactory to func which returns client
+func (f *frontend) WithResourcesClientFactory(client features.ResourcesClient) *frontend {
+	f.resourcesClientFactory = func(subscriptionID string, authorizer autorest.Authorizer) features.ResourcesClient {
+		return client
+	}
+	return f
+}
+
+// WithVMClientFactory sets vmClientFactory to func which returns client
+func (f *frontend) WithVMClientFactory(client compute.VirtualMachinesClient) *frontend {
+	f.vmClientFactory = func(subscriptionID string, authorizer autorest.Authorizer) compute.VirtualMachinesClient {
+		return client
+	}
+	return f
+}
+
+// WithVNetClientFactory sets vNetClientFactory to func which returns client
+func (f *frontend) WithVNetClientFactory(client network.VirtualNetworksClient) *frontend {
+	f.vNetClientFactory = func(subscriptionID string, authorizer autorest.Authorizer) network.VirtualNetworksClient {
+		return client
+	}
+	return f
+}
+
+// WithAccountsClientFactory sets accountsClientFactory to func which returns client
+func (f *frontend) WithAccountsClientFactory(client storage.AccountsClient) *frontend {
+	f.accountsClientFactory = func(subscriptionID string, authorizer autorest.Authorizer) storage.AccountsClient {
+		return client
+	}
+	return f
+}
+
+// WithKubernetesClientFactory sets kubernetesClientFactory to func which returns client
+func (f *frontend) WithKubernetesClientFactory(client kubernetes.Interface) *frontend {
+	f.kubernetesClientFactory = func(args ...interface{}) (kubernetes.Interface, error) {
+		return client, nil
+	}
+	return f
 }
 
 func (f *frontend) unauthenticatedRoutes(r *mux.Router) {
@@ -338,7 +424,7 @@ func adminJmespathFilter(result []byte, jpath *jmespath.JMESPath) ([]byte, error
 }
 
 func adminReply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b []byte, err error) {
-	if apiErr, ok := err.(errors.APIStatus); ok {
+	if apiErr, ok := err.(k8serrors.APIStatus); ok {
 		status := apiErr.Status()
 
 		var target string

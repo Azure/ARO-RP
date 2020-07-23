@@ -17,21 +17,10 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/portforward"
-	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-func (ka *kubeactions) MustGather(ctx context.Context, oc *api.OpenShiftCluster, w io.Writer) error {
-	restconfig, err := restconfig.RestConfig(ka.env, oc)
-	if err != nil {
-		return err
-	}
-
-	cli, err := kubernetes.NewForConfig(restconfig)
-	if err != nil {
-		return err
-	}
-
+func (ka *kubeactions) MustGather(ctx context.Context, oc *api.OpenShiftCluster, w io.Writer, cli kubernetes.Interface) error {
 	ns, err := cli.CoreV1().Namespaces().Create(&corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "openshift-must-gather-",

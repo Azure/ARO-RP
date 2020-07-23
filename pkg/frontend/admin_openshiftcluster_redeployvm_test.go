@@ -15,7 +15,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Azure/go-autorest/autorest"
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 
@@ -23,7 +22,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	mockcompute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
@@ -132,18 +130,15 @@ func TestAdminRedeployVM(t *testing.T) {
 			subscriptions := mock_database.NewMockSubscriptions(controller)
 			tt.mocks(tt, openshiftClusters, subscriptions, vmClient)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
+			f, err := New(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
 				OpenShiftClusters: openshiftClusters,
 				Subscriptions:     subscriptions,
-			}, api.APIs, &noop.Noop{}, nil, nil, nil, func(subscriptionID string, authorizer autorest.Authorizer) compute.VirtualMachinesClient {
-				return vmClient
-			}, nil)
-
+			}, api.APIs, &noop.Noop{}, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			go f.Run(ctx, nil, nil)
+			go f.WithVMClientFactory(vmClient).Run(ctx, nil, nil)
 			url := fmt.Sprintf("https://server/admin%s/redeployvm?vmName=%s", tt.resourceID, tt.vmName)
 			req, err := http.NewRequest(http.MethodPost, url, nil)
 			if err != nil {

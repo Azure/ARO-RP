@@ -302,9 +302,9 @@ func TestListOpenShiftCluster(t *testing.T) {
 					cipher := mock_encryption.NewMockCipher(controller)
 					tt.mocks(controller, openshiftClusters, enricher, cipher, listPrefix)
 
-					f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
+					f, err := New(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
 						OpenShiftClusters: openshiftClusters,
-					}, api.APIs, &noop.Noop{}, cipher, nil, nil, nil, nil)
+					}, api.APIs, &noop.Noop{}, cipher)
 					if err != nil {
 						t.Fatal(err)
 					}

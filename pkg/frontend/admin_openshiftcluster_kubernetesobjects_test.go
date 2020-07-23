@@ -22,7 +22,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/frontend/kubeactions"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
@@ -235,16 +234,14 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			openshiftClusters := mock_database.NewMockOpenShiftClusters(controller)
 			tt.mocks(tt, openshiftClusters, kactions)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), _env, &database.Database{
+			f, err := New(ctx, logrus.NewEntry(logrus.StandardLogger()), _env, &database.Database{
 				OpenShiftClusters: openshiftClusters,
-			}, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface) kubeactions.Interface {
-				return kactions
-			}, nil, nil, nil)
+			}, api.APIs, &noop.Noop{}, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			go f.Run(ctx, nil, nil)
+			go f.WithKubeActionsFactory(kactions).Run(ctx, nil, nil)
 			url := fmt.Sprintf("https://server/admin%s/kubernetesObjects?kind=%s&namespace=%s&name=%s", tt.resourceID, tt.objKind, tt.objNamespace, tt.objName)
 			req, err := http.NewRequest(tt.method, url, nil)
 			if err != nil {
@@ -482,11 +479,9 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 			openshiftClusters := mock_database.NewMockOpenShiftClusters(controller)
 			tt.mocks(tt, openshiftClusters, kactions)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), _env, &database.Database{
+			f, err := New(ctx, logrus.NewEntry(logrus.StandardLogger()), _env, &database.Database{
 				OpenShiftClusters: openshiftClusters,
-			}, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface) kubeactions.Interface {
-				return kactions
-			}, nil, nil, nil)
+			}, api.APIs, &noop.Noop{}, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -497,7 +492,7 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			go f.Run(ctx, nil, nil)
+			go f.WithKubeActionsFactory(kactions).Run(ctx, nil, nil)
 			url := fmt.Sprintf("https://server/admin%s/kubernetesObjects", tt.resourceID)
 			req, err := http.NewRequest(http.MethodPost, url, buf)
 			if err != nil {

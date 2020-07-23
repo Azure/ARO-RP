@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -28,7 +29,7 @@ type Interface interface {
 	List(ctx context.Context, oc *api.OpenShiftCluster, groupKind, namespace string) ([]byte, error)
 	CreateOrUpdate(ctx context.Context, oc *api.OpenShiftCluster, obj *unstructured.Unstructured) error
 	Delete(ctx context.Context, oc *api.OpenShiftCluster, groupKind, namespace, name string) error
-	MustGather(ctx context.Context, oc *api.OpenShiftCluster, w io.Writer) error
+	MustGather(ctx context.Context, oc *api.OpenShiftCluster, w io.Writer, cli kubernetes.Interface) error
 }
 
 type kubeactions struct {

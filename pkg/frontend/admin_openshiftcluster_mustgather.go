@@ -43,5 +43,10 @@ func (f *frontend) _postAdminOpenShiftClusterMustGather(ctx context.Context, w h
 	w.Header().Add("Content-Type", "application/gzip")
 	w.Header().Add("Content-Disposition", `attachment; filename="must-gather.tgz"`)
 
-	return f.kubeActionsFactory(log, f.env).MustGather(ctx, doc.OpenShiftCluster, w)
+	cli, err := f.kubernetesClientFactory(f.env, doc.OpenShiftCluster)
+	if err != nil {
+		return err
+	}
+
+	return f.kubeActionsFactory(log, f.env).MustGather(ctx, doc.OpenShiftCluster, w, cli)
 }

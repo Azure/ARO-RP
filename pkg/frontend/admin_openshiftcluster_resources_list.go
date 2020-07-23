@@ -67,8 +67,8 @@ func (f *frontend) _listAdminOpenShiftClusterResources(ctx context.Context, r *h
 	}
 
 	resourcesClient := f.resourcesClientFactory(subscriptionDoc.ID, fpAuthorizer)
-	vmClient := f.computeClientFactory(subscriptionDoc.ID, fpAuthorizer)
-	vnetClient := f.vnetClientFactory(subscriptionDoc.ID, fpAuthorizer)
+	vmClient := f.vmClientFactory(subscriptionDoc.ID, fpAuthorizer)
+	vnetClient := f.vNetClientFactory(subscriptionDoc.ID, fpAuthorizer)
 
 	clusterResourceGroup := stringutils.LastTokenByte(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	resources, err := resourcesClient.List(ctx, fmt.Sprintf("resourceGroup eq '%s'", clusterResourceGroup), "", nil)
