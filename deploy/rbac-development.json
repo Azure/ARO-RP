@@ -44,6 +44,7 @@
                             "Microsoft.Network/routeTables/write",
                             "Microsoft.Network/virtualNetworks/join/action",
                             "Microsoft.Network/virtualNetworks/read",
+                            "Microsoft.Network/virtualNetworks/write",
                             "Microsoft.Network/virtualNetworks/subnets/join/action",
                             "Microsoft.Network/virtualNetworks/subnets/read",
                             "Microsoft.Network/virtualNetworks/subnets/write"
