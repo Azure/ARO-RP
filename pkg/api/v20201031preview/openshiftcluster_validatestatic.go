@@ -15,6 +15,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/util/immutable"
+	utilmachine "github.com/Azure/ARO-RP/pkg/util/machine"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -203,11 +204,7 @@ func (sv *openShiftClusterStaticValidator) validateNetworkProfile(path string, n
 }
 
 func (sv *openShiftClusterStaticValidator) validateMasterProfile(path string, mp *MasterProfile) error {
-	switch mp.VMSize {
-	case VMSizeStandardD8sV3,
-		VMSizeStandardD16sV3,
-		VMSizeStandardD32sV3:
-	default:
+	if !utilmachine.VMSizeIsValid(api.VMSize(mp.VMSize), sv.developmentMode, true) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", "The provided master VM size '%s' is invalid.", mp.VMSize)
 	}
 	if !validate.RxSubnetID.MatchString(mp.SubnetID) {
@@ -228,33 +225,10 @@ func (sv *openShiftClusterStaticValidator) validateWorkerProfile(path string, wp
 	if wp.Name != "worker" {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".name", "The provided worker name '%s' is invalid.", wp.Name)
 	}
-	if sv.developmentMode {
-		if wp.VMSize != VMSizeStandardD2sV3 {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", "The provided worker VM size '%s' is invalid in development mode.", wp.VMSize)
-		}
-	} else {
-		switch wp.VMSize {
-		case VMSizeStandardD4asV4,
-			VMSizeStandardD8asV4,
-			VMSizeStandardD16asV4,
-			VMSizeStandardD32asV4,
-			VMSizeStandardD4sV3,
-			VMSizeStandardD8sV3,
-			VMSizeStandardD16sV3,
-			VMSizeStandardD32sV3,
-			VMSizeStandardE4sV3,
-			VMSizeStandardE8sV3,
-			VMSizeStandardE16sV3,
-			VMSizeStandardE32sV3,
-			VMSizeStandardF4sV2,
-			VMSizeStandardF8sV2,
-			VMSizeStandardF16sV2,
-			VMSizeStandardF32sV2:
-		default:
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", "The provided worker VM size '%s' is invalid.", wp.VMSize)
-		}
+	if !utilmachine.VMSizeIsValid(api.VMSize(wp.VMSize), sv.developmentMode, false) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", "The provided worker VM size '%s' is invalid.", wp.VMSize)
 	}
-	if wp.DiskSizeGB < 128 {
+	if !utilmachine.DiskSizeIsValid(int32(wp.DiskSizeGB)) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".diskSizeGB", "The provided worker disk size '%d' is invalid.", wp.DiskSizeGB)
 	}
 	if !validate.RxSubnetID.MatchString(wp.SubnetID) {

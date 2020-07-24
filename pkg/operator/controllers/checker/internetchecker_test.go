@@ -1,4 +1,4 @@
-package internetchecker
+package checker
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -75,7 +75,7 @@ func TestInternetCheckerCheck(t *testing.T) {
 				log: utillog.GetLogger(),
 			}
 
-			if err := r.check(tt.cli, urltocheck); (err != nil) != tt.wantErr {
+			if err := r.checkWithClient(tt.cli, urltocheck); (err != nil) != tt.wantErr {
 				t.Errorf("InternetChecker.check() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

@@ -486,7 +486,7 @@ func TestOpenShiftClusterStaticValidateWorkerProfile(t *testing.T) {
 				oc.Properties.WorkerProfiles[0].VMSize = "Standard_D4s_v3"
 			},
 			developmentMode: true,
-			wantErr:         "400: InvalidParameter: properties.workerProfiles['worker'].vmSize: The provided worker VM size 'Standard_D4s_v3' is invalid in development mode.",
+			wantErr:         "400: InvalidParameter: properties.workerProfiles['worker'].vmSize: The provided worker VM size 'Standard_D4s_v3' is invalid.",
 		},
 		{
 			name: "disk too small",

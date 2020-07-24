@@ -87,14 +87,25 @@ func (o *operator) resources() ([]runtime.Object, error) {
 			return nil, err
 		}
 
+		rpMode := ""
+		if o.env.IsDevelopment() {
+			rpMode = "development"
+		}
 		// set the image for the deployments
 		if d, ok := obj.(*appsv1.Deployment); ok {
 			for i := range d.Spec.Template.Spec.Containers {
 				d.Spec.Template.Spec.Containers[i].Image = o.env.AROOperatorImage()
+				// set the RP_MODE env variable
+				for ix, e := range d.Spec.Template.Spec.Containers[i].Env {
+					if e.Name == "RP_MODE" {
+						d.Spec.Template.Spec.Containers[i].Env[ix].Value = rpMode
+					}
+				}
 			}
+			results = append(results, d)
+		} else {
+			results = append(results, obj)
 		}
-
-		results = append(results, obj)
 	}
 	// then dynamic resources
 	key, cert := o.env.ClustersGenevaLoggingSecret()

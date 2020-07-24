@@ -12,10 +12,11 @@ const (
 	SingletonClusterName                             = "cluster"
 	InternetReachableFromMaster status.ConditionType = "InternetReachableFromMaster"
 	InternetReachableFromWorker status.ConditionType = "InternetReachableFromWorker"
+	MachineValid                status.ConditionType = "MachineValid"
 )
 
 func AllConditionTypes() []status.ConditionType {
-	return []status.ConditionType{InternetReachableFromMaster, InternetReachableFromWorker}
+	return []status.ConditionType{InternetReachableFromMaster, InternetReachableFromWorker, MachineValid}
 }
 
 type GenevaLoggingSpec struct {
