@@ -18,16 +18,30 @@ type actionFunction func(context.Context) error
 // Action returns a Step which will execute the action function `f`. Errors from
 // `f` are returned directly.
 func Action(f actionFunction) actionStep {
-	return actionStep{f}
+	return actionStep{f: f}
+}
+
+func WrappedAction(originalFunc interface{}, f actionFunction) actionStep {
+	return actionStep{
+		f:           f,
+		wrappedName: friendlyName(originalFunc),
+	}
 }
 
 type actionStep struct {
-	f actionFunction
+	f           actionFunction
+	wrappedName string
 }
 
 func (s actionStep) run(ctx context.Context, log *logrus.Entry) error {
 	return s.f(ctx)
 }
 func (s actionStep) String() string {
-	return fmt.Sprintf("[Action %s]", friendlyName(s.f))
+	var name string
+	if s.wrappedName == "" {
+		name = friendlyName(s.f)
+	} else {
+		name = s.wrappedName
+	}
+	return fmt.Sprintf("[Action %s]", name)
 }

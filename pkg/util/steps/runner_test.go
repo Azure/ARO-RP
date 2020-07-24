@@ -98,7 +98,7 @@ func TestStepRunner(t *testing.T) {
 			wantErr: `oh no!`,
 		},
 		{
-			name: "An AuthorizationRefreshingAction that fails but is retried successfully will allow a successful run",
+			name: "An RetryOnAuthorizationFailedError that fails but is retried successfully will allow a successful run",
 			steps: func(controller *gomock.Controller) []Step {
 				refreshable := mock_refreshable.NewMockAuthorizer(controller)
 				refreshable.EXPECT().
@@ -123,7 +123,7 @@ func TestStepRunner(t *testing.T) {
 					return nil
 				})
 
-				errorsOnce := &authorizationRefreshingActionStep{
+				errorsOnce := &authorizationRefreshingStep{
 					step:         action,
 					authorizer:   refreshable,
 					retryTimeout: 50 * time.Millisecond,
@@ -142,7 +142,7 @@ func TestStepRunner(t *testing.T) {
 					Level:   logrus.InfoLevel,
 				},
 				{
-					MessageRegex: `running step \[AuthorizationRefreshingAction \[Action github.com/Azure/ARO-RP/pkg/util/steps\.TestStepRunner\..*.\.1]]`,
+					MessageRegex: `running step \[RetryOnAuthorizationFailedError \[Action github.com/Azure/ARO-RP/pkg/util/steps\.TestStepRunner\..*.\.1]]`,
 					Level:        logrus.InfoLevel,
 				},
 				{
@@ -180,13 +180,13 @@ func TestStepRunner(t *testing.T) {
 			},
 		},
 		{
-			name: "AuthorizationRefreshingAction will not refresh once it is timed out",
+			name: "RetryOnAuthorizationFailedError will not refresh once it is timed out",
 			steps: func(controller *gomock.Controller) []Step {
 				// We time out immediately, so we won't actually try and refresh
 				refreshable := mock_refreshable.NewMockAuthorizer(controller)
 				return []Step{
 					Action(successfulFunc),
-					&authorizationRefreshingActionStep{
+					&authorizationRefreshingStep{
 						step:         Action(failsWithAzureError),
 						authorizer:   refreshable,
 						retryTimeout: 1 * time.Nanosecond,
@@ -200,23 +200,23 @@ func TestStepRunner(t *testing.T) {
 					Level:   logrus.InfoLevel,
 				},
 				{
-					Message: "running step [AuthorizationRefreshingAction [Action github.com/Azure/ARO-RP/pkg/util/steps.failsWithAzureError]]",
+					Message: "running step [RetryOnAuthorizationFailedError [Action github.com/Azure/ARO-RP/pkg/util/steps.failsWithAzureError]]",
 					Level:   logrus.InfoLevel,
 				},
 				{
-					Message: `step [AuthorizationRefreshingAction [Action github.com/Azure/ARO-RP/pkg/util/steps.failsWithAzureError]] encountered error: TEST#GET: oops: StatusCode=403 -- Original Error: Code="AuthorizationFailed" Message="failed"`,
+					Message: `step [RetryOnAuthorizationFailedError [Action github.com/Azure/ARO-RP/pkg/util/steps.failsWithAzureError]] encountered error: TEST#GET: oops: StatusCode=403 -- Original Error: Code="AuthorizationFailed" Message="failed"`,
 					Level:   logrus.ErrorLevel,
 				},
 			},
 			wantErr: `TEST#GET: oops: StatusCode=403 -- Original Error: Code="AuthorizationFailed" Message="failed"`,
 		},
 		{
-			name: "AuthorizationRefreshingAction will not refresh on a real failure",
+			name: "RetryOnAuthorizationFailedError will not refresh on a real failure",
 			steps: func(controller *gomock.Controller) []Step {
 				refreshable := mock_refreshable.NewMockAuthorizer(controller)
 				return []Step{
 					Action(successfulFunc),
-					AuthorizationRefreshingAction(refreshable, Action(failingFunc)),
+					RetryOnAuthorizationFailedError(refreshable, Action(failingFunc)),
 					Action(successfulFunc),
 				}
 			},
@@ -226,11 +226,11 @@ func TestStepRunner(t *testing.T) {
 					Level:   logrus.InfoLevel,
 				},
 				{
-					Message: "running step [AuthorizationRefreshingAction [Action github.com/Azure/ARO-RP/pkg/util/steps.failingFunc]]",
+					Message: "running step [RetryOnAuthorizationFailedError [Action github.com/Azure/ARO-RP/pkg/util/steps.failingFunc]]",
 					Level:   logrus.InfoLevel,
 				},
 				{
-					Message: `step [AuthorizationRefreshingAction [Action github.com/Azure/ARO-RP/pkg/util/steps.failingFunc]] encountered error: oh no!`,
+					Message: `step [RetryOnAuthorizationFailedError [Action github.com/Azure/ARO-RP/pkg/util/steps.failingFunc]] encountered error: oh no!`,
 					Level:   logrus.ErrorLevel,
 				},
 			},

@@ -31,8 +31,17 @@ func Condition(f conditionFunction, timeout time.Duration) conditionStep {
 	}
 }
 
+func WrappedCondition(originalFunc interface{}, timeout time.Duration, f conditionFunction) conditionStep {
+	return conditionStep{
+		f:           f,
+		timeout:     timeout,
+		wrappedName: friendlyName(originalFunc),
+	}
+}
+
 type conditionStep struct {
 	f            conditionFunction
+	wrappedName  string
 	timeout      time.Duration
 	pollInterval time.Duration
 }
@@ -61,5 +70,11 @@ func (c conditionStep) run(ctx context.Context, log *logrus.Entry) error {
 }
 
 func (c conditionStep) String() string {
-	return fmt.Sprintf("[Condition %s, timeout %s]", friendlyName(c.f), c.timeout)
+	var name string
+	if c.wrappedName == "" {
+		name = friendlyName(c.f)
+	} else {
+		name = c.wrappedName
+	}
+	return fmt.Sprintf("[Condition %s, timeout %s]", name, c.timeout)
 }
