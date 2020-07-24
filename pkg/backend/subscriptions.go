@@ -90,6 +90,13 @@ func (sb *subscriptionBackend) handle(ctx context.Context, log *logrus.Entry, do
 // caller indicating whether it this is the case - if this is false, the caller
 // should sleep before calling again
 func (sb *subscriptionBackend) handleDelete(ctx context.Context, log *logrus.Entry, subdoc *api.SubscriptionDocument) (bool, error) {
+	// at the time of writing, subscription docs are only enqueued to enable
+	// cascading delete, but for safety let's double-check our state here before
+	// actually deleting anything in case the above assumption ever changes...
+	if subdoc.Subscription.State != api.SubscriptionStateDeleted {
+		return false, fmt.Errorf("handleDelete was called, but subscription is in state %s", subdoc.Subscription.State)
+	}
+
 	i, err := sb.db.OpenShiftClusters.ListByPrefix(subdoc.ID, "/subscriptions/"+subdoc.ID+"/", "")
 	if err != nil {
 		return false, err
