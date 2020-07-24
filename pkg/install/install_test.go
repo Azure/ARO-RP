@@ -125,11 +125,13 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			h, log := test_log.NewCapturingLogger()
 			i := &Installer{
-				log:       log,
-				configcli: tt.configcli,
+				log: log,
+			}
+			clients := &kubeClients{
+				Config: tt.configcli,
 			}
 
-			err := i.runSteps(ctx, tt.steps)
+			err := i.runSteps(ctx, clients, tt.steps)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

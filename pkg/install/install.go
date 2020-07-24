@@ -87,10 +87,18 @@ type Installer struct {
 	privateendpoint privateendpoint.Manager
 	subnet          subnet.Manager
 
-	kubeInitialiser func(context.Context) error
+	kubeInitialiser func(env.Interface, *api.OpenShiftClusterDocument) (*kubeClients, error)
 }
 
 const deploymentName = "azuredeploy"
+
+type kubeClients struct {
+	Kubernetes kubernetes.Interface
+	Operator   operatorclient.Interface
+	Config     configclient.Interface
+	Samples    samplesclient.Interface
+	Security   securityclient.Interface
+}
 
 // NewInstaller creates a new Installer
 func NewInstaller(ctx context.Context, log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (*Installer, error) {
@@ -151,35 +159,56 @@ func NewInstaller(ctx context.Context, log *logrus.Entry, _env env.Interface, db
 }
 
 func (i *Installer) AdminUpgrade(ctx context.Context) error {
-
 	clients := &kubeClients{}
 
 	steps := []steps.Step{
-		steps.Action(i.initializeKubernetesClients(clients)),
+		steps.WrappedAction(i.kubeInitialiser, func(context.Context) error {
+			var err error
+			clients, err = i.kubeInitialiser(i.env, i.doc)
+			return err
+		}),
 		steps.Action(i.startVMs),
-		steps.Condition(i.apiServersReady, 30*time.Minute),
+		steps.WrappedCondition(i.apiServersReady, 30*time.Minute, func(ctx context.Context) (bool, error) {
+			return i.apiServersReady(ctx, clients.Config)
+		}),
 		steps.Action(i.ensureBillingRecord), // belt and braces
-		steps.Action(i.fixLBProbes),
+		steps.WrappedAction(i.fixLBProbes, func(ctx context.Context) error {
+			return i.fixLBProbes(ctx, clients.Kubernetes)
+		}),
 		steps.Action(i.fixNSG),
-		steps.Action(i.fixPullSecret),
-		steps.Action(i.ensureGenevaLogging),
-		steps.Action(i.ensureIfReload),
-		steps.Action(i.ensureRouteFix),
+		steps.WrappedAction(i.fixPullSecret, func(ctx context.Context) error {
+			return i.fixPullSecret(ctx, clients.Kubernetes)
+		}),
+		steps.WrappedAction(i.bootstrapConfigMapReady, func(ctx context.Context) error {
+			return i.ensureGenevaLogging(ctx, clients.Kubernetes, clients.Security)
+		}),
+		steps.WrappedAction(i.ensureIfReload, func(ctx context.Context) error {
+			return i.ensureIfReload(ctx, clients.Kubernetes, clients.Security)
+		}),
+		steps.WrappedAction(i.ensureRouteFix, func(context.Context) error {
+			return i.ensureRouteFix(ctx, clients.Kubernetes, clients.Security)
+		}),
 		steps.Action(i.upgradeCertificates),
-		steps.Action(i.configureAPIServerCertificate),
-		steps.Action(i.configureIngressCertificate),
+		steps.WrappedAction(i.configureAPIServerCertificate, func(ctx context.Context) error {
+			return i.configureAPIServerCertificate(ctx, clients.Kubernetes, clients.Config)
+		}),
+		steps.WrappedAction(i.configureIngressCertificate, func(ctx context.Context) error {
+			return i.configureIngressCertificate(ctx, clients.Kubernetes, clients.Operator)
+		}),
 		steps.Action(i.preUpgradeChecks), // Run this before Upgrade cluster
-		steps.Action(i.upgradeCluster),
+		steps.WrappedAction(i.upgradeCluster, func(ctx context.Context) error {
+			return i.upgradeCluster(ctx, clients.Config)
+		}),
 		steps.Action(i.addResourceProviderVersion), // Run this last so we capture the resource provider only once the upgrade has been fully performed
 	}
 
-	return i.runSteps(ctx, steps)
+	return i.runSteps(ctx, clients, steps)
 }
 
 // Install installs an ARO cluster
 func (i *Installer) Install(ctx context.Context) error {
+	clients := &kubeClients{}
 
-	var clients *kubeClients
 	steps := map[api.InstallPhase][]steps.Step{
 		api.InstallPhaseBootstrap: {
 			steps.Condition(i.dynamicValidate, 10*time.Minute),
@@ -188,38 +217,80 @@ func (i *Installer) Install(ctx context.Context) error {
 			steps.OnlyInEnv(i.env, env.EnvironmentTypeProduction|env.EnvironmentTypeIntegration, steps.Action(i.ensureAcrToken)),
 			steps.Action(i.initializeConfig),
 			steps.Action(i.createDNS),
-			steps.AuthorizationRefreshingAction(i.fpAuthorizer, steps.Action(i.deployStorageTemplate)),
-			steps.AuthorizationRefreshingAction(i.fpAuthorizer, steps.Action(i.attachNSGsAndPatch)),
+			steps.RetryOnAuthorizationFailedError(i.fpAuthorizer, steps.Action(i.deployStorageTemplate)),
+			steps.RetryOnAuthorizationFailedError(i.fpAuthorizer, steps.Action(i.attachNSGsAndPatch)),
 			steps.Action(i.ensureBillingRecord),
-			steps.AuthorizationRefreshingAction(i.fpAuthorizer, steps.Action(i.deployResourceTemplate)),
+			steps.RetryOnAuthorizationFailedError(i.fpAuthorizer, steps.Action(i.deployResourceTemplate)),
 			steps.Action(i.createPrivateEndpoint),
 			steps.Action(i.updateAPIIP),
 			steps.Action(i.createCertificates),
-			steps.Action(i.initializeKubernetesClients(clients)),
-			steps.Condition(i.bootstrapConfigMapReady, 30*time.Minute),
-			ClientAction(clients, i.ensureGenevaLogging),
-			ClientAction(clients, i.ensureIfReload),
-			steps.Action(i.ensureRouteFix),
+			steps.WrappedAction(i.kubeInitialiser, func(context.Context) error {
+				var err error
+				clients, err = i.kubeInitialiser(i.env, i.doc)
+				return err
+			}),
+			steps.WrappedCondition(i.bootstrapConfigMapReady, 30*time.Minute, func(ctx context.Context) (bool, error) {
+				return i.bootstrapConfigMapReady(ctx, clients.Kubernetes)
+			}),
+			steps.WrappedAction(i.bootstrapConfigMapReady, func(ctx context.Context) error {
+				return i.ensureGenevaLogging(ctx, clients.Kubernetes, clients.Security)
+			}),
+			steps.WrappedAction(i.ensureIfReload, func(ctx context.Context) error {
+				return i.ensureIfReload(ctx, clients.Kubernetes, clients.Security)
+			}),
+			steps.WrappedAction(i.ensureRouteFix, func(context.Context) error {
+				return i.ensureRouteFix(ctx, clients.Kubernetes, clients.Security)
+			}),
 			steps.Action(i.incrInstallPhase),
 		},
 		api.InstallPhaseRemoveBootstrap: {
 			steps.Action(i.initializeConfig),
-			steps.Action(i.initializeKubernetesClients(clients)),
+			steps.WrappedAction(i.kubeInitialiser, func(context.Context) error {
+				var err error
+				clients, err = i.kubeInitialiser(i.env, i.doc)
+				return err
+			}),
 			steps.Action(i.removeBootstrap),
 			steps.Action(i.removeBootstrapIgnition),
-			steps.Action(i.configureAPIServerCertificate),
-			steps.Condition(i.apiServersReady, 30*time.Minute),
-			steps.Condition(i.operatorConsoleExists, 30*time.Minute),
-			ClientAction(clients, i.updateConsoleBranding),
-			steps.Condition(i.operatorConsoleReady, 10*time.Minute),
-			steps.Condition(i.clusterVersionReady, 30*time.Minute),
-			steps.Action(i.disableAlertManagerWarning),
-			steps.Action(i.disableUpdates),
-			steps.Action(i.disableSamples),
-			steps.Action(i.disableOperatorHubSources),
-			steps.Action(i.updateRouterIP),
-			steps.Action(i.configureIngressCertificate),
-			steps.Condition(i.ingressControllerReady, 30*time.Minute),
+			steps.WrappedAction(i.configureAPIServerCertificate, func(ctx context.Context) error {
+				return i.configureAPIServerCertificate(ctx, clients.Kubernetes, clients.Config)
+			}),
+			steps.WrappedCondition(i.apiServersReady, 30*time.Minute, func(ctx context.Context) (bool, error) {
+				return i.apiServersReady(ctx, clients.Config)
+			}),
+			steps.WrappedCondition(i.operatorConsoleExists, 30*time.Minute, func(ctx context.Context) (bool, error) {
+				return i.operatorConsoleExists(ctx, clients.Operator)
+			}),
+			steps.WrappedAction(i.updateConsoleBranding, func(ctx context.Context) error {
+				return i.updateConsoleBranding(ctx, clients.Operator)
+			}),
+			steps.WrappedCondition(i.operatorConsoleReady, 10*time.Minute, func(ctx context.Context) (bool, error) {
+				return i.operatorConsoleReady(ctx, clients.Config)
+			}),
+			steps.WrappedCondition(i.clusterVersionReady, 30*time.Minute, func(ctx context.Context) (bool, error) {
+				return i.clusterVersionReady(ctx, clients.Config)
+			}),
+			steps.WrappedAction(i.disableAlertManagerWarning, func(ctx context.Context) error {
+				return i.disableAlertManagerWarning(ctx, clients.Kubernetes)
+			}),
+			steps.WrappedAction(i.disableUpdates, func(ctx context.Context) error {
+				return i.disableUpdates(ctx, clients.Config)
+			}),
+			steps.OnlyInEnv(i.env, env.EnvironmentTypeProduction|env.EnvironmentTypeIntegration, steps.WrappedAction(i.disableSamples, func(ctx context.Context) error {
+				return i.disableSamples(ctx, clients.Samples)
+			})),
+			steps.OnlyInEnv(i.env, env.EnvironmentTypeProduction|env.EnvironmentTypeIntegration, steps.WrappedAction(i.disableOperatorHubSources, func(ctx context.Context) error {
+				return i.disableOperatorHubSources(ctx, clients.Config)
+			})),
+			steps.WrappedAction(i.updateRouterIP, func(ctx context.Context) error {
+				return i.updateRouterIP(ctx, clients.Kubernetes)
+			}),
+			steps.WrappedAction(i.configureIngressCertificate, func(ctx context.Context) error {
+				return i.configureIngressCertificate(ctx, clients.Kubernetes, clients.Operator)
+			}),
+			steps.WrappedCondition(i.ingressControllerReady, 30*time.Minute, func(ctx context.Context) (bool, error) {
+				return i.ingressControllerReady(ctx, clients.Config)
+			}),
 			steps.Action(i.finishInstallation),
 			steps.Action(i.addResourceProviderVersion),
 		},
@@ -234,13 +305,13 @@ func (i *Installer) Install(ctx context.Context) error {
 		return fmt.Errorf("unrecognised phase %s", i.doc.OpenShiftCluster.Properties.Install.Phase)
 	}
 	i.log.Printf("starting phase %s", i.doc.OpenShiftCluster.Properties.Install.Phase)
-	return i.runSteps(ctx, steps[i.doc.OpenShiftCluster.Properties.Install.Phase])
+	return i.runSteps(ctx, clients, steps[i.doc.OpenShiftCluster.Properties.Install.Phase])
 }
 
-func (i *Installer) runSteps(ctx context.Context, s []steps.Step) error {
+func (i *Installer) runSteps(ctx context.Context, clients *kubeClients, s []steps.Step) error {
 	err := steps.Run(ctx, i.log, 10*time.Second, s)
 	if err != nil {
-		i.gatherFailureLogs(ctx)
+		i.gatherFailureLogs(ctx, clients.Config)
 	}
 	return err
 }
@@ -376,61 +447,39 @@ func (i *Installer) saveGraph(ctx context.Context, g graph) error {
 	return graph.CreateBlockBlobFromReader(bytes.NewReader([]byte(output)), nil)
 }
 
-type kubeClients struct {
-	Kubernetes kubernetes.Interface
-	Operator   operatorclient.Interface
-	Config     configclient.Interface
-	Samples    samplesclient.Interface
-	Security   securityclient.Interface
-}
+// kubeInitialiser initializes clients which are used once the cluster is up
+// later on in the install process.
+func kubeInitialiser(_env env.Interface, doc *api.OpenShiftClusterDocument) (*kubeClients, error) {
+	var err error
+	clients := &kubeClients{}
 
-// initializeKubernetesClients initializes clients which are used
-// once the cluster is up later on in the install process.
-func (i *Installer) initializeKubernetesClients(kubeClients *kubeClients) func(context.Context) error {
-
-	return i.kubeInitialiser
-
-}
-
-func kubeInitialiser(context.Context) error {
-	restConfig, err := restconfig.RestConfig(i.env, i.doc.OpenShiftCluster)
+	restConfig, err := restconfig.RestConfig(_env, doc.OpenShiftCluster)
 	if err != nil {
-		return nil, err
+		return clients, err
 	}
 
-	kubernetescli, err = kubernetes.NewForConfig(restConfig)
+	clients.Config, err = configclient.NewForConfig(restConfig)
 	if err != nil {
-		return nil, err
+		return clients, err
 	}
 
-	operatorcli, err = operatorclient.NewForConfig(restConfig)
+	clients.Kubernetes, err = kubernetes.NewForConfig(restConfig)
 	if err != nil {
-		return nil, err
+		return clients, err
 	}
 
-	securitycli, err = securityclient.NewForConfig(restConfig)
+	clients.Operator, err = operatorclient.NewForConfig(restConfig)
 	if err != nil {
-		return nil, err
+		return clients, err
 	}
 
-	samplescli, err = samplesclient.NewForConfig(restConfig)
+	clients.Security, err = securityclient.NewForConfig(restConfig)
 	if err != nil {
-		return nil, err
+		return clients, err
 	}
 
-	configcli, err = configclient.NewForConfig(restConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	kubeClients = &kubeClients{
-		Kubernetes: kubernetescli,
-		Operator:   operatorcli,
-		Security:   securitycli,
-		Samples:    samplescli,
-	}
-
-	return nil
+	clients.Samples, err = samplesclient.NewForConfig(restConfig)
+	return clients, err
 }
 
 func (i *Installer) deployARMTemplate(ctx context.Context, rg string, tName string, t *arm.Template, params map[string]interface{}) error {
