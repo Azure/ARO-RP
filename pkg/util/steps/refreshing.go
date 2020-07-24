@@ -15,40 +15,35 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
-// AuthorizationRefreshingAction returns a wrapper Step which will refresh
-// `authorizer` if the step returns an Azure AuthenticationError and rerun it.
+// RetryOnAuthorizationFailedError returns a wrapper Step which will refresh
+// `authorizer` if the step returns an Azure AuthorizationError and rerun it.
 // The step will be retried until `retryTimeout` is hit. Any other error will be
 // returned directly.
-func AuthorizationRefreshingAction(authorizer refreshable.Authorizer, step Step) authorizationRefreshingActionStep {
-	return authorizationRefreshingActionStep{
-		step:       step,
-		authorizer: authorizer,
+func RetryOnAuthorizationFailedError(authorizer refreshable.Authorizer, step Step) authorizationRefreshingStep {
+	return authorizationRefreshingStep{
+		step:         step,
+		authorizer:   authorizer,
+		retryTimeout: 10 * time.Minute,
+		pollInterval: 10 * time.Second,
 	}
 }
 
-type authorizationRefreshingActionStep struct {
+type authorizationRefreshingStep struct {
 	step         Step
 	authorizer   refreshable.Authorizer
 	retryTimeout time.Duration
 	pollInterval time.Duration
 }
 
-func (s authorizationRefreshingActionStep) run(ctx context.Context, log *logrus.Entry) error {
-	var pollInterval time.Duration
+func (s authorizationRefreshingStep) run(ctx context.Context, log *logrus.Entry) error {
 	var retryTimeout time.Duration
 
-	// If no pollInterval has been set, use a default
-	if s.retryTimeout == time.Duration(0) {
-		retryTimeout = 10 * time.Minute
+	// If it's a condition, absorb its retryTimeout.
+	c, isCondition := s.step.(conditionStep)
+	if isCondition {
+		retryTimeout = c.timeout
 	} else {
 		retryTimeout = s.retryTimeout
-	}
-
-	// If no pollInterval has been set, use a default
-	if s.pollInterval == time.Duration(0) {
-		pollInterval = 10 * time.Second
-	} else {
-		pollInterval = s.pollInterval
 	}
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, retryTimeout)
@@ -59,11 +54,20 @@ func (s authorizationRefreshingActionStep) run(ctx context.Context, log *logrus.
 	// step is called again after runner.pollInterval. If we have timed out or
 	// any other error is returned, the error from the step is returned
 	// directly.
-	return wait.PollImmediateUntil(pollInterval, func() (bool, error) {
+	return wait.PollImmediateUntil(s.pollInterval, func() (bool, error) {
+		var done bool
+		var err error
+
 		// We use the outer context, not the timeout context, as we do not want
 		// to time out the condition function itself, only stop retrying once
 		// timeoutCtx's timeout has fired.
-		err := s.step.run(ctx, log)
+		// Also, if it's a condition, run the inner function directly.
+		if isCondition {
+			done, err = c.f(ctx)
+		} else {
+			err = s.step.run(ctx, log)
+			done = true
+		}
 
 		// Don't refresh if we have timed out
 		if timeoutCtx.Err() == nil &&
@@ -75,9 +79,9 @@ func (s authorizationRefreshingActionStep) run(ctx context.Context, log *logrus.
 			err = s.authorizer.RefreshWithContext(ctx)
 			return false, err
 		}
-		return true, err
+		return done, err
 	}, timeoutCtx.Done())
 }
-func (s authorizationRefreshingActionStep) String() string {
-	return fmt.Sprintf("[AuthorizationRefreshingAction %s]", s.step)
+func (s authorizationRefreshingStep) String() string {
+	return fmt.Sprintf("[RetryOnAuthorizationFailedError %s]", s.step)
 }
