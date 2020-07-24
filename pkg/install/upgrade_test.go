@@ -102,11 +102,10 @@ func TestUpgradeCluster(t *testing.T) {
 			})
 
 			i := &Installer{
-				log:       logrus.NewEntry(logrus.StandardLogger()),
-				configcli: tt.fakecli,
+				log: logrus.NewEntry(logrus.StandardLogger()),
 			}
 
-			err := i.upgradeCluster(ctx)
+			err := i.upgradeCluster(ctx, tt.fakecli)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
@@ -116,7 +115,7 @@ func TestUpgradeCluster(t *testing.T) {
 				t.Fatal(updated)
 			}
 
-			cv, err := i.configcli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
+			cv, err := tt.fakecli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
 			if err != nil {
 				t.Error(err)
 			}

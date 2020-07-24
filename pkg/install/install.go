@@ -87,11 +87,7 @@ type Installer struct {
 	privateendpoint privateendpoint.Manager
 	subnet          subnet.Manager
 
-	kubernetescli kubernetes.Interface
-	operatorcli   operatorclient.Interface
-	configcli     configclient.Interface
-	samplescli    samplesclient.Interface
-	securitycli   securityclient.Interface
+	kubeInitialiser func(context.Context) error
 }
 
 const deploymentName = "azuredeploy"
@@ -149,12 +145,17 @@ func NewInstaller(ctx context.Context, log *logrus.Entry, _env env.Interface, db
 		keyvault:        keyvault.NewManager(localFPKVAuthorizer),
 		privateendpoint: privateendpoint.NewManager(_env, localFPAuthorizer),
 		subnet:          subnet.NewManager(r.SubscriptionID, fpAuthorizer),
+
+		kubeInitialiser: kubeInitialiser,
 	}, nil
 }
 
 func (i *Installer) AdminUpgrade(ctx context.Context) error {
+
+	clients := &kubeClients{}
+
 	steps := []steps.Step{
-		steps.Action(i.initializeKubernetesClients),
+		steps.Action(i.initializeKubernetesClients(clients)),
 		steps.Action(i.startVMs),
 		steps.Condition(i.apiServersReady, 30*time.Minute),
 		steps.Action(i.ensureBillingRecord), // belt and braces
@@ -177,6 +178,8 @@ func (i *Installer) AdminUpgrade(ctx context.Context) error {
 
 // Install installs an ARO cluster
 func (i *Installer) Install(ctx context.Context) error {
+
+	var clients *kubeClients
 	steps := map[api.InstallPhase][]steps.Step{
 		api.InstallPhaseBootstrap: {
 			steps.Condition(i.dynamicValidate, 10*time.Minute),
@@ -192,22 +195,22 @@ func (i *Installer) Install(ctx context.Context) error {
 			steps.Action(i.createPrivateEndpoint),
 			steps.Action(i.updateAPIIP),
 			steps.Action(i.createCertificates),
-			steps.Action(i.initializeKubernetesClients),
+			steps.Action(i.initializeKubernetesClients(clients)),
 			steps.Condition(i.bootstrapConfigMapReady, 30*time.Minute),
-			steps.Action(i.ensureGenevaLogging),
-			steps.Action(i.ensureIfReload),
+			ClientAction(clients, i.ensureGenevaLogging),
+			ClientAction(clients, i.ensureIfReload),
 			steps.Action(i.ensureRouteFix),
 			steps.Action(i.incrInstallPhase),
 		},
 		api.InstallPhaseRemoveBootstrap: {
 			steps.Action(i.initializeConfig),
-			steps.Action(i.initializeKubernetesClients),
+			steps.Action(i.initializeKubernetesClients(clients)),
 			steps.Action(i.removeBootstrap),
 			steps.Action(i.removeBootstrapIgnition),
 			steps.Action(i.configureAPIServerCertificate),
 			steps.Condition(i.apiServersReady, 30*time.Minute),
 			steps.Condition(i.operatorConsoleExists, 30*time.Minute),
-			steps.Action(i.updateConsoleBranding),
+			ClientAction(clients, i.updateConsoleBranding),
 			steps.Condition(i.operatorConsoleReady, 10*time.Minute),
 			steps.Condition(i.clusterVersionReady, 30*time.Minute),
 			steps.Action(i.disableAlertManagerWarning),
@@ -373,36 +376,61 @@ func (i *Installer) saveGraph(ctx context.Context, g graph) error {
 	return graph.CreateBlockBlobFromReader(bytes.NewReader([]byte(output)), nil)
 }
 
+type kubeClients struct {
+	Kubernetes kubernetes.Interface
+	Operator   operatorclient.Interface
+	Config     configclient.Interface
+	Samples    samplesclient.Interface
+	Security   securityclient.Interface
+}
+
 // initializeKubernetesClients initializes clients which are used
 // once the cluster is up later on in the install process.
-func (i *Installer) initializeKubernetesClients(ctx context.Context) error {
+func (i *Installer) initializeKubernetesClients(kubeClients *kubeClients) func(context.Context) error {
+
+	return i.kubeInitialiser
+
+}
+
+func kubeInitialiser(context.Context) error {
 	restConfig, err := restconfig.RestConfig(i.env, i.doc.OpenShiftCluster)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	i.kubernetescli, err = kubernetes.NewForConfig(restConfig)
+	kubernetescli, err = kubernetes.NewForConfig(restConfig)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	i.operatorcli, err = operatorclient.NewForConfig(restConfig)
+	operatorcli, err = operatorclient.NewForConfig(restConfig)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	i.securitycli, err = securityclient.NewForConfig(restConfig)
+	securitycli, err = securityclient.NewForConfig(restConfig)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	i.samplescli, err = samplesclient.NewForConfig(restConfig)
+	samplescli, err = samplesclient.NewForConfig(restConfig)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	i.configcli, err = configclient.NewForConfig(restConfig)
-	return err
+	configcli, err = configclient.NewForConfig(restConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	kubeClients = &kubeClients{
+		Kubernetes: kubernetescli,
+		Operator:   operatorcli,
+		Security:   securitycli,
+		Samples:    samplescli,
+	}
+
+	return nil
 }
 
 func (i *Installer) deployARMTemplate(ctx context.Context, rg string, tName string, t *arm.Template, params map[string]interface{}) error {

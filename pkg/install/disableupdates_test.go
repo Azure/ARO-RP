@@ -17,24 +17,23 @@ func TestDisableUpdates(t *testing.T) {
 
 	versionName := "version"
 
-	i := &Installer{
-		configcli: fake.NewSimpleClientset(&v1.ClusterVersion{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: versionName,
-			},
-			Spec: v1.ClusterVersionSpec{
-				Upstream: "RemoveMe",
-				Channel:  "RemoveMe",
-			},
-		}),
-	}
+	i := &Installer{}
+	configClient := fake.NewSimpleClientset(&v1.ClusterVersion{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: versionName,
+		},
+		Spec: v1.ClusterVersionSpec{
+			Upstream: "RemoveMe",
+			Channel:  "RemoveMe",
+		},
+	})
 
-	err := i.disableUpdates(ctx)
+	err := i.disableUpdates(ctx, configClient)
 	if err != nil {
 		t.Error(err)
 	}
 
-	cv, err := i.configcli.ConfigV1().ClusterVersions().Get(versionName, metav1.GetOptions{})
+	cv, err := configClient.ConfigV1().ClusterVersions().Get(versionName, metav1.GetOptions{})
 	if err != nil {
 		t.Error(err)
 	}

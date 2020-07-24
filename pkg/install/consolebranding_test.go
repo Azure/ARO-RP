@@ -18,31 +18,29 @@ func TestUpdateConsoleBranding(t *testing.T) {
 
 	consoleName := "cluster"
 
-	i := &Installer{
-		log: logrus.NewEntry(logrus.StandardLogger()),
-		operatorcli: fake.NewSimpleClientset(&operatorv1.Console{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: consoleName,
-			},
-			Status: operatorv1.ConsoleStatus{
-				OperatorStatus: operatorv1.OperatorStatus{
-					Conditions: []operatorv1.OperatorCondition{
-						{
-							Type:   "DeploymentAvailable",
-							Status: operatorv1.ConditionTrue,
-						},
+	i := &Installer{log: logrus.NewEntry(logrus.StandardLogger())}
+	operatorClient := fake.NewSimpleClientset(&operatorv1.Console{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: consoleName,
+		},
+		Status: operatorv1.ConsoleStatus{
+			OperatorStatus: operatorv1.OperatorStatus{
+				Conditions: []operatorv1.OperatorCondition{
+					{
+						Type:   "DeploymentAvailable",
+						Status: operatorv1.ConditionTrue,
 					},
 				},
 			},
-		}),
-	}
+		},
+	})
 
-	err := i.updateConsoleBranding(ctx)
+	err := i.updateConsoleBranding(ctx, operatorClient)
 	if err != nil {
 		t.Error(err)
 	}
 
-	console, err := i.operatorcli.OperatorV1().Consoles().Get(consoleName, metav1.GetOptions{})
+	console, err := operatorClient.OperatorV1().Consoles().Get(consoleName, metav1.GetOptions{})
 	if err != nil {
 		t.Error(err)
 	}

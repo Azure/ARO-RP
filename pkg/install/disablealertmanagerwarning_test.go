@@ -56,24 +56,24 @@ route:
 func TestDisableAlertManagerWarning(t *testing.T) {
 	ctx := context.Background()
 
-	i := &Installer{
-		kubernetescli: fake.NewSimpleClientset(&v1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "alertmanager-main",
-				Namespace: "openshift-monitoring",
-			},
-			Data: map[string][]byte{
-				"alertmanager.yaml": initial,
-			},
-		}),
-	}
+	i := &Installer{}
 
-	err := i.disableAlertManagerWarning(ctx)
+	kubernetesClient := fake.NewSimpleClientset(&v1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "alertmanager-main",
+			Namespace: "openshift-monitoring",
+		},
+		Data: map[string][]byte{
+			"alertmanager.yaml": initial,
+		},
+	})
+
+	err := i.disableAlertManagerWarning(ctx, kubernetesClient)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	s, err := i.kubernetescli.CoreV1().Secrets("openshift-monitoring").Get("alertmanager-main", metav1.GetOptions{})
+	s, err := kubernetesClient.CoreV1().Secrets("openshift-monitoring").Get("alertmanager-main", metav1.GetOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}

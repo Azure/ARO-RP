@@ -6,10 +6,13 @@ package install
 import (
 	"context"
 
+	securityclient "github.com/openshift/client-go/security/clientset/versioned"
+	"k8s.io/client-go/kubernetes"
+
 	"github.com/Azure/ARO-RP/pkg/genevalogging"
 )
 
-func (i *Installer) ensureGenevaLogging(ctx context.Context) error {
-	gl := genevalogging.New(i.log, i.env, i.doc.OpenShiftCluster, i.kubernetescli, i.securitycli)
+func (i *Installer) ensureGenevaLogging(ctx context.Context, kubernetesClient kubernetes.Interface, securityClient securityclient.Interface) error {
+	gl := genevalogging.New(i.log, i.env, i.doc.OpenShiftCluster, kubernetesClient, securityClient)
 	return gl.CreateOrUpdate(ctx)
 }

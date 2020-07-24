@@ -11,9 +11,12 @@ import (
 	"encoding/pem"
 
 	configv1 "github.com/openshift/api/config/v1"
+	configclient "github.com/openshift/client-go/config/clientset/versioned"
+	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	coreclient "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/util/retry"
 
@@ -146,7 +149,7 @@ func (i *Installer) ensureSecret(ctx context.Context, secrets coreclient.SecretI
 	return err
 }
 
-func (i *Installer) configureAPIServerCertificate(ctx context.Context) error {
+func (i *Installer) configureAPIServerCertificate(ctx context.Context, kubernetesClient kubernetes.Interface, configClient configclient.Interface) error {
 	if _, ok := i.env.(env.Dev); ok {
 		return nil
 	}
@@ -160,13 +163,13 @@ func (i *Installer) configureAPIServerCertificate(ctx context.Context) error {
 		return nil
 	}
 
-	err = i.ensureSecret(ctx, i.kubernetescli.CoreV1().Secrets("openshift-config"), i.doc.ID+"-apiserver")
+	err = i.ensureSecret(ctx, kubernetesClient.CoreV1().Secrets("openshift-config"), i.doc.ID+"-apiserver")
 	if err != nil {
 		return err
 	}
 
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		apiserver, err := i.configcli.ConfigV1().APIServers().Get("cluster", metav1.GetOptions{})
+		apiserver, err := configClient.ConfigV1().APIServers().Get("cluster", metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -182,12 +185,12 @@ func (i *Installer) configureAPIServerCertificate(ctx context.Context) error {
 			},
 		}
 
-		_, err = i.configcli.ConfigV1().APIServers().Update(apiserver)
+		_, err = configClient.ConfigV1().APIServers().Update(apiserver)
 		return err
 	})
 }
 
-func (i *Installer) configureIngressCertificate(ctx context.Context) error {
+func (i *Installer) configureIngressCertificate(ctx context.Context, kubernetesClient kubernetes.Interface, operatorClient operatorclient.Interface) error {
 	if _, ok := i.env.(env.Dev); ok {
 		return nil
 	}
@@ -201,13 +204,13 @@ func (i *Installer) configureIngressCertificate(ctx context.Context) error {
 		return nil
 	}
 
-	err = i.ensureSecret(ctx, i.kubernetescli.CoreV1().Secrets("openshift-ingress"), i.doc.ID+"-ingress")
+	err = i.ensureSecret(ctx, kubernetesClient.CoreV1().Secrets("openshift-ingress"), i.doc.ID+"-ingress")
 	if err != nil {
 		return err
 	}
 
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		ic, err := i.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Get("default", metav1.GetOptions{})
+		ic, err := operatorClient.OperatorV1().IngressControllers("openshift-ingress-operator").Get("default", metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -216,7 +219,7 @@ func (i *Installer) configureIngressCertificate(ctx context.Context) error {
 			Name: i.doc.ID + "-ingress",
 		}
 
-		_, err = i.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Update(ic)
+		_, err = operatorClient.OperatorV1().IngressControllers("openshift-ingress-operator").Update(ic)
 		return err
 	})
 }

@@ -10,18 +10,19 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
 
-func (i *Installer) fixPullSecret(ctx context.Context) error {
+func (i *Installer) fixPullSecret(ctx context.Context, kubernetesClient kubernetes.Interface) error {
 	// TODO: this function does not currently reapply a pull secret in
 	// development mode.
 
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		var isCreate bool
-		ps, err := i.kubernetescli.CoreV1().Secrets("openshift-config").Get("pull-secret", metav1.GetOptions{})
+		ps, err := kubernetesClient.CoreV1().Secrets("openshift-config").Get("pull-secret", metav1.GetOptions{})
 		switch {
 		case errors.IsNotFound(err):
 			ps = &v1.Secret{
@@ -62,7 +63,7 @@ func (i *Installer) fixPullSecret(ctx context.Context) error {
 			changed = true
 
 			// unfortunately the type field is immutable.
-			err = i.kubernetescli.CoreV1().Secrets(ps.Namespace).Delete(ps.Name, nil)
+			err = kubernetesClient.CoreV1().Secrets(ps.Namespace).Delete(ps.Name, nil)
 			if err != nil {
 				return err
 			}
@@ -79,9 +80,9 @@ func (i *Installer) fixPullSecret(ctx context.Context) error {
 		ps.Data[v1.DockerConfigJsonKey] = []byte(pullSecret)
 
 		if isCreate {
-			_, err = i.kubernetescli.CoreV1().Secrets(ps.Namespace).Create(ps)
+			_, err = kubernetesClient.CoreV1().Secrets(ps.Namespace).Create(ps)
 		} else {
-			_, err = i.kubernetescli.CoreV1().Secrets(ps.Namespace).Update(ps)
+			_, err = kubernetesClient.CoreV1().Secrets(ps.Namespace).Update(ps)
 		}
 		return err
 	})

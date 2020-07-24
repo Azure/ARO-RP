@@ -49,18 +49,17 @@ func TestBootstrapConfigMapReady(t *testing.T) {
 			want:               true,
 		},
 	} {
-		i := &Installer{
-			kubernetescli: k8sfake.NewSimpleClientset(&corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      tt.configMapName,
-					Namespace: tt.configMapNamespace,
-				},
-				Data: map[string]string{
-					"status": tt.configMapStatus,
-				},
-			}),
-		}
-		ready, err := i.bootstrapConfigMapReady(ctx)
+		i := &Installer{}
+		kubernetesClient := k8sfake.NewSimpleClientset(&corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      tt.configMapName,
+				Namespace: tt.configMapNamespace,
+			},
+			Data: map[string]string{
+				"status": tt.configMapStatus,
+			},
+		})
+		ready, err := i.bootstrapConfigMapReady(ctx, kubernetesClient)
 		if err != nil {
 			t.Error(errMustBeNilMsg)
 		}
@@ -87,14 +86,13 @@ func TestOperatorConsoleExists(t *testing.T) {
 			want:        true,
 		},
 	} {
-		i := &Installer{
-			operatorcli: operatorfake.NewSimpleClientset(&operatorv1.Console{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: tt.consoleName,
-				},
-			}),
-		}
-		ready, err := i.operatorConsoleExists(ctx)
+		i := &Installer{}
+		operatorClient := operatorfake.NewSimpleClientset(&operatorv1.Console{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: tt.consoleName,
+			},
+		})
+		ready, err := i.operatorConsoleExists(ctx, operatorClient)
 		if err != nil {
 			t.Error(errMustBeNilMsg)
 		}
@@ -182,22 +180,21 @@ func TestClusterVersionReady(t *testing.T) {
 			want:               true,
 		},
 	} {
-		i := &Installer{
-			configcli: configfake.NewSimpleClientset(&configv1.ClusterVersion{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: tt.version,
-				},
-				Status: configv1.ClusterVersionStatus{
-					Conditions: []configv1.ClusterOperatorStatusCondition{
-						{
-							Type:   configv1.OperatorAvailable,
-							Status: tt.availableCondition,
-						},
+		i := &Installer{}
+		configClient := configfake.NewSimpleClientset(&configv1.ClusterVersion{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: tt.version,
+			},
+			Status: configv1.ClusterVersionStatus{
+				Conditions: []configv1.ClusterOperatorStatusCondition{
+					{
+						Type:   configv1.OperatorAvailable,
+						Status: tt.availableCondition,
 					},
 				},
-			}),
-		}
-		ready, err := i.clusterVersionReady(ctx)
+			},
+		})
+		ready, err := i.clusterVersionReady(ctx, configClient)
 		if err != nil {
 			t.Error(errMustBeNilMsg)
 		}

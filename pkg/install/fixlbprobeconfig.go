@@ -13,13 +13,14 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/util/pem"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
-func (i *Installer) fixLBProbeConfig(ctx context.Context, resourceGroup, lbName string) error {
-	mcsCertIsMalformed, err := i.mcsCertIsMalformed()
+func (i *Installer) fixLBProbeConfig(ctx context.Context, kubernetesClient kubernetes.Interface, resourceGroup, lbName string) error {
+	mcsCertIsMalformed, err := i.mcsCertIsMalformed(kubernetesClient)
 	if err != nil {
 		return err
 	}
@@ -71,7 +72,7 @@ loop:
 	return i.loadbalancers.CreateOrUpdateAndWait(ctx, resourceGroup, lbName, lb)
 }
 
-func (i *Installer) fixLBProbes(ctx context.Context) error {
+func (i *Installer) fixLBProbes(ctx context.Context, kubernetesClient kubernetes.Interface) error {
 	infraID := i.doc.OpenShiftCluster.Properties.InfraID
 	if infraID == "" {
 		infraID = "aro"
@@ -83,7 +84,7 @@ func (i *Installer) fixLBProbes(ctx context.Context) error {
 		infraID + "-public-lb",
 		infraID + "-internal-lb",
 	} {
-		err := i.fixLBProbeConfig(ctx, resourceGroup, lbName)
+		err := i.fixLBProbeConfig(ctx, kubernetesClient, resourceGroup, lbName)
 		if err != nil {
 			return err
 		}
@@ -96,8 +97,8 @@ func (i *Installer) fixLBProbes(ctx context.Context) error {
 // authority key identifier equals the subject key identifier, which is
 // non-compliant and is rejected by Azure SLB.  This provisioning error was
 // fixed in 4a7415a4 but clusters pre-dating the fix still exist.
-func (i *Installer) mcsCertIsMalformed() (bool, error) {
-	s, err := i.kubernetescli.CoreV1().Secrets("openshift-machine-config-operator").Get("machine-config-server-tls", metav1.GetOptions{})
+func (i *Installer) mcsCertIsMalformed(kubernetesClient kubernetes.Interface) (bool, error) {
+	s, err := kubernetesClient.CoreV1().Secrets("openshift-machine-config-operator").Get("machine-config-server-tls", metav1.GetOptions{})
 	if err != nil {
 		return false, err
 	}

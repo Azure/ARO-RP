@@ -7,15 +7,16 @@ import (
 	"context"
 
 	configv1 "github.com/openshift/api/config/v1"
+	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-func (i *Installer) upgradeCluster(ctx context.Context) error {
+func (i *Installer) upgradeCluster(ctx context.Context, configClient configclient.Interface) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		cv, err := i.configcli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
+		cv, err := configClient.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -41,7 +42,7 @@ func (i *Installer) upgradeCluster(ctx context.Context) error {
 			Image:   stream.PullSpec,
 		}
 
-		_, err = i.configcli.ConfigV1().ClusterVersions().Update(cv)
+		_, err = configClient.ConfigV1().ClusterVersions().Update(cv)
 		return err
 	})
 }

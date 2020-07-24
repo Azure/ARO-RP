@@ -6,10 +6,13 @@ package install
 import (
 	"context"
 
+	securityclient "github.com/openshift/client-go/security/clientset/versioned"
+	"k8s.io/client-go/kubernetes"
+
 	"github.com/Azure/ARO-RP/pkg/ifreload"
 )
 
-func (i *Installer) ensureIfReload(ctx context.Context) error {
-	ir := ifreload.New(i.log, i.env, i.kubernetescli, i.securitycli)
+func (i *Installer) ensureIfReload(ctx context.Context, kubernetesClient kubernetes.Interface, securityClient securityclient.Interface) error {
+	ir := ifreload.New(i.log, i.env, kubernetesClient, securityClient)
 	return ir.CreateOrUpdate(ctx)
 }
