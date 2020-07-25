@@ -31,15 +31,22 @@ var _ = Describe("[Admin API] List Azure resources action", func() {
 		Expect(err).NotTo(HaveOccurred())
 		clusterResourceGroup := stringutils.LastTokenByte(*oc.OpenShiftClusterProperties.ClusterProfile.ResourceGroupID, '/')
 
-		By("building a list of valid Azure resource ID's via the Azure API")
+		By("building a list of valid Azure resource IDs via the Azure API")
 		expectedResources, err := clients.Resources.ListByResourceGroup(ctx, clusterResourceGroup, "", "", nil)
 		Expect(err).NotTo(HaveOccurred())
+
+		By("adding VNet to list of valid Azure resource IDs")
+		aroResourceGroup := strings.TrimPrefix(clusterResourceGroup, "aro-")
+		vNet, err := clients.Resources.ListByResourceGroup(ctx, aroResourceGroup, "resourceType eq 'Microsoft.Network/virtualNetworks'", "", nil)
+		Expect(err).NotTo(HaveOccurred())
+		expectedResources = append(vNet, expectedResources...)
+
 		expectedResourceIDs := make([]string, len(expectedResources))
 		for i, r := range expectedResources {
 			expectedResourceIDs[i] = strings.ToLower(*r.ID)
 		}
 
-		By("getting the Azure resource IDs via admin actions API")
+		By("getting the actual Azure resource IDs via admin actions API")
 		var actualResources []mgmtfeatures.GenericResourceExpanded
 		resp, err := adminRequest(ctx, http.MethodGet, "/admin"+resourceID+"/resources", nil, nil, &actualResources)
 		Expect(err).NotTo(HaveOccurred())
