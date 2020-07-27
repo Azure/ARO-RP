@@ -6,7 +6,6 @@ package e2e
 import (
 	"context"
 	"fmt"
-	"net"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -19,6 +18,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	proj "github.com/Azure/ARO-RP/test/util/project"
+	ready "github.com/Azure/ARO-RP/test/util/ready"
 )
 
 const (
@@ -71,13 +71,21 @@ var _ = Describe("Cluster smoke test", func() {
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		Eventually(func() error {
-			return verifyServiceIsReady(ctx, clients.Kubernetes, "elb")
-		}, 5*time.Minute, 10*time.Second).Should(BeNil())
+		Eventually(func() bool {
+			svc, err := clients.Kubernetes.CoreV1().Services(testNamespace).Get("elb", metav1.GetOptions{})
+			if err != nil {
+				return false
+			}
+			return ready.ServiceIsReady(svc)
+		}, 5*time.Minute, 10*time.Second).Should(BeTrue())
 
-		Eventually(func() error {
-			return verifyServiceIsReady(ctx, clients.Kubernetes, "ilb")
-		}, 5*time.Minute, 10*time.Second).Should(BeNil())
+		Eventually(func() bool {
+			svc, err := clients.Kubernetes.CoreV1().Services(testNamespace).Get("ilb", metav1.GetOptions{})
+			if err != nil {
+				return false
+			}
+			return ready.ServiceIsReady(svc)
+		}, 5*time.Minute, 10*time.Second).Should(BeTrue())
 	})
 })
 
@@ -181,23 +189,4 @@ func createLoadBalancerService(ctx context.Context, cli kubernetes.Interface, na
 	}
 	_, err := cli.CoreV1().Services(testNamespace).Create(svc)
 	return err
-}
-
-func verifyServiceIsReady(ctx context.Context, cli kubernetes.Interface, svcName string) error {
-	svc, err := cli.CoreV1().Services(testNamespace).Get(svcName, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-
-	switch svc.Spec.Type {
-	case corev1.ServiceTypeLoadBalancer:
-		if len(svc.Status.LoadBalancer.Ingress) <= 0 {
-			return fmt.Errorf("Load balancer service '%s' is not ready", svcName)
-		}
-	case corev1.ServiceTypeClusterIP:
-		if net.ParseIP(svc.Spec.ClusterIP) == nil {
-			return fmt.Errorf("ClusterIP service '%s' is not ready", svcName)
-		}
-	}
-	return nil
 }
