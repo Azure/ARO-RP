@@ -3,7 +3,7 @@
 
 create_infra_rg() {
     echo "########## Creating RG $RESOURCEGROUP in $LOCATION ##########"
-    az group create -g "$RESOURCEGROUP" -l "$LOCATION" >/dev/null
+    az group create -g "$RESOURCEGROUP" -l "$LOCATION" --tags persist=true >/dev/null
 }
 
 deploy_rp_dev_predeploy() {
