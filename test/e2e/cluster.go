@@ -45,7 +45,7 @@ var _ = Describe("Cluster smoke test", func() {
 
 		Eventually(func() error {
 			return project.VerifyProjectIsDeleted()
-		}, 5*time.Minute, 1*time.Second).Should(BeNil())
+		}, 5*time.Minute, 10*time.Second).Should(BeNil())
 	})
 
 	Specify("Can run a pod which is using Azure File storage", func() {
