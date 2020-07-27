@@ -15,6 +15,7 @@ import (
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
+	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 var _ = Describe("[Admin API] List Azure resources action", func() {
@@ -35,16 +36,15 @@ var _ = Describe("[Admin API] List Azure resources action", func() {
 		expectedResources, err := clients.Resources.ListByResourceGroup(ctx, clusterResourceGroup, "", "", nil)
 		Expect(err).NotTo(HaveOccurred())
 
-		By("adding VNet to list of valid Azure resource IDs")
-		aroResourceGroup := strings.TrimPrefix(clusterResourceGroup, "aro-")
-		vNet, err := clients.Resources.ListByResourceGroup(ctx, aroResourceGroup, "resourceType eq 'Microsoft.Network/virtualNetworks'", "", nil)
-		Expect(err).NotTo(HaveOccurred())
-		expectedResources = append(vNet, expectedResources...)
-
-		expectedResourceIDs := make([]string, len(expectedResources))
-		for i, r := range expectedResources {
-			expectedResourceIDs[i] = strings.ToLower(*r.ID)
+		expectedResourceIDs := make([]string, 0, len(expectedResources)+1)
+		for _, r := range expectedResources {
+			expectedResourceIDs = append(expectedResourceIDs, strings.ToLower(*r.ID))
 		}
+
+		By("adding VNet to list of valid Azure resource IDs")
+		vnetName, _, err := subnet.Split(*oc.OpenShiftClusterProperties.MasterProfile.SubnetID)
+		Expect(err).NotTo(HaveOccurred())
+		expectedResourceIDs = append(expectedResourceIDs, strings.ToLower(vnetName))
 
 		By("getting the actual Azure resource IDs via admin actions API")
 		var actualResources []mgmtfeatures.GenericResourceExpanded
@@ -53,9 +53,9 @@ var _ = Describe("[Admin API] List Azure resources action", func() {
 		Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 		By("reading response")
-		actualResourceIDs := make([]string, len(actualResources))
-		for i, r := range actualResources {
-			actualResourceIDs[i] = strings.ToLower(*r.ID)
+		actualResourceIDs := make([]string, 0, len(actualResources))
+		for _, r := range actualResources {
+			actualResourceIDs = append(actualResourceIDs, strings.ToLower(*r.ID))
 		}
 
 		By("comparing lists of resources")
