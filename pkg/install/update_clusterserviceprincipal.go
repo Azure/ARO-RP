@@ -6,6 +6,7 @@ package install
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"strings"
 	"time"
 
@@ -20,6 +21,8 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/util/aad"
+	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 )
@@ -96,11 +99,10 @@ func (i *Installer) clusterSPObjectID(ctx context.Context) (string, error) {
 	}
 
 	spGraphAuthorizer := autorest.NewBearerAuthorizer(token)
-
 	applications := graphrbac.NewApplicationsClient(spp.TenantID, spGraphAuthorizer)
-
 	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
+
 	// NOTE: Do not override err with the error returned by wait.PollImmediateUntil.
 	// Doing this will not propagate the latest error to the user in case when wait exceeds the timeout
 	wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
@@ -111,10 +113,8 @@ func (i *Installer) clusterSPObjectID(ctx context.Context) (string, error) {
 				i.log.Info(err)
 				return false, nil
 			}
-
 			return false, err
 		}
-
 		result = *res.Value
 		return true, nil
 	}, timeoutCtx.Done())
@@ -127,40 +127,63 @@ func (i *Installer) updateRoleAssignments(ctx context.Context) error {
 	if err != nil {
 		return nil
 	}
-	// TODO shouldn't this be the armAuthoriser?
-	roleassignments := authorization.NewRoleAssignmentsClient(i.env.SubscriptionID(), i.fpAuthorizer)
 
+	roleassignments := authorization.NewRoleAssignmentsClient(i.env.SubscriptionID(), i.fpAuthorizer)
 	_, err = roleassignments.Create(ctx, "/subscriptions/"+i.env.SubscriptionID()+"/resourceGroups/"+i.env.ResourceGroup(), uuid.NewV4().String(), mgmtauthorization.RoleAssignmentCreateParameters{
 		RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
-			RoleDefinitionID: to.StringPtr("/subscriptions/" + i.env.SubscriptionID() + "/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c"),
+			RoleDefinitionID: to.StringPtr("/subscriptions/" + i.env.SubscriptionID() + "/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c"), // Contributor
 			PrincipalID:      to.StringPtr(clusterSPObjectID),
 			PrincipalType:    mgmtauthorization.ServicePrincipal,
 		},
 	})
-	if detailedErr, ok := err.(autorest.DetailedError); ok {
-		if requestErr, ok := detailedErr.Original.(*azure.RequestError); ok &&
-			requestErr.ServiceError != nil &&
-			requestErr.ServiceError.Code == "RoleAssignmentExists" {
-			err = nil
-		}
-	}
-	/*	TODO, we also need to do this but there does not seem to be a create/update api
-		if _, ok := i.env.(env.Dev); !ok {
 
-			Resource: &mgmtauthorization.DenyAssignment{
-				Name: to.StringPtr("[guid(resourceGroup().id, 'ARO cluster resource group deny assignment')]"),
-				Type: to.StringPtr("Microsoft.Authorization/denyAssignments"),
-				DenyAssignmentProperties: &mgmtauthorization.DenyAssignmentProperties{
-					ExcludePrincipals: &[]mgmtauthorization.Principal{
-						{
-							ID:   &clusterSPObjectID,
-							Type: to.StringPtr("ServicePrincipal"),
+	if os.Getenv("RP_MODE") == "" {
+		t := &arm.Template{
+			Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+			ContentVersion: "1.0.0.0",
+			Resources: []*arm.Resource{
+				{
+					Resource: &mgmtauthorization.DenyAssignment{
+						Name: to.StringPtr("[guid(resourceGroup().id, 'ARO cluster resource group deny assignment')]"),
+						Type: to.StringPtr("Microsoft.Authorization/denyAssignments"),
+						DenyAssignmentProperties: &mgmtauthorization.DenyAssignmentProperties{
+							DenyAssignmentName: to.StringPtr("[guid(resourceGroup().id, 'ARO cluster resource group deny assignment')]"),
+							Permissions: &[]mgmtauthorization.DenyAssignmentPermission{
+								{
+									Actions: &[]string{
+										"*/action",
+										"*/delete",
+										"*/write",
+									},
+									NotActions: &[]string{
+										"Microsoft.Network/networkSecurityGroups/join/action",
+									},
+								},
+							},
+							Scope: &i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID,
+							Principals: &[]mgmtauthorization.Principal{
+								{
+									ID:   to.StringPtr("00000000-0000-0000-0000-000000000000"),
+									Type: to.StringPtr("SystemDefined"),
+								},
+							},
+							ExcludePrincipals: &[]mgmtauthorization.Principal{
+								{
+									ID:   &clusterSPObjectID,
+									Type: to.StringPtr("ServicePrincipal"),
+								},
+							},
+							IsSystemProtected: to.BoolPtr(true),
 						},
 					},
-					IsSystemProtected: to.BoolPtr(true),
+					APIVersion: azureclient.APIVersions["Microsoft.Authorization/denyAssignments"],
 				},
 			},
 		}
-	*/
+		err = i.deployARMTemplate(ctx, "rg", "storage", t, nil)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
