@@ -428,6 +428,9 @@ func TestValidateVnetPermissions(t *testing.T) {
 					Return([]mgmtauthorization.Permission{
 						{
 							Actions: &[]string{
+								"Microsoft.Network/virtualNetworks/join/action",
+								"Microsoft.Network/virtualNetworks/read",
+								"Microsoft.Network/virtualNetworks/write",
 								"Microsoft.Network/virtualNetworks/subnets/join/action",
 								"Microsoft.Network/virtualNetworks/subnets/read",
 								"Microsoft.Network/virtualNetworks/subnets/write",
