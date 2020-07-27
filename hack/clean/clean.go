@@ -102,7 +102,10 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		}
 
 		// TODO: Remove me when shared cluster tagging is solved
-		if strings.HasPrefix(*resourceGroup.Name, "aro-v4-shared") {
+		// TODO: Remove when people stop re-using shared RG for their vnets
+		// and tags are not removed.
+		if strings.HasPrefix(*resourceGroup.Name, "aro-v4-shared") ||
+			strings.HasPrefix(*resourceGroup.Name, "v4-") {
 			return false
 		}
 
