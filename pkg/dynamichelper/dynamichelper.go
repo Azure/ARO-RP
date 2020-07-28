@@ -9,7 +9,8 @@ import (
 	"strings"
 
 	"github.com/sirupsen/logrus"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"github.com/ugorji/go/codec"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -27,31 +28,23 @@ type DynamicHelper interface {
 	RefreshAPIResources() error
 	CreateOrUpdate(obj *unstructured.Unstructured) error
 	Delete(groupKind, namespace, name string) error
+	Ensure(o *unstructured.Unstructured) error
 	Get(groupKind, namespace, name string) (*unstructured.Unstructured, error)
 	List(groupKind, namespace string) (*unstructured.UnstructuredList, error)
 }
 
-type UpdatePolicy struct {
-	LogChanges              bool
-	RetryOnConflict         bool
-	AvoidUnnecessaryUpdates bool
-}
-
 type dynamicHelper struct {
 	log *logrus.Entry
-
-	updatePolicy UpdatePolicy
 
 	restconfig   *rest.Config
 	dyn          dynamic.Interface
 	apiresources []*metav1.APIResourceList
 }
 
-func New(log *logrus.Entry, restconfig *rest.Config, updatePolicy UpdatePolicy) (DynamicHelper, error) {
+func New(log *logrus.Entry, restconfig *rest.Config) (DynamicHelper, error) {
 	dh := &dynamicHelper{
-		log:          log,
-		updatePolicy: updatePolicy,
-		restconfig:   restconfig,
+		log:        log,
+		restconfig: restconfig,
 	}
 
 	var err error
@@ -139,43 +132,21 @@ func (dh *dynamicHelper) findGVR(groupKind, optionalVersion string) (*schema.Gro
 	return matches[0], nil
 }
 
+// CreateOrUpdate does nothing more than an Update call (and a Create if that
+// call returned 404).  We don't add any fancy behaviour because this is called
+// from the Geneva Admin context and we don't want to get in the SRE's way.
 func (dh *dynamicHelper) CreateOrUpdate(o *unstructured.Unstructured) error {
 	gvr, err := dh.findGVR(o.GroupVersionKind().GroupKind().String(), o.GroupVersionKind().Version)
 	if err != nil {
 		return err
 	}
 
-	err = retry.OnError(retry.DefaultRetry, func(err error) bool {
-		return dh.updatePolicy.RetryOnConflict && apierrors.ReasonForError(err) == metav1.StatusReasonConflict
-	}, func() error {
-		existing, err := dh.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Get(o.GetName(), metav1.GetOptions{})
-		if apierrors.IsNotFound(err) {
-			dh.log.Info("Create " + keyFuncO(o))
-			_, err = dh.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Create(o, metav1.CreateOptions{})
-			return err
-		}
-		if err != nil {
-			return err
-		}
-
-		if dh.updatePolicy.AvoidUnnecessaryUpdates {
-			copyImmutableFields(o, existing)
-
-			if !dh.needsUpdate(reflect.ValueOf(existing.Object), reflect.ValueOf(o.Object)) {
-				return nil
-			}
-		} else {
-			o.SetResourceVersion(existing.GetResourceVersion())
-		}
-
-		if !dh.logDiff(existing, o) {
-			dh.log.Info("Update ", keyFuncO(o))
-		}
-
-		_, err = dh.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Update(o, metav1.UpdateOptions{})
+	_, err = dh.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Update(o, metav1.UpdateOptions{})
+	if !errors.IsNotFound(err) {
 		return err
-	})
+	}
 
+	_, err = dh.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Create(o, metav1.CreateOptions{})
 	return err
 }
 
@@ -186,6 +157,39 @@ func (dh *dynamicHelper) Delete(groupKind, namespace, name string) error {
 	}
 
 	return dh.dyn.Resource(*gvr).Namespace(namespace).Delete(name, &metav1.DeleteOptions{})
+}
+
+// Ensure is called by the operator deploy tool and individual controllers.  It
+// is intended to ensure that an object matches a desired state.  It is tolerant
+// of unspecified fields in the desired state (e.g. it will leave typically
+// leave .status untouched).
+func (dh *dynamicHelper) Ensure(o *unstructured.Unstructured) error {
+	gvr, err := dh.findGVR(o.GroupVersionKind().GroupKind().String(), o.GroupVersionKind().Version)
+	if err != nil {
+		return err
+	}
+
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		existing, err := dh.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Get(o.GetName(), metav1.GetOptions{})
+		if errors.IsNotFound(err) {
+			dh.log.Printf("Create %s", keyFuncO(o))
+			_, err = dh.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Create(o, metav1.CreateOptions{})
+			return err
+		}
+		if err != nil {
+			return err
+		}
+
+		o, changed, diff, err := merge(existing, o)
+		if err != nil || !changed {
+			return err
+		}
+
+		dh.log.Printf("Update %s: %s", keyFuncO(o), diff)
+
+		_, err = dh.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Update(o, metav1.UpdateOptions{})
+		return err
+	})
 }
 
 func (dh *dynamicHelper) Get(groupKind, namespace, name string) (*unstructured.Unstructured, error) {
@@ -206,61 +210,34 @@ func (dh *dynamicHelper) List(groupKind, namespace string) (*unstructured.Unstru
 	return dh.dyn.Resource(*gvr).Namespace(namespace).List(metav1.ListOptions{})
 }
 
-// needsUpdate: the idea is that we recursively compare existing and o; when we
-// get to a map, we only check if the keys that are set in o are identical in
-// existing.  We don't pay any attention to keys in existing that o has no
-// opinion about.
-func (dh *dynamicHelper) needsUpdate(existing, o reflect.Value) bool {
-	if existing.Type() != o.Type() {
-		return true
+func diff(existing, o *unstructured.Unstructured) string {
+	if o.GroupVersionKind().GroupKind().String() == "Secret" { // Don't show a diff if kind is Secret
+		return ""
 	}
 
-	switch o.Kind() {
-	case reflect.Map:
-		i := o.MapRange()
-		for i.Next() {
-			if dh.needsUpdate(existing.MapIndex(i.Key()), i.Value()) {
-				return true
-			}
-		}
-		return false
-
-	case reflect.Interface, reflect.Ptr:
-		if existing.IsNil() || o.IsNil() {
-			return existing.IsNil() != o.IsNil()
-		}
-
-		return dh.needsUpdate(existing.Elem(), o.Elem())
-
-	case reflect.Slice, reflect.Array:
-		if existing.IsNil() || o.IsNil() {
-			return existing.IsNil() != o.IsNil()
-		}
-		if o.Len() != existing.Len() {
-			return true
-		}
-		for i := 0; i < o.Len(); i++ {
-			if dh.needsUpdate(existing.Index(i), o.Index(i)) {
-				return true
-			}
-		}
-		return false
-
-	default:
-		return !reflect.DeepEqual(existing.Interface(), o.Interface())
-	}
+	return cmp.Diff(existing.Object, o.Object)
 }
 
-func (dh *dynamicHelper) logDiff(existing, o *unstructured.Unstructured) bool {
-	gk := o.GroupVersionKind().GroupKind()
-	diffShown := false
-	if dh.updatePolicy.LogChanges && gk.String() != "Secret" { // Don't show a diff if kind is Secret
-		if diff := cmp.Diff(*existing, *o); diff != "" {
-			dh.log.Info("Update ", keyFuncO(o), diff)
-			diffShown = true
-		}
+// merge merges delta onto base using ugorji/go/codec semantics.  It returns the
+// newly merged object (the inputs are untouched) plus a flag indicating if a
+// change took place and a printable diff as appropriate
+func merge(base, delta *unstructured.Unstructured) (*unstructured.Unstructured, bool, string, error) {
+	copy := base.DeepCopy()
+
+	h := &codec.JsonHandle{}
+
+	var b []byte
+	err := codec.NewEncoderBytes(&b, h).Encode(delta.Object)
+	if err != nil {
+		return nil, false, "", err
 	}
-	return diffShown
+
+	err = codec.NewDecoderBytes(b, h).Decode(&copy.Object)
+	if err != nil {
+		return nil, false, "", err
+	}
+
+	return copy, !reflect.DeepEqual(base, copy), diff(base, copy), nil
 }
 
 func keyFuncO(o *unstructured.Unstructured) string {

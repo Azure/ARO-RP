@@ -56,11 +56,7 @@ func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, cli kub
 	if err != nil {
 		return nil, err
 	}
-	dh, err := dynamichelper.New(log, restConfig, dynamichelper.UpdatePolicy{
-		LogChanges:              true,
-		RetryOnConflict:         true,
-		AvoidUnnecessaryUpdates: true,
-	})
+	dh, err := dynamichelper.New(log, restConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +190,7 @@ func (o *operator) CreateOrUpdate() error {
 		return dynamichelper.KindLess(objects[i].GetKind(), objects[j].GetKind())
 	})
 	for _, un := range objects {
-		err = o.dh.CreateOrUpdate(un)
+		err = o.dh.Ensure(un)
 		if err != nil {
 			return err
 		}

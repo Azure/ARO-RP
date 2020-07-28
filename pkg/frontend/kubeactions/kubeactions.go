@@ -41,7 +41,7 @@ func (ka *kubeactions) Get(oc *api.OpenShiftCluster, groupKind, namespace, name 
 	if err != nil {
 		return nil, err
 	}
-	dh, err := dynamichelper.New(ka.log, restConfig, dynamichelper.UpdatePolicy{})
+	dh, err := dynamichelper.New(ka.log, restConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func (ka *kubeactions) List(oc *api.OpenShiftCluster, groupKind, namespace strin
 	if err != nil {
 		return nil, err
 	}
-	dh, err := dynamichelper.New(ka.log, restConfig, dynamichelper.UpdatePolicy{})
+	dh, err := dynamichelper.New(ka.log, restConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func (ka *kubeactions) CreateOrUpdate(oc *api.OpenShiftCluster, obj *unstructure
 	if err != nil {
 		return err
 	}
-	dh, err := dynamichelper.New(ka.log, restConfig, dynamichelper.UpdatePolicy{})
+	dh, err := dynamichelper.New(ka.log, restConfig)
 	if err != nil {
 		return err
 	}
@@ -94,7 +94,7 @@ func (ka *kubeactions) Delete(oc *api.OpenShiftCluster, groupKind, namespace, na
 	if err != nil {
 		return err
 	}
-	dh, err := dynamichelper.New(ka.log, restConfig, dynamichelper.UpdatePolicy{})
+	dh, err := dynamichelper.New(ka.log, restConfig)
 	if err != nil {
 		return err
 	}

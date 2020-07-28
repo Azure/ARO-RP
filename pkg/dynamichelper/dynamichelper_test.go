@@ -4,14 +4,11 @@ package dynamichelper
 // Licensed under the Apache License 2.0.
 
 import (
-	"io/ioutil"
 	"net/http"
-	"path/filepath"
 	"reflect"
-	"strings"
 	"testing"
 
-	"gopkg.in/yaml.v2"
+	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -20,8 +17,6 @@ import (
 	ktesting "k8s.io/client-go/testing"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/util/cmp"
-	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
 func TestFindGVR(t *testing.T) {
@@ -159,33 +154,17 @@ func TestFindGVR(t *testing.T) {
 	}
 }
 
-func TestCreateOrUpdate(t *testing.T) {
-	testlog := utillog.GetLogger()
-	v1configmap := []*metav1.APIResourceList{
-		{
-			GroupVersion: "v1",
-			APIResources: []metav1.APIResource{
-				{
-					Name: "configmaps",
-					Kind: "ConfigMap",
-				},
-			},
-		},
-	}
+func TestEnsure(t *testing.T) {
 	tests := []struct {
-		name                    string
-		existing                []runtime.Object
-		new                     *unstructured.Unstructured
-		apiresources            []*metav1.APIResourceList
-		avoidUnnecessaryUpdates bool
-		wantCreate              bool
-		wantUpdate              bool
-		wantErr                 bool
+		name       string
+		existing   []runtime.Object
+		new        *unstructured.Unstructured
+		wantCreate bool
+		wantUpdate bool
+		wantErr    string
 	}{
 		{
-			name:                    "create",
-			avoidUnnecessaryUpdates: true,
-			existing:                []runtime.Object{},
+			name: "create",
 			new: &unstructured.Unstructured{
 				Object: map[string]interface{}{
 					"kind": "ConfigMap",
@@ -195,12 +174,10 @@ func TestCreateOrUpdate(t *testing.T) {
 					},
 				},
 			},
-			wantCreate:   true,
-			apiresources: v1configmap,
+			wantCreate: true,
 		},
 		{
-			name:                    "update",
-			avoidUnnecessaryUpdates: true,
+			name: "update",
 			existing: []runtime.Object{
 				&unstructured.Unstructured{
 					Object: map[string]interface{}{
@@ -229,12 +206,10 @@ func TestCreateOrUpdate(t *testing.T) {
 					},
 				},
 			},
-			wantUpdate:   true,
-			apiresources: v1configmap,
+			wantUpdate: true,
 		},
 		{
-			name:                    "no update needed",
-			avoidUnnecessaryUpdates: true,
+			name: "no update needed",
 			existing: []runtime.Object{
 				&unstructured.Unstructured{
 					Object: map[string]interface{}{
@@ -263,44 +238,9 @@ func TestCreateOrUpdate(t *testing.T) {
 					},
 				},
 			},
-			apiresources: v1configmap,
 		},
 		{
-			name: "always update without avoidUnnecessaryUpdates",
-			existing: []runtime.Object{
-				&unstructured.Unstructured{
-					Object: map[string]interface{}{
-						"kind":       "ConfigMap",
-						"apiVersion": "v1",
-						"metadata": map[string]interface{}{
-							"namespace": "openshift-azure-logging",
-							"name":      "config",
-						},
-						"data": map[string]interface{}{
-							"audit.conf": "2",
-						},
-					},
-				},
-			},
-			new: &unstructured.Unstructured{
-				Object: map[string]interface{}{
-					"kind":       "ConfigMap",
-					"apiVersion": "v1",
-					"metadata": map[string]interface{}{
-						"namespace": "openshift-azure-logging",
-						"name":      "config",
-					},
-					"data": map[string]interface{}{
-						"audit.conf": "2",
-					},
-				},
-			},
-			wantUpdate:   true,
-			apiresources: v1configmap,
-		},
-		{
-			name:                    "no update needed with avoidUnnecessaryUpdates",
-			avoidUnnecessaryUpdates: true,
+			name: "no update needed either",
 			existing: []runtime.Object{
 				&unstructured.Unstructured{
 					Object: map[string]interface{}{
@@ -309,7 +249,7 @@ func TestCreateOrUpdate(t *testing.T) {
 						"metadata": map[string]interface{}{
 							"namespace":  "openshift-azure-logging",
 							"name":       "config",
-							"generation": "4", // <- should be stripped out by clean()
+							"generation": "4", // <- should be ignored by merge
 						},
 						"data": map[string]interface{}{
 							"audit.conf": "2",
@@ -330,7 +270,6 @@ func TestCreateOrUpdate(t *testing.T) {
 					},
 				},
 			},
-			apiresources: v1configmap,
 		},
 	}
 	for _, tt := range tests {
@@ -349,66 +288,33 @@ func TestCreateOrUpdate(t *testing.T) {
 			})
 
 			dh := &dynamicHelper{
-				log: testlog,
-				updatePolicy: UpdatePolicy{
-					LogChanges:              true,
-					AvoidUnnecessaryUpdates: tt.avoidUnnecessaryUpdates,
+				log: logrus.NewEntry(logrus.StandardLogger()),
+				dyn: fakeDyn,
+				apiresources: []*metav1.APIResourceList{
+					{
+						GroupVersion: "v1",
+						APIResources: []metav1.APIResource{
+							{
+								Name: "configmaps",
+								Kind: "ConfigMap",
+							},
+						},
+					},
 				},
-				dyn:          fakeDyn,
-				apiresources: tt.apiresources,
 			}
-			if err := dh.CreateOrUpdate(tt.new); (err != nil) != tt.wantErr {
-				t.Errorf("dynamicHelper.CreateOrUpdate() error = %v, wantErr %v", err, tt.wantErr)
+
+			err := dh.Ensure(tt.new)
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Error(err)
 			}
+
 			if tt.wantCreate != created {
-				t.Errorf("dynamicHelper.CreateOrUpdate create should be %v but was %v", tt.wantCreate, created)
+				t.Error(created)
 			}
 			if tt.wantUpdate != updated {
-				t.Errorf("dynamicHelper.CreateOrUpdate update should be %v but was %v", tt.wantUpdate, updated)
+				t.Error(updated)
 			}
 		})
-	}
-}
-
-func unmarshal(b []byte) (unstructured.Unstructured, error) {
-	obj := &unstructured.Unstructured{}
-	err := yaml.Unmarshal(b, obj)
-	return *obj, err
-}
-
-func TestNeedsUpdate(t *testing.T) {
-	testlog := utillog.GetLogger()
-	matches, err := filepath.Glob("testdata/needsUpdate/*-in.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	dh := &dynamicHelper{
-		log:          testlog,
-		updatePolicy: UpdatePolicy{},
-	}
-
-	for _, match := range matches {
-		b, err := ioutil.ReadFile(match)
-		if err != nil {
-			t.Error(err)
-		}
-		in, err := unmarshal(b)
-		if err != nil {
-			t.Error(err)
-		}
-
-		b, err = ioutil.ReadFile(strings.Replace(match, "-in.yaml", "-out.yaml", -1))
-		if err != nil {
-			t.Error(err)
-		}
-		out, err := unmarshal(b)
-		if err != nil {
-			t.Error(err)
-		}
-
-		if dh.needsUpdate(reflect.ValueOf(in.Object), reflect.ValueOf(out.Object)) {
-			t.Errorf("%s:\n%s", match, cmp.Diff(in, out))
-		}
 	}
 }
