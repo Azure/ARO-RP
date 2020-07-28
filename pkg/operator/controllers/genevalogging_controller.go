@@ -104,18 +104,21 @@ func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		return reconcile.Result{}, err
 	}
 
-	sort.Slice(resources, func(i, j int) bool {
-		return dynamichelper.KindLess(resources[i].GetObjectKind().GroupVersionKind().Kind, resources[j].GetObjectKind().GroupVersionKind().Kind)
-	})
-
+	uns := make([]*unstructured.Unstructured, 0, len(resources))
 	for _, res := range resources {
 		un := &unstructured.Unstructured{}
 		err = scheme.Scheme.Convert(res, un, nil)
 		if err != nil {
-			r.log.Error(err)
 			return reconcile.Result{}, err
 		}
+		uns = append(uns, un)
+	}
 
+	sort.Slice(uns, func(i, j int) bool {
+		return dynamichelper.CreateOrder(uns[i], uns[j])
+	})
+
+	for _, un := range uns {
 		err = dh.Ensure(un)
 		if err != nil {
 			r.log.Error(err)
@@ -137,10 +140,6 @@ func (r *GenevaloggingReconciler) certificatesSecret(instance *arov1alpha1.Clust
 		}
 
 		newCert = &corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Secret",
-				APIVersion: "v1",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      genevalogging.CertificatesSecretName,
 				Namespace: genevalogging.KubeNamespace,

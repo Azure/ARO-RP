@@ -116,10 +116,6 @@ func (o *operator) resources() ([]runtime.Object, error) {
 	// the genevalogging namespace.
 	return append(results,
 		&corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Secret",
-				APIVersion: "v1",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      genevalogging.CertificatesSecretName,
 				Namespace: pkgoperator.Namespace,
@@ -130,10 +126,6 @@ func (o *operator) resources() ([]runtime.Object, error) {
 			},
 		},
 		&corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Secret",
-				APIVersion: "v1",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      ACRPullSecretName,
 				Namespace: pkgoperator.Namespace,
@@ -142,10 +134,6 @@ func (o *operator) resources() ([]runtime.Object, error) {
 			Data: map[string][]byte{v1.DockerConfigJsonKey: []byte(ps)},
 		},
 		&arov1alpha1.Cluster{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Cluster",
-				APIVersion: "aro.openshift.io/v1alpha1",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name: arov1alpha1.SingletonClusterName,
 			},
@@ -176,20 +164,21 @@ func (o *operator) CreateOrUpdate() error {
 		return err
 	}
 
-	objects := []*unstructured.Unstructured{}
+	uns := make([]*unstructured.Unstructured, 0, len(resources))
 	for _, res := range resources {
 		un := &unstructured.Unstructured{}
 		err = scheme.Scheme.Convert(res, un, nil)
 		if err != nil {
 			return err
 		}
-		objects = append(objects, un)
+		uns = append(uns, un)
 	}
 
-	sort.Slice(objects, func(i, j int) bool {
-		return dynamichelper.KindLess(objects[i].GetKind(), objects[j].GetKind())
+	sort.Slice(uns, func(i, j int) bool {
+		return dynamichelper.CreateOrder(uns[i], uns[j])
 	})
-	for _, un := range objects {
+
+	for _, un := range uns {
 		err = o.dh.Ensure(un)
 		if err != nil {
 			return err

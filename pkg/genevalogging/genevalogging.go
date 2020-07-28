@@ -36,10 +36,6 @@ type genevaLogging struct {
 }
 
 func New(log *logrus.Entry, cluster *arov1alpha1.Cluster, seccli securityclient.Interface, certs *v1.Secret) GenevaLogging {
-	certs.TypeMeta = metav1.TypeMeta{
-		Kind:       "Secret",
-		APIVersion: "v1",
-	}
 	return &genevaLogging{
 		log: log,
 
@@ -57,10 +53,6 @@ func (g *genevaLogging) securityContextConstraints(name, serviceAccountName stri
 		return nil, err
 	}
 
-	scc.TypeMeta = metav1.TypeMeta{
-		Kind:       "SecurityContextConstraints",
-		APIVersion: "security.openshift.io/v1",
-	}
 	scc.ObjectMeta = metav1.ObjectMeta{
 		Name: name,
 	}
@@ -71,10 +63,6 @@ func (g *genevaLogging) securityContextConstraints(name, serviceAccountName stri
 
 func (g *genevaLogging) daemonset(r azure.Resource) *appsv1.DaemonSet {
 	return &appsv1.DaemonSet{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "DaemonSet",
-			APIVersion: "apps/v1",
-		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "mdsd",
 			Namespace: KubeNamespace,
@@ -378,10 +366,6 @@ func (g *genevaLogging) Resources() ([]runtime.Object, error) {
 
 	return []runtime.Object{
 		&v1.Namespace{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Namespace",
-				APIVersion: "v1",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        KubeNamespace,
 				Annotations: map[string]string{projectv1.ProjectNodeSelector: ""},
@@ -389,10 +373,6 @@ func (g *genevaLogging) Resources() ([]runtime.Object, error) {
 		},
 		g.certs,
 		&v1.ConfigMap{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "ConfigMap",
-				APIVersion: "v1",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "fluent-config",
 				Namespace: KubeNamespace,
@@ -405,10 +385,6 @@ func (g *genevaLogging) Resources() ([]runtime.Object, error) {
 			},
 		},
 		&v1.ServiceAccount{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "ServiceAccount",
-				APIVersion: "v1",
-			},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "geneva",
 				Namespace: KubeNamespace,
