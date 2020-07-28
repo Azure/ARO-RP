@@ -6,6 +6,7 @@ package install
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -180,7 +181,8 @@ func (i *Installer) updateRoleAssignments(ctx context.Context) error {
 				},
 			},
 		}
-		err = i.deployARMTemplate(ctx, "rg", "storage", t, nil)
+		resourceGroupName := fmt.Sprintf("aro-%s", i.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
+		err = i.deployARMTemplate(ctx, resourceGroupName, "storage", t, nil)
 		if err != nil {
 			return err
 		}
