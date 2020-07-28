@@ -24,9 +24,8 @@ func (rc *ResourceCleaner) CleanResourceGroups(ctx context.Context) error {
 	for _, g := range gs {
 		err := rc.cleanResourceGroup(ctx, g)
 		if err != nil {
-			return err
+			rc.log.Error(err)
 		}
-
 	}
 
 	return nil
