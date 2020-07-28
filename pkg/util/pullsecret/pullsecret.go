@@ -6,6 +6,7 @@ package pullsecret
 import (
 	"encoding/base64"
 	"encoding/json"
+	"os"
 	"reflect"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -41,7 +42,6 @@ func SetRegistryProfiles(_ps string, rps ...*api.RegistryProfile) (string, bool,
 		if !reflect.DeepEqual(ps.Auths[rp.Name], v) {
 			changed = true
 		}
-
 		ps.Auths[rp.Name] = v
 	}
 
@@ -51,7 +51,7 @@ func SetRegistryProfiles(_ps string, rps ...*api.RegistryProfile) (string, bool,
 
 // Merge returns _ps over _base.  If both _ps and _base have a given key, the
 // version of it in _ps wins.
-func Merge(_base, _ps string) (string, error) {
+func Merge(_base, _ps string) (string, bool, error) {
 	if _base == "" {
 		_base = "{}"
 	}
@@ -64,24 +64,29 @@ func Merge(_base, _ps string) (string, error) {
 
 	err := json.Unmarshal([]byte(_base), &base)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 
 	err = json.Unmarshal([]byte(_ps), &ps)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
+
+	var changed bool
 
 	for k, v := range ps.Auths {
 		if base.Auths == nil {
 			base.Auths = map[string]map[string]interface{}{}
 		}
 
-		base.Auths[k] = v
+		if !reflect.DeepEqual(base.Auths[k], v) {
+			base.Auths[k] = v
+			changed = true
+		}
 	}
 
 	b, err := json.Marshal(base)
-	return string(b), err
+	return string(b), changed, err
 }
 
 func RemoveKey(_ps, key string) (string, error) {
@@ -110,4 +115,20 @@ func Validate(_ps string) error {
 	var ps *pullSecret
 
 	return json.Unmarshal([]byte(_ps), &ps)
+}
+
+func Build(oc *api.OpenShiftCluster, ps string) (string, error) {
+	pullSecret := os.Getenv("PULL_SECRET")
+
+	pullSecret, _, err := Merge(pullSecret, ps)
+	if err != nil {
+		return "", err
+	}
+
+	pullSecret, _, err = SetRegistryProfiles(pullSecret, oc.Properties.RegistryProfiles...)
+	if err != nil {
+		return "", err
+	}
+
+	return pullSecret, nil
 }

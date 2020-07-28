@@ -11,7 +11,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"math/big"
-	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -126,14 +125,7 @@ func (m *Manager) Create(ctx context.Context) error {
 		return err
 	}
 
-	pullSecret := os.Getenv("PULL_SECRET")
-
-	pullSecret, err = pullsecret.Merge(pullSecret, string(m.doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret))
-	if err != nil {
-		return err
-	}
-
-	pullSecret, _, err = pullsecret.SetRegistryProfiles(pullSecret, m.doc.OpenShiftCluster.Properties.RegistryProfiles...)
+	pullSecret, err := pullsecret.Build(m.doc.OpenShiftCluster, string(m.doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret))
 	if err != nil {
 		return err
 	}
@@ -150,7 +142,7 @@ func (m *Manager) Create(ctx context.Context) error {
 		return err
 	}
 
-	vnetID, masterSubnetName, err := subnet.Split(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
+	_, masterSubnetName, err := subnet.Split(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return err
 	}

@@ -31,6 +31,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 type conn struct {
@@ -162,7 +163,16 @@ func (d *dev) InitializeAuthorizers() error {
 }
 
 func (d *dev) ACRName() string {
-	return "arosvc"
+	return "arointsvc"
+}
+
+func (d *dev) AROOperatorImage() string {
+	override := os.Getenv("ARO_IMAGE")
+	if override != "" {
+		return override
+	}
+
+	return fmt.Sprintf("%s/aro:%s", d.acrName, version.GitCommit)
 }
 
 func (d *dev) DatabaseName() string {

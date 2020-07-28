@@ -1,5 +1,7 @@
 SHELL = /bin/bash
 COMMIT = $(shell git rev-parse --short HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
+BRANCH = $(shell git rev-parse --abbrev-ref HEAD)
+ARO_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/aro:$(COMMIT)
 
 aro: generate
 	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro
@@ -54,7 +56,7 @@ generate:
 
 image-aro: aro
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
-	docker build -f Dockerfile.aro -t ${RP_IMAGE_ACR}.azurecr.io/aro:$(COMMIT) .
+	docker build -f Dockerfile.aro -t $(ARO_IMAGE) .
 
 image-fluentbit:
 	docker build --build-arg VERSION=1.3.9-1 \
@@ -72,7 +74,11 @@ image-routefix:
 	docker build -f Dockerfile.routefix -t ${RP_IMAGE_ACR}.azurecr.io/routefix:$(COMMIT) .
 
 publish-image-aro: image-aro
-	docker push ${RP_IMAGE_ACR}.azurecr.io/aro:$(COMMIT)
+	docker push $(ARO_IMAGE)
+ifeq ("${RP_IMAGE_ACR}-$(BRANCH)","arointsvc-master")
+		docker tag $(ARO_IMAGE) arointsvc.azurecr.io/aro:latest
+		docker push arointsvc.azurecr.io/aro:latest
+endif
 
 publish-image-fluentbit: image-fluentbit
 	docker push ${RP_IMAGE_ACR}.azurecr.io/fluentbit:1.3.9-1
