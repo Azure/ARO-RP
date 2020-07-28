@@ -52,7 +52,7 @@ client: generate
 generate:
 	go generate ./...
 
-image-aro: aro
+image-aro: aro e2e.test
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
 	docker build -f Dockerfile.aro -t ${RP_IMAGE_ACR}.azurecr.io/aro:$(COMMIT) .
 
@@ -109,8 +109,11 @@ secrets-update:
 	az storage blob upload --auth-mode login -n secrets.tar.gz -c secrets -f secrets.tar.gz --account-name ${SECRET_SA_ACCOUNT_NAME} >/dev/null
 	rm secrets.tar.gz
 
-e2e:
-	go test ./test/e2e -timeout 60m -v -ginkgo.v -tags e2e
+e2e.test:
+	go test ./test/e2e -tags e2e -c -o e2e.test
+
+test-e2e: e2e.test
+	./e2e.test -test.timeout 60m -test.v -ginkgo.v
 
 test-go: generate
 	go build ./...
@@ -140,4 +143,4 @@ test-python: generate pyenv${PYTHON_VERSION}
 admin.kubeconfig:
 	hack/get-admin-kubeconfig.sh /subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}/providers/Microsoft.RedHatOpenShift/openShiftClusters/${CLUSTER} >admin.kubeconfig
 
-.PHONY: admin.kubeconfig aro az clean client generate image-aro image-fluentbit image-ifreload image-proxy image-routefix proxy publish-image-aro publish-image-fluentbit publish-image-ifreload publish-image-proxy publish-image-routefix secrets secrets-update test-go test-python
+.PHONY: admin.kubeconfig aro az clean client generate image-aro image-fluentbit image-ifreload image-proxy image-routefix proxy publish-image-aro publish-image-fluentbit publish-image-ifreload publish-image-proxy publish-image-routefix secrets secrets-update e2e.test test-e2e test-go test-python

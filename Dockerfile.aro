@@ -1,6 +1,6 @@
 FROM registry.access.redhat.com/ubi8/ubi-minimal
 RUN microdnf update && microdnf clean all
-COPY aro /usr/local/bin
+COPY aro e2e.test /usr/local/bin/
 ENTRYPOINT ["aro"]
 EXPOSE 8443/tcp
 USER 1000

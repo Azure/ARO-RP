@@ -33,7 +33,7 @@ E2e tests can also be run locally as follows:
 - Register a subscription where to run the e2e
 - Deploy a cluster: RG / Vnet / Cluster
 - Export the KUBECONFIG file
-- Run the `make e2e` target
+- Run the `make test-e2e` target
 - Delete the cluster and dependencies such as DB, RB & Vnet.
 
 These steps can be acheived using commands below.  Look at the [e2e helper
