@@ -34,50 +34,46 @@ func newOpenShiftClusters(h *codec.JsonHandle) *fakeOpenShiftClusters {
 }
 
 func (c *fakeOpenShiftClusters) fromString(s *string) (*api.OpenShiftClusterDocument, error) {
-
 	res := &api.OpenShiftClusterDocument{}
 	d := codec.NewDecoder(bytes.NewBufferString(*s), c.jsonHandle)
 	err := d.Decode(&res)
-
 	return res, err
-
 }
 
 func (c *fakeOpenShiftClusters) Create(ctx context.Context, partitionkey string, doc *api.OpenShiftClusterDocument, options *cosmosdb.Options) (*api.OpenShiftClusterDocument, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	var err error
-
 	_, ext := c.docs[doc.ID]
 	if ext {
 		// it's here
-		return nil, errors.New("sdkjfbg")
+		return nil, errors.New("Document already exists?")
 	}
 
 	buf := &bytes.Buffer{}
-	err = codec.NewEncoder(buf, c.jsonHandle).Encode(doc)
+	err := codec.NewEncoder(buf, c.jsonHandle).Encode(doc)
 	if err != nil {
 		return nil, err
 	}
 
 	out := buf.String()
 	c.docs[doc.ID] = &out
-
 	return c.fromString(&out)
-
 }
+
 func (c *fakeOpenShiftClusters) List(*cosmosdb.Options) cosmosdb.OpenShiftClusterDocumentRawIterator {
 	return nil
 }
+
 func (c *fakeOpenShiftClusters) ListAll(context.Context, *cosmosdb.Options) (*api.OpenShiftClusterDocuments, error) {
 	return nil, errors.New("not implemented")
 }
+
 func (c *fakeOpenShiftClusters) Get(ctx context.Context, partitionkey string, documentId string, options *cosmosdb.Options) (*api.OpenShiftClusterDocument, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	out, ext := c.docs[documentId]
 
+	out, ext := c.docs[documentId]
 	if !ext {
 		return nil, &cosmosdb.Error{StatusCode: http.StatusNotFound}
 	}
@@ -92,7 +88,6 @@ func (c *fakeOpenShiftClusters) Get(ctx context.Context, partitionkey string, do
 	}
 
 	return dec, err
-
 }
 func (c *fakeOpenShiftClusters) Replace(ctx context.Context, partitionkey string, doc *api.OpenShiftClusterDocument, options *cosmosdb.Options) (*api.OpenShiftClusterDocument, error) {
 	c.lock.Lock()
@@ -120,9 +115,7 @@ func (c *fakeOpenShiftClusters) Replace(ctx context.Context, partitionkey string
 
 	out := buf.String()
 	c.docs[doc.ID] = &out
-
 	return c.fromString(&out)
-
 }
 
 func (c *fakeOpenShiftClusters) Delete(ctx context.Context, partitionKey string, doc *api.OpenShiftClusterDocument, options *cosmosdb.Options) error {
@@ -135,7 +128,6 @@ func (c *fakeOpenShiftClusters) Delete(ctx context.Context, partitionKey string,
 	}
 
 	delete(c.docs, doc.ID)
-
 	return nil
 }
 

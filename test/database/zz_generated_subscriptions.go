@@ -34,50 +34,46 @@ func newSubscriptions(h *codec.JsonHandle) *fakeSubscriptions {
 }
 
 func (c *fakeSubscriptions) fromString(s *string) (*api.SubscriptionDocument, error) {
-
 	res := &api.SubscriptionDocument{}
 	d := codec.NewDecoder(bytes.NewBufferString(*s), c.jsonHandle)
 	err := d.Decode(&res)
-
 	return res, err
-
 }
 
 func (c *fakeSubscriptions) Create(ctx context.Context, partitionkey string, doc *api.SubscriptionDocument, options *cosmosdb.Options) (*api.SubscriptionDocument, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	var err error
-
 	_, ext := c.docs[doc.ID]
 	if ext {
 		// it's here
-		return nil, errors.New("sdkjfbg")
+		return nil, errors.New("Document already exists?")
 	}
 
 	buf := &bytes.Buffer{}
-	err = codec.NewEncoder(buf, c.jsonHandle).Encode(doc)
+	err := codec.NewEncoder(buf, c.jsonHandle).Encode(doc)
 	if err != nil {
 		return nil, err
 	}
 
 	out := buf.String()
 	c.docs[doc.ID] = &out
-
 	return c.fromString(&out)
-
 }
+
 func (c *fakeSubscriptions) List(*cosmosdb.Options) cosmosdb.SubscriptionDocumentRawIterator {
 	return nil
 }
+
 func (c *fakeSubscriptions) ListAll(context.Context, *cosmosdb.Options) (*api.SubscriptionDocuments, error) {
 	return nil, errors.New("not implemented")
 }
+
 func (c *fakeSubscriptions) Get(ctx context.Context, partitionkey string, documentId string, options *cosmosdb.Options) (*api.SubscriptionDocument, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	out, ext := c.docs[documentId]
 
+	out, ext := c.docs[documentId]
 	if !ext {
 		return nil, &cosmosdb.Error{StatusCode: http.StatusNotFound}
 	}
@@ -88,7 +84,6 @@ func (c *fakeSubscriptions) Get(ctx context.Context, partitionkey string, docume
 	}
 
 	return dec, err
-
 }
 func (c *fakeSubscriptions) Replace(ctx context.Context, partitionkey string, doc *api.SubscriptionDocument, options *cosmosdb.Options) (*api.SubscriptionDocument, error) {
 	c.lock.Lock()
@@ -116,9 +111,7 @@ func (c *fakeSubscriptions) Replace(ctx context.Context, partitionkey string, do
 
 	out := buf.String()
 	c.docs[doc.ID] = &out
-
 	return c.fromString(&out)
-
 }
 
 func (c *fakeSubscriptions) Delete(ctx context.Context, partitionKey string, doc *api.SubscriptionDocument, options *cosmosdb.Options) error {
@@ -131,13 +124,13 @@ func (c *fakeSubscriptions) Delete(ctx context.Context, partitionKey string, doc
 	}
 
 	delete(c.docs, doc.ID)
-
 	return nil
 }
 
 func (c *fakeSubscriptions) Query(name string, query *cosmosdb.Query, options *cosmosdb.Options) cosmosdb.SubscriptionDocumentRawIterator {
 	return nil
 }
+
 func (c *fakeSubscriptions) QueryAll(ctx context.Context, partitionkey string, query *cosmosdb.Query, options *cosmosdb.Options) (*api.SubscriptionDocuments, error) {
 	return nil, errors.New("not implemented but for get")
 }

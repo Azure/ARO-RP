@@ -13,7 +13,6 @@ import (
 )
 
 func main() {
-
 	template := flag.String("template", "", "path to template")
 	flag.Parse()
 
@@ -27,11 +26,9 @@ func main() {
 	}
 
 	err = Generate(templatePath)
-
 	if err != nil {
 		panic(err)
 	}
-
 }
 
 type db struct {
@@ -42,7 +39,6 @@ type db struct {
 }
 
 func Generate(pathName string) error {
-
 	databaseKinds := []db{
 		{
 			Name:              "OpenShiftClusters",
@@ -72,13 +68,11 @@ func Generate(pathName string) error {
 
 	dir, filename := path.Split(pathName)
 	tmpl, err := template.New(filename).ParseFiles(pathName)
-
 	if err != nil {
 		return err
 	}
 
 	for _, f := range databaseKinds {
-
 		writer, err := os.Create(dir + "/zz_generated_" + strings.ToLower(f.Name) + ".go")
 		if err != nil {
 			return err
@@ -88,9 +82,6 @@ func Generate(pathName string) error {
 		if err != nil {
 			return err
 		}
-
 	}
-
 	return nil
-
 }

@@ -33,50 +33,46 @@ func newAsyncOperations(h *codec.JsonHandle) *fakeAsyncOperations {
 }
 
 func (c *fakeAsyncOperations) fromString(s *string) (*api.AsyncOperationDocument, error) {
-
 	res := &api.AsyncOperationDocument{}
 	d := codec.NewDecoder(bytes.NewBufferString(*s), c.jsonHandle)
 	err := d.Decode(&res)
-
 	return res, err
-
 }
 
 func (c *fakeAsyncOperations) Create(ctx context.Context, partitionkey string, doc *api.AsyncOperationDocument, options *cosmosdb.Options) (*api.AsyncOperationDocument, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	var err error
-
 	_, ext := c.docs[doc.ID]
 	if ext {
 		// it's here
-		return nil, errors.New("sdkjfbg")
+		return nil, errors.New("Document already exists?")
 	}
 
 	buf := &bytes.Buffer{}
-	err = codec.NewEncoder(buf, c.jsonHandle).Encode(doc)
+	err := codec.NewEncoder(buf, c.jsonHandle).Encode(doc)
 	if err != nil {
 		return nil, err
 	}
 
 	out := buf.String()
 	c.docs[doc.ID] = &out
-
 	return c.fromString(&out)
-
 }
+
 func (c *fakeAsyncOperations) List(*cosmosdb.Options) cosmosdb.AsyncOperationDocumentRawIterator {
 	return nil
 }
+
 func (c *fakeAsyncOperations) ListAll(context.Context, *cosmosdb.Options) (*api.AsyncOperationDocuments, error) {
 	return nil, errors.New("not implemented")
 }
+
 func (c *fakeAsyncOperations) Get(ctx context.Context, partitionkey string, documentId string, options *cosmosdb.Options) (*api.AsyncOperationDocument, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	out, ext := c.docs[documentId]
 
+	out, ext := c.docs[documentId]
 	if !ext {
 		return nil, &cosmosdb.Error{StatusCode: http.StatusNotFound}
 	}
@@ -87,7 +83,6 @@ func (c *fakeAsyncOperations) Get(ctx context.Context, partitionkey string, docu
 	}
 
 	return dec, err
-
 }
 func (c *fakeAsyncOperations) Replace(ctx context.Context, partitionkey string, doc *api.AsyncOperationDocument, options *cosmosdb.Options) (*api.AsyncOperationDocument, error) {
 	c.lock.Lock()
@@ -107,9 +102,7 @@ func (c *fakeAsyncOperations) Replace(ctx context.Context, partitionkey string, 
 
 	out := buf.String()
 	c.docs[doc.ID] = &out
-
 	return c.fromString(&out)
-
 }
 
 func (c *fakeAsyncOperations) Delete(ctx context.Context, partitionKey string, doc *api.AsyncOperationDocument, options *cosmosdb.Options) error {
@@ -122,13 +115,13 @@ func (c *fakeAsyncOperations) Delete(ctx context.Context, partitionKey string, d
 	}
 
 	delete(c.docs, doc.ID)
-
 	return nil
 }
 
 func (c *fakeAsyncOperations) Query(name string, query *cosmosdb.Query, options *cosmosdb.Options) cosmosdb.AsyncOperationDocumentRawIterator {
 	return nil
 }
+
 func (c *fakeAsyncOperations) QueryAll(ctx context.Context, partitionkey string, query *cosmosdb.Query, options *cosmosdb.Options) (*api.AsyncOperationDocuments, error) {
 	return nil, errors.New("not implemented but for get")
 }

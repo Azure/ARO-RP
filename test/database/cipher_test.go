@@ -8,13 +8,13 @@ import "testing"
 func TestFakeCipher(t *testing.T) {
 	c := &fakeCipher{}
 
-	encrypted, _ := c.Encrypt([]byte{'h', 'i'})
-	if string(encrypted) != "FAKEhi" {
+	encrypted, _ := c.Encrypt([]byte{'f', 'o', 'o'})
+	if string(encrypted) != "FAKEfoo" {
 		t.Error(string(encrypted))
 	}
 
 	decrypted, _ := c.Decrypt(encrypted)
-	if string(decrypted) != "hi" {
+	if string(decrypted) != "foo" {
 		t.Error(string(decrypted))
 	}
 }

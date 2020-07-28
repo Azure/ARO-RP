@@ -8,7 +8,6 @@ package database
 {{ $cfg := . }}
 
 import (
-	"github.com/Azure/ARO-RP/pkg/database"
 	"bytes"
 	"context"
 	"errors"
@@ -18,6 +17,7 @@ import (
 	"github.com/ugorji/go/codec"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 )
 
@@ -36,50 +36,46 @@ func new{{ $cfg.Name }}(h *codec.JsonHandle) *fake{{ $cfg.Name }} {
 }
 
 func (c *fake{{ $cfg.Name }}) fromString(s *string) (*api.{{ $cfg.DocumentInterface }}, error) {
-
 	res := &api.{{ $cfg.DocumentInterface }}{}
 	d := codec.NewDecoder(bytes.NewBufferString(*s), c.jsonHandle)
 	err := d.Decode(&res)
-
 	return res, err
-
 }
 
 func (c *fake{{ $cfg.Name }}) Create(ctx context.Context, partitionkey string, doc *api.{{ $cfg.DocumentInterface }}, options *cosmosdb.Options) (*api.{{ $cfg.DocumentInterface }}, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	var err error
-
 	_, ext := c.docs[doc.ID]
 	if ext {
 		// it's here
-		return nil, errors.New("sdkjfbg")
+		return nil, errors.New("Document already exists?")
 	}
 
 	buf := &bytes.Buffer{}
-	err = codec.NewEncoder(buf, c.jsonHandle).Encode(doc)
+	err := codec.NewEncoder(buf, c.jsonHandle).Encode(doc)
 	if err != nil {
 		return nil, err
 	}
 
 	out := buf.String()
 	c.docs[doc.ID] = &out
-
 	return c.fromString(&out)
-
 }
+
 func (c *fake{{ $cfg.Name }}) List(*cosmosdb.Options) cosmosdb.{{ $cfg.DocumentInterface }}RawIterator {
 	return nil
 }
+
 func (c *fake{{ $cfg.Name }}) ListAll(context.Context, *cosmosdb.Options) (*api.{{ $cfg.DocumentInterface }}s, error) {
 	return nil, errors.New("not implemented")
 }
+
 func (c *fake{{ $cfg.Name }}) Get(ctx context.Context, partitionkey string, documentId string, options *cosmosdb.Options) (*api.{{ $cfg.DocumentInterface }}, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	out, ext := c.docs[documentId]
 
+	out, ext := c.docs[documentId]
 	if !ext {
 		return nil, &cosmosdb.Error{StatusCode: http.StatusNotFound}
 	}
@@ -93,10 +89,9 @@ func (c *fake{{ $cfg.Name }}) Get(ctx context.Context, partitionkey string, docu
 	if dec.PartitionKey != partitionkey {
 		return nil, errors.New("mismatching partition key")
 	}
+
 	{{ end }}
-
 	return dec, err
-
 }
 func (c *fake{{ $cfg.Name }}) Replace(ctx context.Context, partitionkey string, doc *api.{{ $cfg.DocumentInterface }}, options *cosmosdb.Options) (*api.{{ $cfg.DocumentInterface }}, error) {
 	c.lock.Lock()
@@ -125,9 +120,7 @@ func (c *fake{{ $cfg.Name }}) Replace(ctx context.Context, partitionkey string, 
 
 	out := buf.String()
 	c.docs[doc.ID] = &out
-
 	return c.fromString(&out)
-
 }
 
 func (c *fake{{ $cfg.Name }}) Delete(ctx context.Context, partitionKey string, doc *api.{{ $cfg.DocumentInterface }}, options *cosmosdb.Options) error {
@@ -140,7 +133,6 @@ func (c *fake{{ $cfg.Name }}) Delete(ctx context.Context, partitionKey string, d
 	}
 
 	delete(c.docs, doc.ID)
-
 	return nil
 }
 
@@ -148,6 +140,7 @@ func (c *fake{{ $cfg.Name }}) Delete(ctx context.Context, partitionKey string, d
 func (c *fake{{ $cfg.Name }}) Query(name string, query *cosmosdb.Query, options *cosmosdb.Options) cosmosdb.{{ $cfg.DocumentInterface }}RawIterator {
 	return nil
 }
+
 func (c *fake{{ $cfg.Name }}) QueryAll(ctx context.Context, partitionkey string, query *cosmosdb.Query, options *cosmosdb.Options) (*api.{{ $cfg.DocumentInterface }}s, error) {
 return nil, errors.New("not implemented but for get")
 }

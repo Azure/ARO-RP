@@ -33,50 +33,46 @@ func newBilling(h *codec.JsonHandle) *fakeBilling {
 }
 
 func (c *fakeBilling) fromString(s *string) (*api.BillingDocument, error) {
-
 	res := &api.BillingDocument{}
 	d := codec.NewDecoder(bytes.NewBufferString(*s), c.jsonHandle)
 	err := d.Decode(&res)
-
 	return res, err
-
 }
 
 func (c *fakeBilling) Create(ctx context.Context, partitionkey string, doc *api.BillingDocument, options *cosmosdb.Options) (*api.BillingDocument, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	var err error
-
 	_, ext := c.docs[doc.ID]
 	if ext {
 		// it's here
-		return nil, errors.New("sdkjfbg")
+		return nil, errors.New("Document already exists?")
 	}
 
 	buf := &bytes.Buffer{}
-	err = codec.NewEncoder(buf, c.jsonHandle).Encode(doc)
+	err := codec.NewEncoder(buf, c.jsonHandle).Encode(doc)
 	if err != nil {
 		return nil, err
 	}
 
 	out := buf.String()
 	c.docs[doc.ID] = &out
-
 	return c.fromString(&out)
-
 }
+
 func (c *fakeBilling) List(*cosmosdb.Options) cosmosdb.BillingDocumentRawIterator {
 	return nil
 }
+
 func (c *fakeBilling) ListAll(context.Context, *cosmosdb.Options) (*api.BillingDocuments, error) {
 	return nil, errors.New("not implemented")
 }
+
 func (c *fakeBilling) Get(ctx context.Context, partitionkey string, documentId string, options *cosmosdb.Options) (*api.BillingDocument, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	out, ext := c.docs[documentId]
 
+	out, ext := c.docs[documentId]
 	if !ext {
 		return nil, &cosmosdb.Error{StatusCode: http.StatusNotFound}
 	}
@@ -87,7 +83,6 @@ func (c *fakeBilling) Get(ctx context.Context, partitionkey string, documentId s
 	}
 
 	return dec, err
-
 }
 func (c *fakeBilling) Replace(ctx context.Context, partitionkey string, doc *api.BillingDocument, options *cosmosdb.Options) (*api.BillingDocument, error) {
 	c.lock.Lock()
@@ -107,9 +102,7 @@ func (c *fakeBilling) Replace(ctx context.Context, partitionkey string, doc *api
 
 	out := buf.String()
 	c.docs[doc.ID] = &out
-
 	return c.fromString(&out)
-
 }
 
 func (c *fakeBilling) Delete(ctx context.Context, partitionKey string, doc *api.BillingDocument, options *cosmosdb.Options) error {
@@ -122,13 +115,13 @@ func (c *fakeBilling) Delete(ctx context.Context, partitionKey string, doc *api.
 	}
 
 	delete(c.docs, doc.ID)
-
 	return nil
 }
 
 func (c *fakeBilling) Query(name string, query *cosmosdb.Query, options *cosmosdb.Options) cosmosdb.BillingDocumentRawIterator {
 	return nil
 }
+
 func (c *fakeBilling) QueryAll(ctx context.Context, partitionkey string, query *cosmosdb.Query, options *cosmosdb.Options) (*api.BillingDocuments, error) {
 	return nil, errors.New("not implemented but for get")
 }
