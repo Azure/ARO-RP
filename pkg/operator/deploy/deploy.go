@@ -19,21 +19,17 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/pointer"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/dynamichelper"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/genevalogging"
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	"github.com/Azure/ARO-RP/pkg/util/tls"
-)
-
-const (
-	ACRPullSecretName = "acr-pullsecret-tokens"
 )
 
 type Operator interface {
@@ -117,21 +113,23 @@ func (o *operator) resources() ([]runtime.Object, error) {
 	return append(results,
 		&corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      genevalogging.CertificatesSecretName,
+				Name:      pkgoperator.SecretName,
 				Namespace: pkgoperator.Namespace,
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion:         arov1alpha1.GroupVersion.String(),
+						Kind:               "Cluster",
+						Name:               arov1alpha1.SingletonClusterName,
+						BlockOwnerDeletion: pointer.BoolPtr(true),
+						Controller:         pointer.BoolPtr(true),
+					},
+				},
 			},
 			Data: map[string][]byte{
-				"gcscert.pem": gcsCertBytes,
-				"gcskey.pem":  gcsKeyBytes,
+				"gcscert.pem":          gcsCertBytes,
+				"gcskey.pem":           gcsKeyBytes,
+				v1.DockerConfigJsonKey: []byte(ps),
 			},
-		},
-		&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      ACRPullSecretName,
-				Namespace: pkgoperator.Namespace,
-			},
-			Type: corev1.SecretTypeOpaque,
-			Data: map[string][]byte{v1.DockerConfigJsonKey: []byte(ps)},
 		},
 		&arov1alpha1.Cluster{
 			ObjectMeta: metav1.ObjectMeta{

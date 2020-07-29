@@ -11,7 +11,6 @@ import (
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -56,15 +55,14 @@ func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 
 	instance, err := r.arocli.Clusters().Get(request.Name, metav1.GetOptions{})
 	if err != nil {
-		// Error reading the object or not found - requeue the request.
 		return reconcile.Result{}, err
 	}
 
-	newCert, err := r.certificatesSecret(instance)
+	mysec, err := r.kubernetescli.CoreV1().Secrets(operator.Namespace).Get(operator.SecretName, metav1.GetOptions{})
 	if err != nil {
-		r.log.Error(err)
 		return reconcile.Result{}, err
 	}
+
 	// TODO: dh should be a field in r, but the fact that it is initialised here
 	// each time currently saves us in the case that the controller runs before
 	// the SCC API is registered.
@@ -73,7 +71,7 @@ func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		r.log.Error(err)
 		return reconcile.Result{}, err
 	}
-	gl := genevalogging.New(r.log, instance, r.securitycli, newCert)
+	gl := genevalogging.New(r.log, instance, r.securitycli, mysec.Data["gcscert.pem"], mysec.Data["gcskey.pem"])
 
 	resources, err := gl.Resources()
 	if err != nil {
@@ -127,29 +125,6 @@ func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	}
 
 	return reconcile.Result{}, nil
-}
-
-func (r *GenevaloggingReconciler) certificatesSecret(instance *arov1alpha1.Cluster) (*corev1.Secret, error) {
-	newCert, err := r.kubernetescli.CoreV1().Secrets(genevalogging.KubeNamespace).Get(genevalogging.CertificatesSecretName, metav1.GetOptions{})
-	if err != nil && apierrors.IsNotFound(err) {
-		// copy the certificates from our namespace into the genevalogging one.
-		certs, err := r.kubernetescli.CoreV1().Secrets(operator.Namespace).Get(genevalogging.CertificatesSecretName, metav1.GetOptions{})
-		if err != nil {
-			r.log.Errorf("Error reading the certificates secret: %v", err)
-			return nil, err
-		}
-
-		newCert = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      genevalogging.CertificatesSecretName,
-				Namespace: genevalogging.KubeNamespace,
-			},
-			Data: certs.Data,
-		}
-	} else if err != nil {
-		return nil, err
-	}
-	return newCert, nil
 }
 
 // SetupWithManager setup our mananger

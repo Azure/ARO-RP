@@ -5,7 +5,6 @@ package controllers
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -22,7 +21,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/operator/deploy"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
 
@@ -45,11 +43,14 @@ func NewPullSecretReconciler(log *logrus.Entry, kubernetescli kubernetes.Interfa
 
 // Reconcile will make sure that the ACR part of the pull secret is correct
 func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
+	// TODO: Reconcile will not be called if the *configuration* secret changes,
+	// and it should.
+
 	if request.NamespacedName != pullSecretName {
 		return reconcile.Result{}, nil
 	}
 
-	pullsec, err := r.requiredPullSecret()
+	mysec, err := r.kubernetescli.CoreV1().Secrets(operator.Namespace).Get(operator.SecretName, metav1.GetOptions{})
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -70,7 +71,7 @@ func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 			delete(ps.Data, v1.DockerConfigJsonKey)
 		}
 
-		pullsec, changed, err := pullsecret.Merge(string(ps.Data[corev1.DockerConfigJsonKey]), pullsec)
+		pullsec, changed, err := pullsecret.Merge(string(ps.Data[corev1.DockerConfigJsonKey]), string(mysec.Data[v1.DockerConfigJsonKey]))
 		if err != nil {
 			return err
 		}
@@ -130,15 +131,6 @@ func (r *PullSecretReconciler) pullsecret(request ctrl.Request) (*v1.Secret, boo
 		return nil, false, err
 	}
 	return ps, false, nil
-}
-
-func (r *PullSecretReconciler) requiredPullSecret() (string, error) {
-	s, err := r.kubernetescli.CoreV1().Secrets(operator.Namespace).Get(deploy.ACRPullSecretName, metav1.GetOptions{})
-	if err != nil {
-		return "", fmt.Errorf("Error reading the repoToken secret: %v", err)
-	}
-
-	return string(s.Data[v1.DockerConfigJsonKey]), nil
 }
 
 func triggerReconcile(secret *corev1.Secret) bool {

@@ -7,5 +7,6 @@ const (
 	RoleMaster = "master"
 	RoleWorker = "worker"
 
-	Namespace = "openshift-azure-operator"
+	Namespace  = "openshift-azure-operator"
+	SecretName = "cluster"
 )

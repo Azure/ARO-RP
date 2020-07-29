@@ -27,23 +27,24 @@ type GenevaLogging interface {
 }
 
 type genevaLogging struct {
-	log *logrus.Entry
-
+	log     *logrus.Entry
 	cluster *arov1alpha1.Cluster
 
-	certs  *v1.Secret
 	seccli securityclient.Interface
+
+	gcscert []byte
+	gcskey  []byte
 }
 
-func New(log *logrus.Entry, cluster *arov1alpha1.Cluster, seccli securityclient.Interface, certs *v1.Secret) GenevaLogging {
+func New(log *logrus.Entry, cluster *arov1alpha1.Cluster, seccli securityclient.Interface, gcscert, gcskey []byte) GenevaLogging {
 	return &genevaLogging{
-		log: log,
-
+		log:     log,
 		cluster: cluster,
 
-		certs: certs,
-
 		seccli: seccli,
+
+		gcscert: gcscert,
+		gcskey:  gcskey,
 	}
 }
 
@@ -65,7 +66,7 @@ func (g *genevaLogging) daemonset(r azure.Resource) *appsv1.DaemonSet {
 	return &appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "mdsd",
-			Namespace: KubeNamespace,
+			Namespace: kubeNamespace,
 		},
 		Spec: appsv1.DaemonSetSpec{
 			Selector: &metav1.LabelSelector{
@@ -116,7 +117,7 @@ func (g *genevaLogging) daemonset(r azure.Resource) *appsv1.DaemonSet {
 							Name: "certificates",
 							VolumeSource: v1.VolumeSource{
 								Secret: &v1.SecretVolumeSource{
-									SecretName: "certificates",
+									SecretName: certificatesSecretName,
 								},
 							},
 						},
@@ -367,15 +368,24 @@ func (g *genevaLogging) Resources() ([]runtime.Object, error) {
 	return []runtime.Object{
 		&v1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        KubeNamespace,
+				Name:        kubeNamespace,
 				Annotations: map[string]string{projectv1.ProjectNodeSelector: ""},
 			},
 		},
-		g.certs,
+		&v1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      certificatesSecretName,
+				Namespace: kubeNamespace,
+			},
+			Data: map[string][]byte{
+				"gcscert.pem": g.gcscert,
+				"gcskey.pem":  g.gcskey,
+			},
+		},
 		&v1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "fluent-config",
-				Namespace: KubeNamespace,
+				Namespace: kubeNamespace,
 			},
 			Data: map[string]string{
 				"audit.conf":      auditConf,
@@ -387,7 +397,7 @@ func (g *genevaLogging) Resources() ([]runtime.Object, error) {
 		&v1.ServiceAccount{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "geneva",
-				Namespace: KubeNamespace,
+				Namespace: kubeNamespace,
 			},
 		},
 		scc,

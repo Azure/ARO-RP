@@ -15,13 +15,12 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
-	"github.com/Azure/ARO-RP/pkg/operator/deploy"
 )
 
 func TestPullSecretReconciler(t *testing.T) {
 	newFakecli := func(s *v1.Secret, c *v1.Secret) *fake.Clientset {
 		c.ObjectMeta = metav1.ObjectMeta{
-			Name:      deploy.ACRPullSecretName,
+			Name:      operator.SecretName,
 			Namespace: operator.Namespace,
 		}
 		c.Type = v1.SecretTypeOpaque
