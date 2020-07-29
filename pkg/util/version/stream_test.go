@@ -33,49 +33,61 @@ func TestUnique(t *testing.T) {
 	}
 }
 
-func TestGetStream(t *testing.T) {
-	Stream43 := Stream{
+func TestGetUpgradeStream(t *testing.T) {
+	stream43 := Stream{
 		Version: NewVersion(4, 3, 18),
 	}
-	Stream44 := Stream{
+	stream44 := Stream{
 		Version: NewVersion(4, 4, 3),
 	}
 
-	Streams = append([]Stream{}, Stream43, Stream44)
 	for _, tt := range []struct {
-		name string
-		v    *Version
-		want Stream
-		err  error
+		name    string
+		v       *Version
+		streams []Stream
+		want    Stream
+		err     error
 	}{
 		{
-			name: "4.3 - upgrade",
-			v:    NewVersion(4, 3, 17),
-			want: Stream43,
+			name:    "upgrade x.Y lower",
+			v:       NewVersion(4, 3, 17),
+			streams: []Stream{stream43, stream44},
+			want:    stream43,
 		},
 		{
-			name: "4.3 - error",
-			v:    NewVersion(4, 3, 19),
-			err:  fmt.Errorf("not upgrading: cvo desired version is 4.3.19"),
+			name:    "upgrade x.Y higher",
+			v:       NewVersion(4, 3, 19),
+			streams: []Stream{stream43, stream44},
+			want:    stream43,
 		},
 		{
-			name: "4.4 - upgrade",
-			v:    NewVersion(4, 4, 2),
-			want: Stream44,
+			name:    "upgrade X higher",
+			v:       NewVersion(4, 4, 2),
+			streams: []Stream{stream43, stream44},
+			want:    stream44,
 		},
 		{
-			name: "4.4.10 stream",
-			v:    NewVersion(4, 4, 9),
-			err:  fmt.Errorf("not upgrading: cvo desired version is 4.4.9"),
+			name:    "upgrade X lower",
+			v:       NewVersion(4, 4, 9),
+			streams: []Stream{stream43, stream44},
+			want:    stream44,
 		},
 		{
-			name: "error",
-			v:    NewVersion(4, 5, 1),
-			err:  fmt.Errorf("stream for 4.5.1 not found"),
+			name:    "cvo error",
+			v:       NewVersion(4, 5, 1),
+			streams: []Stream{stream43, stream44},
+			err:     fmt.Errorf("not upgrading: stream not found 4.5.1"),
+		},
+		{
+			name:    "error",
+			v:       NewVersion(5, 5, 1),
+			streams: []Stream{stream43, stream44},
+			err:     fmt.Errorf("not upgrading: stream not found 5.5.1"),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := GetStream(tt.v)
+			Streams = tt.streams
+			got, err := GetUpgradeStream(tt.v)
 			if err != nil && tt.err != nil && !reflect.DeepEqual(tt.err, err) {
 				t.Fatal(err)
 			}

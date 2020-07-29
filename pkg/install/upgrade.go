@@ -5,11 +5,13 @@ package install
 
 import (
 	"context"
+	"fmt"
 
 	configv1 "github.com/openshift/api/config/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 
+	"github.com/Azure/ARO-RP/pkg/util/status"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -20,18 +22,20 @@ func (i *Installer) upgradeCluster(ctx context.Context) error {
 			return err
 		}
 
+		// We don't upgrade if cluster upgrade is not finished
+		if !status.ClusterVersionOperatorIsHealthy(cv.Status) {
+			return fmt.Errorf("not upgrading: previous upgrade in-progress")
+		}
+
 		desired, err := version.ParseVersion(cv.Status.Desired.Version)
 		if err != nil {
 			return err
 		}
 
 		// Get Cluster upgrade version based on desired version
-		// If desired is 4.3.x we return 4.3 channel update
-		// If desired is 4.4.x we return 4.4 channel update
-		stream, err := version.GetStream(desired)
+		stream, err := version.GetUpgradeStream(desired)
 		if err != nil {
-			i.log.Info(err)
-			return nil
+			return err
 		}
 
 		i.log.Printf("initiating cluster upgrade, target version %s", stream.Version.String())

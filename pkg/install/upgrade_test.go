@@ -20,80 +20,135 @@ import (
 func TestUpgradeCluster(t *testing.T) {
 	ctx := context.Background()
 
-	Stream43 := version.Stream{
-		Version: version.NewVersion(4, 3, 18),
+	stream43 := version.Stream{
+		Version: version.NewVersion(4, 3, 27),
 	}
-	Stream44 := version.Stream{
-		Version: version.NewVersion(4, 4, 3),
+	stream44 := version.Stream{
+		Version: version.NewVersion(4, 4, 10),
+	}
+	stream45 := version.Stream{
+		Version: version.NewVersion(4, 5, 3),
 	}
 
-	version.Streams = append([]version.Stream{}, Stream43, Stream44)
-
-	newFakecli := func(channel, version string) *fake.Clientset {
+	newFakecli := func(status configv1.ClusterVersionStatus) *fake.Clientset {
 		return fake.NewSimpleClientset(&configv1.ClusterVersion{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "version",
 			},
 			Spec: configv1.ClusterVersionSpec{
-				Channel: channel,
+				Channel: "",
 			},
-			Status: configv1.ClusterVersionStatus{
-				Desired: configv1.Update{
-					Version: version,
-				},
-			},
+			Status: status,
 		})
 	}
 
 	for _, tt := range []struct {
-		name           string
-		fakecli        *fake.Clientset
+		name    string
+		fakecli *fake.Clientset
+
 		desiredVersion string
 		wantUpdated    bool
 		wantErr        string
 	}{
 		{
-			name:        "non-existing version - no update",
-			fakecli:     newFakecli("", "0.0.0"),
+			name: "unhealthy cluster",
+			fakecli: newFakecli(configv1.ClusterVersionStatus{
+				Desired: configv1.Update{
+					Version: stream43.Version.String(),
+				},
+				Conditions: []configv1.ClusterOperatorStatusCondition{
+					{
+						Type:   configv1.OperatorAvailable,
+						Status: configv1.ConditionFalse,
+					},
+				},
+			}),
 			wantUpdated: false,
+			wantErr:     "not upgrading: previous upgrade in-progress",
 		},
 		{
-			name:    "right version, no update needed",
-			fakecli: newFakecli("", Stream44.Version.String()),
-		},
-		{
-			name:    "higher version, no update needed",
-			fakecli: newFakecli("", "4.4.5"),
-		},
-		{
-			name:           "lower version, update needed (4.4)",
-			fakecli:        newFakecli("", "4.4.1"),
+			name: "upgrade to Y latest",
+			fakecli: newFakecli(configv1.ClusterVersionStatus{
+				Desired: configv1.Update{
+					Version: "4.3.1",
+				},
+				Conditions: []configv1.ClusterOperatorStatusCondition{
+					{
+						Type:   configv1.OperatorAvailable,
+						Status: configv1.ConditionTrue,
+					},
+				},
+			}),
 			wantUpdated:    true,
-			desiredVersion: Stream44.Version.String(),
+			desiredVersion: stream43.Version.String(),
 		},
 		{
-			name:    "higher version, no update needed",
-			fakecli: newFakecli("", "4.3.19"),
+			name: "no upgrade, Y higher than expected",
+			fakecli: newFakecli(configv1.ClusterVersionStatus{
+				Desired: configv1.Update{
+					Version: "4.3.99",
+				},
+				Conditions: []configv1.ClusterOperatorStatusCondition{
+					{
+						Type:   configv1.OperatorAvailable,
+						Status: configv1.ConditionTrue,
+					},
+				},
+			}),
+			wantUpdated: false,
+			wantErr:     "not upgrading: cvo desired version is 4.3.99",
 		},
 		{
-			name:           "lower version, update needed (3.3)",
-			fakecli:        newFakecli("", "4.3.14"),
+			name: "no upgrade, Y match but unhealthy cluster",
+			fakecli: newFakecli(configv1.ClusterVersionStatus{
+				Desired: configv1.Update{
+					Version: stream43.Version.String(),
+				},
+				Conditions: []configv1.ClusterOperatorStatusCondition{
+					{
+						Type:   configv1.OperatorAvailable,
+						Status: configv1.ConditionFalse,
+					},
+				},
+			}),
+			wantUpdated: false,
+			wantErr:     "not upgrading: previous upgrade in-progress",
+		},
+		{
+			name: "upgrade, Y match",
+			fakecli: newFakecli(configv1.ClusterVersionStatus{
+				Desired: configv1.Update{
+					Version: stream43.Version.String(),
+				},
+				Conditions: []configv1.ClusterOperatorStatusCondition{
+					{
+						Type:   configv1.OperatorAvailable,
+						Status: configv1.ConditionTrue,
+					},
+				},
+			}),
 			wantUpdated:    true,
-			desiredVersion: Stream43.Version.String(),
+			desiredVersion: stream44.Version.String(),
 		},
 		{
-			name:           "on a channel, update needed",
-			fakecli:        newFakecli("my-channel", "4.3.14"),
-			desiredVersion: Stream43.Version.String(),
+			name: "upgrade, Y match 2",
+			fakecli: newFakecli(configv1.ClusterVersionStatus{
+				Desired: configv1.Update{
+					Version: stream44.Version.String(),
+				},
+				Conditions: []configv1.ClusterOperatorStatusCondition{
+					{
+						Type:   configv1.OperatorAvailable,
+						Status: configv1.ConditionTrue,
+					},
+				},
+			}),
 			wantUpdated:    true,
-		},
-		{
-			name:           "on a channel, no update needed",
-			fakecli:        newFakecli("my-channel", "4.4.4"),
-			desiredVersion: Stream44.Version.String(),
+			desiredVersion: stream45.Version.String(),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			version.Streams = append([]version.Stream{}, stream43, stream44, stream45)
 			var updated bool
 
 			tt.fakecli.PrependReactor("update", "clusterversions", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
