@@ -154,7 +154,6 @@ func (i *Installer) Update(ctx context.Context) error {
 	steps := []interface{}{
 		action(i.initializeKubernetesClients),
 		action(i.updateAzureCloudProvider),
-		action(i.updateOpenShiftCloudProviderConfig),
 		action(i.updateRoleAssignments),
 	}
 

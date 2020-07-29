@@ -5,7 +5,6 @@ package install
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -57,35 +56,6 @@ func (i *Installer) updateAzureCloudProvider(ctx context.Context) error {
 		}
 
 		_, err = i.kubernetescli.CoreV1().Secrets("kube-system").Update(acp)
-		return err
-	})
-}
-
-func (i *Installer) updateOpenShiftCloudProviderConfig(ctx context.Context) error {
-	spp := i.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
-
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		cpc, err := i.kubernetescli.CoreV1().ConfigMaps("openshift-config").Get("cloud-provider-config", metav1.GetOptions{})
-		if err != nil {
-			return err
-		}
-
-		var config map[string]interface{}
-		err = json.Unmarshal([]byte(cpc.Data["config"]), &config)
-		if err != nil {
-			return err
-		}
-		tenantID, ok := config["tenantId"].(string)
-		if ok && tenantID == spp.TenantID {
-			return nil
-		}
-		config["tenantID"] = spp.TenantID
-		b, err := json.Marshal(config)
-		if err != nil {
-			return err
-		}
-		cpc.Data["config"] = string(b)
-		_, err = i.kubernetescli.CoreV1().ConfigMaps("openshift-config").Update(cpc)
 		return err
 	})
 }
