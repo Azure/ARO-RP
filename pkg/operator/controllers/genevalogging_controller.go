@@ -152,17 +152,6 @@ func (r *GenevaloggingReconciler) certificatesSecret(instance *arov1alpha1.Clust
 	return newCert, nil
 }
 
-func genevaloggingRelatedObjects() []corev1.ObjectReference {
-	return []corev1.ObjectReference{
-		{Kind: "Namespace", Name: genevalogging.KubeNamespace},
-		{Kind: "SecurityContextConstraints", Name: "privileged-genevalogging"},
-		{Kind: "Secret", Name: genevalogging.CertificatesSecretName, Namespace: genevalogging.KubeNamespace},
-		{Kind: "ConfigMap", Name: "fluent-config", Namespace: genevalogging.KubeNamespace},
-		{Kind: "ServiceAccount", Name: "geneva", Namespace: genevalogging.KubeNamespace},
-		{Kind: "DaemonSet", Name: "mdsd", Namespace: genevalogging.KubeNamespace},
-	}
-}
-
 // SetupWithManager setup our mananger
 func (r *GenevaloggingReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).

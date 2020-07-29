@@ -4,8 +4,6 @@ package controllers
 // Licensed under the Apache License 2.0.
 
 import (
-	"reflect"
-
 	"github.com/operator-framework/operator-sdk/pkg/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
@@ -53,20 +51,9 @@ func setStaticStatus(cluster *arov1alpha1.Cluster, role string) (changed bool) {
 
 	cluster.Status.Conditions = conditions
 
-	if role == operator.RoleMaster {
-		relatedObjects := pullsecretRelatedObjects()
-		cluster.Status.RelatedObjects = append(cluster.Status.RelatedObjects, genevaloggingRelatedObjects()...)
-		cluster.Status.RelatedObjects = append(cluster.Status.RelatedObjects, alertwebhookRelatedObjects()...)
-
-		if !reflect.DeepEqual(cluster.Status.RelatedObjects, relatedObjects) {
-			cluster.Status.RelatedObjects = relatedObjects
-			changed = true
-		}
-
-		if cluster.Status.OperatorVersion != version.GitCommit {
-			cluster.Status.OperatorVersion = version.GitCommit
-			changed = true
-		}
+	if role == operator.RoleMaster && cluster.Status.OperatorVersion != version.GitCommit {
+		cluster.Status.OperatorVersion = version.GitCommit
+		changed = true
 	}
 
 	return

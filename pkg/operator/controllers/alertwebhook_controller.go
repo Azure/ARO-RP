@@ -101,12 +101,6 @@ func (r *AlertWebhookReconciler) setAlertManagerWebhook(addr string) error {
 	})
 }
 
-func alertwebhookRelatedObjects() []corev1.ObjectReference {
-	return []corev1.ObjectReference{
-		{Kind: "Secret", Name: alertManagerName.Name, Namespace: alertManagerName.Namespace},
-	}
-}
-
 func triggerAlertReconcile(secret *corev1.Secret) bool {
 	return secret.Name == alertManagerName.Name && secret.Namespace == alertManagerName.Namespace
 }

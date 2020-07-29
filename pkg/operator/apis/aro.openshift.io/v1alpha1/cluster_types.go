@@ -5,7 +5,6 @@ package v1alpha1
 
 import (
 	"github.com/operator-framework/operator-sdk/pkg/status"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -38,9 +37,8 @@ type ClusterSpec struct {
 
 // ClusterStatus defines the observed state of Cluster
 type ClusterStatus struct {
-	OperatorVersion string                   `json:"operatorVersion,omitempty"`
-	Conditions      status.Conditions        `json:"conditions,omitempty"`
-	RelatedObjects  []corev1.ObjectReference `json:"relatedObjects,omitempty"`
+	OperatorVersion string            `json:"operatorVersion,omitempty"`
+	Conditions      status.Conditions `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true
