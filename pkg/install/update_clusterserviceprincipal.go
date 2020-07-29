@@ -16,6 +16,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/ghodss/yaml"
 	uuid "github.com/satori/go.uuid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -37,7 +38,7 @@ func (i *Installer) updateAzureCloudProvider(ctx context.Context) error {
 			return err
 		}
 		var config map[string]interface{}
-		err = json.Unmarshal([]byte(acp.Data["cloud-config"]), &config)
+		err = yaml.Unmarshal([]byte(acp.Data["cloud-config"]), &config)
 		if err != nil {
 			return err
 		}
@@ -50,7 +51,7 @@ func (i *Installer) updateAzureCloudProvider(ctx context.Context) error {
 		}
 		config["aadClientId"] = spp.ClientID
 		config["aadClientSecret"] = spp.ClientSecret
-		acp.Data["cloud-config"], err = json.Marshal(config)
+		acp.Data["cloud-config"], err = yaml.Marshal(config)
 		if err != nil {
 			return err
 		}
