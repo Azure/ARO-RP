@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
@@ -43,10 +44,8 @@ func NewPullSecretReconciler(log *logrus.Entry, kubernetescli kubernetes.Interfa
 
 // Reconcile will make sure that the ACR part of the pull secret is correct
 func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
-	// TODO: Reconcile will not be called if the *configuration* secret changes,
-	// and it should.
-
-	if request.NamespacedName != pullSecretName {
+	if request.NamespacedName != pullSecretName &&
+		request.Name != arov1alpha1.SingletonClusterName {
 		return reconcile.Result{}, nil
 	}
 
@@ -56,7 +55,7 @@ func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 	}
 
 	return reconcile.Result{}, retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		ps, isCreate, err := r.pullsecret(request)
+		ps, isCreate, err := r.pullsecret()
 		if err != nil {
 			return err
 		}
@@ -67,7 +66,7 @@ func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 
 		// validate
 		if !json.Valid(ps.Data[v1.DockerConfigJsonKey]) {
-			r.log.Info("Pull Secret is not valid json - recreating")
+			r.log.Info("pull secret is not valid json - recreating")
 			delete(ps.Data, v1.DockerConfigJsonKey)
 		}
 
@@ -80,14 +79,14 @@ func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 		if ps.Type != v1.SecretTypeDockerConfigJson {
 			ps = &v1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "pull-secret",
-					Namespace: "openshift-config",
+					Name:      pullSecretName.Name,
+					Namespace: pullSecretName.Namespace,
 				},
 				Type: v1.SecretTypeDockerConfigJson,
 				Data: map[string][]byte{},
 			}
 			isCreate = true
-			r.log.Info("Pull Secret has the wrong secret type - recreating")
+			r.log.Info("pull secret has the wrong type - recreating")
 
 			// unfortunately the type field is immutable.
 			err = r.kubernetescli.CoreV1().Secrets(ps.Namespace).Delete(ps.Name, nil)
@@ -106,23 +105,23 @@ func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 		ps.Data[corev1.DockerConfigJsonKey] = []byte(pullsec)
 
 		if isCreate {
-			r.log.Info("re-creating the Pull Secret")
-			_, err = r.kubernetescli.CoreV1().Secrets("openshift-config").Create(ps)
+			r.log.Info("re-creating pull secret")
+			_, err = r.kubernetescli.CoreV1().Secrets(ps.Namespace).Create(ps)
 		} else {
-			r.log.Info("updating the Pull Secret")
-			_, err = r.kubernetescli.CoreV1().Secrets("openshift-config").Update(ps)
+			r.log.Info("updating pull secret")
+			_, err = r.kubernetescli.CoreV1().Secrets(ps.Namespace).Update(ps)
 		}
 		return err
 	})
 }
 
-func (r *PullSecretReconciler) pullsecret(request ctrl.Request) (*v1.Secret, bool, error) {
-	ps, err := r.kubernetescli.CoreV1().Secrets(request.Namespace).Get(request.Name, metav1.GetOptions{})
+func (r *PullSecretReconciler) pullsecret() (*v1.Secret, bool, error) {
+	ps, err := r.kubernetescli.CoreV1().Secrets(pullSecretName.Namespace).Get(pullSecretName.Name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		return &v1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      request.Name,
-				Namespace: request.Namespace,
+				Name:      pullSecretName.Name,
+				Namespace: pullSecretName.Namespace,
 			},
 			Type: v1.SecretTypeDockerConfigJson,
 		}, true, nil
@@ -134,39 +133,46 @@ func (r *PullSecretReconciler) pullsecret(request ctrl.Request) (*v1.Secret, boo
 }
 
 func triggerReconcile(secret *corev1.Secret) bool {
-	return secret.Name == pullSecretName.Name && secret.Namespace == pullSecretName.Namespace
+	return (secret.Name == pullSecretName.Name && secret.Namespace == pullSecretName.Namespace) ||
+		(secret.Name == operator.SecretName && secret.Namespace == operator.Namespace)
 }
 
 // SetupWithManager setup our mananger
 func (r *PullSecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	// The pull secret may already be deleted when controller starts
-	initialRequest := ctrl.Request{
-		NamespacedName: types.NamespacedName{
-			Namespace: pullSecretName.Namespace,
-			Name:      pullSecretName.Name,
-		},
-	}
-	_, isCreate, err := r.pullsecret(initialRequest)
-	if err == nil && isCreate {
-		r.Reconcile(initialRequest)
-	}
-
 	isPullSecret := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
+			_, ok := e.ObjectOld.(*arov1alpha1.Cluster)
+			if ok {
+				return true
+			}
+
 			secret, ok := e.ObjectOld.(*corev1.Secret)
 			return ok && triggerReconcile(secret)
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
+			_, ok := e.Object.(*arov1alpha1.Cluster)
+			if ok {
+				return true
+			}
+
 			secret, ok := e.Object.(*corev1.Secret)
 			return ok && triggerReconcile(secret)
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
+			_, ok := e.Object.(*arov1alpha1.Cluster)
+			if ok {
+				return true
+			}
+
 			secret, ok := e.Object.(*corev1.Secret)
 			return ok && triggerReconcile(secret)
 		},
 	}
+
 	return ctrl.NewControllerManagedBy(mgr).
+		For(&arov1alpha1.Cluster{}).
 		For(&v1.Secret{}).
+		Owns(&v1.Secret{}).
 		WithEventFilter(isPullSecret).
 		Named(PullSecretControllerName).
 		Complete(r)
