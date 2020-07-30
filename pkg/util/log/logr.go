@@ -5,6 +5,8 @@ package log
 
 import (
 	"fmt"
+	"runtime"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/sirupsen/logrus"
@@ -69,4 +71,40 @@ func LogrWrapper(logger *logrus.Entry) logr.Logger {
 		entry: logger,
 		level: int(logrus.GetLevel()),
 	}
+}
+
+type logrHook struct{}
+
+func (logrHook) Levels() []logrus.Level {
+	return logrus.AllLevels
+}
+
+// Fire is an ugly hack to attempt to correct the caller information when
+// logrWrapper is in use.  If the entry Caller refers to a function in this
+// package, it re-fetches the backtrace again, attempts to find the frame
+// matching Caller and replace it with its parent.
+func (logrHook) Fire(log *logrus.Entry) error {
+	if log.Caller == nil || !strings.HasPrefix(log.Caller.File, pkgpath+"/") {
+		return nil
+	}
+
+	pc := make([]uintptr, 10)
+	count := runtime.Callers(1, pc)
+	frames := runtime.CallersFrames(pc[:count])
+
+	for {
+		frame, more := frames.Next()
+
+		if frame == *log.Caller && more {
+			frame, more = frames.Next()
+			log.Caller = &frame
+			break
+		}
+
+		if !more {
+			break
+		}
+	}
+
+	return nil
 }
