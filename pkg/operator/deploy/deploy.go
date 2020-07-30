@@ -19,7 +19,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/utils/pointer"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/dynamichelper"
@@ -115,15 +114,6 @@ func (o *operator) resources() ([]runtime.Object, error) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      pkgoperator.SecretName,
 				Namespace: pkgoperator.Namespace,
-				OwnerReferences: []metav1.OwnerReference{
-					{
-						APIVersion:         arov1alpha1.GroupVersion.String(),
-						Kind:               "Cluster",
-						Name:               arov1alpha1.SingletonClusterName,
-						BlockOwnerDeletion: pointer.BoolPtr(true),
-						Controller:         pointer.BoolPtr(true),
-					},
-				},
 			},
 			Data: map[string][]byte{
 				"gcscert.pem":          gcsCertBytes,
