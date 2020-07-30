@@ -1520,7 +1520,7 @@ func (g *generator) acrReplica() *arm.Resource {
 			Type:     to.StringPtr("Microsoft.ContainerRegistry/registries/replications"),
 			Location: to.StringPtr("[parameters('location')]"),
 		},
-		Condition:  g.conditionStanza("fullDeploy"),
+		Condition:  g.conditionStanza("fullDeploy", "acrReplica"),
 		APIVersion: azureclient.APIVersions["Microsoft.ContainerRegistry"],
 	}
 }

@@ -2,6 +2,10 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
+        "acrReplica": {
+            "type": "bool",
+            "defaultValue": true
+        },
         "acrResourceId": {
             "type": "string"
         },
@@ -24,7 +28,7 @@
             "name": "[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', parameters('location'))]",
             "type": "Microsoft.ContainerRegistry/registries/replications",
             "location": "[parameters('location')]",
-            "condition": "[parameters('fullDeploy')]",
+            "condition": "[and(parameters('fullDeploy'),parameters('acrReplica'))]",
             "apiVersion": "2019-05-01"
         },
         {
