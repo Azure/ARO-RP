@@ -318,3 +318,116 @@ func TestEnsure(t *testing.T) {
 		})
 	}
 }
+
+func TestMerge(t *testing.T) {
+	for _, tt := range []struct {
+		name        string
+		base        *unstructured.Unstructured
+		delta       *unstructured.Unstructured
+		want        *unstructured.Unstructured
+		wantChanged bool
+	}{
+		{
+			name: "changed",
+			base: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"creationTimestamp": "2020-01-01T00:00:00Z", // untouched
+					},
+					"spec": map[string]interface{}{
+						"key1": "overwritten",
+						"key2": "untouched",
+					},
+					"status": map[string]interface{}{
+						"key1": "untouched",
+					},
+				},
+			},
+			delta: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"creationTimestamp": nil,
+					},
+					"spec": map[string]interface{}{
+						"key1": "new value",
+					},
+					"status": map[string]interface{}{
+						"key1": "ignored",
+					},
+				},
+			},
+			want: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"creationTimestamp": "2020-01-01T00:00:00Z",
+					},
+					"spec": map[string]interface{}{
+						"key1": "new value",
+						"key2": "untouched",
+					},
+					"status": map[string]interface{}{
+						"key1": "untouched",
+					},
+				},
+			},
+			wantChanged: true,
+		},
+		{
+			name: "no change",
+			base: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"creationTimestamp": "2020-01-01T00:00:00Z", // untouched
+					},
+					"spec": map[string]interface{}{
+						"key1": "untouched",
+					},
+					"status": map[string]interface{}{
+						"key1": "untouched",
+					},
+				},
+			},
+			delta: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"creationTimestamp": nil,
+					},
+					"spec": map[string]interface{}{
+						"key1": "untouched",
+					},
+					"status": map[string]interface{}{
+						"key1": "ignored",
+					},
+				},
+			},
+			want: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"creationTimestamp": "2020-01-01T00:00:00Z",
+					},
+					"spec": map[string]interface{}{
+						"key1": "untouched",
+					},
+					"status": map[string]interface{}{
+						"key1": "untouched",
+					},
+				},
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			result, changed, _, err := merge(tt.base, tt.delta)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if changed != tt.wantChanged {
+				t.Error(changed)
+			}
+
+			if !reflect.DeepEqual(result, tt.want) {
+				t.Error(result)
+			}
+		})
+	}
+}
