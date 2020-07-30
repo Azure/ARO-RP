@@ -42,7 +42,15 @@ func NewPullSecretReconciler(log *logrus.Entry, kubernetescli kubernetes.Interfa
 	}
 }
 
-// Reconcile will make sure that the ACR part of the pull secret is correct
+// Reconcile will make sure that the ACR part of the pull secret is correct. The
+// conditions under which Reconcile is called are slightly unusual and are as
+// follows:
+// * If the Cluster object changes, we'll see the *Cluster* object requested.
+// * If a Secret object owned by the Cluster object changes (e.g., but not
+//   limited to, the configuration Secret, we'll see the *Cluster* object
+//   requested).
+// * If the pull Secret object (which is not owned by the Cluster object)
+//   changes, we'll see the pull Secret object requested.
 func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	if request.NamespacedName != pullSecretName &&
 		request.Name != arov1alpha1.SingletonClusterName {
