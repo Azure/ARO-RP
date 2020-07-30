@@ -237,6 +237,15 @@ func merge(base, delta *unstructured.Unstructured) (*unstructured.Unstructured, 
 		return nil, false, "", err
 	}
 
+	// all new objects have a null creationTimestamp that causes every object to
+	// be updated.
+	copy.SetCreationTimestamp(base.GetCreationTimestamp())
+
+	status, found, err := unstructured.NestedMap(base.Object, "status")
+	if err == nil && found {
+		unstructured.SetNestedMap(copy.Object, status, "status")
+	}
+
 	return copy, !reflect.DeepEqual(base, copy), diff(base, copy), nil
 }
 
