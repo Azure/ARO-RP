@@ -38,6 +38,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
@@ -88,6 +89,7 @@ type Installer struct {
 	configcli     configclient.Interface
 	samplescli    samplesclient.Interface
 	securitycli   securityclient.Interface
+	arocli        aroclient.AroV1alpha1Interface
 }
 
 const (
@@ -449,6 +451,11 @@ func (i *Installer) initializeKubernetesClients(ctx context.Context) error {
 	}
 
 	i.samplescli, err = samplesclient.NewForConfig(restConfig)
+	if err != nil {
+		return err
+	}
+
+	i.arocli, err = aroclient.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}

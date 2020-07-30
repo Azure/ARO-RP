@@ -19,12 +19,15 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/dynamichelper"
 	"github.com/Azure/ARO-RP/pkg/env"
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
@@ -44,9 +47,10 @@ type operator struct {
 	dh     dynamichelper.DynamicHelper
 	cli    kubernetes.Interface
 	extcli extensionsclient.Interface
+	arocli aroclient.AroV1alpha1Interface
 }
 
-func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, cli kubernetes.Interface, extcli extensionsclient.Interface) (Operator, error) {
+func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, cli kubernetes.Interface, extcli extensionsclient.Interface, arocli aroclient.AroV1alpha1Interface) (Operator, error) {
 	restConfig, err := restconfig.RestConfig(env, oc)
 	if err != nil {
 		return nil, err
@@ -64,6 +68,7 @@ func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, cli kub
 		dh:     dh,
 		cli:    cli,
 		extcli: extcli,
+		arocli: arocli,
 	}, nil
 }
 
@@ -172,7 +177,8 @@ func (o *operator) CreateOrUpdate() error {
 			return err
 		}
 
-		if un.GroupVersionKind().GroupKind().String() == "CustomResourceDefinition.apiextensions.k8s.io" {
+		switch un.GroupVersionKind().GroupKind().String() {
+		case "CustomResourceDefinition.apiextensions.k8s.io":
 			err = wait.PollImmediate(time.Second, time.Minute, func() (bool, error) {
 				crd, err := o.extcli.ApiextensionsV1beta1().CustomResourceDefinitions().Get(un.GetName(), metav1.GetOptions{})
 				if err != nil {
@@ -186,6 +192,34 @@ func (o *operator) CreateOrUpdate() error {
 			}
 
 			err = o.dh.RefreshAPIResources()
+			if err != nil {
+				return err
+			}
+
+		case "Cluster.aro.openshift.io":
+			// add an owner reference onto our configuration secret.  This is
+			// can only be done once we've got the cluster UID.  It is needed to
+			// ensure that secret updates trigger updates of the appropriate
+			// controllers
+			err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				cluster, err := o.arocli.Clusters().Get(arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+				if err != nil {
+					return err
+				}
+
+				s, err := o.cli.CoreV1().Secrets(pkgoperator.Namespace).Get(pkgoperator.SecretName, metav1.GetOptions{})
+				if err != nil {
+					return err
+				}
+
+				err = controllerutil.SetControllerReference(cluster, s, scheme.Scheme)
+				if err != nil {
+					return err
+				}
+
+				_, err = o.cli.CoreV1().Secrets(pkgoperator.Namespace).Update(s)
+				return err
+			})
 			if err != nil {
 				return err
 			}
