@@ -2,10 +2,6 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "acrReplica": {
-            "type": "bool",
-            "defaultValue": true
-        },
         "acrResourceId": {
             "type": "string"
         },
@@ -16,21 +12,11 @@
             "type": "bool",
             "defaultValue": false
         },
-        "location": {
-            "type": "string"
-        },
         "rpServicePrincipalId": {
             "type": "string"
         }
     },
     "resources": [
-        {
-            "name": "[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', parameters('location'))]",
-            "type": "Microsoft.ContainerRegistry/registries/replications",
-            "location": "[parameters('location')]",
-            "condition": "[and(parameters('fullDeploy'),parameters('acrReplica'))]",
-            "apiVersion": "2019-05-01"
-        },
         {
             "name": "[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), parameters('rpServicePrincipalId'), 'RP / AcrPull')))]",
             "type": "Microsoft.ContainerRegistry/registries/providers/roleAssignments",

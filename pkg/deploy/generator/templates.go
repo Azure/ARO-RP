@@ -6,7 +6,6 @@ package generator
 import (
 	"bytes"
 	"encoding/json"
-	"strings"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 )
@@ -100,19 +99,39 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 
 	params := []string{
 		"acrResourceId",
-		"acrReplica",
-		"fpServicePrincipalId",
 		"fullDeploy",
-		"location",
+		"fpServicePrincipalId",
 		"rpServicePrincipalId",
 	}
 
 	for _, param := range params {
 		p := &arm.TemplateParameter{Type: "string"}
 		switch param {
-		case "acrReplica":
+		case "fullDeploy":
 			p.Type = "bool"
-			p.DefaultValue = true
+			p.DefaultValue = false
+		}
+		t.Parameters[param] = p
+	}
+	t.Resources = append(t.Resources,
+		g.acrRbac()...,
+	)
+
+	return t
+}
+
+func (g *generator) rpGlobalACRReplicationTemplate() *arm.Template {
+	t := templateStanza()
+
+	params := []string{
+		"acrResourceId",
+		"fullDeploy",
+		"location",
+	}
+
+	for _, param := range params {
+		p := &arm.TemplateParameter{Type: "string"}
+		switch param {
 		case "fullDeploy":
 			p.Type = "bool"
 			p.DefaultValue = false
@@ -121,10 +140,6 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 	}
 	t.Resources = append(t.Resources,
 		g.acrReplica(),
-	)
-
-	t.Resources = append(t.Resources,
-		g.acrRbac()...,
 	)
 
 	return t
@@ -351,18 +366,9 @@ func (g *generator) templateFixup(t *arm.Template) ([]byte, error) {
 	return append(b, byte('\n')), nil
 }
 
-func (g *generator) conditionStanza(parameters ...string) interface{} {
+func (g *generator) conditionStanza(parameterName string) interface{} {
 	if g.production {
-		values := []string{}
-		for _, p := range parameters {
-			values = append(values, "parameters('"+p+"')")
-		}
-		if len(values) == 1 {
-			return "[" + values[0] + "]"
-		}
-
-		v := strings.Join(values, ",")
-		return "[and(" + v + ")]"
+		return "[parameters('" + parameterName + "')]"
 	}
 
 	return nil
