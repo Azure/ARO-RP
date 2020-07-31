@@ -40,9 +40,11 @@ type Manager struct {
 	subnet          subnet.Manager
 	acrtoken        pkgacrtoken.Manager
 
-	doc *api.OpenShiftClusterDocument
+	doc             *api.OpenShiftClusterDocument
+	subscriptionDoc *api.SubscriptionDocument
 }
 
+// NewManager returns a new openshiftcluster Manager
 func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (*Manager, error) {
 	localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
@@ -90,7 +92,8 @@ func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClus
 		acrtoken:        acrtoken,
 		subnet:          subnet.NewManager(subscriptionDoc.ID, fpAuthorizer),
 
-		doc: doc,
+		doc:             doc,
+		subscriptionDoc: subscriptionDoc,
 	}
 
 	return m, nil
