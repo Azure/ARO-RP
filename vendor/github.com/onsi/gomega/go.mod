@@ -1,7 +1,5 @@
 module github.com/onsi/gomega
 
-go 1.14
-
 require (
 	github.com/fsnotify/fsnotify v1.4.7 // indirect
 	github.com/golang/protobuf v1.2.0
@@ -15,3 +13,4 @@ require (
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	gopkg.in/yaml.v2 v2.2.4
 )
+

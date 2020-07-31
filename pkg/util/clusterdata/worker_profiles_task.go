@@ -12,8 +12,7 @@ import (
 	clusterapi "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -22,16 +21,6 @@ import (
 const (
 	workerMachineSetsNamespace = "openshift-machine-api"
 )
-
-var scheme = runtime.NewScheme()
-var codecs = serializer.NewCodecFactory(scheme)
-
-func init() {
-	err := azureproviderv1beta1.SchemeBuilder.AddToScheme(scheme)
-	if err != nil {
-		panic(err)
-	}
-}
 
 func newWorkerProfilesEnricherTask(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster) (enricherTask, error) {
 	client, err := clusterapi.NewForConfig(restConfig)
@@ -84,7 +73,7 @@ func (ef *workerProfilesEnricherTask) FetchData(callbacks chan<- func(), errs ch
 			continue
 		}
 
-		o, _, err := codecs.UniversalDeserializer().Decode(machineset.Spec.Template.Spec.ProviderSpec.Value.Raw, nil, nil)
+		o, _, err := scheme.Codecs.UniversalDeserializer().Decode(machineset.Spec.Template.Spec.ProviderSpec.Value.Raw, nil, nil)
 		if err != nil {
 			ef.log.Info(err)
 			continue

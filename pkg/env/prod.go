@@ -29,6 +29,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 	"github.com/Azure/ARO-RP/pkg/util/pem"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 type prod struct {
@@ -121,6 +122,8 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 			return nil, err
 		}
 		p.acrName = acrResource.ResourceName
+	} else {
+		p.acrName = "arointsvc"
 	}
 
 	return p, nil
@@ -156,6 +159,10 @@ func (p *prod) ACRResourceID() string {
 
 func (p *prod) ACRName() string {
 	return p.acrName
+}
+
+func (p *prod) AROOperatorImage() string {
+	return fmt.Sprintf("%s.azurecr.io/aro:%s", p.acrName, version.GitCommit)
 }
 
 func (p *prod) populateCosmosDB(ctx context.Context, rpAuthorizer autorest.Authorizer) error {

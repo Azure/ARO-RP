@@ -33,6 +33,10 @@ jobs:
     displayName: ⚙️ Building ARO RP Golang binary
     workingDirectory: ${{ variables.modulePath }}
     condition: eq(variables['RP_MODE'], 'development')
+  - template: ./templates/template-push-images-to-acr.yml
+    parameters:
+      workingDirectory: ${{ variables.modulePath }}
+      rpImageACR: $(RP_IMAGE_ACR)
   - template: ./templates/template-az-cli-set-context.yml
     parameters:
       workingDirectory: ${{ variables.modulePath }}

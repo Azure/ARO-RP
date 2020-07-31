@@ -53,6 +53,7 @@ type Interface interface {
 	Zones(vmSize string) ([]string, error)
 	ACRResourceID() string
 	ACRName() string
+	AROOperatorImage() string
 	E2EStorageAccountName() string
 	E2EStorageAccountRGName() string
 	E2EStorageAccountSubID() string

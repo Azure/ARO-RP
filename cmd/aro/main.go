@@ -13,6 +13,7 @@ import (
 	"time"
 
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
+	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -22,6 +23,7 @@ func usage() {
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s mirror\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s monitor\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s rp\n", os.Args[0])
+	fmt.Fprintf(flag.CommandLine.Output(), "  %s operator {master,worker}\n", os.Args[0])
 	flag.PrintDefaults()
 }
 
@@ -50,6 +52,9 @@ func main() {
 	case "deploy":
 		checkArgs(3)
 		err = deploy(ctx, log)
+	case "operator":
+		checkArgs(2)
+		err = operator(ctx, log)
 	default:
 		usage()
 		os.Exit(2)

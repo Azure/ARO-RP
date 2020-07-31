@@ -31,7 +31,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "778ae565bde392f58e04c3c8ff07c2ac506d00c9",
+                    "commitHash": "e7b391b759b050d6719cc6fd8bb87b6dc038bca6",
                     "repositoryUrl": "https://github.com/Azure/go-autorest/"
                 }
             }
@@ -310,6 +310,15 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "daf2830f2741ebb735b21709a520c5f37d642d85",
+                    "repositoryUrl": "https://github.com/fatih/color/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "0ca9ea5df5451ffdf184b4428c902747c2c11cd7",
                     "repositoryUrl": "https://github.com/ghodss/yaml/"
                 }
@@ -321,6 +330,15 @@
                 "git": {
                     "commitHash": "ff7109080027ec152dabb369e157c4f359b76f31",
                     "repositoryUrl": "https://github.com/go-bindata/go-bindata/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "9fb12b3b21c5415d16ac18dc5cd42c1cfdd40c4e",
+                    "repositoryUrl": "https://github.com/go-logr/logr/"
                 }
             }
         },
@@ -357,6 +375,15 @@
                 "git": {
                     "commitHash": "8a84ec635f1b280a7062edeab609f0667a053248",
                     "repositoryUrl": "https://github.com/go-openapi/swag/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "7a04ff140e0fd2ea77adfd5b8bd2b0c80ab739a9",
+                    "repositoryUrl": "https://github.com/gobuffalo/flect/"
                 }
             }
         },
@@ -481,6 +508,15 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "14eae340515388ca95aa8e7b86f0de668e981f54",
+                    "repositoryUrl": "https://github.com/hashicorp/golang-lru/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "a30252cb686a21eb2d0b98132633053ec2f7f1e5",
                     "repositoryUrl": "https://github.com/hpcloud/tail/"
                 }
@@ -492,6 +528,15 @@
                 "git": {
                     "commitHash": "1afb36080aec31e0d1528973ebe6721b191b0369",
                     "repositoryUrl": "https://github.com/imdario/mergo/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75",
+                    "repositoryUrl": "https://github.com/inconshreveable/mousetrap/"
                 }
             }
         },
@@ -832,6 +877,15 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "8e28aca60994c5cb1aec0251b85f0116cc4c9427",
+                    "repositoryUrl": "https://github.com/operator-framework/operator-sdk/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "dfc5841ab94d2a2b221d1cba1de040e2c552ef3f",
                     "repositoryUrl": "https://github.com/ovirt/cluster-api-provider-ovirt/"
                 }
@@ -960,6 +1014,15 @@
                 "git": {
                     "commitHash": "839c75faf7f98a33d445d181f3018b5c3409a45e",
                     "repositoryUrl": "https://github.com/sirupsen/logrus/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "a684a6d7f5e37385d954dd3b5a14fc6912c6ab9d",
+                    "repositoryUrl": "https://github.com/spf13/cobra/"
                 }
             }
         },
@@ -1111,6 +1174,15 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "1c2a0262323edc27502942d9727c95646b1c3cbe",
+                    "repositoryUrl": "https://gomodules.xyz/jsonpatch/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "0cbcb99a9ea0c8023c794b2693cbe1def82ed4d7",
                     "repositoryUrl": "https://google.golang.org/api/"
                 }
@@ -1201,8 +1273,26 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "eeeca48fe7764f320e4870d231902bf9c1be2c08",
+                    "repositoryUrl": "https://gopkg.in/yaml.v3/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "7643814f1c97f24ccfb38c2b85a7bb3c7f494346",
                     "repositoryUrl": "https://github.com/kubernetes/api/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "88d23e1d281b9aa0cb534c4cdf3ed01af4b180b9",
+                    "repositoryUrl": "https://github.com/kubernetes/apiextensions-apiserver/"
                 }
             }
         },
@@ -1221,6 +1311,24 @@
                 "git": {
                     "commitHash": "bb38286aebfbd8b39c317114442ed28d37c7617e",
                     "repositoryUrl": "https://github.com/kubernetes/client-go/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "e95606b614f049ef6087115cb340d8d5805b8da7",
+                    "repositoryUrl": "https://github.com/kubernetes/code-generator/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "f8a0810f38afb8478882b3835a615aebfda39afa",
+                    "repositoryUrl": "https://github.com/kubernetes/gengo/"
                 }
             }
         },
@@ -1282,8 +1390,17 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "fc5542c693e3340f8abbe91c6345bd64c494a60c",
+                    "commitHash": "fef04902823b5a3bed3ba29518e50cbf6560594d",
                     "repositoryUrl": "https://sigs.k8s.io/controller-runtime/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "93a4eed983cf9670deabcf3cfa837a4b69988c6e",
+                    "repositoryUrl": "https://sigs.k8s.io/controller-tools/"
                 }
             }
         },

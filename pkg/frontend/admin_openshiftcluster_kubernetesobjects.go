@@ -59,9 +59,9 @@ func (f *frontend) _getAdminKubernetesObjects(ctx context.Context, r *http.Reque
 	}
 
 	if name != "" {
-		return f.kubeActionsFactory(log, f.env).Get(ctx, doc.OpenShiftCluster, groupKind, namespace, name)
+		return f.kubeActionsFactory(log, f.env).Get(doc.OpenShiftCluster, groupKind, namespace, name)
 	}
-	return f.kubeActionsFactory(log, f.env).List(ctx, doc.OpenShiftCluster, groupKind, namespace)
+	return f.kubeActionsFactory(log, f.env).List(doc.OpenShiftCluster, groupKind, namespace)
 }
 
 func (f *frontend) deleteAdminKubernetesObjects(w http.ResponseWriter, r *http.Request) {
@@ -94,7 +94,7 @@ func (f *frontend) _deleteAdminKubernetesObjects(ctx context.Context, r *http.Re
 		return err
 	}
 
-	return f.kubeActionsFactory(log, f.env).Delete(ctx, doc.OpenShiftCluster, groupKind, namespace, name)
+	return f.kubeActionsFactory(log, f.env).Delete(doc.OpenShiftCluster, groupKind, namespace, name)
 }
 
 func (f *frontend) postAdminKubernetesObjects(w http.ResponseWriter, r *http.Request) {
@@ -138,5 +138,5 @@ func (f *frontend) _postAdminKubernetesObjects(ctx context.Context, r *http.Requ
 		return err
 	}
 
-	return f.kubeActionsFactory(log, f.env).CreateOrUpdate(ctx, doc.OpenShiftCluster, obj)
+	return f.kubeActionsFactory(log, f.env).CreateOrUpdate(doc.OpenShiftCluster, obj)
 }

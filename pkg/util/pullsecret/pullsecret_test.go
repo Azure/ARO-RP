@@ -31,7 +31,7 @@ func TestSetRegistryProfiles(t *testing.T) {
 					Password: "enter",
 				},
 				{
-					Name:     "arosvc-int.azurecr.io",
+					Name:     "arointsvc.azurecr.io",
 					Username: "fred",
 					Password: "enter",
 				},
@@ -44,7 +44,7 @@ func TestSetRegistryProfiles(t *testing.T) {
 					"registry.redhat.io": {
 						"auth": "y",
 					},
-					"arosvc-int.azurecr.io": {
+					"arointsvc.azurecr.io": {
 						"auth": "ZnJlZDplbnRlcg==",
 					},
 				},
@@ -71,7 +71,7 @@ func TestSetRegistryProfiles(t *testing.T) {
 		},
 		{
 			name: "no change",
-			ps:   `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"arosvc-int.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"y"}}}`,
+			ps:   `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"arointsvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"y"}}}`,
 			rps: []*api.RegistryProfile{
 				{
 					Name:     "arosvc.azurecr.io",
@@ -79,7 +79,7 @@ func TestSetRegistryProfiles(t *testing.T) {
 					Password: "enter",
 				},
 				{
-					Name:     "arosvc-int.azurecr.io",
+					Name:     "arointsvc.azurecr.io",
 					Username: "fred",
 					Password: "enter",
 				},
@@ -92,7 +92,7 @@ func TestSetRegistryProfiles(t *testing.T) {
 					"registry.redhat.io": {
 						"auth": "y",
 					},
-					"arosvc-int.azurecr.io": {
+					"arointsvc.azurecr.io": {
 						"auth": "ZnJlZDplbnRlcg==",
 					},
 				},

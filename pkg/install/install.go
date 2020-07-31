@@ -31,12 +31,14 @@ import (
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
 	"github.com/sirupsen/logrus"
+	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
@@ -82,10 +84,12 @@ type Installer struct {
 	subnet          subnet.Manager
 
 	kubernetescli kubernetes.Interface
+	extcli        extensionsclient.Interface
 	operatorcli   operatorclient.Interface
 	configcli     configclient.Interface
 	samplescli    samplesclient.Interface
 	securitycli   securityclient.Interface
+	arocli        aroclient.AroV1alpha1Interface
 }
 
 const (
@@ -161,10 +165,10 @@ func (i *Installer) AdminUpgrade(ctx context.Context) error {
 		action(i.ensureBillingRecord), // belt and braces
 		action(i.fixLBProbes),
 		action(i.fixNSG),
-		action(i.fixPullSecret),
-		action(i.ensureGenevaLogging),
 		action(i.ensureIfReload),
 		action(i.ensureRouteFix),
+		action(i.ensureAROOperator),
+		condition{i.aroDeploymentReady, 10 * time.Minute},
 		action(i.upgradeCertificates),
 		action(i.configureAPIServerCertificate),
 		action(i.configureIngressCertificate),
@@ -192,9 +196,9 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			action(i.createCertificates),
 			action(i.initializeKubernetesClients),
 			condition{i.bootstrapConfigMapReady, 30 * time.Minute},
-			action(i.ensureGenevaLogging),
 			action(i.ensureIfReload),
 			action(i.ensureRouteFix),
+			action(i.ensureAROOperator),
 			action(i.incrInstallPhase),
 		},
 		api.InstallPhaseRemoveBootstrap: {
@@ -207,7 +211,7 @@ func (i *Installer) Install(ctx context.Context, installConfig *installconfig.In
 			action(i.updateConsoleBranding),
 			condition{i.operatorConsoleReady, 10 * time.Minute},
 			condition{i.clusterVersionReady, 30 * time.Minute},
-			action(i.disableAlertManagerWarning),
+			condition{i.aroDeploymentReady, 10 * time.Minute},
 			action(i.disableUpdates),
 			action(i.disableSamples),
 			action(i.disableOperatorHubSources),
@@ -431,6 +435,11 @@ func (i *Installer) initializeKubernetesClients(ctx context.Context) error {
 		return err
 	}
 
+	i.extcli, err = extensionsclient.NewForConfig(restConfig)
+	if err != nil {
+		return err
+	}
+
 	i.operatorcli, err = operatorclient.NewForConfig(restConfig)
 	if err != nil {
 		return err
@@ -442,6 +451,11 @@ func (i *Installer) initializeKubernetesClients(ctx context.Context) error {
 	}
 
 	i.samplescli, err = samplesclient.NewForConfig(restConfig)
+	if err != nil {
+		return err
+	}
+
+	i.arocli, err = aroclient.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}
