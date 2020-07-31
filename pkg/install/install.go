@@ -59,13 +59,14 @@ import (
 
 // Installer contains information needed to install an ARO cluster
 type Installer struct {
-	log          *logrus.Entry
-	env          env.Interface
-	db           database.OpenShiftClusters
-	billing      billing.Manager
-	doc          *api.OpenShiftClusterDocument
-	cipher       encryption.Cipher
-	fpAuthorizer refreshable.Authorizer
+	log             *logrus.Entry
+	env             env.Interface
+	db              database.OpenShiftClusters
+	billing         billing.Manager
+	doc             *api.OpenShiftClusterDocument
+	subscriptionDoc *api.SubscriptionDocument
+	cipher          encryption.Cipher
+	fpAuthorizer    refreshable.Authorizer
 
 	disks             compute.DisksClient
 	virtualmachines   compute.VirtualMachinesClient
@@ -104,7 +105,8 @@ type condition struct {
 }
 
 // NewInstaller creates a new Installer
-func NewInstaller(ctx context.Context, log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, billing billing.Manager, doc *api.OpenShiftClusterDocument) (*Installer, error) {
+func NewInstaller(ctx context.Context, log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters,
+	billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (*Installer, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
 		return nil, err
@@ -157,9 +159,11 @@ func NewInstaller(ctx context.Context, log *logrus.Entry, _env env.Interface, db
 	}, nil
 }
 
+// AdminUpgrade performs an admin upgrade of an ARO cluster
 func (i *Installer) AdminUpgrade(ctx context.Context) error {
 	steps := []interface{}{
-		action(i.initializeKubernetesClients),
+		action(i.initializeKubernetesClients), // must be first
+		action(i.deploySnapshotUpgradeTemplate),
 		action(i.startVMs),
 		condition{i.apiServersReady, 30 * time.Minute},
 		action(i.ensureBillingRecord), // belt and braces

@@ -35,12 +35,48 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
+	"github.com/Azure/ARO-RP/pkg/util/feature"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 func (i *Installer) createDNS(ctx context.Context) error {
 	return i.dns.Create(ctx, i.doc.OpenShiftCluster)
+}
+
+func (i *Installer) clusterSPObjectID(ctx context.Context) (string, error) {
+	var clusterSPObjectID string
+	spp := &i.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
+
+	token, err := aad.GetToken(ctx, i.log, i.doc.OpenShiftCluster, azure.PublicCloud.GraphEndpoint)
+	if err != nil {
+		return "", err
+	}
+
+	spGraphAuthorizer := autorest.NewBearerAuthorizer(token)
+
+	applications := graphrbac.NewApplicationsClient(spp.TenantID, spGraphAuthorizer)
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
+	// NOTE: Do not override err with the error returned by wait.PollImmediateUntil.
+	// Doing this will not propagate the latest error to the user in case when wait exceeds the timeout
+	wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+		var res azgraphrbac.ServicePrincipalObjectResult
+		res, err = applications.GetServicePrincipalsIDByAppID(ctx, spp.ClientID)
+		if err != nil {
+			if strings.Contains(err.Error(), "Authorization_IdentityNotFound") {
+				i.log.Info(err)
+				return false, nil
+			}
+			return false, err
+		}
+
+		clusterSPObjectID = *res.Value
+		return true, nil
+	}, timeoutCtx.Done())
+
+	return clusterSPObjectID, err
 }
 
 func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image, bootstrapLoggingConfig *bootstraplogging.Config) error {
@@ -92,41 +128,9 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 		}
 	}
 
-	var clusterSPObjectID string
-	{
-		spp := &i.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
-
-		token, err := aad.GetToken(ctx, i.log, i.doc.OpenShiftCluster, azure.PublicCloud.GraphEndpoint)
-		if err != nil {
-			return err
-		}
-
-		spGraphAuthorizer := autorest.NewBearerAuthorizer(token)
-
-		applications := graphrbac.NewApplicationsClient(spp.TenantID, spGraphAuthorizer)
-
-		timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
-		defer cancel()
-		// NOTE: Do not override err with the error returned by wait.PollImmediateUntil.
-		// Doing this will not propagate the latest error to the user in case when wait exceeds the timeout
-		wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-			var res azgraphrbac.ServicePrincipalObjectResult
-			res, err = applications.GetServicePrincipalsIDByAppID(ctx, spp.ClientID)
-			if err != nil {
-				if strings.Contains(err.Error(), "Authorization_IdentityNotFound") {
-					i.log.Info(err)
-					return false, nil
-				}
-
-				return false, err
-			}
-
-			clusterSPObjectID = *res.Value
-			return true, nil
-		}, timeoutCtx.Done())
-		if err != nil {
-			return err
-		}
+	clusterSPObjectID, err := i.clusterSPObjectID(ctx)
+	if err != nil {
+		return err
 	}
 
 	t := &arm.Template{
@@ -189,50 +193,8 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 		},
 	}
 
-	if os.Getenv("RP_MODE") == "" {
-		t.Resources = append(t.Resources, &arm.Resource{
-			Resource: &mgmtauthorization.DenyAssignment{
-				Name: to.StringPtr("[guid(resourceGroup().id, 'ARO cluster resource group deny assignment')]"),
-				Type: to.StringPtr("Microsoft.Authorization/denyAssignments"),
-				DenyAssignmentProperties: &mgmtauthorization.DenyAssignmentProperties{
-					DenyAssignmentName: to.StringPtr("[guid(resourceGroup().id, 'ARO cluster resource group deny assignment')]"),
-					Permissions: &[]mgmtauthorization.DenyAssignmentPermission{
-						{
-							Actions: &[]string{
-								"*/action",
-								"*/delete",
-								"*/write",
-							},
-							NotActions: &[]string{
-								"Microsoft.Network/networkSecurityGroups/join/action",
-								"Microsoft.Compute/disks/beginGetAccess/action",
-								"Microsoft.Compute/disks/write",
-								"Microsoft.Compute/disks/endGetAccess/action",
-								"Microsoft.Compute/snapshots/write",
-								"Microsoft.Compute/snapshots/delete",
-								"Microsoft.Compute/snapshots/beginGetAccess/action",
-								"Microsoft.Compute/snapshots/endGetAccess/action",
-							},
-						},
-					},
-					Scope: &i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID,
-					Principals: &[]mgmtauthorization.Principal{
-						{
-							ID:   to.StringPtr("00000000-0000-0000-0000-000000000000"),
-							Type: to.StringPtr("SystemDefined"),
-						},
-					},
-					ExcludePrincipals: &[]mgmtauthorization.Principal{
-						{
-							ID:   &clusterSPObjectID,
-							Type: to.StringPtr("ServicePrincipal"),
-						},
-					},
-					IsSystemProtected: to.BoolPtr(true),
-				},
-			},
-			APIVersion: azureclient.APIVersions["Microsoft.Authorization/denyAssignments"],
-		})
+	if os.Getenv("RP_MODE") == "" { // production
+		t.Resources = append(t.Resources, i.denyAssignments(clusterSPObjectID))
 	}
 
 	err = i.deployARMTemplate(ctx, resourceGroup, "storage", t, nil)
@@ -268,6 +230,81 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 
 	// the graph is quite big so we store it in a storage account instead of in cosmosdb
 	return i.saveGraph(ctx, g)
+}
+
+func (i *Installer) denyAssignments(clusterSPObjectID string) *arm.Resource {
+	notActions := []string{
+		"Microsoft.Network/networkSecurityGroups/join/action",
+	}
+
+	if feature.IsRegisteredForFeature(i.subscriptionDoc.Subscription.Properties, "Microsoft.RedHatOpenShift/EnableSnapshots") {
+		notActions = append(notActions, []string{
+			"Microsoft.Compute/disks/beginGetAccess/action",
+			"Microsoft.Compute/disks/endGetAccess/action",
+			"Microsoft.Compute/disks/write",
+			"Microsoft.Compute/snapshots/beginGetAccess/action",
+			"Microsoft.Compute/snapshots/endGetAccess/action",
+			"Microsoft.Compute/snapshots/write",
+			"Microsoft.Compute/snapshots/delete",
+		}...)
+	}
+
+	return &arm.Resource{
+		Resource: &mgmtauthorization.DenyAssignment{
+			Name: to.StringPtr("[guid(resourceGroup().id, 'ARO cluster resource group deny assignment')]"),
+			Type: to.StringPtr("Microsoft.Authorization/denyAssignments"),
+			DenyAssignmentProperties: &mgmtauthorization.DenyAssignmentProperties{
+				DenyAssignmentName: to.StringPtr("[guid(resourceGroup().id, 'ARO cluster resource group deny assignment')]"),
+				Permissions: &[]mgmtauthorization.DenyAssignmentPermission{
+					{
+						Actions: &[]string{
+							"*/action",
+							"*/delete",
+							"*/write",
+						},
+						NotActions: &notActions,
+					},
+				},
+				Scope: &i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID,
+				Principals: &[]mgmtauthorization.Principal{
+					{
+						ID:   to.StringPtr("00000000-0000-0000-0000-000000000000"),
+						Type: to.StringPtr("SystemDefined"),
+					},
+				},
+				ExcludePrincipals: &[]mgmtauthorization.Principal{
+					{
+						ID:   &clusterSPObjectID,
+						Type: to.StringPtr("ServicePrincipal"),
+					},
+				},
+				IsSystemProtected: to.BoolPtr(true),
+			},
+		},
+		APIVersion: azureclient.APIVersions["Microsoft.Authorization/denyAssignments"],
+	}
+}
+
+func (i *Installer) deploySnapshotUpgradeTemplate(ctx context.Context) error {
+	if os.Getenv("RP_MODE") != "" {
+		// only need this upgrade in production, where there are DenyAssignments
+		return nil
+	}
+
+	resourceGroup := stringutils.LastTokenByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+
+	clusterSPObjectID, err := i.clusterSPObjectID(ctx)
+	if err != nil {
+		return err
+	}
+
+	t := &arm.Template{
+		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+		ContentVersion: "1.0.0.0",
+		Resources:      []*arm.Resource{i.denyAssignments(clusterSPObjectID)},
+	}
+
+	return i.deployARMTemplate(ctx, resourceGroup, "storage", t, nil)
 }
 
 func (i *Installer) attachNSGsAndPatch(ctx context.Context) error {
