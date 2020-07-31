@@ -51,6 +51,21 @@ func (ka *kubeactions) MustGather(ctx context.Context, oc *api.OpenShiftCluster,
 		}
 	}()
 
+	// wait for default service account to exist
+	timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	defer cancel()
+	err = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+		_, err := cli.CoreV1().ServiceAccounts(ns.Name).Get("default", metav1.GetOptions{})
+		if err != nil {
+			return false, nil
+		}
+		return true, nil
+	}, timeoutCtx.Done())
+
+	if err != nil {
+		return err
+	}
+
 	crb, err := cli.RbacV1().ClusterRoleBindings().Create(&rbacv1.ClusterRoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "must-gather-",
