@@ -122,6 +122,8 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 			return nil, err
 		}
 		p.acrName = acrResource.ResourceName
+	} else {
+		p.acrName = "arointsvc"
 	}
 
 	return p, nil
@@ -160,7 +162,7 @@ func (p *prod) ACRName() string {
 }
 
 func (p *prod) AROOperatorImage() string {
-	return fmt.Sprintf("%s/aro:%s", p.acrName, version.GitCommit)
+	return fmt.Sprintf("%s.azurecr.io/aro:%s", p.acrName, version.GitCommit)
 }
 
 func (p *prod) populateCosmosDB(ctx context.Context, rpAuthorizer autorest.Authorizer) error {

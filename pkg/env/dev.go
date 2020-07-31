@@ -162,17 +162,13 @@ func (d *dev) InitializeAuthorizers() error {
 	return nil
 }
 
-func (d *dev) ACRName() string {
-	return "arointsvc"
-}
-
 func (d *dev) AROOperatorImage() string {
 	override := os.Getenv("ARO_IMAGE")
 	if override != "" {
 		return override
 	}
 
-	return fmt.Sprintf("%s/aro:%s", d.acrName, version.GitCommit)
+	return fmt.Sprintf("%s.azurecr.io/aro:%s", d.acrName, version.GitCommit)
 }
 
 func (d *dev) DatabaseName() string {
