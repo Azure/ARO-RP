@@ -28,7 +28,7 @@ type RPConfig struct {
 // Configuration represents configuration structure
 type Configuration struct {
 	ACRResourceID                      string        `json:"acrResourceId,omitempty"`
-	ACRReplica                         bool          `json:"acrReplica,omitempty"`
+	ACRReplicaDisabled                 bool          `json:"acrReplicaDisabled,omitempty"`
 	AdminAPICABundle                   string        `json:"adminApiCaBundle,omitempty"`
 	AdminAPIClientCertCommonName       string        `json:"adminApiClientCertCommonName,omitempty"`
 	ClusterParentDomainName            string        `json:"clusterParentDomainName,omitempty"`

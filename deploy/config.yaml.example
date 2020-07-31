@@ -7,7 +7,7 @@ rps:
     keyvaultPrefix: ''
 configuration:
   acrResourceId: ''
-  acrReplica: true
+  acrReplicaDisabled: true
   adminApiCaBundle: ''
   adminApiClientCertCommonName: ''
   clusterParentDomainName: ''
