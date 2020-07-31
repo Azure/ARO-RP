@@ -224,10 +224,10 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 	s.Methods(http.MethodPost).HandlerFunc(f.postAdminOpenShiftClusterMustGather).Name("postAdminOpenShiftClusterMustGather")
 
 	s = r.
-		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/restartvm").
-		Subrouter() // remove after Geneva actions have been updated
+		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/serialconsole").
+		Subrouter()
 
-	s.Methods(http.MethodPost).HandlerFunc(f.postAdminOpenShiftClusterRedeployVM).Name("postAdminOpenShiftClusterRestartVM") // remove after Geneva actions have been updated
+	s.Methods(http.MethodGet).HandlerFunc(f.getAdminOpenShiftClusterSerialConsole).Name("getAdminOpenShiftClusterSerialConsole")
 
 	s = r.
 		Path("/admin/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/redeployvm").
