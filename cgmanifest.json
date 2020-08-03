@@ -319,6 +319,15 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "45d7d09e39ef4ac08d493309fa031790c15bfe8a",
+                    "repositoryUrl": "https://github.com/fsnotify/fsnotify/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "0ca9ea5df5451ffdf184b4428c902747c2c11cd7",
                     "repositoryUrl": "https://github.com/ghodss/yaml/"
                 }
@@ -409,7 +418,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "3a35fb6e3e18b9dbfee291262260dee7372d2a92",
+                    "commitHash": "f7b1909c82a8958747e5c87c6a5c3b2eaed8a33d",
                     "repositoryUrl": "https://github.com/golang/mock/"
                 }
             }
@@ -510,15 +519,6 @@
                 "git": {
                     "commitHash": "14eae340515388ca95aa8e7b86f0de668e981f54",
                     "repositoryUrl": "https://github.com/hashicorp/golang-lru/"
-                }
-            }
-        },
-        {
-            "component": {
-                "type": "git",
-                "git": {
-                    "commitHash": "a30252cb686a21eb2d0b98132633053ec2f7f1e5",
-                    "repositoryUrl": "https://github.com/hpcloud/tail/"
                 }
             }
         },
@@ -724,7 +724,16 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "ce5d301e555bb672c693c099ba6ca5087b06c0b4",
+                    "commitHash": "327c577245448d8192115e77a76ea3d6aee88202",
+                    "repositoryUrl": "https://github.com/nxadm/tail/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "9c254cb251dc962dc20ca91d0279c870095cfcf9",
                     "repositoryUrl": "https://github.com/onsi/ginkgo/"
                 }
             }
@@ -733,7 +742,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "f9a52764bd5a0fd2d201bcca584351d03b72f8da",
+                    "commitHash": "904ac6ab26e9a888bdff3467eea03b6122a1c027",
                     "repositoryUrl": "https://github.com/onsi/gomega/"
                 }
             }
@@ -1167,6 +1176,15 @@
                 "git": {
                     "commitHash": "dbc83e6dc05ede08439f32f7024b36e4e9e5b406",
                     "repositoryUrl": "https://golang.org/x/tools/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
+                    "commitHash": "9bdfabe68543c54f90421aeb9a60ef8061b5b544",
+                    "repositoryUrl": "https://golang.org/x/xerrors/"
                 }
             }
         },
