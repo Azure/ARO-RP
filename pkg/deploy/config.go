@@ -35,7 +35,7 @@ type Configuration struct {
 	ClusterParentDomainName            *string       `json:"clusterParentDomainName,omitempty"`
 	DatabaseAccountName                *string       `json:"databaseAccountName,omitempty"`
 	ExtraClusterKeyvaultAccessPolicies []interface{} `json:"extraClusterKeyvaultAccessPolicies,omitempty"`
-	ExtraCosmosDBIPs                   []string      `json:"extraCosmosDBIPs,omitempty"`
+	ExtraCosmosDBIPs                   []string      `json:"extraCosmosDBIPs,omitempty" value:"required"`
 	ExtraServiceKeyvaultAccessPolicies []interface{} `json:"extraServiceKeyvaultAccessPolicies,omitempty"`
 	FPServerCertCommonName             *string       `json:"fpServerCertCommonName,omitempty"`
 	FPServicePrincipalID               *string       `json:"fpServicePrincipalId,omitempty"`
@@ -43,7 +43,7 @@ type Configuration struct {
 	GlobalResourceGroupName            *string       `json:"globalResourceGroupName,omitempty"`
 	GlobalSubscriptionID               *string       `json:"globalSubscriptionId,omitempty"`
 	KeyvaultPrefix                     *string       `json:"keyvaultPrefix,omitempty"`
-	MDMFrontendURL                     *string       `json:"mdmFrontendUrl,omitempty"`
+	MDMFrontendURL                     *string       `json:"mdmFrontendUrl,omitempty" value:"required"`
 	MDSDConfigVersion                  *string       `json:"mdsdConfigVersion,omitempty"`
 	MDSDEnvironment                    *string       `json:"mdsdEnvironment,omitempty"`
 	RPImagePrefix                      *string       `json:"rpImagePrefix,omitempty"`
@@ -96,4 +96,28 @@ func mergeConfig(primary, secondary *Configuration) (*Configuration, error) {
 	}
 
 	return primary, nil
+}
+
+// CheckRequiredFields validates configuration whether it provides required fields.
+// Config is invalid if required fields are not provided.
+func (conf *RPConfig) CheckRequiredFields() error {
+	configuration := conf.Configuration
+	v := reflect.ValueOf(*configuration)
+	missingFields := []string{}
+
+	for i := 0; i < v.NumField(); i++ {
+		required := v.Type().Field(i).Tag.Get("value") == "required"
+
+		if required && v.Field(i).IsZero() {
+			missingFields = append(missingFields, v.Type().Field(i).Name)
+		}
+	}
+
+	fmt.Println(missingFields)
+
+	if len(missingFields) == 0 {
+		return nil
+	}
+
+	return fmt.Errorf("Configuration has missing fields: %s", missingFields)
 }

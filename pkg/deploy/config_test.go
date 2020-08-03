@@ -5,6 +5,7 @@ package deploy
 
 import (
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -109,5 +110,47 @@ func TestConfigNilable(t *testing.T) {
 
 	for i := 0; i < val.NumField(); i++ {
 		val.Field(i).IsNil()
+	}
+}
+
+func TestConfigRequiredValues(t *testing.T) {
+	AdminAPICABundle := "AdminAPICABundle"
+	ACRResourceID := "ACRResourceID"
+	ExtraCosmosDBIPs := "ExtraCosmosDBIPs"
+	MDMFrontendURL := "MDMFrontendURL"
+
+	for _, tt := range []struct {
+		name   string
+		config RPConfig
+		expect error
+	}{
+		{
+			name: "valid config",
+			config: RPConfig{
+				Configuration: &Configuration{
+					ACRResourceID:    &ACRResourceID,
+					AdminAPICABundle: &AdminAPICABundle,
+					ExtraCosmosDBIPs: []string{ExtraCosmosDBIPs},
+					MDMFrontendURL:   &MDMFrontendURL,
+				},
+			},
+			expect: nil,
+		},
+		{
+			name: "invalid config",
+			config: RPConfig{
+				Configuration: &Configuration{
+					ACRResourceID:    &ACRResourceID,
+					AdminAPICABundle: &AdminAPICABundle,
+					ExtraCosmosDBIPs: []string{ExtraCosmosDBIPs},
+				},
+			},
+			expect: fmt.Errorf("Configuration has missing fields: %s", "[MDMFrontendURL]"),
+		},
+	} {
+		valid := tt.config.CheckRequiredFields()
+		if valid != tt.expect && valid.Error() != tt.expect.Error() {
+			t.Errorf("Expected %s but got %s", tt.name, valid.Error())
+		}
 	}
 }
