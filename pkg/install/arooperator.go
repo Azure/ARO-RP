@@ -17,7 +17,7 @@ func (i *Installer) ensureAROOperator(ctx context.Context) error {
 	return dep.CreateOrUpdate()
 }
 
-func (i *Installer) aroDeploymentReady() (bool, error) {
+func (i *Installer) aroDeploymentReady(ctx context.Context) (bool, error) {
 	dep, err := deploy.New(i.log, i.env, i.doc.OpenShiftCluster, i.kubernetescli, i.extcli, i.arocli)
 	if err != nil {
 		return false, err

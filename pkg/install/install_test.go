@@ -6,21 +6,141 @@ package install
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/golang/mock/gomock"
+	configv1 "github.com/openshift/api/config/v1"
+	"github.com/openshift/client-go/config/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
+	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/version"
+	test_log "github.com/Azure/ARO-RP/test/util/log"
 )
+
+func failingFunc(context.Context) error { return errors.New("oh no!") }
+
+var clusterOperators = &configv1.ClusterOperator{
+	ObjectMeta: metav1.ObjectMeta{
+		Name: "console",
+	},
+	Status: configv1.ClusterOperatorStatus{
+		Versions: []configv1.OperandVersion{
+			{
+				Name:    "operator",
+				Version: "4.3.0",
+			},
+			{
+				Name:    "operator-good",
+				Version: "4.3.1",
+			},
+		},
+	},
+}
+
+var clusterVersion = &configv1.ClusterVersion{
+	ObjectMeta: metav1.ObjectMeta{
+		Name: "version",
+	},
+	Status: configv1.ClusterVersionStatus{
+		Desired: configv1.Update{
+			Version: "1.2.3",
+		},
+	},
+}
+
+func TestStepRunnerWithInstaller(t *testing.T) {
+	ctx := context.Background()
+
+	for _, tt := range []struct {
+		name        string
+		steps       []steps.Step
+		wantEntries []test_log.ExpectedLogEntry
+		wantErr     string
+		configcli   *fake.Clientset
+	}{
+		{
+			name: "Failed step run will log cluster version and cluster operator information if available",
+			steps: []steps.Step{
+				steps.Action(failingFunc),
+			},
+			wantErr: "oh no!",
+			wantEntries: []test_log.ExpectedLogEntry{
+				{
+					Level:   logrus.InfoLevel,
+					Message: `running step [Action github.com/Azure/ARO-RP/pkg/install.failingFunc]`,
+				},
+				{
+					Level:   logrus.ErrorLevel,
+					Message: "step [Action github.com/Azure/ARO-RP/pkg/install.failingFunc] encountered error: oh no!",
+				},
+				{
+					Level:        logrus.InfoLevel,
+					MessageRegex: `github.com/Azure/ARO-RP/pkg/install.\(\*Installer\).logClusterVersion\-fm: {.*"version":"1.2.3".*}`,
+				},
+				{
+					Level:        logrus.InfoLevel,
+					MessageRegex: `github.com/Azure/ARO-RP/pkg/install.\(\*Installer\).logClusterOperators\-fm: {.*"versions":\[{"name":"operator","version":"4.3.0"},{"name":"operator\-good","version":"4.3.1"}\].*}`,
+				},
+			},
+			configcli: fake.NewSimpleClientset(clusterVersion, clusterOperators),
+		},
+		{
+			name: "Failed step run will not crash if it cannot get the clusterversions or clusteroperators",
+			steps: []steps.Step{
+				steps.Action(failingFunc),
+			},
+			wantErr: "oh no!",
+			wantEntries: []test_log.ExpectedLogEntry{
+				{
+					Level:   logrus.InfoLevel,
+					Message: `running step [Action github.com/Azure/ARO-RP/pkg/install.failingFunc]`,
+				},
+				{
+					Level:   logrus.ErrorLevel,
+					Message: "step [Action github.com/Azure/ARO-RP/pkg/install.failingFunc] encountered error: oh no!",
+				},
+				{
+					Level:   logrus.ErrorLevel,
+					Message: `clusterversions.config.openshift.io "version" not found`,
+				},
+				{
+					Level:   logrus.InfoLevel,
+					Message: `github.com/Azure/ARO-RP/pkg/install.(*Installer).logClusterOperators-fm: {"metadata":{},"items":null}`,
+				},
+			},
+			configcli: fake.NewSimpleClientset(),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			h, log := test_log.NewCapturingLogger()
+			i := &Installer{
+				log:       log,
+				configcli: tt.configcli,
+			}
+
+			err := i.runSteps(ctx, tt.steps)
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Error(err)
+			}
+
+			for _, e := range test_log.AssertLoggingOutput(h, tt.wantEntries) {
+				t.Error(e)
+			}
+		})
+	}
+}
 
 func TestDeployARMTemplate(t *testing.T) {
 	ctx := context.Background()
