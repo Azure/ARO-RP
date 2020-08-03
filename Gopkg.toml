@@ -48,7 +48,7 @@ required = [
 
 [[constraint]]
   name = "github.com/golang/mock"
-  version = "1.4.3"
+  version = "1.4.4"
 
 [[constraint]]
   name = "github.com/gorilla/mux"
@@ -143,3 +143,28 @@ required = [
   [[prune.project]]
     name = "github.com/openshift/installer"
     unused-packages = false
+
+  # Prune non-go files individually right now for safety
+  [[prune.project]]
+    name = "github.com/onsi/ginkgo"
+    non-go = true
+
+  [[prune.project]]
+    name = "github.com/onsi/gomega"
+    non-go = true
+
+  [[prune.project]]
+    name = "github.com/nxadm/tail"
+    non-go = true
+
+  [[prune.project]]
+    name = "github.com/fsnotify/fsnotify"
+    non-go = true
+
+  [[prune.project]]
+    name = "gopkg.in/fsnotify.v1"
+    non-go = true
+
+  [[prune.project]]
+    name = "golang.org/x/xerrors"
+    non-go = true

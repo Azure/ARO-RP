@@ -441,6 +441,14 @@
   version = "v1.9.0"
 
 [[projects]]
+  digest = "1:0914bf7efc3e3052163e92b859a89f3b407ad353d7c3b7f59a1bbb4fd05bb25d"
+  name = "github.com/fsnotify/fsnotify"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "45d7d09e39ef4ac08d493309fa031790c15bfe8a"
+  version = "v1.4.9"
+
+[[projects]]
   digest = "1:2cd7915ab26ede7d95b8749e6b1f933f1c6d5398030684e6505940a10f31cfda"
   name = "github.com/ghodss/yaml"
   packages = ["."]
@@ -535,8 +543,8 @@
     "mockgen/model",
   ]
   pruneopts = "UT"
-  revision = "3a35fb6e3e18b9dbfee291262260dee7372d2a92"
-  version = "v1.4.3"
+  revision = "f7b1909c82a8958747e5c87c6a5c3b2eaed8a33d"
+  version = "v1.4.4"
 
 [[projects]]
   digest = "1:f5ce1529abc1204444ec73779f44f94e2fa8fcdb7aca3c355b0c95947e4005c6"
@@ -666,20 +674,6 @@
   pruneopts = "UT"
   revision = "14eae340515388ca95aa8e7b86f0de668e981f54"
   version = "v0.5.4"
-
-[[projects]]
-  digest = "1:a1038ef593beb4771c8f0f9c26e8b00410acd800af5c6864651d9bf160ea1813"
-  name = "github.com/hpcloud/tail"
-  packages = [
-    ".",
-    "ratelimiter",
-    "util",
-    "watch",
-    "winfile",
-  ]
-  pruneopts = "UT"
-  revision = "a30252cb686a21eb2d0b98132633053ec2f7f1e5"
-  version = "v1.0.0"
 
 [[projects]]
   digest = "1:78d28d5b84a26159c67ea51996a230da4bc07cac648adaae1dfb5fc0ec8e40d3"
@@ -877,7 +871,21 @@
   version = "v0.1.1"
 
 [[projects]]
-  digest = "1:51766ddcba65b7f0eece2906249d7603970959ba0f1011b72037485044339ece"
+  digest = "1:17995b544cdab2ad44419d8c9f551416c63c0fdee5a8b916373188623ed77ea5"
+  name = "github.com/nxadm/tail"
+  packages = [
+    ".",
+    "ratelimiter",
+    "util",
+    "watch",
+    "winfile",
+  ]
+  pruneopts = "NUT"
+  revision = "327c577245448d8192115e77a76ea3d6aee88202"
+  version = "v1.4.4"
+
+[[projects]]
+  digest = "1:40ce4e46e3d4c1f10054844d2756bd33d21334422d8d020112e04fc60415a438"
   name = "github.com/onsi/ginkgo"
   packages = [
     ".",
@@ -885,6 +893,7 @@
     "internal/codelocation",
     "internal/containernode",
     "internal/failer",
+    "internal/global",
     "internal/leafnodes",
     "internal/remote",
     "internal/spec",
@@ -899,12 +908,12 @@
     "reporters/stenographer/support/go-isatty",
     "types",
   ]
-  pruneopts = "UT"
-  revision = "ce5d301e555bb672c693c099ba6ca5087b06c0b4"
-  version = "v1.10.3"
+  pruneopts = "NUT"
+  revision = "9c254cb251dc962dc20ca91d0279c870095cfcf9"
+  version = "v1.14.0"
 
 [[projects]]
-  digest = "1:7e57cd10c5424b2abf91f29354796a2468720396419585fef5a2d346c5a0f24d"
+  digest = "1:ab338113e784a312b4d3bb2bf579d8806130fedbf19a5e0c1728376ce70cba4b"
   name = "github.com/onsi/gomega"
   packages = [
     ".",
@@ -920,9 +929,9 @@
     "matchers/support/goraph/util",
     "types",
   ]
-  pruneopts = "UT"
-  revision = "f9a52764bd5a0fd2d201bcca584351d03b72f8da"
-  version = "v1.7.1"
+  pruneopts = "NUT"
+  revision = "904ac6ab26e9a888bdff3467eea03b6122a1c027"
+  version = "v1.10.1"
 
 [[projects]]
   digest = "1:ee4d4af67d93cc7644157882329023ce9a7bcfce956a079069a9405521c7cc8d"
@@ -1625,6 +1634,17 @@
   revision = "dbc83e6dc05ede08439f32f7024b36e4e9e5b406"
 
 [[projects]]
+  branch = "master"
+  digest = "1:325a1b73817aa79fc85f10376ed41ea607f7dd7f6c6bfa46df6a28ef2857941f"
+  name = "golang.org/x/xerrors"
+  packages = [
+    ".",
+    "internal",
+  ]
+  pruneopts = "NUT"
+  revision = "9bdfabe68543c54f90421aeb9a60ef8061b5b544"
+
+[[projects]]
   digest = "1:a4e6161ffbea6b872a122961fff978f81af9c064f1757c559e21d2d322f13958"
   name = "gomodules.xyz/jsonpatch"
   packages = ["v2"]
@@ -1735,10 +1755,10 @@
   revision = "6773bdf39b7fa13e6a40ece7ac2d01e0d469c205"
 
 [[projects]]
-  digest = "1:abeb38ade3f32a92943e5be54f55ed6d6e3b6602761d74b4aab4c9dd45c18abd"
+  digest = "1:1b91ae0dc69a41d4c2ed23ea5cffb721ea63f5037ca4b81e6d6771fbb8f45129"
   name = "gopkg.in/fsnotify.v1"
   packages = ["."]
-  pruneopts = "UT"
+  pruneopts = "NUT"
   revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
   source = "https://github.com/fsnotify/fsnotify.git"
   version = "v1.4.7"
@@ -2330,7 +2350,6 @@
     "golang.org/x/tools/cmd/goimports",
     "golang.org/x/tools/go/ast/astutil",
     "golang.org/x/tools/go/packages",
-    "gopkg.in/yaml.v2",
     "k8s.io/api/apps/v1",
     "k8s.io/api/core/v1",
     "k8s.io/api/rbac/v1",
