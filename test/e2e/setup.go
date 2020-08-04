@@ -67,13 +67,13 @@ func newClientSet(subscriptionID string) (*clientSet, error) {
 		&clientcmd.ConfigOverrides{},
 	)
 
-	restConfig, err := kubeconfig.ClientConfig()
+	restconfig, err := kubeconfig.ClientConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	cli := kubernetes.NewForConfigOrDie(restConfig)
-	machineapicli := machineapiclient.NewForConfigOrDie(restConfig)
+	cli := kubernetes.NewForConfigOrDie(restconfig)
+	machineapicli := machineapiclient.NewForConfigOrDie(restconfig)
 
 	arocli, err := aroclient.NewForConfig(restconfig)
 	if err != nil {
@@ -90,7 +90,7 @@ func newClientSet(subscriptionID string) (*clientSet, error) {
 		Kubernetes:  cli,
 		MachineAPI:  machineapicli,
 		AROClusters: arocli,
-		Project:     projectv1client.NewForConfigOrDie(restConfig),
+		Project:     projectv1client.NewForConfigOrDie(restconfig),
 	}, nil
 }
 

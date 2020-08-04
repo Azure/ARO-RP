@@ -17,8 +17,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
+	ready "github.com/Azure/ARO-RP/pkg/util/ready"
 	proj "github.com/Azure/ARO-RP/test/util/project"
-	ready "github.com/Azure/ARO-RP/test/util/ready"
 )
 
 const (
