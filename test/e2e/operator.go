@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
@@ -55,6 +56,10 @@ var _ = Describe("ARO Operator - Internet checking", func() {
 	BeforeEach(func() {
 		// save the originalURLs
 		co, err := clients.AROClusters.Clusters().Get("cluster", metav1.GetOptions{})
+		if errors.IsNotFound(err) {
+			Skip("skipping tests as aro-operator is not deployed")
+		}
+
 		Expect(err).NotTo(HaveOccurred())
 		originalURLs = co.Spec.InternetChecker.URLs
 	})
@@ -105,6 +110,12 @@ var _ = Describe("ARO Operator - Internet checking", func() {
 })
 
 var _ = Describe("ARO Operator - Geneva Logging", func() {
+	BeforeEach(func() {
+		_, err := clients.AROClusters.Clusters().Get("cluster", metav1.GetOptions{})
+		if errors.IsNotFound(err) {
+			Skip("skipping tests as aro-operator is not deployed")
+		}
+	})
 	Specify("genevalogging must be repaired if deployment deleted", func() {
 		mdsdReady := ready.CheckDaemonSetIsReady(clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-logging"), "mdsd")
 
