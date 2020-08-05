@@ -15,13 +15,12 @@ import (
 	coreclient "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/util/retry"
 
-	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 )
 
 func (i *Installer) createCertificates(ctx context.Context) error {
-	if _, ok := i.env.(env.Dev); ok {
+	if i.env.IsDevelopment() {
 		return nil
 	}
 
@@ -68,7 +67,7 @@ func (i *Installer) createCertificates(ctx context.Context) error {
 }
 
 func (i *Installer) upgradeCertificates(ctx context.Context) error {
-	if _, ok := i.env.(env.Dev); ok {
+	if i.env.IsDevelopment() {
 		return nil
 	}
 
@@ -144,7 +143,7 @@ func (i *Installer) ensureSecret(ctx context.Context, secrets coreclient.SecretI
 }
 
 func (i *Installer) configureAPIServerCertificate(ctx context.Context) error {
-	if _, ok := i.env.(env.Dev); ok {
+	if i.env.IsDevelopment() {
 		return nil
 	}
 
@@ -185,7 +184,7 @@ func (i *Installer) configureAPIServerCertificate(ctx context.Context) error {
 }
 
 func (i *Installer) configureIngressCertificate(ctx context.Context) error {
-	if _, ok := i.env.(env.Dev); ok {
+	if i.env.IsDevelopment() {
 		return nil
 	}
 

@@ -48,7 +48,7 @@ type manager struct {
 func NewManager(_env env.Interface, billing database.Billing, sub database.Subscriptions, log *logrus.Entry) (Manager, error) {
 	var storageClient *azstorage.Client
 
-	if _, ok := _env.(env.Dev); !ok {
+	if !_env.IsDevelopment() {
 		localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
 		if err != nil {
 			return nil, err
@@ -137,7 +137,7 @@ func isSubscriptionRegisteredForE2E(sub *api.SubscriptionProperties) bool {
 // storage account. This is used later on by the billing e2e
 func (m *manager) createOrUpdateE2EBlob(ctx context.Context, doc *api.BillingDocument) error {
 	//skip updating the storage account if this is a dev scenario
-	if _, ok := m.env.(env.Dev); ok {
+	if m.env.IsDevelopment() {
 		return nil
 	}
 

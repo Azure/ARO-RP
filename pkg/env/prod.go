@@ -60,7 +60,8 @@ type prod struct {
 	e2eStorageAccountRGName string
 	e2eStorageAccountSubID  string
 
-	log *logrus.Entry
+	log     *logrus.Entry
+	envType environmentType
 }
 
 func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata, rpAuthorizer, kvAuthorizer autorest.Authorizer) (*prod, error) {
@@ -72,7 +73,8 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 		clustersGenevaLoggingEnvironment:   "DiagnosticsProd",
 		clustersGenevaLoggingConfigVersion: "2.2",
 
-		log: log,
+		log:     log,
+		envType: environmentTypeProduction,
 	}
 
 	err := p.populateCosmosDB(ctx, rpAuthorizer)
@@ -382,4 +384,12 @@ func (p *prod) E2EStorageAccountRGName() string {
 
 func (p *prod) E2EStorageAccountSubID() string {
 	return p.e2eStorageAccountSubID
+}
+
+func (p *prod) ShouldDeployDenyAssignment() bool {
+	return p.envType == environmentTypeProduction
+}
+
+func (p *prod) IsDevelopment() bool {
+	return p.envType == environmentTypeDevelopment
 }

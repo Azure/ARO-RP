@@ -109,6 +109,7 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 	}
 	d.prod.clustersGenevaLoggingEnvironment = "Test"
 	d.prod.clustersGenevaLoggingConfigVersion = "2.3"
+	d.prod.envType = environmentTypeDevelopment
 
 	fpGraphAuthorizer, err := d.FPAuthorizer(instancemetadata.TenantID(), azure.PublicCloud.GraphEndpoint)
 	if err != nil {
@@ -294,4 +295,8 @@ func (d *dev) E2EStorageAccountRGName() string {
 
 func (d *dev) E2EStorageAccountSubID() string {
 	return "0cc1cafa-578f-4fa5-8d6b-ddfd8d82e6ea"
+}
+
+func (d *dev) ShouldDeployDenyAssignment() bool {
+	return false
 }

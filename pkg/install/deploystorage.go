@@ -6,7 +6,6 @@ package install
 import (
 	"context"
 	"net/http"
-	"os"
 	"reflect"
 	"strings"
 	"time"
@@ -113,7 +112,7 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 		Location:  &installConfig.Config.Azure.Region,
 		ManagedBy: to.StringPtr(i.doc.OpenShiftCluster.ID),
 	}
-	if _, ok := i.env.(env.Dev); ok {
+	if i.env.IsDevelopment() {
 		group.ManagedBy = nil
 	}
 	_, err := i.groups.CreateOrUpdate(ctx, resourceGroup, group)
@@ -193,7 +192,7 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 		},
 	}
 
-	if os.Getenv("RP_MODE") == "" { // production
+	if i.env.ShouldDeployDenyAssignment() {
 		t.Resources = append(t.Resources, i.denyAssignments(clusterSPObjectID))
 	}
 
@@ -286,7 +285,7 @@ func (i *Installer) denyAssignments(clusterSPObjectID string) *arm.Resource {
 }
 
 func (i *Installer) deploySnapshotUpgradeTemplate(ctx context.Context) error {
-	if os.Getenv("RP_MODE") != "" {
+	if !i.env.ShouldDeployDenyAssignment() {
 		// only need this upgrade in production, where there are DenyAssignments
 		return nil
 	}
