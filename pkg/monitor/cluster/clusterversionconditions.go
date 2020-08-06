@@ -8,7 +8,6 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var clusterVersionConditionsExpected = map[configv1.ClusterStatusConditionType]configv1.ConditionStatus{
@@ -19,7 +18,7 @@ var clusterVersionConditionsExpected = map[configv1.ClusterStatusConditionType]c
 }
 
 func (mon *Monitor) emitClusterVersionConditions(ctx context.Context) error {
-	cv, err := mon.configcli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
+	cv, err := mon.getClusterVersion()
 	if err != nil {
 		return err
 	}
@@ -28,13 +27,12 @@ func (mon *Monitor) emitClusterVersionConditions(ctx context.Context) error {
 		if c.Status == clusterVersionConditionsExpected[c.Type] {
 			continue
 		}
-
 		mon.emitGauge("clusterversion.conditions", 1, map[string]string{
 			"status": string(c.Status),
 			"type":   string(c.Type),
 		})
 
-		if mon.logMessages {
+		if mon.hourlyRun {
 			mon.log.WithFields(logrus.Fields{
 				"metric":  "clusterversion.conditions",
 				"status":  c.Status,

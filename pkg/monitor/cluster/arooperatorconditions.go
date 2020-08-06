@@ -35,7 +35,7 @@ func (mon *Monitor) emitAroOperatorConditions(ctx context.Context) error {
 			"type":   string(c.Type),
 		})
 
-		if mon.logMessages {
+		if mon.hourlyRun {
 			mon.log.WithFields(logrus.Fields{
 				"metric":  "arooperator.conditions",
 				"status":  c.Status,

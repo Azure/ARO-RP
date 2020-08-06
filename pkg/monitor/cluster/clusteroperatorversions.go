@@ -5,17 +5,15 @@ package cluster
 
 import (
 	"context"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (mon *Monitor) emitClusterOperatorVersions(ctx context.Context) error {
-	cv, err := mon.configcli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
+	cv, err := mon.getClusterVersion()
 	if err != nil {
 		return err
 	}
 
-	cos, err := mon.configcli.ConfigV1().ClusterOperators().List(metav1.ListOptions{})
+	cos, err := mon.listClusterOperators()
 	if err != nil {
 		return err
 	}
