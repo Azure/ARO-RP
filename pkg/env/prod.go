@@ -374,6 +374,11 @@ func (p *prod) Zones(vmSize string) ([]string, error) {
 	return zones, nil
 }
 
+func (d *prod) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthorizer refreshable.Authorizer, resourceGroup string) error {
+	// ARM ResourceGroup role assignments are not required in production.
+	return nil
+}
+
 func (p *prod) E2EStorageAccountName() string {
 	return p.e2eStorageAccountName
 }
