@@ -4,6 +4,8 @@ package ready
 // Licensed under the Apache License 2.0.
 
 import (
+	"net"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -28,6 +30,23 @@ func DaemonSetIsReady(ds *appsv1.DaemonSet) bool {
 	return ds.Status.DesiredNumberScheduled == ds.Status.NumberAvailable &&
 		ds.Status.DesiredNumberScheduled == ds.Status.UpdatedNumberScheduled &&
 		ds.Generation == ds.Status.ObservedGeneration
+}
+
+// ServiceIsReady returns true if a Service is considered ready
+func ServiceIsReady(svc *corev1.Service) bool {
+	switch svc.Spec.Type {
+	case corev1.ServiceTypeLoadBalancer:
+		if len(svc.Status.LoadBalancer.Ingress) <= 0 {
+			return false
+		}
+	case corev1.ServiceTypeClusterIP:
+		if net.ParseIP(svc.Spec.ClusterIP) == nil {
+			return false
+		}
+	default:
+		return false
+	}
+	return true
 }
 
 // CheckDaemonSetIsReady returns a function which polls a DaemonSet and returns
