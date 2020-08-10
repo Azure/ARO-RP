@@ -105,7 +105,9 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		// TODO: Remove when people stop re-using shared RG for their vnets
 		// and tags are not removed.
 		if strings.HasPrefix(*resourceGroup.Name, "aro-v4-shared") ||
-			strings.HasPrefix(*resourceGroup.Name, "v4-") {
+			strings.HasPrefix(*resourceGroup.Name, "v4-eastus") ||
+			strings.HasPrefix(*resourceGroup.Name, "v4-australiasoutheast") ||
+			strings.HasPrefix(*resourceGroup.Name, "v4-westeurope") {
 			return false
 		}
 
