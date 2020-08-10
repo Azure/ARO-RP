@@ -75,7 +75,7 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 	for _, tt := range []*test{
 		{
 			name: "clusters exists in db",
-			mocks: func(controller *gomock.Controller, openshiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher, cipher *mock_encryption.MockCipher) {
+			mocks: func(controller *gomock.Controller, oc *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher, cipher *mock_encryption.MockCipher) {
 				clusterDocs := []*api.OpenShiftClusterDocument{
 					{
 						OpenShiftCluster: &api.OpenShiftCluster{
@@ -113,7 +113,7 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 				mockIter.EXPECT().Next(gomock.Any(), -1).Return(&api.OpenShiftClusterDocuments{OpenShiftClusterDocuments: clusterDocs}, nil)
 				mockIter.EXPECT().Next(gomock.Any(), -1).Return(nil, nil)
 
-				openshiftClusters.EXPECT().
+				oc.EXPECT().
 					List().
 					Return(mockIter)
 			},
@@ -133,11 +133,11 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 		},
 		{
 			name: "no clusters found in db",
-			mocks: func(controller *gomock.Controller, openshiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher, cipher *mock_encryption.MockCipher) {
+			mocks: func(controller *gomock.Controller, oc *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher, cipher *mock_encryption.MockCipher) {
 				mockIter := mock_cosmosdb.NewMockOpenShiftClusterDocumentIterator(controller)
 				mockIter.EXPECT().Next(gomock.Any(), -1).Return(nil, nil)
 
-				openshiftClusters.EXPECT().
+				oc.EXPECT().
 					List().
 					Return(mockIter)
 			},
@@ -146,11 +146,11 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 		},
 		{
 			name: "internal error while iterating list",
-			mocks: func(controller *gomock.Controller, openshiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher, cipher *mock_encryption.MockCipher) {
+			mocks: func(controller *gomock.Controller, oc *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher, cipher *mock_encryption.MockCipher) {
 				mockIter := mock_cosmosdb.NewMockOpenShiftClusterDocumentIterator(controller)
 				mockIter.EXPECT().Next(gomock.Any(), -1).Return(nil, errors.New("random error"))
 
-				openshiftClusters.EXPECT().
+				oc.EXPECT().
 					List().
 					Return(mockIter)
 			},
@@ -173,14 +173,14 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			openshiftClusters := mock_database.NewMockOpenShiftClusters(controller)
+			oc := mock_database.NewMockOpenShiftClusters(controller)
 			enricher := mock_clusterdata.NewMockOpenShiftClusterEnricher(controller)
 			cipher := mock_encryption.NewMockCipher(controller)
-			tt.mocks(controller, openshiftClusters, enricher, cipher)
+			tt.mocks(controller, oc, enricher, cipher)
 
 			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
-				OpenShiftClusters: openshiftClusters,
-			}, api.APIs, &noop.Noop{}, cipher, nil, nil, nil, nil)
+				OpenShiftClusters: oc,
+			}, api.APIs, &noop.Noop{}, cipher, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -141,9 +141,9 @@ func TestFindGVR(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ka := &dynamicHelper{apiresources: tt.resources}
+			dh := &dynamicHelper{apiresources: tt.resources}
 
-			got, err := ka.findGVR(tt.kind, "")
+			got, err := dh.findGVR(tt.kind, "")
 			if !reflect.DeepEqual(err, tt.wantErr) {
 				t.Error(err)
 			}

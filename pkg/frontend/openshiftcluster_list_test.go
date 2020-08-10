@@ -304,7 +304,7 @@ func TestListOpenShiftCluster(t *testing.T) {
 
 					f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
 						OpenShiftClusters: openshiftClusters,
-					}, api.APIs, &noop.Noop{}, cipher, nil, nil, nil, nil)
+					}, api.APIs, &noop.Noop{}, cipher, nil)
 					if err != nil {
 						t.Fatal(err)
 					}

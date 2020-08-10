@@ -14,7 +14,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest"
 	"github.com/gorilla/mux"
 	"github.com/jmespath/go-jmespath"
 	"github.com/sirupsen/logrus"
@@ -24,12 +23,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/frontend/kubeactions"
+	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/metrics"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
@@ -43,10 +39,8 @@ func (err statusCodeError) Error() string {
 	return fmt.Sprintf("%d", err)
 }
 
-type kubeActionsFactory func(*logrus.Entry, env.Interface) kubeactions.Interface
-type resourcesClientFactory func(subscriptionID string, authorizer autorest.Authorizer) features.ResourcesClient
-type computeClientFactory func(subscriptionID string, authorizer autorest.Authorizer) compute.VirtualMachinesClient
-type vnetClientFactory func(subscriptionID string, authorizer autorest.Authorizer) network.VirtualNetworksClient
+type adminActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster,
+	*api.SubscriptionDocument) (adminactions.Interface, error)
 
 type frontend struct {
 	baseLog *logrus.Entry
@@ -56,11 +50,8 @@ type frontend struct {
 	m       metrics.Interface
 	cipher  encryption.Cipher
 
-	ocEnricher             clusterdata.OpenShiftClusterEnricher
-	kubeActionsFactory     kubeActionsFactory
-	resourcesClientFactory resourcesClientFactory
-	computeClientFactory   computeClientFactory
-	vnetClientFactory      vnetClientFactory
+	ocEnricher          clusterdata.OpenShiftClusterEnricher
+	adminActionsFactory adminActionsFactory
 
 	l net.Listener
 	s *http.Server
@@ -84,21 +75,15 @@ func NewFrontend(ctx context.Context,
 	apis map[string]*api.Version,
 	m metrics.Interface,
 	cipher encryption.Cipher,
-	kubeActionsFactory kubeActionsFactory,
-	resourcesClientFactory resourcesClientFactory,
-	computeClientFactory computeClientFactory,
-	vnetClientFactory vnetClientFactory) (Runnable, error) {
+	adminActionsFactory adminActionsFactory) (Runnable, error) {
 	f := &frontend{
-		baseLog:                baseLog,
-		env:                    _env,
-		db:                     db,
-		apis:                   apis,
-		m:                      m,
-		cipher:                 cipher,
-		kubeActionsFactory:     kubeActionsFactory,
-		resourcesClientFactory: resourcesClientFactory,
-		computeClientFactory:   computeClientFactory,
-		vnetClientFactory:      vnetClientFactory,
+		baseLog:             baseLog,
+		env:                 _env,
+		db:                  db,
+		apis:                apis,
+		m:                   m,
+		cipher:              cipher,
+		adminActionsFactory: adminActionsFactory,
 
 		ocEnricher: clusterdata.NewBestEffortEnricher(baseLog, _env, m),
 

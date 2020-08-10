@@ -15,17 +15,16 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Azure/go-autorest/autorest"
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
-	mockcompute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
+	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
 	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/test/util/listener"
@@ -68,7 +67,7 @@ func TestAdminRedeployVM(t *testing.T) {
 		name           string
 		resourceID     string
 		vmName         string
-		mocks          func(*test, *mock_database.MockOpenShiftClusters, *mock_database.MockSubscriptions, *mockcompute.MockVirtualMachinesClient)
+		mocks          func(*test, *mock_adminactions.MockInterface, *mock_database.MockOpenShiftClusters, *mock_database.MockSubscriptions)
 		wantStatusCode int
 		wantResponse   func() []byte
 		wantError      string
@@ -79,7 +78,7 @@ func TestAdminRedeployVM(t *testing.T) {
 			name:       "basic coverage",
 			vmName:     "aro-worker-australiasoutheast-7tcq7",
 			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, subscriptions *mock_database.MockSubscriptions, vmc *mockcompute.MockVirtualMachinesClient) {
+			mocks: func(tt *test, a *mock_adminactions.MockInterface, oc *mock_database.MockOpenShiftClusters, s *mock_database.MockSubscriptions) {
 				clusterDoc := &api.OpenShiftClusterDocument{
 					Key: tt.resourceID,
 					OpenShiftCluster: &api.OpenShiftCluster{
@@ -100,13 +99,14 @@ func TestAdminRedeployVM(t *testing.T) {
 					},
 				}
 
-				openshiftClusters.EXPECT().Get(gomock.Any(), strings.ToLower(tt.resourceID)).
+				oc.EXPECT().Get(gomock.Any(), strings.ToLower(tt.resourceID)).
 					Return(clusterDoc, nil)
 
-				subscriptions.EXPECT().Get(gomock.Any(), strings.ToLower(mockSubID)).
+				s.EXPECT().Get(gomock.Any(), strings.ToLower(mockSubID)).
 					Return(subscriptionDoc, nil)
 
-				vmc.EXPECT().RedeployAndWait(gomock.Any(), "test-cluster", tt.vmName).Return(nil)
+				a.EXPECT().VMRedeployAndWait(gomock.Any(), tt.vmName).Return(nil)
+
 			},
 			wantStatusCode: http.StatusOK,
 		},
@@ -115,29 +115,30 @@ func TestAdminRedeployVM(t *testing.T) {
 			defer cli.CloseIdleConnections()
 			l := listener.NewListener()
 			defer l.Close()
-			env := &env.Test{
+			_env := &env.Test{
 				L:            l,
 				TestLocation: "eastus",
 				TLSKey:       serverkey,
 				TLSCerts:     servercerts,
 			}
-			env.SetAdminClientAuthorizer(clientauthorizer.NewOne(clientcerts[0].Raw))
+			_env.SetAdminClientAuthorizer(clientauthorizer.NewOne(clientcerts[0].Raw))
 			cli.Transport.(*http.Transport).Dial = l.Dial
 
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			vmClient := mockcompute.NewMockVirtualMachinesClient(controller)
-			openshiftClusters := mock_database.NewMockOpenShiftClusters(controller)
-			subscriptions := mock_database.NewMockSubscriptions(controller)
-			tt.mocks(tt, openshiftClusters, subscriptions, vmClient)
+			a := mock_adminactions.NewMockInterface(controller)
+			oc := mock_database.NewMockOpenShiftClusters(controller)
+			s := mock_database.NewMockSubscriptions(controller)
+			tt.mocks(tt, a, oc, s)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
-				OpenShiftClusters: openshiftClusters,
-				Subscriptions:     subscriptions,
-			}, api.APIs, &noop.Noop{}, nil, nil, nil, func(subscriptionID string, authorizer autorest.Authorizer) compute.VirtualMachinesClient {
-				return vmClient
-			}, nil)
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), _env, &database.Database{
+				OpenShiftClusters: oc,
+				Subscriptions:     s,
+			}, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster,
+				*api.SubscriptionDocument) (adminactions.Interface, error) {
+				return a, nil
+			})
 
 			if err != nil {
 				t.Fatal(err)

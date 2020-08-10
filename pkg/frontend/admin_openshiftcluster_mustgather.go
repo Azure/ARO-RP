@@ -40,8 +40,15 @@ func (f *frontend) _postAdminOpenShiftClusterMustGather(ctx context.Context, w h
 		return err
 	}
 
-	w.Header().Add("Content-Type", "application/gzip")
-	w.Header().Add("Content-Disposition", `attachment; filename="must-gather.tgz"`)
+	subscriptionDoc, err := f.getSubscriptionDocument(ctx, doc.Key)
+	if err != nil {
+		return err
+	}
 
-	return f.kubeActionsFactory(log, f.env).MustGather(ctx, doc.OpenShiftCluster, w)
+	a, err := f.adminActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
+	if err != nil {
+		return err
+	}
+
+	return a.MustGather(ctx, w)
 }
