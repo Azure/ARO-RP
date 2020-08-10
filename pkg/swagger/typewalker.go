@@ -17,12 +17,15 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
+type ModelAsString bool
+
 type typeWalker struct {
-	pkg   *packages.Package
-	enums map[types.Type][]interface{}
+	pkg         *packages.Package
+	enums       map[types.Type][]interface{}
+	xmsEnumList map[string]ModelAsString
 }
 
-func newTypeWalker(pkgname string) (*typeWalker, error) {
+func newTypeWalker(pkgname string, xmsEnumList map[string]ModelAsString) (*typeWalker, error) {
 	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo}, pkgname)
 	if err != nil {
 		return nil, err
@@ -32,8 +35,9 @@ func newTypeWalker(pkgname string) (*typeWalker, error) {
 	}
 
 	tw := &typeWalker{
-		pkg:   pkgs[0],
-		enums: map[types.Type][]interface{}{},
+		pkg:         pkgs[0],
+		enums:       map[types.Type][]interface{}{},
+		xmsEnumList: xmsEnumList,
 	}
 
 	// populate enums: walk all types declared at package scope
@@ -151,6 +155,17 @@ func (tw *typeWalker) _define(definitions Definitions, t *types.Named) {
 	s.Description = strings.Trim(path[len(path)-2].(*ast.GenDecl).Doc.Text(), "\n")
 	s.Enum = tw.enums[t]
 
+	// Enum extensions allows non-breaking api changes
+	// https://github.com/Azure/autorest/tree/master/docs/extensions#x-ms-enum
+	c := strings.Split(t.String(), ".")
+	name := c[(len(c) - 1)]
+	if _, ok := tw.xmsEnumList[name]; ok {
+		s.XMSEnum = &XMSEnum{
+			ModelAsString: bool(tw.xmsEnumList[name]),
+			Name:          name,
+		}
+	}
+
 	definitions[t.Obj().Name()] = s
 
 	for dep := range deps {
@@ -168,8 +183,8 @@ func (tw *typeWalker) define(definitions Definitions, name string) {
 }
 
 // define adds a Definition for the named types in the given package
-func define(definitions Definitions, pkgname string, names ...string) error {
-	th, err := newTypeWalker(pkgname)
+func define(definitions Definitions, pkgname string, xmsEnumList map[string]ModelAsString, names ...string) error {
+	th, err := newTypeWalker(pkgname, xmsEnumList)
 	if err != nil {
 		return err
 	}

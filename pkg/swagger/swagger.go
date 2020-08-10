@@ -71,12 +71,16 @@ func Run(outputDir string) error {
 
 	populateExamples(s.Paths)
 
-	err := define(s.Definitions, "github.com/Azure/ARO-RP/pkg/api/v20200430", "OpenShiftClusterList", "OpenShiftClusterCredentials")
+	xmsEnumList := map[string]ModelAsString{
+		"VMSize": true,
+	}
+
+	err := define(s.Definitions, "github.com/Azure/ARO-RP/pkg/api/v20200430", xmsEnumList, "OpenShiftClusterList", "OpenShiftClusterCredentials")
 	if err != nil {
 		return err
 	}
 
-	err = define(s.Definitions, "github.com/Azure/ARO-RP/pkg/api", "CloudError", "OperationList")
+	err = define(s.Definitions, "github.com/Azure/ARO-RP/pkg/api", xmsEnumList, "CloudError", "OperationList")
 	if err != nil {
 		return err
 	}
