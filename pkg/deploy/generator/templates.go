@@ -313,9 +313,14 @@ func (g *generator) sharedDevelopmentEnvTemplate() *arm.Template {
 		g.devVpnPip(),
 		g.devVnet(),
 		g.devVPN(),
+		g.devCIPool(),
 		g.proxyVmss())
 
 	for _, param := range []string{
+		"ciAzpToken",
+		"ciCapacity",
+		"ciPoolName",
+		"ciDeployTooling",
 		"proxyCert",
 		"proxyClientCert",
 		"proxyDomainNameLabel",
@@ -330,6 +335,11 @@ func (g *generator) sharedDevelopmentEnvTemplate() *arm.Template {
 		typ := "string"
 		var defaultValue interface{}
 		switch param {
+		case "ciDeployTooling":
+			typ = "bool"
+			defaultValue = false
+		case "ciCapacity":
+			typ = "int"
 		case "proxyImageAuth", "proxyKey":
 			typ = "securestring"
 		case "publicIPAddressAllocationMethod":
@@ -361,6 +371,7 @@ func (g *generator) templateFixup(t *arm.Template) ([]byte, error) {
 
 	// :-(
 	b = bytes.ReplaceAll(b, []byte(tenantIDHack), []byte("[subscription().tenantId]"))
+	b = bytes.ReplaceAll(b, []byte(`"capacity": 1337`), []byte(`"capacity": "[int(parameters('ciCapacity'))]"`))
 	if g.production {
 		b = bytes.Replace(b, []byte(`"accessPolicies": []`), []byte(`"accessPolicies": "[concat(variables('clusterKeyvaultAccessPolicies'), parameters('extraClusterKeyvaultAccessPolicies'))]"`), 1)
 		b = bytes.Replace(b, []byte(`"accessPolicies": []`), []byte(`"accessPolicies": "[concat(variables('serviceKeyvaultAccessPolicies'), parameters('extraServiceKeyvaultAccessPolicies'))]"`), 1)

@@ -20,10 +20,6 @@ stages:
     aro_v4_e2e_devops_spn: $(aro-v4-e2e-devops-spn)
     billing_e2e_pipeline_name: $(billing_e2e_pipeline_name)
     billing_e2e_branch_name: $(billing_e2e_branch_name)
-    gobin: ${{ variables.GOBIN }}
-    gopath: ${{ variables.GOPATH }}
-    goroot: ${{ variables.GOROOT }}
-    modulePath: ${{ variables.modulePath }}
     locations:
     - australiaeast
     - brazilsouth
@@ -52,10 +48,6 @@ stages:
     aro_v4_e2e_devops_spn: $(aro-v4-e2e-devops-spn)
     billing_e2e_pipeline_name: $(billing_e2e_pipeline_name)
     billing_e2e_branch_name: $(billing_e2e_branch_name)
-    gobin: ${{ variables.GOBIN }}
-    gopath: ${{ variables.GOPATH }}
-    goroot: ${{ variables.GOROOT }}
-    modulePath: ${{ variables.modulePath }}
     locations:
     - canadacentral
     - canadaeast
@@ -83,10 +75,6 @@ stages:
     aro_v4_e2e_devops_spn: $(aro-v4-e2e-devops-spn)
     billing_e2e_pipeline_name: $(billing_e2e_pipeline_name)
     billing_e2e_branch_name: $(billing_e2e_branch_name)
-    gobin: ${{ variables.GOBIN }}
-    gopath: ${{ variables.GOPATH }}
-    goroot: ${{ variables.GOROOT }}
-    modulePath: ${{ variables.modulePath }}
     locations:
     - centralus
     - eastus

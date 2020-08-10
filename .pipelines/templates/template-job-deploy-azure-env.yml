@@ -21,18 +21,12 @@ jobs:
     variables:
     - template: ../vars.yml
     pool:
-      name: ARO-Release
+      name: ARO-CI
     environment: ${{ parameters.environment }}
     strategy:
       runOnce:
         deploy:
           steps:
-          - template: ./template-setup-golang-env.yml
-            parameters:
-              gobin: ${{ variables.GOBIN }}
-              gopath: ${{ variables.GOPATH }}
-              goroot: ${{ variables.GOROOT }}
-              modulePath: ${{ variables.modulePath }}
           - task: DownloadBuildArtifacts@0
             inputs:
               buildType: specific
@@ -63,7 +57,6 @@ jobs:
             displayName: Download Deployer
           - template: ./template-deploy-azure-env.yml
             parameters:
-              workingDirectory: $(system.defaultWorkingDirectory)
               configDirectory: $(System.ArtifactsDirectory)/config/drop/deploy
               deployerDirectory: $(System.ArtifactsDirectory)/deployer/drop
               configFileName: ${{ parameters.configFileName }}
@@ -76,14 +69,10 @@ jobs:
     - template: ../vars.yml
     timeoutInMinutes: 120
     pool:
-      name: ARO-Release
+      name: ARO-CI
     steps:
     - template: ./template-prod-e2e-steps.yml
       parameters:
-        gobin: ${{ variables.GOBIN }}
-        gopath: ${{ variables.GOPATH }}
-        goroot: ${{ variables.GOROOT }}
-        workingDirectory: ${{ variables.modulePath }}
         location: ${{ location }}
         subscription: ${{ parameters.e2eSubscription }}
         azureDevOpsE2EJSONSPN: ${{ parameters.azureDevOpsE2EJSONSPN }}

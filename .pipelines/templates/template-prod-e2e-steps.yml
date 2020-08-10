@@ -2,29 +2,13 @@ parameters:
   location: ''
   subscription: ''
   azureDevOpsE2EJSONSPN: ''
-  gobin: ''
-  gopath: ''
-  goroot: ''
-  workingDirectory: ''
 
 steps:
-- template: ./template-setup-golang-env.yml
-  parameters:
-    gobin: ${{ parameters.gobin }}
-    gopath: ${{ parameters.gopath }}
-    goroot: ${{ parameters.goroot }}
-    modulePath: ${{ parameters.workingDirectory }}
-- template: ./template-setup-azure-tools.yml
-  parameters:
-    workingDirectory: ${{ parameters.workingDirectory }}
 - template: ./template-az-cli-login.yml
   parameters:
-    workingDirectory: ${{ parameters.workingDirectory }}
     azureDevOpsJSONSPN: ${{ parameters.azureDevOpsE2EJSONSPN }}
 - script: |
     set -e
-    cd ${{ parameters.workingDirectory }}
-
     export LOCATION=${{ parameters.location }}
     export AZURE_SUBSCRIPTION_ID=${{ parameters.subscription }}
 
@@ -41,8 +25,6 @@ steps:
     run_e2e
   displayName: 🚀 Run ${{ parameters.location }} E2E
 - script: |
-    cd ${{ parameters.workingDirectory }}
-
     export LOCATION=${{ parameters.location }}
     export AZURE_SUBSCRIPTION_ID=${{ parameters.subscription }}
 

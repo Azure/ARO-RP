@@ -15,12 +15,7 @@ jobs:
     name: ARO-CI
 
   steps:
-  - template: ./templates/template-setup-golang-env.yml
-    parameters:
-      gobin: ${{ variables.GOBIN }}
-      gopath: ${{ variables.GOPATH }}
-      goroot: ${{ variables.GOROOT }}
-      modulePath: ${{ variables.modulePath }}
+  - template: ./templates/template-checkout.yml
   - task: DownloadBuildArtifacts@0
     inputs:
       buildType: specific

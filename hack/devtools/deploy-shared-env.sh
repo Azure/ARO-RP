@@ -39,6 +39,10 @@ deploy_env_dev() {
         -n env-development \
         --template-file deploy/env-development.json \
         --parameters \
+            "ciAzpToken=$AZPTOKEN" \
+            "ciCapacity=3" \
+            "ciDeployTooling=true" \
+            "ciPoolName=ARO-CI" \
             "proxyCert=$(base64 -w0 <secrets/proxy.crt)" \
             "proxyClientCert=$(base64 -w0 <secrets/proxy-client.crt)" \
             "proxyDomainNameLabel=$(cut -d. -f2 <<<$PROXY_HOSTNAME)" \
@@ -56,6 +60,10 @@ deploy_env_dev_override() {
         -n env-development \
         --template-file deploy/env-development.json \
         --parameters \
+            "ciAzpToken=$AZPTOKEN" \
+            "ciCapacity=3" \
+            "ciDeployTooling=true" \
+            "ciPoolName=ARO-CI" \
             "proxyCert=$(base64 -w0 <secrets/proxy.crt)" \
             "proxyClientCert=$(base64 -w0 <secrets/proxy-client.crt)" \
             "proxyDomainNameLabel=$(cut -d. -f2 <<<$PROXY_HOSTNAME)" \
@@ -73,7 +81,7 @@ import_certs_secrets() {
     az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --name rp-firstparty \
-        --file secrets/firstparty-development.pem
+        --file secrets/firstparty.pem
     az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --name rp-server \
@@ -151,11 +159,14 @@ clean_env() {
       done
 }
 
+export DATABASE_NAME="v4-e2e-V$BUILD_BUILDID"
+
 echo "##########################################"
 echo "##### ARO V4 Dev Env helper sourced ######"
 echo "##########################################"
 echo "########## Current settings : ############"
 echo "RESOURCEGROUP=$RESOURCEGROUP"
+echo "AZURE_SUBSCRIPTION_ID=$AZURE_SUBSCRIPTION_ID"
 echo
 echo "LOCATION=$LOCATION"
 echo

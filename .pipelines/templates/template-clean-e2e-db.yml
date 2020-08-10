@@ -1,15 +1,10 @@
-parameters:
-  workingDirectory: ''
 steps:
 - script: |
-    cd ${{ parameters.workingDirectory }}
-
     . secrets/env
 
     set -x
     . ./hack/e2e/run-rp-and-e2e.sh
 
-    export DATABASE_NAME=v4-e2e-V$BUILD_BUILDID
     clean_e2e_db
   displayName: 🧹 Clean cluster DB
   condition: and(always(), eq(variables['RP_MODE'], 'development'))

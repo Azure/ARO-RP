@@ -3,7 +3,6 @@ parameters:
   purgeCreatedTag: ''
   subscriptionCredentialsJSON: ''
   subscriptionId: ''
-  workingDirectory: ''
   dryRun: ''
   resourceGroupDeletePrefixes: ''
 
@@ -23,5 +22,4 @@ steps:
     rm spn.json
 
     go run ./hack/clean -dryRun=${{ parameters.dryRun }}
-  workingDirectory: ${{ parameters.workingDirectory }}
   displayName: 🧹 Clean subscription

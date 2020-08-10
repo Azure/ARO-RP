@@ -82,7 +82,7 @@ func (g *generator) securityGroupRP() *arm.Resource {
 				SourceAddressPrefix:      to.StringPtr("*"),
 				DestinationAddressPrefix: to.StringPtr("*"),
 				Access:                   mgmtnetwork.SecurityRuleAccessAllow,
-				Priority:                 to.Int32Ptr(100),
+				Priority:                 to.Int32Ptr(125),
 				Direction:                mgmtnetwork.SecurityRuleDirectionInbound,
 			},
 			Name: to.StringPtr("ssh_in"),
@@ -330,6 +330,15 @@ func (g *generator) devVnet() *arm.Resource {
 							AddressPrefix: to.StringPtr("10.0.0.0/24"),
 						},
 						Name: to.StringPtr("GatewaySubnet"),
+					},
+					{
+						SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+							AddressPrefix: to.StringPtr("10.0.1.0/24"),
+							NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+								ID: to.StringPtr("[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]"),
+							},
+						},
+						Name: to.StringPtr("ToolingSubnet"),
 					},
 				},
 			},
@@ -1571,5 +1580,206 @@ func (g *generator) rpVersionStorageAccount() *arm.Resource {
 		},
 		Condition:  g.conditionStanza("fullDeploy"),
 		APIVersion: azureclient.APIVersions["Microsoft.Storage"],
+	}
+}
+
+func (g *generator) devCIPool() *arm.Resource {
+	parts := []string{
+		fmt.Sprintf("base64ToString('%s')", base64.StdEncoding.EncodeToString([]byte("set -e\n\n"))),
+	}
+
+	for _, variable := range []string{
+		"ciAzpToken",
+		"ciPoolName"} {
+		parts = append(parts,
+			fmt.Sprintf("'%s='''", strings.ToUpper(variable)),
+			fmt.Sprintf("parameters('%s')", variable),
+			"'''\n'",
+		)
+	}
+
+	trailer := base64.StdEncoding.EncodeToString([]byte(`yum -y update -x WALinuxAgent
+# install az cli
+sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
+cat > /etc/yum.repos.d/azure-cli.repo <<'EOF'
+[azure-cli]
+name=Azure CLI
+baseurl=https://packages.microsoft.com/yumrepos/azure-cli
+enabled=1
+gpgcheck=1
+gpgkey=https://packages.microsoft.com/keys/microsoft.asc
+EOF
+
+# install common tooling
+yum -y install rhui-azure-rhel7-devtools.noarch rhui-azure-rhel7.noarch rhui-azure-rhel7-eus.noarch
+yum -y install docker azure-cli rh-git29 rh-python36 gcc gpgme-devel libassuan-devel
+
+rm -f ~/.azure/commandIndex.json # https://github.com/Azure/azure-cli/issues/14997
+
+systemctl enable docker
+systemctl start docker
+
+# install jq
+yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+yum -y install jq
+
+cat > /etc/profile.d/enablerh-git29.sh <<'EOF'
+#!/bin/bash
+if [ -x /usr/bin/scl_source ]; then
+  if [ -r /etc/scl/prefixes/rh-git29 ]; then
+	source scl_source enable rh-git29
+  fi
+fi
+EOF
+
+cat > /etc/profile.d/enablerh-python36.sh <<'EOF'
+#!/bin/bash
+if [ -x /usr/bin/scl_source ]; then
+  if [ -r /etc/scl/prefixes/rh-python36 ]; then
+  source scl_source enable rh-python36
+  fi
+fi
+EOF
+
+# install golang
+GO_VERSION=1.13.15
+curl -sL https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz -o /tmp/go${GO_VERSION}.linux-amd64.tar.gz
+mkdir -p /usr/local/go
+tar -C /usr/local/go -xzf /tmp/go${GO_VERSION}.linux-amd64.tar.gz --strip-components=1 go
+ln -s /usr/local/go/bin/* /usr/bin/
+
+# Install azp agent
+VSTS_AGENT=2.172.2
+curl -sL https://vstsagentpackage.azureedge.net/agent/${VSTS_AGENT}/vsts-agent-linux-x64-${VSTS_AGENT}.tar.gz -o /tmp/vsts-agent-linux-x64-${VSTS_AGENT}.tar.gz
+mkdir /home/cloud-user/agent && cd /home/cloud-user/agent
+tar zxvf /tmp/vsts-agent-linux-x64-${VSTS_AGENT}.tar.gz
+./bin/installdependencies.sh
+sudo chown cloud-user:root -R /home/cloud-user/agent
+
+# configure agent
+sudo -u cloud-user ./config.sh --unattended --url https://dev.azure.com/msazure --auth pat --token "$CIAZPTOKEN" --pool "$CIPOOLNAME" --agent "ARO-RHEL-$HOSTNAME"
+./svc.sh install
+
+# azure scripts do not work well with rhel
+# TODO: Fix upstream in vsts repos
+cat > /home/cloud-user/agent/.path <<'EOF'
+/opt/rh/rh-python36/root/usr/bin:/opt/rh/rh-git29/root/usr/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/home/cloud-user/.local/bin:/home/cloud-user/bin
+EOF
+
+cat > /home/cloud-user/agent/.env <<'EOF'
+LANG=en_US.UTF-8
+LD_LIBRARY_PATH=/opt/rh/rh-python36/root/usr/lib64:/opt/rh/httpd24/root/usr/lib64
+PERL5LIB=/opt/rh/rh-git29/root/usr/share/perl5/vendor_perl
+HOME=/home/cloud-user
+EOF
+
+firewall-cmd --add-port=443/tcp --permanent
+
+(sleep 30; reboot) &
+`))
+
+	parts = append(parts, "'\n'", fmt.Sprintf("base64ToString('%s')", trailer))
+
+	script := fmt.Sprintf("[base64(concat(%s))]", strings.Join(parts, ","))
+
+	return &arm.Resource{
+		Resource: &mgmtcompute.VirtualMachineScaleSet{
+			Sku: &mgmtcompute.Sku{
+				Name:     to.StringPtr(string(mgmtcompute.VirtualMachineSizeTypesStandardD2sV3)),
+				Tier:     to.StringPtr("Standard"),
+				Capacity: to.Int64Ptr(1337),
+			},
+			VirtualMachineScaleSetProperties: &mgmtcompute.VirtualMachineScaleSetProperties{
+				UpgradePolicy: &mgmtcompute.UpgradePolicy{
+					Mode: mgmtcompute.Manual,
+				},
+				VirtualMachineProfile: &mgmtcompute.VirtualMachineScaleSetVMProfile{
+					OsProfile: &mgmtcompute.VirtualMachineScaleSetOSProfile{
+						ComputerNamePrefix: to.StringPtr("ci-"),
+						AdminUsername:      to.StringPtr("cloud-user"),
+						LinuxConfiguration: &mgmtcompute.LinuxConfiguration{
+							DisablePasswordAuthentication: to.BoolPtr(true),
+							SSH: &mgmtcompute.SSHConfiguration{
+								PublicKeys: &[]mgmtcompute.SSHPublicKey{
+									{
+										Path:    to.StringPtr("/home/cloud-user/.ssh/authorized_keys"),
+										KeyData: to.StringPtr("[parameters('sshPublicKey')]"),
+									},
+								},
+							},
+						},
+					},
+					StorageProfile: &mgmtcompute.VirtualMachineScaleSetStorageProfile{
+						ImageReference: &mgmtcompute.ImageReference{
+							Publisher: to.StringPtr("RedHat"),
+							Offer:     to.StringPtr("RHEL"),
+							Sku:       to.StringPtr("7-RAW"),
+							Version:   to.StringPtr("latest"),
+						},
+						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
+							CreateOption: mgmtcompute.DiskCreateOptionTypesFromImage,
+							ManagedDisk: &mgmtcompute.VirtualMachineScaleSetManagedDiskParameters{
+								StorageAccountType: mgmtcompute.StorageAccountTypesPremiumLRS,
+							},
+						},
+					},
+					NetworkProfile: &mgmtcompute.VirtualMachineScaleSetNetworkProfile{
+						NetworkInterfaceConfigurations: &[]mgmtcompute.VirtualMachineScaleSetNetworkConfiguration{
+							{
+								Name: to.StringPtr("ci-vmss-nic"),
+								VirtualMachineScaleSetNetworkConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetNetworkConfigurationProperties{
+									Primary: to.BoolPtr(true),
+									IPConfigurations: &[]mgmtcompute.VirtualMachineScaleSetIPConfiguration{
+										{
+											Name: to.StringPtr("ci-vmss-ipconfig"),
+											VirtualMachineScaleSetIPConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetIPConfigurationProperties{
+												Subnet: &mgmtcompute.APIEntityReference{
+													ID: to.StringPtr("[resourceId('Microsoft.Network/virtualNetworks/subnets', 'dev-vnet', 'ToolingSubnet')]"),
+												},
+												Primary: to.BoolPtr(true),
+												PublicIPAddressConfiguration: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfiguration{
+													Name: to.StringPtr("ci-vmss-pip"),
+													VirtualMachineScaleSetPublicIPAddressConfigurationProperties: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfigurationProperties{
+														DNSSettings: &mgmtcompute.VirtualMachineScaleSetPublicIPAddressConfigurationDNSSettings{
+															DomainNameLabel: to.StringPtr("aro-ci"),
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					ExtensionProfile: &mgmtcompute.VirtualMachineScaleSetExtensionProfile{
+						Extensions: &[]mgmtcompute.VirtualMachineScaleSetExtension{
+							{
+								Name: to.StringPtr("ci-vmss-cse"),
+								VirtualMachineScaleSetExtensionProperties: &mgmtcompute.VirtualMachineScaleSetExtensionProperties{
+									Publisher:               to.StringPtr("Microsoft.Azure.Extensions"),
+									Type:                    to.StringPtr("CustomScript"),
+									TypeHandlerVersion:      to.StringPtr("2.0"),
+									AutoUpgradeMinorVersion: to.BoolPtr(true),
+									Settings:                map[string]interface{}{},
+									ProtectedSettings: map[string]interface{}{
+										"script": script,
+									},
+								},
+							},
+						},
+					},
+				},
+				Overprovision: to.BoolPtr(false),
+			},
+			Name:     to.StringPtr("ci-vmss"),
+			Type:     to.StringPtr("Microsoft.Compute/virtualMachineScaleSets"),
+			Location: to.StringPtr("[resourceGroup().location]"),
+		},
+		APIVersion: azureclient.APIVersions["Microsoft.Compute"],
+		Condition:  "[parameters('ciDeployTooling')]", // TODO(mj): Refactor g.conditionStanza for better usage
+		DependsOn: []string{
+			"[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]",
+		},
 	}
 }

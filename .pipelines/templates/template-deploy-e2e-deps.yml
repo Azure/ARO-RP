@@ -1,9 +1,5 @@
-parameters:
-  workingDirectory: ''
 steps:
 - script: |
-    cd ${{ parameters.workingDirectory }}
-
     . secrets/env
 
     set -x

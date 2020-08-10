@@ -1,5 +1,4 @@
 parameters:
-  workingDirectory: ''
   location: ''
   configDirectory: ''
   deployerDirectory: ''
@@ -9,7 +8,6 @@ parameters:
 steps:
 - script: |
     set -eu
-    cd ${{ parameters.workingDirectory }}
 
     echo ${{ parameters.azureDevOpsJSONSPN }} | base64 -d -w 0 > devops-spn.json
     export AZURE_SUBSCRIPTION_ID="${{ parameters.subscriptionId }}"
