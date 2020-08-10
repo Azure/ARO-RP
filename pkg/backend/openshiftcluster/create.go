@@ -31,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/genevalogging"
 	"github.com/Azure/ARO-RP/pkg/install"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
@@ -66,7 +65,7 @@ func (m *Manager) Create(ctx context.Context) error {
 
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
-	if _, ok := m.env.(env.Dev); !ok {
+	if !m.env.IsDevelopment() {
 		rp := m.acrtoken.GetRegistryProfile(m.doc.OpenShiftCluster)
 		if rp == nil {
 			// 1. choose a name and establish the intent to create a token with

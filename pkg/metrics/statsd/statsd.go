@@ -129,7 +129,7 @@ func (s *statsd) write(m *metric) (err error) {
 	if s.conn == nil {
 		err = s.dial()
 		if err != nil {
-			if _, ok := s.env.(env.Dev); ok {
+			if s.env.IsDevelopment() {
 				err = nil
 			}
 			return

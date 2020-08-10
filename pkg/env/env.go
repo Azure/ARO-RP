@@ -20,6 +20,14 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
+type environmentType uint8
+
+const (
+	environmentTypeProduction environmentType = iota
+	environmentTypeDevelopment
+	environmentTypeIntegration
+)
+
 const (
 	RPFirstPartySecretName       = "rp-firstparty"
 	RPServerSecretName           = "rp-server"
@@ -33,9 +41,11 @@ const (
 type Interface interface {
 	instancemetadata.InstanceMetadata
 
+	IsDevelopment() bool
 	InitializeAuthorizers() error
 	ArmClientAuthorizer() clientauthorizer.ClientAuthorizer
 	AdminClientAuthorizer() clientauthorizer.ClientAuthorizer
+	CreateARMResourceGroupRoleAssignment(context.Context, refreshable.Authorizer, string) error
 	ClustersGenevaLoggingConfigVersion() string
 	ClustersGenevaLoggingEnvironment() string
 	ClustersGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate)
@@ -57,6 +67,7 @@ type Interface interface {
 	E2EStorageAccountName() string
 	E2EStorageAccountRGName() string
 	E2EStorageAccountSubID() string
+	ShouldDeployDenyAssignment() bool
 }
 
 func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {

@@ -16,6 +16,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
+	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 )
 
 func TestIsSubscriptionRegisteredForE2E(t *testing.T) {
@@ -235,6 +236,9 @@ func TestDelete(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
+			_env := mock_env.NewMockInterface(controller)
+			_env.EXPECT().IsDevelopment().AnyTimes().Return(false)
+
 			log := logrus.NewEntry(logrus.StandardLogger())
 
 			billingDB := mock_database.NewMockBilling(controller)
@@ -246,6 +250,7 @@ func TestDelete(t *testing.T) {
 				log:       log,
 				billingDB: billingDB,
 				subDB:     subsDB,
+				env:       _env,
 			}
 
 			err := m.Delete(ctx, tt.openshiftdoc)
@@ -397,6 +402,9 @@ func TestEnsure(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
+			_env := mock_env.NewMockInterface(controller)
+			_env.EXPECT().IsDevelopment().AnyTimes().Return(false)
+
 			log := logrus.NewEntry(logrus.StandardLogger())
 
 			billingDB := mock_database.NewMockBilling(controller)
@@ -408,6 +416,7 @@ func TestEnsure(t *testing.T) {
 				log:       log,
 				billingDB: billingDB,
 				subDB:     subsDB,
+				env:       _env,
 			}
 
 			err := m.Ensure(ctx, tt.openshiftdoc)

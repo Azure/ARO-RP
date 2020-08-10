@@ -6,7 +6,6 @@ package install
 import (
 	"context"
 	"net/http"
-	"os"
 	"reflect"
 	"strings"
 	"time"
@@ -30,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
@@ -113,7 +111,7 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 		Location:  &installConfig.Config.Azure.Region,
 		ManagedBy: to.StringPtr(i.doc.OpenShiftCluster.ID),
 	}
-	if _, ok := i.env.(env.Dev); ok {
+	if i.env.IsDevelopment() {
 		group.ManagedBy = nil
 	}
 	_, err := i.groups.CreateOrUpdate(ctx, resourceGroup, group)
@@ -121,11 +119,9 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 		return err
 	}
 
-	if development, ok := i.env.(env.Dev); ok {
-		err = development.CreateARMResourceGroupRoleAssignment(ctx, i.fpAuthorizer, resourceGroup)
-		if err != nil {
-			return err
-		}
+	err = i.env.CreateARMResourceGroupRoleAssignment(ctx, i.fpAuthorizer, resourceGroup)
+	if err != nil {
+		return err
 	}
 
 	clusterSPObjectID, err := i.clusterSPObjectID(ctx)
@@ -193,7 +189,7 @@ func (i *Installer) deployStorageTemplate(ctx context.Context, installConfig *in
 		},
 	}
 
-	if os.Getenv("RP_MODE") == "" { // production
+	if i.env.ShouldDeployDenyAssignment() {
 		t.Resources = append(t.Resources, i.denyAssignments(clusterSPObjectID))
 	}
 
@@ -286,7 +282,7 @@ func (i *Installer) denyAssignments(clusterSPObjectID string) *arm.Resource {
 }
 
 func (i *Installer) deploySnapshotUpgradeTemplate(ctx context.Context) error {
-	if os.Getenv("RP_MODE") != "" {
+	if !i.env.ShouldDeployDenyAssignment() {
 		// only need this upgrade in production, where there are DenyAssignments
 		return nil
 	}

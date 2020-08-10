@@ -44,7 +44,7 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	var keys []string
-	if _, ok := _env.(env.Dev); ok {
+	if _env.IsDevelopment() {
 		keys = []string{
 			"PULL_SECRET",
 		}

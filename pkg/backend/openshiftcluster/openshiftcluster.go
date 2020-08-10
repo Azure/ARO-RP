@@ -62,7 +62,7 @@ func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClus
 	}
 
 	var acrtoken pkgacrtoken.Manager
-	if _, ok := _env.(env.Dev); !ok {
+	if !_env.IsDevelopment() {
 		acrtoken, err = pkgacrtoken.NewManager(_env, localFPAuthorizer)
 		if err != nil {
 			return nil, err
