@@ -71,7 +71,7 @@ func Run(outputDir string) error {
 
 	populateExamples(s.Paths)
 
-	err := define(s.Definitions, "github.com/Azure/ARO-RP/pkg/api/v20191231preview", "OpenShiftClusterList", "OpenShiftClusterCredentials")
+	err := define(s.Definitions, "github.com/Azure/ARO-RP/pkg/api/v20200430", "OpenShiftClusterList", "OpenShiftClusterCredentials")
 	if err != nil {
 		return err
 	}
