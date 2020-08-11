@@ -2,17 +2,18 @@
 
 There are currently two codebases for the `az aro` command:
 
-* The [upstream](https://github.com/Azure/ARO-RP/tree/master/python/az/aro) `az
+* The [downstream](https://github.com/Azure/ARO-RP/tree/master/python/az/aro) `az
   aro` extension in this repo
 
 * The
-  [downstream](https://github.com/Azure/azure-cli/tree/dev/src/azure-cli/azure/cli/command_modules/aro)
+  [upstream](https://github.com/Azure/azure-cli/tree/dev/src/azure-cli/azure/cli/command_modules/aro)
   `az aro` module.
 
-The downstream `az aro` module is distributed with `az` and is automatically
-present in the Azure cloud shell.  The upstream extension can be installed by an
+The upstream `az aro` module is distributed with `az` and is automatically
+present in the Azure cloud shell.  The downstream extension can be installed by an
 end user to override the module (e.g. to fix an issue rapidly).  We use the
-extension for development and testing of new API versions.
+extension for development and testing of new API versions.  Customers are
+advised to use the upstream CLI.
 
 We aim for the upstream and downstream codebase to be as closely in sync as
 possible.
@@ -85,16 +86,26 @@ Recorded tests are run when the `--live` flag is not passed.
 
 Changes made to the `az aro` command will be made to `Azure/ARO-RP` **before**
 being contributed
-[downstream](https://github.com/Azure/azure-cli/tree/dev/src/azure-cli/azure/cli/command_modules/aro).
+[upstream](https://github.com/Azure/azure-cli/tree/dev/src/azure-cli/azure/cli/command_modules/aro).
 This will allow synchronization between the two repositories to be consistent.
 Once changes are made and approved to
-[upstream](https://github.com/Azure/ARO-RP/tree/master/python/az/aro), pull
-requests to downstream can then be opened.
+[downstream](https://github.com/Azure/ARO-RP/tree/master/python/az/aro), pull
+requests to upstream can then be opened.
 
 When contributing to the `az aro` command upstream, imports will be different
 for testing. When submitting pull requests, tests that include `azdev style`,
 `azdev linter`, and `azdev test aro` should pass to ensure that changes will not
 impact CI pipelines.
+
+### Reviews
+
+You can use the following command (or similar) to generate a code diff:
+
+```
+diff --color=always -uNr -x '*.pyc' -x vendored_sdks -x tests \
+    ~/src/azure-cli/src/azure-cli/azure/cli/command_modules/aro/ \
+    ~/go/src/github.com/Azure/ARO-RP/python/az/aro/azext_aro/
+```
 
 ## Caveats
 
