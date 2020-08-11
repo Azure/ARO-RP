@@ -14,7 +14,7 @@ func (m *Manager) Update(ctx context.Context) error {
 	// an enriched oc.  Neither are we enriching oc here currently, nor does
 	// Dynamic() support running on an enriched oc.
 
-	i, err := install.NewInstaller(ctx, m.log, m.env, m.db, m.billing, m.doc)
+	i, err := install.NewInstaller(ctx, m.log, m.env, m.db, m.billing, m.doc, m.subscriptionDoc)
 	if err != nil {
 		return err
 	}

@@ -151,10 +151,10 @@ func NewInstaller(ctx context.Context, log *logrus.Entry, _env env.Interface, db
 
 // Update updates an ARO cluster
 func (i *Installer) Update(ctx context.Context) error {
-	steps := []interface{}{
-		action(i.initializeKubernetesClients),
-		action(i.updateAzureCloudProvider),
-		action(i.updateRoleAssignments),
+	steps := []steps.Step{
+		steps.Action(i.initializeKubernetesClients),
+		steps.Action(i.updateAzureCloudProvider),
+		steps.Action(i.updateRoleAssignments),
 	}
 
 	return i.runSteps(ctx, steps)
