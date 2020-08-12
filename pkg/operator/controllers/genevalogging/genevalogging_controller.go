@@ -1,4 +1,4 @@
-package controllers
+package genevalogging
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -22,10 +22,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/Azure/ARO-RP/pkg/dynamichelper"
-	"github.com/Azure/ARO-RP/pkg/genevalogging"
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 )
 
 // GenevaloggingReconciler reconciles a Cluster object
@@ -37,7 +37,7 @@ type GenevaloggingReconciler struct {
 	log           *logrus.Entry
 }
 
-func NewGenevaloggingReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, securitycli securityclient.Interface, arocli aroclient.AroV1alpha1Interface, restConfig *rest.Config) *GenevaloggingReconciler {
+func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, securitycli securityclient.Interface, arocli aroclient.AroV1alpha1Interface, restConfig *rest.Config) *GenevaloggingReconciler {
 	return &GenevaloggingReconciler{
 		securitycli:   securitycli,
 		kubernetescli: kubernetescli,
@@ -71,7 +71,7 @@ func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		r.log.Error(err)
 		return reconcile.Result{}, err
 	}
-	gl := genevalogging.New(r.log, instance, r.securitycli, mysec.Data[genevalogging.GenevaCertName], mysec.Data[genevalogging.GenevaKeyName])
+	gl := New(r.log, instance, r.securitycli, mysec.Data[GenevaCertName], mysec.Data[GenevaKeyName])
 
 	resources, err := gl.Resources()
 	if err != nil {
@@ -137,6 +137,6 @@ func (r *GenevaloggingReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.Secret{}).
 		Owns(&corev1.ServiceAccount{}).
 		Owns(&securityv1.SecurityContextConstraints{}).
-		Named(GenevaLoggingControllerName).
+		Named(controllers.GenevaLoggingControllerName).
 		Complete(r)
 }

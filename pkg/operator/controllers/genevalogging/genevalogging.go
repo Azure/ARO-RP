@@ -287,7 +287,7 @@ func (g *genevaLogging) daemonset(r azure.Resource) *appsv1.DaemonSet {
 								},
 								{
 									Name:  "MONITORING_GCS_NAMESPACE",
-									Value: genevaClusterLogsNamespace,
+									Value: ClusterLogsNamespace,
 								},
 								{
 									Name:  "MONITORING_CONFIG_VERSION",

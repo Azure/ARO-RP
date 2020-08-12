@@ -1,4 +1,4 @@
-package genevalogging
+package bootstraplogging
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -9,13 +9,14 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	"github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-// GetBootstrapLoggingConfig prepares a bootstraplogging.Config object based on
+// GetConfig prepares a bootstraplogging.Config object based on
 // the environment
-func GetBootstrapLoggingConfig(env env.Interface, doc *api.OpenShiftClusterDocument) (*bootstraplogging.Config, error) {
+func GetConfig(env env.Interface, doc *api.OpenShiftClusterDocument) (*bootstraplogging.Config, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
 		return nil, err
@@ -36,7 +37,7 @@ func GetBootstrapLoggingConfig(env env.Interface, doc *api.OpenShiftClusterDocum
 	return &bootstraplogging.Config{
 		Certificate:       string(gcsCertBytes),
 		Key:               string(gcsKeyBytes),
-		Namespace:         genevaClusterLogsNamespace,
+		Namespace:         genevalogging.ClusterLogsNamespace,
 		Environment:       env.ClustersGenevaLoggingEnvironment(),
 		ConfigVersion:     env.ClustersGenevaLoggingConfigVersion(),
 		Region:            env.Location(),

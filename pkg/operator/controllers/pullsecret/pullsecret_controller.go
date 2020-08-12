@@ -1,4 +1,4 @@
-package controllers
+package pullsecret
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -22,6 +22,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
 
@@ -34,7 +35,7 @@ type PullSecretReconciler struct {
 	log           *logrus.Entry
 }
 
-func NewPullSecretReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, arocli aroclient.AroV1alpha1Interface) *PullSecretReconciler {
+func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, arocli aroclient.AroV1alpha1Interface) *PullSecretReconciler {
 	return &PullSecretReconciler{
 		log:           log,
 		kubernetescli: kubernetescli,
@@ -182,6 +183,6 @@ func (r *PullSecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&v1.Secret{}).
 		Owns(&v1.Secret{}).
 		WithEventFilter(isPullSecret).
-		Named(PullSecretControllerName).
+		Named(controllers.PullSecretControllerName).
 		Complete(r)
 }

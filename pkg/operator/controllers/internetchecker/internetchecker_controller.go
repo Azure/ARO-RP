@@ -1,4 +1,4 @@
-package controllers
+package internetchecker
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -21,6 +21,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 )
 
 // InternetChecker reconciles a Cluster object
@@ -31,7 +32,7 @@ type InternetChecker struct {
 	role          string
 }
 
-func NewInternetChecker(log *logrus.Entry, kubernetescli kubernetes.Interface, arocli aroclient.AroV1alpha1Interface, role string) *InternetChecker {
+func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, arocli aroclient.AroV1alpha1Interface, role string) *InternetChecker {
 	return &InternetChecker{
 		kubernetescli: kubernetescli,
 		arocli:        arocli,
@@ -82,14 +83,14 @@ func (r *InternetChecker) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 		for url, err := range urlErrors {
 			fmt.Fprintf(sb, "%s: %s\n", url, err)
 		}
-		err = setCondition(r.arocli, &status.Condition{
+		err = controllers.SetCondition(r.arocli, &status.Condition{
 			Type:    condition,
 			Status:  corev1.ConditionFalse,
 			Message: sb.String(),
 			Reason:  "CheckFailed",
 		}, r.role)
 	} else {
-		err = setCondition(r.arocli, &status.Condition{
+		err = controllers.SetCondition(r.arocli, &status.Condition{
 			Type:    condition,
 			Status:  corev1.ConditionTrue,
 			Message: "Outgoing connection successful.",
@@ -125,6 +126,6 @@ func (r *InternetChecker) check(client simpleHTTPClient, url string) error {
 func (r *InternetChecker) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}).
-		Named(InternetCheckerControllerName).
+		Named(controllers.InternetCheckerControllerName).
 		Complete(r)
 }
