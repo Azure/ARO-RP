@@ -14,6 +14,10 @@ const (
 	InternetReachableFromWorker status.ConditionType = "InternetReachableFromWorker"
 )
 
+func AllConditionTypes() []status.ConditionType {
+	return []status.ConditionType{InternetReachableFromMaster, InternetReachableFromWorker}
+}
+
 type GenevaLoggingSpec struct {
 	// +kubebuilder:validation:Pattern:=`[0-9]+.[0-9]+`
 	ConfigVersion string `json:"configVersion,omitempty"`
