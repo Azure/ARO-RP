@@ -71,7 +71,7 @@ func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		r.log.Error(err)
 		return reconcile.Result{}, err
 	}
-	gl := genevalogging.New(r.log, instance, r.securitycli, mysec.Data["gcscert.pem"], mysec.Data["gcskey.pem"])
+	gl := genevalogging.New(r.log, instance, r.securitycli, mysec.Data[genevalogging.GenevaCertName], mysec.Data[genevalogging.GenevaKeyName])
 
 	resources, err := gl.Resources()
 	if err != nil {

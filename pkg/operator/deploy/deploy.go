@@ -25,6 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/dynamichelper"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/genevalogging"
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
@@ -121,9 +122,9 @@ func (o *operator) resources() ([]runtime.Object, error) {
 				Namespace: pkgoperator.Namespace,
 			},
 			Data: map[string][]byte{
-				"gcscert.pem":          gcsCertBytes,
-				"gcskey.pem":           gcsKeyBytes,
-				v1.DockerConfigJsonKey: []byte(ps),
+				genevalogging.GenevaCertName: gcsCertBytes,
+				genevalogging.GenevaKeyName:  gcsKeyBytes,
+				v1.DockerConfigJsonKey:       []byte(ps),
 			},
 		},
 		&arov1alpha1.Cluster{
