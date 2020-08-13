@@ -43,6 +43,7 @@ func GetUpgradeStream(v *Version) (*Stream, error) {
 						return &upgradeCandidate, nil
 					}
 				}
+				return &upgradeCandidate, nil // if we don't have a higher version, just return the current one.
 			}
 		}
 	}
