@@ -163,8 +163,13 @@ func (p *prod) ACRName() string {
 	return p.acrName
 }
 
-func (p *prod) AROOperatorImage() string {
-	return fmt.Sprintf("%s.azurecr.io/aro:%s", p.acrName, version.GitCommit)
+func (p *prod) AROOperatorImage(overrideTag string) string {
+	tag := version.GitCommit
+	if overrideTag != "" {
+		tag = overrideTag
+	}
+
+	return fmt.Sprintf("%s.azurecr.io/aro:%s", p.acrName, tag)
 }
 
 func (p *prod) populateCosmosDB(ctx context.Context, rpAuthorizer autorest.Authorizer) error {

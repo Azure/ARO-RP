@@ -52,6 +52,9 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 				IP:         oc.Properties.APIServerProfile.IP,
 			},
 			StorageSuffix: oc.Properties.StorageSuffix,
+			OperatorProfile: OperatorProfile{
+				OverrideTag: oc.Properties.OperatorProfile.OverrideTag,
+			},
 		},
 	}
 
@@ -190,4 +193,6 @@ func (c *openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShi
 	// Other fields are converted and this breaks the pattern, however this converting this field creates an issue
 	// with filling the out.Properties.RegistryProfiles[i].Password as default is "" which erases the original value.
 	// Workaround would be filling the password when receiving request, but it is array and the logic would be to complex.
+
+	out.Properties.OperatorProfile.OverrideTag = oc.Properties.OperatorProfile.OverrideTag
 }

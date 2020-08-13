@@ -44,6 +44,7 @@ type OpenShiftClusterProperties struct {
 	Install                 *Install                `json:"install,omitempty"`
 	StorageSuffix           string                  `json:"storageSuffix,omitempty"`
 	RegistryProfiles        []RegistryProfile       `json:"registryProfiles,omitempty"`
+	OperatorProfile         OperatorProfile         `json:"operatorProfile,omitempty"`
 }
 
 // ProvisioningState represents a provisioning state.
@@ -170,4 +171,9 @@ const (
 type RegistryProfile struct {
 	Name     string `json:"name,omitempty"`
 	Username string `json:"username,omitempty"`
+}
+
+// OperatorProfile represents the aro operator
+type OperatorProfile struct {
+	OverrideTag string `json:"overrideTag,omitempty" mutable:"true"`
 }

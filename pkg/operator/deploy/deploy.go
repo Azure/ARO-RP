@@ -88,8 +88,10 @@ func (o *operator) resources() ([]runtime.Object, error) {
 
 		// set the image for the deployments
 		if d, ok := obj.(*appsv1.Deployment); ok {
+			image := o.env.AROOperatorImage(o.oc.Properties.OperatorProfile.OverrideTag)
+
 			for i := range d.Spec.Template.Spec.Containers {
-				d.Spec.Template.Spec.Containers[i].Image = o.env.AROOperatorImage()
+				d.Spec.Template.Spec.Containers[i].Image = image
 			}
 		}
 

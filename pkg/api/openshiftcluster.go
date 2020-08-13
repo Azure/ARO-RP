@@ -99,6 +99,7 @@ type OpenShiftClusterProperties struct {
 	KubeadminPassword    SecureString `json:"kubeadminPassword,omitempty"`
 
 	RegistryProfiles []*RegistryProfile `json:"registryProfiles,omitempty"`
+	OperatorProfile  OperatorProfile    `json:"operatorProfile,omitempty"`
 }
 
 // ProvisioningState represents a provisioning state
@@ -255,3 +256,8 @@ const (
 	InstallPhaseBootstrap InstallPhase = iota
 	InstallPhaseRemoveBootstrap
 )
+
+// OperatorProfile represents the aro operator
+type OperatorProfile struct {
+	OverrideTag string `json:"overrideTag,omitempty"`
+}
