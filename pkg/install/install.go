@@ -122,13 +122,14 @@ func NewInstaller(ctx context.Context, log *logrus.Entry, _env env.Interface, db
 	}
 
 	return &Installer{
-		log:          log,
-		env:          _env,
-		db:           db,
-		billing:      billing,
-		cipher:       cipher,
-		doc:          doc,
-		fpAuthorizer: fpAuthorizer,
+		log:             log,
+		env:             _env,
+		db:              db,
+		billing:         billing,
+		cipher:          cipher,
+		doc:             doc,
+		subscriptionDoc: subscriptionDoc,
+		fpAuthorizer:    fpAuthorizer,
 
 		disks:             compute.NewDisksClient(r.SubscriptionID, fpAuthorizer),
 		virtualmachines:   compute.NewVirtualMachinesClient(r.SubscriptionID, fpAuthorizer),
