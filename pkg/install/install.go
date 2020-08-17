@@ -154,6 +154,7 @@ func (i *Installer) Update(ctx context.Context) error {
 	steps := []steps.Step{
 		steps.Action(i.initializeKubernetesClients),
 		steps.Action(i.updateAzureCloudProvider),
+		steps.Action(i.updateAzureCredentials),
 		steps.Action(i.updateRoleAssignments),
 	}
 

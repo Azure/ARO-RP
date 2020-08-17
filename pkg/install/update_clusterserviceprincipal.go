@@ -34,9 +34,9 @@ func (i *Installer) updateAzureCloudProvider(ctx context.Context) error {
 			return err
 		}
 
-		// don't panic if aadClientId or aadClientSecret is not a string
 		clientID, _ := config["aadClientId"].(string)
 		clientSecret, _ := config["aadClientSecret"].(string)
+
 		if clientID == spp.ClientID && clientSecret == string(spp.ClientSecret) {
 			return nil
 		}
@@ -46,8 +46,32 @@ func (i *Installer) updateAzureCloudProvider(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		i.log.Info("updated azure-cloud-credentials secret with new values")
 
 		_, err = i.kubernetescli.CoreV1().Secrets("kube-system").Update(acp)
+		return err
+	})
+}
+
+func (i *Installer) updateAzureCredentials(ctx context.Context) error {
+	spp := i.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
+
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		secret, err := i.kubernetescli.CoreV1().Secrets("kube-system").Get("azure-credentials", metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		clientID := string(secret.Data["azure_client_id"])
+		clientSecret := string(secret.Data["azure_client_secret"])
+		if clientID == spp.ClientID && clientSecret == string(spp.ClientSecret) {
+			return nil
+		}
+		secret.Data["aadClientId"] = []byte(spp.ClientID)
+		secret.Data["aadClientSecret"] = []byte(spp.ClientSecret)
+		i.log.Info("updated azure-credentials secret with new values")
+
+		_, err = i.kubernetescli.CoreV1().Secrets("kube-system").Update(secret)
 		return err
 	})
 }
