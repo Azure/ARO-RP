@@ -33,7 +33,7 @@ stages:
       billingE2EBranchName: $(billing-e2e-branch-name)
       fullDeploy: ${{ parameters.fullDeploy }}
 - stage: Deploy_LowTrafficSector
-  dependsOn: []
+  dependsOn: [Deploy_CanarySector]
   displayName: 🚀 Deploy Low Traffic Sector
   jobs:
   - template: ./templates/template-job-deploy-azure-env.yml
