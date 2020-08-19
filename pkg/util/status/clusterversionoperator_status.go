@@ -15,7 +15,9 @@ var clusterVersionConditionsHealthy = map[configv1.ClusterStatusConditionType]co
 	configv1.OperatorProgressing: configv1.ConditionFalse,
 	configv1.OperatorDegraded:    configv1.ConditionFalse,
 	configv1.OperatorUpgradeable: configv1.ConditionTrue,
-	OperatorFailing:              configv1.ConditionFalse,
+	//TODO: Once https://github.com/openshift/cluster-version-operator/issues/437 this can go away,
+	//      TL;DR: openshift/api updated, openshift/cvo did not catch up, therefore the condition missalignment
+	OperatorFailing: configv1.ConditionFalse,
 }
 
 // ClusterVersionOperatorIsHealthy iterates core condotions and returns true
