@@ -17,6 +17,7 @@ import (
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtmonitor "github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights"
+	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	"github.com/Azure/go-autorest/autorest/to"
 	uuid "github.com/satori/go.uuid"
 
@@ -1555,5 +1556,20 @@ func (g *generator) acrRbac() []*arm.Resource {
 			Condition:  g.conditionStanza("fullDeploy"),
 			APIVersion: azureclient.APIVersions["Microsoft.Authorization"],
 		},
+	}
+}
+
+func (g *generator) rpVersionStorageAccount() *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtstorage.Account{
+			Name:     to.StringPtr("[parameters('rpVersionStorageAccountName')]"),
+			Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
+			Location: to.StringPtr("[resourceGroup().location]"),
+			Sku: &mgmtstorage.Sku{
+				Name: "Standard_LRS",
+			},
+		},
+		Condition:  g.conditionStanza("fullDeploy"),
+		APIVersion: azureclient.APIVersions["Microsoft.Storage"],
 	}
 }

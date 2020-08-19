@@ -14,6 +14,9 @@
         },
         "rpServicePrincipalId": {
             "type": "string"
+        },
+        "rpVersionStorageAccountName": {
+            "type": "string"
         }
     },
     "resources": [
@@ -40,6 +43,16 @@
             },
             "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2018-09-01-preview"
+        },
+        {
+            "sku": {
+                "name": "Standard_LRS"
+            },
+            "location": "[resourceGroup().location]",
+            "name": "[parameters('rpVersionStorageAccountName')]",
+            "type": "Microsoft.Storage/storageAccounts",
+            "condition": "[parameters('fullDeploy')]",
+            "apiVersion": "2019-04-01"
         }
     ]
 }

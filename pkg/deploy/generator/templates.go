@@ -102,6 +102,7 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 		"fullDeploy",
 		"fpServicePrincipalId",
 		"rpServicePrincipalId",
+		"rpVersionStorageAccountName",
 	}
 
 	for _, param := range params {
@@ -115,6 +116,9 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 	}
 	t.Resources = append(t.Resources,
 		g.acrRbac()...,
+	)
+	t.Resources = append(t.Resources,
+		g.rpVersionStorageAccount(),
 	)
 
 	return t
