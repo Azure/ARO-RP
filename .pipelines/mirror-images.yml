@@ -1,6 +1,11 @@
 trigger: none
 pr: none
 
+parameters:
+- name: vsoDeployerBuildID
+  type: string
+  default: master
+
 variables:
 - template: vars.yml
 
@@ -21,8 +26,12 @@ jobs:
       buildType: specific
       project: $(vso-project-id)
       pipeline: $(vso-deployer-pipeline-id)
-      buildVersionToDownload: latestFromBranch
-      branchName: refs/heads/master
+      ${{ if eq(parameters.vsoDeployerBuildID, 'master') }}:
+        buildVersionToDownload: latestFromBranch
+        branchName: refs/heads/master
+      ${{ if ne(parameters.vsoDeployerBuildID, 'master') }}:
+        buildVersionToDownload: specific
+        buildId: ${{ parameters.vsoDeployerBuildID }}
       downloadType: specific
       downloadPath: $(System.ArtifactsDirectory)/deployer
     displayName: Download Deployer
