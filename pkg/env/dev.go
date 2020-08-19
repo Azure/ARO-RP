@@ -14,6 +14,9 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"path"
+	"path/filepath"
+	"runtime"
 	"time"
 
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
@@ -77,6 +80,13 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 		}
 	}
 
+	// This assumes we are running from an ARO-RP checkout in development
+	_, curmod, _, _ := runtime.Caller(0)
+	basepath, err := filepath.Abs(filepath.Join(filepath.Dir(curmod), "../.."))
+	if err != nil {
+		return nil, err
+	}
+
 	armAuthorizer, err := auth.NewClientCredentialsConfig(os.Getenv("AZURE_ARM_CLIENT_ID"), os.Getenv("AZURE_ARM_CLIENT_SECRET"), instancemetadata.TenantID()).Authorizer()
 	if err != nil {
 		return nil, err
@@ -122,7 +132,7 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 
 	d.deployments = features.NewDeploymentsClient(instancemetadata.TenantID(), fpAuthorizer)
 
-	b, err := ioutil.ReadFile("secrets/proxy.crt")
+	b, err := ioutil.ReadFile(path.Join(basepath, "secrets/proxy.crt"))
 	if err != nil {
 		return nil, err
 	}
@@ -135,12 +145,12 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 	d.proxyPool = x509.NewCertPool()
 	d.proxyPool.AddCert(cert)
 
-	d.proxyClientCert, err = ioutil.ReadFile("secrets/proxy-client.crt")
+	d.proxyClientCert, err = ioutil.ReadFile(path.Join(basepath, "secrets/proxy-client.crt"))
 	if err != nil {
 		return nil, err
 	}
 
-	b, err = ioutil.ReadFile("secrets/proxy-client.key")
+	b, err = ioutil.ReadFile(path.Join(basepath, "secrets/proxy-client.key"))
 	if err != nil {
 		return nil, err
 	}
