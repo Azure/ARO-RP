@@ -1,4 +1,4 @@
-package controllers
+package alertwebhook
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -20,6 +20,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 )
 
 var alertManagerName = types.NamespacedName{Name: "alertmanager-main", Namespace: "openshift-monitoring"}
@@ -30,7 +32,7 @@ type AlertWebhookReconciler struct {
 	log           *logrus.Entry
 }
 
-func NewAlertWebhookReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface) *AlertWebhookReconciler {
+func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface) *AlertWebhookReconciler {
 	return &AlertWebhookReconciler{
 		kubernetescli: kubernetescli,
 		log:           log,
@@ -139,6 +141,6 @@ func (r *AlertWebhookReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1.Secret{}).
 		WithEventFilter(isAlertManager).
-		Named(AlertwebhookControllerName).
+		Named(controllers.AlertwebhookControllerName).
 		Complete(r)
 }

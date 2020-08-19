@@ -31,7 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/genevalogging"
+	"github.com/Azure/ARO-RP/pkg/bootstraplogging"
 	"github.com/Azure/ARO-RP/pkg/install"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
@@ -314,7 +314,7 @@ func (m *Manager) Create(ctx context.Context) error {
 		return err
 	}
 
-	bootstrapLoggingConfig, err := genevalogging.GetBootstrapLoggingConfig(m.env, m.doc)
+	bootstrapLoggingConfig, err := bootstraplogging.GetConfig(m.env, m.doc)
 	if err != nil {
 		return err
 	}

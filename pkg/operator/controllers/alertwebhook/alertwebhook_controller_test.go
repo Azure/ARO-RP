@@ -1,4 +1,4 @@
-package controllers
+package alertwebhook
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.

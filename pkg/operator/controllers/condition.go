@@ -14,7 +14,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-func setCondition(arocli aroclient.AroV1alpha1Interface, cond *status.Condition, role string) error {
+func SetCondition(arocli aroclient.AroV1alpha1Interface, cond *status.Condition, role string) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		cluster, err := arocli.Clusters().Get(arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 		if err != nil {

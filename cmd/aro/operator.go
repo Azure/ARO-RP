@@ -16,6 +16,10 @@ import (
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/alertwebhook"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/internetchecker"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/pullsecret"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	// +kubebuilder:scaffold:imports
 )
@@ -57,25 +61,25 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	if role == pkgoperator.RoleMaster {
-		if err = (controllers.NewGenevaloggingReconciler(
+		if err = (genevalogging.NewReconciler(
 			log.WithField("controller", controllers.GenevaLoggingControllerName),
 			kubernetescli, securitycli, arocli,
 			restConfig)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller Genevalogging: %v", err)
 		}
-		if err = (controllers.NewPullSecretReconciler(
+		if err = (pullsecret.NewReconciler(
 			log.WithField("controller", controllers.PullSecretControllerName),
 			kubernetescli, arocli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller PullSecret: %v", err)
 		}
-		if err = (controllers.NewAlertWebhookReconciler(
+		if err = (alertwebhook.NewReconciler(
 			log.WithField("controller", controllers.AlertwebhookControllerName),
 			kubernetescli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller AlertWebhook: %v", err)
 		}
 	}
 
-	if err = (controllers.NewInternetChecker(
+	if err = (internetchecker.NewReconciler(
 		log.WithField("controller", controllers.InternetCheckerControllerName),
 		kubernetescli, arocli,
 		role,

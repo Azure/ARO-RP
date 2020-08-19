@@ -22,6 +22,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
+const (
+	GenevaCertName = "gcscert.pem"
+	GenevaKeyName  = "gcskey.pem"
+)
+
 type GenevaLogging interface {
 	Resources() ([]runtime.Object, error)
 }
@@ -274,15 +279,15 @@ func (g *genevaLogging) daemonset(r azure.Resource) *appsv1.DaemonSet {
 								},
 								{
 									Name:  "MONITORING_GCS_CERT_CERTFILE",
-									Value: "/etc/mdsd.d/secret/gcscert.pem",
+									Value: "/etc/mdsd.d/secret/" + GenevaCertName,
 								},
 								{
 									Name:  "MONITORING_GCS_CERT_KEYFILE",
-									Value: "/etc/mdsd.d/secret/gcskey.pem",
+									Value: "/etc/mdsd.d/secret/" + GenevaKeyName,
 								},
 								{
 									Name:  "MONITORING_GCS_NAMESPACE",
-									Value: genevaClusterLogsNamespace,
+									Value: ClusterLogsNamespace,
 								},
 								{
 									Name:  "MONITORING_CONFIG_VERSION",
@@ -378,8 +383,8 @@ func (g *genevaLogging) Resources() ([]runtime.Object, error) {
 				Namespace: kubeNamespace,
 			},
 			Data: map[string][]byte{
-				"gcscert.pem": g.gcscert,
-				"gcskey.pem":  g.gcskey,
+				GenevaCertName: g.gcscert,
+				GenevaKeyName:  g.gcskey,
 			},
 		},
 		&v1.ConfigMap{
