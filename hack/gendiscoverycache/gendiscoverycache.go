@@ -21,7 +21,7 @@ import (
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
-const discoveryCacheDir = "pkg/dynamichelper/discovery/cache"
+const discoveryCacheDir = "pkg/util/dynamichelper/discovery/cache"
 
 func run(ctx context.Context, log *logrus.Entry) error {
 	kubeconfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
