@@ -8,4 +8,5 @@ const (
 	GenevaLoggingControllerName   = "GenevaLogging"
 	PullSecretControllerName      = "PullSecret"
 	InternetCheckerControllerName = "InternetChecker"
+	WorkaroundControllerName      = "Workaround"
 )

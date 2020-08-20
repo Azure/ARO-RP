@@ -8,7 +8,10 @@ import (
 	"flag"
 	"fmt"
 
+	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
+	clusterclient "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset"
+	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -20,6 +23,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/internetchecker"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/pullsecret"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/workaround"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	// +kubebuilder:scaffold:imports
 )
@@ -55,6 +59,18 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
+	configcli, err := configclient.NewForConfig(restConfig)
+	if err != nil {
+		return err
+	}
+	clustercli, err := clusterclient.NewForConfig(restConfig)
+	if err != nil {
+		return err
+	}
+	mcocli, err := mcoclient.NewForConfig(restConfig)
+	if err != nil {
+		return err
+	}
 	arocli, err := aroclient.NewForConfig(restConfig)
 	if err != nil {
 		return err
@@ -76,6 +92,11 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			log.WithField("controller", controllers.AlertwebhookControllerName),
 			kubernetescli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller AlertWebhook: %v", err)
+		}
+		if err = (workaround.NewReconciler(
+			log.WithField("controller", controllers.WorkaroundControllerName),
+			kubernetescli, configcli, mcocli, clustercli, arocli, restConfig)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller Workaround: %v", err)
 		}
 	}
 
