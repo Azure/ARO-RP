@@ -1,5 +1,3 @@
-// +build test
-
 // stringifying representations of API documents for debugging and testing
 // logging
 
@@ -23,10 +21,25 @@ func TestSubscriptionDocumentString(t *testing.T) {
 }
 
 func TestOpenShiftClusterDocumentString(t *testing.T) {
-	doc := &OpenShiftClusterDocument{ID: "test"}
+	doc := &OpenShiftClusterDocument{
+		ID: "test",
+		OpenShiftCluster: &OpenShiftCluster{
+			Properties: OpenShiftClusterProperties{
+				KubeadminPassword: SecureString("SECRET"),
+			},
+		},
+	}
 	stringed := fmt.Sprint(doc)
 	if !strings.Contains(stringed, "test") {
 		t.Fatalf("OpenShiftClusterDocument did not format: %s", stringed)
+	}
+
+	// no secrets should survive
+	if strings.Contains(stringed, "SECRET") {
+		t.Fatalf("OpenShiftClusterDocument did not hide secrets: %s", stringed)
+	}
+	if !strings.Contains(stringed, "[REDACTED]") {
+		t.Fatalf("OpenShiftClusterDocument did not hide secrets: %s", stringed)
 	}
 }
 

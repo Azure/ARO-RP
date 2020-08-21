@@ -11,6 +11,10 @@ type SubscriptionDocuments struct {
 	SubscriptionDocuments []*SubscriptionDocument `json:"Documents,omitempty"`
 }
 
+func (c *SubscriptionDocuments) String() string {
+	return encodeJSON(c)
+}
+
 // SubscriptionDocument represents a subscription document.
 // pkg/database/cosmosdb requires its definition.
 type SubscriptionDocument struct {
@@ -32,4 +36,8 @@ type SubscriptionDocument struct {
 	Deleting bool `json:"deleting,omitempty"`
 
 	Subscription *Subscription `json:"subscription,omitempty"`
+}
+
+func (c *SubscriptionDocument) String() string {
+	return encodeJSON(c)
 }

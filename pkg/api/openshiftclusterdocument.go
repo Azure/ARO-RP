@@ -11,6 +11,10 @@ type OpenShiftClusterDocuments struct {
 	OpenShiftClusterDocuments []*OpenShiftClusterDocument `json:"Documents,omitempty"`
 }
 
+func (c *OpenShiftClusterDocuments) String() string {
+	return encodeJSON(c)
+}
+
 // OpenShiftClusterDocument represents an OpenShift cluster document.
 // pkg/database/cosmosdb requires its definition.
 type OpenShiftClusterDocument struct {
@@ -41,4 +45,8 @@ type OpenShiftClusterDocument struct {
 	OpenShiftCluster *OpenShiftCluster `json:"openShiftCluster,omitempty"`
 
 	CorrelationData *CorrelationData `json:"correlationData,omitempty"`
+}
+
+func (c *OpenShiftClusterDocument) String() string {
+	return encodeJSON(c)
 }

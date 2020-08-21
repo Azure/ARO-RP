@@ -11,6 +11,10 @@ type BillingDocuments struct {
 	BillingDocuments []*BillingDocument `json:"Documents,omitempty"`
 }
 
+func (c *BillingDocuments) String() string {
+	return encodeJSON(c)
+}
+
 // BillingDocument represents a billing document.
 // pkg/database/cosmosdb requires its definition.
 type BillingDocument struct {
@@ -30,4 +34,8 @@ type BillingDocument struct {
 	Key                       string `json:"key,omitempty"`
 	ClusterResourceGroupIDKey string `json:"clusterResourceGroupIDKey,omitempty"`
 	InfraID                   string `json:"infraId,omitempty"`
+}
+
+func (c *BillingDocument) String() string {
+	return encodeJSON(c)
 }

@@ -133,7 +133,7 @@ test-go: generate
 	go test -tags e2e -run ^$$ ./test/e2e/...
 
 	go vet ./...
-	set -o pipefail && go test -tags test -v ./... -coverprofile cover.out | tee uts.txt
+	set -o pipefail && go test -v ./... -coverprofile cover.out | tee uts.txt
 
 lint-go: generate
 	golangci-lint run
