@@ -40,11 +40,15 @@ func setStaticStatus(cluster *arov1alpha1.Cluster, role string) (changed bool) {
 	conditions := make(status.Conditions, 0, len(cluster.Status.Conditions))
 
 	// cleanup any old conditions
+	current := map[status.ConditionType]bool{}
+	for _, ct := range arov1alpha1.AllConditionTypes() {
+		current[ct] = true
+	}
+
 	for _, cond := range cluster.Status.Conditions {
-		switch cond.Type {
-		case arov1alpha1.InternetReachableFromMaster, arov1alpha1.InternetReachableFromWorker:
+		if _, ok := current[cond.Type]; ok {
 			conditions = append(conditions, cond)
-		default:
+		} else {
 			changed = true
 		}
 	}

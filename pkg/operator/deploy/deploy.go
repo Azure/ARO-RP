@@ -234,7 +234,26 @@ func (o *operator) IsReady() (bool, error) {
 	if !ok || err != nil {
 		return ok, err
 	}
-	return ready.CheckDeploymentIsReady(o.cli.AppsV1().Deployments(pkgoperator.Namespace), "aro-operator-worker")()
+	ok, err = ready.CheckDeploymentIsReady(o.cli.AppsV1().Deployments(pkgoperator.Namespace), "aro-operator-worker")()
+	if !ok || err != nil {
+		return ok, err
+	}
+
+	// wait for conditions to appear
+	cluster, err := o.arocli.Clusters().Get(arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	if err != nil {
+		return false, err
+	}
+	for _, ct := range arov1alpha1.AllConditionTypes() {
+		cond := cluster.Status.Conditions.GetCondition(ct)
+		if cond == nil {
+			return false, nil
+		}
+		if cond.Status != corev1.ConditionTrue {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 func isCRDEstablished(crd *extv1beta1.CustomResourceDefinition) bool {
