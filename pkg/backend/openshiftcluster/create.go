@@ -32,7 +32,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/bootstraplogging"
-	"github.com/Azure/ARO-RP/pkg/install"
+	"github.com/Azure/ARO-RP/pkg/cluster"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -309,7 +309,7 @@ func (m *Manager) Create(ctx context.Context) error {
 		return err
 	}
 
-	i, err := install.NewInstaller(ctx, m.log, m.env, m.db, m.billing, m.doc, m.subscriptionDoc)
+	i, err := cluster.New(ctx, m.log, m.env, m.db, m.billing, m.doc, m.subscriptionDoc)
 	if err != nil {
 		return err
 	}
