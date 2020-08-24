@@ -15,40 +15,7 @@ clean:
 	find python -type d -name __pycache__ -delete
 
 client: generate
-	rm -rf pkg/client python/client
-	mkdir pkg/client python/client
-	sha256sum swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/stable/2020-04-30/redhatopenshift.json >.sha256sum
-
-	sudo docker run \
-		--rm \
-		-v $(PWD)/pkg/client:/github.com/Azure/ARO-RP/pkg/client:z \
-		-v $(PWD)/swagger:/swagger:z \
-		azuresdk/autorest \
-		--go \
-		--license-header=MICROSOFT_APACHE_NO_VERSION \
-		--namespace=redhatopenshift \
-		--input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/stable/2020-04-30/redhatopenshift.json \
-		--output-folder=/github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2020-04-30/redhatopenshift
-
-	sudo docker run \
-		--rm \
-		-v $(PWD)/python/client:/python/client:z \
-		-v $(PWD)/swagger:/swagger:z \
-		azuresdk/autorest \
-		--use=@microsoft.azure/autorest.python@4.0.70 \
-		--python \
-		--azure-arm \
-		--license-header=MICROSOFT_APACHE_NO_VERSION \
-		--namespace=azure.mgmt.redhatopenshift.v2020_04_30 \
-		--input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/stable/2020-04-30/redhatopenshift.json \
-		--output-folder=/python/client
-
-	sudo chown -R $$(id -un):$$(id -gn) pkg/client python/client
-	sed -i -e 's|azure/aro-rp|Azure/ARO-RP|g' pkg/client/services/redhatopenshift/mgmt/2020-04-30/redhatopenshift/models.go pkg/client/services/redhatopenshift/mgmt/2020-04-30/redhatopenshift/redhatopenshiftapi/interfaces.go
-	rm -rf python/client/azure/mgmt/redhatopenshift/v2020_04_30/aio
-	>python/client/__init__.py
-
-	go run ./vendor/golang.org/x/tools/cmd/goimports -w -local=github.com/Azure/ARO-RP pkg/client
+	hack/build-client.sh 2020-04-30 2020-10-31-preview
 
 generate:
 	go generate ./...
