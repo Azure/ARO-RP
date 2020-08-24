@@ -11,6 +11,10 @@ type AsyncOperationDocuments struct {
 	AsyncOperationDocuments []*AsyncOperationDocument `json:"Documents,omitempty"`
 }
 
+func (c *AsyncOperationDocuments) String() string {
+	return encodeJSON(c)
+}
+
 // AsyncOperationDocument represents a asyncOperation document.
 // pkg/database/cosmosdb requires its definition.
 type AsyncOperationDocument struct {
@@ -29,4 +33,8 @@ type AsyncOperationDocument struct {
 
 	OpenShiftClusterKey string            `json:"openShiftClusterKey,omitempty"`
 	OpenShiftCluster    *OpenShiftCluster `json:"openShiftCluster,omitempty"`
+}
+
+func (c *AsyncOperationDocument) String() string {
+	return encodeJSON(c)
 }
