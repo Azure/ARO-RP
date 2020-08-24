@@ -78,19 +78,19 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 			wantEntries: []test_log.ExpectedLogEntry{
 				{
 					Level:   logrus.InfoLevel,
-					Message: `running step [Action github.com/Azure/ARO-RP/pkg/install.failingFunc]`,
+					Message: `running step [Action github.com/Azure/ARO-RP/pkg/cluster.failingFunc]`,
 				},
 				{
 					Level:   logrus.ErrorLevel,
-					Message: "step [Action github.com/Azure/ARO-RP/pkg/install.failingFunc] encountered error: oh no!",
+					Message: "step [Action github.com/Azure/ARO-RP/pkg/cluster.failingFunc] encountered error: oh no!",
 				},
 				{
 					Level:        logrus.InfoLevel,
-					MessageRegex: `github.com/Azure/ARO-RP/pkg/cluster.\(\*cluster\).logClusterVersion\-fm: {.*"version":"1.2.3".*}`,
+					MessageRegex: `github.com/Azure/ARO-RP/pkg/cluster.\(\*manager\).logClusterVersion\-fm: {.*"version":"1.2.3".*}`,
 				},
 				{
 					Level:        logrus.InfoLevel,
-					MessageRegex: `github.com/Azure/ARO-RP/pkg/cluster.\(\*cluster\).logClusterOperators\-fm: {.*"versions":\[{"name":"operator","version":"4.3.0"},{"name":"operator\-good","version":"4.3.1"}\].*}`,
+					MessageRegex: `github.com/Azure/ARO-RP/pkg/cluster.\(\*manager\).logClusterOperators\-fm: {.*"versions":\[{"name":"operator","version":"4.3.0"},{"name":"operator\-good","version":"4.3.1"}\].*}`,
 				},
 			},
 			configcli: fake.NewSimpleClientset(clusterVersion, clusterOperators),
@@ -104,11 +104,11 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 			wantEntries: []test_log.ExpectedLogEntry{
 				{
 					Level:   logrus.InfoLevel,
-					Message: `running step [Action github.com/Azure/ARO-RP/pkg/install.failingFunc]`,
+					Message: `running step [Action github.com/Azure/ARO-RP/pkg/cluster.failingFunc]`,
 				},
 				{
 					Level:   logrus.ErrorLevel,
-					Message: "step [Action github.com/Azure/ARO-RP/pkg/install.failingFunc] encountered error: oh no!",
+					Message: "step [Action github.com/Azure/ARO-RP/pkg/cluster.failingFunc] encountered error: oh no!",
 				},
 				{
 					Level:   logrus.ErrorLevel,
@@ -116,7 +116,7 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				},
 				{
 					Level:   logrus.InfoLevel,
-					Message: `github.com/Azure/ARO-RP/pkg/cluster.(*cluster).logClusterOperators-fm: {"metadata":{},"items":null}`,
+					Message: `github.com/Azure/ARO-RP/pkg/cluster.(*manager).logClusterOperators-fm: {"metadata":{},"items":null}`,
 				},
 			},
 			configcli: fake.NewSimpleClientset(),
