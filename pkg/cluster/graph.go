@@ -4,8 +4,13 @@ package cluster
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"io/ioutil"
 	"reflect"
 
+	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/bootstraplogging"
 	clusterAsset "github.com/openshift/installer/pkg/asset/cluster"
@@ -146,4 +151,80 @@ func (g graph) resolve(a asset.Asset) (asset.Asset, error) {
 	}
 
 	return g[reflect.TypeOf(a)], nil
+}
+
+func (i *manager) graphExists(ctx context.Context) (bool, error) {
+	i.log.Print("checking if graph exists")
+
+	blobService, err := i.getBlobService(ctx, mgmtstorage.Permissions("r"), mgmtstorage.SignedResourceTypesO)
+	if err != nil {
+		return false, err
+	}
+
+	aro := blobService.GetContainerReference("aro")
+	return aro.GetBlobReference("graph").Exists()
+}
+
+func (i *manager) loadGraph(ctx context.Context) (graph, error) {
+	i.log.Print("load graph")
+
+	blobService, err := i.getBlobService(ctx, mgmtstorage.Permissions("r"), mgmtstorage.SignedResourceTypesO)
+	if err != nil {
+		return nil, err
+	}
+
+	aro := blobService.GetContainerReference("aro")
+	cluster := aro.GetBlobReference("graph")
+	rc, err := cluster.Get(nil)
+	if err != nil {
+		return nil, err
+	}
+	defer rc.Close()
+
+	encrypted, err := ioutil.ReadAll(rc)
+	if err != nil {
+		return nil, err
+	}
+
+	output, err := i.cipher.Decrypt(encrypted)
+	if err != nil {
+		return nil, err
+	}
+
+	var g graph
+	err = json.Unmarshal(output, &g)
+	if err != nil {
+		return nil, err
+	}
+
+	return g, nil
+}
+
+func (i *manager) saveGraph(ctx context.Context, g graph) error {
+	i.log.Print("save graph")
+
+	blobService, err := i.getBlobService(ctx, mgmtstorage.Permissions("cw"), mgmtstorage.SignedResourceTypesO)
+	if err != nil {
+		return err
+	}
+
+	bootstrap := g[reflect.TypeOf(&bootstrap.Bootstrap{})].(*bootstrap.Bootstrap)
+	bootstrapIgn := blobService.GetContainerReference("ignition").GetBlobReference("bootstrap.ign")
+	err = bootstrapIgn.CreateBlockBlobFromReader(bytes.NewReader(bootstrap.File.Data), nil)
+	if err != nil {
+		return err
+	}
+
+	graph := blobService.GetContainerReference("aro").GetBlobReference("graph")
+	b, err := json.MarshalIndent(g, "", "    ")
+	if err != nil {
+		return err
+	}
+
+	output, err := i.cipher.Encrypt(b)
+	if err != nil {
+		return err
+	}
+
+	return graph.CreateBlockBlobFromReader(bytes.NewReader([]byte(output)), nil)
 }

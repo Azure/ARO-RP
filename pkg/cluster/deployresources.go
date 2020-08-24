@@ -6,19 +6,26 @@ package cluster
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"reflect"
 	"time"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	mgmtprivatedns "github.com/Azure/azure-sdk-for-go/services/privatedns/mgmt/2018-09-01/privatedns"
+	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset/ignition/machine"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
@@ -593,4 +600,52 @@ func zones(installConfig *installconfig.InstallConfig) (zones *[]string, err err
 		err = fmt.Errorf("cluster creation with %d zone(s) and %d replica(s) is unimplemented", zoneCount, replicas)
 	}
 	return
+}
+
+func (i *manager) deployARMTemplate(ctx context.Context, rg string, tName string, t *arm.Template, params map[string]interface{}) error {
+	i.log.Printf("deploying %s template", tName)
+
+	err := i.deployments.CreateOrUpdateAndWait(ctx, rg, deploymentName, mgmtfeatures.Deployment{
+		Properties: &mgmtfeatures.DeploymentProperties{
+			Template:   t,
+			Parameters: params,
+			Mode:       mgmtfeatures.Incremental,
+		},
+	})
+
+	if azureerrors.IsDeploymentActiveError(err) {
+		i.log.Printf("waiting for %s template to be deployed", tName)
+		err = i.deployments.Wait(ctx, rg, deploymentName)
+	}
+
+	if azureerrors.HasAuthorizationFailedError(err) ||
+		azureerrors.HasLinkedAuthorizationFailedError(err) {
+		return err
+	}
+
+	serviceErr, _ := err.(*azure.ServiceError) // futures return *azure.ServiceError directly
+
+	// CreateOrUpdate() returns a wrapped *azure.ServiceError
+	if detailedErr, ok := err.(autorest.DetailedError); ok {
+		serviceErr, _ = detailedErr.Original.(*azure.ServiceError)
+	}
+
+	if serviceErr != nil {
+		b, _ := json.Marshal(serviceErr)
+
+		return &api.CloudError{
+			StatusCode: http.StatusBadRequest,
+			CloudErrorBody: &api.CloudErrorBody{
+				Code:    api.CloudErrorCodeDeploymentFailed,
+				Message: "Deployment failed.",
+				Details: []api.CloudErrorBody{
+					{
+						Message: string(b),
+					},
+				},
+			},
+		}
+	}
+
+	return err
 }
