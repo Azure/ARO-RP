@@ -11,6 +11,9 @@ import (
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	samplesclient "github.com/openshift/client-go/samples/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
+	"github.com/openshift/installer/pkg/asset/bootstraplogging"
+	"github.com/openshift/installer/pkg/asset/installconfig"
+	"github.com/openshift/installer/pkg/asset/releaseimage"
 	"github.com/sirupsen/logrus"
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/client-go/kubernetes"
@@ -31,6 +34,13 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
+
+type Interface interface {
+	Install(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image, bootstrapLoggingConfig *bootstraplogging.Config) error
+	AdminUpgrade(ctx context.Context) error
+}
+
+var _ Interface = &manager{}
 
 // manager contains information needed to install and maintain an ARO cluster
 type manager struct {
