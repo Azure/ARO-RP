@@ -29,14 +29,14 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 	}
 
 	if d.fullDeploy {
-		_, err = d.groups.CreateOrUpdate(ctx, d.config.Configuration.SubscriptionResourceGroupName, mgmtfeatures.ResourceGroup{
+		_, err = d.groups.CreateOrUpdate(ctx, *d.config.Configuration.SubscriptionResourceGroupName, mgmtfeatures.ResourceGroup{
 			Location: to.StringPtr("centralus"),
 		})
 		if err != nil {
 			return err
 		}
 
-		_, err = d.groups.CreateOrUpdate(ctx, d.config.Configuration.GlobalResourceGroupName, mgmtfeatures.ResourceGroup{
+		_, err = d.groups.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, mgmtfeatures.ResourceGroup{
 			Location: to.StringPtr("centralus"),
 		})
 		if err != nil {
@@ -69,7 +69,7 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 	// Due to https://github.com/Azure/azure-resource-manager-schemas/issues/1067
 	// we can't use conditions to define ACR replication object deployment.
 	// We use ACRReplicaDisabled in the same way as we use fullDeploy.
-	if !d.config.Configuration.ACRReplicaDisabled {
+	if d.config.Configuration.ACRReplicaDisabled != nil && !*d.config.Configuration.ACRReplicaDisabled {
 		err = d.deployGloalACRReplication(ctx)
 		if err != nil {
 			return err
@@ -117,7 +117,7 @@ func (d *deployer) deployGlobal(ctx context.Context, rpServicePrincipalID string
 	}
 
 	d.log.Infof("deploying %s", deploymentName)
-	return d.globaldeployments.CreateOrUpdateAndWait(ctx, d.config.Configuration.GlobalResourceGroupName, deploymentName, mgmtfeatures.Deployment{
+	return d.globaldeployments.CreateOrUpdateAndWait(ctx, *d.config.Configuration.GlobalResourceGroupName, deploymentName, mgmtfeatures.Deployment{
 		Properties: &mgmtfeatures.DeploymentProperties{
 			Template:   template,
 			Mode:       mgmtfeatures.Incremental,
@@ -146,7 +146,7 @@ func (d *deployer) deployGloalACRReplication(ctx context.Context) error {
 	}
 
 	d.log.Infof("deploying %s", deploymentName)
-	return d.globaldeployments.CreateOrUpdateAndWait(ctx, d.config.Configuration.GlobalResourceGroupName, deploymentName, mgmtfeatures.Deployment{
+	return d.globaldeployments.CreateOrUpdateAndWait(ctx, *d.config.Configuration.GlobalResourceGroupName, deploymentName, mgmtfeatures.Deployment{
 		Properties: &mgmtfeatures.DeploymentProperties{
 			Template:   template,
 			Mode:       mgmtfeatures.Incremental,
@@ -199,7 +199,7 @@ func (d *deployer) deploySubscription(ctx context.Context) error {
 	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
 
 	d.log.Infof("deploying %s", deploymentName)
-	return d.deployments.CreateOrUpdateAndWait(ctx, d.config.Configuration.SubscriptionResourceGroupName, deploymentName, mgmtfeatures.Deployment{
+	return d.deployments.CreateOrUpdateAndWait(ctx, *d.config.Configuration.SubscriptionResourceGroupName, deploymentName, mgmtfeatures.Deployment{
 		Properties: &mgmtfeatures.DeploymentProperties{
 			Template:   template,
 			Mode:       mgmtfeatures.Incremental,
@@ -277,7 +277,7 @@ func (d *deployer) deployPreDeploy(ctx context.Context, rpServicePrincipalID str
 }
 
 func (d *deployer) configureServiceSecrets(ctx context.Context) error {
-	serviceKeyVaultURI := "https://" + d.config.Configuration.KeyvaultPrefix + "-svc.vault.azure.net/"
+	serviceKeyVaultURI := "https://" + *d.config.Configuration.KeyvaultPrefix + "-svc.vault.azure.net/"
 	secrets, err := d.keyvault.GetSecrets(ctx, serviceKeyVaultURI, nil)
 	if err != nil {
 		return err

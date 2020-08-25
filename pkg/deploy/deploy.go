@@ -71,8 +71,8 @@ func New(ctx context.Context, log *logrus.Entry, config *RPConfig, version strin
 	return &deployer{
 		log: log,
 
-		globaldeployments:      features.NewDeploymentsClient(config.Configuration.GlobalSubscriptionID, authorizer),
-		globalrecordsets:       dns.NewRecordSetsClient(config.Configuration.GlobalSubscriptionID, authorizer),
+		globaldeployments:      features.NewDeploymentsClient(*config.Configuration.GlobalSubscriptionID, authorizer),
+		globalrecordsets:       dns.NewRecordSetsClient(*config.Configuration.GlobalSubscriptionID, authorizer),
 		deployments:            features.NewDeploymentsClient(config.SubscriptionID, authorizer),
 		groups:                 features.NewResourceGroupsClient(config.SubscriptionID, authorizer),
 		metricalerts:           insights.NewMetricAlertsClient(config.SubscriptionID, authorizer),
@@ -110,16 +110,16 @@ func (d *deployer) Deploy(ctx context.Context) error {
 
 	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
 	parameters.Parameters["adminApiCaBundle"] = &arm.ParametersParameter{
-		Value: base64.StdEncoding.EncodeToString([]byte(d.config.Configuration.AdminAPICABundle)),
+		Value: base64.StdEncoding.EncodeToString([]byte(*d.config.Configuration.AdminAPICABundle)),
 	}
 	parameters.Parameters["domainName"] = &arm.ParametersParameter{
-		Value: d.config.Location + "." + d.config.Configuration.ClusterParentDomainName,
+		Value: d.config.Location + "." + *d.config.Configuration.ClusterParentDomainName,
 	}
 	parameters.Parameters["extraCosmosDBIPs"] = &arm.ParametersParameter{
 		Value: strings.Join(d.config.Configuration.ExtraCosmosDBIPs, ","),
 	}
 	parameters.Parameters["rpImage"] = &arm.ParametersParameter{
-		Value: d.config.Configuration.RPImagePrefix + ":" + d.version,
+		Value: *d.config.Configuration.RPImagePrefix + ":" + d.version,
 	}
 	parameters.Parameters["rpServicePrincipalId"] = &arm.ParametersParameter{
 		Value: msi.PrincipalID.String(),
@@ -177,12 +177,12 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 		return err
 	}
 
-	zone, err := d.zones.Get(ctx, d.config.ResourceGroupName, d.config.Location+"."+d.config.Configuration.ClusterParentDomainName)
+	zone, err := d.zones.Get(ctx, d.config.ResourceGroupName, d.config.Location+"."+*d.config.Configuration.ClusterParentDomainName)
 	if err != nil {
 		return err
 	}
 
-	_, err = d.globalrecordsets.CreateOrUpdate(ctx, d.config.Configuration.GlobalResourceGroupName, d.config.Configuration.RPParentDomainName, "rp."+d.config.Location, mgmtdns.A, mgmtdns.RecordSet{
+	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.RPParentDomainName, "rp."+d.config.Location, mgmtdns.A, mgmtdns.RecordSet{
 		RecordSetProperties: &mgmtdns.RecordSetProperties{
 			TTL: to.Int64Ptr(3600),
 			ARecords: &[]mgmtdns.ARecord{
@@ -203,7 +203,7 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 		})
 	}
 
-	_, err = d.globalrecordsets.CreateOrUpdate(ctx, d.config.Configuration.GlobalResourceGroupName, d.config.Configuration.ClusterParentDomainName, d.config.Location, mgmtdns.NS, mgmtdns.RecordSet{
+	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.ClusterParentDomainName, d.config.Location, mgmtdns.NS, mgmtdns.RecordSet{
 		RecordSetProperties: &mgmtdns.RecordSetProperties{
 			TTL:       to.Int64Ptr(3600),
 			NsRecords: &nsRecords,
@@ -242,9 +242,12 @@ func (d *deployer) removeOldMetricAlerts(ctx context.Context) error {
 // from d.config.Configuration.
 func (d *deployer) getParameters(ps map[string]interface{}) *arm.Parameters {
 	m := map[string]interface{}{}
-
 	v := reflect.ValueOf(*d.config.Configuration)
 	for i := 0; i < v.NumField(); i++ {
+		if v.Field(i).IsNil() {
+			continue
+		}
+
 		m[strings.SplitN(v.Type().Field(i).Tag.Get("json"), ",", 2)[0]] = v.Field(i).Interface()
 	}
 
@@ -253,8 +256,15 @@ func (d *deployer) getParameters(ps map[string]interface{}) *arm.Parameters {
 	}
 
 	for p := range ps {
+		// do not convert empty fields
+		// makes default values templates work
+		v, ok := m[p]
+		if !ok {
+			continue
+		}
+
 		parameters.Parameters[p] = &arm.ParametersParameter{
-			Value: m[p],
+			Value: v,
 		}
 	}
 
