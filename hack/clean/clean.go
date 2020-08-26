@@ -21,6 +21,20 @@ var (
 	dryRun = flag.Bool("dryRun", true, `Dry run`)
 )
 
+var denylist = []string{
+	"aro-v4-shared",
+	"aro-v4-shared-cluster",
+	"v4-eastus",
+	"v4-australiasoutheast",
+	"v4-westeurope",
+	"management-westeurope",
+	"management-eastus",
+	"management-australiasoutheast",
+	"images",
+	"secrets",
+	"dns",
+}
+
 const (
 	defaultTTL          = 48 * time.Hour
 	defaultCreatedAtTag = "createdAt"
@@ -101,13 +115,8 @@ func run(ctx context.Context, log *logrus.Entry) error {
 			return false
 		}
 
-		// TODO: Remove me when shared cluster tagging is solved
-		// TODO: Remove when people stop re-using shared RG for their vnets
-		// and tags are not removed.
-		if strings.HasPrefix(*resourceGroup.Name, "aro-v4-shared") ||
-			strings.HasPrefix(*resourceGroup.Name, "v4-eastus") ||
-			strings.HasPrefix(*resourceGroup.Name, "v4-australiasoutheast") ||
-			strings.HasPrefix(*resourceGroup.Name, "v4-westeurope") {
+		// TODO(mj): Fix this!
+		if contains(denylist, *resourceGroup.Name) {
 			return false
 		}
 
@@ -122,4 +131,13 @@ func run(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	return rc.CleanResourceGroups(ctx)
+}
+
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
 }
