@@ -64,8 +64,8 @@ func (fi fileInfo) ModTime() time.Time { return time.Time{} }
 
 func main() {
 	err := vfsgen.Generate(fileSystem{http.Dir("../../vendor/github.com/openshift/installer/data/data")}, vfsgen.Options{
-		Filename:     "../../pkg/install/assets_vfsdata.go",
-		PackageName:  "install",
+		Filename:     "../../pkg/cluster/assets_vfsdata.go",
+		PackageName:  "cluster",
 		VariableName: "Assets",
 	})
 	if err != nil {
