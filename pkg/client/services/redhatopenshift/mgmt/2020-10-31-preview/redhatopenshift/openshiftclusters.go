@@ -94,7 +94,7 @@ func (client OpenShiftClustersClient) CreateOrUpdatePreparer(ctx context.Context
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2020-04-30"
+	const APIVersion = "2020-10-31-preview"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -182,7 +182,7 @@ func (client OpenShiftClustersClient) DeletePreparer(ctx context.Context, resour
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2020-04-30"
+	const APIVersion = "2020-10-31-preview"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -273,7 +273,7 @@ func (client OpenShiftClustersClient) GetPreparer(ctx context.Context, resourceG
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2020-04-30"
+	const APIVersion = "2020-10-31-preview"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -354,7 +354,7 @@ func (client OpenShiftClustersClient) ListPreparer(ctx context.Context) (*http.R
 		"subscriptionId": autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2020-04-30"
+	const APIVersion = "2020-10-31-preview"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -479,7 +479,7 @@ func (client OpenShiftClustersClient) ListByResourceGroupPreparer(ctx context.Co
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2020-04-30"
+	const APIVersion = "2020-10-31-preview"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -602,7 +602,7 @@ func (client OpenShiftClustersClient) ListCredentialsPreparer(ctx context.Contex
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2020-04-30"
+	const APIVersion = "2020-10-31-preview"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -683,7 +683,7 @@ func (client OpenShiftClustersClient) UpdatePreparer(ctx context.Context, resour
 		"subscriptionId":    autorest.Encode("path", client.SubscriptionID),
 	}
 
-	const APIVersion = "2020-04-30"
+	const APIVersion = "2020-10-31-preview"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
