@@ -100,7 +100,7 @@ func mergeConfig(primary, secondary *Configuration) (*Configuration, error) {
 
 // CheckRequiredFields validates configuration whether it provides required fields.
 // Config is invalid if required fields are not provided.
-func (conf *RPConfig) CheckRequiredFields() error {
+func (conf *RPConfig) validate() error {
 	configuration := conf.Configuration
 	v := reflect.ValueOf(*configuration)
 	missingFields := []string{}
@@ -112,8 +112,6 @@ func (conf *RPConfig) CheckRequiredFields() error {
 			missingFields = append(missingFields, v.Type().Field(i).Name)
 		}
 	}
-
-	fmt.Println(missingFields)
 
 	if len(missingFields) == 0 {
 		return nil

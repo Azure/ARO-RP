@@ -148,7 +148,7 @@ func TestConfigRequiredValues(t *testing.T) {
 			expect: fmt.Errorf("Configuration has missing fields: %s", "[MDMFrontendURL]"),
 		},
 	} {
-		valid := tt.config.CheckRequiredFields()
+		valid := checkRequiredFields(tt.config)
 		if valid != tt.expect && valid.Error() != tt.expect.Error() {
 			t.Errorf("Expected %s but got %s", tt.name, valid.Error())
 		}
