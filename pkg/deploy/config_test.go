@@ -118,6 +118,24 @@ func TestConfigRequiredValues(t *testing.T) {
 	ACRResourceID := "ACRResourceID"
 	ExtraCosmosDBIPs := "ExtraCosmosDBIPs"
 	MDMFrontendURL := "MDMFrontendURL"
+	AdminAPIClientCertCommonName := "AdminAPIClientCertCommonName"
+	ClusterParentDomainName := "ClusterParentDomainName"
+	DatabaseAccountName := "DatabaseAccountName"
+	FPServerCertCommonName := "FPServerCertCommonName"
+	FPServicePrincipalID := "FPServicePrincipalID"
+	GlobalMonitoringKeyVaultURI := "GlobalMonitoringKeyVaultURI"
+	GlobalResourceGroupName := "GlobalResourceGroupName"
+	GlobalSubscriptionID := "GlobalSubscriptionID"
+	KeyvaultPrefix := "KeyvaultPrefix"
+	MDSDConfigVersion := "MDSDConfigVersion"
+	MDSDEnvironment := "MDSDEnvironment"
+	RPImagePrefix := "RPImagePrefix"
+	RPMode := "RPMode"
+	RPParentDomainName := "RPParentDomainName"
+	RPVersionStorageAccountName := "RPVersionStorageAccountName"
+	SSHPublicKey := "SSHPublicKey"
+	SubscriptionResourceGroupName := "SubscriptionResourceGroupName"
+	VMSize := "VMSize"
 
 	for _, tt := range []struct {
 		name   string
@@ -128,10 +146,32 @@ func TestConfigRequiredValues(t *testing.T) {
 			name: "valid config",
 			config: RPConfig{
 				Configuration: &Configuration{
-					ACRResourceID:    &ACRResourceID,
-					AdminAPICABundle: &AdminAPICABundle,
-					ExtraCosmosDBIPs: []string{ExtraCosmosDBIPs},
-					MDMFrontendURL:   &MDMFrontendURL,
+					ACRResourceID:                      &ACRResourceID,
+					AdminAPICABundle:                   &AdminAPICABundle,
+					ExtraCosmosDBIPs:                   []string{ExtraCosmosDBIPs},
+					MDMFrontendURL:                     &MDMFrontendURL,
+					ACRReplicaDisabled:                 to.BoolPtr(true),
+					AdminAPIClientCertCommonName:       &AdminAPIClientCertCommonName,
+					ClusterParentDomainName:            &ClusterParentDomainName,
+					DatabaseAccountName:                &DatabaseAccountName,
+					ExtraClusterKeyvaultAccessPolicies: []interface{}{},
+					ExtraServiceKeyvaultAccessPolicies: []interface{}{},
+					FPServerCertCommonName:             &FPServerCertCommonName,
+					FPServicePrincipalID:               &FPServicePrincipalID,
+					GlobalMonitoringKeyVaultURI:        &GlobalMonitoringKeyVaultURI,
+					GlobalResourceGroupName:            &GlobalResourceGroupName,
+					GlobalSubscriptionID:               &GlobalSubscriptionID,
+					KeyvaultPrefix:                     &KeyvaultPrefix,
+					MDSDConfigVersion:                  &MDSDConfigVersion,
+					MDSDEnvironment:                    &MDSDEnvironment,
+					RPImagePrefix:                      &RPImagePrefix,
+					RPMode:                             &RPMode,
+					RPNSGSourceAddressPrefixes:         []string{},
+					RPParentDomainName:                 &RPParentDomainName,
+					RPVersionStorageAccountName:        &RPVersionStorageAccountName,
+					SSHPublicKey:                       &SSHPublicKey,
+					SubscriptionResourceGroupName:      &SubscriptionResourceGroupName,
+					VMSize:                             &VMSize,
 				},
 			},
 			expect: nil,
@@ -145,10 +185,10 @@ func TestConfigRequiredValues(t *testing.T) {
 					ExtraCosmosDBIPs: []string{ExtraCosmosDBIPs},
 				},
 			},
-			expect: fmt.Errorf("Configuration has missing fields: %s", "[MDMFrontendURL]"),
+			expect: fmt.Errorf("Configuration has missing fields: %s", "[RPVersionStorageAccountName AdminAPIClientCertCommonName ClusterParentDomainName DatabaseAccountName ExtraClusterKeyvaultAccessPolicies ExtraServiceKeyvaultAccessPolicies FPServicePrincipalID GlobalMonitoringKeyVaultURI GlobalResourceGroupName GlobalSubscriptionID KeyvaultPrefix MDMFrontendURL MDSDConfigVersion MDSDEnvironment RPImagePrefix RPNSGSourceAddressPrefixes RPParentDomainName SubscriptionResourceGroupName SSHPublicKey VMSize]"),
 		},
 	} {
-		valid := checkRequiredFields(tt.config)
+		valid := tt.config.validate()
 		if valid != tt.expect && valid.Error() != tt.expect.Error() {
 			t.Errorf("Expected %s but got %s", tt.name, valid.Error())
 		}
