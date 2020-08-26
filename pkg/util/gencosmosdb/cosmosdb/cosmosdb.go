@@ -51,6 +51,9 @@ func IsErrorStatusCode(err error, statusCode int) bool {
 // PUT or DELETE operation
 var ErrETagRequired = fmt.Errorf("ETag is required")
 
+// ErrNotImplemented is the error returned if a fake function is not implemented
+var ErrNotImplemented = fmt.Errorf("not implemented")
+
 // RetryOnPreconditionFailed retries a function if it fails due to
 // PreconditionFailed
 func RetryOnPreconditionFailed(f func() error) (err error) {

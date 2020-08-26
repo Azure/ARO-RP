@@ -43,7 +43,7 @@ func unexport(s string) string {
 
 func run() error {
 	for _, name := range gencosmosdb.AssetNames() {
-		if name == "template.go" {
+		if name == "template.go" || name == "template_fake.go" {
 			continue
 		}
 
@@ -65,19 +65,39 @@ func run() error {
 		singular := unexport(singularExported)
 		plural := unexport(pluralExported)
 
-		data := gencosmosdb.MustAsset("template.go")
+		// TODO: hack! don't merge this
+		{
+			data := gencosmosdb.MustAsset("template.go")
 
-		data = importRegexp.ReplaceAll(data, []byte("\tpkg \""+importpkg+"\""))
+			data = importRegexp.ReplaceAll(data, []byte("\tpkg \""+importpkg+"\""))
 
-		// plural must be done before singular ("template" is a sub-string of "templates")
-		data = pluralRegexp.ReplaceAll(data, []byte(plural))
-		data = pluralExportedRegexp.ReplaceAll(data, []byte(pluralExported))
-		data = singularRegexp.ReplaceAll(data, []byte(singular))
-		data = singularExportedRegexp.ReplaceAll(data, []byte(singularExported))
+			// plural must be done before singular ("template" is a sub-string of "templates")
+			data = pluralRegexp.ReplaceAll(data, []byte(plural))
+			data = pluralExportedRegexp.ReplaceAll(data, []byte(pluralExported))
+			data = singularRegexp.ReplaceAll(data, []byte(singular))
+			data = singularExportedRegexp.ReplaceAll(data, []byte(singularExported))
 
-		err := writeFile("zz_generated_"+strings.ToLower(singularExported)+".go", data)
-		if err != nil {
-			return err
+			err := writeFile("zz_generated_"+strings.ToLower(singularExported)+".go", data)
+			if err != nil {
+				return err
+			}
+		}
+
+		{
+			data := gencosmosdb.MustAsset("template_fake.go")
+
+			data = importRegexp.ReplaceAll(data, []byte("\tpkg \""+importpkg+"\""))
+
+			// plural must be done before singular ("template" is a sub-string of "templates")
+			data = pluralRegexp.ReplaceAll(data, []byte(plural))
+			data = pluralExportedRegexp.ReplaceAll(data, []byte(pluralExported))
+			data = singularRegexp.ReplaceAll(data, []byte(singular))
+			data = singularExportedRegexp.ReplaceAll(data, []byte(singularExported))
+
+			err := writeFile("zz_generated_"+strings.ToLower(singularExported)+"_fake.go", data)
+			if err != nil {
+				return err
+			}
 		}
 	}
 

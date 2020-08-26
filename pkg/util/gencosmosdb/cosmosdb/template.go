@@ -17,7 +17,7 @@ type templateClient struct {
 // TemplateClient is a template client
 type TemplateClient interface {
 	Create(context.Context, string, *pkg.Template, *Options) (*pkg.Template, error)
-	List(*Options) TemplateRawIterator
+	List(*Options) TemplateIterator
 	ListAll(context.Context, *Options) (*pkg.Templates, error)
 	Get(context.Context, string, string, *Options) (*pkg.Template, error)
 	Replace(context.Context, string, *pkg.Template, *Options) (*pkg.Template, error)
@@ -107,7 +107,7 @@ func (c *templateClient) Create(ctx context.Context, partitionkey string, newtem
 	return
 }
 
-func (c *templateClient) List(options *Options) TemplateRawIterator {
+func (c *templateClient) List(options *Options) TemplateIterator {
 	continuation := ""
 	if options != nil {
 		continuation = options.Continuation
@@ -237,11 +237,6 @@ func (i *templateChangeFeedIterator) Continuation() string {
 }
 
 func (i *templateListIterator) Next(ctx context.Context, maxItemCount int) (templates *pkg.Templates, err error) {
-	err = i.NextRaw(ctx, maxItemCount, &templates)
-	return
-}
-
-func (i *templateListIterator) NextRaw(ctx context.Context, maxItemCount int, raw interface{}) (err error) {
 	if i.done {
 		return
 	}
@@ -257,7 +252,7 @@ func (i *templateListIterator) NextRaw(ctx context.Context, maxItemCount int, ra
 		return
 	}
 
-	err = i.do(ctx, http.MethodGet, i.path+"/docs", "docs", i.path, http.StatusOK, nil, &raw, headers)
+	err = i.do(ctx, http.MethodGet, i.path+"/docs", "docs", i.path, http.StatusOK, nil, &templates, headers)
 	if err != nil {
 		return
 	}
