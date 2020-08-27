@@ -731,7 +731,7 @@ gpgcheck=yes
 EOF
 
 for attempt in {1..5}; do
-yum -y install azsec-clamav azsec-monitor azure-cli azure-mdsd azure-security docker td-agent-bit && break
+yum -y install azsec-clamav azsec-monitor azure-cli-2.10.1 azure-mdsd azure-security docker td-agent-bit && break
   if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
 done
 
