@@ -9,7 +9,6 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
-	clusterapi "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -36,7 +35,7 @@ type WorkaroundReconciler struct {
 	log           *logrus.Entry
 }
 
-func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, configcli configclient.Interface, mcocli mcoclient.Interface, clustercli clusterapi.Interface, arocli aroclient.AroV1alpha1Interface, restConfig *rest.Config) *WorkaroundReconciler {
+func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, configcli configclient.Interface, mcocli mcoclient.Interface, arocli aroclient.AroV1alpha1Interface, restConfig *rest.Config) *WorkaroundReconciler {
 	dh, err := dynamichelper.New(log, restConfig)
 	if err != nil {
 		panic(err)
@@ -47,7 +46,7 @@ func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, config
 		configcli:     configcli,
 		arocli:        arocli,
 		restConfig:    restConfig,
-		workarounds:   []Workaround{NewSystemReserved(log, mcocli, clustercli, dh)},
+		workarounds:   []Workaround{NewSystemReserved(log, mcocli, dh)},
 		log:           log,
 	}
 }
