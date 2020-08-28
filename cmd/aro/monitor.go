@@ -19,6 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/azure"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/k8s"
 	pkgmonitor "github.com/Azure/ARO-RP/pkg/monitor"
+	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 )
 
@@ -87,7 +88,12 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	mon := pkgmonitor.NewMonitor(log.WithField("component", "monitor"), _env, dbmonitors, dbopenshiftclusters, dbsubscriptions, m, clusterm)
+	dialer, err := proxy.NewDialer(_env)
+	if err != nil {
+		return err
+	}
+
+	mon := pkgmonitor.NewMonitor(log.WithField("component", "monitor"), dialer, dbmonitors, dbopenshiftclusters, dbsubscriptions, m, clusterm)
 
 	return mon.Run(ctx)
 }

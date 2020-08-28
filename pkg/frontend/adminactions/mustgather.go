@@ -21,7 +21,6 @@ import (
 )
 
 func (a *adminactions) MustGather(ctx context.Context, w http.ResponseWriter) error {
-
 	ns, err := a.k8sClient.CoreV1().Namespaces().Create(&corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "openshift-must-gather-",
@@ -148,7 +147,7 @@ func (a *adminactions) MustGather(ctx context.Context, w http.ResponseWriter) er
 	}
 
 	a.log.Info("must-gather pod running")
-	rc, err := portforward.ExecStdout(ctx, a.log, a.env, a.oc, pod.Namespace, pod.Name, "copy", []string{"tar", "cz", "/must-gather"})
+	rc, err := portforward.ExecStdout(ctx, a.log, a.dialer, a.oc, pod.Namespace, pod.Name, "copy", []string{"tar", "cz", "/must-gather"})
 	if err != nil {
 		return err
 	}

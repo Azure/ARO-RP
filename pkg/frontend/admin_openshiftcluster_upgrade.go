@@ -45,7 +45,7 @@ func (f *frontend) _postAdminOpenShiftUpgrade(ctx context.Context, r *http.Reque
 		return err
 	}
 
-	a, err := f.adminActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
+	a, err := f.adminActionsFactory(log, f.env, f.dialer, doc.OpenShiftCluster, subscriptionDoc)
 	if err != nil {
 		return err
 	}

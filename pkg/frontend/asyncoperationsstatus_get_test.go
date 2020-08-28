@@ -182,7 +182,7 @@ func TestGetAsyncOperationsStatus(t *testing.T) {
 
 			tt.mocks(dbopenshiftclusters, dbasyncoperations)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, dbasyncoperations, dbopenshiftclusters, nil, api.APIs, &noop.Noop{}, nil, nil)
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, dbasyncoperations, dbopenshiftclusters, nil, api.APIs, &noop.Noop{}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

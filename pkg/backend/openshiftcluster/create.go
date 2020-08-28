@@ -309,7 +309,7 @@ func (m *Manager) Create(ctx context.Context) error {
 		return err
 	}
 
-	i, err := cluster.New(ctx, m.log, m.env, m.db, m.cipher, m.billing, m.doc, m.subscriptionDoc)
+	i, err := cluster.New(ctx, m.log, m.env, m.dialer, m.db, m.cipher, m.billing, m.doc, m.subscriptionDoc)
 	if err != nil {
 		return err
 	}

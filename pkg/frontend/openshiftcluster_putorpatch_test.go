@@ -228,7 +228,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					},
 				}, nil)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, dbasyncoperations, dbopenshiftclusters, dbsubscriptions, apis, &noop.Noop{}, nil, nil)
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, dbasyncoperations, dbopenshiftclusters, dbsubscriptions, apis, &noop.Noop{}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -884,7 +884,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				}, nil)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, dbasyncoperations, dbopenshiftclusters, dbsubscriptions, apis, &noop.Noop{}, nil, nil)
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, dbasyncoperations, dbopenshiftclusters, dbsubscriptions, apis, &noop.Noop{}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

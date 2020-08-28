@@ -48,7 +48,6 @@ type Interface interface {
 	ClustersGenevaLoggingEnvironment() string
 	ClustersGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate)
 	ClustersKeyvaultURI() string
-	DialContext(context.Context, string, string) (net.Conn, error)
 	Domain() string
 	FPAuthorizer(string, string) (refreshable.Authorizer, error)
 	Listen() (net.Listener, error)

@@ -14,6 +14,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
+	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
@@ -27,6 +28,7 @@ const (
 type backend struct {
 	baseLog *logrus.Entry
 	env     env.Interface
+	dialer  proxy.Dialer
 
 	dbasyncoperations   database.AsyncOperations
 	dbbilling           database.Billing
@@ -52,10 +54,11 @@ type Runnable interface {
 }
 
 // NewBackend returns a new runnable backend
-func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, dbasyncoperations database.AsyncOperations, dbbilling database.Billing, dbopenshiftclusters database.OpenShiftClusters, dbsubscriptions database.Subscriptions, cipher encryption.Cipher, m metrics.Interface) (Runnable, error) {
+func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, dialer proxy.Dialer, dbasyncoperations database.AsyncOperations, dbbilling database.Billing, dbopenshiftclusters database.OpenShiftClusters, dbsubscriptions database.Subscriptions, cipher encryption.Cipher, m metrics.Interface) (Runnable, error) {
 	b := &backend{
 		baseLog: log,
 		env:     env,
+		dialer:  dialer,
 
 		dbasyncoperations:   dbasyncoperations,
 		dbbilling:           dbbilling,

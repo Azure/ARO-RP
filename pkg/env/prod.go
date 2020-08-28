@@ -11,7 +11,6 @@ import (
 	"net"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
@@ -225,13 +224,6 @@ func (p *prod) ClustersGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate
 
 func (p *prod) ClustersKeyvaultURI() string {
 	return p.clustersKeyvaultURI
-}
-
-func (p *prod) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
-	return (&net.Dialer{
-		Timeout:   30 * time.Second,
-		KeepAlive: 30 * time.Second,
-	}).DialContext(ctx, network, address)
 }
 
 func (p *prod) Domain() string {

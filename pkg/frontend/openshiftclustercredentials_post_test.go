@@ -238,7 +238,7 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 				tt.mocks(tt, dbopenshiftclusters)
 			}
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, dbopenshiftclusters, dbsubscriptions, apis, &noop.Noop{}, nil, nil)
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, nil, dbopenshiftclusters, dbsubscriptions, apis, &noop.Noop{}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

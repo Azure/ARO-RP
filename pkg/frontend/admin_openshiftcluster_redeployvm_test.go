@@ -17,6 +17,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
+	"github.com/Azure/ARO-RP/pkg/proxy"
 	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
 	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
 )
@@ -87,7 +88,7 @@ func TestAdminRedeployVM(t *testing.T) {
 			dbsubscriptions := mock_database.NewMockSubscriptions(ti.controller)
 			tt.mocks(tt, a, dbopenshiftclusters, dbsubscriptions)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, dbopenshiftclusters, dbsubscriptions, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster,
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, nil, dbopenshiftclusters, dbsubscriptions, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, proxy.Dialer, *api.OpenShiftCluster,
 				*api.SubscriptionDocument) (adminactions.Interface, error) {
 				return a, nil
 			})

@@ -26,6 +26,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/metrics"
+	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
@@ -39,12 +40,12 @@ func (err statusCodeError) Error() string {
 	return fmt.Sprintf("%d", err)
 }
 
-type adminActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster,
-	*api.SubscriptionDocument) (adminactions.Interface, error)
+type adminActionsFactory func(*logrus.Entry, env.Interface, proxy.Dialer, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.Interface, error)
 
 type frontend struct {
 	baseLog *logrus.Entry
 	env     env.Interface
+	dialer  proxy.Dialer
 
 	dbasyncoperations   database.AsyncOperations
 	dbopenshiftclusters database.OpenShiftClusters
@@ -75,6 +76,7 @@ type Runnable interface {
 func NewFrontend(ctx context.Context,
 	baseLog *logrus.Entry,
 	_env env.Interface,
+	dialer proxy.Dialer,
 	dbasyncoperations database.AsyncOperations,
 	dbopenshiftclusters database.OpenShiftClusters,
 	dbsubscriptions database.Subscriptions,
@@ -85,6 +87,7 @@ func NewFrontend(ctx context.Context,
 	f := &frontend{
 		baseLog: baseLog,
 		env:     _env,
+		dialer:  dialer,
 
 		dbasyncoperations:   dbasyncoperations,
 		dbopenshiftclusters: dbopenshiftclusters,
@@ -95,7 +98,7 @@ func NewFrontend(ctx context.Context,
 		cipher:              cipher,
 		adminActionsFactory: adminActionsFactory,
 
-		ocEnricher: clusterdata.NewBestEffortEnricher(baseLog, _env, m),
+		ocEnricher: clusterdata.NewBestEffortEnricher(baseLog, dialer, m),
 
 		bucketAllocator: &bucket.Random{},
 

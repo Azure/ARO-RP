@@ -249,7 +249,7 @@ func TestListOpenShiftCluster(t *testing.T) {
 					cipher := mock_encryption.NewMockCipher(ti.controller)
 					tt.mocks(controller, dbopenshiftclusters, enricher, cipher, listPrefix)
 
-					f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, dbopenshiftclusters, nil, api.APIs, &noop.Noop{}, cipher, nil)
+					f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, nil, dbopenshiftclusters, nil, api.APIs, &noop.Noop{}, cipher, nil)
 					if err != nil {
 						t.Fatal(err)
 					}

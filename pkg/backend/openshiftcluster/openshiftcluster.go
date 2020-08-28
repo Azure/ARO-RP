@@ -12,6 +12,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/proxy"
 	pkgacrtoken "github.com/Azure/ARO-RP/pkg/util/acrtoken"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
@@ -26,6 +27,7 @@ import (
 type Manager struct {
 	log          *logrus.Entry
 	env          env.Interface
+	dialer       proxy.Dialer
 	db           database.OpenShiftClusters
 	cipher       encryption.Cipher
 	billing      billing.Manager
@@ -47,7 +49,7 @@ type Manager struct {
 }
 
 // NewManager returns a new openshiftcluster Manager
-func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, cipher encryption.Cipher, billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (*Manager, error) {
+func NewManager(log *logrus.Entry, _env env.Interface, dialer proxy.Dialer, db database.OpenShiftClusters, cipher encryption.Cipher, billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (*Manager, error) {
 	localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
@@ -79,6 +81,7 @@ func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClus
 	m := &Manager{
 		log:          log,
 		env:          _env,
+		dialer:       dialer,
 		db:           db,
 		cipher:       cipher,
 		billing:      billing,

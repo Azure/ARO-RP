@@ -22,6 +22,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
@@ -46,6 +47,7 @@ var _ Interface = &manager{}
 type manager struct {
 	log             *logrus.Entry
 	env             env.Interface
+	dialer          proxy.Dialer
 	db              database.OpenShiftClusters
 	billing         billing.Manager
 	doc             *api.OpenShiftClusterDocument
@@ -81,7 +83,7 @@ type manager struct {
 const deploymentName = "azuredeploy"
 
 // New returns a cluster manager
-func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, cipher encryption.Cipher,
+func New(ctx context.Context, log *logrus.Entry, _env env.Interface, dialer proxy.Dialer, db database.OpenShiftClusters, cipher encryption.Cipher,
 	billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (*manager, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
@@ -106,6 +108,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 	return &manager{
 		log:             log,
 		env:             _env,
+		dialer:          dialer,
 		db:              db,
 		billing:         billing,
 		cipher:          cipher,

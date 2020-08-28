@@ -15,6 +15,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
@@ -39,10 +40,11 @@ type Interface interface {
 }
 
 type adminactions struct {
-	log *logrus.Entry
-	env env.Interface
-	oc  *api.OpenShiftCluster
-	dh  dynamichelper.DynamicHelper
+	log    *logrus.Entry
+	env    env.Interface
+	dialer proxy.Dialer
+	oc     *api.OpenShiftCluster
+	dh     dynamichelper.DynamicHelper
 
 	k8sClient    kubernetes.Interface
 	configClient configclient.Interface
@@ -55,10 +57,10 @@ type adminactions struct {
 }
 
 // New returns an adminactions Interface
-func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster,
+func New(log *logrus.Entry, env env.Interface, dialer proxy.Dialer, oc *api.OpenShiftCluster,
 	subscriptionDoc *api.SubscriptionDocument) (Interface, error) {
 
-	restConfig, err := restconfig.RestConfig(env, oc)
+	restConfig, err := restconfig.RestConfig(dialer, oc)
 	if err != nil {
 		return nil, err
 	}
@@ -87,6 +89,7 @@ func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster,
 	return &adminactions{
 		log:               log,
 		env:               env,
+		dialer:            dialer,
 		oc:                oc,
 		dh:                dh,
 		k8sClient:         k8sClient,

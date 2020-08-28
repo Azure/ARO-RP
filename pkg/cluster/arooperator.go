@@ -10,7 +10,7 @@ import (
 )
 
 func (i *manager) ensureAROOperator(ctx context.Context) error {
-	dep, err := deploy.New(i.log, i.env, i.doc.OpenShiftCluster, i.kubernetescli, i.extcli, i.arocli)
+	dep, err := deploy.New(i.log, i.env, i.dialer, i.doc.OpenShiftCluster, i.kubernetescli, i.extcli, i.arocli)
 	if err != nil {
 		return err
 	}
@@ -18,7 +18,7 @@ func (i *manager) ensureAROOperator(ctx context.Context) error {
 }
 
 func (i *manager) aroDeploymentReady(ctx context.Context) (bool, error) {
-	dep, err := deploy.New(i.log, i.env, i.doc.OpenShiftCluster, i.kubernetescli, i.extcli, i.arocli)
+	dep, err := deploy.New(i.log, i.env, i.dialer, i.doc.OpenShiftCluster, i.kubernetescli, i.extcli, i.arocli)
 	if err != nil {
 		return false, err
 	}
