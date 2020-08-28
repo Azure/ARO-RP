@@ -10,8 +10,6 @@ import (
 	"fmt"
 
 	"golang.org/x/crypto/chacha20poly1305"
-
-	"github.com/Azure/ARO-RP/pkg/env"
 )
 
 var _ Cipher = (*aeadCipher)(nil)
@@ -26,12 +24,7 @@ type aeadCipher struct {
 	randRead func([]byte) (int, error)
 }
 
-func NewXChaCha20Poly1305(ctx context.Context, _env env.Interface, secretName string) (Cipher, error) {
-	key, err := _env.GetSecret(ctx, secretName)
-	if err != nil {
-		return nil, err
-	}
-
+func NewXChaCha20Poly1305(ctx context.Context, key []byte) (Cipher, error) {
 	aead, err := chacha20poly1305.NewX(key)
 	if err != nil {
 		return nil, err

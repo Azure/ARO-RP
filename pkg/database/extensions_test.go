@@ -11,7 +11,6 @@ import (
 	"github.com/ugorji/go/codec"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 )
 
@@ -25,11 +24,9 @@ type testStruct struct {
 func TestExtensions(t *testing.T) {
 	ctx := context.Background()
 
-	_env := &env.Test{
-		TestSecret: []byte("\x63\xb5\x59\xf0\x43\x34\x79\x49\x68\x46\xab\x8b\xce\xdb\xc1\x2d\x7a\x0b\x14\x86\x7e\x1a\xb2\xd7\x3a\x92\x4e\x98\x6c\x5e\xcb\xe1"),
-	}
+	testKey := []byte("\x63\xb5\x59\xf0\x43\x34\x79\x49\x68\x46\xab\x8b\xce\xdb\xc1\x2d\x7a\x0b\x14\x86\x7e\x1a\xb2\xd7\x3a\x92\x4e\x98\x6c\x5e\xcb\xe1")
 
-	cipher, err := encryption.NewXChaCha20Poly1305(ctx, _env, env.EncryptionSecretName)
+	cipher, err := encryption.NewXChaCha20Poly1305(ctx, testKey)
 	if err != nil {
 		t.Fatal(err)
 	}

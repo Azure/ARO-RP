@@ -7,7 +7,6 @@ import (
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
-	"encoding/base64"
 	"fmt"
 	"net"
 	"os"
@@ -23,16 +22,16 @@ import (
 	basekeyvault "github.com/Azure/ARO-RP/pkg/util/azureclient/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
-	"github.com/Azure/ARO-RP/pkg/util/pem"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 type prod struct {
 	instancemetadata.InstanceMetadata
+	ServiceKeyvaultInterface
+
 	armClientAuthorizer   clientauthorizer.ClientAuthorizer
 	adminClientAuthorizer clientauthorizer.ClientAuthorizer
 
@@ -41,7 +40,6 @@ type prod struct {
 	acrName             string
 	clustersKeyvaultURI string
 	domain              string
-	serviceKeyvaultURI  string
 	zones               map[string][]string
 
 	fpCertificate        *x509.Certificate
@@ -79,6 +77,11 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 		envType: environmentTypeProduction,
 	}
 
+	p.ServiceKeyvaultInterface, err = NewServiceKeyvault(ctx, p)
+	if err != nil {
+		return nil, err
+	}
+
 	rpAuthorizer, err := RPAuthorizer(azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
@@ -89,7 +92,7 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 		return nil, err
 	}
 
-	err = p.populateVaultURIs(ctx, rpAuthorizer)
+	p.clustersKeyvaultURI, err = getVaultURI(ctx, instancemetadata, generator.ClustersKeyVaultTagValue)
 	if err != nil {
 		return nil, err
 	}
@@ -186,36 +189,6 @@ func (p *prod) populateDomain(ctx context.Context, rpAuthorizer autorest.Authori
 	return nil
 }
 
-func (p *prod) populateVaultURIs(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
-	vaults := keyvault.NewVaultsClient(p.SubscriptionID(), rpAuthorizer)
-
-	vs, err := vaults.ListByResourceGroup(ctx, p.ResourceGroup(), nil)
-	if err != nil {
-		return err
-	}
-
-	for _, v := range vs {
-		if v.Tags[generator.KeyVaultTagName] != nil {
-			switch *v.Tags[generator.KeyVaultTagName] {
-			case generator.ClustersKeyVaultTagValue:
-				p.clustersKeyvaultURI = *v.Properties.VaultURI
-			case generator.ServiceKeyVaultTagValue:
-				p.serviceKeyvaultURI = *v.Properties.VaultURI
-			}
-		}
-	}
-
-	if p.clustersKeyvaultURI == "" {
-		return fmt.Errorf("clusters key vault not found")
-	}
-
-	if p.serviceKeyvaultURI == "" {
-		return fmt.Errorf("service key vault not found")
-	}
-
-	return nil
-}
-
 func (p *prod) populateZones(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
 	c := compute.NewResourceSkusClient(p.SubscriptionID(), rpAuthorizer)
 
@@ -277,37 +250,6 @@ func (p *prod) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, 
 	}
 
 	return refreshable.NewAuthorizer(sp), nil
-}
-
-func (p *prod) GetCertificateSecret(ctx context.Context, secretName string) (*rsa.PrivateKey, []*x509.Certificate, error) {
-	bundle, err := p.keyvault.GetSecret(ctx, p.serviceKeyvaultURI, secretName, "")
-	if err != nil {
-		return nil, nil, err
-	}
-
-	key, certs, err := pem.Parse([]byte(*bundle.Value))
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if key == nil {
-		return nil, nil, fmt.Errorf("no private key found")
-	}
-
-	if len(certs) == 0 {
-		return nil, nil, fmt.Errorf("no certificate found")
-	}
-
-	return key, certs, nil
-}
-
-func (p *prod) GetSecret(ctx context.Context, secretName string) ([]byte, error) {
-	bundle, err := p.keyvault.GetSecret(ctx, p.serviceKeyvaultURI, secretName, "")
-	if err != nil {
-		return nil, err
-	}
-
-	return base64.StdEncoding.DecodeString(*bundle.Value)
 }
 
 func (p *prod) Listen() (net.Listener, error) {

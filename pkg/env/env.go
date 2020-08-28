@@ -38,6 +38,7 @@ const (
 
 type Interface interface {
 	instancemetadata.InstanceMetadata
+	ServiceKeyvaultInterface
 
 	IsDevelopment() bool
 	InitializeAuthorizers() error
@@ -51,8 +52,6 @@ type Interface interface {
 	DialContext(context.Context, string, string) (net.Conn, error)
 	Domain() string
 	FPAuthorizer(string, string) (refreshable.Authorizer, error)
-	GetCertificateSecret(context.Context, string) (*rsa.PrivateKey, []*x509.Certificate, error)
-	GetSecret(context.Context, string) ([]byte, error)
 	Listen() (net.Listener, error)
 	ManagedDomain(string) (string, error)
 	MetricsSocketPath() string

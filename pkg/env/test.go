@@ -23,7 +23,6 @@ type Test struct {
 	TestLocation       string
 	TestResourceGroup  string
 	TestDomain         string
-	TestSecret         []byte
 
 	TLSKey   *rsa.PrivateKey
 	TLSCerts []*x509.Certificate
@@ -58,10 +57,6 @@ func (t *Test) GetCertificateSecret(ctx context.Context, secretName string) (key
 	default:
 		return nil, nil, fmt.Errorf("secret %q not found", secretName)
 	}
-}
-
-func (t *Test) GetSecret(ctx context.Context, secretName string) ([]byte, error) {
-	return t.TestSecret, nil
 }
 
 func (t *Test) Listen() (net.Listener, error) {
