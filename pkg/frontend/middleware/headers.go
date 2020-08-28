@@ -19,7 +19,7 @@ func Headers(_env env.Interface) func(http.Handler) http.Handler {
 				w.Header().Set("X-Ms-Client-Request-Id", r.Header.Get("X-Ms-Client-Request-Id"))
 			}
 
-			if _env.IsDevelopment() {
+			if _env.Type() == env.Dev {
 				r.Header.Set("Referer", "https://localhost:8443"+r.URL.String())
 			}
 

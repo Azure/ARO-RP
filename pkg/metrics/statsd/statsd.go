@@ -113,7 +113,7 @@ func (s *statsd) run() {
 
 func (s *statsd) dial() (err error) {
 	metricsSocketPath := "/var/etw/mdm_statsd.socket"
-	if s.env.IsDevelopment() {
+	if s.env.Type() == env.Dev {
 		metricsSocketPath = "mdm_statsd.socket"
 	}
 
@@ -134,7 +134,7 @@ func (s *statsd) write(m *metric) (err error) {
 	if s.conn == nil {
 		err = s.dial()
 		if err != nil {
-			if s.env.IsDevelopment() {
+			if s.env.Type() == env.Dev {
 				err = nil
 			}
 			return

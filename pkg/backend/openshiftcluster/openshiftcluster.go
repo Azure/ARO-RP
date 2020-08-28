@@ -66,7 +66,7 @@ func NewManager(log *logrus.Entry, _env env.Interface, dialer proxy.Dialer, db d
 	}
 
 	var acrtoken pkgacrtoken.Manager
-	if !_env.IsDevelopment() {
+	if _env.Type() != env.Dev {
 		acrtoken, err = pkgacrtoken.NewManager(_env, localFPAuthorizer)
 		if err != nil {
 			return nil, err

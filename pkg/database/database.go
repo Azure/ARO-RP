@@ -93,8 +93,8 @@ func cosmosDB(ctx context.Context, im instancemetadata.InstanceMetadata) (string
 	return *(*accts.Value)[0].Name, *keys.PrimaryMasterKey, nil
 }
 
-func databaseName(env env.Lite) (string, error) {
-	if env.IsDevelopment() {
+func databaseName(_env env.Lite) (string, error) {
+	if _env.Type() == env.Dev {
 		for _, key := range []string{
 			"DATABASE_NAME",
 		} {

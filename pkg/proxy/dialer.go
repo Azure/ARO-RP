@@ -27,7 +27,7 @@ type Dialer interface {
 }
 
 func NewDialer(_env env.Lite) (Dialer, error) {
-	if _env.IsDevelopment() {
+	if _env.Type() == env.Dev {
 		return newProxyDialer()
 	}
 	return &directDialer{}, nil

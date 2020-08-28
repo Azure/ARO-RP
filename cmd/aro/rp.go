@@ -42,7 +42,7 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	var keys []string
-	if _env.IsDevelopment() {
+	if _env.Type() == env.Dev {
 		keys = []string{
 			"PULL_SECRET",
 		}

@@ -13,6 +13,7 @@ import (
 
 	gomock "github.com/golang/mock/gomock"
 
+	env "github.com/Azure/ARO-RP/pkg/env"
 	clientauthorizer "github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	refreshable "github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
@@ -297,20 +298,6 @@ func (mr *MockInterfaceMockRecorder) InitializeAuthorizers() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitializeAuthorizers", reflect.TypeOf((*MockInterface)(nil).InitializeAuthorizers))
 }
 
-// IsDevelopment mocks base method
-func (m *MockInterface) IsDevelopment() bool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsDevelopment")
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// IsDevelopment indicates an expected call of IsDevelopment
-func (mr *MockInterfaceMockRecorder) IsDevelopment() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDevelopment", reflect.TypeOf((*MockInterface)(nil).IsDevelopment))
-}
-
 // Listen mocks base method
 func (m *MockInterface) Listen() (net.Listener, error) {
 	m.ctrl.T.Helper()
@@ -369,20 +356,6 @@ func (mr *MockInterfaceMockRecorder) ResourceGroup() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResourceGroup", reflect.TypeOf((*MockInterface)(nil).ResourceGroup))
 }
 
-// ShouldDeployDenyAssignment mocks base method
-func (m *MockInterface) ShouldDeployDenyAssignment() bool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ShouldDeployDenyAssignment")
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// ShouldDeployDenyAssignment indicates an expected call of ShouldDeployDenyAssignment
-func (mr *MockInterfaceMockRecorder) ShouldDeployDenyAssignment() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShouldDeployDenyAssignment", reflect.TypeOf((*MockInterface)(nil).ShouldDeployDenyAssignment))
-}
-
 // SubscriptionID mocks base method
 func (m *MockInterface) SubscriptionID() string {
 	m.ctrl.T.Helper()
@@ -409,6 +382,20 @@ func (m *MockInterface) TenantID() string {
 func (mr *MockInterfaceMockRecorder) TenantID() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TenantID", reflect.TypeOf((*MockInterface)(nil).TenantID))
+}
+
+// Type mocks base method
+func (m *MockInterface) Type() env.Type {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Type")
+	ret0, _ := ret[0].(env.Type)
+	return ret0
+}
+
+// Type indicates an expected call of Type
+func (mr *MockInterfaceMockRecorder) Type() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Type", reflect.TypeOf((*MockInterface)(nil).Type))
 }
 
 // Zones mocks base method

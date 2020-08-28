@@ -55,7 +55,7 @@ type prod struct {
 	e2eStorageAccountSubID  string
 
 	log     *logrus.Entry
-	envType environmentType
+	envType Type
 }
 
 func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata) (*prod, error) {
@@ -73,7 +73,7 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 		clustersGenevaLoggingConfigVersion: "2.2",
 
 		log:     log,
-		envType: environmentTypeProduction,
+		envType: Prod,
 	}
 
 	p.ServiceKeyvaultInterface, err = NewServiceKeyvault(ctx, p)
@@ -292,10 +292,6 @@ func (p *prod) E2EStorageAccountSubID() string {
 	return p.e2eStorageAccountSubID
 }
 
-func (p *prod) ShouldDeployDenyAssignment() bool {
-	return p.envType == environmentTypeProduction
-}
-
-func (p *prod) IsDevelopment() bool {
-	return p.envType == environmentTypeDevelopment
+func (p *prod) Type() Type {
+	return p.envType
 }

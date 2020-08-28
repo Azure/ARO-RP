@@ -14,19 +14,19 @@ import (
 type Lite interface {
 	instancemetadata.InstanceMetadata
 
-	IsDevelopment() bool
+	Type() Type
 }
 
 type lite struct {
 	instancemetadata.InstanceMetadata
 }
 
-func (*lite) IsDevelopment() bool {
-	return isDevelopment()
+func (*lite) Type() Type {
+	return envType()
 }
 
 func NewEnvLite(ctx context.Context, log *logrus.Entry) (Lite, error) {
-	if isDevelopment() {
+	if envType() == Dev {
 		log.Warn("running in development mode")
 	}
 

@@ -33,6 +33,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/bootstraplogging"
 	"github.com/Azure/ARO-RP/pkg/cluster"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -65,7 +66,7 @@ func (m *Manager) Create(ctx context.Context) error {
 
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
-	if !m.env.IsDevelopment() {
+	if m.env.Type() != env.Dev {
 		rp := m.acrtoken.GetRegistryProfile(m.doc.OpenShiftCluster)
 		if rp == nil {
 			// 1. choose a name and establish the intent to create a token with

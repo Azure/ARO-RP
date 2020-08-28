@@ -15,6 +15,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/env"
 	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 )
@@ -237,7 +238,7 @@ func TestDelete(t *testing.T) {
 			defer controller.Finish()
 
 			_env := mock_env.NewMockInterface(controller)
-			_env.EXPECT().IsDevelopment().AnyTimes().Return(false)
+			_env.EXPECT().Type().AnyTimes().Return(env.Prod)
 
 			log := logrus.NewEntry(logrus.StandardLogger())
 
@@ -403,7 +404,7 @@ func TestEnsure(t *testing.T) {
 			defer controller.Finish()
 
 			_env := mock_env.NewMockInterface(controller)
-			_env.EXPECT().IsDevelopment().AnyTimes().Return(false)
+			_env.EXPECT().Type().AnyTimes().Return(env.Prod)
 
 			log := logrus.NewEntry(logrus.StandardLogger())
 

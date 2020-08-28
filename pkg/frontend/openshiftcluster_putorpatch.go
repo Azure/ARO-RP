@@ -20,12 +20,13 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/admin"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/middleware"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 func (f *frontend) putOrPatchOpenShiftCluster(w http.ResponseWriter, r *http.Request) {
-	developmentMode := f.env.IsDevelopment()
+	developmentMode := f.env.Type() == env.Dev
 
 	ctx := r.Context()
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)

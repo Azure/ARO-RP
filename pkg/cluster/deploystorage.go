@@ -29,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
@@ -111,7 +112,7 @@ func (i *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 		Location:  &installConfig.Config.Azure.Region,
 		ManagedBy: to.StringPtr(i.doc.OpenShiftCluster.ID),
 	}
-	if i.env.IsDevelopment() {
+	if i.env.Type() == env.Dev {
 		group.ManagedBy = nil
 	}
 	_, err := i.groups.CreateOrUpdate(ctx, resourceGroup, group)
@@ -189,7 +190,7 @@ func (i *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 		},
 	}
 
-	if i.env.ShouldDeployDenyAssignment() {
+	if i.env.Type() == env.Prod {
 		t.Resources = append(t.Resources, i.denyAssignments(clusterSPObjectID))
 	}
 
@@ -282,7 +283,7 @@ func (i *manager) denyAssignments(clusterSPObjectID string) *arm.Resource {
 }
 
 func (i *manager) deploySnapshotUpgradeTemplate(ctx context.Context) error {
-	if !i.env.ShouldDeployDenyAssignment() {
+	if i.env.Type() != env.Prod {
 		// only need this upgrade in production, where there are DenyAssignments
 		return nil
 	}

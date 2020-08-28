@@ -18,12 +18,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
-type environmentType uint8
+type Type int
 
 const (
-	environmentTypeProduction environmentType = iota
-	environmentTypeDevelopment
-	environmentTypeIntegration
+	Prod Type = iota
+	Dev
+	Int
 )
 
 const (
@@ -59,11 +59,10 @@ type Interface interface {
 	E2EStorageAccountName() string
 	E2EStorageAccountRGName() string
 	E2EStorageAccountSubID() string
-	ShouldDeployDenyAssignment() bool
 }
 
 func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
-	if isDevelopment() {
+	if envType() == Dev {
 		log.Warn("running in development mode")
 	}
 
@@ -72,26 +71,32 @@ func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
 		return nil, err
 	}
 
-	if isDevelopment() {
+	switch envType() {
+	case Dev:
 		return newDev(ctx, log, im)
-	}
-
-	if strings.ToLower(os.Getenv("RP_MODE")) == "int" {
+	case Int:
 		log.Warn("running in int mode")
 		return newInt(ctx, log, im)
+	default:
+		return newProd(ctx, log, im)
 	}
-
-	return newProd(ctx, log, im)
 }
 
 func newInstanceMetadata(ctx context.Context) (instancemetadata.InstanceMetadata, error) {
-	if isDevelopment() {
+	if envType() == Dev {
 		return instancemetadata.NewDev(), nil
 	}
 
 	return instancemetadata.NewProd(ctx)
 }
 
-func isDevelopment() bool {
-	return strings.ToLower(os.Getenv("RP_MODE")) == "development"
+func envType() Type {
+	switch {
+	case strings.ToLower(os.Getenv("RP_MODE")) == "development":
+		return Dev
+	case strings.ToLower(os.Getenv("RP_MODE")) == "int":
+		return Int
+	default:
+		return Prod
+	}
 }
