@@ -196,48 +196,6 @@ func (mr *MockInterfaceMockRecorder) Domain() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Domain", reflect.TypeOf((*MockInterface)(nil).Domain))
 }
 
-// E2EStorageAccountName mocks base method
-func (m *MockInterface) E2EStorageAccountName() string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "E2EStorageAccountName")
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// E2EStorageAccountName indicates an expected call of E2EStorageAccountName
-func (mr *MockInterfaceMockRecorder) E2EStorageAccountName() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "E2EStorageAccountName", reflect.TypeOf((*MockInterface)(nil).E2EStorageAccountName))
-}
-
-// E2EStorageAccountRGName mocks base method
-func (m *MockInterface) E2EStorageAccountRGName() string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "E2EStorageAccountRGName")
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// E2EStorageAccountRGName indicates an expected call of E2EStorageAccountRGName
-func (mr *MockInterfaceMockRecorder) E2EStorageAccountRGName() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "E2EStorageAccountRGName", reflect.TypeOf((*MockInterface)(nil).E2EStorageAccountRGName))
-}
-
-// E2EStorageAccountSubID mocks base method
-func (m *MockInterface) E2EStorageAccountSubID() string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "E2EStorageAccountSubID")
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// E2EStorageAccountSubID indicates an expected call of E2EStorageAccountSubID
-func (mr *MockInterfaceMockRecorder) E2EStorageAccountSubID() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "E2EStorageAccountSubID", reflect.TypeOf((*MockInterface)(nil).E2EStorageAccountSubID))
-}
-
 // FPAuthorizer mocks base method
 func (m *MockInterface) FPAuthorizer(arg0, arg1 string) (refreshable.Authorizer, error) {
 	m.ctrl.T.Helper()

@@ -26,6 +26,13 @@ const (
 	tenantIDMSFT = "72f988bf-86f1-41af-91ab-2d7cd011db47"
 	tenantIDAME  = "33e01921-4d64-4f8c-a055-5bdaffd5e33d"
 
+	prodE2EStorageAccountSubID  = "0923c7de-9fca-4d9e-baf3-131d0c5b2ea4"
+	prodE2EStorageAccountRGName = "global"
+	prodE2EStorageAccountName   = "arov4e2e"
+	intE2EStorageAccountSubID   = "0cc1cafa-578f-4fa5-8d6b-ddfd8d82e6ea"
+	intE2EStorageAccountRGName  = "global-infra"
+	intE2EStorageAccountName    = "arov4e2eint"
+
 	// featureSaveAROTestConfig is the feature in the subscription that is used
 	// to indicate if we need to save ARO cluster config into the E2E
 	// StorageAccount
@@ -46,28 +53,9 @@ type manager struct {
 }
 
 func NewManager(_env env.Interface, dbbilling database.Billing, dbsubscriptions database.Subscriptions, log *logrus.Entry) (Manager, error) {
-	var storageClient *azstorage.Client
-
-	if _env.Type() != env.Dev {
-		localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
-		if err != nil {
-			return nil, err
-		}
-
-		e2estorage := storage.NewAccountsClient(_env.E2EStorageAccountSubID(), localFPAuthorizer)
-
-		keys, err := e2estorage.ListKeys(context.Background(), _env.E2EStorageAccountRGName(), _env.E2EStorageAccountName(), "")
-		if err != nil {
-			return nil, err
-		}
-		key := *(*keys.Keys)[0].Value
-
-		client, err := azstorage.NewBasicClient(_env.E2EStorageAccountName(), key)
-		if err != nil {
-			return nil, err
-		}
-
-		storageClient = &client
+	storageClient, err := getStorageClient(_env)
+	if err != nil {
+		return nil, err
 	}
 
 	return &manager{
@@ -77,6 +65,43 @@ func NewManager(_env env.Interface, dbbilling database.Billing, dbsubscriptions 
 		dbbilling:       dbbilling,
 		log:             log,
 	}, nil
+}
+
+func getStorageClient(_env env.Interface) (*azstorage.Client, error) {
+	var e2eStorageAccountSubID, e2eStorageAccountRGName, e2eStorageAccountName string
+
+	switch _env.Type() {
+	case env.Dev:
+		return nil, nil // allowed: createOrUpdateE2EBlob does nothing in dev mode
+	case env.Int:
+		e2eStorageAccountSubID = intE2EStorageAccountSubID
+		e2eStorageAccountRGName = intE2EStorageAccountRGName
+		e2eStorageAccountName = intE2EStorageAccountName
+	default:
+		e2eStorageAccountSubID = prodE2EStorageAccountSubID
+		e2eStorageAccountRGName = prodE2EStorageAccountRGName
+		e2eStorageAccountName = prodE2EStorageAccountName
+	}
+
+	localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	e2estorage := storage.NewAccountsClient(e2eStorageAccountSubID, localFPAuthorizer)
+
+	keys, err := e2estorage.ListKeys(context.Background(), e2eStorageAccountRGName, e2eStorageAccountName, "")
+	if err != nil {
+		return nil, err
+	}
+	key := *(*keys.Keys)[0].Value
+
+	client, err := azstorage.NewBasicClient(e2eStorageAccountName, key)
+	if err != nil {
+		return nil, err
+	}
+
+	return &client, nil
 }
 
 func (m *manager) Ensure(ctx context.Context, doc *api.OpenShiftClusterDocument) error {

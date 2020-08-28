@@ -50,10 +50,6 @@ type prod struct {
 	clustersGenevaLoggingConfigVersion string
 	clustersGenevaLoggingEnvironment   string
 
-	e2eStorageAccountName   string
-	e2eStorageAccountRGName string
-	e2eStorageAccountSubID  string
-
 	log     *logrus.Entry
 	envType Type
 }
@@ -117,10 +113,6 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 
 	p.clustersGenevaLoggingPrivateKey = clustersGenevaLoggingPrivateKey
 	p.clustersGenevaLoggingCertificate = clustersGenevaLoggingCertificates[0]
-
-	p.e2eStorageAccountName = "arov4e2e"
-	p.e2eStorageAccountRGName = "global"
-	p.e2eStorageAccountSubID = "0923c7de-9fca-4d9e-baf3-131d0c5b2ea4"
 
 	if p.ACRResourceID() != "" { // TODO: ugh!
 		acrResource, err := azure.ParseResourceID(p.ACRResourceID())
@@ -278,18 +270,6 @@ func (p *prod) Zones(vmSize string) ([]string, error) {
 func (d *prod) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthorizer refreshable.Authorizer, resourceGroup string) error {
 	// ARM ResourceGroup role assignments are not required in production.
 	return nil
-}
-
-func (p *prod) E2EStorageAccountName() string {
-	return p.e2eStorageAccountName
-}
-
-func (p *prod) E2EStorageAccountRGName() string {
-	return p.e2eStorageAccountRGName
-}
-
-func (p *prod) E2EStorageAccountSubID() string {
-	return p.e2eStorageAccountSubID
 }
 
 func (p *prod) Type() Type {
