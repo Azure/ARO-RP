@@ -23,7 +23,6 @@ import (
 	basekeyvault "github.com/Azure/ARO-RP/pkg/util/azureclient/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/documentdb"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
@@ -39,13 +38,11 @@ type prod struct {
 
 	keyvault basekeyvault.BaseClient
 
-	acrName                  string
-	clustersKeyvaultURI      string
-	cosmosDBAccountName      string
-	cosmosDBPrimaryMasterKey string
-	domain                   string
-	serviceKeyvaultURI       string
-	zones                    map[string][]string
+	acrName             string
+	clustersKeyvaultURI string
+	domain              string
+	serviceKeyvaultURI  string
+	zones               map[string][]string
 
 	fpCertificate        *x509.Certificate
 	fpPrivateKey         *rsa.PrivateKey
@@ -83,11 +80,6 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 	}
 
 	rpAuthorizer, err := RPAuthorizer(azure.PublicCloud.ResourceManagerEndpoint)
-	if err != nil {
-		return nil, err
-	}
-
-	err = p.populateCosmosDB(ctx, rpAuthorizer)
 	if err != nil {
 		return nil, err
 	}
@@ -177,29 +169,6 @@ func (p *prod) AROOperatorImage() string {
 	return fmt.Sprintf("%s.azurecr.io/aro:%s", p.acrName, version.GitCommit)
 }
 
-func (p *prod) populateCosmosDB(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
-	databaseaccounts := documentdb.NewDatabaseAccountsClient(p.SubscriptionID(), rpAuthorizer)
-
-	accts, err := databaseaccounts.ListByResourceGroup(ctx, p.ResourceGroup())
-	if err != nil {
-		return err
-	}
-
-	if len(*accts.Value) != 1 {
-		return fmt.Errorf("found %d database accounts, expected 1", len(*accts.Value))
-	}
-
-	keys, err := databaseaccounts.ListKeys(ctx, p.ResourceGroup(), *(*accts.Value)[0].Name)
-	if err != nil {
-		return err
-	}
-
-	p.cosmosDBAccountName = *(*accts.Value)[0].Name
-	p.cosmosDBPrimaryMasterKey = *keys.PrimaryMasterKey
-
-	return nil
-}
-
 func (p *prod) populateDomain(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
 	zones := dns.NewZonesClient(p.SubscriptionID(), rpAuthorizer)
 
@@ -283,14 +252,6 @@ func (p *prod) ClustersGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate
 
 func (p *prod) ClustersKeyvaultURI() string {
 	return p.clustersKeyvaultURI
-}
-
-func (p *prod) CosmosDB() (string, string) {
-	return p.cosmosDBAccountName, p.cosmosDBPrimaryMasterKey
-}
-
-func (p *prod) DatabaseName() string {
-	return "ARO"
 }
 
 func (p *prod) DialContext(ctx context.Context, network, address string) (net.Conn, error) {

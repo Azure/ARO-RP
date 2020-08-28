@@ -31,7 +31,12 @@ type Billing interface {
 
 // NewBilling returns a new Billing
 func NewBilling(ctx context.Context, env env.Interface, dbc cosmosdb.DatabaseClient) (Billing, error) {
-	collc := cosmosdb.NewCollectionClient(dbc, env.DatabaseName())
+	dbname, err := databaseName(env)
+	if err != nil {
+		return nil, err
+	}
+
+	collc := cosmosdb.NewCollectionClient(dbc, dbname)
 
 	triggers := []*cosmosdb.Trigger{
 		{

@@ -32,7 +32,12 @@ type Subscriptions interface {
 
 // NewSubscriptions returns a new Subscriptions
 func NewSubscriptions(ctx context.Context, env env.Interface, dbc cosmosdb.DatabaseClient, uuid string) (Subscriptions, error) {
-	collc := cosmosdb.NewCollectionClient(dbc, env.DatabaseName())
+	dbname, err := databaseName(env)
+	if err != nil {
+		return nil, err
+	}
+
+	collc := cosmosdb.NewCollectionClient(dbc, dbname)
 
 	triggers := []*cosmosdb.Trigger{
 		{

@@ -27,7 +27,12 @@ type AsyncOperations interface {
 
 // NewAsyncOperations returns a new AsyncOperations
 func NewAsyncOperations(env env.Interface, dbc cosmosdb.DatabaseClient) (AsyncOperations, error) {
-	collc := cosmosdb.NewCollectionClient(dbc, env.DatabaseName())
+	dbname, err := databaseName(env)
+	if err != nil {
+		return nil, err
+	}
+
+	collc := cosmosdb.NewCollectionClient(dbc, dbname)
 
 	return &asyncOperations{
 		c: cosmosdb.NewAsyncOperationDocumentClient(collc, collAsyncOperations),

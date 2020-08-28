@@ -70,7 +70,6 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 		"AZURE_FP_CLIENT_ID",
 		"AZURE_SUBSCRIPTION_ID",
 		"AZURE_TENANT_ID",
-		"DATABASE_NAME",
 		"LOCATION",
 		"PROXY_HOSTNAME",
 		"RESOURCEGROUP",
@@ -164,10 +163,6 @@ func (d *dev) AROOperatorImage() string {
 	}
 
 	return fmt.Sprintf("%s.azurecr.io/aro:%s", d.acrName, version.GitCommit)
-}
-
-func (d *dev) DatabaseName() string {
-	return os.Getenv("DATABASE_NAME")
 }
 
 func (d *dev) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
