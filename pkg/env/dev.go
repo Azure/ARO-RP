@@ -24,7 +24,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
-	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 var _ Interface = &dev{}
@@ -97,15 +96,6 @@ func (d *dev) InitializeAuthorizers() error {
 	d.armClientAuthorizer = clientauthorizer.NewAll()
 	d.adminClientAuthorizer = clientauthorizer.NewAll()
 	return nil
-}
-
-func (d *dev) AROOperatorImage() string {
-	override := os.Getenv("ARO_IMAGE")
-	if override != "" {
-		return override
-	}
-
-	return fmt.Sprintf("%s.azurecr.io/aro:%s", d.acrName, version.GitCommit)
 }
 
 func (d *dev) Listen() (net.Listener, error) {

@@ -4,6 +4,7 @@ package deploy
 // Licensed under the Apache License 2.0.
 
 import (
+	"os"
 	"sort"
 	"time"
 
@@ -34,6 +35,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	"github.com/Azure/ARO-RP/pkg/util/tls"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 type Operator interface {
@@ -74,6 +76,18 @@ func New(log *logrus.Entry, env env.Interface, dialer proxy.Dialer, oc *api.Open
 	}, nil
 }
 
+func (o *operator) image(_env env.Lite) string {
+	if _env.Type() == env.Dev {
+		override := os.Getenv("ARO_IMAGE")
+
+		if override != "" {
+			return override
+		}
+	}
+
+	return version.OperatorImage(o.env.ACRName())
+}
+
 func (o *operator) resources() ([]runtime.Object, error) {
 	// first static resources from Assets
 	results := []runtime.Object{}
@@ -91,7 +105,7 @@ func (o *operator) resources() ([]runtime.Object, error) {
 		// set the image for the deployments
 		if d, ok := obj.(*appsv1.Deployment); ok {
 			for i := range d.Spec.Template.Spec.Containers {
-				d.Spec.Template.Spec.Containers[i].Image = o.env.AROOperatorImage()
+				d.Spec.Template.Spec.Containers[i].Image = o.image(o.env)
 			}
 		}
 

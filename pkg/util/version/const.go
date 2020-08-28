@@ -38,3 +38,8 @@ func MdmImage(acr string) string {
 func MdsdImage(acr string) string {
 	return acr + ".azurecr.io/genevamdsd:master_295"
 }
+
+// OperatorImage contains the location of the ARO operator container image
+func OperatorImage(acr string) string {
+	return acr + ".azurecr.io/aro:" + GitCommit
+}

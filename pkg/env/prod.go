@@ -24,7 +24,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
-	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 type prod struct {
@@ -157,10 +156,6 @@ func (p *prod) ACRResourceID() string {
 
 func (p *prod) ACRName() string {
 	return p.acrName
-}
-
-func (p *prod) AROOperatorImage() string {
-	return fmt.Sprintf("%s.azurecr.io/aro:%s", p.acrName, version.GitCommit)
 }
 
 func (p *prod) populateDomain(ctx context.Context, rpAuthorizer autorest.Authorizer) error {

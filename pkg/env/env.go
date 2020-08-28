@@ -55,7 +55,6 @@ type Interface interface {
 	Zones(vmSize string) ([]string, error)
 	ACRResourceID() string
 	ACRName() string
-	AROOperatorImage() string
 }
 
 func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
