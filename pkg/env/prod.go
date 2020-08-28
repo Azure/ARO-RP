@@ -64,7 +64,12 @@ type prod struct {
 	envType environmentType
 }
 
-func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata, rpAuthorizer, kvAuthorizer autorest.Authorizer) (*prod, error) {
+func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata) (*prod, error) {
+	kvAuthorizer, err := RPAuthorizer(azure.PublicCloud.ResourceIdentifiers.KeyVault)
+	if err != nil {
+		return nil, err
+	}
+
 	p := &prod{
 		InstanceMetadata: instancemetadata,
 
@@ -77,7 +82,12 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 		envType: environmentTypeProduction,
 	}
 
-	err := p.populateCosmosDB(ctx, rpAuthorizer)
+	rpAuthorizer, err := RPAuthorizer(azure.PublicCloud.ResourceManagerEndpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	err = p.populateCosmosDB(ctx, rpAuthorizer)
 	if err != nil {
 		return nil, err
 	}
