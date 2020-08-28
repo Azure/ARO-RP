@@ -20,7 +20,7 @@ import (
 
 type statsd struct {
 	log *logrus.Entry
-	env env.Interface
+	env env.Lite
 
 	hostname  string
 	account   string
@@ -33,7 +33,7 @@ type statsd struct {
 }
 
 // New returns a new metrics.Interface
-func New(ctx context.Context, log *logrus.Entry, env env.Interface, account, namespace string) (metrics.Interface, error) {
+func New(ctx context.Context, log *logrus.Entry, env env.Lite, account, namespace string) (metrics.Interface, error) {
 	s := &statsd{
 		log: log,
 		env: env,
@@ -112,7 +112,12 @@ func (s *statsd) run() {
 }
 
 func (s *statsd) dial() (err error) {
-	s.conn, err = net.Dial("unix", s.env.MetricsSocketPath())
+	metricsSocketPath := "/var/etw/mdm_statsd.socket"
+	if s.env.IsDevelopment() {
+		metricsSocketPath = "mdm_statsd.socket"
+	}
+
+	s.conn, err = net.Dial("unix", metricsSocketPath)
 	return
 }
 

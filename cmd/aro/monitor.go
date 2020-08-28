@@ -27,7 +27,7 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 	uuid := uuid.NewV4().String()
 	log.Printf("uuid %s", uuid)
 
-	_env, err := env.NewEnv(ctx, log)
+	_env, err := env.NewEnvLite(ctx, log)
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,12 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	dbKey, err := _env.GetSecret(ctx, env.EncryptionSecretName)
+	kv, err := env.NewServiceKeyvault(ctx, _env)
+	if err != nil {
+		return err
+	}
+
+	dbKey, err := kv.GetSecret(ctx, env.EncryptionSecretName)
 	if err != nil {
 		return err
 	}
