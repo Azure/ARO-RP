@@ -26,7 +26,7 @@ type AsyncOperations interface {
 }
 
 // NewAsyncOperations returns a new AsyncOperations
-func NewAsyncOperations(env env.Interface, dbc cosmosdb.DatabaseClient) (AsyncOperations, error) {
+func NewAsyncOperations(env env.Lite, dbc cosmosdb.DatabaseClient) (AsyncOperations, error) {
 	dbname, err := databaseName(env)
 	if err != nil {
 		return nil, err

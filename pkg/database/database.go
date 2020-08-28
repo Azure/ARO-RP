@@ -23,6 +23,7 @@ import (
 	dbmetrics "github.com/Azure/ARO-RP/pkg/metrics/statsd/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/documentdb"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
+	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 )
 
 const (
@@ -33,7 +34,7 @@ const (
 	collSubscriptions     = "Subscriptions"
 )
 
-func NewDatabaseClient(ctx context.Context, log *logrus.Entry, env env.Interface, m metrics.Interface, cipher encryption.Cipher) (cosmosdb.DatabaseClient, error) {
+func NewDatabaseClient(ctx context.Context, log *logrus.Entry, env env.Lite, m metrics.Interface, cipher encryption.Cipher) (cosmosdb.DatabaseClient, error) {
 	databaseAccount, masterKey, err := cosmosDB(ctx, env)
 	if err != nil {
 		return nil, err
@@ -67,15 +68,15 @@ func newJSONHandle(cipher encryption.Cipher) *codec.JsonHandle {
 	return h
 }
 
-func cosmosDB(ctx context.Context, _env env.Interface) (string, string, error) {
+func cosmosDB(ctx context.Context, im instancemetadata.InstanceMetadata) (string, string, error) {
 	rpAuthorizer, err := env.RPAuthorizer(azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return "", "", err
 	}
 
-	databaseaccounts := documentdb.NewDatabaseAccountsClient(_env.SubscriptionID(), rpAuthorizer)
+	databaseaccounts := documentdb.NewDatabaseAccountsClient(im.SubscriptionID(), rpAuthorizer)
 
-	accts, err := databaseaccounts.ListByResourceGroup(ctx, _env.ResourceGroup())
+	accts, err := databaseaccounts.ListByResourceGroup(ctx, im.ResourceGroup())
 	if err != nil {
 		return "", "", err
 	}
@@ -84,7 +85,7 @@ func cosmosDB(ctx context.Context, _env env.Interface) (string, string, error) {
 		return "", "", fmt.Errorf("found %d database accounts, expected 1", len(*accts.Value))
 	}
 
-	keys, err := databaseaccounts.ListKeys(ctx, _env.ResourceGroup(), *(*accts.Value)[0].Name)
+	keys, err := databaseaccounts.ListKeys(ctx, im.ResourceGroup(), *(*accts.Value)[0].Name)
 	if err != nil {
 		return "", "", err
 	}
@@ -92,7 +93,7 @@ func cosmosDB(ctx context.Context, _env env.Interface) (string, string, error) {
 	return *(*accts.Value)[0].Name, *keys.PrimaryMasterKey, nil
 }
 
-func databaseName(env env.Interface) (string, error) {
+func databaseName(env env.Lite) (string, error) {
 	if env.IsDevelopment() {
 		for _, key := range []string{
 			"DATABASE_NAME",

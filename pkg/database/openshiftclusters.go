@@ -42,7 +42,7 @@ type OpenShiftClusters interface {
 }
 
 // NewOpenShiftClusters returns a new OpenShiftClusters
-func NewOpenShiftClusters(ctx context.Context, env env.Interface, dbc cosmosdb.DatabaseClient, uuid string) (OpenShiftClusters, error) {
+func NewOpenShiftClusters(ctx context.Context, env env.Lite, dbc cosmosdb.DatabaseClient, uuid string) (OpenShiftClusters, error) {
 	dbname, err := databaseName(env)
 	if err != nil {
 		return nil, err

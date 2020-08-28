@@ -37,10 +37,9 @@ const (
 )
 
 type Interface interface {
-	instancemetadata.InstanceMetadata
+	Lite
 	ServiceKeyvaultInterface
 
-	IsDevelopment() bool
 	InitializeAuthorizers() error
 	ArmClientAuthorizer() clientauthorizer.ClientAuthorizer
 	AdminClientAuthorizer() clientauthorizer.ClientAuthorizer
@@ -66,14 +65,17 @@ type Interface interface {
 }
 
 func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
-	if strings.ToLower(os.Getenv("RP_MODE")) == "development" {
+	if isDevelopment() {
 		log.Warn("running in development mode")
-		return newDev(ctx, log, instancemetadata.NewDev())
 	}
 
-	im, err := instancemetadata.NewProd(ctx)
+	im, err := newInstanceMetadata(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	if isDevelopment() {
+		return newDev(ctx, log, im)
 	}
 
 	if strings.ToLower(os.Getenv("RP_MODE")) == "int" {
@@ -82,4 +84,16 @@ func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
 	}
 
 	return newProd(ctx, log, im)
+}
+
+func newInstanceMetadata(ctx context.Context) (instancemetadata.InstanceMetadata, error) {
+	if isDevelopment() {
+		return instancemetadata.NewDev(), nil
+	}
+
+	return instancemetadata.NewProd(ctx)
+}
+
+func isDevelopment() bool {
+	return strings.ToLower(os.Getenv("RP_MODE")) == "development"
 }

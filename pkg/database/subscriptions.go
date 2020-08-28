@@ -31,7 +31,7 @@ type Subscriptions interface {
 }
 
 // NewSubscriptions returns a new Subscriptions
-func NewSubscriptions(ctx context.Context, env env.Interface, dbc cosmosdb.DatabaseClient, uuid string) (Subscriptions, error) {
+func NewSubscriptions(ctx context.Context, env env.Lite, dbc cosmosdb.DatabaseClient, uuid string) (Subscriptions, error) {
 	dbname, err := databaseName(env)
 	if err != nil {
 		return nil, err

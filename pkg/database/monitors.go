@@ -30,7 +30,7 @@ type Monitors interface {
 }
 
 // NewMonitors returns a new Monitors
-func NewMonitors(ctx context.Context, env env.Interface, dbc cosmosdb.DatabaseClient, uuid string) (Monitors, error) {
+func NewMonitors(ctx context.Context, env env.Lite, dbc cosmosdb.DatabaseClient, uuid string) (Monitors, error) {
 	dbname, err := databaseName(env)
 	if err != nil {
 		return nil, err
