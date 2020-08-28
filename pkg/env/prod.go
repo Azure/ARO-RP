@@ -44,10 +44,8 @@ type prod struct {
 	fpPrivateKey         *rsa.PrivateKey
 	fpServicePrincipalID string
 
-	clustersGenevaLoggingCertificate   *x509.Certificate
-	clustersGenevaLoggingPrivateKey    *rsa.PrivateKey
-	clustersGenevaLoggingConfigVersion string
-	clustersGenevaLoggingEnvironment   string
+	clustersGenevaLoggingCertificate *x509.Certificate
+	clustersGenevaLoggingPrivateKey  *rsa.PrivateKey
 
 	log     *logrus.Entry
 	envType Type
@@ -63,9 +61,6 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 		InstanceMetadata: instancemetadata,
 
 		keyvault: basekeyvault.New(kvAuthorizer),
-
-		clustersGenevaLoggingEnvironment:   "DiagnosticsProd",
-		clustersGenevaLoggingConfigVersion: "2.2",
 
 		log:     log,
 		envType: Prod,
@@ -195,14 +190,6 @@ func (p *prod) populateZones(ctx context.Context, rpAuthorizer autorest.Authoriz
 	}
 
 	return nil
-}
-
-func (p *prod) ClustersGenevaLoggingConfigVersion() string {
-	return p.clustersGenevaLoggingConfigVersion
-}
-
-func (p *prod) ClustersGenevaLoggingEnvironment() string {
-	return p.clustersGenevaLoggingEnvironment
 }
 
 func (p *prod) ClustersGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate) {

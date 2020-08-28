@@ -34,12 +34,14 @@ func GetConfig(env env.Interface, doc *api.OpenShiftClusterDocument) (*bootstrap
 		return nil, err
 	}
 
+	environment, configVersion := genevalogging.EnvironmentAndVersion(env)
+
 	return &bootstraplogging.Config{
 		Certificate:       string(gcsCertBytes),
 		Key:               string(gcsKeyBytes),
 		Namespace:         genevalogging.ClusterLogsNamespace,
-		Environment:       env.ClustersGenevaLoggingEnvironment(),
-		ConfigVersion:     env.ClustersGenevaLoggingConfigVersion(),
+		Environment:       environment,
+		ConfigVersion:     configVersion,
 		Region:            env.Location(),
 		ResourceID:        doc.OpenShiftCluster.ID,
 		SubscriptionID:    r.SubscriptionID,

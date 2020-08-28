@@ -18,6 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	"github.com/Azure/ARO-RP/pkg/env"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -408,4 +409,12 @@ func (g *genevaLogging) Resources() ([]runtime.Object, error) {
 		scc,
 		g.daemonset(r),
 	}, nil
+}
+
+func EnvironmentAndVersion(_env env.Lite) (string, string) {
+	if _env.Type() != env.Prod {
+		return "Test", "2.3"
+	}
+
+	return "DiagnosticsProd", "2.2"
 }

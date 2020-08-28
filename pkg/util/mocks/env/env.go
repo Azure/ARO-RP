@@ -97,34 +97,6 @@ func (mr *MockInterfaceMockRecorder) ArmClientAuthorizer() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ArmClientAuthorizer", reflect.TypeOf((*MockInterface)(nil).ArmClientAuthorizer))
 }
 
-// ClustersGenevaLoggingConfigVersion mocks base method
-func (m *MockInterface) ClustersGenevaLoggingConfigVersion() string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ClustersGenevaLoggingConfigVersion")
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// ClustersGenevaLoggingConfigVersion indicates an expected call of ClustersGenevaLoggingConfigVersion
-func (mr *MockInterfaceMockRecorder) ClustersGenevaLoggingConfigVersion() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClustersGenevaLoggingConfigVersion", reflect.TypeOf((*MockInterface)(nil).ClustersGenevaLoggingConfigVersion))
-}
-
-// ClustersGenevaLoggingEnvironment mocks base method
-func (m *MockInterface) ClustersGenevaLoggingEnvironment() string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ClustersGenevaLoggingEnvironment")
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// ClustersGenevaLoggingEnvironment indicates an expected call of ClustersGenevaLoggingEnvironment
-func (mr *MockInterfaceMockRecorder) ClustersGenevaLoggingEnvironment() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClustersGenevaLoggingEnvironment", reflect.TypeOf((*MockInterface)(nil).ClustersGenevaLoggingEnvironment))
-}
-
 // ClustersGenevaLoggingSecret mocks base method
 func (m *MockInterface) ClustersGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate) {
 	m.ctrl.T.Helper()

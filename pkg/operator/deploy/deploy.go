@@ -128,6 +128,8 @@ func (o *operator) resources() ([]runtime.Object, error) {
 		return nil, err
 	}
 
+	monitoringGCSEnvironment, configVersion := genevalogging.EnvironmentAndVersion(o.env)
+
 	// create a secret here for genevalogging, later we will copy it to
 	// the genevalogging namespace.
 	return append(results,
@@ -151,8 +153,8 @@ func (o *operator) resources() ([]runtime.Object, error) {
 				ACRName:    o.env.ACRName(),
 				Location:   o.env.Location(),
 				GenevaLogging: arov1alpha1.GenevaLoggingSpec{
-					ConfigVersion:            o.env.ClustersGenevaLoggingConfigVersion(),
-					MonitoringGCSEnvironment: o.env.ClustersGenevaLoggingEnvironment(),
+					ConfigVersion:            configVersion,
+					MonitoringGCSEnvironment: monitoringGCSEnvironment,
 				},
 				InternetChecker: arov1alpha1.InternetCheckerSpec{
 					URLs: []string{
