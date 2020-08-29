@@ -103,8 +103,9 @@ func TestFindGVR(t *testing.T) {
 				"", "The groupKind '%s' was not found.", "baremetalhost/status"),
 		},
 		{
-			name: "empty resources",
-			kind: "configmap",
+			name:      "empty resources",
+			resources: []*metav1.APIResourceList{},
+			kind:      "configmap",
 			wantErr: api.NewCloudError(
 				http.StatusBadRequest, api.CloudErrorCodeNotFound,
 				"", "The groupKind '%s' was not found.", "configmap"),
