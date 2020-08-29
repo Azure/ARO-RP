@@ -14,9 +14,9 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/util/portforward"
+	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -142,7 +142,7 @@ func (a *adminactions) MustGather(ctx context.Context, w http.ResponseWriter) er
 	}
 
 	a.log.Info("waiting for must-gather pod")
-	err = a.waitForPodRunning(ctx, a.k8sClient, pod)
+	err = wait.PollImmediateUntil(10*time.Second, ready.CheckPodIsRunning(a.k8sClient.CoreV1().Pods(pod.Namespace), pod.Name), ctx.Done())
 	if err != nil {
 		return err
 	}
@@ -159,15 +159,4 @@ func (a *adminactions) MustGather(ctx context.Context, w http.ResponseWriter) er
 
 	_, err = io.Copy(w, rc)
 	return err
-}
-
-func (a *adminactions) waitForPodRunning(ctx context.Context, cli kubernetes.Interface, pod *corev1.Pod) error {
-	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-		pod, err := cli.CoreV1().Pods(pod.Namespace).Get(pod.Name, metav1.GetOptions{})
-		if err != nil {
-			return false, err
-		}
-
-		return pod.Status.Phase == corev1.PodRunning, nil
-	}, ctx.Done())
 }

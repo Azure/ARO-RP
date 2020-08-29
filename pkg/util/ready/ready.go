@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	appsv1client "k8s.io/client-go/kubernetes/typed/apps/v1"
+	corev1client "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
 // NodeIsReady returns true if a Node is considered ready
@@ -90,5 +91,26 @@ func CheckDeploymentIsReady(cli appsv1client.DeploymentInterface, name string) f
 		}
 
 		return DeploymentIsReady(d), nil
+	}
+}
+
+// PodIsRunning returns true if a Pod is running
+func PodIsRunning(p *corev1.Pod) bool {
+	return p.Status.Phase == corev1.PodRunning
+}
+
+// CheckPodIsRunning returns a function which polls a Pod and returns if it is
+// running
+func CheckPodIsRunning(cli corev1client.PodInterface, name string) func() (bool, error) {
+	return func() (bool, error) {
+		p, err := cli.Get(name, metav1.GetOptions{})
+		switch {
+		case errors.IsNotFound(err):
+			return false, nil
+		case err != nil:
+			return false, err
+		}
+
+		return PodIsRunning(p), nil
 	}
 }
