@@ -103,8 +103,9 @@ func TestFindGVR(t *testing.T) {
 				"", "The groupKind '%s' was not found.", "baremetalhost/status"),
 		},
 		{
-			name: "empty resources",
-			kind: "configmap",
+			name:      "empty resources",
+			resources: []*metav1.APIResourceList{},
+			kind:      "configmap",
 			wantErr: api.NewCloudError(
 				http.StatusBadRequest, api.CloudErrorCodeNotFound,
 				"", "The groupKind '%s' was not found.", "configmap"),
@@ -141,9 +142,9 @@ func TestFindGVR(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ka := &dynamicHelper{apiresources: tt.resources}
+			dh := &dynamicHelper{apiresources: tt.resources}
 
-			got, err := ka.findGVR(tt.kind, "")
+			got, err := dh.findGVR(tt.kind, "")
 			if !reflect.DeepEqual(err, tt.wantErr) {
 				t.Error(err)
 			}

@@ -24,13 +24,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend"
-	"github.com/Azure/ARO-RP/pkg/frontend/kubeactions"
+	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/azure"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/k8s"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 )
 
@@ -96,8 +93,7 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	// TODO(mj): We need to fix this argument chain
-	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), _env, db, api.APIs, m, feCipher, kubeactions.New, features.NewResourcesClient, compute.NewVirtualMachinesClient, network.NewVirtualNetworksClient)
+	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), _env, db, api.APIs, m, feCipher, adminactions.New)
 	if err != nil {
 		return err
 	}

@@ -53,11 +53,6 @@ func New(log *logrus.Entry, restconfig *rest.Config) (DynamicHelper, error) {
 		return nil, err
 	}
 
-	err = dh.RefreshAPIResources()
-	if err != nil {
-		return nil, err
-	}
-
 	return dh, nil
 }
 
@@ -74,6 +69,13 @@ func (dh *dynamicHelper) RefreshAPIResources() error {
 }
 
 func (dh *dynamicHelper) findGVR(groupKind, optionalVersion string) (*schema.GroupVersionResource, error) {
+	if dh.apiresources == nil {
+		err := dh.RefreshAPIResources()
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	var matches []*schema.GroupVersionResource
 	for _, apiresources := range dh.apiresources {
 		gv, err := schema.ParseGroupVersion(apiresources.GroupVersion)

@@ -15,27 +15,17 @@ import (
 	"strings"
 	"testing"
 
-	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
-	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
-	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
-	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
-	mockcompute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
-	mockfeatures "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
-	mocknetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
-	mockdatabase "github.com/Azure/ARO-RP/pkg/util/mocks/database"
+	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
+	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/test/util/listener"
 )
@@ -75,7 +65,7 @@ func TestAdminListResourcesList(t *testing.T) {
 	type test struct {
 		name           string
 		resourceID     string
-		mocks          func(*test, *mockdatabase.MockOpenShiftClusters, *mockdatabase.MockSubscriptions, *mockfeatures.MockResourcesClient, *mockcompute.MockVirtualMachinesClient, *mocknetwork.MockVirtualNetworksClient)
+		mocks          func(*test, *mock_adminactions.MockInterface, *mock_database.MockOpenShiftClusters, *mock_database.MockSubscriptions)
 		wantStatusCode int
 		wantResponse   func() []byte
 		wantError      string
@@ -85,7 +75,7 @@ func TestAdminListResourcesList(t *testing.T) {
 		{
 			name:       "basic coverage",
 			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-			mocks: func(tt *test, openshiftClusters *mockdatabase.MockOpenShiftClusters, subscriptions *mockdatabase.MockSubscriptions, resources *mockfeatures.MockResourcesClient, compute *mockcompute.MockVirtualMachinesClient, network *mocknetwork.MockVirtualNetworksClient) {
+			mocks: func(tt *test, a *mock_adminactions.MockInterface, oc *mock_database.MockOpenShiftClusters, s *mock_database.MockSubscriptions) {
 				clusterDoc := &api.OpenShiftClusterDocument{
 					Key: tt.resourceID,
 					OpenShiftCluster: &api.OpenShiftCluster{
@@ -109,49 +99,16 @@ func TestAdminListResourcesList(t *testing.T) {
 					},
 				}
 
-				openshiftClusters.EXPECT().Get(gomock.Any(), strings.ToLower(tt.resourceID)).
+				oc.EXPECT().Get(gomock.Any(), strings.ToLower(tt.resourceID)).
 					Return(clusterDoc, nil)
 
-				subscriptions.EXPECT().Get(gomock.Any(), mockSubID).
+				s.EXPECT().Get(gomock.Any(), mockSubID).
 					Return(subscriptionDoc, nil)
 
-				resources.EXPECT().List(gomock.Any(), "resourceGroup eq 'test-cluster'", "", nil).Return([]mgmtfeatures.GenericResourceExpanded{
-					{
-						Name: to.StringPtr("vm-1"),
-						ID:   to.StringPtr("/subscriptions/id"),
-						Type: to.StringPtr("Microsoft.Compute/virtualMachines"),
-					},
-					{
-						Name: to.StringPtr("storage"),
-						ID:   to.StringPtr("/subscriptions/id"),
-						Type: to.StringPtr("Microsoft.Storage/storageAccounts"),
-					},
-				}, nil)
+				a.EXPECT().
+					ResourcesList(gomock.Any()).
+					Return([]byte(`[{"properties":{"dhcpOptions":{"dnsServers":[]}},"id":"/subscriptions/id","type":"Microsoft.Network/virtualNetworks"},{"properties":{"provisioningState":"Succeeded"},"id":"/subscriptions/id","type":"Microsoft.Compute/virtualMachines"},{"id":"/subscriptions/id","name":"storage","type":"Microsoft.Storage/storageAccounts","location":"eastus"}]`), nil)
 
-				network.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mgmtnetwork.VirtualNetwork{
-					ID:   to.StringPtr("/subscriptions/id"),
-					Type: to.StringPtr("Microsoft.Network/virtualNetworks"),
-					VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
-						DhcpOptions: &mgmtnetwork.DhcpOptions{
-							DNSServers: &[]string{},
-						},
-					},
-				}, nil)
-
-				resources.EXPECT().GetByID(gomock.Any(), "/subscriptions/id", azureclient.APIVersions["Microsoft.Storage"]).Return(mgmtfeatures.GenericResource{
-					Name:     to.StringPtr("storage"),
-					ID:       to.StringPtr("/subscriptions/id"),
-					Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
-					Location: to.StringPtr("eastus"),
-				}, nil)
-
-				compute.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mgmtcompute.VirtualMachine{
-					ID:   to.StringPtr("/subscriptions/id"),
-					Type: to.StringPtr("Microsoft.Compute/virtualMachines"),
-					VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
-						ProvisioningState: to.StringPtr("Succeeded"),
-					},
-				}, nil)
 			},
 			wantStatusCode: http.StatusOK,
 			wantResponse: func() []byte {
@@ -163,39 +120,30 @@ func TestAdminListResourcesList(t *testing.T) {
 			defer cli.CloseIdleConnections()
 			l := listener.NewListener()
 			defer l.Close()
-			env := &env.Test{
+			_env := &env.Test{
 				L:            l,
 				TestLocation: "eastus",
 				TLSKey:       serverkey,
 				TLSCerts:     servercerts,
 			}
-			env.SetAdminClientAuthorizer(clientauthorizer.NewOne(clientcerts[0].Raw))
+			_env.SetAdminClientAuthorizer(clientauthorizer.NewOne(clientcerts[0].Raw))
 			cli.Transport.(*http.Transport).Dial = l.Dial
 
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			resourcesClient := mockfeatures.NewMockResourcesClient(controller)
-			openshiftClusters := mockdatabase.NewMockOpenShiftClusters(controller)
-			subscriptions := mockdatabase.NewMockSubscriptions(controller)
-			computeClient := mockcompute.NewMockVirtualMachinesClient(controller)
-			vnetClientFactory := mocknetwork.NewMockVirtualNetworksClient(controller)
-			tt.mocks(tt, openshiftClusters, subscriptions, resourcesClient, computeClient, vnetClientFactory)
+			a := mock_adminactions.NewMockInterface(controller)
+			oc := mock_database.NewMockOpenShiftClusters(controller)
+			s := mock_database.NewMockSubscriptions(controller)
+			tt.mocks(tt, a, oc, s)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
-				OpenShiftClusters: openshiftClusters,
-				Subscriptions:     subscriptions,
-			}, api.APIs, &noop.Noop{}, nil, nil,
-				func(subscriptionID string, authorizer autorest.Authorizer) features.ResourcesClient {
-					return resourcesClient
-				},
-				func(subscriptionID string, authorizer autorest.Authorizer) compute.VirtualMachinesClient {
-					return computeClient
-				},
-				func(subscriptionID string, authorizer autorest.Authorizer) network.VirtualNetworksClient {
-					return vnetClientFactory
-				},
-			)
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), _env, &database.Database{
+				OpenShiftClusters: oc,
+				Subscriptions:     s,
+			}, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster,
+				*api.SubscriptionDocument) (adminactions.Interface, error) {
+				return a, nil
+			})
 
 			if err != nil {
 				t.Fatal(err)
