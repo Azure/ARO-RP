@@ -29,6 +29,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/azure"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/k8s"
 	"github.com/Azure/ARO-RP/pkg/proxy"
+	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 )
 
@@ -62,11 +63,6 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 		if _, found := os.LookupEnv(key); !found {
 			return fmt.Errorf("environment variable %q unset", key)
 		}
-	}
-
-	err = _env.InitializeAuthorizers()
-	if err != nil {
-		return err
 	}
 
 	m, err := statsd.New(ctx, log.WithField("component", "metrics"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"))
@@ -129,7 +125,23 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), _env, dialer, dbasyncoperations, dbopenshiftclusters, dbsubscriptions, api.APIs, m, feCipher, adminactions.New)
+	var armClientAuthorizer, adminClientAuthorizer clientauthorizer.ClientAuthorizer
+	if _env.Type() == env.Dev {
+		armClientAuthorizer = clientauthorizer.NewAll()
+		adminClientAuthorizer = clientauthorizer.NewAll()
+	} else {
+		armClientAuthorizer = clientauthorizer.NewARM(log)
+		adminClientAuthorizer, err = clientauthorizer.NewAdmin(
+			log,
+			"/etc/aro-rp/admin-ca-bundle.pem",
+			os.Getenv("ADMIN_API_CLIENT_CERT_COMMON_NAME"),
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), _env, dialer, dbasyncoperations, dbopenshiftclusters, dbsubscriptions, api.APIs, m, feCipher, adminactions.New, armClientAuthorizer, adminClientAuthorizer)
 	if err != nil {
 		return err
 	}

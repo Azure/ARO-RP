@@ -11,20 +11,17 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/admin"
-	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 )
 
-func Authenticated(env env.Interface) func(http.Handler) http.Handler {
+func Authenticated(armClientAuthorizer, adminClientAuthorizer clientauthorizer.ClientAuthorizer) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			vars := mux.Vars(r)
 
-			var clientAuthorizer clientauthorizer.ClientAuthorizer
+			clientAuthorizer := armClientAuthorizer
 			if vars["api-version"] == admin.APIVersion || strings.HasPrefix(r.URL.Path, "/admin") {
-				clientAuthorizer = env.AdminClientAuthorizer()
-			} else {
-				clientAuthorizer = env.ArmClientAuthorizer()
+				clientAuthorizer = adminClientAuthorizer
 			}
 
 			if !clientAuthorizer.IsAuthorized(r.TLS) {

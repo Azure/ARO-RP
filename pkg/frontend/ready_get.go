@@ -22,8 +22,8 @@ func (f *frontend) checkReady() bool {
 	}
 
 	return f.ready.Load().(bool) &&
-		f.env.ArmClientAuthorizer().IsReady() &&
-		f.env.AdminClientAuthorizer().IsReady()
+		f.armClientAuthorizer.IsReady() &&
+		f.adminClientAuthorizer.IsReady()
 }
 
 func (f *frontend) getReady(w http.ResponseWriter, r *http.Request) {

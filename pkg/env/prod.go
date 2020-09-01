@@ -21,7 +21,6 @@ import (
 	basekeyvault "github.com/Azure/ARO-RP/pkg/util/azureclient/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
-	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
@@ -29,9 +28,6 @@ import (
 type prod struct {
 	instancemetadata.InstanceMetadata
 	ServiceKeyvaultInterface
-
-	armClientAuthorizer   clientauthorizer.ClientAuthorizer
-	adminClientAuthorizer clientauthorizer.ClientAuthorizer
 
 	keyvault basekeyvault.BaseClient
 
@@ -119,30 +115,6 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 	}
 
 	return p, nil
-}
-
-func (p *prod) InitializeAuthorizers() error {
-	p.armClientAuthorizer = clientauthorizer.NewARM(p.log)
-
-	adminClientAuthorizer, err := clientauthorizer.NewAdmin(
-		p.log,
-		"/etc/aro-rp/admin-ca-bundle.pem",
-		os.Getenv("ADMIN_API_CLIENT_CERT_COMMON_NAME"),
-	)
-	if err != nil {
-		return err
-	}
-
-	p.adminClientAuthorizer = adminClientAuthorizer
-	return nil
-}
-
-func (p *prod) ArmClientAuthorizer() clientauthorizer.ClientAuthorizer {
-	return p.armClientAuthorizer
-}
-
-func (p *prod) AdminClientAuthorizer() clientauthorizer.ClientAuthorizer {
-	return p.adminClientAuthorizer
 }
 
 func (p *prod) ACRResourceID() string {

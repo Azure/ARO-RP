@@ -20,7 +20,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/test/util/listener"
 )
@@ -63,8 +62,6 @@ func newTestInfra(t *testing.T) (*testInfra, error) {
 		TLSKey:       serverkey,
 		TLSCerts:     servercerts,
 	}
-	env.SetARMClientAuthorizer(clientauthorizer.NewOne(clientcerts[0].Raw))
-	env.SetAdminClientAuthorizer(clientauthorizer.NewOne(clientcerts[0].Raw))
 
 	return &testInfra{
 		env:        env,

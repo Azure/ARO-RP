@@ -13,7 +13,6 @@ import (
 
 func newInt(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata) (*prod, error) {
 	p, err := newProd(ctx, log, instancemetadata)
-
 	if err != nil {
 		return nil, err
 	}

@@ -28,6 +28,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
+	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/clusterdata"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/heartbeat"
@@ -58,6 +59,9 @@ type frontend struct {
 	ocEnricher          clusterdata.OpenShiftClusterEnricher
 	adminActionsFactory adminActionsFactory
 
+	armClientAuthorizer   clientauthorizer.ClientAuthorizer
+	adminClientAuthorizer clientauthorizer.ClientAuthorizer
+
 	l net.Listener
 	s *http.Server
 
@@ -83,7 +87,9 @@ func NewFrontend(ctx context.Context,
 	apis map[string]*api.Version,
 	m metrics.Interface,
 	cipher encryption.Cipher,
-	adminActionsFactory adminActionsFactory) (Runnable, error) {
+	adminActionsFactory adminActionsFactory,
+	armClientAuthorizer clientauthorizer.ClientAuthorizer,
+	adminClientAuthorizer clientauthorizer.ClientAuthorizer) (Runnable, error) {
 	f := &frontend{
 		baseLog: baseLog,
 		env:     _env,
@@ -97,6 +103,9 @@ func NewFrontend(ctx context.Context,
 		m:                   m,
 		cipher:              cipher,
 		adminActionsFactory: adminActionsFactory,
+
+		armClientAuthorizer:   armClientAuthorizer,
+		adminClientAuthorizer: adminClientAuthorizer,
 
 		ocEnricher: clusterdata.NewBestEffortEnricher(baseLog, dialer, m),
 
@@ -274,13 +283,13 @@ func (f *frontend) setupRouter() *mux.Router {
 		w.Header().Set("Content-Type", "application/json")
 		api.WriteError(w, http.StatusNotFound, api.CloudErrorCodeNotFound, "", "The requested path could not be found.")
 	})
-	r.NotFoundHandler = middleware.Authenticated(f.env)(r.NotFoundHandler)
+	r.NotFoundHandler = middleware.Authenticated(f.armClientAuthorizer, f.adminClientAuthorizer)(r.NotFoundHandler)
 
 	unauthenticated := r.NewRoute().Subrouter()
 	f.unauthenticatedRoutes(unauthenticated)
 
 	authenticated := r.NewRoute().Subrouter()
-	authenticated.Use(middleware.Authenticated(f.env))
+	authenticated.Use(middleware.Authenticated(f.armClientAuthorizer, f.adminClientAuthorizer))
 	f.authenticatedRoutes(authenticated)
 
 	return r

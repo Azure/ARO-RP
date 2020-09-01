@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
@@ -28,18 +27,8 @@ type Test struct {
 	TLSCerts []*x509.Certificate
 }
 
-func (t *Test) SetARMClientAuthorizer(armClientAuthorizer clientauthorizer.ClientAuthorizer) {
-	if t.prod == nil {
-		t.prod = &prod{}
-	}
-	t.armClientAuthorizer = armClientAuthorizer
-}
-
-func (t *Test) SetAdminClientAuthorizer(adminClientAuthorizer clientauthorizer.ClientAuthorizer) {
-	if t.prod == nil {
-		t.prod = &prod{}
-	}
-	t.adminClientAuthorizer = adminClientAuthorizer
+func (t *Test) Type() Type {
+	return Prod
 }
 
 func (t *Test) Domain() string {

@@ -16,6 +16,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	v20200430 "github.com/Azure/ARO-RP/pkg/api/v20200430"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
+	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	mock_clusterdata "github.com/Azure/ARO-RP/pkg/util/mocks/clusterdata"
 	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
 	mock_cosmosdb "github.com/Azure/ARO-RP/pkg/util/mocks/database/cosmosdb"
@@ -249,7 +250,7 @@ func TestListOpenShiftCluster(t *testing.T) {
 					cipher := mock_encryption.NewMockCipher(ti.controller)
 					tt.mocks(controller, dbopenshiftclusters, enricher, cipher, listPrefix)
 
-					f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, nil, dbopenshiftclusters, nil, api.APIs, &noop.Noop{}, cipher, nil)
+					f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, nil, dbopenshiftclusters, nil, api.APIs, &noop.Noop{}, cipher, nil, clientauthorizer.NewOne(clientcerts[0].Raw), nil)
 					if err != nil {
 						t.Fatal(err)
 					}

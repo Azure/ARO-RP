@@ -21,7 +21,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
-	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
@@ -88,12 +87,6 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 	d.deployments = features.NewDeploymentsClient(instancemetadata.TenantID(), fpAuthorizer)
 
 	return d, nil
-}
-
-func (d *dev) InitializeAuthorizers() error {
-	d.armClientAuthorizer = clientauthorizer.NewAll()
-	d.adminClientAuthorizer = clientauthorizer.NewAll()
-	return nil
 }
 
 func (d *dev) Listen() (net.Listener, error) {

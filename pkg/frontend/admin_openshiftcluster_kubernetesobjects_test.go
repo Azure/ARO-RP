@@ -19,6 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/proxy"
+	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
 	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
 )
@@ -230,7 +231,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, nil, dbopenshiftclusters, dbsubscriptions, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, proxy.Dialer, *api.OpenShiftCluster,
 				*api.SubscriptionDocument) (adminactions.Interface, error) {
 				return a, nil
-			})
+			}, nil, clientauthorizer.NewOne(clientcerts[0].Raw))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -436,7 +437,7 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, nil, dbopenshiftclusters, dbsubscriptions, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, proxy.Dialer, *api.OpenShiftCluster,
 				*api.SubscriptionDocument) (adminactions.Interface, error) {
 				return a, nil
-			})
+			}, nil, clientauthorizer.NewOne(clientcerts[0].Raw))
 			if err != nil {
 				t.Fatal(err)
 			}

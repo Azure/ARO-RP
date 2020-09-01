@@ -14,7 +14,6 @@ import (
 	gomock "github.com/golang/mock/gomock"
 
 	env "github.com/Azure/ARO-RP/pkg/env"
-	clientauthorizer "github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	refreshable "github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
@@ -67,34 +66,6 @@ func (m *MockInterface) ACRResourceID() string {
 func (mr *MockInterfaceMockRecorder) ACRResourceID() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ACRResourceID", reflect.TypeOf((*MockInterface)(nil).ACRResourceID))
-}
-
-// AdminClientAuthorizer mocks base method
-func (m *MockInterface) AdminClientAuthorizer() clientauthorizer.ClientAuthorizer {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AdminClientAuthorizer")
-	ret0, _ := ret[0].(clientauthorizer.ClientAuthorizer)
-	return ret0
-}
-
-// AdminClientAuthorizer indicates an expected call of AdminClientAuthorizer
-func (mr *MockInterfaceMockRecorder) AdminClientAuthorizer() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AdminClientAuthorizer", reflect.TypeOf((*MockInterface)(nil).AdminClientAuthorizer))
-}
-
-// ArmClientAuthorizer mocks base method
-func (m *MockInterface) ArmClientAuthorizer() clientauthorizer.ClientAuthorizer {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ArmClientAuthorizer")
-	ret0, _ := ret[0].(clientauthorizer.ClientAuthorizer)
-	return ret0
-}
-
-// ArmClientAuthorizer indicates an expected call of ArmClientAuthorizer
-func (mr *MockInterfaceMockRecorder) ArmClientAuthorizer() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ArmClientAuthorizer", reflect.TypeOf((*MockInterface)(nil).ArmClientAuthorizer))
 }
 
 // ClustersGenevaLoggingSecret mocks base method
@@ -198,20 +169,6 @@ func (m *MockInterface) GetSecret(arg0 context.Context, arg1 string) ([]byte, er
 func (mr *MockInterfaceMockRecorder) GetSecret(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecret", reflect.TypeOf((*MockInterface)(nil).GetSecret), arg0, arg1)
-}
-
-// InitializeAuthorizers mocks base method
-func (m *MockInterface) InitializeAuthorizers() error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InitializeAuthorizers")
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// InitializeAuthorizers indicates an expected call of InitializeAuthorizers
-func (mr *MockInterfaceMockRecorder) InitializeAuthorizers() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitializeAuthorizers", reflect.TypeOf((*MockInterface)(nil).InitializeAuthorizers))
 }
 
 // Listen mocks base method

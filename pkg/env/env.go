@@ -13,7 +13,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
@@ -40,9 +39,6 @@ type Interface interface {
 	Lite
 	ServiceKeyvaultInterface
 
-	InitializeAuthorizers() error
-	ArmClientAuthorizer() clientauthorizer.ClientAuthorizer
-	AdminClientAuthorizer() clientauthorizer.ClientAuthorizer
 	CreateARMResourceGroupRoleAssignment(context.Context, refreshable.Authorizer, string) error
 	ClustersGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate)
 	ClustersKeyvaultURI() string
