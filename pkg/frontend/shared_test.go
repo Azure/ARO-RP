@@ -58,14 +58,12 @@ func newTestInfra(t *testing.T) (*testInfra, error) {
 
 	env := &env.Test{
 		TestLocation: "eastus",
-		TLSKey:       serverkey,
-		TLSCerts:     servercerts,
 	}
 
 	return &testInfra{
 		env:        env,
 		controller: gomock.NewController(t),
-		l:          l,
+		l:          TLSListener(l, serverkey, servercerts),
 		cli: &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{

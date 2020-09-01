@@ -40,7 +40,7 @@ func TestSecurity(t *testing.T) {
 
 	env := &env.Test{}
 
-	env.TLSKey, env.TLSCerts, err = utiltls.GenerateKeyAndCertificate("server", nil, nil, false, false)
+	serverkey, servercerts, err := utiltls.GenerateKeyAndCertificate("server", nil, nil, false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,9 +51,9 @@ func TestSecurity(t *testing.T) {
 	}
 
 	pool := x509.NewCertPool()
-	pool.AddCert(env.TLSCerts[0])
+	pool.AddCert(servercerts[0])
 
-	f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, nil, nil, nil, nil, l, api.APIs, &noop.Noop{}, nil, nil, clientauthorizer.NewOne(validclientcerts[0].Raw), clientauthorizer.NewOne(validadminclientcerts[0].Raw))
+	f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, nil, nil, nil, nil, TLSListener(l, serverkey, servercerts), api.APIs, &noop.Noop{}, nil, nil, clientauthorizer.NewOne(validclientcerts[0].Raw), clientauthorizer.NewOne(validadminclientcerts[0].Raw))
 	if err != nil {
 		t.Fatal(err)
 	}

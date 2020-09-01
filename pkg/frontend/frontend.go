@@ -5,7 +5,9 @@ package frontend
 
 import (
 	"context"
+	"crypto"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -100,6 +102,7 @@ func NewFrontend(ctx context.Context,
 		dbopenshiftclusters: dbopenshiftclusters,
 		dbsubscriptions:     dbsubscriptions,
 
+		l:                   l,
 		apis:                apis,
 		m:                   m,
 		cipher:              cipher,
@@ -115,11 +118,11 @@ func NewFrontend(ctx context.Context,
 		startTime: time.Now(),
 	}
 
-	key, certs, err := f.env.GetCertificateSecret(ctx, env.RPServerSecretName)
-	if err != nil {
-		return nil, err
-	}
+	f.ready.Store(true)
+	return f, nil
+}
 
+func TLSListener(l net.Listener, key crypto.PrivateKey, certs []*x509.Certificate) net.Listener {
 	config := &tls.Config{
 		Certificates: []tls.Certificate{
 			{
@@ -149,10 +152,7 @@ func NewFrontend(ctx context.Context,
 		config.Certificates[0].Certificate = append(config.Certificates[0].Certificate, cert.Raw)
 	}
 
-	f.l = tls.NewListener(l, config)
-
-	f.ready.Store(true)
-	return f, nil
+	return tls.NewListener(l, config)
 }
 
 func (f *frontend) unauthenticatedRoutes(r *mux.Router) {

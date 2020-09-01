@@ -156,6 +156,13 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
+	key, certs, err := _env.GetCertificateSecret(ctx, env.RPServerSecretName)
+	if err != nil {
+		return err
+	}
+
+	l = frontend.TLSListener(l, key, certs)
+
 	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), _env, dialer, dbasyncoperations, dbopenshiftclusters, dbsubscriptions, l, api.APIs, m, feCipher, adminactions.New, armClientAuthorizer, adminClientAuthorizer)
 	if err != nil {
 		return err

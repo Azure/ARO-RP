@@ -4,11 +4,6 @@ package env
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
-	"crypto/rsa"
-	"crypto/x509"
-	"fmt"
-
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
@@ -19,9 +14,6 @@ type Test struct {
 	TestLocation       string
 	TestResourceGroup  string
 	TestDomain         string
-
-	TLSKey   *rsa.PrivateKey
-	TLSCerts []*x509.Certificate
 }
 
 func (t *Test) Type() Type {
@@ -34,15 +26,6 @@ func (t *Test) Domain() string {
 
 func (t *Test) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, error) {
 	return nil, nil
-}
-
-func (t *Test) GetCertificateSecret(ctx context.Context, secretName string) (key *rsa.PrivateKey, certs []*x509.Certificate, err error) {
-	switch secretName {
-	case RPServerSecretName:
-		return t.TLSKey, t.TLSCerts, nil
-	default:
-		return nil, nil, fmt.Errorf("secret %q not found", secretName)
-	}
 }
 
 func (t *Test) Location() string {
