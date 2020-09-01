@@ -6,6 +6,7 @@ package scheme
 import (
 	securityv1 "github.com/openshift/api/security/v1"
 	azureproviderv1beta1 "github.com/openshift/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1"
+	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -18,4 +19,5 @@ func init() {
 	runtime.Must(securityv1.AddToScheme(scheme.Scheme))
 	runtime.Must(arov1alpha1.AddToScheme(scheme.Scheme))
 	runtime.Must(azureproviderv1beta1.SchemeBuilder.AddToScheme(scheme.Scheme))
+	runtime.Must(mcv1.AddToScheme(scheme.Scheme))
 }
