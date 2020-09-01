@@ -7,7 +7,6 @@ import (
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
-	"net"
 	"os"
 	"strings"
 
@@ -44,7 +43,6 @@ type Interface interface {
 	ClustersKeyvaultURI() string
 	Domain() string
 	FPAuthorizer(string, string) (refreshable.Authorizer, error)
-	Listen() (net.Listener, error)
 	ManagedDomain(string) (string, error)
 	Zones(vmSize string) ([]string, error)
 	ACRResourceID() string

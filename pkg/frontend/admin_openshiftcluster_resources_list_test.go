@@ -92,7 +92,7 @@ func TestAdminListResourcesList(t *testing.T) {
 			dbsubscriptions := mock_database.NewMockSubscriptions(ti.controller)
 			tt.mocks(tt, a, dbopenshiftclusters, dbsubscriptions)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, nil, dbopenshiftclusters, dbsubscriptions, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, proxy.Dialer, *api.OpenShiftCluster,
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, nil, dbopenshiftclusters, dbsubscriptions, ti.l, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, proxy.Dialer, *api.OpenShiftCluster,
 				*api.SubscriptionDocument) (adminactions.Interface, error) {
 				return a, nil
 			}, nil, clientauthorizer.NewOne(clientcerts[0].Raw))

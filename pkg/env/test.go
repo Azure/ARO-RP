@@ -8,15 +8,12 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"fmt"
-	"net"
 
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
 type Test struct {
 	*prod
-
-	L net.Listener
 
 	TestSubscriptionID string
 	TestLocation       string
@@ -46,10 +43,6 @@ func (t *Test) GetCertificateSecret(ctx context.Context, secretName string) (key
 	default:
 		return nil, nil, fmt.Errorf("secret %q not found", secretName)
 	}
-}
-
-func (t *Test) Listen() (net.Listener, error) {
-	return t.L, nil
 }
 
 func (t *Test) Location() string {

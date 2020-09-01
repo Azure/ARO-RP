@@ -8,7 +8,6 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"fmt"
-	"net"
 	"os"
 	"strings"
 
@@ -188,10 +187,6 @@ func (p *prod) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, 
 	}
 
 	return refreshable.NewAuthorizer(sp), nil
-}
-
-func (p *prod) Listen() (net.Listener, error) {
-	return net.Listen("tcp", ":8443")
 }
 
 // ManagedDomain returns the fully qualified domain of a cluster if we manage

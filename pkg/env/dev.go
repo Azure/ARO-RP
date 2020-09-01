@@ -6,7 +6,6 @@ package env
 import (
 	"context"
 	"fmt"
-	"net"
 	"os"
 
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
@@ -87,12 +86,6 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 	d.deployments = features.NewDeploymentsClient(instancemetadata.TenantID(), fpAuthorizer)
 
 	return d, nil
-}
-
-func (d *dev) Listen() (net.Listener, error) {
-	// in dev mode there is no authentication, so for safety we only listen on
-	// localhost
-	return net.Listen("tcp", "localhost:8443")
 }
 
 func (d *dev) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, error) {

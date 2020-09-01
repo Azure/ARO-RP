@@ -84,6 +84,7 @@ func NewFrontend(ctx context.Context,
 	dbasyncoperations database.AsyncOperations,
 	dbopenshiftclusters database.OpenShiftClusters,
 	dbsubscriptions database.Subscriptions,
+	l net.Listener,
 	apis map[string]*api.Version,
 	m metrics.Interface,
 	cipher encryption.Cipher,
@@ -112,11 +113,6 @@ func NewFrontend(ctx context.Context,
 		bucketAllocator: &bucket.Random{},
 
 		startTime: time.Now(),
-	}
-
-	l, err := f.env.Listen()
-	if err != nil {
-		return nil, err
 	}
 
 	key, certs, err := f.env.GetCertificateSecret(ctx, env.RPServerSecretName)

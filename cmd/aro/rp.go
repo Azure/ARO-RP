@@ -6,6 +6,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -126,9 +127,18 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	var armClientAuthorizer, adminClientAuthorizer clientauthorizer.ClientAuthorizer
+	var l net.Listener
 	if _env.Type() == env.Dev {
 		armClientAuthorizer = clientauthorizer.NewAll()
 		adminClientAuthorizer = clientauthorizer.NewAll()
+
+		// in dev mode there is no authentication, so for safety we only listen on
+		// localhost
+		l, err = net.Listen("tcp", "localhost:8443")
+		if err != nil {
+			return err
+		}
+
 	} else {
 		armClientAuthorizer = clientauthorizer.NewARM(log)
 		adminClientAuthorizer, err = clientauthorizer.NewAdmin(
@@ -139,9 +149,14 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 		if err != nil {
 			return err
 		}
+
+		l, err = net.Listen("tcp", ":8443")
+		if err != nil {
+			return err
+		}
 	}
 
-	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), _env, dialer, dbasyncoperations, dbopenshiftclusters, dbsubscriptions, api.APIs, m, feCipher, adminactions.New, armClientAuthorizer, adminClientAuthorizer)
+	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), _env, dialer, dbasyncoperations, dbopenshiftclusters, dbsubscriptions, l, api.APIs, m, feCipher, adminactions.New, armClientAuthorizer, adminClientAuthorizer)
 	if err != nil {
 		return err
 	}

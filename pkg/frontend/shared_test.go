@@ -57,7 +57,6 @@ func newTestInfra(t *testing.T) (*testInfra, error) {
 	l := listener.NewListener()
 
 	env := &env.Test{
-		L:            l,
 		TestLocation: "eastus",
 		TLSKey:       serverkey,
 		TLSCerts:     servercerts,

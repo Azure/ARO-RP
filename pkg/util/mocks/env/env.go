@@ -8,7 +8,6 @@ import (
 	context "context"
 	rsa "crypto/rsa"
 	x509 "crypto/x509"
-	net "net"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -169,21 +168,6 @@ func (m *MockInterface) GetSecret(arg0 context.Context, arg1 string) ([]byte, er
 func (mr *MockInterfaceMockRecorder) GetSecret(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecret", reflect.TypeOf((*MockInterface)(nil).GetSecret), arg0, arg1)
-}
-
-// Listen mocks base method
-func (m *MockInterface) Listen() (net.Listener, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Listen")
-	ret0, _ := ret[0].(net.Listener)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// Listen indicates an expected call of Listen
-func (mr *MockInterfaceMockRecorder) Listen() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Listen", reflect.TypeOf((*MockInterface)(nil).Listen))
 }
 
 // Location mocks base method
