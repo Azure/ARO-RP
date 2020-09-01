@@ -120,7 +120,8 @@ func (i *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 		return err
 	}
 
-	err = i.env.CreateARMResourceGroupRoleAssignment(ctx, i.fpAuthorizer, resourceGroup)
+	// only does anything in dev mode
+	err = i.fakearm.CreateARMResourceGroupRoleAssignment(ctx, i.log, i.env, resourceGroup)
 	if err != nil {
 		return err
 	}

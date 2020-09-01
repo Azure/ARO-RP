@@ -13,7 +13,7 @@ func (m *Manager) AdminUpdate(ctx context.Context) error {
 	// m.ocDynamicValidator.Dynamic is not called so that it doesn't block an
 	// admin update
 
-	i, err := cluster.New(ctx, m.log, m.env, m.dialer, m.db, m.cipher, m.billing, m.doc, m.subscriptionDoc)
+	i, err := cluster.New(ctx, m.log, m.env, m.dialer, m.fakearm, m.db, m.cipher, m.billing, m.doc, m.subscriptionDoc)
 	if err != nil {
 		return err
 	}

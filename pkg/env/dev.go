@@ -8,16 +8,10 @@ import (
 	"fmt"
 	"os"
 
-	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
-	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/azure/auth"
-	"github.com/Azure/go-autorest/autorest/to"
-	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
@@ -29,18 +23,14 @@ var _ Interface = &dev{}
 type dev struct {
 	*prod
 
-	permissions     authorization.PermissionsClient
-	roleassignments authorization.RoleAssignmentsClient
-	applications    graphrbac.ApplicationsClient
-	deployments     features.DeploymentsClient
+	permissions authorization.PermissionsClient
+	deployments features.DeploymentsClient
 }
 
 func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata) (*dev, error) {
 	for _, key := range []string{
 		"AZURE_RP_CLIENT_ID",
 		"AZURE_RP_CLIENT_SECRET",
-		"AZURE_ARM_CLIENT_ID",
-		"AZURE_ARM_CLIENT_SECRET",
 		"AZURE_FP_CLIENT_ID",
 		"AZURE_SUBSCRIPTION_ID",
 		"AZURE_TENANT_ID",
@@ -53,28 +43,15 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 		}
 	}
 
-	armAuthorizer, err := auth.NewClientCredentialsConfig(os.Getenv("AZURE_ARM_CLIENT_ID"), os.Getenv("AZURE_ARM_CLIENT_SECRET"), instancemetadata.TenantID()).Authorizer()
-	if err != nil {
-		return nil, err
-	}
+	d := &dev{}
 
-	d := &dev{
-		roleassignments: authorization.NewRoleAssignmentsClient(instancemetadata.SubscriptionID(), armAuthorizer),
-	}
-
+	var err error
 	d.prod, err = newProd(ctx, log, instancemetadata)
 	if err != nil {
 		return nil, err
 	}
 
 	d.prod.envType = Dev
-
-	fpGraphAuthorizer, err := d.FPAuthorizer(instancemetadata.TenantID(), azure.PublicCloud.GraphEndpoint)
-	if err != nil {
-		return nil, err
-	}
-
-	d.applications = graphrbac.NewApplicationsClient(instancemetadata.TenantID(), fpGraphAuthorizer)
 
 	fpAuthorizer, err := d.FPAuthorizer(instancemetadata.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
@@ -100,28 +77,4 @@ func (d *dev) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, e
 	}
 
 	return refreshable.NewAuthorizer(sp), nil
-}
-
-func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthorizer refreshable.Authorizer, resourceGroup string) error {
-	d.log.Print("development mode: applying resource group role assignment")
-
-	res, err := d.applications.GetServicePrincipalsIDByAppID(ctx, os.Getenv("AZURE_FP_CLIENT_ID"))
-	if err != nil {
-		return err
-	}
-
-	_, err = d.roleassignments.Create(ctx, "/subscriptions/"+d.SubscriptionID()+"/resourceGroups/"+resourceGroup, uuid.NewV4().String(), mgmtauthorization.RoleAssignmentCreateParameters{
-		RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
-			RoleDefinitionID: to.StringPtr("/subscriptions/" + d.SubscriptionID() + "/providers/Microsoft.Authorization/roleDefinitions/8e3af657-a8ff-443c-a75c-2fe8c4bcb635"),
-			PrincipalID:      res.Value,
-		},
-	})
-	if detailedErr, ok := err.(autorest.DetailedError); ok {
-		if requestErr, ok := detailedErr.Original.(*azure.RequestError); ok &&
-			requestErr.ServiceError != nil &&
-			requestErr.ServiceError.Code == "RoleAssignmentExists" {
-			err = nil
-		}
-	}
-	return err
 }

@@ -38,7 +38,6 @@ type Interface interface {
 	Lite
 	ServiceKeyvaultInterface
 
-	CreateARMResourceGroupRoleAssignment(context.Context, refreshable.Authorizer, string) error
 	ClustersGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate)
 	ClustersKeyvaultURI() string
 	Domain() string

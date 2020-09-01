@@ -19,6 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
+	"github.com/Azure/ARO-RP/pkg/util/fakearm"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/privateendpoint"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
@@ -32,6 +33,7 @@ type Manager struct {
 	cipher       encryption.Cipher
 	billing      billing.Manager
 	fpAuthorizer autorest.Authorizer
+	fakearm      fakearm.FakeARM
 
 	ocDynamicValidator validate.OpenShiftClusterDynamicValidator
 
@@ -49,7 +51,7 @@ type Manager struct {
 }
 
 // NewManager returns a new openshiftcluster Manager
-func NewManager(log *logrus.Entry, _env env.Interface, dialer proxy.Dialer, db database.OpenShiftClusters, cipher encryption.Cipher, billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (*Manager, error) {
+func NewManager(log *logrus.Entry, _env env.Interface, dialer proxy.Dialer, fakearm fakearm.FakeARM, db database.OpenShiftClusters, cipher encryption.Cipher, billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (*Manager, error) {
 	localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
@@ -86,6 +88,7 @@ func NewManager(log *logrus.Entry, _env env.Interface, dialer proxy.Dialer, db d
 		cipher:       cipher,
 		billing:      billing,
 		fpAuthorizer: fpAuthorizer,
+		fakearm:      fakearm,
 
 		ocDynamicValidator: ocDynamicValidator,
 

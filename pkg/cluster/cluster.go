@@ -30,6 +30,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
+	"github.com/Azure/ARO-RP/pkg/util/fakearm"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/privateendpoint"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
@@ -54,6 +55,7 @@ type manager struct {
 	subscriptionDoc *api.SubscriptionDocument
 	cipher          encryption.Cipher
 	fpAuthorizer    refreshable.Authorizer
+	fakearm         fakearm.FakeARM
 
 	disks             compute.DisksClient
 	virtualmachines   compute.VirtualMachinesClient
@@ -83,7 +85,7 @@ type manager struct {
 const deploymentName = "azuredeploy"
 
 // New returns a cluster manager
-func New(ctx context.Context, log *logrus.Entry, _env env.Interface, dialer proxy.Dialer, db database.OpenShiftClusters, cipher encryption.Cipher,
+func New(ctx context.Context, log *logrus.Entry, _env env.Interface, dialer proxy.Dialer, fakearm fakearm.FakeARM, db database.OpenShiftClusters, cipher encryption.Cipher,
 	billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (*manager, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
@@ -115,6 +117,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, dialer prox
 		doc:             doc,
 		subscriptionDoc: subscriptionDoc,
 		fpAuthorizer:    fpAuthorizer,
+		fakearm:         fakearm,
 
 		disks:             compute.NewDisksClient(r.SubscriptionID, fpAuthorizer),
 		virtualmachines:   compute.NewVirtualMachinesClient(r.SubscriptionID, fpAuthorizer),
