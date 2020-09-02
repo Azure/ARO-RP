@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 	"sync"
 
 	"github.com/ugorji/go/codec"
@@ -13,38 +12,56 @@ import (
 	pkg "github.com/jim-minter/go-cosmosdb/pkg/gencosmosdb/cosmosdb/dummy"
 )
 
-type FakeTemplateDecoder func(*string) *pkg.Template
+type FakeTemplateDecoder func([]byte, *codec.JsonHandle) (*pkg.Template, error)
 type FakeTemplateTrigger func(context.Context, *pkg.Template) error
-type FakeTemplateQuery func(*Query, map[string]*string, FakeTemplateDecoder) []*string
+type FakeTemplateQuery func(TemplateClient, *Query) TemplateRawIterator
 
 var _ TemplateClient = &FakeTemplateClient{}
 
+func NewFakeTemplateClient(h *codec.JsonHandle) *FakeTemplateClient {
+	return &FakeTemplateClient{
+		docs:       make(map[string][]byte),
+		triggers:   make(map[string]FakeTemplateTrigger),
+		queries:    make(map[string]FakeTemplateQuery),
+		jsonHandle: h,
+		lock:       &sync.RWMutex{},
+	}
+}
+
 type FakeTemplateClient struct {
-	docs       map[string]*string
+	docs       map[string][]byte
 	jsonHandle *codec.JsonHandle
-	lock       sync.Locker
+	lock       *sync.RWMutex
 	triggers   map[string]FakeTemplateTrigger
 	queries    map[string]FakeTemplateQuery
 }
 
-func NewFakeTemplateClient(h *codec.JsonHandle) *FakeTemplateClient {
-	return &FakeTemplateClient{
-		docs:       make(map[string]*string),
-		triggers:   make(map[string]FakeTemplateTrigger),
-		queries:    make(map[string]FakeTemplateQuery),
-		jsonHandle: h,
-		lock:       &sync.Mutex{},
-	}
+func decodeTemplate(s []byte, handle *codec.JsonHandle) (*pkg.Template, error) {
+	res := &pkg.Template{}
+	err := codec.NewDecoder(bytes.NewBuffer(s), handle).Decode(&res)
+	return res, err
 }
 
-func (c *FakeTemplateClient) fromString(s *string) *pkg.Template {
-	res := &pkg.Template{}
-	d := codec.NewDecoder(bytes.NewBufferString(*s), c.jsonHandle)
-	err := d.Decode(&res)
+func encodeTemplate(doc *pkg.Template, handle *codec.JsonHandle) (res []byte, err error) {
+	buf := &bytes.Buffer{}
+	err = codec.NewEncoder(buf, handle).Encode(doc)
 	if err != nil {
-		panic(err)
+		return
 	}
-	return res
+	res = buf.Bytes()
+	return
+}
+
+func (c *FakeTemplateClient) encodeAndCopy(doc *pkg.Template) (*pkg.Template, []byte, error) {
+	encoded, err := encodeTemplate(doc, c.jsonHandle)
+	if err != nil {
+		return nil, nil, err
+	}
+	res, err := decodeTemplate(encoded, c.jsonHandle)
+	if err != nil {
+		return nil, nil, err
+	}
+	return res, encoded, err
 }
 
 func (c *FakeTemplateClient) Create(ctx context.Context, partitionkey string, doc *pkg.Template, options *Options) (*pkg.Template, error) {
@@ -60,66 +77,65 @@ func (c *FakeTemplateClient) Create(ctx context.Context, partitionkey string, do
 	}
 
 	if options != nil {
-		for _, o := range options.PreTriggers {
-			err := c.processPreTrigger(ctx, doc, o)
-			if err != nil {
-				return nil, err
-			}
+		err := c.processPreTriggers(ctx, doc, options)
+		if err != nil {
+			return nil, err
 		}
 	}
 
-	buf := &bytes.Buffer{}
-	err := codec.NewEncoder(buf, c.jsonHandle).Encode(doc)
+	res, enc, err := c.encodeAndCopy(doc)
 	if err != nil {
 		return nil, err
 	}
-
-	out := buf.String()
-	c.docs[doc.ID] = &out
-	return c.fromString(&out), nil
+	c.docs[doc.ID] = enc
+	return res, nil
 }
 
 func (c *FakeTemplateClient) List(*Options) TemplateIterator {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 
-	docs := make([]*string, 0, len(c.docs))
+	docs := make([]*pkg.Template, 0, len(c.docs))
 	for _, d := range c.docs {
-		docs = append(docs, d)
+		r, err := decodeTemplate(d, c.jsonHandle)
+		if err != nil {
+			// todo: ??? what do we do here
+			fmt.Print(err)
+		}
+		docs = append(docs, r)
 	}
-
-	return &FakeTemplateClientRawIterator{
-		docs:       docs,
-		jsonHandle: c.jsonHandle,
-	}
+	return NewFakeTemplateClientRawIterator(docs)
 }
 
 func (c *FakeTemplateClient) ListAll(context.Context, *Options) (*pkg.Templates, error) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 	templates := &pkg.Templates{
 		Count:     len(c.docs),
 		Templates: make([]*pkg.Template, 0, len(c.docs)),
 	}
 
 	for _, d := range c.docs {
-		dec := c.fromString(d)
+		dec, err := decodeTemplate(d, c.jsonHandle)
+		if err != nil {
+			return nil, err
+		}
 		templates.Templates = append(templates.Templates, dec)
 	}
-
 	return templates, nil
 }
 
 func (c *FakeTemplateClient) Get(ctx context.Context, partitionkey string, documentId string, options *Options) (*pkg.Template, error) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 
 	out, ext := c.docs[documentId]
 	if !ext {
 		return nil, &Error{StatusCode: http.StatusNotFound}
 	}
-
-	dec := c.fromString(out)
-	return dec, nil
+	return decodeTemplate(out, c.jsonHandle)
 }
+
 func (c *FakeTemplateClient) Replace(ctx context.Context, partitionkey string, doc *pkg.Template, options *Options) (*pkg.Template, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -130,23 +146,18 @@ func (c *FakeTemplateClient) Replace(ctx context.Context, partitionkey string, d
 	}
 
 	if options != nil {
-		for _, o := range options.PreTriggers {
-			err := c.processPreTrigger(ctx, doc, o)
-			if err != nil {
-				return nil, err
-			}
+		err := c.processPreTriggers(ctx, doc, options)
+		if err != nil {
+			return nil, err
 		}
 	}
 
-	buf := &bytes.Buffer{}
-	err := codec.NewEncoder(buf, c.jsonHandle).Encode(doc)
+	res, enc, err := c.encodeAndCopy(doc)
 	if err != nil {
 		return nil, err
 	}
-
-	out := buf.String()
-	c.docs[doc.ID] = &out
-	return c.fromString(&out), nil
+	c.docs[doc.ID] = enc
+	return res, nil
 }
 
 func (c *FakeTemplateClient) Delete(ctx context.Context, partitionKey string, doc *pkg.Template, options *Options) error {
@@ -166,50 +177,44 @@ func (c *FakeTemplateClient) ChangeFeed(*Options) TemplateIterator {
 	return &fakeTemplateNotImplementedIterator{}
 }
 
-func (c *FakeTemplateClient) processPreTrigger(ctx context.Context, doc *pkg.Template, trigger string) (err error) {
-	trig, ok := c.triggers[trigger]
-	if ok {
-		return trig(ctx, doc)
-	} else {
-		panic(ErrNotImplemented)
+func (c *FakeTemplateClient) processPreTriggers(ctx context.Context, doc *pkg.Template, options *Options) error {
+	for _, trigger := range options.PreTriggers {
+		trig, ok := c.triggers[trigger]
+		if ok {
+			err := trig(ctx, doc)
+			if err != nil {
+				return err
+			}
+		} else {
+			return ErrNotImplemented
+		}
 	}
+	return nil
 }
 
 func (c *FakeTemplateClient) Query(name string, query *Query, options *Options) TemplateRawIterator {
-	c.lock.Lock()
-	defer c.lock.Unlock()
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 
 	quer, ok := c.queries[query.Query]
 	if ok {
-		docs := quer(query, c.docs, c.fromString)
-		return &FakeTemplateClientRawIterator{
-			docs:       docs,
-			jsonHandle: c.jsonHandle,
-		}
+		return quer(c, query)
 	} else {
-		panic(ErrNotImplemented)
+		return &fakeTemplateNotImplementedIterator{}
 	}
 }
 
 func (c *FakeTemplateClient) QueryAll(ctx context.Context, partitionkey string, query *Query, options *Options) (*pkg.Templates, error) {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
-	var results []*pkg.Template
+	c.lock.RLock()
+	defer c.lock.RUnlock()
 
 	quer, ok := c.queries[query.Query]
 	if ok {
-		for _, doc := range quer(query, c.docs, c.fromString) {
-			results = append(results, c.fromString(doc))
-		}
+		items := quer(c, query)
+		return items.Next(ctx, -1)
 	} else {
-		panic(ErrNotImplemented)
+		return nil, ErrNotImplemented
 	}
-
-	return &pkg.Templates{
-		Count:     len(results),
-		Templates: results,
-	}, nil
 }
 
 func (c *FakeTemplateClient) InjectTrigger(trigger string, impl FakeTemplateTrigger) {
@@ -220,37 +225,29 @@ func (c *FakeTemplateClient) InjectQuery(query string, impl FakeTemplateQuery) {
 	c.queries[query] = impl
 }
 
-type FakeTemplateClientRawIterator struct {
-	docs         []*string
-	jsonHandle   *codec.JsonHandle
+// NewFakeTemplateClientRawIterator creates a RawIterator that will produce only
+// Templates from Next() and NextRaw().
+func NewFakeTemplateClientRawIterator(docs []*pkg.Template) TemplateRawIterator {
+	return &fakeTemplateClientRawIterator{docs: docs}
+}
+
+type fakeTemplateClientRawIterator struct {
+	docs         []*pkg.Template
 	continuation int
 }
 
-func (i *FakeTemplateClientRawIterator) decode(inp []*string) (done []*pkg.Template, err error) {
-	for _, doc := range inp {
-		res := &pkg.Template{}
-		d := codec.NewDecoder(bytes.NewBufferString(*doc), i.jsonHandle)
-		err := d.Decode(&res)
-		if err != nil {
-			return nil, err
-		}
-		done = append(done, res)
-	}
-	return
+func (i *fakeTemplateClientRawIterator) Next(ctx context.Context, maxItemCount int) (*pkg.Templates, error) {
+	out := &pkg.Templates{}
+	err := i.NextRaw(ctx, maxItemCount, out)
+	return out, err
 }
 
-func (i *FakeTemplateClientRawIterator) Next(ctx context.Context, maxItemCount int) (*pkg.Templates, error) {
-	docs := &pkg.Templates{}
-	err := i.NextRaw(ctx, maxItemCount, docs)
-	return docs, err
-}
-
-func (i *FakeTemplateClientRawIterator) NextRaw(ctx context.Context, maxItemCount int, raw interface{}) (err error) {
+func (i *fakeTemplateClientRawIterator) NextRaw(ctx context.Context, maxItemCount int, out interface{}) error {
 	if i.continuation >= len(i.docs) {
 		return nil
 	}
 
-	var docs []*string
+	var docs []*pkg.Template
 	if maxItemCount == -1 {
 		docs = i.docs[i.continuation:]
 		i.continuation = len(i.docs)
@@ -259,32 +256,17 @@ func (i *FakeTemplateClientRawIterator) NextRaw(ctx context.Context, maxItemCoun
 		i.continuation += maxItemCount
 	}
 
-	d, ok := raw.(*pkg.Templates)
-	if ok {
-		var out []*pkg.Template
-		out, err = i.decode(docs)
-		d.Templates = out
-		d.Count = len(d.Templates)
-	} else {
-		var f strings.Builder
-		fmt.Fprintf(&f, `{"Count": %d, "Documents": [`, len(docs))
-		for n, doc := range docs {
-			fmt.Fprint(&f, *doc)
-			if n != len(docs) {
-				fmt.Fprint(&f, ",")
-			}
-		}
-		fmt.Fprint(&f, "]}")
-		d := codec.NewDecoder(bytes.NewBufferString(f.String()), i.jsonHandle)
-		err = d.Decode(&raw)
-	}
-	return err
+	d := out.(*pkg.Templates)
+	d.Templates = docs
+	d.Count = len(d.Templates)
+	return nil
 }
 
-func (i *FakeTemplateClientRawIterator) Continuation() string {
+func (i *fakeTemplateClientRawIterator) Continuation() string {
 	return ""
 }
 
+// fakeTemplateNotImplementedIterator is a RawIterator that will return an error on use.
 type fakeTemplateNotImplementedIterator struct {
 }
 
