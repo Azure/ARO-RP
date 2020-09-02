@@ -33,6 +33,10 @@ type FakeTemplateClient struct {
 	lock       *sync.RWMutex
 	triggers   map[string]FakeTemplateTrigger
 	queries    map[string]FakeTemplateQuery
+
+	// unavailable, if not nil, is an error to throw when attempting to
+	// communicate with this Client
+	unavailable error
 }
 
 func decodeTemplate(s []byte, handle *codec.JsonHandle) (*pkg.Template, error) {
@@ -51,6 +55,10 @@ func encodeTemplate(doc *pkg.Template, handle *codec.JsonHandle) (res []byte, er
 	return
 }
 
+func (c *FakeTemplateClient) MakeUnavailable(err error) {
+	c.unavailable = err
+}
+
 func (c *FakeTemplateClient) encodeAndCopy(doc *pkg.Template) (*pkg.Template, []byte, error) {
 	encoded, err := encodeTemplate(doc, c.jsonHandle)
 	if err != nil {
@@ -64,6 +72,9 @@ func (c *FakeTemplateClient) encodeAndCopy(doc *pkg.Template) (*pkg.Template, []
 }
 
 func (c *FakeTemplateClient) Create(ctx context.Context, partitionkey string, doc *pkg.Template, options *Options) (*pkg.Template, error) {
+	if c.unavailable != nil {
+		return nil, c.unavailable
+	}
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -91,6 +102,9 @@ func (c *FakeTemplateClient) Create(ctx context.Context, partitionkey string, do
 }
 
 func (c *FakeTemplateClient) List(*Options) TemplateIterator {
+	if c.unavailable != nil {
+		return &fakeTemplateErroringRawIterator{err: c.unavailable}
+	}
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
@@ -107,8 +121,12 @@ func (c *FakeTemplateClient) List(*Options) TemplateIterator {
 }
 
 func (c *FakeTemplateClient) ListAll(context.Context, *Options) (*pkg.Templates, error) {
+	if c.unavailable != nil {
+		return nil, c.unavailable
+	}
 	c.lock.RLock()
 	defer c.lock.RUnlock()
+
 	templates := &pkg.Templates{
 		Count:     len(c.docs),
 		Templates: make([]*pkg.Template, 0, len(c.docs)),
@@ -125,6 +143,9 @@ func (c *FakeTemplateClient) ListAll(context.Context, *Options) (*pkg.Templates,
 }
 
 func (c *FakeTemplateClient) Get(ctx context.Context, partitionkey string, documentId string, options *Options) (*pkg.Template, error) {
+	if c.unavailable != nil {
+		return nil, c.unavailable
+	}
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
@@ -136,6 +157,9 @@ func (c *FakeTemplateClient) Get(ctx context.Context, partitionkey string, docum
 }
 
 func (c *FakeTemplateClient) Replace(ctx context.Context, partitionkey string, doc *pkg.Template, options *Options) (*pkg.Template, error) {
+	if c.unavailable != nil {
+		return nil, c.unavailable
+	}
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -160,6 +184,9 @@ func (c *FakeTemplateClient) Replace(ctx context.Context, partitionkey string, d
 }
 
 func (c *FakeTemplateClient) Delete(ctx context.Context, partitionKey string, doc *pkg.Template, options *Options) error {
+	if c.unavailable != nil {
+		return c.unavailable
+	}
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -173,7 +200,10 @@ func (c *FakeTemplateClient) Delete(ctx context.Context, partitionKey string, do
 }
 
 func (c *FakeTemplateClient) ChangeFeed(*Options) TemplateIterator {
-	return &fakeTemplateNotImplementedIterator{}
+	if c.unavailable != nil {
+		return &fakeTemplateErroringRawIterator{err: c.unavailable}
+	}
+	return &fakeTemplateErroringRawIterator{err: ErrNotImplemented}
 }
 
 func (c *FakeTemplateClient) processPreTriggers(ctx context.Context, doc *pkg.Template, options *Options) error {
@@ -192,6 +222,9 @@ func (c *FakeTemplateClient) processPreTriggers(ctx context.Context, doc *pkg.Te
 }
 
 func (c *FakeTemplateClient) Query(name string, query *Query, options *Options) TemplateRawIterator {
+	if c.unavailable != nil {
+		return &fakeTemplateErroringRawIterator{err: c.unavailable}
+	}
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
@@ -199,11 +232,14 @@ func (c *FakeTemplateClient) Query(name string, query *Query, options *Options) 
 	if ok {
 		return quer(c, query)
 	} else {
-		return &fakeTemplateNotImplementedIterator{}
+		return &fakeTemplateErroringRawIterator{err: ErrNotImplemented}
 	}
 }
 
 func (c *FakeTemplateClient) QueryAll(ctx context.Context, partitionkey string, query *Query, options *Options) (*pkg.Templates, error) {
+	if c.unavailable != nil {
+		return nil, c.unavailable
+	}
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
@@ -270,18 +306,19 @@ func (i *fakeTemplateClientRawIterator) Continuation() string {
 	return ""
 }
 
-// fakeTemplateNotImplementedIterator is a RawIterator that will return an error on use.
-type fakeTemplateNotImplementedIterator struct {
+// fakeTemplateErroringRawIterator is a RawIterator that will return an error on use.
+type fakeTemplateErroringRawIterator struct {
+	err error
 }
 
-func (i *fakeTemplateNotImplementedIterator) Next(ctx context.Context, maxItemCount int) (*pkg.Templates, error) {
-	return nil, ErrNotImplemented
+func (i *fakeTemplateErroringRawIterator) Next(ctx context.Context, maxItemCount int) (*pkg.Templates, error) {
+	return nil, i.err
 }
 
-func (i *fakeTemplateNotImplementedIterator) NextRaw(context.Context, int, interface{}) error {
-	return ErrNotImplemented
+func (i *fakeTemplateErroringRawIterator) NextRaw(context.Context, int, interface{}) error {
+	return i.err
 }
 
-func (i *fakeTemplateNotImplementedIterator) Continuation() string {
+func (i *fakeTemplateErroringRawIterator) Continuation() string {
 	return ""
 }
