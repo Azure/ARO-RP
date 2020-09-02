@@ -42,8 +42,6 @@ func (i *manager) AdminUpgrade(ctx context.Context) error {
 		steps.Action(i.upgradeCertificates),
 		steps.Action(i.configureAPIServerCertificate),
 		steps.Action(i.configureIngressCertificate),
-		steps.Action(i.preUpgradeChecks), // Run this before Upgrade cluster
-		steps.Action(i.upgradeCluster),
 		steps.Action(i.addResourceProviderVersion), // Run this last so we capture the resource provider only once the upgrade has been fully performed
 	}
 

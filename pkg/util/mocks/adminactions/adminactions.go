@@ -124,6 +124,20 @@ func (mr *MockInterfaceMockRecorder) ResourcesList(arg0 interface{}) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResourcesList", reflect.TypeOf((*MockInterface)(nil).ResourcesList), arg0)
 }
 
+// Upgrade mocks base method
+func (m *MockInterface) Upgrade(arg0 context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Upgrade", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Upgrade indicates an expected call of Upgrade
+func (mr *MockInterfaceMockRecorder) Upgrade(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upgrade", reflect.TypeOf((*MockInterface)(nil).Upgrade), arg0)
+}
+
 // VMRedeployAndWait mocks base method
 func (m *MockInterface) VMRedeployAndWait(arg0 context.Context, arg1 string) error {
 	m.ctrl.T.Helper()

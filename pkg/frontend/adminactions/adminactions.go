@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/Azure/go-autorest/autorest/azure"
+	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes"
@@ -31,17 +32,21 @@ type Interface interface {
 	K8sDelete(groupKind, namespace, name string) error
 	MustGather(ctx context.Context, w http.ResponseWriter) error
 	ResourcesList(ctx context.Context) ([]byte, error)
+	Upgrade(ctx context.Context) error
 	VMRedeployAndWait(ctx context.Context, vmName string) error
 	VMSerialConsole(ctx context.Context, w http.ResponseWriter,
 		log *logrus.Entry, vmName string) error
 }
 
 type adminactions struct {
-	log             *logrus.Entry
-	env             env.Interface
-	oc              *api.OpenShiftCluster
-	dh              dynamichelper.DynamicHelper
-	k8sClient       kubernetes.Interface
+	log *logrus.Entry
+	env env.Interface
+	oc  *api.OpenShiftCluster
+	dh  dynamichelper.DynamicHelper
+
+	k8sClient    kubernetes.Interface
+	configClient configclient.Interface
+
 	resourcesClient features.ResourcesClient
 	vmClient        compute.VirtualMachinesClient
 	vNetClient      network.VirtualNetworksClient
@@ -67,6 +72,11 @@ func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster,
 		return nil, err
 	}
 
+	configClient, err := configclient.NewForConfig(restConfig)
+	if err != nil {
+		return nil, err
+	}
+
 	fpAuth, err := env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID,
 		azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
@@ -79,6 +89,7 @@ func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster,
 		oc:              oc,
 		dh:              dh,
 		k8sClient:       k8sClient,
+		configClient:    configClient,
 		resourcesClient: features.NewResourcesClient(subscriptionDoc.ID, fpAuth),
 		vmClient:        compute.NewVirtualMachinesClient(subscriptionDoc.ID, fpAuth),
 		vNetClient:      network.NewVirtualNetworksClient(subscriptionDoc.ID, fpAuth),

@@ -1,4 +1,4 @@
-package cluster
+package adminactions
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -156,12 +156,12 @@ func TestUpgradeCluster(t *testing.T) {
 				return false, nil, nil
 			})
 
-			i := &manager{
-				log:       logrus.NewEntry(logrus.StandardLogger()),
-				configcli: tt.fakecli,
+			a := &adminactions{
+				log:          logrus.NewEntry(logrus.StandardLogger()),
+				configClient: tt.fakecli,
 			}
 
-			err := i.upgradeCluster(ctx)
+			err := upgrade(ctx, a.log, a.configClient)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
@@ -171,7 +171,7 @@ func TestUpgradeCluster(t *testing.T) {
 				t.Fatal(updated)
 			}
 
-			cv, err := i.configcli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
+			cv, err := a.configClient.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
 			if err != nil {
 				t.Error(err)
 			}
