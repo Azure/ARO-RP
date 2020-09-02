@@ -119,6 +119,10 @@ func (t ProvisioningState) IsTerminal() bool {
 	return ProvisioningStateFailed == t || ProvisioningStateSucceeded == t
 }
 
+func (t ProvisioningState) String() string {
+	return string(t)
+}
+
 // ClusterProfile represents a cluster profile.
 type ClusterProfile struct {
 	MissingFields

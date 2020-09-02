@@ -8,7 +8,6 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	"github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type clusterOperatorConditionsIgnoreStruct struct {
@@ -35,11 +34,10 @@ var clusterOperatorConditionsExpected = map[configv1.ClusterStatusConditionType]
 }
 
 func (mon *Monitor) emitClusterOperatorConditions(ctx context.Context) error {
-	cos, err := mon.configcli.ConfigV1().ClusterOperators().List(metav1.ListOptions{})
+	cos, err := mon.listClusterOperators()
 	if err != nil {
 		return err
 	}
-
 	mon.emitGauge("clusteroperator.count", int64(len(cos.Items)), nil)
 
 	for _, co := range cos.Items {
@@ -54,7 +52,7 @@ func (mon *Monitor) emitClusterOperatorConditions(ctx context.Context) error {
 				"type":   string(c.Type),
 			})
 
-			if mon.logMessages {
+			if mon.hourlyRun {
 				mon.log.WithFields(logrus.Fields{
 					"metric":  "clusteroperator.conditions",
 					"name":    co.Name,

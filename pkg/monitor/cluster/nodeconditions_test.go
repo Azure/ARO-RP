@@ -29,6 +29,9 @@ func TestEmitNodeConditions(t *testing.T) {
 					Status: corev1.ConditionTrue,
 				},
 			},
+			NodeInfo: corev1.NodeSystemInfo{
+				KubeletVersion: "v1.17.1+9d33dd3",
+			},
 		},
 	}, &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
@@ -40,6 +43,9 @@ func TestEmitNodeConditions(t *testing.T) {
 					Type:   corev1.NodeReady,
 					Status: corev1.ConditionFalse,
 				},
+			},
+			NodeInfo: corev1.NodeSystemInfo{
+				KubeletVersion: "v1.17.1+9d33dd3",
 			},
 		},
 	})
@@ -64,6 +70,15 @@ func TestEmitNodeConditions(t *testing.T) {
 		"name":   "aro-master-1",
 		"status": "False",
 		"type":   "Ready",
+	})
+
+	m.EXPECT().EmitGauge("node.kubelet.version", int64(1), map[string]string{
+		"name":           "aro-master-0",
+		"kubeletVersion": "v1.17.1+9d33dd3",
+	})
+	m.EXPECT().EmitGauge("node.kubelet.version", int64(1), map[string]string{
+		"name":           "aro-master-1",
+		"kubeletVersion": "v1.17.1+9d33dd3",
 	})
 
 	err := mon.emitNodeConditions(ctx)

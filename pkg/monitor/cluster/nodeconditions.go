@@ -8,7 +8,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var nodeConditionsExpected = map[v1.NodeConditionType]v1.ConditionStatus{
@@ -19,7 +18,7 @@ var nodeConditionsExpected = map[v1.NodeConditionType]v1.ConditionStatus{
 }
 
 func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
-	ns, err := mon.cli.CoreV1().Nodes().List(metav1.ListOptions{})
+	ns, err := mon.listNodes()
 	if err != nil {
 		return err
 	}
@@ -38,7 +37,7 @@ func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 				"type":   string(c.Type),
 			})
 
-			if mon.logMessages {
+			if mon.hourlyRun {
 				mon.log.WithFields(logrus.Fields{
 					"metric":  "node.conditions",
 					"name":    n.Name,
@@ -48,6 +47,12 @@ func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 				}).Print()
 			}
 		}
+
+		mon.emitGauge("node.kubelet.version", 1, map[string]string{
+			"name":           n.Name,
+			"kubeletVersion": n.Status.NodeInfo.KubeletVersion,
+		})
+
 	}
 
 	return nil

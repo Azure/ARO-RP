@@ -10,9 +10,11 @@ import (
 	"runtime"
 
 	"github.com/Azure/go-autorest/autorest/azure"
+	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -23,9 +25,9 @@ import (
 )
 
 type Monitor struct {
-	env         env.Interface
-	log         *logrus.Entry
-	logMessages bool
+	env       env.Interface
+	log       *logrus.Entry
+	hourlyRun bool
 
 	oc   *api.OpenShiftCluster
 	dims map[string]string
@@ -35,9 +37,16 @@ type Monitor struct {
 	mcocli    mcoclient.Interface
 	m         metrics.Interface
 	arocli    aroclient.AroV1alpha1Interface
+
+	// access below only via the helper functions in cache.go
+	cache struct {
+		cos *configv1.ClusterOperatorList
+		cv  *configv1.ClusterVersion
+		ns  *v1.NodeList
+	}
 }
 
-func NewMonitor(ctx context.Context, env env.Interface, log *logrus.Entry, oc *api.OpenShiftCluster, m metrics.Interface, logMessages bool) (*Monitor, error) {
+func NewMonitor(ctx context.Context, env env.Interface, log *logrus.Entry, oc *api.OpenShiftCluster, m metrics.Interface, hourlyRun bool) (*Monitor, error) {
 	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
 		return nil, err
@@ -84,9 +93,9 @@ func NewMonitor(ctx context.Context, env env.Interface, log *logrus.Entry, oc *a
 	}
 
 	return &Monitor{
-		env:         env,
-		log:         log,
-		logMessages: logMessages,
+		env:       env,
+		log:       log,
+		hourlyRun: hourlyRun,
 
 		oc:   oc,
 		dims: dims,
@@ -126,6 +135,7 @@ func (mon *Monitor) Monitor(ctx context.Context) {
 		mon.emitPodConditions,
 		mon.emitReplicasetStatuses,
 		mon.emitStatefulsetStatuses,
+		mon.emitSummary,
 		mon.emitPrometheusAlerts, // at the end for now because it's the slowest/least reliable
 	} {
 		err = f(ctx)

@@ -55,7 +55,7 @@ func (mon *Monitor) _emitPodConditions(ps *v1.PodList) {
 				"type":      string(c.Type),
 			})
 
-			if mon.logMessages {
+			if mon.hourlyRun {
 				mon.log.WithFields(logrus.Fields{
 					"metric":    "pod.conditions",
 					"name":      p.Name,
@@ -91,7 +91,7 @@ func (mon *Monitor) _emitPodContainerStatuses(ps *v1.PodList) {
 				"reason":        cs.State.Waiting.Reason,
 			})
 
-			if mon.logMessages {
+			if mon.hourlyRun {
 				mon.log.WithFields(logrus.Fields{
 					"metric":        "pod.containerstatuses",
 					"name":          p.Name,

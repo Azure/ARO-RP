@@ -187,11 +187,11 @@ out:
 }
 
 // workOne checks the API server health of a cluster
-func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument, logMessages bool) {
+func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.OpenShiftClusterDocument, hourlyRun bool) {
 	ctx, cancel := context.WithTimeout(ctx, 50*time.Second)
 	defer cancel()
 
-	c, err := cluster.NewMonitor(ctx, mon.env, log, doc.OpenShiftCluster, mon.clusterm, logMessages)
+	c, err := cluster.NewMonitor(ctx, mon.env, log, doc.OpenShiftCluster, mon.clusterm, hourlyRun)
 	if err != nil {
 		log.Error(err)
 		return

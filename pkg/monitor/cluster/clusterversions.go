@@ -7,33 +7,32 @@ import (
 	"context"
 
 	configv1 "github.com/openshift/api/config/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func (mon *Monitor) emitClusterVersions(ctx context.Context) error {
-	cv, err := mon.configcli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
+	cv, err := mon.getClusterVersion()
 	if err != nil {
 		return err
 	}
-
-	// Find the actual current cluster state. The history is ordered by most
-	// recent first, so find the latest "Completed" status to get current
-	// cluster version
-	var actualVersion string
-	for _, history := range cv.Status.History {
-		if history.State == configv1.CompletedUpdate {
-			actualVersion = history.Version
-			break
-		}
-	}
-
 	mon.emitGauge("cluster.versions", 1, map[string]string{
-		"actualVersion":           actualVersion,
+		"actualVersion":           actualVersion(cv),
 		"desiredVersion":          desiredVersion(cv),
 		"resourceProviderVersion": mon.oc.Properties.ProvisionedBy,
 	})
 
 	return nil
+}
+
+// actualVersion finds the actual current cluster state. The history is ordered by most
+// recent first, so find the latest "Completed" status to get current
+// cluster version
+func actualVersion(cv *configv1.ClusterVersion) string {
+	for _, history := range cv.Status.History {
+		if history.State == configv1.CompletedUpdate {
+			return history.Version
+		}
+	}
+	return ""
 }
 
 func desiredVersion(cv *configv1.ClusterVersion) string {
