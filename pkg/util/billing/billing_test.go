@@ -17,7 +17,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
-	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 )
 
 func TestIsSubscriptionRegisteredForE2E(t *testing.T) {
@@ -237,8 +236,7 @@ func TestDelete(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			_env := mock_env.NewMockInterface(controller)
-			_env.EXPECT().Type().AnyTimes().Return(env.Prod)
+			_env := &env.Test{}
 
 			log := logrus.NewEntry(logrus.StandardLogger())
 
@@ -403,8 +401,7 @@ func TestEnsure(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			_env := mock_env.NewMockInterface(controller)
-			_env.EXPECT().Type().AnyTimes().Return(env.Prod)
+			_env := &env.Test{}
 
 			log := logrus.NewEntry(logrus.StandardLogger())
 
