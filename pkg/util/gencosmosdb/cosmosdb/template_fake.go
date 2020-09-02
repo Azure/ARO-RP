@@ -246,7 +246,9 @@ func (c *FakeTemplateClient) QueryAll(ctx context.Context, partitionkey string, 
 	quer, ok := c.queries[query.Query]
 	if ok {
 		items := quer(c, query)
-		return items.Next(ctx, -1)
+		res := &pkg.Templates{}
+		err := items.NextRaw(ctx, -1, res)
+		return res, err
 	} else {
 		return nil, ErrNotImplemented
 	}
