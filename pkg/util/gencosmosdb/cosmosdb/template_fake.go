@@ -12,7 +12,6 @@ import (
 	pkg "github.com/jim-minter/go-cosmosdb/pkg/gencosmosdb/cosmosdb/dummy"
 )
 
-type FakeTemplateDecoder func([]byte, *codec.JsonHandle) (*pkg.Template, error)
 type FakeTemplateTrigger func(context.Context, *pkg.Template) error
 type FakeTemplateQuery func(TemplateClient, *Query) TemplateRawIterator
 
