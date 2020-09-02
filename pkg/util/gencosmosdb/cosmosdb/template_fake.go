@@ -238,6 +238,11 @@ type fakeTemplateClientRawIterator struct {
 func (i *fakeTemplateClientRawIterator) Next(ctx context.Context, maxItemCount int) (*pkg.Templates, error) {
 	out := &pkg.Templates{}
 	err := i.NextRaw(ctx, maxItemCount, out)
+
+	if out.Count == 0 {
+		return nil, nil
+	}
+
 	return out, err
 }
 
