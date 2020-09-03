@@ -15,7 +15,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	v20200430 "github.com/Azure/ARO-RP/pkg/api/v20200430"
-	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
@@ -141,10 +140,7 @@ func TestGetAsyncOperationResult(t *testing.T) {
 
 			tt.mocks(openshiftClusters, asyncOperations)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, &database.Database{
-				AsyncOperations:   asyncOperations,
-				OpenShiftClusters: openshiftClusters,
-			}, api.APIs, &noop.Noop{}, nil, nil)
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, asyncOperations, openshiftClusters, nil, api.APIs, &noop.Noop{}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

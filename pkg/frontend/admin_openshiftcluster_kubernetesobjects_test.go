@@ -15,7 +15,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
@@ -227,10 +226,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			s := mock_database.NewMockSubscriptions(ti.controller)
 			tt.mocks(tt, a, oc, s)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, &database.Database{
-				OpenShiftClusters: oc,
-				Subscriptions:     s,
-			}, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster,
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, oc, s, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster,
 				*api.SubscriptionDocument) (adminactions.Interface, error) {
 				return a, nil
 			})
@@ -436,10 +432,7 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 			s := mock_database.NewMockSubscriptions(ti.controller)
 			tt.mocks(tt, a, oc, s)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, &database.Database{
-				OpenShiftClusters: oc,
-				Subscriptions:     s,
-			}, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster,
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, oc, s, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster,
 				*api.SubscriptionDocument) (adminactions.Interface, error) {
 				return a, nil
 			})

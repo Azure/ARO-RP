@@ -29,7 +29,7 @@ type openShiftClusterBackend struct {
 // succeeded in dequeuing anything - if this is false, the caller should sleep
 // before calling again
 func (ocb *openShiftClusterBackend) try(ctx context.Context) (bool, error) {
-	doc, err := ocb.db.OpenShiftClusters.Dequeue(ctx)
+	doc, err := ocb.dbopenshiftclusters.Dequeue(ctx)
 	if err != nil || doc == nil {
 		return false, err
 	}
@@ -82,12 +82,12 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 		return err
 	}
 
-	subscriptionDoc, err := ocb.db.Subscriptions.Get(ctx, r.SubscriptionID)
+	subscriptionDoc, err := ocb.dbsubscriptions.Get(ctx, r.SubscriptionID)
 	if err != nil {
 		return err
 	}
 
-	m, err := openshiftcluster.NewManager(log, ocb.env, ocb.db.OpenShiftClusters, ocb.cipher, ocb.billing, doc, subscriptionDoc)
+	m, err := openshiftcluster.NewManager(log, ocb.env, ocb.dbopenshiftclusters, ocb.cipher, ocb.billing, doc, subscriptionDoc)
 	if err != nil {
 		return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err)
 	}
@@ -104,7 +104,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 		// if Install = nil, we are done with the install.
 		// if Install != nil, we need to terminate, release lease and let other
 		// backend worker to pick up next install phase
-		doc, err = ocb.db.OpenShiftClusters.Get(ctx, strings.ToLower(doc.OpenShiftCluster.ID))
+		doc, err = ocb.dbopenshiftclusters.Get(ctx, strings.ToLower(doc.OpenShiftCluster.ID))
 		if err != nil {
 			return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err)
 		}
@@ -146,7 +146,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 
 		stop()
 
-		return ocb.db.OpenShiftClusters.Delete(ctx, doc)
+		return ocb.dbopenshiftclusters.Delete(ctx, doc)
 	}
 
 	return fmt.Errorf("unexpected provisioningState %q", doc.OpenShiftCluster.Properties.ProvisioningState)
@@ -165,7 +165,7 @@ func (ocb *openShiftClusterBackend) heartbeat(ctx context.Context, cancel contex
 		defer t.Stop()
 
 		for {
-			_, err := ocb.db.OpenShiftClusters.Lease(ctx, doc.Key)
+			_, err := ocb.dbopenshiftclusters.Lease(ctx, doc.Key)
 			if err != nil {
 				log.Error(err)
 				cancel()
@@ -191,7 +191,7 @@ func (ocb *openShiftClusterBackend) heartbeat(ctx context.Context, cancel contex
 
 func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, log *logrus.Entry, id string, oc *api.OpenShiftCluster, provisioningState, failedProvisioningState api.ProvisioningState, backendErr error) error {
 	if id != "" {
-		_, err := ocb.db.AsyncOperations.Patch(ctx, id, func(asyncdoc *api.AsyncOperationDocument) error {
+		_, err := ocb.dbasyncoperations.Patch(ctx, id, func(asyncdoc *api.AsyncOperationDocument) error {
 			asyncdoc.AsyncOperation.ProvisioningState = provisioningState
 
 			now := time.Now()
@@ -268,7 +268,7 @@ func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.En
 		stop()
 	}
 
-	_, err := ocb.db.OpenShiftClusters.EndLease(ctx, doc.Key, provisioningState, failedProvisioningState, adminUpdateError)
+	_, err := ocb.dbopenshiftclusters.EndLease(ctx, doc.Key, provisioningState, failedProvisioningState, adminUpdateError)
 	return err
 }
 

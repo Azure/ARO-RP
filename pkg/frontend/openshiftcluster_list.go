@@ -41,7 +41,7 @@ func (f *frontend) _getOpenShiftClusters(ctx context.Context, r *http.Request, c
 		return nil, err
 	}
 
-	i, err := f.db.OpenShiftClusters.ListByPrefix(vars["subscriptionId"], prefix, skipToken)
+	i, err := f.dbopenshiftclusters.ListByPrefix(vars["subscriptionId"], prefix, skipToken)
 	if err != nil {
 		return nil, err
 	}

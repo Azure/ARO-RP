@@ -38,7 +38,7 @@ func (f *frontend) _postAdminOpenShiftClusterRedeployVM(ctx context.Context, r *
 
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 
-	doc, err := f.db.OpenShiftClusters.Get(ctx, resourceID)
+	doc, err := f.dbopenshiftclusters.Get(ctx, resourceID)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])

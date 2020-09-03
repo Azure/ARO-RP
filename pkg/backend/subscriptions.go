@@ -24,7 +24,7 @@ type subscriptionBackend struct {
 // succeeded in dequeuing anything - if this is false, the caller should sleep
 // before calling again
 func (sb *subscriptionBackend) try(ctx context.Context) (bool, error) {
-	doc, err := sb.db.Subscriptions.Dequeue(ctx)
+	doc, err := sb.dbsubscriptions.Dequeue(ctx)
 	if err != nil || doc == nil {
 		return false, err
 	}
@@ -97,7 +97,7 @@ func (sb *subscriptionBackend) handleDelete(ctx context.Context, log *logrus.Ent
 		return false, fmt.Errorf("handleDelete was called, but subscription is in state %s", subdoc.Subscription.State)
 	}
 
-	i, err := sb.db.OpenShiftClusters.ListByPrefix(subdoc.ID, "/subscriptions/"+subdoc.ID+"/", "")
+	i, err := sb.dbopenshiftclusters.ListByPrefix(subdoc.ID, "/subscriptions/"+subdoc.ID+"/", "")
 	if err != nil {
 		return false, err
 	}
@@ -113,7 +113,7 @@ func (sb *subscriptionBackend) handleDelete(ctx context.Context, log *logrus.Ent
 		}
 
 		for _, doc := range docs.OpenShiftClusterDocuments {
-			_, err = sb.db.OpenShiftClusters.Patch(ctx, doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+			_, err = sb.dbopenshiftclusters.Patch(ctx, doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 				switch doc.OpenShiftCluster.Properties.ProvisioningState {
 				case api.ProvisioningStateCreating,
 					api.ProvisioningStateUpdating,
@@ -151,7 +151,7 @@ func (sb *subscriptionBackend) heartbeat(ctx context.Context, cancel context.Can
 		defer t.Stop()
 
 		for {
-			_, err := sb.db.Subscriptions.Lease(ctx, doc.ID)
+			_, err := sb.dbsubscriptions.Lease(ctx, doc.ID)
 			if err != nil {
 				log.Error(err)
 				cancel()
@@ -180,6 +180,6 @@ func (sb *subscriptionBackend) endLease(ctx context.Context, stop func(), doc *a
 		stop()
 	}
 
-	_, err := sb.db.Subscriptions.EndLease(ctx, doc.ID, done, retryLater)
+	_, err := sb.dbsubscriptions.EndLease(ctx, doc.ID, done, retryLater)
 	return err
 }

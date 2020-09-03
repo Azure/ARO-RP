@@ -21,15 +21,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 )
 
-// Database represents a database
-type Database struct {
-	AsyncOperations   AsyncOperations
-	Billing           Billing
-	Monitors          Monitors
-	OpenShiftClusters OpenShiftClusters
-	Subscriptions     Subscriptions
-}
-
 func NewDatabaseClient(ctx context.Context, log *logrus.Entry, env env.Interface, m metrics.Interface, cipher encryption.Cipher) (cosmosdb.DatabaseClient, error) {
 	databaseAccount, masterKey := env.CosmosDB()
 
@@ -47,28 +38,7 @@ func NewDatabaseClient(ctx context.Context, log *logrus.Entry, env env.Interface
 	return cosmosdb.NewDatabaseClient(log, c, h, databaseAccount, masterKey)
 }
 
-// NewDatabase returns a new Database
-func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Interface, m metrics.Interface, cipher encryption.Cipher, uuid string) (db *Database, err error) {
-	databaseAccount, masterKey := env.CosmosDB()
-
-	h := newJSONHandle(cipher)
-
-	c := &http.Client{
-		Transport: dbmetrics.New(log, &http.Transport{
-			// disable HTTP/2 for now: https://github.com/golang/go/issues/36026
-			TLSNextProto:        map[string]func(string, *tls.Conn) http.RoundTripper{},
-			MaxIdleConnsPerHost: 20,
-		}, m),
-		Timeout: 30 * time.Second,
-	}
-
-	dbc, err := cosmosdb.NewDatabaseClient(log, c, h, databaseAccount, masterKey)
-	if err != nil {
-		return nil, err
-	}
-
-	db = &Database{}
-
+/*
 	db.AsyncOperations, err = NewAsyncOperations(env, dbc)
 	if err != nil {
 		return nil, err
@@ -93,9 +63,7 @@ func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Interface, m me
 	if err != nil {
 		return nil, err
 	}
-
-	return db, nil
-}
+*/
 
 func newJSONHandle(cipher encryption.Cipher) *codec.JsonHandle {
 	h := &codec.JsonHandle{
