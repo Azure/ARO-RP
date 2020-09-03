@@ -15,6 +15,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
+	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
@@ -27,6 +28,7 @@ type backend struct {
 	baseLog *logrus.Entry
 	env     env.Interface
 	db      *database.Database
+	cipher  encryption.Cipher
 	m       metrics.Interface
 	billing billing.Manager
 
@@ -45,11 +47,12 @@ type Runnable interface {
 }
 
 // NewBackend returns a new runnable backend
-func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, db *database.Database, m metrics.Interface) (Runnable, error) {
+func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, db *database.Database, cipher encryption.Cipher, m metrics.Interface) (Runnable, error) {
 	b := &backend{
 		baseLog: log,
 		env:     env,
 		db:      db,
+		cipher:  cipher,
 		m:       m,
 	}
 
