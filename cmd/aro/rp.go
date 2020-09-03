@@ -75,7 +75,12 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 	tracing.Register(azure.New(m))
 	metrics.Register(k8s.NewLatency(m), k8s.NewResult(m))
 
-	dbKey, err := _env.GetSecret(ctx, env.EncryptionSecretName)
+	kv, err := env.NewServiceKeyvault(ctx, _env)
+	if err != nil {
+		return err
+	}
+
+	dbKey, err := kv.GetSecret(ctx, env.EncryptionSecretName)
 	if err != nil {
 		return err
 	}
@@ -112,7 +117,7 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	feKey, err := _env.GetSecret(ctx, env.FrontendEncryptionSecretName)
+	feKey, err := kv.GetSecret(ctx, env.FrontendEncryptionSecretName)
 	if err != nil {
 		return err
 	}
@@ -157,7 +162,7 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
-	key, certs, err := _env.GetCertificateSecret(ctx, env.RPServerSecretName)
+	key, certs, err := kv.GetCertificateSecret(ctx, env.RPServerSecretName)
 	if err != nil {
 		return err
 	}

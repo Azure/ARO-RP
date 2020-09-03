@@ -17,7 +17,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
-	basekeyvault "github.com/Azure/ARO-RP/pkg/util/azureclient/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
@@ -26,9 +25,6 @@ import (
 
 type prod struct {
 	instancemetadata.InstanceMetadata
-	ServiceKeyvaultInterface
-
-	keyvault basekeyvault.BaseClient
 
 	acrName             string
 	clustersKeyvaultURI string
@@ -47,21 +43,14 @@ type prod struct {
 }
 
 func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata) (*prod, error) {
-	kvAuthorizer, err := RPAuthorizer(azure.PublicCloud.ResourceIdentifiers.KeyVault)
-	if err != nil {
-		return nil, err
-	}
-
 	p := &prod{
 		InstanceMetadata: instancemetadata,
-
-		keyvault: basekeyvault.New(kvAuthorizer),
 
 		log:     log,
 		envType: Prod,
 	}
 
-	p.ServiceKeyvaultInterface, err = NewServiceKeyvault(ctx, p)
+	kv, err := NewServiceKeyvault(ctx, p)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +75,7 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 		return nil, err
 	}
 
-	fpPrivateKey, fpCertificates, err := p.GetCertificateSecret(ctx, RPFirstPartySecretName)
+	fpPrivateKey, fpCertificates, err := kv.GetCertificateSecret(ctx, RPFirstPartySecretName)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +84,7 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 	p.fpCertificate = fpCertificates[0]
 	p.fpServicePrincipalID = "f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875"
 
-	clustersGenevaLoggingPrivateKey, clustersGenevaLoggingCertificates, err := p.GetCertificateSecret(ctx, ClusterLoggingSecretName)
+	clustersGenevaLoggingPrivateKey, clustersGenevaLoggingCertificates, err := kv.GetCertificateSecret(ctx, ClusterLoggingSecretName)
 	if err != nil {
 		return nil, err
 	}

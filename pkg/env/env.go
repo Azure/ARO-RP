@@ -36,7 +36,6 @@ const (
 
 type Interface interface {
 	Lite
-	ServiceKeyvaultInterface
 
 	ClustersGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate)
 	ClustersKeyvaultURI() string
