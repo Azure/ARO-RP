@@ -11,6 +11,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/env"
 )
 
 type monitors struct {
@@ -29,8 +30,8 @@ type Monitors interface {
 }
 
 // NewMonitors returns a new Monitors
-func NewMonitors(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, dbid, collid string) (Monitors, error) {
-	collc := cosmosdb.NewCollectionClient(dbc, dbid)
+func NewMonitors(ctx context.Context, env env.Interface, dbc cosmosdb.DatabaseClient, uuid string) (Monitors, error) {
+	collc := cosmosdb.NewCollectionClient(dbc, env.DatabaseName())
 
 	triggers := []*cosmosdb.Trigger{
 		{
@@ -47,7 +48,7 @@ func NewMonitors(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, 
 		},
 	}
 
-	triggerc := cosmosdb.NewTriggerClient(collc, collid)
+	triggerc := cosmosdb.NewTriggerClient(collc, "Monitors")
 	for _, trigger := range triggers {
 		_, err := triggerc.Create(ctx, trigger)
 		if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusConflict) {
@@ -56,7 +57,7 @@ func NewMonitors(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, 
 	}
 
 	return &monitors{
-		c:    cosmosdb.NewMonitorDocumentClient(collc, collid),
+		c:    cosmosdb.NewMonitorDocumentClient(collc, "Monitors"),
 		uuid: uuid,
 	}, nil
 }

@@ -69,27 +69,27 @@ func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Interface, m me
 
 	db = &Database{}
 
-	db.AsyncOperations, err = NewAsyncOperations(dbc, env.DatabaseName(), "AsyncOperations")
+	db.AsyncOperations, err = NewAsyncOperations(env, dbc)
 	if err != nil {
 		return nil, err
 	}
 
-	db.Billing, err = NewBilling(ctx, dbc, env.DatabaseName(), "Billing")
+	db.Billing, err = NewBilling(ctx, env, dbc)
 	if err != nil {
 		return nil, err
 	}
 
-	db.Monitors, err = NewMonitors(ctx, uuid, dbc, env.DatabaseName(), "Monitors")
+	db.Monitors, err = NewMonitors(ctx, env, dbc, uuid)
 	if err != nil {
 		return nil, err
 	}
 
-	db.OpenShiftClusters, err = NewOpenShiftClusters(ctx, uuid, dbc, env.DatabaseName(), "OpenShiftClusters")
+	db.OpenShiftClusters, err = NewOpenShiftClusters(ctx, env, dbc, uuid)
 	if err != nil {
 		return nil, err
 	}
 
-	db.Subscriptions, err = NewSubscriptions(ctx, uuid, dbc, env.DatabaseName(), "Subscriptions")
+	db.Subscriptions, err = NewSubscriptions(ctx, env, dbc, uuid)
 	if err != nil {
 		return nil, err
 	}
