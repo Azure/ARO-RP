@@ -10,7 +10,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 )
 
-func Headers(_env env.Interface) func(http.Handler) http.Handler {
+func Headers(_env env.Lite) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")

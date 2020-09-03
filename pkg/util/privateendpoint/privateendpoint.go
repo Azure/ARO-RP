@@ -24,12 +24,12 @@ type Manager interface {
 }
 
 type manager struct {
-	env env.Interface
+	env env.Lite
 
 	privateendpoints network.PrivateEndpointsClient
 }
 
-func NewManager(env env.Interface, localFPAuthorizer autorest.Authorizer) Manager {
+func NewManager(env env.Lite, localFPAuthorizer autorest.Authorizer) Manager {
 	return &manager{
 		env: env,
 
