@@ -60,7 +60,7 @@ func NewOpenShiftClusters(ctx context.Context, env env.Interface, dbc cosmosdb.D
 		},
 	}
 
-	triggerc := cosmosdb.NewTriggerClient(collc, "OpenShiftClusters")
+	triggerc := cosmosdb.NewTriggerClient(collc, collOpenShiftClusters)
 	for _, trigger := range triggers {
 		_, err := triggerc.Create(ctx, trigger)
 		if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusConflict) {
@@ -69,7 +69,7 @@ func NewOpenShiftClusters(ctx context.Context, env env.Interface, dbc cosmosdb.D
 	}
 
 	return &openShiftClusters{
-		c:     cosmosdb.NewOpenShiftClusterDocumentClient(collc, "OpenShiftClusters"),
+		c:     cosmosdb.NewOpenShiftClusterDocumentClient(collc, collOpenShiftClusters),
 		collc: collc,
 		uuid:  uuid,
 	}, nil
@@ -131,7 +131,7 @@ func (c *openShiftClusters) Get(ctx context.Context, key string) (*api.OpenShift
 // QueueLength returns OpenShiftClusters un-queued document count.
 // If error occurs, 0 is returned with error message
 func (c *openShiftClusters) QueueLength(ctx context.Context) (int, error) {
-	partitions, err := c.collc.PartitionKeyRanges(ctx, "OpenShiftClusters")
+	partitions, err := c.collc.PartitionKeyRanges(ctx, collOpenShiftClusters)
 	if err != nil {
 		return 0, err
 	}

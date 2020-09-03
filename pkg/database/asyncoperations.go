@@ -30,7 +30,7 @@ func NewAsyncOperations(env env.Interface, dbc cosmosdb.DatabaseClient) (AsyncOp
 	collc := cosmosdb.NewCollectionClient(dbc, env.DatabaseName())
 
 	return &asyncOperations{
-		c: cosmosdb.NewAsyncOperationDocumentClient(collc, "AsyncOperations"),
+		c: cosmosdb.NewAsyncOperationDocumentClient(collc, collAsyncOperations),
 	}, nil
 }
 
