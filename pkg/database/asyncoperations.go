@@ -14,8 +14,7 @@ import (
 )
 
 type asyncOperations struct {
-	c    cosmosdb.AsyncOperationDocumentClient
-	uuid string
+	c cosmosdb.AsyncOperationDocumentClient
 }
 
 // AsyncOperations is the database interface for AsyncOperationDocuments
@@ -26,12 +25,11 @@ type AsyncOperations interface {
 }
 
 // NewAsyncOperations returns a new AsyncOperations
-func NewAsyncOperations(uuid string, dbc cosmosdb.DatabaseClient, dbid, collid string) (AsyncOperations, error) {
+func NewAsyncOperations(dbc cosmosdb.DatabaseClient, dbid, collid string) (AsyncOperations, error) {
 	collc := cosmosdb.NewCollectionClient(dbc, dbid)
 
 	return &asyncOperations{
-		c:    cosmosdb.NewAsyncOperationDocumentClient(collc, collid),
-		uuid: uuid,
+		c: cosmosdb.NewAsyncOperationDocumentClient(collc, collid),
 	}, nil
 }
 
