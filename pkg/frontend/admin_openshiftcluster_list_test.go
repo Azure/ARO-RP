@@ -128,12 +128,12 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 			}
 			defer ti.done()
 
-			oc := mock_database.NewMockOpenShiftClusters(ti.controller)
+			dbopenshiftclusters := mock_database.NewMockOpenShiftClusters(ti.controller)
 			enricher := mock_clusterdata.NewMockOpenShiftClusterEnricher(ti.controller)
 			cipher := mock_encryption.NewMockCipher(ti.controller)
-			tt.mocks(ti.controller, oc, enricher, cipher)
+			tt.mocks(ti.controller, dbopenshiftclusters, enricher, cipher)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, oc, nil, api.APIs, &noop.Noop{}, cipher, nil)
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, dbopenshiftclusters, nil, api.APIs, &noop.Noop{}, cipher, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

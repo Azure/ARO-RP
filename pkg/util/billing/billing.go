@@ -38,14 +38,14 @@ type Manager interface {
 }
 
 type manager struct {
-	env           env.Interface
-	storageClient *azstorage.Client
-	billingDB     database.Billing
-	subDB         database.Subscriptions
-	log           *logrus.Entry
+	env             env.Interface
+	storageClient   *azstorage.Client
+	dbbilling       database.Billing
+	dbsubscriptions database.Subscriptions
+	log             *logrus.Entry
 }
 
-func NewManager(_env env.Interface, billing database.Billing, sub database.Subscriptions, log *logrus.Entry) (Manager, error) {
+func NewManager(_env env.Interface, dbbilling database.Billing, dbsubscriptions database.Subscriptions, log *logrus.Entry) (Manager, error) {
 	var storageClient *azstorage.Client
 
 	if !_env.IsDevelopment() {
@@ -71,16 +71,16 @@ func NewManager(_env env.Interface, billing database.Billing, sub database.Subsc
 	}
 
 	return &manager{
-		env:           _env,
-		storageClient: storageClient,
-		subDB:         sub,
-		billingDB:     billing,
-		log:           log,
+		env:             _env,
+		storageClient:   storageClient,
+		dbsubscriptions: dbsubscriptions,
+		dbbilling:       dbbilling,
+		log:             log,
 	}, nil
 }
 
 func (m *manager) Ensure(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
-	billingDoc, err := m.billingDB.Create(ctx, &api.BillingDocument{
+	billingDoc, err := m.dbbilling.Create(ctx, &api.BillingDocument{
 		ID:                        doc.ID,
 		Key:                       doc.Key,
 		ClusterResourceGroupIDKey: doc.ClusterResourceGroupIDKey,
@@ -108,7 +108,7 @@ func (m *manager) Ensure(ctx context.Context, doc *api.OpenShiftClusterDocument)
 
 func (m *manager) Delete(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
 	m.log.Printf("updating billing record with deletion time")
-	billingDoc, err := m.billingDB.MarkForDeletion(ctx, doc.ID)
+	billingDoc, err := m.dbbilling.MarkForDeletion(ctx, doc.ID)
 	if cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil
 	}
@@ -147,7 +147,7 @@ func (m *manager) createOrUpdateE2EBlob(ctx context.Context, doc *api.BillingDoc
 		return err
 	}
 
-	subscriptionDoc, err := m.subDB.Get(ctx, resource.SubscriptionID)
+	subscriptionDoc, err := m.dbsubscriptions.Get(ctx, resource.SubscriptionID)
 	if err != nil {
 		return err
 	}

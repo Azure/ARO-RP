@@ -220,11 +220,11 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 			}
 			defer ti.done()
 
-			openshiftClusters := mock_database.NewMockOpenShiftClusters(ti.controller)
-			subscriptions := mock_database.NewMockSubscriptions(ti.controller)
+			dbopenshiftclusters := mock_database.NewMockOpenShiftClusters(ti.controller)
+			dbsubscriptions := mock_database.NewMockSubscriptions(ti.controller)
 
 			if tt.mocks != nil {
-				subscriptions.EXPECT().
+				dbsubscriptions.EXPECT().
 					Get(gomock.Any(), mockSubID).
 					Return(&api.SubscriptionDocument{
 						Subscription: &api.Subscription{
@@ -235,10 +235,10 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 						},
 					}, nil)
 
-				tt.mocks(tt, openshiftClusters)
+				tt.mocks(tt, dbopenshiftclusters)
 			}
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, openshiftClusters, subscriptions, apis, &noop.Noop{}, nil, nil)
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, dbopenshiftclusters, dbsubscriptions, apis, &noop.Noop{}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

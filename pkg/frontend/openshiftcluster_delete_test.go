@@ -126,13 +126,13 @@ func TestDeleteOpenShiftCluster(t *testing.T) {
 			}
 			defer ti.done()
 
-			asyncOperations := mock_database.NewMockAsyncOperations(ti.controller)
-			openShiftClusters := mock_database.NewMockOpenShiftClusters(ti.controller)
-			subscriptions := mock_database.NewMockSubscriptions(ti.controller)
+			dbasyncoperations := mock_database.NewMockAsyncOperations(ti.controller)
+			dbopenshiftclusters := mock_database.NewMockOpenShiftClusters(ti.controller)
+			dbsubscriptions := mock_database.NewMockSubscriptions(ti.controller)
 
-			tt.mocks(tt, asyncOperations, openShiftClusters, subscriptions)
+			tt.mocks(tt, dbasyncoperations, dbopenshiftclusters, dbsubscriptions)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, asyncOperations, openShiftClusters, subscriptions, api.APIs, &noop.Noop{}, nil, nil)
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, dbasyncoperations, dbopenshiftclusters, dbsubscriptions, api.APIs, &noop.Noop{}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -237,17 +237,17 @@ func TestPutSubscription(t *testing.T) {
 			}
 			defer ti.done()
 
-			subscriptions := mock_database.NewMockSubscriptions(ti.controller)
-			subscriptions.EXPECT().Get(gomock.Any(), mockSubID).Return(tt.dbGetDoc, tt.dbGetErr)
+			dbsubscriptions := mock_database.NewMockSubscriptions(ti.controller)
+			dbsubscriptions.EXPECT().Get(gomock.Any(), mockSubID).Return(tt.dbGetDoc, tt.dbGetErr)
 			if tt.wantDbDoc != nil {
 				if tt.dbGetDoc == nil {
-					subscriptions.EXPECT().Create(gomock.Any(), tt.wantDbDoc).Return(tt.wantDbDoc, nil)
+					dbsubscriptions.EXPECT().Create(gomock.Any(), tt.wantDbDoc).Return(tt.wantDbDoc, nil)
 				} else {
-					subscriptions.EXPECT().Update(gomock.Any(), tt.wantDbDoc).Return(tt.wantDbDoc, nil)
+					dbsubscriptions.EXPECT().Update(gomock.Any(), tt.wantDbDoc).Return(tt.wantDbDoc, nil)
 				}
 			}
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, nil, subscriptions, api.APIs, &noop.Noop{}, nil, nil)
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, nil, dbsubscriptions, api.APIs, &noop.Noop{}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

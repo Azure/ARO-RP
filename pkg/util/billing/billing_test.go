@@ -241,16 +241,16 @@ func TestDelete(t *testing.T) {
 
 			log := logrus.NewEntry(logrus.StandardLogger())
 
-			billingDB := mock_database.NewMockBilling(controller)
-			subsDB := mock_database.NewMockSubscriptions(controller)
+			dbbilling := mock_database.NewMockBilling(controller)
+			dbsubscriptions := mock_database.NewMockSubscriptions(controller)
 
-			tt.mocks(tt, billingDB, subsDB)
+			tt.mocks(tt, dbbilling, dbsubscriptions)
 
 			m := &manager{
-				log:       log,
-				billingDB: billingDB,
-				subDB:     subsDB,
-				env:       _env,
+				log:             log,
+				dbbilling:       dbbilling,
+				dbsubscriptions: dbsubscriptions,
+				env:             _env,
 			}
 
 			err := m.Delete(ctx, tt.openshiftdoc)
@@ -407,16 +407,16 @@ func TestEnsure(t *testing.T) {
 
 			log := logrus.NewEntry(logrus.StandardLogger())
 
-			billingDB := mock_database.NewMockBilling(controller)
-			subsDB := mock_database.NewMockSubscriptions(controller)
+			dbbilling := mock_database.NewMockBilling(controller)
+			dbsubscriptions := mock_database.NewMockSubscriptions(controller)
 
-			tt.mocks(tt, billingDB, subsDB)
+			tt.mocks(tt, dbbilling, dbsubscriptions)
 
 			m := &manager{
-				log:       log,
-				billingDB: billingDB,
-				subDB:     subsDB,
-				env:       _env,
+				log:             log,
+				dbbilling:       dbbilling,
+				dbsubscriptions: dbsubscriptions,
+				env:             _env,
 			}
 
 			err := m.Ensure(ctx, tt.openshiftdoc)

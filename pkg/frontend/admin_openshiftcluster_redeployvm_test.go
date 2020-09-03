@@ -83,11 +83,11 @@ func TestAdminRedeployVM(t *testing.T) {
 			defer ti.done()
 
 			a := mock_adminactions.NewMockInterface(ti.controller)
-			oc := mock_database.NewMockOpenShiftClusters(ti.controller)
-			s := mock_database.NewMockSubscriptions(ti.controller)
-			tt.mocks(tt, a, oc, s)
+			dbopenshiftclusters := mock_database.NewMockOpenShiftClusters(ti.controller)
+			dbsubscriptions := mock_database.NewMockSubscriptions(ti.controller)
+			tt.mocks(tt, a, dbopenshiftclusters, dbsubscriptions)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, oc, s, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster,
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, dbopenshiftclusters, dbsubscriptions, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster,
 				*api.SubscriptionDocument) (adminactions.Interface, error) {
 				return a, nil
 			})

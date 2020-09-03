@@ -99,12 +99,12 @@ func TestGetOpenShiftCluster(t *testing.T) {
 			}
 			defer ti.done()
 
-			openshiftClusters := mock_database.NewMockOpenShiftClusters(ti.controller)
+			dbopenshiftclusters := mock_database.NewMockOpenShiftClusters(ti.controller)
 			enricher := mock_clusterdata.NewMockOpenShiftClusterEnricher(ti.controller)
 
-			tt.mocks(tt, openshiftClusters, enricher)
+			tt.mocks(tt, dbopenshiftclusters, enricher)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, openshiftClusters, nil, api.APIs, &noop.Noop{}, nil, nil)
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, dbopenshiftclusters, nil, api.APIs, &noop.Noop{}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

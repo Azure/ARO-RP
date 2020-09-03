@@ -135,12 +135,12 @@ func TestGetAsyncOperationResult(t *testing.T) {
 			}
 			defer ti.done()
 
-			asyncOperations := mock_database.NewMockAsyncOperations(ti.controller)
-			openshiftClusters := mock_database.NewMockOpenShiftClusters(ti.controller)
+			dbasyncoperations := mock_database.NewMockAsyncOperations(ti.controller)
+			dbopenshiftclusters := mock_database.NewMockOpenShiftClusters(ti.controller)
 
-			tt.mocks(openshiftClusters, asyncOperations)
+			tt.mocks(dbopenshiftclusters, dbasyncoperations)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, asyncOperations, openshiftClusters, nil, api.APIs, &noop.Noop{}, nil, nil)
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, dbasyncoperations, dbopenshiftclusters, nil, api.APIs, &noop.Noop{}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
