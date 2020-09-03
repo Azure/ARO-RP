@@ -19,7 +19,7 @@ func EmitQueueLengthMetrics(ctx context.Context, log *logrus.Entry, openShiftClu
 	defer t.Stop()
 
 	for range t.C {
-		i, err := openShiftClusters.QueueLength(ctx, "OpenShiftClusters")
+		i, err := openShiftClusters.QueueLength(ctx)
 		if err != nil {
 			log.Error(err)
 		} else {

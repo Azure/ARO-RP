@@ -26,7 +26,7 @@ type openShiftClusters struct {
 type OpenShiftClusters interface {
 	Create(context.Context, *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error)
 	Get(context.Context, string) (*api.OpenShiftClusterDocument, error)
-	QueueLength(context.Context, string) (int, error)
+	QueueLength(context.Context) (int, error)
 	Patch(context.Context, string, func(*api.OpenShiftClusterDocument) error) (*api.OpenShiftClusterDocument, error)
 	PatchWithLease(context.Context, string, func(*api.OpenShiftClusterDocument) error) (*api.OpenShiftClusterDocument, error)
 	Update(context.Context, *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error)
@@ -130,8 +130,8 @@ func (c *openShiftClusters) Get(ctx context.Context, key string) (*api.OpenShift
 
 // QueueLength returns OpenShiftClusters un-queued document count.
 // If error occurs, 0 is returned with error message
-func (c *openShiftClusters) QueueLength(ctx context.Context, collid string) (int, error) {
-	partitions, err := c.collc.PartitionKeyRanges(ctx, collid)
+func (c *openShiftClusters) QueueLength(ctx context.Context) (int, error) {
+	partitions, err := c.collc.PartitionKeyRanges(ctx, "OpenShiftClusters")
 	if err != nil {
 		return 0, err
 	}
