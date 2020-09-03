@@ -15,7 +15,7 @@ func (mon *monitor) master(ctx context.Context) error {
 	// if we know we're not the master, attempt to gain the lease on the monitor
 	// document
 	if !mon.isMaster {
-		doc, err := mon.db.Monitors.TryLease(ctx)
+		doc, err := mon.dbmonitors.TryLease(ctx)
 		if err != nil || doc == nil {
 			return err
 		}
@@ -31,8 +31,8 @@ func (mon *monitor) master(ctx context.Context) error {
 	// including ourself, balance buckets between them and write the bucket
 	// allocations to the database.  If it turns out that we're not the master,
 	// the patch will fail
-	_, err := mon.db.Monitors.PatchWithLease(ctx, "master", func(doc *api.MonitorDocument) error {
-		docs, err := mon.db.Monitors.ListMonitors(ctx)
+	_, err := mon.dbmonitors.PatchWithLease(ctx, "master", func(doc *api.MonitorDocument) error {
+		docs, err := mon.dbmonitors.ListMonitors(ctx)
 		if err != nil {
 			return err
 		}

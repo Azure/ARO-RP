@@ -62,12 +62,27 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	db, err := database.NewDatabase(ctx, log.WithField("component", "database"), _env, m, cipher, uuid)
+	dbc, err := database.NewDatabaseClient(ctx, log.WithField("component", "database"), _env, m, cipher)
 	if err != nil {
 		return err
 	}
 
-	mon := pkgmonitor.NewMonitor(log.WithField("component", "monitor"), _env, db, m, clusterm)
+	dbmonitors, err := database.NewMonitors(ctx, _env, dbc, uuid)
+	if err != nil {
+		return err
+	}
+
+	dbopenshiftclusters, err := database.NewOpenShiftClusters(ctx, _env, dbc, uuid)
+	if err != nil {
+		return err
+	}
+
+	dbsubscriptions, err := database.NewSubscriptions(ctx, _env, dbc, uuid)
+	if err != nil {
+		return err
+	}
+
+	mon := pkgmonitor.NewMonitor(log.WithField("component", "monitor"), _env, dbmonitors, dbopenshiftclusters, dbsubscriptions, m, clusterm)
 
 	return mon.Run(ctx)
 }

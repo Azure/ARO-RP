@@ -81,24 +81,44 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	db, err := database.NewDatabase(ctx, log.WithField("component", "database"), _env, m, cipher, uuid)
+	dbc, err := database.NewDatabaseClient(ctx, log.WithField("component", "database"), _env, m, cipher)
 	if err != nil {
 		return err
 	}
 
-	go database.EmitQueueLengthMetrics(ctx, log.WithField("component", "database"), db.OpenShiftClusters, m)
+	dbasyncoperations, err := database.NewAsyncOperations(_env, dbc)
+	if err != nil {
+		return err
+	}
+
+	dbbilling, err := database.NewBilling(ctx, _env, dbc)
+	if err != nil {
+		return err
+	}
+
+	dbopenshiftclusters, err := database.NewOpenShiftClusters(ctx, _env, dbc, uuid)
+	if err != nil {
+		return err
+	}
+
+	go database.EmitQueueLengthMetrics(ctx, log.WithField("component", "database"), dbopenshiftclusters, m)
+
+	dbsubscriptions, err := database.NewSubscriptions(ctx, _env, dbc, uuid)
+	if err != nil {
+		return err
+	}
 
 	feCipher, err := encryption.NewXChaCha20Poly1305(ctx, _env, env.FrontendEncryptionSecretName)
 	if err != nil {
 		return err
 	}
 
-	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), _env, db, api.APIs, m, feCipher, adminactions.New)
+	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), _env, dbasyncoperations, dbopenshiftclusters, dbsubscriptions, api.APIs, m, feCipher, adminactions.New)
 	if err != nil {
 		return err
 	}
 
-	b, err := backend.NewBackend(ctx, log.WithField("component", "backend"), _env, db, m)
+	b, err := backend.NewBackend(ctx, log.WithField("component", "backend"), _env, dbasyncoperations, dbbilling, dbopenshiftclusters, dbsubscriptions, m)
 	if err != nil {
 		return err
 	}

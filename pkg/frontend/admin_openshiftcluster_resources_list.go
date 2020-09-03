@@ -41,7 +41,7 @@ func (f *frontend) _listAdminOpenShiftClusterResources(
 	vars := mux.Vars(r)
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 
-	doc, err := f.db.OpenShiftClusters.Get(ctx, resourceID)
+	doc, err := f.dbopenshiftclusters.Get(ctx, resourceID)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "",

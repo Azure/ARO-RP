@@ -19,7 +19,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
@@ -178,11 +177,7 @@ func TestDeleteOpenShiftCluster(t *testing.T) {
 
 			tt.mocks(tt, asyncOperations, openShiftClusters, subscriptions)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
-				AsyncOperations:   asyncOperations,
-				OpenShiftClusters: openShiftClusters,
-				Subscriptions:     subscriptions,
-			}, api.APIs, &noop.Noop{}, nil, nil)
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, asyncOperations, openShiftClusters, subscriptions, api.APIs, &noop.Noop{}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
