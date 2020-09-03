@@ -231,12 +231,12 @@ func TestGetAsyncOperationsStatus(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			asyncOperations := mock_database.NewMockAsyncOperations(controller)
-			openshiftClusters := mock_database.NewMockOpenShiftClusters(controller)
+			dbasyncoperations := mock_database.NewMockAsyncOperations(controller)
+			dbopenshiftclusters := mock_database.NewMockOpenShiftClusters(controller)
 
-			tt.mocks(openshiftClusters, asyncOperations)
+			tt.mocks(dbopenshiftclusters, dbasyncoperations)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, asyncOperations, openshiftClusters, nil, api.APIs, &noop.Noop{}, nil, nil)
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, dbasyncoperations, dbopenshiftclusters, nil, api.APIs, &noop.Noop{}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

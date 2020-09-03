@@ -38,33 +38,6 @@ func NewDatabaseClient(ctx context.Context, log *logrus.Entry, env env.Interface
 	return cosmosdb.NewDatabaseClient(log, c, h, databaseAccount, masterKey)
 }
 
-/*
-	db.AsyncOperations, err = NewAsyncOperations(env, dbc)
-	if err != nil {
-		return nil, err
-	}
-
-	db.Billing, err = NewBilling(ctx, env, dbc)
-	if err != nil {
-		return nil, err
-	}
-
-	db.Monitors, err = NewMonitors(ctx, env, dbc, uuid)
-	if err != nil {
-		return nil, err
-	}
-
-	db.OpenShiftClusters, err = NewOpenShiftClusters(ctx, env, dbc, uuid)
-	if err != nil {
-		return nil, err
-	}
-
-	db.Subscriptions, err = NewSubscriptions(ctx, env, dbc, uuid)
-	if err != nil {
-		return nil, err
-	}
-*/
-
 func newJSONHandle(cipher encryption.Cipher) *codec.JsonHandle {
 	h := &codec.JsonHandle{
 		BasicHandle: codec.BasicHandle{

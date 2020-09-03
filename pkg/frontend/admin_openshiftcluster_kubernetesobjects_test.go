@@ -271,11 +271,11 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			defer controller.Finish()
 
 			a := mock_adminactions.NewMockInterface(controller)
-			oc := mock_database.NewMockOpenShiftClusters(controller)
-			s := mock_database.NewMockSubscriptions(controller)
-			tt.mocks(tt, a, oc, s)
+			dbopenshiftclusters := mock_database.NewMockOpenShiftClusters(controller)
+			dbsubscriptions := mock_database.NewMockSubscriptions(controller)
+			tt.mocks(tt, a, dbopenshiftclusters, dbsubscriptions)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), _env, nil, oc, s, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster,
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), _env, nil, dbopenshiftclusters, dbsubscriptions, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster,
 				*api.SubscriptionDocument) (adminactions.Interface, error) {
 				return a, nil
 			})
@@ -539,11 +539,11 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 			defer controller.Finish()
 
 			a := mock_adminactions.NewMockInterface(controller)
-			oc := mock_database.NewMockOpenShiftClusters(controller)
-			s := mock_database.NewMockSubscriptions(controller)
-			tt.mocks(tt, a, oc, s)
+			dbopenshiftclusters := mock_database.NewMockOpenShiftClusters(controller)
+			dbsubscriptions := mock_database.NewMockSubscriptions(controller)
+			tt.mocks(tt, a, dbopenshiftclusters, dbsubscriptions)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), _env, nil, oc, s, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster,
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), _env, nil, dbopenshiftclusters, dbsubscriptions, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster,
 				*api.SubscriptionDocument) (adminactions.Interface, error) {
 				return a, nil
 			})

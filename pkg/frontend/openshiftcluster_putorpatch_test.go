@@ -259,14 +259,14 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			asyncOperations := mock_database.NewMockAsyncOperations(controller)
-			openShiftClusters := mock_database.NewMockOpenShiftClusters(controller)
-			subscriptions := mock_database.NewMockSubscriptions(controller)
+			dbasyncoperations := mock_database.NewMockAsyncOperations(controller)
+			dbopenshiftclusters := mock_database.NewMockOpenShiftClusters(controller)
+			dbsubscriptions := mock_database.NewMockSubscriptions(controller)
 			enricher := mock_clusterdata.NewMockOpenShiftClusterEnricher(controller)
 
-			tt.mocks(tt, asyncOperations, openShiftClusters, enricher)
+			tt.mocks(tt, dbasyncoperations, dbopenshiftclusters, enricher)
 
-			subscriptions.EXPECT().
+			dbsubscriptions.EXPECT().
 				Get(gomock.Any(), mockSubID).
 				Return(&api.SubscriptionDocument{
 					Subscription: &api.Subscription{
@@ -277,7 +277,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					},
 				}, nil)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, asyncOperations, openShiftClusters, subscriptions, apis, &noop.Noop{}, nil, nil)
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, dbasyncoperations, dbopenshiftclusters, dbsubscriptions, apis, &noop.Noop{}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -987,14 +987,14 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			asyncOperations := mock_database.NewMockAsyncOperations(controller)
-			openShiftClusters := mock_database.NewMockOpenShiftClusters(controller)
-			subscriptions := mock_database.NewMockSubscriptions(controller)
+			dbasyncoperations := mock_database.NewMockAsyncOperations(controller)
+			dbopenshiftclusters := mock_database.NewMockOpenShiftClusters(controller)
+			dbsubscriptions := mock_database.NewMockSubscriptions(controller)
 			enricher := mock_clusterdata.NewMockOpenShiftClusterEnricher(controller)
 
-			tt.mocks(tt, asyncOperations, openShiftClusters, enricher)
+			tt.mocks(tt, dbasyncoperations, dbopenshiftclusters, enricher)
 
-			subscriptions.EXPECT().
+			dbsubscriptions.EXPECT().
 				Get(gomock.Any(), mockSubID).
 				Return(&api.SubscriptionDocument{
 					Subscription: &api.Subscription{
@@ -1005,7 +1005,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				}, nil)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, asyncOperations, openShiftClusters, subscriptions, apis, &noop.Noop{}, nil, nil)
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, dbasyncoperations, dbopenshiftclusters, dbsubscriptions, apis, &noop.Noop{}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

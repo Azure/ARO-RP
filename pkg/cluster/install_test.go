@@ -264,8 +264,8 @@ func TestAddResourceProviderVersion(t *testing.T) {
 		return
 	}
 
-	openshiftClusters := mock_database.NewMockOpenShiftClusters(controller)
-	openshiftClusters.EXPECT().
+	dbopenshiftclusters := mock_database.NewMockOpenShiftClusters(controller)
+	dbopenshiftclusters.EXPECT().
 		PatchWithLease(gomock.Any(), clusterdoc.Key, gomock.Any()).
 		DoAndReturn(func(ctx context.Context, key string, f func(doc *api.OpenShiftClusterDocument) error) (*api.OpenShiftClusterDocument, error) {
 			// Load what the database would have right now
@@ -294,7 +294,7 @@ func TestAddResourceProviderVersion(t *testing.T) {
 
 	i := &manager{
 		doc: clusterdoc,
-		db:  openshiftClusters,
+		db:  dbopenshiftclusters,
 	}
 	err = i.addResourceProviderVersion(ctx)
 	if err != nil {

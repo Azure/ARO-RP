@@ -296,12 +296,12 @@ func TestListOpenShiftCluster(t *testing.T) {
 					controller := gomock.NewController(t)
 					defer controller.Finish()
 
-					openshiftClusters := mock_database.NewMockOpenShiftClusters(controller)
+					dbopenshiftclusters := mock_database.NewMockOpenShiftClusters(controller)
 					enricher := mock_clusterdata.NewMockOpenShiftClusterEnricher(controller)
 					cipher := mock_encryption.NewMockCipher(controller)
-					tt.mocks(controller, openshiftClusters, enricher, cipher, listPrefix)
+					tt.mocks(controller, dbopenshiftclusters, enricher, cipher, listPrefix)
 
-					f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, nil, openshiftClusters, nil, api.APIs, &noop.Noop{}, cipher, nil)
+					f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, nil, dbopenshiftclusters, nil, api.APIs, &noop.Noop{}, cipher, nil)
 					if err != nil {
 						t.Fatal(err)
 					}
