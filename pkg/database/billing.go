@@ -14,8 +14,7 @@ import (
 )
 
 type billing struct {
-	c    cosmosdb.BillingDocumentClient
-	uuid string
+	c cosmosdb.BillingDocumentClient
 }
 
 // Billing is the database interface for BillingDocuments
@@ -30,7 +29,7 @@ type Billing interface {
 }
 
 // NewBilling returns a new Billing
-func NewBilling(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, dbid, collid string) (Billing, error) {
+func NewBilling(ctx context.Context, dbc cosmosdb.DatabaseClient, dbid, collid string) (Billing, error) {
 	collc := cosmosdb.NewCollectionClient(dbc, dbid)
 
 	triggers := []*cosmosdb.Trigger{
@@ -77,8 +76,7 @@ func NewBilling(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, d
 	}
 
 	return &billing{
-		c:    cosmosdb.NewBillingDocumentClient(collc, collid),
-		uuid: uuid,
+		c: cosmosdb.NewBillingDocumentClient(collc, collid),
 	}, nil
 }
 

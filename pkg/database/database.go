@@ -69,12 +69,12 @@ func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Interface, m me
 
 	db = &Database{}
 
-	db.AsyncOperations, err = NewAsyncOperations(uuid, dbc, env.DatabaseName(), "AsyncOperations")
+	db.AsyncOperations, err = NewAsyncOperations(dbc, env.DatabaseName(), "AsyncOperations")
 	if err != nil {
 		return nil, err
 	}
 
-	db.Billing, err = NewBilling(ctx, uuid, dbc, env.DatabaseName(), "Billing")
+	db.Billing, err = NewBilling(ctx, dbc, env.DatabaseName(), "Billing")
 	if err != nil {
 		return nil, err
 	}
