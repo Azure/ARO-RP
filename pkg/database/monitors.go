@@ -48,7 +48,7 @@ func NewMonitors(ctx context.Context, env env.Interface, dbc cosmosdb.DatabaseCl
 		},
 	}
 
-	triggerc := cosmosdb.NewTriggerClient(collc, "Monitors")
+	triggerc := cosmosdb.NewTriggerClient(collc, collMonitors)
 	for _, trigger := range triggers {
 		_, err := triggerc.Create(ctx, trigger)
 		if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusConflict) {
@@ -57,7 +57,7 @@ func NewMonitors(ctx context.Context, env env.Interface, dbc cosmosdb.DatabaseCl
 	}
 
 	return &monitors{
-		c:    cosmosdb.NewMonitorDocumentClient(collc, "Monitors"),
+		c:    cosmosdb.NewMonitorDocumentClient(collc, collMonitors),
 		uuid: uuid,
 	}, nil
 }

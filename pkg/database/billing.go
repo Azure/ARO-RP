@@ -68,7 +68,7 @@ func NewBilling(ctx context.Context, env env.Interface, dbc cosmosdb.DatabaseCli
 		},
 	}
 
-	triggerc := cosmosdb.NewTriggerClient(collc, "Billing")
+	triggerc := cosmosdb.NewTriggerClient(collc, collBilling)
 	for _, trigger := range triggers {
 		_, err := triggerc.Create(ctx, trigger)
 		if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusConflict) {
@@ -77,7 +77,7 @@ func NewBilling(ctx context.Context, env env.Interface, dbc cosmosdb.DatabaseCli
 	}
 
 	return &billing{
-		c: cosmosdb.NewBillingDocumentClient(collc, "Billing"),
+		c: cosmosdb.NewBillingDocumentClient(collc, collBilling),
 	}, nil
 }
 

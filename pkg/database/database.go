@@ -21,6 +21,14 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 )
 
+const (
+	collAsyncOperations   = "AsyncOperations"
+	collBilling           = "Billing"
+	collMonitors          = "Monitors"
+	collOpenShiftClusters = "OpenShiftClusters"
+	collSubscriptions     = "Subscriptions"
+)
+
 func NewDatabaseClient(ctx context.Context, log *logrus.Entry, env env.Interface, m metrics.Interface, cipher encryption.Cipher) (cosmosdb.DatabaseClient, error) {
 	databaseAccount, masterKey := env.CosmosDB()
 

@@ -61,7 +61,7 @@ func NewSubscriptions(ctx context.Context, env env.Interface, dbc cosmosdb.Datab
 		},
 	}
 
-	triggerc := cosmosdb.NewTriggerClient(collc, "Subscriptions")
+	triggerc := cosmosdb.NewTriggerClient(collc, collSubscriptions)
 	for _, trigger := range triggers {
 		_, err := triggerc.Create(ctx, trigger)
 		if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusConflict) {
@@ -70,7 +70,7 @@ func NewSubscriptions(ctx context.Context, env env.Interface, dbc cosmosdb.Datab
 	}
 
 	return &subscriptions{
-		c:    cosmosdb.NewSubscriptionDocumentClient(collc, "Subscriptions"),
+		c:    cosmosdb.NewSubscriptionDocumentClient(collc, collSubscriptions),
 		uuid: uuid,
 	}, nil
 }
