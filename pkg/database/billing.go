@@ -11,6 +11,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/env"
 )
 
 type billing struct {
@@ -29,8 +30,8 @@ type Billing interface {
 }
 
 // NewBilling returns a new Billing
-func NewBilling(ctx context.Context, dbc cosmosdb.DatabaseClient, dbid, collid string) (Billing, error) {
-	collc := cosmosdb.NewCollectionClient(dbc, dbid)
+func NewBilling(ctx context.Context, env env.Interface, dbc cosmosdb.DatabaseClient) (Billing, error) {
+	collc := cosmosdb.NewCollectionClient(dbc, env.DatabaseName())
 
 	triggers := []*cosmosdb.Trigger{
 		{
@@ -67,7 +68,7 @@ func NewBilling(ctx context.Context, dbc cosmosdb.DatabaseClient, dbid, collid s
 		},
 	}
 
-	triggerc := cosmosdb.NewTriggerClient(collc, collid)
+	triggerc := cosmosdb.NewTriggerClient(collc, "Billing")
 	for _, trigger := range triggers {
 		_, err := triggerc.Create(ctx, trigger)
 		if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusConflict) {
@@ -76,7 +77,7 @@ func NewBilling(ctx context.Context, dbc cosmosdb.DatabaseClient, dbid, collid s
 	}
 
 	return &billing{
-		c: cosmosdb.NewBillingDocumentClient(collc, collid),
+		c: cosmosdb.NewBillingDocumentClient(collc, "Billing"),
 	}, nil
 }
 

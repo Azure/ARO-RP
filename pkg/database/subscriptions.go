@@ -11,6 +11,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/env"
 )
 
 type subscriptions struct {
@@ -30,8 +31,8 @@ type Subscriptions interface {
 }
 
 // NewSubscriptions returns a new Subscriptions
-func NewSubscriptions(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, dbid, collid string) (Subscriptions, error) {
-	collc := cosmosdb.NewCollectionClient(dbc, dbid)
+func NewSubscriptions(ctx context.Context, env env.Interface, dbc cosmosdb.DatabaseClient, uuid string) (Subscriptions, error) {
+	collc := cosmosdb.NewCollectionClient(dbc, env.DatabaseName())
 
 	triggers := []*cosmosdb.Trigger{
 		{
@@ -60,7 +61,7 @@ func NewSubscriptions(ctx context.Context, uuid string, dbc cosmosdb.DatabaseCli
 		},
 	}
 
-	triggerc := cosmosdb.NewTriggerClient(collc, collid)
+	triggerc := cosmosdb.NewTriggerClient(collc, "Subscriptions")
 	for _, trigger := range triggers {
 		_, err := triggerc.Create(ctx, trigger)
 		if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusConflict) {
@@ -69,7 +70,7 @@ func NewSubscriptions(ctx context.Context, uuid string, dbc cosmosdb.DatabaseCli
 	}
 
 	return &subscriptions{
-		c:    cosmosdb.NewSubscriptionDocumentClient(collc, collid),
+		c:    cosmosdb.NewSubscriptionDocumentClient(collc, "Subscriptions"),
 		uuid: uuid,
 	}, nil
 }
