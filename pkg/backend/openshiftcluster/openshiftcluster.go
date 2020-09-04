@@ -17,6 +17,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
+	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/privateendpoint"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
@@ -26,6 +27,7 @@ type Manager struct {
 	log          *logrus.Entry
 	env          env.Interface
 	db           database.OpenShiftClusters
+	cipher       encryption.Cipher
 	billing      billing.Manager
 	fpAuthorizer autorest.Authorizer
 
@@ -45,7 +47,7 @@ type Manager struct {
 }
 
 // NewManager returns a new openshiftcluster Manager
-func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (*Manager, error) {
+func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, cipher encryption.Cipher, billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (*Manager, error) {
 	localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
@@ -78,6 +80,7 @@ func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClus
 		log:          log,
 		env:          _env,
 		db:           db,
+		cipher:       cipher,
 		billing:      billing,
 		fpAuthorizer: fpAuthorizer,
 

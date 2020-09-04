@@ -81,7 +81,7 @@ type manager struct {
 const deploymentName = "azuredeploy"
 
 // New returns a cluster manager
-func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters,
+func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, cipher encryption.Cipher,
 	billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (*manager, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
@@ -99,11 +99,6 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 	}
 
 	fpAuthorizer, err := _env.FPAuthorizer(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
-	if err != nil {
-		return nil, err
-	}
-
-	cipher, err := encryption.NewXChaCha20Poly1305(ctx, _env, env.EncryptionSecretName)
 	if err != nil {
 		return nil, err
 	}
