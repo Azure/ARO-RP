@@ -126,26 +126,10 @@ func NewMonitor(ctx context.Context, env env.Interface, log *logrus.Entry, oc *a
 // Monitor checks the API server health of a cluster
 func (mon *Monitor) Monitor(ctx context.Context) {
 	mon.log.Debug("monitoring")
-
-	statusCode, err := mon.getAPIServerHealthzCode()
-	if err != nil {
-		mon.logAndEmitError(runtime.FuncForPC(reflect.ValueOf(mon.getAPIServerHealthzCode).Pointer()).Name(), err)
+	skipRemaining := mon.initialHealthChecks(ctx)
+	if skipRemaining {
+		return
 	}
-	if statusCode != http.StatusOK {
-		// Check VM power status if API server not returning 200
-		stopped, err := mon.emitStoppedVMPowerStatus(ctx)
-		if err != nil {
-			mon.logAndEmitError(runtime.FuncForPC(reflect.ValueOf(mon.emitStoppedVMPowerStatus).Pointer()).Name(), err)
-		}
-		if stopped {
-			return // If a cluster VM isn't running, return early to avoid raising a API server health incident
-		}
-	}
-	mon.emitAPIServerHealthzCode(statusCode) // If no VMs were powered off, emit API server health metric
-	if statusCode != http.StatusOK {
-		return // If API server is not returning 200, return early
-	}
-
 	for _, f := range []func(context.Context) error{
 		mon.emitAroOperatorConditions,
 		mon.emitClusterOperatorConditions,
@@ -162,9 +146,9 @@ func (mon *Monitor) Monitor(ctx context.Context) {
 		mon.emitSummary,
 		mon.emitPrometheusAlerts, // at the end for now because it's the slowest/least reliable
 	} {
-		err = f(ctx)
+		err := f(ctx)
 		if err != nil {
-			mon.logAndEmitError(runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name(), err)
+			mon.logAndEmitError(f, err)
 			// keep going
 		}
 	}
@@ -190,9 +174,10 @@ func (mon *Monitor) emitGauge(m string, value int64, dims map[string]string) {
 	mon.m.EmitGauge(m, value, dims)
 }
 
-func (mon *Monitor) logAndEmitError(fName string, err error) {
-	mon.log.Printf("%s: %s", fName, err)
-	mon.emitGauge("monitor.clustererrors", 1, map[string]string{"monitor": fName})
+func (mon *Monitor) logAndEmitError(i interface{}, err error) {
+	name := runtime.FuncForPC(reflect.ValueOf(i).Pointer()).Name()
+	mon.log.Printf("%s: %s", name, err)
+	mon.emitGauge("monitor.clustererrors", 1, map[string]string{"monitor": name})
 }
 
 type roundTripperFunc func(*http.Request) (*http.Response, error)
