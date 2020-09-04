@@ -5,6 +5,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"os"
 	"strings"
@@ -52,6 +53,26 @@ func main() {
 }
 
 func run(ctx context.Context, log *logrus.Entry) error {
+	subscriptionID, exists := os.LookupEnv("AZURE_SUBSCRIPTION_ID")
+	if !exists {
+		return errors.New("Cannot read AZURE_SUBSCRIPTION_ID from environment")
+	}
+
+	tenantID, exists := os.LookupEnv("AZURE_TENANT_ID")
+	if !exists {
+		return errors.New("Cannot read AZURE_TENANT_ID from environment")
+	}
+
+	clientID, exists := os.LookupEnv("AZURE_CLIENT_ID")
+	if !exists {
+		return errors.New("Cannot read AZURE_CLIENT_ID from environment")
+	}
+
+	clientSecret, exists := os.LookupEnv("AZURE_CLIENT_SECRET")
+	if !exists {
+		return errors.New("Cannot read AZURE_CLIENT_SECRET from environment")
+	}
+
 	var ttl time.Duration
 	if os.Getenv("AZURE_PURGE_TTL") != "" {
 		var err error
@@ -123,12 +144,17 @@ func run(ctx context.Context, log *logrus.Entry) error {
 
 	log.Infof("Starting the resource cleaner, DryRun: %t", *dryRun)
 
-	rc, err := purge.NewResourceCleaner(log, shouldDelete, *dryRun)
+	rc, err := purge.NewResourceCleaner(log, subscriptionID, tenantID, clientID, clientSecret, shouldDelete, *dryRun)
 	if err != nil {
 		return err
 	}
 
-	return rc.CleanResourceGroups(ctx)
+	err = rc.CleanResourceGroups(ctx)
+	if err != nil {
+		return err
+	}
+
+	return rc.CleanAAD(ctx)
 }
 
 func contains(s []string, e string) bool {
