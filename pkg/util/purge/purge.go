@@ -6,9 +6,6 @@ package purge
 // all the purge functions are located here
 
 import (
-	"context"
-	"os"
-
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
@@ -25,7 +22,7 @@ type checkFn func(mgmtfeatures.ResourceGroup, *logrus.Entry) bool
 
 // ResourceCleaner hold the context required for cleaning
 type ResourceCleaner struct {
-	appMap map[string][]string
+	subscriptionID string
 
 	log    *logrus.Entry
 	dryRun bool
@@ -45,12 +42,7 @@ type ResourceCleaner struct {
 }
 
 // NewResourceCleaner instantiates the new RC object
-func NewResourceCleaner(log *logrus.Entry, shouldDelete checkFn, dryRun bool) (*ResourceCleaner, error) {
-	clientID := os.Getenv("AZURE_CLIENT_ID")
-	clientSecret := os.Getenv("AZURE_CLIENT_SECRET")
-	subscriptionID := os.Getenv("AZURE_SUBSCRIPTION_ID")
-	tenantID := os.Getenv("AZURE_TENANT_ID")
-
+func NewResourceCleaner(log *logrus.Entry, subscriptionID, tenantID, clientID string, clientSecret string, shouldDelete checkFn, dryRun bool) (*ResourceCleaner, error) {
 	authorizer, err := auth.NewAuthorizerFromEnvironment()
 	if err != nil {
 		return nil, err
@@ -62,27 +54,23 @@ func NewResourceCleaner(log *logrus.Entry, shouldDelete checkFn, dryRun bool) (*
 	}
 
 	rc := &ResourceCleaner{
-		appMap: map[string][]string{},
-		log:    log,
-		dryRun: dryRun,
+		log:            log,
+		dryRun:         dryRun,
+		subscriptionID: subscriptionID,
 
 		resourcegroupscli:      features.NewResourceGroupsClient(subscriptionID, authorizer),
 		vnetscli:               network.NewVirtualNetworksClient(subscriptionID, authorizer),
 		privatelinkservicescli: network.NewPrivateLinkServicesClient(subscriptionID, authorizer),
 		securitygroupscli:      network.NewSecurityGroupsClient(subscriptionID, authorizer),
 
-		applicationscli:   graphrbac.NewApplicationsClient(tenantID, rbAuthorizer),
-		roleassignmentcli: authorization.NewRoleAssignmentsClient(subscriptionID, authorizer),
+		applicationscli:     graphrbac.NewApplicationsClient(tenantID, rbAuthorizer),
+		roleassignmentcli:   authorization.NewRoleAssignmentsClient(subscriptionID, authorizer),
+		serviceprincipalcli: graphrbac.NewServicePrincipalClient(tenantID, rbAuthorizer),
 
 		subnetManager: subnet.NewManager(subscriptionID, authorizer),
 
 		// ShouldDelete decides whether the resource group gets deleted
 		shouldDelete: shouldDelete,
-	}
-
-	err = rc.prepareApps(context.Background())
-	if err != nil {
-		return nil, err
 	}
 
 	return rc, nil
