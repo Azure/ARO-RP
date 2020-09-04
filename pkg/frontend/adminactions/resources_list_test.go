@@ -34,7 +34,7 @@ func TestResourcesList(t *testing.T) {
 		resourceID     string
 		mocks          func(*test, *mock_features.MockResourcesClient, *mock_compute.MockVirtualMachinesClient, *mock_network.MockVirtualNetworksClient)
 		wantStatusCode int
-		wantResponse   func() []byte
+		wantResponse   []byte
 		wantError      string
 	}
 
@@ -83,9 +83,7 @@ func TestResourcesList(t *testing.T) {
 				}, nil)
 			},
 			wantStatusCode: http.StatusOK,
-			wantResponse: func() []byte {
-				return []byte(`[{"properties":{"dhcpOptions":{"dnsServers":[]}},"id":"/subscriptions/id","type":"Microsoft.Network/virtualNetworks"},{"properties":{"provisioningState":"Succeeded"},"id":"/subscriptions/id","type":"Microsoft.Compute/virtualMachines"},{"id":"/subscriptions/id","name":"storage","type":"Microsoft.Storage/storageAccounts","location":"eastus"}]`)
-			}, // Note: want without "\n" at end since it hasn't been added at this point
+			wantResponse:   []byte(`[{"properties":{"dhcpOptions":{"dnsServers":[]}},"id":"/subscriptions/id","type":"Microsoft.Network/virtualNetworks"},{"properties":{"provisioningState":"Succeeded"},"id":"/subscriptions/id","type":"Microsoft.Compute/virtualMachines"},{"id":"/subscriptions/id","name":"storage","type":"Microsoft.Storage/storageAccounts","location":"eastus"}]`), // Note: want without "\n" at end since it hasn't been added at this point
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -124,7 +122,7 @@ func TestResourcesList(t *testing.T) {
 
 			if tt.wantError == "" {
 				if tt.wantResponse != nil {
-					if !bytes.Equal(b, tt.wantResponse()) {
+					if !bytes.Equal(b, tt.wantResponse) {
 						t.Error(string(b))
 					}
 				}

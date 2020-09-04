@@ -4,16 +4,10 @@ package frontend
 // Licensed under the Apache License 2.0.
 
 import (
-	"bytes"
 	"context"
-	"crypto/tls"
-	"crypto/x509"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
-	"reflect"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -22,43 +16,12 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
-	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
-	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
-	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
-	"github.com/Azure/ARO-RP/test/util/listener"
 )
 
 func TestPutSubscription(t *testing.T) {
 	ctx := context.Background()
-
-	clientkey, clientcerts, err := utiltls.GenerateKeyAndCertificate("client", nil, nil, false, true)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	serverkey, servercerts, err := utiltls.GenerateKeyAndCertificate("server", nil, nil, false, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	pool := x509.NewCertPool()
-	pool.AddCert(servercerts[0])
-
-	cli := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				RootCAs: pool,
-				Certificates: []tls.Certificate{
-					{
-						Certificate: [][]byte{clientcerts[0].Raw},
-						PrivateKey:  clientkey,
-					},
-				},
-			},
-		},
-	}
 
 	mockSubID := "00000000-0000-0000-0000-000000000000"
 
@@ -269,24 +232,13 @@ func TestPutSubscription(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			defer cli.CloseIdleConnections()
-
-			l := listener.NewListener()
-			defer l.Close()
-
-			env := &env.Test{
-				L:        l,
-				TLSKey:   serverkey,
-				TLSCerts: servercerts,
+			ti, err := newTestInfra(t)
+			if err != nil {
+				t.Fatal(err)
 			}
-			env.SetARMClientAuthorizer(clientauthorizer.NewOne(clientcerts[0].Raw))
+			defer ti.done()
 
-			cli.Transport.(*http.Transport).Dial = l.Dial
-
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			subscriptions := mock_database.NewMockSubscriptions(controller)
+			subscriptions := mock_database.NewMockSubscriptions(ti.controller)
 			subscriptions.EXPECT().Get(gomock.Any(), mockSubID).Return(tt.dbGetDoc, tt.dbGetErr)
 			if tt.wantDbDoc != nil {
 				if tt.dbGetDoc == nil {
@@ -296,7 +248,7 @@ func TestPutSubscription(t *testing.T) {
 				}
 			}
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, &database.Database{
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, &database.Database{
 				Subscriptions: subscriptions,
 			}, api.APIs, &noop.Noop{}, nil, nil)
 			if err != nil {
@@ -305,59 +257,25 @@ func TestPutSubscription(t *testing.T) {
 
 			go f.Run(ctx, nil, nil)
 
-			buf := &bytes.Buffer{}
 			sub := &api.Subscription{}
 			if tt.request != nil {
 				tt.request(sub)
 			}
-			err = json.NewEncoder(buf).Encode(sub)
+
+			resp, b, err := ti.request(http.MethodPut,
+				fmt.Sprintf("https://server/subscriptions/%s?api-version=2.0", mockSubID),
+				http.Header{
+					"Content-Type": []string{"application/json"},
+				}, sub)
+
+			var wantResponse interface{}
+			if tt.wantDbDoc != nil {
+				wantResponse = tt.wantDbDoc.Subscription
+			}
+
+			err = validateResponse(resp, b, tt.wantStatusCode, tt.wantError, wantResponse)
 			if err != nil {
-				t.Fatal(err)
-			}
-
-			req, err := http.NewRequest(http.MethodPut, fmt.Sprintf("https://server/subscriptions/%s?api-version=2.0", mockSubID), buf)
-			if err != nil {
-				t.Fatal(err)
-			}
-			req.Header = http.Header{
-				"Content-Type": []string{"application/json"},
-			}
-			resp, err := cli.Do(req)
-			if err != nil {
-				t.Fatal(err)
-			}
-			defer resp.Body.Close()
-
-			if resp.StatusCode != tt.wantStatusCode {
-				t.Error(resp.StatusCode)
-			}
-
-			b, err := ioutil.ReadAll(resp.Body)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			if tt.wantError == "" {
-				var sub *api.Subscription
-				err = json.Unmarshal(b, &sub)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				if !reflect.DeepEqual(sub, tt.wantDbDoc.Subscription) {
-					b, _ := json.Marshal(sub)
-					t.Error(string(b))
-				}
-			} else {
-				cloudErr := &api.CloudError{StatusCode: resp.StatusCode}
-				err = json.Unmarshal(b, &cloudErr)
-				if err != nil {
-					t.Fatal(err)
-				}
-
-				if cloudErr.Error() != tt.wantError {
-					t.Error(cloudErr)
-				}
+				t.Error(err)
 			}
 		})
 	}
