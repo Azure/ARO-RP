@@ -135,7 +135,7 @@ func TestEmitVMPowerStatus(t *testing.T) {
 				vmClient: vmClient,
 			}
 
-			hasStoppedVMs, err := mon.emitVMPowerStatus(ctx)
+			hasStoppedVMs, err := mon.emitStoppedVMPowerStatus(ctx)
 			if err != nil {
 				t.Fatal(err)
 			}

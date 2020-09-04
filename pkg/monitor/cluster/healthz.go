@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-func (mon *Monitor) emitAPIServerHealthzCode() (int, error) {
+func (mon *Monitor) getAPIServerHealthzCode() (int, error) {
 	var statusCode int
 	err := mon.cli.Discovery().RESTClient().
 		Get().
@@ -15,10 +15,11 @@ func (mon *Monitor) emitAPIServerHealthzCode() (int, error) {
 		Do().
 		StatusCode(&statusCode).
 		Error()
+	return statusCode, err
+}
 
+func (mon *Monitor) emitAPIServerHealthzCode(statusCode int) {
 	mon.emitGauge("apiserver.healthz.code", 1, map[string]string{
 		"code": strconv.FormatInt(int64(statusCode), 10),
 	})
-
-	return statusCode, err
 }

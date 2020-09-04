@@ -127,23 +127,23 @@ func NewMonitor(ctx context.Context, env env.Interface, log *logrus.Entry, oc *a
 func (mon *Monitor) Monitor(ctx context.Context) {
 	mon.log.Debug("monitoring")
 
-	// If cluster VM is deallocated or otherwise powered off, skip the rest of the metrics
-	stopped, err := mon.emitVMPowerStatus(ctx)
+	statusCode, err := mon.getAPIServerHealthzCode()
 	if err != nil {
-		mon.logAndEmitError(runtime.FuncForPC(reflect.ValueOf(mon.emitVMPowerStatus).Pointer()).Name(), err)
-		return
-	}
-	if stopped {
-		return
-	}
-
-	// If API is not returning 200, don't need to run the next checks
-	statusCode, err := mon.emitAPIServerHealthzCode()
-	if err != nil {
-		mon.logAndEmitError(runtime.FuncForPC(reflect.ValueOf(mon.emitAPIServerHealthzCode).Pointer()).Name(), err)
+		mon.logAndEmitError(runtime.FuncForPC(reflect.ValueOf(mon.getAPIServerHealthzCode).Pointer()).Name(), err)
 	}
 	if statusCode != http.StatusOK {
-		return
+		// Check VM power status if API server not returning 200
+		stopped, err := mon.emitStoppedVMPowerStatus(ctx)
+		if err != nil {
+			mon.logAndEmitError(runtime.FuncForPC(reflect.ValueOf(mon.emitStoppedVMPowerStatus).Pointer()).Name(), err)
+		}
+		if stopped {
+			return // If a cluster VM isn't running, return early to avoid raising a API server health incident
+		}
+	}
+	mon.emitAPIServerHealthzCode(statusCode) // If no VMs were powered off, emit API server health metric
+	if statusCode != http.StatusOK {
+		return // If API server is not returning 200, return early
 	}
 
 	for _, f := range []func(context.Context) error{
