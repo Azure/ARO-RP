@@ -27,6 +27,7 @@ stages:
     locations:
     - australiaeast
     - brazilsouth
+    - centralindia
     - japaneast
     - japanwest
     - koreacentral

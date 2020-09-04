@@ -41,6 +41,7 @@ stages:
       environment: RP-Prod-LowTrafficSector
       locations:
       - australiaeast
+      - centralindia
       - japaneast
       - japanwest
       - koreacentral
