@@ -13,7 +13,7 @@ import (
 )
 
 type FakeTemplateTrigger func(context.Context, *pkg.Template) error
-type FakeTemplateQuery func(TemplateClient, *Query) TemplateRawIterator
+type FakeTemplateQuery func(TemplateClient, *Query, *Options) TemplateRawIterator
 
 var _ TemplateClient = &FakeTemplateClient{}
 
@@ -230,7 +230,7 @@ func (c *FakeTemplateClient) Query(name string, query *Query, options *Options) 
 
 	quer, ok := c.queries[query.Query]
 	if ok {
-		return quer(c, query)
+		return quer(c, query, options)
 	} else {
 		return &fakeTemplateErroringRawIterator{err: ErrNotImplemented}
 	}
@@ -245,7 +245,7 @@ func (c *FakeTemplateClient) QueryAll(ctx context.Context, partitionkey string, 
 
 	quer, ok := c.queries[query.Query]
 	if ok {
-		items := quer(c, query)
+		items := quer(c, query, options)
 		res := &pkg.Templates{}
 		err := items.NextRaw(ctx, -1, res)
 		return res, err
