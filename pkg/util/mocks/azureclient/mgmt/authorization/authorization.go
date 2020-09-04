@@ -102,3 +102,48 @@ func (mr *MockRoleAssignmentsClientMockRecorder) Create(arg0, arg1, arg2, arg3 i
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockRoleAssignmentsClient)(nil).Create), arg0, arg1, arg2, arg3)
 }
+
+// DeleteByID mocks base method
+func (m *MockRoleAssignmentsClient) DeleteByID(arg0 context.Context, arg1 string) (authorization.RoleAssignment, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteByID", arg0, arg1)
+	ret0, _ := ret[0].(authorization.RoleAssignment)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteByID indicates an expected call of DeleteByID
+func (mr *MockRoleAssignmentsClientMockRecorder) DeleteByID(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteByID", reflect.TypeOf((*MockRoleAssignmentsClient)(nil).DeleteByID), arg0, arg1)
+}
+
+// List mocks base method
+func (m *MockRoleAssignmentsClient) List(arg0 context.Context, arg1 string) ([]authorization.RoleAssignment, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", arg0, arg1)
+	ret0, _ := ret[0].([]authorization.RoleAssignment)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List
+func (mr *MockRoleAssignmentsClientMockRecorder) List(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockRoleAssignmentsClient)(nil).List), arg0, arg1)
+}
+
+// ListForScope mocks base method
+func (m *MockRoleAssignmentsClient) ListForScope(arg0 context.Context, arg1, arg2 string) ([]authorization.RoleAssignment, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListForScope", arg0, arg1, arg2)
+	ret0, _ := ret[0].([]authorization.RoleAssignment)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListForScope indicates an expected call of ListForScope
+func (mr *MockRoleAssignmentsClientMockRecorder) ListForScope(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListForScope", reflect.TypeOf((*MockRoleAssignmentsClient)(nil).ListForScope), arg0, arg1, arg2)
+}

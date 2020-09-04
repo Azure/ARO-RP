@@ -66,6 +66,21 @@ func (mr *MockApplicationsClientMockRecorder) Delete(arg0, arg1 interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockApplicationsClient)(nil).Delete), arg0, arg1)
 }
 
+// Get mocks base method
+func (m *MockApplicationsClient) Get(arg0 context.Context, arg1 string) (graphrbac.Application, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", arg0, arg1)
+	ret0, _ := ret[0].(graphrbac.Application)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get
+func (mr *MockApplicationsClientMockRecorder) Get(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockApplicationsClient)(nil).Get), arg0, arg1)
+}
+
 // GetServicePrincipalsIDByAppID mocks base method
 func (m *MockApplicationsClient) GetServicePrincipalsIDByAppID(arg0 context.Context, arg1 string) (graphrbac.ServicePrincipalObjectResult, error) {
 	m.ctrl.T.Helper()
@@ -132,6 +147,36 @@ func (m *MockServicePrincipalClient) Create(arg0 context.Context, arg1 graphrbac
 func (mr *MockServicePrincipalClientMockRecorder) Create(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockServicePrincipalClient)(nil).Create), arg0, arg1)
+}
+
+// Delete mocks base method
+func (m *MockServicePrincipalClient) Delete(arg0 context.Context, arg1 string) (autorest.Response, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", arg0, arg1)
+	ret0, _ := ret[0].(autorest.Response)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Delete indicates an expected call of Delete
+func (mr *MockServicePrincipalClientMockRecorder) Delete(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockServicePrincipalClient)(nil).Delete), arg0, arg1)
+}
+
+// Get mocks base method
+func (m *MockServicePrincipalClient) Get(arg0 context.Context, arg1 string) (graphrbac.ServicePrincipal, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", arg0, arg1)
+	ret0, _ := ret[0].(graphrbac.ServicePrincipal)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get
+func (mr *MockServicePrincipalClientMockRecorder) Get(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockServicePrincipalClient)(nil).Get), arg0, arg1)
 }
 
 // List mocks base method
