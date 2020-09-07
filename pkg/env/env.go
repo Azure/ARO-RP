@@ -50,7 +50,6 @@ func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
 		for _, key := range []string{
 			"AZURE_RP_CLIENT_ID",
 			"AZURE_RP_CLIENT_SECRET",
-			"AZURE_FP_CLIENT_ID",
 			"AZURE_TENANT_ID",
 		} {
 			if _, found := os.LookupEnv(key); !found {

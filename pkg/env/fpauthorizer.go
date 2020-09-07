@@ -7,6 +7,7 @@ import (
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
+	"fmt"
 	"os"
 
 	"github.com/Azure/go-autorest/autorest/adal"
@@ -34,6 +35,14 @@ func NewFPAuthorizer(ctx context.Context, env Lite, kv ServiceKeyvaultInterface)
 	var spID string
 	switch env.Type() {
 	case Dev:
+		for _, key := range []string{
+			"AZURE_FP_CLIENT_ID",
+		} {
+			if _, found := os.LookupEnv(key); !found {
+				return nil, fmt.Errorf("environment variable %q unset (development mode)", key)
+			}
+		}
+
 		spID = os.Getenv("AZURE_FP_CLIENT_ID")
 	case Int:
 		spID = "71cfb175-ea3a-444e-8c03-b119b2752ce4"
