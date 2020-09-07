@@ -29,12 +29,12 @@ type prod struct {
 	envType Type
 }
 
-func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata) (*prod, error) {
+func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata, envType Type) (*prod, error) {
 	p := &prod{
 		InstanceMetadata: instancemetadata,
 
 		log:     log,
-		envType: Prod,
+		envType: envType,
 	}
 
 	rpAuthorizer, err := RPAuthorizer(azure.PublicCloud.ResourceManagerEndpoint)
