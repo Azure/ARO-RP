@@ -12,8 +12,6 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
@@ -22,9 +20,6 @@ var _ Interface = &dev{}
 
 type dev struct {
 	*prod
-
-	permissions authorization.PermissionsClient
-	deployments features.DeploymentsClient
 }
 
 func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata) (*dev, error) {
@@ -52,15 +47,6 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 	}
 
 	d.prod.envType = Dev
-
-	fpAuthorizer, err := d.FPAuthorizer(instancemetadata.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
-	if err != nil {
-		return nil, err
-	}
-
-	d.permissions = authorization.NewPermissionsClient(instancemetadata.SubscriptionID(), fpAuthorizer)
-
-	d.deployments = features.NewDeploymentsClient(instancemetadata.TenantID(), fpAuthorizer)
 
 	return d, nil
 }
