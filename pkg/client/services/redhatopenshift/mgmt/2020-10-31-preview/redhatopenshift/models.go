@@ -29,7 +29,7 @@ import (
 )
 
 // The package's fully qualified name.
-const fqdn = "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2020-04-30/redhatopenshift"
+const fqdn = "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2020-10-31-preview/redhatopenshift"
 
 // APIServerProfile aPIServerProfile represents an API server profile.
 type APIServerProfile struct {

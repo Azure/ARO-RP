@@ -19,7 +19,7 @@ package redhatopenshift
 
 // UserAgent returns the UserAgent string to use when sending http.Requests.
 func UserAgent() string {
-	return "Azure-SDK-For-Go/" + Version() + " redhatopenshift/2020-04-30"
+	return "Azure-SDK-For-Go/" + Version() + " redhatopenshift/2020-10-31-preview"
 }
 
 // Version returns the semantic version (see http://semver.org) of the client.
