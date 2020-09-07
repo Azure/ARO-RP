@@ -32,7 +32,7 @@ func TestResourcesList(t *testing.T) {
 	type test struct {
 		name           string
 		resourceID     string
-		mocks          func(*test, *mock_features.MockResourcesClient, *mock_compute.MockVirtualMachinesClient, *mock_network.MockVirtualNetworksClient)
+		mocks          func(*test, *mock_features.MockResourcesClient, *mock_compute.MockVirtualMachinesClient, *mock_network.MockVirtualNetworksClient, *mock_network.MockRouteTablesClient)
 		wantStatusCode int
 		wantResponse   []byte
 		wantError      string
@@ -42,7 +42,7 @@ func TestResourcesList(t *testing.T) {
 		{
 			name:       "basic coverage",
 			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-			mocks: func(tt *test, resourcesClient *mock_features.MockResourcesClient, vmClient *mock_compute.MockVirtualMachinesClient, vNetClient *mock_network.MockVirtualNetworksClient) {
+			mocks: func(tt *test, resourcesClient *mock_features.MockResourcesClient, vmClient *mock_compute.MockVirtualMachinesClient, vNetClient *mock_network.MockVirtualNetworksClient, routeTablesClient *mock_network.MockRouteTablesClient) {
 
 				resourcesClient.EXPECT().List(gomock.Any(), "resourceGroup eq 'test-cluster'", "", nil).Return([]mgmtfeatures.GenericResourceExpanded{
 					{
@@ -64,7 +64,21 @@ func TestResourcesList(t *testing.T) {
 						DhcpOptions: &mgmtnetwork.DhcpOptions{
 							DNSServers: &[]string{},
 						},
+						Subnets: &[]mgmtnetwork.Subnet{
+							{
+								SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+									RouteTable: &mgmtnetwork.RouteTable{
+										ID: to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1"),
+									},
+								},
+							},
+						},
 					},
+				}, nil)
+
+				routeTablesClient.EXPECT().Get(gomock.Any(), "mockrg", "routetable1", "").Return(mgmtnetwork.RouteTable{
+					ID:   to.StringPtr("/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1"),
+					Name: to.StringPtr("routetable1"),
 				}, nil)
 
 				resourcesClient.EXPECT().GetByID(gomock.Any(), "/subscriptions/id", azureclient.APIVersions["Microsoft.Storage"]).Return(mgmtfeatures.GenericResource{
@@ -83,7 +97,45 @@ func TestResourcesList(t *testing.T) {
 				}, nil)
 			},
 			wantStatusCode: http.StatusOK,
-			wantResponse:   []byte(`[{"properties":{"dhcpOptions":{"dnsServers":[]}},"id":"/subscriptions/id","type":"Microsoft.Network/virtualNetworks"},{"properties":{"provisioningState":"Succeeded"},"id":"/subscriptions/id","type":"Microsoft.Compute/virtualMachines"},{"id":"/subscriptions/id","name":"storage","type":"Microsoft.Storage/storageAccounts","location":"eastus"}]`), // Note: want without "\n" at end since it hasn't been added at this point
+			wantResponse:   []byte(`[{"properties":{"dhcpOptions":{"dnsServers":[]},"subnets":[{"properties":{"routeTable":{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1","tags":null}}}]},"id":"/subscriptions/id","type":"Microsoft.Network/virtualNetworks"},{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1","name":"routetable1"},{"properties":{"provisioningState":"Succeeded"},"id":"/subscriptions/id","type":"Microsoft.Compute/virtualMachines"},{"id":"/subscriptions/id","name":"storage","type":"Microsoft.Storage/storageAccounts","location":"eastus"}]`),
+		},
+		{
+			name:       "vnet get error", //Get resources should continue on error from vNetClient.Get()
+			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
+			mocks: func(tt *test, resourcesClient *mock_features.MockResourcesClient, vmClient *mock_compute.MockVirtualMachinesClient, vNetClient *mock_network.MockVirtualNetworksClient, routeTablesClient *mock_network.MockRouteTablesClient) {
+
+				resourcesClient.EXPECT().List(gomock.Any(), "resourceGroup eq 'test-cluster'", "", nil).Return([]mgmtfeatures.GenericResourceExpanded{
+					{
+						Name: to.StringPtr("vm-1"),
+						ID:   to.StringPtr("/subscriptions/id"),
+						Type: to.StringPtr("Microsoft.Compute/virtualMachines"),
+					},
+					{
+						Name: to.StringPtr("storage"),
+						ID:   to.StringPtr("/subscriptions/id"),
+						Type: to.StringPtr("Microsoft.Storage/storageAccounts"),
+					},
+				}, nil)
+
+				vNetClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mgmtnetwork.VirtualNetwork{}, fmt.Errorf("Any error during Get, expecting a permissions error"))
+
+				resourcesClient.EXPECT().GetByID(gomock.Any(), "/subscriptions/id", azureclient.APIVersions["Microsoft.Storage"]).Return(mgmtfeatures.GenericResource{
+					Name:     to.StringPtr("storage"),
+					ID:       to.StringPtr("/subscriptions/id"),
+					Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
+					Location: to.StringPtr("eastus"),
+				}, nil)
+
+				vmClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mgmtcompute.VirtualMachine{
+					ID:   to.StringPtr("/subscriptions/id"),
+					Type: to.StringPtr("Microsoft.Compute/virtualMachines"),
+					VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
+						ProvisioningState: to.StringPtr("Succeeded"),
+					},
+				}, nil)
+			},
+			wantStatusCode: http.StatusOK,
+			wantResponse:   []byte(`[{"properties":{"provisioningState":"Succeeded"},"id":"/subscriptions/id","type":"Microsoft.Compute/virtualMachines"},{"id":"/subscriptions/id","name":"storage","type":"Microsoft.Storage/storageAccounts","location":"eastus"}]`),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -97,7 +149,8 @@ func TestResourcesList(t *testing.T) {
 			resourcesClient := mock_features.NewMockResourcesClient(controller)
 			vmClient := mock_compute.NewMockVirtualMachinesClient(controller)
 			vNetClient := mock_network.NewMockVirtualNetworksClient(controller)
-			tt.mocks(tt, resourcesClient, vmClient, vNetClient)
+			routeTablesClient := mock_network.NewMockRouteTablesClient(controller)
+			tt.mocks(tt, resourcesClient, vmClient, vNetClient, routeTablesClient)
 
 			a := adminactions{
 				log: logrus.NewEntry(logrus.StandardLogger()),
@@ -113,9 +166,10 @@ func TestResourcesList(t *testing.T) {
 					},
 				},
 
-				resourcesClient: resourcesClient,
-				vmClient:        vmClient,
-				vNetClient:      vNetClient,
+				resourcesClient:   resourcesClient,
+				vmClient:          vmClient,
+				vNetClient:        vNetClient,
+				routeTablesClient: routeTablesClient,
 			}
 
 			b, err := a.ResourcesList(ctx)
