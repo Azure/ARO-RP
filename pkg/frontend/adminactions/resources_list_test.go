@@ -18,7 +18,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
@@ -140,10 +139,6 @@ func TestResourcesList(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			_env := &env.Test{
-				TestLocation: "eastus",
-			}
-
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
@@ -155,7 +150,6 @@ func TestResourcesList(t *testing.T) {
 
 			a := adminactions{
 				log: logrus.NewEntry(logrus.StandardLogger()),
-				env: _env,
 				oc: &api.OpenShiftCluster{
 					Properties: api.OpenShiftClusterProperties{
 						ClusterProfile: api.ClusterProfile{
