@@ -5,7 +5,6 @@ package env
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"strings"
 
@@ -46,16 +45,6 @@ func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
 	switch envType() {
 	case Dev:
 		log.Warn("running in development mode")
-
-		for _, key := range []string{
-			"AZURE_RP_CLIENT_ID",
-			"AZURE_RP_CLIENT_SECRET",
-			"AZURE_TENANT_ID",
-		} {
-			if _, found := os.LookupEnv(key); !found {
-				return nil, fmt.Errorf("environment variable %q unset", key)
-			}
-		}
 
 	case Int:
 		log.Warn("running in int mode")

@@ -4,6 +4,7 @@ package env
 // Licensed under the Apache License 2.0.
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -16,6 +17,16 @@ import (
 // MSI.
 func RPAuthorizer(resource string) (autorest.Authorizer, error) {
 	if strings.ToLower(os.Getenv("RP_MODE")) == "development" {
+		for _, key := range []string{
+			"AZURE_RP_CLIENT_ID",
+			"AZURE_RP_CLIENT_SECRET",
+			"AZURE_TENANT_ID",
+		} {
+			if _, found := os.LookupEnv(key); !found {
+				return nil, fmt.Errorf("environment variable %q unset", key)
+			}
+		}
+
 		config := &auth.ClientCredentialsConfig{
 			ClientID:     os.Getenv("AZURE_RP_CLIENT_ID"),
 			ClientSecret: os.Getenv("AZURE_RP_CLIENT_SECRET"),
