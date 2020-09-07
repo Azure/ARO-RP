@@ -67,7 +67,7 @@ func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
 		return nil, err
 	}
 
-	return newProd(ctx, log, im, envType())
+	return newProd(ctx, im, envType())
 }
 
 func newInstanceMetadata(ctx context.Context) (instancemetadata.InstanceMetadata, error) {

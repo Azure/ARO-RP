@@ -11,7 +11,6 @@ import (
 
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
@@ -25,15 +24,13 @@ type prod struct {
 	domain  string
 	zones   map[string][]string
 
-	log     *logrus.Entry
 	envType Type
 }
 
-func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata, envType Type) (*prod, error) {
+func newProd(ctx context.Context, instancemetadata instancemetadata.InstanceMetadata, envType Type) (*prod, error) {
 	p := &prod{
 		InstanceMetadata: instancemetadata,
 
-		log:     log,
 		envType: envType,
 	}
 
