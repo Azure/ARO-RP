@@ -87,7 +87,7 @@ const deploymentName = "azuredeploy"
 
 // New returns a cluster manager
 func New(ctx context.Context, log *logrus.Entry, _env env.Interface, gl env.ClustersGenevaLoggingInterface, dialer proxy.Dialer, fakearm fakearm.FakeARM, db database.OpenShiftClusters, cipher encryption.Cipher,
-	billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (*manager, error) {
+	billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument, clustersKeyvaultURI string) (*manager, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
 		return nil, err
@@ -133,7 +133,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, gl env.Clus
 		accounts:          storage.NewAccountsClient(r.SubscriptionID, fpAuthorizer),
 
 		dns:             dns.NewManager(_env, localFPAuthorizer),
-		keyvault:        keyvault.NewManager(localFPKVAuthorizer, _env.ClustersKeyvaultURI()),
+		keyvault:        keyvault.NewManager(localFPKVAuthorizer, clustersKeyvaultURI),
 		privateendpoint: privateendpoint.NewManager(_env, localFPAuthorizer),
 		subnet:          subnet.NewManager(r.SubscriptionID, fpAuthorizer),
 	}, nil

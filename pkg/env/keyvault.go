@@ -39,7 +39,7 @@ func NewServiceKeyvault(ctx context.Context, im instancemetadata.InstanceMetadat
 		cli: basekeyvault.New(kvAuthorizer),
 	}
 
-	kv.uri, err = getVaultURI(ctx, im, generator.ServiceKeyVaultTagValue)
+	kv.uri, err = GetVaultURI(ctx, im, generator.ServiceKeyVaultTagValue)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +78,7 @@ func (kv *serviceKeyvault) GetSecret(ctx context.Context, secretName string) ([]
 	return base64.StdEncoding.DecodeString(*bundle.Value)
 }
 
-func getVaultURI(ctx context.Context, im instancemetadata.InstanceMetadata, tag string) (string, error) {
+func GetVaultURI(ctx context.Context, im instancemetadata.InstanceMetadata, tag string) (string, error) {
 	rpAuthorizer, err := RPAuthorizer(azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return "", err

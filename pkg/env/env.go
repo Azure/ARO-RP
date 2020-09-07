@@ -35,7 +35,6 @@ const (
 type Interface interface {
 	Lite
 
-	ClustersKeyvaultURI() string
 	Domain() string
 	FPAuthorizer(string, string) (refreshable.Authorizer, error)
 	ManagedDomain(string) (string, error)

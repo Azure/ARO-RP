@@ -49,10 +49,12 @@ type Manager struct {
 
 	doc             *api.OpenShiftClusterDocument
 	subscriptionDoc *api.SubscriptionDocument
+
+	clustersKeyvaultURI string
 }
 
 // NewManager returns a new openshiftcluster Manager
-func NewManager(log *logrus.Entry, _env env.Interface, gl env.ClustersGenevaLoggingInterface, dialer proxy.Dialer, fakearm fakearm.FakeARM, db database.OpenShiftClusters, cipher encryption.Cipher, billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (*Manager, error) {
+func NewManager(log *logrus.Entry, _env env.Interface, gl env.ClustersGenevaLoggingInterface, dialer proxy.Dialer, fakearm fakearm.FakeARM, db database.OpenShiftClusters, cipher encryption.Cipher, billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument, clustersKeyvaultURI string) (*Manager, error) {
 	localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
@@ -98,13 +100,15 @@ func NewManager(log *logrus.Entry, _env env.Interface, gl env.ClustersGenevaLogg
 		securityGroups: network.NewSecurityGroupsClient(subscriptionDoc.ID, fpAuthorizer),
 
 		dns:             dns.NewManager(_env, localFPAuthorizer),
-		keyvault:        keyvault.NewManager(localFPKVAuthorizer, _env.ClustersKeyvaultURI()),
+		keyvault:        keyvault.NewManager(localFPKVAuthorizer, clustersKeyvaultURI),
 		privateendpoint: privateendpoint.NewManager(_env, localFPAuthorizer),
 		acrtoken:        acrtoken,
 		subnet:          subnet.NewManager(subscriptionDoc.ID, fpAuthorizer),
 
 		doc:             doc,
 		subscriptionDoc: subscriptionDoc,
+
+		clustersKeyvaultURI: clustersKeyvaultURI,
 	}
 
 	return m, nil

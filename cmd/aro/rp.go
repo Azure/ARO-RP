@@ -23,6 +23,7 @@ import (
 	_ "github.com/Azure/ARO-RP/pkg/api/v20201031preview"
 	"github.com/Azure/ARO-RP/pkg/backend"
 	"github.com/Azure/ARO-RP/pkg/database"
+	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/frontend"
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
@@ -177,6 +178,11 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
+	clustersKeyvaultURI, err := env.GetVaultURI(ctx, _env, generator.ClustersKeyVaultTagValue)
+	if err != nil {
+		return err
+	}
+
 	l = frontend.TLSListener(l, key, certs)
 
 	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), _env, dialer, dbasyncoperations, dbopenshiftclusters, dbsubscriptions, l, api.APIs, m, feCipher, adminactions.New, armClientAuthorizer, adminClientAuthorizer)
@@ -184,7 +190,7 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	b, err := backend.NewBackend(ctx, log.WithField("component", "backend"), _env, gl, dialer, fakearm, dbasyncoperations, dbbilling, dbopenshiftclusters, dbsubscriptions, cipher, m)
+	b, err := backend.NewBackend(ctx, log.WithField("component", "backend"), _env, gl, dialer, fakearm, dbasyncoperations, dbbilling, dbopenshiftclusters, dbsubscriptions, cipher, m, clustersKeyvaultURI)
 	if err != nil {
 		return err
 	}

@@ -16,7 +16,6 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 
-	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
@@ -26,10 +25,9 @@ import (
 type prod struct {
 	instancemetadata.InstanceMetadata
 
-	acrName             string
-	clustersKeyvaultURI string
-	domain              string
-	zones               map[string][]string
+	acrName string
+	domain  string
+	zones   map[string][]string
 
 	fpCertificate        *x509.Certificate
 	fpPrivateKey         *rsa.PrivateKey
@@ -58,11 +56,6 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 	}
 
 	err = p.populateDomain(ctx, rpAuthorizer)
-	if err != nil {
-		return nil, err
-	}
-
-	p.clustersKeyvaultURI, err = getVaultURI(ctx, instancemetadata, generator.ClustersKeyVaultTagValue)
 	if err != nil {
 		return nil, err
 	}
@@ -139,10 +132,6 @@ func (p *prod) populateZones(ctx context.Context, rpAuthorizer autorest.Authoriz
 	}
 
 	return nil
-}
-
-func (p *prod) ClustersKeyvaultURI() string {
-	return p.clustersKeyvaultURI
 }
 
 func (p *prod) Domain() string {

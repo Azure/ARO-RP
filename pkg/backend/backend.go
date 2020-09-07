@@ -47,6 +47,8 @@ type backend struct {
 	workers  int32
 	stopping atomic.Value
 
+	clustersKeyvaultURI string
+
 	ocb *openShiftClusterBackend
 	sb  *subscriptionBackend
 }
@@ -57,7 +59,7 @@ type Runnable interface {
 }
 
 // NewBackend returns a new runnable backend
-func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, gl env.ClustersGenevaLoggingInterface, dialer proxy.Dialer, fakearm fakearm.FakeARM, dbasyncoperations database.AsyncOperations, dbbilling database.Billing, dbopenshiftclusters database.OpenShiftClusters, dbsubscriptions database.Subscriptions, cipher encryption.Cipher, m metrics.Interface) (Runnable, error) {
+func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, gl env.ClustersGenevaLoggingInterface, dialer proxy.Dialer, fakearm fakearm.FakeARM, dbasyncoperations database.AsyncOperations, dbbilling database.Billing, dbopenshiftclusters database.OpenShiftClusters, dbsubscriptions database.Subscriptions, cipher encryption.Cipher, m metrics.Interface, clustersKeyvaultURI string) (Runnable, error) {
 	b := &backend{
 		baseLog: log,
 		env:     env,
@@ -72,6 +74,8 @@ func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, gl en
 		cipher:              cipher,
 
 		m: m,
+
+		clustersKeyvaultURI: clustersKeyvaultURI,
 	}
 
 	b.cond = sync.NewCond(&b.mu)
