@@ -49,6 +49,14 @@ type proxyDialer struct {
 }
 
 func newProxyDialer() (Dialer, error) {
+	for _, key := range []string{
+		"PROXY_HOSTNAME",
+	} {
+		if _, found := os.LookupEnv(key); !found {
+			return nil, fmt.Errorf("environment variable %q unset (development mode)", key)
+		}
+	}
+
 	d := &proxyDialer{}
 
 	// This assumes we are running from an ARO-RP checkout in development

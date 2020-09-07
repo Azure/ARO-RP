@@ -25,7 +25,6 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 		"AZURE_RP_CLIENT_SECRET",
 		"AZURE_FP_CLIENT_ID",
 		"AZURE_TENANT_ID",
-		"PROXY_HOSTNAME",
 	} {
 		if _, found := os.LookupEnv(key); !found {
 			return nil, fmt.Errorf("environment variable %q unset", key)
