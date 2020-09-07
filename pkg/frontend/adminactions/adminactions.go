@@ -47,10 +47,11 @@ type adminactions struct {
 	k8sClient    kubernetes.Interface
 	configClient configclient.Interface
 
-	resourcesClient features.ResourcesClient
-	vmClient        compute.VirtualMachinesClient
-	vNetClient      network.VirtualNetworksClient
-	accountsClient  storage.AccountsClient
+	resourcesClient   features.ResourcesClient
+	vmClient          compute.VirtualMachinesClient
+	vNetClient        network.VirtualNetworksClient
+	routeTablesClient network.RouteTablesClient
+	accountsClient    storage.AccountsClient
 }
 
 // New returns an adminactions Interface
@@ -84,16 +85,17 @@ func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster,
 	}
 
 	return &adminactions{
-		log:             log,
-		env:             env,
-		oc:              oc,
-		dh:              dh,
-		k8sClient:       k8sClient,
-		configClient:    configClient,
-		resourcesClient: features.NewResourcesClient(subscriptionDoc.ID, fpAuth),
-		vmClient:        compute.NewVirtualMachinesClient(subscriptionDoc.ID, fpAuth),
-		vNetClient:      network.NewVirtualNetworksClient(subscriptionDoc.ID, fpAuth),
-		accountsClient:  storage.NewAccountsClient(subscriptionDoc.ID, fpAuth),
+		log:               log,
+		env:               env,
+		oc:                oc,
+		dh:                dh,
+		k8sClient:         k8sClient,
+		configClient:      configClient,
+		resourcesClient:   features.NewResourcesClient(subscriptionDoc.ID, fpAuth),
+		vmClient:          compute.NewVirtualMachinesClient(subscriptionDoc.ID, fpAuth),
+		vNetClient:        network.NewVirtualNetworksClient(subscriptionDoc.ID, fpAuth),
+		routeTablesClient: network.NewRouteTablesClient(subscriptionDoc.ID, fpAuth),
+		accountsClient:    storage.NewAccountsClient(subscriptionDoc.ID, fpAuth),
 	}, nil
 }
 
