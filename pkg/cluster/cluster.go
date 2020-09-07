@@ -48,6 +48,7 @@ var _ Interface = &manager{}
 type manager struct {
 	log             *logrus.Entry
 	env             env.Interface
+	gl              env.ClustersGenevaLoggingInterface
 	dialer          proxy.Dialer
 	db              database.OpenShiftClusters
 	billing         billing.Manager
@@ -85,7 +86,7 @@ type manager struct {
 const deploymentName = "azuredeploy"
 
 // New returns a cluster manager
-func New(ctx context.Context, log *logrus.Entry, _env env.Interface, dialer proxy.Dialer, fakearm fakearm.FakeARM, db database.OpenShiftClusters, cipher encryption.Cipher,
+func New(ctx context.Context, log *logrus.Entry, _env env.Interface, gl env.ClustersGenevaLoggingInterface, dialer proxy.Dialer, fakearm fakearm.FakeARM, db database.OpenShiftClusters, cipher encryption.Cipher,
 	billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (*manager, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
@@ -110,6 +111,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, dialer prox
 	return &manager{
 		log:             log,
 		env:             _env,
+		gl:              gl,
 		dialer:          dialer,
 		db:              db,
 		billing:         billing,

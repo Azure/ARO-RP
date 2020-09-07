@@ -34,7 +34,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
-	"github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -46,6 +45,7 @@ type Operator interface {
 type operator struct {
 	log *logrus.Entry
 	env env.Interface
+	gl  env.ClustersGenevaLoggingInterface
 	oc  *api.OpenShiftCluster
 
 	dh     dynamichelper.DynamicHelper
@@ -54,7 +54,7 @@ type operator struct {
 	arocli aroclient.AroV1alpha1Interface
 }
 
-func New(log *logrus.Entry, env env.Interface, dialer proxy.Dialer, oc *api.OpenShiftCluster, cli kubernetes.Interface, extcli extensionsclient.Interface, arocli aroclient.AroV1alpha1Interface) (Operator, error) {
+func New(log *logrus.Entry, env env.Interface, gl env.ClustersGenevaLoggingInterface, dialer proxy.Dialer, oc *api.OpenShiftCluster, cli kubernetes.Interface, extcli extensionsclient.Interface, arocli aroclient.AroV1alpha1Interface) (Operator, error) {
 	restConfig, err := restconfig.RestConfig(dialer, oc)
 	if err != nil {
 		return nil, err
@@ -67,6 +67,7 @@ func New(log *logrus.Entry, env env.Interface, dialer proxy.Dialer, oc *api.Open
 	return &operator{
 		log: log,
 		env: env,
+		gl:  gl,
 		oc:  oc,
 
 		dh:     dh,
@@ -112,16 +113,7 @@ func (o *operator) resources() ([]runtime.Object, error) {
 		results = append(results, obj)
 	}
 	// then dynamic resources
-	key, cert := o.env.ClustersGenevaLoggingSecret()
-	gcsKeyBytes, err := tls.PrivateKeyAsBytes(key)
-	if err != nil {
-		return nil, err
-	}
-
-	gcsCertBytes, err := tls.CertAsBytes(cert)
-	if err != nil {
-		return nil, err
-	}
+	gcsKeyBytes, gcsCertBytes := o.gl.ClustersGenevaLoggingSecret()
 
 	ps, err := pullsecret.Build(o.oc, "")
 	if err != nil {

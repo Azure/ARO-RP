@@ -5,8 +5,6 @@ package env
 
 import (
 	"context"
-	"crypto/rsa"
-	"crypto/x509"
 	"os"
 	"strings"
 
@@ -37,7 +35,6 @@ const (
 type Interface interface {
 	Lite
 
-	ClustersGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate)
 	ClustersKeyvaultURI() string
 	Domain() string
 	FPAuthorizer(string, string) (refreshable.Authorizer, error)

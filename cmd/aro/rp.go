@@ -172,6 +172,11 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
+	gl, err := env.NewClustersGenevaLogging(ctx, kv)
+	if err != nil {
+		return err
+	}
+
 	l = frontend.TLSListener(l, key, certs)
 
 	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), _env, dialer, dbasyncoperations, dbopenshiftclusters, dbsubscriptions, l, api.APIs, m, feCipher, adminactions.New, armClientAuthorizer, adminClientAuthorizer)
@@ -179,7 +184,7 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	b, err := backend.NewBackend(ctx, log.WithField("component", "backend"), _env, dialer, fakearm, dbasyncoperations, dbbilling, dbopenshiftclusters, dbsubscriptions, cipher, m)
+	b, err := backend.NewBackend(ctx, log.WithField("component", "backend"), _env, gl, dialer, fakearm, dbasyncoperations, dbbilling, dbopenshiftclusters, dbsubscriptions, cipher, m)
 	if err != nil {
 		return err
 	}

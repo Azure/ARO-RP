@@ -10,29 +10,18 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
-	"github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 // GetConfig prepares a bootstraplogging.Config object based on
 // the environment
-func GetConfig(env env.Interface, doc *api.OpenShiftClusterDocument) (*bootstraplogging.Config, error) {
+func GetConfig(env env.Interface, gl env.ClustersGenevaLoggingInterface, doc *api.OpenShiftClusterDocument) (*bootstraplogging.Config, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	key, cert := env.ClustersGenevaLoggingSecret()
-
-	gcsKeyBytes, err := tls.PrivateKeyAsBytes(key)
-	if err != nil {
-		return nil, err
-	}
-
-	gcsCertBytes, err := tls.CertAsBytes(cert)
-	if err != nil {
-		return nil, err
-	}
+	gcsKeyBytes, gcsCertBytes := gl.ClustersGenevaLoggingSecret()
 
 	environment, configVersion := genevalogging.EnvironmentAndVersion(env)
 

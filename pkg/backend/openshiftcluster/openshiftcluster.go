@@ -28,6 +28,7 @@ import (
 type Manager struct {
 	log          *logrus.Entry
 	env          env.Interface
+	gl           env.ClustersGenevaLoggingInterface
 	dialer       proxy.Dialer
 	db           database.OpenShiftClusters
 	cipher       encryption.Cipher
@@ -51,7 +52,7 @@ type Manager struct {
 }
 
 // NewManager returns a new openshiftcluster Manager
-func NewManager(log *logrus.Entry, _env env.Interface, dialer proxy.Dialer, fakearm fakearm.FakeARM, db database.OpenShiftClusters, cipher encryption.Cipher, billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (*Manager, error) {
+func NewManager(log *logrus.Entry, _env env.Interface, gl env.ClustersGenevaLoggingInterface, dialer proxy.Dialer, fakearm fakearm.FakeARM, db database.OpenShiftClusters, cipher encryption.Cipher, billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (*Manager, error) {
 	localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
@@ -83,6 +84,7 @@ func NewManager(log *logrus.Entry, _env env.Interface, dialer proxy.Dialer, fake
 	m := &Manager{
 		log:          log,
 		env:          _env,
+		gl:           gl,
 		dialer:       dialer,
 		db:           db,
 		cipher:       cipher,

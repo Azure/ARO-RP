@@ -35,9 +35,6 @@ type prod struct {
 	fpPrivateKey         *rsa.PrivateKey
 	fpServicePrincipalID string
 
-	clustersGenevaLoggingCertificate *x509.Certificate
-	clustersGenevaLoggingPrivateKey  *rsa.PrivateKey
-
 	log     *logrus.Entry
 	envType Type
 }
@@ -83,14 +80,6 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 	p.fpPrivateKey = fpPrivateKey
 	p.fpCertificate = fpCertificates[0]
 	p.fpServicePrincipalID = "f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875"
-
-	clustersGenevaLoggingPrivateKey, clustersGenevaLoggingCertificates, err := kv.GetCertificateSecret(ctx, ClusterLoggingSecretName)
-	if err != nil {
-		return nil, err
-	}
-
-	p.clustersGenevaLoggingPrivateKey = clustersGenevaLoggingPrivateKey
-	p.clustersGenevaLoggingCertificate = clustersGenevaLoggingCertificates[0]
 
 	if p.ACRResourceID() != "" { // TODO: ugh!
 		acrResource, err := azure.ParseResourceID(p.ACRResourceID())
@@ -150,10 +139,6 @@ func (p *prod) populateZones(ctx context.Context, rpAuthorizer autorest.Authoriz
 	}
 
 	return nil
-}
-
-func (p *prod) ClustersGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate) {
-	return p.clustersGenevaLoggingPrivateKey, p.clustersGenevaLoggingCertificate
 }
 
 func (p *prod) ClustersKeyvaultURI() string {
