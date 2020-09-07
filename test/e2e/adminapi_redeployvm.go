@@ -14,8 +14,10 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 
+	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -67,6 +69,23 @@ var _ = Describe("[Admin API] VM redeploy action", func() {
 			}
 
 			return count == 1, nil
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		By("waiting for all nodes to be ready")
+		err = wait.PollImmediate(10*time.Second, 10*time.Minute, func() (bool, error) {
+			nodes, err := clients.Kubernetes.CoreV1().Nodes().List(metav1.ListOptions{})
+			if err != nil {
+				return false, err
+			}
+
+			for _, node := range nodes.Items {
+				if !ready.NodeIsReady(&node) {
+					return false, nil
+				}
+			}
+
+			return true, nil
 		})
 		Expect(err).NotTo(HaveOccurred())
 	})
