@@ -73,7 +73,7 @@ func (a *adminactions) VMSerialConsole(ctx context.Context, w http.ResponseWrite
 	}
 	defer rc.Close()
 
-	w.Header().Add("Content-Type", "application/octet-stream")
+	w.Header().Add("Content-Type", "text/plain")
 
 	_, err = io.Copy(w, rc)
 	return err
