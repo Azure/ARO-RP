@@ -242,13 +242,10 @@ func TestListOpenShiftCluster(t *testing.T) {
 					}
 					defer ti.done()
 
-					controller := gomock.NewController(t)
-					defer controller.Finish()
-
 					dbopenshiftclusters := mock_database.NewMockOpenShiftClusters(ti.controller)
 					enricher := mock_clusterdata.NewMockOpenShiftClusterEnricher(ti.controller)
 					cipher := mock_encryption.NewMockCipher(ti.controller)
-					tt.mocks(controller, dbopenshiftclusters, enricher, cipher, listPrefix)
+					tt.mocks(ti.controller, dbopenshiftclusters, enricher, cipher, listPrefix)
 
 					f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, nil, dbopenshiftclusters, nil, ti.l, api.APIs, &noop.Noop{}, cipher, nil, clientauthorizer.NewOne(clientcerts[0].Raw), nil)
 					if err != nil {
