@@ -34,26 +34,30 @@ const (
 )
 
 type Manager interface {
-	basekeyvault.BaseClient
-
-	CreateSignedCertificate(ctx context.Context, keyvaultURI string, issuer Issuer, certificateName, commonName string, eku Eku) error
-	EnsureCertificateDeleted(ctx context.Context, keyvaultURI, certificateName string) error
-	UpgradeCertificatePolicy(ctx context.Context, keyvaultURI, certificateName string) error
-	WaitForCertificateOperation(ctx context.Context, keyvaultURI, certificateName string) error
+	CreateSignedCertificate(context.Context, Issuer, string, string, Eku) error
+	EnsureCertificateDeleted(context.Context, string) error
+	GetSecret(context.Context, string, string) (keyvault.SecretBundle, error)
+	GetSecrets(context.Context, *int32) ([]keyvault.SecretItem, error)
+	SetSecret(context.Context, string, keyvault.SecretSetParameters) (keyvault.SecretBundle, error)
+	UpgradeCertificatePolicy(context.Context, string) error
+	WaitForCertificateOperation(context.Context, string) error
 }
 
 type manager struct {
-	basekeyvault.BaseClient
+	kv basekeyvault.BaseClient
+
+	keyvaultURI string
 }
 
-func NewManager(kvAuthorizer autorest.Authorizer) Manager {
+func NewManager(kvAuthorizer autorest.Authorizer, keyvaultURI string) Manager {
 	return &manager{
-		BaseClient: basekeyvault.New(kvAuthorizer),
+		kv:          basekeyvault.New(kvAuthorizer),
+		keyvaultURI: keyvaultURI,
 	}
 }
 
-func (m *manager) CreateSignedCertificate(ctx context.Context, keyvaultURI string, issuer Issuer, certificateName, commonName string, eku Eku) error {
-	op, err := m.BaseClient.CreateCertificate(ctx, keyvaultURI, certificateName, keyvault.CertificateCreateParameters{
+func (m *manager) CreateSignedCertificate(ctx context.Context, issuer Issuer, certificateName, commonName string, eku Eku) error {
+	op, err := m.kv.CreateCertificate(ctx, m.keyvaultURI, certificateName, keyvault.CertificateCreateParameters{
 		CertificatePolicy: &keyvault.CertificatePolicy{
 			KeyProperties: &keyvault.KeyProperties{
 				Exportable: to.BoolPtr(true),
@@ -97,8 +101,8 @@ func (m *manager) CreateSignedCertificate(ctx context.Context, keyvaultURI strin
 	return err
 }
 
-func (m *manager) EnsureCertificateDeleted(ctx context.Context, keyvaultURI, certificateName string) error {
-	_, err := m.BaseClient.DeleteCertificate(ctx, keyvaultURI, certificateName)
+func (m *manager) EnsureCertificateDeleted(ctx context.Context, certificateName string) error {
+	_, err := m.kv.DeleteCertificate(ctx, m.keyvaultURI, certificateName)
 	if detailedError, ok := err.(autorest.DetailedError); ok {
 		if requestError, ok := detailedError.Original.(*azure.RequestError); ok &&
 			requestError.ServiceError != nil &&
@@ -110,12 +114,24 @@ func (m *manager) EnsureCertificateDeleted(ctx context.Context, keyvaultURI, cer
 	return err
 }
 
-func (m *manager) WaitForCertificateOperation(ctx context.Context, keyvaultURI, certificateName string) error {
+func (m *manager) GetSecret(ctx context.Context, secretName string, secretVersion string) (keyvault.SecretBundle, error) {
+	return m.kv.GetSecret(ctx, m.keyvaultURI, secretName, secretVersion)
+}
+
+func (m *manager) GetSecrets(ctx context.Context, maxresults *int32) ([]keyvault.SecretItem, error) {
+	return m.kv.GetSecrets(ctx, m.keyvaultURI, maxresults)
+}
+
+func (m *manager) SetSecret(ctx context.Context, secretName string, parameters keyvault.SecretSetParameters) (keyvault.SecretBundle, error) {
+	return m.kv.SetSecret(ctx, m.keyvaultURI, secretName, parameters)
+}
+
+func (m *manager) WaitForCertificateOperation(ctx context.Context, certificateName string) error {
 	ctx, cancel := context.WithTimeout(ctx, 15*time.Minute)
 	defer cancel()
 
 	err := wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-		op, err := m.BaseClient.GetCertificateOperation(ctx, keyvaultURI, certificateName)
+		op, err := m.kv.GetCertificateOperation(ctx, m.keyvaultURI, certificateName)
 		if err != nil {
 			return false, err
 		}
@@ -125,8 +141,8 @@ func (m *manager) WaitForCertificateOperation(ctx context.Context, keyvaultURI, 
 	return err
 }
 
-func (m *manager) UpgradeCertificatePolicy(ctx context.Context, keyvaultURI, certificateName string) error {
-	policy, err := m.BaseClient.GetCertificatePolicy(ctx, keyvaultURI, certificateName)
+func (m *manager) UpgradeCertificatePolicy(ctx context.Context, certificateName string) error {
+	policy, err := m.kv.GetCertificatePolicy(ctx, m.keyvaultURI, certificateName)
 	if err != nil {
 		return err
 	}
@@ -148,7 +164,7 @@ func (m *manager) UpgradeCertificatePolicy(ctx context.Context, keyvaultURI, cer
 
 	policy.LifetimeActions = lifetimeActions
 
-	_, err = m.BaseClient.UpdateCertificatePolicy(ctx, keyvaultURI, certificateName, policy)
+	_, err = m.kv.UpdateCertificatePolicy(ctx, m.keyvaultURI, certificateName, policy)
 	return err
 }
 

@@ -98,7 +98,7 @@ func NewManager(log *logrus.Entry, _env env.Interface, gl env.ClustersGenevaLogg
 		securityGroups: network.NewSecurityGroupsClient(subscriptionDoc.ID, fpAuthorizer),
 
 		dns:             dns.NewManager(_env, localFPAuthorizer),
-		keyvault:        keyvault.NewManager(localFPKVAuthorizer),
+		keyvault:        keyvault.NewManager(localFPKVAuthorizer, _env.ClustersKeyvaultURI()),
 		privateendpoint: privateendpoint.NewManager(_env, localFPAuthorizer),
 		acrtoken:        acrtoken,
 		subnet:          subnet.NewManager(subscriptionDoc.ID, fpAuthorizer),
