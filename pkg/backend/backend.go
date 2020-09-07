@@ -29,6 +29,7 @@ const (
 type backend struct {
 	baseLog *logrus.Entry
 	env     env.Interface
+	fp      env.FPAuthorizer
 	gl      env.ClustersGenevaLoggingInterface
 	dialer  proxy.Dialer
 	fakearm fakearm.FakeARM
@@ -59,10 +60,11 @@ type Runnable interface {
 }
 
 // NewBackend returns a new runnable backend
-func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, gl env.ClustersGenevaLoggingInterface, dialer proxy.Dialer, fakearm fakearm.FakeARM, dbasyncoperations database.AsyncOperations, dbbilling database.Billing, dbopenshiftclusters database.OpenShiftClusters, dbsubscriptions database.Subscriptions, cipher encryption.Cipher, m metrics.Interface, clustersKeyvaultURI string) (Runnable, error) {
+func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, fp env.FPAuthorizer, gl env.ClustersGenevaLoggingInterface, dialer proxy.Dialer, fakearm fakearm.FakeARM, dbasyncoperations database.AsyncOperations, dbbilling database.Billing, dbopenshiftclusters database.OpenShiftClusters, dbsubscriptions database.Subscriptions, cipher encryption.Cipher, m metrics.Interface, clustersKeyvaultURI string) (Runnable, error) {
 	b := &backend{
 		baseLog: log,
 		env:     env,
+		fp:      fp,
 		gl:      gl,
 		dialer:  dialer,
 		fakearm: fakearm,
@@ -85,7 +87,7 @@ func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, gl en
 	b.sb = &subscriptionBackend{backend: b}
 
 	var err error
-	b.billing, err = billing.NewManager(env, dbbilling, dbsubscriptions, log)
+	b.billing, err = billing.NewManager(env, fp, dbbilling, dbsubscriptions, log)
 	if err != nil {
 		return nil, err
 	}

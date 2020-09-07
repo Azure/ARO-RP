@@ -28,6 +28,7 @@ import (
 type Manager struct {
 	log          *logrus.Entry
 	env          env.Interface
+	fp           env.FPAuthorizer
 	gl           env.ClustersGenevaLoggingInterface
 	dialer       proxy.Dialer
 	db           database.OpenShiftClusters
@@ -54,18 +55,18 @@ type Manager struct {
 }
 
 // NewManager returns a new openshiftcluster Manager
-func NewManager(log *logrus.Entry, _env env.Interface, gl env.ClustersGenevaLoggingInterface, dialer proxy.Dialer, fakearm fakearm.FakeARM, db database.OpenShiftClusters, cipher encryption.Cipher, billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument, clustersKeyvaultURI string) (*Manager, error) {
-	localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
+func NewManager(log *logrus.Entry, _env env.Interface, fp env.FPAuthorizer, gl env.ClustersGenevaLoggingInterface, dialer proxy.Dialer, fakearm fakearm.FakeARM, db database.OpenShiftClusters, cipher encryption.Cipher, billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument, clustersKeyvaultURI string) (*Manager, error) {
+	localFPAuthorizer, err := fp.FPAuthorizer(_env.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	localFPKVAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), azure.PublicCloud.ResourceIdentifiers.KeyVault)
+	localFPKVAuthorizer, err := fp.FPAuthorizer(_env.TenantID(), azure.PublicCloud.ResourceIdentifiers.KeyVault)
 	if err != nil {
 		return nil, err
 	}
 
-	fpAuthorizer, err := _env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
+	fpAuthorizer, err := fp.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +79,7 @@ func NewManager(log *logrus.Entry, _env env.Interface, gl env.ClustersGenevaLogg
 		}
 	}
 
-	ocDynamicValidator, err := validate.NewOpenShiftClusterDynamicValidator(log, _env, doc.OpenShiftCluster, subscriptionDoc)
+	ocDynamicValidator, err := validate.NewOpenShiftClusterDynamicValidator(log, fp, doc.OpenShiftCluster, subscriptionDoc)
 	if err != nil {
 		return nil, err
 	}
@@ -86,6 +87,7 @@ func NewManager(log *logrus.Entry, _env env.Interface, gl env.ClustersGenevaLogg
 	m := &Manager{
 		log:          log,
 		env:          _env,
+		fp:           fp,
 		gl:           gl,
 		dialer:       dialer,
 		db:           db,

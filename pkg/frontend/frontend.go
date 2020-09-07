@@ -43,11 +43,12 @@ func (err statusCodeError) Error() string {
 	return fmt.Sprintf("%d", err)
 }
 
-type adminActionsFactory func(*logrus.Entry, env.Interface, proxy.Dialer, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.Interface, error)
+type adminActionsFactory func(*logrus.Entry, env.Interface, env.FPAuthorizer, proxy.Dialer, *api.OpenShiftCluster, *api.SubscriptionDocument) (adminactions.Interface, error)
 
 type frontend struct {
 	baseLog *logrus.Entry
 	env     env.Interface
+	fp      env.FPAuthorizer
 	dialer  proxy.Dialer
 
 	dbasyncoperations   database.AsyncOperations
@@ -82,6 +83,7 @@ type Runnable interface {
 func NewFrontend(ctx context.Context,
 	baseLog *logrus.Entry,
 	_env env.Interface,
+	fp env.FPAuthorizer,
 	dialer proxy.Dialer,
 	dbasyncoperations database.AsyncOperations,
 	dbopenshiftclusters database.OpenShiftClusters,

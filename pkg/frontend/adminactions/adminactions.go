@@ -57,7 +57,7 @@ type adminactions struct {
 }
 
 // New returns an adminactions Interface
-func New(log *logrus.Entry, env env.Interface, dialer proxy.Dialer, oc *api.OpenShiftCluster,
+func New(log *logrus.Entry, env env.Interface, fp env.FPAuthorizer, dialer proxy.Dialer, oc *api.OpenShiftCluster,
 	subscriptionDoc *api.SubscriptionDocument) (Interface, error) {
 
 	restConfig, err := restconfig.RestConfig(dialer, oc)
@@ -80,8 +80,7 @@ func New(log *logrus.Entry, env env.Interface, dialer proxy.Dialer, oc *api.Open
 		return nil, err
 	}
 
-	fpAuth, err := env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID,
-		azure.PublicCloud.ResourceManagerEndpoint)
+	fpAuth, err := fp.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}

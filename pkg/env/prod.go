@@ -5,21 +5,17 @@ package env
 
 import (
 	"context"
-	"crypto/rsa"
-	"crypto/x509"
 	"fmt"
 	"os"
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
-	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
 type prod struct {
@@ -28,10 +24,6 @@ type prod struct {
 	acrName string
 	domain  string
 	zones   map[string][]string
-
-	fpCertificate        *x509.Certificate
-	fpPrivateKey         *rsa.PrivateKey
-	fpServicePrincipalID string
 
 	log     *logrus.Entry
 	envType Type
@@ -43,11 +35,6 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 
 		log:     log,
 		envType: Prod,
-	}
-
-	kv, err := NewServiceKeyvault(ctx, p)
-	if err != nil {
-		return nil, err
 	}
 
 	rpAuthorizer, err := RPAuthorizer(azure.PublicCloud.ResourceManagerEndpoint)
@@ -64,15 +51,6 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 	if err != nil {
 		return nil, err
 	}
-
-	fpPrivateKey, fpCertificates, err := kv.GetCertificateSecret(ctx, RPFirstPartySecretName)
-	if err != nil {
-		return nil, err
-	}
-
-	p.fpPrivateKey = fpPrivateKey
-	p.fpCertificate = fpCertificates[0]
-	p.fpServicePrincipalID = "f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875"
 
 	if p.ACRResourceID() != "" { // TODO: ugh!
 		acrResource, err := azure.ParseResourceID(p.ACRResourceID())
@@ -136,20 +114,6 @@ func (p *prod) populateZones(ctx context.Context, rpAuthorizer autorest.Authoriz
 
 func (p *prod) Domain() string {
 	return p.domain
-}
-
-func (p *prod) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, error) {
-	oauthConfig, err := adal.NewOAuthConfig(azure.PublicCloud.ActiveDirectoryEndpoint, tenantID)
-	if err != nil {
-		return nil, err
-	}
-
-	sp, err := adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, p.fpServicePrincipalID, p.fpCertificate, p.fpPrivateKey, resource)
-	if err != nil {
-		return nil, err
-	}
-
-	return refreshable.NewAuthorizer(sp), nil
 }
 
 // ManagedDomain returns the fully qualified domain of a cluster if we manage

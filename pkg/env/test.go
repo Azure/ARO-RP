@@ -3,10 +3,6 @@ package env
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-import (
-	"github.com/Azure/ARO-RP/pkg/util/refreshable"
-)
-
 type Test struct {
 	*prod
 
@@ -22,10 +18,6 @@ func (t *Test) Type() Type {
 
 func (t *Test) Domain() string {
 	return t.TestDomain
-}
-
-func (t *Test) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, error) {
-	return nil, nil
 }
 
 func (t *Test) Location() string {

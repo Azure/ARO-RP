@@ -133,7 +133,7 @@ func TestDeleteOpenShiftCluster(t *testing.T) {
 
 			tt.mocks(tt, dbasyncoperations, dbopenshiftclusters, dbsubscriptions)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, dbasyncoperations, dbopenshiftclusters, dbsubscriptions, ti.l, api.APIs, &noop.Noop{}, nil, nil, clientauthorizer.NewOne(clientcerts[0].Raw), nil)
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, nil, dbasyncoperations, dbopenshiftclusters, dbsubscriptions, ti.l, api.APIs, &noop.Noop{}, nil, nil, clientauthorizer.NewOne(clientcerts[0].Raw), nil)
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -168,11 +168,6 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	fakearm, err := fakearm.New(_env)
-	if err != nil {
-		return err
-	}
-
 	gl, err := env.NewClustersGenevaLogging(ctx, kv)
 	if err != nil {
 		return err
@@ -185,12 +180,22 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 
 	l = frontend.TLSListener(l, key, certs)
 
-	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), _env, dialer, dbasyncoperations, dbopenshiftclusters, dbsubscriptions, l, api.APIs, m, feCipher, adminactions.New, armClientAuthorizer, adminClientAuthorizer)
+	fp, err := env.NewFPAuthorizer(ctx, _env, kv)
 	if err != nil {
 		return err
 	}
 
-	b, err := backend.NewBackend(ctx, log.WithField("component", "backend"), _env, gl, dialer, fakearm, dbasyncoperations, dbbilling, dbopenshiftclusters, dbsubscriptions, cipher, m, clustersKeyvaultURI)
+	fakearm, err := fakearm.New(_env, fp)
+	if err != nil {
+		return err
+	}
+
+	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), _env, fp, dialer, dbasyncoperations, dbopenshiftclusters, dbsubscriptions, l, api.APIs, m, feCipher, adminactions.New, armClientAuthorizer, adminClientAuthorizer)
+	if err != nil {
+		return err
+	}
+
+	b, err := backend.NewBackend(ctx, log.WithField("component", "backend"), _env, fp, gl, dialer, fakearm, dbasyncoperations, dbbilling, dbopenshiftclusters, dbsubscriptions, cipher, m, clustersKeyvaultURI)
 	if err != nil {
 		return err
 	}

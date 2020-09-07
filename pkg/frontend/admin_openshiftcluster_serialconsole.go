@@ -51,7 +51,7 @@ func (f *frontend) _getAdminOpenShiftClusterSerialConsole(ctx context.Context, w
 		return err
 	}
 
-	a, err := f.adminActionsFactory(log, f.env, f.dialer, doc.OpenShiftCluster, subscriptionDoc)
+	a, err := f.adminActionsFactory(log, f.env, f.fp, f.dialer, doc.OpenShiftCluster, subscriptionDoc)
 	if err != nil {
 		return err
 	}

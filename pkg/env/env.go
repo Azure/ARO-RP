@@ -11,7 +11,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
-	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
 type Type int
@@ -36,7 +35,6 @@ type Interface interface {
 	Lite
 
 	Domain() string
-	FPAuthorizer(string, string) (refreshable.Authorizer, error)
 	ManagedDomain(string) (string, error)
 	Zones(vmSize string) ([]string, error)
 	ACRResourceID() string

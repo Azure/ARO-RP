@@ -8,12 +8,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Azure/go-autorest/autorest/adal"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
-	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
 var _ Interface = &dev{}
@@ -49,18 +46,4 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 	d.prod.envType = Dev
 
 	return d, nil
-}
-
-func (d *dev) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, error) {
-	oauthConfig, err := adal.NewOAuthConfig(azure.PublicCloud.ActiveDirectoryEndpoint, tenantID)
-	if err != nil {
-		return nil, err
-	}
-
-	sp, err := adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, os.Getenv("AZURE_FP_CLIENT_ID"), d.fpCertificate, d.fpPrivateKey, resource)
-	if err != nil {
-		return nil, err
-	}
-
-	return refreshable.NewAuthorizer(sp), nil
 }

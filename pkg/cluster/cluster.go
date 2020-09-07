@@ -48,6 +48,7 @@ var _ Interface = &manager{}
 type manager struct {
 	log             *logrus.Entry
 	env             env.Interface
+	fp              env.FPAuthorizer
 	gl              env.ClustersGenevaLoggingInterface
 	dialer          proxy.Dialer
 	db              database.OpenShiftClusters
@@ -86,24 +87,24 @@ type manager struct {
 const deploymentName = "azuredeploy"
 
 // New returns a cluster manager
-func New(ctx context.Context, log *logrus.Entry, _env env.Interface, gl env.ClustersGenevaLoggingInterface, dialer proxy.Dialer, fakearm fakearm.FakeARM, db database.OpenShiftClusters, cipher encryption.Cipher,
+func New(ctx context.Context, log *logrus.Entry, _env env.Interface, fp env.FPAuthorizer, gl env.ClustersGenevaLoggingInterface, dialer proxy.Dialer, fakearm fakearm.FakeARM, db database.OpenShiftClusters, cipher encryption.Cipher,
 	billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument, clustersKeyvaultURI string) (*manager, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
+	localFPAuthorizer, err := fp.FPAuthorizer(_env.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	localFPKVAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), azure.PublicCloud.ResourceIdentifiers.KeyVault)
+	localFPKVAuthorizer, err := fp.FPAuthorizer(_env.TenantID(), azure.PublicCloud.ResourceIdentifiers.KeyVault)
 	if err != nil {
 		return nil, err
 	}
 
-	fpAuthorizer, err := _env.FPAuthorizer(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
+	fpAuthorizer, err := fp.FPAuthorizer(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -111,6 +112,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, gl env.Clus
 	return &manager{
 		log:             log,
 		env:             _env,
+		fp:              fp,
 		gl:              gl,
 		dialer:          dialer,
 		db:              db,

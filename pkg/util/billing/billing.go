@@ -52,8 +52,8 @@ type manager struct {
 	log             *logrus.Entry
 }
 
-func NewManager(_env env.Interface, dbbilling database.Billing, dbsubscriptions database.Subscriptions, log *logrus.Entry) (Manager, error) {
-	storageClient, err := getStorageClient(_env)
+func NewManager(_env env.Interface, fp env.FPAuthorizer, dbbilling database.Billing, dbsubscriptions database.Subscriptions, log *logrus.Entry) (Manager, error) {
+	storageClient, err := getStorageClient(_env, fp)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func NewManager(_env env.Interface, dbbilling database.Billing, dbsubscriptions 
 	}, nil
 }
 
-func getStorageClient(_env env.Interface) (*azstorage.Client, error) {
+func getStorageClient(_env env.Interface, fp env.FPAuthorizer) (*azstorage.Client, error) {
 	var e2eStorageAccountSubID, e2eStorageAccountRGName, e2eStorageAccountName string
 
 	switch _env.Type() {
@@ -83,7 +83,7 @@ func getStorageClient(_env env.Interface) (*azstorage.Client, error) {
 		e2eStorageAccountName = prodE2EStorageAccountName
 	}
 
-	localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
+	localFPAuthorizer, err := fp.FPAuthorizer(_env.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}

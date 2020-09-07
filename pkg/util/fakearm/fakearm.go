@@ -25,7 +25,7 @@ type FakeARM interface {
 	CreateARMResourceGroupRoleAssignment(ctx context.Context, log *logrus.Entry, _env env.Interface, resourceGroup string) error
 }
 
-func New(_env env.Interface) (FakeARM, error) {
+func New(_env env.Interface, fp env.FPAuthorizer) (FakeARM, error) {
 	if _env.Type() != env.Dev {
 		return &noop{}, nil
 	}
@@ -40,7 +40,7 @@ func New(_env env.Interface) (FakeARM, error) {
 		}
 	}
 
-	fpGraphAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), azure.PublicCloud.GraphEndpoint)
+	fpGraphAuthorizer, err := fp.FPAuthorizer(_env.TenantID(), azure.PublicCloud.GraphEndpoint)
 	if err != nil {
 		return nil, err
 	}

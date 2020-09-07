@@ -134,7 +134,7 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 			cipher := mock_encryption.NewMockCipher(ti.controller)
 			tt.mocks(ti.controller, dbopenshiftclusters, enricher, cipher)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, nil, dbopenshiftclusters, nil, ti.l, api.APIs, &noop.Noop{}, cipher, nil, nil, clientauthorizer.NewOne(clientcerts[0].Raw))
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, nil, nil, dbopenshiftclusters, nil, ti.l, api.APIs, &noop.Noop{}, cipher, nil, nil, clientauthorizer.NewOne(clientcerts[0].Raw))
 			if err != nil {
 				t.Fatal(err)
 			}
