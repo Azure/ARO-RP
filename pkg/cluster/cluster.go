@@ -35,6 +35,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/privateendpoint"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 type Interface interface {
@@ -58,6 +59,7 @@ type manager struct {
 	cipher          encryption.Cipher
 	fpAuthorizer    refreshable.Authorizer
 	fakearm         fakearm.FakeARM
+	version         version.Interface
 
 	disks             compute.DisksClient
 	virtualmachines   compute.VirtualMachinesClient
@@ -87,7 +89,7 @@ type manager struct {
 const deploymentName = "azuredeploy"
 
 // New returns a cluster manager
-func New(ctx context.Context, log *logrus.Entry, _env env.Interface, fp env.FPAuthorizer, gl env.ClustersGenevaLoggingInterface, dialer proxy.Dialer, fakearm fakearm.FakeARM, db database.OpenShiftClusters, cipher encryption.Cipher,
+func New(ctx context.Context, log *logrus.Entry, _env env.Interface, fp env.FPAuthorizer, gl env.ClustersGenevaLoggingInterface, dialer proxy.Dialer, fakearm fakearm.FakeARM, version version.Interface, db database.OpenShiftClusters, cipher encryption.Cipher,
 	billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument, clustersKeyvaultURI string) (*manager, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
@@ -122,6 +124,7 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, fp env.FPAu
 		subscriptionDoc: subscriptionDoc,
 		fpAuthorizer:    fpAuthorizer,
 		fakearm:         fakearm,
+		version:         version,
 
 		disks:             compute.NewDisksClient(r.SubscriptionID, fpAuthorizer),
 		virtualmachines:   compute.NewVirtualMachinesClient(r.SubscriptionID, fpAuthorizer),

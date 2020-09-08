@@ -19,8 +19,7 @@ import (
 type prod struct {
 	instancemetadata.InstanceMetadata
 
-	acrName string
-	domain  string
+	domain string
 
 	envType Type
 }
@@ -42,25 +41,11 @@ func newProd(ctx context.Context, instancemetadata instancemetadata.InstanceMeta
 		return nil, err
 	}
 
-	if p.ACRResourceID() != "" { // TODO: ugh!
-		acrResource, err := azure.ParseResourceID(p.ACRResourceID())
-		if err != nil {
-			return nil, err
-		}
-		p.acrName = acrResource.ResourceName
-	} else {
-		p.acrName = "arointsvc"
-	}
-
 	return p, nil
 }
 
 func (p *prod) ACRResourceID() string {
 	return os.Getenv("ACR_RESOURCE_ID")
-}
-
-func (p *prod) ACRName() string {
-	return p.acrName
 }
 
 func (p *prod) populateDomain(ctx context.Context, rpAuthorizer autorest.Authorizer) error {

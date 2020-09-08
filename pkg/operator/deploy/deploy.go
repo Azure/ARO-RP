@@ -4,7 +4,6 @@ package deploy
 // Licensed under the Apache License 2.0.
 
 import (
-	"os"
 	"sort"
 	"time"
 
@@ -43,10 +42,11 @@ type Operator interface {
 }
 
 type operator struct {
-	log *logrus.Entry
-	env env.Interface
-	gl  env.ClustersGenevaLoggingInterface
-	oc  *api.OpenShiftCluster
+	log     *logrus.Entry
+	env     env.Interface
+	version version.Interface
+	gl      env.ClustersGenevaLoggingInterface
+	oc      *api.OpenShiftCluster
 
 	dh     dynamichelper.DynamicHelper
 	cli    kubernetes.Interface
@@ -54,7 +54,7 @@ type operator struct {
 	arocli aroclient.AroV1alpha1Interface
 }
 
-func New(log *logrus.Entry, env env.Interface, gl env.ClustersGenevaLoggingInterface, dialer proxy.Dialer, oc *api.OpenShiftCluster, cli kubernetes.Interface, extcli extensionsclient.Interface, arocli aroclient.AroV1alpha1Interface) (Operator, error) {
+func New(log *logrus.Entry, env env.Interface, version version.Interface, gl env.ClustersGenevaLoggingInterface, dialer proxy.Dialer, oc *api.OpenShiftCluster, cli kubernetes.Interface, extcli extensionsclient.Interface, arocli aroclient.AroV1alpha1Interface) (Operator, error) {
 	restConfig, err := restconfig.RestConfig(dialer, oc)
 	if err != nil {
 		return nil, err
@@ -65,28 +65,17 @@ func New(log *logrus.Entry, env env.Interface, gl env.ClustersGenevaLoggingInter
 	}
 
 	return &operator{
-		log: log,
-		env: env,
-		gl:  gl,
-		oc:  oc,
+		log:     log,
+		env:     env,
+		version: version,
+		gl:      gl,
+		oc:      oc,
 
 		dh:     dh,
 		cli:    cli,
 		extcli: extcli,
 		arocli: arocli,
 	}, nil
-}
-
-func (o *operator) image(_env env.Lite) string {
-	if _env.Type() == env.Dev {
-		override := os.Getenv("ARO_IMAGE")
-
-		if override != "" {
-			return override
-		}
-	}
-
-	return version.OperatorImage(o.env.ACRName())
 }
 
 func (o *operator) resources() ([]runtime.Object, error) {
@@ -106,7 +95,7 @@ func (o *operator) resources() ([]runtime.Object, error) {
 		// set the image for the deployments
 		if d, ok := obj.(*appsv1.Deployment); ok {
 			for i := range d.Spec.Template.Spec.Containers {
-				d.Spec.Template.Spec.Containers[i].Image = o.image(o.env)
+				d.Spec.Template.Spec.Containers[i].Image = o.version.GetVersion(version.ARO)
 			}
 		}
 
@@ -142,7 +131,7 @@ func (o *operator) resources() ([]runtime.Object, error) {
 			},
 			Spec: arov1alpha1.ClusterSpec{
 				ResourceID: o.oc.ID,
-				ACRName:    o.env.ACRName(),
+				ACRName:    o.version.ACRName(),
 				Location:   o.env.Location(),
 				GenevaLogging: arov1alpha1.GenevaLoggingSpec{
 					ConfigVersion:            configVersion,

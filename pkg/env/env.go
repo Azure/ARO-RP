@@ -37,7 +37,6 @@ type Interface interface {
 	Domain() string
 	ManagedDomain(string) (string, error)
 	ACRResourceID() string
-	ACRName() string
 }
 
 func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {

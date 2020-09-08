@@ -269,19 +269,19 @@ func (m *Manager) Create(ctx context.Context) error {
 				{
 					Source: "quay.io/openshift-release-dev/ocp-release",
 					Mirrors: []string{
-						fmt.Sprintf("%s.azurecr.io/openshift-release-dev/ocp-release", m.env.ACRName()),
+						m.version.GetVersion(version.OCPRelease),
 					},
 				},
 				{
 					Source: "quay.io/openshift-release-dev/ocp-release-nightly",
 					Mirrors: []string{
-						fmt.Sprintf("%s.azurecr.io/openshift-release-dev/ocp-release-nightly", m.env.ACRName()),
+						m.version.GetVersion(version.OCPReleaseNightly),
 					},
 				},
 				{
 					Source: "quay.io/openshift-release-dev/ocp-v4.0-art-dev",
 					Mirrors: []string{
-						fmt.Sprintf("%s.azurecr.io/openshift-release-dev/ocp-v4.0-art-dev", m.env.ACRName()),
+						m.version.GetVersion(version.OCPARTDev),
 					},
 				},
 			},
@@ -310,7 +310,7 @@ func (m *Manager) Create(ctx context.Context) error {
 		return err
 	}
 
-	i, err := cluster.New(ctx, m.log, m.env, m.fp, m.gl, m.dialer, m.fakearm, m.db, m.cipher, m.billing, m.doc, m.subscriptionDoc, m.clustersKeyvaultURI)
+	i, err := cluster.New(ctx, m.log, m.env, m.fp, m.gl, m.dialer, m.fakearm, m.version, m.db, m.cipher, m.billing, m.doc, m.subscriptionDoc, m.clustersKeyvaultURI)
 	if err != nil {
 		return err
 	}

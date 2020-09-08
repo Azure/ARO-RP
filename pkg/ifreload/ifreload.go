@@ -5,7 +5,6 @@ package ifreload
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/to"
@@ -22,12 +21,12 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 const (
-	kubeNamespace       = "openshift-azure-ifreload"
-	kubeServiceAccount  = "system:serviceaccount:" + kubeNamespace + ":default"
-	ifreloadImageFormat = "%s.azurecr.io/ifreload:109810fe"
+	kubeNamespace      = "openshift-azure-ifreload"
+	kubeServiceAccount = "system:serviceaccount:" + kubeNamespace + ":default"
 )
 
 type IfReload interface {
@@ -35,25 +34,23 @@ type IfReload interface {
 }
 
 type ifReload struct {
-	log *logrus.Entry
-	env env.Interface
+	log     *logrus.Entry
+	env     env.Interface
+	version version.Interface
 
 	cli    kubernetes.Interface
 	seccli securityclient.Interface
 }
 
-func New(log *logrus.Entry, e env.Interface, cli kubernetes.Interface, seccli securityclient.Interface) IfReload {
+func New(log *logrus.Entry, e env.Interface, version version.Interface, cli kubernetes.Interface, seccli securityclient.Interface) IfReload {
 	return &ifReload{
-		log: log,
-		env: e,
+		log:     log,
+		env:     e,
+		version: version,
 
 		cli:    cli,
 		seccli: seccli,
 	}
-}
-
-func (i *ifReload) ifreloadImage() string {
-	return fmt.Sprintf(ifreloadImageFormat, i.env.ACRName())
 }
 
 func (i *ifReload) ensureNamespace(ns string) error {
@@ -152,7 +149,7 @@ func (i *ifReload) CreateOrUpdate(ctx context.Context) error {
 					Containers: []v1.Container{
 						{
 							Name:  "ifreload",
-							Image: i.ifreloadImage(),
+							Image: i.version.GetVersion(version.IfReload),
 							// TODO: specify requests/limits
 							SecurityContext: &v1.SecurityContext{
 								Privileged: to.BoolPtr(true),

@@ -37,6 +37,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/fakearm"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 	"github.com/Azure/ARO-RP/pkg/util/zones"
 )
 
@@ -216,12 +217,17 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
+	versions, err := version.New(_env)
+	if err != nil {
+		return err
+	}
+
 	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), _env, fp, dialer, dbasyncoperations, dbopenshiftclusters, dbsubscriptions, l, api.APIs, m, feCipher, adminactions.New, armClientAuthorizer, adminClientAuthorizer)
 	if err != nil {
 		return err
 	}
 
-	b, err := backend.NewBackend(ctx, log.WithField("component", "backend"), _env, fp, gl, dialer, fakearm, zones, dbasyncoperations, dbbilling, dbopenshiftclusters, dbsubscriptions, cipher, m, clustersKeyvaultURI)
+	b, err := backend.NewBackend(ctx, log.WithField("component", "backend"), _env, fp, gl, dialer, fakearm, versions, zones, dbasyncoperations, dbbilling, dbopenshiftclusters, dbsubscriptions, cipher, m, clustersKeyvaultURI)
 	if err != nil {
 		return err
 	}

@@ -5,7 +5,6 @@ package routefix
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/to"
@@ -22,13 +21,13 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 const (
-	kubeNamespace       = "openshift-azure-routefix"
-	kubeServiceAccount  = "system:serviceaccount:" + kubeNamespace + ":default"
-	routefixImageFormat = "%s.azurecr.io/routefix:c5c4a5db"
-	shellScript         = `for ((;;))
+	kubeNamespace      = "openshift-azure-routefix"
+	kubeServiceAccount = "system:serviceaccount:" + kubeNamespace + ":default"
+	shellScript        = `for ((;;))
 do
   if ip route show cache | grep -q 'mtu 1450'; then
     ip route show cache
@@ -44,25 +43,23 @@ type RouteFix interface {
 }
 
 type routeFix struct {
-	log *logrus.Entry
-	env env.Interface
+	log     *logrus.Entry
+	env     env.Interface
+	version version.Interface
 
 	cli    kubernetes.Interface
 	seccli securityclient.Interface
 }
 
-func New(log *logrus.Entry, e env.Interface, cli kubernetes.Interface, seccli securityclient.Interface) RouteFix {
+func New(log *logrus.Entry, e env.Interface, version version.Interface, cli kubernetes.Interface, seccli securityclient.Interface) RouteFix {
 	return &routeFix{
-		log: log,
-		env: e,
+		log:     log,
+		env:     e,
+		version: version,
 
 		cli:    cli,
 		seccli: seccli,
 	}
-}
-
-func (i *routeFix) routefixImage() string {
-	return fmt.Sprintf(routefixImageFormat, i.env.ACRName())
 }
 
 func (i *routeFix) ensureNamespace(ns string) error {
@@ -161,7 +158,7 @@ func (i *routeFix) CreateOrUpdate(ctx context.Context) error {
 					Containers: []v1.Container{
 						{
 							Name:  "routefix",
-							Image: i.routefixImage(),
+							Image: i.version.GetVersion(version.RouteFix),
 							Args: []string{
 								"sh",
 								"-c",

@@ -672,8 +672,9 @@ func (g *generator) vmss() *arm.Resource {
 		)
 	}
 
+	versions := version.NewWithACR(nil, "")
 	parts = append(parts,
-		"'MDMIMAGE=''"+version.MdmImage("")+"''\n'",
+		"'MDMIMAGE=''"+versions.GetVersion(version.MDM)+"''\n'",
 	)
 
 	parts = append(parts,

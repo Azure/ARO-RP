@@ -34,6 +34,7 @@ type GenevaLogging interface {
 
 type genevaLogging struct {
 	log     *logrus.Entry
+	version version.Interface
 	cluster *arov1alpha1.Cluster
 
 	seccli securityclient.Interface
@@ -43,8 +44,11 @@ type genevaLogging struct {
 }
 
 func New(log *logrus.Entry, cluster *arov1alpha1.Cluster, seccli securityclient.Interface, gcscert, gcskey []byte) GenevaLogging {
+	version := version.NewWithACR(nil, cluster.Spec.ACRName)
+
 	return &genevaLogging{
 		log:     log,
+		version: version,
 		cluster: cluster,
 
 		seccli: seccli,
@@ -142,7 +146,7 @@ func (g *genevaLogging) daemonset(r azure.Resource) *appsv1.DaemonSet {
 					Containers: []v1.Container{
 						{
 							Name:  "fluentbit-journal",
-							Image: version.FluentbitImage(g.cluster.Spec.ACRName),
+							Image: g.version.GetVersion(version.Fluentbit),
 							Command: []string{
 								"/opt/td-agent-bit/bin/td-agent-bit",
 							},
@@ -179,7 +183,7 @@ func (g *genevaLogging) daemonset(r azure.Resource) *appsv1.DaemonSet {
 						},
 						{
 							Name:  "fluentbit-containers",
-							Image: version.FluentbitImage(g.cluster.Spec.ACRName),
+							Image: g.version.GetVersion(version.Fluentbit),
 							Command: []string{
 								"/opt/td-agent-bit/bin/td-agent-bit",
 							},
@@ -216,7 +220,7 @@ func (g *genevaLogging) daemonset(r azure.Resource) *appsv1.DaemonSet {
 						},
 						{
 							Name:  "fluentbit-audit",
-							Image: version.FluentbitImage(g.cluster.Spec.ACRName),
+							Image: g.version.GetVersion(version.Fluentbit),
 							Command: []string{
 								"/opt/td-agent-bit/bin/td-agent-bit",
 							},
@@ -253,7 +257,7 @@ func (g *genevaLogging) daemonset(r azure.Resource) *appsv1.DaemonSet {
 						},
 						{
 							Name:  "mdsd",
-							Image: version.MdsdImage(g.cluster.Spec.ACRName),
+							Image: g.version.GetVersion(version.MDSD),
 							Command: []string{
 								"/usr/sbin/mdsd",
 							},

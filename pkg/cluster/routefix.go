@@ -10,6 +10,6 @@ import (
 )
 
 func (i *manager) ensureRouteFix(ctx context.Context) error {
-	rf := routefix.New(i.log, i.env, i.kubernetescli, i.securitycli)
+	rf := routefix.New(i.log, i.env, i.version, i.kubernetescli, i.securitycli)
 	return rf.CreateOrUpdate(ctx)
 }

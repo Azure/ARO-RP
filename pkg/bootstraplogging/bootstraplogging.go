@@ -16,6 +16,11 @@ import (
 // GetConfig prepares a bootstraplogging.Config object based on
 // the environment
 func GetConfig(env env.Interface, gl env.ClustersGenevaLoggingInterface, doc *api.OpenShiftClusterDocument) (*bootstraplogging.Config, error) {
+	versions, err := version.New(env)
+	if err != nil {
+		return nil, err
+	}
+
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
 		return nil, err
@@ -36,7 +41,7 @@ func GetConfig(env env.Interface, gl env.ClustersGenevaLoggingInterface, doc *ap
 		SubscriptionID:    r.SubscriptionID,
 		ResourceName:      r.ResourceName,
 		ResourceGroupName: r.ResourceGroup,
-		MdsdImage:         version.MdsdImage(env.ACRName()),
-		FluentbitImage:    version.FluentbitImage(env.ACRName()),
+		MdsdImage:         versions.GetVersion(version.MDSD),
+		FluentbitImage:    versions.GetVersion(version.Fluentbit),
 	}, nil
 }

@@ -74,9 +74,11 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
+	versions := version.NewWithACR(nil, "linuxgeneva-microsoft")
+
 	for _, ref := range []string{
-		version.MdsdImage("linuxgeneva-microsoft"),
-		version.MdmImage("linuxgeneva-microsoft"),
+		versions.GetVersion(version.MDSD),
+		versions.GetVersion(version.MDM),
 	} {
 		log.Printf("mirroring %s", ref)
 		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+".azurecr.io", ref), ref, dstauth, srcauthGeneva)
