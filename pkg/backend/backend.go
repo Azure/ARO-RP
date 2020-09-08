@@ -19,6 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/fakearm"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
+	"github.com/Azure/ARO-RP/pkg/util/zones"
 )
 
 const (
@@ -33,6 +34,7 @@ type backend struct {
 	gl      env.ClustersGenevaLoggingInterface
 	dialer  proxy.Dialer
 	fakearm fakearm.FakeARM
+	zones   zones.Interface
 
 	dbasyncoperations   database.AsyncOperations
 	dbbilling           database.Billing
@@ -60,7 +62,7 @@ type Runnable interface {
 }
 
 // NewBackend returns a new runnable backend
-func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, fp env.FPAuthorizer, gl env.ClustersGenevaLoggingInterface, dialer proxy.Dialer, fakearm fakearm.FakeARM, dbasyncoperations database.AsyncOperations, dbbilling database.Billing, dbopenshiftclusters database.OpenShiftClusters, dbsubscriptions database.Subscriptions, cipher encryption.Cipher, m metrics.Interface, clustersKeyvaultURI string) (Runnable, error) {
+func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, fp env.FPAuthorizer, gl env.ClustersGenevaLoggingInterface, dialer proxy.Dialer, fakearm fakearm.FakeARM, zones zones.Interface, dbasyncoperations database.AsyncOperations, dbbilling database.Billing, dbopenshiftclusters database.OpenShiftClusters, dbsubscriptions database.Subscriptions, cipher encryption.Cipher, m metrics.Interface, clustersKeyvaultURI string) (Runnable, error) {
 	b := &backend{
 		baseLog: log,
 		env:     env,
@@ -68,6 +70,7 @@ func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, fp en
 		gl:      gl,
 		dialer:  dialer,
 		fakearm: fakearm,
+		zones:   zones,
 
 		dbasyncoperations:   dbasyncoperations,
 		dbbilling:           dbbilling,

@@ -36,7 +36,6 @@ type Interface interface {
 
 	Domain() string
 	ManagedDomain(string) (string, error)
-	Zones(vmSize string) ([]string, error)
 	ACRResourceID() string
 	ACRName() string
 }

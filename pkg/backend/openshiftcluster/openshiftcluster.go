@@ -23,6 +23,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/privateendpoint"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
+	"github.com/Azure/ARO-RP/pkg/util/zones"
 )
 
 type Manager struct {
@@ -47,6 +48,7 @@ type Manager struct {
 	privateendpoint privateendpoint.Manager
 	subnet          subnet.Manager
 	acrtoken        pkgacrtoken.Manager
+	zones           zones.Interface
 
 	doc             *api.OpenShiftClusterDocument
 	subscriptionDoc *api.SubscriptionDocument
@@ -55,7 +57,7 @@ type Manager struct {
 }
 
 // NewManager returns a new openshiftcluster Manager
-func NewManager(log *logrus.Entry, _env env.Interface, fp env.FPAuthorizer, gl env.ClustersGenevaLoggingInterface, dialer proxy.Dialer, fakearm fakearm.FakeARM, db database.OpenShiftClusters, cipher encryption.Cipher, billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument, clustersKeyvaultURI string) (*Manager, error) {
+func NewManager(log *logrus.Entry, _env env.Interface, fp env.FPAuthorizer, gl env.ClustersGenevaLoggingInterface, dialer proxy.Dialer, fakearm fakearm.FakeARM, zones zones.Interface, db database.OpenShiftClusters, cipher encryption.Cipher, billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument, clustersKeyvaultURI string) (*Manager, error) {
 	localFPAuthorizer, err := fp.FPAuthorizer(_env.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
@@ -106,6 +108,7 @@ func NewManager(log *logrus.Entry, _env env.Interface, fp env.FPAuthorizer, gl e
 		privateendpoint: privateendpoint.NewManager(_env, localFPAuthorizer),
 		acrtoken:        acrtoken,
 		subnet:          subnet.NewManager(subscriptionDoc.ID, fpAuthorizer),
+		zones:           zones,
 
 		doc:             doc,
 		subscriptionDoc: subscriptionDoc,

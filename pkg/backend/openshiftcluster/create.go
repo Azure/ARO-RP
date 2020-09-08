@@ -172,7 +172,7 @@ func (m *Manager) Create(ctx context.Context) error {
 		domain += "." + m.env.Domain()
 	}
 
-	masterZones, err := m.env.Zones(string(m.doc.OpenShiftCluster.Properties.MasterProfile.VMSize))
+	masterZones, err := m.zones.Zones(string(m.doc.OpenShiftCluster.Properties.MasterProfile.VMSize))
 	if err != nil {
 		return err
 	}
@@ -180,7 +180,7 @@ func (m *Manager) Create(ctx context.Context) error {
 		masterZones = []string{""}
 	}
 
-	workerZones, err := m.env.Zones(string(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].VMSize))
+	workerZones, err := m.zones.Zones(string(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].VMSize))
 	if err != nil {
 		return err
 	}

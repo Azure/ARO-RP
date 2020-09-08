@@ -12,7 +12,6 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 )
@@ -22,7 +21,6 @@ type prod struct {
 
 	acrName string
 	domain  string
-	zones   map[string][]string
 
 	envType Type
 }
@@ -40,11 +38,6 @@ func newProd(ctx context.Context, instancemetadata instancemetadata.InstanceMeta
 	}
 
 	err = p.populateDomain(ctx, rpAuthorizer)
-	if err != nil {
-		return nil, err
-	}
-
-	err = p.populateZones(ctx, rpAuthorizer)
 	if err != nil {
 		return nil, err
 	}
@@ -87,28 +80,6 @@ func (p *prod) populateDomain(ctx context.Context, rpAuthorizer autorest.Authori
 	return nil
 }
 
-func (p *prod) populateZones(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
-	c := compute.NewResourceSkusClient(p.SubscriptionID(), rpAuthorizer)
-
-	skus, err := c.List(ctx, "")
-	if err != nil {
-		return err
-	}
-
-	p.zones = map[string][]string{}
-
-	for _, sku := range skus {
-		if !strings.EqualFold((*sku.Locations)[0], p.Location()) ||
-			*sku.ResourceType != "virtualMachines" {
-			continue
-		}
-
-		p.zones[*sku.Name] = *(*sku.LocationInfo)[0].Zones
-	}
-
-	return nil
-}
-
 func (p *prod) Domain() string {
 	return p.domain
 }
@@ -130,14 +101,6 @@ func (p *prod) ManagedDomain(domain string) (string, error) {
 		return "", nil
 	}
 	return domain + "." + p.Domain(), nil
-}
-
-func (p *prod) Zones(vmSize string) ([]string, error) {
-	zones, found := p.zones[vmSize]
-	if !found {
-		return nil, fmt.Errorf("zone information not found for vm size %q", vmSize)
-	}
-	return zones, nil
 }
 
 func (p *prod) Type() Type {
