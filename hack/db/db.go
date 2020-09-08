@@ -5,17 +5,21 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/database"
+	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
+	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
@@ -29,12 +33,24 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	kv, err := env.NewServiceKeyvault(ctx, _env)
+	rpKVAuthorizer, err := env.RPAuthorizer(azure.PublicCloud.ResourceIdentifiers.KeyVault)
 	if err != nil {
 		return err
 	}
 
-	dbKey, err := kv.GetSecret(ctx, env.EncryptionSecretName)
+	serviceKeyvaultURI, err := env.GetVaultURI(ctx, _env, generator.ServiceKeyVaultTagValue)
+	if err != nil {
+		return err
+	}
+
+	kv := keyvault.NewManager(rpKVAuthorizer, serviceKeyvaultURI)
+
+	bundle, err := kv.GetSecret(ctx, env.EncryptionSecretName, "")
+	if err != nil {
+		return err
+	}
+
+	dbKey, err := base64.StdEncoding.DecodeString(*bundle.Value)
 	if err != nil {
 		return err
 	}

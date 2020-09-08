@@ -5,22 +5,26 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"os"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/tracing"
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/tools/metrics"
 
 	"github.com/Azure/ARO-RP/pkg/database"
+	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
-	"github.com/Azure/ARO-RP/pkg/metrics/statsd/azure"
+	statsdazure "github.com/Azure/ARO-RP/pkg/metrics/statsd/azure"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/k8s"
 	pkgmonitor "github.com/Azure/ARO-RP/pkg/monitor"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
+	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
 
 func monitor(ctx context.Context, log *logrus.Entry) error {
@@ -50,7 +54,7 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	tracing.Register(azure.New(m))
+	tracing.Register(statsdazure.New(m))
 	metrics.Register(k8s.NewLatency(m), k8s.NewResult(m))
 
 	clusterm, err := statsd.New(ctx, log.WithField("component", "metrics"), _env, os.Getenv("CLUSTER_MDM_ACCOUNT"), os.Getenv("CLUSTER_MDM_NAMESPACE"))
@@ -58,12 +62,24 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	kv, err := env.NewServiceKeyvault(ctx, _env)
+	rpKVAuthorizer, err := env.RPAuthorizer(azure.PublicCloud.ResourceIdentifiers.KeyVault)
 	if err != nil {
 		return err
 	}
 
-	dbKey, err := kv.GetSecret(ctx, env.EncryptionSecretName)
+	serviceKeyvaultURI, err := env.GetVaultURI(ctx, _env, generator.ServiceKeyVaultTagValue)
+	if err != nil {
+		return err
+	}
+
+	kv := keyvault.NewManager(rpKVAuthorizer, serviceKeyvaultURI)
+
+	bundle, err := kv.GetSecret(ctx, env.EncryptionSecretName, "")
+	if err != nil {
+		return err
+	}
+
+	dbKey, err := base64.StdEncoding.DecodeString(*bundle.Value)
 	if err != nil {
 		return err
 	}

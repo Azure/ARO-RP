@@ -6,6 +6,7 @@ package env
 import (
 	"context"
 
+	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/tls"
 )
 
@@ -22,7 +23,7 @@ func (gl *genevalogging) ClustersGenevaLoggingSecret() (key []byte, cert []byte)
 	return gl.key, gl.cert
 }
 
-func NewClustersGenevaLogging(ctx context.Context, kv ServiceKeyvaultInterface) (ClustersGenevaLoggingInterface, error) {
+func NewClustersGenevaLogging(ctx context.Context, kv keyvault.Manager) (ClustersGenevaLoggingInterface, error) {
 	key, certs, err := kv.GetCertificateSecret(ctx, ClusterLoggingSecretName)
 	if err != nil {
 		return nil, err

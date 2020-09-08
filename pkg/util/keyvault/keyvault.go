@@ -5,6 +5,8 @@ package keyvault
 
 import (
 	"context"
+	"crypto/rsa"
+	"crypto/x509"
 	"crypto/x509/pkix"
 	"fmt"
 	"reflect"
@@ -18,6 +20,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	basekeyvault "github.com/Azure/ARO-RP/pkg/util/azureclient/keyvault"
+	"github.com/Azure/ARO-RP/pkg/util/pem"
 )
 
 type Eku string
@@ -36,6 +39,7 @@ const (
 type Manager interface {
 	CreateSignedCertificate(context.Context, Issuer, string, string, Eku) error
 	EnsureCertificateDeleted(context.Context, string) error
+	GetCertificateSecret(context.Context, string) (*rsa.PrivateKey, []*x509.Certificate, error)
 	GetSecret(context.Context, string, string) (keyvault.SecretBundle, error)
 	GetSecrets(context.Context, *int32) ([]keyvault.SecretItem, error)
 	SetSecret(context.Context, string, keyvault.SecretSetParameters) (keyvault.SecretBundle, error)
@@ -112,6 +116,28 @@ func (m *manager) EnsureCertificateDeleted(ctx context.Context, certificateName 
 	}
 
 	return err
+}
+
+func (m *manager) GetCertificateSecret(ctx context.Context, secretName string) (*rsa.PrivateKey, []*x509.Certificate, error) {
+	bundle, err := m.kv.GetSecret(ctx, m.keyvaultURI, secretName, "")
+	if err != nil {
+		return nil, nil, err
+	}
+
+	key, certs, err := pem.Parse([]byte(*bundle.Value))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if key == nil {
+		return nil, nil, fmt.Errorf("no private key found")
+	}
+
+	if len(certs) == 0 {
+		return nil, nil, fmt.Errorf("no certificate found")
+	}
+
+	return key, certs, nil
 }
 
 func (m *manager) GetSecret(ctx context.Context, secretName string, secretVersion string) (keyvault.SecretBundle, error) {

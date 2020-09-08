@@ -13,6 +13,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
 
+	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
@@ -26,7 +27,7 @@ type fpAuthorizer struct {
 	spID string
 }
 
-func NewFPAuthorizer(ctx context.Context, env Lite, kv ServiceKeyvaultInterface) (FPAuthorizer, error) {
+func NewFPAuthorizer(ctx context.Context, env Lite, kv keyvault.Manager) (FPAuthorizer, error) {
 	key, certs, err := kv.GetCertificateSecret(ctx, RPFirstPartySecretName)
 	if err != nil {
 		return nil, err
