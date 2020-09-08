@@ -5,7 +5,6 @@ package generator
 
 // Deployment constants
 const (
-	KeyVaultTagName          = "vault"
 	ClustersKeyVaultTagValue = "clusters"
 	ServiceKeyVaultTagValue  = "service"
 	kvClusterSuffix          = "-cls"

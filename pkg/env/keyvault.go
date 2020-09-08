@@ -9,9 +9,12 @@ import (
 
 	"github.com/Azure/go-autorest/autorest/azure"
 
-	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
+)
+
+const (
+	KeyVaultTagName = "vault"
 )
 
 func GetVaultURI(ctx context.Context, im instancemetadata.InstanceMetadata, tag string) (string, error) {
@@ -30,8 +33,8 @@ func GetVaultURI(ctx context.Context, im instancemetadata.InstanceMetadata, tag 
 	var count int
 	var uri string
 	for _, v := range vs {
-		if v.Tags[generator.KeyVaultTagName] != nil &&
-			*v.Tags[generator.KeyVaultTagName] == tag {
+		if v.Tags[KeyVaultTagName] != nil &&
+			*v.Tags[KeyVaultTagName] == tag {
 			uri = *v.Properties.VaultURI
 			count++
 		}

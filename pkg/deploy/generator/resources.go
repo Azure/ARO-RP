@@ -21,6 +21,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	uuid "github.com/satori/go.uuid"
 
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -1122,7 +1123,7 @@ func (g *generator) clustersKeyvault() *arm.Resource {
 		Type:     to.StringPtr("Microsoft.KeyVault/vaults"),
 		Location: to.StringPtr("[resourceGroup().location]"),
 		Tags: map[string]*string{
-			KeyVaultTagName: to.StringPtr(ClustersKeyVaultTagValue),
+			env.KeyVaultTagName: to.StringPtr(ClustersKeyVaultTagValue),
 		},
 	}
 
@@ -1163,7 +1164,7 @@ func (g *generator) serviceKeyvault() *arm.Resource {
 		Type:     to.StringPtr("Microsoft.KeyVault/vaults"),
 		Location: to.StringPtr("[resourceGroup().location]"),
 		Tags: map[string]*string{
-			KeyVaultTagName: to.StringPtr(ServiceKeyVaultTagValue),
+			env.KeyVaultTagName: to.StringPtr(ServiceKeyVaultTagValue),
 		},
 	}
 
