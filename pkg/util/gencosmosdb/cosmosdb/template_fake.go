@@ -3,6 +3,7 @@ package cosmosdb
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"sync"
@@ -47,10 +48,17 @@ func decodeTemplate(s []byte, handle *codec.JsonHandle) (*pkg.Template, error) {
 	return res, err
 }
 
-func decodeTemplateToMap(s []byte, handle *codec.JsonHandle) (map[string]string, error) {
-	res := make(map[string]string)
+func decodeTemplateToMap(s []byte, handle *codec.JsonHandle) (map[interface{}]interface{}, error) {
+	var res interface{}
 	err := codec.NewDecoder(bytes.NewBuffer(s), handle).Decode(&res)
-	return res, err
+	if err != nil {
+		return nil, err
+	}
+	ret, ok := res.(map[interface{}]interface{})
+	if !ok {
+		return nil, errors.New("Could not coerce")
+	}
+	return ret, err
 }
 
 func encodeTemplate(doc *pkg.Template, handle *codec.JsonHandle) (res []byte, err error) {
