@@ -46,7 +46,7 @@ func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, config
 		configcli:     configcli,
 		arocli:        arocli,
 		restConfig:    restConfig,
-		workarounds:   []Workaround{NewSystemReserved(log, mcocli, dh)},
+		workarounds:   []Workaround{NewSystemReserved(log, mcocli, dh), NewIfReload(log, kubernetescli)},
 		log:           log,
 	}
 }
