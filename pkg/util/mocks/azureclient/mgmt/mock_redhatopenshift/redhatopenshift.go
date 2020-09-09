@@ -50,6 +50,20 @@ func (mr *MockOpenShiftClustersClientMockRecorder) CreateOrUpdateAndWait(arg0, a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockOpenShiftClustersClient)(nil).CreateOrUpdateAndWait), arg0, arg1, arg2, arg3)
 }
 
+// DeleteAndWait mocks base method
+func (m *MockOpenShiftClustersClient) DeleteAndWait(arg0 context.Context, arg1, arg2 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteAndWait", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteAndWait indicates an expected call of DeleteAndWait
+func (mr *MockOpenShiftClustersClientMockRecorder) DeleteAndWait(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockOpenShiftClustersClient)(nil).DeleteAndWait), arg0, arg1, arg2)
+}
+
 // Get mocks base method
 func (m *MockOpenShiftClustersClient) Get(arg0 context.Context, arg1, arg2 string) (redhatopenshift.OpenShiftCluster, error) {
 	m.ctrl.T.Helper()

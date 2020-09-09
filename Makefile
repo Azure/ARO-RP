@@ -84,7 +84,7 @@ e2e.test:
 	go test ./test/e2e -tags e2e -c -o e2e.test
 
 test-e2e: e2e.test
-	./e2e.test -test.timeout 60m -test.v -ginkgo.v
+	./e2e.test -test.timeout 180m -test.v -ginkgo.v
 
 test-go: generate
 	go build ./...

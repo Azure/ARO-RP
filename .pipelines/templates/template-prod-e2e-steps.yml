@@ -23,23 +23,6 @@ steps:
     set -x
     . ./hack/e2e/run-rp-and-e2e.sh
 
-    deploy_e2e_deps
     run_e2e
   displayName: 🚀 Run ${{ parameters.location }} E2E
-- script: |
-    export LOCATION=${{ parameters.location }}
-    export AZURE_SUBSCRIPTION_ID=${{ parameters.subscription }}
-
-    trap 'rm -f devops-spn.json' EXIT
-    base64 -d >devops-spn.json <<<${{ parameters.azureDevOpsE2EJSONSPN }}
-    export AZURE_CLIENT_ID=$(jq -r .clientId <devops-spn.json)
-    export AZURE_CLIENT_SECRET=$(jq -r .clientSecret <devops-spn.json)
-    export AZURE_TENANT_ID=$(jq -r .tenantId <devops-spn.json)
-
-    set -x
-    . ./hack/e2e/run-rp-and-e2e.sh
-
-    clean_e2e
-  condition: succeededOrFailed()
-  displayName: 🧹 Clean up after ${{ parameters.location }} E2E
 - template: ./template-az-cli-logout.yml
