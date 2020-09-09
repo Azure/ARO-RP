@@ -17,11 +17,12 @@ type FakeTemplateQuery func(TemplateClient, *Query, *Options) TemplateRawIterato
 
 var _ TemplateClient = &FakeTemplateClient{}
 
-func NewFakeTemplateClient(h *codec.JsonHandle) *FakeTemplateClient {
+func NewFakeTemplateClient(h *codec.JsonHandle, uniqueKeys []string) *FakeTemplateClient {
 	return &FakeTemplateClient{
 		docs:       make(map[string][]byte),
 		triggers:   make(map[string]FakeTemplateTrigger),
 		queries:    make(map[string]FakeTemplateQuery),
+		uniqueKeys: uniqueKeys,
 		jsonHandle: h,
 		lock:       &sync.RWMutex{},
 	}
@@ -33,6 +34,7 @@ type FakeTemplateClient struct {
 	lock       *sync.RWMutex
 	triggers   map[string]FakeTemplateTrigger
 	queries    map[string]FakeTemplateQuery
+	uniqueKeys []string
 
 	// unavailable, if not nil, is an error to throw when attempting to
 	// communicate with this Client
@@ -41,6 +43,12 @@ type FakeTemplateClient struct {
 
 func decodeTemplate(s []byte, handle *codec.JsonHandle) (*pkg.Template, error) {
 	res := &pkg.Template{}
+	err := codec.NewDecoder(bytes.NewBuffer(s), handle).Decode(&res)
+	return res, err
+}
+
+func decodeTemplateToMap(s []byte, handle *codec.JsonHandle) (map[string]string, error) {
+	res := make(map[string]string)
 	err := codec.NewDecoder(bytes.NewBuffer(s), handle).Decode(&res)
 	return res, err
 }
@@ -78,14 +86,6 @@ func (c *FakeTemplateClient) Create(ctx context.Context, partitionkey string, do
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	_, ext := c.docs[doc.ID]
-	if ext {
-		return nil, &Error{
-			StatusCode: http.StatusPreconditionFailed,
-			Message:    "Entity with the specified id already exists in the system",
-		}
-	}
-
 	if options != nil {
 		err := c.processPreTriggers(ctx, doc, options)
 		if err != nil {
@@ -97,6 +97,28 @@ func (c *FakeTemplateClient) Create(ctx context.Context, partitionkey string, do
 	if err != nil {
 		return nil, err
 	}
+
+	docAsMap, err := decodeTemplateToMap(enc, c.jsonHandle)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, ext := range c.docs {
+		extDecoded, err := decodeTemplateToMap(ext, c.jsonHandle)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, key := range c.uniqueKeys {
+			if docAsMap[key] != "" && extDecoded[key] != "" && docAsMap[key] == extDecoded[key] {
+				return nil, &Error{
+					StatusCode: http.StatusPreconditionFailed,
+					Message:    "Entity with the specified id already exists in the system",
+				}
+			}
+		}
+	}
+
 	c.docs[doc.ID] = enc
 	return res, nil
 }
