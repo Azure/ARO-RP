@@ -11,11 +11,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-const (
-	kubeNamespace       = "openshift-azure-ifreload"
-	kubeServiceAccount  = "system:serviceaccount:" + kubeNamespace + ":default"
-	ifreloadImageFormat = "%s.azurecr.io/ifreload:109810fe"
-)
+const kubeNamespace = "openshift-azure-ifreload"
 
 type ifReload struct {
 	log          *logrus.Entry
