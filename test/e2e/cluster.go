@@ -48,7 +48,7 @@ var _ = Describe("Cluster smoke test", func() {
 		}, 5*time.Minute, 10*time.Second).Should(BeNil())
 	})
 
-	Specify("Can run a pod which is using Azure File storage", func() {
+	Specify("Can run a pod which is using Azure Disk storage", func() {
 		ctx := context.Background()
 		err := createPVC(ctx, clients.Kubernetes)
 		Expect(err).NotTo(HaveOccurred())
