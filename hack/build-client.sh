@@ -1,13 +1,15 @@
 #!/bin/bash
 
 function clean() {
+  local API_VERSION=$1
+
   rm .sha256sum
 
-  rm -rf pkg/client
-  mkdir pkg/client
+  rm -rf pkg/client/services/redhatopenshift/mgmt/"$API_VERSION"
+  mkdir pkg/client/services/redhatopenshift/mgmt/"$API_VERSION"
 
-  rm -rf python/client
-  mkdir -p python/client
+  rm -rf python/client/azure/mgmt/redhatopenshift/v"${API_VERSION//-/_}"
+  mkdir -p python/client/azure/mgmt/redhatopenshift/v"${API_VERSION//-/_}"
 }
 
 function checksum() {
@@ -54,9 +56,10 @@ function generate_python() {
   >python/client/__init__.py
 }
 
-clean
+
 for API in "$@"
 do
+  clean "${API}"
   checksum "${API}"
   generate_golang "${API}"
   generate_python "${API}"

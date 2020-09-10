@@ -294,7 +294,7 @@ class MasterProfile(Model):
      'Standard_E8s_v3', 'Standard_F16s_v2', 'Standard_F32s_v2',
      'Standard_F4s_v2', 'Standard_F8s_v2'
     :type vm_size: str or
-     ~azure.mgmt.redhatopenshift.v2020_10_31_preview.models.enum
+     ~azure.mgmt.redhatopenshift.v2020_10_31_preview.models.VMSize
     :param subnet_id: The Azure resource ID of the master subnet (immutable).
     :type subnet_id: str
     """
@@ -637,7 +637,7 @@ class WorkerProfile(Model):
      'Standard_E8s_v3', 'Standard_F16s_v2', 'Standard_F32s_v2',
      'Standard_F4s_v2', 'Standard_F8s_v2'
     :type vm_size: str or
-     ~azure.mgmt.redhatopenshift.v2020_10_31_preview.models.enum
+     ~azure.mgmt.redhatopenshift.v2020_10_31_preview.models.VMSize
     :param disk_size_gb: The disk size of the worker VMs.  Must be 128 or
      greater (immutable).
     :type disk_size_gb: int
