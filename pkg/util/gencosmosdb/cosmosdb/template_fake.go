@@ -105,7 +105,6 @@ func (c *FakeTemplateClient) Create(ctx context.Context, partitionkey string, do
 	if err != nil {
 		return nil, err
 	}
-
 	docAsMap, err := decodeTemplateToMap(enc, c.jsonHandle)
 	if err != nil {
 		return nil, err
@@ -118,7 +117,17 @@ func (c *FakeTemplateClient) Create(ctx context.Context, partitionkey string, do
 		}
 
 		for _, key := range c.uniqueKeys {
-			if docAsMap[key] != "" && extDecoded[key] != "" && docAsMap[key] == extDecoded[key] {
+			var ourKeyStr string
+			var theirKeyStr string
+			ourKey, ourKeyOk := docAsMap[key]
+			if ourKeyOk {
+				ourKeyStr, ourKeyOk = ourKey.(string)
+			}
+			theirKey, theirKeyOk := extDecoded[key]
+			if theirKeyOk {
+				theirKeyStr, theirKeyOk = theirKey.(string)
+			}
+			if ourKeyOk && theirKeyOk && ourKeyStr != "" && ourKeyStr == theirKeyStr {
 				return nil, &Error{
 					StatusCode: http.StatusPreconditionFailed,
 					Message:    "Entity with the specified id already exists in the system",
@@ -133,7 +142,7 @@ func (c *FakeTemplateClient) Create(ctx context.Context, partitionkey string, do
 
 func (c *FakeTemplateClient) List(*Options) TemplateIterator {
 	if c.unavailable != nil {
-		return &fakeTemplateErroringRawIterator{err: c.unavailable}
+		return NewFakeTemplateClientErroringRawIterator(c.unavailable)
 	}
 	c.lock.RLock()
 	defer c.lock.RUnlock()
@@ -147,7 +156,7 @@ func (c *FakeTemplateClient) List(*Options) TemplateIterator {
 		}
 		docs = append(docs, r)
 	}
-	return NewFakeTemplateClientRawIterator(docs)
+	return NewFakeTemplateClientRawIterator(docs, 0)
 }
 
 func (c *FakeTemplateClient) ListAll(context.Context, *Options) (*pkg.Templates, error) {
@@ -231,9 +240,9 @@ func (c *FakeTemplateClient) Delete(ctx context.Context, partitionKey string, do
 
 func (c *FakeTemplateClient) ChangeFeed(*Options) TemplateIterator {
 	if c.unavailable != nil {
-		return &fakeTemplateErroringRawIterator{err: c.unavailable}
+		return NewFakeTemplateClientErroringRawIterator(c.unavailable)
 	}
-	return &fakeTemplateErroringRawIterator{err: ErrNotImplemented}
+	return NewFakeTemplateClientErroringRawIterator(ErrNotImplemented)
 }
 
 func (c *FakeTemplateClient) processPreTriggers(ctx context.Context, doc *pkg.Template, options *Options) error {
@@ -253,7 +262,7 @@ func (c *FakeTemplateClient) processPreTriggers(ctx context.Context, doc *pkg.Te
 
 func (c *FakeTemplateClient) Query(name string, query *Query, options *Options) TemplateRawIterator {
 	if c.unavailable != nil {
-		return &fakeTemplateErroringRawIterator{err: c.unavailable}
+		return NewFakeTemplateClientErroringRawIterator(c.unavailable)
 	}
 	c.lock.RLock()
 	defer c.lock.RUnlock()
@@ -262,7 +271,7 @@ func (c *FakeTemplateClient) Query(name string, query *Query, options *Options) 
 	if ok {
 		return quer(c, query, options)
 	} else {
-		return &fakeTemplateErroringRawIterator{err: ErrNotImplemented}
+		return NewFakeTemplateClientErroringRawIterator(ErrNotImplemented)
 	}
 }
 
@@ -294,8 +303,8 @@ func (c *FakeTemplateClient) InjectQuery(query string, impl FakeTemplateQuery) {
 
 // NewFakeTemplateClientRawIterator creates a RawIterator that will produce only
 // Templates from Next() and NextRaw().
-func NewFakeTemplateClientRawIterator(docs []*pkg.Template) TemplateRawIterator {
-	return &fakeTemplateClientRawIterator{docs: docs}
+func NewFakeTemplateClientRawIterator(docs []*pkg.Template, continuation int) TemplateRawIterator {
+	return &fakeTemplateClientRawIterator{docs: docs, continuation: continuation}
 }
 
 type fakeTemplateClientRawIterator struct {
@@ -310,7 +319,6 @@ func (i *fakeTemplateClientRawIterator) Next(ctx context.Context, maxItemCount i
 	if out.Count == 0 {
 		return nil, nil
 	}
-
 	return out, err
 }
 
@@ -324,8 +332,12 @@ func (i *fakeTemplateClientRawIterator) NextRaw(ctx context.Context, maxItemCoun
 		docs = i.docs[i.continuation:]
 		i.continuation = len(i.docs)
 	} else {
-		docs = i.docs[i.continuation : i.continuation+maxItemCount]
-		i.continuation += maxItemCount
+		max := i.continuation + maxItemCount
+		if max > len(i.docs) {
+			max = len(i.docs)
+		}
+		docs = i.docs[i.continuation:max]
+		i.continuation += max
 	}
 
 	d := out.(*pkg.Templates)
@@ -335,10 +347,17 @@ func (i *fakeTemplateClientRawIterator) NextRaw(ctx context.Context, maxItemCoun
 }
 
 func (i *fakeTemplateClientRawIterator) Continuation() string {
-	return ""
+	if i.continuation >= len(i.docs) {
+		return ""
+	}
+	return fmt.Sprintf("%d", i.continuation)
 }
 
 // fakeTemplateErroringRawIterator is a RawIterator that will return an error on use.
+func NewFakeTemplateClientErroringRawIterator(err error) *fakeTemplateErroringRawIterator {
+	return &fakeTemplateErroringRawIterator{err: err}
+}
+
 type fakeTemplateErroringRawIterator struct {
 	err error
 }
