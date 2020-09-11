@@ -206,7 +206,16 @@ func (sv *openShiftClusterStaticValidator) validateMasterProfile(path string, mp
 	switch mp.VMSize {
 	case VMSizeStandardD8sV3,
 		VMSizeStandardD16sV3,
-		VMSizeStandardD32sV3:
+		VMSizeStandardD32sV3,
+		VMSizeStandardD8asV4,
+		VMSizeStandardD16asV4,
+		VMSizeStandardD32asV4,
+		VMSizeStandardE8sV3,
+		VMSizeStandardE16sV3,
+		VMSizeStandardE32sV3,
+		VMSizeStandardF8sV2,
+		VMSizeStandardF16sV2,
+		VMSizeStandardF32sV2:
 	default:
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".vmSize", "The provided master VM size '%s' is invalid.", mp.VMSize)
 	}
