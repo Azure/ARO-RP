@@ -28,6 +28,7 @@ stages:
     - australiaeast
     - brazilsouth
     - centralindia
+    - eastasia
     - japaneast
     - japanwest
     - koreacentral
@@ -60,6 +61,7 @@ stages:
     - canadaeast
     - westeurope
     - northeurope
+    - uaenorth
     - uksouth
     - ukwest
     - francecentral
