@@ -96,7 +96,7 @@ var _ = Describe("ARO Operator - Internet checking", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// confirm the conditions are correct
-		err = wait.PollImmediate(10*time.Second, time.Minute, func() (bool, error) {
+		err = wait.PollImmediate(10*time.Second, 10*time.Minute, func() (bool, error) {
 			co, err := clients.AROClusters.Clusters().Get("cluster", metav1.GetOptions{})
 			if err != nil {
 				return false, err
