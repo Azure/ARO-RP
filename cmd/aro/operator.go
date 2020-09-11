@@ -97,7 +97,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 
 	if err = (internetchecker.NewReconciler(
 		log.WithField("controller", controllers.InternetCheckerControllerName),
-		kubernetescli, arocli,
+		arocli,
 		role,
 	)).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller InternetChecker: %v", err)

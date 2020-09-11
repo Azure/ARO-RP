@@ -14,7 +14,8 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -24,21 +25,29 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 )
 
-// InternetChecker reconciles a Cluster object
-type InternetChecker struct {
-	kubernetescli kubernetes.Interface
-	arocli        aroclient.AroV1alpha1Interface
-	log           *logrus.Entry
-	role          string
+const (
+	// schedule the check every 5m
+	requeueInterval = 5 * time.Minute
+)
+
+// if a check fails it is retried using the following parameters
+var checkBackoff = wait.Backoff{
+	Steps:    5,
+	Duration: 5 * time.Second,
+	Factor:   2.0,
+	Jitter:   0.5,
+	Cap:      requeueInterval / 2,
 }
 
-func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, arocli aroclient.AroV1alpha1Interface, role string) *InternetChecker {
-	return &InternetChecker{
-		kubernetescli: kubernetescli,
-		arocli:        arocli,
-		log:           log,
-		role:          role,
-	}
+// InternetChecker reconciles a Cluster object
+type InternetChecker struct {
+	arocli aroclient.AroV1alpha1Interface
+	log    *logrus.Entry
+	role   string
+}
+
+func NewReconciler(log *logrus.Entry, arocli aroclient.AroV1alpha1Interface, role string) *InternetChecker {
+	return &InternetChecker{arocli: arocli, log: log, role: role}
 }
 
 type simpleHTTPClient interface {
@@ -62,64 +71,75 @@ func (r *InternetChecker) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 		return reconcile.Result{}, err
 	}
 
-	var condition status.ConditionType
-	switch r.role {
-	case operator.RoleMaster:
-		condition = arov1alpha1.InternetReachableFromMaster
-	case operator.RoleWorker:
-		condition = arov1alpha1.InternetReachableFromWorker
-	}
+	// limit all checks to take no longer than half of the requeueInterval
+	ctx, cancel := context.WithTimeout(context.Background(), requeueInterval/2)
+	defer cancel()
 
-	urlErrors := map[string]string{}
+	checks := make(map[string]chan error)
 	for _, url := range instance.Spec.InternetChecker.URLs {
-		err = r.check(&http.Client{}, url)
-		if err != nil {
-			urlErrors[url] = err.Error()
+		checks[url] = make(chan error)
+		go r.checkWithRetry(ctx, &http.Client{}, url, checkBackoff, checks[url])
+	}
+
+	sb := &strings.Builder{}
+	checkFailed := false
+
+	for url, ch := range checks {
+		if err = <-ch; err != nil {
+			fmt.Fprintf(sb, "%s: %s\n", url, err)
+			checkFailed = true
 		}
 	}
 
-	if len(urlErrors) > 0 {
-		sb := &strings.Builder{}
-		for url, err := range urlErrors {
-			fmt.Fprintf(sb, "%s: %s\n", url, err)
-		}
-		err = controllers.SetCondition(r.arocli, &status.Condition{
-			Type:    condition,
+	var condition *status.Condition
+	if checkFailed {
+		condition = &status.Condition{
+			Type:    r.conditionType(),
 			Status:  corev1.ConditionFalse,
 			Message: sb.String(),
 			Reason:  "CheckFailed",
-		}, r.role)
+		}
 	} else {
-		err = controllers.SetCondition(r.arocli, &status.Condition{
-			Type:    condition,
+		condition = &status.Condition{
+			Type:    r.conditionType(),
 			Status:  corev1.ConditionTrue,
 			Message: "Outgoing connection successful.",
 			Reason:  "CheckDone",
-		}, r.role)
+		}
 	}
+
+	err = controllers.SetCondition(r.arocli, condition, r.role)
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	return reconcile.Result{RequeueAfter: time.Minute, Requeue: true}, nil
+	return reconcile.Result{RequeueAfter: requeueInterval, Requeue: true}, nil
 }
 
-func (r *InternetChecker) check(client simpleHTTPClient, url string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+// check the URL, retrying failed queries a few times
+func (r *InternetChecker) checkWithRetry(
+	ctx context.Context,
+	client simpleHTTPClient,
+	url string,
+	backoff wait.Backoff,
+	ch chan error,
+) {
+	ch <- retry.OnError(backoff, func(_ error) bool { return true }, func() error {
+		localCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+		req, err := http.NewRequestWithContext(localCtx, http.MethodHead, url, nil)
+		if err != nil {
+			return err
+		}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodHead, url, nil)
-	if err != nil {
-		return err
-	}
+		resp, err := client.Do(req)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
 
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	return nil
+		return nil
+	})
 }
 
 // SetupWithManager setup our mananger
@@ -128,4 +148,16 @@ func (r *InternetChecker) SetupWithManager(mgr ctrl.Manager) error {
 		For(&arov1alpha1.Cluster{}).
 		Named(controllers.InternetCheckerControllerName).
 		Complete(r)
+}
+
+func (r *InternetChecker) conditionType() (ctype status.ConditionType) {
+	switch r.role {
+	case operator.RoleMaster:
+		return arov1alpha1.InternetReachableFromMaster
+	case operator.RoleWorker:
+		return arov1alpha1.InternetReachableFromWorker
+	default:
+		r.log.Warnf("unknown role %s, assuming worker role", r.role)
+		return arov1alpha1.InternetReachableFromWorker
+	}
 }
