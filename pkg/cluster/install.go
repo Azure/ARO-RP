@@ -35,6 +35,7 @@ func (i *manager) AdminUpgrade(ctx context.Context) error {
 		steps.Action(i.ensureBillingRecord), // belt and braces
 		steps.Action(i.fixLBProbes),
 		steps.Action(i.fixNSG),
+		steps.Action(i.fixPullSecret), // TODO(mj): Remove when operator deployed
 		steps.Action(i.ensureRouteFix),
 		steps.Action(i.ensureAROOperator),
 		steps.Condition(i.aroDeploymentReady, 10*time.Minute),
