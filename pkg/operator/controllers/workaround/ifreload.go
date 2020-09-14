@@ -33,7 +33,7 @@ func (*ifReload) Ensure() error {
 
 func (i *ifReload) Remove() error {
 	err := i.cli.CoreV1().Namespaces().Delete(kubeNamespace, nil)
-	if !errors.IsNotFound(err) {
+	if errors.IsNotFound(err) {
 		return nil
 	}
 	return err
