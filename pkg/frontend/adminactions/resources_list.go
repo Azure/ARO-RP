@@ -13,7 +13,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
@@ -33,9 +32,21 @@ func (a *adminactions) ResourcesList(ctx context.Context) ([]byte, error) {
 	}
 
 	armResources := make([]arm.Resource, 0, len(resources))
-	armResources, err = a.appendAzureNetworkResources(ctx, armResources, vNetID, a.vNetClient, a.routeTablesClient)
-	if err != nil {
-		a.log.Warnf("error when getting network resources: %s", err)
+	{
+		// get customer vnet and append it to the list
+
+		r, err := azure.ParseResourceID(vNetID)
+		if err != nil {
+			return nil, err
+		}
+
+		vNet, err := a.vNetClient.Get(ctx, r.ResourceGroup, r.ResourceName, "")
+		if err != nil {
+			return nil, err
+		}
+		armResources = append(armResources, arm.Resource{
+			Resource: vNet,
+		})
 	}
 
 	for _, res := range resources {
@@ -64,40 +75,4 @@ func (a *adminactions) ResourcesList(ctx context.Context) ([]byte, error) {
 	}
 
 	return json.Marshal(armResources)
-}
-
-func (a *adminactions) appendAzureNetworkResources(ctx context.Context, armResources []arm.Resource, vNetID string, vnetClient network.VirtualNetworksClient, routeTablesClient network.RouteTablesClient) ([]arm.Resource, error) {
-	r, err := azure.ParseResourceID(vNetID)
-	if err != nil {
-		return armResources, err
-	}
-
-	vnet, err := vnetClient.Get(ctx, r.ResourceGroup, r.ResourceName, "")
-	if err != nil {
-		return armResources, err
-	}
-	armResources = append(armResources, arm.Resource{
-		Resource: vnet,
-	})
-	if vnet.Subnets != nil {
-		for _, snet := range *vnet.Subnets {
-			if snet.RouteTable != nil {
-				//for each subnet in the listed vnet get attached route tables
-				r, err := azure.ParseResourceID(*snet.RouteTable.ID)
-				if err != nil {
-					a.log.Warnf("skipping route table '%s' due to ID parse error: %s", *snet.RouteTable.ID, err)
-					continue
-				}
-				rt, err := routeTablesClient.Get(ctx, r.ResourceGroup, r.ResourceName, "")
-				if err != nil {
-					a.log.Warnf("skipping route table '%s' due to Get error: %s", *snet.RouteTable.ID, err)
-					continue
-				}
-				armResources = append(armResources, arm.Resource{
-					Resource: rt,
-				})
-			}
-		}
-	}
-	return armResources, nil
 }
