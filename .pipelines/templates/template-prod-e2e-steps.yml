@@ -4,6 +4,8 @@ parameters:
   azureDevOpsE2EJSONSPN: ''
 
 steps:
+# TODO(mj) we need to checkout code to run tooling like kubeconfig. This should go away once we refactor everything into golang.
+- template: ./template-checkout.yml
 - template: ./template-az-cli-login.yml
   parameters:
     azureDevOpsJSONSPN: ${{ parameters.azureDevOpsE2EJSONSPN }}
