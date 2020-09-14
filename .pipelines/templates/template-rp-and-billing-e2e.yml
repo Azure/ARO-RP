@@ -5,10 +5,6 @@ parameters:
   aro_v4_e2e_devops_spn: ''
   billing_e2e_pipeline_name: ''
   billing_e2e_branch_name: ''
-  gobin: ''
-  gopath: ''
-  goroot: ''
-  modulePath: ''
   location: ''
 
 stages:
@@ -19,14 +15,10 @@ stages:
   - job: ${{ parameters.location }}_RP_E2E_Job
     timeoutInMinutes: 120
     pool:
-      name: ARO-E2E
+      name: ARO-CI
     steps:
     - template: ./template-prod-e2e-steps.yml
       parameters:
-        gobin: ${{ parameters.gobin }}
-        gopath: ${{ parameters.gopath }}
-        goroot: ${{ parameters.goroot }}
-        workingDirectory: ${{ parameters.modulePath }}
         location: ${{ parameters.location }}
         subscription: ${{ parameters.e2e_subscription }}
         azureDevOpsE2EJSONSPN: ${{ parameters.aro_v4_e2e_devops_spn }}

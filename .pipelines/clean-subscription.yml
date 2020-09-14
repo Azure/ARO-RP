@@ -15,13 +15,7 @@ jobs:
     name: ARO-CI
 
   steps:
-  - template: ./templates/template-setup-golang-env.yml
-    parameters:
-      gobin: ${{ variables.GOBIN }}
-      gopath: ${{ variables.GOPATH }}
-      goroot: ${{ variables.GOROOT }}
-      modulePath: ${{ variables.modulePath }}
-
+  - template: ./templates/template-checkout.yml
   - template: ./templates/template-clean-subscription.yml
     parameters:
       dryRun: ${{ parameters.dryRun }}
@@ -30,5 +24,4 @@ jobs:
       purgeCreatedTag: $(purgeCreatedTag)
       resourceGroupDeletePrefixes: $(resourceGroupDeletePrefixes)
       purgeTTL: $(purgeTTL)
-      workingDirectory: ${{ variables.modulePath }}
 

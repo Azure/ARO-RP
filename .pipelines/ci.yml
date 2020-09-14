@@ -15,43 +15,28 @@ jobs:
         python.version: '3.6'
 
   steps:
-  - template: ./templates/template-setup-golang-env.yml
-    parameters:
-      gobin: ${{ variables.GOBIN }}
-      gopath: ${{ variables.GOPATH }}
-      goroot: ${{ variables.GOROOT }}
-      modulePath: ${{ variables.modulePath }}
+  - template: ./templates/template-checkout.yml
   - script: |
       set -xe
-      pip install virtualenv
       make test-python
       [[ -z "$(git status -s)" ]]
     displayName: '🧪Run Python Unit Tests : $(python.version)'
-    workingDirectory: ${{ variables.modulePath }}
 
 - job: Golang_Unit_Tests
   pool:
     name: ARO-CI
-
   steps:
-  - template: ./templates/template-setup-golang-env.yml
-    parameters:
-      gobin: ${{ variables.GOBIN }}
-      gopath: ${{ variables.GOPATH }}
-      goroot: ${{ variables.GOROOT }}
-      modulePath: ${{ variables.modulePath }}
+  - template: ./templates/template-checkout.yml
   - script: |
       set -xe
       make test-go
       [[ -z "$(git status -s)" ]]
-    workingDirectory: ${{ variables.modulePath }}
     displayName: 🧪Run Golang Unit Tests
 
   - script: |
       go run ./vendor/github.com/jstemmer/go-junit-report/go-junit-report.go < uts.txt > report.xml
       go run ./vendor/github.com/axw/gocov/gocov/*.go convert cover.out > coverage.json
       go run ./vendor/github.com/AlekSi/gocov-xml/gocov-xml.go < coverage.json > coverage.xml
-    workingDirectory: ${{ variables.modulePath }}
     displayName: ⚙️ Process Reports
     condition: succeededOrFailed()
 

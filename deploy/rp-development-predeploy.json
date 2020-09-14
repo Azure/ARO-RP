@@ -41,7 +41,7 @@
                             "sourceAddressPrefix": "*",
                             "destinationAddressPrefix": "*",
                             "access": "Allow",
-                            "priority": 100,
+                            "priority": 125,
                             "direction": "Inbound"
                         },
                         "name": "ssh_in"

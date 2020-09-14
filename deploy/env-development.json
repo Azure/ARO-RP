@@ -2,6 +2,19 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
+        "ciAzpToken": {
+            "type": "string"
+        },
+        "ciCapacity": {
+            "type": "int"
+        },
+        "ciDeployTooling": {
+            "type": "bool",
+            "defaultValue": false
+        },
+        "ciPoolName": {
+            "type": "string"
+        },
         "proxyCert": {
             "type": "string"
         },
@@ -61,6 +74,16 @@
                             "addressPrefix": "10.0.0.0/24"
                         },
                         "name": "GatewaySubnet"
+                    },
+                    {
+                        "properties": {
+                            "addressPrefix": "10.0.1.0/24",
+                            "networkSecurityGroup": {
+                                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'rp-nsg')]",
+                                "tags": null
+                            }
+                        },
+                        "name": "ToolingSubnet"
                     }
                 ]
             },
@@ -114,6 +137,104 @@
             "apiVersion": "2019-07-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/publicIPAddresses', 'dev-vpn-pip')]",
+                "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]"
+            ]
+        },
+        {
+            "sku": {
+                "name": "Standard_D2s_v3",
+                "tier": "Standard",
+                "capacity": "[int(parameters('ciCapacity'))]"
+            },
+            "properties": {
+                "upgradePolicy": {
+                    "mode": "Manual"
+                },
+                "virtualMachineProfile": {
+                    "osProfile": {
+                        "computerNamePrefix": "ci-",
+                        "adminUsername": "cloud-user",
+                        "linuxConfiguration": {
+                            "disablePasswordAuthentication": true,
+                            "ssh": {
+                                "publicKeys": [
+                                    {
+                                        "path": "/home/cloud-user/.ssh/authorized_keys",
+                                        "keyData": "[parameters('sshPublicKey')]"
+                                    }
+                                ]
+                            }
+                        }
+                    },
+                    "storageProfile": {
+                        "imageReference": {
+                            "publisher": "RedHat",
+                            "offer": "RHEL",
+                            "sku": "7-RAW",
+                            "version": "latest"
+                        },
+                        "osDisk": {
+                            "createOption": "FromImage",
+                            "managedDisk": {
+                                "storageAccountType": "Premium_LRS"
+                            }
+                        }
+                    },
+                    "networkProfile": {
+                        "networkInterfaceConfigurations": [
+                            {
+                                "name": "ci-vmss-nic",
+                                "properties": {
+                                    "primary": true,
+                                    "ipConfigurations": [
+                                        {
+                                            "name": "ci-vmss-ipconfig",
+                                            "properties": {
+                                                "subnet": {
+                                                    "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'dev-vnet', 'ToolingSubnet')]"
+                                                },
+                                                "primary": true,
+                                                "publicIPAddressConfiguration": {
+                                                    "name": "ci-vmss-pip",
+                                                    "properties": {
+                                                        "dnsSettings": {
+                                                            "domainNameLabel": "aro-ci"
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    },
+                    "extensionProfile": {
+                        "extensions": [
+                            {
+                                "name": "ci-vmss-cse",
+                                "properties": {
+                                    "publisher": "Microsoft.Azure.Extensions",
+                                    "type": "CustomScript",
+                                    "typeHandlerVersion": "2.0",
+                                    "autoUpgradeMinorVersion": true,
+                                    "settings": {},
+                                    "protectedSettings": {
+                                        "script": "[base64(concat(base64ToString('c2V0IC1lCgo='),'CIAZPTOKEN=''',parameters('ciAzpToken'),'''\n','CIPOOLNAME=''',parameters('ciPoolName'),'''\n','\n',base64ToString('eXVtIC15IHVwZGF0ZSAteCBXQUxpbnV4QWdlbnQKIyBpbnN0YWxsIGF6IGNsaQpzdWRvIHJwbSAtLWltcG9ydCBodHRwczovL3BhY2thZ2VzLm1pY3Jvc29mdC5jb20va2V5cy9taWNyb3NvZnQuYXNjCmNhdCA+IC9ldGMveXVtLnJlcG9zLmQvYXp1cmUtY2xpLnJlcG8gPDwnRU9GJwpbYXp1cmUtY2xpXQpuYW1lPUF6dXJlIENMSQpiYXNldXJsPWh0dHBzOi8vcGFja2FnZXMubWljcm9zb2Z0LmNvbS95dW1yZXBvcy9henVyZS1jbGkKZW5hYmxlZD0xCmdwZ2NoZWNrPTEKZ3Bna2V5PWh0dHBzOi8vcGFja2FnZXMubWljcm9zb2Z0LmNvbS9rZXlzL21pY3Jvc29mdC5hc2MKRU9GCgojIGluc3RhbGwgY29tbW9uIHRvb2xpbmcKeXVtIC15IGluc3RhbGwgcmh1aS1henVyZS1yaGVsNy1kZXZ0b29scy5ub2FyY2ggcmh1aS1henVyZS1yaGVsNy5ub2FyY2ggcmh1aS1henVyZS1yaGVsNy1ldXMubm9hcmNoCnl1bSAteSBpbnN0YWxsIGRvY2tlciBhenVyZS1jbGkgcmgtZ2l0MjkgcmgtcHl0aG9uMzYgZ2NjIGdwZ21lLWRldmVsIGxpYmFzc3Vhbi1kZXZlbAoKcm0gLWYgfi8uYXp1cmUvY29tbWFuZEluZGV4Lmpzb24gIyBodHRwczovL2dpdGh1Yi5jb20vQXp1cmUvYXp1cmUtY2xpL2lzc3Vlcy8xNDk5NwoKc3lzdGVtY3RsIGVuYWJsZSBkb2NrZXIKc3lzdGVtY3RsIHN0YXJ0IGRvY2tlcgoKIyBpbnN0YWxsIGpxCnl1bSAteSBpbnN0YWxsIGh0dHBzOi8vZGwuZmVkb3JhcHJvamVjdC5vcmcvcHViL2VwZWwvZXBlbC1yZWxlYXNlLWxhdGVzdC03Lm5vYXJjaC5ycG0KeXVtIC15IGluc3RhbGwganEKCmNhdCA+IC9ldGMvcHJvZmlsZS5kL2VuYWJsZXJoLWdpdDI5LnNoIDw8J0VPRicKIyEvYmluL2Jhc2gKaWYgWyAteCAvdXNyL2Jpbi9zY2xfc291cmNlIF07IHRoZW4KICBpZiBbIC1yIC9ldGMvc2NsL3ByZWZpeGVzL3JoLWdpdDI5IF07IHRoZW4KCXNvdXJjZSBzY2xfc291cmNlIGVuYWJsZSByaC1naXQyOQogIGZpCmZpCkVPRgoKY2F0ID4gL2V0Yy9wcm9maWxlLmQvZW5hYmxlcmgtcHl0aG9uMzYuc2ggPDwnRU9GJwojIS9iaW4vYmFzaAppZiBbIC14IC91c3IvYmluL3NjbF9zb3VyY2UgXTsgdGhlbgogIGlmIFsgLXIgL2V0Yy9zY2wvcHJlZml4ZXMvcmgtcHl0aG9uMzYgXTsgdGhlbgogIHNvdXJjZSBzY2xfc291cmNlIGVuYWJsZSByaC1weXRob24zNgogIGZpCmZpCkVPRgoKIyBpbnN0YWxsIGdvbGFuZwpHT19WRVJTSU9OPTEuMTMuMTUKY3VybCAtc0wgaHR0cHM6Ly9kbC5nb29nbGUuY29tL2dvL2dvJHtHT19WRVJTSU9OfS5saW51eC1hbWQ2NC50YXIuZ3ogLW8gL3RtcC9nbyR7R09fVkVSU0lPTn0ubGludXgtYW1kNjQudGFyLmd6Cm1rZGlyIC1wIC91c3IvbG9jYWwvZ28KdGFyIC1DIC91c3IvbG9jYWwvZ28gLXh6ZiAvdG1wL2dvJHtHT19WRVJTSU9OfS5saW51eC1hbWQ2NC50YXIuZ3ogLS1zdHJpcC1jb21wb25lbnRzPTEgZ28KbG4gLXMgL3Vzci9sb2NhbC9nby9iaW4vKiAvdXNyL2Jpbi8KCiMgSW5zdGFsbCBhenAgYWdlbnQKVlNUU19BR0VOVD0yLjE3Mi4yCmN1cmwgLXNMIGh0dHBzOi8vdnN0c2FnZW50cGFja2FnZS5henVyZWVkZ2UubmV0L2FnZW50LyR7VlNUU19BR0VOVH0vdnN0cy1hZ2VudC1saW51eC14NjQtJHtWU1RTX0FHRU5UfS50YXIuZ3ogLW8gL3RtcC92c3RzLWFnZW50LWxpbnV4LXg2NC0ke1ZTVFNfQUdFTlR9LnRhci5negpta2RpciAvaG9tZS9jbG91ZC11c2VyL2FnZW50ICYmIGNkIC9ob21lL2Nsb3VkLXVzZXIvYWdlbnQKdGFyIHp4dmYgL3RtcC92c3RzLWFnZW50LWxpbnV4LXg2NC0ke1ZTVFNfQUdFTlR9LnRhci5negouL2Jpbi9pbnN0YWxsZGVwZW5kZW5jaWVzLnNoCnN1ZG8gY2hvd24gY2xvdWQtdXNlcjpyb290IC1SIC9ob21lL2Nsb3VkLXVzZXIvYWdlbnQKCiMgY29uZmlndXJlIGFnZW50CnN1ZG8gLXUgY2xvdWQtdXNlciAuL2NvbmZpZy5zaCAtLXVuYXR0ZW5kZWQgLS11cmwgaHR0cHM6Ly9kZXYuYXp1cmUuY29tL21zYXp1cmUgLS1hdXRoIHBhdCAtLXRva2VuICIkQ0lBWlBUT0tFTiIgLS1wb29sICIkQ0lQT09MTkFNRSIgLS1hZ2VudCAiQVJPLVJIRUwtJEhPU1ROQU1FIgouL3N2Yy5zaCBpbnN0YWxsCgojIGF6dXJlIHNjcmlwdHMgZG8gbm90IHdvcmsgd2VsbCB3aXRoIHJoZWwKIyBUT0RPOiBGaXggdXBzdHJlYW0gaW4gdnN0cyByZXBvcwpjYXQgPiAvaG9tZS9jbG91ZC11c2VyL2FnZW50Ly5wYXRoIDw8J0VPRicKL29wdC9yaC9yaC1weXRob24zNi9yb290L3Vzci9iaW46L29wdC9yaC9yaC1naXQyOS9yb290L3Vzci9iaW46L3Vzci9sb2NhbC9iaW46L3Vzci9iaW46L3Vzci9sb2NhbC9zYmluOi91c3Ivc2JpbjovaG9tZS9jbG91ZC11c2VyLy5sb2NhbC9iaW46L2hvbWUvY2xvdWQtdXNlci9iaW4KRU9GCgpjYXQgPiAvaG9tZS9jbG91ZC11c2VyL2FnZW50Ly5lbnYgPDwnRU9GJwpMQU5HPWVuX1VTLlVURi04CkxEX0xJQlJBUllfUEFUSD0vb3B0L3JoL3JoLXB5dGhvbjM2L3Jvb3QvdXNyL2xpYjY0Oi9vcHQvcmgvaHR0cGQyNC9yb290L3Vzci9saWI2NApQRVJMNUxJQj0vb3B0L3JoL3JoLWdpdDI5L3Jvb3QvdXNyL3NoYXJlL3Blcmw1L3ZlbmRvcl9wZXJsCkhPTUU9L2hvbWUvY2xvdWQtdXNlcgpFT0YKCmZpcmV3YWxsLWNtZCAtLWFkZC1wb3J0PTQ0My90Y3AgLS1wZXJtYW5lbnQKCihzbGVlcCAzMDsgcmVib290KSAmCg==')))]"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                },
+                "overprovision": false
+            },
+            "name": "ci-vmss",
+            "type": "Microsoft.Compute/virtualMachineScaleSets",
+            "location": "[resourceGroup().location]",
+            "condition": "[parameters('ciDeployTooling')]",
+            "apiVersion": "2019-03-01",
+            "dependsOn": [
                 "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]"
             ]
         },

@@ -11,24 +11,15 @@ jobs:
     name: ARO-Release
 
   steps:
-  - template: ./templates/template-setup-golang-env.yml
-    parameters:
-      gobin: ${{ variables.GOBIN }}
-      gopath: ${{ variables.GOPATH }}
-      goroot: ${{ variables.GOROOT }}
-      modulePath: ${{ variables.modulePath }}
-  - template: ./templates/template-setup-azure-tools.yml
-    parameters:
-      workingDirectory: ${{ variables.modulePath }}
+  - template: ./templates/template-checkout.yml
   - template: ./templates/template-az-cli-login.yml
     parameters:
-      workingDirectory: ${{ variables.modulePath }}
       azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
   - script: |
       export SECRET_SA_ACCOUNT_NAME=$(SECRET_SA_ACCOUNT_NAME)
       make secrets
     displayName: 🔑 Downloading certificates and secrets from storage account
-    workingDirectory: ${{ variables.modulePath }}
   - template: ./templates/template-deploy-shared-env.yml
     parameters:
-      workingDirectory: ${{ variables.modulePath }}
+      subscriptionID: $(AZURE_SUBSCRIPTION_ID)
+      azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)

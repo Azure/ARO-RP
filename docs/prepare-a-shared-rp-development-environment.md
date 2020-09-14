@@ -102,8 +102,8 @@ locations.
    utility:
 
    ```bash
-   go run ./hack/genkey -client firstparty-development
-   mv firstparty-development.* secrets
+   go run ./hack/genkey -client firstparty
+   mv firstparty.* secrets
    ```
 
    Now create the application:
@@ -116,7 +116,7 @@ locations.
      -o tsv)"
    az ad app credential reset \
      --id "$AZURE_FP_CLIENT_ID" \
-     --cert "$(base64 -w0 <secrets/firstparty-development.crt)" >/dev/null
+     --cert "$(base64 -w0 <secrets/firstparty.crt)" >/dev/null
    az ad sp create --id "$AZURE_FP_CLIENT_ID" >/dev/null
    ```
 

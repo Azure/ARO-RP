@@ -1,11 +1,8 @@
 parameters:
-  workingDirectory: ''
   rpImageACR: ''
 steps:
 - script: |
     set -e
-    cd ${{ parameters.workingDirectory }}
-
     export RP_IMAGE_ACR=${{ parameters.rpImageACR }}
 
     az acr login --name "$RP_IMAGE_ACR"

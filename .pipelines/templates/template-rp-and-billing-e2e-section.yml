@@ -4,10 +4,6 @@ parameters:
   aro_v4_e2e_devops_spn: ''
   billing_e2e_pipeline_name: ''
   billing_e2e_branch_name: ''
-  gobin: ''
-  gopath: ''
-  goroot: ''
-  modulePath: ''
   locations: []
 
 stages:
@@ -19,8 +15,4 @@ stages:
       aro_v4_e2e_devops_spn: ${{ parameters.aro_v4_e2e_devops_spn }}
       billing_e2e_pipeline_name: ${{ parameters.billing_e2e_pipeline_name }}
       billing_e2e_branch_name: ${{ parameters.billing_e2e_branch_name }}
-      gobin: ${{ parameters.gobin }}
-      gopath: ${{ parameters.gopath }}
-      goroot: ${{ parameters.goroot }}
-      modulePath: ${{ parameters.modulePath }}
       location: ${{ location }}
