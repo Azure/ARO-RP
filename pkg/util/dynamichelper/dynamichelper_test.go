@@ -415,6 +415,40 @@ func TestMerge(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "empty status",
+			base: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"creationTimestamp": "2020-01-01T00:00:00Z", // untouched
+					},
+					"spec": map[string]interface{}{
+						"key1": "untouched",
+					},
+				},
+			},
+			delta: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"creationTimestamp": nil,
+					},
+					"spec": map[string]interface{}{
+						"key1": "untouched",
+					},
+					"status": map[interface{}]interface{}{}, // this is empty
+				},
+			},
+			want: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"metadata": map[string]interface{}{
+						"creationTimestamp": "2020-01-01T00:00:00Z",
+					},
+					"spec": map[string]interface{}{
+						"key1": "untouched",
+					},
+				},
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			result, changed, _, err := merge(tt.base, tt.delta)
