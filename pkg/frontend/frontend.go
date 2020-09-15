@@ -309,7 +309,7 @@ func (f *frontend) Run(ctx context.Context, stop <-chan struct{}, done chan<- st
 	}
 }
 
-func adminJmespathFilter(result []byte, jpath *jmespath.JMESPath) ([]byte, error) {
+func adminJmespathFilter(result []byte, jpath *jmespath.JMESPath, rootPath string) ([]byte, error) {
 	if jpath == nil {
 		return result, nil
 	}
@@ -319,13 +319,22 @@ func adminJmespathFilter(result []byte, jpath *jmespath.JMESPath) ([]byte, error
 	if err != nil {
 		return nil, err
 	}
+	root := o
+	if rootPath != "" {
+		root = o.(map[string]interface{})[rootPath]
+	}
 
-	filtered, err := jpath.Search(o)
+	filtered, err := jpath.Search(root)
 	if err != nil {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeJMESPathSearchFailed, "", "The JMESPath search returned an error: '%s'", err)
 	}
+	final := filtered
+	if rootPath != "" {
+		final = o
+		final.(map[string]interface{})[rootPath] = filtered
+	}
 
-	return json.Marshal(filtered)
+	return json.Marshal(final)
 }
 
 func adminReply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b []byte, err error) {

@@ -201,3 +201,51 @@ func TestRoutesAreNamedWithLowerCasePaths(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestAdminJmespathFilter(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    []byte
+		filter   string
+		rootPath string
+		want     []byte
+		wantErr  bool
+	}{
+		{
+			name:  "no jpath",
+			input: []byte("{\"foo\": \"a\"}"),
+			want:  []byte("{\"foo\": \"a\"}"),
+		},
+		{
+			name:   "no root, jpath",
+			filter: "foo",
+			input:  []byte("{\"foo\": \"a\"}"),
+			want:   []byte("\"a\""),
+		},
+		{
+			name:     "root and jpath",
+			filter:   "[0]",
+			rootPath: "foo",
+			input:    []byte("{\"foo\": [\"a\", \"b\"],\"nextPage\":\"val\"}"),
+			want:     []byte("{\"foo\":\"a\",\"nextPage\":\"val\"}"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			jpath, err := validateAdminJmespathFilter(tt.filter)
+			if err != nil {
+				t.Errorf("validateAdminJmespathFilter() error = %v", err)
+				return
+			}
+
+			got, err := adminJmespathFilter(tt.input, jpath, tt.rootPath)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("adminJmespathFilter() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("adminJmespathFilter() = %v, want %v", string(got), string(tt.want))
+			}
+		})
+	}
+}

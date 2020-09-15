@@ -23,13 +23,8 @@ var _ = Describe("[Admin API] List clusters action", func() {
 		ctx := context.Background()
 		resourceID := resourceIDFromEnv()
 
-		// TODO: add pagination support once https://github.com/Azure/ARO-RP/pull/859 lands.
-		//       Replace code below with testAdminClustersList(...). See example below.
 		By("requesting the cluster document via RP admin API")
-		var ocs []*admin.OpenShiftCluster
-		resp, err := adminRequest(ctx, http.MethodGet, "/admin/providers/Microsoft.RedHatOpenShift/openShiftClusters", nil, nil, &ocs)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(resp.StatusCode).To(Equal(http.StatusOK))
+		ocs := adminClustersList(ctx, "/admin/providers/Microsoft.RedHatOpenShift/openShiftClusters")
 
 		By("checking that we received the expected cluster")
 		var oc *admin.OpenShiftCluster
@@ -39,12 +34,6 @@ var _ = Describe("[Admin API] List clusters action", func() {
 			}
 		}
 		Expect(oc).ToNot(BeNil())
-
-		By("checking that fields available only in Admin API have values")
-		// Note: some fields will have empty values
-		// on successfully provisioned cluster (oc.Properties.Install, for example)
-		Expect(oc.Properties.ServicePrincipalProfile.TenantID).ToNot(BeEmpty())
-		Expect(oc.Properties.StorageSuffix).ToNot(BeEmpty())
 	})
 
 	It("should be able to return list clusters with admin fields by subscription", func() {
@@ -67,7 +56,7 @@ var _ = Describe("[Admin API] List clusters action", func() {
 	})
 })
 
-func testAdminClustersList(ctx context.Context, path, wantResourceID string) {
+func adminClustersList(ctx context.Context, path string) []*admin.OpenShiftCluster {
 	By("requesting the cluster document via RP admin API")
 	ocs := make([]*admin.OpenShiftCluster, 0)
 	params := url.Values{}
@@ -85,6 +74,12 @@ func testAdminClustersList(ctx context.Context, path, wantResourceID string) {
 
 		params = nextParams(list.NextLink)
 	}
+	return ocs
+}
+
+func testAdminClustersList(ctx context.Context, path, wantResourceID string) {
+	By("requesting the cluster document via RP admin API")
+	ocs := adminClustersList(ctx, path)
 
 	By("checking that we received the expected cluster")
 	var oc *admin.OpenShiftCluster
