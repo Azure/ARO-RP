@@ -25,6 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/insights"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/cluster"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
@@ -38,6 +39,7 @@ type clientSet struct {
 	VirtualMachines   compute.VirtualMachinesClient
 	Resources         features.ResourcesClient
 	ActivityLogs      insights.ActivityLogsClient
+	VirtualNetworks   network.VirtualNetworksClient
 
 	Kubernetes  kubernetes.Interface
 	MachineAPI  machineapiclient.Interface
@@ -115,6 +117,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		VirtualMachines:   compute.NewVirtualMachinesClient(im.SubscriptionID(), authorizer),
 		Resources:         features.NewResourcesClient(im.SubscriptionID(), authorizer),
 		ActivityLogs:      insights.NewActivityLogsClient(im.SubscriptionID(), authorizer),
+		VirtualNetworks:   network.NewVirtualNetworksClient(im.SubscriptionID(), authorizer),
 
 		Kubernetes:  cli,
 		MachineAPI:  machineapicli,
