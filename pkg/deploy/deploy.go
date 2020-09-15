@@ -58,6 +58,11 @@ type deployer struct {
 
 // New initiates new deploy utility object
 func New(ctx context.Context, log *logrus.Entry, config *RPConfig, version string, fullDeploy bool) (Deployer, error) {
+	err := config.validate()
+	if err != nil {
+		return nil, err
+	}
+
 	authorizer, err := auth.NewAuthorizerFromEnvironment()
 	if err != nil {
 		return nil, err

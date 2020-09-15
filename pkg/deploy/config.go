@@ -27,32 +27,32 @@ type RPConfig struct {
 
 // Configuration represents configuration structure
 type Configuration struct {
-	ACRResourceID                      *string       `json:"acrResourceId,omitempty"`
-	RPVersionStorageAccountName        *string       `json:"rpVersionStorageAccountName,omitempty"`
+	ACRResourceID                      *string       `json:"acrResourceId,omitempty" value:"required"`
+	RPVersionStorageAccountName        *string       `json:"rpVersionStorageAccountName,omitempty" value:"required"`
 	ACRReplicaDisabled                 *bool         `json:"acrReplicaDisabled,omitempty"`
-	AdminAPICABundle                   *string       `json:"adminApiCaBundle,omitempty"`
-	AdminAPIClientCertCommonName       *string       `json:"adminApiClientCertCommonName,omitempty"`
-	ClusterParentDomainName            *string       `json:"clusterParentDomainName,omitempty"`
-	DatabaseAccountName                *string       `json:"databaseAccountName,omitempty"`
-	ExtraClusterKeyvaultAccessPolicies []interface{} `json:"extraClusterKeyvaultAccessPolicies,omitempty"`
+	AdminAPICABundle                   *string       `json:"adminApiCaBundle,omitempty" value:"required"`
+	AdminAPIClientCertCommonName       *string       `json:"adminApiClientCertCommonName,omitempty" value:"required"`
+	ClusterParentDomainName            *string       `json:"clusterParentDomainName,omitempty" value:"required"`
+	DatabaseAccountName                *string       `json:"databaseAccountName,omitempty" value:"required"`
+	ExtraClusterKeyvaultAccessPolicies []interface{} `json:"extraClusterKeyvaultAccessPolicies,omitempty" value:"required"`
 	ExtraCosmosDBIPs                   []string      `json:"extraCosmosDBIPs,omitempty" value:"required"`
-	ExtraServiceKeyvaultAccessPolicies []interface{} `json:"extraServiceKeyvaultAccessPolicies,omitempty"`
+	ExtraServiceKeyvaultAccessPolicies []interface{} `json:"extraServiceKeyvaultAccessPolicies,omitempty" value:"required"`
 	FPServerCertCommonName             *string       `json:"fpServerCertCommonName,omitempty"`
-	FPServicePrincipalID               *string       `json:"fpServicePrincipalId,omitempty"`
-	GlobalMonitoringKeyVaultURI        *string       `json:"globalMonitoringKeyVaultUri,omitempty"`
-	GlobalResourceGroupName            *string       `json:"globalResourceGroupName,omitempty"`
-	GlobalSubscriptionID               *string       `json:"globalSubscriptionId,omitempty"`
-	KeyvaultPrefix                     *string       `json:"keyvaultPrefix,omitempty"`
+	FPServicePrincipalID               *string       `json:"fpServicePrincipalId,omitempty" value:"required"`
+	GlobalMonitoringKeyVaultURI        *string       `json:"globalMonitoringKeyVaultUri,omitempty" value:"required"`
+	GlobalResourceGroupName            *string       `json:"globalResourceGroupName,omitempty" value:"required"`
+	GlobalSubscriptionID               *string       `json:"globalSubscriptionId,omitempty" value:"required"`
+	KeyvaultPrefix                     *string       `json:"keyvaultPrefix,omitempty" value:"required"`
 	MDMFrontendURL                     *string       `json:"mdmFrontendUrl,omitempty" value:"required"`
-	MDSDConfigVersion                  *string       `json:"mdsdConfigVersion,omitempty"`
-	MDSDEnvironment                    *string       `json:"mdsdEnvironment,omitempty"`
-	RPImagePrefix                      *string       `json:"rpImagePrefix,omitempty"`
+	MDSDConfigVersion                  *string       `json:"mdsdConfigVersion,omitempty" value:"required"`
+	MDSDEnvironment                    *string       `json:"mdsdEnvironment,omitempty" value:"required"`
+	RPImagePrefix                      *string       `json:"rpImagePrefix,omitempty" value:"required"`
 	RPMode                             *string       `json:"rpMode,omitempty"`
-	RPNSGSourceAddressPrefixes         []string      `json:"rpNsgSourceAddressPrefixes,omitempty"`
-	RPParentDomainName                 *string       `json:"rpParentDomainName,omitempty"`
-	SubscriptionResourceGroupName      *string       `json:"subscriptionResourceGroupName,omitempty"`
-	SSHPublicKey                       *string       `json:"sshPublicKey,omitempty"`
-	VMSize                             *string       `json:"vmSize,omitempty"`
+	RPNSGSourceAddressPrefixes         []string      `json:"rpNsgSourceAddressPrefixes,omitempty" value:"required"`
+	RPParentDomainName                 *string       `json:"rpParentDomainName,omitempty" value:"required"`
+	SubscriptionResourceGroupName      *string       `json:"subscriptionResourceGroupName,omitempty" value:"required"`
+	SSHPublicKey                       *string       `json:"sshPublicKey,omitempty" value:"required"`
+	VMSize                             *string       `json:"vmSize,omitempty" value:"required"`
 }
 
 // GetConfig return RP configuration from the file
@@ -100,7 +100,7 @@ func mergeConfig(primary, secondary *Configuration) (*Configuration, error) {
 
 // CheckRequiredFields validates configuration whether it provides required fields.
 // Config is invalid if required fields are not provided.
-func (conf *RPConfig) CheckRequiredFields() error {
+func (conf *RPConfig) validate() error {
 	configuration := conf.Configuration
 	v := reflect.ValueOf(*configuration)
 	missingFields := []string{}
@@ -112,8 +112,6 @@ func (conf *RPConfig) CheckRequiredFields() error {
 			missingFields = append(missingFields, v.Type().Field(i).Name)
 		}
 	}
-
-	fmt.Println(missingFields)
 
 	if len(missingFields) == 0 {
 		return nil
