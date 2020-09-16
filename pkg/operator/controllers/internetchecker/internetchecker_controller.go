@@ -86,6 +86,7 @@ func (r *InternetChecker) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 
 	for url, ch := range checks {
 		if err = <-ch; err != nil {
+			r.log.Infof("URL %s check failed with error %s", url, err)
 			fmt.Fprintf(sb, "%s: %s\n", url, err)
 			checkFailed = true
 		}
