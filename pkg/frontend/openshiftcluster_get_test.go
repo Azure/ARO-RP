@@ -18,7 +18,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
-	mock_clusterdata "github.com/Azure/ARO-RP/pkg/util/mocks/clusterdata"
 	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
 )
 
@@ -28,17 +27,20 @@ func TestGetOpenShiftCluster(t *testing.T) {
 	type test struct {
 		name           string
 		resourceID     string
-		mocks          func(*test, *mock_database.MockOpenShiftClusters, *mock_clusterdata.MockOpenShiftClusterEnricher)
+		mocks          func(*test, *mock_database.MockOpenShiftClusters)
+		wantEnriched   []string
 		wantStatusCode int
 		wantResponse   func(*test) *v20200430.OpenShiftCluster
 		wantError      string
 	}
 
+	mockSubID := "00000000-0000-0000-0000-000000000000"
+
 	for _, tt := range []*test{
 		{
 			name:       "cluster exists in db",
-			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName",
-			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher) {
+			resourceID: getResourcePath(mockSubID, "resourceName"),
+			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters) {
 				clusterDoc := &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID:   tt.resourceID,
@@ -58,9 +60,8 @@ func TestGetOpenShiftCluster(t *testing.T) {
 				openshiftClusters.EXPECT().
 					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
 					Return(clusterDoc, nil)
-
-				enricher.EXPECT().Enrich(gomock.Any(), clusterDoc.OpenShiftCluster)
 			},
+			wantEnriched:   []string{getResourcePath(mockSubID, "resourceName")},
 			wantStatusCode: http.StatusOK,
 			wantResponse: func(tt *test) *v20200430.OpenShiftCluster {
 				return &v20200430.OpenShiftCluster{
@@ -72,8 +73,8 @@ func TestGetOpenShiftCluster(t *testing.T) {
 		},
 		{
 			name:       "cluster not found in db",
-			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName",
-			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher) {
+			resourceID: getResourcePath(mockSubID, "resourceName"),
+			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters) {
 				openshiftClusters.EXPECT().
 					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
 					Return(nil, &cosmosdb.Error{StatusCode: http.StatusNotFound})
@@ -83,8 +84,8 @@ func TestGetOpenShiftCluster(t *testing.T) {
 		},
 		{
 			name:       "internal error",
-			resourceID: "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName",
-			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters, enricher *mock_clusterdata.MockOpenShiftClusterEnricher) {
+			resourceID: getResourcePath(mockSubID, "resourceName"),
+			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters) {
 				openshiftClusters.EXPECT().
 					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
 					Return(nil, errors.New("random error"))
@@ -101,9 +102,8 @@ func TestGetOpenShiftCluster(t *testing.T) {
 			defer ti.done()
 
 			openshiftClusters := mock_database.NewMockOpenShiftClusters(ti.controller)
-			enricher := mock_clusterdata.NewMockOpenShiftClusterEnricher(ti.controller)
 
-			tt.mocks(tt, openshiftClusters, enricher)
+			tt.mocks(tt, openshiftClusters)
 
 			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, &database.Database{
 				OpenShiftClusters: openshiftClusters,
@@ -111,7 +111,7 @@ func TestGetOpenShiftCluster(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			f.(*frontend).ocEnricher = enricher
+			f.(*frontend).ocEnricher = ti.enricher
 
 			go f.Run(ctx, nil, nil)
 
@@ -129,6 +129,11 @@ func TestGetOpenShiftCluster(t *testing.T) {
 
 			err = validateResponse(resp, b, tt.wantStatusCode, tt.wantError, wantResponse)
 			if err != nil {
+				t.Error(err)
+			}
+
+			errs := ti.enricher.Check(tt.wantEnriched)
+			for _, err := range errs {
 				t.Error(err)
 			}
 		})
