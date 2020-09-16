@@ -7,9 +7,9 @@ var GitCommit = "unknown"
 
 // InstallStream describes stream we are defaulting to for all new clusters
 var InstallStream = Stream{
-	Version:    NewVersion(4, 4, 17),
-	PullSpec:   "quay.io/openshift-release-dev/ocp-release@sha256:624e84b5d22cb865ee1be32aa6e3feea99917c6081f7a9c5b1185fc9934d23f3",
-	MustGather: "quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:2acc62c38f40bcebc003a6ce8a30ee58f5c1ed6dc0d8514811cc70528d93a65d",
+	Version:    NewVersion(4, 4, 20),
+	PullSpec:   "quay.io/openshift-release-dev/ocp-release@sha256:d14e6d01c7a41f7d76c42e100207a3f48bb416fd1a863dad4e2708b6c5a9f366",
+	MustGather: "quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:a7fe9502442180833dc0805f84fe5177c510d16fcc6d5a77767a0bb435b65e19",
 }
 
 // Streams describes list of streams we support for upgrades
@@ -17,9 +17,9 @@ var (
 	Streams = []Stream{
 		InstallStream,
 		{
-			Version:    NewVersion(4, 3, 31),
-			PullSpec:   "quay.io/openshift-release-dev/ocp-release@sha256:6395ddd44276c4a1d760c77f9f5d8dabf302df7b84afd7b3147c97bdf268ab0f",
-			MustGather: "quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:bdb0536aaa8d581990f4e73b6c55d4938536ca697b5370d4627adaf666e6cb66",
+			Version:    NewVersion(4, 3, 35),
+			PullSpec:   "quay.io/openshift-release-dev/ocp-release@sha256:557107b1a5911d73d9fa749cf103cc3b45d688bf0da991471279042eec84f830",
+			MustGather: "quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:58bba19084b2c4ead3bad2575491cd98c2475c80934c75cc01da2b91ce3fc75e",
 		},
 	}
 )
