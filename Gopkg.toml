@@ -168,3 +168,7 @@ required = [
   [[prune.project]]
     name = "golang.org/x/xerrors"
     non-go = true
+
+  [[prune.project]]
+    name = "github.com/go-test/deep"
+    non-go = true

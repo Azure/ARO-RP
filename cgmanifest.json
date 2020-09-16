@@ -391,6 +391,15 @@
             "component": {
                 "type": "git",
                 "git": {
+                    "commitHash": "c733f5ed5136b7437e29ac91bb97c653af3694b5",
+                    "repositoryUrl": "https://github.com/go-test/deep/"
+                }
+            }
+        },
+        {
+            "component": {
+                "type": "git",
+                "git": {
                     "commitHash": "7a04ff140e0fd2ea77adfd5b8bd2b0c80ab739a9",
                     "repositoryUrl": "https://github.com/gobuffalo/flect/"
                 }

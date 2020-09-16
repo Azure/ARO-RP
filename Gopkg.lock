@@ -508,6 +508,14 @@
   version = "v0.19.6"
 
 [[projects]]
+  digest = "1:30a57dc70a46f2e32e456c5c8670e678573800c4d4dfbe35aaae7f31baa5faa0"
+  name = "github.com/go-test/deep"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "c733f5ed5136b7437e29ac91bb97c653af3694b5"
+  version = "v1.0.7"
+
+[[projects]]
   digest = "1:eec9b9a9f07a9b0de09431545481e22c233181b1af40170d0bc1f50b83690738"
   name = "github.com/gobuffalo/flect"
   packages = ["."]
@@ -2280,8 +2288,10 @@
     "github.com/ghodss/yaml",
     "github.com/go-bindata/go-bindata/go-bindata",
     "github.com/go-logr/logr",
+    "github.com/go-test/deep",
     "github.com/golang/mock/gomock",
     "github.com/golang/mock/mockgen",
+    "github.com/golang/mock/mockgen/model",
     "github.com/google/go-cmp/cmp",
     "github.com/googleapis/gnostic/OpenAPIv2",
     "github.com/gorilla/mux",
