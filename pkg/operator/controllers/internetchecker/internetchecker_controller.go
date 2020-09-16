@@ -125,7 +125,7 @@ func (r *InternetChecker) checkWithRetry(
 	ch chan error,
 ) {
 	ch <- retry.OnError(backoff, func(_ error) bool { return true }, func() error {
-		localCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		localCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
 		req, err := http.NewRequestWithContext(localCtx, http.MethodHead, url, nil)
 		if err != nil {
