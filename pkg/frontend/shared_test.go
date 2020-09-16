@@ -22,6 +22,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
+	testclusterdata "github.com/Azure/ARO-RP/test/util/clusterdata"
 	"github.com/Azure/ARO-RP/test/util/listener"
 )
 
@@ -49,6 +50,7 @@ type testInfra struct {
 	controller *gomock.Controller
 	l          net.Listener
 	cli        *http.Client
+	enricher   testclusterdata.TestEnricher
 }
 
 func newTestInfra(t *testing.T) (*testInfra, error) {
@@ -70,6 +72,7 @@ func newTestInfra(t *testing.T) (*testInfra, error) {
 		env:        env,
 		controller: gomock.NewController(t),
 		l:          l,
+		enricher:   testclusterdata.NewTestEnricher(),
 		cli: &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
@@ -169,4 +172,8 @@ func validateResponse(resp *http.Response, b []byte, wantStatusCode int, wantErr
 	}
 
 	return nil
+}
+
+func getResourcePath(subscriptionID string, resourceID string) string {
+	return fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s", subscriptionID, resourceID)
 }

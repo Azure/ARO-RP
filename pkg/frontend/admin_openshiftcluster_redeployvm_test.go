@@ -42,7 +42,7 @@ func TestAdminRedeployVM(t *testing.T) {
 		{
 			name:       "basic coverage",
 			vmName:     "aro-worker-australiasoutheast-7tcq7",
-			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
+			resourceID: getResourcePath(mockSubID, "resourceName"),
 			mocks: func(tt *test, a *mock_adminactions.MockInterface, oc *mock_database.MockOpenShiftClusters, s *mock_database.MockSubscriptions) {
 				clusterDoc := &api.OpenShiftClusterDocument{
 					Key: tt.resourceID,
