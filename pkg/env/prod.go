@@ -69,7 +69,12 @@ type prod struct {
 	log *logrus.Entry
 }
 
-func newProd(ctx context.Context, log *logrus.Entry, deploymentMode deployment.Mode, instancemetadata instancemetadata.InstanceMetadata) (*prod, error) {
+func newProd(ctx context.Context, log *logrus.Entry, deploymentMode deployment.Mode) (*prod, error) {
+	instancemetadata, err := instancemetadata.New(ctx, deploymentMode)
+	if err != nil {
+		return nil, err
+	}
+
 	rpauthorizer, err := rpauthorizer.New(deploymentMode)
 	if err != nil {
 		return nil, err

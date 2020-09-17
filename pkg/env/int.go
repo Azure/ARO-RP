@@ -9,11 +9,10 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
-	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 )
 
-func newInt(ctx context.Context, log *logrus.Entry, deploymentMode deployment.Mode, instancemetadata instancemetadata.InstanceMetadata) (*prod, error) {
-	p, err := newProd(ctx, log, deploymentMode, instancemetadata)
+func newInt(ctx context.Context, log *logrus.Entry, deploymentMode deployment.Mode) (*prod, error) {
+	p, err := newProd(ctx, log, deploymentMode)
 
 	if err != nil {
 		return nil, err

@@ -63,20 +63,14 @@ type Interface interface {
 func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
 	deploymentMode := deployment.NewMode()
 
-	if deploymentMode == deployment.Development {
+	switch deploymentMode {
+	case deployment.Development:
 		log.Warn("running in development mode")
-		return newDev(ctx, log, deploymentMode, instancemetadata.NewDev())
-	}
-
-	im, err := instancemetadata.NewProd(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	if deploymentMode == deployment.Integration {
+		return newDev(ctx, log, deploymentMode)
+	case deployment.Integration:
 		log.Warn("running in int mode")
-		return newInt(ctx, log, deploymentMode, im)
+		return newInt(ctx, log, deploymentMode)
+	default:
+		return newProd(ctx, log, deploymentMode)
 	}
-
-	return newProd(ctx, log, deploymentMode, im)
 }

@@ -35,7 +35,7 @@ type prod struct {
 	newServicePrincipalTokenFromMSI func(string, string) (ServicePrincipalToken, error)
 }
 
-func NewProd(ctx context.Context) (InstanceMetadata, error) {
+func newProd(ctx context.Context) (InstanceMetadata, error) {
 	p := &prod{
 		do: http.DefaultClient.Do,
 		newServicePrincipalTokenFromMSI: func(msiEndpoint, resource string) (ServicePrincipalToken, error) {

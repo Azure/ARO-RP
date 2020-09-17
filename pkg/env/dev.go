@@ -33,7 +33,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
-	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -62,17 +61,13 @@ type dev struct {
 	proxyClientKey  *rsa.PrivateKey
 }
 
-func newDev(ctx context.Context, log *logrus.Entry, deploymentMode deployment.Mode, instancemetadata instancemetadata.InstanceMetadata) (*dev, error) {
+func newDev(ctx context.Context, log *logrus.Entry, deploymentMode deployment.Mode) (*dev, error) {
 	for _, key := range []string{
 		"AZURE_ARM_CLIENT_ID",
 		"AZURE_ARM_CLIENT_SECRET",
 		"AZURE_FP_CLIENT_ID",
-		"AZURE_SUBSCRIPTION_ID",
-		"AZURE_TENANT_ID",
 		"DATABASE_NAME",
-		"LOCATION",
 		"PROXY_HOSTNAME",
-		"RESOURCEGROUP",
 	} {
 		if _, found := os.LookupEnv(key); !found {
 			return nil, fmt.Errorf("environment variable %q unset", key)
@@ -86,37 +81,37 @@ func newDev(ctx context.Context, log *logrus.Entry, deploymentMode deployment.Mo
 		return nil, err
 	}
 
-	armAuthorizer, err := auth.NewClientCredentialsConfig(os.Getenv("AZURE_ARM_CLIENT_ID"), os.Getenv("AZURE_ARM_CLIENT_SECRET"), instancemetadata.TenantID()).Authorizer()
+	d := &dev{}
+
+	d.prod, err = newProd(ctx, log, deploymentMode)
 	if err != nil {
 		return nil, err
 	}
 
-	d := &dev{
-		roleassignments: authorization.NewRoleAssignmentsClient(instancemetadata.SubscriptionID(), armAuthorizer),
-	}
-
-	d.prod, err = newProd(ctx, log, deploymentMode, instancemetadata)
+	armAuthorizer, err := auth.NewClientCredentialsConfig(os.Getenv("AZURE_ARM_CLIENT_ID"), os.Getenv("AZURE_ARM_CLIENT_SECRET"), d.TenantID()).Authorizer()
 	if err != nil {
 		return nil, err
 	}
+
+	d.roleassignments = authorization.NewRoleAssignmentsClient(d.SubscriptionID(), armAuthorizer)
 	d.prod.clustersGenevaLoggingEnvironment = "Test"
 	d.prod.clustersGenevaLoggingConfigVersion = "2.3"
 
-	fpGraphAuthorizer, err := d.FPAuthorizer(instancemetadata.TenantID(), azure.PublicCloud.GraphEndpoint)
+	fpGraphAuthorizer, err := d.FPAuthorizer(d.TenantID(), azure.PublicCloud.GraphEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	d.applications = graphrbac.NewApplicationsClient(instancemetadata.TenantID(), fpGraphAuthorizer)
+	d.applications = graphrbac.NewApplicationsClient(d.TenantID(), fpGraphAuthorizer)
 
-	fpAuthorizer, err := d.FPAuthorizer(instancemetadata.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
+	fpAuthorizer, err := d.FPAuthorizer(d.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	d.permissions = authorization.NewPermissionsClient(instancemetadata.SubscriptionID(), fpAuthorizer)
+	d.permissions = authorization.NewPermissionsClient(d.SubscriptionID(), fpAuthorizer)
 
-	d.deployments = features.NewDeploymentsClient(instancemetadata.TenantID(), fpAuthorizer)
+	d.deployments = features.NewDeploymentsClient(d.TenantID(), fpAuthorizer)
 
 	b, err := ioutil.ReadFile(path.Join(basepath, "secrets/proxy.crt"))
 	if err != nil {

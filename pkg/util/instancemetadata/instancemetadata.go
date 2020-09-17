@@ -3,6 +3,12 @@ package instancemetadata
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
+import (
+	"context"
+
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
+)
+
 type InstanceMetadata interface {
 	TenantID() string
 	SubscriptionID() string
@@ -31,4 +37,12 @@ func (im *instanceMetadata) Location() string {
 
 func (im *instanceMetadata) ResourceGroup() string {
 	return im.resourceGroup
+}
+
+func New(ctx context.Context, deploymentMode deployment.Mode) (InstanceMetadata, error) {
+	if deploymentMode == deployment.Development {
+		return newDev()
+	}
+
+	return newProd(ctx)
 }
