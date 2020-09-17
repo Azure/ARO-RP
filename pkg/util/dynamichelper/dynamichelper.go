@@ -246,6 +246,9 @@ func merge(base, delta *unstructured.Unstructured) (*unstructured.Unstructured, 
 	status, found, err := unstructured.NestedMap(base.Object, "status")
 	if err == nil && found {
 		unstructured.SetNestedMap(copy.Object, status, "status")
+	} else {
+		// prevent empty status objects from causing problems
+		unstructured.RemoveNestedField(copy.Object, "status")
 	}
 
 	return copy, !reflect.DeepEqual(base, copy), diff(base, copy), nil
