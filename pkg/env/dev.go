@@ -32,7 +32,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -61,7 +60,7 @@ type dev struct {
 	proxyClientKey  *rsa.PrivateKey
 }
 
-func newDev(ctx context.Context, log *logrus.Entry, deploymentMode deployment.Mode) (*dev, error) {
+func newDev(ctx context.Context, log *logrus.Entry) (*dev, error) {
 	for _, key := range []string{
 		"AZURE_ARM_CLIENT_ID",
 		"AZURE_ARM_CLIENT_SECRET",
@@ -83,7 +82,7 @@ func newDev(ctx context.Context, log *logrus.Entry, deploymentMode deployment.Mo
 
 	d := &dev{}
 
-	d.prod, err = newProd(ctx, log, deploymentMode)
+	d.prod, err = newProd(ctx, log)
 	if err != nil {
 		return nil, err
 	}

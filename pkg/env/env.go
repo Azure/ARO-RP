@@ -13,10 +13,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
-	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
-	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
-	"github.com/Azure/ARO-RP/pkg/util/rpauthorizer"
 )
 
 const (
@@ -30,9 +27,7 @@ const (
 )
 
 type Interface interface {
-	DeploymentMode() deployment.Mode
-	instancemetadata.InstanceMetadata
-	rpauthorizer.RPAuthorizer
+	Core
 
 	InitializeAuthorizers() error
 	ArmClientAuthorizer() clientauthorizer.ClientAuthorizer
@@ -50,7 +45,6 @@ type Interface interface {
 	Listen() (net.Listener, error)
 	ManagedDomain(string) (string, error)
 	MetricsSocketPath() string
-	ServiceKeyvault() keyvault.Manager
 	Zones(vmSize string) ([]string, error)
 	ACRResourceID() string
 	ACRName() string
@@ -61,16 +55,12 @@ type Interface interface {
 }
 
 func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
-	deploymentMode := deployment.NewMode()
-
-	switch deploymentMode {
+	switch deployment.NewMode() {
 	case deployment.Development:
-		log.Warn("running in development mode")
-		return newDev(ctx, log, deploymentMode)
+		return newDev(ctx, log)
 	case deployment.Integration:
-		log.Warn("running in int mode")
-		return newInt(ctx, log, deploymentMode)
+		return newInt(ctx, log)
 	default:
-		return newProd(ctx, log, deploymentMode)
+		return newProd(ctx, log)
 	}
 }

@@ -7,12 +7,10 @@ import (
 	"context"
 
 	"github.com/sirupsen/logrus"
-
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 )
 
-func newInt(ctx context.Context, log *logrus.Entry, deploymentMode deployment.Mode) (*prod, error) {
-	p, err := newProd(ctx, log, deploymentMode)
+func newInt(ctx context.Context, log *logrus.Entry) (*prod, error) {
+	p, err := newProd(ctx, log)
 
 	if err != nil {
 		return nil, err
