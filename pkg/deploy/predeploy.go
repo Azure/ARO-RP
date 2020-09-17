@@ -277,21 +277,20 @@ func (d *deployer) deployPreDeploy(ctx context.Context, rpServicePrincipalID str
 }
 
 func (d *deployer) configureServiceSecrets(ctx context.Context) error {
-	serviceKeyVaultURI := "https://" + *d.config.Configuration.KeyvaultPrefix + "-svc.vault.azure.net/"
-	secrets, err := d.keyvault.GetSecrets(ctx, serviceKeyVaultURI, nil)
+	secrets, err := d.keyvault.GetSecrets(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = d.ensureSecret(ctx, secrets, serviceKeyVaultURI, env.EncryptionSecretName)
+	err = d.ensureSecret(ctx, secrets, env.EncryptionSecretName)
 	if err != nil {
 		return err
 	}
 
-	return d.ensureSecret(ctx, secrets, serviceKeyVaultURI, env.FrontendEncryptionSecretName)
+	return d.ensureSecret(ctx, secrets, env.FrontendEncryptionSecretName)
 }
 
-func (d *deployer) ensureSecret(ctx context.Context, existingSecrets []keyvault.SecretItem, serviceKeyVaultURI, secretName string) error {
+func (d *deployer) ensureSecret(ctx context.Context, existingSecrets []keyvault.SecretItem, secretName string) error {
 	for _, secret := range existingSecrets {
 		if filepath.Base(*secret.ID) == secretName {
 			return nil
@@ -305,8 +304,7 @@ func (d *deployer) ensureSecret(ctx context.Context, existingSecrets []keyvault.
 	}
 
 	d.log.Infof("setting %s", secretName)
-	_, err = d.keyvault.SetSecret(ctx, serviceKeyVaultURI, secretName, keyvault.SecretSetParameters{
+	return d.keyvault.SetSecret(ctx, secretName, keyvault.SecretSetParameters{
 		Value: to.StringPtr(base64.StdEncoding.EncodeToString(key)),
 	})
-	return err
 }
