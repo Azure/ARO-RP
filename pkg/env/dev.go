@@ -65,7 +65,6 @@ func newDev(ctx context.Context, log *logrus.Entry) (*dev, error) {
 		"AZURE_ARM_CLIENT_ID",
 		"AZURE_ARM_CLIENT_SECRET",
 		"AZURE_FP_CLIENT_ID",
-		"DATABASE_NAME",
 		"PROXY_HOSTNAME",
 	} {
 		if _, found := os.LookupEnv(key); !found {
@@ -156,10 +155,6 @@ func (d *dev) AROOperatorImage() string {
 	}
 
 	return fmt.Sprintf("%s.azurecr.io/aro:%s", d.acrName, version.GitCommit)
-}
-
-func (d *dev) DatabaseName() string {
-	return os.Getenv("DATABASE_NAME")
 }
 
 func (d *dev) DialContext(ctx context.Context, network, address string) (net.Conn, error) {

@@ -170,21 +170,6 @@ func (mr *MockInterfaceMockRecorder) ClustersKeyvaultURI() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClustersKeyvaultURI", reflect.TypeOf((*MockInterface)(nil).ClustersKeyvaultURI))
 }
 
-// CosmosDB mocks base method
-func (m *MockInterface) CosmosDB() (string, string) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CosmosDB")
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(string)
-	return ret0, ret1
-}
-
-// CosmosDB indicates an expected call of CosmosDB
-func (mr *MockInterfaceMockRecorder) CosmosDB() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CosmosDB", reflect.TypeOf((*MockInterface)(nil).CosmosDB))
-}
-
 // CreateARMResourceGroupRoleAssignment mocks base method
 func (m *MockInterface) CreateARMResourceGroupRoleAssignment(arg0 context.Context, arg1 refreshable.Authorizer, arg2 string) error {
 	m.ctrl.T.Helper()
@@ -197,20 +182,6 @@ func (m *MockInterface) CreateARMResourceGroupRoleAssignment(arg0 context.Contex
 func (mr *MockInterfaceMockRecorder) CreateARMResourceGroupRoleAssignment(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateARMResourceGroupRoleAssignment", reflect.TypeOf((*MockInterface)(nil).CreateARMResourceGroupRoleAssignment), arg0, arg1, arg2)
-}
-
-// DatabaseName mocks base method
-func (m *MockInterface) DatabaseName() string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DatabaseName")
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// DatabaseName indicates an expected call of DatabaseName
-func (mr *MockInterfaceMockRecorder) DatabaseName() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DatabaseName", reflect.TypeOf((*MockInterface)(nil).DatabaseName))
 }
 
 // DeploymentMode mocks base method
