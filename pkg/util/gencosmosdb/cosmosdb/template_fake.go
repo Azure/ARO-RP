@@ -26,6 +26,7 @@ func NewFakeTemplateClient(h *codec.JsonHandle, uniqueKeys []string) *FakeTempla
 		uniqueKeys: uniqueKeys,
 		jsonHandle: h,
 		lock:       &sync.RWMutex{},
+		sorter:     func(in []*pkg.Template) {},
 	}
 }
 
@@ -36,6 +37,7 @@ type FakeTemplateClient struct {
 	triggers   map[string]FakeTemplateTrigger
 	queries    map[string]FakeTemplateQuery
 	uniqueKeys []string
+	sorter     func([]*pkg.Template)
 
 	// unavailable, if not nil, is an error to throw when attempting to
 	// communicate with this Client
@@ -73,6 +75,10 @@ func encodeTemplate(doc *pkg.Template, handle *codec.JsonHandle) (res []byte, er
 
 func (c *FakeTemplateClient) MakeUnavailable(err error) {
 	c.unavailable = err
+}
+
+func (c *FakeTemplateClient) UseSorter(sorter func([]*pkg.Template)) {
+	c.sorter = sorter
 }
 
 func (c *FakeTemplateClient) encodeAndCopy(doc *pkg.Template) (*pkg.Template, []byte, error) {
@@ -129,7 +135,7 @@ func (c *FakeTemplateClient) Create(ctx context.Context, partitionkey string, do
 			}
 			if ourKeyOk && theirKeyOk && ourKeyStr != "" && ourKeyStr == theirKeyStr {
 				return nil, &Error{
-					StatusCode: http.StatusPreconditionFailed,
+					StatusCode: http.StatusConflict,
 					Message:    "Entity with the specified id already exists in the system",
 				}
 			}
@@ -151,11 +157,11 @@ func (c *FakeTemplateClient) List(*Options) TemplateIterator {
 	for _, d := range c.docs {
 		r, err := decodeTemplate(d, c.jsonHandle)
 		if err != nil {
-			// todo: ??? what do we do here
-			fmt.Print(err)
+			return NewFakeTemplateClientErroringRawIterator(err)
 		}
 		docs = append(docs, r)
 	}
+	c.sorter(docs)
 	return NewFakeTemplateClientRawIterator(docs, 0)
 }
 
@@ -178,6 +184,7 @@ func (c *FakeTemplateClient) ListAll(context.Context, *Options) (*pkg.Templates,
 		}
 		templates.Templates = append(templates.Templates, dec)
 	}
+	c.sorter(templates.Templates)
 	return templates, nil
 }
 
