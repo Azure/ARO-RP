@@ -32,6 +32,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -61,10 +62,8 @@ type dev struct {
 	proxyClientKey  *rsa.PrivateKey
 }
 
-func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata) (*dev, error) {
+func newDev(ctx context.Context, log *logrus.Entry, deploymentMode deployment.Mode, instancemetadata instancemetadata.InstanceMetadata) (*dev, error) {
 	for _, key := range []string{
-		"AZURE_RP_CLIENT_ID",
-		"AZURE_RP_CLIENT_SECRET",
 		"AZURE_ARM_CLIENT_ID",
 		"AZURE_ARM_CLIENT_SECRET",
 		"AZURE_FP_CLIENT_ID",
@@ -96,19 +95,7 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 		roleassignments: authorization.NewRoleAssignmentsClient(instancemetadata.SubscriptionID(), armAuthorizer),
 	}
 
-	config := auth.NewClientCredentialsConfig(os.Getenv("AZURE_RP_CLIENT_ID"), os.Getenv("AZURE_RP_CLIENT_SECRET"), os.Getenv("AZURE_TENANT_ID"))
-	config.Resource = azure.PublicCloud.ResourceIdentifiers.KeyVault
-	rpKVAuthorizer, err := config.Authorizer()
-	if err != nil {
-		return nil, err
-	}
-
-	rpAuthorizer, err := auth.NewClientCredentialsConfig(os.Getenv("AZURE_RP_CLIENT_ID"), os.Getenv("AZURE_RP_CLIENT_SECRET"), os.Getenv("AZURE_TENANT_ID")).Authorizer()
-	if err != nil {
-		return nil, err
-	}
-
-	d.prod, err = newProd(ctx, log, instancemetadata, rpAuthorizer, rpKVAuthorizer)
+	d.prod, err = newProd(ctx, log, deploymentMode, instancemetadata)
 	if err != nil {
 		return nil, err
 	}

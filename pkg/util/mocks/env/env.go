@@ -11,6 +11,7 @@ import (
 	net "net"
 	reflect "reflect"
 
+	autorest "github.com/Azure/go-autorest/autorest"
 	gomock "github.com/golang/mock/gomock"
 
 	clientauthorizer "github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
@@ -412,6 +413,21 @@ func (m *MockInterface) MetricsSocketPath() string {
 func (mr *MockInterfaceMockRecorder) MetricsSocketPath() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MetricsSocketPath", reflect.TypeOf((*MockInterface)(nil).MetricsSocketPath))
+}
+
+// NewRPAuthorizer mocks base method
+func (m *MockInterface) NewRPAuthorizer(arg0 string) (autorest.Authorizer, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NewRPAuthorizer", arg0)
+	ret0, _ := ret[0].(autorest.Authorizer)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// NewRPAuthorizer indicates an expected call of NewRPAuthorizer
+func (mr *MockInterfaceMockRecorder) NewRPAuthorizer(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewRPAuthorizer", reflect.TypeOf((*MockInterface)(nil).NewRPAuthorizer), arg0)
 }
 
 // ResourceGroup mocks base method

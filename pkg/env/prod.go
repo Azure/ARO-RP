@@ -30,11 +30,13 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 	"github.com/Azure/ARO-RP/pkg/util/pem"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
+	"github.com/Azure/ARO-RP/pkg/util/rpauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 type prod struct {
 	instancemetadata.InstanceMetadata
+	rpauthorizer.RPAuthorizer
 
 	deploymentMode deployment.Mode
 
@@ -67,11 +69,27 @@ type prod struct {
 	log *logrus.Entry
 }
 
-func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata, rpAuthorizer, rpKVAuthorizer autorest.Authorizer) (*prod, error) {
+func newProd(ctx context.Context, log *logrus.Entry, deploymentMode deployment.Mode, instancemetadata instancemetadata.InstanceMetadata) (*prod, error) {
+	rpauthorizer, err := rpauthorizer.New(deploymentMode)
+	if err != nil {
+		return nil, err
+	}
+
+	rpAuthorizer, err := rpauthorizer.NewRPAuthorizer(azure.PublicCloud.ResourceManagerEndpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	rpKVAuthorizer, err := rpauthorizer.NewRPAuthorizer(azure.PublicCloud.ResourceIdentifiers.KeyVault)
+	if err != nil {
+		return nil, err
+	}
+
 	p := &prod{
 		InstanceMetadata: instancemetadata,
+		RPAuthorizer:     rpauthorizer,
 
-		deploymentMode: deployment.NewMode(),
+		deploymentMode: deploymentMode,
 
 		keyvault: basekeyvault.New(rpKVAuthorizer),
 
@@ -81,7 +99,7 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 		log: log,
 	}
 
-	err := p.populateCosmosDB(ctx, rpAuthorizer)
+	err = p.populateCosmosDB(ctx, rpAuthorizer)
 	if err != nil {
 		return nil, err
 	}

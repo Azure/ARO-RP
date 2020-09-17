@@ -9,14 +9,13 @@ import (
 	"crypto/x509"
 	"net"
 
-	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
+	"github.com/Azure/ARO-RP/pkg/util/rpauthorizer"
 )
 
 const (
@@ -32,6 +31,7 @@ const (
 type Interface interface {
 	DeploymentMode() deployment.Mode
 	instancemetadata.InstanceMetadata
+	rpauthorizer.RPAuthorizer
 
 	InitializeAuthorizers() error
 	ArmClientAuthorizer() clientauthorizer.ClientAuthorizer
@@ -61,9 +61,11 @@ type Interface interface {
 }
 
 func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
-	if deployment.NewMode() == deployment.Development {
+	deploymentMode := deployment.NewMode()
+
+	if deploymentMode == deployment.Development {
 		log.Warn("running in development mode")
-		return newDev(ctx, log, instancemetadata.NewDev())
+		return newDev(ctx, log, deploymentMode, instancemetadata.NewDev())
 	}
 
 	im, err := instancemetadata.NewProd(ctx)
@@ -71,20 +73,10 @@ func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
 		return nil, err
 	}
 
-	if deployment.NewMode() == deployment.Integration {
+	if deploymentMode == deployment.Integration {
 		log.Warn("running in int mode")
-		return newInt(ctx, log, im)
+		return newInt(ctx, log, deploymentMode, im)
 	}
 
-	rpKVAuthorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(azure.PublicCloud.ResourceIdentifiers.KeyVault)
-	if err != nil {
-		return nil, err
-	}
-
-	rpAuthorizer, err := auth.NewAuthorizerFromEnvironment()
-	if err != nil {
-		return nil, err
-	}
-
-	return newProd(ctx, log, im, rpAuthorizer, rpKVAuthorizer)
+	return newProd(ctx, log, deploymentMode, im)
 }
