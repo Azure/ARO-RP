@@ -1,1 +1,92 @@
-{"kind":"APIResourceList","apiVersion":"v1","groupVersion":"monitoring.coreos.com/v1","resources":[{"name":"prometheuses","singularName":"prometheus","namespaced":true,"kind":"Prometheus","verbs":["delete","deletecollection","get","list","patch","create","update","watch"],"storageVersionHash":"C8naPY4eojU="},{"name":"alertmanagers","singularName":"alertmanager","namespaced":true,"kind":"Alertmanager","verbs":["delete","deletecollection","get","list","patch","create","update","watch"],"storageVersionHash":"NshW3zg1K7o="},{"name":"servicemonitors","singularName":"servicemonitor","namespaced":true,"kind":"ServiceMonitor","verbs":["delete","deletecollection","get","list","patch","create","update","watch"],"storageVersionHash":"JLhPcfa+5xE="},{"name":"podmonitors","singularName":"podmonitor","namespaced":true,"kind":"PodMonitor","verbs":["delete","deletecollection","get","list","patch","create","update","watch"],"storageVersionHash":"t6BHpUAzPig="},{"name":"prometheusrules","singularName":"prometheusrule","namespaced":true,"kind":"PrometheusRule","verbs":["delete","deletecollection","get","list","patch","create","update","watch"],"storageVersionHash":"RSJ8iG+KDOo="}]}
+{
+    "kind": "APIResourceList",
+    "apiVersion": "v1",
+    "groupVersion": "monitoring.coreos.com/v1",
+    "resources": [
+        {
+            "name": "alertmanagers",
+            "singularName": "alertmanager",
+            "namespaced": true,
+            "kind": "Alertmanager",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "NshW3zg1K7o="
+        },
+        {
+            "name": "podmonitors",
+            "singularName": "podmonitor",
+            "namespaced": true,
+            "kind": "PodMonitor",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "t6BHpUAzPig="
+        },
+        {
+            "name": "prometheuses",
+            "singularName": "prometheus",
+            "namespaced": true,
+            "kind": "Prometheus",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "C8naPY4eojU="
+        },
+        {
+            "name": "prometheusrules",
+            "singularName": "prometheusrule",
+            "namespaced": true,
+            "kind": "PrometheusRule",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "RSJ8iG+KDOo="
+        },
+        {
+            "name": "servicemonitors",
+            "singularName": "servicemonitor",
+            "namespaced": true,
+            "kind": "ServiceMonitor",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "JLhPcfa+5xE="
+        }
+    ]
+}

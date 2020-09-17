@@ -5,10 +5,13 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 
 	configv1 "github.com/openshift/api/config/v1"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
@@ -81,7 +84,49 @@ func writeAssets(cli discovery.DiscoveryInterface, clusterVersion, cacheDir stri
 	}
 
 	versionPath := filepath.Join(cacheDir, "assets_version")
-	return ioutil.WriteFile(versionPath, []byte(clusterVersion), 0666)
+	err = ioutil.WriteFile(versionPath, []byte(clusterVersion), 0666)
+	if err != nil {
+		return err
+	}
+
+	return canonicalizeAssets(cacheDir)
+}
+
+func canonicalizeAssets(cacheDir string) error {
+	return filepath.Walk(cacheDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || !strings.HasSuffix(path, "/serverresources.json") {
+			return err
+		}
+
+		b, err := ioutil.ReadFile(path)
+		if err != nil {
+			return err
+		}
+
+		var l *metav1.APIResourceList
+
+		err = json.Unmarshal(b, &l)
+		if err != nil {
+			return err
+		}
+
+		sort.Slice(l.APIResources, func(i, j int) bool {
+			return strings.Compare(l.APIResources[i].Name, l.APIResources[j].Name) < 0
+		})
+
+		for _, r := range l.APIResources {
+			sort.Strings(r.Categories)
+			sort.Strings(r.ShortNames)
+			sort.Strings(r.Verbs)
+		}
+
+		b, err = json.MarshalIndent(l, "", "    ")
+		if err != nil {
+			return err
+		}
+
+		return ioutil.WriteFile(path, append(b, '\n'), 0666)
+	})
 }
 
 func main() {
