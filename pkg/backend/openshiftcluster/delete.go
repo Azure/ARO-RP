@@ -13,6 +13,7 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -99,7 +100,7 @@ func (m *Manager) Delete(ctx context.Context) error {
 		return err
 	}
 
-	if !m.env.IsDevelopment() {
+	if m.env.DeploymentMode() != deployment.Development {
 		managedDomain, err := m.env.ManagedDomain(m.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
 		if err != nil {
 			return err
@@ -130,7 +131,7 @@ func (m *Manager) Delete(ctx context.Context) error {
 		return err
 	}
 
-	if !m.env.IsDevelopment() {
+	if m.env.DeploymentMode() != deployment.Development {
 		rp := m.acrtoken.GetRegistryProfile(m.doc.OpenShiftCluster)
 		if rp != nil {
 			err = m.acrtoken.Delete(ctx, rp)

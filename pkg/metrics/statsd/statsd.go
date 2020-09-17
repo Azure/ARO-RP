@@ -15,6 +15,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
@@ -129,7 +130,7 @@ func (s *statsd) write(m *metric) (err error) {
 	if s.conn == nil {
 		err = s.dial()
 		if err != nil {
-			if s.env.IsDevelopment() {
+			if s.env.DeploymentMode() == deployment.Development {
 				err = nil
 			}
 			return

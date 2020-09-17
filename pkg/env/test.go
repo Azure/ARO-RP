@@ -11,11 +11,13 @@ import (
 	"net"
 
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
 type Test struct {
 	*prod
+	deployment.Mode
 
 	L net.Listener
 

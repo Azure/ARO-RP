@@ -3,6 +3,10 @@ package api
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
+import (
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
+)
+
 type OpenShiftClusterConverter interface {
 	ToExternal(*OpenShiftCluster) interface{}
 	ToExternalList([]*OpenShiftCluster, string) interface{}
@@ -20,7 +24,7 @@ type OpenShiftClusterCredentialsConverter interface {
 // Version is a set of endpoints implemented by each API version
 type Version struct {
 	OpenShiftClusterConverter            func() OpenShiftClusterConverter
-	OpenShiftClusterStaticValidator      func(string, string, bool, string) OpenShiftClusterStaticValidator
+	OpenShiftClusterStaticValidator      func(string, string, deployment.Mode, string) OpenShiftClusterStaticValidator
 	OpenShiftClusterCredentialsConverter func() OpenShiftClusterCredentialsConverter
 }
 

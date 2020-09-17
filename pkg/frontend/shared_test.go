@@ -21,6 +21,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	testclusterdata "github.com/Azure/ARO-RP/test/util/clusterdata"
 	"github.com/Azure/ARO-RP/test/util/listener"
@@ -61,6 +62,7 @@ func newTestInfra(t *testing.T) (*testInfra, error) {
 
 	env := &env.Test{
 		L:            l,
+		Mode:         deployment.Production,
 		TestLocation: "eastus",
 		TLSKey:       serverkey,
 		TLSCerts:     servercerts,

@@ -7,8 +7,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"os"
-	"strings"
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
@@ -26,6 +24,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/workaround"
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	// +kubebuilder:scaffold:imports
 )
@@ -37,10 +36,9 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 	default:
 		return fmt.Errorf("invalid role %s", role)
 	}
-	developmentMode := false
-	if strings.ToLower(os.Getenv("RP_MODE")) == "development" {
+	deploymentMode := deployment.NewMode()
+	if deploymentMode == deployment.Development {
 		log.Warn("running in development mode")
-		developmentMode = true
 	}
 
 	ctrl.SetLogger(utillog.LogrWrapper(log))
@@ -109,7 +107,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 
 	if err = (checker.NewReconciler(
 		log.WithField("controller", controllers.CheckerControllerName),
-		clustercli, arocli, role, developmentMode)).SetupWithManager(mgr); err != nil {
+		clustercli, arocli, role, deploymentMode)).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller InternetChecker: %v", err)
 	}
 	// +kubebuilder:scaffold:builder

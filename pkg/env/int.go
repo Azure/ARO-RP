@@ -36,7 +36,6 @@ func newInt(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 	p.e2eStorageAccountName = "arov4e2eint"
 	p.e2eStorageAccountRGName = "global-infra"
 	p.e2eStorageAccountSubID = "0cc1cafa-578f-4fa5-8d6b-ddfd8d82e6ea"
-	p.envType = environmentTypeIntegration
 
 	return p, nil
 }

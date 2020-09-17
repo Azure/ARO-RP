@@ -16,6 +16,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
@@ -64,7 +65,7 @@ func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClus
 	}
 
 	var acrtoken pkgacrtoken.Manager
-	if !_env.IsDevelopment() {
+	if _env.DeploymentMode() != deployment.Development {
 		acrtoken, err = pkgacrtoken.NewManager(_env, localFPAuthorizer)
 		if err != nil {
 			return nil, err

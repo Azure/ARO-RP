@@ -28,6 +28,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/azure"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/k8s"
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 )
 
@@ -41,7 +42,7 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	var keys []string
-	if _env.IsDevelopment() {
+	if _env.DeploymentMode() == deployment.Development {
 		keys = []string{
 			"PULL_SECRET",
 		}

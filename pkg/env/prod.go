@@ -26,6 +26,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/documentdb"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 	"github.com/Azure/ARO-RP/pkg/util/pem"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
@@ -34,6 +35,9 @@ import (
 
 type prod struct {
 	instancemetadata.InstanceMetadata
+
+	deploymentMode deployment.Mode
+
 	armClientAuthorizer   clientauthorizer.ClientAuthorizer
 	adminClientAuthorizer clientauthorizer.ClientAuthorizer
 
@@ -60,21 +64,21 @@ type prod struct {
 	e2eStorageAccountRGName string
 	e2eStorageAccountSubID  string
 
-	log     *logrus.Entry
-	envType environmentType
+	log *logrus.Entry
 }
 
 func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata, rpAuthorizer, rpKVAuthorizer autorest.Authorizer) (*prod, error) {
 	p := &prod{
 		InstanceMetadata: instancemetadata,
 
+		deploymentMode: deployment.NewMode(),
+
 		keyvault: basekeyvault.New(rpKVAuthorizer),
 
 		clustersGenevaLoggingEnvironment:   "DiagnosticsProd",
 		clustersGenevaLoggingConfigVersion: "2.2",
 
-		log:     log,
-		envType: environmentTypeProduction,
+		log: log,
 	}
 
 	err := p.populateCosmosDB(ctx, rpAuthorizer)
@@ -129,6 +133,10 @@ func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instanceme
 	}
 
 	return p, nil
+}
+
+func (p *prod) DeploymentMode() deployment.Mode {
+	return p.deploymentMode
 }
 
 func (p *prod) InitializeAuthorizers() error {
@@ -393,12 +401,4 @@ func (p *prod) E2EStorageAccountRGName() string {
 
 func (p *prod) E2EStorageAccountSubID() string {
 	return p.e2eStorageAccountSubID
-}
-
-func (p *prod) ShouldDeployDenyAssignment() bool {
-	return p.envType == environmentTypeProduction
-}
-
-func (p *prod) IsDevelopment() bool {
-	return p.envType == environmentTypeDevelopment
 }

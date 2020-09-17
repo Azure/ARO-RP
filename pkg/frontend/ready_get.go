@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
 )
 
 // checkReady checks the ready status of the frontend to make it consistent
@@ -15,7 +16,7 @@ import (
 // minutes before indicating health.  This ensures that there will be a gap in
 // our health metric if we crash or restart.
 func (f *frontend) checkReady() bool {
-	if !f.env.IsDevelopment() &&
+	if f.env.DeploymentMode() != deployment.Development &&
 		time.Now().Sub(f.startTime) < 2*time.Minute {
 		return false
 	}

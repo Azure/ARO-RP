@@ -14,12 +14,15 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
+	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
@@ -166,8 +169,15 @@ func TestAdminReply(t *testing.T) {
 }
 
 func TestRoutesAreNamedWithLowerCasePaths(t *testing.T) {
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	_env := mock_env.NewMockInterface(controller)
+	_env.EXPECT().DeploymentMode().AnyTimes().Return(deployment.Production)
+
 	f := &frontend{
 		baseLog: logrus.NewEntry(logrus.StandardLogger()),
+		env:     _env,
 	}
 	router := f.setupRouter()
 

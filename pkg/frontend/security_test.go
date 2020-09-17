@@ -18,6 +18,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/test/util/listener"
 )
@@ -39,7 +40,8 @@ func TestSecurity(t *testing.T) {
 	defer l.Close()
 
 	env := &env.Test{
-		L: l,
+		Mode: deployment.Production,
+		L:    l,
 	}
 	env.SetARMClientAuthorizer(clientauthorizer.NewOne(validclientcerts[0].Raw))
 	env.SetAdminClientAuthorizer(clientauthorizer.NewOne(validadminclientcerts[0].Raw))

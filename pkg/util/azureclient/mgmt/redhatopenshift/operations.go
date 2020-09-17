@@ -6,11 +6,11 @@ package redhatopenshift
 import (
 	"crypto/tls"
 	"net/http"
-	"os"
 
 	"github.com/Azure/go-autorest/autorest"
 
 	"github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2020-04-30/redhatopenshift"
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
 )
 
 // OperationsClient is a minimal interface for azure OperationsClient
@@ -27,7 +27,7 @@ var _ OperationsClient = &operationsClient{}
 // NewOperationsClient creates a new OperationsClient
 func NewOperationsClient(subscriptionID string, authorizer autorest.Authorizer) OperationsClient {
 	var client redhatopenshift.OperationsClient
-	if os.Getenv("RP_MODE") == "development" {
+	if deployment.NewMode() == deployment.Development {
 		client = redhatopenshift.NewOperationsClientWithBaseURI("https://localhost:8443", subscriptionID)
 		client.Sender = &http.Client{
 			Transport: &http.Transport{

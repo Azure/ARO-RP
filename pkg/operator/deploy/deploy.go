@@ -28,6 +28,7 @@ import (
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
@@ -92,7 +93,7 @@ func (o *operator) resources() ([]runtime.Object, error) {
 			for i := range d.Spec.Template.Spec.Containers {
 				d.Spec.Template.Spec.Containers[i].Image = o.env.AROOperatorImage()
 
-				if o.env.IsDevelopment() {
+				if o.env.DeploymentMode() == deployment.Development {
 					d.Spec.Template.Spec.Containers[i].Env = append(d.Spec.Template.Spec.Containers[i].Env, corev1.EnvVar{
 						Name:  "RP_MODE",
 						Value: "development",

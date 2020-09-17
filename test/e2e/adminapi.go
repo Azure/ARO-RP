@@ -12,15 +12,15 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
 
 	. "github.com/onsi/gomega"
 
 	"github.com/Azure/ARO-RP/pkg/api/admin"
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
 )
 
 func adminRequest(ctx context.Context, method, path string, params url.Values, in, out interface{}) (*http.Response, error) {
-	if os.Getenv("RP_MODE") != "development" {
+	if deployment.NewMode() != deployment.Development {
 		return nil, errors.New("only development RP mode is supported")
 	}
 

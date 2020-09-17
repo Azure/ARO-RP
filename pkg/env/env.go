@@ -8,24 +8,15 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"net"
-	"os"
-	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
-)
-
-type environmentType uint8
-
-const (
-	environmentTypeProduction environmentType = iota
-	environmentTypeDevelopment
-	environmentTypeIntegration
 )
 
 const (
@@ -39,9 +30,9 @@ const (
 )
 
 type Interface interface {
+	DeploymentMode() deployment.Mode
 	instancemetadata.InstanceMetadata
 
-	IsDevelopment() bool
 	InitializeAuthorizers() error
 	ArmClientAuthorizer() clientauthorizer.ClientAuthorizer
 	AdminClientAuthorizer() clientauthorizer.ClientAuthorizer
@@ -67,11 +58,10 @@ type Interface interface {
 	E2EStorageAccountName() string
 	E2EStorageAccountRGName() string
 	E2EStorageAccountSubID() string
-	ShouldDeployDenyAssignment() bool
 }
 
 func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
-	if strings.ToLower(os.Getenv("RP_MODE")) == "development" {
+	if deployment.NewMode() == deployment.Development {
 		log.Warn("running in development mode")
 		return newDev(ctx, log, instancemetadata.NewDev())
 	}
@@ -81,7 +71,7 @@ func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
 		return nil, err
 	}
 
-	if strings.ToLower(os.Getenv("RP_MODE")) == "int" {
+	if deployment.NewMode() == deployment.Integration {
 		log.Warn("running in int mode")
 		return newInt(ctx, log, im)
 	}

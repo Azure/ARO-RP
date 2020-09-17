@@ -22,6 +22,7 @@ import (
 	aro "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
@@ -31,20 +32,20 @@ const (
 
 // MachineChecker reconciles the alertmanager webhook
 type MachineChecker struct {
-	clustercli      clusterapi.Interface
-	arocli          aroclient.AroV1alpha1Interface
-	log             *logrus.Entry
-	developmentMode bool
-	role            string
+	clustercli     clusterapi.Interface
+	arocli         aroclient.AroV1alpha1Interface
+	log            *logrus.Entry
+	deploymentMode deployment.Mode
+	role           string
 }
 
-func NewMachineChecker(log *logrus.Entry, clustercli clusterapi.Interface, arocli aroclient.AroV1alpha1Interface, role string, developmentMode bool) *MachineChecker {
+func NewMachineChecker(log *logrus.Entry, clustercli clusterapi.Interface, arocli aroclient.AroV1alpha1Interface, role string, deploymentMode deployment.Mode) *MachineChecker {
 	return &MachineChecker{
-		clustercli:      clustercli,
-		arocli:          arocli,
-		log:             log,
-		role:            role,
-		developmentMode: developmentMode,
+		clustercli:     clustercli,
+		arocli:         arocli,
+		log:            log,
+		deploymentMode: deploymentMode,
+		role:           role,
 	}
 }
 
@@ -79,7 +80,7 @@ func (r *MachineChecker) machineValid(ctx context.Context, machine *machinev1bet
 		return []error{fmt.Errorf("machine %s: failed to read provider spec: %T", machine.Name, o)}
 	}
 
-	if !validate.VMSizeIsValid(api.VMSize(machineProviderSpec.VMSize), r.developmentMode, isMaster) {
+	if !validate.VMSizeIsValid(api.VMSize(machineProviderSpec.VMSize), r.deploymentMode, isMaster) {
 		errs = append(errs, fmt.Errorf("machine %s: invalid VM size '%s'", machine.Name, machineProviderSpec.VMSize))
 	}
 
