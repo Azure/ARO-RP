@@ -16,7 +16,6 @@ import (
 
 	clientauthorizer "github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	deployment "github.com/Azure/ARO-RP/pkg/util/deployment"
-	keyvault "github.com/Azure/ARO-RP/pkg/util/keyvault"
 	refreshable "github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
@@ -284,6 +283,37 @@ func (mr *MockInterfaceMockRecorder) FPAuthorizer(arg0, arg1 interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FPAuthorizer", reflect.TypeOf((*MockInterface)(nil).FPAuthorizer), arg0, arg1)
 }
 
+// GetBase64Secret mocks base method
+func (m *MockInterface) GetBase64Secret(arg0 context.Context, arg1 string) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBase64Secret", arg0, arg1)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetBase64Secret indicates an expected call of GetBase64Secret
+func (mr *MockInterfaceMockRecorder) GetBase64Secret(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBase64Secret", reflect.TypeOf((*MockInterface)(nil).GetBase64Secret), arg0, arg1)
+}
+
+// GetCertificateSecret mocks base method
+func (m *MockInterface) GetCertificateSecret(arg0 context.Context, arg1 string) (*rsa.PrivateKey, []*x509.Certificate, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCertificateSecret", arg0, arg1)
+	ret0, _ := ret[0].(*rsa.PrivateKey)
+	ret1, _ := ret[1].([]*x509.Certificate)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// GetCertificateSecret indicates an expected call of GetCertificateSecret
+func (mr *MockInterfaceMockRecorder) GetCertificateSecret(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCertificateSecret", reflect.TypeOf((*MockInterface)(nil).GetCertificateSecret), arg0, arg1)
+}
+
 // InitializeAuthorizers mocks base method
 func (m *MockInterface) InitializeAuthorizers() error {
 	m.ctrl.T.Helper()
@@ -354,20 +384,6 @@ func (m *MockInterface) ResourceGroup() string {
 func (mr *MockInterfaceMockRecorder) ResourceGroup() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResourceGroup", reflect.TypeOf((*MockInterface)(nil).ResourceGroup))
-}
-
-// ServiceKeyvault mocks base method
-func (m *MockInterface) ServiceKeyvault() keyvault.Manager {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ServiceKeyvault")
-	ret0, _ := ret[0].(keyvault.Manager)
-	return ret0
-}
-
-// ServiceKeyvault indicates an expected call of ServiceKeyvault
-func (mr *MockInterfaceMockRecorder) ServiceKeyvault() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ServiceKeyvault", reflect.TypeOf((*MockInterface)(nil).ServiceKeyvault))
 }
 
 // SubscriptionID mocks base method

@@ -5,6 +5,8 @@ package env
 
 import (
 	"context"
+	"crypto/rsa"
+	"crypto/x509"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
@@ -21,7 +23,8 @@ type Core interface {
 	instancemetadata.InstanceMetadata
 	rpauthorizer.RPAuthorizer
 
-	ServiceKeyvault() keyvault.Manager
+	GetBase64Secret(context.Context, string) ([]byte, error)
+	GetCertificateSecret(context.Context, string) (*rsa.PrivateKey, []*x509.Certificate, error)
 }
 
 type core struct {
@@ -36,8 +39,12 @@ func (c *core) DeploymentMode() deployment.Mode {
 	return c.deploymentMode
 }
 
-func (c *core) ServiceKeyvault() keyvault.Manager {
-	return c.servicekeyvault
+func (c *core) GetBase64Secret(ctx context.Context, secretName string) ([]byte, error) {
+	return c.servicekeyvault.GetBase64Secret(ctx, secretName)
+}
+
+func (c *core) GetCertificateSecret(ctx context.Context, secretName string) (*rsa.PrivateKey, []*x509.Certificate, error) {
+	return c.servicekeyvault.GetCertificateSecret(ctx, secretName)
 }
 
 func NewCore(ctx context.Context, log *logrus.Entry) (Core, error) {

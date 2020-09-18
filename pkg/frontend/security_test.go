@@ -21,7 +21,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	mock_keyvault "github.com/Azure/ARO-RP/pkg/util/mocks/keyvault"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/test/util/listener"
 )
@@ -50,15 +49,12 @@ func TestSecurity(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
-	kv := mock_keyvault.NewMockManager(controller)
-	kv.EXPECT().GetCertificateSecret(gomock.Any(), env.RPServerSecretName).AnyTimes().Return(serverkey, servercerts, nil)
-
-	env := mock_env.NewMockInterface(controller)
-	env.EXPECT().DeploymentMode().AnyTimes().Return(deployment.Production)
-	env.EXPECT().ServiceKeyvault().AnyTimes().Return(kv)
-	env.EXPECT().ArmClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(validclientcerts[0].Raw))
-	env.EXPECT().AdminClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(validadminclientcerts[0].Raw))
-	env.EXPECT().Listen().AnyTimes().Return(l, nil)
+	_env := mock_env.NewMockInterface(controller)
+	_env.EXPECT().DeploymentMode().AnyTimes().Return(deployment.Production)
+	_env.EXPECT().GetCertificateSecret(gomock.Any(), env.RPServerSecretName).AnyTimes().Return(serverkey, servercerts, nil)
+	_env.EXPECT().ArmClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(validclientcerts[0].Raw))
+	_env.EXPECT().AdminClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(validadminclientcerts[0].Raw))
+	_env.EXPECT().Listen().AnyTimes().Return(l, nil)
 
 	invalidclientkey, invalidclientcerts, err := utiltls.GenerateKeyAndCertificate("invalidclient", nil, nil, false, true)
 	if err != nil {
@@ -68,7 +64,7 @@ func TestSecurity(t *testing.T) {
 	pool := x509.NewCertPool()
 	pool.AddCert(servercerts[0])
 
-	f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, nil, api.APIs, &noop.Noop{}, nil, nil)
+	f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), _env, nil, api.APIs, &noop.Noop{}, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

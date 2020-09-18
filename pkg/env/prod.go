@@ -89,7 +89,7 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		return nil, err
 	}
 
-	fpPrivateKey, fpCertificates, err := p.ServiceKeyvault().GetCertificateSecret(ctx, RPFirstPartySecretName)
+	fpPrivateKey, fpCertificates, err := p.GetCertificateSecret(ctx, RPFirstPartySecretName)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +98,7 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 	p.fpCertificate = fpCertificates[0]
 	p.fpServicePrincipalID = "f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875"
 
-	clustersGenevaLoggingPrivateKey, clustersGenevaLoggingCertificates, err := p.ServiceKeyvault().GetCertificateSecret(ctx, ClusterLoggingSecretName)
+	clustersGenevaLoggingPrivateKey, clustersGenevaLoggingCertificates, err := p.GetCertificateSecret(ctx, ClusterLoggingSecretName)
 	if err != nil {
 		return nil, err
 	}
