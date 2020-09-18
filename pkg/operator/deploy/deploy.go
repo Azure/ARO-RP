@@ -91,6 +91,13 @@ func (o *operator) resources() ([]runtime.Object, error) {
 		if d, ok := obj.(*appsv1.Deployment); ok {
 			for i := range d.Spec.Template.Spec.Containers {
 				d.Spec.Template.Spec.Containers[i].Image = o.env.AROOperatorImage()
+
+				if o.env.IsDevelopment() {
+					d.Spec.Template.Spec.Containers[i].Env = append(d.Spec.Template.Spec.Containers[i].Env, corev1.EnvVar{
+						Name:  "RP_MODE",
+						Value: "development",
+					})
+				}
 			}
 		}
 
