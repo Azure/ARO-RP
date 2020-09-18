@@ -40,7 +40,7 @@ deploy_env_dev() {
         --template-file deploy/env-development.json \
         --parameters \
             "ciAzpToken=$AZPTOKEN" \
-            "ciCapacity=3" \
+            "ciCapacity=6" \
             "ciDeployTooling=true" \
             "ciPoolName=ARO-CI" \
             "proxyCert=$(base64 -w0 <secrets/proxy.crt)" \
