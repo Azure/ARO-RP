@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"testing"
 
+	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+
 	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -469,6 +471,64 @@ func TestDelete(t *testing.T) {
 			}
 
 			err := m.Delete(ctx, tt.oc)
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Error(err)
+			}
+		})
+	}
+}
+
+func TestManagedDomain(t *testing.T) {
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	env := mock_env.NewMockInterface(controller)
+	env.EXPECT().Domain().AnyTimes().Return("eastus.aroapp.io")
+
+	for _, tt := range []struct {
+		domain  string
+		want    string
+		wantErr string
+	}{
+		{
+			domain: "eastus.aroapp.io",
+		},
+		{
+			domain: "aroapp.io",
+		},
+		{
+			domain: "redhat.com",
+		},
+		{
+			domain: "foo.eastus.aroapp.io.redhat.com",
+		},
+		{
+			domain: "foo.eastus.aroapp.io",
+			want:   "foo.eastus.aroapp.io",
+		},
+		{
+			domain: "bar",
+			want:   "bar.eastus.aroapp.io",
+		},
+		{
+			domain:  "",
+			wantErr: `invalid domain ""`,
+		},
+		{
+			domain:  ".foo",
+			wantErr: `invalid domain ".foo"`,
+		},
+		{
+			domain:  "foo.",
+			wantErr: `invalid domain "foo."`,
+		},
+	} {
+		t.Run(tt.domain, func(t *testing.T) {
+			got, err := ManagedDomain(env, tt.domain)
+			if got != tt.want {
+				t.Error(got)
+			}
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

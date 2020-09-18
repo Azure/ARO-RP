@@ -38,14 +38,6 @@ func (t *Test) Location() string {
 	return t.TestLocation
 }
 
-func (t *Test) ManagedDomain(clusterDomain string) (string, error) {
-	if t.prod == nil {
-		t.prod = &prod{}
-	}
-	t.prod.domain = t.TestDomain
-	return t.prod.ManagedDomain(clusterDomain)
-}
-
 func (t *Test) ResourceGroup() string {
 	return t.TestResourceGroup
 }

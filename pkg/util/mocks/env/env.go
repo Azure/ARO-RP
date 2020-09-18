@@ -327,21 +327,6 @@ func (mr *MockInterfaceMockRecorder) Location() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Location", reflect.TypeOf((*MockInterface)(nil).Location))
 }
 
-// ManagedDomain mocks base method
-func (m *MockInterface) ManagedDomain(arg0 string) (string, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ManagedDomain", arg0)
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// ManagedDomain indicates an expected call of ManagedDomain
-func (mr *MockInterfaceMockRecorder) ManagedDomain(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ManagedDomain", reflect.TypeOf((*MockInterface)(nil).ManagedDomain), arg0)
-}
-
 // NewRPAuthorizer mocks base method
 func (m *MockInterface) NewRPAuthorizer(arg0 string) (autorest.Authorizer, error) {
 	m.ctrl.T.Helper()

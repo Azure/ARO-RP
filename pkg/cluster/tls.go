@@ -16,6 +16,7 @@ import (
 	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
+	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 )
@@ -25,7 +26,7 @@ func (i *manager) createCertificates(ctx context.Context) error {
 		return nil
 	}
 
-	managedDomain, err := i.env.ManagedDomain(i.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
+	managedDomain, err := dns.ManagedDomain(i.env, i.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
 	if err != nil {
 		return err
 	}
@@ -72,7 +73,7 @@ func (i *manager) upgradeCertificates(ctx context.Context) error {
 		return nil
 	}
 
-	managedDomain, err := i.env.ManagedDomain(i.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
+	managedDomain, err := dns.ManagedDomain(i.env, i.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
 	if err != nil {
 		return err
 	}
@@ -148,7 +149,7 @@ func (i *manager) configureAPIServerCertificate(ctx context.Context) error {
 		return nil
 	}
 
-	managedDomain, err := i.env.ManagedDomain(i.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
+	managedDomain, err := dns.ManagedDomain(i.env, i.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
 	if err != nil {
 		return err
 	}
@@ -189,7 +190,7 @@ func (i *manager) configureIngressCertificate(ctx context.Context) error {
 		return nil
 	}
 
-	managedDomain, err := i.env.ManagedDomain(i.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
+	managedDomain, err := dns.ManagedDomain(i.env, i.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
 	if err != nil {
 		return err
 	}

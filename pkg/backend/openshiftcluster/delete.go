@@ -14,6 +14,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
+	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
@@ -101,7 +102,7 @@ func (m *Manager) Delete(ctx context.Context) error {
 	}
 
 	if m.env.DeploymentMode() != deployment.Development {
-		managedDomain, err := m.env.ManagedDomain(m.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
+		managedDomain, err := dns.ManagedDomain(m.env, m.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
 		if err != nil {
 			return err
 		}
