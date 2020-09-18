@@ -10,12 +10,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
+	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	"github.com/Azure/ARO-RP/test/util/cmp"
 )
 
@@ -205,6 +207,11 @@ func TestBestEffortEnricher(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			env := mock_env.NewMockInterface(controller)
+
 			restConfig := defaultMockRestConfig
 			if tt.restConfig != nil {
 				restConfig = tt.restConfig
@@ -217,7 +224,7 @@ func TestBestEffortEnricher(t *testing.T) {
 
 			e := &bestEffortEnricher{
 				log:              log,
-				env:              &env.Test{},
+				env:              env,
 				restConfig:       restConfig,
 				taskConstructors: taskConstructors,
 				m:                &noop.Noop{},

@@ -9,25 +9,18 @@ import (
 	"net/http"
 	"testing"
 
-	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-
 	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/env"
 	mock_dns "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/dns"
+	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 )
 
 func TestCreate(t *testing.T) {
 	ctx := context.Background()
-
-	env := &env.Test{
-		TestResourceGroup: "rpResourcegroup",
-		TestDomain:        "domain",
-	}
 
 	managedOc := &api.OpenShiftCluster{
 		Properties: api.OpenShiftClusterProperties{
@@ -125,6 +118,10 @@ func TestCreate(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
+			env := mock_env.NewMockInterface(controller)
+			env.EXPECT().ResourceGroup().AnyTimes().Return("rpResourcegroup")
+			env.EXPECT().Domain().AnyTimes().Return("domain")
+
 			recordsets := mock_dns.NewMockRecordSetsClient(controller)
 			if tt.mocks != nil {
 				tt.mocks(tt, recordsets)
@@ -146,11 +143,6 @@ func TestCreate(t *testing.T) {
 
 func TestUpdate(t *testing.T) {
 	ctx := context.Background()
-
-	env := &env.Test{
-		TestResourceGroup: "rpResourcegroup",
-		TestDomain:        "domain",
-	}
 
 	managedOc := &api.OpenShiftCluster{
 		Properties: api.OpenShiftClusterProperties{
@@ -243,6 +235,10 @@ func TestUpdate(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
+			env := mock_env.NewMockInterface(controller)
+			env.EXPECT().ResourceGroup().AnyTimes().Return("rpResourcegroup")
+			env.EXPECT().Domain().AnyTimes().Return("domain")
+
 			recordsets := mock_dns.NewMockRecordSetsClient(controller)
 			if tt.mocks != nil {
 				tt.mocks(tt, recordsets)
@@ -264,11 +260,6 @@ func TestUpdate(t *testing.T) {
 
 func TestCreateOrUpdateRouter(t *testing.T) {
 	ctx := context.Background()
-
-	env := &env.Test{
-		TestResourceGroup: "rpResourcegroup",
-		TestDomain:        "domain",
-	}
 
 	managedOc := &api.OpenShiftCluster{
 		Properties: api.OpenShiftClusterProperties{
@@ -340,6 +331,10 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
+			env := mock_env.NewMockInterface(controller)
+			env.EXPECT().ResourceGroup().AnyTimes().Return("rpResourcegroup")
+			env.EXPECT().Domain().AnyTimes().Return("domain")
+
 			recordsets := mock_dns.NewMockRecordSetsClient(controller)
 			if tt.mocks != nil {
 				tt.mocks(tt, recordsets)
@@ -361,11 +356,6 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 
 func TestDelete(t *testing.T) {
 	ctx := context.Background()
-
-	env := &env.Test{
-		TestResourceGroup: "rpResourcegroup",
-		TestDomain:        "domain",
-	}
 
 	managedOc := &api.OpenShiftCluster{
 		Properties: api.OpenShiftClusterProperties{
@@ -460,6 +450,10 @@ func TestDelete(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
+			env := mock_env.NewMockInterface(controller)
+			env.EXPECT().ResourceGroup().AnyTimes().Return("rpResourcegroup")
+			env.EXPECT().Domain().AnyTimes().Return("domain")
+
 			recordsets := mock_dns.NewMockRecordSetsClient(controller)
 			if tt.mocks != nil {
 				tt.mocks(tt, recordsets)
@@ -538,13 +532,6 @@ func TestManagedDomain(t *testing.T) {
 }
 
 func TestManagedDomainPrefix(t *testing.T) {
-	m := &manager{
-		env: &env.Test{
-			TestResourceGroup: "rpResourcegroup",
-			TestDomain:        "domain",
-		},
-	}
-
 	for _, tt := range []struct {
 		domain  string
 		want    string
@@ -576,6 +563,17 @@ func TestManagedDomainPrefix(t *testing.T) {
 		},
 	} {
 		t.Run(tt.domain, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			env := mock_env.NewMockInterface(controller)
+			env.EXPECT().ResourceGroup().AnyTimes().Return("rpResourcegroup")
+			env.EXPECT().Domain().AnyTimes().Return("domain")
+
+			m := &manager{
+				env: env,
+			}
+
 			got, err := m.managedDomainPrefix(tt.domain)
 			if got != tt.want {
 				t.Error(got)

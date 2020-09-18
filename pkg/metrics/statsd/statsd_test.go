@@ -9,16 +9,22 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/golang/mock/gomock"
+
+	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 )
 
 func TestEmitGauge(t *testing.T) {
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	env := mock_env.NewMockInterface(controller)
+	env.EXPECT().Location().AnyTimes().Return("eastus")
+
 	c1, c2 := net.Pipe()
 
 	s := &statsd{
-		env: &env.Test{
-			TestLocation: "eastus",
-		},
+		env: env,
 
 		account:   "*",
 		namespace: "*",
@@ -43,12 +49,16 @@ func TestEmitGauge(t *testing.T) {
 }
 
 func TestEmitFloat(t *testing.T) {
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	env := mock_env.NewMockInterface(controller)
+	env.EXPECT().Location().AnyTimes().Return("eastus")
+
 	c1, c2 := net.Pipe()
 
 	s := &statsd{
-		env: &env.Test{
-			TestLocation: "eastus",
-		},
+		env: env,
 
 		account:   "*",
 		namespace: "*",

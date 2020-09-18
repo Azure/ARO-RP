@@ -18,11 +18,11 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	mock_compute "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/compute"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
+	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 )
 
 func TestResourcesList(t *testing.T) {
@@ -140,12 +140,11 @@ func TestResourcesList(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			_env := &env.Test{
-				TestLocation: "eastus",
-			}
-
 			controller := gomock.NewController(t)
 			defer controller.Finish()
+
+			env := mock_env.NewMockInterface(controller)
+			env.EXPECT().Location().AnyTimes().Return("eastus")
 
 			resourcesClient := mock_features.NewMockResourcesClient(controller)
 			vmClient := mock_compute.NewMockVirtualMachinesClient(controller)
@@ -155,7 +154,7 @@ func TestResourcesList(t *testing.T) {
 
 			a := adminactions{
 				log: logrus.NewEntry(logrus.StandardLogger()),
-				env: _env,
+				env: env,
 				oc: &api.OpenShiftCluster{
 					Properties: api.OpenShiftClusterProperties{
 						ClusterProfile: api.ClusterProfile{
