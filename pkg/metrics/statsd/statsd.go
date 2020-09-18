@@ -21,7 +21,7 @@ import (
 
 type statsd struct {
 	log *logrus.Entry
-	env env.Interface
+	env env.Core
 
 	hostname  string
 	account   string
@@ -34,7 +34,7 @@ type statsd struct {
 }
 
 // New returns a new metrics.Interface
-func New(ctx context.Context, log *logrus.Entry, env env.Interface, account, namespace string) (metrics.Interface, error) {
+func New(ctx context.Context, log *logrus.Entry, env env.Core, account, namespace string) (metrics.Interface, error) {
 	s := &statsd{
 		log: log,
 		env: env,
