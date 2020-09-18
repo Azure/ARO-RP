@@ -25,9 +25,6 @@ spec:
         args:
         - operator
         - master
-        env:
-        - name: RP_MODE
-          value: ""
         image: GENERATED
         name: aro-operator
         ports:

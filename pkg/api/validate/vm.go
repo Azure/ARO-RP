@@ -1,11 +1,13 @@
-package machine
+package validate
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-import "github.com/Azure/ARO-RP/pkg/api"
+import (
+	"github.com/Azure/ARO-RP/pkg/api"
+)
 
-func DiskSizeIsValid(sizeGB int32) bool {
+func DiskSizeIsValid(sizeGB int) bool {
 	return sizeGB >= 128
 }
 
@@ -15,13 +17,13 @@ func VMSizeIsValid(vmSize api.VMSize, developmentMode bool, isMaster bool) bool 
 		case api.VMSizeStandardD8sV3,
 			api.VMSizeStandardD16sV3,
 			api.VMSizeStandardD32sV3:
-		default:
-			return false
+			return true
 		}
 	} else {
 		if developmentMode {
-			if vmSize != api.VMSizeStandardD2sV3 {
-				return false
+			switch vmSize {
+			case api.VMSizeStandardD2sV3:
+				return true
 			}
 		} else {
 			switch vmSize {
@@ -41,10 +43,10 @@ func VMSizeIsValid(vmSize api.VMSize, developmentMode bool, isMaster bool) bool 
 				api.VMSizeStandardF8sV2,
 				api.VMSizeStandardF16sV2,
 				api.VMSizeStandardF32sV2:
-			default:
-				return false
+				return true
 			}
 		}
 	}
-	return true
+
+	return false
 }

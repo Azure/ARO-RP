@@ -18,10 +18,10 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/validate"
 	aro "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
-	utilmachine "github.com/Azure/ARO-RP/pkg/util/machine"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
@@ -62,79 +62,67 @@ func (r *MachineChecker) workerReplicas() (int, error) {
 	return count, nil
 }
 
-func (r *MachineChecker) machineValid(ctx context.Context, machine *machinev1beta1.Machine) (bool, []string, error) {
-	msgs := []string{}
-	valid := true
-
-	isMaster, err := utilmachine.IsMasterRole(machine)
-	if err != nil {
-		return true, nil, err
-	}
-
+func (r *MachineChecker) machineValid(ctx context.Context, machine *machinev1beta1.Machine, isMaster bool) (errs []error) {
 	if machine.Spec.ProviderSpec.Value == nil {
-		return true, nil, fmt.Errorf("provider spec is missing in the machine %q", machine.Name)
+		return []error{fmt.Errorf("machine %s: provider spec missing", machine.Name)}
 	}
 
 	o, _, err := scheme.Codecs.UniversalDeserializer().Decode(machine.Spec.ProviderSpec.Value.Raw, nil, nil)
 	if err != nil {
-		return true, nil, err
+		return []error{err}
 	}
 
 	machineProviderSpec, ok := o.(*azureproviderv1beta1.AzureMachineProviderSpec)
 	if !ok {
 		// This should never happen: codecs uses scheme that has only one registered type
 		// and if something is wrong with the provider spec - decoding should fail
-		return true, nil, fmt.Errorf("failed to read provider spec from the machine %q: %T", machine.Name, o)
+		return []error{fmt.Errorf("machine %s: failed to read provider spec: %T", machine.Name, o)}
 	}
 
-	if !utilmachine.VMSizeIsValid(api.VMSize(machineProviderSpec.VMSize), r.developmentMode, isMaster) {
-		valid = false
-		msgs = append(msgs, fmt.Sprintf("the machine %s VM size '%s' is invalid", machine.Name, machineProviderSpec.VMSize))
+	if !validate.VMSizeIsValid(api.VMSize(machineProviderSpec.VMSize), r.developmentMode, isMaster) {
+		errs = append(errs, fmt.Errorf("machine %s: invalid VM size '%s'", machine.Name, machineProviderSpec.VMSize))
 	}
 
-	if !isMaster && !utilmachine.DiskSizeIsValid(machineProviderSpec.OSDisk.DiskSizeGB) {
-		valid = false
-		msgs = append(msgs, fmt.Sprintf("the machine %s disk size '%d' is invalid", machine.Name, machineProviderSpec.OSDisk.DiskSizeGB))
+	if !isMaster && !validate.DiskSizeIsValid(int(machineProviderSpec.OSDisk.DiskSizeGB)) {
+		errs = append(errs, fmt.Errorf("machine %s: invalid disk size '%d'", machine.Name, machineProviderSpec.OSDisk.DiskSizeGB))
 	}
 
 	// to begin with, just check that the image publisher and offer are correct
 	if machineProviderSpec.Image.Publisher != "azureopenshift" || machineProviderSpec.Image.Offer != "aro4" {
-		valid = false
-		msgs = append(msgs, fmt.Sprintf("the machine %s image '%v' is invalid", machine.Name, machineProviderSpec.Image))
+		errs = append(errs, fmt.Errorf("machine %s: invalid image '%v'", machine.Name, machineProviderSpec.Image))
 	}
 
 	if machineProviderSpec.ManagedIdentity != "" {
-		valid = false
-		msgs = append(msgs, fmt.Sprintf("the machine %s managedIdentity '%v' is invalid", machine.Name, machineProviderSpec.ManagedIdentity))
+		errs = append(errs, fmt.Errorf("machine %s: invalid managedIdentity '%s'", machine.Name, machineProviderSpec.ManagedIdentity))
 	}
 
-	return valid, msgs, nil
+	return errs
 }
 
-func (r *MachineChecker) checkMachines(ctx context.Context) (bool, []string, error) {
-	msgs := []string{}
-	valid := true
+func (r *MachineChecker) checkMachines(ctx context.Context) (errs []error) {
 	actualWorkers := 0
 	actualMasters := 0
 
+	expectedMasters := 3
+	expectedWorkers, err := r.workerReplicas()
+	if err != nil {
+		return []error{err}
+	}
+
 	machines, err := r.clustercli.MachineV1beta1().Machines(machineSetsNamespace).List(metav1.ListOptions{})
 	if err != nil {
-		return valid, msgs, err
+		return []error{err}
 	}
+
 	for _, machine := range machines.Items {
-		mValid, msgsMachine, err := r.machineValid(ctx, &machine)
+		isMaster, err := isMasterRole(&machine)
 		if err != nil {
-			r.log.Errorf("machineValid err:%v", err)
-			return valid, msgs, err
+			errs = append(errs, err)
+			continue
 		}
-		if !mValid {
-			valid = false
-			msgs = append(msgs, msgsMachine...)
-		}
-		isMaster, err := utilmachine.IsMasterRole(&machine)
-		if err != nil {
-			return valid, msgs, err
-		}
+
+		errs = append(errs, r.machineValid(ctx, &machine, isMaster)...)
+
 		if isMaster {
 			actualMasters++
 		} else {
@@ -142,22 +130,15 @@ func (r *MachineChecker) checkMachines(ctx context.Context) (bool, []string, err
 		}
 	}
 
-	expectedMasters := 3
-	expectedWorkers, err := r.workerReplicas()
-	if err != nil {
-		return valid, msgs, err
-	}
-
 	if actualMasters != expectedMasters {
-		valid = false
-		msgs = append(msgs, fmt.Sprintf("invalid number of master machines %d", actualMasters))
+		errs = append(errs, fmt.Errorf("invalid number of master machines %d, expected %d", actualMasters, expectedMasters))
 	}
 
 	if actualWorkers != expectedWorkers {
-		valid = false
-		msgs = append(msgs, fmt.Sprintf("invalid number of worker machines %d, expected %d", actualWorkers, expectedWorkers))
+		errs = append(errs, fmt.Errorf("invalid number of worker machines %d, expected %d", actualWorkers, expectedWorkers))
 	}
-	return valid, msgs, nil
+
+	return errs
 }
 
 func (r *MachineChecker) Name() string {
@@ -174,16 +155,26 @@ func (r *MachineChecker) Check() error {
 		Reason:  "CheckDone",
 	}
 
-	valid, msgs, err := r.checkMachines(ctx)
-	if err != nil {
-		r.log.Errorf("checkMachines err:%v", err)
-		return err
-	}
-	if !valid {
+	errs := r.checkMachines(ctx)
+	if len(errs) > 0 {
 		cond.Status = corev1.ConditionFalse
 		cond.Reason = "CheckFailed"
-		cond.Message = strings.Join(msgs, "\n")
+
+		var sb strings.Builder
+		for _, err := range errs {
+			sb.WriteString(err.Error())
+			sb.WriteByte('\n')
+		}
+		cond.Message = sb.String()
 	}
 
 	return controllers.SetCondition(r.arocli, cond, r.role)
+}
+
+func isMasterRole(m *machinev1beta1.Machine) (bool, error) {
+	role, ok := m.Labels["machine.openshift.io/cluster-api-machine-role"]
+	if !ok {
+		return false, fmt.Errorf("machine %s: cluster-api-machine-role label not found", m.Name)
+	}
+	return role == "master", nil
 }

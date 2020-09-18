@@ -5,6 +5,7 @@ package checker
 
 import (
 	"context"
+	"errors"
 	"reflect"
 	"testing"
 
@@ -14,14 +15,12 @@ import (
 )
 
 func TestMachineValid(t *testing.T) {
-	ctx := context.TODO()
+	ctx := context.Background()
 
 	tests := []struct {
-		name      string
-		machine   *machinev1beta1.Machine
-		wantErr   bool
-		wantValid bool
-		wantMsgs  []string
+		name     string
+		machine  *machinev1beta1.Machine
+		wantErrs []error
 	}{
 		{
 			name: "valid",
@@ -55,8 +54,6 @@ func TestMachineValid(t *testing.T) {
 					},
 				},
 			},
-			wantValid: true,
-			wantMsgs:  []string{},
 		},
 		{
 			name: "wrong vmSize",
@@ -90,8 +87,9 @@ func TestMachineValid(t *testing.T) {
 					},
 				},
 			},
-			wantValid: false,
-			wantMsgs:  []string{"the machine foo-hx8z7-master-0 VM size 'Standard_D2s_V3' is invalid"},
+			wantErrs: []error{
+				errors.New("machine foo-hx8z7-master-0: invalid VM size 'Standard_D2s_V3'"),
+			},
 		},
 		{
 			name: "wrong diskSize",
@@ -125,8 +123,9 @@ func TestMachineValid(t *testing.T) {
 					},
 				},
 			},
-			wantValid: false,
-			wantMsgs:  []string{"the machine foo-hx8z7-master-0 disk size '64' is invalid"},
+			wantErrs: []error{
+				errors.New("machine foo-hx8z7-master-0: invalid disk size '64'"),
+			},
 		},
 		{
 			name: "wrong image publisher",
@@ -160,25 +159,24 @@ func TestMachineValid(t *testing.T) {
 					},
 				},
 			},
-			wantValid: false,
-			wantMsgs:  []string{"the machine foo-hx8z7-master-0 image '{xyzcorp bananas   }' is invalid"},
+			wantErrs: []error{
+				errors.New("machine foo-hx8z7-master-0: invalid image '{xyzcorp bananas   }'"),
+			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := &MachineChecker{
-				developmentMode: false,
+			r := &MachineChecker{}
+
+			isMaster, err := isMasterRole(tt.machine)
+			if err != nil {
+				t.Fatal(err)
 			}
-			gotSup, gotMsg, err := r.machineValid(ctx, tt.machine)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("MachineChecker.machineValid() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if gotSup != tt.wantValid {
-				t.Errorf("MachineChecker.machineValid() = %v, want %v", gotSup, tt.wantValid)
-			}
-			if !reflect.DeepEqual(gotMsg, tt.wantMsgs) {
-				t.Errorf("MachineChecker.machineValid() = %v, want %v", gotMsg, tt.wantMsgs)
+
+			errs := r.machineValid(ctx, tt.machine, isMaster)
+
+			if !reflect.DeepEqual(errs, tt.wantErrs) {
+				t.Errorf("MachineChecker.machineValid() = %v, want %v", errs, tt.wantErrs)
 			}
 		})
 	}
