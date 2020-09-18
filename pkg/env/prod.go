@@ -11,7 +11,6 @@ import (
 	"net"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
@@ -19,6 +18,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
+	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
@@ -29,6 +29,7 @@ import (
 
 type prod struct {
 	Core
+	proxy.Dialer
 
 	armClientAuthorizer   clientauthorizer.ClientAuthorizer
 	adminClientAuthorizer clientauthorizer.ClientAuthorizer
@@ -60,8 +61,14 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		return nil, err
 	}
 
+	dialer, err := proxy.NewDialer(core.DeploymentMode())
+	if err != nil {
+		return nil, err
+	}
+
 	p := &prod{
-		Core: core,
+		Core:   core,
+		Dialer: dialer,
 
 		clustersGenevaLoggingEnvironment:   "DiagnosticsProd",
 		clustersGenevaLoggingConfigVersion: "2.2",
@@ -216,13 +223,6 @@ func (p *prod) ClustersGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate
 
 func (p *prod) ClustersKeyvaultURI() string {
 	return p.clustersKeyvaultURI
-}
-
-func (p *prod) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
-	return (&net.Dialer{
-		Timeout:   30 * time.Second,
-		KeepAlive: 30 * time.Second,
-	}).DialContext(ctx, network, address)
 }
 
 func (p *prod) Domain() string {

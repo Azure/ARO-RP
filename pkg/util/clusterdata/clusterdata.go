@@ -17,6 +17,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
+	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
@@ -54,7 +55,7 @@ type bestEffortEnricher struct {
 	env env.Interface
 	m   metrics.Interface
 
-	restConfig       func(env env.Interface, oc *api.OpenShiftCluster) (*rest.Config, error)
+	restConfig       func(dialer proxy.Dialer, oc *api.OpenShiftCluster) (*rest.Config, error)
 	taskConstructors []enricherTaskConstructor
 }
 
