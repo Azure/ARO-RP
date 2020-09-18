@@ -237,10 +237,6 @@ func (d *dev) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, e
 	return refreshable.NewAuthorizer(sp), nil
 }
 
-func (d *dev) MetricsSocketPath() string {
-	return "mdm_statsd.socket"
-}
-
 func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthorizer refreshable.Authorizer, resourceGroup string) error {
 	d.log.Print("development mode: applying resource group role assignment")
 

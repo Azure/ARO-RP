@@ -42,7 +42,6 @@ type Interface interface {
 	FPAuthorizer(string, string) (refreshable.Authorizer, error)
 	Listen() (net.Listener, error)
 	ManagedDomain(string) (string, error)
-	MetricsSocketPath() string
 	Zones(vmSize string) ([]string, error)
 	ACRResourceID() string
 	ACRName() string

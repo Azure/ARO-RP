@@ -113,7 +113,12 @@ func (s *statsd) run() {
 }
 
 func (s *statsd) dial() (err error) {
-	s.conn, err = net.Dial("unix", s.env.MetricsSocketPath())
+	path := "/var/etw/mdm_statsd.socket"
+	if s.env.DeploymentMode() == deployment.Development {
+		path = "mdm_statsd.socket"
+	}
+
+	s.conn, err = net.Dial("unix", path)
 	return
 }
 

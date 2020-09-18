@@ -342,20 +342,6 @@ func (mr *MockInterfaceMockRecorder) ManagedDomain(arg0 interface{}) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ManagedDomain", reflect.TypeOf((*MockInterface)(nil).ManagedDomain), arg0)
 }
 
-// MetricsSocketPath mocks base method
-func (m *MockInterface) MetricsSocketPath() string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MetricsSocketPath")
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// MetricsSocketPath indicates an expected call of MetricsSocketPath
-func (mr *MockInterfaceMockRecorder) MetricsSocketPath() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MetricsSocketPath", reflect.TypeOf((*MockInterface)(nil).MetricsSocketPath))
-}
-
 // NewRPAuthorizer mocks base method
 func (m *MockInterface) NewRPAuthorizer(arg0 string) (autorest.Authorizer, error) {
 	m.ctrl.T.Helper()

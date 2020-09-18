@@ -266,10 +266,6 @@ func (p *prod) ManagedDomain(domain string) (string, error) {
 	return domain + "." + p.Domain(), nil
 }
 
-func (p *prod) MetricsSocketPath() string {
-	return "/var/etw/mdm_statsd.socket"
-}
-
 func (p *prod) Zones(vmSize string) ([]string, error) {
 	zones, found := p.zones[vmSize]
 	if !found {
