@@ -7,7 +7,6 @@ import (
 	"context"
 	"crypto/rsa"
 	"crypto/x509"
-	"encoding/base64"
 	"fmt"
 	"net"
 	"os"
@@ -20,7 +19,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
-	basekeyvault "github.com/Azure/ARO-RP/pkg/util/azureclient/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/documentdb"
@@ -28,7 +26,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
-	"github.com/Azure/ARO-RP/pkg/util/pem"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/rpauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -37,13 +34,12 @@ import (
 type prod struct {
 	instancemetadata.InstanceMetadata
 	rpauthorizer.RPAuthorizer
+	servicekeyvault keyvault.Manager
 
 	deploymentMode deployment.Mode
 
 	armClientAuthorizer   clientauthorizer.ClientAuthorizer
 	adminClientAuthorizer clientauthorizer.ClientAuthorizer
-
-	keyvault basekeyvault.BaseClient
 
 	acrName                  string
 	clustersKeyvaultURI      string
@@ -96,8 +92,6 @@ func newProd(ctx context.Context, log *logrus.Entry, deploymentMode deployment.M
 
 		deploymentMode: deploymentMode,
 
-		keyvault: basekeyvault.New(rpKVAuthorizer),
-
 		clustersGenevaLoggingEnvironment:   "DiagnosticsProd",
 		clustersGenevaLoggingConfigVersion: "2.2",
 
@@ -124,12 +118,14 @@ func newProd(ctx context.Context, log *logrus.Entry, deploymentMode deployment.M
 		return nil, err
 	}
 
+	p.servicekeyvault = keyvault.NewManager(rpKVAuthorizer, p.serviceKeyvaultURI)
+
 	err = p.populateZones(ctx, rpAuthorizer)
 	if err != nil {
 		return nil, err
 	}
 
-	fpPrivateKey, fpCertificates, err := p.GetCertificateSecret(ctx, RPFirstPartySecretName)
+	fpPrivateKey, fpCertificates, err := p.servicekeyvault.GetCertificateSecret(ctx, RPFirstPartySecretName)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +134,7 @@ func newProd(ctx context.Context, log *logrus.Entry, deploymentMode deployment.M
 	p.fpCertificate = fpCertificates[0]
 	p.fpServicePrincipalID = "f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875"
 
-	clustersGenevaLoggingPrivateKey, clustersGenevaLoggingCertificates, err := p.GetCertificateSecret(ctx, ClusterLoggingSecretName)
+	clustersGenevaLoggingPrivateKey, clustersGenevaLoggingCertificates, err := p.servicekeyvault.GetCertificateSecret(ctx, ClusterLoggingSecretName)
 	if err != nil {
 		return nil, err
 	}
@@ -318,37 +314,6 @@ func (p *prod) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, 
 	return refreshable.NewAuthorizer(sp), nil
 }
 
-func (p *prod) GetCertificateSecret(ctx context.Context, secretName string) (*rsa.PrivateKey, []*x509.Certificate, error) {
-	bundle, err := p.keyvault.GetSecret(ctx, p.serviceKeyvaultURI, secretName, "")
-	if err != nil {
-		return nil, nil, err
-	}
-
-	key, certs, err := pem.Parse([]byte(*bundle.Value))
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if key == nil {
-		return nil, nil, fmt.Errorf("no private key found")
-	}
-
-	if len(certs) == 0 {
-		return nil, nil, fmt.Errorf("no certificate found")
-	}
-
-	return key, certs, nil
-}
-
-func (p *prod) GetSecret(ctx context.Context, secretName string) ([]byte, error) {
-	bundle, err := p.keyvault.GetSecret(ctx, p.serviceKeyvaultURI, secretName, "")
-	if err != nil {
-		return nil, err
-	}
-
-	return base64.StdEncoding.DecodeString(*bundle.Value)
-}
-
 func (p *prod) Listen() (net.Listener, error) {
 	return net.Listen("tcp", ":8443")
 }
@@ -374,6 +339,10 @@ func (p *prod) ManagedDomain(domain string) (string, error) {
 
 func (p *prod) MetricsSocketPath() string {
 	return "/var/etw/mdm_statsd.socket"
+}
+
+func (p *prod) ServiceKeyvault() keyvault.Manager {
+	return p.servicekeyvault
 }
 
 func (p *prod) Zones(vmSize string) ([]string, error) {

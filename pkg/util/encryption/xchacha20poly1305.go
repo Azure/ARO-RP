@@ -27,7 +27,7 @@ type aeadCipher struct {
 }
 
 func NewXChaCha20Poly1305(ctx context.Context, _env env.Interface, secretName string) (Cipher, error) {
-	key, err := _env.GetSecret(ctx, secretName)
+	key, err := _env.ServiceKeyvault().GetBase64Secret(ctx, secretName)
 	if err != nil {
 		return nil, err
 	}

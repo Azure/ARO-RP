@@ -8,11 +8,14 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	"github.com/ugorji/go/codec"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
+	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	mock_keyvault "github.com/Azure/ARO-RP/pkg/util/mocks/keyvault"
 )
 
 type testStruct struct {
@@ -25,9 +28,14 @@ type testStruct struct {
 func TestExtensions(t *testing.T) {
 	ctx := context.Background()
 
-	_env := &env.Test{
-		TestSecret: []byte("\x63\xb5\x59\xf0\x43\x34\x79\x49\x68\x46\xab\x8b\xce\xdb\xc1\x2d\x7a\x0b\x14\x86\x7e\x1a\xb2\xd7\x3a\x92\x4e\x98\x6c\x5e\xcb\xe1"),
-	}
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	kv := mock_keyvault.NewMockManager(controller)
+	kv.EXPECT().GetBase64Secret(gomock.Any(), env.EncryptionSecretName).Return([]byte("\x63\xb5\x59\xf0\x43\x34\x79\x49\x68\x46\xab\x8b\xce\xdb\xc1\x2d\x7a\x0b\x14\x86\x7e\x1a\xb2\xd7\x3a\x92\x4e\x98\x6c\x5e\xcb\xe1"), nil)
+
+	_env := mock_env.NewMockInterface(controller)
+	_env.EXPECT().ServiceKeyvault().Return(kv)
 
 	cipher, err := encryption.NewXChaCha20Poly1305(ctx, _env, env.EncryptionSecretName)
 	if err != nil {

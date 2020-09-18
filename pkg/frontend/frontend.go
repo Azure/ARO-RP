@@ -97,7 +97,7 @@ func NewFrontend(ctx context.Context,
 		return nil, err
 	}
 
-	key, certs, err := f.env.GetCertificateSecret(ctx, env.RPServerSecretName)
+	key, certs, err := f.env.ServiceKeyvault().GetCertificateSecret(ctx, env.RPServerSecretName)
 	if err != nil {
 		return nil, err
 	}

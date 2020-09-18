@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -19,6 +20,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
+	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	mock_keyvault "github.com/Azure/ARO-RP/pkg/util/mocks/keyvault"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/test/util/listener"
 )
@@ -39,17 +42,23 @@ func TestSecurity(t *testing.T) {
 	l := listener.NewListener()
 	defer l.Close()
 
-	env := &env.Test{
-		Mode: deployment.Production,
-		L:    l,
-	}
-	env.SetARMClientAuthorizer(clientauthorizer.NewOne(validclientcerts[0].Raw))
-	env.SetAdminClientAuthorizer(clientauthorizer.NewOne(validadminclientcerts[0].Raw))
-
-	env.TLSKey, env.TLSCerts, err = utiltls.GenerateKeyAndCertificate("server", nil, nil, false, false)
+	serverkey, servercerts, err := utiltls.GenerateKeyAndCertificate("server", nil, nil, false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	controller := gomock.NewController(t)
+	defer controller.Finish()
+
+	kv := mock_keyvault.NewMockManager(controller)
+	kv.EXPECT().GetCertificateSecret(gomock.Any(), env.RPServerSecretName).AnyTimes().Return(serverkey, servercerts, nil)
+
+	env := mock_env.NewMockInterface(controller)
+	env.EXPECT().DeploymentMode().AnyTimes().Return(deployment.Production)
+	env.EXPECT().ServiceKeyvault().AnyTimes().Return(kv)
+	env.EXPECT().ArmClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(validclientcerts[0].Raw))
+	env.EXPECT().AdminClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(validadminclientcerts[0].Raw))
+	env.EXPECT().Listen().AnyTimes().Return(l, nil)
 
 	invalidclientkey, invalidclientcerts, err := utiltls.GenerateKeyAndCertificate("invalidclient", nil, nil, false, true)
 	if err != nil {
@@ -57,7 +66,7 @@ func TestSecurity(t *testing.T) {
 	}
 
 	pool := x509.NewCertPool()
-	pool.AddCert(env.TLSCerts[0])
+	pool.AddCert(servercerts[0])
 
 	f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), env, nil, api.APIs, &noop.Noop{}, nil, nil)
 	if err != nil {

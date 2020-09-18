@@ -4,13 +4,8 @@ package env
 // Licensed under the Apache License 2.0.
 
 import (
-	"context"
-	"crypto/rsa"
-	"crypto/x509"
-	"fmt"
 	"net"
 
-	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
@@ -25,24 +20,6 @@ type Test struct {
 	TestLocation       string
 	TestResourceGroup  string
 	TestDomain         string
-	TestSecret         []byte
-
-	TLSKey   *rsa.PrivateKey
-	TLSCerts []*x509.Certificate
-}
-
-func (t *Test) SetARMClientAuthorizer(armClientAuthorizer clientauthorizer.ClientAuthorizer) {
-	if t.prod == nil {
-		t.prod = &prod{}
-	}
-	t.armClientAuthorizer = armClientAuthorizer
-}
-
-func (t *Test) SetAdminClientAuthorizer(adminClientAuthorizer clientauthorizer.ClientAuthorizer) {
-	if t.prod == nil {
-		t.prod = &prod{}
-	}
-	t.adminClientAuthorizer = adminClientAuthorizer
 }
 
 func (t *Test) Domain() string {
@@ -51,19 +28,6 @@ func (t *Test) Domain() string {
 
 func (t *Test) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, error) {
 	return nil, nil
-}
-
-func (t *Test) GetCertificateSecret(ctx context.Context, secretName string) (key *rsa.PrivateKey, certs []*x509.Certificate, err error) {
-	switch secretName {
-	case RPServerSecretName:
-		return t.TLSKey, t.TLSCerts, nil
-	default:
-		return nil, nil, fmt.Errorf("secret %q not found", secretName)
-	}
-}
-
-func (t *Test) GetSecret(ctx context.Context, secretName string) ([]byte, error) {
-	return t.TestSecret, nil
 }
 
 func (t *Test) Listen() (net.Listener, error) {

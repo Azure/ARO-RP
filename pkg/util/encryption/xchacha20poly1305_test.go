@@ -10,7 +10,11 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/golang/mock/gomock"
+
 	"github.com/Azure/ARO-RP/pkg/env"
+	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	mock_keyvault "github.com/Azure/ARO-RP/pkg/util/mocks/keyvault"
 )
 
 func TestNewXChaCha20Poly1305(t *testing.T) {
@@ -35,9 +39,14 @@ func TestNewXChaCha20Poly1305(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			_env := &env.Test{
-				TestSecret: tt.key,
-			}
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			kv := mock_keyvault.NewMockManager(controller)
+			kv.EXPECT().GetBase64Secret(gomock.Any(), env.EncryptionSecretName).Return(tt.key, nil)
+
+			_env := mock_env.NewMockInterface(controller)
+			_env.EXPECT().ServiceKeyvault().Return(kv)
 
 			_, err := NewXChaCha20Poly1305(context.Background(), _env, env.EncryptionSecretName)
 			if err != nil && err.Error() != tt.wantErr ||
@@ -76,9 +85,14 @@ func TestXChaCha20Poly1305Decrypt(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			_env := &env.Test{
-				TestSecret: tt.key,
-			}
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			kv := mock_keyvault.NewMockManager(controller)
+			kv.EXPECT().GetBase64Secret(gomock.Any(), env.EncryptionSecretName).Return(tt.key, nil)
+
+			_env := mock_env.NewMockInterface(controller)
+			_env.EXPECT().ServiceKeyvault().Return(kv)
 
 			cipher, err := NewXChaCha20Poly1305(context.Background(), _env, env.EncryptionSecretName)
 			if err != nil {
@@ -128,9 +142,14 @@ func TestXChaCha20Poly1305Encrypt(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			_env := &env.Test{
-				TestSecret: tt.key,
-			}
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			kv := mock_keyvault.NewMockManager(controller)
+			kv.EXPECT().GetBase64Secret(gomock.Any(), env.EncryptionSecretName).Return(tt.key, nil)
+
+			_env := mock_env.NewMockInterface(controller)
+			_env.EXPECT().ServiceKeyvault().Return(kv)
 
 			cipher, err := NewXChaCha20Poly1305(context.Background(), _env, env.EncryptionSecretName)
 			if err != nil {

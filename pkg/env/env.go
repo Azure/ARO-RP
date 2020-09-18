@@ -14,6 +14,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
+	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/rpauthorizer"
 )
@@ -46,11 +47,10 @@ type Interface interface {
 	DialContext(context.Context, string, string) (net.Conn, error)
 	Domain() string
 	FPAuthorizer(string, string) (refreshable.Authorizer, error)
-	GetCertificateSecret(context.Context, string) (*rsa.PrivateKey, []*x509.Certificate, error)
-	GetSecret(context.Context, string) ([]byte, error)
 	Listen() (net.Listener, error)
 	ManagedDomain(string) (string, error)
 	MetricsSocketPath() string
+	ServiceKeyvault() keyvault.Manager
 	Zones(vmSize string) ([]string, error)
 	ACRResourceID() string
 	ACRName() string
