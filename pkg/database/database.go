@@ -37,7 +37,7 @@ type Database struct {
 func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Interface, m metrics.Interface, cipher encryption.Cipher, uuid string) (db *Database, err error) {
 	databaseAccount, masterKey := env.CosmosDB()
 
-	h := newJSONHandle(cipher)
+	h := NewJSONHandle(cipher)
 
 	c := &http.Client{
 		Transport: dbmetrics.New(log, &http.Transport{
@@ -86,7 +86,7 @@ func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Interface, m me
 	return db, nil
 }
 
-func newJSONHandle(cipher encryption.Cipher) *codec.JsonHandle {
+func NewJSONHandle(cipher encryption.Cipher) *codec.JsonHandle {
 	h := &codec.JsonHandle{
 		BasicHandle: codec.BasicHandle{
 			DecodeOptions: codec.DecodeOptions{

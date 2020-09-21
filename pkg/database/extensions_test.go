@@ -34,7 +34,7 @@ func TestExtensions(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	h := newJSONHandle(cipher)
+	h := NewJSONHandle(cipher)
 
 	encrypted := []byte(`{
 		"bytes": "Ynl0ZXM=",
