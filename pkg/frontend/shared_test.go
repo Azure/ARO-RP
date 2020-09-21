@@ -5,6 +5,7 @@ package frontend
 
 import (
 	"bytes"
+	"context"
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
@@ -16,14 +17,18 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/go-test/deep"
 	"github.com/golang/mock/gomock"
+	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
+	testdatabase "github.com/Azure/ARO-RP/test/database"
 	testclusterdata "github.com/Azure/ARO-RP/test/util/clusterdata"
 	"github.com/Azure/ARO-RP/test/util/listener"
 )
@@ -53,6 +58,11 @@ type testInfra struct {
 	l          net.Listener
 	cli        *http.Client
 	enricher   testclusterdata.TestEnricher
+	log        *logrus.Entry
+	db         *database.Database
+	dbclients  *testdatabase.FakeClients
+	fixture    *testdatabase.Fixture
+	checker    *testdatabase.Checker
 }
 
 func newTestInfra(t *testing.T) (*testInfra, error) {
@@ -72,11 +82,26 @@ func newTestInfra(t *testing.T) (*testInfra, error) {
 	_env.EXPECT().Domain().AnyTimes().Return("")
 	_env.EXPECT().Listen().AnyTimes().Return(l, nil)
 
+	log := logrus.NewEntry(logrus.StandardLogger())
+
+	db, dbclients, _, err := testdatabase.NewDatabase(context.Background(), log)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	fixture := testdatabase.NewFixture(db)
+	checker := testdatabase.NewChecker(dbclients)
+
 	return &testInfra{
 		env:        _env,
 		controller: controller,
 		l:          l,
 		enricher:   testclusterdata.NewTestEnricher(),
+		log:        log,
+		db:         db,
+		dbclients:  dbclients,
+		fixture:    fixture,
+		checker:    checker,
 		cli: &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
@@ -98,6 +123,13 @@ func (ti *testInfra) done() error {
 	ti.controller.Finish()
 	ti.cli.CloseIdleConnections()
 	return ti.l.Close()
+}
+
+func (ti *testInfra) buildFixtures(fixtures func(*testdatabase.Fixture)) error {
+	if fixtures != nil {
+		fixtures(ti.fixture)
+	}
+	return ti.fixture.Create()
 }
 
 func (ti *testInfra) request(method, url string, header http.Header, in interface{}) (*http.Response, []byte, error) {
@@ -171,13 +203,9 @@ func validateResponse(resp *http.Response, b []byte, wantStatusCode int, wantErr
 		return err
 	}
 
-	if !reflect.DeepEqual(v, wantResponse) {
-		return fmt.Errorf("unexpected response %s, wanted to match %#v", string(b), wantResponse)
+	if diff := deep.Equal(v, wantResponse); diff != nil {
+		return fmt.Errorf("unexpected response %s, wanted to match %#v (%s)", string(b), wantResponse, diff)
 	}
 
 	return nil
-}
-
-func getResourcePath(subscriptionID string, resourceID string) string {
-	return fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s", subscriptionID, resourceID)
 }
