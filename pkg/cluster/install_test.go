@@ -5,8 +5,8 @@ package cluster
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
+	"strings"
 	"testing"
 
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
@@ -22,9 +22,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
-	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/version"
+	testdatabase "github.com/Azure/ARO-RP/test/database"
 	test_log "github.com/Azure/ARO-RP/test/util/log"
 )
 
@@ -247,67 +247,45 @@ func TestDeployARMTemplate(t *testing.T) {
 
 func TestAddResourceProviderVersion(t *testing.T) {
 	ctx := context.Background()
+	key := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1"
 
-	clusterdoc := &api.OpenShiftClusterDocument{
-		Key: "test",
-		OpenShiftCluster: &api.OpenShiftCluster{
-			Properties: api.OpenShiftClusterProperties{},
-		},
-	}
-	controller := gomock.NewController(t)
-	defer controller.Finish()
-
-	// The original, as-in-database version of clusterdoc
-	databaseDoc, err := json.Marshal(clusterdoc)
+	log := logrus.NewEntry(logrus.StandardLogger())
+	db, _, uuid, err := testdatabase.NewDatabase(ctx, log)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	openshiftClusters := mock_database.NewMockOpenShiftClusters(controller)
-	openshiftClusters.EXPECT().
-		PatchWithLease(gomock.Any(), clusterdoc.Key, gomock.Any()).
-		DoAndReturn(func(ctx context.Context, key string, f func(doc *api.OpenShiftClusterDocument) error) (*api.OpenShiftClusterDocument, error) {
-			// Load what the database would have right now
-			docFromDatabase := &api.OpenShiftClusterDocument{}
-			err := json.Unmarshal(databaseDoc, &docFromDatabase)
-			if err != nil {
-				t.Error(err)
-				return nil, err
-			}
+	clusterdoc := &api.OpenShiftClusterDocument{
+		Key: strings.ToLower(key),
+		OpenShiftCluster: &api.OpenShiftCluster{
+			ID:         key,
+			Properties: api.OpenShiftClusterProperties{},
+		},
+		LeaseOwner:   uuid,
+		LeaseExpires: 99999999999999,
+	}
 
-			err = f(docFromDatabase)
-			if err != nil {
-				t.Error("PatchWithLease failed")
-				return nil, err
-			}
-
-			// Save what would be stored in the db
-			databaseDoc, err = json.Marshal(docFromDatabase)
-			if err != nil {
-				t.Error(err)
-				return nil, err
-			}
-
-			return docFromDatabase, err
-		})
+	fixture := testdatabase.NewFixture(db)
+	fixture.AddOpenShiftClusterDocument(clusterdoc)
+	err = fixture.Create()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	i := &manager{
 		doc: clusterdoc,
-		db:  openshiftClusters,
+		db:  db.OpenShiftClusters,
 	}
 	err = i.addResourceProviderVersion(ctx)
 	if err != nil {
 		t.Error(err)
-		return
 	}
 
 	// Check it was set to the correct value in the database
-	updatedClusterDoc := &api.OpenShiftClusterDocument{}
-	err = json.Unmarshal(databaseDoc, &updatedClusterDoc)
+	updatedClusterDoc, err := db.OpenShiftClusters.Get(ctx, strings.ToLower(key))
 	if err != nil {
-		t.Error(err)
-		return
+		t.Fatal(err)
 	}
 	if updatedClusterDoc.OpenShiftCluster.Properties.ProvisionedBy != version.GitCommit {
 		t.Error("version was not added")

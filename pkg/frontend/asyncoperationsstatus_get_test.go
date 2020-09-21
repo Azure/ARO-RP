@@ -5,34 +5,30 @@ package frontend
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/golang/mock/gomock"
-	"github.com/sirupsen/logrus"
-
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
-	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
+	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
 func TestGetAsyncOperationsStatus(t *testing.T) {
 	ctx := context.Background()
 
 	mockSubID := "00000000-0000-0000-0000-000000000000"
-	mockClusterDocKey := "22222222-2222-2222-2222-222222222222"
 	mockOpID := "11111111-1111-1111-1111-111111111111"
 	mockOpStartTime := time.Now().Add(-time.Hour).UTC()
 	mockOpEndTime := time.Now().Add(-time.Minute).UTC()
 
 	type test struct {
 		name           string
-		mocks          func(*mock_database.MockOpenShiftClusters, *mock_database.MockAsyncOperations)
+		fixture        func(*testdatabase.Fixture)
+		dbError        error
 		wantStatusCode int
 		wantResponse   *api.AsyncOperation
 		wantError      string
@@ -41,32 +37,27 @@ func TestGetAsyncOperationsStatus(t *testing.T) {
 	for _, tt := range []*test{
 		{
 			name: "operation and cluster exist in db - final result is available",
-			mocks: func(openshiftClusters *mock_database.MockOpenShiftClusters, asyncOperations *mock_database.MockAsyncOperations) {
-				asyncOperations.EXPECT().
-					Get(gomock.Any(), mockOpID).
-					Return(&api.AsyncOperationDocument{
-						ID:                  mockOpID,
-						OpenShiftClusterKey: mockClusterDocKey,
-						AsyncOperation: &api.AsyncOperation{
-							ID:                       "fakeOpPath",
-							Name:                     mockOpID,
-							InitialProvisioningState: api.ProvisioningStateUpdating,
-							ProvisioningState:        api.ProvisioningStateFailed,
-							StartTime:                mockOpStartTime,
-							EndTime:                  &mockOpEndTime,
-							Error: &api.CloudErrorBody{
-								Code:    api.CloudErrorCodeInternalServerError,
-								Message: "Some error.",
-							},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddAsyncOperationDocument(&api.AsyncOperationDocument{
+					ID:                  mockOpID,
+					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resource1")),
+					AsyncOperation: &api.AsyncOperation{
+						ID:                       "fakeoppath",
+						Name:                     mockOpID,
+						InitialProvisioningState: api.ProvisioningStateUpdating,
+						ProvisioningState:        api.ProvisioningStateFailed,
+						StartTime:                mockOpStartTime,
+						EndTime:                  &mockOpEndTime,
+						Error: &api.CloudErrorBody{
+							Code:    api.CloudErrorCodeInternalServerError,
+							Message: "Some error.",
 						},
-					}, nil)
-
-				openshiftClusters.EXPECT().Get(gomock.Any(), mockClusterDocKey).
-					Return(&api.OpenShiftClusterDocument{}, nil)
+					},
+				})
 			},
 			wantStatusCode: http.StatusOK,
 			wantResponse: &api.AsyncOperation{
-				ID:                "fakeOpPath",
+				ID:                "fakeoppath",
 				Name:              mockOpID,
 				ProvisioningState: api.ProvisioningStateFailed,
 				StartTime:         mockOpStartTime,
@@ -79,77 +70,65 @@ func TestGetAsyncOperationsStatus(t *testing.T) {
 		},
 		{
 			name: "operation and cluster exist in db - final result is not yet available",
-			mocks: func(openshiftClusters *mock_database.MockOpenShiftClusters, asyncOperations *mock_database.MockAsyncOperations) {
-				asyncOperations.EXPECT().
-					Get(gomock.Any(), mockOpID).
-					Return(&api.AsyncOperationDocument{
-						ID:                  mockOpID,
-						OpenShiftClusterKey: mockClusterDocKey,
-						AsyncOperation: &api.AsyncOperation{
-							ID:                       "fakeOpPath",
-							Name:                     mockOpID,
-							InitialProvisioningState: api.ProvisioningStateUpdating,
-							ProvisioningState:        api.ProvisioningStateFailed,
-							StartTime:                mockOpStartTime,
-							EndTime:                  &mockOpEndTime,
-							Error: &api.CloudErrorBody{
-								Code:    api.CloudErrorCodeInternalServerError,
-								Message: "Some error.",
-							},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddAsyncOperationDocument(&api.AsyncOperationDocument{
+					ID:                  mockOpID,
+					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resource1")),
+					AsyncOperation: &api.AsyncOperation{
+						ID:                       "fakeoppath",
+						Name:                     mockOpID,
+						InitialProvisioningState: api.ProvisioningStateUpdating,
+						ProvisioningState:        api.ProvisioningStateFailed,
+						StartTime:                mockOpStartTime,
+						EndTime:                  &mockOpEndTime,
+						Error: &api.CloudErrorBody{
+							Code:    api.CloudErrorCodeInternalServerError,
+							Message: "Some error.",
 						},
-					}, nil)
+					},
+				})
 
-				openshiftClusters.EXPECT().Get(gomock.Any(), mockClusterDocKey).
-					Return(&api.OpenShiftClusterDocument{
-						AsyncOperationID: mockOpID,
-					}, nil)
+				f.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+					Key:              strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resource1")),
+					AsyncOperationID: mockOpID,
+				})
 			},
 			wantStatusCode: http.StatusOK,
 			wantResponse: &api.AsyncOperation{
-				ID:                "fakeOpPath",
+				ID:                "fakeoppath",
 				Name:              mockOpID,
 				ProvisioningState: api.ProvisioningStateUpdating,
 				StartTime:         mockOpStartTime,
 			},
 		},
 		{
-			name: "operation not found in db",
-			mocks: func(openshiftClusters *mock_database.MockOpenShiftClusters, asyncOperations *mock_database.MockAsyncOperations) {
-				asyncOperations.EXPECT().
-					Get(gomock.Any(), mockOpID).
-					Return(nil, &cosmosdb.Error{StatusCode: http.StatusNotFound})
-			},
+			name:           "operation not found in db",
 			wantStatusCode: http.StatusNotFound,
 			wantError:      `404: NotFound: : The entity was not found.`,
 		},
 		{
 			name: "operation exists in db, but no cluster",
-			mocks: func(openshiftClusters *mock_database.MockOpenShiftClusters, asyncOperations *mock_database.MockAsyncOperations) {
-				asyncOperations.EXPECT().
-					Get(gomock.Any(), mockOpID).
-					Return(&api.AsyncOperationDocument{
-						ID:                  mockOpID,
-						OpenShiftClusterKey: mockClusterDocKey,
-						AsyncOperation: &api.AsyncOperation{
-							ID:                       "fakeOpPath",
-							Name:                     mockOpID,
-							InitialProvisioningState: api.ProvisioningStateCreating,
-							ProvisioningState:        api.ProvisioningStateFailed,
-							StartTime:                mockOpStartTime,
-							EndTime:                  &mockOpEndTime,
-							Error: &api.CloudErrorBody{
-								Code:    api.CloudErrorCodeInternalServerError,
-								Message: "Some error.",
-							},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddAsyncOperationDocument(&api.AsyncOperationDocument{
+					ID:                  mockOpID,
+					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resource1")),
+					AsyncOperation: &api.AsyncOperation{
+						ID:                       "fakeoppath",
+						Name:                     mockOpID,
+						InitialProvisioningState: api.ProvisioningStateCreating,
+						ProvisioningState:        api.ProvisioningStateFailed,
+						StartTime:                mockOpStartTime,
+						EndTime:                  &mockOpEndTime,
+						Error: &api.CloudErrorBody{
+							Code:    api.CloudErrorCodeInternalServerError,
+							Message: "Some error.",
 						},
-					}, nil)
-
-				openshiftClusters.EXPECT().Get(gomock.Any(), mockClusterDocKey).
-					Return(nil, &cosmosdb.Error{StatusCode: http.StatusNotFound})
+					},
+				})
 			},
 			wantStatusCode: http.StatusOK,
 			wantResponse: &api.AsyncOperation{
-				ID:                "fakeOpPath",
+				ID:                "fakeoppath",
 				Name:              mockOpID,
 				ProvisioningState: api.ProvisioningStateFailed,
 				StartTime:         mockOpStartTime,
@@ -161,12 +140,8 @@ func TestGetAsyncOperationsStatus(t *testing.T) {
 			},
 		},
 		{
-			name: "internal error",
-			mocks: func(openshiftClusters *mock_database.MockOpenShiftClusters, asyncOperations *mock_database.MockAsyncOperations) {
-				asyncOperations.EXPECT().
-					Get(gomock.Any(), mockOpID).
-					Return(nil, errors.New("random error"))
-			},
+			name:           "internal error",
+			dbError:        &cosmosdb.Error{Code: "500", Message: "blorb"},
 			wantStatusCode: http.StatusInternalServerError,
 			wantError:      `500: InternalServerError: : Internal server error.`,
 		},
@@ -178,15 +153,16 @@ func TestGetAsyncOperationsStatus(t *testing.T) {
 			}
 			defer ti.done()
 
-			asyncOperations := mock_database.NewMockAsyncOperations(ti.controller)
-			openshiftClusters := mock_database.NewMockOpenShiftClusters(ti.controller)
+			err = ti.buildFixtures(tt.fixture)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-			tt.mocks(openshiftClusters, asyncOperations)
+			if tt.dbError != nil {
+				ti.dbclients.MakeUnavailable(tt.dbError)
+			}
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, &database.Database{
-				AsyncOperations:   asyncOperations,
-				OpenShiftClusters: openshiftClusters,
-			}, api.APIs, &noop.Noop{}, nil, nil)
+			f, err := NewFrontend(ctx, ti.log, ti.env, ti.db, api.APIs, &noop.Noop{}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

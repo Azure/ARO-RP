@@ -10,14 +10,9 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/golang/mock/gomock"
-	"github.com/sirupsen/logrus"
-
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/database"
-	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
-	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
+	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
 func TestPutSubscription(t *testing.T) {
@@ -28,8 +23,8 @@ func TestPutSubscription(t *testing.T) {
 	type test struct {
 		name           string
 		request        func(*api.Subscription)
-		dbGetDoc       *api.SubscriptionDocument
-		dbGetErr       error
+		fixture        func(*testdatabase.Fixture)
+		dbError        error
 		wantDbDoc      *api.SubscriptionDocument
 		wantStatusCode int
 		wantError      string
@@ -41,7 +36,6 @@ func TestPutSubscription(t *testing.T) {
 			request: func(sub *api.Subscription) {
 				sub.State = api.SubscriptionStateRegistered
 			},
-			dbGetErr: &cosmosdb.Error{StatusCode: http.StatusNotFound},
 			wantDbDoc: &api.SubscriptionDocument{
 				ID: mockSubID,
 				Subscription: &api.Subscription{
@@ -55,7 +49,6 @@ func TestPutSubscription(t *testing.T) {
 			request: func(sub *api.Subscription) {
 				sub.State = api.SubscriptionStateWarned
 			},
-			dbGetErr: &cosmosdb.Error{StatusCode: http.StatusNotFound},
 			wantDbDoc: &api.SubscriptionDocument{
 				ID: mockSubID,
 				Subscription: &api.Subscription{
@@ -69,7 +62,6 @@ func TestPutSubscription(t *testing.T) {
 			request: func(sub *api.Subscription) {
 				sub.State = api.SubscriptionStateSuspended
 			},
-			dbGetErr: &cosmosdb.Error{StatusCode: http.StatusNotFound},
 			wantDbDoc: &api.SubscriptionDocument{
 				ID: mockSubID,
 				Subscription: &api.Subscription{
@@ -83,7 +75,6 @@ func TestPutSubscription(t *testing.T) {
 			request: func(sub *api.Subscription) {
 				sub.State = api.SubscriptionStateUnregistered
 			},
-			dbGetErr: &cosmosdb.Error{StatusCode: http.StatusNotFound},
 			wantDbDoc: &api.SubscriptionDocument{
 				ID: mockSubID,
 				Subscription: &api.Subscription{
@@ -97,7 +88,6 @@ func TestPutSubscription(t *testing.T) {
 			request: func(sub *api.Subscription) {
 				sub.State = api.SubscriptionStateDeleted
 			},
-			dbGetErr: &cosmosdb.Error{StatusCode: http.StatusNotFound},
 			wantDbDoc: &api.SubscriptionDocument{
 				ID:       mockSubID,
 				Deleting: true,
@@ -113,7 +103,6 @@ func TestPutSubscription(t *testing.T) {
 				sub.State = api.SubscriptionStateRegistered
 				sub.Properties = &api.SubscriptionProperties{TenantID: "changed", AccountOwner: &api.AccountOwnerProfile{Email: "email@example.com"}}
 			},
-			dbGetErr: &cosmosdb.Error{StatusCode: http.StatusNotFound},
 			wantDbDoc: &api.SubscriptionDocument{
 				ID: mockSubID,
 				Subscription: &api.Subscription{
@@ -129,11 +118,13 @@ func TestPutSubscription(t *testing.T) {
 				sub.State = api.SubscriptionStateWarned
 				sub.Properties = &api.SubscriptionProperties{TenantID: "changed"}
 			},
-			dbGetDoc: &api.SubscriptionDocument{
-				ID: mockSubID,
-				Subscription: &api.Subscription{
-					State: api.SubscriptionStateRegistered,
-				},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+					},
+				})
 			},
 			wantDbDoc: &api.SubscriptionDocument{
 				ID: mockSubID,
@@ -150,11 +141,13 @@ func TestPutSubscription(t *testing.T) {
 				sub.State = api.SubscriptionStateSuspended
 				sub.Properties = &api.SubscriptionProperties{TenantID: "changed"}
 			},
-			dbGetDoc: &api.SubscriptionDocument{
-				ID: mockSubID,
-				Subscription: &api.Subscription{
-					State: api.SubscriptionStateWarned,
-				},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateWarned,
+					},
+				})
 			},
 			wantDbDoc: &api.SubscriptionDocument{
 				ID: mockSubID,
@@ -171,11 +164,13 @@ func TestPutSubscription(t *testing.T) {
 				sub.State = api.SubscriptionStateDeleted
 				sub.Properties = &api.SubscriptionProperties{TenantID: "changed"}
 			},
-			dbGetDoc: &api.SubscriptionDocument{
-				ID: mockSubID,
-				Subscription: &api.Subscription{
-					State: api.SubscriptionStateSuspended,
-				},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateSuspended,
+					},
+				})
 			},
 			wantDbDoc: &api.SubscriptionDocument{
 				ID:       mockSubID,
@@ -193,11 +188,13 @@ func TestPutSubscription(t *testing.T) {
 				sub.State = api.SubscriptionStateRegistered
 				sub.Properties = &api.SubscriptionProperties{TenantID: "changed"}
 			},
-			dbGetDoc: &api.SubscriptionDocument{
-				ID: mockSubID,
-				Subscription: &api.Subscription{
-					State: api.SubscriptionStateUnregistered,
-				},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateUnregistered,
+					},
+				})
 			},
 			wantDbDoc: &api.SubscriptionDocument{
 				ID: mockSubID,
@@ -214,19 +211,21 @@ func TestPutSubscription(t *testing.T) {
 				sub.State = api.SubscriptionStateUnregistered
 				sub.Properties = &api.SubscriptionProperties{TenantID: "changed"}
 			},
-			dbGetDoc: &api.SubscriptionDocument{
-				ID:       mockSubID,
-				Deleting: true,
-				Subscription: &api.Subscription{
-					State: api.SubscriptionStateDeleted,
-				},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+					ID:       mockSubID,
+					Deleting: true,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateDeleted,
+					},
+				})
 			},
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      `400: InvalidSubscriptionState: : Request is not allowed in subscription in state 'Deleted'.`,
 		},
 		{
 			name:           "internal error",
-			dbGetErr:       errors.New("random error"),
+			dbError:        errors.New("random error"),
 			wantStatusCode: http.StatusInternalServerError,
 			wantError:      `500: InternalServerError: : Internal server error.`,
 		},
@@ -238,19 +237,16 @@ func TestPutSubscription(t *testing.T) {
 			}
 			defer ti.done()
 
-			subscriptions := mock_database.NewMockSubscriptions(ti.controller)
-			subscriptions.EXPECT().Get(gomock.Any(), mockSubID).Return(tt.dbGetDoc, tt.dbGetErr)
-			if tt.wantDbDoc != nil {
-				if tt.dbGetDoc == nil {
-					subscriptions.EXPECT().Create(gomock.Any(), tt.wantDbDoc).Return(tt.wantDbDoc, nil)
-				} else {
-					subscriptions.EXPECT().Update(gomock.Any(), tt.wantDbDoc).Return(tt.wantDbDoc, nil)
-				}
+			if tt.dbError != nil {
+				ti.dbclients.MakeUnavailable(tt.dbError)
 			}
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, &database.Database{
-				Subscriptions: subscriptions,
-			}, api.APIs, &noop.Noop{}, nil, nil)
+			err = ti.buildFixtures(tt.fixture)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			f, err := NewFrontend(ctx, ti.log, ti.env, ti.db, api.APIs, &noop.Noop{}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -267,10 +263,18 @@ func TestPutSubscription(t *testing.T) {
 				http.Header{
 					"Content-Type": []string{"application/json"},
 				}, sub)
+			if err != nil {
+				t.Error(err)
+			}
 
 			var wantResponse interface{}
 			if tt.wantDbDoc != nil {
 				wantResponse = tt.wantDbDoc.Subscription
+				ti.checker.AddSubscriptionDocument(tt.wantDbDoc)
+				errs := ti.checker.Check()
+				for _, i := range errs {
+					t.Error(i)
+				}
 			}
 
 			err = validateResponse(resp, b, tt.wantStatusCode, tt.wantError, wantResponse)

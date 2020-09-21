@@ -6,22 +6,16 @@ package frontend
 import (
 	"context"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"net/http"
 	"reflect"
+	"strings"
 	"testing"
-
-	"github.com/golang/mock/gomock"
-	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	admin "github.com/Azure/ARO-RP/pkg/api/admin"
-	"github.com/Azure/ARO-RP/pkg/database"
+	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
-	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
-	mock_cosmosdb "github.com/Azure/ARO-RP/pkg/util/mocks/database/cosmosdb"
-	mock_encryption "github.com/Azure/ARO-RP/pkg/util/mocks/encryption"
+	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
 func TestAdminListOpenShiftCluster(t *testing.T) {
@@ -32,8 +26,9 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 
 	type test struct {
 		name           string
-		mocks          func(*gomock.Controller, *mock_database.MockOpenShiftClusters, *mock_encryption.MockCipher)
 		wantEnriched   []string
+		throwsError    error
+		fixture        func(*testdatabase.Fixture)
 		wantStatusCode int
 		wantResponse   *admin.OpenShiftClusterList
 		wantError      string
@@ -42,97 +37,71 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 	for _, tt := range []*test{
 		{
 			name: "clusters exists in db",
-			mocks: func(controller *gomock.Controller, oc *mock_database.MockOpenShiftClusters, cipher *mock_encryption.MockCipher) {
-				clusterDocs := []*api.OpenShiftClusterDocument{
-					{
-						OpenShiftCluster: &api.OpenShiftCluster{
-							ID:   getResourcePath(mockSubID, "resourceName1"),
-							Name: "resourceName1",
-							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-							Properties: api.OpenShiftClusterProperties{
-								ClusterProfile: api.ClusterProfile{
-									PullSecret: "{}",
-								},
-								ServicePrincipalProfile: api.ServicePrincipalProfile{
-									ClientSecret: "clientSecret1",
-								},
-							},
-						},
-					},
-					{
-						OpenShiftCluster: &api.OpenShiftCluster{
-							ID:   getResourcePath(otherMockSubID, "resourceName2"),
-							Name: "resourceName2",
-							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-							Properties: api.OpenShiftClusterProperties{
-								ClusterProfile: api.ClusterProfile{
-									PullSecret: "{}",
-								},
-								ServicePrincipalProfile: api.ServicePrincipalProfile{
-									ClientSecret: "clientSecret2",
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocuments(
+					[]*api.OpenShiftClusterDocument{
+						{
+							Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName1")),
+							OpenShiftCluster: &api.OpenShiftCluster{
+								ID:   testdatabase.GetResourcePath(mockSubID, "resourceName1"),
+								Name: "resourceName1",
+								Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+								Properties: api.OpenShiftClusterProperties{
+									ClusterProfile: api.ClusterProfile{
+										PullSecret: "{}",
+									},
+									ServicePrincipalProfile: api.ServicePrincipalProfile{
+										ClientSecret: "clientSecret1",
+									},
 								},
 							},
 						},
-					},
-				}
-
-				mockIter := mock_cosmosdb.NewMockOpenShiftClusterDocumentIterator(controller)
-				mockIter.EXPECT().Next(gomock.Any(), 10).Return(&api.OpenShiftClusterDocuments{OpenShiftClusterDocuments: clusterDocs}, nil)
-				mockIter.EXPECT().Continuation().Return("mock-skip-token")
-
-				oc.EXPECT().
-					List("").
-					Return(mockIter)
-
-				cipher.EXPECT().
-					Encrypt([]byte("mock-skip-token")).
-					Return([]byte("encrypted-mock-skip-token"), nil)
+						{
+							Key: strings.ToLower(testdatabase.GetResourcePath(otherMockSubID, "resourceName2")),
+							OpenShiftCluster: &api.OpenShiftCluster{
+								ID:   testdatabase.GetResourcePath(otherMockSubID, "resourceName2"),
+								Name: "resourceName2",
+								Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+								Properties: api.OpenShiftClusterProperties{
+									ClusterProfile: api.ClusterProfile{
+										PullSecret: "{}",
+									},
+									ServicePrincipalProfile: api.ServicePrincipalProfile{
+										ClientSecret: "clientSecret2",
+									},
+								},
+							},
+						},
+					})
 			},
-			wantEnriched:   []string{getResourcePath(mockSubID, "resourceName1"), getResourcePath(otherMockSubID, "resourceName2")},
+			wantEnriched:   []string{testdatabase.GetResourcePath(mockSubID, "resourceName1"), testdatabase.GetResourcePath(otherMockSubID, "resourceName2")},
 			wantStatusCode: http.StatusOK,
 			wantResponse: &admin.OpenShiftClusterList{
 				OpenShiftClusters: []*admin.OpenShiftCluster{
 					{
-						ID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1", mockSubID),
+						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName1"),
 						Name: "resourceName1",
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 					},
 					{
-						ID:   "/subscriptions/00000000-0000-0000-0000-000000000001/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName2",
+						ID:   testdatabase.GetResourcePath(otherMockSubID, "resourceName2"),
 						Name: "resourceName2",
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 					},
 				},
-				NextLink: "https://mockrefererhost/?%24skipToken=ZW5jcnlwdGVkLW1vY2stc2tpcC10b2tlbg%3D%3D",
 			},
 		},
 		{
-			name: "no clusters found in db",
-			mocks: func(controller *gomock.Controller, oc *mock_database.MockOpenShiftClusters, cipher *mock_encryption.MockCipher) {
-				mockIter := mock_cosmosdb.NewMockOpenShiftClusterDocumentIterator(controller)
-				mockIter.EXPECT().Next(gomock.Any(), 10).Return(nil, nil)
-				mockIter.EXPECT().Continuation().Return("")
-
-				oc.EXPECT().
-					List("").
-					Return(mockIter)
-			},
+			name:           "no clusters found in db",
 			wantStatusCode: http.StatusOK,
 			wantResponse: &admin.OpenShiftClusterList{
 				OpenShiftClusters: []*admin.OpenShiftCluster{},
 			},
 		},
 		{
-			name: "internal error while iterating list",
-			mocks: func(controller *gomock.Controller, oc *mock_database.MockOpenShiftClusters, cipher *mock_encryption.MockCipher) {
-				mockIter := mock_cosmosdb.NewMockOpenShiftClusterDocumentIterator(controller)
-				mockIter.EXPECT().Next(gomock.Any(), 10).Return(nil, errors.New("random error"))
-
-				oc.EXPECT().
-					List("").
-					Return(mockIter)
-			},
+			name:           "internal error while iterating list",
 			wantStatusCode: http.StatusInternalServerError,
+			throwsError:    &cosmosdb.Error{Code: "500", Message: "random error"},
 			wantError:      `500: InternalServerError: : Internal server error.`,
 		},
 	} {
@@ -143,13 +112,18 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 			}
 			defer ti.done()
 
-			oc := mock_database.NewMockOpenShiftClusters(ti.controller)
-			cipher := mock_encryption.NewMockCipher(ti.controller)
-			tt.mocks(ti.controller, oc, cipher)
+			err = ti.buildFixtures(tt.fixture)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, &database.Database{
-				OpenShiftClusters: oc,
-			}, api.APIs, &noop.Noop{}, cipher, nil)
+			cipher := testdatabase.NewFakeCipher()
+
+			if tt.throwsError != nil {
+				ti.dbclients.MakeUnavailable(tt.throwsError)
+			}
+
+			f, err := NewFrontend(ctx, ti.log, ti.env, ti.db, api.APIs, &noop.Noop{}, cipher, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
