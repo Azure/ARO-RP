@@ -183,17 +183,15 @@ func (c *FakeTemplateClient) List(*Options) TemplateIterator {
 		}
 		docs = append(docs, r)
 	}
+
 	c.sorter(docs)
+
 	return NewFakeTemplateClientRawIterator(docs, 0)
 }
 
 func (c *FakeTemplateClient) ListAll(ctx context.Context, opts *Options) (*pkg.Templates, error) {
 	iter := c.List(opts)
-	templates, err := iter.Next(ctx, -1)
-	if err != nil {
-		return nil, err
-	}
-	return templates, nil
+	return iter.Next(ctx, -1)
 }
 
 func (c *FakeTemplateClient) Get(ctx context.Context, partitionkey string, documentId string, options *Options) (*pkg.Template, error) {
