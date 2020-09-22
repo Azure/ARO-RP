@@ -97,16 +97,13 @@ func (c *FakeTemplateClient) SetQueryHandler(queryName string, query fakeTemplat
 	c.queryHandlers[queryName] = query
 }
 
-func (c *FakeTemplateClient) encodeAndCopy(template *pkg.Template) (*pkg.Template, []byte, error) {
+func (c *FakeTemplateClient) deepCopy(template *pkg.Template) (*pkg.Template, error) {
 	b, err := c.encodeTemplate(template)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	templateCopy, err := c.decodeTemplate(b)
-	if err != nil {
-		return nil, nil, err
-	}
-	return templateCopy, b, err
+
+	return c.decodeTemplate(b)
 }
 
 func (c *FakeTemplateClient) apply(ctx context.Context, partitionkey string, template *pkg.Template, options *Options, isCreate bool) (*pkg.Template, error) {
@@ -117,16 +114,16 @@ func (c *FakeTemplateClient) apply(ctx context.Context, partitionkey string, tem
 		return nil, c.err
 	}
 
+	template, err := c.deepCopy(template) // copy now because pretriggers can mutate template
+	if err != nil {
+		return nil, err
+	}
+
 	if options != nil {
 		err := c.processPreTriggers(ctx, template, options)
 		if err != nil {
 			return nil, err
 		}
-	}
-
-	templateCopy, b, err := c.encodeAndCopy(template)
-	if err != nil {
-		return nil, err
 	}
 
 	_, exists := c.templates[template.ID]
@@ -147,7 +144,7 @@ func (c *FakeTemplateClient) apply(ctx context.Context, partitionkey string, tem
 				return nil, err
 			}
 
-			if c.conflictChecker(templateToCheck, templateCopy) {
+			if c.conflictChecker(templateToCheck, template) {
 				return nil, &Error{
 					StatusCode: http.StatusConflict,
 					Message:    "Entity with the specified id already exists in the system",
@@ -156,8 +153,14 @@ func (c *FakeTemplateClient) apply(ctx context.Context, partitionkey string, tem
 		}
 	}
 
+	b, err := c.encodeTemplate(template)
+	if err != nil {
+		return nil, err
+	}
+
 	c.templates[template.ID] = b
-	return templateCopy, nil
+
+	return template, nil
 }
 
 // Create creates a Template in the database
