@@ -67,18 +67,30 @@ func (c *FakeTemplateClient) MakeUnavailable(err error) {
 }
 
 func (c *FakeTemplateClient) UseSorter(sorter func([]*pkg.Template)) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
 	c.sorter = sorter
 }
 
 func (c *FakeTemplateClient) UseDocumentConflictChecker(checker func(*pkg.Template, *pkg.Template) bool) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
 	c.checkDocsConflict = checker
 }
 
 func (c *FakeTemplateClient) InjectTrigger(trigger string, impl fakeTemplateTrigger) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
 	c.triggers[trigger] = impl
 }
 
 func (c *FakeTemplateClient) InjectQuery(query string, impl fakeTemplateQuery) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
 	c.queries[query] = impl
 }
 
@@ -95,9 +107,14 @@ func (c *FakeTemplateClient) encodeAndCopy(doc *pkg.Template) (*pkg.Template, []
 }
 
 func (c *FakeTemplateClient) apply(ctx context.Context, partitionkey string, doc *pkg.Template, options *Options, isNew bool) (*pkg.Template, error) {
-	var docExists bool
 	c.lock.Lock()
 	defer c.lock.Unlock()
+
+	if c.unavailable != nil {
+		return nil, c.unavailable
+	}
+
+	var docExists bool
 
 	if options != nil {
 		err := c.processPreTriggers(ctx, doc, options)
@@ -148,25 +165,20 @@ func (c *FakeTemplateClient) apply(ctx context.Context, partitionkey string, doc
 }
 
 func (c *FakeTemplateClient) Create(ctx context.Context, partitionkey string, doc *pkg.Template, options *Options) (*pkg.Template, error) {
-	if c.unavailable != nil {
-		return nil, c.unavailable
-	}
 	return c.apply(ctx, partitionkey, doc, options, true)
 }
 
 func (c *FakeTemplateClient) Replace(ctx context.Context, partitionkey string, doc *pkg.Template, options *Options) (*pkg.Template, error) {
-	if c.unavailable != nil {
-		return nil, c.unavailable
-	}
 	return c.apply(ctx, partitionkey, doc, options, false)
 }
 
 func (c *FakeTemplateClient) List(*Options) TemplateIterator {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
 	if c.unavailable != nil {
 		return NewFakeTemplateClientErroringRawIterator(c.unavailable)
 	}
-	c.lock.RLock()
-	defer c.lock.RUnlock()
 
 	docs := make([]*pkg.Template, 0, len(c.docs))
 	for _, d := range c.docs {
@@ -181,9 +193,6 @@ func (c *FakeTemplateClient) List(*Options) TemplateIterator {
 }
 
 func (c *FakeTemplateClient) ListAll(ctx context.Context, opts *Options) (*pkg.Templates, error) {
-	if c.unavailable != nil {
-		return nil, c.unavailable
-	}
 	iter := c.List(opts)
 	templates, err := iter.Next(ctx, -1)
 	if err != nil {
@@ -193,11 +202,12 @@ func (c *FakeTemplateClient) ListAll(ctx context.Context, opts *Options) (*pkg.T
 }
 
 func (c *FakeTemplateClient) Get(ctx context.Context, partitionkey string, documentId string, options *Options) (*pkg.Template, error) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
 	if c.unavailable != nil {
 		return nil, c.unavailable
 	}
-	c.lock.RLock()
-	defer c.lock.RUnlock()
 
 	out, ext := c.docs[documentId]
 	if !ext {
@@ -207,11 +217,12 @@ func (c *FakeTemplateClient) Get(ctx context.Context, partitionkey string, docum
 }
 
 func (c *FakeTemplateClient) Delete(ctx context.Context, partitionKey string, doc *pkg.Template, options *Options) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
 	if c.unavailable != nil {
 		return c.unavailable
 	}
-	c.lock.Lock()
-	defer c.lock.Unlock()
 
 	_, ext := c.docs[doc.ID]
 	if !ext {
@@ -223,6 +234,9 @@ func (c *FakeTemplateClient) Delete(ctx context.Context, partitionKey string, do
 }
 
 func (c *FakeTemplateClient) ChangeFeed(*Options) TemplateIterator {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
 	if c.unavailable != nil {
 		return NewFakeTemplateClientErroringRawIterator(c.unavailable)
 	}
@@ -245,11 +259,12 @@ func (c *FakeTemplateClient) processPreTriggers(ctx context.Context, doc *pkg.Te
 }
 
 func (c *FakeTemplateClient) Query(name string, query *Query, options *Options) TemplateRawIterator {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
 	if c.unavailable != nil {
 		return NewFakeTemplateClientErroringRawIterator(c.unavailable)
 	}
-	c.lock.RLock()
-	defer c.lock.RUnlock()
 
 	quer, ok := c.queries[query.Query]
 	if ok {
