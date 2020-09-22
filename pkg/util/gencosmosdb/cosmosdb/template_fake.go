@@ -23,7 +23,6 @@ func NewFakeTemplateClient(h *codec.JsonHandle) *FakeTemplateClient {
 		queries:    make(map[string]fakeTemplateQuery),
 		jsonHandle: h,
 		lock:       &sync.RWMutex{},
-		sorter:     func(in []*pkg.Template) {},
 	}
 }
 
@@ -175,7 +174,9 @@ func (c *FakeTemplateClient) List(*Options) TemplateIterator {
 		docs = append(docs, r)
 	}
 
-	c.sorter(docs)
+	if c.sorter != nil {
+		c.sorter(docs)
+	}
 
 	return NewFakeTemplateIterator(docs, 0)
 }
