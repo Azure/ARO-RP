@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"reflect"
 	"sync"
 
 	"github.com/ugorji/go/codec"
@@ -178,7 +177,7 @@ func (c *FakeTemplateClient) List(*Options) TemplateIterator {
 
 	c.sorter(docs)
 
-	return NewFakeTemplateClientRawIterator(docs, 0)
+	return NewFakeTemplateClientIterator(docs, 0)
 }
 
 func (c *FakeTemplateClient) ListAll(ctx context.Context, opts *Options) (*pkg.Templates, error) {
@@ -264,26 +263,21 @@ func (c *FakeTemplateClient) QueryAll(ctx context.Context, partitionkey string, 
 	return iter.Next(ctx, -1)
 }
 
-// NewFakeTemplateClientRawIterator creates a RawIterator that will produce only
-// Templates from Next() and NextRaw().
-func NewFakeTemplateClientRawIterator(docs []*pkg.Template, continuation int) TemplateRawIterator {
-	return &fakeTemplateClientRawIterator{docs: docs, continuation: continuation}
+// NewFakeTemplateClientIterator creates a TemplateIterator that will produce
+// only Templates from Next().
+func NewFakeTemplateClientIterator(docs []*pkg.Template, continuation int) TemplateIterator {
+	return &fakeTemplateClientIterator{docs: docs, continuation: continuation}
 }
 
-type fakeTemplateClientRawIterator struct {
+type fakeTemplateClientIterator struct {
 	docs         []*pkg.Template
 	continuation int
 	done         bool
 }
 
-func (i *fakeTemplateClientRawIterator) Next(ctx context.Context, maxItemCount int) (out *pkg.Templates, err error) {
-	err = i.NextRaw(ctx, maxItemCount, &out)
-	return
-}
-
-func (i *fakeTemplateClientRawIterator) NextRaw(ctx context.Context, maxItemCount int, out interface{}) error {
+func (i *fakeTemplateClientIterator) Next(ctx context.Context, maxItemCount int) (*pkg.Templates, error) {
 	if i.done {
-		return nil
+		return nil, nil
 	}
 
 	var docs []*pkg.Template
@@ -301,15 +295,13 @@ func (i *fakeTemplateClientRawIterator) NextRaw(ctx context.Context, maxItemCoun
 		i.done = i.Continuation() == ""
 	}
 
-	y := reflect.ValueOf(out)
-	d := &pkg.Templates{}
-	d.Templates = docs
-	d.Count = len(d.Templates)
-	y.Elem().Set(reflect.ValueOf(d))
-	return nil
+	return &pkg.Templates{
+		Templates: docs,
+		Count:     len(docs),
+	}, nil
 }
 
-func (i *fakeTemplateClientRawIterator) Continuation() string {
+func (i *fakeTemplateClientIterator) Continuation() string {
 	if i.continuation >= len(i.docs) {
 		return ""
 	}
