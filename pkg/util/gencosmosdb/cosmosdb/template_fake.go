@@ -45,19 +45,14 @@ type FakeTemplateClient struct {
 	unavailable error
 }
 
-func (c *FakeTemplateClient) decodeTemplate(s []byte) (*pkg.Template, error) {
-	res := &pkg.Template{}
-	err := codec.NewDecoderBytes(s, c.jsonHandle).Decode(&res)
-	return res, err
+func (c *FakeTemplateClient) decodeTemplate(s []byte) (res *pkg.Template, err error) {
+	err = codec.NewDecoderBytes(s, c.jsonHandle).Decode(&res)
+	return
 }
 
-func (c *FakeTemplateClient) encodeTemplate(doc *pkg.Template) ([]byte, error) {
-	res := make([]byte, 0)
-	err := codec.NewEncoderBytes(&res, c.jsonHandle).Encode(doc)
-	if err != nil {
-		return nil, err
-	}
-	return res, err
+func (c *FakeTemplateClient) encodeTemplate(doc *pkg.Template) (res []byte, err error) {
+	err = codec.NewEncoderBytes(&res, c.jsonHandle).Encode(doc)
+	return
 }
 
 func (c *FakeTemplateClient) MakeUnavailable(err error) {
