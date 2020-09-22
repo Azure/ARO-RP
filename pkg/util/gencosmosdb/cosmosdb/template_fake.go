@@ -19,13 +19,12 @@ var _ TemplateClient = &FakeTemplateClient{}
 
 func NewFakeTemplateClient(h *codec.JsonHandle) *FakeTemplateClient {
 	return &FakeTemplateClient{
-		docs:              make(map[string][]byte),
-		triggers:          make(map[string]fakeTemplateTrigger),
-		queries:           make(map[string]fakeTemplateQuery),
-		jsonHandle:        h,
-		lock:              &sync.RWMutex{},
-		sorter:            func(in []*pkg.Template) {},
-		checkDocsConflict: func(*pkg.Template, *pkg.Template) bool { return false },
+		docs:       make(map[string][]byte),
+		triggers:   make(map[string]fakeTemplateTrigger),
+		queries:    make(map[string]fakeTemplateQuery),
+		jsonHandle: h,
+		lock:       &sync.RWMutex{},
+		sorter:     func(in []*pkg.Template) {},
 	}
 }
 
@@ -101,15 +100,13 @@ func (c *FakeTemplateClient) encodeAndCopy(doc *pkg.Template) (*pkg.Template, []
 	return res, encoded, err
 }
 
-func (c *FakeTemplateClient) apply(ctx context.Context, partitionkey string, doc *pkg.Template, options *Options, isNew bool) (*pkg.Template, error) {
+func (c *FakeTemplateClient) apply(ctx context.Context, partitionkey string, doc *pkg.Template, options *Options, isCreate bool) (*pkg.Template, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
 	if c.unavailable != nil {
 		return nil, c.unavailable
 	}
-
-	var docExists bool
 
 	if options != nil {
 		err := c.processPreTriggers(ctx, doc, options)
@@ -123,25 +120,24 @@ func (c *FakeTemplateClient) apply(ctx context.Context, partitionkey string, doc
 		return nil, err
 	}
 
-	for _, ext := range c.docs {
-		dec, err := c.decodeTemplate(ext)
-		if err != nil {
-			return nil, err
+	_, ext := c.docs[doc.ID]
+	if isCreate && ext {
+		return nil, &Error{
+			StatusCode: http.StatusConflict,
+			Message:    "Entity with the specified id already exists in the system",
 		}
+	}
+	if !isCreate && !ext {
+		return nil, &Error{StatusCode: http.StatusNotFound}
+	}
 
-		if dec.ID == res.ID {
-			// If the document exists in the database, we want to error out in a
-			// create but mark the document as extant so it can be replaced if
-			// it is an update
-			if isNew {
-				return nil, &Error{
-					StatusCode: http.StatusConflict,
-					Message:    "Entity with the specified id already exists in the system",
-				}
-			} else {
-				docExists = true
+	if c.checkDocsConflict != nil {
+		for _, ext := range c.docs {
+			dec, err := c.decodeTemplate(ext)
+			if err != nil {
+				return nil, err
 			}
-		} else {
+
 			if c.checkDocsConflict(dec, res) {
 				return nil, &Error{
 					StatusCode: http.StatusConflict,
@@ -149,10 +145,6 @@ func (c *FakeTemplateClient) apply(ctx context.Context, partitionkey string, doc
 				}
 			}
 		}
-	}
-
-	if !isNew && !docExists {
-		return nil, &Error{StatusCode: http.StatusNotFound}
 	}
 
 	c.docs[doc.ID] = enc
