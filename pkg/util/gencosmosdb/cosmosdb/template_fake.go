@@ -163,21 +163,21 @@ func (c *FakeTemplateClient) List(*Options) TemplateIterator {
 	defer c.lock.RUnlock()
 
 	if c.unavailable != nil {
-		return NewFakeTemplateClientErroringRawIterator(c.unavailable)
+		return NewFakeTemplateErroringRawIterator(c.unavailable)
 	}
 
 	docs := make([]*pkg.Template, 0, len(c.docs))
 	for _, d := range c.docs {
 		r, err := c.decodeTemplate(d)
 		if err != nil {
-			return NewFakeTemplateClientErroringRawIterator(err)
+			return NewFakeTemplateErroringRawIterator(err)
 		}
 		docs = append(docs, r)
 	}
 
 	c.sorter(docs)
 
-	return NewFakeTemplateClientIterator(docs, 0)
+	return NewFakeTemplateIterator(docs, 0)
 }
 
 func (c *FakeTemplateClient) ListAll(ctx context.Context, opts *Options) (*pkg.Templates, error) {
@@ -222,9 +222,9 @@ func (c *FakeTemplateClient) ChangeFeed(*Options) TemplateIterator {
 	defer c.lock.RUnlock()
 
 	if c.unavailable != nil {
-		return NewFakeTemplateClientErroringRawIterator(c.unavailable)
+		return NewFakeTemplateErroringRawIterator(c.unavailable)
 	}
-	return NewFakeTemplateClientErroringRawIterator(ErrNotImplemented)
+	return NewFakeTemplateErroringRawIterator(ErrNotImplemented)
 }
 
 func (c *FakeTemplateClient) processPreTriggers(ctx context.Context, doc *pkg.Template, options *Options) error {
@@ -247,14 +247,14 @@ func (c *FakeTemplateClient) Query(name string, query *Query, options *Options) 
 	defer c.lock.RUnlock()
 
 	if c.unavailable != nil {
-		return NewFakeTemplateClientErroringRawIterator(c.unavailable)
+		return NewFakeTemplateErroringRawIterator(c.unavailable)
 	}
 
 	quer, ok := c.queries[query.Query]
 	if ok {
 		return quer(c, query, options)
 	} else {
-		return NewFakeTemplateClientErroringRawIterator(ErrNotImplemented)
+		return NewFakeTemplateErroringRawIterator(ErrNotImplemented)
 	}
 }
 
@@ -263,19 +263,19 @@ func (c *FakeTemplateClient) QueryAll(ctx context.Context, partitionkey string, 
 	return iter.Next(ctx, -1)
 }
 
-// NewFakeTemplateClientIterator creates a TemplateIterator that will produce
+// NewFakeTemplateIterator creates a TemplateIterator that will produce
 // only Templates from Next().
-func NewFakeTemplateClientIterator(docs []*pkg.Template, continuation int) TemplateIterator {
-	return &fakeTemplateClientIterator{docs: docs, continuation: continuation}
+func NewFakeTemplateIterator(docs []*pkg.Template, continuation int) TemplateIterator {
+	return &fakeTemplateIterator{docs: docs, continuation: continuation}
 }
 
-type fakeTemplateClientIterator struct {
+type fakeTemplateIterator struct {
 	docs         []*pkg.Template
 	continuation int
 	done         bool
 }
 
-func (i *fakeTemplateClientIterator) Next(ctx context.Context, maxItemCount int) (*pkg.Templates, error) {
+func (i *fakeTemplateIterator) Next(ctx context.Context, maxItemCount int) (*pkg.Templates, error) {
 	if i.done {
 		return nil, nil
 	}
@@ -301,18 +301,19 @@ func (i *fakeTemplateClientIterator) Next(ctx context.Context, maxItemCount int)
 	}, nil
 }
 
-func (i *fakeTemplateClientIterator) Continuation() string {
+func (i *fakeTemplateIterator) Continuation() string {
 	if i.continuation >= len(i.docs) {
 		return ""
 	}
 	return fmt.Sprintf("%d", i.continuation)
 }
 
-// fakeTemplateErroringRawIterator is a RawIterator that will return an error on use.
-func NewFakeTemplateClientErroringRawIterator(err error) *fakeTemplateErroringRawIterator {
+func NewFakeTemplateErroringRawIterator(err error) *fakeTemplateErroringRawIterator {
 	return &fakeTemplateErroringRawIterator{err: err}
 }
 
+// fakeTemplateErroringRawIterator is a RawIterator that will return an error on
+// use.
 type fakeTemplateErroringRawIterator struct {
 	err error
 }
