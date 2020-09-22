@@ -11,132 +11,132 @@ import (
 	pkg "github.com/jim-minter/go-cosmosdb/pkg/gencosmosdb/cosmosdb/dummy"
 )
 
-type fakeTemplateTrigger func(context.Context, *pkg.Template) error
-type fakeTemplateQuery func(TemplateClient, *Query, *Options) TemplateRawIterator
+type fakeTemplateTriggerHandler func(context.Context, *pkg.Template) error
+type fakeTemplateQueryHandler func(TemplateClient, *Query, *Options) TemplateRawIterator
 
 var _ TemplateClient = &FakeTemplateClient{}
 
 func NewFakeTemplateClient(h *codec.JsonHandle) *FakeTemplateClient {
 	return &FakeTemplateClient{
-		docs:       make(map[string][]byte),
-		triggers:   make(map[string]fakeTemplateTrigger),
-		queries:    make(map[string]fakeTemplateQuery),
-		jsonHandle: h,
-		lock:       &sync.RWMutex{},
+		templates:       make(map[string][]byte),
+		triggerHandlers: make(map[string]fakeTemplateTriggerHandler),
+		queryHandlers:   make(map[string]fakeTemplateQueryHandler),
+		jsonHandle:      h,
+		lock:            &sync.RWMutex{},
 	}
 }
 
 type FakeTemplateClient struct {
-	docs       map[string][]byte
-	jsonHandle *codec.JsonHandle
-	lock       *sync.RWMutex
-	triggers   map[string]fakeTemplateTrigger
-	queries    map[string]fakeTemplateQuery
-	sorter     func([]*pkg.Template)
+	templates       map[string][]byte
+	jsonHandle      *codec.JsonHandle
+	lock            *sync.RWMutex
+	triggerHandlers map[string]fakeTemplateTriggerHandler
+	queryHandlers   map[string]fakeTemplateQueryHandler
+	sorter          func([]*pkg.Template)
 
 	// returns true if documents conflict
-	checkDocsConflict func(*pkg.Template, *pkg.Template) bool
+	conflictChecker func(*pkg.Template, *pkg.Template) bool
 
-	// unavailable, if not nil, is an error to throw when attempting to
-	// communicate with this Client
-	unavailable error
+	// err, if not nil, is an error to return when attempting to communicate
+	// with this Client
+	err error
 }
 
-func (c *FakeTemplateClient) decodeTemplate(s []byte) (res *pkg.Template, err error) {
-	err = codec.NewDecoderBytes(s, c.jsonHandle).Decode(&res)
+func (c *FakeTemplateClient) decodeTemplate(s []byte) (template *pkg.Template, err error) {
+	err = codec.NewDecoderBytes(s, c.jsonHandle).Decode(&template)
 	return
 }
 
-func (c *FakeTemplateClient) encodeTemplate(doc *pkg.Template) (res []byte, err error) {
-	err = codec.NewEncoderBytes(&res, c.jsonHandle).Encode(doc)
+func (c *FakeTemplateClient) encodeTemplate(template *pkg.Template) (b []byte, err error) {
+	err = codec.NewEncoderBytes(&b, c.jsonHandle).Encode(template)
 	return
 }
 
-func (c *FakeTemplateClient) MakeUnavailable(err error) {
+func (c *FakeTemplateClient) SetError(err error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	c.unavailable = err
+	c.err = err
 }
 
-func (c *FakeTemplateClient) UseSorter(sorter func([]*pkg.Template)) {
+func (c *FakeTemplateClient) SetSorter(sorter func([]*pkg.Template)) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
 	c.sorter = sorter
 }
 
-func (c *FakeTemplateClient) UseDocumentConflictChecker(checker func(*pkg.Template, *pkg.Template) bool) {
+func (c *FakeTemplateClient) SetConflictChecker(conflictChecker func(*pkg.Template, *pkg.Template) bool) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	c.checkDocsConflict = checker
+	c.conflictChecker = conflictChecker
 }
 
-func (c *FakeTemplateClient) InjectTrigger(trigger string, impl fakeTemplateTrigger) {
+func (c *FakeTemplateClient) SetTriggerHandler(triggerName string, trigger fakeTemplateTriggerHandler) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	c.triggers[trigger] = impl
+	c.triggerHandlers[triggerName] = trigger
 }
 
-func (c *FakeTemplateClient) InjectQuery(query string, impl fakeTemplateQuery) {
+func (c *FakeTemplateClient) SetQueryHandler(queryName string, query fakeTemplateQueryHandler) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	c.queries[query] = impl
+	c.queryHandlers[queryName] = query
 }
 
-func (c *FakeTemplateClient) encodeAndCopy(doc *pkg.Template) (*pkg.Template, []byte, error) {
-	encoded, err := c.encodeTemplate(doc)
+func (c *FakeTemplateClient) encodeAndCopy(template *pkg.Template) (*pkg.Template, []byte, error) {
+	b, err := c.encodeTemplate(template)
 	if err != nil {
 		return nil, nil, err
 	}
-	res, err := c.decodeTemplate(encoded)
+	templateCopy, err := c.decodeTemplate(b)
 	if err != nil {
 		return nil, nil, err
 	}
-	return res, encoded, err
+	return templateCopy, b, err
 }
 
-func (c *FakeTemplateClient) apply(ctx context.Context, partitionkey string, doc *pkg.Template, options *Options, isCreate bool) (*pkg.Template, error) {
+func (c *FakeTemplateClient) apply(ctx context.Context, partitionkey string, template *pkg.Template, options *Options, isCreate bool) (*pkg.Template, error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	if c.unavailable != nil {
-		return nil, c.unavailable
+	if c.err != nil {
+		return nil, c.err
 	}
 
 	if options != nil {
-		err := c.processPreTriggers(ctx, doc, options)
+		err := c.processPreTriggers(ctx, template, options)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	res, enc, err := c.encodeAndCopy(doc)
+	templateCopy, b, err := c.encodeAndCopy(template)
 	if err != nil {
 		return nil, err
 	}
 
-	_, ext := c.docs[doc.ID]
-	if isCreate && ext {
+	_, exists := c.templates[template.ID]
+	if isCreate && exists {
 		return nil, &Error{
 			StatusCode: http.StatusConflict,
 			Message:    "Entity with the specified id already exists in the system",
 		}
 	}
-	if !isCreate && !ext {
+	if !isCreate && !exists {
 		return nil, &Error{StatusCode: http.StatusNotFound}
 	}
 
-	if c.checkDocsConflict != nil {
-		for _, ext := range c.docs {
-			dec, err := c.decodeTemplate(ext)
+	if c.conflictChecker != nil {
+		for id := range c.templates {
+			templateToCheck, err := c.decodeTemplate(c.templates[id])
 			if err != nil {
 				return nil, err
 			}
 
-			if c.checkDocsConflict(dec, res) {
+			if c.conflictChecker(templateToCheck, templateCopy) {
 				return nil, &Error{
 					StatusCode: http.StatusConflict,
 					Message:    "Entity with the specified id already exists in the system",
@@ -145,76 +145,76 @@ func (c *FakeTemplateClient) apply(ctx context.Context, partitionkey string, doc
 		}
 	}
 
-	c.docs[doc.ID] = enc
-	return res, nil
+	c.templates[template.ID] = b
+	return templateCopy, nil
 }
 
-func (c *FakeTemplateClient) Create(ctx context.Context, partitionkey string, doc *pkg.Template, options *Options) (*pkg.Template, error) {
-	return c.apply(ctx, partitionkey, doc, options, true)
+func (c *FakeTemplateClient) Create(ctx context.Context, partitionkey string, template *pkg.Template, options *Options) (*pkg.Template, error) {
+	return c.apply(ctx, partitionkey, template, options, true)
 }
 
-func (c *FakeTemplateClient) Replace(ctx context.Context, partitionkey string, doc *pkg.Template, options *Options) (*pkg.Template, error) {
-	return c.apply(ctx, partitionkey, doc, options, false)
+func (c *FakeTemplateClient) Replace(ctx context.Context, partitionkey string, template *pkg.Template, options *Options) (*pkg.Template, error) {
+	return c.apply(ctx, partitionkey, template, options, false)
 }
 
 func (c *FakeTemplateClient) List(*Options) TemplateIterator {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
-	if c.unavailable != nil {
-		return NewFakeTemplateErroringRawIterator(c.unavailable)
+	if c.err != nil {
+		return NewFakeTemplateErroringRawIterator(c.err)
 	}
 
-	docs := make([]*pkg.Template, 0, len(c.docs))
-	for _, d := range c.docs {
+	templates := make([]*pkg.Template, 0, len(c.templates))
+	for _, d := range c.templates {
 		r, err := c.decodeTemplate(d)
 		if err != nil {
 			return NewFakeTemplateErroringRawIterator(err)
 		}
-		docs = append(docs, r)
+		templates = append(templates, r)
 	}
 
 	if c.sorter != nil {
-		c.sorter(docs)
+		c.sorter(templates)
 	}
 
-	return NewFakeTemplateIterator(docs, 0)
+	return NewFakeTemplateIterator(templates, 0)
 }
 
-func (c *FakeTemplateClient) ListAll(ctx context.Context, opts *Options) (*pkg.Templates, error) {
-	iter := c.List(opts)
+func (c *FakeTemplateClient) ListAll(ctx context.Context, options *Options) (*pkg.Templates, error) {
+	iter := c.List(options)
 	return iter.Next(ctx, -1)
 }
 
-func (c *FakeTemplateClient) Get(ctx context.Context, partitionkey string, documentId string, options *Options) (*pkg.Template, error) {
+func (c *FakeTemplateClient) Get(ctx context.Context, partitionkey string, id string, options *Options) (*pkg.Template, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
-	if c.unavailable != nil {
-		return nil, c.unavailable
+	if c.err != nil {
+		return nil, c.err
 	}
 
-	out, ext := c.docs[documentId]
-	if !ext {
+	template, exists := c.templates[id]
+	if !exists {
 		return nil, &Error{StatusCode: http.StatusNotFound}
 	}
-	return c.decodeTemplate(out)
+	return c.decodeTemplate(template)
 }
 
-func (c *FakeTemplateClient) Delete(ctx context.Context, partitionKey string, doc *pkg.Template, options *Options) error {
+func (c *FakeTemplateClient) Delete(ctx context.Context, partitionKey string, template *pkg.Template, options *Options) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	if c.unavailable != nil {
-		return c.unavailable
+	if c.err != nil {
+		return c.err
 	}
 
-	_, ext := c.docs[doc.ID]
-	if !ext {
+	_, exists := c.templates[template.ID]
+	if !exists {
 		return &Error{StatusCode: http.StatusNotFound}
 	}
 
-	delete(c.docs, doc.ID)
+	delete(c.templates, template.ID)
 	return nil
 }
 
@@ -222,17 +222,16 @@ func (c *FakeTemplateClient) ChangeFeed(*Options) TemplateIterator {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
-	if c.unavailable != nil {
-		return NewFakeTemplateErroringRawIterator(c.unavailable)
+	if c.err != nil {
+		return NewFakeTemplateErroringRawIterator(c.err)
 	}
 	return NewFakeTemplateErroringRawIterator(ErrNotImplemented)
 }
 
-func (c *FakeTemplateClient) processPreTriggers(ctx context.Context, doc *pkg.Template, options *Options) error {
-	for _, trigger := range options.PreTriggers {
-		trig, ok := c.triggers[trigger]
-		if ok {
-			err := trig(ctx, doc)
+func (c *FakeTemplateClient) processPreTriggers(ctx context.Context, template *pkg.Template, options *Options) error {
+	for _, triggerName := range options.PreTriggers {
+		if triggerHandler := c.triggerHandlers[triggerName]; triggerHandler != nil {
+			err := triggerHandler(ctx, template)
 			if err != nil {
 				return err
 			}
@@ -247,13 +246,12 @@ func (c *FakeTemplateClient) Query(name string, query *Query, options *Options) 
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
-	if c.unavailable != nil {
-		return NewFakeTemplateErroringRawIterator(c.unavailable)
+	if c.err != nil {
+		return NewFakeTemplateErroringRawIterator(c.err)
 	}
 
-	quer, ok := c.queries[query.Query]
-	if ok {
-		return quer(c, query, options)
+	if queryHandler := c.queryHandlers[query.Query]; queryHandler != nil {
+		return queryHandler(c, query, options)
 	} else {
 		return NewFakeTemplateErroringRawIterator(ErrNotImplemented)
 	}
@@ -266,12 +264,12 @@ func (c *FakeTemplateClient) QueryAll(ctx context.Context, partitionkey string, 
 
 // NewFakeTemplateIterator creates a TemplateIterator that will produce
 // only Templates from Next().
-func NewFakeTemplateIterator(docs []*pkg.Template, continuation int) TemplateIterator {
-	return &fakeTemplateIterator{docs: docs, continuation: continuation}
+func NewFakeTemplateIterator(templates []*pkg.Template, continuation int) TemplateIterator {
+	return &fakeTemplateIterator{templates: templates, continuation: continuation}
 }
 
 type fakeTemplateIterator struct {
-	docs         []*pkg.Template
+	templates    []*pkg.Template
 	continuation int
 	done         bool
 }
@@ -281,29 +279,29 @@ func (i *fakeTemplateIterator) Next(ctx context.Context, maxItemCount int) (*pkg
 		return nil, nil
 	}
 
-	var docs []*pkg.Template
+	var templates []*pkg.Template
 	if maxItemCount == -1 {
-		docs = i.docs[i.continuation:]
-		i.continuation = len(i.docs)
+		templates = i.templates[i.continuation:]
+		i.continuation = len(i.templates)
 		i.done = true
 	} else {
 		max := i.continuation + maxItemCount
-		if max > len(i.docs) {
-			max = len(i.docs)
+		if max > len(i.templates) {
+			max = len(i.templates)
 		}
-		docs = i.docs[i.continuation:max]
+		templates = i.templates[i.continuation:max]
 		i.continuation += max
 		i.done = i.Continuation() == ""
 	}
 
 	return &pkg.Templates{
-		Templates: docs,
-		Count:     len(docs),
+		Templates: templates,
+		Count:     len(templates),
 	}, nil
 }
 
 func (i *fakeTemplateIterator) Continuation() string {
-	if i.continuation >= len(i.docs) {
+	if i.continuation >= len(i.templates) {
 		return ""
 	}
 	return fmt.Sprintf("%d", i.continuation)
