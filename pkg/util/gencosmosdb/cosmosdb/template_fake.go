@@ -16,6 +16,7 @@ type fakeTemplateQueryHandler func(TemplateClient, *Query, *Options) TemplateRaw
 
 var _ TemplateClient = &FakeTemplateClient{}
 
+// NewFakeTemplateClient returns a FakeTemplateClient
 func NewFakeTemplateClient(h *codec.JsonHandle) *FakeTemplateClient {
 	return &FakeTemplateClient{
 		templates:       make(map[string][]byte),
@@ -26,6 +27,7 @@ func NewFakeTemplateClient(h *codec.JsonHandle) *FakeTemplateClient {
 	}
 }
 
+// FakeTemplateClient is a FakeTemplateClient
 type FakeTemplateClient struct {
 	templates       map[string][]byte
 	jsonHandle      *codec.JsonHandle
@@ -52,12 +54,17 @@ func (c *FakeTemplateClient) encodeTemplate(template *pkg.Template) (b []byte, e
 	return
 }
 
+// SetError sets or unsets an error that will be returned on any
+// FakeTemplateClient method invocation
 func (c *FakeTemplateClient) SetError(err error) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
+
 	c.err = err
 }
 
+// SetSorter sets or unsets a sorter function which will be used to sort values
+// returned by List() for test stability
 func (c *FakeTemplateClient) SetSorter(sorter func([]*pkg.Template)) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -65,6 +72,8 @@ func (c *FakeTemplateClient) SetSorter(sorter func([]*pkg.Template)) {
 	c.sorter = sorter
 }
 
+// SetConflictChecker sets or unsets a function which can be used to validate
+// additional unique keys in a Template
 func (c *FakeTemplateClient) SetConflictChecker(conflictChecker func(*pkg.Template, *pkg.Template) bool) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -72,6 +81,7 @@ func (c *FakeTemplateClient) SetConflictChecker(conflictChecker func(*pkg.Templa
 	c.conflictChecker = conflictChecker
 }
 
+// SetTriggerHandler sets or unsets a trigger handler
 func (c *FakeTemplateClient) SetTriggerHandler(triggerName string, trigger fakeTemplateTriggerHandler) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -79,6 +89,7 @@ func (c *FakeTemplateClient) SetTriggerHandler(triggerName string, trigger fakeT
 	c.triggerHandlers[triggerName] = trigger
 }
 
+// SetQueryHandler sets or unsets a query handler
 func (c *FakeTemplateClient) SetQueryHandler(queryName string, query fakeTemplateQueryHandler) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -149,14 +160,17 @@ func (c *FakeTemplateClient) apply(ctx context.Context, partitionkey string, tem
 	return templateCopy, nil
 }
 
+// Create creates a Template in the database
 func (c *FakeTemplateClient) Create(ctx context.Context, partitionkey string, template *pkg.Template, options *Options) (*pkg.Template, error) {
 	return c.apply(ctx, partitionkey, template, options, true)
 }
 
+// Replace replaces a Template in the database
 func (c *FakeTemplateClient) Replace(ctx context.Context, partitionkey string, template *pkg.Template, options *Options) (*pkg.Template, error) {
 	return c.apply(ctx, partitionkey, template, options, false)
 }
 
+// List returns a TemplateIterator to list all Templates in the database
 func (c *FakeTemplateClient) List(*Options) TemplateIterator {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
@@ -178,14 +192,16 @@ func (c *FakeTemplateClient) List(*Options) TemplateIterator {
 		c.sorter(templates)
 	}
 
-	return NewFakeTemplateIterator(templates, 0)
+	return newFakeTemplateIterator(templates, 0)
 }
 
+// ListAll lists all Templates in the database
 func (c *FakeTemplateClient) ListAll(ctx context.Context, options *Options) (*pkg.Templates, error) {
 	iter := c.List(options)
 	return iter.Next(ctx, -1)
 }
 
+// Get gets a Template from the database
 func (c *FakeTemplateClient) Get(ctx context.Context, partitionkey string, id string, options *Options) (*pkg.Template, error) {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
@@ -198,9 +214,11 @@ func (c *FakeTemplateClient) Get(ctx context.Context, partitionkey string, id st
 	if !exists {
 		return nil, &Error{StatusCode: http.StatusNotFound}
 	}
+
 	return c.decodeTemplate(template)
 }
 
+// Delete deletes a Template from the database
 func (c *FakeTemplateClient) Delete(ctx context.Context, partitionKey string, template *pkg.Template, options *Options) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
@@ -218,6 +236,7 @@ func (c *FakeTemplateClient) Delete(ctx context.Context, partitionKey string, te
 	return nil
 }
 
+// ChangeFeed is unimplemented
 func (c *FakeTemplateClient) ChangeFeed(*Options) TemplateIterator {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
@@ -225,6 +244,7 @@ func (c *FakeTemplateClient) ChangeFeed(*Options) TemplateIterator {
 	if c.err != nil {
 		return NewFakeTemplateErroringRawIterator(c.err)
 	}
+
 	return NewFakeTemplateErroringRawIterator(ErrNotImplemented)
 }
 
@@ -239,9 +259,11 @@ func (c *FakeTemplateClient) processPreTriggers(ctx context.Context, template *p
 			return ErrNotImplemented
 		}
 	}
+
 	return nil
 }
 
+// Query calls a query handler to implement database querying
 func (c *FakeTemplateClient) Query(name string, query *Query, options *Options) TemplateRawIterator {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
@@ -252,19 +274,18 @@ func (c *FakeTemplateClient) Query(name string, query *Query, options *Options) 
 
 	if queryHandler := c.queryHandlers[query.Query]; queryHandler != nil {
 		return queryHandler(c, query, options)
-	} else {
-		return NewFakeTemplateErroringRawIterator(ErrNotImplemented)
 	}
+
+	return NewFakeTemplateErroringRawIterator(ErrNotImplemented)
 }
 
+// QueryAll calls a query handler to implement database querying
 func (c *FakeTemplateClient) QueryAll(ctx context.Context, partitionkey string, query *Query, options *Options) (*pkg.Templates, error) {
 	iter := c.Query("", query, options)
 	return iter.Next(ctx, -1)
 }
 
-// NewFakeTemplateIterator creates a TemplateIterator that will produce
-// only Templates from Next().
-func NewFakeTemplateIterator(templates []*pkg.Template, continuation int) TemplateIterator {
+func newFakeTemplateIterator(templates []*pkg.Template, continuation int) TemplateIterator {
 	return &fakeTemplateIterator{templates: templates, continuation: continuation}
 }
 
@@ -307,12 +328,12 @@ func (i *fakeTemplateIterator) Continuation() string {
 	return fmt.Sprintf("%d", i.continuation)
 }
 
-func NewFakeTemplateErroringRawIterator(err error) *fakeTemplateErroringRawIterator {
+// NewFakeTemplateErroringRawIterator returns a TemplateRawIterator which
+// whose methods return the given error
+func NewFakeTemplateErroringRawIterator(err error) TemplateRawIterator {
 	return &fakeTemplateErroringRawIterator{err: err}
 }
 
-// fakeTemplateErroringRawIterator is a RawIterator that will return an error on
-// use.
 type fakeTemplateErroringRawIterator struct {
 	err error
 }
