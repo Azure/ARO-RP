@@ -253,6 +253,10 @@ func (p *prod) populateZones(ctx context.Context, rpAuthorizer autorest.Authoriz
 			continue
 		}
 
+		if len(*sku.LocationInfo) == 0 { // happened in eastus2euap
+			continue
+		}
+
 		p.zones[*sku.Name] = *(*sku.LocationInfo)[0].Zones
 	}
 
