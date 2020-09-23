@@ -28,25 +28,34 @@ var _ = Describe("Scale nodes", func() {
 		oc, err := clients.OpenshiftClusters.Get(ctx, os.Getenv("RESOURCEGROUP"), os.Getenv("CLUSTER"))
 		Expect(err).NotTo(HaveOccurred())
 
-		var expectedNodeCount int = 3 // for masters
+		expectedNodeCount := 3 // for masters
 		for _, wp := range *oc.WorkerProfiles {
 			expectedNodeCount += int(*wp.Count)
 		}
 
-		nodes, err := clients.Kubernetes.CoreV1().Nodes().List(metav1.ListOptions{})
-		Expect(err).NotTo(HaveOccurred())
-		var nodeCount int32
-		for _, node := range nodes.Items {
-			if ready.NodeIsReady(&node) {
-				nodeCount++
-			} else {
-				for _, c := range node.Status.Conditions {
-					log.Warnf("node %s status %s", node.Name, c.String())
+		// another hack: we don't currently instantaneously expect all nodes to
+		// be ready, it could be that the workaround operator is busy rotating
+		// them, which we don't currently wait for on create
+		err = wait.PollImmediate(10*time.Second, 30*time.Minute, func() (bool, error) {
+			nodes, err := clients.Kubernetes.CoreV1().Nodes().List(metav1.ListOptions{})
+			if err != nil {
+				return false, err
+			}
+
+			var nodeCount int
+			for _, node := range nodes.Items {
+				if ready.NodeIsReady(&node) {
+					nodeCount++
+				} else {
+					for _, c := range node.Status.Conditions {
+						log.Warnf("node %s status %s", node.Name, c.String())
+					}
 				}
 			}
-		}
 
-		Expect(nodeCount).To(BeEquivalentTo(expectedNodeCount))
+			return nodeCount == expectedNodeCount, nil
+		})
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	Specify("nodes should scale up and down", func() {
