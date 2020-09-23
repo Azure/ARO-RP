@@ -86,7 +86,7 @@ func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
 		return newInt(ctx, log, im)
 	}
 
-	kvAuthorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(azure.PublicCloud.ResourceIdentifiers.KeyVault)
+	rpKVAuthorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(azure.PublicCloud.ResourceIdentifiers.KeyVault)
 	if err != nil {
 		return nil, err
 	}
@@ -96,5 +96,5 @@ func NewEnv(ctx context.Context, log *logrus.Entry) (Interface, error) {
 		return nil, err
 	}
 
-	return newProd(ctx, log, im, rpAuthorizer, kvAuthorizer)
+	return newProd(ctx, log, im, rpAuthorizer, rpKVAuthorizer)
 }

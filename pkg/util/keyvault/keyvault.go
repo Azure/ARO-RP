@@ -46,6 +46,8 @@ type manager struct {
 	basekeyvault.BaseClient
 }
 
+// NewManager returns a pointer to a manager containing a BaseClient.
+// The BaseClient is created with kvAuthorizer, which is an authorizer which can access a key vault.
 func NewManager(kvAuthorizer autorest.Authorizer) Manager {
 	return &manager{
 		BaseClient: basekeyvault.New(kvAuthorizer),

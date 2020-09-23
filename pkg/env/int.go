@@ -14,7 +14,7 @@ import (
 )
 
 func newInt(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata) (*prod, error) {
-	kvAuthorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(azure.PublicCloud.ResourceIdentifiers.KeyVault)
+	rpKVAuthorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(azure.PublicCloud.ResourceIdentifiers.KeyVault)
 	if err != nil {
 		return nil, err
 	}
@@ -24,7 +24,7 @@ func newInt(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 		return nil, err
 	}
 
-	p, err := newProd(ctx, log, instancemetadata, rpAuthorizer, kvAuthorizer)
+	p, err := newProd(ctx, log, instancemetadata, rpAuthorizer, rpKVAuthorizer)
 
 	if err != nil {
 		return nil, err

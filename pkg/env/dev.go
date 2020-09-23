@@ -98,7 +98,7 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 
 	config := auth.NewClientCredentialsConfig(os.Getenv("AZURE_RP_CLIENT_ID"), os.Getenv("AZURE_RP_CLIENT_SECRET"), os.Getenv("AZURE_TENANT_ID"))
 	config.Resource = azure.PublicCloud.ResourceIdentifiers.KeyVault
-	kvAuthorizer, err := config.Authorizer()
+	rpKVAuthorizer, err := config.Authorizer()
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +108,7 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 		return nil, err
 	}
 
-	d.prod, err = newProd(ctx, log, instancemetadata, rpAuthorizer, kvAuthorizer)
+	d.prod, err = newProd(ctx, log, instancemetadata, rpAuthorizer, rpKVAuthorizer)
 	if err != nil {
 		return nil, err
 	}
