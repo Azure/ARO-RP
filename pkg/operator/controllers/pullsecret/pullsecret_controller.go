@@ -16,8 +16,10 @@ import (
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
@@ -180,7 +182,9 @@ func (r *PullSecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}).
-		For(&v1.Secret{}).
+		// https://github.com/kubernetes-sigs/controller-runtime/issues/1173
+		// equivalent to For(&v1.Secret{})., but can't call For multiple times on one builder
+		Watches(&source.Kind{Type: &v1.Secret{}}, &handler.EnqueueRequestForObject{}).
 		Owns(&v1.Secret{}).
 		WithEventFilter(isPullSecret).
 		Named(controllers.PullSecretControllerName).

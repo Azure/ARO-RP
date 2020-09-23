@@ -10,7 +10,9 @@ import (
 	clusterapi "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset"
 	"github.com/sirupsen/logrus"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
@@ -64,7 +66,9 @@ func (r *CheckerController) Reconcile(request ctrl.Request) (ctrl.Result, error)
 func (r *CheckerController) SetupWithManager(mgr ctrl.Manager) error {
 	builder := ctrl.NewControllerManagedBy(mgr).For(&arov1alpha1.Cluster{})
 	if r.role == operator.RoleMaster {
-		builder = builder.For(&machinev1beta1.Machine{})
+		// https://github.com/kubernetes-sigs/controller-runtime/issues/1173
+		// equivalent to builder = builder.For(&machinev1beta1.Machine{}), but can't call For multiple times on one builder
+		builder = builder.Watches(&source.Kind{Type: &machinev1beta1.Machine{}}, &handler.EnqueueRequestForObject{})
 	}
 	return builder.Named(controllers.CheckerControllerName).Complete(r)
 }
