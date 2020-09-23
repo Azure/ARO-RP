@@ -1,0 +1,15 @@
+name: "Maintenance"
+on:
+  push:
+  pull_request_target:
+    types: [synchronize]
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+      - name: check if prs are dirty
+        uses: eps1lon/actions-label-merge-conflict@releases/2.x
+        with:
+          dirtyLabel: needs-rebase
+          repoToken: "${{ secrets.GITHUB_TOKEN }}"
