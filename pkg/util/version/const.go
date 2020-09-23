@@ -17,9 +17,9 @@ var (
 	Streams = []Stream{
 		InstallStream,
 		{
-			Version:    NewVersion(4, 3, 35),
-			PullSpec:   "quay.io/openshift-release-dev/ocp-release@sha256:557107b1a5911d73d9fa749cf103cc3b45d688bf0da991471279042eec84f830",
-			MustGather: "quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:58bba19084b2c4ead3bad2575491cd98c2475c80934c75cc01da2b91ce3fc75e",
+			Version:    NewVersion(4, 3, 38),
+			PullSpec:   "quay.io/openshift-release-dev/ocp-release@sha256:59cc585be7b4ad069a18f6f1a3309391e172192744ee65fa6e499c8b337edda4",
+			MustGather: "quay.io/openshift-release-dev/ocp-v4.0-art-dev@sha256:c6c987ea3b52c9b08357e16524f4a023c2e9e07c6c936193ab45ddf34e0fb9ca",
 		},
 	}
 )
