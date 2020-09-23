@@ -70,7 +70,7 @@ var _ = Describe("[Admin API] Kubernetes objects action", func() {
 				// To avoid flakes, we need it to be completely deleted before we can use it again
 				// in a separate run or in a separate It block
 				By("waiting for the test customer namespace to be deleted")
-				err = wait.PollImmediate(10*time.Second, time.Minute, func() (bool, error) {
+				err = wait.PollImmediate(10*time.Second, 5*time.Minute, func() (bool, error) {
 					_, err := clients.Kubernetes.CoreV1().Namespaces().Get(namespace, metav1.GetOptions{})
 					if err == nil {
 						return false, nil
