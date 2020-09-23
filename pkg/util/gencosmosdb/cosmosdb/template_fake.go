@@ -195,7 +195,7 @@ func (c *FakeTemplateClient) List(*Options) TemplateIterator {
 		c.sorter(templates)
 	}
 
-	return newFakeTemplateIterator(templates, 0)
+	return NewFakeTemplateIterator(templates, 0)
 }
 
 // ListAll lists all Templates in the database
@@ -288,7 +288,7 @@ func (c *FakeTemplateClient) QueryAll(ctx context.Context, partitionkey string, 
 	return iter.Next(ctx, -1)
 }
 
-func newFakeTemplateIterator(templates []*pkg.Template, continuation int) TemplateIterator {
+func NewFakeTemplateIterator(templates []*pkg.Template, continuation int) TemplateRawIterator {
 	return &fakeTemplateIterator{templates: templates, continuation: continuation}
 }
 
@@ -296,6 +296,10 @@ type fakeTemplateIterator struct {
 	templates    []*pkg.Template
 	continuation int
 	done         bool
+}
+
+func (i *fakeTemplateIterator) NextRaw(ctx context.Context, maxItemCount int, out interface{}) error {
+	return ErrNotImplemented
 }
 
 func (i *fakeTemplateIterator) Next(ctx context.Context, maxItemCount int) (*pkg.Templates, error) {
