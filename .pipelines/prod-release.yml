@@ -98,7 +98,9 @@ stages:
       locations:
       - canadacentral
       - canadaeast
+      - germanywestcentral
       - northeurope
+      - norwayeast
       - switzerlandnorth
       - westeurope
       - francecentral

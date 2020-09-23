@@ -57,6 +57,7 @@ stages:
     - uksouth
     - ukwest
     - francecentral
+    - germanywestcentral
 - stage: PhaseThree
   displayName: wait 2 hour to avoid resource threshold
   dependsOn: []
@@ -84,3 +85,4 @@ stages:
     - westus
     - westus2
     - southafricanorth
+    - norwayeast
