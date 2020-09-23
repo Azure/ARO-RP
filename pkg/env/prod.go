@@ -64,11 +64,11 @@ type prod struct {
 	envType environmentType
 }
 
-func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata, rpAuthorizer, kvAuthorizer autorest.Authorizer) (*prod, error) {
+func newProd(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata, rpAuthorizer, rpKVAuthorizer autorest.Authorizer) (*prod, error) {
 	p := &prod{
 		InstanceMetadata: instancemetadata,
 
-		keyvault: basekeyvault.New(kvAuthorizer),
+		keyvault: basekeyvault.New(rpKVAuthorizer),
 
 		clustersGenevaLoggingEnvironment:   "DiagnosticsProd",
 		clustersGenevaLoggingConfigVersion: "2.2",
