@@ -553,7 +553,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "0e3ac7c97cf21cf5fcd6315b6ed273db35b3c531",
+                    "commitHash": "1528d2db09d65eb9a8a1df75f0ba1d5add4bcf44",
                     "repositoryUrl": "https://github.com/jim-minter/go-cosmosdb/"
                 }
             }

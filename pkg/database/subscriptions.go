@@ -13,6 +13,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 )
 
+const SubscriptionsDequeueQuery string = `SELECT * FROM Subscriptions doc WHERE (doc.deleting ?? false) AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`
+
 type subscriptions struct {
 	c    cosmosdb.SubscriptionDocumentClient
 	uuid string
@@ -68,10 +70,15 @@ func NewSubscriptions(ctx context.Context, uuid string, dbc cosmosdb.DatabaseCli
 		}
 	}
 
+	documentClient := cosmosdb.NewSubscriptionDocumentClient(collc, collid)
+	return NewSubscriptionsWithProvidedClient(uuid, documentClient), nil
+}
+
+func NewSubscriptionsWithProvidedClient(uuid string, client cosmosdb.SubscriptionDocumentClient) Subscriptions {
 	return &subscriptions{
-		c:    cosmosdb.NewSubscriptionDocumentClient(collc, collid),
+		c:    client,
 		uuid: uuid,
-	}, nil
+	}
 }
 
 func (c *subscriptions) Create(ctx context.Context, doc *api.SubscriptionDocument) (*api.SubscriptionDocument, error) {
@@ -124,7 +131,7 @@ func (c *subscriptions) patchWithLease(ctx context.Context, key string, f func(*
 		}
 
 		return f(doc)
-	}, nil)
+	}, options)
 }
 
 func (c *subscriptions) Update(ctx context.Context, doc *api.SubscriptionDocument) (*api.SubscriptionDocument, error) {
@@ -144,9 +151,7 @@ func (c *subscriptions) ChangeFeed() cosmosdb.SubscriptionDocumentIterator {
 }
 
 func (c *subscriptions) Dequeue(ctx context.Context) (*api.SubscriptionDocument, error) {
-	i := c.c.Query("", &cosmosdb.Query{
-		Query: `SELECT * FROM Subscriptions doc WHERE (doc.deleting ?? false) AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`,
-	}, nil)
+	i := c.c.Query("", &cosmosdb.Query{Query: SubscriptionsDequeueQuery}, nil)
 
 	for {
 		docs, err := i.Next(ctx, -1)

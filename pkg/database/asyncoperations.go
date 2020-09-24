@@ -28,11 +28,15 @@ type AsyncOperations interface {
 // NewAsyncOperations returns a new AsyncOperations
 func NewAsyncOperations(uuid string, dbc cosmosdb.DatabaseClient, dbid, collid string) (AsyncOperations, error) {
 	collc := cosmosdb.NewCollectionClient(dbc, dbid)
+	client := cosmosdb.NewAsyncOperationDocumentClient(collc, collid)
+	return NewAsyncOperationsWithProvidedClient(uuid, client), nil
+}
 
+func NewAsyncOperationsWithProvidedClient(uuid string, client cosmosdb.AsyncOperationDocumentClient) AsyncOperations {
 	return &asyncOperations{
-		c:    cosmosdb.NewAsyncOperationDocumentClient(collc, collid),
+		c:    client,
 		uuid: uuid,
-	}, nil
+	}
 }
 
 func (c *asyncOperations) Create(ctx context.Context, doc *api.AsyncOperationDocument) (*api.AsyncOperationDocument, error) {

@@ -76,10 +76,15 @@ func NewBilling(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, d
 		}
 	}
 
+	documentClient := cosmosdb.NewBillingDocumentClient(collc, collid)
+	return NewBillingWithProvidedClient(uuid, documentClient), nil
+}
+
+func NewBillingWithProvidedClient(uuid string, client cosmosdb.BillingDocumentClient) Billing {
 	return &billing{
-		c:    cosmosdb.NewBillingDocumentClient(collc, collid),
+		c:    client,
 		uuid: uuid,
-	}, nil
+	}
 }
 
 // Creating Billing Document

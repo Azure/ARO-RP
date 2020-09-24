@@ -19,7 +19,7 @@ type subscriptionDocumentClient struct {
 // SubscriptionDocumentClient is a subscriptionDocument client
 type SubscriptionDocumentClient interface {
 	Create(context.Context, string, *pkg.SubscriptionDocument, *Options) (*pkg.SubscriptionDocument, error)
-	List(*Options) SubscriptionDocumentRawIterator
+	List(*Options) SubscriptionDocumentIterator
 	ListAll(context.Context, *Options) (*pkg.SubscriptionDocuments, error)
 	Get(context.Context, string, string, *Options) (*pkg.SubscriptionDocument, error)
 	Replace(context.Context, string, *pkg.SubscriptionDocument, *Options) (*pkg.SubscriptionDocument, error)
@@ -109,7 +109,7 @@ func (c *subscriptionDocumentClient) Create(ctx context.Context, partitionkey st
 	return
 }
 
-func (c *subscriptionDocumentClient) List(options *Options) SubscriptionDocumentRawIterator {
+func (c *subscriptionDocumentClient) List(options *Options) SubscriptionDocumentIterator {
 	continuation := ""
 	if options != nil {
 		continuation = options.Continuation
@@ -239,11 +239,6 @@ func (i *subscriptionDocumentChangeFeedIterator) Continuation() string {
 }
 
 func (i *subscriptionDocumentListIterator) Next(ctx context.Context, maxItemCount int) (subscriptionDocuments *pkg.SubscriptionDocuments, err error) {
-	err = i.NextRaw(ctx, maxItemCount, &subscriptionDocuments)
-	return
-}
-
-func (i *subscriptionDocumentListIterator) NextRaw(ctx context.Context, maxItemCount int, raw interface{}) (err error) {
 	if i.done {
 		return
 	}
@@ -259,7 +254,7 @@ func (i *subscriptionDocumentListIterator) NextRaw(ctx context.Context, maxItemC
 		return
 	}
 
-	err = i.do(ctx, http.MethodGet, i.path+"/docs", "docs", i.path, http.StatusOK, nil, &raw, headers)
+	err = i.do(ctx, http.MethodGet, i.path+"/docs", "docs", i.path, http.StatusOK, nil, &subscriptionDocuments, headers)
 	if err != nil {
 		return
 	}

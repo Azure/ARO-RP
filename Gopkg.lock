@@ -701,14 +701,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:11a561b078819a1cd5d9d9c52031e8476e9ee7622f2b3b054850940a7d167971"
+  digest = "1:98afffae13f349c0963814f73abbe86003bb1f8be44c4829a1e5e782b5aab9b0"
   name = "github.com/jim-minter/go-cosmosdb"
   packages = [
     "cmd/gencosmosdb",
     "pkg/gencosmosdb",
   ]
   pruneopts = "UT"
-  revision = "0e3ac7c97cf21cf5fcd6315b6ed273db35b3c531"
+  revision = "1528d2db09d65eb9a8a1df75f0ba1d5add4bcf44"
 
 [[projects]]
   digest = "1:bb81097a5b62634f3e9fec1014657855610c82d19b9a40c17612e32651e35dca"
@@ -2408,9 +2408,11 @@
     "sigs.k8s.io/controller-runtime",
     "sigs.k8s.io/controller-runtime/pkg/controller/controllerutil",
     "sigs.k8s.io/controller-runtime/pkg/event",
+    "sigs.k8s.io/controller-runtime/pkg/handler",
     "sigs.k8s.io/controller-runtime/pkg/predicate",
     "sigs.k8s.io/controller-runtime/pkg/reconcile",
     "sigs.k8s.io/controller-runtime/pkg/scheme",
+    "sigs.k8s.io/controller-runtime/pkg/source",
     "sigs.k8s.io/controller-tools/cmd/controller-gen",
   ]
   solver-name = "gps-cdcl"

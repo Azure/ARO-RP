@@ -15,6 +15,15 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 )
 
+const (
+	OpenShiftClustersDequeueQuery       = `SELECT * FROM OpenShiftClusters doc WHERE doc.openShiftCluster.properties.provisioningState IN ("Creating", "Deleting", "Updating", "AdminUpdating") AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`
+	OpenShiftClustersQueueLengthQuery   = `SELECT VALUE COUNT(1) FROM OpenShiftClusters doc WHERE doc.openShiftCluster.properties.provisioningState IN ("Creating", "Deleting", "Updating", "AdminUpdating") AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`
+	OpenShiftClustersGetQuery           = `SELECT * FROM OpenShiftClusters doc WHERE doc.key = @key`
+	OpenshiftClustersPrefixQuery        = `SELECT * FROM OpenShiftClusters doc WHERE STARTSWITH(doc.key, @prefix)`
+	OpenshiftClustersClientIdQuery      = `SELECT * FROM OpenShiftClusters doc WHERE doc.clientIdKey = @clientID`
+	OpenshiftClustersResourceGroupQuery = `SELECT * FROM OpenShiftClusters doc WHERE doc.clusterResourceGroupIdKey = @resourceGroupID`
+)
+
 type openShiftClusters struct {
 	c     cosmosdb.OpenShiftClusterDocumentClient
 	collc cosmosdb.CollectionClient
@@ -67,11 +76,16 @@ func NewOpenShiftClusters(ctx context.Context, uuid string, dbc cosmosdb.Databas
 		}
 	}
 
+	documentClient := cosmosdb.NewOpenShiftClusterDocumentClient(collc, collid)
+	return NewOpenShiftClustersWithProvidedClient(uuid, documentClient, collc), nil
+}
+
+func NewOpenShiftClustersWithProvidedClient(uuid string, client cosmosdb.OpenShiftClusterDocumentClient, collectionClient cosmosdb.CollectionClient) OpenShiftClusters {
 	return &openShiftClusters{
-		c:     cosmosdb.NewOpenShiftClusterDocumentClient(collc, collid),
-		collc: collc,
+		c:     client,
+		collc: collectionClient,
 		uuid:  uuid,
-	}, nil
+	}
 }
 
 func (c *openShiftClusters) Create(ctx context.Context, doc *api.OpenShiftClusterDocument) (*api.OpenShiftClusterDocument, error) {
@@ -105,7 +119,7 @@ func (c *openShiftClusters) Get(ctx context.Context, key string) (*api.OpenShift
 	}
 
 	docs, err := c.c.QueryAll(ctx, partitionKey, &cosmosdb.Query{
-		Query: "SELECT * FROM OpenShiftClusters doc WHERE doc.key = @key",
+		Query: OpenShiftClustersGetQuery,
 		Parameters: []cosmosdb.Parameter{
 			{
 				Name:  "@key",
@@ -138,7 +152,7 @@ func (c *openShiftClusters) QueueLength(ctx context.Context, collid string) (int
 	var countTotal int
 	for _, r := range partitions.PartitionKeyRanges {
 		result := c.c.Query("", &cosmosdb.Query{
-			Query: `SELECT VALUE COUNT(1) FROM OpenShiftClusters doc WHERE doc.openShiftCluster.properties.provisioningState IN ("Creating", "Deleting", "Updating", "AdminUpdating") AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`,
+			Query: OpenShiftClustersQueueLengthQuery,
 		}, &cosmosdb.Options{
 			PartitionKeyRangeID: r.ID,
 		})
@@ -233,7 +247,7 @@ func (c *openShiftClusters) ListByPrefix(subscriptionID, prefix, continuation st
 	return c.c.Query(
 		subscriptionID,
 		&cosmosdb.Query{
-			Query: "SELECT * FROM OpenShiftClusters doc WHERE STARTSWITH(doc.key, @prefix)",
+			Query: OpenshiftClustersPrefixQuery,
 			Parameters: []cosmosdb.Parameter{
 				{
 					Name:  "@prefix",
@@ -247,7 +261,7 @@ func (c *openShiftClusters) ListByPrefix(subscriptionID, prefix, continuation st
 
 func (c *openShiftClusters) Dequeue(ctx context.Context) (*api.OpenShiftClusterDocument, error) {
 	i := c.c.Query("", &cosmosdb.Query{
-		Query: `SELECT * FROM OpenShiftClusters doc WHERE doc.openShiftCluster.properties.provisioningState IN ("Creating", "Deleting", "Updating", "AdminUpdating") AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`,
+		Query: OpenShiftClustersDequeueQuery,
 	}, nil)
 
 	for {
@@ -311,7 +325,7 @@ func (c *openShiftClusters) partitionKey(key string) (string, error) {
 
 func (c *openShiftClusters) GetByClientID(ctx context.Context, partitionKey, clientID string) (*api.OpenShiftClusterDocuments, error) {
 	docs, err := c.c.QueryAll(ctx, partitionKey, &cosmosdb.Query{
-		Query: "SELECT * FROM OpenShiftClusters doc WHERE doc.clientIdKey = @clientID",
+		Query: OpenshiftClustersClientIdQuery,
 		Parameters: []cosmosdb.Parameter{
 			{
 				Name:  "@clientID",
@@ -327,7 +341,7 @@ func (c *openShiftClusters) GetByClientID(ctx context.Context, partitionKey, cli
 
 func (c *openShiftClusters) GetByClusterResourceGroupID(ctx context.Context, partitionKey, resourceGroupID string) (*api.OpenShiftClusterDocuments, error) {
 	docs, err := c.c.QueryAll(ctx, partitionKey, &cosmosdb.Query{
-		Query: "SELECT * FROM OpenShiftClusters doc WHERE doc.clusterResourceGroupIdKey = @resourceGroupID",
+		Query: OpenshiftClustersResourceGroupQuery,
 		Parameters: []cosmosdb.Parameter{
 			{
 				Name:  "@resourceGroupID",

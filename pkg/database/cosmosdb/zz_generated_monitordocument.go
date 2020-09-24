@@ -19,7 +19,7 @@ type monitorDocumentClient struct {
 // MonitorDocumentClient is a monitorDocument client
 type MonitorDocumentClient interface {
 	Create(context.Context, string, *pkg.MonitorDocument, *Options) (*pkg.MonitorDocument, error)
-	List(*Options) MonitorDocumentRawIterator
+	List(*Options) MonitorDocumentIterator
 	ListAll(context.Context, *Options) (*pkg.MonitorDocuments, error)
 	Get(context.Context, string, string, *Options) (*pkg.MonitorDocument, error)
 	Replace(context.Context, string, *pkg.MonitorDocument, *Options) (*pkg.MonitorDocument, error)
@@ -109,7 +109,7 @@ func (c *monitorDocumentClient) Create(ctx context.Context, partitionkey string,
 	return
 }
 
-func (c *monitorDocumentClient) List(options *Options) MonitorDocumentRawIterator {
+func (c *monitorDocumentClient) List(options *Options) MonitorDocumentIterator {
 	continuation := ""
 	if options != nil {
 		continuation = options.Continuation
@@ -239,11 +239,6 @@ func (i *monitorDocumentChangeFeedIterator) Continuation() string {
 }
 
 func (i *monitorDocumentListIterator) Next(ctx context.Context, maxItemCount int) (monitorDocuments *pkg.MonitorDocuments, err error) {
-	err = i.NextRaw(ctx, maxItemCount, &monitorDocuments)
-	return
-}
-
-func (i *monitorDocumentListIterator) NextRaw(ctx context.Context, maxItemCount int, raw interface{}) (err error) {
 	if i.done {
 		return
 	}
@@ -259,7 +254,7 @@ func (i *monitorDocumentListIterator) NextRaw(ctx context.Context, maxItemCount 
 		return
 	}
 
-	err = i.do(ctx, http.MethodGet, i.path+"/docs", "docs", i.path, http.StatusOK, nil, &raw, headers)
+	err = i.do(ctx, http.MethodGet, i.path+"/docs", "docs", i.path, http.StatusOK, nil, &monitorDocuments, headers)
 	if err != nil {
 		return
 	}

@@ -19,7 +19,7 @@ type openShiftClusterDocumentClient struct {
 // OpenShiftClusterDocumentClient is a openShiftClusterDocument client
 type OpenShiftClusterDocumentClient interface {
 	Create(context.Context, string, *pkg.OpenShiftClusterDocument, *Options) (*pkg.OpenShiftClusterDocument, error)
-	List(*Options) OpenShiftClusterDocumentRawIterator
+	List(*Options) OpenShiftClusterDocumentIterator
 	ListAll(context.Context, *Options) (*pkg.OpenShiftClusterDocuments, error)
 	Get(context.Context, string, string, *Options) (*pkg.OpenShiftClusterDocument, error)
 	Replace(context.Context, string, *pkg.OpenShiftClusterDocument, *Options) (*pkg.OpenShiftClusterDocument, error)
@@ -109,7 +109,7 @@ func (c *openShiftClusterDocumentClient) Create(ctx context.Context, partitionke
 	return
 }
 
-func (c *openShiftClusterDocumentClient) List(options *Options) OpenShiftClusterDocumentRawIterator {
+func (c *openShiftClusterDocumentClient) List(options *Options) OpenShiftClusterDocumentIterator {
 	continuation := ""
 	if options != nil {
 		continuation = options.Continuation
@@ -239,11 +239,6 @@ func (i *openShiftClusterDocumentChangeFeedIterator) Continuation() string {
 }
 
 func (i *openShiftClusterDocumentListIterator) Next(ctx context.Context, maxItemCount int) (openShiftClusterDocuments *pkg.OpenShiftClusterDocuments, err error) {
-	err = i.NextRaw(ctx, maxItemCount, &openShiftClusterDocuments)
-	return
-}
-
-func (i *openShiftClusterDocumentListIterator) NextRaw(ctx context.Context, maxItemCount int, raw interface{}) (err error) {
 	if i.done {
 		return
 	}
@@ -259,7 +254,7 @@ func (i *openShiftClusterDocumentListIterator) NextRaw(ctx context.Context, maxI
 		return
 	}
 
-	err = i.do(ctx, http.MethodGet, i.path+"/docs", "docs", i.path, http.StatusOK, nil, &raw, headers)
+	err = i.do(ctx, http.MethodGet, i.path+"/docs", "docs", i.path, http.StatusOK, nil, &openShiftClusterDocuments, headers)
 	if err != nil {
 		return
 	}
