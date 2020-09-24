@@ -19,7 +19,7 @@ type asyncOperationDocumentClient struct {
 // AsyncOperationDocumentClient is a asyncOperationDocument client
 type AsyncOperationDocumentClient interface {
 	Create(context.Context, string, *pkg.AsyncOperationDocument, *Options) (*pkg.AsyncOperationDocument, error)
-	List(*Options) AsyncOperationDocumentRawIterator
+	List(*Options) AsyncOperationDocumentIterator
 	ListAll(context.Context, *Options) (*pkg.AsyncOperationDocuments, error)
 	Get(context.Context, string, string, *Options) (*pkg.AsyncOperationDocument, error)
 	Replace(context.Context, string, *pkg.AsyncOperationDocument, *Options) (*pkg.AsyncOperationDocument, error)
@@ -109,7 +109,7 @@ func (c *asyncOperationDocumentClient) Create(ctx context.Context, partitionkey 
 	return
 }
 
-func (c *asyncOperationDocumentClient) List(options *Options) AsyncOperationDocumentRawIterator {
+func (c *asyncOperationDocumentClient) List(options *Options) AsyncOperationDocumentIterator {
 	continuation := ""
 	if options != nil {
 		continuation = options.Continuation
@@ -239,11 +239,6 @@ func (i *asyncOperationDocumentChangeFeedIterator) Continuation() string {
 }
 
 func (i *asyncOperationDocumentListIterator) Next(ctx context.Context, maxItemCount int) (asyncOperationDocuments *pkg.AsyncOperationDocuments, err error) {
-	err = i.NextRaw(ctx, maxItemCount, &asyncOperationDocuments)
-	return
-}
-
-func (i *asyncOperationDocumentListIterator) NextRaw(ctx context.Context, maxItemCount int, raw interface{}) (err error) {
 	if i.done {
 		return
 	}
@@ -259,7 +254,7 @@ func (i *asyncOperationDocumentListIterator) NextRaw(ctx context.Context, maxIte
 		return
 	}
 
-	err = i.do(ctx, http.MethodGet, i.path+"/docs", "docs", i.path, http.StatusOK, nil, &raw, headers)
+	err = i.do(ctx, http.MethodGet, i.path+"/docs", "docs", i.path, http.StatusOK, nil, &asyncOperationDocuments, headers)
 	if err != nil {
 		return
 	}

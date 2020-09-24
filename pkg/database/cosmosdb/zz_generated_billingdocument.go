@@ -19,7 +19,7 @@ type billingDocumentClient struct {
 // BillingDocumentClient is a billingDocument client
 type BillingDocumentClient interface {
 	Create(context.Context, string, *pkg.BillingDocument, *Options) (*pkg.BillingDocument, error)
-	List(*Options) BillingDocumentRawIterator
+	List(*Options) BillingDocumentIterator
 	ListAll(context.Context, *Options) (*pkg.BillingDocuments, error)
 	Get(context.Context, string, string, *Options) (*pkg.BillingDocument, error)
 	Replace(context.Context, string, *pkg.BillingDocument, *Options) (*pkg.BillingDocument, error)
@@ -109,7 +109,7 @@ func (c *billingDocumentClient) Create(ctx context.Context, partitionkey string,
 	return
 }
 
-func (c *billingDocumentClient) List(options *Options) BillingDocumentRawIterator {
+func (c *billingDocumentClient) List(options *Options) BillingDocumentIterator {
 	continuation := ""
 	if options != nil {
 		continuation = options.Continuation
@@ -239,11 +239,6 @@ func (i *billingDocumentChangeFeedIterator) Continuation() string {
 }
 
 func (i *billingDocumentListIterator) Next(ctx context.Context, maxItemCount int) (billingDocuments *pkg.BillingDocuments, err error) {
-	err = i.NextRaw(ctx, maxItemCount, &billingDocuments)
-	return
-}
-
-func (i *billingDocumentListIterator) NextRaw(ctx context.Context, maxItemCount int, raw interface{}) (err error) {
 	if i.done {
 		return
 	}
@@ -259,7 +254,7 @@ func (i *billingDocumentListIterator) NextRaw(ctx context.Context, maxItemCount 
 		return
 	}
 
-	err = i.do(ctx, http.MethodGet, i.path+"/docs", "docs", i.path, http.StatusOK, nil, &raw, headers)
+	err = i.do(ctx, http.MethodGet, i.path+"/docs", "docs", i.path, http.StatusOK, nil, &billingDocuments, headers)
 	if err != nil {
 		return
 	}

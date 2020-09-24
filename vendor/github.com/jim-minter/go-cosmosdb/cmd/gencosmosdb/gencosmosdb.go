@@ -43,7 +43,7 @@ func unexport(s string) string {
 
 func run() error {
 	for _, name := range gencosmosdb.AssetNames() {
-		if name == "template.go" {
+		if name == "template.go" || name == "template_fake.go" {
 			continue
 		}
 
@@ -54,6 +54,7 @@ func run() error {
 	}
 
 	for _, arg := range flag.Args() {
+		filesToGenerate := []string{"template.go", "template_fake.go"}
 		args := strings.Split(arg, ",")
 
 		importpkg := args[0]
@@ -65,19 +66,21 @@ func run() error {
 		singular := unexport(singularExported)
 		plural := unexport(pluralExported)
 
-		data := gencosmosdb.MustAsset("template.go")
+		for _, filename := range filesToGenerate {
+			data := gencosmosdb.MustAsset(filename)
+			data = importRegexp.ReplaceAll(data, []byte("\tpkg \""+importpkg+"\""))
 
-		data = importRegexp.ReplaceAll(data, []byte("\tpkg \""+importpkg+"\""))
+			// plural must be done before singular ("template" is a sub-string of "templates")
+			data = pluralRegexp.ReplaceAll(data, []byte(plural))
+			data = pluralExportedRegexp.ReplaceAll(data, []byte(pluralExported))
+			data = singularRegexp.ReplaceAll(data, []byte(singular))
+			data = singularExportedRegexp.ReplaceAll(data, []byte(singularExported))
 
-		// plural must be done before singular ("template" is a sub-string of "templates")
-		data = pluralRegexp.ReplaceAll(data, []byte(plural))
-		data = pluralExportedRegexp.ReplaceAll(data, []byte(pluralExported))
-		data = singularRegexp.ReplaceAll(data, []byte(singular))
-		data = singularExportedRegexp.ReplaceAll(data, []byte(singularExported))
-
-		err := writeFile("zz_generated_"+strings.ToLower(singularExported)+".go", data)
-		if err != nil {
-			return err
+			generatedFilename := strings.Replace(filename, "template", strings.ToLower(singularExported), 1)
+			err := writeFile("zz_generated_"+generatedFilename, data)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
