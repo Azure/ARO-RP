@@ -6,25 +6,11 @@ package env
 import (
 	"context"
 
-	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/sirupsen/logrus"
-
-	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 )
 
-func newInt(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata) (*prod, error) {
-	rpKVAuthorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(azure.PublicCloud.ResourceIdentifiers.KeyVault)
-	if err != nil {
-		return nil, err
-	}
-
-	rpAuthorizer, err := auth.NewAuthorizerFromEnvironment()
-	if err != nil {
-		return nil, err
-	}
-
-	p, err := newProd(ctx, log, instancemetadata, rpAuthorizer, rpKVAuthorizer)
+func newInt(ctx context.Context, log *logrus.Entry) (*prod, error) {
+	p, err := newProd(ctx, log)
 
 	if err != nil {
 		return nil, err
@@ -36,7 +22,6 @@ func newInt(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 	p.e2eStorageAccountName = "arov4e2eint"
 	p.e2eStorageAccountRGName = "global-infra"
 	p.e2eStorageAccountSubID = "0cc1cafa-578f-4fa5-8d6b-ddfd8d82e6ea"
-	p.envType = environmentTypeIntegration
 
 	return p, nil
 }

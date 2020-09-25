@@ -15,16 +15,18 @@ import (
 	coreclient "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/util/retry"
 
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
+	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 )
 
 func (i *manager) createCertificates(ctx context.Context) error {
-	if i.env.IsDevelopment() {
+	if i.env.DeploymentMode() == deployment.Development {
 		return nil
 	}
 
-	managedDomain, err := i.env.ManagedDomain(i.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
+	managedDomain, err := dns.ManagedDomain(i.env, i.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
 	if err != nil {
 		return err
 	}
@@ -49,7 +51,7 @@ func (i *manager) createCertificates(ctx context.Context) error {
 
 	for _, c := range certs {
 		i.log.Printf("creating certificate %s", c.certificateName)
-		err = i.keyvault.CreateSignedCertificate(ctx, i.env.ClustersKeyvaultURI(), keyvault.IssuerDigicert, c.certificateName, c.commonName, keyvault.EkuServerAuth)
+		err = i.keyvault.CreateSignedCertificate(ctx, keyvault.IssuerDigicert, c.certificateName, c.commonName, keyvault.EkuServerAuth)
 		if err != nil {
 			return err
 		}
@@ -57,7 +59,7 @@ func (i *manager) createCertificates(ctx context.Context) error {
 
 	for _, c := range certs {
 		i.log.Printf("waiting for certificate %s", c.certificateName)
-		err = i.keyvault.WaitForCertificateOperation(ctx, i.env.ClustersKeyvaultURI(), c.certificateName)
+		err = i.keyvault.WaitForCertificateOperation(ctx, c.certificateName)
 		if err != nil {
 			return err
 		}
@@ -67,11 +69,11 @@ func (i *manager) createCertificates(ctx context.Context) error {
 }
 
 func (i *manager) upgradeCertificates(ctx context.Context) error {
-	if i.env.IsDevelopment() {
+	if i.env.DeploymentMode() == deployment.Development {
 		return nil
 	}
 
-	managedDomain, err := i.env.ManagedDomain(i.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
+	managedDomain, err := dns.ManagedDomain(i.env, i.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
 	if err != nil {
 		return err
 	}
@@ -82,7 +84,7 @@ func (i *manager) upgradeCertificates(ctx context.Context) error {
 
 	for _, c := range []string{i.doc.ID + "-apiserver", i.doc.ID + "-ingress"} {
 		i.log.Printf("upgrading certificate %s", c)
-		err = i.keyvault.UpgradeCertificatePolicy(ctx, i.env.ClustersKeyvaultURI(), c)
+		err = i.keyvault.UpgradeCertificatePolicy(ctx, c)
 		if err != nil {
 			return err
 		}
@@ -92,7 +94,7 @@ func (i *manager) upgradeCertificates(ctx context.Context) error {
 }
 
 func (i *manager) ensureSecret(ctx context.Context, secrets coreclient.SecretInterface, certificateName string) error {
-	bundle, err := i.keyvault.GetSecret(ctx, i.env.ClustersKeyvaultURI(), certificateName, "")
+	bundle, err := i.keyvault.GetSecret(ctx, certificateName)
 	if err != nil {
 		return err
 	}
@@ -143,11 +145,11 @@ func (i *manager) ensureSecret(ctx context.Context, secrets coreclient.SecretInt
 }
 
 func (i *manager) configureAPIServerCertificate(ctx context.Context) error {
-	if i.env.IsDevelopment() {
+	if i.env.DeploymentMode() == deployment.Development {
 		return nil
 	}
 
-	managedDomain, err := i.env.ManagedDomain(i.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
+	managedDomain, err := dns.ManagedDomain(i.env, i.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
 	if err != nil {
 		return err
 	}
@@ -184,11 +186,11 @@ func (i *manager) configureAPIServerCertificate(ctx context.Context) error {
 }
 
 func (i *manager) configureIngressCertificate(ctx context.Context) error {
-	if i.env.IsDevelopment() {
+	if i.env.DeploymentMode() == deployment.Development {
 		return nil
 	}
 
-	managedDomain, err := i.env.ManagedDomain(i.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
+	managedDomain, err := dns.ManagedDomain(i.env, i.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
 	if err != nil {
 		return err
 	}

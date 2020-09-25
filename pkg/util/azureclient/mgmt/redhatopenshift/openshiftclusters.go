@@ -7,12 +7,12 @@ import (
 	"context"
 	"crypto/tls"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest"
 
 	"github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2020-04-30/redhatopenshift"
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
 )
 
 // OpenShiftClustersClient is a minimal interface for azure OpenshiftClustersClient
@@ -31,7 +31,7 @@ var _ OpenShiftClustersClient = &openShiftClustersClient{}
 // NewOpenShiftClustersClient creates a new OpenShiftClustersClient
 func NewOpenShiftClustersClient(subscriptionID string, authorizer autorest.Authorizer) OpenShiftClustersClient {
 	var client redhatopenshift.OpenShiftClustersClient
-	if os.Getenv("RP_MODE") == "development" {
+	if deployment.NewMode() == deployment.Development {
 		client = redhatopenshift.NewOpenShiftClustersClientWithBaseURI("https://localhost:8443", subscriptionID)
 		client.Sender = &http.Client{
 			Transport: &http.Transport{

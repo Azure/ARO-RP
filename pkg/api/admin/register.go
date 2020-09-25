@@ -5,6 +5,7 @@ package admin
 
 import (
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
 )
 
 // APIVersion contains a version string as it will be used by clients
@@ -15,7 +16,7 @@ func init() {
 		OpenShiftClusterConverter: func() api.OpenShiftClusterConverter {
 			return &openShiftClusterConverter{}
 		},
-		OpenShiftClusterStaticValidator: func(location, domain string, developmentMode bool, resourceID string) api.OpenShiftClusterStaticValidator {
+		OpenShiftClusterStaticValidator: func(string, string, deployment.Mode, string) api.OpenShiftClusterStaticValidator {
 			return &openShiftClusterStaticValidator{}
 		},
 	}

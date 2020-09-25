@@ -24,7 +24,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return fmt.Errorf("usage: %s resourceid", os.Args[0])
 	}
 
-	_env, err := env.NewEnv(ctx, log)
+	_env, err := env.NewCore(ctx, log)
 	if err != nil {
 		return err
 	}

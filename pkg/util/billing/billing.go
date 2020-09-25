@@ -19,6 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/feature"
 )
 
@@ -48,7 +49,7 @@ type manager struct {
 func NewManager(_env env.Interface, billing database.Billing, sub database.Subscriptions, log *logrus.Entry) (Manager, error) {
 	var storageClient *azstorage.Client
 
-	if !_env.IsDevelopment() {
+	if _env.DeploymentMode() != deployment.Development {
 		localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
 		if err != nil {
 			return nil, err
@@ -137,7 +138,7 @@ func isSubscriptionRegisteredForE2E(sub *api.SubscriptionProperties) bool {
 // storage account. This is used later on by the billing e2e
 func (m *manager) createOrUpdateE2EBlob(ctx context.Context, doc *api.BillingDocument) error {
 	//skip updating the storage account if this is a dev scenario
-	if m.env.IsDevelopment() {
+	if m.env.DeploymentMode() == deployment.Development {
 		return nil
 	}
 

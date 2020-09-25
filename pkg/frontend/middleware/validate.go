@@ -23,7 +23,7 @@ const (
 
 var rxResourceGroupName = regexp.MustCompile(`^[-a-z0-9_().]{0,89}[-a-z0-9_()]$`)
 
-func Validate(env env.Interface, apis map[string]*api.Version) func(http.Handler) http.Handler {
+func Validate(env env.Core, apis map[string]*api.Version) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			vars := mux.Vars(r)

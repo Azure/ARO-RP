@@ -13,16 +13,18 @@ import (
 	"github.com/golang/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/env"
 	mock_containerregistry "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/containerregistry"
+	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 )
 
 func TestEnsureTokenAndPassword(t *testing.T) {
 	ctx := context.Background()
-	env := &env.Test{}
 
 	controller := gomock.NewController(t)
 	defer controller.Finish()
+
+	env := mock_env.NewMockInterface(controller)
+	env.EXPECT().ACRResourceID().AnyTimes().Return("/subscriptions/93aeba23-2f76-4307-be82-02921df010cf/resourceGroups/global/providers/Microsoft.ContainerRegistry/registries/arointsvc")
 
 	tokens := mock_containerregistry.NewMockTokensClient(controller)
 	tokens.EXPECT().

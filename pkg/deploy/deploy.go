@@ -86,7 +86,7 @@ func New(ctx context.Context, log *logrus.Entry, config *RPConfig, version strin
 		vmss:                   compute.NewVirtualMachineScaleSetsClient(config.SubscriptionID, authorizer),
 		vmssvms:                compute.NewVirtualMachineScaleSetVMsClient(config.SubscriptionID, authorizer),
 		zones:                  dns.NewZonesClient(config.SubscriptionID, authorizer),
-		keyvault:               keyvault.NewManager(kvAuthorizer),
+		keyvault:               keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+"-svc.vault.azure.net/"),
 
 		fullDeploy: fullDeploy,
 		config:     config,

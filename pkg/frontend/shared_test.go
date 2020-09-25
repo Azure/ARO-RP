@@ -21,6 +21,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
+	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	testclusterdata "github.com/Azure/ARO-RP/test/util/clusterdata"
 	"github.com/Azure/ARO-RP/test/util/listener"
@@ -59,18 +61,20 @@ func newTestInfra(t *testing.T) (*testInfra, error) {
 
 	l := listener.NewListener()
 
-	env := &env.Test{
-		L:            l,
-		TestLocation: "eastus",
-		TLSKey:       serverkey,
-		TLSCerts:     servercerts,
-	}
-	env.SetARMClientAuthorizer(clientauthorizer.NewOne(clientcerts[0].Raw))
-	env.SetAdminClientAuthorizer(clientauthorizer.NewOne(clientcerts[0].Raw))
+	controller := gomock.NewController(t)
+
+	_env := mock_env.NewMockInterface(controller)
+	_env.EXPECT().DeploymentMode().AnyTimes().Return(deployment.Production)
+	_env.EXPECT().Location().AnyTimes().Return("eastus")
+	_env.EXPECT().GetCertificateSecret(gomock.Any(), env.RPServerSecretName).AnyTimes().Return(serverkey, servercerts, nil)
+	_env.EXPECT().ArmClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(clientcerts[0].Raw))
+	_env.EXPECT().AdminClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(clientcerts[0].Raw))
+	_env.EXPECT().Domain().AnyTimes().Return("")
+	_env.EXPECT().Listen().AnyTimes().Return(l, nil)
 
 	return &testInfra{
-		env:        env,
-		controller: gomock.NewController(t),
+		env:        _env,
+		controller: controller,
 		l:          l,
 		enricher:   testclusterdata.NewTestEnricher(),
 		cli: &http.Client{

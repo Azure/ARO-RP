@@ -15,12 +15,13 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
 type statsd struct {
 	log *logrus.Entry
-	env env.Interface
+	env env.Core
 
 	hostname  string
 	account   string
@@ -33,7 +34,7 @@ type statsd struct {
 }
 
 // New returns a new metrics.Interface
-func New(ctx context.Context, log *logrus.Entry, env env.Interface, account, namespace string) (metrics.Interface, error) {
+func New(ctx context.Context, log *logrus.Entry, env env.Core, account, namespace string) (metrics.Interface, error) {
 	s := &statsd{
 		log: log,
 		env: env,
@@ -112,7 +113,12 @@ func (s *statsd) run() {
 }
 
 func (s *statsd) dial() (err error) {
-	s.conn, err = net.Dial("unix", s.env.MetricsSocketPath())
+	path := "/var/etw/mdm_statsd.socket"
+	if s.env.DeploymentMode() == deployment.Development {
+		path = "mdm_statsd.socket"
+	}
+
+	s.conn, err = net.Dial("unix", path)
 	return
 }
 
@@ -129,7 +135,7 @@ func (s *statsd) write(m *metric) (err error) {
 	if s.conn == nil {
 		err = s.dial()
 		if err != nil {
-			if s.env.IsDevelopment() {
+			if s.env.DeploymentMode() == deployment.Development {
 				err = nil
 			}
 			return

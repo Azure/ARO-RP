@@ -13,8 +13,8 @@ import (
 	"github.com/golang/mock/gomock"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/env"
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
+	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 )
 
 func TestCreate(t *testing.T) {
@@ -30,11 +30,6 @@ func TestCreate(t *testing.T) {
 				},
 			},
 		},
-	}
-
-	env := &env.Test{
-		TestSubscriptionID: "rpSubscriptionId",
-		TestResourceGroup:  "rpResourcegroup",
 	}
 
 	type test struct {
@@ -101,6 +96,10 @@ func TestCreate(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
+			env := mock_env.NewMockInterface(controller)
+			env.EXPECT().SubscriptionID().AnyTimes().Return("rpSubscriptionId")
+			env.EXPECT().ResourceGroup().AnyTimes().Return("rpResourcegroup")
+
 			privateendpoints := mock_network.NewMockPrivateEndpointsClient(controller)
 			if tt.mocks != nil {
 				tt.mocks(tt, privateendpoints)
@@ -127,10 +126,6 @@ func TestDelete(t *testing.T) {
 
 	doc := &api.OpenShiftClusterDocument{
 		ID: "id",
-	}
-
-	env := &env.Test{
-		TestResourceGroup: "rpResourcegroup",
 	}
 
 	type test struct {
@@ -165,6 +160,9 @@ func TestDelete(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
+			env := mock_env.NewMockInterface(controller)
+			env.EXPECT().ResourceGroup().AnyTimes().Return("rpResourcegroup")
+
 			privateendpoints := mock_network.NewMockPrivateEndpointsClient(controller)
 			if tt.mocks != nil {
 				tt.mocks(tt, privateendpoints)
@@ -189,10 +187,6 @@ func TestGetIP(t *testing.T) {
 
 	doc := &api.OpenShiftClusterDocument{
 		ID: "id",
-	}
-
-	env := &env.Test{
-		TestResourceGroup: "rpResourcegroup",
 	}
 
 	type test struct {
@@ -244,6 +238,9 @@ func TestGetIP(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
+
+			env := mock_env.NewMockInterface(controller)
+			env.EXPECT().ResourceGroup().AnyTimes().Return("rpResourcegroup")
 
 			privateendpoints := mock_network.NewMockPrivateEndpointsClient(controller)
 			if tt.mocks != nil {

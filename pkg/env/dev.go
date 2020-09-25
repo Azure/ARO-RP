@@ -32,7 +32,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
-	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
@@ -61,19 +60,12 @@ type dev struct {
 	proxyClientKey  *rsa.PrivateKey
 }
 
-func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemetadata.InstanceMetadata) (*dev, error) {
+func newDev(ctx context.Context, log *logrus.Entry) (*dev, error) {
 	for _, key := range []string{
-		"AZURE_RP_CLIENT_ID",
-		"AZURE_RP_CLIENT_SECRET",
 		"AZURE_ARM_CLIENT_ID",
 		"AZURE_ARM_CLIENT_SECRET",
 		"AZURE_FP_CLIENT_ID",
-		"AZURE_SUBSCRIPTION_ID",
-		"AZURE_TENANT_ID",
-		"DATABASE_NAME",
-		"LOCATION",
 		"PROXY_HOSTNAME",
-		"RESOURCEGROUP",
 	} {
 		if _, found := os.LookupEnv(key); !found {
 			return nil, fmt.Errorf("environment variable %q unset", key)
@@ -87,50 +79,37 @@ func newDev(ctx context.Context, log *logrus.Entry, instancemetadata instancemet
 		return nil, err
 	}
 
-	armAuthorizer, err := auth.NewClientCredentialsConfig(os.Getenv("AZURE_ARM_CLIENT_ID"), os.Getenv("AZURE_ARM_CLIENT_SECRET"), instancemetadata.TenantID()).Authorizer()
+	d := &dev{}
+
+	d.prod, err = newProd(ctx, log)
 	if err != nil {
 		return nil, err
 	}
 
-	d := &dev{
-		roleassignments: authorization.NewRoleAssignmentsClient(instancemetadata.SubscriptionID(), armAuthorizer),
-	}
-
-	config := auth.NewClientCredentialsConfig(os.Getenv("AZURE_RP_CLIENT_ID"), os.Getenv("AZURE_RP_CLIENT_SECRET"), os.Getenv("AZURE_TENANT_ID"))
-	config.Resource = azure.PublicCloud.ResourceIdentifiers.KeyVault
-	rpKVAuthorizer, err := config.Authorizer()
+	armAuthorizer, err := auth.NewClientCredentialsConfig(os.Getenv("AZURE_ARM_CLIENT_ID"), os.Getenv("AZURE_ARM_CLIENT_SECRET"), d.TenantID()).Authorizer()
 	if err != nil {
 		return nil, err
 	}
 
-	rpAuthorizer, err := auth.NewClientCredentialsConfig(os.Getenv("AZURE_RP_CLIENT_ID"), os.Getenv("AZURE_RP_CLIENT_SECRET"), os.Getenv("AZURE_TENANT_ID")).Authorizer()
-	if err != nil {
-		return nil, err
-	}
-
-	d.prod, err = newProd(ctx, log, instancemetadata, rpAuthorizer, rpKVAuthorizer)
-	if err != nil {
-		return nil, err
-	}
+	d.roleassignments = authorization.NewRoleAssignmentsClient(d.SubscriptionID(), armAuthorizer)
 	d.prod.clustersGenevaLoggingEnvironment = "Test"
 	d.prod.clustersGenevaLoggingConfigVersion = "2.3"
-	d.prod.envType = environmentTypeDevelopment
 
-	fpGraphAuthorizer, err := d.FPAuthorizer(instancemetadata.TenantID(), azure.PublicCloud.GraphEndpoint)
+	fpGraphAuthorizer, err := d.FPAuthorizer(d.TenantID(), azure.PublicCloud.GraphEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	d.applications = graphrbac.NewApplicationsClient(instancemetadata.TenantID(), fpGraphAuthorizer)
+	d.applications = graphrbac.NewApplicationsClient(d.TenantID(), fpGraphAuthorizer)
 
-	fpAuthorizer, err := d.FPAuthorizer(instancemetadata.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
+	fpAuthorizer, err := d.FPAuthorizer(d.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	d.permissions = authorization.NewPermissionsClient(instancemetadata.SubscriptionID(), fpAuthorizer)
+	d.permissions = authorization.NewPermissionsClient(d.SubscriptionID(), fpAuthorizer)
 
-	d.deployments = features.NewDeploymentsClient(instancemetadata.TenantID(), fpAuthorizer)
+	d.deployments = features.NewDeploymentsClient(d.TenantID(), fpAuthorizer)
 
 	b, err := ioutil.ReadFile(path.Join(basepath, "secrets/proxy.crt"))
 	if err != nil {
@@ -176,10 +155,6 @@ func (d *dev) AROOperatorImage() string {
 	}
 
 	return fmt.Sprintf("%s.azurecr.io/aro:%s", d.acrName, version.GitCommit)
-}
-
-func (d *dev) DatabaseName() string {
-	return os.Getenv("DATABASE_NAME")
 }
 
 func (d *dev) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
@@ -262,10 +237,6 @@ func (d *dev) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, e
 	return refreshable.NewAuthorizer(sp), nil
 }
 
-func (d *dev) MetricsSocketPath() string {
-	return "mdm_statsd.socket"
-}
-
 func (d *dev) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthorizer refreshable.Authorizer, resourceGroup string) error {
 	d.log.Print("development mode: applying resource group role assignment")
 
@@ -300,8 +271,4 @@ func (d *dev) E2EStorageAccountRGName() string {
 
 func (d *dev) E2EStorageAccountSubID() string {
 	return "0cc1cafa-578f-4fa5-8d6b-ddfd8d82e6ea"
-}
-
-func (d *dev) ShouldDeployDenyAssignment() bool {
-	return false
 }

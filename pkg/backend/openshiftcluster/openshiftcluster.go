@@ -16,6 +16,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
@@ -64,7 +65,7 @@ func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClus
 	}
 
 	var acrtoken pkgacrtoken.Manager
-	if !_env.IsDevelopment() {
+	if _env.DeploymentMode() != deployment.Development {
 		acrtoken, err = pkgacrtoken.NewManager(_env, localFPAuthorizer)
 		if err != nil {
 			return nil, err
@@ -90,7 +91,7 @@ func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClus
 		securityGroups: network.NewSecurityGroupsClient(subscriptionDoc.ID, fpAuthorizer),
 
 		dns:             dns.NewManager(_env, localFPAuthorizer),
-		keyvault:        keyvault.NewManager(localFPKVAuthorizer),
+		keyvault:        keyvault.NewManager(localFPKVAuthorizer, _env.ClustersKeyvaultURI()),
 		privateendpoint: privateendpoint.NewManager(_env, localFPAuthorizer),
 		acrtoken:        acrtoken,
 		subnet:          subnet.NewManager(subscriptionDoc.ID, fpAuthorizer),

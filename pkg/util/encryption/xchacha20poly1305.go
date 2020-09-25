@@ -26,8 +26,8 @@ type aeadCipher struct {
 	randRead func([]byte) (int, error)
 }
 
-func NewXChaCha20Poly1305(ctx context.Context, _env env.Interface, secretName string) (Cipher, error) {
-	key, err := _env.GetSecret(ctx, secretName)
+func NewXChaCha20Poly1305(ctx context.Context, _env env.Core, secretName string) (Cipher, error) {
+	key, err := _env.GetBase64Secret(ctx, secretName)
 	if err != nil {
 		return nil, err
 	}

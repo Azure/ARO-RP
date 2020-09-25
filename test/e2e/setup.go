@@ -23,6 +23,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/insights"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift"
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
 )
 
 type clientSet struct {
@@ -44,7 +45,7 @@ var (
 )
 
 func skipIfNotInDevelopmentEnv() {
-	if os.Getenv("RP_MODE") != "development" {
+	if deployment.NewMode() != deployment.Development {
 		Skip("skipping tests in non-development environment")
 	}
 }

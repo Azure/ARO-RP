@@ -162,10 +162,29 @@ func (m *manager) createOrUpdate(ctx context.Context, oc *api.OpenShiftCluster, 
 }
 
 func (m *manager) managedDomainPrefix(clusterDomain string) (string, error) {
-	managedDomain, err := m.env.ManagedDomain(clusterDomain)
+	managedDomain, err := ManagedDomain(m.env, clusterDomain)
 	if err != nil || managedDomain == "" {
 		return "", err
 	}
 
 	return managedDomain[:strings.IndexByte(managedDomain, '.')], nil
+}
+
+// ManagedDomain returns the fully qualified domain of a cluster if we manage
+// it.  If we don't, it returns the empty string.  We manage only domains of the
+// form "foo.$LOCATION.aroapp.io" and "foo" (we consider this a short form of
+// the former).
+func ManagedDomain(env env.Interface, domain string) (string, error) {
+	if domain == "" ||
+		strings.HasPrefix(domain, ".") ||
+		strings.HasSuffix(domain, ".") {
+		// belt and braces: validation should already prevent this
+		return "", fmt.Errorf("invalid domain %q", domain)
+	}
+
+	domain = strings.TrimSuffix(domain, "."+env.Domain())
+	if strings.ContainsRune(domain, '.') {
+		return "", nil
+	}
+	return domain + "." + env.Domain(), nil
 }

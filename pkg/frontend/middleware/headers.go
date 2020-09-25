@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
 )
 
-func Headers(_env env.Interface) func(http.Handler) http.Handler {
+func Headers(deploymentMode deployment.Mode) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
@@ -19,7 +19,7 @@ func Headers(_env env.Interface) func(http.Handler) http.Handler {
 				w.Header().Set("X-Ms-Client-Request-Id", r.Header.Get("X-Ms-Client-Request-Id"))
 			}
 
-			if _env.IsDevelopment() {
+			if deploymentMode == deployment.Development {
 				r.Header.Set("Referer", "https://localhost:8443"+r.URL.String())
 			}
 

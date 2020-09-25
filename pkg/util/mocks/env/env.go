@@ -11,9 +11,11 @@ import (
 	net "net"
 	reflect "reflect"
 
+	autorest "github.com/Azure/go-autorest/autorest"
 	gomock "github.com/golang/mock/gomock"
 
 	clientauthorizer "github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
+	deployment "github.com/Azure/ARO-RP/pkg/util/deployment"
 	refreshable "github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
@@ -167,21 +169,6 @@ func (mr *MockInterfaceMockRecorder) ClustersKeyvaultURI() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClustersKeyvaultURI", reflect.TypeOf((*MockInterface)(nil).ClustersKeyvaultURI))
 }
 
-// CosmosDB mocks base method
-func (m *MockInterface) CosmosDB() (string, string) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CosmosDB")
-	ret0, _ := ret[0].(string)
-	ret1, _ := ret[1].(string)
-	return ret0, ret1
-}
-
-// CosmosDB indicates an expected call of CosmosDB
-func (mr *MockInterfaceMockRecorder) CosmosDB() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CosmosDB", reflect.TypeOf((*MockInterface)(nil).CosmosDB))
-}
-
 // CreateARMResourceGroupRoleAssignment mocks base method
 func (m *MockInterface) CreateARMResourceGroupRoleAssignment(arg0 context.Context, arg1 refreshable.Authorizer, arg2 string) error {
 	m.ctrl.T.Helper()
@@ -196,18 +183,18 @@ func (mr *MockInterfaceMockRecorder) CreateARMResourceGroupRoleAssignment(arg0, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateARMResourceGroupRoleAssignment", reflect.TypeOf((*MockInterface)(nil).CreateARMResourceGroupRoleAssignment), arg0, arg1, arg2)
 }
 
-// DatabaseName mocks base method
-func (m *MockInterface) DatabaseName() string {
+// DeploymentMode mocks base method
+func (m *MockInterface) DeploymentMode() deployment.Mode {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DatabaseName")
-	ret0, _ := ret[0].(string)
+	ret := m.ctrl.Call(m, "DeploymentMode")
+	ret0, _ := ret[0].(deployment.Mode)
 	return ret0
 }
 
-// DatabaseName indicates an expected call of DatabaseName
-func (mr *MockInterfaceMockRecorder) DatabaseName() *gomock.Call {
+// DeploymentMode indicates an expected call of DeploymentMode
+func (mr *MockInterfaceMockRecorder) DeploymentMode() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DatabaseName", reflect.TypeOf((*MockInterface)(nil).DatabaseName))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeploymentMode", reflect.TypeOf((*MockInterface)(nil).DeploymentMode))
 }
 
 // DialContext mocks base method
@@ -296,6 +283,21 @@ func (mr *MockInterfaceMockRecorder) FPAuthorizer(arg0, arg1 interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FPAuthorizer", reflect.TypeOf((*MockInterface)(nil).FPAuthorizer), arg0, arg1)
 }
 
+// GetBase64Secret mocks base method
+func (m *MockInterface) GetBase64Secret(arg0 context.Context, arg1 string) ([]byte, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBase64Secret", arg0, arg1)
+	ret0, _ := ret[0].([]byte)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetBase64Secret indicates an expected call of GetBase64Secret
+func (mr *MockInterfaceMockRecorder) GetBase64Secret(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBase64Secret", reflect.TypeOf((*MockInterface)(nil).GetBase64Secret), arg0, arg1)
+}
+
 // GetCertificateSecret mocks base method
 func (m *MockInterface) GetCertificateSecret(arg0 context.Context, arg1 string) (*rsa.PrivateKey, []*x509.Certificate, error) {
 	m.ctrl.T.Helper()
@@ -312,21 +314,6 @@ func (mr *MockInterfaceMockRecorder) GetCertificateSecret(arg0, arg1 interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCertificateSecret", reflect.TypeOf((*MockInterface)(nil).GetCertificateSecret), arg0, arg1)
 }
 
-// GetSecret mocks base method
-func (m *MockInterface) GetSecret(arg0 context.Context, arg1 string) ([]byte, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSecret", arg0, arg1)
-	ret0, _ := ret[0].([]byte)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetSecret indicates an expected call of GetSecret
-func (mr *MockInterfaceMockRecorder) GetSecret(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecret", reflect.TypeOf((*MockInterface)(nil).GetSecret), arg0, arg1)
-}
-
 // InitializeAuthorizers mocks base method
 func (m *MockInterface) InitializeAuthorizers() error {
 	m.ctrl.T.Helper()
@@ -339,20 +326,6 @@ func (m *MockInterface) InitializeAuthorizers() error {
 func (mr *MockInterfaceMockRecorder) InitializeAuthorizers() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InitializeAuthorizers", reflect.TypeOf((*MockInterface)(nil).InitializeAuthorizers))
-}
-
-// IsDevelopment mocks base method
-func (m *MockInterface) IsDevelopment() bool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "IsDevelopment")
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// IsDevelopment indicates an expected call of IsDevelopment
-func (mr *MockInterfaceMockRecorder) IsDevelopment() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsDevelopment", reflect.TypeOf((*MockInterface)(nil).IsDevelopment))
 }
 
 // Listen mocks base method
@@ -384,33 +357,19 @@ func (mr *MockInterfaceMockRecorder) Location() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Location", reflect.TypeOf((*MockInterface)(nil).Location))
 }
 
-// ManagedDomain mocks base method
-func (m *MockInterface) ManagedDomain(arg0 string) (string, error) {
+// NewRPAuthorizer mocks base method
+func (m *MockInterface) NewRPAuthorizer(arg0 string) (autorest.Authorizer, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ManagedDomain", arg0)
-	ret0, _ := ret[0].(string)
+	ret := m.ctrl.Call(m, "NewRPAuthorizer", arg0)
+	ret0, _ := ret[0].(autorest.Authorizer)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ManagedDomain indicates an expected call of ManagedDomain
-func (mr *MockInterfaceMockRecorder) ManagedDomain(arg0 interface{}) *gomock.Call {
+// NewRPAuthorizer indicates an expected call of NewRPAuthorizer
+func (mr *MockInterfaceMockRecorder) NewRPAuthorizer(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ManagedDomain", reflect.TypeOf((*MockInterface)(nil).ManagedDomain), arg0)
-}
-
-// MetricsSocketPath mocks base method
-func (m *MockInterface) MetricsSocketPath() string {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MetricsSocketPath")
-	ret0, _ := ret[0].(string)
-	return ret0
-}
-
-// MetricsSocketPath indicates an expected call of MetricsSocketPath
-func (mr *MockInterfaceMockRecorder) MetricsSocketPath() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MetricsSocketPath", reflect.TypeOf((*MockInterface)(nil).MetricsSocketPath))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NewRPAuthorizer", reflect.TypeOf((*MockInterface)(nil).NewRPAuthorizer), arg0)
 }
 
 // ResourceGroup mocks base method
@@ -425,20 +384,6 @@ func (m *MockInterface) ResourceGroup() string {
 func (mr *MockInterfaceMockRecorder) ResourceGroup() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ResourceGroup", reflect.TypeOf((*MockInterface)(nil).ResourceGroup))
-}
-
-// ShouldDeployDenyAssignment mocks base method
-func (m *MockInterface) ShouldDeployDenyAssignment() bool {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ShouldDeployDenyAssignment")
-	ret0, _ := ret[0].(bool)
-	return ret0
-}
-
-// ShouldDeployDenyAssignment indicates an expected call of ShouldDeployDenyAssignment
-func (mr *MockInterfaceMockRecorder) ShouldDeployDenyAssignment() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ShouldDeployDenyAssignment", reflect.TypeOf((*MockInterface)(nil).ShouldDeployDenyAssignment))
 }
 
 // SubscriptionID mocks base method
