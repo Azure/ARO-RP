@@ -17,7 +17,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/proxy"
-	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	"github.com/Azure/ARO-RP/test/util/cmp"
 )
 
@@ -210,8 +209,6 @@ func TestBestEffortEnricher(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			env := mock_env.NewMockInterface(controller)
-
 			restConfig := defaultMockRestConfig
 			if tt.restConfig != nil {
 				restConfig = tt.restConfig
@@ -224,7 +221,6 @@ func TestBestEffortEnricher(t *testing.T) {
 
 			e := &bestEffortEnricher{
 				log:              log,
-				env:              env,
 				restConfig:       restConfig,
 				taskConstructors: taskConstructors,
 				m:                &noop.Noop{},

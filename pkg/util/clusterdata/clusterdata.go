@@ -15,7 +15,6 @@ import (
 	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
@@ -36,11 +35,11 @@ type enricherTask interface {
 
 // NewBestEffortEnricher returns an enricher that attempts to populate
 // fields, but ignores errors in case of failures
-func NewBestEffortEnricher(log *logrus.Entry, env env.Interface, m metrics.Interface) OpenShiftClusterEnricher {
+func NewBestEffortEnricher(log *logrus.Entry, dialer proxy.Dialer, m metrics.Interface) OpenShiftClusterEnricher {
 	return &bestEffortEnricher{
-		log: log,
-		env: env,
-		m:   m,
+		log:    log,
+		dialer: dialer,
+		m:      m,
 
 		restConfig: restconfig.RestConfig,
 		taskConstructors: []enricherTaskConstructor{
@@ -51,9 +50,9 @@ func NewBestEffortEnricher(log *logrus.Entry, env env.Interface, m metrics.Inter
 }
 
 type bestEffortEnricher struct {
-	log *logrus.Entry
-	env env.Interface
-	m   metrics.Interface
+	log    *logrus.Entry
+	dialer proxy.Dialer
+	m      metrics.Interface
 
 	restConfig       func(dialer proxy.Dialer, oc *api.OpenShiftCluster) (*rest.Config, error)
 	taskConstructors []enricherTaskConstructor
@@ -80,7 +79,7 @@ func (e *bestEffortEnricher) enrichOne(ctx context.Context, oc *api.OpenShiftClu
 		return
 	}
 
-	restConfig, err := e.restConfig(e.env, oc)
+	restConfig, err := e.restConfig(e.dialer, oc)
 	if err != nil {
 		e.m.EmitGauge("enricher.tasks.errors", int64(len(e.taskConstructors)), nil)
 		e.log.Error(err)
