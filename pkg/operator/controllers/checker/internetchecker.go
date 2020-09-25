@@ -14,12 +14,23 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 )
+
+// if a check fails it is retried using the following parameters
+var checkBackoff = wait.Backoff{
+	Steps:    5,
+	Duration: 5 * time.Second,
+	Factor:   1.5,
+	Jitter:   0.5,
+	Cap:      1 * time.Minute,
+}
 
 // InternetChecker reconciles a Cluster object
 type InternetChecker struct {
@@ -57,56 +68,76 @@ func (r *InternetChecker) Check() error {
 		return err
 	}
 
-	var condition status.ConditionType
-	switch r.role {
-	case operator.RoleMaster:
-		condition = arov1alpha1.InternetReachableFromMaster
-	case operator.RoleWorker:
-		condition = arov1alpha1.InternetReachableFromWorker
-	}
-
-	urlErrors := map[string]string{}
+	ch := make(chan error)
+	checkCount := 0
 	for _, url := range instance.Spec.InternetChecker.URLs {
-		err = r.checkWithClient(&http.Client{}, url)
-		if err != nil {
-			urlErrors[url] = err.Error()
+		checkCount++
+		go func(urlToCheck string) {
+			ch <- r.checkWithRetry(&http.Client{}, urlToCheck, checkBackoff)
+		}(url)
+	}
+
+	sb := &strings.Builder{}
+	checkFailed := false
+
+	for i := 0; i < checkCount; i++ {
+		if err = <-ch; err != nil {
+			r.log.Infof("URL check failed with error %s", err)
+			fmt.Fprintf(sb, "%s\n", err)
+			checkFailed = true
 		}
 	}
 
-	if len(urlErrors) > 0 {
-		sb := &strings.Builder{}
-		for url, err := range urlErrors {
-			fmt.Fprintf(sb, "%s: %s\n", url, err)
-		}
-		return controllers.SetCondition(r.arocli, &status.Condition{
-			Type:    condition,
+	var condition *status.Condition
+
+	if checkFailed {
+		condition = &status.Condition{
+			Type:    r.conditionType(),
 			Status:  corev1.ConditionFalse,
 			Message: sb.String(),
 			Reason:  "CheckFailed",
-		}, r.role)
+		}
+	} else {
+		condition = &status.Condition{
+			Type:    r.conditionType(),
+			Status:  corev1.ConditionTrue,
+			Message: "Outgoing connection successful",
+			Reason:  "CheckDone",
+		}
+
 	}
-	return controllers.SetCondition(r.arocli, &status.Condition{
-		Type:    condition,
-		Status:  corev1.ConditionTrue,
-		Message: "Outgoing connection successful.",
-		Reason:  "CheckDone",
-	}, r.role)
+
+	return controllers.SetCondition(r.arocli, condition, r.role)
 }
 
-func (r *InternetChecker) checkWithClient(client simpleHTTPClient, url string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+// check the URL, retrying a failed query a few times according to the given backoff
+func (r *InternetChecker) checkWithRetry(client simpleHTTPClient, url string, backoff wait.Backoff) error {
+	return retry.OnError(backoff, func(_ error) bool { return true }, func() error {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		req, err := http.NewRequestWithContext(ctx, http.MethodHead, url, nil)
+		if err != nil {
+			return fmt.Errorf("%s: %s", url, err)
+		}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodHead, url, nil)
-	if err != nil {
-		return err
+		resp, err := client.Do(req)
+		if err != nil {
+			return fmt.Errorf("%s: %s", url, err)
+		}
+		defer resp.Body.Close()
+
+		return nil
+	})
+}
+
+func (r *InternetChecker) conditionType() (ctype status.ConditionType) {
+	switch r.role {
+	case operator.RoleMaster:
+		return arov1alpha1.InternetReachableFromMaster
+	case operator.RoleWorker:
+		return arov1alpha1.InternetReachableFromWorker
+	default:
+		r.log.Warnf("unknown role %s, assuming worker role", r.role)
+		return arov1alpha1.InternetReachableFromWorker
 	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	return nil
 }
