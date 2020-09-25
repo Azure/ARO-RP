@@ -37,17 +37,9 @@ type Database struct {
 
 // NewDatabase returns a new Database
 func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Core, m metrics.Interface, cipher encryption.Cipher, uuid string) (db *Database, err error) {
-	databaseName := "ARO"
-	if env.DeploymentMode() == deployment.Development {
-		for _, key := range []string{
-			"DATABASE_NAME",
-		} {
-			if _, found := os.LookupEnv(key); !found {
-				return nil, fmt.Errorf("environment variable %q unset (development mode)", key)
-			}
-		}
-
-		databaseName = os.Getenv("DATABASE_NAME")
+	databaseName, err := databaseName(env.DeploymentMode())
+	if err != nil {
+		return nil, err
 	}
 
 	databaseAccount, masterKey, err := find(ctx, env)
@@ -113,6 +105,22 @@ func NewJSONHandle(cipher encryption.Cipher) *codec.JsonHandle {
 	h.SetInterfaceExt(reflect.TypeOf(api.SecureBytes{}), 1, secureBytesExt{cipher: cipher})
 	h.SetInterfaceExt(reflect.TypeOf((*api.SecureString)(nil)), 1, secureStringExt{cipher: cipher})
 	return h
+}
+
+func databaseName(deploymentMode deployment.Mode) (string, error) {
+	if deploymentMode != deployment.Development {
+		return "ARO", nil
+	}
+
+	for _, key := range []string{
+		"DATABASE_NAME",
+	} {
+		if _, found := os.LookupEnv(key); !found {
+			return "", fmt.Errorf("environment variable %q unset (development mode)", key)
+		}
+	}
+
+	return os.Getenv("DATABASE_NAME"), nil
 }
 
 func find(ctx context.Context, env env.Core) (string, string, error) {
