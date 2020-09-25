@@ -17,7 +17,7 @@ func TestDisableUpdates(t *testing.T) {
 
 	versionName := "version"
 
-	i := &manager{
+	m := &manager{
 		configcli: fake.NewSimpleClientset(&v1.ClusterVersion{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: versionName,
@@ -29,12 +29,12 @@ func TestDisableUpdates(t *testing.T) {
 		}),
 	}
 
-	err := i.disableUpdates(ctx)
+	err := m.disableUpdates(ctx)
 	if err != nil {
 		t.Error(err)
 	}
 
-	cv, err := i.configcli.ConfigV1().ClusterVersions().Get(versionName, metav1.GetOptions{})
+	cv, err := m.configcli.ConfigV1().ClusterVersions().Get(versionName, metav1.GetOptions{})
 	if err != nil {
 		t.Error(err)
 	}

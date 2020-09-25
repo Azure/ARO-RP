@@ -23,8 +23,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
-func (i *manager) deployResourceTemplate(ctx context.Context) error {
-	g, err := i.loadGraph(ctx)
+func (m *manager) deployResourceTemplate(ctx context.Context) error {
+	g, err := m.loadGraph(ctx)
 	if err != nil {
 		return err
 	}
@@ -32,14 +32,14 @@ func (i *manager) deployResourceTemplate(ctx context.Context) error {
 	installConfig := g[reflect.TypeOf(&installconfig.InstallConfig{})].(*installconfig.InstallConfig)
 	machineMaster := g[reflect.TypeOf(&machine.Master{})].(*machine.Master)
 
-	infraID := i.doc.OpenShiftCluster.Properties.InfraID
+	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 	if infraID == "" {
 		infraID = "aro" // TODO: remove after deploy
 	}
 
-	resourceGroup := stringutils.LastTokenByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
-	vnetID, _, err := subnet.Split(i.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
+	vnetID, _, err := subnet.Split(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return err
 	}
@@ -181,7 +181,7 @@ func (i *manager) deployResourceTemplate(ctx context.Context) error {
 							{
 								PrivateLinkServiceIPConfigurationProperties: &mgmtnetwork.PrivateLinkServiceIPConfigurationProperties{
 									Subnet: &mgmtnetwork.Subnet{
-										ID: to.StringPtr(i.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
+										ID: to.StringPtr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 									},
 								},
 								Name: to.StringPtr(infraID + "-pls-nic"),
@@ -189,12 +189,12 @@ func (i *manager) deployResourceTemplate(ctx context.Context) error {
 						},
 						Visibility: &mgmtnetwork.PrivateLinkServicePropertiesVisibility{
 							Subscriptions: &[]string{
-								i.env.SubscriptionID(),
+								m.env.SubscriptionID(),
 							},
 						},
 						AutoApproval: &mgmtnetwork.PrivateLinkServicePropertiesAutoApproval{
 							Subscriptions: &[]string{
-								i.env.SubscriptionID(),
+								m.env.SubscriptionID(),
 							},
 						},
 					},
@@ -221,7 +221,7 @@ func (i *manager) deployResourceTemplate(ctx context.Context) error {
 				},
 				APIVersion: azureclient.APIVersions["Microsoft.Network"],
 			},
-			i.apiServerPublicLoadBalancer(installConfig.Config.Azure.Region),
+			m.apiServerPublicLoadBalancer(installConfig.Config.Azure.Region),
 			{
 				Resource: &mgmtnetwork.LoadBalancer{
 					Sku: &mgmtnetwork.LoadBalancerSku{
@@ -233,7 +233,7 @@ func (i *manager) deployResourceTemplate(ctx context.Context) error {
 								FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
 									PrivateIPAllocationMethod: mgmtnetwork.Dynamic,
 									Subnet: &mgmtnetwork.Subnet{
-										ID: to.StringPtr(i.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
+										ID: to.StringPtr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 									},
 								},
 								Name: to.StringPtr("internal-lb-ip-v4"),
@@ -329,7 +329,7 @@ func (i *manager) deployResourceTemplate(ctx context.Context) error {
 										},
 									},
 									Subnet: &mgmtnetwork.Subnet{
-										ID: to.StringPtr(i.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
+										ID: to.StringPtr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 									},
 								},
 								Name: to.StringPtr("bootstrap-nic-ip-v4"),
@@ -361,7 +361,7 @@ func (i *manager) deployResourceTemplate(ctx context.Context) error {
 										},
 									},
 									Subnet: &mgmtnetwork.Subnet{
-										ID: to.StringPtr(i.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
+										ID: to.StringPtr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 									},
 								},
 								Name: to.StringPtr("pipConfig"),
@@ -409,7 +409,7 @@ func (i *manager) deployResourceTemplate(ctx context.Context) error {
 							ComputerName:  to.StringPtr(infraID + "-bootstrap-vm"),
 							AdminUsername: to.StringPtr("core"),
 							AdminPassword: to.StringPtr("NotActuallyApplied!"),
-							CustomData:    to.StringPtr(`[base64(concat('{"ignition":{"version":"2.2.0","config":{"replace":{"source":"https://cluster` + i.doc.OpenShiftCluster.Properties.StorageSuffix + `.blob.core.windows.net/ignition/bootstrap.ign?', listAccountSas(resourceId('Microsoft.Storage/storageAccounts', 'cluster` + i.doc.OpenShiftCluster.Properties.StorageSuffix + `'), '2019-04-01', parameters('sas')).accountSasToken, '"}}}}'))]`),
+							CustomData:    to.StringPtr(`[base64(concat('{"ignition":{"version":"2.2.0","config":{"replace":{"source":"https://cluster` + m.doc.OpenShiftCluster.Properties.StorageSuffix + `.blob.core.windows.net/ignition/bootstrap.ign?', listAccountSas(resourceId('Microsoft.Storage/storageAccounts', 'cluster` + m.doc.OpenShiftCluster.Properties.StorageSuffix + `'), '2019-04-01', parameters('sas')).accountSasToken, '"}}}}'))]`),
 							LinuxConfiguration: &mgmtcompute.LinuxConfiguration{
 								DisablePasswordAuthentication: to.BoolPtr(false),
 							},
@@ -424,7 +424,7 @@ func (i *manager) deployResourceTemplate(ctx context.Context) error {
 						DiagnosticsProfile: &mgmtcompute.DiagnosticsProfile{
 							BootDiagnostics: &mgmtcompute.BootDiagnostics{
 								Enabled:    to.BoolPtr(true),
-								StorageURI: to.StringPtr("https://cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix + ".blob.core.windows.net/"),
+								StorageURI: to.StringPtr("https://cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix + ".blob.core.windows.net/"),
 							},
 						},
 					},
@@ -480,7 +480,7 @@ func (i *manager) deployResourceTemplate(ctx context.Context) error {
 						DiagnosticsProfile: &mgmtcompute.DiagnosticsProfile{
 							BootDiagnostics: &mgmtcompute.BootDiagnostics{
 								Enabled:    to.BoolPtr(true),
-								StorageURI: to.StringPtr("https://cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix + ".blob.core.windows.net/"),
+								StorageURI: to.StringPtr("https://cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix + ".blob.core.windows.net/"),
 							},
 						},
 					},
@@ -565,11 +565,11 @@ func (i *manager) deployResourceTemplate(ctx context.Context) error {
 			},
 		},
 	}
-	return i.deployARMTemplate(ctx, resourceGroup, "resources", t, map[string]interface{}{
+	return m.deployARMTemplate(ctx, resourceGroup, "resources", t, map[string]interface{}{
 		"sas": map[string]interface{}{
 			"value": map[string]interface{}{
-				"signedStart":         i.doc.OpenShiftCluster.Properties.Install.Now.Format(time.RFC3339),
-				"signedExpiry":        i.doc.OpenShiftCluster.Properties.Install.Now.Add(24 * time.Hour).Format(time.RFC3339),
+				"signedStart":         m.doc.OpenShiftCluster.Properties.Install.Now.Format(time.RFC3339),
+				"signedExpiry":        m.doc.OpenShiftCluster.Properties.Install.Now.Add(24 * time.Hour).Format(time.RFC3339),
 				"signedPermission":    "rl",
 				"signedResourceTypes": "o",
 				"signedServices":      "b",

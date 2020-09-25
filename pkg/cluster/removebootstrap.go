@@ -12,33 +12,33 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
-func (i *manager) removeBootstrap(ctx context.Context) error {
-	infraID := i.doc.OpenShiftCluster.Properties.InfraID
+func (m *manager) removeBootstrap(ctx context.Context) error {
+	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 	if infraID == "" {
 		infraID = "aro" // TODO: remove after deploy
 	}
 
-	resourceGroup := stringutils.LastTokenByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-	i.log.Print("removing bootstrap vm")
-	err := i.virtualmachines.DeleteAndWait(ctx, resourceGroup, infraID+"-bootstrap")
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	m.log.Print("removing bootstrap vm")
+	err := m.virtualmachines.DeleteAndWait(ctx, resourceGroup, infraID+"-bootstrap")
 	if err != nil {
 		return err
 	}
 
-	i.log.Print("removing bootstrap disk")
-	err = i.disks.DeleteAndWait(ctx, resourceGroup, infraID+"-bootstrap_OSDisk")
+	m.log.Print("removing bootstrap disk")
+	err = m.disks.DeleteAndWait(ctx, resourceGroup, infraID+"-bootstrap_OSDisk")
 	if err != nil {
 		return err
 	}
 
-	i.log.Print("removing bootstrap nic")
-	return i.interfaces.DeleteAndWait(ctx, resourceGroup, infraID+"-bootstrap-nic")
+	m.log.Print("removing bootstrap nic")
+	return m.interfaces.DeleteAndWait(ctx, resourceGroup, infraID+"-bootstrap-nic")
 }
 
-func (i *manager) removeBootstrapIgnition(ctx context.Context) error {
-	i.log.Print("remove ignition config")
+func (m *manager) removeBootstrapIgnition(ctx context.Context) error {
+	m.log.Print("remove ignition config")
 
-	blobService, err := i.getBlobService(ctx, mgmtstorage.Permissions("d"), mgmtstorage.SignedResourceTypesC)
+	blobService, err := m.getBlobService(ctx, mgmtstorage.Permissions("d"), mgmtstorage.SignedResourceTypesC)
 	if err != nil {
 		return err
 	}

@@ -124,12 +124,12 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			h, log := test_log.NewCapturingLogger()
-			i := &manager{
+			m := &manager{
 				log:       log,
 				configcli: tt.configcli,
 			}
 
-			err := i.runSteps(ctx, tt.steps)
+			err := m.runSteps(ctx, tt.steps)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
@@ -230,12 +230,12 @@ func TestDeployARMTemplate(t *testing.T) {
 			deploymentsClient := mock_features.NewMockDeploymentsClient(controller)
 			tt.mocks(deploymentsClient)
 
-			i := &manager{
+			m := &manager{
 				log:         logrus.NewEntry(logrus.StandardLogger()),
 				deployments: deploymentsClient,
 			}
 
-			err := i.deployARMTemplate(ctx, resourceGroup, "test", armTemplate, params)
+			err := m.deployARMTemplate(ctx, resourceGroup, "test", armTemplate, params)
 
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
@@ -292,11 +292,11 @@ func TestAddResourceProviderVersion(t *testing.T) {
 			return docFromDatabase, err
 		})
 
-	i := &manager{
+	m := &manager{
 		doc: clusterdoc,
 		db:  openshiftClusters,
 	}
-	err = i.addResourceProviderVersion(ctx)
+	err = m.addResourceProviderVersion(ctx)
 	if err != nil {
 		t.Error(err)
 		return

@@ -41,7 +41,7 @@ func TestDenyAssignments(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			i := &manager{
+			m := &manager{
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
 						Properties: api.OpenShiftClusterProperties{
@@ -64,7 +64,7 @@ func TestDenyAssignments(t *testing.T) {
 					},
 				},
 			}
-			exceptionsToDeniedActions := *(*((i.denyAssignments("testing").Resource).(*mgmtauthorization.DenyAssignment).
+			exceptionsToDeniedActions := *(*((m.denyAssignments("testing").Resource).(*mgmtauthorization.DenyAssignment).
 				DenyAssignmentProperties.Permissions))[0].NotActions
 
 			if !reflect.DeepEqual(exceptionsToDeniedActions, tt.want) {

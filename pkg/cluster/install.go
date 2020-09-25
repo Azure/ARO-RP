@@ -26,93 +26,93 @@ import (
 )
 
 // AdminUpgrade performs an admin upgrade of an ARO cluster
-func (i *manager) AdminUpgrade(ctx context.Context) error {
+func (m *manager) AdminUpgrade(ctx context.Context) error {
 	steps := []steps.Step{
-		steps.Action(i.initializeKubernetesClients), // must be first
-		steps.Action(i.deploySnapshotUpgradeTemplate),
-		steps.Action(i.startVMs),
-		steps.Condition(i.apiServersReady, 30*time.Minute),
-		steps.Action(i.ensureBillingRecord), // belt and braces
-		steps.Action(i.fixLBProbes),
-		steps.Action(i.fixNSG),
-		steps.Action(i.fixPullSecret), // TODO(mj): Remove when operator deployed
-		steps.Action(i.ensureRouteFix),
-		steps.Action(i.ensureAROOperator),
-		steps.Condition(i.aroDeploymentReady, 10*time.Minute),
-		steps.Action(i.upgradeCertificates),
-		steps.Action(i.configureAPIServerCertificate),
-		steps.Action(i.configureIngressCertificate),
-		steps.Action(i.addResourceProviderVersion), // Run this last so we capture the resource provider only once the upgrade has been fully performed
+		steps.Action(m.initializeKubernetesClients), // must be first
+		steps.Action(m.deploySnapshotUpgradeTemplate),
+		steps.Action(m.startVMs),
+		steps.Condition(m.apiServersReady, 30*time.Minute),
+		steps.Action(m.ensureBillingRecord), // belt and braces
+		steps.Action(m.fixLBProbes),
+		steps.Action(m.fixNSG),
+		steps.Action(m.fixPullSecret), // TODO(mj): Remove when operator deployed
+		steps.Action(m.ensureRouteFix),
+		steps.Action(m.ensureAROOperator),
+		steps.Condition(m.aroDeploymentReady, 10*time.Minute),
+		steps.Action(m.upgradeCertificates),
+		steps.Action(m.configureAPIServerCertificate),
+		steps.Action(m.configureIngressCertificate),
+		steps.Action(m.addResourceProviderVersion), // Run this last so we capture the resource provider only once the upgrade has been fully performed
 	}
 
-	return i.runSteps(ctx, steps)
+	return m.runSteps(ctx, steps)
 }
 
 // Install installs an ARO cluster
-func (i *manager) Install(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image, bootstrapLoggingConfig *bootstraplogging.Config) error {
+func (m *manager) Install(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image, bootstrapLoggingConfig *bootstraplogging.Config) error {
 	steps := map[api.InstallPhase][]steps.Step{
 		api.InstallPhaseBootstrap: {
-			steps.Action(i.createDNS),
-			steps.AuthorizationRefreshingAction(i.fpAuthorizer, steps.Action(func(ctx context.Context) error {
-				return i.deployStorageTemplate(ctx, installConfig, platformCreds, image, bootstrapLoggingConfig)
+			steps.Action(m.createDNS),
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(func(ctx context.Context) error {
+				return m.deployStorageTemplate(ctx, installConfig, platformCreds, image, bootstrapLoggingConfig)
 			})),
-			steps.AuthorizationRefreshingAction(i.fpAuthorizer, steps.Action(i.attachNSGsAndPatch)),
-			steps.Action(i.ensureBillingRecord),
-			steps.AuthorizationRefreshingAction(i.fpAuthorizer, steps.Action(i.deployResourceTemplate)),
-			steps.Action(i.createPrivateEndpoint),
-			steps.Action(i.updateAPIIP),
-			steps.Action(i.createCertificates),
-			steps.Action(i.initializeKubernetesClients),
-			steps.Condition(i.bootstrapConfigMapReady, 30*time.Minute),
-			steps.Action(i.ensureRouteFix),
-			steps.Action(i.ensureAROOperator),
-			steps.Action(i.incrInstallPhase),
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.attachNSGsAndPatch)),
+			steps.Action(m.ensureBillingRecord),
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.deployResourceTemplate)),
+			steps.Action(m.createPrivateEndpoint),
+			steps.Action(m.updateAPIIP),
+			steps.Action(m.createCertificates),
+			steps.Action(m.initializeKubernetesClients),
+			steps.Condition(m.bootstrapConfigMapReady, 30*time.Minute),
+			steps.Action(m.ensureRouteFix),
+			steps.Action(m.ensureAROOperator),
+			steps.Action(m.incrInstallPhase),
 		},
 		api.InstallPhaseRemoveBootstrap: {
-			steps.Action(i.initializeKubernetesClients),
-			steps.Action(i.removeBootstrap),
-			steps.Action(i.removeBootstrapIgnition),
-			steps.Action(i.configureAPIServerCertificate),
-			steps.Condition(i.apiServersReady, 30*time.Minute),
-			steps.Condition(i.operatorConsoleExists, 30*time.Minute),
-			steps.Action(i.updateConsoleBranding),
-			steps.Condition(i.operatorConsoleReady, 30*time.Minute),
-			steps.Condition(i.clusterVersionReady, 30*time.Minute),
-			steps.Condition(i.aroDeploymentReady, 10*time.Minute),
-			steps.Action(i.disableUpdates),
-			steps.Action(i.disableSamples),
-			steps.Action(i.disableOperatorHubSources),
-			steps.Action(i.updateRouterIP),
-			steps.Action(i.configureIngressCertificate),
-			steps.Condition(i.ingressControllerReady, 30*time.Minute),
-			steps.Action(i.finishInstallation),
-			steps.Action(i.addResourceProviderVersion),
+			steps.Action(m.initializeKubernetesClients),
+			steps.Action(m.removeBootstrap),
+			steps.Action(m.removeBootstrapIgnition),
+			steps.Action(m.configureAPIServerCertificate),
+			steps.Condition(m.apiServersReady, 30*time.Minute),
+			steps.Condition(m.operatorConsoleExists, 30*time.Minute),
+			steps.Action(m.updateConsoleBranding),
+			steps.Condition(m.operatorConsoleReady, 10*time.Minute),
+			steps.Condition(m.clusterVersionReady, 30*time.Minute),
+			steps.Condition(m.aroDeploymentReady, 10*time.Minute),
+			steps.Action(m.disableUpdates),
+			steps.Action(m.disableSamples),
+			steps.Action(m.disableOperatorHubSources),
+			steps.Action(m.updateRouterIP),
+			steps.Action(m.configureIngressCertificate),
+			steps.Condition(m.ingressControllerReady, 30*time.Minute),
+			steps.Action(m.finishInstallation),
+			steps.Action(m.addResourceProviderVersion),
 		},
 	}
 
-	err := i.startInstallation(ctx)
+	err := m.startInstallation(ctx)
 	if err != nil {
 		return err
 	}
 
-	if steps[i.doc.OpenShiftCluster.Properties.Install.Phase] == nil {
-		return fmt.Errorf("unrecognised phase %s", i.doc.OpenShiftCluster.Properties.Install.Phase)
+	if steps[m.doc.OpenShiftCluster.Properties.Install.Phase] == nil {
+		return fmt.Errorf("unrecognised phase %s", m.doc.OpenShiftCluster.Properties.Install.Phase)
 	}
-	i.log.Printf("starting phase %s", i.doc.OpenShiftCluster.Properties.Install.Phase)
-	return i.runSteps(ctx, steps[i.doc.OpenShiftCluster.Properties.Install.Phase])
+	m.log.Printf("starting phase %s", m.doc.OpenShiftCluster.Properties.Install.Phase)
+	return m.runSteps(ctx, steps[m.doc.OpenShiftCluster.Properties.Install.Phase])
 }
 
-func (i *manager) runSteps(ctx context.Context, s []steps.Step) error {
-	err := steps.Run(ctx, i.log, 10*time.Second, s)
+func (m *manager) runSteps(ctx context.Context, s []steps.Step) error {
+	err := steps.Run(ctx, m.log, 10*time.Second, s)
 	if err != nil {
-		i.gatherFailureLogs(ctx)
+		m.gatherFailureLogs(ctx)
 	}
 	return err
 }
 
-func (i *manager) startInstallation(ctx context.Context) error {
+func (m *manager) startInstallation(ctx context.Context) error {
 	var err error
-	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		if doc.OpenShiftCluster.Properties.Install == nil {
 			doc.OpenShiftCluster.Properties.Install = &api.Install{}
 		}
@@ -121,18 +121,18 @@ func (i *manager) startInstallation(ctx context.Context) error {
 	return err
 }
 
-func (i *manager) incrInstallPhase(ctx context.Context) error {
+func (m *manager) incrInstallPhase(ctx context.Context) error {
 	var err error
-	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		doc.OpenShiftCluster.Properties.Install.Phase++
 		return nil
 	})
 	return err
 }
 
-func (i *manager) finishInstallation(ctx context.Context) error {
+func (m *manager) finishInstallation(ctx context.Context) error {
 	var err error
-	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		doc.OpenShiftCluster.Properties.Install = nil
 		return nil
 	})
@@ -141,51 +141,51 @@ func (i *manager) finishInstallation(ctx context.Context) error {
 
 // initializeKubernetesClients initializes clients which are used
 // once the cluster is up later on in the install process.
-func (i *manager) initializeKubernetesClients(ctx context.Context) error {
-	restConfig, err := restconfig.RestConfig(i.env, i.doc.OpenShiftCluster)
+func (m *manager) initializeKubernetesClients(ctx context.Context) error {
+	restConfig, err := restconfig.RestConfig(m.env, m.doc.OpenShiftCluster)
 	if err != nil {
 		return err
 	}
 
-	i.kubernetescli, err = kubernetes.NewForConfig(restConfig)
+	m.kubernetescli, err = kubernetes.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}
 
-	i.extcli, err = extensionsclient.NewForConfig(restConfig)
+	m.extcli, err = extensionsclient.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}
 
-	i.operatorcli, err = operatorclient.NewForConfig(restConfig)
+	m.operatorcli, err = operatorclient.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}
 
-	i.securitycli, err = securityclient.NewForConfig(restConfig)
+	m.securitycli, err = securityclient.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}
 
-	i.samplescli, err = samplesclient.NewForConfig(restConfig)
+	m.samplescli, err = samplesclient.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}
 
-	i.arocli, err = aroclient.NewForConfig(restConfig)
+	m.arocli, err = aroclient.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}
 
-	i.configcli, err = configclient.NewForConfig(restConfig)
+	m.configcli, err = configclient.NewForConfig(restConfig)
 	return err
 }
 
 // addResourceProviderVersion sets the deploying resource provider version in
 // the cluster document for deployment-tracking purposes.
-func (i *manager) addResourceProviderVersion(ctx context.Context) error {
+func (m *manager) addResourceProviderVersion(ctx context.Context) error {
 	var err error
-	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		doc.OpenShiftCluster.Properties.ProvisionedBy = version.GitCommit
 		return nil
 	})

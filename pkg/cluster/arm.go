@@ -17,10 +17,10 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 )
 
-func (i *manager) deployARMTemplate(ctx context.Context, rg string, tName string, t *arm.Template, params map[string]interface{}) error {
-	i.log.Printf("deploying %s template", tName)
+func (m *manager) deployARMTemplate(ctx context.Context, rg string, tName string, t *arm.Template, params map[string]interface{}) error {
+	m.log.Printf("deploying %s template", tName)
 
-	err := i.deployments.CreateOrUpdateAndWait(ctx, rg, deploymentName, mgmtfeatures.Deployment{
+	err := m.deployments.CreateOrUpdateAndWait(ctx, rg, deploymentName, mgmtfeatures.Deployment{
 		Properties: &mgmtfeatures.DeploymentProperties{
 			Template:   t,
 			Parameters: params,
@@ -29,8 +29,8 @@ func (i *manager) deployARMTemplate(ctx context.Context, rg string, tName string
 	})
 
 	if azureerrors.IsDeploymentActiveError(err) {
-		i.log.Printf("waiting for %s template to be deployed", tName)
-		err = i.deployments.Wait(ctx, rg, deploymentName)
+		m.log.Printf("waiting for %s template to be deployed", tName)
+		err = m.deployments.Wait(ctx, rg, deploymentName)
 	}
 
 	if azureerrors.HasAuthorizationFailedError(err) ||

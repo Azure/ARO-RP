@@ -18,13 +18,13 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
-func (i *manager) fixLBProbeConfig(ctx context.Context, resourceGroup, lbName string) error {
-	mcsCertIsMalformed, err := i.mcsCertIsMalformed()
+func (m *manager) fixLBProbeConfig(ctx context.Context, resourceGroup, lbName string) error {
+	mcsCertIsMalformed, err := m.mcsCertIsMalformed()
 	if err != nil {
 		return err
 	}
 
-	lb, err := i.loadbalancers.Get(ctx, resourceGroup, lbName, "")
+	lb, err := m.loadbalancers.Get(ctx, resourceGroup, lbName, "")
 	if err != nil {
 		return err
 	}
@@ -68,22 +68,22 @@ loop:
 		return nil
 	}
 
-	return i.loadbalancers.CreateOrUpdateAndWait(ctx, resourceGroup, lbName, lb)
+	return m.loadbalancers.CreateOrUpdateAndWait(ctx, resourceGroup, lbName, lb)
 }
 
-func (i *manager) fixLBProbes(ctx context.Context) error {
-	infraID := i.doc.OpenShiftCluster.Properties.InfraID
+func (m *manager) fixLBProbes(ctx context.Context) error {
+	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 	if infraID == "" {
 		infraID = "aro"
 	}
 
-	resourceGroup := stringutils.LastTokenByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
 	for _, lbName := range []string{
 		infraID + "-public-lb",
 		infraID + "-internal-lb",
 	} {
-		err := i.fixLBProbeConfig(ctx, resourceGroup, lbName)
+		err := m.fixLBProbeConfig(ctx, resourceGroup, lbName)
 		if err != nil {
 			return err
 		}
@@ -96,8 +96,8 @@ func (i *manager) fixLBProbes(ctx context.Context) error {
 // authority key identifier equals the subject key identifier, which is
 // non-compliant and is rejected by Azure SLB.  This provisioning error was
 // fixed in 4a7415a4 but clusters pre-dating the fix still exist.
-func (i *manager) mcsCertIsMalformed() (bool, error) {
-	s, err := i.kubernetescli.CoreV1().Secrets("openshift-machine-config-operator").Get("machine-config-server-tls", metav1.GetOptions{})
+func (m *manager) mcsCertIsMalformed() (bool, error) {
+	s, err := m.kubernetescli.CoreV1().Secrets("openshift-machine-config-operator").Get("machine-config-server-tls", metav1.GetOptions{})
 	if err != nil {
 		return false, err
 	}

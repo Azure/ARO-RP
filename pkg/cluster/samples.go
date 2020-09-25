@@ -16,37 +16,37 @@ import (
 )
 
 // disableSamples disables the samples if there's no appropriate pull secret
-func (i *manager) disableSamples(ctx context.Context) error {
-	if i.env.DeploymentMode() != deployment.Development &&
-		i.doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret != "" {
+func (m *manager) disableSamples(ctx context.Context) error {
+	if m.env.DeploymentMode() != deployment.Development &&
+		m.doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret != "" {
 		return nil
 	}
 
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		c, err := i.samplescli.SamplesV1().Configs().Get("cluster", metav1.GetOptions{})
+		c, err := m.samplescli.SamplesV1().Configs().Get("cluster", metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
 
 		c.Spec.ManagementState = operatorv1.Removed
 
-		_, err = i.samplescli.SamplesV1().Configs().Update(c)
+		_, err = m.samplescli.SamplesV1().Configs().Update(c)
 		return err
 	})
 }
 
 // disableOperatorHubSources disables operator hub sources if there's no
 // appropriate pull secret
-func (i *manager) disableOperatorHubSources(ctx context.Context) error {
-	if i.env.DeploymentMode() != deployment.Development &&
-		i.doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret != "" {
+func (m *manager) disableOperatorHubSources(ctx context.Context) error {
+	if m.env.DeploymentMode() != deployment.Development &&
+		m.doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret != "" {
 		return nil
 	}
 
 	// https://bugzilla.redhat.com/show_bug.cgi?id=1815649
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		c := &configv1.OperatorHub{}
-		err := i.configcli.ConfigV1().RESTClient().Get().
+		err := m.configcli.ConfigV1().RESTClient().Get().
 			Resource("operatorhubs").
 			Name("cluster").
 			VersionedParams(&metav1.GetOptions{}, configscheme.ParameterCodec).
@@ -75,7 +75,7 @@ func (i *manager) disableOperatorHubSources(ctx context.Context) error {
 		}
 		c.Spec.Sources = sources
 
-		err = i.configcli.ConfigV1().RESTClient().Put().
+		err = m.configcli.ConfigV1().RESTClient().Put().
 			Resource("operatorhubs").
 			Name("cluster").
 			Body(c).

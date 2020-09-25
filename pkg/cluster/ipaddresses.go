@@ -16,8 +16,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
-func (i *manager) updateRouterIP(ctx context.Context) error {
-	g, err := i.loadGraph(ctx)
+func (m *manager) updateRouterIP(ctx context.Context) error {
+	g, err := m.loadGraph(ctx)
 	if err != nil {
 		return err
 	}
@@ -25,7 +25,7 @@ func (i *manager) updateRouterIP(ctx context.Context) error {
 	installConfig := g[reflect.TypeOf(&installconfig.InstallConfig{})].(*installconfig.InstallConfig)
 	kubeadminPassword := g[reflect.TypeOf(&password.KubeadminPassword{})].(*password.KubeadminPassword)
 
-	svc, err := i.kubernetescli.CoreV1().Services("openshift-ingress").Get("router-default", metav1.GetOptions{})
+	svc, err := m.kubernetescli.CoreV1().Services("openshift-ingress").Get("router-default", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -36,12 +36,12 @@ func (i *manager) updateRouterIP(ctx context.Context) error {
 
 	routerIP := svc.Status.LoadBalancer.Ingress[0].IP
 
-	err = i.dns.CreateOrUpdateRouter(ctx, i.doc.OpenShiftCluster, routerIP)
+	err = m.dns.CreateOrUpdateRouter(ctx, m.doc.OpenShiftCluster, routerIP)
 	if err != nil {
 		return err
 	}
 
-	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		doc.OpenShiftCluster.Properties.APIServerProfile.URL = "https://api." + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + ":6443/"
 		doc.OpenShiftCluster.Properties.IngressProfiles[0].IP = routerIP
 		doc.OpenShiftCluster.Properties.ConsoleProfile.URL = "https://console-openshift-console.apps." + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/"
@@ -51,39 +51,39 @@ func (i *manager) updateRouterIP(ctx context.Context) error {
 	return err
 }
 
-func (i *manager) updateAPIIP(ctx context.Context) error {
-	infraID := i.doc.OpenShiftCluster.Properties.InfraID
+func (m *manager) updateAPIIP(ctx context.Context) error {
+	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 	if infraID == "" {
 		infraID = "aro" // TODO: remove after deploy
 	}
 
-	resourceGroup := stringutils.LastTokenByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	var ipAddress string
-	if i.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {
-		ip, err := i.publicipaddresses.Get(ctx, resourceGroup, infraID+"-pip-v4", "")
+	if m.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {
+		ip, err := m.publicipaddresses.Get(ctx, resourceGroup, infraID+"-pip-v4", "")
 		if err != nil {
 			return err
 		}
 		ipAddress = *ip.IPAddress
 	} else {
-		lb, err := i.loadbalancers.Get(ctx, resourceGroup, infraID+"-internal-lb", "")
+		lb, err := m.loadbalancers.Get(ctx, resourceGroup, infraID+"-internal-lb", "")
 		if err != nil {
 			return err
 		}
 		ipAddress = *((*lb.FrontendIPConfigurations)[0].PrivateIPAddress)
 	}
 
-	err := i.dns.Update(ctx, i.doc.OpenShiftCluster, ipAddress)
+	err := m.dns.Update(ctx, m.doc.OpenShiftCluster, ipAddress)
 	if err != nil {
 		return err
 	}
 
-	privateEndpointIP, err := i.privateendpoint.GetIP(ctx, i.doc)
+	privateEndpointIP, err := m.privateendpoint.GetIP(ctx, m.doc)
 	if err != nil {
 		return err
 	}
 
-	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		doc.OpenShiftCluster.Properties.NetworkProfile.PrivateEndpointIP = privateEndpointIP
 		doc.OpenShiftCluster.Properties.APIServerProfile.IP = ipAddress
 		return nil
@@ -91,6 +91,6 @@ func (i *manager) updateAPIIP(ctx context.Context) error {
 	return err
 }
 
-func (i *manager) createPrivateEndpoint(ctx context.Context) error {
-	return i.privateendpoint.Create(ctx, i.doc)
+func (m *manager) createPrivateEndpoint(ctx context.Context) error {
+	return m.privateendpoint.Create(ctx, m.doc)
 }
