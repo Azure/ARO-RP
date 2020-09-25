@@ -43,8 +43,7 @@ type Database struct {
 	Subscriptions     Subscriptions
 }
 
-// NewDatabase returns a new Database
-func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Core, m metrics.Interface, cipher encryption.Cipher, uuid string) (db *Database, err error) {
+func NewDatabaseClient(ctx context.Context, log *logrus.Entry, env env.Core, m metrics.Interface, cipher encryption.Cipher) (cosmosdb.DatabaseClient, error) {
 	databaseAccount, masterKey, err := find(ctx, env)
 	if err != nil {
 		return nil, err
@@ -61,7 +60,12 @@ func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Core, m metrics
 		Timeout: 30 * time.Second,
 	}
 
-	dbc, err := cosmosdb.NewDatabaseClient(log, c, h, databaseAccount, masterKey)
+	return cosmosdb.NewDatabaseClient(log, c, h, databaseAccount, masterKey)
+}
+
+// NewDatabase returns a new Database
+func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Core, m metrics.Interface, cipher encryption.Cipher, uuid string) (db *Database, err error) {
+	dbc, err := NewDatabaseClient(ctx, log, env, m, cipher)
 	if err != nil {
 		return nil, err
 	}
