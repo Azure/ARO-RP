@@ -18,14 +18,14 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
 
 type Monitor struct {
-	env       env.Interface
+	dialer    proxy.Dialer
 	log       *logrus.Entry
 	hourlyRun bool
 
@@ -46,7 +46,7 @@ type Monitor struct {
 	}
 }
 
-func NewMonitor(ctx context.Context, env env.Interface, log *logrus.Entry, oc *api.OpenShiftCluster, m metrics.Interface, hourlyRun bool) (*Monitor, error) {
+func NewMonitor(ctx context.Context, dialer proxy.Dialer, log *logrus.Entry, oc *api.OpenShiftCluster, m metrics.Interface, hourlyRun bool) (*Monitor, error) {
 	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
 		return nil, err
@@ -59,7 +59,7 @@ func NewMonitor(ctx context.Context, env env.Interface, log *logrus.Entry, oc *a
 		"resourceName":   r.ResourceName,
 	}
 
-	restConfig, err := restconfig.RestConfig(env, oc)
+	restConfig, err := restconfig.RestConfig(dialer, oc)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func NewMonitor(ctx context.Context, env env.Interface, log *logrus.Entry, oc *a
 	}
 
 	return &Monitor{
-		env:       env,
+		dialer:    dialer,
 		log:       log,
 		hourlyRun: hourlyRun,
 

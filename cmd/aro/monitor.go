@@ -19,6 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/azure"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/k8s"
 	pkgmonitor "github.com/Azure/ARO-RP/pkg/monitor"
+	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 )
@@ -27,7 +28,7 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 	uuid := uuid.NewV4().String()
 	log.Printf("uuid %s", uuid)
 
-	_env, err := env.NewEnv(ctx, log)
+	_env, err := env.NewCore(ctx, log)
 	if err != nil {
 		return err
 	}
@@ -68,7 +69,12 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	mon := pkgmonitor.NewMonitor(log.WithField("component", "monitor"), _env, db, m, clusterm)
+	dialer, err := proxy.NewDialer(_env.DeploymentMode())
+	if err != nil {
+		return err
+	}
+
+	mon := pkgmonitor.NewMonitor(log.WithField("component", "monitor"), dialer, db, m, clusterm)
 
 	return mon.Run(ctx)
 }
