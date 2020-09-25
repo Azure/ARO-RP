@@ -107,9 +107,9 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		env:             _env,
 		db:              db,
 		billing:         billing,
-		cipher:          cipher,
 		doc:             doc,
 		subscriptionDoc: subscriptionDoc,
+		cipher:          cipher,
 		fpAuthorizer:    fpAuthorizer,
 
 		disks:             compute.NewDisksClient(r.SubscriptionID, fpAuthorizer),
