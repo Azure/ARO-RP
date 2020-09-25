@@ -87,7 +87,7 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	go db.EmitMetrics(ctx)
+	go db.EmitMetrics(ctx, log, m)
 
 	feCipher, err := encryption.NewXChaCha20Poly1305(ctx, _env, env.FrontendEncryptionSecretName)
 	if err != nil {

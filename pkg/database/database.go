@@ -28,9 +28,6 @@ import (
 
 // Database represents a database
 type Database struct {
-	log *logrus.Entry
-	m   metrics.Interface
-
 	AsyncOperations   AsyncOperations
 	Billing           Billing
 	Monitors          Monitors
@@ -74,10 +71,7 @@ func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Core, m metrics
 		return nil, err
 	}
 
-	db = &Database{
-		log: log,
-		m:   m,
-	}
+	db = &Database{}
 
 	db.AsyncOperations, err = NewAsyncOperations(uuid, dbc, databaseName, "AsyncOperations")
 	if err != nil {
