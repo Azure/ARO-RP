@@ -11,6 +11,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
 )
 
 type billing struct {
@@ -30,7 +31,12 @@ type Billing interface {
 }
 
 // NewBilling returns a new Billing
-func NewBilling(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, dbid string) (Billing, error) {
+func NewBilling(ctx context.Context, deploymentMode deployment.Mode, uuid string, dbc cosmosdb.DatabaseClient) (Billing, error) {
+	dbid, err := databaseName(deploymentMode)
+	if err != nil {
+		return nil, err
+	}
+
 	collc := cosmosdb.NewCollectionClient(dbc, dbid)
 
 	triggers := []*cosmosdb.Trigger{

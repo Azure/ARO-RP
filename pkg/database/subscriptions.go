@@ -11,6 +11,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
 )
 
 const SubscriptionsDequeueQuery string = `SELECT * FROM Subscriptions doc WHERE (doc.deleting ?? false) AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`
@@ -32,7 +33,12 @@ type Subscriptions interface {
 }
 
 // NewSubscriptions returns a new Subscriptions
-func NewSubscriptions(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, dbid string) (Subscriptions, error) {
+func NewSubscriptions(ctx context.Context, deploymentMode deployment.Mode, uuid string, dbc cosmosdb.DatabaseClient) (Subscriptions, error) {
+	dbid, err := databaseName(deploymentMode)
+	if err != nil {
+		return nil, err
+	}
+
 	collc := cosmosdb.NewCollectionClient(dbc, dbid)
 
 	triggers := []*cosmosdb.Trigger{

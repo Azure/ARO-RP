@@ -45,11 +45,6 @@ type Database struct {
 
 // NewDatabase returns a new Database
 func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Core, m metrics.Interface, cipher encryption.Cipher, uuid string) (db *Database, err error) {
-	databaseName, err := databaseName(env.DeploymentMode())
-	if err != nil {
-		return nil, err
-	}
-
 	databaseAccount, masterKey, err := find(ctx, env)
 	if err != nil {
 		return nil, err
@@ -73,27 +68,27 @@ func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Core, m metrics
 
 	db = &Database{}
 
-	db.AsyncOperations, err = NewAsyncOperations(uuid, dbc, databaseName)
+	db.AsyncOperations, err = NewAsyncOperations(ctx, env.DeploymentMode(), uuid, dbc)
 	if err != nil {
 		return nil, err
 	}
 
-	db.Billing, err = NewBilling(ctx, uuid, dbc, databaseName)
+	db.Billing, err = NewBilling(ctx, env.DeploymentMode(), uuid, dbc)
 	if err != nil {
 		return nil, err
 	}
 
-	db.Monitors, err = NewMonitors(ctx, uuid, dbc, databaseName)
+	db.Monitors, err = NewMonitors(ctx, env.DeploymentMode(), uuid, dbc)
 	if err != nil {
 		return nil, err
 	}
 
-	db.OpenShiftClusters, err = NewOpenShiftClusters(ctx, uuid, dbc, databaseName)
+	db.OpenShiftClusters, err = NewOpenShiftClusters(ctx, env.DeploymentMode(), uuid, dbc)
 	if err != nil {
 		return nil, err
 	}
 
-	db.Subscriptions, err = NewSubscriptions(ctx, uuid, dbc, databaseName)
+	db.Subscriptions, err = NewSubscriptions(ctx, env.DeploymentMode(), uuid, dbc)
 	if err != nil {
 		return nil, err
 	}

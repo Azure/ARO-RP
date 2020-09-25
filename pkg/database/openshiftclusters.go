@@ -13,6 +13,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
 )
 
 const (
@@ -50,7 +51,12 @@ type OpenShiftClusters interface {
 }
 
 // NewOpenShiftClusters returns a new OpenShiftClusters
-func NewOpenShiftClusters(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, dbid string) (OpenShiftClusters, error) {
+func NewOpenShiftClusters(ctx context.Context, deploymentMode deployment.Mode, uuid string, dbc cosmosdb.DatabaseClient) (OpenShiftClusters, error) {
+	dbid, err := databaseName(deploymentMode)
+	if err != nil {
+		return nil, err
+	}
+
 	collc := cosmosdb.NewCollectionClient(dbc, dbid)
 
 	triggers := []*cosmosdb.Trigger{
