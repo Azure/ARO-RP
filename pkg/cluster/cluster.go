@@ -55,7 +55,6 @@ type manager struct {
 
 	disks             compute.DisksClient
 	virtualmachines   compute.VirtualMachinesClient
-	vnet              network.VirtualNetworksClient
 	interfaces        network.InterfacesClient
 	publicipaddresses network.PublicIPAddressesClient
 	loadbalancers     network.LoadBalancersClient
@@ -115,7 +114,6 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 
 		disks:             compute.NewDisksClient(r.SubscriptionID, fpAuthorizer),
 		virtualmachines:   compute.NewVirtualMachinesClient(r.SubscriptionID, fpAuthorizer),
-		vnet:              network.NewVirtualNetworksClient(r.SubscriptionID, fpAuthorizer),
 		interfaces:        network.NewInterfacesClient(r.SubscriptionID, fpAuthorizer),
 		publicipaddresses: network.NewPublicIPAddressesClient(r.SubscriptionID, fpAuthorizer),
 		loadbalancers:     network.NewLoadBalancersClient(r.SubscriptionID, fpAuthorizer),
