@@ -22,9 +22,13 @@ import (
 )
 
 type monitor struct {
-	baseLog  *logrus.Entry
-	dialer   proxy.Dialer
-	db       *database.Database
+	baseLog *logrus.Entry
+	dialer  proxy.Dialer
+
+	dbMonitors          database.Monitors
+	dbOpenShiftClusters database.OpenShiftClusters
+	dbSubscriptions     database.Subscriptions
+
 	m        metrics.Interface
 	clusterm metrics.Interface
 	mu       sync.RWMutex
@@ -44,11 +48,15 @@ type Runnable interface {
 	Run(context.Context) error
 }
 
-func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, db *database.Database, m, clusterm metrics.Interface) Runnable {
+func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Monitors, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, m, clusterm metrics.Interface) Runnable {
 	return &monitor{
-		baseLog:  log,
-		dialer:   dialer,
-		db:       db,
+		baseLog: log,
+		dialer:  dialer,
+
+		dbMonitors:          dbMonitors,
+		dbOpenShiftClusters: dbOpenShiftClusters,
+		dbSubscriptions:     dbSubscriptions,
+
 		m:        m,
 		clusterm: clusterm,
 		docs:     map[string]*cacheDoc{},
@@ -62,7 +70,7 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, db *database.Database, m
 }
 
 func (mon *monitor) Run(ctx context.Context) error {
-	_, err := mon.db.Monitors.Create(ctx, &api.MonitorDocument{
+	_, err := mon.dbMonitors.Create(ctx, &api.MonitorDocument{
 		ID: "master",
 	})
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusPreconditionFailed) {
@@ -79,7 +87,7 @@ func (mon *monitor) Run(ctx context.Context) error {
 
 	for {
 		// register ourself as a monitor
-		err = mon.db.Monitors.MonitorHeartbeat(ctx)
+		err = mon.dbMonitors.MonitorHeartbeat(ctx)
 		if err != nil {
 			mon.baseLog.Error(err)
 		}

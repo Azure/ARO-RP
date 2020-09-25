@@ -19,7 +19,7 @@ import (
 
 // listBuckets reads our bucket allocation from the master
 func (mon *monitor) listBuckets(ctx context.Context) error {
-	buckets, err := mon.db.Monitors.ListBuckets(ctx)
+	buckets, err := mon.dbMonitors.ListBuckets(ctx)
 
 	mon.mu.Lock()
 	defer mon.mu.Unlock()
@@ -46,8 +46,8 @@ func (mon *monitor) listBuckets(ctx context.Context) error {
 func (mon *monitor) changefeed(ctx context.Context, baseLog *logrus.Entry, stop <-chan struct{}) {
 	defer recover.Panic(baseLog)
 
-	clustersIterator := mon.db.OpenShiftClusters.ChangeFeed()
-	subscriptionsIterator := mon.db.Subscriptions.ChangeFeed()
+	clustersIterator := mon.dbOpenShiftClusters.ChangeFeed()
+	subscriptionsIterator := mon.dbSubscriptions.ChangeFeed()
 
 	t := time.NewTicker(10 * time.Second)
 	defer t.Stop()

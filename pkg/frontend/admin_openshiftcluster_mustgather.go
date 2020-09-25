@@ -32,7 +32,7 @@ func (f *frontend) _postAdminOpenShiftClusterMustGather(ctx context.Context, w h
 
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 
-	doc, err := f.db.OpenShiftClusters.Get(ctx, resourceID)
+	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])

@@ -34,12 +34,17 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	db, err := database.NewDatabase(ctx, log.WithField("component", "database"), _env, &noop.Noop{}, cipher)
+	dbc, err := database.NewDatabaseClient(ctx, log.WithField("component", "database"), _env, &noop.Noop{}, cipher)
 	if err != nil {
 		return err
 	}
 
-	doc, err := db.OpenShiftClusters.Get(ctx, strings.ToLower(os.Args[1]))
+	openShiftClusters, err := database.NewOpenShiftClusters(ctx, _env.DeploymentMode(), dbc)
+	if err != nil {
+		return err
+	}
+
+	doc, err := openShiftClusters.Get(ctx, strings.ToLower(os.Args[1]))
 	if err != nil {
 		return err
 	}

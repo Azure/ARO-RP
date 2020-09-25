@@ -14,6 +14,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/azure"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/k8s"
@@ -60,7 +61,22 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	db, err := database.NewDatabase(ctx, log.WithField("component", "database"), _env, m, cipher)
+	dbc, err := database.NewDatabaseClient(ctx, log.WithField("component", "database"), _env, &noop.Noop{}, cipher)
+	if err != nil {
+		return err
+	}
+
+	dbMonitors, err := database.NewMonitors(ctx, _env.DeploymentMode(), dbc)
+	if err != nil {
+		return err
+	}
+
+	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, _env.DeploymentMode(), dbc)
+	if err != nil {
+		return err
+	}
+
+	dbSubscriptions, err := database.NewSubscriptions(ctx, _env.DeploymentMode(), dbc)
 	if err != nil {
 		return err
 	}
@@ -70,7 +86,7 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	mon := pkgmonitor.NewMonitor(log.WithField("component", "monitor"), dialer, db, m, clusterm)
+	mon := pkgmonitor.NewMonitor(log.WithField("component", "monitor"), dialer, dbMonitors, dbOpenShiftClusters, dbSubscriptions, m, clusterm)
 
 	return mon.Run(ctx)
 }

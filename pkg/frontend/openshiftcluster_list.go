@@ -30,7 +30,7 @@ func (f *frontend) getOpenShiftClusters(w http.ResponseWriter, r *http.Request) 
 			prefix += "resourcegroups/" + vars["resourceGroupName"] + "/"
 		}
 
-		return f.db.OpenShiftClusters.ListByPrefix(vars["subscriptionId"], prefix, skipToken)
+		return f.dbOpenShiftClusters.ListByPrefix(vars["subscriptionId"], prefix, skipToken)
 	})
 
 	reply(log, w, nil, b, err)

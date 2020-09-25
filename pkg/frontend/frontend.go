@@ -45,10 +45,14 @@ type adminActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluste
 type frontend struct {
 	baseLog *logrus.Entry
 	env     env.Interface
-	db      *database.Database
-	apis    map[string]*api.Version
-	m       metrics.Interface
-	cipher  encryption.Cipher
+
+	dbAsyncOperations   database.AsyncOperations
+	dbOpenShiftClusters database.OpenShiftClusters
+	dbSubscriptions     database.Subscriptions
+
+	apis   map[string]*api.Version
+	m      metrics.Interface
+	cipher encryption.Cipher
 
 	ocEnricher          clusterdata.OpenShiftClusterEnricher
 	adminActionsFactory adminActionsFactory
@@ -71,7 +75,9 @@ type Runnable interface {
 func NewFrontend(ctx context.Context,
 	baseLog *logrus.Entry,
 	_env env.Interface,
-	db *database.Database,
+	dbAsyncOperations database.AsyncOperations,
+	dbOpenShiftClusters database.OpenShiftClusters,
+	dbSubscriptions database.Subscriptions,
 	apis map[string]*api.Version,
 	m metrics.Interface,
 	cipher encryption.Cipher,
@@ -79,7 +85,9 @@ func NewFrontend(ctx context.Context,
 	f := &frontend{
 		baseLog:             baseLog,
 		env:                 _env,
-		db:                  db,
+		dbAsyncOperations:   dbAsyncOperations,
+		dbOpenShiftClusters: dbOpenShiftClusters,
+		dbSubscriptions:     dbSubscriptions,
 		apis:                apis,
 		m:                   m,
 		cipher:              cipher,
