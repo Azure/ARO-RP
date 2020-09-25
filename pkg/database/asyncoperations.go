@@ -26,9 +26,9 @@ type AsyncOperations interface {
 }
 
 // NewAsyncOperations returns a new AsyncOperations
-func NewAsyncOperations(uuid string, dbc cosmosdb.DatabaseClient, dbid, collid string) (AsyncOperations, error) {
+func NewAsyncOperations(uuid string, dbc cosmosdb.DatabaseClient, dbid string) (AsyncOperations, error) {
 	collc := cosmosdb.NewCollectionClient(dbc, dbid)
-	client := cosmosdb.NewAsyncOperationDocumentClient(collc, collid)
+	client := cosmosdb.NewAsyncOperationDocumentClient(collc, collAsyncOperations)
 	return NewAsyncOperationsWithProvidedClient(uuid, client), nil
 }
 

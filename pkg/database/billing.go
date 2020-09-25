@@ -30,7 +30,7 @@ type Billing interface {
 }
 
 // NewBilling returns a new Billing
-func NewBilling(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, dbid, collid string) (Billing, error) {
+func NewBilling(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, dbid string) (Billing, error) {
 	collc := cosmosdb.NewCollectionClient(dbc, dbid)
 
 	triggers := []*cosmosdb.Trigger{
@@ -68,7 +68,7 @@ func NewBilling(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, d
 		},
 	}
 
-	triggerc := cosmosdb.NewTriggerClient(collc, collid)
+	triggerc := cosmosdb.NewTriggerClient(collc, collBilling)
 	for _, trigger := range triggers {
 		_, err := triggerc.Create(ctx, trigger)
 		if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusConflict) {
@@ -76,7 +76,7 @@ func NewBilling(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, d
 		}
 	}
 
-	documentClient := cosmosdb.NewBillingDocumentClient(collc, collid)
+	documentClient := cosmosdb.NewBillingDocumentClient(collc, collBilling)
 	return NewBillingWithProvidedClient(uuid, documentClient), nil
 }
 

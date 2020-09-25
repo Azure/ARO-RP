@@ -29,7 +29,7 @@ type Monitors interface {
 }
 
 // NewMonitors returns a new Monitors
-func NewMonitors(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, dbid, collid string) (Monitors, error) {
+func NewMonitors(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, dbid string) (Monitors, error) {
 	collc := cosmosdb.NewCollectionClient(dbc, dbid)
 
 	triggers := []*cosmosdb.Trigger{
@@ -47,7 +47,7 @@ func NewMonitors(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, 
 		},
 	}
 
-	triggerc := cosmosdb.NewTriggerClient(collc, collid)
+	triggerc := cosmosdb.NewTriggerClient(collc, collMonitors)
 	for _, trigger := range triggers {
 		_, err := triggerc.Create(ctx, trigger)
 		if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusConflict) {
@@ -56,7 +56,7 @@ func NewMonitors(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, 
 	}
 
 	return &monitors{
-		c:    cosmosdb.NewMonitorDocumentClient(collc, collid),
+		c:    cosmosdb.NewMonitorDocumentClient(collc, collMonitors),
 		uuid: uuid,
 	}, nil
 }

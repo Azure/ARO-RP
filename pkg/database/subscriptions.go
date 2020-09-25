@@ -32,7 +32,7 @@ type Subscriptions interface {
 }
 
 // NewSubscriptions returns a new Subscriptions
-func NewSubscriptions(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, dbid, collid string) (Subscriptions, error) {
+func NewSubscriptions(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, dbid string) (Subscriptions, error) {
 	collc := cosmosdb.NewCollectionClient(dbc, dbid)
 
 	triggers := []*cosmosdb.Trigger{
@@ -62,7 +62,7 @@ func NewSubscriptions(ctx context.Context, uuid string, dbc cosmosdb.DatabaseCli
 		},
 	}
 
-	triggerc := cosmosdb.NewTriggerClient(collc, collid)
+	triggerc := cosmosdb.NewTriggerClient(collc, collSubscriptions)
 	for _, trigger := range triggers {
 		_, err := triggerc.Create(ctx, trigger)
 		if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusConflict) {
@@ -70,7 +70,7 @@ func NewSubscriptions(ctx context.Context, uuid string, dbc cosmosdb.DatabaseCli
 		}
 	}
 
-	documentClient := cosmosdb.NewSubscriptionDocumentClient(collc, collid)
+	documentClient := cosmosdb.NewSubscriptionDocumentClient(collc, collSubscriptions)
 	return NewSubscriptionsWithProvidedClient(uuid, documentClient), nil
 }
 

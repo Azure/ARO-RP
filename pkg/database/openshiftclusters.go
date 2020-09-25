@@ -50,7 +50,7 @@ type OpenShiftClusters interface {
 }
 
 // NewOpenShiftClusters returns a new OpenShiftClusters
-func NewOpenShiftClusters(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, dbid, collid string) (OpenShiftClusters, error) {
+func NewOpenShiftClusters(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, dbid string) (OpenShiftClusters, error) {
 	collc := cosmosdb.NewCollectionClient(dbc, dbid)
 
 	triggers := []*cosmosdb.Trigger{
@@ -68,7 +68,7 @@ func NewOpenShiftClusters(ctx context.Context, uuid string, dbc cosmosdb.Databas
 		},
 	}
 
-	triggerc := cosmosdb.NewTriggerClient(collc, collid)
+	triggerc := cosmosdb.NewTriggerClient(collc, collOpenShiftClusters)
 	for _, trigger := range triggers {
 		_, err := triggerc.Create(ctx, trigger)
 		if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusConflict) {
@@ -76,7 +76,7 @@ func NewOpenShiftClusters(ctx context.Context, uuid string, dbc cosmosdb.Databas
 		}
 	}
 
-	documentClient := cosmosdb.NewOpenShiftClusterDocumentClient(collc, collid)
+	documentClient := cosmosdb.NewOpenShiftClusterDocumentClient(collc, collOpenShiftClusters)
 	return NewOpenShiftClustersWithProvidedClient(uuid, documentClient, collc), nil
 }
 

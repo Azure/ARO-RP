@@ -26,6 +26,14 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 )
 
+const (
+	collAsyncOperations   = "AsyncOperations"
+	collBilling           = "Billing"
+	collMonitors          = "Monitors"
+	collOpenShiftClusters = "OpenShiftClusters"
+	collSubscriptions     = "Subscriptions"
+)
+
 // Database represents a database
 type Database struct {
 	AsyncOperations   AsyncOperations
@@ -65,27 +73,27 @@ func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Core, m metrics
 
 	db = &Database{}
 
-	db.AsyncOperations, err = NewAsyncOperations(uuid, dbc, databaseName, "AsyncOperations")
+	db.AsyncOperations, err = NewAsyncOperations(uuid, dbc, databaseName)
 	if err != nil {
 		return nil, err
 	}
 
-	db.Billing, err = NewBilling(ctx, uuid, dbc, databaseName, "Billing")
+	db.Billing, err = NewBilling(ctx, uuid, dbc, databaseName)
 	if err != nil {
 		return nil, err
 	}
 
-	db.Monitors, err = NewMonitors(ctx, uuid, dbc, databaseName, "Monitors")
+	db.Monitors, err = NewMonitors(ctx, uuid, dbc, databaseName)
 	if err != nil {
 		return nil, err
 	}
 
-	db.OpenShiftClusters, err = NewOpenShiftClusters(ctx, uuid, dbc, databaseName, "OpenShiftClusters")
+	db.OpenShiftClusters, err = NewOpenShiftClusters(ctx, uuid, dbc, databaseName)
 	if err != nil {
 		return nil, err
 	}
 
-	db.Subscriptions, err = NewSubscriptions(ctx, uuid, dbc, databaseName, "Subscriptions")
+	db.Subscriptions, err = NewSubscriptions(ctx, uuid, dbc, databaseName)
 	if err != nil {
 		return nil, err
 	}
