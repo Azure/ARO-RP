@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"reflect"
 	"strings"
@@ -116,6 +117,23 @@ func (i *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 		group.ManagedBy = nil
 	}
 	_, err := i.groups.CreateOrUpdate(ctx, resourceGroup, group)
+	if requestErr, ok := err.(*azure.RequestError); ok &&
+		requestErr.ServiceError != nil && requestErr.ServiceError.Code == "RequestDisallowedByPolicy" {
+		// if request was disallowed by policy, inform user so they can take appropriate action
+		b, _ := json.Marshal(requestErr.ServiceError)
+		return &api.CloudError{
+			StatusCode: http.StatusBadRequest,
+			CloudErrorBody: &api.CloudErrorBody{
+				Code:    api.CloudErrorCodeDeploymentFailed,
+				Message: "Deployment failed.",
+				Details: []api.CloudErrorBody{
+					{
+						Message: string(b),
+					},
+				},
+			},
+		}
+	}
 	if err != nil {
 		return err
 	}
