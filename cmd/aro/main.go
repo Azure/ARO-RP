@@ -24,6 +24,7 @@ func usage() {
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s deploy config.yaml location\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s mirror [release_image...]\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s monitor\n", os.Args[0])
+	fmt.Fprintf(flag.CommandLine.Output(), "  %s portal\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s rp\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s operator {master,worker}\n", os.Args[0])
 	flag.PrintDefaults()
@@ -46,6 +47,9 @@ func main() {
 
 	var err error
 	switch strings.ToLower(flag.Arg(0)) {
+	case "deploy":
+		checkArgs(3)
+		err = deploy(ctx, log)
 	case "mirror":
 		checkMinArgs(1)
 		err = mirror(ctx, log)
@@ -55,9 +59,9 @@ func main() {
 	case "rp":
 		checkArgs(1)
 		err = rp(ctx, log)
-	case "deploy":
-		checkArgs(3)
-		err = deploy(ctx, log)
+	case "portal":
+		checkArgs(1)
+		err = portal(ctx, log)
 	case "operator":
 		checkArgs(2)
 		err = operator(ctx, log)

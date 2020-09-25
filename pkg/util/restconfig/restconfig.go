@@ -40,7 +40,13 @@ func RestConfig(dialer proxy.Dialer, oc *api.OpenShiftCluster) (*rest.Config, er
 		return nil, err
 	}
 
-	restconfig.Dial = func(ctx context.Context, network, address string) (net.Conn, error) {
+	restconfig.Dial = DialContext(dialer, oc)
+
+	return restconfig, nil
+}
+
+func DialContext(dialer proxy.Dialer, oc *api.OpenShiftCluster) func(ctx context.Context, network, address string) (net.Conn, error) {
+	return func(ctx context.Context, network, address string) (net.Conn, error) {
 		if network != "tcp" {
 			return nil, fmt.Errorf("unimplemented network %q", network)
 		}
@@ -52,6 +58,4 @@ func RestConfig(dialer proxy.Dialer, oc *api.OpenShiftCluster) (*rest.Config, er
 
 		return dialer.DialContext(ctx, network, oc.Properties.NetworkProfile.PrivateEndpointIP+":"+port)
 	}
-
-	return restconfig, nil
 }

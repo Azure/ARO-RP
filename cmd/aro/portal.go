@@ -1,0 +1,181 @@
+package main
+
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
+import (
+	"context"
+	"crypto/x509"
+	"fmt"
+	"net"
+	"os"
+	"strings"
+
+	uuid "github.com/satori/go.uuid"
+	"github.com/sirupsen/logrus"
+
+	"github.com/Azure/ARO-RP/pkg/database"
+	"github.com/Azure/ARO-RP/pkg/deploy/generator"
+	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/metrics/noop"
+	pkgportal "github.com/Azure/ARO-RP/pkg/portal"
+	"github.com/Azure/ARO-RP/pkg/portal/middleware"
+	"github.com/Azure/ARO-RP/pkg/proxy"
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
+	"github.com/Azure/ARO-RP/pkg/util/encryption"
+	"github.com/Azure/ARO-RP/pkg/util/keyvault"
+)
+
+func portal(ctx context.Context, log *logrus.Entry) error {
+	_env, err := env.NewCore(ctx, log)
+	if err != nil {
+		return err
+	}
+
+	if _env.DeploymentMode() != deployment.Development {
+		for _, key := range []string{
+			"PORTAL_HOSTNAME",
+		} {
+			if _, found := os.LookupEnv(key); !found {
+				return fmt.Errorf("environment variable %q unset", key)
+			}
+		}
+	}
+
+	for _, key := range []string{
+		"AZURE_PORTAL_CLIENT_ID",
+		"AZURE_PORTAL_ACCESS_GROUP_IDS",
+		"AZURE_PORTAL_ELEVATED_GROUP_IDS",
+	} {
+		if _, found := os.LookupEnv(key); !found {
+			return fmt.Errorf("environment variable %q unset", key)
+		}
+	}
+
+	groupIDs, err := parseGroupIDs(os.Getenv("AZURE_PORTAL_ACCESS_GROUP_IDS"))
+	if err != nil {
+		return err
+	}
+
+	elevatedGroupIDs, err := parseGroupIDs(os.Getenv("AZURE_PORTAL_ELEVATED_GROUP_IDS"))
+	if err != nil {
+		return err
+	}
+
+	rpKVAuthorizer, err := _env.NewRPAuthorizer(_env.Environment().ResourceIdentifiers.KeyVault)
+	if err != nil {
+		return err
+	}
+
+	// TODO: should not be using the service keyvault here
+	serviceKeyvaultURI, err := keyvault.URI(_env, generator.ServiceKeyvaultSuffix)
+	if err != nil {
+		return err
+	}
+
+	serviceKeyvault := keyvault.NewManager(rpKVAuthorizer, serviceKeyvaultURI)
+
+	key, err := serviceKeyvault.GetBase64Secret(ctx, env.EncryptionSecretName)
+	if err != nil {
+		return err
+	}
+
+	cipher, err := encryption.NewXChaCha20Poly1305(ctx, key)
+	if err != nil {
+		return err
+	}
+
+	dbc, err := database.NewDatabaseClient(ctx, log.WithField("component", "database"), _env, &noop.Noop{}, cipher)
+	if err != nil {
+		return err
+	}
+
+	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, _env.DeploymentMode(), dbc)
+	if err != nil {
+		return err
+	}
+
+	dbPortal, err := database.NewPortal(ctx, _env.DeploymentMode(), dbc)
+	if err != nil {
+		return err
+	}
+
+	portalKeyvaultURI, err := keyvault.URI(_env, generator.PortalKeyvaultSuffix)
+	if err != nil {
+		return err
+	}
+
+	portalKeyvault := keyvault.NewManager(rpKVAuthorizer, portalKeyvaultURI)
+
+	servingKey, servingCerts, err := portalKeyvault.GetCertificateSecret(ctx, env.PortalServerSecretName)
+	if err != nil {
+		return err
+	}
+
+	clientKey, clientCerts, err := portalKeyvault.GetCertificateSecret(ctx, env.PortalServerClientSecretName)
+	if err != nil {
+		return err
+	}
+
+	sessionKey, err := portalKeyvault.GetBase64Secret(ctx, env.PortalServerSessionKeySecretName)
+	if err != nil {
+		return err
+	}
+
+	b, err := portalKeyvault.GetBase64Secret(ctx, env.PortalServerSSHKeySecretName)
+	if err != nil {
+		return err
+	}
+
+	sshKey, err := x509.ParsePKCS1PrivateKey(b)
+	if err != nil {
+		return err
+	}
+
+	dialer, err := proxy.NewDialer(_env.DeploymentMode())
+	if err != nil {
+		return err
+	}
+
+	clientID := os.Getenv("AZURE_PORTAL_CLIENT_ID")
+	verifier, err := middleware.NewVerifier(ctx, _env.TenantID(), clientID)
+	if err != nil {
+		return err
+	}
+
+	hostname := "localhost:8444"
+	address := "localhost:8444"
+	sshAddress := "localhost:2222"
+	if _env.DeploymentMode() != deployment.Development {
+		hostname = os.Getenv("PORTAL_HOSTNAME")
+		address = ":8444"
+		sshAddress = ":2222"
+	}
+
+	l, err := net.Listen("tcp", address)
+	if err != nil {
+		return err
+	}
+
+	sshl, err := net.Listen("tcp", sshAddress)
+	if err != nil {
+		return err
+	}
+
+	log.Print("listening")
+
+	p := pkgportal.NewPortal(_env, log.WithField("component", "portal"), log.WithField("component", "portal-access"), l, sshl, verifier, hostname, servingKey, servingCerts, clientID, clientKey, clientCerts, sessionKey, sshKey, groupIDs, elevatedGroupIDs, dbOpenShiftClusters, dbPortal, dialer)
+
+	return p.Run(ctx)
+}
+
+func parseGroupIDs(_groupIDs string) ([]string, error) {
+	groupIDs := strings.Split(_groupIDs, ",")
+	for _, groupID := range groupIDs {
+		_, err := uuid.FromString(groupID)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return groupIDs, nil
+}

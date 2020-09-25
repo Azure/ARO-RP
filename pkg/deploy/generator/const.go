@@ -6,6 +6,7 @@ package generator
 // Deployment constants
 const (
 	ClustersKeyvaultSuffix = "-cls"
+	PortalKeyvaultSuffix   = "-por"
 	ServiceKeyvaultSuffix  = "-svc"
 )
 

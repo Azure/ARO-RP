@@ -30,6 +30,7 @@ const (
 	collBilling           = "Billing"
 	collMonitors          = "Monitors"
 	collOpenShiftClusters = "OpenShiftClusters"
+	collPortal            = "Portal"
 	collSubscriptions     = "Subscriptions"
 )
 

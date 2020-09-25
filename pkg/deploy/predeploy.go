@@ -6,6 +6,8 @@ package deploy
 import (
 	"context"
 	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"path/filepath"
@@ -307,7 +309,17 @@ func (d *deployer) configureServiceSecrets(ctx context.Context) error {
 		return err
 	}
 
-	return d.ensureSecret(ctx, secrets, env.FrontendEncryptionSecretName)
+	err = d.ensureSecret(ctx, secrets, env.FrontendEncryptionSecretName)
+	if err != nil {
+		return err
+	}
+
+	err = d.ensureSecret(ctx, secrets, env.PortalServerSessionKeySecretName)
+	if err != nil {
+		return err
+	}
+
+	return d.ensureSecretKey(ctx, secrets, env.PortalServerSSHKeySecretName)
 }
 
 func (d *deployer) ensureSecret(ctx context.Context, existingSecrets []keyvault.SecretItem, secretName string) error {
@@ -326,5 +338,23 @@ func (d *deployer) ensureSecret(ctx context.Context, existingSecrets []keyvault.
 	d.log.Infof("setting %s", secretName)
 	return d.keyvault.SetSecret(ctx, secretName, keyvault.SecretSetParameters{
 		Value: to.StringPtr(base64.StdEncoding.EncodeToString(key)),
+	})
+}
+
+func (d *deployer) ensureSecretKey(ctx context.Context, existingSecrets []keyvault.SecretItem, secretName string) error {
+	for _, secret := range existingSecrets {
+		if filepath.Base(*secret.ID) == secretName {
+			return nil
+		}
+	}
+
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return err
+	}
+
+	d.log.Infof("setting %s", secretName)
+	return d.keyvault.SetSecret(ctx, secretName, keyvault.SecretSetParameters{
+		Value: to.StringPtr(base64.StdEncoding.EncodeToString(x509.MarshalPKCS1PrivateKey(key))),
 	})
 }

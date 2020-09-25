@@ -47,3 +47,9 @@ func NewFakeAsyncOperations() (db database.AsyncOperations, client *cosmosdb.Fak
 	db = database.NewAsyncOperationsWithProvidedClient(client)
 	return db, client
 }
+
+func NewFakePortal() (db database.Portal, client *cosmosdb.FakePortalDocumentClient) {
+	client = cosmosdb.NewFakePortalDocumentClient(jsonHandle)
+	db = database.NewPortalWithProvidedClient(client)
+	return db, client
+}

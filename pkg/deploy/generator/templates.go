@@ -86,6 +86,9 @@ func (g *generator) rpTemplate() *arm.Template {
 			"mdmFrontendUrl",
 			"mdsdConfigVersion",
 			"mdsdEnvironment",
+			"portalAccessGroupIds",
+			"portalClientId",
+			"portalElevatedGroupIds",
 			"rpImage",
 			"rpMode",
 			"sshPublicKey",
@@ -111,7 +114,11 @@ func (g *generator) rpTemplate() *arm.Template {
 	}
 
 	if g.production {
-		t.Resources = append(t.Resources, g.pip(), g.lb(), g.vmss(),
+		t.Resources = append(t.Resources,
+			g.pip("rp-pip"),
+			g.pip("portal-pip"),
+			g.lb(),
+			g.vmss(),
 			g.storageAccount(),
 			g.lbAlert(30.0, 2, "rp-availability-alert", "PT5M", "PT15M", "DipAvailability"), // triggers on all 3 RPs being down for 10min, can't be >=0.3 due to deploys going down to 32% at times.
 			g.lbAlert(67.0, 3, "rp-degraded-alert", "PT15M", "PT6H", "DipAvailability"),     // 1/3 backend down for 1h or 2/3 down for 3h in the last 6h
@@ -270,6 +277,7 @@ func (g *generator) preDeployTemplate() *arm.Template {
 	if g.production {
 		t.Variables = map[string]interface{}{
 			"clusterKeyvaultAccessPolicies": g.clusterKeyvaultAccessPolicies(),
+			"portalKeyvaultAccessPolicies":  g.portalKeyvaultAccessPolicies(),
 			"serviceKeyvaultAccessPolicies": g.serviceKeyvaultAccessPolicies(),
 		}
 	}
@@ -284,6 +292,7 @@ func (g *generator) preDeployTemplate() *arm.Template {
 		params = append(params,
 			"deployNSGs",
 			"extraClusterKeyvaultAccessPolicies",
+			"extraPortalKeyvaultAccessPolicies",
 			"extraServiceKeyvaultAccessPolicies",
 			"fullDeploy",
 			"rpNsgSourceAddressPrefixes",
@@ -300,7 +309,9 @@ func (g *generator) preDeployTemplate() *arm.Template {
 		case "deployNSGs":
 			p.Type = "bool"
 			p.DefaultValue = false
-		case "extraClusterKeyvaultAccessPolicies", "extraServiceKeyvaultAccessPolicies":
+		case "extraClusterKeyvaultAccessPolicies",
+			"extraPortalKeyvaultAccessPolicies",
+			"extraServiceKeyvaultAccessPolicies":
 			p.Type = "array"
 			p.DefaultValue = []interface{}{}
 		case "fullDeploy":
@@ -318,9 +329,10 @@ func (g *generator) preDeployTemplate() *arm.Template {
 	t.Resources = append(t.Resources,
 		g.securityGroupRP(),
 		g.securityGroupPE(),
-		// clustersKeyvault must preceed serviceKeyvault due to terrible
-		// bytes.Replace in templateFixup
+		// clustersKeyvault, portalKeyvault and serviceKeyvault must be in this
+		// order due to terrible bytes.Replace in templateFixup
 		g.clustersKeyvault(),
+		g.portalKeyvault(),
 		g.serviceKeyvault(),
 	)
 
@@ -409,6 +421,7 @@ func (g *generator) templateFixup(t *arm.Template) ([]byte, error) {
 	b = bytes.ReplaceAll(b, []byte(`"capacity": 1337`), []byte(`"capacity": "[int(parameters('ciCapacity'))]"`))
 	if g.production {
 		b = bytes.Replace(b, []byte(`"accessPolicies": []`), []byte(`"accessPolicies": "[concat(variables('clusterKeyvaultAccessPolicies'), parameters('extraClusterKeyvaultAccessPolicies'))]"`), 1)
+		b = bytes.Replace(b, []byte(`"accessPolicies": []`), []byte(`"accessPolicies": "[concat(variables('portalKeyvaultAccessPolicies'), parameters('extraPortalKeyvaultAccessPolicies'))]"`), 1)
 		b = bytes.Replace(b, []byte(`"accessPolicies": []`), []byte(`"accessPolicies": "[concat(variables('serviceKeyvaultAccessPolicies'), parameters('extraServiceKeyvaultAccessPolicies'))]"`), 1)
 		b = bytes.Replace(b, []byte(`"sourceAddressPrefixes": []`), []byte(`"sourceAddressPrefixes": "[parameters('rpNsgSourceAddressPrefixes')]"`), 1)
 	}

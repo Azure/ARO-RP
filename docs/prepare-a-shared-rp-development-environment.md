@@ -182,6 +182,31 @@ locations.
      >/dev/null
    ```
 
+1. Create an AAD application which will fake up the portal client.
+
+   This application requires client certificate authentication to be enabled.  A
+   suitable key/certificate file can be generated using the following helper
+   utility:
+
+   ```bash
+   go run ./hack/genkey -client portal-client
+   mv portal-client.* secrets
+   ```
+
+   ```bash
+   AZURE_PORTAL_CLIENT_ID="$(az ad app create \
+     --display-name aro-v4-portal-shared \
+     --identifier-uris "https://$(uuidgen)/" \
+     --reply-urls "https://localhost:8444/callback" \
+     --query appId \
+     -o tsv)"
+   az ad app credential reset \
+     --id "$AZURE_PORTAL_CLIENT_ID" \
+     --cert "$(base64 -w0 <secrets/portal-client.crt)" >/dev/null
+   ```
+
+   TODO: more steps are needed to configure aro-v4-portal-shared.
+
 
 ## Certificates
 
@@ -258,6 +283,9 @@ locations.
    export AZURE_ARM_CLIENT_ID='$AZURE_ARM_CLIENT_ID'
    export AZURE_ARM_CLIENT_SECRET='$AZURE_ARM_CLIENT_SECRET'
    export AZURE_FP_CLIENT_ID='$AZURE_FP_CLIENT_ID'
+   export AZURE_PORTAL_CLIENT_ID='$AZURE_PORTAL_CLIENT_ID'
+   export AZURE_PORTAL_ACCESS_GROUP_IDS='$ADMIN_OBJECT_ID'
+   export AZURE_PORTAL_ELEVATED_GROUP_IDS='$ADMIN_OBJECT_ID'
    export AZURE_CLIENT_ID='$AZURE_CLIENT_ID'
    export AZURE_CLIENT_SECRET='$AZURE_CLIENT_SECRET'
    export AZURE_RP_CLIENT_ID='$AZURE_RP_CLIENT_ID'

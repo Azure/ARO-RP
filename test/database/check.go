@@ -21,6 +21,7 @@ type Checker struct {
 	subscriptionDocuments     []*api.SubscriptionDocument
 	billingDocuments          []*api.BillingDocument
 	asyncOperationDocuments   []*api.AsyncOperationDocument
+	portalDocuments           []*api.PortalDocument
 }
 
 func NewChecker() *Checker {
@@ -41,6 +42,10 @@ func (f *Checker) AddBillingDocuments(docs ...*api.BillingDocument) {
 
 func (f *Checker) AddAsyncOperationDocuments(docs ...*api.AsyncOperationDocument) {
 	f.asyncOperationDocuments = append(f.asyncOperationDocuments, docs...)
+}
+
+func (f *Checker) AddPortalDocuments(docs ...*api.PortalDocument) {
+	f.portalDocuments = append(f.portalDocuments, docs...)
 }
 
 func (f *Checker) CheckOpenShiftClusters(openShiftClusters *cosmosdb.FakeOpenShiftClusterDocumentClient) (errs []error) {
@@ -130,6 +135,26 @@ func (f *Checker) CheckAsyncOperations(asyncOperations *cosmosdb.FakeAsyncOperat
 		}
 	} else if len(all.AsyncOperationDocuments) != 0 || len(f.asyncOperationDocuments) != 0 {
 		errs = append(errs, fmt.Errorf("asyncOperations length different, %d vs %d", len(all.AsyncOperationDocuments), len(f.asyncOperationDocuments)))
+	}
+
+	return errs
+}
+
+func (f *Checker) CheckPortals(portals *cosmosdb.FakePortalDocumentClient) (errs []error) {
+	ctx := context.Background()
+
+	all, err := portals.ListAll(ctx, nil)
+	if err != nil {
+		return []error{err}
+	}
+
+	if len(f.portalDocuments) != 0 && len(all.PortalDocuments) == len(f.portalDocuments) {
+		diff := deep.Equal(all.PortalDocuments, f.portalDocuments)
+		for _, i := range diff {
+			errs = append(errs, errors.New(i))
+		}
+	} else if len(all.PortalDocuments) != 0 || len(f.portalDocuments) != 0 {
+		errs = append(errs, fmt.Errorf("portals length different, %d vs %d", len(all.PortalDocuments), len(f.portalDocuments)))
 	}
 
 	return errs

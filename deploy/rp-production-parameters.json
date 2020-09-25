@@ -38,6 +38,15 @@
         "mdsdEnvironment": {
             "value": ""
         },
+        "portalAccessGroupIds": {
+            "value": ""
+        },
+        "portalClientId": {
+            "value": ""
+        },
+        "portalElevatedGroupIds": {
+            "value": ""
+        },
         "rpImage": {
             "value": ""
         },

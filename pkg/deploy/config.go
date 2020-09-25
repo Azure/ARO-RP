@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"reflect"
+	"strings"
 
 	"github.com/ghodss/yaml"
 )
@@ -36,6 +37,7 @@ type Configuration struct {
 	DatabaseAccountName                *string       `json:"databaseAccountName,omitempty" value:"required"`
 	ExtraClusterKeyvaultAccessPolicies []interface{} `json:"extraClusterKeyvaultAccessPolicies,omitempty" value:"required"`
 	ExtraCosmosDBIPs                   []string      `json:"extraCosmosDBIPs,omitempty" value:"required"`
+	ExtraPortalKeyvaultAccessPolicies  []interface{} `json:"extraPortalKeyvaultAccessPolicies,omitempty" value:"required"`
 	ExtraServiceKeyvaultAccessPolicies []interface{} `json:"extraServiceKeyvaultAccessPolicies,omitempty" value:"required"`
 	FPServerCertCommonName             *string       `json:"fpServerCertCommonName,omitempty"`
 	FPServicePrincipalID               *string       `json:"fpServicePrincipalId,omitempty" value:"required"`
@@ -46,6 +48,9 @@ type Configuration struct {
 	MDMFrontendURL                     *string       `json:"mdmFrontendUrl,omitempty" value:"required"`
 	MDSDConfigVersion                  *string       `json:"mdsdConfigVersion,omitempty" value:"required"`
 	MDSDEnvironment                    *string       `json:"mdsdEnvironment,omitempty" value:"required"`
+	PortalAccessGroupIDs               *string       `json:"portalAccessGroupIds,omitempty" value:"required"`
+	PortalClientID                     *string       `json:"portalClientId,omitempty" value:"required"`
+	PortalElevatedGroupIDs             *string       `json:"portalElevatedGroupIds,omitempty" value:"required"`
 	RPImagePrefix                      *string       `json:"rpImagePrefix,omitempty" value:"required"`
 	RPMode                             *string       `json:"rpMode,omitempty"`
 	RPNSGSourceAddressPrefixes         []string      `json:"rpNsgSourceAddressPrefixes,omitempty" value:"required"`
@@ -119,5 +124,5 @@ func (conf *RPConfig) validate() error {
 		return nil
 	}
 
-	return fmt.Errorf("Configuration has missing fields: %s", missingFields)
+	return fmt.Errorf("configuration has missing fields: %s", strings.Join(missingFields, ","))
 }

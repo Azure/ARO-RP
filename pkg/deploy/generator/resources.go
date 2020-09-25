@@ -507,7 +507,7 @@ func (g *generator) pevnet() *arm.Resource {
 	}
 }
 
-func (g *generator) pip() *arm.Resource {
+func (g *generator) pip(name string) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.PublicIPAddress{
 			Sku: &mgmtnetwork.PublicIPAddressSku{
@@ -516,7 +516,7 @@ func (g *generator) pip() *arm.Resource {
 			PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
 				PublicIPAllocationMethod: mgmtnetwork.Static,
 			},
-			Name:     to.StringPtr("rp-pip"),
+			Name:     &name,
 			Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
@@ -540,6 +540,14 @@ func (g *generator) lb() *arm.Resource {
 							},
 						},
 						Name: to.StringPtr("rp-frontend"),
+					},
+					{
+						FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
+							PublicIPAddress: &mgmtnetwork.PublicIPAddress{
+								ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', 'portal-pip')]"),
+							},
+						},
+						Name: to.StringPtr("portal-frontend"),
 					},
 				},
 				BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
@@ -566,6 +574,42 @@ func (g *generator) lb() *arm.Resource {
 						},
 						Name: to.StringPtr("rp-lbrule"),
 					},
+					{
+						LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
+							FrontendIPConfiguration: &mgmtnetwork.SubResource{
+								ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'portal-frontend')]"),
+							},
+							BackendAddressPool: &mgmtnetwork.SubResource{
+								ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
+							},
+							Probe: &mgmtnetwork.SubResource{
+								ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'portal-probe-https')]"),
+							},
+							Protocol:         mgmtnetwork.TransportProtocolTCP,
+							LoadDistribution: mgmtnetwork.LoadDistributionDefault,
+							FrontendPort:     to.Int32Ptr(443),
+							BackendPort:      to.Int32Ptr(444),
+						},
+						Name: to.StringPtr("portal-lbrule"),
+					},
+					{
+						LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
+							FrontendIPConfiguration: &mgmtnetwork.SubResource{
+								ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', 'rp-lb', 'portal-frontend')]"),
+							},
+							BackendAddressPool: &mgmtnetwork.SubResource{
+								ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', 'rp-lb', 'rp-backend')]"),
+							},
+							Probe: &mgmtnetwork.SubResource{
+								ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/probes', 'rp-lb', 'portal-probe-ssh')]"),
+							},
+							Protocol:         mgmtnetwork.TransportProtocolTCP,
+							LoadDistribution: mgmtnetwork.LoadDistributionDefault,
+							FrontendPort:     to.Int32Ptr(22),
+							BackendPort:      to.Int32Ptr(2222),
+						},
+						Name: to.StringPtr("portal-lbrule"),
+					},
 				},
 				Probes: &[]mgmtnetwork.Probe{
 					{
@@ -576,6 +620,23 @@ func (g *generator) lb() *arm.Resource {
 							RequestPath:    to.StringPtr("/healthz/ready"),
 						},
 						Name: to.StringPtr("rp-probe"),
+					},
+					{
+						ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
+							Protocol:       mgmtnetwork.ProbeProtocolHTTPS,
+							Port:           to.Int32Ptr(444),
+							NumberOfProbes: to.Int32Ptr(2),
+							RequestPath:    to.StringPtr("/healthz/ready"),
+						},
+						Name: to.StringPtr("portal-probe-https"),
+					},
+					{
+						ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
+							Protocol:       mgmtnetwork.ProbeProtocolTCP,
+							Port:           to.Int32Ptr(2222),
+							NumberOfProbes: to.Int32Ptr(2),
+						},
+						Name: to.StringPtr("portal-probe-ssh"),
 					},
 				},
 			},
@@ -664,6 +725,9 @@ func (g *generator) vmss() *arm.Resource {
 		"mdsdEnvironment",
 		"acrResourceId",
 		"domainName",
+		"portalAccessGroupIds",
+		"portalClientId",
+		"portalElevatedGroupIds",
 		"rpImage",
 		"rpMode",
 		"adminApiClientCertCommonName",
@@ -764,6 +828,8 @@ EOF
 sysctl --system
 
 firewall-cmd --add-port=443/tcp --permanent
+firewall-cmd --add-port=444/tcp --permanent
+firewall-cmd --add-port=2222/tcp --permanent
 
 cat >/etc/td-agent-bit/td-agent-bit.conf <<'EOF'
 [INPUT]
@@ -970,9 +1036,49 @@ StartLimitInterval=0
 WantedBy=multi-user.target
 EOF
 
+cat >/etc/sysconfig/aro-portal <<EOF
+MDM_ACCOUNT=AzureRedHatOpenShiftRP
+MDM_NAMESPACE=Portal
+AZURE_PORTAL_CLIENT_ID='$PORTALCLIENTID'
+AZURE_PORTAL_ACCESS_GROUP_IDS='$PORTALACCESSGROUPIDS'
+AZURE_PORTAL_ELEVATED_GROUP_IDS='$PORTALELEVATEDGROUPIDS'
+RPIMAGE='$RPIMAGE'
+RP_MODE='$RPMODE'
+EOF
+
+cat >/etc/systemd/system/aro-portal.service <<'EOF'
+[Unit]
+After=docker.service
+Requires=docker.service
+StartLimitInterval=0
+
+[Service]
+EnvironmentFile=/etc/sysconfig/aro-portal
+ExecStartPre=-/usr/bin/docker rm -f %N
+ExecStart=/usr/bin/docker run \
+  --hostname %H \
+  --name %N \
+  --rm \
+  -e ADMIN_API_CLIENT_CERT_COMMON_NAME \
+  -e MDM_ACCOUNT \
+  -e MDM_NAMESPACE \
+  -e RP_MODE \
+  -p 444:8444 \
+  -p 2222:2222 \
+  -v /run/systemd/journal:/run/systemd/journal \
+  -v /var/etw:/var/etw:z \
+  $RPIMAGE \
+  portal
+Restart=always
+RestartSec=1
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
 chcon -R system_u:object_r:var_log_t:s0 /var/opt/microsoft/linuxmonagent
 
-for service in aro-monitor aro-rp auoms azsecd azsecmond mdsd mdm chronyd td-agent-bit; do
+for service in aro-monitor aro-portal aro-rp auoms azsecd azsecmond mdsd mdm chronyd td-agent-bit; do
   systemctl enable $service.service
 done
 
@@ -1155,6 +1261,20 @@ func (g *generator) clusterKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyE
 	}
 }
 
+func (g *generator) portalKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyEntry {
+	return []mgmtkeyvault.AccessPolicyEntry{
+		{
+			TenantID: &tenantUUIDHack,
+			ObjectID: to.StringPtr("[parameters('rpServicePrincipalId')]"),
+			Permissions: &mgmtkeyvault.Permissions{
+				Secrets: &[]mgmtkeyvault.SecretPermissions{
+					mgmtkeyvault.SecretPermissionsGet,
+				},
+			},
+		},
+	}
+}
+
 func (g *generator) serviceKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyEntry {
 	return []mgmtkeyvault.AccessPolicyEntry{
 		{
@@ -1194,6 +1314,50 @@ func (g *generator) clustersKeyvault() *arm.Resource {
 					Certificates: &[]mgmtkeyvault.CertificatePermissions{
 						mgmtkeyvault.Get,
 						mgmtkeyvault.List,
+					},
+				},
+			},
+		)
+	}
+
+	return &arm.Resource{
+		Resource:   vault,
+		Condition:  g.conditionStanza("fullDeploy"),
+		APIVersion: azureclient.APIVersion("Microsoft.KeyVault"),
+	}
+}
+
+func (g *generator) portalKeyvault() *arm.Resource {
+	vault := &mgmtkeyvault.Vault{
+		Properties: &mgmtkeyvault.VaultProperties{
+			EnableSoftDelete: to.BoolPtr(true),
+			TenantID:         &tenantUUIDHack,
+			Sku: &mgmtkeyvault.Sku{
+				Name:   mgmtkeyvault.Standard,
+				Family: to.StringPtr("A"),
+			},
+			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{},
+		},
+		Name:     to.StringPtr("[concat(parameters('keyvaultPrefix'), '" + PortalKeyvaultSuffix + "')]"),
+		Type:     to.StringPtr("Microsoft.KeyVault/vaults"),
+		Location: to.StringPtr("[resourceGroup().location]"),
+	}
+
+	if !g.production {
+		*vault.Properties.AccessPolicies = append(g.portalKeyvaultAccessPolicies(),
+			mgmtkeyvault.AccessPolicyEntry{
+				TenantID: &tenantUUIDHack,
+				ObjectID: to.StringPtr("[parameters('adminObjectId')]"),
+				Permissions: &mgmtkeyvault.Permissions{
+					Certificates: &[]mgmtkeyvault.CertificatePermissions{
+						mgmtkeyvault.Delete,
+						mgmtkeyvault.Get,
+						mgmtkeyvault.Import,
+						mgmtkeyvault.List,
+					},
+					Secrets: &[]mgmtkeyvault.SecretPermissions{
+						mgmtkeyvault.SecretPermissionsSet,
+						mgmtkeyvault.SecretPermissionsList,
 					},
 				},
 			},
@@ -1304,6 +1468,36 @@ func (g *generator) cosmosdb() []*arm.Resource {
 }
 
 func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Resource {
+	portal := &arm.Resource{
+		Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
+			SQLContainerCreateUpdateProperties: &mgmtdocumentdb.SQLContainerCreateUpdateProperties{
+				Resource: &mgmtdocumentdb.SQLContainerResource{
+					ID: to.StringPtr("Portal"),
+					PartitionKey: &mgmtdocumentdb.ContainerPartitionKey{
+						Paths: &[]string{
+							"/id",
+						},
+						Kind: mgmtdocumentdb.PartitionKindHash,
+					},
+					DefaultTTL: to.Int32Ptr(-1),
+				},
+				Options: map[string]*string{},
+			},
+			Name:     to.StringPtr("[concat(parameters('databaseAccountName'), '/', " + databaseName + ", '/Portal')]"),
+			Type:     to.StringPtr("Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers"),
+			Location: to.StringPtr("[resourceGroup().location]"),
+		},
+		Condition:  g.conditionStanza("fullDeploy"),
+		APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
+		DependsOn: []string{
+			"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
+		},
+	}
+
+	if g.production {
+		portal.Resource.(*mgmtdocumentdb.SQLContainerCreateUpdateParameters).SQLContainerCreateUpdateProperties.Options["throughput"] = to.StringPtr("400")
+	}
+
 	rs := []*arm.Resource{
 		{
 			Resource: &mgmtdocumentdb.SQLDatabaseCreateUpdateParameters{
@@ -1439,6 +1633,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
 		},
+		portal,
 		{
 			Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
 				SQLContainerCreateUpdateProperties: &mgmtdocumentdb.SQLContainerCreateUpdateProperties{

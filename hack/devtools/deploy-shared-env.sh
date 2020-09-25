@@ -85,6 +85,14 @@ import_certs_secrets() {
         --name rp-server \
         --file secrets/localhost.pem
     az keyvault certificate import \
+        --vault-name "$KEYVAULT_PREFIX-por" \
+        --name portal-server \
+        --file secrets/localhost.pem
+    az keyvault certificate import \
+        --vault-name "$KEYVAULT_PREFIX-por" \
+        --name portal-client \
+        --file secrets/portal-client.pem
+    az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --name cluster-mdsd \
         --file secrets/cluster-logging-int.pem
@@ -104,6 +112,22 @@ import_certs_secrets() {
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --name fe-encryption-key \
         --value "$(openssl rand -base64 32)"
+    az keyvault secret list \
+        --vault-name "$KEYVAULT_PREFIX-por" \
+        --query '[].name' \
+        -o tsv | grep -q ^portal-session-key$ || \
+    az keyvault secret set \
+        --vault-name "$KEYVAULT_PREFIX-por" \
+        --name portal-session-key \
+        --value "$(openssl rand -base64 32)"
+    az keyvault secret list \
+        --vault-name "$KEYVAULT_PREFIX-por" \
+        --query '[].name' \
+        -o tsv | grep -q ^portal-sshkey$ || \
+    az keyvault secret set \
+        --vault-name "$KEYVAULT_PREFIX-por" \
+        --name portal-sshkey \
+        --value "$(openssl genpkey -algorithm rsa -pkeyopt rsa_keygen_bits:2048 -outform der | base64 -w0)"
 }
 
 update_parent_domain_dns_zone() {

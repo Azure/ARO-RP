@@ -180,6 +180,11 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 		return err
 	}
 
+	portalPip, err := d.publicipaddresses.Get(ctx, d.config.ResourceGroupName, "portal-pip", "")
+	if err != nil {
+		return err
+	}
+
 	zone, err := d.zones.Get(ctx, d.config.ResourceGroupName, d.config.Location+"."+*d.config.Configuration.ClusterParentDomainName)
 	if err != nil {
 		return err
@@ -191,6 +196,20 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 			ARecords: &[]mgmtdns.ARecord{
 				{
 					Ipv4Address: rpPip.IPAddress,
+				},
+			},
+		},
+	}, "", "")
+	if err != nil {
+		return err
+	}
+
+	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.RPParentDomainName, "admin."+d.config.Location, mgmtdns.A, mgmtdns.RecordSet{
+		RecordSetProperties: &mgmtdns.RecordSetProperties{
+			TTL: to.Int64Ptr(3600),
+			ARecords: &[]mgmtdns.ARecord{
+				{
+					Ipv4Address: portalPip.IPAddress,
 				},
 			},
 		},

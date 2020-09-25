@@ -257,5 +257,5 @@ func (m *manager) saveGraph(ctx context.Context, g graph) error {
 		return err
 	}
 
-	return graph.CreateBlockBlobFromReader(bytes.NewReader([]byte(output)), nil)
+	return graph.CreateBlockBlobFromReader(bytes.NewReader(output), nil)
 }

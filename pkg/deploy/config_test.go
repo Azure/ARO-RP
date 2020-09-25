@@ -5,7 +5,6 @@ package deploy
 
 import (
 	"encoding/json"
-	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -114,87 +113,25 @@ func TestConfigNilable(t *testing.T) {
 }
 
 func TestConfigRequiredValues(t *testing.T) {
-	AdminAPICABundle := "AdminAPICABundle"
-	ACRResourceID := "ACRResourceID"
-	ExtraCosmosDBIPs := "ExtraCosmosDBIPs"
-	MDMFrontendURL := "MDMFrontendURL"
-	AdminAPIClientCertCommonName := "AdminAPIClientCertCommonName"
-	ClusterParentDomainName := "ClusterParentDomainName"
-	DatabaseAccountName := "DatabaseAccountName"
-	FPServerCertCommonName := "FPServerCertCommonName"
-	FPServicePrincipalID := "FPServicePrincipalID"
-	GlobalResourceGroupName := "GlobalResourceGroupName"
-	GlobalResourceGroupLocation := "GlobalResourceGroupLocation"
-	GlobalSubscriptionID := "GlobalSubscriptionID"
-	KeyvaultPrefix := "KeyvaultPrefix"
-	MDSDConfigVersion := "MDSDConfigVersion"
-	MDSDEnvironment := "MDSDEnvironment"
-	RPImagePrefix := "RPImagePrefix"
-	RPMode := "RPMode"
-	RPParentDomainName := "RPParentDomainName"
-	RPVersionStorageAccountName := "RPVersionStorageAccountName"
-	SSHPublicKey := "SSHPublicKey"
-	SubscriptionResourceGroupName := "SubscriptionResourceGroupName"
-	SubscriptionResourceGroupLocation := "SubscriptionResourceGroupLocation"
-	StorageAccountDomain := "StorageAccountDomain"
-	VMSize := "VMSize"
-
 	for _, tt := range []struct {
-		name   string
-		config RPConfig
-		expect error
+		name    string
+		config  RPConfig
+		wantErr string
 	}{
-		{
-			name: "valid config",
-			config: RPConfig{
-				Configuration: &Configuration{
-					ACRResourceID:                      &ACRResourceID,
-					AdminAPICABundle:                   &AdminAPICABundle,
-					ExtraCosmosDBIPs:                   []string{ExtraCosmosDBIPs},
-					MDMFrontendURL:                     &MDMFrontendURL,
-					ACRReplicaDisabled:                 to.BoolPtr(true),
-					AdminAPIClientCertCommonName:       &AdminAPIClientCertCommonName,
-					ClusterParentDomainName:            &ClusterParentDomainName,
-					DatabaseAccountName:                &DatabaseAccountName,
-					ExtraClusterKeyvaultAccessPolicies: []interface{}{},
-					ExtraServiceKeyvaultAccessPolicies: []interface{}{},
-					FPServerCertCommonName:             &FPServerCertCommonName,
-					FPServicePrincipalID:               &FPServicePrincipalID,
-					GlobalResourceGroupName:            &GlobalResourceGroupName,
-					GlobalResourceGroupLocation:        &GlobalResourceGroupLocation,
-					GlobalSubscriptionID:               &GlobalSubscriptionID,
-					KeyvaultPrefix:                     &KeyvaultPrefix,
-					MDSDConfigVersion:                  &MDSDConfigVersion,
-					MDSDEnvironment:                    &MDSDEnvironment,
-					RPImagePrefix:                      &RPImagePrefix,
-					RPMode:                             &RPMode,
-					RPNSGSourceAddressPrefixes:         []string{},
-					RPParentDomainName:                 &RPParentDomainName,
-					RPVersionStorageAccountName:        &RPVersionStorageAccountName,
-					SSHPublicKey:                       &SSHPublicKey,
-					SubscriptionResourceGroupName:      &SubscriptionResourceGroupName,
-					SubscriptionResourceGroupLocation:  &SubscriptionResourceGroupLocation,
-					StorageAccountDomain:               &StorageAccountDomain,
-					VMSize:                             &VMSize,
-				},
-			},
-			expect: nil,
-		},
 		{
 			name: "invalid config",
 			config: RPConfig{
-				Configuration: &Configuration{
-					ACRResourceID:    &ACRResourceID,
-					AdminAPICABundle: &AdminAPICABundle,
-					ExtraCosmosDBIPs: []string{ExtraCosmosDBIPs},
-				},
+				Configuration: &Configuration{},
 			},
-			expect: fmt.Errorf("Configuration has missing fields: %s", "[RPVersionStorageAccountName AdminAPIClientCertCommonName ClusterParentDomainName DatabaseAccountName ExtraClusterKeyvaultAccessPolicies ExtraServiceKeyvaultAccessPolicies FPServicePrincipalID GlobalResourceGroupName GlobalResourceGroupLocation GlobalSubscriptionID KeyvaultPrefix MDMFrontendURL MDSDConfigVersion MDSDEnvironment RPImagePrefix RPNSGSourceAddressPrefixes RPParentDomainName SubscriptionResourceGroupName SubscriptionResourceGroupLocation SSHPublicKey StorageAccountDomain VMSize]"),
+			wantErr: "configuration has missing fields: ACRResourceID,RPVersionStorageAccountName,AdminAPICABundle,AdminAPIClientCertCommonName,ClusterParentDomainName,DatabaseAccountName,ExtraClusterKeyvaultAccessPolicies,ExtraCosmosDBIPs,ExtraPortalKeyvaultAccessPolicies,ExtraServiceKeyvaultAccessPolicies,FPServicePrincipalID,GlobalResourceGroupName,GlobalResourceGroupLocation,GlobalSubscriptionID,KeyvaultPrefix,MDMFrontendURL,MDSDConfigVersion,MDSDEnvironment,PortalAccessGroupIDs,PortalClientID,PortalElevatedGroupIDs,RPImagePrefix,RPNSGSourceAddressPrefixes,RPParentDomainName,SubscriptionResourceGroupName,SubscriptionResourceGroupLocation,SSHPublicKey,StorageAccountDomain,VMSize",
 		},
 	} {
-		valid := tt.config.validate()
-		if valid != tt.expect && valid.Error() != tt.expect.Error() {
-			t.Errorf("Expected %s but got %s", tt.name, valid.Error())
-		}
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.config.validate()
+			if err != nil && err.Error() != tt.wantErr ||
+				err == nil && tt.wantErr != "" {
+				t.Error(err)
+			}
+		})
 	}
 }
