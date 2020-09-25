@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
+	uuid "github.com/satori/go.uuid"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
@@ -51,7 +52,7 @@ type OpenShiftClusters interface {
 }
 
 // NewOpenShiftClusters returns a new OpenShiftClusters
-func NewOpenShiftClusters(ctx context.Context, deploymentMode deployment.Mode, uuid string, dbc cosmosdb.DatabaseClient) (OpenShiftClusters, error) {
+func NewOpenShiftClusters(ctx context.Context, deploymentMode deployment.Mode, dbc cosmosdb.DatabaseClient) (OpenShiftClusters, error) {
 	dbid, err := databaseName(deploymentMode)
 	if err != nil {
 		return nil, err
@@ -83,14 +84,14 @@ func NewOpenShiftClusters(ctx context.Context, deploymentMode deployment.Mode, u
 	}
 
 	documentClient := cosmosdb.NewOpenShiftClusterDocumentClient(collc, collOpenShiftClusters)
-	return NewOpenShiftClustersWithProvidedClient(uuid, documentClient, collc), nil
+	return NewOpenShiftClustersWithProvidedClient(documentClient, collc), nil
 }
 
-func NewOpenShiftClustersWithProvidedClient(uuid string, client cosmosdb.OpenShiftClusterDocumentClient, collectionClient cosmosdb.CollectionClient) OpenShiftClusters {
+func NewOpenShiftClustersWithProvidedClient(client cosmosdb.OpenShiftClusterDocumentClient, collectionClient cosmosdb.CollectionClient) OpenShiftClusters {
 	return &openShiftClusters{
 		c:     client,
 		collc: collectionClient,
-		uuid:  uuid,
+		uuid:  uuid.NewV4().String(),
 	}
 }
 

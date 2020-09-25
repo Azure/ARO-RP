@@ -9,7 +9,6 @@ import (
 	"os"
 
 	"github.com/Azure/go-autorest/tracing"
-	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/tools/metrics"
 
@@ -25,9 +24,6 @@ import (
 )
 
 func monitor(ctx context.Context, log *logrus.Entry) error {
-	uuid := uuid.NewV4().String()
-	log.Printf("uuid %s", uuid)
-
 	_env, err := env.NewCore(ctx, log)
 	if err != nil {
 		return err
@@ -64,7 +60,7 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	db, err := database.NewDatabase(ctx, log.WithField("component", "database"), _env, m, cipher, uuid)
+	db, err := database.NewDatabase(ctx, log.WithField("component", "database"), _env, m, cipher)
 	if err != nil {
 		return err
 	}

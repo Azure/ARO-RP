@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"strings"
 
+	uuid "github.com/satori/go.uuid"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
@@ -30,7 +32,7 @@ type Monitors interface {
 }
 
 // NewMonitors returns a new Monitors
-func NewMonitors(ctx context.Context, deploymentMode deployment.Mode, uuid string, dbc cosmosdb.DatabaseClient) (Monitors, error) {
+func NewMonitors(ctx context.Context, deploymentMode deployment.Mode, dbc cosmosdb.DatabaseClient) (Monitors, error) {
 	dbid, err := databaseName(deploymentMode)
 	if err != nil {
 		return nil, err
@@ -63,7 +65,7 @@ func NewMonitors(ctx context.Context, deploymentMode deployment.Mode, uuid strin
 
 	return &monitors{
 		c:    cosmosdb.NewMonitorDocumentClient(collc, collMonitors),
-		uuid: uuid,
+		uuid: uuid.NewV4().String(),
 	}, nil
 }
 

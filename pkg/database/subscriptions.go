@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"strings"
 
+	uuid "github.com/satori/go.uuid"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
@@ -33,7 +35,7 @@ type Subscriptions interface {
 }
 
 // NewSubscriptions returns a new Subscriptions
-func NewSubscriptions(ctx context.Context, deploymentMode deployment.Mode, uuid string, dbc cosmosdb.DatabaseClient) (Subscriptions, error) {
+func NewSubscriptions(ctx context.Context, deploymentMode deployment.Mode, dbc cosmosdb.DatabaseClient) (Subscriptions, error) {
 	dbid, err := databaseName(deploymentMode)
 	if err != nil {
 		return nil, err
@@ -77,13 +79,13 @@ func NewSubscriptions(ctx context.Context, deploymentMode deployment.Mode, uuid 
 	}
 
 	documentClient := cosmosdb.NewSubscriptionDocumentClient(collc, collSubscriptions)
-	return NewSubscriptionsWithProvidedClient(uuid, documentClient), nil
+	return NewSubscriptionsWithProvidedClient(documentClient), nil
 }
 
-func NewSubscriptionsWithProvidedClient(uuid string, client cosmosdb.SubscriptionDocumentClient) Subscriptions {
+func NewSubscriptionsWithProvidedClient(client cosmosdb.SubscriptionDocumentClient) Subscriptions {
 	return &subscriptions{
 		c:    client,
-		uuid: uuid,
+		uuid: uuid.NewV4().String(),
 	}
 }
 

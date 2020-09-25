@@ -64,7 +64,7 @@ func NewDatabaseClient(ctx context.Context, log *logrus.Entry, env env.Core, m m
 }
 
 // NewDatabase returns a new Database
-func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Core, m metrics.Interface, cipher encryption.Cipher, uuid string) (db *Database, err error) {
+func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Core, m metrics.Interface, cipher encryption.Cipher) (db *Database, err error) {
 	dbc, err := NewDatabaseClient(ctx, log, env, m, cipher)
 	if err != nil {
 		return nil, err
@@ -72,27 +72,27 @@ func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Core, m metrics
 
 	db = &Database{}
 
-	db.AsyncOperations, err = NewAsyncOperations(ctx, env.DeploymentMode(), uuid, dbc)
+	db.AsyncOperations, err = NewAsyncOperations(ctx, env.DeploymentMode(), dbc)
 	if err != nil {
 		return nil, err
 	}
 
-	db.Billing, err = NewBilling(ctx, env.DeploymentMode(), uuid, dbc)
+	db.Billing, err = NewBilling(ctx, env.DeploymentMode(), dbc)
 	if err != nil {
 		return nil, err
 	}
 
-	db.Monitors, err = NewMonitors(ctx, env.DeploymentMode(), uuid, dbc)
+	db.Monitors, err = NewMonitors(ctx, env.DeploymentMode(), dbc)
 	if err != nil {
 		return nil, err
 	}
 
-	db.OpenShiftClusters, err = NewOpenShiftClusters(ctx, env.DeploymentMode(), uuid, dbc)
+	db.OpenShiftClusters, err = NewOpenShiftClusters(ctx, env.DeploymentMode(), dbc)
 	if err != nil {
 		return nil, err
 	}
 
-	db.Subscriptions, err = NewSubscriptions(ctx, env.DeploymentMode(), uuid, dbc)
+	db.Subscriptions, err = NewSubscriptions(ctx, env.DeploymentMode(), dbc)
 	if err != nil {
 		return nil, err
 	}
