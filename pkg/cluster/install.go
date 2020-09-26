@@ -32,7 +32,8 @@ func (m *manager) AdminUpdate(ctx context.Context) error {
 		steps.Action(m.startVMs),
 		steps.Condition(m.apiServersReady, 30*time.Minute),
 		steps.Action(m.ensureBillingRecord), // belt and braces
-		steps.Action(m.fixPullSecret),       // TODO(mj): Remove when operator deployed
+		steps.Action(m.fixSSH),
+		steps.Action(m.fixPullSecret), // TODO(mj): Remove when operator deployed
 		steps.Action(m.ensureAROOperator),
 		steps.Condition(m.aroDeploymentReady, 20*time.Minute),
 		steps.Action(m.configureAPIServerCertificate),
