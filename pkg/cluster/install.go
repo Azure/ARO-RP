@@ -42,6 +42,7 @@ func (i *manager) AdminUpgrade(ctx context.Context) error {
 		steps.Action(i.upgradeCertificates),
 		steps.Action(i.configureAPIServerCertificate),
 		steps.Action(i.configureIngressCertificate),
+		steps.Action(i.addArchitectureVersion),     // TODO(mj): Remove this once all cluster in production has this field populated
 		steps.Action(i.addResourceProviderVersion), // Run this last so we capture the resource provider only once the upgrade has been fully performed
 	}
 
@@ -87,6 +88,7 @@ func (i *manager) Install(ctx context.Context, installConfig *installconfig.Inst
 			steps.Action(i.configureIngressCertificate),
 			steps.Condition(i.ingressControllerReady, 30*time.Minute),
 			steps.Action(i.finishInstallation),
+			steps.Action(i.addArchitectureVersion),
 			steps.Action(i.addResourceProviderVersion),
 		},
 	}
@@ -188,6 +190,17 @@ func (i *manager) addResourceProviderVersion(ctx context.Context) error {
 	var err error
 	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		doc.OpenShiftCluster.Properties.ProvisionedBy = version.GitCommit
+		return nil
+	})
+	return err
+}
+
+// addArchitectureVersion sets architecture version in
+// the cluster document for version-tracking purposes.
+func (i *manager) addArchitectureVersion(ctx context.Context) error {
+	var err error
+	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.Properties.ArchitectureVersion = version.ArchitectureVersion
 		return nil
 	})
 	return err

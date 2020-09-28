@@ -1,9 +1,12 @@
 package version
 
+import "github.com/Azure/ARO-RP/pkg/api"
+
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
 var GitCommit = "unknown"
+var ArchitectureVersion = api.ArchitectureVersionV1
 
 // InstallStream describes stream we are defaulting to for all new clusters
 var InstallStream = Stream{

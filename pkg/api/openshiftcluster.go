@@ -65,11 +65,12 @@ type OpenShiftClusterProperties struct {
 	// ProvisioningState.  When they complete, regardless of success, admin
 	// updates always reset the ProvisioningState to LastProvisioningState.
 
-	ProvisioningState       ProvisioningState `json:"provisioningState,omitempty"`
-	ProvisionedBy           string            `json:"provisionedBy,omitempty"`
-	LastProvisioningState   ProvisioningState `json:"lastProvisioningState,omitempty"`
-	FailedProvisioningState ProvisioningState `json:"failedProvisioningState,omitempty"`
-	LastAdminUpdateError    string            `json:"lastAdminUpdateError,omitempty"`
+	ArchitectureVersion     ArchitectureVersion `json:"architectureVersion,omitempty"`
+	ProvisioningState       ProvisioningState   `json:"provisioningState,omitempty"`
+	ProvisionedBy           string              `json:"provisionedBy,omitempty"`
+	LastProvisioningState   ProvisioningState   `json:"lastProvisioningState,omitempty"`
+	FailedProvisioningState ProvisioningState   `json:"failedProvisioningState,omitempty"`
+	LastAdminUpdateError    string              `json:"lastAdminUpdateError,omitempty"`
 
 	ClusterProfile ClusterProfile `json:"clusterProfile,omitempty"`
 
@@ -258,4 +259,14 @@ type InstallPhase int
 const (
 	InstallPhaseBootstrap InstallPhase = iota
 	InstallPhaseRemoveBootstrap
+)
+
+// ArchitectureVersion represents an architecture version
+type ArchitectureVersion int
+
+// ArchitectureVersion constants
+// TODO(mj): Document architecture deltas in 4.5 PR in the comments.
+const (
+	ArchitectureVersionV1 ArchitectureVersion = iota
+	ArchitectureVersionV2
 )

@@ -20,6 +20,7 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 		Type:     oc.Type,
 		Location: oc.Location,
 		Properties: OpenShiftClusterProperties{
+			ArchitectureVersion:     ArchitectureVersion(oc.Properties.ArchitectureVersion),
 			ProvisioningState:       ProvisioningState(oc.Properties.ProvisioningState),
 			ProvisionedBy:           oc.Properties.ProvisionedBy,
 			LastProvisioningState:   ProvisioningState(oc.Properties.LastProvisioningState),
