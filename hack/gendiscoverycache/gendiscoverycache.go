@@ -94,39 +94,71 @@ func writeAssets(cli discovery.DiscoveryInterface, clusterVersion, cacheDir stri
 
 func canonicalizeAssets(cacheDir string) error {
 	return filepath.Walk(cacheDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || !strings.HasSuffix(path, "/serverresources.json") {
-			return err
-		}
-
-		b, err := ioutil.ReadFile(path)
 		if err != nil {
 			return err
 		}
 
-		var l *metav1.APIResourceList
-
-		err = json.Unmarshal(b, &l)
-		if err != nil {
-			return err
+		switch filepath.Base(path) {
+		case "servergroups.json":
+			return formatServerGroups(path)
+		case "serverresources.json":
+			return canonicalizeServerResources(path)
 		}
 
-		sort.Slice(l.APIResources, func(i, j int) bool {
-			return strings.Compare(l.APIResources[i].Name, l.APIResources[j].Name) < 0
-		})
-
-		for _, r := range l.APIResources {
-			sort.Strings(r.Categories)
-			sort.Strings(r.ShortNames)
-			sort.Strings(r.Verbs)
-		}
-
-		b, err = json.MarshalIndent(l, "", "    ")
-		if err != nil {
-			return err
-		}
-
-		return ioutil.WriteFile(path, append(b, '\n'), 0666)
+		return nil
 	})
+}
+
+func formatServerGroups(path string) error {
+	b, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	var i interface{}
+
+	err = json.Unmarshal(b, &i)
+	if err != nil {
+		return err
+	}
+
+	b, err = json.MarshalIndent(i, "", "    ")
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(path, append(b, '\n'), 0666)
+}
+
+func canonicalizeServerResources(path string) error {
+	b, err := ioutil.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	var l *metav1.APIResourceList
+
+	err = json.Unmarshal(b, &l)
+	if err != nil {
+		return err
+	}
+
+	sort.Slice(l.APIResources, func(i, j int) bool {
+		return strings.Compare(l.APIResources[i].Name, l.APIResources[j].Name) < 0
+	})
+
+	for _, r := range l.APIResources {
+		sort.Strings(r.Categories)
+		sort.Strings(r.ShortNames)
+		sort.Strings(r.Verbs)
+	}
+
+	b, err = json.MarshalIndent(l, "", "    ")
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(path, append(b, '\n'), 0666)
 }
 
 func main() {
