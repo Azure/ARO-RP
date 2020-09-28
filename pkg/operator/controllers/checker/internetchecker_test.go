@@ -13,70 +13,104 @@ import (
 	"os"
 	"syscall"
 	"testing"
+	"time"
+
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
-type fakeClient struct {
-	resp *http.Response
-	err  error
+type fakeResponse struct {
+	httpResponse *http.Response
+	err          error
 }
 
-func (c *fakeClient) Do(req *http.Request) (*http.Response, error) {
-	return c.resp, c.err
+type testClient struct {
+	responses []*fakeResponse
+}
+
+func (c *testClient) Do(req *http.Request) (*http.Response, error) {
+	response := c.responses[0]
+	c.responses = c.responses[1:]
+	return response.httpResponse, response.err
+}
+
+const urltocheck = "https://not-used-in-test.io"
+
+type testCase struct {
+	name      string
+	responses []*fakeResponse
+	wantError bool
+}
+
+// simulated responses
+var (
+	okResp = &fakeResponse{
+		httpResponse: &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       ioutil.NopCloser(&bytes.Buffer{}),
+		},
+	}
+
+	badReq = &fakeResponse{
+		httpResponse: &http.Response{
+			StatusCode: http.StatusBadRequest,
+			Body:       ioutil.NopCloser(&bytes.Buffer{}),
+		},
+	}
+
+	networkUnreach = &fakeResponse{
+		err: &url.Error{
+			URL: urltocheck,
+			Err: &net.OpError{
+				Err: os.NewSyscallError("socket", syscall.ENETUNREACH),
+			},
+		},
+	}
+
+	timedoutReq = &fakeResponse{err: context.DeadlineExceeded}
+)
+
+var testBackoff = wait.Backoff{
+	Steps:    5,
+	Duration: 5 * time.Millisecond,
+	Factor:   2.0,
+	Jitter:   0.5,
+	Cap:      50 * time.Millisecond,
+}
+
+var testCases = []testCase{
+	{
+		name:      "200 OK",
+		responses: []*fakeResponse{okResp},
+	},
+	{
+		name:      "bad request",
+		responses: []*fakeResponse{badReq},
+	},
+	{
+		name:      "eventual 200 OK",
+		responses: []*fakeResponse{networkUnreach, timedoutReq, okResp},
+	},
+	{
+		name:      "eventual bad request",
+		responses: []*fakeResponse{timedoutReq, networkUnreach, badReq},
+	},
+	{
+		name:      "timedout request",
+		responses: []*fakeResponse{networkUnreach, timedoutReq, timedoutReq, timedoutReq, timedoutReq, timedoutReq},
+		wantError: true,
+	},
 }
 
 func TestInternetCheckerCheck(t *testing.T) {
-	urltocheck := "https://not-used-in-test.io"
-	tests := []struct {
-		name    string
-		cli     *fakeClient
-		wantErr bool
-	}{
-		{
-			name: "200 ok",
-			cli: &fakeClient{
-				resp: &http.Response{
-					StatusCode: http.StatusOK,
-					Body:       ioutil.NopCloser(&bytes.Buffer{}),
-				},
-			},
-		},
-		{
-			name: "400 bad request",
-			cli: &fakeClient{
-				resp: &http.Response{
-					StatusCode: http.StatusBadRequest,
-					Body:       ioutil.NopCloser(&bytes.Buffer{}),
-				},
-			},
-		},
-		{
-			name: "unreachable error",
-			cli: &fakeClient{
-				err: &url.Error{
-					URL: urltocheck,
-					Err: &net.OpError{
-						Err: os.NewSyscallError("socket", syscall.ENETUNREACH),
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name:    "timeout",
-			cli:     &fakeClient{err: context.DeadlineExceeded},
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			r := &InternetChecker{
-				log: utillog.GetLogger(),
-			}
-
-			if err := r.checkWithClient(tt.cli, urltocheck); (err != nil) != tt.wantErr {
-				t.Errorf("InternetChecker.check() error = %v, wantErr %v", err, tt.wantErr)
+	r := &InternetChecker{log: utillog.GetLogger()}
+	for _, test := range testCases {
+		t.Run(test.name, func(t *testing.T) {
+			client := &testClient{responses: test.responses}
+			err := r.checkWithRetry(client, urltocheck, testBackoff)
+			if (err != nil) != test.wantError {
+				t.Errorf("InternetChecker.check() error = %v, wantErr %v", err, test.wantError)
 			}
 		})
 	}
