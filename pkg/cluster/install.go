@@ -59,7 +59,6 @@ func (i *manager) Install(ctx context.Context, installConfig *installconfig.Inst
 			steps.AuthorizationRefreshingAction(i.fpAuthorizer, steps.Action(i.attachNSGsAndPatch)),
 			steps.Action(i.ensureBillingRecord),
 			steps.AuthorizationRefreshingAction(i.fpAuthorizer, steps.Action(i.deployResourceTemplate)),
-			steps.Action(i.deployResourceTemplate),
 			steps.Action(i.createPrivateEndpoint),
 			steps.Action(i.updateAPIIP),
 			steps.Action(i.createCertificates),
