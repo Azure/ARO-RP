@@ -197,6 +197,7 @@ func TestDelete(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			var err error
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
@@ -204,14 +205,15 @@ func TestDelete(t *testing.T) {
 			_env.EXPECT().DeploymentMode().AnyTimes().Return(deployment.Production)
 
 			log := logrus.NewEntry(logrus.StandardLogger())
-			db, dbClients, _, err := testdatabase.NewDatabase(ctx, log)
-			if err != nil {
-				t.Error(err)
-				return
-			}
+			openShiftClusterDatabase, _, _ := testdatabase.NewFakeOpenShiftClusters()
+			billingDatabase, billingClient, _ := testdatabase.NewFakeBilling()
+			subscriptionsDatabase, _, _ := testdatabase.NewFakeSubscriptions()
 
 			if tt.fixture != nil {
-				fixture := testdatabase.NewFixture(db)
+				fixture := testdatabase.NewFixture().
+					WithOpenShiftClusters(openShiftClusterDatabase).
+					WithBilling(billingDatabase).
+					WithSubscriptions(subscriptionsDatabase)
 				tt.fixture(fixture)
 				err = fixture.Create()
 				if err != nil {
@@ -220,13 +222,13 @@ func TestDelete(t *testing.T) {
 			}
 
 			if tt.dbError != nil {
-				dbClients.Billing.MakeUnavailable(tt.dbError)
+				billingClient.SetError(tt.dbError)
 			}
 
 			m := &manager{
 				log:       log,
-				billingDB: db.Billing,
-				subDB:     db.Subscriptions,
+				billingDB: billingDatabase,
+				subDB:     subscriptionsDatabase,
 				env:       _env,
 			}
 
@@ -237,9 +239,9 @@ func TestDelete(t *testing.T) {
 			}
 
 			if tt.wantDocuments != nil {
-				checker := testdatabase.NewChecker(dbClients)
+				checker := testdatabase.NewChecker()
 				tt.wantDocuments(checker)
-				errs := checker.CheckBilling()
+				errs := checker.CheckBilling(billingClient)
 				for _, err := range errs {
 					t.Error(err)
 				}
@@ -386,6 +388,7 @@ func TestEnsure(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			var err error
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
@@ -393,33 +396,34 @@ func TestEnsure(t *testing.T) {
 			_env.EXPECT().DeploymentMode().AnyTimes().Return(deployment.Production)
 
 			log := logrus.NewEntry(logrus.StandardLogger())
-			db, dbClients, _, err := testdatabase.NewDatabase(ctx, log)
-			if err != nil {
-				t.Error(err)
-				return
-			}
+			openShiftClusterDatabase, _, _ := testdatabase.NewFakeOpenShiftClusters()
+			billingDatabase, billingClient, _ := testdatabase.NewFakeBilling()
+			subscriptionsDatabase, _, _ := testdatabase.NewFakeSubscriptions()
 
 			if tt.fixture != nil {
-				fixture := testdatabase.NewFixture(db)
+				fixture := testdatabase.NewFixture().
+					WithOpenShiftClusters(openShiftClusterDatabase).
+					WithBilling(billingDatabase).
+					WithSubscriptions(subscriptionsDatabase)
 				tt.fixture(fixture)
-				err := fixture.Create()
+				err = fixture.Create()
 				if err != nil {
 					t.Fatal(err)
 				}
 			}
 
 			if tt.dbError != nil {
-				dbClients.Billing.MakeUnavailable(tt.dbError)
+				billingClient.SetError(tt.dbError)
 			}
 
 			m := &manager{
 				log:       log,
-				billingDB: db.Billing,
-				subDB:     db.Subscriptions,
+				billingDB: billingDatabase,
+				subDB:     subscriptionsDatabase,
 				env:       _env,
 			}
 
-			doc, err := db.OpenShiftClusters.Get(ctx, strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")))
+			doc, err := openShiftClusterDatabase.Get(ctx, strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -431,9 +435,9 @@ func TestEnsure(t *testing.T) {
 			}
 
 			if tt.wantDocuments != nil {
-				checker := testdatabase.NewChecker(dbClients)
+				checker := testdatabase.NewChecker()
 				tt.wantDocuments(checker)
-				errs := checker.CheckBilling()
+				errs := checker.CheckBilling(billingClient)
 				for _, err := range errs {
 					t.Error(err)
 				}

@@ -249,12 +249,7 @@ func TestAddResourceProviderVersion(t *testing.T) {
 	ctx := context.Background()
 	key := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1"
 
-	log := logrus.NewEntry(logrus.StandardLogger())
-	db, _, uuid, err := testdatabase.NewDatabase(ctx, log)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	openShiftClustersDatabase, _, uuid := testdatabase.NewFakeOpenShiftClusters()
 
 	clusterdoc := &api.OpenShiftClusterDocument{
 		Key: strings.ToLower(key),
@@ -266,16 +261,16 @@ func TestAddResourceProviderVersion(t *testing.T) {
 		LeaseExpires: 99999999999999,
 	}
 
-	fixture := testdatabase.NewFixture(db)
+	fixture := testdatabase.NewFixture().WithOpenShiftClusters(openShiftClustersDatabase)
 	fixture.AddOpenShiftClusterDocument(clusterdoc)
-	err = fixture.Create()
+	err := fixture.Create()
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	i := &manager{
 		doc: clusterdoc,
-		db:  db.OpenShiftClusters,
+		db:  openShiftClustersDatabase,
 	}
 	err = i.addResourceProviderVersion(ctx)
 	if err != nil {
@@ -283,7 +278,7 @@ func TestAddResourceProviderVersion(t *testing.T) {
 	}
 
 	// Check it was set to the correct value in the database
-	updatedClusterDoc, err := db.OpenShiftClusters.Get(ctx, strings.ToLower(key))
+	updatedClusterDoc, err := openShiftClustersDatabase.Get(ctx, strings.ToLower(key))
 	if err != nil {
 		t.Fatal(err)
 	}

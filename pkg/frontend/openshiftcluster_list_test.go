@@ -20,8 +20,8 @@ import (
 
 func makeDoc(num int) *api.OpenShiftClusterDocument {
 	mockSubID := "00000000-0000-0000-0000-000000000000"
-	resourceName := fmt.Sprintf("resourceName%d", num)
-	clientSecret := fmt.Sprintf("clientSecret%d", num)
+	resourceName := fmt.Sprintf("resourceName%02d", num)
+	clientSecret := fmt.Sprintf("clientSecret%02d", num)
 	return &api.OpenShiftClusterDocument{
 		Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, resourceName)),
 		OpenShiftCluster: &api.OpenShiftCluster{
@@ -66,19 +66,22 @@ func TestListOpenShiftCluster(t *testing.T) {
 				}
 				f.AddOpenShiftClusterDocuments(docs)
 			},
-			wantEnriched:   []string{testdatabase.GetResourcePath(mockSubID, "resourceName1"), testdatabase.GetResourcePath(mockSubID, "resourceName2")},
+			wantEnriched: []string{
+				testdatabase.GetResourcePath(mockSubID, "resourceName01"),
+				testdatabase.GetResourcePath(mockSubID, "resourceName02"),
+			},
 			wantStatusCode: http.StatusOK,
 			wantResponse: func() *v20200430.OpenShiftClusterList {
 				return &v20200430.OpenShiftClusterList{
 					OpenShiftClusters: []*v20200430.OpenShiftCluster{
 						{
-							ID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1", mockSubID),
-							Name: "resourceName1",
+							ID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName01", mockSubID),
+							Name: "resourceName01",
 							Type: "Microsoft.RedHatOpenShift/openShiftClusters",
 						},
 						{
-							ID:   testdatabase.GetResourcePath(mockSubID, "resourceName2"),
-							Name: "resourceName2",
+							ID:   testdatabase.GetResourcePath(mockSubID, "resourceName02"),
+							Name: "resourceName02",
 							Type: "Microsoft.RedHatOpenShift/openShiftClusters",
 						},
 					},
@@ -94,14 +97,25 @@ func TestListOpenShiftCluster(t *testing.T) {
 				}
 				f.AddOpenShiftClusterDocuments(docs)
 			},
-			wantEnriched:   []string{testdatabase.GetResourcePath(mockSubID, "resourceName1"), testdatabase.GetResourcePath(mockSubID, "resourceName2"), testdatabase.GetResourcePath(mockSubID, "resourceName3"), testdatabase.GetResourcePath(mockSubID, "resourceName4"), testdatabase.GetResourcePath(mockSubID, "resourceName5"), testdatabase.GetResourcePath(mockSubID, "resourceName6"), testdatabase.GetResourcePath(mockSubID, "resourceName7"), testdatabase.GetResourcePath(mockSubID, "resourceName8"), testdatabase.GetResourcePath(mockSubID, "resourceName9"), testdatabase.GetResourcePath(mockSubID, "resourceName10")},
+			wantEnriched: []string{
+				testdatabase.GetResourcePath(mockSubID, "resourceName01"),
+				testdatabase.GetResourcePath(mockSubID, "resourceName02"),
+				testdatabase.GetResourcePath(mockSubID, "resourceName03"),
+				testdatabase.GetResourcePath(mockSubID, "resourceName04"),
+				testdatabase.GetResourcePath(mockSubID, "resourceName05"),
+				testdatabase.GetResourcePath(mockSubID, "resourceName06"),
+				testdatabase.GetResourcePath(mockSubID, "resourceName07"),
+				testdatabase.GetResourcePath(mockSubID, "resourceName08"),
+				testdatabase.GetResourcePath(mockSubID, "resourceName09"),
+				testdatabase.GetResourcePath(mockSubID, "resourceName10"),
+			},
 			wantStatusCode: http.StatusOK,
 			wantResponse: func() *v20200430.OpenShiftClusterList {
 				var docs []*v20200430.OpenShiftCluster
 				for i := 1; i < 11; i++ {
 					docs = append(docs, &v20200430.OpenShiftCluster{
-						ID:   testdatabase.GetResourcePath(mockSubID, fmt.Sprintf("resourceName%d", i)),
-						Name: fmt.Sprintf("resourceName%d", i),
+						ID:   testdatabase.GetResourcePath(mockSubID, fmt.Sprintf("resourceName%02d", i)),
+						Name: fmt.Sprintf("resourceName%02d", i),
 						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
 					})
 				}
@@ -165,24 +179,21 @@ func TestListOpenShiftCluster(t *testing.T) {
 				"resource group list": fmt.Sprintf("/subscriptions/%s/resourcegroups/resourcegroup/", mockSubID),
 			} {
 				t.Run(name, func(t *testing.T) {
-					ti, err := newTestInfra(t)
-					if err != nil {
-						t.Fatal(err)
-					}
+					ti := newTestInfra(t).WithOpenShiftClusters()
 					defer ti.done()
 
-					err = ti.buildFixtures(tt.fixture)
+					err := ti.buildFixtures(tt.fixture)
 					if err != nil {
 						t.Fatal(err)
 					}
 
 					if tt.dbError != nil {
-						ti.dbclients.MakeUnavailable(tt.dbError)
+						ti.openShiftClustersClient.SetError(tt.dbError)
 					}
 
 					cipher := testdatabase.NewFakeCipher()
 
-					f, err := NewFrontend(ctx, ti.log, ti.env, ti.db, api.APIs, &noop.Noop{}, cipher, nil)
+					f, err := NewFrontend(ctx, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, api.APIs, &noop.Noop{}, cipher, nil)
 					if err != nil {
 						t.Fatal(err)
 					}

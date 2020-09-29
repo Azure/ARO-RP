@@ -5,7 +5,6 @@ package frontend
 
 import (
 	"bytes"
-	"context"
 	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
@@ -23,6 +22,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database"
+	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
@@ -59,13 +59,20 @@ type testInfra struct {
 	cli        *http.Client
 	enricher   testclusterdata.TestEnricher
 	log        *logrus.Entry
-	db         *database.Database
-	dbclients  *testdatabase.FakeClients
 	fixture    *testdatabase.Fixture
 	checker    *testdatabase.Checker
+
+	openShiftClustersClient   *cosmosdb.FakeOpenShiftClusterDocumentClient
+	openShiftClustersDatabase database.OpenShiftClusters
+	asyncOperationsClient     *cosmosdb.FakeAsyncOperationDocumentClient
+	asyncOperationsDatabase   database.AsyncOperations
+	billingClient             *cosmosdb.FakeBillingDocumentClient
+	billingDatabase           database.Billing
+	subscriptionsClient       *cosmosdb.FakeSubscriptionDocumentClient
+	subscriptionsDatabase     database.Subscriptions
 }
 
-func newTestInfra(t *testing.T) (*testInfra, error) {
+func newTestInfra(t *testing.T) *testInfra {
 	pool := x509.NewCertPool()
 	pool.AddCert(servercerts[0])
 
@@ -84,24 +91,17 @@ func newTestInfra(t *testing.T) (*testInfra, error) {
 
 	log := logrus.NewEntry(logrus.StandardLogger())
 
-	db, dbclients, _, err := testdatabase.NewDatabase(context.Background(), log)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	fixture := testdatabase.NewFixture(db)
-	checker := testdatabase.NewChecker(dbclients)
+	fixture := testdatabase.NewFixture()
+	checker := testdatabase.NewChecker()
 
 	return &testInfra{
 		env:        _env,
 		controller: controller,
 		l:          l,
 		enricher:   testclusterdata.NewTestEnricher(),
-		log:        log,
-		db:         db,
-		dbclients:  dbclients,
 		fixture:    fixture,
 		checker:    checker,
+		log:        log,
 		cli: &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
@@ -116,7 +116,31 @@ func newTestInfra(t *testing.T) (*testInfra, error) {
 				Dial: l.Dial,
 			},
 		},
-	}, nil
+	}
+}
+
+func (ti *testInfra) WithOpenShiftClusters() *testInfra {
+	ti.openShiftClustersDatabase, ti.openShiftClustersClient, _ = testdatabase.NewFakeOpenShiftClusters()
+	ti.fixture.WithOpenShiftClusters(ti.openShiftClustersDatabase)
+	return ti
+}
+
+func (ti *testInfra) WithBilling() *testInfra {
+	ti.billingDatabase, ti.billingClient, _ = testdatabase.NewFakeBilling()
+	ti.fixture.WithBilling(ti.billingDatabase)
+	return ti
+}
+
+func (ti *testInfra) WithSubscriptions() *testInfra {
+	ti.subscriptionsDatabase, ti.subscriptionsClient, _ = testdatabase.NewFakeSubscriptions()
+	ti.fixture.WithSubscriptions(ti.subscriptionsDatabase)
+	return ti
+}
+
+func (ti *testInfra) WithAsyncOperations() *testInfra {
+	ti.asyncOperationsDatabase, ti.asyncOperationsClient, _ = testdatabase.NewFakeAsyncOperations()
+	ti.fixture.WithAsyncOperations(ti.asyncOperationsDatabase)
+	return ti
 }
 
 func (ti *testInfra) done() error {

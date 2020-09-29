@@ -18,11 +18,34 @@ type Fixture struct {
 	billingDocuments          []*api.BillingDocument
 	asyncOperationDocuments   []*api.AsyncOperationDocument
 
-	db *database.Database
+	openShiftClustersDatabase database.OpenShiftClusters
+	billingDatabase           database.Billing
+	subscriptionsDatabase     database.Subscriptions
+	asyncOperationsDatabase   database.AsyncOperations
 }
 
-func NewFixture(db *database.Database) *Fixture {
-	return &Fixture{db: db}
+func NewFixture() *Fixture {
+	return &Fixture{}
+}
+
+func (f *Fixture) WithOpenShiftClusters(db database.OpenShiftClusters) *Fixture {
+	f.openShiftClustersDatabase = db
+	return f
+}
+
+func (f *Fixture) WithBilling(db database.Billing) *Fixture {
+	f.billingDatabase = db
+	return f
+}
+
+func (f *Fixture) WithSubscriptions(db database.Subscriptions) *Fixture {
+	f.subscriptionsDatabase = db
+	return f
+}
+
+func (f *Fixture) WithAsyncOperations(db database.AsyncOperations) *Fixture {
+	f.asyncOperationsDatabase = db
+	return f
 }
 
 func (f *Fixture) AddOpenShiftClusterDocuments(docs []*api.OpenShiftClusterDocument) {
@@ -64,28 +87,28 @@ func (f *Fixture) Create() error {
 		if i.ID == "" {
 			i.ID = uuid.NewV4().String()
 		}
-		_, err := f.db.OpenShiftClusters.Create(ctx, i)
+		_, err := f.openShiftClustersDatabase.Create(ctx, i)
 		if err != nil {
 			return err
 		}
 	}
 
 	for _, i := range f.subscriptionDocuments {
-		_, err := f.db.Subscriptions.Create(ctx, i)
+		_, err := f.subscriptionsDatabase.Create(ctx, i)
 		if err != nil {
 			return err
 		}
 	}
 
 	for _, i := range f.billingDocuments {
-		_, err := f.db.Billing.Create(ctx, i)
+		_, err := f.billingDatabase.Create(ctx, i)
 		if err != nil {
 			return err
 		}
 	}
 
 	for _, i := range f.asyncOperationDocuments {
-		_, err := f.db.AsyncOperations.Create(ctx, i)
+		_, err := f.asyncOperationsDatabase.Create(ctx, i)
 		if err != nil {
 			return err
 		}

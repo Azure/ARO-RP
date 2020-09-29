@@ -67,7 +67,6 @@ func TestDeleteOpenShiftCluster(t *testing.T) {
 						ProvisioningState:        api.ProvisioningStateDeleting,
 					},
 				})
-
 				c.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					OpenShiftCluster: &api.OpenShiftCluster{
@@ -98,22 +97,24 @@ func TestDeleteOpenShiftCluster(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			ti, err := newTestInfra(t)
-			if err != nil {
-				t.Fatal(err)
-			}
+			ti := newTestInfra(t).
+				WithOpenShiftClusters().
+				WithAsyncOperations().
+				WithSubscriptions()
 			defer ti.done()
 
-			err = ti.buildFixtures(tt.fixture)
+			err := ti.buildFixtures(tt.fixture)
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			if tt.dbError != nil {
-				ti.dbclients.MakeUnavailable(tt.dbError)
+				ti.openShiftClustersClient.SetError(tt.dbError)
+				ti.asyncOperationsClient.SetError(tt.dbError)
+				ti.subscriptionsClient.SetError(tt.dbError)
 			}
 
-			f, err := NewFrontend(ctx, ti.log, ti.env, ti.db, api.APIs, &noop.Noop{}, nil, nil)
+			f, err := NewFrontend(ctx, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, api.APIs, &noop.Noop{}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -150,11 +151,17 @@ func TestDeleteOpenShiftCluster(t *testing.T) {
 				t.Error(err)
 			}
 
-			ti.dbclients.MakeUnavailable(nil)
+			ti.openShiftClustersClient.SetError(nil)
+			ti.asyncOperationsClient.SetError(nil)
+			ti.subscriptionsClient.SetError(nil)
 			if tt.wantDocuments != nil {
 				tt.wantDocuments(ti.checker)
 			}
-			errs := ti.checker.Check()
+			errs := ti.checker.CheckOpenShiftCluster(ti.openShiftClustersClient)
+			for _, i := range errs {
+				t.Error(i)
+			}
+			errs = ti.checker.CheckAsyncOperations(ti.asyncOperationsClient)
 			for _, i := range errs {
 				t.Error(i)
 			}

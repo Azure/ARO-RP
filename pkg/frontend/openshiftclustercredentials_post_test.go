@@ -253,22 +253,20 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			ti, err := newTestInfra(t)
-			if err != nil {
-				t.Fatal(err)
-			}
+			ti := newTestInfra(t).WithOpenShiftClusters().WithSubscriptions()
 			defer ti.done()
 
 			if tt.dbError != nil {
-				ti.dbclients.MakeUnavailable(tt.dbError)
+				ti.subscriptionsClient.SetError(tt.dbError)
+				ti.openShiftClustersClient.SetError(tt.dbError)
 			}
 
-			err = ti.buildFixtures(tt.fixture)
+			err := ti.buildFixtures(tt.fixture)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.log, ti.env, ti.db, apis, &noop.Noop{}, nil, nil)
+			f, err := NewFrontend(ctx, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, apis, &noop.Noop{}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

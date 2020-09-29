@@ -106,13 +106,10 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			ti, err := newTestInfra(t)
-			if err != nil {
-				t.Fatal(err)
-			}
+			ti := newTestInfra(t).WithOpenShiftClusters()
 			defer ti.done()
 
-			err = ti.buildFixtures(tt.fixture)
+			err := ti.buildFixtures(tt.fixture)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -120,10 +117,10 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 			cipher := testdatabase.NewFakeCipher()
 
 			if tt.throwsError != nil {
-				ti.dbclients.MakeUnavailable(tt.throwsError)
+				ti.openShiftClustersClient.SetError(tt.throwsError)
 			}
 
-			f, err := NewFrontend(ctx, ti.log, ti.env, ti.db, api.APIs, &noop.Noop{}, cipher, nil)
+			f, err := NewFrontend(ctx, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, api.APIs, &noop.Noop{}, cipher, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

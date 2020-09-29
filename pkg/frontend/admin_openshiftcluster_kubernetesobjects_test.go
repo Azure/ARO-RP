@@ -144,10 +144,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 		},
 	} {
 		t.Run(fmt.Sprintf("%s: %s", tt.method, tt.name), func(t *testing.T) {
-			ti, err := newTestInfra(t)
-			if err != nil {
-				t.Fatal(err)
-			}
+			ti := newTestInfra(t).WithOpenShiftClusters().WithSubscriptions()
 			defer ti.done()
 
 			a := mock_adminactions.NewMockInterface(ti.controller)
@@ -171,12 +168,12 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 				},
 			})
 
-			err = ti.buildFixtures(nil)
+			err := ti.buildFixtures(nil)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.log, ti.env, ti.db, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster,
+			f, err := NewFrontend(ctx, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster,
 				*api.SubscriptionDocument) (adminactions.Interface, error) {
 				return a, nil
 			})
@@ -335,10 +332,7 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			ti, err := newTestInfra(t)
-			if err != nil {
-				t.Fatal(err)
-			}
+			ti := newTestInfra(t).WithOpenShiftClusters().WithSubscriptions()
 			defer ti.done()
 
 			a := mock_adminactions.NewMockInterface(ti.controller)
@@ -362,12 +356,12 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 				},
 			})
 
-			err = ti.buildFixtures(nil)
+			err := ti.buildFixtures(nil)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.log, ti.env, ti.db, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster,
+			f, err := NewFrontend(ctx, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster,
 				*api.SubscriptionDocument) (adminactions.Interface, error) {
 				return a, nil
 			})

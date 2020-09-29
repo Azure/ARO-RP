@@ -231,22 +231,20 @@ func TestPutSubscription(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			ti, err := newTestInfra(t)
-			if err != nil {
-				t.Fatal(err)
-			}
+			ti := newTestInfra(t).WithSubscriptions().WithOpenShiftClusters()
 			defer ti.done()
 
 			if tt.dbError != nil {
-				ti.dbclients.MakeUnavailable(tt.dbError)
+				ti.subscriptionsClient.SetError(tt.dbError)
+				ti.openShiftClustersClient.SetError(tt.dbError)
 			}
 
-			err = ti.buildFixtures(tt.fixture)
+			err := ti.buildFixtures(tt.fixture)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.log, ti.env, ti.db, api.APIs, &noop.Noop{}, nil, nil)
+			f, err := NewFrontend(ctx, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, api.APIs, &noop.Noop{}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -271,7 +269,7 @@ func TestPutSubscription(t *testing.T) {
 			if tt.wantDbDoc != nil {
 				wantResponse = tt.wantDbDoc.Subscription
 				ti.checker.AddSubscriptionDocument(tt.wantDbDoc)
-				errs := ti.checker.Check()
+				errs := ti.checker.CheckSubscriptions(ti.subscriptionsClient)
 				for _, i := range errs {
 					t.Error(i)
 				}

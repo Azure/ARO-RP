@@ -11,6 +11,7 @@ import (
 	"github.com/go-test/deep"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 )
 
 const DELETION_TIME_SET = 123456789
@@ -20,12 +21,10 @@ type Checker struct {
 	subscriptionDocuments     []*api.SubscriptionDocument
 	billingDocuments          []*api.BillingDocument
 	asyncOperationDocuments   []*api.AsyncOperationDocument
-
-	clients *FakeClients
 }
 
-func NewChecker(clients *FakeClients) *Checker {
-	return &Checker{clients: clients}
+func NewChecker() *Checker {
+	return &Checker{}
 }
 
 func (f *Checker) AddOpenShiftClusterDocuments(docs []*api.OpenShiftClusterDocument) {
@@ -60,24 +59,11 @@ func (f *Checker) AddAsyncOperationDocument(doc *api.AsyncOperationDocument) {
 	f.asyncOperationDocuments = append(f.asyncOperationDocuments, doc)
 }
 
-func (f *Checker) Check() (errs []error) {
-	for _, err := range f.CheckAsyncOperations() {
-		errs = append(errs, err)
-	}
-	for _, err := range f.CheckOpenShiftCluster() {
-		errs = append(errs, err)
-	}
-	for _, err := range f.CheckBilling() {
-		errs = append(errs, err)
-	}
-	return errs
-}
-
-func (f *Checker) CheckAsyncOperations() []error {
+func (f *Checker) CheckAsyncOperations(AsyncOperations *cosmosdb.FakeAsyncOperationDocumentClient) []error {
 	var errs []error
 	ctx := context.Background()
 
-	allAsyncDocs, err := f.clients.AsyncOperations.ListAll(ctx, nil)
+	allAsyncDocs, err := AsyncOperations.ListAll(ctx, nil)
 	if err != nil {
 		return []error{err}
 	}
@@ -95,12 +81,12 @@ func (f *Checker) CheckAsyncOperations() []error {
 	return errs
 }
 
-func (f *Checker) CheckOpenShiftCluster() []error {
+func (f *Checker) CheckOpenShiftCluster(OpenShiftClusters *cosmosdb.FakeOpenShiftClusterDocumentClient) []error {
 	var errs []error
 	ctx := context.Background()
 
 	// OpenShiftCluster
-	allOpenShiftDocs, err := f.clients.OpenShiftClusters.ListAll(ctx, nil)
+	allOpenShiftDocs, err := OpenShiftClusters.ListAll(ctx, nil)
 	if err != nil {
 		return []error{err}
 	}
@@ -118,32 +104,57 @@ func (f *Checker) CheckOpenShiftCluster() []error {
 
 	return errs
 }
-func (f *Checker) CheckBilling() []error {
+
+func (f *Checker) CheckBilling(Billing *cosmosdb.FakeBillingDocumentClient) []error {
 	var errs []error
 	ctx := context.Background()
 
 	// Billing
-	allBilling, err := f.clients.Billing.ListAll(ctx, nil)
+	all, err := Billing.ListAll(ctx, nil)
 	if err != nil {
 		return []error{err}
 	}
 
 	// If they exist, change certain values to magic ones
-	for _, doc := range allBilling.BillingDocuments {
+	for _, doc := range all.BillingDocuments {
 		if doc.Billing.DeletionTime != 0 {
 			doc.Billing.DeletionTime = DELETION_TIME_SET
 		}
 	}
 
-	if len(f.billingDocuments) != 0 && len(allBilling.BillingDocuments) == len(f.billingDocuments) {
-		diff := deep.Equal(allBilling.BillingDocuments, f.billingDocuments)
+	if len(f.billingDocuments) != 0 && len(all.BillingDocuments) == len(f.billingDocuments) {
+		diff := deep.Equal(all.BillingDocuments, f.billingDocuments)
 		if diff != nil {
 			for _, i := range diff {
 				errs = append(errs, errors.New(i))
 			}
 		}
-	} else if len(allBilling.BillingDocuments) != 0 || len(f.billingDocuments) != 0 {
-		errs = append(errs, fmt.Errorf("billing length different, %d vs %d", len(allBilling.BillingDocuments), len(f.billingDocuments)))
+	} else if len(all.BillingDocuments) != 0 || len(f.billingDocuments) != 0 {
+		errs = append(errs, fmt.Errorf("billing length different, %d vs %d", len(all.BillingDocuments), len(f.billingDocuments)))
+	}
+
+	return errs
+}
+
+func (f *Checker) CheckSubscriptions(Subscriptions *cosmosdb.FakeSubscriptionDocumentClient) []error {
+	var errs []error
+	ctx := context.Background()
+
+	// Billing
+	all, err := Subscriptions.ListAll(ctx, nil)
+	if err != nil {
+		return []error{err}
+	}
+
+	if len(f.subscriptionDocuments) != 0 && len(all.SubscriptionDocuments) == len(f.subscriptionDocuments) {
+		diff := deep.Equal(all.SubscriptionDocuments, f.subscriptionDocuments)
+		if diff != nil {
+			for _, i := range diff {
+				errs = append(errs, errors.New(i))
+			}
+		}
+	} else if len(all.SubscriptionDocuments) != 0 || len(f.subscriptionDocuments) != 0 {
+		errs = append(errs, fmt.Errorf("billing length different, %d vs %d", len(all.SubscriptionDocuments), len(f.subscriptionDocuments)))
 	}
 
 	return errs
