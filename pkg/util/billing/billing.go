@@ -165,9 +165,7 @@ func (m *manager) createOrUpdateE2EBlob(ctx context.Context, doc *api.BillingDoc
 	}
 
 	// The following is added to get rid of the '-' at the end in order to avoid an invalid container name.
-	if containerName[len(containerName)-1:] == "-" {
-		containerName = containerName[:len(containerName)-1]
-	}
+	strings.TrimSuffix(containerName, "-")
 
 	containerRef := blobclient.GetContainerReference(containerName)
 	_, err = containerRef.CreateIfNotExists(nil)
