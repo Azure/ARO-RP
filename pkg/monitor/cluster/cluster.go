@@ -66,14 +66,6 @@ func NewMonitor(ctx context.Context, dialer proxy.Dialer, log *logrus.Entry, oc 
 		return nil, err
 	}
 
-	// TODO: Get rid of the wrapping RoundTripper once implementation of the KEP below lands into openshift/kubernetes-client-go:
-	//       https://github.com/kubernetes/enhancements/blob/master/keps/sig-api-machinery/20200123-client-go-ctx.md
-	restConfig.Wrap(func(rt http.RoundTripper) http.RoundTripper {
-		return roundTripperFunc(func(req *http.Request) (*http.Response, error) {
-			return rt.RoundTrip(req.WithContext(ctx))
-		})
-	})
-
 	cli, err := kubernetes.NewForConfig(restConfig)
 	if err != nil {
 		return nil, err
@@ -168,10 +160,4 @@ func (mon *Monitor) emitGauge(m string, value int64, dims map[string]string) {
 		dims[k] = v
 	}
 	mon.m.EmitGauge(m, value, dims)
-}
-
-type roundTripperFunc func(*http.Request) (*http.Response, error)
-
-func (r roundTripperFunc) RoundTrip(req *http.Request) (*http.Response, error) {
-	return r(req)
 }
