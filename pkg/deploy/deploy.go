@@ -40,6 +40,7 @@ type deployer struct {
 	log *logrus.Entry
 
 	globaldeployments      features.DeploymentsClient
+	globalgroups           features.ResourceGroupsClient
 	globalrecordsets       dns.RecordSetsClient
 	deployments            features.DeploymentsClient
 	groups                 features.ResourceGroupsClient
@@ -77,6 +78,7 @@ func New(ctx context.Context, log *logrus.Entry, config *RPConfig, version strin
 		log: log,
 
 		globaldeployments:      features.NewDeploymentsClient(*config.Configuration.GlobalSubscriptionID, authorizer),
+		globalgroups:           features.NewResourceGroupsClient(*config.Configuration.GlobalSubscriptionID, authorizer),
 		globalrecordsets:       dns.NewRecordSetsClient(*config.Configuration.GlobalSubscriptionID, authorizer),
 		deployments:            features.NewDeploymentsClient(config.SubscriptionID, authorizer),
 		groups:                 features.NewResourceGroupsClient(config.SubscriptionID, authorizer),
