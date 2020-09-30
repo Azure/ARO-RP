@@ -1,4 +1,4 @@
-//go:generate go run . -o ../../cgmanifest.json
+//go:generate go run .
 
 package main
 
@@ -6,26 +6,13 @@ package main
 // Licensed under the Apache License 2.0.
 
 import (
+	"bufio"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"io/ioutil"
-	"strings"
-
-	"github.com/BurntSushi/toml"
+	"os"
+	"regexp"
 )
-
-var (
-	outputFile = flag.String("o", "", "output file")
-)
-
-type lock struct {
-	Projects []*struct {
-		Name     string
-		Packages []string
-		Revision string
-	}
-}
 
 type cgmanifest struct {
 	Registrations []*registration `json:"registration,omitempty"`
@@ -37,45 +24,47 @@ type registration struct {
 }
 
 type typedComponent struct {
-	Type string        `json:"type,omitempty"`
-	Git  *gitComponent `json:"git,omitempty"`
+	Type string       `json:"type,omitempty"`
+	Go   *goComponent `json:"go,omitempty"`
 }
 
-type gitComponent struct {
-	CommitHash    string `json:"commitHash,omitempty"`
-	RepositoryURL string `json:"repositoryUrl,omitempty"`
+type goComponent struct {
+	Version string `json:"version,omitempty"`
+	Name    string `json:"name,omitempty"`
 }
+
+var rx = regexp.MustCompile(`^# (?:.* => )?([^ ]+) ([^ ]+)$`)
 
 func run() error {
-	var lock lock
-
-	_, err := toml.DecodeFile("../../Gopkg.lock", &lock)
+	file, err := os.Open("../../vendor/modules.txt")
 	if err != nil {
 		return err
 	}
+	defer file.Close()
 
 	cgmanifest := &cgmanifest{
-		Registrations: make([]*registration, 0, len(lock.Projects)),
-		Version:       1,
+		Version: 1,
 	}
 
-	for _, project := range lock.Projects {
-		switch {
-		case strings.HasPrefix(project.Name, "k8s.io/"):
-			project.Name = strings.Replace(project.Name, "k8s.io", "github.com/kubernetes", 1)
-		case strings.HasPrefix(project.Name, "cloud.google.com/") && len(project.Packages) > 0:
-			project.Name += "/" + project.Packages[0]
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		m := rx.FindStringSubmatch(scanner.Text())
+		if m == nil {
+			continue
 		}
 
 		cgmanifest.Registrations = append(cgmanifest.Registrations, &registration{
 			Component: &typedComponent{
-				Type: "git",
-				Git: &gitComponent{
-					CommitHash:    project.Revision,
-					RepositoryURL: "https://" + project.Name + "/",
+				Type: "go",
+				Go: &goComponent{
+					Name:    m[1],
+					Version: m[2],
 				},
 			},
 		})
+	}
+	if err := scanner.Err(); err != nil {
+		return err
 	}
 
 	b, err := json.MarshalIndent(cgmanifest, "", "    ")
@@ -84,13 +73,7 @@ func run() error {
 	}
 	b = append(b, byte('\n'))
 
-	if *outputFile != "" {
-		err = ioutil.WriteFile(*outputFile, b, 0666)
-	} else {
-		_, err = fmt.Print(string(b))
-	}
-
-	return err
+	return ioutil.WriteFile("../../cgmanifest.json", b, 0666)
 }
 
 func main() {
