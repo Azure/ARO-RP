@@ -28,6 +28,11 @@ import (
 
 const (
 	tenantIDHack = "13805ec3-a223-47ad-ad65-8b2baf92c0fb"
+	//aro-billing-operator SP Id, from https://msazure.visualstudio.com/AzureRedHatOpenShift/_workitems/edit/7547877/
+	//needs cleanup of the old role assignment if changed
+	billingSPID = "970792b5-7720-4bf5-a335-f15e97c7e25a"
+	//based on https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
+	documentDBAccountContributor = "5bd9cd88-fe45-4216-938b-f97437e15450"
 )
 
 var (
@@ -1492,7 +1497,7 @@ func (g *generator) rbac() []*arm.Resource {
 				Type: to.StringPtr("Microsoft.DocumentDB/databaseAccounts/providers/roleAssignments"),
 				RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 					Scope:            to.StringPtr("[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"),
-					RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '5bd9cd88-fe45-4216-938b-f97437e15450')]"),
+					RoleDefinitionID: to.StringPtr(fmt.Sprintf("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '%s')]", documentDBAccountContributor)),
 					PrincipalID:      to.StringPtr("[parameters('rpServicePrincipalId')]"),
 					PrincipalType:    mgmtauthorization.ServicePrincipal,
 				},
@@ -1518,6 +1523,28 @@ func (g *generator) rbac() []*arm.Resource {
 			APIVersion: azureclient.APIVersions["Microsoft.Authorization"],
 			DependsOn: []string{
 				"[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]",
+			},
+		},
+	}
+}
+
+func (g *generator) billingContributorRbac() []*arm.Resource {
+	return []*arm.Resource{
+		{
+			Resource: &mgmtauthorization.RoleAssignment{
+				Name: to.StringPtr(fmt.Sprintf("[concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), '%s' , 'Billing / DocumentDB Account Contributor'))]", billingSPID)),
+				Type: to.StringPtr("Microsoft.DocumentDB/databaseAccounts/providers/roleAssignments"),
+				RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+					Scope:            to.StringPtr("[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"),
+					RoleDefinitionID: to.StringPtr(fmt.Sprintf("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '%s')]", documentDBAccountContributor)),
+					PrincipalID:      to.StringPtr(billingSPID),
+					PrincipalType:    mgmtauthorization.ServicePrincipal,
+				},
+			},
+			Condition:  g.conditionStanza("fullDeploy"),
+			APIVersion: azureclient.APIVersions["Microsoft.Authorization"],
+			DependsOn: []string{
+				"[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
 			},
 		},
 	}
