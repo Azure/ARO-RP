@@ -6,6 +6,7 @@ package cluster
 import (
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"strings"
 
 	"github.com/ghodss/yaml"
 	"github.com/openshift/installer/pkg/asset"
@@ -14,12 +15,23 @@ import (
 	clientcmd "k8s.io/client-go/tools/clientcmd/api/v1"
 )
 
-// generateAROServiceKubeconfig generates additional admin credentials and kubeconfig
-// based on admin kubeconfig found in graph
+// generateAROServiceKubeconfig generates additional admin credentials and a
+// kubeconfig for the ARO service, based on the admin kubeconfig found in the
+// graph.
 func (m *manager) generateAROServiceKubeconfig(g graph) (*kubeconfig.AdminInternalClient, error) {
+	return generateKubeconfig(g, "system:aro-service", []string{"system:masters"})
+}
+
+// generateAROSREKubeconfig generates additional admin credentials and a
+// kubeconfig for ARO SREs, based on the admin kubeconfig found in the graph.
+func (m *manager) generateAROSREKubeconfig(g graph) (*kubeconfig.AdminInternalClient, error) {
+	return generateKubeconfig(g, "system:aro-sre", nil)
+}
+
+func generateKubeconfig(g graph, commonName string, organization []string) (*kubeconfig.AdminInternalClient, error) {
 	ca := g.get(&tls.AdminKubeConfigSignerCertKey{}).(*tls.AdminKubeConfigSignerCertKey)
 	cfg := &tls.CertCfg{
-		Subject:      pkix.Name{CommonName: "system:aro-service", Organization: []string{"system:masters"}},
+		Subject:      pkix.Name{CommonName: commonName, Organization: organization},
 		KeyUsages:    x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
 		ExtKeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 		Validity:     tls.ValidityTenYears,
@@ -27,19 +39,19 @@ func (m *manager) generateAROServiceKubeconfig(g graph) (*kubeconfig.AdminIntern
 
 	var clientCertKey tls.AdminKubeConfigClientCertKey
 
-	err := clientCertKey.SignedCertKey.Generate(cfg, ca, "system-aro-service", tls.DoNotAppendParent)
+	err := clientCertKey.SignedCertKey.Generate(cfg, ca, strings.ReplaceAll(commonName, ":", "-"), tls.DoNotAppendParent)
 	if err != nil {
 		return nil, err
 	}
 
 	// create a Config for the new service kubeconfig based on the generated cluster admin Config
 	adminInternalClient := g.get(&kubeconfig.AdminInternalClient{}).(*kubeconfig.AdminInternalClient)
-	aroServiceInternalClient := kubeconfig.AdminInternalClient{}
-	aroServiceInternalClient.Config = &clientcmd.Config{
+	aroInternalClient := kubeconfig.AdminInternalClient{}
+	aroInternalClient.Config = &clientcmd.Config{
 		Clusters: adminInternalClient.Config.Clusters,
 		AuthInfos: []clientcmd.NamedAuthInfo{
 			{
-				Name: "system:aro-service",
+				Name: commonName,
 				AuthInfo: clientcmd.AuthInfo{
 					ClientCertificateData: clientCertKey.CertRaw,
 					ClientKeyData:         clientCertKey.KeyRaw,
@@ -48,25 +60,25 @@ func (m *manager) generateAROServiceKubeconfig(g graph) (*kubeconfig.AdminIntern
 		},
 		Contexts: []clientcmd.NamedContext{
 			{
-				Name: "system:aro-service",
+				Name: commonName,
 				Context: clientcmd.Context{
 					Cluster:  adminInternalClient.Config.Contexts[0].Context.Cluster,
-					AuthInfo: "system:aro-service",
+					AuthInfo: commonName,
 				},
 			},
 		},
-		CurrentContext: "system:aro-service",
+		CurrentContext: commonName,
 	}
 
-	data, err := yaml.Marshal(aroServiceInternalClient.Config)
+	data, err := yaml.Marshal(aroInternalClient.Config)
 	if err != nil {
 		return nil, err
 	}
 
-	aroServiceInternalClient.File = &asset.File{
+	aroInternalClient.File = &asset.File{
 		Filename: "auth/aro/kubeconfig",
 		Data:     data,
 	}
 
-	return &aroServiceInternalClient, nil
+	return &aroInternalClient, nil
 }
