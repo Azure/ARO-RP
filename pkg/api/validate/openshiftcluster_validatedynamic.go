@@ -393,12 +393,8 @@ func validateActions(ctx context.Context, log *logrus.Entry, r *azure.Resource, 
 		permissions, err := client.ListForResource(ctx, r.ResourceGroup, r.Provider, "", r.ResourceType, r.ResourceName)
 		if detailedErr, ok := err.(autorest.DetailedError); ok &&
 			detailedErr.StatusCode == http.StatusForbidden {
-			log.Print(err)
-			err = authorizer.RefreshWithContext(ctx)
-			if err != nil {
-				return false, err
-			}
-			return false, nil
+			_, err = authorizer.RefreshWithContext(ctx, log)
+			return false, err
 		}
 		if err != nil {
 			return false, err
@@ -406,11 +402,8 @@ func validateActions(ctx context.Context, log *logrus.Entry, r *azure.Resource, 
 
 		for _, action := range actions {
 			ok, err := utilpermissions.CanDoAction(permissions, action)
-			if err != nil {
+			if !ok || err != nil {
 				return false, err
-			}
-			if !ok {
-				return false, nil
 			}
 		}
 

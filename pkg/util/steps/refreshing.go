@@ -70,10 +70,9 @@ func (s authorizationRefreshingActionStep) run(ctx context.Context, log *logrus.
 			(azureerrors.HasAuthorizationFailedError(err) ||
 				azureerrors.HasLinkedAuthorizationFailedError(err)) {
 			log.Print(err)
-			// https://github.com/Azure/ARO-RP/issues/541: it is unclear if this
-			// refresh helps or not
-			err = s.authorizer.RefreshWithContext(ctx)
-			return false, err
+			// Try refreshing auth.
+			_, err = s.authorizer.RefreshWithContext(ctx, log)
+			return false, err // retry step
 		}
 		return true, err
 	}, timeoutCtx.Done())
