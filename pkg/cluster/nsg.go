@@ -13,8 +13,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
-func (i *manager) apiServerNSG(location string) *arm.Resource {
-	infraID := i.doc.OpenShiftCluster.Properties.InfraID
+func (m *manager) apiServerNSG(location string) *arm.Resource {
+	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 	if infraID == "" {
 		infraID = "aro" // TODO: remove after deploy
 	}
@@ -26,7 +26,7 @@ func (i *manager) apiServerNSG(location string) *arm.Resource {
 		Location:                      &location,
 	}
 
-	if i.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {
+	if m.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {
 		nsg.SecurityRules = &[]mgmtnetwork.SecurityRule{
 			{
 				SecurityRulePropertiesFormat: &mgmtnetwork.SecurityRulePropertiesFormat{

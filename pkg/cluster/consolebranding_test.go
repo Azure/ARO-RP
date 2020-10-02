@@ -18,7 +18,7 @@ func TestUpdateConsoleBranding(t *testing.T) {
 
 	consoleName := "cluster"
 
-	i := &manager{
+	m := &manager{
 		log: logrus.NewEntry(logrus.StandardLogger()),
 		operatorcli: fake.NewSimpleClientset(&operatorv1.Console{
 			ObjectMeta: metav1.ObjectMeta{
@@ -37,12 +37,12 @@ func TestUpdateConsoleBranding(t *testing.T) {
 		}),
 	}
 
-	err := i.updateConsoleBranding(ctx)
+	err := m.updateConsoleBranding(ctx)
 	if err != nil {
 		t.Error(err)
 	}
 
-	console, err := i.operatorcli.OperatorV1().Consoles().Get(consoleName, metav1.GetOptions{})
+	console, err := m.operatorcli.OperatorV1().Consoles().Get(consoleName, metav1.GetOptions{})
 	if err != nil {
 		t.Error(err)
 	}

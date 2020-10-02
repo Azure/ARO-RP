@@ -16,11 +16,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
-func (i *manager) getBlobService(ctx context.Context, p mgmtstorage.Permissions, r mgmtstorage.SignedResourceTypes) (*azstorage.BlobStorageClient, error) {
-	resourceGroup := stringutils.LastTokenByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+func (m *manager) getBlobService(ctx context.Context, p mgmtstorage.Permissions, r mgmtstorage.SignedResourceTypes) (*azstorage.BlobStorageClient, error) {
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
 	t := time.Now().UTC().Truncate(time.Second)
-	res, err := i.accounts.ListAccountSAS(ctx, resourceGroup, "cluster"+i.doc.OpenShiftCluster.Properties.StorageSuffix, mgmtstorage.AccountSasParameters{
+	res, err := m.accounts.ListAccountSAS(ctx, resourceGroup, "cluster"+m.doc.OpenShiftCluster.Properties.StorageSuffix, mgmtstorage.AccountSasParameters{
 		Services:               "b",
 		ResourceTypes:          r,
 		Permissions:            p,
@@ -37,7 +37,7 @@ func (i *manager) getBlobService(ctx context.Context, p mgmtstorage.Permissions,
 		return nil, err
 	}
 
-	c := azstorage.NewAccountSASClient("cluster"+i.doc.OpenShiftCluster.Properties.StorageSuffix, v, azure.PublicCloud).GetBlobService()
+	c := azstorage.NewAccountSASClient("cluster"+m.doc.OpenShiftCluster.Properties.StorageSuffix, v, azure.PublicCloud).GetBlobService()
 
 	return &c, nil
 }

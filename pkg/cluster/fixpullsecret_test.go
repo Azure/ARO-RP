@@ -82,7 +82,7 @@ func TestFixPullSecret(t *testing.T) {
 				return false, nil, nil
 			})
 
-			i := &manager{
+			m := &manager{
 				kubernetescli: fakecli,
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
@@ -93,7 +93,7 @@ func TestFixPullSecret(t *testing.T) {
 				},
 			}
 
-			err := i.fixPullSecret(ctx)
+			err := m.fixPullSecret(ctx)
 			if err != nil {
 				t.Error(err)
 			}
@@ -102,7 +102,7 @@ func TestFixPullSecret(t *testing.T) {
 				t.Fatal(updated)
 			}
 
-			s, err := i.kubernetescli.CoreV1().Secrets("openshift-config").Get("pull-secret", metav1.GetOptions{})
+			s, err := m.kubernetescli.CoreV1().Secrets("openshift-config").Get("pull-secret", metav1.GetOptions{})
 			if err != nil {
 				t.Error(err)
 			}

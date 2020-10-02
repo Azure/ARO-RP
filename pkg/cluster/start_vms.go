@@ -14,9 +14,9 @@ import (
 )
 
 // startVMs checks cluster VMs power state and starts deallocated and stopped VMs, if any
-func (i *manager) startVMs(ctx context.Context) error {
-	resourceGroupName := stringutils.LastTokenByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-	vms, err := i.virtualmachines.List(ctx, resourceGroupName)
+func (m *manager) startVMs(ctx context.Context) error {
+	resourceGroupName := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	vms, err := m.virtualmachines.List(ctx, resourceGroupName)
 	if err != nil {
 		return err
 	}
@@ -26,7 +26,7 @@ func (i *manager) startVMs(ctx context.Context) error {
 		for idx, vm := range vms {
 			idx, vm := idx, vm // https://golang.org/doc/faq#closures_and_goroutines
 			g.Go(func() (err error) {
-				vms[idx], err = i.virtualmachines.Get(groupCtx, resourceGroupName, *vm.Name, mgmtcompute.InstanceView)
+				vms[idx], err = m.virtualmachines.Get(groupCtx, resourceGroupName, *vm.Name, mgmtcompute.InstanceView)
 				return
 			})
 		}
@@ -66,7 +66,7 @@ func (i *manager) startVMs(ctx context.Context) error {
 		for _, vm := range vmsToStart {
 			vm := vm // https://golang.org/doc/faq#closures_and_goroutines
 			g.Go(func() error {
-				return i.virtualmachines.StartAndWait(groupCtx, resourceGroupName, *vm.Name)
+				return m.virtualmachines.StartAndWait(groupCtx, resourceGroupName, *vm.Name)
 			})
 		}
 		return g.Wait()

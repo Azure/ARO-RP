@@ -78,7 +78,7 @@ func TestFixNSG(t *testing.T) {
 				tt.mocks(securitygroupsClient)
 			}
 
-			i := &manager{
+			m := &manager{
 				securitygroups: securitygroupsClient,
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
@@ -95,7 +95,7 @@ func TestFixNSG(t *testing.T) {
 				},
 			}
 
-			err := i.fixNSG(ctx)
+			err := m.fixNSG(ctx)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

@@ -207,7 +207,7 @@ func TestStartVMs(t *testing.T) {
 
 			tt.mock(vmClient)
 
-			i := &manager{
+			m := &manager{
 				virtualmachines: vmClient,
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
@@ -220,7 +220,7 @@ func TestStartVMs(t *testing.T) {
 				},
 			}
 
-			err := i.startVMs(ctx)
+			err := m.startVMs(ctx)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

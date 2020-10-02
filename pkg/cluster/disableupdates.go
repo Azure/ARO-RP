@@ -10,9 +10,9 @@ import (
 	"k8s.io/client-go/util/retry"
 )
 
-func (i *manager) disableUpdates(ctx context.Context) error {
+func (m *manager) disableUpdates(ctx context.Context) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		cv, err := i.configcli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
+		cv, err := m.configcli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -20,7 +20,7 @@ func (i *manager) disableUpdates(ctx context.Context) error {
 		cv.Spec.Upstream = ""
 		cv.Spec.Channel = ""
 
-		_, err = i.configcli.ConfigV1().ClusterVersions().Update(cv)
+		_, err = m.configcli.ConfigV1().ClusterVersions().Update(cv)
 		return err
 	})
 }
