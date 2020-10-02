@@ -70,10 +70,20 @@ func (s authorizationRefreshingActionStep) run(ctx context.Context, log *logrus.
 			(azureerrors.HasAuthorizationFailedError(err) ||
 				azureerrors.HasLinkedAuthorizationFailedError(err)) {
 			log.Print(err)
-			// https://github.com/Azure/ARO-RP/issues/541: it is unclear if this
-			// refresh helps or not
-			err = s.authorizer.RefreshWithContext(ctx)
-			return false, err
+			// Try refreshing auth. If auth refresh error occurs, return
+			// that instead of original auth error.
+			err = wait.PollImmediateUntil(pollInterval, func() (bool, error) {
+				refreshDone, refreshErr := s.authorizer.RefreshWithContext(ctx, log)
+				if !refreshDone || refreshErr != nil {
+					// Use same timeout context as outer scope.
+					if timeoutCtx.Err() != nil {
+						return false, timeoutCtx.Err() // don't retry refresh or step
+					}
+					return false, refreshErr // retry refresh if refreshErr is nil
+				}
+				return true, nil // auth refresh succeeded
+			}, timeoutCtx.Done())
+			return false, err // retry step if err is nil
 		}
 		return true, err
 	}, timeoutCtx.Done())

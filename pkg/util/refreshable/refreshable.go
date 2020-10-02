@@ -5,14 +5,17 @@ package refreshable
 
 import (
 	"context"
+	"strings"
 
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
+	"github.com/sirupsen/logrus"
 )
 
 type Authorizer interface {
 	autorest.Authorizer
-	RefreshWithContext(ctx context.Context) error
+	RefreshWithContext(context.Context, *logrus.Entry) (bool, error)
+	OAuthToken() string
 }
 
 type authorizer struct {
@@ -20,8 +23,50 @@ type authorizer struct {
 	sp *adal.ServicePrincipalToken
 }
 
-func (a *authorizer) RefreshWithContext(ctx context.Context) error {
-	return a.sp.RefreshWithContext(ctx)
+// RefreshWithContext attempts to refresh a service principal token.  It should
+// be called from within a wait.Poll* loop and its return values match
+// accordingly.  It requests a retry in the cases below.  Unfortunately there
+// doesn't seem to be a way to distinguish whether these cases occur due to
+// misconfiguration or AAD propagation delays.
+//
+// 1. `{"error": "unauthorized_client", "error_description": "AADSTS700016:
+// Application with identifier 'xxx' was not found in the directory 'xxx'. This
+// can happen if the application has not been installed by the administrator of
+// the tenant or consented to by any user in the tenant. You may have sent your
+// authentication request to the wrong tenant. ...", "error_codes": [700016]}`.
+// This can be an indicator of AAD propagation delay.
+//
+// 2. Lack of an altsecid, puid or oid claim in the token.  Continuing would
+// subsequently cause the ARM error `Code="InvalidAuthenticationToken"
+// Message="The received access token is not valid: at least one of the claims
+// 'puid' or 'altsecid' or 'oid' should be present. If you are accessing as an
+// application please make sure service principal is properly created in the
+// tenant."`.  I think this can be returned when the service principal
+// associated with the application hasn't yet caught up with the application
+// itself.
+//
+// 3. Network failures.  If the error is not an adal.TokenRefreshError, then
+// it's likely a transient failure. For example, connection reset by peer.
+func (a *authorizer) RefreshWithContext(ctx context.Context, log *logrus.Entry) (bool, error) {
+	err := a.sp.RefreshWithContext(ctx)
+	if err != nil {
+		log.Info(err)
+
+		isAADSTS700016 := strings.Contains(err.Error(), "AADSTS700016")
+		isTokenRefreshError := autorest.IsTokenRefreshError(err)
+
+		if !isTokenRefreshError || isAADSTS700016 {
+			return false, nil
+		}
+
+		return false, err
+	}
+
+	return true, nil
+}
+
+func (a *authorizer) OAuthToken() string {
+	return a.sp.OAuthToken()
 }
 
 func NewAuthorizer(sp *adal.ServicePrincipalToken) Authorizer {

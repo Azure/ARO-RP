@@ -100,8 +100,8 @@ func TestStepRunner(t *testing.T) {
 			steps: func(controller *gomock.Controller) []Step {
 				refreshable := mock_refreshable.NewMockAuthorizer(controller)
 				refreshable.EXPECT().
-					RefreshWithContext(gomock.Any()).
-					Return(nil)
+					RefreshWithContext(gomock.Any(), gomock.Any()).
+					Return(true, nil)
 
 				errsRemaining := 1
 				action := Action(func(context.Context) error {
@@ -131,6 +131,67 @@ func TestStepRunner(t *testing.T) {
 				return []Step{
 					Action(successfulFunc),
 					errorsOnce,
+					Action(successfulFunc),
+				}
+			},
+			wantEntries: []testlog.ExpectedLogEntry{
+				{
+					Message: "running step [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]",
+					Level:   logrus.InfoLevel,
+				},
+				{
+					MessageRegex: `running step \[AuthorizationRefreshingAction \[Action github.com/Azure/ARO-RP/pkg/util/steps\.TestStepRunner\..*.\.1]]`,
+					Level:        logrus.InfoLevel,
+				},
+				{
+					Message: `TEST#GET: oops: StatusCode=403 -- Original Error: Code="AuthorizationFailed" Message="failed"`,
+					Level:   logrus.InfoLevel,
+				},
+				{
+					Message: "running step [Action github.com/Azure/ARO-RP/pkg/util/steps.successfulFunc]",
+					Level:   logrus.InfoLevel,
+				},
+			},
+		},
+		{
+			name: "AuthorizationRefreshingAction fails, then RefreshWithContext has to be run twice",
+			steps: func(controller *gomock.Controller) []Step {
+				refreshable := mock_refreshable.NewMockAuthorizer(controller)
+				refreshable.EXPECT().
+					RefreshWithContext(gomock.Any(), gomock.Any()).
+					Return(false, nil)
+				refreshable.EXPECT().
+					RefreshWithContext(gomock.Any(), gomock.Any()).
+					Return(true, nil)
+
+				errsRemaining := 1
+				action := Action(func(context.Context) error {
+					if errsRemaining > 0 {
+						errsRemaining--
+						return autorest.DetailedError{
+							Method:      "GET",
+							PackageType: "TEST",
+							Message:     "oops",
+							StatusCode:  403,
+							Original: &azure.ServiceError{
+								Code:    "AuthorizationFailed",
+								Message: "failed",
+							},
+						}
+					}
+					return nil
+				})
+
+				stepErrorsOnceAuthRefreshesTwice := &authorizationRefreshingActionStep{
+					step:         action,
+					authorizer:   refreshable,
+					retryTimeout: 75 * time.Millisecond,
+					pollInterval: 25 * time.Millisecond,
+				}
+
+				return []Step{
+					Action(successfulFunc),
+					stepErrorsOnceAuthRefreshesTwice,
 					Action(successfulFunc),
 				}
 			},
