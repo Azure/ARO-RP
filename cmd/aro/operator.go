@@ -26,9 +26,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/monitoring"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/pullsecret"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/rbac"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/routefix"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/workaround"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
+	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	// +kubebuilder:scaffold:imports
 )
@@ -82,6 +84,10 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
+	dh, err := dynamichelper.New(log, restConfig)
+	if err != nil {
+		return err
+	}
 
 	if role == pkgoperator.RoleMaster {
 		if err = (genevalogging.NewReconciler(
@@ -114,6 +120,11 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			log.WithField("controller", controllers.MonitoringControllerName),
 			kubernetescli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller Monitoring: %v", err)
+		}
+		if err = (rbac.NewReconciler(
+			log.WithField("controller", controllers.RBACControllerName),
+			arocli, dh)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller RBAC: %v", err)
 		}
 	}
 
