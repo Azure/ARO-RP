@@ -103,7 +103,8 @@ func validateAdminKubernetesObjects(method, groupKind, namespace, name string) e
 		!rxKubernetesString.MatchString(groupKind) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided groupKind '%s' is invalid.", groupKind)
 	}
-	if strings.EqualFold(groupKind, "secret") {
+	if strings.EqualFold(groupKind, "Secret") ||
+		strings.HasSuffix(strings.ToLower(groupKind), ".oauth.openshift.io") {
 		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Access to secrets is forbidden.")
 	}
 
