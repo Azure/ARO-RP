@@ -31,10 +31,10 @@ func FluentbitImage(acr string) string {
 
 // MdmImage contains the location of the MDM container image
 func MdmImage(acr string) string {
-	return acr + ".azurecr.io/genevamdm:master_48"
+	return acr + ".azurecr.io/genevamdm:master_49"
 }
 
 // MdsdImage contains the location of the MDSD container image
 func MdsdImage(acr string) string {
-	return acr + ".azurecr.io/genevamdsd:master_309"
+	return acr + ".azurecr.io/genevamdsd:master_325"
 }
