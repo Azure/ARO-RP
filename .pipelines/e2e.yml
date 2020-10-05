@@ -19,8 +19,8 @@ jobs:
     displayName: 🔑 Downloading certificates and secrets from storage account
     name: setEnv
   - script: |
-      make aro
-    displayName: ⚙️ Building ARO RP Golang binary
+      make az
+    displayName: ⚙️ Building az aro extension
     condition: eq(variables['RP_MODE'], 'development')
   - template: ./templates/template-push-images-to-acr.yml
     parameters:
