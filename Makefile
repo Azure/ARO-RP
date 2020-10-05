@@ -3,13 +3,15 @@ COMMIT = $(shell git rev-parse --short HEAD)$(shell [[ $$(git status --porcelain
 ARO_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/aro:$(COMMIT)
 
 export CGO_CFLAGS=-Dgpgme_off_t=off_t
+export PYTHON_VERSION=3.6
 
 aro: generate
 	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro
 
-az:
+az: pyenv${PYTHON_VERSION}
 	cd python/az/aro && python ./setup.py bdist_egg
 	cd python/az/aro && python ./setup.py bdist_wheel || true
+	rm -f ~/.azure/commandIndex.json # https://github.com/Azure/azure-cli/issues/14997
 
 clean:
 	rm -rf python/az/aro/{aro.egg-info,build,dist} aro
