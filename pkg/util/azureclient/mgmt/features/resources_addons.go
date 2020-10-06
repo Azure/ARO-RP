@@ -13,6 +13,16 @@ import (
 type ResourcesClientAddons interface {
 	List(ctx context.Context, filter, expand string, top *int32) ([]mgmtfeatures.GenericResourceExpanded, error)
 	ListByResourceGroup(ctx context.Context, resourceGroupName string, filter string, expand string, top *int32) ([]mgmtfeatures.GenericResourceExpanded, error)
+	DeleteByIDAndWait(ctx context.Context, resourceID string, APIVersion string) (err error)
+}
+
+func (c *resourcesClient) DeleteByIDAndWait(ctx context.Context, resourceID string, APIVersion string) (err error) {
+	future, err := c.DeleteByID(ctx, resourceID, APIVersion)
+	if err != nil {
+		return err
+	}
+
+	return future.WaitForCompletionRef(ctx, c.Client)
 }
 
 func (c *resourcesClient) List(ctx context.Context, filter, expand string, top *int32) (resources []mgmtfeatures.GenericResourceExpanded, err error) {

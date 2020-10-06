@@ -109,3 +109,25 @@ func (a *adminactions) appendAzureNetworkResources(ctx context.Context, armResou
 
 	return armResources, nil
 }
+
+func (a *adminactions) ResourcesDelete(ctx context.Context, resourceName string, resourceType string) error {
+	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
+
+	resources, err := a.resourcesClient.List(ctx, fmt.Sprintf("resourceGroup eq '%s'", clusterRGName), "", nil)
+	if err != nil {
+		return err
+	}
+
+	for _, res := range resources {
+		if *res.Name == resourceName &&
+			*res.Type == resourceType {
+			apiVersion, err := azureclient.APIVersionForType(*res.Type)
+			if err != nil {
+				return err
+			}
+			return a.resourcesClient.DeleteByIDAndWait(ctx, *res.ID, apiVersion)
+		}
+	}
+
+	return nil
+}

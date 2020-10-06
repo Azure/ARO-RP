@@ -32,6 +32,7 @@ type Interface interface {
 	K8sDelete(groupKind, namespace, name string) error
 	MustGather(ctx context.Context, w http.ResponseWriter) error
 	ResourcesList(ctx context.Context) ([]byte, error)
+	ResourcesDelete(ctx context.Context, resourceName, resourceType string) error
 	Upgrade(ctx context.Context) error
 	VMRedeployAndWait(ctx context.Context, vmName string) error
 	VMSerialConsole(ctx context.Context, w http.ResponseWriter,

@@ -63,3 +63,43 @@ func (f *frontend) _listAdminOpenShiftClusterResources(
 
 	return a.ResourcesList(ctx)
 }
+
+func (f *frontend) deleteAdminOpenShiftClusterResources(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
+	r.URL.Path = filepath.Dir(r.URL.Path)
+
+	err := f._deletedminOpenShiftClusterResources(ctx, r, log)
+
+	adminReply(log, w, nil, nil, err)
+}
+
+func (f *frontend) _deletedminOpenShiftClusterResources(
+	ctx context.Context, r *http.Request, log *logrus.Entry) error {
+	vars := mux.Vars(r)
+	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
+
+	doc, err := f.db.OpenShiftClusters.Get(ctx, resourceID)
+	switch {
+	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
+		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "",
+			"The Resource '%s/%s' under resource group '%s' was not found.",
+			vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
+	case err != nil:
+		return err
+	}
+
+	deleteResourceType, deleteResourceName := r.URL.Query().Get("resourceType"), r.URL.Query().Get("resourceName")
+
+	subscriptionDoc, err := f.getSubscriptionDocument(ctx, doc.Key)
+	if err != nil {
+		return err
+	}
+
+	a, err := f.adminActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
+	if err != nil {
+		return err
+	}
+
+	return a.ResourcesDelete(ctx, deleteResourceName, deleteResourceType)
+}
