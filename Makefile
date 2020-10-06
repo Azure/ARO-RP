@@ -3,7 +3,6 @@ COMMIT = $(shell git rev-parse --short HEAD)$(shell [[ $$(git status --porcelain
 ARO_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/aro:$(COMMIT)
 
 export CGO_CFLAGS=-Dgpgme_off_t=off_t
-export PYTHON_VERSION=3.6
 
 aro: generate
 	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro
