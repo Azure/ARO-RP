@@ -14,7 +14,9 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/golang/mock/gomock"
 	configv1 "github.com/openshift/api/config/v1"
+	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/openshift/client-go/config/clientset/versioned/fake"
+	fakeoperatorv1 "github.com/openshift/client-go/operator/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -59,6 +61,15 @@ var clusterVersion = &configv1.ClusterVersion{
 	},
 }
 
+var ingressControllers = &operatorv1.IngressController{
+	ObjectMeta: metav1.ObjectMeta{
+		Namespace: "openshift-ingress-operator",
+	},
+	Spec: operatorv1.IngressControllerSpec{
+		Domain: "aroapp.io",
+	},
+}
+
 func TestStepRunnerWithInstaller(t *testing.T) {
 	ctx := context.Background()
 
@@ -68,9 +79,10 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 		wantEntries []test_log.ExpectedLogEntry
 		wantErr     string
 		configcli   *fake.Clientset
+		operatorcli *fakeoperatorv1.Clientset
 	}{
 		{
-			name: "Failed step run will log cluster version and cluster operator information if available",
+			name: "Failed step run will log cluster version, cluster operator status, and ingress information if available",
 			steps: []steps.Step{
 				steps.Action(failingFunc),
 			},
@@ -92,11 +104,16 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 					Level:        logrus.InfoLevel,
 					MessageRegex: `github.com/Azure/ARO-RP/pkg/cluster.\(\*manager\).logClusterOperators\-fm: {.*"versions":\[{"name":"operator","version":"4.3.0"},{"name":"operator\-good","version":"4.3.1"}\].*}`,
 				},
+				{
+					Level:        logrus.InfoLevel,
+					MessageRegex: `github.com/Azure/ARO-RP/pkg/cluster.\(\*manager\).logIngressControllers\-fm: {.*"items":\[{.*"domain":"aroapp.io"}.*\]}`,
+				},
 			},
-			configcli: fake.NewSimpleClientset(clusterVersion, clusterOperators),
+			configcli:   fake.NewSimpleClientset(clusterVersion, clusterOperators),
+			operatorcli: fakeoperatorv1.NewSimpleClientset(ingressControllers),
 		},
 		{
-			name: "Failed step run will not crash if it cannot get the clusterversions or clusteroperators",
+			name: "Failed step run will not crash if it cannot get the clusterversions, clusteroperators, ingresscontrollers",
 			steps: []steps.Step{
 				steps.Action(failingFunc),
 			},
@@ -118,15 +135,21 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 					Level:   logrus.InfoLevel,
 					Message: `github.com/Azure/ARO-RP/pkg/cluster.(*manager).logClusterOperators-fm: {"metadata":{},"items":null}`,
 				},
+				{
+					Level:   logrus.InfoLevel,
+					Message: `github.com/Azure/ARO-RP/pkg/cluster.(*manager).logIngressControllers-fm: {"metadata":{},"items":null}`,
+				},
 			},
-			configcli: fake.NewSimpleClientset(),
+			configcli:   fake.NewSimpleClientset(),
+			operatorcli: fakeoperatorv1.NewSimpleClientset(),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			h, log := test_log.NewCapturingLogger()
 			m := &manager{
-				log:       log,
-				configcli: tt.configcli,
+				log:         log,
+				configcli:   tt.configcli,
+				operatorcli: tt.operatorcli,
 			}
 
 			err := m.runSteps(ctx, tt.steps)
