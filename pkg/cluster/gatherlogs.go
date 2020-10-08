@@ -16,6 +16,7 @@ func (m *manager) gatherFailureLogs(ctx context.Context) {
 	for _, f := range []func(context.Context) (interface{}, error){
 		m.logClusterVersion,
 		m.logClusterOperators,
+		m.logIngressControllers,
 	} {
 		o, err := f(ctx)
 		if err != nil {
@@ -50,4 +51,12 @@ func (m *manager) logClusterOperators(ctx context.Context) (interface{}, error) 
 	}
 
 	return m.configcli.ConfigV1().ClusterOperators().List(metav1.ListOptions{})
+}
+
+func (m *manager) logIngressControllers(ctx context.Context) (interface{}, error) {
+	if m.operatorcli == nil {
+		return nil, nil
+	}
+
+	return m.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").List(metav1.ListOptions{})
 }
