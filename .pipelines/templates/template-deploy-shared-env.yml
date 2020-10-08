@@ -7,6 +7,7 @@ steps:
 
     . secrets/env
     . ./hack/devtools/deploy-shared-env.sh
+    trap 'rm -f devops-spn.json' EXIT
     base64 -d >devops-spn.json <<<${{ parameters.azureDevOpsJSONSPN }}
 
     az account set -s ${{ parameters.subscriptionID }}
@@ -23,6 +24,4 @@ steps:
     import_certs_secrets
     update_parent_domain_dns_zone
     vpn_configuration
-
-    rm devops-spn.json
   displayName: 🚀 Deploy shared env
