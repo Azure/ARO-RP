@@ -35,7 +35,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
-	"github.com/Azure/ARO-RP/pkg/util/feature"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
@@ -250,18 +249,13 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 func (m *manager) denyAssignments(clusterSPObjectID string) *arm.Resource {
 	notActions := []string{
 		"Microsoft.Network/networkSecurityGroups/join/action",
-	}
-
-	if feature.IsRegisteredForFeature(m.subscriptionDoc.Subscription.Properties, "Microsoft.RedHatOpenShift/EnableSnapshots") {
-		notActions = append(notActions, []string{
-			"Microsoft.Compute/disks/beginGetAccess/action",
-			"Microsoft.Compute/disks/endGetAccess/action",
-			"Microsoft.Compute/disks/write",
-			"Microsoft.Compute/snapshots/beginGetAccess/action",
-			"Microsoft.Compute/snapshots/endGetAccess/action",
-			"Microsoft.Compute/snapshots/write",
-			"Microsoft.Compute/snapshots/delete",
-		}...)
+		"Microsoft.Compute/disks/beginGetAccess/action",
+		"Microsoft.Compute/disks/endGetAccess/action",
+		"Microsoft.Compute/disks/write",
+		"Microsoft.Compute/snapshots/beginGetAccess/action",
+		"Microsoft.Compute/snapshots/endGetAccess/action",
+		"Microsoft.Compute/snapshots/write",
+		"Microsoft.Compute/snapshots/delete",
 	}
 
 	return &arm.Resource{
