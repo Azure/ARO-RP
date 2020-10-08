@@ -21,6 +21,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	mockauthorization "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/authorization"
 	mockfeatures "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
+	mocknetwork "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
 	mockrefreshable "github.com/Azure/ARO-RP/pkg/util/mocks/refreshable"
 )
 
@@ -381,19 +382,31 @@ func TestValidateVnet(t *testing.T) {
 				},
 			}
 
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			spVirtualNetworks := mocknetwork.NewMockVirtualNetworksClient(controller)
+
 			if tt.modifyOC != nil {
 				tt.modifyOC(oc)
 			}
 			if tt.modifyVnet != nil {
 				tt.modifyVnet(vnet)
 			}
+			spVirtualNetworks.EXPECT().Get(gomock.Any(), "testGroup", "testVnet", "").Return(*vnet, nil)
 
 			dv := &openShiftClusterDynamicValidator{
-				log: logrus.NewEntry(logrus.StandardLogger()),
-				oc:  oc,
+				log:               logrus.NewEntry(logrus.StandardLogger()),
+				oc:                oc,
+				spVirtualNetworks: spVirtualNetworks,
 			}
 
-			err := dv.validateVnet(ctx, vnet)
+			vnetr, err := azure.ParseResourceID(vnetID)
+			if err != nil {
+				t.Error(err)
+			}
+
+			err = dv.ValidateVnet(ctx, &vnetr)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
@@ -485,8 +498,13 @@ func TestValidateVnetPermissions(t *testing.T) {
 			permissionsClient := mockauthorization.NewMockPermissionsClient(controller)
 
 			tt.mocks(permissionsClient, cancel)
+			c := clientAttributes{
+				client:         permissionsClient,
+				cloudErrorCode: api.CloudErrorCodeInvalidResourceProviderPermissions,
+				label:          "resource provider",
+			}
 
-			err := dv.validateVnetPermissions(ctx, mockrefreshable.NewMockAuthorizer(controller), permissionsClient, vnetID, &azure.Resource{}, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
+			err := dv.validateVnetPermissions(ctx, vnetID, &azure.Resource{}, c)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
@@ -616,7 +634,14 @@ func TestValidateRouteTablePermissionsSubnet(t *testing.T) {
 				tt.vnet(vnet)
 			}
 
-			err := dv.validateRouteTablePermissionsSubnet(ctx, mockrefreshable.NewMockAuthorizer(controller), permissionsClient, vnet, tt.subnet, "properties.masterProfile.subnetId", api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
+			c := clientAttributes{
+				authorizer:     mockrefreshable.NewMockAuthorizer(controller),
+				client:         permissionsClient,
+				cloudErrorCode: api.CloudErrorCodeInvalidResourceProviderPermissions,
+				label:          "resource provider",
+			}
+
+			err := dv.validateRouteTablePermissionsSubnet(ctx, vnet, tt.subnet, "properties.masterProfile.subnetId", c)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
