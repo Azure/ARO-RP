@@ -7,9 +7,12 @@ export CGO_CFLAGS=-Dgpgme_off_t=off_t
 aro: generate
 	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro
 
-az:
-	cd python/az/aro && python ./setup.py bdist_egg
-	cd python/az/aro && python ./setup.py bdist_wheel || true
+az: pyenv
+	. pyenv/bin/activate && \
+	cd python/az/aro && \
+	python ./setup.py bdist_egg && \
+	python ./setup.py bdist_wheel || true && \
+	rm -f ~/.azure/commandIndex.json # https://github.com/Azure/azure-cli/issues/1499
 
 clean:
 	rm -rf python/az/aro/{aro.egg-info,build,dist} aro
@@ -101,9 +104,8 @@ test-go: generate
 lint-go: generate
 	golangci-lint run
 
-test-python: generate pyenv
+test-python: generate pyenv az
 	. pyenv/bin/activate && \
-		$(MAKE) az && \
 		azdev linter && \
 		azdev style && \
 		hack/format-yaml/format-yaml.py .pipelines
