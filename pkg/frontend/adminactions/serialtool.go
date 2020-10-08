@@ -31,6 +31,10 @@ func (a *adminactions) VMSerialConsole(ctx context.Context, w http.ResponseWrite
 		return err
 	}
 
+	if vm.InstanceView == nil || vm.InstanceView.BootDiagnostics == nil {
+		return fmt.Errorf("BootDiagnostics not enabled on %s, serial log is not available", vmName)
+	}
+
 	u, err := url.Parse(*vm.InstanceView.BootDiagnostics.SerialConsoleLogBlobURI)
 	if err != nil {
 		return err
