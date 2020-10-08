@@ -13,11 +13,11 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/proxy"
 )
 
 // RestConfig returns the Kubernetes *rest.Config for a kubeconfig
-func RestConfig(env env.Interface, oc *api.OpenShiftCluster) (*rest.Config, error) {
+func RestConfig(dialer proxy.Dialer, oc *api.OpenShiftCluster) (*rest.Config, error) {
 	// must not proceed if PrivateEndpointIP is not set.  In
 	// k8s.io/client-go/transport/cache.go, k8s caches our transport, and it
 	// can't tell if data in the restconfig.Dial closure has changed.  We don't
@@ -50,7 +50,7 @@ func RestConfig(env env.Interface, oc *api.OpenShiftCluster) (*rest.Config, erro
 			return nil, err
 		}
 
-		return env.DialContext(ctx, network, oc.Properties.NetworkProfile.PrivateEndpointIP+":"+port)
+		return dialer.DialContext(ctx, network, oc.Properties.NetworkProfile.PrivateEndpointIP+":"+port)
 	}
 
 	return restconfig, nil

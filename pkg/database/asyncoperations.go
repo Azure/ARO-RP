@@ -11,11 +11,11 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
 )
 
 type asyncOperations struct {
-	c    cosmosdb.AsyncOperationDocumentClient
-	uuid string
+	c cosmosdb.AsyncOperationDocumentClient
 }
 
 // AsyncOperations is the database interface for AsyncOperationDocuments
@@ -26,16 +26,20 @@ type AsyncOperations interface {
 }
 
 // NewAsyncOperations returns a new AsyncOperations
-func NewAsyncOperations(uuid string, dbc cosmosdb.DatabaseClient, dbid, collid string) (AsyncOperations, error) {
+func NewAsyncOperations(ctx context.Context, deploymentMode deployment.Mode, dbc cosmosdb.DatabaseClient) (AsyncOperations, error) {
+	dbid, err := databaseName(deploymentMode)
+	if err != nil {
+		return nil, err
+	}
+
 	collc := cosmosdb.NewCollectionClient(dbc, dbid)
-	client := cosmosdb.NewAsyncOperationDocumentClient(collc, collid)
-	return NewAsyncOperationsWithProvidedClient(uuid, client), nil
+	client := cosmosdb.NewAsyncOperationDocumentClient(collc, collAsyncOperations)
+	return NewAsyncOperationsWithProvidedClient(client), nil
 }
 
-func NewAsyncOperationsWithProvidedClient(uuid string, client cosmosdb.AsyncOperationDocumentClient) AsyncOperations {
+func NewAsyncOperationsWithProvidedClient(client cosmosdb.AsyncOperationDocumentClient) AsyncOperations {
 	return &asyncOperations{
-		c:    client,
-		uuid: uuid,
+		c: client,
 	}
 }
 

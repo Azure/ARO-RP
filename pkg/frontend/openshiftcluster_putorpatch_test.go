@@ -16,7 +16,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	admin "github.com/Azure/ARO-RP/pkg/api/admin"
 	v20200430 "github.com/Azure/ARO-RP/pkg/api/v20200430"
-	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
@@ -229,11 +228,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 					},
 				}, nil)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, &database.Database{
-				AsyncOperations:   asyncOperations,
-				OpenShiftClusters: openShiftClusters,
-				Subscriptions:     subscriptions,
-			}, apis, &noop.Noop{}, nil, nil)
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, asyncOperations, openShiftClusters, subscriptions, apis, &noop.Noop{}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -894,11 +889,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 					},
 				}, nil)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, &database.Database{
-				AsyncOperations:   asyncOperations,
-				OpenShiftClusters: openShiftClusters,
-				Subscriptions:     subscriptions,
-			}, apis, &noop.Noop{}, nil, nil)
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, asyncOperations, openShiftClusters, subscriptions, apis, &noop.Noop{}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

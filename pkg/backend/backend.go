@@ -27,7 +27,12 @@ const (
 type backend struct {
 	baseLog *logrus.Entry
 	env     env.Interface
-	db      *database.Database
+
+	dbAsyncOperations   database.AsyncOperations
+	dbBilling           database.Billing
+	dbOpenShiftClusters database.OpenShiftClusters
+	dbSubscriptions     database.Subscriptions
+
 	cipher  encryption.Cipher
 	m       metrics.Interface
 	billing billing.Manager
@@ -47,13 +52,18 @@ type Runnable interface {
 }
 
 // NewBackend returns a new runnable backend
-func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, db *database.Database, cipher encryption.Cipher, m metrics.Interface) (Runnable, error) {
+func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, dbAsyncOperations database.AsyncOperations, dbBilling database.Billing, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, cipher encryption.Cipher, m metrics.Interface) (Runnable, error) {
 	b := &backend{
 		baseLog: log,
 		env:     env,
-		db:      db,
-		cipher:  cipher,
-		m:       m,
+
+		dbAsyncOperations:   dbAsyncOperations,
+		dbBilling:           dbBilling,
+		dbOpenShiftClusters: dbOpenShiftClusters,
+		dbSubscriptions:     dbSubscriptions,
+
+		cipher: cipher,
+		m:      m,
 	}
 
 	b.cond = sync.NewCond(&b.mu)
@@ -63,7 +73,7 @@ func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, db *d
 	b.sb = &subscriptionBackend{backend: b}
 
 	var err error
-	b.billing, err = billing.NewManager(env, db.Billing, db.Subscriptions, log)
+	b.billing, err = billing.NewManager(env, dbBilling, dbSubscriptions, log)
 	if err != nil {
 		return nil, err
 	}

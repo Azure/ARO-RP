@@ -7,20 +7,23 @@ import (
 	"context"
 	"time"
 
+	"github.com/sirupsen/logrus"
+
+	"github.com/Azure/ARO-RP/pkg/metrics"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
-func (db *Database) EmitMetrics(ctx context.Context) {
-	defer recover.Panic(db.log)
+func EmitMetrics(ctx context.Context, log *logrus.Entry, dbOpenShiftClusters OpenShiftClusters, m metrics.Interface) {
+	defer recover.Panic(log)
 	t := time.NewTicker(time.Minute)
 	defer t.Stop()
 
 	for range t.C {
-		i, err := db.OpenShiftClusters.QueueLength(ctx, "OpenShiftClusters")
+		i, err := dbOpenShiftClusters.QueueLength(ctx, "OpenShiftClusters")
 		if err != nil {
-			db.log.Error(err)
+			log.Error(err)
 		} else {
-			db.m.EmitGauge("database.openshiftclusters.queue.length", int64(i), nil)
+			m.EmitGauge("database.openshiftclusters.queue.length", int64(i), nil)
 		}
 	}
 }

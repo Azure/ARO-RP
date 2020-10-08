@@ -17,7 +17,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	admin "github.com/Azure/ARO-RP/pkg/api/admin"
-	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
 	mock_cosmosdb "github.com/Azure/ARO-RP/pkg/util/mocks/database/cosmosdb"
@@ -147,9 +146,7 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 			cipher := mock_encryption.NewMockCipher(ti.controller)
 			tt.mocks(ti.controller, oc, cipher)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, &database.Database{
-				OpenShiftClusters: oc,
-			}, api.APIs, &noop.Noop{}, cipher, nil)
+			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, oc, nil, api.APIs, &noop.Noop{}, cipher, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

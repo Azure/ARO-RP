@@ -15,9 +15,8 @@ import (
 	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
-	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/test/util/cmp"
 )
 
@@ -36,14 +35,14 @@ func TestBestEffortEnricher(t *testing.T) {
 			}), nil
 		},
 	}
-	defaultMockRestConfig := func(env.Interface, *api.OpenShiftCluster) (*rest.Config, error) {
+	defaultMockRestConfig := func(proxy.Dialer, *api.OpenShiftCluster) (*rest.Config, error) {
 		return &rest.Config{}, nil
 	}
 
 	for _, tt := range []struct {
 		name             string
 		taskConstructors []enricherTaskConstructor
-		restConfig       func(env.Interface, *api.OpenShiftCluster) (*rest.Config, error)
+		restConfig       func(proxy.Dialer, *api.OpenShiftCluster) (*rest.Config, error)
 		ctx              func() (context.Context, context.CancelFunc)
 		ocs              func() []*api.OpenShiftCluster
 		wantOcs          []*api.OpenShiftCluster
@@ -189,7 +188,7 @@ func TestBestEffortEnricher(t *testing.T) {
 		{
 			name:             "no changes - error loading the rest config",
 			taskConstructors: defaultMockTaskConstructors,
-			restConfig: func(env.Interface, *api.OpenShiftCluster) (*rest.Config, error) {
+			restConfig: func(proxy.Dialer, *api.OpenShiftCluster) (*rest.Config, error) {
 				return nil, errors.New("fake error from rest config")
 			},
 			ocs: func() []*api.OpenShiftCluster {
@@ -210,8 +209,6 @@ func TestBestEffortEnricher(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			env := mock_env.NewMockInterface(controller)
-
 			restConfig := defaultMockRestConfig
 			if tt.restConfig != nil {
 				restConfig = tt.restConfig
@@ -224,7 +221,6 @@ func TestBestEffortEnricher(t *testing.T) {
 
 			e := &bestEffortEnricher{
 				log:              log,
-				env:              env,
 				restConfig:       restConfig,
 				taskConstructors: taskConstructors,
 				m:                &noop.Noop{},

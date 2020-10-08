@@ -26,7 +26,7 @@ func (f *frontend) getAdminOpenShiftClusters(w http.ResponseWriter, r *http.Requ
 	}
 
 	b, err := f._getOpenShiftClusters(ctx, r, f.apis[admin.APIVersion].OpenShiftClusterConverter(), func(skipToken string) (cosmosdb.OpenShiftClusterDocumentIterator, error) {
-		return f.db.OpenShiftClusters.List(skipToken), nil
+		return f.dbOpenShiftClusters.List(skipToken), nil
 	})
 	if err == nil {
 		b, err = adminJmespathFilter(b, jpath, "value")

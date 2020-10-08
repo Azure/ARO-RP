@@ -9,25 +9,23 @@ import (
 	"os"
 
 	"github.com/Azure/go-autorest/tracing"
-	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/tools/metrics"
 
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/azure"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd/k8s"
 	pkgmonitor "github.com/Azure/ARO-RP/pkg/monitor"
+	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 )
 
 func monitor(ctx context.Context, log *logrus.Entry) error {
-	uuid := uuid.NewV4().String()
-	log.Printf("uuid %s", uuid)
-
-	_env, err := env.NewEnv(ctx, log)
+	_env, err := env.NewCore(ctx, log)
 	if err != nil {
 		return err
 	}
@@ -63,12 +61,32 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	db, err := database.NewDatabase(ctx, log.WithField("component", "database"), _env, m, cipher, uuid)
+	dbc, err := database.NewDatabaseClient(ctx, log.WithField("component", "database"), _env, &noop.Noop{}, cipher)
 	if err != nil {
 		return err
 	}
 
-	mon := pkgmonitor.NewMonitor(log.WithField("component", "monitor"), _env, db, m, clusterm)
+	dbMonitors, err := database.NewMonitors(ctx, _env.DeploymentMode(), dbc)
+	if err != nil {
+		return err
+	}
+
+	dbOpenShiftClusters, err := database.NewOpenShiftClusters(ctx, _env.DeploymentMode(), dbc)
+	if err != nil {
+		return err
+	}
+
+	dbSubscriptions, err := database.NewSubscriptions(ctx, _env.DeploymentMode(), dbc)
+	if err != nil {
+		return err
+	}
+
+	dialer, err := proxy.NewDialer(_env.DeploymentMode())
+	if err != nil {
+		return err
+	}
+
+	mon := pkgmonitor.NewMonitor(log.WithField("component", "monitor"), dialer, dbMonitors, dbOpenShiftClusters, dbSubscriptions, m, clusterm)
 
 	return mon.Run(ctx)
 }
