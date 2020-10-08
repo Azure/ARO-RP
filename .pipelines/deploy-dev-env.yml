@@ -23,3 +23,4 @@ jobs:
     parameters:
       subscriptionID: $(AZURE_SUBSCRIPTION_ID)
       azureDevOpsJSONSPN: $(aro-v4-e2e-devops-spn)
+  - template: ./templates/template-az-cli-logout.yml

@@ -1,3 +1,5 @@
+# if you include this template, also include template-az-cli-logout.yml to
+# remove the credentials from the CI VM.
 parameters:
   azureDevOpsJSONSPN: ''
 steps:
