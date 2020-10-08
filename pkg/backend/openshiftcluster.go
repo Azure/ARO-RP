@@ -40,7 +40,7 @@ func (ocb *openShiftClusterBackend) try(ctx context.Context) (bool, error) {
 
 	if doc.Dequeues > maxDequeueCount {
 		err := fmt.Errorf("dequeued %d times, failing", doc.Dequeues)
-		return true, ocb.endLease(ctx, log, nil, doc, api.ProvisioningStateFailed, err)
+		return true, ocb.endLease(ctx, log, nil, doc, api.ProvisioningStateFailed, err, false)
 	}
 
 	log.Print("dequeued")
@@ -89,7 +89,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 
 	m, err := openshiftcluster.NewManager(log, ocb.env, ocb.dbOpenShiftClusters, ocb.cipher, ocb.billing, doc, subscriptionDoc)
 	if err != nil {
-		return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err)
+		return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err, false)
 	}
 
 	switch doc.OpenShiftCluster.Properties.ProvisioningState {
@@ -98,7 +98,7 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 
 		err = m.Create(ctx)
 		if err != nil {
-			return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err)
+			return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err, false)
 		}
 		// re-get document and check the state:
 		// if Install = nil, we are done with the install.
@@ -106,42 +106,43 @@ func (ocb *openShiftClusterBackend) handle(ctx context.Context, log *logrus.Entr
 		// backend worker to pick up next install phase
 		doc, err = ocb.dbOpenShiftClusters.Get(ctx, strings.ToLower(doc.OpenShiftCluster.ID))
 		if err != nil {
-			return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err)
+			return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err, false)
 		}
 		if doc.OpenShiftCluster.Properties.Install == nil {
-			return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateSucceeded, nil)
+			return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateSucceeded, nil, false)
 		}
-		return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateCreating, nil)
+		return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateCreating, nil, false)
 
 	case api.ProvisioningStateAdminUpdating:
 		log.Print("admin updating")
 
 		err = m.AdminUpdate(ctx)
 		if err != nil {
-			return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err)
+			return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err, false)
 		}
-		return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateSucceeded, nil)
+		return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateSucceeded, nil, false)
 
 	case api.ProvisioningStateUpdating:
 		log.Print("updating")
 
 		err = m.Update(ctx)
 		if err != nil {
-			return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err)
+			return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err, false)
 		}
-		return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateSucceeded, nil)
+		return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateSucceeded, nil, false)
 
 	case api.ProvisioningStateDeleting:
 		log.Print("deleting")
 
 		err = m.Delete(ctx)
 		if err != nil {
-			return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err)
+			log.Error(err)
+			return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateDeleting, err, true)
 		}
 
 		err = ocb.updateAsyncOperation(ctx, log, doc.AsyncOperationID, nil, api.ProvisioningStateSucceeded, "", nil)
 		if err != nil {
-			return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err)
+			return ocb.endLease(ctx, log, stop, doc, api.ProvisioningStateFailed, err, false)
 		}
 
 		stop()
@@ -233,7 +234,7 @@ func (ocb *openShiftClusterBackend) updateAsyncOperation(ctx context.Context, lo
 	return nil
 }
 
-func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.Entry, stop func(), doc *api.OpenShiftClusterDocument, provisioningState api.ProvisioningState, backendErr error) error {
+func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.Entry, stop func(), doc *api.OpenShiftClusterDocument, provisioningState api.ProvisioningState, backendErr error, retryLater bool) error {
 	var adminUpdateError *string
 	var failedProvisioningState api.ProvisioningState
 
@@ -268,7 +269,7 @@ func (ocb *openShiftClusterBackend) endLease(ctx context.Context, log *logrus.En
 		stop()
 	}
 
-	_, err := ocb.dbOpenShiftClusters.EndLease(ctx, doc.Key, provisioningState, failedProvisioningState, adminUpdateError)
+	_, err := ocb.dbOpenShiftClusters.EndLease(ctx, doc.Key, provisioningState, failedProvisioningState, adminUpdateError, retryLater)
 	return err
 }
 

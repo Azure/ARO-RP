@@ -46,7 +46,7 @@ type OpenShiftClusters interface {
 	ListByPrefix(string, string, string) (cosmosdb.OpenShiftClusterDocumentIterator, error)
 	Dequeue(context.Context) (*api.OpenShiftClusterDocument, error)
 	Lease(context.Context, string) (*api.OpenShiftClusterDocument, error)
-	EndLease(context.Context, string, api.ProvisioningState, api.ProvisioningState, *string) (*api.OpenShiftClusterDocument, error)
+	EndLease(context.Context, string, api.ProvisioningState, api.ProvisioningState, *string, bool) (*api.OpenShiftClusterDocument, error)
 	GetByClientID(ctx context.Context, partitionKey, clientID string) (*api.OpenShiftClusterDocuments, error)
 	GetByClusterResourceGroupID(ctx context.Context, partitionKey, resourceGroupID string) (*api.OpenShiftClusterDocuments, error)
 }
@@ -70,6 +70,18 @@ func NewOpenShiftClusters(ctx context.Context, deploymentMode deployment.Mode, d
 	var body = request.getBody();
 	var date = new Date();
 	body["leaseExpires"] = Math.floor(date.getTime() / 1000) + 60;
+	request.setBody(body);
+}`,
+		},
+		{
+			ID:               "retryLater",
+			TriggerOperation: cosmosdb.TriggerOperationAll,
+			TriggerType:      cosmosdb.TriggerTypePre,
+			Body: `function trigger() {
+	var request = getContext().getRequest();
+	var body = request.getBody();
+	var date = new Date();
+	body["leaseExpires"] = Math.floor(date.getTime() / 1000) + 3600;
 	request.setBody(body);
 }`,
 		},
@@ -298,7 +310,12 @@ func (c *openShiftClusters) Lease(ctx context.Context, key string) (*api.OpenShi
 	}, &cosmosdb.Options{PreTriggers: []string{"renewLease"}})
 }
 
-func (c *openShiftClusters) EndLease(ctx context.Context, key string, provisioningState, failedProvisioningState api.ProvisioningState, adminUpdateError *string) (*api.OpenShiftClusterDocument, error) {
+func (c *openShiftClusters) EndLease(ctx context.Context, key string, provisioningState, failedProvisioningState api.ProvisioningState, adminUpdateError *string, retryLater bool) (*api.OpenShiftClusterDocument, error) {
+	var options *cosmosdb.Options
+	if retryLater {
+		options = &cosmosdb.Options{PreTriggers: []string{"retryLater"}}
+	}
+
 	return c.patchWithLease(ctx, key, func(doc *api.OpenShiftClusterDocument) error {
 		doc.OpenShiftCluster.Properties.ProvisioningState = provisioningState
 		doc.OpenShiftCluster.Properties.FailedProvisioningState = failedProvisioningState
@@ -306,7 +323,7 @@ func (c *openShiftClusters) EndLease(ctx context.Context, key string, provisioni
 		doc.LeaseOwner = ""
 		doc.LeaseExpires = 0
 
-		if provisioningState != api.ProvisioningStateFailed {
+		if provisioningState != api.ProvisioningStateFailed || retryLater {
 			doc.Dequeues = 0
 		}
 		// If EndLease is called while cluster is still in terminal phase,
@@ -322,7 +339,7 @@ func (c *openShiftClusters) EndLease(ctx context.Context, key string, provisioni
 		}
 
 		return nil
-	}, nil)
+	}, options)
 }
 
 func (c *openShiftClusters) partitionKey(key string) (string, error) {
