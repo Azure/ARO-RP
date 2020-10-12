@@ -37,9 +37,9 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 			return err
 		}
 
-		d.log.Infof("deploying rg %s in %s", *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.GlobalResourceGroupName)
+		d.log.Infof("deploying rg %s in %s", *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.GlobalResourceGroupLocation)
 		_, err = d.globalgroups.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, mgmtfeatures.ResourceGroup{
-			Location: d.config.Configuration.GlobalResourceGroupName,
+			Location: d.config.Configuration.GlobalResourceGroupLocation,
 		})
 		if err != nil {
 			return err
