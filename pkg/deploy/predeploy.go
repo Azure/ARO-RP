@@ -29,20 +29,23 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 	}
 
 	if d.fullDeploy {
+		d.log.Infof("deploying rg %s in %s", *d.config.Configuration.SubscriptionResourceGroupName, *d.config.Configuration.SubscriptionResourceGroupLocation)
 		_, err = d.groups.CreateOrUpdate(ctx, *d.config.Configuration.SubscriptionResourceGroupName, mgmtfeatures.ResourceGroup{
-			Location: to.StringPtr("centralus"),
+			Location: d.config.Configuration.SubscriptionResourceGroupLocation,
 		})
 		if err != nil {
 			return err
 		}
 
+		d.log.Infof("deploying rg %s in %s", *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.GlobalResourceGroupName)
 		_, err = d.globalgroups.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, mgmtfeatures.ResourceGroup{
-			Location: to.StringPtr("centralus"),
+			Location: d.config.Configuration.GlobalResourceGroupName,
 		})
 		if err != nil {
 			return err
 		}
 
+		d.log.Infof("deploying rg %s in %s", d.config.ResourceGroupName, d.config.Location)
 		_, err = d.groups.CreateOrUpdate(ctx, d.config.ResourceGroupName, mgmtfeatures.ResourceGroup{
 			Location: &d.config.Location,
 		})
