@@ -9,12 +9,13 @@ steps:
 - script: |
     set -eu
 
-    echo ${{ parameters.azureDevOpsJSONSPN }} | base64 -d -w 0 > devops-spn.json
+    trap 'rm -f devops-spn.json' EXIT
+    base64 -d >devops-spn.json <<<${{ parameters.azureDevOpsJSONSPN }}
+    export AZURE_CLIENT_ID=$(jq -r .clientId <devops-spn.json)
+    export AZURE_CLIENT_SECRET=$(jq -r .clientSecret <devops-spn.json)
+    export AZURE_TENANT_ID=$(jq -r .tenantId <devops-spn.json)
+
     export AZURE_SUBSCRIPTION_ID="${{ parameters.subscriptionId }}"
-    export AZURE_CLIENT_ID=$(cat devops-spn.json | jq -r '.clientId')
-    export AZURE_CLIENT_SECRET=$(cat devops-spn.json | jq -r '.clientSecret')
-    export AZURE_TENANT_ID=$(cat devops-spn.json | jq -r '.tenantId')
-    rm devops-spn.json
 
     if [[ "${{ parameters.fullDeploy }}" == "True" ]]; then
       export FULL_DEPLOY=true
