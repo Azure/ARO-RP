@@ -35,6 +35,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
+	"github.com/Azure/ARO-RP/pkg/util/feature"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
@@ -246,6 +247,12 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 	return m.saveGraph(ctx, g)
 }
 
+var extraDenyAssignmentExclusions = map[string][]string{
+	"Microsoft.RedHatOpenShift/RedHatEngineering": {
+		"Microsoft.Network/networkInterfaces/effectiveRouteTable/action",
+	},
+}
+
 func (m *manager) denyAssignments(clusterSPObjectID string) *arm.Resource {
 	notActions := []string{
 		"Microsoft.Network/networkSecurityGroups/join/action",
@@ -256,6 +263,14 @@ func (m *manager) denyAssignments(clusterSPObjectID string) *arm.Resource {
 		"Microsoft.Compute/snapshots/endGetAccess/action",
 		"Microsoft.Compute/snapshots/write",
 		"Microsoft.Compute/snapshots/delete",
+	}
+
+	var props = m.subscriptionDoc.Subscription.Properties
+
+	for flag, exclusions := range extraDenyAssignmentExclusions {
+		if feature.IsRegisteredForFeature(props, flag) {
+			notActions = append(notActions, exclusions...)
+		}
 	}
 
 	return &arm.Resource{
