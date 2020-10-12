@@ -6,32 +6,34 @@ package recover
 import (
 	"testing"
 
+	"github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 
 	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func TestPanic(t *testing.T) {
-
-	h, log := testlog.NewCapturingLogger()
+	h, log := testlog.New()
 
 	func() {
 		defer Panic(log)
 		panic("random error")
 	}()
 
-	expected := []testlog.ExpectedLogEntry{
+	expected := []map[string]types.GomegaMatcher{
 		{
-			Message: "random error",
-			Level:   logrus.ErrorLevel,
+			"msg":   gomega.Equal("random error"),
+			"level": gomega.Equal(logrus.ErrorLevel),
 		},
 		{
-			MessageRegex: `runtime/debug\.Stack`,
-			Level:        logrus.InfoLevel,
+			"msg":   gomega.MatchRegexp(`runtime/debug\.Stack`),
+			"level": gomega.Equal(logrus.InfoLevel),
 		},
 	}
 
-	for _, e := range testlog.AssertLoggingOutput(h, expected) {
-		t.Error(e)
+	err := testlog.AssertLoggingOutput(h, expected)
+	if err != nil {
+		t.Error(err)
 	}
 }

@@ -13,6 +13,8 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/golang/mock/gomock"
+	"github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/openshift/client-go/config/clientset/versioned/fake"
@@ -27,7 +29,7 @@ import (
 	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/version"
-	test_log "github.com/Azure/ARO-RP/test/util/log"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func failingFunc(context.Context) error { return errors.New("oh no!") }
@@ -76,7 +78,7 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 	for _, tt := range []struct {
 		name        string
 		steps       []steps.Step
-		wantEntries []test_log.ExpectedLogEntry
+		wantEntries []map[string]types.GomegaMatcher
 		wantErr     string
 		configcli   *fake.Clientset
 		operatorcli *fakeoperatorv1.Clientset
@@ -87,26 +89,26 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				steps.Action(failingFunc),
 			},
 			wantErr: "oh no!",
-			wantEntries: []test_log.ExpectedLogEntry{
+			wantEntries: []map[string]types.GomegaMatcher{
 				{
-					Level:   logrus.InfoLevel,
-					Message: `running step [Action github.com/Azure/ARO-RP/pkg/cluster.failingFunc]`,
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(`running step [Action github.com/Azure/ARO-RP/pkg/cluster.failingFunc]`),
 				},
 				{
-					Level:   logrus.ErrorLevel,
-					Message: "step [Action github.com/Azure/ARO-RP/pkg/cluster.failingFunc] encountered error: oh no!",
+					"level": gomega.Equal(logrus.ErrorLevel),
+					"msg":   gomega.Equal("step [Action github.com/Azure/ARO-RP/pkg/cluster.failingFunc] encountered error: oh no!"),
 				},
 				{
-					Level:        logrus.InfoLevel,
-					MessageRegex: `github.com/Azure/ARO-RP/pkg/cluster.\(\*manager\).logClusterVersion\-fm: {.*"version":"1.2.3".*}`,
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.MatchRegexp(`github.com/Azure/ARO-RP/pkg/cluster.\(\*manager\).logClusterVersion\-fm: {.*"version":"1.2.3".*}`),
 				},
 				{
-					Level:        logrus.InfoLevel,
-					MessageRegex: `github.com/Azure/ARO-RP/pkg/cluster.\(\*manager\).logClusterOperators\-fm: {.*"versions":\[{"name":"operator","version":"4.3.0"},{"name":"operator\-good","version":"4.3.1"}\].*}`,
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.MatchRegexp(`github.com/Azure/ARO-RP/pkg/cluster.\(\*manager\).logClusterOperators\-fm: {.*"versions":\[{"name":"operator","version":"4.3.0"},{"name":"operator\-good","version":"4.3.1"}\].*}`),
 				},
 				{
-					Level:        logrus.InfoLevel,
-					MessageRegex: `github.com/Azure/ARO-RP/pkg/cluster.\(\*manager\).logIngressControllers\-fm: {.*"items":\[{.*"domain":"aroapp.io"}.*\]}`,
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.MatchRegexp(`github.com/Azure/ARO-RP/pkg/cluster.\(\*manager\).logIngressControllers\-fm: {.*"items":\[{.*"domain":"aroapp.io"}.*\]}`),
 				},
 			},
 			configcli:   fake.NewSimpleClientset(clusterVersion, clusterOperators),
@@ -118,26 +120,26 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				steps.Action(failingFunc),
 			},
 			wantErr: "oh no!",
-			wantEntries: []test_log.ExpectedLogEntry{
+			wantEntries: []map[string]types.GomegaMatcher{
 				{
-					Level:   logrus.InfoLevel,
-					Message: `running step [Action github.com/Azure/ARO-RP/pkg/cluster.failingFunc]`,
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(`running step [Action github.com/Azure/ARO-RP/pkg/cluster.failingFunc]`),
 				},
 				{
-					Level:   logrus.ErrorLevel,
-					Message: "step [Action github.com/Azure/ARO-RP/pkg/cluster.failingFunc] encountered error: oh no!",
+					"level": gomega.Equal(logrus.ErrorLevel),
+					"msg":   gomega.Equal("step [Action github.com/Azure/ARO-RP/pkg/cluster.failingFunc] encountered error: oh no!"),
 				},
 				{
-					Level:   logrus.ErrorLevel,
-					Message: `clusterversions.config.openshift.io "version" not found`,
+					"level": gomega.Equal(logrus.ErrorLevel),
+					"msg":   gomega.Equal(`clusterversions.config.openshift.io "version" not found`),
 				},
 				{
-					Level:   logrus.InfoLevel,
-					Message: `github.com/Azure/ARO-RP/pkg/cluster.(*manager).logClusterOperators-fm: {"metadata":{},"items":null}`,
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(`github.com/Azure/ARO-RP/pkg/cluster.(*manager).logClusterOperators-fm: {"metadata":{},"items":null}`),
 				},
 				{
-					Level:   logrus.InfoLevel,
-					Message: `github.com/Azure/ARO-RP/pkg/cluster.(*manager).logIngressControllers-fm: {"metadata":{},"items":null}`,
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(`github.com/Azure/ARO-RP/pkg/cluster.(*manager).logIngressControllers-fm: {"metadata":{},"items":null}`),
 				},
 			},
 			configcli:   fake.NewSimpleClientset(),
@@ -145,7 +147,7 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			h, log := test_log.NewCapturingLogger()
+			h, log := testlog.New()
 			m := &manager{
 				log:         log,
 				configcli:   tt.configcli,
@@ -158,8 +160,9 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				t.Error(err)
 			}
 
-			for _, e := range test_log.AssertLoggingOutput(h, tt.wantEntries) {
-				t.Error(e)
+			err = testlog.AssertLoggingOutput(h, tt.wantEntries)
+			if err != nil {
+				t.Error(err)
 			}
 		})
 	}
