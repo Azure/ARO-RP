@@ -42,4 +42,4 @@ steps:
     clean_e2e
   condition: succeededOrFailed()
   displayName: 🧹 Clean up after ${{ parameters.location }} E2E
-- template: ./templates/template-az-cli-logout.yml
+- template: ./template-az-cli-logout.yml
