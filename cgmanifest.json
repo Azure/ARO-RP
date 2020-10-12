@@ -616,15 +616,6 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "f55edac94c9bbba5d6182a4be46d86a2c9b5b50e",
-                    "repositoryUrl": "https://github.com/konsorten/go-windows-terminal-sequences/"
-                }
-            }
-        },
-        {
-            "component": {
-                "type": "git",
-                "git": {
                     "commitHash": "fcf300cf5543bbd7fb57e08b38ad519c910b59c4",
                     "repositoryUrl": "https://github.com/libvirt/libvirt-go/"
                 }
@@ -1030,7 +1021,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "839c75faf7f98a33d445d181f3018b5c3409a45e",
+                    "commitHash": "6699a89a232f3db797f2e280639854bbc4b89725",
                     "repositoryUrl": "https://github.com/sirupsen/logrus/"
                 }
             }
