@@ -41,6 +41,7 @@ type Configuration struct {
 	FPServicePrincipalID               *string       `json:"fpServicePrincipalId,omitempty" value:"required"`
 	GlobalMonitoringKeyVaultURI        *string       `json:"globalMonitoringKeyVaultUri,omitempty" value:"required"`
 	GlobalResourceGroupName            *string       `json:"globalResourceGroupName,omitempty" value:"required"`
+	GlobalResourceGroupLocation        *string       `json:"globalResourceGroupLocation,omitempty" value:"required"`
 	GlobalSubscriptionID               *string       `json:"globalSubscriptionId,omitempty" value:"required"`
 	KeyvaultPrefix                     *string       `json:"keyvaultPrefix,omitempty" value:"required"`
 	MDMFrontendURL                     *string       `json:"mdmFrontendUrl,omitempty" value:"required"`
@@ -51,6 +52,7 @@ type Configuration struct {
 	RPNSGSourceAddressPrefixes         []string      `json:"rpNsgSourceAddressPrefixes,omitempty" value:"required"`
 	RPParentDomainName                 *string       `json:"rpParentDomainName,omitempty" value:"required"`
 	SubscriptionResourceGroupName      *string       `json:"subscriptionResourceGroupName,omitempty" value:"required"`
+	SubscriptionResourceGroupLocation  *string       `json:"subscriptionResourceGroupLocation,omitempty" value:"required"`
 	SSHPublicKey                       *string       `json:"sshPublicKey,omitempty" value:"required"`
 	VMSize                             *string       `json:"vmSize,omitempty" value:"required"`
 }
