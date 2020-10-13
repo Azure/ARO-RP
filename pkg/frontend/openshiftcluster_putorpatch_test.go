@@ -258,7 +258,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			for _, i := range errs {
 				t.Error(i)
 			}
-			errs = ti.checker.CheckOpenShiftCluster(ti.openShiftClustersClient)
+			errs = ti.checker.CheckOpenShiftClusters(ti.openShiftClustersClient)
 			for _, i := range errs {
 				t.Error(i)
 			}
