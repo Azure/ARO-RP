@@ -121,7 +121,7 @@ func newTestInfra(t *testing.T) *testInfra {
 						},
 					},
 				},
-				Dial: l.Dial,
+				DialContext: l.DialContext,
 			},
 		},
 	}

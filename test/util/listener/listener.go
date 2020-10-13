@@ -4,6 +4,7 @@ package listener
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"fmt"
 	"net"
 )
@@ -44,7 +45,7 @@ func (*Listener) Addr() net.Addr {
 	return testAddr{}
 }
 
-func (l *Listener) Dial(network, addr string) (net.Conn, error) {
+func (l *Listener) DialContext(context.Context, string, string) (net.Conn, error) {
 	c1, c2 := net.Pipe()
 	l.c <- c1
 	return c2, nil
