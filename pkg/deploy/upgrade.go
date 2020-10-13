@@ -117,6 +117,7 @@ func (d *deployer) removeOldScaleset(ctx context.Context, vmssName string) error
 
 // saveRPVersion for current location in shared storage account for environment
 func (d *deployer) saveRPVersion() error {
+	d.log.Printf("saving rpVersion %s deployed in %s to storage account %s", d.version, d.config.Location, *d.config.Configuration.RPVersionStorageAccountName)
 	t := time.Now().UTC().Truncate(time.Second)
 	res, err := d.accounts.ListAccountSAS(
 		context.Background(), *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.RPVersionStorageAccountName, mgmtstorage.AccountSasParameters{
