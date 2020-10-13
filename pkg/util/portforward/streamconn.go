@@ -32,7 +32,7 @@ type streamConn struct {
 
 var _ net.Conn = (*streamConn)(nil)
 
-func newStreamConn(log *logrus.Entry, c httpstream.Connection, dataStream, errorStream httpstream.Stream) *streamConn {
+func NewStreamConn(log *logrus.Entry, c httpstream.Connection, dataStream, errorStream httpstream.Stream) net.Conn {
 	s := &streamConn{
 		log:         log,
 		errch:       make(chan error, 1),
