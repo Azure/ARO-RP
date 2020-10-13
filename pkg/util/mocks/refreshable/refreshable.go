@@ -10,6 +10,7 @@ import (
 
 	autorest "github.com/Azure/go-autorest/autorest"
 	gomock "github.com/golang/mock/gomock"
+	logrus "github.com/sirupsen/logrus"
 )
 
 // MockAuthorizer is a mock of Authorizer interface
@@ -35,18 +36,33 @@ func (m *MockAuthorizer) EXPECT() *MockAuthorizerMockRecorder {
 	return m.recorder
 }
 
-// RefreshWithContext mocks base method
-func (m *MockAuthorizer) RefreshWithContext(arg0 context.Context) error {
+// OAuthToken mocks base method
+func (m *MockAuthorizer) OAuthToken() string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RefreshWithContext", arg0)
-	ret0, _ := ret[0].(error)
+	ret := m.ctrl.Call(m, "OAuthToken")
+	ret0, _ := ret[0].(string)
 	return ret0
 }
 
-// RefreshWithContext indicates an expected call of RefreshWithContext
-func (mr *MockAuthorizerMockRecorder) RefreshWithContext(arg0 interface{}) *gomock.Call {
+// OAuthToken indicates an expected call of OAuthToken
+func (mr *MockAuthorizerMockRecorder) OAuthToken() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RefreshWithContext", reflect.TypeOf((*MockAuthorizer)(nil).RefreshWithContext), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OAuthToken", reflect.TypeOf((*MockAuthorizer)(nil).OAuthToken))
+}
+
+// RefreshWithContext mocks base method
+func (m *MockAuthorizer) RefreshWithContext(arg0 context.Context, arg1 *logrus.Entry) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RefreshWithContext", arg0, arg1)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// RefreshWithContext indicates an expected call of RefreshWithContext
+func (mr *MockAuthorizerMockRecorder) RefreshWithContext(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RefreshWithContext", reflect.TypeOf((*MockAuthorizer)(nil).RefreshWithContext), arg0, arg1)
 }
 
 // WithAuthorization mocks base method

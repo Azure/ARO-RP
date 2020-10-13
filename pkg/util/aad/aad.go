@@ -6,10 +6,8 @@ package aad
 import (
 	"context"
 	"net/http"
-	"strings"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/dgrijalva/jwt-go"
@@ -17,41 +15,23 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
 // GetToken authenticates in the customer's tenant as the cluster service
-// principal and returns a token.  It retries in the cases below.  Unfortunately
-// there doesn't seem to be a way to distinguish whether these cases occur due
-// to misconfiguration or AAD propagation delays.
-//
-// 1. `{"error": "unauthorized_client", "error_description": "AADSTS700016:
-// Application with identifier 'xxx' was not found in the directory 'xxx'. This
-// can happen if the application has not been installed by the administrator of
-// the tenant or consented to by any user in the tenant. You may have sent your
-// authentication request to the wrong tenant. ...", "error_codes": [700016]}`.
-// This can be an indicator of AAD propagation delay.
-//
-// 2. Lack of an altsecid, puid or oid claim in the token.  Continuing would
-// subsequently cause the ARM error `Code="InvalidAuthenticationToken"
-// Message="The received access token is not valid: at least one of the claims
-// 'puid' or 'altsecid' or 'oid' should be present. If you are accessing as an
-// application please make sure service principal is properly created in the
-// tenant."`.  I think this can be returned when the service principal
-// associated with the application hasn't yet caught up with the application
-// itself.
-//
-// 3. Network failures.  If the error is not an adal.TokenRefreshError,
-// then it's likely a transient failure. For example, connection reset by peer.
+// principal and returns a token.
 func GetToken(ctx context.Context, log *logrus.Entry, oc *api.OpenShiftCluster, resource string) (*adal.ServicePrincipalToken, error) {
 	spp := &oc.Properties.ServicePrincipalProfile
 
 	conf := auth.NewClientCredentialsConfig(spp.ClientID, string(spp.ClientSecret), spp.TenantID)
 	conf.Resource = resource
 
-	token, err := conf.ServicePrincipalToken()
+	sp, err := conf.ServicePrincipalToken()
 	if err != nil {
 		return nil, err
 	}
+
+	authorizer := refreshable.NewAuthorizer(sp)
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
@@ -59,26 +39,17 @@ func GetToken(ctx context.Context, log *logrus.Entry, oc *api.OpenShiftCluster, 
 	// NOTE: Do not override err with the error returned by wait.PollImmediateUntil.
 	// Doing this will not propagate the latest error to the user in case when wait exceeds the timeout
 	wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-		err = token.RefreshWithContext(ctx)
+		done, err := authorizer.RefreshWithContext(ctx, log)
 		if err != nil {
-			isAADSTS700016 := strings.Contains(err.Error(), "AADSTS700016")
-			isTokenRefreshError := autorest.IsTokenRefreshError(err)
-
-			// populate err with a user-facing error that will be visible if
-			// we're not successful.
-			log.Info(err)
 			err = api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidServicePrincipalCredentials, "properties.servicePrincipalProfile", "The provided service principal credentials are invalid.")
-
-			if !isTokenRefreshError || isAADSTS700016 {
-				return false, nil
-			}
-
+		}
+		if !done || err != nil {
 			return false, err
 		}
 
 		p := &jwt.Parser{}
 		claims := jwt.MapClaims{}
-		_, _, err = p.ParseUnverified(token.OAuthToken(), claims)
+		_, _, err = p.ParseUnverified(authorizer.OAuthToken(), claims)
 		if err != nil {
 			return false, err
 		}
@@ -100,5 +71,5 @@ func GetToken(ctx context.Context, log *logrus.Entry, oc *api.OpenShiftCluster, 
 		return nil, err
 	}
 
-	return token, nil
+	return sp, nil
 }

@@ -102,8 +102,8 @@ func TestStepRunner(t *testing.T) {
 			steps: func(controller *gomock.Controller) []Step {
 				refreshable := mock_refreshable.NewMockAuthorizer(controller)
 				refreshable.EXPECT().
-					RefreshWithContext(gomock.Any()).
-					Return(nil)
+					RefreshWithContext(gomock.Any(), gomock.Any()).
+					Return(true, nil)
 
 				errsRemaining := 1
 				action := Action(func(context.Context) error {
