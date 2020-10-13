@@ -134,7 +134,7 @@ func TestDelete(t *testing.T) {
 		{
 			name: "successful mark for deletion on billing entity, with a subscription not registered for e2e",
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddBillingDocument(&api.BillingDocument{
+				f.AddBillingDocuments(&api.BillingDocument{
 					Key:                       strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", mockSubID),
 					ID:                        mockSubID,
@@ -145,7 +145,7 @@ func TestDelete(t *testing.T) {
 				})
 			},
 			wantDocuments: func(c *testdatabase.Checker) {
-				c.AddBillingDocument(&api.BillingDocument{
+				c.AddBillingDocuments(&api.BillingDocument{
 					Key:                       strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", mockSubID),
 					ID:                        mockSubID,
@@ -160,7 +160,7 @@ func TestDelete(t *testing.T) {
 		{
 			name: "no error on mark for deletion on billing entry that is not found",
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key:                       strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", mockSubID),
 					ID:                        mockSubID,
@@ -178,7 +178,7 @@ func TestDelete(t *testing.T) {
 		{
 			name: "error on mark for deletion on billing entry",
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key:                       strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", mockSubID),
 					ID:                        mockSubID,
@@ -272,7 +272,7 @@ func TestEnsure(t *testing.T) {
 		{
 			name: "create a new billing entry with a subscription not registered for e2e",
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key:                       strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", mockSubID),
 					ID:                        mockSubID,
@@ -286,7 +286,7 @@ func TestEnsure(t *testing.T) {
 						Location: location,
 					},
 				})
-				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
 					Subscription: &api.Subscription{
 						Properties: &api.SubscriptionProperties{
 							RegisteredFeatures: []api.RegisteredFeatureProfile{
@@ -300,7 +300,7 @@ func TestEnsure(t *testing.T) {
 				})
 			},
 			wantDocuments: func(c *testdatabase.Checker) {
-				c.AddBillingDocument(&api.BillingDocument{
+				c.AddBillingDocuments(&api.BillingDocument{
 					Key:                       strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", mockSubID),
 					ID:                        mockSubID,
@@ -315,7 +315,7 @@ func TestEnsure(t *testing.T) {
 		{
 			name: "error on create a new billing entry",
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key:                       strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", mockSubID),
 					ID:                        mockSubID,
@@ -329,7 +329,7 @@ func TestEnsure(t *testing.T) {
 						Location: location,
 					},
 				})
-				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
 					Subscription: &api.Subscription{
 						Properties: &api.SubscriptionProperties{
 							RegisteredFeatures: []api.RegisteredFeatureProfile{
@@ -348,7 +348,7 @@ func TestEnsure(t *testing.T) {
 		{
 			name: "billing document already existing on DB on create",
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key:                       strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", mockSubID),
 					ID:                        mockSubID,
@@ -362,7 +362,7 @@ func TestEnsure(t *testing.T) {
 						Location: location,
 					},
 				})
-				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
 					Subscription: &api.Subscription{
 						Properties: &api.SubscriptionProperties{
 							RegisteredFeatures: []api.RegisteredFeatureProfile{
@@ -374,7 +374,7 @@ func TestEnsure(t *testing.T) {
 						},
 					},
 				})
-				f.AddBillingDocument(&api.BillingDocument{
+				f.AddBillingDocuments(&api.BillingDocument{
 					Key:                       testdatabase.GetResourcePath(mockSubID, "resourceName"),
 					ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", mockSubID),
 					ID:                        mockSubID,

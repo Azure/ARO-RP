@@ -48,36 +48,20 @@ func (f *Fixture) WithAsyncOperations(db database.AsyncOperations) *Fixture {
 	return f
 }
 
-func (f *Fixture) AddOpenShiftClusterDocuments(docs []*api.OpenShiftClusterDocument) {
+func (f *Fixture) AddOpenShiftClusterDocuments(docs ...*api.OpenShiftClusterDocument) {
 	f.openshiftClusterDocuments = append(f.openshiftClusterDocuments, docs...)
 }
 
-func (f *Fixture) AddOpenShiftClusterDocument(doc *api.OpenShiftClusterDocument) {
-	f.openshiftClusterDocuments = append(f.openshiftClusterDocuments, doc)
-}
-
-func (f *Fixture) AddSubscriptionDocuments(docs []*api.SubscriptionDocument) {
+func (f *Fixture) AddSubscriptionDocuments(docs ...*api.SubscriptionDocument) {
 	f.subscriptionDocuments = append(f.subscriptionDocuments, docs...)
 }
 
-func (f *Fixture) AddSubscriptionDocument(doc *api.SubscriptionDocument) {
-	f.subscriptionDocuments = append(f.subscriptionDocuments, doc)
-}
-
-func (f *Fixture) AddBillingDocuments(docs []*api.BillingDocument) {
+func (f *Fixture) AddBillingDocuments(docs ...*api.BillingDocument) {
 	f.billingDocuments = append(f.billingDocuments, docs...)
 }
 
-func (f *Fixture) AddBillingDocument(doc *api.BillingDocument) {
-	f.billingDocuments = append(f.billingDocuments, doc)
-}
-
-func (f *Fixture) AddAsyncOperationDocuments(docs []*api.AsyncOperationDocument) {
+func (f *Fixture) AddAsyncOperationDocuments(docs ...*api.AsyncOperationDocument) {
 	f.asyncOperationDocuments = append(f.asyncOperationDocuments, docs...)
-}
-
-func (f *Fixture) AddAsyncOperationDocument(doc *api.AsyncOperationDocument) {
-	f.asyncOperationDocuments = append(f.asyncOperationDocuments, doc)
 }
 
 func (f *Fixture) Create() error {

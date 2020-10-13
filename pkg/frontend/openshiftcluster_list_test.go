@@ -64,7 +64,7 @@ func TestListOpenShiftCluster(t *testing.T) {
 				for i := 1; i <= 2; i++ {
 					docs = append(docs, makeDoc(i))
 				}
-				f.AddOpenShiftClusterDocuments(docs)
+				f.AddOpenShiftClusterDocuments(docs...)
 			},
 			wantEnriched: []string{
 				testdatabase.GetResourcePath(mockSubID, "resourceName01"),
@@ -95,7 +95,7 @@ func TestListOpenShiftCluster(t *testing.T) {
 				for i := 1; i <= 11; i++ {
 					docs = append(docs, makeDoc(i))
 				}
-				f.AddOpenShiftClusterDocuments(docs)
+				f.AddOpenShiftClusterDocuments(docs...)
 			},
 			wantEnriched: []string{
 				testdatabase.GetResourcePath(mockSubID, "resourceName01"),
@@ -133,7 +133,7 @@ func TestListOpenShiftCluster(t *testing.T) {
 				for i := 1; i < 12; i++ {
 					docs = append(docs, makeDoc(i))
 				}
-				f.AddOpenShiftClusterDocuments(docs)
+				f.AddOpenShiftClusterDocuments(docs...)
 			},
 			wantEnriched:   []string{testdatabase.GetResourcePath(mockSubID, "resourceName11")},
 			skipToken:      base64.StdEncoding.EncodeToString([]byte("FAKE10")),

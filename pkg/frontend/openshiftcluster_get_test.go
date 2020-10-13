@@ -53,7 +53,7 @@ func TestGetOpenShiftCluster(t *testing.T) {
 						},
 					},
 				}
-				f.AddOpenShiftClusterDocument(clusterDoc)
+				f.AddOpenShiftClusterDocuments(clusterDoc)
 			},
 			wantEnriched:   []string{testdatabase.GetResourcePath(mockSubID, "resourceName")},
 			wantStatusCode: http.StatusOK,

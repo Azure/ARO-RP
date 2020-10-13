@@ -27,31 +27,19 @@ func NewChecker() *Checker {
 	return &Checker{}
 }
 
-func (f *Checker) AddOpenShiftClusterDocuments(docs []*api.OpenShiftClusterDocument) {
+func (f *Checker) AddOpenShiftClusterDocuments(docs ...*api.OpenShiftClusterDocument) {
 	f.openshiftClusterDocuments = append(f.openshiftClusterDocuments, docs...)
 }
 
-func (f *Checker) AddOpenShiftClusterDocument(doc *api.OpenShiftClusterDocument) {
-	f.openshiftClusterDocuments = append(f.openshiftClusterDocuments, doc)
-}
-
-func (f *Checker) AddSubscriptionDocuments(docs []*api.SubscriptionDocument) {
+func (f *Checker) AddSubscriptionDocuments(docs ...*api.SubscriptionDocument) {
 	f.subscriptionDocuments = append(f.subscriptionDocuments, docs...)
 }
 
-func (f *Checker) AddSubscriptionDocument(doc *api.SubscriptionDocument) {
-	f.subscriptionDocuments = append(f.subscriptionDocuments, doc)
-}
-
-func (f *Checker) AddBillingDocuments(docs []*api.BillingDocument) {
+func (f *Checker) AddBillingDocuments(docs ...*api.BillingDocument) {
 	f.billingDocuments = append(f.billingDocuments, docs...)
 }
 
-func (f *Checker) AddBillingDocument(doc *api.BillingDocument) {
-	f.billingDocuments = append(f.billingDocuments, doc)
-}
-
-func (f *Checker) AddAsyncOperationDocuments(docs []*api.AsyncOperationDocument) {
+func (f *Checker) AddAsyncOperationDocuments(docs ...*api.AsyncOperationDocument) {
 	f.asyncOperationDocuments = append(f.asyncOperationDocuments, docs...)
 }
 

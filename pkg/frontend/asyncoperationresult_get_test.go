@@ -61,8 +61,8 @@ func TestGetAsyncOperationResult(t *testing.T) {
 					OpenShiftCluster:    clusterDoc.OpenShiftCluster,
 				}
 
-				f.AddOpenShiftClusterDocument(clusterDoc)
-				f.AddAsyncOperationDocument(asyncDoc)
+				f.AddOpenShiftClusterDocuments(clusterDoc)
+				f.AddAsyncOperationDocuments(asyncDoc)
 			},
 			wantStatusCode: http.StatusOK,
 			wantResponse: &v20200430.OpenShiftCluster{
@@ -74,7 +74,7 @@ func TestGetAsyncOperationResult(t *testing.T) {
 		{
 			name: "operation exists in db, but no cluster - final result is available with no content",
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddAsyncOperationDocument(&api.AsyncOperationDocument{
+				f.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
 					ID:                  mockOpID,
 					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "fakeClusterID")),
 				})
@@ -84,11 +84,11 @@ func TestGetAsyncOperationResult(t *testing.T) {
 		{
 			name: "operation and cluster exist in db - final result is not yet available",
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddAsyncOperationDocument(&api.AsyncOperationDocument{
+				f.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
 					ID:                  mockOpID,
 					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "fakeClusterID")),
 				})
-				f.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key:              strings.ToLower(testdatabase.GetResourcePath(mockSubID, "fakeClusterID")),
 					AsyncOperationID: mockOpID,
 				})

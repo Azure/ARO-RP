@@ -62,7 +62,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			},
 			isPatch: true,
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
 					ID: mockSubID,
 					Subscription: &api.Subscription{
 						State: api.SubscriptionStateRegistered,
@@ -71,7 +71,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 						},
 					},
 				})
-				f.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
@@ -85,14 +85,14 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			},
 			wantEnriched: []string{testdatabase.GetResourcePath(mockSubID, "resourceName")},
 			wantDocuments: func(c *testdatabase.Checker) {
-				c.AddAsyncOperationDocument(&api.AsyncOperationDocument{
+				c.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
 					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					AsyncOperation: &api.AsyncOperation{
 						InitialProvisioningState: api.ProvisioningStateAdminUpdating,
 						ProvisioningState:        api.ProvisioningStateAdminUpdating,
 					},
 				})
-				c.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
@@ -132,7 +132,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			},
 			isPatch: true,
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
 					ID: mockSubID,
 					Subscription: &api.Subscription{
 						State: api.SubscriptionStateRegistered,
@@ -141,7 +141,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 						},
 					},
 				})
-				f.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
@@ -155,14 +155,14 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 				})
 			},
 			wantDocuments: func(c *testdatabase.Checker) {
-				c.AddAsyncOperationDocument(&api.AsyncOperationDocument{
+				c.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
 					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					AsyncOperation: &api.AsyncOperation{
 						InitialProvisioningState: api.ProvisioningStateAdminUpdating,
 						ProvisioningState:        api.ProvisioningStateAdminUpdating,
 					},
 				})
-				c.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
@@ -309,7 +309,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				oc.Properties.ClusterProfile.Version = "4.3.0"
 			},
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
 					ID: mockSubID,
 					Subscription: &api.Subscription{
 						State: api.SubscriptionStateRegistered,
@@ -320,14 +320,14 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				})
 			},
 			wantDocuments: func(c *testdatabase.Checker) {
-				c.AddAsyncOperationDocument(&api.AsyncOperationDocument{
+				c.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
 					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					AsyncOperation: &api.AsyncOperation{
 						InitialProvisioningState: api.ProvisioningStateCreating,
 						ProvisioningState:        api.ProvisioningStateCreating,
 					},
 				})
-				c.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key:    strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					Bucket: 1,
 					OpenShiftCluster: &api.OpenShiftCluster{
@@ -365,7 +365,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				oc.Properties.ClusterProfile.Domain = "changed"
 			},
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
 					ID: mockSubID,
 					Subscription: &api.Subscription{
 						State: api.SubscriptionStateRegistered,
@@ -374,7 +374,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						},
 					},
 				})
-				f.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
@@ -397,14 +397,14 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 
 			},
 			wantDocuments: func(c *testdatabase.Checker) {
-				c.AddAsyncOperationDocument(&api.AsyncOperationDocument{
+				c.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
 					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					AsyncOperation: &api.AsyncOperation{
 						InitialProvisioningState: api.ProvisioningStateUpdating,
 						ProvisioningState:        api.ProvisioningStateUpdating,
 					},
 				})
-				c.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
@@ -446,7 +446,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				oc.Properties.ClusterProfile.Domain = "changed"
 			},
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
 					ID: mockSubID,
 					Subscription: &api.Subscription{
 						State: api.SubscriptionStateRegistered,
@@ -455,7 +455,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						},
 					},
 				})
-				f.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
@@ -472,14 +472,14 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				})
 			},
 			wantDocuments: func(c *testdatabase.Checker) {
-				c.AddAsyncOperationDocument(&api.AsyncOperationDocument{
+				c.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
 					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					AsyncOperation: &api.AsyncOperation{
 						InitialProvisioningState: api.ProvisioningStateUpdating,
 						ProvisioningState:        api.ProvisioningStateUpdating,
 					},
 				})
-				c.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
@@ -518,7 +518,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				oc.Properties.ClusterProfile.Domain = "changed"
 			},
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
 					ID: mockSubID,
 					Subscription: &api.Subscription{
 						State: api.SubscriptionStateRegistered,
@@ -527,7 +527,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						},
 					},
 				})
-				f.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
@@ -550,7 +550,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				oc.Properties.ClusterProfile.Domain = "changed"
 			},
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
 					ID: mockSubID,
 					Subscription: &api.Subscription{
 						State: api.SubscriptionStateRegistered,
@@ -559,7 +559,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						},
 					},
 				})
-				f.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
@@ -585,7 +585,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			},
 			isPatch: true,
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
 					ID: mockSubID,
 					Subscription: &api.Subscription{
 						State: api.SubscriptionStateRegistered,
@@ -594,7 +594,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						},
 					},
 				})
-				f.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
@@ -610,14 +610,14 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				})
 			},
 			wantDocuments: func(c *testdatabase.Checker) {
-				c.AddAsyncOperationDocument(&api.AsyncOperationDocument{
+				c.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
 					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					AsyncOperation: &api.AsyncOperation{
 						InitialProvisioningState: api.ProvisioningStateUpdating,
 						ProvisioningState:        api.ProvisioningStateUpdating,
 					},
 				})
-				c.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
@@ -662,7 +662,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			},
 			isPatch: true,
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
 					ID: mockSubID,
 					Subscription: &api.Subscription{
 						State: api.SubscriptionStateRegistered,
@@ -671,7 +671,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						},
 					},
 				})
-				f.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
@@ -688,14 +688,14 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				})
 			},
 			wantDocuments: func(c *testdatabase.Checker) {
-				c.AddAsyncOperationDocument(&api.AsyncOperationDocument{
+				c.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
 					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					AsyncOperation: &api.AsyncOperation{
 						InitialProvisioningState: api.ProvisioningStateUpdating,
 						ProvisioningState:        api.ProvisioningStateUpdating,
 					},
 				})
-				c.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
@@ -741,7 +741,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			},
 			isPatch: true,
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
 					ID: mockSubID,
 					Subscription: &api.Subscription{
 						State: api.SubscriptionStateRegistered,
@@ -750,7 +750,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						},
 					},
 				})
-				f.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
@@ -774,7 +774,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			},
 			isPatch: true,
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
 					ID: mockSubID,
 					Subscription: &api.Subscription{
 						State: api.SubscriptionStateRegistered,
@@ -783,7 +783,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						},
 					},
 				})
-				f.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
@@ -807,7 +807,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				oc.Properties.ClusterProfile.ResourceGroupID = fmt.Sprintf("/subscriptions/%s/resourcegroups/aro-vjb21wca", mockSubID)
 			},
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
 					ID: mockSubID,
 					Subscription: &api.Subscription{
 						State: api.SubscriptionStateRegistered,
@@ -816,7 +816,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						},
 					},
 				})
-				f.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key:                       strings.ToLower(testdatabase.GetResourcePath(mockSubID, "otherResourceName")),
 					ClusterResourceGroupIDKey: strings.ToLower(fmt.Sprintf("/subscriptions/%s/resourcegroups/aro-vjb21wca", mockSubID)),
 					OpenShiftCluster: &api.OpenShiftCluster{
@@ -847,7 +847,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				oc.Properties.ServicePrincipalProfile.ClientID = mockSubID
 			},
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
 					ID: mockSubID,
 					Subscription: &api.Subscription{
 						State: api.SubscriptionStateRegistered,
@@ -856,7 +856,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						},
 					},
 				})
-				f.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key:         strings.ToLower(testdatabase.GetResourcePath(mockSubID, "otherResourceName")),
 					ClientIDKey: mockSubID,
 					OpenShiftCluster: &api.OpenShiftCluster{
