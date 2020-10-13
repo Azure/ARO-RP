@@ -11,7 +11,6 @@ import (
 	"net"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
@@ -19,6 +18,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
+	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
@@ -29,6 +29,7 @@ import (
 
 type prod struct {
 	Core
+	proxy.Dialer
 
 	armClientAuthorizer   clientauthorizer.ClientAuthorizer
 	adminClientAuthorizer clientauthorizer.ClientAuthorizer
@@ -47,10 +48,6 @@ type prod struct {
 	clustersGenevaLoggingConfigVersion string
 	clustersGenevaLoggingEnvironment   string
 
-	e2eStorageAccountName   string
-	e2eStorageAccountRGName string
-	e2eStorageAccountSubID  string
-
 	log *logrus.Entry
 }
 
@@ -60,8 +57,14 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		return nil, err
 	}
 
+	dialer, err := proxy.NewDialer(core.DeploymentMode())
+	if err != nil {
+		return nil, err
+	}
+
 	p := &prod{
-		Core: core,
+		Core:   core,
+		Dialer: dialer,
 
 		clustersGenevaLoggingEnvironment:   "DiagnosticsProd",
 		clustersGenevaLoggingConfigVersion: "2.2",
@@ -105,10 +108,6 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 
 	p.clustersGenevaLoggingPrivateKey = clustersGenevaLoggingPrivateKey
 	p.clustersGenevaLoggingCertificate = clustersGenevaLoggingCertificates[0]
-
-	p.e2eStorageAccountName = "arov4e2e"
-	p.e2eStorageAccountRGName = "global"
-	p.e2eStorageAccountSubID = "0923c7de-9fca-4d9e-baf3-131d0c5b2ea4"
 
 	if p.ACRResourceID() != "" { // TODO: ugh!
 		acrResource, err := azure.ParseResourceID(p.ACRResourceID())
@@ -218,13 +217,6 @@ func (p *prod) ClustersKeyvaultURI() string {
 	return p.clustersKeyvaultURI
 }
 
-func (p *prod) DialContext(ctx context.Context, network, address string) (net.Conn, error) {
-	return (&net.Dialer{
-		Timeout:   30 * time.Second,
-		KeepAlive: 30 * time.Second,
-	}).DialContext(ctx, network, address)
-}
-
 func (p *prod) Domain() string {
 	return p.domain
 }
@@ -258,16 +250,4 @@ func (p *prod) Zones(vmSize string) ([]string, error) {
 func (d *prod) CreateARMResourceGroupRoleAssignment(ctx context.Context, fpAuthorizer refreshable.Authorizer, resourceGroup string) error {
 	// ARM ResourceGroup role assignments are not required in production.
 	return nil
-}
-
-func (p *prod) E2EStorageAccountName() string {
-	return p.e2eStorageAccountName
-}
-
-func (p *prod) E2EStorageAccountRGName() string {
-	return p.e2eStorageAccountRGName
-}
-
-func (p *prod) E2EStorageAccountSubID() string {
-	return p.e2eStorageAccountSubID
 }

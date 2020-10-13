@@ -13,17 +13,17 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
 
-func (i *manager) fixPullSecret(ctx context.Context) error {
+func (m *manager) fixPullSecret(ctx context.Context) error {
 	// TODO: this function does not currently reapply a pull secret in
 	// development mode.
 
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		ps, err := i.kubernetescli.CoreV1().Secrets("openshift-config").Get("pull-secret", metav1.GetOptions{})
+		ps, err := m.kubernetescli.CoreV1().Secrets("openshift-config").Get("pull-secret", metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
 
-		pullSecret, changed, err := pullsecret.SetRegistryProfiles(string(ps.Data[v1.DockerConfigJsonKey]), i.doc.OpenShiftCluster.Properties.RegistryProfiles...)
+		pullSecret, changed, err := pullsecret.SetRegistryProfiles(string(ps.Data[v1.DockerConfigJsonKey]), m.doc.OpenShiftCluster.Properties.RegistryProfiles...)
 		if err != nil {
 			return err
 		}
@@ -34,7 +34,7 @@ func (i *manager) fixPullSecret(ctx context.Context) error {
 
 		ps.Data[v1.DockerConfigJsonKey] = []byte(pullSecret)
 
-		_, err = i.kubernetescli.CoreV1().Secrets("openshift-config").Update(ps)
+		_, err = m.kubernetescli.CoreV1().Secrets("openshift-config").Update(ps)
 		return err
 	})
 }

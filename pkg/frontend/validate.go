@@ -31,7 +31,7 @@ func (f *frontend) getSubscriptionDocument(ctx context.Context, key string) (*ap
 		return nil, err
 	}
 
-	doc, err := f.db.Subscriptions.Get(ctx, r.SubscriptionID)
+	doc, err := f.dbSubscriptions.Get(ctx, r.SubscriptionID)
 	if cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidSubscriptionState, "", "Request is not allowed in unregistered subscription '%s'.", r.SubscriptionID)
 	}
@@ -56,14 +56,14 @@ func (f *frontend) validateSubscriptionState(ctx context.Context, key string, al
 
 // validateOpenShiftUniqueKey returns which unique key if causing a 412 error
 func (f *frontend) validateOpenShiftUniqueKey(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
-	docs, err := f.db.OpenShiftClusters.GetByClientID(ctx, doc.PartitionKey, doc.ClientIDKey)
+	docs, err := f.dbOpenShiftClusters.GetByClientID(ctx, doc.PartitionKey, doc.ClientIDKey)
 	if err != nil {
 		return err
 	}
 	if docs.Count != 0 {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeDuplicateClientID, "", "The provided client ID '%s' is already in use by a cluster.", doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientID)
 	}
-	docs, err = f.db.OpenShiftClusters.GetByClusterResourceGroupID(ctx, doc.PartitionKey, doc.ClusterResourceGroupIDKey)
+	docs, err = f.dbOpenShiftClusters.GetByClusterResourceGroupID(ctx, doc.PartitionKey, doc.ClusterResourceGroupIDKey)
 	if err != nil {
 		return err
 	}
@@ -103,7 +103,8 @@ func validateAdminKubernetesObjects(method, groupKind, namespace, name string) e
 		!rxKubernetesString.MatchString(groupKind) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, "", "The provided groupKind '%s' is invalid.", groupKind)
 	}
-	if strings.EqualFold(groupKind, "secret") {
+	if strings.EqualFold(groupKind, "Secret") ||
+		strings.HasSuffix(strings.ToLower(groupKind), ".oauth.openshift.io") {
 		return api.NewCloudError(http.StatusForbidden, api.CloudErrorCodeForbidden, "", "Access to secrets is forbidden.")
 	}
 

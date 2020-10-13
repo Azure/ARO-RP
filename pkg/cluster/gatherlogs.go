@@ -12,14 +12,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (i *manager) gatherFailureLogs(ctx context.Context) {
+func (m *manager) gatherFailureLogs(ctx context.Context) {
 	for _, f := range []func(context.Context) (interface{}, error){
-		i.logClusterVersion,
-		i.logClusterOperators,
+		m.logClusterVersion,
+		m.logClusterOperators,
+		m.logIngressControllers,
 	} {
 		o, err := f(ctx)
 		if err != nil {
-			i.log.Error(err)
+			m.log.Error(err)
 			continue
 		}
 		if o == nil {
@@ -28,26 +29,34 @@ func (i *manager) gatherFailureLogs(ctx context.Context) {
 
 		b, err := json.Marshal(o)
 		if err != nil {
-			i.log.Error(err)
+			m.log.Error(err)
 			continue
 		}
 
-		i.log.Printf("%s: %s", runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name(), string(b))
+		m.log.Printf("%s: %s", runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name(), string(b))
 	}
 }
 
-func (i *manager) logClusterVersion(ctx context.Context) (interface{}, error) {
-	if i.configcli == nil {
+func (m *manager) logClusterVersion(ctx context.Context) (interface{}, error) {
+	if m.configcli == nil {
 		return nil, nil
 	}
 
-	return i.configcli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
+	return m.configcli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
 }
 
-func (i *manager) logClusterOperators(ctx context.Context) (interface{}, error) {
-	if i.configcli == nil {
+func (m *manager) logClusterOperators(ctx context.Context) (interface{}, error) {
+	if m.configcli == nil {
 		return nil, nil
 	}
 
-	return i.configcli.ConfigV1().ClusterOperators().List(metav1.ListOptions{})
+	return m.configcli.ConfigV1().ClusterOperators().List(metav1.ListOptions{})
+}
+
+func (m *manager) logIngressControllers(ctx context.Context) (interface{}, error) {
+	if m.operatorcli == nil {
+		return nil, nil
+	}
+
+	return m.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").List(metav1.ListOptions{})
 }

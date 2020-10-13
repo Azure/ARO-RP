@@ -50,7 +50,7 @@ func (f *frontend) _getAdminKubernetesObjects(ctx context.Context, r *http.Reque
 
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 
-	doc, err := f.db.OpenShiftClusters.Get(ctx, resourceID)
+	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return nil, api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
@@ -96,7 +96,7 @@ func (f *frontend) _deleteAdminKubernetesObjects(ctx context.Context, r *http.Re
 
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 
-	doc, err := f.db.OpenShiftClusters.Get(ctx, resourceID)
+	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])
@@ -139,7 +139,7 @@ func (f *frontend) _postAdminKubernetesObjects(ctx context.Context, r *http.Requ
 
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 
-	doc, err := f.db.OpenShiftClusters.Get(ctx, resourceID)
+	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
 	switch {
 	case cosmosdb.IsErrorStatusCode(err, http.StatusNotFound):
 		return api.NewCloudError(http.StatusNotFound, api.CloudErrorCodeResourceNotFound, "", "The Resource '%s/%s' under resource group '%s' was not found.", vars["resourceType"], vars["resourceName"], vars["resourceGroupName"])

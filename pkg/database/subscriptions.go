@@ -9,8 +9,11 @@ import (
 	"net/http"
 	"strings"
 
+	uuid "github.com/satori/go.uuid"
+
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
+	"github.com/Azure/ARO-RP/pkg/util/deployment"
 )
 
 const SubscriptionsDequeueQuery string = `SELECT * FROM Subscriptions doc WHERE (doc.deleting ?? false) AND (doc.leaseExpires ?? 0) < GetCurrentTimestamp() / 1000`
@@ -32,7 +35,12 @@ type Subscriptions interface {
 }
 
 // NewSubscriptions returns a new Subscriptions
-func NewSubscriptions(ctx context.Context, uuid string, dbc cosmosdb.DatabaseClient, dbid, collid string) (Subscriptions, error) {
+func NewSubscriptions(ctx context.Context, deploymentMode deployment.Mode, dbc cosmosdb.DatabaseClient) (Subscriptions, error) {
+	dbid, err := databaseName(deploymentMode)
+	if err != nil {
+		return nil, err
+	}
+
 	collc := cosmosdb.NewCollectionClient(dbc, dbid)
 
 	triggers := []*cosmosdb.Trigger{
@@ -62,7 +70,7 @@ func NewSubscriptions(ctx context.Context, uuid string, dbc cosmosdb.DatabaseCli
 		},
 	}
 
-	triggerc := cosmosdb.NewTriggerClient(collc, collid)
+	triggerc := cosmosdb.NewTriggerClient(collc, collSubscriptions)
 	for _, trigger := range triggers {
 		_, err := triggerc.Create(ctx, trigger)
 		if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusConflict) {
@@ -70,14 +78,14 @@ func NewSubscriptions(ctx context.Context, uuid string, dbc cosmosdb.DatabaseCli
 		}
 	}
 
-	documentClient := cosmosdb.NewSubscriptionDocumentClient(collc, collid)
-	return NewSubscriptionsWithProvidedClient(uuid, documentClient), nil
+	documentClient := cosmosdb.NewSubscriptionDocumentClient(collc, collSubscriptions)
+	return NewSubscriptionsWithProvidedClient(documentClient), nil
 }
 
-func NewSubscriptionsWithProvidedClient(uuid string, client cosmosdb.SubscriptionDocumentClient) Subscriptions {
+func NewSubscriptionsWithProvidedClient(client cosmosdb.SubscriptionDocumentClient) Subscriptions {
 	return &subscriptions{
 		c:    client,
-		uuid: uuid,
+		uuid: uuid.NewV4().String(),
 	}
 }
 

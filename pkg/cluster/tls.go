@@ -21,12 +21,12 @@ import (
 	utilpem "github.com/Azure/ARO-RP/pkg/util/pem"
 )
 
-func (i *manager) createCertificates(ctx context.Context) error {
-	if i.env.DeploymentMode() == deployment.Development {
+func (m *manager) createCertificates(ctx context.Context) error {
+	if m.env.DeploymentMode() == deployment.Development {
 		return nil
 	}
 
-	managedDomain, err := dns.ManagedDomain(i.env, i.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
+	managedDomain, err := dns.ManagedDomain(m.env, m.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
 	if err != nil {
 		return err
 	}
@@ -40,26 +40,26 @@ func (i *manager) createCertificates(ctx context.Context) error {
 		commonName      string
 	}{
 		{
-			certificateName: i.doc.ID + "-apiserver",
+			certificateName: m.doc.ID + "-apiserver",
 			commonName:      "api." + managedDomain,
 		},
 		{
-			certificateName: i.doc.ID + "-ingress",
+			certificateName: m.doc.ID + "-ingress",
 			commonName:      "*.apps." + managedDomain,
 		},
 	}
 
 	for _, c := range certs {
-		i.log.Printf("creating certificate %s", c.certificateName)
-		err = i.keyvault.CreateSignedCertificate(ctx, keyvault.IssuerDigicert, c.certificateName, c.commonName, keyvault.EkuServerAuth)
+		m.log.Printf("creating certificate %s", c.certificateName)
+		err = m.keyvault.CreateSignedCertificate(ctx, keyvault.IssuerDigicert, c.certificateName, c.commonName, keyvault.EkuServerAuth)
 		if err != nil {
 			return err
 		}
 	}
 
 	for _, c := range certs {
-		i.log.Printf("waiting for certificate %s", c.certificateName)
-		err = i.keyvault.WaitForCertificateOperation(ctx, c.certificateName)
+		m.log.Printf("waiting for certificate %s", c.certificateName)
+		err = m.keyvault.WaitForCertificateOperation(ctx, c.certificateName)
 		if err != nil {
 			return err
 		}
@@ -68,12 +68,12 @@ func (i *manager) createCertificates(ctx context.Context) error {
 	return nil
 }
 
-func (i *manager) upgradeCertificates(ctx context.Context) error {
-	if i.env.DeploymentMode() == deployment.Development {
+func (m *manager) upgradeCertificates(ctx context.Context) error {
+	if m.env.DeploymentMode() == deployment.Development {
 		return nil
 	}
 
-	managedDomain, err := dns.ManagedDomain(i.env, i.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
+	managedDomain, err := dns.ManagedDomain(m.env, m.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
 	if err != nil {
 		return err
 	}
@@ -82,9 +82,9 @@ func (i *manager) upgradeCertificates(ctx context.Context) error {
 		return nil
 	}
 
-	for _, c := range []string{i.doc.ID + "-apiserver", i.doc.ID + "-ingress"} {
-		i.log.Printf("upgrading certificate %s", c)
-		err = i.keyvault.UpgradeCertificatePolicy(ctx, c)
+	for _, c := range []string{m.doc.ID + "-apiserver", m.doc.ID + "-ingress"} {
+		m.log.Printf("upgrading certificate %s", c)
+		err = m.keyvault.UpgradeCertificatePolicy(ctx, c)
 		if err != nil {
 			return err
 		}
@@ -93,8 +93,8 @@ func (i *manager) upgradeCertificates(ctx context.Context) error {
 	return nil
 }
 
-func (i *manager) ensureSecret(ctx context.Context, secrets coreclient.SecretInterface, certificateName string) error {
-	bundle, err := i.keyvault.GetSecret(ctx, certificateName)
+func (m *manager) ensureSecret(ctx context.Context, secrets coreclient.SecretInterface, certificateName string) error {
+	bundle, err := m.keyvault.GetSecret(ctx, certificateName)
 	if err != nil {
 		return err
 	}
@@ -144,12 +144,12 @@ func (i *manager) ensureSecret(ctx context.Context, secrets coreclient.SecretInt
 	return err
 }
 
-func (i *manager) configureAPIServerCertificate(ctx context.Context) error {
-	if i.env.DeploymentMode() == deployment.Development {
+func (m *manager) configureAPIServerCertificate(ctx context.Context) error {
+	if m.env.DeploymentMode() == deployment.Development {
 		return nil
 	}
 
-	managedDomain, err := dns.ManagedDomain(i.env, i.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
+	managedDomain, err := dns.ManagedDomain(m.env, m.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
 	if err != nil {
 		return err
 	}
@@ -158,13 +158,13 @@ func (i *manager) configureAPIServerCertificate(ctx context.Context) error {
 		return nil
 	}
 
-	err = i.ensureSecret(ctx, i.kubernetescli.CoreV1().Secrets("openshift-config"), i.doc.ID+"-apiserver")
+	err = m.ensureSecret(ctx, m.kubernetescli.CoreV1().Secrets("openshift-config"), m.doc.ID+"-apiserver")
 	if err != nil {
 		return err
 	}
 
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		apiserver, err := i.configcli.ConfigV1().APIServers().Get("cluster", metav1.GetOptions{})
+		apiserver, err := m.configcli.ConfigV1().APIServers().Get("cluster", metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -175,22 +175,22 @@ func (i *manager) configureAPIServerCertificate(ctx context.Context) error {
 					"api." + managedDomain,
 				},
 				ServingCertificate: configv1.SecretNameReference{
-					Name: i.doc.ID + "-apiserver",
+					Name: m.doc.ID + "-apiserver",
 				},
 			},
 		}
 
-		_, err = i.configcli.ConfigV1().APIServers().Update(apiserver)
+		_, err = m.configcli.ConfigV1().APIServers().Update(apiserver)
 		return err
 	})
 }
 
-func (i *manager) configureIngressCertificate(ctx context.Context) error {
-	if i.env.DeploymentMode() == deployment.Development {
+func (m *manager) configureIngressCertificate(ctx context.Context) error {
+	if m.env.DeploymentMode() == deployment.Development {
 		return nil
 	}
 
-	managedDomain, err := dns.ManagedDomain(i.env, i.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
+	managedDomain, err := dns.ManagedDomain(m.env, m.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
 	if err != nil {
 		return err
 	}
@@ -199,22 +199,22 @@ func (i *manager) configureIngressCertificate(ctx context.Context) error {
 		return nil
 	}
 
-	err = i.ensureSecret(ctx, i.kubernetescli.CoreV1().Secrets("openshift-ingress"), i.doc.ID+"-ingress")
+	err = m.ensureSecret(ctx, m.kubernetescli.CoreV1().Secrets("openshift-ingress"), m.doc.ID+"-ingress")
 	if err != nil {
 		return err
 	}
 
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		ic, err := i.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Get("default", metav1.GetOptions{})
+		ic, err := m.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Get("default", metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
 
 		ic.Spec.DefaultCertificate = &v1.LocalObjectReference{
-			Name: i.doc.ID + "-ingress",
+			Name: m.doc.ID + "-ingress",
 		}
 
-		_, err = i.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Update(ic)
+		_, err = m.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Update(ic)
 		return err
 	})
 }

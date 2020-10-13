@@ -28,6 +28,11 @@ import (
 
 const (
 	tenantIDHack = "13805ec3-a223-47ad-ad65-8b2baf92c0fb"
+	//aro-billing-operator SP Id, from https://msazure.visualstudio.com/AzureRedHatOpenShift/_workitems/edit/7547877/
+	//needs cleanup of the old role assignment if changed
+	billingSPID = "970792b5-7720-4bf5-a335-f15e97c7e25a"
+	//based on https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
+	documentDBAccountContributor = "5bd9cd88-fe45-4216-938b-f97437e15450"
 )
 
 var (
@@ -1492,7 +1497,7 @@ func (g *generator) rbac() []*arm.Resource {
 				Type: to.StringPtr("Microsoft.DocumentDB/databaseAccounts/providers/roleAssignments"),
 				RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
 					Scope:            to.StringPtr("[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"),
-					RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '5bd9cd88-fe45-4216-938b-f97437e15450')]"),
+					RoleDefinitionID: to.StringPtr(fmt.Sprintf("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '%s')]", documentDBAccountContributor)),
 					PrincipalID:      to.StringPtr("[parameters('rpServicePrincipalId')]"),
 					PrincipalType:    mgmtauthorization.ServicePrincipal,
 				},
@@ -1518,6 +1523,28 @@ func (g *generator) rbac() []*arm.Resource {
 			APIVersion: azureclient.APIVersions["Microsoft.Authorization"],
 			DependsOn: []string{
 				"[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]",
+			},
+		},
+	}
+}
+
+func (g *generator) billingContributorRbac() []*arm.Resource {
+	return []*arm.Resource{
+		{
+			Resource: &mgmtauthorization.RoleAssignment{
+				Name: to.StringPtr(fmt.Sprintf("[concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), '%s' , 'Billing / DocumentDB Account Contributor'))]", billingSPID)),
+				Type: to.StringPtr("Microsoft.DocumentDB/databaseAccounts/providers/roleAssignments"),
+				RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
+					Scope:            to.StringPtr("[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"),
+					RoleDefinitionID: to.StringPtr(fmt.Sprintf("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '%s')]", documentDBAccountContributor)),
+					PrincipalID:      to.StringPtr(billingSPID),
+					PrincipalType:    mgmtauthorization.ServicePrincipal,
+				},
+			},
+			Condition:  g.conditionStanza("fullDeploy"),
+			APIVersion: azureclient.APIVersions["Microsoft.Authorization"],
+			DependsOn: []string{
+				"[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
 			},
 		},
 	}
@@ -1598,82 +1625,58 @@ func (g *generator) devCIPool() *arm.Resource {
 		)
 	}
 
-	trailer := base64.StdEncoding.EncodeToString([]byte(`yum -y update -x WALinuxAgent
-# install az cli
-sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc
-cat > /etc/yum.repos.d/azure-cli.repo <<'EOF'
-[azure-cli]
-name=Azure CLI
-baseurl=https://packages.microsoft.com/yumrepos/azure-cli
-enabled=1
-gpgcheck=1
-gpgkey=https://packages.microsoft.com/keys/microsoft.asc
-EOF
+	trailer := base64.StdEncoding.EncodeToString([]byte(`
+yum -y update -x WALinuxAgent
 
-# install common tooling
-yum -y install rhui-azure-rhel7-devtools.noarch rhui-azure-rhel7.noarch rhui-azure-rhel7-eus.noarch
-yum -y install docker azure-cli rh-git29 rh-python36 gcc gpgme-devel libassuan-devel
+lvextend -l +100%FREE /dev/rootvg/homelv
+xfs_growfs /home
 
-rm -f ~/.azure/commandIndex.json # https://github.com/Azure/azure-cli/issues/14997
+rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
+rpm --import https://packages.microsoft.com/keys/microsoft.asc
 
-systemctl enable docker
-systemctl start docker
-
-# install jq
 yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-yum -y install jq
 
-cat > /etc/profile.d/enablerh-git29.sh <<'EOF'
-#!/bin/bash
-if [ -x /usr/bin/scl_source ]; then
-  if [ -r /etc/scl/prefixes/rh-git29 ]; then
-	source scl_source enable rh-git29
-  fi
-fi
+cat >/etc/yum.repos.d/azure.repo <<'EOF'
+[azure-cli]
+name=azure-cli
+baseurl=https://packages.microsoft.com/yumrepos/azure-cli
+enabled=yes
+gpgcheck=yes
 EOF
 
-cat > /etc/profile.d/enablerh-python36.sh <<'EOF'
-#!/bin/bash
-if [ -x /usr/bin/scl_source ]; then
-  if [ -r /etc/scl/prefixes/rh-python36 ]; then
-  source scl_source enable rh-python36
-  fi
-fi
-EOF
+yum --enablerepo=rhui-rhel-7-server-rhui-optional-rpms -y install azure-cli docker jq libassuan-devel gcc gpgme-devel rh-git29 rh-python36
 
-# install golang
-GO_VERSION=1.13.15
-curl -sL https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz -o /tmp/go${GO_VERSION}.linux-amd64.tar.gz
-mkdir -p /usr/local/go
-tar -C /usr/local/go -xzf /tmp/go${GO_VERSION}.linux-amd64.tar.gz --strip-components=1 go
-ln -s /usr/local/go/bin/* /usr/bin/
+GO_VERSION=1.14.9
+curl https://dl.google.com/go/go${GO_VERSION}.linux-amd64.tar.gz | tar -C /usr/local -xz
+ln -s /usr/local/go/bin/* /usr/local/bin
 
-# Install azp agent
-VSTS_AGENT=2.172.2
-curl -sL https://vstsagentpackage.azureedge.net/agent/${VSTS_AGENT}/vsts-agent-linux-x64-${VSTS_AGENT}.tar.gz -o /tmp/vsts-agent-linux-x64-${VSTS_AGENT}.tar.gz
-mkdir /home/cloud-user/agent && cd /home/cloud-user/agent
-tar zxvf /tmp/vsts-agent-linux-x64-${VSTS_AGENT}.tar.gz
+VSTS_AGENT_VERSION=2.175.2
+mkdir /home/cloud-user/agent
+pushd /home/cloud-user/agent
+curl https://vstsagentpackage.azureedge.net/agent/${VSTS_AGENT_VERSION}/vsts-agent-linux-x64-${VSTS_AGENT_VERSION}.tar.gz | tar -xz
+chown -R cloud-user:cloud-user .
+
 ./bin/installdependencies.sh
-sudo chown cloud-user:root -R /home/cloud-user/agent
+sudo -u cloud-user ./config.sh --unattended --url https://dev.azure.com/msazure --auth pat --token "$CIAZPTOKEN" --pool "$CIPOOLNAME" --agent "ARO-RHEL-$HOSTNAME" --replace
+./svc.sh install cloud-user
+popd
 
-# configure agent
-sudo -u cloud-user ./config.sh --unattended --url https://dev.azure.com/msazure --auth pat --token "$CIAZPTOKEN" --pool "$CIPOOLNAME" --agent "ARO-RHEL-$HOSTNAME"
-./svc.sh install
-
-# azure scripts do not work well with rhel
-# TODO: Fix upstream in vsts repos
-cat > /home/cloud-user/agent/.path <<'EOF'
+# merge in /opt/rh/rh-*/enable
+cat >/home/cloud-user/agent/.path <<'EOF'
 /opt/rh/rh-python36/root/usr/bin:/opt/rh/rh-git29/root/usr/bin:/usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/home/cloud-user/.local/bin:/home/cloud-user/bin
 EOF
 
-cat > /home/cloud-user/agent/.env <<'EOF'
-LANG=en_US.UTF-8
+cat >/home/cloud-user/agent/.env <<'EOF'
 LD_LIBRARY_PATH=/opt/rh/rh-python36/root/usr/lib64:/opt/rh/httpd24/root/usr/lib64
+MANPATH=/opt/rh/rh-python36/root/usr/share/man:/opt/rh/rh-git29/root/usr/share/man
 PERL5LIB=/opt/rh/rh-git29/root/usr/share/perl5/vendor_perl
-HOME=/home/cloud-user
+PKG_CONFIG_PATH=/opt/rh/rh-python36/root/usr/lib64/pkgconfig
+XDG_DATA_DIRS=/opt/rh/rh-python36/root/usr/share:/usr/local/share:/usr/share
 EOF
 
-firewall-cmd --add-port=443/tcp --permanent
+sed -i -e 's/^OPTIONS='\''/OPTIONS='\''-G cloud-user /' /etc/sysconfig/docker
+
+systemctl enable docker
 
 (sleep 30; reboot) &
 `))
@@ -1713,7 +1716,7 @@ firewall-cmd --add-port=443/tcp --permanent
 						ImageReference: &mgmtcompute.ImageReference{
 							Publisher: to.StringPtr("RedHat"),
 							Offer:     to.StringPtr("RHEL"),
-							Sku:       to.StringPtr("7-RAW"),
+							Sku:       to.StringPtr("7-LVM"),
 							Version:   to.StringPtr("latest"),
 						},
 						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{

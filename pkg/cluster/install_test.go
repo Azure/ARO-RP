@@ -13,8 +13,12 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/golang/mock/gomock"
+	"github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 	configv1 "github.com/openshift/api/config/v1"
+	operatorv1 "github.com/openshift/api/operator/v1"
 	"github.com/openshift/client-go/config/clientset/versioned/fake"
+	fakeoperatorv1 "github.com/openshift/client-go/operator/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -25,7 +29,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
-	test_log "github.com/Azure/ARO-RP/test/util/log"
+	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 func failingFunc(context.Context) error { return errors.New("oh no!") }
@@ -59,84 +63,106 @@ var clusterVersion = &configv1.ClusterVersion{
 	},
 }
 
+var ingressControllers = &operatorv1.IngressController{
+	ObjectMeta: metav1.ObjectMeta{
+		Namespace: "openshift-ingress-operator",
+	},
+	Spec: operatorv1.IngressControllerSpec{
+		Domain: "aroapp.io",
+	},
+}
+
 func TestStepRunnerWithInstaller(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tt := range []struct {
 		name        string
 		steps       []steps.Step
-		wantEntries []test_log.ExpectedLogEntry
+		wantEntries []map[string]types.GomegaMatcher
 		wantErr     string
 		configcli   *fake.Clientset
+		operatorcli *fakeoperatorv1.Clientset
 	}{
 		{
-			name: "Failed step run will log cluster version and cluster operator information if available",
+			name: "Failed step run will log cluster version, cluster operator status, and ingress information if available",
 			steps: []steps.Step{
 				steps.Action(failingFunc),
 			},
 			wantErr: "oh no!",
-			wantEntries: []test_log.ExpectedLogEntry{
+			wantEntries: []map[string]types.GomegaMatcher{
 				{
-					Level:   logrus.InfoLevel,
-					Message: `running step [Action github.com/Azure/ARO-RP/pkg/cluster.failingFunc]`,
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(`running step [Action github.com/Azure/ARO-RP/pkg/cluster.failingFunc]`),
 				},
 				{
-					Level:   logrus.ErrorLevel,
-					Message: "step [Action github.com/Azure/ARO-RP/pkg/cluster.failingFunc] encountered error: oh no!",
+					"level": gomega.Equal(logrus.ErrorLevel),
+					"msg":   gomega.Equal("step [Action github.com/Azure/ARO-RP/pkg/cluster.failingFunc] encountered error: oh no!"),
 				},
 				{
-					Level:        logrus.InfoLevel,
-					MessageRegex: `github.com/Azure/ARO-RP/pkg/cluster.\(\*manager\).logClusterVersion\-fm: {.*"version":"1.2.3".*}`,
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.MatchRegexp(`github.com/Azure/ARO-RP/pkg/cluster.\(\*manager\).logClusterVersion\-fm: {.*"version":"1.2.3".*}`),
 				},
 				{
-					Level:        logrus.InfoLevel,
-					MessageRegex: `github.com/Azure/ARO-RP/pkg/cluster.\(\*manager\).logClusterOperators\-fm: {.*"versions":\[{"name":"operator","version":"4.3.0"},{"name":"operator\-good","version":"4.3.1"}\].*}`,
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.MatchRegexp(`github.com/Azure/ARO-RP/pkg/cluster.\(\*manager\).logClusterOperators\-fm: {.*"versions":\[{"name":"operator","version":"4.3.0"},{"name":"operator\-good","version":"4.3.1"}\].*}`),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.MatchRegexp(`github.com/Azure/ARO-RP/pkg/cluster.\(\*manager\).logIngressControllers\-fm: {.*"items":\[{.*"domain":"aroapp.io"}.*\]}`),
 				},
 			},
-			configcli: fake.NewSimpleClientset(clusterVersion, clusterOperators),
+			configcli:   fake.NewSimpleClientset(clusterVersion, clusterOperators),
+			operatorcli: fakeoperatorv1.NewSimpleClientset(ingressControllers),
 		},
 		{
-			name: "Failed step run will not crash if it cannot get the clusterversions or clusteroperators",
+			name: "Failed step run will not crash if it cannot get the clusterversions, clusteroperators, ingresscontrollers",
 			steps: []steps.Step{
 				steps.Action(failingFunc),
 			},
 			wantErr: "oh no!",
-			wantEntries: []test_log.ExpectedLogEntry{
+			wantEntries: []map[string]types.GomegaMatcher{
 				{
-					Level:   logrus.InfoLevel,
-					Message: `running step [Action github.com/Azure/ARO-RP/pkg/cluster.failingFunc]`,
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(`running step [Action github.com/Azure/ARO-RP/pkg/cluster.failingFunc]`),
 				},
 				{
-					Level:   logrus.ErrorLevel,
-					Message: "step [Action github.com/Azure/ARO-RP/pkg/cluster.failingFunc] encountered error: oh no!",
+					"level": gomega.Equal(logrus.ErrorLevel),
+					"msg":   gomega.Equal("step [Action github.com/Azure/ARO-RP/pkg/cluster.failingFunc] encountered error: oh no!"),
 				},
 				{
-					Level:   logrus.ErrorLevel,
-					Message: `clusterversions.config.openshift.io "version" not found`,
+					"level": gomega.Equal(logrus.ErrorLevel),
+					"msg":   gomega.Equal(`clusterversions.config.openshift.io "version" not found`),
 				},
 				{
-					Level:   logrus.InfoLevel,
-					Message: `github.com/Azure/ARO-RP/pkg/cluster.(*manager).logClusterOperators-fm: {"metadata":{},"items":null}`,
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(`github.com/Azure/ARO-RP/pkg/cluster.(*manager).logClusterOperators-fm: {"metadata":{},"items":null}`),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(`github.com/Azure/ARO-RP/pkg/cluster.(*manager).logIngressControllers-fm: {"metadata":{},"items":null}`),
 				},
 			},
-			configcli: fake.NewSimpleClientset(),
+			configcli:   fake.NewSimpleClientset(),
+			operatorcli: fakeoperatorv1.NewSimpleClientset(),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			h, log := test_log.NewCapturingLogger()
-			i := &manager{
-				log:       log,
-				configcli: tt.configcli,
+			h, log := testlog.New()
+			m := &manager{
+				log:         log,
+				configcli:   tt.configcli,
+				operatorcli: tt.operatorcli,
 			}
 
-			err := i.runSteps(ctx, tt.steps)
+			err := m.runSteps(ctx, tt.steps)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
 			}
 
-			for _, e := range test_log.AssertLoggingOutput(h, tt.wantEntries) {
-				t.Error(e)
+			err = testlog.AssertLoggingOutput(h, tt.wantEntries)
+			if err != nil {
+				t.Error(err)
 			}
 		})
 	}
@@ -230,12 +256,12 @@ func TestDeployARMTemplate(t *testing.T) {
 			deploymentsClient := mock_features.NewMockDeploymentsClient(controller)
 			tt.mocks(deploymentsClient)
 
-			i := &manager{
+			m := &manager{
 				log:         logrus.NewEntry(logrus.StandardLogger()),
 				deployments: deploymentsClient,
 			}
 
-			err := i.deployARMTemplate(ctx, resourceGroup, "test", armTemplate, params)
+			err := m.deployARMTemplate(ctx, resourceGroup, "test", armTemplate, params)
 
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
@@ -249,21 +275,23 @@ func TestAddResourceProviderVersion(t *testing.T) {
 	ctx := context.Background()
 	key := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1"
 
-	openShiftClustersDatabase, _, uuid := testdatabase.NewFakeOpenShiftClusters()
-
-	clusterdoc := &api.OpenShiftClusterDocument{
+	openShiftClustersDatabase, _ := testdatabase.NewFakeOpenShiftClusters()
+	fixture := testdatabase.NewFixture().WithOpenShiftClusters(openShiftClustersDatabase)
+	fixture.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
 		Key: strings.ToLower(key),
 		OpenShiftCluster: &api.OpenShiftCluster{
-			ID:         key,
-			Properties: api.OpenShiftClusterProperties{},
+			ID: key,
+			Properties: api.OpenShiftClusterProperties{
+				ProvisioningState: api.ProvisioningStateCreating,
+			},
 		},
-		LeaseOwner:   uuid,
-		LeaseExpires: 99999999999999,
+	})
+	err := fixture.Create()
+	if err != nil {
+		t.Fatal(err)
 	}
 
-	fixture := testdatabase.NewFixture().WithOpenShiftClusters(openShiftClustersDatabase)
-	fixture.AddOpenShiftClusterDocument(clusterdoc)
-	err := fixture.Create()
+	clusterdoc, err := openShiftClustersDatabase.Dequeue(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

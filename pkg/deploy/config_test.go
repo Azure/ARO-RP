@@ -125,6 +125,7 @@ func TestConfigRequiredValues(t *testing.T) {
 	FPServicePrincipalID := "FPServicePrincipalID"
 	GlobalMonitoringKeyVaultURI := "GlobalMonitoringKeyVaultURI"
 	GlobalResourceGroupName := "GlobalResourceGroupName"
+	GlobalResourceGroupLocation := "GlobalResourceGroupLocation"
 	GlobalSubscriptionID := "GlobalSubscriptionID"
 	KeyvaultPrefix := "KeyvaultPrefix"
 	MDSDConfigVersion := "MDSDConfigVersion"
@@ -135,6 +136,7 @@ func TestConfigRequiredValues(t *testing.T) {
 	RPVersionStorageAccountName := "RPVersionStorageAccountName"
 	SSHPublicKey := "SSHPublicKey"
 	SubscriptionResourceGroupName := "SubscriptionResourceGroupName"
+	SubscriptionResourceGroupLocation := "SubscriptionResourceGroupLocation"
 	VMSize := "VMSize"
 
 	for _, tt := range []struct {
@@ -160,6 +162,7 @@ func TestConfigRequiredValues(t *testing.T) {
 					FPServicePrincipalID:               &FPServicePrincipalID,
 					GlobalMonitoringKeyVaultURI:        &GlobalMonitoringKeyVaultURI,
 					GlobalResourceGroupName:            &GlobalResourceGroupName,
+					GlobalResourceGroupLocation:        &GlobalResourceGroupLocation,
 					GlobalSubscriptionID:               &GlobalSubscriptionID,
 					KeyvaultPrefix:                     &KeyvaultPrefix,
 					MDSDConfigVersion:                  &MDSDConfigVersion,
@@ -171,6 +174,7 @@ func TestConfigRequiredValues(t *testing.T) {
 					RPVersionStorageAccountName:        &RPVersionStorageAccountName,
 					SSHPublicKey:                       &SSHPublicKey,
 					SubscriptionResourceGroupName:      &SubscriptionResourceGroupName,
+					SubscriptionResourceGroupLocation:  &SubscriptionResourceGroupLocation,
 					VMSize:                             &VMSize,
 				},
 			},
@@ -185,7 +189,7 @@ func TestConfigRequiredValues(t *testing.T) {
 					ExtraCosmosDBIPs: []string{ExtraCosmosDBIPs},
 				},
 			},
-			expect: fmt.Errorf("Configuration has missing fields: %s", "[RPVersionStorageAccountName AdminAPIClientCertCommonName ClusterParentDomainName DatabaseAccountName ExtraClusterKeyvaultAccessPolicies ExtraServiceKeyvaultAccessPolicies FPServicePrincipalID GlobalMonitoringKeyVaultURI GlobalResourceGroupName GlobalSubscriptionID KeyvaultPrefix MDMFrontendURL MDSDConfigVersion MDSDEnvironment RPImagePrefix RPNSGSourceAddressPrefixes RPParentDomainName SubscriptionResourceGroupName SSHPublicKey VMSize]"),
+			expect: fmt.Errorf("Configuration has missing fields: %s", "[RPVersionStorageAccountName AdminAPIClientCertCommonName ClusterParentDomainName DatabaseAccountName ExtraClusterKeyvaultAccessPolicies ExtraServiceKeyvaultAccessPolicies FPServicePrincipalID GlobalMonitoringKeyVaultURI GlobalResourceGroupName GlobalResourceGroupLocation GlobalSubscriptionID KeyvaultPrefix MDMFrontendURL MDSDConfigVersion MDSDEnvironment RPImagePrefix RPNSGSourceAddressPrefixes RPParentDomainName SubscriptionResourceGroupName SubscriptionResourceGroupLocation SSHPublicKey VMSize]"),
 		},
 	} {
 		valid := tt.config.validate()

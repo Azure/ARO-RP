@@ -205,9 +205,9 @@ func TestDelete(t *testing.T) {
 			_env.EXPECT().DeploymentMode().AnyTimes().Return(deployment.Production)
 
 			log := logrus.NewEntry(logrus.StandardLogger())
-			openShiftClusterDatabase, _, _ := testdatabase.NewFakeOpenShiftClusters()
-			billingDatabase, billingClient, _ := testdatabase.NewFakeBilling()
-			subscriptionsDatabase, _, _ := testdatabase.NewFakeSubscriptions()
+			openShiftClusterDatabase, _ := testdatabase.NewFakeOpenShiftClusters()
+			billingDatabase, billingClient := testdatabase.NewFakeBilling()
+			subscriptionsDatabase, _ := testdatabase.NewFakeSubscriptions()
 
 			if tt.fixture != nil {
 				fixture := testdatabase.NewFixture().
@@ -396,9 +396,9 @@ func TestEnsure(t *testing.T) {
 			_env.EXPECT().DeploymentMode().AnyTimes().Return(deployment.Production)
 
 			log := logrus.NewEntry(logrus.StandardLogger())
-			openShiftClusterDatabase, _, _ := testdatabase.NewFakeOpenShiftClusters()
-			billingDatabase, billingClient, _ := testdatabase.NewFakeBilling()
-			subscriptionsDatabase, _, _ := testdatabase.NewFakeSubscriptions()
+			openShiftClusterDatabase, _ := testdatabase.NewFakeOpenShiftClusters()
+			billingDatabase, billingClient := testdatabase.NewFakeBilling()
+			subscriptionsDatabase, _ := testdatabase.NewFakeSubscriptions()
 
 			if tt.fixture != nil {
 				fixture := testdatabase.NewFixture().

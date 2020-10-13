@@ -34,7 +34,7 @@ func (f *frontend) _putSubscription(ctx context.Context, r *http.Request) ([]byt
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 	vars := mux.Vars(r)
 
-	doc, err := f.db.Subscriptions.Get(ctx, vars["subscriptionId"])
+	doc, err := f.dbSubscriptions.Get(ctx, vars["subscriptionId"])
 	if err != nil && !cosmosdb.IsErrorStatusCode(err, http.StatusNotFound) {
 		return nil, err
 	}
@@ -86,9 +86,9 @@ func (f *frontend) _putSubscription(ctx context.Context, r *http.Request) ([]byt
 	}
 
 	if isCreate {
-		doc, err = f.db.Subscriptions.Create(ctx, doc)
+		doc, err = f.dbSubscriptions.Create(ctx, doc)
 	} else {
-		doc, err = f.db.Subscriptions.Update(ctx, doc)
+		doc, err = f.dbSubscriptions.Update(ctx, doc)
 	}
 	if err != nil {
 		return nil, err

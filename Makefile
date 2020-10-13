@@ -7,9 +7,12 @@ export CGO_CFLAGS=-Dgpgme_off_t=off_t
 aro: generate
 	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro
 
-az:
-	cd python/az/aro && python ./setup.py bdist_egg
-	cd python/az/aro && python ./setup.py bdist_wheel || true
+az: pyenv
+	. pyenv/bin/activate && \
+	cd python/az/aro && \
+	python ./setup.py bdist_egg && \
+	python ./setup.py bdist_wheel || true && \
+	rm -f ~/.azure/commandIndex.json # https://github.com/Azure/azure-cli/issues/1499
 
 clean:
 	rm -rf python/az/aro/{aro.egg-info,build,dist} aro
@@ -57,9 +60,9 @@ publish-image-routefix: image-routefix
 proxy:
 	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./hack/proxy
 
-pyenv${PYTHON_VERSION}:
-	virtualenv --python=/usr/bin/python${PYTHON_VERSION} pyenv${PYTHON_VERSION}
-	. pyenv${PYTHON_VERSION}/bin/activate && \
+pyenv:
+	virtualenv pyenv
+	. pyenv/bin/activate && \
 		pip install autopep8 azdev azure-mgmt-loganalytics==0.2.0 ruamel.yaml wheel && \
 		azdev setup -r . && \
 		sed -i -e "s|^dev_sources = $(PWD)$$|dev_sources = $(PWD)/python|" ~/.azure/config
@@ -101,9 +104,8 @@ test-go: generate
 lint-go: generate
 	golangci-lint run
 
-test-python: generate pyenv${PYTHON_VERSION}
-	. pyenv${PYTHON_VERSION}/bin/activate && \
-		$(MAKE) az && \
+test-python: generate pyenv az
+	. pyenv/bin/activate && \
 		azdev linter && \
 		azdev style && \
 		hack/format-yaml/format-yaml.py .pipelines

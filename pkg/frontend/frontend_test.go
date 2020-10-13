@@ -16,6 +16,8 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
+	"github.com/onsi/gomega"
+	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,7 +36,7 @@ func TestAdminReply(t *testing.T) {
 		err            error
 		wantStatusCode int
 		wantBody       interface{}
-		wantEntries    []testlog.ExpectedLogEntry
+		wantEntries    []map[string]types.GomegaMatcher
 	}{
 		{
 			name: "kubernetes error",
@@ -58,10 +60,10 @@ func TestAdminReply(t *testing.T) {
 					"target":  "routes.route.openshift.io/doesntexist",
 				},
 			},
-			wantEntries: []testlog.ExpectedLogEntry{
+			wantEntries: []map[string]types.GomegaMatcher{
 				{
-					Level:   logrus.InfoLevel,
-					Message: `404: NotFound: routes.route.openshift.io/doesntexist: routes.route.openshift.io "doesntexist" not found`,
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(`404: NotFound: routes.route.openshift.io/doesntexist: routes.route.openshift.io "doesntexist" not found`),
 				},
 			},
 		},
@@ -83,10 +85,10 @@ func TestAdminReply(t *testing.T) {
 					"target":  "thing",
 				},
 			},
-			wantEntries: []testlog.ExpectedLogEntry{
+			wantEntries: []map[string]types.GomegaMatcher{
 				{
-					Level:   logrus.InfoLevel,
-					Message: `400: RequestNotAllowed: thing: You can't do that.`,
+					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(`400: RequestNotAllowed: thing: You can't do that.`),
 				},
 			},
 		},
@@ -105,10 +107,10 @@ func TestAdminReply(t *testing.T) {
 					"message": "Internal server error.",
 				},
 			},
-			wantEntries: []testlog.ExpectedLogEntry{
+			wantEntries: []map[string]types.GomegaMatcher{
 				{
-					Level:   logrus.ErrorLevel,
-					Message: `random error`,
+					"level": gomega.Equal(logrus.ErrorLevel),
+					"msg":   gomega.Equal(`random error`),
 				},
 			},
 		},
@@ -127,7 +129,7 @@ func TestAdminReply(t *testing.T) {
 				tt.header = http.Header{}
 			}
 
-			h, log := testlog.NewCapturingLogger()
+			h, log := testlog.New()
 			w := &httptest.ResponseRecorder{
 				Body: &bytes.Buffer{},
 			}
@@ -161,8 +163,9 @@ func TestAdminReply(t *testing.T) {
 				}
 			}
 
-			for _, e := range testlog.AssertLoggingOutput(h, tt.wantEntries) {
-				t.Error(e)
+			err := testlog.AssertLoggingOutput(h, tt.wantEntries)
+			if err != nil {
+				t.Error(err)
 			}
 		})
 	}

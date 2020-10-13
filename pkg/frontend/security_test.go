@@ -64,7 +64,7 @@ func TestSecurity(t *testing.T) {
 	pool := x509.NewCertPool()
 	pool.AddCert(servercerts[0])
 
-	f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), _env, nil, api.APIs, &noop.Noop{}, nil, nil)
+	f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), _env, nil, nil, nil, api.APIs, &noop.Noop{}, nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

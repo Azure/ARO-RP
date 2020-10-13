@@ -5,6 +5,7 @@ package cluster
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"reflect"
 	"strings"
@@ -34,20 +35,19 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
-	"github.com/Azure/ARO-RP/pkg/util/feature"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
-func (i *manager) createDNS(ctx context.Context) error {
-	return i.dns.Create(ctx, i.doc.OpenShiftCluster)
+func (m *manager) createDNS(ctx context.Context) error {
+	return m.dns.Create(ctx, m.doc.OpenShiftCluster)
 }
 
-func (i *manager) clusterSPObjectID(ctx context.Context) (string, error) {
+func (m *manager) clusterSPObjectID(ctx context.Context) (string, error) {
 	var clusterSPObjectID string
-	spp := &i.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
+	spp := &m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
 
-	token, err := aad.GetToken(ctx, i.log, i.doc.OpenShiftCluster, azure.PublicCloud.GraphEndpoint)
+	token, err := aad.GetToken(ctx, m.log, m.doc.OpenShiftCluster, azure.PublicCloud.GraphEndpoint)
 	if err != nil {
 		return "", err
 	}
@@ -65,7 +65,7 @@ func (i *manager) clusterSPObjectID(ctx context.Context) (string, error) {
 		res, err = applications.GetServicePrincipalsIDByAppID(ctx, spp.ClientID)
 		if err != nil {
 			if strings.Contains(err.Error(), "Authorization_IdentityNotFound") {
-				i.log.Info(err)
+				m.log.Info(err)
 				return false, nil
 			}
 			return false, err
@@ -78,15 +78,15 @@ func (i *manager) clusterSPObjectID(ctx context.Context) (string, error) {
 	return clusterSPObjectID, err
 }
 
-func (i *manager) deployStorageTemplate(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image, bootstrapLoggingConfig *bootstraplogging.Config) error {
-	if i.doc.OpenShiftCluster.Properties.InfraID == "" {
+func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image, bootstrapLoggingConfig *bootstraplogging.Config) error {
+	if m.doc.OpenShiftCluster.Properties.InfraID == "" {
 		clusterID := &installconfig.ClusterID{}
 
 		err := clusterID.Generate(asset.Parents{
 			reflect.TypeOf(installConfig): &installconfig.InstallConfig{
 				Config: &types.InstallConfig{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: strings.ToLower(i.doc.OpenShiftCluster.Name),
+						Name: strings.ToLower(m.doc.OpenShiftCluster.Name),
 					},
 				},
 			},
@@ -95,7 +95,7 @@ func (i *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 			return err
 		}
 
-		i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 			doc.OpenShiftCluster.Properties.InfraID = clusterID.InfraID
 			return nil
 		})
@@ -103,29 +103,46 @@ func (i *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 			return err
 		}
 	}
-	infraID := i.doc.OpenShiftCluster.Properties.InfraID
+	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 
-	resourceGroup := stringutils.LastTokenByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
-	i.log.Print("creating resource group")
+	m.log.Print("creating resource group")
 	group := mgmtfeatures.ResourceGroup{
 		Location:  &installConfig.Config.Azure.Region,
-		ManagedBy: to.StringPtr(i.doc.OpenShiftCluster.ID),
+		ManagedBy: to.StringPtr(m.doc.OpenShiftCluster.ID),
 	}
-	if i.env.DeploymentMode() == deployment.Development {
+	if m.env.DeploymentMode() == deployment.Development {
 		group.ManagedBy = nil
 	}
-	_, err := i.groups.CreateOrUpdate(ctx, resourceGroup, group)
+	_, err := m.groups.CreateOrUpdate(ctx, resourceGroup, group)
+	if requestErr, ok := err.(*azure.RequestError); ok &&
+		requestErr.ServiceError != nil && requestErr.ServiceError.Code == "RequestDisallowedByPolicy" {
+		// if request was disallowed by policy, inform user so they can take appropriate action
+		b, _ := json.Marshal(requestErr.ServiceError)
+		return &api.CloudError{
+			StatusCode: http.StatusBadRequest,
+			CloudErrorBody: &api.CloudErrorBody{
+				Code:    api.CloudErrorCodeDeploymentFailed,
+				Message: "Deployment failed.",
+				Details: []api.CloudErrorBody{
+					{
+						Message: string(b),
+					},
+				},
+			},
+		}
+	}
 	if err != nil {
 		return err
 	}
 
-	err = i.env.CreateARMResourceGroupRoleAssignment(ctx, i.fpAuthorizer, resourceGroup)
+	err = m.env.CreateARMResourceGroupRoleAssignment(ctx, m.fpAuthorizer, resourceGroup)
 	if err != nil {
 		return err
 	}
 
-	clusterSPObjectID, err := i.clusterSPObjectID(ctx)
+	clusterSPObjectID, err := m.clusterSPObjectID(ctx)
 	if err != nil {
 		return err
 	}
@@ -152,7 +169,7 @@ func (i *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 					Sku: &mgmtstorage.Sku{
 						Name: "Standard_LRS",
 					},
-					Name:     to.StringPtr("cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix),
+					Name:     to.StringPtr("cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix),
 					Location: &installConfig.Config.Azure.Region,
 					Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
 				},
@@ -160,25 +177,25 @@ func (i *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 			},
 			{
 				Resource: &mgmtstorage.BlobContainer{
-					Name: to.StringPtr("cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix + "/default/ignition"),
+					Name: to.StringPtr("cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix + "/default/ignition"),
 					Type: to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
 				},
 				APIVersion: azureclient.APIVersions["Microsoft.Storage"],
 				DependsOn: []string{
-					"Microsoft.Storage/storageAccounts/cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix,
+					"Microsoft.Storage/storageAccounts/cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix,
 				},
 			},
 			{
 				Resource: &mgmtstorage.BlobContainer{
-					Name: to.StringPtr("cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix + "/default/aro"),
+					Name: to.StringPtr("cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix + "/default/aro"),
 					Type: to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
 				},
 				APIVersion: azureclient.APIVersions["Microsoft.Storage"],
 				DependsOn: []string{
-					"Microsoft.Storage/storageAccounts/cluster" + i.doc.OpenShiftCluster.Properties.StorageSuffix,
+					"Microsoft.Storage/storageAccounts/cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix,
 				},
 			},
-			i.apiServerNSG(installConfig.Config.Azure.Region),
+			m.apiServerNSG(installConfig.Config.Azure.Region),
 			{
 				Resource: &mgmtnetwork.SecurityGroup{
 					Name:     to.StringPtr(infraID + subnet.NSGNodeSuffix),
@@ -190,22 +207,22 @@ func (i *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 		},
 	}
 
-	if i.env.DeploymentMode() == deployment.Production {
-		t.Resources = append(t.Resources, i.denyAssignments(clusterSPObjectID))
+	if m.env.DeploymentMode() == deployment.Production {
+		t.Resources = append(t.Resources, m.denyAssignments(clusterSPObjectID))
 	}
 
-	err = i.deployARMTemplate(ctx, resourceGroup, "storage", t, nil)
+	err = m.deployARMTemplate(ctx, resourceGroup, "storage", t, nil)
 	if err != nil {
 		return err
 	}
 
-	exists, err := i.graphExists(ctx)
+	exists, err := m.graphExists(ctx)
 	if err != nil || exists {
 		return err
 	}
 
 	clusterID := &installconfig.ClusterID{
-		UUID:    i.doc.ID,
+		UUID:    m.doc.ID,
 		InfraID: infraID,
 	}
 
@@ -217,7 +234,7 @@ func (i *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 		reflect.TypeOf(bootstrapLoggingConfig): bootstrapLoggingConfig,
 	}
 
-	i.log.Print("resolving graph")
+	m.log.Print("resolving graph")
 	for _, a := range targets.Cluster {
 		_, err := g.resolve(a)
 		if err != nil {
@@ -226,24 +243,19 @@ func (i *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 	}
 
 	// the graph is quite big so we store it in a storage account instead of in cosmosdb
-	return i.saveGraph(ctx, g)
+	return m.saveGraph(ctx, g)
 }
 
-func (i *manager) denyAssignments(clusterSPObjectID string) *arm.Resource {
+func (m *manager) denyAssignments(clusterSPObjectID string) *arm.Resource {
 	notActions := []string{
 		"Microsoft.Network/networkSecurityGroups/join/action",
-	}
-
-	if feature.IsRegisteredForFeature(i.subscriptionDoc.Subscription.Properties, "Microsoft.RedHatOpenShift/EnableSnapshots") {
-		notActions = append(notActions, []string{
-			"Microsoft.Compute/disks/beginGetAccess/action",
-			"Microsoft.Compute/disks/endGetAccess/action",
-			"Microsoft.Compute/disks/write",
-			"Microsoft.Compute/snapshots/beginGetAccess/action",
-			"Microsoft.Compute/snapshots/endGetAccess/action",
-			"Microsoft.Compute/snapshots/write",
-			"Microsoft.Compute/snapshots/delete",
-		}...)
+		"Microsoft.Compute/disks/beginGetAccess/action",
+		"Microsoft.Compute/disks/endGetAccess/action",
+		"Microsoft.Compute/disks/write",
+		"Microsoft.Compute/snapshots/beginGetAccess/action",
+		"Microsoft.Compute/snapshots/endGetAccess/action",
+		"Microsoft.Compute/snapshots/write",
+		"Microsoft.Compute/snapshots/delete",
 	}
 
 	return &arm.Resource{
@@ -262,7 +274,7 @@ func (i *manager) denyAssignments(clusterSPObjectID string) *arm.Resource {
 						NotActions: &notActions,
 					},
 				},
-				Scope: &i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID,
+				Scope: &m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID,
 				Principals: &[]mgmtauthorization.Principal{
 					{
 						ID:   to.StringPtr("00000000-0000-0000-0000-000000000000"),
@@ -282,15 +294,15 @@ func (i *manager) denyAssignments(clusterSPObjectID string) *arm.Resource {
 	}
 }
 
-func (i *manager) deploySnapshotUpgradeTemplate(ctx context.Context) error {
-	if i.env.DeploymentMode() != deployment.Production {
+func (m *manager) deploySnapshotUpgradeTemplate(ctx context.Context) error {
+	if m.env.DeploymentMode() != deployment.Production {
 		// only need this upgrade in production, where there are DenyAssignments
 		return nil
 	}
 
-	resourceGroup := stringutils.LastTokenByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
-	clusterSPObjectID, err := i.clusterSPObjectID(ctx)
+	clusterSPObjectID, err := m.clusterSPObjectID(ctx)
 	if err != nil {
 		return err
 	}
@@ -298,27 +310,27 @@ func (i *manager) deploySnapshotUpgradeTemplate(ctx context.Context) error {
 	t := &arm.Template{
 		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 		ContentVersion: "1.0.0.0",
-		Resources:      []*arm.Resource{i.denyAssignments(clusterSPObjectID)},
+		Resources:      []*arm.Resource{m.denyAssignments(clusterSPObjectID)},
 	}
 
-	return i.deployARMTemplate(ctx, resourceGroup, "storage", t, nil)
+	return m.deployARMTemplate(ctx, resourceGroup, "storage", t, nil)
 }
 
-func (i *manager) attachNSGsAndPatch(ctx context.Context) error {
-	g, err := i.loadGraph(ctx)
+func (m *manager) attachNSGsAndPatch(ctx context.Context) error {
+	g, err := m.loadGraph(ctx)
 	if err != nil {
 		return err
 	}
 
 	for _, subnetID := range []string{
-		i.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
-		i.doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID,
+		m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID,
+		m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID,
 	} {
-		i.log.Printf("attaching network security group to subnet %s", subnetID)
+		m.log.Printf("attaching network security group to subnet %s", subnetID)
 
 		// TODO: there is probably an undesirable race condition here - check if etags can help.
 
-		s, err := i.subnet.Get(ctx, subnetID)
+		s, err := m.subnet.Get(ctx, subnetID)
 		if err != nil {
 			return err
 		}
@@ -327,7 +339,7 @@ func (i *manager) attachNSGsAndPatch(ctx context.Context) error {
 			s.SubnetPropertiesFormat = &mgmtnetwork.SubnetPropertiesFormat{}
 		}
 
-		nsgID, err := subnet.NetworkSecurityGroupID(i.doc.OpenShiftCluster, subnetID)
+		nsgID, err := subnet.NetworkSecurityGroupID(m.doc.OpenShiftCluster, subnetID)
 		if err != nil {
 			return err
 		}
@@ -348,19 +360,19 @@ func (i *manager) attachNSGsAndPatch(ctx context.Context) error {
 			ID: to.StringPtr(nsgID),
 		}
 
-		err = i.subnet.CreateOrUpdate(ctx, subnetID, s)
+		err = m.subnet.CreateOrUpdate(ctx, subnetID, s)
 		if err != nil {
 			return err
 		}
 	}
 
 	adminInternalClient := g[reflect.TypeOf(&kubeconfig.AdminInternalClient{})].(*kubeconfig.AdminInternalClient)
-	aroServiceInternalClient, err := i.generateAROServiceKubeconfig(g)
+	aroServiceInternalClient, err := m.generateAROServiceKubeconfig(g)
 	if err != nil {
 		return err
 	}
 
-	i.doc, err = i.db.PatchWithLease(ctx, i.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		// used for the SAS token with which the bootstrap node retrieves its
 		// ignition payload
 		var t time.Time

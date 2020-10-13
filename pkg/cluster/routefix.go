@@ -9,7 +9,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/routefix"
 )
 
-func (i *manager) ensureRouteFix(ctx context.Context) error {
-	rf := routefix.New(i.log, i.env, i.kubernetescli, i.securitycli)
+func (m *manager) ensureRouteFix(ctx context.Context) error {
+	rf := routefix.New(m.log, m.env, m.kubernetescli, m.securitycli)
 	return rf.CreateOrUpdate(ctx)
 }

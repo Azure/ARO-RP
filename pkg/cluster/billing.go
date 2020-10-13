@@ -7,6 +7,6 @@ import (
 	"context"
 )
 
-func (i *manager) ensureBillingRecord(ctx context.Context) error {
-	return i.billing.Ensure(ctx, i.doc)
+func (m *manager) ensureBillingRecord(ctx context.Context) error {
+	return m.billing.Ensure(ctx, m.doc)
 }

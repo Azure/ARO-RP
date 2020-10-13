@@ -468,7 +468,7 @@ func TestFixLBProbes(t *testing.T) {
 			loadbalancersClient := mock_network.NewMockLoadBalancersClient(controller)
 			tt.mocks(loadbalancersClient)
 
-			i := &manager{
+			m := &manager{
 				kubernetescli: kubernetescli,
 				loadbalancers: loadbalancersClient,
 				doc: &api.OpenShiftClusterDocument{
@@ -483,7 +483,7 @@ func TestFixLBProbes(t *testing.T) {
 				},
 			}
 
-			err := i.fixLBProbes(ctx)
+			err := m.fixLBProbes(ctx)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

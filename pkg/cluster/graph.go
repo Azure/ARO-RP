@@ -153,10 +153,10 @@ func (g graph) resolve(a asset.Asset) (asset.Asset, error) {
 	return g[reflect.TypeOf(a)], nil
 }
 
-func (i *manager) graphExists(ctx context.Context) (bool, error) {
-	i.log.Print("checking if graph exists")
+func (m *manager) graphExists(ctx context.Context) (bool, error) {
+	m.log.Print("checking if graph exists")
 
-	blobService, err := i.getBlobService(ctx, mgmtstorage.Permissions("r"), mgmtstorage.SignedResourceTypesO)
+	blobService, err := m.getBlobService(ctx, mgmtstorage.Permissions("r"), mgmtstorage.SignedResourceTypesO)
 	if err != nil {
 		return false, err
 	}
@@ -165,10 +165,10 @@ func (i *manager) graphExists(ctx context.Context) (bool, error) {
 	return aro.GetBlobReference("graph").Exists()
 }
 
-func (i *manager) loadGraph(ctx context.Context) (graph, error) {
-	i.log.Print("load graph")
+func (m *manager) loadGraph(ctx context.Context) (graph, error) {
+	m.log.Print("load graph")
 
-	blobService, err := i.getBlobService(ctx, mgmtstorage.Permissions("r"), mgmtstorage.SignedResourceTypesO)
+	blobService, err := m.getBlobService(ctx, mgmtstorage.Permissions("r"), mgmtstorage.SignedResourceTypesO)
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +186,7 @@ func (i *manager) loadGraph(ctx context.Context) (graph, error) {
 		return nil, err
 	}
 
-	output, err := i.cipher.Decrypt(encrypted)
+	output, err := m.cipher.Decrypt(encrypted)
 	if err != nil {
 		return nil, err
 	}
@@ -200,10 +200,10 @@ func (i *manager) loadGraph(ctx context.Context) (graph, error) {
 	return g, nil
 }
 
-func (i *manager) saveGraph(ctx context.Context, g graph) error {
-	i.log.Print("save graph")
+func (m *manager) saveGraph(ctx context.Context, g graph) error {
+	m.log.Print("save graph")
 
-	blobService, err := i.getBlobService(ctx, mgmtstorage.Permissions("cw"), mgmtstorage.SignedResourceTypesO)
+	blobService, err := m.getBlobService(ctx, mgmtstorage.Permissions("cw"), mgmtstorage.SignedResourceTypesO)
 	if err != nil {
 		return err
 	}
@@ -221,7 +221,7 @@ func (i *manager) saveGraph(ctx context.Context, g graph) error {
 		return err
 	}
 
-	output, err := i.cipher.Encrypt(b)
+	output, err := m.cipher.Encrypt(b)
 	if err != nil {
 		return err
 	}

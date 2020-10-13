@@ -47,12 +47,12 @@ func TestEnsureBillingEntry(t *testing.T) {
 			billing := mock_billing.NewMockManager(controller)
 			tt.mocks(billing)
 
-			i := &manager{
+			m := &manager{
 				doc:     &api.OpenShiftClusterDocument{},
 				billing: billing,
 			}
 
-			err := i.ensureBillingRecord(ctx)
+			err := m.ensureBillingRecord(ctx)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

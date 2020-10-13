@@ -120,25 +120,25 @@ func newTestInfra(t *testing.T) *testInfra {
 }
 
 func (ti *testInfra) WithOpenShiftClusters() *testInfra {
-	ti.openShiftClustersDatabase, ti.openShiftClustersClient, _ = testdatabase.NewFakeOpenShiftClusters()
+	ti.openShiftClustersDatabase, ti.openShiftClustersClient = testdatabase.NewFakeOpenShiftClusters()
 	ti.fixture.WithOpenShiftClusters(ti.openShiftClustersDatabase)
 	return ti
 }
 
 func (ti *testInfra) WithBilling() *testInfra {
-	ti.billingDatabase, ti.billingClient, _ = testdatabase.NewFakeBilling()
+	ti.billingDatabase, ti.billingClient = testdatabase.NewFakeBilling()
 	ti.fixture.WithBilling(ti.billingDatabase)
 	return ti
 }
 
 func (ti *testInfra) WithSubscriptions() *testInfra {
-	ti.subscriptionsDatabase, ti.subscriptionsClient, _ = testdatabase.NewFakeSubscriptions()
+	ti.subscriptionsDatabase, ti.subscriptionsClient = testdatabase.NewFakeSubscriptions()
 	ti.fixture.WithSubscriptions(ti.subscriptionsDatabase)
 	return ti
 }
 
 func (ti *testInfra) WithAsyncOperations() *testInfra {
-	ti.asyncOperationsDatabase, ti.asyncOperationsClient, _ = testdatabase.NewFakeAsyncOperations()
+	ti.asyncOperationsDatabase, ti.asyncOperationsClient = testdatabase.NewFakeAsyncOperations()
 	ti.fixture.WithAsyncOperations(ti.asyncOperationsDatabase)
 	return ti
 }

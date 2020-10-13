@@ -26,33 +26,15 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 )
 
-// Database represents a database
-type Database struct {
-	log *logrus.Entry
-	m   metrics.Interface
+const (
+	collAsyncOperations   = "AsyncOperations"
+	collBilling           = "Billing"
+	collMonitors          = "Monitors"
+	collOpenShiftClusters = "OpenShiftClusters"
+	collSubscriptions     = "Subscriptions"
+)
 
-	AsyncOperations   AsyncOperations
-	Billing           Billing
-	Monitors          Monitors
-	OpenShiftClusters OpenShiftClusters
-	Subscriptions     Subscriptions
-}
-
-// NewDatabase returns a new Database
-func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Core, m metrics.Interface, cipher encryption.Cipher, uuid string) (db *Database, err error) {
-	databaseName := "ARO"
-	if env.DeploymentMode() == deployment.Development {
-		for _, key := range []string{
-			"DATABASE_NAME",
-		} {
-			if _, found := os.LookupEnv(key); !found {
-				return nil, fmt.Errorf("environment variable %q unset (development mode)", key)
-			}
-		}
-
-		databaseName = os.Getenv("DATABASE_NAME")
-	}
-
+func NewDatabaseClient(ctx context.Context, log *logrus.Entry, env env.Core, m metrics.Interface, cipher encryption.Cipher) (cosmosdb.DatabaseClient, error) {
 	databaseAccount, masterKey, err := find(ctx, env)
 	if err != nil {
 		return nil, err
@@ -69,42 +51,7 @@ func NewDatabase(ctx context.Context, log *logrus.Entry, env env.Core, m metrics
 		Timeout: 30 * time.Second,
 	}
 
-	dbc, err := cosmosdb.NewDatabaseClient(log, c, h, databaseAccount, masterKey)
-	if err != nil {
-		return nil, err
-	}
-
-	db = &Database{
-		log: log,
-		m:   m,
-	}
-
-	db.AsyncOperations, err = NewAsyncOperations(uuid, dbc, databaseName, "AsyncOperations")
-	if err != nil {
-		return nil, err
-	}
-
-	db.Billing, err = NewBilling(ctx, uuid, dbc, databaseName, "Billing")
-	if err != nil {
-		return nil, err
-	}
-
-	db.Monitors, err = NewMonitors(ctx, uuid, dbc, databaseName, "Monitors")
-	if err != nil {
-		return nil, err
-	}
-
-	db.OpenShiftClusters, err = NewOpenShiftClusters(ctx, uuid, dbc, databaseName, "OpenShiftClusters")
-	if err != nil {
-		return nil, err
-	}
-
-	db.Subscriptions, err = NewSubscriptions(ctx, uuid, dbc, databaseName, "Subscriptions")
-	if err != nil {
-		return nil, err
-	}
-
-	return db, nil
+	return cosmosdb.NewDatabaseClient(log, c, h, databaseAccount, masterKey)
 }
 
 func NewJSONHandle(cipher encryption.Cipher) *codec.JsonHandle {
@@ -119,6 +66,22 @@ func NewJSONHandle(cipher encryption.Cipher) *codec.JsonHandle {
 	h.SetInterfaceExt(reflect.TypeOf(api.SecureBytes{}), 1, secureBytesExt{cipher: cipher})
 	h.SetInterfaceExt(reflect.TypeOf((*api.SecureString)(nil)), 1, secureStringExt{cipher: cipher})
 	return h
+}
+
+func databaseName(deploymentMode deployment.Mode) (string, error) {
+	if deploymentMode != deployment.Development {
+		return "ARO", nil
+	}
+
+	for _, key := range []string{
+		"DATABASE_NAME",
+	} {
+		if _, found := os.LookupEnv(key); !found {
+			return "", fmt.Errorf("environment variable %q unset (development mode)", key)
+		}
+	}
+
+	return os.Getenv("DATABASE_NAME"), nil
 }
 
 func find(ctx context.Context, env env.Core) (string, string, error) {

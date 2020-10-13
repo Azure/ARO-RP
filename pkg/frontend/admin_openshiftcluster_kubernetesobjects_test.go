@@ -237,6 +237,13 @@ func TestValidateAdminKubernetesObjectsNonCustomer(t *testing.T) {
 			wantErr:   "403: Forbidden: : Access to secrets is forbidden.",
 		},
 		{
+			test:      "forbidden groupKind",
+			groupKind: "Anything.oauth.openshift.io",
+			namespace: "openshift-ns",
+			name:      "Valid-NAME-01",
+			wantErr:   "403: Forbidden: : Access to secrets is forbidden.",
+		},
+		{
 			test:      "empty groupKind",
 			namespace: "openshift-ns",
 			name:      "Valid-NAME-01",

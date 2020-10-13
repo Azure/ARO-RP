@@ -49,7 +49,7 @@ func TestBootstrapConfigMapReady(t *testing.T) {
 			want:               true,
 		},
 	} {
-		i := &manager{
+		m := &manager{
 			kubernetescli: k8sfake.NewSimpleClientset(&corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      tt.configMapName,
@@ -60,7 +60,7 @@ func TestBootstrapConfigMapReady(t *testing.T) {
 				},
 			}),
 		}
-		ready, err := i.bootstrapConfigMapReady(ctx)
+		ready, err := m.bootstrapConfigMapReady(ctx)
 		if err != nil {
 			t.Error(errMustBeNilMsg)
 		}
@@ -87,14 +87,14 @@ func TestOperatorConsoleExists(t *testing.T) {
 			want:        true,
 		},
 	} {
-		i := &manager{
+		m := &manager{
 			operatorcli: operatorfake.NewSimpleClientset(&operatorv1.Console{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: tt.consoleName,
 				},
 			}),
 		}
-		ready, err := i.operatorConsoleExists(ctx)
+		ready, err := m.operatorConsoleExists(ctx)
 		if err != nil {
 			t.Error(errMustBeNilMsg)
 		}
@@ -182,7 +182,7 @@ func TestClusterVersionReady(t *testing.T) {
 			want:               true,
 		},
 	} {
-		i := &manager{
+		m := &manager{
 			configcli: configfake.NewSimpleClientset(&configv1.ClusterVersion{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: tt.version,
@@ -197,7 +197,7 @@ func TestClusterVersionReady(t *testing.T) {
 				},
 			}),
 		}
-		ready, err := i.clusterVersionReady(ctx)
+		ready, err := m.clusterVersionReady(ctx)
 		if err != nil {
 			t.Error(errMustBeNilMsg)
 		}

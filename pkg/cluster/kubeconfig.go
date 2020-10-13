@@ -17,7 +17,7 @@ import (
 
 // generateAROServiceKubeconfig generates additional admin credentials and kubeconfig
 // based on admin kubeconfig found in graph
-func (i *manager) generateAROServiceKubeconfig(g graph) (*kubeconfig.AdminInternalClient, error) {
+func (m *manager) generateAROServiceKubeconfig(g graph) (*kubeconfig.AdminInternalClient, error) {
 	ca := g[reflect.TypeOf(&tls.AdminKubeConfigSignerCertKey{})].(*tls.AdminKubeConfigSignerCertKey)
 	cfg := &tls.CertCfg{
 		Subject:      pkix.Name{CommonName: "system:aro-service", Organization: []string{"system:masters"}},

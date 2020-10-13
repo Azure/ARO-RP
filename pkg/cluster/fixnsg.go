@@ -13,19 +13,19 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
-func (i *manager) fixNSG(ctx context.Context) error {
-	if i.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {
+func (m *manager) fixNSG(ctx context.Context) error {
+	if m.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {
 		return nil
 	}
 
-	infraID := i.doc.OpenShiftCluster.Properties.InfraID
+	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 	if infraID == "" {
 		infraID = "aro"
 	}
 
-	resourceGroup := stringutils.LastTokenByte(i.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
+	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
-	nsg, err := i.securitygroups.Get(ctx, resourceGroup, infraID+subnet.NSGControlPlaneSuffix, "")
+	nsg, err := m.securitygroups.Get(ctx, resourceGroup, infraID+subnet.NSGControlPlaneSuffix, "")
 	if err != nil {
 		return err
 	}
@@ -54,5 +54,5 @@ func (i *manager) fixNSG(ctx context.Context) error {
 
 	nsg.SecurityRules = &rules
 
-	return i.securitygroups.CreateOrUpdateAndWait(ctx, resourceGroup, infraID+subnet.NSGControlPlaneSuffix, nsg)
+	return m.securitygroups.CreateOrUpdateAndWait(ctx, resourceGroup, infraID+subnet.NSGControlPlaneSuffix, nsg)
 }
