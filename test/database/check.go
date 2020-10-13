@@ -14,7 +14,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 )
 
-const DELETION_TIME_SET = 123456789
+const deletionTimeSetSentinel = 123456789
 
 type Checker struct {
 	openshiftClusterDocuments []*api.OpenShiftClusterDocument
@@ -118,7 +118,12 @@ func (f *Checker) CheckBilling(Billing *cosmosdb.FakeBillingDocumentClient) []er
 	// If they exist, change certain values to magic ones
 	for _, doc := range all.BillingDocuments {
 		if doc.Billing.DeletionTime != 0 {
-			doc.Billing.DeletionTime = DELETION_TIME_SET
+			doc.Billing.DeletionTime = deletionTimeSetSentinel
+		}
+	}
+	for _, doc := range f.billingDocuments {
+		if doc.Billing.DeletionTime != 0 {
+			doc.Billing.DeletionTime = deletionTimeSetSentinel
 		}
 	}
 

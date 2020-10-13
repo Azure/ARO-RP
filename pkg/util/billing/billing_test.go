@@ -152,7 +152,7 @@ func TestDelete(t *testing.T) {
 					Billing: &api.Billing{
 						TenantID:     mockTenantID,
 						Location:     location,
-						DeletionTime: testdatabase.DELETION_TIME_SET,
+						DeletionTime: 1,
 					},
 				})
 			},
