@@ -9,10 +9,10 @@ import (
 	"net"
 )
 
-type testAddr struct{}
+type addr struct{}
 
-func (testAddr) Network() string { return "" }
-func (testAddr) String() string  { return "" }
+func (addr) Network() string { return "testlistener" }
+func (addr) String() string  { return "testlistener" }
 
 type Listener struct {
 	c      chan net.Conn
@@ -42,7 +42,7 @@ func (l *Listener) Close() error {
 }
 
 func (*Listener) Addr() net.Addr {
-	return testAddr{}
+	return &addr{}
 }
 
 func (l *Listener) DialContext(context.Context, string, string) (net.Conn, error) {
