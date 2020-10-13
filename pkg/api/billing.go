@@ -7,7 +7,7 @@ package api
 type Billing struct {
 	MissingFields
 
-	CreationTime    int `json:"creationTime,omitempty"`
+	CreationTime    int `json:"creationTime,omitempty" deep:"-"`
 	DeletionTime    int `json:"deletionTime,omitempty"`
 	LastBillingTime int `json:"lastBillingTime,omitempty"`
 

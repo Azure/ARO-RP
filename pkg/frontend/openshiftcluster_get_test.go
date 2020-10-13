@@ -5,19 +5,15 @@ package frontend
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"strings"
 	"testing"
-
-	"github.com/golang/mock/gomock"
-	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	v20200430 "github.com/Azure/ARO-RP/pkg/api/v20200430"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
-	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
+	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
 func TestGetOpenShiftCluster(t *testing.T) {
@@ -26,7 +22,8 @@ func TestGetOpenShiftCluster(t *testing.T) {
 	type test struct {
 		name           string
 		resourceID     string
-		mocks          func(*test, *mock_database.MockOpenShiftClusters)
+		fixture        func(*testdatabase.Fixture)
+		dbError        error
 		wantEnriched   []string
 		wantStatusCode int
 		wantResponse   func(*test) *v20200430.OpenShiftCluster
@@ -38,11 +35,12 @@ func TestGetOpenShiftCluster(t *testing.T) {
 	for _, tt := range []*test{
 		{
 			name:       "cluster exists in db",
-			resourceID: getResourcePath(mockSubID, "resourceName"),
-			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters) {
+			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			fixture: func(f *testdatabase.Fixture) {
 				clusterDoc := &api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					OpenShiftCluster: &api.OpenShiftCluster{
-						ID:   tt.resourceID,
+						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
 						Name: "resourceName",
 						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 						Properties: api.OpenShiftClusterProperties{
@@ -55,12 +53,9 @@ func TestGetOpenShiftCluster(t *testing.T) {
 						},
 					},
 				}
-
-				openshiftClusters.EXPECT().
-					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
-					Return(clusterDoc, nil)
+				f.AddOpenShiftClusterDocument(clusterDoc)
 			},
-			wantEnriched:   []string{getResourcePath(mockSubID, "resourceName")},
+			wantEnriched:   []string{testdatabase.GetResourcePath(mockSubID, "resourceName")},
 			wantStatusCode: http.StatusOK,
 			wantResponse: func(tt *test) *v20200430.OpenShiftCluster {
 				return &v20200430.OpenShiftCluster{
@@ -71,40 +66,33 @@ func TestGetOpenShiftCluster(t *testing.T) {
 			},
 		},
 		{
-			name:       "cluster not found in db",
-			resourceID: getResourcePath(mockSubID, "resourceName"),
-			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters) {
-				openshiftClusters.EXPECT().
-					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
-					Return(nil, &cosmosdb.Error{StatusCode: http.StatusNotFound})
-			},
+			name:           "cluster not found in db",
+			resourceID:     testdatabase.GetResourcePath(mockSubID, "resourceName"),
 			wantStatusCode: http.StatusNotFound,
 			wantError:      `404: ResourceNotFound: : The Resource 'openshiftclusters/resourcename' under resource group 'resourcegroup' was not found.`,
 		},
 		{
-			name:       "internal error",
-			resourceID: getResourcePath(mockSubID, "resourceName"),
-			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters) {
-				openshiftClusters.EXPECT().
-					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
-					Return(nil, errors.New("random error"))
-			},
+			name:           "internal error",
+			resourceID:     testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			dbError:        &cosmosdb.Error{Code: "500", Message: "oh no"},
 			wantStatusCode: http.StatusInternalServerError,
 			wantError:      `500: InternalServerError: : Internal server error.`,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			ti, err := newTestInfra(t)
+			ti := newTestInfra(t).WithOpenShiftClusters()
+			defer ti.done()
+
+			err := ti.buildFixtures(tt.fixture)
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer ti.done()
 
-			openshiftClusters := mock_database.NewMockOpenShiftClusters(ti.controller)
+			if tt.dbError != nil {
+				ti.openShiftClustersClient.SetError(tt.dbError)
+			}
 
-			tt.mocks(tt, openshiftClusters)
-
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, openshiftClusters, nil, api.APIs, &noop.Noop{}, nil, nil)
+			f, err := NewFrontend(ctx, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, api.APIs, &noop.Noop{}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

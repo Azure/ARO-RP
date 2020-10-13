@@ -5,20 +5,16 @@ package frontend
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"testing"
 
-	"github.com/golang/mock/gomock"
-	"github.com/sirupsen/logrus"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	v20200430 "github.com/Azure/ARO-RP/pkg/api/v20200430"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
-	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
+	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
 func TestPostOpenShiftClusterCredentials(t *testing.T) {
@@ -38,7 +34,8 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 		name           string
 		resourceID     string
 		apiVersion     string
-		mocks          func(*test, *mock_database.MockOpenShiftClusters)
+		fixture        func(*testdatabase.Fixture)
+		dbError        error
 		wantStatusCode int
 		wantResponse   func(*test) *v20200430.OpenShiftClusterCredentials
 		wantError      string
@@ -48,26 +45,34 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 		{
 			name:       "cluster exists in db",
 			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters) {
-				openshiftClusters.EXPECT().
-					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
-					Return(&api.OpenShiftClusterDocument{
-						OpenShiftCluster: &api.OpenShiftCluster{
-							ID:   tt.resourceID,
-							Name: "resourceName",
-							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-							Properties: api.OpenShiftClusterProperties{
-								ProvisioningState: api.ProvisioningStateSucceeded,
-								ClusterProfile: api.ClusterProfile{
-									PullSecret: "{}",
-								},
-								ServicePrincipalProfile: api.ServicePrincipalProfile{
-									ClientSecret: "clientSecret",
-								},
-								KubeadminPassword: "password",
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+						Name: "resourceName",
+						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState: api.ProvisioningStateSucceeded,
+							ClusterProfile: api.ClusterProfile{
+								PullSecret: "{}",
 							},
+							ServicePrincipalProfile: api.ServicePrincipalProfile{
+								ClientSecret: "clientSecret",
+							},
+							KubeadminPassword: "password",
 						},
-					}, nil)
+					},
+				})
+				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "11111111-1111-1111-1111-111111111111",
+						},
+					},
+				})
 			},
 			wantStatusCode: http.StatusOK,
 			wantResponse: func(tt *test) *v20200430.OpenShiftClusterCredentials {
@@ -87,25 +92,33 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 		{
 			name:       "cluster exists in db in creating state",
 			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters) {
-				openshiftClusters.EXPECT().
-					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
-					Return(&api.OpenShiftClusterDocument{
-						OpenShiftCluster: &api.OpenShiftCluster{
-							ID:   tt.resourceID,
-							Name: "resourceName",
-							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-							Properties: api.OpenShiftClusterProperties{
-								ProvisioningState: api.ProvisioningStateCreating,
-								ClusterProfile: api.ClusterProfile{
-									PullSecret: "{}",
-								},
-								ServicePrincipalProfile: api.ServicePrincipalProfile{
-									ClientSecret: "clientSecret",
-								},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+						Name: "resourceName",
+						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState: api.ProvisioningStateCreating,
+							ClusterProfile: api.ClusterProfile{
+								PullSecret: "{}",
+							},
+							ServicePrincipalProfile: api.ServicePrincipalProfile{
+								ClientSecret: "clientSecret",
 							},
 						},
-					}, nil)
+					},
+				})
+				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "11111111-1111-1111-1111-111111111111",
+						},
+					},
+				})
 			},
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      `400: RequestNotAllowed: : Request is not allowed in provisioningState 'Creating'.`,
@@ -113,25 +126,33 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 		{
 			name:       "cluster exists in db in deleting state",
 			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters) {
-				openshiftClusters.EXPECT().
-					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
-					Return(&api.OpenShiftClusterDocument{
-						OpenShiftCluster: &api.OpenShiftCluster{
-							ID:   tt.resourceID,
-							Name: "resourceName",
-							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-							Properties: api.OpenShiftClusterProperties{
-								ProvisioningState: api.ProvisioningStateDeleting,
-								ClusterProfile: api.ClusterProfile{
-									PullSecret: "{}",
-								},
-								ServicePrincipalProfile: api.ServicePrincipalProfile{
-									ClientSecret: "clientSecret",
-								},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+						Name: "resourceName",
+						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState: api.ProvisioningStateDeleting,
+							ClusterProfile: api.ClusterProfile{
+								PullSecret: "{}",
+							},
+							ServicePrincipalProfile: api.ServicePrincipalProfile{
+								ClientSecret: "clientSecret",
 							},
 						},
-					}, nil)
+					},
+				})
+				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "11111111-1111-1111-1111-111111111111",
+						},
+					},
+				})
 			},
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      `400: RequestNotAllowed: : Request is not allowed in provisioningState 'Deleting'.`,
@@ -139,26 +160,34 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 		{
 			name:       "cluster failed to create",
 			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters) {
-				openshiftClusters.EXPECT().
-					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
-					Return(&api.OpenShiftClusterDocument{
-						OpenShiftCluster: &api.OpenShiftCluster{
-							ID:   tt.resourceID,
-							Name: "resourceName",
-							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-							Properties: api.OpenShiftClusterProperties{
-								ProvisioningState: api.ProvisioningStateFailed,
-								ClusterProfile: api.ClusterProfile{
-									PullSecret: "{}",
-								},
-								FailedProvisioningState: api.ProvisioningStateCreating,
-								ServicePrincipalProfile: api.ServicePrincipalProfile{
-									ClientSecret: "clientSecret",
-								},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+						Name: "resourceName",
+						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState: api.ProvisioningStateFailed,
+							ClusterProfile: api.ClusterProfile{
+								PullSecret: "{}",
+							},
+							FailedProvisioningState: api.ProvisioningStateCreating,
+							ServicePrincipalProfile: api.ServicePrincipalProfile{
+								ClientSecret: "clientSecret",
 							},
 						},
-					}, nil)
+					},
+				})
+				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "11111111-1111-1111-1111-111111111111",
+						},
+					},
+				})
 			},
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      `400: RequestNotAllowed: : Request is not allowed in provisioningState 'Failed'.`,
@@ -166,26 +195,34 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 		{
 			name:       "cluster failed to delete",
 			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters) {
-				openshiftClusters.EXPECT().
-					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
-					Return(&api.OpenShiftClusterDocument{
-						OpenShiftCluster: &api.OpenShiftCluster{
-							ID:   tt.resourceID,
-							Name: "resourceName",
-							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-							Properties: api.OpenShiftClusterProperties{
-								ProvisioningState: api.ProvisioningStateFailed,
-								ClusterProfile: api.ClusterProfile{
-									PullSecret: "{}",
-								},
-								FailedProvisioningState: api.ProvisioningStateDeleting,
-								ServicePrincipalProfile: api.ServicePrincipalProfile{
-									ClientSecret: "clientSecret",
-								},
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+						Name: "resourceName",
+						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState: api.ProvisioningStateFailed,
+							ClusterProfile: api.ClusterProfile{
+								PullSecret: "{}",
+							},
+							FailedProvisioningState: api.ProvisioningStateDeleting,
+							ServicePrincipalProfile: api.ServicePrincipalProfile{
+								ClientSecret: "clientSecret",
 							},
 						},
-					}, nil)
+					},
+				})
+				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "11111111-1111-1111-1111-111111111111",
+						},
+					},
+				})
 			},
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      `400: RequestNotAllowed: : Request is not allowed in provisioningState 'Failed'.`,
@@ -193,52 +230,43 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 		{
 			name:       "cluster not found in db",
 			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters) {
-				openshiftClusters.EXPECT().
-					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
-					Return(nil, &cosmosdb.Error{StatusCode: http.StatusNotFound})
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "11111111-1111-1111-1111-111111111111",
+						},
+					},
+				})
 			},
 			wantStatusCode: http.StatusNotFound,
 			wantError:      `404: ResourceNotFound: : The Resource 'openshiftclusters/resourcename' under resource group 'resourcegroup' was not found.`,
 		},
 		{
-			name:       "internal error",
-			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-			mocks: func(tt *test, openshiftClusters *mock_database.MockOpenShiftClusters) {
-				openshiftClusters.EXPECT().
-					Get(gomock.Any(), strings.ToLower(tt.resourceID)).
-					Return(nil, errors.New("random error"))
-			},
+			name:           "internal error",
+			resourceID:     fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
+			dbError:        &cosmosdb.Error{Code: "500", Message: "oh no!"},
 			wantStatusCode: http.StatusInternalServerError,
 			wantError:      `500: InternalServerError: : Internal server error.`,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			ti, err := newTestInfra(t)
+			ti := newTestInfra(t).WithOpenShiftClusters().WithSubscriptions()
+			defer ti.done()
+
+			if tt.dbError != nil {
+				ti.subscriptionsClient.SetError(tt.dbError)
+				ti.openShiftClustersClient.SetError(tt.dbError)
+			}
+
+			err := ti.buildFixtures(tt.fixture)
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer ti.done()
 
-			openshiftClusters := mock_database.NewMockOpenShiftClusters(ti.controller)
-			subscriptions := mock_database.NewMockSubscriptions(ti.controller)
-
-			if tt.mocks != nil {
-				subscriptions.EXPECT().
-					Get(gomock.Any(), mockSubID).
-					Return(&api.SubscriptionDocument{
-						Subscription: &api.Subscription{
-							State: api.SubscriptionStateRegistered,
-							Properties: &api.SubscriptionProperties{
-								TenantID: "11111111-1111-1111-1111-111111111111",
-							},
-						},
-					}, nil)
-
-				tt.mocks(tt, openshiftClusters)
-			}
-
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, openshiftClusters, subscriptions, apis, &noop.Noop{}, nil, nil)
+			f, err := NewFrontend(ctx, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, apis, &noop.Noop{}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -253,6 +281,9 @@ func TestPostOpenShiftClusterCredentials(t *testing.T) {
 			resp, b, err := ti.request(http.MethodPost,
 				fmt.Sprintf("https://server%s/listcredentials?api-version=%s", tt.resourceID, reqAPIVersion),
 				nil, nil)
+			if err != nil {
+				t.Error(err)
+			}
 
 			var wantResponse interface{}
 			if tt.wantResponse != nil {

@@ -18,7 +18,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/frontend/adminactions"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	mock_adminactions "github.com/Azure/ARO-RP/pkg/util/mocks/adminactions"
-	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
+	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
 func TestAdminRedeployVM(t *testing.T) {
@@ -30,8 +30,10 @@ func TestAdminRedeployVM(t *testing.T) {
 	type test struct {
 		name           string
 		resourceID     string
+		fixture        func(*testdatabase.Fixture)
+		dbError        error
 		vmName         string
-		mocks          func(*test, *mock_adminactions.MockInterface, *mock_database.MockOpenShiftClusters, *mock_database.MockSubscriptions)
+		mocks          func(*test, *mock_adminactions.MockInterface)
 		wantStatusCode int
 		wantResponse   []byte
 		wantError      string
@@ -41,19 +43,21 @@ func TestAdminRedeployVM(t *testing.T) {
 		{
 			name:       "basic coverage",
 			vmName:     "aro-worker-australiasoutheast-7tcq7",
-			resourceID: getResourcePath(mockSubID, "resourceName"),
-			mocks: func(tt *test, a *mock_adminactions.MockInterface, oc *mock_database.MockOpenShiftClusters, s *mock_database.MockSubscriptions) {
-				clusterDoc := &api.OpenShiftClusterDocument{
-					Key: tt.resourceID,
+			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					OpenShiftCluster: &api.OpenShiftCluster{
+						ID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
 						Properties: api.OpenShiftClusterProperties{
 							ClusterProfile: api.ClusterProfile{
 								ResourceGroupID: fmt.Sprintf("/subscriptions/%s/resourceGroups/test-cluster", mockSubID),
 							},
 						},
 					},
-				}
-				subscriptionDoc := &api.SubscriptionDocument{
+				})
+
+				f.AddSubscriptionDocument(&api.SubscriptionDocument{
 					ID: mockSubID,
 					Subscription: &api.Subscription{
 						State: api.SubscriptionStateRegistered,
@@ -61,33 +65,27 @@ func TestAdminRedeployVM(t *testing.T) {
 							TenantID: mockTenantID,
 						},
 					},
-				}
-
-				oc.EXPECT().Get(gomock.Any(), strings.ToLower(tt.resourceID)).
-					Return(clusterDoc, nil)
-
-				s.EXPECT().Get(gomock.Any(), strings.ToLower(mockSubID)).
-					Return(subscriptionDoc, nil)
-
+				})
+			},
+			mocks: func(tt *test, a *mock_adminactions.MockInterface) {
 				a.EXPECT().VMRedeployAndWait(gomock.Any(), tt.vmName).Return(nil)
-
 			},
 			wantStatusCode: http.StatusOK,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			ti, err := newTestInfra(t)
-			if err != nil {
-				t.Fatal(err)
-			}
+			ti := newTestInfra(t).WithOpenShiftClusters().WithSubscriptions()
 			defer ti.done()
 
 			a := mock_adminactions.NewMockInterface(ti.controller)
-			oc := mock_database.NewMockOpenShiftClusters(ti.controller)
-			s := mock_database.NewMockSubscriptions(ti.controller)
-			tt.mocks(tt, a, oc, s)
+			tt.mocks(tt, a)
 
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, nil, oc, s, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster,
+			err := ti.buildFixtures(tt.fixture)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			f, err := NewFrontend(ctx, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster,
 				*api.SubscriptionDocument) (adminactions.Interface, error) {
 				return a, nil
 			})
@@ -101,6 +99,9 @@ func TestAdminRedeployVM(t *testing.T) {
 			resp, b, err := ti.request(http.MethodPost,
 				fmt.Sprintf("https://server/admin%s/redeployvm?vmName=%s", tt.resourceID, tt.vmName),
 				nil, nil)
+			if err != nil {
+				t.Error(err)
+			}
 
 			err = validateResponse(resp, b, tt.wantStatusCode, tt.wantError, tt.wantResponse)
 			if err != nil {

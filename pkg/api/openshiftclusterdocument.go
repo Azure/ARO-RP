@@ -20,7 +20,7 @@ func (c *OpenShiftClusterDocuments) String() string {
 type OpenShiftClusterDocument struct {
 	MissingFields
 
-	ID          string                 `json:"id,omitempty"`
+	ID          string                 `json:"id,omitempty" deep:"-"`
 	ResourceID  string                 `json:"_rid,omitempty"`
 	Timestamp   int                    `json:"_ts,omitempty"`
 	Self        string                 `json:"_self,omitempty"`
@@ -30,7 +30,7 @@ type OpenShiftClusterDocument struct {
 	Metadata    map[string]interface{} `json:"_metadata,omitempty"`
 
 	Key                       string `json:"key,omitempty"`
-	PartitionKey              string `json:"partitionKey,omitempty"`
+	PartitionKey              string `json:"partitionKey,omitempty" deep:"-"`
 	ClusterResourceGroupIDKey string `json:"clusterResourceGroupIdKey,omitempty"`
 	ClientIDKey               string `json:"clientIdKey,omitempty"`
 
@@ -40,11 +40,11 @@ type OpenShiftClusterDocument struct {
 	LeaseExpires int    `json:"leaseExpires,omitempty"`
 	Dequeues     int    `json:"dequeues,omitempty"`
 
-	AsyncOperationID string `json:"asyncOperationId,omitempty"`
+	AsyncOperationID string `json:"asyncOperationId,omitempty" deep:"-"`
 
 	OpenShiftCluster *OpenShiftCluster `json:"openShiftCluster,omitempty"`
 
-	CorrelationData *CorrelationData `json:"correlationData,omitempty"`
+	CorrelationData *CorrelationData `json:"correlationData,omitempty" deep:"-"`
 }
 
 func (c *OpenShiftClusterDocument) String() string {

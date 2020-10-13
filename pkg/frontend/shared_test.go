@@ -16,14 +16,19 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/go-test/deep"
 	"github.com/golang/mock/gomock"
+	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/database"
+	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
+	testdatabase "github.com/Azure/ARO-RP/test/database"
 	testclusterdata "github.com/Azure/ARO-RP/test/util/clusterdata"
 	"github.com/Azure/ARO-RP/test/util/listener"
 )
@@ -53,9 +58,21 @@ type testInfra struct {
 	l          net.Listener
 	cli        *http.Client
 	enricher   testclusterdata.TestEnricher
+	log        *logrus.Entry
+	fixture    *testdatabase.Fixture
+	checker    *testdatabase.Checker
+
+	openShiftClustersClient   *cosmosdb.FakeOpenShiftClusterDocumentClient
+	openShiftClustersDatabase database.OpenShiftClusters
+	asyncOperationsClient     *cosmosdb.FakeAsyncOperationDocumentClient
+	asyncOperationsDatabase   database.AsyncOperations
+	billingClient             *cosmosdb.FakeBillingDocumentClient
+	billingDatabase           database.Billing
+	subscriptionsClient       *cosmosdb.FakeSubscriptionDocumentClient
+	subscriptionsDatabase     database.Subscriptions
 }
 
-func newTestInfra(t *testing.T) (*testInfra, error) {
+func newTestInfra(t *testing.T) *testInfra {
 	pool := x509.NewCertPool()
 	pool.AddCert(servercerts[0])
 
@@ -72,11 +89,19 @@ func newTestInfra(t *testing.T) (*testInfra, error) {
 	_env.EXPECT().Domain().AnyTimes().Return("")
 	_env.EXPECT().Listen().AnyTimes().Return(l, nil)
 
+	log := logrus.NewEntry(logrus.StandardLogger())
+
+	fixture := testdatabase.NewFixture()
+	checker := testdatabase.NewChecker()
+
 	return &testInfra{
 		env:        _env,
 		controller: controller,
 		l:          l,
 		enricher:   testclusterdata.NewTestEnricher(),
+		fixture:    fixture,
+		checker:    checker,
+		log:        log,
 		cli: &http.Client{
 			Transport: &http.Transport{
 				TLSClientConfig: &tls.Config{
@@ -91,13 +116,44 @@ func newTestInfra(t *testing.T) (*testInfra, error) {
 				Dial: l.Dial,
 			},
 		},
-	}, nil
+	}
+}
+
+func (ti *testInfra) WithOpenShiftClusters() *testInfra {
+	ti.openShiftClustersDatabase, ti.openShiftClustersClient = testdatabase.NewFakeOpenShiftClusters()
+	ti.fixture.WithOpenShiftClusters(ti.openShiftClustersDatabase)
+	return ti
+}
+
+func (ti *testInfra) WithBilling() *testInfra {
+	ti.billingDatabase, ti.billingClient = testdatabase.NewFakeBilling()
+	ti.fixture.WithBilling(ti.billingDatabase)
+	return ti
+}
+
+func (ti *testInfra) WithSubscriptions() *testInfra {
+	ti.subscriptionsDatabase, ti.subscriptionsClient = testdatabase.NewFakeSubscriptions()
+	ti.fixture.WithSubscriptions(ti.subscriptionsDatabase)
+	return ti
+}
+
+func (ti *testInfra) WithAsyncOperations() *testInfra {
+	ti.asyncOperationsDatabase, ti.asyncOperationsClient = testdatabase.NewFakeAsyncOperations()
+	ti.fixture.WithAsyncOperations(ti.asyncOperationsDatabase)
+	return ti
 }
 
 func (ti *testInfra) done() error {
 	ti.controller.Finish()
 	ti.cli.CloseIdleConnections()
 	return ti.l.Close()
+}
+
+func (ti *testInfra) buildFixtures(fixtures func(*testdatabase.Fixture)) error {
+	if fixtures != nil {
+		fixtures(ti.fixture)
+	}
+	return ti.fixture.Create()
 }
 
 func (ti *testInfra) request(method, url string, header http.Header, in interface{}) (*http.Response, []byte, error) {
@@ -171,13 +227,9 @@ func validateResponse(resp *http.Response, b []byte, wantStatusCode int, wantErr
 		return err
 	}
 
-	if !reflect.DeepEqual(v, wantResponse) {
-		return fmt.Errorf("unexpected response %s, wanted to match %#v", string(b), wantResponse)
+	if diff := deep.Equal(v, wantResponse); diff != nil {
+		return fmt.Errorf("unexpected response %s, wanted to match %#v (%s)", string(b), wantResponse, diff)
 	}
 
 	return nil
-}
-
-func getResourcePath(subscriptionID string, resourceID string) string {
-	return fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s", subscriptionID, resourceID)
 }

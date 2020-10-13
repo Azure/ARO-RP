@@ -5,21 +5,15 @@ package frontend
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 	"testing"
 
-	"github.com/golang/mock/gomock"
-	"github.com/sirupsen/logrus"
-
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
-	mock_database "github.com/Azure/ARO-RP/pkg/util/mocks/database"
-	"github.com/Azure/ARO-RP/test/util/matcher"
+	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
 func TestDeleteOpenShiftCluster(t *testing.T) {
@@ -30,7 +24,9 @@ func TestDeleteOpenShiftCluster(t *testing.T) {
 	type test struct {
 		name           string
 		resourceID     string
-		mocks          func(*test, *mock_database.MockAsyncOperations, *mock_database.MockOpenShiftClusters, *mock_database.MockSubscriptions)
+		fixture        func(*testdatabase.Fixture)
+		dbError        error
+		wantDocuments  func(*testdatabase.Checker)
 		wantStatusCode int
 		wantAsync      bool
 		wantError      string
@@ -39,100 +35,86 @@ func TestDeleteOpenShiftCluster(t *testing.T) {
 	for _, tt := range []*test{
 		{
 			name:       "cluster exists in db",
-			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-			mocks: func(tt *test, asyncOperations *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters, subscriptions *mock_database.MockSubscriptions) {
-				subscriptions.EXPECT().
-					Get(gomock.Any(), mockSubID).
-					Return(&api.SubscriptionDocument{
-						Subscription: &api.Subscription{
-							State: api.SubscriptionStateRegistered,
-							Properties: &api.SubscriptionProperties{
-								TenantID: "11111111-1111-1111-1111-111111111111",
-							},
+			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			fixture: func(f *testdatabase.Fixture) {
+				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+					ID: mockSubID,
+					Subscription: &api.Subscription{
+						State: api.SubscriptionStateRegistered,
+						Properties: &api.SubscriptionProperties{
+							TenantID: "11111111-1111-1111-1111-111111111111",
 						},
-					}, nil)
-
-				expectAsyncOperationDocumentCreate(asyncOperations, strings.ToLower(tt.resourceID), api.ProvisioningStateDeleting)
-
-				openShiftClusters.EXPECT().
-					Patch(gomock.Any(), strings.ToLower(tt.resourceID), gomock.Any()).
-					DoAndReturn(func(ctx context.Context, key string, f func(doc *api.OpenShiftClusterDocument) error) (*api.OpenShiftClusterDocument, error) {
-						doc := &api.OpenShiftClusterDocument{
-							Key:      key,
-							Dequeues: 1,
-							OpenShiftCluster: &api.OpenShiftCluster{
-								ID:   tt.resourceID,
-								Name: "resourceName",
-								Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-								Properties: api.OpenShiftClusterProperties{
-									ProvisioningState: api.ProvisioningStateSucceeded,
-								},
-							},
-						}
-
-						// doc gets modified in the callback
-						err := f(doc)
-
-						m := (*matcher.OpenShiftClusterDocument)(&api.OpenShiftClusterDocument{
-							Key: key,
-							OpenShiftCluster: &api.OpenShiftCluster{
-								ID:   tt.resourceID,
-								Name: "resourceName",
-								Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-								Properties: api.OpenShiftClusterProperties{
-									ProvisioningState:     api.ProvisioningStateDeleting,
-									LastProvisioningState: api.ProvisioningStateSucceeded,
-								},
-							},
-						})
-
-						if !m.Matches(doc) {
-							b, _ := json.MarshalIndent(doc, "", "    ")
-							t.Fatal(string(b))
-						}
-
-						return doc, err
-					})
+					},
+				})
+				f.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+					Key:      strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					Dequeues: 1,
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+						Name: "resourceName",
+						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState: api.ProvisioningStateSucceeded,
+						},
+					},
+				})
+			},
+			wantDocuments: func(c *testdatabase.Checker) {
+				c.AddAsyncOperationDocument(&api.AsyncOperationDocument{
+					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					AsyncOperation: &api.AsyncOperation{
+						InitialProvisioningState: api.ProvisioningStateDeleting,
+						ProvisioningState:        api.ProvisioningStateDeleting,
+					},
+				})
+				c.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
+						Name: "resourceName",
+						Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState:     api.ProvisioningStateDeleting,
+							LastProvisioningState: api.ProvisioningStateSucceeded,
+						},
+					},
+				})
 			},
 			wantStatusCode: http.StatusAccepted,
 			wantAsync:      true,
 		},
 		{
-			name:       "cluster not found in db",
-			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-			mocks: func(tt *test, _ *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters, _ *mock_database.MockSubscriptions) {
-				openShiftClusters.EXPECT().
-					Patch(gomock.Any(), strings.ToLower(tt.resourceID), gomock.Any()).
-					Return(nil, &cosmosdb.Error{StatusCode: http.StatusNotFound})
-			},
+			name:           "cluster not found in db",
+			resourceID:     testdatabase.GetResourcePath(mockSubID, "resourceName"),
 			wantStatusCode: http.StatusNoContent,
 		},
 		{
-			name:       "internal error",
-			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
-			mocks: func(tt *test, _ *mock_database.MockAsyncOperations, openShiftClusters *mock_database.MockOpenShiftClusters, _ *mock_database.MockSubscriptions) {
-				openShiftClusters.EXPECT().
-					Patch(gomock.Any(), strings.ToLower(tt.resourceID), gomock.Any()).
-					Return(nil, errors.New("random error"))
-			},
+			name:           "internal error",
+			resourceID:     testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			dbError:        &cosmosdb.Error{Code: "500", Message: "blah"},
 			wantStatusCode: http.StatusInternalServerError,
 			wantError:      `500: InternalServerError: : Internal server error.`,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			ti, err := newTestInfra(t)
+			ti := newTestInfra(t).
+				WithOpenShiftClusters().
+				WithAsyncOperations().
+				WithSubscriptions()
+			defer ti.done()
+
+			err := ti.buildFixtures(tt.fixture)
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer ti.done()
 
-			asyncOperations := mock_database.NewMockAsyncOperations(ti.controller)
-			openShiftClusters := mock_database.NewMockOpenShiftClusters(ti.controller)
-			subscriptions := mock_database.NewMockSubscriptions(ti.controller)
+			if tt.dbError != nil {
+				ti.openShiftClustersClient.SetError(tt.dbError)
+				ti.asyncOperationsClient.SetError(tt.dbError)
+				ti.subscriptionsClient.SetError(tt.dbError)
+			}
 
-			tt.mocks(tt, asyncOperations, openShiftClusters, subscriptions)
-
-			f, err := NewFrontend(ctx, logrus.NewEntry(logrus.StandardLogger()), ti.env, asyncOperations, openShiftClusters, subscriptions, api.APIs, &noop.Noop{}, nil, nil)
+			f, err := NewFrontend(ctx, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, api.APIs, &noop.Noop{}, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -142,6 +124,9 @@ func TestDeleteOpenShiftCluster(t *testing.T) {
 			resp, b, err := ti.request(http.MethodDelete,
 				"https://server"+tt.resourceID+"?api-version=2020-04-30",
 				nil, nil)
+			if err != nil {
+				t.Error(err)
+			}
 
 			location := resp.Header.Get("Location")
 			azureAsyncOperation := resp.Header.Get("Azure-AsyncOperation")
@@ -164,6 +149,21 @@ func TestDeleteOpenShiftCluster(t *testing.T) {
 			err = validateResponse(resp, b, tt.wantStatusCode, tt.wantError, nil)
 			if err != nil {
 				t.Error(err)
+			}
+
+			ti.openShiftClustersClient.SetError(nil)
+			ti.asyncOperationsClient.SetError(nil)
+			ti.subscriptionsClient.SetError(nil)
+			if tt.wantDocuments != nil {
+				tt.wantDocuments(ti.checker)
+			}
+			errs := ti.checker.CheckOpenShiftCluster(ti.openShiftClustersClient)
+			for _, i := range errs {
+				t.Error(i)
+			}
+			errs = ti.checker.CheckAsyncOperations(ti.asyncOperationsClient)
+			for _, i := range errs {
+				t.Error(i)
 			}
 		})
 	}

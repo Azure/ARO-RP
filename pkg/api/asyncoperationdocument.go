@@ -20,7 +20,7 @@ func (c *AsyncOperationDocuments) String() string {
 type AsyncOperationDocument struct {
 	MissingFields
 
-	ID          string                 `json:"id,omitempty"`
+	ID          string                 `json:"id,omitempty" deep:"-"`
 	ResourceID  string                 `json:"_rid,omitempty"`
 	Timestamp   int                    `json:"_ts,omitempty"`
 	Self        string                 `json:"_self,omitempty"`
