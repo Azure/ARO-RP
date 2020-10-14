@@ -25,6 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/insights"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/msi"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
 
@@ -51,6 +52,7 @@ type deployer struct {
 	vmssvms                compute.VirtualMachineScaleSetVMsClient
 	zones                  dns.ZonesClient
 	keyvault               keyvault.Manager
+	accounts               storage.AccountsClient
 
 	fullDeploy bool
 	config     *RPConfig
@@ -89,6 +91,7 @@ func New(ctx context.Context, log *logrus.Entry, config *RPConfig, version strin
 		vmssvms:                compute.NewVirtualMachineScaleSetVMsClient(config.SubscriptionID, authorizer),
 		zones:                  dns.NewZonesClient(config.SubscriptionID, authorizer),
 		keyvault:               keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+"-svc.vault.azure.net/"),
+		accounts:               storage.NewAccountsClient(config.SubscriptionID, authorizer),
 
 		fullDeploy: fullDeploy,
 		config:     config,

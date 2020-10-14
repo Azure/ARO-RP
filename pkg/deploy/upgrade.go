@@ -4,10 +4,16 @@ package deploy
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"context"
+	"net/url"
 	"time"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
+	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
+	azstorage "github.com/Azure/azure-sdk-for-go/storage"
+	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/autorest/date"
 	"github.com/Azure/go-autorest/autorest/to"
 	"k8s.io/apimachinery/pkg/util/wait"
 )
@@ -30,7 +36,13 @@ func (d *deployer) Upgrade(ctx context.Context) error {
 	d.log.Print("sleeping 5 minutes")
 	time.Sleep(5 * time.Minute)
 
-	return d.removeOldScalesets(ctx)
+	err = d.removeOldScalesets(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Must be last step so we can be sure there are no RPs at older versions still serving
+	return d.saveRPVersion()
 }
 
 func (d *deployer) waitForRPReadiness(ctx context.Context, vmssName string) error {
@@ -101,4 +113,36 @@ func (d *deployer) removeOldScaleset(ctx context.Context, vmssName string) error
 
 	d.log.Printf("deleting scaleset %s", vmssName)
 	return d.vmss.DeleteAndWait(ctx, d.config.ResourceGroupName, vmssName)
+}
+
+// saveRPVersion for current location in shared storage account for environment
+func (d *deployer) saveRPVersion() error {
+	d.log.Printf("saving rpVersion %s deployed in %s to storage account %s", d.version, d.config.Location, *d.config.Configuration.RPVersionStorageAccountName)
+	t := time.Now().UTC().Truncate(time.Second)
+	res, err := d.accounts.ListAccountSAS(
+		context.Background(), *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.RPVersionStorageAccountName, mgmtstorage.AccountSasParameters{
+			Services:               mgmtstorage.B,
+			ResourceTypes:          mgmtstorage.SignedResourceTypesO,
+			Permissions:            "cw", // create and write
+			Protocols:              mgmtstorage.HTTPS,
+			SharedAccessStartTime:  &date.Time{Time: t},
+			SharedAccessExpiryTime: &date.Time{Time: t.Add(24 * time.Hour)},
+		})
+	if err != nil {
+		return err
+	}
+
+	v, err := url.ParseQuery(*res.AccountSasToken)
+	if err != nil {
+		return err
+	}
+
+	blobClient := azstorage.NewAccountSASClient(
+		*d.config.Configuration.RPVersionStorageAccountName, v, azure.PublicCloud).GetBlobService()
+
+	containerRef := blobClient.GetContainerReference("rpVersion")
+
+	// save rpVersion deployed to current location
+	blobRef := containerRef.GetBlobReference(d.config.Location)
+	return blobRef.CreateBlockBlobFromReader(bytes.NewReader([]byte(d.version)), nil)
 }
