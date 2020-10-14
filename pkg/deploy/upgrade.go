@@ -140,7 +140,7 @@ func (d *deployer) saveRPVersion() error {
 	blobClient := azstorage.NewAccountSASClient(
 		*d.config.Configuration.RPVersionStorageAccountName, v, azure.PublicCloud).GetBlobService()
 
-	containerRef := blobClient.GetContainerReference("rpVersion")
+	containerRef := blobClient.GetContainerReference("rpversion")
 
 	// save rpVersion deployed to current location
 	blobRef := containerRef.GetBlobReference(d.config.Location)
