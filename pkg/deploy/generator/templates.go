@@ -119,7 +119,7 @@ func (g *generator) rpGlobalTemplate() *arm.Template {
 		g.acrRbac()...,
 	)
 	t.Resources = append(t.Resources,
-		g.rpVersionStorageAccount(),
+		g.rpVersionStorageAccount()...,
 	)
 
 	return t

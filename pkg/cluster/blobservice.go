@@ -21,7 +21,7 @@ func (m *manager) getBlobService(ctx context.Context, p mgmtstorage.Permissions,
 
 	t := time.Now().UTC().Truncate(time.Second)
 	res, err := m.accounts.ListAccountSAS(ctx, resourceGroup, "cluster"+m.doc.OpenShiftCluster.Properties.StorageSuffix, mgmtstorage.AccountSasParameters{
-		Services:               "b",
+		Services:               mgmtstorage.B,
 		ResourceTypes:          r,
 		Permissions:            p,
 		Protocols:              mgmtstorage.HTTPS,
