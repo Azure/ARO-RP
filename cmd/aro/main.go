@@ -8,6 +8,8 @@ import (
 	"flag"
 	"fmt"
 	"math/rand"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"strings"
 	"time"
@@ -35,6 +37,10 @@ func main() {
 
 	ctx := context.Background()
 	log := utillog.GetLogger()
+
+	go func() {
+		log.Warn(http.ListenAndServe("localhost:6060", nil))
+	}()
 
 	log.Printf("starting, git commit %s", version.GitCommit)
 
