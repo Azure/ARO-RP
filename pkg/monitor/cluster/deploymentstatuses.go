@@ -7,13 +7,11 @@ import (
 	"context"
 	"strconv"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/Azure/ARO-RP/pkg/util/namespace"
 )
 
 func (mon *Monitor) emitDeploymentStatuses(ctx context.Context) error {
-	ds, err := mon.cli.AppsV1().Deployments("").List(metav1.ListOptions{})
+	ds, err := mon.listDeployments()
 	if err != nil {
 		return err
 	}
