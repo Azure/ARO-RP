@@ -150,7 +150,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			a := mock_adminactions.NewMockInterface(ti.controller)
 			tt.mocks(tt, a)
 
-			ti.fixture.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+			ti.fixture.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 				Key: strings.ToLower(tt.resourceID),
 				OpenShiftCluster: &api.OpenShiftCluster{
 					ID:   tt.resourceID,
@@ -158,7 +158,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 					Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 				},
 			})
-			ti.fixture.AddSubscriptionDocument(&api.SubscriptionDocument{
+			ti.fixture.AddSubscriptionDocuments(&api.SubscriptionDocument{
 				ID: mockSubID,
 				Subscription: &api.Subscription{
 					State: api.SubscriptionStateRegistered,
@@ -345,7 +345,7 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 			a := mock_adminactions.NewMockInterface(ti.controller)
 			tt.mocks(tt, a)
 
-			ti.fixture.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+			ti.fixture.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 				Key: strings.ToLower(tt.resourceID),
 				OpenShiftCluster: &api.OpenShiftCluster{
 					ID:   tt.resourceID,
@@ -353,7 +353,7 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 					Type: "Microsoft.RedHatOpenShift/openshiftClusters",
 				},
 			})
-			ti.fixture.AddSubscriptionDocument(&api.SubscriptionDocument{
+			ti.fixture.AddSubscriptionDocuments(&api.SubscriptionDocument{
 				ID: mockSubID,
 				Subscription: &api.Subscription{
 					State: api.SubscriptionStateRegistered,

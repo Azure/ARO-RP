@@ -119,7 +119,7 @@ func TestPutSubscription(t *testing.T) {
 				sub.Properties = &api.SubscriptionProperties{TenantID: "changed"}
 			},
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
 					ID: mockSubID,
 					Subscription: &api.Subscription{
 						State: api.SubscriptionStateRegistered,
@@ -142,7 +142,7 @@ func TestPutSubscription(t *testing.T) {
 				sub.Properties = &api.SubscriptionProperties{TenantID: "changed"}
 			},
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
 					ID: mockSubID,
 					Subscription: &api.Subscription{
 						State: api.SubscriptionStateWarned,
@@ -165,7 +165,7 @@ func TestPutSubscription(t *testing.T) {
 				sub.Properties = &api.SubscriptionProperties{TenantID: "changed"}
 			},
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
 					ID: mockSubID,
 					Subscription: &api.Subscription{
 						State: api.SubscriptionStateSuspended,
@@ -189,7 +189,7 @@ func TestPutSubscription(t *testing.T) {
 				sub.Properties = &api.SubscriptionProperties{TenantID: "changed"}
 			},
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
 					ID: mockSubID,
 					Subscription: &api.Subscription{
 						State: api.SubscriptionStateUnregistered,
@@ -212,7 +212,7 @@ func TestPutSubscription(t *testing.T) {
 				sub.Properties = &api.SubscriptionProperties{TenantID: "changed"}
 			},
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
 					ID:       mockSubID,
 					Deleting: true,
 					Subscription: &api.Subscription{
@@ -268,7 +268,7 @@ func TestPutSubscription(t *testing.T) {
 			var wantResponse interface{}
 			if tt.wantDbDoc != nil {
 				wantResponse = tt.wantDbDoc.Subscription
-				ti.checker.AddSubscriptionDocument(tt.wantDbDoc)
+				ti.checker.AddSubscriptionDocuments(tt.wantDbDoc)
 				errs := ti.checker.CheckSubscriptions(ti.subscriptionsClient)
 				for _, i := range errs {
 					t.Error(i)

@@ -41,7 +41,7 @@ func TestAdminListResourcesList(t *testing.T) {
 			name:       "basic coverage",
 			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
@@ -55,7 +55,7 @@ func TestAdminListResourcesList(t *testing.T) {
 						},
 					},
 				})
-				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
 					ID: mockSubID,
 					Subscription: &api.Subscription{
 						State: api.SubscriptionStateRegistered,

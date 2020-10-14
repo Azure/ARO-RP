@@ -37,7 +37,7 @@ func TestDeleteOpenShiftCluster(t *testing.T) {
 			name:       "cluster exists in db",
 			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
 			fixture: func(f *testdatabase.Fixture) {
-				f.AddSubscriptionDocument(&api.SubscriptionDocument{
+				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
 					ID: mockSubID,
 					Subscription: &api.Subscription{
 						State: api.SubscriptionStateRegistered,
@@ -46,7 +46,7 @@ func TestDeleteOpenShiftCluster(t *testing.T) {
 						},
 					},
 				})
-				f.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key:      strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					Dequeues: 1,
 					OpenShiftCluster: &api.OpenShiftCluster{
@@ -60,14 +60,14 @@ func TestDeleteOpenShiftCluster(t *testing.T) {
 				})
 			},
 			wantDocuments: func(c *testdatabase.Checker) {
-				c.AddAsyncOperationDocument(&api.AsyncOperationDocument{
+				c.AddAsyncOperationDocuments(&api.AsyncOperationDocument{
 					OpenShiftClusterKey: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					AsyncOperation: &api.AsyncOperation{
 						InitialProvisioningState: api.ProvisioningStateDeleting,
 						ProvisioningState:        api.ProvisioningStateDeleting,
 					},
 				})
-				c.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID:   testdatabase.GetResourcePath(mockSubID, "resourceName"),
@@ -157,7 +157,7 @@ func TestDeleteOpenShiftCluster(t *testing.T) {
 			if tt.wantDocuments != nil {
 				tt.wantDocuments(ti.checker)
 			}
-			errs := ti.checker.CheckOpenShiftCluster(ti.openShiftClustersClient)
+			errs := ti.checker.CheckOpenShiftClusters(ti.openShiftClustersClient)
 			for _, i := range errs {
 				t.Error(i)
 			}

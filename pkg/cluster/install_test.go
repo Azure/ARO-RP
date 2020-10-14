@@ -277,7 +277,7 @@ func TestAddResourceProviderVersion(t *testing.T) {
 
 	openShiftClustersDatabase, _ := testdatabase.NewFakeOpenShiftClusters()
 	fixture := testdatabase.NewFixture().WithOpenShiftClusters(openShiftClustersDatabase)
-	fixture.AddOpenShiftClusterDocument(&api.OpenShiftClusterDocument{
+	fixture.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 		Key: strings.ToLower(key),
 		OpenShiftCluster: &api.OpenShiftCluster{
 			ID: key,

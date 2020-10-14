@@ -39,36 +39,34 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 			name: "clusters exists in db",
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddOpenShiftClusterDocuments(
-					[]*api.OpenShiftClusterDocument{
-						{
-							Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName1")),
-							OpenShiftCluster: &api.OpenShiftCluster{
-								ID:   testdatabase.GetResourcePath(mockSubID, "resourceName1"),
-								Name: "resourceName1",
-								Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-								Properties: api.OpenShiftClusterProperties{
-									ClusterProfile: api.ClusterProfile{
-										PullSecret: "{}",
-									},
-									ServicePrincipalProfile: api.ServicePrincipalProfile{
-										ClientSecret: "clientSecret1",
-									},
+					&api.OpenShiftClusterDocument{
+						Key: strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName1")),
+						OpenShiftCluster: &api.OpenShiftCluster{
+							ID:   testdatabase.GetResourcePath(mockSubID, "resourceName1"),
+							Name: "resourceName1",
+							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+							Properties: api.OpenShiftClusterProperties{
+								ClusterProfile: api.ClusterProfile{
+									PullSecret: "{}",
+								},
+								ServicePrincipalProfile: api.ServicePrincipalProfile{
+									ClientSecret: "clientSecret1",
 								},
 							},
 						},
-						{
-							Key: strings.ToLower(testdatabase.GetResourcePath(otherMockSubID, "resourceName2")),
-							OpenShiftCluster: &api.OpenShiftCluster{
-								ID:   testdatabase.GetResourcePath(otherMockSubID, "resourceName2"),
-								Name: "resourceName2",
-								Type: "Microsoft.RedHatOpenShift/openshiftClusters",
-								Properties: api.OpenShiftClusterProperties{
-									ClusterProfile: api.ClusterProfile{
-										PullSecret: "{}",
-									},
-									ServicePrincipalProfile: api.ServicePrincipalProfile{
-										ClientSecret: "clientSecret2",
-									},
+					},
+					&api.OpenShiftClusterDocument{
+						Key: strings.ToLower(testdatabase.GetResourcePath(otherMockSubID, "resourceName2")),
+						OpenShiftCluster: &api.OpenShiftCluster{
+							ID:   testdatabase.GetResourcePath(otherMockSubID, "resourceName2"),
+							Name: "resourceName2",
+							Type: "Microsoft.RedHatOpenShift/openshiftClusters",
+							Properties: api.OpenShiftClusterProperties{
+								ClusterProfile: api.ClusterProfile{
+									PullSecret: "{}",
+								},
+								ServicePrincipalProfile: api.ServicePrincipalProfile{
+									ClientSecret: "clientSecret2",
 								},
 							},
 						},
