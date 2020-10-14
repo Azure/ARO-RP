@@ -1595,18 +1595,31 @@ func (g *generator) acrRbac() []*arm.Resource {
 	}
 }
 
-func (g *generator) rpVersionStorageAccount() *arm.Resource {
-	return &arm.Resource{
-		Resource: &mgmtstorage.Account{
-			Name:     to.StringPtr("[parameters('rpVersionStorageAccountName')]"),
-			Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
-			Location: to.StringPtr("[resourceGroup().location]"),
-			Sku: &mgmtstorage.Sku{
-				Name: "Standard_LRS",
+func (g *generator) rpVersionStorageAccount() []*arm.Resource {
+	return []*arm.Resource{
+		{
+			Resource: &mgmtstorage.Account{
+				Name:     to.StringPtr("[parameters('rpVersionStorageAccountName')]"),
+				Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
+				Location: to.StringPtr("[resourceGroup().location]"),
+				Sku: &mgmtstorage.Sku{
+					Name: "Standard_LRS",
+				},
+			},
+			Condition:  g.conditionStanza("fullDeploy"),
+			APIVersion: azureclient.APIVersions["Microsoft.Storage"],
+		},
+		{
+			Resource: &mgmtstorage.BlobContainer{
+				Name: to.StringPtr("[concat(parameters('rpVersionStorageAccountName'), '/default/rpversion')]"),
+				Type: to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
+			},
+			APIVersion: azureclient.APIVersions["Microsoft.Storage"],
+			Condition:  g.conditionStanza("fullDeploy"),
+			DependsOn: []string{
+				"[resourceId('Microsoft.Storage/storageAccounts', parameters('rpVersionStorageAccountName'))]",
 			},
 		},
-		Condition:  g.conditionStanza("fullDeploy"),
-		APIVersion: azureclient.APIVersions["Microsoft.Storage"],
 	}
 }
 

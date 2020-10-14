@@ -53,6 +53,15 @@
             "type": "Microsoft.Storage/storageAccounts",
             "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2019-04-01"
+        },
+        {
+            "name": "[concat(parameters('rpVersionStorageAccountName'), '/default/rpversion')]",
+            "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+            "condition": "[parameters('fullDeploy')]",
+            "apiVersion": "2019-04-01",
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('rpVersionStorageAccountName'))]"
+            ]
         }
     ]
 }
