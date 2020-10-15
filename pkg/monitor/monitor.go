@@ -41,7 +41,6 @@ type monitor struct {
 
 	lastBucketlist atomic.Value //time.Time
 	lastChangefeed atomic.Value //time.Time
-	startTime      time.Time
 }
 
 type Runnable interface {
@@ -64,8 +63,6 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Moni
 
 		bucketCount: bucket.Buckets,
 		buckets:     map[int]struct{}{},
-
-		startTime: time.Now(),
 	}
 }
 
@@ -124,6 +121,5 @@ func (mon *monitor) checkReady() bool {
 		return false
 	}
 	return (time.Since(lastBucketTime) < time.Minute) && // did we list buckets successfully recently?
-		(time.Since(lastChangefeedTime) < time.Minute) && // did we process the change feed recently?
-		(time.Since(mon.startTime) > 2*time.Minute) // are we running for at least 2 minutes?
+		(time.Since(lastChangefeedTime) < time.Minute) // did we process the change feed recently?
 }
