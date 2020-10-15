@@ -29,6 +29,6 @@ jobs:
   - template: ./templates/template-deploy-e2e-deps.yml
   - template: ./templates/template-deploy-e2e-db.yml
   - template: ./templates/template-run-rp-and-e2e.yml
-  - template: ./templates/template-clean-e2e-db.yml
-  - template: ./templates/template-clean-e2e-deps.yml
-  - template: ./templates/template-az-cli-logout.yml
+  #- template: ./templates/template-clean-e2e-db.yml
+  #- template: ./templates/template-clean-e2e-deps.yml
+  #- template: ./templates/template-az-cli-logout.yml
