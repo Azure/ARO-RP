@@ -84,7 +84,7 @@ func writeAssets(cli discovery.DiscoveryInterface, clusterVersion, cacheDir stri
 	}
 
 	versionPath := filepath.Join(cacheDir, "assets_version")
-	err = ioutil.WriteFile(versionPath, []byte(clusterVersion), 0666)
+	err = ioutil.WriteFile(versionPath, []byte(clusterVersion+"\n"), 0666)
 	if err != nil {
 		return err
 	}
