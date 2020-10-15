@@ -5,6 +5,7 @@ package monitor
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"sync"
 	"sync/atomic"
@@ -39,16 +40,18 @@ type monitor struct {
 	bucketCount int
 	buckets     map[int]struct{}
 
-	lastBucketlist atomic.Value //time.Time
-	lastChangefeed atomic.Value //time.Time
-	startTime      time.Time
+	now              func() time.Time
+	lastBucketlist   atomic.Value //time.Time
+	lastChangefeed   atomic.Value //time.Time
+	startTime        time.Time
+	startGracePeriod time.Duration
 }
 
 type Runnable interface {
 	Run(context.Context) error
 }
 
-func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Monitors, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, m, clusterm metrics.Interface) Runnable {
+func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Monitors, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, m, clusterm metrics.Interface, startGracePeriod time.Duration) Runnable {
 	return &monitor{
 		baseLog: log,
 		dialer:  dialer,
@@ -65,7 +68,9 @@ func NewMonitor(log *logrus.Entry, dialer proxy.Dialer, dbMonitors database.Moni
 		bucketCount: bucket.Buckets,
 		buckets:     map[int]struct{}{},
 
-		startTime: time.Now(),
+		now:              time.Now,
+		startTime:        time.Now(),
+		startGracePeriod: startGracePeriod,
 	}
 }
 
@@ -114,16 +119,41 @@ func (mon *monitor) Run(ctx context.Context) error {
 // across the /healthz/ready endpoint and emitted metrics.   We wait for 2
 // minutes before indicating health.  This ensures that there will be a gap in
 // our health metric if we crash or restart.
-func (mon *monitor) checkReady() bool {
+func (mon *monitor) checkReady() (failed bool, failing map[string]string) {
+	failing = make(map[string]string)
+
+	// did we list buckets successfully recently?
 	lastBucketTime, ok := mon.lastBucketlist.Load().(time.Time)
 	if !ok {
-		return false
+		failed = true
+		failing["lastBucketTime"] = "buckets not yet read"
+	} else {
+		sinceLastBucketTime := mon.now().Sub(lastBucketTime)
+		if sinceLastBucketTime > time.Minute {
+			failed = true
+			failing["lastBucketTime"] = fmt.Sprintf("running behind, %s > %s", sinceLastBucketTime, time.Minute)
+		}
 	}
+
+	// did we process the change feed recently?
 	lastChangefeedTime, ok := mon.lastChangefeed.Load().(time.Time)
 	if !ok {
-		return false
+		failed = true
+		failing["lastChangefeedTime"] = "changefeed not yet read"
+	} else {
+		sinceLastChangefeedTime := mon.now().Sub(lastChangefeedTime)
+		if sinceLastChangefeedTime > time.Minute {
+			failed = true
+			failing["lastChangefeedTime"] = fmt.Sprintf("running behind, %s > %s", sinceLastChangefeedTime, time.Minute)
+		}
 	}
-	return (time.Now().Sub(lastBucketTime) < time.Minute) && // did we list buckets successfully recently?
-		(time.Now().Sub(lastChangefeedTime) < time.Minute) && // did we process the change feed recently?
-		(time.Now().Sub(mon.startTime) > 2*time.Minute) // are we running for at least 2 minutes?
+
+	// If we are in our starting grace period, return OK (but still emit
+	// individual failures)
+	inGracePeriod := mon.now().Sub(mon.startTime) <= mon.startGracePeriod
+	if inGracePeriod {
+		failed = false
+	}
+
+	return failed, failing
 }

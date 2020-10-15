@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/Azure/go-autorest/tracing"
 	"github.com/sirupsen/logrus"
@@ -24,7 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 )
 
-func monitor(ctx context.Context, log *logrus.Entry) error {
+func monitor(ctx context.Context, log *logrus.Entry, startGracePeriod time.Duration) error {
 	_env, err := env.NewCore(ctx, log)
 	if err != nil {
 		return err
@@ -86,7 +87,7 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	mon := pkgmonitor.NewMonitor(log.WithField("component", "monitor"), dialer, dbMonitors, dbOpenShiftClusters, dbSubscriptions, m, clusterm)
+	mon := pkgmonitor.NewMonitor(log.WithField("component", "monitor"), dialer, dbMonitors, dbOpenShiftClusters, dbSubscriptions, m, clusterm, startGracePeriod)
 
 	return mon.Run(ctx)
 }

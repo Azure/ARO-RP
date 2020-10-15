@@ -14,7 +14,7 @@ import (
 
 // EmitHeartbeat sends a heartbeat metric (if healthy), starting immediately and
 // subsequently every 60 seconds
-func EmitHeartbeat(log *logrus.Entry, m metrics.Interface, metricName string, stop <-chan struct{}, checkFunc func() bool) {
+func EmitHeartbeat(log *logrus.Entry, m metrics.Interface, metricName string, stop <-chan struct{}, checkFunc func() (bool, map[string]string)) {
 	defer recover.Panic(log)
 
 	t := time.NewTicker(time.Minute)
@@ -23,8 +23,9 @@ func EmitHeartbeat(log *logrus.Entry, m metrics.Interface, metricName string, st
 	log.Print("starting heartbeat")
 
 	for {
-		if checkFunc() {
-			m.EmitGauge(metricName, 1, nil)
+		check, info := checkFunc()
+		if check {
+			m.EmitGauge(metricName, 1, info)
 		}
 
 		select {
