@@ -51,7 +51,7 @@ func main() {
 		err = mirror(ctx, log)
 	case "monitor":
 		checkArgs(1)
-		err = monitor(ctx, log)
+		err = monitor(ctx, log, 2*time.Minute)
 	case "rp":
 		checkArgs(1)
 		err = rp(ctx, log)
