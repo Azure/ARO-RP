@@ -846,6 +846,7 @@ ExecStart=/usr/bin/docker run \
   --hostname %H \
   --name %N \
   --rm \
+  -m 2g \
   -v /etc/mdm.pem:/etc/mdm.pem \
   -v /var/etw:/var/etw:z \
   $MDMIMAGE \
@@ -892,6 +893,7 @@ ExecStart=/usr/bin/docker run \
   -e ADMIN_API_CLIENT_CERT_COMMON_NAME \
   -e RP_MODE \
   -e ACR_RESOURCE_ID \
+  -m 2g \
   -p 443:8443 \
   -v /etc/aro-rp:/etc/aro-rp \
   -v /run/systemd/journal:/run/systemd/journal \
@@ -934,6 +936,7 @@ ExecStart=/usr/bin/docker run \
   -e MDM_ACCOUNT \
   -e MDM_NAMESPACE \
   -e RP_MODE \
+  -m 2g \
   -v /run/systemd/journal:/run/systemd/journal \
   -v /var/etw:/var/etw:z \
   $RPIMAGE \
