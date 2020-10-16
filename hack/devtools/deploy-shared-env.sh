@@ -86,14 +86,22 @@ import_certs_secrets() {
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --name rp-server \
         --file secrets/localhost.pem
-   az keyvault certificate import \
+    az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --name cluster-mdsd \
         --file secrets/cluster-logging-int.pem
+    az keyvault secret list \
+        --vault-name "$KEYVAULT_PREFIX-svc" \
+        --query '[].name' \
+        -o tsv | grep -q ^encryption-key$ || \
     az keyvault secret set \
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --name encryption-key \
         --value "$(openssl rand -base64 32)"
+    az keyvault secret list \
+        --vault-name "$KEYVAULT_PREFIX-svc" \
+        --query '[].name' \
+        -o tsv | grep -q ^fe-encryption-key$ || \
     az keyvault secret set \
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --name fe-encryption-key \
