@@ -88,8 +88,12 @@ deploy_e2e_deps() {
       --disable-private-link-service-network-policies true >/dev/null
 
     echo "########## Create Cluster SPN ##########"
-    az ad sp create-for-rbac -n "$CLUSTER-$LOCATION" --role contributor \
-        --scopes /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$ARO_RESOURCEGROUP >$CLUSTERSPN
+    for ((i=0; i<5; i++)); do
+        az ad sp create-for-rbac -n "$CLUSTER-$LOCATION" --role contributor \
+            --scopes /subscriptions/$AZURE_SUBSCRIPTION_ID/resourceGroups/$ARO_RESOURCEGROUP >$CLUSTERSPN && break
+    done
+    # HACK: because ^ is the last command in the function, the function will
+    # return with $? equal to the success or failure of the above
 }
 
 set_cli_context() {
