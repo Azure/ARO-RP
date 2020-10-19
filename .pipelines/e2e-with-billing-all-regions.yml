@@ -22,6 +22,7 @@ stages:
     billing_e2e_branch_name: $(billing_e2e_branch_name)
     locations:
     - australiaeast
+    - australiasoutheast
     - brazilsouth
     - centralindia
     - eastasia
@@ -30,6 +31,7 @@ stages:
     - koreacentral
     - southeastasia
     - switzerlandnorth
+    - switzerlandwest
 - stage: PhaseTwo
   displayName: wait 1 hour to avoid resource threshold
   dependsOn: []
