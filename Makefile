@@ -5,7 +5,7 @@ OS=$(shell uname)
 
 ifndef CGO_CFLAGS
 ifneq ("${OS}", "Darwin")
-CGO_CFLAGS=-Dgpgme_off_t=off_t;
+	CGO_CFLAGS=-Dgpgme_off_t=off_t;
 endif
 endif
 
