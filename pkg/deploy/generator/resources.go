@@ -1644,6 +1644,9 @@ func (g *generator) devCIPool() *arm.Resource {
 	trailer := base64.StdEncoding.EncodeToString([]byte(`
 yum -y update -x WALinuxAgent
 
+lvextend -l +50%FREE /dev/rootvg/varlv
+xfs_growfs /var
+
 lvextend -l +100%FREE /dev/rootvg/homelv
 xfs_growfs /home
 
