@@ -3,6 +3,8 @@ parameters:
 steps:
 - script: |
     set -e
+    trap 'for c in $(docker ps -aq); do docker rm -f $c; done; docker image prune -af' EXIT
+
     export RP_IMAGE_ACR=${{ parameters.rpImageACR }}
 
     az acr login --name "$RP_IMAGE_ACR"
