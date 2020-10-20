@@ -37,9 +37,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		return fmt.Errorf("invalid role %s", role)
 	}
 	deploymentMode := deployment.NewMode()
-	if deploymentMode == deployment.Development {
-		log.Warn("running in development mode")
-	}
+	log.Infof("running in %s mode", deploymentMode)
 
 	ctrl.SetLogger(utillog.LogrWrapper(log))
 
