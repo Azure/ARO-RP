@@ -8,16 +8,35 @@ from azure.cli.core.commands.client_factory import get_mgmt_service_client
 from azure.cli.core.commands.client_factory import get_subscription_id
 from azure.cli.core.profiles import get_sdk
 from azure.cli.core.profiles import ResourceType
-from msrestazure.tools import resource_id
+from knack.log import get_logger
+from msrest.exceptions import ValidationError
 from msrestazure.tools import parse_resource_id
+from msrestazure.tools import resource_id
 
 
 CONTRIBUTOR = 'b24988ac-6180-42a0-ab88-20f7382dd24c'
 DEVELOPMENT_CONTRIBUTOR = 'f3fe7bc1-0ef9-4681-a68c-c1fa285d6128'
 
 
+logger = get_logger(__name__)
+
+
 def _gen_uuid():
     return uuid.uuid4()
+
+
+def _create_role_assignment(auth_client, resource, params):
+    # retry "ValidationError: A hash conflict was encountered for the role Assignment ID. Please use a new Guid."
+    max_retries = 3
+    retries = 0
+    while True:
+        try:
+            return auth_client.role_assignments.create(resource, _gen_uuid(), params)
+        except ValidationError as ex:
+            if retries >= max_retries:
+                raise
+            retries += 1
+            logger.warning("%s; retry %d of %d", ex, retries, max_retries)
 
 
 def assign_contributor_to_vnet(cli_ctx, vnet, object_id):
@@ -37,10 +56,7 @@ def assign_contributor_to_vnet(cli_ctx, vnet, object_id):
     if has_assignment(auth_client.role_assignments.list_for_scope(vnet), role_definition_id, object_id):
         return
 
-    # generate random uuid for role assignment
-    role_uuid = _gen_uuid()
-
-    auth_client.role_assignments.create(vnet, role_uuid, RoleAssignmentCreateParameters(
+    _create_role_assignment(auth_client, vnet, RoleAssignmentCreateParameters(
         role_definition_id=role_definition_id,
         principal_id=object_id,
         principal_type='ServicePrincipal',
@@ -78,9 +94,7 @@ def assign_contributor_to_routetable(cli_ctx, master_subnet, worker_subnet, obje
                           role_definition_id, object_id):
             continue
 
-        role_uuid = _gen_uuid()
-
-        auth_client.role_assignments.create(rt, role_uuid, RoleAssignmentCreateParameters(
+        _create_role_assignment(auth_client, rt, RoleAssignmentCreateParameters(
             role_definition_id=role_definition_id,
             principal_id=object_id,
             principal_type='ServicePrincipal',
