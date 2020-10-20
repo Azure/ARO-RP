@@ -27,19 +27,19 @@ generate:
 
 image-aro: aro e2e.test
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
-	docker build -f Dockerfile.aro -t $(ARO_IMAGE) .
+	docker build --no-cache -f Dockerfile.aro -t $(ARO_IMAGE) .
 
 image-fluentbit:
-	docker build --build-arg VERSION=1.3.9-1 \
+	docker build --no-cache --build-arg VERSION=1.3.9-1 \
 	  -f Dockerfile.fluentbit -t ${RP_IMAGE_ACR}.azurecr.io/fluentbit:1.3.9-1 .
 
 image-proxy: proxy
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
-	docker build -f Dockerfile.proxy -t ${RP_IMAGE_ACR}.azurecr.io/proxy:latest .
+	docker build --no-cache -f Dockerfile.proxy -t ${RP_IMAGE_ACR}.azurecr.io/proxy:latest .
 
 image-routefix:
 	docker pull registry.access.redhat.com/ubi8/ubi
-	docker build -f Dockerfile.routefix -t ${RP_IMAGE_ACR}.azurecr.io/routefix:$(COMMIT) .
+	docker build --no-cache -f Dockerfile.routefix -t ${RP_IMAGE_ACR}.azurecr.io/routefix:$(COMMIT) .
 
 publish-image-aro: image-aro
 	docker push $(ARO_IMAGE)
