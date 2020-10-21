@@ -37,6 +37,7 @@ import (
 
 type Interface interface {
 	Install(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image, bootstrapLoggingConfig *bootstraplogging.Config) error
+	Delete(ctx context.Context) error
 	AdminUpgrade(ctx context.Context) error
 }
 
@@ -44,14 +45,15 @@ var _ Interface = &manager{}
 
 // manager contains information needed to install and maintain an ARO cluster
 type manager struct {
-	log             *logrus.Entry
-	env             env.Interface
-	db              database.OpenShiftClusters
-	billing         billing.Manager
-	doc             *api.OpenShiftClusterDocument
-	subscriptionDoc *api.SubscriptionDocument
-	cipher          encryption.Cipher
-	fpAuthorizer    refreshable.Authorizer
+	log               *logrus.Entry
+	env               env.Interface
+	db                database.OpenShiftClusters
+	billing           billing.Manager
+	doc               *api.OpenShiftClusterDocument
+	subscriptionDoc   *api.SubscriptionDocument
+	cipher            encryption.Cipher
+	fpAuthorizer      refreshable.Authorizer
+	localFpAuthorizer refreshable.Authorizer
 
 	disks             compute.DisksClient
 	virtualmachines   compute.VirtualMachinesClient
@@ -103,14 +105,15 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 	}
 
 	return &manager{
-		log:             log,
-		env:             _env,
-		db:              db,
-		billing:         billing,
-		doc:             doc,
-		subscriptionDoc: subscriptionDoc,
-		cipher:          cipher,
-		fpAuthorizer:    fpAuthorizer,
+		log:               log,
+		env:               _env,
+		db:                db,
+		billing:           billing,
+		doc:               doc,
+		subscriptionDoc:   subscriptionDoc,
+		cipher:            cipher,
+		fpAuthorizer:      fpAuthorizer,
+		localFpAuthorizer: localFPAuthorizer,
 
 		disks:             compute.NewDisksClient(r.SubscriptionID, fpAuthorizer),
 		virtualmachines:   compute.NewVirtualMachinesClient(r.SubscriptionID, fpAuthorizer),
