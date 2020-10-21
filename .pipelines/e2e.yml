@@ -3,7 +3,7 @@ variables:
 - template: vars.yml
 jobs:
 - job: E2E
-  timeoutInMinutes: 120
+  timeoutInMinutes: 180
   pool:
     name: ARO-CI
   steps:

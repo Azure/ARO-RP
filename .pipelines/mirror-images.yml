@@ -11,6 +11,7 @@ variables:
 
 jobs:
 - job: Mirror_images
+  timeoutInMinutes: 180
   pool:
     name: ARO-CI
 
