@@ -47,13 +47,6 @@
 
 ## Installing the extension
 
-1. Prepare a Python development environment:
-
-   ```
-   make pyenv
-   . pyenv/bin/activate
-   ```
-
 1. Build the development `az aro` extension:
 
    `make az`
