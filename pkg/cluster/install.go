@@ -66,6 +66,7 @@ func (m *manager) Install(ctx context.Context, installConfig *installconfig.Inst
 			steps.Condition(m.bootstrapConfigMapReady, 30*time.Minute),
 			steps.Action(m.ensureRouteFix),
 			steps.Action(m.ensureAROOperator),
+			steps.Action(m.configureClusterMonitoring),
 			steps.Action(m.incrInstallPhase),
 		},
 		api.InstallPhaseRemoveBootstrap: {
