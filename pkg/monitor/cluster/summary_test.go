@@ -74,18 +74,20 @@ func TestEmitSummary(t *testing.T) {
 		m:         m,
 		oc: &api.OpenShiftCluster{
 			Properties: api.OpenShiftClusterProperties{
-				ProvisioningState: api.ProvisioningStateSucceeded,
+				ProvisioningState:       api.ProvisioningStateFailed,
+				FailedProvisioningState: api.ProvisioningStateDeleting,
 			},
 		},
 		hourlyRun: true,
 	}
 
 	m.EXPECT().EmitGauge("cluster.summary", int64(1), map[string]string{
-		"actualVersion":     "4.3.0",
-		"desiredVersion":    "4.3.3",
-		"masterCount":       "1",
-		"workerCount":       "2",
-		"provisioningState": mon.oc.Properties.ProvisioningState.String(),
+		"actualVersion":           "4.3.0",
+		"desiredVersion":          "4.3.3",
+		"masterCount":             "1",
+		"workerCount":             "2",
+		"provisioningState":       api.ProvisioningStateFailed.String(),
+		"failedProvisioningState": api.ProvisioningStateDeleting.String(),
 	})
 
 	err := mon.emitSummary(ctx)
