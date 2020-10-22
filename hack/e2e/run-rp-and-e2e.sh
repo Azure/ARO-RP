@@ -76,12 +76,13 @@ clean_e2e_db(){
         --resource-group $RESOURCEGROUP >/dev/null
 }
 
+# TODO: CLUSTER and ARO_RESOURCEGROUP are also recalculated in multiple places
+# in the billing pipelines :-(
 export CLUSTER="v4-e2e-V$BUILD_BUILDID"
 export DATABASE_NAME="v4-e2e-V$BUILD_BUILDID"
 export ARO_RESOURCEGROUP="v4-e2e-rg-V$BUILD_BUILDID-$LOCATION"
-export CLUSTER_RESOURCEGROUP="aro-$ARO_RESOURCEGROUP"
-export AZURE_E2E_CREATE=true
-export AZURE_E2E_DELETE=true
+export E2E_CREATE_CLUSTER=true
+export E2E_DELETE_CLUSTER=true
 
 echo "######################################"
 echo "##### ARO V4 E2e helper sourced ######"
@@ -102,10 +103,6 @@ fi
 echo
 echo "CLUSTER=$CLUSTER"
 echo "ARO_RESOURCEGROUP=$ARO_RESOURCEGROUP"
-echo "CLUSTER_RESOURCEGROUP=$CLUSTER_RESOURCEGROUP"
-echo "AZURE_E2E_CREATE=$AZURE_E2E_CREATE"
-echo "AZURE_E2E_DELETE=$AZURE_E2E_DELETE"
-
 if [ "$RP_MODE" = "development" ]
 then
     echo

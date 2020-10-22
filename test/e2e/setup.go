@@ -27,7 +27,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/test/util/infra"
-	"github.com/Azure/ARO-RP/test/util/kubeconfig"
+	"github.com/Azure/ARO-RP/test/util/kubeadminkubeconfig"
 )
 
 type clientSet struct {
@@ -78,8 +78,7 @@ func newClientSet(subscriptionID string) (*clientSet, error) {
 			&clientcmd.ConfigOverrides{},
 		)
 	} else {
-		kconfig, err := kubeconfig.NewManager(log, subscriptionID, authorizer).
-			Get(context.Background(), os.Getenv("RESOURCEGROUP"), os.Getenv("CLUSTER"))
+		kconfig, err := kubeadminkubeconfig.Get(context.Background(), log, authorizer, resourceIDFromEnv())
 		if err != nil {
 			return nil, err
 		}
@@ -151,7 +150,7 @@ var _ = BeforeSuite(func() {
 	}
 
 	// Gate infrastructure creation with env variable for CI
-	if os.Getenv("AZURE_E2E_CREATE") != "" {
+	if os.Getenv("E2E_CREATE_CLUSTER") != "" {
 		err = testInfra.Deploy(context.Background())
 		if err != nil {
 			panic(err)
@@ -167,7 +166,7 @@ var _ = BeforeSuite(func() {
 var _ = AfterSuite(func() {
 	log.Info("AfterSuite")
 
-	if os.Getenv("AZURE_E2E_DELETE") != "" && testInfra != nil {
+	if os.Getenv("E2E_DELETE_CLUSTER") != "" && testInfra != nil {
 		// delete infrastructure only if variable is set
 		err := testInfra.Destroy(context.Background())
 		if err != nil {

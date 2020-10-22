@@ -31,5 +31,4 @@ func TestE2E(t *testing.T) {
 	RegisterFailHandler(Fail)
 	format.TruncatedDiff = false
 	RunSpecs(t, "e2e tests")
-
 }

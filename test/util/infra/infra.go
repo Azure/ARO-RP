@@ -67,7 +67,7 @@ func New(log *logrus.Entry, subscriptionID, tenantID string) (*Infrastructure, e
 	return &Infrastructure{
 		log:                  log,
 		clusterName:          os.Getenv("CLUSTER"),
-		clusterResourceGroup: os.Getenv("CLUSTER_RESOURCEGROUP"),
+		clusterResourceGroup: "aro-" + os.Getenv("RESOURCEGROUP"),
 		resourceGroup:        os.Getenv("RESOURCEGROUP"),
 		location:             os.Getenv("LOCATION"),
 		subscriptionID:       subscriptionID,
@@ -88,7 +88,7 @@ func New(log *logrus.Entry, subscriptionID, tenantID string) (*Infrastructure, e
 // If E2E variable is not set we are running in CI with CLI context.
 // If it is set, we ignore CLI context and use ENV
 func getAuthorizers(log *logrus.Entry) (autorest.Authorizer, autorest.Authorizer, error) {
-	if os.Getenv("AZURE_E2E_CREATE") != "" {
+	if os.Getenv("E2E_CREATE_CLUSTER") != "" {
 		log.Info("authorizer from CLI")
 		authorizer, err := auth.NewAuthorizerFromCLI()
 		if err != nil {
@@ -119,6 +119,9 @@ func (i *Infrastructure) Deploy(ctx context.Context) error {
 		return nil
 	}
 
+	// TODO: we are listing here rather than calling
+	// i.applications.GetServicePrincipalsIDByAppID() due to some missing
+	// permission with our dev/e2e applications
 	results, err := i.serviceprincipals.List(ctx, fmt.Sprintf("appId eq '%s'", fpClientID))
 	if err != nil {
 		return err

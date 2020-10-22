@@ -1,9 +1,0 @@
-steps:
-- script: |
-    . secrets/env
-
-    set -x
-    . ./hack/e2e/run-rp-and-e2e.sh
-
-    deploy_e2e_deps
-  displayName: 🚀 Create cluster RG and Vnet
