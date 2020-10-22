@@ -7,7 +7,7 @@ stages:
   displayName: 🚀 RUN RP E2E
   jobs:
   - job: RP_E2E_Job
-    timeoutInMinutes: 120
+    timeoutInMinutes: 180
     pool:
       name: ARO-CI
     steps:
