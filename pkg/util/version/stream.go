@@ -8,9 +8,8 @@ import (
 // Licensed under the Apache License 2.0.
 
 type Stream struct {
-	Version    *Version
-	PullSpec   string
-	MustGather string
+	Version  *Version
+	PullSpec string
 }
 
 // GetUpgradeStream determines if a valid upgrade path is available, and if so, returns the corresponding stream.

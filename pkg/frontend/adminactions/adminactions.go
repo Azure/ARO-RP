@@ -30,7 +30,6 @@ type Interface interface {
 	K8sList(groupKind, namespace string) ([]byte, error)
 	K8sCreateOrUpdate(obj *unstructured.Unstructured) error
 	K8sDelete(groupKind, namespace, name string) error
-	MustGather(ctx context.Context, w http.ResponseWriter) error
 	ResourcesList(ctx context.Context) ([]byte, error)
 	Upgrade(ctx context.Context) error
 	VMRedeployAndWait(ctx context.Context, vmName string) error
