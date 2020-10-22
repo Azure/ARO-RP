@@ -19,8 +19,8 @@ func (mon *Monitor) emitAroOperatorHeartbeat(ctx context.Context) error {
 
 	for _, d := range aroDeployments.Items {
 		mon.emitGauge("arooperator.heartbeat", 1, map[string]string{
-			"name":      d.Name,
-			"available": strconv.FormatBool(d.Status.AvailableReplicas == d.Status.Replicas),
+			"name":    d.Name,
+			"healthy": strconv.FormatBool(d.Status.UnavailableReplicas == 0),
 		})
 	}
 

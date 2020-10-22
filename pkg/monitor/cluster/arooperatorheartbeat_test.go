@@ -25,8 +25,9 @@ func TestEmitAroOperatorHeartbeat(t *testing.T) {
 				Namespace: "openshift-azure-operator",
 			},
 			Status: appsv1.DeploymentStatus{
-				Replicas:          1,
-				AvailableReplicas: 0,
+				Replicas:            1,
+				AvailableReplicas:   0,
+				UnavailableReplicas: 1,
 			},
 		}, &appsv1.Deployment{ // available expected
 			ObjectMeta: metav1.ObjectMeta{
@@ -34,17 +35,29 @@ func TestEmitAroOperatorHeartbeat(t *testing.T) {
 				Namespace: "openshift-azure-operator",
 			},
 			Status: appsv1.DeploymentStatus{
-				Replicas:          1,
-				AvailableReplicas: 1,
+				Replicas:            1,
+				AvailableReplicas:   1,
+				UnavailableReplicas: 0,
+			},
+		}, &appsv1.Deployment{ // available expected - there can be more replicas during upgrade
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "name3",
+				Namespace: "openshift-azure-operator",
+			},
+			Status: appsv1.DeploymentStatus{
+				Replicas:            1,
+				AvailableReplicas:   2,
+				UnavailableReplicas: 0,
 			},
 		}, &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{ // no metric expected -customer
-				Name:      "name2",
+				Name:      "name4",
 				Namespace: "customer",
 			},
 			Status: appsv1.DeploymentStatus{
-				Replicas:          2,
-				AvailableReplicas: 1,
+				Replicas:            2,
+				AvailableReplicas:   1,
+				UnavailableReplicas: 1,
 			},
 		},
 	)
@@ -60,13 +73,18 @@ func TestEmitAroOperatorHeartbeat(t *testing.T) {
 	}
 
 	m.EXPECT().EmitGauge("arooperator.heartbeat", int64(1), map[string]string{
-		"name":      "name1",
-		"available": "false",
+		"name":    "name1",
+		"healthy": "false",
 	})
 
 	m.EXPECT().EmitGauge("arooperator.heartbeat", int64(1), map[string]string{
-		"name":      "name2",
-		"available": "true",
+		"name":    "name2",
+		"healthy": "true",
+	})
+
+	m.EXPECT().EmitGauge("arooperator.heartbeat", int64(1), map[string]string{
+		"name":    "name3",
+		"healthy": "true",
 	})
 
 	err := mon.emitAroOperatorHeartbeat(ctx)
