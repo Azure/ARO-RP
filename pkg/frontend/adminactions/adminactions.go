@@ -31,7 +31,7 @@ type Interface interface {
 	K8sCreateOrUpdate(obj *unstructured.Unstructured) error
 	K8sDelete(groupKind, namespace, name string) error
 	ResourcesList(ctx context.Context) ([]byte, error)
-	Upgrade(ctx context.Context) error
+	Upgrade(ctx context.Context, upgradeY bool) error
 	VMRedeployAndWait(ctx context.Context, vmName string) error
 	VMSerialConsole(ctx context.Context, w http.ResponseWriter,
 		log *logrus.Entry, vmName string) error

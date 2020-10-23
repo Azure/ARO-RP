@@ -21,16 +21,16 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-func (a *adminactions) Upgrade(ctx context.Context) error {
+func (a *adminactions) Upgrade(ctx context.Context, upgradeY bool) error {
 	err := preUpgradeChecks(ctx, a.oc, a.vNetClient)
 	if err != nil {
 		return err
 	}
 
-	return upgrade(ctx, a.log, a.configClient)
+	return upgrade(ctx, a.log, a.configClient, upgradeY)
 }
 
-func upgrade(ctx context.Context, log *logrus.Entry, configClient configclient.Interface) error {
+func upgrade(ctx context.Context, log *logrus.Entry, configClient configclient.Interface, upgradeY bool) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		cv, err := configClient.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
 		if err != nil {
@@ -48,9 +48,9 @@ func upgrade(ctx context.Context, log *logrus.Entry, configClient configclient.I
 		}
 
 		// Get Cluster upgrade version based on desired version
-		stream, err := version.GetUpgradeStream(desired)
-		if err != nil {
-			return err
+		stream := version.GetUpgradeStream(desired, upgradeY)
+		if stream == nil {
+			return fmt.Errorf("not upgrading: stream not found")
 		}
 
 		log.Printf("initiating cluster upgrade, target version %s", stream.Version.String())
