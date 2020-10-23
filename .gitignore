@@ -17,8 +17,7 @@ gomock_reflect_*
 /pyenv*
 /python/az/aro/build
 /python/az/aro/dist
-/secrets
-/secrets.tar.gz
+/secrets*
 /mdm_statsd.socket
 /uts.txt
 /cover.out
