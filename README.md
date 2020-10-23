@@ -81,6 +81,25 @@ questions or comments.
 
   * pkg/monitor: Monitors running clusters.
 
+  * pkg/operator/controllers: A list of controllers instantiated by the operator
+    component.
+
+    * alertwebhook: Ensures the `alertmanager-main` secret in the
+      `openshift-monitoring` namespace is correct.
+
+    * checker: Watches the `Cluster` resource for changes and perform a set of
+      checks against it.
+
+    * genevalogging: Ensures all the Geneva logging resources in the
+      `openshift-azure-logging` namespace matches the pre-defined
+      [specification](https://github.com/Azure/ARO-RP/blob/bcda60153111923802e2de8360b5ad57d6b1cb34/pkg/operator/controllers/genevalogging/genevalogging.go#L373-L409).
+
+    * pullsecret: Ensures that the ACR credentials in the `pull-secret` secret
+      in the `openshift-config` namespace is correct, and that it matches the
+      `cluster` secret in the `openshift-azure-operator` namespace.
+
+    * workaround: Applies a set of workaround to the ARO cluster.
+
   * pkg/swagger: Swagger specification generation code.
 
   * pkg/util: Utility libraries.
