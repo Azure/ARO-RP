@@ -49,13 +49,7 @@ func (c *core) GetCertificateSecret(ctx context.Context, secretName string) (*rs
 
 func NewCore(ctx context.Context, log *logrus.Entry) (Core, error) {
 	deploymentMode := deployment.NewMode()
-
-	switch deploymentMode {
-	case deployment.Development:
-		log.Warn("running in development mode")
-	case deployment.Integration:
-		log.Warn("running in int mode")
-	}
+	log.Infof("running in %s mode", deploymentMode)
 
 	instancemetadata, err := instancemetadata.New(ctx, deploymentMode)
 	if err != nil {

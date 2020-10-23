@@ -24,3 +24,4 @@ gomock_reflect_*
 /coverage.*
 /report.xml
 /deploy/config.yaml
+**/*.swp
