@@ -5,7 +5,9 @@ package infra
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"math/rand"
 	"os"
 	"strconv"
 	"time"
@@ -21,6 +23,8 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2020-04-30/redhatopenshift"
+	"github.com/Azure/ARO-RP/pkg/deploy"
+	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
@@ -145,22 +149,28 @@ func (i *Infrastructure) Deploy(ctx context.Context) error {
 		return err
 	}
 
-	t := arm.Template{
-		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-		ContentVersion: "1.0.0.0",
-		Resources: []*arm.Resource{
-			networkRouteTable(),
-			networkVnet(),
-			rbacResourceGroupRoleAssignment(spID, i.resourceGroup),
-			rbacVnetRoleAssignment(spID, "sp-client"),
-			rbacVnetRoleAssignment(fpSPID, "fp-client"),
-			rbacRouteTableRoleAssignment(spID, "sp-client"),
-			rbacRouteTableRoleAssignment(fpSPID, "fp-client"),
-		},
+	b, err := deploy.Asset(generator.FileClusterPredeploy)
+	if err != nil {
+		return err
+	}
+
+	var template map[string]interface{}
+	err = json.Unmarshal(b, &template)
+	if err != nil {
+		return err
+	}
+
+	parameters := map[string]*arm.ParametersParameter{
+		"clusterName":               {Value: i.clusterName},
+		"clusterServicePrincipalId": {Value: spID},
+		"fpServicePrincipalId":      {Value: fpSPID},
+		"fullDeploy":                {Value: true},
+		"masterAddressPrefix":       {Value: fmt.Sprintf("10.%d.%d.0/24", rand.Intn(128), rand.Intn(256))},
+		"workerAddressPrefix":       {Value: fmt.Sprintf("10.%d.%d.0/24", rand.Intn(128), rand.Intn(256))},
 	}
 
 	i.log.Info("Create ci-infra arm")
-	err = i.deployARMTemplate(ctx, &t)
+	err = i.deployARMTemplate(ctx, template, parameters)
 	if err != nil {
 		return err
 	}
@@ -187,11 +197,12 @@ func (i *Infrastructure) Destroy(ctx context.Context) error {
 }
 
 // Deploy puts the cloud infra in place using ARM template and Deploy method
-func (i *Infrastructure) deployARMTemplate(ctx context.Context, t *arm.Template) error {
+func (i *Infrastructure) deployARMTemplate(ctx context.Context, t interface{}, parameters map[string]*arm.ParametersParameter) error {
 	err := i.deployments.CreateOrUpdateAndWait(ctx, i.resourceGroup, "ci-infra", mgmtfeatures.Deployment{
 		Properties: &mgmtfeatures.DeploymentProperties{
-			Template: t,
-			Mode:     mgmtfeatures.Incremental,
+			Template:   t,
+			Parameters: parameters,
+			Mode:       mgmtfeatures.Incremental,
 		},
 	})
 
@@ -260,7 +271,7 @@ func (i *Infrastructure) deployCluster(ctx context.Context, spID, secret string)
 			},
 			MasterProfile: &redhatopenshift.MasterProfile{
 				VMSize:   redhatopenshift.StandardD8sV3,
-				SubnetID: to.StringPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/%s/subnets/%s", i.subscriptionID, i.resourceGroup, vnetName, masterSubnetName)),
+				SubnetID: to.StringPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-master", i.subscriptionID, i.resourceGroup, i.clusterName)),
 			},
 			WorkerProfiles: &[]redhatopenshift.WorkerProfile{
 				{
@@ -268,7 +279,7 @@ func (i *Infrastructure) deployCluster(ctx context.Context, spID, secret string)
 					Count:      to.Int32Ptr(3),
 					DiskSizeGB: to.Int32Ptr(128),
 					VMSize:     redhatopenshift.VMSize1StandardD2sV3,
-					SubnetID:   to.StringPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/%s/subnets/%s", i.subscriptionID, i.resourceGroup, vnetName, workerSubnetName)),
+					SubnetID:   to.StringPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-worker", i.subscriptionID, i.resourceGroup, i.clusterName)),
 				},
 			},
 			ApiserverProfile: &redhatopenshift.APIServerProfile{

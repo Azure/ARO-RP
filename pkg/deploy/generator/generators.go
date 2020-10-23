@@ -81,6 +81,10 @@ func (g *generator) Artifacts() error {
 		if err != nil {
 			return err
 		}
+		err = g.writeTemplate(g.clusterPredeploy(), FileClusterPredeploy)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

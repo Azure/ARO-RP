@@ -1,0 +1,147 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "clusterName": {
+            "type": "string"
+        },
+        "clusterServicePrincipalId": {
+            "type": "string"
+        },
+        "fpServicePrincipalId": {
+            "type": "string"
+        },
+        "fullDeploy": {
+            "type": "bool",
+            "defaultValue": false
+        },
+        "masterAddressPrefix": {
+            "type": "string"
+        },
+        "workerAddressPrefix": {
+            "type": "string"
+        }
+    },
+    "resources": [
+        {
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "10.0.0.0/9"
+                    ]
+                }
+            },
+            "name": "dev-vnet",
+            "type": "Microsoft.Network/virtualNetworks",
+            "location": "[resourceGroup().location]",
+            "condition": "[parameters('fullDeploy')]",
+            "apiVersion": "2019-07-01"
+        },
+        {
+            "name": "[concat(parameters('clusterName'), '-rt')]",
+            "type": "Microsoft.Network/routeTables",
+            "location": "[resourceGroup().location]",
+            "apiVersion": "2019-07-01"
+        },
+        {
+            "properties": {
+                "addressPrefix": "[parameters('masterAddressPrefix')]",
+                "routeTable": {
+                    "id": "[resourceid('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]",
+                    "tags": null
+                },
+                "serviceEndpoints": [
+                    {
+                        "service": "Microsoft.ContainerRegistry"
+                    }
+                ],
+                "privateLinkServiceNetworkPolicies": "Disabled"
+            },
+            "name": "[concat('dev-vnet/', parameters('clusterName'), '-master')]",
+            "type": "Microsoft.Network/virtualNetworks/subnets",
+            "apiVersion": "2019-07-01",
+            "dependsOn": [
+                "[resourceid('Microsoft.Network/virtualNetworks', 'dev-vnet')]",
+                "[resourceid('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]"
+            ],
+            "location": "[resourceGroup().location]"
+        },
+        {
+            "properties": {
+                "addressPrefix": "[parameters('workerAddressPrefix')]",
+                "serviceEndpoints": [
+                    {
+                        "service": "Microsoft.ContainerRegistry"
+                    }
+                ]
+            },
+            "name": "[concat('dev-vnet/', parameters('clusterName'), '-worker')]",
+            "type": "Microsoft.Network/virtualNetworks/subnets",
+            "apiVersion": "2019-07-01",
+            "dependsOn": [
+                "[resourceid('Microsoft.Network/virtualNetworks/subnets', 'dev-vnet', concat(parameters('clusterName'), '-master'))]"
+            ],
+            "location": "[resourceGroup().location]"
+        },
+        {
+            "name": "[concat('dev-vnet', '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet'), parameters('clusterServicePrincipalId'), 'b24988ac-6180-42a0-ab88-20f7382dd24c'))]",
+            "type": "Microsoft.Network/virtualNetworks/providers/roleAssignments",
+            "properties": {
+                "scope": "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
+                "principalId": "[parameters('clusterServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
+            },
+            "condition": null,
+            "apiVersion": "2018-09-01-preview",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]"
+            ]
+        },
+        {
+            "name": "[concat('dev-vnet', '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet'), parameters('fpServicePrincipalId'), 'b24988ac-6180-42a0-ab88-20f7382dd24c'))]",
+            "type": "Microsoft.Network/virtualNetworks/providers/roleAssignments",
+            "properties": {
+                "scope": "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
+                "principalId": "[parameters('fpServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
+            },
+            "condition": null,
+            "apiVersion": "2018-09-01-preview",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]"
+            ]
+        },
+        {
+            "name": "[concat(concat(parameters('clusterName'), '-rt'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt')), parameters('clusterServicePrincipalId'), 'b24988ac-6180-42a0-ab88-20f7382dd24c'))]",
+            "type": "Microsoft.Network/routeTables/providers/roleAssignments",
+            "properties": {
+                "scope": "[resourceId('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
+                "principalId": "[parameters('clusterServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
+            },
+            "condition": null,
+            "apiVersion": "2018-09-01-preview",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]"
+            ]
+        },
+        {
+            "name": "[concat(concat(parameters('clusterName'), '-rt'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt')), parameters('fpServicePrincipalId'), 'b24988ac-6180-42a0-ab88-20f7382dd24c'))]",
+            "type": "Microsoft.Network/routeTables/providers/roleAssignments",
+            "properties": {
+                "scope": "[resourceId('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
+                "principalId": "[parameters('fpServicePrincipalId')]",
+                "principalType": "ServicePrincipal"
+            },
+            "condition": null,
+            "apiVersion": "2018-09-01-preview",
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]"
+            ]
+        }
+    ]
+}
