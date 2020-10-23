@@ -36,6 +36,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/feature"
+	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
@@ -152,19 +153,11 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 		ContentVersion: "1.0.0.0",
 		Resources: []*arm.Resource{
-			{
-				Resource: &mgmtauthorization.RoleAssignment{
-					Name: to.StringPtr("[guid(resourceGroup().id, 'SP / Contributor')]"),
-					Type: to.StringPtr("Microsoft.Authorization/roleAssignments"),
-					RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-						Scope:            to.StringPtr("[resourceGroup().id]"),
-						RoleDefinitionID: to.StringPtr("[resourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]"), // Contributor
-						PrincipalID:      &clusterSPObjectID,
-						PrincipalType:    mgmtauthorization.ServicePrincipal,
-					},
-				},
-				APIVersion: azureclient.APIVersions["Microsoft.Authorization"],
-			},
+			rbac.ResourceGroupRoleAssignmentWithName(
+				rbac.RoleContributor,
+				"'"+clusterSPObjectID+"'",
+				"guid(resourceGroup().id, 'SP / Contributor')",
+			),
 			{
 				Resource: &mgmtstorage.Account{
 					Sku: &mgmtstorage.Sku{

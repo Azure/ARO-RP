@@ -23,6 +23,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -31,8 +32,6 @@ const (
 	//aro-billing-operator SP Id, from https://msazure.visualstudio.com/AzureRedHatOpenShift/_workitems/edit/7547877/
 	//needs cleanup of the old role assignment if changed
 	billingSPID = "970792b5-7720-4bf5-a335-f15e97c7e25a"
-	//based on https://docs.microsoft.com/en-us/azure/role-based-access-control/built-in-roles
-	documentDBAccountContributor = "5bd9cd88-fe45-4216-938b-f97437e15450"
 )
 
 var (
@@ -1466,90 +1465,47 @@ func (g *generator) roleDefinitionTokenContributor() *arm.Resource {
 
 func (g *generator) rbac() []*arm.Resource {
 	return []*arm.Resource{
-		{
-			Resource: &mgmtauthorization.RoleAssignment{
-				Name: to.StringPtr("[guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / Reader')]"),
-				Type: to.StringPtr("Microsoft.Authorization/roleAssignments"),
-				RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-					Scope:            to.StringPtr("[resourceGroup().id]"),
-					RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'acdd72a7-3385-48ef-bd42-f606fba81ae7')]"),
-					PrincipalID:      to.StringPtr("[parameters('rpServicePrincipalId')]"),
-					PrincipalType:    mgmtauthorization.ServicePrincipal,
-				},
-			},
-			Condition:  g.conditionStanza("fullDeploy"),
-			APIVersion: azureclient.APIVersions["Microsoft.Authorization"],
-		},
-		{
-			Resource: &mgmtauthorization.RoleAssignment{
-				Name: to.StringPtr("[guid(resourceGroup().id, 'FP / Network Contributor')]"),
-				Type: to.StringPtr("Microsoft.Authorization/roleAssignments"),
-				RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-					Scope:            to.StringPtr("[resourceGroup().id]"),
-					RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4d97b98b-1d4f-4787-a291-c67834d212e7')]"),
-					PrincipalID:      to.StringPtr("[parameters('fpServicePrincipalId')]"),
-					PrincipalType:    mgmtauthorization.ServicePrincipal,
-				},
-			},
-			Condition:  g.conditionStanza("fullDeploy"),
-			APIVersion: azureclient.APIVersions["Microsoft.Authorization"],
-		},
-		{
-			Resource: &mgmtauthorization.RoleAssignment{
-				Name: to.StringPtr("[concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('rpServicePrincipalId'), 'RP / DocumentDB Account Contributor'))]"),
-				Type: to.StringPtr("Microsoft.DocumentDB/databaseAccounts/providers/roleAssignments"),
-				RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-					Scope:            to.StringPtr("[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"),
-					RoleDefinitionID: to.StringPtr(fmt.Sprintf("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '%s')]", documentDBAccountContributor)),
-					PrincipalID:      to.StringPtr("[parameters('rpServicePrincipalId')]"),
-					PrincipalType:    mgmtauthorization.ServicePrincipal,
-				},
-			},
-			Condition:  g.conditionStanza("fullDeploy"),
-			APIVersion: azureclient.APIVersions["Microsoft.Authorization"],
-			DependsOn: []string{
-				"[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
-			},
-		},
-		{
-			Resource: &mgmtauthorization.RoleAssignment{
-				Name: to.StringPtr("[concat(parameters('domainName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/dnsZones', parameters('domainName')), 'FP / DNS Zone Contributor'))]"),
-				Type: to.StringPtr("Microsoft.Network/dnsZones/providers/roleAssignments"),
-				RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-					Scope:            to.StringPtr("[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]"),
-					RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'befefa01-2a29-4197-83a8-272ff33ce314')]"),
-					PrincipalID:      to.StringPtr("[parameters('fpServicePrincipalId')]"),
-					PrincipalType:    mgmtauthorization.ServicePrincipal,
-				},
-			},
-			Condition:  g.conditionStanza("fullDeploy"),
-			APIVersion: azureclient.APIVersions["Microsoft.Authorization"],
-			DependsOn: []string{
-				"[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]",
-			},
-		},
+		rbac.ResourceGroupRoleAssignmentWithName(
+			rbac.RoleReader,
+			"parameters('rpServicePrincipalId')",
+			"guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / Reader')",
+			g.conditionStanza("fullDeploy"),
+		),
+		rbac.ResourceGroupRoleAssignmentWithName(
+			rbac.RoleNetworkContributor,
+			"parameters('fpServicePrincipalId')",
+			"guid(resourceGroup().id, 'FP / Network Contributor')",
+			g.conditionStanza("fullDeploy"),
+		),
+		rbac.ResourceRoleAssignmentWithName(
+			rbac.RoleDocumentDBAccountContributor,
+			"parameters('rpServicePrincipalId')",
+			"Microsoft.DocumentDB/databaseAccounts",
+			"parameters('databaseAccountName')",
+			"concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), parameters('rpServicePrincipalId'), 'RP / DocumentDB Account Contributor'))",
+			g.conditionStanza("fullDeploy"),
+		),
+		rbac.ResourceRoleAssignmentWithName(
+			rbac.RoleDNSZoneContributor,
+			"parameters('fpServicePrincipalId')",
+			"Microsoft.Network/dnsZones",
+			"parameters('domainName')",
+			"concat(parameters('domainName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/dnsZones', parameters('domainName')), 'FP / DNS Zone Contributor'))",
+			g.conditionStanza("fullDeploy"),
+		),
 	}
 }
 
 func (g *generator) billingContributorRbac() []*arm.Resource {
 	return []*arm.Resource{
-		{
-			Resource: &mgmtauthorization.RoleAssignment{
-				Name: to.StringPtr(fmt.Sprintf("[concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), '%s' , 'Billing / DocumentDB Account Contributor'))]", billingSPID)),
-				Type: to.StringPtr("Microsoft.DocumentDB/databaseAccounts/providers/roleAssignments"),
-				RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-					Scope:            to.StringPtr("[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]"),
-					RoleDefinitionID: to.StringPtr(fmt.Sprintf("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '%s')]", documentDBAccountContributor)),
-					PrincipalID:      to.StringPtr(billingSPID),
-					PrincipalType:    mgmtauthorization.ServicePrincipal,
-				},
-			},
-			Condition:  g.conditionStanza("fullDeploy"),
-			APIVersion: azureclient.APIVersions["Microsoft.Authorization"],
-			DependsOn: []string{
-				"[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
-			},
-		},
+		rbac.ResourceRoleAssignmentWithName(
+			rbac.RoleDocumentDBAccountContributor,
+			"'"+billingSPID+"'",
+			"Microsoft.DocumentDB/databaseAccounts",
+			"parameters('databaseAccountName')",
+			"concat(parameters('databaseAccountName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName')), '"+billingSPID+"' , 'Billing / DocumentDB Account Contributor'))",
+			g.conditionStanza("fullDeploy"),
+		),
 	}
 }
 
@@ -1566,36 +1522,30 @@ func (g *generator) acrReplica() *arm.Resource {
 }
 
 func (g *generator) acrRbac() []*arm.Resource {
-	return []*arm.Resource{
-		{
-			Resource: &mgmtauthorization.RoleAssignment{
-				Name: to.StringPtr("[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), parameters('rpServicePrincipalId'), 'RP / AcrPull')))]"),
-				Type: to.StringPtr("Microsoft.ContainerRegistry/registries/providers/roleAssignments"),
-				RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-					Scope:            to.StringPtr("[parameters('acrResourceId')]"),
-					RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]"),
-					PrincipalID:      to.StringPtr("[parameters('rpServicePrincipalId')]"),
-					PrincipalType:    mgmtauthorization.ServicePrincipal,
-				},
-			},
-			Condition:  g.conditionStanza("fullDeploy"),
-			APIVersion: azureclient.APIVersions["Microsoft.Authorization"],
-		},
-		{
-			Resource: &mgmtauthorization.RoleAssignment{
-				Name: to.StringPtr("[concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), 'FP / ARO v4 ContainerRegistry Token Contributor')))]"),
-				Type: to.StringPtr("Microsoft.ContainerRegistry/registries/providers/roleAssignments"),
-				RoleAssignmentPropertiesWithScope: &mgmtauthorization.RoleAssignmentPropertiesWithScope{
-					Scope:            to.StringPtr("[parameters('acrResourceId')]"),
-					RoleDefinitionID: to.StringPtr("[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '48983534-3d06-4dcb-a566-08a694eb1279')]"),
-					PrincipalID:      to.StringPtr("[parameters('fpServicePrincipalId')]"),
-					PrincipalType:    mgmtauthorization.ServicePrincipal,
-				},
-			},
-			Condition:  g.conditionStanza("fullDeploy"),
-			APIVersion: azureclient.APIVersions["Microsoft.Authorization"],
-		},
+	rs := []*arm.Resource{
+		rbac.ResourceRoleAssignmentWithName(
+			rbac.RoleACRPull,
+			"parameters('rpServicePrincipalId')",
+			"Microsoft.ContainerRegistry/registries",
+			"substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1))",
+			"concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), parameters('rpServicePrincipalId'), 'RP / AcrPull')))",
+			g.conditionStanza("fullDeploy"),
+		),
+		rbac.ResourceRoleAssignmentWithName(
+			"48983534-3d06-4dcb-a566-08a694eb1279", // ARO v4 ContainerRegistry Token Contributor
+			"parameters('fpServicePrincipalId')",
+			"Microsoft.ContainerRegistry/registries",
+			"substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1))",
+			"concat(substring(parameters('acrResourceId'), add(lastIndexOf(parameters('acrResourceId'), '/'), 1)), '/', '/Microsoft.Authorization/', guid(concat(parameters('acrResourceId'), 'FP / ARO v4 ContainerRegistry Token Contributor')))",
+			g.conditionStanza("fullDeploy"),
+		),
 	}
+
+	for _, r := range rs {
+		r.DependsOn = nil
+	}
+
+	return rs
 }
 
 func (g *generator) rpVersionStorageAccount() []*arm.Resource {
