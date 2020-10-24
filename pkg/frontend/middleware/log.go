@@ -87,27 +87,23 @@ func Log(baseLog *logrus.Entry) func(http.Handler) http.Handler {
 
 			r = r.WithContext(ctx)
 
-			defer func() {
-				log.WithFields(logrus.Fields{
-					"body_read_bytes":      r.Body.(*logReadCloser).bytes,
-					"body_written_bytes":   w.(*logResponseWriter).bytes,
-					"duration":             time.Now().Sub(t).Seconds(),
-					"request_method":       r.Method,
-					"request_path":         r.URL.Path,
-					"request_proto":        r.Proto,
-					"request_remote_addr":  r.RemoteAddr,
-					"request_user_agent":   r.UserAgent(),
-					"response_status_code": w.(*logResponseWriter).statusCode,
-				}).Print("sent response")
-			}()
-
-			log.WithFields(logrus.Fields{
+			log = log.WithFields(logrus.Fields{
 				"request_method":      r.Method,
 				"request_path":        r.URL.Path,
 				"request_proto":       r.Proto,
 				"request_remote_addr": r.RemoteAddr,
 				"request_user_agent":  r.UserAgent(),
-			}).Print("read request")
+			})
+			log.Print("read request")
+
+			defer func() {
+				log.WithFields(logrus.Fields{
+					"body_read_bytes":      r.Body.(*logReadCloser).bytes,
+					"body_written_bytes":   w.(*logResponseWriter).bytes,
+					"duration":             time.Now().Sub(t).Seconds(),
+					"response_status_code": w.(*logResponseWriter).statusCode,
+				}).Print("sent response")
+			}()
 
 			h.ServeHTTP(w, r)
 		})
