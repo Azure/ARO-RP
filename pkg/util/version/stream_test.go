@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+
+	"github.com/Azure/ARO-RP/test/util/cmp"
 )
 
 func TestOpenShiftVersions(t *testing.T) {
@@ -32,13 +34,13 @@ func TestUnique(t *testing.T) {
 }
 
 func TestGetUpgradeStream(t *testing.T) {
-	stream43 := Stream{
+	stream43 := &Stream{
 		Version: NewVersion(4, 3, 18),
 	}
-	stream44 := Stream{
+	stream44 := &Stream{
 		Version: NewVersion(4, 4, 3),
 	}
-	stream45 := Stream{
+	stream45 := &Stream{
 		Version: NewVersion(4, 5, 0),
 	}
 
@@ -50,73 +52,59 @@ func TestGetUpgradeStream(t *testing.T) {
 		streams  []*Stream
 	}{
 		{
-			name:     "upgrade when Y versions match and candidate Z (4.3.18) is greater",
-			v:        NewVersion(4, 3, 17),
-			upgradeY: false,
-			streams:  []*Stream{&stream43, &stream44},
-			want:     &stream43,
+			name:    "upgrade when Y versions match and candidate Z (4.3.18) is greater",
+			v:       NewVersion(4, 3, 17),
+			streams: []*Stream{stream43, stream44},
+			want:    stream43,
 		},
 		{
-			name:     "don't upgrade when Y versions match but current Z (4.3.19) is greater",
-			v:        NewVersion(4, 3, 19),
-			upgradeY: false,
-			streams:  []*Stream{&stream43, &stream44},
-			want:     nil,
+			name:    "don't upgrade when Y versions match but current Z (4.3.19) is greater",
+			v:       NewVersion(4, 3, 19),
+			streams: []*Stream{stream43, stream44},
 		},
 		{
-			name:     "upgrade when Y versions match and candidate Z (4.4.3) is greater",
-			v:        NewVersion(4, 4, 2),
-			upgradeY: false,
-			streams:  []*Stream{&stream43, &stream44},
-			want:     &stream44,
+			name:    "upgrade when Y versions match and candidate Z (4.4.3) is greater",
+			v:       NewVersion(4, 4, 2),
+			streams: []*Stream{stream43, stream44},
+			want:    stream44,
 		},
 		{
-			name:     "don't upgrade when Y versions match but current Z (4.4.9) is greater",
-			v:        NewVersion(4, 4, 9),
-			upgradeY: false,
-			streams:  []*Stream{&stream43, &stream44},
-			want:     nil,
+			name:    "don't upgrade when Y versions match but current Z (4.4.9) is greater",
+			v:       NewVersion(4, 4, 9),
+			streams: []*Stream{stream43, stream44},
 		},
 		{
 			name:     "upgrade to Y+1 when allowed and candidate y.Z (4.3.18) < current y.Z (4.3.19)",
 			v:        NewVersion(4, 3, 19),
 			upgradeY: true,
-			streams:  []*Stream{&stream43, &stream44},
-			want:     &stream44,
+			streams:  []*Stream{stream43, stream44},
+			want:     stream44,
 		},
 		{
 			name:     "upgrade to Y+1 when allowed and candidate y.Z == current y.Z (4.3.18)",
 			v:        stream43.Version,
 			upgradeY: true,
-			streams:  []*Stream{&stream43, &stream44},
-			want:     &stream44,
+			streams:  []*Stream{stream43, stream44},
+			want:     stream44,
 		},
 		{
 			name:     "upgrade to Y+1 (not Y+2) when allowed and candidate y.Z == current y.Z (4.3.18)",
 			v:        stream43.Version,
 			upgradeY: true,
-			streams:  []*Stream{&stream43, &stream44, &stream45},
-			want:     &stream44,
+			streams:  []*Stream{stream43, stream44, stream45},
+			want:     stream44,
 		},
 		{
-			name:     "don't upgrade Y when not allowed",
-			v:        stream43.Version,
-			upgradeY: false,
-			streams:  []*Stream{&stream43, &stream44},
-			want:     nil,
+			name:    "don't upgrade Y when not allowed",
+			v:       stream43.Version,
+			streams: []*Stream{stream43, stream44},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			Streams = tt.streams
-			got := GetUpgradeStream(tt.v, tt.upgradeY)
-			if got != nil && tt.want != nil && !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("wanted %s, got %s", tt.want.Version, got.Version)
-			}
-			if got == nil && tt.want != nil {
-				t.Errorf("wanted %s, got nil", tt.want.Version)
-			}
-			if got != nil && tt.want == nil {
-				t.Errorf("wanted nil, got %s", got)
+			got := GetUpgradeStream(tt.streams, tt.v, tt.upgradeY)
+
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Error(cmp.Diff(tt.want, got))
 			}
 		})
 	}

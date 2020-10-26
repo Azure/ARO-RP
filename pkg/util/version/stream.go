@@ -10,8 +10,8 @@ type Stream struct {
 
 // GetUpgradeStream returns an upgrade Stream for a Version or nil if no upgrade
 // should be performed.
-func GetUpgradeStream(v *Version, upgradeY bool) *Stream {
-	s := getStream(v)
+func GetUpgradeStream(streams []*Stream, v *Version, upgradeY bool) *Stream {
+	s := getStream(streams, v)
 	if s == nil {
 		return nil
 	}
@@ -21,15 +21,15 @@ func GetUpgradeStream(v *Version, upgradeY bool) *Stream {
 	}
 
 	if upgradeY {
-		return getStream(&Version{V: [3]uint32{v.V[0], v.V[1] + 1}})
+		return getStream(streams, &Version{V: [3]uint32{v.V[0], v.V[1] + 1}})
 	}
 
 	return nil
 }
 
 // getStream receives a Version x.y.z and returns the Stream x.y.0 if it exists.
-func getStream(v *Version) *Stream {
-	for _, s := range Streams {
+func getStream(streams []*Stream, v *Version) *Stream {
+	for _, s := range streams {
 		if s.Version.V[0] == v.V[0] && s.Version.V[1] == v.V[1] {
 			return s
 		}

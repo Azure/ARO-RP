@@ -25,13 +25,13 @@ import (
 func TestUpgradeCluster(t *testing.T) {
 	ctx := context.Background()
 
-	stream43 := version.Stream{
+	stream43 := &version.Stream{
 		Version: version.NewVersion(4, 3, 27),
 	}
-	stream44 := version.Stream{
+	stream44 := &version.Stream{
 		Version: version.NewVersion(4, 4, 10),
 	}
-	stream45 := version.Stream{
+	stream45 := &version.Stream{
 		Version: version.NewVersion(4, 5, 3),
 	}
 
@@ -168,7 +168,6 @@ func TestUpgradeCluster(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			version.Streams = append([]*version.Stream{}, &stream43, &stream44, &stream45)
 			var updated bool
 
 			tt.fakecli.PrependReactor("update", "clusterversions", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
@@ -181,7 +180,7 @@ func TestUpgradeCluster(t *testing.T) {
 				configClient: tt.fakecli,
 			}
 
-			err := upgrade(ctx, a.log, a.configClient, tt.upgradeY)
+			err := upgrade(ctx, a.log, a.configClient, []*version.Stream{stream43, stream44, stream45}, tt.upgradeY)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

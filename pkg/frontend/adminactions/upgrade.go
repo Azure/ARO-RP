@@ -27,10 +27,10 @@ func (a *adminactions) Upgrade(ctx context.Context, upgradeY bool) error {
 		return err
 	}
 
-	return upgrade(ctx, a.log, a.configClient, upgradeY)
+	return upgrade(ctx, a.log, a.configClient, version.Streams, upgradeY)
 }
 
-func upgrade(ctx context.Context, log *logrus.Entry, configClient configclient.Interface, upgradeY bool) error {
+func upgrade(ctx context.Context, log *logrus.Entry, configClient configclient.Interface, streams []*version.Stream, upgradeY bool) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		cv, err := configClient.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
 		if err != nil {
@@ -48,7 +48,7 @@ func upgrade(ctx context.Context, log *logrus.Entry, configClient configclient.I
 		}
 
 		// Get Cluster upgrade version based on desired version
-		stream := version.GetUpgradeStream(desired, upgradeY)
+		stream := version.GetUpgradeStream(streams, desired, upgradeY)
 		if stream == nil {
 			return fmt.Errorf("not upgrading: stream not found")
 		}
