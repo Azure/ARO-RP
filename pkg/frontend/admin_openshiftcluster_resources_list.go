@@ -22,16 +22,7 @@ func (f *frontend) listAdminOpenShiftClusterResources(w http.ResponseWriter, r *
 	log := ctx.Value(middleware.ContextKeyLog).(*logrus.Entry)
 	r.URL.Path = filepath.Dir(r.URL.Path)
 
-	jpath, err := validateAdminJmespathFilter(r.URL.Query().Get("filter"))
-	if err != nil {
-		adminReply(log, w, nil, nil, err)
-		return
-	}
-
 	b, err := f._listAdminOpenShiftClusterResources(ctx, r, log)
-	if err == nil {
-		b, err = adminJmespathFilter(b, jpath, "")
-	}
 
 	adminReply(log, w, nil, b, err)
 }
