@@ -5,7 +5,6 @@ package e2e
 
 import (
 	"context"
-	"os"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -25,7 +24,7 @@ var _ = Describe("Scale nodes", func() {
 	Specify("node count should match the cluster resource and nodes should be ready", func() {
 		ctx := context.Background()
 
-		oc, err := clients.OpenshiftClusters.Get(ctx, os.Getenv("RESOURCEGROUP"), os.Getenv("CLUSTER"))
+		oc, err := clients.OpenshiftClusters.Get(ctx, im.ResourceGroup(), clusterName)
 		Expect(err).NotTo(HaveOccurred())
 
 		expectedNodeCount := 3 // for masters
