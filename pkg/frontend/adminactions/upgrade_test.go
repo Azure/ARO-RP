@@ -25,13 +25,13 @@ import (
 func TestUpgradeCluster(t *testing.T) {
 	ctx := context.Background()
 
-	stream43 := version.Stream{
+	stream43 := &version.Stream{
 		Version: version.NewVersion(4, 3, 27),
 	}
-	stream44 := version.Stream{
+	stream44 := &version.Stream{
 		Version: version.NewVersion(4, 4, 10),
 	}
-	stream45 := version.Stream{
+	stream45 := &version.Stream{
 		Version: version.NewVersion(4, 5, 3),
 	}
 
@@ -52,6 +52,7 @@ func TestUpgradeCluster(t *testing.T) {
 		fakecli *fake.Clientset
 
 		desiredVersion string
+		upgradeY       bool
 		wantUpdated    bool
 		wantErr        string
 	}{
@@ -68,8 +69,7 @@ func TestUpgradeCluster(t *testing.T) {
 					},
 				},
 			}),
-			wantUpdated: false,
-			wantErr:     "not upgrading: previous upgrade in-progress",
+			wantErr: "not upgrading: previous upgrade in-progress",
 		},
 		{
 			name: "upgrade to Y latest",
@@ -84,8 +84,8 @@ func TestUpgradeCluster(t *testing.T) {
 					},
 				},
 			}),
-			wantUpdated:    true,
 			desiredVersion: stream43.Version.String(),
+			wantUpdated:    true,
 		},
 		{
 			name: "no upgrade, Y higher than expected",
@@ -100,8 +100,7 @@ func TestUpgradeCluster(t *testing.T) {
 					},
 				},
 			}),
-			wantUpdated: false,
-			wantErr:     "not upgrading: cvo desired version is 4.3.99",
+			wantErr: "not upgrading: stream not found",
 		},
 		{
 			name: "no upgrade, Y match but unhealthy cluster",
@@ -116,11 +115,10 @@ func TestUpgradeCluster(t *testing.T) {
 					},
 				},
 			}),
-			wantUpdated: false,
-			wantErr:     "not upgrading: previous upgrade in-progress",
+			wantErr: "not upgrading: previous upgrade in-progress",
 		},
 		{
-			name: "upgrade, Y match",
+			name: "upgrade, Y match, Y upgrades NOT allowed",
 			fakecli: newFakecli(configv1.ClusterVersionStatus{
 				Desired: configv1.Update{
 					Version: stream43.Version.String(),
@@ -132,11 +130,27 @@ func TestUpgradeCluster(t *testing.T) {
 					},
 				},
 			}),
-			wantUpdated:    true,
-			desiredVersion: stream44.Version.String(),
+			wantErr: "not upgrading: stream not found",
 		},
 		{
-			name: "upgrade, Y match 2",
+			name: "upgrade, Y match, Y upgrades allowed (4.3 to 4.4)",
+			fakecli: newFakecli(configv1.ClusterVersionStatus{
+				Desired: configv1.Update{
+					Version: stream43.Version.String(),
+				},
+				Conditions: []configv1.ClusterOperatorStatusCondition{
+					{
+						Type:   configv1.OperatorAvailable,
+						Status: configv1.ConditionTrue,
+					},
+				},
+			}),
+			desiredVersion: stream44.Version.String(),
+			upgradeY:       true,
+			wantUpdated:    true,
+		},
+		{
+			name: "upgrade, Y match, Y upgrades allowed (4.4 to 4.5)",
 			fakecli: newFakecli(configv1.ClusterVersionStatus{
 				Desired: configv1.Update{
 					Version: stream44.Version.String(),
@@ -148,12 +162,12 @@ func TestUpgradeCluster(t *testing.T) {
 					},
 				},
 			}),
-			wantUpdated:    true,
 			desiredVersion: stream45.Version.String(),
+			upgradeY:       true,
+			wantUpdated:    true,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			version.Streams = append([]version.Stream{}, stream43, stream44, stream45)
 			var updated bool
 
 			tt.fakecli.PrependReactor("update", "clusterversions", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
@@ -166,7 +180,7 @@ func TestUpgradeCluster(t *testing.T) {
 				configClient: tt.fakecli,
 			}
 
-			err := upgrade(ctx, a.log, a.configClient)
+			err := upgrade(ctx, a.log, a.configClient, []*version.Stream{stream43, stream44, stream45}, tt.upgradeY)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

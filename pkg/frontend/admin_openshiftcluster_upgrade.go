@@ -30,6 +30,8 @@ func (f *frontend) postAdminOpenShiftUpgrade(w http.ResponseWriter, r *http.Requ
 func (f *frontend) _postAdminOpenShiftUpgrade(ctx context.Context, r *http.Request, log *logrus.Entry) error {
 	vars := mux.Vars(r)
 
+	upgradeY := r.URL.Query().Get("upgradeY") == "true"
+
 	resourceID := strings.TrimPrefix(r.URL.Path, "/admin")
 
 	doc, err := f.dbOpenShiftClusters.Get(ctx, resourceID)
@@ -50,5 +52,5 @@ func (f *frontend) _postAdminOpenShiftUpgrade(ctx context.Context, r *http.Reque
 		return err
 	}
 
-	return a.Upgrade(ctx)
+	return a.Upgrade(ctx, upgradeY)
 }

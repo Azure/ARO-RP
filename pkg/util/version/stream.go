@@ -1,9 +1,5 @@
 package version
 
-import (
-	"fmt"
-)
-
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
@@ -12,40 +8,32 @@ type Stream struct {
 	PullSpec string
 }
 
-// GetUpgradeStream determines if a valid upgrade path is available, and if so, returns the corresponding stream.
-func GetUpgradeStream(v *Version) (*Stream, error) {
-	// ARO version matches OCP version - X.Y.Z.
-	// We know we can have only single version configured per Y release. These
-	// version should be edge points for Y+1 upgrades.
+// GetUpgradeStream returns an upgrade Stream for a Version or nil if no upgrade
+// should be performed.
+func GetUpgradeStream(streams []*Stream, v *Version, upgradeY bool) *Stream {
+	s := getStream(streams, v)
+	if s == nil {
+		return nil
+	}
 
-	// We check first with which configured Y stream we are dealing with
-	for _, upgradeCandidate := range Streams {
-		if upgradeCandidate.Version.V[0] == v.V[0] &&
-			upgradeCandidate.Version.V[1] == v.V[1] {
+	if v.Lt(s.Version) {
+		return s
+	}
 
-			// we DO NOT upgrade if CVO version is already higher
-			if upgradeCandidate.Version != nil && upgradeCandidate.Version.Lt(v) {
-				return nil, fmt.Errorf("not upgrading: cvo desired version is %s", v)
-			}
+	if upgradeY {
+		return getStream(streams, &Version{V: [3]uint32{v.V[0], v.V[1] + 1}})
+	}
 
-			// If upgradeCandidate is higher than CVO - use it to upgrade to ARO
-			// latest x.Y release before jumping major version.
-			if v.Lt(upgradeCandidate.Version) {
-				return &upgradeCandidate, nil
-			}
+	return nil
+}
 
-			// If we on right version, we need to upgrade next major version
-			if v.Eq(upgradeCandidate.Version) {
-				for _, upgradeCandidate := range Streams {
-					// if incoming version is 4.2, we return 4.3 for major upgrade.
-					if upgradeCandidate.Version.V[1] == v.V[1]+1 {
-						return &upgradeCandidate, nil
-					}
-				}
-				return &upgradeCandidate, nil // if we don't have a higher version, just return the current one.
-			}
+// getStream receives a Version x.y.z and returns the Stream x.y.0 if it exists.
+func getStream(streams []*Stream, v *Version) *Stream {
+	for _, s := range streams {
+		if s.Version.V[0] == v.V[0] && s.Version.V[1] == v.V[1] {
+			return s
 		}
 	}
 
-	return nil, fmt.Errorf("not upgrading: stream not found %s", v)
+	return nil
 }
