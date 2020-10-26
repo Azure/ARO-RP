@@ -5,7 +5,6 @@ package e2e
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"time"
@@ -19,14 +18,17 @@ import (
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/clientcmd/api"
+	"k8s.io/client-go/tools/clientcmd/api/latest"
 
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/insights"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift"
+	"github.com/Azure/ARO-RP/pkg/util/cluster"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
-	"github.com/Azure/ARO-RP/test/util/infra"
+	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 	"github.com/Azure/ARO-RP/test/util/kubeadminkubeconfig"
 )
 
@@ -44,62 +46,63 @@ type clientSet struct {
 }
 
 var (
-	log       *logrus.Entry
-	clients   *clientSet
-	testInfra infra.Interface
+	log            *logrus.Entry
+	deploymentMode deployment.Mode
+	im             instancemetadata.InstanceMetadata
+	clusterName    string
+	clients        *clientSet
 )
 
 func skipIfNotInDevelopmentEnv() {
-	if deployment.NewMode() != deployment.Development {
+	if deploymentMode != deployment.Development {
 		Skip("skipping tests in non-development environment")
 	}
 }
 
 func resourceIDFromEnv() string {
-	subscriptionID := os.Getenv("AZURE_SUBSCRIPTION_ID")
-	resourceGroup := os.Getenv("RESOURCEGROUP")
-	clusterName := os.Getenv("CLUSTER")
-	return fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s", subscriptionID, resourceGroup, clusterName)
+	return fmt.Sprintf(
+		"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s",
+		im.SubscriptionID(), im.ResourceGroup(), clusterName)
 }
 
-func newClientSet(subscriptionID string) (*clientSet, error) {
+func newClientSet(ctx context.Context) (*clientSet, error) {
 	authorizer, err := auth.NewAuthorizerFromEnvironment()
 	if err != nil {
 		return nil, err
 	}
 
-	var clientConfig clientcmd.ClientConfig
-	// If KUBECONFIG variable is set, use its context to run E2E tests
-	// else use variables to get cluster credentials either from local RP or
-	// production
-	if os.Getenv("KUBECONFIG") != "" {
-		clientConfig = clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-			clientcmd.NewDefaultClientConfigLoadingRules(),
-			&clientcmd.ConfigOverrides{},
-		)
-	} else {
-		kconfig, err := kubeadminkubeconfig.Get(context.Background(), log, authorizer, resourceIDFromEnv())
-		if err != nil {
-			return nil, err
-		}
-		b, err := json.Marshal(kconfig)
-		if err != nil {
-			return nil, err
-		}
-
-		clientConfig, err = clientcmd.NewClientConfigFromBytes(b)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	restconfig, err := clientConfig.ClientConfig()
+	configv1, err := kubeadminkubeconfig.Get(ctx, log, authorizer, resourceIDFromEnv())
 	if err != nil {
 		return nil, err
 	}
 
-	cli := kubernetes.NewForConfigOrDie(restconfig)
-	machineapicli := machineapiclient.NewForConfigOrDie(restconfig)
+	var config api.Config
+	err = latest.Scheme.Convert(configv1, &config, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	kubeconfig := clientcmd.NewDefaultClientConfig(config, &clientcmd.ConfigOverrides{})
+
+	restconfig, err := kubeconfig.ClientConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	cli, err := kubernetes.NewForConfig(restconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	machineapicli, err := machineapiclient.NewForConfig(restconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	projectcli, err := projectv1client.NewForConfig(restconfig)
+	if err != nil {
+		return nil, err
+	}
 
 	arocli, err := aroclient.NewForConfig(restconfig)
 	if err != nil {
@@ -107,17 +110,73 @@ func newClientSet(subscriptionID string) (*clientSet, error) {
 	}
 
 	return &clientSet{
-		OpenshiftClusters: redhatopenshift.NewOpenShiftClustersClient(subscriptionID, authorizer),
-		Operations:        redhatopenshift.NewOperationsClient(subscriptionID, authorizer),
-		VirtualMachines:   compute.NewVirtualMachinesClient(subscriptionID, authorizer),
-		Resources:         features.NewResourcesClient(subscriptionID, authorizer),
-		ActivityLogs:      insights.NewActivityLogsClient(subscriptionID, authorizer),
+		OpenshiftClusters: redhatopenshift.NewOpenShiftClustersClient(im.SubscriptionID(), authorizer),
+		Operations:        redhatopenshift.NewOperationsClient(im.SubscriptionID(), authorizer),
+		VirtualMachines:   compute.NewVirtualMachinesClient(im.SubscriptionID(), authorizer),
+		Resources:         features.NewResourcesClient(im.SubscriptionID(), authorizer),
+		ActivityLogs:      insights.NewActivityLogsClient(im.SubscriptionID(), authorizer),
 
 		Kubernetes:  cli,
 		MachineAPI:  machineapicli,
 		AROClusters: arocli,
-		Project:     projectv1client.NewForConfigOrDie(restconfig),
+		Project:     projectcli,
 	}, nil
+}
+
+func setup(ctx context.Context) error {
+	deploymentMode = deployment.NewMode()
+	log.Infof("running in %s mode", deploymentMode)
+
+	var err error
+	im, err = instancemetadata.NewDev()
+	if err != nil {
+		return err
+	}
+
+	for _, key := range []string{
+		"CLUSTER",
+	} {
+		if _, found := os.LookupEnv(key); !found {
+			return fmt.Errorf("environment variable %q unset", key)
+		}
+	}
+
+	clusterName = os.Getenv("CLUSTER")
+
+	if os.Getenv("E2E_CREATE_CLUSTER") != "" {
+		cluster, err := cluster.New(log, deploymentMode, im, os.Getenv("CI") != "")
+		if err != nil {
+			return err
+		}
+
+		err = cluster.Create(ctx, clusterName)
+		if err != nil {
+			return err
+		}
+	}
+
+	clients, err = newClientSet(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func done(ctx context.Context) error {
+	if os.Getenv("E2E_DELETE_CLUSTER") != "" {
+		cluster, err := cluster.New(log, deploymentMode, im, os.Getenv("CI") != "")
+		if err != nil {
+			return err
+		}
+
+		err = cluster.Delete(ctx, clusterName)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 var _ = BeforeSuite(func() {
@@ -126,39 +185,7 @@ var _ = BeforeSuite(func() {
 	SetDefaultEventuallyTimeout(2 * time.Minute)
 	SetDefaultEventuallyPollingInterval(10 * time.Second)
 
-	for _, key := range []string{
-		"AZURE_CLIENT_ID",
-		"AZURE_CLIENT_SECRET",
-		"AZURE_SUBSCRIPTION_ID",
-		"AZURE_TENANT_ID",
-		"CLUSTER",
-		"LOCATION",
-		"RESOURCEGROUP",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			panic(fmt.Sprintf("environment variable %q unset", key))
-		}
-	}
-
-	subscriptionID := os.Getenv("AZURE_SUBSCRIPTION_ID")
-	tenantID := os.Getenv("AZURE_TENANT_ID")
-
-	var err error
-	testInfra, err = infra.New(log, subscriptionID, tenantID)
-	if err != nil {
-		panic(err)
-	}
-
-	// Gate infrastructure creation with env variable for CI
-	if os.Getenv("E2E_CREATE_CLUSTER") != "" {
-		err = testInfra.Deploy(context.Background())
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	clients, err = newClientSet(subscriptionID)
-	if err != nil {
+	if err := setup(context.Background()); err != nil {
 		panic(err)
 	}
 })
@@ -166,11 +193,7 @@ var _ = BeforeSuite(func() {
 var _ = AfterSuite(func() {
 	log.Info("AfterSuite")
 
-	if os.Getenv("E2E_DELETE_CLUSTER") != "" && testInfra != nil {
-		// delete infrastructure only if variable is set
-		err := testInfra.Destroy(context.Background())
-		if err != nil {
-			panic(err)
-		}
+	if err := done(context.Background()); err != nil {
+		panic(err)
 	}
 })

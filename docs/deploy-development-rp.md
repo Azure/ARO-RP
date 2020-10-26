@@ -142,10 +142,22 @@
      "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID?api-version=2.0"
    ```
 
-1. To create a cluster, follow the instructions in [Create, access, and manage
-   an Azure Red Hat OpenShift 4.3 Cluster][1].  Note that as long as the
+1. To create a cluster, EITHER follow the instructions in [Create, access, and
+   manage an Azure Red Hat OpenShift 4.3 Cluster][1].  Note that as long as the
    `RP_MODE` environment variable is set to `development`, the `az aro` client
    will connect to your local RP.
+
+   OR use the create utility:
+
+   ```bash
+   CLUSTER=mycluster go run ./hack/cluster create
+   ```
+
+   Later the cluster can be deleted as follows:
+
+   ```bash
+   CLUSTER=mycluster go run ./hack/cluster delete
+   ```
 
    [1]: https://docs.microsoft.com/en-us/azure/openshift/tutorial-create-cluster
 

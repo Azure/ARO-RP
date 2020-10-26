@@ -23,6 +23,7 @@ steps:
     set -x
     . ./hack/e2e/run-rp-and-e2e.sh
 
+    export CI=true
     run_e2e
   displayName: 🚀 Run ${{ parameters.location }} E2E
 - template: ./template-az-cli-logout.yml

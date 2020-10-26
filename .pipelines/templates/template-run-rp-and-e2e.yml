@@ -15,6 +15,7 @@ steps:
       register_sub
     fi
 
+    export CI=true
     run_e2e
 
     if [ $RP_MODE = "development" ]

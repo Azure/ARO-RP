@@ -41,7 +41,7 @@ func (im *instanceMetadata) ResourceGroup() string {
 
 func New(ctx context.Context, deploymentMode deployment.Mode) (InstanceMetadata, error) {
 	if deploymentMode == deployment.Development {
-		return newDev()
+		return NewDev()
 	}
 
 	return newProd(ctx)
