@@ -94,7 +94,6 @@ var (
 	CloudErrorCodeResourceQuotaExceeded              = "ResourceQuotaExceeded"
 	CloudErrorCodeQuotaExceeded                      = "QuotaExceeded"
 	CloudErrorResourceProviderNotRegistered          = "ResourceProviderNotRegistered"
-	CloudErrorCodeJMESPathSearchFailed               = "JMESPathSearchFailed"
 )
 
 // NewCloudError returns a new CloudError

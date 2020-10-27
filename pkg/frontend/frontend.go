@@ -6,7 +6,6 @@ package frontend
 import (
 	"context"
 	"crypto/tls"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -15,7 +14,6 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/jmespath/go-jmespath"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -309,34 +307,6 @@ func (f *frontend) Run(ctx context.Context, stop <-chan struct{}, done chan<- st
 	if err != http.ErrServerClosed {
 		f.baseLog.Error(err)
 	}
-}
-
-func adminJmespathFilter(result []byte, jpath *jmespath.JMESPath, rootPath string) ([]byte, error) {
-	if jpath == nil {
-		return result, nil
-	}
-
-	var o interface{}
-	err := json.Unmarshal(result, &o)
-	if err != nil {
-		return nil, err
-	}
-	root := o
-	if rootPath != "" {
-		root = o.(map[string]interface{})[rootPath]
-	}
-
-	filtered, err := jpath.Search(root)
-	if err != nil {
-		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeJMESPathSearchFailed, "", "The JMESPath search returned an error: '%s'", err)
-	}
-	final := filtered
-	if rootPath != "" {
-		final = o
-		final.(map[string]interface{})[rootPath] = filtered
-	}
-
-	return json.Marshal(final)
 }
 
 func adminReply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b []byte, err error) {
