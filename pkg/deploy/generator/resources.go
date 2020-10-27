@@ -182,7 +182,6 @@ cat >/etc/systemd/system/proxy.service <<'EOF'
 [Unit]
 After=docker.service
 Requires=docker.service
-StartLimitInterval=0
 
 [Service]
 EnvironmentFile=/etc/sysconfig/proxy
@@ -191,6 +190,7 @@ ExecStart=/usr/bin/docker run --rm --name %n -p 443:8443 -v /etc/proxy:/secrets 
 ExecStop=/usr/bin/docker stop %n
 Restart=always
 RestartSec=1
+StartLimitInterval=0
 
 [Install]
 WantedBy=multi-user.target
@@ -836,7 +836,6 @@ cat >/etc/systemd/system/mdm.service <<'EOF'
 [Unit]
 After=docker.service
 Requires=docker.service
-StartLimitInterval=0
 
 [Service]
 EnvironmentFile=/etc/sysconfig/mdm
@@ -861,6 +860,7 @@ ExecStart=/usr/bin/docker run \
 ExecStop=/usr/bin/docker stop %N
 Restart=always
 RestartSec=1
+StartLimitInterval=0
 
 [Install]
 WantedBy=multi-user.target
@@ -879,7 +879,6 @@ cat >/etc/systemd/system/aro-rp.service <<'EOF'
 [Unit]
 After=docker.service
 Requires=docker.service
-StartLimitInterval=0
 
 [Service]
 EnvironmentFile=/etc/sysconfig/aro-rp
@@ -904,6 +903,7 @@ ExecStop=/usr/bin/docker stop -t 3600 %N
 TimeoutStopSec=3600
 Restart=always
 RestartSec=1
+StartLimitInterval=0
 
 [Install]
 WantedBy=multi-user.target
@@ -922,7 +922,6 @@ cat >/etc/systemd/system/aro-monitor.service <<'EOF'
 [Unit]
 After=docker.service
 Requires=docker.service
-StartLimitInterval=0
 
 [Service]
 EnvironmentFile=/etc/sysconfig/aro-monitor
@@ -943,6 +942,7 @@ ExecStart=/usr/bin/docker run \
   monitor
 Restart=always
 RestartSec=1
+StartLimitInterval=0
 
 [Install]
 WantedBy=multi-user.target
