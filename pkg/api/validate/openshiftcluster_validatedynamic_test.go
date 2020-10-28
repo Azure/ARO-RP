@@ -168,6 +168,7 @@ func TestValidateVnet(t *testing.T) {
 	vnetID := resourceGroupID + "/providers/Microsoft.Network/virtualNetworks/testVnet"
 	masterSubnet := vnetID + "/subnet/masterSubnet"
 	workerSubnet := vnetID + "/subnet/workerSubnet"
+	workerSubnet2 := vnetID + "/subnet/workerSubnet2"
 	masterNSGv1 := resourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/aro-controlplane-nsg"
 	workerNSGv1 := resourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/aro-node-nsg"
 	commonNSGv2 := resourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/aro-nsg"
@@ -267,7 +268,7 @@ func TestValidateVnet(t *testing.T) {
 			modifyOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.ArchitectureVersion = api.ArchitectureVersionV2
 			},
-			wantErr: `400: InvalidLinkedVNet: properties.workerProfiles["worker"].subnetId: The provided subnet '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/virtualNetworks/testVnet/subnet/workerSubnet' is invalid: must have network security group '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/networkSecurityGroups/aro-nsg' attached.`,
+			wantErr: `400: InvalidLinkedVNet: properties.workerProfiles[0].subnetId: The provided subnet '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/virtualNetworks/testVnet/subnet/workerSubnet' is invalid: must have network security group '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/networkSecurityGroups/aro-nsg' attached.`,
 		},
 		{
 			name: "invalid master nsg (creating)",
@@ -347,15 +348,15 @@ func TestValidateVnet(t *testing.T) {
 			},
 			wantErr: "",
 		},
-		// {
-		// 	name: "two worker pools on the on two different subnets which do not overlap with pod or service cidr",
-		// 	modifyOC: func(oc *api.OpenShiftCluster) {
-		// 		oc.Properties.WorkerProfiles = append(oc.Properties.WorkerProfiles, api.WorkerProfile{
-		// 			SubnetID: secondWorkerSubnet,
-		// 		})
-		// 	},
-		// 	wantErr: "",
-		// },
+		{
+			name: "two worker pools on the on two different subnets which do not overlap with pod or service cidr",
+			modifyOC: func(oc *api.OpenShiftCluster) {
+				oc.Properties.WorkerProfiles = append(oc.Properties.WorkerProfiles, api.WorkerProfile{
+					SubnetID: workerSubnet2,
+				})
+			},
+			wantErr: "",
+		},
 		{
 			name: "two worker pools on the on two different subnets one of which overlaps with pod or service cidr",
 			modifyVnet: func(vnet *mgmtnetwork.VirtualNetwork) {
@@ -363,7 +364,7 @@ func TestValidateVnet(t *testing.T) {
 			},
 			modifyOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.WorkerProfiles = append(oc.Properties.WorkerProfiles, api.WorkerProfile{
-					SubnetID: secondWorkerSubnet,
+					SubnetID: workerSubnet2,
 				})
 			},
 			wantErr: "400: InvalidLinkedVNet: : The provided CIDRs must not overlap: '10.0.3.0/24 overlaps with 10.0.3.0/24'.",
@@ -440,11 +441,11 @@ func TestValidateVnet(t *testing.T) {
 							},
 						},
 						{
-							ID: &secondWorkerSubnet,
+							ID: &workerSubnet2,
 							SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 								AddressPrefix: to.StringPtr("10.0.4.0/24"),
 								NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
-									ID: &workerNSG,
+									ID: &workerNSGv1,
 								},
 								ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
 									{

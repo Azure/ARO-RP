@@ -5,12 +5,8 @@ package openshiftcluster
 
 import (
 	"context"
-	"time"
-
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/cluster"
-	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 )
 
 func (m *manager) AdminUpdate(ctx context.Context) error {

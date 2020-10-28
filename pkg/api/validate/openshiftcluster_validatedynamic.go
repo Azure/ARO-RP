@@ -330,42 +330,49 @@ func (dv *openShiftClusterDynamicValidator) validateSubnet(ctx context.Context, 
 func (dv *openShiftClusterDynamicValidator) validateVnet(ctx context.Context, vnet *mgmtnetwork.VirtualNetwork) error {
 	dv.log.Print("validateVnet")
 	var err error
-	maxCIDRBlocks := len(dv.oc.Properties.WorkerProfiles) + 3
-	CIDRMap := make(map[string]*net.IPNet, maxCIDRBlocks)
 
 	if !strings.EqualFold(*vnet.Location, dv.oc.Location) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The vnet location '%s' must match the cluster location '%s'.", *vnet.Location, dv.oc.Location)
 	}
 
-	CIDRMap[dv.oc.Properties.MasterProfile.SubnetID], err = dv.validateSubnet(ctx, vnet, "properties.masterProfile.subnetId", dv.oc.Properties.MasterProfile.SubnetID)
-
-	if err != nil {
-		return err
-	}
-
-	_, CIDRMap["podCIDR"], err = net.ParseCIDR(dv.oc.Properties.NetworkProfile.PodCIDR)
-	if err != nil {
-		return err
-	}
-
-	_, CIDRMap["serviceCIDR"], err = net.ParseCIDR(dv.oc.Properties.NetworkProfile.ServiceCIDR)
-	if err != nil {
-		return err
-	}
-
-	for i, s := range dv.oc.Properties.WorkerProfiles {
-		CIDRMap[s.SubnetID], err = dv.validateSubnet(ctx, vnet, "properties.workerProfiles["+strconv.Itoa(i)+"].subnetId", s.SubnetID)
-		if err != nil {
-			return err
+	// unique names of subnets from all node pools
+	var subnets []string
+	var CIDRArray []*net.IPNet
+	for i, subnet := range dv.oc.Properties.WorkerProfiles {
+		exists := false
+		for _, s := range subnets {
+			if strings.EqualFold(strings.ToLower(subnet.SubnetID), strings.ToLower(s)) {
+				exists = true
+				break
+			}
+		}
+		if !exists {
+			subnets = append(subnets, subnet.SubnetID)
+			c, err := dv.validateSubnet(ctx, vnet, "properties.workerProfiles["+strconv.Itoa(i)+"].subnetId", subnet.SubnetID)
+			if err != nil {
+				return err
+			}
+			CIDRArray = append(CIDRArray, c)
 		}
 	}
-
-	CIDRBlocks := make([]*net.IPNet, 0, maxCIDRBlocks)
-	for _, c := range CIDRMap {
-		CIDRBlocks = append(CIDRBlocks, c)
+	masterSubnetCIDR, err := dv.validateSubnet(ctx, vnet, "properties.masterProfile.subnetId", dv.oc.Properties.MasterProfile.SubnetID)
+	if err != nil {
+		return err
 	}
 
-	err = cidr.VerifyNoOverlap(CIDRBlocks, &net.IPNet{IP: net.IPv4zero, Mask: net.IPMask(net.IPv4zero)})
+	_, podCIDR, err := net.ParseCIDR(dv.oc.Properties.NetworkProfile.PodCIDR)
+	if err != nil {
+		return err
+	}
+
+	_, serviceCIDR, err := net.ParseCIDR(dv.oc.Properties.NetworkProfile.ServiceCIDR)
+	if err != nil {
+		return err
+	}
+
+	CIDRArray = append(CIDRArray, masterSubnetCIDR, podCIDR, serviceCIDR)
+
+	err = cidr.VerifyNoOverlap(CIDRArray, &net.IPNet{IP: net.IPv4zero, Mask: net.IPMask(net.IPv4zero)})
 	if err != nil {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided CIDRs must not overlap: '%s'.", err)
 	}
