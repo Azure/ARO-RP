@@ -4,8 +4,11 @@ package workaround
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
+
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -27,12 +30,12 @@ func (i *ifReload) IsRequired(clusterVersion *version.Version) bool {
 	return clusterVersion.Lt(i.versionFixed)
 }
 
-func (*ifReload) Ensure() error {
+func (*ifReload) Ensure(ctx context.Context) error {
 	return nil
 }
 
-func (i *ifReload) Remove() error {
-	err := i.cli.CoreV1().Namespaces().Delete(kubeNamespace, nil)
+func (i *ifReload) Remove(ctx context.Context) error {
+	err := i.cli.CoreV1().Namespaces().Delete(ctx, kubeNamespace, metav1.DeleteOptions{})
 	if errors.IsNotFound(err) {
 		return nil
 	}

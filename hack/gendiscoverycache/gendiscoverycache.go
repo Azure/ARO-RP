@@ -42,7 +42,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	clusterVersion, err := getClusterVersion(cvClient)
+	clusterVersion, err := getClusterVersion(ctx, cvClient)
 	if err != nil {
 		return err
 	}
@@ -60,8 +60,8 @@ func run(ctx context.Context, log *logrus.Entry) error {
 	return writeAssets(cli, clusterVersion, discoveryCacheDir)
 }
 
-func getClusterVersion(cvClient configclient.Interface) (string, error) {
-	cv, err := cvClient.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
+func getClusterVersion(ctx context.Context, cvClient configclient.Interface) (string, error) {
+	cv, err := cvClient.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
 	if err != nil {
 		return "", err
 	}

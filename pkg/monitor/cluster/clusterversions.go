@@ -13,12 +13,12 @@ import (
 )
 
 func (mon *Monitor) emitClusterVersions(ctx context.Context) error {
-	cv, err := mon.getClusterVersion()
+	cv, err := mon.getClusterVersion(ctx)
 	if err != nil {
 		return err
 	}
 
-	dl, err := mon.listDeployments()
+	dl, err := mon.listDeployments(ctx)
 	if err != nil {
 		return err
 	}

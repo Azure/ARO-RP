@@ -4,6 +4,8 @@ package workaround
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
+
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
@@ -14,8 +16,8 @@ type Workaround interface {
 	// is effected by the bug that the workaround fixes.
 	IsRequired(clusterVersion *version.Version) bool
 	// Ensure will apply the workaround to the cluster.
-	Ensure() error
+	Ensure(context.Context) error
 	// Remove will remove the workaround from the cluster
 	// (in the case when IsRequired returns false).
-	Remove() error
+	Remove(context.Context) error
 }

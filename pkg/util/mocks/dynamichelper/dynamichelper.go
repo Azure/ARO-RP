@@ -5,6 +5,7 @@
 package mock_dynamichelper
 
 import (
+	context "context"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -35,75 +36,75 @@ func (m *MockDynamicHelper) EXPECT() *MockDynamicHelperMockRecorder {
 }
 
 // CreateOrUpdate mocks base method
-func (m *MockDynamicHelper) CreateOrUpdate(arg0 *unstructured.Unstructured) error {
+func (m *MockDynamicHelper) CreateOrUpdate(arg0 context.Context, arg1 *unstructured.Unstructured) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateOrUpdate", arg0)
+	ret := m.ctrl.Call(m, "CreateOrUpdate", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateOrUpdate indicates an expected call of CreateOrUpdate
-func (mr *MockDynamicHelperMockRecorder) CreateOrUpdate(arg0 interface{}) *gomock.Call {
+func (mr *MockDynamicHelperMockRecorder) CreateOrUpdate(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdate", reflect.TypeOf((*MockDynamicHelper)(nil).CreateOrUpdate), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdate", reflect.TypeOf((*MockDynamicHelper)(nil).CreateOrUpdate), arg0, arg1)
 }
 
 // Delete mocks base method
-func (m *MockDynamicHelper) Delete(arg0, arg1, arg2 string) error {
+func (m *MockDynamicHelper) Delete(arg0 context.Context, arg1, arg2, arg3 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Delete", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete
-func (mr *MockDynamicHelperMockRecorder) Delete(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockDynamicHelperMockRecorder) Delete(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockDynamicHelper)(nil).Delete), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockDynamicHelper)(nil).Delete), arg0, arg1, arg2, arg3)
 }
 
 // Ensure mocks base method
-func (m *MockDynamicHelper) Ensure(arg0 *unstructured.Unstructured) error {
+func (m *MockDynamicHelper) Ensure(arg0 context.Context, arg1 *unstructured.Unstructured) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Ensure", arg0)
+	ret := m.ctrl.Call(m, "Ensure", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Ensure indicates an expected call of Ensure
-func (mr *MockDynamicHelperMockRecorder) Ensure(arg0 interface{}) *gomock.Call {
+func (mr *MockDynamicHelperMockRecorder) Ensure(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ensure", reflect.TypeOf((*MockDynamicHelper)(nil).Ensure), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ensure", reflect.TypeOf((*MockDynamicHelper)(nil).Ensure), arg0, arg1)
 }
 
 // Get mocks base method
-func (m *MockDynamicHelper) Get(arg0, arg1, arg2 string) (*unstructured.Unstructured, error) {
+func (m *MockDynamicHelper) Get(arg0 context.Context, arg1, arg2, arg3 string) (*unstructured.Unstructured, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(*unstructured.Unstructured)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Get indicates an expected call of Get
-func (mr *MockDynamicHelperMockRecorder) Get(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockDynamicHelperMockRecorder) Get(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockDynamicHelper)(nil).Get), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockDynamicHelper)(nil).Get), arg0, arg1, arg2, arg3)
 }
 
 // List mocks base method
-func (m *MockDynamicHelper) List(arg0, arg1 string) (*unstructured.UnstructuredList, error) {
+func (m *MockDynamicHelper) List(arg0 context.Context, arg1, arg2 string) (*unstructured.UnstructuredList, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0, arg1)
+	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2)
 	ret0, _ := ret[0].(*unstructured.UnstructuredList)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // List indicates an expected call of List
-func (mr *MockDynamicHelperMockRecorder) List(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockDynamicHelperMockRecorder) List(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockDynamicHelper)(nil).List), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockDynamicHelper)(nil).List), arg0, arg1, arg2)
 }
 
 // RefreshAPIResources mocks base method

@@ -15,12 +15,12 @@ import (
 // if a condition function encounters a retryable error it should return false, nil.
 
 func (m *manager) bootstrapConfigMapReady(ctx context.Context) (bool, error) {
-	cm, err := m.kubernetescli.CoreV1().ConfigMaps("kube-system").Get("bootstrap", metav1.GetOptions{})
+	cm, err := m.kubernetescli.CoreV1().ConfigMaps("kube-system").Get(ctx, "bootstrap", metav1.GetOptions{})
 	return err == nil && cm.Data["status"] == "complete", nil
 }
 
 func (m *manager) apiServersReady(ctx context.Context) (bool, error) {
-	apiserver, err := m.configcli.ConfigV1().ClusterOperators().Get("kube-apiserver", metav1.GetOptions{})
+	apiserver, err := m.configcli.ConfigV1().ClusterOperators().Get(ctx, "kube-apiserver", metav1.GetOptions{})
 	if err != nil {
 		return false, nil
 	}
@@ -28,12 +28,12 @@ func (m *manager) apiServersReady(ctx context.Context) (bool, error) {
 }
 
 func (m *manager) operatorConsoleExists(ctx context.Context) (bool, error) {
-	_, err := m.operatorcli.OperatorV1().Consoles().Get(consoleapi.ConfigResourceName, metav1.GetOptions{})
+	_, err := m.operatorcli.OperatorV1().Consoles().Get(ctx, consoleapi.ConfigResourceName, metav1.GetOptions{})
 	return err == nil, nil
 }
 
 func (m *manager) operatorConsoleReady(ctx context.Context) (bool, error) {
-	consoleOperator, err := m.configcli.ConfigV1().ClusterOperators().Get("console", metav1.GetOptions{})
+	consoleOperator, err := m.configcli.ConfigV1().ClusterOperators().Get(ctx, "console", metav1.GetOptions{})
 	if err != nil {
 		return false, nil
 	}
@@ -41,7 +41,7 @@ func (m *manager) operatorConsoleReady(ctx context.Context) (bool, error) {
 }
 
 func (m *manager) clusterVersionReady(ctx context.Context) (bool, error) {
-	cv, err := m.configcli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
+	cv, err := m.configcli.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
 	if err == nil {
 		for _, cond := range cv.Status.Conditions {
 			if cond.Type == configv1.OperatorAvailable && cond.Status == configv1.ConditionTrue {
@@ -53,7 +53,7 @@ func (m *manager) clusterVersionReady(ctx context.Context) (bool, error) {
 }
 
 func (m *manager) ingressControllerReady(ctx context.Context) (bool, error) {
-	ingressOperator, err := m.configcli.ConfigV1().ClusterOperators().Get("ingress", metav1.GetOptions{})
+	ingressOperator, err := m.configcli.ConfigV1().ClusterOperators().Get(ctx, "ingress", metav1.GetOptions{})
 	if err != nil {
 		return false, nil
 	}

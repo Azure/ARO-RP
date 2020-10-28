@@ -29,7 +29,7 @@ type OpenShiftClusterEnricher interface {
 type enricherTaskConstructor func(*logrus.Entry, *rest.Config, *api.OpenShiftCluster) (enricherTask, error)
 type enricherTask interface {
 	SetDefaults()
-	FetchData(chan<- func(), chan<- error)
+	FetchData(context.Context, chan<- func(), chan<- error)
 }
 
 // NewBestEffortEnricher returns an enricher that attempts to populate
@@ -123,7 +123,7 @@ func (e *bestEffortEnricher) enrichOne(ctx context.Context, oc *api.OpenShiftClu
 				})
 			}()
 
-			tasks[i].FetchData(callbacks, errors)
+			tasks[i].FetchData(ctx, callbacks, errors)
 		}(i) // https://golang.org/doc/faq#closures_and_goroutines
 	}
 

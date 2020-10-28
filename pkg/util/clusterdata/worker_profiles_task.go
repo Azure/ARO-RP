@@ -4,6 +4,7 @@ package clusterdata
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"fmt"
 	"sort"
 
@@ -41,7 +42,7 @@ type workerProfilesEnricherTask struct {
 	oc     *api.OpenShiftCluster
 }
 
-func (ef *workerProfilesEnricherTask) FetchData(callbacks chan<- func(), errs chan<- error) {
+func (ef *workerProfilesEnricherTask) FetchData(ctx context.Context, callbacks chan<- func(), errs chan<- error) {
 	r, err := azure.ParseResourceID(ef.oc.ID)
 	if err != nil {
 		ef.log.Error(err)
@@ -49,7 +50,7 @@ func (ef *workerProfilesEnricherTask) FetchData(callbacks chan<- func(), errs ch
 		return
 	}
 
-	machinesets, err := ef.client.MachineV1beta1().MachineSets(workerMachineSetsNamespace).List(metav1.ListOptions{})
+	machinesets, err := ef.client.MachineV1beta1().MachineSets(workerMachineSetsNamespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		ef.log.Error(err)
 		errs <- err

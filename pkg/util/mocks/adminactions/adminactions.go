@@ -38,61 +38,61 @@ func (m *MockInterface) EXPECT() *MockInterfaceMockRecorder {
 }
 
 // K8sCreateOrUpdate mocks base method
-func (m *MockInterface) K8sCreateOrUpdate(arg0 *unstructured.Unstructured) error {
+func (m *MockInterface) K8sCreateOrUpdate(arg0 context.Context, arg1 *unstructured.Unstructured) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "K8sCreateOrUpdate", arg0)
+	ret := m.ctrl.Call(m, "K8sCreateOrUpdate", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // K8sCreateOrUpdate indicates an expected call of K8sCreateOrUpdate
-func (mr *MockInterfaceMockRecorder) K8sCreateOrUpdate(arg0 interface{}) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) K8sCreateOrUpdate(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "K8sCreateOrUpdate", reflect.TypeOf((*MockInterface)(nil).K8sCreateOrUpdate), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "K8sCreateOrUpdate", reflect.TypeOf((*MockInterface)(nil).K8sCreateOrUpdate), arg0, arg1)
 }
 
 // K8sDelete mocks base method
-func (m *MockInterface) K8sDelete(arg0, arg1, arg2 string) error {
+func (m *MockInterface) K8sDelete(arg0 context.Context, arg1, arg2, arg3 string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "K8sDelete", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "K8sDelete", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // K8sDelete indicates an expected call of K8sDelete
-func (mr *MockInterfaceMockRecorder) K8sDelete(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) K8sDelete(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "K8sDelete", reflect.TypeOf((*MockInterface)(nil).K8sDelete), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "K8sDelete", reflect.TypeOf((*MockInterface)(nil).K8sDelete), arg0, arg1, arg2, arg3)
 }
 
 // K8sGet mocks base method
-func (m *MockInterface) K8sGet(arg0, arg1, arg2 string) ([]byte, error) {
+func (m *MockInterface) K8sGet(arg0 context.Context, arg1, arg2, arg3 string) ([]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "K8sGet", arg0, arg1, arg2)
+	ret := m.ctrl.Call(m, "K8sGet", arg0, arg1, arg2, arg3)
 	ret0, _ := ret[0].([]byte)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // K8sGet indicates an expected call of K8sGet
-func (mr *MockInterfaceMockRecorder) K8sGet(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) K8sGet(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "K8sGet", reflect.TypeOf((*MockInterface)(nil).K8sGet), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "K8sGet", reflect.TypeOf((*MockInterface)(nil).K8sGet), arg0, arg1, arg2, arg3)
 }
 
 // K8sList mocks base method
-func (m *MockInterface) K8sList(arg0, arg1 string) ([]byte, error) {
+func (m *MockInterface) K8sList(arg0 context.Context, arg1, arg2 string) ([]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "K8sList", arg0, arg1)
+	ret := m.ctrl.Call(m, "K8sList", arg0, arg1, arg2)
 	ret0, _ := ret[0].([]byte)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // K8sList indicates an expected call of K8sList
-func (mr *MockInterfaceMockRecorder) K8sList(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) K8sList(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "K8sList", reflect.TypeOf((*MockInterface)(nil).K8sList), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "K8sList", reflect.TypeOf((*MockInterface)(nil).K8sList), arg0, arg1, arg2)
 }
 
 // ResourcesList mocks base method

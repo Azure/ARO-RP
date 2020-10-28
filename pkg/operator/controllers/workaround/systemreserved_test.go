@@ -4,6 +4,7 @@ package workaround
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -68,7 +69,7 @@ func TestSystemreservedEnsure(t *testing.T) {
 			}),
 			machineConfigPoolNeedsUpdate: true,
 			mocker: func(mdh *mock_dynamichelper.MockDynamicHelper) {
-				mdh.EXPECT().Ensure(gomock.Any()).Return(nil)
+				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
 		{
@@ -80,7 +81,7 @@ func TestSystemreservedEnsure(t *testing.T) {
 				},
 			}),
 			mocker: func(mdh *mock_dynamichelper.MockDynamicHelper) {
-				mdh.EXPECT().Ensure(gomock.Any()).Return(nil)
+				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
 	}
@@ -107,7 +108,7 @@ func TestSystemreservedEnsure(t *testing.T) {
 			})
 
 			tt.mocker(mdh)
-			if err := sr.Ensure(); (err != nil) != tt.wantErr {
+			if err := sr.Ensure(context.Background()); (err != nil) != tt.wantErr {
 				t.Errorf("systemreserved.Ensure() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if tt.machineConfigPoolNeedsUpdate != updated {

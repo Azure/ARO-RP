@@ -4,6 +4,7 @@ package e2e
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strings"
@@ -22,8 +23,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 )
 
-func updatedObjects(nsfilter string) ([]string, error) {
-	pods, err := clients.Kubernetes.CoreV1().Pods("openshift-azure-operator").List(metav1.ListOptions{
+func updatedObjects(ctx context.Context, nsfilter string) ([]string, error) {
+	pods, err := clients.Kubernetes.CoreV1().Pods("openshift-azure-operator").List(ctx, metav1.ListOptions{
 		LabelSelector: "app=aro-operator-master",
 	})
 	if err != nil {
@@ -32,7 +33,7 @@ func updatedObjects(nsfilter string) ([]string, error) {
 	if len(pods.Items) != 1 {
 		return nil, fmt.Errorf("%d aro-operator-master pods found", len(pods.Items))
 	}
-	b, err := clients.Kubernetes.CoreV1().Pods("openshift-azure-operator").GetLogs(pods.Items[0].Name, &corev1.PodLogOptions{}).DoRaw()
+	b, err := clients.Kubernetes.CoreV1().Pods("openshift-azure-operator").GetLogs(pods.Items[0].Name, &corev1.PodLogOptions{}).DoRaw(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +54,7 @@ var _ = Describe("ARO Operator - Internet checking", func() {
 	var originalURLs []string
 	BeforeEach(func() {
 		// save the originalURLs
-		co, err := clients.AROClusters.Clusters().Get("cluster", metav1.GetOptions{})
+		co, err := clients.AROClusters.Clusters().Get(context.Background(), "cluster", metav1.GetOptions{})
 		if errors.IsNotFound(err) {
 			Skip("skipping tests as aro-operator is not deployed")
 		}
@@ -64,25 +65,24 @@ var _ = Describe("ARO Operator - Internet checking", func() {
 	AfterEach(func() {
 		// set the URLs back again
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			co, err := clients.AROClusters.Clusters().Get("cluster", metav1.GetOptions{})
+			co, err := clients.AROClusters.Clusters().Get(context.Background(), "cluster", metav1.GetOptions{})
 			if err != nil {
 				return err
 			}
 			co.Spec.InternetChecker.URLs = originalURLs
-			_, err = clients.AROClusters.Clusters().Update(co)
+			_, err = clients.AROClusters.Clusters().Update(context.Background(), co, metav1.UpdateOptions{})
 			return err
 		})
 		Expect(err).NotTo(HaveOccurred())
 	})
-
-	Specify("the InternetReachable default list should all be reachable from master", func() {
-		co, err := clients.AROClusters.Clusters().Get("cluster", metav1.GetOptions{})
+	Specify("the InternetReachable default list should all be reachable", func() {
+		co, err := clients.AROClusters.Clusters().Get(context.Background(), "cluster", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(co.Status.Conditions.IsTrueFor(arov1alpha1.InternetReachableFromMaster)).To(BeTrue())
 	})
 
 	Specify("the InternetReachable default list should all be reachable from worker", func() {
-		co, err := clients.AROClusters.Clusters().Get("cluster", metav1.GetOptions{})
+		co, err := clients.AROClusters.Clusters().Get(context.Background(), "cluster", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(co.Status.Conditions.IsTrueFor(arov1alpha1.InternetReachableFromWorker)).To(BeTrue())
 	})
@@ -90,19 +90,19 @@ var _ = Describe("ARO Operator - Internet checking", func() {
 	Specify("custom invalid site shows not InternetReachable", func() {
 		// set an unreachable URL
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			co, err := clients.AROClusters.Clusters().Get("cluster", metav1.GetOptions{})
+			co, err := clients.AROClusters.Clusters().Get(context.Background(), "cluster", metav1.GetOptions{})
 			if err != nil {
 				return err
 			}
 			co.Spec.InternetChecker.URLs = []string{"https://localhost:1234/shouldnotexist"}
-			_, err = clients.AROClusters.Clusters().Update(co)
+			_, err = clients.AROClusters.Clusters().Update(context.Background(), co, metav1.UpdateOptions{})
 			return err
 		})
 		Expect(err).NotTo(HaveOccurred())
 
 		// confirm the conditions are correct
 		err = wait.PollImmediate(10*time.Second, 2*time.Minute, func() (bool, error) {
-			co, err := clients.AROClusters.Clusters().Get("cluster", metav1.GetOptions{})
+			co, err := clients.AROClusters.Clusters().Get(context.Background(), "cluster", metav1.GetOptions{})
 			if err != nil {
 				return false, err
 			}
@@ -117,21 +117,21 @@ var _ = Describe("ARO Operator - Internet checking", func() {
 
 var _ = Describe("ARO Operator - Geneva Logging", func() {
 	BeforeEach(func() {
-		_, err := clients.AROClusters.Clusters().Get("cluster", metav1.GetOptions{})
+		_, err := clients.AROClusters.Clusters().Get(context.Background(), "cluster", metav1.GetOptions{})
 		if errors.IsNotFound(err) {
 			Skip("skipping tests as aro-operator is not deployed")
 		}
 	})
 	Specify("genevalogging must be repaired if deployment deleted", func() {
-		mdsdReady := ready.CheckDaemonSetIsReady(clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-logging"), "mdsd")
+		mdsdReady := ready.CheckDaemonSetIsReady(context.Background(), clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-logging"), "mdsd")
 
 		err := wait.PollImmediate(30*time.Second, 15*time.Minute, mdsdReady)
 		Expect(err).NotTo(HaveOccurred())
-		initial, err := updatedObjects("openshift-azure-logging")
+		initial, err := updatedObjects(context.Background(), "openshift-azure-logging")
 		Expect(err).NotTo(HaveOccurred())
 
 		// delete the mdsd daemonset
-		err = clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-logging").Delete("mdsd", nil)
+		err = clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-logging").Delete(context.Background(), "mdsd", metav1.DeleteOptions{})
 		Expect(err).NotTo(HaveOccurred())
 
 		// Wait for it to be fixed
@@ -139,7 +139,7 @@ var _ = Describe("ARO Operator - Geneva Logging", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// confirm that only one object was updated
-		final, err := updatedObjects("openshift-azure-logging")
+		final, err := updatedObjects(context.Background(), "openshift-azure-logging")
 		Expect(err).NotTo(HaveOccurred())
 		if len(final)-len(initial) != 1 {
 			log.Error("initial changes ", initial)

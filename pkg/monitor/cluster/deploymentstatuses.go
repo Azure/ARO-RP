@@ -11,7 +11,7 @@ import (
 )
 
 func (mon *Monitor) emitDeploymentStatuses(ctx context.Context) error {
-	ds, err := mon.listDeployments()
+	ds, err := mon.listDeployments(ctx)
 	if err != nil {
 		return err
 	}

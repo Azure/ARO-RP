@@ -4,6 +4,7 @@ package dynamichelper
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"net/http"
 	"reflect"
 	"strings"
@@ -26,11 +27,11 @@ import (
 
 type DynamicHelper interface {
 	RefreshAPIResources() error
-	CreateOrUpdate(obj *unstructured.Unstructured) error
-	Delete(groupKind, namespace, name string) error
-	Ensure(o *unstructured.Unstructured) error
-	Get(groupKind, namespace, name string) (*unstructured.Unstructured, error)
-	List(groupKind, namespace string) (*unstructured.UnstructuredList, error)
+	CreateOrUpdate(ctx context.Context, obj *unstructured.Unstructured) error
+	Delete(ctx context.Context, groupKind, namespace, name string) error
+	Ensure(ctx context.Context, o *unstructured.Unstructured) error
+	Get(ctx context.Context, groupKind, namespace, name string) (*unstructured.Unstructured, error)
+	List(ctx context.Context, groupKind, namespace string) (*unstructured.UnstructuredList, error)
 }
 
 type dynamicHelper struct {
@@ -137,45 +138,45 @@ func (dh *dynamicHelper) findGVR(groupKind, optionalVersion string) (*schema.Gro
 // CreateOrUpdate does nothing more than an Update call (and a Create if that
 // call returned 404).  We don't add any fancy behaviour because this is called
 // from the Geneva Admin context and we don't want to get in the SRE's way.
-func (dh *dynamicHelper) CreateOrUpdate(o *unstructured.Unstructured) error {
+func (dh *dynamicHelper) CreateOrUpdate(ctx context.Context, o *unstructured.Unstructured) error {
 	gvr, err := dh.findGVR(o.GroupVersionKind().GroupKind().String(), o.GroupVersionKind().Version)
 	if err != nil {
 		return err
 	}
 
-	_, err = dh.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Update(o, metav1.UpdateOptions{})
+	_, err = dh.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Update(ctx, o, metav1.UpdateOptions{})
 	if !errors.IsNotFound(err) {
 		return err
 	}
 
-	_, err = dh.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Create(o, metav1.CreateOptions{})
+	_, err = dh.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Create(ctx, o, metav1.CreateOptions{})
 	return err
 }
 
-func (dh *dynamicHelper) Delete(groupKind, namespace, name string) error {
+func (dh *dynamicHelper) Delete(ctx context.Context, groupKind, namespace, name string) error {
 	gvr, err := dh.findGVR(groupKind, "")
 	if err != nil {
 		return err
 	}
 
-	return dh.dyn.Resource(*gvr).Namespace(namespace).Delete(name, &metav1.DeleteOptions{})
+	return dh.dyn.Resource(*gvr).Namespace(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 }
 
 // Ensure is called by the operator deploy tool and individual controllers.  It
 // is intended to ensure that an object matches a desired state.  It is tolerant
 // of unspecified fields in the desired state (e.g. it will leave typically
 // leave .status untouched).
-func (dh *dynamicHelper) Ensure(o *unstructured.Unstructured) error {
+func (dh *dynamicHelper) Ensure(ctx context.Context, o *unstructured.Unstructured) error {
 	gvr, err := dh.findGVR(o.GroupVersionKind().GroupKind().String(), o.GroupVersionKind().Version)
 	if err != nil {
 		return err
 	}
 
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		existing, err := dh.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Get(o.GetName(), metav1.GetOptions{})
+		existing, err := dh.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Get(ctx, o.GetName(), metav1.GetOptions{})
 		if errors.IsNotFound(err) {
 			dh.log.Printf("Create %s", keyFuncO(o))
-			_, err = dh.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Create(o, metav1.CreateOptions{})
+			_, err = dh.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Create(ctx, o, metav1.CreateOptions{})
 			return err
 		}
 		if err != nil {
@@ -189,27 +190,27 @@ func (dh *dynamicHelper) Ensure(o *unstructured.Unstructured) error {
 
 		dh.log.Printf("Update %s: %s", keyFuncO(o), diff)
 
-		_, err = dh.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Update(o, metav1.UpdateOptions{})
+		_, err = dh.dyn.Resource(*gvr).Namespace(o.GetNamespace()).Update(ctx, o, metav1.UpdateOptions{})
 		return err
 	})
 }
 
-func (dh *dynamicHelper) Get(groupKind, namespace, name string) (*unstructured.Unstructured, error) {
+func (dh *dynamicHelper) Get(ctx context.Context, groupKind, namespace, name string) (*unstructured.Unstructured, error) {
 	gvr, err := dh.findGVR(groupKind, "")
 	if err != nil {
 		return nil, err
 	}
 
-	return dh.dyn.Resource(*gvr).Namespace(namespace).Get(name, metav1.GetOptions{})
+	return dh.dyn.Resource(*gvr).Namespace(namespace).Get(ctx, name, metav1.GetOptions{})
 }
 
-func (dh *dynamicHelper) List(groupKind, namespace string) (*unstructured.UnstructuredList, error) {
+func (dh *dynamicHelper) List(ctx context.Context, groupKind, namespace string) (*unstructured.UnstructuredList, error) {
 	gvr, err := dh.findGVR(groupKind, "")
 	if err != nil {
 		return nil, err
 	}
 
-	return dh.dyn.Resource(*gvr).Namespace(namespace).List(metav1.ListOptions{})
+	return dh.dyn.Resource(*gvr).Namespace(namespace).List(ctx, metav1.ListOptions{})
 }
 
 func diff(existing, o *unstructured.Unstructured) string {

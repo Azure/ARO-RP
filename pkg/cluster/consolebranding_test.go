@@ -42,7 +42,7 @@ func TestUpdateConsoleBranding(t *testing.T) {
 		t.Error(err)
 	}
 
-	console, err := m.operatorcli.OperatorV1().Consoles().Get(consoleName, metav1.GetOptions{})
+	console, err := m.operatorcli.OperatorV1().Consoles().Get(ctx, consoleName, metav1.GetOptions{})
 	if err != nil {
 		t.Error(err)
 	}

@@ -49,9 +49,9 @@ func NewMachineChecker(log *logrus.Entry, clustercli maoclient.Interface, arocli
 	}
 }
 
-func (r *MachineChecker) workerReplicas() (int, error) {
+func (r *MachineChecker) workerReplicas(ctx context.Context) (int, error) {
 	count := 0
-	machinesets, err := r.clustercli.MachineV1beta1().MachineSets(machineSetsNamespace).List(metav1.ListOptions{})
+	machinesets, err := r.clustercli.MachineV1beta1().MachineSets(machineSetsNamespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return 0, err
 	}
@@ -105,12 +105,12 @@ func (r *MachineChecker) checkMachines(ctx context.Context) (errs []error) {
 	actualMasters := 0
 
 	expectedMasters := 3
-	expectedWorkers, err := r.workerReplicas()
+	expectedWorkers, err := r.workerReplicas(ctx)
 	if err != nil {
 		return []error{err}
 	}
 
-	machines, err := r.clustercli.MachineV1beta1().Machines(machineSetsNamespace).List(metav1.ListOptions{})
+	machines, err := r.clustercli.MachineV1beta1().Machines(machineSetsNamespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return []error{err}
 	}
@@ -147,8 +147,7 @@ func (r *MachineChecker) Name() string {
 }
 
 // Reconcile makes sure that the Machines are in a supportable state
-func (r *MachineChecker) Check() error {
-	ctx := context.Background()
+func (r *MachineChecker) Check(ctx context.Context) error {
 	cond := &status.Condition{
 		Type:    aro.MachineValid,
 		Status:  corev1.ConditionTrue,
@@ -169,7 +168,7 @@ func (r *MachineChecker) Check() error {
 		cond.Message = sb.String()
 	}
 
-	return controllers.SetCondition(r.arocli, cond, r.role)
+	return controllers.SetCondition(ctx, r.arocli, cond, r.role)
 }
 
 func isMasterRole(m *machinev1beta1.Machine) (bool, error) {

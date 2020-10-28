@@ -18,7 +18,7 @@ func (m *manager) fixPullSecret(ctx context.Context) error {
 	// development mode.
 
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		ps, err := m.kubernetescli.CoreV1().Secrets("openshift-config").Get("pull-secret", metav1.GetOptions{})
+		ps, err := m.kubernetescli.CoreV1().Secrets("openshift-config").Get(ctx, "pull-secret", metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -34,7 +34,7 @@ func (m *manager) fixPullSecret(ctx context.Context) error {
 
 		ps.Data[v1.DockerConfigJsonKey] = []byte(pullSecret)
 
-		_, err = m.kubernetescli.CoreV1().Secrets("openshift-config").Update(ps)
+		_, err = m.kubernetescli.CoreV1().Secrets("openshift-config").Update(ctx, ps, metav1.UpdateOptions{})
 		return err
 	})
 }

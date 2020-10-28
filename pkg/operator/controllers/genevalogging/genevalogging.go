@@ -4,6 +4,7 @@ package genevalogging
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -28,7 +29,7 @@ const (
 )
 
 type GenevaLogging interface {
-	Resources() ([]runtime.Object, error)
+	Resources(context.Context) ([]runtime.Object, error)
 }
 
 type genevaLogging struct {
@@ -53,8 +54,8 @@ func New(log *logrus.Entry, cluster *arov1alpha1.Cluster, seccli securityclient.
 	}
 }
 
-func (g *genevaLogging) securityContextConstraints(name, serviceAccountName string) (*securityv1.SecurityContextConstraints, error) {
-	scc, err := g.seccli.SecurityV1().SecurityContextConstraints().Get("privileged", metav1.GetOptions{})
+func (g *genevaLogging) securityContextConstraints(ctx context.Context, name, serviceAccountName string) (*securityv1.SecurityContextConstraints, error) {
+	scc, err := g.seccli.SecurityV1().SecurityContextConstraints().Get(ctx, "privileged", metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -359,13 +360,13 @@ func (g *genevaLogging) daemonset(r azure.Resource) *appsv1.DaemonSet {
 	}
 }
 
-func (g *genevaLogging) Resources() ([]runtime.Object, error) {
+func (g *genevaLogging) Resources(ctx context.Context) ([]runtime.Object, error) {
 	r, err := azure.ParseResourceID(g.cluster.Spec.ResourceID)
 	if err != nil {
 		return nil, err
 	}
 
-	scc, err := g.securityContextConstraints("privileged-genevalogging", kubeServiceAccount)
+	scc, err := g.securityContextConstraints(ctx, "privileged-genevalogging", kubeServiceAccount)
 	if err != nil {
 		return nil, err
 	}

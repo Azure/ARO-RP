@@ -102,7 +102,7 @@ func TestFixPullSecret(t *testing.T) {
 				t.Fatal(updated)
 			}
 
-			s, err := m.kubernetescli.CoreV1().Secrets("openshift-config").Get("pull-secret", metav1.GetOptions{})
+			s, err := m.kubernetescli.CoreV1().Secrets("openshift-config").Get(ctx, "pull-secret", metav1.GetOptions{})
 			if err != nil {
 				t.Error(err)
 			}

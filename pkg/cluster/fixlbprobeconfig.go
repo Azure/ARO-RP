@@ -19,7 +19,7 @@ import (
 )
 
 func (m *manager) fixLBProbeConfig(ctx context.Context, resourceGroup, lbName string) error {
-	mcsCertIsMalformed, err := m.mcsCertIsMalformed()
+	mcsCertIsMalformed, err := m.mcsCertIsMalformed(ctx)
 	if err != nil {
 		return err
 	}
@@ -96,8 +96,8 @@ func (m *manager) fixLBProbes(ctx context.Context) error {
 // authority key identifier equals the subject key identifier, which is
 // non-compliant and is rejected by Azure SLB.  This provisioning error was
 // fixed in 4a7415a4 but clusters pre-dating the fix still exist.
-func (m *manager) mcsCertIsMalformed() (bool, error) {
-	s, err := m.kubernetescli.CoreV1().Secrets("openshift-machine-config-operator").Get("machine-config-server-tls", metav1.GetOptions{})
+func (m *manager) mcsCertIsMalformed(ctx context.Context) (bool, error) {
+	s, err := m.kubernetescli.CoreV1().Secrets("openshift-machine-config-operator").Get(ctx, "machine-config-server-tls", metav1.GetOptions{})
 	if err != nil {
 		return false, err
 	}

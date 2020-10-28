@@ -4,6 +4,8 @@ package controllers
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
+
 	"github.com/operator-framework/operator-sdk/pkg/status"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
@@ -14,9 +16,9 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-func SetCondition(arocli aroclient.AroV1alpha1Interface, cond *status.Condition, role string) error {
+func SetCondition(ctx context.Context, arocli aroclient.AroV1alpha1Interface, cond *status.Condition, role string) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		cluster, err := arocli.Clusters().Get(arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+		cluster, err := arocli.Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -31,7 +33,7 @@ func SetCondition(arocli aroclient.AroV1alpha1Interface, cond *status.Condition,
 			return nil
 		}
 
-		_, err = arocli.Clusters().UpdateStatus(cluster)
+		_, err = arocli.Clusters().UpdateStatus(ctx, cluster, metav1.UpdateOptions{})
 		return err
 	})
 }

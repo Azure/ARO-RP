@@ -4,6 +4,7 @@ package genevalogging
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"sort"
 
 	securityv1 "github.com/openshift/api/security/v1"
@@ -49,16 +50,18 @@ func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, securi
 
 // Reconcile the genevalogging deployment.
 func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
+	// TODO(mj): controller-runtime master fixes the need for this (https://github.com/kubernetes-sigs/controller-runtime/blob/master/pkg/reconcile/reconcile.go#L93) but it's not yet released.
+	ctx := context.Background()
 	if request.Name != arov1alpha1.SingletonClusterName {
 		return reconcile.Result{}, nil
 	}
 
-	instance, err := r.arocli.Clusters().Get(request.Name, metav1.GetOptions{})
+	instance, err := r.arocli.Clusters().Get(ctx, request.Name, metav1.GetOptions{})
 	if err != nil {
 		return reconcile.Result{}, err
 	}
 
-	mysec, err := r.kubernetescli.CoreV1().Secrets(operator.Namespace).Get(operator.SecretName, metav1.GetOptions{})
+	mysec, err := r.kubernetescli.CoreV1().Secrets(operator.Namespace).Get(ctx, operator.SecretName, metav1.GetOptions{})
 	if err != nil {
 		return reconcile.Result{}, err
 	}
@@ -73,7 +76,7 @@ func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	}
 	gl := New(r.log, instance, r.securitycli, mysec.Data[GenevaCertName], mysec.Data[GenevaKeyName])
 
-	resources, err := gl.Resources()
+	resources, err := gl.Resources(ctx)
 	if err != nil {
 		r.log.Error(err)
 		return reconcile.Result{}, err
@@ -117,7 +120,7 @@ func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	})
 
 	for _, un := range uns {
-		err = dh.Ensure(un)
+		err = dh.Ensure(ctx, un)
 		if err != nil {
 			r.log.Error(err)
 			return reconcile.Result{}, err

@@ -4,6 +4,7 @@ package deploy
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"sort"
 	"time"
 
@@ -38,8 +39,8 @@ import (
 )
 
 type Operator interface {
-	CreateOrUpdate() error
-	IsReady() (bool, error)
+	CreateOrUpdate(context.Context) error
+	IsReady(context.Context) (bool, error)
 }
 
 type operator struct {
@@ -165,7 +166,7 @@ func (o *operator) resources() ([]runtime.Object, error) {
 	), nil
 }
 
-func (o *operator) CreateOrUpdate() error {
+func (o *operator) CreateOrUpdate(ctx context.Context) error {
 	resources, err := o.resources()
 	if err != nil {
 		return err
@@ -186,7 +187,7 @@ func (o *operator) CreateOrUpdate() error {
 	})
 
 	for _, un := range uns {
-		err = o.dh.Ensure(un)
+		err = o.dh.Ensure(ctx, un)
 		if err != nil {
 			return err
 		}
@@ -194,7 +195,7 @@ func (o *operator) CreateOrUpdate() error {
 		switch un.GroupVersionKind().GroupKind().String() {
 		case "CustomResourceDefinition.apiextensions.k8s.io":
 			err = wait.PollImmediate(time.Second, time.Minute, func() (bool, error) {
-				crd, err := o.extcli.ApiextensionsV1beta1().CustomResourceDefinitions().Get(un.GetName(), metav1.GetOptions{})
+				crd, err := o.extcli.ApiextensionsV1beta1().CustomResourceDefinitions().Get(ctx, un.GetName(), metav1.GetOptions{})
 				if err != nil {
 					return false, err
 				}
@@ -216,12 +217,12 @@ func (o *operator) CreateOrUpdate() error {
 			// ensure that secret updates trigger updates of the appropriate
 			// controllers
 			err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-				cluster, err := o.arocli.Clusters().Get(arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+				cluster, err := o.arocli.Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 				if err != nil {
 					return err
 				}
 
-				s, err := o.cli.CoreV1().Secrets(pkgoperator.Namespace).Get(pkgoperator.SecretName, metav1.GetOptions{})
+				s, err := o.cli.CoreV1().Secrets(pkgoperator.Namespace).Get(ctx, pkgoperator.SecretName, metav1.GetOptions{})
 				if err != nil {
 					return err
 				}
@@ -231,7 +232,7 @@ func (o *operator) CreateOrUpdate() error {
 					return err
 				}
 
-				_, err = o.cli.CoreV1().Secrets(pkgoperator.Namespace).Update(s)
+				_, err = o.cli.CoreV1().Secrets(pkgoperator.Namespace).Update(ctx, s, metav1.UpdateOptions{})
 				return err
 			})
 			if err != nil {
@@ -242,18 +243,18 @@ func (o *operator) CreateOrUpdate() error {
 	return nil
 }
 
-func (o *operator) IsReady() (bool, error) {
-	ok, err := ready.CheckDeploymentIsReady(o.cli.AppsV1().Deployments(pkgoperator.Namespace), "aro-operator-master")()
+func (o *operator) IsReady(ctx context.Context) (bool, error) {
+	ok, err := ready.CheckDeploymentIsReady(ctx, o.cli.AppsV1().Deployments(pkgoperator.Namespace), "aro-operator-master")()
 	if !ok || err != nil {
 		return ok, err
 	}
-	ok, err = ready.CheckDeploymentIsReady(o.cli.AppsV1().Deployments(pkgoperator.Namespace), "aro-operator-worker")()
+	ok, err = ready.CheckDeploymentIsReady(ctx, o.cli.AppsV1().Deployments(pkgoperator.Namespace), "aro-operator-worker")()
 	if !ok || err != nil {
 		return ok, err
 	}
 
 	// wait for conditions to appear
-	cluster, err := o.arocli.Clusters().Get(arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	cluster, err := o.arocli.Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 	if err != nil {
 		return false, err
 	}

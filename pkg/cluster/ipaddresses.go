@@ -25,7 +25,7 @@ func (m *manager) updateRouterIP(ctx context.Context) error {
 	installConfig := g[reflect.TypeOf(&installconfig.InstallConfig{})].(*installconfig.InstallConfig)
 	kubeadminPassword := g[reflect.TypeOf(&password.KubeadminPassword{})].(*password.KubeadminPassword)
 
-	svc, err := m.kubernetescli.CoreV1().Services("openshift-ingress").Get("router-default", metav1.GetOptions{})
+	svc, err := m.kubernetescli.CoreV1().Services("openshift-ingress").Get(ctx, "router-default", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}

@@ -4,6 +4,7 @@ package ready
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"net"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -52,9 +53,9 @@ func ServiceIsReady(svc *corev1.Service) bool {
 
 // CheckDaemonSetIsReady returns a function which polls a DaemonSet and returns
 // its readiness
-func CheckDaemonSetIsReady(cli appsv1client.DaemonSetInterface, name string) func() (bool, error) {
+func CheckDaemonSetIsReady(ctx context.Context, cli appsv1client.DaemonSetInterface, name string) func() (bool, error) {
 	return func() (bool, error) {
-		ds, err := cli.Get(name, metav1.GetOptions{})
+		ds, err := cli.Get(ctx, name, metav1.GetOptions{})
 		switch {
 		case errors.IsNotFound(err):
 			return false, nil
@@ -80,9 +81,9 @@ func DeploymentIsReady(d *appsv1.Deployment) bool {
 
 // CheckDeploymentIsReady returns a function which polls a Deployment and
 // returns its readiness
-func CheckDeploymentIsReady(cli appsv1client.DeploymentInterface, name string) func() (bool, error) {
+func CheckDeploymentIsReady(ctx context.Context, cli appsv1client.DeploymentInterface, name string) func() (bool, error) {
 	return func() (bool, error) {
-		d, err := cli.Get(name, metav1.GetOptions{})
+		d, err := cli.Get(ctx, name, metav1.GetOptions{})
 		switch {
 		case errors.IsNotFound(err):
 			return false, nil
@@ -101,9 +102,9 @@ func PodIsRunning(p *corev1.Pod) bool {
 
 // CheckPodIsRunning returns a function which polls a Pod and returns if it is
 // running
-func CheckPodIsRunning(cli corev1client.PodInterface, name string) func() (bool, error) {
+func CheckPodIsRunning(ctx context.Context, cli corev1client.PodInterface, name string) func() (bool, error) {
 	return func() (bool, error) {
-		p, err := cli.Get(name, metav1.GetOptions{})
+		p, err := cli.Get(ctx, name, metav1.GetOptions{})
 		switch {
 		case errors.IsNotFound(err):
 			return false, nil

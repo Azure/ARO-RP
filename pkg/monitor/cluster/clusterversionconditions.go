@@ -18,7 +18,7 @@ var clusterVersionConditionsExpected = map[configv1.ClusterStatusConditionType]c
 }
 
 func (mon *Monitor) emitClusterVersionConditions(ctx context.Context) error {
-	cv, err := mon.getClusterVersion()
+	cv, err := mon.getClusterVersion(ctx)
 	if err != nil {
 		return err
 	}

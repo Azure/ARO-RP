@@ -4,6 +4,7 @@ package clusterdata
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"reflect"
@@ -267,7 +268,7 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 
 			callbacks := make(chan func())
 			errors := make(chan error)
-			go e.FetchData(callbacks, errors)
+			go e.FetchData(context.Background(), callbacks, errors)
 
 			select {
 			case f := <-callbacks:

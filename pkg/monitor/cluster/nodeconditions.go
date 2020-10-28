@@ -18,7 +18,7 @@ var nodeConditionsExpected = map[v1.NodeConditionType]v1.ConditionStatus{
 }
 
 func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
-	ns, err := mon.listNodes()
+	ns, err := mon.listNodes(ctx)
 	if err != nil {
 		return err
 	}

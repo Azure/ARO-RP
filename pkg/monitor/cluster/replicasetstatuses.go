@@ -13,7 +13,7 @@ import (
 )
 
 func (mon *Monitor) emitReplicasetStatuses(ctx context.Context) error {
-	rss, err := mon.cli.AppsV1().ReplicaSets("").List(metav1.ListOptions{})
+	rss, err := mon.cli.AppsV1().ReplicaSets("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return err
 	}

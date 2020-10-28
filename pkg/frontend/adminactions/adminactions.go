@@ -26,10 +26,10 @@ import (
 
 // Interface for adminactions
 type Interface interface {
-	K8sGet(groupKind, namespace, name string) ([]byte, error)
-	K8sList(groupKind, namespace string) ([]byte, error)
-	K8sCreateOrUpdate(obj *unstructured.Unstructured) error
-	K8sDelete(groupKind, namespace, name string) error
+	K8sGet(ctx context.Context, groupKind, namespace, name string) ([]byte, error)
+	K8sList(ctx context.Context, groupKind, namespace string) ([]byte, error)
+	K8sCreateOrUpdate(ctx context.Context, obj *unstructured.Unstructured) error
+	K8sDelete(ctx context.Context, groupKind, namespace, name string) error
 	ResourcesList(ctx context.Context) ([]byte, error)
 	Upgrade(ctx context.Context, upgradeY bool) error
 	VMRedeployAndWait(ctx context.Context, vmName string) error
@@ -98,28 +98,28 @@ func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster,
 	}, nil
 }
 
-func (a *adminactions) K8sGet(groupKind, namespace, name string) ([]byte, error) {
-	un, err := a.dh.Get(groupKind, namespace, name)
+func (a *adminactions) K8sGet(ctx context.Context, groupKind, namespace, name string) ([]byte, error) {
+	un, err := a.dh.Get(ctx, groupKind, namespace, name)
 	if err != nil {
 		return nil, err
 	}
 	return un.MarshalJSON()
 }
 
-func (a *adminactions) K8sList(groupKind, namespace string) ([]byte, error) {
-	ul, err := a.dh.List(groupKind, namespace)
+func (a *adminactions) K8sList(ctx context.Context, groupKind, namespace string) ([]byte, error) {
+	ul, err := a.dh.List(ctx, groupKind, namespace)
 	if err != nil {
 		return nil, err
 	}
 	return ul.MarshalJSON()
 }
 
-func (a *adminactions) K8sCreateOrUpdate(obj *unstructured.Unstructured) error {
-	return a.dh.CreateOrUpdate(obj)
+func (a *adminactions) K8sCreateOrUpdate(ctx context.Context, obj *unstructured.Unstructured) error {
+	return a.dh.CreateOrUpdate(ctx, obj)
 }
 
-func (a *adminactions) K8sDelete(groupKind, namespace, name string) error {
-	return a.dh.Delete(groupKind, namespace, name)
+func (a *adminactions) K8sDelete(ctx context.Context, groupKind, namespace, name string) error {
+	return a.dh.Delete(ctx, groupKind, namespace, name)
 }
 
 func (a *adminactions) VMRedeployAndWait(ctx context.Context, vmName string) error {

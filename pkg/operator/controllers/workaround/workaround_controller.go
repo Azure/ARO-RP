@@ -4,6 +4,7 @@ package workaround
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -51,8 +52,8 @@ func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, config
 	}
 }
 
-func (r *WorkaroundReconciler) actualClusterVersion() (*version.Version, error) {
-	cv, err := r.configcli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
+func (r *WorkaroundReconciler) actualClusterVersion(ctx context.Context) (*version.Version, error) {
+	cv, err := r.configcli.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +68,9 @@ func (r *WorkaroundReconciler) actualClusterVersion() (*version.Version, error) 
 
 // Reconcile makes sure that the workarounds are applied or removed as per the OpenShift version.
 func (r *WorkaroundReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
-	clusterVersion, err := r.actualClusterVersion()
+	// TODO(mj): controller-runtime master fixes the need for this (https://github.com/kubernetes-sigs/controller-runtime/blob/master/pkg/reconcile/reconcile.go#L93) but it's not yet released.
+	ctx := context.Background()
+	clusterVersion, err := r.actualClusterVersion(ctx)
 	if err != nil {
 		r.log.Errorf("error getting the OpenShift version: %v", err)
 		return reconcile.Result{}, err
@@ -75,9 +78,9 @@ func (r *WorkaroundReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 
 	for _, wa := range r.workarounds {
 		if wa.IsRequired(clusterVersion) {
-			err = wa.Ensure()
+			err = wa.Ensure(ctx)
 		} else {
-			err = wa.Remove()
+			err = wa.Remove(ctx)
 		}
 
 		if err != nil {

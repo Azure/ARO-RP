@@ -8,12 +8,12 @@ import (
 )
 
 func (mon *Monitor) emitClusterOperatorVersions(ctx context.Context) error {
-	cv, err := mon.getClusterVersion()
+	cv, err := mon.getClusterVersion(ctx)
 	if err != nil {
 		return err
 	}
 
-	cos, err := mon.listClusterOperators()
+	cos, err := mon.listClusterOperators(ctx)
 	if err != nil {
 		return err
 	}

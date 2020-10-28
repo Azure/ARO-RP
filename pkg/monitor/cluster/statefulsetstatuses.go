@@ -13,7 +13,7 @@ import (
 )
 
 func (mon *Monitor) emitStatefulsetStatuses(ctx context.Context) error {
-	sss, err := mon.cli.AppsV1().StatefulSets("").List(metav1.ListOptions{})
+	sss, err := mon.cli.AppsV1().StatefulSets("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return err
 	}

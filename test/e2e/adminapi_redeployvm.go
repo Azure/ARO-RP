@@ -71,7 +71,7 @@ var _ = Describe("[Admin API] VM redeploy action", func() {
 
 		By("waiting for all nodes to be ready")
 		err = wait.PollImmediate(10*time.Second, 10*time.Minute, func() (bool, error) {
-			nodes, err := clients.Kubernetes.CoreV1().Nodes().List(metav1.ListOptions{})
+			nodes, err := clients.Kubernetes.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
 			if err != nil {
 				return false, err
 			}
