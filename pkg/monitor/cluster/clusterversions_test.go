@@ -9,23 +9,38 @@ import (
 
 	"github.com/golang/mock/gomock"
 	configv1 "github.com/openshift/api/config/v1"
-	"github.com/openshift/client-go/config/clientset/versioned/fake"
+	configfake "github.com/openshift/client-go/config/clientset/versioned/fake"
+	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
 	mock_metrics "github.com/Azure/ARO-RP/pkg/util/mocks/metrics"
 )
 
 func TestEmitClusterVersion(t *testing.T) {
 	ctx := context.Background()
 
+	cli := fake.NewSimpleClientset(
+		&appsv1.Deployment{ // metrics expected
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: pkgoperator.Namespace,
+				Name:      "aro-operator-master",
+				Labels: map[string]string{
+					"version": "test",
+				},
+			},
+		},
+	)
+
 	for _, tt := range []struct {
-		name                        string
-		cv                          *configv1.ClusterVersion
-		oc                          *api.OpenShiftCluster
-		wantActualVersion           string
-		wantDesiredVersion          string
-		wantResourceProviderVersion string
+		name                                     string
+		cv                                       *configv1.ClusterVersion
+		oc                                       *api.OpenShiftCluster
+		wantActualVersion                        string
+		wantDesiredVersion                       string
+		wantProvisionedByResourceProviderVersion string
 	}{
 		{
 			name: "without spec",
@@ -56,9 +71,9 @@ func TestEmitClusterVersion(t *testing.T) {
 			oc: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{},
 			},
-			wantActualVersion:           "4.3.1",
-			wantDesiredVersion:          "4.3.3",
-			wantResourceProviderVersion: "",
+			wantActualVersion:                        "4.3.1",
+			wantDesiredVersion:                       "4.3.3",
+			wantProvisionedByResourceProviderVersion: "",
 		},
 		{
 			name: "with spec",
@@ -80,8 +95,8 @@ func TestEmitClusterVersion(t *testing.T) {
 			oc: &api.OpenShiftCluster{
 				Properties: api.OpenShiftClusterProperties{},
 			},
-			wantDesiredVersion:          "4.3.4",
-			wantResourceProviderVersion: "",
+			wantDesiredVersion:                       "4.3.4",
+			wantProvisionedByResourceProviderVersion: "",
 		},
 		{
 			name: "with ProvisionedBy",
@@ -95,11 +110,11 @@ func TestEmitClusterVersion(t *testing.T) {
 					ProvisionedBy: "somesha",
 				},
 			},
-			wantResourceProviderVersion: "somesha",
+			wantProvisionedByResourceProviderVersion: "somesha",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			configcli := fake.NewSimpleClientset(tt.cv)
+			configcli := configfake.NewSimpleClientset(tt.cv)
 
 			controller := gomock.NewController(t)
 			defer controller.Finish()
@@ -110,12 +125,15 @@ func TestEmitClusterVersion(t *testing.T) {
 				configcli: configcli,
 				m:         m,
 				oc:        tt.oc,
+				cli:       cli,
 			}
 
 			m.EXPECT().EmitGauge("cluster.versions", int64(1), map[string]string{
-				"actualVersion":           tt.wantActualVersion,
-				"desiredVersion":          tt.wantDesiredVersion,
-				"resourceProviderVersion": tt.wantResourceProviderVersion,
+				"actualVersion":                        tt.wantActualVersion,
+				"desiredVersion":                       tt.wantDesiredVersion,
+				"provisionedByResourceProviderVersion": tt.wantProvisionedByResourceProviderVersion,
+				"operatorVersion":                      "test",
+				"resourceProviderVersion":              "unknown",
 			})
 
 			err := mon.emitClusterVersions(ctx)

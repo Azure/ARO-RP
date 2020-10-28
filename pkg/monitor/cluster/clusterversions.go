@@ -7,6 +7,9 @@ import (
 	"context"
 
 	configv1 "github.com/openshift/api/config/v1"
+
+	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 func (mon *Monitor) emitClusterVersions(ctx context.Context) error {
@@ -14,10 +17,29 @@ func (mon *Monitor) emitClusterVersions(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
+	dl, err := mon.listDeployments()
+	if err != nil {
+		return err
+	}
+
+	operatorVersion := "unknown" // TODO(mj): Once unknown is not present anymore, simplify this
+	for _, d := range dl.Items {
+		if d.Namespace == pkgoperator.Namespace && d.Name == "aro-operator-master" {
+			if d.Labels != nil {
+				if val, ok := d.Labels["version"]; ok {
+					operatorVersion = val
+				}
+			}
+		}
+	}
+
 	mon.emitGauge("cluster.versions", 1, map[string]string{
-		"actualVersion":           actualVersion(cv),
-		"desiredVersion":          desiredVersion(cv),
-		"resourceProviderVersion": mon.oc.Properties.ProvisionedBy,
+		"actualVersion":                        actualVersion(cv),
+		"desiredVersion":                       desiredVersion(cv),
+		"provisionedByResourceProviderVersion": mon.oc.Properties.ProvisionedBy, // last successful Put or Patch
+		"resourceProviderVersion":              version.GitCommit,               // RP version currently running
+		"operatorVersion":                      operatorVersion,                 // operator version in the cluster
 	})
 
 	return nil

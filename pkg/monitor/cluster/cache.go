@@ -5,6 +5,7 @@ package cluster
 
 import (
 	configv1 "github.com/openshift/api/config/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -37,4 +38,14 @@ func (mon *Monitor) listNodes() (*v1.NodeList, error) {
 	var err error
 	mon.cache.ns, err = mon.cli.CoreV1().Nodes().List(metav1.ListOptions{})
 	return mon.cache.ns, err
+}
+
+func (mon *Monitor) listDeployments() (*appsv1.DeploymentList, error) {
+	if mon.cache.dl != nil {
+		return mon.cache.dl, nil
+	}
+
+	var err error
+	mon.cache.dl, err = mon.cli.AppsV1().Deployments("").List(metav1.ListOptions{})
+	return mon.cache.dl, err
 }

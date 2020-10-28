@@ -34,6 +34,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 	"github.com/Azure/ARO-RP/pkg/util/tls"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 type Operator interface {
@@ -90,6 +91,10 @@ func (o *operator) resources() ([]runtime.Object, error) {
 
 		// set the image for the deployments
 		if d, ok := obj.(*appsv1.Deployment); ok {
+			if d.Labels == nil {
+				d.Labels = map[string]string{}
+			}
+			d.Labels["version"] = version.GitCommit
 			for i := range d.Spec.Template.Spec.Containers {
 				d.Spec.Template.Spec.Containers[i].Image = o.env.AROOperatorImage()
 
