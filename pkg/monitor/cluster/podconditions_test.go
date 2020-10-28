@@ -21,6 +21,9 @@ func TestEmitPodConditions(t *testing.T) {
 				Name:      "name",
 				Namespace: "openshift",
 			},
+			Spec: corev1.PodSpec{
+				NodeName: "fake-node-name",
+			},
 			Status: corev1.PodStatus{
 				Conditions: []corev1.PodCondition{
 					{
@@ -61,24 +64,28 @@ func TestEmitPodConditions(t *testing.T) {
 	m.EXPECT().EmitGauge("pod.conditions", int64(1), map[string]string{
 		"name":      "name",
 		"namespace": "openshift",
+		"nodeName":  "fake-node-name",
 		"status":    "False",
 		"type":      "ContainersReady",
 	})
 	m.EXPECT().EmitGauge("pod.conditions", int64(1), map[string]string{
 		"name":      "name",
 		"namespace": "openshift",
+		"nodeName":  "fake-node-name",
 		"status":    "False",
 		"type":      "Initialized",
 	})
 	m.EXPECT().EmitGauge("pod.conditions", int64(1), map[string]string{
 		"name":      "name",
 		"namespace": "openshift",
+		"nodeName":  "fake-node-name",
 		"status":    "False",
 		"type":      "PodScheduled",
 	})
 	m.EXPECT().EmitGauge("pod.conditions", int64(1), map[string]string{
 		"name":      "name",
 		"namespace": "openshift",
+		"nodeName":  "fake-node-name",
 		"status":    "False",
 		"type":      "Ready",
 	})
@@ -106,6 +113,9 @@ func TestEmitPodContainerStatuses(t *testing.T) {
 					},
 				},
 			},
+			Spec: corev1.PodSpec{
+				NodeName: "fake-node-name",
+			},
 		},
 	)
 
@@ -122,6 +132,7 @@ func TestEmitPodContainerStatuses(t *testing.T) {
 	m.EXPECT().EmitGauge("pod.containerstatuses", int64(1), map[string]string{
 		"name":          "name",
 		"namespace":     "openshift",
+		"nodeName":      "fake-node-name",
 		"containername": "containername",
 		"reason":        "ImagePullBackOff",
 	})
