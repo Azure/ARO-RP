@@ -226,7 +226,9 @@ func diff(existing, o *unstructured.Unstructured) string {
 func merge(base, delta *unstructured.Unstructured) (*unstructured.Unstructured, bool, string, error) {
 	copy := base.DeepCopy()
 
-	h := &codec.JsonHandle{}
+	h := &codec.JsonHandle{
+		MapKeyAsString: true,
+	}
 
 	var b []byte
 	err := codec.NewEncoderBytes(&b, h).Encode(delta.Object)

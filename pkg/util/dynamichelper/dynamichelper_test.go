@@ -449,6 +449,43 @@ func TestMerge(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "complex merge changed",
+			base: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"spec": map[string]interface{}{
+						"key1": map[string]interface{}{
+							"untouched": "test",
+						},
+					},
+				},
+			},
+			delta: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"spec": map[string]interface{}{
+						"key1": map[string]interface{}{
+							"untouched": "test",
+						},
+						"key2": map[string]interface{}{
+							"new-value": "test2",
+						},
+					},
+				},
+			},
+			want: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"spec": map[string]interface{}{
+						"key1": map[string]interface{}{
+							"untouched": "test",
+						},
+						"key2": map[string]interface{}{
+							"new-value": "test2",
+						},
+					},
+				},
+			},
+			wantChanged: true,
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			result, changed, _, err := merge(tt.base, tt.delta)

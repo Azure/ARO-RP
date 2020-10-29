@@ -4,8 +4,6 @@ package workaround
 // Licensed under the Apache License 2.0.
 
 import (
-	"encoding/json"
-
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
@@ -28,6 +26,7 @@ type systemreserved struct {
 }
 
 const (
+	hardEviction                = "500Mi"
 	labelName                   = "aro.openshift.io/limits"
 	labelValue                  = ""
 	kubeletConfigName           = "aro-limits"
@@ -60,16 +59,6 @@ func (sr *systemreserved) IsRequired(clusterVersion *version.Version) bool {
 }
 
 func (sr *systemreserved) kubeletConfig() (*unstructured.Unstructured, error) {
-	kubeletConfig := map[string]map[string]string{
-		"systemReserved": {
-			"memory": memReserved,
-		},
-	}
-	cfgJSON, err := json.Marshal(kubeletConfig)
-	if err != nil {
-		return nil, err
-	}
-
 	kc := &mcv1.KubeletConfig{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   kubeletConfigName,
@@ -79,11 +68,23 @@ func (sr *systemreserved) kubeletConfig() (*unstructured.Unstructured, error) {
 			MachineConfigPoolSelector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{labelName: labelValue},
 			},
-			KubeletConfig: &runtime.RawExtension{Raw: cfgJSON},
+			KubeletConfig: &runtime.RawExtension{
+				Object: &unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"systemReserved": map[string]interface{}{
+							"memory": memReserved,
+						},
+						"evictionHard": map[string]interface{}{
+							"memory.available": hardEviction,
+						},
+					},
+				},
+			},
 		},
 	}
+
 	un := &unstructured.Unstructured{}
-	err = scheme.Scheme.Convert(kc, un, nil)
+	err := scheme.Scheme.Convert(kc, un, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +93,7 @@ func (sr *systemreserved) kubeletConfig() (*unstructured.Unstructured, error) {
 
 func (sr *systemreserved) Ensure() error {
 	// Step 1. Add label to worker MachineConfigPool.
-	// Get the worker MachineConfigPool, modify it to add a label bz-1857446: hotfixed, and apply the modified config.
+	// Get the worker MachineConfigPool, modify it to add a label aro.openshift.io/limits: "", and apply the modified config.
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		mcp, err := sr.mcocli.MachineconfigurationV1().MachineConfigPools().Get(workerMachineConfigPoolName, metav1.GetOptions{})
 		if err != nil {
