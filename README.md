@@ -84,21 +84,23 @@ questions or comments.
   * pkg/operator/controllers: A list of controllers instantiated by the operator
     component.
 
-    * alertwebhook: Ensures the `alertmanager-main` secret in the
-      `openshift-monitoring` namespace is correct.
+    * alertwebhook: Ensures that the receiver endpoint defined in the
+      `alertmanager-main` secret matches the webserver endpoint at
+      aro-operator-master.openshift-azure-operator:8080, to avoid the
+      `AlertmanagerReceiversNotConfigured` warning.
 
     * checker: Watches the `Cluster` resource for changes and perform a set of
-      checks against it.
+      checks for outbound internet connectivity.
 
     * genevalogging: Ensures all the Geneva logging resources in the
-      `openshift-azure-logging` namespace matches the pre-defined
-      [specification](https://github.com/Azure/ARO-RP/blob/bcda60153111923802e2de8360b5ad57d6b1cb34/pkg/operator/controllers/genevalogging/genevalogging.go#L373-L409).
+      `openshift-azure-logging` namespace matches the pre-defined specification
+      found in `pkg/operator/controllers/genevalogging/genevalogging.go`.
 
-    * pullsecret: Ensures that the ACR credentials in the `pull-secret` secret
-      in the `openshift-config` namespace is correct, and that it matches the
-      `cluster` secret in the `openshift-azure-operator` namespace.
+    * pullsecret: Ensures that the ACR credentials in the
+      `openshift-config/pull-secret` secret match those in the
+      `openshift/azure-operator/cluster` secret.
 
-    * workaround: Applies a set of workaround to the ARO cluster.
+    * workaround: Applies a set of temporay workarounds to the ARO cluster.
 
   * pkg/swagger: Swagger specification generation code.
 
