@@ -93,7 +93,7 @@ jobs:
         echo "##vso[task.setvariable variable=REGION]${{ location }}"
         CLUSTER="v4-e2e-V$BUILD_BUILDID"
         echo "##vso[task.setvariable variable=CLUSTER]$CLUSTER"
-        CLUSTER_RESOURCEGROUP="v4-e2e-rg-V$BUILD_BUILDID-${{ location }}"
+        CLUSTER_RESOURCEGROUP="v4-e2e-V$BUILD_BUILDID-${{ location }}"
         echo "##vso[task.setvariable variable=CLUSTER_RESOURCEGROUP]$CLUSTER_RESOURCEGROUP"
         echo "E2E Cluster Resource Group Name:" $CLUSTER_RESOURCEGROUP
         echo "E2E Cluster Name:" $CLUSTER
