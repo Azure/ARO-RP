@@ -7,6 +7,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/mock/gomock"
 	appsv1 "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,25 +22,37 @@ func TestEmitAroOperatorHeartbeat(t *testing.T) {
 	cli := fake.NewSimpleClientset(
 		&appsv1.Deployment{ // not available expected
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "name1",
-				Namespace: "openshift-azure-operator",
+				Name:       "aro-operator-master",
+				Namespace:  "openshift-azure-operator",
+				Generation: 4,
+			},
+			Spec: appsv1.DeploymentSpec{
+				Replicas: to.Int32Ptr(1),
 			},
 			Status: appsv1.DeploymentStatus{
 				Replicas:            1,
 				AvailableReplicas:   0,
 				UnavailableReplicas: 1,
+				UpdatedReplicas:     0,
+				ObservedGeneration:  4,
 			},
 		}, &appsv1.Deployment{ // available expected
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "name2",
-				Namespace: "openshift-azure-operator",
+				Name:       "aro-operator-worker",
+				Namespace:  "openshift-azure-operator",
+				Generation: 4,
+			},
+			Spec: appsv1.DeploymentSpec{
+				Replicas: to.Int32Ptr(1),
 			},
 			Status: appsv1.DeploymentStatus{
 				Replicas:            1,
 				AvailableReplicas:   1,
 				UnavailableReplicas: 0,
+				UpdatedReplicas:     1,
+				ObservedGeneration:  4,
 			},
-		}, &appsv1.Deployment{ // available expected - there can be more replicas during upgrade
+		}, &appsv1.Deployment{ // no metric expected - different name
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "name3",
 				Namespace: "openshift-azure-operator",
@@ -72,19 +85,12 @@ func TestEmitAroOperatorHeartbeat(t *testing.T) {
 		m:   m,
 	}
 
-	m.EXPECT().EmitGauge("arooperator.heartbeat", int64(1), map[string]string{
-		"name":    "name1",
-		"healthy": "false",
+	m.EXPECT().EmitGauge("arooperator.heartbeat", int64(0), map[string]string{
+		"name": "aro-operator-master",
 	})
 
 	m.EXPECT().EmitGauge("arooperator.heartbeat", int64(1), map[string]string{
-		"name":    "name2",
-		"healthy": "true",
-	})
-
-	m.EXPECT().EmitGauge("arooperator.heartbeat", int64(1), map[string]string{
-		"name":    "name3",
-		"healthy": "true",
+		"name": "aro-operator-worker",
 	})
 
 	err := mon.emitAroOperatorHeartbeat(ctx)
