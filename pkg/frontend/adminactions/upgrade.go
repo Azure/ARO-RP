@@ -6,6 +6,7 @@ package adminactions
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	configv1 "github.com/openshift/api/config/v1"
@@ -39,7 +40,7 @@ func upgrade(ctx context.Context, log *logrus.Entry, configClient configclient.I
 
 		// We don't upgrade if cluster upgrade is not finished
 		if !status.ClusterVersionOperatorIsHealthy(cv.Status) {
-			return fmt.Errorf("not upgrading: previous upgrade in-progress")
+			return api.NewCloudError(http.StatusInternalServerError, api.CloudErrorCodeInternalServerError, "", "Not upgrading: cvo is unhealthy.")
 		}
 
 		desired, err := version.ParseVersion(cv.Status.Desired.Version)
@@ -50,7 +51,8 @@ func upgrade(ctx context.Context, log *logrus.Entry, configClient configclient.I
 		// Get Cluster upgrade version based on desired version
 		stream := version.GetUpgradeStream(streams, desired, upgradeY)
 		if stream == nil {
-			return fmt.Errorf("not upgrading: stream not found")
+			log.Info("not upgrading: stream not found")
+			return nil
 		}
 
 		log.Printf("initiating cluster upgrade, target version %s", stream.Version.String())
