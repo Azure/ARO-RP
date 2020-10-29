@@ -167,8 +167,6 @@ clean_env() {
       done
 }
 
-export DATABASE_NAME="v4-e2e-V$BUILD_BUILDID"
-
 echo "##########################################"
 echo "##### ARO V4 Dev Env helper sourced ######"
 echo "##########################################"
@@ -179,7 +177,6 @@ echo
 echo "LOCATION=$LOCATION"
 echo
 echo "COSMOSDB_ACCOUNT=$COSMOSDB_ACCOUNT"
-echo "DATABASE_NAME=$DATABASE_NAME"
 echo
 echo "ADMIN_OBJECT_ID=$ADMIN_OBJECT_ID"
 echo "AZURE_RP_CLIENT_ID=$AZURE_RP_CLIENT_ID"
@@ -198,7 +195,6 @@ echo "######################################"
 [ "$RESOURCEGROUP" ] || ( echo ">> RESOURCEGROUP is not set please validate your ./secrets/env"; exit 128 )
 [ "$PROXY_HOSTNAME" ] || ( echo ">> PROXY_HOSTNAME is not set please validate your ./secrets/env"; exit 128 )
 [ "$COSMOSDB_ACCOUNT" ] || ( echo ">> COSMOSDB_ACCOUNT is not set please validate your ./secrets/env"; exit 128 )
-[ "$DATABASE_NAME" ] || ( echo ">> DATABASE_NAME is not set please validate your ./secrets/env"; exit 128 )
 [ "$ADMIN_OBJECT_ID" ] || ( echo ">> ADMIN_OBJECT_ID is not set please validate your ./secrets/env"; exit 128 )
 [ "$DOMAIN_NAME" ] || ( echo ">> DOMAIN_NAME is not set please validate your ./secrets/env"; exit 128 )
 [ "$PARENT_DOMAIN_NAME" ] || ( echo ">> PARENT_DOMAIN_NAME is not set please validate your ./secrets/env"; exit 128 )

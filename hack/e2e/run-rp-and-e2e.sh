@@ -78,9 +78,9 @@ clean_e2e_db(){
 
 # TODO: CLUSTER and ARO_RESOURCEGROUP are also recalculated in multiple places
 # in the billing pipelines :-(
-export CLUSTER="v4-e2e-V$BUILD_BUILDID"
-export DATABASE_NAME="v4-e2e-V$BUILD_BUILDID"
-export ARO_RESOURCEGROUP="v4-e2e-rg-V$BUILD_BUILDID-$LOCATION"
+export CLUSTER="v4-e2e-V$BUILD_BUILDID-$LOCATION"
+export DATABASE_NAME="v4-e2e-V$BUILD_BUILDID-$LOCATION"
+export ARO_RESOURCEGROUP="v4-e2e-V$BUILD_BUILDID-$LOCATION"
 export E2E_CREATE_CLUSTER=true
 export E2E_DELETE_CLUSTER=true
 
