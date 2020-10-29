@@ -12,12 +12,22 @@ import (
 // OpenShiftClustersClientAddons contains addons for OpenShiftClustersClient
 type OpenShiftClustersClientAddons interface {
 	CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, resourceName string, parameters redhatopenshift.OpenShiftCluster) error
+	DeleteAndWait(ctx context.Context, resourceGroupName string, resourceName string) error
 	List(ctx context.Context) (clusters []redhatopenshift.OpenShiftCluster, err error)
 	ListByResourceGroup(ctx context.Context, resourceGroupName string) (clusters []redhatopenshift.OpenShiftCluster, err error)
 }
 
 func (c *openShiftClustersClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, resourceName string, parameters redhatopenshift.OpenShiftCluster) error {
 	future, err := c.CreateOrUpdate(ctx, resourceGroupName, resourceName, parameters)
+	if err != nil {
+		return err
+	}
+
+	return future.WaitForCompletionRef(ctx, c.Client)
+}
+
+func (c *openShiftClustersClient) DeleteAndWait(ctx context.Context, resourceGroupName string, resourceName string) error {
+	future, err := c.Delete(ctx, resourceGroupName, resourceName)
 	if err != nil {
 		return err
 	}

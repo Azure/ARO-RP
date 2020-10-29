@@ -24,7 +24,6 @@ var _ = Describe("[Admin API] Kubernetes objects action", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
 	const objName = "e2e-test-object"
-	resourceID := resourceIDFromEnv()
 
 	When("in a standard openshift namespace", func() {
 		const namespace = "default"
@@ -42,14 +41,14 @@ var _ = Describe("[Admin API] Kubernetes objects action", func() {
 				}
 			}()
 
-			testConfigMapCreateOK(resourceID, objName, namespace)
-			testConfigMapGetOK(resourceID, objName, namespace)
-			testConfigMapListOK(resourceID, objName, namespace)
-			testConfigMapUpdateOK(resourceID, objName, namespace)
-			testConfigMapDeleteOK(resourceID, objName, namespace)
+			testConfigMapCreateOK(objName, namespace)
+			testConfigMapGetOK(objName, namespace)
+			testConfigMapListOK(objName, namespace)
+			testConfigMapUpdateOK(objName, namespace)
+			testConfigMapDeleteOK(objName, namespace)
 		})
 
-		testSecretOperationsForbidden(resourceID, objName, namespace)
+		testSecretOperationsForbidden(objName, namespace)
 	})
 
 	When("in a customer namespace", func() {
@@ -83,7 +82,7 @@ var _ = Describe("[Admin API] Kubernetes objects action", func() {
 				Expect(err).NotTo(HaveOccurred())
 			}()
 
-			testConfigMapCreateOrUpdateForbidden("creating", resourceID, objName, namespace)
+			testConfigMapCreateOrUpdateForbidden("creating", objName, namespace)
 
 			By("creating an object via Kubernetes API")
 			_, err = clients.Kubernetes.CoreV1().ConfigMaps(namespace).Create(&corev1.ConfigMap{
@@ -91,22 +90,22 @@ var _ = Describe("[Admin API] Kubernetes objects action", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			testConfigMapGetOK(resourceID, objName, namespace)
-			testConfigMapListOK(resourceID, objName, namespace)
-			testConfigMapCreateOrUpdateForbidden("updating", resourceID, objName, namespace)
-			testConfigMapDeleteForbidden(resourceID, objName, namespace)
+			testConfigMapGetOK(objName, namespace)
+			testConfigMapListOK(objName, namespace)
+			testConfigMapCreateOrUpdateForbidden("updating", objName, namespace)
+			testConfigMapDeleteForbidden(objName, namespace)
 		})
 
-		testSecretOperationsForbidden(resourceID, objName, namespace)
+		testSecretOperationsForbidden(objName, namespace)
 	})
 })
 
-func testSecretOperationsForbidden(resourceID, objName, namespace string) {
+func testSecretOperationsForbidden(objName, namespace string) {
 	It("should not be able to create a secret", func() {
 		By("creating a new secret via RP admin API")
 		obj := mockSecret(objName, namespace)
 		var cloudErr api.CloudError
-		resp, err := adminRequest(context.Background(), http.MethodPost, "/admin"+resourceID+"/kubernetesobjects", nil, obj, &cloudErr)
+		resp, err := adminRequest(context.Background(), http.MethodPost, "/admin"+resourceIDFromEnv()+"/kubernetesobjects", nil, obj, &cloudErr)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
 		Expect(cloudErr.Code).To(Equal(api.CloudErrorCodeForbidden))
@@ -120,7 +119,7 @@ func testSecretOperationsForbidden(resourceID, objName, namespace string) {
 			"name":      []string{objName},
 		}
 		var cloudErr api.CloudError
-		resp, err := adminRequest(context.Background(), http.MethodGet, "/admin"+resourceID+"/kubernetesobjects", params, nil, &cloudErr)
+		resp, err := adminRequest(context.Background(), http.MethodGet, "/admin"+resourceIDFromEnv()+"/kubernetesobjects", params, nil, &cloudErr)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
 
@@ -135,7 +134,7 @@ func testSecretOperationsForbidden(resourceID, objName, namespace string) {
 			"namespace": []string{namespace},
 		}
 		var cloudErr api.CloudError
-		resp, err := adminRequest(context.Background(), http.MethodGet, "/admin"+resourceID+"/kubernetesobjects", params, nil, &cloudErr)
+		resp, err := adminRequest(context.Background(), http.MethodGet, "/admin"+resourceIDFromEnv()+"/kubernetesobjects", params, nil, &cloudErr)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
 
@@ -151,17 +150,17 @@ func testSecretOperationsForbidden(resourceID, objName, namespace string) {
 			"name":      []string{objName},
 		}
 		var cloudErr api.CloudError
-		resp, err := adminRequest(context.Background(), http.MethodDelete, "/admin"+resourceID+"/kubernetesobjects", params, nil, &cloudErr)
+		resp, err := adminRequest(context.Background(), http.MethodDelete, "/admin"+resourceIDFromEnv()+"/kubernetesobjects", params, nil, &cloudErr)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
 		Expect(cloudErr.Code).To(Equal(api.CloudErrorCodeForbidden))
 	})
 }
 
-func testConfigMapCreateOK(resourceID, objName, namespace string) {
+func testConfigMapCreateOK(objName, namespace string) {
 	By("creating a new object via RP admin API")
 	obj := mockConfigMap(objName, namespace)
-	resp, err := adminRequest(context.Background(), http.MethodPost, "/admin"+resourceID+"/kubernetesobjects", nil, obj, nil)
+	resp, err := adminRequest(context.Background(), http.MethodPost, "/admin"+resourceIDFromEnv()+"/kubernetesobjects", nil, obj, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -173,7 +172,7 @@ func testConfigMapCreateOK(resourceID, objName, namespace string) {
 	Expect(obj.Data).To(Equal(cm.Data))
 }
 
-func testConfigMapGetOK(resourceID, objName, namespace string) {
+func testConfigMapGetOK(objName, namespace string) {
 	By("getting an object via RP admin API")
 	params := url.Values{
 		"kind":      []string{"configmap"},
@@ -181,7 +180,7 @@ func testConfigMapGetOK(resourceID, objName, namespace string) {
 		"name":      []string{objName},
 	}
 	var obj corev1.ConfigMap
-	resp, err := adminRequest(context.Background(), http.MethodGet, "/admin"+resourceID+"/kubernetesobjects", params, nil, &obj)
+	resp, err := adminRequest(context.Background(), http.MethodGet, "/admin"+resourceIDFromEnv()+"/kubernetesobjects", params, nil, &obj)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -193,14 +192,14 @@ func testConfigMapGetOK(resourceID, objName, namespace string) {
 	Expect(obj.Data).To(Equal(cm.Data))
 }
 
-func testConfigMapListOK(resourceID, objName, namespace string) {
+func testConfigMapListOK(objName, namespace string) {
 	By("requesting a list of objects via RP admin API")
 	params := url.Values{
 		"kind":      []string{"configmap"},
 		"namespace": []string{namespace},
 	}
 	var obj corev1.ConfigMapList
-	resp, err := adminRequest(context.Background(), http.MethodGet, "/admin"+resourceID+"/kubernetesobjects", params, nil, &obj)
+	resp, err := adminRequest(context.Background(), http.MethodGet, "/admin"+resourceIDFromEnv()+"/kubernetesobjects", params, nil, &obj)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -212,12 +211,12 @@ func testConfigMapListOK(resourceID, objName, namespace string) {
 	Expect(names).To(ContainElement(objName))
 }
 
-func testConfigMapUpdateOK(resourceID, objName, namespace string) {
+func testConfigMapUpdateOK(objName, namespace string) {
 	By("updating the object via RP admin API")
 	obj := mockConfigMap(objName, namespace)
 	obj.Data["key"] = "new_value"
 
-	resp, err := adminRequest(context.Background(), http.MethodPost, "/admin"+resourceID+"/kubernetesobjects", nil, obj, nil)
+	resp, err := adminRequest(context.Background(), http.MethodPost, "/admin"+resourceIDFromEnv()+"/kubernetesobjects", nil, obj, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -229,14 +228,14 @@ func testConfigMapUpdateOK(resourceID, objName, namespace string) {
 	Expect(cm.Data).To(Equal(map[string]string{"key": "new_value"}))
 }
 
-func testConfigMapDeleteOK(resourceID, objName, namespace string) {
+func testConfigMapDeleteOK(objName, namespace string) {
 	By("deleting the object via RP admin API")
 	params := url.Values{
 		"kind":      []string{"configmap"},
 		"namespace": []string{namespace},
 		"name":      []string{objName},
 	}
-	resp, err := adminRequest(context.Background(), http.MethodDelete, "/admin"+resourceID+"/kubernetesobjects", params, nil, nil)
+	resp, err := adminRequest(context.Background(), http.MethodDelete, "/admin"+resourceIDFromEnv()+"/kubernetesobjects", params, nil, nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
@@ -256,17 +255,17 @@ func testConfigMapDeleteOK(resourceID, objName, namespace string) {
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func testConfigMapCreateOrUpdateForbidden(operation, resourceID, objName, namespace string) {
+func testConfigMapCreateOrUpdateForbidden(operation, objName, namespace string) {
 	By(operation + " a new object via RP admin API")
 	obj := mockConfigMap(objName, namespace)
 	var cloudErr api.CloudError
-	resp, err := adminRequest(context.Background(), http.MethodPost, "/admin"+resourceID+"/kubernetesobjects", nil, obj, &cloudErr)
+	resp, err := adminRequest(context.Background(), http.MethodPost, "/admin"+resourceIDFromEnv()+"/kubernetesobjects", nil, obj, &cloudErr)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
 	Expect(cloudErr.Code).To(Equal(api.CloudErrorCodeForbidden))
 }
 
-func testConfigMapDeleteForbidden(resourceID, objName, namespace string) {
+func testConfigMapDeleteForbidden(objName, namespace string) {
 	By("deleting the object via RP admin API")
 	params := url.Values{
 		"kind":      []string{"configmap"},
@@ -274,7 +273,7 @@ func testConfigMapDeleteForbidden(resourceID, objName, namespace string) {
 		"name":      []string{objName},
 	}
 	var cloudErr api.CloudError
-	resp, err := adminRequest(context.Background(), http.MethodDelete, "/admin"+resourceID+"/kubernetesobjects", params, nil, &cloudErr)
+	resp, err := adminRequest(context.Background(), http.MethodDelete, "/admin"+resourceIDFromEnv()+"/kubernetesobjects", params, nil, &cloudErr)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(resp.StatusCode).To(Equal(http.StatusForbidden))
 	Expect(cloudErr.Code).To(Equal(api.CloudErrorCodeForbidden))

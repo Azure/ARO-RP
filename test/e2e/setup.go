@@ -4,6 +4,7 @@ package e2e
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
@@ -17,13 +18,18 @@ import (
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/tools/clientcmd/api"
+	"k8s.io/client-go/tools/clientcmd/api/latest"
 
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/insights"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift"
+	"github.com/Azure/ARO-RP/pkg/util/cluster"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
+	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
+	"github.com/Azure/ARO-RP/test/util/kubeadminkubeconfig"
 )
 
 type clientSet struct {
@@ -40,41 +46,63 @@ type clientSet struct {
 }
 
 var (
-	log     *logrus.Entry
-	clients *clientSet
+	log            *logrus.Entry
+	deploymentMode deployment.Mode
+	im             instancemetadata.InstanceMetadata
+	clusterName    string
+	clients        *clientSet
 )
 
 func skipIfNotInDevelopmentEnv() {
-	if deployment.NewMode() != deployment.Development {
+	if deploymentMode != deployment.Development {
 		Skip("skipping tests in non-development environment")
 	}
 }
 
 func resourceIDFromEnv() string {
-	subscriptionID := os.Getenv("AZURE_SUBSCRIPTION_ID")
-	resourceGroup := os.Getenv("RESOURCEGROUP")
-	clusterName := os.Getenv("CLUSTER")
-	return fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s", subscriptionID, resourceGroup, clusterName)
+	return fmt.Sprintf(
+		"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s",
+		im.SubscriptionID(), im.ResourceGroup(), clusterName)
 }
 
-func newClientSet(subscriptionID string) (*clientSet, error) {
+func newClientSet(ctx context.Context) (*clientSet, error) {
 	authorizer, err := auth.NewAuthorizerFromEnvironment()
 	if err != nil {
 		return nil, err
 	}
 
-	kubeconfig := clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		clientcmd.NewDefaultClientConfigLoadingRules(),
-		&clientcmd.ConfigOverrides{},
-	)
+	configv1, err := kubeadminkubeconfig.Get(ctx, log, authorizer, resourceIDFromEnv())
+	if err != nil {
+		return nil, err
+	}
+
+	var config api.Config
+	err = latest.Scheme.Convert(configv1, &config, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	kubeconfig := clientcmd.NewDefaultClientConfig(config, &clientcmd.ConfigOverrides{})
 
 	restconfig, err := kubeconfig.ClientConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	cli := kubernetes.NewForConfigOrDie(restconfig)
-	machineapicli := machineapiclient.NewForConfigOrDie(restconfig)
+	cli, err := kubernetes.NewForConfig(restconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	machineapicli, err := machineapiclient.NewForConfig(restconfig)
+	if err != nil {
+		return nil, err
+	}
+
+	projectcli, err := projectv1client.NewForConfig(restconfig)
+	if err != nil {
+		return nil, err
+	}
 
 	arocli, err := aroclient.NewForConfig(restconfig)
 	if err != nil {
@@ -82,17 +110,73 @@ func newClientSet(subscriptionID string) (*clientSet, error) {
 	}
 
 	return &clientSet{
-		OpenshiftClusters: redhatopenshift.NewOpenShiftClustersClient(subscriptionID, authorizer),
-		Operations:        redhatopenshift.NewOperationsClient(subscriptionID, authorizer),
-		VirtualMachines:   compute.NewVirtualMachinesClient(subscriptionID, authorizer),
-		Resources:         features.NewResourcesClient(subscriptionID, authorizer),
-		ActivityLogs:      insights.NewActivityLogsClient(subscriptionID, authorizer),
+		OpenshiftClusters: redhatopenshift.NewOpenShiftClustersClient(im.SubscriptionID(), authorizer),
+		Operations:        redhatopenshift.NewOperationsClient(im.SubscriptionID(), authorizer),
+		VirtualMachines:   compute.NewVirtualMachinesClient(im.SubscriptionID(), authorizer),
+		Resources:         features.NewResourcesClient(im.SubscriptionID(), authorizer),
+		ActivityLogs:      insights.NewActivityLogsClient(im.SubscriptionID(), authorizer),
 
 		Kubernetes:  cli,
 		MachineAPI:  machineapicli,
 		AROClusters: arocli,
-		Project:     projectv1client.NewForConfigOrDie(restconfig),
+		Project:     projectcli,
 	}, nil
+}
+
+func setup(ctx context.Context) error {
+	deploymentMode = deployment.NewMode()
+	log.Infof("running in %s mode", deploymentMode)
+
+	var err error
+	im, err = instancemetadata.NewDev()
+	if err != nil {
+		return err
+	}
+
+	for _, key := range []string{
+		"CLUSTER",
+	} {
+		if _, found := os.LookupEnv(key); !found {
+			return fmt.Errorf("environment variable %q unset", key)
+		}
+	}
+
+	clusterName = os.Getenv("CLUSTER")
+
+	if os.Getenv("E2E_CREATE_CLUSTER") != "" {
+		cluster, err := cluster.New(log, deploymentMode, im, os.Getenv("CI") != "")
+		if err != nil {
+			return err
+		}
+
+		err = cluster.Create(ctx, clusterName)
+		if err != nil {
+			return err
+		}
+	}
+
+	clients, err = newClientSet(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func done(ctx context.Context) error {
+	if os.Getenv("E2E_DELETE_CLUSTER") != "" {
+		cluster, err := cluster.New(log, deploymentMode, im, os.Getenv("CI") != "")
+		if err != nil {
+			return err
+		}
+
+		err = cluster.Delete(ctx, clusterName)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 var _ = BeforeSuite(func() {
@@ -101,21 +185,15 @@ var _ = BeforeSuite(func() {
 	SetDefaultEventuallyTimeout(2 * time.Minute)
 	SetDefaultEventuallyPollingInterval(10 * time.Second)
 
-	for _, key := range []string{
-		"AZURE_SUBSCRIPTION_ID",
-		"CLUSTER",
-		"RESOURCEGROUP",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			panic(fmt.Sprintf("environment variable %q unset", key))
-		}
+	if err := setup(context.Background()); err != nil {
+		panic(err)
 	}
+})
 
-	subscriptionID := os.Getenv("AZURE_SUBSCRIPTION_ID")
+var _ = AfterSuite(func() {
+	log.Info("AfterSuite")
 
-	var err error
-	clients, err = newClientSet(subscriptionID)
-	if err != nil {
+	if err := done(context.Background()); err != nil {
 		panic(err)
 	}
 })

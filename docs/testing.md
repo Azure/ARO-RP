@@ -31,10 +31,8 @@ E2e tests can also be run locally as follows:
 - Run the RP
 - Validate the RP is running properly by hitting the `/healthz` route
 - Register a subscription where to run the e2e
-- Deploy a cluster: RG / Vnet / Cluster
-- Export the KUBECONFIG file
 - Run the `make test-e2e` target
-- Delete the cluster and dependencies such as DB, RB & Vnet.
+- Delete the cosmos database, if applicable
 
 These steps can be acheived using commands below.  Look at the [e2e helper
 file](../hack/e2e/run-rp-and-e2e.sh) to understand each of the bash functions
@@ -63,9 +61,6 @@ validate_rp_running
 # Register the sub you are using to run e2e
 register_sub
 
-# Deploy cluster prereqs. RG & Vnet
-deploy_e2e_deps
-
 # Run e2e
 run_e2e
 
@@ -74,7 +69,4 @@ kill_rp
 
 # Delete the DB
 clean_e2e_db
-
-# Delete cluster prereqs. RG & Vnet
-clean_e2e
 ```

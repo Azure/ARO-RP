@@ -8,7 +8,44 @@ import (
 	"encoding/json"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	"github.com/Azure/ARO-RP/pkg/util/rbac"
 )
+
+func (g *generator) clusterPredeploy() *arm.Template {
+	t := templateStanza()
+
+	params := []string{
+		"clusterName",
+		"clusterServicePrincipalId",
+		"fpServicePrincipalId",
+		"fullDeploy",
+		"masterAddressPrefix",
+		"workerAddressPrefix",
+	}
+
+	for _, param := range params {
+		p := &arm.TemplateParameter{Type: "string"}
+		switch param {
+		case "fullDeploy":
+			p.Type = "bool"
+			p.DefaultValue = false
+		}
+		t.Parameters[param] = p
+	}
+
+	t.Resources = append(t.Resources,
+		clusterVnet(),
+		clusterRouteTable(),
+		clusterMasterSubnet(),
+		clusterWorkerSubnet(),
+		rbac.ResourceRoleAssignment(rbac.RoleContributor, "parameters('clusterServicePrincipalId')", "Microsoft.Network/virtualNetworks", "'dev-vnet'"),
+		rbac.ResourceRoleAssignment(rbac.RoleContributor, "parameters('fpServicePrincipalId')", "Microsoft.Network/virtualNetworks", "'dev-vnet'"),
+		rbac.ResourceRoleAssignment(rbac.RoleContributor, "parameters('clusterServicePrincipalId')", "Microsoft.Network/routeTables", "concat(parameters('clusterName'), '-rt')"),
+		rbac.ResourceRoleAssignment(rbac.RoleContributor, "parameters('fpServicePrincipalId')", "Microsoft.Network/routeTables", "concat(parameters('clusterName'), '-rt')"),
+	)
+
+	return t
+}
 
 func (g *generator) managedIdentityTemplate() *arm.Template {
 	t := templateStanza()

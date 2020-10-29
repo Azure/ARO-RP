@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -27,11 +26,9 @@ var _ = Describe("[Admin API] VM redeploy action", func() {
 	It("should trigger a selected VM to redeploy", func() {
 		ctx := context.Background()
 		resourceID := resourceIDFromEnv()
-		resourceGroup := os.Getenv("RESOURCEGROUP")
-		resourceName := os.Getenv("CLUSTER")
 
 		By("getting the resource group where the VM instances live in")
-		oc, err := clients.OpenshiftClusters.Get(ctx, resourceGroup, resourceName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, im.ResourceGroup(), clusterName)
 		Expect(err).NotTo(HaveOccurred())
 		clusterResourceGroup := stringutils.LastTokenByte(*oc.OpenShiftClusterProperties.ClusterProfile.ResourceGroupID, '/')
 

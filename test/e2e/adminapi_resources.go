@@ -6,7 +6,6 @@ package e2e
 import (
 	"context"
 	"net/http"
-	"os"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
@@ -24,11 +23,9 @@ var _ = Describe("[Admin API] List Azure resources action", func() {
 	It("should list Azure resources", func() {
 		ctx := context.Background()
 		resourceID := resourceIDFromEnv()
-		resourceGroup := os.Getenv("RESOURCEGROUP")
-		resourceName := os.Getenv("CLUSTER")
 
 		By("getting the resource group where cluster resources live in")
-		oc, err := clients.OpenshiftClusters.Get(ctx, resourceGroup, resourceName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, im.ResourceGroup(), clusterName)
 		Expect(err).NotTo(HaveOccurred())
 		clusterResourceGroup := stringutils.LastTokenByte(*oc.OpenShiftClusterProperties.ClusterProfile.ResourceGroupID, '/')
 

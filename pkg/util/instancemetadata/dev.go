@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-func newDev() (InstanceMetadata, error) {
+func NewDev() (InstanceMetadata, error) {
 	for _, key := range []string{
 		"AZURE_SUBSCRIPTION_ID",
 		"AZURE_TENANT_ID",

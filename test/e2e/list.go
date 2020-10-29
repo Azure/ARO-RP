@@ -5,7 +5,6 @@ package e2e
 
 import (
 	"context"
-	"os"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -21,7 +20,7 @@ var _ = Describe("List clusters", func() {
 
 		found := false
 		for _, oc := range ocList {
-			if *oc.Name == os.Getenv("CLUSTER") {
+			if *oc.Name == clusterName {
 				found = true
 				break
 			}
@@ -32,13 +31,13 @@ var _ = Describe("List clusters", func() {
 	Specify("the test cluster should be in the returned listByResourceGroup", func() {
 		ctx := context.Background()
 
-		ocList, err := clients.OpenshiftClusters.ListByResourceGroup(ctx, os.Getenv("RESOURCEGROUP"))
+		ocList, err := clients.OpenshiftClusters.ListByResourceGroup(ctx, im.ResourceGroup())
 		Expect(err).NotTo(HaveOccurred())
 		//Expect(len(ocList.Value)).To(Greater(1)))
 
 		found := false
 		for _, oc := range ocList {
-			if *oc.Name == os.Getenv("CLUSTER") {
+			if *oc.Name == clusterName {
 				found = true
 				break
 			}

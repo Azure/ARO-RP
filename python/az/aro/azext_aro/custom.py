@@ -16,9 +16,6 @@ from azure.cli.core.util import sdk_no_wait
 from knack.util import CLIError
 
 
-FP_CLIENT_ID = 'f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875'
-
-
 def aro_create(cmd,  # pylint: disable=too-many-locals
                client,
                resource_group_name,
@@ -66,10 +63,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
     if not client_sp:
         client_sp = aad.create_service_principal(client_id)
 
-    rp_client_id = FP_CLIENT_ID
-    if rp_mode_development():
-        rp_client_id = os.environ['AZURE_FP_CLIENT_ID']
-
+    rp_client_id = os.environ.get('AZURE_FP_CLIENT_ID', 'f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875')
     rp_client_sp = aad.get_service_principal(rp_client_id)
 
     for sp_id in [client_sp.object_id, rp_client_sp.object_id]:

@@ -380,7 +380,7 @@
             "properties": {
                 "scope": "[resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('databaseAccountName'))]",
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '5bd9cd88-fe45-4216-938b-f97437e15450')]",
-                "principalId": "970792b5-7720-4bf5-a335-f15e97c7e25a",
+                "principalId": "['970792b5-7720-4bf5-a335-f15e97c7e25a']",
                 "principalType": "ServicePrincipal"
             },
             "condition": "[parameters('fullDeploy')]",

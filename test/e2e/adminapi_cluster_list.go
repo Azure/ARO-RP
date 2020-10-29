@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -39,19 +38,16 @@ var _ = Describe("[Admin API] List clusters action", func() {
 	It("should be able to return list clusters with admin fields by subscription", func() {
 		ctx := context.Background()
 		resourceID := resourceIDFromEnv()
-		subscriptionID := os.Getenv("AZURE_SUBSCRIPTION_ID")
 
-		path := fmt.Sprintf("/subscriptions/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters", subscriptionID)
+		path := fmt.Sprintf("/subscriptions/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters", im.SubscriptionID())
 		testAdminClustersList(ctx, path, resourceID)
 	})
 
 	It("should be able to return list clusters with admin fields by resource group", func() {
 		ctx := context.Background()
 		resourceID := resourceIDFromEnv()
-		subscriptionID := os.Getenv("AZURE_SUBSCRIPTION_ID")
-		resourceGroup := os.Getenv("RESOURCEGROUP")
 
-		path := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters", subscriptionID, resourceGroup)
+		path := fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters", im.SubscriptionID(), im.ResourceGroup())
 		testAdminClustersList(ctx, path, resourceID)
 	})
 })

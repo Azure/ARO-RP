@@ -24,6 +24,7 @@ const (
 	FileRPProductionParameters           = "rp-production-parameters.json"
 	FileRPProductionSubscription         = "rp-production-subscription.json"
 
+	FileClusterPredeploy       = "cluster-predeploy.json"
 	fileEnvDevelopment         = "env-development.json"
 	fileDatabaseDevelopment    = "databases-development.json"
 	fileRPDevelopmentPredeploy = "rp-development-predeploy.json"
