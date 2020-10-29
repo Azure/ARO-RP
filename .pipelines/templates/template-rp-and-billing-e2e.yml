@@ -41,7 +41,7 @@ stages:
     - script: |
         # Pass variables between tasks: https://medium.com/microsoftazure/how-to-pass-variables-in-azure-pipelines-yaml-tasks-5c81c5d31763
         echo "##vso[task.setvariable variable=REGION]${{ parameters.location }}"
-        CLUSTER="v4-e2e-V$BUILD_BUILDID"
+        CLUSTER="v4-e2e-V$BUILD_BUILDID-${{ parameters.location }}"
         echo "##vso[task.setvariable variable=CLUSTER]$CLUSTER"
         CLUSTER_RESOURCEGROUP="v4-e2e-V$BUILD_BUILDID-${{ parameters.location }}"
         echo "##vso[task.setvariable variable=CLUSTER_RESOURCEGROUP]$CLUSTER_RESOURCEGROUP"
