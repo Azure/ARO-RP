@@ -117,7 +117,7 @@ func TestSystemreservedEnsure(t *testing.T) {
 	}
 }
 
-func TestSystemreservedKubeletConfig(t *testing.T) {
+func TestKubeletConfig(t *testing.T) {
 	err := mcv1.AddToScheme(scheme.Scheme)
 	if err != nil {
 		t.Error(err)
@@ -143,6 +143,9 @@ func TestSystemreservedKubeletConfig(t *testing.T) {
 				"kubeletConfig": map[string]interface{}{
 					"systemReserved": map[string]interface{}{
 						"memory": "2000Mi",
+					},
+					"evictionHard": map[string]interface{}{
+						"memory.available": "500Mi",
 					},
 				},
 				"machineConfigPoolSelector": map[string]interface{}{
