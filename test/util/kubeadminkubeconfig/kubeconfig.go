@@ -43,7 +43,7 @@ func Get(ctx context.Context, log *logrus.Entry, authorizer autorest.Authorizer,
 
 	var token string
 
-	timeoutCtx, cancel := context.WithTimeout(ctx, time.Minute)
+	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
 	defer cancel()
 
 	err = wait.PollImmediateUntil(time.Second, func() (bool, error) {
