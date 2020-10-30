@@ -17,6 +17,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	mgmtredhatopenshift "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2020-04-30/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/deploy"
@@ -24,6 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
@@ -40,6 +42,7 @@ type Cluster struct {
 	applications      graphrbac.ApplicationsClient
 	serviceprincipals graphrbac.ServicePrincipalClient
 	openshiftclusters redhatopenshift.OpenShiftClustersClient
+	subnets           network.SubnetsClient
 }
 
 func New(log *logrus.Entry, deploymentMode deployment.Mode, instancemetadata instancemetadata.InstanceMetadata, ci bool) (*Cluster, error) {
@@ -74,6 +77,7 @@ func New(log *logrus.Entry, deploymentMode deployment.Mode, instancemetadata ins
 		openshiftclusters: redhatopenshift.NewOpenShiftClustersClient(instancemetadata.SubscriptionID(), authorizer),
 		applications:      graphrbac.NewApplicationsClient(instancemetadata.TenantID(), graphAuthorizer),
 		serviceprincipals: graphrbac.NewServicePrincipalClient(instancemetadata.TenantID(), graphAuthorizer),
+		subnets:           network.NewSubnetsClient(instancemetadata.SubscriptionID(), authorizer),
 	}, nil
 }
 
@@ -150,6 +154,14 @@ func (c *Cluster) Create(ctx context.Context, clusterName string) error {
 		return err
 	}
 
+	if c.ci {
+		c.log.Info("waiting for and detaching NSGs")
+		err = c.waitForAndDetachNSGs(ctx, clusterName)
+		if err != nil {
+			return err
+		}
+	}
+
 	c.log.Info("creating cluster")
 	err = c.createCluster(ctx, clusterName, appID, appSecret)
 	if err != nil {
@@ -176,6 +188,17 @@ func (c *Cluster) Delete(ctx context.Context, clusterName string) error {
 	}
 
 	if c.deploymentMode == deployment.Development {
+		c.log.Info("detaching NSGs")
+		for _, subnetName := range []string{
+			clusterName + "-master",
+			clusterName + "-worker",
+		} {
+			err = c.detachNSG(ctx, clusterName, subnetName)
+			if err != nil {
+				c.log.Warn(err)
+			}
+		}
+
 		_, err = c.groups.Get(ctx, "aro-"+clusterName)
 		if err == nil {
 			c.log.Print("deleting cluster resource group (belt and braces)")
@@ -249,4 +272,48 @@ func (c *Cluster) createCluster(ctx context.Context, clusterName, clientID, clie
 	}
 
 	return c.openshiftclusters.CreateOrUpdateAndWait(ctx, c.ResourceGroup(), clusterName, oc)
+}
+
+func (c *Cluster) waitForAndDetachNSGs(ctx context.Context, clusterName string) error {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	defer cancel()
+
+	for _, subnetName := range []string{
+		clusterName + "-master",
+		clusterName + "-worker",
+	} {
+		err := wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+			subnet, err := c.subnets.Get(ctx, c.ResourceGroup(), "dev-vnet", subnetName, "")
+			if err != nil {
+				return false, err
+			}
+
+			return subnet.NetworkSecurityGroup != nil, nil
+		}, ctx.Done())
+		if err != nil {
+			return err
+		}
+
+		err = c.detachNSG(ctx, clusterName, subnetName)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *Cluster) detachNSG(ctx context.Context, clusterName, subnetName string) error {
+	subnet, err := c.subnets.Get(ctx, c.ResourceGroup(), "dev-vnet", subnetName, "")
+	if err != nil {
+		return err
+	}
+
+	if subnet.NetworkSecurityGroup == nil {
+		return nil
+	}
+
+	subnet.NetworkSecurityGroup = nil
+
+	return c.subnets.CreateOrUpdateAndWait(ctx, c.ResourceGroup(), "dev-vnet", subnetName, subnet)
 }
