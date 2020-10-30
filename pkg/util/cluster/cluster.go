@@ -190,17 +190,6 @@ func (c *Cluster) Delete(ctx context.Context, clusterName string) error {
 		}
 	}
 
-	if c.deploymentMode == deployment.Development {
-		_, err = c.groups.Get(ctx, "aro-"+clusterName)
-		if err == nil {
-			c.log.Print("deleting cluster resource group (belt and braces)")
-			err = c.groups.DeleteAndWait(ctx, "aro-"+clusterName)
-			if err != nil {
-				c.log.Warn(err)
-			}
-		}
-	}
-
 	if c.ci {
 		_, err = c.groups.Get(ctx, c.ResourceGroup())
 		if err == nil {
