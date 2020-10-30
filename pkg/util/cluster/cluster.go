@@ -10,7 +10,9 @@ import (
 	"math/rand"
 	"os"
 	"strings"
+	"time"
 
+	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
@@ -23,9 +25,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
+	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 type Cluster struct {
@@ -39,6 +43,21 @@ type Cluster struct {
 	applications      graphrbac.ApplicationsClient
 	serviceprincipals graphrbac.ServicePrincipalClient
 	openshiftclusters redhatopenshift.OpenShiftClustersClient
+	securitygroups    network.SecurityGroupsClient
+	subnets           network.SubnetsClient
+}
+
+type errors []error
+
+func (errs errors) Error() string {
+	var sb strings.Builder
+
+	for _, err := range errs {
+		sb.WriteString(err.Error())
+		sb.WriteByte('\n')
+	}
+
+	return sb.String()
 }
 
 func New(log *logrus.Entry, deploymentMode deployment.Mode, instancemetadata instancemetadata.InstanceMetadata, ci bool) (*Cluster, error) {
@@ -73,6 +92,8 @@ func New(log *logrus.Entry, deploymentMode deployment.Mode, instancemetadata ins
 		openshiftclusters: redhatopenshift.NewOpenShiftClustersClient(instancemetadata.SubscriptionID(), authorizer),
 		applications:      graphrbac.NewApplicationsClient(instancemetadata.TenantID(), graphAuthorizer),
 		serviceprincipals: graphrbac.NewServicePrincipalClient(instancemetadata.TenantID(), graphAuthorizer),
+		securitygroups:    network.NewSecurityGroupsClient(instancemetadata.SubscriptionID(), authorizer),
+		subnets:           network.NewSubnetsClient(instancemetadata.SubscriptionID(), authorizer),
 	}, nil
 }
 
@@ -134,8 +155,11 @@ func (c *Cluster) Create(ctx context.Context, clusterName string) error {
 		"workerAddressPrefix":       {Value: fmt.Sprintf("10.%d.%d.0/24", rand.Intn(128), rand.Intn(256))},
 	}
 
+	armctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	defer cancel()
+
 	c.log.Info("predeploying ARM template")
-	err = c.deployments.CreateOrUpdateAndWait(ctx, c.ResourceGroup(), clusterName, mgmtfeatures.Deployment{
+	err = c.deployments.CreateOrUpdateAndWait(armctx, c.ResourceGroup(), clusterName, mgmtfeatures.Deployment{
 		Properties: &mgmtfeatures.DeploymentProperties{
 			Template:   template,
 			Parameters: parameters,
@@ -152,33 +176,32 @@ func (c *Cluster) Create(ctx context.Context, clusterName string) error {
 		return err
 	}
 
+	if c.ci {
+		c.log.Info("fixing up NSGs")
+		err = c.fixupNSGs(ctx, clusterName)
+		if err != nil {
+			return err
+		}
+	}
+
 	c.log.Info("done")
 	return nil
 }
 
 func (c *Cluster) Delete(ctx context.Context, clusterName string) error {
+	var errs errors
+
 	oc, err := c.openshiftclusters.Get(ctx, c.ResourceGroup(), clusterName)
 	if err == nil {
 		err = c.deleteApplication(ctx, *oc.OpenShiftClusterProperties.ServicePrincipalProfile.ClientID)
 		if err != nil {
-			c.log.Warn(err)
+			errs = append(errs, err)
 		}
 
 		c.log.Print("deleting cluster")
 		err = c.openshiftclusters.DeleteAndWait(ctx, c.ResourceGroup(), clusterName)
 		if err != nil {
-			c.log.Warn(err)
-		}
-	}
-
-	if c.deploymentMode == deployment.Development {
-		_, err = c.groups.Get(ctx, "aro-"+clusterName)
-		if err == nil {
-			c.log.Print("deleting cluster resource group (belt and braces)")
-			err = c.groups.DeleteAndWait(ctx, "aro-"+clusterName)
-			if err != nil {
-				c.log.Warn(err)
-			}
+			errs = append(errs, err)
 		}
 	}
 
@@ -188,7 +211,7 @@ func (c *Cluster) Delete(ctx context.Context, clusterName string) error {
 			c.log.Print("deleting resource group")
 			err = c.groups.DeleteAndWait(ctx, c.ResourceGroup())
 			if err != nil {
-				c.log.Warn(err)
+				errs = append(errs, err)
 			}
 		}
 	} else {
@@ -196,6 +219,11 @@ func (c *Cluster) Delete(ctx context.Context, clusterName string) error {
 	}
 
 	c.log.Info("done")
+
+	if errs != nil {
+		return errs // https://golang.org/doc/faq#nil_error
+	}
+
 	return nil
 }
 
@@ -245,4 +273,54 @@ func (c *Cluster) createCluster(ctx context.Context, clusterName, clientID, clie
 	}
 
 	return c.openshiftclusters.CreateOrUpdateAndWait(ctx, c.ResourceGroup(), clusterName, oc)
+}
+
+func (c *Cluster) fixupNSGs(ctx context.Context, clusterName string) error {
+	// TODO: will need updating for 4.5 architecture
+
+	type fix struct {
+		subnetName string
+		nsgID      string
+	}
+
+	var fixes []*fix
+
+	nsgs, err := c.securitygroups.List(ctx, "aro-"+clusterName)
+	if err != nil {
+		return err
+	}
+
+	for _, nsg := range nsgs {
+		switch {
+		case strings.HasSuffix(*nsg.Name, subnet.NSGControlPlaneSuffix):
+			fixes = append(fixes, &fix{
+				subnetName: clusterName + "-master",
+				nsgID:      *nsg.ID,
+			})
+
+		case strings.HasSuffix(*nsg.Name, subnet.NSGNodeSuffix):
+			fixes = append(fixes, &fix{
+				subnetName: clusterName + "-worker",
+				nsgID:      *nsg.ID,
+			})
+		}
+	}
+
+	for _, fix := range fixes {
+		subnet, err := c.subnets.Get(ctx, c.ResourceGroup(), "dev-vnet", fix.subnetName, "")
+		if err != nil {
+			return err
+		}
+
+		subnet.NetworkSecurityGroup = &mgmtnetwork.SecurityGroup{
+			ID: &fix.nsgID,
+		}
+
+		err = c.subnets.CreateOrUpdateAndWait(ctx, c.ResourceGroup(), "dev-vnet", fix.subnetName, subnet)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
