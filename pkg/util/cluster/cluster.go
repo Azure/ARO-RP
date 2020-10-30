@@ -47,6 +47,19 @@ type Cluster struct {
 	subnets           network.SubnetsClient
 }
 
+type errors []error
+
+func (errs errors) Error() string {
+	var sb strings.Builder
+
+	for _, err := range errs {
+		sb.WriteString(err.Error())
+		sb.WriteByte('\n')
+	}
+
+	return sb.String()
+}
+
 func New(log *logrus.Entry, deploymentMode deployment.Mode, instancemetadata instancemetadata.InstanceMetadata, ci bool) (*Cluster, error) {
 	if deploymentMode != deployment.Production {
 		for _, key := range []string{
@@ -176,17 +189,19 @@ func (c *Cluster) Create(ctx context.Context, clusterName string) error {
 }
 
 func (c *Cluster) Delete(ctx context.Context, clusterName string) error {
+	var errs errors
+
 	oc, err := c.openshiftclusters.Get(ctx, c.ResourceGroup(), clusterName)
 	if err == nil {
 		err = c.deleteApplication(ctx, *oc.OpenShiftClusterProperties.ServicePrincipalProfile.ClientID)
 		if err != nil {
-			c.log.Warn(err)
+			errs = append(errs, err)
 		}
 
 		c.log.Print("deleting cluster")
 		err = c.openshiftclusters.DeleteAndWait(ctx, c.ResourceGroup(), clusterName)
 		if err != nil {
-			c.log.Warn(err)
+			errs = append(errs, err)
 		}
 	}
 
@@ -196,7 +211,7 @@ func (c *Cluster) Delete(ctx context.Context, clusterName string) error {
 			c.log.Print("deleting resource group")
 			err = c.groups.DeleteAndWait(ctx, c.ResourceGroup())
 			if err != nil {
-				c.log.Warn(err)
+				errs = append(errs, err)
 			}
 		}
 	} else {
@@ -204,6 +219,11 @@ func (c *Cluster) Delete(ctx context.Context, clusterName string) error {
 	}
 
 	c.log.Info("done")
+
+	if errs != nil {
+		return errs // https://golang.org/doc/faq#nil_error
+	}
+
 	return nil
 }
 
