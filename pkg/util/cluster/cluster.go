@@ -154,18 +154,19 @@ func (c *Cluster) Create(ctx context.Context, clusterName string) error {
 		return err
 	}
 
+	c.log.Info("creating cluster")
+	err = c.createCluster(ctx, clusterName, appID, appSecret)
+	if err != nil {
+		return err
+	}
+
+	// HACK: NRM
 	if c.ci {
 		c.log.Info("waiting for and detaching NSGs")
 		err = c.waitForAndDetachNSGs(ctx, clusterName)
 		if err != nil {
 			return err
 		}
-	}
-
-	c.log.Info("creating cluster")
-	err = c.createCluster(ctx, clusterName, appID, appSecret)
-	if err != nil {
-		return err
 	}
 
 	c.log.Info("done")
@@ -278,29 +279,28 @@ func (c *Cluster) waitForAndDetachNSGs(ctx context.Context, clusterName string) 
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
-	for _, subnetName := range []string{
-		clusterName + "-master",
-		clusterName + "-worker",
-	} {
-		err := wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+	err := wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+		for _, subnetName := range []string{
+			clusterName + "-master",
+			clusterName + "-worker",
+		} {
 			subnet, err := c.subnets.Get(ctx, c.ResourceGroup(), "dev-vnet", subnetName, "")
 			if err != nil {
 				return false, err
 			}
+			err = c.detachNSG(ctx, clusterName, subnetName)
+			if err != nil {
+				return false, err
+			}
 
-			return subnet.NetworkSecurityGroup != nil, nil
-		}, ctx.Done())
-		if err != nil {
-			return err
+			if subnet.NetworkSecurityGroup != nil {
+				return false, nil
+			}
 		}
 
-		err = c.detachNSG(ctx, clusterName, subnetName)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+		return true, nil
+	}, ctx.Done())
+	return err
 }
 
 func (c *Cluster) detachNSG(ctx context.Context, clusterName, subnetName string) error {
