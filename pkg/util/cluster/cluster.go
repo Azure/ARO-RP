@@ -10,6 +10,7 @@ import (
 	"math/rand"
 	"os"
 	"strings"
+	"time"
 
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -134,8 +135,11 @@ func (c *Cluster) Create(ctx context.Context, clusterName string) error {
 		"workerAddressPrefix":       {Value: fmt.Sprintf("10.%d.%d.0/24", rand.Intn(128), rand.Intn(256))},
 	}
 
+	armctx, cancel := context.WithTimeout(ctx, 10*time.Minute)
+	defer cancel()
+
 	c.log.Info("predeploying ARM template")
-	err = c.deployments.CreateOrUpdateAndWait(ctx, c.ResourceGroup(), clusterName, mgmtfeatures.Deployment{
+	err = c.deployments.CreateOrUpdateAndWait(armctx, c.ResourceGroup(), clusterName, mgmtfeatures.Deployment{
 		Properties: &mgmtfeatures.DeploymentProperties{
 			Template:   template,
 			Parameters: parameters,
