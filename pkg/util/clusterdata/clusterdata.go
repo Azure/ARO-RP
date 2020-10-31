@@ -3,7 +3,6 @@ package clusterdata
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-// TODO: After OpenShift 4.4, replace github.com/openshift/cluster-api with github.com/openshift/machine-api-operator
 import (
 	"context"
 	"fmt"

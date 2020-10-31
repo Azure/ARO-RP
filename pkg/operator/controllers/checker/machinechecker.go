@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	azureproviderv1beta1 "github.com/openshift/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1"
-	machinev1beta1 "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
-	clusterapi "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset"
+	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
+	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	"github.com/operator-framework/operator-sdk/pkg/status"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -32,14 +32,14 @@ const (
 
 // MachineChecker reconciles the alertmanager webhook
 type MachineChecker struct {
-	clustercli     clusterapi.Interface
+	clustercli     maoclient.Interface
 	arocli         aroclient.AroV1alpha1Interface
 	log            *logrus.Entry
 	deploymentMode deployment.Mode
 	role           string
 }
 
-func NewMachineChecker(log *logrus.Entry, clustercli clusterapi.Interface, arocli aroclient.AroV1alpha1Interface, role string, deploymentMode deployment.Mode) *MachineChecker {
+func NewMachineChecker(log *logrus.Entry, clustercli maoclient.Interface, arocli aroclient.AroV1alpha1Interface, role string, deploymentMode deployment.Mode) *MachineChecker {
 	return &MachineChecker{
 		clustercli:     clustercli,
 		arocli:         arocli,

@@ -10,9 +10,9 @@ import (
 	"testing"
 
 	"github.com/Azure/go-autorest/autorest/to"
-	machinev1beta1 "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
-	clusterapi "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset"
-	"github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset/fake"
+	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
+	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
+	"github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -40,14 +40,14 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 
 	for _, tt := range []struct {
 		name     string
-		client   func() clusterapi.Interface
+		client   func() maoclient.Interface
 		modifyOc func(*api.OpenShiftCluster)
 		wantOc   *api.OpenShiftCluster
 		wantErr  string
 	}{
 		{
 			name: "machine set objects exists - valid provider spec JSON",
-			client: func() clusterapi.Interface {
+			client: func() maoclient.Interface {
 				return fake.NewSimpleClientset(
 					&machinev1beta1.MachineSet{
 						ObjectMeta: metav1.ObjectMeta{
@@ -134,7 +134,7 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 		},
 		{
 			name: "machine set objects exists - invalid provider spec JSON",
-			client: func() clusterapi.Interface {
+			client: func() maoclient.Interface {
 				return fake.NewSimpleClientset(
 					&machinev1beta1.MachineSet{
 						ObjectMeta: metav1.ObjectMeta{
@@ -164,7 +164,7 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 		},
 		{
 			name: "machine set objects exists - provider spec is missing",
-			client: func() clusterapi.Interface {
+			client: func() maoclient.Interface {
 				return fake.NewSimpleClientset(
 					&machinev1beta1.MachineSet{
 						ObjectMeta: metav1.ObjectMeta{
@@ -183,7 +183,7 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 		},
 		{
 			name: "machine set objects exists - provider spec is missing raw value",
-			client: func() clusterapi.Interface {
+			client: func() maoclient.Interface {
 				return fake.NewSimpleClientset(
 					&machinev1beta1.MachineSet{
 						ObjectMeta: metav1.ObjectMeta{
@@ -211,7 +211,7 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 		},
 		{
 			name: "machine set objects do not exist",
-			client: func() clusterapi.Interface {
+			client: func() maoclient.Interface {
 				return fake.NewSimpleClientset()
 			},
 			wantOc: &api.OpenShiftCluster{
@@ -223,7 +223,7 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 		},
 		{
 			name: "machine set list request failed",
-			client: func() clusterapi.Interface {
+			client: func() maoclient.Interface {
 				client := fake.NewSimpleClientset()
 				client.PrependReactor("list", "machinesets", func(action clientgotesting.Action) (bool, runtime.Object, error) {
 					return true, nil, errors.New("fake list error")
@@ -237,7 +237,7 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 		},
 		{
 			name: "invalid cluster object",
-			client: func() clusterapi.Interface {
+			client: func() maoclient.Interface {
 				return fake.NewSimpleClientset()
 			},
 			modifyOc: func(oc *api.OpenShiftCluster) {
