@@ -14,9 +14,6 @@ import (
 
 func (m *manager) removeBootstrap(ctx context.Context) error {
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
-	if infraID == "" {
-		infraID = "aro" // TODO: remove after deploy
-	}
 
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	m.log.Print("removing bootstrap vm")

@@ -105,6 +105,7 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 			return err
 		}
 	}
+
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
@@ -189,7 +190,7 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 					"Microsoft.Storage/storageAccounts/cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix,
 				},
 			},
-			m.clusterNSG(installConfig.Config.Azure.Region),
+			m.clusterNSG(infraID, installConfig.Config.Azure.Region),
 		},
 	}
 

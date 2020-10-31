@@ -43,6 +43,7 @@ func TestCreate(t *testing.T) {
 	for _, tt := range []*test{
 		{
 			name:     "valid",
+			infraID:  "test-1234",
 			subnetID: "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/subnet",
 			mocks: func(tt *test, privateendpoints *mock_network.MockPrivateEndpointsClient) {
 				privateendpoints.EXPECT().
@@ -55,7 +56,7 @@ func TestCreate(t *testing.T) {
 								{
 									Name: to.StringPtr("rp-plsconnection"),
 									PrivateLinkServiceConnectionProperties: &mgmtnetwork.PrivateLinkServiceConnectionProperties{
-										PrivateLinkServiceID: to.StringPtr("/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup/providers/Microsoft.Network/privateLinkServices/aro-pls"),
+										PrivateLinkServiceID: to.StringPtr("/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup/providers/Microsoft.Network/privateLinkServices/test-1234-pls"),
 									},
 								},
 							},

@@ -39,9 +39,6 @@ func NewManager(env env.Core, localFPAuthorizer autorest.Authorizer) Manager {
 
 func (m *manager) Create(ctx context.Context, doc *api.OpenShiftClusterDocument) error {
 	infraID := doc.OpenShiftCluster.Properties.InfraID
-	if infraID == "" {
-		infraID = "aro" // TODO: remove after deploy
-	}
 
 	return m.privateendpoints.CreateOrUpdateAndWait(ctx, m.env.ResourceGroup(), prefix+doc.ID, mgmtnetwork.PrivateEndpoint{
 		PrivateEndpointProperties: &mgmtnetwork.PrivateEndpointProperties{

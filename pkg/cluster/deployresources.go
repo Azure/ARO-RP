@@ -27,9 +27,6 @@ func (m *manager) deployResourceTemplate(ctx context.Context) error {
 	machineMaster := g[reflect.TypeOf(&machine.Master{})].(*machine.Master)
 
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
-	if infraID == "" {
-		infraID = "aro" // TODO: remove after deploy
-	}
 
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
