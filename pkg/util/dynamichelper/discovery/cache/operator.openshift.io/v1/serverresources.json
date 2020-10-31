@@ -32,6 +32,65 @@
             ]
         },
         {
+            "name": "cloudcredentials",
+            "singularName": "cloudcredential",
+            "namespaced": false,
+            "kind": "CloudCredential",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "rJ9MVOyFQKo="
+        },
+        {
+            "name": "cloudcredentials/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "CloudCredential",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "configs",
+            "singularName": "config",
+            "namespaced": false,
+            "kind": "Config",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "categories": [
+                "coreoperators"
+            ],
+            "storageVersionHash": "Bt48MmgSCbA="
+        },
+        {
+            "name": "configs/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "Config",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
             "name": "consoles",
             "singularName": "console",
             "namespaced": false,
@@ -406,68 +465,6 @@
             "singularName": "",
             "namespaced": false,
             "kind": "ServiceCA",
-            "verbs": [
-                "get",
-                "patch",
-                "update"
-            ]
-        },
-        {
-            "name": "servicecatalogapiservers",
-            "singularName": "servicecatalogapiserver",
-            "namespaced": false,
-            "kind": "ServiceCatalogAPIServer",
-            "verbs": [
-                "create",
-                "delete",
-                "deletecollection",
-                "get",
-                "list",
-                "patch",
-                "update",
-                "watch"
-            ],
-            "categories": [
-                "coreoperators"
-            ],
-            "storageVersionHash": "XDRNCKHKnPc="
-        },
-        {
-            "name": "servicecatalogapiservers/status",
-            "singularName": "",
-            "namespaced": false,
-            "kind": "ServiceCatalogAPIServer",
-            "verbs": [
-                "get",
-                "patch",
-                "update"
-            ]
-        },
-        {
-            "name": "servicecatalogcontrollermanagers",
-            "singularName": "servicecatalogcontrollermanager",
-            "namespaced": false,
-            "kind": "ServiceCatalogControllerManager",
-            "verbs": [
-                "create",
-                "delete",
-                "deletecollection",
-                "get",
-                "list",
-                "patch",
-                "update",
-                "watch"
-            ],
-            "categories": [
-                "coreoperators"
-            ],
-            "storageVersionHash": "kTNZzrH6OLY="
-        },
-        {
-            "name": "servicecatalogcontrollermanagers/status",
-            "singularName": "",
-            "namespaced": false,
-            "kind": "ServiceCatalogControllerManager",
             "verbs": [
                 "get",
                 "patch",

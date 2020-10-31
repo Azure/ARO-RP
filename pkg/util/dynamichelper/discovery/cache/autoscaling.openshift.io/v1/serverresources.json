@@ -18,6 +18,9 @@
                 "update",
                 "watch"
             ],
+            "shortNames": [
+                "ca"
+            ],
             "storageVersionHash": "zBaLBLdlZGk="
         },
         {
