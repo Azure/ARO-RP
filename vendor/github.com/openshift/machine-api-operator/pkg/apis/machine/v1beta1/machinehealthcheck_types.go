@@ -41,7 +41,8 @@ type MachineHealthCheckList struct {
 
 // MachineHealthCheckSpec defines the desired state of MachineHealthCheck
 type MachineHealthCheckSpec struct {
-	// Label selector to match machines whose health will be exercised
+	// Label selector to match machines whose health will be exercised.
+	// Note: An empty selector will match all machines.
 	Selector metav1.LabelSelector `json:"selector"`
 
 	// UnhealthyConditions contains a list of the conditions that determine
@@ -55,6 +56,18 @@ type MachineHealthCheckSpec struct {
 	// "selector" are not healthy.
 	// +optional
 	MaxUnhealthy *intstr.IntOrString `json:"maxUnhealthy,omitempty"`
+
+	// It would be preferable for nodeStartupTimeout to be a metav1.Duration, but
+	// there's no good way to validate the format here.  Invalid input would cause
+	// problems with marshaling, so it's better to just make it a string and
+	// handle the conversion in the controller.
+	//
+	// Intentional blank line to keep this out of the OpenAPI description...
+
+	// Machines older than this duration without a node will be considered to have
+	// failed and will be remediated.
+	// +optional
+	NodeStartupTimeout string `json:"nodeStartupTimeout,omitempty"`
 }
 
 // UnhealthyCondition represents a Node condition type and value with a timeout
@@ -87,7 +100,6 @@ type MachineHealthCheckStatus struct {
 	ExpectedMachines *int `json:"expectedMachines"`
 
 	// total number of machines counted by this machine health check
-	// +kubebuilder:default=0
 	// +kubebuilder:validation:Minimum=0
 	CurrentHealthy *int `json:"currentHealthy" protobuf:"varint,4,opt,name=currentHealthy"`
 }

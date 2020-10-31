@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	machineapi "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
-	vsphereapis "github.com/openshift/machine-api-operator/pkg/apis/vsphereprovider/v1alpha1"
+	vsphereapis "github.com/openshift/machine-api-operator/pkg/apis/vsphereprovider/v1beta1"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -64,6 +64,12 @@ func Machines(clusterID string, config *types.InstallConfig, pool *types.Machine
 }
 
 func provider(clusterID string, platform *vsphere.Platform, mpool *vsphere.MachinePool, osImage string, userDataSecret string) (*vsphereapis.VSphereMachineProviderSpec, error) {
+	folder := fmt.Sprintf("/%s/vm/%s", platform.Datacenter, clusterID)
+	resourcePool := fmt.Sprintf("/%s/host/%s/Resources", platform.Datacenter, platform.Cluster)
+	if platform.Folder != "" {
+		folder = platform.Folder
+	}
+
 	return &vsphereapis.VSphereMachineProviderSpec{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: vsphereapis.SchemeGroupVersion.String(),
@@ -80,10 +86,11 @@ func provider(clusterID string, platform *vsphere.Platform, mpool *vsphere.Machi
 			},
 		},
 		Workspace: &vsphereapis.Workspace{
-			Server:     platform.VCenter,
-			Datacenter: platform.Datacenter,
-			Datastore:  platform.DefaultDatastore,
-			Folder:     clusterID,
+			Server:       platform.VCenter,
+			Datacenter:   platform.Datacenter,
+			Datastore:    platform.DefaultDatastore,
+			Folder:       folder,
+			ResourcePool: resourcePool,
 		},
 		NumCPUs:           mpool.NumCPUs,
 		NumCoresPerSocket: mpool.NumCoresPerSocket,

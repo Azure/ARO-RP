@@ -1634,6 +1634,9 @@ func XMLMacPoolWriteOne(writer *XMLWriter, object *MacPool, tag string) error {
 	if r, ok := object.Name(); ok {
 		writer.WriteCharacter("name", r)
 	}
+	if r, ok := object.Permissions(); ok {
+		XMLPermissionWriteMany(writer, r, "permissions", "permission")
+	}
 	if r, ok := object.Ranges(); ok {
 		XMLRangeWriteMany(writer, r, "ranges", "range")
 	}
@@ -1696,7 +1699,14 @@ func XMLProductInfoWriteOne(writer *XMLWriter, object *ProductInfo, tag string) 
 	if tag == "" {
 		tag = "product_info"
 	}
-	writer.WriteStart("", tag, nil)
+	var attrs map[string]string
+	if r, ok := object.Id(); ok {
+		if attrs == nil {
+			attrs = make(map[string]string)
+		}
+		attrs["id"] = r
+	}
+	writer.WriteStart("", tag, attrs)
 	if r, ok := object.Name(); ok {
 		writer.WriteCharacter("name", r)
 	}
@@ -2457,8 +2467,8 @@ func XMLImageTransferWriteOne(writer *XMLWriter, object *ImageTransfer, tag stri
 	if r, ok := object.ProxyUrl(); ok {
 		writer.WriteCharacter("proxy_url", r)
 	}
-	if r, ok := object.SignedTicket(); ok {
-		writer.WriteCharacter("signed_ticket", r)
+	if r, ok := object.Shallow(); ok {
+		writer.WriteBool("shallow", r)
 	}
 	if r, ok := object.Snapshot(); ok {
 		XMLDiskSnapshotWriteOne(writer, r, "snapshot")
@@ -7227,6 +7237,9 @@ func XMLNetworkWriteOne(writer *XMLWriter, object *Network, tag string) error {
 	if r, ok := object.Permissions(); ok {
 		XMLPermissionWriteMany(writer, r, "permissions", "permission")
 	}
+	if r, ok := object.PortIsolation(); ok {
+		writer.WriteBool("port_isolation", r)
+	}
 	if r, ok := object.ProfileRequired(); ok {
 		writer.WriteBool("profile_required", r)
 	}
@@ -7244,6 +7257,9 @@ func XMLNetworkWriteOne(writer *XMLWriter, object *Network, tag string) error {
 	}
 	if r, ok := object.Usages(); ok {
 		XMLNetworkUsageWriteMany(writer, r, "usages", "usage")
+	}
+	if r, ok := object.VdsmName(); ok {
+		writer.WriteCharacter("vdsm_name", r)
 	}
 	if r, ok := object.Vlan(); ok {
 		XMLVlanWriteOne(writer, r, "vlan")
@@ -7498,6 +7514,61 @@ func XMLHardwareInformationWriteMany(writer *XMLWriter, structSlice *HardwareInf
 	writer.WriteStart("", plural, nil)
 	for _, o := range structSlice.Slice() {
 		XMLHardwareInformationWriteOne(writer, o, singular)
+	}
+	writer.WriteEnd(plural)
+	return nil
+}
+
+func XMLCheckpointWriteOne(writer *XMLWriter, object *Checkpoint, tag string) error {
+	if object == nil {
+		return fmt.Errorf("input object pointer is nil")
+	}
+	if tag == "" {
+		tag = "checkpoint"
+	}
+	var attrs map[string]string
+	if r, ok := object.Id(); ok {
+		if attrs == nil {
+			attrs = make(map[string]string)
+		}
+		attrs["id"] = r
+	}
+	writer.WriteStart("", tag, attrs)
+	if r, ok := object.Comment(); ok {
+		writer.WriteCharacter("comment", r)
+	}
+	if r, ok := object.CreationDate(); ok {
+		writer.WriteDate("creation_date", r)
+	}
+	if r, ok := object.Description(); ok {
+		writer.WriteCharacter("description", r)
+	}
+	if r, ok := object.Disks(); ok {
+		XMLDiskWriteMany(writer, r, "disks", "disk")
+	}
+	if r, ok := object.Name(); ok {
+		writer.WriteCharacter("name", r)
+	}
+	if r, ok := object.ParentId(); ok {
+		writer.WriteCharacter("parent_id", r)
+	}
+	if r, ok := object.Vm(); ok {
+		XMLVmWriteOne(writer, r, "vm")
+	}
+	writer.WriteEnd(tag)
+	return nil
+}
+
+func XMLCheckpointWriteMany(writer *XMLWriter, structSlice *CheckpointSlice, plural, singular string) error {
+	if plural == "" {
+		plural = "checkpoints"
+	}
+	if singular == "" {
+		singular = "checkpoint"
+	}
+	writer.WriteStart("", plural, nil)
+	for _, o := range structSlice.Slice() {
+		XMLCheckpointWriteOne(writer, o, singular)
 	}
 	writer.WriteEnd(plural)
 	return nil
@@ -8867,6 +8938,12 @@ func XMLDiskSnapshotWriteOne(writer *XMLWriter, object *DiskSnapshot, tag string
 	if r, ok := object.DiskProfile(); ok {
 		XMLDiskProfileWriteOne(writer, r, "disk_profile")
 	}
+	if r, ok := object.DiskSnapshots(); ok {
+		XMLDiskSnapshotWriteMany(writer, r, "disk_snapshots", "disk_snapshot")
+	}
+	if r, ok := object.ExternalDisk(); ok {
+		writer.WriteCharacter("external_disk", r)
+	}
 	if r, ok := object.Format(); ok {
 		XMLDiskFormatWriteOne(writer, r, "format")
 	}
@@ -8893,6 +8970,9 @@ func XMLDiskSnapshotWriteOne(writer *XMLWriter, object *DiskSnapshot, tag string
 	}
 	if r, ok := object.OpenstackVolumeType(); ok {
 		XMLOpenStackVolumeTypeWriteOne(writer, r, "openstack_volume_type")
+	}
+	if r, ok := object.Parent(); ok {
+		XMLDiskSnapshotWriteOne(writer, r, "parent")
 	}
 	if r, ok := object.Permissions(); ok {
 		XMLPermissionWriteMany(writer, r, "permissions", "permission")
@@ -9295,6 +9375,12 @@ func XMLDiskWriteOne(writer *XMLWriter, object *Disk, tag string) error {
 	}
 	if r, ok := object.DiskProfile(); ok {
 		XMLDiskProfileWriteOne(writer, r, "disk_profile")
+	}
+	if r, ok := object.DiskSnapshots(); ok {
+		XMLDiskSnapshotWriteMany(writer, r, "disk_snapshots", "disk_snapshot")
+	}
+	if r, ok := object.ExternalDisk(); ok {
+		writer.WriteCharacter("external_disk", r)
 	}
 	if r, ok := object.Format(); ok {
 		XMLDiskFormatWriteOne(writer, r, "format")
@@ -9906,6 +9992,9 @@ func XMLClusterWriteOne(writer *XMLWriter, object *Cluster, tag string) error {
 	}
 	if r, ok := object.VirtService(); ok {
 		writer.WriteBool("virt_service", r)
+	}
+	if r, ok := object.VncEncryption(); ok {
+		writer.WriteBool("vnc_encryption", r)
 	}
 	writer.WriteEnd(tag)
 	return nil
@@ -11507,7 +11596,7 @@ func XMLHostWriteOne(writer *XMLWriter, object *Host, tag string) error {
 		XMLHostDevicePassthroughWriteOne(writer, r, "device_passthrough")
 	}
 	if r, ok := object.Devices(); ok {
-		XMLDeviceWriteMany(writer, r, "devices", "device")
+		XMLHostDeviceWriteMany(writer, r, "devices", "host_device")
 	}
 	if r, ok := object.Display(); ok {
 		XMLDisplayWriteOne(writer, r, "display")
@@ -11586,6 +11675,9 @@ func XMLHostWriteOne(writer *XMLWriter, object *Host, tag string) error {
 	}
 	if r, ok := object.Protocol(); ok {
 		XMLHostProtocolWriteOne(writer, r, "protocol")
+	}
+	if r, ok := object.ReinstallationRequired(); ok {
+		writer.WriteBool("reinstallation_required", r)
 	}
 	if r, ok := object.RootPassword(); ok {
 		writer.WriteCharacter("root_password", r)
@@ -12015,6 +12107,9 @@ func XMLActionWriteOne(writer *XMLWriter, object *Action, tag string) error {
 	if r, ok := object.AuthorizedKey(); ok {
 		XMLAuthorizedKeyWriteOne(writer, r, "authorized_key")
 	}
+	if r, ok := object.AutoPinningPolicy(); ok {
+		XMLAutoPinningPolicyWriteOne(writer, r, "auto_pinning_policy")
+	}
 	if r, ok := object.Bricks(); ok {
 		XMLGlusterBrickWriteMany(writer, r, "bricks", "brick")
 	}
@@ -12251,6 +12346,12 @@ func XMLActionWriteOne(writer *XMLWriter, object *Action, tag string) error {
 	}
 	if r, ok := object.UseCloudInit(); ok {
 		writer.WriteBool("use_cloud_init", r)
+	}
+	if r, ok := object.UseIgnition(); ok {
+		writer.WriteBool("use_ignition", r)
+	}
+	if r, ok := object.UseInitialization(); ok {
+		writer.WriteBool("use_initialization", r)
 	}
 	if r, ok := object.UseSysprep(); ok {
 		writer.WriteBool("use_sysprep", r)
@@ -13047,6 +13148,28 @@ func XMLQosTypeWriteMany(writer *XMLWriter, enums []QosType, plural, singular st
 	}
 	if singular == "" {
 		singular = "qos_type"
+	}
+	writer.WriteStart("", plural, nil)
+	for _, e := range enums {
+		writer.WriteCharacter(singular, string(e))
+	}
+	writer.WriteEnd(plural)
+	return nil
+}
+
+func XMLAutoPinningPolicyWriteOne(writer *XMLWriter, enum AutoPinningPolicy, tag string) {
+	if tag == "" {
+		tag = "auto_pinning_policy"
+	}
+	writer.WriteCharacter(tag, string(enum))
+}
+
+func XMLAutoPinningPolicyWriteMany(writer *XMLWriter, enums []AutoPinningPolicy, plural, singular string) error {
+	if plural == "" {
+		plural = "auto_pinning_policies"
+	}
+	if singular == "" {
+		singular = "auto_pinning_policy"
 	}
 	writer.WriteStart("", plural, nil)
 	for _, e := range enums {

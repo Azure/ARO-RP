@@ -9,6 +9,7 @@ import (
 
 	dockerref "github.com/containers/image/docker/reference"
 	"github.com/pkg/errors"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/openshift/installer/pkg/ipnet"
@@ -25,6 +26,8 @@ import (
 	libvirtvalidation "github.com/openshift/installer/pkg/types/libvirt/validation"
 	"github.com/openshift/installer/pkg/types/openstack"
 	openstackvalidation "github.com/openshift/installer/pkg/types/openstack/validation"
+	"github.com/openshift/installer/pkg/types/ovirt"
+	ovirtvalidation "github.com/openshift/installer/pkg/types/ovirt/validation"
 	"github.com/openshift/installer/pkg/types/vsphere"
 	vspherevalidation "github.com/openshift/installer/pkg/types/vsphere/validation"
 	"github.com/openshift/installer/pkg/validate"
@@ -33,12 +36,6 @@ import (
 const (
 	masterPoolName = "master"
 )
-
-// ClusterDomain returns the cluster domain for a cluster with the specified
-// base domain and cluster name.
-func ClusterDomain(baseDomain, clusterName string) string {
-	return fmt.Sprintf("%s.%s", clusterName, baseDomain)
-}
 
 // ValidateInstallConfig checks that the specified install config is valid.
 func ValidateInstallConfig(c *types.InstallConfig, openStackValidValuesFetcher openstackvalidation.ValidValuesFetcher) field.ErrorList {
@@ -74,7 +71,7 @@ func ValidateInstallConfig(c *types.InstallConfig, openStackValidValuesFetcher o
 		allErrs = append(allErrs, field.Invalid(field.NewPath("baseDomain"), c.BaseDomain, baseDomainErr.Error()))
 	}
 	if nameErr == nil && baseDomainErr == nil {
-		clusterDomain := ClusterDomain(c.BaseDomain, c.ObjectMeta.Name)
+		clusterDomain := c.ClusterDomain()
 		if err := validate.DomainName(clusterDomain, true); err != nil {
 			allErrs = append(allErrs, field.Invalid(field.NewPath("baseDomain"), clusterDomain, err.Error()))
 		}
@@ -102,6 +99,7 @@ func ValidateInstallConfig(c *types.InstallConfig, openStackValidValuesFetcher o
 	if _, ok := validPublishingStrategies[c.Publish]; !ok {
 		allErrs = append(allErrs, field.NotSupported(field.NewPath("publish"), c.Publish, validPublishingStrategyValues))
 	}
+	allErrs = append(allErrs, validateCloudCredentialsMode(c.CredentialsMode, field.NewPath("credentialsMode"), c.Platform.Name())...)
 
 	return allErrs
 }
@@ -378,7 +376,12 @@ func validatePlatform(platform *types.Platform, fldPath *field.Path, openStackVa
 	}
 	if platform.BareMetal != nil {
 		validate(baremetal.Name, platform.BareMetal, func(f *field.Path) field.ErrorList {
-			return baremetalvalidation.ValidatePlatform(platform.BareMetal, network, f)
+			return baremetalvalidation.ValidatePlatform(platform.BareMetal, network, f, c)
+		})
+	}
+	if platform.Ovirt != nil {
+		validate(ovirt.Name, platform.Ovirt, func(f *field.Path) field.ErrorList {
+			return ovirtvalidation.ValidatePlatform(platform.Ovirt, f)
 		})
 	}
 	return allErrs
@@ -458,3 +461,29 @@ var (
 		return v
 	}()
 )
+
+func validateCloudCredentialsMode(mode types.CredentialsMode, fldPath *field.Path, platform string) field.ErrorList {
+	if mode == "" {
+		return nil
+	}
+	allErrs := field.ErrorList{}
+	// validPlatformCredentialsModes is a map from the platform name to a slice of credentials modes that are valid
+	// for the platform. If a platform name is not in the map, then the credentials mode cannot be set for that platform.
+	validPlatformCredentialsModes := map[string][]types.CredentialsMode{
+		aws.Name:   {types.MintCredentialsMode, types.PassthroughCredentialsMode, types.ManualCredentialsMode},
+		azure.Name: {types.MintCredentialsMode, types.PassthroughCredentialsMode},
+		gcp.Name:   {types.MintCredentialsMode, types.PassthroughCredentialsMode},
+	}
+	if validModes, ok := validPlatformCredentialsModes[platform]; ok {
+		validModesSet := sets.NewString()
+		for _, m := range validModes {
+			validModesSet.Insert(string(m))
+		}
+		if !validModesSet.Has(string(mode)) {
+			allErrs = append(allErrs, field.NotSupported(fldPath, mode, validModesSet.List()))
+		}
+	} else {
+		allErrs = append(allErrs, field.Invalid(fldPath, mode, fmt.Sprintf("cannot be set when using the %q platform", platform)))
+	}
+	return allErrs
+}

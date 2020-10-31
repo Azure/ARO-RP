@@ -47,6 +47,7 @@ type Connection struct {
 	token    string
 	insecure bool
 	caFile   string
+	caCert   []byte
 	headers  map[string]string
 	// Debug options
 	logFunc LogFunc
@@ -66,12 +67,13 @@ func (c *Connection) URL() string {
 	return c.url.String()
 }
 
-// Test tests the connectivity with the server using the credentials provided in connection.
-// If connectivity works correctly and the credentials are valid, it returns a nil error,
-// or it will return an error containing the reason as the message.
+// Test tests the connectivity with the server using the system service.
 func (c *Connection) Test() error {
-	_, err := c.authenticate()
-	return err
+	_, err  := c.SystemService().Get().Send()
+	if err != nil  {
+		return fmt.Errorf("Failed to validate the connection, '%s'", err)
+	}
+	return nil
 }
 
 func (c *Connection) getHref(object Href) (string, bool) {
@@ -123,6 +125,10 @@ func (c *Connection) FollowLink(object Href) (interface{}, error) {
 		requestCaller = serviceValue.MethodByName("Get").Call([]reflect.Value{})[0]
 	}
 	callerResponse := requestCaller.MethodByName("Send").Call([]reflect.Value{})[0]
+	if callerResponse.IsNil() {
+		return nil, errors.New("Could not get response")
+	}
+
 	// Get the method index, which is not the Must version
 	methodIndex := 0
 	callerResponseType := callerResponse.Type()
@@ -236,13 +242,19 @@ func (c *Connection) getSsoResponse(inputURL *url.URL, parameters map[string]str
 			if _, err := os.Stat(c.caFile); os.IsNotExist(err) {
 				return nil, fmt.Errorf("The CA File '%s' doesn't exist", c.caFile)
 			}
-			pool := x509.NewCertPool()
 			caCerts, err := ioutil.ReadFile(c.caFile)
 			if err != nil {
 				return nil, err
 			}
-			if !pool.AppendCertsFromPEM(caCerts) {
+			pool, err := createCertPool(caCerts)
+			if err != nil {
 				return nil, fmt.Errorf("Failed to parse CA Certificate in file '%s'", c.caFile)
+			}
+			tlsConfig.RootCAs = pool
+		} else if len(c.caCert) > 0 {
+			pool, err := createCertPool(c.caCert)
+			if err != nil {
+				return nil, err
 			}
 			tlsConfig.RootCAs = pool
 		}
@@ -452,6 +464,16 @@ func (connBuilder *ConnectionBuilder) CAFile(caFilePath string) *ConnectionBuild
 	return connBuilder
 }
 
+// CACert sets the caCert field for `Connection` instance
+func (connBuilder *ConnectionBuilder) CACert(caCert []byte) *ConnectionBuilder {
+	// If already has errors, just return
+	if connBuilder.err != nil {
+		return connBuilder
+	}
+	connBuilder.conn.caCert = caCert
+	return connBuilder
+}
+
 // Headers sets a map of custom HTTP headers to be added to each HTTP request
 func (connBuilder *ConnectionBuilder) Headers(headers map[string]string) *ConnectionBuilder {
 	// If already has errors, just return
@@ -523,13 +545,19 @@ func (connBuilder *ConnectionBuilder) Build() (*Connection, error) {
 			if _, err := os.Stat(connBuilder.conn.caFile); os.IsNotExist(err) {
 				return nil, fmt.Errorf("The ca file '%s' doesn't exist", connBuilder.conn.caFile)
 			}
-			pool := x509.NewCertPool()
 			caCerts, err := ioutil.ReadFile(connBuilder.conn.caFile)
 			if err != nil {
 				return nil, err
 			}
-			if !pool.AppendCertsFromPEM(caCerts) {
+			pool, err := createCertPool(caCerts)
+			if err != nil {
 				return nil, fmt.Errorf("Failed to parse CA Certificate in file '%s'", connBuilder.conn.caFile)
+			}
+			tlsConfig.RootCAs = pool
+		} else if len(connBuilder.conn.caCert) > 0 {
+			pool, err := createCertPool(connBuilder.conn.caCert)
+			if err != nil {
+				return nil, err
 			}
 			tlsConfig.RootCAs = pool
 		}
@@ -544,4 +572,12 @@ func (connBuilder *ConnectionBuilder) Build() (*Connection, error) {
 		},
 	}
 	return connBuilder.conn, nil
+}
+
+func createCertPool(caCerts []byte) (*x509.CertPool, error) {
+	pool := x509.NewCertPool()
+	if !pool.AppendCertsFromPEM(caCerts) {
+		return nil, fmt.Errorf("Failed to parse CA Certificate")
+	}
+	return pool, nil
 }

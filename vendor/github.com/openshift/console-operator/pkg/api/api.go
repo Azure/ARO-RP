@@ -18,7 +18,9 @@ const (
 	DefaultIngressCertConfigMapName     = "default-ingress-cert"
 	OpenShiftConsoleDeploymentName      = OpenShiftConsoleName
 	OpenShiftConsoleServiceName         = OpenShiftConsoleName
+	OpenshiftConsoleRedirectServiceName = "console-redirect"
 	OpenShiftConsoleRouteName           = OpenShiftConsoleName
+	OpenshiftConsoleCustomRouteName     = "console-custom"
 	OpenShiftConsoleDownloadsRouteName  = "downloads"
 	OAuthClientName                     = OpenShiftConsoleName
 	OpenShiftConfigManagedNamespace     = "openshift-config-managed"
@@ -31,4 +33,12 @@ const (
 	TrustedCABundleMountFile            = "tls-ca-bundle.pem"
 	OCCLIDownloadsCustomResourceName    = "oc-cli-downloads"
 	ODOCLIDownloadsCustomResourceName   = "odo-cli-downloads"
+
+	ConsoleContainerPortName    = "https"
+	ConsoleContainerPort        = 443
+	ConsoleContainerTargetPort  = 8443
+	RedirectContainerPortName   = "custom-route-redirect"
+	RedirectContainerPort       = 8444
+	RedirectContainerTargetPort = RedirectContainerPort
+	ConsoleServingCertName      = "console-serving-cert"
 )

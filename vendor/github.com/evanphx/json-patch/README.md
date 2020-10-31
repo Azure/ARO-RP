@@ -11,10 +11,11 @@ well as for calculating & applying [RFC7396 JSON merge patches](https://tools.ie
 
 **Latest and greatest**: 
 ```bash
-go get -u github.com/evanphx/json-patch
+go get -u github.com/evanphx/json-patch/v5
 ```
 
 **Stable Versions**:
+* Version 5: `go get -u gopkg.in/evanphx/json-patch.v5`
 * Version 4: `go get -u gopkg.in/evanphx/json-patch.v4`
 
 (previous versions below `v3` are unavailable)
@@ -82,7 +83,7 @@ When ran, you get the following output:
 ```bash
 $ go run main.go
 patch document:   {"height":null,"name":"Jane"}
-updated tina doc: {"age":28,"name":"Jane"}
+updated alternative doc: {"age":28,"name":"Jane"}
 ```
 
 ## Create and apply a JSON Patch

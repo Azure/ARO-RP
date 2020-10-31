@@ -16,7 +16,7 @@ limitations under the License.
 // Package v1beta1 contains API Schema definitions for the ovirtprovider v1beta1 API group
 // +k8s:openapi-gen=true
 // +k8s:deepcopy-gen=package,register
-// +k8s:conversion-gen=github.com/ovirt/cluster-api-provider-ovirt/pkg/apis/ovirtprovider
+// +k8s:conversion-gen=github.com/openshift/cluster-api-provider-ovirt/pkg/apis/ovirtprovider
 // +k8s:defaulter-gen=TypeMeta
 // +groupName=ovirtprovider.machine.openshift.io
 package v1beta1
@@ -44,7 +44,6 @@ var (
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
 	SchemeBuilder = &scheme.Builder{GroupVersion: SchemeGroupVersion}
 )
-
 
 // MachineSpecFromProviderSpec
 func MachineSpecFromProviderSpec(providerSpec machinev1.ProviderSpec) (*OvirtMachineProviderSpec, error) {
@@ -122,4 +121,3 @@ func ProviderStatusFromRawExtension(rawExtension *runtime.RawExtension) (*OvirtM
 	klog.V(5).Infof("Got provider Status from raw extension: %+v", providerStatus)
 	return providerStatus, nil
 }
-

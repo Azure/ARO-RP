@@ -46,7 +46,6 @@ var (
 		&bootkube.EtcdMetricSignerSecret{},
 		&bootkube.EtcdMetricServingCAConfigMap{},
 		&bootkube.OpenshiftConfigSecretPullSecret{},
-		&bootkube.OpenshiftAPIServerNamespace{},
 		&openshift.CloudCredsSecret{},
 		&openshift.KubeadminPasswordSecret{},
 		&openshift.RoleCloudCredsSecretReader{},
@@ -64,10 +63,10 @@ var (
 
 	// Cluster are the cluster targeted assets.
 	Cluster = []asset.WritableAsset{
+		&cluster.Metadata{},
 		&cluster.TerraformVariables{},
 		&kubeconfig.AdminClient{},
 		&password.KubeadminPassword{},
 		&tls.JournalCertKey{},
-		&cluster.Metadata{},
 	}
 )

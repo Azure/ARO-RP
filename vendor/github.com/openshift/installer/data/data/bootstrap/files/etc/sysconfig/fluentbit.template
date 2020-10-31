@@ -1,1 +1,0 @@
-FLUENTIMAGE={{ .LoggingConfig.FluentbitImage }}

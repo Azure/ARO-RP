@@ -14,6 +14,8 @@ import (
 	icazure "github.com/openshift/installer/pkg/asset/installconfig/azure"
 	icgcp "github.com/openshift/installer/pkg/asset/installconfig/gcp"
 	icopenstack "github.com/openshift/installer/pkg/asset/installconfig/openstack"
+	icovirt "github.com/openshift/installer/pkg/asset/installconfig/ovirt"
+	icvsphere "github.com/openshift/installer/pkg/asset/installconfig/vsphere"
 	"github.com/openshift/installer/pkg/types"
 	"github.com/openshift/installer/pkg/types/conversion"
 	"github.com/openshift/installer/pkg/types/defaults"
@@ -133,7 +135,7 @@ func (a *InstallConfig) finish(filename string, platformCreds *PlatformCreds) er
 	defaults.SetInstallConfigDefaults(a.Config)
 
 	if a.Config.AWS != nil {
-		a.AWS = aws.NewMetadata(a.Config.Platform.AWS.Region, a.Config.Platform.AWS.Subnets)
+		a.AWS = aws.NewMetadata(a.Config.Platform.AWS.Region, a.Config.Platform.AWS.Subnets, a.Config.AWS.ServiceEndpoints)
 	}
 
 	if err := validation.ValidateInstallConfig(a.Config, icopenstack.NewValidValuesFetcher()).ToAggregate(); err != nil {
@@ -179,6 +181,12 @@ func (a *InstallConfig) platformValidation(platformCreds *PlatformCreds) error {
 	}
 	if a.Config.Platform.AWS != nil {
 		return aws.Validate(context.TODO(), a.AWS, a.Config)
+	}
+	if a.Config.Platform.VSphere != nil {
+		return icvsphere.Validate(a.Config)
+	}
+	if a.Config.Platform.Ovirt != nil {
+		return icovirt.Validate(a.Config)
 	}
 	return field.ErrorList{}.ToAggregate()
 }

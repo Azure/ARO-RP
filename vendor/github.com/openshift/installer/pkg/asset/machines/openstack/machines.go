@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	machineapi "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
-	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -36,20 +35,22 @@ func Machines(clusterID string, config *types.InstallConfig, pool *types.Machine
 		return nil, fmt.Errorf("non-OpenStack machine-pool: %q", poolPlatform)
 	}
 	platform := config.Platform.OpenStack
-	mpool := pool.Platform.OpenStack
+
+	az := ""
+	trunk := platform.TrunkSupport
+
+	provider := generateProvider(clusterID, platform, pool.Platform.OpenStack, osImage, az, role, userDataSecret, trunk)
+
+	if role == "master" {
+		provider.ServerGroupName = clusterID + "-master"
+	}
 
 	total := int64(1)
 	if pool.Replicas != nil {
 		total = *pool.Replicas
 	}
-	var machines []machineapi.Machine
+	machines := make([]machineapi.Machine, 0, total)
 	for idx := int64(0); idx < total; idx++ {
-		az := ""
-		trunk := config.Platform.OpenStack.TrunkSupport
-		provider, err := provider(clusterID, platform, mpool, osImage, az, role, userDataSecret, trunk)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to create provider")
-		}
 		machine := machineapi.Machine{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "machine.openshift.io/v1beta1",
@@ -71,43 +72,61 @@ func Machines(clusterID string, config *types.InstallConfig, pool *types.Machine
 				// we don't need to set Versions, because we control those via operators.
 			},
 		}
-
 		machines = append(machines, machine)
 	}
 
 	return machines, nil
 }
 
-func provider(clusterID string, platform *openstack.Platform, mpool *openstack.MachinePool, osImage string, az string, role, userDataSecret string, trunk string) (*openstackprovider.OpenstackProviderSpec, error) {
+func generateProvider(clusterID string, platform *openstack.Platform, mpool *openstack.MachinePool, osImage string, az string, role, userDataSecret string, trunk string) *openstackprovider.OpenstackProviderSpec {
+	var networks []openstackprovider.NetworkParam
+	if platform.MachinesSubnet != "" {
+		networks = []openstackprovider.NetworkParam{{
+			Subnets: []openstackprovider.SubnetParam{{
+				UUID: platform.MachinesSubnet,
+			}}},
+		}
+	} else {
+		networks = []openstackprovider.NetworkParam{{
+			Subnets: []openstackprovider.SubnetParam{{
+				Filter: openstackprovider.SubnetFilter{
+					Name: fmt.Sprintf("%s-nodes", clusterID),
+					Tags: fmt.Sprintf("%s=%s", "openshiftClusterID", clusterID),
+				}},
+			}},
+		}
+	}
+	for _, networkID := range mpool.AdditionalNetworkIDs {
+		networks = append(networks, openstackprovider.NetworkParam{
+			UUID:                  networkID,
+			NoAllowedAddressPairs: true,
+		})
+	}
+
+	securityGroups := []openstackprovider.SecurityGroupParam{
+		{
+			Name: fmt.Sprintf("%s-%s", clusterID, role),
+		},
+	}
+	for _, sg := range mpool.AdditionalSecurityGroupIDs {
+		securityGroups = append(securityGroups, openstackprovider.SecurityGroupParam{
+			UUID: sg,
+		})
+	}
 
 	spec := openstackprovider.OpenstackProviderSpec{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: openstackprovider.SchemeGroupVersion.String(),
 			Kind:       "OpenstackProviderSpec",
 		},
-		Flavor:         mpool.FlavorName,
-		CloudName:      CloudName,
-		CloudsSecret:   &corev1.SecretReference{Name: cloudsSecret, Namespace: cloudsSecretNamespace},
-		UserDataSecret: &corev1.SecretReference{Name: userDataSecret},
-		Networks: []openstackprovider.NetworkParam{
-			{
-				Subnets: []openstackprovider.SubnetParam{
-					{
-						Filter: openstackprovider.SubnetFilter{
-							Name: fmt.Sprintf("%s-nodes", clusterID),
-							Tags: fmt.Sprintf("%s=%s", "openshiftClusterID", clusterID),
-						},
-					},
-				},
-			},
-		},
+		Flavor:           mpool.FlavorName,
+		CloudName:        CloudName,
+		CloudsSecret:     &corev1.SecretReference{Name: cloudsSecret, Namespace: cloudsSecretNamespace},
+		UserDataSecret:   &corev1.SecretReference{Name: userDataSecret},
+		Networks:         networks,
 		AvailabilityZone: az,
-		SecurityGroups: []openstackprovider.SecurityGroupParam{
-			{
-				Name: fmt.Sprintf("%s-%s", clusterID, role),
-			},
-		},
-		Trunk: trunkSupportBoolean(trunk),
+		SecurityGroups:   securityGroups,
+		Trunk:            trunkSupportBoolean(trunk),
 		Tags: []string{
 			fmt.Sprintf("openshiftClusterID=%s", clusterID),
 		},
@@ -126,7 +145,7 @@ func provider(clusterID string, platform *openstack.Platform, mpool *openstack.M
 	} else {
 		spec.Image = osImage
 	}
-	return &spec, nil
+	return &spec
 }
 
 func trunkSupportBoolean(trunkSupport string) (result bool) {
