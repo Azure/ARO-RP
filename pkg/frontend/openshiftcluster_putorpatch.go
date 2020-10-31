@@ -71,9 +71,10 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 				Name: originalR.ResourceName,
 				Type: originalR.Provider + "/" + originalR.ResourceType,
 				Properties: api.OpenShiftClusterProperties{
-					ProvisioningState: api.ProvisioningStateSucceeded,
-					CreatedBy:         version.GitCommit,
-					ProvisionedBy:     version.GitCommit,
+					ArchitectureVersion: version.InstallArchitectureVersion,
+					ProvisioningState:   api.ProvisioningStateSucceeded,
+					CreatedBy:           version.GitCommit,
+					ProvisionedBy:       version.GitCommit,
 					ClusterProfile: api.ClusterProfile{
 						Version: version.InstallStream.Version.String(),
 					},

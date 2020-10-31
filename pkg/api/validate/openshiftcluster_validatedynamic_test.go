@@ -168,8 +168,9 @@ func TestValidateVnet(t *testing.T) {
 	vnetID := resourceGroupID + "/providers/Microsoft.Network/virtualNetworks/testVnet"
 	masterSubnet := vnetID + "/subnet/masterSubnet"
 	workerSubnet := vnetID + "/subnet/workerSubnet"
-	masterNSG := resourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/aro-controlplane-nsg"
-	workerNSG := resourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/aro-node-nsg"
+	masterNSGv1 := resourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/aro-controlplane-nsg"
+	workerNSGv1 := resourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/aro-node-nsg"
+	commonNSGv2 := resourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/aro-nsg"
 
 	for _, tt := range []struct {
 		name       string
@@ -226,18 +227,40 @@ func TestValidateVnet(t *testing.T) {
 			wantErr: `400: InvalidLinkedVNet: properties.workerProfiles["worker"].subnetId: The provided subnet '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/virtualNetworks/testVnet/subnet/workerSubnet' is invalid: must have Microsoft.ContainerRegistry serviceEndpoint.`,
 		},
 		{
-			name: "invalid master nsg",
+			name: "invalid master nsg arch v1",
 			modifyVnet: func(vnet *mgmtnetwork.VirtualNetwork) {
 				(*vnet.Subnets)[0].NetworkSecurityGroup = nil
 			},
 			wantErr: `400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/virtualNetworks/testVnet/subnet/masterSubnet' is invalid: must have network security group '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/networkSecurityGroups/aro-controlplane-nsg' attached.`,
 		},
 		{
-			name: "invalid worker nsg",
+			name: "invalid master nsg arch v2",
+			modifyVnet: func(vnet *mgmtnetwork.VirtualNetwork) {
+				(*vnet.Subnets)[0].NetworkSecurityGroup = nil
+				(*vnet.Subnets)[1].NetworkSecurityGroup.ID = &commonNSGv2
+			},
+			modifyOC: func(oc *api.OpenShiftCluster) {
+				oc.Properties.ArchitectureVersion = api.ArchitectureVersionV2
+			},
+			wantErr: `400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/virtualNetworks/testVnet/subnet/masterSubnet' is invalid: must have network security group '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/networkSecurityGroups/aro-nsg' attached.`,
+		},
+		{
+			name: "invalid worker nsg arch v1",
 			modifyVnet: func(vnet *mgmtnetwork.VirtualNetwork) {
 				(*vnet.Subnets)[1].NetworkSecurityGroup = nil
 			},
 			wantErr: `400: InvalidLinkedVNet: properties.workerProfiles["worker"].subnetId: The provided subnet '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/virtualNetworks/testVnet/subnet/workerSubnet' is invalid: must have network security group '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/networkSecurityGroups/aro-node-nsg' attached.`,
+		},
+		{
+			name: "invalid worker nsg arch v2",
+			modifyVnet: func(vnet *mgmtnetwork.VirtualNetwork) {
+				(*vnet.Subnets)[0].NetworkSecurityGroup.ID = &commonNSGv2
+				(*vnet.Subnets)[1].NetworkSecurityGroup = nil
+			},
+			modifyOC: func(oc *api.OpenShiftCluster) {
+				oc.Properties.ArchitectureVersion = api.ArchitectureVersionV2
+			},
+			wantErr: `400: InvalidLinkedVNet: properties.workerProfiles["worker"].subnetId: The provided subnet '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/virtualNetworks/testVnet/subnet/workerSubnet' is invalid: must have network security group '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/networkSecurityGroups/aro-nsg' attached.`,
 		},
 		{
 			name: "invalid master nsg (creating)",
@@ -351,7 +374,7 @@ func TestValidateVnet(t *testing.T) {
 							SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 								AddressPrefix: to.StringPtr("10.0.0.0/24"),
 								NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
-									ID: &masterNSG,
+									ID: &masterNSGv1,
 								},
 								ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
 									{
@@ -367,7 +390,7 @@ func TestValidateVnet(t *testing.T) {
 							SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
 								AddressPrefix: to.StringPtr("10.0.1.0/24"),
 								NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
-									ID: &workerNSG,
+									ID: &workerNSGv1,
 								},
 								ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
 									{

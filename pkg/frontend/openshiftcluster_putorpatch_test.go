@@ -336,9 +336,10 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						Name: "resourceName",
 						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
 						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState: api.ProvisioningStateCreating,
-							ProvisionedBy:     version.GitCommit,
-							CreatedBy:         version.GitCommit,
+							ArchitectureVersion: version.InstallArchitectureVersion,
+							ProvisioningState:   api.ProvisioningStateCreating,
+							ProvisionedBy:       version.GitCommit,
+							CreatedBy:           version.GitCommit,
 							ClusterProfile: api.ClusterProfile{
 								Version: "4.3.0",
 							},

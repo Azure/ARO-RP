@@ -66,7 +66,7 @@ func (m *manager) updateAPIIP(ctx context.Context) error {
 		}
 		ipAddress = *ip.IPAddress
 	} else {
-		lb, err := m.loadbalancers.Get(ctx, resourceGroup, infraID+"-internal-lb", "")
+		lb, err := m.loadbalancers.Get(ctx, resourceGroup, infraID+"-internal", "")
 		if err != nil {
 			return err
 		}

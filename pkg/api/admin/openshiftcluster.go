@@ -180,4 +180,5 @@ type ArchitectureVersion int
 // ArchitectureVersion constants
 const (
 	ArchitectureVersionV1 ArchitectureVersion = iota
+	ArchitectureVersionV2
 )

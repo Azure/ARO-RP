@@ -13,7 +13,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
-func (m *manager) apiServerNSG(location string) *arm.Resource {
+func (m *manager) clusterNSG(location string) *arm.Resource {
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 	if infraID == "" {
 		infraID = "aro" // TODO: remove after deploy
@@ -21,7 +21,7 @@ func (m *manager) apiServerNSG(location string) *arm.Resource {
 
 	nsg := &mgmtnetwork.SecurityGroup{
 		SecurityGroupPropertiesFormat: &mgmtnetwork.SecurityGroupPropertiesFormat{},
-		Name:                          to.StringPtr(infraID + subnet.NSGControlPlaneSuffix),
+		Name:                          to.StringPtr(infraID + subnet.NSGSuffixV2),
 		Type:                          to.StringPtr("Microsoft.Network/networkSecurityGroups"),
 		Location:                      &location,
 	}

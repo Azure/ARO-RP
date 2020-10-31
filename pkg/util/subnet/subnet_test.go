@@ -169,31 +169,46 @@ func TestNetworkSecurityGroupID(t *testing.T) {
 	}
 
 	for _, tt := range []struct {
-		name      string
-		infraID   string
-		subnetID  string
-		wantNSGID string
-		wantErr   string
+		name        string
+		infraID     string
+		archVersion api.ArchitectureVersion
+		subnetID    string
+		wantNSGID   string
+		wantErr     string
 	}{
 		{
-			name:      "master",
+			name:      "master arch v1",
 			subnetID:  "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/master",
-			wantNSGID: "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup/providers/Microsoft.Network/networkSecurityGroups/aro" + NSGControlPlaneSuffix,
+			wantNSGID: "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup/providers/Microsoft.Network/networkSecurityGroups/aro-controlplane-nsg",
 		},
 		{
-			name:      "worker",
+			name:      "worker arch v1",
 			infraID:   "test-1234",
 			subnetID:  "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker",
-			wantNSGID: "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup/providers/Microsoft.Network/networkSecurityGroups/test-1234" + NSGNodeSuffix,
+			wantNSGID: "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup/providers/Microsoft.Network/networkSecurityGroups/test-1234-node-nsg",
 		},
 		{
-			name:     "invalid",
-			subnetID: "invalid",
-			wantErr:  `unknown subnetID "invalid"`,
+			name:        "master arch v2",
+			archVersion: api.ArchitectureVersionV2,
+			subnetID:    "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/master",
+			wantNSGID:   "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup/providers/Microsoft.Network/networkSecurityGroups/aro-nsg",
+		},
+		{
+			name:        "worker arch v2",
+			infraID:     "test-1234",
+			archVersion: api.ArchitectureVersionV2,
+			subnetID:    "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/worker",
+			wantNSGID:   "/subscriptions/subscriptionId/resourceGroups/clusterResourceGroup/providers/Microsoft.Network/networkSecurityGroups/test-1234-nsg",
+		},
+		{
+			name:        "unknown architecture version",
+			archVersion: api.ArchitectureVersion(42),
+			wantErr:     `unknown architecture version 42`,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			oc.Properties.InfraID = tt.infraID
+			oc.Properties.ArchitectureVersion = tt.archVersion
 
 			nsgID, err := NetworkSecurityGroupID(oc, tt.subnetID)
 			if err != nil && err.Error() != tt.wantErr ||

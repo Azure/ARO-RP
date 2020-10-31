@@ -274,4 +274,6 @@ type ArchitectureVersion int
 const (
 	// ArchitectureVersionV1: 4.3, 4.4: 2 load balancers, 2 NSGs
 	ArchitectureVersionV1 ArchitectureVersion = iota
+	// ArchitectureVersionV2: 4.5: 1 load balancer, 1 NSG
+	ArchitectureVersionV2
 )

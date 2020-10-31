@@ -5,6 +5,7 @@ package subnet
 
 // Network security group constants
 const (
-	NSGControlPlaneSuffix = "-controlplane-nsg"
-	NSGNodeSuffix         = "-node-nsg"
+	NSGControlPlaneSuffixV1 = "-controlplane-nsg"
+	NSGNodeSuffixV1         = "-node-nsg"
+	NSGSuffixV2             = "-nsg"
 )
