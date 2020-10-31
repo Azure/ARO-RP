@@ -28,6 +28,7 @@ type OpenShiftCluster struct {
 
 // OpenShiftClusterProperties represents an OpenShift cluster's properties.
 type OpenShiftClusterProperties struct {
+	ArchitectureVersion     ArchitectureVersion     `json:"architectureVersion,omitempty"`
 	ProvisioningState       ProvisioningState       `json:"provisioningState,omitempty"`
 	LastProvisioningState   ProvisioningState       `json:"lastProvisioningState,omitempty"`
 	FailedProvisioningState ProvisioningState       `json:"failedProvisioningState,omitempty"`
@@ -172,3 +173,11 @@ type RegistryProfile struct {
 	Name     string `json:"name,omitempty"`
 	Username string `json:"username,omitempty"`
 }
+
+// ArchitectureVersion represents an architecture version
+type ArchitectureVersion int
+
+// ArchitectureVersion constants
+const (
+	ArchitectureVersionV1 ArchitectureVersion = iota
+)

@@ -65,10 +65,11 @@ type OpenShiftClusterProperties struct {
 	// ProvisioningState.  When they complete, regardless of success, admin
 	// updates always reset the ProvisioningState to LastProvisioningState.
 
-	ProvisioningState       ProvisioningState `json:"provisioningState,omitempty"`
-	LastProvisioningState   ProvisioningState `json:"lastProvisioningState,omitempty"`
-	FailedProvisioningState ProvisioningState `json:"failedProvisioningState,omitempty"`
-	LastAdminUpdateError    string            `json:"lastAdminUpdateError,omitempty"`
+	ArchitectureVersion     ArchitectureVersion `json:"architectureVersion,omitempty"`
+	ProvisioningState       ProvisioningState   `json:"provisioningState,omitempty"`
+	LastProvisioningState   ProvisioningState   `json:"lastProvisioningState,omitempty"`
+	FailedProvisioningState ProvisioningState   `json:"failedProvisioningState,omitempty"`
+	LastAdminUpdateError    string              `json:"lastAdminUpdateError,omitempty"`
 
 	// CreatedBy is the RP version (Git commit hash) that created this cluster
 	CreatedBy string `json:"createdBy,omitempty"`
@@ -264,4 +265,13 @@ type InstallPhase int
 const (
 	InstallPhaseBootstrap InstallPhase = iota
 	InstallPhaseRemoveBootstrap
+)
+
+// ArchitectureVersion represents an architecture version
+type ArchitectureVersion int
+
+// ArchitectureVersion constants
+const (
+	// ArchitectureVersionV1: 4.3, 4.4: 2 load balancers, 2 NSGs
+	ArchitectureVersionV1 ArchitectureVersion = iota
 )
