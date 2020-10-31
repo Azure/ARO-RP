@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/containers/image/types"
+	"github.com/containers/image/v5/types"
 	"github.com/sirupsen/logrus"
 
 	pkgmirror "github.com/Azure/ARO-RP/pkg/mirror"
