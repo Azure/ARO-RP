@@ -71,7 +71,10 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	tracing.Register(azure.New(m))
-	metrics.Register(k8s.NewLatency(m), k8s.NewResult(m))
+	metrics.Register(metrics.RegisterOpts{
+		RequestResult:  k8s.NewResult(m),
+		RequestLatency: k8s.NewLatency(m),
+	})
 
 	cipher, err := encryption.NewXChaCha20Poly1305(ctx, _env, env.EncryptionSecretName)
 	if err != nil {
