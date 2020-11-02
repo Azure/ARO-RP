@@ -146,7 +146,7 @@ func setup(ctx context.Context) error {
 
 	clusterName = os.Getenv("CLUSTER")
 
-	if os.Getenv("E2E_CREATE_CLUSTER") != "" {
+	if os.Getenv("CI") != "" { // always create cluster in CI
 		cluster, err := cluster.New(log, deploymentMode, im, os.Getenv("CI") != "")
 		if err != nil {
 			return err
@@ -167,7 +167,8 @@ func setup(ctx context.Context) error {
 }
 
 func done(ctx context.Context) error {
-	if os.Getenv("E2E_DELETE_CLUSTER") != "" {
+	// terminate early if delete flag is set to false
+	if os.Getenv("CI") != "" && os.Getenv("E2E_DELETE_CLUSTER") != "false" {
 		cluster, err := cluster.New(log, deploymentMode, im, os.Getenv("CI") != "")
 		if err != nil {
 			return err

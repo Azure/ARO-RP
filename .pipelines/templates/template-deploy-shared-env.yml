@@ -1,6 +1,7 @@
 parameters:
-  subscriptionID: ''
   azureDevOpsJSONSPN: ''
+  subscriptionID: ''
+
 steps:
 - script: |
     set -e

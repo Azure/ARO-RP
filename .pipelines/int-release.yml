@@ -11,7 +11,7 @@ parameters:
   default: latest
 - name: fullDeploy
   type: boolean
-  default: false
+  default: true
 
 stages:
 - stage: Deploy_INT
@@ -21,6 +21,8 @@ stages:
   - template: ./templates/template-job-deploy-azure-env.yml
     parameters:
       environment: RP-INT
+      rpMode: int
+      aroVersionStorageAccount: $(aro-version-storage-account)
       locations:
       - eastus
       configFileName: int-config.yaml

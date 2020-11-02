@@ -1,10 +1,10 @@
 parameters:
+  dryRun: ''
   purgeTTL: ''
   purgeCreatedTag: ''
+  resourceGroupDeletePrefixes: ''
   subscriptionCredentialsJSON: ''
   subscriptionId: ''
-  dryRun: ''
-  resourceGroupDeletePrefixes: ''
 
 steps:
 - script: |

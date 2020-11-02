@@ -1,11 +1,11 @@
 # Azure DevOps Pipeline running RP e2e and Billing e2e
 parameters:
-  sign_off_stage: ''
-  e2e_subscription: ''
   aro_v4_e2e_devops_spn: ''
   billing_e2e_pipeline_name: ''
   billing_e2e_branch_name: ''
+  e2e_subscription: ''
   location: ''
+  sign_off_stage: ''
 
 stages:
 - stage: ${{ parameters.location }}_RP_E2E
@@ -22,6 +22,8 @@ stages:
         location: ${{ parameters.location }}
         subscription: ${{ parameters.e2e_subscription }}
         azureDevOpsE2EJSONSPN: ${{ parameters.aro_v4_e2e_devops_spn }}
+        aroVersionStorageAccount: $(aro-version-storage-account)
+        rpMode: ''
 - stage: ${{ parameters.location }}_Delay_For_Billing_Table
   displayName: ${{ parameters.location }} wait 6 hours for billing table ready
   jobs:

@@ -1,9 +1,9 @@
 parameters:
-  last_stage_of_previous_section: ''
-  e2e_subscription: ''
   aro_v4_e2e_devops_spn: ''
   billing_e2e_pipeline_name: ''
   billing_e2e_branch_name: ''
+  e2e_subscription: ''
+  last_stage_of_previous_section: ''
   locations: []
 
 stages:

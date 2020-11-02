@@ -50,6 +50,11 @@ type Cluster struct {
 	roleassignments   authorization.RoleAssignmentsClient
 }
 
+const (
+	firstPartyClientIDProduction  = "f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875"
+	firstPartyClientIDIntegration = "71cfb175-ea3a-444e-8c03-b119b2752ce4"
+)
+
 type errors []error
 
 func (errs errors) Error() string {
@@ -64,7 +69,7 @@ func (errs errors) Error() string {
 }
 
 func New(log *logrus.Entry, deploymentMode deployment.Mode, instancemetadata instancemetadata.InstanceMetadata, ci bool) (*Cluster, error) {
-	if deploymentMode != deployment.Production {
+	if deploymentMode == deployment.Development {
 		for _, key := range []string{
 			"AZURE_FP_CLIENT_ID",
 		} {
@@ -109,8 +114,13 @@ func (c *Cluster) Create(ctx context.Context, clusterName string) error {
 		return nil
 	}
 
-	fpClientID := "f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875"
-	if c.deploymentMode != deployment.Production {
+	var fpClientID string
+	switch c.deploymentMode {
+	case deployment.Integration:
+		fpClientID = firstPartyClientIDIntegration
+	case deployment.Production:
+		fpClientID = firstPartyClientIDProduction
+	default:
 		fpClientID = os.Getenv("AZURE_FP_CLIENT_ID")
 	}
 
