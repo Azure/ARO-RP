@@ -32,9 +32,12 @@ func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 			}
 
 			mon.emitGauge("node.conditions", 1, map[string]string{
-				"name":   n.Name,
-				"status": string(c.Status),
-				"type":   string(c.Type),
+				// FIXME: Remove "name" and keep "nodeName" after reconfiguring
+				// monitors to use "nodeName" dimension.
+				"name":     n.Name,
+				"nodeName": n.Name,
+				"status":   string(c.Status),
+				"type":     string(c.Type),
 			})
 
 			if mon.hourlyRun {
@@ -49,7 +52,10 @@ func (mon *Monitor) emitNodeConditions(ctx context.Context) error {
 		}
 
 		mon.emitGauge("node.kubelet.version", 1, map[string]string{
+			// FIXME: Remove "name" and keep "nodeName" after reconfiguring
+			// monitors to use "nodeName" dimension.
 			"name":           n.Name,
+			"nodeName":       n.Name,
 			"kubeletVersion": n.Status.NodeInfo.KubeletVersion,
 		})
 

@@ -51,6 +51,7 @@ func (mon *Monitor) _emitPodConditions(ps *v1.PodList) {
 			mon.emitGauge("pod.conditions", 1, map[string]string{
 				"name":      p.Name,
 				"namespace": p.Namespace,
+				"nodeName":  p.Spec.NodeName,
 				"status":    string(c.Status),
 				"type":      string(c.Type),
 			})
@@ -60,6 +61,7 @@ func (mon *Monitor) _emitPodConditions(ps *v1.PodList) {
 					"metric":    "pod.conditions",
 					"name":      p.Name,
 					"namespace": p.Namespace,
+					"nodeName":  p.Spec.NodeName,
 					"status":    c.Status,
 					"type":      c.Type,
 					"message":   c.Message,
@@ -87,6 +89,7 @@ func (mon *Monitor) _emitPodContainerStatuses(ps *v1.PodList) {
 			mon.emitGauge("pod.containerstatuses", 1, map[string]string{
 				"name":          p.Name,
 				"namespace":     p.Namespace,
+				"nodeName":      p.Spec.NodeName,
 				"containername": cs.Name,
 				"reason":        cs.State.Waiting.Reason,
 			})
