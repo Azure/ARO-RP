@@ -24,7 +24,7 @@ var _ DatabaseAccountsClient = &databaseAccountsClient{}
 
 // NewDatabaseAccountsClient creates a new DatabaseAccountsClient
 func NewDatabaseAccountsClient(subscriptionID string, authorizer autorest.Authorizer) DatabaseAccountsClient {
-	client := mgmtdocumentdb.NewDatabaseAccountsClient(subscriptionID)
+	client := mgmtdocumentdb.NewDatabaseAccountsClient(subscriptionID, subscriptionID)
 	client.Authorizer = authorizer
 
 	return &databaseAccountsClient{

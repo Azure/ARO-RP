@@ -1555,6 +1555,9 @@ func (g *generator) rpVersionStorageAccount() []*arm.Resource {
 				Name:     to.StringPtr("[parameters('rpVersionStorageAccountName')]"),
 				Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
 				Location: to.StringPtr("[resourceGroup().location]"),
+				AccountProperties: &mgmtstorage.AccountProperties{
+					AllowBlobPublicAccess: to.BoolPtr(true),
+				},
 				Sku: &mgmtstorage.Sku{
 					Name: "Standard_LRS",
 				},
@@ -1566,6 +1569,9 @@ func (g *generator) rpVersionStorageAccount() []*arm.Resource {
 			Resource: &mgmtstorage.BlobContainer{
 				Name: to.StringPtr("[concat(parameters('rpVersionStorageAccountName'), '/default/rpversion')]"),
 				Type: to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
+				ContainerProperties: &mgmtstorage.ContainerProperties{
+					PublicAccess: mgmtstorage.PublicAccessContainer,
+				},
 			},
 			APIVersion: azureclient.APIVersions["Microsoft.Storage"],
 			Condition:  g.conditionStanza("fullDeploy"),
