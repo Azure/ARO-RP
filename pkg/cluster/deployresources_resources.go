@@ -221,8 +221,8 @@ func networkInternalLoadBalancer(infraID string, oc *api.OpenShiftCluster, insta
 						ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
 							Protocol:          mgmtnetwork.ProbeProtocolHTTPS,
 							Port:              to.Int32Ptr(6443),
-							IntervalInSeconds: to.Int32Ptr(10),
-							NumberOfProbes:    to.Int32Ptr(3),
+							IntervalInSeconds: to.Int32Ptr(5),
+							NumberOfProbes:    to.Int32Ptr(2),
 							RequestPath:       to.StringPtr("/readyz"),
 						},
 						Name: to.StringPtr("api-internal-probe"),
@@ -231,8 +231,8 @@ func networkInternalLoadBalancer(infraID string, oc *api.OpenShiftCluster, insta
 						ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
 							Protocol:          mgmtnetwork.ProbeProtocolHTTPS,
 							Port:              to.Int32Ptr(22623),
-							IntervalInSeconds: to.Int32Ptr(10),
-							NumberOfProbes:    to.Int32Ptr(3),
+							IntervalInSeconds: to.Int32Ptr(5),
+							NumberOfProbes:    to.Int32Ptr(2),
 							RequestPath:       to.StringPtr("/healthz"),
 						},
 						Name: to.StringPtr("sint-probe"),
@@ -319,8 +319,8 @@ func networkPublicLoadBalancer(infraID string, oc *api.OpenShiftCluster, install
 			ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
 				Protocol:          mgmtnetwork.ProbeProtocolHTTPS,
 				Port:              to.Int32Ptr(6443),
-				IntervalInSeconds: to.Int32Ptr(10),
-				NumberOfProbes:    to.Int32Ptr(3),
+				IntervalInSeconds: to.Int32Ptr(5),
+				NumberOfProbes:    to.Int32Ptr(2),
 				RequestPath:       to.StringPtr("/readyz"),
 			},
 			Name: to.StringPtr("api-internal-probe"),
