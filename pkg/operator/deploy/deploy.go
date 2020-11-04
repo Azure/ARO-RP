@@ -14,6 +14,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	extv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -216,7 +217,18 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 			// can only be done once we've got the cluster UID.  It is needed to
 			// ensure that secret updates trigger updates of the appropriate
 			// controllers
-			err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			err = retry.OnError(wait.Backoff{
+				Steps:    60,
+				Duration: time.Second,
+			}, func(err error) bool {
+				// IsForbidden here is intended to catch the following transient
+				// error: secrets "cluster" is forbidden: cannot set
+				// blockOwnerDeletion in this case because cannot find
+				// RESTMapping for APIVersion aro.openshift.io/v1alpha1 Kind
+				// Cluster: no matches for kind "Cluster" in version
+				// "aro.openshift.io/v1alpha1"
+				return errors.IsForbidden(err) || errors.IsConflict(err)
+			}, func() error {
 				cluster, err := o.arocli.Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 				if err != nil {
 					return err
