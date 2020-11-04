@@ -35,25 +35,31 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		"DST_ACR_NAME",
 		"SRC_AUTH_GENEVA",
 		"SRC_AUTH_QUAY",
+		"SRC_AUTH_REDHAT",
 	} {
 		if _, found := os.LookupEnv(key); !found {
 			return fmt.Errorf("environment variable %q unset", key)
 		}
 	}
 
-	dstauth, err := getAuth("DST_AUTH")
+	dstAuth, err := getAuth("DST_AUTH")
 	if err != nil {
 		return err
 	}
 
 	dstAcr, _ := os.LookupEnv("DST_ACR_NAME")
 
-	srcauthGeneva, err := getAuth("SRC_AUTH_GENEVA")
+	srcAuthGeneva, err := getAuth("SRC_AUTH_GENEVA")
 	if err != nil {
 		return err
 	}
 
-	srcauthQuay, err := getAuth("SRC_AUTH_QUAY")
+	srcAuthQuay, err := getAuth("SRC_AUTH_QUAY")
+	if err != nil {
+		return err
+	}
+
+	srcAuthRedhat, err := getAuth("SRC_AUTH_REDHAT")
 	if err != nil {
 		return err
 	}
@@ -67,7 +73,7 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 	var errorOccurred bool
 	for _, release := range releases {
 		log.Printf("mirroring release %s", release.Version)
-		err = pkgmirror.Mirror(ctx, log, dstAcr+".azurecr.io", release.Payload, dstauth, srcauthQuay)
+		err = pkgmirror.Mirror(ctx, log, dstAcr+".azurecr.io", release.Payload, dstAuth, srcAuthQuay)
 		if err != nil {
 			log.Errorf("%s: %s\n", release, err)
 			errorOccurred = true
@@ -78,8 +84,20 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		version.MdsdImage("linuxgeneva-microsoft"),
 		version.MdmImage("linuxgeneva-microsoft"),
 	} {
-		log.Printf("mirroring %s", ref)
-		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+".azurecr.io", ref), ref, dstauth, srcauthGeneva)
+		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+".azurecr.io", ref))
+		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+".azurecr.io", ref), ref, dstAuth, srcAuthGeneva)
+		if err != nil {
+			log.Errorf("%s: %s\n", ref, err)
+			errorOccurred = true
+		}
+	}
+
+	for _, ref := range []string{
+		"registry.redhat.io/rhel7/support-tools:latest",
+		"registry.redhat.io/rhel8/support-tools:latest",
+	} {
+		log.Printf("mirroring %s -> %s", ref, pkgmirror.Dest(dstAcr+".azurecr.io", ref))
+		err = pkgmirror.Copy(ctx, pkgmirror.Dest(dstAcr+".azurecr.io", ref), ref, dstAuth, srcAuthRedhat)
 		if err != nil {
 			log.Errorf("%s: %s\n", ref, err)
 			errorOccurred = true
