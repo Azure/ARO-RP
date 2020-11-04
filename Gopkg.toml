@@ -20,7 +20,7 @@ required = [
 
 [[override]]
   name = "github.com/Azure/azure-sdk-for-go"
-  version = "42.1.0"
+  version = "44.2.0"
 
 [[override]]
   name = "k8s.io/code-generator"

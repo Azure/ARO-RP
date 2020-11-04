@@ -18,9 +18,10 @@
   revision = "3a14fb1c4737b3995174c5f4d6d08a348b9b4180"
 
 [[projects]]
-  digest = "1:df0547e3857332f466bafd3cfe5ac3b305d1921cfba0372187fcd6db9e48eb90"
+  digest = "1:f6d716a22d9fb7dc4b800566a6751117c17d80a370a625febaf0ce5517a3f5c5"
   name = "github.com/Azure/azure-sdk-for-go"
   packages = [
+    ".",
     "profiles/latest/dns/mgmt/dns",
     "services/compute/mgmt/2018-10-01/compute",
     "services/compute/mgmt/2019-03-01/compute",
@@ -44,8 +45,8 @@
     "version",
   ]
   pruneopts = "UT"
-  revision = "c444986936ce426843fddc90ffb9d2749ff497bd"
-  version = "v42.3.0"
+  revision = "165ddcba65a4f9857d87667114c6ccac1ec148b4"
+  version = "v44.2.0"
 
 [[projects]]
   digest = "1:837909599d3b4e95163a3f819453b7013c345bc7455cd13e5fe74108a38d6925"
@@ -2243,6 +2244,7 @@
   analyzer-version = 1
   input-imports = [
     "github.com/AlekSi/gocov-xml",
+    "github.com/Azure/azure-sdk-for-go",
     "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute",
     "github.com/Azure/azure-sdk-for-go/services/containerregistry/mgmt/2019-06-01-preview/containerregistry",
     "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2019-08-01/documentdb",
@@ -2283,6 +2285,7 @@
     "github.com/go-test/deep",
     "github.com/golang/mock/gomock",
     "github.com/golang/mock/mockgen",
+    "github.com/golang/mock/mockgen/model",
     "github.com/google/go-cmp/cmp",
     "github.com/googleapis/gnostic/OpenAPIv2",
     "github.com/gorilla/mux",
@@ -2387,6 +2390,8 @@
     "k8s.io/client-go/rest",
     "k8s.io/client-go/testing",
     "k8s.io/client-go/tools/clientcmd",
+    "k8s.io/client-go/tools/clientcmd/api",
+    "k8s.io/client-go/tools/clientcmd/api/latest",
     "k8s.io/client-go/tools/clientcmd/api/v1",
     "k8s.io/client-go/tools/metrics",
     "k8s.io/client-go/util/flowcontrol",
