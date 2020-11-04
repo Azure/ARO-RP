@@ -69,7 +69,7 @@ func TestUpgradeCluster(t *testing.T) {
 					},
 				},
 			}),
-			wantErr: "not upgrading: previous upgrade in-progress",
+			wantErr: "500: InternalServerError: : Not upgrading: cvo is unhealthy.",
 		},
 		{
 			name: "upgrade to Y latest",
@@ -100,7 +100,6 @@ func TestUpgradeCluster(t *testing.T) {
 					},
 				},
 			}),
-			wantErr: "not upgrading: stream not found",
 		},
 		{
 			name: "no upgrade, Y match but unhealthy cluster",
@@ -115,7 +114,7 @@ func TestUpgradeCluster(t *testing.T) {
 					},
 				},
 			}),
-			wantErr: "not upgrading: previous upgrade in-progress",
+			wantErr: "500: InternalServerError: : Not upgrading: cvo is unhealthy.",
 		},
 		{
 			name: "upgrade, Y match, Y upgrades NOT allowed",
@@ -130,7 +129,6 @@ func TestUpgradeCluster(t *testing.T) {
 					},
 				},
 			}),
-			wantErr: "not upgrading: stream not found",
 		},
 		{
 			name: "upgrade, Y match, Y upgrades allowed (4.3 to 4.4)",
