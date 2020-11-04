@@ -48,6 +48,9 @@
             "sku": {
                 "name": "Standard_LRS"
             },
+            "properties": {
+                "allowBlobPublicAccess": true
+            },
             "location": "[resourceGroup().location]",
             "name": "[parameters('rpVersionStorageAccountName')]",
             "type": "Microsoft.Storage/storageAccounts",
@@ -55,6 +58,10 @@
             "apiVersion": "2019-04-01"
         },
         {
+            "properties": {
+                "publicAccess": "Container",
+                "metadata": null
+            },
             "name": "[concat(parameters('rpVersionStorageAccountName'), '/default/rpversion')]",
             "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
             "condition": "[parameters('fullDeploy')]",

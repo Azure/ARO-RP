@@ -22,7 +22,7 @@
             "component": {
                 "type": "git",
                 "git": {
-                    "commitHash": "c444986936ce426843fddc90ffb9d2749ff497bd",
+                    "commitHash": "165ddcba65a4f9857d87667114c6ccac1ec148b4",
                     "repositoryUrl": "https://github.com/Azure/azure-sdk-for-go/"
                 }
             }
