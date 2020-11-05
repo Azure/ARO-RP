@@ -29,10 +29,11 @@ type OpenShiftCluster struct {
 // OpenShiftClusterProperties represents an OpenShift cluster's properties.
 type OpenShiftClusterProperties struct {
 	ProvisioningState       ProvisioningState       `json:"provisioningState,omitempty"`
-	ProvisionedBy           string                  `json:"provisionedBy,omitempty"`
 	LastProvisioningState   ProvisioningState       `json:"lastProvisioningState,omitempty"`
 	FailedProvisioningState ProvisioningState       `json:"failedProvisioningState,omitempty"`
 	LastAdminUpdateError    string                  `json:"lastAdminUpdateError,omitempty"`
+	CreatedBy               string                  `json:"createdBy,omitempty"`
+	ProvisionedBy           string                  `json:"provisionedBy,omitempty"`
 	ClusterProfile          ClusterProfile          `json:"clusterProfile,omitempty"`
 	ConsoleProfile          ConsoleProfile          `json:"consoleProfile,omitempty"`
 	ServicePrincipalProfile ServicePrincipalProfile `json:"servicePrincipalProfile,omitempty"`
