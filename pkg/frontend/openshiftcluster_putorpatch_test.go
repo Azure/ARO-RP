@@ -339,6 +339,9 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							ClusterProfile: api.ClusterProfile{
 								Version: "4.3.0",
 							},
+							ServicePrincipalProfile: api.ServicePrincipalProfile{
+								TenantID: "11111111-1111-1111-1111-111111111111",
+							},
 						},
 					},
 				})
@@ -939,6 +942,15 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			errs := ti.enricher.Check(tt.wantEnriched)
 			for _, err := range errs {
 				t.Error(err)
+			}
+
+			if tt.wantDocuments != nil {
+				tt.wantDocuments(ti.checker)
+				errs = ti.checker.CheckOpenShiftClusters(ti.openShiftClustersClient)
+				errs = append(errs, ti.checker.CheckAsyncOperations(ti.asyncOperationsClient)...)
+				for _, err := range errs {
+					t.Error(err)
+				}
 			}
 		})
 	}
