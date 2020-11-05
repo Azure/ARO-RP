@@ -73,8 +73,8 @@ type OpenShiftClusterProperties struct {
 	// CreatedBy is the RP version (Git commit hash) that created this cluster
 	CreatedBy string `json:"createdBy,omitempty"`
 
-	// ProvisionedBy is the RP version (Git commit hash) that last provisioned
-	// this cluster (e.g. Update/AdminUpdate)
+	// ProvisionedBy is the RP version (Git commit hash) that last successfully
+	// admin updated this cluster
 	ProvisionedBy string `json:"provisionedBy,omitempty"`
 
 	ClusterProfile ClusterProfile `json:"clusterProfile,omitempty"`
