@@ -66,10 +66,16 @@ type OpenShiftClusterProperties struct {
 	// updates always reset the ProvisioningState to LastProvisioningState.
 
 	ProvisioningState       ProvisioningState `json:"provisioningState,omitempty"`
-	ProvisionedBy           string            `json:"provisionedBy,omitempty"`
 	LastProvisioningState   ProvisioningState `json:"lastProvisioningState,omitempty"`
 	FailedProvisioningState ProvisioningState `json:"failedProvisioningState,omitempty"`
 	LastAdminUpdateError    string            `json:"lastAdminUpdateError,omitempty"`
+
+	// CreatedBy is the RP version (Git commit hash) that created this cluster
+	CreatedBy string `json:"createdBy,omitempty"`
+
+	// ProvisionedBy is the RP version (Git commit hash) that last provisioned
+	// this cluster (e.g. Update/AdminUpdate)
+	ProvisionedBy string `json:"provisionedBy,omitempty"`
 
 	ClusterProfile ClusterProfile `json:"clusterProfile,omitempty"`
 

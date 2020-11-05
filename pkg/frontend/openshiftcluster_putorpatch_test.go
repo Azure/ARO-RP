@@ -16,6 +16,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
@@ -335,6 +336,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						Name: "resourceName",
 						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
 						Properties: api.OpenShiftClusterProperties{
+							CreatedBy:         version.GitCommit,
 							ProvisioningState: api.ProvisioningStateCreating,
 							ClusterProfile: api.ClusterProfile{
 								Version: "4.3.0",
