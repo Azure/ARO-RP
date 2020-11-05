@@ -16,6 +16,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/bucket"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
+	"github.com/Azure/ARO-RP/pkg/util/version"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 )
 
@@ -335,9 +336,13 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 						Name: "resourceName",
 						Type: "Microsoft.RedHatOpenShift/openShiftClusters",
 						Properties: api.OpenShiftClusterProperties{
+							CreatedBy:         version.GitCommit,
 							ProvisioningState: api.ProvisioningStateCreating,
 							ClusterProfile: api.ClusterProfile{
 								Version: "4.3.0",
+							},
+							ServicePrincipalProfile: api.ServicePrincipalProfile{
+								TenantID: "11111111-1111-1111-1111-111111111111",
 							},
 						},
 					},
@@ -939,6 +944,15 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			errs := ti.enricher.Check(tt.wantEnriched)
 			for _, err := range errs {
 				t.Error(err)
+			}
+
+			if tt.wantDocuments != nil {
+				tt.wantDocuments(ti.checker)
+				errs = ti.checker.CheckOpenShiftClusters(ti.openShiftClustersClient)
+				errs = append(errs, ti.checker.CheckAsyncOperations(ti.asyncOperationsClient)...)
+				for _, err := range errs {
+					t.Error(err)
+				}
 			}
 		})
 	}
