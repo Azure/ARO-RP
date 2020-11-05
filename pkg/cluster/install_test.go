@@ -271,7 +271,7 @@ func TestDeployARMTemplate(t *testing.T) {
 	}
 }
 
-func TestAddResourceProviderVersion(t *testing.T) {
+func TestUpdateProvisionedBy(t *testing.T) {
 	ctx := context.Background()
 	key := "/subscriptions/00000000-0000-0000-0000-000000000000/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName1"
 
@@ -300,7 +300,7 @@ func TestAddResourceProviderVersion(t *testing.T) {
 		doc: clusterdoc,
 		db:  openShiftClustersDatabase,
 	}
-	err = i.addResourceProviderVersion(ctx)
+	err = i.updateProvisionedBy(ctx)
 	if err != nil {
 		t.Error(err)
 	}

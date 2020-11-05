@@ -42,7 +42,7 @@ func (m *manager) AdminUpgrade(ctx context.Context) error {
 		steps.Action(m.upgradeCertificates),
 		steps.Action(m.configureAPIServerCertificate),
 		steps.Action(m.configureIngressCertificate),
-		steps.Action(m.addResourceProviderVersion), // Run this last so we capture the resource provider only once the upgrade has been fully performed
+		steps.Action(m.updateProvisionedBy), // Run this last so we capture the resource provider only once the upgrade has been fully performed
 	}
 
 	return m.runSteps(ctx, steps)
@@ -86,7 +86,7 @@ func (m *manager) Install(ctx context.Context, installConfig *installconfig.Inst
 			steps.Action(m.configureIngressCertificate),
 			steps.Condition(m.ingressControllerReady, 30*time.Minute),
 			steps.Action(m.finishInstallation),
-			steps.Action(m.addResourceProviderVersion),
+			steps.Action(m.updateProvisionedBy),
 		},
 	}
 
@@ -181,9 +181,9 @@ func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 	return err
 }
 
-// addResourceProviderVersion sets the deploying resource provider version in
+// updateProvisionedBy sets the deploying resource provider version in
 // the cluster document for deployment-tracking purposes.
-func (m *manager) addResourceProviderVersion(ctx context.Context) error {
+func (m *manager) updateProvisionedBy(ctx context.Context) error {
 	var err error
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 		doc.OpenShiftCluster.Properties.ProvisionedBy = version.GitCommit
