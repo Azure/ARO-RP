@@ -47,6 +47,9 @@
         "sshPublicKey": {
             "value": ""
         },
+        "storageAccountName": {
+            "value": ""
+        },
         "subscriptionResourceGroupName": {
             "value": ""
         },
