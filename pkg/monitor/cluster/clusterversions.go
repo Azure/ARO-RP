@@ -37,9 +37,10 @@ func (mon *Monitor) emitClusterVersions(ctx context.Context) error {
 	mon.emitGauge("cluster.versions", 1, map[string]string{
 		"actualVersion":                        actualVersion(cv),
 		"desiredVersion":                       desiredVersion(cv),
-		"provisionedByResourceProviderVersion": mon.oc.Properties.ProvisionedBy, // last successful Put or Patch
-		"resourceProviderVersion":              version.GitCommit,               // RP version currently running
-		"operatorVersion":                      operatorVersion,                 // operator version in the cluster
+		"provisionedByResourceProviderVersion": mon.oc.Properties.ProvisionedBy,       // last successful Put or Patch
+		"resourceProviderVersion":              version.GitCommit,                     // RP version currently running
+		"operatorVersion":                      operatorVersion,                       // operator version in the cluster
+		"availableVersion":                     availableVersion(cv, version.Streams), // current available version for upgrade from stream
 	})
 
 	return nil
@@ -64,4 +65,21 @@ func desiredVersion(cv *configv1.ClusterVersion) string {
 	}
 
 	return cv.Status.Desired.Version
+}
+
+// availableVersion checks the upgradeStreams for possible upgrade of the cluster
+// when the upgrade is possible withing the current Y version, return true and closest upgrade stream version
+func availableVersion(cv *configv1.ClusterVersion, streams []*version.Stream) string {
+	av := actualVersion(cv)
+	v, err := version.ParseVersion(av)
+	if err != nil {
+		return ""
+	}
+
+	uStream := version.GetUpgradeStream(streams, v, false)
+	if uStream == nil {
+		return ""
+	}
+
+	return uStream.Version.String()
 }
