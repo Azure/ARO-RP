@@ -86,7 +86,6 @@ func (m *manager) Install(ctx context.Context, installConfig *installconfig.Inst
 			steps.Action(m.configureIngressCertificate),
 			steps.Condition(m.ingressControllerReady, 30*time.Minute),
 			steps.Action(m.finishInstallation),
-			steps.Action(m.updateProvisionedBy),
 		},
 	}
 
