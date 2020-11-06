@@ -14,7 +14,9 @@ func printIfNotEmpty(buf *bytes.Buffer, k, v string) {
 }
 
 // CloudProviderConfig generates the cloud provider config for the vSphere platform.
-func CloudProviderConfig(clusterName string, p *vspheretypes.Platform) (string, error) {
+// folderPath is the absolute path to the VM folder that will be used for installation.
+// p is the vSphere platform struct.
+func CloudProviderConfig(folderPath string, p *vspheretypes.Platform) (string, error) {
 	buf := new(bytes.Buffer)
 
 	fmt.Fprintln(buf, "[Global]")
@@ -27,7 +29,7 @@ func CloudProviderConfig(clusterName string, p *vspheretypes.Platform) (string, 
 	printIfNotEmpty(buf, "server", p.VCenter)
 	printIfNotEmpty(buf, "datacenter", p.Datacenter)
 	printIfNotEmpty(buf, "default-datastore", p.DefaultDatastore)
-	printIfNotEmpty(buf, "folder", clusterName)
+	printIfNotEmpty(buf, "folder", folderPath)
 	fmt.Fprintln(buf, "")
 
 	fmt.Fprintf(buf, "[VirtualCenter %q]\n", p.VCenter)

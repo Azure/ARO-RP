@@ -5,6 +5,7 @@
 package mock_workaround
 
 import (
+	context "context"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -36,17 +37,17 @@ func (m *MockWorkaround) EXPECT() *MockWorkaroundMockRecorder {
 }
 
 // Ensure mocks base method
-func (m *MockWorkaround) Ensure() error {
+func (m *MockWorkaround) Ensure(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Ensure")
+	ret := m.ctrl.Call(m, "Ensure", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Ensure indicates an expected call of Ensure
-func (mr *MockWorkaroundMockRecorder) Ensure() *gomock.Call {
+func (mr *MockWorkaroundMockRecorder) Ensure(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ensure", reflect.TypeOf((*MockWorkaround)(nil).Ensure))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ensure", reflect.TypeOf((*MockWorkaround)(nil).Ensure), arg0)
 }
 
 // IsRequired mocks base method
@@ -78,15 +79,15 @@ func (mr *MockWorkaroundMockRecorder) Name() *gomock.Call {
 }
 
 // Remove mocks base method
-func (m *MockWorkaround) Remove() error {
+func (m *MockWorkaround) Remove(arg0 context.Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Remove")
+	ret := m.ctrl.Call(m, "Remove", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Remove indicates an expected call of Remove
-func (mr *MockWorkaroundMockRecorder) Remove() *gomock.Call {
+func (mr *MockWorkaroundMockRecorder) Remove(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Remove", reflect.TypeOf((*MockWorkaround)(nil).Remove))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Remove", reflect.TypeOf((*MockWorkaround)(nil).Remove), arg0)
 }

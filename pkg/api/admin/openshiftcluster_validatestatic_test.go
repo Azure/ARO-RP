@@ -80,6 +80,18 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
 					Properties: OpenShiftClusterProperties{
+						ArchitectureVersion: 1,
+					},
+				}
+			},
+			modify:  func(oc *OpenShiftCluster) { oc.Properties.ArchitectureVersion = 2 },
+			wantErr: "400: PropertyChangeNotAllowed: properties.architectureVersion: Changing property 'properties.architectureVersion' is not allowed.",
+		},
+		{
+			name: "provisioningState change is not allowed",
+			oc: func() *OpenShiftCluster {
+				return &OpenShiftCluster{
+					Properties: OpenShiftClusterProperties{
 						ProvisioningState: ProvisioningStateSucceeded,
 					},
 				}

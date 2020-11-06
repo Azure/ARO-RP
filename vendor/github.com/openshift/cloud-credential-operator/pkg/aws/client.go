@@ -23,7 +23,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
-	"github.com/openshift/cloud-credential-operator/version"
+	"github.com/openshift/cloud-credential-operator/pkg/version"
 )
 
 //go:generate mockgen -source=./client.go -destination=./mock/client_generated.go -package=mock
@@ -102,8 +102,12 @@ func (c *awsClient) TagUser(input *iam.TagUserInput) (*iam.TagUserOutput, error)
 }
 
 // NewClient creates our client wrapper object for the actual AWS clients we use.
-func NewClient(accessKeyID, secretAccessKey []byte, infraName string) (Client, error) {
+func NewClient(accessKeyID, secretAccessKey []byte, region, infraName string) (Client, error) {
 	awsConfig := &awssdk.Config{}
+
+	if region != "" {
+		awsConfig.Region = &region
+	}
 
 	awsConfig.Credentials = credentials.NewStaticCredentials(
 		string(accessKeyID), string(secretAccessKey), "")
@@ -114,10 +118,15 @@ func NewClient(accessKeyID, secretAccessKey []byte, infraName string) (Client, e
 	}
 	s.Handlers.Build.PushBackNamed(request.NamedHandler{
 		Name: "openshift.io/cloud-credential-operator",
-		Fn:   request.MakeAddToUserAgentHandler("openshift.io cloud-credential-operator", version.Version, infraName),
+		Fn:   request.MakeAddToUserAgentHandler("openshift.io cloud-credential-operator", version.Get().String(), infraName),
 	})
 
+	return NewClientFromIAMClient(iam.New(s))
+}
+
+// NewClientFromIAMClient create a client from AWS IAM client.
+func NewClientFromIAMClient(client iamiface.IAMAPI) (Client, error) {
 	return &awsClient{
-		iamClient: iam.New(s),
+		iamClient: client,
 	}, nil
 }

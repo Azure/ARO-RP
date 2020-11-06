@@ -188,7 +188,7 @@ func TestUpgradeCluster(t *testing.T) {
 				t.Fatal(updated)
 			}
 
-			cv, err := a.configClient.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
+			cv, err := a.configClient.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
 			if err != nil {
 				t.Error(err)
 			}

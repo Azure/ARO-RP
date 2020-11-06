@@ -14,7 +14,7 @@ func (mon *Monitor) emitAroOperatorHeartbeat(ctx context.Context) error {
 		"aro-operator-master": false,
 		"aro-operator-worker": false}
 
-	aroDeployments, err := mon.listDeployments()
+	aroDeployments, err := mon.listDeployments(ctx)
 	if err != nil {
 		return err
 	}

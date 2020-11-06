@@ -4,6 +4,8 @@ package workaround
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
+
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
@@ -91,11 +93,11 @@ func (sr *systemreserved) kubeletConfig() (*unstructured.Unstructured, error) {
 	return un, nil
 }
 
-func (sr *systemreserved) Ensure() error {
+func (sr *systemreserved) Ensure(ctx context.Context) error {
 	// Step 1. Add label to worker MachineConfigPool.
 	// Get the worker MachineConfigPool, modify it to add a label aro.openshift.io/limits: "", and apply the modified config.
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		mcp, err := sr.mcocli.MachineconfigurationV1().MachineConfigPools().Get(workerMachineConfigPoolName, metav1.GetOptions{})
+		mcp, err := sr.mcocli.MachineconfigurationV1().MachineConfigPools().Get(ctx, workerMachineConfigPoolName, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -108,7 +110,7 @@ func (sr *systemreserved) Ensure() error {
 		}
 		mcp.Labels[labelName] = labelValue
 
-		_, err = sr.mcocli.MachineconfigurationV1().MachineConfigPools().Update(mcp)
+		_, err = sr.mcocli.MachineconfigurationV1().MachineConfigPools().Update(ctx, mcp, metav1.UpdateOptions{})
 		return err
 	})
 	if err != nil {
@@ -121,12 +123,12 @@ func (sr *systemreserved) Ensure() error {
 		return err
 	}
 
-	return sr.dh.Ensure(un)
+	return sr.dh.Ensure(ctx, un)
 }
 
-func (sr *systemreserved) Remove() error {
+func (sr *systemreserved) Remove(ctx context.Context) error {
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		mcp, err := sr.mcocli.MachineconfigurationV1().MachineConfigPools().Get(workerMachineConfigPoolName, metav1.GetOptions{})
+		mcp, err := sr.mcocli.MachineconfigurationV1().MachineConfigPools().Get(ctx, workerMachineConfigPoolName, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -136,11 +138,11 @@ func (sr *systemreserved) Remove() error {
 		}
 		delete(mcp.Labels, labelName)
 
-		_, err = sr.mcocli.MachineconfigurationV1().MachineConfigPools().Update(mcp)
+		_, err = sr.mcocli.MachineconfigurationV1().MachineConfigPools().Update(ctx, mcp, metav1.UpdateOptions{})
 		return err
 	})
 	if err != nil {
 		return err
 	}
-	return sr.dh.Delete("KubeletConfig.machineconfiguration.openshift.io/v1", "", kubeletConfigName)
+	return sr.dh.Delete(ctx, "KubeletConfig.machineconfiguration.openshift.io/v1", "", kubeletConfigName)
 }

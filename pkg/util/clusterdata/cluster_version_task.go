@@ -4,6 +4,8 @@ package clusterdata
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
+
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,8 +33,8 @@ type clusterVersionEnricherTask struct {
 	oc     *api.OpenShiftCluster
 }
 
-func (ef *clusterVersionEnricherTask) FetchData(callbacks chan<- func(), errs chan<- error) {
-	cv, err := ef.client.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
+func (ef *clusterVersionEnricherTask) FetchData(ctx context.Context, callbacks chan<- func(), errs chan<- error) {
+	cv, err := ef.client.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
 	if err != nil {
 		ef.log.Error(err)
 		errs <- err

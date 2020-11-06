@@ -10,7 +10,7 @@ import (
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
-	clusterclient "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset"
+	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	mcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
@@ -66,7 +66,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 	if err != nil {
 		return err
 	}
-	clustercli, err := clusterclient.NewForConfig(restConfig)
+	clustercli, err := maoclient.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}

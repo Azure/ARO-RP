@@ -23,6 +23,7 @@ type config struct {
 	MasterMemory    string   `json:"libvirt_master_memory,omitempty"`
 	MasterVcpu      string   `json:"libvirt_master_vcpu,omitempty"`
 	BootstrapMemory int      `json:"libvirt_bootstrap_memory,omitempty"`
+	MasterDiskSize  string   `json:"libvirt_master_size,omitempty"`
 }
 
 // TFVars generates libvirt-specific Terraform variables.
@@ -52,9 +53,11 @@ func TFVars(masterConfig *v1beta1.LibvirtMachineProviderConfig, osImage string, 
 		MasterVcpu:   strconv.Itoa(masterConfig.DomainVcpu),
 	}
 
-	// Power PC systems typically require more memory because the page size is 64K and not the default 4K
-	// TODO: need to make ppc64le a supported architecture - https://bugzilla.redhat.com/show_bug.cgi?id=1821392
-	if architecture == "ppc64le" {
+	if masterConfig.Volume.VolumeSize != nil {
+		cfg.MasterDiskSize = masterConfig.Volume.VolumeSize.String()
+	}
+
+	if architecture == types.ArchitecturePPC64LE {
 		cfg.BootstrapMemory = 5120
 	}
 

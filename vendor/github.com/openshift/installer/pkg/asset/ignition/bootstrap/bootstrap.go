@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/openshift/installer/pkg/asset/ignition/bootstrap/baremetal"
 	"io"
 	"io/ioutil"
 	"os"
@@ -24,6 +23,8 @@ import (
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/bootstraplogging"
 	"github.com/openshift/installer/pkg/asset/ignition"
+	"github.com/openshift/installer/pkg/asset/ignition/bootstrap/baremetal"
+	"github.com/openshift/installer/pkg/asset/ignition/bootstrap/vsphere"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/kubeconfig"
 	"github.com/openshift/installer/pkg/asset/machines"
@@ -33,6 +34,7 @@ import (
 	"github.com/openshift/installer/pkg/asset/tls"
 	"github.com/openshift/installer/pkg/types"
 	baremetaltypes "github.com/openshift/installer/pkg/types/baremetal"
+	vspheretypes "github.com/openshift/installer/pkg/types/vsphere"
 )
 
 const (
@@ -61,6 +63,7 @@ type bootstrapTemplateData struct {
 // template files that are specific to one platform.
 type platformTemplateData struct {
 	BareMetal *baremetal.TemplateData
+	VSphere   *vsphere.TemplateData
 }
 
 // Bootstrap is an asset that generates the ignition config for bootstrap nodes.
@@ -90,6 +93,7 @@ func (a *Bootstrap) Dependencies() []asset.Asset {
 		&tls.AggregatorClientCertKey{},
 		&tls.AggregatorSignerCertKey{},
 		&tls.APIServerProxyCertKey{},
+		&tls.BootstrapSSHKeyPair{},
 		&tls.EtcdCABundle{},
 		&tls.EtcdMetricCABundle{},
 		&tls.EtcdMetricSignerCertKey{},
@@ -136,7 +140,8 @@ func (a *Bootstrap) Generate(dependencies asset.Parents) error {
 	proxy := &manifests.Proxy{}
 	releaseImage := &releaseimage.Image{}
 	rhcosImage := new(rhcos.Image)
-	dependencies.Get(installConfig, proxy, releaseImage, rhcosImage, loggingConfig)
+	bootstrapSSHKeyPair := &tls.BootstrapSSHKeyPair{}
+	dependencies.Get(installConfig, proxy, releaseImage, rhcosImage, bootstrapSSHKeyPair, loggingConfig)
 
 	templateData, err := a.getTemplateData(installConfig.Config, releaseImage.PullSpec, installConfig.Config.ImageContentSources, proxy.Config, rhcosImage, loggingConfig)
 
@@ -185,7 +190,10 @@ func (a *Bootstrap) Generate(dependencies asset.Parents) error {
 
 	a.Config.Passwd.Users = append(
 		a.Config.Passwd.Users,
-		igntypes.PasswdUser{Name: "core", SSHAuthorizedKeys: []igntypes.SSHAuthorizedKey{igntypes.SSHAuthorizedKey(installConfig.Config.SSHKey)}},
+		igntypes.PasswdUser{Name: "core", SSHAuthorizedKeys: []igntypes.SSHAuthorizedKey{
+			igntypes.SSHAuthorizedKey(installConfig.Config.SSHKey),
+			igntypes.SSHAuthorizedKey(string(bootstrapSSHKeyPair.Public())),
+		}},
 	)
 
 	data, err := json.Marshal(a.Config)
@@ -236,12 +244,14 @@ func (a *Bootstrap) getTemplateData(installConfig *types.InstallConfig, releaseI
 		registries = append(registries, registry)
 	}
 
-	// Generate platform-specific baremetal data
+	// Generate platform-specific bootstrap data
 	var platformData platformTemplateData
 
 	switch installConfig.Platform.Name() {
 	case baremetaltypes.Name:
 		platformData.BareMetal = baremetal.GetTemplateData(installConfig.Platform.BareMetal)
+	case vspheretypes.Name:
+		platformData.VSphere = vsphere.GetTemplateData(installConfig.Platform.VSphere)
 	}
 
 	return &bootstrapTemplateData{
@@ -311,7 +321,9 @@ func (a *Bootstrap) addStorageFiles(base string, uri string, templateData *boots
 	}
 	ign := ignition.FileFromBytes(strings.TrimSuffix(base, ".template"), "root", mode, data)
 	ign.Append = appendToFile
-	a.Config.Storage.Files = append(a.Config.Storage.Files, ign)
+
+	// Replace files that already exist in the slice with ones added later, otherwise append them
+	a.Config.Storage.Files = replaceOrAppend(a.Config.Storage.Files, ign)
 
 	return nil
 }
@@ -324,11 +336,12 @@ func (a *Bootstrap) addSystemdUnits(uri string, templateData *bootstrapTemplateD
 		"systemd-journal-gatewayd.socket": {},
 		"approve-csr.service":             {},
 		// baremetal & openstack platform services
-		"keepalived.service": {},
-		"coredns.service":    {},
-		"ironic.service":     {},
-		"fluentbit.service":  {},
-		"mdsd.service":       {},
+		"keepalived.service":        {},
+		"coredns.service":           {},
+		"ironic.service":            {},
+		"master-bmh-update.service": {},
+		"fluentbit.service":         {},
+		"mdsd.service":              {},
 	}
 
 	directory, err := data.Assets.Open(uri)
@@ -450,7 +463,11 @@ func (a *Bootstrap) addParentFiles(dependencies asset.Parents) {
 		&machines.Worker{},
 	} {
 		dependencies.Get(asset)
-		a.Config.Storage.Files = append(a.Config.Storage.Files, ignition.FilesFromAsset(rootDir, "root", 0644, asset)...)
+
+		// Replace files that already exist in the slice with ones added later, otherwise append them
+		for _, file := range ignition.FilesFromAsset(rootDir, "root", 0644, asset) {
+			a.Config.Storage.Files = replaceOrAppend(a.Config.Storage.Files, file)
+		}
 	}
 
 	// These files are all added with mode 0600; use for secret keys and the like.
@@ -499,12 +516,27 @@ func (a *Bootstrap) addParentFiles(dependencies asset.Parents) {
 		&tls.JournalCertKey{},
 	} {
 		dependencies.Get(asset)
-		a.Config.Storage.Files = append(a.Config.Storage.Files, ignition.FilesFromAsset(rootDir, "root", 0600, asset)...)
+
+		// Replace files that already exist in the slice with ones added later, otherwise append them
+		for _, file := range ignition.FilesFromAsset(rootDir, "root", 0600, asset) {
+			a.Config.Storage.Files = replaceOrAppend(a.Config.Storage.Files, file)
+		}
 	}
 
 	rootCA := &tls.RootCA{}
 	dependencies.Get(rootCA)
-	a.Config.Storage.Files = append(a.Config.Storage.Files, ignition.FileFromBytes(filepath.Join(rootDir, rootCA.CertFile().Filename), "root", 0644, rootCA.Cert()))
+	a.Config.Storage.Files = replaceOrAppend(a.Config.Storage.Files, ignition.FileFromBytes(filepath.Join(rootDir, rootCA.CertFile().Filename), "root", 0644, rootCA.Cert()))
+}
+
+func replaceOrAppend(files []igntypes.File, file igntypes.File) []igntypes.File {
+	for i, f := range files {
+		if f.Node.Path == file.Node.Path {
+			files[i] = file
+			return files
+		}
+	}
+	files = append(files, file)
+	return files
 }
 
 func applyTemplateData(template *template.Template, templateData interface{}) string {

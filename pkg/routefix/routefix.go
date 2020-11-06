@@ -65,19 +65,19 @@ func (i *routeFix) routefixImage() string {
 	return fmt.Sprintf(routefixImageFormat, i.env.ACRName())
 }
 
-func (i *routeFix) ensureNamespace(ns string) error {
-	_, err := i.cli.CoreV1().Namespaces().Create(&v1.Namespace{
+func (i *routeFix) ensureNamespace(ctx context.Context, ns string) error {
+	_, err := i.cli.CoreV1().Namespaces().Create(ctx, &v1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        ns,
 			Annotations: map[string]string{projectv1.ProjectNodeSelector: ""},
 		},
-	})
+	}, metav1.CreateOptions{})
 	if !errors.IsAlreadyExists(err) {
 		return err
 	}
 
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		_ns, err := i.cli.CoreV1().Namespaces().Get(ns, metav1.GetOptions{})
+		_ns, err := i.cli.CoreV1().Namespaces().Get(ctx, ns, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -92,31 +92,31 @@ func (i *routeFix) ensureNamespace(ns string) error {
 
 		_ns.Annotations[projectv1.ProjectNodeSelector] = ""
 
-		_, err = i.cli.CoreV1().Namespaces().Update(_ns)
+		_, err = i.cli.CoreV1().Namespaces().Update(ctx, _ns, metav1.UpdateOptions{})
 		return err
 	})
 }
 
-func (i *routeFix) applyDaemonSet(ds *appsv1.DaemonSet) error {
-	_, err := i.cli.AppsV1().DaemonSets(ds.Namespace).Create(ds)
+func (i *routeFix) applyDaemonSet(ctx context.Context, ds *appsv1.DaemonSet) error {
+	_, err := i.cli.AppsV1().DaemonSets(ds.Namespace).Create(ctx, ds, metav1.CreateOptions{})
 	if !errors.IsAlreadyExists(err) {
 		return err
 	}
 
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		_ds, err := i.cli.AppsV1().DaemonSets(ds.Namespace).Get(ds.Name, metav1.GetOptions{})
+		_ds, err := i.cli.AppsV1().DaemonSets(ds.Namespace).Get(ctx, ds.Name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
 
 		ds.ResourceVersion = _ds.ResourceVersion
-		_, err = i.cli.AppsV1().DaemonSets(ds.Namespace).Update(ds)
+		_, err = i.cli.AppsV1().DaemonSets(ds.Namespace).Update(ctx, ds, metav1.UpdateOptions{})
 		return err
 	})
 }
 
 func (i *routeFix) CreateOrUpdate(ctx context.Context) error {
-	err := i.ensureNamespace(kubeNamespace)
+	err := i.ensureNamespace(ctx, kubeNamespace)
 	if err != nil {
 		return err
 	}
@@ -126,7 +126,7 @@ func (i *routeFix) CreateOrUpdate(ctx context.Context) error {
 	defer cancel()
 	var scc *securityv1.SecurityContextConstraints
 	err = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-		scc, err = i.seccli.SecurityV1().SecurityContextConstraints().Get("privileged", metav1.GetOptions{})
+		scc, err = i.seccli.SecurityV1().SecurityContextConstraints().Get(ctx, "privileged", metav1.GetOptions{})
 		return err == nil, nil
 	}, timeoutCtx.Done())
 	if err != nil {
@@ -139,12 +139,12 @@ func (i *routeFix) CreateOrUpdate(ctx context.Context) error {
 	scc.Groups = nil
 	scc.Users = []string{kubeServiceAccount}
 
-	_, err = i.seccli.SecurityV1().SecurityContextConstraints().Create(scc)
+	_, err = i.seccli.SecurityV1().SecurityContextConstraints().Create(ctx, scc, metav1.CreateOptions{})
 	if err != nil && !errors.IsAlreadyExists(err) {
 		return err
 	}
 
-	return i.applyDaemonSet(&appsv1.DaemonSet{
+	return i.applyDaemonSet(ctx, &appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "routefix",
 			Namespace: kubeNamespace,

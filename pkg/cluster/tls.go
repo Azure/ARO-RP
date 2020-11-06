@@ -114,7 +114,7 @@ func (m *manager) ensureSecret(ctx context.Context, secrets coreclient.SecretInt
 		cb = append(cb, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw})...)
 	}
 
-	_, err = secrets.Create(&v1.Secret{
+	_, err = secrets.Create(ctx, &v1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: certificateName,
 		},
@@ -123,10 +123,10 @@ func (m *manager) ensureSecret(ctx context.Context, secrets coreclient.SecretInt
 			v1.TLSPrivateKeyKey: pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: b}),
 		},
 		Type: v1.SecretTypeTLS,
-	})
+	}, metav1.CreateOptions{})
 	if errors.IsAlreadyExists(err) {
 		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			s, err := secrets.Get(certificateName, metav1.GetOptions{})
+			s, err := secrets.Get(ctx, certificateName, metav1.GetOptions{})
 			if err != nil {
 				return err
 			}
@@ -137,7 +137,7 @@ func (m *manager) ensureSecret(ctx context.Context, secrets coreclient.SecretInt
 			}
 			s.Type = v1.SecretTypeTLS
 
-			_, err = secrets.Update(s)
+			_, err = secrets.Update(ctx, s, metav1.UpdateOptions{})
 			return err
 		})
 	}
@@ -164,7 +164,7 @@ func (m *manager) configureAPIServerCertificate(ctx context.Context) error {
 	}
 
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		apiserver, err := m.configcli.ConfigV1().APIServers().Get("cluster", metav1.GetOptions{})
+		apiserver, err := m.configcli.ConfigV1().APIServers().Get(ctx, "cluster", metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -180,7 +180,7 @@ func (m *manager) configureAPIServerCertificate(ctx context.Context) error {
 			},
 		}
 
-		_, err = m.configcli.ConfigV1().APIServers().Update(apiserver)
+		_, err = m.configcli.ConfigV1().APIServers().Update(ctx, apiserver, metav1.UpdateOptions{})
 		return err
 	})
 }
@@ -205,7 +205,7 @@ func (m *manager) configureIngressCertificate(ctx context.Context) error {
 	}
 
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		ic, err := m.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Get("default", metav1.GetOptions{})
+		ic, err := m.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Get(ctx, "default", metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -214,7 +214,7 @@ func (m *manager) configureIngressCertificate(ctx context.Context) error {
 			Name: m.doc.ID + "-ingress",
 		}
 
-		_, err = m.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Update(ic)
+		_, err = m.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").Update(ctx, ic, metav1.UpdateOptions{})
 		return err
 	})
 }

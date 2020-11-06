@@ -22,7 +22,7 @@ var podConditionsExpected = map[v1.PodConditionType]v1.ConditionStatus{
 
 func (mon *Monitor) emitPodConditions(ctx context.Context) error {
 	// to list pods once
-	ps, err := mon.cli.CoreV1().Pods("").List(metav1.ListOptions{})
+	ps, err := mon.cli.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return err
 	}

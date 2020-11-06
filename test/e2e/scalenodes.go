@@ -36,7 +36,7 @@ var _ = Describe("Scale nodes", func() {
 		// be ready, it could be that the workaround operator is busy rotating
 		// them, which we don't currently wait for on create
 		err = wait.PollImmediate(10*time.Second, 30*time.Minute, func() (bool, error) {
-			nodes, err := clients.Kubernetes.CoreV1().Nodes().List(metav1.ListOptions{})
+			nodes, err := clients.Kubernetes.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
 			if err != nil {
 				return false, err
 			}
@@ -58,7 +58,7 @@ var _ = Describe("Scale nodes", func() {
 	})
 
 	Specify("nodes should scale up and down", func() {
-		mss, err := clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").List(metav1.ListOptions{})
+		mss, err := clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").List(context.Background(), metav1.ListOptions{})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(mss.Items).NotTo(BeEmpty())
 
@@ -78,7 +78,7 @@ var _ = Describe("Scale nodes", func() {
 
 func scale(name string, delta int32) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		ms, err := clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").Get(name, metav1.GetOptions{})
+		ms, err := clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").Get(context.Background(), name, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -88,14 +88,14 @@ func scale(name string, delta int32) error {
 		}
 		*ms.Spec.Replicas += delta
 
-		_, err = clients.MachineAPI.MachineV1beta1().MachineSets(ms.Namespace).Update(ms)
+		_, err = clients.MachineAPI.MachineV1beta1().MachineSets(ms.Namespace).Update(context.Background(), ms, metav1.UpdateOptions{})
 		return err
 	})
 }
 
 func waitForScale(name string) error {
 	return wait.PollImmediate(10*time.Second, 30*time.Minute, func() (bool, error) {
-		ms, err := clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").Get(name, metav1.GetOptions{})
+		ms, err := clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").Get(context.Background(), name, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}

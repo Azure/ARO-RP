@@ -4,6 +4,7 @@ package cluster
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -90,7 +91,7 @@ func TestEmitPodConditions(t *testing.T) {
 		"type":      "Ready",
 	})
 
-	ps, _ := cli.CoreV1().Pods("").List(metav1.ListOptions{})
+	ps, _ := cli.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
 	mon._emitPodConditions(ps)
 }
 
@@ -137,6 +138,6 @@ func TestEmitPodContainerStatuses(t *testing.T) {
 		"reason":        "ImagePullBackOff",
 	})
 
-	ps, _ := cli.CoreV1().Pods("").List(metav1.ListOptions{})
+	ps, _ := cli.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
 	mon._emitPodContainerStatuses(ps)
 }

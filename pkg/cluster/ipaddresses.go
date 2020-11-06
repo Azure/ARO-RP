@@ -25,7 +25,7 @@ func (m *manager) updateRouterIP(ctx context.Context) error {
 	installConfig := g[reflect.TypeOf(&installconfig.InstallConfig{})].(*installconfig.InstallConfig)
 	kubeadminPassword := g[reflect.TypeOf(&password.KubeadminPassword{})].(*password.KubeadminPassword)
 
-	svc, err := m.kubernetescli.CoreV1().Services("openshift-ingress").Get("router-default", metav1.GetOptions{})
+	svc, err := m.kubernetescli.CoreV1().Services("openshift-ingress").Get(ctx, "router-default", metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -53,9 +53,6 @@ func (m *manager) updateRouterIP(ctx context.Context) error {
 
 func (m *manager) updateAPIIP(ctx context.Context) error {
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
-	if infraID == "" {
-		infraID = "aro" // TODO: remove after deploy
-	}
 
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	var ipAddress string
@@ -66,7 +63,7 @@ func (m *manager) updateAPIIP(ctx context.Context) error {
 		}
 		ipAddress = *ip.IPAddress
 	} else {
-		lb, err := m.loadbalancers.Get(ctx, resourceGroup, infraID+"-internal-lb", "")
+		lb, err := m.loadbalancers.Get(ctx, resourceGroup, infraID+"-internal", "")
 		if err != nil {
 			return err
 		}

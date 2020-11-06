@@ -87,6 +87,23 @@
                 "watch"
             ],
             "storageVersionHash": "JLhPcfa+5xE="
+        },
+        {
+            "name": "thanosrulers",
+            "singularName": "thanosruler",
+            "namespaced": true,
+            "kind": "ThanosRuler",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "YBxpg/kA6UI="
         }
     ]
 }

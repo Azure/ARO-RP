@@ -3,11 +3,9 @@ package clusterdata
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-// TODO: After OpenShift 4.4, replace github.com/openshift/cluster-api with github.com/openshift/machine-api-operator
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"sync"
 	"time"
 
@@ -30,7 +28,7 @@ type OpenShiftClusterEnricher interface {
 type enricherTaskConstructor func(*logrus.Entry, *rest.Config, *api.OpenShiftCluster) (enricherTask, error)
 type enricherTask interface {
 	SetDefaults()
-	FetchData(chan<- func(), chan<- error)
+	FetchData(context.Context, chan<- func(), chan<- error)
 }
 
 // NewBestEffortEnricher returns an enricher that attempts to populate
@@ -86,14 +84,6 @@ func (e *bestEffortEnricher) enrichOne(ctx context.Context, oc *api.OpenShiftClu
 		return
 	}
 
-	// TODO: Get rid of the wrapping RoundTripper once implementation of the KEP below lands into openshift/client-go:
-	//       https://github.com/kubernetes/enhancements/blob/master/keps/sig-api-machinery/20200123-client-go-ctx.md
-	restConfig.Wrap(func(rt http.RoundTripper) http.RoundTripper {
-		return roundTripperFunc(func(req *http.Request) (*http.Response, error) {
-			return rt.RoundTrip(req.WithContext(ctx))
-		})
-	})
-
 	tasks := make([]enricherTask, 0, len(e.taskConstructors))
 	for i := range e.taskConstructors {
 		task, err := e.taskConstructors[i](e.log, restConfig, oc)
@@ -124,7 +114,7 @@ func (e *bestEffortEnricher) enrichOne(ctx context.Context, oc *api.OpenShiftClu
 				})
 			}()
 
-			tasks[i].FetchData(callbacks, errors)
+			tasks[i].FetchData(ctx, callbacks, errors)
 		}(i) // https://golang.org/doc/faq#closures_and_goroutines
 	}
 
@@ -162,10 +152,4 @@ func (e *bestEffortEnricher) isValidProvisioningState(oc *api.OpenShiftCluster) 
 		}
 	}
 	return true
-}
-
-type roundTripperFunc func(*http.Request) (*http.Response, error)
-
-func (r roundTripperFunc) RoundTrip(req *http.Request) (*http.Response, error) {
-	return r(req)
 }

@@ -42,7 +42,7 @@ func (d *deployer) Upgrade(ctx context.Context) error {
 	}
 
 	// Must be last step so we can be sure there are no RPs at older versions still serving
-	return d.saveRPVersion()
+	return d.saveRPVersion(ctx)
 }
 
 func (d *deployer) waitForRPReadiness(ctx context.Context, vmssName string) error {
@@ -116,11 +116,11 @@ func (d *deployer) removeOldScaleset(ctx context.Context, vmssName string) error
 }
 
 // saveRPVersion for current location in shared storage account for environment
-func (d *deployer) saveRPVersion() error {
+func (d *deployer) saveRPVersion(ctx context.Context) error {
 	d.log.Printf("saving rpVersion %s deployed in %s to storage account %s", d.version, d.config.Location, *d.config.Configuration.RPVersionStorageAccountName)
 	t := time.Now().UTC().Truncate(time.Second)
 	res, err := d.globalaccounts.ListAccountSAS(
-		context.Background(), *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.RPVersionStorageAccountName, mgmtstorage.AccountSasParameters{
+		ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.RPVersionStorageAccountName, mgmtstorage.AccountSasParameters{
 			Services:               mgmtstorage.B,
 			ResourceTypes:          mgmtstorage.SignedResourceTypesO,
 			Permissions:            "cw", // create and write

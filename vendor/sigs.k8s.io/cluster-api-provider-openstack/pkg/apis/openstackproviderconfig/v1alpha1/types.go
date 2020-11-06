@@ -38,9 +38,6 @@ type OpenstackProviderSpec struct {
 	// The name of the cloud to use from the clouds secret
 	CloudName string `json:"cloudName"`
 
-	// A plaintext string of PEM(s)
-	CertBundle string `json:"caCert,omitempty"`
-
 	// The flavor reference for the flavor for your server instance.
 	Flavor string `json:"flavor"`
 
@@ -85,6 +82,15 @@ type OpenstackProviderSpec struct {
 
 	// The volume metadata to boot from
 	RootVolume *RootVolume `json:"rootVolume,omitempty"`
+
+	// The server group to assign the machine to.
+	ServerGroupID string `json:"serverGroupID,omitempty"`
+
+	// The server group to assign the machine to. A server group with that
+	// name will be created if it does not exist. If both ServerGroupID and
+	// ServerGroupName are non-empty, they must refer to the same OpenStack
+	// resource.
+	ServerGroupName string `json:"serverGroupName,omitempty"`
 }
 
 type SecurityGroupParam struct {
@@ -121,6 +127,8 @@ type NetworkParam struct {
 	Filter Filter `json:"filter,omitempty"`
 	// Subnet within a network to use
 	Subnets []SubnetParam `json:"subnets,omitempty"`
+	// NoAllowedAddressPairs disables creation of allowed address pairs for the network ports
+	NoAllowedAddressPairs bool `json:"noAllowedAddressPairs,omitempty"`
 }
 
 type Filter struct {

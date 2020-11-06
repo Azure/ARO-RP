@@ -5,6 +5,7 @@ package alertwebhook
 
 import (
 	"bytes"
+	"context"
 	"testing"
 
 	v1 "k8s.io/api/core/v1"
@@ -65,12 +66,12 @@ func TestSetAlertManagerWebhook(t *testing.T) {
 		}),
 	}
 
-	err := i.setAlertManagerWebhook("http://aro-operator-master.openshift-azure-operator.svc.cluster.local:8080")
+	err := i.setAlertManagerWebhook(context.Background(), "http://aro-operator-master.openshift-azure-operator.svc.cluster.local:8080")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	s, err := i.kubernetescli.CoreV1().Secrets("openshift-monitoring").Get("alertmanager-main", metav1.GetOptions{})
+	s, err := i.kubernetescli.CoreV1().Secrets("openshift-monitoring").Get(context.Background(), "alertmanager-main", metav1.GetOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}

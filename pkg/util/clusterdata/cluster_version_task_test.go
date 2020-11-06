@@ -4,6 +4,7 @@ package clusterdata
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
@@ -67,7 +68,7 @@ func TestClusterVersionEnricherTask(t *testing.T) {
 
 			callbacks := make(chan func())
 			errors := make(chan error)
-			go e.FetchData(callbacks, errors)
+			go e.FetchData(context.Background(), callbacks, errors)
 
 			select {
 			case f := <-callbacks:

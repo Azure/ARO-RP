@@ -4,6 +4,7 @@ package pullsecret
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -156,7 +157,7 @@ func TestPullSecretReconciler(t *testing.T) {
 				t.Fatal(updated)
 			}
 
-			s, err := r.kubernetescli.CoreV1().Secrets("openshift-config").Get("pull-secret", metav1.GetOptions{})
+			s, err := r.kubernetescli.CoreV1().Secrets("openshift-config").Get(context.Background(), "pull-secret", metav1.GetOptions{})
 			if err != nil {
 				t.Error(err)
 			}

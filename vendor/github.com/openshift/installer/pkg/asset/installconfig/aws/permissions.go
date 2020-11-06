@@ -2,14 +2,12 @@
 package aws
 
 import (
-	"fmt"
-
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 
 	ccaws "github.com/openshift/cloud-credential-operator/pkg/aws"
-	"github.com/openshift/installer/pkg/version"
 )
 
 // PermissionGroup is the group of permissions needed by cluster creation, operation, or teardown.
@@ -71,6 +69,7 @@ var permissions = map[PermissionGroup][]string{
 		"ec2:DescribeVpcClassicLinkDnsSupport",
 		"ec2:DescribeVpcEndpoints",
 		"ec2:DescribeVpcs",
+		"ec2:GetEbsDefaultKmsKeyId",
 		"ec2:ModifyInstanceAttribute",
 		"ec2:ModifyNetworkInterfaceAttribute",
 		"ec2:ReleaseAddress",
@@ -142,6 +141,7 @@ var permissions = map[PermissionGroup][]string{
 		"s3:CreateBucket",
 		"s3:DeleteBucket",
 		"s3:GetAccelerateConfiguration",
+		"s3:GetBucketAcl",
 		"s3:GetBucketCors",
 		"s3:GetBucketLocation",
 		"s3:GetBucketLogging",
@@ -176,10 +176,13 @@ var permissions = map[PermissionGroup][]string{
 		"ec2:DeleteVolume",
 		"elasticloadbalancing:DeleteTargetGroup",
 		"elasticloadbalancing:DescribeTargetGroups",
+		"iam:DeleteAccessKey",
+		"iam:DeleteUser",
 		"iam:ListInstanceProfiles",
 		"iam:ListRolePolicies",
 		"iam:ListUserPolicies",
 		"s3:DeleteObject",
+		"s3:ListBucketVersions",
 		"tag:GetResources",
 	},
 	// Permissions required for creating network resources
@@ -229,14 +232,9 @@ func ValidateCreds(ssn *session.Session, groups []PermissionGroup, region string
 		requiredPermissions = append(requiredPermissions, groupPerms...)
 	}
 
-	creds, err := ssn.Config.Credentials.Get()
+	client, err := ccaws.NewClientFromIAMClient(iam.New(ssn))
 	if err != nil {
-		return errors.Wrap(err, "getting creds from session")
-	}
-
-	client, err := ccaws.NewClient([]byte(creds.AccessKeyID), []byte(creds.SecretAccessKey), fmt.Sprintf("OpenShift/4.x Installer/%s", version.Raw))
-	if err != nil {
-		return errors.Wrap(err, "initialize cloud-credentials client")
+		return errors.Wrap(err, "failed to create client for permission check")
 	}
 
 	sParams := &ccaws.SimulateParams{

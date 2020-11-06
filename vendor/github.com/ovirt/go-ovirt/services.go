@@ -8807,6 +8807,172 @@ func (op *VmHostDeviceService) String() string {
 
 //
 //
+type VmCheckpointDiskService struct {
+	BaseService
+}
+
+func NewVmCheckpointDiskService(connection *Connection, path string) *VmCheckpointDiskService {
+	var result VmCheckpointDiskService
+	result.connection = connection
+	result.path = path
+	return &result
+}
+
+//
+// Retrieves the description of the disk.
+//
+type VmCheckpointDiskServiceGetRequest struct {
+	VmCheckpointDiskService *VmCheckpointDiskService
+	header                  map[string]string
+	query                   map[string]string
+	follow                  *string
+}
+
+func (p *VmCheckpointDiskServiceGetRequest) Header(key, value string) *VmCheckpointDiskServiceGetRequest {
+	if p.header == nil {
+		p.header = make(map[string]string)
+	}
+	p.header[key] = value
+	return p
+}
+
+func (p *VmCheckpointDiskServiceGetRequest) Query(key, value string) *VmCheckpointDiskServiceGetRequest {
+	if p.query == nil {
+		p.query = make(map[string]string)
+	}
+	p.query[key] = value
+	return p
+}
+
+func (p *VmCheckpointDiskServiceGetRequest) Follow(follow string) *VmCheckpointDiskServiceGetRequest {
+	p.follow = &follow
+	return p
+}
+
+func (p *VmCheckpointDiskServiceGetRequest) Send() (*VmCheckpointDiskServiceGetResponse, error) {
+	rawURL := fmt.Sprintf("%s%s", p.VmCheckpointDiskService.connection.URL(), p.VmCheckpointDiskService.path)
+	values := make(url.Values)
+	if p.follow != nil {
+		values["follow"] = []string{fmt.Sprintf("%v", *p.follow)}
+	}
+
+	if p.query != nil {
+		for k, v := range p.query {
+			values[k] = []string{v}
+		}
+	}
+	if len(values) > 0 {
+		rawURL = fmt.Sprintf("%s?%s", rawURL, values.Encode())
+	}
+	req, err := http.NewRequest("GET", rawURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	for hk, hv := range p.VmCheckpointDiskService.connection.headers {
+		req.Header.Add(hk, hv)
+	}
+
+	if p.header != nil {
+		for hk, hv := range p.header {
+			req.Header.Add(hk, hv)
+		}
+	}
+
+	req.Header.Add("User-Agent", fmt.Sprintf("GoSDK/%s", SDK_VERSION))
+	req.Header.Add("Version", "4")
+	req.Header.Add("Content-Type", "application/xml")
+	req.Header.Add("Accept", "application/xml")
+	// get OAuth access token
+	token, err := p.VmCheckpointDiskService.connection.authenticate()
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token))
+	// Send the request and wait for the response
+	resp, err := p.VmCheckpointDiskService.connection.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if p.VmCheckpointDiskService.connection.logFunc != nil {
+		dumpReq, err := httputil.DumpRequestOut(req, true)
+		if err != nil {
+			return nil, err
+		}
+		dumpResp, err := httputil.DumpResponse(resp, true)
+		if err != nil {
+			return nil, err
+		}
+		p.VmCheckpointDiskService.connection.logFunc("<<<<<<Request:\n%sResponse:\n%s>>>>>>\n", string(dumpReq), string(dumpResp))
+	}
+	if !Contains(resp.StatusCode, []int{200}) {
+		return nil, CheckFault(resp)
+	}
+	respBodyBytes, errReadBody := ioutil.ReadAll(resp.Body)
+	if errReadBody != nil {
+		return nil, errReadBody
+	}
+	reader := NewXMLReader(respBodyBytes)
+	result, err := XMLDiskReadOne(reader, nil, "")
+	if err != nil {
+		return nil, err
+	}
+	return &VmCheckpointDiskServiceGetResponse{disk: result}, nil
+}
+
+func (p *VmCheckpointDiskServiceGetRequest) MustSend() *VmCheckpointDiskServiceGetResponse {
+	if v, err := p.Send(); err != nil {
+		panic(err)
+	} else {
+		return v
+	}
+}
+
+//
+// Retrieves the description of the disk.
+//
+type VmCheckpointDiskServiceGetResponse struct {
+	disk *Disk
+}
+
+func (p *VmCheckpointDiskServiceGetResponse) Disk() (*Disk, bool) {
+	if p.disk != nil {
+		return p.disk, true
+	}
+	return nil, false
+}
+
+func (p *VmCheckpointDiskServiceGetResponse) MustDisk() *Disk {
+	if p.disk == nil {
+		panic("disk in response does not exist")
+	}
+	return p.disk
+}
+
+//
+// Retrieves the description of the disk.
+//
+func (p *VmCheckpointDiskService) Get() *VmCheckpointDiskServiceGetRequest {
+	return &VmCheckpointDiskServiceGetRequest{VmCheckpointDiskService: p}
+}
+
+//
+// Service locator method, returns individual service on which the URI is dispatched.
+//
+func (op *VmCheckpointDiskService) Service(path string) (Service, error) {
+	if path == "" {
+		return op, nil
+	}
+	return nil, fmt.Errorf("The path <%s> doesn't correspond to any service", path)
+}
+
+func (op *VmCheckpointDiskService) String() string {
+	return fmt.Sprintf("VmCheckpointDiskService:%s", op.path)
+}
+
+//
+//
 type HostNumaNodesService struct {
 	BaseService
 }
@@ -47268,6 +47434,8 @@ func (p *HostService) CommitNetConfig() *HostServiceCommitNetConfigRequest {
 
 //
 // Copy the network configuration of the specified host to current host.
+// IMPORTANT: Any network attachments that are not present on the source host will be erased from the target host
+// by the copy operation.
 // To copy networks from another host, send a request like this:
 // [source]
 // ----
@@ -47277,7 +47445,7 @@ func (p *HostService) CommitNetConfig() *HostServiceCommitNetConfigRequest {
 // [source,xml]
 // ----
 // <action>
-//    <sourceHost id="456" />
+//    <source_host id="456"/>
 // </action>
 // ----
 //
@@ -47398,6 +47566,8 @@ func (p *HostServiceCopyHostNetworksRequest) MustSend() *HostServiceCopyHostNetw
 
 //
 // Copy the network configuration of the specified host to current host.
+// IMPORTANT: Any network attachments that are not present on the source host will be erased from the target host
+// by the copy operation.
 // To copy networks from another host, send a request like this:
 // [source]
 // ----
@@ -47407,7 +47577,7 @@ func (p *HostServiceCopyHostNetworksRequest) MustSend() *HostServiceCopyHostNetw
 // [source,xml]
 // ----
 // <action>
-//    <sourceHost id="456" />
+//    <source_host id="456"/>
 // </action>
 // ----
 //
@@ -47416,6 +47586,8 @@ type HostServiceCopyHostNetworksResponse struct {
 
 //
 // Copy the network configuration of the specified host to current host.
+// IMPORTANT: Any network attachments that are not present on the source host will be erased from the target host
+// by the copy operation.
 // To copy networks from another host, send a request like this:
 // [source]
 // ----
@@ -47425,7 +47597,7 @@ type HostServiceCopyHostNetworksResponse struct {
 // [source,xml]
 // ----
 // <action>
-//    <sourceHost id="456" />
+//    <source_host id="456"/>
 // </action>
 // ----
 //
@@ -48286,9 +48458,10 @@ func (p *HostService) Get() *HostServiceGetRequest {
 // --data '
 // {
 //   "root_password": "myrootpassword"
+// "deploy_hosted_engine" : "true"
 // }
 // ' \
-// "https://engine.example.com/ovirt-engine/api/hosts/123?deploy_hosted_engine=true"
+// "https://engine.example.com/ovirt-engine/api/hosts/123"
 // ----
 // IMPORTANT: Since version 4.1.2 of the engine, when a host is reinstalled we override the host firewall
 // definitions by default.
@@ -48498,9 +48671,10 @@ func (p *HostServiceInstallRequest) MustSend() *HostServiceInstallResponse {
 // --data '
 // {
 //   "root_password": "myrootpassword"
+// "deploy_hosted_engine" : "true"
 // }
 // ' \
-// "https://engine.example.com/ovirt-engine/api/hosts/123?deploy_hosted_engine=true"
+// "https://engine.example.com/ovirt-engine/api/hosts/123"
 // ----
 // IMPORTANT: Since version 4.1.2 of the engine, when a host is reinstalled we override the host firewall
 // definitions by default.
@@ -48546,9 +48720,10 @@ type HostServiceInstallResponse struct {
 // --data '
 // {
 //   "root_password": "myrootpassword"
+// "deploy_hosted_engine" : "true"
 // }
 // ' \
-// "https://engine.example.com/ovirt-engine/api/hosts/123?deploy_hosted_engine=true"
+// "https://engine.example.com/ovirt-engine/api/hosts/123"
 // ----
 // IMPORTANT: Since version 4.1.2 of the engine, when a host is reinstalled we override the host firewall
 // definitions by default.
@@ -58283,13 +58458,14 @@ func NewVmsService(connection *Connection, path string) *VmsService {
 // In all cases the name or identifier of the cluster where the virtual machine will be created is mandatory.
 //
 type VmsServiceAddRequest struct {
-	VmsService       *VmsService
-	header           map[string]string
-	query            map[string]string
-	clone            *bool
-	clonePermissions *bool
-	filter           *bool
-	vm               *Vm
+	VmsService        *VmsService
+	header            map[string]string
+	query             map[string]string
+	autoPinningPolicy *AutoPinningPolicy
+	clone             *bool
+	clonePermissions  *bool
+	filter            *bool
+	vm                *Vm
 }
 
 func (p *VmsServiceAddRequest) Header(key, value string) *VmsServiceAddRequest {
@@ -58305,6 +58481,11 @@ func (p *VmsServiceAddRequest) Query(key, value string) *VmsServiceAddRequest {
 		p.query = make(map[string]string)
 	}
 	p.query[key] = value
+	return p
+}
+
+func (p *VmsServiceAddRequest) AutoPinningPolicy(autoPinningPolicy AutoPinningPolicy) *VmsServiceAddRequest {
+	p.autoPinningPolicy = &autoPinningPolicy
 	return p
 }
 
@@ -58331,6 +58512,10 @@ func (p *VmsServiceAddRequest) Vm(vm *Vm) *VmsServiceAddRequest {
 func (p *VmsServiceAddRequest) Send() (*VmsServiceAddResponse, error) {
 	rawURL := fmt.Sprintf("%s%s", p.VmsService.connection.URL(), p.VmsService.path)
 	values := make(url.Values)
+	if p.autoPinningPolicy != nil {
+		values["auto_pinning_policy"] = []string{fmt.Sprintf("%v", *p.autoPinningPolicy)}
+	}
+
 	if p.clone != nil {
 		values["clone"] = []string{fmt.Sprintf("%v", *p.clone)}
 	}
@@ -58723,13 +58908,14 @@ func (p *VmsService) Add() *VmsServiceAddRequest {
 // add a virtual machine to the system from a configuration - requires the configuration type and the configuration data
 //
 type VmsServiceAddFromConfigurationRequest struct {
-	VmsService       *VmsService
-	header           map[string]string
-	query            map[string]string
-	clone            *bool
-	clonePermissions *bool
-	filter           *bool
-	vm               *Vm
+	VmsService        *VmsService
+	header            map[string]string
+	query             map[string]string
+	autoPinningPolicy *AutoPinningPolicy
+	clone             *bool
+	clonePermissions  *bool
+	filter            *bool
+	vm                *Vm
 }
 
 func (p *VmsServiceAddFromConfigurationRequest) Header(key, value string) *VmsServiceAddFromConfigurationRequest {
@@ -58745,6 +58931,11 @@ func (p *VmsServiceAddFromConfigurationRequest) Query(key, value string) *VmsSer
 		p.query = make(map[string]string)
 	}
 	p.query[key] = value
+	return p
+}
+
+func (p *VmsServiceAddFromConfigurationRequest) AutoPinningPolicy(autoPinningPolicy AutoPinningPolicy) *VmsServiceAddFromConfigurationRequest {
+	p.autoPinningPolicy = &autoPinningPolicy
 	return p
 }
 
@@ -58771,6 +58962,9 @@ func (p *VmsServiceAddFromConfigurationRequest) Vm(vm *Vm) *VmsServiceAddFromCon
 func (p *VmsServiceAddFromConfigurationRequest) Send() (*VmsServiceAddFromConfigurationResponse, error) {
 	rawURL := fmt.Sprintf("%s%s/fromconfiguration", p.VmsService.connection.URL(), p.VmsService.path)
 	actionBuilder := NewActionBuilder()
+	if p.autoPinningPolicy != nil {
+		actionBuilder.AutoPinningPolicy(*p.autoPinningPolicy)
+	}
 	if p.clone != nil {
 		actionBuilder.Clone(*p.clone)
 	}
@@ -58888,13 +59082,14 @@ func (p *VmsService) AddFromConfiguration() *VmsServiceAddFromConfigurationReque
 // add a virtual machine to the system from scratch
 //
 type VmsServiceAddFromScratchRequest struct {
-	VmsService       *VmsService
-	header           map[string]string
-	query            map[string]string
-	clone            *bool
-	clonePermissions *bool
-	filter           *bool
-	vm               *Vm
+	VmsService        *VmsService
+	header            map[string]string
+	query             map[string]string
+	autoPinningPolicy *AutoPinningPolicy
+	clone             *bool
+	clonePermissions  *bool
+	filter            *bool
+	vm                *Vm
 }
 
 func (p *VmsServiceAddFromScratchRequest) Header(key, value string) *VmsServiceAddFromScratchRequest {
@@ -58910,6 +59105,11 @@ func (p *VmsServiceAddFromScratchRequest) Query(key, value string) *VmsServiceAd
 		p.query = make(map[string]string)
 	}
 	p.query[key] = value
+	return p
+}
+
+func (p *VmsServiceAddFromScratchRequest) AutoPinningPolicy(autoPinningPolicy AutoPinningPolicy) *VmsServiceAddFromScratchRequest {
+	p.autoPinningPolicy = &autoPinningPolicy
 	return p
 }
 
@@ -58936,6 +59136,9 @@ func (p *VmsServiceAddFromScratchRequest) Vm(vm *Vm) *VmsServiceAddFromScratchRe
 func (p *VmsServiceAddFromScratchRequest) Send() (*VmsServiceAddFromScratchResponse, error) {
 	rawURL := fmt.Sprintf("%s%s/fromscratch", p.VmsService.connection.URL(), p.VmsService.path)
 	actionBuilder := NewActionBuilder()
+	if p.autoPinningPolicy != nil {
+		actionBuilder.AutoPinningPolicy(*p.autoPinningPolicy)
+	}
 	if p.clone != nil {
 		actionBuilder.Clone(*p.clone)
 	}
@@ -59053,13 +59256,14 @@ func (p *VmsService) AddFromScratch() *VmsServiceAddFromScratchRequest {
 // add a virtual machine to the system by cloning from a snapshot
 //
 type VmsServiceAddFromSnapshotRequest struct {
-	VmsService       *VmsService
-	header           map[string]string
-	query            map[string]string
-	clone            *bool
-	clonePermissions *bool
-	filter           *bool
-	vm               *Vm
+	VmsService        *VmsService
+	header            map[string]string
+	query             map[string]string
+	autoPinningPolicy *AutoPinningPolicy
+	clone             *bool
+	clonePermissions  *bool
+	filter            *bool
+	vm                *Vm
 }
 
 func (p *VmsServiceAddFromSnapshotRequest) Header(key, value string) *VmsServiceAddFromSnapshotRequest {
@@ -59075,6 +59279,11 @@ func (p *VmsServiceAddFromSnapshotRequest) Query(key, value string) *VmsServiceA
 		p.query = make(map[string]string)
 	}
 	p.query[key] = value
+	return p
+}
+
+func (p *VmsServiceAddFromSnapshotRequest) AutoPinningPolicy(autoPinningPolicy AutoPinningPolicy) *VmsServiceAddFromSnapshotRequest {
+	p.autoPinningPolicy = &autoPinningPolicy
 	return p
 }
 
@@ -59101,6 +59310,9 @@ func (p *VmsServiceAddFromSnapshotRequest) Vm(vm *Vm) *VmsServiceAddFromSnapshot
 func (p *VmsServiceAddFromSnapshotRequest) Send() (*VmsServiceAddFromSnapshotResponse, error) {
 	rawURL := fmt.Sprintf("%s%s/fromsnapshot", p.VmsService.connection.URL(), p.VmsService.path)
 	actionBuilder := NewActionBuilder()
+	if p.autoPinningPolicy != nil {
+		actionBuilder.AutoPinningPolicy(*p.autoPinningPolicy)
+	}
 	if p.clone != nil {
 		actionBuilder.Clone(*p.clone)
 	}
@@ -59228,6 +59440,7 @@ type VmsServiceListRequest struct {
 	filter        *bool
 	follow        *string
 	max           *int64
+	ovfAsOva      *bool
 	search        *string
 }
 
@@ -59272,6 +59485,11 @@ func (p *VmsServiceListRequest) Max(max int64) *VmsServiceListRequest {
 	return p
 }
 
+func (p *VmsServiceListRequest) OvfAsOva(ovfAsOva bool) *VmsServiceListRequest {
+	p.ovfAsOva = &ovfAsOva
+	return p
+}
+
 func (p *VmsServiceListRequest) Search(search string) *VmsServiceListRequest {
 	p.search = &search
 	return p
@@ -59298,6 +59516,10 @@ func (p *VmsServiceListRequest) Send() (*VmsServiceListResponse, error) {
 
 	if p.max != nil {
 		values["max"] = []string{fmt.Sprintf("%v", *p.max)}
+	}
+
+	if p.ovfAsOva != nil {
+		values["ovf_as_ova"] = []string{fmt.Sprintf("%v", *p.ovfAsOva)}
 	}
 
 	if p.search != nil {
@@ -60530,6 +60752,139 @@ func (p *ClusterServiceGetResponse) MustCluster() *Cluster {
 //
 func (p *ClusterService) Get() *ClusterServiceGetRequest {
 	return &ClusterServiceGetRequest{ClusterService: p}
+}
+
+//
+// Refresh the Gluster heal info for all volumes in cluster.
+// For example, Cluster `123`, send a request like
+// this:
+// [source]
+// ----
+// POST /ovirt-engine/api/clusters/123/refreshglusterhealstatus
+// ----
+//
+type ClusterServiceRefreshGlusterHealStatusRequest struct {
+	ClusterService *ClusterService
+	header         map[string]string
+	query          map[string]string
+}
+
+func (p *ClusterServiceRefreshGlusterHealStatusRequest) Header(key, value string) *ClusterServiceRefreshGlusterHealStatusRequest {
+	if p.header == nil {
+		p.header = make(map[string]string)
+	}
+	p.header[key] = value
+	return p
+}
+
+func (p *ClusterServiceRefreshGlusterHealStatusRequest) Query(key, value string) *ClusterServiceRefreshGlusterHealStatusRequest {
+	if p.query == nil {
+		p.query = make(map[string]string)
+	}
+	p.query[key] = value
+	return p
+}
+
+func (p *ClusterServiceRefreshGlusterHealStatusRequest) Send() (*ClusterServiceRefreshGlusterHealStatusResponse, error) {
+	rawURL := fmt.Sprintf("%s%s/refreshglusterhealstatus", p.ClusterService.connection.URL(), p.ClusterService.path)
+	actionBuilder := NewActionBuilder()
+	action, err := actionBuilder.Build()
+	if err != nil {
+		return nil, err
+	}
+	values := make(url.Values)
+	if p.query != nil {
+		for k, v := range p.query {
+			values[k] = []string{v}
+		}
+	}
+	if len(values) > 0 {
+		rawURL = fmt.Sprintf("%s?%s", rawURL, values.Encode())
+	}
+	var body bytes.Buffer
+	writer := NewXMLWriter(&body)
+	err = XMLActionWriteOne(writer, action, "")
+	writer.Flush()
+	req, err := http.NewRequest("POST", rawURL, &body)
+	if err != nil {
+		return nil, err
+	}
+
+	for hk, hv := range p.ClusterService.connection.headers {
+		req.Header.Add(hk, hv)
+	}
+
+	if p.header != nil {
+		for hk, hv := range p.header {
+			req.Header.Add(hk, hv)
+		}
+	}
+
+	req.Header.Add("User-Agent", fmt.Sprintf("GoSDK/%s", SDK_VERSION))
+	req.Header.Add("Version", "4")
+	req.Header.Add("Content-Type", "application/xml")
+	req.Header.Add("Accept", "application/xml")
+	// get OAuth access token
+	token, err := p.ClusterService.connection.authenticate()
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token))
+	// Send the request and wait for the response
+	resp, err := p.ClusterService.connection.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if p.ClusterService.connection.logFunc != nil {
+		dumpReq, err := httputil.DumpRequestOut(req, true)
+		if err != nil {
+			return nil, err
+		}
+		dumpResp, err := httputil.DumpResponse(resp, true)
+		if err != nil {
+			return nil, err
+		}
+		p.ClusterService.connection.logFunc("<<<<<<Request:\n%sResponse:\n%s>>>>>>\n", string(dumpReq), string(dumpResp))
+	}
+	_, errCheckAction := CheckAction(resp)
+	if errCheckAction != nil {
+		return nil, errCheckAction
+	}
+	return new(ClusterServiceRefreshGlusterHealStatusResponse), nil
+}
+
+func (p *ClusterServiceRefreshGlusterHealStatusRequest) MustSend() *ClusterServiceRefreshGlusterHealStatusResponse {
+	if v, err := p.Send(); err != nil {
+		panic(err)
+	} else {
+		return v
+	}
+}
+
+//
+// Refresh the Gluster heal info for all volumes in cluster.
+// For example, Cluster `123`, send a request like
+// this:
+// [source]
+// ----
+// POST /ovirt-engine/api/clusters/123/refreshglusterhealstatus
+// ----
+//
+type ClusterServiceRefreshGlusterHealStatusResponse struct {
+}
+
+//
+// Refresh the Gluster heal info for all volumes in cluster.
+// For example, Cluster `123`, send a request like
+// this:
+// [source]
+// ----
+// POST /ovirt-engine/api/clusters/123/refreshglusterhealstatus
+// ----
+//
+func (p *ClusterService) RefreshGlusterHealStatus() *ClusterServiceRefreshGlusterHealStatusRequest {
+	return &ClusterServiceRefreshGlusterHealStatusRequest{ClusterService: p}
 }
 
 //
@@ -62017,6 +62372,7 @@ type DiskSnapshotsServiceListRequest struct {
 	header               map[string]string
 	query                map[string]string
 	follow               *string
+	includeActive        *bool
 	max                  *int64
 }
 
@@ -62041,6 +62397,11 @@ func (p *DiskSnapshotsServiceListRequest) Follow(follow string) *DiskSnapshotsSe
 	return p
 }
 
+func (p *DiskSnapshotsServiceListRequest) IncludeActive(includeActive bool) *DiskSnapshotsServiceListRequest {
+	p.includeActive = &includeActive
+	return p
+}
+
 func (p *DiskSnapshotsServiceListRequest) Max(max int64) *DiskSnapshotsServiceListRequest {
 	p.max = &max
 	return p
@@ -62051,6 +62412,10 @@ func (p *DiskSnapshotsServiceListRequest) Send() (*DiskSnapshotsServiceListRespo
 	values := make(url.Values)
 	if p.follow != nil {
 		values["follow"] = []string{fmt.Sprintf("%v", *p.follow)}
+	}
+
+	if p.includeActive != nil {
+		values["include_active"] = []string{fmt.Sprintf("%v", *p.includeActive)}
 	}
 
 	if p.max != nil {
@@ -63289,6 +63654,194 @@ func (op *DataCenterService) Service(path string) (Service, error) {
 
 func (op *DataCenterService) String() string {
 	return fmt.Sprintf("DataCenterService:%s", op.path)
+}
+
+//
+// Lists the checkpoints of a virtual machine.
+//
+type VmCheckpointsService struct {
+	BaseService
+}
+
+func NewVmCheckpointsService(connection *Connection, path string) *VmCheckpointsService {
+	var result VmCheckpointsService
+	result.connection = connection
+	result.path = path
+	return &result
+}
+
+//
+// The list of virtual machine checkpoints.
+//
+type VmCheckpointsServiceListRequest struct {
+	VmCheckpointsService *VmCheckpointsService
+	header               map[string]string
+	query                map[string]string
+	follow               *string
+	max                  *int64
+}
+
+func (p *VmCheckpointsServiceListRequest) Header(key, value string) *VmCheckpointsServiceListRequest {
+	if p.header == nil {
+		p.header = make(map[string]string)
+	}
+	p.header[key] = value
+	return p
+}
+
+func (p *VmCheckpointsServiceListRequest) Query(key, value string) *VmCheckpointsServiceListRequest {
+	if p.query == nil {
+		p.query = make(map[string]string)
+	}
+	p.query[key] = value
+	return p
+}
+
+func (p *VmCheckpointsServiceListRequest) Follow(follow string) *VmCheckpointsServiceListRequest {
+	p.follow = &follow
+	return p
+}
+
+func (p *VmCheckpointsServiceListRequest) Max(max int64) *VmCheckpointsServiceListRequest {
+	p.max = &max
+	return p
+}
+
+func (p *VmCheckpointsServiceListRequest) Send() (*VmCheckpointsServiceListResponse, error) {
+	rawURL := fmt.Sprintf("%s%s", p.VmCheckpointsService.connection.URL(), p.VmCheckpointsService.path)
+	values := make(url.Values)
+	if p.follow != nil {
+		values["follow"] = []string{fmt.Sprintf("%v", *p.follow)}
+	}
+
+	if p.max != nil {
+		values["max"] = []string{fmt.Sprintf("%v", *p.max)}
+	}
+
+	if p.query != nil {
+		for k, v := range p.query {
+			values[k] = []string{v}
+		}
+	}
+	if len(values) > 0 {
+		rawURL = fmt.Sprintf("%s?%s", rawURL, values.Encode())
+	}
+	req, err := http.NewRequest("GET", rawURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	for hk, hv := range p.VmCheckpointsService.connection.headers {
+		req.Header.Add(hk, hv)
+	}
+
+	if p.header != nil {
+		for hk, hv := range p.header {
+			req.Header.Add(hk, hv)
+		}
+	}
+
+	req.Header.Add("User-Agent", fmt.Sprintf("GoSDK/%s", SDK_VERSION))
+	req.Header.Add("Version", "4")
+	req.Header.Add("Content-Type", "application/xml")
+	req.Header.Add("Accept", "application/xml")
+	// get OAuth access token
+	token, err := p.VmCheckpointsService.connection.authenticate()
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token))
+	// Send the request and wait for the response
+	resp, err := p.VmCheckpointsService.connection.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if p.VmCheckpointsService.connection.logFunc != nil {
+		dumpReq, err := httputil.DumpRequestOut(req, true)
+		if err != nil {
+			return nil, err
+		}
+		dumpResp, err := httputil.DumpResponse(resp, true)
+		if err != nil {
+			return nil, err
+		}
+		p.VmCheckpointsService.connection.logFunc("<<<<<<Request:\n%sResponse:\n%s>>>>>>\n", string(dumpReq), string(dumpResp))
+	}
+	if !Contains(resp.StatusCode, []int{200}) {
+		return nil, CheckFault(resp)
+	}
+	respBodyBytes, errReadBody := ioutil.ReadAll(resp.Body)
+	if errReadBody != nil {
+		return nil, errReadBody
+	}
+	reader := NewXMLReader(respBodyBytes)
+	result, err := XMLCheckpointReadMany(reader, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &VmCheckpointsServiceListResponse{checkpoints: result}, nil
+}
+
+func (p *VmCheckpointsServiceListRequest) MustSend() *VmCheckpointsServiceListResponse {
+	if v, err := p.Send(); err != nil {
+		panic(err)
+	} else {
+		return v
+	}
+}
+
+//
+// The list of virtual machine checkpoints.
+//
+type VmCheckpointsServiceListResponse struct {
+	checkpoints *CheckpointSlice
+}
+
+func (p *VmCheckpointsServiceListResponse) Checkpoints() (*CheckpointSlice, bool) {
+	if p.checkpoints != nil {
+		return p.checkpoints, true
+	}
+	return nil, false
+}
+
+func (p *VmCheckpointsServiceListResponse) MustCheckpoints() *CheckpointSlice {
+	if p.checkpoints == nil {
+		panic("checkpoints in response does not exist")
+	}
+	return p.checkpoints
+}
+
+//
+// The list of virtual machine checkpoints.
+//
+func (p *VmCheckpointsService) List() *VmCheckpointsServiceListRequest {
+	return &VmCheckpointsServiceListRequest{VmCheckpointsService: p}
+}
+
+//
+// Returns a reference to the service that manages a specific VM checkpoint.
+//
+func (op *VmCheckpointsService) CheckpointService(id string) *VmCheckpointService {
+	return NewVmCheckpointService(op.connection, fmt.Sprintf("%s/%s", op.path, id))
+}
+
+//
+// Service locator method, returns individual service on which the URI is dispatched.
+//
+func (op *VmCheckpointsService) Service(path string) (Service, error) {
+	if path == "" {
+		return op, nil
+	}
+	index := strings.Index(path, "/")
+	if index == -1 {
+		return op.CheckpointService(path), nil
+	}
+	return op.CheckpointService(path[:index]).Service(path[index+1:])
+}
+
+func (op *VmCheckpointsService) String() string {
+	return fmt.Sprintf("VmCheckpointsService:%s", op.path)
 }
 
 //
@@ -80653,6 +81206,193 @@ func (op *VmWatchdogService) Service(path string) (Service, error) {
 
 func (op *VmWatchdogService) String() string {
 	return fmt.Sprintf("VmWatchdogService:%s", op.path)
+}
+
+//
+//
+type VmCheckpointDisksService struct {
+	BaseService
+}
+
+func NewVmCheckpointDisksService(connection *Connection, path string) *VmCheckpointDisksService {
+	var result VmCheckpointDisksService
+	result.connection = connection
+	result.path = path
+	return &result
+}
+
+//
+// Returns the list of disks in checkpoint.
+//
+type VmCheckpointDisksServiceListRequest struct {
+	VmCheckpointDisksService *VmCheckpointDisksService
+	header                   map[string]string
+	query                    map[string]string
+	follow                   *string
+	max                      *int64
+}
+
+func (p *VmCheckpointDisksServiceListRequest) Header(key, value string) *VmCheckpointDisksServiceListRequest {
+	if p.header == nil {
+		p.header = make(map[string]string)
+	}
+	p.header[key] = value
+	return p
+}
+
+func (p *VmCheckpointDisksServiceListRequest) Query(key, value string) *VmCheckpointDisksServiceListRequest {
+	if p.query == nil {
+		p.query = make(map[string]string)
+	}
+	p.query[key] = value
+	return p
+}
+
+func (p *VmCheckpointDisksServiceListRequest) Follow(follow string) *VmCheckpointDisksServiceListRequest {
+	p.follow = &follow
+	return p
+}
+
+func (p *VmCheckpointDisksServiceListRequest) Max(max int64) *VmCheckpointDisksServiceListRequest {
+	p.max = &max
+	return p
+}
+
+func (p *VmCheckpointDisksServiceListRequest) Send() (*VmCheckpointDisksServiceListResponse, error) {
+	rawURL := fmt.Sprintf("%s%s", p.VmCheckpointDisksService.connection.URL(), p.VmCheckpointDisksService.path)
+	values := make(url.Values)
+	if p.follow != nil {
+		values["follow"] = []string{fmt.Sprintf("%v", *p.follow)}
+	}
+
+	if p.max != nil {
+		values["max"] = []string{fmt.Sprintf("%v", *p.max)}
+	}
+
+	if p.query != nil {
+		for k, v := range p.query {
+			values[k] = []string{v}
+		}
+	}
+	if len(values) > 0 {
+		rawURL = fmt.Sprintf("%s?%s", rawURL, values.Encode())
+	}
+	req, err := http.NewRequest("GET", rawURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	for hk, hv := range p.VmCheckpointDisksService.connection.headers {
+		req.Header.Add(hk, hv)
+	}
+
+	if p.header != nil {
+		for hk, hv := range p.header {
+			req.Header.Add(hk, hv)
+		}
+	}
+
+	req.Header.Add("User-Agent", fmt.Sprintf("GoSDK/%s", SDK_VERSION))
+	req.Header.Add("Version", "4")
+	req.Header.Add("Content-Type", "application/xml")
+	req.Header.Add("Accept", "application/xml")
+	// get OAuth access token
+	token, err := p.VmCheckpointDisksService.connection.authenticate()
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token))
+	// Send the request and wait for the response
+	resp, err := p.VmCheckpointDisksService.connection.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if p.VmCheckpointDisksService.connection.logFunc != nil {
+		dumpReq, err := httputil.DumpRequestOut(req, true)
+		if err != nil {
+			return nil, err
+		}
+		dumpResp, err := httputil.DumpResponse(resp, true)
+		if err != nil {
+			return nil, err
+		}
+		p.VmCheckpointDisksService.connection.logFunc("<<<<<<Request:\n%sResponse:\n%s>>>>>>\n", string(dumpReq), string(dumpResp))
+	}
+	if !Contains(resp.StatusCode, []int{200}) {
+		return nil, CheckFault(resp)
+	}
+	respBodyBytes, errReadBody := ioutil.ReadAll(resp.Body)
+	if errReadBody != nil {
+		return nil, errReadBody
+	}
+	reader := NewXMLReader(respBodyBytes)
+	result, err := XMLDiskReadMany(reader, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &VmCheckpointDisksServiceListResponse{disks: result}, nil
+}
+
+func (p *VmCheckpointDisksServiceListRequest) MustSend() *VmCheckpointDisksServiceListResponse {
+	if v, err := p.Send(); err != nil {
+		panic(err)
+	} else {
+		return v
+	}
+}
+
+//
+// Returns the list of disks in checkpoint.
+//
+type VmCheckpointDisksServiceListResponse struct {
+	disks *DiskSlice
+}
+
+func (p *VmCheckpointDisksServiceListResponse) Disks() (*DiskSlice, bool) {
+	if p.disks != nil {
+		return p.disks, true
+	}
+	return nil, false
+}
+
+func (p *VmCheckpointDisksServiceListResponse) MustDisks() *DiskSlice {
+	if p.disks == nil {
+		panic("disks in response does not exist")
+	}
+	return p.disks
+}
+
+//
+// Returns the list of disks in checkpoint.
+//
+func (p *VmCheckpointDisksService) List() *VmCheckpointDisksServiceListRequest {
+	return &VmCheckpointDisksServiceListRequest{VmCheckpointDisksService: p}
+}
+
+//
+// A reference to the service that manages a specific disk.
+//
+func (op *VmCheckpointDisksService) DiskService(id string) *VmCheckpointDiskService {
+	return NewVmCheckpointDiskService(op.connection, fmt.Sprintf("%s/%s", op.path, id))
+}
+
+//
+// Service locator method, returns individual service on which the URI is dispatched.
+//
+func (op *VmCheckpointDisksService) Service(path string) (Service, error) {
+	if path == "" {
+		return op, nil
+	}
+	index := strings.Index(path, "/")
+	if index == -1 {
+		return op.DiskService(path), nil
+	}
+	return op.DiskService(path[:index]).Service(path[index+1:])
+}
+
+func (op *VmCheckpointDisksService) String() string {
+	return fmt.Sprintf("VmCheckpointDisksService:%s", op.path)
 }
 
 //
@@ -100143,6 +100883,7 @@ func (p *VmService) Detach() *VmServiceDetachRequest {
 //   <filename>myvm.ova</filename>
 // </action>
 // ----
+// NOTE: Confirm that the export operation has completed before attempting any actions on the export domain.
 //
 type VmServiceExportRequest struct {
 	VmService        *VmService
@@ -100313,6 +101054,7 @@ func (p *VmServiceExportRequest) MustSend() *VmServiceExportResponse {
 //   <filename>myvm.ova</filename>
 // </action>
 // ----
+// NOTE: Confirm that the export operation has completed before attempting any actions on the export domain.
 //
 type VmServiceExportResponse struct {
 }
@@ -100353,6 +101095,7 @@ type VmServiceExportResponse struct {
 //   <filename>myvm.ova</filename>
 // </action>
 // ----
+// NOTE: Confirm that the export operation has completed before attempting any actions on the export domain.
 //
 func (p *VmService) Export() *VmServiceExportRequest {
 	return &VmServiceExportRequest{VmService: p}
@@ -100529,6 +101272,7 @@ type VmServiceGetRequest struct {
 	filter     *bool
 	follow     *string
 	nextRun    *bool
+	ovfAsOva   *bool
 }
 
 func (p *VmServiceGetRequest) Header(key, value string) *VmServiceGetRequest {
@@ -100567,6 +101311,11 @@ func (p *VmServiceGetRequest) NextRun(nextRun bool) *VmServiceGetRequest {
 	return p
 }
 
+func (p *VmServiceGetRequest) OvfAsOva(ovfAsOva bool) *VmServiceGetRequest {
+	p.ovfAsOva = &ovfAsOva
+	return p
+}
+
 func (p *VmServiceGetRequest) Send() (*VmServiceGetResponse, error) {
 	rawURL := fmt.Sprintf("%s%s", p.VmService.connection.URL(), p.VmService.path)
 	values := make(url.Values)
@@ -100584,6 +101333,10 @@ func (p *VmServiceGetRequest) Send() (*VmServiceGetResponse, error) {
 
 	if p.nextRun != nil {
 		values["next_run"] = []string{fmt.Sprintf("%v", *p.nextRun)}
+	}
+
+	if p.ovfAsOva != nil {
+		values["ovf_as_ova"] = []string{fmt.Sprintf("%v", *p.ovfAsOva)}
 	}
 
 	if p.query != nil {
@@ -102009,17 +102762,19 @@ func (p *VmService) Shutdown() *VmServiceShutdownRequest {
 // ----
 //
 type VmServiceStartRequest struct {
-	VmService     *VmService
-	header        map[string]string
-	query         map[string]string
-	async         *bool
-	authorizedKey *AuthorizedKey
-	filter        *bool
-	pause         *bool
-	useCloudInit  *bool
-	useSysprep    *bool
-	vm            *Vm
-	volatile      *bool
+	VmService         *VmService
+	header            map[string]string
+	query             map[string]string
+	async             *bool
+	authorizedKey     *AuthorizedKey
+	filter            *bool
+	pause             *bool
+	useCloudInit      *bool
+	useIgnition       *bool
+	useInitialization *bool
+	useSysprep        *bool
+	vm                *Vm
+	volatile          *bool
 }
 
 func (p *VmServiceStartRequest) Header(key, value string) *VmServiceStartRequest {
@@ -102063,6 +102818,16 @@ func (p *VmServiceStartRequest) UseCloudInit(useCloudInit bool) *VmServiceStartR
 	return p
 }
 
+func (p *VmServiceStartRequest) UseIgnition(useIgnition bool) *VmServiceStartRequest {
+	p.useIgnition = &useIgnition
+	return p
+}
+
+func (p *VmServiceStartRequest) UseInitialization(useInitialization bool) *VmServiceStartRequest {
+	p.useInitialization = &useInitialization
+	return p
+}
+
 func (p *VmServiceStartRequest) UseSysprep(useSysprep bool) *VmServiceStartRequest {
 	p.useSysprep = &useSysprep
 	return p
@@ -102093,6 +102858,12 @@ func (p *VmServiceStartRequest) Send() (*VmServiceStartResponse, error) {
 	}
 	if p.useCloudInit != nil {
 		actionBuilder.UseCloudInit(*p.useCloudInit)
+	}
+	if p.useIgnition != nil {
+		actionBuilder.UseIgnition(*p.useIgnition)
+	}
+	if p.useInitialization != nil {
+		actionBuilder.UseInitialization(*p.useInitialization)
 	}
 	if p.useSysprep != nil {
 		actionBuilder.UseSysprep(*p.useSysprep)
@@ -103580,6 +104351,13 @@ func (op *VmService) CdromsService() *VmCdromsService {
 }
 
 //
+// List of checkpoints of this virtual machine.
+//
+func (op *VmService) CheckpointsService() *VmCheckpointsService {
+	return NewVmCheckpointsService(op.connection, fmt.Sprintf("%s/checkpoints", op.path))
+}
+
+//
 // List of disks attached to this virtual machine.
 //
 func (op *VmService) DiskAttachmentsService() *DiskAttachmentsService {
@@ -103691,6 +104469,12 @@ func (op *VmService) Service(path string) (Service, error) {
 	}
 	if strings.HasPrefix(path, "cdroms/") {
 		return op.CdromsService().Service(path[7:])
+	}
+	if path == "checkpoints" {
+		return op.CheckpointsService(), nil
+	}
+	if strings.HasPrefix(path, "checkpoints/") {
+		return op.CheckpointsService().Service(path[12:])
 	}
 	if path == "diskattachments" {
 		return op.DiskAttachmentsService(), nil
@@ -107665,6 +108449,7 @@ func (p *SnapshotService) Remove() *SnapshotServiceRemoveRequest {
 // ----
 // <action/>
 // ----
+// NOTE: Confirm that the commit operation is finished and the virtual machine is down before running the virtual machine.
 //
 type SnapshotServiceRestoreRequest struct {
 	SnapshotService *SnapshotService
@@ -107811,6 +108596,7 @@ func (p *SnapshotServiceRestoreRequest) MustSend() *SnapshotServiceRestoreRespon
 // ----
 // <action/>
 // ----
+// NOTE: Confirm that the commit operation is finished and the virtual machine is down before running the virtual machine.
 //
 type SnapshotServiceRestoreResponse struct {
 }
@@ -107828,6 +108614,7 @@ type SnapshotServiceRestoreResponse struct {
 // ----
 // <action/>
 // ----
+// NOTE: Confirm that the commit operation is finished and the virtual machine is down before running the virtual machine.
 //
 func (p *SnapshotService) Restore() *SnapshotServiceRestoreRequest {
 	return &SnapshotServiceRestoreRequest{SnapshotService: p}
@@ -110689,82 +111476,24 @@ func (op *StepsService) String() string {
 // The transfer can be resumed by calling <<services/image_transfer/methods/resume, resume>>
 // of the service that manages it.
 // If the session was successfully established - the returned transfer entity will
-// contain the <<types/image_transfer, proxy_url>> and <<types/image_transfer, signed_ticket>> attributes,
+// contain the <<types/image_transfer, transfer_url>> and <<types/image_transfer, proxy_url>> attributes,
 // which the client needs to use in order to transfer the required data. The client can choose whatever
 // technique and tool for sending the HTTPS request with the image's data.
-// - `proxy_url` is the address of a proxy server to the image, to do I/O to.
-// - `signed_ticket` is the content that needs to be added to the `Authentication`
-//    header in the HTTPS request, in order to perform a trusted communication.
-// For example, Python's HTTPSConnection can be used in order to perform a transfer,
-// so an `transfer_headers` dict is set for the upcoming transfer:
+// - `transfer_url` is the address of an imageio server running on one of the hypervisors.
+// - `proxy_url` is the address of an imageio proxy server that can be used if
+//   you cannot access transfer_url.
+// To transfer the image, it is recommended to use the imageio client python library.
 // [source,python]
 // ----
-// transfer_headers = {
-//    'Authorization' :  transfer.signed_ticket,
-// }
+// from ovirt_imageio import client
+// # Upload qcow2 image to virtual disk:
+// client.upload("disk.qcow2", transfer.transfer_url)
+// # Download virtual disk to qcow2 image:
+// client.download(transfer.transfer_url, "disk.qcow2")
 // ----
-// Using Python's `HTTPSConnection`, a new connection is established:
-// [source,python]
-// ----
-// # Extract the URI, port, and path from the transfer's proxy_url.
-// url = urlparse.urlparse(transfer.proxy_url)
-// # Create a new instance of the connection.
-// proxy_connection = HTTPSConnection(
-//    url.hostname,
-//    url.port,
-//    context=ssl.SSLContext(ssl.PROTOCOL_SSLv23)
-// )
-// ----
-// For upload, the specific content range being sent must be noted in the `Content-Range` HTTPS
-// header. This can be used in order to split the transfer into several requests for
-// a more flexible process.
-// For doing that, the client will have to repeatedly extend the transfer session
-// to keep the channel open. Otherwise, the session will terminate and the transfer will
-// get into `paused_system` phase, and HTTPS requests to the server will be rejected.
-// E.g., the client can iterate on chunks of the file, and send them to the
-// proxy server while asking the service to extend the session:
-// [source,python]
-// ----
-// path = "/path/to/image"
-// MB_per_request = 32
-// with open(path, "rb") as disk:
-//    size = os.path.getsize(path)
-//    chunk_size = 1024*1024*MB_per_request
-//    pos = 0
-//    while (pos < size):
-//       transfer_service.extend()
-//       transfer_headers['Content-Range'] = "bytes %d-%d/%d" % (pos, min(pos + chunk_size, size)-1, size)
-//       proxy_connection.request(
-//          'PUT',
-//          url.path,
-//          disk.read(chunk_size),
-//          headers=transfer_headers
-//       )
-//       r = proxy_connection.getresponse()
-//       print r.status, r.reason, "Completed", "{:.0%}".format(pos/ float(size))
-//       pos += chunk_size
-// ----
-// Similarly, for a download transfer, a `Range` header must be sent, making the download process
-// more easily managed by downloading the disk in chunks.
-// E.g., the client will again iterate on chunks of the disk image, but this time he/she will download
-// it to a local file, rather than uploading its own file to the image:
-// [source,python]
-// ----
-// output_file = "/home/user/downloaded_image"
-// MiB_per_request = 32
-// chunk_size = 1024*1024*MiB_per_request
-// total = disk_size
-// with open(output_file, "wb") as disk:
-//    pos = 0
-//    while pos < total:
-//       transfer_service.extend()
-//       transfer_headers['Range'] = "bytes=%d-%d" %  (pos, min(total, pos + chunk_size) - 1)
-//       proxy_connection.request('GET', proxy_url.path, headers=transfer_headers)
-//       r = proxy_connection.getresponse()
-//       disk.write(r.read())
-//       print "Completed", "{:.0%}".format(pos/ float(total))
-//       pos += chunk_size
-// ----
+// You can also upload and download using imageio REST API. For more info
+// on this, see imageio API documentation:
+//     http://ovirt.github.io/ovirt-imageio/images.html
 // When finishing the transfer, the user should call
 // <<services/image_transfer/methods/finalize, finalize>>. This will make the
 // final adjustments and verifications for finishing the transfer process.
@@ -112920,17 +113649,332 @@ func (p *MacPoolService) Update() *MacPoolServiceUpdateRequest {
 }
 
 //
+// Returns a reference to the service that manages the permissions that are associated with the MacPool.
+//
+func (op *MacPoolService) PermissionsService() *AssignedPermissionsService {
+	return NewAssignedPermissionsService(op.connection, fmt.Sprintf("%s/permissions", op.path))
+}
+
+//
 // Service locator method, returns individual service on which the URI is dispatched.
 //
 func (op *MacPoolService) Service(path string) (Service, error) {
 	if path == "" {
 		return op, nil
 	}
+	if path == "permissions" {
+		return op.PermissionsService(), nil
+	}
+	if strings.HasPrefix(path, "permissions/") {
+		return op.PermissionsService().Service(path[12:])
+	}
 	return nil, fmt.Errorf("The path <%s> doesn't correspond to any service", path)
 }
 
 func (op *MacPoolService) String() string {
 	return fmt.Sprintf("MacPoolService:%s", op.path)
+}
+
+//
+// A service managing a checkpoint of a virtual machines.
+//
+type VmCheckpointService struct {
+	BaseService
+}
+
+func NewVmCheckpointService(connection *Connection, path string) *VmCheckpointService {
+	var result VmCheckpointService
+	result.connection = connection
+	result.path = path
+	return &result
+}
+
+//
+// Returns information about the virtual machine checkpoint.
+//
+type VmCheckpointServiceGetRequest struct {
+	VmCheckpointService *VmCheckpointService
+	header              map[string]string
+	query               map[string]string
+	follow              *string
+}
+
+func (p *VmCheckpointServiceGetRequest) Header(key, value string) *VmCheckpointServiceGetRequest {
+	if p.header == nil {
+		p.header = make(map[string]string)
+	}
+	p.header[key] = value
+	return p
+}
+
+func (p *VmCheckpointServiceGetRequest) Query(key, value string) *VmCheckpointServiceGetRequest {
+	if p.query == nil {
+		p.query = make(map[string]string)
+	}
+	p.query[key] = value
+	return p
+}
+
+func (p *VmCheckpointServiceGetRequest) Follow(follow string) *VmCheckpointServiceGetRequest {
+	p.follow = &follow
+	return p
+}
+
+func (p *VmCheckpointServiceGetRequest) Send() (*VmCheckpointServiceGetResponse, error) {
+	rawURL := fmt.Sprintf("%s%s", p.VmCheckpointService.connection.URL(), p.VmCheckpointService.path)
+	values := make(url.Values)
+	if p.follow != nil {
+		values["follow"] = []string{fmt.Sprintf("%v", *p.follow)}
+	}
+
+	if p.query != nil {
+		for k, v := range p.query {
+			values[k] = []string{v}
+		}
+	}
+	if len(values) > 0 {
+		rawURL = fmt.Sprintf("%s?%s", rawURL, values.Encode())
+	}
+	req, err := http.NewRequest("GET", rawURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	for hk, hv := range p.VmCheckpointService.connection.headers {
+		req.Header.Add(hk, hv)
+	}
+
+	if p.header != nil {
+		for hk, hv := range p.header {
+			req.Header.Add(hk, hv)
+		}
+	}
+
+	req.Header.Add("User-Agent", fmt.Sprintf("GoSDK/%s", SDK_VERSION))
+	req.Header.Add("Version", "4")
+	req.Header.Add("Content-Type", "application/xml")
+	req.Header.Add("Accept", "application/xml")
+	// get OAuth access token
+	token, err := p.VmCheckpointService.connection.authenticate()
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token))
+	// Send the request and wait for the response
+	resp, err := p.VmCheckpointService.connection.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if p.VmCheckpointService.connection.logFunc != nil {
+		dumpReq, err := httputil.DumpRequestOut(req, true)
+		if err != nil {
+			return nil, err
+		}
+		dumpResp, err := httputil.DumpResponse(resp, true)
+		if err != nil {
+			return nil, err
+		}
+		p.VmCheckpointService.connection.logFunc("<<<<<<Request:\n%sResponse:\n%s>>>>>>\n", string(dumpReq), string(dumpResp))
+	}
+	if !Contains(resp.StatusCode, []int{200}) {
+		return nil, CheckFault(resp)
+	}
+	respBodyBytes, errReadBody := ioutil.ReadAll(resp.Body)
+	if errReadBody != nil {
+		return nil, errReadBody
+	}
+	reader := NewXMLReader(respBodyBytes)
+	result, err := XMLCheckpointReadOne(reader, nil, "")
+	if err != nil {
+		return nil, err
+	}
+	return &VmCheckpointServiceGetResponse{checkpoint: result}, nil
+}
+
+func (p *VmCheckpointServiceGetRequest) MustSend() *VmCheckpointServiceGetResponse {
+	if v, err := p.Send(); err != nil {
+		panic(err)
+	} else {
+		return v
+	}
+}
+
+//
+// Returns information about the virtual machine checkpoint.
+//
+type VmCheckpointServiceGetResponse struct {
+	checkpoint *Checkpoint
+}
+
+func (p *VmCheckpointServiceGetResponse) Checkpoint() (*Checkpoint, bool) {
+	if p.checkpoint != nil {
+		return p.checkpoint, true
+	}
+	return nil, false
+}
+
+func (p *VmCheckpointServiceGetResponse) MustCheckpoint() *Checkpoint {
+	if p.checkpoint == nil {
+		panic("checkpoint in response does not exist")
+	}
+	return p.checkpoint
+}
+
+//
+// Returns information about the virtual machine checkpoint.
+//
+func (p *VmCheckpointService) Get() *VmCheckpointServiceGetRequest {
+	return &VmCheckpointServiceGetRequest{VmCheckpointService: p}
+}
+
+//
+// Remove the virtual machine checkpoint entity.
+// Remove the checkpoint from libvirt and the database.
+//
+type VmCheckpointServiceRemoveRequest struct {
+	VmCheckpointService *VmCheckpointService
+	header              map[string]string
+	query               map[string]string
+	async               *bool
+}
+
+func (p *VmCheckpointServiceRemoveRequest) Header(key, value string) *VmCheckpointServiceRemoveRequest {
+	if p.header == nil {
+		p.header = make(map[string]string)
+	}
+	p.header[key] = value
+	return p
+}
+
+func (p *VmCheckpointServiceRemoveRequest) Query(key, value string) *VmCheckpointServiceRemoveRequest {
+	if p.query == nil {
+		p.query = make(map[string]string)
+	}
+	p.query[key] = value
+	return p
+}
+
+func (p *VmCheckpointServiceRemoveRequest) Async(async bool) *VmCheckpointServiceRemoveRequest {
+	p.async = &async
+	return p
+}
+
+func (p *VmCheckpointServiceRemoveRequest) Send() (*VmCheckpointServiceRemoveResponse, error) {
+	rawURL := fmt.Sprintf("%s%s", p.VmCheckpointService.connection.URL(), p.VmCheckpointService.path)
+	values := make(url.Values)
+	if p.async != nil {
+		values["async"] = []string{fmt.Sprintf("%v", *p.async)}
+	}
+
+	if p.query != nil {
+		for k, v := range p.query {
+			values[k] = []string{v}
+		}
+	}
+	if len(values) > 0 {
+		rawURL = fmt.Sprintf("%s?%s", rawURL, values.Encode())
+	}
+	req, err := http.NewRequest("DELETE", rawURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	for hk, hv := range p.VmCheckpointService.connection.headers {
+		req.Header.Add(hk, hv)
+	}
+
+	if p.header != nil {
+		for hk, hv := range p.header {
+			req.Header.Add(hk, hv)
+		}
+	}
+
+	req.Header.Add("User-Agent", fmt.Sprintf("GoSDK/%s", SDK_VERSION))
+	req.Header.Add("Version", "4")
+	req.Header.Add("Content-Type", "application/xml")
+	req.Header.Add("Accept", "application/xml")
+	// get OAuth access token
+	token, err := p.VmCheckpointService.connection.authenticate()
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", token))
+	// Send the request and wait for the response
+	resp, err := p.VmCheckpointService.connection.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if p.VmCheckpointService.connection.logFunc != nil {
+		dumpReq, err := httputil.DumpRequestOut(req, true)
+		if err != nil {
+			return nil, err
+		}
+		dumpResp, err := httputil.DumpResponse(resp, true)
+		if err != nil {
+			return nil, err
+		}
+		p.VmCheckpointService.connection.logFunc("<<<<<<Request:\n%sResponse:\n%s>>>>>>\n", string(dumpReq), string(dumpResp))
+	}
+	if !Contains(resp.StatusCode, []int{200}) {
+		return nil, CheckFault(resp)
+	}
+	_, errReadBody := ioutil.ReadAll(resp.Body)
+	if errReadBody != nil {
+		return nil, errReadBody
+	}
+	return new(VmCheckpointServiceRemoveResponse), nil
+}
+
+func (p *VmCheckpointServiceRemoveRequest) MustSend() *VmCheckpointServiceRemoveResponse {
+	if v, err := p.Send(); err != nil {
+		panic(err)
+	} else {
+		return v
+	}
+}
+
+//
+// Remove the virtual machine checkpoint entity.
+// Remove the checkpoint from libvirt and the database.
+//
+type VmCheckpointServiceRemoveResponse struct {
+}
+
+//
+// Remove the virtual machine checkpoint entity.
+// Remove the checkpoint from libvirt and the database.
+//
+func (p *VmCheckpointService) Remove() *VmCheckpointServiceRemoveRequest {
+	return &VmCheckpointServiceRemoveRequest{VmCheckpointService: p}
+}
+
+//
+// A reference to the service that lists the disks in checkpoint.
+//
+func (op *VmCheckpointService) DisksService() *VmCheckpointDisksService {
+	return NewVmCheckpointDisksService(op.connection, fmt.Sprintf("%s/disks", op.path))
+}
+
+//
+// Service locator method, returns individual service on which the URI is dispatched.
+//
+func (op *VmCheckpointService) Service(path string) (Service, error) {
+	if path == "" {
+		return op, nil
+	}
+	if path == "disks" {
+		return op.DisksService(), nil
+	}
+	if strings.HasPrefix(path, "disks/") {
+		return op.DisksService().Service(path[6:])
+	}
+	return nil, fmt.Errorf("The path <%s> doesn't correspond to any service", path)
+}
+
+func (op *VmCheckpointService) String() string {
+	return fmt.Sprintf("VmCheckpointService:%s", op.path)
 }
 
 //
@@ -120275,6 +121319,21 @@ func (p *DiskService) Update() *DiskServiceUpdateRequest {
 }
 
 //
+// Reference to the service that manages the DiskSnapshots.
+// For example, to list all disk snapshots under the disks resource '123':
+// ....
+// GET /ovirt-engine/api/disks/123/disksnapshots
+// ....
+// For example, to retrieve a specific disk snapshot '789' under the disk resource '123':
+// ....
+// GET /ovirt-engine/api/disks/123/disksnapshots/789
+// ....
+//
+func (op *DiskService) DiskSnapshotsService() *DiskSnapshotsService {
+	return NewDiskSnapshotsService(op.connection, fmt.Sprintf("%s/disksnapshots", op.path))
+}
+
+//
 // Reference to the service that manages the permissions assigned to the disk.
 //
 func (op *DiskService) PermissionsService() *AssignedPermissionsService {
@@ -120293,6 +121352,12 @@ func (op *DiskService) StatisticsService() *StatisticsService {
 func (op *DiskService) Service(path string) (Service, error) {
 	if path == "" {
 		return op, nil
+	}
+	if path == "disksnapshots" {
+		return op.DiskSnapshotsService(), nil
+	}
+	if strings.HasPrefix(path, "disksnapshots/") {
+		return op.DiskSnapshotsService().Service(path[14:])
 	}
 	if path == "permissions" {
 		return op.PermissionsService(), nil

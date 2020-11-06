@@ -105,6 +105,7 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 			return err
 		}
 	}
+
 	infraID := m.doc.OpenShiftCluster.Properties.InfraID
 
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
@@ -189,15 +190,7 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 					"Microsoft.Storage/storageAccounts/cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix,
 				},
 			},
-			m.apiServerNSG(installConfig.Config.Azure.Region),
-			{
-				Resource: &mgmtnetwork.SecurityGroup{
-					Name:     to.StringPtr(infraID + subnet.NSGNodeSuffix),
-					Type:     to.StringPtr("Microsoft.Network/networkSecurityGroups"),
-					Location: &installConfig.Config.Azure.Region,
-				},
-				APIVersion: azureclient.APIVersions["Microsoft.Network"],
-			},
+			m.clusterNSG(infraID, installConfig.Config.Azure.Region),
 		},
 	}
 

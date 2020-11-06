@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/coreos/go-systemd/journal"
+	"github.com/coreos/go-systemd/v22/journal"
 	"github.com/sirupsen/logrus"
 )
 

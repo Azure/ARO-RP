@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	openapi_v2 "github.com/googleapis/gnostic/OpenAPIv2"
@@ -33,7 +34,7 @@ func TestVersion(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	assetsVersion := string(b)
+	assetsVersion := strings.TrimSuffix(string(b), "\n")
 	if assetsVersion != version.InstallStream.Version.String() {
 		t.Error(assetsVersion)
 	}

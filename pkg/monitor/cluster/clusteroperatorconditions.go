@@ -34,7 +34,7 @@ var clusterOperatorConditionsExpected = map[configv1.ClusterStatusConditionType]
 }
 
 func (mon *Monitor) emitClusterOperatorConditions(ctx context.Context) error {
-	cos, err := mon.listClusterOperators()
+	cos, err := mon.listClusterOperators(ctx)
 	if err != nil {
 		return err
 	}

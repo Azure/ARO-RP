@@ -60,9 +60,9 @@ func (f *frontend) _getAdminKubernetesObjects(ctx context.Context, r *http.Reque
 	}
 
 	if name != "" {
-		return a.K8sGet(groupKind, namespace, name)
+		return a.K8sGet(ctx, groupKind, namespace, name)
 	}
-	return a.K8sList(groupKind, namespace)
+	return a.K8sList(ctx, groupKind, namespace)
 }
 
 func (f *frontend) deleteAdminKubernetesObjects(w http.ResponseWriter, r *http.Request) {
@@ -105,7 +105,7 @@ func (f *frontend) _deleteAdminKubernetesObjects(ctx context.Context, r *http.Re
 		return err
 	}
 
-	return a.K8sDelete(groupKind, namespace, name)
+	return a.K8sDelete(ctx, groupKind, namespace, name)
 }
 
 func (f *frontend) postAdminKubernetesObjects(w http.ResponseWriter, r *http.Request) {
@@ -159,5 +159,5 @@ func (f *frontend) _postAdminKubernetesObjects(ctx context.Context, r *http.Requ
 		return err
 	}
 
-	return a.K8sCreateOrUpdate(obj)
+	return a.K8sCreateOrUpdate(ctx, obj)
 }

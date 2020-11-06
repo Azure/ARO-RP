@@ -13,7 +13,7 @@ import (
 )
 
 func (mon *Monitor) emitDaemonsetStatuses(ctx context.Context) error {
-	dss, err := mon.cli.AppsV1().DaemonSets("").List(metav1.ListOptions{})
+	dss, err := mon.cli.AppsV1().DaemonSets("").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return err
 	}

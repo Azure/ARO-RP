@@ -8,14 +8,14 @@ import (
 	"fmt"
 	"strings"
 
-	azureproviderv1beta1 "github.com/openshift/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1"
-	machinev1beta1 "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
-	clusterapi "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset"
+	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
+	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	"github.com/operator-framework/operator-sdk/pkg/status"
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
+	azureproviderv1beta1 "sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
@@ -32,14 +32,14 @@ const (
 
 // MachineChecker reconciles the alertmanager webhook
 type MachineChecker struct {
-	clustercli     clusterapi.Interface
+	clustercli     maoclient.Interface
 	arocli         aroclient.AroV1alpha1Interface
 	log            *logrus.Entry
 	deploymentMode deployment.Mode
 	role           string
 }
 
-func NewMachineChecker(log *logrus.Entry, clustercli clusterapi.Interface, arocli aroclient.AroV1alpha1Interface, role string, deploymentMode deployment.Mode) *MachineChecker {
+func NewMachineChecker(log *logrus.Entry, clustercli maoclient.Interface, arocli aroclient.AroV1alpha1Interface, role string, deploymentMode deployment.Mode) *MachineChecker {
 	return &MachineChecker{
 		clustercli:     clustercli,
 		arocli:         arocli,
@@ -49,9 +49,9 @@ func NewMachineChecker(log *logrus.Entry, clustercli clusterapi.Interface, arocl
 	}
 }
 
-func (r *MachineChecker) workerReplicas() (int, error) {
+func (r *MachineChecker) workerReplicas(ctx context.Context) (int, error) {
 	count := 0
-	machinesets, err := r.clustercli.MachineV1beta1().MachineSets(machineSetsNamespace).List(metav1.ListOptions{})
+	machinesets, err := r.clustercli.MachineV1beta1().MachineSets(machineSetsNamespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return 0, err
 	}
@@ -105,12 +105,12 @@ func (r *MachineChecker) checkMachines(ctx context.Context) (errs []error) {
 	actualMasters := 0
 
 	expectedMasters := 3
-	expectedWorkers, err := r.workerReplicas()
+	expectedWorkers, err := r.workerReplicas(ctx)
 	if err != nil {
 		return []error{err}
 	}
 
-	machines, err := r.clustercli.MachineV1beta1().Machines(machineSetsNamespace).List(metav1.ListOptions{})
+	machines, err := r.clustercli.MachineV1beta1().Machines(machineSetsNamespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return []error{err}
 	}
@@ -147,8 +147,7 @@ func (r *MachineChecker) Name() string {
 }
 
 // Reconcile makes sure that the Machines are in a supportable state
-func (r *MachineChecker) Check() error {
-	ctx := context.Background()
+func (r *MachineChecker) Check(ctx context.Context) error {
 	cond := &status.Condition{
 		Type:    aro.MachineValid,
 		Status:  corev1.ConditionTrue,
@@ -169,7 +168,7 @@ func (r *MachineChecker) Check() error {
 		cond.Message = sb.String()
 	}
 
-	return controllers.SetCondition(r.arocli, cond, r.role)
+	return controllers.SetCondition(ctx, r.arocli, cond, r.role)
 }
 
 func isMasterRole(m *machinev1beta1.Machine) (bool, error) {

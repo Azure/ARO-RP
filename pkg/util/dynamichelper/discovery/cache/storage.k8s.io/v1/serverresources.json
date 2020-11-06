@@ -4,6 +4,23 @@
     "groupVersion": "storage.k8s.io/v1",
     "resources": [
         {
+            "name": "csidrivers",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "CSIDriver",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "Z7aeXSiaYTw="
+        },
+        {
             "name": "csinodes",
             "singularName": "",
             "namespaced": false,
@@ -18,7 +35,7 @@
                 "update",
                 "watch"
             ],
-            "storageVersionHash": "fnCuCdDgSvE="
+            "storageVersionHash": "Pe62DkZtjuo="
         },
         {
             "name": "storageclasses",

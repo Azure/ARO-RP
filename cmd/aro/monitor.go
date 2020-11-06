@@ -49,7 +49,10 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	tracing.Register(azure.New(m))
-	metrics.Register(k8s.NewLatency(m), k8s.NewResult(m))
+	metrics.Register(metrics.RegisterOpts{
+		RequestResult:  k8s.NewResult(m),
+		RequestLatency: k8s.NewLatency(m),
+	})
 
 	clusterm, err := statsd.New(ctx, log.WithField("component", "metrics"), _env, os.Getenv("CLUSTER_MDM_ACCOUNT"), os.Getenv("CLUSTER_MDM_NAMESPACE"))
 	if err != nil {

@@ -34,7 +34,7 @@ var _ = Describe("[Admin API] Kubernetes objects action", func() {
 				// but we need to remove the object in case of failure
 				// to allow us to run this test against the same cluster multiple times.
 				By("deleting the config map via Kubernetes API")
-				err := clients.Kubernetes.CoreV1().ConfigMaps(namespace).Delete(objName, &metav1.DeleteOptions{})
+				err := clients.Kubernetes.CoreV1().ConfigMaps(namespace).Delete(context.Background(), objName, metav1.DeleteOptions{})
 				// On successfully we expect NotFound error
 				if !errors.IsNotFound(err) {
 					Expect(err).NotTo(HaveOccurred())
@@ -56,21 +56,21 @@ var _ = Describe("[Admin API] Kubernetes objects action", func() {
 
 		It("should be able to get and list existing objects, but not update and delete or create new objects", func() {
 			By("creating a test customer namespace via Kubernetes API")
-			_, err := clients.Kubernetes.CoreV1().Namespaces().Create(&corev1.Namespace{
+			_, err := clients.Kubernetes.CoreV1().Namespaces().Create(context.Background(), &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{Name: namespace},
-			})
+			}, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			defer func() {
 				By("deleting the test customer namespace via Kubernetes API")
-				err := clients.Kubernetes.CoreV1().Namespaces().Delete(namespace, &metav1.DeleteOptions{})
+				err := clients.Kubernetes.CoreV1().Namespaces().Delete(context.Background(), namespace, metav1.DeleteOptions{})
 				Expect(err).NotTo(HaveOccurred())
 
 				// To avoid flakes, we need it to be completely deleted before we can use it again
 				// in a separate run or in a separate It block
 				By("waiting for the test customer namespace to be deleted")
 				err = wait.PollImmediate(10*time.Second, 5*time.Minute, func() (bool, error) {
-					_, err := clients.Kubernetes.CoreV1().Namespaces().Get(namespace, metav1.GetOptions{})
+					_, err := clients.Kubernetes.CoreV1().Namespaces().Get(context.Background(), namespace, metav1.GetOptions{})
 					if err == nil {
 						return false, nil
 					}
@@ -85,9 +85,9 @@ var _ = Describe("[Admin API] Kubernetes objects action", func() {
 			testConfigMapCreateOrUpdateForbidden("creating", objName, namespace)
 
 			By("creating an object via Kubernetes API")
-			_, err = clients.Kubernetes.CoreV1().ConfigMaps(namespace).Create(&corev1.ConfigMap{
+			_, err = clients.Kubernetes.CoreV1().ConfigMaps(namespace).Create(context.Background(), &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{Name: objName},
-			})
+			}, metav1.CreateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
 			testConfigMapGetOK(objName, namespace)
@@ -165,7 +165,7 @@ func testConfigMapCreateOK(objName, namespace string) {
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 	By("checking that the object was created via Kubernetes API")
-	cm, err := clients.Kubernetes.CoreV1().ConfigMaps(namespace).Get(objName, metav1.GetOptions{})
+	cm, err := clients.Kubernetes.CoreV1().ConfigMaps(namespace).Get(context.Background(), objName, metav1.GetOptions{})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(obj.Namespace).To(Equal(cm.Namespace))
 	Expect(obj.Name).To(Equal(cm.Name))
@@ -185,7 +185,7 @@ func testConfigMapGetOK(objName, namespace string) {
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 	By("comparing it to the actual object retrived via Kubernetes API")
-	cm, err := clients.Kubernetes.CoreV1().ConfigMaps(namespace).Get(objName, metav1.GetOptions{})
+	cm, err := clients.Kubernetes.CoreV1().ConfigMaps(namespace).Get(context.Background(), objName, metav1.GetOptions{})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(obj.Namespace).To(Equal(cm.Namespace))
 	Expect(obj.Name).To(Equal(cm.Name))
@@ -221,7 +221,7 @@ func testConfigMapUpdateOK(objName, namespace string) {
 	Expect(resp.StatusCode).To(Equal(http.StatusOK))
 
 	By("checking that the object changed via Kubernetes API")
-	cm, err := clients.Kubernetes.CoreV1().ConfigMaps(namespace).Get(objName, metav1.GetOptions{})
+	cm, err := clients.Kubernetes.CoreV1().ConfigMaps(namespace).Get(context.Background(), objName, metav1.GetOptions{})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cm.Namespace).To(Equal(namespace))
 	Expect(cm.Name).To(Equal(objName))
@@ -243,7 +243,7 @@ func testConfigMapDeleteOK(objName, namespace string) {
 	// in a separate run or in a separate It block
 	By("waiting for the configmap to be deleted")
 	err = wait.PollImmediate(10*time.Second, time.Minute, func() (bool, error) {
-		_, err = clients.Kubernetes.CoreV1().ConfigMaps(namespace).Get(objName, metav1.GetOptions{})
+		_, err = clients.Kubernetes.CoreV1().ConfigMaps(namespace).Get(context.Background(), objName, metav1.GetOptions{})
 		if err == nil {
 			return false, nil
 		}

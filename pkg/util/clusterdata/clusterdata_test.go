@@ -245,7 +245,7 @@ func TestBestEffortEnricher(t *testing.T) {
 
 type mockEnricherTaskFunc func(callbacks chan<- func(), errs chan<- error)
 
-func (m mockEnricherTaskFunc) FetchData(callbacks chan<- func(), errs chan<- error) {
+func (m mockEnricherTaskFunc) FetchData(ctx context.Context, callbacks chan<- func(), errs chan<- error) {
 	m(callbacks, errs)
 }
 func (m mockEnricherTaskFunc) SetDefaults() {}

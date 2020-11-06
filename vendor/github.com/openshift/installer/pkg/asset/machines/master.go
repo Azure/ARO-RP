@@ -5,25 +5,27 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/ghodss/yaml"
-	baremetalapi "github.com/metal3-io/cluster-api-provider-baremetal/pkg/apis"
-	baremetalprovider "github.com/metal3-io/cluster-api-provider-baremetal/pkg/apis/baremetal/v1alpha1"
+	baremetalapi "github.com/openshift/cluster-api-provider-baremetal/pkg/apis"
+	baremetalprovider "github.com/openshift/cluster-api-provider-baremetal/pkg/apis/baremetal/v1alpha1"
 	gcpapi "github.com/openshift/cluster-api-provider-gcp/pkg/apis"
 	gcpprovider "github.com/openshift/cluster-api-provider-gcp/pkg/apis/gcpprovider/v1beta1"
 	libvirtapi "github.com/openshift/cluster-api-provider-libvirt/pkg/apis"
 	libvirtprovider "github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1beta1"
-	ovirtprovider "github.com/openshift/cluster-api-provider-ovirt/pkg/apis"
+	ovirtproviderapi "github.com/openshift/cluster-api-provider-ovirt/pkg/apis"
+	ovirtprovider "github.com/openshift/cluster-api-provider-ovirt/pkg/apis/ovirtprovider/v1beta1"
 	machineapi "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
 	vsphereapi "github.com/openshift/machine-api-operator/pkg/apis/vsphereprovider"
-	vsphereprovider "github.com/openshift/machine-api-operator/pkg/apis/vsphereprovider/v1alpha1"
+	vsphereprovider "github.com/openshift/machine-api-operator/pkg/apis/vsphereprovider/v1beta1"
 	mcfgv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	awsapi "sigs.k8s.io/cluster-api-provider-aws/pkg/apis"
-	awsprovider "sigs.k8s.io/cluster-api-provider-aws/pkg/apis/awsproviderconfig/v1beta1"
+	awsprovider "sigs.k8s.io/cluster-api-provider-aws/pkg/apis/awsprovider/v1beta1"
 	azureapi "sigs.k8s.io/cluster-api-provider-azure/pkg/apis"
 	azureprovider "sigs.k8s.io/cluster-api-provider-azure/pkg/apis/azureprovider/v1beta1"
 	openstackapi "sigs.k8s.io/cluster-api-provider-openstack/pkg/apis"
@@ -160,6 +162,14 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 		}
 
 		mpool := defaultAWSMachinePoolPlatform()
+
+		osImage := strings.SplitN(string(*rhcosImage), ",", 2)
+		osImageID := osImage[0]
+		if len(osImage) == 2 {
+			osImageID = "" // the AMI will be generated later on
+		}
+		mpool.AMIID = osImageID
+
 		mpool.Set(ic.Platform.AWS.DefaultMachinePlatform)
 		mpool.Set(pool.Platform.AWS)
 		if len(mpool.Zones) == 0 {
@@ -188,7 +198,6 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 			installConfig.Config.Platform.AWS.Region,
 			subnets,
 			pool,
-			string(*rhcosImage),
 			"master",
 			"master-user-data",
 			installConfig.Config.Platform.AWS.UserTags,
@@ -254,6 +263,7 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 				mpool.Zones = []string{""}
 			}
 		}
+
 		pool.Platform.Azure = &mpool
 
 		machines, err = azure.Machines(clusterID.InfraID, ic, pool, string(*rhcosImage), "master", "master-user-data")
@@ -312,7 +322,11 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 		}
 	case ovirttypes.Name:
 		mpool := defaultOvirtMachinePoolPlatform()
+		mpool.VMType = ovirttypes.VMTypeHighPerformance
+		mpool.Set(ic.Platform.Ovirt.DefaultMachinePlatform)
+		mpool.Set(pool.Platform.Ovirt)
 		pool.Platform.Ovirt = &mpool
+
 		imageName, _ := rhcosutils.GenerateOpenStackImageName(string(*rhcosImage), clusterID.InfraID)
 
 		machines, err = ovirt.Machines(clusterID.InfraID, ic, pool, imageName, "master", "master-user-data")
@@ -326,8 +340,9 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 		mpool.Set(ic.Platform.VSphere.DefaultMachinePlatform)
 		mpool.Set(pool.Platform.VSphere)
 		pool.Platform.VSphere = &mpool
+		templateName := clusterID.InfraID + "-rhcos"
 
-		machines, err = vsphere.Machines(clusterID.InfraID, ic, pool, string(*rhcosImage), "master", "master-user-data")
+		machines, err = vsphere.Machines(clusterID.InfraID, ic, pool, templateName, "master", "master-user-data")
 		if err != nil {
 			return errors.Wrap(err, "failed to create master machine objects")
 		}
@@ -349,13 +364,25 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 
 	machineConfigs := []*mcfgv1.MachineConfig{}
 	if pool.Hyperthreading == types.HyperthreadingDisabled {
-		machineConfigs = append(machineConfigs, machineconfig.ForHyperthreadingDisabled("master"))
+		config, err := machineconfig.ForHyperthreadingDisabled("master")
+		if err != nil {
+			return errors.Wrap(err, "failed to create master machine objects")
+		}
+		machineConfigs = append(machineConfigs, config)
 	}
 	if ic.SSHKey != "" {
-		machineConfigs = append(machineConfigs, machineconfig.ForAuthorizedKeys(ic.SSHKey, "master"))
+		config, err := machineconfig.ForAuthorizedKeys(ic.SSHKey, "master")
+		if err != nil {
+			return errors.Wrap(err, "failed to create master machine objects")
+		}
+		machineConfigs = append(machineConfigs, config)
 	}
 	if ic.FIPS {
-		machineConfigs = append(machineConfigs, machineconfig.ForFIPSEnabled("master"))
+		config, err := machineconfig.ForFIPSEnabled("master")
+		if err != nil {
+			return errors.Wrap(err, "failed to create master machine objects")
+		}
+		machineConfigs = append(machineConfigs, config)
 	}
 
 	m.MachineConfigFiles, err = machineconfig.Manifests(machineConfigs, "master", directory)
@@ -446,7 +473,7 @@ func (m *Master) Machines() ([]machineapi.Machine, error) {
 	gcpapi.AddToScheme(scheme)
 	libvirtapi.AddToScheme(scheme)
 	openstackapi.AddToScheme(scheme)
-	ovirtprovider.AddToScheme(scheme)
+	ovirtproviderapi.AddToScheme(scheme)
 	vsphereapi.AddToScheme(scheme)
 	decoder := serializer.NewCodecFactory(scheme).UniversalDecoder(
 		awsprovider.SchemeGroupVersion,
@@ -456,6 +483,7 @@ func (m *Master) Machines() ([]machineapi.Machine, error) {
 		libvirtprovider.SchemeGroupVersion,
 		openstackprovider.SchemeGroupVersion,
 		vsphereprovider.SchemeGroupVersion,
+		ovirtprovider.SchemeGroupVersion,
 	)
 
 	machines := []machineapi.Machine{}

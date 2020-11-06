@@ -3,13 +3,20 @@ package validation
 import (
 	"fmt"
 	"net"
+	"net/http"
 	"net/url"
+	"reflect"
+	"strings"
 
+	"github.com/apparentlymart/go-cidr/cidr"
+	"github.com/go-playground/validator/v10"
+	"github.com/pkg/errors"
+
+	"github.com/openshift/installer/pkg/ipnet"
 	"github.com/openshift/installer/pkg/types"
 	"github.com/openshift/installer/pkg/types/baremetal"
 	"github.com/openshift/installer/pkg/validate"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"strings"
 )
 
 // dynamicValidator is a function that validates certain fields in the platform.
@@ -38,6 +45,44 @@ func validateIPNotinMachineCIDR(ip string, n *types.Networking) error {
 	return nil
 }
 
+func validateNoOverlapMachineCIDR(target *net.IPNet, n *types.Networking) error {
+	allIPv4 := ipnet.MustParseCIDR("0.0.0.0/0")
+	allIPv6 := ipnet.MustParseCIDR("::/0")
+	netIsIPv6 := target.IP.To4() == nil
+
+	for _, machineCIDR := range n.MachineNetwork {
+		machineCIDRisIPv6 := machineCIDR.CIDR.IP.To4() == nil
+
+		// Only compare if both are the same IP version
+		if netIsIPv6 == machineCIDRisIPv6 {
+			var err error
+			if netIsIPv6 {
+				err = cidr.VerifyNoOverlap(
+					[]*net.IPNet{
+						target,
+						&machineCIDR.CIDR.IPNet,
+					},
+					&allIPv6.IPNet,
+				)
+			} else {
+				err = cidr.VerifyNoOverlap(
+					[]*net.IPNet{
+						target,
+						&machineCIDR.CIDR.IPNet,
+					},
+					&allIPv4.IPNet,
+				)
+			}
+
+			if err != nil {
+				return errors.Wrap(err, "cannot overlap with machine network")
+			}
+		}
+	}
+
+	return nil
+}
+
 func validateOSImageURI(uri string) error {
 	// Check for valid URI and sha256 checksum part of the URL
 	parsedURL, err := url.ParseRequestURI(uri)
@@ -61,8 +106,116 @@ func validateOSImageURI(uri string) error {
 	return nil
 }
 
+// validateHosts checks that hosts have all required fields set with appropriate values
+func validateHosts(hosts []*baremetal.Host, fldPath *field.Path) field.ErrorList {
+	hostErrs := field.ErrorList{}
+
+	values := make(map[string]map[interface{}]struct{})
+
+	//Initialize a new validator and register a custom validation rule for the tag `uniqueField`
+	validate := validator.New()
+	validate.RegisterValidation("uniqueField", func(fl validator.FieldLevel) bool {
+		valueFound := false
+		fieldName := fl.Parent().Type().Name() + "." + fl.FieldName()
+		fieldValue := fl.Field().Interface()
+
+		if fl.Field().Type().Comparable() {
+			if _, present := values[fieldName]; !present {
+				values[fieldName] = make(map[interface{}]struct{})
+			}
+
+			fieldValues := values[fieldName]
+			if _, valueFound = fieldValues[fieldValue]; !valueFound {
+				fieldValues[fieldValue] = struct{}{}
+			}
+		} else {
+			panic(fmt.Sprintf("Cannot apply validation rule 'uniqueField' on field %s", fl.FieldName()))
+		}
+
+		return !valueFound
+	})
+
+	//Apply validations and translate errors
+	fldPath = fldPath.Child("hosts")
+
+	for idx, host := range hosts {
+		err := validate.Struct(host)
+		if err != nil {
+			hostType := reflect.TypeOf(hosts).Elem().Elem().Name()
+			for _, err := range err.(validator.ValidationErrors) {
+				childName := fldPath.Index(idx).Child(err.Namespace()[len(hostType)+1:])
+				switch err.Tag() {
+				case "required":
+					hostErrs = append(hostErrs, field.Required(childName, "missing "+err.Field()))
+				case "uniqueField":
+					hostErrs = append(hostErrs, field.Duplicate(childName, err.Value()))
+				}
+			}
+		}
+	}
+
+	return hostErrs
+}
+
+func validateOSImages(p *baremetal.Platform, fldPath *field.Path) field.ErrorList {
+	platformErrs := field.ErrorList{}
+
+	validate := validator.New()
+
+	customErrs := make(map[string]error)
+	validate.RegisterValidation("osimageuri", func(fl validator.FieldLevel) bool {
+		err := validateOSImageURI(fl.Field().String())
+		if err != nil {
+			customErrs[fl.FieldName()] = err
+		}
+		return err == nil
+	})
+	validate.RegisterValidation("urlexist", func(fl validator.FieldLevel) bool {
+		if res, err := http.Head(fl.Field().String()); err == nil {
+			return res.StatusCode == http.StatusOK
+		}
+		return false
+	})
+	err := validate.Struct(p)
+
+	if err != nil {
+		baseType := reflect.TypeOf(p).Elem().Name()
+		for _, err := range err.(validator.ValidationErrors) {
+			childName := fldPath.Child(err.Namespace()[len(baseType)+1:])
+			switch err.Tag() {
+			case "osimageuri":
+				platformErrs = append(platformErrs, field.Invalid(childName, err.Value(), customErrs[err.Field()].Error()))
+			case "urlexist":
+				platformErrs = append(platformErrs, field.NotFound(childName, err.Value()))
+			}
+		}
+	}
+
+	return platformErrs
+}
+
+func validateHostsCount(hosts []*baremetal.Host, installConfig *types.InstallConfig) error {
+
+	hostsNum := int64(len(hosts))
+	counter := int64(0)
+
+	for _, worker := range installConfig.Compute {
+		if worker.Replicas != nil {
+			counter += *worker.Replicas
+		}
+	}
+	if installConfig.ControlPlane != nil && installConfig.ControlPlane.Replicas != nil {
+		counter += *installConfig.ControlPlane.Replicas
+	}
+	if hostsNum < counter {
+		return fmt.Errorf("not enough hosts found (%v) to support all the configured ControlPlane and Compute replicas (%v)", hostsNum, counter)
+	}
+
+	return nil
+}
+
 // ValidatePlatform checks that the specified platform is valid.
-func ValidatePlatform(p *baremetal.Platform, n *types.Networking, fldPath *field.Path) field.ErrorList {
+func ValidatePlatform(p *baremetal.Platform, n *types.Networking, fldPath *field.Path, c *types.InstallConfig) field.ErrorList {
 	allErrs := field.ErrorList{}
 	if err := validate.URI(p.LibvirtURI); err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("libvirtURI"), p.LibvirtURI, err.Error()))
@@ -72,16 +225,25 @@ func ValidatePlatform(p *baremetal.Platform, n *types.Networking, fldPath *field
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("provisioningHostIP"), p.ClusterProvisioningIP, err.Error()))
 	}
 
-	if p.ProvisioningNetworkCIDR != nil && !p.ProvisioningNetworkCIDR.Contains(net.ParseIP(p.ClusterProvisioningIP)) {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("clusterProvisioningIP"), p.ClusterProvisioningIP, fmt.Sprintf("%q is not in the provisioning network", p.ClusterProvisioningIP)))
-	}
-
 	if err := validate.IP(p.BootstrapProvisioningIP); err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("bootstrapProvisioningIP"), p.BootstrapProvisioningIP, err.Error()))
 	}
 
-	if p.ProvisioningNetworkCIDR != nil && !p.ProvisioningNetworkCIDR.Contains(net.ParseIP(p.BootstrapProvisioningIP)) {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("bootstrapProvisioningIP"), p.BootstrapProvisioningIP, fmt.Sprintf("%q is not in the provisioning network", p.BootstrapProvisioningIP)))
+	if p.ProvisioningNetworkCIDR != nil {
+		// Ensure provisioningNetworkCIDR doesn't overlap with any machine network
+		if err := validateNoOverlapMachineCIDR(&p.ProvisioningNetworkCIDR.IPNet, n); err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("provisioningNetworkCIDR"), p.ProvisioningNetworkCIDR.String(), err.Error()))
+		}
+
+		// Ensure bootstrapProvisioningIP is in the provisioningNetworkCIDR
+		if !p.ProvisioningNetworkCIDR.Contains(net.ParseIP(p.BootstrapProvisioningIP)) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("bootstrapProvisioningIP"), p.BootstrapProvisioningIP, fmt.Sprintf("%q is not in the provisioning network", p.BootstrapProvisioningIP)))
+		}
+
+		// Ensure clusterProvisioningIP is in the provisioningNetworkCIDR
+		if !p.ProvisioningNetworkCIDR.Contains(net.ParseIP(p.ClusterProvisioningIP)) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("clusterProvisioningIP"), p.ClusterProvisioningIP, fmt.Sprintf("%q is not in the provisioning network", p.ClusterProvisioningIP)))
+		}
 	}
 
 	if p.ProvisioningDHCPRange != "" {
@@ -132,29 +294,20 @@ func ValidatePlatform(p *baremetal.Platform, n *types.Networking, fldPath *field
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("ingressVIP"), p.IngressVIP, err.Error()))
 	}
 
-	if err := validate.IP(p.DNSVIP); err != nil {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("dnsVIP"), p.DNSVIP, err.Error()))
-	}
-
-	if err := validateIPinMachineCIDR(p.DNSVIP, n); err != nil {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("dnsVIP"), p.DNSVIP, err.Error()))
-	}
 	if err := validateIPNotinMachineCIDR(p.ClusterProvisioningIP, n); err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("provisioningHostIP"), p.ClusterProvisioningIP, err.Error()))
 	}
 	if err := validateIPNotinMachineCIDR(p.BootstrapProvisioningIP, n); err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("bootstrapHostIP"), p.BootstrapProvisioningIP, err.Error()))
 	}
-	if p.BootstrapOSImage != "" {
-		if err := validateOSImageURI(p.BootstrapOSImage); err != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("bootstrapOSImage"), p.BootstrapOSImage, err.Error()))
-		}
+
+	if err := validateHostsCount(p.Hosts, c); err != nil {
+		allErrs = append(allErrs, field.Required(fldPath.Child("Hosts"), err.Error()))
 	}
-	if p.ClusterOSImage != "" {
-		if err := validateOSImageURI(p.ClusterOSImage); err != nil {
-			allErrs = append(allErrs, field.Invalid(fldPath.Child("clusterOSImage"), p.ClusterOSImage, err.Error()))
-		}
-	}
+
+	allErrs = append(allErrs, validateOSImages(p, fldPath)...)
+
+	allErrs = append(allErrs, validateHosts(p.Hosts, fldPath)...)
 
 	for _, validator := range dynamicValidators {
 		allErrs = append(allErrs, validator(p, fldPath)...)

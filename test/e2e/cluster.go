@@ -31,20 +31,20 @@ var _ = Describe("Cluster smoke test", func() {
 
 	var _ = BeforeEach(func() {
 		project = proj.NewProject(clients.Kubernetes, clients.Project, testNamespace)
-		err := project.Create()
+		err := project.Create(context.Background())
 		Expect(err).NotTo(HaveOccurred(), "Failed to create test namespace")
 
 		Eventually(func() error {
-			return project.Verify()
+			return project.Verify(context.Background())
 		}).Should(BeNil())
 	})
 
 	var _ = AfterEach(func() {
-		err := project.Delete()
+		err := project.Delete(context.Background())
 		Expect(err).NotTo(HaveOccurred(), "Failed to delete test namespace")
 
 		Eventually(func() error {
-			return project.VerifyProjectIsDeleted()
+			return project.VerifyProjectIsDeleted(context.Background())
 		}, 5*time.Minute, 10*time.Second).Should(BeNil())
 	})
 
@@ -72,7 +72,7 @@ var _ = Describe("Cluster smoke test", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		Eventually(func() bool {
-			svc, err := clients.Kubernetes.CoreV1().Services(testNamespace).Get("elb", metav1.GetOptions{})
+			svc, err := clients.Kubernetes.CoreV1().Services(testNamespace).Get(context.Background(), "elb", metav1.GetOptions{})
 			if err != nil {
 				return false
 			}
@@ -80,7 +80,7 @@ var _ = Describe("Cluster smoke test", func() {
 		}, 5*time.Minute, 10*time.Second).Should(BeTrue())
 
 		Eventually(func() bool {
-			svc, err := clients.Kubernetes.CoreV1().Services(testNamespace).Get("ilb", metav1.GetOptions{})
+			svc, err := clients.Kubernetes.CoreV1().Services(testNamespace).Get(context.Background(), "ilb", metav1.GetOptions{})
 			if err != nil {
 				return false
 			}
@@ -96,7 +96,7 @@ func createPVC(ctx context.Context, cli kubernetes.Interface) error {
 	}
 	pvcName := fmt.Sprintf("%s-pvc", testPodName)
 	storageClass := "managed-premium"
-	_, err = cli.CoreV1().PersistentVolumeClaims(testNamespace).Create(&corev1.PersistentVolumeClaim{
+	_, err = cli.CoreV1().PersistentVolumeClaims(testNamespace).Create(context.Background(), &corev1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: pvcName,
 		},
@@ -111,14 +111,14 @@ func createPVC(ctx context.Context, cli kubernetes.Interface) error {
 				},
 			},
 		},
-	})
+	}, metav1.CreateOptions{})
 	return err
 }
 
 func createPodWithPVC(ctx context.Context, cli kubernetes.Interface) error {
 	pvcName := fmt.Sprintf("%s-pvc", testPodName)
 	volumeName := fmt.Sprintf("%s-vol", pvcName)
-	_, err := cli.CoreV1().Pods(testNamespace).Create(&corev1.Pod{
+	_, err := cli.CoreV1().Pods(testNamespace).Create(context.Background(), &corev1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: testPodName,
 		},
@@ -155,12 +155,12 @@ func createPodWithPVC(ctx context.Context, cli kubernetes.Interface) error {
 			},
 			RestartPolicy: corev1.RestartPolicyNever,
 		},
-	})
+	}, metav1.CreateOptions{})
 	return err
 }
 
 func verifyPodSucceeded(cli kubernetes.Interface) error {
-	pod, err := cli.CoreV1().Pods(testNamespace).Get(testPodName, metav1.GetOptions{})
+	pod, err := cli.CoreV1().Pods(testNamespace).Get(context.Background(), testPodName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -187,6 +187,6 @@ func createLoadBalancerService(ctx context.Context, cli kubernetes.Interface, na
 			Type: corev1.ServiceTypeLoadBalancer,
 		},
 	}
-	_, err := cli.CoreV1().Services(testNamespace).Create(svc)
+	_, err := cli.CoreV1().Services(testNamespace).Create(context.Background(), svc, metav1.CreateOptions{})
 	return err
 }

@@ -62,8 +62,8 @@ func (r *InternetChecker) Name() string {
 // +kubebuilder:rbac:groups=aro.openshift.io,resources=clusters/status,verbs=get;update;patch
 
 // Reconcile will keep checking that the cluster can connect to essential services.
-func (r *InternetChecker) Check() error {
-	instance, err := r.arocli.Clusters().Get(arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+func (r *InternetChecker) Check(ctx context.Context) error {
+	instance, err := r.arocli.Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func (r *InternetChecker) Check() error {
 
 	}
 
-	return controllers.SetCondition(r.arocli, condition, r.role)
+	return controllers.SetCondition(ctx, r.arocli, condition, r.role)
 }
 
 // check the URL, retrying a failed query a few times according to the given backoff

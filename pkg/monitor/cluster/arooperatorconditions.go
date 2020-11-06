@@ -20,7 +20,7 @@ var aroOperatorConditionsExpected = map[status.ConditionType]corev1.ConditionSta
 }
 
 func (mon *Monitor) emitAroOperatorConditions(ctx context.Context) error {
-	cluster, err := mon.arocli.Clusters().Get(arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	cluster, err := mon.arocli.Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}

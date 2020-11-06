@@ -42,7 +42,7 @@ func (m *manager) logClusterVersion(ctx context.Context) (interface{}, error) {
 		return nil, nil
 	}
 
-	return m.configcli.ConfigV1().ClusterVersions().Get("version", metav1.GetOptions{})
+	return m.configcli.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
 }
 
 func (m *manager) logClusterOperators(ctx context.Context) (interface{}, error) {
@@ -50,7 +50,7 @@ func (m *manager) logClusterOperators(ctx context.Context) (interface{}, error) 
 		return nil, nil
 	}
 
-	return m.configcli.ConfigV1().ClusterOperators().List(metav1.ListOptions{})
+	return m.configcli.ConfigV1().ClusterOperators().List(ctx, metav1.ListOptions{})
 }
 
 func (m *manager) logIngressControllers(ctx context.Context) (interface{}, error) {
@@ -58,5 +58,5 @@ func (m *manager) logIngressControllers(ctx context.Context) (interface{}, error
 		return nil, nil
 	}
 
-	return m.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").List(metav1.ListOptions{})
+	return m.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").List(ctx, metav1.ListOptions{})
 }

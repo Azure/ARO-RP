@@ -4,6 +4,7 @@ package dynamichelper
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"net/http"
 	"reflect"
 	"testing"
@@ -304,7 +305,7 @@ func TestEnsure(t *testing.T) {
 				},
 			}
 
-			err := dh.Ensure(tt.new)
+			err := dh.Ensure(context.Background(), tt.new)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

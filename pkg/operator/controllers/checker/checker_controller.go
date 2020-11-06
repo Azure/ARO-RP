@@ -4,10 +4,11 @@ package checker
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"time"
 
-	machinev1beta1 "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
-	clusterapi "github.com/openshift/cluster-api/pkg/client/clientset_generated/clientset"
+	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
+	maoclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -28,7 +29,7 @@ type CheckerController struct {
 	checkers []Checker
 }
 
-func NewReconciler(log *logrus.Entry, clustercli clusterapi.Interface, arocli aroclient.AroV1alpha1Interface, role string, deploymentMode deployment.Mode) *CheckerController {
+func NewReconciler(log *logrus.Entry, clustercli maoclient.Interface, arocli aroclient.AroV1alpha1Interface, role string, deploymentMode deployment.Mode) *CheckerController {
 	checkers := []Checker{NewInternetChecker(log, arocli, role)}
 
 	if role == operator.RoleMaster {
@@ -50,9 +51,11 @@ func NewReconciler(log *logrus.Entry, clustercli clusterapi.Interface, arocli ar
 
 // Reconcile will keep checking that the cluster can connect to essential services.
 func (r *CheckerController) Reconcile(request ctrl.Request) (ctrl.Result, error) {
+	// TODO(mj): controller-runtime master fixes the need for this (https://github.com/kubernetes-sigs/controller-runtime/blob/master/pkg/reconcile/reconcile.go#L93) but it's not yet released.
+	ctx := context.Background()
 	var err error
 	for _, c := range r.checkers {
-		thisErr := c.Check()
+		thisErr := c.Check(ctx)
 		if thisErr != nil {
 			// do all checks even if there is an error
 			err = thisErr

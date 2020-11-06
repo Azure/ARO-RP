@@ -276,6 +276,17 @@
             "storageVersionHash": "s/S0qwLEaK4="
         },
         {
+            "name": "infrastructures/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "Infrastructure",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
             "name": "ingresses",
             "singularName": "ingress",
             "namespaced": false,

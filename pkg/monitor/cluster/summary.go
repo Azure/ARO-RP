@@ -20,12 +20,12 @@ func (mon *Monitor) emitSummary(ctx context.Context) error {
 		return nil
 	}
 
-	cv, err := mon.getClusterVersion()
+	cv, err := mon.getClusterVersion(ctx)
 	if err != nil {
 		return err
 	}
 
-	ns, err := mon.listNodes()
+	ns, err := mon.listNodes(ctx)
 	if err != nil {
 		return err
 	}

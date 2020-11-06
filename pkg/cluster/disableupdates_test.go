@@ -34,7 +34,7 @@ func TestDisableUpdates(t *testing.T) {
 		t.Error(err)
 	}
 
-	cv, err := m.configcli.ConfigV1().ClusterVersions().Get(versionName, metav1.GetOptions{})
+	cv, err := m.configcli.ConfigV1().ClusterVersions().Get(ctx, versionName, metav1.GetOptions{})
 	if err != nil {
 		t.Error(err)
 	}

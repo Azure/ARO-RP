@@ -71,9 +71,10 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 				Name: originalR.ResourceName,
 				Type: originalR.Provider + "/" + originalR.ResourceType,
 				Properties: api.OpenShiftClusterProperties{
-					ProvisioningState: api.ProvisioningStateSucceeded,
-					CreatedBy:         version.GitCommit,
-					ProvisionedBy:     version.GitCommit,
+					ArchitectureVersion: version.InstallArchitectureVersion,
+					ProvisioningState:   api.ProvisioningStateSucceeded,
+					CreatedBy:           version.GitCommit,
+					ProvisionedBy:       version.GitCommit,
 					ClusterProfile: api.ClusterProfile{
 						Version: version.InstallStream.Version.String(),
 					},
@@ -154,6 +155,10 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 	doc.OpenShiftCluster.ID, doc.OpenShiftCluster.Name, doc.OpenShiftCluster.Type = oldID, oldName, oldType
 
 	if isCreate {
+		// on create, make the cluster resourcegroup ID lower case to work
+		// around LB/PLS bug
+		doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID = strings.ToLower(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
+
 		doc.ClusterResourceGroupIDKey = strings.ToLower(doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID)
 		doc.ClientIDKey = strings.ToLower(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientID)
 		doc.OpenShiftCluster.Properties.ProvisioningState = api.ProvisioningStateCreating

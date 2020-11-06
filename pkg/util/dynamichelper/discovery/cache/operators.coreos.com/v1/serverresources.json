@@ -4,26 +4,6 @@
     "groupVersion": "operators.coreos.com/v1",
     "resources": [
         {
-            "name": "catalogsourceconfigs",
-            "singularName": "catalogsourceconfig",
-            "namespaced": true,
-            "kind": "CatalogSourceConfig",
-            "verbs": [
-                "create",
-                "delete",
-                "deletecollection",
-                "get",
-                "list",
-                "patch",
-                "update",
-                "watch"
-            ],
-            "shortNames": [
-                "csc"
-            ],
-            "storageVersionHash": "MQDcm7IzDFU="
-        },
-        {
             "name": "operatorgroups",
             "singularName": "operatorgroup",
             "namespaced": true,

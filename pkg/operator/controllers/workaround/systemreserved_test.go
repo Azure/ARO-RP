@@ -4,12 +4,13 @@ package workaround
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	machinev1beta1 "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
+	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	fakemcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -68,7 +69,7 @@ func TestSystemreservedEnsure(t *testing.T) {
 			}),
 			machineConfigPoolNeedsUpdate: true,
 			mocker: func(mdh *mock_dynamichelper.MockDynamicHelper) {
-				mdh.EXPECT().Ensure(gomock.Any()).Return(nil)
+				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
 		{
@@ -80,7 +81,7 @@ func TestSystemreservedEnsure(t *testing.T) {
 				},
 			}),
 			mocker: func(mdh *mock_dynamichelper.MockDynamicHelper) {
-				mdh.EXPECT().Ensure(gomock.Any()).Return(nil)
+				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
 	}
@@ -107,7 +108,7 @@ func TestSystemreservedEnsure(t *testing.T) {
 			})
 
 			tt.mocker(mdh)
-			if err := sr.Ensure(); (err != nil) != tt.wantErr {
+			if err := sr.Ensure(context.Background()); (err != nil) != tt.wantErr {
 				t.Errorf("systemreserved.Ensure() error = %v, wantErr %v", err, tt.wantErr)
 			}
 			if tt.machineConfigPoolNeedsUpdate != updated {

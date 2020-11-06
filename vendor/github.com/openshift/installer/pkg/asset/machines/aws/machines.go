@@ -11,14 +11,14 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/utils/pointer"
-	awsprovider "sigs.k8s.io/cluster-api-provider-aws/pkg/apis/awsproviderconfig/v1beta1"
+	awsprovider "sigs.k8s.io/cluster-api-provider-aws/pkg/apis/awsprovider/v1beta1"
 
 	"github.com/openshift/installer/pkg/types"
 	"github.com/openshift/installer/pkg/types/aws"
 )
 
 // Machines returns a list of machines for a machinepool.
-func Machines(clusterID string, region string, subnets map[string]string, pool *types.MachinePool, osImage, role, userDataSecret string, userTags map[string]string) ([]machineapi.Machine, error) {
+func Machines(clusterID string, region string, subnets map[string]string, pool *types.MachinePool, role, userDataSecret string, userTags map[string]string) ([]machineapi.Machine, error) {
 	if poolPlatform := pool.Platform.Name(); poolPlatform != aws.Name {
 		return nil, fmt.Errorf("non-AWS machine-pool: %q", poolPlatform)
 	}
@@ -41,7 +41,7 @@ func Machines(clusterID string, region string, subnets map[string]string, pool *
 			subnet,
 			mpool.InstanceType,
 			&mpool.EC2RootVolume,
-			osImage,
+			mpool.AMIID,
 			zone,
 			role,
 			userDataSecret,
@@ -79,7 +79,6 @@ func Machines(clusterID string, region string, subnets map[string]string, pool *
 }
 
 func provider(clusterID string, region string, subnet string, instanceType string, root *aws.EC2RootVolume, osImage string, zone, role, userDataSecret string, userTags map[string]string) (*awsprovider.AWSMachineProviderConfig, error) {
-	amiID := osImage
 	tags, err := tagsFromUserTags(clusterID, userTags)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create awsprovider.TagSpecifications from UserTags")
@@ -97,10 +96,11 @@ func provider(clusterID string, region string, subnet string, instanceType strin
 					VolumeType: pointer.StringPtr(root.Type),
 					VolumeSize: pointer.Int64Ptr(int64(root.Size)),
 					Iops:       pointer.Int64Ptr(int64(root.IOPS)),
+					Encrypted:  pointer.BoolPtr(true),
+					KMSKey:     awsprovider.AWSResourceReference{ARN: pointer.StringPtr(root.KMSKeyARN)},
 				},
 			},
 		},
-		AMI:                awsprovider.AWSResourceReference{ID: &amiID},
 		Tags:               tags,
 		IAMInstanceProfile: &awsprovider.AWSResourceReference{ID: pointer.StringPtr(fmt.Sprintf("%s-%s-profile", clusterID, role))},
 		UserDataSecret:     &corev1.LocalObjectReference{Name: userDataSecret},
@@ -121,6 +121,15 @@ func provider(clusterID string, region string, subnet string, instanceType strin
 		}}
 	} else {
 		config.Subnet.ID = pointer.StringPtr(subnet)
+	}
+
+	if osImage == "" {
+		config.AMI.Filters = []awsprovider.Filter{{
+			Name:   "tag:Name",
+			Values: []string{fmt.Sprintf("%s-ami-%s", clusterID, region)},
+		}}
+	} else {
+		config.AMI.ID = pointer.StringPtr(osImage)
 	}
 
 	return config, nil
