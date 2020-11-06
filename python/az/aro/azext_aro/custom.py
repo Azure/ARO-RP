@@ -14,6 +14,7 @@ from azure.cli.core.commands.client_factory import get_subscription_id
 from azure.cli.core.profiles import ResourceType
 from azure.cli.core.util import sdk_no_wait
 from msrestazure.azure_exceptions import CloudError
+from msrest.exceptions import HttpOperationError
 from msrestazure.tools import resource_id, parse_resource_id
 from knack.log import get_logger
 from knack.util import CLIError
@@ -138,13 +139,9 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
 def aro_delete(cmd, client, resource_group_name, resource_name, no_wait=False):
     # TODO: clean up rbac
 
-    oc = None
     try:
         oc = client.get(resource_group_name, resource_name)
-    except CloudError:
-        pass
 
-    if oc:
         master_subnet = oc.master_profile.subnet_id
         worker_subnets = {w.subnet_id for w in oc.worker_profiles}
 
@@ -158,32 +155,22 @@ def aro_delete(cmd, client, resource_group_name, resource_name, no_wait=False):
         )
 
         aad = AADManager(cmd.cli_ctx)
-
-        sp_ids = []
-
-        client_id = oc.service_principal_profile.client_id
-        client_sp = aad.get_service_principal(client_id)
-        if client_sp:
-            sp_ids.append(client_sp.object_id)
-        else:
-            logger.warning(
-                'Unable to retrieve the cluster service principal. This means '
-                'that it may have been deleted, and some cleanup may fail.'
-            )
-
         rp_client_id = os.environ.get('AZURE_FP_CLIENT_ID', FP_CLIENT_ID)
-
         rp_client_sp = aad.get_service_principal(rp_client_id)
-        if rp_client_sp:
-            sp_ids.append(rp_client_sp.object_id)
 
-        # Customers frequently remove these permissions, then cannot delete their
-        # clusters. Hence, verify this before attempting deletion.
-        for sp_id in sp_ids:
+        # Customers frequently remove the RP's permissions, then cannot
+        # delete the cluster. Where possible, fix this before attempting
+        # deletion.
+        if rp_client_sp:
+            sp_id = rp_client_sp.object_id
             assign_contributor_to_vnet(cmd.cli_ctx, vnet, sp_id)
             assign_contributor_to_routetable(cmd.cli_ctx,
                                              worker_subnets | {master_subnet},
                                              sp_id)
+    except (CloudError, HttpOperationError) as e:
+        # Default to old deletion behaviour in case operations throw an
+        # exception above.
+        pass
 
     return sdk_no_wait(no_wait, client.delete,
                        resource_group_name=resource_group_name,
