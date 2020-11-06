@@ -65,6 +65,18 @@ func NewManager(kvAuthorizer autorest.Authorizer, keyvaultURI string) Manager {
 }
 
 func (m *manager) CreateSignedCertificate(ctx context.Context, issuer Issuer, certificateName, commonName string, eku Eku) error {
+	shortCommonName := commonName
+	if len(shortCommonName) > 64 {
+		// RFC 5280 requires that the common name be <= 64 characters.  Also see
+		// https://docs.digicert.com/manage-certificates/public-certificates-data-entries-that/#64character-maximum-limit-violation .
+		// The above does not prevent having longer DNS names in the subject
+		// alternative names field.  Key vault does not allow a certificate
+		// subject with an empty common name.  So, in the case where the domain
+		// name is too long, we use a reserved domain name which cannot be
+		// allocated by an end user as the common name.
+		shortCommonName = "reserved.aroapp.io"
+	}
+
 	op, err := m.kv.CreateCertificate(ctx, m.keyvaultURI, certificateName, keyvault.CertificateCreateParameters{
 		CertificatePolicy: &keyvault.CertificatePolicy{
 			KeyProperties: &keyvault.KeyProperties{
@@ -76,9 +88,14 @@ func (m *manager) CreateSignedCertificate(ctx context.Context, issuer Issuer, ce
 				ContentType: to.StringPtr("application/x-pem-file"),
 			},
 			X509CertificateProperties: &keyvault.X509CertificateProperties{
-				Subject: to.StringPtr(pkix.Name{CommonName: commonName}.String()),
+				Subject: to.StringPtr(pkix.Name{CommonName: shortCommonName}.String()),
 				Ekus: &[]string{
 					string(eku),
+				},
+				SubjectAlternativeNames: &keyvault.SubjectAlternativeNames{
+					DNSNames: &[]string{
+						commonName,
+					},
 				},
 				KeyUsage: &[]keyvault.KeyUsageType{
 					keyvault.DigitalSignature,
