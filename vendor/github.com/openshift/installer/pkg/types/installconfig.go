@@ -4,15 +4,8 @@ import (
 	"fmt"
 
 	"github.com/openshift/installer/pkg/ipnet"
-	"github.com/openshift/installer/pkg/types/aws"
 	"github.com/openshift/installer/pkg/types/azure"
-	"github.com/openshift/installer/pkg/types/baremetal"
-	"github.com/openshift/installer/pkg/types/gcp"
-	"github.com/openshift/installer/pkg/types/libvirt"
 	"github.com/openshift/installer/pkg/types/none"
-	"github.com/openshift/installer/pkg/types/openstack"
-	"github.com/openshift/installer/pkg/types/ovirt"
-	"github.com/openshift/installer/pkg/types/vsphere"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -28,18 +21,14 @@ var (
 	// platform names in alphabetical order. This is the list of
 	// platforms presented to the user in the interactive wizard.
 	PlatformNames = []string{
-		aws.Name,
+
 		azure.Name,
-		gcp.Name,
-		openstack.Name,
-		ovirt.Name,
-		vsphere.Name,
 	}
 	// HiddenPlatformNames is a slice with all the
 	// hidden-but-supported platform names. This list isn't presented
 	// to the user in the interactive wizard.
 	HiddenPlatformNames = []string{
-		baremetal.Name,
+
 		none.Name,
 	}
 )
@@ -150,7 +139,6 @@ func (c *InstallConfig) ClusterDomain() string {
 type Platform struct {
 	// AWS is the configuration used when installing on AWS.
 	// +optional
-	AWS *aws.Platform `json:"aws,omitempty"`
 
 	// Azure is the configuration used when installing on Azure.
 	// +optional
@@ -158,15 +146,12 @@ type Platform struct {
 
 	// BareMetal is the configuration used when installing on bare metal.
 	// +optional
-	BareMetal *baremetal.Platform `json:"baremetal,omitempty"`
 
 	// GCP is the configuration used when installing on Google Cloud Platform.
 	// +optional
-	GCP *gcp.Platform `json:"gcp,omitempty"`
 
 	// Libvirt is the configuration used when installing on libvirt.
 	// +optional
-	Libvirt *libvirt.Platform `json:"libvirt,omitempty"`
 
 	// None is the empty configuration used when installing on an unsupported
 	// platform.
@@ -174,15 +159,13 @@ type Platform struct {
 
 	// OpenStack is the configuration used when installing on OpenStack.
 	// +optional
-	OpenStack *openstack.Platform `json:"openstack,omitempty"`
 
 	// VSphere is the configuration used when installing on vSphere.
 	// +optional
-	VSphere *vsphere.Platform `json:"vsphere,omitempty"`
 
 	// Ovirt is the configuration used when installing on oVirt.
 	// +optional
-	Ovirt *ovirt.Platform `json:"ovirt,omitempty"`
+
 }
 
 // Name returns a string representation of the platform (e.g. "aws" if
@@ -192,24 +175,10 @@ func (p *Platform) Name() string {
 	switch {
 	case p == nil:
 		return ""
-	case p.AWS != nil:
-		return aws.Name
 	case p.Azure != nil:
 		return azure.Name
-	case p.BareMetal != nil:
-		return baremetal.Name
-	case p.GCP != nil:
-		return gcp.Name
-	case p.Libvirt != nil:
-		return libvirt.Name
 	case p.None != nil:
 		return none.Name
-	case p.OpenStack != nil:
-		return openstack.Name
-	case p.VSphere != nil:
-		return vsphere.Name
-	case p.Ovirt != nil:
-		return ovirt.Name
 	default:
 		return ""
 	}

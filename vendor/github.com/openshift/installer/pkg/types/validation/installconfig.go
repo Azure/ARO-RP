@@ -14,22 +14,9 @@ import (
 
 	"github.com/openshift/installer/pkg/ipnet"
 	"github.com/openshift/installer/pkg/types"
-	"github.com/openshift/installer/pkg/types/aws"
-	awsvalidation "github.com/openshift/installer/pkg/types/aws/validation"
 	"github.com/openshift/installer/pkg/types/azure"
 	azurevalidation "github.com/openshift/installer/pkg/types/azure/validation"
-	"github.com/openshift/installer/pkg/types/baremetal"
-	baremetalvalidation "github.com/openshift/installer/pkg/types/baremetal/validation"
-	"github.com/openshift/installer/pkg/types/gcp"
-	gcpvalidation "github.com/openshift/installer/pkg/types/gcp/validation"
-	"github.com/openshift/installer/pkg/types/libvirt"
-	libvirtvalidation "github.com/openshift/installer/pkg/types/libvirt/validation"
-	"github.com/openshift/installer/pkg/types/openstack"
 	openstackvalidation "github.com/openshift/installer/pkg/types/openstack/validation"
-	"github.com/openshift/installer/pkg/types/ovirt"
-	ovirtvalidation "github.com/openshift/installer/pkg/types/ovirt/validation"
-	"github.com/openshift/installer/pkg/types/vsphere"
-	vspherevalidation "github.com/openshift/installer/pkg/types/vsphere/validation"
 	"github.com/openshift/installer/pkg/validate"
 )
 
@@ -60,7 +47,7 @@ func ValidateInstallConfig(c *types.InstallConfig, openStackValidValuesFetcher o
 		}
 	}
 	nameErr := validate.ClusterName(c.ObjectMeta.Name)
-	if c.Platform.GCP != nil || c.Platform.Azure != nil {
+	if c.Platform.Azure != nil {
 		nameErr = validate.ClusterName1035(c.ObjectMeta.Name)
 	}
 	if nameErr != nil {
@@ -184,15 +171,12 @@ func validateNetworkingIPVersion(n *types.Networking, p *types.Platform) field.E
 
 		switch {
 		case p.Azure != nil:
-		case p.BareMetal != nil:
 		case p.None != nil:
 		default:
 			allErrs = append(allErrs, field.Invalid(field.NewPath("networking"), "DualStack", "dual-stack IPv4/IPv6 is not supported for this platform, specify only one type of address"))
 		}
 		for k, v := range presence {
 			switch {
-			case k == "machineNetwork" && p.AWS != nil:
-				// AWS can default an ipv6 subnet
 			case v.IPv4 && !v.IPv6:
 				allErrs = append(allErrs, field.Invalid(field.NewPath("networking", k), strings.Join(ipSliceToStrings(addresses[k]), ", "), "dual-stack IPv4/IPv6 requires an IPv6 address in this list"))
 			case !v.IPv4 && v.IPv6:
@@ -206,7 +190,6 @@ func validateNetworkingIPVersion(n *types.Networking, p *types.Platform) field.E
 		}
 
 		switch {
-		case p.BareMetal != nil:
 		case p.None != nil:
 		case p.Azure != nil && os.Getenv("OPENSHIFT_INSTALL_AZURE_EMULATE_SINGLESTACK_IPV6") == "true":
 		default:
@@ -352,38 +335,13 @@ func validatePlatform(platform *types.Platform, fldPath *field.Path, openStackVa
 		}
 		allErrs = append(allErrs, validation(fldPath.Child(n))...)
 	}
-	if platform.AWS != nil {
-		validate(aws.Name, platform.AWS, func(f *field.Path) field.ErrorList { return awsvalidation.ValidatePlatform(platform.AWS, f) })
-	}
+
 	if platform.Azure != nil {
 		validate(azure.Name, platform.Azure, func(f *field.Path) field.ErrorList {
 			return azurevalidation.ValidatePlatform(platform.Azure, c.Publish, f)
 		})
 	}
-	if platform.GCP != nil {
-		validate(gcp.Name, platform.GCP, func(f *field.Path) field.ErrorList { return gcpvalidation.ValidatePlatform(platform.GCP, f) })
-	}
-	if platform.Libvirt != nil {
-		validate(libvirt.Name, platform.Libvirt, func(f *field.Path) field.ErrorList { return libvirtvalidation.ValidatePlatform(platform.Libvirt, f) })
-	}
-	if platform.OpenStack != nil {
-		validate(openstack.Name, platform.OpenStack, func(f *field.Path) field.ErrorList {
-			return openstackvalidation.ValidatePlatform(platform.OpenStack, network, f, openStackValidValuesFetcher, c)
-		})
-	}
-	if platform.VSphere != nil {
-		validate(vsphere.Name, platform.VSphere, func(f *field.Path) field.ErrorList { return vspherevalidation.ValidatePlatform(platform.VSphere, f) })
-	}
-	if platform.BareMetal != nil {
-		validate(baremetal.Name, platform.BareMetal, func(f *field.Path) field.ErrorList {
-			return baremetalvalidation.ValidatePlatform(platform.BareMetal, network, f, c)
-		})
-	}
-	if platform.Ovirt != nil {
-		validate(ovirt.Name, platform.Ovirt, func(f *field.Path) field.ErrorList {
-			return ovirtvalidation.ValidatePlatform(platform.Ovirt, f)
-		})
-	}
+
 	return allErrs
 }
 
@@ -470,9 +428,8 @@ func validateCloudCredentialsMode(mode types.CredentialsMode, fldPath *field.Pat
 	// validPlatformCredentialsModes is a map from the platform name to a slice of credentials modes that are valid
 	// for the platform. If a platform name is not in the map, then the credentials mode cannot be set for that platform.
 	validPlatformCredentialsModes := map[string][]types.CredentialsMode{
-		aws.Name:   {types.MintCredentialsMode, types.PassthroughCredentialsMode, types.ManualCredentialsMode},
+
 		azure.Name: {types.MintCredentialsMode, types.PassthroughCredentialsMode},
-		gcp.Name:   {types.MintCredentialsMode, types.PassthroughCredentialsMode},
 	}
 	if validModes, ok := validPlatformCredentialsModes[platform]; ok {
 		validModesSet := sets.NewString()

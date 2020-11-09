@@ -1,14 +1,7 @@
 package types
 
 import (
-	"github.com/openshift/installer/pkg/types/aws"
 	"github.com/openshift/installer/pkg/types/azure"
-	"github.com/openshift/installer/pkg/types/baremetal"
-	"github.com/openshift/installer/pkg/types/gcp"
-	"github.com/openshift/installer/pkg/types/libvirt"
-	"github.com/openshift/installer/pkg/types/openstack"
-	"github.com/openshift/installer/pkg/types/ovirt"
-	"github.com/openshift/installer/pkg/types/vsphere"
 )
 
 // HyperthreadingMode is the mode of hyperthreading for a machine.
@@ -68,28 +61,22 @@ type MachinePool struct {
 // pool. Only one of the platforms should be set.
 type MachinePoolPlatform struct {
 	// AWS is the configuration used when installing on AWS.
-	AWS *aws.MachinePool `json:"aws,omitempty"`
 
 	// Azure is the configuration used when installing on Azure.
 	Azure *azure.MachinePool `json:"azure,omitempty"`
 
 	// BareMetal is the configuration used when installing on bare metal.
-	BareMetal *baremetal.MachinePool `json:"baremetal,omitempty"`
 
 	// GCP is the configuration used when installing on GCP
-	GCP *gcp.MachinePool `json:"gcp,omitempty"`
 
 	// Libvirt is the configuration used when installing on libvirt.
-	Libvirt *libvirt.MachinePool `json:"libvirt,omitempty"`
 
 	// OpenStack is the configuration used when installing on OpenStack.
-	OpenStack *openstack.MachinePool `json:"openstack,omitempty"`
 
 	// VSphere is the configuration used when installing on vSphere.
-	VSphere *vsphere.MachinePool `json:"vsphere,omitempty"`
 
 	// Ovirt is the configuration used when installing on oVirt.
-	Ovirt *ovirt.MachinePool `json:"ovirt,omitempty"`
+
 }
 
 // Name returns a string representation of the platform (e.g. "aws" if
@@ -99,22 +86,8 @@ func (p *MachinePoolPlatform) Name() string {
 	switch {
 	case p == nil:
 		return ""
-	case p.AWS != nil:
-		return aws.Name
 	case p.Azure != nil:
 		return azure.Name
-	case p.BareMetal != nil:
-		return baremetal.Name
-	case p.GCP != nil:
-		return gcp.Name
-	case p.Libvirt != nil:
-		return libvirt.Name
-	case p.OpenStack != nil:
-		return openstack.Name
-	case p.VSphere != nil:
-		return vsphere.Name
-	case p.Ovirt != nil:
-		return ovirt.Name
 	default:
 		return ""
 	}

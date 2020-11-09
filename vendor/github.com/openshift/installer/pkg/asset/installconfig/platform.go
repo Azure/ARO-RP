@@ -8,22 +8,9 @@ import (
 	survey "gopkg.in/AlecAivazis/survey.v1"
 
 	"github.com/openshift/installer/pkg/asset"
-	awsconfig "github.com/openshift/installer/pkg/asset/installconfig/aws"
 	azureconfig "github.com/openshift/installer/pkg/asset/installconfig/azure"
-	gcpconfig "github.com/openshift/installer/pkg/asset/installconfig/gcp"
-	libvirtconfig "github.com/openshift/installer/pkg/asset/installconfig/libvirt"
-	openstackconfig "github.com/openshift/installer/pkg/asset/installconfig/openstack"
-	ovirtconfig "github.com/openshift/installer/pkg/asset/installconfig/ovirt"
-	vsphereconfig "github.com/openshift/installer/pkg/asset/installconfig/vsphere"
 	"github.com/openshift/installer/pkg/types"
-	"github.com/openshift/installer/pkg/types/aws"
 	"github.com/openshift/installer/pkg/types/azure"
-	"github.com/openshift/installer/pkg/types/gcp"
-	"github.com/openshift/installer/pkg/types/libvirt"
-	"github.com/openshift/installer/pkg/types/none"
-	"github.com/openshift/installer/pkg/types/openstack"
-	"github.com/openshift/installer/pkg/types/ovirt"
-	"github.com/openshift/installer/pkg/types/vsphere"
 )
 
 // Platform is an asset that queries the user for the platform on which to install
@@ -52,40 +39,8 @@ func (a *platform) Generate(parents asset.Parents) error {
 	}
 
 	switch platform {
-	case aws.Name:
-		a.AWS, err = awsconfig.Platform()
-		if err != nil {
-			return err
-		}
-	case libvirt.Name:
-		a.Libvirt, err = libvirtconfig.Platform()
-		if err != nil {
-			return err
-		}
 	case azure.Name:
 		a.Azure, err = azureconfig.Platform(platformCreds.Azure)
-		if err != nil {
-			return err
-		}
-	case gcp.Name:
-		a.GCP, err = gcpconfig.Platform()
-		if err != nil {
-			return err
-		}
-	case none.Name:
-		a.None = &none.Platform{}
-	case openstack.Name:
-		a.OpenStack, err = openstackconfig.Platform()
-		if err != nil {
-			return err
-		}
-	case vsphere.Name:
-		a.VSphere, err = vsphereconfig.Platform()
-		if err != nil {
-			return err
-		}
-	case ovirt.Name:
-		a.Ovirt, err = ovirtconfig.Platform()
 		if err != nil {
 			return err
 		}

@@ -2,13 +2,8 @@
 package rhcos
 
 import (
-	"context"
-	"time"
-
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/installconfig"
-	"github.com/openshift/installer/pkg/rhcos"
-	"github.com/openshift/installer/pkg/types/baremetal"
 )
 
 // BootstrapImage is location of the RHCOS image for the Bootstrap node
@@ -39,19 +34,7 @@ func (i *BootstrapImage) Generate(p asset.Parents) error {
 
 	var osimage string
 	var err error
-	ctx, cancel := context.WithTimeout(context.TODO(), 30*time.Second)
-	defer cancel()
 	switch config.Platform.Name() {
-	case baremetal.Name:
-		// Check for RHCOS image URL override
-		if boi := config.Platform.BareMetal.BootstrapOSImage; boi != "" {
-			osimage = boi
-			break
-		}
-
-		// Baremetal IPI launches a local VM for the bootstrap node
-		// Hence requires the QEMU image to use the libvirt backend
-		osimage, err = rhcos.QEMU(ctx, config.ControlPlane.Architecture)
 	default:
 		// other platforms use the same image for all nodes
 		osimage, err = osImage(config)

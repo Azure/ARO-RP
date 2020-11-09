@@ -3,7 +3,6 @@ package rhcos
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"time"
 
@@ -12,18 +11,9 @@ import (
 
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/installconfig"
-	configaws "github.com/openshift/installer/pkg/asset/installconfig/aws"
 	"github.com/openshift/installer/pkg/rhcos"
 	"github.com/openshift/installer/pkg/types"
-	"github.com/openshift/installer/pkg/types/aws"
 	"github.com/openshift/installer/pkg/types/azure"
-	"github.com/openshift/installer/pkg/types/baremetal"
-	"github.com/openshift/installer/pkg/types/gcp"
-	"github.com/openshift/installer/pkg/types/libvirt"
-	"github.com/openshift/installer/pkg/types/none"
-	"github.com/openshift/installer/pkg/types/openstack"
-	"github.com/openshift/installer/pkg/types/ovirt"
-	"github.com/openshift/installer/pkg/types/vsphere"
 )
 
 // Image is location of RHCOS image.
@@ -72,53 +62,9 @@ func osImage(config *types.InstallConfig) (string, error) {
 	ctx, cancel := context.WithTimeout(context.TODO(), 30*time.Second)
 	defer cancel()
 	switch config.Platform.Name() {
-	case aws.Name:
-		if len(config.Platform.AWS.AMIID) > 0 {
-			osimage = config.Platform.AWS.AMIID
-			break
-		}
-		region := config.Platform.AWS.Region
-		if !configaws.IsKnownRegion(config.Platform.AWS.Region) {
-			region = "us-east-1"
-		}
-		osimage, err = rhcos.AMI(ctx, arch, region)
-		if region != config.Platform.AWS.Region {
-			osimage = fmt.Sprintf("%s,%s", osimage, region)
-		}
-	case gcp.Name:
-		osimage, err = rhcos.GCP(ctx, arch)
-	case libvirt.Name:
-		osimage, err = rhcos.QEMU(ctx, arch)
-	case openstack.Name:
-		if oi := config.Platform.OpenStack.ClusterOSImage; oi != "" {
-			osimage = oi
-			break
-		}
-		osimage, err = rhcos.OpenStack(ctx, arch)
-	case ovirt.Name:
-		osimage, err = rhcos.OpenStack(ctx, arch)
 	case azure.Name:
 		osimage, err = rhcos.VHD(ctx, arch)
-	case baremetal.Name:
-		// Check for RHCOS image URL override
-		if oi := config.Platform.BareMetal.ClusterOSImage; oi != "" {
-			osimage = oi
-			break
-		}
 
-		// Note that baremetal IPI currently uses the OpenStack image
-		// because this contains the necessary ironic config drive
-		// ignition support, which isn't enabled in the UPI BM images
-		osimage, err = rhcos.OpenStack(ctx, arch)
-	case vsphere.Name:
-		// Check for RHCOS image URL override
-		if config.Platform.VSphere.ClusterOSImage != "" {
-			osimage = config.Platform.VSphere.ClusterOSImage
-			break
-		}
-
-		osimage, err = rhcos.VMware(ctx, arch)
-	case none.Name:
 	default:
 		return "", errors.New("invalid Platform")
 	}

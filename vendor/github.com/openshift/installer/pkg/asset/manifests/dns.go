@@ -1,10 +1,7 @@
 package manifests
 
 import (
-	"context"
-	"fmt"
 	"path/filepath"
-	"strings"
 
 	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
@@ -14,19 +11,9 @@ import (
 
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/installconfig"
-	icaws "github.com/openshift/installer/pkg/asset/installconfig/aws"
 	icazure "github.com/openshift/installer/pkg/asset/installconfig/azure"
-	icgcp "github.com/openshift/installer/pkg/asset/installconfig/gcp"
 	"github.com/openshift/installer/pkg/types"
-	awstypes "github.com/openshift/installer/pkg/types/aws"
 	azuretypes "github.com/openshift/installer/pkg/types/azure"
-	baremetaltypes "github.com/openshift/installer/pkg/types/baremetal"
-	gcptypes "github.com/openshift/installer/pkg/types/gcp"
-	libvirttypes "github.com/openshift/installer/pkg/types/libvirt"
-	nonetypes "github.com/openshift/installer/pkg/types/none"
-	openstacktypes "github.com/openshift/installer/pkg/types/openstack"
-	ovirttypes "github.com/openshift/installer/pkg/types/ovirt"
-	vspheretypes "github.com/openshift/installer/pkg/types/vsphere"
 )
 
 var (
@@ -81,22 +68,6 @@ func (d *DNS) Generate(dependencies asset.Parents) error {
 	}
 
 	switch installConfig.Config.Platform.Name() {
-	case awstypes.Name:
-		if installConfig.Config.Publish == types.ExternalPublishingStrategy {
-			sess, err := installConfig.AWS.Session(context.TODO())
-			if err != nil {
-				return errors.Wrap(err, "failed to initialize session")
-			}
-			zone, err := icaws.GetPublicZone(sess, installConfig.Config.BaseDomain)
-			if err != nil {
-				return errors.Wrapf(err, "getting public zone for %q", installConfig.Config.BaseDomain)
-			}
-			config.Spec.PublicZone = &configv1.DNSZone{ID: strings.TrimPrefix(*zone.Id, "/hostedzone/")}
-		}
-		config.Spec.PrivateZone = &configv1.DNSZone{Tags: map[string]string{
-			fmt.Sprintf("kubernetes.io/cluster/%s", clusterID.InfraID): "owned",
-			"Name": fmt.Sprintf("%s-int", clusterID.InfraID),
-		}}
 	case azuretypes.Name:
 		dnsConfig, err := icazure.NewDNSConfig(platformCreds.Azure)
 		if err != nil {
@@ -113,16 +84,7 @@ func (d *DNS) Generate(dependencies asset.Parents) error {
 		config.Spec.PrivateZone = &configv1.DNSZone{
 			ID: dnsConfig.GetPrivateDNSZoneID(installConfig.Config.Azure.ResourceGroupName, installConfig.Config.ClusterDomain()),
 		}
-	case gcptypes.Name:
-		if installConfig.Config.Publish == types.ExternalPublishingStrategy {
-			zone, err := icgcp.GetPublicZone(context.TODO(), installConfig.Config.Platform.GCP.ProjectID, installConfig.Config.BaseDomain)
-			if err != nil {
-				return errors.Wrapf(err, "failed to get public zone for %q", installConfig.Config.BaseDomain)
-			}
-			config.Spec.PublicZone = &configv1.DNSZone{ID: zone.Name}
-		}
-		config.Spec.PrivateZone = &configv1.DNSZone{ID: fmt.Sprintf("%s-private-zone", clusterID.InfraID)}
-	case libvirttypes.Name, openstacktypes.Name, baremetaltypes.Name, nonetypes.Name, vspheretypes.Name, ovirttypes.Name:
+
 	default:
 		return errors.New("invalid Platform")
 	}

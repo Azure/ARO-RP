@@ -30,7 +30,7 @@ func (a *clusterName) Generate(parents asset.Parents) error {
 
 	validator := survey.Required
 
-	if platform.GCP != nil || platform.Azure != nil {
+	if platform.Azure != nil {
 		validator = survey.ComposeValidators(validator, func(ans interface{}) error {
 			return validate.ClusterName1035(ans.(string))
 		})

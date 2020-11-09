@@ -2,7 +2,6 @@ package manifests
 
 import (
 	"fmt"
-	"io/ioutil"
 	"path/filepath"
 
 	"github.com/ghodss/yaml"
@@ -16,20 +15,8 @@ import (
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	icazure "github.com/openshift/installer/pkg/asset/installconfig/azure"
-	icopenstack "github.com/openshift/installer/pkg/asset/installconfig/openstack"
 	"github.com/openshift/installer/pkg/asset/manifests/azure"
-	gcpmanifests "github.com/openshift/installer/pkg/asset/manifests/gcp"
-	openstackmanifests "github.com/openshift/installer/pkg/asset/manifests/openstack"
-	vspheremanifests "github.com/openshift/installer/pkg/asset/manifests/vsphere"
-	awstypes "github.com/openshift/installer/pkg/types/aws"
 	azuretypes "github.com/openshift/installer/pkg/types/azure"
-	baremetaltypes "github.com/openshift/installer/pkg/types/baremetal"
-	gcptypes "github.com/openshift/installer/pkg/types/gcp"
-	libvirttypes "github.com/openshift/installer/pkg/types/libvirt"
-	nonetypes "github.com/openshift/installer/pkg/types/none"
-	openstacktypes "github.com/openshift/installer/pkg/types/openstack"
-	ovirttypes "github.com/openshift/installer/pkg/types/ovirt"
-	vspheretypes "github.com/openshift/installer/pkg/types/vsphere"
 )
 
 var (
@@ -90,24 +77,6 @@ func (cpc *CloudProviderConfig) Generate(dependencies asset.Parents) error {
 	}
 
 	switch installConfig.Config.Platform.Name() {
-	case awstypes.Name, libvirttypes.Name, nonetypes.Name, baremetaltypes.Name, ovirttypes.Name:
-		return nil
-	case openstacktypes.Name:
-		cloud, err := icopenstack.GetSession(installConfig.Config.Platform.OpenStack.Cloud)
-		if err != nil {
-			return errors.Wrap(err, "failed to get cloud config for openstack")
-		}
-
-		cm.Data[cloudProviderConfigDataKey] = openstackmanifests.CloudProviderConfig(cloud.CloudConfig)
-
-		// Get the ca-cert-bundle key if there is a value for cacert in clouds.yaml
-		if caPath := cloud.CloudConfig.CACertFile; caPath != "" {
-			caFile, err := ioutil.ReadFile(caPath)
-			if err != nil {
-				return errors.Wrap(err, "failed to read clouds.yaml ca-cert from disk")
-			}
-			cm.Data["ca-bundle.pem"] = string(caFile)
-		}
 	case azuretypes.Name:
 		session, err := icazure.GetSession(platformCreds.Azure)
 		if err != nil {
@@ -143,30 +112,6 @@ func (cpc *CloudProviderConfig) Generate(dependencies asset.Parents) error {
 			return errors.Wrap(err, "could not create cloud provider config")
 		}
 		cm.Data[cloudProviderConfigDataKey] = azureConfig
-	case gcptypes.Name:
-		subnet := fmt.Sprintf("%s-worker-subnet", clusterID.InfraID)
-		if installConfig.Config.GCP.ComputeSubnet != "" {
-			subnet = installConfig.Config.GCP.ComputeSubnet
-		}
-		gcpConfig, err := gcpmanifests.CloudProviderConfig(clusterID.InfraID, installConfig.Config.GCP.ProjectID, subnet)
-		if err != nil {
-			return errors.Wrap(err, "could not create cloud provider config")
-		}
-		cm.Data[cloudProviderConfigDataKey] = gcpConfig
-	case vspheretypes.Name:
-		folderPath := installConfig.Config.Platform.VSphere.Folder
-		if len(folderPath) == 0 {
-			dataCenter := installConfig.Config.Platform.VSphere.Datacenter
-			folderPath = fmt.Sprintf("/%s/vm/%s", dataCenter, clusterID.InfraID)
-		}
-		vsphereConfig, err := vspheremanifests.CloudProviderConfig(
-			folderPath,
-			installConfig.Config.Platform.VSphere,
-		)
-		if err != nil {
-			return errors.Wrap(err, "could not create cloud provider config")
-		}
-		cm.Data[cloudProviderConfigDataKey] = vsphereConfig
 	default:
 		return errors.New("invalid Platform")
 	}

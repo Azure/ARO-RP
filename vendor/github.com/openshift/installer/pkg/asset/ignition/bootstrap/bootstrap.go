@@ -23,8 +23,6 @@ import (
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/bootstraplogging"
 	"github.com/openshift/installer/pkg/asset/ignition"
-	"github.com/openshift/installer/pkg/asset/ignition/bootstrap/baremetal"
-	"github.com/openshift/installer/pkg/asset/ignition/bootstrap/vsphere"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/kubeconfig"
 	"github.com/openshift/installer/pkg/asset/machines"
@@ -33,8 +31,6 @@ import (
 	"github.com/openshift/installer/pkg/asset/rhcos"
 	"github.com/openshift/installer/pkg/asset/tls"
 	"github.com/openshift/installer/pkg/types"
-	baremetaltypes "github.com/openshift/installer/pkg/types/baremetal"
-	vspheretypes "github.com/openshift/installer/pkg/types/vsphere"
 )
 
 const (
@@ -62,8 +58,6 @@ type bootstrapTemplateData struct {
 // platformTemplateData is the data to use to replace values in bootstrap
 // template files that are specific to one platform.
 type platformTemplateData struct {
-	BareMetal *baremetal.TemplateData
-	VSphere   *vsphere.TemplateData
 }
 
 // Bootstrap is an asset that generates the ignition config for bootstrap nodes.
@@ -246,13 +240,6 @@ func (a *Bootstrap) getTemplateData(installConfig *types.InstallConfig, releaseI
 
 	// Generate platform-specific bootstrap data
 	var platformData platformTemplateData
-
-	switch installConfig.Platform.Name() {
-	case baremetaltypes.Name:
-		platformData.BareMetal = baremetal.GetTemplateData(installConfig.Platform.BareMetal)
-	case vspheretypes.Name:
-		platformData.VSphere = vsphere.GetTemplateData(installConfig.Platform.VSphere)
-	}
 
 	return &bootstrapTemplateData{
 		AdditionalTrustBundle: installConfig.AdditionalTrustBundle,

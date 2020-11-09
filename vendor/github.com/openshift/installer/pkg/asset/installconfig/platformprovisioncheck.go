@@ -1,22 +1,11 @@
 package installconfig
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/openshift/installer/pkg/asset"
 	azconfig "github.com/openshift/installer/pkg/asset/installconfig/azure"
-	gcpconfig "github.com/openshift/installer/pkg/asset/installconfig/gcp"
-	vsconfig "github.com/openshift/installer/pkg/asset/installconfig/vsphere"
-	"github.com/openshift/installer/pkg/types/aws"
 	"github.com/openshift/installer/pkg/types/azure"
-	"github.com/openshift/installer/pkg/types/baremetal"
-	"github.com/openshift/installer/pkg/types/gcp"
-	"github.com/openshift/installer/pkg/types/libvirt"
-	"github.com/openshift/installer/pkg/types/none"
-	"github.com/openshift/installer/pkg/types/openstack"
-	"github.com/openshift/installer/pkg/types/ovirt"
-	"github.com/openshift/installer/pkg/types/vsphere"
 )
 
 // PlatformProvisionCheck is an asset that validates the install-config platform for
@@ -43,27 +32,11 @@ func (a *PlatformProvisionCheck) Generate(dependencies asset.Parents) error {
 	var err error
 	platform := ic.Config.Platform.Name()
 	switch platform {
-	case vsphere.Name:
-		err = vsconfig.ValidateForProvisioning(ic.Config)
-		if err != nil {
-			return err
-		}
 	case azure.Name:
 		err = azconfig.ValidatePublicDNS(platformCreds.Azure, ic.Config)
 		if err != nil {
 			return err
 		}
-	case gcp.Name:
-		client, err := gcpconfig.NewClient(context.TODO())
-		if err != nil {
-			return err
-		}
-		err = gcpconfig.ValidatePreExitingPublicDNS(client, ic.Config)
-		if err != nil {
-			return err
-		}
-	case aws.Name, baremetal.Name, libvirt.Name, none.Name, openstack.Name, ovirt.Name:
-		// no special provisioning requirements to check
 	default:
 		err = fmt.Errorf("unknown platform type %q", platform)
 	}

@@ -3,14 +3,9 @@ package tls
 import (
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"net"
 
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/installconfig"
-	baremetaltypes "github.com/openshift/installer/pkg/types/baremetal"
-	openstacktypes "github.com/openshift/installer/pkg/types/openstack"
-	ovirttypes "github.com/openshift/installer/pkg/types/ovirt"
-	vspheretypes "github.com/openshift/installer/pkg/types/vsphere"
 )
 
 // MCSCertKey is the asset that generates the MCS key/cert pair.
@@ -45,20 +40,6 @@ func (a *MCSCertKey) Generate(dependencies asset.Parents) error {
 	}
 
 	switch installConfig.Config.Platform.Name() {
-	case baremetaltypes.Name:
-		cfg.IPAddresses = []net.IP{net.ParseIP(installConfig.Config.BareMetal.APIVIP)}
-		cfg.DNSNames = []string{hostname, installConfig.Config.BareMetal.APIVIP}
-	case openstacktypes.Name:
-		cfg.IPAddresses = []net.IP{net.ParseIP(installConfig.Config.OpenStack.APIVIP)}
-		cfg.DNSNames = []string{hostname, installConfig.Config.OpenStack.APIVIP}
-	case ovirttypes.Name:
-		cfg.IPAddresses = []net.IP{net.ParseIP(installConfig.Config.Ovirt.APIVIP)}
-		cfg.DNSNames = []string{hostname, installConfig.Config.Ovirt.APIVIP}
-	case vspheretypes.Name:
-		if installConfig.Config.VSphere.APIVIP != "" {
-			cfg.IPAddresses = []net.IP{net.ParseIP(installConfig.Config.VSphere.APIVIP)}
-			cfg.DNSNames = []string{hostname, installConfig.Config.VSphere.APIVIP}
-		}
 	default:
 		cfg.DNSNames = []string{hostname}
 	}
