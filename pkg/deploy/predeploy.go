@@ -12,6 +12,7 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
@@ -175,14 +176,28 @@ func (d *deployer) deployGlobalSubscription(ctx context.Context) error {
 	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
 
 	d.log.Infof("deploying %s", deploymentName)
-	return d.globaldeployments.CreateOrUpdateAtSubscriptionScopeAndWait(ctx, deploymentName, mgmtfeatures.Deployment{
-		Properties: &mgmtfeatures.DeploymentProperties{
-			Template:   template,
-			Mode:       mgmtfeatures.Incremental,
-			Parameters: parameters.Parameters,
-		},
-		Location: to.StringPtr("centralus"),
-	})
+	for i := 0; i < 2; i++ {
+		err = d.globaldeployments.CreateOrUpdateAtSubscriptionScopeAndWait(ctx, deploymentName, mgmtfeatures.Deployment{
+			Properties: &mgmtfeatures.DeploymentProperties{
+				Template:   template,
+				Mode:       mgmtfeatures.Incremental,
+				Parameters: parameters.Parameters,
+			},
+			Location: to.StringPtr("centralus"),
+		})
+		if serviceErr, ok := err.(*azure.ServiceError); ok &&
+			serviceErr.Code == "RoleDefinitionUpdateConflict" &&
+			i == 0 {
+			d.log.Print(err)
+			continue
+		}
+		if err != nil {
+			return err
+		}
+
+		break
+	}
+	return nil
 }
 
 func (d *deployer) deploySubscription(ctx context.Context) error {
