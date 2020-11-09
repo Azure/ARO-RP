@@ -1,7 +1,7 @@
 # github.com/AlekSi/gocov-xml v0.0.0-20190121064608-3a14fb1c4737
 ## explicit
 github.com/AlekSi/gocov-xml
-# github.com/Azure/azure-sdk-for-go v48.0.0+incompatible
+# github.com/Azure/azure-sdk-for-go v48.1.0+incompatible
 ## explicit
 github.com/Azure/azure-sdk-for-go/profiles/latest/dns/mgmt/dns
 github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2018-10-01/compute
@@ -151,7 +151,8 @@ github.com/coreos/ignition/config/v2_5_experimental/types
 github.com/coreos/ignition/config/validate/report
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
-# github.com/dimchansky/utfbom v1.1.0
+# github.com/dimchansky/utfbom v1.1.1
+## explicit
 github.com/dimchansky/utfbom
 # github.com/docker/distribution v2.7.1+incompatible
 github.com/docker/distribution
@@ -562,7 +563,7 @@ golang.org/x/oauth2/internal
 ## explicit
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20201101102859-da207088b7d1
+# golang.org/x/sys v0.0.0-20201107080550-4d91cf3a1aaf
 ## explicit
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
@@ -593,7 +594,7 @@ golang.org/x/text/unicode/norm
 # golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e
 ## explicit
 golang.org/x/time/rate
-# golang.org/x/tools v0.0.0-20201104183702-aefe0b742155
+# golang.org/x/tools v0.0.0-20201105220310-78b158585360
 ## explicit
 golang.org/x/tools/cmd/goimports
 golang.org/x/tools/cover
@@ -923,10 +924,10 @@ k8s.io/klog
 # k8s.io/klog/v2 v2.4.0
 ## explicit
 k8s.io/klog/v2
-# k8s.io/kube-openapi v0.0.0-20201104192653-842b07581b16 => k8s.io/kube-openapi v0.0.0-20200410145947-61e04a5be9a6
+# k8s.io/kube-openapi v0.0.0-20201107163737-74b467f3a622 => k8s.io/kube-openapi v0.0.0-20200410145947-61e04a5be9a6
 ## explicit
 k8s.io/kube-openapi/pkg/util/proto
-# k8s.io/utils v0.0.0-20201027101359-01387209bb0d
+# k8s.io/utils v0.0.0-20201104234853-8146046b121e
 ## explicit
 k8s.io/utils/buffer
 k8s.io/utils/integer
@@ -1012,4 +1013,5 @@ sigs.k8s.io/yaml
 # k8s.io/code-generator => k8s.io/code-generator v0.18.3
 # k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20200410145947-61e04a5be9a6
 # k8s.io/kubectl => k8s.io/kubectl v0.18.3
+# sigs.k8s.io/cluster-api-provider-aws => github.com/openshift/cluster-api-provider-aws v0.2.1-0.20200911195425-2710ded1034b
 # sigs.k8s.io/cluster-api-provider-azure => github.com/openshift/cluster-api-provider-azure v0.1.0-alpha.3.0.20201021230208-6a32d86775de

@@ -2,14 +2,11 @@ module github.com/Azure/ARO-RP
 
 go 1.14
 
-exclude (
-	github.com/openshift/cluster-api-provider-gcp v0.0.0-00010101000000-000000000000
-	sigs.k8s.io/cluster-api-provider-aws v0.0.0
-)
+exclude github.com/openshift/cluster-api-provider-gcp v0.0.0-00010101000000-000000000000
 
 require (
 	github.com/AlekSi/gocov-xml v0.0.0-20190121064608-3a14fb1c4737
-	github.com/Azure/azure-sdk-for-go v48.0.0+incompatible
+	github.com/Azure/azure-sdk-for-go v48.1.0+incompatible
 	github.com/Azure/go-autorest/autorest v0.11.10
 	github.com/Azure/go-autorest/autorest/adal v0.9.5
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.3
@@ -26,6 +23,7 @@ require (
 	github.com/containers/libtrust v0.0.0-20200511145503-9c3a6c22cd9a // indirect
 	github.com/containers/storage v1.23.9 // indirect
 	github.com/coreos/go-systemd/v22 v22.1.0
+	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/form3tech-oss/jwt-go v3.2.2+incompatible
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
@@ -64,10 +62,10 @@ require (
 	golang.org/x/net v0.0.0-20201031054903-ff519b6c9102 // indirect
 	golang.org/x/oauth2 v0.0.0-20200902213428-5d25da1a8d43 // indirect
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
-	golang.org/x/sys v0.0.0-20201101102859-da207088b7d1 // indirect
+	golang.org/x/sys v0.0.0-20201107080550-4d91cf3a1aaf // indirect
 	golang.org/x/text v0.3.4 // indirect
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
-	golang.org/x/tools v0.0.0-20201104183702-aefe0b742155
+	golang.org/x/tools v0.0.0-20201105220310-78b158585360
 	gomodules.xyz/jsonpatch/v2 v2.1.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
@@ -79,8 +77,8 @@ require (
 	k8s.io/code-generator v0.19.0
 	k8s.io/gengo v0.0.0-20200413195148-3a45101e95ac // indirect
 	k8s.io/klog/v2 v2.4.0 // indirect
-	k8s.io/kube-openapi v0.0.0-20201104192653-842b07581b16 // indirect
-	k8s.io/utils v0.0.0-20201027101359-01387209bb0d // indirect
+	k8s.io/kube-openapi v0.0.0-20201107163737-74b467f3a622 // indirect
+	k8s.io/utils v0.0.0-20201104234853-8146046b121e // indirect
 	sigs.k8s.io/cluster-api-provider-azure v0.4.9
 	sigs.k8s.io/controller-runtime v0.6.3
 	sigs.k8s.io/controller-tools v0.3.0
@@ -106,5 +104,6 @@ replace (
 	k8s.io/code-generator => k8s.io/code-generator v0.18.3
 	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20200410145947-61e04a5be9a6
 	k8s.io/kubectl => k8s.io/kubectl v0.18.3
+	sigs.k8s.io/cluster-api-provider-aws => github.com/openshift/cluster-api-provider-aws v0.2.1-0.20200911195425-2710ded1034b
 	sigs.k8s.io/cluster-api-provider-azure => github.com/openshift/cluster-api-provider-azure v0.1.0-alpha.3.0.20201021230208-6a32d86775de
 )
