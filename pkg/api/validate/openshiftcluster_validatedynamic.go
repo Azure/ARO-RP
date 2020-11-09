@@ -39,12 +39,7 @@ type OpenShiftClusterDynamicValidator interface {
 }
 
 // NewOpenShiftClusterDynamicValidator creates a new OpenShiftClusterDynamicValidator
-func NewOpenShiftClusterDynamicValidator(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, subscriptionDoc *api.SubscriptionDocument) (OpenShiftClusterDynamicValidator, error) {
-	fpAuthorizer, err := env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID, env.Environment().ResourceManagerEndpoint)
-	if err != nil {
-		return nil, err
-	}
-
+func NewOpenShiftClusterDynamicValidator(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, subscriptionDoc *api.SubscriptionDocument, fpAuthorizer refreshable.Authorizer) OpenShiftClusterDynamicValidator {
 	return &openShiftClusterDynamicValidator{
 		log: log,
 		env: env,
@@ -54,7 +49,7 @@ func NewOpenShiftClusterDynamicValidator(log *logrus.Entry, env env.Interface, o
 		fpAuthorizer: fpAuthorizer,
 
 		fpPermissions: authorization.NewPermissionsClient(env.Environment(), subscriptionDoc.ID, fpAuthorizer),
-	}, nil
+	}
 }
 
 type azureClaim struct {

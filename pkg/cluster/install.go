@@ -12,7 +12,6 @@ import (
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	samplesclient "github.com/openshift/client-go/samples/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
-	"github.com/openshift/installer/pkg/asset/bootstraplogging"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
@@ -25,8 +24,8 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-// AdminUpgrade performs an admin upgrade of an ARO cluster
-func (m *manager) AdminUpgrade(ctx context.Context) error {
+// AdminUpdate performs an admin update of an ARO cluster
+func (m *manager) AdminUpdate(ctx context.Context) error {
 	steps := []steps.Step{
 		steps.Action(m.initializeKubernetesClients), // must be first
 		steps.Action(m.deploySnapshotUpgradeTemplate),
@@ -44,13 +43,36 @@ func (m *manager) AdminUpgrade(ctx context.Context) error {
 	return m.runSteps(ctx, steps)
 }
 
+func (m *manager) Update(ctx context.Context) error {
+	steps := []steps.Step{
+		steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
+	}
+
+	return m.runSteps(ctx, steps)
+}
+
 // Install installs an ARO cluster
-func (m *manager) Install(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image, bootstrapLoggingConfig *bootstraplogging.Config) error {
+func (m *manager) Install(ctx context.Context) error {
+
+	var (
+		installConfig *installconfig.InstallConfig
+		platformCreds *installconfig.PlatformCreds
+		image         *releaseimage.Image
+	)
+
 	steps := map[api.InstallPhase][]steps.Step{
 		api.InstallPhaseBootstrap: {
+			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
+			steps.Action(m.ensureACRToken),
+			steps.Action(m.generateSSHKey),
+			steps.Action(func(ctx context.Context) error {
+				var err error
+				installConfig, platformCreds, image, err = m.generateInstallConfig(ctx)
+				return err
+			}),
 			steps.Action(m.createDNS),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(func(ctx context.Context) error {
-				return m.deployStorageTemplate(ctx, installConfig, platformCreds, image, bootstrapLoggingConfig)
+				return m.deployStorageTemplate(ctx, installConfig, platformCreds, image)
 			})),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.attachNSGsAndPatch)),
 			steps.Action(m.ensureBillingRecord),

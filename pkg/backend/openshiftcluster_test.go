@@ -28,7 +28,7 @@ import (
 
 type backendTestStruct struct {
 	name    string
-	mocks   func(*mock_openshiftcluster.MockManager, database.OpenShiftClusters)
+	mocks   func(*mock_cluster.MockInterface, database.OpenShiftClusters)
 	fixture func(*testdb.Fixture)
 	checker func(*testdb.Checker)
 }
