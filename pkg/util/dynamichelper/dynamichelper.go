@@ -66,6 +66,13 @@ func (dh *dynamicHelper) RefreshAPIResources() error {
 	cli = kadiscovery.NewCacheFallbackDiscoveryClient(dh.log, cli)
 
 	_, dh.apiresources, err = cli.ServerGroupsAndResources()
+	if discovery.IsGroupDiscoveryFailedError(err) {
+		// Some group discovery failed; dh.apiresources will have all the ones
+		// that worked. This error can happen with a misconfigured apiservice,
+		// for example. Log it and try to keep going.
+		dh.log.Warn(err)
+		return nil
+	}
 	return err
 }
 
