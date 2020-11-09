@@ -11,9 +11,6 @@ import (
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
 	samplesclient "github.com/openshift/client-go/samples/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
-	"github.com/openshift/installer/pkg/asset/bootstraplogging"
-	"github.com/openshift/installer/pkg/asset/installconfig"
-	"github.com/openshift/installer/pkg/asset/releaseimage"
 	"github.com/sirupsen/logrus"
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/client-go/kubernetes"
@@ -36,9 +33,10 @@ import (
 )
 
 type Interface interface {
-	Install(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image, bootstrapLoggingConfig *bootstraplogging.Config) error
+	Install(ctx context.Context) error
 	Delete(ctx context.Context) error
-	AdminUpgrade(ctx context.Context) error
+	Update(ctx context.Context) error
+	AdminUpdate(ctx context.Context) error
 }
 
 // manager contains information needed to install and maintain an ARO cluster
@@ -80,8 +78,8 @@ type manager struct {
 
 const deploymentName = "azuredeploy"
 
-// NewManager returns a cluster manager
-func NewManager(ctx context.Context, log *logrus.Entry, env env.Interface, db database.OpenShiftClusters, cipher encryption.Cipher,
+// New returns a cluster manager
+func New(ctx context.Context, log *logrus.Entry, env env.Interface, db database.OpenShiftClusters, cipher encryption.Cipher,
 	billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (Interface, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {

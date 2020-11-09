@@ -14,15 +14,15 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/backend/openshiftcluster"
+	"github.com/Azure/ARO-RP/pkg/cluster"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
+	mock_cluster "github.com/Azure/ARO-RP/pkg/util/mocks/cluster"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
-	mock_openshiftcluster "github.com/Azure/ARO-RP/pkg/util/mocks/openshiftcluster"
 	testdb "github.com/Azure/ARO-RP/test/database"
 )
 
@@ -74,8 +74,8 @@ func TestBackendTry(t *testing.T) {
 					},
 				})
 			},
-			mocks: func(manager *mock_openshiftcluster.MockManager, dbOpenShiftClusters database.OpenShiftClusters) {
-				manager.EXPECT().Create(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
+			mocks: func(manager *mock_cluster.MockInterface, dbOpenShiftClusters database.OpenShiftClusters) {
+				manager.EXPECT().Install(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
 					_, err := dbOpenShiftClusters.Patch(ctx, strings.ToLower(resourceID), func(inFlightDoc *api.OpenShiftClusterDocument) error {
 						inFlightDoc.OpenShiftCluster.Properties.Install = &api.Install{}
 						return nil
@@ -117,8 +117,8 @@ func TestBackendTry(t *testing.T) {
 					},
 				})
 			},
-			mocks: func(manager *mock_openshiftcluster.MockManager, dbOpenShiftClusters database.OpenShiftClusters) {
-				manager.EXPECT().Create(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
+			mocks: func(manager *mock_cluster.MockInterface, dbOpenShiftClusters database.OpenShiftClusters) {
+				manager.EXPECT().Install(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
 					_, err := dbOpenShiftClusters.Patch(ctx, strings.ToLower(resourceID), func(inFlightDoc *api.OpenShiftClusterDocument) error {
 						inFlightDoc.OpenShiftCluster.Properties.Install = nil
 						return nil
@@ -162,8 +162,8 @@ func TestBackendTry(t *testing.T) {
 					},
 				})
 			},
-			mocks: func(manager *mock_openshiftcluster.MockManager, dbOpenShiftClusters database.OpenShiftClusters) {
-				manager.EXPECT().Create(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
+			mocks: func(manager *mock_cluster.MockInterface, dbOpenShiftClusters database.OpenShiftClusters) {
+				manager.EXPECT().Install(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
 					return errors.New("something bad!")
 				})
 			},
@@ -203,7 +203,7 @@ func TestBackendTry(t *testing.T) {
 					},
 				})
 			},
-			mocks: func(manager *mock_openshiftcluster.MockManager, dbOpenShiftClusters database.OpenShiftClusters) {
+			mocks: func(manager *mock_cluster.MockInterface, dbOpenShiftClusters database.OpenShiftClusters) {
 				manager.EXPECT().AdminUpdate(gomock.Any()).Return(nil)
 			},
 		},
@@ -244,7 +244,7 @@ func TestBackendTry(t *testing.T) {
 					},
 				})
 			},
-			mocks: func(manager *mock_openshiftcluster.MockManager, dbOpenShiftClusters database.OpenShiftClusters) {
+			mocks: func(manager *mock_cluster.MockInterface, dbOpenShiftClusters database.OpenShiftClusters) {
 				manager.EXPECT().AdminUpdate(gomock.Any()).Return(errors.New("oh no!"))
 			},
 		},
@@ -268,7 +268,7 @@ func TestBackendTry(t *testing.T) {
 				})
 			},
 			checker: func(c *testdb.Checker) {},
-			mocks: func(manager *mock_openshiftcluster.MockManager, dbOpenShiftClusters database.OpenShiftClusters) {
+			mocks: func(manager *mock_cluster.MockInterface, dbOpenShiftClusters database.OpenShiftClusters) {
 				manager.EXPECT().Delete(gomock.Any()).Return(nil)
 			},
 		},
@@ -279,7 +279,7 @@ func TestBackendTry(t *testing.T) {
 
 			controller := gomock.NewController(t)
 			defer controller.Finish()
-			manager := mock_openshiftcluster.NewMockManager(controller)
+			manager := mock_cluster.NewMockInterface(controller)
 			_env := mock_env.NewMockInterface(controller)
 			_env.EXPECT().DeploymentMode().Return(deployment.Development)
 
@@ -294,7 +294,7 @@ func TestBackendTry(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			createManager := func(*logrus.Entry, env.Interface, database.OpenShiftClusters, encryption.Cipher, billing.Manager, *api.OpenShiftClusterDocument, *api.SubscriptionDocument) (openshiftcluster.Manager, error) {
+			createManager := func(context.Context, *logrus.Entry, env.Interface, database.OpenShiftClusters, encryption.Cipher, billing.Manager, *api.OpenShiftClusterDocument, *api.SubscriptionDocument) (cluster.Interface, error) {
 				return manager, nil
 			}
 
