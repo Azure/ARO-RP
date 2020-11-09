@@ -9,7 +9,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/cluster"
 )
 
-func (m *Manager) AdminUpdate(ctx context.Context) error {
+func (m *manager) AdminUpdate(ctx context.Context) error {
 	// m.ocDynamicValidator.Dynamic is not called so that it doesn't block an
 	// admin update
 

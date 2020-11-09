@@ -53,6 +53,22 @@ type Runnable interface {
 
 // NewBackend returns a new runnable backend
 func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, dbAsyncOperations database.AsyncOperations, dbBilling database.Billing, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, cipher encryption.Cipher, m metrics.Interface) (Runnable, error) {
+	b, err := newBackend(ctx, log, env, dbAsyncOperations, dbBilling, dbOpenShiftClusters, dbSubscriptions, cipher, m)
+	if err != nil {
+		return nil, err
+	}
+
+	b.ocb = newOpenShiftClusterBackend(b)
+	b.sb = newSubscriptionBackend(b)
+	return b, nil
+}
+
+func newBackend(ctx context.Context, log *logrus.Entry, env env.Interface, dbAsyncOperations database.AsyncOperations, dbBilling database.Billing, dbOpenShiftClusters database.OpenShiftClusters, dbSubscriptions database.Subscriptions, cipher encryption.Cipher, m metrics.Interface) (*backend, error) {
+	billing, err := billing.NewManager(env, dbBilling, dbSubscriptions, log)
+	if err != nil {
+		return nil, err
+	}
+
 	b := &backend{
 		baseLog: log,
 		env:     env,
@@ -62,22 +78,12 @@ func NewBackend(ctx context.Context, log *logrus.Entry, env env.Interface, dbAsy
 		dbOpenShiftClusters: dbOpenShiftClusters,
 		dbSubscriptions:     dbSubscriptions,
 
-		cipher: cipher,
-		m:      m,
+		billing: billing,
+		cipher:  cipher,
+		m:       m,
 	}
-
 	b.cond = sync.NewCond(&b.mu)
 	b.stopping.Store(false)
-
-	b.ocb = &openShiftClusterBackend{backend: b}
-	b.sb = &subscriptionBackend{backend: b}
-
-	var err error
-	b.billing, err = billing.NewManager(env, dbBilling, dbSubscriptions, log)
-	if err != nil {
-		return nil, err
-	}
-
 	return b, nil
 }
 
@@ -124,12 +130,15 @@ func (b *backend) Run(ctx context.Context, stop <-chan struct{}, done chan<- str
 		}
 	}
 
+	b.waitForWorkerCompletion()
+	b.baseLog.Print("exiting")
+	close(done)
+}
+
+func (b *backend) waitForWorkerCompletion() {
 	b.mu.Lock()
 	for atomic.LoadInt32(&b.workers) > 0 {
 		b.cond.Wait()
 	}
 	b.mu.Unlock()
-
-	b.baseLog.Print("exiting")
-	close(done)
 }

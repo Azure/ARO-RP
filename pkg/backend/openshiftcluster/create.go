@@ -41,7 +41,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-func (m *Manager) Create(ctx context.Context) error {
+func (m *manager) Create(ctx context.Context) error {
 	var err error
 
 	if m.doc.OpenShiftCluster.Properties.Install == nil {

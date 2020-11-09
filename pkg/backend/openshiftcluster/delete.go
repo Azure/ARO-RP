@@ -9,7 +9,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/cluster"
 )
 
-func (m *Manager) Delete(ctx context.Context) error {
+func (m *manager) Delete(ctx context.Context) error {
 	i, err := cluster.New(ctx, m.log, m.env, m.db, m.cipher, m.billing, m.doc, m.subscriptionDoc)
 	if err != nil {
 		return err
