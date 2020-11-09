@@ -27,7 +27,7 @@ import (
 type openShiftClusterBackend struct {
 	*backend
 
-	newManager func(log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, cipher encryption.Cipher, billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (openshiftcluster.ManagerInterface, error)
+	newManager func(log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, cipher encryption.Cipher, billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (openshiftcluster.Manager, error)
 }
 
 func newOpenShiftClusterBackend(b *backend) *openShiftClusterBackend {

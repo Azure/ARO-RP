@@ -11,15 +11,13 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	"github.com/onsi/gomega"
-	"github.com/onsi/gomega/types"
-	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/backend/openshiftcluster"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
@@ -27,21 +25,15 @@ import (
 	mock_openshiftcluster "github.com/Azure/ARO-RP/pkg/util/mocks/openshiftcluster"
 	testdb "github.com/Azure/ARO-RP/test/database"
 	testlog "github.com/Azure/ARO-RP/test/util/log"
-	teststatsd "github.com/Azure/ARO-RP/test/util/statsd"
 )
 
 type backendTestStruct struct {
-	name                            string
-	clusterDoc                      *api.OpenShiftClusterDocument
-	subscriptionDoc                 *api.SubscriptionDocument
-	mocks                           func(*mock_openshiftcluster.MockManagerInterface, database.OpenShiftClusters)
-	fixture                         func(*testdb.Fixture)
-	expectedLogs                    []map[string]types.GomegaMatcher
-	expectedDocumentExists          bool
-	expectedProvisioningState       api.ProvisioningState
-	expectedFailedProvisioningState api.ProvisioningState
-	expectedAdminUpdateError        string
-	expectedInstallPhase            api.InstallPhase
+	name            string
+	clusterDoc      *api.OpenShiftClusterDocument
+	subscriptionDoc *api.SubscriptionDocument
+	mocks           func(*mock_openshiftcluster.MockManager, database.OpenShiftClusters)
+	fixture         func(*testdb.Fixture)
+	checker         func(*testdb.Checker)
 }
 
 func TestBackendTry(t *testing.T) {
@@ -50,10 +42,9 @@ func TestBackendTry(t *testing.T) {
 
 	for _, tt := range []backendTestStruct{
 		{
-			name: "StateCreating with an InstallPhase set keeps it in Creating",
+			name: "StateCreating success that sets an InstallPhase stays it in Creating",
 			fixture: func(f *testdb.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					ID:  uuid.NewV4().String(),
 					Key: strings.ToLower(resourceID),
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID:       resourceID,
@@ -69,7 +60,24 @@ func TestBackendTry(t *testing.T) {
 					ID: mockSubID,
 				})
 			},
-			mocks: func(manager *mock_openshiftcluster.MockManagerInterface, dbOpenShiftClusters database.OpenShiftClusters) {
+			checker: func(c *testdb.Checker) {
+				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(resourceID),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:       resourceID,
+						Name:     "resourceName",
+						Type:     "Microsoft.RedHatOpenShift/OpenShiftClusters",
+						Location: "location",
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState: api.ProvisioningStateCreating,
+							Install: &api.Install{
+								Phase: api.InstallPhaseBootstrap,
+							},
+						},
+					},
+				})
+			},
+			mocks: func(manager *mock_openshiftcluster.MockManager, dbOpenShiftClusters database.OpenShiftClusters) {
 				manager.EXPECT().Create(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
 					_, err := dbOpenShiftClusters.Patch(ctx, strings.ToLower(resourceID), func(inFlightDoc *api.OpenShiftClusterDocument) error {
 						inFlightDoc.OpenShiftCluster.Properties.Install = &api.Install{}
@@ -78,26 +86,9 @@ func TestBackendTry(t *testing.T) {
 					return err
 				})
 			},
-			expectedDocumentExists:    true,
-			expectedProvisioningState: api.ProvisioningStateCreating,
-			expectedInstallPhase:      api.InstallPhaseBootstrap,
-			expectedLogs: []map[string]types.GomegaMatcher{
-				{
-					"msg":   gomega.Equal("dequeued"),
-					"level": gomega.Equal(logrus.InfoLevel),
-				},
-				{
-					"msg":   gomega.Equal("creating"),
-					"level": gomega.Equal(logrus.InfoLevel),
-				},
-				{
-					"msg":   gomega.Equal("done"),
-					"level": gomega.Equal(logrus.InfoLevel),
-				},
-			},
 		},
 		{
-			name: "StateCreating without an InstallPhase marks provisioning as succeeded",
+			name: "StateCreating success without an InstallPhase marks provisioning as succeeded",
 			fixture: func(f *testdb.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 					Key: strings.ToLower(resourceID),
@@ -115,7 +106,21 @@ func TestBackendTry(t *testing.T) {
 					ID: mockSubID,
 				})
 			},
-			mocks: func(manager *mock_openshiftcluster.MockManagerInterface, dbOpenShiftClusters database.OpenShiftClusters) {
+			checker: func(c *testdb.Checker) {
+				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(resourceID),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:       resourceID,
+						Name:     "resourceName",
+						Type:     "Microsoft.RedHatOpenShift/OpenShiftClusters",
+						Location: "location",
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState: api.ProvisioningStateSucceeded,
+						},
+					},
+				})
+			},
+			mocks: func(manager *mock_openshiftcluster.MockManager, dbOpenShiftClusters database.OpenShiftClusters) {
 				manager.EXPECT().Create(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
 					_, err := dbOpenShiftClusters.Patch(ctx, strings.ToLower(resourceID), func(inFlightDoc *api.OpenShiftClusterDocument) error {
 						inFlightDoc.OpenShiftCluster.Properties.Install = nil
@@ -124,28 +129,11 @@ func TestBackendTry(t *testing.T) {
 					return err
 				})
 			},
-			expectedDocumentExists:    true,
-			expectedProvisioningState: api.ProvisioningStateSucceeded,
-			expectedLogs: []map[string]types.GomegaMatcher{
-				{
-					"msg":   gomega.Equal("dequeued"),
-					"level": gomega.Equal(logrus.InfoLevel),
-				},
-				{
-					"msg":   gomega.Equal("creating"),
-					"level": gomega.Equal(logrus.InfoLevel),
-				},
-				{
-					"msg":   gomega.Equal("done"),
-					"level": gomega.Equal(logrus.InfoLevel),
-				},
-			},
 		},
 		{
-			name: "StateCreating that fails marks provisioning as Failed",
+			name: "StateCreating that fails marks ProvisioningState as Failed",
 			fixture: func(f *testdb.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					ID:  uuid.NewV4().String(),
 					Key: strings.ToLower(resourceID),
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID:       resourceID,
@@ -161,34 +149,32 @@ func TestBackendTry(t *testing.T) {
 					ID: mockSubID,
 				})
 			},
-			mocks: func(manager *mock_openshiftcluster.MockManagerInterface, dbOpenShiftClusters database.OpenShiftClusters) {
+			checker: func(c *testdb.Checker) {
+				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key:      strings.ToLower(resourceID),
+					Dequeues: 1,
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:       resourceID,
+						Name:     "resourceName",
+						Type:     "Microsoft.RedHatOpenShift/OpenShiftClusters",
+						Location: "location",
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState:       api.ProvisioningStateFailed,
+							FailedProvisioningState: api.ProvisioningStateCreating,
+						},
+					},
+				})
+			},
+			mocks: func(manager *mock_openshiftcluster.MockManager, dbOpenShiftClusters database.OpenShiftClusters) {
 				manager.EXPECT().Create(gomock.Any()).DoAndReturn(func(ctx context.Context) error {
 					return errors.New("something bad!")
 				})
 			},
-			expectedDocumentExists:          true,
-			expectedProvisioningState:       api.ProvisioningStateFailed,
-			expectedFailedProvisioningState: api.ProvisioningStateCreating,
-			expectedLogs: []map[string]types.GomegaMatcher{
-				{
-					"msg":   gomega.Equal("dequeued"),
-					"level": gomega.Equal(logrus.InfoLevel),
-				},
-				{
-					"msg":   gomega.Equal("creating"),
-					"level": gomega.Equal(logrus.InfoLevel),
-				},
-				{
-					"msg":   gomega.Equal("done"),
-					"level": gomega.Equal(logrus.InfoLevel),
-				},
-			},
 		},
 		{
-			name: "StateAdminUpdating success",
+			name: "StateAdminUpdating success sets the last ProvisioningState and clears LastAdminUpdateError",
 			fixture: func(f *testdb.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					ID:  uuid.NewV4().String(),
 					Key: strings.ToLower(resourceID),
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID:       resourceID,
@@ -198,6 +184,7 @@ func TestBackendTry(t *testing.T) {
 						Properties: api.OpenShiftClusterProperties{
 							ProvisioningState:     api.ProvisioningStateAdminUpdating,
 							LastProvisioningState: api.ProvisioningStateSucceeded,
+							LastAdminUpdateError:  "oh no",
 						},
 					},
 				})
@@ -205,31 +192,28 @@ func TestBackendTry(t *testing.T) {
 					ID: mockSubID,
 				})
 			},
-			mocks: func(manager *mock_openshiftcluster.MockManagerInterface, dbOpenShiftClusters database.OpenShiftClusters) {
+			checker: func(c *testdb.Checker) {
+				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(resourceID),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:       resourceID,
+						Name:     "resourceName",
+						Type:     "Microsoft.RedHatOpenShift/OpenShiftClusters",
+						Location: "location",
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState: api.ProvisioningStateSucceeded,
+						},
+					},
+				})
+			},
+			mocks: func(manager *mock_openshiftcluster.MockManager, dbOpenShiftClusters database.OpenShiftClusters) {
 				manager.EXPECT().AdminUpdate(gomock.Any()).Return(nil)
 			},
-			expectedDocumentExists:    true,
-			expectedProvisioningState: api.ProvisioningStateSucceeded,
-			expectedLogs: []map[string]types.GomegaMatcher{
-				{
-					"msg":   gomega.Equal("dequeued"),
-					"level": gomega.Equal(logrus.InfoLevel),
-				},
-				{
-					"msg":   gomega.Equal("admin updating"),
-					"level": gomega.Equal(logrus.InfoLevel),
-				},
-				{
-					"msg":   gomega.Equal("done"),
-					"level": gomega.Equal(logrus.InfoLevel),
-				},
-			},
 		},
 		{
-			name: "StateAdminUpdating failure",
+			name: "StateAdminUpdating run failure populates LastAdminUpdateError and restores previous provisioning state + failed provisioning state",
 			fixture: func(f *testdb.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					ID:  uuid.NewV4().String(),
 					Key: strings.ToLower(resourceID),
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID:       resourceID,
@@ -237,8 +221,9 @@ func TestBackendTry(t *testing.T) {
 						Type:     "Microsoft.RedHatOpenShift/OpenShiftClusters",
 						Location: "location",
 						Properties: api.OpenShiftClusterProperties{
-							ProvisioningState:     api.ProvisioningStateAdminUpdating,
-							LastProvisioningState: api.ProvisioningStateSucceeded,
+							ProvisioningState:       api.ProvisioningStateAdminUpdating,
+							LastProvisioningState:   api.ProvisioningStateSucceeded,
+							FailedProvisioningState: api.ProvisioningStateUpdating,
 						},
 					},
 				})
@@ -246,33 +231,30 @@ func TestBackendTry(t *testing.T) {
 					ID: mockSubID,
 				})
 			},
-			mocks: func(manager *mock_openshiftcluster.MockManagerInterface, dbOpenShiftClusters database.OpenShiftClusters) {
-				manager.EXPECT().AdminUpdate(gomock.Any()).Return(errors.New("oh no!"))
+			checker: func(c *testdb.Checker) {
+				c.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
+					Key: strings.ToLower(resourceID),
+					OpenShiftCluster: &api.OpenShiftCluster{
+						ID:       resourceID,
+						Name:     "resourceName",
+						Type:     "Microsoft.RedHatOpenShift/OpenShiftClusters",
+						Location: "location",
+						Properties: api.OpenShiftClusterProperties{
+							ProvisioningState:       api.ProvisioningStateSucceeded,
+							FailedProvisioningState: api.ProvisioningStateUpdating,
+							LastAdminUpdateError:    "oh no!",
+						},
+					},
+				})
 			},
-			expectedDocumentExists:          true,
-			expectedProvisioningState:       api.ProvisioningStateSucceeded,
-			expectedFailedProvisioningState: "",
-			expectedAdminUpdateError:        "oh no!",
-			expectedLogs: []map[string]types.GomegaMatcher{
-				{
-					"msg":   gomega.Equal("dequeued"),
-					"level": gomega.Equal(logrus.InfoLevel),
-				},
-				{
-					"msg":   gomega.Equal("admin updating"),
-					"level": gomega.Equal(logrus.InfoLevel),
-				},
-				{
-					"msg":   gomega.Equal("done"),
-					"level": gomega.Equal(logrus.InfoLevel),
-				},
+			mocks: func(manager *mock_openshiftcluster.MockManager, dbOpenShiftClusters database.OpenShiftClusters) {
+				manager.EXPECT().AdminUpdate(gomock.Any()).Return(errors.New("oh no!"))
 			},
 		},
 		{
-			name: "StateDeleting success",
+			name: "StateDeleting success deletes the document",
 			fixture: func(f *testdb.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					ID:  uuid.NewV4().String(),
 					Key: strings.ToLower(resourceID),
 					OpenShiftCluster: &api.OpenShiftCluster{
 						ID:       resourceID,
@@ -288,37 +270,23 @@ func TestBackendTry(t *testing.T) {
 					ID: mockSubID,
 				})
 			},
-			mocks: func(manager *mock_openshiftcluster.MockManagerInterface, dbOpenShiftClusters database.OpenShiftClusters) {
+			checker: func(c *testdb.Checker) {},
+			mocks: func(manager *mock_openshiftcluster.MockManager, dbOpenShiftClusters database.OpenShiftClusters) {
 				manager.EXPECT().Delete(gomock.Any()).Return(nil)
-			},
-			expectedDocumentExists: false,
-			expectedLogs: []map[string]types.GomegaMatcher{
-				{
-					"msg":   gomega.Equal("dequeued"),
-					"level": gomega.Equal(logrus.InfoLevel),
-				},
-				{
-					"msg":   gomega.Equal("deleting"),
-					"level": gomega.Equal(logrus.InfoLevel),
-				},
-				{
-					"msg":   gomega.Equal("done"),
-					"level": gomega.Equal(logrus.InfoLevel),
-				},
 			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			h, log := testlog.New()
+			_, log := testlog.New()
 
 			controller := gomock.NewController(t)
 			defer controller.Finish()
-			manager := mock_openshiftcluster.NewMockManagerInterface(controller)
+			manager := mock_openshiftcluster.NewMockManager(controller)
 			_env := mock_env.NewMockInterface(controller)
 			_env.EXPECT().DeploymentMode().Return(deployment.Development)
 
-			dbOpenShiftClusters, _ := testdb.NewFakeOpenShiftClusters()
+			dbOpenShiftClusters, clientOpenShiftClusters := testdb.NewFakeOpenShiftClusters()
 			dbSubscriptions, _ := testdb.NewFakeSubscriptions()
 
 			f := testdb.NewFixture().WithOpenShiftClusters(dbOpenShiftClusters).WithSubscriptions(dbSubscriptions)
@@ -329,11 +297,11 @@ func TestBackendTry(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			createManager := func(*logrus.Entry, env.Interface, database.OpenShiftClusters, encryption.Cipher, billing.Manager, *api.OpenShiftClusterDocument, *api.SubscriptionDocument) (openshiftcluster.ManagerInterface, error) {
+			createManager := func(*logrus.Entry, env.Interface, database.OpenShiftClusters, encryption.Cipher, billing.Manager, *api.OpenShiftClusterDocument, *api.SubscriptionDocument) (openshiftcluster.Manager, error) {
 				return manager, nil
 			}
 
-			b, err := newBackend(ctx, log, _env, nil, nil, dbOpenShiftClusters, dbSubscriptions, nil, teststatsd.New())
+			b, err := newBackend(ctx, log, _env, nil, nil, dbOpenShiftClusters, dbSubscriptions, nil, &noop.Noop{})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -354,44 +322,11 @@ func TestBackendTry(t *testing.T) {
 			// wait on the workers to finish their tasks
 			b.waitForWorkerCompletion()
 
-			out, err := dbOpenShiftClusters.Get(ctx, strings.ToLower(resourceID))
-			if tt.expectedDocumentExists {
-				if err != nil {
-					t.Fatal(err)
-				}
+			c := testdb.NewChecker()
+			tt.checker(c)
 
-				if out.OpenShiftCluster.Properties.LastAdminUpdateError != tt.expectedAdminUpdateError {
-					t.Errorf("LastAdminUpdateError was %s not %s", out.OpenShiftCluster.Properties.LastAdminUpdateError, tt.expectedAdminUpdateError)
-				}
-
-				if out.OpenShiftCluster.Properties.ProvisioningState != tt.expectedProvisioningState {
-					t.Errorf("ProvisioningState was %s not %s", out.OpenShiftCluster.Properties.ProvisioningState, tt.expectedProvisioningState)
-				}
-
-				if tt.expectedProvisioningState == api.ProvisioningStateCreating {
-					if out.OpenShiftCluster.Properties.Install == nil {
-						t.Error("install phase was nil")
-					} else {
-						if out.OpenShiftCluster.Properties.Install.Phase != tt.expectedInstallPhase {
-							t.Errorf("InstallPhase was %s not %s", out.OpenShiftCluster.Properties.Install.Phase, tt.expectedInstallPhase)
-						}
-					}
-				} else if tt.expectedProvisioningState == api.ProvisioningStateFailed {
-					if out.OpenShiftCluster.Properties.FailedProvisioningState != tt.expectedFailedProvisioningState {
-						t.Errorf("FailedProvisioningState was %s not %s", out.OpenShiftCluster.Properties.FailedProvisioningState, tt.expectedFailedProvisioningState)
-
-					}
-				}
-			} else {
-				// We should not have a document to look at
-				if out != nil {
-					t.Error("got unexpected document")
-					t.Error(out)
-				}
-			}
-
-			err = testlog.AssertLoggingOutput(h, tt.expectedLogs)
-			if err != nil {
+			errs := c.CheckOpenShiftClusters(clientOpenShiftClusters)
+			for _, err := range errs {
 				t.Error(err)
 			}
 		})

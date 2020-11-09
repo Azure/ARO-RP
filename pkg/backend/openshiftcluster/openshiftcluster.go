@@ -26,16 +26,16 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
-type ManagerInterface interface {
+type Manager interface {
 	Create(ctx context.Context) error
 	Update(ctx context.Context) error
 	AdminUpdate(ctx context.Context) error
 	Delete(ctx context.Context) error
 }
 
-var _ ManagerInterface = &Manager{}
+var _ Manager = &manager{}
 
-type Manager struct {
+type manager struct {
 	log          *logrus.Entry
 	env          env.Interface
 	db           database.OpenShiftClusters
@@ -59,7 +59,7 @@ type Manager struct {
 }
 
 // NewManager returns a new openshiftcluster Manager
-func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, cipher encryption.Cipher, billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (ManagerInterface, error) {
+func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, cipher encryption.Cipher, billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (Manager, error) {
 	localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
@@ -88,7 +88,7 @@ func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClus
 		return nil, err
 	}
 
-	m := &Manager{
+	m := &manager{
 		log:          log,
 		env:          _env,
 		db:           db,
