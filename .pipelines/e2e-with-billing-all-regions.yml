@@ -21,17 +21,15 @@ stages:
     billing_e2e_pipeline_name: $(billing_e2e_pipeline_name)
     billing_e2e_branch_name: $(billing_e2e_branch_name)
     locations:
+    - westcentralus
+    - eastus2euap
     - australiaeast
     - australiasoutheast
-    - brazilsouth
     - centralindia
     - eastasia
     - japaneast
     - japanwest
     - koreacentral
-    - southeastasia
-    - switzerlandnorth
-    - switzerlandwest
 - stage: PhaseTwo
   displayName: wait 1 hour to avoid resource threshold
   dependsOn: []
@@ -51,17 +49,15 @@ stages:
     billing_e2e_pipeline_name: $(billing_e2e_pipeline_name)
     billing_e2e_branch_name: $(billing_e2e_branch_name)
     locations:
-    - canadacentral
-    - canadaeast
-    - westeurope
-    - northeurope
-    - uaenorth
-    - uksouth
-    - ukwest
-    - francecentral
-    - germanywestcentral
+    - centralus
+    - eastus
+    - eastus2
+    - northcentralus
+    - southcentralus
+    - westus
+    - westus2
 - stage: PhaseThree
-  displayName: wait 2 hour to avoid resource threshold
+  displayName: wait 2 hours to avoid resource threshold
   dependsOn: []
   jobs:
   - job: JustWait
@@ -79,12 +75,38 @@ stages:
     billing_e2e_pipeline_name: $(billing_e2e_pipeline_name)
     billing_e2e_branch_name: $(billing_e2e_branch_name)
     locations:
-    - centralus
-    - eastus
-    - eastus2
-    - northcentralus
-    - southcentralus
-    - westus
-    - westus2
-    - southafricanorth
+    - canadacentral
+    - canadaeast
+    - germanywestcentral
+    - northeurope
     - norwayeast
+    - switzerlandnorth
+    - switzerlandwest
+    - westeurope
+    - francecentral
+
+- stage: PhaseFour
+  displayName: wait 3 hours to avoid resource threshold
+  dependsOn: []
+  jobs:
+  - job: JustWait
+    timeoutInMinutes: 190
+    pool: server
+    steps:
+    - task: Delay@1
+      inputs:
+        delayForMinutes: '180'
+- template: ./templates/template-rp-and-billing-e2e-section.yml
+  parameters:
+    last_stage_of_previous_section: PhaseFour
+    e2e_subscription: $(e2e-subscription)
+    aro_v4_e2e_devops_spn: $(aro-v4-e2e-devops-spn)
+    billing_e2e_pipeline_name: $(billing_e2e_pipeline_name)
+    billing_e2e_branch_name: $(billing_e2e_branch_name)
+    locations:
+    - brazilsouth
+    - southeastasia
+    - southafricanorth
+    - uaenorth
+    - uksouth
+    - ukwest
