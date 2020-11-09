@@ -24,6 +24,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift"
@@ -44,6 +45,8 @@ type Cluster struct {
 	openshiftclusters redhatopenshift.OpenShiftClustersClient
 	securitygroups    network.SecurityGroupsClient
 	subnets           network.SubnetsClient
+	routetables       network.RouteTablesClient
+	roleassignments   authorization.RoleAssignmentsClient
 }
 
 type errors []error
@@ -93,6 +96,8 @@ func New(log *logrus.Entry, deploymentMode deployment.Mode, instancemetadata ins
 		serviceprincipals: graphrbac.NewServicePrincipalClient(instancemetadata.TenantID(), graphAuthorizer),
 		securitygroups:    network.NewSecurityGroupsClient(instancemetadata.SubscriptionID(), authorizer),
 		subnets:           network.NewSubnetsClient(instancemetadata.SubscriptionID(), authorizer),
+		routetables:       network.NewRouteTablesClient(instancemetadata.SubscriptionID(), authorizer),
+		roleassignments:   authorization.NewRoleAssignmentsClient(instancemetadata.SubscriptionID(), authorizer),
 	}, nil
 }
 
@@ -192,6 +197,11 @@ func (c *Cluster) Delete(ctx context.Context, clusterName string) error {
 
 	oc, err := c.openshiftclusters.Get(ctx, c.ResourceGroup(), clusterName)
 	if err == nil {
+		err = c.deleteRoleAssignments(ctx, *oc.OpenShiftClusterProperties.ServicePrincipalProfile.ClientID)
+		if err != nil {
+			errs = append(errs, err)
+		}
+
 		err = c.deleteApplication(ctx, *oc.OpenShiftClusterProperties.ServicePrincipalProfile.ClientID)
 		if err != nil {
 			errs = append(errs, err)
@@ -214,7 +224,31 @@ func (c *Cluster) Delete(ctx context.Context, clusterName string) error {
 			}
 		}
 	} else {
-		// TODO: clean up subnets, route table, RBAC
+		c.log.Info("removing predeployment resources")
+
+		// Deleting the deployment does not clean up the associated resources
+		c.log.Info("deleting deployment")
+		err = c.deployments.DeleteAndWait(ctx, c.ResourceGroup(), clusterName)
+		if err != nil {
+			errs = append(errs, err)
+		}
+
+		c.log.Info("deleting master/worker subnets")
+		err = c.subnets.DeleteAndWait(ctx, c.ResourceGroup(), "dev-vnet", clusterName+"-worker")
+		if err != nil {
+			errs = append(errs, err)
+		}
+
+		err = c.subnets.DeleteAndWait(ctx, c.ResourceGroup(), "dev-vnet", clusterName+"-master")
+		if err != nil {
+			errs = append(errs, err)
+		}
+
+		c.log.Info("deleting route table")
+		err = c.routetables.DeleteAndWait(ctx, c.ResourceGroup(), clusterName+"-rt")
+		if err != nil {
+			errs = append(errs, err)
+		}
 	}
 
 	c.log.Info("done")
@@ -294,6 +328,28 @@ func (c *Cluster) fixupNSG(ctx context.Context, clusterName string) error {
 		}
 
 		err = c.subnets.CreateOrUpdateAndWait(ctx, c.ResourceGroup(), "dev-vnet", subnetName, subnet)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *Cluster) deleteRoleAssignments(ctx context.Context, appID string) error {
+	spObjID, err := c.getServicePrincipal(ctx, appID)
+	if err != nil {
+		return err
+	}
+
+	roleAssignments, err := c.roleassignments.List(ctx, fmt.Sprintf("principalId eq '%s'", spObjID))
+	if err != nil {
+		return err
+	}
+
+	c.log.Info("deleting role assignments")
+	for _, roleAssignment := range roleAssignments {
+		_, err = c.roleassignments.Delete(ctx, *roleAssignment.Scope, *roleAssignment.Name)
 		if err != nil {
 			return err
 		}

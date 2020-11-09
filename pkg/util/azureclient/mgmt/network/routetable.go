@@ -13,6 +13,7 @@ import (
 // RouteTablesClient is a minimal interface for azure RouteTablesClient
 type RouteTablesClient interface {
 	Get(ctx context.Context, resourceGroupName string, routeTableName string, expand string) (result mgmtnetwork.RouteTable, err error)
+	RouteTablesClientAddons
 }
 
 type routeTablesClient struct {
