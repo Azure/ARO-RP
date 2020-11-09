@@ -132,26 +132,56 @@ var registeredTypes = map[string]asset.Asset{
 	"*tls.ServiceAccountKeyPair":                              &tls.ServiceAccountKeyPair{},
 }
 
-type graph map[reflect.Type]asset.Asset
+// graph values are interface{}s rather than Assets to enable us to round trip
+// values that we don't recognise (i.e. deprecated types from older installers)
+type graph map[string]interface{}
 
-func (g graph) resolve(a asset.Asset) (asset.Asset, error) {
-	if _, found := g[reflect.TypeOf(a)]; !found {
-		for _, dep := range a.Dependencies() {
-			_, err := g.resolve(dep)
-			if err != nil {
-				return nil, err
-			}
-		}
+func newGraph(assets ...asset.Asset) graph {
+	g := graph{}
+	for _, a := range assets {
+		g.set(a)
+	}
+	return g
+}
 
-		err := a.Generate(asset.Parents(g))
-		if err != nil {
-			return nil, err
-		}
-
-		g[reflect.TypeOf(a)] = a
+func (g graph) get(a asset.Asset) asset.Asset {
+	i := g[reflect.TypeOf(a).String()]
+	if i == nil {
+		return nil
 	}
 
-	return g[reflect.TypeOf(a)], nil
+	return i.(asset.Asset)
+}
+
+func (g graph) set(a asset.Asset) {
+	g[reflect.TypeOf(a).String()] = a
+}
+
+func (g graph) resolve(a asset.Asset) error {
+	if g.get(a) != nil {
+		return nil
+	}
+
+	for _, dep := range a.Dependencies() {
+		err := g.resolve(dep)
+		if err != nil {
+			return err
+		}
+	}
+
+	parents := asset.Parents{}
+	for _, v := range g {
+		parents[reflect.TypeOf(v)] = v.(asset.Asset)
+	}
+
+	err := a.Generate(parents)
+	if err != nil {
+		return err
+	}
+
+	g.set(a)
+
+	return nil
 }
 
 func (m *manager) graphExists(ctx context.Context) (bool, error) {
@@ -209,7 +239,7 @@ func (m *manager) saveGraph(ctx context.Context, g graph) error {
 		return err
 	}
 
-	bootstrap := g[reflect.TypeOf(&bootstrap.Bootstrap{})].(*bootstrap.Bootstrap)
+	bootstrap := g.get(&bootstrap.Bootstrap{}).(*bootstrap.Bootstrap)
 	bootstrapIgn := blobService.GetContainerReference("ignition").GetBlobReference("bootstrap.ign")
 	err = bootstrapIgn.CreateBlockBlobFromReader(bytes.NewReader(bootstrap.File.Data), nil)
 	if err != nil {

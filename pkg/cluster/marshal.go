@@ -5,19 +5,8 @@ package cluster
 
 import (
 	"encoding/json"
-	"fmt"
 	"reflect"
-
-	"github.com/openshift/installer/pkg/asset"
 )
-
-func (g graph) MarshalJSON() ([]byte, error) {
-	m := map[string]asset.Asset{}
-	for t, a := range g {
-		m[t.String()] = a
-	}
-	return json.Marshal(m)
-}
 
 func (g *graph) UnmarshalJSON(b []byte) error {
 	if *g == nil {
@@ -31,18 +20,18 @@ func (g *graph) UnmarshalJSON(b []byte) error {
 	}
 
 	for n, b := range m {
-		t, found := registeredTypes[n]
-		if !found {
-			return fmt.Errorf("unregistered type %q", n)
+		var i interface{}
+
+		if t := registeredTypes[n]; t != nil {
+			i = reflect.New(reflect.TypeOf(t).Elem()).Interface()
 		}
 
-		a := reflect.New(reflect.TypeOf(t).Elem()).Interface().(asset.Asset)
-		err = json.Unmarshal(b, a)
+		err = json.Unmarshal(b, &i)
 		if err != nil {
 			return err
 		}
 
-		(*g)[reflect.TypeOf(a)] = a
+		(*g)[n] = i
 	}
 
 	return nil

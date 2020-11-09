@@ -6,7 +6,6 @@ package cluster
 import (
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"reflect"
 
 	"github.com/ghodss/yaml"
 	"github.com/openshift/installer/pkg/asset"
@@ -18,7 +17,7 @@ import (
 // generateAROServiceKubeconfig generates additional admin credentials and kubeconfig
 // based on admin kubeconfig found in graph
 func (m *manager) generateAROServiceKubeconfig(g graph) (*kubeconfig.AdminInternalClient, error) {
-	ca := g[reflect.TypeOf(&tls.AdminKubeConfigSignerCertKey{})].(*tls.AdminKubeConfigSignerCertKey)
+	ca := g.get(&tls.AdminKubeConfigSignerCertKey{}).(*tls.AdminKubeConfigSignerCertKey)
 	cfg := &tls.CertCfg{
 		Subject:      pkix.Name{CommonName: "system:aro-service", Organization: []string{"system:masters"}},
 		KeyUsages:    x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
@@ -34,7 +33,7 @@ func (m *manager) generateAROServiceKubeconfig(g graph) (*kubeconfig.AdminIntern
 	}
 
 	// create a Config for the new service kubeconfig based on the generated cluster admin Config
-	adminInternalClient := g[reflect.TypeOf(&kubeconfig.AdminInternalClient{})].(*kubeconfig.AdminInternalClient)
+	adminInternalClient := g.get(&kubeconfig.AdminInternalClient{}).(*kubeconfig.AdminInternalClient)
 	aroServiceInternalClient := kubeconfig.AdminInternalClient{}
 	aroServiceInternalClient.Config = &clientcmd.Config{
 		Clusters: adminInternalClient.Config.Clusters,
