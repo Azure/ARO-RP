@@ -4,8 +4,6 @@ trigger: none
 
 parameters:
 - name: vsoDeployerBuildID
-  type: string
-  default: master
 - name: fullDeploy
   type: boolean
   default: false
