@@ -1,20 +1,20 @@
 # Azure Red Hat OpenShift Resource Provider
 
-## :warning: Notice
+## Welcome!
 
-For information relating to the generally available Azure Red Hat OpenShift v3
+For information relating to the generally available Azure Red Hat OpenShift v4
 service, please see the following links:
 
 * https://azure.microsoft.com/en-us/services/openshift/
 * https://www.openshift.com/products/azure-openshift
 * https://docs.microsoft.com/en-us/azure/openshift/
-* https://docs.openshift.com/aro/welcome/index.html
+* https://docs.openshift.com/aro/4/welcome/index.html
 
 
 ## Quickstarts
 
 * If you are an end user and want to create an Azure Red Hat OpenShift 4
-  cluster, follow [Create, access, and manage an Azure Red Hat OpenShift 4.3
+  cluster, follow [Create, access, and manage an Azure Red Hat OpenShift 4
   Cluster][1].
 
 * If you want to deploy a development RP, follow [deploy development
