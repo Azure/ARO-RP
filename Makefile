@@ -1,13 +1,13 @@
 SHELL = /bin/bash
 COMMIT = $(shell git rev-parse --short HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
-ARO_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/aro:$(COMMIT)
+ARO_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/aro:${COMMIT}
 
 ifneq ($(shell uname -s),Darwin)
     export CGO_CFLAGS=-Dgpgme_off_t=off_t
 endif
 
 aro: generate
-	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro
+	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=${COMMIT}" ./cmd/aro
 
 az: pyenv
 	. pyenv/bin/activate && \
@@ -29,7 +29,7 @@ generate:
 
 image-aro: aro e2e.test
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
-	docker build --no-cache -f Dockerfile.aro -t $(ARO_IMAGE) .
+	docker build --no-cache -f Dockerfile.aro -t ${ARO_IMAGE} .
 
 image-fluentbit:
 	docker build --no-cache --build-arg VERSION=1.3.9-1 \
@@ -41,12 +41,12 @@ image-proxy: proxy
 
 image-routefix:
 	docker pull registry.access.redhat.com/ubi8/ubi
-	docker build --no-cache -f Dockerfile.routefix -t ${RP_IMAGE_ACR}.azurecr.io/routefix:$(COMMIT) .
+	docker build --no-cache -f Dockerfile.routefix -t ${RP_IMAGE_ACR}.azurecr.io/routefix:${COMMIT} .
 
 publish-image-aro: image-aro
-	docker push $(ARO_IMAGE)
-ifeq ("${RP_IMAGE_ACR}-$(BRANCH)","arointsvc-master")
-		docker tag $(ARO_IMAGE) arointsvc.azurecr.io/aro:latest
+	docker push ${ARO_IMAGE}
+ifeq ("${RP_IMAGE_ACR}-${BRANCH}","arointsvc-master")
+		docker tag ${ARO_IMAGE} arointsvc.azurecr.io/aro:latest
 		docker push arointsvc.azurecr.io/aro:latest
 endif
 
@@ -57,17 +57,17 @@ publish-image-proxy: image-proxy
 	docker push ${RP_IMAGE_ACR}.azurecr.io/proxy:latest
 
 publish-image-routefix: image-routefix
-	docker push ${RP_IMAGE_ACR}.azurecr.io/routefix:$(COMMIT)
+	docker push ${RP_IMAGE_ACR}.azurecr.io/routefix:${COMMIT}
 
 proxy:
-	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./hack/proxy
+	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=${COMMIT}" ./hack/proxy
 
 pyenv:
 	virtualenv pyenv
 	. pyenv/bin/activate && \
 		pip install autopep8 azdev azure-mgmt-loganalytics==0.2.0 ruamel.yaml wheel && \
 		azdev setup -r . && \
-		sed -i -e "s|^dev_sources = $(PWD)$$|dev_sources = $(PWD)/python|" ~/.azure/config
+		sed -i -e "s|^dev_sources = ${PWD}$$|dev_sources = ${PWD}/python|" ~/.azure/config
 
 secrets:
 	@[ "${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 )
