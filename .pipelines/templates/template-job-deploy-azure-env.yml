@@ -6,9 +6,9 @@ parameters:
   azureDevOpsJSONSPN: ''
   vsoProjectID: ''
   vsoConfigPipelineID: ''
-  vsoConfigBuildID: ''
+  vsoConfigBuildID: ' '
   vsoDeployerPipelineID: ''
-  vsoDeployerBuildID: ''
+  vsoDeployerBuildID: ' '
   azureDevOpsE2EJSONSPN: ''
   e2eSubscription: ''
   billingE2EPipelineName: ''
@@ -32,10 +32,10 @@ jobs:
               buildType: specific
               project: ${{ parameters.vsoProjectID }}
               pipeline: ${{ parameters.vsoConfigPipelineID }}
-              ${{ if eq(parameters.vsoConfigBuildID, '') }}:
+              ${{ if eq(parameters.vsoConfigBuildID, ' ') }}:
                 buildVersionToDownload: latestFromBranch
                 branchName: refs/heads/master
-              ${{ if ne(parameters.vsoConfigBuildID, '') }}:
+              ${{ if ne(parameters.vsoConfigBuildID, ' ') }}:
                 buildVersionToDownload: specific
                 buildId: ${{ parameters.vsoConfigBuildID }}
               downloadType: specific
@@ -46,10 +46,10 @@ jobs:
               buildType: specific
               project: ${{ parameters.vsoProjectID }}
               pipeline: ${{ parameters.vsoDeployerPipelineID }}
-              ${{ if eq(parameters.vsoDeployerBuildID, '') }}:
+              ${{ if eq(parameters.vsoDeployerBuildID, ' ') }}:
                 buildVersionToDownload: latestFromBranch
                 branchName: refs/heads/master
-              ${{ if ne(parameters.vsoDeployerBuildID, '') }}:
+              ${{ if ne(parameters.vsoDeployerBuildID, ' ') }}:
                 buildVersionToDownload: specific
                 buildId: ${{ parameters.vsoDeployerBuildID }}
               downloadType: specific
