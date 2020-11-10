@@ -5,10 +5,10 @@ trigger: none
 parameters:
 - name: vsoDeployerBuildID
   type: string
-  default: master
+  default: latest
 - name: vsoConfigBuildID
   type: string
-  default: master
+  default: latest
 - name: fullDeploy
   type: boolean
   default: false
