@@ -39,7 +39,7 @@ func (d *cacheFallbackDiscoveryClient) ServerResourcesForGroupVersion(groupVersi
 		if cacheErr == nil {
 			return cachedResources, nil
 		}
-		d.log.Info(cacheErr)
+		d.log.Warnf("discovery cache failed. Fallback to live dynamic client. Error: %s", cacheErr)
 	}
 
 	return liveResources, err
