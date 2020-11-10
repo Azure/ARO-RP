@@ -13,13 +13,17 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/ugorji/go/codec"
 	corev1 "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
+	"sigs.k8s.io/yaml"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/monitoring"
 	"github.com/Azure/ARO-RP/pkg/util/ready"
 )
 
@@ -153,8 +157,6 @@ var _ = Describe("ARO Operator - Geneva Logging", func() {
 var _ = Describe("ARO Operator - Routefix Daemonset", func() {
 	// remove this once the change where the operator manages the routefix
 	// daemonset is in production
-	BeforeEach(skipIfNotInDevelopmentEnv)
-
 	Specify("routefix must be repaired if daemonset is deleted", func() {
 		dsReady := func() (bool, error) {
 			done, err := ready.CheckDaemonSetIsReady(context.Background(), clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-routefix"), "routefix")()
@@ -176,6 +178,57 @@ var _ = Describe("ARO Operator - Routefix Daemonset", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-routefix").Get(context.Background(), "routefix", metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+	})
+})
+
+var _ = Describe("ARO Operator - Cluster Monitoring ConfigMap", func() {
+	Specify("cluster monitoring configmap should have persistent volume config", func() {
+		var cm *v1.ConfigMap
+		var err error
+		configMapExists := func() (bool, error) {
+			cm, err = clients.Kubernetes.CoreV1().ConfigMaps("openshift-monitoring").Get(context.Background(), "cluster-monitoring-config", metav1.GetOptions{})
+			if err != nil {
+				return false, nil
+			}
+			return true, nil
+		}
+
+		err = wait.PollImmediate(30*time.Second, 15*time.Minute, configMapExists)
+		Expect(err).NotTo(HaveOccurred())
+
+		var configData monitoring.Config
+		configDataJSON, err := yaml.YAMLToJSON([]byte(cm.Data["config.yaml"]))
+		Expect(err).NotTo(HaveOccurred())
+
+		err = codec.NewDecoderBytes(configDataJSON, &codec.JsonHandle{}).Decode(&configData)
+		if err != nil {
+			log.Warn(err)
+		}
+
+		Expect(configData.PrometheusK8s.Retention).To(Equal("15d"))
+		Expect(configData.PrometheusK8s.VolumeClaimTemplate.Spec.Resources.Requests.Storage).To(Equal("100Gi"))
+	})
+
+	Specify("cluster monitoring configmap should be restored if deleted", func() {
+		configMapExists := func() (bool, error) {
+			_, err := clients.Kubernetes.CoreV1().ConfigMaps("openshift-monitoring").Get(context.Background(), "cluster-monitoring-config", metav1.GetOptions{})
+			if err != nil {
+				return false, nil
+			}
+			return true, nil
+		}
+
+		err := wait.PollImmediate(30*time.Second, 15*time.Minute, configMapExists)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = clients.Kubernetes.CoreV1().ConfigMaps("openshift-monitoring").Delete(context.Background(), "cluster-monitoring-config", metav1.DeleteOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		err = wait.PollImmediate(30*time.Second, 15*time.Minute, configMapExists)
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = clients.Kubernetes.CoreV1().ConfigMaps("openshift-monitoring").Get(context.Background(), "cluster-monitoring-config", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 	})
 })

@@ -10,4 +10,5 @@ const (
 	WorkaroundControllerName    = "Workaround"
 	CheckerControllerName       = "Checker"
 	RouteFixControllerName      = "RouteFix"
+	MonitoringControllerName    = "Monitoring"
 )

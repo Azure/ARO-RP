@@ -105,6 +105,8 @@ questions or comments.
     * routefix: Ensures all the routefix resources in the namespace
       `openshift-azure-routefix` remain on the cluster.
 
+    * monitoring: Ensures Prometheus is configured to persist data.
+
   * pkg/swagger: Swagger specification generation code.
 
   * pkg/util: Utility libraries.
