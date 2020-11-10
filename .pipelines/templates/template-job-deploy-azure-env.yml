@@ -32,10 +32,10 @@ jobs:
               buildType: specific
               project: ${{ parameters.vsoProjectID }}
               pipeline: ${{ parameters.vsoConfigPipelineID }}
-              ${{ if eq(parameters.vsoConfigBuildID, '') }}:
+              ${{ if eq(parameters.vsoConfigBuildID, 'master') }}:
                 buildVersionToDownload: latestFromBranch
                 branchName: refs/heads/master
-              ${{ if ne(parameters.vsoConfigBuildID, '') }}:
+              ${{ if ne(parameters.vsoConfigBuildID, 'master') }}:
                 buildVersionToDownload: specific
                 buildId: ${{ parameters.vsoConfigBuildID }}
               downloadType: specific
@@ -46,10 +46,10 @@ jobs:
               buildType: specific
               project: ${{ parameters.vsoProjectID }}
               pipeline: ${{ parameters.vsoDeployerPipelineID }}
-              ${{ if eq(parameters.vsoDeployerBuildID, '') }}:
+              ${{ if eq(parameters.vsoDeployerBuildID, 'master') }}:
                 buildVersionToDownload: latestFromBranch
                 branchName: refs/heads/master
-              ${{ if ne(parameters.vsoDeployerBuildID, '') }}:
+              ${{ if ne(parameters.vsoDeployerBuildID, 'master') }}:
                 buildVersionToDownload: specific
                 buildId: ${{ parameters.vsoDeployerBuildID }}
               downloadType: specific
