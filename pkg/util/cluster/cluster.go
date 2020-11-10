@@ -29,6 +29,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
+	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 type Cluster struct {
@@ -177,7 +178,7 @@ func (c *Cluster) Create(ctx context.Context, clusterName string) error {
 
 	if c.ci {
 		c.log.Info("fixing up NSGs")
-		err = c.fixupNSG(ctx, clusterName)
+		err = c.fixupNSGs(ctx, clusterName)
 		if err != nil {
 			return err
 		}
@@ -274,26 +275,64 @@ func (c *Cluster) createCluster(ctx context.Context, clusterName, clientID, clie
 	return c.openshiftclusters.CreateOrUpdateAndWait(ctx, c.ResourceGroup(), clusterName, oc)
 }
 
-func (c *Cluster) fixupNSG(ctx context.Context, clusterName string) error {
+func (c *Cluster) fixupNSGs(ctx context.Context, clusterName string) error {
+	// TODO: simplify after 4.5 is rolled out.
+
+	type fix struct {
+		subnetName string
+		nsgID      string
+	}
+
+	var fixes []*fix
+
 	nsgs, err := c.securitygroups.List(ctx, "aro-"+clusterName)
 	if err != nil {
 		return err
 	}
 
-	for _, subnetName := range []string{
-		clusterName + "-master",
-		clusterName + "-worker",
-	} {
-		subnet, err := c.subnets.Get(ctx, c.ResourceGroup(), "dev-vnet", subnetName, "")
+	if len(nsgs) == 2 {
+		// ArchitectureVersionV1
+		for _, nsg := range nsgs {
+			switch {
+			case strings.HasSuffix(*nsg.Name, subnet.NSGControlPlaneSuffixV1):
+				fixes = append(fixes, &fix{
+					subnetName: clusterName + "-master",
+					nsgID:      *nsg.ID,
+				})
+
+			case strings.HasSuffix(*nsg.Name, subnet.NSGNodeSuffixV1):
+				fixes = append(fixes, &fix{
+					subnetName: clusterName + "-worker",
+					nsgID:      *nsg.ID,
+				})
+			}
+		}
+
+	} else {
+		// ArchitectureVersionV2
+		fixes = []*fix{
+			{
+				subnetName: clusterName + "-master",
+				nsgID:      *nsgs[0].ID,
+			},
+			{
+				subnetName: clusterName + "-worker",
+				nsgID:      *nsgs[0].ID,
+			},
+		}
+	}
+
+	for _, fix := range fixes {
+		subnet, err := c.subnets.Get(ctx, c.ResourceGroup(), "dev-vnet", fix.subnetName, "")
 		if err != nil {
 			return err
 		}
 
 		subnet.NetworkSecurityGroup = &mgmtnetwork.SecurityGroup{
-			ID: nsgs[0].ID,
+			ID: &fix.nsgID,
 		}
 
-		err = c.subnets.CreateOrUpdateAndWait(ctx, c.ResourceGroup(), "dev-vnet", subnetName, subnet)
+		err = c.subnets.CreateOrUpdateAndWait(ctx, c.ResourceGroup(), "dev-vnet", fix.subnetName, subnet)
 		if err != nil {
 			return err
 		}
