@@ -1,5 +1,5 @@
 SHELL = /bin/bash
-COMMIT = $(shell git rev-parse --short HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
+COMMIT = $(shell git rev-parse HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
 ARO_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/aro:${COMMIT}
 
 ifneq ($(shell uname -s),Darwin)
