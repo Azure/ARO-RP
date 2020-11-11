@@ -137,6 +137,7 @@ func TestConfigRequiredValues(t *testing.T) {
 	SSHPublicKey := "SSHPublicKey"
 	SubscriptionResourceGroupName := "SubscriptionResourceGroupName"
 	SubscriptionResourceGroupLocation := "SubscriptionResourceGroupLocation"
+	StorageAccountName := "StorageAccountName"
 	VMSize := "VMSize"
 
 	for _, tt := range []struct {
@@ -175,6 +176,7 @@ func TestConfigRequiredValues(t *testing.T) {
 					SSHPublicKey:                       &SSHPublicKey,
 					SubscriptionResourceGroupName:      &SubscriptionResourceGroupName,
 					SubscriptionResourceGroupLocation:  &SubscriptionResourceGroupLocation,
+					StorageAccountName:                 &StorageAccountName,
 					VMSize:                             &VMSize,
 				},
 			},
@@ -189,7 +191,7 @@ func TestConfigRequiredValues(t *testing.T) {
 					ExtraCosmosDBIPs: []string{ExtraCosmosDBIPs},
 				},
 			},
-			expect: fmt.Errorf("Configuration has missing fields: %s", "[RPVersionStorageAccountName AdminAPIClientCertCommonName ClusterParentDomainName DatabaseAccountName ExtraClusterKeyvaultAccessPolicies ExtraServiceKeyvaultAccessPolicies FPServicePrincipalID GlobalMonitoringKeyVaultURI GlobalResourceGroupName GlobalResourceGroupLocation GlobalSubscriptionID KeyvaultPrefix MDMFrontendURL MDSDConfigVersion MDSDEnvironment RPImagePrefix RPNSGSourceAddressPrefixes RPParentDomainName SubscriptionResourceGroupName SubscriptionResourceGroupLocation SSHPublicKey VMSize]"),
+			expect: fmt.Errorf("Configuration has missing fields: %s", "[RPVersionStorageAccountName AdminAPIClientCertCommonName ClusterParentDomainName DatabaseAccountName ExtraClusterKeyvaultAccessPolicies ExtraServiceKeyvaultAccessPolicies FPServicePrincipalID GlobalMonitoringKeyVaultURI GlobalResourceGroupName GlobalResourceGroupLocation GlobalSubscriptionID KeyvaultPrefix MDMFrontendURL MDSDConfigVersion MDSDEnvironment RPImagePrefix RPNSGSourceAddressPrefixes RPParentDomainName SubscriptionResourceGroupName SubscriptionResourceGroupLocation SSHPublicKey StorageAccountName VMSize]"),
 		},
 	} {
 		valid := tt.config.validate()

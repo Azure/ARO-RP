@@ -1054,6 +1054,12 @@ done
 							},
 						},
 					},
+					DiagnosticsProfile: &mgmtcompute.DiagnosticsProfile{
+						BootDiagnostics: &mgmtcompute.BootDiagnostics{
+							Enabled:    to.BoolPtr(true),
+							StorageURI: to.StringPtr("[concat('https://', parameters('storageAccountName'), '.blob.core.windows.net/')]"),
+						},
+					},
 				},
 				Overprovision: to.BoolPtr(false),
 			},
@@ -1072,6 +1078,7 @@ done
 			"[resourceId('Microsoft.Authorization/roleAssignments', guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / Reader'))]",
 			"[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]",
 			"[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]",
+			"[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
 		},
 	}
 }
@@ -1579,6 +1586,21 @@ func (g *generator) rpVersionStorageAccount() []*arm.Resource {
 				"[resourceId('Microsoft.Storage/storageAccounts', parameters('rpVersionStorageAccountName'))]",
 			},
 		},
+	}
+}
+
+func (g *generator) storageAccount() *arm.Resource {
+	return &arm.Resource{
+		Resource: &mgmtstorage.Account{
+			Name:     to.StringPtr("[parameters('storageAccountName')]"),
+			Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
+			Location: to.StringPtr("[resourceGroup().location]"),
+			Sku: &mgmtstorage.Sku{
+				Name: "Standard_LRS",
+			},
+		},
+		Condition:  g.conditionStanza("fullDeploy"),
+		APIVersion: azureclient.APIVersions["Microsoft.Storage"],
 	}
 }
 

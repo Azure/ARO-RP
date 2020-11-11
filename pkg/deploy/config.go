@@ -54,6 +54,7 @@ type Configuration struct {
 	SubscriptionResourceGroupName      *string       `json:"subscriptionResourceGroupName,omitempty" value:"required"`
 	SubscriptionResourceGroupLocation  *string       `json:"subscriptionResourceGroupLocation,omitempty" value:"required"`
 	SSHPublicKey                       *string       `json:"sshPublicKey,omitempty" value:"required"`
+	StorageAccountName                 *string       `json:"storageAccountName,omitempty" value:"required"`
 	VMSize                             *string       `json:"vmSize,omitempty" value:"required"`
 }
 
