@@ -310,6 +310,20 @@ func (m *MockRouteTablesClient) EXPECT() *MockRouteTablesClientMockRecorder {
 	return m.recorder
 }
 
+// DeleteAndWait mocks base method
+func (m *MockRouteTablesClient) DeleteAndWait(arg0 context.Context, arg1, arg2 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteAndWait", arg0, arg1, arg2)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteAndWait indicates an expected call of DeleteAndWait
+func (mr *MockRouteTablesClientMockRecorder) DeleteAndWait(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockRouteTablesClient)(nil).DeleteAndWait), arg0, arg1, arg2)
+}
+
 // Get mocks base method
 func (m *MockRouteTablesClient) Get(arg0 context.Context, arg1, arg2, arg3 string) (network.RouteTable, error) {
 	m.ctrl.T.Helper()
@@ -360,6 +374,20 @@ func (m *MockSubnetsClient) CreateOrUpdateAndWait(arg0 context.Context, arg1, ar
 func (mr *MockSubnetsClientMockRecorder) CreateOrUpdateAndWait(arg0, arg1, arg2, arg3, arg4 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockSubnetsClient)(nil).CreateOrUpdateAndWait), arg0, arg1, arg2, arg3, arg4)
+}
+
+// DeleteAndWait mocks base method
+func (m *MockSubnetsClient) DeleteAndWait(arg0 context.Context, arg1, arg2, arg3 string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteAndWait", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteAndWait indicates an expected call of DeleteAndWait
+func (mr *MockSubnetsClientMockRecorder) DeleteAndWait(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockSubnetsClient)(nil).DeleteAndWait), arg0, arg1, arg2, arg3)
 }
 
 // Get mocks base method

@@ -15,6 +15,7 @@ import (
 type DeploymentsClientAddons interface {
 	CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, deploymentName string, parameters mgmtfeatures.Deployment) error
 	CreateOrUpdateAtSubscriptionScopeAndWait(ctx context.Context, deploymentName string, parameters mgmtfeatures.Deployment) error
+	DeleteAndWait(ctx context.Context, resourceGroupName string, deploymentName string) error
 	Wait(ctx context.Context, resourceGroupName string, deploymentName string) error
 }
 
@@ -29,6 +30,15 @@ func (c *deploymentsClient) CreateOrUpdateAtSubscriptionScopeAndWait(ctx context
 
 func (c *deploymentsClient) CreateOrUpdateAndWait(ctx context.Context, resourceGroupName string, deploymentName string, parameters mgmtfeatures.Deployment) error {
 	future, err := c.CreateOrUpdate(ctx, resourceGroupName, deploymentName, parameters)
+	if err != nil {
+		return err
+	}
+
+	return future.WaitForCompletionRef(ctx, c.Client)
+}
+
+func (c *deploymentsClient) DeleteAndWait(ctx context.Context, resourceGroupName string, deploymentName string) error {
+	future, err := c.Delete(ctx, resourceGroupName, deploymentName)
 	if err != nil {
 		return err
 	}
