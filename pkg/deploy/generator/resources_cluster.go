@@ -26,7 +26,7 @@ func clusterVnet() *arm.Resource {
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
 		Condition:  "[parameters('fullDeploy')]",
-		APIVersion: azureclient.APIVersions["Microsoft.Network"],
+		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
 }
 
@@ -37,7 +37,7 @@ func clusterRouteTable() *arm.Resource {
 			Type:     to.StringPtr("Microsoft.Network/routeTables"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
-		APIVersion: azureclient.APIVersions["Microsoft.Network"],
+		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
 }
 
@@ -60,7 +60,7 @@ func clusterMasterSubnet() *arm.Resource {
 		},
 		Type:       "Microsoft.Network/virtualNetworks/subnets",
 		Location:   "[resourceGroup().location]",
-		APIVersion: azureclient.APIVersions["Microsoft.Network"],
+		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		DependsOn: []string{
 			"[resourceid('Microsoft.Network/virtualNetworks', 'dev-vnet')]",
 			"[resourceid('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]",
@@ -83,7 +83,7 @@ func clusterWorkerSubnet() *arm.Resource {
 		},
 		Type:       "Microsoft.Network/virtualNetworks/subnets",
 		Location:   "[resourceGroup().location]",
-		APIVersion: azureclient.APIVersions["Microsoft.Network"],
+		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		DependsOn: []string{
 			"[resourceid('Microsoft.Network/virtualNetworks/subnets', 'dev-vnet', concat(parameters('clusterName'), '-master'))]",
 		},

@@ -46,7 +46,7 @@ func (g *generator) managedIdentity() *arm.Resource {
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
 		Condition:  g.conditionStanza("fullDeploy"),
-		APIVersion: azureclient.APIVersions["Microsoft.ManagedIdentity"],
+		APIVersion: azureclient.APIVersion("Microsoft.ManagedIdentity"),
 	}
 }
 
@@ -110,7 +110,7 @@ func (g *generator) securityGroupRP() *arm.Resource {
 	return &arm.Resource{
 		Resource:   nsg,
 		Condition:  g.conditionStanza("deployNSGs"),
-		APIVersion: azureclient.APIVersions["Microsoft.Network"],
+		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
 }
 
@@ -123,7 +123,7 @@ func (g *generator) securityGroupPE() *arm.Resource {
 			Location:                      to.StringPtr("[resourceGroup().location]"),
 		},
 		Condition:  g.conditionStanza("deployNSGs"),
-		APIVersion: azureclient.APIVersions["Microsoft.Network"],
+		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
 }
 
@@ -298,7 +298,7 @@ systemctl enable proxy.service
 			Type:     to.StringPtr("Microsoft.Compute/virtualMachineScaleSets"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
-		APIVersion: azureclient.APIVersions["Microsoft.Compute"],
+		APIVersion: azureclient.APIVersion("Microsoft.Compute"),
 	}
 }
 
@@ -315,7 +315,7 @@ func (g *generator) devVpnPip() *arm.Resource {
 			Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
-		APIVersion: azureclient.APIVersions["Microsoft.Network"],
+		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
 }
 
@@ -350,7 +350,7 @@ func (g *generator) devVnet() *arm.Resource {
 			Type:     to.StringPtr("Microsoft.Network/virtualNetworks"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
-		APIVersion: azureclient.APIVersions["Microsoft.Network"],
+		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
 }
 
@@ -397,7 +397,7 @@ func (g *generator) devVPN() *arm.Resource {
 			Type:     to.StringPtr("Microsoft.Network/virtualNetworkGateways"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
-		APIVersion: azureclient.APIVersions["Microsoft.Network"],
+		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		DependsOn: []string{
 			"[resourceId('Microsoft.Network/publicIPAddresses', 'dev-vpn-pip')]",
 			"[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]",
@@ -421,7 +421,7 @@ func (g *generator) halfPeering(vnetA string, vnetB string) *arm.Resource {
 			Name: to.StringPtr(fmt.Sprintf("%s/peering-%s", vnetA, vnetB)),
 		},
 		Condition:  g.conditionStanza("fullDeploy"),
-		APIVersion: azureclient.APIVersions["Microsoft.Network"],
+		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		DependsOn: []string{
 			fmt.Sprintf("[resourceId('Microsoft.Network/virtualNetworks', '%s')]", vnetA),
 			fmt.Sprintf("[resourceId('Microsoft.Network/virtualNetworks', '%s')]", vnetB),
@@ -472,7 +472,7 @@ func (g *generator) rpvnet() *arm.Resource {
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
 		Condition:  g.conditionStanza("fullDeploy"),
-		APIVersion: azureclient.APIVersions["Microsoft.Network"],
+		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
 }
 
@@ -503,7 +503,7 @@ func (g *generator) pevnet() *arm.Resource {
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
 		Condition:  g.conditionStanza("fullDeploy"),
-		APIVersion: azureclient.APIVersions["Microsoft.Network"],
+		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
 }
 
@@ -521,7 +521,7 @@ func (g *generator) pip() *arm.Resource {
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
 		Condition:  g.conditionStanza("fullDeploy"),
-		APIVersion: azureclient.APIVersions["Microsoft.Network"],
+		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
 }
 
@@ -584,7 +584,7 @@ func (g *generator) lb() *arm.Resource {
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
 		Condition:  g.conditionStanza("fullDeploy"),
-		APIVersion: azureclient.APIVersions["Microsoft.Network"],
+		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		DependsOn: []string{
 			"[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip')]",
 		},
@@ -603,7 +603,7 @@ func (g *generator) actionGroup(name string, shortName string) *arm.Resource {
 			Location: to.StringPtr("Global"),
 		},
 		Condition:  g.conditionStanza("fullDeploy"),
-		APIVersion: azureclient.APIVersions["Microsoft.Insights"],
+		APIVersion: azureclient.APIVersion("Microsoft.Insights"),
 	}
 }
 
@@ -646,7 +646,7 @@ func (g *generator) lbAlert(threshold float64, severity int32, name string, eval
 			Location: to.StringPtr("global"),
 		},
 		Condition:  g.conditionStanza("fullDeploy"),
-		APIVersion: azureclient.APIVersions["Microsoft.Insights"],
+		APIVersion: azureclient.APIVersion("Microsoft.Insights"),
 		DependsOn: []string{
 			"[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]",
 		},
@@ -1073,7 +1073,7 @@ done
 			Type:     to.StringPtr("Microsoft.Compute/virtualMachineScaleSets"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
-		APIVersion: azureclient.APIVersions["Microsoft.Compute"],
+		APIVersion: azureclient.APIVersion("Microsoft.Compute"),
 		DependsOn: []string{
 			"[resourceId('Microsoft.Authorization/roleAssignments', guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / Reader'))]",
 			"[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]",
@@ -1092,7 +1092,7 @@ func (g *generator) zone() *arm.Resource {
 			Location:       to.StringPtr("global"),
 		},
 		Condition:  g.conditionStanza("fullDeploy"),
-		APIVersion: azureclient.APIVersions["Microsoft.Network/dnsZones"],
+		APIVersion: azureclient.APIVersion("Microsoft.Network/dnsZones"),
 	}
 }
 
@@ -1167,7 +1167,7 @@ func (g *generator) clustersKeyvault() *arm.Resource {
 	return &arm.Resource{
 		Resource:   vault,
 		Condition:  g.conditionStanza("fullDeploy"),
-		APIVersion: azureclient.APIVersions["Microsoft.KeyVault"],
+		APIVersion: azureclient.APIVersion("Microsoft.KeyVault"),
 	}
 }
 
@@ -1214,7 +1214,7 @@ func (g *generator) serviceKeyvault() *arm.Resource {
 	return &arm.Resource{
 		Resource:   vault,
 		Condition:  g.conditionStanza("fullDeploy"),
-		APIVersion: azureclient.APIVersions["Microsoft.KeyVault"],
+		APIVersion: azureclient.APIVersion("Microsoft.KeyVault"),
 	}
 }
 
@@ -1243,7 +1243,7 @@ func (g *generator) cosmosdb() []*arm.Resource {
 	r := &arm.Resource{
 		Resource:   cosmosdb,
 		Condition:  g.conditionStanza("fullDeploy"),
-		APIVersion: azureclient.APIVersions["Microsoft.DocumentDB"],
+		APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 	}
 
 	if g.production {
@@ -1287,7 +1287,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},
 			Condition:  g.conditionStanza("fullDeploy"),
-			APIVersion: azureclient.APIVersions["Microsoft.DocumentDB"],
+			APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 		},
 		{
 			Resource: &mgmtdocumentdb.SQLContainerCreateUpdateParameters{
@@ -1309,7 +1309,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},
 			Condition:  g.conditionStanza("fullDeploy"),
-			APIVersion: azureclient.APIVersions["Microsoft.DocumentDB"],
+			APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
@@ -1333,7 +1333,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},
 			Condition:  g.conditionStanza("fullDeploy"),
-			APIVersion: azureclient.APIVersions["Microsoft.DocumentDB"],
+			APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
@@ -1358,7 +1358,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},
 			Condition:  g.conditionStanza("fullDeploy"),
-			APIVersion: azureclient.APIVersions["Microsoft.DocumentDB"],
+			APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
@@ -1401,7 +1401,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},
 			Condition:  g.conditionStanza("fullDeploy"),
-			APIVersion: azureclient.APIVersions["Microsoft.DocumentDB"],
+			APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
@@ -1425,7 +1425,7 @@ func (g *generator) database(databaseName string, addDependsOn bool) []*arm.Reso
 				Location: to.StringPtr("[resourceGroup().location]"),
 			},
 			Condition:  g.conditionStanza("fullDeploy"),
-			APIVersion: azureclient.APIVersions["Microsoft.DocumentDB"],
+			APIVersion: azureclient.APIVersion("Microsoft.DocumentDB"),
 			DependsOn: []string{
 				"[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', parameters('databaseAccountName'), " + databaseName + ")]",
 			},
@@ -1466,7 +1466,7 @@ func (g *generator) roleDefinitionTokenContributor() *arm.Resource {
 			},
 		},
 		Condition:  g.conditionStanza("fullDeploy"),
-		APIVersion: azureclient.APIVersions["Microsoft.Authorization/roleDefinitions"],
+		APIVersion: azureclient.APIVersion("Microsoft.Authorization/roleDefinitions"),
 	}
 }
 
@@ -1524,7 +1524,7 @@ func (g *generator) acrReplica() *arm.Resource {
 			Location: to.StringPtr("[parameters('location')]"),
 		},
 		Condition:  g.conditionStanza("fullDeploy"),
-		APIVersion: azureclient.APIVersions["Microsoft.ContainerRegistry"],
+		APIVersion: azureclient.APIVersion("Microsoft.ContainerRegistry"),
 	}
 }
 
@@ -1570,7 +1570,7 @@ func (g *generator) rpVersionStorageAccount() []*arm.Resource {
 				},
 			},
 			Condition:  g.conditionStanza("fullDeploy"),
-			APIVersion: azureclient.APIVersions["Microsoft.Storage"],
+			APIVersion: azureclient.APIVersion("Microsoft.Storage"),
 		},
 		{
 			Resource: &mgmtstorage.BlobContainer{
@@ -1580,7 +1580,7 @@ func (g *generator) rpVersionStorageAccount() []*arm.Resource {
 					PublicAccess: mgmtstorage.PublicAccessContainer,
 				},
 			},
-			APIVersion: azureclient.APIVersions["Microsoft.Storage"],
+			APIVersion: azureclient.APIVersion("Microsoft.Storage"),
 			Condition:  g.conditionStanza("fullDeploy"),
 			DependsOn: []string{
 				"[resourceId('Microsoft.Storage/storageAccounts', parameters('rpVersionStorageAccountName'))]",
@@ -1600,7 +1600,7 @@ func (g *generator) storageAccount() *arm.Resource {
 			},
 		},
 		Condition:  g.conditionStanza("fullDeploy"),
-		APIVersion: azureclient.APIVersions["Microsoft.Storage"],
+		APIVersion: azureclient.APIVersion("Microsoft.Storage"),
 	}
 }
 
@@ -1776,7 +1776,7 @@ systemctl enable docker
 			Type:     to.StringPtr("Microsoft.Compute/virtualMachineScaleSets"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 		},
-		APIVersion: azureclient.APIVersions["Microsoft.Compute"],
+		APIVersion: azureclient.APIVersion("Microsoft.Compute"),
 		Condition:  "[parameters('ciDeployTooling')]", // TODO(mj): Refactor g.conditionStanza for better usage
 		DependsOn: []string{
 			"[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]",
