@@ -12,7 +12,7 @@
    package is called `python-virtualenv` on both Fedora and Debian-based
    systems.
 
-1. Fedora users: install the `gpgme-devel` and `libassuan-devel` packages.
+1. Fedora users: install the `gpgme-devel`, `libassuan-devel`, and `openssl` packages.
 
    Debian users: install the `libgpgme-dev` package.
 
@@ -150,13 +150,13 @@
    OR use the create utility:
 
    ```bash
-   CLUSTER=mycluster go run ./hack/cluster create
+   CLUSTER=cluster go run ./hack/cluster create
    ```
 
    Later the cluster can be deleted as follows:
 
    ```bash
-   CLUSTER=mycluster go run ./hack/cluster delete
+   CLUSTER=cluster go run ./hack/cluster delete
    ```
 
    [1]: https://docs.microsoft.com/en-us/azure/openshift/tutorial-create-cluster
@@ -189,16 +189,16 @@
 ## Debugging
 
 * SSH to the bootstrap node:
-
+> __NOTE:__ If you have a password-based `sudo` command, you must first authenticate before running `sudo` in the background
   ```bash
   sudo openvpn secrets/vpn-$LOCATION.ovpn &
-  hack/ssh-agent.sh bootstrap
+  CLUSTER=cluster hack/ssh-agent.sh bootstrap
   ```
 
 * Get an admin kubeconfig:
 
   ```bash
-  make admin.kubeconfig
+  CLUSTER=cluster make admin.kubeconfig
   export KUBECONFIG=admin.kubeconfig
   ```
 
@@ -207,7 +207,7 @@
   * First, get the admin kubeconfig and `export KUBECONFIG` as detailed above.
 
   ```bash
-  hack/ssh-agent.sh [master-{0,1,2}]
+  CLUSTER=cluster hack/ssh-agent.sh [master-{0,1,2}]
   ```
 
 

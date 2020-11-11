@@ -5,9 +5,9 @@
 # you want to pass in
 
 usage() {
-    echo "usage: $0 hostname_pattern" >&2
-    echo "       Examples: $0 master1" >&2
-    echo "                 $0 bootstrap" >&2
+    echo "usage: CLUSTER=cluster $0 hostname_pattern" >&2
+    echo "       Examples: CLUSTER=cluster $0 master1" >&2
+    echo "                 CLUSTER=cluster $0 bootstrap" >&2
     exit 1
 }
 
@@ -23,6 +23,11 @@ cleanup() {
 trap cleanup EXIT
 
 eval "$(ssh-agent | grep -v '^echo ')"
+
+if [[ -z "$CLUSTER" ]]; then
+    echo "CLUSTER must be specified"
+    usage
+fi
 
 if [[ -z "$RESOURCEID" ]]; then
     RESOURCEID="/subscriptions/${AZURE_SUBSCRIPTION_ID}/resourceGroups/${RESOURCEGROUP}/providers/Microsoft.RedHatOpenShift/openShiftClusters/${CLUSTER}"
