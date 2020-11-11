@@ -6,7 +6,6 @@ package adminactions
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -18,10 +17,9 @@ import (
 )
 
 func (a *adminactions) ResourcesList(ctx context.Context) ([]byte, error) {
-
 	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
 
-	resources, err := a.resourcesClient.List(ctx, fmt.Sprintf("resourceGroup eq '%s'", clusterRGName), "", nil)
+	resources, err := a.resourcesClient.ListByResourceGroup(ctx, clusterRGName, "", "", nil)
 	if err != nil {
 		return nil, err
 	}
