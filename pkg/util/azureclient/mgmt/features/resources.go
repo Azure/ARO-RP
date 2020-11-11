@@ -13,6 +13,7 @@ import (
 // ResourcesClient is a minimal interface for azure ResourcesClient
 type ResourcesClient interface {
 	GetByID(ctx context.Context, resourceID string, APIVersion string) (mgmtfeatures.GenericResource, error)
+	DeleteByID(ctx context.Context, resourceID string, APIVersion string) (mgmtfeatures.ResourcesDeleteByIDFuture, error)
 	ResourcesClientAddons
 }
 
