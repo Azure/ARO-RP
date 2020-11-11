@@ -32,32 +32,6 @@
             "apiVersion": "2018-01-01-preview"
         },
         {
-            "name": "f3fe7bc1-0ef9-4681-a68c-c1fa285d6128",
-            "type": "Microsoft.Authorization/roleDefinitions",
-            "properties": {
-                "roleName": "ARO v4 Development Subnet Contributor",
-                "permissions": [
-                    {
-                        "actions": [
-                            "Microsoft.Network/routeTables/join/action",
-                            "Microsoft.Network/routeTables/read",
-                            "Microsoft.Network/routeTables/write",
-                            "Microsoft.Network/virtualNetworks/join/action",
-                            "Microsoft.Network/virtualNetworks/read",
-                            "Microsoft.Network/virtualNetworks/write",
-                            "Microsoft.Network/virtualNetworks/subnets/join/action",
-                            "Microsoft.Network/virtualNetworks/subnets/read",
-                            "Microsoft.Network/virtualNetworks/subnets/write"
-                        ]
-                    }
-                ],
-                "assignableScopes": [
-                    "[subscription().id]"
-                ]
-            },
-            "apiVersion": "2018-01-01-preview"
-        },
-        {
             "name": "[guid(subscription().id, 'FP / ARO v4 FP Subscription')]",
             "type": "Microsoft.Authorization/roleAssignments",
             "dependsOn": [
