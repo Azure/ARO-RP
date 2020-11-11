@@ -84,11 +84,11 @@
             "location": "[resourceGroup().location]"
         },
         {
-            "name": "[concat('dev-vnet', '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet'), parameters('clusterServicePrincipalId'), 'b24988ac-6180-42a0-ab88-20f7382dd24c'))]",
+            "name": "[concat('dev-vnet', '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet'), parameters('clusterServicePrincipalId'), '4d97b98b-1d4f-4787-a291-c67834d212e7'))]",
             "type": "Microsoft.Network/virtualNetworks/providers/roleAssignments",
             "properties": {
                 "scope": "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]",
-                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4d97b98b-1d4f-4787-a291-c67834d212e7')]",
                 "principalId": "[parameters('clusterServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
@@ -99,11 +99,11 @@
             ]
         },
         {
-            "name": "[concat('dev-vnet', '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet'), parameters('fpServicePrincipalId'), 'b24988ac-6180-42a0-ab88-20f7382dd24c'))]",
+            "name": "[concat('dev-vnet', '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet'), parameters('fpServicePrincipalId'), '4d97b98b-1d4f-4787-a291-c67834d212e7'))]",
             "type": "Microsoft.Network/virtualNetworks/providers/roleAssignments",
             "properties": {
                 "scope": "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]",
-                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4d97b98b-1d4f-4787-a291-c67834d212e7')]",
                 "principalId": "[parameters('fpServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
@@ -114,11 +114,11 @@
             ]
         },
         {
-            "name": "[concat(concat(parameters('clusterName'), '-rt'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt')), parameters('clusterServicePrincipalId'), 'b24988ac-6180-42a0-ab88-20f7382dd24c'))]",
+            "name": "[concat(concat(parameters('clusterName'), '-rt'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt')), parameters('clusterServicePrincipalId'), '4d97b98b-1d4f-4787-a291-c67834d212e7'))]",
             "type": "Microsoft.Network/routeTables/providers/roleAssignments",
             "properties": {
                 "scope": "[resourceId('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]",
-                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4d97b98b-1d4f-4787-a291-c67834d212e7')]",
                 "principalId": "[parameters('clusterServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
@@ -129,11 +129,11 @@
             ]
         },
         {
-            "name": "[concat(concat(parameters('clusterName'), '-rt'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt')), parameters('fpServicePrincipalId'), 'b24988ac-6180-42a0-ab88-20f7382dd24c'))]",
+            "name": "[concat(concat(parameters('clusterName'), '-rt'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt')), parameters('fpServicePrincipalId'), '4d97b98b-1d4f-4787-a291-c67834d212e7'))]",
             "type": "Microsoft.Network/routeTables/providers/roleAssignments",
             "properties": {
                 "scope": "[resourceId('Microsoft.Network/routeTables', concat(parameters('clusterName'), '-rt'))]",
-                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4d97b98b-1d4f-4787-a291-c67834d212e7')]",
                 "principalId": "[parameters('fpServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },

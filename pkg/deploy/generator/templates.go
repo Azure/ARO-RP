@@ -38,10 +38,10 @@ func (g *generator) clusterPredeploy() *arm.Template {
 		clusterRouteTable(),
 		clusterMasterSubnet(),
 		clusterWorkerSubnet(),
-		rbac.ResourceRoleAssignment(rbac.RoleContributor, "parameters('clusterServicePrincipalId')", "Microsoft.Network/virtualNetworks", "'dev-vnet'"),
-		rbac.ResourceRoleAssignment(rbac.RoleContributor, "parameters('fpServicePrincipalId')", "Microsoft.Network/virtualNetworks", "'dev-vnet'"),
-		rbac.ResourceRoleAssignment(rbac.RoleContributor, "parameters('clusterServicePrincipalId')", "Microsoft.Network/routeTables", "concat(parameters('clusterName'), '-rt')"),
-		rbac.ResourceRoleAssignment(rbac.RoleContributor, "parameters('fpServicePrincipalId')", "Microsoft.Network/routeTables", "concat(parameters('clusterName'), '-rt')"),
+		rbac.ResourceRoleAssignment(rbac.RoleNetworkContributor, "parameters('clusterServicePrincipalId')", "Microsoft.Network/virtualNetworks", "'dev-vnet'"),
+		rbac.ResourceRoleAssignment(rbac.RoleNetworkContributor, "parameters('fpServicePrincipalId')", "Microsoft.Network/virtualNetworks", "'dev-vnet'"),
+		rbac.ResourceRoleAssignment(rbac.RoleNetworkContributor, "parameters('clusterServicePrincipalId')", "Microsoft.Network/routeTables", "concat(parameters('clusterName'), '-rt')"),
+		rbac.ResourceRoleAssignment(rbac.RoleNetworkContributor, "parameters('fpServicePrincipalId')", "Microsoft.Network/routeTables", "concat(parameters('clusterName'), '-rt')"),
 	)
 
 	return t

@@ -1,7 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the Apache License 2.0.
 
-import os
 import uuid
 
 from azure.cli.core.commands.client_factory import get_mgmt_service_client
@@ -14,8 +13,7 @@ from msrestazure.tools import parse_resource_id
 from msrestazure.tools import resource_id
 
 
-CONTRIBUTOR = 'b24988ac-6180-42a0-ab88-20f7382dd24c'
-DEVELOPMENT_CONTRIBUTOR = 'f3fe7bc1-0ef9-4681-a68c-c1fa285d6128'
+NETWORK_CONTRIBUTOR = '4d97b98b-1d4f-4787-a291-c67834d212e7'
 
 
 logger = get_logger(__name__)
@@ -50,7 +48,7 @@ def assign_contributor_to_vnet(cli_ctx, vnet, object_id):
         subscription=get_subscription_id(cli_ctx),
         namespace='Microsoft.Authorization',
         type='roleDefinitions',
-        name=DEVELOPMENT_CONTRIBUTOR if rp_mode_development() else CONTRIBUTOR,
+        name=NETWORK_CONTRIBUTOR,
     )
 
     if has_assignment(auth_client.role_assignments.list_for_scope(vnet), role_definition_id, object_id):
@@ -75,7 +73,7 @@ def assign_contributor_to_routetable(cli_ctx, master_subnet, worker_subnet, obje
         subscription=get_subscription_id(cli_ctx),
         namespace='Microsoft.Authorization',
         type='roleDefinitions',
-        name=DEVELOPMENT_CONTRIBUTOR if rp_mode_development() else CONTRIBUTOR,
+        name=NETWORK_CONTRIBUTOR,
     )
 
     route_tables = set()
@@ -108,7 +106,3 @@ def has_assignment(assignments, role_definition_id, object_id):
             return True
 
     return False
-
-
-def rp_mode_development():
-    return os.environ.get('RP_MODE', '').lower() == 'development'
