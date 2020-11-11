@@ -17,11 +17,13 @@ import (
 	"github.com/onsi/gomega/types"
 	configv1 "github.com/openshift/api/config/v1"
 	operatorv1 "github.com/openshift/api/operator/v1"
-	"github.com/openshift/client-go/config/clientset/versioned/fake"
-	fakeoperatorv1 "github.com/openshift/client-go/operator/clientset/versioned/fake"
+	fakeconfig "github.com/openshift/client-go/config/clientset/versioned/fake"
+	fakeoperator "github.com/openshift/client-go/operator/clientset/versioned/fake"
 	"github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
@@ -34,7 +36,7 @@ import (
 
 func failingFunc(context.Context) error { return errors.New("oh no!") }
 
-var clusterOperators = &configv1.ClusterOperator{
+var clusterOperator = &configv1.ClusterOperator{
 	ObjectMeta: metav1.ObjectMeta{
 		Name: "console",
 	},
@@ -63,7 +65,13 @@ var clusterVersion = &configv1.ClusterVersion{
 	},
 }
 
-var ingressControllers = &operatorv1.IngressController{
+var node = &corev1.Node{
+	ObjectMeta: metav1.ObjectMeta{
+		Name: "node",
+	},
+}
+
+var ingressController = &operatorv1.IngressController{
 	ObjectMeta: metav1.ObjectMeta{
 		Namespace: "openshift-ingress-operator",
 	},
@@ -76,12 +84,13 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 	ctx := context.Background()
 
 	for _, tt := range []struct {
-		name        string
-		steps       []steps.Step
-		wantEntries []map[string]types.GomegaMatcher
-		wantErr     string
-		configcli   *fake.Clientset
-		operatorcli *fakeoperatorv1.Clientset
+		name          string
+		steps         []steps.Step
+		wantEntries   []map[string]types.GomegaMatcher
+		wantErr       string
+		kubernetescli *fake.Clientset
+		configcli     *fakeconfig.Clientset
+		operatorcli   *fakeoperator.Clientset
 	}{
 		{
 			name: "Failed step run will log cluster version, cluster operator status, and ingress information if available",
@@ -104,6 +113,10 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.MatchRegexp(`github.com/Azure/ARO-RP/pkg/cluster.\(\*manager\).logNodes\-fm: {.*"name":"node".*}`),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.MatchRegexp(`github.com/Azure/ARO-RP/pkg/cluster.\(\*manager\).logClusterOperators\-fm: {.*"versions":\[{"name":"operator","version":"4.3.0"},{"name":"operator\-good","version":"4.3.1"}\].*}`),
 				},
 				{
@@ -111,8 +124,9 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 					"msg":   gomega.MatchRegexp(`github.com/Azure/ARO-RP/pkg/cluster.\(\*manager\).logIngressControllers\-fm: {.*"items":\[{.*"domain":"aroapp.io"}.*\]}`),
 				},
 			},
-			configcli:   fake.NewSimpleClientset(clusterVersion, clusterOperators),
-			operatorcli: fakeoperatorv1.NewSimpleClientset(ingressControllers),
+			kubernetescli: fake.NewSimpleClientset(node),
+			configcli:     fakeconfig.NewSimpleClientset(clusterVersion, clusterOperator),
+			operatorcli:   fakeoperator.NewSimpleClientset(ingressController),
 		},
 		{
 			name: "Failed step run will not crash if it cannot get the clusterversions, clusteroperators, ingresscontrollers",
@@ -135,6 +149,10 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
+					"msg":   gomega.Equal(`github.com/Azure/ARO-RP/pkg/cluster.(*manager).logNodes-fm: {"metadata":{},"items":null}`),
+				},
+				{
+					"level": gomega.Equal(logrus.InfoLevel),
 					"msg":   gomega.Equal(`github.com/Azure/ARO-RP/pkg/cluster.(*manager).logClusterOperators-fm: {"metadata":{},"items":null}`),
 				},
 				{
@@ -142,16 +160,18 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 					"msg":   gomega.Equal(`github.com/Azure/ARO-RP/pkg/cluster.(*manager).logIngressControllers-fm: {"metadata":{},"items":null}`),
 				},
 			},
-			configcli:   fake.NewSimpleClientset(),
-			operatorcli: fakeoperatorv1.NewSimpleClientset(),
+			kubernetescli: fake.NewSimpleClientset(),
+			configcli:     fakeconfig.NewSimpleClientset(),
+			operatorcli:   fakeoperator.NewSimpleClientset(),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			h, log := testlog.New()
 			m := &manager{
-				log:         log,
-				configcli:   tt.configcli,
-				operatorcli: tt.operatorcli,
+				log:           log,
+				kubernetescli: tt.kubernetescli,
+				configcli:     tt.configcli,
+				operatorcli:   tt.operatorcli,
 			}
 
 			err := m.runSteps(ctx, tt.steps)
