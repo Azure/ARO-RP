@@ -101,7 +101,15 @@ func networkSecurityGroupIDV1(oc *api.OpenShiftCluster, subnetID, infraID string
 		return oc.Properties.ClusterProfile.ResourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/" + infraID + NSGControlPlaneSuffixV1
 	}
 
-	return oc.Properties.ClusterProfile.ResourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/" + infraID + NSGNodeSuffixV1
+	// node pools may have different subnets, but they share the same NSG
+	for _, s := range oc.Properties.WorkerProfiles {
+		if strings.EqualFold(subnetID, s.SubnetID) {
+			return oc.Properties.ClusterProfile.ResourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/" + infraID + NSGNodeSuffixV1, nil
+		}
+
+	}
+
+	return "", fmt.Errorf("unknown subnetID %q", subnetID)
 }
 
 func networkSecurityGroupIDV2(oc *api.OpenShiftCluster, subnetID, infraID string) string {

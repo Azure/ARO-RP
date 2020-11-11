@@ -210,7 +210,7 @@ func TestValidateVnet(t *testing.T) {
 			modifyVnet: func(vnet *mgmtnetwork.VirtualNetwork) {
 				*vnet.Subnets = (*vnet.Subnets)[:1]
 			},
-			wantErr: `400: InvalidLinkedVNet: properties.workerProfiles["worker"].subnetId: The provided subnet '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/virtualNetworks/testVnet/subnet/workerSubnet' could not be found.`,
+			wantErr: `400: InvalidLinkedVNet: properties.workerProfiles[0].subnetId: The provided subnet '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/virtualNetworks/testVnet/subnet/workerSubnet' could not be found.`,
 		},
 		{
 			name: "invalid PLS network policy (master)",
@@ -231,7 +231,7 @@ func TestValidateVnet(t *testing.T) {
 			modifyVnet: func(vnet *mgmtnetwork.VirtualNetwork) {
 				(*vnet.Subnets)[1].ServiceEndpoints = nil
 			},
-			wantErr: `400: InvalidLinkedVNet: properties.workerProfiles["worker"].subnetId: The provided subnet '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/virtualNetworks/testVnet/subnet/workerSubnet' is invalid: must have Microsoft.ContainerRegistry serviceEndpoint.`,
+			wantErr: `400: InvalidLinkedVNet: properties.workerProfiles[0].subnetId: The provided subnet '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/virtualNetworks/testVnet/subnet/workerSubnet' is invalid: must have Microsoft.ContainerRegistry serviceEndpoint.`,
 		},
 		{
 			name: "invalid master nsg arch v1",
@@ -256,7 +256,7 @@ func TestValidateVnet(t *testing.T) {
 			modifyVnet: func(vnet *mgmtnetwork.VirtualNetwork) {
 				(*vnet.Subnets)[1].NetworkSecurityGroup = nil
 			},
-			wantErr: `400: InvalidLinkedVNet: properties.workerProfiles["worker"].subnetId: The provided subnet '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/virtualNetworks/testVnet/subnet/workerSubnet' is invalid: must have network security group '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/networkSecurityGroups/aro-node-nsg' attached.`,
+			wantErr: `400: InvalidLinkedVNet: properties.workerProfiles[0].subnetId: The provided subnet '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/virtualNetworks/testVnet/subnet/workerSubnet' is invalid: must have network security group '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/networkSecurityGroups/aro-node-nsg' attached.`,
 		},
 		{
 			name: "invalid worker nsg arch v2",
@@ -287,7 +287,7 @@ func TestValidateVnet(t *testing.T) {
 			modifyOC: func(oc *api.OpenShiftCluster) {
 				oc.Properties.ProvisioningState = api.ProvisioningStateCreating
 			},
-			wantErr: `400: InvalidLinkedVNet: properties.workerProfiles["worker"].subnetId: The provided subnet '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/virtualNetworks/testVnet/subnet/workerSubnet' is invalid: must not have a network security group attached.`,
+			wantErr: `400: InvalidLinkedVNet: properties.workerProfiles[0].subnetId: The provided subnet '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/virtualNetworks/testVnet/subnet/workerSubnet' is invalid: must not have a network security group attached.`,
 		},
 		{
 			name: "invalid master subnet size",
@@ -301,7 +301,7 @@ func TestValidateVnet(t *testing.T) {
 			modifyVnet: func(vnet *mgmtnetwork.VirtualNetwork) {
 				(*vnet.Subnets)[1].AddressPrefix = to.StringPtr("10.0.0.0/28")
 			},
-			wantErr: `400: InvalidLinkedVNet: properties.workerProfiles["worker"].subnetId: The provided subnet '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/virtualNetworks/testVnet/subnet/workerSubnet' is invalid: must be /27 or larger.`,
+			wantErr: `400: InvalidLinkedVNet: properties.workerProfiles[0].subnetId: The provided subnet '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/virtualNetworks/testVnet/subnet/workerSubnet' is invalid: must be /27 or larger.`,
 		},
 		{
 			name: "master and worker subnets overlap",
@@ -335,6 +335,36 @@ func TestValidateVnet(t *testing.T) {
 			name: "worker and service subnets overlap",
 			modifyVnet: func(vnet *mgmtnetwork.VirtualNetwork) {
 				(*vnet.Subnets)[1].AddressPrefix = to.StringPtr("10.0.3.0/24")
+			},
+			wantErr: "400: InvalidLinkedVNet: : The provided CIDRs must not overlap: '10.0.3.0/24 overlaps with 10.0.3.0/24'.",
+		},
+		{
+			name: "two worker pools on the same subnet",
+			modifyOC: func(oc *api.OpenShiftCluster) {
+				oc.Properties.WorkerProfiles = append(oc.Properties.WorkerProfiles, api.WorkerProfile{
+					SubnetID: workerSubnet,
+				})
+			},
+			wantErr: "",
+		},
+		// {
+		// 	name: "two worker pools on the on two different subnets which do not overlap with pod or service cidr",
+		// 	modifyOC: func(oc *api.OpenShiftCluster) {
+		// 		oc.Properties.WorkerProfiles = append(oc.Properties.WorkerProfiles, api.WorkerProfile{
+		// 			SubnetID: secondWorkerSubnet,
+		// 		})
+		// 	},
+		// 	wantErr: "",
+		// },
+		{
+			name: "two worker pools on the on two different subnets one of which overlaps with pod or service cidr",
+			modifyVnet: func(vnet *mgmtnetwork.VirtualNetwork) {
+				(*vnet.Subnets)[2].AddressPrefix = to.StringPtr("10.0.3.0/24")
+			},
+			modifyOC: func(oc *api.OpenShiftCluster) {
+				oc.Properties.WorkerProfiles = append(oc.Properties.WorkerProfiles, api.WorkerProfile{
+					SubnetID: secondWorkerSubnet,
+				})
 			},
 			wantErr: "400: InvalidLinkedVNet: : The provided CIDRs must not overlap: '10.0.3.0/24 overlaps with 10.0.3.0/24'.",
 		},
@@ -409,6 +439,21 @@ func TestValidateVnet(t *testing.T) {
 								},
 							},
 						},
+						{
+							ID: &secondWorkerSubnet,
+							SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
+								AddressPrefix: to.StringPtr("10.0.4.0/24"),
+								NetworkSecurityGroup: &mgmtnetwork.SecurityGroup{
+									ID: &workerNSG,
+								},
+								ServiceEndpoints: &[]mgmtnetwork.ServiceEndpointPropertiesFormat{
+									{
+										Service:           to.StringPtr("Microsoft.ContainerRegistry"),
+										ProvisioningState: mgmtnetwork.Succeeded,
+									},
+								},
+							},
+						},
 					},
 				},
 			}
@@ -433,7 +478,6 @@ func TestValidateVnet(t *testing.T) {
 		})
 	}
 }
-
 func TestValidateVnetPermissions(t *testing.T) {
 	ctx := context.Background()
 
