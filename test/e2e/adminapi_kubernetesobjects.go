@@ -71,13 +71,13 @@ var _ = Describe("[Admin API] Kubernetes objects action", func() {
 				By("waiting for the test customer namespace to be deleted")
 				err = wait.PollImmediate(10*time.Second, 5*time.Minute, func() (bool, error) {
 					_, err := clients.Kubernetes.CoreV1().Namespaces().Get(context.Background(), namespace, metav1.GetOptions{})
-					if err == nil {
-						return false, nil
+					if errors.IsNotFound(err) {
+						return true, nil
 					}
-					if !errors.IsNotFound(err) {
-						return false, err
+					if err != nil {
+						log.Warn(err)
 					}
-					return true, nil
+					return false, nil // swallow error
 				})
 				Expect(err).NotTo(HaveOccurred())
 			}()
@@ -244,13 +244,13 @@ func testConfigMapDeleteOK(objName, namespace string) {
 	By("waiting for the configmap to be deleted")
 	err = wait.PollImmediate(10*time.Second, time.Minute, func() (bool, error) {
 		_, err = clients.Kubernetes.CoreV1().ConfigMaps(namespace).Get(context.Background(), objName, metav1.GetOptions{})
-		if err == nil {
-			return false, nil
+		if errors.IsNotFound(err) {
+			return true, nil
 		}
-		if !errors.IsNotFound(err) {
-			return false, err
+		if err != nil {
+			log.Warn(err)
 		}
-		return true, nil
+		return false, nil // swallow error
 	})
 	Expect(err).NotTo(HaveOccurred())
 }

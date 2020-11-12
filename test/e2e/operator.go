@@ -104,7 +104,8 @@ var _ = Describe("ARO Operator - Internet checking", func() {
 		err = wait.PollImmediate(10*time.Second, 10*time.Minute, func() (bool, error) {
 			co, err := clients.AROClusters.Clusters().Get(context.Background(), "cluster", metav1.GetOptions{})
 			if err != nil {
-				return false, err
+				log.Warn(err)
+				return false, nil // swallow error
 			}
 
 			log.Debugf("ClusterStatus.Conditions %s", co.Status.Conditions)
@@ -117,7 +118,13 @@ var _ = Describe("ARO Operator - Internet checking", func() {
 
 var _ = Describe("ARO Operator - Geneva Logging", func() {
 	Specify("genevalogging must be repaired if deployment deleted", func() {
-		mdsdReady := ready.CheckDaemonSetIsReady(context.Background(), clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-logging"), "mdsd")
+		mdsdReady := func() (bool, error) {
+			done, err := ready.CheckDaemonSetIsReady(context.Background(), clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-logging"), "mdsd")()
+			if err != nil {
+				log.Warn(err)
+			}
+			return done, nil // swallow error
+		}
 
 		err := wait.PollImmediate(30*time.Second, 15*time.Minute, mdsdReady)
 		Expect(err).NotTo(HaveOccurred())
@@ -149,7 +156,13 @@ var _ = Describe("ARO Operator - Routefix Daemonset", func() {
 	BeforeEach(skipIfNotInDevelopmentEnv)
 
 	Specify("routefix must be repaired if daemonset is deleted", func() {
-		dsReady := ready.CheckDaemonSetIsReady(context.Background(), clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-routefix"), "routefix")
+		dsReady := func() (bool, error) {
+			done, err := ready.CheckDaemonSetIsReady(context.Background(), clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-routefix"), "routefix")()
+			if err != nil {
+				log.Warn(err)
+			}
+			return done, nil // swallow error
+		}
 
 		err := wait.PollImmediate(30*time.Second, 15*time.Minute, dsReady)
 		Expect(err).NotTo(HaveOccurred())
