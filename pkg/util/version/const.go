@@ -46,3 +46,7 @@ func MdmImage(acr string) string {
 func MdsdImage(acr string) string {
 	return acr + ".azurecr.io/genevamdsd:master_330"
 }
+
+func RouteFixImage(acr string) string {
+	return acr + ".azurecr.io/routefix:c5c4a5db"
+}
