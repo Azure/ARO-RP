@@ -225,8 +225,6 @@ func (c *Cluster) Delete(ctx context.Context, clusterName string) error {
 			}
 		}
 	} else {
-		c.log.Info("removing predeployment resources")
-
 		// Deleting the deployment does not clean up the associated resources
 		c.log.Info("deleting deployment")
 		err = c.deployments.DeleteAndWait(ctx, c.ResourceGroup(), clusterName)
@@ -235,12 +233,12 @@ func (c *Cluster) Delete(ctx context.Context, clusterName string) error {
 		}
 
 		c.log.Info("deleting master/worker subnets")
-		err = c.subnets.DeleteAndWait(ctx, c.ResourceGroup(), "dev-vnet", clusterName+"-worker")
+		err = c.subnets.DeleteAndWait(ctx, c.ResourceGroup(), "dev-vnet", clusterName+"-master")
 		if err != nil {
 			errs = append(errs, err)
 		}
 
-		err = c.subnets.DeleteAndWait(ctx, c.ResourceGroup(), "dev-vnet", clusterName+"-master")
+		err = c.subnets.DeleteAndWait(ctx, c.ResourceGroup(), "dev-vnet", clusterName+"-worker")
 		if err != nil {
 			errs = append(errs, err)
 		}
@@ -381,13 +379,13 @@ func (c *Cluster) deleteRoleAssignments(ctx context.Context, appID string) error
 		return err
 	}
 
-	roleAssignments, err := c.roleassignments.List(ctx, fmt.Sprintf("principalId eq '%s'", spObjID))
+	roleAssignments, err := c.roleassignments.ListForResourceGroup(ctx, c.ResourceGroup(), fmt.Sprintf("principalId eq '%s'", spObjID))
 	if err != nil {
 		return err
 	}
 
-	c.log.Info("deleting role assignments")
 	for _, roleAssignment := range roleAssignments {
+		c.log.Infof("deleting role assignment %s", *roleAssignment.Name)
 		_, err = c.roleassignments.Delete(ctx, *roleAssignment.Scope, *roleAssignment.Name)
 		if err != nil {
 			return err
