@@ -2,7 +2,9 @@ SHELL = /bin/bash
 COMMIT = $(shell git rev-parse --short HEAD)$(shell [[ $$(git status --porcelain) = "" ]] || echo -dirty)
 ARO_IMAGE ?= ${RP_IMAGE_ACR}.azurecr.io/aro:$(COMMIT)
 
-export CGO_CFLAGS=-Dgpgme_off_t=off_t
+ifneq ($(shell uname -s),Darwin)
+    export CGO_CFLAGS=-Dgpgme_off_t=off_t
+endif
 
 aro: generate
 	go build -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" ./cmd/aro
