@@ -11,11 +11,11 @@ import (
 
 // RoleAssignmentsClientAddons contains addons for RoleAssignmentsClient
 type RoleAssignmentsClientAddons interface {
-	List(ctx context.Context, filter string) (result []mgmtauthorization.RoleAssignment, err error)
+	ListForResourceGroup(ctx context.Context, resourceGroupName string, filter string) ([]mgmtauthorization.RoleAssignment, error)
 }
 
-func (c *roleAssignmentsClient) List(ctx context.Context, filter string) (result []mgmtauthorization.RoleAssignment, err error) {
-	page, err := c.RoleAssignmentsClient.List(ctx, filter)
+func (c *roleAssignmentsClient) ListForResourceGroup(ctx context.Context, resourceGroupName string, filter string) (result []mgmtauthorization.RoleAssignment, err error) {
+	page, err := c.RoleAssignmentsClient.ListForResourceGroup(ctx, resourceGroupName, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -29,5 +29,4 @@ func (c *roleAssignmentsClient) List(ctx context.Context, filter string) (result
 	}
 
 	return result, nil
-
 }

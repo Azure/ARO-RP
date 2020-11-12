@@ -118,17 +118,17 @@ func (mr *MockRoleAssignmentsClientMockRecorder) Delete(arg0, arg1, arg2 interfa
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockRoleAssignmentsClient)(nil).Delete), arg0, arg1, arg2)
 }
 
-// List mocks base method
-func (m *MockRoleAssignmentsClient) List(arg0 context.Context, arg1 string) ([]authorization.RoleAssignment, error) {
+// ListForResourceGroup mocks base method
+func (m *MockRoleAssignmentsClient) ListForResourceGroup(arg0 context.Context, arg1, arg2 string) ([]authorization.RoleAssignment, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0, arg1)
+	ret := m.ctrl.Call(m, "ListForResourceGroup", arg0, arg1, arg2)
 	ret0, _ := ret[0].([]authorization.RoleAssignment)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// List indicates an expected call of List
-func (mr *MockRoleAssignmentsClientMockRecorder) List(arg0, arg1 interface{}) *gomock.Call {
+// ListForResourceGroup indicates an expected call of ListForResourceGroup
+func (mr *MockRoleAssignmentsClientMockRecorder) ListForResourceGroup(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockRoleAssignmentsClient)(nil).List), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListForResourceGroup", reflect.TypeOf((*MockRoleAssignmentsClient)(nil).ListForResourceGroup), arg0, arg1, arg2)
 }
