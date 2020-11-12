@@ -198,7 +198,8 @@ func (c *Cluster) Delete(ctx context.Context, clusterName string) error {
 
 	oc, err := c.openshiftclusters.Get(ctx, c.ResourceGroup(), clusterName)
 	if err == nil {
-		err = c.deleteRoleAssignments(ctx, *oc.OpenShiftClusterProperties.ServicePrincipalProfile.ClientID)
+		c.log.Print("deleting cluster")
+		err = c.openshiftclusters.DeleteAndWait(ctx, c.ResourceGroup(), clusterName)
 		if err != nil {
 			errs = append(errs, err)
 		}
@@ -208,8 +209,10 @@ func (c *Cluster) Delete(ctx context.Context, clusterName string) error {
 			errs = append(errs, err)
 		}
 
-		c.log.Print("deleting cluster")
-		err = c.openshiftclusters.DeleteAndWait(ctx, c.ResourceGroup(), clusterName)
+		// Cluster service principal has contributor access on clusterResourceGroup.
+		// At the same time ClusterResourceGroup is protected with DenyAssignment,
+		// so this can't be deleted while cluster still exists.
+		err = c.deleteRoleAssignments(ctx, *oc.OpenShiftClusterProperties.ServicePrincipalProfile.ClientID)
 		if err != nil {
 			errs = append(errs, err)
 		}
@@ -386,8 +389,8 @@ func (c *Cluster) deleteRoleAssignments(ctx context.Context, appID string) error
 		return err
 	}
 
-	c.log.Info("deleting role assignments")
 	for _, roleAssignment := range roleAssignments {
+		c.log.Infof("deleting role assignment %s", *roleAssignment.Name)
 		_, err = c.roleassignments.Delete(ctx, *roleAssignment.Scope, *roleAssignment.Name)
 		if err != nil {
 			return err
