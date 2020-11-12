@@ -11,8 +11,6 @@ import (
 	"github.com/Azure/go-autorest/autorest/to"
 	projectv1 "github.com/openshift/api/project/v1"
 	securityv1 "github.com/openshift/api/security/v1"
-	securityclient "github.com/openshift/client-go/security/clientset/versioned"
-	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -28,34 +26,8 @@ const (
 	GenevaKeyName  = "gcskey.pem"
 )
 
-type GenevaLogging interface {
-	Resources(context.Context) ([]runtime.Object, error)
-}
-
-type genevaLogging struct {
-	log     *logrus.Entry
-	cluster *arov1alpha1.Cluster
-
-	seccli securityclient.Interface
-
-	gcscert []byte
-	gcskey  []byte
-}
-
-func New(log *logrus.Entry, cluster *arov1alpha1.Cluster, seccli securityclient.Interface, gcscert, gcskey []byte) GenevaLogging {
-	return &genevaLogging{
-		log:     log,
-		cluster: cluster,
-
-		seccli: seccli,
-
-		gcscert: gcscert,
-		gcskey:  gcskey,
-	}
-}
-
-func (g *genevaLogging) securityContextConstraints(ctx context.Context, name, serviceAccountName string) (*securityv1.SecurityContextConstraints, error) {
-	scc, err := g.seccli.SecurityV1().SecurityContextConstraints().Get(ctx, "privileged", metav1.GetOptions{})
+func (g *GenevaloggingReconciler) securityContextConstraints(ctx context.Context, name, serviceAccountName string) (*securityv1.SecurityContextConstraints, error) {
+	scc, err := g.securitycli.SecurityV1().SecurityContextConstraints().Get(ctx, "privileged", metav1.GetOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +40,11 @@ func (g *genevaLogging) securityContextConstraints(ctx context.Context, name, se
 	return scc, nil
 }
 
-func (g *genevaLogging) daemonset(r azure.Resource) *appsv1.DaemonSet {
+func (g *GenevaloggingReconciler) daemonset(cluster *arov1alpha1.Cluster) (*appsv1.DaemonSet, error) {
+	r, err := azure.ParseResourceID(cluster.Spec.ResourceID)
+	if err != nil {
+		return nil, err
+	}
 
 	return &appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -143,7 +119,7 @@ func (g *genevaLogging) daemonset(r azure.Resource) *appsv1.DaemonSet {
 					Containers: []v1.Container{
 						{
 							Name:  "fluentbit-journal",
-							Image: version.FluentbitImage(g.cluster.Spec.ACRDomain),
+							Image: version.FluentbitImage(cluster.Spec.ACRDomain),
 							Command: []string{
 								"/opt/td-agent-bit/bin/td-agent-bit",
 							},
@@ -180,7 +156,7 @@ func (g *genevaLogging) daemonset(r azure.Resource) *appsv1.DaemonSet {
 						},
 						{
 							Name:  "fluentbit-containers",
-							Image: version.FluentbitImage(g.cluster.Spec.ACRDomain),
+							Image: version.FluentbitImage(cluster.Spec.ACRDomain),
 							Command: []string{
 								"/opt/td-agent-bit/bin/td-agent-bit",
 							},
@@ -217,7 +193,7 @@ func (g *genevaLogging) daemonset(r azure.Resource) *appsv1.DaemonSet {
 						},
 						{
 							Name:  "fluentbit-audit",
-							Image: version.FluentbitImage(g.cluster.Spec.ACRDomain),
+							Image: version.FluentbitImage(cluster.Spec.ACRDomain),
 							Command: []string{
 								"/opt/td-agent-bit/bin/td-agent-bit",
 							},
@@ -254,7 +230,7 @@ func (g *genevaLogging) daemonset(r azure.Resource) *appsv1.DaemonSet {
 						},
 						{
 							Name:  "mdsd",
-							Image: version.MdsdImage(g.cluster.Spec.ACRDomain),
+							Image: version.MdsdImage(cluster.Spec.ACRDomain),
 							Command: []string{
 								"/usr/sbin/mdsd",
 							},
@@ -269,7 +245,7 @@ func (g *genevaLogging) daemonset(r azure.Resource) *appsv1.DaemonSet {
 							Env: []v1.EnvVar{
 								{
 									Name:  "MONITORING_GCS_ENVIRONMENT",
-									Value: g.cluster.Spec.GenevaLogging.MonitoringGCSEnvironment,
+									Value: cluster.Spec.GenevaLogging.MonitoringGCSEnvironment,
 								},
 								{
 									Name:  "MONITORING_GCS_ACCOUNT",
@@ -277,7 +253,7 @@ func (g *genevaLogging) daemonset(r azure.Resource) *appsv1.DaemonSet {
 								},
 								{
 									Name:  "MONITORING_GCS_REGION",
-									Value: g.cluster.Spec.Location,
+									Value: cluster.Spec.Location,
 								},
 								{
 									Name:  "MONITORING_GCS_CERT_CERTFILE",
@@ -293,7 +269,7 @@ func (g *genevaLogging) daemonset(r azure.Resource) *appsv1.DaemonSet {
 								},
 								{
 									Name:  "MONITORING_CONFIG_VERSION",
-									Value: g.cluster.Spec.GenevaLogging.ConfigVersion,
+									Value: cluster.Spec.GenevaLogging.ConfigVersion,
 								},
 								{
 									Name:  "MONITORING_USE_GENEVA_CONFIG_SERVICE",
@@ -301,7 +277,7 @@ func (g *genevaLogging) daemonset(r azure.Resource) *appsv1.DaemonSet {
 								},
 								{
 									Name:  "MONITORING_TENANT",
-									Value: g.cluster.Spec.Location,
+									Value: cluster.Spec.Location,
 								},
 								{
 									Name:  "MONITORING_ROLE",
@@ -318,7 +294,7 @@ func (g *genevaLogging) daemonset(r azure.Resource) *appsv1.DaemonSet {
 								},
 								{
 									Name:  "RESOURCE_ID",
-									Value: strings.ToLower(g.cluster.Spec.ResourceID),
+									Value: strings.ToLower(cluster.Spec.ResourceID),
 								},
 								{
 									Name:  "SUBSCRIPTION_ID",
@@ -358,16 +334,16 @@ func (g *genevaLogging) daemonset(r azure.Resource) *appsv1.DaemonSet {
 				},
 			},
 		},
-	}
+	}, nil
 }
 
-func (g *genevaLogging) Resources(ctx context.Context) ([]runtime.Object, error) {
-	r, err := azure.ParseResourceID(g.cluster.Spec.ResourceID)
+func (g *GenevaloggingReconciler) resources(ctx context.Context, cluster *arov1alpha1.Cluster, gcscert, gcskey []byte) ([]runtime.Object, error) {
+	scc, err := g.securityContextConstraints(ctx, "privileged-genevalogging", kubeServiceAccount)
 	if err != nil {
 		return nil, err
 	}
 
-	scc, err := g.securityContextConstraints(ctx, "privileged-genevalogging", kubeServiceAccount)
+	daemonset, err := g.daemonset(cluster)
 	if err != nil {
 		return nil, err
 	}
@@ -385,8 +361,8 @@ func (g *genevaLogging) Resources(ctx context.Context) ([]runtime.Object, error)
 				Namespace: kubeNamespace,
 			},
 			Data: map[string][]byte{
-				GenevaCertName: g.gcscert,
-				GenevaKeyName:  g.gcskey,
+				GenevaCertName: gcscert,
+				GenevaKeyName:  gcskey,
 			},
 		},
 		&v1.ConfigMap{
@@ -408,6 +384,6 @@ func (g *genevaLogging) Resources(ctx context.Context) ([]runtime.Object, error)
 			},
 		},
 		scc,
-		g.daemonset(r),
+		daemonset,
 	}, nil
 }
