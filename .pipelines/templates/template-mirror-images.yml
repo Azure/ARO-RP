@@ -4,6 +4,7 @@ parameters:
   dstACRName: ''
   srcAuthGeneva: ''
   srcAuthQuay: ''
+  srcAuthRedhat: ''
 
 steps:
 - script: |
@@ -13,6 +14,7 @@ steps:
     export DST_ACR_NAME=${{ parameters.dstACRName }}
     export SRC_AUTH_GENEVA=${{ parameters.srcAuthGeneva }}
     export SRC_AUTH_QUAY=${{ parameters.srcAuthQuay }}
+    export SRC_AUTH_REDHAT=${{ parameters.srcAuthRedhat }}
 
     chmod +x ${{ parameters.deployerDirectory }}/aro
     ${{ parameters.deployerDirectory }}/aro mirror
