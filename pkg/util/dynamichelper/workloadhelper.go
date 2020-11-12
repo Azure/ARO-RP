@@ -11,14 +11,58 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
-// HashWorkloadConfigs iterates daemonsets, walks their volumes, and updates
+func SetControllerReferences(resources []runtime.Object, owner metav1.Object) error {
+	for _, resource := range resources {
+		r, err := meta.Accessor(resource)
+		if err != nil {
+			return err
+		}
+
+		err = controllerutil.SetControllerReference(owner, r, scheme.Scheme)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func Prepare(resources []runtime.Object) ([]*unstructured.Unstructured, error) {
+	err := hashWorkloadConfigs(resources)
+	if err != nil {
+		return nil, err
+	}
+
+	uns := make([]*unstructured.Unstructured, 0, len(resources))
+	for _, resource := range resources {
+		un := &unstructured.Unstructured{}
+		err = scheme.Scheme.Convert(resource, un, nil)
+		if err != nil {
+			return nil, err
+		}
+		uns = append(uns, un)
+	}
+
+	sort.Slice(uns, func(i, j int) bool {
+		return createOrder(uns[i], uns[j])
+	})
+
+	return uns, nil
+}
+
+// hashWorkloadConfigs iterates daemonsets, walks their volumes, and updates
 // their pod templates with annotations that include the hashes of the content
 // for each configmap or secret.
-func HashWorkloadConfigs(resources []runtime.Object) error {
+func hashWorkloadConfigs(resources []runtime.Object) error {
 	// map config resources to their hashed content
 	configToHash := map[string]string{}
 	for _, o := range resources {

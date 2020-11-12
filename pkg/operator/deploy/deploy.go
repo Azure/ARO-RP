@@ -6,7 +6,6 @@ package deploy
 import (
 	"context"
 	"fmt"
-	"sort"
 	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -18,7 +17,6 @@ import (
 	extensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -185,19 +183,10 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 		return err
 	}
 
-	uns := make([]*unstructured.Unstructured, 0, len(resources))
-	for _, res := range resources {
-		un := &unstructured.Unstructured{}
-		err = scheme.Scheme.Convert(res, un, nil)
-		if err != nil {
-			return err
-		}
-		uns = append(uns, un)
+	uns, err := dynamichelper.Prepare(resources)
+	if err != nil {
+		return err
 	}
-
-	sort.Slice(uns, func(i, j int) bool {
-		return dynamichelper.CreateOrder(uns[i], uns[j])
-	})
 
 	for _, un := range uns {
 		err = o.dh.Ensure(ctx, un)

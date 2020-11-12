@@ -64,17 +64,22 @@ func (mr *MockInterfaceMockRecorder) Delete(arg0, arg1, arg2, arg3 interface{}) 
 }
 
 // Ensure mocks base method
-func (m *MockInterface) Ensure(arg0 context.Context, arg1 *unstructured.Unstructured) error {
+func (m *MockInterface) Ensure(arg0 context.Context, arg1 ...*unstructured.Unstructured) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Ensure", arg0, arg1)
+	varargs := []interface{}{arg0}
+	for _, a := range arg1 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "Ensure", varargs...)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Ensure indicates an expected call of Ensure
-func (mr *MockInterfaceMockRecorder) Ensure(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockInterfaceMockRecorder) Ensure(arg0 interface{}, arg1 ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ensure", reflect.TypeOf((*MockInterface)(nil).Ensure), arg0, arg1)
+	varargs := append([]interface{}{arg0}, arg1...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ensure", reflect.TypeOf((*MockInterface)(nil).Ensure), varargs...)
 }
 
 // Get mocks base method

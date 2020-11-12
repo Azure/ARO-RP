@@ -91,7 +91,7 @@ func TestHashWorkloadConfigs(t *testing.T) {
 		},
 	}
 
-	err := HashWorkloadConfigs([]runtime.Object{cm, sec, ds})
+	err := hashWorkloadConfigs([]runtime.Object{cm, sec, ds})
 	if err != nil {
 		t.Fatal(err)
 	}
