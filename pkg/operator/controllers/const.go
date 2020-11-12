@@ -9,4 +9,5 @@ const (
 	PullSecretControllerName    = "PullSecret"
 	WorkaroundControllerName    = "Workaround"
 	CheckerControllerName       = "Checker"
+	RouteFixControllerName      = "RouteFix"
 )

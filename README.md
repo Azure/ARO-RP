@@ -102,6 +102,9 @@ questions or comments.
 
     * workaround: Applies a set of temporay workarounds to the ARO cluster.
 
+    * routefix: Ensures all the routefix resources in the namespace
+      `openshift-azure-routefix` remain on the cluster.
+
   * pkg/swagger: Swagger specification generation code.
 
   * pkg/util: Utility libraries.

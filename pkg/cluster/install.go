@@ -34,7 +34,6 @@ func (m *manager) AdminUpgrade(ctx context.Context) error {
 		steps.Condition(m.apiServersReady, 30*time.Minute),
 		steps.Action(m.ensureBillingRecord), // belt and braces
 		steps.Action(m.fixPullSecret),       // TODO(mj): Remove when operator deployed
-		steps.Action(m.ensureRouteFix),
 		steps.Action(m.ensureAROOperator),
 		steps.Condition(m.aroDeploymentReady, 20*time.Minute),
 		steps.Action(m.upgradeCertificates),
@@ -62,7 +61,6 @@ func (m *manager) Install(ctx context.Context, installConfig *installconfig.Inst
 			steps.Action(m.createCertificates),
 			steps.Action(m.initializeKubernetesClients),
 			steps.Condition(m.bootstrapConfigMapReady, 30*time.Minute),
-			steps.Action(m.ensureRouteFix),
 			steps.Action(m.ensureAROOperator),
 			steps.Action(m.incrInstallPhase),
 		},

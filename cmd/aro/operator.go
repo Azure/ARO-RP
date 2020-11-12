@@ -23,6 +23,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/checker"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/pullsecret"
+	"github.com/Azure/ARO-RP/pkg/operator/controllers/routefix"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/workaround"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
@@ -101,6 +102,11 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 			kubernetescli, configcli, mcocli, arocli, restConfig)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller Workaround: %v", err)
 		}
+		if err = (routefix.NewReconciler(
+			log.WithField("controller", controllers.RouteFixControllerName),
+			kubernetescli, securitycli, arocli, restConfig)).SetupWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to create controller RouteFix: %v", err)
+		}
 	}
 
 	if err = (checker.NewReconciler(
@@ -108,6 +114,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		clustercli, arocli, role, deploymentMode)).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("unable to create controller InternetChecker: %v", err)
 	}
+
 	// +kubebuilder:scaffold:builder
 
 	log.Info("starting manager")

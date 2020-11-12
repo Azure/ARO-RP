@@ -148,3 +148,28 @@ var _ = Describe("ARO Operator - Geneva Logging", func() {
 		Expect(len(final) - len(initial)).To(Equal(1))
 	})
 })
+
+var _ = Describe("ARO Operator - Routefix Daemonset", func() {
+	BeforeEach(func() {
+		_, err := clients.AROClusters.Clusters().Get(context.Background(), "cluster", metav1.GetOptions{})
+		if errors.IsNotFound(err) {
+			Skip("skipping tests as aro-operator is not deployed")
+		}
+		Specify("routefix must be repaired if daemonset is deleted", func() {
+			dsReady := ready.CheckDaemonSetIsReady(context.Background(), clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-routefix"), "routefix")
+			err := wait.PollImmediate(30*time.Second, 15*time.Minute, dsReady)
+			Expect(err).NotTo(HaveOccurred())
+
+			//delete the routefix daemonset
+			err = clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-routefix").Delete(context.Background(), "routefix", metav1.DeleteOptions{})
+			Expect(err).NotTo(HaveOccurred())
+
+			//wait for it to be fixed
+			err = wait.PollImmediate(30*time.Second, 15*time.Minute, dsReady)
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = clients.Kubernetes.AppsV1().DaemonSets("openshift-azure-routefix").Get(context.Background(), "routefix", metav1.GetOptions{})
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+})
