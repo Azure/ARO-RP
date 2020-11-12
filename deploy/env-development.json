@@ -171,7 +171,7 @@
                             "publisher": "RedHat",
                             "offer": "RHEL",
                             "sku": "7-LVM",
-                            "version": "latest"
+                            "version": "7.9.2020100116"
                         },
                         "osDisk": {
                             "createOption": "FromImage",
@@ -269,7 +269,7 @@
                             "publisher": "RedHat",
                             "offer": "RHEL",
                             "sku": "7-LVM",
-                            "version": "latest"
+                            "version": "7.9.2020100116"
                         },
                         "osDisk": {
                             "createOption": "FromImage",

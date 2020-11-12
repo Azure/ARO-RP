@@ -236,7 +236,7 @@ systemctl enable proxy.service
 							Publisher: to.StringPtr("RedHat"),
 							Offer:     to.StringPtr("RHEL"),
 							Sku:       to.StringPtr("7-LVM"),
-							Version:   to.StringPtr("latest"),
+							Version:   to.StringPtr("7.9.2020100116"),
 						},
 						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
 							CreateOption: mgmtcompute.DiskCreateOptionTypesFromImage,
@@ -996,7 +996,7 @@ done
 							Publisher: to.StringPtr("RedHat"),
 							Offer:     to.StringPtr("RHEL"),
 							Sku:       to.StringPtr("7-LVM"),
-							Version:   to.StringPtr("latest"),
+							Version:   to.StringPtr("7.9.2020100116"),
 						},
 						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
 							CreateOption: mgmtcompute.DiskCreateOptionTypesFromImage,
@@ -1714,7 +1714,7 @@ systemctl enable docker
 							Publisher: to.StringPtr("RedHat"),
 							Offer:     to.StringPtr("RHEL"),
 							Sku:       to.StringPtr("7-LVM"),
-							Version:   to.StringPtr("latest"),
+							Version:   to.StringPtr("7.9.2020100116"),
 						},
 						OsDisk: &mgmtcompute.VirtualMachineScaleSetOSDisk{
 							CreateOption: mgmtcompute.DiskCreateOptionTypesFromImage,
