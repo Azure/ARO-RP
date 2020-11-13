@@ -10,7 +10,6 @@ import (
 
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/date"
 
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -37,7 +36,7 @@ func (m *manager) getBlobService(ctx context.Context, p mgmtstorage.Permissions,
 		return nil, err
 	}
 
-	c := azstorage.NewAccountSASClient("cluster"+m.doc.OpenShiftCluster.Properties.StorageSuffix, v, azure.PublicCloud).GetBlobService()
+	c := azstorage.NewAccountSASClient("cluster"+m.doc.OpenShiftCluster.Properties.StorageSuffix, v, *m.env.Environment()).GetBlobService()
 
 	return &c, nil
 }

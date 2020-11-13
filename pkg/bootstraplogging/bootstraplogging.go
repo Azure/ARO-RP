@@ -45,7 +45,7 @@ func GetConfig(env env.Interface, doc *api.OpenShiftClusterDocument) (*bootstrap
 		SubscriptionID:    r.SubscriptionID,
 		ResourceName:      r.ResourceName,
 		ResourceGroupName: r.ResourceGroup,
-		MdsdImage:         version.MdsdImage(env.ACRName()),
-		FluentbitImage:    version.FluentbitImage(env.ACRName()),
+		MdsdImage:         version.MdsdImage(env.ACRDomain()),
+		FluentbitImage:    version.FluentbitImage(env.ACRDomain()),
 	}, nil
 }

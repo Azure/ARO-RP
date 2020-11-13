@@ -75,7 +75,7 @@ func (r *RouteFixReconciler) resources(ctx context.Context, cluster *arov1alpha1
 						Containers: []v1.Container{
 							{
 								Name:  kubeName,
-								Image: version.RouteFixImage(cluster.Spec.ACRName),
+								Image: version.RouteFixImage(cluster.Spec.ACRDomain),
 								Args: []string{
 									"sh",
 									"-c",

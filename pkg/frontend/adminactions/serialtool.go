@@ -15,7 +15,6 @@ import (
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	azstorage "github.com/Azure/azure-sdk-for-go/storage"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/date"
 	"github.com/sirupsen/logrus"
 
@@ -65,7 +64,7 @@ func (a *adminactions) VMSerialConsole(ctx context.Context, w http.ResponseWrite
 	}
 
 	blobService := azstorage.NewAccountSASClient(
-		"cluster"+a.oc.Properties.StorageSuffix, v, azure.PublicCloud).GetBlobService()
+		"cluster"+a.oc.Properties.StorageSuffix, v, *a.env.Environment()).GetBlobService()
 
 	c := blobService.GetContainerReference(parts[1])
 

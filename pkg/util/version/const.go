@@ -33,20 +33,20 @@ var (
 )
 
 // FluentbitImage contains the location of the Fluentbit container image
-func FluentbitImage(acr string) string {
-	return acr + ".azurecr.io/fluentbit:1.3.9-1"
+func FluentbitImage(acrDomain string) string {
+	return acrDomain + "/fluentbit:1.3.9-1"
 }
 
 // MdmImage contains the location of the MDM container image
-func MdmImage(acr string) string {
-	return acr + ".azurecr.io/genevamdm:master_51"
+func MdmImage(acrDomain string) string {
+	return acrDomain + "/genevamdm:master_51"
 }
 
 // MdsdImage contains the location of the MDSD container image
-func MdsdImage(acr string) string {
-	return acr + ".azurecr.io/genevamdsd:master_330"
+func MdsdImage(acrDomain string) string {
+	return acrDomain + "/genevamdsd:master_330"
 }
 
-func RouteFixImage(acr string) string {
-	return acr + ".azurecr.io/routefix:c5c4a5db"
+func RouteFixImage(acrDomain string) string {
+	return acrDomain + "/routefix:c5c4a5db"
 }

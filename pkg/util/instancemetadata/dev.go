@@ -6,6 +6,8 @@ package instancemetadata
 import (
 	"fmt"
 	"os"
+
+	"github.com/Azure/go-autorest/autorest/azure"
 )
 
 func NewDev() (InstanceMetadata, error) {
@@ -20,10 +22,20 @@ func NewDev() (InstanceMetadata, error) {
 		}
 	}
 
+	environment := azure.PublicCloud
+	if value, found := os.LookupEnv("AZURE_ENVIRONMENT"); found {
+		var err error
+		environment, err = azure.EnvironmentFromName(value)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &instanceMetadata{
 		tenantID:       os.Getenv("AZURE_TENANT_ID"),
 		subscriptionID: os.Getenv("AZURE_SUBSCRIPTION_ID"),
 		location:       os.Getenv("LOCATION"),
 		resourceGroup:  os.Getenv("RESOURCEGROUP"),
+		environment:    &environment,
 	}, nil
 }

@@ -44,7 +44,7 @@ type Interface interface {
 	Listen() (net.Listener, error)
 	Zones(vmSize string) ([]string, error)
 	ACRResourceID() string
-	ACRName() string
+	ACRDomain() string
 	AROOperatorImage() string
 }
 

@@ -39,7 +39,7 @@ type OpenShiftClusterDynamicValidator interface {
 
 // NewOpenShiftClusterDynamicValidator creates a new OpenShiftClusterDynamicValidator
 func NewOpenShiftClusterDynamicValidator(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, subscriptionDoc *api.SubscriptionDocument) (OpenShiftClusterDynamicValidator, error) {
-	fpAuthorizer, err := env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
+	fpAuthorizer, err := env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID, env.Environment().ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +159,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 func (dv *openShiftClusterDynamicValidator) validateServicePrincipalProfile(ctx context.Context) (refreshable.Authorizer, error) {
 	dv.log.Print("validateServicePrincipalProfile")
 
-	token, err := aad.GetToken(ctx, dv.log, dv.oc, azure.PublicCloud.ResourceManagerEndpoint)
+	token, err := aad.GetToken(ctx, dv.log, dv.oc, dv.env.Environment().ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}

@@ -66,14 +66,14 @@ func newDev(ctx context.Context, log *logrus.Entry) (*dev, error) {
 	d.prod.clustersGenevaLoggingEnvironment = "Test"
 	d.prod.clustersGenevaLoggingConfigVersion = "2.3"
 
-	fpGraphAuthorizer, err := d.FPAuthorizer(d.TenantID(), azure.PublicCloud.GraphEndpoint)
+	fpGraphAuthorizer, err := d.FPAuthorizer(d.TenantID(), d.Environment().GraphEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
 	d.applications = graphrbac.NewApplicationsClient(d.TenantID(), fpGraphAuthorizer)
 
-	fpAuthorizer, err := d.FPAuthorizer(d.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
+	fpAuthorizer, err := d.FPAuthorizer(d.TenantID(), d.Environment().ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func (d *dev) AROOperatorImage() string {
 		return override
 	}
 
-	return fmt.Sprintf("%s.azurecr.io/aro:%s", d.acrName, version.GitCommit)
+	return fmt.Sprintf("%s/aro:%s", d.ACRDomain(), version.GitCommit)
 }
 
 func (d *dev) Listen() (net.Listener, error) {

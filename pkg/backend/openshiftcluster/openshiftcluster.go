@@ -7,7 +7,6 @@ import (
 	"context"
 
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
@@ -60,17 +59,17 @@ type manager struct {
 
 // NewManager returns a new openshiftcluster Manager
 func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, cipher encryption.Cipher, billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (Manager, error) {
-	localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
+	localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), _env.Environment().ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	localFPKVAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), azure.PublicCloud.ResourceIdentifiers.KeyVault)
+	localFPKVAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), _env.Environment().ResourceIdentifiers.KeyVault)
 	if err != nil {
 		return nil, err
 	}
 
-	fpAuthorizer, err := _env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
+	fpAuthorizer, err := _env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID, _env.Environment().ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}

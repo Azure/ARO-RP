@@ -269,19 +269,19 @@ func (m *manager) Create(ctx context.Context) error {
 				{
 					Source: "quay.io/openshift-release-dev/ocp-release",
 					Mirrors: []string{
-						fmt.Sprintf("%s.azurecr.io/openshift-release-dev/ocp-release", m.env.ACRName()),
+						fmt.Sprintf("%s/openshift-release-dev/ocp-release", m.env.ACRDomain()),
 					},
 				},
 				{
 					Source: "quay.io/openshift-release-dev/ocp-release-nightly",
 					Mirrors: []string{
-						fmt.Sprintf("%s.azurecr.io/openshift-release-dev/ocp-release-nightly", m.env.ACRName()),
+						fmt.Sprintf("%s/openshift-release-dev/ocp-release-nightly", m.env.ACRDomain()),
 					},
 				},
 				{
 					Source: "quay.io/openshift-release-dev/ocp-v4.0-art-dev",
 					Mirrors: []string{
-						fmt.Sprintf("%s.azurecr.io/openshift-release-dev/ocp-v4.0-art-dev", m.env.ACRName()),
+						fmt.Sprintf("%s/openshift-release-dev/ocp-v4.0-art-dev", m.env.ACRDomain()),
 					},
 				},
 			},

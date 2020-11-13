@@ -34,7 +34,7 @@ type prod struct {
 	armClientAuthorizer   clientauthorizer.ClientAuthorizer
 	adminClientAuthorizer clientauthorizer.ClientAuthorizer
 
-	acrName             string
+	acrDomain           string
 	clustersKeyvaultURI string
 	domain              string
 	zones               map[string][]string
@@ -72,7 +72,7 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		log: log,
 	}
 
-	rpAuthorizer, err := p.NewRPAuthorizer(azure.PublicCloud.ResourceManagerEndpoint)
+	rpAuthorizer, err := p.NewRPAuthorizer(p.Environment().ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -114,9 +114,9 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		if err != nil {
 			return nil, err
 		}
-		p.acrName = acrResource.ResourceName
+		p.acrDomain = acrResource.ResourceName + "." + p.Environment().ContainerRegistryDNSSuffix
 	} else {
-		p.acrName = "arointsvc"
+		p.acrDomain = "arointsvc" + "." + p.Environment().ContainerRegistryDNSSuffix
 	}
 
 	return p, nil
@@ -150,12 +150,12 @@ func (p *prod) ACRResourceID() string {
 	return os.Getenv("ACR_RESOURCE_ID")
 }
 
-func (p *prod) ACRName() string {
-	return p.acrName
+func (p *prod) ACRDomain() string {
+	return p.acrDomain
 }
 
 func (p *prod) AROOperatorImage() string {
-	return fmt.Sprintf("%s.azurecr.io/aro:%s", p.acrName, version.GitCommit)
+	return fmt.Sprintf("%s/aro:%s", p.acrDomain, version.GitCommit)
 }
 
 func (p *prod) populateDomain(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
@@ -222,7 +222,7 @@ func (p *prod) Domain() string {
 }
 
 func (p *prod) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, error) {
-	oauthConfig, err := adal.NewOAuthConfig(azure.PublicCloud.ActiveDirectoryEndpoint, tenantID)
+	oauthConfig, err := adal.NewOAuthConfig(p.Environment().ActiveDirectoryEndpoint, tenantID)
 	if err != nil {
 		return nil, err
 	}
