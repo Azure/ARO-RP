@@ -25,6 +25,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/privatedns"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
@@ -55,15 +56,17 @@ type manager struct {
 	fpAuthorizer      refreshable.Authorizer
 	localFpAuthorizer refreshable.Authorizer
 
-	disks             compute.DisksClient
-	virtualmachines   compute.VirtualMachinesClient
-	interfaces        network.InterfacesClient
-	publicipaddresses network.PublicIPAddressesClient
-	loadbalancers     network.LoadBalancersClient
-	securitygroups    network.SecurityGroupsClient
-	deployments       features.DeploymentsClient
-	groups            features.ResourceGroupsClient
-	accounts          storage.AccountsClient
+	disks               compute.DisksClient
+	virtualmachines     compute.VirtualMachinesClient
+	interfaces          network.InterfacesClient
+	publicipaddresses   network.PublicIPAddressesClient
+	loadbalancers       network.LoadBalancersClient
+	securitygroups      network.SecurityGroupsClient
+	deployments         features.DeploymentsClient
+	groups              features.ResourceGroupsClient
+	resources           features.ResourcesClient
+	virtualnetworklinks privatedns.VirtualNetworkLinksClient
+	accounts            storage.AccountsClient
 
 	dns             dns.Manager
 	keyvault        keyvault.Manager
@@ -115,15 +118,17 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		fpAuthorizer:      fpAuthorizer,
 		localFpAuthorizer: localFPAuthorizer,
 
-		disks:             compute.NewDisksClient(r.SubscriptionID, fpAuthorizer),
-		virtualmachines:   compute.NewVirtualMachinesClient(r.SubscriptionID, fpAuthorizer),
-		interfaces:        network.NewInterfacesClient(r.SubscriptionID, fpAuthorizer),
-		publicipaddresses: network.NewPublicIPAddressesClient(r.SubscriptionID, fpAuthorizer),
-		loadbalancers:     network.NewLoadBalancersClient(r.SubscriptionID, fpAuthorizer),
-		securitygroups:    network.NewSecurityGroupsClient(r.SubscriptionID, fpAuthorizer),
-		deployments:       features.NewDeploymentsClient(r.SubscriptionID, fpAuthorizer),
-		groups:            features.NewResourceGroupsClient(r.SubscriptionID, fpAuthorizer),
-		accounts:          storage.NewAccountsClient(r.SubscriptionID, fpAuthorizer),
+		disks:               compute.NewDisksClient(r.SubscriptionID, fpAuthorizer),
+		virtualmachines:     compute.NewVirtualMachinesClient(r.SubscriptionID, fpAuthorizer),
+		interfaces:          network.NewInterfacesClient(r.SubscriptionID, fpAuthorizer),
+		publicipaddresses:   network.NewPublicIPAddressesClient(r.SubscriptionID, fpAuthorizer),
+		loadbalancers:       network.NewLoadBalancersClient(r.SubscriptionID, fpAuthorizer),
+		securitygroups:      network.NewSecurityGroupsClient(r.SubscriptionID, fpAuthorizer),
+		deployments:         features.NewDeploymentsClient(r.SubscriptionID, fpAuthorizer),
+		groups:              features.NewResourceGroupsClient(r.SubscriptionID, fpAuthorizer),
+		resources:           features.NewResourcesClient(r.SubscriptionID, fpAuthorizer),
+		virtualnetworklinks: privatedns.NewVirtualNetworkLinksClient(r.SubscriptionID, fpAuthorizer),
+		accounts:            storage.NewAccountsClient(r.SubscriptionID, fpAuthorizer),
 
 		dns:             dns.NewManager(_env, localFPAuthorizer),
 		keyvault:        keyvault.NewManager(localFPKVAuthorizer, _env.ClustersKeyvaultURI()),

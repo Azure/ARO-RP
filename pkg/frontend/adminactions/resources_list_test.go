@@ -44,7 +44,7 @@ func TestResourcesList(t *testing.T) {
 			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
 			mocks: func(tt *test, resourcesClient *mock_features.MockResourcesClient, vmClient *mock_compute.MockVirtualMachinesClient, vNetClient *mock_network.MockVirtualNetworksClient, routeTablesClient *mock_network.MockRouteTablesClient) {
 
-				resourcesClient.EXPECT().List(gomock.Any(), "resourceGroup eq 'test-cluster'", "", nil).Return([]mgmtfeatures.GenericResourceExpanded{
+				resourcesClient.EXPECT().ListByResourceGroup(gomock.Any(), "test-cluster", "", "", nil).Return([]mgmtfeatures.GenericResourceExpanded{
 					{
 						Name: to.StringPtr("vm-1"),
 						ID:   to.StringPtr("/subscriptions/id"),
@@ -82,7 +82,7 @@ func TestResourcesList(t *testing.T) {
 					Name: to.StringPtr("routetable1"),
 				}, nil)
 
-				resourcesClient.EXPECT().GetByID(gomock.Any(), "/subscriptions/id", azureclient.APIVersions["Microsoft.Storage"]).Return(mgmtfeatures.GenericResource{
+				resourcesClient.EXPECT().GetByID(gomock.Any(), "/subscriptions/id", azureclient.APIVersion("Microsoft.Storage")).Return(mgmtfeatures.GenericResource{
 					Name:     to.StringPtr("storage"),
 					ID:       to.StringPtr("/subscriptions/id"),
 					Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
@@ -104,8 +104,7 @@ func TestResourcesList(t *testing.T) {
 			name:       "vnet get error", //Get resources should continue on error from vNetClient.Get()
 			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
 			mocks: func(tt *test, resourcesClient *mock_features.MockResourcesClient, vmClient *mock_compute.MockVirtualMachinesClient, vNetClient *mock_network.MockVirtualNetworksClient, routeTablesClient *mock_network.MockRouteTablesClient) {
-
-				resourcesClient.EXPECT().List(gomock.Any(), "resourceGroup eq 'test-cluster'", "", nil).Return([]mgmtfeatures.GenericResourceExpanded{
+				resourcesClient.EXPECT().ListByResourceGroup(gomock.Any(), "test-cluster", "", "", nil).Return([]mgmtfeatures.GenericResourceExpanded{
 					{
 						Name: to.StringPtr("vm-1"),
 						ID:   to.StringPtr("/subscriptions/id"),
@@ -120,7 +119,7 @@ func TestResourcesList(t *testing.T) {
 
 				vNetClient.EXPECT().Get(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(mgmtnetwork.VirtualNetwork{}, fmt.Errorf("Any error during Get, expecting a permissions error"))
 
-				resourcesClient.EXPECT().GetByID(gomock.Any(), "/subscriptions/id", azureclient.APIVersions["Microsoft.Storage"]).Return(mgmtfeatures.GenericResource{
+				resourcesClient.EXPECT().GetByID(gomock.Any(), "/subscriptions/id", azureclient.APIVersion("Microsoft.Storage")).Return(mgmtfeatures.GenericResource{
 					Name:     to.StringPtr("storage"),
 					ID:       to.StringPtr("/subscriptions/id"),
 					Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),

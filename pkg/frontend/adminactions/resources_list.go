@@ -18,10 +18,9 @@ import (
 )
 
 func (a *adminactions) ResourcesList(ctx context.Context) ([]byte, error) {
-
 	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
 
-	resources, err := a.resourcesClient.List(ctx, fmt.Sprintf("resourceGroup eq '%s'", clusterRGName), "", nil)
+	resources, err := a.resourcesClient.ListByResourceGroup(ctx, clusterRGName, "", "", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -33,9 +32,9 @@ func (a *adminactions) ResourcesList(ctx context.Context) ([]byte, error) {
 	}
 
 	for _, res := range resources {
-		apiVersion, err := azureclient.APIVersionForType(*res.Type)
-		if err != nil {
-			return nil, err
+		apiVersion := azureclient.APIVersion(*res.Type)
+		if apiVersion == "" {
+			return nil, fmt.Errorf("API version not found for type %s", *res.Type)
 		}
 		switch *res.Type {
 		case "Microsoft.Compute/virtualMachines":

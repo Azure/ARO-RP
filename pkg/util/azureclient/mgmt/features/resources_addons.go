@@ -7,29 +7,17 @@ import (
 	"context"
 
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+	"github.com/Azure/go-autorest/autorest"
 )
 
 // ResourcesClientAddons is a minimal interface for azure ResourcesClient
 type ResourcesClientAddons interface {
-	List(ctx context.Context, filter, expand string, top *int32) ([]mgmtfeatures.GenericResourceExpanded, error)
+	Client() autorest.Client
 	ListByResourceGroup(ctx context.Context, resourceGroupName string, filter string, expand string, top *int32) ([]mgmtfeatures.GenericResourceExpanded, error)
 }
 
-func (c *resourcesClient) List(ctx context.Context, filter, expand string, top *int32) (resources []mgmtfeatures.GenericResourceExpanded, err error) {
-	page, err := c.ResourcesClient.List(ctx, filter, expand, top)
-	if err != nil {
-		return nil, err
-	}
-
-	for page.NotDone() {
-		resources = append(resources, page.Values()...)
-		err = page.NextWithContext(ctx)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return resources, nil
+func (c *resourcesClient) Client() autorest.Client {
+	return c.ResourcesClient.Client
 }
 
 func (c *resourcesClient) ListByResourceGroup(ctx context.Context, resourceGroupName string, filter string, expand string, top *int32) (resources []mgmtfeatures.GenericResourceExpanded, err error) {

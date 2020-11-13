@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 
 	features "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+	autorest "github.com/Azure/go-autorest/autorest"
 	gomock "github.com/golang/mock/gomock"
 )
 
@@ -264,6 +265,35 @@ func (m *MockResourcesClient) EXPECT() *MockResourcesClientMockRecorder {
 	return m.recorder
 }
 
+// Client mocks base method
+func (m *MockResourcesClient) Client() autorest.Client {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Client")
+	ret0, _ := ret[0].(autorest.Client)
+	return ret0
+}
+
+// Client indicates an expected call of Client
+func (mr *MockResourcesClientMockRecorder) Client() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Client", reflect.TypeOf((*MockResourcesClient)(nil).Client))
+}
+
+// DeleteByID mocks base method
+func (m *MockResourcesClient) DeleteByID(arg0 context.Context, arg1, arg2 string) (features.ResourcesDeleteByIDFuture, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteByID", arg0, arg1, arg2)
+	ret0, _ := ret[0].(features.ResourcesDeleteByIDFuture)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteByID indicates an expected call of DeleteByID
+func (mr *MockResourcesClientMockRecorder) DeleteByID(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteByID", reflect.TypeOf((*MockResourcesClient)(nil).DeleteByID), arg0, arg1, arg2)
+}
+
 // GetByID mocks base method
 func (m *MockResourcesClient) GetByID(arg0 context.Context, arg1, arg2 string) (features.GenericResource, error) {
 	m.ctrl.T.Helper()
@@ -277,21 +307,6 @@ func (m *MockResourcesClient) GetByID(arg0 context.Context, arg1, arg2 string) (
 func (mr *MockResourcesClientMockRecorder) GetByID(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockResourcesClient)(nil).GetByID), arg0, arg1, arg2)
-}
-
-// List mocks base method
-func (m *MockResourcesClient) List(arg0 context.Context, arg1, arg2 string, arg3 *int32) ([]features.GenericResourceExpanded, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "List", arg0, arg1, arg2, arg3)
-	ret0, _ := ret[0].([]features.GenericResourceExpanded)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// List indicates an expected call of List
-func (mr *MockResourcesClientMockRecorder) List(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockResourcesClient)(nil).List), arg0, arg1, arg2, arg3)
 }
 
 // ListByResourceGroup mocks base method

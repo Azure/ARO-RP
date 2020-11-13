@@ -15,6 +15,7 @@ import (
 func (m *manager) gatherFailureLogs(ctx context.Context) {
 	for _, f := range []func(context.Context) (interface{}, error){
 		m.logClusterVersion,
+		m.logNodes,
 		m.logClusterOperators,
 		m.logIngressControllers,
 	} {
@@ -43,6 +44,14 @@ func (m *manager) logClusterVersion(ctx context.Context) (interface{}, error) {
 	}
 
 	return m.configcli.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
+}
+
+func (m *manager) logNodes(ctx context.Context) (interface{}, error) {
+	if m.kubernetescli == nil {
+		return nil, nil
+	}
+
+	return m.kubernetescli.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 }
 
 func (m *manager) logClusterOperators(ctx context.Context) (interface{}, error) {

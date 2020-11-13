@@ -168,14 +168,14 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 					Location: &installConfig.Config.Azure.Region,
 					Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
 				},
-				APIVersion: azureclient.APIVersions["Microsoft.Storage"],
+				APIVersion: azureclient.APIVersion("Microsoft.Storage"),
 			},
 			{
 				Resource: &mgmtstorage.BlobContainer{
 					Name: to.StringPtr("cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix + "/default/ignition"),
 					Type: to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
 				},
-				APIVersion: azureclient.APIVersions["Microsoft.Storage"],
+				APIVersion: azureclient.APIVersion("Microsoft.Storage"),
 				DependsOn: []string{
 					"Microsoft.Storage/storageAccounts/cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix,
 				},
@@ -185,7 +185,7 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 					Name: to.StringPtr("cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix + "/default/aro"),
 					Type: to.StringPtr("Microsoft.Storage/storageAccounts/blobServices/containers"),
 				},
-				APIVersion: azureclient.APIVersions["Microsoft.Storage"],
+				APIVersion: azureclient.APIVersion("Microsoft.Storage"),
 				DependsOn: []string{
 					"Microsoft.Storage/storageAccounts/cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix,
 				},
@@ -292,7 +292,7 @@ func (m *manager) denyAssignments(clusterSPObjectID string) *arm.Resource {
 				IsSystemProtected: to.BoolPtr(true),
 			},
 		},
-		APIVersion: azureclient.APIVersions["Microsoft.Authorization/denyAssignments"],
+		APIVersion: azureclient.APIVersion("Microsoft.Authorization/denyAssignments"),
 	}
 }
 

@@ -41,6 +41,6 @@ func (m *manager) clusterNSG(infraID, location string) *arm.Resource {
 
 	return &arm.Resource{
 		Resource:   nsg,
-		APIVersion: azureclient.APIVersions["Microsoft.Network"],
+		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
 }

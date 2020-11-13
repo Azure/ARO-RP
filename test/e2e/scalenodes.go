@@ -38,7 +38,8 @@ var _ = Describe("Scale nodes", func() {
 		err = wait.PollImmediate(10*time.Second, 30*time.Minute, func() (bool, error) {
 			nodes, err := clients.Kubernetes.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
 			if err != nil {
-				return false, err
+				log.Warn(err)
+				return false, nil // swallow error
 			}
 
 			var nodeCount int
@@ -97,7 +98,8 @@ func waitForScale(name string) error {
 	return wait.PollImmediate(10*time.Second, 30*time.Minute, func() (bool, error) {
 		ms, err := clients.MachineAPI.MachineV1beta1().MachineSets("openshift-machine-api").Get(context.Background(), name, metav1.GetOptions{})
 		if err != nil {
-			return false, err
+			log.Warn(err)
+			return false, nil // swallow error
 		}
 
 		if ms.Spec.Replicas == nil {

@@ -26,7 +26,7 @@ func dnsPrivateZone(installConfig *installconfig.InstallConfig) *arm.Resource {
 			Type:     to.StringPtr("Microsoft.Network/privateDnsZones"),
 			Location: to.StringPtr("global"),
 		},
-		APIVersion: azureclient.APIVersions["Microsoft.Network/privateDnsZones"],
+		APIVersion: azureclient.APIVersion("Microsoft.Network/privateDnsZones"),
 	}
 }
 
@@ -39,12 +39,12 @@ func dnsPrivateRecordAPIINT(infraID string, installConfig *installconfig.Install
 				TTL: to.Int64Ptr(300),
 				ARecords: &[]mgmtprivatedns.ARecord{
 					{
-						Ipv4Address: to.StringPtr(fmt.Sprintf("[reference('Microsoft.Network/loadBalancers/%s-internal', '%s').frontendIpConfigurations[0].properties.privateIPAddress]", infraID, azureclient.APIVersions["Microsoft.Network"])),
+						Ipv4Address: to.StringPtr(fmt.Sprintf("[reference('Microsoft.Network/loadBalancers/%s-internal', '%s').frontendIpConfigurations[0].properties.privateIPAddress]", infraID, azureclient.APIVersion("Microsoft.Network"))),
 					},
 				},
 			},
 		},
-		APIVersion: azureclient.APIVersions["Microsoft.Network/privateDnsZones"],
+		APIVersion: azureclient.APIVersion("Microsoft.Network/privateDnsZones"),
 		DependsOn: []string{
 			"Microsoft.Network/loadBalancers/" + infraID + "-internal",
 			"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
@@ -61,12 +61,12 @@ func dnsPrivateRecordAPI(infraID string, installConfig *installconfig.InstallCon
 				TTL: to.Int64Ptr(300),
 				ARecords: &[]mgmtprivatedns.ARecord{
 					{
-						Ipv4Address: to.StringPtr(fmt.Sprintf("[reference('Microsoft.Network/loadBalancers/%s-internal', '%s').frontendIpConfigurations[0].properties.privateIPAddress]", infraID, azureclient.APIVersions["Microsoft.Network"])),
+						Ipv4Address: to.StringPtr(fmt.Sprintf("[reference('Microsoft.Network/loadBalancers/%s-internal', '%s').frontendIpConfigurations[0].properties.privateIPAddress]", infraID, azureclient.APIVersion("Microsoft.Network"))),
 					},
 				},
 			},
 		},
-		APIVersion: azureclient.APIVersions["Microsoft.Network/privateDnsZones"],
+		APIVersion: azureclient.APIVersion("Microsoft.Network/privateDnsZones"),
 		DependsOn: []string{
 			"Microsoft.Network/loadBalancers/" + infraID + "-internal",
 			"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
@@ -87,7 +87,7 @@ func dnsVirtualNetworkLink(vnetID string, installConfig *installconfig.InstallCo
 			Type:     to.StringPtr("Microsoft.Network/privateDnsZones/virtualNetworkLinks"),
 			Location: to.StringPtr("global"),
 		},
-		APIVersion: azureclient.APIVersions["Microsoft.Network/privateDnsZones"],
+		APIVersion: azureclient.APIVersion("Microsoft.Network/privateDnsZones"),
 		DependsOn: []string{
 			"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
 		},
@@ -128,7 +128,7 @@ func networkPrivateLinkService(infraID, subscriptionID string, oc *api.OpenShift
 			Type:     to.StringPtr("Microsoft.Network/privateLinkServices"),
 			Location: &installConfig.Config.Azure.Region,
 		},
-		APIVersion: azureclient.APIVersions["Microsoft.Network"],
+		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		DependsOn: []string{
 			"Microsoft.Network/loadBalancers/" + infraID + "-internal",
 		},
@@ -148,7 +148,7 @@ func networkPublicIPAddress(infraID string, installConfig *installconfig.Install
 			Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
 			Location: &installConfig.Config.Azure.Region,
 		},
-		APIVersion: azureclient.APIVersions["Microsoft.Network"],
+		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
 }
 
@@ -243,7 +243,7 @@ func networkInternalLoadBalancer(infraID string, oc *api.OpenShiftCluster, insta
 			Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
 			Location: &installConfig.Config.Azure.Region,
 		},
-		APIVersion: azureclient.APIVersions["Microsoft.Network"],
+		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 	}
 }
 
@@ -329,7 +329,7 @@ func networkPublicLoadBalancer(infraID string, oc *api.OpenShiftCluster, install
 
 	return &arm.Resource{
 		Resource:   lb,
-		APIVersion: azureclient.APIVersions["Microsoft.Network"],
+		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		DependsOn: []string{
 			"Microsoft.Network/publicIPAddresses/" + infraID + "-pip-v4",
 		},
@@ -363,7 +363,7 @@ func networkBootstrapNIC(infraID string, oc *api.OpenShiftCluster, installConfig
 			Type:     to.StringPtr("Microsoft.Network/networkInterfaces"),
 			Location: &installConfig.Config.Azure.Region,
 		},
-		APIVersion: azureclient.APIVersions["Microsoft.Network"],
+		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		DependsOn: []string{
 			"Microsoft.Network/loadBalancers/" + infraID + "-internal",
 			"Microsoft.Network/loadBalancers/" + infraID,
@@ -398,7 +398,7 @@ func networkMasterNICs(infraID string, oc *api.OpenShiftCluster, installConfig *
 			Type:     to.StringPtr("Microsoft.Network/networkInterfaces"),
 			Location: &installConfig.Config.Azure.Region,
 		},
-		APIVersion: azureclient.APIVersions["Microsoft.Network"],
+		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		Copy: &arm.Copy{
 			Name:  "networkcopy",
 			Count: int(*installConfig.Config.ControlPlane.Replicas),
@@ -461,7 +461,7 @@ func computeBoostrapVM(infraID string, oc *api.OpenShiftCluster, installConfig *
 			Type:     to.StringPtr("Microsoft.Compute/virtualMachines"),
 			Location: &installConfig.Config.Azure.Region,
 		},
-		APIVersion: azureclient.APIVersions["Microsoft.Compute"],
+		APIVersion: azureclient.APIVersion("Microsoft.Compute"),
 		DependsOn: []string{
 			"Microsoft.Network/networkInterfaces/" + infraID + "-bootstrap-nic",
 			"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/virtualNetworkLinks/" + installConfig.Config.ObjectMeta.Name + "-network-link",
@@ -521,7 +521,7 @@ func computeMasterVMs(infraID string, zones *[]string, machineMaster *machine.Ma
 			Type:     to.StringPtr("Microsoft.Compute/virtualMachines"),
 			Location: &installConfig.Config.Azure.Region,
 		},
-		APIVersion: azureclient.APIVersions["Microsoft.Compute"],
+		APIVersion: azureclient.APIVersion("Microsoft.Compute"),
 		Copy: &arm.Copy{
 			Name:  "computecopy",
 			Count: int(*installConfig.Config.ControlPlane.Replicas),

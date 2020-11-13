@@ -73,7 +73,8 @@ var _ = Describe("[Admin API] VM redeploy action", func() {
 		err = wait.PollImmediate(10*time.Second, 10*time.Minute, func() (bool, error) {
 			nodes, err := clients.Kubernetes.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
 			if err != nil {
-				return false, err
+				log.Warn(err)
+				return false, nil // swallow error
 			}
 
 			for _, node := range nodes.Items {
