@@ -23,17 +23,17 @@ import (
 )
 
 func (a *adminactions) Upgrade(ctx context.Context, upgradeY bool) error {
-	err := preUpgradeChecks(ctx, a.oc, a.vNetClient)
+	err := preUpgradeChecks(ctx, a.oc, a.virtualNetworks)
 	if err != nil {
 		return err
 	}
 
-	return upgrade(ctx, a.log, a.configClient, version.Streams, upgradeY)
+	return upgrade(ctx, a.log, a.configcli, version.Streams, upgradeY)
 }
 
-func upgrade(ctx context.Context, log *logrus.Entry, configClient configclient.Interface, streams []*version.Stream, upgradeY bool) error {
+func upgrade(ctx context.Context, log *logrus.Entry, configcli configclient.Interface, streams []*version.Stream, upgradeY bool) error {
 	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		cv, err := configClient.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
+		cv, err := configcli.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -62,13 +62,13 @@ func upgrade(ctx context.Context, log *logrus.Entry, configClient configclient.I
 			Image:   stream.PullSpec,
 		}
 
-		_, err = configClient.ConfigV1().ClusterVersions().Update(ctx, cv, metav1.UpdateOptions{})
+		_, err = configcli.ConfigV1().ClusterVersions().Update(ctx, cv, metav1.UpdateOptions{})
 		return err
 	})
 }
 
-func preUpgradeChecks(ctx context.Context, oc *api.OpenShiftCluster, vnet network.VirtualNetworksClient) error {
-	return checkCustomDNS(ctx, oc, vnet)
+func preUpgradeChecks(ctx context.Context, oc *api.OpenShiftCluster, virtualNetworks network.VirtualNetworksClient) error {
+	return checkCustomDNS(ctx, oc, virtualNetworks)
 }
 
 // checkCustomDNS checks if customer has custom DNS configured on VNET.

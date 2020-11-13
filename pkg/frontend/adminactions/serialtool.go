@@ -25,7 +25,7 @@ func (a *adminactions) VMSerialConsole(ctx context.Context, w http.ResponseWrite
 	log *logrus.Entry, vmName string) error {
 
 	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
-	vm, err := a.vmClient.Get(ctx, clusterRGName, vmName, mgmtcompute.InstanceView)
+	vm, err := a.virtualMachines.Get(ctx, clusterRGName, vmName, mgmtcompute.InstanceView)
 	if err != nil {
 		return err
 	}
@@ -45,7 +45,7 @@ func (a *adminactions) VMSerialConsole(ctx context.Context, w http.ResponseWrite
 	}
 
 	t := time.Now().UTC().Truncate(time.Second)
-	res, err := a.accountsClient.ListAccountSAS(
+	res, err := a.storageAccounts.ListAccountSAS(
 		ctx, clusterRGName, "cluster"+a.oc.Properties.StorageSuffix, mgmtstorage.AccountSasParameters{
 			Services:               mgmtstorage.B,
 			ResourceTypes:          mgmtstorage.SignedResourceTypesO,

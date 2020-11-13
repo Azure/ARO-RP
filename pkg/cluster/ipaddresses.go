@@ -57,13 +57,13 @@ func (m *manager) updateAPIIP(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	var ipAddress string
 	if m.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {
-		ip, err := m.publicipaddresses.Get(ctx, resourceGroup, infraID+"-pip-v4", "")
+		ip, err := m.publicIPAddresses.Get(ctx, resourceGroup, infraID+"-pip-v4", "")
 		if err != nil {
 			return err
 		}
 		ipAddress = *ip.IPAddress
 	} else {
-		lb, err := m.loadbalancers.Get(ctx, resourceGroup, infraID+"-internal", "")
+		lb, err := m.loadBalancers.Get(ctx, resourceGroup, infraID+"-internal", "")
 		if err != nil {
 			return err
 		}

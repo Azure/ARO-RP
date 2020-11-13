@@ -44,7 +44,7 @@ type manager struct {
 
 	ocDynamicValidator validate.OpenShiftClusterDynamicValidator
 
-	groups         features.ResourceGroupsClient
+	resourceGroups features.ResourceGroupsClient
 	securityGroups network.SecurityGroupsClient
 
 	dns             dns.Manager
@@ -97,7 +97,7 @@ func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClus
 
 		ocDynamicValidator: ocDynamicValidator,
 
-		groups:         features.NewResourceGroupsClient(subscriptionDoc.ID, fpAuthorizer),
+		resourceGroups: features.NewResourceGroupsClient(subscriptionDoc.ID, fpAuthorizer),
 		securityGroups: network.NewSecurityGroupsClient(subscriptionDoc.ID, fpAuthorizer),
 
 		dns:             dns.NewManager(_env, localFPAuthorizer),

@@ -22,7 +22,7 @@ import (
 
 type systemreserved struct {
 	mcocli       mcoclient.Interface
-	dh           dynamichelper.DynamicHelper
+	dh           dynamichelper.Interface
 	log          *logrus.Entry
 	versionFixed *version.Version
 }
@@ -40,7 +40,7 @@ var (
 	_ Workaround = &systemreserved{}
 )
 
-func NewSystemReserved(log *logrus.Entry, mcocli mcoclient.Interface, dh dynamichelper.DynamicHelper) *systemreserved {
+func NewSystemReserved(log *logrus.Entry, mcocli mcoclient.Interface, dh dynamichelper.Interface) *systemreserved {
 	verFixed, err := version.ParseVersion("4.99.0") // TODO set this correctly when known.
 	utilruntime.Must(err)
 

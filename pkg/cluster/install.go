@@ -147,7 +147,7 @@ func (m *manager) initializeKubernetesClients(ctx context.Context) error {
 		return err
 	}
 
-	m.extcli, err = extensionsclient.NewForConfig(restConfig)
+	m.extensionscli, err = extensionsclient.NewForConfig(restConfig)
 	if err != nil {
 		return err
 	}

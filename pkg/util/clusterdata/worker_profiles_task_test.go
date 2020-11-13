@@ -261,7 +261,7 @@ func TestWorkerProfilesEnricherTask(t *testing.T) {
 
 			e := &workerProfilesEnricherTask{
 				log:    log,
-				client: tt.client(),
+				maocli: tt.client(),
 				oc:     oc,
 			}
 			e.SetDefaults()

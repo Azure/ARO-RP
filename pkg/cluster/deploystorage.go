@@ -118,7 +118,7 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 	if m.env.DeploymentMode() == deployment.Development {
 		group.ManagedBy = nil
 	}
-	_, err := m.groups.CreateOrUpdate(ctx, resourceGroup, group)
+	_, err := m.resourceGroups.CreateOrUpdate(ctx, resourceGroup, group)
 	if requestErr, ok := err.(*azure.RequestError); ok &&
 		requestErr.ServiceError != nil && requestErr.ServiceError.Code == "RequestDisallowedByPolicy" {
 		// if request was disallowed by policy, inform user so they can take appropriate action

@@ -24,21 +24,21 @@ const (
 )
 
 func newWorkerProfilesEnricherTask(log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster) (enricherTask, error) {
-	client, err := maoclient.NewForConfig(restConfig)
+	maocli, err := maoclient.NewForConfig(restConfig)
 	if err != nil {
 		return nil, err
 	}
 
 	return &workerProfilesEnricherTask{
 		log:    log,
-		client: client,
+		maocli: maocli,
 		oc:     oc,
 	}, nil
 }
 
 type workerProfilesEnricherTask struct {
 	log    *logrus.Entry
-	client maoclient.Interface
+	maocli maoclient.Interface
 	oc     *api.OpenShiftCluster
 }
 
@@ -50,7 +50,7 @@ func (ef *workerProfilesEnricherTask) FetchData(ctx context.Context, callbacks c
 		return
 	}
 
-	machinesets, err := ef.client.MachineV1beta1().MachineSets(workerMachineSetsNamespace).List(ctx, metav1.ListOptions{})
+	machinesets, err := ef.maocli.MachineV1beta1().MachineSets(workerMachineSetsNamespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		ef.log.Error(err)
 		errs <- err

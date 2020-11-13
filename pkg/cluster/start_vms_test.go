@@ -208,7 +208,7 @@ func TestStartVMs(t *testing.T) {
 			tt.mock(vmClient)
 
 			m := &manager{
-				virtualmachines: vmClient,
+				virtualMachines: vmClient,
 				doc: &api.OpenShiftClusterDocument{
 					OpenShiftCluster: &api.OpenShiftCluster{
 						Properties: api.OpenShiftClusterProperties{

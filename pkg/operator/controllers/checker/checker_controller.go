@@ -29,11 +29,11 @@ type CheckerController struct {
 	checkers []Checker
 }
 
-func NewReconciler(log *logrus.Entry, clustercli maoclient.Interface, arocli aroclient.AroV1alpha1Interface, role string, deploymentMode deployment.Mode) *CheckerController {
+func NewReconciler(log *logrus.Entry, maocli maoclient.Interface, arocli aroclient.AroV1alpha1Interface, role string, deploymentMode deployment.Mode) *CheckerController {
 	checkers := []Checker{NewInternetChecker(log, arocli, role)}
 
 	if role == operator.RoleMaster {
-		checkers = append(checkers, NewMachineChecker(log, clustercli, arocli, role, deploymentMode))
+		checkers = append(checkers, NewMachineChecker(log, maocli, arocli, role, deploymentMode))
 	}
 
 	return &CheckerController{
