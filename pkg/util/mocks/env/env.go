@@ -12,6 +12,7 @@ import (
 	reflect "reflect"
 
 	autorest "github.com/Azure/go-autorest/autorest"
+	azure "github.com/Azure/go-autorest/autorest/azure"
 	gomock "github.com/golang/mock/gomock"
 
 	clientauthorizer "github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
@@ -42,18 +43,18 @@ func (m *MockInterface) EXPECT() *MockInterfaceMockRecorder {
 	return m.recorder
 }
 
-// ACRName mocks base method
-func (m *MockInterface) ACRName() string {
+// ACRDomain mocks base method
+func (m *MockInterface) ACRDomain() string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ACRName")
+	ret := m.ctrl.Call(m, "ACRDomain")
 	ret0, _ := ret[0].(string)
 	return ret0
 }
 
-// ACRName indicates an expected call of ACRName
-func (mr *MockInterfaceMockRecorder) ACRName() *gomock.Call {
+// ACRDomain indicates an expected call of ACRDomain
+func (mr *MockInterfaceMockRecorder) ACRDomain() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ACRName", reflect.TypeOf((*MockInterface)(nil).ACRName))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ACRDomain", reflect.TypeOf((*MockInterface)(nil).ACRDomain))
 }
 
 // ACRResourceID mocks base method
@@ -224,6 +225,20 @@ func (m *MockInterface) Domain() string {
 func (mr *MockInterfaceMockRecorder) Domain() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Domain", reflect.TypeOf((*MockInterface)(nil).Domain))
+}
+
+// Environment mocks base method
+func (m *MockInterface) Environment() *azure.Environment {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Environment")
+	ret0, _ := ret[0].(*azure.Environment)
+	return ret0
+}
+
+// Environment indicates an expected call of Environment
+func (mr *MockInterfaceMockRecorder) Environment() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Environment", reflect.TypeOf((*MockInterface)(nil).Environment))
 }
 
 // FPAuthorizer mocks base method

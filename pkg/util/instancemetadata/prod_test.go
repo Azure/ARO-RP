@@ -10,9 +10,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/golang/mock/gomock"
 
 	mock_instancemetadata "github.com/Azure/ARO-RP/pkg/util/mocks/instancemetadata"
@@ -25,10 +27,11 @@ func TestPopulateInstanceMetadata(t *testing.T) {
 		wantSubscriptionID string
 		wantLocation       string
 		wantResourceGroup  string
+		wantEnvironment    *azure.Environment
 		wantErr            string
 	}{
 		{
-			name: "valid",
+			name: "valid (Public Cloud)",
 			do: func(*http.Request) (*http.Response, error) {
 				return &http.Response{
 					StatusCode: http.StatusOK,
@@ -39,7 +42,8 @@ func TestPopulateInstanceMetadata(t *testing.T) {
 						`{
 							"subscriptionId": "rpSubscriptionId",
 							"location": "eastus",
-							"resourceGroupName": "rpResourceGroup"
+							"resourceGroupName": "rpResourceGroup",
+							"azEnvironment": "AzurePublicCloud"
 						}`,
 					)),
 				}, nil
@@ -47,6 +51,30 @@ func TestPopulateInstanceMetadata(t *testing.T) {
 			wantSubscriptionID: "rpSubscriptionId",
 			wantLocation:       "eastus",
 			wantResourceGroup:  "rpResourceGroup",
+			wantEnvironment:    &azure.PublicCloud,
+		},
+		{
+			name: "valid (US Government Cloud)",
+			do: func(*http.Request) (*http.Response, error) {
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Header: http.Header{
+						"Content-Type": []string{"application/json; charset=utf-8"},
+					},
+					Body: ioutil.NopCloser(strings.NewReader(
+						`{
+							"subscriptionId": "rpSubscriptionId",
+							"location": "eastus",
+							"resourceGroupName": "rpResourceGroup",
+							"azEnvironment": "AzureUSGovernmentCloud"
+						}`,
+					)),
+				}, nil
+			},
+			wantSubscriptionID: "rpSubscriptionId",
+			wantLocation:       "eastus",
+			wantResourceGroup:  "rpResourceGroup",
+			wantEnvironment:    &azure.USGovernmentCloud,
 		},
 		{
 			name: "invalid JSON",
@@ -112,7 +140,7 @@ func TestPopulateInstanceMetadata(t *testing.T) {
 
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
-				t.Error(err)
+				t.Fatal(err)
 			}
 
 			if p.subscriptionID != tt.wantSubscriptionID {
@@ -125,6 +153,10 @@ func TestPopulateInstanceMetadata(t *testing.T) {
 
 			if p.resourceGroup != tt.wantResourceGroup {
 				t.Error(p.resourceGroup)
+			}
+
+			if !reflect.DeepEqual(p.environment, tt.wantEnvironment) {
+				t.Error(p.environment)
 			}
 		})
 	}
@@ -195,13 +227,16 @@ func TestPopulateTenantIDFromMSI(t *testing.T) {
 					}
 					return token, nil
 				},
+				instanceMetadata: instanceMetadata{
+					environment: &azure.PublicCloud,
+				},
 			}
 
 			err := p.populateTenantIDFromMSI(ctx)
 
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
-				t.Error(err)
+				t.Fatal(err)
 			}
 
 			if p.tenantID != tt.wantTenantID {

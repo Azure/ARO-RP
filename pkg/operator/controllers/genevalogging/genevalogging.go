@@ -69,6 +69,7 @@ func (g *genevaLogging) securityContextConstraints(ctx context.Context, name, se
 }
 
 func (g *genevaLogging) daemonset(r azure.Resource) *appsv1.DaemonSet {
+
 	return &appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "mdsd",
@@ -142,7 +143,7 @@ func (g *genevaLogging) daemonset(r azure.Resource) *appsv1.DaemonSet {
 					Containers: []v1.Container{
 						{
 							Name:  "fluentbit-journal",
-							Image: version.FluentbitImage(g.cluster.Spec.ACRName),
+							Image: version.FluentbitImage(g.cluster.Spec.ACRDomain),
 							Command: []string{
 								"/opt/td-agent-bit/bin/td-agent-bit",
 							},
@@ -179,7 +180,7 @@ func (g *genevaLogging) daemonset(r azure.Resource) *appsv1.DaemonSet {
 						},
 						{
 							Name:  "fluentbit-containers",
-							Image: version.FluentbitImage(g.cluster.Spec.ACRName),
+							Image: version.FluentbitImage(g.cluster.Spec.ACRDomain),
 							Command: []string{
 								"/opt/td-agent-bit/bin/td-agent-bit",
 							},
@@ -216,7 +217,7 @@ func (g *genevaLogging) daemonset(r azure.Resource) *appsv1.DaemonSet {
 						},
 						{
 							Name:  "fluentbit-audit",
-							Image: version.FluentbitImage(g.cluster.Spec.ACRName),
+							Image: version.FluentbitImage(g.cluster.Spec.ACRDomain),
 							Command: []string{
 								"/opt/td-agent-bit/bin/td-agent-bit",
 							},
@@ -253,7 +254,7 @@ func (g *genevaLogging) daemonset(r azure.Resource) *appsv1.DaemonSet {
 						},
 						{
 							Name:  "mdsd",
-							Image: version.MdsdImage(g.cluster.Spec.ACRName),
+							Image: version.MdsdImage(g.cluster.Spec.ACRDomain),
 							Command: []string{
 								"/usr/sbin/mdsd",
 							},

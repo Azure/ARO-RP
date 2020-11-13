@@ -84,7 +84,7 @@ func storageClient(_env env.Interface, billing database.Billing, sub database.Su
 		storageAccountName = intE2EStorageAccountName
 	}
 
-	localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
+	localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), _env.Environment().ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}

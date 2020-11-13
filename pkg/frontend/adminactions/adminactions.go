@@ -7,7 +7,6 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -78,7 +77,7 @@ func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster,
 	}
 
 	fpAuth, err := env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID,
-		azure.PublicCloud.ResourceManagerEndpoint)
+		env.Environment().ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}

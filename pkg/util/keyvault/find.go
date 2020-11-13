@@ -7,8 +7,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Azure/go-autorest/autorest/azure"
-
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
@@ -16,7 +14,7 @@ import (
 )
 
 func Find(ctx context.Context, instancemetadata instancemetadata.InstanceMetadata, rpauthorizer rpauthorizer.RPAuthorizer, tagValue string) (string, error) {
-	rpAuthorizer, err := rpauthorizer.NewRPAuthorizer(azure.PublicCloud.ResourceManagerEndpoint)
+	rpAuthorizer, err := rpauthorizer.NewRPAuthorizer(instancemetadata.Environment().ResourceManagerEndpoint)
 	if err != nil {
 		return "", err
 	}

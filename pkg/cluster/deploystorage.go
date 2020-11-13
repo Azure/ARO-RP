@@ -49,7 +49,7 @@ func (m *manager) clusterSPObjectID(ctx context.Context) (string, error) {
 	var clusterSPObjectID string
 	spp := &m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
 
-	token, err := aad.GetToken(ctx, m.log, m.doc.OpenShiftCluster, azure.PublicCloud.GraphEndpoint)
+	token, err := aad.GetToken(ctx, m.log, m.doc.OpenShiftCluster, m.env.Environment().GraphEndpoint)
 	if err != nil {
 		return "", err
 	}

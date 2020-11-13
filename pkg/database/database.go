@@ -12,7 +12,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 	"github.com/ugorji/go/codec"
 
@@ -85,7 +84,7 @@ func databaseName(deploymentMode deployment.Mode) (string, error) {
 }
 
 func find(ctx context.Context, env env.Core) (string, string, error) {
-	rpAuthorizer, err := env.NewRPAuthorizer(azure.PublicCloud.ResourceManagerEndpoint)
+	rpAuthorizer, err := env.NewRPAuthorizer(env.Environment().ResourceManagerEndpoint)
 	if err != nil {
 		return "", "", err
 	}

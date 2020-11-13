@@ -43,12 +43,12 @@ func newProd(ctx context.Context) (InstanceMetadata, error) {
 		},
 	}
 
-	err := p.populateTenantIDFromMSI(ctx)
+	err := p.populateInstanceMetadata()
 	if err != nil {
 		return nil, err
 	}
 
-	err = p.populateInstanceMetadata()
+	err = p.populateTenantIDFromMSI(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func (p *prod) populateTenantIDFromMSI(ctx context.Context) error {
 		return err
 	}
 
-	token, err := p.newServicePrincipalTokenFromMSI(msiEndpoint, azure.PublicCloud.ResourceManagerEndpoint)
+	token, err := p.newServicePrincipalTokenFromMSI(msiEndpoint, p.Environment().ResourceManagerEndpoint)
 	if err != nil {
 		return err
 	}
@@ -109,6 +109,7 @@ func (p *prod) populateInstanceMetadata() error {
 		Location          string `json:"location,omitempty"`
 		ResourceGroupName string `json:"resourceGroupName,omitempty"`
 		SubscriptionID    string `json:"subscriptionId,omitempty"`
+		AzEnvironment     string `json:"azEnvironment,omitempty"`
 	}
 
 	err = json.NewDecoder(resp.Body).Decode(&m)
@@ -116,6 +117,11 @@ func (p *prod) populateInstanceMetadata() error {
 		return err
 	}
 
+	environment, err := azure.EnvironmentFromName(m.AzEnvironment)
+	if err != nil {
+		return err
+	}
+	p.environment = &environment
 	p.subscriptionID = m.SubscriptionID
 	p.location = m.Location
 	p.resourceGroup = m.ResourceGroupName

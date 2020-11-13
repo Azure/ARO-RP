@@ -8,7 +8,6 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
@@ -61,7 +60,7 @@ func NewCore(ctx context.Context, log *logrus.Entry) (Core, error) {
 		return nil, err
 	}
 
-	rpKVAuthorizer, err := rpauthorizer.NewRPAuthorizer(azure.PublicCloud.ResourceIdentifiers.KeyVault)
+	rpKVAuthorizer, err := rpauthorizer.NewRPAuthorizer(instancemetadata.Environment().ResourceIdentifiers.KeyVault)
 	if err != nil {
 		return nil, err
 	}

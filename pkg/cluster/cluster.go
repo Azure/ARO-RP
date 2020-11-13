@@ -92,17 +92,17 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		return nil, err
 	}
 
-	localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), azure.PublicCloud.ResourceManagerEndpoint)
+	localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), _env.Environment().ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	localFPKVAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), azure.PublicCloud.ResourceIdentifiers.KeyVault)
+	localFPKVAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), _env.Environment().ResourceIdentifiers.KeyVault)
 	if err != nil {
 		return nil, err
 	}
 
-	fpAuthorizer, err := _env.FPAuthorizer(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID, azure.PublicCloud.ResourceManagerEndpoint)
+	fpAuthorizer, err := _env.FPAuthorizer(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID, _env.Environment().ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}

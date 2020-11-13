@@ -5,9 +5,11 @@ package deploy
 
 import (
 	"context"
+	"fmt"
 	"sort"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -128,6 +130,16 @@ func (o *operator) resources() ([]runtime.Object, error) {
 		return nil, err
 	}
 
+	var monitoringEndpoint string
+	switch o.env.Environment().Name {
+	case azure.PublicCloud.Name:
+		monitoringEndpoint = "https://gcs.prod.monitoring.core.windows.net/"
+	case azure.USGovernmentCloud.Name:
+		monitoringEndpoint = "https://gcs.monitoring.core.usgovcloudapi.net/"
+	default:
+		return nil, fmt.Errorf("unsupported cloud environment")
+	}
+
 	// create a secret here for genevalogging, later we will copy it to
 	// the genevalogging namespace.
 	return append(results,
@@ -148,7 +160,7 @@ func (o *operator) resources() ([]runtime.Object, error) {
 			},
 			Spec: arov1alpha1.ClusterSpec{
 				ResourceID: o.oc.ID,
-				ACRName:    o.env.ACRName(),
+				ACRDomain:  o.env.ACRDomain(),
 				Location:   o.env.Location(),
 				GenevaLogging: arov1alpha1.GenevaLoggingSpec{
 					ConfigVersion:            o.env.ClustersGenevaLoggingConfigVersion(),
@@ -156,10 +168,10 @@ func (o *operator) resources() ([]runtime.Object, error) {
 				},
 				InternetChecker: arov1alpha1.InternetCheckerSpec{
 					URLs: []string{
-						"https://arosvc.azurecr.io/",
-						"https://login.microsoftonline.com/",
-						"https://management.azure.com/",
-						"https://gcs.prod.monitoring.core.windows.net/",
+						fmt.Sprintf("https://%s/", o.env.ACRDomain()),
+						o.env.Environment().ActiveDirectoryEndpoint,
+						o.env.Environment().ResourceManagerEndpoint,
+						monitoringEndpoint,
 					},
 				},
 			},

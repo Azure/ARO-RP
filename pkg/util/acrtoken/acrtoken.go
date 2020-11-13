@@ -5,6 +5,7 @@ package acrtoken
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/containerregistry/mgmt/2019-06-01-preview/containerregistry"
@@ -53,7 +54,7 @@ func NewManager(env env.Interface, localFPAuthorizer autorest.Authorizer) (Manag
 
 func (m *manager) GetRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProfile {
 	for i, rp := range oc.Properties.RegistryProfiles {
-		if rp.Name == m.r.ResourceName+".azurecr.io" {
+		if rp.Name == fmt.Sprintf("%s.%s", m.r.ResourceName, m.env.Environment().ContainerRegistryDNSSuffix) {
 			return oc.Properties.RegistryProfiles[i]
 		}
 	}
@@ -63,7 +64,7 @@ func (m *manager) GetRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProf
 
 func (m *manager) NewRegistryProfile(oc *api.OpenShiftCluster) *api.RegistryProfile {
 	return &api.RegistryProfile{
-		Name:     m.r.ResourceName + ".azurecr.io",
+		Name:     fmt.Sprintf("%s.%s", m.r.ResourceName, m.env.Environment().ContainerRegistryDNSSuffix),
 		Username: "token-" + uuid.NewV4().String(),
 	}
 }
