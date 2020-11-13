@@ -6,7 +6,6 @@ package log
 import (
 	"reflect"
 	"runtime"
-	"strings"
 	"testing"
 
 	"github.com/sirupsen/logrus"
@@ -76,7 +75,7 @@ func TestRelativeFilePathPrettier(t *testing.T) {
 	currentFrames := runtime.CallersFrames(pc)
 	currentFunc, _ := currentFrames.Next()
 	currentFunc.Line = 11 // so it's not too fragile
-	goPath := strings.Split(currentFunc.File, "src/github.com")[0]
+
 	tests := []struct {
 		name         string
 		f            *runtime.Frame
@@ -94,16 +93,6 @@ func TestRelativeFilePathPrettier(t *testing.T) {
 			f:            &runtime.Frame{},
 			wantFunction: "()",
 			wantFile:     ":0",
-		},
-		{
-			name: "install",
-			f: &runtime.Frame{
-				Function: "github.com/Azure/ARO-RP/pkg/install/install.deployResourceTemplate",
-				File:     goPath + "src/github.com/Azure/ARO-RP/pkg/install/1-installresources.go",
-				Line:     623,
-			},
-			wantFunction: "install.deployResourceTemplate()",
-			wantFile:     "pkg/install/1-installresources.go:623",
 		},
 	}
 
