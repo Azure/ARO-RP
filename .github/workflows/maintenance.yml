@@ -14,3 +14,4 @@ jobs:
         with:
           dirtyLabel: needs-rebase
           repoToken: "${{ secrets.GITHUB_TOKEN }}"
+          commentOnDirty: "Please rebase pull request."
