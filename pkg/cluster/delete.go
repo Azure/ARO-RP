@@ -113,7 +113,10 @@ func (m *manager) disconnectSecurityGroup(ctx context.Context, resourceID string
 	return nil
 }
 
-// keys must be lower case
+// deleteOrder maps resource types to the deletion level.  We walk the levels
+// from lowest to highest, deleting all the resources in the given level in
+// parallel and waiting for completion before we proceed.  Any type not in the
+// map is considered to be at level 0.  Keys must be lower case.
 var deleteOrder = map[string]int{
 	"microsoft.compute/virtualmachines":     -1, // first, and before microsoft.compute/disks, microsoft.network/networkinterfaces
 	"microsoft.network/privatelinkservices": -1, // before microsoft.network/loadbalancers
@@ -128,6 +131,7 @@ func (m *manager) deleteResources(ctx context.Context) error {
 		return err
 	}
 
+	// group our resources by level
 	resourceMap := map[int][]*mgmtfeatures.GenericResourceExpanded{}
 	for i, resource := range resources {
 		level := deleteOrder[strings.ToLower(*resource.Type)]
@@ -141,12 +145,14 @@ func (m *manager) deleteResources(ctx context.Context) error {
 	sort.Ints(levels)
 
 	for _, level := range levels {
+		// ensure that resource deletion order is deterministic
 		sort.Slice(resourceMap[level], func(i, j int) bool {
 			return strings.Compare(
 				strings.ToLower(*resourceMap[level][i].ID),
 				strings.ToLower(*resourceMap[level][j].ID)) < 0
 		})
 
+		// asynchronously delete all resources in the level
 		futures := make([]mgmtfeatures.ResourcesDeleteByIDFuture, 0, len(resourceMap[level]))
 		for _, resource := range resourceMap[level] {
 			apiVersion := azureclient.APIVersion(*resource.Type)
@@ -180,6 +186,7 @@ func (m *manager) deleteResources(ctx context.Context) error {
 			futures = append(futures, future)
 		}
 
+		// wait for all the deletions to complete
 		for i, future := range futures {
 			m.log.Printf("waiting for deletion of %s", *resourceMap[level][i].ID)
 
