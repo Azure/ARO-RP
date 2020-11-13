@@ -127,6 +127,11 @@ func (m *manager) deleteResources(ctx context.Context) error {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
 	resources, err := m.resources.ListByResourceGroup(ctx, resourceGroup, "", "", nil)
+	if detailedErr, ok := err.(autorest.DetailedError); ok &&
+		(detailedErr.StatusCode == http.StatusNotFound ||
+			detailedErr.StatusCode == http.StatusForbidden) {
+		return nil
+	}
 	if err != nil {
 		return err
 	}
