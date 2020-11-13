@@ -39,9 +39,9 @@ type prod struct {
 	domain              string
 	zones               map[string][]string
 
-	fpCertificate        *x509.Certificate
-	fpPrivateKey         *rsa.PrivateKey
-	fpServicePrincipalID string
+	fpCertificate *x509.Certificate
+	fpPrivateKey  *rsa.PrivateKey
+	fpClientID    string
 
 	clustersGenevaLoggingCertificate   *x509.Certificate
 	clustersGenevaLoggingPrivateKey    *rsa.PrivateKey
@@ -99,7 +99,7 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 
 	p.fpPrivateKey = fpPrivateKey
 	p.fpCertificate = fpCertificates[0]
-	p.fpServicePrincipalID = "f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875"
+	p.fpClientID = "f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875"
 
 	clustersGenevaLoggingPrivateKey, clustersGenevaLoggingCertificates, err := p.GetCertificateSecret(ctx, ClusterLoggingSecretName)
 	if err != nil {
@@ -227,7 +227,7 @@ func (p *prod) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, 
 		return nil, err
 	}
 
-	sp, err := adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, p.fpServicePrincipalID, p.fpCertificate, p.fpPrivateKey, resource)
+	sp, err := adal.NewServicePrincipalTokenFromCertificate(*oauthConfig, p.fpClientID, p.fpCertificate, p.fpPrivateKey, resource)
 	if err != nil {
 		return nil, err
 	}
