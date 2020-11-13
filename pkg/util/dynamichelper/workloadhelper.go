@@ -59,6 +59,28 @@ func Prepare(resources []runtime.Object) ([]*unstructured.Unstructured, error) {
 	return uns, nil
 }
 
+func addWorkloadHashes(o *metav1.ObjectMeta, t *v1.PodTemplateSpec, configToHash map[string]string) {
+	for _, v := range t.Spec.Volumes {
+		if v.Secret != nil {
+			if hash, found := configToHash[keyFunc(schema.GroupKind{Kind: "Secret"}, o.Namespace, v.Secret.SecretName)]; found {
+				if t.Annotations == nil {
+					t.Annotations = map[string]string{}
+				}
+				t.Annotations["checksum/secret-"+v.Secret.SecretName] = hash
+			}
+		}
+
+		if v.ConfigMap != nil {
+			if hash, found := configToHash[keyFunc(schema.GroupKind{Kind: "ConfigMap"}, o.Namespace, v.ConfigMap.Name)]; found {
+				if t.Annotations == nil {
+					t.Annotations = map[string]string{}
+				}
+				t.Annotations["checksum/configmap-"+v.ConfigMap.Name] = hash
+			}
+		}
+	}
+}
+
 // hashWorkloadConfigs iterates daemonsets, walks their volumes, and updates
 // their pod templates with annotations that include the hashes of the content
 // for each configmap or secret.
@@ -80,29 +102,13 @@ func hashWorkloadConfigs(resources []runtime.Object) error {
 	for _, o := range resources {
 		switch o := o.(type) {
 		case *appsv1.DaemonSet:
-			for _, v := range o.Spec.Template.Spec.Volumes {
-				if v.Secret != nil {
-					if hash, found := configToHash[keyFunc(schema.GroupKind{Kind: "Secret"}, o.Namespace, v.Secret.SecretName)]; found {
-						if o.Spec.Template.Annotations == nil {
-							o.Spec.Template.Annotations = map[string]string{}
-						}
-						o.Spec.Template.Annotations["checksum/secret-"+v.Secret.SecretName] = hash
-					}
-				}
+			addWorkloadHashes(&o.ObjectMeta, &o.Spec.Template, configToHash)
 
-				if v.ConfigMap != nil {
-					if hash, found := configToHash[keyFunc(schema.GroupKind{Kind: "ConfigMap"}, o.Namespace, v.ConfigMap.Name)]; found {
-						if o.Spec.Template.Annotations == nil {
-							o.Spec.Template.Annotations = map[string]string{}
-						}
-						o.Spec.Template.Annotations["checksum/configmap-"+v.ConfigMap.Name] = hash
-					}
-				}
-			}
+		case *appsv1.Deployment:
+			addWorkloadHashes(&o.ObjectMeta, &o.Spec.Template, configToHash)
 
-		case *appsv1.Deployment, *appsv1.StatefulSet:
-			// TODO: add as/when needed
-			return fmt.Errorf("unimplemented: %T", o)
+		case *appsv1.StatefulSet:
+			addWorkloadHashes(&o.ObjectMeta, &o.Spec.Template, configToHash)
 		}
 	}
 
