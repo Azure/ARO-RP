@@ -42,8 +42,6 @@ type Interface interface {
 	AdminUpgrade(ctx context.Context) error
 }
 
-var _ Interface = &manager{}
-
 // manager contains information needed to install and maintain an ARO cluster
 type manager struct {
 	log               *logrus.Entry
@@ -57,16 +55,16 @@ type manager struct {
 	localFpAuthorizer refreshable.Authorizer
 
 	disks               compute.DisksClient
-	virtualmachines     compute.VirtualMachinesClient
+	virtualMachines     compute.VirtualMachinesClient
 	interfaces          network.InterfacesClient
-	publicipaddresses   network.PublicIPAddressesClient
-	loadbalancers       network.LoadBalancersClient
-	securitygroups      network.SecurityGroupsClient
+	publicIPAddresses   network.PublicIPAddressesClient
+	loadBalancers       network.LoadBalancersClient
+	securityGroups      network.SecurityGroupsClient
 	deployments         features.DeploymentsClient
-	groups              features.ResourceGroupsClient
+	resourceGroups      features.ResourceGroupsClient
 	resources           features.ResourcesClient
-	virtualnetworklinks privatedns.VirtualNetworkLinksClient
-	accounts            storage.AccountsClient
+	virtualNetworkLinks privatedns.VirtualNetworkLinksClient
+	storageAccounts     storage.AccountsClient
 
 	dns             dns.Manager
 	keyvault        keyvault.Manager
@@ -74,7 +72,7 @@ type manager struct {
 	subnet          subnet.Manager
 
 	kubernetescli kubernetes.Interface
-	extcli        extensionsclient.Interface
+	extensionscli extensionsclient.Interface
 	operatorcli   operatorclient.Interface
 	configcli     configclient.Interface
 	samplescli    samplesclient.Interface
@@ -84,9 +82,9 @@ type manager struct {
 
 const deploymentName = "azuredeploy"
 
-// New returns a cluster manager
-func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, cipher encryption.Cipher,
-	billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (*manager, error) {
+// NewManager returns a cluster manager
+func NewManager(ctx context.Context, log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, cipher encryption.Cipher,
+	billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (Interface, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
 		return nil, err
@@ -119,16 +117,16 @@ func New(ctx context.Context, log *logrus.Entry, _env env.Interface, db database
 		localFpAuthorizer: localFPAuthorizer,
 
 		disks:               compute.NewDisksClient(r.SubscriptionID, fpAuthorizer),
-		virtualmachines:     compute.NewVirtualMachinesClient(r.SubscriptionID, fpAuthorizer),
+		virtualMachines:     compute.NewVirtualMachinesClient(r.SubscriptionID, fpAuthorizer),
 		interfaces:          network.NewInterfacesClient(r.SubscriptionID, fpAuthorizer),
-		publicipaddresses:   network.NewPublicIPAddressesClient(r.SubscriptionID, fpAuthorizer),
-		loadbalancers:       network.NewLoadBalancersClient(r.SubscriptionID, fpAuthorizer),
-		securitygroups:      network.NewSecurityGroupsClient(r.SubscriptionID, fpAuthorizer),
+		publicIPAddresses:   network.NewPublicIPAddressesClient(r.SubscriptionID, fpAuthorizer),
+		loadBalancers:       network.NewLoadBalancersClient(r.SubscriptionID, fpAuthorizer),
+		securityGroups:      network.NewSecurityGroupsClient(r.SubscriptionID, fpAuthorizer),
 		deployments:         features.NewDeploymentsClient(r.SubscriptionID, fpAuthorizer),
-		groups:              features.NewResourceGroupsClient(r.SubscriptionID, fpAuthorizer),
+		resourceGroups:      features.NewResourceGroupsClient(r.SubscriptionID, fpAuthorizer),
 		resources:           features.NewResourcesClient(r.SubscriptionID, fpAuthorizer),
-		virtualnetworklinks: privatedns.NewVirtualNetworkLinksClient(r.SubscriptionID, fpAuthorizer),
-		accounts:            storage.NewAccountsClient(r.SubscriptionID, fpAuthorizer),
+		virtualNetworkLinks: privatedns.NewVirtualNetworkLinksClient(r.SubscriptionID, fpAuthorizer),
+		storageAccounts:     storage.NewAccountsClient(r.SubscriptionID, fpAuthorizer),
 
 		dns:             dns.NewManager(_env, localFPAuthorizer),
 		keyvault:        keyvault.NewManager(localFPKVAuthorizer, _env.ClustersKeyvaultURI()),

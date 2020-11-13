@@ -29,13 +29,13 @@ func (m *manager) deletePrivateDNSVirtualNetworkLinks(ctx context.Context, resou
 		return err
 	}
 
-	virtualnetworklinks, err := m.virtualnetworklinks.List(ctx, r.ResourceGroup, r.ResourceName, nil)
+	virtualNetworkLinks, err := m.virtualNetworkLinks.List(ctx, r.ResourceGroup, r.ResourceName, nil)
 	if err != nil {
 		return err
 	}
 
-	for _, virtualnetworklink := range virtualnetworklinks {
-		err = m.virtualnetworklinks.DeleteAndWait(ctx, r.ResourceGroup, r.ResourceName, *virtualnetworklink.Name, "")
+	for _, virtualNetworkLink := range virtualNetworkLinks {
+		err = m.virtualNetworkLinks.DeleteAndWait(ctx, r.ResourceGroup, r.ResourceName, *virtualNetworkLink.Name, "")
 		if err != nil {
 			return err
 		}
@@ -50,7 +50,7 @@ func (m *manager) disconnectSecurityGroup(ctx context.Context, resourceID string
 		return err
 	}
 
-	nsg, err := m.securitygroups.Get(ctx, r.ResourceGroup, r.ResourceName, "")
+	nsg, err := m.securityGroups.Get(ctx, r.ResourceGroup, r.ResourceName, "")
 	if err != nil {
 		return err
 	}
@@ -222,7 +222,7 @@ func (m *manager) Delete(ctx context.Context) error {
 	}
 
 	m.log.Printf("deleting resource group %s", resourceGroup)
-	err = m.groups.DeleteAndWait(ctx, resourceGroup)
+	err = m.resourceGroups.DeleteAndWait(ctx, resourceGroup)
 	if detailedErr, ok := err.(autorest.DetailedError); ok &&
 		(detailedErr.StatusCode == http.StatusForbidden || detailedErr.StatusCode == http.StatusNotFound) {
 		err = nil

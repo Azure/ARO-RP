@@ -25,7 +25,7 @@ import (
 	kadiscovery "github.com/Azure/ARO-RP/pkg/util/dynamichelper/discovery"
 )
 
-type DynamicHelper interface {
+type Interface interface {
 	RefreshAPIResources() error
 	CreateOrUpdate(ctx context.Context, obj *unstructured.Unstructured) error
 	Delete(ctx context.Context, groupKind, namespace, name string) error
@@ -42,7 +42,7 @@ type dynamicHelper struct {
 	apiresources []*metav1.APIResourceList
 }
 
-func New(log *logrus.Entry, restconfig *rest.Config) (DynamicHelper, error) {
+func New(log *logrus.Entry, restconfig *rest.Config) (Interface, error) {
 	dh := &dynamicHelper{
 		log:        log,
 		restconfig: restconfig,

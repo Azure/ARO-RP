@@ -26,8 +26,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-var _ Interface = &dev{}
-
 type dev struct {
 	*prod
 
@@ -37,7 +35,7 @@ type dev struct {
 	deployments     features.DeploymentsClient
 }
 
-func newDev(ctx context.Context, log *logrus.Entry) (*dev, error) {
+func newDev(ctx context.Context, log *logrus.Entry) (Interface, error) {
 	for _, key := range []string{
 		"AZURE_ARM_CLIENT_ID",
 		"AZURE_ARM_CLIENT_SECRET",

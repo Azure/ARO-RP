@@ -40,16 +40,16 @@ type adminactions struct {
 	log *logrus.Entry
 	env env.Interface
 	oc  *api.OpenShiftCluster
-	dh  dynamichelper.DynamicHelper
+	dh  dynamichelper.Interface
 
-	k8sClient    kubernetes.Interface
-	configClient configclient.Interface
+	kubernetescli kubernetes.Interface
+	configcli     configclient.Interface
 
-	resourcesClient   features.ResourcesClient
-	vmClient          compute.VirtualMachinesClient
-	vNetClient        network.VirtualNetworksClient
-	routeTablesClient network.RouteTablesClient
-	accountsClient    storage.AccountsClient
+	resources       features.ResourcesClient
+	virtualMachines compute.VirtualMachinesClient
+	virtualNetworks network.VirtualNetworksClient
+	routeTables     network.RouteTablesClient
+	storageAccounts storage.AccountsClient
 }
 
 // New returns an adminactions Interface
@@ -66,12 +66,12 @@ func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster,
 		return nil, err
 	}
 
-	k8sClient, err := kubernetes.NewForConfig(restConfig)
+	kubernetescli, err := kubernetes.NewForConfig(restConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	configClient, err := configclient.NewForConfig(restConfig)
+	configcli, err := configclient.NewForConfig(restConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -83,17 +83,19 @@ func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster,
 	}
 
 	return &adminactions{
-		log:               log,
-		env:               env,
-		oc:                oc,
-		dh:                dh,
-		k8sClient:         k8sClient,
-		configClient:      configClient,
-		resourcesClient:   features.NewResourcesClient(subscriptionDoc.ID, fpAuth),
-		vmClient:          compute.NewVirtualMachinesClient(subscriptionDoc.ID, fpAuth),
-		vNetClient:        network.NewVirtualNetworksClient(subscriptionDoc.ID, fpAuth),
-		routeTablesClient: network.NewRouteTablesClient(subscriptionDoc.ID, fpAuth),
-		accountsClient:    storage.NewAccountsClient(subscriptionDoc.ID, fpAuth),
+		log: log,
+		env: env,
+		oc:  oc,
+		dh:  dh,
+
+		kubernetescli: kubernetescli,
+		configcli:     configcli,
+
+		resources:       features.NewResourcesClient(subscriptionDoc.ID, fpAuth),
+		virtualMachines: compute.NewVirtualMachinesClient(subscriptionDoc.ID, fpAuth),
+		virtualNetworks: network.NewVirtualNetworksClient(subscriptionDoc.ID, fpAuth),
+		routeTables:     network.NewRouteTablesClient(subscriptionDoc.ID, fpAuth),
+		storageAccounts: storage.NewAccountsClient(subscriptionDoc.ID, fpAuth),
 	}, nil
 }
 
@@ -123,5 +125,5 @@ func (a *adminactions) K8sDelete(ctx context.Context, groupKind, namespace, name
 
 func (a *adminactions) VMRedeployAndWait(ctx context.Context, vmName string) error {
 	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
-	return a.vmClient.RedeployAndWait(ctx, clusterRGName, vmName)
+	return a.virtualMachines.RedeployAndWait(ctx, clusterRGName, vmName)
 }

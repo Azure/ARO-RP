@@ -40,11 +40,11 @@ func (r *Resource) MarshalJSON() ([]byte, error) {
 	for i := 1; i < outer.NumField(); i++ {
 		field := outer.Type().Field(i)
 
-		if idx, found := indexes[field.Name]; found {
+		if j, found := indexes[field.Name]; found {
 			field.Type = emptyInterfaceType
-			fields[idx] = field
+			fields[j] = field
 			if !outer.Field(i).IsZero() {
-				values[idx] = outer.Field(i)
+				values[j] = outer.Field(i)
 			}
 		} else {
 			fields = append(fields, field)

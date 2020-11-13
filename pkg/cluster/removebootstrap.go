@@ -17,7 +17,7 @@ func (m *manager) removeBootstrap(ctx context.Context) error {
 
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 	m.log.Print("removing bootstrap vm")
-	err := m.virtualmachines.DeleteAndWait(ctx, resourceGroup, infraID+"-bootstrap")
+	err := m.virtualMachines.DeleteAndWait(ctx, resourceGroup, infraID+"-bootstrap")
 	if err != nil {
 		return err
 	}

@@ -37,12 +37,12 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	cvClient, err := configclient.NewForConfig(restconfig)
+	configcli, err := configclient.NewForConfig(restconfig)
 	if err != nil {
 		return err
 	}
 
-	clusterVersion, err := getClusterVersion(ctx, cvClient)
+	clusterVersion, err := getClusterVersion(ctx, configcli)
 	if err != nil {
 		return err
 	}
@@ -60,8 +60,8 @@ func run(ctx context.Context, log *logrus.Entry) error {
 	return writeAssets(cli, clusterVersion, discoveryCacheDir)
 }
 
-func getClusterVersion(ctx context.Context, cvClient configclient.Interface) (string, error) {
-	cv, err := cvClient.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
+func getClusterVersion(ctx context.Context, configcli configclient.Interface) (string, error) {
+	cv, err := configcli.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
 	if err != nil {
 		return "", err
 	}

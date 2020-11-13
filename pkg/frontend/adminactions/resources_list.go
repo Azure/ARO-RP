@@ -20,7 +20,7 @@ import (
 func (a *adminactions) ResourcesList(ctx context.Context) ([]byte, error) {
 	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
 
-	resources, err := a.resourcesClient.ListByResourceGroup(ctx, clusterRGName, "", "", nil)
+	resources, err := a.resources.ListByResourceGroup(ctx, clusterRGName, "", "", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +38,7 @@ func (a *adminactions) ResourcesList(ctx context.Context) ([]byte, error) {
 		}
 		switch *res.Type {
 		case "Microsoft.Compute/virtualMachines":
-			vm, err := a.vmClient.Get(ctx, clusterRGName, *res.Name, mgmtcompute.InstanceView)
+			vm, err := a.virtualMachines.Get(ctx, clusterRGName, *res.Name, mgmtcompute.InstanceView)
 			if err != nil {
 				return nil, err
 			}
@@ -46,7 +46,7 @@ func (a *adminactions) ResourcesList(ctx context.Context) ([]byte, error) {
 				Resource: vm,
 			})
 		default:
-			gr, err := a.resourcesClient.GetByID(ctx, *res.ID, apiVersion)
+			gr, err := a.resources.GetByID(ctx, *res.ID, apiVersion)
 			if err != nil {
 				return nil, err
 			}
@@ -70,7 +70,7 @@ func (a *adminactions) appendAzureNetworkResources(ctx context.Context, armResou
 		return armResources, err
 	}
 
-	vnet, err := a.vNetClient.Get(ctx, r.ResourceGroup, r.ResourceName, "")
+	vnet, err := a.virtualNetworks.Get(ctx, r.ResourceGroup, r.ResourceName, "")
 	if err != nil {
 		return armResources, err
 	}
@@ -94,7 +94,7 @@ func (a *adminactions) appendAzureNetworkResources(ctx context.Context, armResou
 					a.log.Warnf("skipping route table '%s' due to ID parse error: %s", *snet.RouteTable.ID, err)
 					continue
 				}
-				rt, err := a.routeTablesClient.Get(ctx, r.ResourceGroup, r.ResourceName, "")
+				rt, err := a.routeTables.Get(ctx, r.ResourceGroup, r.ResourceName, "")
 				if err != nil {
 					a.log.Warnf("skipping route table '%s' due to Get error: %s", *snet.RouteTable.ID, err)
 					continue

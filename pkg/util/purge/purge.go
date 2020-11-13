@@ -27,7 +27,7 @@ type ResourceCleaner struct {
 	privatelinkservicescli network.PrivateLinkServicesClient
 	securitygroupscli      network.SecurityGroupsClient
 
-	subnetManager subnet.Manager
+	subnet subnet.Manager
 
 	shouldDelete checkFn
 }
@@ -48,7 +48,7 @@ func NewResourceCleaner(log *logrus.Entry, subscriptionID string, shouldDelete c
 		privatelinkservicescli: network.NewPrivateLinkServicesClient(subscriptionID, authorizer),
 		securitygroupscli:      network.NewSecurityGroupsClient(subscriptionID, authorizer),
 
-		subnetManager: subnet.NewManager(subscriptionID, authorizer),
+		subnet: subnet.NewManager(subscriptionID, authorizer),
 
 		// ShouldDelete decides whether the resource group gets deleted
 		shouldDelete: shouldDelete,

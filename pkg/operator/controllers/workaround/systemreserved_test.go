@@ -56,7 +56,7 @@ func TestSystemreservedEnsure(t *testing.T) {
 	tests := []struct {
 		name                         string
 		mcocli                       *fakemcoclient.Clientset
-		mocker                       func(mdh *mock_dynamichelper.MockDynamicHelper)
+		mocker                       func(mdh *mock_dynamichelper.MockInterface)
 		machineConfigPoolNeedsUpdate bool
 		wantErr                      bool
 	}{
@@ -68,7 +68,7 @@ func TestSystemreservedEnsure(t *testing.T) {
 				},
 			}),
 			machineConfigPoolNeedsUpdate: true,
-			mocker: func(mdh *mock_dynamichelper.MockDynamicHelper) {
+			mocker: func(mdh *mock_dynamichelper.MockInterface) {
 				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
@@ -80,7 +80,7 @@ func TestSystemreservedEnsure(t *testing.T) {
 					Labels: map[string]string{labelName: labelValue},
 				},
 			}),
-			mocker: func(mdh *mock_dynamichelper.MockDynamicHelper) {
+			mocker: func(mdh *mock_dynamichelper.MockInterface) {
 				mdh.EXPECT().Ensure(gomock.Any(), gomock.Any()).Return(nil)
 			},
 		},
@@ -94,7 +94,7 @@ func TestSystemreservedEnsure(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			mdh := mock_dynamichelper.NewMockDynamicHelper(controller)
+			mdh := mock_dynamichelper.NewMockInterface(controller)
 			sr := &systemreserved{
 				mcocli: tt.mcocli,
 				dh:     mdh,

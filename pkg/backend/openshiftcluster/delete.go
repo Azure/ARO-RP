@@ -10,7 +10,7 @@ import (
 )
 
 func (m *manager) Delete(ctx context.Context) error {
-	i, err := cluster.New(ctx, m.log, m.env, m.db, m.cipher, m.billing, m.doc, m.subscriptionDoc)
+	i, err := cluster.NewManager(ctx, m.log, m.env, m.db, m.cipher, m.billing, m.doc, m.subscriptionDoc)
 	if err != nil {
 		return err
 	}

@@ -73,7 +73,7 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 		}
 
 		for _, secGroupSubnet := range *secGroup.SecurityGroupPropertiesFormat.Subnets {
-			subnet, err := rc.subnetManager.Get(ctx, *secGroupSubnet.ID)
+			subnet, err := rc.subnet.Get(ctx, *secGroupSubnet.ID)
 			if err != nil {
 				return err
 			}
@@ -87,7 +87,7 @@ func (rc *ResourceCleaner) cleanNetworking(ctx context.Context, resourceGroup mg
 
 				subnet.NetworkSecurityGroup = nil
 
-				err = rc.subnetManager.CreateOrUpdate(ctx, *subnet.ID, subnet)
+				err = rc.subnet.CreateOrUpdate(ctx, *subnet.ID, subnet)
 				if err != nil {
 					return err
 				}

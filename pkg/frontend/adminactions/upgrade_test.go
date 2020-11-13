@@ -174,11 +174,11 @@ func TestUpgradeCluster(t *testing.T) {
 			})
 
 			a := &adminactions{
-				log:          logrus.NewEntry(logrus.StandardLogger()),
-				configClient: tt.fakecli,
+				log:       logrus.NewEntry(logrus.StandardLogger()),
+				configcli: tt.fakecli,
 			}
 
-			err := upgrade(ctx, a.log, a.configClient, []*version.Stream{stream43, stream44, stream45}, tt.upgradeY)
+			err := upgrade(ctx, a.log, a.configcli, []*version.Stream{stream43, stream44, stream45}, tt.upgradeY)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
@@ -188,7 +188,7 @@ func TestUpgradeCluster(t *testing.T) {
 				t.Fatal(updated)
 			}
 
-			cv, err := a.configClient.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
+			cv, err := a.configcli.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
 			if err != nil {
 				t.Error(err)
 			}
@@ -247,14 +247,14 @@ func TestCheckCustomDNS(t *testing.T) {
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
-			vnetClient := mock_network.NewMockVirtualNetworksClient(controller)
+			virtualNetworks := mock_network.NewMockVirtualNetworksClient(controller)
 			if tt.mocks != nil {
-				tt.mocks(vnetClient)
+				tt.mocks(virtualNetworks)
 			}
 
 			a := &adminactions{
-				log:        logrus.NewEntry(logrus.StandardLogger()),
-				vNetClient: vnetClient,
+				log:             logrus.NewEntry(logrus.StandardLogger()),
+				virtualNetworks: virtualNetworks,
 			}
 
 			oc := &api.OpenShiftCluster{
@@ -265,7 +265,7 @@ func TestCheckCustomDNS(t *testing.T) {
 				},
 			}
 
-			err := checkCustomDNS(ctx, oc, a.vNetClient)
+			err := checkCustomDNS(ctx, oc, a.virtualNetworks)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

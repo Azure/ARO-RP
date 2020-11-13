@@ -38,12 +38,12 @@ func run(ctx context.Context) error {
 		return err
 	}
 
-	storageClient, err := azstorage.NewBasicClient(accountName, *(*keys.Keys)[0].Value)
+	storagecli, err := azstorage.NewBasicClient(accountName, *(*keys.Keys)[0].Value)
 	if err != nil {
 		return err
 	}
 
-	blobService := storageClient.GetBlobService()
+	blobService := storagecli.GetBlobService()
 
 	c := blobService.GetContainerReference("rhcos")
 

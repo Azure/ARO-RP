@@ -51,13 +51,13 @@ type operator struct {
 	env env.Interface
 	oc  *api.OpenShiftCluster
 
-	dh     dynamichelper.DynamicHelper
-	cli    kubernetes.Interface
-	extcli extensionsclient.Interface
-	arocli aroclient.AroV1alpha1Interface
+	dh            dynamichelper.Interface
+	cli           kubernetes.Interface
+	extensionscli extensionsclient.Interface
+	arocli        aroclient.AroV1alpha1Interface
 }
 
-func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, cli kubernetes.Interface, extcli extensionsclient.Interface, arocli aroclient.AroV1alpha1Interface) (Operator, error) {
+func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, cli kubernetes.Interface, extensionscli extensionsclient.Interface, arocli aroclient.AroV1alpha1Interface) (Operator, error) {
 	restConfig, err := restconfig.RestConfig(env, oc)
 	if err != nil {
 		return nil, err
@@ -72,10 +72,10 @@ func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, cli kub
 		env: env,
 		oc:  oc,
 
-		dh:     dh,
-		cli:    cli,
-		extcli: extcli,
-		arocli: arocli,
+		dh:            dh,
+		cli:           cli,
+		extensionscli: extensionscli,
+		arocli:        arocli,
 	}, nil
 }
 
@@ -208,7 +208,7 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 		switch un.GroupVersionKind().GroupKind().String() {
 		case "CustomResourceDefinition.apiextensions.k8s.io":
 			err = wait.PollImmediate(time.Second, time.Minute, func() (bool, error) {
-				crd, err := o.extcli.ApiextensionsV1beta1().CustomResourceDefinitions().Get(ctx, un.GetName(), metav1.GetOptions{})
+				crd, err := o.extensionscli.ApiextensionsV1beta1().CustomResourceDefinitions().Get(ctx, un.GetName(), metav1.GetOptions{})
 				if err != nil {
 					return false, err
 				}
