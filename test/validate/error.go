@@ -11,7 +11,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 )
 
-func CloudError(t *testing.T, err error) *api.CloudError {
+func CloudError(t *testing.T, err error) {
 	cloudErr, ok := err.(*api.CloudError)
 	if !ok {
 		t.Fatal("must return *api.CloudError")
@@ -35,6 +35,4 @@ func CloudError(t *testing.T, err error) *api.CloudError {
 	if strings.Contains(cloudErr.Target, `"`) {
 		t.Error(`target must not contain '"'`)
 	}
-
-	return cloudErr
 }

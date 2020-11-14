@@ -43,7 +43,6 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 
 	type test struct {
 		name           string
-		resourceID     string
 		request        func(*admin.OpenShiftCluster)
 		isPatch        bool
 		fixture        func(*testdatabase.Fixture)
@@ -57,8 +56,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 
 	for _, tt := range []*test{
 		{
-			name:       "patch with empty request",
-			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			name: "patch with empty request",
 			request: func(oc *admin.OpenShiftCluster) {
 			},
 			isPatch: true,
@@ -119,8 +117,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 			},
 		},
 		{
-			name:       "patch a cluster with registry profile should ignore registry profile",
-			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			name: "patch a cluster with registry profile should ignore registry profile",
 			request: func(oc *admin.OpenShiftCluster) {
 				oc.Properties.ClusterProfile.Domain = "changed"
 				oc.Name = "resourceName"
@@ -290,7 +287,6 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 
 	type test struct {
 		name           string
-		resourceID     string
 		request        func(*v20200430.OpenShiftCluster)
 		isPatch        bool
 		fixture        func(*testdatabase.Fixture)
@@ -304,8 +300,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 
 	for _, tt := range []*test{
 		{
-			name:       "create a new cluster",
-			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			name: "create a new cluster",
 			request: func(oc *v20200430.OpenShiftCluster) {
 				oc.Properties.ClusterProfile.Version = "4.3.0"
 			},
@@ -366,8 +361,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			},
 		},
 		{
-			name:       "update a cluster from succeeded",
-			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			name: "update a cluster from succeeded",
 			request: func(oc *v20200430.OpenShiftCluster) {
 				oc.Properties.ClusterProfile.Domain = "changed"
 			},
@@ -447,8 +441,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			},
 		},
 		{
-			name:       "update a cluster from failed during update",
-			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			name: "update a cluster from failed during update",
 			request: func(oc *v20200430.OpenShiftCluster) {
 				oc.Properties.ClusterProfile.Domain = "changed"
 			},
@@ -519,8 +512,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			},
 		},
 		{
-			name:       "update a cluster from failed during creation",
-			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			name: "update a cluster from failed during creation",
 			request: func(oc *v20200430.OpenShiftCluster) {
 				oc.Properties.ClusterProfile.Domain = "changed"
 			},
@@ -551,8 +543,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			wantError:      "400: RequestNotAllowed: : Request is not allowed on cluster whose creation failed. Delete the cluster.",
 		},
 		{
-			name:       "update a cluster from failed during deletion",
-			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			name: "update a cluster from failed during deletion",
 			request: func(oc *v20200430.OpenShiftCluster) {
 				oc.Properties.ClusterProfile.Domain = "changed"
 			},
@@ -583,8 +574,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			wantError:      "400: RequestNotAllowed: : Request is not allowed on cluster whose deletion failed. Delete the cluster.",
 		},
 		{
-			name:       "patch a cluster from succeeded",
-			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			name: "patch a cluster from succeeded",
 			request: func(oc *v20200430.OpenShiftCluster) {
 				oc.Properties.ClusterProfile.Domain = "changed"
 				oc.Properties.IngressProfiles = []v20200430.IngressProfile{{Name: "changed"}}
@@ -662,8 +652,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			},
 		},
 		{
-			name:       "patch a cluster from failed during update",
-			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			name: "patch a cluster from failed during update",
 			request: func(oc *v20200430.OpenShiftCluster) {
 				oc.Properties.ClusterProfile.Domain = "changed"
 			},
@@ -741,8 +730,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			},
 		},
 		{
-			name:       "patch a cluster from failed during creation",
-			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			name: "patch a cluster from failed during creation",
 			request: func(oc *v20200430.OpenShiftCluster) {
 				oc.Properties.ClusterProfile.Domain = "changed"
 			},
@@ -774,8 +762,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			wantError:      "400: RequestNotAllowed: : Request is not allowed on cluster whose creation failed. Delete the cluster.",
 		},
 		{
-			name:       "patch a cluster from failed during deletion",
-			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			name: "patch a cluster from failed during deletion",
 			request: func(oc *v20200430.OpenShiftCluster) {
 				oc.Properties.ClusterProfile.Domain = "changed"
 			},
@@ -807,8 +794,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			wantError:      "400: RequestNotAllowed: : Request is not allowed on cluster whose deletion failed. Delete the cluster.",
 		},
 		{
-			name:       "creating cluster failing when provided cluster resource group already contains a cluster",
-			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			name: "creating cluster failing when provided cluster resource group already contains a cluster",
 			request: func(oc *v20200430.OpenShiftCluster) {
 				oc.Properties.ServicePrincipalProfile.ClientID = mockSubID
 				oc.Properties.ClusterProfile.ResourceGroupID = fmt.Sprintf("/subscriptions/%s/resourcegroups/aro-vjb21wca", mockSubID)
@@ -848,8 +834,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			wantError:      fmt.Sprintf("400: DuplicateResourceGroup: : The provided resource group '/subscriptions/%s/resourcegroups/aro-vjb21wca' already contains a cluster.", mockSubID),
 		},
 		{
-			name:       "creating cluster failing when provided client ID is not unique",
-			resourceID: testdatabase.GetResourcePath(mockSubID, "resourceName"),
+			name: "creating cluster failing when provided client ID is not unique",
 			request: func(oc *v20200430.OpenShiftCluster) {
 				oc.Properties.ServicePrincipalProfile.ClientID = mockSubID
 			},

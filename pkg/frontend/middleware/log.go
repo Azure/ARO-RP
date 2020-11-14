@@ -100,7 +100,7 @@ func Log(baseLog *logrus.Entry) func(http.Handler) http.Handler {
 				log.WithFields(logrus.Fields{
 					"body_read_bytes":      r.Body.(*logReadCloser).bytes,
 					"body_written_bytes":   w.(*logResponseWriter).bytes,
-					"duration":             time.Now().Sub(t).Seconds(),
+					"duration":             time.Since(t).Seconds(),
 					"response_status_code": w.(*logResponseWriter).statusCode,
 				}).Print("sent response")
 			}()

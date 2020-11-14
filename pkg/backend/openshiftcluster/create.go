@@ -50,7 +50,7 @@ func (m *manager) Create(ctx context.Context) error {
 		// could fail with a false positive.
 		timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 		defer cancel()
-		wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+		_ = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 			err = m.ocDynamicValidator.Dynamic(ctx)
 			if azureerrors.HasAuthorizationFailedError(err) ||
 				azureerrors.HasLinkedAuthorizationFailedError(err) {

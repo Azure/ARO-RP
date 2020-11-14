@@ -20,7 +20,7 @@ var (
 )
 
 func applyGoLicense() error {
-	filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+	return filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -61,12 +61,10 @@ func applyGoLicense() error {
 
 		return nil
 	})
-
-	return nil
 }
 
 func applyPythonLicense() error {
-	filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+	return filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -114,8 +112,6 @@ func applyPythonLicense() error {
 
 		return nil
 	})
-
-	return nil
 }
 
 func run() error {

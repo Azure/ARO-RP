@@ -17,7 +17,7 @@ import (
 // our health metric if we crash or restart.
 func (f *frontend) checkReady() bool {
 	if f.env.DeploymentMode() != deployment.Development &&
-		time.Now().Sub(f.startTime) < 2*time.Minute {
+		time.Since(f.startTime) < 2*time.Minute {
 		return false
 	}
 

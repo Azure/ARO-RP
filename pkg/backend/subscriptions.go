@@ -53,13 +53,13 @@ func (sb *subscriptionBackend) try(ctx context.Context) (bool, error) {
 			sb.m.EmitGauge("backend.subscriptions.workers.count", int64(atomic.LoadInt32(&sb.workers)), nil)
 			sb.cond.Signal()
 
-			sb.m.EmitGauge("backend.subscriptions.duration", time.Now().Sub(t).Milliseconds(), map[string]string{
+			sb.m.EmitGauge("backend.subscriptions.duration", time.Since(t).Milliseconds(), map[string]string{
 				"state": string(doc.Subscription.State),
 			})
 
 			sb.m.EmitGauge("backend.subscriptions.count", 1, nil)
 
-			log.WithField("duration", time.Now().Sub(t).Seconds()).Print("done")
+			log.WithField("duration", time.Since(t).Seconds()).Print("done")
 		}()
 
 		err := sb.handle(context.Background(), log, doc)

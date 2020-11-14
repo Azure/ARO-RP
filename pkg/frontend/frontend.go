@@ -357,7 +357,7 @@ func reply(log *logrus.Entry, w http.ResponseWriter, header http.Header, b []byt
 	}
 
 	if b != nil {
-		w.Write(b)
-		w.Write([]byte{'\n'})
+		_, _ = w.Write(b)
+		_, _ = w.Write([]byte{'\n'})
 	}
 }

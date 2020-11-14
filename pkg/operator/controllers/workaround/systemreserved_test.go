@@ -5,12 +5,10 @@ package workaround
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"testing"
 
 	"github.com/golang/mock/gomock"
-	machinev1beta1 "github.com/openshift/machine-api-operator/pkg/apis/machine/v1beta1"
 	mcv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	fakemcoclient "github.com/openshift/machine-config-operator/pkg/generated/clientset/versioned/fake"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,33 +22,6 @@ import (
 	mock_dynamichelper "github.com/Azure/ARO-RP/pkg/util/mocks/dynamichelper"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
-
-func machineset(vmSize string) *machinev1beta1.MachineSet {
-	return &machinev1beta1.MachineSet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "fake-worker-profile-1",
-			Namespace: "openshift-machine-api",
-		},
-		Spec: machinev1beta1.MachineSetSpec{
-			Template: machinev1beta1.MachineTemplateSpec{
-				Spec: machinev1beta1.MachineSpec{
-					ProviderSpec: machinev1beta1.ProviderSpec{
-						Value: &runtime.RawExtension{
-							Raw: []byte(fmt.Sprintf(`{
-"apiVersion": "azureproviderconfig.openshift.io/v1beta1",
-"kind": "AzureMachineProviderSpec",
-"osDisk": {
-"diskSizeGB": 512
-},
-"vmSize": "%s"
-}`, vmSize)),
-						},
-					},
-				},
-			},
-		},
-	}
-}
 
 func TestSystemreservedEnsure(t *testing.T) {
 	tests := []struct {

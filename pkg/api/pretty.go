@@ -8,13 +8,14 @@ package api
 
 import (
 	"reflect"
-	"strings"
 
 	"github.com/ugorji/go/codec"
 )
 
-func newSecretPreservingJsonHandle() *codec.JsonHandle {
-	h := &codec.JsonHandle{
+var secretPreservingJSONHandle *codec.JsonHandle
+
+func init() {
+	secretPreservingJSONHandle = &codec.JsonHandle{
 		BasicHandle: codec.BasicHandle{
 			DecodeOptions: codec.DecodeOptions{
 				ErrorIfNoField: true,
@@ -22,30 +23,36 @@ func newSecretPreservingJsonHandle() *codec.JsonHandle {
 		},
 	}
 
-	h.SetInterfaceExt(reflect.TypeOf(SecureBytes{}), 1, secureHidingExt{})
-	h.SetInterfaceExt(reflect.TypeOf((*SecureString)(nil)), 1, secureHidingExt{})
-	return h
+	err := secretPreservingJSONHandle.SetInterfaceExt(reflect.TypeOf(SecureBytes{}), 1, secureHidingExt{})
+	if err != nil {
+		panic(err)
+	}
+
+	err = secretPreservingJSONHandle.SetInterfaceExt(reflect.TypeOf((*SecureString)(nil)), 1, secureHidingExt{})
+	if err != nil {
+		panic(err)
+	}
 }
 
 func encodeJSON(i interface{}) string {
-	w := &strings.Builder{}
-	enc := codec.NewEncoder(w, newSecretPreservingJsonHandle())
-	err := enc.Encode(i)
+	var b []byte
+
+	err := codec.NewEncoderBytes(&b, secretPreservingJSONHandle).Encode(i)
 	if err != nil {
 		return err.Error()
 	}
-	return w.String()
+
+	return string(b)
 }
 
 var _ codec.InterfaceExt = (*secureHidingExt)(nil)
 
-type secureHidingExt struct {
-}
+type secureHidingExt struct{}
 
-func (s secureHidingExt) ConvertExt(v interface{}) interface{} {
+func (secureHidingExt) ConvertExt(v interface{}) interface{} {
 	return "[REDACTED]"
 }
 
-func (s secureHidingExt) UpdateExt(dest interface{}, v interface{}) {
+func (secureHidingExt) UpdateExt(dest interface{}, v interface{}) {
 	panic("cannot be used to decode!")
 }

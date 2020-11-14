@@ -33,18 +33,16 @@ func TestCreate(t *testing.T) {
 	}
 
 	type test struct {
-		name     string
-		infraID  string
-		subnetID string
-		mocks    func(*test, *mock_network.MockPrivateEndpointsClient)
-		wantErr  string
+		name    string
+		infraID string
+		mocks   func(*test, *mock_network.MockPrivateEndpointsClient)
+		wantErr string
 	}
 
 	for _, tt := range []*test{
 		{
-			name:     "valid",
-			infraID:  "test-1234",
-			subnetID: "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/subnet",
+			name:    "valid",
+			infraID: "test-1234",
 			mocks: func(tt *test, privateendpoints *mock_network.MockPrivateEndpointsClient) {
 				privateendpoints.EXPECT().
 					CreateOrUpdateAndWait(ctx, "rpResourcegroup", "rp-pe-id", mgmtnetwork.PrivateEndpoint{
@@ -67,9 +65,8 @@ func TestCreate(t *testing.T) {
 			},
 		},
 		{
-			name:     "internal error",
-			infraID:  "test-1234",
-			subnetID: "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/subnet",
+			name:    "internal error",
+			infraID: "test-1234",
 			mocks: func(tt *test, privateendpoints *mock_network.MockPrivateEndpointsClient) {
 				privateendpoints.EXPECT().
 					CreateOrUpdateAndWait(ctx, "rpResourcegroup", "rp-pe-id", mgmtnetwork.PrivateEndpoint{
@@ -130,16 +127,14 @@ func TestDelete(t *testing.T) {
 	}
 
 	type test struct {
-		name     string
-		subnetID string
-		mocks    func(*test, *mock_network.MockPrivateEndpointsClient)
-		wantErr  string
+		name    string
+		mocks   func(*test, *mock_network.MockPrivateEndpointsClient)
+		wantErr string
 	}
 
 	for _, tt := range []*test{
 		{
-			name:     "valid",
-			subnetID: "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/subnet",
+			name: "valid",
 			mocks: func(tt *test, privateendpoints *mock_network.MockPrivateEndpointsClient) {
 				privateendpoints.EXPECT().
 					DeleteAndWait(ctx, "rpResourcegroup", "rp-pe-id").
@@ -147,8 +142,7 @@ func TestDelete(t *testing.T) {
 			},
 		},
 		{
-			name:     "internal error",
-			subnetID: "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/subnet",
+			name: "internal error",
 			mocks: func(tt *test, privateendpoints *mock_network.MockPrivateEndpointsClient) {
 				privateendpoints.EXPECT().
 					DeleteAndWait(ctx, "rpResourcegroup", "rp-pe-id").
@@ -191,17 +185,15 @@ func TestGetIP(t *testing.T) {
 	}
 
 	type test struct {
-		name     string
-		subnetID string
-		mocks    func(*test, *mock_network.MockPrivateEndpointsClient)
-		wantIP   string
-		wantErr  string
+		name    string
+		mocks   func(*test, *mock_network.MockPrivateEndpointsClient)
+		wantIP  string
+		wantErr string
 	}
 
 	for _, tt := range []*test{
 		{
-			name:     "valid",
-			subnetID: "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/subnet",
+			name: "valid",
 			mocks: func(tt *test, privateendpoints *mock_network.MockPrivateEndpointsClient) {
 				privateendpoints.EXPECT().
 					Get(ctx, "rpResourcegroup", "rp-pe-id", "networkInterfaces").
@@ -226,8 +218,7 @@ func TestGetIP(t *testing.T) {
 			wantIP: "1.2.3.4",
 		},
 		{
-			name:     "internal error",
-			subnetID: "/subscriptions/subscriptionId/resourceGroups/vnetResourceGroup/providers/Microsoft.Network/virtualNetworks/vnet/subnets/subnet",
+			name: "internal error",
 			mocks: func(tt *test, privateendpoints *mock_network.MockPrivateEndpointsClient) {
 				privateendpoints.EXPECT().
 					Get(ctx, "rpResourcegroup", "rp-pe-id", "networkInterfaces").

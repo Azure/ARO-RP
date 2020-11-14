@@ -116,7 +116,9 @@ func aroserverRun() error {
 		return err
 	}
 
-	go http.Serve(l, http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	go func() {
+		_ = http.Serve(l, http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	}()
 
 	return nil
 }

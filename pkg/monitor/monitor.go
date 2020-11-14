@@ -123,7 +123,7 @@ func (mon *monitor) checkReady() bool {
 	if !ok {
 		return false
 	}
-	return (time.Now().Sub(lastBucketTime) < time.Minute) && // did we list buckets successfully recently?
-		(time.Now().Sub(lastChangefeedTime) < time.Minute) && // did we process the change feed recently?
-		(time.Now().Sub(mon.startTime) > 2*time.Minute) // are we running for at least 2 minutes?
+	return (time.Since(lastBucketTime) < time.Minute) && // did we list buckets successfully recently?
+		(time.Since(lastChangefeedTime) < time.Minute) && // did we process the change feed recently?
+		(time.Since(mon.startTime) > 2*time.Minute) // are we running for at least 2 minutes?
 }

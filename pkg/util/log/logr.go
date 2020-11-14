@@ -96,7 +96,7 @@ func (logrHook) Fire(log *logrus.Entry) error {
 		frame, more := frames.Next()
 
 		if frame == *log.Caller && more {
-			frame, more = frames.Next()
+			frame, _ = frames.Next()
 			log.Caller = &frame
 			break
 		}

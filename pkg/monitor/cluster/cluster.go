@@ -140,16 +140,6 @@ func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 	return
 }
 
-func (mon *Monitor) emitFloat(m string, value float64, dims map[string]string) {
-	if dims == nil {
-		dims = map[string]string{}
-	}
-	for k, v := range mon.dims {
-		dims[k] = v
-	}
-	mon.m.EmitFloat(m, value, dims)
-}
-
 func (mon *Monitor) emitGauge(m string, value int64, dims map[string]string) {
 	if dims == nil {
 		dims = map[string]string{}

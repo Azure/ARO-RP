@@ -109,7 +109,7 @@ func (e *bestEffortEnricher) enrichOne(ctx context.Context, oc *api.OpenShiftClu
 
 			t := time.Now()
 			defer func() {
-				e.m.EmitGauge("enricher.tasks.duration", time.Now().Sub(t).Milliseconds(), map[string]string{
+				e.m.EmitGauge("enricher.tasks.duration", time.Since(t).Milliseconds(), map[string]string{
 					"task": fmt.Sprintf("%T", tasks[i]),
 				})
 			}()

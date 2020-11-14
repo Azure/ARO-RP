@@ -110,7 +110,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 			log.Errorf("%s: %s", *resourceGroup.Name, err)
 			return false
 		}
-		if time.Now().Sub(createdAt) < ttl {
+		if time.Since(createdAt) < ttl {
 			log.Debugf("Group %s is still less than TTL. SKIP.", *resourceGroup.Name)
 			return false
 		}

@@ -20,7 +20,7 @@ func getQueuedSubscriptionDocuments(client cosmosdb.SubscriptionDocumentClient) 
 	}
 
 	for _, r := range input.SubscriptionDocuments {
-		if r.Deleting == true && int64(r.LeaseExpires) < time.Now().Unix() {
+		if r.Deleting && int64(r.LeaseExpires) < time.Now().Unix() {
 			results = append(results, r)
 		}
 	}

@@ -53,10 +53,8 @@ func (f *Checker) CheckOpenShiftClusters(openShiftClusters *cosmosdb.FakeOpenShi
 
 	if len(f.openshiftClusterDocuments) != 0 && len(all.OpenShiftClusterDocuments) == len(f.openshiftClusterDocuments) {
 		diff := deep.Equal(all.OpenShiftClusterDocuments, f.openshiftClusterDocuments)
-		if diff != nil {
-			for _, i := range diff {
-				errs = append(errs, errors.New(i))
-			}
+		for _, i := range diff {
+			errs = append(errs, errors.New(i))
 		}
 	} else if len(all.OpenShiftClusterDocuments) != 0 || len(f.openshiftClusterDocuments) != 0 {
 		errs = append(errs, fmt.Errorf("openShiftClusters length different, %d vs %d", len(all.OpenShiftClusterDocuments), len(f.openshiftClusterDocuments)))
@@ -87,10 +85,8 @@ func (f *Checker) CheckBilling(billing *cosmosdb.FakeBillingDocumentClient) (err
 
 	if len(f.billingDocuments) != 0 && len(all.BillingDocuments) == len(f.billingDocuments) {
 		diff := deep.Equal(all.BillingDocuments, f.billingDocuments)
-		if diff != nil {
-			for _, i := range diff {
-				errs = append(errs, errors.New(i))
-			}
+		for _, i := range diff {
+			errs = append(errs, errors.New(i))
 		}
 	} else if len(all.BillingDocuments) != 0 || len(f.billingDocuments) != 0 {
 		errs = append(errs, fmt.Errorf("billing length different, %d vs %d", len(all.BillingDocuments), len(f.billingDocuments)))
@@ -109,10 +105,8 @@ func (f *Checker) CheckSubscriptions(subscriptions *cosmosdb.FakeSubscriptionDoc
 
 	if len(f.subscriptionDocuments) != 0 && len(all.SubscriptionDocuments) == len(f.subscriptionDocuments) {
 		diff := deep.Equal(all.SubscriptionDocuments, f.subscriptionDocuments)
-		if diff != nil {
-			for _, i := range diff {
-				errs = append(errs, errors.New(i))
-			}
+		for _, i := range diff {
+			errs = append(errs, errors.New(i))
 		}
 	} else if len(all.SubscriptionDocuments) != 0 || len(f.subscriptionDocuments) != 0 {
 		errs = append(errs, fmt.Errorf("subscriptions length different, %d vs %d", len(all.SubscriptionDocuments), len(f.subscriptionDocuments)))
@@ -131,10 +125,8 @@ func (f *Checker) CheckAsyncOperations(asyncOperations *cosmosdb.FakeAsyncOperat
 
 	if len(f.asyncOperationDocuments) != 0 && len(all.AsyncOperationDocuments) == len(f.asyncOperationDocuments) {
 		diff := deep.Equal(all.AsyncOperationDocuments, f.asyncOperationDocuments)
-		if diff != nil {
-			for _, i := range diff {
-				errs = append(errs, errors.New(i))
-			}
+		for _, i := range diff {
+			errs = append(errs, errors.New(i))
 		}
 	} else if len(all.AsyncOperationDocuments) != 0 || len(f.asyncOperationDocuments) != 0 {
 		errs = append(errs, fmt.Errorf("asyncOperations length different, %d vs %d", len(all.AsyncOperationDocuments), len(f.asyncOperationDocuments)))
