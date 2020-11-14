@@ -103,8 +103,8 @@ test-go: generate
 	go vet ./...
 	set -o pipefail && go test -v ./... -coverprofile cover.out | tee uts.txt
 
-lint-go: generate
-	golangci-lint run
+lint-go:
+	go run ./vendor/github.com/golangci/golangci-lint/cmd/golangci-lint run
 
 test-python: generate pyenv az
 	. pyenv/bin/activate && \
@@ -119,4 +119,4 @@ vendor:
 	# https://groups.google.com/forum/#!topic/golang-nuts/51-D_YFC78k
 	hack/update-go-module-dependencies.sh
 
-.PHONY: admin.kubeconfig aro az clean client generate image-aro image-fluentbit image-proxy image-routefix proxy publish-image-aro publish-image-fluentbit publish-image-proxy publish-image-routefix secrets secrets-update e2e.test test-e2e test-go test-python vendor
+.PHONY: admin.kubeconfig aro az clean client generate image-aro image-fluentbit image-proxy image-routefix lint-go proxy publish-image-aro publish-image-fluentbit publish-image-proxy publish-image-routefix secrets secrets-update e2e.test test-e2e test-go test-python vendor
