@@ -185,7 +185,7 @@ func done(ctx context.Context) error {
 var _ = BeforeSuite(func() {
 	log.Info("BeforeSuite")
 
-	SetDefaultEventuallyTimeout(2 * time.Minute)
+	SetDefaultEventuallyTimeout(5 * time.Minute)
 	SetDefaultEventuallyPollingInterval(10 * time.Second)
 
 	if err := setup(context.Background()); err != nil {
