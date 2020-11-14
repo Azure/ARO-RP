@@ -29,7 +29,7 @@ type Interface interface {
 	RefreshAPIResources() error
 	CreateOrUpdate(ctx context.Context, obj *unstructured.Unstructured) error
 	Delete(ctx context.Context, groupKind, namespace, name string) error
-	Ensure(ctx context.Context, o *unstructured.Unstructured) error
+	Ensure(ctx context.Context, objs ...*unstructured.Unstructured) error
 	Get(ctx context.Context, groupKind, namespace, name string) (*unstructured.Unstructured, error)
 	List(ctx context.Context, groupKind, namespace string) (*unstructured.UnstructuredList, error)
 }
@@ -173,7 +173,18 @@ func (dh *dynamicHelper) Delete(ctx context.Context, groupKind, namespace, name 
 // is intended to ensure that an object matches a desired state.  It is tolerant
 // of unspecified fields in the desired state (e.g. it will leave typically
 // leave .status untouched).
-func (dh *dynamicHelper) Ensure(ctx context.Context, o *unstructured.Unstructured) error {
+func (dh *dynamicHelper) Ensure(ctx context.Context, objs ...*unstructured.Unstructured) error {
+	for _, o := range objs {
+		err := dh.ensureOne(ctx, o)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (dh *dynamicHelper) ensureOne(ctx context.Context, o *unstructured.Unstructured) error {
 	gvr, err := dh.findGVR(o.GroupVersionKind().GroupKind().String(), o.GroupVersionKind().Version)
 	if err != nil {
 		return err

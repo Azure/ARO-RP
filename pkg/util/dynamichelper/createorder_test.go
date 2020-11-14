@@ -29,7 +29,7 @@ func TestCreateOrder(t *testing.T) {
 	}
 
 	sort.Slice(test, func(i, j int) bool {
-		return CreateOrder(test[i], test[j])
+		return createOrder(test[i], test[j])
 	})
 
 	if !reflect.DeepEqual(expect, test) {
