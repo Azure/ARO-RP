@@ -55,8 +55,7 @@ class OpenShiftClustersOperations(object):
             self, custom_headers=None, raw=False, **operation_config):
         """Lists OpenShift clusters in the specified subscription.
 
-        Lists OpenShift clusters in the specified subscription.  The operation
-        returns properties of each OpenShift cluster.
+        The operation returns properties of each OpenShift cluster.
 
         :param dict custom_headers: headers that will be added to the request
         :param bool raw: returns the direct response alongside the
@@ -125,8 +124,7 @@ class OpenShiftClustersOperations(object):
         """Lists OpenShift clusters in the specified subscription and resource
         group.
 
-        Lists OpenShift clusters in the specified subscription and resource
-        group.  The operation returns properties of each OpenShift cluster.
+        The operation returns properties of each OpenShift cluster.
 
         :param resource_group_name: The name of the resource group. The name
          is case insensitive.
@@ -199,9 +197,7 @@ class OpenShiftClustersOperations(object):
         """Gets a OpenShift cluster with the specified subscription, resource
         group and resource name.
 
-        Gets a OpenShift cluster with the specified subscription, resource
-        group and resource name.  The operation returns properties of a
-        OpenShift cluster.
+        The operation returns properties of a OpenShift cluster.
 
         :param resource_group_name: The name of the resource group. The name
          is case insensitive.
@@ -319,9 +315,7 @@ class OpenShiftClustersOperations(object):
         """Creates or updates a OpenShift cluster with the specified subscription,
         resource group and resource name.
 
-        Creates or updates a OpenShift cluster with the specified subscription,
-        resource group and resource name.  The operation returns properties of
-        a OpenShift cluster.
+        The operation returns properties of a OpenShift cluster.
 
         :param resource_group_name: The name of the resource group. The name
          is case insensitive.
@@ -414,8 +408,7 @@ class OpenShiftClustersOperations(object):
         """Deletes a OpenShift cluster with the specified subscription, resource
         group and resource name.
 
-        Deletes a OpenShift cluster with the specified subscription, resource
-        group and resource name.  The operation returns nothing.
+        The operation returns nothing.
 
         :param resource_group_name: The name of the resource group. The name
          is case insensitive.
@@ -512,9 +505,7 @@ class OpenShiftClustersOperations(object):
         """Creates or updates a OpenShift cluster with the specified subscription,
         resource group and resource name.
 
-        Creates or updates a OpenShift cluster with the specified subscription,
-        resource group and resource name.  The operation returns properties of
-        a OpenShift cluster.
+        The operation returns properties of a OpenShift cluster.
 
         :param resource_group_name: The name of the resource group. The name
          is case insensitive.
@@ -569,9 +560,7 @@ class OpenShiftClustersOperations(object):
         """Lists credentials of an OpenShift cluster with the specified
         subscription, resource group and resource name.
 
-        Lists credentials of an OpenShift cluster with the specified
-        subscription, resource group and resource name.  The operation returns
-        the credentials.
+        The operation returns the credentials.
 
         :param resource_group_name: The name of the resource group. The name
          is case insensitive.
