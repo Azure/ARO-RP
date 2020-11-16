@@ -322,6 +322,10 @@ func (dv *openShiftClusterDynamicValidator) validateSubnet(ctx context.Context, 
 func (dv *openShiftClusterDynamicValidator) validateVnet(ctx context.Context, vnet *mgmtnetwork.VirtualNetwork) error {
 	dv.log.Print("validateVnet")
 
+	if !strings.EqualFold(*vnet.Location, dv.oc.Location) {
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The vnet location '%s' must match the cluster location '%s'.", *vnet.Location, dv.oc.Location)
+	}
+
 	master, err := dv.validateSubnet(ctx, vnet, "properties.masterProfile.subnetId", dv.oc.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return err

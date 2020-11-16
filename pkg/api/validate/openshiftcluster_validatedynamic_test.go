@@ -194,6 +194,13 @@ func TestValidateVnet(t *testing.T) {
 		{
 			name: "missing subnet (master)",
 			modifyVnet: func(vnet *mgmtnetwork.VirtualNetwork) {
+				vnet.Location = to.StringPtr("westeurope")
+			},
+			wantErr: "400: InvalidLinkedVNet: : The vnet location 'westeurope' must match the cluster location 'eastus'.",
+		},
+		{
+			name: "missing subnet (master)",
+			modifyVnet: func(vnet *mgmtnetwork.VirtualNetwork) {
 				*vnet.Subnets = (*vnet.Subnets)[1:]
 			},
 			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The provided subnet '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/virtualNetworks/testVnet/subnet/masterSubnet' could not be found.",
@@ -343,6 +350,7 @@ func TestValidateVnet(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			oc := &api.OpenShiftCluster{
+				Location: "eastus",
 				Properties: api.OpenShiftClusterProperties{
 					ClusterProfile: api.ClusterProfile{
 						ResourceGroupID: resourceGroupID,
@@ -363,7 +371,8 @@ func TestValidateVnet(t *testing.T) {
 			}
 
 			vnet := &mgmtnetwork.VirtualNetwork{
-				ID: &vnetID,
+				Location: to.StringPtr("eastus"),
+				ID:       &vnetID,
 				VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
 					DhcpOptions: &mgmtnetwork.DhcpOptions{
 						DNSServers: &[]string{},
