@@ -748,6 +748,7 @@ yum -y install azsec-clamav azsec-monitor azure-cli-2.10.1 azure-mdsd azure-secu
   if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
 done
 
+rpm -e $(rpm -qa | grep ^abrt-)
 
 firewall-cmd --add-port=443/tcp --permanent
 
