@@ -9,50 +9,83 @@ Feature work will need to be agreed and converted to working stories. All techni
 
 ### .OpenShiftClusterProperties.SecurityProfile
 
-Add security profile for all security enhancements for the product.
-Proposal is to use new profile structure, so we do not scatter these options
-to corresponding objects. In example, `EncryptionAtHost` can be set on individual
-worker pools. But this creates possibility to configure some nodes with/without
-encryption.
+Add security profile to worker pool configuration for all security enhancements
+for the product compute resource.
 
 We need to make sure that these option are validated on the cluster too when customer is interacting with MachineSet objects. We should be able to verify
 if these options where enabled on cluster create and set those accordingly.
 
-This validation should be part of machine-api webhooks.
-
 ```
-	// The cluster security profile
-	SecurityProfile SecurityProfile `json:"securityProfile,omitempty"`
-```
+	// MasterProfile represents a master profile.
 
-```
-// SecurityProfile represents an security profile
-type SecurityProfile struct {
-	// EncryptionAtHost value sets encryptionAtHost option for all VirtualMachines.
-	EncryptionAtHost *bool `json:"encryptionAtHost,omitempty"`
+type MasterProfile struct {
+	...
 
-	// ManagedDiskEncryptionSetID represents Virtual Machine managed disk DiskEncryptionSetID
-	// encryption
-	ManagedDiskEncryptionSetID string `json:"diskEncryptionSetID,omitempty"`
+	ComputeSecurityProfile ComputeSecurityProfile `json:"securityProfile,omitempty"`
+}
+
+
+// WorkerProfile represents a worker profile.
+type WorkerProfile struct {
+	...
+
+	ComputeSecurityProfile ComputeSecurityProfile `json:"securityProfile,omitempty"`
 }
 ```
 
-### Extend OpenShiftClusterCredentials with GET
-
-Extend `OpenShiftClusterCredentials` where current behaviour (POST to get credentials), is maintained. But if GET call is executed we allow to download kubeConfig for the cluster. This would allow customer to have system credentials in a cold storage if needed and access cluster in case of oAuth or Console outage.
+Re-use same structure for all compute profiles:
+```
+// ComputeSecurityProfile represents an security profile for all compute
+type ComputeSecurityProfile struct {
+	// EncryptionAtHost value sets encryptionAtHost option for all VirtualMachines.
+	EncryptionAtHost *bool `json:"encryptionAtHost,omitempty"`
+}
 
 ```
-	// Downloads kubeconfig file
-	s.Methods(http.MethodGet).HandlerFunc(f.getOpenShiftClusterCredentials).Name("getOpenShiftClusterCredentials")
 
+### Extend OpenShiftClusterCredentials to provide kube-config
+
+For backwards compatability we leave `OpenShiftClusterCredentials` as it is.
+In the future we might want to refactor all this to Separate `AccessProfile` to
+be aligned with AKS. But for now we just do simple extension.
+
+Introduce new structure `OpenShiftClusterAdminCredentials` and extend frontend API with one more method to trigger download of the `adminKubeConfig`
+
+```
+// OpenShiftClusterCredentials represents a default an OpenShift cluster's
+// console credentials
+type OpenShiftClusterCredentials struct {
+	...
+}
+
+// OpenShiftClusterAdminCredentials represents an OpenShift cluster's credentials
+type OpenShiftClusterAdminCredentials struct {
+	// The username for the kubeadmin user
+	KubeadminUsername string `json:"kubeadminUsername,omitempty"`
+
+	// The password for the kubeadmin user
+	KubeadminPassword string `json:"kubeadminPassword,omitempty"`
+}
+
+```
+
+Frontend changes:
+
+```
+	s = r.
+		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/listcredentials/listadminkubeconfig").
+		Queries("api-version", "{api-version}").
+		Subrouter()
+
+	s.Methods(http.MethodPost).HandlerFunc(f.postOpenShiftClusterAdminCredentials).Name("postOpenShiftClusterAdminCredentials")
 ```
 
 ### Add Isolated compute SKUs
 
 For Government cloud we need to extend our current support SKUs with isolated compute SKUs. With adding of https://github.com/Azure/ARO-RP/commit/213abf54a65ff17abeebc214c862a6c6b10c6d82 to our API this should be no-op change for new APIs in the future.
 
-This has hard requirement on OpenShift being able to rotate master nodes,
-as Isolated compute SKU's are retirable, so recovery process is pre-requisite.
+This has hard requirement on OpenShift being able to rotate master nodes in place.
+Isolated compute instances has retire date, this means they are not migrated in the backend and retire notice is given. After this SRE's must perform master node rotation in place to avoid downtime when retirement happens.
 
 Isolated SKUs for decision making:
 
@@ -93,4 +126,8 @@ type NetworkingProfile struct {
 
 1. https://docs.openshift.com/container-platform/4.6/networking/ovn_kubernetes_network_provider/about-ovn-kubernetes.html
 
+
+# Reference:
+
+AKS API Spec: https://github.com/Azure/azure-rest-api-specs/tree/master/specification/containerservice/resource-manager/Microsoft.ContainerService/stable/2020-11-01/examples and https://docs.microsoft.com/en-us/rest/api/container-instances/
 
