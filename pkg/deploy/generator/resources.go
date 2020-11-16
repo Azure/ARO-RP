@@ -709,6 +709,12 @@ func (g *generator) vmss() *arm.Resource {
 	trailer := base64.StdEncoding.EncodeToString([]byte(`
 yum -y update -x WALinuxAgent
 
+lvextend -l +50%FREE /dev/rootvg/rootlv
+xfs_growfs /
+
+lvextend -l +100%FREE /dev/rootvg/varlv
+xfs_growfs /var
+
 # avoid "error: db5 error(-30969) from dbenv->open: BDB0091 DB_VERSION_MISMATCH: Database environment version mismatch"
 rm -f /var/lib/rpm/__db*
 
