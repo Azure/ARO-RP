@@ -45,7 +45,7 @@ func NewOpenShiftClustersClient(subscriptionID string, authorizer autorest.Autho
 		client.Authorizer = authorizer
 	}
 	client.PollingDelay = 10 * time.Second
-	client.PollingDuration = time.Hour
+	client.PollingDuration = 2 * time.Hour
 
 	return &openShiftClustersClient{
 		OpenShiftClustersClient: client,
