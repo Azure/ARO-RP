@@ -47,6 +47,7 @@ var registeredTypes = map[string]asset.Asset{
 	"*bootkube.MachineConfigServerTLSSecret":                  &bootkube.MachineConfigServerTLSSecret{},
 	"*bootkube.OpenshiftConfigSecretPullSecret":               &bootkube.OpenshiftConfigSecretPullSecret{},
 	"*bootkube.OpenshiftMachineConfigOperator":                &bootkube.OpenshiftMachineConfigOperator{},
+	"*bootkube.AROWorkerRegistries":                           &bootkube.AROWorkerRegistries{},
 	"*bootstrap.Bootstrap":                                    &bootstrap.Bootstrap{},
 	"*cluster.Metadata":                                       &clusterAsset.Metadata{},
 	"*cluster.TerraformVariables":                             &clusterAsset.TerraformVariables{},

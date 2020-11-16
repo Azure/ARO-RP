@@ -38,30 +38,13 @@ func failingFunc(context.Context) error { return errors.New("oh no!") }
 
 var clusterOperator = &configv1.ClusterOperator{
 	ObjectMeta: metav1.ObjectMeta{
-		Name: "console",
-	},
-	Status: configv1.ClusterOperatorStatus{
-		Versions: []configv1.OperandVersion{
-			{
-				Name:    "operator",
-				Version: "4.3.0",
-			},
-			{
-				Name:    "operator-good",
-				Version: "4.3.1",
-			},
-		},
+		Name: "operator",
 	},
 }
 
 var clusterVersion = &configv1.ClusterVersion{
 	ObjectMeta: metav1.ObjectMeta{
 		Name: "version",
-	},
-	Status: configv1.ClusterVersionStatus{
-		Desired: configv1.Update{
-			Version: "1.2.3",
-		},
 	},
 }
 
@@ -74,9 +57,7 @@ var node = &corev1.Node{
 var ingressController = &operatorv1.IngressController{
 	ObjectMeta: metav1.ObjectMeta{
 		Namespace: "openshift-ingress-operator",
-	},
-	Spec: operatorv1.IngressControllerSpec{
-		Domain: "aroapp.io",
+		Name:      "ingress-controller",
 	},
 }
 
@@ -109,19 +90,19 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.MatchRegexp(`github.com/Azure/ARO-RP/pkg/cluster.\(\*manager\).logClusterVersion\-fm: {.*"version":"1.2.3".*}`),
+					"msg":   gomega.MatchRegexp(`(?s)github.com/Azure/ARO-RP/pkg/cluster.\(\*manager\).logClusterVersion\-fm:.*"name": "version"`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.MatchRegexp(`github.com/Azure/ARO-RP/pkg/cluster.\(\*manager\).logNodes\-fm: {.*"name":"node".*}`),
+					"msg":   gomega.MatchRegexp(`(?s)github.com/Azure/ARO-RP/pkg/cluster.\(\*manager\).logNodes\-fm:.*"name": "node"`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.MatchRegexp(`github.com/Azure/ARO-RP/pkg/cluster.\(\*manager\).logClusterOperators\-fm: {.*"versions":\[{"name":"operator","version":"4.3.0"},{"name":"operator\-good","version":"4.3.1"}\].*}`),
+					"msg":   gomega.MatchRegexp(`(?s)github.com/Azure/ARO-RP/pkg/cluster.\(\*manager\).logClusterOperators\-fm:.*"name": "operator"`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.MatchRegexp(`github.com/Azure/ARO-RP/pkg/cluster.\(\*manager\).logIngressControllers\-fm: {.*"items":\[{.*"domain":"aroapp.io"}.*\]}`),
+					"msg":   gomega.MatchRegexp(`(?s)github.com/Azure/ARO-RP/pkg/cluster.\(\*manager\).logIngressControllers\-fm:.*"name": "ingress-controller"`),
 				},
 			},
 			kubernetescli: fake.NewSimpleClientset(node),
@@ -149,15 +130,15 @@ func TestStepRunnerWithInstaller(t *testing.T) {
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(`github.com/Azure/ARO-RP/pkg/cluster.(*manager).logNodes-fm: {"metadata":{},"items":null}`),
+					"msg":   gomega.Equal(`github.com/Azure/ARO-RP/pkg/cluster.(*manager).logNodes-fm: null`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(`github.com/Azure/ARO-RP/pkg/cluster.(*manager).logClusterOperators-fm: {"metadata":{},"items":null}`),
+					"msg":   gomega.Equal(`github.com/Azure/ARO-RP/pkg/cluster.(*manager).logClusterOperators-fm: null`),
 				},
 				{
 					"level": gomega.Equal(logrus.InfoLevel),
-					"msg":   gomega.Equal(`github.com/Azure/ARO-RP/pkg/cluster.(*manager).logIngressControllers-fm: {"metadata":{},"items":null}`),
+					"msg":   gomega.Equal(`github.com/Azure/ARO-RP/pkg/cluster.(*manager).logIngressControllers-fm: null`),
 				},
 			},
 			kubernetescli: fake.NewSimpleClientset(),

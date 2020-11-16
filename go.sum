@@ -1071,8 +1071,8 @@ github.com/jessevdk/go-flags v1.4.0/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJS
 github.com/jhump/protoreflect v1.6.0/go.mod h1:eaTn3RZAmMBcV0fifFvlm6VHNz3wSkYyXYWUh7ymB74=
 github.com/jim-minter/go-cosmosdb v0.0.0-20200923160222-1528d2db09d6 h1:4HhzSzhgL1TDsdVqsyifRovCuWwogmz3tL8LQkvqOxQ=
 github.com/jim-minter/go-cosmosdb v0.0.0-20200923160222-1528d2db09d6/go.mod h1:fTvDmpVqcmolOdtE7NltKskFwy8jLRDKHTczX+ZVHTU=
-github.com/jim-minter/installer v0.9.0-master.0.20201104171656-9d8ed4c585f0 h1:CwHhw5zD1ngSg+b8Nu5cmbwDJ9z2vKsHRGMqcxLVU1g=
-github.com/jim-minter/installer v0.9.0-master.0.20201104171656-9d8ed4c585f0/go.mod h1:of/td4KUxV/m+XIW9s801GmNQMXkKr/BshS07qA36vQ=
+github.com/jim-minter/installer v0.9.0-master.0.20201116195329-73508e766328 h1:VFj0GDbMBmqHS4wEDPQDBRDvmuyojy08yrL7//ZDU5Q=
+github.com/jim-minter/installer v0.9.0-master.0.20201116195329-73508e766328/go.mod h1:of/td4KUxV/m+XIW9s801GmNQMXkKr/BshS07qA36vQ=
 github.com/jmespath/go-jmespath v0.0.0-20160202185014-0b12d6b521d8/go.mod h1:Nht3zPeWKUH0NzdCt2Blrr5ys8VGpn0CEB0cQHVjt7k=
 github.com/jmespath/go-jmespath v0.0.0-20160803190731-bd40a432e4c7/go.mod h1:Nht3zPeWKUH0NzdCt2Blrr5ys8VGpn0CEB0cQHVjt7k=
 github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af/go.mod h1:Nht3zPeWKUH0NzdCt2Blrr5ys8VGpn0CEB0cQHVjt7k=

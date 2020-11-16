@@ -11,6 +11,7 @@ import (
 
 	"github.com/ghodss/yaml"
 	"github.com/pkg/errors"
+	"github.com/vincent-petithory/dataurl"
 
 	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/installconfig"
@@ -88,6 +89,7 @@ func (m *Manifests) Dependencies() []asset.Asset {
 		&bootkube.MachineConfigServerTLSSecret{},
 		&bootkube.OpenshiftConfigSecretPullSecret{},
 		&bootkube.OpenshiftMachineConfigOperator{},
+		&bootkube.AROWorkerRegistries{},
 	}
 }
 
@@ -190,6 +192,7 @@ func (m *Manifests) generateBootKubeManifests(dependencies asset.Parents) []*ass
 		McsTLSKey:                  base64.StdEncoding.EncodeToString(mcsCertKey.Key()),
 		PullSecretBase64:           base64.StdEncoding.EncodeToString([]byte(installConfig.Config.PullSecret)),
 		RootCaCert:                 string(rootCA.Cert()),
+		AROWorkerRegistries:        aroWorkerRegistries(installConfig.Config.ImageContentSources),
 	}
 
 	files := []*asset.File{}
@@ -211,6 +214,7 @@ func (m *Manifests) generateBootKubeManifests(dependencies asset.Parents) []*ass
 		&bootkube.MachineConfigServerTLSSecret{},
 		&bootkube.OpenshiftConfigSecretPullSecret{},
 		&bootkube.OpenshiftMachineConfigOperator{},
+		&bootkube.AROWorkerRegistries{},
 	} {
 		dependencies.Get(a)
 		for _, f := range a.Files() {
@@ -279,4 +283,23 @@ func redactedInstallConfig(config types.InstallConfig) ([]byte, error) {
 func indent(indention int, v string) string {
 	newline := "\n" + strings.Repeat(" ", indention)
 	return strings.Replace(v, "\n", newline, -1)
+}
+
+func aroWorkerRegistries(icss []types.ImageContentSource) string {
+	b := &bytes.Buffer{}
+
+	fmt.Fprintf(b, "unqualified-search-registries = [\"registry.access.redhat.com\", \"docker.io\"]\n")
+
+	for _, ics := range icss {
+		fmt.Fprintf(b, "\n[[registry]]\n  prefix = \"\"\n  location = \"%s\"\n  mirror-by-digest-only = true\n", ics.Source)
+
+		for _, mirror := range ics.Mirrors {
+			fmt.Fprintf(b, "\n  [[registry.mirror]]\n    location = \"%s\"\n", mirror)
+		}
+	}
+
+	du := dataurl.New(b.Bytes(), "text/plain")
+	du.Encoding = dataurl.EncodingASCII
+
+	return du.String()
 }

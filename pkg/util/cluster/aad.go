@@ -22,11 +22,14 @@ func (c *Cluster) getServicePrincipal(ctx context.Context, appID string) (string
 		return "", err
 	}
 
-	if len(sps) != 1 {
+	switch len(sps) {
+	case 0:
+		return "", nil
+	case 1:
+		return *sps[0].ObjectID, nil
+	default:
 		return "", fmt.Errorf("%d service principals found for appId %s", len(sps), appID)
 	}
-
-	return *sps[0].ObjectID, nil
 }
 
 func (c *Cluster) createApplication(ctx context.Context, displayName string) (string, string, error) {

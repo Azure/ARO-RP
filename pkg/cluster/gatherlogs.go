@@ -24,11 +24,8 @@ func (m *manager) gatherFailureLogs(ctx context.Context) {
 			m.log.Error(err)
 			continue
 		}
-		if o == nil {
-			continue
-		}
 
-		b, err := json.Marshal(o)
+		b, err := json.MarshalIndent(o, "", "    ")
 		if err != nil {
 			m.log.Error(err)
 			continue
@@ -51,7 +48,12 @@ func (m *manager) logNodes(ctx context.Context) (interface{}, error) {
 		return nil, nil
 	}
 
-	return m.kubernetescli.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	nodes, err := m.kubernetescli.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return nodes.Items, nil
 }
 
 func (m *manager) logClusterOperators(ctx context.Context) (interface{}, error) {
@@ -59,7 +61,12 @@ func (m *manager) logClusterOperators(ctx context.Context) (interface{}, error) 
 		return nil, nil
 	}
 
-	return m.configcli.ConfigV1().ClusterOperators().List(ctx, metav1.ListOptions{})
+	cos, err := m.configcli.ConfigV1().ClusterOperators().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return cos.Items, nil
 }
 
 func (m *manager) logIngressControllers(ctx context.Context) (interface{}, error) {
@@ -67,5 +74,10 @@ func (m *manager) logIngressControllers(ctx context.Context) (interface{}, error
 		return nil, nil
 	}
 
-	return m.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").List(ctx, metav1.ListOptions{})
+	ics, err := m.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return ics.Items, nil
 }

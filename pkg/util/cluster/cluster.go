@@ -118,6 +118,9 @@ func (c *Cluster) Create(ctx context.Context, clusterName string) error {
 	if err != nil {
 		return err
 	}
+	if fpSPID == "" {
+		return fmt.Errorf("service principal not found for appId %s", fpClientID)
+	}
 
 	c.log.Infof("creating AAD application")
 	appID, appSecret, err := c.createApplication(ctx, "aro-"+clusterName)
@@ -377,6 +380,9 @@ func (c *Cluster) deleteRoleAssignments(ctx context.Context, appID string) error
 	spObjID, err := c.getServicePrincipal(ctx, appID)
 	if err != nil {
 		return err
+	}
+	if spObjID == "" {
+		return nil
 	}
 
 	roleAssignments, err := c.roleassignments.ListForResourceGroup(ctx, c.ResourceGroup(), fmt.Sprintf("principalId eq '%s'", spObjID))
