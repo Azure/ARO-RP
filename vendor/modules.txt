@@ -366,7 +366,7 @@ github.com/hashicorp/golang-lru/simplelru
 github.com/imdario/mergo
 # github.com/inconshreveable/mousetrap v1.0.0
 github.com/inconshreveable/mousetrap
-# github.com/jim-minter/go-cosmosdb v0.0.0-20200923160222-1528d2db09d6
+# github.com/jim-minter/go-cosmosdb v0.0.0-20201117192055-43b4b21373cc
 ## explicit
 github.com/jim-minter/go-cosmosdb/cmd/gencosmosdb
 github.com/jim-minter/go-cosmosdb/pkg/gencosmosdb
@@ -811,7 +811,6 @@ golang.org/x/oauth2/jwt
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
 # golang.org/x/sys v0.0.0-20201116194326-cc9327a14d48
-## explicit
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/plan9
