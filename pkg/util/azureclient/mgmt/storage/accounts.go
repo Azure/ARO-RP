@@ -13,7 +13,6 @@ import (
 // AccountsClient is a minimal interface for azure AccountsClient
 type AccountsClient interface {
 	ListAccountSAS(ctx context.Context, resourceGroupName string, accountName string, parameters mgmtstorage.AccountSasParameters) (result mgmtstorage.ListAccountSasResponse, err error)
-	ListByResourceGroup(context context.Context, resourceGroup string) (mgmtstorage.AccountListResult, error)
 	ListKeys(ctx context.Context, resourceGroupName string, accountName string, expand mgmtstorage.ListKeyExpand) (result mgmtstorage.AccountListKeysResult, err error)
 	AccountsClientAddons
 }
