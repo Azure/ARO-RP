@@ -666,6 +666,7 @@ func (g *generator) vmss() *arm.Resource {
 		"rpImage",
 		"rpMode",
 		"adminApiClientCertCommonName",
+		"databaseAccountName",
 	} {
 		parts = append(parts,
 			fmt.Sprintf("'%s=$(base64 -d <<<'''", strings.ToUpper(variable)),
@@ -709,6 +710,12 @@ func (g *generator) vmss() *arm.Resource {
 	trailer := base64.StdEncoding.EncodeToString([]byte(`
 yum -y update -x WALinuxAgent
 
+lvextend -l +50%FREE /dev/rootvg/rootlv
+xfs_growfs /
+
+lvextend -l +100%FREE /dev/rootvg/varlv
+xfs_growfs /var
+
 # avoid "error: db5 error(-30969) from dbenv->open: BDB0091 DB_VERSION_MISMATCH: Database environment version mismatch"
 rm -f /var/lib/rpm/__db*
 
@@ -749,6 +756,10 @@ yum -y install azsec-clamav azsec-monitor azure-cli-2.10.1 azure-mdsd azure-secu
 done
 
 rpm -e $(rpm -qa | grep ^abrt-)
+cat >/etc/sysctl.d/01-disable-core.conf <<'EOF'
+kernel.core_pattern = |/bin/true
+EOF
+sysctl --system
 
 firewall-cmd --add-port=443/tcp --permanent
 
@@ -871,6 +882,7 @@ MDM_ACCOUNT=AzureRedHatOpenShiftRP
 MDM_NAMESPACE=RP
 ACR_RESOURCE_ID='$ACRRESOURCEID'
 ADMIN_API_CLIENT_CERT_COMMON_NAME='$ADMINAPICLIENTCERTCOMMONNAME'
+DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
 RPIMAGE='$RPIMAGE'
 RP_MODE='$RPMODE'
 EOF
@@ -890,6 +902,7 @@ ExecStart=/usr/bin/docker run \
   -e MDM_ACCOUNT \
   -e MDM_NAMESPACE \
   -e ADMIN_API_CLIENT_CERT_COMMON_NAME \
+  -e DATABASE_ACCOUNT_NAME \
   -e RP_MODE \
   -e ACR_RESOURCE_ID \
   -m 2g \
@@ -914,6 +927,7 @@ MDM_ACCOUNT=AzureRedHatOpenShiftRP
 MDM_NAMESPACE=BBM
 CLUSTER_MDM_ACCOUNT=AzureRedHatOpenShiftCluster
 CLUSTER_MDM_NAMESPACE=BBM
+DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
 RPIMAGE='$RPIMAGE'
 RP_MODE='$RPMODE'
 EOF
@@ -932,6 +946,7 @@ ExecStart=/usr/bin/docker run \
   --rm \
   -e CLUSTER_MDM_ACCOUNT \
   -e CLUSTER_MDM_NAMESPACE \
+  -e DATABASE_ACCOUNT_NAME \
   -e MDM_ACCOUNT \
   -e MDM_NAMESPACE \
   -e RP_MODE \

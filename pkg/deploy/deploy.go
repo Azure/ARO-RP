@@ -150,7 +150,7 @@ func (d *deployer) Deploy(ctx context.Context) error {
 		if serviceErr, ok := err.(*azure.ServiceError); ok &&
 			serviceErr.Code == "DeploymentFailed" &&
 			d.fullDeploy &&
-			i == 0 {
+			i < 1 {
 			// on new RP deployments, we get a spurious DeploymentFailed error
 			// from the Microsoft.Insights/metricAlerts resources indicating
 			// that rp-lb can't be found, even though it exists and the
