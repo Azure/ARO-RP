@@ -294,15 +294,15 @@ func (e *Encoder) kSeqFn(rtelem reflect.Type) (fn *codecFn) {
 }
 
 func (e *Encoder) kSliceWMbs(rv reflect.Value, ti *typeInfo) {
-	var l = rvGetSliceLen(rv)
+	var l = rvLenSlice(rv)
 	if l == 0 {
 		e.mapStart(0)
 	} else {
 		e.haltOnMbsOddLen(l)
-		e.mapStart(l / 2)
+		e.mapStart(l >> 1) // e.mapStart(l / 2)
 		fn := e.kSeqFn(ti.elem)
 		for j := 0; j < l; j++ {
-			if j%2 == 0 {
+			if j&1 == 0 { // j%2 == 0 {
 				e.mapElemKey()
 			} else {
 				e.mapElemValue()
@@ -314,7 +314,7 @@ func (e *Encoder) kSliceWMbs(rv reflect.Value, ti *typeInfo) {
 }
 
 func (e *Encoder) kSliceW(rv reflect.Value, ti *typeInfo) {
-	var l = rvGetSliceLen(rv)
+	var l = rvLenSlice(rv)
 	e.arrayStart(l)
 	if l > 0 {
 		fn := e.kSeqFn(ti.elem)
@@ -326,16 +326,16 @@ func (e *Encoder) kSliceW(rv reflect.Value, ti *typeInfo) {
 	e.arrayEnd()
 }
 
-func (e *Encoder) kSeqWMbs(rv reflect.Value, ti *typeInfo) {
-	var l = rv.Len()
+func (e *Encoder) kArrayWMbs(rv reflect.Value, ti *typeInfo) {
+	var l = rvLenArray(rv)
 	if l == 0 {
 		e.mapStart(0)
 	} else {
 		e.haltOnMbsOddLen(l)
-		e.mapStart(l / 2)
+		e.mapStart(l >> 1) // e.mapStart(l / 2)
 		fn := e.kSeqFn(ti.elem)
 		for j := 0; j < l; j++ {
-			if j%2 == 0 {
+			if j&1 == 0 { // j%2 == 0 {
 				e.mapElemKey()
 			} else {
 				e.mapElemValue()
@@ -346,8 +346,8 @@ func (e *Encoder) kSeqWMbs(rv reflect.Value, ti *typeInfo) {
 	e.mapEnd()
 }
 
-func (e *Encoder) kSeqW(rv reflect.Value, ti *typeInfo) {
-	var l = rv.Len()
+func (e *Encoder) kArrayW(rv reflect.Value, ti *typeInfo) {
+	var l = rvLenArray(rv)
 	e.arrayStart(l)
 	if l > 0 {
 		fn := e.kSeqFn(ti.elem)
@@ -380,24 +380,20 @@ func (e *Encoder) kChan(f *codecFnInfo, rv reflect.Value) {
 func (e *Encoder) kSlice(f *codecFnInfo, rv reflect.Value) {
 	if f.ti.mbs {
 		e.kSliceWMbs(rv, f.ti)
+	} else if f.ti.rtid == uint8SliceTypId || uint8TypId == rt2id(f.ti.elem) {
+		e.e.EncodeStringBytesRaw(rvGetBytes(rv))
 	} else {
-		if f.ti.rtid == uint8SliceTypId || uint8TypId == rt2id(f.ti.elem) {
-			e.e.EncodeStringBytesRaw(rvGetBytes(rv))
-		} else {
-			e.kSliceW(rv, f.ti)
-		}
+		e.kSliceW(rv, f.ti)
 	}
 }
 
 func (e *Encoder) kArray(f *codecFnInfo, rv reflect.Value) {
 	if f.ti.mbs {
-		e.kSeqWMbs(rv, f.ti)
+		e.kArrayWMbs(rv, f.ti)
+	} else if uint8TypId == rt2id(f.ti.elem) {
+		e.e.EncodeStringBytesRaw(rvGetArrayBytesRO(rv, e.b[:]))
 	} else {
-		if uint8TypId == rt2id(f.ti.elem) {
-			e.e.EncodeStringBytesRaw(rvGetArrayBytesRO(rv, e.b[:]))
-		} else {
-			e.kSeqW(rv, f.ti)
-		}
+		e.kArrayW(rv, f.ti)
 	}
 }
 
@@ -458,7 +454,7 @@ func (e *Encoder) kStructNoOmitempty(f *codecFnInfo, rv reflect.Value) {
 		e.arrayStart(len(f.ti.sfiSrc))
 		for _, si := range f.ti.sfiSrc {
 			e.arrayElem()
-			e.encodeValue(si.field(rv), nil)
+			e.encodeValue(si.path.field(rv), nil)
 		}
 		e.arrayEnd()
 	} else {
@@ -466,9 +462,9 @@ func (e *Encoder) kStructNoOmitempty(f *codecFnInfo, rv reflect.Value) {
 		e.mapStart(len(tisfi))
 		for _, si := range tisfi {
 			e.mapElemKey()
-			e.kStructFieldKey(f.ti.keyType, si.encNameAsciiAlphaNum, si.encName)
+			e.kStructFieldKey(f.ti.keyType, si.path.encNameAsciiAlphaNum, si.encName)
 			e.mapElemValue()
-			e.encodeValue(si.field(rv), nil)
+			e.encodeValue(si.path.field(rv), nil)
 		}
 		e.mapEnd()
 	}
@@ -482,11 +478,11 @@ func (e *Encoder) kStruct(f *codecFnInfo, rv reflect.Value) {
 	var newlen int
 	toMap := !(f.ti.toArray || e.h.StructToArray)
 	var mf map[string]interface{}
-	if f.ti.isFlag(tiflagMissingFielder) {
+	if f.ti.flagMissingFielder {
 		mf = rv2i(rv).(MissingFielder).CodecMissingFields()
 		toMap = true
 		newlen += len(mf)
-	} else if f.ti.isFlag(tiflagMissingFielderPtr) {
+	} else if f.ti.flagMissingFielderPtr {
 		if rv.CanAddr() {
 			mf = rv2i(rv.Addr()).(MissingFielder).CodecMissingFields()
 		} else {
@@ -500,7 +496,7 @@ func (e *Encoder) kStruct(f *codecFnInfo, rv reflect.Value) {
 	}
 	newlen += len(f.ti.sfiSrc)
 
-	var fkvs = e.slist.get(newlen)
+	var fkvs = e.slist.get(newlen)[:newlen]
 
 	recur := e.h.RecursiveEmptyCheck
 
@@ -509,8 +505,8 @@ func (e *Encoder) kStruct(f *codecFnInfo, rv reflect.Value) {
 	if toMap {
 		newlen = 0
 		for _, si := range e.kStructSfi(f) {
-			kv.r = si.field(rv)
-			if si.omitEmpty && isEmptyValue(kv.r, e.h.TypeInfos, recur) {
+			kv.r = si.path.field(rv)
+			if si.path.omitEmpty && isEmptyValue(kv.r, e.h.TypeInfos, recur) {
 				continue
 			}
 			kv.v = si
@@ -534,7 +530,7 @@ func (e *Encoder) kStruct(f *codecFnInfo, rv reflect.Value) {
 		for j = 0; j < newlen; j++ {
 			kv = fkvs[j]
 			e.mapElemKey()
-			e.kStructFieldKey(f.ti.keyType, kv.v.encNameAsciiAlphaNum, kv.v.encName)
+			e.kStructFieldKey(f.ti.keyType, kv.v.path.encNameAsciiAlphaNum, kv.v.encName)
 			e.mapElemValue()
 			e.encodeValue(kv.r, nil)
 		}
@@ -549,10 +545,10 @@ func (e *Encoder) kStruct(f *codecFnInfo, rv reflect.Value) {
 	} else {
 		newlen = len(f.ti.sfiSrc)
 		for i, si := range f.ti.sfiSrc { // use unsorted array (to match sequence in struct)
-			kv.r = si.field(rv)
+			kv.r = si.path.field(rv)
 			// use the zero value.
 			// if a reference or struct, set to nil (so you do not output too much)
-			if si.omitEmpty && isEmptyValue(kv.r, e.h.TypeInfos, recur) {
+			if si.path.omitEmpty && isEmptyValue(kv.r, e.h.TypeInfos, recur) {
 				switch kv.r.Kind() {
 				case reflect.Struct, reflect.Interface, reflect.Ptr, reflect.Array, reflect.Map, reflect.Slice:
 					kv.r = reflect.Value{} //encode as nil
@@ -576,7 +572,7 @@ func (e *Encoder) kStruct(f *codecFnInfo, rv reflect.Value) {
 }
 
 func (e *Encoder) kMap(f *codecFnInfo, rv reflect.Value) {
-	l := rv.Len()
+	l := rvLenMap(rv)
 	e.mapStart(l)
 	if l == 0 {
 		e.mapEnd()
@@ -630,28 +626,15 @@ func (e *Encoder) kMap(f *codecFnInfo, rv reflect.Value) {
 	var it mapIter
 	mapRange(&it, rv, rvk, rvv, true)
 
-	if it.ValidKV() {
-		for it.Next() {
-			e.mapElemKey()
-			if keyTypeIsString {
-				e.e.EncodeString(it.Key().String())
-			} else {
-				e.encodeValue(it.Key(), keyFn)
-			}
-			e.mapElemValue()
-			e.encodeValue(it.Value(), valFn)
+	for it.Next() {
+		e.mapElemKey()
+		if keyTypeIsString {
+			e.e.EncodeString(it.Key().String())
+		} else {
+			e.encodeValue(it.Key(), keyFn)
 		}
-	} else {
-		for it.Next() {
-			e.mapElemKey()
-			if keyTypeIsString {
-				e.e.EncodeString(rvk.String())
-			} else {
-				e.encodeValue(rvk, keyFn)
-			}
-			e.mapElemValue()
-			e.encodeValue(rvv, valFn)
-		}
+		e.mapElemValue()
+		e.encodeValue(it.Value(), valFn)
 	}
 	it.Done()
 
@@ -1309,7 +1292,7 @@ func (e *Encoder) arrayEnd() {
 // ----------
 
 func (e *Encoder) haltOnMbsOddLen(length int) {
-	if length%2 == 1 {
+	if length&1 != 0 { // similar to &1==1 or %2 == 1
 		e.errorf("mapBySlice requires even slice length, but got %v", length)
 	}
 }

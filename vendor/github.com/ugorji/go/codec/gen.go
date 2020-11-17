@@ -118,7 +118,8 @@ import (
 // v17: 20200911 reduce number of types for which we generate fast path functions (v1.1.8)
 // v18: 20201004 changed definition of genHelper...Extension (to take interface{}) and eliminated I2Rtid method
 // v19: 20201115 updated codecgen cmdline flags and optimized output
-const genVersion = 19
+// v20: 20201120 refactored GenHelper to one exported function
+const genVersion = 20
 
 const (
 	genCodecPkg        = "codec1978" // MARKER: keep in sync with codecgen/gen.go
@@ -454,9 +455,9 @@ func (x *genRunner) arr2str(t reflect.Type, s string) string {
 func (x *genRunner) genRequiredMethodVars(encode bool) {
 	x.line("var h " + x.hn)
 	if encode {
-		x.line("z, r := " + x.cpfx + "GenHelperEncoder(e)")
+		x.line("z, r := " + x.cpfx + "GenHelper().Encoder(e)")
 	} else {
-		x.line("z, r := " + x.cpfx + "GenHelperDecoder(d)")
+		x.line("z, r := " + x.cpfx + "GenHelper().Decoder(d)")
 	}
 	x.line("_, _, _ = h, z, r")
 }
@@ -638,11 +639,12 @@ func (x *genRunner) tryGenIsZero(t reflect.Type) (done bool) {
 	anonSeen := make(map[reflect.Type]bool)
 	var omitline genBuf
 	for _, si := range tisfi {
-		if len(si.path) > 1 {
-			if anonSeen[si.path[0].typ] {
+		if si.path.parent != nil {
+			root := si.path.root()
+			if anonSeen[root.typ] {
 				continue
 			}
-			anonSeen[si.path[0].typ] = true
+			anonSeen[root.typ] = true
 		}
 		t2 := genOmitEmptyLinePreChecks(varname, t, si, &omitline, true)
 		// if Ptr, we already checked if nil above
@@ -867,10 +869,10 @@ func (x *genRunner) enc(varname string, t reflect.Type, isptr bool) {
 	}
 
 	if x.checkForSelfer(t, varname) {
-		if ti2.isFlag(tiflagSelfer) {
+		if ti2.flagSelfer {
 			x.linef("%s %s.CodecEncodeSelf(e)", hasIf.c(true), varname)
 			return
-		} else if ti2.isFlag(tiflagSelferPtr) {
+		} else if ti2.flagSelferPtr {
 			x.linef("%s %ssf%s := &%s", hasIf.c(true), genTempVarPfx, mi, varname)
 			x.linef("%ssf%s.CodecEncodeSelf(e)", genTempVarPfx, mi)
 			return
@@ -900,19 +902,19 @@ func (x *genRunner) enc(varname string, t reflect.Type, isptr bool) {
 		rtidAdded = true
 	}
 
-	if ti2.isFlag(tiflagBinaryMarshaler) {
+	if ti2.flagBinaryMarshaler {
 		x.linef("%s z.EncBinary() { z.EncBinaryMarshal(%s%v) ", hasIf.c(false), ptrPfx, varname)
-	} else if ti2.isFlag(tiflagBinaryMarshalerPtr) {
+	} else if ti2.flagBinaryMarshalerPtr {
 		x.linef("%s z.EncBinary() { z.EncBinaryMarshal(%s%v) ", hasIf.c(false), addrPfx, varname)
 	}
 
-	if ti2.isFlag(tiflagJsonMarshaler) {
+	if ti2.flagJsonMarshaler {
 		x.linef("%s !z.EncBinary() && z.IsJSONHandle() { z.EncJSONMarshal(%s%v) ", hasIf.c(false), ptrPfx, varname)
-	} else if ti2.isFlag(tiflagJsonMarshalerPtr) {
+	} else if ti2.flagJsonMarshalerPtr {
 		x.linef("%s !z.EncBinary() && z.IsJSONHandle() { z.EncJSONMarshal(%s%v) ", hasIf.c(false), addrPfx, varname)
-	} else if ti2.isFlag(tiflagTextMarshaler) {
+	} else if ti2.flagTextMarshaler {
 		x.linef("%s !z.EncBinary() { z.EncTextMarshal(%s%v) ", hasIf.c(false), ptrPfx, varname)
-	} else if ti2.isFlag(tiflagTextMarshalerPtr) {
+	} else if ti2.flagTextMarshalerPtr {
 		x.linef("%s !z.EncBinary() { z.EncTextMarshal(%s%v) ", hasIf.c(false), addrPfx, varname)
 	}
 
@@ -946,7 +948,7 @@ func (x *genRunner) enc(varname string, t reflect.Type, isptr bool) {
 		x.linef("if %s == nil { r.EncodeNil() } else {", varname)
 		if rtid == uint8SliceTypId {
 			x.line("r.EncodeStringBytesRaw([]byte(" + varname + "))")
-		} else if fastpathAV.index(rtid) != -1 {
+		} else if fastpathAvIndex(rtid) != -1 {
 			g := x.newFastpathGenV(t)
 			x.line("z.F." + g.MethodNamePfx("Enc", false) + "V(" + varname + ", e)")
 		} else {
@@ -960,7 +962,7 @@ func (x *genRunner) enc(varname string, t reflect.Type, isptr bool) {
 		// - if elements are primitives or Selfers, call dedicated function on each member.
 		// - else call Encoder.encode(XXX) on it.
 		x.linef("if %s == nil { r.EncodeNil() } else {", varname)
-		if fastpathAV.index(rtid) != -1 {
+		if fastpathAvIndex(rtid) != -1 {
 			g := x.newFastpathGenV(t)
 			x.line("z.F." + g.MethodNamePfx("Enc", false) + "V(" + varname + ", e)")
 		} else {
@@ -1007,20 +1009,20 @@ func genOmitEmptyLinePreChecks(varname string, t reflect.Type, si *structFieldIn
 	varname3 := varname
 	// go through the loop, record the t2 field explicitly,
 	// and gather the omit line if embedded in pointers.
-	lp := len(si.path)
-	for ij := 0; ij < lp; ij++ {
+	fullpath := si.path.fullpath()
+	for i, path := range fullpath {
 		for t2typ.Kind() == reflect.Ptr {
 			t2typ = t2typ.Elem()
 		}
-		t2 = t2typ.Field(int(si.path[ij].index))
+		t2 = t2typ.Field(int(path.index))
 		t2typ = t2.Type
 		varname3 = varname3 + "." + t2.Name
 		// do not include actual field in the omit line.
 		// that is done subsequently (right after - below).
-		if ij+1 < lp && t2typ.Kind() == reflect.Ptr {
+		if i+1 < len(fullpath) && t2typ.Kind() == reflect.Ptr {
 			omitline.s(varname3).s(" != nil && ")
 		}
-		if oneLevel && ij == 0 {
+		if oneLevel {
 			break
 		}
 	}
@@ -1046,7 +1048,7 @@ func (x *genRunner) encOmitEmptyLine(t2 reflect.StructField, varname string, buf
 			buf.s("!(").s(varname2).s(".IsZero())")
 			break
 		}
-		if ti2.isFlag(tiflagIsZeroerPtr) || ti2.isFlag(tiflagIsZeroer) {
+		if ti2.flagIsZeroerPtr || ti2.flagIsZeroer {
 			buf.s("!(").s(varname2).s(".IsZero())")
 			break
 		}
@@ -1066,7 +1068,7 @@ func (x *genRunner) encOmitEmptyLine(t2 reflect.StructField, varname string, buf
 			buf.s("!(").s(varname2).s(".IsCodecEmpty())")
 			break
 		}
-		if ti2.isFlag(tiflagComparable) {
+		if ti2.flagComparable {
 			buf.s(varname2).s(" != ").s(x.genZeroValueR(t2.Type))
 			break
 		}
@@ -1124,12 +1126,12 @@ func (x *genRunner) encStruct(varname string, rtid uintptr, t reflect.Type) {
 		q.fqname = varname
 		{
 			t2typ := t
-			lp := len(si.path)
-			for ij := 0; ij < lp; ij++ {
+			fullpath := si.path.fullpath()
+			for _, path := range fullpath {
 				for t2typ.Kind() == reflect.Ptr {
 					t2typ = t2typ.Elem()
 				}
-				q.sf = t2typ.Field(int(si.path[ij].index))
+				q.sf = t2typ.Field(int(path.index))
 				t2typ = q.sf.Type
 				q.fqname += "." + q.sf.Name
 				if t2typ.Kind() == reflect.Ptr {
@@ -1174,14 +1176,14 @@ func (x *genRunner) encStruct(varname string, rtid uintptr, t reflect.Type) {
 		x.linef("var %s = [%v]bool{ // should field at this index be written?", numfieldsvar, len(tisfi))
 
 		for _, si := range tisfi {
-			if omitEmptySometimes && !si.omitEmpty {
-				x.linef("true, // %s", si.fieldName)
+			if omitEmptySometimes && !si.path.omitEmpty {
+				x.linef("true, // %s", si.encName) // si.fieldName)
 				continue
 			}
 			var omitline genBuf
 			t2 := genOmitEmptyLinePreChecks(varname, t, si, &omitline, false)
 			x.doEncOmitEmptyLine(t2, varname, &omitline)
-			x.linef("%s, // %s", omitline.v(), si.fieldName)
+			x.linef("%s, // %s", omitline.v(), si.encName) // si.fieldName)
 		}
 		x.line("}")
 		x.linef("_ = %s", numfieldsvar)
@@ -1194,7 +1196,7 @@ func (x *genRunner) encStruct(varname string, rtid uintptr, t reflect.Type) {
 		x.linef("z.EncWriteArrayStart(%d)", len(tisfi))
 
 		for j, si := range tisfi {
-			doOmitEmptyCheck := (omitEmptySometimes && si.omitEmpty) || omitEmptyAlways
+			doOmitEmptyCheck := (omitEmptySometimes && si.path.omitEmpty) || omitEmptyAlways
 			q := &genFQNs[j]
 			// if the type of the field is a Selfer, or one of the ones
 			if q.canNil {
@@ -1232,7 +1234,7 @@ func (x *genRunner) encStruct(varname string, rtid uintptr, t reflect.Type) {
 
 		for j, si := range tisfi {
 			q := &genFQNs[j]
-			doOmitEmptyCheck := (omitEmptySometimes && si.omitEmpty) || omitEmptyAlways
+			doOmitEmptyCheck := (omitEmptySometimes && si.path.omitEmpty) || omitEmptyAlways
 			if doOmitEmptyCheck {
 				x.linef("if %s[%v] {", numfieldsvar, j)
 			}
@@ -1248,15 +1250,15 @@ func (x *genRunner) encStruct(varname string, rtid uintptr, t reflect.Type) {
 				x.linef("r.EncodeFloat64(z.M.Float(strconv.ParseFloat(`%s`, 64)))", si.encName)
 			default: // string
 				if x.jsonOnlyWhen == nil {
-					if si.encNameAsciiAlphaNum {
+					if si.path.encNameAsciiAlphaNum {
 						x.linef(`if z.IsJSONHandle() { z.WriteStr("\"%s\"") } else { `, si.encName)
 					}
 					x.linef("r.EncodeString(`%s`)", si.encName)
-					if si.encNameAsciiAlphaNum {
+					if si.path.encNameAsciiAlphaNum {
 						x.linef("}")
 					}
 				} else if *(x.jsonOnlyWhen) {
-					if si.encNameAsciiAlphaNum {
+					if si.path.encNameAsciiAlphaNum {
 						x.linef(`z.WriteStr("\"%s\"")`, si.encName)
 					} else {
 						x.linef("r.EncodeString(`%s`)", si.encName)
@@ -1349,13 +1351,13 @@ func (x *genRunner) decVarInitPtr(varname, nilvar string, t reflect.Type, si *st
 	t2kind := t2typ.Kind()
 	var nilbufed bool
 	if si != nil {
-		lp := len(si.path)
-		for ij := 0; ij < lp; ij++ {
+		fullpath := si.path.fullpath()
+		for _, path := range fullpath {
 			// only one-level pointers can be seen in a type
 			if t2typ.Kind() == reflect.Ptr {
 				t2typ = t2typ.Elem()
 			}
-			t2 = t2typ.Field(int(si.path[ij].index))
+			t2 = t2typ.Field(int(path.index))
 			t2typ = t2.Type
 			varname3 = varname3 + "." + t2.Name
 			t2kind = t2typ.Kind()
@@ -1508,11 +1510,11 @@ func (x *genRunner) dec(varname string, t reflect.Type, isptr bool) {
 	}
 
 	if x.checkForSelfer(t, varname) {
-		if ti2.isFlag(tiflagSelfer) {
+		if ti2.flagSelfer {
 			x.linef("%s %s.CodecDecodeSelf(d)", hasIf.c(true), varname)
 			return
 		}
-		if ti2.isFlag(tiflagSelferPtr) {
+		if ti2.flagSelferPtr {
 			x.linef("%s %s.CodecDecodeSelf(d)", hasIf.c(true), varname)
 			return
 		}
@@ -1540,18 +1542,18 @@ func (x *genRunner) dec(varname string, t reflect.Type, isptr bool) {
 		rtidAdded = true
 	}
 
-	if ti2.isFlag(tiflagBinaryUnmarshaler) {
+	if ti2.flagBinaryUnmarshaler {
 		x.linef("%s z.DecBinary() { z.DecBinaryUnmarshal(%s%v) ", hasIf.c(false), ptrPfx, varname)
-	} else if ti2.isFlag(tiflagBinaryUnmarshalerPtr) {
+	} else if ti2.flagBinaryUnmarshalerPtr {
 		x.linef("%s z.DecBinary() { z.DecBinaryUnmarshal(%s%v) ", hasIf.c(false), addrPfx, varname)
 	}
-	if ti2.isFlag(tiflagJsonUnmarshaler) {
+	if ti2.flagJsonUnmarshaler {
 		x.linef("%s !z.DecBinary() && z.IsJSONHandle() { z.DecJSONUnmarshal(%s%v)", hasIf.c(false), ptrPfx, varname)
-	} else if ti2.isFlag(tiflagJsonUnmarshalerPtr) {
+	} else if ti2.flagJsonUnmarshalerPtr {
 		x.linef("%s !z.DecBinary() && z.IsJSONHandle() { z.DecJSONUnmarshal(%s%v)", hasIf.c(false), addrPfx, varname)
-	} else if ti2.isFlag(tiflagTextUnmarshaler) {
+	} else if ti2.flagTextUnmarshaler {
 		x.linef("%s !z.DecBinary() { z.DecTextUnmarshal(%s%v)", hasIf.c(false), ptrPfx, varname)
-	} else if ti2.isFlag(tiflagTextUnmarshalerPtr) {
+	} else if ti2.flagTextUnmarshalerPtr {
 		x.linef("%s !z.DecBinary() { z.DecTextUnmarshal(%s%v)", hasIf.c(false), addrPfx, varname)
 	}
 
@@ -1573,7 +1575,7 @@ func (x *genRunner) dec(varname string, t reflect.Type, isptr bool) {
 		if rtid == uint8SliceTypId {
 			x.linef("%s%s = r.DecodeBytes(%s(%s[]byte)(%s), false)",
 				ptrPfx, varname, ptrPfx, ptrPfx, varname)
-		} else if fastpathAV.index(rtid) != -1 {
+		} else if fastpathAvIndex(rtid) != -1 {
 			g := x.newFastpathGenV(t)
 			x.linef("z.F.%sX(%s%s, d)", g.MethodNamePfx("Dec", false), addrPfx, varname)
 		} else {
@@ -1585,7 +1587,7 @@ func (x *genRunner) dec(varname string, t reflect.Type, isptr bool) {
 		// else write encode function in-line.
 		// - if elements are primitives or Selfers, call dedicated function on each member.
 		// - else call Encoder.encode(XXX) on it.
-		if fastpathAV.index(rtid) != -1 {
+		if fastpathAvIndex(rtid) != -1 {
 			g := x.newFastpathGenV(t)
 			x.linef("z.F.%sX(%s%s, d)", g.MethodNamePfx("Dec", false), addrPfx, varname)
 		} else {
@@ -2588,4 +2590,28 @@ func genRunTmpl2Go(fnameIn, fnameOut string) {
 	defer fout.Close()
 	err = genInternalGoFile(fin, fout)
 	genCheckErr(err)
+}
+
+// --- some methods here for other types, which are only used in codecgen
+
+// depth returns number of valid nodes in the hierachy
+func (path *structFieldInfoPathNode) root() *structFieldInfoPathNode {
+TOP:
+	if path.parent != nil {
+		path = path.parent
+		goto TOP
+	}
+	return path
+}
+
+func (path *structFieldInfoPathNode) fullpath() (p []*structFieldInfoPathNode) {
+	// this method is mostly called by a command-line tool - it's not optimized, and that's ok.
+	// it shouldn't be used in typical runtime use - as it does unnecessary allocation.
+	d := path.depth()
+	p = make([]*structFieldInfoPathNode, d)
+	for d--; d >= 0; d-- {
+		p[d] = path
+		path = path.parent
+	}
+	return
 }
