@@ -12,7 +12,6 @@ import (
 
 // DatabaseAccountsClient is a minimal interface for azure DatabaseAccountsClient
 type DatabaseAccountsClient interface {
-	ListByResourceGroup(ctx context.Context, resourceGroupName string) (result mgmtdocumentdb.DatabaseAccountsListResult, err error)
 	ListKeys(ctx context.Context, resourceGroupName string, accountName string) (result mgmtdocumentdb.DatabaseAccountListKeysResult, err error)
 }
 
