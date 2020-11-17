@@ -666,6 +666,7 @@ func (g *generator) vmss() *arm.Resource {
 		"rpImage",
 		"rpMode",
 		"adminApiClientCertCommonName",
+		"databaseAccountName",
 	} {
 		parts = append(parts,
 			fmt.Sprintf("'%s=$(base64 -d <<<'''", strings.ToUpper(variable)),
@@ -881,6 +882,7 @@ MDM_ACCOUNT=AzureRedHatOpenShiftRP
 MDM_NAMESPACE=RP
 ACR_RESOURCE_ID='$ACRRESOURCEID'
 ADMIN_API_CLIENT_CERT_COMMON_NAME='$ADMINAPICLIENTCERTCOMMONNAME'
+DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
 RPIMAGE='$RPIMAGE'
 RP_MODE='$RPMODE'
 EOF
@@ -900,6 +902,7 @@ ExecStart=/usr/bin/docker run \
   -e MDM_ACCOUNT \
   -e MDM_NAMESPACE \
   -e ADMIN_API_CLIENT_CERT_COMMON_NAME \
+  -e DATABASE_ACCOUNT_NAME \
   -e RP_MODE \
   -e ACR_RESOURCE_ID \
   -m 2g \
@@ -924,6 +927,7 @@ MDM_ACCOUNT=AzureRedHatOpenShiftRP
 MDM_NAMESPACE=BBM
 CLUSTER_MDM_ACCOUNT=AzureRedHatOpenShiftCluster
 CLUSTER_MDM_NAMESPACE=BBM
+DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
 RPIMAGE='$RPIMAGE'
 RP_MODE='$RPMODE'
 EOF
@@ -942,6 +946,7 @@ ExecStart=/usr/bin/docker run \
   --rm \
   -e CLUSTER_MDM_ACCOUNT \
   -e CLUSTER_MDM_NAMESPACE \
+  -e DATABASE_ACCOUNT_NAME \
   -e MDM_ACCOUNT \
   -e MDM_NAMESPACE \
   -e RP_MODE \

@@ -91,19 +91,24 @@ func find(ctx context.Context, env env.Core) (string, string, error) {
 
 	databaseaccounts := documentdb.NewDatabaseAccountsClient(env.SubscriptionID(), rpAuthorizer)
 
-	accts, err := databaseaccounts.ListByResourceGroup(ctx, env.ResourceGroup())
+	acctName := os.Getenv("DATABASE_ACCOUNT_NAME")
+	if acctName == "" {
+		accts, err := databaseaccounts.ListByResourceGroup(ctx, env.ResourceGroup())
+		if err != nil {
+			return "", "", err
+		}
+
+		if len(*accts.Value) != 1 {
+			return "", "", fmt.Errorf("found %d database accounts, expected 1", len(*accts.Value))
+		}
+
+		acctName = *(*accts.Value)[0].Name
+	}
+
+	keys, err := databaseaccounts.ListKeys(ctx, env.ResourceGroup(), acctName)
 	if err != nil {
 		return "", "", err
 	}
 
-	if len(*accts.Value) != 1 {
-		return "", "", fmt.Errorf("found %d database accounts, expected 1", len(*accts.Value))
-	}
-
-	keys, err := databaseaccounts.ListKeys(ctx, env.ResourceGroup(), *(*accts.Value)[0].Name)
-	if err != nil {
-		return "", "", err
-	}
-
-	return *(*accts.Value)[0].Name, *keys.PrimaryMasterKey, nil
+	return acctName, *keys.PrimaryMasterKey, nil
 }
