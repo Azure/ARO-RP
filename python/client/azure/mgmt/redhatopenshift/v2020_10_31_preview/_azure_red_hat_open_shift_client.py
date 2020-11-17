@@ -29,7 +29,7 @@ from . import models
 
 
 class AzureRedHatOpenShiftClient(SDKClient):
-    """Rest API for Azure Red Hat OpenShift
+    """Rest API for Azure Red Hat OpenShift 4
 
     :ivar config: Configuration for client.
     :vartype config: AzureRedHatOpenShiftClientConfiguration

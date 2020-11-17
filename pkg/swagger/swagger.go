@@ -17,7 +17,7 @@ func Run(outputDir string) error {
 		Swagger: "2.0",
 		Info: &Info{
 			Title:       "Azure Red Hat OpenShift Client",
-			Description: "Rest API for Azure Red Hat OpenShift",
+			Description: "Rest API for Azure Red Hat OpenShift 4",
 			Version:     stringutils.LastTokenByte(outputDir, '/'),
 		},
 		Host:        "management.azure.com",
@@ -48,7 +48,7 @@ func Run(outputDir string) error {
 		Post: &Operation{
 			Tags:        []string{"OpenShiftClusters"},
 			Summary:     "Lists credentials of an OpenShift cluster with the specified subscription, resource group and resource name.",
-			Description: "Lists credentials of an OpenShift cluster with the specified subscription, resource group and resource name.  The operation returns the credentials.",
+			Description: "The operation returns the credentials.",
 			OperationID: "OpenShiftClusters_ListCredentials",
 			Parameters:  populateParameters(3, "OpenShiftCluster", "OpenShift cluster"),
 			Responses:   populateResponses("OpenShiftClusterCredentials", false, http.StatusOK),
@@ -59,7 +59,7 @@ func Run(outputDir string) error {
 		Get: &Operation{
 			Tags:        []string{"Operations"},
 			Summary:     "Lists all of the available RP operations.",
-			Description: "Lists all of the available RP operations.  The operation returns the RP operations.",
+			Description: "The operation returns the RP operations.",
 			OperationID: "Operations_List",
 			Parameters:  populateParameters(0, "Operation", "Operation"),
 			Responses:   populateResponses("OperationList", false, http.StatusOK),

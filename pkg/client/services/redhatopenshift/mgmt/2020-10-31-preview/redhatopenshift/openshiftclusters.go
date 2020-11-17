@@ -27,7 +27,7 @@ import (
 	"github.com/Azure/go-autorest/tracing"
 )
 
-// OpenShiftClustersClient is the rest API for Azure Red Hat OpenShift
+// OpenShiftClustersClient is the rest API for Azure Red Hat OpenShift 4
 type OpenShiftClustersClient struct {
 	BaseClient
 }
@@ -44,8 +44,7 @@ func NewOpenShiftClustersClientWithBaseURI(baseURI string, subscriptionID string
 	return OpenShiftClustersClient{NewWithBaseURI(baseURI, subscriptionID)}
 }
 
-// CreateOrUpdate creates or updates a OpenShift cluster with the specified subscription, resource group and resource
-// name.  The operation returns properties of a OpenShift cluster.
+// CreateOrUpdate the operation returns properties of a OpenShift cluster.
 // Parameters:
 // resourceGroupName - the name of the resource group. The name is case insensitive.
 // resourceName - the name of the OpenShift cluster resource.
@@ -133,8 +132,7 @@ func (client OpenShiftClustersClient) CreateOrUpdateResponder(resp *http.Respons
 	return
 }
 
-// Delete deletes a OpenShift cluster with the specified subscription, resource group and resource name.  The operation
-// returns nothing.
+// Delete the operation returns nothing.
 // Parameters:
 // resourceGroupName - the name of the resource group. The name is case insensitive.
 // resourceName - the name of the OpenShift cluster resource.
@@ -218,8 +216,7 @@ func (client OpenShiftClustersClient) DeleteResponder(resp *http.Response) (resu
 	return
 }
 
-// Get gets a OpenShift cluster with the specified subscription, resource group and resource name.  The operation
-// returns properties of a OpenShift cluster.
+// Get the operation returns properties of a OpenShift cluster.
 // Parameters:
 // resourceGroupName - the name of the resource group. The name is case insensitive.
 // resourceName - the name of the OpenShift cluster resource.
@@ -304,8 +301,7 @@ func (client OpenShiftClustersClient) GetResponder(resp *http.Response) (result 
 	return
 }
 
-// List lists OpenShift clusters in the specified subscription.  The operation returns properties of each OpenShift
-// cluster.
+// List the operation returns properties of each OpenShift cluster.
 func (client OpenShiftClustersClient) List(ctx context.Context) (result OpenShiftClusterListPage, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/OpenShiftClustersClient.List")
@@ -422,8 +418,7 @@ func (client OpenShiftClustersClient) ListComplete(ctx context.Context) (result 
 	return
 }
 
-// ListByResourceGroup lists OpenShift clusters in the specified subscription and resource group.  The operation
-// returns properties of each OpenShift cluster.
+// ListByResourceGroup the operation returns properties of each OpenShift cluster.
 // Parameters:
 // resourceGroupName - the name of the resource group. The name is case insensitive.
 func (client OpenShiftClustersClient) ListByResourceGroup(ctx context.Context, resourceGroupName string) (result OpenShiftClusterListPage, err error) {
@@ -547,8 +542,7 @@ func (client OpenShiftClustersClient) ListByResourceGroupComplete(ctx context.Co
 	return
 }
 
-// ListCredentials lists credentials of an OpenShift cluster with the specified subscription, resource group and
-// resource name.  The operation returns the credentials.
+// ListCredentials the operation returns the credentials.
 // Parameters:
 // resourceGroupName - the name of the resource group. The name is case insensitive.
 // resourceName - the name of the OpenShift cluster resource.
@@ -633,8 +627,7 @@ func (client OpenShiftClustersClient) ListCredentialsResponder(resp *http.Respon
 	return
 }
 
-// Update creates or updates a OpenShift cluster with the specified subscription, resource group and resource name.
-// The operation returns properties of a OpenShift cluster.
+// Update the operation returns properties of a OpenShift cluster.
 // Parameters:
 // resourceGroupName - the name of the resource group. The name is case insensitive.
 // resourceName - the name of the OpenShift cluster resource.
