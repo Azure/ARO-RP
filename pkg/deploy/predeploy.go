@@ -14,6 +14,7 @@ import (
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/davecgh/go-spew/spew"
 
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -192,6 +193,9 @@ func (d *deployer) deployGlobalSubscription(ctx context.Context) error {
 			continue
 		}
 		if err != nil {
+			// TODO: Remove this once error structure is clear in case of failure
+			// and we can "unwrap" it properly for retries
+			spew.Dump(err)
 			return err
 		}
 
