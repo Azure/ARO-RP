@@ -13,6 +13,7 @@ import (
 	"k8s.io/client-go/tools/metrics"
 
 	"github.com/Azure/ARO-RP/pkg/database"
+	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
@@ -22,6 +23,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
+	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
 
 func monitor(ctx context.Context, log *logrus.Entry) error {
@@ -59,7 +61,20 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	key, err := _env.GetBase64Secret(ctx, env.EncryptionSecretName)
+	rpKVAuthorizer, err := _env.NewRPAuthorizer(_env.Environment().ResourceIdentifiers.KeyVault)
+	if err != nil {
+		return err
+	}
+
+	// TODO: should not be using the service keyvault here
+	serviceKeyvaultURI, err := keyvault.Find(ctx, _env, _env, generator.ServiceKeyVaultTagValue)
+	if err != nil {
+		return err
+	}
+
+	serviceKeyvault := keyvault.NewManager(rpKVAuthorizer, serviceKeyvaultURI)
+
+	key, err := serviceKeyvault.GetBase64Secret(ctx, env.EncryptionSecretName)
 	if err != nil {
 		return err
 	}

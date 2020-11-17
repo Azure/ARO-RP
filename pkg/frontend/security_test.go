@@ -21,6 +21,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	mock_keyvault "github.com/Azure/ARO-RP/pkg/util/mocks/keyvault"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	"github.com/Azure/ARO-RP/test/util/listener"
 )
@@ -49,9 +50,12 @@ func TestSecurity(t *testing.T) {
 	controller := gomock.NewController(t)
 	defer controller.Finish()
 
+	keyvault := mock_keyvault.NewMockManager(controller)
+	keyvault.EXPECT().GetCertificateSecret(gomock.Any(), env.RPServerSecretName).AnyTimes().Return(serverkey, servercerts, nil)
+
 	_env := mock_env.NewMockInterface(controller)
 	_env.EXPECT().DeploymentMode().AnyTimes().Return(deployment.Production)
-	_env.EXPECT().GetCertificateSecret(gomock.Any(), env.RPServerSecretName).AnyTimes().Return(serverkey, servercerts, nil)
+	_env.EXPECT().ServiceKeyvault().AnyTimes().Return(keyvault)
 	_env.EXPECT().ArmClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(validclientcerts[0].Raw))
 	_env.EXPECT().AdminClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(validadminclientcerts[0].Raw))
 	_env.EXPECT().Listen().AnyTimes().Return(l, nil)

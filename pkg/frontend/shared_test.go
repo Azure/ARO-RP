@@ -27,6 +27,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
+	mock_keyvault "github.com/Azure/ARO-RP/pkg/util/mocks/keyvault"
 	utiltls "github.com/Azure/ARO-RP/pkg/util/tls"
 	testdatabase "github.com/Azure/ARO-RP/test/database"
 	testclusterdata "github.com/Azure/ARO-RP/test/util/clusterdata"
@@ -80,10 +81,13 @@ func newTestInfra(t *testing.T) *testInfra {
 
 	controller := gomock.NewController(t)
 
+	keyvault := mock_keyvault.NewMockManager(controller)
+	keyvault.EXPECT().GetCertificateSecret(gomock.Any(), env.RPServerSecretName).AnyTimes().Return(serverkey, servercerts, nil)
+
 	_env := mock_env.NewMockInterface(controller)
 	_env.EXPECT().DeploymentMode().AnyTimes().Return(deployment.Production)
 	_env.EXPECT().Location().AnyTimes().Return("eastus")
-	_env.EXPECT().GetCertificateSecret(gomock.Any(), env.RPServerSecretName).AnyTimes().Return(serverkey, servercerts, nil)
+	_env.EXPECT().ServiceKeyvault().AnyTimes().Return(keyvault)
 	_env.EXPECT().ArmClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(clientcerts[0].Raw))
 	_env.EXPECT().AdminClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(clientcerts[0].Raw))
 	_env.EXPECT().Domain().AnyTimes().Return("")

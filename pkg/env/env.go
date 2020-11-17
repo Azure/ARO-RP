@@ -43,6 +43,7 @@ type Interface interface {
 	Domain() string
 	FPAuthorizer(string, string) (refreshable.Authorizer, error)
 	Listen() (net.Listener, error)
+	ServiceKeyvault() keyvault.Manager
 	Zones(vmSize string) ([]string, error)
 	ACRResourceID() string
 	ACRDomain() string
