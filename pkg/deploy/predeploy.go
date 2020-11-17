@@ -176,7 +176,7 @@ func (d *deployer) deployGlobalSubscription(ctx context.Context) error {
 	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
 
 	d.log.Infof("deploying %s", deploymentName)
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 5; i++ {
 		err = d.globaldeployments.CreateOrUpdateAtSubscriptionScopeAndWait(ctx, deploymentName, mgmtfeatures.Deployment{
 			Properties: &mgmtfeatures.DeploymentProperties{
 				Template:   template,
@@ -186,8 +186,10 @@ func (d *deployer) deployGlobalSubscription(ctx context.Context) error {
 			Location: to.StringPtr("centralus"),
 		})
 		if serviceErr, ok := err.(*azure.ServiceError); ok &&
-			serviceErr.Code == "RoleDefinitionUpdateConflict" &&
-			i == 0 {
+			serviceErr.Code == "DeploymentFailed" &&
+			i < 4 {
+			// Sometimes we see RoleDefinitionUpdateConflict when multiple RPs
+			// are deploying at once.  Retry a few times.
 			d.log.Print(err)
 			continue
 		}
