@@ -34,14 +34,15 @@ type prod struct {
 	armClientAuthorizer   clientauthorizer.ClientAuthorizer
 	adminClientAuthorizer clientauthorizer.ClientAuthorizer
 
-	acrDomain           string
-	clustersKeyvaultURI string
-	domain              string
-	zones               map[string][]string
+	acrDomain string
+	domain    string
+	zones     map[string][]string
 
 	fpCertificate *x509.Certificate
 	fpPrivateKey  *rsa.PrivateKey
 	fpClientID    string
+
+	clustersKeyvault keyvault.Manager
 
 	clustersGenevaLoggingCertificate   *x509.Certificate
 	clustersGenevaLoggingPrivateKey    *rsa.PrivateKey
@@ -77,15 +78,22 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		return nil, err
 	}
 
+	rpKVAuthorizer, err := p.NewRPAuthorizer(p.Environment().ResourceIdentifiers.KeyVault)
+	if err != nil {
+		return nil, err
+	}
+
 	err = p.populateDomain(ctx, rpAuthorizer)
 	if err != nil {
 		return nil, err
 	}
 
-	p.clustersKeyvaultURI, err = keyvault.Find(ctx, p, p, generator.ClustersKeyVaultTagValue)
+	clustersKeyvaultURI, err := keyvault.Find(ctx, p, p, generator.ClustersKeyVaultTagValue)
 	if err != nil {
 		return nil, err
 	}
+
+	p.clustersKeyvault = keyvault.NewManager(rpKVAuthorizer, clustersKeyvaultURI)
 
 	err = p.populateZones(ctx, rpAuthorizer)
 	if err != nil {
@@ -213,8 +221,8 @@ func (p *prod) ClustersGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate
 	return p.clustersGenevaLoggingPrivateKey, p.clustersGenevaLoggingCertificate
 }
 
-func (p *prod) ClustersKeyvaultURI() string {
-	return p.clustersKeyvaultURI
+func (p *prod) ClustersKeyvault() keyvault.Manager {
+	return p.clustersKeyvault
 }
 
 func (p *prod) Domain() string {

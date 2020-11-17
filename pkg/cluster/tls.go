@@ -51,7 +51,7 @@ func (m *manager) createCertificates(ctx context.Context) error {
 
 	for _, c := range certs {
 		m.log.Printf("creating certificate %s", c.certificateName)
-		err = m.keyvault.CreateSignedCertificate(ctx, keyvault.IssuerDigicert, c.certificateName, c.commonName, keyvault.EkuServerAuth)
+		err = m.env.ClustersKeyvault().CreateSignedCertificate(ctx, keyvault.IssuerDigicert, c.certificateName, c.commonName, keyvault.EkuServerAuth)
 		if err != nil {
 			return err
 		}
@@ -59,7 +59,7 @@ func (m *manager) createCertificates(ctx context.Context) error {
 
 	for _, c := range certs {
 		m.log.Printf("waiting for certificate %s", c.certificateName)
-		err = m.keyvault.WaitForCertificateOperation(ctx, c.certificateName)
+		err = m.env.ClustersKeyvault().WaitForCertificateOperation(ctx, c.certificateName)
 		if err != nil {
 			return err
 		}
@@ -69,7 +69,7 @@ func (m *manager) createCertificates(ctx context.Context) error {
 }
 
 func (m *manager) ensureSecret(ctx context.Context, secrets coreclient.SecretInterface, certificateName string) error {
-	bundle, err := m.keyvault.GetSecret(ctx, certificateName)
+	bundle, err := m.env.ClustersKeyvault().GetSecret(ctx, certificateName)
 	if err != nil {
 		return err
 	}

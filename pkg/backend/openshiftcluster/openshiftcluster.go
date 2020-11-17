@@ -20,7 +20,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
-	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/privateendpoint"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
@@ -48,7 +47,6 @@ type manager struct {
 	securityGroups network.SecurityGroupsClient
 
 	dns             dns.Manager
-	keyvault        keyvault.Manager
 	privateendpoint privateendpoint.Manager
 	subnet          subnet.Manager
 	acrtoken        pkgacrtoken.Manager
@@ -60,11 +58,6 @@ type manager struct {
 // NewManager returns a new openshiftcluster Manager
 func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, cipher encryption.Cipher, billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (Manager, error) {
 	localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), _env.Environment().ResourceManagerEndpoint)
-	if err != nil {
-		return nil, err
-	}
-
-	localFPKVAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), _env.Environment().ResourceIdentifiers.KeyVault)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +94,6 @@ func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClus
 		securityGroups: network.NewSecurityGroupsClient(subscriptionDoc.ID, fpAuthorizer),
 
 		dns:             dns.NewManager(_env, localFPAuthorizer),
-		keyvault:        keyvault.NewManager(localFPKVAuthorizer, _env.ClustersKeyvaultURI()),
 		privateendpoint: privateendpoint.NewManager(_env, localFPAuthorizer),
 		acrtoken:        acrtoken,
 		subnet:          subnet.NewManager(subscriptionDoc.ID, fpAuthorizer),

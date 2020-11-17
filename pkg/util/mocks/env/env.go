@@ -17,6 +17,7 @@ import (
 
 	clientauthorizer "github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	deployment "github.com/Azure/ARO-RP/pkg/util/deployment"
+	keyvault "github.com/Azure/ARO-RP/pkg/util/keyvault"
 	refreshable "github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
@@ -156,18 +157,18 @@ func (mr *MockInterfaceMockRecorder) ClustersGenevaLoggingSecret() *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClustersGenevaLoggingSecret", reflect.TypeOf((*MockInterface)(nil).ClustersGenevaLoggingSecret))
 }
 
-// ClustersKeyvaultURI mocks base method
-func (m *MockInterface) ClustersKeyvaultURI() string {
+// ClustersKeyvault mocks base method
+func (m *MockInterface) ClustersKeyvault() keyvault.Manager {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ClustersKeyvaultURI")
-	ret0, _ := ret[0].(string)
+	ret := m.ctrl.Call(m, "ClustersKeyvault")
+	ret0, _ := ret[0].(keyvault.Manager)
 	return ret0
 }
 
-// ClustersKeyvaultURI indicates an expected call of ClustersKeyvaultURI
-func (mr *MockInterfaceMockRecorder) ClustersKeyvaultURI() *gomock.Call {
+// ClustersKeyvault indicates an expected call of ClustersKeyvault
+func (mr *MockInterfaceMockRecorder) ClustersKeyvault() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClustersKeyvaultURI", reflect.TypeOf((*MockInterface)(nil).ClustersKeyvaultURI))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ClustersKeyvault", reflect.TypeOf((*MockInterface)(nil).ClustersKeyvault))
 }
 
 // CreateARMResourceGroupRoleAssignment mocks base method

@@ -30,7 +30,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
-	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/privateendpoint"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
@@ -67,7 +66,6 @@ type manager struct {
 	storageAccounts     storage.AccountsClient
 
 	dns             dns.Manager
-	keyvault        keyvault.Manager
 	privateendpoint privateendpoint.Manager
 	subnet          subnet.Manager
 
@@ -91,11 +89,6 @@ func NewManager(ctx context.Context, log *logrus.Entry, _env env.Interface, db d
 	}
 
 	localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), _env.Environment().ResourceManagerEndpoint)
-	if err != nil {
-		return nil, err
-	}
-
-	localFPKVAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), _env.Environment().ResourceIdentifiers.KeyVault)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +122,6 @@ func NewManager(ctx context.Context, log *logrus.Entry, _env env.Interface, db d
 		storageAccounts:     storage.NewAccountsClient(r.SubscriptionID, fpAuthorizer),
 
 		dns:             dns.NewManager(_env, localFPAuthorizer),
-		keyvault:        keyvault.NewManager(localFPKVAuthorizer, _env.ClustersKeyvaultURI()),
 		privateendpoint: privateendpoint.NewManager(_env, localFPAuthorizer),
 		subnet:          subnet.NewManager(r.SubscriptionID, fpAuthorizer),
 	}, nil
