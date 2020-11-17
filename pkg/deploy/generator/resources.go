@@ -749,6 +749,10 @@ yum -y install azsec-clamav azsec-monitor azure-cli-2.10.1 azure-mdsd azure-secu
 done
 
 rpm -e $(rpm -qa | grep ^abrt-)
+cat >/etc/sysctl.d/01-disable-core.conf <<'EOF'
+kernel.core_pattern = |/bin/true
+EOF
+sysctl --system
 
 firewall-cmd --add-port=443/tcp --permanent
 
