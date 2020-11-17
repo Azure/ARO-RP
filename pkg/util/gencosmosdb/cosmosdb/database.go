@@ -28,12 +28,12 @@ type Databases struct {
 }
 
 type databaseClient struct {
-	log             *logrus.Entry
-	hc              *http.Client
-	jsonHandle      *codec.JsonHandle
-	databaseAccount string
-	masterKey       []byte
-	maxRetries      int
+	log              *logrus.Entry
+	hc               *http.Client
+	jsonHandle       *codec.JsonHandle
+	databaseHostname string
+	masterKey        []byte
+	maxRetries       int
 }
 
 // DatabaseClient is a database client
@@ -57,15 +57,15 @@ type DatabaseIterator interface {
 }
 
 // NewDatabaseClient returns a new database client
-func NewDatabaseClient(log *logrus.Entry, hc *http.Client, jsonHandle *codec.JsonHandle, databaseAccount, masterKey string) (DatabaseClient, error) {
+func NewDatabaseClient(log *logrus.Entry, hc *http.Client, jsonHandle *codec.JsonHandle, databaseHostname, masterKey string) (DatabaseClient, error) {
 	var err error
 
 	c := &databaseClient{
-		log:             log,
-		hc:              hc,
-		jsonHandle:      jsonHandle,
-		databaseAccount: databaseAccount,
-		maxRetries:      10,
+		log:              log,
+		hc:               hc,
+		jsonHandle:       jsonHandle,
+		databaseHostname: databaseHostname,
+		maxRetries:       10,
 	}
 
 	c.masterKey, err = base64.StdEncoding.DecodeString(masterKey)

@@ -110,7 +110,7 @@ func (c *databaseClient) do(ctx context.Context, method, path, resourceType, res
 }
 
 func (c *databaseClient) _do(ctx context.Context, method, path, resourceType, resourceLink string, expectedStatusCode int, in, out interface{}, headers http.Header) (*http.Response, error) {
-	req, err := http.NewRequestWithContext(ctx, method, "https://"+c.databaseAccount+".documents.azure.com/"+path, nil)
+	req, err := http.NewRequestWithContext(ctx, method, "https://"+c.databaseHostname+"/"+path, nil)
 	if err != nil {
 		return nil, err
 	}
