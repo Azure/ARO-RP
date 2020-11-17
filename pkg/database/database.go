@@ -50,7 +50,8 @@ func NewDatabaseClient(ctx context.Context, log *logrus.Entry, env env.Core, m m
 		Timeout: 30 * time.Second,
 	}
 
-	return cosmosdb.NewDatabaseClient(log, c, h, databaseAccount, masterKey)
+	databaseHostname := databaseAccount + "." + env.Environment().CosmosDBDNSSuffix
+	return cosmosdb.NewDatabaseClient(log, c, h, databaseHostname, masterKey)
 }
 
 func NewJSONHandle(cipher encryption.Cipher) *codec.JsonHandle {
