@@ -89,12 +89,12 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		return nil, err
 	}
 
-	clustersKeyvaultURI, err := keyvault.Find(ctx, p, p, generator.ClustersKeyVaultTagValue)
+	clustersKeyvaultURI, err := keyvault.URI(p, generator.ClustersKeyvaultSuffix)
 	if err != nil {
 		return nil, err
 	}
 
-	serviceKeyvaultURI, err := keyvault.Find(ctx, p, p, generator.ServiceKeyVaultTagValue)
+	serviceKeyvaultURI, err := keyvault.URI(p, generator.ServiceKeyvaultSuffix)
 	if err != nil {
 		return nil, err
 	}

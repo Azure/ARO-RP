@@ -36,7 +36,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	serviceKeyvaultURI, err := keyvault.Find(ctx, _env, _env, generator.ServiceKeyVaultTagValue)
+	serviceKeyvaultURI, err := keyvault.URI(_env, generator.ServiceKeyvaultSuffix)
 	if err != nil {
 		return err
 	}

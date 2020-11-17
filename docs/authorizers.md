@@ -24,7 +24,7 @@ steady state: manage ACR tokens, DNS zone records, private endpoints.
 
 The managed identity attached to the RP VM, in the AME tenant, for use against
 ARM. Used for bootstrapping: finding the CosmosDB account and key, finding the
-DNS zone, finding the key vaults, populating the SKU list.
+DNS zone, populating the SKU list.
 
 ## rpKVAuthorizer
 

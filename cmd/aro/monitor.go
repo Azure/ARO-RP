@@ -67,7 +67,7 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 	}
 
 	// TODO: should not be using the service keyvault here
-	serviceKeyvaultURI, err := keyvault.Find(ctx, _env, _env, generator.ServiceKeyVaultTagValue)
+	serviceKeyvaultURI, err := keyvault.URI(_env, generator.ServiceKeyvaultSuffix)
 	if err != nil {
 		return err
 	}

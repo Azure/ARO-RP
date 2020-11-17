@@ -114,9 +114,6 @@
             "name": "[concat(parameters('keyvaultPrefix'), '-cls')]",
             "type": "Microsoft.KeyVault/vaults",
             "location": "[resourceGroup().location]",
-            "tags": {
-                "vault": "clusters"
-            },
             "apiVersion": "2016-10-01"
         },
         {
@@ -158,9 +155,6 @@
             "name": "[concat(parameters('keyvaultPrefix'), '-svc')]",
             "type": "Microsoft.KeyVault/vaults",
             "location": "[resourceGroup().location]",
-            "tags": {
-                "vault": "service"
-            },
             "apiVersion": "2016-10-01"
         }
     ]
