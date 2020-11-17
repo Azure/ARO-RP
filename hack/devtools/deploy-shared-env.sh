@@ -27,7 +27,7 @@ deploy_rp_dev() {
         --template-file deploy/rp-development.json \
         --parameters \
             "databaseAccountName=$DATABASE_ACCOUNT_NAME" \
-            "domainName=$DOMAIN_NAME.$PARENT_DOMAIN_NAME" \
+            "domainName=$RESOURCEGROUP.$PARENT_DOMAIN_NAME" \
             "fpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].objectId' -o tsv)" \
             "rpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_RP_CLIENT_ID'" --query '[].objectId' -o tsv)" >/dev/null
 }
@@ -109,19 +109,19 @@ import_certs_secrets() {
 }
 
 update_parent_domain_dns_zone() {
-    echo "########## Creating NS record to DNS Zone $DOMAIN_NAME in $PARENT_DOMAIN_NAME | RG $PARENT_DOMAIN_RESOURCEGROUP ##########"
+    echo "########## Creating NS record to DNS Zone $RESOURCEGROUP in $PARENT_DOMAIN_NAME | RG $PARENT_DOMAIN_RESOURCEGROUP ##########"
     az network dns record-set ns create \
         --resource-group "$PARENT_DOMAIN_RESOURCEGROUP" \
         --zone "$PARENT_DOMAIN_NAME" \
-        --name "$DOMAIN_NAME" >/dev/null
+        --name "$RESOURCEGROUP" >/dev/null
     for ns in $(az network dns zone show \
         --resource-group "$RESOURCEGROUP" \
-        --name "$DOMAIN_NAME.$PARENT_DOMAIN_NAME" \
+        --name "$RESOURCEGROUP.$PARENT_DOMAIN_NAME" \
         --query nameServers -o tsv); do
         az network dns record-set ns add-record \
           --resource-group "$PARENT_DOMAIN_RESOURCEGROUP" \
           --zone "$PARENT_DOMAIN_NAME" \
-          --record-set-name "$DOMAIN_NAME" \
+          --record-set-name "$RESOURCEGROUP" \
           --nsdname "$ns" >/dev/null
       done
 }
@@ -154,15 +154,15 @@ clean_env() {
     az network dns record-set ns delete \
         --resource-group "$PARENT_DOMAIN_RESOURCEGROUP" \
         --zone "$PARENT_DOMAIN_NAME" \
-        --name "$DOMAIN_NAME"
+        --name "$RESOURCEGROUP"
     for ns in $(az network dns zone show \
         --resource-group "$RESOURCEGROUP" \
-        --name "$DOMAIN_NAME.$PARENT_DOMAIN_NAME" \
+        --name "$RESOURCEGROUP.$PARENT_DOMAIN_NAME" \
         --query nameServers -o tsv); do
         az network dns record-set ns remove-record \
           --resource-group "$PARENT_DOMAIN_RESOURCEGROUP" \
           --zone "$PARENT_DOMAIN_NAME" \
-          --record-set-name "$DOMAIN_NAME" \
+          --record-set-name "$RESOURCEGROUP" \
           --nsdname "$ns"
       done
 }
@@ -182,7 +182,6 @@ echo "ADMIN_OBJECT_ID=$ADMIN_OBJECT_ID"
 echo "AZURE_RP_CLIENT_ID=$AZURE_RP_CLIENT_ID"
 echo "AZURE_FP_CLIENT_ID=$AZURE_FP_CLIENT_ID"
 echo
-echo "DOMAIN_NAME=$DOMAIN_NAME"
 echo "PARENT_DOMAIN_NAME=$PARENT_DOMAIN_NAME"
 echo "PARENT_DOMAIN_RESOURCEGROUP=$PARENT_DOMAIN_RESOURCEGROUP"
 echo
@@ -196,7 +195,6 @@ echo "######################################"
 [ "$PROXY_HOSTNAME" ] || ( echo ">> PROXY_HOSTNAME is not set please validate your ./secrets/env"; exit 128 )
 [ "$DATABASE_ACCOUNT_NAME" ] || ( echo ">> DATABASE_ACCOUNT_NAME is not set please validate your ./secrets/env"; exit 128 )
 [ "$ADMIN_OBJECT_ID" ] || ( echo ">> ADMIN_OBJECT_ID is not set please validate your ./secrets/env"; exit 128 )
-[ "$DOMAIN_NAME" ] || ( echo ">> DOMAIN_NAME is not set please validate your ./secrets/env"; exit 128 )
 [ "$PARENT_DOMAIN_NAME" ] || ( echo ">> PARENT_DOMAIN_NAME is not set please validate your ./secrets/env"; exit 128 )
 [ "$AZURE_FP_CLIENT_ID" ] || ( echo ">> AZURE_FP_CLIENT_ID is not set please validate your ./secrets/env"; exit 128 )
 [ "$KEYVAULT_PREFIX" ] || ( echo ">> KEYVAULT_PREFIX is not set please validate your ./secrets/env"; exit 128 )
