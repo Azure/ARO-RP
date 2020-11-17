@@ -29,7 +29,12 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	cipher, err := encryption.NewXChaCha20Poly1305(ctx, _env, env.EncryptionSecretName)
+	key, err := _env.GetBase64Secret(ctx, env.EncryptionSecretName)
+	if err != nil {
+		return err
+	}
+
+	cipher, err := encryption.NewXChaCha20Poly1305(ctx, key)
 	if err != nil {
 		return err
 	}

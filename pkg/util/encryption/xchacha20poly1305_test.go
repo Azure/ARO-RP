@@ -9,11 +9,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"testing"
-
-	"github.com/golang/mock/gomock"
-
-	"github.com/Azure/ARO-RP/pkg/env"
-	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 )
 
 func TestNewXChaCha20Poly1305(t *testing.T) {
@@ -38,13 +33,7 @@ func TestNewXChaCha20Poly1305(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			_env := mock_env.NewMockInterface(controller)
-			_env.EXPECT().GetBase64Secret(gomock.Any(), env.EncryptionSecretName).Return(tt.key, nil)
-
-			_, err := NewXChaCha20Poly1305(context.Background(), _env, env.EncryptionSecretName)
+			_, err := NewXChaCha20Poly1305(context.Background(), tt.key)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Fatal(err)
@@ -81,13 +70,7 @@ func TestXChaCha20Poly1305Decrypt(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			_env := mock_env.NewMockInterface(controller)
-			_env.EXPECT().GetBase64Secret(gomock.Any(), env.EncryptionSecretName).Return(tt.key, nil)
-
-			cipher, err := NewXChaCha20Poly1305(context.Background(), _env, env.EncryptionSecretName)
+			cipher, err := NewXChaCha20Poly1305(context.Background(), tt.key)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -135,13 +118,7 @@ func TestXChaCha20Poly1305Encrypt(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			controller := gomock.NewController(t)
-			defer controller.Finish()
-
-			_env := mock_env.NewMockInterface(controller)
-			_env.EXPECT().GetBase64Secret(gomock.Any(), env.EncryptionSecretName).Return(tt.key, nil)
-
-			cipher, err := NewXChaCha20Poly1305(context.Background(), _env, env.EncryptionSecretName)
+			cipher, err := NewXChaCha20Poly1305(context.Background(), tt.key)
 			if err != nil {
 				t.Fatal(err)
 			}
