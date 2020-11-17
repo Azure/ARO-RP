@@ -38,14 +38,14 @@ kill_rp(){
 }
 
 deploy_e2e_db() {
-    echo "########## 📦 Creating new DB $DATABASE_NAME in $COSMOSDB_ACCOUNT ##########"
+    echo "########## 📦 Creating new DB $DATABASE_NAME in $DATABASE_ACCOUNT_NAME ##########"
 
     az deployment group create \
       -g "$RESOURCEGROUP" \
       -n "databases-development-$DATABASE_NAME" \
       --template-file deploy/databases-development.json \
       --parameters \
-        "databaseAccountName=$COSMOSDB_ACCOUNT" \
+        "databaseAccountName=$DATABASE_ACCOUNT_NAME" \
         "databaseName=$DATABASE_NAME" \
         >/dev/null
 
@@ -72,7 +72,7 @@ clean_e2e_db(){
     echo "########## 🧹 Deleting DB $DATABASE_NAME ##########"
     az cosmosdb sql database delete --name $DATABASE_NAME \
         --yes \
-        --account-name $COSMOSDB_ACCOUNT \
+        --account-name $DATABASE_ACCOUNT_NAME \
         --resource-group $RESOURCEGROUP >/dev/null
 }
 
@@ -96,7 +96,7 @@ echo "RP_MODE=$RP_MODE"
 if [ "$RP_MODE" = "development" ]
 then
     echo
-    echo "COSMOSDB_ACCOUNT=$COSMOSDB_ACCOUNT"
+    echo "DATABASE_ACCOUNT_NAME=$DATABASE_ACCOUNT_NAME"
     echo "DATABASE_NAME=$DATABASE_NAME"
     echo "RESOURCEGROUP=$RESOURCEGROUP"
 fi
@@ -115,7 +115,7 @@ if [ "$RP_MODE" = "development" ]
 then
     [ "$RESOURCEGROUP" ] || ( echo ">> RESOURCEGROUP is not set; please validate your ./secrets/env"; exit 128 )
     [ "$PROXY_HOSTNAME" ] || ( echo ">> PROXY_HOSTNAME is not set; please validate your ./secrets/env"; exit 128 )
-    [ "$COSMOSDB_ACCOUNT" ] || ( echo ">> COSMOSDB_ACCOUNT is not set; please validate your ./secrets/env"; exit 128 )
+    [ "$DATABASE_ACCOUNT_NAME" ] || ( echo ">> DATABASE_ACCOUNT_NAME is not set; please validate your ./secrets/env"; exit 128 )
     [ "$DATABASE_NAME" ] || ( echo ">> DATABASE_NAME is not set; please validate your ./secrets/env"; exit 128 )
 fi
 [ "$AZURE_SUBSCRIPTION_ID" ] || ( echo ">> AZURE_SUBSCRIPTION_ID is not set; please validate your ./secrets/env"; exit 128 )
