@@ -27,7 +27,7 @@ deploy_rp_dev() {
         --template-file deploy/rp-development.json \
         --parameters \
             "databaseAccountName=$DATABASE_ACCOUNT_NAME" \
-            "domainName=$RESOURCEGROUP.$PARENT_DOMAIN_NAME" \
+            "domainName=$DOMAIN_NAME" \
             "fpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].objectId' -o tsv)" \
             "rpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_RP_CLIENT_ID'" --query '[].objectId' -o tsv)" >/dev/null
 }
@@ -116,7 +116,7 @@ update_parent_domain_dns_zone() {
         --name "$RESOURCEGROUP" >/dev/null
     for ns in $(az network dns zone show \
         --resource-group "$RESOURCEGROUP" \
-        --name "$RESOURCEGROUP.$PARENT_DOMAIN_NAME" \
+        --name "$DOMAIN_NAME" \
         --query nameServers -o tsv); do
         az network dns record-set ns add-record \
           --resource-group "$PARENT_DOMAIN_RESOURCEGROUP" \
@@ -157,7 +157,7 @@ clean_env() {
         --name "$RESOURCEGROUP"
     for ns in $(az network dns zone show \
         --resource-group "$RESOURCEGROUP" \
-        --name "$RESOURCEGROUP.$PARENT_DOMAIN_NAME" \
+        --name "$DOMAIN_NAME" \
         --query nameServers -o tsv); do
         az network dns record-set ns remove-record \
           --resource-group "$PARENT_DOMAIN_RESOURCEGROUP" \

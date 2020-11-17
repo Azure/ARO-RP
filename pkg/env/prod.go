@@ -20,7 +20,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
@@ -54,6 +53,14 @@ type prod struct {
 }
 
 func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
+	for _, key := range []string{
+		"DOMAIN_NAME",
+	} {
+		if _, found := os.LookupEnv(key); !found {
+			return nil, fmt.Errorf("environment variable %q unset", key)
+		}
+	}
+
 	core, err := NewCore(ctx, log)
 	if err != nil {
 		return nil, err
@@ -80,11 +87,6 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 	}
 
 	rpKVAuthorizer, err := p.NewRPAuthorizer(p.Environment().ResourceIdentifiers.KeyVault)
-	if err != nil {
-		return nil, err
-	}
-
-	err = p.populateDomain(ctx, rpAuthorizer)
 	if err != nil {
 		return nil, err
 	}
@@ -173,23 +175,6 @@ func (p *prod) AROOperatorImage() string {
 	return fmt.Sprintf("%s/aro:%s", p.acrDomain, version.GitCommit)
 }
 
-func (p *prod) populateDomain(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
-	zones := dns.NewZonesClient(p.SubscriptionID(), rpAuthorizer)
-
-	zs, err := zones.ListByResourceGroup(ctx, p.ResourceGroup(), nil)
-	if err != nil {
-		return err
-	}
-
-	if len(zs) != 1 {
-		return fmt.Errorf("found %d zones, expected 1", len(zs))
-	}
-
-	p.domain = *zs[0].Name
-
-	return nil
-}
-
 func (p *prod) populateZones(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
 	c := compute.NewResourceSkusClient(p.SubscriptionID(), rpAuthorizer)
 
@@ -233,7 +218,7 @@ func (p *prod) ClustersKeyvault() keyvault.Manager {
 }
 
 func (p *prod) Domain() string {
-	return p.domain
+	return os.Getenv("DOMAIN_NAME")
 }
 
 func (p *prod) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, error) {

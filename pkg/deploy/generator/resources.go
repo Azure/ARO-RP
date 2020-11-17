@@ -663,6 +663,7 @@ func (g *generator) vmss() *arm.Resource {
 		"mdsdConfigVersion",
 		"mdsdEnvironment",
 		"acrResourceId",
+		"domainName",
 		"rpImage",
 		"rpMode",
 		"adminApiClientCertCommonName",
@@ -883,6 +884,7 @@ MDM_NAMESPACE=RP
 ACR_RESOURCE_ID='$ACRRESOURCEID'
 ADMIN_API_CLIENT_CERT_COMMON_NAME='$ADMINAPICLIENTCERTCOMMONNAME'
 DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
+DOMAIN_NAME='$DOMAINNAME'
 KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 RPIMAGE='$RPIMAGE'
 RP_MODE='$RPMODE'
@@ -904,6 +906,7 @@ ExecStart=/usr/bin/docker run \
   -e MDM_NAMESPACE \
   -e ADMIN_API_CLIENT_CERT_COMMON_NAME \
   -e DATABASE_ACCOUNT_NAME \
+  -e DOMAIN_NAME \
   -e KEYVAULT_PREFIX \
   -e RP_MODE \
   -e ACR_RESOURCE_ID \

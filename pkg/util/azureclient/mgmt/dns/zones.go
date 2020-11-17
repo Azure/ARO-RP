@@ -12,7 +12,6 @@ import (
 
 // ZonesClient is a minimal interface for azure ZonesClient
 type ZonesClient interface {
-	ZonesClientAddons
 	Get(ctx context.Context, resourceGroupName string, zoneName string) (result mgmtdns.Zone, err error)
 }
 
