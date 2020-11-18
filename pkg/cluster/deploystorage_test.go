@@ -44,7 +44,6 @@ var daTestCases = []struct {
 			"Microsoft.Compute/snapshots/write",
 			"Microsoft.Compute/snapshots/delete",
 			"Microsoft.Network/networkInterfaces/effectiveRouteTable/action",
-			"Microsoft.Resources/subscriptions/resourceGroups/write",
 		},
 	},
 }
