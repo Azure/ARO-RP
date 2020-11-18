@@ -13,8 +13,8 @@ from azure.cli.core.commands.client_factory import get_mgmt_service_client
 from azure.cli.core.commands.client_factory import get_subscription_id
 from azure.cli.core.profiles import ResourceType
 from azure.cli.core.util import sdk_no_wait
-from msrestazure.azure_exceptions import CloudError
 from msrest.exceptions import HttpOperationError
+from msrestazure.azure_exceptions import CloudError
 from msrestazure.tools import resource_id, parse_resource_id
 from knack.log import get_logger
 from knack.util import CLIError
