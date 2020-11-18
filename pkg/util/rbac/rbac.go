@@ -17,6 +17,7 @@ const (
 	RoleDocumentDBAccountContributor = "5bd9cd88-fe45-4216-938b-f97437e15450"
 	RoleDNSZoneContributor           = "befefa01-2a29-4197-83a8-272ff33ce314"
 	RoleNetworkContributor           = "4d97b98b-1d4f-4787-a291-c67834d212e7"
+	RoleOwner                        = "8e3af657-a8ff-443c-a75c-2fe8c4bcb635"
 	RoleReader                       = "acdd72a7-3385-48ef-bd42-f606fba81ae7"
 )
 
