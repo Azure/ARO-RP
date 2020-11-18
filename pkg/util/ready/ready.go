@@ -115,3 +115,31 @@ func CheckPodIsRunning(ctx context.Context, cli corev1client.PodInterface, name 
 		return PodIsRunning(p), nil
 	}
 }
+
+// StatefulSetIsReady returns true if a StatefulSet is considered ready
+func StatefulSetIsReady(s *appsv1.StatefulSet) bool {
+	specReplicas := int32(1)
+	if s.Spec.Replicas != nil {
+		specReplicas = *s.Spec.Replicas
+	}
+
+	return specReplicas == s.Status.ReadyReplicas &&
+		specReplicas == s.Status.UpdatedReplicas &&
+		s.Generation == s.Status.ObservedGeneration
+}
+
+// CheckStatefulSetIsReady returns a function which polls a StatefulSet and
+// returns its readiness
+func CheckStatefulSetIsReady(ctx context.Context, cli appsv1client.StatefulSetInterface, name string) func() (bool, error) {
+	return func() (bool, error) {
+		s, err := cli.Get(ctx, name, metav1.GetOptions{})
+		switch {
+		case errors.IsNotFound(err):
+			return false, nil
+		case err != nil:
+			return false, err
+		}
+
+		return StatefulSetIsReady(s), nil
+	}
+}

@@ -5,25 +5,25 @@ package e2e
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/Azure/go-autorest/autorest/to"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 
-	ready "github.com/Azure/ARO-RP/pkg/util/ready"
+	"github.com/Azure/ARO-RP/pkg/util/ready"
 	proj "github.com/Azure/ARO-RP/test/util/project"
 )
 
 const (
 	testNamespace = "test-e2e"
-	testPodName   = "busybox"
 )
 
 var _ = Describe("Cluster smoke test", func() {
@@ -48,17 +48,13 @@ var _ = Describe("Cluster smoke test", func() {
 		}, 5*time.Minute, 10*time.Second).Should(BeNil())
 	})
 
-	Specify("Can run a pod which is using Azure Disk storage", func() {
+	Specify("Can run a stateful set which is using Azure Disk storage", func() {
 		ctx := context.Background()
-		err := createPVC(ctx, clients.Kubernetes)
+		err := createStatefulSet(ctx, clients.Kubernetes)
 		Expect(err).NotTo(HaveOccurred())
 
-		err = createPodWithPVC(ctx, clients.Kubernetes)
+		err = wait.PollImmediate(10*time.Second, 15*time.Minute, ready.CheckStatefulSetIsReady(ctx, clients.Kubernetes.AppsV1().StatefulSets(testNamespace), "busybox"))
 		Expect(err).NotTo(HaveOccurred())
-
-		Eventually(func() error {
-			return verifyPodSucceeded(clients.Kubernetes)
-		}).Should(BeNil())
 	})
 
 	Specify("Can create load balancer services", func() {
@@ -89,85 +85,66 @@ var _ = Describe("Cluster smoke test", func() {
 	})
 })
 
-func createPVC(ctx context.Context, cli kubernetes.Interface) error {
+func createStatefulSet(ctx context.Context, cli kubernetes.Interface) error {
 	pvcStorage, err := resource.ParseQuantity("2Gi")
 	if err != nil {
 		return err
 	}
-	pvcName := fmt.Sprintf("%s-pvc", testPodName)
-	storageClass := "managed-premium"
-	_, err = cli.CoreV1().PersistentVolumeClaims(testNamespace).Create(context.Background(), &corev1.PersistentVolumeClaim{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: pvcName,
-		},
-		Spec: corev1.PersistentVolumeClaimSpec{
-			AccessModes: []corev1.PersistentVolumeAccessMode{
-				corev1.PersistentVolumeAccessMode("ReadWriteOnce"),
-			},
-			StorageClassName: to.StringPtr(storageClass),
-			Resources: corev1.ResourceRequirements{
-				Requests: corev1.ResourceList{
-					corev1.ResourceStorage: pvcStorage,
-				},
-			},
-		},
-	}, metav1.CreateOptions{})
-	return err
-}
 
-func createPodWithPVC(ctx context.Context, cli kubernetes.Interface) error {
-	pvcName := fmt.Sprintf("%s-pvc", testPodName)
-	volumeName := fmt.Sprintf("%s-vol", pvcName)
-	_, err := cli.CoreV1().Pods(testNamespace).Create(context.Background(), &corev1.Pod{
+	_, err = cli.AppsV1().StatefulSets(testNamespace).Create(context.Background(), &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: testPodName,
+			Name: "busybox",
 		},
-		Spec: corev1.PodSpec{
-			Containers: []corev1.Container{
-				{
-					Name:  testPodName,
-					Image: testPodName,
-					Command: []string{
-						"/bin/dd",
-						"if=/dev/urandom",
-						fmt.Sprintf("of=/data/%s.bin", testNamespace),
-						"bs=1M",
-						"count=100",
-					},
-					VolumeMounts: []corev1.VolumeMount{
+		Spec: appsv1.StatefulSetSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"app": "busybox"},
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{"app": "busybox"},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
 						{
-							Name:      volumeName,
-							MountPath: "/data",
-							ReadOnly:  false,
+							Name:  "busybox",
+							Image: "busybox",
+							Command: []string{
+								"/bin/sh",
+								"-c",
+								"while true; do sleep 1; done",
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "busybox",
+									MountPath: "/data",
+									ReadOnly:  false,
+								},
+							},
 						},
 					},
 				},
 			},
-			Volumes: []corev1.Volume{
+			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
 				{
-					Name: volumeName,
-					VolumeSource: corev1.VolumeSource{
-						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-							ClaimName: pvcName,
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "busybox",
+					},
+					Spec: corev1.PersistentVolumeClaimSpec{
+						AccessModes: []corev1.PersistentVolumeAccessMode{
+							corev1.ReadWriteOnce,
+						},
+						StorageClassName: to.StringPtr("managed-premium"),
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceStorage: pvcStorage,
+							},
 						},
 					},
 				},
 			},
-			RestartPolicy: corev1.RestartPolicyNever,
 		},
 	}, metav1.CreateOptions{})
 	return err
-}
-
-func verifyPodSucceeded(cli kubernetes.Interface) error {
-	pod, err := cli.CoreV1().Pods(testNamespace).Get(context.Background(), testPodName, metav1.GetOptions{})
-	if err != nil {
-		return err
-	}
-	if pod.Status.Phase != corev1.PodSucceeded {
-		return fmt.Errorf("Pod '%s' is not running: '%+v'", "busybox", pod.Status.Conditions)
-	}
-	return nil
 }
 
 func createLoadBalancerService(ctx context.Context, cli kubernetes.Interface, name string, annotations map[string]string) error {
