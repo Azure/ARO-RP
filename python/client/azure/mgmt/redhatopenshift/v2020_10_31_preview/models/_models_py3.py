@@ -643,8 +643,7 @@ class WorkerProfile(Model):
     :type disk_size_gb: int
     :param subnet_id: The Azure resource ID of the worker subnet (immutable).
     :type subnet_id: str
-    :param count: The number of worker VMs.  Must be between 3 and 20
-     (immutable).
+    :param count: The number of worker VMs.
     :type count: int
     """
 

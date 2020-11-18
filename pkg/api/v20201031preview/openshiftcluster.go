@@ -169,7 +169,7 @@ type WorkerProfile struct {
 	// The Azure resource ID of the worker subnet (immutable).
 	SubnetID string `json:"subnetId,omitempty"`
 
-	// The number of worker VMs.  Must be between 3 and 20 (immutable).
+	// The number of worker VMs.
 	Count int `json:"count,omitempty"`
 }
 
