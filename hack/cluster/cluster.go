@@ -37,12 +37,12 @@ func run(ctx context.Context, log *logrus.Entry) error {
 
 	instancemetadata, err := instancemetadata.NewDev()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	c, err := cluster.New(log, deploymentMode, instancemetadata, false)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	switch strings.ToLower(os.Args[1]) {

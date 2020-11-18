@@ -27,7 +27,7 @@ const (
 func ResourceRoleAssignment(roleID, spID, resourceType, resourceName string, condition ...interface{}) *arm.Resource {
 	resourceID := "resourceId('" + resourceType + "', " + resourceName + ")"
 
-	return ResourceRoleAssignmentWithName(roleID, spID, resourceType, resourceName, "concat("+resourceName+", '/Microsoft.Authorization/', guid("+resourceID+", "+spID+", '"+roleID+"'))", condition)
+	return ResourceRoleAssignmentWithName(roleID, spID, resourceType, resourceName, "concat("+resourceName+", '/Microsoft.Authorization/', guid("+resourceID+", "+spID+", '"+roleID+"', uniqueString(deployment().name)))", condition)
 }
 
 // ResourceRoleAssignmentWithName returns a Resource granting roleID on the
@@ -67,7 +67,7 @@ func ResourceRoleAssignmentWithName(roleID, spID, resourceType, resourceName, na
 // resource group to spID.  Argument spID must be a valid ARM expression, e.g.
 // "'foo'" or "concat('foo')".  Use this function in new ARM templates.
 func ResourceGroupRoleAssignment(roleID, spID string, condition ...interface{}) *arm.Resource {
-	return ResourceGroupRoleAssignmentWithName(roleID, spID, "guid(resourceGroup().id, '"+spID+"', '"+roleID+"')", condition)
+	return ResourceGroupRoleAssignmentWithName(roleID, spID, "guid(resourceGroup().id, '"+spID+"', '"+roleID+"', uniqueString(deployment().name))", condition)
 }
 
 // ResourceGroupRoleAssignmentWithName returns a Resource granting roleID on the
