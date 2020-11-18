@@ -8,27 +8,20 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
+	"time"
 
 	"k8s.io/apimachinery/pkg/util/httpstream"
 	"k8s.io/apimachinery/pkg/util/httpstream/spdy"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
-
-	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/proxy"
-	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
 
 // dialSpdy connects to the specified path on the API server of oc and
 // negotiates SPDY
-func dialSpdy(ctx context.Context, dialer proxy.Dialer, oc *api.OpenShiftCluster, path string) (httpstream.Connection, error) {
-	restconfig, err := restconfig.RestConfig(dialer, oc)
-	if err != nil {
-		return nil, err
-	}
-
+func dialSpdy(ctx context.Context, restconfig *rest.Config, path string) (httpstream.Connection, error) {
 	// 1. Connect to the API server via private endpoint (and via proxy in
 	//    development mode)
 	clusterURL, err := url.Parse(restconfig.Host)
@@ -36,7 +29,15 @@ func dialSpdy(ctx context.Context, dialer proxy.Dialer, oc *api.OpenShiftCluster
 		return nil, err
 	}
 
-	rawConn, err := dialer.DialContext(ctx, "tcp", oc.Properties.NetworkProfile.PrivateEndpointIP+":"+clusterURL.Port())
+	dialContext := restconfig.Dial
+	if dialContext == nil {
+		dialContext = (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext
+	}
+
+	rawConn, err := dialContext(ctx, "tcp", clusterURL.Host)
 	if err != nil {
 		return nil, err
 	}
@@ -46,6 +47,9 @@ func dialSpdy(ctx context.Context, dialer proxy.Dialer, oc *api.OpenShiftCluster
 	if err != nil {
 		rawConn.Close()
 		return nil, err
+	}
+	if tlsConfig == nil {
+		tlsConfig = &tls.Config{}
 	}
 	tlsConfig.ServerName = clusterURL.Hostname()
 
@@ -65,6 +69,9 @@ func dialSpdy(ctx context.Context, dialer proxy.Dialer, oc *api.OpenShiftCluster
 	req.Header.Add(httpstream.HeaderConnection, httpstream.HeaderUpgrade)
 	req.Header.Add(httpstream.HeaderProtocolVersion, portforward.PortForwardProtocolV1Name)
 	req.Header.Add(httpstream.HeaderUpgrade, spdy.HeaderSpdy31)
+	if restconfig.BearerToken != "" {
+		req.Header.Add("Authorization", "Bearer "+restconfig.BearerToken)
+	}
 
 	err = req.Write(tlsConn)
 	if err != nil {

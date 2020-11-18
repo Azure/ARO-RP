@@ -30,7 +30,7 @@ func (mon *Monitor) emitPrometheusAlerts(ctx context.Context) error {
 						return nil, err
 					}
 
-					return portforward.DialContext(ctx, mon.log, mon.dialer, mon.oc, "openshift-monitoring", fmt.Sprintf("alertmanager-main-%d", i), port)
+					return portforward.DialContext(ctx, mon.log, mon.restconfig, "openshift-monitoring", fmt.Sprintf("alertmanager-main-%d", i), port)
 				},
 				// HACK: without this, keepalive connections don't get closed,
 				// resulting in excessive open TCP connections, lots of
