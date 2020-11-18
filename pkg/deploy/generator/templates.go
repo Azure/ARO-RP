@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 
 	"github.com/Azure/ARO-RP/pkg/util/arm"
-	"github.com/Azure/ARO-RP/pkg/util/rbac"
 )
 
 func (g *generator) clusterPredeploy() *arm.Template {
@@ -38,10 +37,6 @@ func (g *generator) clusterPredeploy() *arm.Template {
 		clusterRouteTable(),
 		clusterMasterSubnet(),
 		clusterWorkerSubnet(),
-		rbac.ResourceRoleAssignment(rbac.RoleNetworkContributor, "parameters('clusterServicePrincipalId')", "Microsoft.Network/virtualNetworks", "'dev-vnet'"),
-		rbac.ResourceRoleAssignment(rbac.RoleNetworkContributor, "parameters('fpServicePrincipalId')", "Microsoft.Network/virtualNetworks", "'dev-vnet'"),
-		rbac.ResourceRoleAssignment(rbac.RoleNetworkContributor, "parameters('clusterServicePrincipalId')", "Microsoft.Network/routeTables", "concat(parameters('clusterName'), '-rt')"),
-		rbac.ResourceRoleAssignment(rbac.RoleNetworkContributor, "parameters('fpServicePrincipalId')", "Microsoft.Network/routeTables", "concat(parameters('clusterName'), '-rt')"),
 	)
 
 	return t

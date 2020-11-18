@@ -13,10 +13,12 @@ import (
 	"time"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
+	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
+	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 
 	mgmtredhatopenshift "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2020-04-30/redhatopenshift"
@@ -30,6 +32,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
+	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
@@ -176,6 +179,41 @@ func (c *Cluster) Create(ctx context.Context, clusterName string) error {
 	})
 	if err != nil {
 		return err
+	}
+
+	c.log.Info("creating role assignments")
+	for _, scope := range []string{
+		"/subscriptions/" + c.SubscriptionID() + "/resourceGroups/" + c.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/dev-vnet",
+		"/subscriptions/" + c.SubscriptionID() + "/resourceGroups/" + c.ResourceGroup() + "/providers/Microsoft.Network/routeTables/" + clusterName + "-rt",
+	} {
+		for _, principalID := range []string{spID, fpSPID} {
+			for i := 0; i < 5; i++ {
+				_, err = c.roleassignments.Create(
+					ctx,
+					scope,
+					uuid.NewV4().String(),
+					mgmtauthorization.RoleAssignmentCreateParameters{
+						RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
+							RoleDefinitionID: to.StringPtr("/subscriptions/" + c.SubscriptionID() + "/providers/Microsoft.Authorization/roleDefinitions/" + rbac.RoleNetworkContributor),
+							PrincipalID:      &principalID,
+							PrincipalType:    mgmtauthorization.ServicePrincipal,
+						},
+					},
+				)
+				// TODO: tighten this error check
+				if err != nil && i < 4 {
+					// Sometimes we see HashConflictOnDifferentRoleAssignmentIds.
+					// Retry a few times.
+					c.log.Print(err)
+					continue
+				}
+				if err != nil {
+					return err
+				}
+
+				break
+			}
+		}
 	}
 
 	c.log.Info("creating cluster")
