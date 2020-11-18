@@ -14,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/httpstream"
 	"k8s.io/apimachinery/pkg/util/httpstream/spdy"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/portforward"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/proxy"
@@ -62,6 +63,7 @@ func dialSpdy(ctx context.Context, dialer proxy.Dialer, oc *api.OpenShiftCluster
 		return nil, err
 	}
 	req.Header.Add(httpstream.HeaderConnection, httpstream.HeaderUpgrade)
+	req.Header.Add(httpstream.HeaderProtocolVersion, portforward.PortForwardProtocolV1Name)
 	req.Header.Add(httpstream.HeaderUpgrade, spdy.HeaderSpdy31)
 
 	err = req.Write(tlsConn)
