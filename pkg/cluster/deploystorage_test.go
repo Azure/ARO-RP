@@ -32,7 +32,7 @@ var daTestCases = []struct {
 		},
 	},
 	{
-		name:         "Registered for engineering feature flag",
+		name:         "Registered for route table inspection feature",
 		featureFlags: []string{"Microsoft.RedHatOpenShift/RedHatEngineering"},
 		want: []string{
 			"Microsoft.Network/networkSecurityGroups/join/action",
@@ -44,7 +44,6 @@ var daTestCases = []struct {
 			"Microsoft.Compute/snapshots/write",
 			"Microsoft.Compute/snapshots/delete",
 			"Microsoft.Network/networkInterfaces/effectiveRouteTable/action",
-			"Microsoft.Resources/resourceGroups/write",
 		},
 	},
 }

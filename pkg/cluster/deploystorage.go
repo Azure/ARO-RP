@@ -236,7 +236,6 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 var extraDenyAssignmentExclusions = map[string][]string{
 	"Microsoft.RedHatOpenShift/RedHatEngineering": {
 		"Microsoft.Network/networkInterfaces/effectiveRouteTable/action",
-		"Microsoft.Resources/resourceGroups/write", // enable resource group tagging
 	},
 }
 
