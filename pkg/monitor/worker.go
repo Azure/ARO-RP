@@ -15,6 +15,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/monitor/cluster"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
+	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
 
 // listBuckets reads our bucket allocation from the master
@@ -191,7 +192,13 @@ func (mon *monitor) workOne(ctx context.Context, log *logrus.Entry, doc *api.Ope
 	ctx, cancel := context.WithTimeout(ctx, 50*time.Second)
 	defer cancel()
 
-	c, err := cluster.NewMonitor(ctx, mon.dialer, log, doc.OpenShiftCluster, mon.clusterm, hourlyRun)
+	restConfig, err := restconfig.RestConfig(mon.dialer, doc.OpenShiftCluster)
+	if err != nil {
+		log.Error(err)
+		return
+	}
+
+	c, err := cluster.NewMonitor(ctx, log, restConfig, doc.OpenShiftCluster, mon.clusterm, hourlyRun)
 	if err != nil {
 		log.Error(err)
 		return

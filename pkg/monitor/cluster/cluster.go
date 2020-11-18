@@ -17,27 +17,26 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/metrics"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
-	"github.com/Azure/ARO-RP/pkg/proxy"
-	"github.com/Azure/ARO-RP/pkg/util/restconfig"
 )
 
 type Monitor struct {
-	dialer    proxy.Dialer
 	log       *logrus.Entry
 	hourlyRun bool
 
 	oc   *api.OpenShiftCluster
 	dims map[string]string
 
-	cli       kubernetes.Interface
-	configcli configclient.Interface
-	mcocli    mcoclient.Interface
-	m         metrics.Interface
-	arocli    aroclient.AroV1alpha1Interface
+	restconfig *rest.Config
+	cli        kubernetes.Interface
+	configcli  configclient.Interface
+	mcocli     mcoclient.Interface
+	m          metrics.Interface
+	arocli     aroclient.AroV1alpha1Interface
 
 	// access below only via the helper functions in cache.go
 	cache struct {
@@ -48,7 +47,7 @@ type Monitor struct {
 	}
 }
 
-func NewMonitor(ctx context.Context, dialer proxy.Dialer, log *logrus.Entry, oc *api.OpenShiftCluster, m metrics.Interface, hourlyRun bool) (*Monitor, error) {
+func NewMonitor(ctx context.Context, log *logrus.Entry, restConfig *rest.Config, oc *api.OpenShiftCluster, m metrics.Interface, hourlyRun bool) (*Monitor, error) {
 	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
 		return nil, err
@@ -59,11 +58,6 @@ func NewMonitor(ctx context.Context, dialer proxy.Dialer, log *logrus.Entry, oc 
 		"subscriptionId": r.SubscriptionID,
 		"resourceGroup":  r.ResourceGroup,
 		"resourceName":   r.ResourceName,
-	}
-
-	restConfig, err := restconfig.RestConfig(dialer, oc)
-	if err != nil {
-		return nil, err
 	}
 
 	cli, err := kubernetes.NewForConfig(restConfig)
@@ -87,28 +81,29 @@ func NewMonitor(ctx context.Context, dialer proxy.Dialer, log *logrus.Entry, oc 
 	}
 
 	return &Monitor{
-		dialer:    dialer,
 		log:       log,
 		hourlyRun: hourlyRun,
 
 		oc:   oc,
 		dims: dims,
 
-		cli:       cli,
-		configcli: configcli,
-		mcocli:    mcocli,
-		arocli:    arocli,
-		m:         m,
+		restconfig: restConfig,
+		cli:        cli,
+		configcli:  configcli,
+		mcocli:     mcocli,
+		arocli:     arocli,
+		m:          m,
 	}, nil
 }
 
 // Monitor checks the API server health of a cluster
-func (mon *Monitor) Monitor(ctx context.Context) {
+func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 	mon.log.Debug("monitoring")
 
 	// If API is not returning 200, don't need to run the next checks
 	statusCode, err := mon.emitAPIServerHealthzCode(ctx)
 	if err != nil {
+		errs = append(errs, err)
 		mon.log.Printf("%s: %s", runtime.FuncForPC(reflect.ValueOf(mon.emitAPIServerHealthzCode).Pointer()).Name(), err)
 		mon.emitGauge("monitor.clustererrors", 1, map[string]string{"monitor": runtime.FuncForPC(reflect.ValueOf(mon.emitAPIServerHealthzCode).Pointer()).Name()})
 	}
@@ -135,11 +130,14 @@ func (mon *Monitor) Monitor(ctx context.Context) {
 	} {
 		err = f(ctx)
 		if err != nil {
+			errs = append(errs, err)
 			mon.log.Printf("%s: %s", runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name(), err)
 			mon.emitGauge("monitor.clustererrors", 1, map[string]string{"monitor": runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name()})
 			// keep going
 		}
 	}
+
+	return
 }
 
 func (mon *Monitor) emitFloat(m string, value float64, dims map[string]string) {

@@ -17,6 +17,7 @@ import (
 	machineapiclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/client-go/tools/clientcmd/api/latest"
@@ -41,6 +42,7 @@ type clientSet struct {
 	ActivityLogs      insights.ActivityLogsClient
 	VirtualNetworks   network.VirtualNetworksClient
 
+	RestConfig  *rest.Config
 	Kubernetes  kubernetes.Interface
 	MachineAPI  machineapiclient.Interface
 	AROClusters aroclient.AroV1alpha1Interface
@@ -119,6 +121,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		ActivityLogs:      insights.NewActivityLogsClient(im.SubscriptionID(), authorizer),
 		VirtualNetworks:   network.NewVirtualNetworksClient(im.SubscriptionID(), authorizer),
 
+		RestConfig:  restconfig,
 		Kubernetes:  cli,
 		MachineAPI:  machineapicli,
 		AROClusters: arocli,
