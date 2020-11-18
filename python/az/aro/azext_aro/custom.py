@@ -169,8 +169,8 @@ def aro_delete(cmd, client, resource_group_name, resource_name, no_wait=False):
                                              sp_id)
     except (CloudError, HttpOperationError) as e:
         # Default to old deletion behaviour in case operations throw an
-        # exception above.
-        pass
+        # exception above. Log the error.
+        logger.info(e.message)
 
     return sdk_no_wait(no_wait, client.delete,
                        resource_group_name=resource_group_name,
