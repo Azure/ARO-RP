@@ -7,21 +7,19 @@ Feature work will need to be agreed and converted to working stories. All techni
 
 ## API changes
 
-### .OpenShiftClusterProperties.SecurityProfile
+### ComputeSecurityProfile
 
-Add security profile to worker pool configuration for all security enhancements
-for the product compute resource.
+Add security profile to worker and master pools configuration for all security enhancements
+for the compute instances
 
-We need to make sure that these option are validated on the cluster too when customer is interacting with MachineSet objects. We should be able to verify
-if these options where enabled on cluster create and set those accordingly.
+We need to make sure that these option are validated on the cluster too when customer is interacting with MachineSet objects. We should be able to verify if these options where enabled on cluster create and set those accordingly. This does not prevent customer to create instances with and without encryption in the same cluster.
 
 ```
-	// MasterProfile represents a master profile.
-
+// MasterProfile represents a master profile.
 type MasterProfile struct {
 	...
 
-	ComputeSecurityProfile ComputeSecurityProfile `json:"securityProfile,omitempty"`
+	ComputeSecurityProfile
 }
 
 
@@ -29,16 +27,26 @@ type MasterProfile struct {
 type WorkerProfile struct {
 	...
 
-	ComputeSecurityProfile ComputeSecurityProfile `json:"securityProfile,omitempty"`
+	ComputeSecurityProfile
 }
 ```
 
-Re-use same structure for all compute profiles:
-```
-// ComputeSecurityProfile represents an security profile for all compute
+// EncryptionAtHostEnum enumerates the values for Encryption at host
+type EncryptionAtHostEnum string
+
+const (
+	// Disabled ...
+	Disabled EncryptionAtHostEnum = "Disabled"
+	// Enabled ...
+	Enabled EncryptionAtHostEnum = "Enabled"
+)
+
+// ComputeSecurityProfile represents an security profile for compute instance
 type ComputeSecurityProfile struct {
-	// EncryptionAtHost value sets encryptionAtHost option for all VirtualMachines.
-	EncryptionAtHost *bool `json:"encryptionAtHost,omitempty"`
+	// EncryptionAtHost defines value encryptionAtHost option for all VirtualMachines.
+	EncryptionAtHost EncryptionAtHostEnum `json:"encryptionAtHost,omitempty"`
+	// / DiskEncryptionSetID defines resourceID for diskEncryptionSet resource. It must be in the same subscription
+	DiskEncryptionSetID string `json:"diskEncryptionSetID,omitempty"`
 }
 
 ```
@@ -60,20 +68,19 @@ type OpenShiftClusterCredentials struct {
 
 // OpenShiftClusterAdminCredentials represents an OpenShift cluster's credentials
 type OpenShiftClusterAdminCredentials struct {
-	// The username for the kubeadmin user
-	KubeadminUsername string `json:"kubeadminUsername,omitempty"`
-
-	// The password for the kubeadmin user
-	KubeadminPassword string `json:"kubeadminPassword,omitempty"`
+	// KubeConfig - Base64-encoded Kubernetes configuration file.
+	KubeConfig *[]byte `json:"kubeConfig,omitempty"`
 }
 
 ```
 
 Frontend changes:
 
+Existing method `listcredentials` stays as it is.
+
 ```
 	s = r.
-		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/listcredentials/listadminkubeconfig").
+		Path("/subscriptions/{subscriptionId}/resourcegroups/{resourceGroupName}/providers/{resourceProviderNamespace}/{resourceType}/{resourceName}/listadmincredentials")
 		Queries("api-version", "{api-version}").
 		Subrouter()
 
@@ -98,28 +105,36 @@ Standard_G5
 Standard_F72s_v2
 ```
 
-### Networking profile
+### NetworkProfile
 
-We could start working on `NetworkingProfile` for few nit features we will want to
-deliver in the future releases. Examples:
+We should extend existing `NetworkProfile` with SDN plugin option for 4.6 onwards.
 
-1.`SDNPlugin` - OpenShift will be changing its default SDN provider[1]. We can start
+`SDNPlugin` - OpenShift will be changing its default SDN provider[1]. We can start
 shipping ability to chose it on install, so customer can start testing, and we
-will be able to switch it in the future relase.
+will be able to switch it in the future release.
 
-2. `OutboundIPAdrressesCount` - if we set `disableOutboundSnat=false` in Azure cloud provider, any new Kubernetes `Loadbalancer.Type=LoadBalancer` will not be used
-for outbound traffic. By adding `FrontendIPsCount` and `PortsPerInstance` we would enable customer to control their outbound traffic behaviour. `FrondendIps` would
-have to be provisioned by RP backend, to control SNAT behaviour.
+
+// SDNPluginName enumerates the values for Supported SDN plugins
+type SDNPluginName string
+
+const (
+	// OpenShiftSDN ...
+	OpenShiftSDN SDNPluginName = "OpenShiftSDN"
+	// OVNKubernetes ...
+	OVNKubernetes SDNPluginName = "OVNKubernetes"
+)
 
 ```
-// NetworkingProfile allows customer to configure networking settings on the
-// clusters
-type NetworkingProfile struct {
-    // SDNPlugin allows override current default SDNPlugin with other. In this
-    // case future Kubernetes OVN[1]
-    SDNPlugin string `json:"sdnPlugin,omitempty"`
-    FrontendIPsCount: 2 `int:"frontendIPsCount,omitempty"`
-    PortsPerInstance: 2048   `int:"portsPerInstance,omitempty"`
+// NetworkProfile represents a network profile.
+type NetworkProfile struct {
+	// The CIDR used for OpenShift/Kubernetes Pods (immutable).
+	PodCIDR string `json:"podCidr,omitempty"`
+
+	// The CIDR used for OpenShift/Kubernetes Services (immutable).
+	ServiceCIDR string `json:"serviceCidr,omitempty"`
+
+	// SDNPlugin defines SDN plugin, used in the cluster
+	SDNPluginName SDNPluginName `json:"sdnPluginName,omitempty"`
 }
 ```
 
