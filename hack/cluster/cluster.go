@@ -40,7 +40,12 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	c, err := cluster.New(log, deploymentMode, instancemetadata, false)
+	ci := false
+	if os.Getenv("FULL_DEPLOY") != "" {
+		ci = true
+	}
+
+	c, err := cluster.New(log, deploymentMode, instancemetadata, ci)
 	if err != nil {
 		return err
 	}
