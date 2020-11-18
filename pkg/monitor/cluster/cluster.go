@@ -97,12 +97,13 @@ func NewMonitor(ctx context.Context, log *logrus.Entry, restConfig *rest.Config,
 }
 
 // Monitor checks the API server health of a cluster
-func (mon *Monitor) Monitor(ctx context.Context) {
+func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 	mon.log.Debug("monitoring")
 
 	// If API is not returning 200, don't need to run the next checks
 	statusCode, err := mon.emitAPIServerHealthzCode(ctx)
 	if err != nil {
+		errs = append(errs, err)
 		mon.log.Printf("%s: %s", runtime.FuncForPC(reflect.ValueOf(mon.emitAPIServerHealthzCode).Pointer()).Name(), err)
 		mon.emitGauge("monitor.clustererrors", 1, map[string]string{"monitor": runtime.FuncForPC(reflect.ValueOf(mon.emitAPIServerHealthzCode).Pointer()).Name()})
 	}
@@ -129,11 +130,14 @@ func (mon *Monitor) Monitor(ctx context.Context) {
 	} {
 		err = f(ctx)
 		if err != nil {
+			errs = append(errs, err)
 			mon.log.Printf("%s: %s", runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name(), err)
 			mon.emitGauge("monitor.clustererrors", 1, map[string]string{"monitor": runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name()})
 			// keep going
 		}
 	}
+
+	return
 }
 
 func (mon *Monitor) emitFloat(m string, value float64, dims map[string]string) {
