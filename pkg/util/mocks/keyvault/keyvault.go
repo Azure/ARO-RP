@@ -142,20 +142,6 @@ func (mr *MockManagerMockRecorder) SetSecret(arg0, arg1, arg2 interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetSecret", reflect.TypeOf((*MockManager)(nil).SetSecret), arg0, arg1, arg2)
 }
 
-// UpgradeCertificatePolicy mocks base method
-func (m *MockManager) UpgradeCertificatePolicy(arg0 context.Context, arg1 string) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpgradeCertificatePolicy", arg0, arg1)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// UpgradeCertificatePolicy indicates an expected call of UpgradeCertificatePolicy
-func (mr *MockManagerMockRecorder) UpgradeCertificatePolicy(arg0, arg1 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpgradeCertificatePolicy", reflect.TypeOf((*MockManager)(nil).UpgradeCertificatePolicy), arg0, arg1)
-}
-
 // WaitForCertificateOperation mocks base method
 func (m *MockManager) WaitForCertificateOperation(arg0 context.Context, arg1 string) error {
 	m.ctrl.T.Helper()

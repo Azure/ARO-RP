@@ -10,7 +10,6 @@ import (
 	"crypto/x509/pkix"
 	"encoding/base64"
 	"fmt"
-	"reflect"
 	"strings"
 	"time"
 
@@ -45,7 +44,6 @@ type Manager interface {
 	GetSecret(context.Context, string) (keyvault.SecretBundle, error)
 	GetSecrets(context.Context) ([]keyvault.SecretItem, error)
 	SetSecret(context.Context, string, keyvault.SecretSetParameters) error
-	UpgradeCertificatePolicy(context.Context, string) error
 	WaitForCertificateOperation(context.Context, string) error
 }
 
@@ -195,33 +193,6 @@ func (m *manager) WaitForCertificateOperation(ctx context.Context, certificateNa
 
 		return checkOperation(&op)
 	}, ctx.Done())
-	return err
-}
-
-func (m *manager) UpgradeCertificatePolicy(ctx context.Context, certificateName string) error {
-	policy, err := m.kv.GetCertificatePolicy(ctx, m.keyvaultURI, certificateName)
-	if err != nil {
-		return err
-	}
-
-	lifetimeActions := &[]keyvault.LifetimeAction{
-		{
-			Trigger: &keyvault.Trigger{
-				DaysBeforeExpiry: to.Int32Ptr(365 - 90),
-			},
-			Action: &keyvault.Action{
-				ActionType: keyvault.AutoRenew,
-			},
-		},
-	}
-
-	if reflect.DeepEqual(policy.LifetimeActions, lifetimeActions) {
-		return nil
-	}
-
-	policy.LifetimeActions = lifetimeActions
-
-	_, err = m.kv.UpdateCertificatePolicy(ctx, m.keyvaultURI, certificateName, policy)
 	return err
 }
 

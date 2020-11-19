@@ -18,8 +18,6 @@ type BaseClient interface {
 	GetSecret(ctx context.Context, vaultBaseURL string, secretName string, secretVersion string) (result keyvault.SecretBundle, err error)
 	GetCertificates(ctx context.Context, vaultBaseURL string, maxresults *int32, includePending *bool) (result keyvault.CertificateListResultPage, err error)
 	SetSecret(ctx context.Context, vaultBaseURL string, secretName string, parameters keyvault.SecretSetParameters) (result keyvault.SecretBundle, err error)
-	GetCertificatePolicy(ctx context.Context, vaultBaseURL string, certificateName string) (result keyvault.CertificatePolicy, err error)
-	UpdateCertificatePolicy(ctx context.Context, vaultBaseURL string, certificateName string, certificatePolicy keyvault.CertificatePolicy) (result keyvault.CertificatePolicy, err error)
 	BaseClientAddons
 }
 
