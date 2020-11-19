@@ -7,19 +7,50 @@ Feature work will need to be agreed and converted to working stories. All techni
 
 ## API changes
 
-### ComputeSecurityProfile
+### Disk encryption and FIPS
 
-Add security profile to worker and master pools configuration for all security enhancements
-for the compute instances
+Add encryption and FIPS values to worker profiles for security enhancements.
 
-We need to make sure that these option are validated on the cluster too when customer is interacting with MachineSet objects. We should be able to verify if these options where enabled on cluster create and set those accordingly. This does not prevent customer to create instances with and without encryption in the same cluster.
+EncryptionAtHost - Disk encryption at host
+DiskEncryptionSetID - Managed disk encryption option
+FIPS - FIPS encryption option for host
+
+```
+// EncryptionAtHost enumerates the values for Encryption at host
+type EncryptionAtHost string
+
+const (
+	// EncryptionAtHostDisabled ...
+	EncryptionAtHostDisabled EncryptionAtHost = "Disabled"
+	// EncryptionAtHostEnabled ...
+	EncryptionAtHostEnabled EncryptionAtHost = "Enabled"
+)
+
+```
+// FIPS enumerates the values for FIPS at host
+type FIPS string
+
+const (
+	// FIPSDisabled ...
+	FIPSDisabled FIPS = "Disabled"
+	// FIPSEnabled ...
+	FIPSEnabled FIPS = "Enabled"
+)
+
+```
 
 ```
 // MasterProfile represents a master profile.
 type MasterProfile struct {
 	...
 
-	ComputeSecurityProfile
+	// EncryptionAtHost defines value encryptionAtHost option for all VirtualMachines.
+	EncryptionAtHost EncryptionAtHostEnum `json:"encryptionAtHost,omitempty"`
+	// DiskEncryptionSetID defines resourceID for diskEncryptionSet resource. It must be in the same subscription
+	DiskEncryptionSetID string `json:"diskEncryptionSetId,omitempty"`
+
+	// FIPS defines value for FIPS encryption for hosts
+	FIPS FIPS `json:"fips,omitempty"`
 }
 
 
@@ -27,28 +58,11 @@ type MasterProfile struct {
 type WorkerProfile struct {
 	...
 
-	ComputeSecurityProfile
-}
-```
-
-// EncryptionAtHostEnum enumerates the values for Encryption at host
-type EncryptionAtHostEnum string
-
-const (
-	// Disabled ...
-	Disabled EncryptionAtHostEnum = "Disabled"
-	// Enabled ...
-	Enabled EncryptionAtHostEnum = "Enabled"
-)
-
-// ComputeSecurityProfile represents an security profile for compute instance
-type ComputeSecurityProfile struct {
 	// EncryptionAtHost defines value encryptionAtHost option for all VirtualMachines.
 	EncryptionAtHost EncryptionAtHostEnum `json:"encryptionAtHost,omitempty"`
-	// / DiskEncryptionSetID defines resourceID for diskEncryptionSet resource. It must be in the same subscription
-	DiskEncryptionSetID string `json:"diskEncryptionSetID,omitempty"`
+	// DiskEncryptionSetID defines resourceID for diskEncryptionSet resource. It must be in the same subscription
+	DiskEncryptionSetID string `json:"diskEncryptionSetId,omitempty"`
 }
-
 ```
 
 ### Extend OpenShiftClusterCredentials to provide kube-config
@@ -66,10 +80,10 @@ type OpenShiftClusterCredentials struct {
 	...
 }
 
-// OpenShiftClusterAdminCredentials represents an OpenShift cluster's credentials
-type OpenShiftClusterAdminCredentials struct {
+// OpenShiftClusterAdminKubeConfig represents an OpenShift cluster's credentials
+type OpenShiftClusterAdminKubeConfig struct {
 	// KubeConfig - Base64-encoded Kubernetes configuration file.
-	KubeConfig *[]byte `json:"kubeConfig,omitempty"`
+	KubeConfig []byte `json:"kubeConfig,omitempty"`
 }
 
 ```
@@ -114,14 +128,14 @@ shipping ability to chose it on install, so customer can start testing, and we
 will be able to switch it in the future release.
 
 
-// SDNPluginName enumerates the values for Supported SDN plugins
-type SDNPluginName string
+// SDNProvider enumerates the values for Supported SDN providers
+type SDNProvider string
 
 const (
 	// OpenShiftSDN ...
-	OpenShiftSDN SDNPluginName = "OpenShiftSDN"
+	OpenShiftSDN SDNProvider = "OpenShiftSDN"
 	// OVNKubernetes ...
-	OVNKubernetes SDNPluginName = "OVNKubernetes"
+	OVNKubernetes SDNProvider = "OVNKubernetes"
 )
 
 ```
@@ -134,7 +148,7 @@ type NetworkProfile struct {
 	ServiceCIDR string `json:"serviceCidr,omitempty"`
 
 	// SDNPlugin defines SDN plugin, used in the cluster
-	SDNPluginName SDNPluginName `json:"sdnPluginName,omitempty"`
+	SDNProvider SDNProvider `json:"sdnProvider,omitempty"`
 }
 ```
 
