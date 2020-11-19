@@ -34,7 +34,6 @@ type prod struct {
 	adminClientAuthorizer clientauthorizer.ClientAuthorizer
 
 	acrDomain string
-	domain    string
 	zones     map[string][]string
 
 	fpCertificate *x509.Certificate
