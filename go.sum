@@ -1078,8 +1078,8 @@ github.com/jellevandenhooff/dkim v0.0.0-20150330215556-f50fe3d243e1/go.mod h1:E0
 github.com/jessevdk/go-flags v0.0.0-20180331124232-1c38ed7ad0cc/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=
 github.com/jessevdk/go-flags v1.4.0/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=
 github.com/jhump/protoreflect v1.6.0/go.mod h1:eaTn3RZAmMBcV0fifFvlm6VHNz3wSkYyXYWUh7ymB74=
-github.com/jim-minter/go-cosmosdb v0.0.0-20201117192055-43b4b21373cc h1:1GuA++1yez1MbiCQqZpov6kTJZSdJgWZ1inVQ+x4X5g=
-github.com/jim-minter/go-cosmosdb v0.0.0-20201117192055-43b4b21373cc/go.mod h1:n4wXKwl/rXS49qkPRFf3vovG0V6nkwAO4SbRwjGYibM=
+github.com/jim-minter/go-cosmosdb v0.0.0-20201119201311-b37af9b82812 h1:il0jxCpyWRQ5klfw8ey8yg+WCUdsZGjziYEk5rIDkuc=
+github.com/jim-minter/go-cosmosdb v0.0.0-20201119201311-b37af9b82812/go.mod h1:n4wXKwl/rXS49qkPRFf3vovG0V6nkwAO4SbRwjGYibM=
 github.com/jim-minter/installer v0.9.0-master.0.20201116195329-73508e766328 h1:VFj0GDbMBmqHS4wEDPQDBRDvmuyojy08yrL7//ZDU5Q=
 github.com/jim-minter/installer v0.9.0-master.0.20201116195329-73508e766328/go.mod h1:of/td4KUxV/m+XIW9s801GmNQMXkKr/BshS07qA36vQ=
 github.com/jmespath/go-jmespath v0.0.0-20160202185014-0b12d6b521d8/go.mod h1:Nht3zPeWKUH0NzdCt2Blrr5ys8VGpn0CEB0cQHVjt7k=
