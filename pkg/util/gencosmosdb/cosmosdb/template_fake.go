@@ -156,7 +156,7 @@ func (c *FakeTemplateClient) apply(ctx context.Context, partitionkey string, tem
 
 	c.templates[template.ID] = template
 
-	return template, nil
+	return c.deepCopy(template)
 }
 
 // Create creates a Template in the database
