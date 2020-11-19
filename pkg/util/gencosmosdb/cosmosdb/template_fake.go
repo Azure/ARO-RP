@@ -20,7 +20,7 @@ var _ TemplateClient = &FakeTemplateClient{}
 func NewFakeTemplateClient(h *codec.JsonHandle) *FakeTemplateClient {
 	return &FakeTemplateClient{
 		jsonHandle:      h,
-		templates:       make(map[string][]byte),
+		templates:       make(map[string]*pkg.Template),
 		triggerHandlers: make(map[string]fakeTemplateTriggerHandler),
 		queryHandlers:   make(map[string]fakeTemplateQueryHandler),
 	}
@@ -30,7 +30,7 @@ func NewFakeTemplateClient(h *codec.JsonHandle) *FakeTemplateClient {
 type FakeTemplateClient struct {
 	lock            sync.RWMutex
 	jsonHandle      *codec.JsonHandle
-	templates       map[string][]byte
+	templates       map[string]*pkg.Template
 	triggerHandlers map[string]fakeTemplateTriggerHandler
 	queryHandlers   map[string]fakeTemplateQueryHandler
 	sorter          func([]*pkg.Template)
@@ -42,16 +42,6 @@ type FakeTemplateClient struct {
 	// err, if not nil, is an error to return when attempting to communicate
 	// with this Client
 	err error
-}
-
-func (c *FakeTemplateClient) decodeTemplate(s []byte) (template *pkg.Template, err error) {
-	err = codec.NewDecoderBytes(s, c.jsonHandle).Decode(&template)
-	return
-}
-
-func (c *FakeTemplateClient) encodeTemplate(template *pkg.Template) (b []byte, err error) {
-	err = codec.NewEncoderBytes(&b, c.jsonHandle).Encode(template)
-	return
 }
 
 // SetError sets or unsets an error that will be returned on any
@@ -98,12 +88,19 @@ func (c *FakeTemplateClient) SetQueryHandler(queryName string, query fakeTemplat
 }
 
 func (c *FakeTemplateClient) deepCopy(template *pkg.Template) (*pkg.Template, error) {
-	b, err := c.encodeTemplate(template)
+	var b []byte
+	err := codec.NewEncoderBytes(&b, c.jsonHandle).Encode(template)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.decodeTemplate(b)
+	template = nil
+	err = codec.NewDecoderBytes(b, c.jsonHandle).Decode(&template)
+	if err != nil {
+		return nil, err
+	}
+
+	return template, nil
 }
 
 func (c *FakeTemplateClient) apply(ctx context.Context, partitionkey string, template *pkg.Template, options *Options, isCreate bool) (*pkg.Template, error) {
@@ -126,7 +123,7 @@ func (c *FakeTemplateClient) apply(ctx context.Context, partitionkey string, tem
 		}
 	}
 
-	b, exists := c.templates[template.ID]
+	existingTemplate, exists := c.templates[template.ID]
 	if isCreate && exists {
 		return nil, &Error{
 			StatusCode: http.StatusConflict,
@@ -138,23 +135,13 @@ func (c *FakeTemplateClient) apply(ctx context.Context, partitionkey string, tem
 			return nil, &Error{StatusCode: http.StatusNotFound}
 		}
 
-		existingTemplate, err := c.decodeTemplate(b)
-		if err != nil {
-			return nil, err
-		}
-
 		if template.ETag != existingTemplate.ETag {
 			return nil, &Error{StatusCode: http.StatusPreconditionFailed}
 		}
 	}
 
 	if c.conflictChecker != nil {
-		for id := range c.templates {
-			templateToCheck, err := c.decodeTemplate(c.templates[id])
-			if err != nil {
-				return nil, err
-			}
-
+		for _, templateToCheck := range c.templates {
 			if c.conflictChecker(templateToCheck, template) {
 				return nil, &Error{
 					StatusCode: http.StatusConflict,
@@ -167,12 +154,7 @@ func (c *FakeTemplateClient) apply(ctx context.Context, partitionkey string, tem
 	template.ETag = fmt.Sprint(c.etag)
 	c.etag++
 
-	b, err = c.encodeTemplate(template)
-	if err != nil {
-		return nil, err
-	}
-
-	c.templates[template.ID] = b
+	c.templates[template.ID] = template
 
 	return template, nil
 }
@@ -197,12 +179,12 @@ func (c *FakeTemplateClient) List(*Options) TemplateIterator {
 	}
 
 	templates := make([]*pkg.Template, 0, len(c.templates))
-	for _, d := range c.templates {
-		r, err := c.decodeTemplate(d)
+	for _, template := range c.templates {
+		template, err := c.deepCopy(template)
 		if err != nil {
 			return NewFakeTemplateErroringRawIterator(err)
 		}
-		templates = append(templates, r)
+		templates = append(templates, template)
 	}
 
 	if c.sorter != nil {
@@ -232,7 +214,7 @@ func (c *FakeTemplateClient) Get(ctx context.Context, partitionkey string, id st
 		return nil, &Error{StatusCode: http.StatusNotFound}
 	}
 
-	return c.decodeTemplate(template)
+	return c.deepCopy(template)
 }
 
 // Delete deletes a Template from the database
