@@ -62,7 +62,7 @@ validate_rp_running
 register_sub
 
 # Run e2e
-run_e2e
+make test-e2e
 
 # Stop the local RP
 kill_rp

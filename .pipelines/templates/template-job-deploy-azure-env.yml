@@ -1,19 +1,21 @@
 # Azure DevOps Job deploying rp
 parameters:
-  environment: ''
-  locations: []
-  configFileName: ''
+  aroVersionStorageAccount: ''
+  azureDevOpsE2EJSONSPN: ''
   azureDevOpsJSONSPN: ''
+  billingE2EPipelineName: ''
+  billingE2EBranchName: ''
+  configFileName: ''
+  e2eSubscription: ''
+  environment: ''
+  fullDeploy: ''
+  locations: []
+  rpMode: ''
   vsoProjectID: ''
   vsoConfigPipelineID: ''
   vsoConfigBuildID: ''
   vsoDeployerPipelineID: ''
   vsoDeployerBuildID: ''
-  azureDevOpsE2EJSONSPN: ''
-  e2eSubscription: ''
-  billingE2EPipelineName: ''
-  billingE2EBranchName: ''
-  fullDeploy: ''
 
 jobs:
 - ${{ each location in  parameters.locations }}:
@@ -76,6 +78,8 @@ jobs:
         location: ${{ location }}
         subscription: ${{ parameters.e2eSubscription }}
         azureDevOpsE2EJSONSPN: ${{ parameters.azureDevOpsE2EJSONSPN }}
+        aroVersionStorageAccount: ${{ parameters.aroVersionStorageAccount }}
+        rpMode: ${{ parameters.rpMode }}
   - job: Billing_E2E_${{ location }}_Wait
     dependsOn: RP_E2E_${{ location }}
     timeoutInMinutes: 400

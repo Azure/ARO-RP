@@ -3,17 +3,19 @@ trigger: none
 pr: none
 
 parameters:
-- name: location
-- name: vsoConfigBuildID
-- name: vsoDeployerBuildID
 - name: fullDeploy
   type: boolean
   default: false
+- name: location
+- name: vsoConfigBuildID
+- name: vsoDeployerBuildID
 
 jobs:
 - template: ./templates/template-job-deploy-azure-env.yml
   parameters:
     environment: RP-Prod
+    rpMode: ''
+    aroVersionStorageAccount: $(aro-version-storage-account)
     locations:
     - ${{ parameters.location }}
     configFileName: $(config-file-name)

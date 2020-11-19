@@ -3,11 +3,11 @@ pr: none
 trigger: none
 
 parameters:
-- name: vsoConfigBuildID
-- name: vsoDeployerBuildID
 - name: fullDeploy
   type: boolean
   default: false
+- name: vsoConfigBuildID
+- name: vsoDeployerBuildID
 
 stages:
 - stage: Deploy_CanarySector
@@ -17,6 +17,8 @@ stages:
   - template: ./templates/template-job-deploy-azure-env.yml
     parameters:
       environment: RP-Prod-CanarySector
+      rpMode: ''
+      aroVersionStorageAccount: $(aro-version-storage-account)
       locations:
       - westcentralus
       - eastus2euap
@@ -40,6 +42,8 @@ stages:
   - template: ./templates/template-job-deploy-azure-env.yml
     parameters:
       environment: RP-Prod-LowTrafficSector
+      rpMode: ''
+      aroVersionStorageAccount: $(aro-version-storage-account)
       locations:
       - australiaeast
       - australiasoutheast
@@ -68,6 +72,8 @@ stages:
   - template: ./templates/template-job-deploy-azure-env.yml
     parameters:
       environment: RP-Prod-USSector
+      rpMode: ''
+      aroVersionStorageAccount: $(aro-version-storage-account)
       locations:
       - centralus
       - eastus
@@ -96,6 +102,8 @@ stages:
   - template: ./templates/template-job-deploy-azure-env.yml
     parameters:
       environment: RP-Prod-EuropeSector
+      rpMode: ''
+      aroVersionStorageAccount: $(aro-version-storage-account)
       locations:
       - canadacentral
       - canadaeast
@@ -126,6 +134,8 @@ stages:
   - template: ./templates/template-job-deploy-azure-env.yml
     parameters:
       environment: RP-Prod-ROWSector
+      rpMode: ''
+      aroVersionStorageAccount: $(aro-version-storage-account)
       locations:
       - brazilsouth
       - southeastasia

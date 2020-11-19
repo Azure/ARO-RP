@@ -21,8 +21,27 @@ jobs:
   - template: ./templates/template-push-images-to-acr.yml
     parameters:
       rpImageACR: $(RP_IMAGE_ACR)
-  - template: ./templates/template-az-cli-set-context.yml
-  - template: ./templates/template-deploy-e2e-db.yml
-  - template: ./templates/template-run-rp-and-e2e.yml
-  - template: ./templates/template-clean-e2e-db.yml
+  - script: |
+      set -e
+      set -o pipefail
+
+      . secrets/env
+
+      az account set -s $AZURE_SUBSCRIPTION_ID
+
+      set -x
+      . ./hack/e2e/run-rp-and-e2e.sh
+      trap 'set +e; kill_rp; clean_e2e_db' EXIT
+
+      deploy_e2e_db
+
+      run_rp
+      validate_rp_running
+      register_sub
+
+      export CI=true
+
+      # Don't override RESOURCEGROUP more widely because clean_e2e_db depends
+      # on the original value
+      RESOURCEGROUP=$ARO_RESOURCEGROUP make test-e2e
   - template: ./templates/template-az-cli-logout.yml

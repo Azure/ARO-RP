@@ -14,9 +14,9 @@ validate_rp_running() {
             *)
             echo "Attempt $ELAPSED - local RP is NOT up. Code : $http_code, waiting"
             sleep 2
-            # after 20 secs return exit 1 to not block ci
+            # after 40 secs return exit 1 to not block ci
             ELAPSED=$((ELAPSED+1))
-            if [ $ELAPSED -eq 10 ]
+            if [ $ELAPSED -eq 20 ]
             then
                 exit 1
             fi
@@ -51,21 +51,12 @@ deploy_e2e_db() {
 
 }
 
-set_cli_context() {
-    echo "########## Setting az cli context ##########"
-    az account set -s $AZURE_SUBSCRIPTION_ID
-}
-
 register_sub() {
     echo "########## 🔑 Registering subscription ##########"
     curl -sko /dev/null -X PUT \
       -H 'Content-Type: application/json' \
       -d '{"state": "Registered", "properties": {"tenantId": "'"$AZURE_TENANT_ID"'"}}' \
       "https://localhost:8443/subscriptions/$AZURE_SUBSCRIPTION_ID?api-version=2.0"
-}
-
-run_e2e() {
-    RESOURCEGROUP=$ARO_RESOURCEGROUP make test-e2e
 }
 
 clean_e2e_db(){
@@ -81,8 +72,6 @@ clean_e2e_db(){
 export CLUSTER="v4-e2e-V$BUILD_BUILDID-$LOCATION"
 export DATABASE_NAME="v4-e2e-V$BUILD_BUILDID-$LOCATION"
 export ARO_RESOURCEGROUP="v4-e2e-V$BUILD_BUILDID-$LOCATION"
-export E2E_CREATE_CLUSTER=true
-export E2E_DELETE_CLUSTER=true
 
 echo "######################################"
 echo "##### ARO V4 E2e helper sourced ######"

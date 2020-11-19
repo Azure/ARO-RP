@@ -1,10 +1,11 @@
 parameters:
-  location: ''
-  configDirectory: ''
-  deployerDirectory: ''
-  configFileName: ''
   azureDevOpsJSONSPN: ''
+  configDirectory: ''
+  configFileName: ''
+  deployerDirectory: ''
   fullDeploy: ''
+  location: ''
+
 steps:
 - script: |
     set -eu

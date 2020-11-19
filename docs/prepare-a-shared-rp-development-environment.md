@@ -277,7 +277,6 @@ locations.
    EOF
    ```
 
-
 ## Deploy shared RP development environment (once per location)
 
 Look at the [helper file](../hack/devtools/deploy-shared-env.sh) to understand
