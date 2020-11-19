@@ -47,7 +47,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/h2non/filetype v1.1.0 // indirect
-	github.com/jim-minter/go-cosmosdb v0.0.0-20200923160222-1528d2db09d6
+	github.com/jim-minter/go-cosmosdb v0.0.0-20201117192055-43b4b21373cc
 	github.com/jstemmer/go-junit-report v0.9.1
 	github.com/klauspost/compress v1.11.3 // indirect
 	github.com/libvirt/libvirt-go v6.9.0+incompatible // indirect
@@ -79,7 +79,6 @@ require (
 	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b // indirect
 	golang.org/x/oauth2 v0.0.0-20201109201403-9fd604954f58 // indirect
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
-	golang.org/x/sys v0.0.0-20201116194326-cc9327a14d48 // indirect
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
 	golang.org/x/tools v0.0.0-20201117021029-3c3a81204b10
 	gomodules.xyz/jsonpatch/v2 v2.1.0 // indirect

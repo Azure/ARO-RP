@@ -1078,8 +1078,8 @@ github.com/jellevandenhooff/dkim v0.0.0-20150330215556-f50fe3d243e1/go.mod h1:E0
 github.com/jessevdk/go-flags v0.0.0-20180331124232-1c38ed7ad0cc/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=
 github.com/jessevdk/go-flags v1.4.0/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=
 github.com/jhump/protoreflect v1.6.0/go.mod h1:eaTn3RZAmMBcV0fifFvlm6VHNz3wSkYyXYWUh7ymB74=
-github.com/jim-minter/go-cosmosdb v0.0.0-20200923160222-1528d2db09d6 h1:4HhzSzhgL1TDsdVqsyifRovCuWwogmz3tL8LQkvqOxQ=
-github.com/jim-minter/go-cosmosdb v0.0.0-20200923160222-1528d2db09d6/go.mod h1:fTvDmpVqcmolOdtE7NltKskFwy8jLRDKHTczX+ZVHTU=
+github.com/jim-minter/go-cosmosdb v0.0.0-20201117192055-43b4b21373cc h1:1GuA++1yez1MbiCQqZpov6kTJZSdJgWZ1inVQ+x4X5g=
+github.com/jim-minter/go-cosmosdb v0.0.0-20201117192055-43b4b21373cc/go.mod h1:n4wXKwl/rXS49qkPRFf3vovG0V6nkwAO4SbRwjGYibM=
 github.com/jim-minter/installer v0.9.0-master.0.20201116195329-73508e766328 h1:VFj0GDbMBmqHS4wEDPQDBRDvmuyojy08yrL7//ZDU5Q=
 github.com/jim-minter/installer v0.9.0-master.0.20201116195329-73508e766328/go.mod h1:of/td4KUxV/m+XIW9s801GmNQMXkKr/BshS07qA36vQ=
 github.com/jmespath/go-jmespath v0.0.0-20160202185014-0b12d6b521d8/go.mod h1:Nht3zPeWKUH0NzdCt2Blrr5ys8VGpn0CEB0cQHVjt7k=
@@ -2187,6 +2187,8 @@ golang.org/x/sys v0.0.0-20200909081042-eff7692f9009/go.mod h1:h1NjWce9XRLGQEsW7w
 golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20201015000850-e3ed0017c211/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20201116194326-cc9327a14d48 h1:AYCWBZhgIw6XobZ5CibNJr0Rc4ZofGGKvWa1vcx2IGk=
+golang.org/x/sys v0.0.0-20201116194326-cc9327a14d48 h1:AYCWBZhgIw6XobZ5CibNJr0Rc4ZofGGKvWa1vcx2IGk=
+golang.org/x/sys v0.0.0-20201116194326-cc9327a14d48/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20201116194326-cc9327a14d48/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/term v0.0.0-20201113234701-d7a72108b828 h1:htWEtQEuEVJ4tU/Ngx7Cd/4Q7e3A5Up1owgyBtVsTwk=
 golang.org/x/term v0.0.0-20201113234701-d7a72108b828/go.mod h1:Nr5EML6q2oocZ2LXRh80K7BxOlk5/8JxuGnuhpl+muw=
