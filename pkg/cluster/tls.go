@@ -68,31 +68,6 @@ func (m *manager) createCertificates(ctx context.Context) error {
 	return nil
 }
 
-func (m *manager) upgradeCertificates(ctx context.Context) error {
-	if m.env.DeploymentMode() == deployment.Development {
-		return nil
-	}
-
-	managedDomain, err := dns.ManagedDomain(m.env, m.doc.OpenShiftCluster.Properties.ClusterProfile.Domain)
-	if err != nil {
-		return err
-	}
-
-	if managedDomain == "" {
-		return nil
-	}
-
-	for _, c := range []string{m.doc.ID + "-apiserver", m.doc.ID + "-ingress"} {
-		m.log.Printf("upgrading certificate %s", c)
-		err = m.keyvault.UpgradeCertificatePolicy(ctx, c)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 func (m *manager) ensureSecret(ctx context.Context, secrets coreclient.SecretInterface, certificateName string) error {
 	bundle, err := m.keyvault.GetSecret(ctx, certificateName)
 	if err != nil {

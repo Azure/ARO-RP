@@ -36,7 +36,6 @@ func (m *manager) AdminUpgrade(ctx context.Context) error {
 		steps.Action(m.fixPullSecret),       // TODO(mj): Remove when operator deployed
 		steps.Action(m.ensureAROOperator),
 		steps.Condition(m.aroDeploymentReady, 20*time.Minute),
-		steps.Action(m.upgradeCertificates),
 		steps.Action(m.configureAPIServerCertificate),
 		steps.Action(m.configureIngressCertificate),
 		steps.Action(m.updateProvisionedBy), // Run this last so we capture the resource provider only once the upgrade has been fully performed
