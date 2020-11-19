@@ -170,12 +170,6 @@ const (
 	// when a 'nil' was encountered in the stream.
 	containerLenNil = math.MinInt32
 
-	// rvNLen is the length of the array for readn or writen calls.
-	//
-	// Note: we set it to 7, so that method calls that pass an int (for length)
-	// will keep both at 8 bytes.
-	rwNLen = 7
-
 	// Support encoding.(Binary|Text)(Unm|M)arshaler.
 	// This constant flag will enable or disable it.
 	supportMarshalInterfaces = true
@@ -196,6 +190,8 @@ const (
 	// to determine the function to use for values of that type.
 	skipFastpathTypeSwitchInDirectCall = false
 )
+
+const cpu32Bit = ^uint(0)>>32 == 0
 
 var (
 	must mustHdl
@@ -482,7 +478,10 @@ func (e codecError) Error() string {
 }
 
 var (
-	bigen               = binary.BigEndian
+	bigen bigenHelper
+
+	bigenstd = binary.BigEndian
+
 	structInfoFieldName = "_struct"
 
 	mapStrIntfTyp  = reflect.TypeOf(map[string]interface{}(nil))
@@ -854,39 +853,39 @@ func (x *BasicHandle) fnLoad(rt reflect.Type, rtid uintptr, checkExt bool) (fn *
 		if rk == reflect.Struct || rk == reflect.Array {
 			fi.addrE = true
 		}
-	} else if ti.isFlag(tiflagSelfer) || ti.isFlag(tiflagSelferPtr) {
+	} else if ti.flagSelfer || ti.flagSelferPtr {
 		fn.fe = (*Encoder).selferMarshal
 		fn.fd = (*Decoder).selferUnmarshal
-		fi.addrD = ti.isFlag(tiflagSelferPtr)
-		fi.addrE = ti.isFlag(tiflagSelferPtr)
+		fi.addrD = ti.flagSelferPtr
+		fi.addrE = ti.flagSelferPtr
 	} else if supportMarshalInterfaces && x.isBe() &&
-		(ti.isFlag(tiflagBinaryMarshaler) || ti.isFlag(tiflagBinaryMarshalerPtr)) &&
-		(ti.isFlag(tiflagBinaryUnmarshaler) || ti.isFlag(tiflagBinaryUnmarshalerPtr)) {
+		(ti.flagBinaryMarshaler || ti.flagBinaryMarshalerPtr) &&
+		(ti.flagBinaryUnmarshaler || ti.flagBinaryUnmarshalerPtr) {
 		fn.fe = (*Encoder).binaryMarshal
 		fn.fd = (*Decoder).binaryUnmarshal
-		fi.addrD = ti.isFlag(tiflagBinaryUnmarshalerPtr)
-		fi.addrE = ti.isFlag(tiflagBinaryMarshalerPtr)
+		fi.addrD = ti.flagBinaryUnmarshalerPtr
+		fi.addrE = ti.flagBinaryMarshalerPtr
 	} else if supportMarshalInterfaces && !x.isBe() && x.isJs() &&
-		(ti.isFlag(tiflagJsonMarshaler) || ti.isFlag(tiflagJsonMarshalerPtr)) &&
-		(ti.isFlag(tiflagJsonUnmarshaler) || ti.isFlag(tiflagJsonUnmarshalerPtr)) {
+		(ti.flagJsonMarshaler || ti.flagJsonMarshalerPtr) &&
+		(ti.flagJsonUnmarshaler || ti.flagJsonUnmarshalerPtr) {
 		//If JSON, we should check JSONMarshal before textMarshal
 		fn.fe = (*Encoder).jsonMarshal
 		fn.fd = (*Decoder).jsonUnmarshal
-		fi.addrD = ti.isFlag(tiflagJsonUnmarshalerPtr)
-		fi.addrE = ti.isFlag(tiflagJsonMarshalerPtr)
+		fi.addrD = ti.flagJsonUnmarshalerPtr
+		fi.addrE = ti.flagJsonMarshalerPtr
 	} else if supportMarshalInterfaces && !x.isBe() &&
-		(ti.isFlag(tiflagTextMarshaler) || ti.isFlag(tiflagTextMarshalerPtr)) &&
-		(ti.isFlag(tiflagTextUnmarshaler) || ti.isFlag(tiflagTextUnmarshalerPtr)) {
+		(ti.flagTextMarshaler || ti.flagTextMarshalerPtr) &&
+		(ti.flagTextUnmarshaler || ti.flagTextUnmarshalerPtr) {
 		fn.fe = (*Encoder).textMarshal
 		fn.fd = (*Decoder).textUnmarshal
-		fi.addrD = ti.isFlag(tiflagTextUnmarshalerPtr)
-		fi.addrE = ti.isFlag(tiflagTextMarshalerPtr)
+		fi.addrD = ti.flagTextUnmarshalerPtr
+		fi.addrE = ti.flagTextMarshalerPtr
 	} else {
 		if fastpathEnabled && (rk == reflect.Map || rk == reflect.Slice) {
 			if ti.pkgpath == "" { // un-named slice or map
-				if idx := fastpathAV.index(rtid); idx != -1 {
-					fn.fe = fastpathAV[idx].encfn
-					fn.fd = fastpathAV[idx].decfn
+				if idx := fastpathAvIndex(rtid); idx != -1 {
+					fn.fe = fastpathAv[idx].encfn
+					fn.fd = fastpathAv[idx].decfn
 					fi.addrD = true
 					fi.addrDf = false
 				}
@@ -899,15 +898,15 @@ func (x *BasicHandle) fnLoad(rt reflect.Type, rtid uintptr, checkExt bool) (fn *
 					rtu = reflect.SliceOf(ti.elem)
 				}
 				rtuid := rt2id(rtu)
-				if idx := fastpathAV.index(rtuid); idx != -1 {
-					xfnf := fastpathAV[idx].encfn
-					xrt := fastpathAV[idx].rt
+				if idx := fastpathAvIndex(rtuid); idx != -1 {
+					xfnf := fastpathAv[idx].encfn
+					xrt := fastpathAv[idx].rt
 					fn.fe = func(e *Encoder, xf *codecFnInfo, xrv reflect.Value) {
 						xfnf(e, xf, rvConvert(xrv, xrt))
 					}
 					fi.addrD = true
 					fi.addrDf = false // meaning it can be an address(ptr) or a value
-					xfnf2 := fastpathAV[idx].decfn
+					xfnf2 := fastpathAv[idx].decfn
 					xptr2rt := reflect.PtrTo(xrt)
 					fn.fd = func(d *Decoder, xf *codecFnInfo, xrv reflect.Value) {
 						if xrv.Kind() == reflect.Ptr {
@@ -994,8 +993,8 @@ func (x *BasicHandle) fnLoad(rt reflect.Type, rtid uintptr, checkExt bool) (fn *
 				}
 			case reflect.Struct:
 				if ti.anyOmitEmpty ||
-					ti.isFlag(tiflagMissingFielder) ||
-					ti.isFlag(tiflagMissingFielderPtr) {
+					ti.flagMissingFielder ||
+					ti.flagMissingFielderPtr {
 					fn.fe = (*Encoder).kStruct
 				} else {
 					fn.fe = (*Encoder).kStructNoOmitempty
@@ -1181,26 +1180,83 @@ type noBuiltInTypes struct{}
 func (noBuiltInTypes) EncodeBuiltin(rt uintptr, v interface{}) {}
 func (noBuiltInTypes) DecodeBuiltin(rt uintptr, v interface{}) {}
 
-// bigenHelper.
-// Users must already slice the x completely, because we will not reslice.
-type bigenHelper struct {
-	x []byte // must be correctly sliced to appropriate len. slicing is a cost.
-	w *encWr
+// bigenHelper handles ByteOrder operations directly using
+// arrays of bytes (not slice of bytes).
+//
+// Since byteorder operations are very common for encoding and decoding
+// numbers, lengths, etc - it is imperative that this operation is as
+// fast as possible. Removing indirection (pointer chasing) to look
+// at up to 8 bytes helps a lot here.
+//
+// For times where it is expedient to use a slice, delegate to the
+// bigenstd (equal to the binary.BigEndian value).
+//
+// retrofitted from stdlib: encoding/binary/BigEndian (ByteOrder)
+type bigenHelper struct{}
+
+func (z bigenHelper) PutUint16(v uint16) (b [2]byte) {
+	return [...]byte{
+		byte(v >> 8),
+		byte(v),
+	}
 }
 
-func (z bigenHelper) writeUint16(v uint16) {
-	bigen.PutUint16(z.x, v)
-	z.w.writeb(z.x)
+func (z bigenHelper) PutUint32(v uint32) (b [4]byte) {
+	return [...]byte{
+		byte(v >> 24),
+		byte(v >> 16),
+		byte(v >> 8),
+		byte(v),
+	}
 }
 
-func (z bigenHelper) writeUint32(v uint32) {
-	bigen.PutUint32(z.x, v)
-	z.w.writeb(z.x)
+func (z bigenHelper) PutUint64(v uint64) (b [8]byte) {
+	return [...]byte{
+		byte(v >> 56),
+		byte(v >> 48),
+		byte(v >> 40),
+		byte(v >> 32),
+		byte(v >> 24),
+		byte(v >> 16),
+		byte(v >> 8),
+		byte(v),
+	}
 }
 
-func (z bigenHelper) writeUint64(v uint64) {
-	bigen.PutUint64(z.x, v)
-	z.w.writeb(z.x)
+func (z bigenHelper) Uint16(b [2]byte) (v uint16) {
+	return uint16(b[1]) |
+		uint16(b[0])<<8
+}
+
+func (z bigenHelper) Uint32(b [4]byte) (v uint32) {
+	return uint32(b[3]) |
+		uint32(b[2])<<8 |
+		uint32(b[1])<<16 |
+		uint32(b[0])<<24
+}
+
+func (z bigenHelper) Uint64(b [8]byte) (v uint64) {
+	return uint64(b[7]) |
+		uint64(b[6])<<8 |
+		uint64(b[5])<<16 |
+		uint64(b[4])<<24 |
+		uint64(b[3])<<32 |
+		uint64(b[2])<<40 |
+		uint64(b[1])<<48 |
+		uint64(b[0])<<56
+}
+
+func (z bigenHelper) writeUint16(w *encWr, v uint16) {
+	x := z.PutUint16(v)
+	w.writen2(x[0], x[1])
+}
+
+func (z bigenHelper) writeUint32(w *encWr, v uint32) {
+	w.writen4(z.PutUint32(v))
+}
+
+func (z bigenHelper) writeUint64(w *encWr, v uint64) {
+	w.writen8(z.PutUint64(v))
 }
 
 type extTypeTagFn struct {
@@ -1344,61 +1400,77 @@ func (o intf2impls) intf2impl(rtid uintptr) (rv reflect.Value) {
 	return
 }
 
+// structFieldinfopathNode is a node in a tree, which allows us easily
+// walk the anonymous path.
+//
+// In the typical case, the node is not embedded/anonymous, and thus the parent
+// will be nil and this information becomes a value (not needing any indirection).
 type structFieldInfoPathNode struct {
-	typ      reflect.Type
+	parent *structFieldInfoPathNode
+
 	offset   uint16
 	index    uint16
 	kind     uint8
 	numderef uint8
-	// embedded bool
-	// exported bool
+
+	// encNameAsciiAlphaNum and omitEmpty should be in structFieldInfo,
+	// but are kept here for tighter packaging.
+
+	encNameAsciiAlphaNum bool // the encName only contains ascii alphabet and numbers
+	omitEmpty            bool
+
+	typ reflect.Type
 }
 
-type structFieldInfo struct {
-	encName   string // encode name
-	fieldName string
-
-	// MARKER: leaf: consider optimizing for case where there are no embedded fields,
-	// thus keeping this within structFieldInfo makes sense.
-	// leaf [1]structFieldInfoPathNode
-
-	path []structFieldInfoPathNode
-
-	kind                 uint8
-	encNameAsciiAlphaNum bool // the encName only contains ascii alphabet and numbers
-	ready                bool
-	omitEmpty            bool
+// depth returns number of valid nodes in the hierachy
+func (path *structFieldInfoPathNode) depth() (d int) {
+TOP:
+	if path != nil {
+		d++
+		path = path.parent
+		goto TOP
+	}
+	return
 }
 
 // field returns the field of the struct.
-func (si *structFieldInfo) field(v reflect.Value) (rv2 reflect.Value) {
-	lp := len(si.path) - 1
-	for i := 0; i < lp; i++ {
-		v = si.path[i].rvField(v)
-		for j, k := uint8(0), si.path[i].numderef; j < k; j++ {
+func (path *structFieldInfoPathNode) field(v reflect.Value) (rv2 reflect.Value) {
+	if parent := path.parent; parent != nil {
+		v = parent.field(v)
+		for j, k := uint8(0), parent.numderef; j < k; j++ {
 			if rvIsNil(v) {
 				return
 			}
 			v = v.Elem()
 		}
 	}
-	return si.path[lp].rvField(v)
+	return path.rvField(v)
 }
 
 // fieldAlloc returns the field of the struct.
 // It allocates if a nil value was seen while searching.
-func (si *structFieldInfo) fieldAlloc(v reflect.Value) (rv2 reflect.Value) {
-	lp := len(si.path) - 1
-	for i := 0; i < lp; i++ {
-		v = si.path[i].rvField(v)
-		for j, k := uint8(0), si.path[i].numderef; j < k; j++ {
+func (path *structFieldInfoPathNode) fieldAlloc(v reflect.Value) (rv2 reflect.Value) {
+	if parent := path.parent; parent != nil {
+		v = parent.field(v)
+		for j, k := uint8(0), parent.numderef; j < k; j++ {
 			if rvIsNil(v) {
 				rvSetDirect(v, reflect.New(rvType(v).Elem()))
 			}
 			v = v.Elem()
 		}
 	}
-	return si.path[lp].rvField(v)
+	return path.rvField(v)
+}
+
+type structFieldInfo struct {
+	encName string // encode name
+
+	// fieldName string // currently unused
+
+	// encNameAsciiAlphaNum and omitEmpty should be here,
+	// but are stored in structFieldInfoPathNode for tighter packaging.
+
+	path structFieldInfoPathNode
 }
 
 func parseStructInfo(stag string) (toArray, omitEmpty bool, keytype valueType) {
@@ -1439,7 +1511,7 @@ func (si *structFieldInfo) parseTag(stag string) {
 		} else {
 			switch s {
 			case "omitempty":
-				si.omitEmpty = true
+				si.path.omitEmpty = true
 			}
 		}
 	}
@@ -1450,44 +1522,6 @@ type sfiSortedByEncName []*structFieldInfo
 func (p sfiSortedByEncName) Len() int           { return len(p) }
 func (p sfiSortedByEncName) Less(i, j int) bool { return p[uint(i)].encName < p[uint(j)].encName }
 func (p sfiSortedByEncName) Swap(i, j int)      { p[uint(i)], p[uint(j)] = p[uint(j)], p[uint(i)] }
-
-type tiflag uint32
-
-const (
-	_ tiflag = 1 << iota
-
-	tiflagComparable
-
-	tiflagIsZeroer
-	tiflagIsZeroerPtr
-
-	tiflagIsCodecEmptyer
-	tiflagIsCodecEmptyerPtr
-
-	tiflagBinaryMarshaler
-	tiflagBinaryMarshalerPtr
-
-	tiflagBinaryUnmarshaler
-	tiflagBinaryUnmarshalerPtr
-
-	tiflagTextMarshaler
-	tiflagTextMarshalerPtr
-
-	tiflagTextUnmarshaler
-	tiflagTextUnmarshalerPtr
-
-	tiflagJsonMarshaler
-	tiflagJsonMarshalerPtr
-
-	tiflagJsonUnmarshaler
-	tiflagJsonUnmarshalerPtr
-
-	tiflagSelfer
-	tiflagSelferPtr
-
-	tiflagMissingFielder
-	tiflagMissingFielderPtr
-)
 
 // typeInfo keeps static (non-changing readonly)information
 // about each (non-ptr) type referenced in the encode/decode sequence.
@@ -1527,22 +1561,40 @@ type typeInfo struct {
 	size, keysize, elemsize uint32
 
 	// other flags, with individual bits representing if set.
-	flags tiflag
+	flagComparable  bool
+	flagIsZeroer    bool
+	flagIsZeroerPtr bool
+
+	flagIsCodecEmptyer    bool
+	flagIsCodecEmptyerPtr bool
+
+	flagBinaryMarshaler    bool
+	flagBinaryMarshalerPtr bool
+
+	flagBinaryUnmarshaler    bool
+	flagBinaryUnmarshalerPtr bool
+
+	flagTextMarshaler    bool
+	flagTextMarshalerPtr bool
+
+	flagTextUnmarshaler    bool
+	flagTextUnmarshalerPtr bool
+
+	flagJsonMarshaler    bool
+	flagJsonMarshalerPtr bool
+
+	flagJsonUnmarshaler    bool
+	flagJsonUnmarshalerPtr bool
+
+	flagSelfer    bool
+	flagSelferPtr bool
+
+	flagMissingFielder    bool
+	flagMissingFielderPtr bool
 
 	infoFieldOmitempty bool
 
 	keykind, elemkind uint8
-}
-
-func (ti *typeInfo) isFlag(f tiflag) bool {
-	return ti.flags&f != 0
-}
-
-func (ti *typeInfo) flag(when bool, f tiflag) *typeInfo {
-	if when {
-		ti.flags |= f
-	}
-	return ti
 }
 
 func (ti *typeInfo) siForEncName(name string) (si *structFieldInfo) {
@@ -1558,16 +1610,16 @@ func (ti *typeInfo) init(x []structFieldInfo, ss map[string]uint16) {
 
 	for i := range x {
 		ui := uint16(i)
-		xn := x[i].encName // fieldName or encName? use encName for now.
+		xn := x[ui].encName // fieldName or encName? use encName for now.
 		j, ok := ss[xn]
 		if ok {
-			i2clear := ui                        // index to be cleared
-			if len(x[i].path) < len(x[j].path) { // this one is shallower
+			i2clear := ui                               // index to be cleared
+			if x[ui].path.depth() < x[j].path.depth() { // this one is shallower
 				ss[xn] = ui
 				i2clear = j
 			}
-			if x[i2clear].ready {
-				x[i2clear].ready = false
+			if x[i2clear].encName != "" {
+				x[i2clear].encName = ""
 				n--
 			}
 		} else {
@@ -1583,10 +1635,10 @@ func (ti *typeInfo) init(x []structFieldInfo, ss map[string]uint16) {
 	y := make([]*structFieldInfo, n)
 	n = 0
 	for i := range x {
-		if !x[i].ready {
+		if x[i].encName == "" {
 			continue
 		}
-		if !anyOmitEmpty && x[i].omitEmpty {
+		if !anyOmitEmpty && x[i].path.omitEmpty {
 			anyOmitEmpty = true
 		}
 		w[n] = x[i]
@@ -1694,29 +1746,46 @@ func (x *TypeInfos) get(rtid uintptr, rt reflect.Type) (pti *typeInfo) {
 		keyType: valueTypeString, // default it - so it's never 0
 	}
 
+	bset := func(when bool, b *bool) {
+		if when {
+			*b = true
+		}
+	}
+
 	var b1, b2 bool
+
 	b1, b2 = implIntf(rt, binaryMarshalerTyp)
-	ti.flag(b1, tiflagBinaryMarshaler).flag(b2, tiflagBinaryMarshalerPtr)
+	bset(b1, &ti.flagBinaryMarshaler)
+	bset(b2, &ti.flagBinaryMarshalerPtr)
 	b1, b2 = implIntf(rt, binaryUnmarshalerTyp)
-	ti.flag(b1, tiflagBinaryUnmarshaler).flag(b2, tiflagBinaryUnmarshalerPtr)
+	bset(b1, &ti.flagBinaryUnmarshaler)
+	bset(b2, &ti.flagBinaryUnmarshalerPtr)
 	b1, b2 = implIntf(rt, textMarshalerTyp)
-	ti.flag(b1, tiflagTextMarshaler).flag(b2, tiflagTextMarshalerPtr)
+	bset(b1, &ti.flagTextMarshaler)
+	bset(b2, &ti.flagTextMarshalerPtr)
 	b1, b2 = implIntf(rt, textUnmarshalerTyp)
-	ti.flag(b1, tiflagTextUnmarshaler).flag(b2, tiflagTextUnmarshalerPtr)
+	bset(b1, &ti.flagTextUnmarshaler)
+	bset(b2, &ti.flagTextUnmarshalerPtr)
 	b1, b2 = implIntf(rt, jsonMarshalerTyp)
-	ti.flag(b1, tiflagJsonMarshaler).flag(b2, tiflagJsonMarshalerPtr)
+	bset(b1, &ti.flagJsonMarshaler)
+	bset(b2, &ti.flagJsonMarshalerPtr)
 	b1, b2 = implIntf(rt, jsonUnmarshalerTyp)
-	ti.flag(b1, tiflagJsonUnmarshaler).flag(b2, tiflagJsonUnmarshalerPtr)
+	bset(b1, &ti.flagJsonUnmarshaler)
+	bset(b2, &ti.flagJsonUnmarshalerPtr)
 	b1, b2 = implIntf(rt, selferTyp)
-	ti.flag(b1, tiflagSelfer).flag(b2, tiflagSelferPtr)
+	bset(b1, &ti.flagSelfer)
+	bset(b2, &ti.flagSelferPtr)
 	b1, b2 = implIntf(rt, missingFielderTyp)
-	ti.flag(b1, tiflagMissingFielder).flag(b2, tiflagMissingFielderPtr)
+	bset(b1, &ti.flagMissingFielder)
+	bset(b2, &ti.flagMissingFielderPtr)
 	b1, b2 = implIntf(rt, iszeroTyp)
-	ti.flag(b1, tiflagIsZeroer).flag(b2, tiflagIsZeroerPtr)
+	bset(b1, &ti.flagIsZeroer)
+	bset(b2, &ti.flagIsZeroerPtr)
 	b1, b2 = implIntf(rt, isCodecEmptyerTyp)
-	ti.flag(b1, tiflagIsCodecEmptyer).flag(b2, tiflagIsCodecEmptyerPtr)
+	bset(b1, &ti.flagIsCodecEmptyer)
+	bset(b2, &ti.flagIsCodecEmptyerPtr)
 	b1 = rt.Comparable()
-	ti.flag(b1, tiflagComparable)
+	bset(b1, &ti.flagComparable)
 
 	switch rk {
 	case reflect.Struct:
@@ -1793,7 +1862,7 @@ func (x *TypeInfos) get(rtid uintptr, rt reflect.Type) (pti *typeInfo) {
 }
 
 func (x *TypeInfos) rget(rt reflect.Type, rtid uintptr, omitEmpty bool,
-	path []structFieldInfoPathNode, pv *typeInfoLoad) {
+	path *structFieldInfoPathNode, pv *typeInfoLoad) {
 	// Read up fields and store how to access the value.
 	//
 	// It uses go's rules for message selectors,
@@ -1873,9 +1942,14 @@ LOOP:
 				}
 				if processIt {
 					pv.etypes = append(pv.etypes, ftid)
-					path2 := make([]structFieldInfoPathNode, len(path)+1)
-					copy(path2, path)
-					path2[len(path)] = structFieldInfoPathNode{f.Type, uint16(f.Offset), j, uint8(fkind), numderef}
+					path2 := &structFieldInfoPathNode{
+						parent:   path,
+						typ:      f.Type,
+						offset:   uint16(f.Offset),
+						index:    j,
+						kind:     uint8(fkind),
+						numderef: numderef,
+					}
 					x.rget(ft, ftid, omitEmpty, path2, pv)
 				}
 				continue
@@ -1887,6 +1961,19 @@ LOOP:
 			continue
 		}
 
+		si.path = structFieldInfoPathNode{
+			parent:   path,
+			typ:      f.Type,
+			offset:   uint16(f.Offset),
+			index:    j,
+			kind:     uint8(fkind),
+			numderef: numderef,
+			// set asciiAlphaNum to true (default); checked and may be set to false below
+			encNameAsciiAlphaNum: true,
+			// note: omitEmpty might have been set in an earlier parseTag call, etc - so carry it forward
+			omitEmpty: si.path.omitEmpty,
+		}
+
 		if !parsed {
 			si.encName = f.Name
 			si.parseTag(stag)
@@ -1894,22 +1981,20 @@ LOOP:
 		} else if si.encName == "" {
 			si.encName = f.Name
 		}
-		si.encNameAsciiAlphaNum = true
+
+		if omitEmpty {
+			si.path.omitEmpty = true
+		}
+
+		// si.fieldName = f.Name
+		// si.path.encNameAsciiAlphaNum = true
 		for i := len(si.encName) - 1; i >= 0; i-- { // bounds-check elimination
 			if !asciiAlphaNumBitset.isset(si.encName[i]) {
-				si.encNameAsciiAlphaNum = false
+				si.path.encNameAsciiAlphaNum = false
 				break
 			}
 		}
-		si.fieldName = f.Name
-		si.kind = uint8(fkind)
-		si.ready = true
 
-		if omitEmpty {
-			si.omitEmpty = true
-		}
-
-		si.path = append(path, structFieldInfoPathNode{f.Type, uint16(f.Offset), j, uint8(fkind), numderef})
 		pv.sfis = append(pv.sfis, si)
 	}
 }
@@ -1952,19 +2037,19 @@ func isEmptyStruct(v reflect.Value, tinfos *TypeInfos, recursive bool) bool {
 	if ti.rtid == timeTypId {
 		return rv2i(v).(time.Time).IsZero()
 	}
-	if ti.isFlag(tiflagIsZeroerPtr) && v.CanAddr() {
+	if ti.flagIsZeroerPtr && v.CanAddr() {
 		return rv2i(v.Addr()).(isZeroer).IsZero()
 	}
-	if ti.isFlag(tiflagIsZeroer) {
+	if ti.flagIsZeroer {
 		return rv2i(v).(isZeroer).IsZero()
 	}
-	if ti.isFlag(tiflagIsCodecEmptyerPtr) && v.CanAddr() {
+	if ti.flagIsCodecEmptyerPtr && v.CanAddr() {
 		return rv2i(v.Addr()).(isCodecEmptyer).IsCodecEmpty()
 	}
-	if ti.isFlag(tiflagIsCodecEmptyer) {
+	if ti.flagIsCodecEmptyer {
 		return rv2i(v).(isCodecEmptyer).IsCodecEmpty()
 	}
-	if ti.isFlag(tiflagComparable) {
+	if ti.flagComparable {
 		return rv2i(v) == rv2i(rvZeroK(vt, reflect.Struct))
 	}
 	if !recursive {
@@ -1973,7 +2058,7 @@ func isEmptyStruct(v reflect.Value, tinfos *TypeInfos, recursive bool) bool {
 	// We only care about what we can encode/decode,
 	// so that is what we use to check omitEmpty.
 	for _, si := range ti.sfiSrc {
-		sfv := si.field(v)
+		sfv := si.path.field(v)
 		if sfv.IsValid() && !isEmptyValue(sfv, tinfos, recursive) {
 			return false
 		}
@@ -1990,8 +2075,8 @@ func panicToErr(h errDecorator, err *error) {
 }
 
 func isSliceBoundsError(s string) bool {
-	return strings.Contains(s, " out of range") &&
-		(strings.Contains(s, "index") || strings.Contains(s, "slice bounds"))
+	return strings.Contains(s, "index out of range") ||
+		strings.Contains(s, "slice bounds out of range")
 }
 
 func panicValToErr(h errDecorator, v interface{}, err *error) {
@@ -2161,42 +2246,6 @@ func (x checkOverflow) SignedIntV(v uint64) int64 {
 // ------------------ FLOATING POINT -----------------
 
 func isNaN64(f float64) bool { return f != f }
-func abs32(f float32) float32 {
-	return math.Float32frombits(math.Float32bits(f) &^ (1 << 31))
-}
-
-// Per go spec, floats are represented in memory as
-// IEEE single or double precision floating point values.
-//
-// We also looked at the source for stdlib math/modf.go,
-// reviewed https://github.com/chewxy/math32
-// and read wikipedia documents describing the formats.
-//
-// It became clear that we could easily look at the bits to determine
-// whether any fraction exists.
-//
-// This is all we need for now.
-
-func noFrac64(f float64) (v bool) {
-	x := math.Float64bits(f)
-	e := uint64(x>>52)&0x7FF - 1023 // uint(x>>shift)&mask - bias
-	// clear top 12+e bits, the integer part; if the rest is 0, then no fraction.
-	if e < 52 {
-		// return x&((1<<64-1)>>(12+e)) == 0
-		return x<<(12+e) == 0
-	}
-	return
-}
-
-func noFrac32(f float32) (v bool) {
-	x := math.Float32bits(f)
-	e := uint32(x>>23)&0xFF - 127 // uint(x>>shift)&mask - bias
-	// clear top 9+e bits, the integer part; if the rest is 0, then no fraction.
-	if e < 23 {
-		return x<<(9+e) == 0
-	}
-	return
-}
 
 func isWhitespaceChar(v byte) bool {
 	// these are in order of speed below ...
@@ -2216,12 +2265,11 @@ func isNumberChar(v byte) bool {
 	// return v > 42 && v < 102 && numCharWithExpBitset64.isset(v-42)
 }
 
-func isDigitChar(v byte) bool {
-	// these are in order of speed below ...
-
-	return digitCharBitset.isset(v)
-	// return v >= '0' && v <= '9'
-}
+// func isDigitChar(v byte) bool {
+// 	// these are in order of speed below ...
+// 	return digitCharBitset.isset(v)
+// 	// return v >= '0' && v <= '9'
+// }
 
 // -----------------------
 
@@ -2256,6 +2304,8 @@ type sfiRv struct {
 //
 // given x > 0 and n > 0 and x is exactly 2^n, then pos/x === pos>>n AND pos%x === pos&(x-1).
 // consequently, pos/32 === pos>>5, pos/16 === pos>>4, pos/8 === pos>>3, pos%8 == pos&7
+//
+// Note that using >> or & is faster than using / or %, as division is quite expensive if not optimized.
 
 // MARKER:
 // We noticed a little performance degradation when using bitset256 as [32]byte (or bitset32 as uint32).
@@ -2267,11 +2317,11 @@ type sfiRv struct {
 type bitset32 [32]bool
 
 func (x *bitset32) set(pos byte) *bitset32 {
-	x[pos%32] = true
+	x[pos&31] = true // x[pos%32] = true
 	return x
 }
 func (x *bitset32) isset(pos byte) bool {
-	return x[pos%32]
+	return x[pos&31] // x[pos%32]
 }
 
 // type bitset64 [64]bool
@@ -2392,6 +2442,10 @@ func freelistCapacity(length int) (capacity int) {
 }
 
 // bytesFreelist is a list of byte buffers, sorted by cap.
+//
+// In anecdotal testing (running go test -tsd 1..6), we couldn't get
+// the length ofthe list > 4 at any time. So we believe a linear search
+// without bounds checking is sufficient.
 type bytesFreelist [][]byte
 
 // return a slice of possibly non-zero'ed bytes, with len=0,
@@ -2441,32 +2495,42 @@ func (x *bytesFreelist) check(v []byte, length int) (out []byte) {
 
 // -------------------------
 
+// sfiRvFreelist is used by Encoder for encoding structs,
+// where we have to gather the fields first and then
+// analyze them for omitEmpty, before knowing the length of the array/map to encode.
+//
+// Typically, the length here will depend on the number of cycles e.g.
+// if type T1 has reference to T1, or T1 has reference to type T2 which has reference to T1.
+//
+// In the general case, the length of this list at most times is 1,
+// so linear search is fine.
 type sfiRvFreelist [][]sfiRv
 
 func (x *sfiRvFreelist) get(length int) (out []sfiRv) {
-	var j int = -1
-	for i := 0; i < len(*x); i++ {
-		if cap((*x)[i]) >= length && (j == -1 || cap((*x)[j]) > cap((*x)[i])) {
-			j = i
+	y := *x
+	for i, v := range y {
+		if cap(v) >= length {
+			// *x = append(y[:i], y[i+1:]...)
+			copy(y[i:], y[i+1:])
+			*x = y[:len(y)-1]
+			return v
 		}
 	}
-	if j == -1 {
-		return make([]sfiRv, length, freelistCapacity(length))
-	}
-	out = (*x)[j][:length]
-	(*x)[j] = nil
-	for i := 0; i < len(out); i++ {
-		out[i] = sfiRv{}
-	}
-	return
+	return make([]sfiRv, 0, freelistCapacity(length))
 }
 
 func (x *sfiRvFreelist) put(v []sfiRv) {
-	for i := 0; i < len(*x); i++ {
-		if cap((*x)[i]) == 0 {
-			(*x)[i] = v
+	if len(v) != 0 {
+		v = v[:0]
+	}
+	// append the new value, then try to put it in a better position
+	y := append(*x, v)
+	*x = y
+	for i, z := range y[:len(y)-1] {
+		if cap(z) > cap(v) {
+			copy(y[i+1:], y[i:])
+			y[i] = v
 			return
 		}
 	}
-	*x = append(*x, v)
 }

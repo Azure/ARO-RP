@@ -15,6 +15,8 @@ This package will carefully use 'package unsafe' for performance reasons in
 specific places. You can build without unsafe use by passing the safe or
 appengine tag i.e. 'go install -tags=safe ...'.
 
+This library works with both the standard `gc` and the `gccgo` compilers.
+
 For detailed usage information, read the primer at
 http://ugorji.net/blog/go-codec-primer .
 
@@ -244,12 +246,11 @@ some caveats. See Encode documentation.
 
 ```go
 const CborStreamBytes byte = 0x5f ...
-const GenVersion = 19
+const GenVersion = 20
 var SelfExt = &extFailWrapper{}
 var GoRpc goRpc
 var MsgpackSpecRpc msgpackSpecRpc
-func GenHelperDecoder(d *Decoder) (gd genHelperDecoder, dd genHelperDecDriver)
-func GenHelperEncoder(e *Encoder) (ge genHelperEncoder, ee genHelperEncDriver)
+func GenHelper() (g genHelper)
 type BasicHandle struct{ ... }
 type BincHandle struct{ ... }
 type BytesExt interface{ ... }

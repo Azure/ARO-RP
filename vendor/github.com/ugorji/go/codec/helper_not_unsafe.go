@@ -34,6 +34,10 @@ func bytesView(v string) []byte {
 	return []byte(v)
 }
 
+// func copyBytes(dst []byte, src []byte) {
+// 	copy(dst, src)
+// }
+
 // isNil says whether the value v is nil.
 // This applies to references like map/ptr/unsafepointer/chan/func,
 // and non-reference values like interface/slice.
@@ -298,11 +302,15 @@ func rvSliceIndex(rv reflect.Value, i int, ti *typeInfo) reflect.Value {
 	return rv.Index(i)
 }
 
-func rvGetSliceLen(rv reflect.Value) int {
+func rvSliceZeroCap(t reflect.Type) (v reflect.Value) {
+	return reflect.MakeSlice(t, 0, 0)
+}
+
+func rvLenSlice(rv reflect.Value) int {
 	return rv.Len()
 }
 
-func rvGetSliceCap(rv reflect.Value) int {
+func rvCapSlice(rv reflect.Value) int {
 	return rv.Cap()
 }
 
@@ -322,7 +330,7 @@ func rvGetArrayBytesRO(rv reflect.Value, scratch []byte) (bs []byte) {
 }
 
 func rvGetArray4Slice(rv reflect.Value) (v reflect.Value) {
-	v = rvZeroAddrK(reflectArrayOf(rvGetSliceLen(rv), rvType(rv).Elem()), reflect.Array)
+	v = rvZeroAddrK(reflectArrayOf(rvLenSlice(rv), rvType(rv).Elem()), reflect.Array)
 	reflect.Copy(v, rv)
 	return
 }
@@ -403,6 +411,14 @@ func rvGetUint64(rv reflect.Value) uint64 {
 
 func rvGetUintptr(rv reflect.Value) uintptr {
 	return uintptr(rv.Uint())
+}
+
+func rvLenMap(rv reflect.Value) int {
+	return rv.Len()
+}
+
+func rvLenArray(rv reflect.Value) int {
+	return rv.Len()
 }
 
 // ------------ map range and map indexing ----------
