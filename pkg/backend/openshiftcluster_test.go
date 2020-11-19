@@ -24,7 +24,6 @@ import (
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	mock_openshiftcluster "github.com/Azure/ARO-RP/pkg/util/mocks/openshiftcluster"
 	testdb "github.com/Azure/ARO-RP/test/database"
-	testlog "github.com/Azure/ARO-RP/test/util/log"
 )
 
 type backendTestStruct struct {
@@ -278,7 +277,7 @@ func TestBackendTry(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
-			_, log := testlog.New()
+			log := logrus.NewEntry(logrus.StandardLogger())
 
 			controller := gomock.NewController(t)
 			defer controller.Finish()
