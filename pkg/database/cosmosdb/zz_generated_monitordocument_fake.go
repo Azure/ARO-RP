@@ -21,22 +21,22 @@ var _ MonitorDocumentClient = &FakeMonitorDocumentClient{}
 // NewFakeMonitorDocumentClient returns a FakeMonitorDocumentClient
 func NewFakeMonitorDocumentClient(h *codec.JsonHandle) *FakeMonitorDocumentClient {
 	return &FakeMonitorDocumentClient{
-		monitorDocuments: make(map[string][]byte),
+		jsonHandle:       h,
+		monitorDocuments: make(map[string]*pkg.MonitorDocument),
 		triggerHandlers:  make(map[string]fakeMonitorDocumentTriggerHandler),
 		queryHandlers:    make(map[string]fakeMonitorDocumentQueryHandler),
-		jsonHandle:       h,
-		lock:             &sync.RWMutex{},
 	}
 }
 
 // FakeMonitorDocumentClient is a FakeMonitorDocumentClient
 type FakeMonitorDocumentClient struct {
-	monitorDocuments map[string][]byte
+	lock             sync.RWMutex
 	jsonHandle       *codec.JsonHandle
-	lock             *sync.RWMutex
+	monitorDocuments map[string]*pkg.MonitorDocument
 	triggerHandlers  map[string]fakeMonitorDocumentTriggerHandler
 	queryHandlers    map[string]fakeMonitorDocumentQueryHandler
 	sorter           func([]*pkg.MonitorDocument)
+	etag             int
 
 	// returns true if documents conflict
 	conflictChecker func(*pkg.MonitorDocument, *pkg.MonitorDocument) bool
@@ -44,16 +44,6 @@ type FakeMonitorDocumentClient struct {
 	// err, if not nil, is an error to return when attempting to communicate
 	// with this Client
 	err error
-}
-
-func (c *FakeMonitorDocumentClient) decodeMonitorDocument(s []byte) (monitorDocument *pkg.MonitorDocument, err error) {
-	err = codec.NewDecoderBytes(s, c.jsonHandle).Decode(&monitorDocument)
-	return
-}
-
-func (c *FakeMonitorDocumentClient) encodeMonitorDocument(monitorDocument *pkg.MonitorDocument) (b []byte, err error) {
-	err = codec.NewEncoderBytes(&b, c.jsonHandle).Encode(monitorDocument)
-	return
 }
 
 // SetError sets or unsets an error that will be returned on any
@@ -100,12 +90,19 @@ func (c *FakeMonitorDocumentClient) SetQueryHandler(queryName string, query fake
 }
 
 func (c *FakeMonitorDocumentClient) deepCopy(monitorDocument *pkg.MonitorDocument) (*pkg.MonitorDocument, error) {
-	b, err := c.encodeMonitorDocument(monitorDocument)
+	var b []byte
+	err := codec.NewEncoderBytes(&b, c.jsonHandle).Encode(monitorDocument)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.decodeMonitorDocument(b)
+	monitorDocument = nil
+	err = codec.NewDecoderBytes(b, c.jsonHandle).Decode(&monitorDocument)
+	if err != nil {
+		return nil, err
+	}
+
+	return monitorDocument, nil
 }
 
 func (c *FakeMonitorDocumentClient) apply(ctx context.Context, partitionkey string, monitorDocument *pkg.MonitorDocument, options *Options, isCreate bool) (*pkg.MonitorDocument, error) {
@@ -128,24 +125,25 @@ func (c *FakeMonitorDocumentClient) apply(ctx context.Context, partitionkey stri
 		}
 	}
 
-	_, exists := c.monitorDocuments[monitorDocument.ID]
+	existingMonitorDocument, exists := c.monitorDocuments[monitorDocument.ID]
 	if isCreate && exists {
 		return nil, &Error{
 			StatusCode: http.StatusConflict,
 			Message:    "Entity with the specified id already exists in the system",
 		}
 	}
-	if !isCreate && !exists {
-		return nil, &Error{StatusCode: http.StatusNotFound}
+	if !isCreate {
+		if !exists {
+			return nil, &Error{StatusCode: http.StatusNotFound}
+		}
+
+		if monitorDocument.ETag != existingMonitorDocument.ETag {
+			return nil, &Error{StatusCode: http.StatusPreconditionFailed}
+		}
 	}
 
 	if c.conflictChecker != nil {
-		for id := range c.monitorDocuments {
-			monitorDocumentToCheck, err := c.decodeMonitorDocument(c.monitorDocuments[id])
-			if err != nil {
-				return nil, err
-			}
-
+		for _, monitorDocumentToCheck := range c.monitorDocuments {
 			if c.conflictChecker(monitorDocumentToCheck, monitorDocument) {
 				return nil, &Error{
 					StatusCode: http.StatusConflict,
@@ -155,14 +153,12 @@ func (c *FakeMonitorDocumentClient) apply(ctx context.Context, partitionkey stri
 		}
 	}
 
-	b, err := c.encodeMonitorDocument(monitorDocument)
-	if err != nil {
-		return nil, err
-	}
+	monitorDocument.ETag = fmt.Sprint(c.etag)
+	c.etag++
 
-	c.monitorDocuments[monitorDocument.ID] = b
+	c.monitorDocuments[monitorDocument.ID] = monitorDocument
 
-	return monitorDocument, nil
+	return c.deepCopy(monitorDocument)
 }
 
 // Create creates a MonitorDocument in the database
@@ -185,12 +181,12 @@ func (c *FakeMonitorDocumentClient) List(*Options) MonitorDocumentIterator {
 	}
 
 	monitorDocuments := make([]*pkg.MonitorDocument, 0, len(c.monitorDocuments))
-	for _, d := range c.monitorDocuments {
-		r, err := c.decodeMonitorDocument(d)
+	for _, monitorDocument := range c.monitorDocuments {
+		monitorDocument, err := c.deepCopy(monitorDocument)
 		if err != nil {
 			return NewFakeMonitorDocumentErroringRawIterator(err)
 		}
-		monitorDocuments = append(monitorDocuments, r)
+		monitorDocuments = append(monitorDocuments, monitorDocument)
 	}
 
 	if c.sorter != nil {
@@ -220,7 +216,7 @@ func (c *FakeMonitorDocumentClient) Get(ctx context.Context, partitionkey string
 		return nil, &Error{StatusCode: http.StatusNotFound}
 	}
 
-	return c.decodeMonitorDocument(monitorDocument)
+	return c.deepCopy(monitorDocument)
 }
 
 // Delete deletes a MonitorDocument from the database
@@ -256,7 +252,9 @@ func (c *FakeMonitorDocumentClient) ChangeFeed(*Options) MonitorDocumentIterator
 func (c *FakeMonitorDocumentClient) processPreTriggers(ctx context.Context, monitorDocument *pkg.MonitorDocument, options *Options) error {
 	for _, triggerName := range options.PreTriggers {
 		if triggerHandler := c.triggerHandlers[triggerName]; triggerHandler != nil {
+			c.lock.Unlock()
 			err := triggerHandler(ctx, monitorDocument)
+			c.lock.Lock()
 			if err != nil {
 				return err
 			}
@@ -278,7 +276,10 @@ func (c *FakeMonitorDocumentClient) Query(name string, query *Query, options *Op
 	}
 
 	if queryHandler := c.queryHandlers[query.Query]; queryHandler != nil {
-		return queryHandler(c, query, options)
+		c.lock.RUnlock()
+		i := queryHandler(c, query, options)
+		c.lock.RLock()
+		return i
 	}
 
 	return NewFakeMonitorDocumentErroringRawIterator(ErrNotImplemented)

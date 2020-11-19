@@ -21,22 +21,22 @@ var _ AsyncOperationDocumentClient = &FakeAsyncOperationDocumentClient{}
 // NewFakeAsyncOperationDocumentClient returns a FakeAsyncOperationDocumentClient
 func NewFakeAsyncOperationDocumentClient(h *codec.JsonHandle) *FakeAsyncOperationDocumentClient {
 	return &FakeAsyncOperationDocumentClient{
-		asyncOperationDocuments: make(map[string][]byte),
+		jsonHandle:              h,
+		asyncOperationDocuments: make(map[string]*pkg.AsyncOperationDocument),
 		triggerHandlers:         make(map[string]fakeAsyncOperationDocumentTriggerHandler),
 		queryHandlers:           make(map[string]fakeAsyncOperationDocumentQueryHandler),
-		jsonHandle:              h,
-		lock:                    &sync.RWMutex{},
 	}
 }
 
 // FakeAsyncOperationDocumentClient is a FakeAsyncOperationDocumentClient
 type FakeAsyncOperationDocumentClient struct {
-	asyncOperationDocuments map[string][]byte
+	lock                    sync.RWMutex
 	jsonHandle              *codec.JsonHandle
-	lock                    *sync.RWMutex
+	asyncOperationDocuments map[string]*pkg.AsyncOperationDocument
 	triggerHandlers         map[string]fakeAsyncOperationDocumentTriggerHandler
 	queryHandlers           map[string]fakeAsyncOperationDocumentQueryHandler
 	sorter                  func([]*pkg.AsyncOperationDocument)
+	etag                    int
 
 	// returns true if documents conflict
 	conflictChecker func(*pkg.AsyncOperationDocument, *pkg.AsyncOperationDocument) bool
@@ -44,16 +44,6 @@ type FakeAsyncOperationDocumentClient struct {
 	// err, if not nil, is an error to return when attempting to communicate
 	// with this Client
 	err error
-}
-
-func (c *FakeAsyncOperationDocumentClient) decodeAsyncOperationDocument(s []byte) (asyncOperationDocument *pkg.AsyncOperationDocument, err error) {
-	err = codec.NewDecoderBytes(s, c.jsonHandle).Decode(&asyncOperationDocument)
-	return
-}
-
-func (c *FakeAsyncOperationDocumentClient) encodeAsyncOperationDocument(asyncOperationDocument *pkg.AsyncOperationDocument) (b []byte, err error) {
-	err = codec.NewEncoderBytes(&b, c.jsonHandle).Encode(asyncOperationDocument)
-	return
 }
 
 // SetError sets or unsets an error that will be returned on any
@@ -100,12 +90,19 @@ func (c *FakeAsyncOperationDocumentClient) SetQueryHandler(queryName string, que
 }
 
 func (c *FakeAsyncOperationDocumentClient) deepCopy(asyncOperationDocument *pkg.AsyncOperationDocument) (*pkg.AsyncOperationDocument, error) {
-	b, err := c.encodeAsyncOperationDocument(asyncOperationDocument)
+	var b []byte
+	err := codec.NewEncoderBytes(&b, c.jsonHandle).Encode(asyncOperationDocument)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.decodeAsyncOperationDocument(b)
+	asyncOperationDocument = nil
+	err = codec.NewDecoderBytes(b, c.jsonHandle).Decode(&asyncOperationDocument)
+	if err != nil {
+		return nil, err
+	}
+
+	return asyncOperationDocument, nil
 }
 
 func (c *FakeAsyncOperationDocumentClient) apply(ctx context.Context, partitionkey string, asyncOperationDocument *pkg.AsyncOperationDocument, options *Options, isCreate bool) (*pkg.AsyncOperationDocument, error) {
@@ -128,24 +125,25 @@ func (c *FakeAsyncOperationDocumentClient) apply(ctx context.Context, partitionk
 		}
 	}
 
-	_, exists := c.asyncOperationDocuments[asyncOperationDocument.ID]
+	existingAsyncOperationDocument, exists := c.asyncOperationDocuments[asyncOperationDocument.ID]
 	if isCreate && exists {
 		return nil, &Error{
 			StatusCode: http.StatusConflict,
 			Message:    "Entity with the specified id already exists in the system",
 		}
 	}
-	if !isCreate && !exists {
-		return nil, &Error{StatusCode: http.StatusNotFound}
+	if !isCreate {
+		if !exists {
+			return nil, &Error{StatusCode: http.StatusNotFound}
+		}
+
+		if asyncOperationDocument.ETag != existingAsyncOperationDocument.ETag {
+			return nil, &Error{StatusCode: http.StatusPreconditionFailed}
+		}
 	}
 
 	if c.conflictChecker != nil {
-		for id := range c.asyncOperationDocuments {
-			asyncOperationDocumentToCheck, err := c.decodeAsyncOperationDocument(c.asyncOperationDocuments[id])
-			if err != nil {
-				return nil, err
-			}
-
+		for _, asyncOperationDocumentToCheck := range c.asyncOperationDocuments {
 			if c.conflictChecker(asyncOperationDocumentToCheck, asyncOperationDocument) {
 				return nil, &Error{
 					StatusCode: http.StatusConflict,
@@ -155,14 +153,12 @@ func (c *FakeAsyncOperationDocumentClient) apply(ctx context.Context, partitionk
 		}
 	}
 
-	b, err := c.encodeAsyncOperationDocument(asyncOperationDocument)
-	if err != nil {
-		return nil, err
-	}
+	asyncOperationDocument.ETag = fmt.Sprint(c.etag)
+	c.etag++
 
-	c.asyncOperationDocuments[asyncOperationDocument.ID] = b
+	c.asyncOperationDocuments[asyncOperationDocument.ID] = asyncOperationDocument
 
-	return asyncOperationDocument, nil
+	return c.deepCopy(asyncOperationDocument)
 }
 
 // Create creates a AsyncOperationDocument in the database
@@ -185,12 +181,12 @@ func (c *FakeAsyncOperationDocumentClient) List(*Options) AsyncOperationDocument
 	}
 
 	asyncOperationDocuments := make([]*pkg.AsyncOperationDocument, 0, len(c.asyncOperationDocuments))
-	for _, d := range c.asyncOperationDocuments {
-		r, err := c.decodeAsyncOperationDocument(d)
+	for _, asyncOperationDocument := range c.asyncOperationDocuments {
+		asyncOperationDocument, err := c.deepCopy(asyncOperationDocument)
 		if err != nil {
 			return NewFakeAsyncOperationDocumentErroringRawIterator(err)
 		}
-		asyncOperationDocuments = append(asyncOperationDocuments, r)
+		asyncOperationDocuments = append(asyncOperationDocuments, asyncOperationDocument)
 	}
 
 	if c.sorter != nil {
@@ -220,7 +216,7 @@ func (c *FakeAsyncOperationDocumentClient) Get(ctx context.Context, partitionkey
 		return nil, &Error{StatusCode: http.StatusNotFound}
 	}
 
-	return c.decodeAsyncOperationDocument(asyncOperationDocument)
+	return c.deepCopy(asyncOperationDocument)
 }
 
 // Delete deletes a AsyncOperationDocument from the database
@@ -256,7 +252,9 @@ func (c *FakeAsyncOperationDocumentClient) ChangeFeed(*Options) AsyncOperationDo
 func (c *FakeAsyncOperationDocumentClient) processPreTriggers(ctx context.Context, asyncOperationDocument *pkg.AsyncOperationDocument, options *Options) error {
 	for _, triggerName := range options.PreTriggers {
 		if triggerHandler := c.triggerHandlers[triggerName]; triggerHandler != nil {
+			c.lock.Unlock()
 			err := triggerHandler(ctx, asyncOperationDocument)
+			c.lock.Lock()
 			if err != nil {
 				return err
 			}
@@ -278,7 +276,10 @@ func (c *FakeAsyncOperationDocumentClient) Query(name string, query *Query, opti
 	}
 
 	if queryHandler := c.queryHandlers[query.Query]; queryHandler != nil {
-		return queryHandler(c, query, options)
+		c.lock.RUnlock()
+		i := queryHandler(c, query, options)
+		c.lock.RLock()
+		return i
 	}
 
 	return NewFakeAsyncOperationDocumentErroringRawIterator(ErrNotImplemented)

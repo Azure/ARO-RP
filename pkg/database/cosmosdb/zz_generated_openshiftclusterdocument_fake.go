@@ -21,22 +21,22 @@ var _ OpenShiftClusterDocumentClient = &FakeOpenShiftClusterDocumentClient{}
 // NewFakeOpenShiftClusterDocumentClient returns a FakeOpenShiftClusterDocumentClient
 func NewFakeOpenShiftClusterDocumentClient(h *codec.JsonHandle) *FakeOpenShiftClusterDocumentClient {
 	return &FakeOpenShiftClusterDocumentClient{
-		openShiftClusterDocuments: make(map[string][]byte),
+		jsonHandle:                h,
+		openShiftClusterDocuments: make(map[string]*pkg.OpenShiftClusterDocument),
 		triggerHandlers:           make(map[string]fakeOpenShiftClusterDocumentTriggerHandler),
 		queryHandlers:             make(map[string]fakeOpenShiftClusterDocumentQueryHandler),
-		jsonHandle:                h,
-		lock:                      &sync.RWMutex{},
 	}
 }
 
 // FakeOpenShiftClusterDocumentClient is a FakeOpenShiftClusterDocumentClient
 type FakeOpenShiftClusterDocumentClient struct {
-	openShiftClusterDocuments map[string][]byte
+	lock                      sync.RWMutex
 	jsonHandle                *codec.JsonHandle
-	lock                      *sync.RWMutex
+	openShiftClusterDocuments map[string]*pkg.OpenShiftClusterDocument
 	triggerHandlers           map[string]fakeOpenShiftClusterDocumentTriggerHandler
 	queryHandlers             map[string]fakeOpenShiftClusterDocumentQueryHandler
 	sorter                    func([]*pkg.OpenShiftClusterDocument)
+	etag                      int
 
 	// returns true if documents conflict
 	conflictChecker func(*pkg.OpenShiftClusterDocument, *pkg.OpenShiftClusterDocument) bool
@@ -44,16 +44,6 @@ type FakeOpenShiftClusterDocumentClient struct {
 	// err, if not nil, is an error to return when attempting to communicate
 	// with this Client
 	err error
-}
-
-func (c *FakeOpenShiftClusterDocumentClient) decodeOpenShiftClusterDocument(s []byte) (openShiftClusterDocument *pkg.OpenShiftClusterDocument, err error) {
-	err = codec.NewDecoderBytes(s, c.jsonHandle).Decode(&openShiftClusterDocument)
-	return
-}
-
-func (c *FakeOpenShiftClusterDocumentClient) encodeOpenShiftClusterDocument(openShiftClusterDocument *pkg.OpenShiftClusterDocument) (b []byte, err error) {
-	err = codec.NewEncoderBytes(&b, c.jsonHandle).Encode(openShiftClusterDocument)
-	return
 }
 
 // SetError sets or unsets an error that will be returned on any
@@ -100,12 +90,19 @@ func (c *FakeOpenShiftClusterDocumentClient) SetQueryHandler(queryName string, q
 }
 
 func (c *FakeOpenShiftClusterDocumentClient) deepCopy(openShiftClusterDocument *pkg.OpenShiftClusterDocument) (*pkg.OpenShiftClusterDocument, error) {
-	b, err := c.encodeOpenShiftClusterDocument(openShiftClusterDocument)
+	var b []byte
+	err := codec.NewEncoderBytes(&b, c.jsonHandle).Encode(openShiftClusterDocument)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.decodeOpenShiftClusterDocument(b)
+	openShiftClusterDocument = nil
+	err = codec.NewDecoderBytes(b, c.jsonHandle).Decode(&openShiftClusterDocument)
+	if err != nil {
+		return nil, err
+	}
+
+	return openShiftClusterDocument, nil
 }
 
 func (c *FakeOpenShiftClusterDocumentClient) apply(ctx context.Context, partitionkey string, openShiftClusterDocument *pkg.OpenShiftClusterDocument, options *Options, isCreate bool) (*pkg.OpenShiftClusterDocument, error) {
@@ -128,24 +125,25 @@ func (c *FakeOpenShiftClusterDocumentClient) apply(ctx context.Context, partitio
 		}
 	}
 
-	_, exists := c.openShiftClusterDocuments[openShiftClusterDocument.ID]
+	existingOpenShiftClusterDocument, exists := c.openShiftClusterDocuments[openShiftClusterDocument.ID]
 	if isCreate && exists {
 		return nil, &Error{
 			StatusCode: http.StatusConflict,
 			Message:    "Entity with the specified id already exists in the system",
 		}
 	}
-	if !isCreate && !exists {
-		return nil, &Error{StatusCode: http.StatusNotFound}
+	if !isCreate {
+		if !exists {
+			return nil, &Error{StatusCode: http.StatusNotFound}
+		}
+
+		if openShiftClusterDocument.ETag != existingOpenShiftClusterDocument.ETag {
+			return nil, &Error{StatusCode: http.StatusPreconditionFailed}
+		}
 	}
 
 	if c.conflictChecker != nil {
-		for id := range c.openShiftClusterDocuments {
-			openShiftClusterDocumentToCheck, err := c.decodeOpenShiftClusterDocument(c.openShiftClusterDocuments[id])
-			if err != nil {
-				return nil, err
-			}
-
+		for _, openShiftClusterDocumentToCheck := range c.openShiftClusterDocuments {
 			if c.conflictChecker(openShiftClusterDocumentToCheck, openShiftClusterDocument) {
 				return nil, &Error{
 					StatusCode: http.StatusConflict,
@@ -155,14 +153,12 @@ func (c *FakeOpenShiftClusterDocumentClient) apply(ctx context.Context, partitio
 		}
 	}
 
-	b, err := c.encodeOpenShiftClusterDocument(openShiftClusterDocument)
-	if err != nil {
-		return nil, err
-	}
+	openShiftClusterDocument.ETag = fmt.Sprint(c.etag)
+	c.etag++
 
-	c.openShiftClusterDocuments[openShiftClusterDocument.ID] = b
+	c.openShiftClusterDocuments[openShiftClusterDocument.ID] = openShiftClusterDocument
 
-	return openShiftClusterDocument, nil
+	return c.deepCopy(openShiftClusterDocument)
 }
 
 // Create creates a OpenShiftClusterDocument in the database
@@ -185,12 +181,12 @@ func (c *FakeOpenShiftClusterDocumentClient) List(*Options) OpenShiftClusterDocu
 	}
 
 	openShiftClusterDocuments := make([]*pkg.OpenShiftClusterDocument, 0, len(c.openShiftClusterDocuments))
-	for _, d := range c.openShiftClusterDocuments {
-		r, err := c.decodeOpenShiftClusterDocument(d)
+	for _, openShiftClusterDocument := range c.openShiftClusterDocuments {
+		openShiftClusterDocument, err := c.deepCopy(openShiftClusterDocument)
 		if err != nil {
 			return NewFakeOpenShiftClusterDocumentErroringRawIterator(err)
 		}
-		openShiftClusterDocuments = append(openShiftClusterDocuments, r)
+		openShiftClusterDocuments = append(openShiftClusterDocuments, openShiftClusterDocument)
 	}
 
 	if c.sorter != nil {
@@ -220,7 +216,7 @@ func (c *FakeOpenShiftClusterDocumentClient) Get(ctx context.Context, partitionk
 		return nil, &Error{StatusCode: http.StatusNotFound}
 	}
 
-	return c.decodeOpenShiftClusterDocument(openShiftClusterDocument)
+	return c.deepCopy(openShiftClusterDocument)
 }
 
 // Delete deletes a OpenShiftClusterDocument from the database
@@ -256,7 +252,9 @@ func (c *FakeOpenShiftClusterDocumentClient) ChangeFeed(*Options) OpenShiftClust
 func (c *FakeOpenShiftClusterDocumentClient) processPreTriggers(ctx context.Context, openShiftClusterDocument *pkg.OpenShiftClusterDocument, options *Options) error {
 	for _, triggerName := range options.PreTriggers {
 		if triggerHandler := c.triggerHandlers[triggerName]; triggerHandler != nil {
+			c.lock.Unlock()
 			err := triggerHandler(ctx, openShiftClusterDocument)
+			c.lock.Lock()
 			if err != nil {
 				return err
 			}
@@ -278,7 +276,10 @@ func (c *FakeOpenShiftClusterDocumentClient) Query(name string, query *Query, op
 	}
 
 	if queryHandler := c.queryHandlers[query.Query]; queryHandler != nil {
-		return queryHandler(c, query, options)
+		c.lock.RUnlock()
+		i := queryHandler(c, query, options)
+		c.lock.RLock()
+		return i
 	}
 
 	return NewFakeOpenShiftClusterDocumentErroringRawIterator(ErrNotImplemented)
