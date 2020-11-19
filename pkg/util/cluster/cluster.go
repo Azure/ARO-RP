@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/rand"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -15,6 +16,7 @@ import (
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
+	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -210,6 +212,14 @@ func (c *Cluster) Create(ctx context.Context, clusterName string) error {
 						},
 					},
 				)
+
+				// Ignore if the role assignment already exists
+				if detailedError, ok := err.(autorest.DetailedError); ok {
+					if detailedError.StatusCode == http.StatusConflict {
+						err = nil
+					}
+				}
+
 				// TODO: tighten this error check
 				if err != nil && i < 4 {
 					// Sometimes we see HashConflictOnDifferentRoleAssignmentIds.
