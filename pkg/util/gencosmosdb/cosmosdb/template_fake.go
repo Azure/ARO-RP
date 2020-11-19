@@ -35,6 +35,7 @@ type FakeTemplateClient struct {
 	triggerHandlers map[string]fakeTemplateTriggerHandler
 	queryHandlers   map[string]fakeTemplateQueryHandler
 	sorter          func([]*pkg.Template)
+	etag            int
 
 	// returns true if documents conflict
 	conflictChecker func(*pkg.Template, *pkg.Template) bool
@@ -126,15 +127,26 @@ func (c *FakeTemplateClient) apply(ctx context.Context, partitionkey string, tem
 		}
 	}
 
-	_, exists := c.templates[template.ID]
+	b, exists := c.templates[template.ID]
 	if isCreate && exists {
 		return nil, &Error{
 			StatusCode: http.StatusConflict,
 			Message:    "Entity with the specified id already exists in the system",
 		}
 	}
-	if !isCreate && !exists {
-		return nil, &Error{StatusCode: http.StatusNotFound}
+	if !isCreate {
+		if !exists {
+			return nil, &Error{StatusCode: http.StatusNotFound}
+		}
+
+		existingTemplate, err := c.decodeTemplate(b)
+		if err != nil {
+			return nil, err
+		}
+
+		if template.ETag != existingTemplate.ETag {
+			return nil, &Error{StatusCode: http.StatusPreconditionFailed}
+		}
 	}
 
 	if c.conflictChecker != nil {
@@ -153,7 +165,10 @@ func (c *FakeTemplateClient) apply(ctx context.Context, partitionkey string, tem
 		}
 	}
 
-	b, err := c.encodeTemplate(template)
+	template.ETag = fmt.Sprint(c.etag)
+	c.etag++
+
+	b, err = c.encodeTemplate(template)
 	if err != nil {
 		return nil, err
 	}
