@@ -14,6 +14,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
+	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
 )
 
@@ -38,10 +39,11 @@ type Interface interface {
 	ClustersGenevaLoggingConfigVersion() string
 	ClustersGenevaLoggingEnvironment() string
 	ClustersGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate)
-	ClustersKeyvaultURI() string
+	ClustersKeyvault() keyvault.Manager
 	Domain() string
 	FPAuthorizer(string, string) (refreshable.Authorizer, error)
 	Listen() (net.Listener, error)
+	ServiceKeyvault() keyvault.Manager
 	Zones(vmSize string) ([]string, error)
 	ACRResourceID() string
 	ACRDomain() string

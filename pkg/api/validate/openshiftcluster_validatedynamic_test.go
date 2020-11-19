@@ -19,8 +19,8 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	mockauthorization "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/authorization"
-	mockfeatures "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
+	mock_authorization "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/authorization"
+	mock_features "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/features"
 	mockrefreshable "github.com/Azure/ARO-RP/pkg/util/mocks/refreshable"
 )
 
@@ -32,12 +32,12 @@ func TestValidateProviders(t *testing.T) {
 
 	for _, tt := range []struct {
 		name    string
-		mocks   func(*mockfeatures.MockProvidersClient)
+		mocks   func(*mock_features.MockProvidersClient)
 		wantErr string
 	}{
 		{
 			name: "all registered",
-			mocks: func(providersClient *mockfeatures.MockProvidersClient) {
+			mocks: func(providersClient *mock_features.MockProvidersClient) {
 				providersClient.EXPECT().
 					List(gomock.Any(), nil, "").
 					Return([]mgmtfeatures.Provider{
@@ -70,7 +70,7 @@ func TestValidateProviders(t *testing.T) {
 		},
 		{
 			name: "compute not registered",
-			mocks: func(providersClient *mockfeatures.MockProvidersClient) {
+			mocks: func(providersClient *mock_features.MockProvidersClient) {
 				providersClient.EXPECT().
 					List(gomock.Any(), nil, "").
 					Return([]mgmtfeatures.Provider{
@@ -104,7 +104,7 @@ func TestValidateProviders(t *testing.T) {
 		},
 		{
 			name: "storage missing",
-			mocks: func(providersClient *mockfeatures.MockProvidersClient) {
+			mocks: func(providersClient *mock_features.MockProvidersClient) {
 				providersClient.EXPECT().
 					List(gomock.Any(), nil, "").
 					Return([]mgmtfeatures.Provider{
@@ -134,7 +134,7 @@ func TestValidateProviders(t *testing.T) {
 		},
 		{
 			name: "error case",
-			mocks: func(providersClient *mockfeatures.MockProvidersClient) {
+			mocks: func(providersClient *mock_features.MockProvidersClient) {
 				providersClient.EXPECT().
 					List(gomock.Any(), nil, "").
 					Return(nil, errors.New("random error"))
@@ -143,7 +143,7 @@ func TestValidateProviders(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			providerClient := mockfeatures.NewMockProvidersClient(controller)
+			providerClient := mock_features.NewMockProvidersClient(controller)
 
 			tt.mocks(providerClient)
 
@@ -449,12 +449,12 @@ func TestValidateVnetPermissions(t *testing.T) {
 
 	for _, tt := range []struct {
 		name    string
-		mocks   func(*mockauthorization.MockPermissionsClient, func())
+		mocks   func(*mock_authorization.MockPermissionsClient, func())
 		wantErr string
 	}{
 		{
 			name: "pass",
-			mocks: func(permissionsClient *mockauthorization.MockPermissionsClient, cancel func()) {
+			mocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel func()) {
 				permissionsClient.EXPECT().
 					ListForResource(gomock.Any(), "", "", "", "", "").
 					Return([]mgmtauthorization.Permission{
@@ -474,7 +474,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 		},
 		{
 			name: "fail: missing permissions",
-			mocks: func(permissionsClient *mockauthorization.MockPermissionsClient, cancel func()) {
+			mocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel func()) {
 				permissionsClient.EXPECT().
 					ListForResource(gomock.Any(), "", "", "", "", "").
 					Do(func(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) {
@@ -494,7 +494,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 		},
 		{
 			name: "fail: not found",
-			mocks: func(permissionsClient *mockauthorization.MockPermissionsClient, cancel func()) {
+			mocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel func()) {
 				permissionsClient.EXPECT().
 					ListForResource(gomock.Any(), "", "", "", "", "").
 					Do(func(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) {
@@ -514,7 +514,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
 
-			permissionsClient := mockauthorization.NewMockPermissionsClient(controller)
+			permissionsClient := mock_authorization.NewMockPermissionsClient(controller)
 
 			tt.mocks(permissionsClient, cancel)
 
@@ -544,14 +544,14 @@ func TestValidateRouteTablePermissionsSubnet(t *testing.T) {
 
 	for _, tt := range []struct {
 		name    string
-		mocks   func(*mockauthorization.MockPermissionsClient, func())
+		mocks   func(*mock_authorization.MockPermissionsClient, func())
 		vnet    func(*mgmtnetwork.VirtualNetwork)
 		subnet  string
 		wantErr string
 	}{
 		{
 			name: "pass",
-			mocks: func(permissionsClient *mockauthorization.MockPermissionsClient, cancel func()) {
+			mocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel func()) {
 				permissionsClient.EXPECT().
 					ListForResource(gomock.Any(), "testGroup", "Microsoft.Network", "", "routeTables", "testRT").
 					Return([]mgmtauthorization.Permission{
@@ -576,7 +576,7 @@ func TestValidateRouteTablePermissionsSubnet(t *testing.T) {
 		},
 		{
 			name: "fail: missing permissions",
-			mocks: func(permissionsClient *mockauthorization.MockPermissionsClient, cancel func()) {
+			mocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel func()) {
 				permissionsClient.EXPECT().
 					ListForResource(gomock.Any(), "testGroup", "Microsoft.Network", "", "routeTables", "testRT").
 					Do(func(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) {
@@ -597,7 +597,7 @@ func TestValidateRouteTablePermissionsSubnet(t *testing.T) {
 		},
 		{
 			name: "fail: not found",
-			mocks: func(permissionsClient *mockauthorization.MockPermissionsClient, cancel func()) {
+			mocks: func(permissionsClient *mock_authorization.MockPermissionsClient, cancel func()) {
 				permissionsClient.EXPECT().
 					ListForResource(gomock.Any(), "testGroup", "Microsoft.Network", "", "routeTables", "testRT").
 					Do(func(arg0, arg1, arg2, arg3, arg4, arg5 interface{}) {
@@ -638,7 +638,7 @@ func TestValidateRouteTablePermissionsSubnet(t *testing.T) {
 				},
 			}
 
-			permissionsClient := mockauthorization.NewMockPermissionsClient(controller)
+			permissionsClient := mock_authorization.NewMockPermissionsClient(controller)
 
 			if tt.mocks != nil {
 				tt.mocks(permissionsClient, cancel)

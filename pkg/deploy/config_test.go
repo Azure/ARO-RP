@@ -123,7 +123,6 @@ func TestConfigRequiredValues(t *testing.T) {
 	DatabaseAccountName := "DatabaseAccountName"
 	FPServerCertCommonName := "FPServerCertCommonName"
 	FPServicePrincipalID := "FPServicePrincipalID"
-	GlobalMonitoringKeyVaultURI := "GlobalMonitoringKeyVaultURI"
 	GlobalResourceGroupName := "GlobalResourceGroupName"
 	GlobalResourceGroupLocation := "GlobalResourceGroupLocation"
 	GlobalSubscriptionID := "GlobalSubscriptionID"
@@ -161,7 +160,6 @@ func TestConfigRequiredValues(t *testing.T) {
 					ExtraServiceKeyvaultAccessPolicies: []interface{}{},
 					FPServerCertCommonName:             &FPServerCertCommonName,
 					FPServicePrincipalID:               &FPServicePrincipalID,
-					GlobalMonitoringKeyVaultURI:        &GlobalMonitoringKeyVaultURI,
 					GlobalResourceGroupName:            &GlobalResourceGroupName,
 					GlobalResourceGroupLocation:        &GlobalResourceGroupLocation,
 					GlobalSubscriptionID:               &GlobalSubscriptionID,
@@ -191,7 +189,7 @@ func TestConfigRequiredValues(t *testing.T) {
 					ExtraCosmosDBIPs: []string{ExtraCosmosDBIPs},
 				},
 			},
-			expect: fmt.Errorf("Configuration has missing fields: %s", "[RPVersionStorageAccountName AdminAPIClientCertCommonName ClusterParentDomainName DatabaseAccountName ExtraClusterKeyvaultAccessPolicies ExtraServiceKeyvaultAccessPolicies FPServicePrincipalID GlobalMonitoringKeyVaultURI GlobalResourceGroupName GlobalResourceGroupLocation GlobalSubscriptionID KeyvaultPrefix MDMFrontendURL MDSDConfigVersion MDSDEnvironment RPImagePrefix RPNSGSourceAddressPrefixes RPParentDomainName SubscriptionResourceGroupName SubscriptionResourceGroupLocation SSHPublicKey StorageAccountName VMSize]"),
+			expect: fmt.Errorf("Configuration has missing fields: %s", "[RPVersionStorageAccountName AdminAPIClientCertCommonName ClusterParentDomainName DatabaseAccountName ExtraClusterKeyvaultAccessPolicies ExtraServiceKeyvaultAccessPolicies FPServicePrincipalID GlobalResourceGroupName GlobalResourceGroupLocation GlobalSubscriptionID KeyvaultPrefix MDMFrontendURL MDSDConfigVersion MDSDEnvironment RPImagePrefix RPNSGSourceAddressPrefixes RPParentDomainName SubscriptionResourceGroupName SubscriptionResourceGroupLocation SSHPublicKey StorageAccountName VMSize]"),
 		},
 	} {
 		valid := tt.config.validate()

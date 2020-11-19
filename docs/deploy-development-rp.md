@@ -112,7 +112,7 @@
      -n "databases-development-$USER" \
      --template-file deploy/databases-development.json \
      --parameters \
-       "databaseAccountName=$COSMOSDB_ACCOUNT" \
+       "databaseAccountName=$DATABASE_ACCOUNT_NAME" \
        "databaseName=$DATABASE_NAME" \
      >/dev/null
    ```

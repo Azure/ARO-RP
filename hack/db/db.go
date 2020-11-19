@@ -13,9 +13,11 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/database"
+	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/metrics/noop"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
+	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
@@ -29,7 +31,24 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	cipher, err := encryption.NewXChaCha20Poly1305(ctx, _env, env.EncryptionSecretName)
+	rpKVAuthorizer, err := _env.NewRPAuthorizer(_env.Environment().ResourceIdentifiers.KeyVault)
+	if err != nil {
+		return err
+	}
+
+	serviceKeyvaultURI, err := keyvault.URI(_env, generator.ServiceKeyvaultSuffix)
+	if err != nil {
+		return err
+	}
+
+	serviceKeyvault := keyvault.NewManager(rpKVAuthorizer, serviceKeyvaultURI)
+
+	key, err := serviceKeyvault.GetBase64Secret(ctx, env.EncryptionSecretName)
+	if err != nil {
+		return err
+	}
+
+	cipher, err := encryption.NewXChaCha20Poly1305(ctx, key)
 	if err != nil {
 		return err
 	}

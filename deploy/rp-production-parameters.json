@@ -26,6 +26,9 @@
         "fullDeploy": {
             "value": false
         },
+        "keyvaultPrefix": {
+            "value": ""
+        },
         "mdmFrontendUrl": {
             "value": ""
         },

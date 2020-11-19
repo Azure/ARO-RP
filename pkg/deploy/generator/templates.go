@@ -82,6 +82,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"adminApiClientCertCommonName",
 			"extraCosmosDBIPs",
 			"fullDeploy",
+			"keyvaultPrefix",
 			"mdmFrontendUrl",
 			"mdsdConfigVersion",
 			"mdsdEnvironment",
@@ -309,7 +310,7 @@ func (g *generator) preDeployTemplate() *arm.Template {
 			p.Type = "array"
 			p.DefaultValue = []string{}
 		case "keyvaultPrefix":
-			p.MaxLength = 24 - max(len(kvClusterSuffix), len(kvServiceSuffix))
+			p.MaxLength = 24 - max(len(ClustersKeyvaultSuffix), len(ServiceKeyvaultSuffix))
 		}
 		t.Parameters[param] = p
 	}

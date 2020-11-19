@@ -663,10 +663,12 @@ func (g *generator) vmss() *arm.Resource {
 		"mdsdConfigVersion",
 		"mdsdEnvironment",
 		"acrResourceId",
+		"domainName",
 		"rpImage",
 		"rpMode",
 		"adminApiClientCertCommonName",
 		"databaseAccountName",
+		"keyvaultPrefix",
 	} {
 		parts = append(parts,
 			fmt.Sprintf("'%s=$(base64 -d <<<'''", strings.ToUpper(variable)),
@@ -790,15 +792,14 @@ MDMIMAGE="${RPIMAGE%%/*}/${MDMIMAGE##*/}"
 docker pull "$MDMIMAGE"
 docker pull "$RPIMAGE"
 
-SVCVAULTURI="$(az keyvault list -g "$RESOURCEGROUPNAME" --query "[?tags.vault=='service'].properties.vaultUri" -o tsv)"
 for attempt in {1..5}; do
-  az keyvault secret download --file /etc/mdm.pem --id "${SVCVAULTURI}secrets/rp-mdm" && break
+  az keyvault secret download --file /etc/mdm.pem --id "https://$KEYVAULTPREFIX-svc.vault.azure.net/secrets/rp-mdm" && break
   if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
 done
 chmod 0600 /etc/mdm.pem
 sed -i -ne '1,/END CERTIFICATE/ p' /etc/mdm.pem
 
-az keyvault secret download --file /etc/mdsd.pem --id "${SVCVAULTURI}secrets/rp-mdsd"
+az keyvault secret download --file /etc/mdsd.pem --id "https://$KEYVAULTPREFIX-svc.vault.azure.net/secrets/rp-mdsd"
 chown syslog:syslog /etc/mdsd.pem
 chmod 0600 /etc/mdsd.pem
 
@@ -883,6 +884,8 @@ MDM_NAMESPACE=RP
 ACR_RESOURCE_ID='$ACRRESOURCEID'
 ADMIN_API_CLIENT_CERT_COMMON_NAME='$ADMINAPICLIENTCERTCOMMONNAME'
 DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
+DOMAIN_NAME='$DOMAINNAME'
+KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 RPIMAGE='$RPIMAGE'
 RP_MODE='$RPMODE'
 EOF
@@ -903,6 +906,8 @@ ExecStart=/usr/bin/docker run \
   -e MDM_NAMESPACE \
   -e ADMIN_API_CLIENT_CERT_COMMON_NAME \
   -e DATABASE_ACCOUNT_NAME \
+  -e DOMAIN_NAME \
+  -e KEYVAULT_PREFIX \
   -e RP_MODE \
   -e ACR_RESOURCE_ID \
   -m 2g \
@@ -928,6 +933,7 @@ MDM_NAMESPACE=BBM
 CLUSTER_MDM_ACCOUNT=AzureRedHatOpenShiftCluster
 CLUSTER_MDM_NAMESPACE=BBM
 DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
+KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 RPIMAGE='$RPIMAGE'
 RP_MODE='$RPMODE'
 EOF
@@ -947,6 +953,7 @@ ExecStart=/usr/bin/docker run \
   -e CLUSTER_MDM_ACCOUNT \
   -e CLUSTER_MDM_NAMESPACE \
   -e DATABASE_ACCOUNT_NAME \
+  -e KEYVAULT_PREFIX \
   -e MDM_ACCOUNT \
   -e MDM_NAMESPACE \
   -e RP_MODE \
@@ -1114,9 +1121,25 @@ func (g *generator) zone() *arm.Resource {
 
 func (g *generator) clusterKeyvaultAccessPolicies() []mgmtkeyvault.AccessPolicyEntry {
 	return []mgmtkeyvault.AccessPolicyEntry{
+		// TODO: remove fpServicePrincipalId after next RP rollout
 		{
 			TenantID: &tenantUUIDHack,
 			ObjectID: to.StringPtr("[parameters('fpServicePrincipalId')]"),
+			Permissions: &mgmtkeyvault.Permissions{
+				Secrets: &[]mgmtkeyvault.SecretPermissions{
+					mgmtkeyvault.SecretPermissionsGet,
+				},
+				Certificates: &[]mgmtkeyvault.CertificatePermissions{
+					mgmtkeyvault.Create,
+					mgmtkeyvault.Delete,
+					mgmtkeyvault.Get,
+					mgmtkeyvault.Update,
+				},
+			},
+		},
+		{
+			TenantID: &tenantUUIDHack,
+			ObjectID: to.StringPtr("[parameters('rpServicePrincipalId')]"),
 			Permissions: &mgmtkeyvault.Permissions{
 				Secrets: &[]mgmtkeyvault.SecretPermissions{
 					mgmtkeyvault.SecretPermissionsGet,
@@ -1157,12 +1180,9 @@ func (g *generator) clustersKeyvault() *arm.Resource {
 			},
 			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{},
 		},
-		Name:     to.StringPtr("[concat(parameters('keyvaultPrefix'), '" + kvClusterSuffix + "')]"),
+		Name:     to.StringPtr("[concat(parameters('keyvaultPrefix'), '" + ClustersKeyvaultSuffix + "')]"),
 		Type:     to.StringPtr("Microsoft.KeyVault/vaults"),
 		Location: to.StringPtr("[resourceGroup().location]"),
-		Tags: map[string]*string{
-			KeyVaultTagName: to.StringPtr(ClustersKeyVaultTagValue),
-		},
 	}
 
 	if !g.production {
@@ -1198,12 +1218,9 @@ func (g *generator) serviceKeyvault() *arm.Resource {
 			},
 			AccessPolicies: &[]mgmtkeyvault.AccessPolicyEntry{},
 		},
-		Name:     to.StringPtr("[concat(parameters('keyvaultPrefix'), '" + kvServiceSuffix + "')]"),
+		Name:     to.StringPtr("[concat(parameters('keyvaultPrefix'), '" + ServiceKeyvaultSuffix + "')]"),
 		Type:     to.StringPtr("Microsoft.KeyVault/vaults"),
 		Location: to.StringPtr("[resourceGroup().location]"),
-		Tags: map[string]*string{
-			KeyVaultTagName: to.StringPtr(ServiceKeyVaultTagValue),
-		},
 	}
 
 	if !g.production {

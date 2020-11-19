@@ -85,6 +85,14 @@ func databaseName(deploymentMode deployment.Mode) (string, error) {
 }
 
 func find(ctx context.Context, env env.Core) (string, string, error) {
+	for _, key := range []string{
+		"DATABASE_ACCOUNT_NAME",
+	} {
+		if _, found := os.LookupEnv(key); !found {
+			return "", "", fmt.Errorf("environment variable %q unset", key)
+		}
+	}
+
 	rpAuthorizer, err := env.NewRPAuthorizer(env.Environment().ResourceManagerEndpoint)
 	if err != nil {
 		return "", "", err
@@ -93,18 +101,6 @@ func find(ctx context.Context, env env.Core) (string, string, error) {
 	databaseaccounts := documentdb.NewDatabaseAccountsClient(env.SubscriptionID(), rpAuthorizer)
 
 	acctName := os.Getenv("DATABASE_ACCOUNT_NAME")
-	if acctName == "" {
-		accts, err := databaseaccounts.ListByResourceGroup(ctx, env.ResourceGroup())
-		if err != nil {
-			return "", "", err
-		}
-
-		if len(*accts.Value) != 1 {
-			return "", "", fmt.Errorf("found %d database accounts, expected 1", len(*accts.Value))
-		}
-
-		acctName = *(*accts.Value)[0].Name
-	}
 
 	keys, err := databaseaccounts.ListKeys(ctx, env.ResourceGroup(), acctName)
 	if err != nil {

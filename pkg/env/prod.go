@@ -20,7 +20,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/proxy"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
 	"github.com/Azure/ARO-RP/pkg/util/clientauthorizer"
 	"github.com/Azure/ARO-RP/pkg/util/keyvault"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
@@ -34,14 +33,16 @@ type prod struct {
 	armClientAuthorizer   clientauthorizer.ClientAuthorizer
 	adminClientAuthorizer clientauthorizer.ClientAuthorizer
 
-	acrDomain           string
-	clustersKeyvaultURI string
-	domain              string
-	zones               map[string][]string
+	acrDomain string
+	domain    string
+	zones     map[string][]string
 
 	fpCertificate *x509.Certificate
 	fpPrivateKey  *rsa.PrivateKey
 	fpClientID    string
+
+	clustersKeyvault keyvault.Manager
+	serviceKeyvault  keyvault.Manager
 
 	clustersGenevaLoggingCertificate   *x509.Certificate
 	clustersGenevaLoggingPrivateKey    *rsa.PrivateKey
@@ -52,6 +53,14 @@ type prod struct {
 }
 
 func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
+	for _, key := range []string{
+		"DOMAIN_NAME",
+	} {
+		if _, found := os.LookupEnv(key); !found {
+			return nil, fmt.Errorf("environment variable %q unset", key)
+		}
+	}
+
 	core, err := NewCore(ctx, log)
 	if err != nil {
 		return nil, err
@@ -77,22 +86,30 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 		return nil, err
 	}
 
-	err = p.populateDomain(ctx, rpAuthorizer)
+	rpKVAuthorizer, err := p.NewRPAuthorizer(p.Environment().ResourceIdentifiers.KeyVault)
 	if err != nil {
 		return nil, err
 	}
 
-	p.clustersKeyvaultURI, err = keyvault.Find(ctx, p, p, generator.ClustersKeyVaultTagValue)
+	clustersKeyvaultURI, err := keyvault.URI(p, generator.ClustersKeyvaultSuffix)
 	if err != nil {
 		return nil, err
 	}
+
+	serviceKeyvaultURI, err := keyvault.URI(p, generator.ServiceKeyvaultSuffix)
+	if err != nil {
+		return nil, err
+	}
+
+	p.clustersKeyvault = keyvault.NewManager(rpKVAuthorizer, clustersKeyvaultURI)
+	p.serviceKeyvault = keyvault.NewManager(rpKVAuthorizer, serviceKeyvaultURI)
 
 	err = p.populateZones(ctx, rpAuthorizer)
 	if err != nil {
 		return nil, err
 	}
 
-	fpPrivateKey, fpCertificates, err := p.GetCertificateSecret(ctx, RPFirstPartySecretName)
+	fpPrivateKey, fpCertificates, err := p.serviceKeyvault.GetCertificateSecret(ctx, RPFirstPartySecretName)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +118,7 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 	p.fpCertificate = fpCertificates[0]
 	p.fpClientID = "f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875"
 
-	clustersGenevaLoggingPrivateKey, clustersGenevaLoggingCertificates, err := p.GetCertificateSecret(ctx, ClusterLoggingSecretName)
+	clustersGenevaLoggingPrivateKey, clustersGenevaLoggingCertificates, err := p.serviceKeyvault.GetCertificateSecret(ctx, ClusterLoggingSecretName)
 	if err != nil {
 		return nil, err
 	}
@@ -158,23 +175,6 @@ func (p *prod) AROOperatorImage() string {
 	return fmt.Sprintf("%s/aro:%s", p.acrDomain, version.GitCommit)
 }
 
-func (p *prod) populateDomain(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
-	zones := dns.NewZonesClient(p.SubscriptionID(), rpAuthorizer)
-
-	zs, err := zones.ListByResourceGroup(ctx, p.ResourceGroup(), nil)
-	if err != nil {
-		return err
-	}
-
-	if len(zs) != 1 {
-		return fmt.Errorf("found %d zones, expected 1", len(zs))
-	}
-
-	p.domain = *zs[0].Name
-
-	return nil
-}
-
 func (p *prod) populateZones(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
 	c := compute.NewResourceSkusClient(p.SubscriptionID(), rpAuthorizer)
 
@@ -213,12 +213,12 @@ func (p *prod) ClustersGenevaLoggingSecret() (*rsa.PrivateKey, *x509.Certificate
 	return p.clustersGenevaLoggingPrivateKey, p.clustersGenevaLoggingCertificate
 }
 
-func (p *prod) ClustersKeyvaultURI() string {
-	return p.clustersKeyvaultURI
+func (p *prod) ClustersKeyvault() keyvault.Manager {
+	return p.clustersKeyvault
 }
 
 func (p *prod) Domain() string {
-	return p.domain
+	return os.Getenv("DOMAIN_NAME")
 }
 
 func (p *prod) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, error) {
@@ -237,6 +237,10 @@ func (p *prod) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, 
 
 func (p *prod) Listen() (net.Listener, error) {
 	return net.Listen("tcp", ":8443")
+}
+
+func (p *prod) ServiceKeyvault() keyvault.Manager {
+	return p.serviceKeyvault
 }
 
 func (p *prod) Zones(vmSize string) ([]string, error) {

@@ -39,7 +39,6 @@ type Configuration struct {
 	ExtraServiceKeyvaultAccessPolicies []interface{} `json:"extraServiceKeyvaultAccessPolicies,omitempty" value:"required"`
 	FPServerCertCommonName             *string       `json:"fpServerCertCommonName,omitempty"`
 	FPServicePrincipalID               *string       `json:"fpServicePrincipalId,omitempty" value:"required"`
-	GlobalMonitoringKeyVaultURI        *string       `json:"globalMonitoringKeyVaultUri,omitempty" value:"required"`
 	GlobalResourceGroupName            *string       `json:"globalResourceGroupName,omitempty" value:"required"`
 	GlobalResourceGroupLocation        *string       `json:"globalResourceGroupLocation,omitempty" value:"required"`
 	GlobalSubscriptionID               *string       `json:"globalSubscriptionId,omitempty" value:"required"`

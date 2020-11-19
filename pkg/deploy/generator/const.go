@@ -5,11 +5,8 @@ package generator
 
 // Deployment constants
 const (
-	KeyVaultTagName          = "vault"
-	ClustersKeyVaultTagValue = "clusters"
-	ServiceKeyVaultTagValue  = "service"
-	kvClusterSuffix          = "-cls"
-	kvServiceSuffix          = "-svc"
+	ClustersKeyvaultSuffix = "-cls"
+	ServiceKeyvaultSuffix  = "-svc"
 )
 
 // Template file constants
