@@ -19,19 +19,18 @@ var _ TemplateClient = &FakeTemplateClient{}
 // NewFakeTemplateClient returns a FakeTemplateClient
 func NewFakeTemplateClient(h *codec.JsonHandle) *FakeTemplateClient {
 	return &FakeTemplateClient{
+		jsonHandle:      h,
 		templates:       make(map[string][]byte),
 		triggerHandlers: make(map[string]fakeTemplateTriggerHandler),
 		queryHandlers:   make(map[string]fakeTemplateQueryHandler),
-		jsonHandle:      h,
-		lock:            &sync.RWMutex{},
 	}
 }
 
 // FakeTemplateClient is a FakeTemplateClient
 type FakeTemplateClient struct {
-	templates       map[string][]byte
+	lock            sync.RWMutex
 	jsonHandle      *codec.JsonHandle
-	lock            *sync.RWMutex
+	templates       map[string][]byte
 	triggerHandlers map[string]fakeTemplateTriggerHandler
 	queryHandlers   map[string]fakeTemplateQueryHandler
 	sorter          func([]*pkg.Template)
@@ -269,7 +268,9 @@ func (c *FakeTemplateClient) ChangeFeed(*Options) TemplateIterator {
 func (c *FakeTemplateClient) processPreTriggers(ctx context.Context, template *pkg.Template, options *Options) error {
 	for _, triggerName := range options.PreTriggers {
 		if triggerHandler := c.triggerHandlers[triggerName]; triggerHandler != nil {
+			c.lock.Unlock()
 			err := triggerHandler(ctx, template)
+			c.lock.Lock()
 			if err != nil {
 				return err
 			}
@@ -291,7 +292,10 @@ func (c *FakeTemplateClient) Query(name string, query *Query, options *Options) 
 	}
 
 	if queryHandler := c.queryHandlers[query.Query]; queryHandler != nil {
-		return queryHandler(c, query, options)
+		c.lock.RUnlock()
+		i := queryHandler(c, query, options)
+		c.lock.RLock()
+		return i
 	}
 
 	return NewFakeTemplateErroringRawIterator(ErrNotImplemented)
