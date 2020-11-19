@@ -39,7 +39,10 @@ func NewDatabaseClient(ctx context.Context, log *logrus.Entry, env env.Core, m m
 		return nil, err
 	}
 
-	h := NewJSONHandle(cipher)
+	h, err := NewJSONHandle(cipher)
+	if err != nil {
+		return nil, err
+	}
 
 	c := &http.Client{
 		Transport: dbmetrics.New(log, &http.Transport{
@@ -54,7 +57,7 @@ func NewDatabaseClient(ctx context.Context, log *logrus.Entry, env env.Core, m m
 	return cosmosdb.NewDatabaseClient(log, c, h, databaseHostname, masterKey)
 }
 
-func NewJSONHandle(cipher encryption.Cipher) *codec.JsonHandle {
+func NewJSONHandle(cipher encryption.Cipher) (*codec.JsonHandle, error) {
 	h := &codec.JsonHandle{
 		BasicHandle: codec.BasicHandle{
 			DecodeOptions: codec.DecodeOptions{
@@ -63,9 +66,17 @@ func NewJSONHandle(cipher encryption.Cipher) *codec.JsonHandle {
 		},
 	}
 
-	h.SetInterfaceExt(reflect.TypeOf(api.SecureBytes{}), 1, secureBytesExt{cipher: cipher})
-	h.SetInterfaceExt(reflect.TypeOf((*api.SecureString)(nil)), 1, secureStringExt{cipher: cipher})
-	return h
+	err := h.SetInterfaceExt(reflect.TypeOf(api.SecureBytes{}), 1, secureBytesExt{cipher: cipher})
+	if err != nil {
+		return nil, err
+	}
+
+	err = h.SetInterfaceExt(reflect.TypeOf((*api.SecureString)(nil)), 1, secureStringExt{cipher: cipher})
+	if err != nil {
+		return nil, err
+	}
+
+	return h, nil
 }
 
 func databaseName(deploymentMode deployment.Mode) (string, error) {

@@ -14,8 +14,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	pkgacrtoken "github.com/Azure/ARO-RP/pkg/util/acrtoken"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
@@ -42,9 +40,6 @@ type manager struct {
 	fpAuthorizer autorest.Authorizer
 
 	ocDynamicValidator validate.OpenShiftClusterDynamicValidator
-
-	resourceGroups features.ResourceGroupsClient
-	securityGroups network.SecurityGroupsClient
 
 	dns             dns.Manager
 	privateendpoint privateendpoint.Manager
@@ -89,9 +84,6 @@ func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClus
 		fpAuthorizer: fpAuthorizer,
 
 		ocDynamicValidator: ocDynamicValidator,
-
-		resourceGroups: features.NewResourceGroupsClient(subscriptionDoc.ID, fpAuthorizer),
-		securityGroups: network.NewSecurityGroupsClient(subscriptionDoc.ID, fpAuthorizer),
 
 		dns:             dns.NewManager(_env, localFPAuthorizer),
 		privateendpoint: privateendpoint.NewManager(_env, localFPAuthorizer),

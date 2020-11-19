@@ -11,6 +11,7 @@ import (
 	_ "github.com/axw/gocov/gocov"
 	_ "github.com/go-bindata/go-bindata/go-bindata"
 	_ "github.com/golang/mock/mockgen"
+	_ "github.com/golangci/golangci-lint/cmd/golangci-lint"
 	_ "github.com/jim-minter/go-cosmosdb/cmd/gencosmosdb"
 	_ "github.com/jstemmer/go-junit-report"
 	_ "golang.org/x/tools/cmd/goimports"

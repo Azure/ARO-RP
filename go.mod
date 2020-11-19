@@ -39,6 +39,7 @@ require (
 	github.com/go-playground/validator/v10 v10.4.1 // indirect
 	github.com/go-test/deep v1.0.7
 	github.com/golang/mock v1.4.4
+	github.com/golangci/golangci-lint v1.32.2
 	github.com/google/go-cmp v0.5.3
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/googleapis/gnostic v0.5.3
@@ -51,7 +52,6 @@ require (
 	github.com/jstemmer/go-junit-report v0.9.1
 	github.com/klauspost/compress v1.11.3 // indirect
 	github.com/libvirt/libvirt-go v6.9.0+incompatible // indirect
-	github.com/mattn/go-colorable v0.1.8 // indirect
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/nxadm/tail v1.4.5 // indirect
 	github.com/onsi/ginkgo v1.14.2

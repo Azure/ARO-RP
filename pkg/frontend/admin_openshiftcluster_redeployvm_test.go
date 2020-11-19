@@ -31,7 +31,6 @@ func TestAdminRedeployVM(t *testing.T) {
 		name           string
 		resourceID     string
 		fixture        func(*testdatabase.Fixture)
-		dbError        error
 		vmName         string
 		mocks          func(*test, *mock_adminactions.MockInterface)
 		wantStatusCode int

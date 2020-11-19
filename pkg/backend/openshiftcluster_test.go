@@ -27,12 +27,10 @@ import (
 )
 
 type backendTestStruct struct {
-	name            string
-	clusterDoc      *api.OpenShiftClusterDocument
-	subscriptionDoc *api.SubscriptionDocument
-	mocks           func(*mock_openshiftcluster.MockManager, database.OpenShiftClusters)
-	fixture         func(*testdb.Fixture)
-	checker         func(*testdb.Checker)
+	name    string
+	mocks   func(*mock_openshiftcluster.MockManager, database.OpenShiftClusters)
+	fixture func(*testdb.Fixture)
+	checker func(*testdb.Checker)
 }
 
 func TestBackendTry(t *testing.T) {

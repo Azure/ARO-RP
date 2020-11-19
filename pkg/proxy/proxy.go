@@ -127,10 +127,10 @@ func proxy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	go func() {
-		io.Copy(c2, buf)
-		c2.(*net.TCPConn).CloseWrite()
+		_, _ = io.Copy(c2, buf)
+		_ = c2.(*net.TCPConn).CloseWrite()
 	}()
 
-	io.Copy(c1, c2)
-	c1.(*tls.Conn).CloseWrite()
+	_, _ = io.Copy(c1, c2)
+	_ = c1.(*tls.Conn).CloseWrite()
 }

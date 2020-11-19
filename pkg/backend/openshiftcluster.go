@@ -70,7 +70,7 @@ func (ocb *openShiftClusterBackend) try(ctx context.Context) (bool, error) {
 			ocb.m.EmitGauge("backend.openshiftcluster.workers.count", int64(atomic.LoadInt32(&ocb.workers)), nil)
 			ocb.cond.Signal()
 
-			log.WithField("duration", time.Now().Sub(t).Seconds()).Print("done")
+			log.WithField("duration", time.Since(t).Seconds()).Print("done")
 		}()
 
 		err := ocb.handle(context.Background(), log, doc)
@@ -290,7 +290,7 @@ func (ocb *openShiftClusterBackend) emitMetrics(doc *api.OpenShiftClusterDocumen
 		return
 	}
 
-	duration := time.Now().Sub(doc.CorrelationData.RequestTime).Milliseconds()
+	duration := time.Since(doc.CorrelationData.RequestTime).Milliseconds()
 
 	ocb.m.EmitGauge("backend.openshiftcluster.duration", duration, map[string]string{
 		"oldProvisioningState": string(doc.OpenShiftCluster.Properties.ProvisioningState),

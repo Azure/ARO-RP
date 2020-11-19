@@ -27,14 +27,19 @@ func run(log *logrus.Entry) error {
 
 	log.Print("listening")
 
-	go func() error {
+	go func() {
 		for {
 			c, err := l.Accept()
 			if err != nil {
-				return err
+				return
 			}
 
-			go io.Copy(os.Stdout, c)
+			go func() {
+				_, err := io.Copy(os.Stdout, c)
+				if err != nil {
+					log.Error(err)
+				}
+			}()
 		}
 	}()
 

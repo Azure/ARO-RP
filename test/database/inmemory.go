@@ -10,7 +10,15 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database/cosmosdb"
 )
 
-var jsonHandle *codec.JsonHandle = database.NewJSONHandle(&fakeCipher{})
+var jsonHandle *codec.JsonHandle
+
+func init() {
+	var err error
+	jsonHandle, err = database.NewJSONHandle(&fakeCipher{})
+	if err != nil {
+		panic(err)
+	}
+}
 
 func NewFakeOpenShiftClusters() (db database.OpenShiftClusters, client *cosmosdb.FakeOpenShiftClusterDocumentClient) {
 	coll := &fakeCollectionClient{}

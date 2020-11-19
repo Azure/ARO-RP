@@ -74,11 +74,6 @@ func preUpgradeChecks(ctx context.Context, oc *api.OpenShiftCluster, virtualNetw
 // checkCustomDNS checks if customer has custom DNS configured on VNET.
 // This would cause nodes to rotate and render cluster inoperable
 func checkCustomDNS(ctx context.Context, oc *api.OpenShiftCluster, vnet network.VirtualNetworksClient) error {
-	infraID := oc.Properties.InfraID
-	if infraID == "" {
-		infraID = "aro"
-	}
-
 	vnetID, _, err := subnet.Split(oc.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return err

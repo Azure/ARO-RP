@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"net/http"
 	"testing"
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
@@ -30,20 +29,16 @@ func TestResourcesList(t *testing.T) {
 	ctx := context.Background()
 
 	type test struct {
-		name           string
-		resourceID     string
-		mocks          func(*test, *mock_features.MockResourcesClient, *mock_compute.MockVirtualMachinesClient, *mock_network.MockVirtualNetworksClient, *mock_network.MockRouteTablesClient)
-		wantStatusCode int
-		wantResponse   []byte
-		wantError      string
+		name         string
+		mocks        func(*test, *mock_features.MockResourcesClient, *mock_compute.MockVirtualMachinesClient, *mock_network.MockVirtualNetworksClient, *mock_network.MockRouteTablesClient)
+		wantResponse []byte
+		wantError    string
 	}
 
 	for _, tt := range []*test{
 		{
-			name:       "basic coverage",
-			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
+			name: "basic coverage",
 			mocks: func(tt *test, resources *mock_features.MockResourcesClient, virtualMachines *mock_compute.MockVirtualMachinesClient, virtualNetworks *mock_network.MockVirtualNetworksClient, routeTables *mock_network.MockRouteTablesClient) {
-
 				resources.EXPECT().ListByResourceGroup(gomock.Any(), "test-cluster", "", "", nil).Return([]mgmtfeatures.GenericResourceExpanded{
 					{
 						Name: to.StringPtr("vm-1"),
@@ -97,12 +92,10 @@ func TestResourcesList(t *testing.T) {
 					},
 				}, nil)
 			},
-			wantStatusCode: http.StatusOK,
-			wantResponse:   []byte(`[{"properties":{"dhcpOptions":{"dnsServers":[]},"subnets":[{"properties":{"routeTable":{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1","tags":null}},"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master"}]},"id":"/subscriptions/id","type":"Microsoft.Network/virtualNetworks"},{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1","name":"routetable1"},{"properties":{"provisioningState":"Succeeded"},"id":"/subscriptions/id","type":"Microsoft.Compute/virtualMachines"},{"id":"/subscriptions/id","name":"storage","type":"Microsoft.Storage/storageAccounts","location":"eastus"}]`),
+			wantResponse: []byte(`[{"properties":{"dhcpOptions":{"dnsServers":[]},"subnets":[{"properties":{"routeTable":{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1","tags":null}},"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/test-cluster/providers/Microsoft.Network/virtualNetworks/test-vnet/subnets/master"}]},"id":"/subscriptions/id","type":"Microsoft.Network/virtualNetworks"},{"id":"/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/mockrg/providers/Microsoft.Network/routeTables/routetable1","name":"routetable1"},{"properties":{"provisioningState":"Succeeded"},"id":"/subscriptions/id","type":"Microsoft.Compute/virtualMachines"},{"id":"/subscriptions/id","name":"storage","type":"Microsoft.Storage/storageAccounts","location":"eastus"}]`),
 		},
 		{
-			name:       "vnet get error", //Get resources should continue on error from virtualNetworks.Get()
-			resourceID: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
+			name: "vnet get error", //Get resources should continue on error from virtualNetworks.Get()
 			mocks: func(tt *test, resources *mock_features.MockResourcesClient, virtualMachines *mock_compute.MockVirtualMachinesClient, virtualNetworks *mock_network.MockVirtualNetworksClient, routeTablesClient *mock_network.MockRouteTablesClient) {
 				resources.EXPECT().ListByResourceGroup(gomock.Any(), "test-cluster", "", "", nil).Return([]mgmtfeatures.GenericResourceExpanded{
 					{
@@ -134,8 +127,7 @@ func TestResourcesList(t *testing.T) {
 					},
 				}, nil)
 			},
-			wantStatusCode: http.StatusOK,
-			wantResponse:   []byte(`[{"properties":{"provisioningState":"Succeeded"},"id":"/subscriptions/id","type":"Microsoft.Compute/virtualMachines"},{"id":"/subscriptions/id","name":"storage","type":"Microsoft.Storage/storageAccounts","location":"eastus"}]`),
+			wantResponse: []byte(`[{"properties":{"provisioningState":"Succeeded"},"id":"/subscriptions/id","type":"Microsoft.Compute/virtualMachines"},{"id":"/subscriptions/id","name":"storage","type":"Microsoft.Storage/storageAccounts","location":"eastus"}]`),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

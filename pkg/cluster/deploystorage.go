@@ -62,7 +62,7 @@ func (m *manager) clusterSPObjectID(ctx context.Context) (string, error) {
 	defer cancel()
 	// NOTE: Do not override err with the error returned by wait.PollImmediateUntil.
 	// Doing this will not propagate the latest error to the user in case when wait exceeds the timeout
-	wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
+	_ = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 		var res azgraphrbac.ServicePrincipalObjectResult
 		res, err = applications.GetServicePrincipalsIDByAppID(ctx, spp.ClientID)
 		if err != nil {

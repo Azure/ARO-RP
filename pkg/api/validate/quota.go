@@ -83,10 +83,16 @@ func (dv *openShiftClusterDynamicValidator) validateQuotas(ctx context.Context) 
 	dv.log.Print("validateQuotas")
 
 	requiredResources := map[string]int{}
-	addRequiredResources(requiredResources, dv.oc.Properties.MasterProfile.VMSize, 3)
+	err := addRequiredResources(requiredResources, dv.oc.Properties.MasterProfile.VMSize, 3)
+	if err != nil {
+		return err
+	}
 	//worker node resource calculation
 	for _, w := range dv.oc.Properties.WorkerProfiles {
-		addRequiredResources(requiredResources, w.VMSize, w.Count)
+		err = addRequiredResources(requiredResources, w.VMSize, w.Count)
+		if err != nil {
+			return err
+		}
 	}
 
 	usages, err := dv.spUsage.List(ctx, dv.oc.Location)

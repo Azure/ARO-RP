@@ -64,8 +64,8 @@ func adminRequest(ctx context.Context, method, path string, params url.Values, i
 		return nil, err
 	}
 	defer func() {
-		resp.Body.Read(nil)
-		resp.Body.Close()
+		_, _ = resp.Body.Read(nil)
+		_ = resp.Body.Close()
 	}()
 
 	if out != nil && resp.Header.Get("Content-Type") == "application/json" {

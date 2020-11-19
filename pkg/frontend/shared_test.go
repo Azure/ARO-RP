@@ -54,6 +54,8 @@ func init() {
 }
 
 type testInfra struct {
+	t *testing.T
+
 	env        env.Interface
 	controller *gomock.Controller
 	l          net.Listener
@@ -99,6 +101,8 @@ func newTestInfra(t *testing.T) *testInfra {
 	checker := testdatabase.NewChecker()
 
 	return &testInfra{
+		t: t,
+
 		env:        _env,
 		controller: controller,
 		l:          l,
@@ -147,10 +151,13 @@ func (ti *testInfra) WithAsyncOperations() *testInfra {
 	return ti
 }
 
-func (ti *testInfra) done() error {
+func (ti *testInfra) done() {
 	ti.controller.Finish()
 	ti.cli.CloseIdleConnections()
-	return ti.l.Close()
+	err := ti.l.Close()
+	if err != nil {
+		ti.t.Fatal(err)
+	}
 }
 
 func (ti *testInfra) buildFixtures(fixtures func(*testdatabase.Fixture)) error {

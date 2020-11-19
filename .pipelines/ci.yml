@@ -24,7 +24,7 @@ jobs:
   - template: ./templates/template-checkout.yml
   - script: |
       set -xe
-      make test-go
+      make test-go lint-go
       [[ -z "$(git status -s)" ]]
     displayName: 🧪Run Golang Unit Tests
 
