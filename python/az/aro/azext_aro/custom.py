@@ -13,7 +13,15 @@ from azure.cli.core.commands.client_factory import get_mgmt_service_client
 from azure.cli.core.commands.client_factory import get_subscription_id
 from azure.cli.core.profiles import ResourceType
 from azure.cli.core.util import sdk_no_wait
+from msrest.exceptions import HttpOperationError
+from msrestazure.azure_exceptions import CloudError
+from msrestazure.tools import resource_id, parse_resource_id
+from knack.log import get_logger
 from knack.util import CLIError
+
+logger = get_logger(__name__)
+
+FP_CLIENT_ID = 'f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875'
 
 
 def aro_create(cmd,  # pylint: disable=too-many-locals
@@ -63,12 +71,12 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
     if not client_sp:
         client_sp = aad.create_service_principal(client_id)
 
-    rp_client_id = os.environ.get('AZURE_FP_CLIENT_ID', 'f1dd0a37-89c6-4e07-bcd1-ffd3d43d8875')
+    rp_client_id = os.environ.get('AZURE_FP_CLIENT_ID', FP_CLIENT_ID)
     rp_client_sp = aad.get_service_principal(rp_client_id)
 
     for sp_id in [client_sp.object_id, rp_client_sp.object_id]:
         assign_contributor_to_vnet(cmd.cli_ctx, vnet, sp_id)
-        assign_contributor_to_routetable(cmd.cli_ctx, master_subnet, worker_subnet, sp_id)
+        assign_contributor_to_routetable(cmd.cli_ctx, [master_subnet, worker_subnet], sp_id)
 
     if rp_mode_development():
         worker_vm_size = worker_vm_size or 'Standard_D2s_v3'
@@ -128,8 +136,41 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                        parameters=oc)
 
 
-def aro_delete(client, resource_group_name, resource_name, no_wait=False):
+def aro_delete(cmd, client, resource_group_name, resource_name, no_wait=False):
     # TODO: clean up rbac
+
+    try:
+        oc = client.get(resource_group_name, resource_name)
+
+        master_subnet = oc.master_profile.subnet_id
+        worker_subnets = {w.subnet_id for w in oc.worker_profiles}
+
+        master_parts = parse_resource_id(master_subnet)
+        vnet = resource_id(
+            subscription=master_parts['subscription'],
+            resource_group=master_parts['resource_group'],
+            namespace='Microsoft.Network',
+            type='virtualNetworks',
+            name=master_parts['name'],
+        )
+
+        aad = AADManager(cmd.cli_ctx)
+        rp_client_id = os.environ.get('AZURE_FP_CLIENT_ID', FP_CLIENT_ID)
+        rp_client_sp = aad.get_service_principal(rp_client_id)
+
+        # Customers frequently remove the RP's permissions, then cannot
+        # delete the cluster. Where possible, fix this before attempting
+        # deletion.
+        if rp_client_sp:
+            sp_id = rp_client_sp.object_id
+            assign_contributor_to_vnet(cmd.cli_ctx, vnet, sp_id)
+            assign_contributor_to_routetable(cmd.cli_ctx,
+                                             worker_subnets | {master_subnet},
+                                             sp_id)
+    except (CloudError, HttpOperationError) as e:
+        # Default to old deletion behaviour in case operations throw an
+        # exception above. Log the error.
+        logger.info(e.message)
 
     return sdk_no_wait(no_wait, client.delete,
                        resource_group_name=resource_group_name,
