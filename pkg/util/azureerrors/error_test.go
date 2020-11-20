@@ -43,6 +43,26 @@ func TestHasAuthorizationFailedError(t *testing.T) {
 			want: true,
 		},
 		{
+			name: "Non-deploy authorization Failed",
+			err: autorest.DetailedError{
+				Original: &azure.RequestError{
+					DetailedError: autorest.DetailedError{
+						StatusCode: "403",
+					},
+					ServiceError: &azure.ServiceError{
+						Code:    "AuthorizationFailed",
+						Message: "The client 'c78f37e4-e979-4b70-8055-d04f6e6c0302' with object id 'c78f37e4-e979-4b70-8055-d04f6e6c0302' does not have authorization to perform action 'Microsoft.Network/virtualNetworks/read' over scope '/subscriptions/46626fc5-476d-41ad-8c76-2ec49c6994eb/resourceGroups/v4-e2e-V36907046-centralus/providers/Microsoft.Network/virtualNetworks/dev-vnet' or the scope is invalid. If access was recently granted, please refresh your credentials.",
+					},
+				},
+				PackageType: "network.VirtualNetworksClient",
+				Method:      "Get",
+				StatusCode:  http.StatusForbidden,
+				Message:     "Failure responding to request",
+				// Response omitted for brevity
+			},
+			want: true,
+		},
+		{
 			name: "Nested authorization failed",
 			err: &azure.ServiceError{
 				Code:    "DeploymentFailed",

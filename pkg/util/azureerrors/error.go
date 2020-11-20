@@ -31,6 +31,11 @@ func deploymentFailedDueToAuthError(err error, authCode string) bool {
 				return true
 			}
 		}
+		if requestErr, ok := detailedErr.Original.(*azure.RequestError); ok &&
+			requestErr.ServiceError != nil &&
+			requestErr.ServiceError.Code == authCode {
+			return true
+		}
 	}
 
 	if serviceErr, ok := err.(*azure.ServiceError); ok &&
