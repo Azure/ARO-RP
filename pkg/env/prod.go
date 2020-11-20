@@ -139,7 +139,7 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 }
 
 func (p *prod) InitializeAuthorizers() error {
-	p.armClientAuthorizer = clientauthorizer.NewARM(p.log)
+	p.armClientAuthorizer = clientauthorizer.NewARM(p.log, p.Core)
 
 	adminClientAuthorizer, err := clientauthorizer.NewAdmin(
 		p.log,

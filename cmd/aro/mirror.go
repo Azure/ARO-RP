@@ -13,11 +13,10 @@ import (
 	"github.com/containers/image/v5/types"
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/ARO-RP/pkg/env"
 	pkgmirror "github.com/Azure/ARO-RP/pkg/mirror"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
-
-const acrDomainSuffix = ".azurecr.io" // TODO: retrieve dynamically
 
 func getAuth(key string) (*types.DockerAuthConfig, error) {
 	b, err := base64.StdEncoding.DecodeString(os.Getenv(key))
@@ -32,6 +31,11 @@ func getAuth(key string) (*types.DockerAuthConfig, error) {
 }
 
 func mirror(ctx context.Context, log *logrus.Entry) error {
+	env, err := env.NewCore(ctx, log)
+	if err != nil {
+		return err
+	}
+
 	for _, key := range []string{
 		"DST_AUTH",
 		"DST_ACR_NAME",
@@ -43,6 +47,8 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 			return fmt.Errorf("environment variable %q unset", key)
 		}
 	}
+
+	acrDomainSuffix := "." + env.Environment().ContainerRegistryDNSSuffix
 
 	dstAuth, err := getAuth("DST_AUTH")
 	if err != nil {

@@ -18,6 +18,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/dns"
@@ -58,7 +59,7 @@ type deployer struct {
 }
 
 // New initiates new deploy utility object
-func New(ctx context.Context, log *logrus.Entry, config *RPConfig, version string, fullDeploy bool) (Deployer, error) {
+func New(ctx context.Context, log *logrus.Entry, env env.Core, config *RPConfig, version string, fullDeploy bool) (Deployer, error) {
 	err := config.validate()
 	if err != nil {
 		return nil, err
@@ -69,7 +70,7 @@ func New(ctx context.Context, log *logrus.Entry, config *RPConfig, version strin
 		return nil, err
 	}
 
-	kvAuthorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(azure.PublicCloud.ResourceIdentifiers.KeyVault)
+	kvAuthorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(env.Environment().ResourceIdentifiers.KeyVault)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +89,7 @@ func New(ctx context.Context, log *logrus.Entry, config *RPConfig, version strin
 		vmss:                   compute.NewVirtualMachineScaleSetsClient(config.SubscriptionID, authorizer),
 		vmssvms:                compute.NewVirtualMachineScaleSetVMsClient(config.SubscriptionID, authorizer),
 		zones:                  dns.NewZonesClient(config.SubscriptionID, authorizer),
-		keyvault:               keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+"-svc.vault.azure.net/"),
+		keyvault:               keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+"-svc."+env.Environment().KeyVaultDNSSuffix+"/"),
 
 		fullDeploy: fullDeploy,
 		config:     config,

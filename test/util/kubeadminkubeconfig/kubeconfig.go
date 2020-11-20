@@ -16,9 +16,10 @@ import (
 	v1 "k8s.io/client-go/tools/clientcmd/api/v1"
 
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift"
+	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 )
 
-func Get(ctx context.Context, log *logrus.Entry, authorizer autorest.Authorizer, resourceID string) (*v1.Config, error) {
+func Get(ctx context.Context, log *logrus.Entry, im instancemetadata.InstanceMetadata, authorizer autorest.Authorizer, resourceID string) (*v1.Config, error) {
 	res, err := azure.ParseResourceID(resourceID)
 	if err != nil {
 		return nil, err

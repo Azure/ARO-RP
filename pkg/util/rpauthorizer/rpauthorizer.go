@@ -8,25 +8,27 @@ import (
 	"os"
 
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
+	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 )
 
 type RPAuthorizer interface {
 	NewRPAuthorizer(resource string) (autorest.Authorizer, error)
 }
 
-type devRPAuthorizer struct{}
+type devRPAuthorizer struct {
+	im instancemetadata.InstanceMetadata
+}
 
-func (devRPAuthorizer) NewRPAuthorizer(resource string) (autorest.Authorizer, error) {
+func (d devRPAuthorizer) NewRPAuthorizer(resource string) (autorest.Authorizer, error) {
 	config := &auth.ClientCredentialsConfig{
 		ClientID:     os.Getenv("AZURE_RP_CLIENT_ID"),
 		ClientSecret: os.Getenv("AZURE_RP_CLIENT_SECRET"),
 		TenantID:     os.Getenv("AZURE_TENANT_ID"),
 		Resource:     resource,
-		AADEndpoint:  azure.PublicCloud.ActiveDirectoryEndpoint,
+		AADEndpoint:  d.im.Environment().ActiveDirectoryEndpoint,
 	}
 
 	return config.Authorizer()
@@ -38,7 +40,7 @@ func (prodRPAuthorizer) NewRPAuthorizer(resource string) (autorest.Authorizer, e
 	return auth.NewAuthorizerFromEnvironmentWithResource(resource)
 }
 
-func New(deploymentMode deployment.Mode) (RPAuthorizer, error) {
+func New(deploymentMode deployment.Mode, im instancemetadata.InstanceMetadata) (RPAuthorizer, error) {
 	if deploymentMode == deployment.Development {
 		for _, key := range []string{
 			"AZURE_RP_CLIENT_ID",
@@ -50,7 +52,7 @@ func New(deploymentMode deployment.Mode) (RPAuthorizer, error) {
 			}
 		}
 
-		return &devRPAuthorizer{}, nil
+		return &devRPAuthorizer{im: im}, nil
 	}
 
 	return &prodRPAuthorizer{}, nil

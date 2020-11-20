@@ -222,7 +222,7 @@ func TestPopulateTenantIDFromMSI(t *testing.T) {
 					if msiEndpoint != "http://169.254.169.254/metadata/identity/oauth2/token" {
 						return nil, fmt.Errorf("unexpected endpoint %q", msiEndpoint)
 					}
-					if resource != "https://management.azure.com/" {
+					if resource != azure.PublicCloud.ResourceManagerEndpoint {
 						return nil, fmt.Errorf("unexpected resource %q", resource)
 					}
 					return token, nil

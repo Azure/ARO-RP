@@ -17,7 +17,6 @@ import (
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
 	uuid "github.com/satori/go.uuid"
@@ -89,7 +88,7 @@ func New(log *logrus.Entry, deploymentMode deployment.Mode, instancemetadata ins
 		return nil, err
 	}
 
-	graphAuthorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(azure.PublicCloud.GraphEndpoint)
+	graphAuthorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(instancemetadata.Environment().GraphEndpoint)
 	if err != nil {
 		return nil, err
 	}

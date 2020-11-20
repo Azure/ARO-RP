@@ -75,7 +75,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
-	configv1, err := kubeadminkubeconfig.Get(ctx, log, authorizer, resourceIDFromEnv())
+	configv1, err := kubeadminkubeconfig.Get(ctx, log, im, authorizer, resourceIDFromEnv())
 	if err != nil {
 		return nil, err
 	}

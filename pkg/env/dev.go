@@ -106,7 +106,7 @@ func (d *dev) Listen() (net.Listener, error) {
 }
 
 func (d *dev) FPAuthorizer(tenantID, resource string) (refreshable.Authorizer, error) {
-	oauthConfig, err := adal.NewOAuthConfig(azure.PublicCloud.ActiveDirectoryEndpoint, tenantID)
+	oauthConfig, err := adal.NewOAuthConfig(d.Environment().ActiveDirectoryEndpoint, tenantID)
 	if err != nil {
 		return nil, err
 	}

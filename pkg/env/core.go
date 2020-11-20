@@ -5,7 +5,9 @@ package env
 
 import (
 	"context"
+	"errors"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
@@ -34,18 +36,24 @@ func NewCore(ctx context.Context, log *logrus.Entry) (Core, error) {
 	deploymentMode := deployment.NewMode()
 	log.Infof("running in %s mode", deploymentMode)
 
-	instancemetadata, err := instancemetadata.New(ctx, deploymentMode)
+	im, err := instancemetadata.New(ctx, deploymentMode)
 	if err != nil {
 		return nil, err
 	}
 
-	rpauthorizer, err := rpauthorizer.New(deploymentMode)
+	switch im.Environment().Name {
+	case azure.PublicCloud.Name, azure.USGovernmentCloud.Name:
+	default:
+		return nil, errors.New("unsupported Azure cloud environment")
+	}
+
+	rpauthorizer, err := rpauthorizer.New(deploymentMode, im)
 	if err != nil {
 		return nil, err
 	}
 
 	return &core{
-		InstanceMetadata: instancemetadata,
+		InstanceMetadata: im,
 		RPAuthorizer:     rpauthorizer,
 
 		deploymentMode: deploymentMode,

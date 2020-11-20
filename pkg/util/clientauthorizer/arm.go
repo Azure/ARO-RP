@@ -15,6 +15,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
@@ -31,6 +32,7 @@ type clientCertificate struct {
 
 type arm struct {
 	log *logrus.Entry
+	im  instancemetadata.InstanceMetadata
 	now func() time.Time
 	do  func(*http.Request) (*http.Response, error)
 
@@ -40,7 +42,7 @@ type arm struct {
 	lastSuccessfulRefresh time.Time
 }
 
-func NewARM(log *logrus.Entry) ClientAuthorizer {
+func NewARM(log *logrus.Entry, im instancemetadata.InstanceMetadata) ClientAuthorizer {
 	c := http.Client{
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			return fmt.Errorf("tried to redirect")
@@ -49,6 +51,7 @@ func NewARM(log *logrus.Entry) ClientAuthorizer {
 
 	a := &arm{
 		log: log,
+		im:  im,
 		now: time.Now,
 		do:  c.Do,
 	}
@@ -98,7 +101,7 @@ func (a *arm) refresh() {
 func (a *arm) refreshOnce() error {
 	now := a.now()
 
-	req, err := http.NewRequest(http.MethodGet, "https://management.azure.com:24582/metadata/authentication?api-version=2015-01-01", nil)
+	req, err := http.NewRequest(http.MethodGet, strings.TrimSuffix(a.im.Environment().ResourceManagerEndpoint, "/")+":24582/metadata/authentication?api-version=2015-01-01", nil)
 	if err != nil {
 		return err
 	}
