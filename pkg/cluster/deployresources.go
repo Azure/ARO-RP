@@ -26,8 +26,6 @@ func (m *manager) deployResourceTemplate(ctx context.Context) error {
 	installConfig := g[reflect.TypeOf(&installconfig.InstallConfig{})].(*installconfig.InstallConfig)
 	machineMaster := g[reflect.TypeOf(&machine.Master{})].(*machine.Master)
 
-	infraID := m.doc.OpenShiftCluster.Properties.InfraID
-
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 
 	vnetID, _, err := subnet.Split(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
@@ -49,18 +47,18 @@ func (m *manager) deployResourceTemplate(ctx context.Context) error {
 			},
 		},
 		Resources: []*arm.Resource{
-			dnsPrivateZone(installConfig),
-			dnsPrivateRecordAPIINT(infraID, installConfig),
-			dnsPrivateRecordAPI(infraID, installConfig),
-			dnsVirtualNetworkLink(vnetID, installConfig),
-			networkPrivateLinkService(infraID, m.env.SubscriptionID(), m.doc.OpenShiftCluster, installConfig),
-			networkPublicIPAddress(infraID, installConfig),
-			networkInternalLoadBalancer(infraID, m.doc.OpenShiftCluster, installConfig),
-			networkPublicLoadBalancer(infraID, m.doc.OpenShiftCluster, installConfig),
-			networkBootstrapNIC(infraID, m.doc.OpenShiftCluster, installConfig),
-			networkMasterNICs(infraID, m.doc.OpenShiftCluster, installConfig),
-			computeBoostrapVM(infraID, m.doc.OpenShiftCluster, installConfig),
-			computeMasterVMs(infraID, zones, machineMaster, m.doc.OpenShiftCluster, installConfig),
+			m.dnsPrivateZone(installConfig),
+			m.dnsPrivateRecordAPIINT(installConfig),
+			m.dnsPrivateRecordAPI(installConfig),
+			m.dnsVirtualNetworkLink(installConfig, vnetID),
+			m.networkPrivateLinkService(installConfig),
+			m.networkPublicIPAddress(installConfig),
+			m.networkInternalLoadBalancer(installConfig),
+			m.networkPublicLoadBalancer(installConfig),
+			m.networkBootstrapNIC(installConfig),
+			m.networkMasterNICs(installConfig),
+			m.computeBootstrapVM(installConfig),
+			m.computeMasterVMs(installConfig, zones, machineMaster),
 		},
 	}
 	return m.deployARMTemplate(ctx, resourceGroup, "resources", t, map[string]interface{}{
