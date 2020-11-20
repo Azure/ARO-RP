@@ -123,7 +123,7 @@ func aroserverRun() error {
 	return nil
 }
 
-// SetupWithManager setup our mananger
+// SetupWithManager setup our manager
 func (r *AlertWebhookReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.log.Info("starting alertmanager sink")
 

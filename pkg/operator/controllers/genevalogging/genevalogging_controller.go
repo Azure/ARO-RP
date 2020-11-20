@@ -97,7 +97,7 @@ func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 	return reconcile.Result{}, nil
 }
 
-// SetupWithManager setup our mananger
+// SetupWithManager setup our manager
 func (r *GenevaloggingReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}).

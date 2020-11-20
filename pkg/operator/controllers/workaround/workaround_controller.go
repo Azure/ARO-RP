@@ -91,7 +91,7 @@ func (r *WorkaroundReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 	return reconcile.Result{RequeueAfter: time.Hour, Requeue: true}, nil
 }
 
-// SetupWithManager setup our mananger
+// SetupWithManager setup our manager
 func (r *WorkaroundReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&arov1alpha1.Cluster{}).

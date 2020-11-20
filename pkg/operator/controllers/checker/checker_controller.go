@@ -66,7 +66,7 @@ func (r *CheckerController) Reconcile(request ctrl.Request) (ctrl.Result, error)
 	return reconcile.Result{RequeueAfter: time.Hour, Requeue: true}, err
 }
 
-// SetupWithManager setup our mananger
+// SetupWithManager setup our manager
 func (r *CheckerController) SetupWithManager(mgr ctrl.Manager) error {
 	builder := ctrl.NewControllerManagedBy(mgr).For(&arov1alpha1.Cluster{})
 	if r.role == operator.RoleMaster {

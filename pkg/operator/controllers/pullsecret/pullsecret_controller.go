@@ -151,7 +151,7 @@ func triggerReconcile(secret *corev1.Secret) bool {
 		(secret.Name == operator.SecretName && secret.Namespace == operator.Namespace)
 }
 
-// SetupWithManager setup our mananger
+// SetupWithManager setup our manager
 func (r *PullSecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	isPullSecret := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
