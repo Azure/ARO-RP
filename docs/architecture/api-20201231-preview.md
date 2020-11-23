@@ -3,7 +3,7 @@
 For api `20201231-preview` bellow is the list of proposed changes and features.
 These would have to land into API and backend as a features.
 
-Feature work will need to be agreed and converted to working stories. All technical details bellow are overview only
+Feature work will need to be agreed and converted to working stories. All technical details bellow is overview only
 
 ## API changes
 
@@ -67,7 +67,7 @@ type WorkerProfile struct {
 
 ### Extend OpenShiftClusterCredentials to provide kube-config
 
-For backwards compatability we leave `OpenShiftClusterCredentials` as it is.
+For backwards compatibility  we leave `OpenShiftClusterCredentials` as it is.
 In the future we might want to refactor all this to Separate `AccessProfile` to
 be aligned with AKS. But for now we just do simple extension.
 
@@ -124,8 +124,7 @@ Standard_F72s_v2
 We should extend existing `NetworkProfile` with SDN plugin option for 4.6 onwards.
 
 `SDNPlugin` - OpenShift will be changing its default SDN provider[1]. We can start
-shipping ability to chose it on install, so customer can start testing, and we
-will be able to switch it in the future release.
+shipping ability to choose it on install, so customer can start testing, and we will be able to switch it in the future release.
 
 
 // SDNProvider enumerates the values for Supported SDN providers
