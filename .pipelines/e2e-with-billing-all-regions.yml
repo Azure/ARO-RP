@@ -30,6 +30,7 @@ stages:
     - japaneast
     - japanwest
     - koreacentral
+    rpMode: ''
 - stage: PhaseTwo
   displayName: wait 1 hour to avoid resource threshold
   dependsOn: []
@@ -56,6 +57,7 @@ stages:
     - southcentralus
     - westus
     - westus2
+    rpMode: ''
 - stage: PhaseThree
   displayName: wait 2 hours to avoid resource threshold
   dependsOn: []
@@ -84,7 +86,7 @@ stages:
     - switzerlandwest
     - westeurope
     - francecentral
-
+    rpMode: ''
 - stage: PhaseFour
   displayName: wait 3 hours to avoid resource threshold
   dependsOn: []
@@ -110,3 +112,4 @@ stages:
     - uaenorth
     - uksouth
     - ukwest
+    rpMode: ''

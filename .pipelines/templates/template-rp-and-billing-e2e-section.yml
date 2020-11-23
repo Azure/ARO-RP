@@ -5,6 +5,7 @@ parameters:
   e2e_subscription: ''
   last_stage_of_previous_section: ''
   locations: []
+  rpMode: ''
 
 stages:
 - ${{ each location in parameters.locations }}:
@@ -19,3 +20,4 @@ stages:
         billing_e2e_pipeline_name: ${{ parameters.billing_e2e_pipeline_name }}
         billing_e2e_branch_name: ${{ parameters.billing_e2e_branch_name }}
         location: ${{ location }}
+        rpMode: ${{ parameters.rpMode }}

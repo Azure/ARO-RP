@@ -5,6 +5,7 @@ parameters:
   billing_e2e_branch_name: ''
   e2e_subscription: ''
   location: ''
+  rpMode: ''
 
 jobs:
 - job: ${{ parameters.location }}_RP_E2E_Job
@@ -18,7 +19,7 @@ jobs:
       subscription: ${{ parameters.e2e_subscription }}
       azureDevOpsE2EJSONSPN: ${{ parameters.aro_v4_e2e_devops_spn }}
       aroVersionStorageAccount: $(aro-version-storage-account)
-      rpMode: ''
+      rpMode: ${{ parameters.rpMode }}
 - job: ${{ parameters.location }}_JustWait
   timeoutInMinutes: 400
   pool: server
