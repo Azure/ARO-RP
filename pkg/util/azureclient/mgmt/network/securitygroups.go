@@ -8,6 +8,7 @@ import (
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 )
 
 // SecurityGroupsClient is a minimal interface for azure SecurityGroupsClient
@@ -23,8 +24,8 @@ type securityGroupsClient struct {
 var _ SecurityGroupsClient = &securityGroupsClient{}
 
 // NewSecurityGroupsClient creates a new SecurityGroupsClient
-func NewSecurityGroupsClient(subscriptionID string, authorizer autorest.Authorizer) SecurityGroupsClient {
-	client := mgmtnetwork.NewSecurityGroupsClient(subscriptionID)
+func NewSecurityGroupsClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) SecurityGroupsClient {
+	client := mgmtnetwork.NewSecurityGroupsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 
 	return &securityGroupsClient{

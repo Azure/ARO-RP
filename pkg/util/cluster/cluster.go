@@ -38,10 +38,11 @@ import (
 )
 
 type Cluster struct {
+	instancemetadata.InstanceMetadata
+
 	log            *logrus.Entry
 	deploymentMode deployment.Mode
-	instancemetadata.InstanceMetadata
-	ci bool
+	ci             bool
 
 	deployments       features.DeploymentsClient
 	groups            features.ResourceGroupsClient
@@ -72,7 +73,7 @@ func (errs errors) Error() string {
 	return sb.String()
 }
 
-func New(log *logrus.Entry, deploymentMode deployment.Mode, instancemetadata instancemetadata.InstanceMetadata, ci bool) (*Cluster, error) {
+func New(log *logrus.Entry, deploymentMode deployment.Mode, im instancemetadata.InstanceMetadata, ci bool) (*Cluster, error) {
 	if deploymentMode == deployment.Development {
 		for _, key := range []string{
 			"AZURE_FP_CLIENT_ID",
@@ -88,7 +89,7 @@ func New(log *logrus.Entry, deploymentMode deployment.Mode, instancemetadata ins
 		return nil, err
 	}
 
-	graphAuthorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(instancemetadata.Environment().GraphEndpoint)
+	graphAuthorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(im.Environment().GraphEndpoint)
 	if err != nil {
 		return nil, err
 	}
@@ -96,18 +97,18 @@ func New(log *logrus.Entry, deploymentMode deployment.Mode, instancemetadata ins
 	return &Cluster{
 		log:              log,
 		deploymentMode:   deploymentMode,
-		InstanceMetadata: instancemetadata,
+		InstanceMetadata: im,
 		ci:               ci,
 
-		deployments:       features.NewDeploymentsClient(instancemetadata.SubscriptionID(), authorizer),
-		groups:            features.NewResourceGroupsClient(instancemetadata.SubscriptionID(), authorizer),
-		openshiftclusters: redhatopenshift.NewOpenShiftClustersClient(instancemetadata.SubscriptionID(), authorizer),
-		applications:      graphrbac.NewApplicationsClient(instancemetadata.TenantID(), graphAuthorizer),
-		serviceprincipals: graphrbac.NewServicePrincipalClient(instancemetadata.TenantID(), graphAuthorizer),
-		securitygroups:    network.NewSecurityGroupsClient(instancemetadata.SubscriptionID(), authorizer),
-		subnets:           network.NewSubnetsClient(instancemetadata.SubscriptionID(), authorizer),
-		routetables:       network.NewRouteTablesClient(instancemetadata.SubscriptionID(), authorizer),
-		roleassignments:   authorization.NewRoleAssignmentsClient(instancemetadata.SubscriptionID(), authorizer),
+		deployments:       features.NewDeploymentsClient(im.Environment(), im.SubscriptionID(), authorizer),
+		groups:            features.NewResourceGroupsClient(im.Environment(), im.SubscriptionID(), authorizer),
+		openshiftclusters: redhatopenshift.NewOpenShiftClustersClient(im.Environment(), im.SubscriptionID(), authorizer),
+		applications:      graphrbac.NewApplicationsClient(im.Environment(), im.TenantID(), graphAuthorizer),
+		serviceprincipals: graphrbac.NewServicePrincipalClient(im.Environment(), im.TenantID(), graphAuthorizer),
+		securitygroups:    network.NewSecurityGroupsClient(im.Environment(), im.SubscriptionID(), authorizer),
+		subnets:           network.NewSubnetsClient(im.Environment(), im.SubscriptionID(), authorizer),
+		routetables:       network.NewRouteTablesClient(im.Environment(), im.SubscriptionID(), authorizer),
+		roleassignments:   authorization.NewRoleAssignmentsClient(im.Environment(), im.SubscriptionID(), authorizer),
 	}, nil
 }
 

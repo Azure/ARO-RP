@@ -61,7 +61,7 @@ func newDev(ctx context.Context, log *logrus.Entry) (Interface, error) {
 		return nil, err
 	}
 
-	d.roleassignments = authorization.NewRoleAssignmentsClient(d.SubscriptionID(), armAuthorizer)
+	d.roleassignments = authorization.NewRoleAssignmentsClient(d.Environment(), d.SubscriptionID(), armAuthorizer)
 	d.prod.clustersGenevaLoggingEnvironment = "Test"
 	d.prod.clustersGenevaLoggingConfigVersion = "2.3"
 
@@ -70,16 +70,16 @@ func newDev(ctx context.Context, log *logrus.Entry) (Interface, error) {
 		return nil, err
 	}
 
-	d.applications = graphrbac.NewApplicationsClient(d.TenantID(), fpGraphAuthorizer)
+	d.applications = graphrbac.NewApplicationsClient(d.Environment(), d.TenantID(), fpGraphAuthorizer)
 
 	fpAuthorizer, err := d.FPAuthorizer(d.TenantID(), d.Environment().ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	d.permissions = authorization.NewPermissionsClient(d.SubscriptionID(), fpAuthorizer)
+	d.permissions = authorization.NewPermissionsClient(d.Environment(), d.SubscriptionID(), fpAuthorizer)
 
-	d.deployments = features.NewDeploymentsClient(d.TenantID(), fpAuthorizer)
+	d.deployments = features.NewDeploymentsClient(d.Environment(), d.TenantID(), fpAuthorizer)
 
 	return d, nil
 }

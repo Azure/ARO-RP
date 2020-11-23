@@ -8,6 +8,7 @@ import (
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 )
 
 // RouteTablesClient is a minimal interface for azure RouteTablesClient
@@ -23,8 +24,8 @@ type routeTablesClient struct {
 var _ RouteTablesClient = &routeTablesClient{}
 
 // NewRouteTablesClient creates a new RouteTablesClient
-func NewRouteTablesClient(subscriptionID string, authorizer autorest.Authorizer) RouteTablesClient {
-	client := mgmtnetwork.NewRouteTablesClient(subscriptionID)
+func NewRouteTablesClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) RouteTablesClient {
+	client := mgmtnetwork.NewRouteTablesClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 
 	return &routeTablesClient{

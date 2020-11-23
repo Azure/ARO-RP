@@ -36,7 +36,7 @@ func NewManager(env env.Interface, localFPAuthorizer autorest.Authorizer) Manage
 	return &manager{
 		env: env,
 
-		recordsets: dns.NewRecordSetsClient(env.SubscriptionID(), localFPAuthorizer),
+		recordsets: dns.NewRecordSetsClient(env.Environment(), env.SubscriptionID(), localFPAuthorizer),
 	}
 }
 

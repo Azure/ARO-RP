@@ -25,7 +25,7 @@ func Get(ctx context.Context, log *logrus.Entry, im instancemetadata.InstanceMet
 		return nil, err
 	}
 
-	openshiftclusters := redhatopenshift.NewOpenShiftClustersClient(res.SubscriptionID, authorizer)
+	openshiftclusters := redhatopenshift.NewOpenShiftClustersClient(im.Environment(), res.SubscriptionID, authorizer)
 
 	oc, err := openshiftclusters.Get(ctx, res.ResourceGroup, res.ResourceName)
 	if err != nil {

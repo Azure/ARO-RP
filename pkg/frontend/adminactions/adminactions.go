@@ -91,11 +91,11 @@ func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster,
 		kubernetescli: kubernetescli,
 		configcli:     configcli,
 
-		resources:       features.NewResourcesClient(subscriptionDoc.ID, fpAuth),
-		virtualMachines: compute.NewVirtualMachinesClient(subscriptionDoc.ID, fpAuth),
-		virtualNetworks: network.NewVirtualNetworksClient(subscriptionDoc.ID, fpAuth),
-		routeTables:     network.NewRouteTablesClient(subscriptionDoc.ID, fpAuth),
-		storageAccounts: storage.NewAccountsClient(subscriptionDoc.ID, fpAuth),
+		resources:       features.NewResourcesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		virtualMachines: compute.NewVirtualMachinesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		virtualNetworks: network.NewVirtualNetworksClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		routeTables:     network.NewRouteTablesClient(env.Environment(), subscriptionDoc.ID, fpAuth),
+		storageAccounts: storage.NewAccountsClient(env.Environment(), subscriptionDoc.ID, fpAuth),
 	}, nil
 }
 

@@ -8,6 +8,7 @@ import (
 
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 )
 
 // RoleAssignmentsClient is a minimal interface for azure RoleAssignmentsClient
@@ -24,8 +25,8 @@ type roleAssignmentsClient struct {
 var _ RoleAssignmentsClient = &roleAssignmentsClient{}
 
 // NewRoleAssignmentsClient creates a new RoleAssignmentsClient
-func NewRoleAssignmentsClient(subscriptionID string, authorizer autorest.Authorizer) RoleAssignmentsClient {
-	client := mgmtauthorization.NewRoleAssignmentsClient(subscriptionID)
+func NewRoleAssignmentsClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) RoleAssignmentsClient {
+	client := mgmtauthorization.NewRoleAssignmentsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 
 	return &roleAssignmentsClient{

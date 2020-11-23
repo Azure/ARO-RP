@@ -8,6 +8,7 @@ import (
 
 	mgmtdns "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 )
 
 // ZonesClient is a minimal interface for azure ZonesClient
@@ -22,8 +23,8 @@ type zonesClient struct {
 var _ ZonesClient = &zonesClient{}
 
 // NewZonesClient creates a new ZonesClient
-func NewZonesClient(subscriptionID string, authorizer autorest.Authorizer) ZonesClient {
-	client := mgmtdns.NewZonesClient(subscriptionID)
+func NewZonesClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) ZonesClient {
+	client := mgmtdns.NewZonesClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 
 	return &zonesClient{

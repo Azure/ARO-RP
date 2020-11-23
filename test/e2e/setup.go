@@ -114,12 +114,12 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 	}
 
 	return &clientSet{
-		OpenshiftClusters: redhatopenshift.NewOpenShiftClustersClient(im.SubscriptionID(), authorizer),
-		Operations:        redhatopenshift.NewOperationsClient(im.SubscriptionID(), authorizer),
-		VirtualMachines:   compute.NewVirtualMachinesClient(im.SubscriptionID(), authorizer),
-		Resources:         features.NewResourcesClient(im.SubscriptionID(), authorizer),
-		ActivityLogs:      insights.NewActivityLogsClient(im.SubscriptionID(), authorizer),
-		VirtualNetworks:   network.NewVirtualNetworksClient(im.SubscriptionID(), authorizer),
+		OpenshiftClusters: redhatopenshift.NewOpenShiftClustersClient(im.Environment(), im.SubscriptionID(), authorizer),
+		Operations:        redhatopenshift.NewOperationsClient(im.Environment(), im.SubscriptionID(), authorizer),
+		VirtualMachines:   compute.NewVirtualMachinesClient(im.Environment(), im.SubscriptionID(), authorizer),
+		Resources:         features.NewResourcesClient(im.Environment(), im.SubscriptionID(), authorizer),
+		ActivityLogs:      insights.NewActivityLogsClient(im.Environment(), im.SubscriptionID(), authorizer),
+		VirtualNetworks:   network.NewVirtualNetworksClient(im.Environment(), im.SubscriptionID(), authorizer),
 
 		RestConfig:  restconfig,
 		Kubernetes:  cli,

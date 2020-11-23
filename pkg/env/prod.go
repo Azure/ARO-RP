@@ -175,7 +175,7 @@ func (p *prod) AROOperatorImage() string {
 }
 
 func (p *prod) populateZones(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
-	c := compute.NewResourceSkusClient(p.SubscriptionID(), rpAuthorizer)
+	c := compute.NewResourceSkusClient(p.Environment(), p.SubscriptionID(), rpAuthorizer)
 
 	skus, err := c.List(ctx, "")
 	if err != nil {

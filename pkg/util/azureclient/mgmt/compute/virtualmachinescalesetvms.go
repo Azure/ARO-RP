@@ -8,6 +8,7 @@ import (
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 )
 
 // VirtualMachineScaleSetVMsClient is a minimal interface for azure VirtualMachineScaleSetVMsClient
@@ -23,8 +24,8 @@ type virtualMachineScaleSetVMsClient struct {
 var _ VirtualMachineScaleSetVMsClient = &virtualMachineScaleSetVMsClient{}
 
 // NewVirtualMachineScaleSetVMsClient creates a new VirtualMachineScaleSetVMsClient
-func NewVirtualMachineScaleSetVMsClient(subscriptionID string, authorizer autorest.Authorizer) VirtualMachineScaleSetVMsClient {
-	client := mgmtcompute.NewVirtualMachineScaleSetVMsClient(subscriptionID)
+func NewVirtualMachineScaleSetVMsClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) VirtualMachineScaleSetVMsClient {
+	client := mgmtcompute.NewVirtualMachineScaleSetVMsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 
 	return &virtualMachineScaleSetVMsClient{

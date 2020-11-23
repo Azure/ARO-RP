@@ -52,7 +52,7 @@ func NewOpenShiftClusterDynamicValidator(log *logrus.Entry, env env.Interface, o
 
 		fpAuthorizer: fpAuthorizer,
 
-		fpPermissions: authorization.NewPermissionsClient(subscriptionDoc.ID, fpAuthorizer),
+		fpPermissions: authorization.NewPermissionsClient(env.Environment(), subscriptionDoc.ID, fpAuthorizer),
 	}, nil
 }
 
@@ -95,10 +95,10 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		return err
 	}
 
-	dv.spPermissions = authorization.NewPermissionsClient(r.SubscriptionID, spAuthorizer)
-	dv.spProviders = features.NewProvidersClient(r.SubscriptionID, spAuthorizer)
-	dv.spUsage = compute.NewUsageClient(r.SubscriptionID, spAuthorizer)
-	dv.spVirtualNetworks = network.NewVirtualNetworksClient(r.SubscriptionID, spAuthorizer)
+	dv.spPermissions = authorization.NewPermissionsClient(dv.env.Environment(), r.SubscriptionID, spAuthorizer)
+	dv.spProviders = features.NewProvidersClient(dv.env.Environment(), r.SubscriptionID, spAuthorizer)
+	dv.spUsage = compute.NewUsageClient(dv.env.Environment(), r.SubscriptionID, spAuthorizer)
+	dv.spVirtualNetworks = network.NewVirtualNetworksClient(dv.env.Environment(), r.SubscriptionID, spAuthorizer)
 
 	vnetID, _, err := subnet.Split(dv.oc.Properties.MasterProfile.SubnetID)
 	if err != nil {

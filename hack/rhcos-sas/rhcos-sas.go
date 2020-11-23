@@ -14,14 +14,16 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/openshift/installer/pkg/rhcos"
 	"github.com/openshift/installer/pkg/types"
+	"github.com/sirupsen/logrus"
 
 	_ "github.com/Azure/ARO-RP/pkg/cluster"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
-func run(ctx context.Context) error {
+func run(ctx context.Context, log *logrus.Entry) error {
 	subscriptionID := os.Getenv("AZURE_SUBSCRIPTION_ID")
 	resourceGroup := "images"
 	accountName := "openshiftimages"
@@ -31,7 +33,12 @@ func run(ctx context.Context) error {
 		return err
 	}
 
-	accounts := storage.NewAccountsClient(subscriptionID, authorizer)
+	env, err := env.NewCore(ctx, log)
+	if err != nil {
+		return err
+	}
+
+	accounts := storage.NewAccountsClient(env.Environment(), subscriptionID, authorizer)
 
 	keys, err := accounts.ListKeys(ctx, resourceGroup, accountName, "")
 	if err != nil {
@@ -101,7 +108,7 @@ func run(ctx context.Context) error {
 func main() {
 	log := utillog.GetLogger()
 
-	if err := run(context.Background()); err != nil {
+	if err := run(context.Background(), log); err != nil {
 		log.Fatal(err)
 	}
 }

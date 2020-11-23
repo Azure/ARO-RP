@@ -54,14 +54,14 @@ type manager struct {
 	log           *logrus.Entry
 }
 
-func NewManager(_env env.Interface, billing database.Billing, sub database.Subscriptions, log *logrus.Entry) (Manager, error) {
-	storageClient, err := storageClient(_env, billing, sub, log)
+func NewManager(env env.Interface, billing database.Billing, sub database.Subscriptions, log *logrus.Entry) (Manager, error) {
+	storageClient, err := storageClient(env, billing, sub, log)
 	if err != nil {
 		return nil, err
 	}
 
 	return &manager{
-		env:           _env,
+		env:           env,
 		storageClient: storageClient,
 		subDB:         sub,
 		billingDB:     billing,
@@ -69,12 +69,12 @@ func NewManager(_env env.Interface, billing database.Billing, sub database.Subsc
 	}, nil
 }
 
-func storageClient(_env env.Interface, billing database.Billing, sub database.Subscriptions, log *logrus.Entry) (*azstorage.Client, error) {
+func storageClient(env env.Interface, billing database.Billing, sub database.Subscriptions, log *logrus.Entry) (*azstorage.Client, error) {
 	subscriptionID := prodE2ESubscriptionID
 	resourceGroupName := prodE2EResourceGroupName
 	storageAccountName := prodE2EStorageAccountName
 
-	switch _env.DeploymentMode() {
+	switch env.DeploymentMode() {
 	case deployment.Development:
 		return nil, nil
 
@@ -84,12 +84,12 @@ func storageClient(_env env.Interface, billing database.Billing, sub database.Su
 		storageAccountName = intE2EStorageAccountName
 	}
 
-	localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), _env.Environment().ResourceManagerEndpoint)
+	localFPAuthorizer, err := env.FPAuthorizer(env.TenantID(), env.Environment().ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	e2estorage := storage.NewAccountsClient(subscriptionID, localFPAuthorizer)
+	e2estorage := storage.NewAccountsClient(env.Environment(), subscriptionID, localFPAuthorizer)
 
 	keys, err := e2estorage.ListKeys(context.Background(), resourceGroupName, storageAccountName, "")
 	if err != nil {

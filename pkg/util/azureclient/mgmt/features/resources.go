@@ -8,6 +8,7 @@ import (
 
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 )
 
 // ResourcesClient is a minimal interface for azure ResourcesClient
@@ -24,8 +25,8 @@ type resourcesClient struct {
 var _ ResourcesClient = &resourcesClient{}
 
 // NewResourcesClient creates a new ResourcesClient
-func NewResourcesClient(subscriptionID string, authorizer autorest.Authorizer) ResourcesClient {
-	client := mgmtfeatures.NewResourcesClient(subscriptionID)
+func NewResourcesClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) ResourcesClient {
+	client := mgmtfeatures.NewResourcesClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 
 	return &resourcesClient{

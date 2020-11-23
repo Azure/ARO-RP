@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2020-04-30/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
@@ -29,7 +30,7 @@ type openShiftClustersClient struct {
 var _ OpenShiftClustersClient = &openShiftClustersClient{}
 
 // NewOpenShiftClustersClient creates a new OpenShiftClustersClient
-func NewOpenShiftClustersClient(subscriptionID string, authorizer autorest.Authorizer) OpenShiftClustersClient {
+func NewOpenShiftClustersClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) OpenShiftClustersClient {
 	var client redhatopenshift.OpenShiftClustersClient
 	if deployment.NewMode() == deployment.Development {
 		client = redhatopenshift.NewOpenShiftClustersClientWithBaseURI("https://localhost:8443", subscriptionID)
@@ -41,7 +42,7 @@ func NewOpenShiftClustersClient(subscriptionID string, authorizer autorest.Autho
 			},
 		}
 	} else {
-		client = redhatopenshift.NewOpenShiftClustersClient(subscriptionID)
+		client = redhatopenshift.NewOpenShiftClustersClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 		client.Authorizer = authorizer
 	}
 	client.PollingDelay = 10 * time.Second

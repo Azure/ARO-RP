@@ -33,7 +33,7 @@ func NewManager(env env.Core, localFPAuthorizer autorest.Authorizer) Manager {
 	return &manager{
 		env: env,
 
-		privateendpoints: network.NewPrivateEndpointsClient(env.SubscriptionID(), localFPAuthorizer),
+		privateendpoints: network.NewPrivateEndpointsClient(env.Environment(), env.SubscriptionID(), localFPAuthorizer),
 	}
 }
 
