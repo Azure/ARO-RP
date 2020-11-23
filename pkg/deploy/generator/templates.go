@@ -89,7 +89,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"rpImage",
 			"rpMode",
 			"sshPublicKey",
-			"storageAccountName",
+			"storageAccountDomain",
 			"subscriptionResourceGroupName",
 			"vmssName",
 			"vmSize",

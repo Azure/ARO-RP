@@ -1080,7 +1080,7 @@ done
 					DiagnosticsProfile: &mgmtcompute.DiagnosticsProfile{
 						BootDiagnostics: &mgmtcompute.BootDiagnostics{
 							Enabled:    to.BoolPtr(true),
-							StorageURI: to.StringPtr("[concat('https://', parameters('storageAccountName'), '.blob.core.windows.net/')]"),
+							StorageURI: to.StringPtr("[concat('https://', parameters('storageAccountDomain'), '/')]"),
 						},
 					},
 				},
@@ -1101,7 +1101,7 @@ done
 			"[resourceId('Microsoft.Authorization/roleAssignments', guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / Reader'))]",
 			"[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]",
 			"[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]",
-			"[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]",
+			"[resourceId('Microsoft.Storage/storageAccounts', substring(parameters('storageAccountDomain'), 0, indexOf(parameters('storageAccountDomain'), '.')))]",
 		},
 	}
 }
@@ -1625,7 +1625,7 @@ func (g *generator) rpVersionStorageAccount() []*arm.Resource {
 func (g *generator) storageAccount() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtstorage.Account{
-			Name:     to.StringPtr("[parameters('storageAccountName')]"),
+			Name:     to.StringPtr("[substring(parameters('storageAccountDomain'), 0, indexOf(parameters('storageAccountDomain'), '.'))]"),
 			Type:     to.StringPtr("Microsoft.Storage/storageAccounts"),
 			Location: to.StringPtr("[resourceGroup().location]"),
 			Sku: &mgmtstorage.Sku{

@@ -53,7 +53,7 @@
         "sshPublicKey": {
             "type": "string"
         },
-        "storageAccountName": {
+        "storageAccountDomain": {
             "type": "string"
         },
         "subscriptionResourceGroupName": {
@@ -218,7 +218,7 @@
                     "diagnosticsProfile": {
                         "bootDiagnostics": {
                             "enabled": true,
-                            "storageUri": "[concat('https://', parameters('storageAccountName'), '.blob.core.windows.net/')]"
+                            "storageUri": "[concat('https://', parameters('storageAccountDomain'), '/')]"
                         }
                     },
                     "extensionProfile": {
@@ -255,7 +255,7 @@
                 "[resourceId('Microsoft.Authorization/roleAssignments', guid(resourceGroup().id, parameters('rpServicePrincipalId'), 'RP / Reader'))]",
                 "[resourceId('Microsoft.Network/virtualNetworks', 'rp-vnet')]",
                 "[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]",
-                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
+                "[resourceId('Microsoft.Storage/storageAccounts', substring(parameters('storageAccountDomain'), 0, indexOf(parameters('storageAccountDomain'), '.')))]"
             ]
         },
         {
@@ -263,7 +263,7 @@
                 "name": "Standard_LRS"
             },
             "location": "[resourceGroup().location]",
-            "name": "[parameters('storageAccountName')]",
+            "name": "[substring(parameters('storageAccountDomain'), 0, indexOf(parameters('storageAccountDomain'), '.'))]",
             "type": "Microsoft.Storage/storageAccounts",
             "condition": "[parameters('fullDeploy')]",
             "apiVersion": "2019-04-01"
