@@ -17,7 +17,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/metrics/noop"
+	"github.com/Azure/ARO-RP/pkg/metrics/statsd"
 	pkgportal "github.com/Azure/ARO-RP/pkg/portal"
 	"github.com/Azure/ARO-RP/pkg/portal/middleware"
 	"github.com/Azure/ARO-RP/pkg/proxy"
@@ -34,6 +34,8 @@ func portal(ctx context.Context, log *logrus.Entry) error {
 
 	if _env.DeploymentMode() != deployment.Development {
 		for _, key := range []string{
+			"MDM_ACCOUNT",
+			"MDM_NAMESPACE",
 			"PORTAL_HOSTNAME",
 		} {
 			if _, found := os.LookupEnv(key); !found {
@@ -67,6 +69,11 @@ func portal(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
+	m, err := statsd.New(ctx, log.WithField("component", "portal"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"))
+	if err != nil {
+		return err
+	}
+
 	// TODO: should not be using the service keyvault here
 	serviceKeyvaultURI, err := keyvault.URI(_env, generator.ServiceKeyvaultSuffix)
 	if err != nil {
@@ -85,7 +92,7 @@ func portal(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	dbc, err := database.NewDatabaseClient(ctx, log.WithField("component", "database"), _env, &noop.Noop{}, cipher)
+	dbc, err := database.NewDatabaseClient(ctx, log.WithField("component", "database"), _env, m, cipher)
 	if err != nil {
 		return err
 	}
