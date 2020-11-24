@@ -6,7 +6,7 @@ parameters:
 - name: fullDeploy
   type: boolean
   default: false
-- name: vsoConfigBuildID
+- name: rpConfigCommit
 
 stages:
 - stage: Deploy_CanarySector
@@ -23,9 +23,7 @@ stages:
       - eastus2euap
       configFileName: prod-config.yaml
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
-      vsoProjectID: $(vso-project-id)
-      vsoConfigPipelineID: $(vso-config-pipeline-id)
-      vsoConfigBuildID: ${{ parameters.vsoConfigBuildID }}
+      rpConfigCommit: ${{ parameters.rpConfigCommit }}
       azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
       e2eSubscription: $(e2e-subscription)
       billingE2EPipelineName: $(billing-e2e-pipeline-name)
@@ -51,9 +49,7 @@ stages:
       - koreacentral
       configFileName: prod-config.yaml
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
-      vsoProjectID: $(vso-project-id)
-      vsoConfigPipelineID: $(vso-config-pipeline-id)
-      vsoConfigBuildID: ${{ parameters.vsoConfigBuildID }}
+      rpConfigCommit: ${{ parameters.rpConfigCommit }}
       azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
       e2eSubscription: $(e2e-subscription)
       billingE2EPipelineName: $(billing-e2e-pipeline-name)
@@ -79,9 +75,7 @@ stages:
       - westus2
       configFileName: prod-config.yaml
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
-      vsoProjectID: $(vso-project-id)
-      vsoConfigPipelineID: $(vso-config-pipeline-id)
-      vsoConfigBuildID: ${{ parameters.vsoConfigBuildID }}
+      rpConfigCommit: ${{ parameters.rpConfigCommit }}
       azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
       e2eSubscription: $(e2e-subscription)
       billingE2EPipelineName: $(billing-e2e-pipeline-name)
@@ -109,9 +103,7 @@ stages:
       - francecentral
       configFileName: prod-config.yaml
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
-      vsoProjectID: $(vso-project-id)
-      vsoConfigPipelineID: $(vso-config-pipeline-id)
-      vsoConfigBuildID: ${{ parameters.vsoConfigBuildID }}
+      rpConfigCommit: ${{ parameters.rpConfigCommit }}
       azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
       e2eSubscription: $(e2e-subscription)
       billingE2EPipelineName: $(billing-e2e-pipeline-name)
@@ -136,9 +128,7 @@ stages:
       - ukwest
       configFileName: prod-config.yaml
       azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
-      vsoProjectID: $(vso-project-id)
-      vsoConfigPipelineID: $(vso-config-pipeline-id)
-      vsoConfigBuildID: ${{ parameters.vsoConfigBuildID }}
+      rpConfigCommit: ${{ parameters.rpConfigCommit }}
       azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
       e2eSubscription: $(e2e-subscription)
       billingE2EPipelineName: $(billing-e2e-pipeline-name)

@@ -10,13 +10,11 @@ parameters:
   environment: ''
   fullDeploy: ''
   locations: []
+  rpConfigCommit: ''
   rpMode: ''
-  vsoProjectID: ''
-  vsoConfigPipelineID: ''
-  vsoConfigBuildID: ''
 
 jobs:
-- ${{ each location in  parameters.locations }}:
+- ${{ each location in parameters.locations }}:
   - deployment: Deploy_${{ location }}
     pool:
       name: ARO-CI
@@ -25,20 +23,8 @@ jobs:
       runOnce:
         deploy:
           steps:
-          - task: DownloadBuildArtifacts@0
-            inputs:
-              buildType: specific
-              project: ${{ parameters.vsoProjectID }}
-              pipeline: ${{ parameters.vsoConfigPipelineID }}
-              ${{ if eq(parameters.vsoConfigBuildID, 'latest') }}:
-                buildVersionToDownload: latestFromBranch
-                branchName: refs/heads/master
-              ${{ if ne(parameters.vsoConfigBuildID, 'latest') }}:
-                buildVersionToDownload: specific
-                buildId: ${{ parameters.vsoConfigBuildID }}
-              downloadType: specific
-              downloadPath: $(System.ArtifactsDirectory)/config
-            displayName: Download Config
+          - checkout: |
+              git://AzureRedHatOpenShift/RP-Config@${{ parameters.rpConfigCommit }}
           - script: |
               set -e
 
@@ -64,7 +50,7 @@ jobs:
                 -e AZURE_TENANT_ID \
                 -e AZURE_SUBSCRIPTION_ID \
                 -e FULL_DEPLOY \
-                -v $(System.ArtifactsDirectory)/config/drop/deploy/${{ parameters.configFileName }}:/config.yaml
+                -v $(Agent.BuildDirectory)/RP-Config/deploy/${{ parameters.configFileName }}:/config.yaml
                 arointsvc.azurecr.io/aro:$(Build.SourceVersion) deploy /config.yaml ${{ location }}
             displayName: 🚀 Buildout/Deploy ${{ location }} env
   - template: ./template-rp-and-billing-e2e.yml

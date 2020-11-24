@@ -7,7 +7,7 @@ parameters:
   type: boolean
   default: false
 - name: location
-- name: vsoConfigBuildID
+- name: rpConfigCommit
 
 jobs:
 - template: ./templates/template-job-deploy-azure-env.yml
@@ -19,9 +19,7 @@ jobs:
     - ${{ parameters.location }}
     configFileName: $(config-file-name)
     azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
-    vsoProjectID: $(vso-project-id)
-    vsoConfigPipelineID: $(vso-config-pipeline-id)
-    vsoConfigBuildID: ${{ parameters.vsoConfigBuildID }}
+    rpConfigCommit: ${{ parameters.rpConfigCommit }}
     azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
     e2eSubscription: $(e2e-subscription)
     billingE2EPipelineName: $(billing-e2e-pipeline-name)
