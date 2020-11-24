@@ -20,8 +20,6 @@ parameters:
 jobs:
 - ${{ each location in  parameters.locations }}:
   - deployment: Deploy_${{ location }}
-    variables:
-    - template: ../vars.yml
     pool:
       name: ARO-CI
     environment: ${{ parameters.environment }}
@@ -65,61 +63,11 @@ jobs:
               location: ${{ location }}
               azureDevOpsJSONSPN: ${{ parameters.azureDevOpsJSONSPN }}
               fullDeploy: ${{ parameters.fullDeploy }}
-  - job: RP_E2E_${{ location }}
-    dependsOn: Deploy_${{ location }}
-    variables:
-    - template: ../vars.yml
-    timeoutInMinutes: 120
-    pool:
-      name: ARO-CI
-    steps:
-    - template: ./template-prod-e2e-steps.yml
-      parameters:
-        location: ${{ location }}
-        subscription: ${{ parameters.e2eSubscription }}
-        azureDevOpsE2EJSONSPN: ${{ parameters.azureDevOpsE2EJSONSPN }}
-        aroVersionStorageAccount: ${{ parameters.aroVersionStorageAccount }}
-        rpMode: ${{ parameters.rpMode }}
-  - job: Billing_E2E_${{ location }}_Wait
-    dependsOn: RP_E2E_${{ location }}
-    timeoutInMinutes: 400
-    pool: server
-    steps:
-    - task: Delay@1
-      inputs:
-        delayForMinutes: '360'
-  - job: ${{ location }}_TriggerBillingBuild
-    displayName: Trigger Billing E2E pipeline
-    dependsOn: Billing_E2E_${{ location }}_Wait
-    steps:
-    - script: |
-        # Pass variables between tasks: https://medium.com/microsoftazure/how-to-pass-variables-in-azure-pipelines-yaml-tasks-5c81c5d31763
-        echo "##vso[task.setvariable variable=REGION]${{ location }}"
-        CLUSTER="v4-e2e-V$BUILD_BUILDID-${{ location }}"
-        echo "##vso[task.setvariable variable=CLUSTER]$CLUSTER"
-        CLUSTER_RESOURCEGROUP="v4-e2e-V$BUILD_BUILDID-${{ location }}"
-        echo "##vso[task.setvariable variable=CLUSTER_RESOURCEGROUP]$CLUSTER_RESOURCEGROUP"
-        echo "E2E Cluster Resource Group Name:" $CLUSTER_RESOURCEGROUP
-        echo "E2E Cluster Name:" $CLUSTER
-      displayName: Pass variables into next Task
-    - task: TriggerBuild@3
-      inputs:
-        definitionIsInCurrentTeamProject: true
-        buildDefinition: ${{ parameters.billingE2EPipelineName }}
-        queueBuildForUserThatTriggeredBuild: true
-        ignoreSslCertificateErrors: false
-        useSameSourceVersion: false
-        useCustomSourceVersion: false
-        useSameBranch: false
-        branchToUse: ${{ parameters.billingE2EBranchName }}
-        waitForQueuedBuildsToFinish: true
-        storeInEnvironmentVariable: false
-        buildParameters: CLUSTER_RESOURCEGROUP:$(CLUSTER_RESOURCEGROUP), CLUSTER:$(CLUSTER),
-          REGION:$(REGION)
-        authenticationMethod: OAuth Token
-        password: $(System.AccessToken)
-        enableBuildInQueueCondition: false
-        dependentOnSuccessfulBuildCondition: true
-        dependentOnFailedBuildCondition: true
-        checkbuildsoncurrentbranch: false
-        failTaskIfConditionsAreNotFulfilled: true
+  - template: ./template-rp-and-billing-e2e.yml
+    parameters:
+      e2e_subscription: ${{ parameters.e2eSubscription }}
+      aro_v4_e2e_devops_spn: ${{ parameters.azureDevOpsE2EJSONSPN }}
+      billing_e2e_pipeline_name: ${{ parameters.billingE2EPipelineName }}
+      billing_e2e_branch_name: ${{ parameters.billingE2EBranchName }}
+      location: ${{ location }}
+      rpMode: ${{ parameters.rpMode }}
