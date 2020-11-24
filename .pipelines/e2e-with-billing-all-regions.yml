@@ -1,6 +1,3 @@
-# Azure DevOps Pipeline running RP e2e and Billing e2e in all supported regions
-variables:
-- template: vars.yml
 stages:
 - stage: PhaseOne
   displayName: wait 0 mins

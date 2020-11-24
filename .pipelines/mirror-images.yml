@@ -6,9 +6,6 @@ parameters:
   type: string
   default: latest
 
-variables:
-- template: vars.yml
-
 jobs:
 - job: Mirror_images
   timeoutInMinutes: 180

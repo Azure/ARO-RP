@@ -2,9 +2,6 @@
 trigger: none
 pr: none
 
-variables:
-- template: vars.yml
-
 jobs:
 - job: Deploy_new_shared_env
   pool:
