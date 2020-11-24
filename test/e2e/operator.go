@@ -189,7 +189,7 @@ var _ = Describe("ARO Operator - Cluster Monitoring ConfigMap", func() {
 		configMapExists := func() (bool, error) {
 			cm, err = clients.Kubernetes.CoreV1().ConfigMaps("openshift-monitoring").Get(context.Background(), "cluster-monitoring-config", metav1.GetOptions{})
 			if err != nil {
-				return false, nil
+				return false, nil // swallow error
 			}
 			return true, nil
 		}
@@ -214,7 +214,7 @@ var _ = Describe("ARO Operator - Cluster Monitoring ConfigMap", func() {
 		configMapExists := func() (bool, error) {
 			_, err := clients.Kubernetes.CoreV1().ConfigMaps("openshift-monitoring").Get(context.Background(), "cluster-monitoring-config", metav1.GetOptions{})
 			if err != nil {
-				return false, nil
+				return false, nil // swallow error
 			}
 			return true, nil
 		}
@@ -229,6 +229,30 @@ var _ = Describe("ARO Operator - Cluster Monitoring ConfigMap", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = clients.Kubernetes.CoreV1().ConfigMaps("openshift-monitoring").Get(context.Background(), "cluster-monitoring-config", metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+	})
+})
+
+var _ = Describe("ARO Operator - RBAC", func() {
+	Specify("system:aro-sre ClusterRole should be restored if deleted", func() {
+		clusterRoleExists := func() (bool, error) {
+			_, err := clients.Kubernetes.RbacV1().ClusterRoles().Get(context.Background(), "system:aro-sre", metav1.GetOptions{})
+			if err != nil {
+				return false, nil // swallow error
+			}
+			return true, nil
+		}
+
+		err := wait.PollImmediate(30*time.Second, 15*time.Minute, clusterRoleExists)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = clients.Kubernetes.RbacV1().ClusterRoles().Delete(context.Background(), "system:aro-sre", metav1.DeleteOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		err = wait.PollImmediate(30*time.Second, 15*time.Minute, clusterRoleExists)
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = clients.Kubernetes.RbacV1().ClusterRoles().Get(context.Background(), "system:aro-sre", metav1.GetOptions{})
 		Expect(err).NotTo(HaveOccurred())
 	})
 })
