@@ -97,6 +97,11 @@ func (p *prometheus) roundTripper(r *http.Request) (*http.Response, error) {
 	return cli.Do(r)
 }
 
+// modifyResponse: unfortunately Prometheus serves HTML files containing just a
+// couple of absolute links.  Given that we're serving Prometheus under
+// /subscriptions/.../clusterName/prometheus, we need to dig these out and
+// rewrite them.  This is a hack which hopefully goes away once we forward all
+// metrics to Kusto.
 func (p *prometheus) modifyResponse(r *http.Response) error {
 	mediaType, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
 	if mediaType != "text/html" {
@@ -115,6 +120,7 @@ func (p *prometheus) modifyResponse(r *http.Response) error {
 		buf.Write(b)
 
 	} else {
+		// walk the HTML parse tree calling makeRelative() on each node
 		walk(n, makeRelative)
 
 		err = html.Render(buf, n)
@@ -133,18 +139,23 @@ func (p *prometheus) modifyResponse(r *http.Response) error {
 func makeRelative(n *html.Node) {
 	switch n.DataAtom {
 	case atom.A, atom.Link:
+		// rewrite <a href="/foo"> -> <a href="./foo">
+		// rewrite <link href="/foo"> -> <link href="./foo">
 		for i, attr := range n.Attr {
 			if attr.Namespace == "" && attr.Key == "href" && strings.HasPrefix(n.Attr[i].Val, "/") {
 				n.Attr[i].Val = "." + n.Attr[i].Val
 			}
 		}
 	case atom.Script:
+		// rewrite <script src="/foo"> -> <script src="./foo">
 		for i, attr := range n.Attr {
 			if attr.Namespace == "" && attr.Key == "src" && strings.HasPrefix(n.Attr[i].Val, "/") {
 				n.Attr[i].Val = "." + n.Attr[i].Val
 			}
 		}
 
+		// special hack: find <script>...</script> and rewrite
+		// `var PATH_PREFIX = "";` -> `var PATH_PREFIX = ".";` once.
 		if len(n.Attr) == 0 {
 			n.FirstChild.Data = strings.Replace(n.FirstChild.Data, `var PATH_PREFIX = "";`, `var PATH_PREFIX = ".";`, 1)
 		}

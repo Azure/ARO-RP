@@ -23,8 +23,34 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
+// This file handles smart proxying of SSH connections between SRE->portal and
+// portal->cluster.  We don't want to give the SRE the cluster SSH key, thus
+// this has to be an application-level proxy so we can replace the validated
+// one-time password that the SRE uses to authenticate with the cluster SSH key.
+//
+// Given that we're now an application-level proxy, we pull a second trick as
+// well: we inject SSH agent forwarding into the portal->cluster connection leg,
+// enabling an SRE to ssh from a master node to a worker node without needing an
+// additional credential.
+//
+// SSH itself is a multiplexed protocol.  Within a single TCP connection there
+// can exist multiple SSH channels.  Administrative requests and responses can
+// also be sent, both on any channel and/or globally.  Channel creations and
+// requests can be initiated by either side of the connection.
+//
+// The golang.org/x/crypto/ssh library exposes the above at a connection level
+// as as Conn, chan NewChannel and chan *Request.  All of these have to be
+// serviced to prevent the connection from blocking.  Requests to open new
+// channels appear on chan NewChannel; global administrative requests appear on
+// chan *Request.  Once a new channel is open, a Channel (effectively an
+// io.ReadWriteCloser) must be handled plus a further chan *Request for
+// channel-scoped administrative requests.
+//
+// The top half of this file deals with connection instantiation; the bottom
+// half deals with proxying Channels and *Requests.
+
 const (
-	sshTimeout = time.Hour
+	sshTimeout = time.Hour // never allow a connection to live longer than an hour.
 )
 
 func (s *ssh) Run() error {
@@ -60,6 +86,8 @@ func (s *ssh) newConn(ctx context.Context, c1 net.Conn) error {
 	var portalDoc *api.PortalDocument
 	var connmetadata cryptossh.ConnMetadata
 
+	// PasswordCallback is called via NewServerConn to validate the one-time
+	// password provided.
 	config.PasswordCallback = func(_connmetadata cryptossh.ConnMetadata, pw []byte) (*cryptossh.Permissions, error) {
 		connmetadata = _connmetadata
 
@@ -81,6 +109,7 @@ func (s *ssh) newConn(ctx context.Context, c1 net.Conn) error {
 		return nil, s.dbPortal.Delete(ctx, portalDoc)
 	}
 
+	// Serve the incoming (SRE->portal) connection.
 	conn1, newchannels1, requests1, err := cryptossh.NewServerConn(c1, config)
 	if err != nil {
 		var username string
@@ -95,6 +124,7 @@ func (s *ssh) newConn(ctx context.Context, c1 net.Conn) error {
 		return err
 	}
 
+	// Log the incoming connection attempt.
 	accessLog := utillog.EnrichWithPath(s.baseAccessLog, portalDoc.Portal.ID)
 	accessLog = accessLog.WithFields(logrus.Fields{
 		"hostname":    fmt.Sprintf("master-%d", portalDoc.Portal.SSH.Master),
@@ -128,6 +158,7 @@ func (s *ssh) newConn(ctx context.Context, c1 net.Conn) error {
 		return err
 	}
 
+	// Connect the second connection leg (portal->cluster).
 	conn2, newchannels2, requests2, err := cryptossh.NewClientConn(c2, "", &cryptossh.ClientConfig{
 		User: "core",
 		Auth: []cryptossh.AuthMethod{
@@ -153,9 +184,12 @@ func (s *ssh) newConn(ctx context.Context, c1 net.Conn) error {
 		return err
 	}
 
+	// Proxy channels and requests between the two connections.
 	return s.proxyConn(accessLog, keyring, conn1, conn2, newchannels1, newchannels2, requests1, requests2)
 }
 
+// proxyConn handles incoming new channel and administrative requests.  It calls
+// newChannel to handle new channels, each on a new goroutine.
 func (s *ssh) proxyConn(accessLog *logrus.Entry, keyring agent.Agent, conn1, conn2 cryptossh.Conn, newchannels1, newchannels2 <-chan cryptossh.NewChannel, requests1, requests2 <-chan *cryptossh.Request) error {
 	timer := time.NewTimer(sshTimeout)
 	defer timer.Stop()
@@ -172,7 +206,8 @@ func (s *ssh) proxyConn(accessLog *logrus.Entry, keyring agent.Agent, conn1, con
 				return nil
 			}
 
-			// on the first c->s session, advertise agent availability
+			// on the first SRE->cluster session, inject an advertisement of
+			// agent availability.
 			var firstSession bool
 			if !sessionOpened && nc.ChannelType() == "session" {
 				firstSession = true
@@ -188,8 +223,8 @@ func (s *ssh) proxyConn(accessLog *logrus.Entry, keyring agent.Agent, conn1, con
 				return nil
 			}
 
-			// hijack and handle incoming s->c agent requests
 			if nc.ChannelType() == "auth-agent@openssh.com" {
+				// hijack and handle incoming cluster->SRE agent requests
 				go func() {
 					_ = s.handleAgent(accessLog, nc, keyring)
 				}()
@@ -234,6 +269,9 @@ func (s *ssh) handleAgent(accessLog *logrus.Entry, nc cryptossh.NewChannel, keyr
 	return agent.ServeAgent(keyring, ch)
 }
 
+// newChannel handles an incoming request to create a new channel.  If the
+// channel creation is successful, it calls proxyChannel to proxy the channel
+// between SRE and cluster.
 func (s *ssh) newChannel(accessLog *logrus.Entry, nc cryptossh.NewChannel, conn1, conn2 cryptossh.Conn, firstSession bool) error {
 	defer recover.Panic(s.log)
 

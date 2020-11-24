@@ -16,6 +16,11 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+// genDiscoveryCache generates the discovery cache.  This is used, primarily, by
+// Geneva Actions k8s actions, as a fallback to be able to map kinds to
+// resources if the API server is flaky and discovery doesn't work at the time
+// of running the Geneva Action. It is also used by the dynamic client but its
+// use there is less critical.
 func genDiscoveryCache(restconfig *rest.Config) error {
 	cli, err := disk.NewCachedDiscoveryClientForConfig(restconfig, discoveryCacheDir, "", 0)
 	if err != nil {

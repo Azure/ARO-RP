@@ -18,6 +18,10 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+// genRBAC auto-generates the system:aro-sre ClusterRole.  This is close in
+// spirit to cluster-reader but is defined separately (a) so that we guarantee
+// it always covers all the necessary kinds and (b) so that the operator syncs
+// it to avoid unexpected changes.
 func genRBAC(restconfig *rest.Config) error {
 	cli, err := discovery.NewDiscoveryClientForConfig(restconfig)
 	if err != nil {
@@ -120,6 +124,8 @@ func isReadOnly(group string, apiresource *metav1.APIResource, verb string) bool
 	case "get", "list", "watch":
 		return true
 	case "create":
+		// These kinds are not actually persisted to etcd;  create is kind-of
+		// like get here.
 		gr := schema.GroupResource{Group: group, Resource: apiresource.Name}.String()
 		switch gr {
 		case "tokenreviews.authentication.k8s.io",
