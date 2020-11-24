@@ -13,7 +13,7 @@ function clean() {
 }
 
 function checksum() {
-  sha256sum swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/stable/"$1"/redhatopenshift.json >> .sha256sum
+  sha256sum swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/preview/"$1"/redhatopenshift.json >> .sha256sum
 }
 
 function generate_golang() {
@@ -27,7 +27,7 @@ function generate_golang() {
 		--go \
 		--license-header=MICROSOFT_APACHE_NO_VERSION \
 		--namespace=redhatopenshift \
-		--input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/stable/"$API_VERSION"/redhatopenshift.json \
+		--input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/preview/"$API_VERSION"/redhatopenshift.json \
 		--output-folder=/github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/"$API_VERSION"/redhatopenshift
 
   sudo chown -R $(id -un):$(id -gn) pkg/client

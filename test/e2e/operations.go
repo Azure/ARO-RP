@@ -12,7 +12,7 @@ import (
 
 var _ = Describe("List operations", func() {
 	Specify("the correct static operations are returned", func() {
-		opList, err := clients.Operations.List(context.Background())
+		opList, err := clients.Operationsv20200430.List(context.Background())
 		Expect(err).NotTo(HaveOccurred())
 		Expect(len(opList) > 0).To(BeTrue())
 	})

@@ -16,7 +16,7 @@ import (
 	v1 "k8s.io/client-go/tools/clientcmd/api/v1"
 
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift"
+	openshiftclustersv20200430 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2020-04-30/redhatopenshift"
 )
 
 func Get(ctx context.Context, log *logrus.Entry, env env.Core, authorizer autorest.Authorizer, resourceID string) (*v1.Config, error) {
@@ -25,7 +25,7 @@ func Get(ctx context.Context, log *logrus.Entry, env env.Core, authorizer autore
 		return nil, err
 	}
 
-	openshiftclusters := redhatopenshift.NewOpenShiftClustersClient(env.Environment(), res.SubscriptionID, authorizer)
+	openshiftclusters := openshiftclustersv20200430.NewOpenShiftClustersClient(env.Environment(), res.SubscriptionID, authorizer)
 
 	oc, err := openshiftclusters.Get(ctx, res.ResourceGroup, res.ResourceName)
 	if err != nil {

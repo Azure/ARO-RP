@@ -22,7 +22,7 @@ clean:
 	find python -type d -name __pycache__ -delete
 
 client: generate
-	hack/build-client.sh 2020-10-31-preview
+	hack/build-client.sh 2021-01-31-preview
 
 generate:
 	go generate ./...

@@ -38,6 +38,15 @@ input-file:
   - Microsoft.RedHatOpenShift/stable/2020-04-30/redhatopenshift.json
 ```
 
+### Tag: package-2021-01-31-preview
+
+These settings apply only when `--tag=package-2021-01-31-preview` is specified on the command line.
+
+``` yaml $(tag) == 'package-2021-01-31'
+input-file:
+  - Microsoft.RedHatOpenShift/preview/2021-01-31-preview/redhatopenshift.json
+```
+
 ---
 
 # Code Generation

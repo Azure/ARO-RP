@@ -4,7 +4,7 @@
 import random
 import os
 
-import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2020_04_30.models as v2020_04_30
+import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2020_04_30.models as openshiftcluster
 
 from azext_aro._aad import AADManager
 from azext_aro._rbac import assign_contributor_to_vnet, assign_contributor_to_routetable
@@ -89,29 +89,29 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
     if ingress_visibility is not None:
         ingress_visibility = ingress_visibility.capitalize()
 
-    oc = v2020_04_30.OpenShiftCluster(
+    oc = openshiftcluster.OpenShiftCluster(
         location=location,
         tags=tags,
-        cluster_profile=v2020_04_30.ClusterProfile(
+        cluster_profile=openshiftcluster.ClusterProfile(
             pull_secret=pull_secret or "",
             domain=domain or random_id,
             resource_group_id='/subscriptions/%s/resourceGroups/%s' %
             (subscription_id, cluster_resource_group or "aro-" + random_id),
         ),
-        service_principal_profile=v2020_04_30.ServicePrincipalProfile(
+        service_principal_profile=openshiftcluster.ServicePrincipalProfile(
             client_id=client_id,
             client_secret=client_secret,
         ),
-        network_profile=v2020_04_30.NetworkProfile(
+        network_profile=openshiftcluster.NetworkProfile(
             pod_cidr=pod_cidr or '10.128.0.0/14',
             service_cidr=service_cidr or '172.30.0.0/16',
         ),
-        master_profile=v2020_04_30.MasterProfile(
+        master_profile=openshiftcluster.MasterProfile(
             vm_size=master_vm_size or 'Standard_D8s_v3',
             subnet_id=master_subnet,
         ),
         worker_profiles=[
-            v2020_04_30.WorkerProfile(
+            openshiftcluster.WorkerProfile(
                 name='worker',  # TODO: 'worker' should not be hard-coded
                 vm_size=worker_vm_size,
                 disk_size_gb=worker_vm_disk_size_gb or 128,
@@ -119,11 +119,11 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
                 count=worker_count or 3,
             )
         ],
-        apiserver_profile=v2020_04_30.APIServerProfile(
+        apiserver_profile=openshiftcluster.APIServerProfile(
             visibility=apiserver_visibility or 'Public',
         ),
         ingress_profiles=[
-            v2020_04_30.IngressProfile(
+            openshiftcluster.IngressProfile(
                 name='default',  # TODO: 'default' should not be hard-coded
                 visibility=ingress_visibility or 'Public',
             )
@@ -192,7 +192,7 @@ def aro_list_credentials(client, resource_group_name, resource_name):
 
 
 def aro_update(client, resource_group_name, resource_name, no_wait=False):
-    oc = v2020_04_30.OpenShiftClusterUpdate()
+    oc = openshiftcluster.OpenShiftClusterUpdate()
 
     return sdk_no_wait(no_wait, client.update,
                        resource_group_name=resource_group_name,
