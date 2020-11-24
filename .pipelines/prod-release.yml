@@ -7,7 +7,6 @@ parameters:
   type: boolean
   default: false
 - name: vsoConfigBuildID
-- name: vsoDeployerBuildID
 
 stages:
 - stage: Deploy_CanarySector
@@ -27,8 +26,6 @@ stages:
       vsoProjectID: $(vso-project-id)
       vsoConfigPipelineID: $(vso-config-pipeline-id)
       vsoConfigBuildID: ${{ parameters.vsoConfigBuildID }}
-      vsoDeployerPipelineID: $(vso-deployer-pipeline-id)
-      vsoDeployerBuildID: ${{ parameters.vsoDeployerBuildID }}
       azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
       e2eSubscription: $(e2e-subscription)
       billingE2EPipelineName: $(billing-e2e-pipeline-name)
@@ -57,8 +54,6 @@ stages:
       vsoProjectID: $(vso-project-id)
       vsoConfigPipelineID: $(vso-config-pipeline-id)
       vsoConfigBuildID: ${{ parameters.vsoConfigBuildID }}
-      vsoDeployerPipelineID: $(vso-deployer-pipeline-id)
-      vsoDeployerBuildID: ${{ parameters.vsoDeployerBuildID }}
       azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
       e2eSubscription: $(e2e-subscription)
       billingE2EPipelineName: $(billing-e2e-pipeline-name)
@@ -87,8 +82,6 @@ stages:
       vsoProjectID: $(vso-project-id)
       vsoConfigPipelineID: $(vso-config-pipeline-id)
       vsoConfigBuildID: ${{ parameters.vsoConfigBuildID }}
-      vsoDeployerPipelineID: $(vso-deployer-pipeline-id)
-      vsoDeployerBuildID: ${{ parameters.vsoDeployerBuildID }}
       azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
       e2eSubscription: $(e2e-subscription)
       billingE2EPipelineName: $(billing-e2e-pipeline-name)
@@ -119,8 +112,6 @@ stages:
       vsoProjectID: $(vso-project-id)
       vsoConfigPipelineID: $(vso-config-pipeline-id)
       vsoConfigBuildID: ${{ parameters.vsoConfigBuildID }}
-      vsoDeployerPipelineID: $(vso-deployer-pipeline-id)
-      vsoDeployerBuildID: ${{ parameters.vsoDeployerBuildID }}
       azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
       e2eSubscription: $(e2e-subscription)
       billingE2EPipelineName: $(billing-e2e-pipeline-name)
@@ -148,8 +139,6 @@ stages:
       vsoProjectID: $(vso-project-id)
       vsoConfigPipelineID: $(vso-config-pipeline-id)
       vsoConfigBuildID: ${{ parameters.vsoConfigBuildID }}
-      vsoDeployerPipelineID: $(vso-deployer-pipeline-id)
-      vsoDeployerBuildID: ${{ parameters.vsoDeployerBuildID }}
       azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
       e2eSubscription: $(e2e-subscription)
       billingE2EPipelineName: $(billing-e2e-pipeline-name)

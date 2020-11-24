@@ -1,11 +1,6 @@
 trigger: none
 pr: none
 
-parameters:
-- name: vsoDeployerBuildID
-  type: string
-  default: latest
-
 jobs:
 - job: Mirror_images
   timeoutInMinutes: 180
@@ -13,26 +8,28 @@ jobs:
     name: ARO-CI
 
   steps:
-  - template: ./templates/template-checkout.yml
-  - task: DownloadBuildArtifacts@0
-    inputs:
-      buildType: specific
-      project: $(vso-project-id)
-      pipeline: $(vso-deployer-pipeline-id)
-      ${{ if eq(parameters.vsoDeployerBuildID, 'latest') }}:
-        buildVersionToDownload: latestFromBranch
-        branchName: refs/heads/master
-      ${{ if ne(parameters.vsoDeployerBuildID, 'latest') }}:
-        buildVersionToDownload: specific
-        buildId: ${{ parameters.vsoDeployerBuildID }}
-      downloadType: specific
-      downloadPath: $(System.ArtifactsDirectory)/deployer
-    displayName: Download Deployer
-  - template: ./templates/template-mirror-images.yml
+  - template: ./templates/template-az-cli-login.yml
     parameters:
-      dstAuth: $(acr-push-auth)
-      srcAuthGeneva: $(acr-geneva-pull-auth)
-      srcAuthQuay: $(quay-pull-auth)
-      srcAuthRedhat: $(redhat-pull-auth)
-      dstACRName: $(dst-acr-name)
-      deployerDirectory: $(System.ArtifactsDirectory)/deployer/drop
+      azureDevOpsJSONSPN: $(aro-v4-ci-devops-spn)
+  - script: |
+      set -e
+
+      trap 'set +e; for c in $(docker ps -aq); do docker rm -f $c; done; docker image prune -af; rm -rf ~/.docker/config.json' EXIT
+
+      export DST_AUTH=$(acr-push-auth)
+      export DST_ACR_NAME=$(dst-acr-name)
+      export SRC_AUTH_GENEVA=$(acr-geneva-pull-auth)
+      export SRC_AUTH_QUAY=$(quay-pull-auth)
+      export SRC_AUTH_REDHAT=$(redhat-pull-auth)
+
+      az acr login --name arointsvc
+
+      docker run \
+        --rm \
+        -e DST_AUTH \
+        -e DST_ACR_NAME \
+        -e SRC_AUTH_GENEVA \
+        -e SRC_AUTH_QUAY \
+        arointsvc.azurecr.io/aro:latest mirror
+    displayName: 🚀 Fetch and mirror images
+  - template: ./templates/template-az-cli-logout.yml

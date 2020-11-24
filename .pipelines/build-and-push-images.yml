@@ -19,9 +19,3 @@ jobs:
     parameters:
       rpImageACR: $(RP_IMAGE_ACR)
   - template: ./templates/template-az-cli-logout.yml
-  - script: |
-      cp -a --parents aro "$(Build.ArtifactStagingDirectory)"
-    displayName: Copy artifacts
-  - task: PublishBuildArtifacts@1
-    displayName: Publish Artifacts
-    name: aro_deployer

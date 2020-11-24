@@ -8,7 +8,6 @@ parameters:
   default: false
 - name: location
 - name: vsoConfigBuildID
-- name: vsoDeployerBuildID
 
 jobs:
 - template: ./templates/template-job-deploy-azure-env.yml
@@ -23,8 +22,6 @@ jobs:
     vsoProjectID: $(vso-project-id)
     vsoConfigPipelineID: $(vso-config-pipeline-id)
     vsoConfigBuildID: ${{ parameters.vsoConfigBuildID }}
-    vsoDeployerPipelineID: $(vso-deployer-pipeline-id)
-    vsoDeployerBuildID: ${{ parameters.vsoDeployerBuildID }}
     azureDevOpsE2EJSONSPN: $(aro-v4-e2e-devops-spn)
     e2eSubscription: $(e2e-subscription)
     billingE2EPipelineName: $(billing-e2e-pipeline-name)

@@ -14,8 +14,6 @@ parameters:
   vsoProjectID: ''
   vsoConfigPipelineID: ''
   vsoConfigBuildID: ''
-  vsoDeployerPipelineID: ''
-  vsoDeployerBuildID: ''
 
 jobs:
 - ${{ each location in  parameters.locations }}:
@@ -41,28 +39,34 @@ jobs:
               downloadType: specific
               downloadPath: $(System.ArtifactsDirectory)/config
             displayName: Download Config
-          - task: DownloadBuildArtifacts@0
-            inputs:
-              buildType: specific
-              project: ${{ parameters.vsoProjectID }}
-              pipeline: ${{ parameters.vsoDeployerPipelineID }}
-              ${{ if eq(parameters.vsoDeployerBuildID, 'latest') }}:
-                buildVersionToDownload: latestFromBranch
-                branchName: refs/heads/master
-              ${{ if ne(parameters.vsoDeployerBuildID, 'latest') }}:
-                buildVersionToDownload: specific
-                buildId: ${{ parameters.vsoDeployerBuildID }}
-              downloadType: specific
-              downloadPath: $(System.ArtifactsDirectory)/deployer
-            displayName: Download Deployer
-          - template: ./template-deploy-azure-env.yml
-            parameters:
-              configDirectory: $(System.ArtifactsDirectory)/config/drop/deploy
-              deployerDirectory: $(System.ArtifactsDirectory)/deployer/drop
-              configFileName: ${{ parameters.configFileName }}
-              location: ${{ location }}
-              azureDevOpsJSONSPN: ${{ parameters.azureDevOpsJSONSPN }}
-              fullDeploy: ${{ parameters.fullDeploy }}
+          - script: |
+              set -e
+
+              trap 'set +e; rm -f devops-spn.json ; for c in $(docker ps -aq); do docker rm -f $c; done; docker image prune -af; rm -rf ~/.docker/config.json' EXIT
+
+              base64 -d >devops-spn.json <<<${{ parameters.azureDevOpsJSONSPN }}
+              export AZURE_CLIENT_ID=$(jq -r .clientId <devops-spn.json)
+              export AZURE_CLIENT_SECRET=$(jq -r .clientSecret <devops-spn.json)
+              export AZURE_TENANT_ID=$(jq -r .tenantId <devops-spn.json)
+
+              export AZURE_SUBSCRIPTION_ID="${{ parameters.subscriptionId }}"
+
+              if [[ "${{ parameters.fullDeploy }}" == "True" ]]; then
+                export FULL_DEPLOY=true
+              fi
+
+              az acr login --name arointsvc
+
+              docker run \
+                --rm \
+                -e AZURE_CLIENT_ID \
+                -e AZURE_CLIENT_SECRET \
+                -e AZURE_TENANT_ID \
+                -e AZURE_SUBSCRIPTION_ID \
+                -e FULL_DEPLOY \
+                -v $(System.ArtifactsDirectory)/config/drop/deploy/${{ parameters.configFileName }}:/config.yaml
+                arointsvc.azurecr.io/aro:$(Build.SourceVersion) deploy /config.yaml ${{ location }}
+            displayName: 🚀 Buildout/Deploy ${{ location }} env
   - template: ./template-rp-and-billing-e2e.yml
     parameters:
       e2e_subscription: ${{ parameters.e2eSubscription }}
