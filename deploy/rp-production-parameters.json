@@ -53,6 +53,9 @@
         "rpMode": {
             "value": ""
         },
+        "rpParentDomainName": {
+            "value": ""
+        },
         "rpServicePrincipalId": {
             "value": ""
         },

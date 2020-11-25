@@ -730,6 +730,7 @@ func (g *generator) vmss() *arm.Resource {
 		"portalElevatedGroupIds",
 		"rpImage",
 		"rpMode",
+		"rpParentDomainName",
 		"adminApiClientCertCommonName",
 		"databaseAccountName",
 		"keyvaultPrefix",
@@ -1042,6 +1043,7 @@ MDM_NAMESPACE=Portal
 AZURE_PORTAL_CLIENT_ID='$PORTALCLIENTID'
 AZURE_PORTAL_ACCESS_GROUP_IDS='$PORTALACCESSGROUPIDS'
 AZURE_PORTAL_ELEVATED_GROUP_IDS='$PORTALELEVATEDGROUPIDS'
+HOSTNAME='admin.$LOCATION.$RPPARENTDOMAINNAME'
 RPIMAGE='$RPIMAGE'
 RP_MODE='$RPMODE'
 EOF

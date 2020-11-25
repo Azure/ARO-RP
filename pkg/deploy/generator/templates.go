@@ -91,6 +91,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"portalElevatedGroupIds",
 			"rpImage",
 			"rpMode",
+			"rpParentDomainName",
 			"sshPublicKey",
 			"storageAccountDomain",
 			"subscriptionResourceGroupName",
