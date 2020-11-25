@@ -13,7 +13,7 @@ var GitCommit = "unknown"
 
 // InstallStream describes stream we are defaulting to for all new clusters
 var InstallStream = &Stream{
-	Version:  NewVersion(4, 5, 16),
+	Version:  NewVersion(4, 5, 20),
 	PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:adb5ef06c54ff75ca9033f222ac5e57f2fd82e49bdd84f737d460ae542c8af60",
 }
 
@@ -22,11 +22,11 @@ var (
 	Streams = []*Stream{
 		InstallStream,
 		{
-			Version:  NewVersion(4, 4, 27),
+			Version:  NewVersion(4, 4, 30),
 			PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:679db43a28a42fc41784ea3d4976d9d60cd194757cfdbea6137d6d0093db8c8d",
 		},
 		{
-			Version:  NewVersion(4, 3, 38),
+			Version:  NewVersion(4, 3, 40),
 			PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:59cc585be7b4ad069a18f6f1a3309391e172192744ee65fa6e499c8b337edda4",
 		},
 	}
@@ -39,12 +39,12 @@ func FluentbitImage(acrDomain string) string {
 
 // MdmImage contains the location of the MDM container image
 func MdmImage(acrDomain string) string {
-	return acrDomain + "/genevamdm:master_51"
+	return acrDomain + "/genevamdm:master_52"
 }
 
 // MdsdImage contains the location of the MDSD container image
 func MdsdImage(acrDomain string) string {
-	return acrDomain + "/genevamdsd:master_330"
+	return acrDomain + "/genevamdsd:master_20201121.1"
 }
 
 func RouteFixImage(acrDomain string) string {

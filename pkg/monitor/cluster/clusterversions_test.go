@@ -42,7 +42,7 @@ func TestEmitClusterVersion(t *testing.T) {
 		wantActualVersion                        string
 		wantDesiredVersion                       string
 		wantProvisionedByResourceProviderVersion string
-		wantAvaliableVersion                     string
+		wantAvailableVersion                     string
 	}{
 		{
 			name: "without spec",
@@ -76,7 +76,7 @@ func TestEmitClusterVersion(t *testing.T) {
 			wantActualVersion:                        "4.3.1",
 			wantDesiredVersion:                       "4.3.3",
 			wantProvisionedByResourceProviderVersion: "",
-			wantAvaliableVersion:                     "4.3.38",
+			wantAvailableVersion:                     "4.3.40",
 		},
 		{
 			name: "with spec",
@@ -137,7 +137,7 @@ func TestEmitClusterVersion(t *testing.T) {
 				"provisionedByResourceProviderVersion": tt.wantProvisionedByResourceProviderVersion,
 				"operatorVersion":                      "test",
 				"resourceProviderVersion":              "unknown",
-				"availableVersion":                     tt.wantAvaliableVersion,
+				"availableVersion":                     tt.wantAvailableVersion,
 			})
 
 			err := mon.emitClusterVersions(ctx)
