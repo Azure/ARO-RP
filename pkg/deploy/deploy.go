@@ -51,7 +51,8 @@ type deployer struct {
 	vmss                   compute.VirtualMachineScaleSetsClient
 	vmssvms                compute.VirtualMachineScaleSetVMsClient
 	zones                  dns.ZonesClient
-	keyvault               keyvault.Manager
+	portalKeyvault         keyvault.Manager
+	serviceKeyvault        keyvault.Manager
 
 	fullDeploy bool
 	config     *RPConfig
@@ -89,7 +90,8 @@ func New(ctx context.Context, log *logrus.Entry, env env.Core, config *RPConfig,
 		vmss:                   compute.NewVirtualMachineScaleSetsClient(env.Environment(), config.SubscriptionID, authorizer),
 		vmssvms:                compute.NewVirtualMachineScaleSetVMsClient(env.Environment(), config.SubscriptionID, authorizer),
 		zones:                  dns.NewZonesClient(env.Environment(), config.SubscriptionID, authorizer),
-		keyvault:               keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+"-svc."+env.Environment().KeyVaultDNSSuffix+"/"),
+		portalKeyvault:         keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+"-por."+env.Environment().KeyVaultDNSSuffix+"/"),
+		serviceKeyvault:        keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+"-svc."+env.Environment().KeyVaultDNSSuffix+"/"),
 
 		fullDeploy: fullDeploy,
 		config:     config,

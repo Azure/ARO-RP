@@ -20,6 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
+	utilkeyvault "github.com/Azure/ARO-RP/pkg/util/keyvault"
 )
 
 // PreDeploy deploys managed identity, NSGs and keyvaults, needed for main
@@ -299,30 +300,30 @@ func (d *deployer) deployPreDeploy(ctx context.Context, rpServicePrincipalID str
 }
 
 func (d *deployer) configureServiceSecrets(ctx context.Context) error {
-	secrets, err := d.keyvault.GetSecrets(ctx)
+	err := d.ensureSecret(ctx, d.serviceKeyvault, env.EncryptionSecretName)
 	if err != nil {
 		return err
 	}
 
-	err = d.ensureSecret(ctx, secrets, env.EncryptionSecretName)
+	err = d.ensureSecret(ctx, d.serviceKeyvault, env.FrontendEncryptionSecretName)
 	if err != nil {
 		return err
 	}
 
-	err = d.ensureSecret(ctx, secrets, env.FrontendEncryptionSecretName)
+	err = d.ensureSecret(ctx, d.portalKeyvault, env.PortalServerSessionKeySecretName)
 	if err != nil {
 		return err
 	}
 
-	err = d.ensureSecret(ctx, secrets, env.PortalServerSessionKeySecretName)
-	if err != nil {
-		return err
-	}
-
-	return d.ensureSecretKey(ctx, secrets, env.PortalServerSSHKeySecretName)
+	return d.ensureSecretKey(ctx, d.portalKeyvault, env.PortalServerSSHKeySecretName)
 }
 
-func (d *deployer) ensureSecret(ctx context.Context, existingSecrets []keyvault.SecretItem, secretName string) error {
+func (d *deployer) ensureSecret(ctx context.Context, kv utilkeyvault.Manager, secretName string) error {
+	existingSecrets, err := kv.GetSecrets(ctx)
+	if err != nil {
+		return err
+	}
+
 	for _, secret := range existingSecrets {
 		if filepath.Base(*secret.ID) == secretName {
 			return nil
@@ -330,18 +331,23 @@ func (d *deployer) ensureSecret(ctx context.Context, existingSecrets []keyvault.
 	}
 
 	key := make([]byte, 32)
-	_, err := rand.Read(key)
+	_, err = rand.Read(key)
 	if err != nil {
 		return err
 	}
 
 	d.log.Infof("setting %s", secretName)
-	return d.keyvault.SetSecret(ctx, secretName, keyvault.SecretSetParameters{
+	return kv.SetSecret(ctx, secretName, keyvault.SecretSetParameters{
 		Value: to.StringPtr(base64.StdEncoding.EncodeToString(key)),
 	})
 }
 
-func (d *deployer) ensureSecretKey(ctx context.Context, existingSecrets []keyvault.SecretItem, secretName string) error {
+func (d *deployer) ensureSecretKey(ctx context.Context, kv utilkeyvault.Manager, secretName string) error {
+	existingSecrets, err := kv.GetSecrets(ctx)
+	if err != nil {
+		return err
+	}
+
 	for _, secret := range existingSecrets {
 		if filepath.Base(*secret.ID) == secretName {
 			return nil
@@ -354,7 +360,7 @@ func (d *deployer) ensureSecretKey(ctx context.Context, existingSecrets []keyvau
 	}
 
 	d.log.Infof("setting %s", secretName)
-	return d.keyvault.SetSecret(ctx, secretName, keyvault.SecretSetParameters{
+	return kv.SetSecret(ctx, secretName, keyvault.SecretSetParameters{
 		Value: to.StringPtr(base64.StdEncoding.EncodeToString(x509.MarshalPKCS1PrivateKey(key))),
 	})
 }
