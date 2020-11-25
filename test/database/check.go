@@ -29,23 +29,58 @@ func NewChecker() *Checker {
 }
 
 func (f *Checker) AddOpenShiftClusterDocuments(docs ...*api.OpenShiftClusterDocument) {
-	f.openshiftClusterDocuments = append(f.openshiftClusterDocuments, docs...)
+	for _, doc := range docs {
+		docCopy, err := deepCopy(doc)
+		if err != nil {
+			panic(err)
+		}
+
+		f.openshiftClusterDocuments = append(f.openshiftClusterDocuments, docCopy.(*api.OpenShiftClusterDocument))
+	}
 }
 
 func (f *Checker) AddSubscriptionDocuments(docs ...*api.SubscriptionDocument) {
-	f.subscriptionDocuments = append(f.subscriptionDocuments, docs...)
+	for _, doc := range docs {
+		docCopy, err := deepCopy(doc)
+		if err != nil {
+			panic(err)
+		}
+
+		f.subscriptionDocuments = append(f.subscriptionDocuments, docCopy.(*api.SubscriptionDocument))
+	}
 }
 
 func (f *Checker) AddBillingDocuments(docs ...*api.BillingDocument) {
-	f.billingDocuments = append(f.billingDocuments, docs...)
+	for _, doc := range docs {
+		docCopy, err := deepCopy(doc)
+		if err != nil {
+			panic(err)
+		}
+
+		f.billingDocuments = append(f.billingDocuments, docCopy.(*api.BillingDocument))
+	}
 }
 
 func (f *Checker) AddAsyncOperationDocuments(docs ...*api.AsyncOperationDocument) {
-	f.asyncOperationDocuments = append(f.asyncOperationDocuments, docs...)
+	for _, doc := range docs {
+		docCopy, err := deepCopy(doc)
+		if err != nil {
+			panic(err)
+		}
+
+		f.asyncOperationDocuments = append(f.asyncOperationDocuments, docCopy.(*api.AsyncOperationDocument))
+	}
 }
 
 func (f *Checker) AddPortalDocuments(docs ...*api.PortalDocument) {
-	f.portalDocuments = append(f.portalDocuments, docs...)
+	for _, doc := range docs {
+		docCopy, err := deepCopy(doc)
+		if err != nil {
+			panic(err)
+		}
+
+		f.portalDocuments = append(f.portalDocuments, docCopy.(*api.PortalDocument))
+	}
 }
 
 func (f *Checker) CheckOpenShiftClusters(openShiftClusters *cosmosdb.FakeOpenShiftClusterDocumentClient) (errs []error) {
