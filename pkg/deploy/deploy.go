@@ -122,9 +122,6 @@ func (d *deployer) Deploy(ctx context.Context) error {
 	parameters.Parameters["adminApiCaBundle"] = &arm.ParametersParameter{
 		Value: base64.StdEncoding.EncodeToString([]byte(*d.config.Configuration.AdminAPICABundle)),
 	}
-	parameters.Parameters["domainName"] = &arm.ParametersParameter{
-		Value: d.config.Location + "." + *d.config.Configuration.ClusterParentDomainName,
-	}
 	parameters.Parameters["extraCosmosDBIPs"] = &arm.ParametersParameter{
 		Value: strings.Join(d.config.Configuration.ExtraCosmosDBIPs, ","),
 	}

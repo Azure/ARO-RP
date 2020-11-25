@@ -70,8 +70,8 @@ func (g *generator) rpTemplate() *arm.Template {
 	t := templateStanza()
 
 	params := []string{
+		"clusterParentDomainName",
 		"databaseAccountName",
-		"domainName",
 		"fpServicePrincipalId",
 		"rpServicePrincipalId",
 	}

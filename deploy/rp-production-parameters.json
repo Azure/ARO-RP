@@ -11,10 +11,10 @@
         "adminApiClientCertCommonName": {
             "value": ""
         },
-        "databaseAccountName": {
+        "clusterParentDomainName": {
             "value": ""
         },
-        "domainName": {
+        "databaseAccountName": {
             "value": ""
         },
         "extraCosmosDBIPs": {

@@ -724,7 +724,7 @@ func (g *generator) vmss() *arm.Resource {
 		"mdsdConfigVersion",
 		"mdsdEnvironment",
 		"acrResourceId",
-		"domainName",
+		"clusterParentDomainName",
 		"portalAccessGroupIds",
 		"portalClientId",
 		"portalElevatedGroupIds",
@@ -950,7 +950,7 @@ MDM_NAMESPACE=RP
 ACR_RESOURCE_ID='$ACRRESOURCEID'
 ADMIN_API_CLIENT_CERT_COMMON_NAME='$ADMINAPICLIENTCERTCOMMONNAME'
 DATABASE_ACCOUNT_NAME='$DATABASEACCOUNTNAME'
-DOMAIN_NAME='$DOMAINNAME'
+DOMAIN_NAME='$LOCATION.$CLUSTERPARENTDOMAINNAME'
 KEYVAULT_PREFIX='$KEYVAULTPREFIX'
 RPIMAGE='$RPIMAGE'
 RP_MODE='$RPMODE'
@@ -1216,7 +1216,7 @@ func (g *generator) zone() *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtdns.Zone{
 			ZoneProperties: &mgmtdns.ZoneProperties{},
-			Name:           to.StringPtr("[parameters('domainName')]"),
+			Name:           to.StringPtr("[concat(resourceGroup().location, '.', parameters('clusterParentDomainName'))]"),
 			Type:           to.StringPtr("Microsoft.Network/dnsZones"),
 			Location:       to.StringPtr("global"),
 		},
@@ -1724,8 +1724,8 @@ func (g *generator) rbac() []*arm.Resource {
 			rbac.RoleDNSZoneContributor,
 			"parameters('fpServicePrincipalId')",
 			"Microsoft.Network/dnsZones",
-			"parameters('domainName')",
-			"concat(parameters('domainName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/dnsZones', parameters('domainName')), 'FP / DNS Zone Contributor'))",
+			"concat(resourceGroup().location, '.', parameters('clusterParentDomainName'))",
+			"concat(resourceGroup().location, '.', parameters('clusterParentDomainName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/dnsZones', concat(resourceGroup().location, '.', parameters('clusterParentDomainName')), 'FP / DNS Zone Contributor'))",
 			g.conditionStanza("fullDeploy"),
 		),
 	}

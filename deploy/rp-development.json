@@ -2,10 +2,10 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "databaseAccountName": {
+        "clusterParentDomainName": {
             "type": "string"
         },
-        "domainName": {
+        "databaseAccountName": {
             "type": "string"
         },
         "fpServicePrincipalId": {
@@ -18,7 +18,7 @@
     "resources": [
         {
             "properties": {},
-            "name": "[parameters('domainName')]",
+            "name": "[concat(resourceGroup().location, '.', parameters('clusterParentDomainName'))]",
             "type": "Microsoft.Network/dnsZones",
             "location": "global",
             "apiVersion": "2018-05-01"
@@ -170,17 +170,17 @@
             ]
         },
         {
-            "name": "[concat(parameters('domainName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/dnsZones', parameters('domainName')), 'FP / DNS Zone Contributor'))]",
+            "name": "[concat(resourceGroup().location, '.', parameters('clusterParentDomainName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/dnsZones', concat(resourceGroup().location, '.', parameters('clusterParentDomainName')), 'FP / DNS Zone Contributor'))]",
             "type": "Microsoft.Network/dnsZones/providers/roleAssignments",
             "properties": {
-                "scope": "[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]",
+                "scope": "[resourceId('Microsoft.Network/dnsZones', concat(resourceGroup().location, '.', parameters('clusterParentDomainName')))]",
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'befefa01-2a29-4197-83a8-272ff33ce314')]",
                 "principalId": "[parameters('fpServicePrincipalId')]",
                 "principalType": "ServicePrincipal"
             },
             "apiVersion": "2018-09-01-preview",
             "dependsOn": [
-                "[resourceId('Microsoft.Network/dnsZones', parameters('domainName'))]"
+                "[resourceId('Microsoft.Network/dnsZones', concat(resourceGroup().location, '.', parameters('clusterParentDomainName')))]"
             ]
         }
     ]

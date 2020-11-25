@@ -26,8 +26,8 @@ deploy_rp_dev() {
         -n rp-development \
         --template-file deploy/rp-development.json \
         --parameters \
+            "clusterParentDomainName=$PARENT_DOMAIN_NAME" \
             "databaseAccountName=$DATABASE_ACCOUNT_NAME" \
-            "domainName=$DOMAIN_NAME" \
             "fpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_FP_CLIENT_ID'" --query '[].objectId' -o tsv)" \
             "rpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_RP_CLIENT_ID'" --query '[].objectId' -o tsv)" >/dev/null
 }
