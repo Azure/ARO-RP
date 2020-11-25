@@ -41,10 +41,9 @@ func NewCore(ctx context.Context, log *logrus.Entry) (Core, error) {
 		return nil, err
 	}
 
-	switch im.Environment().Name {
-	case azure.PublicCloud.Name, azure.USGovernmentCloud.Name:
-	default:
-		return nil, errors.New("unsupported Azure cloud environment")
+	err = validateCloudEnvironment(im.Environment().Name)
+	if err != nil {
+		return nil, err
 	}
 
 	rpauthorizer, err := rpauthorizer.New(deploymentMode, im)
@@ -58,4 +57,38 @@ func NewCore(ctx context.Context, log *logrus.Entry) (Core, error) {
 
 		deploymentMode: deploymentMode,
 	}, nil
+}
+
+// NewCoreForCI returns an env.Core which respects RP_MODE but always uses
+// AZURE_* environment variables instead of IMDS.  This is used for entrypoints
+// which may run on CI VMs.  CI VMs don't currently have MSI and hence cannot
+// resolve their tenant ID, and also may access resources in a different tenant
+// (e.g. AME).
+func NewCoreForCI(ctx context.Context, log *logrus.Entry) (Core, error) {
+	deploymentMode := deployment.NewMode()
+	log.Infof("running in %s mode", deploymentMode)
+
+	im, err := instancemetadata.NewDev()
+	if err != nil {
+		return nil, err
+	}
+
+	err = validateCloudEnvironment(im.Environment().Name)
+	if err != nil {
+		return nil, err
+	}
+
+	return &core{
+		InstanceMetadata: im,
+		deploymentMode:   deploymentMode,
+	}, nil
+}
+
+func validateCloudEnvironment(name string) error {
+	switch name {
+	case azure.PublicCloud.Name, azure.USGovernmentCloud.Name:
+		return nil
+	default:
+		return errors.New("unsupported Azure cloud environment")
+	}
 }

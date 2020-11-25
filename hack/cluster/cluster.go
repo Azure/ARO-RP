@@ -13,9 +13,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/cluster"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
-	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
 
@@ -32,17 +31,14 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
-	deploymentMode := deployment.NewMode()
-	log.Infof("running in %s mode", deploymentMode)
-
-	instancemetadata, err := instancemetadata.NewDev()
+	env, err := env.NewCore(ctx, log)
 	if err != nil {
-		return nil
+		return err
 	}
 
-	c, err := cluster.New(log, deploymentMode, instancemetadata, false)
+	c, err := cluster.New(log, env, false)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	switch strings.ToLower(os.Args[1]) {
