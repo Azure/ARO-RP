@@ -19,7 +19,8 @@ type Portal struct {
 type SSH struct {
 	MissingFields
 
-	Master int `json:"master"`
+	Master        int  `json:"master"`
+	Authenticated bool `json:"authenticated,omitempty"`
 }
 
 type Kubeconfig struct {

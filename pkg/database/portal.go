@@ -22,7 +22,7 @@ type portals struct {
 type Portal interface {
 	Create(context.Context, *api.PortalDocument) (*api.PortalDocument, error)
 	Get(context.Context, string) (*api.PortalDocument, error)
-	Delete(context.Context, *api.PortalDocument) error
+	Patch(context.Context, string, func(*api.PortalDocument) error) (*api.PortalDocument, error)
 }
 
 // NewPortal returns a new Portal
@@ -66,10 +66,23 @@ func (c *portals) Get(ctx context.Context, id string) (*api.PortalDocument, erro
 	return c.c.Get(ctx, id, id, nil)
 }
 
-func (c *portals) Delete(ctx context.Context, doc *api.PortalDocument) error {
-	if doc.ID != strings.ToLower(doc.ID) {
-		return fmt.Errorf("id %q is not lower case", doc.ID)
-	}
+func (c *portals) Patch(ctx context.Context, id string, f func(*api.PortalDocument) error) (*api.PortalDocument, error) {
+	var doc *api.PortalDocument
 
-	return c.c.Delete(ctx, doc.ID, doc, nil)
+	err := cosmosdb.RetryOnPreconditionFailed(func() (err error) {
+		doc, err = c.Get(ctx, id)
+		if err != nil {
+			return
+		}
+
+		err = f(doc)
+		if err != nil {
+			return
+		}
+
+		doc, err = c.c.Replace(ctx, doc.ID, doc, nil)
+		return
+	})
+
+	return doc, err
 }

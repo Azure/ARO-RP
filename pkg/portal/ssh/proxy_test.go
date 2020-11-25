@@ -207,6 +207,9 @@ func TestProxy(t *testing.T) {
 				fixture.AddPortalDocuments(portalDocument)
 				openShiftClusterDocument := goodOpenShiftClusterDocument()
 				fixture.AddOpenShiftClusterDocuments(openShiftClusterDocument)
+				portalDocument = goodPortalDocument(tt.password)
+				portalDocument.Portal.SSH.Authenticated = true
+				checker.AddPortalDocuments(portalDocument)
 				checker.AddOpenShiftClusterDocuments(openShiftClusterDocument)
 			},
 			mocks: func(dialer *mock_proxy.MockDialer) {
@@ -316,6 +319,9 @@ func TestProxy(t *testing.T) {
 			fixtureChecker: func(tt *test, fixture *testdatabase.Fixture, checker *testdatabase.Checker, openShiftClustersClient *cosmosdb.FakeOpenShiftClusterDocumentClient, portalClient *cosmosdb.FakePortalDocumentClient) {
 				portalDocument := goodPortalDocument(tt.password)
 				fixture.AddPortalDocuments(portalDocument)
+				portalDocument = goodPortalDocument(tt.password)
+				portalDocument.Portal.SSH.Authenticated = true
+				checker.AddPortalDocuments(portalDocument)
 
 				openShiftClustersClient.SetError(fmt.Errorf("sad"))
 			},
@@ -355,6 +361,9 @@ func TestProxy(t *testing.T) {
 				fixture.AddPortalDocuments(portalDocument)
 				openShiftClusterDocument := goodOpenShiftClusterDocument()
 				fixture.AddOpenShiftClusterDocuments(openShiftClusterDocument)
+				portalDocument = goodPortalDocument(tt.password)
+				portalDocument.Portal.SSH.Authenticated = true
+				checker.AddPortalDocuments(portalDocument)
 				checker.AddOpenShiftClusterDocuments(openShiftClusterDocument)
 			},
 			mocks: func(dialer *mock_proxy.MockDialer) {

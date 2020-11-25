@@ -96,17 +96,22 @@ func (s *ssh) newConn(ctx context.Context, c1 net.Conn) error {
 			return nil, fmt.Errorf("invalid username") // don't echo password attempt to logs
 		}
 
-		portalDoc, err = s.dbPortal.Get(ctx, password.String())
+		portalDoc, err = s.dbPortal.Patch(ctx, password.String(), func(portalDoc *api.PortalDocument) error {
+			if portalDoc.Portal.SSH == nil ||
+				connmetadata.User() != strings.SplitN(portalDoc.Portal.Username, "@", 2)[0] ||
+				portalDoc.Portal.SSH.Authenticated {
+				return fmt.Errorf("invalid username")
+			}
+
+			portalDoc.Portal.SSH.Authenticated = true
+
+			return nil
+		})
 		if err != nil {
 			return nil, fmt.Errorf("invalid username") // don't echo password attempt to logs
 		}
 
-		if portalDoc.Portal.SSH == nil ||
-			connmetadata.User() != strings.SplitN(portalDoc.Portal.Username, "@", 2)[0] {
-			return nil, fmt.Errorf("invalid username")
-		}
-
-		return nil, s.dbPortal.Delete(ctx, portalDoc)
+		return nil, nil
 	}
 
 	// Serve the incoming (SRE->portal) connection.
