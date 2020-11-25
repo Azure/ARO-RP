@@ -20,6 +20,7 @@ func (c *PortalDocuments) String() string {
 type PortalDocument struct {
 	MissingFields
 
+	// ID is the unique authentication token used by the SRE
 	ID          string                 `json:"id,omitempty"`
 	ResourceID  string                 `json:"_rid,omitempty"`
 	Timestamp   int                    `json:"_ts,omitempty"`

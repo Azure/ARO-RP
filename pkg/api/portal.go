@@ -8,7 +8,9 @@ type Portal struct {
 	MissingFields
 
 	Username string `json:"username"`
-	ID       string `json:"id,omitempty"`
+
+	// ID is the resourceID of the cluster being accessed by the SRE
+	ID string `json:"id,omitempty"`
 
 	SSH        *SSH        `json:"ssh,omitempty"`
 	Kubeconfig *Kubeconfig `json:"kubeconfig,omitempty"`
@@ -17,7 +19,7 @@ type Portal struct {
 type SSH struct {
 	MissingFields
 
-	Master int `json:"master,omitempty"`
+	Master int `json:"master"`
 }
 
 type Kubeconfig struct {
