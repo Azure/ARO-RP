@@ -40,7 +40,14 @@ func (m *manager) logClusterVersion(ctx context.Context) (interface{}, error) {
 		return nil, nil
 	}
 
-	return m.configcli.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
+	cv, err := m.configcli.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	cv.ManagedFields = nil
+
+	return cv, nil
 }
 
 func (m *manager) logNodes(ctx context.Context) (interface{}, error) {
@@ -51,6 +58,10 @@ func (m *manager) logNodes(ctx context.Context) (interface{}, error) {
 	nodes, err := m.kubernetescli.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
+	}
+
+	for i := range nodes.Items {
+		nodes.Items[i].ManagedFields = nil
 	}
 
 	return nodes.Items, nil
@@ -66,6 +77,10 @@ func (m *manager) logClusterOperators(ctx context.Context) (interface{}, error) 
 		return nil, err
 	}
 
+	for i := range cos.Items {
+		cos.Items[i].ManagedFields = nil
+	}
+
 	return cos.Items, nil
 }
 
@@ -77,6 +92,10 @@ func (m *manager) logIngressControllers(ctx context.Context) (interface{}, error
 	ics, err := m.operatorcli.OperatorV1().IngressControllers("openshift-ingress-operator").List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, err
+	}
+
+	for i := range ics.Items {
+		ics.Items[i].ManagedFields = nil
 	}
 
 	return ics.Items, nil
