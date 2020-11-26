@@ -41,7 +41,6 @@ deploy_env_dev() {
         --parameters \
             "ciAzpToken=$AZPTOKEN" \
             "ciCapacity=6" \
-            "ciDeployTooling=true" \
             "ciPoolName=ARO-CI" \
             "proxyCert=$(base64 -w0 <secrets/proxy.crt)" \
             "proxyClientCert=$(base64 -w0 <secrets/proxy-client.crt)" \
@@ -62,7 +61,6 @@ deploy_env_dev_override() {
         --parameters \
             "ciAzpToken=$AZPTOKEN" \
             "ciCapacity=3" \
-            "ciDeployTooling=true" \
             "ciPoolName=ARO-CI" \
             "proxyCert=$(base64 -w0 <secrets/proxy.crt)" \
             "proxyClientCert=$(base64 -w0 <secrets/proxy-client.crt)" \

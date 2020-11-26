@@ -3,17 +3,16 @@
     "contentVersion": "1.0.0.0",
     "parameters": {
         "ciAzpToken": {
-            "type": "string"
+            "type": "string",
+            "defaultValue": ""
         },
         "ciCapacity": {
-            "type": "int"
-        },
-        "ciDeployTooling": {
-            "type": "bool",
-            "defaultValue": false
+            "type": "int",
+            "defaultValue": 0
         },
         "ciPoolName": {
-            "type": "string"
+            "type": "string",
+            "defaultValue": ""
         },
         "proxyCert": {
             "type": "string"
@@ -232,7 +231,7 @@
             "name": "ci-vmss",
             "type": "Microsoft.Compute/virtualMachineScaleSets",
             "location": "[resourceGroup().location]",
-            "condition": "[parameters('ciDeployTooling')]",
+            "condition": "[greater(parameters('ciCapacity'),0)]",
             "apiVersion": "2019-03-01",
             "dependsOn": [
                 "[resourceId('Microsoft.Network/virtualNetworks', 'dev-vnet')]"

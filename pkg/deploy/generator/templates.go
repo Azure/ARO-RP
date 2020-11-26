@@ -356,7 +356,6 @@ func (g *generator) sharedDevelopmentEnvTemplate() *arm.Template {
 		"ciAzpToken",
 		"ciCapacity",
 		"ciPoolName",
-		"ciDeployTooling",
 		"proxyCert",
 		"proxyClientCert",
 		"proxyDomainNameLabel",
@@ -371,11 +370,11 @@ func (g *generator) sharedDevelopmentEnvTemplate() *arm.Template {
 		typ := "string"
 		var defaultValue interface{}
 		switch param {
-		case "ciDeployTooling":
-			typ = "bool"
-			defaultValue = false
+		case "ciAzpToken", "ciPoolName":
+			defaultValue = ""
 		case "ciCapacity":
 			typ = "int"
+			defaultValue = 0
 		case "proxyImageAuth", "proxyKey":
 			typ = "securestring"
 		case "publicIPAddressAllocationMethod":
