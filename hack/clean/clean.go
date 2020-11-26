@@ -55,7 +55,7 @@ func main() {
 func run(ctx context.Context, log *logrus.Entry) error {
 	subscriptionID := os.Getenv("AZURE_SUBSCRIPTION_ID")
 
-	env, err := env.NewCore(ctx, log)
+	env, err := env.NewCoreForCI(ctx, log)
 	if err != nil {
 		return err
 	}

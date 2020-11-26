@@ -22,7 +22,7 @@ type devRPAuthorizer struct {
 	im instancemetadata.InstanceMetadata
 }
 
-func (d devRPAuthorizer) NewRPAuthorizer(resource string) (autorest.Authorizer, error) {
+func (d *devRPAuthorizer) NewRPAuthorizer(resource string) (autorest.Authorizer, error) {
 	config := &auth.ClientCredentialsConfig{
 		ClientID:     os.Getenv("AZURE_RP_CLIENT_ID"),
 		ClientSecret: os.Getenv("AZURE_RP_CLIENT_SECRET"),

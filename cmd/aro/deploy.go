@@ -18,7 +18,7 @@ import (
 )
 
 func deploy(ctx context.Context, log *logrus.Entry) error {
-	env, err := env.NewCore(ctx, log)
+	env, err := env.NewCoreForCI(ctx, log)
 	if err != nil {
 		return err
 	}
