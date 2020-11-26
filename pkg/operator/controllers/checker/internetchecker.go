@@ -114,7 +114,16 @@ func (r *InternetChecker) Check(ctx context.Context) error {
 
 	}
 
-	return controllers.SetCondition(ctx, r.arocli, condition, r.role)
+	err = controllers.SetCondition(ctx, r.arocli, condition, r.role)
+	if err != nil {
+		return err
+	}
+
+	if checkFailed {
+		return errRequeue
+	}
+
+	return nil
 }
 
 // check the URL, retrying a failed query a few times
