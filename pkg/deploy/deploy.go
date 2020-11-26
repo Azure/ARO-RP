@@ -259,6 +259,11 @@ func (d *deployer) getParameters(ps map[string]interface{}) *arm.Parameters {
 			continue
 		}
 
+		switch p {
+		case "portalAccessGroupIds", "portalElevatedGroupIds":
+			v = strings.Join(v.([]string), ",")
+		}
+
 		parameters.Parameters[p] = &arm.ParametersParameter{
 			Value: v,
 		}
