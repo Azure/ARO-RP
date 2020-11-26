@@ -19,7 +19,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
 )
 
-func dnsPrivateZone(installConfig *installconfig.InstallConfig) *arm.Resource {
+func (m *manager) dnsPrivateZone(installConfig *installconfig.InstallConfig) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtprivatedns.PrivateZone{
 			Name:     to.StringPtr(installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain),
@@ -30,7 +30,7 @@ func dnsPrivateZone(installConfig *installconfig.InstallConfig) *arm.Resource {
 	}
 }
 
-func dnsPrivateRecordAPIINT(infraID string, installConfig *installconfig.InstallConfig) *arm.Resource {
+func (m *manager) dnsPrivateRecordAPIINT(installConfig *installconfig.InstallConfig) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtprivatedns.RecordSet{
 			Name: to.StringPtr(installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/api-int"),
@@ -39,20 +39,20 @@ func dnsPrivateRecordAPIINT(infraID string, installConfig *installconfig.Install
 				TTL: to.Int64Ptr(300),
 				ARecords: &[]mgmtprivatedns.ARecord{
 					{
-						Ipv4Address: to.StringPtr(fmt.Sprintf("[reference('Microsoft.Network/loadBalancers/%s-internal', '%s').frontendIpConfigurations[0].properties.privateIPAddress]", infraID, azureclient.APIVersion("Microsoft.Network"))),
+						Ipv4Address: to.StringPtr(fmt.Sprintf("[reference('Microsoft.Network/loadBalancers/%s-internal', '%s').frontendIpConfigurations[0].properties.privateIPAddress]", m.doc.OpenShiftCluster.Properties.InfraID, azureclient.APIVersion("Microsoft.Network"))),
 					},
 				},
 			},
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network/privateDnsZones"),
 		DependsOn: []string{
-			"Microsoft.Network/loadBalancers/" + infraID + "-internal",
+			"Microsoft.Network/loadBalancers/" + m.doc.OpenShiftCluster.Properties.InfraID + "-internal",
 			"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
 		},
 	}
 }
 
-func dnsPrivateRecordAPI(infraID string, installConfig *installconfig.InstallConfig) *arm.Resource {
+func (m *manager) dnsPrivateRecordAPI(installConfig *installconfig.InstallConfig) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtprivatedns.RecordSet{
 			Name: to.StringPtr(installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/api"),
@@ -61,20 +61,20 @@ func dnsPrivateRecordAPI(infraID string, installConfig *installconfig.InstallCon
 				TTL: to.Int64Ptr(300),
 				ARecords: &[]mgmtprivatedns.ARecord{
 					{
-						Ipv4Address: to.StringPtr(fmt.Sprintf("[reference('Microsoft.Network/loadBalancers/%s-internal', '%s').frontendIpConfigurations[0].properties.privateIPAddress]", infraID, azureclient.APIVersion("Microsoft.Network"))),
+						Ipv4Address: to.StringPtr(fmt.Sprintf("[reference('Microsoft.Network/loadBalancers/%s-internal', '%s').frontendIpConfigurations[0].properties.privateIPAddress]", m.doc.OpenShiftCluster.Properties.InfraID, azureclient.APIVersion("Microsoft.Network"))),
 					},
 				},
 			},
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network/privateDnsZones"),
 		DependsOn: []string{
-			"Microsoft.Network/loadBalancers/" + infraID + "-internal",
+			"Microsoft.Network/loadBalancers/" + m.doc.OpenShiftCluster.Properties.InfraID + "-internal",
 			"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain,
 		},
 	}
 }
 
-func dnsVirtualNetworkLink(vnetID string, installConfig *installconfig.InstallConfig) *arm.Resource {
+func (m *manager) dnsVirtualNetworkLink(installConfig *installconfig.InstallConfig, vnetID string) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtprivatedns.VirtualNetworkLink{
 			VirtualNetworkLinkProperties: &mgmtprivatedns.VirtualNetworkLinkProperties{
@@ -94,48 +94,48 @@ func dnsVirtualNetworkLink(vnetID string, installConfig *installconfig.InstallCo
 	}
 }
 
-func networkPrivateLinkService(infraID, subscriptionID string, oc *api.OpenShiftCluster, installConfig *installconfig.InstallConfig) *arm.Resource {
+func (m *manager) networkPrivateLinkService(installConfig *installconfig.InstallConfig) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.PrivateLinkService{
 			PrivateLinkServiceProperties: &mgmtnetwork.PrivateLinkServiceProperties{
 				LoadBalancerFrontendIPConfigurations: &[]mgmtnetwork.FrontendIPConfiguration{
 					{
-						ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '%s-internal', 'internal-lb-ip-v4')]", infraID)),
+						ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '%s-internal', 'internal-lb-ip-v4')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 					},
 				},
 				IPConfigurations: &[]mgmtnetwork.PrivateLinkServiceIPConfiguration{
 					{
 						PrivateLinkServiceIPConfigurationProperties: &mgmtnetwork.PrivateLinkServiceIPConfigurationProperties{
 							Subnet: &mgmtnetwork.Subnet{
-								ID: to.StringPtr(oc.Properties.MasterProfile.SubnetID),
+								ID: to.StringPtr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 							},
 						},
-						Name: to.StringPtr(infraID + "-pls-nic"),
+						Name: to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID + "-pls-nic"),
 					},
 				},
 				Visibility: &mgmtnetwork.PrivateLinkServicePropertiesVisibility{
 					Subscriptions: &[]string{
-						subscriptionID,
+						m.env.SubscriptionID(),
 					},
 				},
 				AutoApproval: &mgmtnetwork.PrivateLinkServicePropertiesAutoApproval{
 					Subscriptions: &[]string{
-						subscriptionID,
+						m.env.SubscriptionID(),
 					},
 				},
 			},
-			Name:     to.StringPtr(infraID + "-pls"),
+			Name:     to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID + "-pls"),
 			Type:     to.StringPtr("Microsoft.Network/privateLinkServices"),
 			Location: &installConfig.Config.Azure.Region,
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		DependsOn: []string{
-			"Microsoft.Network/loadBalancers/" + infraID + "-internal",
+			"Microsoft.Network/loadBalancers/" + m.doc.OpenShiftCluster.Properties.InfraID + "-internal",
 		},
 	}
 }
 
-func networkPublicIPAddress(infraID string, installConfig *installconfig.InstallConfig) *arm.Resource {
+func (m *manager) networkPublicIPAddress(installConfig *installconfig.InstallConfig) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.PublicIPAddress{
 			Sku: &mgmtnetwork.PublicIPAddressSku{
@@ -144,7 +144,7 @@ func networkPublicIPAddress(infraID string, installConfig *installconfig.Install
 			PublicIPAddressPropertiesFormat: &mgmtnetwork.PublicIPAddressPropertiesFormat{
 				PublicIPAllocationMethod: mgmtnetwork.Static,
 			},
-			Name:     to.StringPtr(infraID + "-pip-v4"),
+			Name:     to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID + "-pip-v4"),
 			Type:     to.StringPtr("Microsoft.Network/publicIPAddresses"),
 			Location: &installConfig.Config.Azure.Region,
 		},
@@ -152,7 +152,7 @@ func networkPublicIPAddress(infraID string, installConfig *installconfig.Install
 	}
 }
 
-func networkInternalLoadBalancer(infraID string, oc *api.OpenShiftCluster, installConfig *installconfig.InstallConfig) *arm.Resource {
+func (m *manager) networkInternalLoadBalancer(installConfig *installconfig.InstallConfig) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.LoadBalancer{
 			Sku: &mgmtnetwork.LoadBalancerSku{
@@ -164,7 +164,7 @@ func networkInternalLoadBalancer(infraID string, oc *api.OpenShiftCluster, insta
 						FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
 							PrivateIPAllocationMethod: mgmtnetwork.Dynamic,
 							Subnet: &mgmtnetwork.Subnet{
-								ID: to.StringPtr(oc.Properties.MasterProfile.SubnetID),
+								ID: to.StringPtr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 							},
 						},
 						Name: to.StringPtr("internal-lb-ip-v4"),
@@ -172,20 +172,20 @@ func networkInternalLoadBalancer(infraID string, oc *api.OpenShiftCluster, insta
 				},
 				BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
 					{
-						Name: to.StringPtr(infraID),
+						Name: to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID),
 					},
 				},
 				LoadBalancingRules: &[]mgmtnetwork.LoadBalancingRule{
 					{
 						LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
 							FrontendIPConfiguration: &mgmtnetwork.SubResource{
-								ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '%s-internal', 'internal-lb-ip-v4')]", infraID)),
+								ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '%s-internal', 'internal-lb-ip-v4')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 							},
 							BackendAddressPool: &mgmtnetwork.SubResource{
-								ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s-internal', '%[1]s')]", infraID)),
+								ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s-internal', '%[1]s')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 							},
 							Probe: &mgmtnetwork.SubResource{
-								ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s-internal', 'api-internal-probe')]", infraID)),
+								ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s-internal', 'api-internal-probe')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 							},
 							Protocol:             mgmtnetwork.TransportProtocolTCP,
 							LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
@@ -199,13 +199,13 @@ func networkInternalLoadBalancer(infraID string, oc *api.OpenShiftCluster, insta
 					{
 						LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
 							FrontendIPConfiguration: &mgmtnetwork.SubResource{
-								ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '%s-internal', 'internal-lb-ip-v4')]", infraID)),
+								ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '%s-internal', 'internal-lb-ip-v4')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 							},
 							BackendAddressPool: &mgmtnetwork.SubResource{
-								ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s-internal', '%[1]s')]", infraID)),
+								ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s-internal', '%[1]s')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 							},
 							Probe: &mgmtnetwork.SubResource{
-								ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s-internal', 'sint-probe')]", infraID)),
+								ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s-internal', 'sint-probe')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 							},
 							Protocol:             mgmtnetwork.TransportProtocolTCP,
 							LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
@@ -239,7 +239,7 @@ func networkInternalLoadBalancer(infraID string, oc *api.OpenShiftCluster, insta
 					},
 				},
 			},
-			Name:     to.StringPtr(infraID + "-internal"),
+			Name:     to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID + "-internal"),
 			Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
 			Location: &installConfig.Config.Azure.Region,
 		},
@@ -247,7 +247,7 @@ func networkInternalLoadBalancer(infraID string, oc *api.OpenShiftCluster, insta
 	}
 }
 
-func networkPublicLoadBalancer(infraID string, oc *api.OpenShiftCluster, installConfig *installconfig.InstallConfig) *arm.Resource {
+func (m *manager) networkPublicLoadBalancer(installConfig *installconfig.InstallConfig) *arm.Resource {
 	lb := &mgmtnetwork.LoadBalancer{
 		Sku: &mgmtnetwork.LoadBalancerSku{
 			Name: mgmtnetwork.LoadBalancerSkuNameStandard,
@@ -257,7 +257,7 @@ func networkPublicLoadBalancer(infraID string, oc *api.OpenShiftCluster, install
 				{
 					FrontendIPConfigurationPropertiesFormat: &mgmtnetwork.FrontendIPConfigurationPropertiesFormat{
 						PublicIPAddress: &mgmtnetwork.PublicIPAddress{
-							ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', '" + infraID + "-pip-v4')]"),
+							ID: to.StringPtr("[resourceId('Microsoft.Network/publicIPAddresses', '" + m.doc.OpenShiftCluster.Properties.InfraID + "-pip-v4')]"),
 						},
 					},
 					Name: to.StringPtr("public-lb-ip-v4"),
@@ -265,7 +265,7 @@ func networkPublicLoadBalancer(infraID string, oc *api.OpenShiftCluster, install
 			},
 			BackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
 				{
-					Name: to.StringPtr(infraID),
+					Name: to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID),
 				},
 			},
 			LoadBalancingRules: &[]mgmtnetwork.LoadBalancingRule{}, //required to override default LB rules for port 80 and 443
@@ -275,11 +275,11 @@ func networkPublicLoadBalancer(infraID string, oc *api.OpenShiftCluster, install
 					OutboundRulePropertiesFormat: &mgmtnetwork.OutboundRulePropertiesFormat{
 						FrontendIPConfigurations: &[]mgmtnetwork.SubResource{
 							{
-								ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '" + infraID + "', 'public-lb-ip-v4')]"),
+								ID: to.StringPtr("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '" + m.doc.OpenShiftCluster.Properties.InfraID + "', 'public-lb-ip-v4')]"),
 							},
 						},
 						BackendAddressPool: &mgmtnetwork.SubResource{
-							ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", infraID)),
+							ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 						},
 						Protocol:             mgmtnetwork.LoadBalancerOutboundRuleProtocolAll,
 						IdleTimeoutInMinutes: to.Int32Ptr(30),
@@ -288,22 +288,22 @@ func networkPublicLoadBalancer(infraID string, oc *api.OpenShiftCluster, install
 				},
 			},
 		},
-		Name:     to.StringPtr(infraID),
+		Name:     to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID),
 		Type:     to.StringPtr("Microsoft.Network/loadBalancers"),
 		Location: &installConfig.Config.Azure.Region,
 	}
 
-	if oc.Properties.APIServerProfile.Visibility == api.VisibilityPublic {
+	if m.doc.OpenShiftCluster.Properties.APIServerProfile.Visibility == api.VisibilityPublic {
 		*lb.LoadBalancingRules = append(*lb.LoadBalancingRules, mgmtnetwork.LoadBalancingRule{
 			LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
 				FrontendIPConfiguration: &mgmtnetwork.SubResource{
-					ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '%s', 'public-lb-ip-v4')]", infraID)),
+					ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '%s', 'public-lb-ip-v4')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 				},
 				BackendAddressPool: &mgmtnetwork.SubResource{
-					ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", infraID)),
+					ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 				},
 				Probe: &mgmtnetwork.SubResource{
-					ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s', 'api-internal-probe')]", infraID)),
+					ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s', 'api-internal-probe')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 				},
 				Protocol:             mgmtnetwork.TransportProtocolTCP,
 				LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
@@ -331,12 +331,12 @@ func networkPublicLoadBalancer(infraID string, oc *api.OpenShiftCluster, install
 		Resource:   lb,
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		DependsOn: []string{
-			"Microsoft.Network/publicIPAddresses/" + infraID + "-pip-v4",
+			"Microsoft.Network/publicIPAddresses/" + m.doc.OpenShiftCluster.Properties.InfraID + "-pip-v4",
 		},
 	}
 }
 
-func networkBootstrapNIC(infraID string, oc *api.OpenShiftCluster, installConfig *installconfig.InstallConfig) *arm.Resource {
+func (m *manager) networkBootstrapNIC(installConfig *installconfig.InstallConfig) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.Interface{
 			InterfacePropertiesFormat: &mgmtnetwork.InterfacePropertiesFormat{
@@ -345,33 +345,33 @@ func networkBootstrapNIC(infraID string, oc *api.OpenShiftCluster, installConfig
 						InterfaceIPConfigurationPropertiesFormat: &mgmtnetwork.InterfaceIPConfigurationPropertiesFormat{
 							LoadBalancerBackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
 								{
-									ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", infraID)),
+									ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 								},
 								{
-									ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s-internal', '%[1]s')]", infraID)),
+									ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s-internal', '%[1]s')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 								},
 							},
 							Subnet: &mgmtnetwork.Subnet{
-								ID: to.StringPtr(oc.Properties.MasterProfile.SubnetID),
+								ID: to.StringPtr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 							},
 						},
 						Name: to.StringPtr("bootstrap-nic-ip-v4"),
 					},
 				},
 			},
-			Name:     to.StringPtr(infraID + "-bootstrap-nic"),
+			Name:     to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID + "-bootstrap-nic"),
 			Type:     to.StringPtr("Microsoft.Network/networkInterfaces"),
 			Location: &installConfig.Config.Azure.Region,
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		DependsOn: []string{
-			"Microsoft.Network/loadBalancers/" + infraID + "-internal",
-			"Microsoft.Network/loadBalancers/" + infraID,
+			"Microsoft.Network/loadBalancers/" + m.doc.OpenShiftCluster.Properties.InfraID + "-internal",
+			"Microsoft.Network/loadBalancers/" + m.doc.OpenShiftCluster.Properties.InfraID,
 		},
 	}
 }
 
-func networkMasterNICs(infraID string, oc *api.OpenShiftCluster, installConfig *installconfig.InstallConfig) *arm.Resource {
+func (m *manager) networkMasterNICs(installConfig *installconfig.InstallConfig) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtnetwork.Interface{
 			InterfacePropertiesFormat: &mgmtnetwork.InterfacePropertiesFormat{
@@ -380,21 +380,21 @@ func networkMasterNICs(infraID string, oc *api.OpenShiftCluster, installConfig *
 						InterfaceIPConfigurationPropertiesFormat: &mgmtnetwork.InterfaceIPConfigurationPropertiesFormat{
 							LoadBalancerBackendAddressPools: &[]mgmtnetwork.BackendAddressPool{
 								{
-									ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", infraID)),
+									ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s', '%[1]s')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 								},
 								{
-									ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s-internal', '%[1]s')]", infraID)),
+									ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s-internal', '%[1]s')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 								},
 							},
 							Subnet: &mgmtnetwork.Subnet{
-								ID: to.StringPtr(oc.Properties.MasterProfile.SubnetID),
+								ID: to.StringPtr(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID),
 							},
 						},
 						Name: to.StringPtr("pipConfig"),
 					},
 				},
 			},
-			Name:     to.StringPtr(fmt.Sprintf("[concat('%s-master', copyIndex(), '-nic')]", infraID)),
+			Name:     to.StringPtr(fmt.Sprintf("[concat('%s-master', copyIndex(), '-nic')]", m.doc.OpenShiftCluster.Properties.InfraID)),
 			Type:     to.StringPtr("Microsoft.Network/networkInterfaces"),
 			Location: &installConfig.Config.Azure.Region,
 		},
@@ -404,13 +404,13 @@ func networkMasterNICs(infraID string, oc *api.OpenShiftCluster, installConfig *
 			Count: int(*installConfig.Config.ControlPlane.Replicas),
 		},
 		DependsOn: []string{
-			"Microsoft.Network/loadBalancers/" + infraID + "-internal",
-			"Microsoft.Network/loadBalancers/" + infraID,
+			"Microsoft.Network/loadBalancers/" + m.doc.OpenShiftCluster.Properties.InfraID + "-internal",
+			"Microsoft.Network/loadBalancers/" + m.doc.OpenShiftCluster.Properties.InfraID,
 		},
 	}
 }
 
-func computeBoostrapVM(infraID string, oc *api.OpenShiftCluster, installConfig *installconfig.InstallConfig) *arm.Resource {
+func (m *manager) computeBootstrapVM(installConfig *installconfig.InstallConfig) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtcompute.VirtualMachine{
 			VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
@@ -425,7 +425,7 @@ func computeBoostrapVM(infraID string, oc *api.OpenShiftCluster, installConfig *
 						Version:   &installConfig.Config.Azure.Image.Version,
 					},
 					OsDisk: &mgmtcompute.OSDisk{
-						Name:         to.StringPtr(infraID + "-bootstrap_OSDisk"),
+						Name:         to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID + "-bootstrap_OSDisk"),
 						Caching:      mgmtcompute.CachingTypesReadWrite,
 						CreateOption: mgmtcompute.DiskCreateOptionTypesFromImage,
 						DiskSizeGB:   to.Int32Ptr(100),
@@ -435,10 +435,10 @@ func computeBoostrapVM(infraID string, oc *api.OpenShiftCluster, installConfig *
 					},
 				},
 				OsProfile: &mgmtcompute.OSProfile{
-					ComputerName:  to.StringPtr(infraID + "-bootstrap-vm"),
+					ComputerName:  to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID + "-bootstrap-vm"),
 					AdminUsername: to.StringPtr("core"),
 					AdminPassword: to.StringPtr("NotActuallyApplied!"),
-					CustomData:    to.StringPtr(`[base64(concat('{"ignition":{"version":"2.2.0","config":{"replace":{"source":"https://cluster` + oc.Properties.StorageSuffix + `.blob.core.windows.net/ignition/bootstrap.ign?', listAccountSas(resourceId('Microsoft.Storage/storageAccounts', 'cluster` + oc.Properties.StorageSuffix + `'), '2019-04-01', parameters('sas')).accountSasToken, '"}}}}'))]`),
+					CustomData:    to.StringPtr(`[base64(concat('{"ignition":{"version":"2.2.0","config":{"replace":{"source":"https://cluster` + m.doc.OpenShiftCluster.Properties.StorageSuffix + `.blob.` + m.env.Environment().StorageEndpointSuffix + `/ignition/bootstrap.ign?', listAccountSas(resourceId('Microsoft.Storage/storageAccounts', 'cluster` + m.doc.OpenShiftCluster.Properties.StorageSuffix + `'), '2019-04-01', parameters('sas')).accountSasToken, '"}}}}'))]`),
 					LinuxConfiguration: &mgmtcompute.LinuxConfiguration{
 						DisablePasswordAuthentication: to.BoolPtr(false),
 					},
@@ -446,30 +446,30 @@ func computeBoostrapVM(infraID string, oc *api.OpenShiftCluster, installConfig *
 				NetworkProfile: &mgmtcompute.NetworkProfile{
 					NetworkInterfaces: &[]mgmtcompute.NetworkInterfaceReference{
 						{
-							ID: to.StringPtr("[resourceId('Microsoft.Network/networkInterfaces', '" + infraID + "-bootstrap-nic')]"),
+							ID: to.StringPtr("[resourceId('Microsoft.Network/networkInterfaces', '" + m.doc.OpenShiftCluster.Properties.InfraID + "-bootstrap-nic')]"),
 						},
 					},
 				},
 				DiagnosticsProfile: &mgmtcompute.DiagnosticsProfile{
 					BootDiagnostics: &mgmtcompute.BootDiagnostics{
 						Enabled:    to.BoolPtr(true),
-						StorageURI: to.StringPtr("https://cluster" + oc.Properties.StorageSuffix + ".blob.core.windows.net/"),
+						StorageURI: to.StringPtr("https://cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix + ".blob." + m.env.Environment().StorageEndpointSuffix + "/"),
 					},
 				},
 			},
-			Name:     to.StringPtr(infraID + "-bootstrap"),
+			Name:     to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID + "-bootstrap"),
 			Type:     to.StringPtr("Microsoft.Compute/virtualMachines"),
 			Location: &installConfig.Config.Azure.Region,
 		},
 		APIVersion: azureclient.APIVersion("Microsoft.Compute"),
 		DependsOn: []string{
-			"Microsoft.Network/networkInterfaces/" + infraID + "-bootstrap-nic",
+			"Microsoft.Network/networkInterfaces/" + m.doc.OpenShiftCluster.Properties.InfraID + "-bootstrap-nic",
 			"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/virtualNetworkLinks/" + installConfig.Config.ObjectMeta.Name + "-network-link",
 		},
 	}
 }
 
-func computeMasterVMs(infraID string, zones *[]string, machineMaster *machine.Master, oc *api.OpenShiftCluster, installConfig *installconfig.InstallConfig) *arm.Resource {
+func (m *manager) computeMasterVMs(installConfig *installconfig.InstallConfig, zones *[]string, machineMaster *machine.Master) *arm.Resource {
 	return &arm.Resource{
 		Resource: &mgmtcompute.VirtualMachine{
 			VirtualMachineProperties: &mgmtcompute.VirtualMachineProperties{
@@ -484,7 +484,7 @@ func computeMasterVMs(infraID string, zones *[]string, machineMaster *machine.Ma
 						Version:   &installConfig.Config.Azure.Image.Version,
 					},
 					OsDisk: &mgmtcompute.OSDisk{
-						Name:         to.StringPtr("[concat('" + infraID + "-master-', copyIndex(), '_OSDisk')]"),
+						Name:         to.StringPtr("[concat('" + m.doc.OpenShiftCluster.Properties.InfraID + "-master-', copyIndex(), '_OSDisk')]"),
 						Caching:      mgmtcompute.CachingTypesReadOnly,
 						CreateOption: mgmtcompute.DiskCreateOptionTypesFromImage,
 						DiskSizeGB:   &installConfig.Config.ControlPlane.Platform.Azure.OSDisk.DiskSizeGB,
@@ -494,7 +494,7 @@ func computeMasterVMs(infraID string, zones *[]string, machineMaster *machine.Ma
 					},
 				},
 				OsProfile: &mgmtcompute.OSProfile{
-					ComputerName:  to.StringPtr("[concat('" + infraID + "-master-', copyIndex())]"),
+					ComputerName:  to.StringPtr("[concat('" + m.doc.OpenShiftCluster.Properties.InfraID + "-master-', copyIndex())]"),
 					AdminUsername: to.StringPtr("core"),
 					AdminPassword: to.StringPtr("NotActuallyApplied!"),
 					CustomData:    to.StringPtr(base64.StdEncoding.EncodeToString(machineMaster.File.Data)),
@@ -505,19 +505,19 @@ func computeMasterVMs(infraID string, zones *[]string, machineMaster *machine.Ma
 				NetworkProfile: &mgmtcompute.NetworkProfile{
 					NetworkInterfaces: &[]mgmtcompute.NetworkInterfaceReference{
 						{
-							ID: to.StringPtr("[resourceId('Microsoft.Network/networkInterfaces', concat('" + infraID + "-master', copyIndex(), '-nic'))]"),
+							ID: to.StringPtr("[resourceId('Microsoft.Network/networkInterfaces', concat('" + m.doc.OpenShiftCluster.Properties.InfraID + "-master', copyIndex(), '-nic'))]"),
 						},
 					},
 				},
 				DiagnosticsProfile: &mgmtcompute.DiagnosticsProfile{
 					BootDiagnostics: &mgmtcompute.BootDiagnostics{
 						Enabled:    to.BoolPtr(true),
-						StorageURI: to.StringPtr("https://cluster" + oc.Properties.StorageSuffix + ".blob.core.windows.net/"),
+						StorageURI: to.StringPtr("https://cluster" + m.doc.OpenShiftCluster.Properties.StorageSuffix + ".blob." + m.env.Environment().StorageEndpointSuffix + "/"),
 					},
 				},
 			},
 			Zones:    zones,
-			Name:     to.StringPtr("[concat('" + infraID + "-master-', copyIndex())]"),
+			Name:     to.StringPtr("[concat('" + m.doc.OpenShiftCluster.Properties.InfraID + "-master-', copyIndex())]"),
 			Type:     to.StringPtr("Microsoft.Compute/virtualMachines"),
 			Location: &installConfig.Config.Azure.Region,
 		},
@@ -527,7 +527,7 @@ func computeMasterVMs(infraID string, zones *[]string, machineMaster *machine.Ma
 			Count: int(*installConfig.Config.ControlPlane.Replicas),
 		},
 		DependsOn: []string{
-			"[concat('Microsoft.Network/networkInterfaces/" + infraID + "-master', copyIndex(), '-nic')]",
+			"[concat('Microsoft.Network/networkInterfaces/" + m.doc.OpenShiftCluster.Properties.InfraID + "-master', copyIndex(), '-nic')]",
 			"Microsoft.Network/privateDnsZones/" + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/virtualNetworkLinks/" + installConfig.Config.ObjectMeta.Name + "-network-link",
 		},
 	}
