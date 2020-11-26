@@ -8,6 +8,7 @@ import (
 
 	mgmtdocumentdb "github.com/Azure/azure-sdk-for-go/services/cosmos-db/mgmt/2019-08-01/documentdb"
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 )
 
 // DatabaseAccountsClient is a minimal interface for azure DatabaseAccountsClient
@@ -22,8 +23,8 @@ type databaseAccountsClient struct {
 var _ DatabaseAccountsClient = &databaseAccountsClient{}
 
 // NewDatabaseAccountsClient creates a new DatabaseAccountsClient
-func NewDatabaseAccountsClient(subscriptionID string, authorizer autorest.Authorizer) DatabaseAccountsClient {
-	client := mgmtdocumentdb.NewDatabaseAccountsClient(subscriptionID, subscriptionID)
+func NewDatabaseAccountsClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) DatabaseAccountsClient {
+	client := mgmtdocumentdb.NewDatabaseAccountsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID, subscriptionID)
 	client.Authorizer = authorizer
 
 	return &databaseAccountsClient{

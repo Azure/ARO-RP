@@ -8,6 +8,7 @@ import (
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 )
 
 // PrivateLinkServicesClient is a minimal interface for azure PrivateLinkServicesClient
@@ -23,8 +24,8 @@ type privateLinkServicesClient struct {
 var _ PrivateLinkServicesClient = &privateLinkServicesClient{}
 
 // NewPrivateLinkServicesClient creates a new PrivateLinkServicesClient
-func NewPrivateLinkServicesClient(subscriptionID string, authorizer autorest.Authorizer) PrivateLinkServicesClient {
-	client := mgmtnetwork.NewPrivateLinkServicesClient(subscriptionID)
+func NewPrivateLinkServicesClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) PrivateLinkServicesClient {
+	client := mgmtnetwork.NewPrivateLinkServicesClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 
 	return &privateLinkServicesClient{

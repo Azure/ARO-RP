@@ -51,33 +51,33 @@ type manager struct {
 }
 
 // NewManager returns a new openshiftcluster Manager
-func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, cipher encryption.Cipher, billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (Manager, error) {
-	localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), _env.Environment().ResourceManagerEndpoint)
+func NewManager(log *logrus.Entry, env env.Interface, db database.OpenShiftClusters, cipher encryption.Cipher, billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (Manager, error) {
+	localFPAuthorizer, err := env.FPAuthorizer(env.TenantID(), env.Environment().ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	fpAuthorizer, err := _env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID, _env.Environment().ResourceManagerEndpoint)
+	fpAuthorizer, err := env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID, env.Environment().ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
 	var acrtoken pkgacrtoken.Manager
-	if _env.DeploymentMode() != deployment.Development {
-		acrtoken, err = pkgacrtoken.NewManager(_env, localFPAuthorizer)
+	if env.DeploymentMode() != deployment.Development {
+		acrtoken, err = pkgacrtoken.NewManager(env, localFPAuthorizer)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	ocDynamicValidator, err := validate.NewOpenShiftClusterDynamicValidator(log, _env, doc.OpenShiftCluster, subscriptionDoc)
+	ocDynamicValidator, err := validate.NewOpenShiftClusterDynamicValidator(log, env, doc.OpenShiftCluster, subscriptionDoc)
 	if err != nil {
 		return nil, err
 	}
 
 	m := &manager{
 		log:          log,
-		env:          _env,
+		env:          env,
 		db:           db,
 		cipher:       cipher,
 		billing:      billing,
@@ -85,10 +85,10 @@ func NewManager(log *logrus.Entry, _env env.Interface, db database.OpenShiftClus
 
 		ocDynamicValidator: ocDynamicValidator,
 
-		dns:             dns.NewManager(_env, localFPAuthorizer),
-		privateendpoint: privateendpoint.NewManager(_env, localFPAuthorizer),
+		dns:             dns.NewManager(env, localFPAuthorizer),
+		privateendpoint: privateendpoint.NewManager(env, localFPAuthorizer),
 		acrtoken:        acrtoken,
-		subnet:          subnet.NewManager(subscriptionDoc.ID, fpAuthorizer),
+		subnet:          subnet.NewManager(env, subscriptionDoc.ID, fpAuthorizer),
 
 		doc:             doc,
 		subscriptionDoc: subscriptionDoc,

@@ -81,26 +81,26 @@ type manager struct {
 const deploymentName = "azuredeploy"
 
 // NewManager returns a cluster manager
-func NewManager(ctx context.Context, log *logrus.Entry, _env env.Interface, db database.OpenShiftClusters, cipher encryption.Cipher,
+func NewManager(ctx context.Context, log *logrus.Entry, env env.Interface, db database.OpenShiftClusters, cipher encryption.Cipher,
 	billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (Interface, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	localFPAuthorizer, err := _env.FPAuthorizer(_env.TenantID(), _env.Environment().ResourceManagerEndpoint)
+	localFPAuthorizer, err := env.FPAuthorizer(env.TenantID(), env.Environment().ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	fpAuthorizer, err := _env.FPAuthorizer(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID, _env.Environment().ResourceManagerEndpoint)
+	fpAuthorizer, err := env.FPAuthorizer(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID, env.Environment().ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
 	return &manager{
 		log:               log,
-		env:               _env,
+		env:               env,
 		db:                db,
 		billing:           billing,
 		doc:               doc,
@@ -109,20 +109,20 @@ func NewManager(ctx context.Context, log *logrus.Entry, _env env.Interface, db d
 		fpAuthorizer:      fpAuthorizer,
 		localFpAuthorizer: localFPAuthorizer,
 
-		disks:               compute.NewDisksClient(r.SubscriptionID, fpAuthorizer),
-		virtualMachines:     compute.NewVirtualMachinesClient(r.SubscriptionID, fpAuthorizer),
-		interfaces:          network.NewInterfacesClient(r.SubscriptionID, fpAuthorizer),
-		publicIPAddresses:   network.NewPublicIPAddressesClient(r.SubscriptionID, fpAuthorizer),
-		loadBalancers:       network.NewLoadBalancersClient(r.SubscriptionID, fpAuthorizer),
-		securityGroups:      network.NewSecurityGroupsClient(r.SubscriptionID, fpAuthorizer),
-		deployments:         features.NewDeploymentsClient(r.SubscriptionID, fpAuthorizer),
-		resourceGroups:      features.NewResourceGroupsClient(r.SubscriptionID, fpAuthorizer),
-		resources:           features.NewResourcesClient(r.SubscriptionID, fpAuthorizer),
-		virtualNetworkLinks: privatedns.NewVirtualNetworkLinksClient(r.SubscriptionID, fpAuthorizer),
-		storageAccounts:     storage.NewAccountsClient(r.SubscriptionID, fpAuthorizer),
+		disks:               compute.NewDisksClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
+		virtualMachines:     compute.NewVirtualMachinesClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
+		interfaces:          network.NewInterfacesClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
+		publicIPAddresses:   network.NewPublicIPAddressesClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
+		loadBalancers:       network.NewLoadBalancersClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
+		securityGroups:      network.NewSecurityGroupsClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
+		deployments:         features.NewDeploymentsClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
+		resourceGroups:      features.NewResourceGroupsClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
+		resources:           features.NewResourcesClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
+		virtualNetworkLinks: privatedns.NewVirtualNetworkLinksClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
+		storageAccounts:     storage.NewAccountsClient(env.Environment(), r.SubscriptionID, fpAuthorizer),
 
-		dns:             dns.NewManager(_env, localFPAuthorizer),
-		privateendpoint: privateendpoint.NewManager(_env, localFPAuthorizer),
-		subnet:          subnet.NewManager(r.SubscriptionID, fpAuthorizer),
+		dns:             dns.NewManager(env, localFPAuthorizer),
+		privateendpoint: privateendpoint.NewManager(env, localFPAuthorizer),
+		subnet:          subnet.NewManager(env, r.SubscriptionID, fpAuthorizer),
 	}, nil
 }

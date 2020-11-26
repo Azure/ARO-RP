@@ -15,16 +15,17 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	v1 "k8s.io/client-go/tools/clientcmd/api/v1"
 
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift"
 )
 
-func Get(ctx context.Context, log *logrus.Entry, authorizer autorest.Authorizer, resourceID string) (*v1.Config, error) {
+func Get(ctx context.Context, log *logrus.Entry, env env.Core, authorizer autorest.Authorizer, resourceID string) (*v1.Config, error) {
 	res, err := azure.ParseResourceID(resourceID)
 	if err != nil {
 		return nil, err
 	}
 
-	openshiftclusters := redhatopenshift.NewOpenShiftClustersClient(res.SubscriptionID, authorizer)
+	openshiftclusters := redhatopenshift.NewOpenShiftClustersClient(env.Environment(), res.SubscriptionID, authorizer)
 
 	oc, err := openshiftclusters.Get(ctx, res.ResourceGroup, res.ResourceName)
 	if err != nil {

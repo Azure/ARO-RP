@@ -22,6 +22,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/client-go/tools/clientcmd/api/latest"
 
+	"github.com/Azure/ARO-RP/pkg/env"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
@@ -30,7 +31,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/cluster"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
-	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 	"github.com/Azure/ARO-RP/test/util/kubeadminkubeconfig"
 )
 
@@ -50,15 +50,14 @@ type clientSet struct {
 }
 
 var (
-	log            *logrus.Entry
-	deploymentMode deployment.Mode
-	im             instancemetadata.InstanceMetadata
-	clusterName    string
-	clients        *clientSet
+	log         *logrus.Entry
+	_env        env.Core
+	clusterName string
+	clients     *clientSet
 )
 
 func skipIfNotInDevelopmentEnv() {
-	if deploymentMode != deployment.Development {
+	if _env.DeploymentMode() != deployment.Development {
 		Skip("skipping tests in non-development environment")
 	}
 }
@@ -66,7 +65,7 @@ func skipIfNotInDevelopmentEnv() {
 func resourceIDFromEnv() string {
 	return fmt.Sprintf(
 		"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.RedHatOpenShift/openShiftClusters/%s",
-		im.SubscriptionID(), im.ResourceGroup(), clusterName)
+		_env.SubscriptionID(), _env.ResourceGroup(), clusterName)
 }
 
 func newClientSet(ctx context.Context) (*clientSet, error) {
@@ -75,7 +74,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
-	configv1, err := kubeadminkubeconfig.Get(ctx, log, authorizer, resourceIDFromEnv())
+	configv1, err := kubeadminkubeconfig.Get(ctx, log, _env, authorizer, resourceIDFromEnv())
 	if err != nil {
 		return nil, err
 	}
@@ -114,12 +113,12 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 	}
 
 	return &clientSet{
-		OpenshiftClusters: redhatopenshift.NewOpenShiftClustersClient(im.SubscriptionID(), authorizer),
-		Operations:        redhatopenshift.NewOperationsClient(im.SubscriptionID(), authorizer),
-		VirtualMachines:   compute.NewVirtualMachinesClient(im.SubscriptionID(), authorizer),
-		Resources:         features.NewResourcesClient(im.SubscriptionID(), authorizer),
-		ActivityLogs:      insights.NewActivityLogsClient(im.SubscriptionID(), authorizer),
-		VirtualNetworks:   network.NewVirtualNetworksClient(im.SubscriptionID(), authorizer),
+		OpenshiftClusters: redhatopenshift.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Operations:        redhatopenshift.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		VirtualMachines:   compute.NewVirtualMachinesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Resources:         features.NewResourcesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		ActivityLogs:      insights.NewActivityLogsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		VirtualNetworks:   network.NewVirtualNetworksClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 
 		RestConfig:  restconfig,
 		Kubernetes:  cli,
@@ -130,11 +129,8 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 }
 
 func setup(ctx context.Context) error {
-	deploymentMode = deployment.NewMode()
-	log.Infof("running in %s mode", deploymentMode)
-
 	var err error
-	im, err = instancemetadata.NewDev()
+	_env, err = env.NewCoreForCI(ctx, log)
 	if err != nil {
 		return err
 	}
@@ -150,7 +146,7 @@ func setup(ctx context.Context) error {
 	clusterName = os.Getenv("CLUSTER")
 
 	if os.Getenv("CI") != "" { // always create cluster in CI
-		cluster, err := cluster.New(log, deploymentMode, im, os.Getenv("CI") != "")
+		cluster, err := cluster.New(log, _env, os.Getenv("CI") != "")
 		if err != nil {
 			return err
 		}
@@ -172,7 +168,7 @@ func setup(ctx context.Context) error {
 func done(ctx context.Context) error {
 	// terminate early if delete flag is set to false
 	if os.Getenv("CI") != "" && os.Getenv("E2E_DELETE_CLUSTER") != "false" {
-		cluster, err := cluster.New(log, deploymentMode, im, os.Getenv("CI") != "")
+		cluster, err := cluster.New(log, _env, os.Getenv("CI") != "")
 		if err != nil {
 			return err
 		}

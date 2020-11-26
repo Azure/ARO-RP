@@ -45,8 +45,8 @@ func NewManager(env env.Interface, localFPAuthorizer autorest.Authorizer) (Manag
 		env: env,
 		r:   r,
 
-		tokens:     containerregistry.NewTokensClient(r.SubscriptionID, localFPAuthorizer),
-		registries: containerregistry.NewRegistriesClient(r.SubscriptionID, localFPAuthorizer),
+		tokens:     containerregistry.NewTokensClient(env.Environment(), r.SubscriptionID, localFPAuthorizer),
+		registries: containerregistry.NewRegistriesClient(env.Environment(), r.SubscriptionID, localFPAuthorizer),
 	}
 
 	return m, nil

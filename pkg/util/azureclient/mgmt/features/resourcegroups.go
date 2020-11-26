@@ -9,6 +9,7 @@ import (
 
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 )
 
 // ResourceGroupsClient is a minimal interface for azure ResourceGroupsClient
@@ -26,8 +27,8 @@ type resourceGroupsClient struct {
 var _ ResourceGroupsClient = &resourceGroupsClient{}
 
 // NewResourceGroupsClient creates a new ResourceGroupsClient
-func NewResourceGroupsClient(subscriptionID string, authorizer autorest.Authorizer) ResourceGroupsClient {
-	client := mgmtfeatures.NewResourceGroupsClient(subscriptionID)
+func NewResourceGroupsClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) ResourceGroupsClient {
+	client := mgmtfeatures.NewResourceGroupsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 	client.PollingDelay = 10 * time.Second
 	client.PollingDuration = time.Hour

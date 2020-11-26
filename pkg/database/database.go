@@ -109,7 +109,7 @@ func find(ctx context.Context, env env.Core) (string, string, error) {
 		return "", "", err
 	}
 
-	databaseaccounts := documentdb.NewDatabaseAccountsClient(env.SubscriptionID(), rpAuthorizer)
+	databaseaccounts := documentdb.NewDatabaseAccountsClient(env.Environment(), env.SubscriptionID(), rpAuthorizer)
 
 	acctName := os.Getenv("DATABASE_ACCOUNT_NAME")
 

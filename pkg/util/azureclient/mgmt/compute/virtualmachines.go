@@ -8,6 +8,7 @@ import (
 
 	mgmtcompute "github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2019-03-01/compute"
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 )
 
 // VirtualMachinesClient is a minimal interface for azure VirtualMachinesClient
@@ -23,8 +24,8 @@ type virtualMachinesClient struct {
 var _ VirtualMachinesClient = &virtualMachinesClient{}
 
 // NewVirtualMachinesClient creates a new VirtualMachinesClient
-func NewVirtualMachinesClient(subscriptionID string, authorizer autorest.Authorizer) VirtualMachinesClient {
-	client := mgmtcompute.NewVirtualMachinesClient(subscriptionID)
+func NewVirtualMachinesClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) VirtualMachinesClient {
+	client := mgmtcompute.NewVirtualMachinesClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 
 	return &virtualMachinesClient{

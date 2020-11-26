@@ -6,6 +6,7 @@ package containerregistry
 import (
 	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/containerregistry/mgmt/2019-06-01-preview/containerregistry"
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 )
 
 // TokensClient is a minimal interface for azure TokensClient
@@ -20,8 +21,8 @@ type tokensClient struct {
 var _ TokensClient = &tokensClient{}
 
 // NewTokensClient creates a new TokensClient
-func NewTokensClient(subscriptionID string, authorizer autorest.Authorizer) TokensClient {
-	client := mgmtcontainerregistry.NewTokensClient(subscriptionID)
+func NewTokensClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) TokensClient {
+	client := mgmtcontainerregistry.NewTokensClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 
 	return &tokensClient{

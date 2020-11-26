@@ -13,6 +13,7 @@ import (
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/ARO-RP/pkg/env"
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/purge"
 )
@@ -53,6 +54,11 @@ func main() {
 
 func run(ctx context.Context, log *logrus.Entry) error {
 	subscriptionID := os.Getenv("AZURE_SUBSCRIPTION_ID")
+
+	env, err := env.NewCoreForCI(ctx, log)
+	if err != nil {
+		return err
+	}
 
 	var ttl time.Duration
 	if os.Getenv("AZURE_PURGE_TTL") != "" {
@@ -125,7 +131,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 
 	log.Infof("Starting the resource cleaner, DryRun: %t", *dryRun)
 
-	rc, err := purge.NewResourceCleaner(log, subscriptionID, shouldDelete, *dryRun)
+	rc, err := purge.NewResourceCleaner(log, env, subscriptionID, shouldDelete, *dryRun)
 	if err != nil {
 		return err
 	}

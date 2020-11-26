@@ -13,10 +13,16 @@ import (
 	"github.com/sirupsen/logrus"
 
 	deployer "github.com/Azure/ARO-RP/pkg/deploy"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
 func deploy(ctx context.Context, log *logrus.Entry) error {
+	env, err := env.NewCoreForCI(ctx, log)
+	if err != nil {
+		return err
+	}
+
 	deployVersion, location := version.GitCommit, flag.Arg(2)
 
 	if os.Getenv("RP_VERSION") != "" {
@@ -38,7 +44,7 @@ func deploy(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	deployer, err := deployer.New(ctx, log, config, deployVersion, os.Getenv("FULL_DEPLOY") != "")
+	deployer, err := deployer.New(ctx, log, env, config, deployVersion, os.Getenv("FULL_DEPLOY") != "")
 	if err != nil {
 		return err
 	}

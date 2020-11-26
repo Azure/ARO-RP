@@ -17,7 +17,6 @@ import (
 	mgmtauthorization "github.com/Azure/azure-sdk-for-go/services/preview/authorization/mgmt/2018-09-01-preview/authorization"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
-	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/Azure/go-autorest/autorest/to"
 	uuid "github.com/satori/go.uuid"
@@ -26,6 +25,7 @@ import (
 	mgmtredhatopenshift "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2020-04-30/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/deploy"
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/graphrbac"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
@@ -33,16 +33,14 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
-	"github.com/Azure/ARO-RP/pkg/util/instancemetadata"
 	"github.com/Azure/ARO-RP/pkg/util/rbac"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
 type Cluster struct {
-	log            *logrus.Entry
-	deploymentMode deployment.Mode
-	instancemetadata.InstanceMetadata
-	ci bool
+	log *logrus.Entry
+	env env.Core
+	ci  bool
 
 	deployments       features.DeploymentsClient
 	groups            features.ResourceGroupsClient
@@ -73,8 +71,8 @@ func (errs errors) Error() string {
 	return sb.String()
 }
 
-func New(log *logrus.Entry, deploymentMode deployment.Mode, instancemetadata instancemetadata.InstanceMetadata, ci bool) (*Cluster, error) {
-	if deploymentMode == deployment.Development {
+func New(log *logrus.Entry, env env.Core, ci bool) (*Cluster, error) {
+	if env.DeploymentMode() == deployment.Development {
 		for _, key := range []string{
 			"AZURE_FP_CLIENT_ID",
 		} {
@@ -89,38 +87,37 @@ func New(log *logrus.Entry, deploymentMode deployment.Mode, instancemetadata ins
 		return nil, err
 	}
 
-	graphAuthorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(azure.PublicCloud.GraphEndpoint)
+	graphAuthorizer, err := auth.NewAuthorizerFromEnvironmentWithResource(env.Environment().GraphEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Cluster{
-		log:              log,
-		deploymentMode:   deploymentMode,
-		InstanceMetadata: instancemetadata,
-		ci:               ci,
+		log: log,
+		env: env,
+		ci:  ci,
 
-		deployments:       features.NewDeploymentsClient(instancemetadata.SubscriptionID(), authorizer),
-		groups:            features.NewResourceGroupsClient(instancemetadata.SubscriptionID(), authorizer),
-		openshiftclusters: redhatopenshift.NewOpenShiftClustersClient(instancemetadata.SubscriptionID(), authorizer),
-		applications:      graphrbac.NewApplicationsClient(instancemetadata.TenantID(), graphAuthorizer),
-		serviceprincipals: graphrbac.NewServicePrincipalClient(instancemetadata.TenantID(), graphAuthorizer),
-		securitygroups:    network.NewSecurityGroupsClient(instancemetadata.SubscriptionID(), authorizer),
-		subnets:           network.NewSubnetsClient(instancemetadata.SubscriptionID(), authorizer),
-		routetables:       network.NewRouteTablesClient(instancemetadata.SubscriptionID(), authorizer),
-		roleassignments:   authorization.NewRoleAssignmentsClient(instancemetadata.SubscriptionID(), authorizer),
+		deployments:       features.NewDeploymentsClient(env.Environment(), env.SubscriptionID(), authorizer),
+		groups:            features.NewResourceGroupsClient(env.Environment(), env.SubscriptionID(), authorizer),
+		openshiftclusters: redhatopenshift.NewOpenShiftClustersClient(env.Environment(), env.SubscriptionID(), authorizer),
+		applications:      graphrbac.NewApplicationsClient(env.Environment(), env.TenantID(), graphAuthorizer),
+		serviceprincipals: graphrbac.NewServicePrincipalClient(env.Environment(), env.TenantID(), graphAuthorizer),
+		securitygroups:    network.NewSecurityGroupsClient(env.Environment(), env.SubscriptionID(), authorizer),
+		subnets:           network.NewSubnetsClient(env.Environment(), env.SubscriptionID(), authorizer),
+		routetables:       network.NewRouteTablesClient(env.Environment(), env.SubscriptionID(), authorizer),
+		roleassignments:   authorization.NewRoleAssignmentsClient(env.Environment(), env.SubscriptionID(), authorizer),
 	}, nil
 }
 
 func (c *Cluster) Create(ctx context.Context, clusterName string) error {
-	_, err := c.openshiftclusters.Get(ctx, c.ResourceGroup(), clusterName)
+	_, err := c.openshiftclusters.Get(ctx, c.env.ResourceGroup(), clusterName)
 	if err == nil {
 		c.log.Print("cluster already exists, skipping create")
 		return nil
 	}
 
 	var fpClientID string
-	switch c.deploymentMode {
+	switch c.env.DeploymentMode() {
 	case deployment.Integration:
 		fpClientID = firstPartyClientIDIntegration
 	case deployment.Production:
@@ -150,8 +147,8 @@ func (c *Cluster) Create(ctx context.Context, clusterName string) error {
 
 	if c.ci {
 		c.log.Infof("creating resource group")
-		_, err = c.groups.CreateOrUpdate(ctx, c.ResourceGroup(), mgmtfeatures.ResourceGroup{
-			Location: to.StringPtr(c.Location()),
+		_, err = c.groups.CreateOrUpdate(ctx, c.env.ResourceGroup(), mgmtfeatures.ResourceGroup{
+			Location: to.StringPtr(c.env.Location()),
 		})
 		if err != nil {
 			return err
@@ -182,7 +179,7 @@ func (c *Cluster) Create(ctx context.Context, clusterName string) error {
 	defer cancel()
 
 	c.log.Info("predeploying ARM template")
-	err = c.deployments.CreateOrUpdateAndWait(armctx, c.ResourceGroup(), clusterName, mgmtfeatures.Deployment{
+	err = c.deployments.CreateOrUpdateAndWait(armctx, c.env.ResourceGroup(), clusterName, mgmtfeatures.Deployment{
 		Properties: &mgmtfeatures.DeploymentProperties{
 			Template:   template,
 			Parameters: parameters,
@@ -195,8 +192,8 @@ func (c *Cluster) Create(ctx context.Context, clusterName string) error {
 
 	c.log.Info("creating role assignments")
 	for _, scope := range []string{
-		"/subscriptions/" + c.SubscriptionID() + "/resourceGroups/" + c.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/dev-vnet",
-		"/subscriptions/" + c.SubscriptionID() + "/resourceGroups/" + c.ResourceGroup() + "/providers/Microsoft.Network/routeTables/" + clusterName + "-rt",
+		"/subscriptions/" + c.env.SubscriptionID() + "/resourceGroups/" + c.env.ResourceGroup() + "/providers/Microsoft.Network/virtualNetworks/dev-vnet",
+		"/subscriptions/" + c.env.SubscriptionID() + "/resourceGroups/" + c.env.ResourceGroup() + "/providers/Microsoft.Network/routeTables/" + clusterName + "-rt",
 	} {
 		for _, principalID := range []string{spID, fpSPID} {
 			for i := 0; i < 5; i++ {
@@ -206,7 +203,7 @@ func (c *Cluster) Create(ctx context.Context, clusterName string) error {
 					uuid.NewV4().String(),
 					mgmtauthorization.RoleAssignmentCreateParameters{
 						RoleAssignmentProperties: &mgmtauthorization.RoleAssignmentProperties{
-							RoleDefinitionID: to.StringPtr("/subscriptions/" + c.SubscriptionID() + "/providers/Microsoft.Authorization/roleDefinitions/" + rbac.RoleNetworkContributor),
+							RoleDefinitionID: to.StringPtr("/subscriptions/" + c.env.SubscriptionID() + "/providers/Microsoft.Authorization/roleDefinitions/" + rbac.RoleNetworkContributor),
 							PrincipalID:      &principalID,
 							PrincipalType:    mgmtauthorization.ServicePrincipal,
 						},
@@ -257,7 +254,7 @@ func (c *Cluster) Create(ctx context.Context, clusterName string) error {
 func (c *Cluster) Delete(ctx context.Context, clusterName string) error {
 	var errs errors
 
-	oc, err := c.openshiftclusters.Get(ctx, c.ResourceGroup(), clusterName)
+	oc, err := c.openshiftclusters.Get(ctx, c.env.ResourceGroup(), clusterName)
 	if err == nil {
 		err = c.deleteRoleAssignments(ctx, *oc.OpenShiftClusterProperties.ServicePrincipalProfile.ClientID)
 		if err != nil {
@@ -270,17 +267,17 @@ func (c *Cluster) Delete(ctx context.Context, clusterName string) error {
 		}
 
 		c.log.Print("deleting cluster")
-		err = c.openshiftclusters.DeleteAndWait(ctx, c.ResourceGroup(), clusterName)
+		err = c.openshiftclusters.DeleteAndWait(ctx, c.env.ResourceGroup(), clusterName)
 		if err != nil {
 			errs = append(errs, err)
 		}
 	}
 
 	if c.ci {
-		_, err = c.groups.Get(ctx, c.ResourceGroup())
+		_, err = c.groups.Get(ctx, c.env.ResourceGroup())
 		if err == nil {
 			c.log.Print("deleting resource group")
-			err = c.groups.DeleteAndWait(ctx, c.ResourceGroup())
+			err = c.groups.DeleteAndWait(ctx, c.env.ResourceGroup())
 			if err != nil {
 				errs = append(errs, err)
 			}
@@ -288,24 +285,24 @@ func (c *Cluster) Delete(ctx context.Context, clusterName string) error {
 	} else {
 		// Deleting the deployment does not clean up the associated resources
 		c.log.Info("deleting deployment")
-		err = c.deployments.DeleteAndWait(ctx, c.ResourceGroup(), clusterName)
+		err = c.deployments.DeleteAndWait(ctx, c.env.ResourceGroup(), clusterName)
 		if err != nil {
 			errs = append(errs, err)
 		}
 
 		c.log.Info("deleting master/worker subnets")
-		err = c.subnets.DeleteAndWait(ctx, c.ResourceGroup(), "dev-vnet", clusterName+"-master")
+		err = c.subnets.DeleteAndWait(ctx, c.env.ResourceGroup(), "dev-vnet", clusterName+"-master")
 		if err != nil {
 			errs = append(errs, err)
 		}
 
-		err = c.subnets.DeleteAndWait(ctx, c.ResourceGroup(), "dev-vnet", clusterName+"-worker")
+		err = c.subnets.DeleteAndWait(ctx, c.env.ResourceGroup(), "dev-vnet", clusterName+"-worker")
 		if err != nil {
 			errs = append(errs, err)
 		}
 
 		c.log.Info("deleting route table")
-		err = c.routetables.DeleteAndWait(ctx, c.ResourceGroup(), clusterName+"-rt")
+		err = c.routetables.DeleteAndWait(ctx, c.env.ResourceGroup(), clusterName+"-rt")
 		if err != nil {
 			errs = append(errs, err)
 		}
@@ -325,7 +322,7 @@ func (c *Cluster) createCluster(ctx context.Context, clusterName, clientID, clie
 		OpenShiftClusterProperties: &mgmtredhatopenshift.OpenShiftClusterProperties{
 			ClusterProfile: &mgmtredhatopenshift.ClusterProfile{
 				Domain:          to.StringPtr(strings.ToLower(clusterName)),
-				ResourceGroupID: to.StringPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.SubscriptionID(), "aro-"+clusterName)),
+				ResourceGroupID: to.StringPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s", c.env.SubscriptionID(), "aro-"+clusterName)),
 			},
 			ServicePrincipalProfile: &mgmtredhatopenshift.ServicePrincipalProfile{
 				ClientID:     to.StringPtr(clientID),
@@ -337,14 +334,14 @@ func (c *Cluster) createCluster(ctx context.Context, clusterName, clientID, clie
 			},
 			MasterProfile: &mgmtredhatopenshift.MasterProfile{
 				VMSize:   mgmtredhatopenshift.StandardD8sV3,
-				SubnetID: to.StringPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-master", c.SubscriptionID(), c.ResourceGroup(), clusterName)),
+				SubnetID: to.StringPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-master", c.env.SubscriptionID(), c.env.ResourceGroup(), clusterName)),
 			},
 			WorkerProfiles: &[]mgmtredhatopenshift.WorkerProfile{
 				{
 					Name:       to.StringPtr("worker"),
 					VMSize:     mgmtredhatopenshift.VMSize1StandardD4sV3,
 					DiskSizeGB: to.Int32Ptr(128),
-					SubnetID:   to.StringPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-worker", c.SubscriptionID(), c.ResourceGroup(), clusterName)),
+					SubnetID:   to.StringPtr(fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Network/virtualNetworks/dev-vnet/subnets/%s-worker", c.env.SubscriptionID(), c.env.ResourceGroup(), clusterName)),
 					Count:      to.Int32Ptr(3),
 				},
 			},
@@ -358,14 +355,14 @@ func (c *Cluster) createCluster(ctx context.Context, clusterName, clientID, clie
 				},
 			},
 		},
-		Location: to.StringPtr(c.Location()),
+		Location: to.StringPtr(c.env.Location()),
 	}
 
-	if c.deploymentMode == deployment.Development {
+	if c.env.DeploymentMode() == deployment.Development {
 		(*oc.WorkerProfiles)[0].VMSize = mgmtredhatopenshift.VMSize1StandardD2sV3
 	}
 
-	return c.openshiftclusters.CreateOrUpdateAndWait(ctx, c.ResourceGroup(), clusterName, oc)
+	return c.openshiftclusters.CreateOrUpdateAndWait(ctx, c.env.ResourceGroup(), clusterName, oc)
 }
 
 func (c *Cluster) fixupNSGs(ctx context.Context, clusterName string) error {
@@ -416,7 +413,7 @@ func (c *Cluster) fixupNSGs(ctx context.Context, clusterName string) error {
 	}
 
 	for _, fix := range fixes {
-		subnet, err := c.subnets.Get(ctx, c.ResourceGroup(), "dev-vnet", fix.subnetName, "")
+		subnet, err := c.subnets.Get(ctx, c.env.ResourceGroup(), "dev-vnet", fix.subnetName, "")
 		if err != nil {
 			return err
 		}
@@ -425,7 +422,7 @@ func (c *Cluster) fixupNSGs(ctx context.Context, clusterName string) error {
 			ID: &fix.nsgID,
 		}
 
-		err = c.subnets.CreateOrUpdateAndWait(ctx, c.ResourceGroup(), "dev-vnet", fix.subnetName, subnet)
+		err = c.subnets.CreateOrUpdateAndWait(ctx, c.env.ResourceGroup(), "dev-vnet", fix.subnetName, subnet)
 		if err != nil {
 			return err
 		}
@@ -443,7 +440,7 @@ func (c *Cluster) deleteRoleAssignments(ctx context.Context, appID string) error
 		return nil
 	}
 
-	roleAssignments, err := c.roleassignments.ListForResourceGroup(ctx, c.ResourceGroup(), fmt.Sprintf("principalId eq '%s'", spObjID))
+	roleAssignments, err := c.roleassignments.ListForResourceGroup(ctx, c.env.ResourceGroup(), fmt.Sprintf("principalId eq '%s'", spObjID))
 	if err != nil {
 		return err
 	}

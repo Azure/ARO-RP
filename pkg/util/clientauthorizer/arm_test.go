@@ -13,6 +13,11 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/golang/mock/gomock"
+
+	mock_instancemetadata "github.com/Azure/ARO-RP/pkg/util/mocks/instancemetadata"
 )
 
 func TestARMRefreshOnce(t *testing.T) {
@@ -109,17 +114,24 @@ func TestARMRefreshOnce(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			im := mock_instancemetadata.NewMockInstanceMetadata(controller)
+			im.EXPECT().Environment().AnyTimes().Return(&azure.PublicCloud)
+
 			a := &arm{
 				now: func() time.Time { return time.Date(2020, 1, 20, 0, 0, 0, 0, time.UTC) },
 				do: func(req *http.Request) (*http.Response, error) {
 					if req.Method != http.MethodGet {
 						return nil, fmt.Errorf("unexpected method %q", req.Method)
 					}
-					if req.URL.String() != "https://management.azure.com:24582/metadata/authentication?api-version=2015-01-01" {
+					if req.URL.String() != strings.TrimSuffix(im.Environment().ResourceManagerEndpoint, "/")+":24582/metadata/authentication?api-version=2015-01-01" {
 						return nil, fmt.Errorf("unexpected URL %q", req.URL.String())
 					}
 					return tt.do(req)
 				},
+				im: im,
 			}
 
 			if a.IsReady() {
@@ -262,7 +274,14 @@ func TestARMIsAuthorized(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
+			controller := gomock.NewController(t)
+			defer controller.Finish()
+
+			im := mock_instancemetadata.NewMockInstanceMetadata(controller)
+			im.EXPECT().Environment().AnyTimes().Return(&azure.PublicCloud)
+
 			a := &arm{
+				im: im,
 				now: func() time.Time {
 					return now
 				},

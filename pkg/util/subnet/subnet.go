@@ -13,6 +13,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 )
 
@@ -25,9 +26,9 @@ type manager struct {
 	subnets network.SubnetsClient
 }
 
-func NewManager(subscriptionID string, spAuthorizer autorest.Authorizer) Manager {
+func NewManager(env env.Core, subscriptionID string, spAuthorizer autorest.Authorizer) Manager {
 	return &manager{
-		subnets: network.NewSubnetsClient(subscriptionID, spAuthorizer),
+		subnets: network.NewSubnetsClient(env.Environment(), subscriptionID, spAuthorizer),
 	}
 }
 

@@ -28,7 +28,7 @@ var _ = Describe("[Admin API] VM redeploy action", func() {
 		resourceID := resourceIDFromEnv()
 
 		By("getting the resource group where the VM instances live in")
-		oc, err := clients.OpenshiftClusters.Get(ctx, im.ResourceGroup(), clusterName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, _env.ResourceGroup(), clusterName)
 		Expect(err).NotTo(HaveOccurred())
 		clusterResourceGroup := stringutils.LastTokenByte(*oc.OpenShiftClusterProperties.ClusterProfile.ResourceGroupID, '/')
 

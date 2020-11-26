@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 
 	"github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2020-04-30/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
@@ -25,7 +26,7 @@ type operationsClient struct {
 var _ OperationsClient = &operationsClient{}
 
 // NewOperationsClient creates a new OperationsClient
-func NewOperationsClient(subscriptionID string, authorizer autorest.Authorizer) OperationsClient {
+func NewOperationsClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) OperationsClient {
 	var client redhatopenshift.OperationsClient
 	if deployment.NewMode() == deployment.Development {
 		client = redhatopenshift.NewOperationsClientWithBaseURI("https://localhost:8443", subscriptionID)
@@ -37,7 +38,7 @@ func NewOperationsClient(subscriptionID string, authorizer autorest.Authorizer) 
 			},
 		}
 	} else {
-		client = redhatopenshift.NewOperationsClient(subscriptionID)
+		client = redhatopenshift.NewOperationsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 		client.Authorizer = authorizer
 	}
 

@@ -139,7 +139,7 @@ func newProd(ctx context.Context, log *logrus.Entry) (*prod, error) {
 }
 
 func (p *prod) InitializeAuthorizers() error {
-	p.armClientAuthorizer = clientauthorizer.NewARM(p.log)
+	p.armClientAuthorizer = clientauthorizer.NewARM(p.log, p.Core)
 
 	adminClientAuthorizer, err := clientauthorizer.NewAdmin(
 		p.log,
@@ -175,7 +175,7 @@ func (p *prod) AROOperatorImage() string {
 }
 
 func (p *prod) populateZones(ctx context.Context, rpAuthorizer autorest.Authorizer) error {
-	c := compute.NewResourceSkusClient(p.SubscriptionID(), rpAuthorizer)
+	c := compute.NewResourceSkusClient(p.Environment(), p.SubscriptionID(), rpAuthorizer)
 
 	skus, err := c.List(ctx, "")
 	if err != nil {

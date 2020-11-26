@@ -26,7 +26,7 @@ var _ = Describe("[Admin API] List Azure resources action", func() {
 		resourceID := resourceIDFromEnv()
 
 		By("getting the resource group where cluster resources live in")
-		oc, err := clients.OpenshiftClusters.Get(ctx, im.ResourceGroup(), clusterName)
+		oc, err := clients.OpenshiftClusters.Get(ctx, _env.ResourceGroup(), clusterName)
 		Expect(err).NotTo(HaveOccurred())
 		clusterResourceGroup := stringutils.LastTokenByte(*oc.OpenShiftClusterProperties.ClusterProfile.ResourceGroupID, '/')
 

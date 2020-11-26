@@ -10,6 +10,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure/auth"
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
@@ -33,7 +34,7 @@ type ResourceCleaner struct {
 }
 
 // NewResourceCleaner instantiates the new RC object
-func NewResourceCleaner(log *logrus.Entry, subscriptionID string, shouldDelete checkFn, dryRun bool) (*ResourceCleaner, error) {
+func NewResourceCleaner(log *logrus.Entry, env env.Core, subscriptionID string, shouldDelete checkFn, dryRun bool) (*ResourceCleaner, error) {
 	authorizer, err := auth.NewAuthorizerFromEnvironment()
 	if err != nil {
 		return nil, err
@@ -43,12 +44,12 @@ func NewResourceCleaner(log *logrus.Entry, subscriptionID string, shouldDelete c
 		log:    log,
 		dryRun: dryRun,
 
-		resourcegroupscli:      features.NewResourceGroupsClient(subscriptionID, authorizer),
-		vnetscli:               network.NewVirtualNetworksClient(subscriptionID, authorizer),
-		privatelinkservicescli: network.NewPrivateLinkServicesClient(subscriptionID, authorizer),
-		securitygroupscli:      network.NewSecurityGroupsClient(subscriptionID, authorizer),
+		resourcegroupscli:      features.NewResourceGroupsClient(env.Environment(), subscriptionID, authorizer),
+		vnetscli:               network.NewVirtualNetworksClient(env.Environment(), subscriptionID, authorizer),
+		privatelinkservicescli: network.NewPrivateLinkServicesClient(env.Environment(), subscriptionID, authorizer),
+		securitygroupscli:      network.NewSecurityGroupsClient(env.Environment(), subscriptionID, authorizer),
 
-		subnet: subnet.NewManager(subscriptionID, authorizer),
+		subnet: subnet.NewManager(env, subscriptionID, authorizer),
 
 		// ShouldDelete decides whether the resource group gets deleted
 		shouldDelete: shouldDelete,

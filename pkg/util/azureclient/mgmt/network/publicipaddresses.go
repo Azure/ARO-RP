@@ -8,6 +8,7 @@ import (
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 )
 
 // PublicIPAddressesClient is a minimal interface for azure PublicIPAddressesClient
@@ -24,8 +25,8 @@ type publicIPAddressesClient struct {
 var _ PublicIPAddressesClient = &publicIPAddressesClient{}
 
 // NewPublicIPAddressesClient creates a new PublicIPAddressesClient
-func NewPublicIPAddressesClient(subscriptionID string, authorizer autorest.Authorizer) PublicIPAddressesClient {
-	client := mgmtnetwork.NewPublicIPAddressesClient(subscriptionID)
+func NewPublicIPAddressesClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) PublicIPAddressesClient {
+	client := mgmtnetwork.NewPublicIPAddressesClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 
 	return &publicIPAddressesClient{

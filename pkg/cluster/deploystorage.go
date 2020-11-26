@@ -56,7 +56,7 @@ func (m *manager) clusterSPObjectID(ctx context.Context) (string, error) {
 
 	spGraphAuthorizer := autorest.NewBearerAuthorizer(token)
 
-	applications := graphrbac.NewApplicationsClient(spp.TenantID, spGraphAuthorizer)
+	applications := graphrbac.NewApplicationsClient(m.env.Environment(), spp.TenantID, spGraphAuthorizer)
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()

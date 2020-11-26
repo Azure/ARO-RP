@@ -6,6 +6,7 @@ package containerregistry
 import (
 	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/containerregistry/mgmt/2019-06-01-preview/containerregistry"
 	"github.com/Azure/go-autorest/autorest"
+	"github.com/Azure/go-autorest/autorest/azure"
 )
 
 // RegistriesClient is a minimal interface for azure RegistriesClient
@@ -20,8 +21,8 @@ type registriesClient struct {
 var _ RegistriesClient = &registriesClient{}
 
 // NewRegistriesClient creates a new RegistriesClient
-func NewRegistriesClient(subscriptionID string, authorizer autorest.Authorizer) RegistriesClient {
-	client := mgmtcontainerregistry.NewRegistriesClient(subscriptionID)
+func NewRegistriesClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) RegistriesClient {
+	client := mgmtcontainerregistry.NewRegistriesClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 
 	return &registriesClient{
