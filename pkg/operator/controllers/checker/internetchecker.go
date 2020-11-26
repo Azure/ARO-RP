@@ -63,6 +63,24 @@ func (r *InternetChecker) Name() string {
 
 // Reconcile will keep checking that the cluster can connect to essential services.
 func (r *InternetChecker) Check(ctx context.Context) error {
+	cli := &http.Client{
+		Transport: &http.Transport{
+			// We set DisableKeepAlives for two reasons:
+			//
+			// 1. If we're talking HTTP/2 and the remote end blackholes traffic,
+			// Go has a bug whereby it doesn't reset the connection after a
+			// timeout (https://github.com/golang/go/issues/36026).  If this
+			// happens, we never have a chance to get healthy.  We have
+			// specifically seen this with gcs.prod.monitoring.core.windows.net
+			// in Korea Central, which currently has a bad server which when we
+			// hit it causes our cluster creations to fail.
+			//
+			// 2. We *want* to evaluate our capability to successfully create
+			// *new* connections to internet endpoints anyway.
+			DisableKeepAlives: true,
+		},
+	}
+
 	instance, err := r.arocli.Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 	if err != nil {
 		return err
@@ -73,7 +91,7 @@ func (r *InternetChecker) Check(ctx context.Context) error {
 	for _, url := range instance.Spec.InternetChecker.URLs {
 		checkCount++
 		go func(urlToCheck string) {
-			ch <- r.checkWithRetry(&http.Client{}, urlToCheck, checkBackoff)
+			ch <- r.checkWithRetry(cli, urlToCheck, checkBackoff)
 		}(url)
 	}
 
