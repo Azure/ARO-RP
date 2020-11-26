@@ -14,16 +14,16 @@ type OpenShiftClusterList struct {
 
 // OpenShiftCluster represents an Azure Red Hat OpenShift cluster.
 type OpenShiftCluster struct {
-	// The resource ID (immutable).
+	// The resource ID.
 	ID string `json:"id,omitempty" mutable:"case"`
 
-	// The resource name (immutable).
+	// The resource name.
 	Name string `json:"name,omitempty" mutable:"case"`
 
-	// The resource type (immutable).
+	// The resource type.
 	Type string `json:"type,omitempty" mutable:"case"`
 
-	// The resource location (immutable).
+	// The resource location.
 	Location string `json:"location,omitempty"`
 
 	// The resource tags.
@@ -38,7 +38,7 @@ type Tags map[string]string
 
 // OpenShiftClusterProperties represents an OpenShift cluster's properties.
 type OpenShiftClusterProperties struct {
-	// The cluster provisioning state (immutable).
+	// The cluster provisioning state.
 	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"`
 
 	// The cluster profile.
@@ -69,7 +69,7 @@ type OpenShiftClusterProperties struct {
 // ProvisioningState represents a provisioning state.
 type ProvisioningState string
 
-// ProvisioningState constants
+// ProvisioningState constants.
 const (
 	ProvisioningStateCreating      ProvisioningState = "Creating"
 	ProvisioningStateUpdating      ProvisioningState = "Updating"
@@ -81,49 +81,49 @@ const (
 
 // ClusterProfile represents a cluster profile.
 type ClusterProfile struct {
-	// The pull secret for the cluster (immutable).
+	// The pull secret for the cluster.
 	PullSecret string `json:"pullSecret,omitempty"`
 
-	// The domain for the cluster (immutable).
+	// The domain for the cluster.
 	Domain string `json:"domain,omitempty"`
 
-	// The version of the cluster (immutable).
+	// The version of the cluster.
 	Version string `json:"version,omitempty"`
 
-	// The ID of the cluster resource group (immutable).
+	// The ID of the cluster resource group.
 	ResourceGroupID string `json:"resourceGroupId,omitempty"`
 }
 
 // ConsoleProfile represents a console profile.
 type ConsoleProfile struct {
-	// The URL to access the cluster console (immutable).
+	// The URL to access the cluster console.
 	URL string `json:"url,omitempty"`
 }
 
 // ServicePrincipalProfile represents a service principal profile.
 type ServicePrincipalProfile struct {
-	// The client ID used for the cluster (immutable).
+	// The client ID used for the cluster.
 	ClientID string `json:"clientId,omitempty"`
 
-	// The client secret used for the cluster (immutable).
+	// The client secret used for the cluster.
 	ClientSecret string `json:"clientSecret,omitempty"`
 }
 
 // NetworkProfile represents a network profile.
 type NetworkProfile struct {
-	// The CIDR used for OpenShift/Kubernetes Pods (immutable).
+	// The CIDR used for OpenShift/Kubernetes Pods.
 	PodCIDR string `json:"podCidr,omitempty"`
 
-	// The CIDR used for OpenShift/Kubernetes Services (immutable).
+	// The CIDR used for OpenShift/Kubernetes Services.
 	ServiceCIDR string `json:"serviceCidr,omitempty"`
 }
 
 // MasterProfile represents a master profile.
 type MasterProfile struct {
-	// The size of the master VMs (immutable).
+	// The size of the master VMs.
 	VMSize VMSize `json:"vmSize,omitempty"`
 
-	// The Azure resource ID of the master subnet (immutable).
+	// The Azure resource ID of the master subnet.
 	SubnetID string `json:"subnetId,omitempty"`
 }
 
@@ -157,31 +157,31 @@ const (
 
 // WorkerProfile represents a worker profile.
 type WorkerProfile struct {
-	// The worker profile name.  Must be "worker" (immutable).
+	// The worker profile name.
 	Name string `json:"name,omitempty"`
 
-	// The size of the worker VMs (immutable).
+	// The size of the worker VMs.
 	VMSize VMSize `json:"vmSize,omitempty"`
 
-	// The disk size of the worker VMs.  Must be 128 or greater (immutable).
+	// The disk size of the worker VMs.
 	DiskSizeGB int `json:"diskSizeGB,omitempty"`
 
-	// The Azure resource ID of the worker subnet (immutable).
+	// The Azure resource ID of the worker subnet.
 	SubnetID string `json:"subnetId,omitempty"`
 
-	// The number of worker VMs.  Must be between 3 and 20 (immutable).
+	// The number of worker VMs.
 	Count int `json:"count,omitempty"`
 }
 
 // APIServerProfile represents an API server profile.
 type APIServerProfile struct {
-	// API server visibility (immutable).
+	// API server visibility.
 	Visibility Visibility `json:"visibility,omitempty"`
 
-	// The URL to access the cluster API server (immutable).
+	// The URL to access the cluster API server.
 	URL string `json:"url,omitempty"`
 
-	// The IP of the cluster API server (immutable).
+	// The IP of the cluster API server.
 	IP string `json:"ip,omitempty"`
 }
 
@@ -196,12 +196,12 @@ const (
 
 // IngressProfile represents an ingress profile.
 type IngressProfile struct {
-	// The ingress profile name.  Must be "default" (immutable).
+	// The ingress profile name.
 	Name string `json:"name,omitempty"`
 
-	// Ingress visibility (immutable).
+	// Ingress visibility.
 	Visibility Visibility `json:"visibility,omitempty"`
 
-	// The IP of the ingress (immutable).
+	// The IP of the ingress.
 	IP string `json:"ip,omitempty"`
 }

@@ -248,7 +248,7 @@ func (sv *openShiftClusterStaticValidator) validateWorkerProfile(path string, wp
 	if strings.EqualFold(mp.SubnetID, wp.SubnetID) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".subnetId", "The provided worker VM subnet '%s' is invalid: must be different to master VM subnet '%s'.", wp.SubnetID, mp.SubnetID)
 	}
-	if wp.Count < 3 || wp.Count > 20 {
+	if wp.Count < 2 || wp.Count > 50 {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidParameter, path+".count", "The provided worker count '%d' is invalid.", wp.Count)
 	}
 

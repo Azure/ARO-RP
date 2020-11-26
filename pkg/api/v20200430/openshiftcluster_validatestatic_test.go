@@ -520,16 +520,16 @@ func TestOpenShiftClusterStaticValidateWorkerProfile(t *testing.T) {
 		{
 			name: "count too small",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.WorkerProfiles[0].Count = 2
+				oc.Properties.WorkerProfiles[0].Count = 1
 			},
-			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].count: The provided worker count '2' is invalid.",
+			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].count: The provided worker count '1' is invalid.",
 		},
 		{
 			name: "count too big",
 			modify: func(oc *OpenShiftCluster) {
-				oc.Properties.WorkerProfiles[0].Count = 21
+				oc.Properties.WorkerProfiles[0].Count = 51
 			},
-			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].count: The provided worker count '21' is invalid.",
+			wantErr: "400: InvalidParameter: properties.workerProfiles['worker'].count: The provided worker count '51' is invalid.",
 		},
 	}
 
