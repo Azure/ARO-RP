@@ -43,6 +43,7 @@ func NewBestEffortEnricher(log *logrus.Entry, dialer proxy.Dialer, m metrics.Int
 		taskConstructors: []enricherTaskConstructor{
 			newClusterVersionEnricherTask,
 			newWorkerProfilesEnricherTask,
+			newClusterServicePrincipalEnricherTask,
 		},
 	}
 }
