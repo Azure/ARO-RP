@@ -76,7 +76,7 @@ func TestDenyAssignments(t *testing.T) {
 					},
 				},
 			}
-			exceptionsToDeniedActions := *(*((m.denyAssignments("testing").Resource).(*mgmtauthorization.DenyAssignment).
+			exceptionsToDeniedActions := *(*((m.denyAssignments("testing")[0].Resource).(*mgmtauthorization.DenyAssignment).
 				DenyAssignmentProperties.Permissions))[0].NotActions
 			if !reflect.DeepEqual(exceptionsToDeniedActions, tt.want) {
 				t.Error(exceptionsToDeniedActions)

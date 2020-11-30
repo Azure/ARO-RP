@@ -195,7 +195,7 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 	}
 
 	if m.env.DeploymentMode() == deployment.Production {
-		t.Resources = append(t.Resources, m.denyAssignments(clusterSPObjectID))
+		t.Resources = append(t.Resources, m.denyAssignments(clusterSPObjectID)...)
 	}
 
 	err = m.deployARMTemplate(ctx, resourceGroup, "storage", t, nil)
@@ -239,7 +239,7 @@ var extraDenyAssignmentExclusions = map[string][]string{
 	},
 }
 
-func (m *manager) denyAssignments(clusterSPObjectID string) *arm.Resource {
+func (m *manager) denyAssignments(clusterSPObjectID string) []*arm.Resource {
 	notActions := []string{
 		"Microsoft.Network/networkSecurityGroups/join/action",
 		"Microsoft.Compute/disks/beginGetAccess/action",
@@ -258,41 +258,83 @@ func (m *manager) denyAssignments(clusterSPObjectID string) *arm.Resource {
 			notActions = append(notActions, exclusions...)
 		}
 	}
+	//Microsoft.RedHatOpenShift/RedHatEngineering
 
-	return &arm.Resource{
-		Resource: &mgmtauthorization.DenyAssignment{
-			Name: to.StringPtr("[guid(resourceGroup().id, 'ARO cluster resource group deny assignment')]"),
-			Type: to.StringPtr("Microsoft.Authorization/denyAssignments"),
-			DenyAssignmentProperties: &mgmtauthorization.DenyAssignmentProperties{
-				DenyAssignmentName: to.StringPtr("[guid(resourceGroup().id, 'ARO cluster resource group deny assignment')]"),
-				Permissions: &[]mgmtauthorization.DenyAssignmentPermission{
-					{
-						Actions: &[]string{
-							"*/action",
-							"*/delete",
-							"*/write",
+	result := []*arm.Resource{
+		{
+			Resource: &mgmtauthorization.DenyAssignment{
+				Name: to.StringPtr("[guid(resourceGroup().id, 'ARO cluster resource group deny assignment')]"),
+				Type: to.StringPtr("Microsoft.Authorization/denyAssignments"),
+				DenyAssignmentProperties: &mgmtauthorization.DenyAssignmentProperties{
+					DenyAssignmentName: to.StringPtr("[guid(resourceGroup().id, 'ARO cluster resource group deny assignment')]"),
+					Permissions: &[]mgmtauthorization.DenyAssignmentPermission{
+						{
+							Actions: &[]string{
+								"*/action",
+								"*/delete",
+								"*/write",
+							},
+							NotActions: &notActions,
 						},
-						NotActions: &notActions,
 					},
-				},
-				Scope: &m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID,
-				Principals: &[]mgmtauthorization.Principal{
-					{
-						ID:   to.StringPtr("00000000-0000-0000-0000-000000000000"),
-						Type: to.StringPtr("SystemDefined"),
+					Scope: &m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID,
+					Principals: &[]mgmtauthorization.Principal{
+						{
+							ID:   to.StringPtr("00000000-0000-0000-0000-000000000000"),
+							Type: to.StringPtr("SystemDefined"),
+						},
 					},
-				},
-				ExcludePrincipals: &[]mgmtauthorization.Principal{
-					{
-						ID:   &clusterSPObjectID,
-						Type: to.StringPtr("ServicePrincipal"),
+					ExcludePrincipals: &[]mgmtauthorization.Principal{
+						{
+							ID:   &clusterSPObjectID,
+							Type: to.StringPtr("ServicePrincipal"),
+						},
 					},
+					IsSystemProtected: to.BoolPtr(true),
 				},
-				IsSystemProtected: to.BoolPtr(true),
 			},
+			APIVersion: azureclient.APIVersion("Microsoft.Authorization/denyAssignments"),
 		},
-		APIVersion: azureclient.APIVersion("Microsoft.Authorization/denyAssignments"),
 	}
+
+	//if for testing denyAssignment, this if should be removed after the test is successful
+	if feature.IsRegisteredForFeature(props, "Microsoft.RedHatOpenShift/RedHatEngineering") {
+		result = append(result,
+			&arm.Resource{
+				Resource: &mgmtauthorization.DenyAssignment{
+					Name: to.StringPtr("[guid(resourceGroup().id, 'ARO cluster service principal deny assignment')]"),
+					Type: to.StringPtr("Microsoft.Authorization/denyAssignments"),
+					DenyAssignmentProperties: &mgmtauthorization.DenyAssignmentProperties{
+						DenyAssignmentName: to.StringPtr("[guid(resourceGroup().id, 'ARO cluster service principal deny assignment')]"),
+						Permissions: &[]mgmtauthorization.DenyAssignmentPermission{
+							{
+								Actions: &[]string{
+									"Microsoft.Compute/virtualMachines/deallocate/action",
+									"Microsoft.Compute/virtualMachines/powerOff/action",
+									"Microsoft.Compute/virtualMachines/simulateEviction/action",
+									"Microsoft.Compute/virtualMachineScaleSets/powerOff/action",
+									"Microsoft.Compute/virtualMachineScaleSets/deallocate/action",
+									"Microsoft.Compute/virtualMachineScaleSets/virtualMachines/powerOff/action",
+									"Microsoft.Compute/virtualMachineScaleSets/virtualMachines/deallocate/action",
+									"Microsoft.Compute/virtualMachineScaleSets/virtualMachines/simulateEviction/action",
+								},
+								NotActions: &notActions,
+							},
+						},
+						Scope: &m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID,
+						Principals: &[]mgmtauthorization.Principal{
+							{
+								ID:   &clusterSPObjectID,
+								Type: to.StringPtr("ServicePrincipal"),
+							},
+						},
+						IsSystemProtected: to.BoolPtr(true),
+					},
+				},
+				APIVersion: azureclient.APIVersion("Microsoft.Authorization/denyAssignments"),
+			})
+	}
+	return result
 }
 
 func (m *manager) deploySnapshotUpgradeTemplate(ctx context.Context) error {
@@ -311,7 +353,7 @@ func (m *manager) deploySnapshotUpgradeTemplate(ctx context.Context) error {
 	t := &arm.Template{
 		Schema:         "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
 		ContentVersion: "1.0.0.0",
-		Resources:      []*arm.Resource{m.denyAssignments(clusterSPObjectID)},
+		Resources:      m.denyAssignments(clusterSPObjectID),
 	}
 
 	return m.deployARMTemplate(ctx, resourceGroup, "storage", t, nil)
