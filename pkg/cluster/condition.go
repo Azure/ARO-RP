@@ -8,8 +8,11 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	consoleapi "github.com/openshift/console-operator/pkg/api"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+const minimumWorkerNodes = 2
 
 // condition functions should return an error only if it's not retryable
 // if a condition function encounters a retryable error it should return false, nil.
@@ -25,6 +28,26 @@ func (m *manager) apiServersReady(ctx context.Context) (bool, error) {
 		return false, nil
 	}
 	return isOperatorAvailable(apiserver), nil
+}
+
+func (m *manager) minimumWorkerNodesReady(ctx context.Context) (bool, error) {
+	nodes, err := m.kubernetescli.CoreV1().Nodes().List(ctx, metav1.ListOptions{
+		LabelSelector: "node-role.kubernetes.io/worker",
+	})
+	if err != nil {
+		return false, nil
+	}
+
+	readyWorkers := 0
+	for _, node := range nodes.Items {
+		for _, cond := range node.Status.Conditions {
+			if cond.Type == corev1.NodeReady && cond.Status == corev1.ConditionTrue {
+				readyWorkers++
+			}
+		}
+	}
+
+	return readyWorkers >= minimumWorkerNodes, nil
 }
 
 func (m *manager) operatorConsoleExists(ctx context.Context) (bool, error) {

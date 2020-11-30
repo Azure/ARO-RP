@@ -158,6 +158,82 @@ func TestIsOperatorAvailable(t *testing.T) {
 	}
 }
 
+func TestMinimumWorkerNodesReady(t *testing.T) {
+	ctx := context.Background()
+
+	for _, tt := range []struct {
+		name           string
+		readyCondition corev1.ConditionStatus
+		nodeLabels     map[string]string
+		want           bool
+	}{
+		{
+			name: "Can't get nodes",
+		},
+		{
+			name:           "Non-worker nodes ready, but not enough workers",
+			readyCondition: corev1.ConditionTrue,
+		},
+		{
+			name: "Not enough worker nodes ready",
+			nodeLabels: map[string]string{
+				"node-role.kubernetes.io/worker": "",
+			},
+			readyCondition: corev1.ConditionFalse,
+		},
+		{
+			name:           "Min worker nodes ready",
+			readyCondition: corev1.ConditionTrue,
+			nodeLabels: map[string]string{
+				"node-role.kubernetes.io/worker": "",
+			},
+			want: true,
+		},
+	} {
+		m := &manager{
+			kubernetescli: k8sfake.NewSimpleClientset(&corev1.NodeList{
+				Items: []corev1.Node{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:   "node1",
+							Labels: tt.nodeLabels,
+						},
+						Status: corev1.NodeStatus{
+							Conditions: []corev1.NodeCondition{
+								{
+									Type:   corev1.NodeReady,
+									Status: tt.readyCondition,
+								},
+							},
+						},
+					},
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:   "node2",
+							Labels: tt.nodeLabels,
+						},
+						Status: corev1.NodeStatus{
+							Conditions: []corev1.NodeCondition{
+								{
+									Type:   corev1.NodeReady,
+									Status: tt.readyCondition,
+								},
+							},
+						},
+					},
+				},
+			}),
+		}
+		ready, err := m.minimumWorkerNodesReady(ctx)
+		if err != nil {
+			t.Error(errMustBeNilMsg)
+		}
+		if ready != tt.want {
+			t.Error(ready)
+		}
+	}
+}
+
 func TestClusterVersionReady(t *testing.T) {
 	ctx := context.Background()
 
