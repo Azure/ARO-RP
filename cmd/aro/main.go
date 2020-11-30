@@ -22,7 +22,7 @@ import (
 func usage() {
 	fmt.Fprint(flag.CommandLine.Output(), "usage:\n")
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s deploy config.yaml location\n", os.Args[0])
-	fmt.Fprintf(flag.CommandLine.Output(), "  %s mirror\n", os.Args[0])
+	fmt.Fprintf(flag.CommandLine.Output(), "  %s mirror [release_image...]\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s monitor\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s rp\n", os.Args[0])
 	fmt.Fprintf(flag.CommandLine.Output(), "  %s operator {master,worker}\n", os.Args[0])
@@ -47,7 +47,7 @@ func main() {
 	var err error
 	switch strings.ToLower(flag.Arg(0)) {
 	case "mirror":
-		checkArgs(1)
+		checkMinArgs(1)
 		err = mirror(ctx, log)
 	case "monitor":
 		checkArgs(1)
@@ -73,6 +73,13 @@ func main() {
 
 func checkArgs(required int) {
 	if len(flag.Args()) != required {
+		usage()
+		os.Exit(2)
+	}
+}
+
+func checkMinArgs(required int) {
+	if len(flag.Args()) < required {
 		usage()
 		os.Exit(2)
 	}
