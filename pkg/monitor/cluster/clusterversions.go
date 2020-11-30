@@ -34,6 +34,11 @@ func (mon *Monitor) emitClusterVersions(ctx context.Context) error {
 		}
 	}
 
+	availableRP := ""
+	if version.GitCommit != mon.oc.Properties.ProvisionedBy {
+		availableRP = version.GitCommit
+	}
+
 	mon.emitGauge("cluster.versions", 1, map[string]string{
 		"actualVersion":                        actualVersion(cv),
 		"desiredVersion":                       desiredVersion(cv),
@@ -41,6 +46,7 @@ func (mon *Monitor) emitClusterVersions(ctx context.Context) error {
 		"resourceProviderVersion":              version.GitCommit,                     // RP version currently running
 		"operatorVersion":                      operatorVersion,                       // operator version in the cluster
 		"availableVersion":                     availableVersion(cv, version.Streams), // current available version for upgrade from stream
+		"availableRP":                          availableRP,                           // current RP version available for document update, empty when none
 	})
 
 	return nil
