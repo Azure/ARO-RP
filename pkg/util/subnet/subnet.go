@@ -97,11 +97,13 @@ func NetworkSecurityGroupID(oc *api.OpenShiftCluster, subnetID string) (string, 
 }
 
 func networkSecurityGroupIDV1(oc *api.OpenShiftCluster, subnetID, infraID string) string {
-	if strings.EqualFold(subnetID, oc.Properties.MasterProfile.SubnetID) {
-		return oc.Properties.ClusterProfile.ResourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/" + infraID + NSGControlPlaneSuffixV1
-	}
+	for _, s := range oc.Properties.WorkerProfiles {
+		if strings.EqualFold(subnetID, s.SubnetID) {
+			return oc.Properties.ClusterProfile.ResourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/" + infraID + NSGNodeSuffixV1
+		}
 
-	return oc.Properties.ClusterProfile.ResourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/" + infraID + NSGNodeSuffixV1
+	}
+	return oc.Properties.ClusterProfile.ResourceGroupID + "/providers/Microsoft.Network/networkSecurityGroups/" + infraID + NSGControlPlaneSuffixV1
 }
 
 func networkSecurityGroupIDV2(oc *api.OpenShiftCluster, subnetID, infraID string) string {

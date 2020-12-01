@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -207,7 +208,13 @@ func (dv *openShiftClusterDynamicValidator) validateRouteTablePermissions(ctx co
 		return err
 	}
 
-	return dv.validateRouteTablePermissionsSubnet(ctx, authorizer, client, vnet, dv.oc.Properties.WorkerProfiles[0].SubnetID, `properties.workerProfiles["worker"].subnetId`, code, typ)
+	for i, s := range dv.oc.Properties.WorkerProfiles {
+		err := dv.validateRouteTablePermissionsSubnet(ctx, authorizer, client, vnet, s.SubnetID, "properties.workerProfiles["+strconv.Itoa(i)+"].subnetId", code, typ)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (dv *openShiftClusterDynamicValidator) validateRouteTablePermissionsSubnet(ctx context.Context, authorizer refreshable.Authorizer, client authorization.PermissionsClient, vnet *mgmtnetwork.VirtualNetwork, subnetID, path, code, typ string) error {
@@ -319,34 +326,53 @@ func (dv *openShiftClusterDynamicValidator) validateSubnet(ctx context.Context, 
 }
 
 // validateVnet checks that the vnet does not have custom dns servers set
+// and the subnets do not overlap with cluster pod/service CIDR blocks
 func (dv *openShiftClusterDynamicValidator) validateVnet(ctx context.Context, vnet *mgmtnetwork.VirtualNetwork) error {
 	dv.log.Print("validateVnet")
+	var err error
 
 	if !strings.EqualFold(*vnet.Location, dv.oc.Location) {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The vnet location '%s' must match the cluster location '%s'.", *vnet.Location, dv.oc.Location)
 	}
 
-	master, err := dv.validateSubnet(ctx, vnet, "properties.masterProfile.subnetId", dv.oc.Properties.MasterProfile.SubnetID)
+	// unique names of subnets from all node pools
+	var subnets []string
+	var CIDRArray []*net.IPNet
+	for i, subnet := range dv.oc.Properties.WorkerProfiles {
+		exists := false
+		for _, s := range subnets {
+			if strings.EqualFold(strings.ToLower(subnet.SubnetID), strings.ToLower(s)) {
+				exists = true
+				break
+			}
+		}
+		if !exists {
+			subnets = append(subnets, subnet.SubnetID)
+			c, err := dv.validateSubnet(ctx, vnet, "properties.workerProfiles["+strconv.Itoa(i)+"].subnetId", subnet.SubnetID)
+			if err != nil {
+				return err
+			}
+			CIDRArray = append(CIDRArray, c)
+		}
+	}
+	masterSubnetCIDR, err := dv.validateSubnet(ctx, vnet, "properties.masterProfile.subnetId", dv.oc.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return err
 	}
 
-	worker, err := dv.validateSubnet(ctx, vnet, `properties.workerProfiles["worker"].subnetId`, dv.oc.Properties.WorkerProfiles[0].SubnetID)
+	_, podCIDR, err := net.ParseCIDR(dv.oc.Properties.NetworkProfile.PodCIDR)
 	if err != nil {
 		return err
 	}
 
-	_, pod, err := net.ParseCIDR(dv.oc.Properties.NetworkProfile.PodCIDR)
+	_, serviceCIDR, err := net.ParseCIDR(dv.oc.Properties.NetworkProfile.ServiceCIDR)
 	if err != nil {
 		return err
 	}
 
-	_, service, err := net.ParseCIDR(dv.oc.Properties.NetworkProfile.ServiceCIDR)
-	if err != nil {
-		return err
-	}
+	CIDRArray = append(CIDRArray, masterSubnetCIDR, podCIDR, serviceCIDR)
 
-	err = cidr.VerifyNoOverlap([]*net.IPNet{master, worker, pod, service}, &net.IPNet{IP: net.IPv4zero, Mask: net.IPMask(net.IPv4zero)})
+	err = cidr.VerifyNoOverlap(CIDRArray, &net.IPNet{IP: net.IPv4zero, Mask: net.IPMask(net.IPv4zero)})
 	if err != nil {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided CIDRs must not overlap: '%s'.", err)
 	}
