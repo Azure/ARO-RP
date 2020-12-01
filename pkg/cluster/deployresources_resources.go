@@ -438,7 +438,7 @@ func (m *manager) computeBootstrapVM(installConfig *installconfig.InstallConfig)
 					ComputerName:  to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID + "-bootstrap-vm"),
 					AdminUsername: to.StringPtr("core"),
 					AdminPassword: to.StringPtr("NotActuallyApplied!"),
-					CustomData:    to.StringPtr(`[base64(concat('{"ignition":{"version":"2.2.0","config":{"replace":{"source":"https://cluster` + m.doc.OpenShiftCluster.Properties.StorageSuffix + `.blob.` + m.env.Environment().StorageEndpointSuffix + `/ignition/bootstrap.ign?', listAccountSas(resourceId('Microsoft.Storage/storageAccounts', 'cluster` + m.doc.OpenShiftCluster.Properties.StorageSuffix + `'), '2019-04-01', parameters('sas')).accountSasToken, '"}}}}'))]`),
+					CustomData:    to.StringPtr(`[base64(concat('{"ignition":{"version":"3.2.0","config":{"replace":{"source":"https://cluster` + m.doc.OpenShiftCluster.Properties.StorageSuffix + `.blob.` + m.env.Environment().StorageEndpointSuffix + `/ignition/bootstrap.ign?', listAccountSas(resourceId('Microsoft.Storage/storageAccounts', 'cluster` + m.doc.OpenShiftCluster.Properties.StorageSuffix + `'), '2019-04-01', parameters('sas')).accountSasToken, '"}}}}'))]`),
 					LinuxConfiguration: &mgmtcompute.LinuxConfiguration{
 						DisablePasswordAuthentication: to.BoolPtr(false),
 					},
