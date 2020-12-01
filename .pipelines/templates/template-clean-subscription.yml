@@ -22,5 +22,9 @@ steps:
     export AZURE_PURGE_CREATED_TAG="${{ parameters.purgeCreatedTag }}"
     export AZURE_PURGE_RESOURCEGROUP_PREFIXES="${{ parameters.resourceGroupDeletePrefixes }}"
 
+    # NewCoreForCI() requires these to be set, but they aren't actually used so set them to dummy
+    export LOCATION="dummy"
+    export RESOURCEGROUP="dummy"
+
     go run ./hack/clean -dryRun=${{ parameters.dryRun }}
   displayName: 🧹 Clean subscription
