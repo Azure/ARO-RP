@@ -276,7 +276,7 @@
                     "[resourceId('Microsoft.Network/loadBalancers', 'rp-lb')]"
                 ],
                 "evaluationFrequency": "PT5M",
-                "windowSize": "PT5M",
+                "windowSize": "PT15M",
                 "targetResourceType": "Microsoft.Network/loadBalancers",
                 "criteria": {
                     "allOf": [

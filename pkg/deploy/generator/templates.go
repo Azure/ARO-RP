@@ -113,9 +113,9 @@ func (g *generator) rpTemplate() *arm.Template {
 	if g.production {
 		t.Resources = append(t.Resources, g.pip(), g.lb(), g.vmss(),
 			g.storageAccount(),
-			g.lbAlert(30.0, 2, "rp-availability-alert", "PT5M", "PT5M", "DipAvailability"), // triggers on all 3 RPs being down for 3.5min, can't be >=0.3 due to deploys going down to 32% at times.
-			g.lbAlert(67.0, 3, "rp-degraded-alert", "PT15M", "PT6H", "DipAvailability"),    // 1/3 backend down for 1h or 2/3 down for 3h in the last 6h
-			g.lbAlert(33.0, 2, "rp-vnet-alert", "PT5M", "PT5M", "VipAvailability"))         // this will trigger only if the Azure network infrastructure between the loadBalancers and VMs is down for 3.5min
+			g.lbAlert(30.0, 2, "rp-availability-alert", "PT5M", "PT15M", "DipAvailability"), // triggers on all 3 RPs being down for 10min, can't be >=0.3 due to deploys going down to 32% at times.
+			g.lbAlert(67.0, 3, "rp-degraded-alert", "PT15M", "PT6H", "DipAvailability"),     // 1/3 backend down for 1h or 2/3 down for 3h in the last 6h
+			g.lbAlert(33.0, 2, "rp-vnet-alert", "PT5M", "PT5M", "VipAvailability"))          // this will trigger only if the Azure network infrastructure between the loadBalancers and VMs is down for 3.5min
 		// more on alerts https://msazure.visualstudio.com/AzureRedHatOpenShift/_wiki/wikis/ARO.wiki/53765/WIP-Alerting
 		t.Resources = append(t.Resources, g.billingContributorRbac()...)
 	}
