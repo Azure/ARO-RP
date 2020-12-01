@@ -59,7 +59,9 @@ func (r *CheckerController) Reconcile(request ctrl.Request) (ctrl.Result, error)
 		if thisErr != nil {
 			// do all checks even if there is an error
 			err = thisErr
-			r.log.Errorf("checker %s failed with %v", c.Name(), err)
+			if thisErr != errRequeue {
+				r.log.Errorf("checker %s failed with %v", c.Name(), err)
+			}
 		}
 	}
 

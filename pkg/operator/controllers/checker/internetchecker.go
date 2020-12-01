@@ -14,23 +14,12 @@ import (
 	"github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/client-go/util/retry"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 )
-
-// if a check fails it is retried using the following parameters
-var checkBackoff = wait.Backoff{
-	Steps:    5,
-	Duration: 5 * time.Second,
-	Factor:   1.5,
-	Jitter:   0.5,
-	Cap:      1 * time.Minute,
-}
 
 // InternetChecker reconciles a Cluster object
 type InternetChecker struct {
@@ -63,6 +52,24 @@ func (r *InternetChecker) Name() string {
 
 // Reconcile will keep checking that the cluster can connect to essential services.
 func (r *InternetChecker) Check(ctx context.Context) error {
+	cli := &http.Client{
+		Transport: &http.Transport{
+			// We set DisableKeepAlives for two reasons:
+			//
+			// 1. If we're talking HTTP/2 and the remote end blackholes traffic,
+			// Go has a bug whereby it doesn't reset the connection after a
+			// timeout (https://github.com/golang/go/issues/36026).  If this
+			// happens, we never have a chance to get healthy.  We have
+			// specifically seen this with gcs.prod.monitoring.core.windows.net
+			// in Korea Central, which currently has a bad server which when we
+			// hit it causes our cluster creations to fail.
+			//
+			// 2. We *want* to evaluate our capability to successfully create
+			// *new* connections to internet endpoints anyway.
+			DisableKeepAlives: true,
+		},
+	}
+
 	instance, err := r.arocli.Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 	if err != nil {
 		return err
@@ -73,7 +80,7 @@ func (r *InternetChecker) Check(ctx context.Context) error {
 	for _, url := range instance.Spec.InternetChecker.URLs {
 		checkCount++
 		go func(urlToCheck string) {
-			ch <- r.checkWithRetry(&http.Client{}, urlToCheck, checkBackoff)
+			ch <- r.checkWithRetry(cli, urlToCheck, time.Minute)
 		}(url)
 	}
 
@@ -107,27 +114,53 @@ func (r *InternetChecker) Check(ctx context.Context) error {
 
 	}
 
-	return controllers.SetCondition(ctx, r.arocli, condition, r.role)
+	err = controllers.SetCondition(ctx, r.arocli, condition, r.role)
+	if err != nil {
+		return err
+	}
+
+	if checkFailed {
+		return errRequeue
+	}
+
+	return nil
 }
 
-// check the URL, retrying a failed query a few times according to the given backoff
-func (r *InternetChecker) checkWithRetry(client simpleHTTPClient, url string, backoff wait.Backoff) error {
-	return retry.OnError(backoff, func(_ error) bool { return true }, func() error {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		req, err := http.NewRequestWithContext(ctx, http.MethodHead, url, nil)
-		if err != nil {
-			return fmt.Errorf("%s: %s", url, err)
-		}
+// check the URL, retrying a failed query a few times
+func (r *InternetChecker) checkWithRetry(client simpleHTTPClient, url string, timeout time.Duration) error {
+	var err error
 
-		resp, err := client.Do(req)
-		if err != nil {
-			return fmt.Errorf("%s: %s", url, err)
+	for i := 0; i < 6; i++ {
+		err = r.checkOnce(client, url, timeout/6)
+		if err == nil {
+			return nil
 		}
-		defer resp.Body.Close()
+	}
 
-		return nil
-	})
+	return err
+}
+
+// checkOnce checks a given url.  The check both times out after a given timeout
+// *and* will wait for the timeout if it fails, so that we don't hit endpoints
+// too much.
+func (r *InternetChecker) checkOnce(client simpleHTTPClient, url string, timeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodHead, url, nil)
+	if err != nil {
+		<-ctx.Done()
+		return err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		<-ctx.Done()
+		return fmt.Errorf("%s: %s", url, err)
+	}
+
+	resp.Body.Close()
+	return nil
 }
 
 func (r *InternetChecker) conditionType() (ctype status.ConditionType) {

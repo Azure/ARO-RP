@@ -4,7 +4,6 @@ package checker
 // Licensed under the Apache License 2.0.
 
 import (
-	"bytes"
 	"context"
 	"io/ioutil"
 	"net"
@@ -14,8 +13,6 @@ import (
 	"syscall"
 	"testing"
 	"time"
-
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 )
@@ -48,14 +45,14 @@ var (
 	okResp = &fakeResponse{
 		httpResponse: &http.Response{
 			StatusCode: http.StatusOK,
-			Body:       ioutil.NopCloser(&bytes.Buffer{}),
+			Body:       ioutil.NopCloser(nil),
 		},
 	}
 
 	badReq = &fakeResponse{
 		httpResponse: &http.Response{
 			StatusCode: http.StatusBadRequest,
-			Body:       ioutil.NopCloser(&bytes.Buffer{}),
+			Body:       ioutil.NopCloser(nil),
 		},
 	}
 
@@ -70,14 +67,6 @@ var (
 
 	timedoutReq = &fakeResponse{err: context.DeadlineExceeded}
 )
-
-var testBackoff = wait.Backoff{
-	Steps:    5,
-	Duration: 5 * time.Millisecond,
-	Factor:   2.0,
-	Jitter:   0.5,
-	Cap:      50 * time.Millisecond,
-}
 
 var testCases = []testCase{
 	{
@@ -108,7 +97,7 @@ func TestInternetCheckerCheck(t *testing.T) {
 	for _, test := range testCases {
 		t.Run(test.name, func(t *testing.T) {
 			client := &testClient{responses: test.responses}
-			err := r.checkWithRetry(client, urltocheck, testBackoff)
+			err := r.checkWithRetry(client, urltocheck, 100*time.Millisecond)
 			if (err != nil) != test.wantError {
 				t.Errorf("InternetChecker.check() error = %v, wantErr %v", err, test.wantError)
 			}

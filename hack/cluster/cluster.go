@@ -36,7 +36,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	c, err := cluster.New(log, env, false)
+	c, err := cluster.New(log, env, os.Getenv("CI") != "")
 	if err != nil {
 		return err
 	}
