@@ -49,7 +49,7 @@ func (im *instanceMetadata) Environment() *azure.Environment {
 
 func New(ctx context.Context, deploymentMode deployment.Mode) (InstanceMetadata, error) {
 	if deploymentMode == deployment.Development {
-		return NewDev()
+		return NewDev(true)
 	}
 
 	return newProd(ctx)

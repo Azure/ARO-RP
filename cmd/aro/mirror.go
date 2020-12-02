@@ -32,11 +32,6 @@ func getAuth(key string) (*types.DockerAuthConfig, error) {
 }
 
 func mirror(ctx context.Context, log *logrus.Entry) error {
-	env, err := env.NewCoreForCI(ctx, log)
-	if err != nil {
-		return err
-	}
-
 	for _, key := range []string{
 		"DST_AUTH",
 		"DST_ACR_NAME",
@@ -47,6 +42,11 @@ func mirror(ctx context.Context, log *logrus.Entry) error {
 		if _, found := os.LookupEnv(key); !found {
 			return fmt.Errorf("environment variable %q unset", key)
 		}
+	}
+
+	env, err := env.NewCoreForCI(ctx, log)
+	if err != nil {
+		return err
 	}
 
 	acrDomainSuffix := "." + env.Environment().ContainerRegistryDNSSuffix
