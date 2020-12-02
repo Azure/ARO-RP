@@ -69,6 +69,7 @@ func (m *manager) Install(ctx context.Context, installConfig *installconfig.Inst
 			steps.Action(m.removeBootstrapIgnition),
 			steps.Action(m.configureAPIServerCertificate),
 			steps.Condition(m.apiServersReady, 30*time.Minute),
+			steps.Condition(m.minimumWorkerNodesReady, 30*time.Minute),
 			steps.Condition(m.operatorConsoleExists, 30*time.Minute),
 			steps.Action(m.updateConsoleBranding),
 			steps.Condition(m.operatorConsoleReady, 20*time.Minute),
