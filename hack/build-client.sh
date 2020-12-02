@@ -1,9 +1,8 @@
-#!/bin/bash
+#!/bin/bash -e
 
 function clean() {
   local API_VERSION=$1
-
-  rm .sha256sum
+  local FOLDER=$2
 
   rm -rf pkg/client/services/redhatopenshift/mgmt/"$API_VERSION"
   mkdir pkg/client/services/redhatopenshift/mgmt/"$API_VERSION"
@@ -13,21 +12,25 @@ function clean() {
 }
 
 function checksum() {
-  sha256sum swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/preview/"$1"/redhatopenshift.json >> .sha256sum
+  local API_VERSION=$1
+  local FOLDER=$2
+
+  sha256sum swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/"$FOLDER"/"$API_VERSION"/redhatopenshift.json >> .sha256sum
 }
 
 function generate_golang() {
   local API_VERSION=$1
+  local FOLDER=$2
 
   sudo docker run \
 		--rm \
-		-v ${PWD}/pkg/client:/github.com/Azure/ARO-RP/pkg/client:z \
-		-v ${PWD}/swagger:/swagger:z \
+		-v $PWD/pkg/client:/github.com/Azure/ARO-RP/pkg/client:z \
+		-v $PWD/swagger:/swagger:z \
 		azuresdk/autorest \
 		--go \
 		--license-header=MICROSOFT_APACHE_NO_VERSION \
 		--namespace=redhatopenshift \
-		--input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/preview/"$API_VERSION"/redhatopenshift.json \
+		--input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/"$FOLDER"/"$API_VERSION"/redhatopenshift.json \
 		--output-folder=/github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/"$API_VERSION"/redhatopenshift
 
   sudo chown -R $(id -un):$(id -gn) pkg/client
@@ -37,18 +40,19 @@ function generate_golang() {
 
 function generate_python() {
   local API_VERSION=$1
+  local FOLDER=$2
 
   sudo docker run \
 		--rm \
-		-v ${PWD}/python/client:/python/client:z \
-		-v ${PWD}/swagger:/swagger:z \
+		-v $PWD/python/client:/python/client:z \
+		-v $PWD/swagger:/swagger:z \
 		azuresdk/autorest \
 		--use=@microsoft.azure/autorest.python@4.0.70 \
 		--python \
 		--azure-arm \
 		--license-header=MICROSOFT_APACHE_NO_VERSION \
 		--namespace=azure.mgmt.redhatopenshift.v"${API_VERSION//-/_}" \
-		--input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/stable/"$API_VERSION"/redhatopenshift.json \
+		--input-file=/swagger/redhatopenshift/resource-manager/Microsoft.RedHatOpenShift/"$FOLDER"/"$API_VERSION"/redhatopenshift.json \
 		--output-folder=/python/client
 
   sudo chown -R $(id -un):$(id -gn) python/client
@@ -57,10 +61,17 @@ function generate_python() {
 }
 
 
-for API in "$@"
+rm -f .sha256sum
+
+for API_VERSION in "$@"
 do
-  clean "${API}"
-  checksum "${API}"
-  generate_golang "${API}"
-  generate_python "${API}"
+  FOLDER=stable
+  if [[ "$API_VERSION" =~ .*preview ]]; then
+    FOLDER=preview
+  fi
+
+  clean "$API_VERSION" "$FOLDER"
+  checksum "$API_VERSION" "$FOLDER"
+  generate_golang "$API_VERSION" "$FOLDER"
+  generate_python "$API_VERSION" "$FOLDER"
 done

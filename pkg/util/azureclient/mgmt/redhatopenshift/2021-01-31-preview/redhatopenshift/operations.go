@@ -41,8 +41,8 @@ func NewOperationsClient(environment *azure.Environment, subscriptionID string, 
 		client = redhatopenshift.NewOperationsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 		client.Authorizer = authorizer
 	}
+
 	return &operationsClient{
 		OperationsClient: client,
 	}
-
 }

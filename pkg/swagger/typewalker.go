@@ -22,10 +22,10 @@ type ModelAsString bool
 type typeWalker struct {
 	pkg         *packages.Package
 	enums       map[types.Type][]interface{}
-	xmsEnumList map[string]ModelAsString
+	xmsEnumList map[string]struct{}
 }
 
-func newTypeWalker(pkgname string, xmsEnumList map[string]ModelAsString) (*typeWalker, error) {
+func newTypeWalker(pkgname string, xmsEnumList map[string]struct{}) (*typeWalker, error) {
 	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedSyntax | packages.NeedTypes | packages.NeedTypesInfo}, pkgname)
 	if err != nil {
 		return nil, err
@@ -161,7 +161,7 @@ func (tw *typeWalker) _define(definitions Definitions, t *types.Named) {
 	name := c[(len(c) - 1)]
 	if _, ok := tw.xmsEnumList[name]; ok {
 		s.XMSEnum = &XMSEnum{
-			ModelAsString: bool(tw.xmsEnumList[name]),
+			ModelAsString: true,
 			Name:          name,
 		}
 	}
@@ -183,7 +183,7 @@ func (tw *typeWalker) define(definitions Definitions, name string) {
 }
 
 // define adds a Definition for the named types in the given package
-func define(definitions Definitions, pkgname string, xmsEnumList map[string]ModelAsString, names ...string) error {
+func define(definitions Definitions, pkgname string, xmsEnumList map[string]struct{}, names ...string) error {
 	th, err := newTypeWalker(pkgname, xmsEnumList)
 	if err != nil {
 		return err

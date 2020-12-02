@@ -735,11 +735,7 @@
         "Standard_F4s_v2",
         "Standard_F8s_v2"
       ],
-      "type": "string",
-      "x-ms-enum": {
-        "name": "VMSize",
-        "modelAsString": true
-      }
+      "type": "string"
     },
     "Visibility": {
       "description": "Visibility represents visibility.",

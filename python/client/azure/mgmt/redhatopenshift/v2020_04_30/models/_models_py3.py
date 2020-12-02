@@ -26,13 +26,13 @@ from msrest.exceptions import HttpOperationError
 class APIServerProfile(Model):
     """APIServerProfile represents an API server profile.
 
-    :param visibility: API server visibility (immutable). Possible values
-     include: 'Private', 'Public'
+    :param visibility: API server visibility. Possible values include:
+     'Private', 'Public'
     :type visibility: str or
      ~azure.mgmt.redhatopenshift.v2020_04_30.models.enum
-    :param url: The URL to access the cluster API server (immutable).
+    :param url: The URL to access the cluster API server.
     :type url: str
-    :param ip: The IP of the cluster API server (immutable).
+    :param ip: The IP of the cluster API server.
     :type ip: str
     """
 
@@ -185,14 +185,13 @@ class CloudErrorBody(Model):
 class ClusterProfile(Model):
     """ClusterProfile represents a cluster profile.
 
-    :param pull_secret: The pull secret for the cluster (immutable).
+    :param pull_secret: The pull secret for the cluster.
     :type pull_secret: str
-    :param domain: The domain for the cluster (immutable).
+    :param domain: The domain for the cluster.
     :type domain: str
-    :param version: The version of the cluster (immutable).
+    :param version: The version of the cluster.
     :type version: str
-    :param resource_group_id: The ID of the cluster resource group
-     (immutable).
+    :param resource_group_id: The ID of the cluster resource group.
     :type resource_group_id: str
     """
 
@@ -214,7 +213,7 @@ class ClusterProfile(Model):
 class ConsoleProfile(Model):
     """ConsoleProfile represents a console profile.
 
-    :param url: The URL to access the cluster console (immutable).
+    :param url: The URL to access the cluster console.
     :type url: str
     """
 
@@ -259,13 +258,13 @@ class Display(Model):
 class IngressProfile(Model):
     """IngressProfile represents an ingress profile.
 
-    :param name: The ingress profile name.  Must be "default" (immutable).
+    :param name: The ingress profile name.
     :type name: str
-    :param visibility: Ingress visibility (immutable). Possible values
-     include: 'Private', 'Public'
+    :param visibility: Ingress visibility. Possible values include: 'Private',
+     'Public'
     :type visibility: str or
      ~azure.mgmt.redhatopenshift.v2020_04_30.models.enum
-    :param ip: The IP of the ingress (immutable).
+    :param ip: The IP of the ingress.
     :type ip: str
     """
 
@@ -285,15 +284,15 @@ class IngressProfile(Model):
 class MasterProfile(Model):
     """MasterProfile represents a master profile.
 
-    :param vm_size: The size of the master VMs (immutable). Possible values
-     include: 'Standard_D16as_v4', 'Standard_D16s_v3', 'Standard_D2s_v3',
+    :param vm_size: The size of the master VMs. Possible values include:
+     'Standard_D16as_v4', 'Standard_D16s_v3', 'Standard_D2s_v3',
      'Standard_D32as_v4', 'Standard_D32s_v3', 'Standard_D4as_v4',
      'Standard_D4s_v3', 'Standard_D8as_v4', 'Standard_D8s_v3',
      'Standard_E16s_v3', 'Standard_E32s_v3', 'Standard_E4s_v3',
      'Standard_E8s_v3', 'Standard_F16s_v2', 'Standard_F32s_v2',
      'Standard_F4s_v2', 'Standard_F8s_v2'
     :type vm_size: str or ~azure.mgmt.redhatopenshift.v2020_04_30.models.enum
-    :param subnet_id: The Azure resource ID of the master subnet (immutable).
+    :param subnet_id: The Azure resource ID of the master subnet.
     :type subnet_id: str
     """
 
@@ -311,10 +310,9 @@ class MasterProfile(Model):
 class NetworkProfile(Model):
     """NetworkProfile represents a network profile.
 
-    :param pod_cidr: The CIDR used for OpenShift/Kubernetes Pods (immutable).
+    :param pod_cidr: The CIDR used for OpenShift/Kubernetes Pods.
     :type pod_cidr: str
-    :param service_cidr: The CIDR used for OpenShift/Kubernetes Services
-     (immutable).
+    :param service_cidr: The CIDR used for OpenShift/Kubernetes Services.
     :type service_cidr: str
     """
 
@@ -392,9 +390,9 @@ class OpenShiftCluster(TrackedResource):
     :type tags: dict[str, str]
     :param location: Required. The geo-location where the resource lives
     :type location: str
-    :param provisioning_state: The cluster provisioning state (immutable).
-     Possible values include: 'AdminUpdating', 'Creating', 'Deleting',
-     'Failed', 'Succeeded', 'Updating'
+    :param provisioning_state: The cluster provisioning state. Possible values
+     include: 'AdminUpdating', 'Creating', 'Deleting', 'Failed', 'Succeeded',
+     'Updating'
     :type provisioning_state: str or
      ~azure.mgmt.redhatopenshift.v2020_04_30.models.enum
     :param cluster_profile: The cluster profile.
@@ -463,9 +461,9 @@ class OpenShiftCluster(TrackedResource):
 class OpenShiftClusterCredentials(Model):
     """OpenShiftClusterCredentials represents an OpenShift cluster's credentials.
 
-    :param kubeadmin_username: The username for the kubeadmin user
+    :param kubeadmin_username: The username for the kubeadmin user.
     :type kubeadmin_username: str
-    :param kubeadmin_password: The password for the kubeadmin user
+    :param kubeadmin_password: The password for the kubeadmin user.
     :type kubeadmin_password: str
     """
 
@@ -485,9 +483,9 @@ class OpenShiftClusterUpdate(Model):
 
     :param tags: The resource tags.
     :type tags: dict[str, str]
-    :param provisioning_state: The cluster provisioning state (immutable).
-     Possible values include: 'AdminUpdating', 'Creating', 'Deleting',
-     'Failed', 'Succeeded', 'Updating'
+    :param provisioning_state: The cluster provisioning state. Possible values
+     include: 'AdminUpdating', 'Creating', 'Deleting', 'Failed', 'Succeeded',
+     'Updating'
     :type provisioning_state: str or
      ~azure.mgmt.redhatopenshift.v2020_04_30.models.enum
     :param cluster_profile: The cluster profile.
@@ -604,9 +602,9 @@ class ProxyResource(Resource):
 class ServicePrincipalProfile(Model):
     """ServicePrincipalProfile represents a service principal profile.
 
-    :param client_id: The client ID used for the cluster (immutable).
+    :param client_id: The client ID used for the cluster.
     :type client_id: str
-    :param client_secret: The client secret used for the cluster (immutable).
+    :param client_secret: The client secret used for the cluster.
     :type client_secret: str
     """
 
@@ -624,20 +622,19 @@ class ServicePrincipalProfile(Model):
 class WorkerProfile(Model):
     """WorkerProfile represents a worker profile.
 
-    :param name: The worker profile name.  Must be "worker" (immutable).
+    :param name: The worker profile name.
     :type name: str
-    :param vm_size: The size of the worker VMs (immutable). Possible values
-     include: 'Standard_D16as_v4', 'Standard_D16s_v3', 'Standard_D2s_v3',
+    :param vm_size: The size of the worker VMs. Possible values include:
+     'Standard_D16as_v4', 'Standard_D16s_v3', 'Standard_D2s_v3',
      'Standard_D32as_v4', 'Standard_D32s_v3', 'Standard_D4as_v4',
      'Standard_D4s_v3', 'Standard_D8as_v4', 'Standard_D8s_v3',
      'Standard_E16s_v3', 'Standard_E32s_v3', 'Standard_E4s_v3',
      'Standard_E8s_v3', 'Standard_F16s_v2', 'Standard_F32s_v2',
      'Standard_F4s_v2', 'Standard_F8s_v2'
     :type vm_size: str or ~azure.mgmt.redhatopenshift.v2020_04_30.models.enum
-    :param disk_size_gb: The disk size of the worker VMs.  Must be 128 or
-     greater (immutable).
+    :param disk_size_gb: The disk size of the worker VMs.
     :type disk_size_gb: int
-    :param subnet_id: The Azure resource ID of the worker subnet (immutable).
+    :param subnet_id: The Azure resource ID of the worker subnet.
     :type subnet_id: str
     :param count: The number of worker VMs.
     :type count: int
