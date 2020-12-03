@@ -24,7 +24,7 @@ var _ DatabaseAccountsClient = &databaseAccountsClient{}
 
 // NewDatabaseAccountsClient creates a new DatabaseAccountsClient
 func NewDatabaseAccountsClient(environment *azure.Environment, subscriptionID string, authorizer autorest.Authorizer) DatabaseAccountsClient {
-	client := mgmtdocumentdb.NewDatabaseAccountsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID, subscriptionID)
+	client := mgmtdocumentdb.NewDatabaseAccountsClientWithBaseURI(environment.ResourceManagerEndpoint, subscriptionID)
 	client.Authorizer = authorizer
 
 	return &databaseAccountsClient{

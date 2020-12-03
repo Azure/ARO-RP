@@ -6,7 +6,7 @@ package containerregistry
 import (
 	"context"
 
-	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/containerregistry/mgmt/2019-06-01-preview/containerregistry"
+	mgmtcontainerregistry "github.com/Azure/azure-sdk-for-go/services/preview/containerregistry/mgmt/2019-06-01-preview/containerregistry"
 )
 
 // RegistriesAddons contains addons for RegistriesClient
