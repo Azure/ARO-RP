@@ -38,6 +38,7 @@ func (m *manager) AdminUpgrade(ctx context.Context) error {
 		steps.Condition(m.aroDeploymentReady, 20*time.Minute),
 		steps.Action(m.configureAPIServerCertificate),
 		steps.Action(m.configureIngressCertificate),
+		steps.Action(m.createOrUpdateRouterIP),
 		steps.Action(m.updateProvisionedBy), // Run this last so we capture the resource provider only once the upgrade has been fully performed
 	}
 
@@ -77,7 +78,8 @@ func (m *manager) Install(ctx context.Context, installConfig *installconfig.Inst
 			steps.Action(m.disableUpdates),
 			steps.Action(m.disableSamples),
 			steps.Action(m.disableOperatorHubSources),
-			steps.Action(m.updateRouterIP),
+			steps.Action(m.createOrUpdateRouterIP),
+			steps.Action(m.updateClusterData),
 			steps.Action(m.configureIngressCertificate),
 			steps.Condition(m.ingressControllerReady, 30*time.Minute),
 			steps.Action(m.finishInstallation),
