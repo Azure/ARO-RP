@@ -81,6 +81,25 @@ func PossibleBaseImageTriggerTypeValues() []BaseImageTriggerType {
 	return []BaseImageTriggerType{All, Runtime}
 }
 
+// CreatedByType enumerates the values for created by type.
+type CreatedByType string
+
+const (
+	// Application ...
+	Application CreatedByType = "Application"
+	// Key ...
+	Key CreatedByType = "Key"
+	// ManagedIdentity ...
+	ManagedIdentity CreatedByType = "ManagedIdentity"
+	// User ...
+	User CreatedByType = "User"
+)
+
+// PossibleCreatedByTypeValues returns an array of possible values for the CreatedByType const type.
+func PossibleCreatedByTypeValues() []CreatedByType {
+	return []CreatedByType{Application, Key, ManagedIdentity, User}
+}
+
 // DefaultAction enumerates the values for default action.
 type DefaultAction string
 
@@ -109,6 +128,25 @@ const (
 // PossibleImportModeValues returns an array of possible values for the ImportMode const type.
 func PossibleImportModeValues() []ImportMode {
 	return []ImportMode{Force, NoForce}
+}
+
+// LastModifiedByType enumerates the values for last modified by type.
+type LastModifiedByType string
+
+const (
+	// LastModifiedByTypeApplication ...
+	LastModifiedByTypeApplication LastModifiedByType = "Application"
+	// LastModifiedByTypeKey ...
+	LastModifiedByTypeKey LastModifiedByType = "Key"
+	// LastModifiedByTypeManagedIdentity ...
+	LastModifiedByTypeManagedIdentity LastModifiedByType = "ManagedIdentity"
+	// LastModifiedByTypeUser ...
+	LastModifiedByTypeUser LastModifiedByType = "User"
+)
+
+// PossibleLastModifiedByTypeValues returns an array of possible values for the LastModifiedByType const type.
+func PossibleLastModifiedByTypeValues() []LastModifiedByType {
+	return []LastModifiedByType{LastModifiedByTypeApplication, LastModifiedByTypeKey, LastModifiedByTypeManagedIdentity, LastModifiedByTypeUser}
 }
 
 // OS enumerates the values for os.

@@ -10,8 +10,8 @@ exclude (
 require (
 	cloud.google.com/go v0.72.0 // indirect
 	github.com/AlekSi/gocov-xml v0.0.0-20190121064608-3a14fb1c4737
-	github.com/Azure/azure-sdk-for-go v48.2.0+incompatible
-	github.com/Azure/go-autorest/autorest v0.11.11
+	github.com/Azure/azure-sdk-for-go v49.0.0+incompatible
+	github.com/Azure/go-autorest/autorest v0.11.12
 	github.com/Azure/go-autorest/autorest/adal v0.9.5
 	github.com/Azure/go-autorest/autorest/azure/auth v0.5.3
 	github.com/Azure/go-autorest/autorest/date v0.3.0
@@ -21,11 +21,11 @@ require (
 	github.com/ajeddeloh/go-json v0.0.0-20200220154158-5ae607161559 // indirect
 	github.com/alvaroloes/enumer v1.1.2
 	github.com/apparentlymart/go-cidr v1.1.0
-	github.com/aws/aws-sdk-go v1.35.29 // indirect
+	github.com/aws/aws-sdk-go v1.36.0 // indirect
 	github.com/axw/gocov v1.0.0
-	github.com/containers/image/v5 v5.8.0
+	github.com/containers/image/v5 v5.8.1
 	github.com/containers/libtrust v0.0.0-20200511145503-9c3a6c22cd9a // indirect
-	github.com/containers/storage v1.24.0 // indirect
+	github.com/containers/storage v1.24.1 // indirect
 	github.com/coreos/go-systemd/v22 v22.1.0
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/emicklei/go-restful v2.15.0+incompatible // indirect
@@ -33,34 +33,31 @@ require (
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-bindata/go-bindata v3.1.2+incompatible
 	github.com/go-logr/logr v0.3.0
-	github.com/go-openapi/jsonpointer v0.19.5 // indirect
-	github.com/go-openapi/spec v0.19.13 // indirect
-	github.com/go-openapi/swag v0.19.12 // indirect
+	github.com/go-openapi/spec v0.19.15 // indirect
 	github.com/go-playground/validator/v10 v10.4.1 // indirect
 	github.com/go-test/deep v1.0.7
 	github.com/golang/mock v1.4.4
 	github.com/golangci/golangci-lint v1.32.2
-	github.com/google/go-cmp v0.5.3
+	github.com/google/go-cmp v0.5.4
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/googleapis/gnostic v0.5.3
 	github.com/gophercloud/gophercloud v0.14.0 // indirect
-	github.com/gophercloud/utils v0.0.0-20201101202656-8677e053dcf1 // indirect
+	github.com/gophercloud/utils v0.0.0-20201202205831-7faa8ca08dfe // indirect
 	github.com/gorilla/mux v1.8.0
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/h2non/filetype v1.1.0 // indirect
 	github.com/jim-minter/go-cosmosdb v0.0.0-20201119201311-b37af9b82812
 	github.com/jstemmer/go-junit-report v0.9.1
-	github.com/klauspost/compress v1.11.3 // indirect
-	github.com/libvirt/libvirt-go v6.9.0+incompatible // indirect
+	github.com/libvirt/libvirt-go v6.10.0+incompatible // indirect
 	github.com/mgutz/ansi v0.0.0-20200706080929-d51e80ef957d // indirect
 	github.com/nxadm/tail v1.4.5 // indirect
 	github.com/onsi/ginkgo v1.14.2
 	github.com/onsi/gomega v1.10.3
 	github.com/openshift/api v3.9.1-0.20191111211345-a27ff30ebf09+incompatible
 	github.com/openshift/client-go v0.0.0-20200827190008-3062137373b5
-	github.com/openshift/cloud-credential-operator v0.0.0-20201111070015-850faf1ab48c // indirect
-	github.com/openshift/cluster-api-provider-baremetal v0.0.0-20201112194024-e7b319a24c92 // indirect
-	github.com/openshift/console-operator v0.0.0-20201111180525-9f642e82ccaf
+	github.com/openshift/cloud-credential-operator v0.0.0-20201120003004-b3f99dcadf5a // indirect
+	github.com/openshift/cluster-api-provider-baremetal v0.0.0-20201123200826-dd58d76aef46 // indirect
+	github.com/openshift/console-operator v0.0.0-20201203125343-b1238c381caa
 	github.com/openshift/installer v0.16.1
 	github.com/openshift/machine-api-operator v0.2.1-0.20201002104344-6abfb5440597
 	github.com/openshift/machine-config-operator v4.2.0-alpha.0.0.20190917115525-033375cbe820+incompatible
@@ -75,15 +72,19 @@ require (
 	github.com/ugorji/go/codec v1.2.0
 	github.com/vmware/govmomi v0.23.1 // indirect
 	go4.org v0.0.0-20200411211856-f5505b9728dd // indirect
-	golang.org/x/crypto v0.0.0-20201116153603-4be66e5b6582
-	golang.org/x/net v0.0.0-20201110031124-69a78807bb2b // indirect
-	golang.org/x/oauth2 v0.0.0-20201109201403-9fd604954f58 // indirect
+	golang.org/x/crypto v0.0.0-20201124201722-c8d3bf9c5392
+	golang.org/x/mod v0.4.0 // indirect
+	golang.org/x/net v0.0.0-20201202161906-c7110b5ffcbb // indirect
+	golang.org/x/oauth2 v0.0.0-20201203001011-0b49973bad19 // indirect
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
+	golang.org/x/sys v0.0.0-20201202213521-69691e467435 // indirect
+	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1 // indirect
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
-	golang.org/x/tools v0.0.0-20201117021029-3c3a81204b10
+	golang.org/x/tools v0.0.0-20201202200335-bef1c476418a
 	gomodules.xyz/jsonpatch/v2 v2.1.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20201116205149-79184cff4dfe // indirect
+	google.golang.org/genproto v0.0.0-20201203001206-6486ece9c497 // indirect
+	google.golang.org/grpc v1.34.0 // indirect
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
 	k8s.io/api v0.19.4
@@ -95,11 +96,12 @@ require (
 	k8s.io/klog/v2 v2.4.0 // indirect
 	k8s.io/kube-openapi v0.0.0-20201113171705-d219536bb9fd // indirect
 	k8s.io/utils v0.0.0-20201110183641-67b214c5f920 // indirect
-	sigs.k8s.io/cluster-api-provider-aws v0.6.2 // indirect
-	sigs.k8s.io/cluster-api-provider-azure v0.4.9
-	sigs.k8s.io/cluster-api-provider-openstack v0.3.2 // indirect
-	sigs.k8s.io/controller-runtime v0.6.3
+	sigs.k8s.io/cluster-api-provider-aws v0.6.3 // indirect
+	sigs.k8s.io/cluster-api-provider-azure v0.4.10
+	sigs.k8s.io/cluster-api-provider-openstack v0.3.3 // indirect
+	sigs.k8s.io/controller-runtime v0.6.4
 	sigs.k8s.io/controller-tools v0.3.0
+	sigs.k8s.io/yaml v1.2.0
 )
 
 replace (
@@ -110,7 +112,7 @@ replace (
 	github.com/metal3-io/baremetal-operator => github.com/openshift/baremetal-operator v0.0.0-20201023182211-14317000ae07
 	github.com/openshift/api => github.com/openshift/api v0.0.0-20200917102736-0a191b5b9bb0
 	github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20200521150516-05eb9880269c
-	github.com/openshift/cloud-credential-operator => github.com/openshift/cloud-credential-operator v0.0.0-20200926024851-4ef74fd4ae81
+	github.com/openshift/cloud-credential-operator => github.com/openshift/cloud-credential-operator v0.0.0-20201202215507-371eb009d9a1
 	github.com/openshift/cluster-api => github.com/openshift/cluster-api v0.0.0-20191129101638-b09907ac6668
 	github.com/openshift/cluster-api-provider-baremetal => github.com/openshift/cluster-api-provider-baremetal v0.0.0-20200911144710-1cf0189fc640
 	github.com/openshift/cluster-api-provider-gcp => github.com/openshift/cluster-api-provider-gcp v0.0.1-0.20200917183408-90e92ed9fd9b

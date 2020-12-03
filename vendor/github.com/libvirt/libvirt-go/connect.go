@@ -560,7 +560,8 @@ func getConnectIdentityFieldInfo(params *ConnectIdentity) map[string]typedParams
 	}
 }
 
-func (c *Connect) SetIdentity(ident *ConnectIdentity, flags uint) error {
+// See also https://libvirt.org/html/libvirt-libvirt-host.html#virConnectSetIdentity
+func (c *Connect) SetIdentity(ident *ConnectIdentity, flags uint32) error {
 	if C.LIBVIR_VERSION_NUMBER < 5008000 {
 		return makeNotImplementedError("virConnectSetIdentity")
 	}
@@ -3256,7 +3257,7 @@ func (c *Connect) GetSEVInfo(flags uint32) (*NodeSEVParameters, error) {
 	return params, nil
 }
 
-// See also https://libvirt.org/html/libvirt-libvirt-domain.html#virNWFilterBindingCreateXML
+// See also https://libvirt.org/html/libvirt-libvirt-nwfilter.html#virNWFilterBindingCreateXML
 func (c *Connect) NWFilterBindingCreateXML(xmlConfig string, flags uint32) (*NWFilterBinding, error) {
 	if C.LIBVIR_VERSION_NUMBER < 4005000 {
 		return nil, makeNotImplementedError("virNWFilterBindingCreateXML")
