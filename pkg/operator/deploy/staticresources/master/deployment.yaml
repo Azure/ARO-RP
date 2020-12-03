@@ -30,6 +30,10 @@ spec:
         ports:
         - containerPort: 8080
           name: http
+        livenessProbe:
+          httpGet:
+            path: /healthz/ready
+            port: 8080
       nodeSelector:
         node-role.kubernetes.io/master: ""
       serviceAccountName: aro-operator-master

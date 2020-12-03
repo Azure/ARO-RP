@@ -7,6 +7,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net"
+	"net/http"
 
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	securityclient "github.com/openshift/client-go/security/clientset/versioned"
@@ -124,5 +126,15 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 	// +kubebuilder:scaffold:builder
 
 	log.Info("starting manager")
+
+	l, err := net.Listen("tcp", ":8080")
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		_ = http.Serve(l, http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	}()
+
 	return mgr.Start(ctrl.SetupSignalHandler())
 }

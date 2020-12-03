@@ -27,6 +27,10 @@ spec:
         - worker
         image: GENERATED
         name: aro-operator
+        livenessProbe:
+          httpGet:
+            path: /healthz/ready
+            port: 8080
       nodeSelector:
         node-role.kubernetes.io/worker: ""
       serviceAccountName: aro-operator-worker

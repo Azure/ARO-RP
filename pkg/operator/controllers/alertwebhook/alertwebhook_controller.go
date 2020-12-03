@@ -5,8 +5,6 @@ package alertwebhook
 
 import (
 	"context"
-	"net"
-	"net/http"
 	"reflect"
 
 	"github.com/ghodss/yaml"
@@ -110,27 +108,9 @@ func triggerAlertReconcile(secret *corev1.Secret) bool {
 	return secret.Name == alertManagerName.Name && secret.Namespace == alertManagerName.Namespace
 }
 
-func aroserverRun() error {
-	l, err := net.Listen("tcp", ":8080")
-	if err != nil {
-		return err
-	}
-
-	go func() {
-		_ = http.Serve(l, http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
-	}()
-
-	return nil
-}
-
 // SetupWithManager setup our manager
 func (r *AlertWebhookReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.log.Info("starting alertmanager sink")
-
-	err := aroserverRun()
-	if err != nil {
-		return err
-	}
 
 	isAlertManager := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
