@@ -25,7 +25,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	utilpermissions "github.com/Azure/ARO-RP/pkg/util/permissions"
@@ -71,7 +70,6 @@ type openShiftClusterDynamicValidator struct {
 	fpPermissions     authorization.PermissionsClient
 	spPermissions     authorization.PermissionsClient
 	spProviders       features.ProvidersClient
-	spUsage           compute.UsageClient
 	spVirtualNetworks network.VirtualNetworksClient
 }
 
@@ -86,14 +84,13 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		return err
 	}
 
-	spAuthorizer, err := dv.validateServicePrincipalProfile(ctx)
+	spAuthorizer, err := validateServicePrincipalProfile(ctx, dv.log, dv.env, dv.oc)
 	if err != nil {
 		return err
 	}
 
 	dv.spPermissions = authorization.NewPermissionsClient(dv.env.Environment(), r.SubscriptionID, spAuthorizer)
 	dv.spProviders = features.NewProvidersClient(dv.env.Environment(), r.SubscriptionID, spAuthorizer)
-	dv.spUsage = compute.NewUsageClient(dv.env.Environment(), r.SubscriptionID, spAuthorizer)
 	dv.spVirtualNetworks = network.NewVirtualNetworksClient(dv.env.Environment(), r.SubscriptionID, spAuthorizer)
 
 	vnetID, _, err := subnet.Split(dv.oc.Properties.MasterProfile.SubnetID)
@@ -142,20 +139,13 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		return err
 	}
 
-	if dv.oc.Properties.ProvisioningState == api.ProvisioningStateCreating {
-		err = dv.validateQuotas(ctx)
-		if err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
-func (dv *openShiftClusterDynamicValidator) validateServicePrincipalProfile(ctx context.Context) (refreshable.Authorizer, error) {
-	dv.log.Print("validateServicePrincipalProfile")
+func validateServicePrincipalProfile(ctx context.Context, log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster) (refreshable.Authorizer, error) {
+	log.Print("validateServicePrincipalProfile")
 
-	token, err := aad.GetToken(ctx, dv.log, dv.oc, dv.env.Environment().ResourceManagerEndpoint)
+	token, err := aad.GetToken(ctx, log, oc, env.Environment().ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
