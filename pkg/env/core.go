@@ -68,7 +68,7 @@ func NewCoreForCI(ctx context.Context, log *logrus.Entry) (Core, error) {
 	deploymentMode := deployment.NewMode()
 	log.Infof("running in %s mode", deploymentMode)
 
-	im, err := instancemetadata.NewDev()
+	im, err := instancemetadata.NewDev(false)
 	if err != nil {
 		return nil, err
 	}

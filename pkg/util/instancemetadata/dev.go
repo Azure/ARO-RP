@@ -10,15 +10,17 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 )
 
-func NewDev() (InstanceMetadata, error) {
-	for _, key := range []string{
-		"AZURE_SUBSCRIPTION_ID",
-		"AZURE_TENANT_ID",
-		"LOCATION",
-		"RESOURCEGROUP",
-	} {
-		if _, found := os.LookupEnv(key); !found {
-			return nil, fmt.Errorf("environment variable %q unset (development mode)", key)
+func NewDev(checkEnv bool) (InstanceMetadata, error) {
+	if checkEnv {
+		for _, key := range []string{
+			"AZURE_SUBSCRIPTION_ID",
+			"AZURE_TENANT_ID",
+			"LOCATION",
+			"RESOURCEGROUP",
+		} {
+			if _, found := os.LookupEnv(key); !found {
+				return nil, fmt.Errorf("environment variable %q unset (development mode)", key)
+			}
 		}
 	}
 

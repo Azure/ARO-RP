@@ -34,7 +34,7 @@ type ResourceCleaner struct {
 }
 
 // NewResourceCleaner instantiates the new RC object
-func NewResourceCleaner(log *logrus.Entry, env env.Core, subscriptionID string, shouldDelete checkFn, dryRun bool) (*ResourceCleaner, error) {
+func NewResourceCleaner(log *logrus.Entry, env env.Core, shouldDelete checkFn, dryRun bool) (*ResourceCleaner, error) {
 	authorizer, err := auth.NewAuthorizerFromEnvironment()
 	if err != nil {
 		return nil, err
@@ -44,12 +44,12 @@ func NewResourceCleaner(log *logrus.Entry, env env.Core, subscriptionID string, 
 		log:    log,
 		dryRun: dryRun,
 
-		resourcegroupscli:      features.NewResourceGroupsClient(env.Environment(), subscriptionID, authorizer),
-		vnetscli:               network.NewVirtualNetworksClient(env.Environment(), subscriptionID, authorizer),
-		privatelinkservicescli: network.NewPrivateLinkServicesClient(env.Environment(), subscriptionID, authorizer),
-		securitygroupscli:      network.NewSecurityGroupsClient(env.Environment(), subscriptionID, authorizer),
+		resourcegroupscli:      features.NewResourceGroupsClient(env.Environment(), env.SubscriptionID(), authorizer),
+		vnetscli:               network.NewVirtualNetworksClient(env.Environment(), env.SubscriptionID(), authorizer),
+		privatelinkservicescli: network.NewPrivateLinkServicesClient(env.Environment(), env.SubscriptionID(), authorizer),
+		securitygroupscli:      network.NewSecurityGroupsClient(env.Environment(), env.SubscriptionID(), authorizer),
 
-		subnet: subnet.NewManager(env, subscriptionID, authorizer),
+		subnet: subnet.NewManager(env, env.SubscriptionID(), authorizer),
 
 		// ShouldDelete decides whether the resource group gets deleted
 		shouldDelete: shouldDelete,

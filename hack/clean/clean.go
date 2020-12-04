@@ -6,6 +6,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -53,7 +54,16 @@ func main() {
 }
 
 func run(ctx context.Context, log *logrus.Entry) error {
-	subscriptionID := os.Getenv("AZURE_SUBSCRIPTION_ID")
+	for _, key := range []string{
+		"AZURE_CLIENT_ID",
+		"AZURE_CLIENT_SECRET",
+		"AZURE_SUBSCRIPTION_ID",
+		"AZURE_TENANT_ID",
+	} {
+		if _, found := os.LookupEnv(key); !found {
+			return fmt.Errorf("environment variable %q unset", key)
+		}
+	}
 
 	env, err := env.NewCoreForCI(ctx, log)
 	if err != nil {
@@ -131,7 +141,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 
 	log.Infof("Starting the resource cleaner, DryRun: %t", *dryRun)
 
-	rc, err := purge.NewResourceCleaner(log, env, subscriptionID, shouldDelete, *dryRun)
+	rc, err := purge.NewResourceCleaner(log, env, shouldDelete, *dryRun)
 	if err != nil {
 		return err
 	}
