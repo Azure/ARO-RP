@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	if err := swagger.Run(os.Args[1]); err != nil {
+	if err := swagger.Run(os.Args[1], os.Args[2]); err != nil {
 		panic(err)
 	}
 }

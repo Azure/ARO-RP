@@ -33,11 +33,11 @@ const fqdn = "github.com/Azure/ARO-RP/pkg/client/services/redhatopenshift/mgmt/2
 
 // APIServerProfile aPIServerProfile represents an API server profile.
 type APIServerProfile struct {
-	// Visibility - API server visibility (immutable). Possible values include: 'Private', 'Public'
+	// Visibility - API server visibility. Possible values include: 'Private', 'Public'
 	Visibility Visibility `json:"visibility,omitempty"`
-	// URL - The URL to access the cluster API server (immutable).
+	// URL - The URL to access the cluster API server.
 	URL *string `json:"url,omitempty"`
-	// IP - The IP of the cluster API server (immutable).
+	// IP - The IP of the cluster API server.
 	IP *string `json:"ip,omitempty"`
 }
 
@@ -73,19 +73,19 @@ type CloudErrorBody struct {
 
 // ClusterProfile clusterProfile represents a cluster profile.
 type ClusterProfile struct {
-	// PullSecret - The pull secret for the cluster (immutable).
+	// PullSecret - The pull secret for the cluster.
 	PullSecret *string `json:"pullSecret,omitempty"`
-	// Domain - The domain for the cluster (immutable).
+	// Domain - The domain for the cluster.
 	Domain *string `json:"domain,omitempty"`
-	// Version - The version of the cluster (immutable).
+	// Version - The version of the cluster.
 	Version *string `json:"version,omitempty"`
-	// ResourceGroupID - The ID of the cluster resource group (immutable).
+	// ResourceGroupID - The ID of the cluster resource group.
 	ResourceGroupID *string `json:"resourceGroupId,omitempty"`
 }
 
 // ConsoleProfile consoleProfile represents a console profile.
 type ConsoleProfile struct {
-	// URL - The URL to access the cluster console (immutable).
+	// URL - The URL to access the cluster console.
 	URL *string `json:"url,omitempty"`
 }
 
@@ -103,27 +103,27 @@ type Display struct {
 
 // IngressProfile ingressProfile represents an ingress profile.
 type IngressProfile struct {
-	// Name - The ingress profile name.  Must be "default" (immutable).
+	// Name - The ingress profile name.
 	Name *string `json:"name,omitempty"`
-	// Visibility - Ingress visibility (immutable). Possible values include: 'Visibility1Private', 'Visibility1Public'
+	// Visibility - Ingress visibility. Possible values include: 'Visibility1Private', 'Visibility1Public'
 	Visibility Visibility1 `json:"visibility,omitempty"`
-	// IP - The IP of the ingress (immutable).
+	// IP - The IP of the ingress.
 	IP *string `json:"ip,omitempty"`
 }
 
 // MasterProfile masterProfile represents a master profile.
 type MasterProfile struct {
-	// VMSize - The size of the master VMs (immutable). Possible values include: 'StandardD16asV4', 'StandardD16sV3', 'StandardD2sV3', 'StandardD32asV4', 'StandardD32sV3', 'StandardD4asV4', 'StandardD4sV3', 'StandardD8asV4', 'StandardD8sV3', 'StandardE16sV3', 'StandardE32sV3', 'StandardE4sV3', 'StandardE8sV3', 'StandardF16sV2', 'StandardF32sV2', 'StandardF4sV2', 'StandardF8sV2'
+	// VMSize - The size of the master VMs. Possible values include: 'StandardD16asV4', 'StandardD16sV3', 'StandardD2sV3', 'StandardD32asV4', 'StandardD32sV3', 'StandardD4asV4', 'StandardD4sV3', 'StandardD8asV4', 'StandardD8sV3', 'StandardE16sV3', 'StandardE32sV3', 'StandardE4sV3', 'StandardE8sV3', 'StandardF16sV2', 'StandardF32sV2', 'StandardF4sV2', 'StandardF8sV2'
 	VMSize VMSize `json:"vmSize,omitempty"`
-	// SubnetID - The Azure resource ID of the master subnet (immutable).
+	// SubnetID - The Azure resource ID of the master subnet.
 	SubnetID *string `json:"subnetId,omitempty"`
 }
 
 // NetworkProfile networkProfile represents a network profile.
 type NetworkProfile struct {
-	// PodCidr - The CIDR used for OpenShift/Kubernetes Pods (immutable).
+	// PodCidr - The CIDR used for OpenShift/Kubernetes Pods.
 	PodCidr *string `json:"podCidr,omitempty"`
-	// ServiceCidr - The CIDR used for OpenShift/Kubernetes Services (immutable).
+	// ServiceCidr - The CIDR used for OpenShift/Kubernetes Services.
 	ServiceCidr *string `json:"serviceCidr,omitempty"`
 }
 
@@ -228,12 +228,12 @@ func (osc *OpenShiftCluster) UnmarshalJSON(body []byte) error {
 	return nil
 }
 
-// OpenShiftClusterCredentials openShiftClusterCredentials represents an OpenShift cluster's credentials
+// OpenShiftClusterCredentials openShiftClusterCredentials represents an OpenShift cluster's credentials.
 type OpenShiftClusterCredentials struct {
 	autorest.Response `json:"-"`
-	// KubeadminUsername - The username for the kubeadmin user
+	// KubeadminUsername - The username for the kubeadmin user.
 	KubeadminUsername *string `json:"kubeadminUsername,omitempty"`
-	// KubeadminPassword - The password for the kubeadmin user
+	// KubeadminPassword - The password for the kubeadmin user.
 	KubeadminPassword *string `json:"kubeadminPassword,omitempty"`
 }
 
@@ -398,7 +398,7 @@ func NewOpenShiftClusterListPage(cur OpenShiftClusterList, getNextPage func(cont
 
 // OpenShiftClusterProperties openShiftClusterProperties represents an OpenShift cluster's properties.
 type OpenShiftClusterProperties struct {
-	// ProvisioningState - The cluster provisioning state (immutable). Possible values include: 'AdminUpdating', 'Creating', 'Deleting', 'Failed', 'Succeeded', 'Updating'
+	// ProvisioningState - The cluster provisioning state. Possible values include: 'AdminUpdating', 'Creating', 'Deleting', 'Failed', 'Succeeded', 'Updating'
 	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"`
 	// ClusterProfile - The cluster profile.
 	ClusterProfile *ClusterProfile `json:"clusterProfile,omitempty"`
@@ -744,9 +744,9 @@ type Resource struct {
 
 // ServicePrincipalProfile servicePrincipalProfile represents a service principal profile.
 type ServicePrincipalProfile struct {
-	// ClientID - The client ID used for the cluster (immutable).
+	// ClientID - The client ID used for the cluster.
 	ClientID *string `json:"clientId,omitempty"`
-	// ClientSecret - The client secret used for the cluster (immutable).
+	// ClientSecret - The client secret used for the cluster.
 	ClientSecret *string `json:"clientSecret,omitempty"`
 }
 
@@ -778,13 +778,13 @@ func (tr TrackedResource) MarshalJSON() ([]byte, error) {
 
 // WorkerProfile workerProfile represents a worker profile.
 type WorkerProfile struct {
-	// Name - The worker profile name.  Must be "worker" (immutable).
+	// Name - The worker profile name.
 	Name *string `json:"name,omitempty"`
-	// VMSize - The size of the worker VMs (immutable). Possible values include: 'VMSize1StandardD16asV4', 'VMSize1StandardD16sV3', 'VMSize1StandardD2sV3', 'VMSize1StandardD32asV4', 'VMSize1StandardD32sV3', 'VMSize1StandardD4asV4', 'VMSize1StandardD4sV3', 'VMSize1StandardD8asV4', 'VMSize1StandardD8sV3', 'VMSize1StandardE16sV3', 'VMSize1StandardE32sV3', 'VMSize1StandardE4sV3', 'VMSize1StandardE8sV3', 'VMSize1StandardF16sV2', 'VMSize1StandardF32sV2', 'VMSize1StandardF4sV2', 'VMSize1StandardF8sV2'
+	// VMSize - The size of the worker VMs. Possible values include: 'VMSize1StandardD16asV4', 'VMSize1StandardD16sV3', 'VMSize1StandardD2sV3', 'VMSize1StandardD32asV4', 'VMSize1StandardD32sV3', 'VMSize1StandardD4asV4', 'VMSize1StandardD4sV3', 'VMSize1StandardD8asV4', 'VMSize1StandardD8sV3', 'VMSize1StandardE16sV3', 'VMSize1StandardE32sV3', 'VMSize1StandardE4sV3', 'VMSize1StandardE8sV3', 'VMSize1StandardF16sV2', 'VMSize1StandardF32sV2', 'VMSize1StandardF4sV2', 'VMSize1StandardF8sV2'
 	VMSize VMSize1 `json:"vmSize,omitempty"`
-	// DiskSizeGB - The disk size of the worker VMs.  Must be 128 or greater (immutable).
+	// DiskSizeGB - The disk size of the worker VMs.
 	DiskSizeGB *int32 `json:"diskSizeGB,omitempty"`
-	// SubnetID - The Azure resource ID of the worker subnet (immutable).
+	// SubnetID - The Azure resource ID of the worker subnet.
 	SubnetID *string `json:"subnetId,omitempty"`
 	// Count - The number of worker VMs.
 	Count *int32 `json:"count,omitempty"`

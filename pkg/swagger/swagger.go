@@ -12,7 +12,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
-func Run(outputDir string) error {
+func Run(api, outputDir string) error {
 	s := &Swagger{
 		Swagger: "2.0",
 		Info: &Info{
@@ -71,11 +71,13 @@ func Run(outputDir string) error {
 
 	populateExamples(s.Paths)
 
-	xmsEnumList := map[string]ModelAsString{
-		"VMSize": true,
+	xmsEnumList := map[string]struct{}{}
+
+	if api != "github.com/Azure/ARO-RP/pkg/api/v20200430" {
+		xmsEnumList["VMSize"] = struct{}{}
 	}
 
-	err := define(s.Definitions, "github.com/Azure/ARO-RP/pkg/api/v20200430", xmsEnumList, "OpenShiftClusterList", "OpenShiftClusterCredentials")
+	err := define(s.Definitions, api, xmsEnumList, "OpenShiftClusterList", "OpenShiftClusterCredentials")
 	if err != nil {
 		return err
 	}

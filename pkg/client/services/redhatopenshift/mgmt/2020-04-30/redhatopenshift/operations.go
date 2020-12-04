@@ -26,7 +26,7 @@ import (
 	"github.com/Azure/go-autorest/tracing"
 )
 
-// OperationsClient is the rest API for Azure Red Hat OpenShift
+// OperationsClient is the rest API for Azure Red Hat OpenShift 4
 type OperationsClient struct {
 	BaseClient
 }
@@ -42,7 +42,7 @@ func NewOperationsClientWithBaseURI(baseURI string, subscriptionID string) Opera
 	return OperationsClient{NewWithBaseURI(baseURI, subscriptionID)}
 }
 
-// List lists all of the available RP operations.  The operation returns the RP operations.
+// List the operation returns the RP operations.
 func (client OperationsClient) List(ctx context.Context) (result OperationListPage, err error) {
 	if tracing.IsEnabled() {
 		ctx = tracing.StartSpan(ctx, fqdn+"/OperationsClient.List")

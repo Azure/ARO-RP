@@ -28,19 +28,23 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/insights"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift"
+	openshiftclustersv20200430 "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2020-04-30/redhatopenshift"
+	openshiftclustersv20210131preview "github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/redhatopenshift/2021-01-31-preview/redhatopenshift"
 	"github.com/Azure/ARO-RP/pkg/util/cluster"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/test/util/kubeadminkubeconfig"
 )
 
 type clientSet struct {
-	OpenshiftClusters redhatopenshift.OpenShiftClustersClient
-	Operations        redhatopenshift.OperationsClient
-	VirtualMachines   compute.VirtualMachinesClient
-	Resources         features.ResourcesClient
-	ActivityLogs      insights.ActivityLogsClient
-	VirtualNetworks   network.VirtualNetworksClient
+	OpenshiftClustersv20200430        openshiftclustersv20200430.OpenShiftClustersClient
+	Operationsv20200430               openshiftclustersv20200430.OperationsClient
+	OpenshiftClustersv20210131preview openshiftclustersv20210131preview.OpenShiftClustersClient
+	Operationsv20210131preview        openshiftclustersv20210131preview.OperationsClient
+
+	VirtualMachines compute.VirtualMachinesClient
+	Resources       features.ResourcesClient
+	ActivityLogs    insights.ActivityLogsClient
+	VirtualNetworks network.VirtualNetworksClient
 
 	RestConfig  *rest.Config
 	Kubernetes  kubernetes.Interface
@@ -113,12 +117,15 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 	}
 
 	return &clientSet{
-		OpenshiftClusters: redhatopenshift.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		Operations:        redhatopenshift.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		VirtualMachines:   compute.NewVirtualMachinesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		Resources:         features.NewResourcesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		ActivityLogs:      insights.NewActivityLogsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
-		VirtualNetworks:   network.NewVirtualNetworksClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		OpenshiftClustersv20200430:        openshiftclustersv20200430.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Operationsv20200430:               openshiftclustersv20200430.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		OpenshiftClustersv20210131preview: openshiftclustersv20210131preview.NewOpenShiftClustersClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Operationsv20210131preview:        openshiftclustersv20210131preview.NewOperationsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+
+		VirtualMachines: compute.NewVirtualMachinesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		Resources:       features.NewResourcesClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		ActivityLogs:    insights.NewActivityLogsClient(_env.Environment(), _env.SubscriptionID(), authorizer),
+		VirtualNetworks: network.NewVirtualNetworksClient(_env.Environment(), _env.SubscriptionID(), authorizer),
 
 		RestConfig:  restconfig,
 		Kubernetes:  cli,
