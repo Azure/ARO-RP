@@ -140,7 +140,7 @@ func TestQuotaCheck(t *testing.T) {
 				tt.mocks(tt, usageClient)
 			}
 
-			dv := openShiftClusterDynamicValidator{
+			qv := quotaValidator{
 				log: logrus.NewEntry(logrus.StandardLogger()),
 				oc: &api.OpenShiftCluster{
 					Location: "ocLocation",
@@ -159,7 +159,7 @@ func TestQuotaCheck(t *testing.T) {
 				spUsage: usageClient,
 			}
 
-			err := dv.validateQuotas(ctx)
+			err := qv.Validate(ctx)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

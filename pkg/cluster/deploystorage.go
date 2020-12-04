@@ -20,7 +20,6 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/openshift/installer/pkg/asset"
-	"github.com/openshift/installer/pkg/asset/bootstraplogging"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/kubeconfig"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
@@ -30,6 +29,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/bootstraplogging"
 	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/arm"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
@@ -80,7 +80,7 @@ func (m *manager) clusterSPObjectID(ctx context.Context) (string, error) {
 	return clusterSPObjectID, err
 }
 
-func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image, bootstrapLoggingConfig *bootstraplogging.Config) error {
+func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) error {
 	if m.doc.OpenShiftCluster.Properties.InfraID == "" {
 		clusterID := &installconfig.ClusterID{}
 
@@ -211,6 +211,11 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 	clusterID := &installconfig.ClusterID{
 		UUID:    m.doc.ID,
 		InfraID: infraID,
+	}
+
+	bootstrapLoggingConfig, err := bootstraplogging.GetConfig(m.env, m.doc)
+	if err != nil {
+		return err
 	}
 
 	g := graph{

@@ -1,19 +1,15 @@
-package openshiftcluster
+package cluster
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
 	"fmt"
-	"math/big"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
@@ -28,143 +24,57 @@ import (
 	"github.com/openshift/installer/pkg/types/validation"
 	"golang.org/x/crypto/ssh"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/bootstraplogging"
-	"github.com/Azure/ARO-RP/pkg/cluster"
-	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
-	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-func (m *manager) Create(ctx context.Context) error {
-	var err error
-
-	if m.doc.OpenShiftCluster.Properties.Install == nil {
-		// we don't re-call Dynamic on subsequent entries here.  One reason is
-		// that we would re-check quota *after* we had deployed our VMs, and
-		// could fail with a false positive.
-		timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
-		defer cancel()
-		_ = wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
-			err = m.ocDynamicValidator.Dynamic(ctx)
-			if azureerrors.HasAuthorizationFailedError(err) ||
-				azureerrors.HasLinkedAuthorizationFailedError(err) {
-				m.log.Print(err)
-				return false, nil
-			}
-			return err == nil, err
-		}, timeoutCtx.Done())
-		if err != nil {
-			return err
-		}
-	}
-
+func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.InstallConfig, *installconfig.PlatformCreds, *releaseimage.Image, error) {
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
-
-	if m.env.DeploymentMode() != deployment.Development {
-		rp := m.acrtoken.GetRegistryProfile(m.doc.OpenShiftCluster)
-		if rp == nil {
-			// 1. choose a name and establish the intent to create a token with
-			// that name
-			rp = m.acrtoken.NewRegistryProfile(m.doc.OpenShiftCluster)
-
-			m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-				m.acrtoken.PutRegistryProfile(doc.OpenShiftCluster, rp)
-				return nil
-			})
-			if err != nil {
-				return err
-			}
-		}
-
-		if rp.Password == "" {
-			// 2. ensure a token with the chosen name exists, generate a
-			// password for it and store it in the database
-			password, err := m.acrtoken.EnsureTokenAndPassword(ctx, rp)
-			if err != nil {
-				return err
-			}
-
-			rp.Password = api.SecureString(password)
-
-			m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-				m.acrtoken.PutRegistryProfile(doc.OpenShiftCluster, rp)
-				return nil
-			})
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		if doc.OpenShiftCluster.Properties.SSHKey == nil {
-			sshKey, err := rsa.GenerateKey(rand.Reader, 2048)
-			if err != nil {
-				return err
-			}
-
-			doc.OpenShiftCluster.Properties.SSHKey = x509.MarshalPKCS1PrivateKey(sshKey)
-		}
-
-		if doc.OpenShiftCluster.Properties.StorageSuffix == "" {
-			doc.OpenShiftCluster.Properties.StorageSuffix, err = randomLowerCaseAlphanumericStringWithNoVowels(5)
-			if err != nil {
-				return err
-			}
-		}
-
-		return nil
-	})
-	if err != nil {
-		return err
-	}
 
 	pullSecret, err := pullsecret.Build(m.doc.OpenShiftCluster, string(m.doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret))
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
 
 	for _, key := range []string{"cloud.openshift.com"} {
 		pullSecret, err = pullsecret.RemoveKey(pullSecret, key)
 		if err != nil {
-			return err
+			return nil, nil, nil, err
 		}
 	}
 
 	r, err := azure.ParseResourceID(m.doc.OpenShiftCluster.ID)
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
 
 	_, masterSubnetName, err := subnet.Split(m.doc.OpenShiftCluster.Properties.MasterProfile.SubnetID)
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
 
 	vnetID, workerSubnetName, err := subnet.Split(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].SubnetID)
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
 
 	vnetr, err := azure.ParseResourceID(vnetID)
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
 
 	privateKey, err := x509.ParsePKCS1PrivateKey(m.doc.OpenShiftCluster.Properties.SSHKey)
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
 
 	sshkey, err := ssh.NewPublicKey(&privateKey.PublicKey)
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
 
 	domain := m.doc.OpenShiftCluster.Properties.ClusterProfile.Domain
@@ -174,7 +84,7 @@ func (m *manager) Create(ctx context.Context) error {
 
 	masterZones, err := m.env.Zones(string(m.doc.OpenShiftCluster.Properties.MasterProfile.VMSize))
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
 	if len(masterZones) == 0 {
 		masterZones = []string{""}
@@ -182,7 +92,7 @@ func (m *manager) Create(ctx context.Context) error {
 
 	workerZones, err := m.env.Zones(string(m.doc.OpenShiftCluster.Properties.WorkerProfiles[0].VMSize))
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
 	if len(workerZones) == 0 {
 		masterZones = []string{""}
@@ -295,32 +205,22 @@ func (m *manager) Create(ctx context.Context) error {
 
 	installConfig.Config.Azure.Image, err = getRHCOSImage(ctx)
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
 
 	image := &releaseimage.Image{}
 	if m.doc.OpenShiftCluster.Properties.ClusterProfile.Version == version.InstallStream.Version.String() {
 		image.PullSpec = version.InstallStream.PullSpec
 	} else {
-		return fmt.Errorf("unimplemented version %q", m.doc.OpenShiftCluster.Properties.ClusterProfile.Version)
+		return nil, nil, nil, fmt.Errorf("unimplemented version %q", m.doc.OpenShiftCluster.Properties.ClusterProfile.Version)
 	}
 
 	err = validation.ValidateInstallConfig(installConfig.Config, icopenstack.NewValidValuesFetcher()).ToAggregate()
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
 
-	i, err := cluster.NewManager(ctx, m.log, m.env, m.db, m.cipher, m.billing, m.doc, m.subscriptionDoc)
-	if err != nil {
-		return err
-	}
-
-	bootstrapLoggingConfig, err := bootstraplogging.GetConfig(m.env, m.doc)
-	if err != nil {
-		return err
-	}
-
-	return i.Install(ctx, installConfig, platformCreds, image, bootstrapLoggingConfig)
+	return installConfig, platformCreds, image, err
 }
 
 var rxRHCOS = regexp.MustCompile(`rhcos-((\d+)\.\d+\.\d{8})\d{4}\-\d+-azure\.x86_64\.vhd`)
@@ -342,21 +242,4 @@ func getRHCOSImage(ctx context.Context) (*azuretypes.Image, error) {
 		SKU:       "aro_" + m[2], // "aro_4x"
 		Version:   m[1],          // "4x.yy.2020zzzz"
 	}, nil
-}
-
-func randomLowerCaseAlphanumericStringWithNoVowels(n int) (string, error) {
-	return randomString("bcdfghjklmnpqrstvwxyz0123456789", n)
-}
-
-func randomString(letterBytes string, n int) (string, error) {
-	b := make([]byte, n)
-	for i := range b {
-		o, err := rand.Int(rand.Reader, big.NewInt(int64(len(letterBytes))))
-		if err != nil {
-			return "", err
-		}
-		b[i] = letterBytes[o.Int64()]
-	}
-
-	return string(b), nil
 }

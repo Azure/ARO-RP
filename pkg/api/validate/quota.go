@@ -8,7 +8,12 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/sirupsen/logrus"
+
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/env"
+	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 )
 
 func addRequiredResources(requiredResources map[string]int, vmSize api.VMSize, count int) error {
@@ -78,24 +83,59 @@ func addRequiredResources(requiredResources map[string]int, vmSize api.VMSize, c
 	return nil
 }
 
-// validateQuotas checks usage quotas vs. resources required by cluster before cluster creation
-func (dv *openShiftClusterDynamicValidator) validateQuotas(ctx context.Context) error {
-	dv.log.Print("validateQuotas")
+type AzureQuotaValidator interface {
+	Validate(context.Context) error
+}
+
+type quotaValidator struct {
+	log *logrus.Entry
+	env env.Interface
+
+	oc      *api.OpenShiftCluster
+	spUsage compute.UsageClient
+}
+
+func NewAzureQuotaValidator(ctx context.Context, log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster) (AzureQuotaValidator, error) {
+	r, err := azure.ParseResourceID(oc.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	spAuthorizer, err := validateServicePrincipalProfile(ctx, log, env, oc)
+	if err != nil {
+		return nil, err
+	}
+
+	validator := &quotaValidator{
+		log: log,
+		env: env,
+
+		oc:      oc,
+		spUsage: compute.NewUsageClient(env.Environment(), r.SubscriptionID, spAuthorizer),
+	}
+
+	return validator, nil
+}
+
+// Validate checks usage quotas vs. resources required by cluster before cluster
+// creation
+func (qv *quotaValidator) Validate(ctx context.Context) error {
+	qv.log.Print("ValidateQuotas")
 
 	requiredResources := map[string]int{}
-	err := addRequiredResources(requiredResources, dv.oc.Properties.MasterProfile.VMSize, 3)
+	err := addRequiredResources(requiredResources, qv.oc.Properties.MasterProfile.VMSize, 3)
 	if err != nil {
 		return err
 	}
 	//worker node resource calculation
-	for _, w := range dv.oc.Properties.WorkerProfiles {
+	for _, w := range qv.oc.Properties.WorkerProfiles {
 		err = addRequiredResources(requiredResources, w.VMSize, w.Count)
 		if err != nil {
 			return err
 		}
 	}
 
-	usages, err := dv.spUsage.List(ctx, dv.oc.Location)
+	usages, err := qv.spUsage.List(ctx, qv.oc.Location)
 	if err != nil {
 		return err
 	}
