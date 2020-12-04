@@ -6,6 +6,7 @@ package cluster
 import (
 	"context"
 
+	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
 	"github.com/Azure/go-autorest/autorest/azure"
 	configclient "github.com/openshift/client-go/config/clientset/versioned"
 	operatorclient "github.com/openshift/client-go/operator/clientset/versioned"
@@ -16,6 +17,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 
 	"github.com/Azure/ARO-RP/pkg/api"
+	"github.com/Azure/ARO-RP/pkg/api/validate"
 	"github.com/Azure/ARO-RP/pkg/database"
 	"github.com/Azure/ARO-RP/pkg/env"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
@@ -25,6 +27,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/privatedns"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/storage"
 	"github.com/Azure/ARO-RP/pkg/util/billing"
+	"github.com/Azure/ARO-RP/pkg/util/blob"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 	"github.com/Azure/ARO-RP/pkg/util/privateendpoint"
@@ -74,6 +77,10 @@ type manager struct {
 	samplescli    samplesclient.Interface
 	securitycli   securityclient.Interface
 	arocli        aroclient.AroV1alpha1Interface
+
+	newDynamicValidator   func(*logrus.Entry, env.Interface, *api.OpenShiftCluster, *api.SubscriptionDocument, refreshable.Authorizer) validate.OpenShiftClusterDynamicValidator
+	getClusterSPObjectID  func(context.Context, env.Interface, *logrus.Entry, *api.OpenShiftClusterDocument) (string, error)
+	getBlobServiceBackend func(context.Context, storage.AccountsClient, *api.OpenShiftCluster, mgmtstorage.Permissions, mgmtstorage.SignedResourceTypes) (blob.BlobService, error)
 }
 
 const deploymentName = "azuredeploy"
@@ -122,5 +129,9 @@ func New(ctx context.Context, log *logrus.Entry, env env.Interface, db database.
 		dns:             dns.NewManager(env, localFPAuthorizer),
 		privateendpoint: privateendpoint.NewManager(env, localFPAuthorizer),
 		subnet:          subnet.NewManager(env, r.SubscriptionID, fpAuthorizer),
+
+		newDynamicValidator:   validate.NewOpenShiftClusterDynamicValidator,
+		getClusterSPObjectID:  clusterSPObjectID,
+		getBlobServiceBackend: blob.NewBlobServiceForCluster,
 	}, nil
 }

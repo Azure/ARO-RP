@@ -7,7 +7,6 @@ import (
 	"context"
 
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
-	azstorage "github.com/Azure/azure-sdk-for-go/storage"
 
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
@@ -40,7 +39,5 @@ func (m *manager) removeBootstrapIgnition(ctx context.Context) error {
 		return err
 	}
 
-	bootstrapIgn := blobService.GetContainerReference("ignition")
-	_, err = bootstrapIgn.DeleteIfExists(&azstorage.DeleteContainerOptions{})
-	return err
+	return blobService.DeleteContainerIfExists("ignition")
 }

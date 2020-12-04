@@ -4,10 +4,8 @@ package cluster
 // Licensed under the Apache License 2.0.
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
-	"io/ioutil"
 	"reflect"
 
 	mgmtstorage "github.com/Azure/azure-sdk-for-go/services/storage/mgmt/2019-04-01/storage"
@@ -27,6 +25,8 @@ import (
 	"github.com/openshift/installer/pkg/asset/templates/content/bootkube"
 	"github.com/openshift/installer/pkg/asset/templates/content/openshift"
 	"github.com/openshift/installer/pkg/asset/tls"
+
+	"github.com/Azure/ARO-RP/pkg/util/blob"
 )
 
 var registeredTypes = map[string]asset.Asset{
@@ -154,6 +154,10 @@ func (g graph) resolve(a asset.Asset) (asset.Asset, error) {
 	return g[reflect.TypeOf(a)], nil
 }
 
+func (m *manager) getBlobService(ctx context.Context, p mgmtstorage.Permissions, r mgmtstorage.SignedResourceTypes) (blob.BlobService, error) {
+	return m.getBlobServiceBackend(ctx, m.storageAccounts, m.doc.OpenShiftCluster, p, r)
+}
+
 func (m *manager) graphExists(ctx context.Context) (bool, error) {
 	m.log.Print("checking if graph exists")
 
@@ -162,8 +166,7 @@ func (m *manager) graphExists(ctx context.Context) (bool, error) {
 		return false, err
 	}
 
-	aro := blobService.GetContainerReference("aro")
-	return aro.GetBlobReference("graph").Exists()
+	return blobService.BlobExists("aro", "graph")
 }
 
 func (m *manager) loadGraph(ctx context.Context) (graph, error) {
@@ -174,15 +177,7 @@ func (m *manager) loadGraph(ctx context.Context) (graph, error) {
 		return nil, err
 	}
 
-	aro := blobService.GetContainerReference("aro")
-	cluster := aro.GetBlobReference("graph")
-	rc, err := cluster.Get(nil)
-	if err != nil {
-		return nil, err
-	}
-	defer rc.Close()
-
-	encrypted, err := ioutil.ReadAll(rc)
+	encrypted, err := blobService.ReadBlob("aro", "graph", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -210,13 +205,11 @@ func (m *manager) saveGraph(ctx context.Context, g graph) error {
 	}
 
 	bootstrap := g[reflect.TypeOf(&bootstrap.Bootstrap{})].(*bootstrap.Bootstrap)
-	bootstrapIgn := blobService.GetContainerReference("ignition").GetBlobReference("bootstrap.ign")
-	err = bootstrapIgn.CreateBlockBlobFromReader(bytes.NewReader(bootstrap.File.Data), nil)
+	err = blobService.WriteBlob("ignition", "bootstrap.ign", bootstrap.File.Data)
 	if err != nil {
 		return err
 	}
 
-	graph := blobService.GetContainerReference("aro").GetBlobReference("graph")
 	b, err := json.MarshalIndent(g, "", "    ")
 	if err != nil {
 		return err
@@ -227,5 +220,5 @@ func (m *manager) saveGraph(ctx context.Context, g graph) error {
 		return err
 	}
 
-	return graph.CreateBlockBlobFromReader(bytes.NewReader([]byte(output)), nil)
+	return blobService.WriteBlob("aro", "graph", []byte(output))
 }
