@@ -29,7 +29,7 @@ import (
 )
 
 // The package's fully qualified name.
-const fqdn = "github.com/Azure/azure-sdk-for-go/services/containerregistry/mgmt/2019-06-01-preview/containerregistry"
+const fqdn = "github.com/Azure/azure-sdk-for-go/services/preview/containerregistry/mgmt/2019-06-01-preview/containerregistry"
 
 // ActiveDirectoryObject the Active Directory Object that will be used for authenticating the token of a
 // container registry.
@@ -40,8 +40,8 @@ type ActiveDirectoryObject struct {
 	TenantID *string `json:"tenantId,omitempty"`
 }
 
-// Actor the agent that initiated the event. For most situations, this could be from the authorization context
-// of the request.
+// Actor the agent that initiated the event. For most situations, this could be from the authorization
+// context of the request.
 type Actor struct {
 	// Name - The subject or username associated with the request context that generated the event.
 	Name *string `json:"name,omitempty"`
@@ -63,6 +63,8 @@ type AgentPool struct {
 	Location *string `json:"location,omitempty"`
 	// Tags - The tags of the resource.
 	Tags map[string]*string `json:"tags"`
+	// SystemData - READ-ONLY; Metadata pertaining to creation and last modification of the resource.
+	SystemData *SystemData `json:"systemData,omitempty"`
 }
 
 // MarshalJSON is the custom marshaler for AgentPool.
@@ -142,6 +144,15 @@ func (ap *AgentPool) UnmarshalJSON(body []byte) error {
 					return err
 				}
 				ap.Tags = tags
+			}
+		case "systemData":
+			if v != nil {
+				var systemData SystemData
+				err = json.Unmarshal(*v, &systemData)
+				if err != nil {
+					return err
+				}
+				ap.SystemData = &systemData
 			}
 		}
 	}
@@ -301,8 +312,11 @@ func (page AgentPoolListResultPage) Values() []AgentPool {
 }
 
 // Creates a new instance of the AgentPoolListResultPage type.
-func NewAgentPoolListResultPage(getNextPage func(context.Context, AgentPoolListResult) (AgentPoolListResult, error)) AgentPoolListResultPage {
-	return AgentPoolListResultPage{fn: getNextPage}
+func NewAgentPoolListResultPage(cur AgentPoolListResult, getNextPage func(context.Context, AgentPoolListResult) (AgentPoolListResult, error)) AgentPoolListResultPage {
+	return AgentPoolListResultPage{
+		fn:   getNextPage,
+		aplr: cur,
+	}
 }
 
 // AgentPoolProperties the properties of agent pool.
@@ -350,7 +364,8 @@ type AgentPoolQueueStatus struct {
 	Count *int32 `json:"count,omitempty"`
 }
 
-// AgentPoolsCreateFuture an abstraction for monitoring and retrieving the results of a long-running operation.
+// AgentPoolsCreateFuture an abstraction for monitoring and retrieving the results of a long-running
+// operation.
 type AgentPoolsCreateFuture struct {
 	azure.Future
 }
@@ -378,7 +393,8 @@ func (future *AgentPoolsCreateFuture) Result(client AgentPoolsClient) (ap AgentP
 	return
 }
 
-// AgentPoolsDeleteFuture an abstraction for monitoring and retrieving the results of a long-running operation.
+// AgentPoolsDeleteFuture an abstraction for monitoring and retrieving the results of a long-running
+// operation.
 type AgentPoolsDeleteFuture struct {
 	azure.Future
 }
@@ -400,7 +416,8 @@ func (future *AgentPoolsDeleteFuture) Result(client AgentPoolsClient) (ar autore
 	return
 }
 
-// AgentPoolsUpdateFuture an abstraction for monitoring and retrieving the results of a long-running operation.
+// AgentPoolsUpdateFuture an abstraction for monitoring and retrieving the results of a long-running
+// operation.
 type AgentPoolsUpdateFuture struct {
 	azure.Future
 }
@@ -610,8 +627,8 @@ func (c Credentials) MarshalJSON() ([]byte, error) {
 	return json.Marshal(objectMap)
 }
 
-// CustomRegistryCredentials describes the credentials that will be used to access a custom registry during a
-// run.
+// CustomRegistryCredentials describes the credentials that will be used to access a custom registry during
+// a run.
 type CustomRegistryCredentials struct {
 	// UserName - The username for logging into the custom registry.
 	UserName *SecretObject `json:"userName,omitempty"`
@@ -655,6 +672,8 @@ type DockerBuildRequest struct {
 	IsArchiveEnabled *bool `json:"isArchiveEnabled,omitempty"`
 	// AgentPoolName - The dedicated agent pool for the run.
 	AgentPoolName *string `json:"agentPoolName,omitempty"`
+	// LogTemplate - The template that describes the repository and tag information for run log artifact.
+	LogTemplate *string `json:"logTemplate,omitempty"`
 	// Type - Possible values include: 'TypeRunRequest', 'TypeDockerBuildRequest', 'TypeFileTaskRunRequest', 'TypeTaskRunRequest', 'TypeEncodedTaskRunRequest'
 	Type Type `json:"type,omitempty"`
 }
@@ -701,6 +720,9 @@ func (dbr DockerBuildRequest) MarshalJSON() ([]byte, error) {
 	}
 	if dbr.AgentPoolName != nil {
 		objectMap["agentPoolName"] = dbr.AgentPoolName
+	}
+	if dbr.LogTemplate != nil {
+		objectMap["logTemplate"] = dbr.LogTemplate
 	}
 	if dbr.Type != "" {
 		objectMap["type"] = dbr.Type
@@ -925,6 +947,8 @@ type EncodedTaskRunRequest struct {
 	IsArchiveEnabled *bool `json:"isArchiveEnabled,omitempty"`
 	// AgentPoolName - The dedicated agent pool for the run.
 	AgentPoolName *string `json:"agentPoolName,omitempty"`
+	// LogTemplate - The template that describes the repository and tag information for run log artifact.
+	LogTemplate *string `json:"logTemplate,omitempty"`
 	// Type - Possible values include: 'TypeRunRequest', 'TypeDockerBuildRequest', 'TypeFileTaskRunRequest', 'TypeTaskRunRequest', 'TypeEncodedTaskRunRequest'
 	Type Type `json:"type,omitempty"`
 }
@@ -962,6 +986,9 @@ func (etrr EncodedTaskRunRequest) MarshalJSON() ([]byte, error) {
 	}
 	if etrr.AgentPoolName != nil {
 		objectMap["agentPoolName"] = etrr.AgentPoolName
+	}
+	if etrr.LogTemplate != nil {
+		objectMap["logTemplate"] = etrr.LogTemplate
 	}
 	if etrr.Type != "" {
 		objectMap["type"] = etrr.Type
@@ -1338,8 +1365,11 @@ func (page EventListResultPage) Values() []Event {
 }
 
 // Creates a new instance of the EventListResultPage type.
-func NewEventListResultPage(getNextPage func(context.Context, EventListResult) (EventListResult, error)) EventListResultPage {
-	return EventListResultPage{fn: getNextPage}
+func NewEventListResultPage(cur EventListResult, getNextPage func(context.Context, EventListResult) (EventListResult, error)) EventListResultPage {
+	return EventListResultPage{
+		fn:  getNextPage,
+		elr: cur,
+	}
 }
 
 // EventRequestMessage the event request message sent to the service URI.
@@ -1435,6 +1465,8 @@ type FileTaskRunRequest struct {
 	IsArchiveEnabled *bool `json:"isArchiveEnabled,omitempty"`
 	// AgentPoolName - The dedicated agent pool for the run.
 	AgentPoolName *string `json:"agentPoolName,omitempty"`
+	// LogTemplate - The template that describes the repository and tag information for run log artifact.
+	LogTemplate *string `json:"logTemplate,omitempty"`
 	// Type - Possible values include: 'TypeRunRequest', 'TypeDockerBuildRequest', 'TypeFileTaskRunRequest', 'TypeTaskRunRequest', 'TypeEncodedTaskRunRequest'
 	Type Type `json:"type,omitempty"`
 }
@@ -1472,6 +1504,9 @@ func (ftrr FileTaskRunRequest) MarshalJSON() ([]byte, error) {
 	}
 	if ftrr.AgentPoolName != nil {
 		objectMap["agentPoolName"] = ftrr.AgentPoolName
+	}
+	if ftrr.LogTemplate != nil {
+		objectMap["logTemplate"] = ftrr.LogTemplate
 	}
 	if ftrr.Type != "" {
 		objectMap["type"] = ftrr.Type
@@ -1643,8 +1678,8 @@ func (ftsup FileTaskStepUpdateParameters) AsBasicTaskStepUpdateParameters() (Bas
 	return &ftsup, true
 }
 
-// GenerateCredentialsParameters the parameters used to generate credentials for a specified token or user of a
-// container registry.
+// GenerateCredentialsParameters the parameters used to generate credentials for a specified token or user
+// of a container registry.
 type GenerateCredentialsParameters struct {
 	// TokenID - The resource ID of the token for which credentials have to be generated.
 	TokenID *string `json:"tokenId,omitempty"`
@@ -2026,8 +2061,11 @@ func (page OperationListResultPage) Values() []OperationDefinition {
 }
 
 // Creates a new instance of the OperationListResultPage type.
-func NewOperationListResultPage(getNextPage func(context.Context, OperationListResult) (OperationListResult, error)) OperationListResultPage {
-	return OperationListResultPage{fn: getNextPage}
+func NewOperationListResultPage(cur OperationListResult, getNextPage func(context.Context, OperationListResult) (OperationListResult, error)) OperationListResultPage {
+	return OperationListResultPage{
+		fn:  getNextPage,
+		olr: cur,
+	}
 }
 
 // OperationMetricSpecificationDefinition the definition of Azure Monitoring metric.
@@ -2114,6 +2152,8 @@ type ProxyResource struct {
 	Name *string `json:"name,omitempty"`
 	// Type - READ-ONLY; The type of the resource.
 	Type *string `json:"type,omitempty"`
+	// SystemData - READ-ONLY; Metadata pertaining to creation and last modification of the resource.
+	SystemData *SystemData `json:"systemData,omitempty"`
 }
 
 // QuarantinePolicy the quarantine policy for a container registry.
@@ -2128,7 +2168,8 @@ type RegenerateCredentialParameters struct {
 	Name PasswordName `json:"name,omitempty"`
 }
 
-// RegistriesCreateFuture an abstraction for monitoring and retrieving the results of a long-running operation.
+// RegistriesCreateFuture an abstraction for monitoring and retrieving the results of a long-running
+// operation.
 type RegistriesCreateFuture struct {
 	azure.Future
 }
@@ -2156,7 +2197,8 @@ func (future *RegistriesCreateFuture) Result(client RegistriesClient) (r Registr
 	return
 }
 
-// RegistriesDeleteFuture an abstraction for monitoring and retrieving the results of a long-running operation.
+// RegistriesDeleteFuture an abstraction for monitoring and retrieving the results of a long-running
+// operation.
 type RegistriesDeleteFuture struct {
 	azure.Future
 }
@@ -2259,7 +2301,8 @@ func (future *RegistriesScheduleRunFuture) Result(client RegistriesClient) (r Ru
 	return
 }
 
-// RegistriesUpdateFuture an abstraction for monitoring and retrieving the results of a long-running operation.
+// RegistriesUpdateFuture an abstraction for monitoring and retrieving the results of a long-running
+// operation.
 type RegistriesUpdateFuture struct {
 	azure.Future
 }
@@ -2304,6 +2347,8 @@ type Registry struct {
 	Location *string `json:"location,omitempty"`
 	// Tags - The tags of the resource.
 	Tags map[string]*string `json:"tags"`
+	// SystemData - READ-ONLY; Metadata pertaining to creation and last modification of the resource.
+	SystemData *SystemData `json:"systemData,omitempty"`
 }
 
 // MarshalJSON is the custom marshaler for Registry.
@@ -2395,6 +2440,15 @@ func (r *Registry) UnmarshalJSON(body []byte) error {
 					return err
 				}
 				r.Tags = tags
+			}
+		case "systemData":
+			if v != nil {
+				var systemData SystemData
+				err = json.Unmarshal(*v, &systemData)
+				if err != nil {
+					return err
+				}
+				r.SystemData = &systemData
 			}
 		}
 	}
@@ -2563,8 +2617,11 @@ func (page RegistryListResultPage) Values() []Registry {
 }
 
 // Creates a new instance of the RegistryListResultPage type.
-func NewRegistryListResultPage(getNextPage func(context.Context, RegistryListResult) (RegistryListResult, error)) RegistryListResultPage {
-	return RegistryListResultPage{fn: getNextPage}
+func NewRegistryListResultPage(cur RegistryListResult, getNextPage func(context.Context, RegistryListResult) (RegistryListResult, error)) RegistryListResultPage {
+	return RegistryListResultPage{
+		fn:  getNextPage,
+		rlr: cur,
+	}
 }
 
 // RegistryNameCheckRequest a request to check whether a container registry name is available.
@@ -2743,6 +2800,8 @@ type Replication struct {
 	Location *string `json:"location,omitempty"`
 	// Tags - The tags of the resource.
 	Tags map[string]*string `json:"tags"`
+	// SystemData - READ-ONLY; Metadata pertaining to creation and last modification of the resource.
+	SystemData *SystemData `json:"systemData,omitempty"`
 }
 
 // MarshalJSON is the custom marshaler for Replication.
@@ -2822,6 +2881,15 @@ func (r *Replication) UnmarshalJSON(body []byte) error {
 					return err
 				}
 				r.Tags = tags
+			}
+		case "systemData":
+			if v != nil {
+				var systemData SystemData
+				err = json.Unmarshal(*v, &systemData)
+				if err != nil {
+					return err
+				}
+				r.SystemData = &systemData
 			}
 		}
 	}
@@ -2981,8 +3049,11 @@ func (page ReplicationListResultPage) Values() []Replication {
 }
 
 // Creates a new instance of the ReplicationListResultPage type.
-func NewReplicationListResultPage(getNextPage func(context.Context, ReplicationListResult) (ReplicationListResult, error)) ReplicationListResultPage {
-	return ReplicationListResultPage{fn: getNextPage}
+func NewReplicationListResultPage(cur ReplicationListResult, getNextPage func(context.Context, ReplicationListResult) (ReplicationListResult, error)) ReplicationListResultPage {
+	return ReplicationListResultPage{
+		fn:  getNextPage,
+		rlr: cur,
+	}
 }
 
 // ReplicationProperties the properties of a replication.
@@ -3115,6 +3186,8 @@ type Resource struct {
 	Location *string `json:"location,omitempty"`
 	// Tags - The tags of the resource.
 	Tags map[string]*string `json:"tags"`
+	// SystemData - READ-ONLY; Metadata pertaining to creation and last modification of the resource.
+	SystemData *SystemData `json:"systemData,omitempty"`
 }
 
 // MarshalJSON is the custom marshaler for Resource.
@@ -3162,6 +3235,8 @@ type Run struct {
 	Name *string `json:"name,omitempty"`
 	// Type - READ-ONLY; The type of the resource.
 	Type *string `json:"type,omitempty"`
+	// SystemData - READ-ONLY; Metadata pertaining to creation and last modification of the resource.
+	SystemData *SystemData `json:"systemData,omitempty"`
 }
 
 // MarshalJSON is the custom marshaler for Run.
@@ -3217,6 +3292,15 @@ func (r *Run) UnmarshalJSON(body []byte) error {
 					return err
 				}
 				r.Type = &typeVar
+			}
+		case "systemData":
+			if v != nil {
+				var systemData SystemData
+				err = json.Unmarshal(*v, &systemData)
+				if err != nil {
+					return err
+				}
+				r.SystemData = &systemData
 			}
 		}
 	}
@@ -3408,8 +3492,11 @@ func (page RunListResultPage) Values() []Run {
 }
 
 // Creates a new instance of the RunListResultPage type.
-func NewRunListResultPage(getNextPage func(context.Context, RunListResult) (RunListResult, error)) RunListResultPage {
-	return RunListResultPage{fn: getNextPage}
+func NewRunListResultPage(cur RunListResult, getNextPage func(context.Context, RunListResult) (RunListResult, error)) RunListResultPage {
+	return RunListResultPage{
+		fn:  getNextPage,
+		rlr: cur,
+	}
 }
 
 // RunProperties the properties for a run.
@@ -3452,6 +3539,8 @@ type RunProperties struct {
 	RunErrorMessage *string `json:"runErrorMessage,omitempty"`
 	// UpdateTriggerToken - The update trigger token passed for the Run.
 	UpdateTriggerToken *string `json:"updateTriggerToken,omitempty"`
+	// LogArtifact - READ-ONLY; The image description for the log artifact.
+	LogArtifact *ImageDescriptor `json:"logArtifact,omitempty"`
 	// ProvisioningState - The provisioning state of a run. Possible values include: 'Creating', 'Updating', 'Deleting', 'Succeeded', 'Failed', 'Canceled'
 	ProvisioningState ProvisioningState `json:"provisioningState,omitempty"`
 	// IsArchiveEnabled - The value that indicates whether archiving is enabled or not.
@@ -3539,6 +3628,8 @@ type RunRequest struct {
 	IsArchiveEnabled *bool `json:"isArchiveEnabled,omitempty"`
 	// AgentPoolName - The dedicated agent pool for the run.
 	AgentPoolName *string `json:"agentPoolName,omitempty"`
+	// LogTemplate - The template that describes the repository and tag information for run log artifact.
+	LogTemplate *string `json:"logTemplate,omitempty"`
 	// Type - Possible values include: 'TypeRunRequest', 'TypeDockerBuildRequest', 'TypeFileTaskRunRequest', 'TypeTaskRunRequest', 'TypeEncodedTaskRunRequest'
 	Type Type `json:"type,omitempty"`
 }
@@ -3601,6 +3692,9 @@ func (rr RunRequest) MarshalJSON() ([]byte, error) {
 	}
 	if rr.AgentPoolName != nil {
 		objectMap["agentPoolName"] = rr.AgentPoolName
+	}
+	if rr.LogTemplate != nil {
+		objectMap["logTemplate"] = rr.LogTemplate
 	}
 	if rr.Type != "" {
 		objectMap["type"] = rr.Type
@@ -3705,6 +3799,8 @@ type ScopeMap struct {
 	Name *string `json:"name,omitempty"`
 	// Type - READ-ONLY; The type of the resource.
 	Type *string `json:"type,omitempty"`
+	// SystemData - READ-ONLY; Metadata pertaining to creation and last modification of the resource.
+	SystemData *SystemData `json:"systemData,omitempty"`
 }
 
 // MarshalJSON is the custom marshaler for ScopeMap.
@@ -3760,6 +3856,15 @@ func (sm *ScopeMap) UnmarshalJSON(body []byte) error {
 					return err
 				}
 				sm.Type = &typeVar
+			}
+		case "systemData":
+			if v != nil {
+				var systemData SystemData
+				err = json.Unmarshal(*v, &systemData)
+				if err != nil {
+					return err
+				}
+				sm.SystemData = &systemData
 			}
 		}
 	}
@@ -3919,8 +4024,11 @@ func (page ScopeMapListResultPage) Values() []ScopeMap {
 }
 
 // Creates a new instance of the ScopeMapListResultPage type.
-func NewScopeMapListResultPage(getNextPage func(context.Context, ScopeMapListResult) (ScopeMapListResult, error)) ScopeMapListResultPage {
-	return ScopeMapListResultPage{fn: getNextPage}
+func NewScopeMapListResultPage(cur ScopeMapListResult, getNextPage func(context.Context, ScopeMapListResult) (ScopeMapListResult, error)) ScopeMapListResultPage {
+	return ScopeMapListResultPage{
+		fn:   getNextPage,
+		smlr: cur,
+	}
 }
 
 // ScopeMapProperties the properties of a scope map.
@@ -3961,7 +4069,8 @@ type ScopeMapPropertiesUpdateParameters struct {
 	Actions *[]string `json:"actions,omitempty"`
 }
 
-// ScopeMapsCreateFuture an abstraction for monitoring and retrieving the results of a long-running operation.
+// ScopeMapsCreateFuture an abstraction for monitoring and retrieving the results of a long-running
+// operation.
 type ScopeMapsCreateFuture struct {
 	azure.Future
 }
@@ -3989,7 +4098,8 @@ func (future *ScopeMapsCreateFuture) Result(client ScopeMapsClient) (sm ScopeMap
 	return
 }
 
-// ScopeMapsDeleteFuture an abstraction for monitoring and retrieving the results of a long-running operation.
+// ScopeMapsDeleteFuture an abstraction for monitoring and retrieving the results of a long-running
+// operation.
 type ScopeMapsDeleteFuture struct {
 	azure.Future
 }
@@ -4011,7 +4121,8 @@ func (future *ScopeMapsDeleteFuture) Result(client ScopeMapsClient) (ar autorest
 	return
 }
 
-// ScopeMapsUpdateFuture an abstraction for monitoring and retrieving the results of a long-running operation.
+// ScopeMapsUpdateFuture an abstraction for monitoring and retrieving the results of a long-running
+// operation.
 type ScopeMapsUpdateFuture struct {
 	azure.Future
 }
@@ -4116,8 +4227,8 @@ func (s Sku) MarshalJSON() ([]byte, error) {
 	return json.Marshal(objectMap)
 }
 
-// Source the registry node that generated the event. Put differently, while the actor initiates the event, the
-// source generates it.
+// Source the registry node that generated the event. Put differently, while the actor initiates the event,
+// the source generates it.
 type Source struct {
 	// Addr - The IP or hostname and the port of the registry node that generated the event. Generally, this will be resolved by os.Hostname() along with the running port.
 	Addr *string `json:"addr,omitempty"`
@@ -4220,11 +4331,27 @@ type Status struct {
 	Timestamp *date.Time `json:"timestamp,omitempty"`
 }
 
-// StorageAccountProperties the properties of a storage account for a container registry. Only applicable to
-// Classic SKU.
+// StorageAccountProperties the properties of a storage account for a container registry. Only applicable
+// to Classic SKU.
 type StorageAccountProperties struct {
 	// ID - The resource ID of the storage account.
 	ID *string `json:"id,omitempty"`
+}
+
+// SystemData metadata pertaining to creation and last modification of the resource.
+type SystemData struct {
+	// CreatedBy - The identity that created the resource.
+	CreatedBy *string `json:"createdBy,omitempty"`
+	// CreatedByType - The type of identity that created the resource. Possible values include: 'User', 'Application', 'ManagedIdentity', 'Key'
+	CreatedByType CreatedByType `json:"createdByType,omitempty"`
+	// CreatedAt - The timestamp of resource creation (UTC).
+	CreatedAt *date.Time `json:"createdAt,omitempty"`
+	// LastModifiedBy - The identity that last modified the resource.
+	LastModifiedBy *string `json:"lastModifiedBy,omitempty"`
+	// LastModifiedByType - The type of identity that last modified the resource. Possible values include: 'LastModifiedByTypeUser', 'LastModifiedByTypeApplication', 'LastModifiedByTypeManagedIdentity', 'LastModifiedByTypeKey'
+	LastModifiedByType LastModifiedByType `json:"lastModifiedByType,omitempty"`
+	// LastModifiedAt - The timestamp of resource modification (UTC).
+	LastModifiedAt *date.Time `json:"lastModifiedAt,omitempty"`
 }
 
 // Target the target of the event.
@@ -4267,6 +4394,8 @@ type Task struct {
 	Location *string `json:"location,omitempty"`
 	// Tags - The tags of the resource.
 	Tags map[string]*string `json:"tags"`
+	// SystemData - READ-ONLY; Metadata pertaining to creation and last modification of the resource.
+	SystemData *SystemData `json:"systemData,omitempty"`
 }
 
 // MarshalJSON is the custom marshaler for Task.
@@ -4358,6 +4487,15 @@ func (t *Task) UnmarshalJSON(body []byte) error {
 					return err
 				}
 				t.Tags = tags
+			}
+		case "systemData":
+			if v != nil {
+				var systemData SystemData
+				err = json.Unmarshal(*v, &systemData)
+				if err != nil {
+					return err
+				}
+				t.SystemData = &systemData
 			}
 		}
 	}
@@ -4517,8 +4655,11 @@ func (page TaskListResultPage) Values() []Task {
 }
 
 // Creates a new instance of the TaskListResultPage type.
-func NewTaskListResultPage(getNextPage func(context.Context, TaskListResult) (TaskListResult, error)) TaskListResultPage {
-	return TaskListResultPage{fn: getNextPage}
+func NewTaskListResultPage(cur TaskListResult, getNextPage func(context.Context, TaskListResult) (TaskListResult, error)) TaskListResultPage {
+	return TaskListResultPage{
+		fn:  getNextPage,
+		tlr: cur,
+	}
 }
 
 // TaskProperties the properties of a task.
@@ -4543,6 +4684,10 @@ type TaskProperties struct {
 	Trigger *TriggerProperties `json:"trigger,omitempty"`
 	// Credentials - The properties that describes a set of credentials that will be used when this run is invoked.
 	Credentials *Credentials `json:"credentials,omitempty"`
+	// LogTemplate - The template that describes the repository and tag information for run log artifact.
+	LogTemplate *string `json:"logTemplate,omitempty"`
+	// IsSystemTask - The value of this property indicates whether the task resource is system task or not.
+	IsSystemTask *bool `json:"isSystemTask,omitempty"`
 }
 
 // MarshalJSON is the custom marshaler for TaskProperties.
@@ -4569,6 +4714,12 @@ func (tp TaskProperties) MarshalJSON() ([]byte, error) {
 	}
 	if tp.Credentials != nil {
 		objectMap["credentials"] = tp.Credentials
+	}
+	if tp.LogTemplate != nil {
+		objectMap["logTemplate"] = tp.LogTemplate
+	}
+	if tp.IsSystemTask != nil {
+		objectMap["isSystemTask"] = tp.IsSystemTask
 	}
 	return json.Marshal(objectMap)
 }
@@ -4671,6 +4822,24 @@ func (tp *TaskProperties) UnmarshalJSON(body []byte) error {
 				}
 				tp.Credentials = &credentials
 			}
+		case "logTemplate":
+			if v != nil {
+				var logTemplate string
+				err = json.Unmarshal(*v, &logTemplate)
+				if err != nil {
+					return err
+				}
+				tp.LogTemplate = &logTemplate
+			}
+		case "isSystemTask":
+			if v != nil {
+				var isSystemTask bool
+				err = json.Unmarshal(*v, &isSystemTask)
+				if err != nil {
+					return err
+				}
+				tp.IsSystemTask = &isSystemTask
+			}
 		}
 	}
 
@@ -4695,6 +4864,8 @@ type TaskPropertiesUpdateParameters struct {
 	Trigger *TriggerUpdateParameters `json:"trigger,omitempty"`
 	// Credentials - The parameters that describes a set of credentials that will be used when this run is invoked.
 	Credentials *Credentials `json:"credentials,omitempty"`
+	// LogTemplate - The template that describes the repository and tag information for run log artifact.
+	LogTemplate *string `json:"logTemplate,omitempty"`
 }
 
 // UnmarshalJSON is the custom unmarshaler for TaskPropertiesUpdateParameters struct.
@@ -4777,6 +4948,15 @@ func (tpup *TaskPropertiesUpdateParameters) UnmarshalJSON(body []byte) error {
 				}
 				tpup.Credentials = &credentials
 			}
+		case "logTemplate":
+			if v != nil {
+				var logTemplate string
+				err = json.Unmarshal(*v, &logTemplate)
+				if err != nil {
+					return err
+				}
+				tpup.LogTemplate = &logTemplate
+			}
 		}
 	}
 
@@ -4799,6 +4979,8 @@ type TaskRun struct {
 	Name *string `json:"name,omitempty"`
 	// Type - READ-ONLY; The type of the resource.
 	Type *string `json:"type,omitempty"`
+	// SystemData - READ-ONLY; Metadata pertaining to creation and last modification of the resource.
+	SystemData *SystemData `json:"systemData,omitempty"`
 }
 
 // MarshalJSON is the custom marshaler for TaskRun.
@@ -4878,6 +5060,15 @@ func (tr *TaskRun) UnmarshalJSON(body []byte) error {
 					return err
 				}
 				tr.Type = &typeVar
+			}
+		case "systemData":
+			if v != nil {
+				var systemData SystemData
+				err = json.Unmarshal(*v, &systemData)
+				if err != nil {
+					return err
+				}
+				tr.SystemData = &systemData
 			}
 		}
 	}
@@ -5037,8 +5228,11 @@ func (page TaskRunListResultPage) Values() []TaskRun {
 }
 
 // Creates a new instance of the TaskRunListResultPage type.
-func NewTaskRunListResultPage(getNextPage func(context.Context, TaskRunListResult) (TaskRunListResult, error)) TaskRunListResultPage {
-	return TaskRunListResultPage{fn: getNextPage}
+func NewTaskRunListResultPage(cur TaskRunListResult, getNextPage func(context.Context, TaskRunListResult) (TaskRunListResult, error)) TaskRunListResultPage {
+	return TaskRunListResultPage{
+		fn:   getNextPage,
+		trlr: cur,
+	}
 }
 
 // TaskRunProperties the properties of task run.
@@ -5163,6 +5357,8 @@ type TaskRunRequest struct {
 	IsArchiveEnabled *bool `json:"isArchiveEnabled,omitempty"`
 	// AgentPoolName - The dedicated agent pool for the run.
 	AgentPoolName *string `json:"agentPoolName,omitempty"`
+	// LogTemplate - The template that describes the repository and tag information for run log artifact.
+	LogTemplate *string `json:"logTemplate,omitempty"`
 	// Type - Possible values include: 'TypeRunRequest', 'TypeDockerBuildRequest', 'TypeFileTaskRunRequest', 'TypeTaskRunRequest', 'TypeEncodedTaskRunRequest'
 	Type Type `json:"type,omitempty"`
 }
@@ -5182,6 +5378,9 @@ func (trr TaskRunRequest) MarshalJSON() ([]byte, error) {
 	}
 	if trr.AgentPoolName != nil {
 		objectMap["agentPoolName"] = trr.AgentPoolName
+	}
+	if trr.LogTemplate != nil {
+		objectMap["logTemplate"] = trr.LogTemplate
 	}
 	if trr.Type != "" {
 		objectMap["type"] = trr.Type
@@ -5219,7 +5418,8 @@ func (trr TaskRunRequest) AsBasicRunRequest() (BasicRunRequest, bool) {
 	return &trr, true
 }
 
-// TaskRunsCreateFuture an abstraction for monitoring and retrieving the results of a long-running operation.
+// TaskRunsCreateFuture an abstraction for monitoring and retrieving the results of a long-running
+// operation.
 type TaskRunsCreateFuture struct {
 	azure.Future
 }
@@ -5247,7 +5447,8 @@ func (future *TaskRunsCreateFuture) Result(client TaskRunsClient) (tr TaskRun, e
 	return
 }
 
-// TaskRunsDeleteFuture an abstraction for monitoring and retrieving the results of a long-running operation.
+// TaskRunsDeleteFuture an abstraction for monitoring and retrieving the results of a long-running
+// operation.
 type TaskRunsDeleteFuture struct {
 	azure.Future
 }
@@ -5269,7 +5470,8 @@ func (future *TaskRunsDeleteFuture) Result(client TaskRunsClient) (ar autorest.R
 	return
 }
 
-// TaskRunsUpdateFuture an abstraction for monitoring and retrieving the results of a long-running operation.
+// TaskRunsUpdateFuture an abstraction for monitoring and retrieving the results of a long-running
+// operation.
 type TaskRunsUpdateFuture struct {
 	azure.Future
 }
@@ -5772,6 +5974,8 @@ type Token struct {
 	Name *string `json:"name,omitempty"`
 	// Type - READ-ONLY; The type of the resource.
 	Type *string `json:"type,omitempty"`
+	// SystemData - READ-ONLY; Metadata pertaining to creation and last modification of the resource.
+	SystemData *SystemData `json:"systemData,omitempty"`
 }
 
 // MarshalJSON is the custom marshaler for Token.
@@ -5828,6 +6032,15 @@ func (t *Token) UnmarshalJSON(body []byte) error {
 				}
 				t.Type = &typeVar
 			}
+		case "systemData":
+			if v != nil {
+				var systemData SystemData
+				err = json.Unmarshal(*v, &systemData)
+				if err != nil {
+					return err
+				}
+				t.SystemData = &systemData
+			}
 		}
 	}
 
@@ -5846,7 +6059,8 @@ type TokenCertificate struct {
 	EncodedPemCertificate *string `json:"encodedPemCertificate,omitempty"`
 }
 
-// TokenCredentialsProperties the properties of the credentials that can be used for authenticating the token.
+// TokenCredentialsProperties the properties of the credentials that can be used for authenticating the
+// token.
 type TokenCredentialsProperties struct {
 	ActiveDirectoryObject *ActiveDirectoryObject `json:"activeDirectoryObject,omitempty"`
 	Certificates          *[]TokenCertificate    `json:"certificates,omitempty"`
@@ -6005,8 +6219,11 @@ func (page TokenListResultPage) Values() []Token {
 }
 
 // Creates a new instance of the TokenListResultPage type.
-func NewTokenListResultPage(getNextPage func(context.Context, TokenListResult) (TokenListResult, error)) TokenListResultPage {
-	return TokenListResultPage{fn: getNextPage}
+func NewTokenListResultPage(cur TokenListResult, getNextPage func(context.Context, TokenListResult) (TokenListResult, error)) TokenListResultPage {
+	return TokenListResultPage{
+		fn:  getNextPage,
+		tlr: cur,
+	}
 }
 
 // TokenPassword the password that will be used for authenticating the token of a container registry.
@@ -6251,6 +6468,8 @@ type Webhook struct {
 	Location *string `json:"location,omitempty"`
 	// Tags - The tags of the resource.
 	Tags map[string]*string `json:"tags"`
+	// SystemData - READ-ONLY; Metadata pertaining to creation and last modification of the resource.
+	SystemData *SystemData `json:"systemData,omitempty"`
 }
 
 // MarshalJSON is the custom marshaler for Webhook.
@@ -6330,6 +6549,15 @@ func (w *Webhook) UnmarshalJSON(body []byte) error {
 					return err
 				}
 				w.Tags = tags
+			}
+		case "systemData":
+			if v != nil {
+				var systemData SystemData
+				err = json.Unmarshal(*v, &systemData)
+				if err != nil {
+					return err
+				}
+				w.SystemData = &systemData
 			}
 		}
 	}
@@ -6556,8 +6784,11 @@ func (page WebhookListResultPage) Values() []Webhook {
 }
 
 // Creates a new instance of the WebhookListResultPage type.
-func NewWebhookListResultPage(getNextPage func(context.Context, WebhookListResult) (WebhookListResult, error)) WebhookListResultPage {
-	return WebhookListResultPage{fn: getNextPage}
+func NewWebhookListResultPage(cur WebhookListResult, getNextPage func(context.Context, WebhookListResult) (WebhookListResult, error)) WebhookListResultPage {
+	return WebhookListResultPage{
+		fn:  getNextPage,
+		wlr: cur,
+	}
 }
 
 // WebhookProperties the properties of a webhook.
@@ -6657,7 +6888,8 @@ func (wpup WebhookPropertiesUpdateParameters) MarshalJSON() ([]byte, error) {
 	return json.Marshal(objectMap)
 }
 
-// WebhooksCreateFuture an abstraction for monitoring and retrieving the results of a long-running operation.
+// WebhooksCreateFuture an abstraction for monitoring and retrieving the results of a long-running
+// operation.
 type WebhooksCreateFuture struct {
 	azure.Future
 }
@@ -6685,7 +6917,8 @@ func (future *WebhooksCreateFuture) Result(client WebhooksClient) (w Webhook, er
 	return
 }
 
-// WebhooksDeleteFuture an abstraction for monitoring and retrieving the results of a long-running operation.
+// WebhooksDeleteFuture an abstraction for monitoring and retrieving the results of a long-running
+// operation.
 type WebhooksDeleteFuture struct {
 	azure.Future
 }
@@ -6707,7 +6940,8 @@ func (future *WebhooksDeleteFuture) Result(client WebhooksClient) (ar autorest.R
 	return
 }
 
-// WebhooksUpdateFuture an abstraction for monitoring and retrieving the results of a long-running operation.
+// WebhooksUpdateFuture an abstraction for monitoring and retrieving the results of a long-running
+// operation.
 type WebhooksUpdateFuture struct {
 	azure.Future
 }
