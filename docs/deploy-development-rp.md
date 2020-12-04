@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-1. Install [Go 1.13](https://golang.org/dl) or later, if you haven't already.
+1. Install [Go 1.14](https://golang.org/dl) or later, if you haven't already.
 
 1. Install [Python 3.6+](https://www.python.org/downloads), if you haven't
    already.  You will also need setuptools installed, if you don't have it
