@@ -107,6 +107,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 		}
 	}
 
+	// If Put or Patch is executed we will enrich document with cluster data.
 	if !isCreate {
 		timeoutCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
@@ -115,6 +116,9 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 
 	var ext interface{}
 	switch r.Method {
+	// In case of PUT we will take customer request payload and store into database
+	// Our base structure for unmarshal is skeleton document with values we
+	// think is required. We expect payload to have everything else required.
 	case http.MethodPut:
 		ext = converter.ToExternal(&api.OpenShiftCluster{
 			ID:   doc.OpenShiftCluster.ID,
@@ -132,6 +136,10 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 			},
 		})
 
+		// In case of PATCH we take current cluster document, which is enriched
+		// from the cluster and use it as base for unmarshal. So customer can
+		// provide single field json to be updated in the database.
+		// Patch should be used for updating individual fields of the document.
 	case http.MethodPatch:
 		ext = converter.ToExternal(doc.OpenShiftCluster)
 	}
@@ -210,6 +218,8 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 		return nil, err
 	}
 
+	// We remove sensitive data from document to prevent sensitive data being
+	// returned to the customer.
 	doc.OpenShiftCluster.Properties.ClusterProfile.PullSecret = ""
 	doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret = ""
 
