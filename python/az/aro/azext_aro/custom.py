@@ -8,12 +8,12 @@ from azure.cli.core.commands.client_factory import get_mgmt_service_client
 from azure.cli.core.commands.client_factory import get_subscription_id
 from azure.cli.core.profiles import ResourceType
 from azure.cli.core.util import sdk_no_wait
+from azure.cli.core.azclierror import ResourceNotFoundError, UnauthorizedError
 from azure.graphrbac.models import GraphErrorException
 from msrestazure.azure_exceptions import CloudError
 from msrestazure.tools import resource_id, parse_resource_id
 from msrest.exceptions import HttpOperationError
 from knack.log import get_logger
-from knack.util import CLIError
 
 import azext_aro.vendored_sdks.azure.mgmt.redhatopenshift.v2020_04_30.models as openshiftcluster
 
@@ -55,8 +55,8 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
             cmd.cli_ctx, ResourceType.MGMT_RESOURCE_RESOURCES)
         provider = resource_client.providers.get('Microsoft.RedHatOpenShift')
         if provider.registration_state != 'Registered':
-            raise CLIError('Microsoft.RedHatOpenShift provider is not registered.  Run `az provider ' +
-                           'register -n Microsoft.RedHatOpenShift --wait`.')
+            raise UnauthorizedError('Microsoft.RedHatOpenShift provider is not registered.',
+                                    'Run `az provider register -n Microsoft.RedHatOpenShift --wait`.')
 
     vnet = validate_subnets(master_subnet, worker_subnet)
     resources = get_network_resources(cmd.cli_ctx, [master_subnet, worker_subnet], vnet)
@@ -77,7 +77,7 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
     rp_client_id = os.environ.get('AZURE_FP_CLIENT_ID', FP_CLIENT_ID)
     rp_client_sp = aad.get_service_principal(rp_client_id)
     if not rp_client_sp:
-        raise CLIError("RP service principal not found.")
+        raise ResourceNotFoundError("RP service principal not found.")
 
     for sp_id in [client_sp.object_id, rp_client_sp.object_id]:
         for resource in sorted(resources):
@@ -162,7 +162,7 @@ def aro_delete(cmd, client, resource_group_name, resource_name, no_wait=False):
     try:
         rp_client_sp = aad.get_service_principal(rp_client_id)
         if not rp_client_sp:
-            raise CLIError("RP service principal not found.")
+            raise ResourceNotFoundError("RP service principal not found.")
     except GraphErrorException as e:
         logger.info(e.message)
 
@@ -223,7 +223,7 @@ def aro_update(cmd, client, resource_group_name, resource_name, no_wait=False):
     try:
         rp_client_sp = aad.get_service_principal(rp_client_id)
         if not rp_client_sp:
-            raise CLIError("RP service principal not found.")
+            raise ResourceNotFoundError("RP service principal not found.")
     except GraphErrorException as e:
         logger.info(e.message)
 
@@ -233,7 +233,7 @@ def aro_update(cmd, client, resource_group_name, resource_name, no_wait=False):
     try:
         client_sp = aad.get_service_principal(client_id)
         if not client_sp:
-            raise CLIError("Cluster service principal not found.")
+            raise ResourceNotFoundError("Cluster service principal not found.")
     except GraphErrorException as e:
         logger.info(e.message)
 
