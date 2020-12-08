@@ -6,9 +6,10 @@ package pullsecret
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
+	"github.com/operator-framework/operator-sdk/pkg/status"
 	"github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
+	aro "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
@@ -75,13 +77,33 @@ func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 			ps.Data = map[string][]byte{}
 		}
 
-		// validate
-		if !json.Valid(ps.Data[v1.DockerConfigJsonKey]) {
+		statusCondition := &status.Condition{
+			Type:   aro.RedHatKeyPresent,
+			Status: v1.ConditionFalse,
+			Reason: "CheckFailed",
+		}
+		// do checks on the pull-secret, the controller runs on the master only
+		// statusCondition := r.updateRHKeysCondition(r.checkRHRegistryKeys(r.parseRHRegistryKeys(ps)))
+		// err = controllers.SetCondition(ctx, r.arocli, statusCondition, operator.RoleMaster)
+
+		// parse keys and validate JSON
+		parsedKeys, err := r.parseRHRegistryKeys(ps)
+		if err != nil {
+			// TODO: @pkotas add condition when this happens
 			r.log.Info("pull secret is not valid json - recreating")
 			delete(ps.Data, v1.DockerConfigJsonKey)
+			statusCondition.Reason = "CheckDone"
+			statusCondition.Message = "Cannot parse secret data, recreating."
+		} else {
+			statusCondition = r.updateRHKeysCondition(r.checkRHRegistryKeys(parsedKeys))
 		}
 
-		pullsec, changed, err := pullsecret.Merge(string(ps.Data[corev1.DockerConfigJsonKey]), string(mysec.Data[v1.DockerConfigJsonKey]))
+		err = controllers.SetCondition(ctx, r.arocli, statusCondition, operator.RoleMaster)
+		if err != nil {
+			return err
+		}
+
+		pullsec, changed, err := pullsecret.Merge(string(ps.Data[v1.DockerConfigJsonKey]), string(mysec.Data[v1.DockerConfigJsonKey]))
 		if err != nil {
 			return err
 		}
@@ -113,7 +135,7 @@ func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 			return nil
 		}
 
-		ps.Data[corev1.DockerConfigJsonKey] = []byte(pullsec)
+		ps.Data[v1.DockerConfigJsonKey] = []byte(pullsec)
 
 		if isCreate {
 			r.log.Info("re-creating pull secret")
@@ -143,7 +165,7 @@ func (r *PullSecretReconciler) pullsecret(ctx context.Context) (*v1.Secret, bool
 	return ps, false, nil
 }
 
-func triggerReconcile(secret *corev1.Secret) bool {
+func triggerReconcile(secret *v1.Secret) bool {
 	return (secret.Name == pullSecretName.Name && secret.Namespace == pullSecretName.Namespace) ||
 		(secret.Name == operator.SecretName && secret.Namespace == operator.Namespace)
 }
@@ -157,7 +179,7 @@ func (r *PullSecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				return true
 			}
 
-			secret, ok := e.ObjectOld.(*corev1.Secret)
+			secret, ok := e.ObjectOld.(*v1.Secret)
 			return ok && triggerReconcile(secret)
 		},
 		CreateFunc: func(e event.CreateEvent) bool {
@@ -166,7 +188,7 @@ func (r *PullSecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				return true
 			}
 
-			secret, ok := e.Object.(*corev1.Secret)
+			secret, ok := e.Object.(*v1.Secret)
 			return ok && triggerReconcile(secret)
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
@@ -175,7 +197,7 @@ func (r *PullSecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				return true
 			}
 
-			secret, ok := e.Object.(*corev1.Secret)
+			secret, ok := e.Object.(*v1.Secret)
 			return ok && triggerReconcile(secret)
 		},
 	}
@@ -189,4 +211,71 @@ func (r *PullSecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		WithEventFilter(isPullSecret).
 		Named(controllers.PullSecretControllerName).
 		Complete(r)
+}
+
+func (r *PullSecretReconciler) parseRHRegistryKeys(ps *v1.Secret) (*serializedAuthMap, error) {
+	var pullSecretData *serializedAuthMap
+	if data := ps.Data[v1.DockerConfigJsonKey]; len(data) > 0 {
+		if err := json.Unmarshal(data, &pullSecretData); err != nil {
+			return nil, err
+		}
+	}
+	return pullSecretData, nil
+}
+
+// checkRHRegistryKeys checks whether the rhRegistry keys:
+//   - redhat.registry.io
+//   - registry.connect.redhat.com"
+// are present in the pullSecret
+func (r *PullSecretReconciler) checkRHRegistryKeys(psData *serializedAuthMap) (foundKeys []string) {
+	rhKeys := []string{
+		"registry.redhat.io",
+		"registry.connect.redhat.com",
+	}
+	foundKeys = make([]string, 0, len(rhKeys))
+
+	if psData == nil {
+		return foundKeys
+	}
+
+	for _, key := range rhKeys {
+		if auth, ok := psData.Auths[key]; ok && len(auth.Auth) > 0 {
+			r.log.Infof("Found token: %s\n", key)
+			foundKeys = append(foundKeys, key)
+		}
+	}
+
+	return foundKeys
+}
+
+func (r *PullSecretReconciler) updateRHKeysCondition(foundKeys []string) *status.Condition {
+	cond := &status.Condition{
+		Type:    aro.RedHatKeyPresent,
+		Status:  v1.ConditionFalse,
+		Message: "No Red Hat registry keys found in pull-secret.",
+		Reason:  "CheckDone",
+	}
+
+	if len(foundKeys) == 0 {
+		return cond
+	}
+
+	sb := strings.Builder{}
+	sb.WriteString("Red Hat registry keys present in pull-secret: ")
+	for _, key := range foundKeys {
+		sb.WriteString(key + ", ")
+	}
+
+	cond.Status = v1.ConditionTrue
+	cond.Message = sb.String()
+
+	return cond
+}
+
+type serializedAuthMap struct {
+	Auths map[string]serializedAuth `json:"auths"`
+}
+
+type serializedAuth struct {
+	Auth string `json:"auth"`
 }
