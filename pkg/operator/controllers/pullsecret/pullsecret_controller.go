@@ -190,3 +190,42 @@ func (r *PullSecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Named(controllers.PullSecretControllerName).
 		Complete(r)
 }
+
+func (r *PullSecretReconciler) parseRHRegistryKeys(ps *corev1.Secret) *serializedAuthMap {
+	var pullSecretData *serializedAuthMap
+	if data := ps.Data[".dockerconfigjson"]; len(data) > 0 {
+		if err := json.Unmarshal(data, pullSecretData); err != nil {
+			r.log.Errorf("Unable to unmarshal cluster pull-secret: %v", err)
+		}
+	}
+	return pullSecretData
+}
+
+// checkRHRegistryKeys checks whether the rhRegistry keys:
+//   - redhat.registry.io
+//   - registry.connect.redhat.com"
+// are present in the pullSecret
+func (r *PullSecretReconciler) checkRHRegistryKeys(psData *serializedAuthMap) (foundKeys []string) {
+	rhKeys := []string{
+		"redhat.registry.io",
+		"registry.connect.redhat.com",
+	}
+	foundKeys = make([]string, len(rhKeys))
+
+	for _, key := range rhKeys {
+		if auth, ok := psData.Auths[key]; ok && len(auth.Auth) > 0 {
+			r.log.Infof("Found token: %s\n", key)
+			foundKeys = append(foundKeys, key)
+		}
+	}
+
+	return foundKeys
+}
+
+type serializedAuthMap struct {
+	Auths map[string]serializedAuth `json:"auths"`
+}
+
+type serializedAuth struct {
+	Auth string `json:"auth"`
+}
