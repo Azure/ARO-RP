@@ -36,7 +36,6 @@ func (c *openShiftClusterConverter) ToExternal(oc *api.OpenShiftCluster) interfa
 				URL: oc.Properties.ConsoleProfile.URL,
 			},
 			ServicePrincipalProfile: ServicePrincipalProfile{
-				TenantID: oc.Properties.ServicePrincipalProfile.TenantID,
 				ClientID: oc.Properties.ServicePrincipalProfile.ClientID,
 			},
 			NetworkProfile: NetworkProfile{
@@ -150,7 +149,6 @@ func (c *openShiftClusterConverter) ToInternal(_oc interface{}, out *api.OpenShi
 	out.Properties.ClusterProfile.Version = oc.Properties.ClusterProfile.Version
 	out.Properties.ClusterProfile.ResourceGroupID = oc.Properties.ClusterProfile.ResourceGroupID
 	out.Properties.ConsoleProfile.URL = oc.Properties.ConsoleProfile.URL
-	out.Properties.ServicePrincipalProfile.TenantID = oc.Properties.ServicePrincipalProfile.TenantID
 	out.Properties.ServicePrincipalProfile.ClientID = oc.Properties.ServicePrincipalProfile.ClientID
 	out.Properties.NetworkProfile.PodCIDR = oc.Properties.NetworkProfile.PodCIDR
 	out.Properties.NetworkProfile.ServiceCIDR = oc.Properties.NetworkProfile.ServiceCIDR

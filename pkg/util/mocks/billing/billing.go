@@ -51,15 +51,15 @@ func (mr *MockManagerMockRecorder) Delete(arg0, arg1 interface{}) *gomock.Call {
 }
 
 // Ensure mocks base method
-func (m *MockManager) Ensure(arg0 context.Context, arg1 *api.OpenShiftClusterDocument) error {
+func (m *MockManager) Ensure(arg0 context.Context, arg1 *api.OpenShiftClusterDocument, arg2 *api.SubscriptionDocument) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Ensure", arg0, arg1)
+	ret := m.ctrl.Call(m, "Ensure", arg0, arg1, arg2)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Ensure indicates an expected call of Ensure
-func (mr *MockManagerMockRecorder) Ensure(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockManagerMockRecorder) Ensure(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ensure", reflect.TypeOf((*MockManager)(nil).Ensure), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Ensure", reflect.TypeOf((*MockManager)(nil).Ensure), arg0, arg1, arg2)
 }

@@ -8,5 +8,5 @@ import (
 )
 
 func (m *manager) ensureBillingRecord(ctx context.Context) error {
-	return m.billing.Ensure(ctx, m.doc)
+	return m.billing.Ensure(ctx, m.doc, m.subscriptionDoc)
 }

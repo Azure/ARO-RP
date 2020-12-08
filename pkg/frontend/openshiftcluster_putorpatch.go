@@ -44,7 +44,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 	body := r.Context().Value(middleware.ContextKeyBody).([]byte)
 	correlationData := r.Context().Value(middleware.ContextKeyCorrelationData).(*api.CorrelationData)
 
-	subdoc, err := f.validateSubscriptionState(ctx, r.URL.Path, api.SubscriptionStateRegistered)
+	_, err := f.validateSubscriptionState(ctx, r.URL.Path, api.SubscriptionStateRegistered)
 	if err != nil {
 		return nil, err
 	}
@@ -77,9 +77,6 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 					ProvisionedBy:       version.GitCommit,
 					ClusterProfile: api.ClusterProfile{
 						Version: version.InstallStream.Version.String(),
-					},
-					ServicePrincipalProfile: api.ServicePrincipalProfile{
-						TenantID: subdoc.Subscription.Properties.TenantID,
 					},
 				},
 			},

@@ -170,11 +170,6 @@ func TestDelete(t *testing.T) {
 					ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", subID),
 					ID:                        docID,
 					OpenShiftCluster: &api.OpenShiftCluster{
-						Properties: api.OpenShiftClusterProperties{
-							ServicePrincipalProfile: api.ServicePrincipalProfile{
-								TenantID: tenantID,
-							},
-						},
 						Location: location,
 					},
 				})
@@ -188,11 +183,6 @@ func TestDelete(t *testing.T) {
 					ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", subID),
 					ID:                        docID,
 					OpenShiftCluster: &api.OpenShiftCluster{
-						Properties: api.OpenShiftClusterProperties{
-							ServicePrincipalProfile: api.ServicePrincipalProfile{
-								TenantID: tenantID,
-							},
-						},
 						Location: location,
 					},
 				})
@@ -287,15 +277,13 @@ func TestEnsure(t *testing.T) {
 					ID:                        docID,
 					OpenShiftCluster: &api.OpenShiftCluster{
 						Properties: api.OpenShiftClusterProperties{
-							ServicePrincipalProfile: api.ServicePrincipalProfile{
-								TenantID: tenantID,
-							},
 							InfraID: mockInfraID,
 						},
 						Location: location,
 					},
 				})
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: subID,
 					Subscription: &api.Subscription{
 						Properties: &api.SubscriptionProperties{
 							RegisteredFeatures: []api.RegisteredFeatureProfile{
@@ -304,6 +292,7 @@ func TestEnsure(t *testing.T) {
 									State: "NotRegistered",
 								},
 							},
+							TenantID: tenantID,
 						},
 					},
 				})
@@ -330,15 +319,13 @@ func TestEnsure(t *testing.T) {
 					ID:                        docID,
 					OpenShiftCluster: &api.OpenShiftCluster{
 						Properties: api.OpenShiftClusterProperties{
-							ServicePrincipalProfile: api.ServicePrincipalProfile{
-								TenantID: tenantID,
-							},
 							InfraID: mockInfraID,
 						},
 						Location: location,
 					},
 				})
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: subID,
 					Subscription: &api.Subscription{
 						Properties: &api.SubscriptionProperties{
 							RegisteredFeatures: []api.RegisteredFeatureProfile{
@@ -347,6 +334,7 @@ func TestEnsure(t *testing.T) {
 									State: "NotRegistered",
 								},
 							},
+							TenantID: tenantID,
 						},
 					},
 				})
@@ -363,15 +351,13 @@ func TestEnsure(t *testing.T) {
 					ID:                        docID,
 					OpenShiftCluster: &api.OpenShiftCluster{
 						Properties: api.OpenShiftClusterProperties{
-							ServicePrincipalProfile: api.ServicePrincipalProfile{
-								TenantID: tenantID,
-							},
 							InfraID: mockInfraID,
 						},
 						Location: location,
 					},
 				})
 				f.AddSubscriptionDocuments(&api.SubscriptionDocument{
+					ID: subID,
 					Subscription: &api.Subscription{
 						Properties: &api.SubscriptionProperties{
 							RegisteredFeatures: []api.RegisteredFeatureProfile{
@@ -380,6 +366,7 @@ func TestEnsure(t *testing.T) {
 									State: "NotRegistered",
 								},
 							},
+							TenantID: tenantID,
 						},
 					},
 				})
@@ -436,8 +423,11 @@ func TestEnsure(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-
-			err = m.Ensure(ctx, doc)
+			subDoc, err := subscriptionsDatabase.Get(ctx, subID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			err = m.Ensure(ctx, doc, subDoc)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

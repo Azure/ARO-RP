@@ -43,9 +43,9 @@ func NewOpenShiftClusterDynamicValidator(log *logrus.Entry, env env.Interface, o
 		log: log,
 		env: env,
 
-		oc: oc,
-
-		fpAuthorizer: fpAuthorizer,
+		oc:              oc,
+		subscriptionDoc: subscriptionDoc,
+		fpAuthorizer:    fpAuthorizer,
 
 		fpPermissions: authorization.NewPermissionsClient(env.Environment(), subscriptionDoc.ID, fpAuthorizer),
 	}
@@ -63,9 +63,9 @@ type openShiftClusterDynamicValidator struct {
 	log *logrus.Entry
 	env env.Interface
 
-	oc *api.OpenShiftCluster
-
-	fpAuthorizer refreshable.Authorizer
+	oc              *api.OpenShiftCluster
+	subscriptionDoc *api.SubscriptionDocument
+	fpAuthorizer    refreshable.Authorizer
 
 	fpPermissions     authorization.PermissionsClient
 	spPermissions     authorization.PermissionsClient
@@ -84,7 +84,7 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		return err
 	}
 
-	spAuthorizer, err := validateServicePrincipalProfile(ctx, dv.log, dv.env, dv.oc)
+	spAuthorizer, err := validateServicePrincipalProfile(ctx, dv.log, dv.env, dv.oc, dv.subscriptionDoc)
 	if err != nil {
 		return err
 	}
@@ -142,10 +142,10 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	return nil
 }
 
-func validateServicePrincipalProfile(ctx context.Context, log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster) (refreshable.Authorizer, error) {
+func validateServicePrincipalProfile(ctx context.Context, log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, sub *api.SubscriptionDocument) (refreshable.Authorizer, error) {
 	log.Print("validateServicePrincipalProfile")
 
-	token, err := aad.GetToken(ctx, log, oc, env.Environment().ResourceManagerEndpoint)
+	token, err := aad.GetToken(ctx, log, oc, sub, env.Environment().ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}

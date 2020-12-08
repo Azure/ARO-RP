@@ -95,13 +95,13 @@ type quotaValidator struct {
 	spUsage compute.UsageClient
 }
 
-func NewAzureQuotaValidator(ctx context.Context, log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster) (AzureQuotaValidator, error) {
+func NewAzureQuotaValidator(ctx context.Context, log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, subscriptionDoc *api.SubscriptionDocument) (AzureQuotaValidator, error) {
 	r, err := azure.ParseResourceID(oc.ID)
 	if err != nil {
 		return nil, err
 	}
 
-	spAuthorizer, err := validateServicePrincipalProfile(ctx, log, env, oc)
+	spAuthorizer, err := validateServicePrincipalProfile(ctx, log, env, oc, subscriptionDoc)
 	if err != nil {
 		return nil, err
 	}

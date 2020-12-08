@@ -91,7 +91,7 @@ func New(ctx context.Context, log *logrus.Entry, env env.Interface, db database.
 		return nil, err
 	}
 
-	fpAuthorizer, err := env.FPAuthorizer(doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID, env.Environment().ResourceManagerEndpoint)
+	fpAuthorizer, err := env.FPAuthorizer(subscriptionDoc.Subscription.Properties.TenantID, env.Environment().ResourceManagerEndpoint)
 	if err != nil {
 		return nil, err
 	}
