@@ -170,7 +170,7 @@
             ]
         },
         {
-            "name": "[concat(resourceGroup().location, '.', parameters('clusterParentDomainName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/dnsZones', concat(resourceGroup().location, '.', parameters('clusterParentDomainName')), 'FP / DNS Zone Contributor'))]",
+            "name": "[concat(resourceGroup().location, '.', parameters('clusterParentDomainName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/dnsZones', concat(resourceGroup().location, '.', parameters('clusterParentDomainName'))), 'FP / DNS Zone Contributor'))]",
             "type": "Microsoft.Network/dnsZones/providers/roleAssignments",
             "properties": {
                 "scope": "[resourceId('Microsoft.Network/dnsZones', concat(resourceGroup().location, '.', parameters('clusterParentDomainName')))]",

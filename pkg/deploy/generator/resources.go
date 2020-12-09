@@ -1727,7 +1727,7 @@ func (g *generator) rbac() []*arm.Resource {
 			"parameters('fpServicePrincipalId')",
 			"Microsoft.Network/dnsZones",
 			"concat(resourceGroup().location, '.', parameters('clusterParentDomainName'))",
-			"concat(resourceGroup().location, '.', parameters('clusterParentDomainName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/dnsZones', concat(resourceGroup().location, '.', parameters('clusterParentDomainName')), 'FP / DNS Zone Contributor'))",
+			"concat(resourceGroup().location, '.', parameters('clusterParentDomainName'), '/Microsoft.Authorization/', guid(resourceId('Microsoft.Network/dnsZones', concat(resourceGroup().location, '.', parameters('clusterParentDomainName'))), 'FP / DNS Zone Contributor'))",
 			g.conditionStanza("fullDeploy"),
 		),
 	}
