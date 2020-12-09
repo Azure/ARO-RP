@@ -71,6 +71,9 @@ func (s authorizationRefreshingActionStep) run(ctx context.Context, log *logrus.
 				azureerrors.HasLinkedAuthorizationFailedError(err)) {
 			log.Print(err)
 			// Try refreshing auth.
+			if s.authorizer == nil {
+				return false, nil // retry step
+			}
 			_, err = s.authorizer.RefreshWithContext(ctx, log)
 			return false, err // retry step
 		}
