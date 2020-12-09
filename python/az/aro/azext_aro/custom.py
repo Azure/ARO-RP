@@ -74,7 +74,11 @@ def aro_create(cmd,  # pylint: disable=too-many-locals
     if not client_sp:
         client_sp = aad.create_service_principal(client_id)
 
-    rp_client_id = os.environ.get('AZURE_FP_CLIENT_ID', FP_CLIENT_ID)
+    if rp_mode_production():
+        rp_client_id = FP_CLIENT_ID
+    else:
+        rp_client_id = os.environ.get('AZURE_FP_CLIENT_ID', FP_CLIENT_ID)
+
     rp_client_sp = aad.get_service_principal(rp_client_id)
     if not rp_client_sp:
         raise ResourceNotFoundError("RP service principal not found.")
@@ -156,7 +160,11 @@ def aro_delete(cmd, client, resource_group_name, resource_name, no_wait=False):
         logger.info(e.message)
 
     aad = AADManager(cmd.cli_ctx)
-    rp_client_id = os.environ.get('AZURE_FP_CLIENT_ID', FP_CLIENT_ID)
+
+    if rp_mode_production():
+        rp_client_id = FP_CLIENT_ID
+    else:
+        rp_client_id = os.environ.get('AZURE_FP_CLIENT_ID', FP_CLIENT_ID)
 
     # Best effort - assume the role assignments on the SP exist if exception raised
     try:
@@ -217,7 +225,11 @@ def aro_update(cmd, client, resource_group_name, resource_name, no_wait=False):
         logger.info(e.message)
 
     aad = AADManager(cmd.cli_ctx)
-    rp_client_id = os.environ.get('AZURE_FP_CLIENT_ID', FP_CLIENT_ID)
+
+    if rp_mode_production():
+        rp_client_id = FP_CLIENT_ID
+    else:
+        rp_client_id = os.environ.get('AZURE_FP_CLIENT_ID', FP_CLIENT_ID)
 
     # Best effort - assume the role assignments on the SP exist if exception raised
     try:
@@ -267,6 +279,10 @@ def aro_update(cmd, client, resource_group_name, resource_name, no_wait=False):
 
 def rp_mode_development():
     return os.environ.get('RP_MODE', '').lower() == 'development'
+
+
+def rp_mode_production():
+    return os.environ.get('RP_MODE', '') == ''
 
 
 def generate_random_id():

@@ -535,7 +535,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 						nil,
 					)
 			},
-			wantErr: "400: InvalidResourceProviderPermissions: : The resource provider does not have Contributor permission on vnet '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/virtualNetworks/testVnet'.",
+			wantErr: "400: InvalidResourceProviderPermissions: : The resource provider does not have Network Contributor permission on vnet '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/virtualNetworks/testVnet'.",
 		},
 		{
 			name: "fail: not found",
@@ -638,7 +638,7 @@ func TestValidateRouteTablePermissionsSubnet(t *testing.T) {
 					)
 			},
 			subnet:  masterSubnet,
-			wantErr: "400: InvalidResourceProviderPermissions: : The resource provider does not have Contributor permission on route table '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/routeTables/testRT'.",
+			wantErr: "400: InvalidResourceProviderPermissions: : The resource provider does not have Network Contributor permission on route table '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/routeTables/testRT'.",
 		},
 		{
 			name: "fail: not found",

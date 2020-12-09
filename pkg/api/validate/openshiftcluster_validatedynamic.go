@@ -178,7 +178,7 @@ func (dv *openShiftClusterDynamicValidator) validateVnetPermissions(ctx context.
 		"Microsoft.Network/virtualNetworks/subnets/write",
 	}, authorizer, client)
 	if err == wait.ErrWaitTimeout {
-		return api.NewCloudError(http.StatusBadRequest, code, "", "The %s does not have Contributor permission on vnet '%s'.", typ, vnetID)
+		return api.NewCloudError(http.StatusBadRequest, code, "", "The %s does not have Network Contributor permission on vnet '%s'.", typ, vnetID)
 	}
 	if detailedErr, ok := err.(autorest.DetailedError); ok &&
 		detailedErr.StatusCode == http.StatusNotFound {
@@ -231,7 +231,7 @@ func (dv *openShiftClusterDynamicValidator) validateRouteTablePermissionsSubnet(
 		"Microsoft.Network/routeTables/write",
 	}, authorizer, client)
 	if err == wait.ErrWaitTimeout {
-		return api.NewCloudError(http.StatusBadRequest, code, "", "The %s does not have Contributor permission on route table '%s'.", typ, *s.RouteTable.ID)
+		return api.NewCloudError(http.StatusBadRequest, code, "", "The %s does not have Network Contributor permission on route table '%s'.", typ, *s.RouteTable.ID)
 	}
 	if detailedErr, ok := err.(autorest.DetailedError); ok &&
 		detailedErr.StatusCode == http.StatusNotFound {
