@@ -62,7 +62,7 @@ func (m *manager) Install(ctx context.Context) error {
 
 	steps := map[api.InstallPhase][]steps.Step{
 		api.InstallPhaseBootstrap: {
-			steps.Action(m.validateQuota),
+			steps.AuthorizationRefreshingAction(nil, steps.Action(m.validateQuota)),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.validateResources)),
 			steps.Action(m.ensureACRToken),
 			steps.Action(m.generateSSHKey),
