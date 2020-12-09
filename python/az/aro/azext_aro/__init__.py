@@ -13,7 +13,7 @@ class AroCommandsLoader(AzCommandsLoader):
         aro_custom = CliCommandType(operations_tmpl='azext_aro.custom#{}',
                                     client_factory=cf_aro)
         suppress = ModExtensionSuppress(__name__, 'aro', '1.0.0',
-                                        reason='Its functionality is included the core az CLI.',
+                                        reason='Its functionality is included in the core az CLI.',
                                         recommend_remove=True)
         super(AroCommandsLoader, self).__init__(cli_ctx=cli_ctx,
                                                 suppress_extension=suppress,
