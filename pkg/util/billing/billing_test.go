@@ -20,7 +20,8 @@ import (
 )
 
 func TestIsSubscriptionRegisteredForE2E(t *testing.T) {
-	mockSubID := "11111111-1111-1111-1111-111111111111"
+	const tenantID = "11111111-1111-1111-1111-111111111111"
+
 	for _, tt := range []struct {
 		name string
 		sub  api.SubscriptionProperties
@@ -32,7 +33,7 @@ func TestIsSubscriptionRegisteredForE2E(t *testing.T) {
 		{
 			name: "sub without feature flag registered and not internal tenant",
 			sub: api.SubscriptionProperties{
-				TenantID: mockSubID,
+				TenantID: tenantID,
 				RegisteredFeatures: []api.RegisteredFeatureProfile{
 					{
 						Name:  "RandomFeature",
@@ -44,7 +45,7 @@ func TestIsSubscriptionRegisteredForE2E(t *testing.T) {
 		{
 			name: "sub with feature flag registered and not internal tenant",
 			sub: api.SubscriptionProperties{
-				TenantID: mockSubID,
+				TenantID: tenantID,
 				RegisteredFeatures: []api.RegisteredFeatureProfile{
 					{
 						Name:  featureSaveAROTestConfig,
@@ -115,9 +116,13 @@ func TestIsSubscriptionRegisteredForE2E(t *testing.T) {
 
 func TestDelete(t *testing.T) {
 	ctx := context.Background()
-	mockSubID := "11111111-1111-1111-1111-111111111111"
-	mockTenantID := mockSubID
-	location := "eastus"
+
+	const (
+		docID    = "00000000-0000-0000-0000-000000000000"
+		subID    = "11111111-1111-1111-1111-111111111111"
+		tenantID = "22222222-2222-2222-2222-222222222222"
+		location = "eastus"
+	)
 
 	type test struct {
 		name          string
@@ -135,22 +140,22 @@ func TestDelete(t *testing.T) {
 			name: "successful mark for deletion on billing entity, with a subscription not registered for e2e",
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddBillingDocuments(&api.BillingDocument{
-					Key:                       strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", mockSubID),
-					ID:                        mockSubID,
+					Key:                       strings.ToLower(testdatabase.GetResourcePath(subID, "resourceName")),
+					ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", subID),
+					ID:                        docID,
 					Billing: &api.Billing{
-						TenantID: mockTenantID,
+						TenantID: tenantID,
 						Location: location,
 					},
 				})
 			},
 			wantDocuments: func(c *testdatabase.Checker) {
 				c.AddBillingDocuments(&api.BillingDocument{
-					Key:                       strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", mockSubID),
-					ID:                        mockSubID,
+					Key:                       strings.ToLower(testdatabase.GetResourcePath(subID, "resourceName")),
+					ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", subID),
+					ID:                        docID,
 					Billing: &api.Billing{
-						TenantID:     mockTenantID,
+						TenantID:     tenantID,
 						Location:     location,
 						DeletionTime: 1,
 					},
@@ -161,13 +166,13 @@ func TestDelete(t *testing.T) {
 			name: "no error on mark for deletion on billing entry that is not found",
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key:                       strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", mockSubID),
-					ID:                        mockSubID,
+					Key:                       strings.ToLower(testdatabase.GetResourcePath(subID, "resourceName")),
+					ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", subID),
+					ID:                        docID,
 					OpenShiftCluster: &api.OpenShiftCluster{
 						Properties: api.OpenShiftClusterProperties{
 							ServicePrincipalProfile: api.ServicePrincipalProfile{
-								TenantID: mockTenantID,
+								TenantID: tenantID,
 							},
 						},
 						Location: location,
@@ -179,13 +184,13 @@ func TestDelete(t *testing.T) {
 			name: "error on mark for deletion on billing entry",
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key:                       strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", mockSubID),
-					ID:                        mockSubID,
+					Key:                       strings.ToLower(testdatabase.GetResourcePath(subID, "resourceName")),
+					ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", subID),
+					ID:                        docID,
 					OpenShiftCluster: &api.OpenShiftCluster{
 						Properties: api.OpenShiftClusterProperties{
 							ServicePrincipalProfile: api.ServicePrincipalProfile{
-								TenantID: mockTenantID,
+								TenantID: tenantID,
 							},
 						},
 						Location: location,
@@ -232,7 +237,7 @@ func TestDelete(t *testing.T) {
 				env:       _env,
 			}
 
-			err = m.Delete(ctx, &api.OpenShiftClusterDocument{ID: mockSubID})
+			err = m.Delete(ctx, &api.OpenShiftClusterDocument{ID: docID})
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
@@ -252,10 +257,14 @@ func TestDelete(t *testing.T) {
 
 func TestEnsure(t *testing.T) {
 	ctx := context.Background()
-	mockSubID := "11111111-1111-1111-1111-111111111111"
-	mockTenantID := mockSubID
-	mockInfraID := "infra"
-	location := "eastus"
+
+	const (
+		docID       = "00000000-0000-0000-0000-000000000000"
+		subID       = "11111111-1111-1111-1111-111111111111"
+		tenantID    = "22222222-2222-2222-2222-222222222222"
+		mockInfraID = "infra"
+		location    = "eastus"
+	)
 
 	type test struct {
 		name          string
@@ -273,13 +282,13 @@ func TestEnsure(t *testing.T) {
 			name: "create a new billing entry with a subscription not registered for e2e",
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key:                       strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", mockSubID),
-					ID:                        mockSubID,
+					Key:                       strings.ToLower(testdatabase.GetResourcePath(subID, "resourceName")),
+					ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", subID),
+					ID:                        docID,
 					OpenShiftCluster: &api.OpenShiftCluster{
 						Properties: api.OpenShiftClusterProperties{
 							ServicePrincipalProfile: api.ServicePrincipalProfile{
-								TenantID: mockTenantID,
+								TenantID: tenantID,
 							},
 							InfraID: mockInfraID,
 						},
@@ -301,11 +310,11 @@ func TestEnsure(t *testing.T) {
 			},
 			wantDocuments: func(c *testdatabase.Checker) {
 				c.AddBillingDocuments(&api.BillingDocument{
-					Key:                       strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", mockSubID),
-					ID:                        mockSubID,
+					Key:                       strings.ToLower(testdatabase.GetResourcePath(subID, "resourceName")),
+					ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", subID),
+					ID:                        docID,
 					Billing: &api.Billing{
-						TenantID: mockTenantID,
+						TenantID: tenantID,
 						Location: location,
 					},
 					InfraID: mockInfraID,
@@ -316,13 +325,13 @@ func TestEnsure(t *testing.T) {
 			name: "error on create a new billing entry",
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key:                       strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", mockSubID),
-					ID:                        mockSubID,
+					Key:                       strings.ToLower(testdatabase.GetResourcePath(subID, "resourceName")),
+					ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", subID),
+					ID:                        docID,
 					OpenShiftCluster: &api.OpenShiftCluster{
 						Properties: api.OpenShiftClusterProperties{
 							ServicePrincipalProfile: api.ServicePrincipalProfile{
-								TenantID: mockTenantID,
+								TenantID: tenantID,
 							},
 							InfraID: mockInfraID,
 						},
@@ -349,13 +358,13 @@ func TestEnsure(t *testing.T) {
 			name: "billing document already existing on DB on create",
 			fixture: func(f *testdatabase.Fixture) {
 				f.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
-					Key:                       strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")),
-					ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", mockSubID),
-					ID:                        mockSubID,
+					Key:                       strings.ToLower(testdatabase.GetResourcePath(subID, "resourceName")),
+					ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", subID),
+					ID:                        docID,
 					OpenShiftCluster: &api.OpenShiftCluster{
 						Properties: api.OpenShiftClusterProperties{
 							ServicePrincipalProfile: api.ServicePrincipalProfile{
-								TenantID: mockTenantID,
+								TenantID: tenantID,
 							},
 							InfraID: mockInfraID,
 						},
@@ -375,11 +384,11 @@ func TestEnsure(t *testing.T) {
 					},
 				})
 				f.AddBillingDocuments(&api.BillingDocument{
-					Key:                       testdatabase.GetResourcePath(mockSubID, "resourceName"),
-					ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", mockSubID),
-					ID:                        mockSubID,
+					Key:                       testdatabase.GetResourcePath(subID, "resourceName"),
+					ClusterResourceGroupIDKey: fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup", subID),
+					ID:                        docID,
 					Billing: &api.Billing{
-						TenantID: mockTenantID,
+						TenantID: tenantID,
 						Location: location,
 					},
 					InfraID: mockInfraID,
@@ -423,7 +432,7 @@ func TestEnsure(t *testing.T) {
 				env:       _env,
 			}
 
-			doc, err := openShiftClusterDatabase.Get(ctx, strings.ToLower(testdatabase.GetResourcePath(mockSubID, "resourceName")))
+			doc, err := openShiftClusterDatabase.Get(ctx, strings.ToLower(testdatabase.GetResourcePath(subID, "resourceName")))
 			if err != nil {
 				t.Fatal(err)
 			}
