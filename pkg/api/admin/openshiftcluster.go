@@ -75,7 +75,6 @@ type ConsoleProfile struct {
 
 // ServicePrincipalProfile represents a service principal profile.
 type ServicePrincipalProfile struct {
-	TenantID string `json:"tenantId,omitempty"`
 	ClientID string `json:"clientId,omitempty"`
 }
 

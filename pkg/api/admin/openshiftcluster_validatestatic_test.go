@@ -281,20 +281,6 @@ func TestOpenShiftClusterStaticValidateDelta(t *testing.T) {
 			wantErr: "400: PropertyChangeNotAllowed: properties.servicePrincipalProfile.clientId: Changing property 'properties.servicePrincipalProfile.clientId' is not allowed.",
 		},
 		{
-			name: "tenantId change is not allowed",
-			oc: func() *OpenShiftCluster {
-				return &OpenShiftCluster{
-					Properties: OpenShiftClusterProperties{
-						ServicePrincipalProfile: ServicePrincipalProfile{
-							TenantID: "tenantId",
-						},
-					},
-				}
-			},
-			modify:  func(oc *OpenShiftCluster) { oc.Properties.ServicePrincipalProfile.TenantID = uuid.NewV4().String() },
-			wantErr: "400: PropertyChangeNotAllowed: properties.servicePrincipalProfile.tenantId: Changing property 'properties.servicePrincipalProfile.tenantId' is not allowed.",
-		},
-		{
 			name: "podCidr change is not allowed",
 			oc: func() *OpenShiftCluster {
 				return &OpenShiftCluster{
