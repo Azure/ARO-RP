@@ -5,8 +5,10 @@ package pullsecret
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
+	"github.com/operator-framework/operator-sdk/pkg/status"
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,6 +18,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/Azure/ARO-RP/pkg/operator"
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	aroFake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 )
 
 func TestPullSecretReconciler(t *testing.T) {
@@ -38,10 +42,18 @@ func TestPullSecretReconciler(t *testing.T) {
 		}
 		return fake.NewSimpleClientset(s, c)
 	}
+
+	newFakeAro := func(a *arov1alpha1.Cluster) *aroFake.Clientset {
+		return aroFake.NewSimpleClientset(a)
+	}
+
+	baseCluster := newFakeAro(&arov1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: "cluster"}, Status: arov1alpha1.ClusterStatus{}})
+
 	tests := []struct {
 		name        string
 		request     ctrl.Request
 		fakecli     *fake.Clientset
+		arocli      *aroFake.Clientset
 		wantErr     bool
 		want        string
 		wantCreated bool
@@ -53,6 +65,7 @@ func TestPullSecretReconciler(t *testing.T) {
 			fakecli: newFakecli(nil, &v1.Secret{Data: map[string][]byte{
 				v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
+			arocli:      baseCluster,
 			want:        `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantCreated: true,
 		},
@@ -61,6 +74,7 @@ func TestPullSecretReconciler(t *testing.T) {
 			fakecli: newFakecli(&v1.Secret{}, &v1.Secret{Data: map[string][]byte{
 				v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
+			arocli:      baseCluster,
 			want:        `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantUpdated: true,
 		},
@@ -74,6 +88,7 @@ func TestPullSecretReconciler(t *testing.T) {
 				Data: map[string][]byte{
 					v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 				}}),
+			arocli:      baseCluster,
 			want:        `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantUpdated: true,
 		},
@@ -86,6 +101,7 @@ func TestPullSecretReconciler(t *testing.T) {
 			}, &v1.Secret{Data: map[string][]byte{
 				v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
+			arocli:      baseCluster,
 			want:        `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantUpdated: true,
 		},
@@ -96,6 +112,7 @@ func TestPullSecretReconciler(t *testing.T) {
 			}, &v1.Secret{Data: map[string][]byte{
 				v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
+			arocli:      baseCluster,
 			want:        `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantCreated: true,
 			wantDeleted: true,
@@ -109,7 +126,8 @@ func TestPullSecretReconciler(t *testing.T) {
 			}, &v1.Secret{Data: map[string][]byte{
 				v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
-			want: `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
+			arocli: baseCluster,
+			want:   `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 		},
 	}
 	for _, tt := range tests {
@@ -134,6 +152,7 @@ func TestPullSecretReconciler(t *testing.T) {
 			r := &PullSecretReconciler{
 				kubernetescli: tt.fakecli,
 				log:           logrus.NewEntry(logrus.StandardLogger()),
+				arocli:        tt.arocli.AroV1alpha1(),
 			}
 			if tt.request.Name == "" {
 				tt.request.NamespacedName = pullSecretName
@@ -168,6 +187,131 @@ func TestPullSecretReconciler(t *testing.T) {
 
 			if string(s.Data[v1.DockerConfigJsonKey]) != tt.want {
 				t.Error(string(s.Data[v1.DockerConfigJsonKey]))
+			}
+		})
+	}
+}
+
+func TestParseRegistryKeys(t *testing.T) {
+	test := []struct {
+		name     string
+		ps       *v1.Secret
+		wantAuth serializedAuthMap
+		wantErr  string
+	}{
+		{
+			name: "ok secret",
+			ps: &v1.Secret{
+				Data: map[string][]byte{
+					v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}, "registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+				},
+			},
+			wantAuth: serializedAuthMap{Auths: map[string]serializedAuth{
+				"arosvc.azurecr.io":  {Auth: "ZnJlZDplbnRlcg=="},
+				"registry.redhat.io": {Auth: "ZnJlZDplbnRlcg=="},
+			}},
+		},
+		{
+			name: "broken secret",
+			ps: &v1.Secret{
+				Data: map[string][]byte{
+					v1.DockerConfigJsonKey: []byte(`{"auths":"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+				},
+			},
+			wantErr: "invalid character ':' after object key:value pair",
+		},
+	}
+
+	for _, tt := range test {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &PullSecretReconciler{}
+
+			out, err := r.parseRHRegistryKeys(tt.ps)
+			if err != nil {
+				if err.Error() != tt.wantErr {
+					t.Fatal(err.Error())
+				}
+			} else if !reflect.DeepEqual(*out, tt.wantAuth) {
+				t.Fatal("Auth does not match")
+			}
+		})
+	}
+}
+
+func TestCheckRHRegistryKeys(t *testing.T) {
+	test := []struct {
+		name     string
+		ps       serializedAuthMap
+		wantKeys []string
+		wantErr  string
+	}{
+		{
+			name: "without rh key",
+			ps: serializedAuthMap{Auths: map[string]serializedAuth{
+				"arosvc.azurecr.io": {Auth: "ZnJlZDplbnRlcg=="},
+			}},
+			wantKeys: []string{},
+		},
+		{
+			name: "with rh key",
+			ps: serializedAuthMap{Auths: map[string]serializedAuth{
+				"arosvc.azurecr.io":  {Auth: "ZnJlZDplbnRlcg=="},
+				"registry.redhat.io": {Auth: "ZnJlZDplbnRlcg=="},
+			}},
+			wantKeys: []string{"registry.redhat.io"},
+		},
+	}
+
+	for _, tt := range test {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &PullSecretReconciler{
+				log: logrus.NewEntry(logrus.StandardLogger()),
+			}
+
+			out := r.checkRHRegistryKeys(&tt.ps)
+			if !reflect.DeepEqual(out, tt.wantKeys) {
+				t.Fatal("Cannot match keys")
+			}
+		})
+	}
+}
+
+func TestUpdateRHCondition(t *testing.T) {
+	test := []struct {
+		name          string
+		keys          []string
+		wantCondition status.Condition
+		wantErr       string
+	}{
+		{
+			name: "no keys found",
+			keys: []string{},
+			wantCondition: status.Condition{
+				Type:    arov1alpha1.RedHatKeyPresent,
+				Status:  v1.ConditionFalse,
+				Message: "No Red Hat registry keys found in pull-secret.",
+				Reason:  "CheckDone",
+			},
+		},
+		{
+			name: "keys found",
+			keys: []string{"registry.redhat.io"},
+			wantCondition: status.Condition{
+				Type:    arov1alpha1.RedHatKeyPresent,
+				Status:  v1.ConditionTrue,
+				Message: "Red Hat registry keys present in pull-secret: registry.redhat.io, ",
+				Reason:  "CheckDone",
+			},
+		},
+	}
+
+	for _, tt := range test {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &PullSecretReconciler{}
+
+			out := r.updateRHKeysCondition(tt.keys)
+			if !reflect.DeepEqual(out, &tt.wantCondition) {
+				t.Fatalf("Condition does not match. want: %v, got: %v", tt.wantCondition, out)
 			}
 		})
 	}

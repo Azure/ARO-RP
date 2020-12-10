@@ -13,6 +13,7 @@ const (
 	InternetReachableFromMaster status.ConditionType = "InternetReachableFromMaster"
 	InternetReachableFromWorker status.ConditionType = "InternetReachableFromWorker"
 	MachineValid                status.ConditionType = "MachineValid"
+	RedHatKeyPresent            status.ConditionType = "RedHatKeyPresent"
 )
 
 func AllConditionTypes() []status.ConditionType {
