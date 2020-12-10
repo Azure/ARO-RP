@@ -29,7 +29,7 @@ const (
 	ifxAuditVersion  = 2.1
 
 	// ifxAuditFlags is a collection of values bit-packed into a 64-bit integer.
-	// These properties describe how the event should be processed by the pipelinei
+	// These properties describe how the event should be processed by the pipeline
 	// in an implementation-independent way.
 	ifxAuditFlags = 257
 
