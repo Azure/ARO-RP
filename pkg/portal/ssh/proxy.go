@@ -66,10 +66,7 @@ func (s *ssh) Run() error {
 			go func() {
 				defer recover.Panic(s.log)
 
-				err := s.newConn(context.Background(), c)
-				if err != nil {
-					s.log.Warn(err)
-				}
+				_ = s.newConn(context.Background(), c)
 			}()
 		}
 	}()
@@ -117,14 +114,12 @@ func (s *ssh) newConn(ctx context.Context, c1 net.Conn) error {
 	// Serve the incoming (SRE->portal) connection.
 	conn1, newchannels1, requests1, err := cryptossh.NewServerConn(c1, config)
 	if err != nil {
-		var username string
 		if connmetadata != nil { // after a password attempt
-			username = connmetadata.User()
+			s.baseAccessLog.WithFields(logrus.Fields{
+				"remote_addr": c1.RemoteAddr().String(),
+				"username":    connmetadata.User(),
+			}).Warn("authentication failed")
 		}
-		s.baseAccessLog.WithFields(logrus.Fields{
-			"remote_addr": c1.RemoteAddr().String(),
-			"username":    username,
-		}).Warn("authentication failed")
 
 		return err
 	}
