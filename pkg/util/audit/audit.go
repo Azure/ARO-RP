@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"runtime"
-	"strings"
 	"sync"
 	"time"
 
@@ -50,13 +49,14 @@ var (
 	// sequence field used to track absolute order of uploaded events, per session.
 	// it is reset when the ARO component is restarted.
 	seqNum      uint64
-	seqNumMutex *sync.Mutex
+	seqNumMutex sync.Mutex
 )
 
 func init() {
 	epoch = uuid.NewV4().String()
-	seqNum = 1
-	seqNumMutex = new(sync.Mutex)
+
+	// first log will has its sequence number equals 0
+	seqNum = -1
 }
 
 // EmitRPLog is used by aro-rp to emit audit logs.
@@ -64,7 +64,10 @@ func init() {
 // the appropriate formatter, hooks, log level etc.
 // All audit logs will be emitted at the INFO level.
 func EmitRPLog(entry logrus.Entry, log *Log) error {
-	return emitLog(entry, log, auditSourceRP)
+	if err := emitLog(entry, log, auditSourceRP); err != nil {
+		return fmt.Errorf("failed to send RP log: %w", err)
+	}
+	return nil
 }
 
 func emitLog(entry logrus.Entry, log *Log, source string) error {
@@ -78,11 +81,12 @@ func emitLog(entry logrus.Entry, log *Log, source string) error {
 	fields[auditMetadataResult] = payload.Result.ResultType
 	fields[auditMetadataSource] = source
 
-	marshalled, err := marshal(payload)
+	marshalled, err := json.Marshal(payload)
 	if err != nil {
 		return err
 	}
-	fields[auditMetadataFullPayload] = marshalled
+
+	fields[auditMetadataFullPayload] = string(marshalled)
 
 	// log message can be anything here, since the important audit data are
 	// captured in the different log fields above.
@@ -106,48 +110,41 @@ type Log struct {
 }
 
 func (l *Log) toPayload() *schema.AuditPayload {
-	utcnow := time.Now().UTC()
+	var (
+		utcnow  = time.Now().UTC()
+		envOS   = runtime.GOOS
+		envName = ifxAuditName
+		envTime = utcnow.Format(time.RFC3339)
+	)
+
 	payload := &schema.AuditPayload{
 		// Part-A. See schema/doc.go
-		EnvOS:                runtime.GOOS,
+		EnvOS:                &envOS,
 		EnvVer:               ifxAuditVersion,
-		EnvName:              ifxAuditName,
-		EnvTime:              utcnow.Format(time.RFC3339),
-		EnvEpoch:             epoch,
+		EnvName:              &envName,
+		EnvTime:              &envTime,
+		EnvEpoch:             &epoch,
 		EnvSeqNum:            nextSeqNum(),
 		EnvPopSample:         ifxAuditPopSample,
 		EnvFlags:             ifxAuditFlags,
-		EnvCV:                l.CorrelationID,
+		EnvCV:                &l.CorrelationID,
 		EnvCloudVer:          ifxAuditCloudVer,
-		EnvCloudName:         l.AzureEnvironment,
-		EnvCloudRole:         l.Role,
-		EnvCloudRoleInstance: l.RoleInstance,
-		EnvCloudLocation:     l.Region,
+		EnvCloudName:         &l.AzureEnvironment,
+		EnvCloudRole:         &l.Role,
+		EnvCloudRoleInstance: &l.RoleInstance,
+		EnvCloudLocation:     &l.Region,
 
 		// Part-B. See schema/doc.go
-		OperationName:    l.OperationName,
+		OperationName:    &l.OperationName,
 		Result:           l.OperationResult,
 		Category:         l.Category,
-		NCloud:           l.AzureEnvironment,
-		RequestID:        l.OperationID,
+		NCloud:           &l.AzureEnvironment,
+		RequestID:        &l.OperationID,
 		CallerIdentities: l.CallerIdentities,
 		TargetResources:  l.TargetResources,
 	}
 
 	return payload
-}
-
-// marshal converts the payload into JSON format compatible with IFxAudit
-// formatting requirement. E.g., empty strings are replaced with nulls.
-func marshal(payload *schema.AuditPayload) (string, error) {
-	b, err := json.Marshal(payload)
-	if err != nil {
-		return "", fmt.Errorf("%s", err)
-	}
-
-	// IFxAudit wants nulls not empty string values
-	return strings.Replace(string(b), `""`, `null`, -1),
-		err
 }
 
 func nextSeqNum() uint64 {
