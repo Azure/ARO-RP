@@ -125,7 +125,7 @@ func (s *ssh) new(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	elevated := middleware.GroupsIntersect(s.elevatedGroupIDs, ctx.Value(middleware.ContextKeyGroups).([]string))
+	elevated := len(middleware.GroupsIntersect(s.elevatedGroupIDs, ctx.Value(middleware.ContextKeyGroups).([]string))) > 0
 	if !elevated {
 		s.sendResponse(w, &response{
 			Error: "Elevated access is required.",

@@ -101,7 +101,7 @@ func (k *kubeconfig) new(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	elevated := middleware.GroupsIntersect(k.elevatedGroupIDs, ctx.Value(middleware.ContextKeyGroups).([]string))
+	elevated := len(middleware.GroupsIntersect(k.elevatedGroupIDs, ctx.Value(middleware.ContextKeyGroups).([]string))) > 0
 
 	token := k.newToken()
 

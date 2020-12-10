@@ -98,10 +98,10 @@ type aad struct {
 	clientKey   *rsa.PrivateKey
 	clientCerts []*x509.Certificate
 
-	store    *sessions.CookieStore
-	oauther  oauther
-	verifier Verifier
-	groupIDs []string
+	store     *sessions.CookieStore
+	oauther   oauther
+	verifier  Verifier
+	allGroups []string
 
 	sessionTimeout time.Duration
 }
@@ -115,7 +115,7 @@ func NewAAD(deploymentMode deployment.Mode,
 	clientID string,
 	clientKey *rsa.PrivateKey,
 	clientCerts []*x509.Certificate,
-	groupIDs []string,
+	allGroups []string,
 	unauthenticatedRouter *mux.Router,
 	verifier Verifier) (AAD, error) {
 	if len(sessionKey) != 32 {
@@ -142,8 +142,8 @@ func NewAAD(deploymentMode deployment.Mode,
 				"profile",
 			},
 		},
-		verifier: verifier,
-		groupIDs: groupIDs,
+		verifier:  verifier,
+		allGroups: allGroups,
 
 		sessionTimeout: time.Hour,
 	}
@@ -314,7 +314,8 @@ func (a *aad) callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !GroupsIntersect(a.groupIDs, claims.Groups) {
+	groupsIntersect := GroupsIntersect(a.allGroups, claims.Groups)
+	if len(groupsIntersect) == 0 {
 		http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
 	}
 
@@ -326,7 +327,7 @@ func (a *aad) callback(w http.ResponseWriter, r *http.Request) {
 
 	delete(session.Values, sessionKeyRedirectPath)
 	session.Values[SessionKeyUsername] = claims.PreferredUsername
-	session.Values[SessionKeyGroups] = claims.Groups
+	session.Values[SessionKeyGroups] = groupsIntersect
 	session.Values[SessionKeyExpires] = a.now().Add(a.sessionTimeout)
 
 	err = session.Save(r, w)
@@ -381,14 +382,15 @@ func (a *aad) internalServerError(w http.ResponseWriter, err error) {
 	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 }
 
-func GroupsIntersect(as, bs []string) bool {
+func GroupsIntersect(as, bs []string) (gs []string) {
 	for _, a := range as {
 		for _, b := range bs {
 			if a == b {
-				return true
+				gs = append(gs, a)
+				break
 			}
 		}
 	}
 
-	return false
+	return gs
 }

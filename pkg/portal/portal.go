@@ -157,7 +157,10 @@ func (p *portal) Run(ctx context.Context) error {
 	unauthenticatedRouter := r.NewRoute().Subrouter()
 	p.unauthenticatedRoutes(unauthenticatedRouter)
 
-	p.aad, err = middleware.NewAAD(p.env.DeploymentMode(), p.log, p.baseAccessLog, p.hostname, p.sessionKey, p.env.TenantID(), p.clientID, p.clientKey, p.clientCerts, p.groupIDs, unauthenticatedRouter, p.verifier)
+	allGroups := append([]string{}, p.groupIDs...)
+	allGroups = append(allGroups, p.elevatedGroupIDs...)
+
+	p.aad, err = middleware.NewAAD(p.env.DeploymentMode(), p.log, p.baseAccessLog, p.hostname, p.sessionKey, p.env.TenantID(), p.clientID, p.clientKey, p.clientCerts, allGroups, unauthenticatedRouter, p.verifier)
 	if err != nil {
 		return err
 	}
