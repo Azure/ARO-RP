@@ -51,7 +51,8 @@ type deployer struct {
 	vmss                   compute.VirtualMachineScaleSetsClient
 	vmssvms                compute.VirtualMachineScaleSetVMsClient
 	zones                  dns.ZonesClient
-	keyvault               keyvault.Manager
+	portalKeyvault         keyvault.Manager
+	serviceKeyvault        keyvault.Manager
 
 	fullDeploy bool
 	config     *RPConfig
@@ -89,7 +90,8 @@ func New(ctx context.Context, log *logrus.Entry, env env.Core, config *RPConfig,
 		vmss:                   compute.NewVirtualMachineScaleSetsClient(env.Environment(), config.SubscriptionID, authorizer),
 		vmssvms:                compute.NewVirtualMachineScaleSetVMsClient(env.Environment(), config.SubscriptionID, authorizer),
 		zones:                  dns.NewZonesClient(env.Environment(), config.SubscriptionID, authorizer),
-		keyvault:               keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+"-svc."+env.Environment().KeyVaultDNSSuffix+"/"),
+		portalKeyvault:         keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+"-por."+env.Environment().KeyVaultDNSSuffix+"/"),
+		serviceKeyvault:        keyvault.NewManager(kvAuthorizer, "https://"+*config.Configuration.KeyvaultPrefix+"-svc."+env.Environment().KeyVaultDNSSuffix+"/"),
 
 		fullDeploy: fullDeploy,
 		config:     config,
@@ -119,9 +121,6 @@ func (d *deployer) Deploy(ctx context.Context) error {
 	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
 	parameters.Parameters["adminApiCaBundle"] = &arm.ParametersParameter{
 		Value: base64.StdEncoding.EncodeToString([]byte(*d.config.Configuration.AdminAPICABundle)),
-	}
-	parameters.Parameters["domainName"] = &arm.ParametersParameter{
-		Value: d.config.Location + "." + *d.config.Configuration.ClusterParentDomainName,
 	}
 	parameters.Parameters["extraCosmosDBIPs"] = &arm.ParametersParameter{
 		Value: strings.Join(d.config.Configuration.ExtraCosmosDBIPs, ","),
@@ -180,6 +179,11 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 		return err
 	}
 
+	portalPip, err := d.publicipaddresses.Get(ctx, d.config.ResourceGroupName, "portal-pip", "")
+	if err != nil {
+		return err
+	}
+
 	zone, err := d.zones.Get(ctx, d.config.ResourceGroupName, d.config.Location+"."+*d.config.Configuration.ClusterParentDomainName)
 	if err != nil {
 		return err
@@ -191,6 +195,20 @@ func (d *deployer) configureDNS(ctx context.Context) error {
 			ARecords: &[]mgmtdns.ARecord{
 				{
 					Ipv4Address: rpPip.IPAddress,
+				},
+			},
+		},
+	}, "", "")
+	if err != nil {
+		return err
+	}
+
+	_, err = d.globalrecordsets.CreateOrUpdate(ctx, *d.config.Configuration.GlobalResourceGroupName, *d.config.Configuration.RPParentDomainName, d.config.Location+".admin", mgmtdns.A, mgmtdns.RecordSet{
+		RecordSetProperties: &mgmtdns.RecordSetProperties{
+			TTL: to.Int64Ptr(3600),
+			ARecords: &[]mgmtdns.ARecord{
+				{
+					Ipv4Address: portalPip.IPAddress,
 				},
 			},
 		},
@@ -239,6 +257,11 @@ func (d *deployer) getParameters(ps map[string]interface{}) *arm.Parameters {
 		v, ok := m[p]
 		if !ok {
 			continue
+		}
+
+		switch p {
+		case "portalAccessGroupIds", "portalElevatedGroupIds":
+			v = strings.Join(v.([]string), ",")
 		}
 
 		parameters.Parameters[p] = &arm.ParametersParameter{

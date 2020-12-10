@@ -6,7 +6,6 @@ package cluster
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/password"
@@ -22,8 +21,8 @@ func (m *manager) updateRouterIP(ctx context.Context) error {
 		return err
 	}
 
-	installConfig := g[reflect.TypeOf(&installconfig.InstallConfig{})].(*installconfig.InstallConfig)
-	kubeadminPassword := g[reflect.TypeOf(&password.KubeadminPassword{})].(*password.KubeadminPassword)
+	installConfig := g.get(&installconfig.InstallConfig{}).(*installconfig.InstallConfig)
+	kubeadminPassword := g.get(&password.KubeadminPassword{}).(*password.KubeadminPassword)
 
 	svc, err := m.kubernetescli.CoreV1().Services("openshift-ingress").Get(ctx, "router-default", metav1.GetOptions{})
 	if err != nil {

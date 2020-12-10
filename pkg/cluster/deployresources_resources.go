@@ -174,6 +174,15 @@ func (m *manager) networkInternalLoadBalancer(installConfig *installconfig.Insta
 					{
 						Name: to.StringPtr(m.doc.OpenShiftCluster.Properties.InfraID),
 					},
+					{
+						Name: to.StringPtr("ssh-0"),
+					},
+					{
+						Name: to.StringPtr("ssh-1"),
+					},
+					{
+						Name: to.StringPtr("ssh-2"),
+					},
 				},
 				LoadBalancingRules: &[]mgmtnetwork.LoadBalancingRule{
 					{
@@ -215,6 +224,66 @@ func (m *manager) networkInternalLoadBalancer(installConfig *installconfig.Insta
 						},
 						Name: to.StringPtr("sint-v4"),
 					},
+					{
+						LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
+							FrontendIPConfiguration: &mgmtnetwork.SubResource{
+								ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '%s-internal', 'internal-lb-ip-v4')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+							},
+							BackendAddressPool: &mgmtnetwork.SubResource{
+								ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s-internal', 'ssh-0')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+							},
+							Probe: &mgmtnetwork.SubResource{
+								ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s-internal', 'ssh')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+							},
+							Protocol:             mgmtnetwork.TransportProtocolTCP,
+							LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
+							FrontendPort:         to.Int32Ptr(2200),
+							BackendPort:          to.Int32Ptr(22),
+							IdleTimeoutInMinutes: to.Int32Ptr(30),
+							DisableOutboundSnat:  to.BoolPtr(true),
+						},
+						Name: to.StringPtr("ssh-0"),
+					},
+					{
+						LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
+							FrontendIPConfiguration: &mgmtnetwork.SubResource{
+								ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '%s-internal', 'internal-lb-ip-v4')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+							},
+							BackendAddressPool: &mgmtnetwork.SubResource{
+								ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s-internal', 'ssh-1')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+							},
+							Probe: &mgmtnetwork.SubResource{
+								ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s-internal', 'ssh')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+							},
+							Protocol:             mgmtnetwork.TransportProtocolTCP,
+							LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
+							FrontendPort:         to.Int32Ptr(2201),
+							BackendPort:          to.Int32Ptr(22),
+							IdleTimeoutInMinutes: to.Int32Ptr(30),
+							DisableOutboundSnat:  to.BoolPtr(true),
+						},
+						Name: to.StringPtr("ssh-1"),
+					},
+					{
+						LoadBalancingRulePropertiesFormat: &mgmtnetwork.LoadBalancingRulePropertiesFormat{
+							FrontendIPConfiguration: &mgmtnetwork.SubResource{
+								ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/frontendIPConfigurations', '%s-internal', 'internal-lb-ip-v4')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+							},
+							BackendAddressPool: &mgmtnetwork.SubResource{
+								ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s-internal', 'ssh-2')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+							},
+							Probe: &mgmtnetwork.SubResource{
+								ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/probes', '%s-internal', 'ssh')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+							},
+							Protocol:             mgmtnetwork.TransportProtocolTCP,
+							LoadDistribution:     mgmtnetwork.LoadDistributionDefault,
+							FrontendPort:         to.Int32Ptr(2202),
+							BackendPort:          to.Int32Ptr(22),
+							IdleTimeoutInMinutes: to.Int32Ptr(30),
+							DisableOutboundSnat:  to.BoolPtr(true),
+						},
+						Name: to.StringPtr("ssh-2"),
+					},
 				},
 				Probes: &[]mgmtnetwork.Probe{
 					{
@@ -236,6 +305,15 @@ func (m *manager) networkInternalLoadBalancer(installConfig *installconfig.Insta
 							RequestPath:       to.StringPtr("/healthz"),
 						},
 						Name: to.StringPtr("sint-probe"),
+					},
+					{
+						ProbePropertiesFormat: &mgmtnetwork.ProbePropertiesFormat{
+							Protocol:          mgmtnetwork.ProbeProtocolTCP,
+							Port:              to.Int32Ptr(22),
+							IntervalInSeconds: to.Int32Ptr(5),
+							NumberOfProbes:    to.Int32Ptr(2),
+						},
+						Name: to.StringPtr("ssh"),
 					},
 				},
 			},
@@ -384,6 +462,9 @@ func (m *manager) networkMasterNICs(installConfig *installconfig.InstallConfig) 
 								},
 								{
 									ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s-internal', '%[1]s')]", m.doc.OpenShiftCluster.Properties.InfraID)),
+								},
+								{
+									ID: to.StringPtr(fmt.Sprintf("[resourceId('Microsoft.Network/loadBalancers/backendAddressPools', '%s-internal', concat('ssh-', copyIndex()))]", m.doc.OpenShiftCluster.Properties.InfraID)),
 								},
 							},
 							Subnet: &mgmtnetwork.Subnet{

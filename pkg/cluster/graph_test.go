@@ -4,6 +4,7 @@ package cluster
 // Licensed under the Apache License 2.0.
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/base64"
@@ -12,9 +13,11 @@ import (
 	"testing"
 
 	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/go-test/deep"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	icazure "github.com/openshift/installer/pkg/asset/installconfig/azure"
 	icopenstack "github.com/openshift/installer/pkg/asset/installconfig/openstack"
+	"github.com/openshift/installer/pkg/asset/rhcos"
 	"github.com/openshift/installer/pkg/asset/targets"
 	"github.com/openshift/installer/pkg/ipnet"
 	"github.com/openshift/installer/pkg/types"
@@ -105,13 +108,10 @@ func TestGraphRoundTrip(t *testing.T) {
 		t.Fatal(errs.Error())
 	}
 
-	g := graph{
-		reflect.TypeOf(installConfig): installConfig,
-		reflect.TypeOf(platformCreds): platformCreds,
-	}
+	g := newGraph(installConfig, platformCreds)
 
 	for _, a := range targets.Cluster {
-		_, err := g.resolve(a)
+		err = g.resolve(a)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -122,8 +122,42 @@ func TestGraphRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = json.Unmarshal(b, &g)
+	var g2 graph
+
+	err = json.Unmarshal(b, &g2)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(g, g2) {
+		t.Fatal(deep.Equal(g, g2))
+	}
+}
+
+func TestGraphMarshalledFormat(t *testing.T) {
+	b := []byte(`{"*rhcos.Image":"testimage","*unknown.Key":"unknown.Value"}`)
+
+	var g graph
+	err := json.Unmarshal(b, &g)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	i := g.get(new(rhcos.Image)).(*rhcos.Image)
+	if i == nil || *i != "testimage" {
+		t.Fatal(i)
+	}
+
+	if g["*unknown.Key"] != "unknown.Value" {
+		t.Fatal(g["*unknown.Key"])
+	}
+
+	b2, err := json.Marshal(g)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !bytes.Equal(b, b2) {
+		t.Fatal(string(b))
 	}
 }

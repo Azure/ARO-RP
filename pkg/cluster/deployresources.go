@@ -23,8 +23,8 @@ func (m *manager) deployResourceTemplate(ctx context.Context) error {
 		return err
 	}
 
-	installConfig := g[reflect.TypeOf(&installconfig.InstallConfig{})].(*installconfig.InstallConfig)
-	machineMaster := g[reflect.TypeOf(&machine.Master{})].(*machine.Master)
+	installConfig := g.get(&installconfig.InstallConfig{}).(*installconfig.InstallConfig)
+	machineMaster := g.get(&machine.Master{}).(*machine.Master)
 
 	resourceGroup := stringutils.LastTokenByte(m.doc.OpenShiftCluster.Properties.ClusterProfile.ResourceGroupID, '/')
 

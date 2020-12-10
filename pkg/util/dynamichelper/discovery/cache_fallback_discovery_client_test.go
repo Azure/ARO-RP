@@ -21,13 +21,8 @@ import (
 	"github.com/Azure/ARO-RP/test/util/cmp"
 )
 
-// TestVersion makes sure that bindata contains cache generated
-// with the supported OpenShift version.
-// To update discovery cache:
-//   1. Create a new cluster
-//	 2. Run `oc login` against this cluster or set KUBECONFIG env variable
-//   3. Run `go run ./hack/gendiscoverycache/gendiscoverycache.go`
-//   4. Run `make generate`
+// TestVersion makes sure that bindata contains cache generated with the
+// supported OpenShift version.
 func TestVersion(t *testing.T) {
 	b, err := Asset("assets_version")
 	if err != nil {
@@ -36,7 +31,7 @@ func TestVersion(t *testing.T) {
 
 	assetsVersion := strings.TrimSuffix(string(b), "\n")
 	if assetsVersion != version.InstallStream.Version.String() {
-		t.Error(assetsVersion)
+		t.Error("discovery cache is out of date: run make discoverycache")
 	}
 }
 

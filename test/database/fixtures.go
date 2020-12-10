@@ -17,11 +17,13 @@ type Fixture struct {
 	subscriptionDocuments     []*api.SubscriptionDocument
 	billingDocuments          []*api.BillingDocument
 	asyncOperationDocuments   []*api.AsyncOperationDocument
+	portalDocuments           []*api.PortalDocument
 
 	openShiftClustersDatabase database.OpenShiftClusters
 	billingDatabase           database.Billing
 	subscriptionsDatabase     database.Subscriptions
 	asyncOperationsDatabase   database.AsyncOperations
+	portalDatabase            database.Portal
 }
 
 func NewFixture() *Fixture {
@@ -48,20 +50,64 @@ func (f *Fixture) WithAsyncOperations(db database.AsyncOperations) *Fixture {
 	return f
 }
 
+func (f *Fixture) WithPortal(db database.Portal) *Fixture {
+	f.portalDatabase = db
+	return f
+}
+
 func (f *Fixture) AddOpenShiftClusterDocuments(docs ...*api.OpenShiftClusterDocument) {
-	f.openshiftClusterDocuments = append(f.openshiftClusterDocuments, docs...)
+	for _, doc := range docs {
+		docCopy, err := deepCopy(doc)
+		if err != nil {
+			panic(err)
+		}
+
+		f.openshiftClusterDocuments = append(f.openshiftClusterDocuments, docCopy.(*api.OpenShiftClusterDocument))
+	}
 }
 
 func (f *Fixture) AddSubscriptionDocuments(docs ...*api.SubscriptionDocument) {
-	f.subscriptionDocuments = append(f.subscriptionDocuments, docs...)
+	for _, doc := range docs {
+		docCopy, err := deepCopy(doc)
+		if err != nil {
+			panic(err)
+		}
+
+		f.subscriptionDocuments = append(f.subscriptionDocuments, docCopy.(*api.SubscriptionDocument))
+	}
 }
 
 func (f *Fixture) AddBillingDocuments(docs ...*api.BillingDocument) {
-	f.billingDocuments = append(f.billingDocuments, docs...)
+	for _, doc := range docs {
+		docCopy, err := deepCopy(doc)
+		if err != nil {
+			panic(err)
+		}
+
+		f.billingDocuments = append(f.billingDocuments, docCopy.(*api.BillingDocument))
+	}
 }
 
 func (f *Fixture) AddAsyncOperationDocuments(docs ...*api.AsyncOperationDocument) {
-	f.asyncOperationDocuments = append(f.asyncOperationDocuments, docs...)
+	for _, doc := range docs {
+		docCopy, err := deepCopy(doc)
+		if err != nil {
+			panic(err)
+		}
+
+		f.asyncOperationDocuments = append(f.asyncOperationDocuments, docCopy.(*api.AsyncOperationDocument))
+	}
+}
+
+func (f *Fixture) AddPortalDocuments(docs ...*api.PortalDocument) {
+	for _, doc := range docs {
+		docCopy, err := deepCopy(doc)
+		if err != nil {
+			panic(err)
+		}
+
+		f.portalDocuments = append(f.portalDocuments, docCopy.(*api.PortalDocument))
+	}
 }
 
 func (f *Fixture) Create() error {
@@ -93,6 +139,13 @@ func (f *Fixture) Create() error {
 
 	for _, i := range f.asyncOperationDocuments {
 		_, err := f.asyncOperationsDatabase.Create(ctx, i)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, i := range f.portalDocuments {
+		_, err := f.portalDatabase.Create(ctx, i)
 		if err != nil {
 			return err
 		}

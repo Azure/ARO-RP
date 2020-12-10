@@ -26,6 +26,7 @@ require (
 	github.com/containers/image/v5 v5.8.1
 	github.com/containers/libtrust v0.0.0-20200511145503-9c3a6c22cd9a // indirect
 	github.com/containers/storage v1.24.1 // indirect
+	github.com/coreos/go-oidc v2.1.0+incompatible
 	github.com/coreos/go-systemd/v22 v22.1.0
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/emicklei/go-restful v2.15.0+incompatible // indirect
@@ -43,7 +44,10 @@ require (
 	github.com/googleapis/gnostic v0.5.3
 	github.com/gophercloud/gophercloud v0.14.0 // indirect
 	github.com/gophercloud/utils v0.0.0-20201202205831-7faa8ca08dfe // indirect
+	github.com/gorilla/csrf v1.7.0
 	github.com/gorilla/mux v1.8.0
+	github.com/gorilla/securecookie v1.1.1
+	github.com/gorilla/sessions v1.2.1
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/h2non/filetype v1.1.0 // indirect
 	github.com/jim-minter/go-cosmosdb v0.0.0-20201119201311-b37af9b82812
@@ -74,8 +78,8 @@ require (
 	go4.org v0.0.0-20200411211856-f5505b9728dd // indirect
 	golang.org/x/crypto v0.0.0-20201124201722-c8d3bf9c5392
 	golang.org/x/mod v0.4.0 // indirect
-	golang.org/x/net v0.0.0-20201202161906-c7110b5ffcbb // indirect
-	golang.org/x/oauth2 v0.0.0-20201203001011-0b49973bad19 // indirect
+	golang.org/x/net v0.0.0-20201202161906-c7110b5ffcbb
+	golang.org/x/oauth2 v0.0.0-20201203001011-0b49973bad19
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 	golang.org/x/sys v0.0.0-20201202213521-69691e467435 // indirect
 	golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1 // indirect

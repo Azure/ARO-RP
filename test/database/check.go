@@ -21,6 +21,7 @@ type Checker struct {
 	subscriptionDocuments     []*api.SubscriptionDocument
 	billingDocuments          []*api.BillingDocument
 	asyncOperationDocuments   []*api.AsyncOperationDocument
+	portalDocuments           []*api.PortalDocument
 }
 
 func NewChecker() *Checker {
@@ -28,19 +29,58 @@ func NewChecker() *Checker {
 }
 
 func (f *Checker) AddOpenShiftClusterDocuments(docs ...*api.OpenShiftClusterDocument) {
-	f.openshiftClusterDocuments = append(f.openshiftClusterDocuments, docs...)
+	for _, doc := range docs {
+		docCopy, err := deepCopy(doc)
+		if err != nil {
+			panic(err)
+		}
+
+		f.openshiftClusterDocuments = append(f.openshiftClusterDocuments, docCopy.(*api.OpenShiftClusterDocument))
+	}
 }
 
 func (f *Checker) AddSubscriptionDocuments(docs ...*api.SubscriptionDocument) {
-	f.subscriptionDocuments = append(f.subscriptionDocuments, docs...)
+	for _, doc := range docs {
+		docCopy, err := deepCopy(doc)
+		if err != nil {
+			panic(err)
+		}
+
+		f.subscriptionDocuments = append(f.subscriptionDocuments, docCopy.(*api.SubscriptionDocument))
+	}
 }
 
 func (f *Checker) AddBillingDocuments(docs ...*api.BillingDocument) {
-	f.billingDocuments = append(f.billingDocuments, docs...)
+	for _, doc := range docs {
+		docCopy, err := deepCopy(doc)
+		if err != nil {
+			panic(err)
+		}
+
+		f.billingDocuments = append(f.billingDocuments, docCopy.(*api.BillingDocument))
+	}
 }
 
 func (f *Checker) AddAsyncOperationDocuments(docs ...*api.AsyncOperationDocument) {
-	f.asyncOperationDocuments = append(f.asyncOperationDocuments, docs...)
+	for _, doc := range docs {
+		docCopy, err := deepCopy(doc)
+		if err != nil {
+			panic(err)
+		}
+
+		f.asyncOperationDocuments = append(f.asyncOperationDocuments, docCopy.(*api.AsyncOperationDocument))
+	}
+}
+
+func (f *Checker) AddPortalDocuments(docs ...*api.PortalDocument) {
+	for _, doc := range docs {
+		docCopy, err := deepCopy(doc)
+		if err != nil {
+			panic(err)
+		}
+
+		f.portalDocuments = append(f.portalDocuments, docCopy.(*api.PortalDocument))
+	}
 }
 
 func (f *Checker) CheckOpenShiftClusters(openShiftClusters *cosmosdb.FakeOpenShiftClusterDocumentClient) (errs []error) {
@@ -130,6 +170,26 @@ func (f *Checker) CheckAsyncOperations(asyncOperations *cosmosdb.FakeAsyncOperat
 		}
 	} else if len(all.AsyncOperationDocuments) != 0 || len(f.asyncOperationDocuments) != 0 {
 		errs = append(errs, fmt.Errorf("asyncOperations length different, %d vs %d", len(all.AsyncOperationDocuments), len(f.asyncOperationDocuments)))
+	}
+
+	return errs
+}
+
+func (f *Checker) CheckPortals(portals *cosmosdb.FakePortalDocumentClient) (errs []error) {
+	ctx := context.Background()
+
+	all, err := portals.ListAll(ctx, nil)
+	if err != nil {
+		return []error{err}
+	}
+
+	if len(f.portalDocuments) != 0 && len(all.PortalDocuments) == len(f.portalDocuments) {
+		diff := deep.Equal(all.PortalDocuments, f.portalDocuments)
+		for _, i := range diff {
+			errs = append(errs, errors.New(i))
+		}
+	} else if len(all.PortalDocuments) != 0 || len(f.portalDocuments) != 0 {
+		errs = append(errs, fmt.Errorf("portals length different, %d vs %d", len(all.PortalDocuments), len(f.portalDocuments)))
 	}
 
 	return errs

@@ -11,10 +11,10 @@
         "adminApiClientCertCommonName": {
             "value": ""
         },
-        "databaseAccountName": {
+        "clusterParentDomainName": {
             "value": ""
         },
-        "domainName": {
+        "databaseAccountName": {
             "value": ""
         },
         "extraCosmosDBIPs": {
@@ -38,10 +38,22 @@
         "mdsdEnvironment": {
             "value": ""
         },
+        "portalAccessGroupIds": {
+            "value": ""
+        },
+        "portalClientId": {
+            "value": ""
+        },
+        "portalElevatedGroupIds": {
+            "value": ""
+        },
         "rpImage": {
             "value": ""
         },
         "rpMode": {
+            "value": ""
+        },
+        "rpParentDomainName": {
             "value": ""
         },
         "rpServicePrincipalId": {

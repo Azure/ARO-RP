@@ -4,14 +4,17 @@ package listener
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"fmt"
 	"net"
+
+	"github.com/Azure/ARO-RP/test/util/bufferedpipe"
 )
 
-type testAddr struct{}
+type addr struct{}
 
-func (testAddr) Network() string { return "" }
-func (testAddr) String() string  { return "" }
+func (addr) Network() string { return "testlistener" }
+func (addr) String() string  { return "testlistener" }
 
 type Listener struct {
 	c      chan net.Conn
@@ -41,11 +44,15 @@ func (l *Listener) Close() error {
 }
 
 func (*Listener) Addr() net.Addr {
-	return testAddr{}
+	return &addr{}
 }
 
-func (l *Listener) Dial(network, addr string) (net.Conn, error) {
-	c1, c2 := net.Pipe()
+func (l *Listener) DialContext(context.Context, string, string) (net.Conn, error) {
+	c1, c2 := bufferedpipe.New()
 	l.c <- c1
 	return c2, nil
+}
+
+func (l *Listener) Enqueue(c net.Conn) {
+	l.c <- c
 }

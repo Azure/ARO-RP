@@ -43,5 +43,5 @@ func DialContext(ctx context.Context, log *logrus.Entry, restconfig *rest.Config
 		return nil, err
 	}
 
-	return newStreamConn(log, spdyConn, dataStream, errorStream), nil
+	return NewStreamConn(log, spdyConn, dataStream, errorStream), nil
 }

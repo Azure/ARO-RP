@@ -199,6 +199,9 @@ github.com/containers/storage/pkg/reexec
 github.com/containers/storage/pkg/stringid
 github.com/containers/storage/pkg/system
 github.com/containers/storage/pkg/unshare
+# github.com/coreos/go-oidc v2.1.0+incompatible
+## explicit
+github.com/coreos/go-oidc
 # github.com/coreos/go-semver v0.3.0
 github.com/coreos/go-semver/semver
 # github.com/coreos/go-systemd v0.0.0 => github.com/coreos/go-systemd/v22 v22.0.0
@@ -454,9 +457,18 @@ github.com/gophercloud/gophercloud/pagination
 github.com/gophercloud/utils/env
 github.com/gophercloud/utils/gnocchi
 github.com/gophercloud/utils/openstack/clientconfig
+# github.com/gorilla/csrf v1.7.0
+## explicit
+github.com/gorilla/csrf
 # github.com/gorilla/mux v1.8.0
 ## explicit
 github.com/gorilla/mux
+# github.com/gorilla/securecookie v1.1.1
+## explicit
+github.com/gorilla/securecookie
+# github.com/gorilla/sessions v1.2.1
+## explicit
+github.com/gorilla/sessions
 # github.com/gostaticanalysis/analysisutil v0.1.0
 github.com/gostaticanalysis/analysisutil
 # github.com/gostaticanalysis/comment v1.3.0
@@ -832,6 +844,9 @@ github.com/pkg/errors
 github.com/pmezard/go-difflib/difflib
 # github.com/polyfloyd/go-errorlint v0.0.0-20201006195004-351e25ade6e3
 github.com/polyfloyd/go-errorlint/errorlint
+# github.com/pquerna/cachecontrol v0.0.0-20180517163645-1555304b9b35
+github.com/pquerna/cachecontrol
+github.com/pquerna/cachecontrol/cacheobject
 # github.com/prometheus/client_golang v1.8.0
 ## explicit
 github.com/prometheus/client_golang/prometheus
@@ -1003,6 +1018,7 @@ golang.org/x/crypto/pkcs12/internal/rc2
 golang.org/x/crypto/poly1305
 golang.org/x/crypto/sha3
 golang.org/x/crypto/ssh
+golang.org/x/crypto/ssh/agent
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
 golang.org/x/crypto/ssh/terminal
 # golang.org/x/mod v0.4.0
@@ -1033,6 +1049,7 @@ golang.org/x/oauth2/google
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
+golang.org/x/oauth2/microsoft
 # golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 ## explicit
 golang.org/x/sync/errgroup
