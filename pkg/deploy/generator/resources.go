@@ -608,7 +608,7 @@ func (g *generator) lb() *arm.Resource {
 							FrontendPort:     to.Int32Ptr(22),
 							BackendPort:      to.Int32Ptr(2222),
 						},
-						Name: to.StringPtr("portal-lbrule"),
+						Name: to.StringPtr("portal-lbrule-ssh"),
 					},
 				},
 				Probes: &[]mgmtnetwork.Probe{

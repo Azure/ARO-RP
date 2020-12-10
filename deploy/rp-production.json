@@ -189,7 +189,7 @@
                             "frontendPort": 22,
                             "backendPort": 2222
                         },
-                        "name": "portal-lbrule"
+                        "name": "portal-lbrule-ssh"
                     }
                 ],
                 "probes": [
