@@ -89,7 +89,6 @@ func testAdminClustersList(ctx context.Context, path, wantResourceID string) {
 	By("checking that fields available only in Admin API have values")
 	// Note: some fields will have empty values
 	// on successfully provisioned cluster (oc.Properties.Install, for example)
-	Expect(oc.Properties.ServicePrincipalProfile.TenantID).ToNot(BeEmpty())
 	Expect(oc.Properties.StorageSuffix).ToNot(BeEmpty())
 }
 

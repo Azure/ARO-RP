@@ -32,7 +32,6 @@ func ExampleOpenShiftClusterDocument() *OpenShiftClusterDocument {
 					URL: "https://console-openshift-console.apps.cluster.location.aroapp.io/",
 				},
 				ServicePrincipalProfile: ServicePrincipalProfile{
-					TenantID:     "22222222-2222-2222-2222-222222222222",
 					ClientSecret: "clientSecret",
 					ClientID:     "clientId",
 				},

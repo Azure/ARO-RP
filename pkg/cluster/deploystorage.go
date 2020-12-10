@@ -49,14 +49,14 @@ func (m *manager) clusterSPObjectID(ctx context.Context) (string, error) {
 	var clusterSPObjectID string
 	spp := &m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile
 
-	token, err := aad.GetToken(ctx, m.log, m.doc.OpenShiftCluster, m.env.Environment().GraphEndpoint)
+	token, err := aad.GetToken(ctx, m.log, m.doc.OpenShiftCluster, m.subscriptionDoc, m.env.Environment().GraphEndpoint)
 	if err != nil {
 		return "", err
 	}
 
 	spGraphAuthorizer := autorest.NewBearerAuthorizer(token)
 
-	applications := graphrbac.NewApplicationsClient(m.env.Environment(), spp.TenantID, spGraphAuthorizer)
+	applications := graphrbac.NewApplicationsClient(m.env.Environment(), m.subscriptionDoc.Subscription.Properties.TenantID, spGraphAuthorizer)
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()

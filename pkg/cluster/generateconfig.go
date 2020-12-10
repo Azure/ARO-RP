@@ -100,7 +100,7 @@ func (m *manager) generateInstallConfig(ctx context.Context) (*installconfig.Ins
 
 	platformCreds := &installconfig.PlatformCreds{
 		Azure: &icazure.Credentials{
-			TenantID:       m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.TenantID,
+			TenantID:       m.subscriptionDoc.Subscription.Properties.TenantID,
 			ClientID:       m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientID,
 			ClientSecret:   string(m.doc.OpenShiftCluster.Properties.ServicePrincipalProfile.ClientSecret),
 			SubscriptionID: r.SubscriptionID,

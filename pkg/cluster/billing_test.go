@@ -26,7 +26,7 @@ func TestEnsureBillingEntry(t *testing.T) {
 			name: "manager create is called and doesn't return an error when create doesn't return an error",
 			mocks: func(billing *mock_billing.MockManager) {
 				billing.EXPECT().
-					Ensure(gomock.Any(), &api.OpenShiftClusterDocument{}).
+					Ensure(gomock.Any(), &api.OpenShiftClusterDocument{}, &api.SubscriptionDocument{}).
 					Return(nil)
 			},
 		},
@@ -34,7 +34,7 @@ func TestEnsureBillingEntry(t *testing.T) {
 			name: "manager create is called and returns an error on create returning an error",
 			mocks: func(billing *mock_billing.MockManager) {
 				billing.EXPECT().
-					Ensure(gomock.Any(), &api.OpenShiftClusterDocument{}).
+					Ensure(gomock.Any(), &api.OpenShiftClusterDocument{}, &api.SubscriptionDocument{}).
 					Return(errors.New("random error"))
 			},
 			wantErr: "random error",
@@ -48,8 +48,9 @@ func TestEnsureBillingEntry(t *testing.T) {
 			tt.mocks(billing)
 
 			m := &manager{
-				doc:     &api.OpenShiftClusterDocument{},
-				billing: billing,
+				doc:             &api.OpenShiftClusterDocument{},
+				subscriptionDoc: &api.SubscriptionDocument{},
+				billing:         billing,
 			}
 
 			err := m.ensureBillingRecord(ctx)

@@ -151,7 +151,6 @@ type ConsoleProfile struct {
 type ServicePrincipalProfile struct {
 	MissingFields
 
-	TenantID     string       `json:"tenantId,omitempty"`
 	ClientID     string       `json:"clientId,omitempty"`
 	ClientSecret SecureString `json:"clientSecret,omitempty"`
 }
