@@ -10,9 +10,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Azure/ARO-RP/pkg/util/audit/schema"
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
+
+	"github.com/Azure/ARO-RP/pkg/util/audit/schema"
 )
 
 const (
