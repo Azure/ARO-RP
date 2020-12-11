@@ -46,17 +46,15 @@ var (
 	// session, and has no implied ordering across sessions.
 	epoch string
 
-	// sequence field used to track absolute order of uploaded events, per session.
-	// it is reset when the ARO component is restarted.
+	// seqNum is used to track absolute order of uploaded events, per session.
+	// It is reset when the ARO component is restarted. The first log will have
+	// its sequence number set to 1.
 	seqNum      uint64
 	seqNumMutex sync.Mutex
 )
 
 func init() {
 	epoch = uuid.NewV4().String()
-
-	// first log will has its sequence number equals 0
-	seqNum = -1
 }
 
 // EmitRPLog is used by aro-rp to emit audit logs.
