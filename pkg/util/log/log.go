@@ -29,21 +29,33 @@ var (
 	rxTolerantResourceID = regexp.MustCompile(`(?i)^(?:/admin)?/subscriptions/([^/]+)(?:/resourceGroups/([^/]+)(?:/providers/([^/]+)/([^/]+)(?:/([^/]+))?)?)?`)
 )
 
+func GetBaseLogger() *logrus.Logger {
+	logger := logrus.New()
+
+	logger.SetFormatter(&logrus.TextFormatter{
+		FullTimestamp: true,
+	})
+
+	if journal.Enabled() {
+		logger.AddHook(&journaldHook{})
+	}
+
+	return logger
+}
+
 // GetLogger returns a consistently configured log entry
 func GetLogger() *logrus.Entry {
-	logrus.SetReportCaller(true)
-	logrus.SetFormatter(&logrus.TextFormatter{
+	logger := GetBaseLogger()
+
+	logger.SetReportCaller(true)
+	logger.SetFormatter(&logrus.TextFormatter{
 		FullTimestamp:    true,
 		CallerPrettyfier: relativeFilePathPrettier,
 	})
 
-	logrus.AddHook(&logrHook{})
+	logger.AddHook(&logrHook{})
 
-	if journal.Enabled() {
-		logrus.AddHook(&journaldHook{})
-	}
-
-	log := logrus.NewEntry(logrus.StandardLogger())
+	log := logrus.NewEntry(logger)
 
 	l, err := logrus.ParseLevel(*loglevel)
 	if err == nil {
