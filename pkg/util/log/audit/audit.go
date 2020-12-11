@@ -1,4 +1,4 @@
-package audit
+package log
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -60,7 +60,7 @@ var (
 )
 
 type hook struct {
-	payload *schema.AuditPayload
+	payload *AuditPayload
 }
 
 func (hook) Levels() []logrus.Level {
@@ -80,7 +80,7 @@ func (h *hook) Fire(log *logrus.Entry) error {
 	}
 
 	if category, ok := log.Data[auditMetadataCategory].(string); ok {
-		payload.Category = schema.Category(category)
+		payload.Category = Category(category)
 	}
 
 	// etc.
@@ -96,7 +96,6 @@ func (h *hook) Fire(log *logrus.Entry) error {
 	}
 
 	log.Data[auditMetadataFullPayload] = string(b)
-
 	return nil
 }
 
