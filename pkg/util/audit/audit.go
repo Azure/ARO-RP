@@ -48,7 +48,7 @@ var (
 	// epoch is an unique identifier associated with the current session of the
 	// telemetry library running on the platform. It must be stable during a
 	// session, and has no implied ordering across sessions.
-	epoch string
+	epoch = uuid.NewV4().String()
 
 	// seqNum is used to track absolute order of uploaded events, per session.
 	// It is reset when the ARO component is restarted. The first log will have
@@ -56,10 +56,6 @@ var (
 	seqNum      uint64
 	seqNumMutex sync.Mutex
 )
-
-func init() {
-	epoch = uuid.NewV4().String()
-}
 
 // EmitRPLog is used by aro-rp to emit audit logs.
 // Caller is responsible for providing the logrus.Entry object that contains
@@ -79,7 +75,7 @@ func emitLog(entry logrus.Entry, log *Log, source string) error {
 	fields[auditMetadataCategory] = payload.Category
 	fields[auditMetadataCreatedTime] = time.Now().UTC().Format(time.RFC3339)
 	fields[auditMetadataLogKind] = ifxAuditLogKind
-	fields[auditMetadataOperation] = payload.OperationName
+	fields[auditMetadataOperation] = *payload.OperationName
 	fields[auditMetadataResult] = payload.Result.ResultType
 	fields[auditMetadataSource] = source
 
@@ -153,5 +149,7 @@ func nextSeqNum() uint64 {
 	seqNumMutex.Lock()
 	defer seqNumMutex.Unlock()
 
-	return seqNum + 1
+	seqNum++
+
+	return seqNum
 }
