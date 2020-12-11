@@ -9,3 +9,6 @@ The audit schema is made up of 3 parts:
   to make the audit event valuable which do not fit in with the standard schema.
 */
 package schema
+
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.

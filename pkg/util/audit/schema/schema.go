@@ -1,5 +1,8 @@
 package schema
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 // AuditPayload is the log payload that will be persisted.
 // It has all the fields defined in IFxAudit Part-A and Part-B schema.
 // String fields are declared as pointers-to-string because IFxAudit wants
