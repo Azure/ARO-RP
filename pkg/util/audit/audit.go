@@ -5,7 +5,7 @@ package audit
 
 import (
 	"encoding/json"
-	"fmt"
+	"os"
 	"runtime"
 	"sync"
 	"time"
@@ -13,7 +13,9 @@ import (
 	uuid "github.com/satori/go.uuid"
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/audit/schema"
+	"github.com/Azure/go-autorest/autorest/to"
 )
 
 const (
@@ -57,92 +59,71 @@ var (
 	seqNumMutex sync.Mutex
 )
 
-// EmitRPLog is used by aro-rp to emit audit logs.
-// Caller is responsible for providing the logrus.Entry object that contains
-// the appropriate formatter, hooks, log level etc.
-// All audit logs will be emitted at the INFO level.
-func EmitRPLog(entry logrus.Entry, log *Log) error {
-	if err := emitLog(entry, log, auditSourceRP); err != nil {
-		return fmt.Errorf("failed to send RP log: %w", err)
-	}
-	return nil
+type hook struct {
+	payload *schema.AuditPayload
 }
 
-func emitLog(entry logrus.Entry, log *Log, source string) error {
-	payload := log.toPayload()
+func (hook) Levels() []logrus.Level {
+	return logrus.AllLevels
+}
 
-	fields := logrus.Fields{}
-	fields[auditMetadataCategory] = payload.Category
-	fields[auditMetadataCreatedTime] = time.Now().UTC().Format(time.RFC3339)
-	fields[auditMetadataLogKind] = ifxAuditLogKind
-	fields[auditMetadataOperation] = *payload.OperationName
-	fields[auditMetadataResult] = payload.Result.ResultType
-	fields[auditMetadataSource] = source
+func (h *hook) Fire(log *logrus.Entry) error {
+	payload := *h.payload // shallow copy
 
-	marshalled, err := json.Marshal(payload)
+	payload.EnvTime = to.StringPtr(log.Time.UTC().Format(time.RFC3339))
+	payload.EnvSeqNum = nextSeqNum()
+
+	if operationName, ok := log.Data["operationName"].(string); ok {
+		payload.OperationName = &operationName
+		delete(log.Data, "operationName")
+		log.Data[auditMetadataOperation] = operationName
+	}
+
+	if category, ok := log.Data[auditMetadataCategory].(string); ok {
+		payload.Category = schema.Category(category)
+	}
+
+	// etc.
+
+	log.Data[auditMetadataCreatedTime] = *payload.EnvTime
+	log.Data[auditMetadataLogKind] = ifxAuditLogKind
+	log.Data[auditMetadataResult] = payload.Result.ResultType
+	log.Data[auditMetadataSource] = auditSourceRP
+
+	b, err := json.Marshal(payload)
 	if err != nil {
 		return err
 	}
 
-	fields[auditMetadataFullPayload] = string(marshalled)
+	log.Data[auditMetadataFullPayload] = string(b)
 
-	// log message can be anything here, since the important audit data are
-	// captured in the different log fields above.
-	entry.WithFields(fields).Info("see auditFullPayload field for full log data")
 	return nil
 }
 
-// Log captures information about the operation to be logged.
-type Log struct {
-	AzureEnvironment string
-	CallerIdentities []*schema.CallerIdentity
-	Category         schema.Category
-	CorrelationID    string
-	OperationID      string
-	OperationName    string
-	OperationResult  schema.Result
-	Region           string
-	Role             string
-	RoleInstance     string
-	TargetResources  []*schema.TargetResource
-}
-
-func (l *Log) toPayload() *schema.AuditPayload {
-	var (
-		utcnow  = time.Now().UTC()
-		envOS   = runtime.GOOS
-		envName = ifxAuditName
-		envTime = utcnow.Format(time.RFC3339)
-	)
-
-	payload := &schema.AuditPayload{
-		// Part-A. See schema/doc.go
-		EnvOS:                &envOS,
-		EnvVer:               ifxAuditVersion,
-		EnvName:              &envName,
-		EnvTime:              &envTime,
-		EnvEpoch:             &epoch,
-		EnvSeqNum:            nextSeqNum(),
-		EnvPopSample:         ifxAuditPopSample,
-		EnvFlags:             ifxAuditFlags,
-		EnvCV:                &l.CorrelationID,
-		EnvCloudVer:          ifxAuditCloudVer,
-		EnvCloudName:         &l.AzureEnvironment,
-		EnvCloudRole:         &l.Role,
-		EnvCloudRoleInstance: &l.RoleInstance,
-		EnvCloudLocation:     &l.Region,
-
-		// Part-B. See schema/doc.go
-		OperationName:    &l.OperationName,
-		Result:           l.OperationResult,
-		Category:         l.Category,
-		NCloud:           &l.AzureEnvironment,
-		RequestID:        &l.OperationID,
-		CallerIdentities: l.CallerIdentities,
-		TargetResources:  l.TargetResources,
+func AuditLog(env env.Core, logger *logrus.Logger) (*logrus.Entry, error) {
+	hostname, err := os.Hostname()
+	if err != nil {
+		return nil, err
 	}
 
-	return payload
+	logger.AddHook(&hook{
+		payload: &schema.AuditPayload{
+			EnvOS:        to.StringPtr(runtime.GOOS),
+			EnvVer:       ifxAuditVersion,
+			EnvName:      to.StringPtr(ifxAuditName),
+			EnvEpoch:     &epoch,
+			EnvPopSample: ifxAuditPopSample,
+			EnvFlags:     ifxAuditFlags,
+			// TODO: EnvCV
+			EnvCloudVer:  ifxAuditCloudVer,
+			EnvCloudName: &env.Environment().Name,
+			// TODO: EnvCloudRole
+			EnvCloudRoleInstance: &hostname,
+			EnvCloudLocation:     to.StringPtr(env.Location()),
+		},
+	})
+
+	return logrus.NewEntry(logger), nil
 }
 
 func nextSeqNum() uint64 {

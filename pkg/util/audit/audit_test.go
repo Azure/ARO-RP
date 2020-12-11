@@ -1,8 +1,6 @@
 package audit
 
 import (
-	"os"
-	"strconv"
 	"testing"
 	"time"
 
@@ -11,6 +9,7 @@ import (
 	"github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus/hooks/test"
 
 	"github.com/Azure/ARO-RP/pkg/util/audit/schema"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
@@ -18,7 +17,7 @@ import (
 )
 
 func TestAudit(t *testing.T) {
-	h, log := utillog.New()
+	logger, h := test.NewNullLogger()
 
 	controller := gomock.NewController(t)
 	defer controller.Finish()
@@ -27,29 +26,16 @@ func TestAudit(t *testing.T) {
 	env.EXPECT().Environment().AnyTimes().Return(&azure.PublicCloud)
 	env.EXPECT().Location().AnyTimes().Return("eastus")
 
-	auditLog := &Log{
-		AzureEnvironment: env.Environment().Name,
-		CallerIdentities: []*schema.CallerIdentity{
-			{
-				CallerIdentityType:  schema.CallerIdentityTypePUID,
-				CallerIdentityValue: strconv.Itoa(os.Getpid()),
-			},
-		},
-		Category:      schema.CategoryAuthorization,
-		OperationName: "initializeAuthorizers",
-		Region:        env.Location(),
-		TargetResources: []*schema.TargetResource{
-			{
-				TargetResourceType: "resource provider",
-				TargetResourceName: "aro-rp",
-			},
-		},
-	}
-
-	err := EmitRPLog(*log, auditLog)
+	auditLog, err := AuditLog(env, logger)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	// maybe this goes into a helper function?
+	auditLog.WithFields(logrus.Fields{
+		auditMetadataCategory:  schema.CategoryAuthorization,
+		auditMetadataOperation: "initializeAuthorizers",
+	}).Print("see auditFullPayload field for full log data")
 
 	err = utillog.AssertLoggingOutput(h, []map[string]types.GomegaMatcher{
 		{
