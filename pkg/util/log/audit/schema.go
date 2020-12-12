@@ -3,8 +3,9 @@ package audit
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-// AuditPayload is the IFxAudit-compliant log payload that will be sent to
-// Geneva. It has all the fields defined in IFxAudit Part-A and Part-B schema.
+// AuditPayload is the IFxAudit log payload that will be sent to Geneva. It has
+// all the fields defined in IFxAudit Part-A and Part-B schema.
+//
 // String fields are declared as pointers-to-string because IFxAudit wants nil,
 // not empty string values.
 type AuditPayload struct {
