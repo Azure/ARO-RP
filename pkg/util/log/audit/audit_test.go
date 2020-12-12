@@ -1,4 +1,4 @@
-package log
+package audit
 
 import (
 	"testing"
@@ -11,7 +11,6 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
 
-	"github.com/Azure/ARO-RP/pkg/util/audit/schema"
 	mock_env "github.com/Azure/ARO-RP/pkg/util/mocks/env"
 	utillog "github.com/Azure/ARO-RP/test/util/log"
 )
@@ -26,23 +25,22 @@ func TestAudit(t *testing.T) {
 	env.EXPECT().Environment().AnyTimes().Return(&azure.PublicCloud)
 	env.EXPECT().Location().AnyTimes().Return("eastus")
 
-	auditLog, err := AuditLog(env, logger)
-	if err != nil {
-		t.Fatal(err)
-	}
+	auditLog := NewEntry(env, logger)
 
 	// maybe this goes into a helper function?
 	auditLog.WithFields(logrus.Fields{
-		auditMetadataCategory:  schema.CategoryAuthorization,
-		auditMetadataOperation: "initializeAuthorizers",
+		PayloadKeyCategory:      CategoryAuthorization,
+		PayloadKeyOperationName: "initializeAuthorizers",
+		MetadataSource:          SourceRP,
 	}).Print("see auditFullPayload field for full log data")
 
-	err = utillog.AssertLoggingOutput(h, []map[string]types.GomegaMatcher{
+	if err := utillog.AssertLoggingOutput(h, []map[string]types.GomegaMatcher{
 		{
 			"level":         gomega.Equal(logrus.InfoLevel),
 			"msg":           gomega.Equal("see auditFullPayload field for full log data"),
-			"auditCategory": gomega.BeEquivalentTo("Authorization"),
-			"auditCreatedTime": gomega.WithTransform(
+			MetadataSource:  gomega.Equal("aro-rp"),
+			MetadataLogKind: gomega.Equal("ifxaudit"),
+			MetadataCreatedTime: gomega.WithTransform(
 				func(s string) time.Time {
 					t, err := time.Parse(time.RFC3339, s)
 					if err != nil {
@@ -53,13 +51,8 @@ func TestAudit(t *testing.T) {
 				gomega.BeTemporally("~", time.Now(), time.Second),
 			),
 			// auditFullPayload: "{"env_ver":2.1,"env_name":"#Ifx.AuditSchema","env_time":"2020-12-11T13:47:27Z","env_epoch":"ab34cafa-b047-4dc4-a8ff-e24b7f854b4d","env_seqNum":1,"env_popSample":0,"env_iKey":null,"env_flags":257,"env_cv":"","env_os":"linux","env_osVer":null,"env_appId":null,"env_appVer":null,"env_cloud_ver":1,"env_cloud_name":"AzurePublicCloud","env_cloud_role":"","env_cloud_roleVer":null,"env_cloud_roleInstance":"","env_cloud_environment":null,"env_cloud_location":"eastus","env_cloud_deploymentUnit":null,"CallerIdentities":[{"CallerDisplayName":"","CallerIdentityType":"PUID","CallerIdentityValue":"1261453","CallerIpAddress":""}],"Category":"Authorization","nCloud":"AzurePublicCloud","OperationName":"initializeAuthorizers","Result":{"ResultType":"","ResultDescription":""},"requestId":"","TargetResources":[{"TargetResourceType":"resource provider","TargetResourceName":"aro-rp"}]}"
-			"auditOperation": gomega.Equal("initializeAuthorizers"),
-			"auditResult":    gomega.Equal(""),
-			"auditSource":    gomega.Equal("aro-rp"),
-			"logKind":        gomega.Equal("ifxaudit"),
 		},
-	})
-	if err != nil {
-		t.Fatal(err)
+	}); err != nil {
+		t.Error(err)
 	}
 }

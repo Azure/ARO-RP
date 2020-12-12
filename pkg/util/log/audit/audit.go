@@ -1,4 +1,4 @@
-package log
+package audit
 
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
@@ -14,19 +14,28 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/audit/schema"
 	"github.com/Azure/go-autorest/autorest/to"
 )
 
 const (
-	auditMetadataCategory    = "auditCategory"
-	auditMetadataCreatedTime = "auditCreatedTime"
-	auditMetadataFullPayload = "auditFullPayload"
-	auditMetadataLogKind     = "logKind"
-	auditMetadataOperation   = "auditOperation"
-	auditMetadataResult      = "auditResult"
-	auditMetadataSource      = "auditSource"
-	auditSourceRP            = "aro-rp"
+	MetadataCreatedTime = "createdTime"
+	MetadataPayload     = "payload"
+	MetadataLogKind     = "logKind"
+	MetadataSource      = "source"
+
+	SourceAdminPortal = "aro-admin"
+	SourceRP          = "aro-rp"
+
+	EnvelopeKeyCloudRole     = "envCloudRole"
+	EnvelopeKeyCorrelationID = "envCorrelationID"
+
+	PayloadKeyCallerIdentities = "payloadCallerIdentities"
+	PayloadKeyCategory         = "payloadCategory"
+	PayloadKeyNCloud           = "payloadNCloud"
+	PayloadKeyOperationName    = "payloadOperationName"
+	PayloadKeyResult           = "payloadResult"
+	PayloadKeyRequestID        = "payloadRequestID"
+	PayloadKeyTargetResources  = "payloadTargetResources"
 
 	ifxAuditCloudVer = 1.0
 	ifxAuditLogKind  = "ifxaudit"
@@ -59,70 +68,114 @@ var (
 	seqNumMutex sync.Mutex
 )
 
-type hook struct {
-	payload *AuditPayload
+// NewEntry returns a log entry that embeds the provided logger. It has a hook
+// that knows how to hydrate an IFxAudit-compliant payload before logging it.
+func NewEntry(env env.Core, logger *logrus.Logger) *logrus.Entry {
+	logger.AddHook(&payloadHook{
+		payload: &AuditPayload{},
+		env:     env,
+	})
+
+	return logrus.NewEntry(logger)
 }
 
-func (hook) Levels() []logrus.Level {
+// payloadHook, when fires, hydrates an audit payload using data in a log
+// entry.
+type payloadHook struct {
+	payload *AuditPayload
+	env     env.Core
+}
+
+func (payloadHook) Levels() []logrus.Level {
 	return logrus.AllLevels
 }
 
-func (h *hook) Fire(log *logrus.Entry) error {
-	payload := *h.payload // shallow copy
-
-	payload.EnvTime = to.StringPtr(log.Time.UTC().Format(time.RFC3339))
-	payload.EnvSeqNum = nextSeqNum()
-
-	if operationName, ok := log.Data["operationName"].(string); ok {
-		payload.OperationName = &operationName
-		delete(log.Data, "operationName")
-		log.Data[auditMetadataOperation] = operationName
-	}
-
-	if category, ok := log.Data[auditMetadataCategory].(string); ok {
-		payload.Category = Category(category)
-	}
-
-	// etc.
-
-	log.Data[auditMetadataCreatedTime] = *payload.EnvTime
-	log.Data[auditMetadataLogKind] = ifxAuditLogKind
-	log.Data[auditMetadataResult] = payload.Result.ResultType
-	log.Data[auditMetadataSource] = auditSourceRP
-
-	b, err := json.Marshal(payload)
+func (h *payloadHook) Fire(entry *logrus.Entry) error {
+	hostname, err := os.Hostname()
 	if err != nil {
 		return err
 	}
 
-	log.Data[auditMetadataFullPayload] = string(b)
-	return nil
-}
+	payload := *h.payload // shallow copy
 
-func AuditLog(env env.Core, logger *logrus.Logger) (*logrus.Entry, error) {
-	hostname, err := os.Hostname()
-	if err != nil {
-		return nil, err
+	// Part-A
+	payload.EnvOS = to.StringPtr(runtime.GOOS)
+	payload.EnvVer = ifxAuditVersion
+	payload.EnvName = to.StringPtr(ifxAuditName)
+	payload.EnvEpoch = &epoch
+	payload.EnvPopSample = ifxAuditPopSample
+	payload.EnvFlags = ifxAuditFlags
+	payload.EnvCloudVer = ifxAuditCloudVer
+	payload.EnvCloudName = to.StringPtr(h.env.Environment().Name)
+	payload.EnvCloudRoleInstance = &hostname
+	payload.EnvCloudLocation = to.StringPtr(h.env.Location())
+	payload.EnvSeqNum = nextSeqNum()
+
+	logTime := entry.Time.UTC().Format(time.RFC3339)
+	payload.EnvTime = to.StringPtr(logTime)
+
+	if v, ok := entry.Data[EnvelopeKeyCloudRole].(string); ok {
+		payload.EnvCloudRole = &v
+		delete(entry.Data, EnvelopeKeyCloudRole)
 	}
 
-	logger.AddHook(&hook{
-		payload: &schema.AuditPayload{
-			EnvOS:        to.StringPtr(runtime.GOOS),
-			EnvVer:       ifxAuditVersion,
-			EnvName:      to.StringPtr(ifxAuditName),
-			EnvEpoch:     &epoch,
-			EnvPopSample: ifxAuditPopSample,
-			EnvFlags:     ifxAuditFlags,
-			// TODO: EnvCV
-			EnvCloudVer:  ifxAuditCloudVer,
-			EnvCloudName: &env.Environment().Name,
-			// TODO: EnvCloudRole
-			EnvCloudRoleInstance: &hostname,
-			EnvCloudLocation:     to.StringPtr(env.Location()),
-		},
-	})
+	if v, ok := entry.Data[EnvelopeKeyCorrelationID].(string); ok {
+		payload.EnvCV = &v
+		delete(entry.Data, EnvelopeKeyCorrelationID)
+	}
 
-	return logrus.NewEntry(logger), nil
+	// Part-B
+	if v, ok := entry.Data[PayloadKeyCategory].(Category); ok {
+		payload.Category = v
+		delete(entry.Data, PayloadKeyCategory)
+	}
+
+	if v, ok := entry.Data[PayloadKeyNCloud].(string); ok {
+		payload.NCloud = &v
+		delete(entry.Data, PayloadKeyNCloud)
+	}
+
+	if v, ok := entry.Data[PayloadKeyOperationName].(string); ok {
+		payload.OperationName = &v
+		delete(entry.Data, PayloadKeyOperationName)
+	}
+
+	if v, ok := entry.Data[PayloadKeyRequestID].(string); ok {
+		payload.RequestID = &v
+		delete(entry.Data, PayloadKeyRequestID)
+	}
+
+	if v, ok := entry.Data[PayloadKeyResult].(Result); ok {
+		payload.Result = v
+		delete(entry.Data, PayloadKeyResult)
+	}
+
+	if ids, ok := entry.Data[PayloadKeyCallerIdentities].([]*CallerIdentity); ok {
+		for _, id := range ids {
+			payload.CallerIdentities = append(payload.CallerIdentities, id)
+		}
+		delete(entry.Data, PayloadKeyCallerIdentities)
+	}
+
+	if rs, ok := entry.Data[PayloadKeyTargetResources].([]*TargetResource); ok {
+		for _, r := range rs {
+			payload.TargetResources = append(payload.TargetResources, r)
+		}
+		delete(entry.Data, PayloadKeyTargetResources)
+	}
+
+	// add the audit payload
+	b, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+	entry.Data[MetadataPayload] = string(b)
+
+	// add non-IFxAudit metadata for our own use
+	entry.Data[MetadataCreatedTime] = logTime
+	entry.Data[MetadataLogKind] = ifxAuditLogKind
+
+	return nil
 }
 
 func nextSeqNum() uint64 {
@@ -130,6 +183,5 @@ func nextSeqNum() uint64 {
 	defer seqNumMutex.Unlock()
 
 	seqNum++
-
 	return seqNum
 }
