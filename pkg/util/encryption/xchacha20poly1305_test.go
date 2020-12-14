@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
-	"fmt"
+	"io"
 	"testing"
 )
 
@@ -92,29 +92,29 @@ func TestXChaCha20Poly1305Encrypt(t *testing.T) {
 	for _, tt := range []struct {
 		name          string
 		key           []byte
-		randRead      func(b []byte) (int, error)
+		randReader    io.Reader
 		input         []byte
 		wantEncrypted []byte
 		wantErr       string
 	}{
 		{
-			name: "valid",
-			key:  []byte("\x6a\x98\x95\x6b\x2b\xb2\x7e\xfd\x1b\x68\xdf\x5c\x40\xc3\x4f\x8b\xcf\xff\xe8\x17\xc2\x2d\xf6\x40\x2e\x5a\xb0\x15\x63\x4a\x2d\x2e"),
-			randRead: func(b []byte) (int, error) {
-				nonce := []byte("\xd9\x1c\x3c\x05\xb2\xf3\xc5\x93\x20\x9f\x9b\x67\x43\x8c\x0c\x3d\x9c\x33\x5b\x16\xd6\x9a\x9c\xf2")
-				copy(b, nonce)
-				return len(nonce), nil
-			},
+			name:          "valid",
+			key:           []byte("\x6a\x98\x95\x6b\x2b\xb2\x7e\xfd\x1b\x68\xdf\x5c\x40\xc3\x4f\x8b\xcf\xff\xe8\x17\xc2\x2d\xf6\x40\x2e\x5a\xb0\x15\x63\x4a\x2d\x2e"),
+			randReader:    bytes.NewBufferString("\xd9\x1c\x3c\x05\xb2\xf3\xc5\x93\x20\x9f\x9b\x67\x43\x8c\x0c\x3d\x9c\x33\x5b\x16\xd6\x9a\x9c\xf2"),
 			input:         []byte("test"),
 			wantEncrypted: []byte("\xd9\x1c\x3c\x05\xb2\xf3\xc5\x93\x20\x9f\x9b\x67\x43\x8c\x0c\x3d\x9c\x33\x5b\x16\xd6\x9a\x9c\xf2\x9c\xf6\xe9\xbd\xdd\xe3\x1d\x54\xde\x41\xa2\x99\x56\x6a\xfc\x9a\xf3\x58\x73\x03"),
 		},
 		{
-			name: "rand.Read error",
-			key:  make([]byte, 32),
-			randRead: func(b []byte) (int, error) {
-				return 0, fmt.Errorf("random error")
-			},
-			wantErr: "random error",
+			name:       "rand.Read EOF",
+			key:        make([]byte, 32),
+			randReader: &bytes.Buffer{},
+			wantErr:    "EOF",
+		},
+		{
+			name:       "rand.Read unexpected EOF",
+			key:        make([]byte, 32),
+			randReader: bytes.NewBufferString("X"),
+			wantErr:    "unexpected EOF",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -123,7 +123,7 @@ func TestXChaCha20Poly1305Encrypt(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			cipher.(*aeadCipher).randRead = tt.randRead
+			cipher.(*aeadCipher).randReader = tt.randReader
 
 			encrypted, err := cipher.Encrypt(tt.input)
 			if err != nil && err.Error() != tt.wantErr ||

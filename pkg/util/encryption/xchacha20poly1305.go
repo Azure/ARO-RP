@@ -8,6 +8,7 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"fmt"
+	"io"
 
 	"golang.org/x/crypto/chacha20poly1305"
 )
@@ -20,8 +21,8 @@ type Cipher interface {
 }
 
 type aeadCipher struct {
-	aead     cipher.AEAD
-	randRead func([]byte) (int, error)
+	aead       cipher.AEAD
+	randReader io.Reader
 }
 
 func NewXChaCha20Poly1305(ctx context.Context, key []byte) (Cipher, error) {
@@ -31,8 +32,8 @@ func NewXChaCha20Poly1305(ctx context.Context, key []byte) (Cipher, error) {
 	}
 
 	return &aeadCipher{
-		aead:     aead,
-		randRead: rand.Read,
+		aead:       aead,
+		randReader: rand.Reader,
 	}, nil
 }
 
@@ -50,13 +51,9 @@ func (c *aeadCipher) Decrypt(input []byte) ([]byte, error) {
 func (c *aeadCipher) Encrypt(input []byte) ([]byte, error) {
 	nonce := make([]byte, chacha20poly1305.NonceSizeX)
 
-	n, err := c.randRead(nonce)
+	_, err := io.ReadFull(c.randReader, nonce)
 	if err != nil {
 		return nil, err
-	}
-
-	if n != chacha20poly1305.NonceSizeX {
-		return nil, fmt.Errorf("rand.Read returned %d bytes, expected %d", n, chacha20poly1305.NonceSizeX)
 	}
 
 	return append(nonce, c.aead.Seal(nil, nonce, input, nil)...), nil
