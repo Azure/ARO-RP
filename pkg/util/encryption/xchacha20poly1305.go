@@ -38,18 +38,18 @@ func NewXChaCha20Poly1305(ctx context.Context, key []byte) (Cipher, error) {
 }
 
 func (c *aeadCipher) Decrypt(input []byte) ([]byte, error) {
-	if len(input) < chacha20poly1305.NonceSizeX {
+	if len(input) < c.aead.NonceSize() {
 		return nil, fmt.Errorf("encrypted value too short")
 	}
 
-	nonce := input[:chacha20poly1305.NonceSizeX]
-	data := input[chacha20poly1305.NonceSizeX:]
+	nonce := input[:c.aead.NonceSize()]
+	data := input[c.aead.NonceSize():]
 
 	return c.aead.Open(nil, nonce, data, nil)
 }
 
 func (c *aeadCipher) Encrypt(input []byte) ([]byte, error) {
-	nonce := make([]byte, chacha20poly1305.NonceSizeX)
+	nonce := make([]byte, c.aead.NonceSize())
 
 	_, err := io.ReadFull(c.randReader, nonce)
 	if err != nil {
