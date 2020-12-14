@@ -94,7 +94,7 @@ func (f *frontend) parseSkipToken(originalURL string) (string, error) {
 		return "", err
 	}
 
-	output, err := f.cipher.Decrypt(b)
+	output, err := f.aead.Open(b)
 	if err != nil {
 		return "", err
 	}
@@ -114,7 +114,7 @@ func (f *frontend) buildNextLink(baseURL, skipToken string) (string, error) {
 		return "", err
 	}
 
-	output, err := f.cipher.Encrypt([]byte(skipToken))
+	output, err := f.aead.Seal([]byte(skipToken))
 	if err != nil {
 		return "", err
 	}

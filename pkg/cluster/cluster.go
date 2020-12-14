@@ -47,7 +47,7 @@ type manager struct {
 	billing           billing.Manager
 	doc               *api.OpenShiftClusterDocument
 	subscriptionDoc   *api.SubscriptionDocument
-	cipher            encryption.Cipher
+	aead              encryption.AEAD
 	fpAuthorizer      refreshable.Authorizer
 	localFpAuthorizer refreshable.Authorizer
 
@@ -79,7 +79,7 @@ type manager struct {
 const deploymentName = "azuredeploy"
 
 // New returns a cluster manager
-func New(ctx context.Context, log *logrus.Entry, env env.Interface, db database.OpenShiftClusters, cipher encryption.Cipher,
+func New(ctx context.Context, log *logrus.Entry, env env.Interface, db database.OpenShiftClusters, aead encryption.AEAD,
 	billing billing.Manager, doc *api.OpenShiftClusterDocument, subscriptionDoc *api.SubscriptionDocument) (Interface, error) {
 	r, err := azure.ParseResourceID(doc.OpenShiftCluster.ID)
 	if err != nil {
@@ -103,7 +103,7 @@ func New(ctx context.Context, log *logrus.Entry, env env.Interface, db database.
 		billing:           billing,
 		doc:               doc,
 		subscriptionDoc:   subscriptionDoc,
-		cipher:            cipher,
+		aead:              aead,
 		fpAuthorizer:      fpAuthorizer,
 		localFpAuthorizer: localFPAuthorizer,
 

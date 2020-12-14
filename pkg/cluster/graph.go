@@ -212,18 +212,18 @@ func (m *manager) loadGraph(ctx context.Context) (graph, error) {
 	}
 	defer rc.Close()
 
-	encrypted, err := ioutil.ReadAll(rc)
+	b, err := ioutil.ReadAll(rc)
 	if err != nil {
 		return nil, err
 	}
 
-	output, err := m.cipher.Decrypt(encrypted)
+	b, err = m.aead.Open(b)
 	if err != nil {
 		return nil, err
 	}
 
 	var g graph
-	err = json.Unmarshal(output, &g)
+	err = json.Unmarshal(b, &g)
 	if err != nil {
 		return nil, err
 	}
@@ -252,10 +252,10 @@ func (m *manager) saveGraph(ctx context.Context, g graph) error {
 		return err
 	}
 
-	output, err := m.cipher.Encrypt(b)
+	b, err = m.aead.Seal(b)
 	if err != nil {
 		return err
 	}
 
-	return graph.CreateBlockBlobFromReader(bytes.NewReader(output), nil)
+	return graph.CreateBlockBlobFromReader(bytes.NewReader(b), nil)
 }

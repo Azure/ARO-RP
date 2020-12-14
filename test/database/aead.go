@@ -5,20 +5,19 @@ package database
 
 var fakeCode []byte = []byte{'F', 'A', 'K', 'E'}
 
-type fakeCipher struct {
-}
+type fakeAEAD struct{}
 
-func (c fakeCipher) Decrypt(in []byte) ([]byte, error) {
+func (fakeAEAD) Open(in []byte) ([]byte, error) {
 	return in[4:], nil
 }
 
-func (c fakeCipher) Encrypt(in []byte) ([]byte, error) {
+func (fakeAEAD) Seal(in []byte) ([]byte, error) {
 	out := make([]byte, 4+len(in))
 	copy(out, fakeCode)
 	copy(out[4:], in)
 	return out, nil
 }
 
-func NewFakeCipher() *fakeCipher {
-	return &fakeCipher{}
+func NewFakeAEAD() *fakeAEAD {
+	return &fakeAEAD{}
 }

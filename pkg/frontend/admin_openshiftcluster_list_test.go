@@ -112,13 +112,13 @@ func TestAdminListOpenShiftCluster(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			cipher := testdatabase.NewFakeCipher()
+			aead := testdatabase.NewFakeAEAD()
 
 			if tt.throwsError != nil {
 				ti.openShiftClustersClient.SetError(tt.throwsError)
 			}
 
-			f, err := NewFrontend(ctx, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, api.APIs, &noop.Noop{}, cipher, nil)
+			f, err := NewFrontend(ctx, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, api.APIs, &noop.Noop{}, aead, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
