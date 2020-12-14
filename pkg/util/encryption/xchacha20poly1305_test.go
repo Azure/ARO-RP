@@ -19,16 +19,16 @@ func TestNewXChaCha20Poly1305(t *testing.T) {
 	}{
 		{
 			name: "valid",
-			key:  []byte("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"),
+			key:  make([]byte, 32),
 		},
 		{
 			name:    "key too short",
-			key:     []byte("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"),
+			key:     make([]byte, 31),
 			wantErr: "chacha20poly1305: bad key length",
 		},
 		{
 			name:    "key too long",
-			key:     []byte("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"),
+			key:     make([]byte, 33),
 			wantErr: "chacha20poly1305: bad key length",
 		},
 	} {
@@ -65,7 +65,7 @@ func TestXChaCha20Poly1305Decrypt(t *testing.T) {
 		{
 			name:    "invalid - too short",
 			key:     []byte("\x6a\x98\x95\x6b\x2b\xb2\x7e\xfd\x1b\x68\xdf\x5c\x40\xc3\x4f\x8b\xcf\xff\xe8\x17\xc2\x2d\xf6\x40\x2e\x5a\xb0\x15\x63\x4a\x2d\x2e"),
-			input:   []byte("XXXXXXXXXXXXXXXXXXXXXXX"),
+			input:   make([]byte, 23),
 			wantErr: "encrypted value too short",
 		},
 	} {
@@ -110,7 +110,7 @@ func TestXChaCha20Poly1305Encrypt(t *testing.T) {
 		},
 		{
 			name: "rand.Read error",
-			key:  []byte("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"),
+			key:  make([]byte, 32),
 			randRead: func(b []byte) (int, error) {
 				return 0, fmt.Errorf("random error")
 			},
