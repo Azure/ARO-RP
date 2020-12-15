@@ -43,6 +43,7 @@ type OpenShiftClusters interface {
 	Delete(context.Context, *api.OpenShiftClusterDocument) error
 	ChangeFeed() cosmosdb.OpenShiftClusterDocumentIterator
 	List(string) cosmosdb.OpenShiftClusterDocumentIterator
+	ListAll(context.Context) (*api.OpenShiftClusterDocuments, error)
 	ListByPrefix(string, string, string) (cosmosdb.OpenShiftClusterDocumentIterator, error)
 	Dequeue(context.Context) (*api.OpenShiftClusterDocument, error)
 	Lease(context.Context, string) (*api.OpenShiftClusterDocument, error)
@@ -244,6 +245,10 @@ func (c *openShiftClusters) ChangeFeed() cosmosdb.OpenShiftClusterDocumentIterat
 
 func (c *openShiftClusters) List(continuation string) cosmosdb.OpenShiftClusterDocumentIterator {
 	return c.c.List(&cosmosdb.Options{Continuation: continuation})
+}
+
+func (c *openShiftClusters) ListAll(ctx context.Context) (*api.OpenShiftClusterDocuments, error) {
+	return c.c.ListAll(ctx, nil)
 }
 
 func (c *openShiftClusters) ListByPrefix(subscriptionID, prefix, continuation string) (cosmosdb.OpenShiftClusterDocumentIterator, error) {

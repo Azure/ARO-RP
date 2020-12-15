@@ -25,8 +25,8 @@ func TestGenerateAROServiceKubeconfig(t *testing.T) {
 	}
 	b := x509.MarshalPKCS1PrivateKey(validCaKey)
 
-	g := graph{
-		reflect.TypeOf(&tls.AdminKubeConfigSignerCertKey{}): &tls.AdminKubeConfigSignerCertKey{
+	g := newGraph(
+		&tls.AdminKubeConfigSignerCertKey{
 			SelfSignedCertKey: tls.SelfSignedCertKey{
 				CertKey: tls.CertKey{
 					CertRaw: pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: validCaCerts[0].Raw}),
@@ -34,14 +34,14 @@ func TestGenerateAROServiceKubeconfig(t *testing.T) {
 				},
 			},
 		},
-		reflect.TypeOf(&kubeconfig.AdminInternalClient{}): &kubeconfig.AdminInternalClient{},
-	}
+		&kubeconfig.AdminInternalClient{},
+	)
 
 	apiserverURL := "https://api.hash.rg.mydomain:6443"
 	clusterName := "api-hash-rg-mydomain:6443"
 	serviceName := "system:aro-service"
 
-	adminInternalClient := g[reflect.TypeOf(&kubeconfig.AdminInternalClient{})].(*kubeconfig.AdminInternalClient)
+	adminInternalClient := g.get(&kubeconfig.AdminInternalClient{}).(*kubeconfig.AdminInternalClient)
 	adminInternalClient.Config = &clientcmd.Config{
 		Clusters: []clientcmd.NamedCluster{
 			{

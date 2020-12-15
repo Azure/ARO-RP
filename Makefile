@@ -24,6 +24,11 @@ clean:
 client: generate
 	hack/build-client.sh 2020-04-30 2021-01-31-preview
 
+discoverycache:
+	$(MAKE) admin.kubeconfig
+	KUBECONFIG=admin.kubeconfig go run ./hack/gendiscoverycache
+	$(MAKE) generate
+
 generate:
 	go generate ./...
 
@@ -72,7 +77,7 @@ pyenv:
 secrets:
 	@[ "${SECRET_SA_ACCOUNT_NAME}" ] || ( echo ">> SECRET_SA_ACCOUNT_NAME is not set"; exit 1 )
 	rm -rf secrets
-	az storage blob download --auth-mode login -n secrets.tar.gz -c secrets -f secrets.tar.gz --account-name ${SECRET_SA_ACCOUNT_NAME} >/dev/null
+	az storage blob download -n secrets.tar.gz -c secrets -f secrets.tar.gz --account-name ${SECRET_SA_ACCOUNT_NAME} >/dev/null
 	tar -xzf secrets.tar.gz
 	rm secrets.tar.gz
 
@@ -119,4 +124,4 @@ vendor:
 	# https://groups.google.com/forum/#!topic/golang-nuts/51-D_YFC78k
 	hack/update-go-module-dependencies.sh
 
-.PHONY: admin.kubeconfig aro az clean client generate image-aro image-fluentbit image-proxy image-routefix lint-go proxy publish-image-aro publish-image-fluentbit publish-image-proxy publish-image-routefix secrets secrets-update e2e.test test-e2e test-go test-python vendor
+.PHONY: admin.kubeconfig aro az clean client discoverycache generate image-aro image-fluentbit image-proxy image-routefix lint-go proxy publish-image-aro publish-image-fluentbit publish-image-proxy publish-image-routefix secrets secrets-update e2e.test test-e2e test-go test-python vendor

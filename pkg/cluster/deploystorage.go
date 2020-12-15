@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"reflect"
 	"strings"
 	"time"
 
@@ -19,7 +18,6 @@ import (
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/openshift/installer/pkg/asset"
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/kubeconfig"
 	"github.com/openshift/installer/pkg/asset/releaseimage"
@@ -82,20 +80,20 @@ func (m *manager) clusterSPObjectID(ctx context.Context) (string, error) {
 
 func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) error {
 	if m.doc.OpenShiftCluster.Properties.InfraID == "" {
-		clusterID := &installconfig.ClusterID{}
-
-		err := clusterID.Generate(asset.Parents{
-			reflect.TypeOf(installConfig): &installconfig.InstallConfig{
-				Config: &types.InstallConfig{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: strings.ToLower(m.doc.OpenShiftCluster.Name),
-					},
+		g := newGraph(&installconfig.InstallConfig{
+			Config: &types.InstallConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: strings.ToLower(m.doc.OpenShiftCluster.Name),
 				},
 			},
 		})
+
+		err := g.resolve(&installconfig.ClusterID{})
 		if err != nil {
 			return err
 		}
+
+		clusterID := g.get(&installconfig.ClusterID{}).(*installconfig.ClusterID)
 
 		m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
 			doc.OpenShiftCluster.Properties.InfraID = clusterID.InfraID
@@ -218,17 +216,11 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 		return err
 	}
 
-	g := graph{
-		reflect.TypeOf(installConfig):          installConfig,
-		reflect.TypeOf(platformCreds):          platformCreds,
-		reflect.TypeOf(image):                  image,
-		reflect.TypeOf(clusterID):              clusterID,
-		reflect.TypeOf(bootstrapLoggingConfig): bootstrapLoggingConfig,
-	}
+	g := newGraph(installConfig, platformCreds, image, clusterID, bootstrapLoggingConfig)
 
 	m.log.Print("resolving graph")
 	for _, a := range targets.Cluster {
-		_, err := g.resolve(a)
+		err = g.resolve(a)
 		if err != nil {
 			return err
 		}
@@ -372,8 +364,12 @@ func (m *manager) attachNSGsAndPatch(ctx context.Context) error {
 		}
 	}
 
-	adminInternalClient := g[reflect.TypeOf(&kubeconfig.AdminInternalClient{})].(*kubeconfig.AdminInternalClient)
+	adminInternalClient := g.get(&kubeconfig.AdminInternalClient{}).(*kubeconfig.AdminInternalClient)
 	aroServiceInternalClient, err := m.generateAROServiceKubeconfig(g)
+	if err != nil {
+		return err
+	}
+	aroSREInternalClient, err := m.generateAROSREKubeconfig(g)
 	if err != nil {
 		return err
 	}
@@ -391,6 +387,7 @@ func (m *manager) attachNSGsAndPatch(ctx context.Context) error {
 		}
 		doc.OpenShiftCluster.Properties.AdminKubeconfig = adminInternalClient.File.Data
 		doc.OpenShiftCluster.Properties.AROServiceKubeconfig = aroServiceInternalClient.File.Data
+		doc.OpenShiftCluster.Properties.AROSREKubeconfig = aroSREInternalClient.File.Data
 		return nil
 	})
 	return err

@@ -11,4 +11,5 @@ const (
 	CheckerControllerName       = "Checker"
 	RouteFixControllerName      = "RouteFix"
 	MonitoringControllerName    = "Monitoring"
+	RBACControllerName          = "RBAC"
 )

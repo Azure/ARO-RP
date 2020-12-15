@@ -35,6 +35,20 @@ func (m *MockInterfacesClient) EXPECT() *MockInterfacesClientMockRecorder {
 	return m.recorder
 }
 
+// CreateOrUpdateAndWait mocks base method
+func (m *MockInterfacesClient) CreateOrUpdateAndWait(arg0 context.Context, arg1, arg2 string, arg3 network.Interface) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateOrUpdateAndWait", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateOrUpdateAndWait indicates an expected call of CreateOrUpdateAndWait
+func (mr *MockInterfacesClientMockRecorder) CreateOrUpdateAndWait(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateOrUpdateAndWait", reflect.TypeOf((*MockInterfacesClient)(nil).CreateOrUpdateAndWait), arg0, arg1, arg2, arg3)
+}
+
 // DeleteAndWait mocks base method
 func (m *MockInterfacesClient) DeleteAndWait(arg0 context.Context, arg1, arg2 string) error {
 	m.ctrl.T.Helper()
@@ -47,6 +61,21 @@ func (m *MockInterfacesClient) DeleteAndWait(arg0 context.Context, arg1, arg2 st
 func (mr *MockInterfacesClientMockRecorder) DeleteAndWait(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAndWait", reflect.TypeOf((*MockInterfacesClient)(nil).DeleteAndWait), arg0, arg1, arg2)
+}
+
+// Get mocks base method
+func (m *MockInterfacesClient) Get(arg0 context.Context, arg1, arg2, arg3 string) (network.Interface, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", arg0, arg1, arg2, arg3)
+	ret0, _ := ret[0].(network.Interface)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get
+func (mr *MockInterfacesClientMockRecorder) Get(arg0, arg1, arg2, arg3 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockInterfacesClient)(nil).Get), arg0, arg1, arg2, arg3)
 }
 
 // MockLoadBalancersClient is a mock of LoadBalancersClient interface

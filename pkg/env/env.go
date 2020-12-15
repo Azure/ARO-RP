@@ -19,13 +19,17 @@ import (
 )
 
 const (
-	RPFirstPartySecretName       = "rp-firstparty"
-	RPServerSecretName           = "rp-server"
-	ClusterLoggingSecretName     = "cluster-mdsd"
-	EncryptionSecretName         = "encryption-key"
-	FrontendEncryptionSecretName = "fe-encryption-key"
-	RPLoggingSecretName          = "rp-mdsd"
-	RPMonitoringSecretName       = "rp-mdm"
+	RPFirstPartySecretName           = "rp-firstparty"
+	RPServerSecretName               = "rp-server"
+	ClusterLoggingSecretName         = "cluster-mdsd"
+	EncryptionSecretName             = "encryption-key"
+	FrontendEncryptionSecretName     = "fe-encryption-key"
+	RPLoggingSecretName              = "rp-mdsd"
+	RPMonitoringSecretName           = "rp-mdm"
+	PortalServerSecretName           = "portal-server"
+	PortalServerClientSecretName     = "portal-client"
+	PortalServerSessionKeySecretName = "portal-session-key"
+	PortalServerSSHKeySecretName     = "portal-sshkey"
 )
 
 type Interface interface {

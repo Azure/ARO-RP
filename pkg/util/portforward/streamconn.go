@@ -16,6 +16,11 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/recover"
 )
 
+type addr struct{}
+
+func (addr) Network() string { return "streamconn" }
+func (addr) String() string  { return "streamconn" }
+
 // streamConn wraps a pair of SPDY streams and pretends to be a net.Conn
 type streamConn struct {
 	log         *logrus.Entry
@@ -27,7 +32,7 @@ type streamConn struct {
 
 var _ net.Conn = (*streamConn)(nil)
 
-func newStreamConn(log *logrus.Entry, c httpstream.Connection, dataStream, errorStream httpstream.Stream) *streamConn {
+func NewStreamConn(log *logrus.Entry, c httpstream.Connection, dataStream, errorStream httpstream.Stream) net.Conn {
 	s := &streamConn{
 		log:         log,
 		errch:       make(chan error, 1),
@@ -75,8 +80,8 @@ func (s *streamConn) Close() error {
 	return s.c.Close()
 }
 
-func (s *streamConn) LocalAddr() net.Addr              { return nil }
-func (s *streamConn) RemoteAddr() net.Addr             { return nil }
+func (s *streamConn) LocalAddr() net.Addr              { return &addr{} }
+func (s *streamConn) RemoteAddr() net.Addr             { return &addr{} }
 func (s *streamConn) SetDeadline(time.Time) error      { return errors.New("not implemented") }
 func (s *streamConn) SetReadDeadline(time.Time) error  { return errors.New("not implemented") }
 func (s *streamConn) SetWriteDeadline(time.Time) error { return errors.New("not implemented") }

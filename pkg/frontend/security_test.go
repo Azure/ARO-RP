@@ -231,7 +231,7 @@ func TestSecurity(t *testing.T) {
 
 			c := &http.Client{
 				Transport: &http.Transport{
-					Dial:            l.Dial,
+					DialContext:     l.DialContext,
 					TLSClientConfig: tlsConfig,
 				},
 			}
