@@ -80,6 +80,7 @@ func (g *generator) rpTemplate() *arm.Template {
 			"acrResourceId",
 			"adminApiCaBundle",
 			"adminApiClientCertCommonName",
+			"encryptionAtHost",
 			"extraCosmosDBIPs",
 			"fullDeploy",
 			"keyvaultPrefix",
@@ -103,6 +104,8 @@ func (g *generator) rpTemplate() *arm.Template {
 	for _, param := range params {
 		p := &arm.TemplateParameter{Type: "string"}
 		switch param {
+		case "encryptionAtHost":
+			p.Type = "bool"
 		case "extraCosmosDBIPs", "rpMode":
 			p.DefaultValue = ""
 		case "fullDeploy":
@@ -425,6 +428,7 @@ func (g *generator) templateFixup(t *arm.Template) ([]byte, error) {
 		b = bytes.Replace(b, []byte(`"accessPolicies": []`), []byte(`"accessPolicies": "[concat(variables('portalKeyvaultAccessPolicies'), parameters('extraPortalKeyvaultAccessPolicies'))]"`), 1)
 		b = bytes.Replace(b, []byte(`"accessPolicies": []`), []byte(`"accessPolicies": "[concat(variables('serviceKeyvaultAccessPolicies'), parameters('extraServiceKeyvaultAccessPolicies'))]"`), 1)
 		b = bytes.Replace(b, []byte(`"sourceAddressPrefixes": []`), []byte(`"sourceAddressPrefixes": "[parameters('rpNsgSourceAddressPrefixes')]"`), 1)
+		b = bytes.Replace(b, []byte(`"encryptionAtHost": true`), []byte(`"encryptionAtHost": "[parameters('encryptionAtHost')]"`), 1)
 	}
 
 	return append(b, byte('\n')), nil

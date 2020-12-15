@@ -45,9 +45,12 @@ type deployer struct {
 	globalrecordsets       dns.RecordSetsClient
 	globalaccounts         storage.AccountsClient
 	deployments            features.DeploymentsClient
+	features               features.Client
 	groups                 features.ResourceGroupsClient
 	userassignedidentities msi.UserAssignedIdentitiesClient
+	providers              features.ProvidersClient
 	publicipaddresses      network.PublicIPAddressesClient
+	resourceskus           compute.ResourceSkusClient
 	vmss                   compute.VirtualMachineScaleSetsClient
 	vmssvms                compute.VirtualMachineScaleSetVMsClient
 	zones                  dns.ZonesClient
@@ -84,8 +87,11 @@ func New(ctx context.Context, log *logrus.Entry, env env.Core, config *RPConfig,
 		globalrecordsets:       dns.NewRecordSetsClient(env.Environment(), *config.Configuration.GlobalSubscriptionID, authorizer),
 		globalaccounts:         storage.NewAccountsClient(env.Environment(), *config.Configuration.GlobalSubscriptionID, authorizer),
 		deployments:            features.NewDeploymentsClient(env.Environment(), config.SubscriptionID, authorizer),
+		features:               features.NewClient(env.Environment(), config.SubscriptionID, authorizer),
 		groups:                 features.NewResourceGroupsClient(env.Environment(), config.SubscriptionID, authorizer),
 		userassignedidentities: msi.NewUserAssignedIdentitiesClient(env.Environment(), config.SubscriptionID, authorizer),
+		providers:              features.NewProvidersClient(env.Environment(), config.SubscriptionID, authorizer),
+		resourceskus:           compute.NewResourceSkusClient(env.Environment(), config.SubscriptionID, authorizer),
 		publicipaddresses:      network.NewPublicIPAddressesClient(env.Environment(), config.SubscriptionID, authorizer),
 		vmss:                   compute.NewVirtualMachineScaleSetsClient(env.Environment(), config.SubscriptionID, authorizer),
 		vmssvms:                compute.NewVirtualMachineScaleSetVMsClient(env.Environment(), config.SubscriptionID, authorizer),
@@ -100,6 +106,14 @@ func New(ctx context.Context, log *logrus.Entry, env env.Core, config *RPConfig,
 }
 
 func (d *deployer) Deploy(ctx context.Context) error {
+	encryptionAtHostSupported, err := d.encryptionAtHostSupported(ctx)
+	if err != nil {
+		return err
+	}
+	if !encryptionAtHostSupported {
+		d.log.Warn("encryption at host not supported")
+	}
+
 	msi, err := d.userassignedidentities.Get(ctx, d.config.ResourceGroupName, "aro-rp-"+d.config.Location)
 	if err != nil {
 		return err
@@ -121,6 +135,9 @@ func (d *deployer) Deploy(ctx context.Context) error {
 	parameters := d.getParameters(template["parameters"].(map[string]interface{}))
 	parameters.Parameters["adminApiCaBundle"] = &arm.ParametersParameter{
 		Value: base64.StdEncoding.EncodeToString([]byte(*d.config.Configuration.AdminAPICABundle)),
+	}
+	parameters.Parameters["encryptionAtHost"] = &arm.ParametersParameter{
+		Value: encryptionAtHostSupported,
 	}
 	parameters.Parameters["extraCosmosDBIPs"] = &arm.ParametersParameter{
 		Value: strings.Join(d.config.Configuration.ExtraCosmosDBIPs, ","),
@@ -274,4 +291,27 @@ func (d *deployer) getParameters(ps map[string]interface{}) *arm.Parameters {
 	}
 
 	return parameters
+}
+
+func (d *deployer) encryptionAtHostSupported(ctx context.Context) (bool, error) {
+	skus, err := d.resourceskus.List(ctx, "")
+	if err != nil {
+		return false, err
+	}
+
+	for _, sku := range skus {
+		if !strings.EqualFold((*sku.Locations)[0], d.config.Location) ||
+			*sku.Name != "Standard_D2s_v3" {
+			continue
+		}
+
+		for _, cap := range *sku.Capabilities {
+			if *cap.Name == "EncryptionAtHostSupported" &&
+				*cap.Value == "True" {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
 }

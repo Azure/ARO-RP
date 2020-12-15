@@ -11,11 +11,13 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"path/filepath"
+	"time"
 
 	"github.com/Azure/azure-sdk-for-go/services/keyvault/v7.0/keyvault"
 	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/Azure/go-autorest/autorest/to"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/deploy/generator"
 	"github.com/Azure/ARO-RP/pkg/env"
@@ -26,6 +28,13 @@ import (
 // PreDeploy deploys managed identity, NSGs and keyvaults, needed for main
 // deployment
 func (d *deployer) PreDeploy(ctx context.Context) error {
+	if d.fullDeploy {
+		err := d.enableEncryptionAtHostSubscriptionFeatureFlag(ctx)
+		if err != nil {
+			return err
+		}
+	}
+
 	// deploy global rbac
 	err := d.deployGlobalSubscription(ctx)
 	if err != nil {
@@ -102,6 +111,40 @@ func (d *deployer) PreDeploy(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (d *deployer) enableEncryptionAtHostSubscriptionFeatureFlag(ctx context.Context) error {
+	f, err := d.features.Get(ctx, "Microsoft.Compute", "EncryptionAtHost")
+	if err != nil {
+		return err
+	}
+
+	if *f.Properties.State == "Registered" {
+		return nil
+	}
+
+	_, err = d.features.Register(ctx, "Microsoft.Compute", "EncryptionAtHost")
+	if err != nil {
+		return err
+	}
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Minute)
+	defer cancel()
+
+	err = wait.PollImmediateUntil(time.Minute, func() (bool, error) {
+		f, err = d.features.Get(ctx, "Microsoft.Compute", "EncryptionAtHost")
+		if err != nil {
+			return false, err
+		}
+
+		return *f.Properties.State == "Registered", nil
+	}, timeoutCtx.Done())
+	if err != nil {
+		return err
+	}
+
+	_, err = d.providers.Register(ctx, "Microsoft.Compute")
+	return err
 }
 
 func (d *deployer) deployGlobal(ctx context.Context, rpServicePrincipalID string) error {

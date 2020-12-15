@@ -1254,6 +1254,9 @@ done
 							},
 						},
 					},
+					SecurityProfile: &mgmtcompute.SecurityProfile{
+						EncryptionAtHost: to.BoolPtr(true),
+					},
 					ExtensionProfile: &mgmtcompute.VirtualMachineScaleSetExtensionProfile{
 						Extensions: &[]mgmtcompute.VirtualMachineScaleSetExtension{
 							{
