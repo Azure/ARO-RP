@@ -72,6 +72,20 @@ func (mr *MockCoreMockRecorder) Environment() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Environment", reflect.TypeOf((*MockCore)(nil).Environment))
 }
 
+// Hostname mocks base method
+func (m *MockCore) Hostname() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Hostname")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Hostname indicates an expected call of Hostname
+func (mr *MockCoreMockRecorder) Hostname() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Hostname", reflect.TypeOf((*MockCore)(nil).Hostname))
+}
+
 // Location mocks base method
 func (m *MockCore) Location() string {
 	m.ctrl.T.Helper()
