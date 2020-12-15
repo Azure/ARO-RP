@@ -170,7 +170,8 @@
                         "objectId": "[parameters('rpServicePrincipalId')]",
                         "permissions": {
                             "secrets": [
-                                "get"
+                                "get",
+                                "list"
                             ]
                         }
                     },
