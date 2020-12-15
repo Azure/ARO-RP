@@ -385,17 +385,27 @@ func (d *deployer) configureKeyvaultIssuers(ctx context.Context) error {
 }
 
 func (d *deployer) configureServiceSecrets(ctx context.Context) error {
-	err := d.ensureSecret(ctx, d.serviceKeyvault, env.EncryptionSecretName)
+	err := d.ensureSecret(ctx, d.serviceKeyvault, env.EncryptionSecretName, 32)
 	if err != nil {
 		return err
 	}
 
-	err = d.ensureSecret(ctx, d.serviceKeyvault, env.FrontendEncryptionSecretName)
+	err = d.ensureSecret(ctx, d.serviceKeyvault, env.EncryptionSecretV2Name, 64)
 	if err != nil {
 		return err
 	}
 
-	err = d.ensureSecret(ctx, d.portalKeyvault, env.PortalServerSessionKeySecretName)
+	err = d.ensureSecret(ctx, d.serviceKeyvault, env.FrontendEncryptionSecretName, 32)
+	if err != nil {
+		return err
+	}
+
+	err = d.ensureSecret(ctx, d.serviceKeyvault, env.FrontendEncryptionSecretV2Name, 64)
+	if err != nil {
+		return err
+	}
+
+	err = d.ensureSecret(ctx, d.portalKeyvault, env.PortalServerSessionKeySecretName, 32)
 	if err != nil {
 		return err
 	}
@@ -403,7 +413,7 @@ func (d *deployer) configureServiceSecrets(ctx context.Context) error {
 	return d.ensureSecretKey(ctx, d.portalKeyvault, env.PortalServerSSHKeySecretName)
 }
 
-func (d *deployer) ensureSecret(ctx context.Context, kv keyvault.Manager, secretName string) error {
+func (d *deployer) ensureSecret(ctx context.Context, kv keyvault.Manager, secretName string, len int) error {
 	existingSecrets, err := kv.GetSecrets(ctx)
 	if err != nil {
 		return err
@@ -415,7 +425,7 @@ func (d *deployer) ensureSecret(ctx context.Context, kv keyvault.Manager, secret
 		}
 	}
 
-	key := make([]byte, 32)
+	key := make([]byte, len)
 	_, err = rand.Read(key)
 	if err != nil {
 		return err
