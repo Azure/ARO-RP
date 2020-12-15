@@ -42,12 +42,7 @@ func run(ctx context.Context, log *logrus.Entry) error {
 
 	serviceKeyvault := keyvault.NewManager(rpKVAuthorizer, serviceKeyvaultURI)
 
-	key, err := serviceKeyvault.GetBase64Secret(ctx, env.EncryptionSecretName, "")
-	if err != nil {
-		return err
-	}
-
-	aead, err := encryption.NewXChaCha20Poly1305(ctx, key)
+	aead, err := encryption.NewMulti(ctx, serviceKeyvault, env.EncryptionSecretV2Name, env.EncryptionSecretName)
 	if err != nil {
 		return err
 	}

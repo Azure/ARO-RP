@@ -74,12 +74,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		RequestLatency: k8s.NewLatency(m),
 	})
 
-	dbKey, err := _env.ServiceKeyvault().GetBase64Secret(ctx, env.EncryptionSecretName, "")
-	if err != nil {
-		return err
-	}
-
-	aead, err := encryption.NewXChaCha20Poly1305(ctx, dbKey)
+	aead, err := encryption.NewMulti(ctx, _env.ServiceKeyvault(), env.EncryptionSecretV2Name, env.EncryptionSecretName)
 	if err != nil {
 		return err
 	}
@@ -111,12 +106,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 
 	go database.EmitMetrics(ctx, log, dbOpenShiftClusters, m)
 
-	feKey, err := _env.ServiceKeyvault().GetBase64Secret(ctx, env.FrontendEncryptionSecretName, "")
-	if err != nil {
-		return err
-	}
-
-	feAead, err := encryption.NewXChaCha20Poly1305(ctx, feKey)
+	feAead, err := encryption.NewMulti(ctx, _env.ServiceKeyvault(), env.FrontendEncryptionSecretV2Name, env.FrontendEncryptionSecretName)
 	if err != nil {
 		return err
 	}
