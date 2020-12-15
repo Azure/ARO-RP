@@ -67,7 +67,7 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 
 	serviceKeyvault := keyvault.NewManager(rpKVAuthorizer, serviceKeyvaultURI)
 
-	key, err := serviceKeyvault.GetBase64Secret(ctx, env.EncryptionSecretName)
+	key, err := serviceKeyvault.GetBase64Secret(ctx, env.EncryptionSecretName, "")
 	if err != nil {
 		return err
 	}
