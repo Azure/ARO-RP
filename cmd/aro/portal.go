@@ -90,7 +90,7 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 
 	serviceKeyvault := keyvault.NewManager(msiKVAuthorizer, serviceKeyvaultURI)
 
-	key, err := serviceKeyvault.GetBase64Secret(ctx, env.EncryptionSecretName)
+	key, err := serviceKeyvault.GetBase64Secret(ctx, env.EncryptionSecretName, "")
 	if err != nil {
 		return err
 	}
@@ -137,12 +137,12 @@ func portal(ctx context.Context, log *logrus.Entry, audit *logrus.Entry) error {
 		return err
 	}
 
-	sessionKey, err := portalKeyvault.GetBase64Secret(ctx, env.PortalServerSessionKeySecretName)
+	sessionKey, err := portalKeyvault.GetBase64Secret(ctx, env.PortalServerSessionKeySecretName, "")
 	if err != nil {
 		return err
 	}
 
-	b, err := portalKeyvault.GetBase64Secret(ctx, env.PortalServerSSHKeySecretName)
+	b, err := portalKeyvault.GetBase64Secret(ctx, env.PortalServerSSHKeySecretName, "")
 	if err != nil {
 		return err
 	}

@@ -88,7 +88,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 		return err
 	}
 
-	dbKey, err := _env.ServiceKeyvault().GetBase64Secret(ctx, env.EncryptionSecretName)
+	dbKey, err := _env.ServiceKeyvault().GetBase64Secret(ctx, env.EncryptionSecretName, "")
 	if err != nil {
 		return err
 	}
@@ -135,7 +135,7 @@ func rp(ctx context.Context, log, audit *logrus.Entry) error {
 
 	go database.EmitMetrics(ctx, log, dbOpenShiftClusters, m)
 
-	feKey, err := _env.ServiceKeyvault().GetBase64Secret(ctx, env.FrontendEncryptionSecretName)
+	feKey, err := _env.ServiceKeyvault().GetBase64Secret(ctx, env.FrontendEncryptionSecretName, "")
 	if err != nil {
 		return err
 	}
