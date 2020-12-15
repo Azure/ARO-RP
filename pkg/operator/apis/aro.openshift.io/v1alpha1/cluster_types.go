@@ -14,6 +14,7 @@ const (
 	InternetReachableFromWorker status.ConditionType = "InternetReachableFromWorker"
 	MachineValid                status.ConditionType = "MachineValid"
 	RedHatKeyPresent            status.ConditionType = "RedHatKeyPresent"
+	SamplesOperatorEnabled      status.ConditionType = "SamplesOperatorEnabled"
 )
 
 func AllConditionTypes() []status.ConditionType {

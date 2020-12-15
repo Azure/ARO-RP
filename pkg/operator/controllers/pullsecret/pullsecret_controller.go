@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"strings"
 
+	operatorv1 "github.com/openshift/api/operator/v1"
+	samplesclient "github.com/openshift/client-go/samples/clientset/versioned"
 	"github.com/operator-framework/operator-sdk/pkg/status"
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
@@ -26,6 +28,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator"
 	aro "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
@@ -35,13 +38,17 @@ var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "opens
 // PullSecretReconciler reconciles a Cluster object
 type PullSecretReconciler struct {
 	kubernetescli kubernetes.Interface
+	arocli        aroclient.AroV1alpha1Interface
+	samplescli    samplesclient.Interface
 	log           *logrus.Entry
 }
 
-func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface) *PullSecretReconciler {
+func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, arocli aroclient.AroV1alpha1Interface, samplescli samplesclient.Interface) *PullSecretReconciler {
 	return &PullSecretReconciler{
 		log:           log,
 		kubernetescli: kubernetescli,
+		arocli:        arocli,
+		samplescli:    samplescli,
 	}
 }
 
@@ -77,28 +84,48 @@ func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 			ps.Data = map[string][]byte{}
 		}
 
-		statusCondition := &status.Condition{
+		keyCondition := &status.Condition{
 			Type:   aro.RedHatKeyPresent,
 			Status: v1.ConditionFalse,
 			Reason: "CheckFailed",
 		}
-		// do checks on the pull-secret, the controller runs on the master only
-		// statusCondition := r.updateRHKeysCondition(r.checkRHRegistryKeys(r.parseRHRegistryKeys(ps)))
-		// err = controllers.SetCondition(ctx, r.arocli, statusCondition, operator.RoleMaster)
+		samplesCondition := &status.Condition{
+			Type:   aro.SamplesOperatorModified,
+			Status: v1.ConditionFalse,
+			Reason: "RedHatKeyNotPresent",
+		}
 
 		// parse keys and validate JSON
 		parsedKeys, err := r.parseRHRegistryKeys(ps)
+		foundKeys := []string{}
 		if err != nil {
-			// TODO: @pkotas add condition when this happens
 			r.log.Info("pull secret is not valid json - recreating")
 			delete(ps.Data, v1.DockerConfigJsonKey)
-			statusCondition.Reason = "CheckDone"
-			statusCondition.Message = "Cannot parse secret data, recreating."
+			keyCondition.Reason = "CheckDone"
+			keyCondition.Message = "Cannot parse secret data, recreating."
 		} else {
-			statusCondition = r.updateRHKeysCondition(r.checkRHRegistryKeys(parsedKeys))
+			foundKeys = r.checkRHRegistryKeys(parsedKeys)
+			keyCondition = r.updateRHKeysCondition(foundKeys)
 		}
 
-		err = controllers.SetCondition(ctx, r.arocli, statusCondition, operator.RoleMaster)
+		updated := false
+		if len(foundKeys) > 0 {
+			// enable samples operator
+			updated, err = r.switchSamples(ctx, true)
+			samplesCondition.Reason = "RedHatKeyPresent"
+		} else {
+			// disable samples operator
+			updated, err = r.switchSamples(ctx, false)
+		}
+		if updated {
+			samplesCondition.Status = v1.ConditionTrue
+		}
+
+		err = controllers.SetCondition(ctx, r.arocli, keyCondition, operator.RoleMaster)
+		if err != nil {
+			return err
+		}
+		err = controllers.SetCondition(ctx, r.arocli, samplesCondition, operator.RoleMaster)
 		if err != nil {
 			return err
 		}
@@ -270,6 +297,42 @@ func (r *PullSecretReconciler) updateRHKeysCondition(foundKeys []string) *status
 	cond.Message = sb.String()
 
 	return cond
+}
+
+// switchSamples enables/disables the samples if there's no appropriate pull secret
+func (r *PullSecretReconciler) switchSamples(ctx context.Context, enable bool) (bool, error) {
+	updated := false
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		c, err := r.samplescli.SamplesV1().Configs().Get(ctx, "cluster", metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		if c.Spec.SamplesRegistry != "" {
+			// if the samples registry point elsewhere no action
+			return nil
+		}
+
+		if enable {
+			if c.Spec.ManagementState == operatorv1.Managed {
+				return nil
+			}
+			c.Spec.ManagementState = operatorv1.Managed
+		} else {
+			if c.Spec.ManagementState == operatorv1.Removed {
+				return nil
+			}
+			c.Spec.ManagementState = operatorv1.Removed
+		}
+
+		_, err = r.samplescli.SamplesV1().Configs().Update(ctx, c, metav1.UpdateOptions{})
+		if err == nil {
+			updated = true
+		}
+		return err
+	})
+
+	return updated, err
 }
 
 type serializedAuthMap struct {
