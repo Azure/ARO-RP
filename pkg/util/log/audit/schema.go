@@ -11,34 +11,34 @@ package audit
 type AuditPayload struct {
 	// Part-A
 	EnvVer                 float64 `json:"env_ver"`
-	EnvName                *string `json:"env_name"`
-	EnvTime                *string `json:"env_time"`
-	EnvEpoch               *string `json:"env_epoch"`
+	EnvName                string  `json:"env_name"`
+	EnvTime                string  `json:"env_time"`
+	EnvEpoch               string  `json:"env_epoch"`
 	EnvSeqNum              uint64  `json:"env_seqNum"`
 	EnvPopSample           float64 `json:"env_popSample"`
-	EnvIKey                *string `json:"env_iKey"`
+	EnvIKey                string  `json:"env_iKey"`
 	EnvFlags               int     `json:"env_flags"`
-	EnvCV                  *string `json:"env_cv"`
-	EnvOS                  *string `json:"env_os"`
-	EnvOSVer               *string `json:"env_osVer"`
-	EnvAppId               *string `json:"env_appId"`
-	EnvAppVer              *string `json:"env_appVer"`
+	EnvCV                  string  `json:"env_cv"`
+	EnvOS                  string  `json:"env_os"`
+	EnvOSVer               string  `json:"env_osVer"`
+	EnvAppId               string  `json:"env_appId"`
+	EnvAppVer              string  `json:"env_appVer"`
 	EnvCloudVer            float64 `json:"env_cloud_ver"`
-	EnvCloudName           *string `json:"env_cloud_name"`
-	EnvCloudRole           *string `json:"env_cloud_role"`
-	EnvCloudRoleVer        *string `json:"env_cloud_roleVer"`
-	EnvCloudRoleInstance   *string `json:"env_cloud_roleInstance"`
-	EnvCloudEnvironment    *string `json:"env_cloud_environment"`
-	EnvCloudLocation       *string `json:"env_cloud_location"`
-	EnvCloudDeploymentUnit *string `json:"env_cloud_deploymentUnit"`
+	EnvCloudName           string  `json:"env_cloud_name"`
+	EnvCloudRole           string  `json:"env_cloud_role"`
+	EnvCloudRoleVer        string  `json:"env_cloud_roleVer"`
+	EnvCloudRoleInstance   string  `json:"env_cloud_roleInstance"`
+	EnvCloudEnvironment    string  `json:"env_cloud_environment"`
+	EnvCloudLocation       string  `json:"env_cloud_location"`
+	EnvCloudDeploymentUnit string  `json:"env_cloud_deploymentUnit"`
 
 	// Part-B
 	CallerIdentities []*CallerIdentity `json:"CallerIdentities"`
 	Category         Category          `json:"Category"`
-	NCloud           *string           `json:"nCloud"`
-	OperationName    *string           `json:"OperationName"`
-	Result           Result            `json:"Result"`
-	RequestID        *string           `json:"requestId"`
+	NCloud           string            `json:"nCloud"`
+	OperationName    string            `json:"OperationName"`
+	Result           *Result           `json:"Result"`
+	RequestID        string            `json:"requestId"`
 	TargetResources  []*TargetResource `json:"TargetResources"`
 }
 

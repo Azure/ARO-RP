@@ -12,6 +12,7 @@ import (
 )
 
 type InstanceMetadata interface {
+	Hostname() string
 	TenantID() string
 	SubscriptionID() string
 	Location() string
@@ -20,11 +21,16 @@ type InstanceMetadata interface {
 }
 
 type instanceMetadata struct {
+	hostname       string
 	tenantID       string
 	subscriptionID string
 	location       string
 	resourceGroup  string
 	environment    *azure.Environment
+}
+
+func (im *instanceMetadata) Hostname() string {
+	return im.hostname
 }
 
 func (im *instanceMetadata) TenantID() string {

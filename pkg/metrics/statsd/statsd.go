@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"os"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -23,7 +22,6 @@ type statsd struct {
 	log *logrus.Entry
 	env env.Core
 
-	hostname  string
 	account   string
 	namespace string
 
@@ -46,12 +44,6 @@ func New(ctx context.Context, log *logrus.Entry, env env.Core, account, namespac
 
 		now: time.Now,
 	}
-
-	hostname, err := os.Hostname()
-	if err != nil {
-		return nil, err
-	}
-	s.hostname = hostname
 
 	if s.account == "" {
 		s.account = "*"
@@ -91,7 +83,7 @@ func (s *statsd) emitMetric(m *metric) {
 		m.dims = map[string]string{}
 	}
 	m.dims["location"] = s.env.Location()
-	m.dims["hostname"] = s.hostname
+	m.dims["hostname"] = s.env.Hostname()
 	m.ts = s.now()
 
 	s.ch <- m

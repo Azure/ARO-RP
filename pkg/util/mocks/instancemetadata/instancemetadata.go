@@ -100,6 +100,20 @@ func (mr *MockInstanceMetadataMockRecorder) Environment() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Environment", reflect.TypeOf((*MockInstanceMetadata)(nil).Environment))
 }
 
+// Hostname mocks base method
+func (m *MockInstanceMetadata) Hostname() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Hostname")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Hostname indicates an expected call of Hostname
+func (mr *MockInstanceMetadataMockRecorder) Hostname() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Hostname", reflect.TypeOf((*MockInstanceMetadata)(nil).Hostname))
+}
+
 // Location mocks base method
 func (m *MockInstanceMetadata) Location() string {
 	m.ctrl.T.Helper()

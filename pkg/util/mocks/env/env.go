@@ -257,6 +257,20 @@ func (mr *MockInterfaceMockRecorder) FPAuthorizer(arg0, arg1 interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FPAuthorizer", reflect.TypeOf((*MockInterface)(nil).FPAuthorizer), arg0, arg1)
 }
 
+// Hostname mocks base method
+func (m *MockInterface) Hostname() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Hostname")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// Hostname indicates an expected call of Hostname
+func (mr *MockInterfaceMockRecorder) Hostname() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Hostname", reflect.TypeOf((*MockInterface)(nil).Hostname))
+}
+
 // InitializeAuthorizers mocks base method
 func (m *MockInterface) InitializeAuthorizers() error {
 	m.ctrl.T.Helper()

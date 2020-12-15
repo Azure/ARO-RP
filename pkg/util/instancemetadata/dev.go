@@ -33,7 +33,13 @@ func NewDev(checkEnv bool) (InstanceMetadata, error) {
 		}
 	}
 
+	hostname, err := os.Hostname()
+	if err != nil {
+		return nil, err
+	}
+
 	return &instanceMetadata{
+		hostname:       hostname,
 		tenantID:       os.Getenv("AZURE_TENANT_ID"),
 		subscriptionID: os.Getenv("AZURE_SUBSCRIPTION_ID"),
 		location:       os.Getenv("LOCATION"),

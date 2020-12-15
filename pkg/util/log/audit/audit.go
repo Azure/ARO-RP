@@ -5,7 +5,6 @@ package audit
 
 import (
 	"encoding/json"
-	"os"
 	"runtime"
 	"sync"
 	"time"
@@ -14,7 +13,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/go-autorest/autorest/to"
 )
 
 const (
@@ -91,61 +89,56 @@ func (payloadHook) Levels() []logrus.Level {
 }
 
 func (h *payloadHook) Fire(entry *logrus.Entry) error {
-	hostname, err := os.Hostname()
-	if err != nil {
-		return err
-	}
-
 	payload := *h.payload // shallow copy
 
 	// Part-A
-	payload.EnvOS = to.StringPtr(runtime.GOOS)
+	payload.EnvOS = runtime.GOOS
 	payload.EnvVer = ifxAuditVersion
-	payload.EnvName = to.StringPtr(ifxAuditName)
-	payload.EnvEpoch = &epoch
+	payload.EnvName = ifxAuditName
+	payload.EnvEpoch = epoch
 	payload.EnvPopSample = ifxAuditPopSample
 	payload.EnvFlags = ifxAuditFlags
 	payload.EnvCloudVer = ifxAuditCloudVer
-	payload.EnvCloudName = to.StringPtr(h.env.Environment().Name)
-	payload.EnvCloudRoleInstance = &hostname
-	payload.EnvCloudLocation = to.StringPtr(h.env.Location())
+	payload.EnvCloudName = h.env.Environment().Name
+	payload.EnvCloudRoleInstance = h.env.Hostname()
+	payload.EnvCloudLocation = h.env.Location()
 	payload.EnvSeqNum = nextSeqNum()
 
 	logTime := entry.Time.UTC().Format(time.RFC3339)
-	payload.EnvTime = to.StringPtr(logTime)
+	payload.EnvTime = logTime
 
 	if v, ok := entry.Data[EnvelopeKeyCloudRole].(string); ok {
-		payload.EnvCloudRole = &v
+		payload.EnvCloudRole = v
 		delete(entry.Data, EnvelopeKeyCloudRole)
 	}
 
 	if v, ok := entry.Data[EnvelopeKeyCorrelationID].(string); ok {
-		payload.EnvCV = &v
+		payload.EnvCV = v
 		delete(entry.Data, EnvelopeKeyCorrelationID)
 	}
 
 	// Part-B
-	if v, ok := entry.Data[PayloadKeyCategory].(Category); ok {
-		payload.Category = v
+	if v, ok := entry.Data[PayloadKeyCategory].(string); ok {
+		payload.Category = Category(v)
 		delete(entry.Data, PayloadKeyCategory)
 	}
 
 	if v, ok := entry.Data[PayloadKeyNCloud].(string); ok {
-		payload.NCloud = &v
+		payload.NCloud = v
 		delete(entry.Data, PayloadKeyNCloud)
 	}
 
 	if v, ok := entry.Data[PayloadKeyOperationName].(string); ok {
-		payload.OperationName = &v
+		payload.OperationName = v
 		delete(entry.Data, PayloadKeyOperationName)
 	}
 
 	if v, ok := entry.Data[PayloadKeyRequestID].(string); ok {
-		payload.RequestID = &v
+		payload.RequestID = v
 		delete(entry.Data, PayloadKeyRequestID)
 	}
 
-	if v, ok := entry.Data[PayloadKeyResult].(Result); ok {
+	if v, ok := entry.Data[PayloadKeyResult].(*Result); ok {
 		payload.Result = v
 		delete(entry.Data, PayloadKeyResult)
 	}
