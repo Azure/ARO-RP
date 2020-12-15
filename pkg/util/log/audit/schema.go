@@ -4,38 +4,36 @@ package audit
 // Licensed under the Apache License 2.0.
 
 // AuditPayload is the IFxAudit log payload that will be sent to Geneva. It has
-// all the fields defined in IFxAudit Part-A and Part-B schema.
+// all the required and optional fields defined in IFxAudit Part-A and Part-B
+// schema.
 //
-// String fields are declared as pointers-to-string because IFxAudit wants nil,
-// not empty string values.
+// Fields that are marked as optional or "required when applicable" in the
+// schema are marked with the omitempty tag. Fields that are marked as "unused"
+// are not included.
 type AuditPayload struct {
 	// Part-A
 	EnvVer                 float64 `json:"env_ver"`
 	EnvName                string  `json:"env_name"`
 	EnvTime                string  `json:"env_time"`
-	EnvEpoch               string  `json:"env_epoch"`
-	EnvSeqNum              uint64  `json:"env_seqNum"`
-	EnvPopSample           float64 `json:"env_popSample"`
-	EnvIKey                string  `json:"env_iKey"`
-	EnvFlags               int     `json:"env_flags"`
-	EnvCV                  string  `json:"env_cv"`
-	EnvOS                  string  `json:"env_os"`
-	EnvOSVer               string  `json:"env_osVer"`
+	EnvEpoch               string  `json:"env_epoch,omitempty"`
+	EnvSeqNum              uint64  `json:"env_seqNum,omitempty"`
+	EnvIKey                string  `json:"env_iKey,omitempty"`
+	EnvFlags               int     `json:"env_flags,omitempty"`
 	EnvAppId               string  `json:"env_appId"`
-	EnvAppVer              string  `json:"env_appVer"`
-	EnvCloudVer            float64 `json:"env_cloud_ver"`
+	EnvAppVer              string  `json:"env_appVer,omitempty"`
+	EnvCV                  string  `json:"env_cv,omitempty"`
 	EnvCloudName           string  `json:"env_cloud_name"`
 	EnvCloudRole           string  `json:"env_cloud_role"`
-	EnvCloudRoleVer        string  `json:"env_cloud_roleVer"`
+	EnvCloudRoleVer        string  `json:"env_cloud_roleVer,omitempty"`
 	EnvCloudRoleInstance   string  `json:"env_cloud_roleInstance"`
-	EnvCloudEnvironment    string  `json:"env_cloud_environment"`
+	EnvCloudEnvironment    string  `json:"env_cloud_environment,omitempty"`
 	EnvCloudLocation       string  `json:"env_cloud_location"`
-	EnvCloudDeploymentUnit string  `json:"env_cloud_deploymentUnit"`
+	EnvCloudDeploymentUnit string  `json:"env_cloud_deploymentUnit,omitempty"`
+	EnvCloudVer            float64 `json:"env_cloud_ver"`
 
 	// Part-B
 	CallerIdentities []*CallerIdentity `json:"CallerIdentities"`
 	Category         Category          `json:"Category"`
-	NCloud           string            `json:"nCloud"`
 	OperationName    string            `json:"OperationName"`
 	Result           *Result           `json:"Result"`
 	RequestID        string            `json:"requestId"`
@@ -45,10 +43,10 @@ type AuditPayload struct {
 // CallerIdentity has identity information on the entity that invoke the
 // operation described in the audit log.
 type CallerIdentity struct {
-	CallerDisplayName   string             `json:"CallerDisplayName"`
+	CallerDisplayName   string             `json:"CallerDisplayName;omitempty"`
 	CallerIdentityType  CallerIdentityType `json:"CallerIdentityType"`
 	CallerIdentityValue string             `json:"CallerIdentityValue"`
-	CallerIPAddress     string             `json:"CallerIpAddress"`
+	CallerIPAddress     string             `json:"CallerIpAddress;omitempty"`
 }
 
 // CallerIdentityType represents the type of identity used in an auditable event.
@@ -60,7 +58,7 @@ type Category string
 // Result provides information on the result of the operation.
 type Result struct {
 	ResultType        string `json:"ResultType"`
-	ResultDescription string `json:"ResultDescription"`
+	ResultDescription string `json:"ResultDescription;omitempty"`
 }
 
 // ResultType indicates the outcome of the operation.

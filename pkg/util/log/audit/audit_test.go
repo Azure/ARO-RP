@@ -56,7 +56,7 @@ func TestAudit(t *testing.T) {
 				},
 				gomega.BeTemporally("~", now, time.Second),
 			),
-			MetadataPayload: gomega.Equal(`{"env_ver":2.1,"env_name":"#Ifx.AuditSchema","env_time":"` + formattedNow + `","env_epoch":"` + epoch + `","env_seqNum":1,"env_popSample":0,"env_iKey":"","env_flags":257,"env_cv":"","env_os":"linux","env_osVer":"","env_appId":"","env_appVer":"","env_cloud_ver":1,"env_cloud_name":"AzurePublicCloud","env_cloud_role":"","env_cloud_roleVer":"","env_cloud_roleInstance":"test-host","env_cloud_environment":"","env_cloud_location":"eastus","env_cloud_deploymentUnit":"","CallerIdentities":null,"Category":"Authorization","nCloud":"","OperationName":"initializeAuthorizers","Result":null,"requestId":"","TargetResources":null}`),
+			MetadataPayload: gomega.Equal(`{"env_ver":2.1,"env_name":"#Ifx.AuditSchema","env_time":"` + formattedNow + `","env_epoch":"` + epoch + `","env_seqNum":1,"env_flags":257,"env_appId":"","env_cloud_name":"AzurePublicCloud","env_cloud_role":"","env_cloud_roleInstance":"test-host","env_cloud_environment":"AzurePublicCloud","env_cloud_location":"eastus","env_cloud_ver":1,"CallerIdentities":null,"Category":"Authorization","OperationName":"initializeAuthorizers","Result":null,"requestId":"","TargetResources":null}`),
 		},
 	}); err != nil {
 		t.Error(err)
