@@ -43,10 +43,10 @@ type AuditPayload struct {
 // CallerIdentity has identity information on the entity that invoke the
 // operation described in the audit log.
 type CallerIdentity struct {
-	CallerDisplayName   string             `json:"CallerDisplayName;omitempty"`
+	CallerDisplayName   string             `json:"CallerDisplayName,omitempty"`
 	CallerIdentityType  CallerIdentityType `json:"CallerIdentityType"`
 	CallerIdentityValue string             `json:"CallerIdentityValue"`
-	CallerIPAddress     string             `json:"CallerIpAddress;omitempty"`
+	CallerIPAddress     string             `json:"CallerIpAddress,omitempty"`
 }
 
 // CallerIdentityType represents the type of identity used in an auditable event.
@@ -58,7 +58,7 @@ type Category string
 // Result provides information on the result of the operation.
 type Result struct {
 	ResultType        string `json:"ResultType"`
-	ResultDescription string `json:"ResultDescription;omitempty"`
+	ResultDescription string `json:"ResultDescription,omitempty"`
 }
 
 // ResultType indicates the outcome of the operation.

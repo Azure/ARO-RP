@@ -145,9 +145,7 @@ func (h *payloadHook) Fire(entry *logrus.Entry) error {
 
 	// Part-B
 	if ids, ok := entry.Data[PayloadKeyCallerIdentities].([]*CallerIdentity); ok {
-		for _, id := range ids {
-			payload.CallerIdentities = append(payload.CallerIdentities, id)
-		}
+		payload.CallerIdentities = append(payload.CallerIdentities, ids...)
 		delete(entry.Data, PayloadKeyCallerIdentities)
 	}
 
@@ -172,9 +170,7 @@ func (h *payloadHook) Fire(entry *logrus.Entry) error {
 	}
 
 	if rs, ok := entry.Data[PayloadKeyTargetResources].([]*TargetResource); ok {
-		for _, r := range rs {
-			payload.TargetResources = append(payload.TargetResources, r)
-		}
+		payload.TargetResources = append(payload.TargetResources, rs...)
 		delete(entry.Data, PayloadKeyTargetResources)
 	}
 
