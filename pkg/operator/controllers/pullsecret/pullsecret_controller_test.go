@@ -276,20 +276,32 @@ func TestCheckRHRegistryKeys(t *testing.T) {
 	}
 }
 
-func TestUpdateRHCondition(t *testing.T) {
+func TestKeyCondition(t *testing.T) {
 	test := []struct {
 		name          string
+		failed        bool
 		keys          []string
 		wantCondition status.Condition
 		wantErr       string
 	}{
 		{
-			name: "no keys found",
+			name:   "cannot parse keys",
+			failed: true,
+			keys:   []string{},
+			wantCondition: status.Condition{
+				Type:    arov1alpha1.RedHatKeyPresent,
+				Status:  v1.ConditionFalse,
+				Message: "Cannot parse pull-secret",
+				Reason:  "CheckFailed",
+			},
+		},
+		{
+			name: "no key found",
 			keys: []string{},
 			wantCondition: status.Condition{
 				Type:    arov1alpha1.RedHatKeyPresent,
 				Status:  v1.ConditionFalse,
-				Message: "No Red Hat registry keys found in pull-secret.",
+				Message: "No Red Hat keys found in pull-secret",
 				Reason:  "CheckDone",
 			},
 		},
@@ -309,7 +321,73 @@ func TestUpdateRHCondition(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &PullSecretReconciler{}
 
-			out := r.updateRHKeysCondition(tt.keys)
+			out := r.keyCondition(tt.failed, tt.keys)
+			if !reflect.DeepEqual(out, &tt.wantCondition) {
+				t.Fatalf("Condition does not match. want: %v, got: %v", tt.wantCondition, out)
+			}
+		})
+	}
+}
+
+func TestSamplesCondition(t *testing.T) {
+	test := []struct {
+		name          string
+		updated       bool
+		keys          []string
+		wantCondition status.Condition
+		wantErr       string
+	}{
+		{
+			name:    "no keys found and nothing updated",
+			updated: false,
+			keys:    []string{},
+			wantCondition: status.Condition{
+				Type:    arov1alpha1.SamplesOperatorEnabled,
+				Status:  v1.ConditionFalse,
+				Message: "cluster-samples-operator in removed state",
+				Reason:  "RedHatKey",
+			},
+		},
+		{
+			name:    "no key found and operator updated",
+			updated: true,
+			keys:    []string{},
+			wantCondition: status.Condition{
+				Type:    arov1alpha1.SamplesOperatorEnabled,
+				Status:  v1.ConditionFalse,
+				Message: "cluster-samples-operator updated to removed state",
+				Reason:  "RedHatKey",
+			},
+		},
+		{
+			name:    "keys found and nothing updated",
+			updated: false,
+			keys:    []string{"registry.redhat.io"},
+			wantCondition: status.Condition{
+				Type:    arov1alpha1.SamplesOperatorEnabled,
+				Status:  v1.ConditionTrue,
+				Message: "cluster-samples-operator in managed state",
+				Reason:  "RedHatKey",
+			},
+		},
+		{
+			name:    "keys found and operator updated",
+			updated: true,
+			keys:    []string{"registry.redhat.io"},
+			wantCondition: status.Condition{
+				Type:    arov1alpha1.SamplesOperatorEnabled,
+				Status:  v1.ConditionTrue,
+				Message: "cluster-samples-operator updated to managed state",
+				Reason:  "RedHatKey",
+			},
+		},
+	}
+
+	for _, tt := range test {
+		t.Run(tt.name, func(t *testing.T) {
+			r := &PullSecretReconciler{}
+
+			out := r.samplesCondition(tt.updated, tt.keys)
 			if !reflect.DeepEqual(out, &tt.wantCondition) {
 				t.Fatalf("Condition does not match. want: %v, got: %v", tt.wantCondition, out)
 			}

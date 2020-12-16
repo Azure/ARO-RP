@@ -84,42 +84,29 @@ func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 			ps.Data = map[string][]byte{}
 		}
 
-		keyCondition := &status.Condition{
-			Type:   aro.RedHatKeyPresent,
-			Status: v1.ConditionFalse,
-			Reason: "CheckFailed",
-		}
-		samplesCondition := &status.Condition{
-			Type:   aro.SamplesOperatorModified,
-			Status: v1.ConditionFalse,
-			Reason: "RedHatKeyNotPresent",
-		}
-
 		// parse keys and validate JSON
 		parsedKeys, err := r.parseRHRegistryKeys(ps)
 		foundKeys := []string{}
+		failed := false
 		if err != nil {
 			r.log.Info("pull secret is not valid json - recreating")
 			delete(ps.Data, v1.DockerConfigJsonKey)
-			keyCondition.Reason = "CheckDone"
-			keyCondition.Message = "Cannot parse secret data, recreating."
+			failed = true
 		} else {
 			foundKeys = r.checkRHRegistryKeys(parsedKeys)
-			keyCondition = r.updateRHKeysCondition(foundKeys)
 		}
 
 		updated := false
 		if len(foundKeys) > 0 {
 			// enable samples operator
 			updated, err = r.switchSamples(ctx, true)
-			samplesCondition.Reason = "RedHatKeyPresent"
 		} else {
 			// disable samples operator
 			updated, err = r.switchSamples(ctx, false)
 		}
-		if updated {
-			samplesCondition.Status = v1.ConditionTrue
-		}
+
+		keyCondition := r.keyCondition(failed, foundKeys)
+		samplesCondition := r.samplesCondition(updated, foundKeys)
 
 		err = controllers.SetCondition(ctx, r.arocli, keyCondition, operator.RoleMaster)
 		if err != nil {
@@ -275,16 +262,23 @@ func (r *PullSecretReconciler) checkRHRegistryKeys(psData *serializedAuthMap) (f
 	return foundKeys
 }
 
-func (r *PullSecretReconciler) updateRHKeysCondition(foundKeys []string) *status.Condition {
-	cond := &status.Condition{
-		Type:    aro.RedHatKeyPresent,
-		Status:  v1.ConditionFalse,
-		Message: "No Red Hat registry keys found in pull-secret.",
-		Reason:  "CheckDone",
+func (r *PullSecretReconciler) keyCondition(failed bool, foundKeys []string) *status.Condition {
+	keyCondition := &status.Condition{
+		Type:   aro.RedHatKeyPresent,
+		Status: v1.ConditionFalse,
+		Reason: "CheckFailed",
 	}
 
+	if failed {
+		keyCondition.Message = "Cannot parse pull-secret"
+		return keyCondition
+	}
+
+	keyCondition.Reason = "CheckDone"
+
 	if len(foundKeys) == 0 {
-		return cond
+		keyCondition.Message = "No Red Hat keys found in pull-secret"
+		return keyCondition
 	}
 
 	sb := strings.Builder{}
@@ -293,10 +287,39 @@ func (r *PullSecretReconciler) updateRHKeysCondition(foundKeys []string) *status
 		sb.WriteString(key + ", ")
 	}
 
-	cond.Status = v1.ConditionTrue
-	cond.Message = sb.String()
+	keyCondition.Status = v1.ConditionTrue
+	keyCondition.Message = sb.String()
 
-	return cond
+	return keyCondition
+}
+
+// samplesCondition indicates whether aroOperator modified state of the cluster-samples-operator
+func (r *PullSecretReconciler) samplesCondition(updated bool, foundKeys []string) *status.Condition {
+	samplesCondition := &status.Condition{
+		Type:   aro.SamplesOperatorEnabled,
+		Status: v1.ConditionFalse,
+		Reason: "RedHatKey",
+	}
+	sb := strings.Builder{}
+	sb.WriteString("cluster-samples-operator ")
+
+	if updated {
+		sb.WriteString("updated to ")
+	} else {
+		sb.WriteString("in ")
+	}
+
+	if len(foundKeys) > 0 {
+		sb.WriteString("managed ")
+		samplesCondition.Status = v1.ConditionTrue
+	} else {
+		sb.WriteString("removed ")
+	}
+
+	sb.WriteString("state")
+	samplesCondition.Message = sb.String()
+
+	return samplesCondition
 }
 
 // switchSamples enables/disables the samples if there's no appropriate pull secret
