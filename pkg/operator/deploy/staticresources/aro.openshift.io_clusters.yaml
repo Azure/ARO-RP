@@ -40,6 +40,8 @@ spec:
               type: string
             acrName:
               type: string
+            azEnvironment:
+              type: string
             genevaLogging:
               properties:
                 configVersion:
@@ -62,6 +64,8 @@ spec:
               type: string
             resourceId:
               description: ResourceID is the Azure resourceId of the cluster
+              type: string
+            vnetId:
               type: string
           type: object
         status:

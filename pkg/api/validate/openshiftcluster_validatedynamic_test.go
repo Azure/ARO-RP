@@ -147,12 +147,7 @@ func TestValidateProviders(t *testing.T) {
 
 			tt.mocks(providerClient)
 
-			dv := &openShiftClusterDynamicValidator{
-				log:         logrus.NewEntry(logrus.StandardLogger()),
-				spProviders: providerClient,
-			}
-
-			err := dv.validateProviders(ctx)
+			err := validateProviders(ctx, logrus.NewEntry(logrus.StandardLogger()), providerClient)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
@@ -466,12 +461,7 @@ func TestValidateVnet(t *testing.T) {
 				tt.modifyVnet(vnet)
 			}
 
-			dv := &openShiftClusterDynamicValidator{
-				log: logrus.NewEntry(logrus.StandardLogger()),
-				oc:  oc,
-			}
-
-			err := dv.validateVnet(ctx, vnet)
+			err := validateVnet(ctx, logrus.NewEntry(logrus.StandardLogger()), oc, vnet)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
@@ -487,10 +477,6 @@ func TestValidateVnetPermissions(t *testing.T) {
 
 	controller := gomock.NewController(t)
 	defer controller.Finish()
-
-	dv := &openShiftClusterDynamicValidator{
-		log: logrus.NewEntry(logrus.StandardLogger()),
-	}
 
 	for _, tt := range []struct {
 		name    string
@@ -563,7 +549,7 @@ func TestValidateVnetPermissions(t *testing.T) {
 
 			tt.mocks(permissionsClient, cancel)
 
-			err := dv.validateVnetPermissions(ctx, mockrefreshable.NewMockAuthorizer(controller), permissionsClient, vnetID, &azure.Resource{}, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
+			err := validateVnetPermissions(ctx, logrus.NewEntry(logrus.StandardLogger()), mockrefreshable.NewMockAuthorizer(controller), permissionsClient, vnetID, &azure.Resource{}, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
@@ -582,10 +568,6 @@ func TestValidateRouteTablePermissionsSubnet(t *testing.T) {
 
 	controller := gomock.NewController(t)
 	defer controller.Finish()
-
-	dv := &openShiftClusterDynamicValidator{
-		log: logrus.NewEntry(logrus.StandardLogger()),
-	}
 
 	for _, tt := range []struct {
 		name    string
@@ -693,7 +675,7 @@ func TestValidateRouteTablePermissionsSubnet(t *testing.T) {
 				tt.vnet(vnet)
 			}
 
-			err := dv.validateRouteTablePermissionsSubnet(ctx, mockrefreshable.NewMockAuthorizer(controller), permissionsClient, vnet, tt.subnet, "properties.masterProfile.subnetId", api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
+			err := validateRouteTablePermissionsSubnet(ctx, logrus.NewEntry(logrus.StandardLogger()), mockrefreshable.NewMockAuthorizer(controller), permissionsClient, vnet, tt.subnet, "properties.masterProfile.subnetId", api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
