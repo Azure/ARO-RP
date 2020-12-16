@@ -85,7 +85,7 @@ func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 		}
 
 		// parse keys and validate JSON
-		parsedKeys, err := r.parseRHRegistryKeys(ps)
+		parsedKeys, err := r.unmarshalSecretData(ps)
 		foundKeys := []string{}
 		failed := false
 		if err != nil {
@@ -227,7 +227,7 @@ func (r *PullSecretReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *PullSecretReconciler) parseRHRegistryKeys(ps *v1.Secret) (*serializedAuthMap, error) {
+func (r *PullSecretReconciler) unmarshalSecretData(ps *v1.Secret) (*serializedAuthMap, error) {
 	var pullSecretData *serializedAuthMap
 	if data := ps.Data[v1.DockerConfigJsonKey]; len(data) > 0 {
 		if err := json.Unmarshal(data, &pullSecretData); err != nil {
