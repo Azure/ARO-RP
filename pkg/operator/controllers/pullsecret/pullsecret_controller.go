@@ -239,12 +239,10 @@ func (r *PullSecretReconciler) parseRHRegistryKeys(ps *v1.Secret) (*serializedAu
 
 // checkRHRegistryKeys checks whether the rhRegistry keys:
 //   - redhat.registry.io
-//   - registry.connect.redhat.com"
 // are present in the pullSecret
 func (r *PullSecretReconciler) checkRHRegistryKeys(psData *serializedAuthMap) (foundKeys []string) {
 	rhKeys := []string{
 		"registry.redhat.io",
-		"registry.connect.redhat.com",
 	}
 	foundKeys = make([]string, 0, len(rhKeys))
 
