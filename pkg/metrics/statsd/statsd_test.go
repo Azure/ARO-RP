@@ -20,6 +20,7 @@ func TestEmitGauge(t *testing.T) {
 
 	env := mock_env.NewMockInterface(controller)
 	env.EXPECT().Location().AnyTimes().Return("eastus")
+	env.EXPECT().Hostname().AnyTimes().Return("test-host")
 
 	c1, c2 := net.Pipe()
 
@@ -43,7 +44,7 @@ func TestEmitGauge(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if m != `{"Metric":"tests.test_key","Account":"*","Namespace":"*","Dims":{"hostname":"","key":"value","location":"eastus"},"TS":"0001-01-01T00:00:00.000"}:42|g`+"\n" {
+	if m != `{"Metric":"tests.test_key","Account":"*","Namespace":"*","Dims":{"hostname":"test-host","key":"value","location":"eastus"},"TS":"0001-01-01T00:00:00.000"}:42|g`+"\n" {
 		t.Error(m)
 	}
 }
@@ -54,6 +55,7 @@ func TestEmitFloat(t *testing.T) {
 
 	env := mock_env.NewMockInterface(controller)
 	env.EXPECT().Location().AnyTimes().Return("eastus")
+	env.EXPECT().Hostname().AnyTimes().Return("test-host")
 
 	c1, c2 := net.Pipe()
 
@@ -77,7 +79,7 @@ func TestEmitFloat(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if m != `{"Metric":"tests.test_key","Account":"*","Namespace":"*","Dims":{"hostname":"","key":"value","location":"eastus"},"TS":"0001-01-01T00:00:00.000"}:5.000000|f`+"\n" {
+	if m != `{"Metric":"tests.test_key","Account":"*","Namespace":"*","Dims":{"hostname":"test-host","key":"value","location":"eastus"},"TS":"0001-01-01T00:00:00.000"}:5.000000|f`+"\n" {
 		t.Error(m)
 	}
 }

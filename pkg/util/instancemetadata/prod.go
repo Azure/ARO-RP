@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/Azure/go-autorest/autorest/adal"
@@ -125,6 +126,12 @@ func (p *prod) populateInstanceMetadata() error {
 	p.subscriptionID = m.SubscriptionID
 	p.location = m.Location
 	p.resourceGroup = m.ResourceGroupName
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		return err
+	}
+	p.hostname = hostname
 
 	return nil
 }
