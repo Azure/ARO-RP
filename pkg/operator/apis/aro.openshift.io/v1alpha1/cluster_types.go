@@ -36,11 +36,12 @@ type ClusterSpec struct {
 	ResourceID      string              `json:"resourceId,omitempty"`
 	ACRName         string              `json:"acrName,omitempty"`
 	ACRDomain       string              `json:"acrDomain,omitempty"`
+	AZEnvironment   string              `json:"azEnvironment,omitempty"`
 	Location        string              `json:"location,omitempty"`
 	GenevaLogging   GenevaLoggingSpec   `json:"genevaLogging,omitempty"`
 	InternetChecker InternetCheckerSpec `json:"internetChecker,omitempty"`
-
-	Features FeaturesSpec `json:"features,omitempty"`
+	VNetID          string              `json:"vnetId,omitempty"`
+	Features        FeaturesSpec        `json:"features,omitempty"`
 }
 
 // FeaturesSpec defines ARO operator feature gates
