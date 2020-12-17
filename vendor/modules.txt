@@ -143,6 +143,9 @@ github.com/beorn7/perks/quantile
 github.com/bombsimon/wsl/v3
 # github.com/cespare/xxhash/v2 v2.1.1
 github.com/cespare/xxhash/v2
+# github.com/codahale/etm v0.0.0-20141003032925-c00c9e6fb4c9
+## explicit
+github.com/codahale/etm
 # github.com/containers/image v3.0.2+incompatible
 github.com/containers/image/docker/reference
 github.com/containers/image/pkg/sysregistriesv2

@@ -5,15 +5,15 @@ package database
 
 import "testing"
 
-func TestFakeCipher(t *testing.T) {
-	c := &fakeCipher{}
+func TestFakeAEAD(t *testing.T) {
+	c := &fakeAEAD{}
 
-	encrypted, _ := c.Encrypt([]byte{'f', 'o', 'o'})
+	encrypted, _ := c.Seal([]byte{'f', 'o', 'o'})
 	if string(encrypted) != "FAKEfoo" {
 		t.Error(string(encrypted))
 	}
 
-	decrypted, _ := c.Decrypt(encrypted)
+	decrypted, _ := c.Open(encrypted)
 	if string(decrypted) != "foo" {
 		t.Error(string(decrypted))
 	}

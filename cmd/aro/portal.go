@@ -87,12 +87,12 @@ func portal(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	cipher, err := encryption.NewXChaCha20Poly1305(ctx, key)
+	aead, err := encryption.NewXChaCha20Poly1305(ctx, key)
 	if err != nil {
 		return err
 	}
 
-	dbc, err := database.NewDatabaseClient(ctx, log.WithField("component", "database"), _env, m, cipher)
+	dbc, err := database.NewDatabaseClient(ctx, log.WithField("component", "database"), _env, m, aead)
 	if err != nil {
 		return err
 	}

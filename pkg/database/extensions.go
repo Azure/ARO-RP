@@ -15,16 +15,16 @@ import (
 var _ codec.InterfaceExt = (*secureBytesExt)(nil)
 
 type secureBytesExt struct {
-	cipher encryption.Cipher
+	aead encryption.AEAD
 }
 
 func (s secureBytesExt) ConvertExt(v interface{}) interface{} {
-	encrypted, err := s.cipher.Encrypt(v.(api.SecureBytes))
+	b, err := s.aead.Seal(v.(api.SecureBytes))
 	if err != nil {
 		panic(err)
 	}
 
-	return base64.StdEncoding.EncodeToString([]byte(encrypted))
+	return base64.StdEncoding.EncodeToString(b)
 }
 
 func (s secureBytesExt) UpdateExt(dest interface{}, v interface{}) {
@@ -33,7 +33,7 @@ func (s secureBytesExt) UpdateExt(dest interface{}, v interface{}) {
 		panic(err)
 	}
 
-	b, err = s.cipher.Decrypt(b)
+	b, err = s.aead.Open(b)
 	if err != nil {
 		panic(err)
 	}
@@ -44,16 +44,16 @@ func (s secureBytesExt) UpdateExt(dest interface{}, v interface{}) {
 var _ codec.InterfaceExt = (*secureStringExt)(nil)
 
 type secureStringExt struct {
-	cipher encryption.Cipher
+	aead encryption.AEAD
 }
 
 func (s secureStringExt) ConvertExt(v interface{}) interface{} {
-	encrypted, err := s.cipher.Encrypt([]byte(v.(api.SecureString)))
+	b, err := s.aead.Seal([]byte(v.(api.SecureString)))
 	if err != nil {
 		panic(err)
 	}
 
-	return base64.StdEncoding.EncodeToString([]byte(encrypted))
+	return base64.StdEncoding.EncodeToString(b)
 }
 
 func (s secureStringExt) UpdateExt(dest interface{}, v interface{}) {
@@ -62,7 +62,7 @@ func (s secureStringExt) UpdateExt(dest interface{}, v interface{}) {
 		panic(err)
 	}
 
-	b, err = s.cipher.Decrypt(b)
+	b, err = s.aead.Open(b)
 	if err != nil {
 		panic(err)
 	}

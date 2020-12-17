@@ -79,12 +79,12 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	cipher, err := encryption.NewXChaCha20Poly1305(ctx, key)
+	aead, err := encryption.NewXChaCha20Poly1305(ctx, key)
 	if err != nil {
 		return err
 	}
 
-	dbc, err := database.NewDatabaseClient(ctx, log.WithField("component", "database"), _env, &noop.Noop{}, cipher)
+	dbc, err := database.NewDatabaseClient(ctx, log.WithField("component", "database"), _env, &noop.Noop{}, aead)
 	if err != nil {
 		return err
 	}

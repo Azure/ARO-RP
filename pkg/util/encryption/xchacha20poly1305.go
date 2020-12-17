@@ -8,55 +8,47 @@ import (
 	"crypto/cipher"
 	"crypto/rand"
 	"fmt"
+	"io"
 
 	"golang.org/x/crypto/chacha20poly1305"
 )
 
-var _ Cipher = (*aeadCipher)(nil)
-
-type Cipher interface {
-	Decrypt([]byte) ([]byte, error)
-	Encrypt([]byte) ([]byte, error)
+type xChaCha20Poly1305 struct {
+	aead       cipher.AEAD
+	randReader io.Reader
 }
 
-type aeadCipher struct {
-	aead     cipher.AEAD
-	randRead func([]byte) (int, error)
-}
+var _ AEAD = (*xChaCha20Poly1305)(nil)
 
-func NewXChaCha20Poly1305(ctx context.Context, key []byte) (Cipher, error) {
+func NewXChaCha20Poly1305(ctx context.Context, key []byte) (AEAD, error) {
 	aead, err := chacha20poly1305.NewX(key)
 	if err != nil {
 		return nil, err
 	}
 
-	return &aeadCipher{
-		aead:     aead,
-		randRead: rand.Read,
+	return &xChaCha20Poly1305{
+		aead:       aead,
+		randReader: rand.Reader,
 	}, nil
 }
 
-func (c *aeadCipher) Decrypt(input []byte) ([]byte, error) {
-	if len(input) < chacha20poly1305.NonceSizeX {
+func (c *xChaCha20Poly1305) Open(input []byte) ([]byte, error) {
+	if len(input) < c.aead.NonceSize() {
 		return nil, fmt.Errorf("encrypted value too short")
 	}
 
-	nonce := input[:chacha20poly1305.NonceSizeX]
-	data := input[chacha20poly1305.NonceSizeX:]
+	nonce := input[:c.aead.NonceSize()]
+	data := input[c.aead.NonceSize():]
 
 	return c.aead.Open(nil, nonce, data, nil)
 }
 
-func (c *aeadCipher) Encrypt(input []byte) ([]byte, error) {
-	nonce := make([]byte, chacha20poly1305.NonceSizeX)
+func (c *xChaCha20Poly1305) Seal(input []byte) ([]byte, error) {
+	nonce := make([]byte, c.aead.NonceSize())
 
-	n, err := c.randRead(nonce)
+	_, err := io.ReadFull(c.randReader, nonce)
 	if err != nil {
 		return nil, err
-	}
-
-	if n != chacha20poly1305.NonceSizeX {
-		return nil, fmt.Errorf("rand.Read returned %d bytes, expected %d", n, chacha20poly1305.NonceSizeX)
 	}
 
 	return append(nonce, c.aead.Seal(nil, nonce, input, nil)...), nil

@@ -48,9 +48,9 @@ type frontend struct {
 	dbOpenShiftClusters database.OpenShiftClusters
 	dbSubscriptions     database.Subscriptions
 
-	apis   map[string]*api.Version
-	m      metrics.Interface
-	cipher encryption.Cipher
+	apis map[string]*api.Version
+	m    metrics.Interface
+	aead encryption.AEAD
 
 	ocEnricher          clusterdata.OpenShiftClusterEnricher
 	adminActionsFactory adminActionsFactory
@@ -78,7 +78,7 @@ func NewFrontend(ctx context.Context,
 	dbSubscriptions database.Subscriptions,
 	apis map[string]*api.Version,
 	m metrics.Interface,
-	cipher encryption.Cipher,
+	aead encryption.AEAD,
 	adminActionsFactory adminActionsFactory) (Runnable, error) {
 	f := &frontend{
 		baseLog:             baseLog,
@@ -88,7 +88,7 @@ func NewFrontend(ctx context.Context,
 		dbSubscriptions:     dbSubscriptions,
 		apis:                apis,
 		m:                   m,
-		cipher:              cipher,
+		aead:                aead,
 		adminActionsFactory: adminActionsFactory,
 
 		ocEnricher: clusterdata.NewBestEffortEnricher(baseLog, _env, m),

@@ -14,7 +14,7 @@ var jsonHandle *codec.JsonHandle
 
 func init() {
 	var err error
-	jsonHandle, err = database.NewJSONHandle(&fakeCipher{})
+	jsonHandle, err = database.NewJSONHandle(&fakeAEAD{})
 	if err != nil {
 		panic(err)
 	}

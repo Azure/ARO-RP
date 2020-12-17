@@ -34,13 +34,13 @@ const (
 	collSubscriptions     = "Subscriptions"
 )
 
-func NewDatabaseClient(ctx context.Context, log *logrus.Entry, env env.Core, m metrics.Interface, cipher encryption.Cipher) (cosmosdb.DatabaseClient, error) {
+func NewDatabaseClient(ctx context.Context, log *logrus.Entry, env env.Core, m metrics.Interface, aead encryption.AEAD) (cosmosdb.DatabaseClient, error) {
 	databaseAccount, masterKey, err := find(ctx, env)
 	if err != nil {
 		return nil, err
 	}
 
-	h, err := NewJSONHandle(cipher)
+	h, err := NewJSONHandle(aead)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +58,7 @@ func NewDatabaseClient(ctx context.Context, log *logrus.Entry, env env.Core, m m
 	return cosmosdb.NewDatabaseClient(log, c, h, databaseHostname, masterKey)
 }
 
-func NewJSONHandle(cipher encryption.Cipher) (*codec.JsonHandle, error) {
+func NewJSONHandle(aead encryption.AEAD) (*codec.JsonHandle, error) {
 	h := &codec.JsonHandle{
 		BasicHandle: codec.BasicHandle{
 			DecodeOptions: codec.DecodeOptions{
@@ -67,12 +67,12 @@ func NewJSONHandle(cipher encryption.Cipher) (*codec.JsonHandle, error) {
 		},
 	}
 
-	err := h.SetInterfaceExt(reflect.TypeOf(api.SecureBytes{}), 1, secureBytesExt{cipher: cipher})
+	err := h.SetInterfaceExt(reflect.TypeOf(api.SecureBytes{}), 1, secureBytesExt{aead: aead})
 	if err != nil {
 		return nil, err
 	}
 
-	err = h.SetInterfaceExt(reflect.TypeOf((*api.SecureString)(nil)), 1, secureStringExt{cipher: cipher})
+	err = h.SetInterfaceExt(reflect.TypeOf((*api.SecureString)(nil)), 1, secureStringExt{aead: aead})
 	if err != nil {
 		return nil, err
 	}

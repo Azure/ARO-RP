@@ -191,9 +191,9 @@ func TestListOpenShiftCluster(t *testing.T) {
 						ti.openShiftClustersClient.SetError(tt.dbError)
 					}
 
-					cipher := testdatabase.NewFakeCipher()
+					aead := testdatabase.NewFakeAEAD()
 
-					f, err := NewFrontend(ctx, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, api.APIs, &noop.Noop{}, cipher, nil)
+					f, err := NewFrontend(ctx, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, api.APIs, &noop.Noop{}, aead, nil)
 					if err != nil {
 						t.Fatal(err)
 					}
