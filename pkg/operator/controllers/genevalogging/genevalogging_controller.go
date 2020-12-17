@@ -19,7 +19,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
+	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
@@ -28,12 +28,12 @@ import (
 type GenevaloggingReconciler struct {
 	kubernetescli kubernetes.Interface
 	securitycli   securityclient.Interface
-	arocli        aroclient.AroV1alpha1Interface
+	arocli        aroclient.Interface
 	restConfig    *rest.Config
 	log           *logrus.Entry
 }
 
-func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, securitycli securityclient.Interface, arocli aroclient.AroV1alpha1Interface, restConfig *rest.Config) *GenevaloggingReconciler {
+func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, securitycli securityclient.Interface, arocli aroclient.Interface, restConfig *rest.Config) *GenevaloggingReconciler {
 	return &GenevaloggingReconciler{
 		securitycli:   securitycli,
 		kubernetescli: kubernetescli,
@@ -51,7 +51,7 @@ func (r *GenevaloggingReconciler) Reconcile(request ctrl.Request) (ctrl.Result, 
 		return reconcile.Result{}, nil
 	}
 
-	instance, err := r.arocli.Clusters().Get(ctx, request.Name, metav1.GetOptions{})
+	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, request.Name, metav1.GetOptions{})
 	if err != nil {
 		return reconcile.Result{}, err
 	}

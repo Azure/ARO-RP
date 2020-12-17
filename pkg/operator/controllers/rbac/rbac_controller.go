@@ -15,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
+	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 )
@@ -23,11 +23,11 @@ import (
 type RBACReconciler struct {
 	log *logrus.Entry
 
-	arocli aroclient.AroV1alpha1Interface
+	arocli aroclient.Interface
 	dh     dynamichelper.Interface
 }
 
-func NewReconciler(log *logrus.Entry, arocli aroclient.AroV1alpha1Interface, dh dynamichelper.Interface) *RBACReconciler {
+func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, dh dynamichelper.Interface) *RBACReconciler {
 	return &RBACReconciler{
 		log:    log,
 		arocli: arocli,
@@ -42,7 +42,7 @@ func (r *RBACReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 		return reconcile.Result{}, nil
 	}
 
-	instance, err := r.arocli.Clusters().Get(ctx, request.Name, metav1.GetOptions{})
+	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, request.Name, metav1.GetOptions{})
 	if err != nil {
 		r.log.Error(err)
 		return reconcile.Result{}, err

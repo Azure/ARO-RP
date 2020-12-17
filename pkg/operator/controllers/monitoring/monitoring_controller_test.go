@@ -14,9 +14,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 	ctrl "sigs.k8s.io/controller-runtime"
+
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	arofake "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/fake"
 )
 
 var cmMetadata = metav1.ObjectMeta{Name: "cluster-monitoring-config", Namespace: "openshift-monitoring"}
+var custerMetadata = metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName}
 
 func TestReconcileMonitoringConfig(t *testing.T) {
 	log := logrus.NewEntry(logrus.StandardLogger())
@@ -28,9 +32,17 @@ func TestReconcileMonitoringConfig(t *testing.T) {
 
 	for _, tt := range []*test{
 		{
-			name: "ConfigMap does not exist",
+			name: "ConfigMap does not exist - enable",
 			setConfigMap: func() *Reconciler {
 				return &Reconciler{
+					arocli: arofake.NewSimpleClientset(&arov1alpha1.Cluster{
+						ObjectMeta: custerMetadata,
+						Spec: arov1alpha1.ClusterSpec{
+							Features: arov1alpha1.FeaturesSpec{
+								PersistentPrometheus: true,
+							},
+						},
+					}),
 					kubernetescli: fake.NewSimpleClientset(&v1.ConfigMap{}),
 					log:           log,
 					jsonHandle:    new(codec.JsonHandle),
@@ -50,6 +62,14 @@ prometheusK8s:
 			name: "ConfigMap does not have data",
 			setConfigMap: func() *Reconciler {
 				return &Reconciler{
+					arocli: arofake.NewSimpleClientset(&arov1alpha1.Cluster{
+						ObjectMeta: custerMetadata,
+						Spec: arov1alpha1.ClusterSpec{
+							Features: arov1alpha1.FeaturesSpec{
+								PersistentPrometheus: true,
+							},
+						},
+					}),
 					kubernetescli: fake.NewSimpleClientset(&v1.ConfigMap{
 						ObjectMeta: cmMetadata,
 					}),
@@ -71,6 +91,14 @@ prometheusK8s:
 			name: "empty config.yaml",
 			setConfigMap: func() *Reconciler {
 				return &Reconciler{
+					arocli: arofake.NewSimpleClientset(&arov1alpha1.Cluster{
+						ObjectMeta: custerMetadata,
+						Spec: arov1alpha1.ClusterSpec{
+							Features: arov1alpha1.FeaturesSpec{
+								PersistentPrometheus: true,
+							},
+						},
+					}),
 					kubernetescli: fake.NewSimpleClientset(&v1.ConfigMap{
 						ObjectMeta: cmMetadata,
 						Data: map[string]string{
@@ -95,6 +123,14 @@ prometheusK8s:
 			name: "settings restored to default and extra fields are preserved",
 			setConfigMap: func() *Reconciler {
 				return &Reconciler{
+					arocli: arofake.NewSimpleClientset(&arov1alpha1.Cluster{
+						ObjectMeta: custerMetadata,
+						Spec: arov1alpha1.ClusterSpec{
+							Features: arov1alpha1.FeaturesSpec{
+								PersistentPrometheus: true,
+							},
+						},
+					}),
 					kubernetescli: fake.NewSimpleClientset(&v1.ConfigMap{
 						ObjectMeta: cmMetadata,
 						Data: map[string]string{
@@ -131,6 +167,14 @@ prometheusK8s:
 			name: "other monitoring components are configured",
 			setConfigMap: func() *Reconciler {
 				return &Reconciler{
+					arocli: arofake.NewSimpleClientset(&arov1alpha1.Cluster{
+						ObjectMeta: custerMetadata,
+						Spec: arov1alpha1.ClusterSpec{
+							Features: arov1alpha1.FeaturesSpec{
+								PersistentPrometheus: true,
+							},
+						},
+					}),
 					kubernetescli: fake.NewSimpleClientset(&v1.ConfigMap{
 						ObjectMeta: cmMetadata,
 						Data: map[string]string{
@@ -156,6 +200,45 @@ prometheusK8s:
       resources:
         requests:
           storage: 100Gi
+`,
+		},
+		{
+			name: "enabled and we want to disable",
+			setConfigMap: func() *Reconciler {
+				return &Reconciler{
+					arocli: arofake.NewSimpleClientset(&arov1alpha1.Cluster{
+						ObjectMeta: custerMetadata,
+						Spec: arov1alpha1.ClusterSpec{
+							Features: arov1alpha1.FeaturesSpec{
+								PersistentPrometheus: false,
+							},
+						},
+					}),
+					kubernetescli: fake.NewSimpleClientset(&v1.ConfigMap{
+						ObjectMeta: cmMetadata,
+						Data: map[string]string{
+							"config.yaml": `
+alertmanagerMain:
+  nodeSelector:
+    foo: bar
+prometheusK8s:
+    retention: 15d
+    volumeClaimTemplate:
+      spec:
+        resources:
+          requests:
+            storage: 100Gi
+`,
+						},
+					}),
+					log:        log,
+					jsonHandle: new(codec.JsonHandle),
+				}
+			},
+			wantConfig: `
+alertmanagerMain:
+  nodeSelector:
+    foo: bar
 `,
 		},
 	} {

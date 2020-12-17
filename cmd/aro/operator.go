@@ -19,7 +19,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
+	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/alertwebhook"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/checker"
@@ -98,7 +98,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (pullsecret.NewReconciler(
 			log.WithField("controller", controllers.PullSecretControllerName),
-			kubernetescli, arocli)).SetupWithManager(mgr); err != nil {
+			kubernetescli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller PullSecret: %v", err)
 		}
 		if err = (alertwebhook.NewReconciler(
@@ -118,7 +118,7 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		}
 		if err = (monitoring.NewReconciler(
 			log.WithField("controller", controllers.MonitoringControllerName),
-			kubernetescli)).SetupWithManager(mgr); err != nil {
+			kubernetescli, arocli)).SetupWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to create controller Monitoring: %v", err)
 		}
 		if err = (rbac.NewReconciler(

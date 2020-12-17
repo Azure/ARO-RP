@@ -172,6 +172,9 @@ func (o *operator) resources() ([]runtime.Object, error) {
 						monitoringEndpoint,
 					},
 				},
+				Features: arov1alpha1.FeaturesSpec{
+					PersistentPrometheus: true,
+				},
 			},
 		},
 	), nil

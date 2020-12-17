@@ -39,6 +39,13 @@ type ClusterSpec struct {
 	Location        string              `json:"location,omitempty"`
 	GenevaLogging   GenevaLoggingSpec   `json:"genevaLogging,omitempty"`
 	InternetChecker InternetCheckerSpec `json:"internetChecker,omitempty"`
+
+	Features FeaturesSpec `json:"features,omitempty"`
+}
+
+// FeaturesSpec defines ARO operator feature gates
+type FeaturesSpec struct {
+	PersistentPrometheus bool `json:"persistentPrometheus,omitempty"`
 }
 
 // ClusterStatus defines the observed state of Cluster
