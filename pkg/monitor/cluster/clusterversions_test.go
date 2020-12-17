@@ -43,6 +43,7 @@ func TestEmitClusterVersion(t *testing.T) {
 		wantDesiredVersion                       string
 		wantProvisionedByResourceProviderVersion string
 		wantAvailableVersion                     string
+		wantAvailableRP                          string
 	}{
 		{
 			name: "without spec",
@@ -77,6 +78,7 @@ func TestEmitClusterVersion(t *testing.T) {
 			wantDesiredVersion:                       "4.3.3",
 			wantProvisionedByResourceProviderVersion: "",
 			wantAvailableVersion:                     "4.3.40",
+			wantAvailableRP:                          "unknown",
 		},
 		{
 			name: "with spec",
@@ -100,6 +102,7 @@ func TestEmitClusterVersion(t *testing.T) {
 			},
 			wantDesiredVersion:                       "4.3.4",
 			wantProvisionedByResourceProviderVersion: "",
+			wantAvailableRP:                          "unknown",
 		},
 		{
 			name: "with ProvisionedBy",
@@ -114,6 +117,22 @@ func TestEmitClusterVersion(t *testing.T) {
 				},
 			},
 			wantProvisionedByResourceProviderVersion: "somesha",
+			wantAvailableRP:                          "unknown", // (rpVersion = unkwnown) != (provisionedByResourceProvider = "")
+		},
+		{
+			name: "with ProvisionedBy",
+			cv: &configv1.ClusterVersion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "version",
+				},
+			},
+			oc: &api.OpenShiftCluster{
+				Properties: api.OpenShiftClusterProperties{
+					ProvisionedBy: "unknown",
+				},
+			},
+			wantProvisionedByResourceProviderVersion: "unknown",
+			wantAvailableRP:                          "",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -138,6 +157,7 @@ func TestEmitClusterVersion(t *testing.T) {
 				"operatorVersion":                      "test",
 				"resourceProviderVersion":              "unknown",
 				"availableVersion":                     tt.wantAvailableVersion,
+				"availableRP":                          tt.wantAvailableRP,
 			})
 
 			err := mon.emitClusterVersions(ctx)
