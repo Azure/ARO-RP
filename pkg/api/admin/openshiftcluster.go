@@ -28,7 +28,7 @@ type OpenShiftCluster struct {
 
 // OpenShiftClusterProperties represents an OpenShift cluster's properties.
 type OpenShiftClusterProperties struct {
-	ArchitectureVersion     ArchitectureVersion     `json:"architectureVersion,omitempty"`
+	ArchitectureVersion     ArchitectureVersion     `json:"architectureVersion"` // ArchitectureVersion is int so 0 is valid value to be returned
 	ProvisioningState       ProvisioningState       `json:"provisioningState,omitempty"`
 	LastProvisioningState   ProvisioningState       `json:"lastProvisioningState,omitempty"`
 	FailedProvisioningState ProvisioningState       `json:"failedProvisioningState,omitempty"`
