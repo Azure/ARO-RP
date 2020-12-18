@@ -20,7 +20,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
 	aro "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
+	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
@@ -33,13 +33,13 @@ const (
 // MachineChecker reconciles the alertmanager webhook
 type MachineChecker struct {
 	clustercli     maoclient.Interface
-	arocli         aroclient.AroV1alpha1Interface
+	arocli         aroclient.Interface
 	log            *logrus.Entry
 	deploymentMode deployment.Mode
 	role           string
 }
 
-func NewMachineChecker(log *logrus.Entry, clustercli maoclient.Interface, arocli aroclient.AroV1alpha1Interface, role string, deploymentMode deployment.Mode) *MachineChecker {
+func NewMachineChecker(log *logrus.Entry, clustercli maoclient.Interface, arocli aroclient.Interface, role string, deploymentMode deployment.Mode) *MachineChecker {
 	return &MachineChecker{
 		clustercli:     clustercli,
 		arocli:         arocli,

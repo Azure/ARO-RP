@@ -40,6 +40,12 @@ spec:
               type: string
             acrName:
               type: string
+            features:
+              description: FeaturesSpec defines ARO operator feature gates
+              properties:
+                persistentPrometheus:
+                  type: boolean
+              type: object
             genevaLogging:
               properties:
                 configVersion:

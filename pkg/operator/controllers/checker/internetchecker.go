@@ -17,18 +17,18 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
+	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 )
 
 // InternetChecker reconciles a Cluster object
 type InternetChecker struct {
-	arocli aroclient.AroV1alpha1Interface
+	arocli aroclient.Interface
 	log    *logrus.Entry
 	role   string
 }
 
-func NewInternetChecker(log *logrus.Entry, arocli aroclient.AroV1alpha1Interface, role string) *InternetChecker {
+func NewInternetChecker(log *logrus.Entry, arocli aroclient.Interface, role string) *InternetChecker {
 	return &InternetChecker{
 		arocli: arocli,
 		log:    log,
@@ -70,7 +70,7 @@ func (r *InternetChecker) Check(ctx context.Context) error {
 		},
 	}
 
-	instance, err := r.arocli.Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	instance, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}

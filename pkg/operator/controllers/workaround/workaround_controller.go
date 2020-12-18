@@ -19,7 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
+	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
 	"github.com/Azure/ARO-RP/pkg/util/version"
@@ -30,13 +30,13 @@ import (
 type WorkaroundReconciler struct {
 	kubernetescli kubernetes.Interface
 	configcli     configclient.Interface
-	arocli        aroclient.AroV1alpha1Interface
+	arocli        aroclient.Interface
 	restConfig    *rest.Config
 	workarounds   []Workaround
 	log           *logrus.Entry
 }
 
-func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, configcli configclient.Interface, mcocli mcoclient.Interface, arocli aroclient.AroV1alpha1Interface, restConfig *rest.Config) *WorkaroundReconciler {
+func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, configcli configclient.Interface, mcocli mcoclient.Interface, arocli aroclient.Interface, restConfig *rest.Config) *WorkaroundReconciler {
 	dh, err := dynamichelper.New(log, restConfig)
 	if err != nil {
 		panic(err)

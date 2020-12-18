@@ -25,6 +25,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 )
 
@@ -64,13 +65,15 @@ var defaultConfig = `prometheusK8s:
 `
 
 type Reconciler struct {
+	arocli        aroclient.Interface
 	kubernetescli kubernetes.Interface
 	log           *logrus.Entry
 	jsonHandle    *codec.JsonHandle
 }
 
-func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface) *Reconciler {
+func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, arocli aroclient.Interface) *Reconciler {
 	return &Reconciler{
+		arocli:        arocli,
 		kubernetescli: kubernetescli,
 		log:           log,
 		jsonHandle:    new(codec.JsonHandle),
@@ -83,6 +86,12 @@ func (r *Reconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 	if request.NamespacedName != monitoringName &&
 		request.Name != arov1alpha1.SingletonClusterName {
 		return reconcile.Result{}, nil
+	}
+
+	// check feature gates and if set to false remove any persistence
+	cluster, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	if err != nil {
+		return reconcile.Result{}, err
 	}
 
 	return reconcile.Result{}, retry.RetryOnConflict(retry.DefaultRetry, func() error {
@@ -106,14 +115,28 @@ func (r *Reconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 		}
 
 		changed := false
-		if configData.PrometheusK8s.Retention != "15d" {
-			configData.PrometheusK8s.Retention = "15d"
-			changed = true
-		}
-
-		if configData.PrometheusK8s.VolumeClaimTemplate.Spec.Resources.Requests.Storage != "100Gi" {
-			configData.PrometheusK8s.VolumeClaimTemplate.Spec.Resources.Requests.Storage = "100Gi"
-			changed = true
+		switch cluster.Spec.Features.PersistentPrometheus {
+		case true:
+			// we are enabling persistence
+			if configData.PrometheusK8s.Retention != "15d" {
+				configData.PrometheusK8s.Retention = "15d"
+				changed = true
+			}
+			if configData.PrometheusK8s.VolumeClaimTemplate.Spec.Resources.Requests.Storage != "100Gi" {
+				configData.PrometheusK8s.VolumeClaimTemplate.Spec.Resources.Requests.Storage = "100Gi"
+				changed = true
+			}
+			// we are disabling persistence. We use omitempty on the struct to
+			// clean the fields
+		case false:
+			if configData.PrometheusK8s.Retention != "" {
+				configData.PrometheusK8s.Retention = ""
+				changed = true
+			}
+			if configData.PrometheusK8s.VolumeClaimTemplate.Spec.Resources.Requests.Storage != "" {
+				configData.PrometheusK8s.VolumeClaimTemplate.Spec.Resources.Requests.Storage = ""
+				changed = true
+			}
 		}
 
 		if !isCreate && !changed {
@@ -133,10 +156,10 @@ func (r *Reconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
 		cm.Data["config.yaml"] = string(cmYaml)
 
 		if isCreate {
-			r.log.Info("re-creating monitoring configmap")
+			r.log.Infof("re-creating monitoring configmap. featureFlag %t", cluster.Spec.Features.PersistentPrometheus)
 			_, err = r.kubernetescli.CoreV1().ConfigMaps(monitoringName.Namespace).Create(ctx, cm, metav1.CreateOptions{})
 		} else {
-			r.log.Info("updating monitoring configmap")
+			r.log.Infof("updating monitoring configmap. featureFlag %t", cluster.Spec.Features.PersistentPrometheus)
 			_, err = r.kubernetescli.CoreV1().ConfigMaps(monitoringName.Namespace).Update(ctx, cm, metav1.UpdateOptions{})
 		}
 		return err

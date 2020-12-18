@@ -24,7 +24,6 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
@@ -34,15 +33,13 @@ var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "opens
 // PullSecretReconciler reconciles a Cluster object
 type PullSecretReconciler struct {
 	kubernetescli kubernetes.Interface
-	arocli        aroclient.AroV1alpha1Interface
 	log           *logrus.Entry
 }
 
-func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, arocli aroclient.AroV1alpha1Interface) *PullSecretReconciler {
+func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface) *PullSecretReconciler {
 	return &PullSecretReconciler{
 		log:           log,
 		kubernetescli: kubernetescli,
-		arocli:        arocli,
 	}
 }
 
