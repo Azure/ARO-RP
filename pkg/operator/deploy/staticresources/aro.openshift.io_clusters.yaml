@@ -38,8 +38,6 @@ spec:
           properties:
             acrDomain:
               type: string
-            acrName:
-              type: string
             azEnvironment:
               type: string
             features:
