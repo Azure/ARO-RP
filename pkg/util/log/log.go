@@ -82,6 +82,9 @@ func EnrichWithPath(log *logrus.Entry, path string) *logrus.Entry {
 	if m[2] != "" {
 		fields["resource_group"] = m[2]
 	}
+	if m[3] != "" {
+		fields["resource_kind"] = m[3]
+	}
 	if m[5] != "" {
 		fields["resource_name"] = m[5]
 		fields["resource_id"] = "/subscriptions/" + m[1] + "/resourcegroups/" + m[2] + "/providers/" + m[3] + "/" + m[4] + "/" + m[5]

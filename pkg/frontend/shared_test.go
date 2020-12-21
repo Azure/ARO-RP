@@ -16,6 +16,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/go-test/deep"
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
@@ -88,6 +89,8 @@ func newTestInfra(t *testing.T) *testInfra {
 
 	_env := mock_env.NewMockInterface(controller)
 	_env.EXPECT().DeploymentMode().AnyTimes().Return(deployment.Production)
+	_env.EXPECT().Environment().AnyTimes().Return(&azure.PublicCloud)
+	_env.EXPECT().Hostname().AnyTimes().Return("testhost")
 	_env.EXPECT().Location().AnyTimes().Return("eastus")
 	_env.EXPECT().ServiceKeyvault().AnyTimes().Return(keyvault)
 	_env.EXPECT().ArmClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(clientcerts[0].Raw))

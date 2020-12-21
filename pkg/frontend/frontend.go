@@ -262,6 +262,7 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 func (f *frontend) setupRouter() *mux.Router {
 	r := mux.NewRouter()
 	r.Use(middleware.Log(f.baseLog.WithField("component", "access")))
+	r.Use(middleware.Audit(f.env, f.baseLog))
 	r.Use(middleware.Metrics(f.m))
 	r.Use(middleware.Panic)
 	r.Use(middleware.Headers(f.env.DeploymentMode()))

@@ -10,6 +10,8 @@ import (
 	"github.com/onsi/gomega/types"
 	"github.com/sirupsen/logrus"
 	"github.com/sirupsen/logrus/hooks/test"
+
+	"github.com/Azure/ARO-RP/pkg/util/log/audit"
 )
 
 // New creates a logging hook and entry suitable for passing to functions and
@@ -23,20 +25,32 @@ func New() (*test.Hook, *logrus.Entry) {
 // AssertLoggingOutput compares the logs on `h` with the expected entries in
 // `expected`. It returns a slice of errors encountered, with a zero length if
 // no assertions failed.
+// This function skips audit log entries  in `h` to avoid test flakiness. Use
+// audit.AssertAuditingOutput() to verify audit entries.
 func AssertLoggingOutput(h *test.Hook, expected []map[string]types.GomegaMatcher) error {
-	var problems []string
+	var (
+		problems []string
+		entries  []*logrus.Entry
+	)
 
-	if len(h.Entries) != len(expected) {
-		problems = append(problems, fmt.Sprintf("got %d logs, expected %d", len(h.Entries), len(expected)))
+	// skip audit entries to avoid test flakiness
+	for _, e := range h.AllEntries() {
+		if v := e.Data[audit.MetadataLogKind]; v != audit.IFXAuditLogKind {
+			entries = append(entries, e)
+		}
+	}
+
+	if len(entries) != len(expected) {
+		problems = append(problems, fmt.Sprintf("got %d logs, expected %d", len(entries), len(expected)))
 	} else {
 		for i, m := range expected {
 			for k, matcher := range m {
-				v := h.Entries[i].Data[k]
+				v := entries[i].Data[k]
 				switch k {
 				case "level":
-					v = h.Entries[i].Level
+					v = entries[i].Level
 				case "msg":
-					v = h.Entries[i].Message
+					v = entries[i].Message
 				}
 				ok, err := matcher.Match(v)
 				if err != nil {
@@ -49,14 +63,14 @@ func AssertLoggingOutput(h *test.Hook, expected []map[string]types.GomegaMatcher
 	}
 
 	if len(problems) > 0 {
-		entries := make([]string, 0, len(h.Entries))
+		formatted := make([]string, 0, len(entries))
 
-		for _, entry := range h.Entries {
-			b, _ := entry.Logger.Formatter.Format(&entry)
-			entries = append(entries, string(b))
+		for _, entry := range entries {
+			b, _ := entry.Logger.Formatter.Format(entry)
+			formatted = append(formatted, string(b))
 		}
 
-		return fmt.Errorf("logging mismatch:\ngot:\n%s\nproblems:\n%s", strings.Join(entries, ""), strings.Join(problems, "\n"))
+		return fmt.Errorf("logging mismatch:\ngot:\n%s\nproblems:\n%s", strings.Join(formatted, ""), strings.Join(problems, "\n"))
 	}
 
 	return nil

@@ -19,7 +19,7 @@ type AuditPayload struct {
 	EnvSeqNum              uint64  `json:"env_seqNum,omitempty"`
 	EnvIKey                string  `json:"env_iKey,omitempty"`
 	EnvFlags               int     `json:"env_flags,omitempty"`
-	EnvAppId               string  `json:"env_appId"`
+	EnvAppID               string  `json:"env_appId"`
 	EnvAppVer              string  `json:"env_appVer,omitempty"`
 	EnvCV                  string  `json:"env_cv,omitempty"`
 	EnvCloudName           string  `json:"env_cloud_name"`
@@ -32,37 +32,28 @@ type AuditPayload struct {
 	EnvCloudVer            float64 `json:"env_cloud_ver"`
 
 	// Part-B
-	CallerIdentities []*CallerIdentity `json:"CallerIdentities"`
-	Category         Category          `json:"Category"`
-	OperationName    string            `json:"OperationName"`
-	Result           *Result           `json:"Result"`
-	RequestID        string            `json:"requestId"`
-	TargetResources  []*TargetResource `json:"TargetResources"`
+	CallerIdentities []CallerIdentity `json:"CallerIdentities"`
+	Category         string           `json:"Category"`
+	OperationName    string           `json:"OperationName"`
+	Result           Result           `json:"Result"`
+	RequestID        string           `json:"requestId"`
+	TargetResources  []TargetResource `json:"TargetResources"`
 }
 
 // CallerIdentity has identity information on the entity that invoke the
 // operation described in the audit log.
 type CallerIdentity struct {
-	CallerDisplayName   string             `json:"CallerDisplayName,omitempty"`
-	CallerIdentityType  CallerIdentityType `json:"CallerIdentityType"`
-	CallerIdentityValue string             `json:"CallerIdentityValue"`
-	CallerIPAddress     string             `json:"CallerIpAddress,omitempty"`
+	CallerDisplayName   string `json:"CallerDisplayName,omitempty"`
+	CallerIdentityType  string `json:"CallerIdentityType"`
+	CallerIdentityValue string `json:"CallerIdentityValue"`
+	CallerIPAddress     string `json:"CallerIpAddress,omitempty"`
 }
-
-// CallerIdentityType represents the type of identity used in an auditable event.
-type CallerIdentityType string
-
-// Category provides information for the category of the operation.
-type Category string
 
 // Result provides information on the result of the operation.
 type Result struct {
 	ResultType        string `json:"ResultType"`
 	ResultDescription string `json:"ResultDescription,omitempty"`
 }
-
-// ResultType indicates the outcome of the operation.
-type ResultType string
 
 // TargetResource has identity information on the entity affected by the
 // operation described in the audit log.
@@ -103,4 +94,5 @@ const (
 	ResultTypeFail        = "Fail"
 	ResultTypeTimeout     = "Timeout"
 	ResultTypeClientError = "Client Error"
+	ResultTypeUnknown     = "Unknown"
 )

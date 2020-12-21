@@ -23,6 +23,7 @@ func TestEnrichWithPath(t *testing.T) {
 			wantData: logrus.Fields{
 				"subscription_id": "subscriptionid",
 				"resource_group":  "resourcegroup",
+				"resource_kind":   "microsoft.redhatopenshift",
 				"resource_name":   "resourcename",
 				"resource_id":     "/subscriptions/subscriptionid/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/resourcename",
 			},
@@ -33,6 +34,7 @@ func TestEnrichWithPath(t *testing.T) {
 			wantData: logrus.Fields{
 				"subscription_id": "subscriptionid",
 				"resource_group":  "resourcegroup",
+				"resource_kind":   "microsoft.redhatopenshift",
 				"resource_name":   "resourcename",
 				"resource_id":     "/subscriptions/subscriptionid/resourcegroups/resourcegroup/providers/microsoft.redhatopenshift/openshiftclusters/resourcename",
 			},
@@ -43,6 +45,7 @@ func TestEnrichWithPath(t *testing.T) {
 			wantData: logrus.Fields{
 				"subscription_id": "subscriptionid",
 				"resource_group":  "resourcegroup",
+				"resource_kind":   "microsoft.redhatopenshift",
 			},
 		},
 		{

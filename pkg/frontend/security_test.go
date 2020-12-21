@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 
@@ -55,6 +56,9 @@ func TestSecurity(t *testing.T) {
 
 	_env := mock_env.NewMockInterface(controller)
 	_env.EXPECT().DeploymentMode().AnyTimes().Return(deployment.Production)
+	_env.EXPECT().Environment().AnyTimes().Return(&azure.PublicCloud)
+	_env.EXPECT().Hostname().AnyTimes().Return("testhost")
+	_env.EXPECT().Location().AnyTimes().Return("eastus")
 	_env.EXPECT().ServiceKeyvault().AnyTimes().Return(keyvault)
 	_env.EXPECT().ArmClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(validclientcerts[0].Raw))
 	_env.EXPECT().AdminClientAuthorizer().AnyTimes().Return(clientauthorizer.NewOne(validadminclientcerts[0].Raw))
