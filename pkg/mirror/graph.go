@@ -74,7 +74,7 @@ loop:
 			continue
 		}
 
-		node.Payload = strings.Replace(node.Payload, "registry.svc.ci.openshift.org/ocp/release", "quay.io/openshift-release-dev/ocp-release", 1)
+		node.Payload = strings.Replace(node.Payload, "registry.ci.openshift.org/ocp/release", "quay.io/openshift-release-dev/ocp-release", 1)
 
 		releases = append(releases, node)
 	}
