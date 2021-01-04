@@ -13,7 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/Azure/go-autorest/autorest/azure/auth"
-	projectv1client "github.com/openshift/client-go/project/clientset/versioned/typed/project/v1"
+	projectclient "github.com/openshift/client-go/project/clientset/versioned"
 	machineapiclient "github.com/openshift/machine-api-operator/pkg/generated/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	"k8s.io/client-go/kubernetes"
@@ -23,7 +23,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd/api/latest"
 
 	"github.com/Azure/ARO-RP/pkg/env"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
+	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/compute"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/insights"
@@ -49,8 +49,8 @@ type clientSet struct {
 	RestConfig  *rest.Config
 	Kubernetes  kubernetes.Interface
 	MachineAPI  machineapiclient.Interface
-	AROClusters aroclient.AroV1alpha1Interface
-	Project     projectv1client.ProjectV1Interface
+	AROClusters aroclient.Interface
+	Project     projectclient.Interface
 }
 
 var (
@@ -106,7 +106,7 @@ func newClientSet(ctx context.Context) (*clientSet, error) {
 		return nil, err
 	}
 
-	projectcli, err := projectv1client.NewForConfig(restconfig)
+	projectcli, err := projectclient.NewForConfig(restconfig)
 	if err != nil {
 		return nil, err
 	}

@@ -28,7 +28,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/env"
 	pkgoperator "github.com/Azure/ARO-RP/pkg/operator"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
+	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers/genevalogging"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/dynamichelper"
@@ -53,10 +53,10 @@ type operator struct {
 	dh            dynamichelper.Interface
 	cli           kubernetes.Interface
 	extensionscli extensionsclient.Interface
-	arocli        aroclient.AroV1alpha1Interface
+	arocli        aroclient.Interface
 }
 
-func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, cli kubernetes.Interface, extensionscli extensionsclient.Interface, arocli aroclient.AroV1alpha1Interface) (Operator, error) {
+func New(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, cli kubernetes.Interface, extensionscli extensionsclient.Interface, arocli aroclient.Interface) (Operator, error) {
 	restConfig, err := restconfig.RestConfig(env, oc)
 	if err != nil {
 		return nil, err
@@ -241,7 +241,7 @@ func (o *operator) CreateOrUpdate(ctx context.Context) error {
 				// "aro.openshift.io/v1alpha1"
 				return errors.IsForbidden(err) || errors.IsConflict(err)
 			}, func() error {
-				cluster, err := o.arocli.Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+				cluster, err := o.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 				if err != nil {
 					return err
 				}
@@ -278,7 +278,7 @@ func (o *operator) IsReady(ctx context.Context) (bool, error) {
 	}
 
 	// wait for conditions to appear
-	cluster, err := o.arocli.Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	cluster, err := o.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
 	if err != nil {
 		return false, err
 	}

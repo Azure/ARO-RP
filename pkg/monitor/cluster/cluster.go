@@ -21,7 +21,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/metrics"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
+	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 )
 
 type Monitor struct {
@@ -36,7 +36,7 @@ type Monitor struct {
 	configcli  configclient.Interface
 	mcocli     mcoclient.Interface
 	m          metrics.Interface
-	arocli     aroclient.AroV1alpha1Interface
+	arocli     aroclient.Interface
 
 	// access below only via the helper functions in cache.go
 	cache struct {
