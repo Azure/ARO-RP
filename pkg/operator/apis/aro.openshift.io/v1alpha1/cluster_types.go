@@ -34,7 +34,6 @@ type InternetCheckerSpec struct {
 type ClusterSpec struct {
 	// ResourceID is the Azure resourceId of the cluster
 	ResourceID      string              `json:"resourceId,omitempty"`
-	ACRName         string              `json:"acrName,omitempty"`
 	ACRDomain       string              `json:"acrDomain,omitempty"`
 	AZEnvironment   string              `json:"azEnvironment,omitempty"`
 	Location        string              `json:"location,omitempty"`
