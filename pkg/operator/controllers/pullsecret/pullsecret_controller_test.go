@@ -242,7 +242,7 @@ func TestCheckRHRegistryKeys(t *testing.T) {
 	test := []struct {
 		name     string
 		ps       serializedAuthMap
-		wantKeys []string
+		wantKeys bool
 		wantErr  string
 	}{
 		{
@@ -250,7 +250,7 @@ func TestCheckRHRegistryKeys(t *testing.T) {
 			ps: serializedAuthMap{Auths: map[string]serializedAuth{
 				"arosvc.azurecr.io": {Auth: "ZnJlZDplbnRlcg=="},
 			}},
-			wantKeys: []string{},
+			wantKeys: false,
 		},
 		{
 			name: "with rh key",
@@ -258,7 +258,7 @@ func TestCheckRHRegistryKeys(t *testing.T) {
 				"arosvc.azurecr.io":  {Auth: "ZnJlZDplbnRlcg=="},
 				"registry.redhat.io": {Auth: "ZnJlZDplbnRlcg=="},
 			}},
-			wantKeys: []string{"registry.redhat.io"},
+			wantKeys: true,
 		},
 	}
 
@@ -269,7 +269,7 @@ func TestCheckRHRegistryKeys(t *testing.T) {
 			}
 
 			out := r.checkRHRegistryKeys(&tt.ps)
-			if !reflect.DeepEqual(out, tt.wantKeys) {
+			if out != tt.wantKeys {
 				t.Fatal("Cannot match keys")
 			}
 		})
@@ -280,14 +280,14 @@ func TestKeyCondition(t *testing.T) {
 	test := []struct {
 		name          string
 		failed        bool
-		keys          []string
+		keys          bool
 		wantCondition status.Condition
 		wantErr       string
 	}{
 		{
 			name:   "cannot parse keys",
 			failed: true,
-			keys:   []string{},
+			keys:   false,
 			wantCondition: status.Condition{
 				Type:    arov1alpha1.RedHatKeyPresent,
 				Status:  v1.ConditionFalse,
@@ -297,21 +297,21 @@ func TestKeyCondition(t *testing.T) {
 		},
 		{
 			name: "no key found",
-			keys: []string{},
+			keys: false,
 			wantCondition: status.Condition{
 				Type:    arov1alpha1.RedHatKeyPresent,
 				Status:  v1.ConditionFalse,
-				Message: "No Red Hat keys found in pull-secret",
+				Message: "No Red Hat key found in pull-secret",
 				Reason:  "CheckDone",
 			},
 		},
 		{
 			name: "keys found",
-			keys: []string{"registry.redhat.io"},
+			keys: true,
 			wantCondition: status.Condition{
 				Type:    arov1alpha1.RedHatKeyPresent,
 				Status:  v1.ConditionTrue,
-				Message: "Red Hat registry keys present in pull-secret: registry.redhat.io, ",
+				Message: "Red Hat registry key present in pull-secret",
 				Reason:  "CheckDone",
 			},
 		},
@@ -333,14 +333,14 @@ func TestSamplesCondition(t *testing.T) {
 	test := []struct {
 		name          string
 		updated       bool
-		keys          []string
+		keys          bool
 		wantCondition status.Condition
 		wantErr       string
 	}{
 		{
 			name:    "no keys found and nothing updated",
 			updated: false,
-			keys:    []string{},
+			keys:    false,
 			wantCondition: status.Condition{
 				Type:    arov1alpha1.SamplesOperatorEnabled,
 				Status:  v1.ConditionFalse,
@@ -351,7 +351,7 @@ func TestSamplesCondition(t *testing.T) {
 		{
 			name:    "no key found and operator updated",
 			updated: true,
-			keys:    []string{},
+			keys:    false,
 			wantCondition: status.Condition{
 				Type:    arov1alpha1.SamplesOperatorEnabled,
 				Status:  v1.ConditionFalse,
@@ -362,7 +362,7 @@ func TestSamplesCondition(t *testing.T) {
 		{
 			name:    "keys found and nothing updated",
 			updated: false,
-			keys:    []string{"registry.redhat.io"},
+			keys:    true,
 			wantCondition: status.Condition{
 				Type:    arov1alpha1.SamplesOperatorEnabled,
 				Status:  v1.ConditionTrue,
@@ -373,7 +373,7 @@ func TestSamplesCondition(t *testing.T) {
 		{
 			name:    "keys found and operator updated",
 			updated: true,
-			keys:    []string{"registry.redhat.io"},
+			keys:    true,
 			wantCondition: status.Condition{
 				Type:    arov1alpha1.SamplesOperatorEnabled,
 				Status:  v1.ConditionTrue,

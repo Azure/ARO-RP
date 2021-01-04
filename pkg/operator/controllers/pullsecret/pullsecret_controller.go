@@ -274,7 +274,7 @@ func (r *PullSecretReconciler) keyCondition(failed bool, foundKey bool) *status.
 	keyCondition.Reason = "CheckDone"
 
 	if !foundKey {
-		keyCondition.Message = "No Red Hat keys found in pull-secret"
+		keyCondition.Message = "No Red Hat key found in pull-secret"
 		return keyCondition
 	}
 
