@@ -226,7 +226,7 @@ func TestParseRegistryKeys(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &PullSecretReconciler{}
 
-			out, err := r.parseRHRegistryKeys(tt.ps)
+			out, err := r.unmarshalSecretData(tt.ps)
 			if err != nil {
 				if err.Error() != tt.wantErr {
 					t.Fatal(err.Error())
