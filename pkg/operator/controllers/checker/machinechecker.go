@@ -19,7 +19,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/api/validate"
-	aro "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
@@ -149,7 +149,7 @@ func (r *MachineChecker) Name() string {
 // Reconcile makes sure that the Machines are in a supportable state
 func (r *MachineChecker) Check(ctx context.Context) error {
 	cond := &status.Condition{
-		Type:    aro.MachineValid,
+		Type:    arov1alpha1.MachineValid,
 		Status:  corev1.ConditionTrue,
 		Message: "all machines valid",
 		Reason:  "CheckDone",

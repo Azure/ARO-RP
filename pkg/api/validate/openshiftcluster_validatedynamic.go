@@ -23,7 +23,7 @@ import (
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
-	arooperatorapi "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
+	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	"github.com/Azure/ARO-RP/pkg/util/aad"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
@@ -59,7 +59,7 @@ func NewOpenShiftClusterFullDynamicValidator(log *logrus.Entry, env env.Interfac
 }
 
 // NewOpenShiftClusterSlimDynamicValidator creates a new OpenShiftClusterSlimDynamicValidator
-func NewOpenShiftClusterSlimDynamicValidator(log *logrus.Entry, clientID string, clientSecret api.SecureString, subscriptionID string, tenantID string, clusterSpec *arooperatorapi.ClusterSpec) OpenShiftClusterSlimDynamicValidator {
+func NewOpenShiftClusterSlimDynamicValidator(log *logrus.Entry, clientID string, clientSecret api.SecureString, subscriptionID string, tenantID string, clusterSpec *arov1alpha1.ClusterSpec) OpenShiftClusterSlimDynamicValidator {
 	spp := &api.ServicePrincipalProfile{
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
@@ -92,7 +92,7 @@ type openShiftClusterSlimDynamicValidator struct {
 	log *logrus.Entry
 
 	spp             *api.ServicePrincipalProfile
-	clusterSpec     *arooperatorapi.ClusterSpec
+	clusterSpec     *arov1alpha1.ClusterSpec
 	tenantID        string
 	subscriptionID  string
 	environmentName string
