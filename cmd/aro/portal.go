@@ -69,10 +69,7 @@ func portal(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	m, err := statsd.New(ctx, log.WithField("component", "portal"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"))
-	if err != nil {
-		return err
-	}
+	m := statsd.New(ctx, log.WithField("component", "portal"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"))
 
 	// TODO: should not be using the service keyvault here
 	serviceKeyvaultURI, err := keyvault.URI(_env, generator.ServiceKeyvaultSuffix)

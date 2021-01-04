@@ -45,10 +45,7 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		}
 	}
 
-	m, err := statsd.New(ctx, log.WithField("component", "metrics"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"))
-	if err != nil {
-		return err
-	}
+	m := statsd.New(ctx, log.WithField("component", "metrics"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"))
 
 	tracing.Register(azure.New(m))
 	metrics.Register(metrics.RegisterOpts{
@@ -56,10 +53,7 @@ func monitor(ctx context.Context, log *logrus.Entry) error {
 		RequestLatency: k8s.NewLatency(m),
 	})
 
-	clusterm, err := statsd.New(ctx, log.WithField("component", "metrics"), _env, os.Getenv("CLUSTER_MDM_ACCOUNT"), os.Getenv("CLUSTER_MDM_NAMESPACE"))
-	if err != nil {
-		return err
-	}
+	clusterm := statsd.New(ctx, log.WithField("component", "metrics"), _env, os.Getenv("CLUSTER_MDM_ACCOUNT"), os.Getenv("CLUSTER_MDM_NAMESPACE"))
 
 	rpKVAuthorizer, err := _env.NewRPAuthorizer(_env.Environment().ResourceIdentifiers.KeyVault)
 	if err != nil {
