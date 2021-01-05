@@ -57,8 +57,12 @@ github.com/Azure/go-autorest/logger
 # github.com/Azure/go-autorest/tracing v0.6.0
 ## explicit
 github.com/Azure/go-autorest/tracing
+# github.com/Azure/go-ntlmssp v0.0.0-20191115210519-2b2be6cc8ed4
+## explicit
 # github.com/BurntSushi/toml v0.3.1
 github.com/BurntSushi/toml
+# github.com/ChrisTrenkamp/goxpath v0.0.0-20190607011252-c5096ec8773d
+## explicit
 # github.com/Djarvur/go-err113 v0.0.0-20200511133814-5174e21577d5
 github.com/Djarvur/go-err113
 # github.com/Masterminds/semver v1.5.0
@@ -66,6 +70,8 @@ github.com/Masterminds/semver
 # github.com/Microsoft/go-winio v0.4.15
 github.com/Microsoft/go-winio
 github.com/Microsoft/go-winio/pkg/guid
+# github.com/Netflix/go-expect v0.0.0-20190729225929-0e00d9168667
+## explicit
 # github.com/OpenPeeDeeP/depguard v1.0.1
 github.com/OpenPeeDeeP/depguard
 # github.com/PuerkitoBio/purell v1.1.1
@@ -82,10 +88,14 @@ github.com/ajeddeloh/go-json
 # github.com/alvaroloes/enumer v1.1.2
 ## explicit
 github.com/alvaroloes/enumer
+# github.com/antchfx/xpath v1.1.2
+## explicit
 # github.com/apparentlymart/go-cidr v1.1.0
 ## explicit
 github.com/apparentlymart/go-cidr/cidr
-# github.com/aws/aws-sdk-go v1.36.0
+# github.com/awalterschulze/gographviz v0.0.0-20190522210029-fa59802746ab
+## explicit
+# github.com/aws/aws-sdk-go v1.35.29
 ## explicit
 github.com/aws/aws-sdk-go/aws
 github.com/aws/aws-sdk-go/aws/arn
@@ -141,6 +151,10 @@ github.com/axw/gocov/gocovutil
 github.com/beorn7/perks/quantile
 # github.com/bombsimon/wsl/v3 v3.1.0
 github.com/bombsimon/wsl/v3
+# github.com/btubbs/datetime v0.1.1
+## explicit
+# github.com/c4milo/gotoolkit v0.0.0-20190525173301-67483a18c17a
+## explicit
 # github.com/cespare/xxhash/v2 v2.1.1
 github.com/cespare/xxhash/v2
 # github.com/codahale/etm v0.0.0-20141003032925-c00c9e6fb4c9
@@ -208,6 +222,7 @@ github.com/coreos/go-oidc
 # github.com/coreos/go-semver v0.3.0
 github.com/coreos/go-semver/semver
 # github.com/coreos/go-systemd v0.0.0 => github.com/coreos/go-systemd/v22 v22.0.0
+## explicit
 github.com/coreos/go-systemd/unit
 # github.com/coreos/go-systemd/v22 v22.1.0
 ## explicit
@@ -229,6 +244,8 @@ github.com/denis-tingajkin/go-header
 # github.com/dimchansky/utfbom v1.1.1
 ## explicit
 github.com/dimchansky/utfbom
+# github.com/dmacvicar/terraform-provider-libvirt v0.6.2
+## explicit
 # github.com/docker/distribution v2.7.1+incompatible
 github.com/docker/distribution
 github.com/docker/distribution/digestset
@@ -267,6 +284,8 @@ github.com/fatih/color
 # github.com/form3tech-oss/jwt-go v3.2.2+incompatible
 ## explicit
 github.com/form3tech-oss/jwt-go
+# github.com/frankban/quicktest v1.7.2
+## explicit
 # github.com/fsnotify/fsnotify v1.4.9
 github.com/fsnotify/fsnotify
 # github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
@@ -426,6 +445,8 @@ github.com/google/go-cmp/cmp/internal/value
 ## explicit
 github.com/google/gofuzz
 github.com/google/gofuzz/bytesource
+# github.com/google/martian v2.1.1-0.20190517191504-25dcb96d9e51+incompatible
+## explicit
 # github.com/google/uuid v1.1.2
 github.com/google/uuid
 # github.com/googleapis/gax-go/v2 v2.0.5
@@ -500,6 +521,12 @@ github.com/hashicorp/hcl/hcl/token
 github.com/hashicorp/hcl/json/parser
 github.com/hashicorp/hcl/json/scanner
 github.com/hashicorp/hcl/json/token
+# github.com/hashicorp/terraform-plugin-sdk v1.14.0
+## explicit
+# github.com/hashicorp/vault v1.3.0
+## explicit
+# github.com/hinshun/vt10x v0.0.0-20180809195222-d55458df857c
+## explicit
 # github.com/imdario/mergo v0.3.11
 github.com/imdario/mergo
 # github.com/inconshreveable/mousetrap v1.0.0
@@ -525,6 +552,8 @@ github.com/jstemmer/go-junit-report/formatter
 github.com/jstemmer/go-junit-report/parser
 # github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 github.com/kballard/go-shellquote
+# github.com/keybase/go-crypto v0.0.0-20190828182435-a05457805304
+## explicit
 # github.com/kisielk/gotool v1.0.0
 github.com/kisielk/gotool
 github.com/kisielk/gotool/internal/load
@@ -544,6 +573,8 @@ github.com/leodido/go-urn
 # github.com/libvirt/libvirt-go v6.10.0+incompatible
 ## explicit
 github.com/libvirt/libvirt-go
+# github.com/libvirt/libvirt-go-xml v5.10.0+incompatible
+## explicit
 # github.com/magiconair/properties v1.8.1
 github.com/magiconair/properties
 # github.com/mailru/easyjson v0.7.6
@@ -552,6 +583,10 @@ github.com/mailru/easyjson/jlexer
 github.com/mailru/easyjson/jwriter
 # github.com/maratori/testpackage v1.0.1
 github.com/maratori/testpackage/pkg/testpackage
+# github.com/masterzen/simplexml v0.0.0-20190410153822-31eea3082786
+## explicit
+# github.com/masterzen/winrm v0.0.0-20190308153735-1d17eaf15943
+## explicit
 # github.com/matoous/godox v0.0.0-20190911065817-5d6d842e92eb
 github.com/matoous/godox
 # github.com/mattn/go-colorable v0.1.8
@@ -565,6 +600,7 @@ github.com/matttproud/golang_protobuf_extensions/pbutil
 # github.com/mbilski/exhaustivestruct v1.1.0
 github.com/mbilski/exhaustivestruct/pkg/analyzer
 # github.com/metal3-io/baremetal-operator v0.0.0 => github.com/openshift/baremetal-operator v0.0.0-20201023182211-14317000ae07
+## explicit
 github.com/metal3-io/baremetal-operator/pkg/apis/metal3/v1alpha1
 github.com/metal3-io/baremetal-operator/pkg/bmc
 github.com/metal3-io/baremetal-operator/pkg/hardware
@@ -652,6 +688,8 @@ github.com/opencontainers/image-spec/specs-go/v1
 github.com/opencontainers/runc/libcontainer/user
 # github.com/opencontainers/runtime-spec v1.0.3-0.20200520003142-237cc4f519e2
 github.com/opencontainers/runtime-spec/specs-go
+# github.com/openshift-metal3/terraform-provider-ironic v0.2.1
+## explicit
 # github.com/openshift/api v3.9.1-0.20191111211345-a27ff30ebf09+incompatible => github.com/openshift/api v0.0.0-20200917102736-0a191b5b9bb0
 ## explicit
 github.com/openshift/api/config/v1
@@ -663,7 +701,9 @@ github.com/openshift/api/operator/v1alpha1
 github.com/openshift/api/project/v1
 github.com/openshift/api/samples/v1
 github.com/openshift/api/security/v1
-# github.com/openshift/client-go v0.0.0-20200827190008-3062137373b5 => github.com/openshift/client-go v0.0.0-20200521150516-05eb9880269c
+# github.com/openshift/build-machinery-go v0.0.0-20200819073603-48aa266c95f7
+## explicit
+# github.com/openshift/client-go v0.0.0-20200827190008-3062137373b5
 ## explicit
 github.com/openshift/client-go/config/clientset/versioned
 github.com/openshift/client-go/config/clientset/versioned/fake
@@ -691,6 +731,7 @@ github.com/openshift/cloud-credential-operator/pkg/apis/cloudcredential/v1
 github.com/openshift/cloud-credential-operator/pkg/aws
 github.com/openshift/cloud-credential-operator/pkg/version
 # github.com/openshift/cluster-api v0.0.0-20191129101638-b09907ac6668 => github.com/openshift/cluster-api v0.0.0-20191129101638-b09907ac6668
+## explicit
 github.com/openshift/cluster-api/pkg/apis/machine/common
 github.com/openshift/cluster-api/pkg/apis/machine/v1beta1
 # github.com/openshift/cluster-api-provider-baremetal v0.0.0-20201123200826-dd58d76aef46 => github.com/openshift/cluster-api-provider-baremetal v0.0.0-20200911144710-1cf0189fc640
@@ -698,18 +739,21 @@ github.com/openshift/cluster-api/pkg/apis/machine/v1beta1
 github.com/openshift/cluster-api-provider-baremetal/pkg/apis
 github.com/openshift/cluster-api-provider-baremetal/pkg/apis/baremetal/v1alpha1
 # github.com/openshift/cluster-api-provider-gcp v0.0.1-0.20201002065957-9854f7420570 => github.com/openshift/cluster-api-provider-gcp v0.0.1-0.20200917183408-90e92ed9fd9b
+## explicit
 github.com/openshift/cluster-api-provider-gcp/pkg/apis
 github.com/openshift/cluster-api-provider-gcp/pkg/apis/gcpprovider/v1beta1
 # github.com/openshift/cluster-api-provider-libvirt v0.2.1-0.20191219173431-2336783d4603 => github.com/openshift/cluster-api-provider-libvirt v0.2.1-0.20201023191903-499c4452f1f7
+## explicit
 github.com/openshift/cluster-api-provider-libvirt/pkg/apis
 github.com/openshift/cluster-api-provider-libvirt/pkg/apis/libvirtproviderconfig/v1beta1
 # github.com/openshift/cluster-api-provider-ovirt v0.1.1-0.20200504092944-27473ea1ae43 => github.com/openshift/cluster-api-provider-ovirt v0.1.1-0.20200917104433-85701abcd927
+## explicit
 github.com/openshift/cluster-api-provider-ovirt/pkg/apis
 github.com/openshift/cluster-api-provider-ovirt/pkg/apis/ovirtprovider/v1beta1
 # github.com/openshift/console-operator v0.0.0-20201203125343-b1238c381caa => github.com/openshift/console-operator v0.0.0-20201028233916-50e817c3eabc
 ## explicit
 github.com/openshift/console-operator/pkg/api
-# github.com/openshift/installer v0.16.1 => github.com/jim-minter/installer v0.9.0-master.0.20201116195329-73508e766328
+# github.com/openshift/installer v0.0.0-00010101000000-000000000000 => github.com/jim-minter/installer v0.9.0-master.0.20201116195329-73508e766328
 ## explicit
 github.com/openshift/installer/data
 github.com/openshift/installer/pkg/asset
@@ -830,6 +874,10 @@ github.com/operator-framework/operator-sdk/pkg/status
 # github.com/ovirt/go-ovirt v0.0.0-20201023070830-77e357c438d5
 ## explicit
 github.com/ovirt/go-ovirt
+# github.com/ovirt/terraform-provider-ovirt v0.4.3-0.20200406133650-74a154c1d861
+## explicit
+# github.com/packer-community/winrmcp v0.0.0-20180921211025-c76d91c1e7db
+## explicit
 # github.com/pascaldekloe/name v0.0.0-20180628100202-0fd16699aae1
 github.com/pascaldekloe/name
 # github.com/pborman/uuid v1.2.1
@@ -841,8 +889,12 @@ github.com/pelletier/go-toml
 github.com/peterbourgon/diskv
 # github.com/phayes/checkstyle v0.0.0-20170904204023-bfd46e6a821d
 github.com/phayes/checkstyle
+# github.com/pierrec/lz4 v2.3.0+incompatible
+## explicit
 # github.com/pkg/errors v0.9.1
 github.com/pkg/errors
+# github.com/pkg/sftp v1.10.1
+## explicit
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
 # github.com/polyfloyd/go-errorlint v0.0.0-20201006195004-351e25ade6e3
@@ -873,6 +925,8 @@ github.com/quasilyte/go-ruleguard/ruleguard
 github.com/quasilyte/go-ruleguard/ruleguard/typematch
 # github.com/quasilyte/regex/syntax v0.0.0-20200407221936-30656e2c4a95
 github.com/quasilyte/regex/syntax
+# github.com/robfig/cron v1.2.0
+## explicit
 # github.com/ryancurrah/gomodguard v1.1.0
 github.com/ryancurrah/gomodguard
 # github.com/ryanrolds/sqlclosecheck v0.3.0
@@ -880,6 +934,8 @@ github.com/ryanrolds/sqlclosecheck/pkg/analyzer
 # github.com/satori/go.uuid v1.2.0
 ## explicit
 github.com/satori/go.uuid
+# github.com/satori/uuid v1.2.0
+## explicit
 # github.com/securego/gosec/v2 v2.5.0
 github.com/securego/gosec/v2
 github.com/securego/gosec/v2/rules
@@ -910,6 +966,8 @@ github.com/spf13/pflag
 github.com/spf13/viper
 # github.com/ssgreg/nlreturn/v2 v2.1.0
 github.com/ssgreg/nlreturn/v2/pkg/nlreturn
+# github.com/stoewer/go-strcase v1.1.0
+## explicit
 # github.com/stretchr/objx v0.2.0
 github.com/stretchr/objx
 # github.com/stretchr/testify v1.6.1
@@ -922,6 +980,18 @@ github.com/subosito/gotenv
 github.com/syndtr/gocapability/capability
 # github.com/tdakkota/asciicheck v0.0.0-20200416190851-d7f85be797a2
 github.com/tdakkota/asciicheck
+# github.com/terraform-providers/terraform-provider-aws v0.1.0
+## explicit
+# github.com/terraform-providers/terraform-provider-azurerm v0.1.0
+## explicit
+# github.com/terraform-providers/terraform-provider-google v1.20.1-0.20200204003432-77547e3e7d52
+## explicit
+# github.com/terraform-providers/terraform-provider-local v1.4.0
+## explicit
+# github.com/terraform-providers/terraform-provider-openstack v1.25.0
+## explicit
+# github.com/terraform-providers/terraform-provider-vsphere v1.16.2
+## explicit
 # github.com/tetafro/godot v0.4.9
 github.com/tetafro/godot
 # github.com/timakin/bodyclose v0.0.0-20190930140734-f7f2e9bca95e
@@ -974,6 +1044,8 @@ github.com/vmware/govmomi/vim25/progress
 github.com/vmware/govmomi/vim25/soap
 github.com/vmware/govmomi/vim25/types
 github.com/vmware/govmomi/vim25/xml
+# github.com/xlab/treeprint v0.0.0-20181112141820-a009c3971eca
+## explicit
 # go.etcd.io/bbolt v1.3.5
 go.etcd.io/bbolt
 # go.mozilla.org/pkcs7 v0.0.0-20200128120323-432b2356ecb1
@@ -1271,6 +1343,7 @@ google.golang.org/protobuf/types/known/anypb
 google.golang.org/protobuf/types/known/durationpb
 google.golang.org/protobuf/types/known/timestamppb
 # gopkg.in/AlecAivazis/survey.v1 v1.8.9-0.20200217094205-6773bdf39b7f
+## explicit
 gopkg.in/AlecAivazis/survey.v1
 gopkg.in/AlecAivazis/survey.v1/core
 gopkg.in/AlecAivazis/survey.v1/terminal
@@ -1569,6 +1642,8 @@ k8s.io/klog
 # k8s.io/klog/v2 v2.4.0
 ## explicit
 k8s.io/klog/v2
+# k8s.io/kube-aggregator v0.19.0
+## explicit
 # k8s.io/kube-openapi v0.0.0-20201113171705-d219536bb9fd => k8s.io/kube-openapi v0.0.0-20200410145947-61e04a5be9a6
 ## explicit
 k8s.io/kube-openapi/pkg/common
@@ -1663,8 +1738,7 @@ sigs.k8s.io/yaml
 # github.com/gophercloud/gophercloud => github.com/gophercloud/gophercloud v0.8.0
 # github.com/metal3-io/baremetal-operator => github.com/openshift/baremetal-operator v0.0.0-20201023182211-14317000ae07
 # github.com/openshift/api => github.com/openshift/api v0.0.0-20200917102736-0a191b5b9bb0
-# github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20200521150516-05eb9880269c
-# github.com/openshift/cloud-credential-operator => github.com/openshift/cloud-credential-operator v0.0.0-20201202215507-371eb009d9a1
+# github.com/openshift/cloud-credential-operator => github.com/openshift/cloud-credential-operator v0.0.0-20200926024851-4ef74fd4ae81
 # github.com/openshift/cluster-api => github.com/openshift/cluster-api v0.0.0-20191129101638-b09907ac6668
 # github.com/openshift/cluster-api-provider-baremetal => github.com/openshift/cluster-api-provider-baremetal v0.0.0-20200911144710-1cf0189fc640
 # github.com/openshift/cluster-api-provider-gcp => github.com/openshift/cluster-api-provider-gcp v0.0.1-0.20200917183408-90e92ed9fd9b
