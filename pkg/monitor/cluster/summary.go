@@ -41,12 +41,11 @@ func (mon *Monitor) emitSummary(ctx context.Context) error {
 	}
 
 	mon.emitGauge("cluster.summary", 1, map[string]string{
-		"actualVersion":           actualVersion(cv),
-		"desiredVersion":          desiredVersion(cv),
-		"masterCount":             strconv.Itoa(masterCount),
-		"workerCount":             strconv.Itoa(workerCount),
-		"provisioningState":       mon.oc.Properties.ProvisioningState.String(),
-		"failedProvisioningState": mon.oc.Properties.FailedProvisioningState.String(),
+		"actualVersion":     actualVersion(cv),
+		"desiredVersion":    desiredVersion(cv),
+		"masterCount":       strconv.Itoa(masterCount),
+		"workerCount":       strconv.Itoa(workerCount),
+		"provisioningState": mon.oc.Properties.ProvisioningState.String(),
 	})
 
 	return nil

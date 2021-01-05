@@ -100,6 +100,13 @@ func NewMonitor(ctx context.Context, log *logrus.Entry, restConfig *rest.Config,
 func (mon *Monitor) Monitor(ctx context.Context) (errs []error) {
 	mon.log.Debug("monitoring")
 
+	if mon.hourlyRun {
+		mon.emitGauge("cluster.provisioning", 1, map[string]string{
+			"provisioningState":       mon.oc.Properties.ProvisioningState.String(),
+			"failedProvisioningState": mon.oc.Properties.FailedProvisioningState.String(),
+		})
+	}
+
 	// If API is not returning 200, don't need to run the next checks
 	statusCode, err := mon.emitAPIServerHealthzCode(ctx)
 	if err != nil {
