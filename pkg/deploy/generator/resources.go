@@ -724,6 +724,7 @@ func (g *generator) vmss() *arm.Resource {
 		"mdmFrontendUrl",
 		"mdsdConfigVersion",
 		"mdsdEnvironment",
+		"mdsdCertificateSAN",
 		"acrResourceId",
 		"clusterParentDomainName",
 		"portalAccessGroupIds",
@@ -860,17 +861,6 @@ MDMIMAGE="${RPIMAGE%%/*}/${MDMIMAGE##*/}"
 docker pull "$MDMIMAGE"
 docker pull "$RPIMAGE"
 
-for attempt in {1..5}; do
-  az keyvault secret download --file /etc/mdm.pem --id "https://$KEYVAULTPREFIX-svc.vault.azure.net/secrets/rp-mdm" && break
-  if [[ ${attempt} -lt 5 ]]; then sleep 10; else exit 1; fi
-done
-chmod 0600 /etc/mdm.pem
-sed -i -ne '1,/END CERTIFICATE/ p' /etc/mdm.pem
-
-az keyvault secret download --file /etc/mdsd.pem --id "https://$KEYVAULTPREFIX-svc.vault.azure.net/secrets/rp-mdsd"
-chown syslog:syslog /etc/mdsd.pem
-chmod 0600 /etc/mdsd.pem
-
 az logout
 
 mkdir /etc/aro-rp
@@ -892,8 +882,8 @@ export SSL_CERT_FILE=/etc/pki/tls/certs/ca-bundle.crt
 export MONITORING_GCS_ENVIRONMENT='$MDSDENVIRONMENT'
 export MONITORING_GCS_ACCOUNT=ARORPLogs
 export MONITORING_GCS_REGION='$LOCATION'
-export MONITORING_GCS_CERT_CERTFILE=/etc/mdsd.pem
-export MONITORING_GCS_CERT_KEYFILE=/etc/mdsd.pem
+export MONITORING_GCS_AUTH_ID_TYPE=AuthKeyVault
+export MONITORING_GCS_AUTH_ID='$MDSDCERTIFICATESAN'
 export MONITORING_GCS_NAMESPACE=ARORPLogs
 export MONITORING_CONFIG_VERSION='$MDSDCONFIGVERSION'
 export MONITORING_USE_GENEVA_CONFIG_SERVICE=true
@@ -1089,6 +1079,107 @@ WantedBy=multi-user.target
 EOF
 
 chcon -R system_u:object_r:var_log_t:s0 /var/opt/microsoft/linuxmonagent
+
+cat >/etc/systemd/system/download-mdm-credentials.service <<'EOF'
+[Unit]
+Description=Periodic mdm credentials refresh
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/download-credentials.sh mdm
+EOF
+
+cat >/etc/systemd/system/download-mdm-credentials.timer <<'EOF'
+[Unit]
+Description=Periodic mdm credentials refresh
+
+[Timer]
+OnBootSec=0min
+OnCalendar=0/12:00:00
+AccuracySec=5s
+
+[Install]
+WantedBy=timers.target
+EOF
+
+cat >/usr/local/bin/download-credentials.sh <<EOF
+#!/bin/bash
+set -eu
+
+COMPONENT="\$1"
+case "\$COMPONENT" in
+  'mdm')
+    NEW_CERT_FILE="/etc/temp-mdm.pem"
+    CURRENT_CERT_FILE="/etc/mdm.pem"
+    SECRET_NAME="rp-mdm"
+  ;;
+  'mdsd')
+    NEW_CERT_FILE="/etc/temp-mdsd.pem"
+    CURRENT_CERT_FILE="/etc/mdsd.pem"
+    SECRET_NAME="rp-mdsd"
+  ;;
+  *) echo Invalid usage && exit 1
+  ;;
+esac
+
+echo "Download \$COMPONENT credentials"
+az login -i
+az account set -s "$SUBSCRIPTIONID"
+trap "az logout" EXIT
+
+rm -f \$NEW_CERT_FILE
+
+for attempt in {1..5}; do
+  az keyvault certificate download --file \$NEW_CERT_FILE --id "https://$KEYVAULTPREFIX-svc.vault.azure.net/secrets/\$SECRET_NAME" && break
+  if [[ \$attempt -lt 5 ]]; then sleep 10; else exit 1; fi
+done
+
+if [ -f \$NEW_CERT_FILE ]; then
+  if [ "\$COMPONENT" = "mdsd" ]; then
+    chown syslog:syslog \$NEW_CERT_FILE
+  else
+    sed -i -ne '1,/END CERTIFICATE/ p' \$NEW_CERT_FILE
+  fi
+  chmod 0600 \$NEW_CERT_FILE
+  mv \$NEW_CERT_FILE \$CURRENT_CERT_FILE
+else
+  echo Failed to refresh certificate for \$COMPONENT && exit 1
+fi
+EOF
+
+chmod u+x /usr/local/bin/download-credentials.sh
+
+cat >/etc/systemd/system/download-mdsd-credentials.service <<EOF
+[Unit]
+Description=Periodic mdsd certificate refresh
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/download-credentials.sh mdsd
+EOF
+
+cat >/etc/systemd/system/download-mdsd-credentials.timer <<EOF
+[Unit]
+Description=Periodic mdsd certificate refresh
+
+[Timer]
+OnBootSec=0min
+OnCalendar=0/12:00:00
+AccuracySec=5s
+
+[Install]
+WantedBy=timers.target
+EOF
+
+systemctl enable download-mdsd-credentials.timer
+systemctl enable download-mdm-credentials.timer
+
+/usr/local/bin/download-mdsd-credentials.sh
+
+/usr/local/bin/download-mdm-credentials.sh
+if [ $? != 0 ]; then
+  touch /etc/mdm.pem
+fi
 
 for service in aro-monitor aro-portal aro-rp auoms azsecd azsecmond mdsd mdm chronyd td-agent-bit; do
   systemctl enable $service.service
