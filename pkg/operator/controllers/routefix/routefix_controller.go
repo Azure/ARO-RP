@@ -42,8 +42,7 @@ func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, securi
 }
 
 //Reconcile fixes the daemonset Routefix
-func (r *RouteFixReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
-	ctx := context.Background()
+func (r *RouteFixReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	if request.Name != arov1alpha1.SingletonClusterName {
 		return reconcile.Result{}, nil
 	}

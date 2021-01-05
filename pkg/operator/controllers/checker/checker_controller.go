@@ -50,9 +50,7 @@ func NewReconciler(log *logrus.Entry, maocli maoclient.Interface, arocli aroclie
 // +kubebuilder:rbac:groups=aro.openshift.io,resources=clusters/status,verbs=get;update;patch
 
 // Reconcile will keep checking that the cluster can connect to essential services.
-func (r *CheckerController) Reconcile(request ctrl.Request) (ctrl.Result, error) {
-	// TODO(mj): controller-runtime master fixes the need for this (https://github.com/kubernetes-sigs/controller-runtime/blob/master/pkg/reconcile/reconcile.go#L93) but it's not yet released.
-	ctx := context.Background()
+func (r *CheckerController) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	var err error
 	for _, c := range r.checkers {
 		thisErr := c.Check(ctx)

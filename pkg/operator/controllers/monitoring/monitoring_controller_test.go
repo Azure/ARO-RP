@@ -249,7 +249,7 @@ alertmanagerMain:
 			request.Name = "cluster-monitoring-config"
 			request.Namespace = "openshift-monitoring"
 
-			_, err := r.Reconcile(request)
+			_, err := r.Reconcile(ctx, request)
 			if err != nil {
 				t.Fatal(err)
 			}

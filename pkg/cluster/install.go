@@ -58,7 +58,6 @@ func (m *manager) Install(ctx context.Context) error {
 
 	var (
 		installConfig *installconfig.InstallConfig
-		platformCreds *installconfig.PlatformCreds
 		image         *releaseimage.Image
 	)
 
@@ -70,12 +69,12 @@ func (m *manager) Install(ctx context.Context) error {
 			steps.Action(m.generateSSHKey),
 			steps.Action(func(ctx context.Context) error {
 				var err error
-				installConfig, platformCreds, image, err = m.generateInstallConfig(ctx)
+				installConfig, image, err = m.generateInstallConfig(ctx)
 				return err
 			}),
 			steps.Action(m.createDNS),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(func(ctx context.Context) error {
-				return m.deployStorageTemplate(ctx, installConfig, platformCreds, image)
+				return m.deployStorageTemplate(ctx, installConfig, image)
 			})),
 			steps.AuthorizationRefreshingAction(m.fpAuthorizer, steps.Action(m.attachNSGsAndPatch)),
 			steps.Action(m.ensureBillingRecord),

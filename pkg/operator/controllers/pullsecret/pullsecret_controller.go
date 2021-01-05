@@ -52,9 +52,7 @@ func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface) *PullS
 //   requested).
 // * If the pull Secret object (which is not owned by the Cluster object)
 //   changes, we'll see the pull Secret object requested.
-func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
-	// TODO(mj): controller-runtime master fixes the need for this (https://github.com/kubernetes-sigs/controller-runtime/blob/master/pkg/reconcile/reconcile.go#L93) but it's not yet released.
-	ctx := context.Background()
+func (r *PullSecretReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	if request.NamespacedName != pullSecretName &&
 		request.Name != arov1alpha1.SingletonClusterName {
 		return reconcile.Result{}, nil

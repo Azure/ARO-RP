@@ -35,9 +35,7 @@ func NewReconciler(log *logrus.Entry, arocli aroclient.Interface, dh dynamichelp
 	}
 }
 
-func (r *RBACReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
-	// TODO(mj): controller-runtime master fixes the need for this (https://github.com/kubernetes-sigs/controller-runtime/blob/master/pkg/reconcile/reconcile.go#L93) but it's not yet released.
-	ctx := context.Background()
+func (r *RBACReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	if request.Name != arov1alpha1.SingletonClusterName {
 		return reconcile.Result{}, nil
 	}

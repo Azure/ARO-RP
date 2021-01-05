@@ -39,9 +39,7 @@ func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface) *Alert
 }
 
 // Reconcile makes sure that the Alertmanager default webhook is set.
-func (r *AlertWebhookReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
-	// TODO(mj): controller-runtime master fixes the need for this (https://github.com/kubernetes-sigs/controller-runtime/blob/master/pkg/reconcile/reconcile.go#L93) but it's not yet released.
-	ctx := context.Background()
+func (r *AlertWebhookReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	if request.NamespacedName != alertManagerName {
 		return reconcile.Result{}, nil
 	}

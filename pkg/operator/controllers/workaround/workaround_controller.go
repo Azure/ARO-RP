@@ -67,9 +67,7 @@ func (r *WorkaroundReconciler) actualClusterVersion(ctx context.Context) (*versi
 }
 
 // Reconcile makes sure that the workarounds are applied or removed as per the OpenShift version.
-func (r *WorkaroundReconciler) Reconcile(request ctrl.Request) (ctrl.Result, error) {
-	// TODO(mj): controller-runtime master fixes the need for this (https://github.com/kubernetes-sigs/controller-runtime/blob/master/pkg/reconcile/reconcile.go#L93) but it's not yet released.
-	ctx := context.Background()
+func (r *WorkaroundReconciler) Reconcile(ctx context.Context, request ctrl.Request) (ctrl.Result, error) {
 	clusterVersion, err := r.actualClusterVersion(ctx)
 	if err != nil {
 		r.log.Errorf("error getting the OpenShift version: %v", err)

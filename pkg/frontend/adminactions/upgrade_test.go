@@ -59,7 +59,7 @@ func TestUpgradeCluster(t *testing.T) {
 		{
 			name: "unhealthy cluster",
 			fakecli: newFakecli(configv1.ClusterVersionStatus{
-				Desired: configv1.Update{
+				Desired: configv1.Release{
 					Version: stream43.Version.String(),
 				},
 				Conditions: []configv1.ClusterOperatorStatusCondition{
@@ -74,7 +74,7 @@ func TestUpgradeCluster(t *testing.T) {
 		{
 			name: "upgrade to Y latest",
 			fakecli: newFakecli(configv1.ClusterVersionStatus{
-				Desired: configv1.Update{
+				Desired: configv1.Release{
 					Version: "4.3.1",
 				},
 				Conditions: []configv1.ClusterOperatorStatusCondition{
@@ -90,7 +90,7 @@ func TestUpgradeCluster(t *testing.T) {
 		{
 			name: "no upgrade, Y higher than expected",
 			fakecli: newFakecli(configv1.ClusterVersionStatus{
-				Desired: configv1.Update{
+				Desired: configv1.Release{
 					Version: "4.3.99",
 				},
 				Conditions: []configv1.ClusterOperatorStatusCondition{
@@ -104,7 +104,7 @@ func TestUpgradeCluster(t *testing.T) {
 		{
 			name: "no upgrade, Y match but unhealthy cluster",
 			fakecli: newFakecli(configv1.ClusterVersionStatus{
-				Desired: configv1.Update{
+				Desired: configv1.Release{
 					Version: stream43.Version.String(),
 				},
 				Conditions: []configv1.ClusterOperatorStatusCondition{
@@ -119,7 +119,7 @@ func TestUpgradeCluster(t *testing.T) {
 		{
 			name: "upgrade, Y match, Y upgrades NOT allowed",
 			fakecli: newFakecli(configv1.ClusterVersionStatus{
-				Desired: configv1.Update{
+				Desired: configv1.Release{
 					Version: stream43.Version.String(),
 				},
 				Conditions: []configv1.ClusterOperatorStatusCondition{
@@ -133,7 +133,7 @@ func TestUpgradeCluster(t *testing.T) {
 		{
 			name: "upgrade, Y match, Y upgrades allowed (4.3 to 4.4)",
 			fakecli: newFakecli(configv1.ClusterVersionStatus{
-				Desired: configv1.Update{
+				Desired: configv1.Release{
 					Version: stream43.Version.String(),
 				},
 				Conditions: []configv1.ClusterOperatorStatusCondition{
@@ -150,7 +150,7 @@ func TestUpgradeCluster(t *testing.T) {
 		{
 			name: "upgrade, Y match, Y upgrades allowed (4.4 to 4.5)",
 			fakecli: newFakecli(configv1.ClusterVersionStatus{
-				Desired: configv1.Update{
+				Desired: configv1.Release{
 					Version: stream44.Version.String(),
 				},
 				Conditions: []configv1.ClusterOperatorStatusCondition{
