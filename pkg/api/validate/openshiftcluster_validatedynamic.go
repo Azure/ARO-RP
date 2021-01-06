@@ -29,6 +29,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	utilpermissions "github.com/Azure/ARO-RP/pkg/util/permissions"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
+	"github.com/Azure/ARO-RP/pkg/util/steps"
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
@@ -45,7 +46,6 @@ func NewOpenShiftClusterDynamicValidator(log *logrus.Entry, env env.Interface, o
 
 		oc:              oc,
 		subscriptionDoc: subscriptionDoc,
-		fpAuthorizer:    fpAuthorizer,
 
 		fpPermissions: authorization.NewPermissionsClient(env.Environment(), subscriptionDoc.ID, fpAuthorizer),
 	}
@@ -65,7 +65,6 @@ type openShiftClusterDynamicValidator struct {
 
 	oc              *api.OpenShiftCluster
 	subscriptionDoc *api.SubscriptionDocument
-	fpAuthorizer    refreshable.Authorizer
 
 	fpPermissions     authorization.PermissionsClient
 	spPermissions     authorization.PermissionsClient
@@ -103,12 +102,12 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		return err
 	}
 
-	err = dv.validateVnetPermissions(ctx, spAuthorizer, dv.spPermissions, vnetID, &vnetr, api.CloudErrorCodeInvalidServicePrincipalPermissions, "provided service principal")
+	err = dv.validateVnetPermissions(ctx, dv.spPermissions, vnetID, &vnetr, api.CloudErrorCodeInvalidServicePrincipalPermissions, "provided service principal")
 	if err != nil {
 		return err
 	}
 
-	err = dv.validateVnetPermissions(ctx, dv.fpAuthorizer, dv.fpPermissions, vnetID, &vnetr, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
+	err = dv.validateVnetPermissions(ctx, dv.fpPermissions, vnetID, &vnetr, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
 	if err != nil {
 		return err
 	}
@@ -119,12 +118,12 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		return err
 	}
 
-	err = dv.validateRouteTablePermissions(ctx, spAuthorizer, dv.spPermissions, &vnet, api.CloudErrorCodeInvalidServicePrincipalPermissions, "provided service principal")
+	err = dv.validateRouteTablePermissions(ctx, dv.spPermissions, &vnet, api.CloudErrorCodeInvalidServicePrincipalPermissions, "provided service principal")
 	if err != nil {
 		return err
 	}
 
-	err = dv.validateRouteTablePermissions(ctx, dv.fpAuthorizer, dv.fpPermissions, &vnet, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
+	err = dv.validateRouteTablePermissions(ctx, dv.fpPermissions, &vnet, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
 	if err != nil {
 		return err
 	}
@@ -166,7 +165,7 @@ func validateServicePrincipalProfile(ctx context.Context, log *logrus.Entry, env
 	return refreshable.NewAuthorizer(token), nil
 }
 
-func (dv *openShiftClusterDynamicValidator) validateVnetPermissions(ctx context.Context, authorizer refreshable.Authorizer, client authorization.PermissionsClient, vnetID string, vnetr *azure.Resource, code, typ string) error {
+func (dv *openShiftClusterDynamicValidator) validateVnetPermissions(ctx context.Context, client authorization.PermissionsClient, vnetID string, vnetr *azure.Resource, code, typ string) error {
 	dv.log.Printf("validateVnetPermissions (%s)", typ)
 
 	err := validateActions(ctx, dv.log, vnetr, []string{
@@ -176,7 +175,7 @@ func (dv *openShiftClusterDynamicValidator) validateVnetPermissions(ctx context.
 		"Microsoft.Network/virtualNetworks/subnets/join/action",
 		"Microsoft.Network/virtualNetworks/subnets/read",
 		"Microsoft.Network/virtualNetworks/subnets/write",
-	}, authorizer, client)
+	}, client)
 	if err == wait.ErrWaitTimeout {
 		return api.NewCloudError(http.StatusBadRequest, code, "", "The %s does not have Network Contributor permission on vnet '%s'.", typ, vnetID)
 	}
@@ -187,14 +186,14 @@ func (dv *openShiftClusterDynamicValidator) validateVnetPermissions(ctx context.
 	return err
 }
 
-func (dv *openShiftClusterDynamicValidator) validateRouteTablePermissions(ctx context.Context, authorizer refreshable.Authorizer, client authorization.PermissionsClient, vnet *mgmtnetwork.VirtualNetwork, code, typ string) error {
-	err := dv.validateRouteTablePermissionsSubnet(ctx, authorizer, client, vnet, dv.oc.Properties.MasterProfile.SubnetID, "properties.masterProfile.subnetId", code, typ)
+func (dv *openShiftClusterDynamicValidator) validateRouteTablePermissions(ctx context.Context, client authorization.PermissionsClient, vnet *mgmtnetwork.VirtualNetwork, code, typ string) error {
+	err := dv.validateRouteTablePermissionsSubnet(ctx, client, vnet, dv.oc.Properties.MasterProfile.SubnetID, "properties.masterProfile.subnetId", code, typ)
 	if err != nil {
 		return err
 	}
 
 	for i, s := range dv.oc.Properties.WorkerProfiles {
-		err := dv.validateRouteTablePermissionsSubnet(ctx, authorizer, client, vnet, s.SubnetID, "properties.workerProfiles["+strconv.Itoa(i)+"].subnetId", code, typ)
+		err := dv.validateRouteTablePermissionsSubnet(ctx, client, vnet, s.SubnetID, "properties.workerProfiles["+strconv.Itoa(i)+"].subnetId", code, typ)
 		if err != nil {
 			return err
 		}
@@ -202,7 +201,7 @@ func (dv *openShiftClusterDynamicValidator) validateRouteTablePermissions(ctx co
 	return nil
 }
 
-func (dv *openShiftClusterDynamicValidator) validateRouteTablePermissionsSubnet(ctx context.Context, authorizer refreshable.Authorizer, client authorization.PermissionsClient, vnet *mgmtnetwork.VirtualNetwork, subnetID, path, code, typ string) error {
+func (dv *openShiftClusterDynamicValidator) validateRouteTablePermissionsSubnet(ctx context.Context, client authorization.PermissionsClient, vnet *mgmtnetwork.VirtualNetwork, subnetID, path, code, typ string) error {
 	dv.log.Printf("validateRouteTablePermissionsSubnet(%s, %s)", typ, path)
 
 	var s *mgmtnetwork.Subnet
@@ -229,7 +228,7 @@ func (dv *openShiftClusterDynamicValidator) validateRouteTablePermissionsSubnet(
 		"Microsoft.Network/routeTables/join/action",
 		"Microsoft.Network/routeTables/read",
 		"Microsoft.Network/routeTables/write",
-	}, authorizer, client)
+	}, client)
 	if err == wait.ErrWaitTimeout {
 		return api.NewCloudError(http.StatusBadRequest, code, "", "The %s does not have Network Contributor permission on route table '%s'.", typ, *s.RouteTable.ID)
 	}
@@ -400,7 +399,7 @@ func (dv *openShiftClusterDynamicValidator) validateProviders(ctx context.Contex
 	return nil
 }
 
-func validateActions(ctx context.Context, log *logrus.Entry, r *azure.Resource, actions []string, authorizer refreshable.Authorizer, client authorization.PermissionsClient) error {
+func validateActions(ctx context.Context, log *logrus.Entry, r *azure.Resource, actions []string, client authorization.PermissionsClient) error {
 	timeoutCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
 
@@ -408,8 +407,7 @@ func validateActions(ctx context.Context, log *logrus.Entry, r *azure.Resource, 
 		permissions, err := client.ListForResource(ctx, r.ResourceGroup, r.Provider, "", r.ResourceType, r.ResourceName)
 		if detailedErr, ok := err.(autorest.DetailedError); ok &&
 			detailedErr.StatusCode == http.StatusForbidden {
-			_, err = authorizer.RefreshWithContext(ctx, log)
-			return false, err
+			return false, steps.ErrWantRefresh
 		}
 		if err != nil {
 			return false, err
@@ -418,6 +416,10 @@ func validateActions(ctx context.Context, log *logrus.Entry, r *azure.Resource, 
 		for _, action := range actions {
 			ok, err := utilpermissions.CanDoAction(permissions, action)
 			if !ok || err != nil {
+				// TODO(jminter): I don't understand if there are genuinely
+				// cases where CanDoAction can return false then true shortly
+				// after. I'm a little skeptical; if it can't happen we can
+				// simplify this code.  We should add a metric on this.
 				return false, err
 			}
 		}
