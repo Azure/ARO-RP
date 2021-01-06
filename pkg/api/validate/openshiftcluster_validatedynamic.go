@@ -340,25 +340,22 @@ func (dv *openShiftClusterDynamicValidator) validateVnet(ctx context.Context, vn
 	}
 
 	// unique names of subnets from all node pools
-	var subnets []string
+	subnets := map[string]struct{}{}
 	var CIDRArray []*net.IPNet
 	for i, subnet := range dv.oc.Properties.WorkerProfiles {
-		exists := false
-		for _, s := range subnets {
-			if strings.EqualFold(strings.ToLower(subnet.SubnetID), strings.ToLower(s)) {
-				exists = true
-				break
-			}
+		if _, ok := subnets[strings.ToLower(subnet.SubnetID)]; ok {
+			continue
 		}
-		if !exists {
-			subnets = append(subnets, subnet.SubnetID)
-			c, err := dv.validateSubnet(ctx, vnet, "properties.workerProfiles["+strconv.Itoa(i)+"].subnetId", subnet.SubnetID)
-			if err != nil {
-				return err
-			}
-			CIDRArray = append(CIDRArray, c)
+
+		subnets[strings.ToLower(subnet.SubnetID)] = struct{}{}
+
+		c, err := dv.validateSubnet(ctx, vnet, "properties.workerProfiles["+strconv.Itoa(i)+"].subnetId", subnet.SubnetID)
+		if err != nil {
+			return err
 		}
+		CIDRArray = append(CIDRArray, c)
 	}
+
 	masterSubnetCIDR, err := dv.validateSubnet(ctx, vnet, "properties.masterProfile.subnetId", dv.oc.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return err
