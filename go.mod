@@ -1,6 +1,6 @@
 module github.com/Azure/ARO-RP
 
-go 1.14
+go 1.15
 
 exclude (
 	github.com/terraform-providers/terraform-provider-aws v0.0.0
