@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"testing"
 
+	samplesFake "github.com/openshift/client-go/samples/clientset/versioned/fake"
 	"github.com/operator-framework/operator-sdk/pkg/status"
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
@@ -54,6 +55,7 @@ func TestPullSecretReconciler(t *testing.T) {
 		request     ctrl.Request
 		fakecli     *fake.Clientset
 		arocli      *aroFake.Clientset
+		samplecli   *samplesFake.Clienset
 		wantErr     bool
 		want        string
 		wantCreated bool

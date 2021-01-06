@@ -703,7 +703,7 @@ github.com/openshift/api/samples/v1
 github.com/openshift/api/security/v1
 # github.com/openshift/build-machinery-go v0.0.0-20200819073603-48aa266c95f7
 ## explicit
-# github.com/openshift/client-go v0.0.0-20200827190008-3062137373b5
+# github.com/openshift/client-go v0.0.0-20200827190008-3062137373b5 => github.com/openshift/client-go v0.0.0-20200521150516-05eb9880269c
 ## explicit
 github.com/openshift/client-go/config/clientset/versioned
 github.com/openshift/client-go/config/clientset/versioned/fake
@@ -720,8 +720,10 @@ github.com/openshift/client-go/operator/clientset/versioned/typed/operator/v1alp
 github.com/openshift/client-go/project/clientset/versioned/scheme
 github.com/openshift/client-go/project/clientset/versioned/typed/project/v1
 github.com/openshift/client-go/samples/clientset/versioned
+github.com/openshift/client-go/samples/clientset/versioned/fake
 github.com/openshift/client-go/samples/clientset/versioned/scheme
 github.com/openshift/client-go/samples/clientset/versioned/typed/samples/v1
+github.com/openshift/client-go/samples/clientset/versioned/typed/samples/v1/fake
 github.com/openshift/client-go/security/clientset/versioned
 github.com/openshift/client-go/security/clientset/versioned/scheme
 github.com/openshift/client-go/security/clientset/versioned/typed/security/v1
@@ -1738,6 +1740,7 @@ sigs.k8s.io/yaml
 # github.com/gophercloud/gophercloud => github.com/gophercloud/gophercloud v0.8.0
 # github.com/metal3-io/baremetal-operator => github.com/openshift/baremetal-operator v0.0.0-20201023182211-14317000ae07
 # github.com/openshift/api => github.com/openshift/api v0.0.0-20200917102736-0a191b5b9bb0
+# github.com/openshift/client-go => github.com/openshift/client-go v0.0.0-20200521150516-05eb9880269c
 # github.com/openshift/cloud-credential-operator => github.com/openshift/cloud-credential-operator v0.0.0-20200926024851-4ef74fd4ae81
 # github.com/openshift/cluster-api => github.com/openshift/cluster-api v0.0.0-20191129101638-b09907ac6668
 # github.com/openshift/cluster-api-provider-baremetal => github.com/openshift/cluster-api-provider-baremetal v0.0.0-20200911144710-1cf0189fc640

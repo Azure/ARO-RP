@@ -5,7 +5,7 @@ package fake
 import (
 	"context"
 
-	operatorv1 "github.com/openshift/api/operator/v1"
+	samplesv1 "github.com/openshift/api/samples/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -16,27 +16,27 @@ import (
 
 // FakeConfigs implements ConfigInterface
 type FakeConfigs struct {
-	Fake *FakeOperatorV1
+	Fake *FakeSamplesV1
 }
 
-var configsResource = schema.GroupVersionResource{Group: "operator.openshift.io", Version: "v1", Resource: "configs"}
+var configsResource = schema.GroupVersionResource{Group: "samples.operator.openshift.io", Version: "v1", Resource: "configs"}
 
-var configsKind = schema.GroupVersionKind{Group: "operator.openshift.io", Version: "v1", Kind: "Config"}
+var configsKind = schema.GroupVersionKind{Group: "samples.operator.openshift.io", Version: "v1", Kind: "Config"}
 
 // Get takes name of the config, and returns the corresponding config object, and an error if there is any.
-func (c *FakeConfigs) Get(ctx context.Context, name string, options v1.GetOptions) (result *operatorv1.Config, err error) {
+func (c *FakeConfigs) Get(ctx context.Context, name string, options v1.GetOptions) (result *samplesv1.Config, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(configsResource, name), &operatorv1.Config{})
+		Invokes(testing.NewRootGetAction(configsResource, name), &samplesv1.Config{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*operatorv1.Config), err
+	return obj.(*samplesv1.Config), err
 }
 
 // List takes label and field selectors, and returns the list of Configs that match those selectors.
-func (c *FakeConfigs) List(ctx context.Context, opts v1.ListOptions) (result *operatorv1.ConfigList, err error) {
+func (c *FakeConfigs) List(ctx context.Context, opts v1.ListOptions) (result *samplesv1.ConfigList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(configsResource, configsKind, opts), &operatorv1.ConfigList{})
+		Invokes(testing.NewRootListAction(configsResource, configsKind, opts), &samplesv1.ConfigList{})
 	if obj == nil {
 		return nil, err
 	}
@@ -45,8 +45,8 @@ func (c *FakeConfigs) List(ctx context.Context, opts v1.ListOptions) (result *op
 	if label == nil {
 		label = labels.Everything()
 	}
-	list := &operatorv1.ConfigList{ListMeta: obj.(*operatorv1.ConfigList).ListMeta}
-	for _, item := range obj.(*operatorv1.ConfigList).Items {
+	list := &samplesv1.ConfigList{ListMeta: obj.(*samplesv1.ConfigList).ListMeta}
+	for _, item := range obj.(*samplesv1.ConfigList).Items {
 		if label.Matches(labels.Set(item.Labels)) {
 			list.Items = append(list.Items, item)
 		}
@@ -61,40 +61,40 @@ func (c *FakeConfigs) Watch(ctx context.Context, opts v1.ListOptions) (watch.Int
 }
 
 // Create takes the representation of a config and creates it.  Returns the server's representation of the config, and an error, if there is any.
-func (c *FakeConfigs) Create(ctx context.Context, config *operatorv1.Config, opts v1.CreateOptions) (result *operatorv1.Config, err error) {
+func (c *FakeConfigs) Create(ctx context.Context, config *samplesv1.Config, opts v1.CreateOptions) (result *samplesv1.Config, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(configsResource, config), &operatorv1.Config{})
+		Invokes(testing.NewRootCreateAction(configsResource, config), &samplesv1.Config{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*operatorv1.Config), err
+	return obj.(*samplesv1.Config), err
 }
 
 // Update takes the representation of a config and updates it. Returns the server's representation of the config, and an error, if there is any.
-func (c *FakeConfigs) Update(ctx context.Context, config *operatorv1.Config, opts v1.UpdateOptions) (result *operatorv1.Config, err error) {
+func (c *FakeConfigs) Update(ctx context.Context, config *samplesv1.Config, opts v1.UpdateOptions) (result *samplesv1.Config, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(configsResource, config), &operatorv1.Config{})
+		Invokes(testing.NewRootUpdateAction(configsResource, config), &samplesv1.Config{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*operatorv1.Config), err
+	return obj.(*samplesv1.Config), err
 }
 
 // UpdateStatus was generated because the type contains a Status member.
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeConfigs) UpdateStatus(ctx context.Context, config *operatorv1.Config, opts v1.UpdateOptions) (*operatorv1.Config, error) {
+func (c *FakeConfigs) UpdateStatus(ctx context.Context, config *samplesv1.Config, opts v1.UpdateOptions) (*samplesv1.Config, error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateSubresourceAction(configsResource, "status", config), &operatorv1.Config{})
+		Invokes(testing.NewRootUpdateSubresourceAction(configsResource, "status", config), &samplesv1.Config{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*operatorv1.Config), err
+	return obj.(*samplesv1.Config), err
 }
 
 // Delete takes name of the config and deletes it. Returns an error if one occurs.
 func (c *FakeConfigs) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(configsResource, name), &operatorv1.Config{})
+		Invokes(testing.NewRootDeleteAction(configsResource, name), &samplesv1.Config{})
 	return err
 }
 
@@ -102,16 +102,16 @@ func (c *FakeConfigs) Delete(ctx context.Context, name string, opts v1.DeleteOpt
 func (c *FakeConfigs) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
 	action := testing.NewRootDeleteCollectionAction(configsResource, listOpts)
 
-	_, err := c.Fake.Invokes(action, &operatorv1.ConfigList{})
+	_, err := c.Fake.Invokes(action, &samplesv1.ConfigList{})
 	return err
 }
 
 // Patch applies the patch and returns the patched config.
-func (c *FakeConfigs) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *operatorv1.Config, err error) {
+func (c *FakeConfigs) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *samplesv1.Config, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(configsResource, name, pt, data, subresources...), &operatorv1.Config{})
+		Invokes(testing.NewRootPatchSubresourceAction(configsResource, name, pt, data, subresources...), &samplesv1.Config{})
 	if obj == nil {
 		return nil, err
 	}
-	return obj.(*operatorv1.Config), err
+	return obj.(*samplesv1.Config), err
 }

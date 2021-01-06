@@ -1482,6 +1482,7 @@ github.com/openshift/client-go v0.0.0-20200521150516-05eb9880269c h1:l7CmbzzkyWl
 github.com/openshift/client-go v0.0.0-20200521150516-05eb9880269c/go.mod h1:kCMeo6IE4o4qvnepM9lgHQ4j/ZFfvY/N/2G/jpJdwm4=
 github.com/openshift/client-go v0.0.0-20200827190008-3062137373b5 h1:E6WhVL5p3rfjtc+o+jVG/29Aclnf3XIF7akxXvadwR0=
 github.com/openshift/client-go v0.0.0-20200827190008-3062137373b5/go.mod h1:5rGmrkQ8DJEUXA+AR3rEjfH+HFyg4/apY9iCQFgvPfE=
+github.com/openshift/client-go v3.9.0+incompatible h1:13k3Ok0B7TA2hA3bQW2aFqn6y04JaJWdk7ITTyg+Ek0=
 github.com/openshift/cloud-credential-operator v0.0.0-20200926024851-4ef74fd4ae81 h1:HTj7v8YK/yonThFB7HtYPV8P7pAJSYSRBIDleb4z3n4=
 github.com/openshift/cloud-credential-operator v0.0.0-20200926024851-4ef74fd4ae81/go.mod h1:DEi4qkr2AMIZxZILwXJf+zkjtoU3tKNJQpNmHFIV98I=
 github.com/openshift/cluster-api v0.0.0-20191129101638-b09907ac6668 h1:IDZyg/Kye98ptqpc9j9rzPjZJlijjEDe8g7TZ67CmLU=
