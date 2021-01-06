@@ -96,14 +96,8 @@ func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 			foundKey = r.checkRHRegistryKeys(parsedKeys)
 		}
 
-		updated := false
-		if foundKey {
-			// enable samples operator
-			updated, err = r.switchSamples(ctx, true)
-		} else {
-			// disable samples operator
-			updated, err = r.switchSamples(ctx, false)
-		}
+		// if foundKey enable samples operator, else disable
+		updated, err := r.switchSamples(ctx, foundKey)
 
 		keyCondition := r.keyCondition(failed, foundKey)
 		samplesCondition := r.samplesCondition(updated, foundKey)
