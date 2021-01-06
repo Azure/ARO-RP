@@ -38,8 +38,6 @@ spec:
           properties:
             acrDomain:
               type: string
-            azEnvironment:
-              type: string
             features:
               description: FeaturesSpec defines ARO operator feature gates
               properties:
@@ -68,8 +66,6 @@ spec:
               type: string
             resourceId:
               description: ResourceID is the Azure resourceId of the cluster
-              type: string
-            vnetId:
               type: string
           type: object
         status:
