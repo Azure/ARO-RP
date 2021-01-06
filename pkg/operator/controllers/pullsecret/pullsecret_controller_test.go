@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"testing"
 
+	samplesV1 "github.com/openshift/api/samples/v1"
 	samplesFake "github.com/openshift/client-go/samples/clientset/versioned/fake"
 	"github.com/operator-framework/operator-sdk/pkg/status"
 	"github.com/sirupsen/logrus"
@@ -50,12 +51,16 @@ func TestPullSecretReconciler(t *testing.T) {
 
 	baseCluster := newFakeAro(&arov1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: "cluster"}, Status: arov1alpha1.ClusterStatus{}})
 
+	newFakeSamples := func(c *samplesV1.Config) *samplesFake.Clientset {
+		return samplesFake.NewSimpleClientset(c)
+	}
+
 	tests := []struct {
 		name        string
 		request     ctrl.Request
 		fakecli     *fake.Clientset
 		arocli      *aroFake.Clientset
-		samplecli   *samplesFake.Clienset
+		samplecli   *samplesFake.Clientset
 		wantErr     bool
 		want        string
 		wantCreated bool
@@ -67,7 +72,14 @@ func TestPullSecretReconciler(t *testing.T) {
 			fakecli: newFakecli(nil, &v1.Secret{Data: map[string][]byte{
 				v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
-			arocli:      baseCluster,
+			arocli: baseCluster,
+			samplecli: newFakeSamples(
+				&samplesV1.Config{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "cluster",
+					},
+				},
+			),
 			want:        `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantCreated: true,
 		},
@@ -76,6 +88,11 @@ func TestPullSecretReconciler(t *testing.T) {
 			fakecli: newFakecli(&v1.Secret{}, &v1.Secret{Data: map[string][]byte{
 				v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
+			samplecli: newFakeSamples(&samplesV1.Config{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster",
+				},
+			}),
 			arocli:      baseCluster,
 			want:        `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantUpdated: true,
@@ -90,6 +107,11 @@ func TestPullSecretReconciler(t *testing.T) {
 				Data: map[string][]byte{
 					v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 				}}),
+			samplecli: newFakeSamples(&samplesV1.Config{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster",
+				},
+			}),
 			arocli:      baseCluster,
 			want:        `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantUpdated: true,
@@ -103,6 +125,11 @@ func TestPullSecretReconciler(t *testing.T) {
 			}, &v1.Secret{Data: map[string][]byte{
 				v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
+			samplecli: newFakeSamples(&samplesV1.Config{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster",
+				},
+			}),
 			arocli:      baseCluster,
 			want:        `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantUpdated: true,
@@ -114,6 +141,11 @@ func TestPullSecretReconciler(t *testing.T) {
 			}, &v1.Secret{Data: map[string][]byte{
 				v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
+			samplecli: newFakeSamples(&samplesV1.Config{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster",
+				},
+			}),
 			arocli:      baseCluster,
 			want:        `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 			wantCreated: true,
@@ -128,6 +160,11 @@ func TestPullSecretReconciler(t *testing.T) {
 			}, &v1.Secret{Data: map[string][]byte{
 				v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
 			}}),
+			samplecli: newFakeSamples(&samplesV1.Config{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster",
+				},
+			}),
 			arocli: baseCluster,
 			want:   `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 		},
@@ -155,6 +192,7 @@ func TestPullSecretReconciler(t *testing.T) {
 				kubernetescli: tt.fakecli,
 				log:           logrus.NewEntry(logrus.StandardLogger()),
 				arocli:        tt.arocli.AroV1alpha1(),
+				samplescli:    tt.samplecli,
 			}
 			if tt.request.Name == "" {
 				tt.request.NamespacedName = pullSecretName
