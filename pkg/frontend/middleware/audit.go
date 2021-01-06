@@ -1,5 +1,8 @@
 package middleware
 
+// Copyright (c) Microsoft Corporation.
+// Licensed under the Apache License 2.0.
+
 import (
 	"fmt"
 	"net/http"
@@ -12,9 +15,6 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/log/audit"
 )
-
-// Copyright (c) Microsoft Corporation.
-// Licensed under the Apache License 2.0.
 
 // Audit generates an audit log based on the request, caller, resource and
 // correlation data found in a HTTP request. It depends on the 'Log' middleware
