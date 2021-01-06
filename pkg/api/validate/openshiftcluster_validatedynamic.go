@@ -204,13 +204,7 @@ func (dv *openShiftClusterDynamicValidator) validateRouteTablePermissions(ctx co
 func (dv *openShiftClusterDynamicValidator) validateRouteTablePermissionsSubnet(ctx context.Context, client authorization.PermissionsClient, vnet *mgmtnetwork.VirtualNetwork, subnetID, path, code, typ string) error {
 	dv.log.Printf("validateRouteTablePermissionsSubnet(%s, %s)", typ, path)
 
-	var s *mgmtnetwork.Subnet
-	for _, ss := range *vnet.Subnets {
-		if strings.EqualFold(*ss.ID, subnetID) {
-			s = &ss
-			break
-		}
-	}
+	s := findSubnet(vnet, subnetID)
 	if s == nil {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The subnet '%s' could not be found.", subnetID)
 	}
@@ -242,15 +236,7 @@ func (dv *openShiftClusterDynamicValidator) validateRouteTablePermissionsSubnet(
 func (dv *openShiftClusterDynamicValidator) validateSubnet(ctx context.Context, vnet *mgmtnetwork.VirtualNetwork, path, subnetID string) (*net.IPNet, error) {
 	dv.log.Printf("validateSubnet (%s)", path)
 
-	var s *mgmtnetwork.Subnet
-	if vnet.Subnets != nil {
-		for _, ss := range *vnet.Subnets {
-			if strings.EqualFold(*ss.ID, subnetID) {
-				s = &ss
-				break
-			}
-		}
-	}
+	s := findSubnet(vnet, subnetID)
 	if s == nil {
 		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The provided subnet '%s' could not be found.", subnetID)
 	}
@@ -426,4 +412,16 @@ func validateActions(ctx context.Context, log *logrus.Entry, r *azure.Resource, 
 
 		return true, nil
 	}, timeoutCtx.Done())
+}
+
+func findSubnet(vnet *mgmtnetwork.VirtualNetwork, subnetID string) *mgmtnetwork.Subnet {
+	if vnet.Subnets != nil {
+		for _, s := range *vnet.Subnets {
+			if strings.EqualFold(*s.ID, subnetID) {
+				return &s
+			}
+		}
+	}
+
+	return nil
 }
