@@ -75,10 +75,6 @@ type openShiftClusterDynamicValidator struct {
 
 // Dynamic validates an OpenShift cluster
 func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
-	// TODO: Dynamic() should work on an enriched oc (in update), and it
-	// currently doesn't.  One sticking point is handling subnet overlap
-	// calculations.
-
 	r, err := azure.ParseResourceID(dv.oc.ID)
 	if err != nil {
 		return err
