@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -118,12 +119,12 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		return err
 	}
 
-	err = dv.validateRouteTablePermissions(ctx, dv.spPermissions, &vnet, api.CloudErrorCodeInvalidServicePrincipalPermissions, "provided service principal")
+	err = dv.validateRouteTablesPermissions(ctx, dv.spPermissions, &vnet, api.CloudErrorCodeInvalidServicePrincipalPermissions, "provided service principal")
 	if err != nil {
 		return err
 	}
 
-	err = dv.validateRouteTablePermissions(ctx, dv.fpPermissions, &vnet, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
+	err = dv.validateRouteTablesPermissions(ctx, dv.fpPermissions, &vnet, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
 	if err != nil {
 		return err
 	}
@@ -186,34 +187,67 @@ func (dv *openShiftClusterDynamicValidator) validateVnetPermissions(ctx context.
 	return err
 }
 
-func (dv *openShiftClusterDynamicValidator) validateRouteTablePermissions(ctx context.Context, client authorization.PermissionsClient, vnet *mgmtnetwork.VirtualNetwork, code, typ string) error {
-	err := dv.validateRouteTablePermissionsSubnet(ctx, client, vnet, dv.oc.Properties.MasterProfile.SubnetID, "properties.masterProfile.subnetId", code, typ)
+func (dv *openShiftClusterDynamicValidator) validateRouteTablesPermissions(ctx context.Context, client authorization.PermissionsClient, vnet *mgmtnetwork.VirtualNetwork, code, typ string) error {
+	m := map[string]string{}
+
+	rtID, err := getRouteTableID(vnet, "properties.masterProfile.subnetId", dv.oc.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return err
 	}
 
+	if rtID != "" {
+		m[strings.ToLower(rtID)] = "properties.masterProfile.subnetId"
+	}
+
 	for i, s := range dv.oc.Properties.WorkerProfiles {
-		err := dv.validateRouteTablePermissionsSubnet(ctx, client, vnet, s.SubnetID, "properties.workerProfiles["+strconv.Itoa(i)+"].subnetId", code, typ)
+		path := fmt.Sprintf("properties.workerProfiles[%d].subnetId", i)
+
+		rtID, err := getRouteTableID(vnet, path, s.SubnetID)
+		if err != nil {
+			return err
+		}
+
+		if _, ok := m[strings.ToLower(rtID)]; ok || rtID == "" {
+			continue
+		}
+
+		m[strings.ToLower(rtID)] = path
+	}
+
+	rts := make([]string, 0, len(m))
+	for rt := range m {
+		rts = append(rts, rt)
+	}
+
+	sort.Slice(rts, func(i, j int) bool { return strings.Compare(m[rts[i]], m[rts[j]]) < 0 })
+
+	for _, rt := range rts {
+		err := dv.validateRouteTablePermissions(ctx, client, rt, m[rt], code, typ)
 		if err != nil {
 			return err
 		}
 	}
+
 	return nil
 }
 
-func (dv *openShiftClusterDynamicValidator) validateRouteTablePermissionsSubnet(ctx context.Context, client authorization.PermissionsClient, vnet *mgmtnetwork.VirtualNetwork, subnetID, path, code, typ string) error {
-	dv.log.Printf("validateRouteTablePermissionsSubnet(%s, %s)", typ, path)
-
+func getRouteTableID(vnet *mgmtnetwork.VirtualNetwork, path, subnetID string) (string, error) {
 	s := findSubnet(vnet, subnetID)
 	if s == nil {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The subnet '%s' could not be found.", subnetID)
+		return "", api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The subnet '%s' could not be found.", subnetID)
 	}
 
 	if s.RouteTable == nil {
-		return nil
+		return "", nil
 	}
 
-	rtr, err := azure.ParseResourceID(*s.RouteTable.ID)
+	return *s.RouteTable.ID, nil
+}
+
+func (dv *openShiftClusterDynamicValidator) validateRouteTablePermissions(ctx context.Context, client authorization.PermissionsClient, rtID, path, code, typ string) error {
+	dv.log.Printf("validateRouteTablePermissions(%s, %s)", typ, path)
+
+	rtr, err := azure.ParseResourceID(rtID)
 	if err != nil {
 		return err
 	}
@@ -224,11 +258,11 @@ func (dv *openShiftClusterDynamicValidator) validateRouteTablePermissionsSubnet(
 		"Microsoft.Network/routeTables/write",
 	}, client)
 	if err == wait.ErrWaitTimeout {
-		return api.NewCloudError(http.StatusBadRequest, code, "", "The %s does not have Network Contributor permission on route table '%s'.", typ, *s.RouteTable.ID)
+		return api.NewCloudError(http.StatusBadRequest, code, "", "The %s does not have Network Contributor permission on route table '%s'.", typ, rtID)
 	}
 	if detailedErr, ok := err.(autorest.DetailedError); ok &&
 		detailedErr.StatusCode == http.StatusNotFound {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedRouteTable, "", "The route table '%s' could not be found.", *s.RouteTable.ID)
+		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedRouteTable, "", "The route table '%s' could not be found.", rtID)
 	}
 	return err
 }

@@ -571,13 +571,10 @@ func TestValidateVnetPermissions(t *testing.T) {
 	}
 }
 
-func TestValidateRouteTablePermissionsSubnet(t *testing.T) {
+func TestValidateRouteTablePermissions(t *testing.T) {
 	ctx := context.Background()
 
-	resourceGroupID := "/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup"
-	vnetID := resourceGroupID + "/providers/Microsoft.Network/virtualNetworks/testVnet"
-	masterSubnet := vnetID + "/subnet/masterSubnet"
-	rtID := resourceGroupID + "/providers/Microsoft.Network/routeTables/testRT"
+	rtID := "/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/routeTables/testRT"
 
 	controller := gomock.NewController(t)
 	defer controller.Finish()
@@ -589,8 +586,6 @@ func TestValidateRouteTablePermissionsSubnet(t *testing.T) {
 	for _, tt := range []struct {
 		name    string
 		mocks   func(*mock_authorization.MockPermissionsClient, func())
-		vnet    func(*mgmtnetwork.VirtualNetwork)
-		subnet  string
 		wantErr string
 	}{
 		{
@@ -609,14 +604,6 @@ func TestValidateRouteTablePermissionsSubnet(t *testing.T) {
 						},
 					}, nil)
 			},
-			subnet: masterSubnet,
-		},
-		{
-			name: "pass (no route table)",
-			vnet: func(vnet *mgmtnetwork.VirtualNetwork) {
-				(*vnet.Subnets)[0].RouteTable = nil
-			},
-			subnet: masterSubnet,
 		},
 		{
 			name: "fail: missing permissions",
@@ -636,7 +623,6 @@ func TestValidateRouteTablePermissionsSubnet(t *testing.T) {
 						nil,
 					)
 			},
-			subnet:  masterSubnet,
 			wantErr: "400: InvalidResourceProviderPermissions: : The resource provider does not have Network Contributor permission on route table '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/routeTables/testRT'.",
 		},
 		{
@@ -654,45 +640,17 @@ func TestValidateRouteTablePermissionsSubnet(t *testing.T) {
 						},
 					)
 			},
-			subnet:  masterSubnet,
 			wantErr: "400: InvalidLinkedRouteTable: : The route table '/subscriptions/0000000-0000-0000-0000-000000000000/resourceGroups/testGroup/providers/Microsoft.Network/routeTables/testRT' could not be found.",
-		},
-		{
-			name:    "fail: subnet not found",
-			subnet:  "doesnotexist",
-			wantErr: "400: InvalidLinkedVNet: properties.masterProfile.subnetId: The subnet 'doesnotexist' could not be found.",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(ctx)
 			defer cancel()
 
-			vnet := &mgmtnetwork.VirtualNetwork{
-				VirtualNetworkPropertiesFormat: &mgmtnetwork.VirtualNetworkPropertiesFormat{
-					Subnets: &[]mgmtnetwork.Subnet{
-						{
-							ID: &masterSubnet,
-							SubnetPropertiesFormat: &mgmtnetwork.SubnetPropertiesFormat{
-								RouteTable: &mgmtnetwork.RouteTable{
-									ID: &rtID,
-								},
-							},
-						},
-					},
-				},
-			}
-
 			permissionsClient := mock_authorization.NewMockPermissionsClient(controller)
+			tt.mocks(permissionsClient, cancel)
 
-			if tt.mocks != nil {
-				tt.mocks(permissionsClient, cancel)
-			}
-
-			if tt.vnet != nil {
-				tt.vnet(vnet)
-			}
-
-			err := dv.validateRouteTablePermissionsSubnet(ctx, permissionsClient, vnet, tt.subnet, "properties.masterProfile.subnetId", api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
+			err := dv.validateRouteTablePermissions(ctx, permissionsClient, rtID, "properties.masterProfile.subnetId", api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
