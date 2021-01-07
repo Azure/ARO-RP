@@ -28,7 +28,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/operator"
 	aro "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
 	arov1alpha1 "github.com/Azure/ARO-RP/pkg/operator/apis/aro.openshift.io/v1alpha1"
-	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned/typed/aro.openshift.io/v1alpha1"
+	aroclient "github.com/Azure/ARO-RP/pkg/operator/clientset/versioned"
 	"github.com/Azure/ARO-RP/pkg/operator/controllers"
 	"github.com/Azure/ARO-RP/pkg/util/pullsecret"
 )
@@ -38,12 +38,12 @@ var pullSecretName = types.NamespacedName{Name: "pull-secret", Namespace: "opens
 // PullSecretReconciler reconciles a Cluster object
 type PullSecretReconciler struct {
 	kubernetescli kubernetes.Interface
-	arocli        aroclient.AroV1alpha1Interface
+	arocli        aroclient.Interface
 	samplescli    samplesclient.Interface
 	log           *logrus.Entry
 }
 
-func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, arocli aroclient.AroV1alpha1Interface, samplescli samplesclient.Interface) *PullSecretReconciler {
+func NewReconciler(log *logrus.Entry, kubernetescli kubernetes.Interface, arocli aroclient.Interface, samplescli samplesclient.Interface) *PullSecretReconciler {
 	return &PullSecretReconciler{
 		log:           log,
 		kubernetescli: kubernetescli,
@@ -74,6 +74,12 @@ func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 		return reconcile.Result{}, err
 	}
 
+	// check feature gates and if set to false remove any persistence
+	cluster, err := r.arocli.AroV1alpha1().Clusters().Get(ctx, arov1alpha1.SingletonClusterName, metav1.GetOptions{})
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
 	return reconcile.Result{}, retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		ps, isCreate, err := r.pullsecret(ctx)
 		if err != nil {
@@ -96,19 +102,21 @@ func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 			foundKey = r.checkRHRegistryKeys(parsedKeys)
 		}
 
-		// if foundKey enable samples operator, else disable
-		updated, err := r.switchSamples(ctx, foundKey)
-
 		keyCondition := r.keyCondition(failed, foundKey)
-		samplesCondition := r.samplesCondition(updated, foundKey)
 
 		err = controllers.SetCondition(ctx, r.arocli, keyCondition, operator.RoleMaster)
 		if err != nil {
 			return err
 		}
-		err = controllers.SetCondition(ctx, r.arocli, samplesCondition, operator.RoleMaster)
-		if err != nil {
-			return err
+
+		if cluster.Spec.Features.ManageSamplesOperator {
+			// if foundKey enable samples operator, else disable
+			updated, err := r.switchSamples(ctx, foundKey)
+			samplesCondition := r.samplesCondition(updated, foundKey)
+			err = controllers.SetCondition(ctx, r.arocli, samplesCondition, operator.RoleMaster)
+			if err != nil {
+				return err
+			}
 		}
 
 		pullsec, changed, err := pullsecret.Merge(string(ps.Data[v1.DockerConfigJsonKey]), string(mysec.Data[v1.DockerConfigJsonKey]))
