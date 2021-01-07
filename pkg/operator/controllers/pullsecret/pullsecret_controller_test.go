@@ -50,7 +50,16 @@ func TestPullSecretReconciler(t *testing.T) {
 		return aroFake.NewSimpleClientset(a)
 	}
 
-	baseCluster := newFakeAro(&arov1alpha1.Cluster{ObjectMeta: metav1.ObjectMeta{Name: "cluster"}, Status: arov1alpha1.ClusterStatus{}})
+	baseCluster := newFakeAro(
+		&arov1alpha1.Cluster{
+			ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+			Spec: arov1alpha1.ClusterSpec{
+				Features: arov1alpha1.FeaturesSpec{
+					ManageSamplesOperator: true,
+				},
+			},
+			Status: arov1alpha1.ClusterStatus{},
+		})
 
 	newFakeSamples := func(c *samplesV1.Config) *samplesFake.Clientset {
 		cli := samplesFake.NewSimpleClientset(c)
@@ -223,6 +232,28 @@ func TestPullSecretReconciler(t *testing.T) {
 			arocli: baseCluster,
 			want:   `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
 		},
+		{
+			name: "disabled feature, valid RH key present",
+			fakecli: newFakecli(&v1.Secret{
+				Data: map[string][]byte{
+					v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+				},
+			}, &v1.Secret{Data: map[string][]byte{
+				v1.DockerConfigJsonKey: []byte(`{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`),
+			}}),
+			samplecli: newFakeSamples(&samplesV1.Config{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster",
+				},
+			}),
+			wantConfig: samplesV1.Config{},
+			arocli: newFakeAro(
+				&arov1alpha1.Cluster{
+					ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+					Status:     arov1alpha1.ClusterStatus{},
+				}),
+			want: `{"auths":{"arosvc.azurecr.io":{"auth":"ZnJlZDplbnRlcg=="},"registry.redhat.io":{"auth":"ZnJlZDplbnRlcg=="}}}`,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -259,7 +290,7 @@ func TestPullSecretReconciler(t *testing.T) {
 			r := &PullSecretReconciler{
 				kubernetescli: tt.fakecli,
 				log:           logrus.NewEntry(logrus.StandardLogger()),
-				arocli:        tt.arocli.AroV1alpha1(),
+				arocli:        tt.arocli,
 				samplescli:    tt.samplecli,
 			}
 			if tt.request.Name == "" {
