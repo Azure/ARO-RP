@@ -219,11 +219,4 @@
 #endif
 
 
-/* 6.10.0 */
-
-#ifndef VIR_ERR_CHECKPOINT_INCONSISTENT
-#define VIR_ERR_CHECKPOINT_INCONSISTENT 109
-#endif
-
-
 #endif /* LIBVIRT_GO_ERROR_COMPAT_H__ */

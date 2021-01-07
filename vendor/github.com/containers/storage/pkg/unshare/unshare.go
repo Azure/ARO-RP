@@ -26,7 +26,6 @@ func HomeDir() (string, error) {
 				return
 			}
 			homeDir, homeDirErr = usr.HomeDir, nil
-			return
 		}
 		homeDir, homeDirErr = home, nil
 	})

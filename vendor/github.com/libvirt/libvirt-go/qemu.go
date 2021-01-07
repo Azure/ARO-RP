@@ -77,7 +77,6 @@ const (
 	CONNECT_DOMAIN_QEMU_MONITOR_EVENT_REGISTER_NOCASE = DomainQemuMonitorEventFlags(C.VIR_CONNECT_DOMAIN_QEMU_MONITOR_EVENT_REGISTER_NOCASE)
 )
 
-// See also https://libvirt.org/html/libvirt-libvirt-qemu.html#virDomainQemuMonitorCommand
 func (d *Domain) QemuMonitorCommand(command string, flags DomainQemuMonitorCommandFlags) (string, error) {
 	var cResult *C.char
 	cCommand := C.CString(command)
@@ -94,7 +93,6 @@ func (d *Domain) QemuMonitorCommand(command string, flags DomainQemuMonitorComma
 	return rstring, nil
 }
 
-// See also https://libvirt.org/html/libvirt-libvirt-qemu.html#virDomainQemuAgentCommand
 func (d *Domain) QemuAgentCommand(command string, timeout DomainQemuAgentCommandTimeout, flags uint32) (string, error) {
 	cCommand := C.CString(command)
 	defer C.free(unsafe.Pointer(cCommand))
@@ -110,7 +108,6 @@ func (d *Domain) QemuAgentCommand(command string, timeout DomainQemuAgentCommand
 	return rstring, nil
 }
 
-// See also https://libvirt.org/html/libvirt-libvirt-qemu.html#virDomainQemuAttach
 func (c *Connect) DomainQemuAttach(pid uint32, flags uint32) (*Domain, error) {
 	var err C.virError
 	ptr := C.virDomainQemuAttachWrapper(c.ptr, C.uint(pid), C.uint(flags), &err)
@@ -152,7 +149,6 @@ func domainQemuMonitorEventCallback(c C.virConnectPtr, d C.virDomainPtr,
 
 }
 
-// See also https://libvirt.org/html/libvirt-libvirt-qemu.html#virConnectDomainQemuMonitorEventRegister
 func (c *Connect) DomainQemuMonitorEventRegister(dom *Domain, event string, callback DomainQemuMonitorEventCallback, flags DomainQemuMonitorEventFlags) (int, error) {
 	if C.LIBVIR_VERSION_NUMBER < 1002003 {
 		return 0, makeNotImplementedError("virConnectDomainQemuMonitorEventRegister")
@@ -178,7 +174,6 @@ func (c *Connect) DomainQemuMonitorEventRegister(dom *Domain, event string, call
 	return int(ret), nil
 }
 
-// See also https://libvirt.org/html/libvirt-libvirt-qemu.html#virConnectDomainQemuMonitorEventDeregister
 func (c *Connect) DomainQemuEventDeregister(callbackId int) error {
 	if C.LIBVIR_VERSION_NUMBER < 1002003 {
 		return makeNotImplementedError("virConnectDomainQemuMonitorEventDeregister")

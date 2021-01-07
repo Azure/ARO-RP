@@ -202,7 +202,7 @@ type DomainEventDeviceRemovalFailed struct {
 type DomainEventDeviceRemovalFailedCallback func(c *Connect, d *Domain, event *DomainEventDeviceRemovalFailed)
 
 type DomainEventMetadataChange struct {
-	Type  DomainMetadataType
+	Type  int
 	NSURI string
 }
 
@@ -570,7 +570,7 @@ func domainEventMetadataChangeCallback(c C.virConnectPtr, d C.virDomainPtr,
 	connection := &Connect{ptr: c}
 
 	eventDetails := &DomainEventMetadataChange{
-		Type:  DomainMetadataType(mtype),
+		Type:  (int)(mtype),
 		NSURI: C.GoString(nsuri),
 	}
 	callbackFunc := getCallbackId(goCallbackId)
@@ -974,7 +974,7 @@ func domainEventMemoryFailureCallback(c C.virConnectPtr, d C.virDomainPtr, recip
 	eventDetails := &DomainEventMemoryFailure{
 		Recipient: DomainMemoryFailureRecipientType(recipient),
 		Action:    DomainMemoryFailureActionType(action),
-		Flags:     DomainMemoryFailureFlags(flags),
+		Flags:     DomainMemoryFailureFlags(action),
 	}
 	callbackFunc := getCallbackId(goCallbackId)
 	callback, ok := callbackFunc.(DomainEventMemoryFailureCallback)

@@ -841,13 +841,6 @@ const (
 	VCPU_BLOCKED = VcpuState(C.VIR_VCPU_BLOCKED)
 )
 
-type VcpuHostCpuState int
-
-const (
-	VCPU_INFO_CPU_OFFLINE     = VcpuHostCpuState(C.VIR_VCPU_INFO_CPU_OFFLINE)
-	VCPU_INFO_CPU_UNAVAILABLE = VcpuHostCpuState(C.VIR_VCPU_INFO_CPU_UNAVAILABLE)
-)
-
 type DomainJobOperationType int
 
 const (
@@ -946,13 +939,6 @@ type DomainMemoryFailureFlags uint
 const (
 	DOMAIN_MEMORY_FAILURE_ACTION_REQUIRED = DomainMemoryFailureFlags(C.VIR_DOMAIN_MEMORY_FAILURE_ACTION_REQUIRED)
 	DOMAIN_MEMORY_FAILURE_RECURSIVE       = DomainMemoryFailureFlags(C.VIR_DOMAIN_MEMORY_FAILURE_RECURSIVE)
-)
-
-type DomainAuthorizedSSHKeysFlags uint
-
-const (
-	DOMAIN_AUTHORIZED_SSH_KEYS_SET_APPEND = DomainAuthorizedSSHKeysFlags(C.VIR_DOMAIN_AUTHORIZED_SSH_KEYS_SET_APPEND)
-	DOMAIN_AUTHORIZED_SSH_KEYS_SET_REMOVE = DomainAuthorizedSSHKeysFlags(C.VIR_DOMAIN_AUTHORIZED_SSH_KEYS_SET_REMOVE)
 )
 
 // See also https://libvirt.org/html/libvirt-libvirt-domain.html#virDomainFree
@@ -1112,12 +1098,12 @@ func (d *Domain) GetAutostart() (bool, error) {
 }
 
 // See also https://libvirt.org/html/libvirt-libvirt-domain.html#virDomainGetBlockInfo
-func (d *Domain) GetBlockInfo(disk string, flags uint32) (*DomainBlockInfo, error) {
+func (d *Domain) GetBlockInfo(disk string, flag uint) (*DomainBlockInfo, error) {
 	var cinfo C.virDomainBlockInfo
 	cDisk := C.CString(disk)
 	defer C.free(unsafe.Pointer(cDisk))
 	var err C.virError
-	result := C.virDomainGetBlockInfoWrapper(d.ptr, cDisk, &cinfo, C.uint(flags), &err)
+	result := C.virDomainGetBlockInfoWrapper(d.ptr, cDisk, &cinfo, C.uint(flag), &err)
 	if result == -1 {
 		return nil, makeError(&err)
 	}
@@ -1402,7 +1388,7 @@ func (d *Domain) SetInterfaceParameters(device string, params *DomainInterfacePa
 }
 
 // See also https://libvirt.org/html/libvirt-libvirt-domain.html#virDomainGetMetadata
-func (d *Domain) GetMetadata(metadataType DomainMetadataType, uri string, flags DomainModificationImpact) (string, error) {
+func (d *Domain) GetMetadata(tipus DomainMetadataType, uri string, flags DomainModificationImpact) (string, error) {
 	var cUri *C.char
 	if uri != "" {
 		cUri = C.CString(uri)
@@ -1410,7 +1396,7 @@ func (d *Domain) GetMetadata(metadataType DomainMetadataType, uri string, flags 
 	}
 
 	var err C.virError
-	result := C.virDomainGetMetadataWrapper(d.ptr, C.int(metadataType), cUri, C.uint(flags), &err)
+	result := C.virDomainGetMetadataWrapper(d.ptr, C.int(tipus), cUri, C.uint(flags), &err)
 	if result == nil {
 		return "", makeError(&err)
 
@@ -1420,7 +1406,7 @@ func (d *Domain) GetMetadata(metadataType DomainMetadataType, uri string, flags 
 }
 
 // See also https://libvirt.org/html/libvirt-libvirt-domain.html#virDomainSetMetadata
-func (d *Domain) SetMetadata(metadataType DomainMetadataType, metaDataCont, uriKey, uri string, flags DomainModificationImpact) error {
+func (d *Domain) SetMetadata(metaDataType DomainMetadataType, metaDataCont, uriKey, uri string, flags DomainModificationImpact) error {
 	var cMetaDataCont *C.char
 	var cUriKey *C.char
 	var cUri *C.char
@@ -1430,7 +1416,7 @@ func (d *Domain) SetMetadata(metadataType DomainMetadataType, metaDataCont, uriK
 		defer C.free(unsafe.Pointer(cMetaDataCont))
 	}
 
-	if metadataType == DOMAIN_METADATA_ELEMENT {
+	if metaDataType == DOMAIN_METADATA_ELEMENT {
 		if uriKey != "" {
 			cUriKey = C.CString(uriKey)
 			defer C.free(unsafe.Pointer(cUriKey))
@@ -1439,7 +1425,7 @@ func (d *Domain) SetMetadata(metadataType DomainMetadataType, metaDataCont, uriK
 		defer C.free(unsafe.Pointer(cUri))
 	}
 	var err C.virError
-	result := C.virDomainSetMetadataWrapper(d.ptr, C.int(metadataType), cMetaDataCont, cUriKey, cUri, C.uint(flags), &err)
+	result := C.virDomainSetMetadataWrapper(d.ptr, C.int(metaDataType), cMetaDataCont, cUriKey, cUri, C.uint(flags), &err)
 	if result == -1 {
 		return makeError(&err)
 	}
@@ -1467,7 +1453,7 @@ func (d *Domain) UndefineFlags(flags DomainUndefineFlagsValues) error {
 }
 
 // See also https://libvirt.org/html/libvirt-libvirt-domain.html#virDomainSetMaxMemory
-func (d *Domain) SetMaxMemory(memory uint64) error {
+func (d *Domain) SetMaxMemory(memory uint) error {
 	var err C.virError
 	result := C.virDomainSetMaxMemoryWrapper(d.ptr, C.ulong(memory), &err)
 	if result == -1 {
@@ -1997,7 +1983,7 @@ func (d *Domain) PinVcpuFlags(vcpu uint, cpuMap []bool, flags DomainModification
 }
 
 type DomainIPAddress struct {
-	Type   IPAddrType
+	Type   int
 	Addr   string
 	Prefix uint
 }
@@ -2038,7 +2024,7 @@ func (d *Domain) ListAllInterfaceAddresses(src DomainInterfaceAddressesSource) (
 			var caddr *C.virDomainIPAddress
 			caddr = (*C.virDomainIPAddress)(unsafe.Pointer(uintptr(unsafe.Pointer(ciface.addrs)) + (unsafe.Sizeof(*caddr) * uintptr(k))))
 			ifaces[i].Addrs[k] = DomainIPAddress{}
-			ifaces[i].Addrs[k].Type = IPAddrType(caddr._type)
+			ifaces[i].Addrs[k].Type = int(caddr._type)
 			ifaces[i].Addrs[k].Addr = C.GoString(caddr.addr)
 			ifaces[i].Addrs[k].Prefix = uint(caddr.prefix)
 
@@ -4902,7 +4888,7 @@ const (
 )
 
 // See also https://libvirt.org/html/libvirt-libvirt-domain.html#virDomainSetLifecycleAction
-func (d *Domain) SetLifecycleAction(lifecycleType DomainLifecycle, action DomainLifecycleAction, flags uint32) error {
+func (d *Domain) SetLifecycleAction(lifecycleType uint32, action uint32, flags uint32) error {
 	if C.LIBVIR_VERSION_NUMBER < 3009000 {
 		return makeNotImplementedError("virDomainSetLifecycleAction")
 	}
@@ -5338,55 +5324,4 @@ func (d *Domain) BackupGetXMLDesc(flags uint32) (string, error) {
 	defer C.free(unsafe.Pointer(ret))
 
 	return xml, nil
-}
-
-func (d *Domain) AuthorizedSSHKeysGet(user string, flags DomainAuthorizedSSHKeysFlags) ([]string, error) {
-	if C.LIBVIR_VERSION_NUMBER < 6010000 {
-		return []string{}, makeNotImplementedError("virDomainAuthorizedSSHKeysGet")
-	}
-	cuser := C.CString(user)
-	defer C.free(unsafe.Pointer(cuser))
-
-	var ckeys **C.char
-	var err C.virError
-	ret := C.virDomainAuthorizedSSHKeysGetWrapper(d.ptr, cuser, &ckeys, C.uint(flags), &err)
-	if ret == -1 {
-		return []string{}, makeError(&err)
-	}
-
-	keys := make([]string, int(ret))
-	for i := 0; i < int(ret); i++ {
-		cmodel := *(**C.char)(unsafe.Pointer(uintptr(unsafe.Pointer(ckeys)) + (unsafe.Sizeof(*ckeys) * uintptr(i))))
-
-		defer C.free(unsafe.Pointer(cmodel))
-		keys[i] = C.GoString(cmodel)
-	}
-	defer C.free(unsafe.Pointer(ckeys))
-
-	return keys, nil
-}
-
-func (d *Domain) AuthorizedSSHKeysSet(user string, keys []string, flags DomainAuthorizedSSHKeysFlags) error {
-	if C.LIBVIR_VERSION_NUMBER < 6010000 {
-		return makeNotImplementedError("virDomainAuthorizedSSHKeysSet")
-	}
-	cuser := C.CString(user)
-	defer C.free(unsafe.Pointer(cuser))
-
-	ckeys := make([](*C.char), len(keys))
-
-	for i := 0; i < len(keys); i++ {
-		ckeys[i] = C.CString(keys[i])
-		defer C.free(unsafe.Pointer(ckeys[i]))
-	}
-
-	nkeys := len(keys)
-	var err C.virError
-	ret := C.virDomainAuthorizedSSHKeysSetWrapper(d.ptr, cuser, (**C.char)(unsafe.Pointer(&ckeys[0])), C.uint(nkeys), C.uint(flags), &err)
-	if ret == -1 {
-		return makeError(&err)
-	}
-
-	return nil
-
 }
