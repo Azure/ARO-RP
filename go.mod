@@ -112,7 +112,6 @@ require (
 replace (
 	bitbucket.org/ww/goautoneg => github.com/munnerz/goautoneg v0.0.0-20120707110453-a547fc61f48d // 404 on bitbucket.org/ww/goautoneg
 	github.com/coreos/go-systemd => github.com/coreos/go-systemd/v22 v22.0.0
-	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.0
 	github.com/gophercloud/gophercloud => github.com/gophercloud/gophercloud v0.8.0
 	github.com/metal3-io/baremetal-operator => github.com/openshift/baremetal-operator v0.0.0-20201023182211-14317000ae07
 	github.com/openshift/api => github.com/openshift/api v0.0.0-20200917102736-0a191b5b9bb0
@@ -128,13 +127,13 @@ replace (
 	github.com/openshift/machine-api-operator => github.com/openshift/machine-api-operator v0.2.1-0.20201009151430-0af747bec740
 	github.com/openshift/machine-config-operator => github.com/openshift/machine-config-operator v0.0.1-0.20201106225516-bc4ece5c0409
 	github.com/operator-framework/operator-sdk => github.com/operator-framework/operator-sdk v0.19.4
-	k8s.io/api => k8s.io/api v0.18.3
-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.18.3
-	k8s.io/apimachinery => k8s.io/apimachinery v0.18.3
-	k8s.io/client-go => k8s.io/client-go v0.18.3
-	k8s.io/code-generator => k8s.io/code-generator v0.18.3
+	k8s.io/api => k8s.io/api v0.19.4
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.19.4
+	k8s.io/apimachinery => k8s.io/apimachinery v0.19.4
+	k8s.io/client-go => k8s.io/client-go v0.19.4
+	k8s.io/code-generator => k8s.io/code-generator v0.19.4
 	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20200410145947-61e04a5be9a6
-	k8s.io/kubectl => k8s.io/kubectl v0.18.3
+	k8s.io/kubectl => k8s.io/kubectl v0.19.4
 	sigs.k8s.io/cluster-api-provider-aws => github.com/openshift/cluster-api-provider-aws v0.2.1-0.20200911195425-2710ded1034b
 	sigs.k8s.io/cluster-api-provider-azure => github.com/openshift/cluster-api-provider-azure v0.1.0-alpha.3.0.20201021230208-6a32d86775de
 	sigs.k8s.io/cluster-api-provider-gcp => github.com/openshift/cluster-api-provider-gcp v0.0.1-0.20200917183408-90e92ed9fd9b
