@@ -1,6 +1,16 @@
+FROM registry.access.redhat.com/ubi8/go-toolset:1.14.12 AS builder
+ENV GOOS=linux \
+    GOPATH=/go/
+WORKDIR ${GOPATH}/src/github.com/Azure/ARO-RP
+USER root
+RUN dnf update -y && \
+    dnf install gpgme-devel libassuan-devel openssl -y
+COPY . ${GOPATH}/src/github.com/Azure/ARO-RP/
+RUN make aro && make e2e.test
+
 FROM registry.access.redhat.com/ubi8/ubi-minimal
 RUN microdnf update && microdnf clean all
-COPY aro e2e.test /usr/local/bin/
+COPY --from=builder /go/src/github.com/Azure/ARO-RP/aro /go/src/github.com/Azure/ARO-RP/e2e.test /usr/local/bin/
 ENTRYPOINT ["aro"]
 EXPOSE 2222/tcp 8443/tcp 8444/tcp
 USER 1000

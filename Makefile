@@ -32,7 +32,7 @@ discoverycache:
 generate:
 	go generate ./...
 
-image-aro: aro e2e.test
+image-aro:
 	docker pull registry.access.redhat.com/ubi8/ubi-minimal
 	docker build --no-cache -f Dockerfile.aro -t $(ARO_IMAGE) .
 
