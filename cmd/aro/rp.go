@@ -65,10 +65,7 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	m, err := statsd.New(ctx, log.WithField("component", "metrics"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"))
-	if err != nil {
-		return err
-	}
+	m := statsd.New(ctx, log.WithField("component", "metrics"), _env, os.Getenv("MDM_ACCOUNT"), os.Getenv("MDM_NAMESPACE"))
 
 	tracing.Register(azure.New(m))
 	metrics.Register(metrics.RegisterOpts{

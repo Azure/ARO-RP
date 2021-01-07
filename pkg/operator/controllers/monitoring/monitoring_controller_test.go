@@ -20,7 +20,7 @@ import (
 )
 
 var cmMetadata = metav1.ObjectMeta{Name: "cluster-monitoring-config", Namespace: "openshift-monitoring"}
-var custerMetadata = metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName}
+var clusterMetadata = metav1.ObjectMeta{Name: arov1alpha1.SingletonClusterName}
 
 func TestReconcileMonitoringConfig(t *testing.T) {
 	log := logrus.NewEntry(logrus.StandardLogger())
@@ -36,7 +36,7 @@ func TestReconcileMonitoringConfig(t *testing.T) {
 			setConfigMap: func() *Reconciler {
 				return &Reconciler{
 					arocli: arofake.NewSimpleClientset(&arov1alpha1.Cluster{
-						ObjectMeta: custerMetadata,
+						ObjectMeta: clusterMetadata,
 						Spec: arov1alpha1.ClusterSpec{
 							Features: arov1alpha1.FeaturesSpec{
 								PersistentPrometheus: true,
@@ -63,7 +63,7 @@ prometheusK8s:
 			setConfigMap: func() *Reconciler {
 				return &Reconciler{
 					arocli: arofake.NewSimpleClientset(&arov1alpha1.Cluster{
-						ObjectMeta: custerMetadata,
+						ObjectMeta: clusterMetadata,
 						Spec: arov1alpha1.ClusterSpec{
 							Features: arov1alpha1.FeaturesSpec{
 								PersistentPrometheus: true,
@@ -92,7 +92,7 @@ prometheusK8s:
 			setConfigMap: func() *Reconciler {
 				return &Reconciler{
 					arocli: arofake.NewSimpleClientset(&arov1alpha1.Cluster{
-						ObjectMeta: custerMetadata,
+						ObjectMeta: clusterMetadata,
 						Spec: arov1alpha1.ClusterSpec{
 							Features: arov1alpha1.FeaturesSpec{
 								PersistentPrometheus: true,
@@ -124,7 +124,7 @@ prometheusK8s:
 			setConfigMap: func() *Reconciler {
 				return &Reconciler{
 					arocli: arofake.NewSimpleClientset(&arov1alpha1.Cluster{
-						ObjectMeta: custerMetadata,
+						ObjectMeta: clusterMetadata,
 						Spec: arov1alpha1.ClusterSpec{
 							Features: arov1alpha1.FeaturesSpec{
 								PersistentPrometheus: true,
@@ -168,7 +168,7 @@ prometheusK8s:
 			setConfigMap: func() *Reconciler {
 				return &Reconciler{
 					arocli: arofake.NewSimpleClientset(&arov1alpha1.Cluster{
-						ObjectMeta: custerMetadata,
+						ObjectMeta: clusterMetadata,
 						Spec: arov1alpha1.ClusterSpec{
 							Features: arov1alpha1.FeaturesSpec{
 								PersistentPrometheus: true,
@@ -207,7 +207,7 @@ prometheusK8s:
 			setConfigMap: func() *Reconciler {
 				return &Reconciler{
 					arocli: arofake.NewSimpleClientset(&arov1alpha1.Cluster{
-						ObjectMeta: custerMetadata,
+						ObjectMeta: clusterMetadata,
 						Spec: arov1alpha1.ClusterSpec{
 							Features: arov1alpha1.FeaturesSpec{
 								PersistentPrometheus: false,

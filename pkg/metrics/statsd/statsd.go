@@ -32,7 +32,7 @@ type statsd struct {
 }
 
 // New returns a new metrics.Interface
-func New(ctx context.Context, log *logrus.Entry, env env.Core, account, namespace string) (metrics.Interface, error) {
+func New(ctx context.Context, log *logrus.Entry, env env.Core, account, namespace string) metrics.Interface {
 	s := &statsd{
 		log: log,
 		env: env,
@@ -55,7 +55,7 @@ func New(ctx context.Context, log *logrus.Entry, env env.Core, account, namespac
 
 	go s.run()
 
-	return s, nil
+	return s
 }
 
 // EmitFloat records float information

@@ -117,7 +117,7 @@ func TestEmitClusterVersion(t *testing.T) {
 				},
 			},
 			wantProvisionedByResourceProviderVersion: "somesha",
-			wantAvailableRP:                          "unknown", // (rpVersion = unkwnown) != (provisionedByResourceProvider = "")
+			wantAvailableRP:                          "unknown", // (rpVersion = unknown) != (provisionedByResourceProvider = "")
 		},
 		{
 			name: "with ProvisionedBy",
