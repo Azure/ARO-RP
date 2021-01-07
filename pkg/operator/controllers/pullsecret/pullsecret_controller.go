@@ -333,16 +333,16 @@ func (r *PullSecretReconciler) switchSamples(ctx context.Context, enable bool) (
 			return nil
 		}
 
+		oldManagementState := c.Spec.ManagementState
+
 		if enable {
-			if c.Spec.ManagementState == operatorv1.Managed {
-				return nil
-			}
 			c.Spec.ManagementState = operatorv1.Managed
 		} else {
-			if c.Spec.ManagementState == operatorv1.Removed {
-				return nil
-			}
 			c.Spec.ManagementState = operatorv1.Removed
+		}
+
+		if oldManagementState == c.Spec.ManagementState {
+			return nil
 		}
 
 		_, err = r.samplescli.SamplesV1().Configs().Update(ctx, c, metav1.UpdateOptions{})
