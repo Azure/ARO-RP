@@ -896,8 +896,8 @@ github.com/jessevdk/go-flags v0.0.0-20180331124232-1c38ed7ad0cc/go.mod h1:4FA24M
 github.com/jessevdk/go-flags v1.4.0/go.mod h1:4FA24M0QyGHXBuZZK/XkWh8h0e1EYbRYJSGM75WSRxI=
 github.com/jim-minter/go-cosmosdb v0.0.0-20201119201311-b37af9b82812 h1:il0jxCpyWRQ5klfw8ey8yg+WCUdsZGjziYEk5rIDkuc=
 github.com/jim-minter/go-cosmosdb v0.0.0-20201119201311-b37af9b82812/go.mod h1:n4wXKwl/rXS49qkPRFf3vovG0V6nkwAO4SbRwjGYibM=
-github.com/jim-minter/installer v0.9.0-master.0.20210107030401-0005478bc952 h1:Mp3pRpYRyJGL5/0pSA8fruouWv3f7NZ0JFuzLO0jrZ0=
-github.com/jim-minter/installer v0.9.0-master.0.20210107030401-0005478bc952/go.mod h1:/2++wiXs6+kQQ8mue7x5Tod1BoJc1D41NP9uk2EJjm4=
+github.com/jim-minter/installer v0.9.0-master.0.20210107032832-25aa614f1e0a h1:VdYm4llpEfDOm03Lc1wlPmp/25lRQc1x81NeWTfrgqU=
+github.com/jim-minter/installer v0.9.0-master.0.20210107032832-25aa614f1e0a/go.mod h1:/2++wiXs6+kQQ8mue7x5Tod1BoJc1D41NP9uk2EJjm4=
 github.com/jingyugao/rowserrcheck v0.0.0-20191204022205-72ab7603b68a h1:GmsqmapfzSJkm28dhRoHz2tLRbJmqhU86IPgBtN3mmk=
 github.com/jingyugao/rowserrcheck v0.0.0-20191204022205-72ab7603b68a/go.mod h1:xRskid8CManxVta/ALEhJha/pweKBaVG6fWgc0yH25s=
 github.com/jirfag/go-printf-func-name v0.0.0-20191110105641-45db9963cdd3 h1:jNYPNLe3d8smommaoQlK7LOA5ESyUJJ+Wf79ZtA7Vp4=
