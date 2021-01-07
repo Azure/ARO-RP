@@ -86,6 +86,9 @@ func operator(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 	dh, err := dynamichelper.New(log, restConfig)
+	if err != nil {
+		return err
+	}
 	samplescli, err := samplesclient.NewForConfig(restConfig)
 	if err != nil {
 		return err

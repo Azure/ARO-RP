@@ -112,6 +112,10 @@ func (r *PullSecretReconciler) Reconcile(request ctrl.Request) (ctrl.Result, err
 		if cluster.Spec.Features.ManageSamplesOperator {
 			// if foundKey enable samples operator, else disable
 			updated, err := r.switchSamples(ctx, foundKey)
+			if err != nil {
+				return err
+			}
+
 			samplesCondition := r.samplesCondition(updated, foundKey)
 			err = controllers.SetCondition(ctx, r.arocli, samplesCondition, operator.RoleMaster)
 			if err != nil {
