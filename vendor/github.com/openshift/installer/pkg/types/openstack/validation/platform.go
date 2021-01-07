@@ -2,10 +2,9 @@ package validation
 
 import (
 	"errors"
-	"fmt"
 	"net"
+	"strings"
 
-	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	"github.com/openshift/installer/pkg/types"
@@ -14,72 +13,10 @@ import (
 )
 
 // ValidatePlatform checks that the specified platform is valid.
-func ValidatePlatform(p *openstack.Platform, n *types.Networking, fldPath *field.Path, fetcher ValidValuesFetcher, c *types.InstallConfig) field.ErrorList {
-	allErrs := field.ErrorList{}
-	validClouds, err := fetcher.GetCloudNames()
-	if err != nil {
-		allErrs = append(allErrs, field.InternalError(fldPath.Child("cloud"), errors.New("could not retrieve valid clouds")))
-	} else if !isValidValue(p.Cloud, validClouds) {
-		allErrs = append(allErrs, field.NotSupported(fldPath.Child("cloud"), p.Cloud, validClouds))
-	} else {
-		if p.MachinesSubnet != "" {
-			if len(p.ExternalDNS) > 0 {
-				allErrs = append(allErrs, field.Invalid(fldPath.Child("externalDNS"), p.ExternalDNS, "externalDNS is set, externalDNS is not supported when machinesSubnet is set"))
-			}
-			if !validUUIDv4(p.MachinesSubnet) {
-				allErrs = append(allErrs, field.InternalError(fldPath.Child("machinesSubnet"), errors.New("invalid subnet ID")))
-			} else {
-				cidr, err := fetcher.GetSubnetCIDR(p.Cloud, p.MachinesSubnet)
-				if err != nil {
-					allErrs = append(allErrs, field.InternalError(fldPath.Child("machinesSubnet"), fmt.Errorf("invalid subnet %v", err)))
-				}
-				if n.MachineNetwork[0].CIDR.String() != cidr {
-					allErrs = append(allErrs, field.InternalError(fldPath.Child("machinesSubnet"), fmt.Errorf("the first CIDR in machineNetwork, %s, doesn't match the CIDR of the machineSubnet, %s", n.MachineNetwork[0].CIDR.String(), cidr)))
-				}
-			}
-		}
-		validNetworks, err := fetcher.GetNetworkNames(p.Cloud)
-		if err != nil {
-			allErrs = append(allErrs, field.InternalError(fldPath.Child("externalNetwork"), errors.New("could not retrieve valid networks")))
-		} else if !isValidValue(p.ExternalNetwork, validNetworks) {
-			allErrs = append(allErrs, field.NotSupported(fldPath.Child("externalNetwork"), p.ExternalNetwork, validNetworks))
-		}
-		validFlavors, err := fetcher.GetFlavorNames(p.Cloud)
-		if err != nil {
-			allErrs = append(allErrs, field.InternalError(fldPath.Child("computeFlavor"), errors.New("could not retrieve valid flavors")))
-		} else if !isValidValue(p.FlavorName, validFlavors) {
-			allErrs = append(allErrs, field.NotSupported(fldPath.Child("computeFlavor"), p.FlavorName, validFlavors))
-		}
-		p.TrunkSupport = "0"
-		netExts, err := fetcher.GetNetworkExtensionsAliases(p.Cloud)
-		if err != nil {
-			logrus.Warning("Could not retrieve networking extension aliases. Assuming trunk ports are not supported.")
-		} else {
-			if isValidValue("trunk", netExts) {
-				p.TrunkSupport = "1"
-			}
-		}
-		p.OctaviaSupport = "0"
-		serviceCatalog, err := fetcher.GetServiceCatalog(p.Cloud)
-		if err != nil {
-			logrus.Warning("Could not retrieve service catalog. Assuming there is no Octavia load balancer service available.")
-		} else {
-			if isValidValue("octavia", serviceCatalog) {
-				p.OctaviaSupport = "1"
-			}
-		}
-	}
-	if p.DefaultMachinePlatform != nil {
-		allErrs = append(allErrs, ValidateMachinePool(p.DefaultMachinePlatform, fldPath.Child("defaultMachinePlatform"))...)
-	}
+func ValidatePlatform(p *openstack.Platform, n *types.Networking, fldPath *field.Path, c *types.InstallConfig) field.ErrorList {
+	var allErrs field.ErrorList
 
-	if len(c.ObjectMeta.Name) > 14 {
-		allErrs = append(allErrs, field.Invalid(field.NewPath("metadata", "name"), c.ObjectMeta.Name, "metadata name is too long, please restrict it to 14 characters"))
-	}
-
-	if len(p.ExternalDNS) > 0 && p.MachinesSubnet != "" {
-		allErrs = append(allErrs, field.InternalError(fldPath.Child("machinesSubnet"), fmt.Errorf("externalDNS can't be set when using a custom machinesSubnet")))
-	}
+	allErrs = append(allErrs, validateClusterName(c.ObjectMeta.Name)...)
 
 	for _, ip := range p.ExternalDNS {
 		if err := validate.IP(ip); err != nil {
@@ -87,7 +24,7 @@ func ValidatePlatform(p *openstack.Platform, n *types.Networking, fldPath *field
 		}
 	}
 
-	err = validateVIP(p.APIVIP, n)
+	err := validateVIP(p.APIVIP, n)
 	if err != nil {
 		allErrs = append(allErrs, field.Invalid(fldPath.Child("apiVIP"), p.APIVIP, err.Error()))
 	}
@@ -100,15 +37,7 @@ func ValidatePlatform(p *openstack.Platform, n *types.Networking, fldPath *field
 	return allErrs
 }
 
-func isValidValue(s string, validValues []string) bool {
-	for _, v := range validValues {
-		if s == v {
-			return true
-		}
-	}
-	return false
-}
-
+// validateVIP is a convenience function for validating VIP port and usage
 func validateVIP(vip string, n *types.Networking) error {
 	if vip != "" {
 		if err := validate.IP(vip); err != nil {
@@ -120,4 +49,16 @@ func validateVIP(vip string, n *types.Networking) error {
 		}
 	}
 	return nil
+}
+
+func validateClusterName(name string) (allErrs field.ErrorList) {
+	if len(name) > 14 {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("metadata", "name"), name, "cluster name is too long, please restrict it to 14 characters"))
+	}
+
+	if strings.Contains(name, ".") {
+		allErrs = append(allErrs, field.Invalid(field.NewPath("metadata", "name"), name, "cluster name can't contain \".\" character"))
+	}
+
+	return
 }

@@ -85,6 +85,8 @@ func provider(platform *azure.Platform, mpool *azure.MachinePool, osImage string
 		az = &mpool.Zones[*azIdx]
 	}
 
+	rg := platform.ClusterResourceGroupName(clusterID)
+
 	networkResourceGroup, virtualNetwork, subnet, err := getNetworkInfo(platform, clusterID, role)
 	if err != nil {
 		return nil, err
@@ -92,6 +94,11 @@ func provider(platform *azure.Platform, mpool *azure.MachinePool, osImage string
 
 	if mpool.OSDisk.DiskType == "" {
 		mpool.OSDisk.DiskType = "Premium_LRS"
+	}
+
+	publicLB := clusterID
+	if platform.OutboundType == azure.UserDefinedRoutingOutboundType {
+		publicLB = ""
 	}
 
 	spec := &azureprovider.AzureMachineProviderSpec{
@@ -104,12 +111,12 @@ func provider(platform *azure.Platform, mpool *azure.MachinePool, osImage string
 		Location:          platform.Region,
 		VMSize:            mpool.InstanceType,
 		Image: azureprovider.Image{
-			ResourceID: fmt.Sprintf("/resourceGroups/%s/providers/Microsoft.Compute/images/%s", platform.ResourceGroupName, clusterID),
+			ResourceID: fmt.Sprintf("/resourceGroups/%s/providers/Microsoft.Compute/images/%s", rg, clusterID),
 		},
 		OSDisk: azureprovider.OSDisk{
 			OSType:     "Linux",
 			DiskSizeGB: mpool.OSDisk.DiskSizeGB,
-			ManagedDisk: azureprovider.ManagedDisk{
+			ManagedDisk: azureprovider.ManagedDiskParameters{
 				StorageAccountType: mpool.OSDisk.DiskType,
 			},
 		},
@@ -117,8 +124,9 @@ func provider(platform *azure.Platform, mpool *azure.MachinePool, osImage string
 		Subnet:               subnet,
 		ManagedIdentity:      fmt.Sprintf("%s-identity", clusterID),
 		Vnet:                 virtualNetwork,
-		ResourceGroup:        platform.ResourceGroupName,
+		ResourceGroup:        rg,
 		NetworkResourceGroup: networkResourceGroup,
+		PublicLoadBalancer:   publicLB,
 	}
 
 	if platform.Image != nil {
@@ -150,7 +158,7 @@ func ConfigMasters(machines []machineapi.Machine, clusterID string) {
 
 func getNetworkInfo(platform *azure.Platform, clusterID, role string) (string, string, string, error) {
 	if platform.VirtualNetwork == "" {
-		return platform.ResourceGroupName, fmt.Sprintf("%s-vnet", clusterID), fmt.Sprintf("%s-%s-subnet", clusterID, role), nil
+		return platform.ClusterResourceGroupName(clusterID), fmt.Sprintf("%s-vnet", clusterID), fmt.Sprintf("%s-%s-subnet", clusterID, role), nil
 	}
 
 	switch role {

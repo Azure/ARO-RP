@@ -3,10 +3,8 @@ package azure
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/Azure/go-autorest/autorest/to"
 
@@ -20,17 +18,23 @@ const (
 	defaultRegion string = "eastus"
 )
 
-// https://docs.microsoft.com/en-us/azure/architecture/best-practices/resource-naming#general
-var resourceGroupNameRx = regexp.MustCompile(`(?i)^[-a-z0-9_().]{0,89}[-a-z0-9_()]$`)
-
 // Platform collects azure-specific configuration.
-func Platform(credentials *Credentials) (*azure.Platform, error) {
-	regions, err := getRegions(credentials)
+func Platform() (*azure.Platform, error) {
+	// Create client using public cloud because install config has not been generated yet.
+	const cloudName = azure.PublicCloud
+	ssn, err := GetSession(cloudName, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	client := NewClient(ssn)
+
+	regions, err := getRegions(context.TODO(), client)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get list of regions")
 	}
 
-	resourceCapableRegions, err := getResourceCapableRegions(credentials)
+	resourceCapableRegions, err := getResourceCapableRegions(context.TODO(), client)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get list of resources to check available regions")
 	}
@@ -83,40 +87,13 @@ func Platform(credentials *Credentials) (*azure.Platform, error) {
 		return nil, err
 	}
 
-	var resourceGroupName string
-	err = survey.Ask([]*survey.Question{
-		{
-			Prompt: &survey.Select{
-				Message: "Resource group name",
-				Help:    "The azure resource group to be used for installation.",
-			},
-			Validate: survey.ComposeValidators(survey.Required, func(ans interface{}) error {
-				if !resourceGroupNameRx.MatchString(ans.(string)) {
-					return errors.Errorf("invalid resource group %q", ans.(string))
-				}
-				return nil
-			}),
-		},
-	}, &resourceGroupName)
-	if err != nil {
-		return nil, err
-	}
-
 	return &azure.Platform{
-		Region:            region,
-		ResourceGroupName: resourceGroupName,
+		Region:    region,
+		CloudName: cloudName,
 	}, nil
 }
 
-func getRegions(credentials *Credentials) (map[string]string, error) {
-	client, err := NewClient(context.TODO(), credentials)
-	if err != nil {
-		return nil, err
-	}
-
-	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Minute)
-	defer cancel()
-
+func getRegions(ctx context.Context, client API) (map[string]string, error) {
 	locations, err := client.ListLocations(ctx)
 	if err != nil {
 		return nil, err
@@ -129,15 +106,7 @@ func getRegions(credentials *Credentials) (map[string]string, error) {
 	return allLocations, nil
 }
 
-func getResourceCapableRegions(credentials *Credentials) ([]string, error) {
-	client, err := NewClient(context.TODO(), credentials)
-	if err != nil {
-		return nil, err
-	}
-
-	ctx, cancel := context.WithTimeout(context.TODO(), 1*time.Minute)
-	defer cancel()
-
+func getResourceCapableRegions(ctx context.Context, client API) ([]string, error) {
 	provider, err := client.GetResourcesProvider(ctx, "Microsoft.Resources")
 	if err != nil {
 		return nil, err

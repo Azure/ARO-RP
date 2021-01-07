@@ -2,21 +2,23 @@
 package openstack
 
 import (
+	"os"
 	"sort"
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	survey "gopkg.in/AlecAivazis/survey.v1"
 
 	"github.com/openshift/installer/pkg/types/openstack"
 )
 
+const (
+	noExtNet = "<none>"
+)
+
 // Platform collects OpenStack-specific configuration.
 func Platform() (*openstack.Platform, error) {
-	validValuesFetcher := NewValidValuesFetcher()
-
-	cloudNames, err := validValuesFetcher.GetCloudNames()
+	cloudNames, err := getCloudNames()
 	if err != nil {
 		return nil, err
 	}
@@ -44,10 +46,16 @@ func Platform() (*openstack.Platform, error) {
 		return nil, err
 	}
 
-	networkNames, err := validValuesFetcher.GetNetworkNames(cloud)
+	// We should unset OS_CLOUD env variable here, because the real cloud name was defined
+	// on the previous step. OS_CLOUD has more priority, so the value from "cloud" variable
+	// will be ignored if OS_CLOUD contains something.
+	os.Unsetenv("OS_CLOUD")
+
+	networkNames, err := getExternalNetworkNames(cloud)
 	if err != nil {
 		return nil, err
 	}
+	networkNames = append(networkNames, noExtNet)
 	sort.Strings(networkNames)
 	var extNet string
 	err = survey.Ask([]*survey.Question{
@@ -56,6 +64,7 @@ func Platform() (*openstack.Platform, error) {
 				Message: "ExternalNetwork",
 				Help:    "The OpenStack external network name to be used for installation.",
 				Options: networkNames,
+				Default: noExtNet,
 			},
 			Validate: survey.ComposeValidators(survey.Required, func(ans interface{}) error {
 				value := ans.(string)
@@ -67,38 +76,43 @@ func Platform() (*openstack.Platform, error) {
 			}),
 		},
 	}, &extNet)
+	if extNet == noExtNet {
+		extNet = ""
+	}
 	if err != nil {
 		return nil, err
 	}
 
-	floatingIPNames, err := validValuesFetcher.GetFloatingIPNames(cloud, extNet)
-	if err != nil {
-		return nil, err
-	}
-	sort.Strings(floatingIPNames)
 	var lbFloatingIP string
-	err = survey.Ask([]*survey.Question{
-		{
-			Prompt: &survey.Select{
-				Message: "APIFloatingIPAddress",
-				Help:    "The Floating IP address used for external access to the OpenShift API.",
-				Options: floatingIPNames,
+	if extNet != "" {
+		floatingIPNames, err := getFloatingIPNames(cloud, extNet)
+		if err != nil {
+			return nil, err
+		}
+		sort.Strings(floatingIPNames)
+		err = survey.Ask([]*survey.Question{
+			{
+				Prompt: &survey.Select{
+					Message: "APIFloatingIPAddress",
+					Help:    "The Floating IP address used for external access to the OpenShift API.",
+					Options: floatingIPNames,
+				},
+				Validate: survey.ComposeValidators(survey.Required, func(ans interface{}) error {
+					value := ans.(string)
+					i := sort.SearchStrings(floatingIPNames, value)
+					if i == len(floatingIPNames) || floatingIPNames[i] != value {
+						return errors.Errorf("invalid floating IP %q, should be one of %+v", value, strings.Join(floatingIPNames, ", "))
+					}
+					return nil
+				}),
 			},
-			Validate: survey.ComposeValidators(survey.Required, func(ans interface{}) error {
-				value := ans.(string)
-				i := sort.SearchStrings(floatingIPNames, value)
-				if i == len(floatingIPNames) || floatingIPNames[i] != value {
-					return errors.Errorf("invalid floating IP %q, should be one of %+v", value, strings.Join(floatingIPNames, ", "))
-				}
-				return nil
-			}),
-		},
-	}, &lbFloatingIP)
-	if err != nil {
-		return nil, err
+		}, &lbFloatingIP)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	flavorNames, err := validValuesFetcher.GetFlavorNames(cloud)
+	flavorNames, err := getFlavorNames(cloud)
 	if err != nil {
 		return nil, err
 	}
@@ -125,37 +139,10 @@ func Platform() (*openstack.Platform, error) {
 		return nil, err
 	}
 
-	trunkSupport := "0"
-	var i int
-	netExts, err := validValuesFetcher.GetNetworkExtensionsAliases(cloud)
-	if err != nil {
-		logrus.Warning("Could not retrieve networking extension aliases. Assuming trunk ports are not supported.")
-	} else {
-		sort.Strings(netExts)
-		i = sort.SearchStrings(netExts, "trunk")
-		if i != len(netExts) && netExts[i] == "trunk" {
-			trunkSupport = "1"
-		}
-	}
-
-	octaviaSupport := "0"
-	serviceCatalog, err := validValuesFetcher.GetServiceCatalog(cloud)
-	if err != nil {
-		logrus.Warning("Could not retrieve service catalog. Assuming there is no Octavia load balancer service available.")
-	} else {
-		sort.Strings(serviceCatalog)
-		i = sort.SearchStrings(serviceCatalog, "octavia")
-		if i != len(serviceCatalog) && serviceCatalog[i] == "octavia" {
-			octaviaSupport = "1"
-		}
-	}
-
 	return &openstack.Platform{
 		Cloud:           cloud,
 		ExternalNetwork: extNet,
 		FlavorName:      flavor,
 		LbFloatingIP:    lbFloatingIP,
-		TrunkSupport:    trunkSupport,
-		OctaviaSupport:  octaviaSupport,
 	}, nil
 }

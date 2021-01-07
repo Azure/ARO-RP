@@ -1,7 +1,8 @@
 package validation
 
 import (
-	"regexp"
+	"fmt"
+	"sort"
 
 	"k8s.io/apimachinery/pkg/util/validation/field"
 
@@ -9,8 +10,22 @@ import (
 	"github.com/openshift/installer/pkg/types/azure"
 )
 
-// https://docs.microsoft.com/en-us/azure/architecture/best-practices/resource-naming#general
-var resourceGroupNameRx = regexp.MustCompile(`(?i)^[-a-z0-9_().]{0,89}[-a-z0-9_()]$`)
+var (
+	validCloudNames = map[azure.CloudEnvironment]bool{
+		azure.PublicCloud:       true,
+		azure.USGovernmentCloud: true,
+		azure.ChinaCloud:        true,
+		azure.GermanCloud:       true,
+	}
+
+	validCloudNameValues = func() []string {
+		v := make([]string, 0, len(validCloudNames))
+		for n := range validCloudNames {
+			v = append(v, string(n))
+		}
+		return v
+	}()
+)
 
 // ValidatePlatform checks that the specified platform is valid.
 func ValidatePlatform(p *azure.Platform, publish types.PublishingStrategy, fldPath *field.Path) field.ErrorList {
@@ -18,13 +33,7 @@ func ValidatePlatform(p *azure.Platform, publish types.PublishingStrategy, fldPa
 	if p.Region == "" {
 		allErrs = append(allErrs, field.Required(fldPath.Child("region"), "region should be set to one of the supported Azure regions"))
 	}
-	if p.ResourceGroupName == "" {
-		allErrs = append(allErrs, field.Required(fldPath.Child("resourceGroupName"), "resourceGroupName should be set"))
-	}
-	if !resourceGroupNameRx.MatchString(p.ResourceGroupName) {
-		allErrs = append(allErrs, field.Invalid(fldPath.Child("resourceGroupName"), p.ResourceGroupName, "resourceGroupName is invalid"))
-	}
-	if !p.ARO && publish == types.ExternalPublishingStrategy {
+	if publish == types.ExternalPublishingStrategy {
 		if p.BaseDomainResourceGroupName == "" {
 			allErrs = append(allErrs, field.Required(fldPath.Child("baseDomainResourceGroupName"), "baseDomainResourceGroupName is the resource group name where the azure dns zone is deployed"))
 		}
@@ -52,5 +61,32 @@ func ValidatePlatform(p *azure.Platform, publish types.PublishingStrategy, fldPa
 			allErrs = append(allErrs, field.Required(fldPath.Child("networkResourceGroupName"), "must provide a network resource group when supplying subnets"))
 		}
 	}
+	if !validCloudNames[p.CloudName] {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("cloudName"), p.CloudName, validCloudNameValues))
+	}
+
+	if _, ok := validOutboundTypes[p.OutboundType]; !ok {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("outboundType"), p.OutboundType, validOutboundTypeValues))
+	}
+	if p.OutboundType == azure.UserDefinedRoutingOutboundType && p.VirtualNetwork == "" {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("outboundType"), p.OutboundType, fmt.Sprintf("%s is only allowed when installing to pre-existing network", azure.UserDefinedRoutingOutboundType)))
+	}
+
 	return allErrs
 }
+
+var (
+	validOutboundTypes = map[azure.OutboundType]struct{}{
+		azure.LoadbalancerOutboundType:       {},
+		azure.UserDefinedRoutingOutboundType: {},
+	}
+
+	validOutboundTypeValues = func() []string {
+		v := make([]string, 0, len(validOutboundTypes))
+		for m := range validOutboundTypes {
+			v = append(v, string(m))
+		}
+		sort.Strings(v)
+		return v
+	}()
+)

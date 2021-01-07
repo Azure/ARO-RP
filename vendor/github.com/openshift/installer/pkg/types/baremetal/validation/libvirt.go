@@ -4,15 +4,16 @@ package validation
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/libvirt/libvirt-go"
 	"github.com/openshift/installer/pkg/types/baremetal"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"strings"
 )
 
 func init() {
-	dynamicValidators = append(dynamicValidators, validateInterfaces)
+	dynamicProvisioningValidators = append(dynamicProvisioningValidators, validateInterfaces)
 }
 
 // validateInterfaces ensures that any interfaces required by the platform exist on the libvirt host.
@@ -29,7 +30,7 @@ func validateInterfaces(p *baremetal.Platform, fldPath *field.Path) field.ErrorL
 		errorList = append(errorList, field.Invalid(fldPath.Child("externalBridge"), p.ExternalBridge, err.Error()))
 	}
 
-	if err := findInterface(p.ProvisioningBridge); err != nil {
+	if err := findInterface(p.ProvisioningBridge); p.ProvisioningNetwork != baremetal.DisabledProvisioningNetwork && err != nil {
 		errorList = append(errorList, field.Invalid(fldPath.Child("provisioningBridge"), p.ProvisioningBridge, err.Error()))
 	}
 
@@ -40,24 +41,44 @@ func validateInterfaces(p *baremetal.Platform, fldPath *field.Path) field.ErrorL
 // to validate if an interface is found among them
 func interfaceValidator(libvirtURI string) (func(string) error, error) {
 	// Connect to libvirt and obtain a list of interface names
+	interfaces := make(map[string]struct{})
+	var exists = struct{}{}
 	conn, err := libvirt.NewConnect(libvirtURI)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not connect to libvirt")
 	}
 
-	interfaces, err := conn.ListAllInterfaces(libvirt.CONNECT_LIST_INTERFACES_ACTIVE)
+	networks, err := conn.ListAllNetworks(libvirt.CONNECT_LIST_NETWORKS_ACTIVE)
+	if err != nil {
+		return nil, errors.Wrap(err, "could not list libvirt networks")
+	}
+	for _, network := range networks {
+		networkName, err := network.GetName()
+		if err == nil {
+			bridgeName, err := network.GetBridgeName()
+			if err == nil && bridgeName == networkName {
+				interfaces[networkName] = exists
+			}
+		}
+	}
+	bridges, err := conn.ListAllInterfaces(libvirt.CONNECT_LIST_INTERFACES_ACTIVE)
 	if err != nil {
 		return nil, errors.Wrap(err, "could not list libvirt interfaces")
 	}
 
-	interfaceNames := make([]string, len(interfaces))
-	for idx, iface := range interfaces {
-		iface, err := iface.GetName()
+	for _, bridge := range bridges {
+		bridgeName, err := bridge.GetName()
 		if err == nil {
-			interfaceNames[idx] = iface
+			interfaces[bridgeName] = exists
 		} else {
 			return nil, errors.Wrap(err, "could not get interface name from libvirt")
 		}
+	}
+	interfaceNames := make([]string, len(interfaces))
+	idx := 0
+	for key := range interfaces {
+		interfaceNames[idx] = key
+		idx++
 	}
 
 	// Return a closure to validate if any particular interface is found among interfaceNames

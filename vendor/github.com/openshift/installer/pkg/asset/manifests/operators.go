@@ -75,8 +75,6 @@ func (m *Manifests) Dependencies() []asset.Asset {
 		&bootkube.CVOOverrides{},
 		&bootkube.EtcdCAConfigMap{},
 		&bootkube.EtcdClientSecret{},
-		&bootkube.EtcdHostServiceEndpoints{},
-		&bootkube.EtcdHostService{},
 		&bootkube.EtcdMetricClientSecret{},
 		&bootkube.EtcdMetricServingCAConfigMap{},
 		&bootkube.EtcdMetricSignerSecret{},
@@ -168,17 +166,9 @@ func (m *Manifests) generateBootKubeManifests(dependencies asset.Parents) []*ass
 		rootCA,
 	)
 
-	etcdEndpointHostnames := make([]string, *installConfig.Config.ControlPlane.Replicas+1)
-	for i := range etcdEndpointHostnames {
-		etcdEndpointHostnames[i] = fmt.Sprintf("etcd-%d", i-1)
-	}
-	etcdEndpointHostnames[0] = "etcd-bootstrap"
-
 	templateData := &bootkubeTemplateData{
 		CVOClusterID:               clusterID.UUID,
 		EtcdCaBundle:               string(etcdCABundle.Cert()),
-		EtcdEndpointDNSSuffix:      installConfig.Config.ClusterDomain(),
-		EtcdEndpointHostnames:      etcdEndpointHostnames,
 		EtcdMetricCaCert:           string(etcdMetricCABundle.Cert()),
 		EtcdMetricSignerCert:       base64.StdEncoding.EncodeToString(etcdMetricSignerCertKey.Cert()),
 		EtcdMetricSignerClientCert: base64.StdEncoding.EncodeToString(etcdMetricSignerClientCertKey.Cert()),
@@ -200,8 +190,6 @@ func (m *Manifests) generateBootKubeManifests(dependencies asset.Parents) []*ass
 		&bootkube.CVOOverrides{},
 		&bootkube.EtcdCAConfigMap{},
 		&bootkube.EtcdClientSecret{},
-		&bootkube.EtcdHostServiceEndpoints{},
-		&bootkube.EtcdHostService{},
 		&bootkube.EtcdMetricClientSecret{},
 		&bootkube.EtcdMetricSignerSecret{},
 		&bootkube.EtcdMetricServingCAConfigMap{},
@@ -238,10 +226,21 @@ func applyTemplateData(data []byte, templateData interface{}) []byte {
 
 // Load returns the manifests asset from disk.
 func (m *Manifests) Load(f asset.FileFetcher) (bool, error) {
-	fileList, err := f.FetchByPattern(filepath.Join(manifestDir, "*"))
+	yamlFileList, err := f.FetchByPattern(filepath.Join(manifestDir, "*.yaml"))
 	if err != nil {
-		return false, err
+		return false, errors.Wrap(err, "failed to load *.yaml files")
 	}
+	ymlFileList, err := f.FetchByPattern(filepath.Join(manifestDir, "*.yml"))
+	if err != nil {
+		return false, errors.Wrap(err, "failed to load *.yml files")
+	}
+	jsonFileList, err := f.FetchByPattern(filepath.Join(manifestDir, "*.json"))
+	if err != nil {
+		return false, errors.Wrap(err, "failed to load *.json files")
+	}
+	fileList := append(yamlFileList, ymlFileList...)
+	fileList = append(fileList, jsonFileList...)
+
 	if len(fileList) == 0 {
 		return false, nil
 	}

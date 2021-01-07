@@ -6,6 +6,7 @@ import (
 
 	"github.com/openshift/installer/pkg/asset"
 	azconfig "github.com/openshift/installer/pkg/asset/installconfig/azure"
+	bmconfig "github.com/openshift/installer/pkg/asset/installconfig/baremetal"
 	gcpconfig "github.com/openshift/installer/pkg/asset/installconfig/gcp"
 	vsconfig "github.com/openshift/installer/pkg/asset/installconfig/vsphere"
 	"github.com/openshift/installer/pkg/types/aws"
@@ -36,20 +37,27 @@ func (a *PlatformProvisionCheck) Dependencies() []asset.Asset {
 // Generate queries for input from the user.
 func (a *PlatformProvisionCheck) Generate(dependencies asset.Parents) error {
 	ic := &InstallConfig{}
-	platformCreds := &PlatformCreds{}
 	dependencies.Get(ic)
-	dependencies.Get(platformCreds)
 
 	var err error
 	platform := ic.Config.Platform.Name()
 	switch platform {
-	case vsphere.Name:
-		err = vsconfig.ValidateForProvisioning(ic.Config)
+	case azure.Name:
+		dnsConfig, err := ic.Azure.DNSConfig()
 		if err != nil {
 			return err
 		}
-	case azure.Name:
-		err = azconfig.ValidatePublicDNS(platformCreds.Azure, ic.Config)
+		err = azconfig.ValidatePublicDNS(ic.Config, dnsConfig)
+		if err != nil {
+			return err
+		}
+		client, err := ic.Azure.Client()
+		if err != nil {
+			return err
+		}
+		return azconfig.ValidateForProvisioning(client, ic.Config)
+	case baremetal.Name:
+		err = bmconfig.ValidateProvisioning(ic.Config)
 		if err != nil {
 			return err
 		}
@@ -62,7 +70,12 @@ func (a *PlatformProvisionCheck) Generate(dependencies asset.Parents) error {
 		if err != nil {
 			return err
 		}
-	case aws.Name, baremetal.Name, libvirt.Name, none.Name, openstack.Name, ovirt.Name:
+	case vsphere.Name:
+		err = vsconfig.ValidateForProvisioning(ic.Config)
+		if err != nil {
+			return err
+		}
+	case aws.Name, libvirt.Name, none.Name, openstack.Name, ovirt.Name:
 		// no special provisioning requirements to check
 	default:
 		err = fmt.Errorf("unknown platform type %q", platform)

@@ -3,11 +3,7 @@ package aws
 
 import (
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
-
-	ccaws "github.com/openshift/cloud-credential-operator/pkg/aws"
 )
 
 // PermissionGroup is the group of permissions needed by cluster creation, operation, or teardown.
@@ -25,6 +21,12 @@ const (
 
 	// PermissionDeleteNetworking is a set of permissions required when the installer destroys networking resources.
 	PermissionDeleteNetworking PermissionGroup = "delete-networking"
+
+	// PermissionCreateSharedNetworking is a set of permissions required when the installer creates resources in a shared-network cluster.
+	PermissionCreateSharedNetworking PermissionGroup = "create-shared-networking"
+
+	// PermissionDeleteSharedNetworking is a set of permissions required when the installer destroys resources from a shared-network cluster.
+	PermissionDeleteSharedNetworking PermissionGroup = "delete-shared-networking"
 )
 
 var permissions = map[PermissionGroup][]string{
@@ -215,6 +217,14 @@ var permissions = map[PermissionGroup][]string{
 		"ec2:DisassociateRouteTable",
 		"ec2:ReplaceRouteTableAssociation",
 	},
+	// Permissions required for deleting a cluster with shared network resources
+	PermissionCreateSharedNetworking: {
+		"tag:TagResources",
+	},
+	// Permissions required for deleting a cluster with shared network resources
+	PermissionDeleteSharedNetworking: {
+		"tag:UnTagResources",
+	},
 }
 
 // ValidateCreds will try to create an AWS session, and also verify that the current credentials
@@ -222,53 +232,5 @@ var permissions = map[PermissionGroup][]string{
 // as either capable of creating new credentials for components that interact with the cloud or
 // being able to be passed through as-is to the components that need cloud credentials
 func ValidateCreds(ssn *session.Session, groups []PermissionGroup, region string) error {
-	// Compile a list of permissions based on the permission groups provided
-	requiredPermissions := []string{}
-	for _, group := range groups {
-		groupPerms, ok := permissions[group]
-		if !ok {
-			return errors.Errorf("unable to access permissions group %s", group)
-		}
-		requiredPermissions = append(requiredPermissions, groupPerms...)
-	}
-
-	client, err := ccaws.NewClientFromIAMClient(iam.New(ssn))
-	if err != nil {
-		return errors.Wrap(err, "failed to create client for permission check")
-	}
-
-	sParams := &ccaws.SimulateParams{
-		Region: region,
-	}
-
-	// Check whether we can do an installation
-	logger := logrus.StandardLogger()
-	canInstall, err := ccaws.CheckPermissionsAgainstActions(client, requiredPermissions, sParams, logger)
-	if err != nil {
-		return errors.Wrap(err, "checking install permissions")
-	}
-	if !canInstall {
-		return errors.New("current credentials insufficient for performing cluster installation")
-	}
-
-	// Check whether we can mint new creds for cluster services needing to interact with the cloud
-	canMint, err := ccaws.CheckCloudCredCreation(client, logger)
-	if err != nil {
-		return errors.Wrap(err, "mint credentials check")
-	}
-	if canMint {
-		return nil
-	}
-
-	// Check whether we can use the current credentials in passthrough mode to satisfy
-	// cluster services needing to interact with the cloud
-	canPassthrough, err := ccaws.CheckCloudCredPassthrough(client, sParams, logger)
-	if err != nil {
-		return errors.Wrap(err, "passthrough credentials check")
-	}
-	if canPassthrough {
-		return nil
-	}
-
 	return errors.New("AWS credentials cannot be used to either create new creds or use as-is")
 }

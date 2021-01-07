@@ -8,8 +8,6 @@ import (
 	"strings"
 
 	"github.com/ghodss/yaml"
-	baremetalapi "github.com/openshift/cluster-api-provider-baremetal/pkg/apis"
-	baremetalprovider "github.com/openshift/cluster-api-provider-baremetal/pkg/apis/baremetal/v1alpha1"
 	gcpapi "github.com/openshift/cluster-api-provider-gcp/pkg/apis"
 	gcpprovider "github.com/openshift/cluster-api-provider-gcp/pkg/apis/gcpprovider/v1beta1"
 	libvirtapi "github.com/openshift/cluster-api-provider-libvirt/pkg/apis"
@@ -17,6 +15,8 @@ import (
 	ovirtproviderapi "github.com/openshift/cluster-api-provider-ovirt/pkg/apis"
 	ovirtprovider "github.com/openshift/cluster-api-provider-ovirt/pkg/apis/ovirtprovider/v1beta1"
 	machineapi "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
+	vsphereproviderapi "github.com/openshift/machine-api-operator/pkg/apis/vsphereprovider"
+	vsphereprovider "github.com/openshift/machine-api-operator/pkg/apis/vsphereprovider/v1beta1"
 	mcfgv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -106,6 +106,7 @@ func defaultGCPMachinePoolPlatform() gcptypes.MachinePool {
 func defaultOpenStackMachinePoolPlatform(flavor string) openstacktypes.MachinePool {
 	return openstacktypes.MachinePool{
 		FlavorName: flavor,
+		Zones:      []string{""},
 	}
 }
 
@@ -163,7 +164,6 @@ func (w *Worker) Name() string {
 // Worker asset
 func (w *Worker) Dependencies() []asset.Asset {
 	return []asset.Asset{
-		&installconfig.PlatformCreds{},
 		&installconfig.ClusterID{},
 		// PlatformCredsCheck just checks the creds (and asks, if needed)
 		// We do not actually use it in this asset directly, hence
@@ -178,12 +178,11 @@ func (w *Worker) Dependencies() []asset.Asset {
 // Generate generates the Worker asset.
 func (w *Worker) Generate(dependencies asset.Parents) error {
 	ctx := context.TODO()
-	platformCreds := &installconfig.PlatformCreds{}
 	clusterID := &installconfig.ClusterID{}
 	installConfig := &installconfig.InstallConfig{}
 	rhcosImage := new(rhcos.Image)
 	wign := &machine.Worker{}
-	dependencies.Get(platformCreds, clusterID, installConfig, rhcosImage, wign)
+	dependencies.Get(clusterID, installConfig, rhcosImage, wign)
 
 	machineConfigs := []*mcfgv1.MachineConfig{}
 	machineSets := []runtime.Object{}
@@ -191,25 +190,25 @@ func (w *Worker) Generate(dependencies asset.Parents) error {
 	ic := installConfig.Config
 	for _, pool := range ic.Compute {
 		if pool.Hyperthreading == types.HyperthreadingDisabled {
-			config, err := machineconfig.ForHyperthreadingDisabled("worker")
+			ignHT, err := machineconfig.ForHyperthreadingDisabled("worker")
 			if err != nil {
-				return errors.Wrap(err, "failed to create worker machine objects")
+				return errors.Wrap(err, "failed to create ignition for hyperthreading disabled for worker machines")
 			}
-			machineConfigs = append(machineConfigs, config)
+			machineConfigs = append(machineConfigs, ignHT)
 		}
 		if ic.SSHKey != "" {
-			config, err := machineconfig.ForAuthorizedKeys(ic.SSHKey, "worker")
+			ignSSH, err := machineconfig.ForAuthorizedKeys(ic.SSHKey, "worker")
 			if err != nil {
-				return errors.Wrap(err, "failed to create worker machine objects")
+				return errors.Wrap(err, "failed to create ignition for authorized SSH keys for worker machines")
 			}
-			machineConfigs = append(machineConfigs, config)
+			machineConfigs = append(machineConfigs, ignSSH)
 		}
 		if ic.FIPS {
-			config, err := machineconfig.ForFIPSEnabled("worker")
+			ignFIPS, err := machineconfig.ForFIPSEnabled("worker")
 			if err != nil {
-				return errors.Wrap(err, "failed to create worker machine objects")
+				return errors.Wrap(err, "failed to create ignition for FIPS enabled for worker machines")
 			}
-			machineConfigs = append(machineConfigs, config)
+			machineConfigs = append(machineConfigs, ignFIPS)
 		}
 		switch ic.Platform.Name() {
 		case awstypes.Name:
@@ -276,7 +275,11 @@ func (w *Worker) Generate(dependencies asset.Parents) error {
 			mpool.Set(ic.Platform.Azure.DefaultMachinePlatform)
 			mpool.Set(pool.Platform.Azure)
 			if len(mpool.Zones) == 0 {
-				azs, err := azure.AvailabilityZones(platformCreds.Azure, ic.Platform.Azure.Region, mpool.InstanceType)
+				session, err := installConfig.Azure.Session()
+				if err != nil {
+					return errors.Wrap(err, "failed to fetch session for availability zones")
+				}
+				azs, err := azure.AvailabilityZones(session, ic.Platform.Azure.Region, mpool.InstanceType)
 				if err != nil {
 					return errors.Wrap(err, "failed to fetch availability zones")
 				}
@@ -461,19 +464,19 @@ func (w *Worker) MachineSets() ([]machineapi.MachineSet, error) {
 	scheme := runtime.NewScheme()
 	awsapi.AddToScheme(scheme)
 	azureapi.AddToScheme(scheme)
-	baremetalapi.AddToScheme(scheme)
 	gcpapi.AddToScheme(scheme)
 	libvirtapi.AddToScheme(scheme)
 	openstackapi.AddToScheme(scheme)
 	ovirtproviderapi.AddToScheme(scheme)
+	vsphereproviderapi.AddToScheme(scheme)
 	decoder := serializer.NewCodecFactory(scheme).UniversalDecoder(
 		awsprovider.SchemeGroupVersion,
 		azureprovider.SchemeGroupVersion,
-		baremetalprovider.SchemeGroupVersion,
 		gcpprovider.SchemeGroupVersion,
 		libvirtprovider.SchemeGroupVersion,
 		openstackprovider.SchemeGroupVersion,
 		ovirtprovider.SchemeGroupVersion,
+		vsphereprovider.SchemeGroupVersion,
 	)
 
 	machineSets := []machineapi.MachineSet{}

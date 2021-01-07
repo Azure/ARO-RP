@@ -8,8 +8,6 @@ import (
 	"strings"
 
 	"github.com/ghodss/yaml"
-	baremetalapi "github.com/openshift/cluster-api-provider-baremetal/pkg/apis"
-	baremetalprovider "github.com/openshift/cluster-api-provider-baremetal/pkg/apis/baremetal/v1alpha1"
 	gcpapi "github.com/openshift/cluster-api-provider-gcp/pkg/apis"
 	gcpprovider "github.com/openshift/cluster-api-provider-gcp/pkg/apis/gcpprovider/v1beta1"
 	libvirtapi "github.com/openshift/cluster-api-provider-libvirt/pkg/apis"
@@ -36,7 +34,6 @@ import (
 	"github.com/openshift/installer/pkg/asset/installconfig"
 	"github.com/openshift/installer/pkg/asset/machines/aws"
 	"github.com/openshift/installer/pkg/asset/machines/azure"
-	"github.com/openshift/installer/pkg/asset/machines/baremetal"
 	"github.com/openshift/installer/pkg/asset/machines/gcp"
 	"github.com/openshift/installer/pkg/asset/machines/libvirt"
 	"github.com/openshift/installer/pkg/asset/machines/machineconfig"
@@ -50,7 +47,6 @@ import (
 	awsdefaults "github.com/openshift/installer/pkg/types/aws/defaults"
 	azuretypes "github.com/openshift/installer/pkg/types/azure"
 	azuredefaults "github.com/openshift/installer/pkg/types/azure/defaults"
-	baremetaltypes "github.com/openshift/installer/pkg/types/baremetal"
 	gcptypes "github.com/openshift/installer/pkg/types/gcp"
 	libvirttypes "github.com/openshift/installer/pkg/types/libvirt"
 	nonetypes "github.com/openshift/installer/pkg/types/none"
@@ -112,7 +108,6 @@ func (m *Master) Name() string {
 // Master asset
 func (m *Master) Dependencies() []asset.Asset {
 	return []asset.Asset{
-		&installconfig.PlatformCreds{},
 		&installconfig.ClusterID{},
 		// PlatformCredsCheck just checks the creds (and asks, if needed)
 		// We do not actually use it in this asset directly, hence
@@ -136,12 +131,11 @@ func awsDefaultMasterMachineTypes(region string) []string {
 // Generate generates the Master asset.
 func (m *Master) Generate(dependencies asset.Parents) error {
 	ctx := context.TODO()
-	platformCreds := &installconfig.PlatformCreds{}
 	clusterID := &installconfig.ClusterID{}
 	installConfig := &installconfig.InstallConfig{}
 	rhcosImage := new(rhcos.Image)
 	mign := &machine.Master{}
-	dependencies.Get(platformCreds, clusterID, installConfig, rhcosImage, mign)
+	dependencies.Get(clusterID, installConfig, rhcosImage, mign)
 
 	ic := installConfig.Config
 
@@ -252,7 +246,11 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 		mpool.Set(ic.Platform.Azure.DefaultMachinePlatform)
 		mpool.Set(pool.Platform.Azure)
 		if len(mpool.Zones) == 0 {
-			azs, err := azure.AvailabilityZones(platformCreds.Azure, ic.Platform.Azure.Region, mpool.InstanceType)
+			session, err := installConfig.Azure.Session()
+			if err != nil {
+				return errors.Wrap(err, "failed to fetch session for availability zones")
+			}
+			azs, err := azure.AvailabilityZones(session, ic.Platform.Azure.Region, mpool.InstanceType)
 			if err != nil {
 				return errors.Wrap(err, "failed to fetch availability zones")
 			}
@@ -271,55 +269,6 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 			return errors.Wrap(err, "failed to create master machine objects")
 		}
 		azure.ConfigMasters(machines, clusterID.InfraID)
-	case baremetaltypes.Name:
-		mpool := defaultBareMetalMachinePoolPlatform()
-		mpool.Set(ic.Platform.BareMetal.DefaultMachinePlatform)
-		mpool.Set(pool.Platform.BareMetal)
-		pool.Platform.BareMetal = &mpool
-
-		machines, err = baremetal.Machines(clusterID.InfraID, ic, pool, string(*rhcosImage), "master", "master-user-data")
-		if err != nil {
-			return errors.Wrap(err, "failed to create master machine objects")
-		}
-
-		hostSettings, err := baremetal.Hosts(ic, machines)
-		if err != nil {
-			return errors.Wrap(err, "failed to assemble host data")
-		}
-
-		if len(hostSettings.Hosts) > 0 {
-			m.HostFiles = make([]*asset.File, len(hostSettings.Hosts))
-			padFormat := fmt.Sprintf("%%0%dd", len(fmt.Sprintf("%d", len(hostSettings.Hosts))))
-			for i, host := range hostSettings.Hosts {
-				data, err := yaml.Marshal(host)
-				if err != nil {
-					return errors.Wrapf(err, "marshal host %d", i)
-				}
-
-				padded := fmt.Sprintf(padFormat, i)
-				m.HostFiles[i] = &asset.File{
-					Filename: filepath.Join(directory, fmt.Sprintf(hostFileName, padded)),
-					Data:     data,
-				}
-			}
-		}
-
-		if len(hostSettings.Secrets) > 0 {
-			m.SecretFiles = make([]*asset.File, len(hostSettings.Secrets))
-			padFormat := fmt.Sprintf("%%0%dd", len(fmt.Sprintf("%d", len(hostSettings.Secrets))))
-			for i, secret := range hostSettings.Secrets {
-				data, err := yaml.Marshal(secret)
-				if err != nil {
-					return errors.Wrapf(err, "marshal secret %d", i)
-				}
-
-				padded := fmt.Sprintf(padFormat, i)
-				m.SecretFiles[i] = &asset.File{
-					Filename: filepath.Join(directory, fmt.Sprintf(secretFileName, padded)),
-					Data:     data,
-				}
-			}
-		}
 	case ovirttypes.Name:
 		mpool := defaultOvirtMachinePoolPlatform()
 		mpool.VMType = ovirttypes.VMTypeHighPerformance
@@ -364,25 +313,25 @@ func (m *Master) Generate(dependencies asset.Parents) error {
 
 	machineConfigs := []*mcfgv1.MachineConfig{}
 	if pool.Hyperthreading == types.HyperthreadingDisabled {
-		config, err := machineconfig.ForHyperthreadingDisabled("master")
+		ignHT, err := machineconfig.ForHyperthreadingDisabled("master")
 		if err != nil {
-			return errors.Wrap(err, "failed to create master machine objects")
+			return errors.Wrap(err, "failed to create ignition for hyperthreading disabled for master machines")
 		}
-		machineConfigs = append(machineConfigs, config)
+		machineConfigs = append(machineConfigs, ignHT)
 	}
 	if ic.SSHKey != "" {
-		config, err := machineconfig.ForAuthorizedKeys(ic.SSHKey, "master")
+		ignSSH, err := machineconfig.ForAuthorizedKeys(ic.SSHKey, "master")
 		if err != nil {
-			return errors.Wrap(err, "failed to create master machine objects")
+			return errors.Wrap(err, "failed to create ignition for authorized SSH keys for master machines")
 		}
-		machineConfigs = append(machineConfigs, config)
+		machineConfigs = append(machineConfigs, ignSSH)
 	}
 	if ic.FIPS {
-		config, err := machineconfig.ForFIPSEnabled("master")
+		ignFIPS, err := machineconfig.ForFIPSEnabled("master")
 		if err != nil {
-			return errors.Wrap(err, "failed to create master machine objects")
+			return errors.Wrap(err, "failed to create ignition for FIPS enabled for master machines")
 		}
-		machineConfigs = append(machineConfigs, config)
+		machineConfigs = append(machineConfigs, ignFIPS)
 	}
 
 	m.MachineConfigFiles, err = machineconfig.Manifests(machineConfigs, "master", directory)
@@ -469,7 +418,6 @@ func (m *Master) Machines() ([]machineapi.Machine, error) {
 	scheme := runtime.NewScheme()
 	awsapi.AddToScheme(scheme)
 	azureapi.AddToScheme(scheme)
-	baremetalapi.AddToScheme(scheme)
 	gcpapi.AddToScheme(scheme)
 	libvirtapi.AddToScheme(scheme)
 	openstackapi.AddToScheme(scheme)
@@ -478,7 +426,6 @@ func (m *Master) Machines() ([]machineapi.Machine, error) {
 	decoder := serializer.NewCodecFactory(scheme).UniversalDecoder(
 		awsprovider.SchemeGroupVersion,
 		azureprovider.SchemeGroupVersion,
-		baremetalprovider.SchemeGroupVersion,
 		gcpprovider.SchemeGroupVersion,
 		libvirtprovider.SchemeGroupVersion,
 		openstackprovider.SchemeGroupVersion,

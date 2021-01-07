@@ -7,7 +7,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/openshift/installer/pkg/asset"
-	azureconfig "github.com/openshift/installer/pkg/asset/installconfig/azure"
 	gcpconfig "github.com/openshift/installer/pkg/asset/installconfig/gcp"
 	openstackconfig "github.com/openshift/installer/pkg/asset/installconfig/openstack"
 	ovirtconfig "github.com/openshift/installer/pkg/asset/installconfig/ovirt"
@@ -32,7 +31,6 @@ var _ asset.Asset = (*PlatformCredsCheck)(nil)
 // Dependencies returns the dependencies for PlatformCredsCheck
 func (a *PlatformCredsCheck) Dependencies() []asset.Asset {
 	return []asset.Asset{
-		&PlatformCreds{},
 		&InstallConfig{},
 	}
 }
@@ -40,9 +38,8 @@ func (a *PlatformCredsCheck) Dependencies() []asset.Asset {
 // Generate queries for input from the user.
 func (a *PlatformCredsCheck) Generate(dependencies asset.Parents) error {
 	ctx := context.TODO()
-	platformCreds := &PlatformCreds{}
 	ic := &InstallConfig{}
-	dependencies.Get(platformCreds, ic)
+	dependencies.Get(ic)
 
 	var err error
 	platform := ic.Config.Platform.Name()
@@ -62,18 +59,18 @@ func (a *PlatformCredsCheck) Generate(dependencies asset.Parents) error {
 	case baremetal.Name, libvirt.Name, none.Name, vsphere.Name:
 		// no creds to check
 	case azure.Name:
-		_, err = azureconfig.GetSession(platformCreds.Azure)
+		_, err = ic.Azure.Session()
 		if err != nil {
 			return errors.Wrap(err, "creating Azure session")
 		}
 	case ovirt.Name:
 		con, err := ovirtconfig.NewConnection()
 		if err != nil {
-			return errors.Wrap(err, "creating oVirt connection")
+			return errors.Wrap(err, "creating Engine connection")
 		}
 		err = con.Test()
 		if err != nil {
-			return errors.Wrap(err, "testing ovirt connection")
+			return errors.Wrap(err, "testing Engine connection")
 		}
 	default:
 		err = fmt.Errorf("unknown platform type %q", platform)
