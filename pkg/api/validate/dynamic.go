@@ -6,25 +6,20 @@ package validate
 import (
 	"context"
 	"fmt"
-	"net"
 	"net/http"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
 	mgmtnetwork "github.com/Azure/azure-sdk-for-go/services/network/mgmt/2019-07-01/network"
-	mgmtfeatures "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2019-07-01/features"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/apparentlymart/go-cidr/cidr"
 	"github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
-	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/features"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	utilpermissions "github.com/Azure/ARO-RP/pkg/util/permissions"
 	"github.com/Azure/ARO-RP/pkg/util/refreshable"
@@ -36,25 +31,26 @@ import (
 type SlimDynamic interface {
 	ValidateVnetPermissions(ctx context.Context) error
 	ValidateRouteTablesPermissions(ctx context.Context) error
+	ValidateVnetDns(ctx context.Context) error
 	// etc
 	// does Quota code go in here too?
 }
 
 type dynamic struct {
-	log   *logrus.Entry
-	oc    *api.OpenShiftCluster
-	vnetr *azure.Resource
+	log             *logrus.Entry
+	vnetr           *azure.Resource
+	masterSubnetID  string
+	workerSubnetIDs []string
 
 	code string
 	typ  string
 
 	permissions     authorization.PermissionsClient
-	providers       features.ProvidersClient
 	virtualNetworks virtualNetworksGetClient
 }
 
-func NewValidator(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster, subscriptionID string, authorizer refreshable.Authorizer, code string, typ string) (*dynamic, error) {
-	vnetID, _, err := subnet.Split(oc.Properties.MasterProfile.SubnetID)
+func NewValidator(log *logrus.Entry, env env.Interface, masterSubnetID string, workerSubnetIDs []string, subscriptionID string, authorizer refreshable.Authorizer, code string, typ string) (*dynamic, error) {
+	vnetID, _, err := subnet.Split(masterSubnetID)
 	if err != nil {
 		return nil, err
 	}
@@ -65,15 +61,15 @@ func NewValidator(log *logrus.Entry, env env.Interface, oc *api.OpenShiftCluster
 	}
 
 	return &dynamic{
-		log:   log,
-		oc:    oc,
-		vnetr: &vnetr,
+		log:             log,
+		vnetr:           &vnetr,
+		masterSubnetID:  masterSubnetID,
+		workerSubnetIDs: workerSubnetIDs,
 
 		code: code,
 		typ:  typ,
 
 		permissions:     authorization.NewPermissionsClient(env.Environment(), subscriptionID, authorizer),
-		providers:       features.NewProvidersClient(env.Environment(), subscriptionID, authorizer),
 		virtualNetworks: newVirtualNetworksCache(network.NewVirtualNetworksClient(env.Environment(), subscriptionID, authorizer)),
 	}, nil
 }
@@ -141,7 +137,7 @@ func (dv *dynamic) ValidateRouteTablesPermissions(ctx context.Context) error {
 
 	m := map[string]string{}
 
-	rtID, err := getRouteTableID(&vnet, "properties.masterProfile.subnetId", dv.oc.Properties.MasterProfile.SubnetID)
+	rtID, err := getRouteTableID(&vnet, "properties.masterProfile.subnetId", dv.masterSubnetID)
 	if err != nil {
 		return err
 	}
@@ -150,10 +146,10 @@ func (dv *dynamic) ValidateRouteTablesPermissions(ctx context.Context) error {
 		m[strings.ToLower(rtID)] = "properties.masterProfile.subnetId"
 	}
 
-	for i, s := range dv.oc.Properties.WorkerProfiles {
+	for i, s := range dv.workerSubnetIDs {
 		path := fmt.Sprintf("properties.workerProfiles[%d].subnetId", i)
 
-		rtID, err := getRouteTableID(&vnet, path, s.SubnetID)
+		rtID, err := getRouteTableID(&vnet, path, s)
 		if err != nil {
 			return err
 		}
@@ -161,7 +157,6 @@ func (dv *dynamic) ValidateRouteTablesPermissions(ctx context.Context) error {
 		if _, ok := m[strings.ToLower(rtID)]; ok || rtID == "" {
 			continue
 		}
-
 		m[strings.ToLower(rtID)] = path
 	}
 
@@ -205,153 +200,18 @@ func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, rtID strin
 	return err
 }
 
-func (dv *dynamic) validateSubnet(ctx context.Context, vnet *mgmtnetwork.VirtualNetwork, path, subnetID string) (*net.IPNet, error) {
-	dv.log.Printf("validateSubnet (%s)", path)
-
-	s := findSubnet(vnet, subnetID)
-	if s == nil {
-		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The provided subnet '%s' could not be found.", subnetID)
-	}
-
-	if strings.EqualFold(dv.oc.Properties.MasterProfile.SubnetID, subnetID) {
-		if s.PrivateLinkServiceNetworkPolicies == nil ||
-			!strings.EqualFold(*s.PrivateLinkServiceNetworkPolicies, "Disabled") {
-			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The provided subnet '%s' is invalid: must have privateLinkServiceNetworkPolicies disabled.", subnetID)
-		}
-	}
-
-	var found bool
-	if s.ServiceEndpoints != nil {
-		for _, se := range *s.ServiceEndpoints {
-			if strings.EqualFold(*se.Service, "Microsoft.ContainerRegistry") &&
-				se.ProvisioningState == mgmtnetwork.Succeeded {
-				found = true
-				break
-			}
-		}
-	}
-	if !found {
-		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The provided subnet '%s' is invalid: must have Microsoft.ContainerRegistry serviceEndpoint.", subnetID)
-	}
-
-	if dv.oc.Properties.ProvisioningState == api.ProvisioningStateCreating {
-		if s.SubnetPropertiesFormat != nil &&
-			s.SubnetPropertiesFormat.NetworkSecurityGroup != nil {
-			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The provided subnet '%s' is invalid: must not have a network security group attached.", subnetID)
-		}
-
-	} else {
-		nsgID, err := subnet.NetworkSecurityGroupID(dv.oc, *s.ID)
-		if err != nil {
-			return nil, err
-		}
-
-		if s.SubnetPropertiesFormat == nil ||
-			s.SubnetPropertiesFormat.NetworkSecurityGroup == nil ||
-			!strings.EqualFold(*s.SubnetPropertiesFormat.NetworkSecurityGroup.ID, nsgID) {
-			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The provided subnet '%s' is invalid: must have network security group '%s' attached.", subnetID, nsgID)
-		}
-	}
-
-	_, net, err := net.ParseCIDR(*s.AddressPrefix)
-	if err != nil {
-		return nil, err
-	}
-	{
-		ones, _ := net.Mask.Size()
-		if ones > 27 {
-			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The provided subnet '%s' is invalid: must be /27 or larger.", subnetID)
-		}
-	}
-
-	return net, nil
-}
-
-// validateVnet checks that the vnet does not have custom dns servers set
-// and the subnets do not overlap with cluster pod/service CIDR blocks
-func (dv *dynamic) validateVnet(ctx context.Context) error {
-	dv.log.Print("validateVnet")
+func (dv *dynamic) ValidateVnetDNS(ctx context.Context) error {
+	dv.log.Print("validateVnetDns")
 
 	vnet, err := dv.virtualNetworks.Get(ctx, dv.vnetr.ResourceGroup, dv.vnetr.ResourceName, "")
 	if err != nil {
 		return err
 	}
 
-	if !strings.EqualFold(*vnet.Location, dv.oc.Location) {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The vnet location '%s' must match the cluster location '%s'.", *vnet.Location, dv.oc.Location)
-	}
-
-	// unique names of subnets from all node pools
-	subnets := map[string]struct{}{}
-	var CIDRArray []*net.IPNet
-	for i, subnet := range dv.oc.Properties.WorkerProfiles {
-		if _, ok := subnets[strings.ToLower(subnet.SubnetID)]; ok {
-			continue
-		}
-
-		subnets[strings.ToLower(subnet.SubnetID)] = struct{}{}
-
-		c, err := dv.validateSubnet(ctx, &vnet, "properties.workerProfiles["+strconv.Itoa(i)+"].subnetId", subnet.SubnetID)
-		if err != nil {
-			return err
-		}
-		CIDRArray = append(CIDRArray, c)
-	}
-	masterSubnetCIDR, err := dv.validateSubnet(ctx, &vnet, "properties.masterProfile.subnetId", dv.oc.Properties.MasterProfile.SubnetID)
-	if err != nil {
-		return err
-	}
-
-	_, podCIDR, err := net.ParseCIDR(dv.oc.Properties.NetworkProfile.PodCIDR)
-	if err != nil {
-		return err
-	}
-
-	_, serviceCIDR, err := net.ParseCIDR(dv.oc.Properties.NetworkProfile.ServiceCIDR)
-	if err != nil {
-		return err
-	}
-
-	CIDRArray = append(CIDRArray, masterSubnetCIDR, podCIDR, serviceCIDR)
-
-	err = cidr.VerifyNoOverlap(CIDRArray, &net.IPNet{IP: net.IPv4zero, Mask: net.IPMask(net.IPv4zero)})
-	if err != nil {
-		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided CIDRs must not overlap: '%s'.", err)
-	}
-
 	if vnet.DhcpOptions != nil &&
 		vnet.DhcpOptions.DNSServers != nil &&
 		len(*vnet.DhcpOptions.DNSServers) > 0 {
 		return api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, "", "The provided vnet '%s' is invalid: custom DNS servers are not supported.", *vnet.ID)
-	}
-
-	return nil
-}
-
-func (dv *dynamic) validateProviders(ctx context.Context) error {
-	dv.log.Print("validateProviders")
-
-	providers, err := dv.providers.List(ctx, nil, "")
-	if err != nil {
-		return err
-	}
-
-	providerMap := make(map[string]mgmtfeatures.Provider, len(providers))
-
-	for _, provider := range providers {
-		providerMap[*provider.Namespace] = provider
-	}
-
-	for _, provider := range []string{
-		"Microsoft.Authorization",
-		"Microsoft.Compute",
-		"Microsoft.Network",
-		"Microsoft.Storage",
-	} {
-		if providerMap[provider].RegistrationState == nil ||
-			*providerMap[provider].RegistrationState != "Registered" {
-			return api.NewCloudError(http.StatusBadRequest, api.CloudErrorResourceProviderNotRegistered, "", "The resource provider '%s' is not registered.", provider)
-		}
 	}
 
 	return nil
@@ -384,4 +244,17 @@ func (dv *dynamic) validateActions(ctx context.Context, r *azure.Resource, actio
 
 		return true, nil
 	}, timeoutCtx.Done())
+}
+
+func getRouteTableID(vnet *mgmtnetwork.VirtualNetwork, path, subnetID string) (string, error) {
+	s := findSubnet(vnet, subnetID)
+	if s == nil {
+		return "", api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The subnet '%s' could not be found.", subnetID)
+	}
+
+	if s.RouteTable == nil {
+		return "", nil
+	}
+
+	return *s.RouteTable.ID, nil
 }
