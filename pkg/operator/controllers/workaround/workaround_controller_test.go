@@ -4,6 +4,7 @@ package workaround
 // Licensed under the Apache License 2.0.
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -75,6 +76,7 @@ func TestWorkaroundReconciler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
 			controller := gomock.NewController(t)
 			defer controller.Finish()
 
@@ -85,7 +87,7 @@ func TestWorkaroundReconciler(t *testing.T) {
 				log:         utillog.GetLogger(),
 			}
 			tt.mocker(mwa)
-			got, err := r.Reconcile(reconcile.Request{})
+			got, err := r.Reconcile(ctx, reconcile.Request{})
 			if (err != nil) != tt.wantErr {
 				t.Errorf("WorkaroundReconciler.Reconcile() error = %v, wantErr %v", err, tt.wantErr)
 				return

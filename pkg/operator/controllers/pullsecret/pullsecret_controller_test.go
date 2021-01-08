@@ -115,6 +115,7 @@ func TestPullSecretReconciler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var created, deleted, updated bool
+			ctx := context.Background()
 
 			tt.fakecli.PrependReactor("create", "secrets", func(action ktesting.Action) (handled bool, ret runtime.Object, err error) {
 				created = true
@@ -139,7 +140,7 @@ func TestPullSecretReconciler(t *testing.T) {
 				tt.request.NamespacedName = pullSecretName
 			}
 
-			_, err := r.Reconcile(tt.request)
+			_, err := r.Reconcile(ctx, tt.request)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("PullsecretReconciler.Reconcile() error = %v, wantErr %v", err, tt.wantErr)
 				return

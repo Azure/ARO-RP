@@ -43,15 +43,8 @@ func TestGraphRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	platformCreds := &installconfig.PlatformCreds{
-		Azure: &icazure.Credentials{
-			ClientID:     "dummy",
-			ClientSecret: "dummy",
-		},
-	}
-
 	installConfig := &installconfig.InstallConfig{
-		Azure: icazure.NewMetadata(azure.PublicCloud, platformCreds.Azure),
+		Azure: icazure.NewMetadata(azure.PublicCloud, nil),
 		Config: &types.InstallConfig{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "v1",
@@ -111,7 +104,7 @@ func TestGraphRoundTrip(t *testing.T) {
 		t.Fatal(errs.Error())
 	}
 
-	g := newGraph(installConfig, platformCreds)
+	g := newGraph(installConfig)
 
 	for _, a := range targets.Cluster {
 		err = g.resolve(a)
