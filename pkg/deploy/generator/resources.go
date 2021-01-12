@@ -724,7 +724,6 @@ func (g *generator) vmss() *arm.Resource {
 		"mdmFrontendUrl",
 		"mdsdConfigVersion",
 		"mdsdEnvironment",
-		"mdsdCertificateSAN",
 		"acrResourceId",
 		"clusterParentDomainName",
 		"portalAccessGroupIds",
@@ -866,32 +865,6 @@ az logout
 mkdir /etc/aro-rp
 base64 -d <<<"$ADMINAPICABUNDLE" >/etc/aro-rp/admin-ca-bundle.pem
 chown -R 1000:1000 /etc/aro-rp
-
-mkdir /etc/systemd/system/mdsd.service.d
-cat >/etc/systemd/system/mdsd.service.d/override.conf <<'EOF'
-[Unit]
-After=network-online.target
-EOF
-
-cat >/etc/default/mdsd <<EOF
-MDSD_ROLE_PREFIX=/var/run/mdsd/default
-MDSD_OPTIONS="-A -d -r \$MDSD_ROLE_PREFIX"
-
-export SSL_CERT_FILE=/etc/pki/tls/certs/ca-bundle.crt
-
-export MONITORING_GCS_ENVIRONMENT='$MDSDENVIRONMENT'
-export MONITORING_GCS_ACCOUNT=ARORPLogs
-export MONITORING_GCS_REGION='$LOCATION'
-export MONITORING_GCS_AUTH_ID_TYPE=AuthKeyVault
-export MONITORING_GCS_AUTH_ID='$MDSDCERTIFICATESAN'
-export MONITORING_GCS_NAMESPACE=ARORPLogs
-export MONITORING_CONFIG_VERSION='$MDSDCONFIGVERSION'
-export MONITORING_USE_GENEVA_CONFIG_SERVICE=true
-
-export MONITORING_TENANT='$LOCATION'
-export MONITORING_ROLE=rp
-export MONITORING_ROLE_INSTANCE='$(hostname)'
-EOF
 
 cat >/etc/sysconfig/mdm <<EOF
 MDMFRONTENDURL='$MDMFRONTENDURL'
@@ -1164,7 +1137,7 @@ Description=Periodic mdsd certificate refresh
 
 [Timer]
 OnBootSec=0min
-OnCalendar=0/12:00:00
+OnCalendar=1/12:00:00
 AccuracySec=5s
 
 [Install]
@@ -1175,11 +1148,34 @@ systemctl enable download-mdsd-credentials.timer
 systemctl enable download-mdm-credentials.timer
 
 /usr/local/bin/download-mdsd-credentials.sh
-
 /usr/local/bin/download-mdm-credentials.sh
-if [ $? != 0 ]; then
-  touch /etc/mdm.pem
-fi
+MDSDCERTIFICATESAN=$(openssl x509 -in /etc/mdsd.pem -noout -subject | sed -e 's/.*CN = //')
+
+mkdir /etc/systemd/system/mdsd.service.d
+cat >/etc/systemd/system/mdsd.service.d/override.conf <<'EOF'
+[Unit]
+After=network-online.target
+EOF
+
+cat >/etc/default/mdsd <<EOF
+MDSD_ROLE_PREFIX=/var/run/mdsd/default
+MDSD_OPTIONS="-A -d -r \$MDSD_ROLE_PREFIX"
+
+export SSL_CERT_FILE=/etc/pki/tls/certs/ca-bundle.crt
+
+export MONITORING_GCS_ENVIRONMENT='$MDSDENVIRONMENT'
+export MONITORING_GCS_ACCOUNT=ARORPLogs
+export MONITORING_GCS_REGION='$LOCATION'
+export MONITORING_GCS_AUTH_ID_TYPE=AuthKeyVault
+export MONITORING_GCS_AUTH_ID='$MDSDCERTIFICATESAN'
+export MONITORING_GCS_NAMESPACE=ARORPLogs
+export MONITORING_CONFIG_VERSION='$MDSDCONFIGVERSION'
+export MONITORING_USE_GENEVA_CONFIG_SERVICE=true
+
+export MONITORING_TENANT='$LOCATION'
+export MONITORING_ROLE=rp
+export MONITORING_ROLE_INSTANCE='$(hostname)'
+EOF
 
 for service in aro-monitor aro-portal aro-rp auoms azsecd azsecmond mdsd mdm chronyd td-agent-bit; do
   systemctl enable $service.service
