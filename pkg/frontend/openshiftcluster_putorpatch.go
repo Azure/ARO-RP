@@ -73,6 +73,7 @@ func (f *frontend) _putOrPatchOpenShiftCluster(ctx context.Context, r *http.Requ
 				Properties: api.OpenShiftClusterProperties{
 					ArchitectureVersion: version.InstallArchitectureVersion,
 					ProvisioningState:   api.ProvisioningStateSucceeded,
+					CreatedAt:           f.now().UTC(),
 					CreatedBy:           version.GitCommit,
 					ProvisionedBy:       version.GitCommit,
 					ClusterProfile: api.ClusterProfile{
