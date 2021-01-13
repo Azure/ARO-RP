@@ -173,12 +173,12 @@ func TestUpgradeCluster(t *testing.T) {
 				return false, nil, nil
 			})
 
-			a := &adminactions{
+			k := &kubeActions{
 				log:       logrus.NewEntry(logrus.StandardLogger()),
 				configcli: tt.fakecli,
 			}
 
-			err := upgrade(ctx, a.log, a.configcli, []*version.Stream{stream43, stream44, stream45}, tt.upgradeY)
+			err := upgrade(ctx, k.log, k.configcli, []*version.Stream{stream43, stream44, stream45}, tt.upgradeY)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
@@ -188,7 +188,7 @@ func TestUpgradeCluster(t *testing.T) {
 				t.Fatal(updated)
 			}
 
-			cv, err := a.configcli.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
+			cv, err := k.configcli.ConfigV1().ClusterVersions().Get(ctx, "version", metav1.GetOptions{})
 			if err != nil {
 				t.Error(err)
 			}
@@ -252,7 +252,7 @@ func TestCheckCustomDNS(t *testing.T) {
 				tt.mocks(virtualNetworks)
 			}
 
-			a := &adminactions{
+			k := &kubeActions{
 				log:             logrus.NewEntry(logrus.StandardLogger()),
 				virtualNetworks: virtualNetworks,
 			}
@@ -265,7 +265,7 @@ func TestCheckCustomDNS(t *testing.T) {
 				},
 			}
 
-			err := checkCustomDNS(ctx, oc, a.virtualNetworks)
+			err := checkCustomDNS(ctx, oc, k.virtualNetworks)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

@@ -17,7 +17,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/subnet"
 )
 
-func (a *adminactions) ResourcesList(ctx context.Context) ([]byte, error) {
+func (a *azureActions) ResourcesList(ctx context.Context) ([]byte, error) {
 	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')
 
 	resources, err := a.resources.ListByResourceGroup(ctx, clusterRGName, "", "", nil)
@@ -59,7 +59,7 @@ func (a *adminactions) ResourcesList(ctx context.Context) ([]byte, error) {
 	return json.Marshal(armResources)
 }
 
-func (a *adminactions) appendAzureNetworkResources(ctx context.Context, armResources []arm.Resource) ([]arm.Resource, error) {
+func (a *azureActions) appendAzureNetworkResources(ctx context.Context, armResources []arm.Resource) ([]arm.Resource, error) {
 	vNetID, _, err := subnet.Split(a.oc.Properties.MasterProfile.SubnetID)
 	if err != nil {
 		return nil, err

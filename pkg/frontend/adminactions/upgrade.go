@@ -22,13 +22,13 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/version"
 )
 
-func (a *adminactions) Upgrade(ctx context.Context, upgradeY bool) error {
-	err := preUpgradeChecks(ctx, a.oc, a.virtualNetworks)
+func (k *kubeActions) Upgrade(ctx context.Context, upgradeY bool) error {
+	err := preUpgradeChecks(ctx, k.oc, k.virtualNetworks)
 	if err != nil {
 		return err
 	}
 
-	return upgrade(ctx, a.log, a.configcli, version.Streams, upgradeY)
+	return upgrade(ctx, k.log, k.configcli, version.Streams, upgradeY)
 }
 
 func upgrade(ctx context.Context, log *logrus.Entry, configcli configclient.Interface, streams []*version.Stream, upgradeY bool) error {

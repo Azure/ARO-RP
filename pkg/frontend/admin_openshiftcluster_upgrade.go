@@ -47,10 +47,10 @@ func (f *frontend) _postAdminOpenShiftUpgrade(ctx context.Context, r *http.Reque
 		return err
 	}
 
-	a, err := f.adminActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
+	k, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
 	if err != nil {
 		return err
 	}
 
-	return a.Upgrade(ctx, upgradeY)
+	return k.Upgrade(ctx, upgradeY)
 }

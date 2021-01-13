@@ -54,15 +54,15 @@ func (f *frontend) _getAdminKubernetesObjects(ctx context.Context, r *http.Reque
 		return nil, err
 	}
 
-	a, err := f.adminActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
+	k, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
 	if err != nil {
 		return nil, err
 	}
 
 	if name != "" {
-		return a.K8sGet(ctx, groupKind, namespace, name)
+		return k.KubeGet(ctx, groupKind, namespace, name)
 	}
-	return a.K8sList(ctx, groupKind, namespace)
+	return k.KubeList(ctx, groupKind, namespace)
 }
 
 func (f *frontend) deleteAdminKubernetesObjects(w http.ResponseWriter, r *http.Request) {
@@ -100,12 +100,12 @@ func (f *frontend) _deleteAdminKubernetesObjects(ctx context.Context, r *http.Re
 		return err
 	}
 
-	a, err := f.adminActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
+	k, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
 	if err != nil {
 		return err
 	}
 
-	return a.K8sDelete(ctx, groupKind, namespace, name)
+	return k.KubeDelete(ctx, groupKind, namespace, name)
 }
 
 func (f *frontend) postAdminKubernetesObjects(w http.ResponseWriter, r *http.Request) {
@@ -154,10 +154,10 @@ func (f *frontend) _postAdminKubernetesObjects(ctx context.Context, r *http.Requ
 		return err
 	}
 
-	a, err := f.adminActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
+	k, err := f.kubeActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
 	if err != nil {
 		return err
 	}
 
-	return a.K8sCreateOrUpdate(ctx, obj)
+	return k.KubeCreateOrUpdate(ctx, obj)
 }

@@ -21,7 +21,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
-func (a *adminactions) VMSerialConsole(ctx context.Context, w http.ResponseWriter,
+func (a *azureActions) VMSerialConsole(ctx context.Context, w http.ResponseWriter,
 	log *logrus.Entry, vmName string) error {
 
 	clusterRGName := stringutils.LastTokenByte(a.oc.Properties.ClusterProfile.ResourceGroupID, '/')

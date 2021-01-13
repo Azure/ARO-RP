@@ -92,7 +92,7 @@ func TestGetOpenShiftCluster(t *testing.T) {
 				ti.openShiftClustersClient.SetError(tt.dbError)
 			}
 
-			f, err := NewFrontend(ctx, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, api.APIs, &noop.Noop{}, nil, nil)
+			f, err := NewFrontend(ctx, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, api.APIs, &noop.Noop{}, nil, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
