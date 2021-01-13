@@ -744,12 +744,6 @@ func NewServiceClient(service string, opts *ClientOpts) (*gophercloud.ServiceCli
 		}
 	}
 
-	// Get a Provider Client
-	pClient, err := AuthenticatedClient(opts)
-	if err != nil {
-		return nil, err
-	}
-
 	// Check if a custom CA cert was provided.
 	// First, check if the CACERT environment variable is set.
 	var caCertPath string
@@ -796,6 +790,16 @@ func NewServiceClient(service string, opts *ClientOpts) (*gophercloud.ServiceCli
 		return nil, err
 	}
 
+	// Get a Provider Client
+	ao, err := AuthOptions(opts)
+	if err != nil {
+		return nil, err
+	}
+	pClient, err := openstack.NewClient(ao.IdentityEndpoint)
+	if err != nil {
+		return nil, err
+	}
+
 	// If an HTTPClient was specified, use it.
 	if opts.HTTPClient != nil {
 		pClient.HTTPClient = *opts.HTTPClient
@@ -806,6 +810,11 @@ func NewServiceClient(service string, opts *ClientOpts) (*gophercloud.ServiceCli
 				TLSClientConfig: tlsConfig,
 			},
 		}
+	}
+
+	err = openstack.Authenticate(pClient, *ao)
+	if err != nil {
+		return nil, err
 	}
 
 	// Determine the region to use.
