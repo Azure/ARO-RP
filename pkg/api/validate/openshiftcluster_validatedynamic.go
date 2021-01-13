@@ -149,16 +149,29 @@ func (dv *openShiftClusterDynamicValidator) validateVnetLocation(ctx context.Con
 func (dv *openShiftClusterDynamicValidator) validateCIDRRanges(ctx context.Context, vnet *mgmtnetwork.VirtualNetwork) error {
 	dv.log.Print("validateCIDRRanges")
 
+	var subnets []string
 	var CIDRArray []*net.IPNet
 
+	// unique names of subnets from all node pools
 	for i, subnet := range dv.oc.Properties.WorkerProfiles {
-		path := fmt.Sprintf("properties.workerProfiles[%d].subnetId", i)
-		c, err := dv.validateSubnet(ctx, vnet, path, subnet.SubnetID)
-		if err != nil {
-			return err
+		exists := false
+		for _, s := range subnets {
+			if strings.EqualFold(strings.ToLower(subnet.SubnetID), strings.ToLower(s)) {
+				exists = true
+				break
+			}
 		}
 
-		CIDRArray = append(CIDRArray, c)
+		if !exists {
+			subnets = append(subnets, subnet.SubnetID)
+			path := fmt.Sprintf("properties.workerProfiles[%d].subnetId", i)
+			c, err := dv.validateSubnet(ctx, vnet, path, subnet.SubnetID)
+			if err != nil {
+				return err
+			}
+
+			CIDRArray = append(CIDRArray, c)
+		}
 	}
 
 	masterCIDR, err := dv.validateSubnet(ctx, vnet, "properties.MasterProfile.subnetId", dv.oc.Properties.MasterProfile.SubnetID)
@@ -237,11 +250,10 @@ func (dv *openShiftClusterDynamicValidator) validateSubnet(ctx context.Context, 
 	if err != nil {
 		return nil, err
 	}
-	{
-		ones, _ := net.Mask.Size()
-		if ones > 27 {
-			return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The provided subnet '%s' is invalid: must be /27 or larger.", subnetID)
-		}
+
+	ones, _ := net.Mask.Size()
+	if ones > 27 {
+		return nil, api.NewCloudError(http.StatusBadRequest, api.CloudErrorCodeInvalidLinkedVNet, path, "The provided subnet '%s' is invalid: must be /27 or larger.", subnetID)
 	}
 
 	return net, nil

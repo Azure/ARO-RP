@@ -74,42 +74,8 @@ func NewValidator(log *logrus.Entry, env env.Interface, masterSubnetID string, w
 	}, nil
 }
 
-/*
-Dynamic() {
-	get fp authorizer
-	create a dynamic{fpauthorizer}
-	validateVnetPermissions
-	if err { bail }
-	validateRouteTablesPermissions
-	if err { bail }
-
-	get sp authorizer
-	create a dynamic{spauthorizer}
-	validateVnetPermissions
-	if err { bail }
-	validateRouteTablesPermissions
-	if err { bail }
-
-	do all the other checks
-	validateVnet
-	if err { bail }
-	etc
-}
-
-operator context {
-	get sp authorizer
-	create a dynamic{spauthorizer}
-	pick and choose...
-	validateVnetPermissions
-	if err { note error and continue }
-	validateRouteTablesPermissions
-	if err { note error and continue }
-}
-
-*/
-
 func (dv *dynamic) ValidateVnetPermissions(ctx context.Context) error {
-	dv.log.Printf("validateVnetPermissions (%s)", dv.typ)
+	dv.log.Printf("ValidateVnetPermissions (%s)", dv.typ)
 
 	err := dv.validateActions(ctx, dv.vnetr, []string{
 		"Microsoft.Network/virtualNetworks/join/action",
@@ -119,6 +85,7 @@ func (dv *dynamic) ValidateVnetPermissions(ctx context.Context) error {
 		"Microsoft.Network/virtualNetworks/subnets/read",
 		"Microsoft.Network/virtualNetworks/subnets/write",
 	})
+
 	if err == wait.ErrWaitTimeout {
 		return api.NewCloudError(http.StatusBadRequest, dv.code, "", "The %s does not have Network Contributor permission on vnet '%s'.", dv.typ, dv.vnetr)
 	}
@@ -223,6 +190,7 @@ func (dv *dynamic) validateActions(ctx context.Context, r *azure.Resource, actio
 
 	return wait.PollImmediateUntil(10*time.Second, func() (bool, error) {
 		permissions, err := dv.permissions.ListForResource(ctx, r.ResourceGroup, r.Provider, "", r.ResourceType, r.ResourceName)
+
 		if detailedErr, ok := err.(autorest.DetailedError); ok &&
 			detailedErr.StatusCode == http.StatusForbidden {
 			return false, steps.ErrWantRefresh

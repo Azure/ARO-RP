@@ -35,9 +35,11 @@ type ClusterSpec struct {
 	// ResourceID is the Azure resourceId of the cluster
 	ResourceID      string              `json:"resourceId,omitempty"`
 	ACRDomain       string              `json:"acrDomain,omitempty"`
+	AZEnvironment   string              `json:"azEnvironment,omitempty"`
 	Location        string              `json:"location,omitempty"`
 	GenevaLogging   GenevaLoggingSpec   `json:"genevaLogging,omitempty"`
 	InternetChecker InternetCheckerSpec `json:"internetChecker,omitempty"`
+	VnetID          string              `json:"vnetId,omitempty"`
 
 	Features FeaturesSpec `json:"features,omitempty"`
 }
