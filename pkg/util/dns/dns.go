@@ -90,6 +90,22 @@ func (m *manager) CreateOrUpdateRouter(ctx context.Context, oc *api.OpenShiftClu
 		return err
 	}
 
+	var isCreate bool
+	rs, err := m.recordsets.Get(ctx, m.env.ResourceGroup(), m.env.Domain(), "*.apps."+prefix, mgmtdns.A)
+	if detailedErr, ok := err.(autorest.DetailedError); ok &&
+		detailedErr.StatusCode == http.StatusNotFound {
+		isCreate = true
+	}
+
+	// If record exists and routerIP already match - skip CreateOrUpdate
+	if err == nil && !isCreate {
+		for _, a := range *rs.ARecords {
+			if *a.Ipv4Address == routerIP {
+				return nil
+			}
+		}
+	}
+
 	_, err = m.recordsets.CreateOrUpdate(ctx, m.env.ResourceGroup(), m.env.Domain(), "*.apps."+prefix, mgmtdns.A, mgmtdns.RecordSet{
 		RecordSetProperties: &mgmtdns.RecordSetProperties{
 			TTL: to.Int64Ptr(300),

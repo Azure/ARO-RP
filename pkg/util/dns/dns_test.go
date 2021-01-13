@@ -278,24 +278,30 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 	}
 
 	type test struct {
-		name    string
-		oc      *api.OpenShiftCluster
-		mocks   func(*test, *mock_dns.MockRecordSetsClient)
-		wantErr string
+		name     string
+		routerIP string
+		oc       *api.OpenShiftCluster
+		mocks    func(*test, *mock_dns.MockRecordSetsClient)
+		wantErr  string
 	}
 
 	for _, tt := range []*test{
 		{
-			name: "managed",
-			oc:   managedOc,
+			name:     "managed - create",
+			routerIP: "1.2.3.4",
+			oc:       managedOc,
 			mocks: func(tt *test, recordsets *mock_dns.MockRecordSetsClient) {
+				recordsets.EXPECT().
+					Get(ctx, "rpResourcegroup", "domain", "*.apps.domain", mgmtdns.A).
+					Return(mgmtdns.RecordSet{}, fmt.Errorf("random error"))
+
 				recordsets.EXPECT().
 					CreateOrUpdate(ctx, "rpResourcegroup", "domain", "*.apps.domain", mgmtdns.A, mgmtdns.RecordSet{
 						RecordSetProperties: &mgmtdns.RecordSetProperties{
 							TTL: to.Int64Ptr(300),
 							ARecords: &[]mgmtdns.ARecord{
 								{
-									Ipv4Address: to.StringPtr("1.2.3.4"),
+									Ipv4Address: to.StringPtr(tt.routerIP),
 								},
 							},
 						},
@@ -304,11 +310,56 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 			},
 		},
 		{
-			name: "managed, error",
-			oc:   managedOc,
+			name:     "managed, error",
+			routerIP: "1.2.3.4",
+			oc:       managedOc,
 			mocks: func(tt *test, recordsets *mock_dns.MockRecordSetsClient) {
 				recordsets.EXPECT().
+					Get(ctx, "rpResourcegroup", "domain", "*.apps.domain", mgmtdns.A).
+					Return(mgmtdns.RecordSet{}, fmt.Errorf("random error"))
+
+				recordsets.EXPECT().
 					CreateOrUpdate(ctx, "rpResourcegroup", "domain", "*.apps.domain", mgmtdns.A, mgmtdns.RecordSet{
+						RecordSetProperties: &mgmtdns.RecordSetProperties{
+							TTL: to.Int64Ptr(300),
+							ARecords: &[]mgmtdns.ARecord{
+								{
+									Ipv4Address: to.StringPtr(tt.routerIP),
+								},
+							},
+						},
+					}, "", "").
+					Return(mgmtdns.RecordSet{}, fmt.Errorf("random error"))
+			},
+			wantErr: "random error",
+		},
+		{
+			name:     "managed, update match",
+			routerIP: "1.2.3.4",
+			oc:       managedOc,
+			mocks: func(tt *test, recordsets *mock_dns.MockRecordSetsClient) {
+				recordsets.EXPECT().
+					Get(ctx, "rpResourcegroup", "domain", "*.apps.domain", mgmtdns.A).
+					Return(mgmtdns.RecordSet{
+						RecordSetProperties: &mgmtdns.RecordSetProperties{
+							TTL: to.Int64Ptr(300),
+							ARecords: &[]mgmtdns.ARecord{
+								{
+									Ipv4Address: to.StringPtr(tt.routerIP),
+								},
+							},
+						},
+					}, nil)
+			},
+		},
+		{
+			name:     "managed, update missmatch",
+			routerIP: "2.2.3.4",
+			oc:       managedOc,
+			mocks: func(tt *test, recordsets *mock_dns.MockRecordSetsClient) {
+				recordsets.EXPECT().
+					Get(ctx, "rpResourcegroup", "domain", "*.apps.domain", mgmtdns.A).
+					Return(mgmtdns.RecordSet{
 						RecordSetProperties: &mgmtdns.RecordSetProperties{
 							TTL: to.Int64Ptr(300),
 							ARecords: &[]mgmtdns.ARecord{
@@ -317,10 +368,21 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 								},
 							},
 						},
+					}, nil)
+
+				recordsets.EXPECT().
+					CreateOrUpdate(ctx, "rpResourcegroup", "domain", "*.apps.domain", mgmtdns.A, mgmtdns.RecordSet{
+						RecordSetProperties: &mgmtdns.RecordSetProperties{
+							TTL: to.Int64Ptr(300),
+							ARecords: &[]mgmtdns.ARecord{
+								{
+									Ipv4Address: to.StringPtr(tt.routerIP),
+								},
+							},
+						},
 					}, "", "").
-					Return(mgmtdns.RecordSet{}, fmt.Errorf("random error"))
+					Return(mgmtdns.RecordSet{}, nil)
 			},
-			wantErr: "random error",
 		},
 		{
 			name: "unmanaged",
@@ -345,7 +407,7 @@ func TestCreateOrUpdateRouter(t *testing.T) {
 				recordsets: recordsets,
 			}
 
-			err := m.CreateOrUpdateRouter(ctx, tt.oc, "1.2.3.4")
+			err := m.CreateOrUpdateRouter(ctx, tt.oc, tt.routerIP)
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

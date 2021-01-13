@@ -15,7 +15,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
 )
 
-func (m *manager) updateRouterIP(ctx context.Context) error {
+func (m *manager) updateClusterData(ctx context.Context) error {
 	g, err := m.loadGraph(ctx)
 	if err != nil {
 		return err
@@ -24,11 +24,23 @@ func (m *manager) updateRouterIP(ctx context.Context) error {
 	installConfig := g.get(&installconfig.InstallConfig{}).(*installconfig.InstallConfig)
 	kubeadminPassword := g.get(&password.KubeadminPassword{}).(*password.KubeadminPassword)
 
+	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
+		doc.OpenShiftCluster.Properties.APIServerProfile.URL = "https://api." + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + ":6443/"
+		doc.OpenShiftCluster.Properties.ConsoleProfile.URL = "https://console-openshift-console.apps." + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/"
+		doc.OpenShiftCluster.Properties.KubeadminPassword = api.SecureString(kubeadminPassword.Password)
+		return nil
+	})
+	return err
+}
+
+func (m *manager) createOrUpdateRouterIP(ctx context.Context) error {
 	svc, err := m.kubernetescli.CoreV1().Services("openshift-ingress").Get(ctx, "router-default", metav1.GetOptions{})
+	// default ingress must be present in the cluster
 	if err != nil {
 		return err
 	}
 
+	// This must be present always. If not - we have an issue
 	if len(svc.Status.LoadBalancer.Ingress) == 0 {
 		return fmt.Errorf("routerIP not found")
 	}
@@ -41,10 +53,7 @@ func (m *manager) updateRouterIP(ctx context.Context) error {
 	}
 
 	m.doc, err = m.db.PatchWithLease(ctx, m.doc.Key, func(doc *api.OpenShiftClusterDocument) error {
-		doc.OpenShiftCluster.Properties.APIServerProfile.URL = "https://api." + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + ":6443/"
 		doc.OpenShiftCluster.Properties.IngressProfiles[0].IP = routerIP
-		doc.OpenShiftCluster.Properties.ConsoleProfile.URL = "https://console-openshift-console.apps." + installConfig.Config.ObjectMeta.Name + "." + installConfig.Config.BaseDomain + "/"
-		doc.OpenShiftCluster.Properties.KubeadminPassword = api.SecureString(kubeadminPassword.Password)
 		return nil
 	})
 	return err
