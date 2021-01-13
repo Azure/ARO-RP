@@ -33,6 +33,7 @@ func (m *manager) AdminUpdate(ctx context.Context) error {
 		steps.Condition(m.apiServersReady, 30*time.Minute),
 		steps.Action(m.ensureBillingRecord), // belt and braces
 		steps.Action(m.fixSSH),
+		steps.Action(m.populateCreatedAt), // TODO(mikalai): Remove after a round of admin updates
 		steps.Action(m.fixSREKubeconfig),
 		steps.Action(m.ensureAROOperator),
 		steps.Condition(m.aroDeploymentReady, 20*time.Minute),
