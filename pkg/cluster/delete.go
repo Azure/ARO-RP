@@ -18,6 +18,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/util/acrtoken"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient"
+	"github.com/Azure/ARO-RP/pkg/util/azureerrors"
 	"github.com/Azure/ARO-RP/pkg/util/deployment"
 	"github.com/Azure/ARO-RP/pkg/util/dns"
 	"github.com/Azure/ARO-RP/pkg/util/stringutils"
@@ -230,6 +231,9 @@ func (m *manager) Delete(ctx context.Context) error {
 	err = m.resourceGroups.DeleteAndWait(ctx, resourceGroup)
 	if detailedErr, ok := err.(autorest.DetailedError); ok &&
 		(detailedErr.StatusCode == http.StatusForbidden || detailedErr.StatusCode == http.StatusNotFound) {
+		err = nil
+	}
+	if azureerrors.HasAuthorizationFailedError(err) {
 		err = nil
 	}
 	if err != nil {
