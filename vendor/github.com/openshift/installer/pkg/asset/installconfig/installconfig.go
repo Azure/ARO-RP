@@ -31,6 +31,7 @@ type InstallConfig struct {
 	Config *types.InstallConfig `json:"config"`
 	File   *asset.File          `json:"file"`
 	AWS    *aws.Metadata        `json:"aws,omitempty"`
+	Azure  *icazure.Metadata    `json:"azure,omitempty"`
 }
 
 var _ asset.WritableAsset = (*InstallConfig)(nil)
@@ -44,7 +45,6 @@ func (a *InstallConfig) Dependencies() []asset.Asset {
 		&clusterName{},
 		&pullSecret{},
 		&platform{},
-		&PlatformCreds{},
 	}
 }
 
@@ -55,14 +55,12 @@ func (a *InstallConfig) Generate(parents asset.Parents) error {
 	clusterName := &clusterName{}
 	pullSecret := &pullSecret{}
 	platform := &platform{}
-	platformCreds := &PlatformCreds{}
 	parents.Get(
 		sshPublicKey,
 		baseDomain,
 		clusterName,
 		pullSecret,
 		platform,
-		platformCreds,
 	)
 
 	a.Config = &types.InstallConfig{
@@ -87,7 +85,7 @@ func (a *InstallConfig) Generate(parents asset.Parents) error {
 	a.Config.BareMetal = platform.BareMetal
 	a.Config.Ovirt = platform.Ovirt
 
-	return a.finish("", platformCreds)
+	return a.finish("")
 }
 
 // Name returns the human-friendly name of the asset.
@@ -124,28 +122,30 @@ func (a *InstallConfig) Load(f asset.FileFetcher) (found bool, err error) {
 		return false, errors.Wrap(err, "failed to upconvert install config")
 	}
 
-	err = a.finish(installConfigFilename, nil)
+	err = a.finish(installConfigFilename)
 	if err != nil {
 		return false, err
 	}
 	return true, nil
 }
 
-func (a *InstallConfig) finish(filename string, platformCreds *PlatformCreds) error {
+func (a *InstallConfig) finish(filename string) error {
 	defaults.SetInstallConfigDefaults(a.Config)
 
 	if a.Config.AWS != nil {
 		a.AWS = aws.NewMetadata(a.Config.Platform.AWS.Region, a.Config.Platform.AWS.Subnets, a.Config.AWS.ServiceEndpoints)
 	}
-
-	if err := validation.ValidateInstallConfig(a.Config, icopenstack.NewValidValuesFetcher()).ToAggregate(); err != nil {
+	if a.Config.Azure != nil {
+		a.Azure = icazure.NewMetadata(a.Config.Azure.CloudName, nil)
+	}
+	if err := validation.ValidateInstallConfig(a.Config).ToAggregate(); err != nil {
 		if filename == "" {
 			return errors.Wrap(err, "invalid install config")
 		}
 		return errors.Wrapf(err, "invalid %q file", filename)
 	}
 
-	if err := a.platformValidation(platformCreds); err != nil {
+	if err := a.platformValidation(); err != nil {
 		return err
 	}
 
@@ -160,13 +160,9 @@ func (a *InstallConfig) finish(filename string, platformCreds *PlatformCreds) er
 	return nil
 }
 
-func (a *InstallConfig) platformValidation(platformCreds *PlatformCreds) error {
+func (a *InstallConfig) platformValidation() error {
 	if a.Config.Platform.Azure != nil {
-		var credentials *icazure.Credentials
-		if platformCreds != nil {
-			credentials = platformCreds.Azure
-		}
-		client, err := icazure.NewClient(context.TODO(), credentials)
+		client, err := a.Azure.Client()
 		if err != nil {
 			return err
 		}
@@ -187,6 +183,9 @@ func (a *InstallConfig) platformValidation(platformCreds *PlatformCreds) error {
 	}
 	if a.Config.Platform.Ovirt != nil {
 		return icovirt.Validate(a.Config)
+	}
+	if a.Config.Platform.OpenStack != nil {
+		return icopenstack.Validate(a.Config)
 	}
 	return field.ErrorList{}.ToAggregate()
 }

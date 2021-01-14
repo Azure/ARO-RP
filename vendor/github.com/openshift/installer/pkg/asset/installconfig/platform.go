@@ -10,6 +10,7 @@ import (
 	"github.com/openshift/installer/pkg/asset"
 	awsconfig "github.com/openshift/installer/pkg/asset/installconfig/aws"
 	azureconfig "github.com/openshift/installer/pkg/asset/installconfig/azure"
+	baremetalconfig "github.com/openshift/installer/pkg/asset/installconfig/baremetal"
 	gcpconfig "github.com/openshift/installer/pkg/asset/installconfig/gcp"
 	libvirtconfig "github.com/openshift/installer/pkg/asset/installconfig/libvirt"
 	openstackconfig "github.com/openshift/installer/pkg/asset/installconfig/openstack"
@@ -18,6 +19,7 @@ import (
 	"github.com/openshift/installer/pkg/types"
 	"github.com/openshift/installer/pkg/types/aws"
 	"github.com/openshift/installer/pkg/types/azure"
+	"github.com/openshift/installer/pkg/types/baremetal"
 	"github.com/openshift/installer/pkg/types/gcp"
 	"github.com/openshift/installer/pkg/types/libvirt"
 	"github.com/openshift/installer/pkg/types/none"
@@ -36,16 +38,11 @@ var _ asset.Asset = (*platform)(nil)
 
 // Dependencies returns no dependencies.
 func (a *platform) Dependencies() []asset.Asset {
-	return []asset.Asset{
-		&PlatformCreds{},
-	}
+	return []asset.Asset{}
 }
 
 // Generate queries for input from the user.
-func (a *platform) Generate(parents asset.Parents) error {
-	platformCreds := &PlatformCreds{}
-	parents.Get(platformCreds)
-
+func (a *platform) Generate(asset.Parents) error {
 	platform, err := a.queryUserForPlatform()
 	if err != nil {
 		return err
@@ -57,18 +54,23 @@ func (a *platform) Generate(parents asset.Parents) error {
 		if err != nil {
 			return err
 		}
-	case libvirt.Name:
-		a.Libvirt, err = libvirtconfig.Platform()
+	case azure.Name:
+		a.Azure, err = azureconfig.Platform()
 		if err != nil {
 			return err
 		}
-	case azure.Name:
-		a.Azure, err = azureconfig.Platform(platformCreds.Azure)
+	case baremetal.Name:
+		a.BareMetal, err = baremetalconfig.Platform()
 		if err != nil {
 			return err
 		}
 	case gcp.Name:
 		a.GCP, err = gcpconfig.Platform()
+		if err != nil {
+			return err
+		}
+	case libvirt.Name:
+		a.Libvirt, err = libvirtconfig.Platform()
 		if err != nil {
 			return err
 		}
@@ -79,13 +81,13 @@ func (a *platform) Generate(parents asset.Parents) error {
 		if err != nil {
 			return err
 		}
-	case vsphere.Name:
-		a.VSphere, err = vsphereconfig.Platform()
+	case ovirt.Name:
+		a.Ovirt, err = ovirtconfig.Platform()
 		if err != nil {
 			return err
 		}
-	case ovirt.Name:
-		a.Ovirt, err = ovirtconfig.Platform()
+	case vsphere.Name:
+		a.VSphere, err = vsphereconfig.Platform()
 		if err != nil {
 			return err
 		}

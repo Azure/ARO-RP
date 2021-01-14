@@ -2,6 +2,7 @@ package baremetal
 
 import (
 	"fmt"
+
 	"github.com/metal3-io/baremetal-operator/pkg/hardware"
 
 	machineapi "github.com/openshift/cluster-api/pkg/apis/machine/v1beta1"
@@ -34,24 +35,30 @@ func Hosts(config *types.InstallConfig, machines []machineapi.Machine) (*HostSet
 	}
 
 	for i, host := range config.Platform.BareMetal.Hosts {
-		// Each host needs a secret to hold the credentials for
-		// communicating with the management controller that drives
-		// that host.
-		secret := corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "Secret",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-bmc-secret", host.Name),
-				Namespace: "openshift-machine-api",
-			},
-			Data: map[string][]byte{
-				"username": []byte(host.BMC.Username),
-				"password": []byte(host.BMC.Password),
-			},
+		bmc := baremetalhost.BMCDetails{}
+		if host.BMC.Username != "" && host.BMC.Password != "" {
+			// Each host needs a secret to hold the credentials for
+			// communicating with the management controller that drives
+			// that host.
+			secret := corev1.Secret{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "v1",
+					Kind:       "Secret",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      fmt.Sprintf("%s-bmc-secret", host.Name),
+					Namespace: "openshift-machine-api",
+				},
+				Data: map[string][]byte{
+					"username": []byte(host.BMC.Username),
+					"password": []byte(host.BMC.Password),
+				},
+			}
+			bmc.Address = host.BMC.Address
+			bmc.CredentialsName = secret.Name
+			bmc.DisableCertificateVerification = host.BMC.DisableCertificateVerification
+			settings.Secrets = append(settings.Secrets, secret)
 		}
-		settings.Secrets = append(settings.Secrets, secret)
 
 		// Map string 'default' to hardware.DefaultProfileName
 		if host.HardwareProfile == "default" {
@@ -68,14 +75,12 @@ func Hosts(config *types.InstallConfig, machines []machineapi.Machine) (*HostSet
 				Namespace: "openshift-machine-api",
 			},
 			Spec: baremetalhost.BareMetalHostSpec{
-				Online: true,
-				BMC: baremetalhost.BMCDetails{
-					Address:                        host.BMC.Address,
-					CredentialsName:                secret.Name,
-					DisableCertificateVerification: host.BMC.DisableCertificateVerification,
-				},
+				Online:          true,
+				BMC:             bmc,
 				BootMACAddress:  host.BootMACAddress,
 				HardwareProfile: host.HardwareProfile,
+				BootMode:        baremetalhost.BootMode(host.BootMode),
+				RootDeviceHints: host.RootDeviceHints.MakeCRDHints(),
 			},
 		}
 		if i < len(machines) {
@@ -87,6 +92,9 @@ func Hosts(config *types.InstallConfig, machines []machineapi.Machine) (*HostSet
 			// hosts are in the same order as the control plane
 			// machines.
 			newHost.Spec.ExternallyProvisioned = true
+			// Pause reconciliation until we can annotate with the initial
+			// status containing the HardwareDetails
+			newHost.ObjectMeta.Annotations = map[string]string{"baremetalhost.metal3.io/paused": ""}
 			machine := machines[i]
 			newHost.Spec.ConsumerRef = &corev1.ObjectReference{
 				APIVersion: machine.TypeMeta.APIVersion,

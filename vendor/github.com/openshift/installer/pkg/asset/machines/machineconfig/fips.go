@@ -1,23 +1,25 @@
 package machineconfig
 
 import (
-	"encoding/json"
 	"fmt"
 
-	igntypes "github.com/coreos/ignition/config/v2_2/types"
+	igntypes "github.com/coreos/ignition/v2/config/v3_1/types"
 	mcfgv1 "github.com/openshift/machine-config-operator/pkg/apis/machineconfiguration.openshift.io/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+
+	"github.com/openshift/installer/pkg/asset/ignition"
 )
 
 // ForFIPSEnabled creates the MachineConfig to enable FIPS.
 // See also https://github.com/openshift/machine-config-operator/pull/889
 func ForFIPSEnabled(role string) (*mcfgv1.MachineConfig, error) {
-	b, err := json.Marshal(igntypes.Config{
+	ignConfig := igntypes.Config{
 		Ignition: igntypes.Ignition{
 			Version: igntypes.MaxVersion.String(),
 		},
-	})
+	}
+
+	rawExt, err := ignition.ConvertToRawExtension(ignConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -34,10 +36,8 @@ func ForFIPSEnabled(role string) (*mcfgv1.MachineConfig, error) {
 			},
 		},
 		Spec: mcfgv1.MachineConfigSpec{
-			Config: runtime.RawExtension{
-				Raw: b,
-			},
-			FIPS: true,
+			Config: rawExt,
+			FIPS:   true,
 		},
 	}, nil
 }

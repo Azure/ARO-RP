@@ -28,11 +28,11 @@ type config struct {
 	Cloud                      string   `json:"openstack_credentials_cloud,omitempty"`
 	FlavorName                 string   `json:"openstack_master_flavor_name,omitempty"`
 	LbFloatingIP               string   `json:"openstack_lb_floating_ip,omitempty"`
+	IngressFloatingIP          string   `json:"openstack_ingress_floating_ip,omitempty"`
 	APIVIP                     string   `json:"openstack_api_int_ip,omitempty"`
-	DNSVIP                     string   `json:"openstack_node_dns_ip,omitempty"`
 	IngressVIP                 string   `json:"openstack_ingress_ip,omitempty"`
-	TrunkSupport               string   `json:"openstack_trunk_support,omitempty"`
-	OctaviaSupport             string   `json:"openstack_octavia_support,omitempty"`
+	TrunkSupport               bool     `json:"openstack_trunk_support,omitempty"`
+	OctaviaSupport             bool     `json:"openstack_octavia_support,omitempty"`
 	RootVolumeSize             int      `json:"openstack_master_root_volume_size,omitempty"`
 	RootVolumeType             string   `json:"openstack_master_root_volume_type,omitempty"`
 	BootstrapShim              string   `json:"openstack_bootstrap_shim_ignition,omitempty"`
@@ -42,23 +42,36 @@ type config struct {
 	AdditionalSecurityGroupIDs []string `json:"openstack_master_extra_sg_ids,omitempty"`
 	MachinesSubnet             string   `json:"openstack_machines_subnet_id,omitempty"`
 	MachinesNetwork            string   `json:"openstack_machines_network_id,omitempty"`
+	MasterAvailabilityZones    []string `json:"openstack_master_availability_zones,omitempty"`
 }
 
 // TFVars generates OpenStack-specific Terraform variables.
-func TFVars(masterConfig *v1alpha1.OpenstackProviderSpec, cloud string, externalNetwork string, externalDNS []string, lbFloatingIP string, apiVIP string, dnsVIP string, ingressVIP string, trunkSupport string, octaviaSupport string, baseImage string, infraID string, userCA string, bootstrapIgn string, mpool *types_openstack.MachinePool, machinesSubnet string) ([]byte, error) {
+func TFVars(masterConfigs []*v1alpha1.OpenstackProviderSpec, cloud string, externalNetwork string, externalDNS []string, lbFloatingIP string, ingressFloatingIP string, apiVIP string, ingressVIP string, baseImage string, infraID string, userCA string, bootstrapIgn string, mpool *types_openstack.MachinePool, machinesSubnet string) ([]byte, error) {
+	zones := []string{}
+	seen := map[string]bool{}
+	for _, config := range masterConfigs {
+		if !seen[config.AvailabilityZone] {
+			zones = append(zones, config.AvailabilityZone)
+			seen[config.AvailabilityZone] = true
+		}
+	}
 
 	cfg := &config{
-		ExternalNetwork: externalNetwork,
-		Cloud:           cloud,
-		FlavorName:      masterConfig.Flavor,
-		LbFloatingIP:    lbFloatingIP,
-		APIVIP:          apiVIP,
-		DNSVIP:          dnsVIP,
-		IngressVIP:      ingressVIP,
-		ExternalDNS:     externalDNS,
-		TrunkSupport:    trunkSupport,
-		OctaviaSupport:  octaviaSupport,
-		MachinesSubnet:  machinesSubnet,
+		ExternalNetwork:         externalNetwork,
+		Cloud:                   cloud,
+		FlavorName:              masterConfigs[0].Flavor,
+		LbFloatingIP:            lbFloatingIP,
+		IngressFloatingIP:       ingressFloatingIP,
+		APIVIP:                  apiVIP,
+		IngressVIP:              ingressVIP,
+		ExternalDNS:             externalDNS,
+		MachinesSubnet:          machinesSubnet,
+		MasterAvailabilityZones: zones,
+	}
+
+	serviceCatalog, err := getServiceCatalog(cloud)
+	if err != nil {
+		return nil, errors.Errorf("Could not retrieve service catalog: %v", err)
 	}
 
 	// Normally baseImage contains a URL that we will use to create a new Glance image, but for testing
@@ -104,7 +117,7 @@ func TFVars(masterConfig *v1alpha1.OpenstackProviderSpec, cloud string, external
 		}
 	}
 
-	glancePublicURL, err := getGlancePublicURL(cloud)
+	glancePublicURL, err := getGlancePublicURL(serviceCatalog)
 	if err != nil {
 		return nil, err
 	}
@@ -126,6 +139,14 @@ func TFVars(masterConfig *v1alpha1.OpenstackProviderSpec, cloud string, external
 	}
 
 	cfg.BootstrapShim = userCAIgnition
+	masterConfig := masterConfigs[0]
+
+	cfg.TrunkSupport = masterConfig.Trunk
+
+	cfg.OctaviaSupport, err = isOctaviaSupported(serviceCatalog)
+	if err != nil {
+		return nil, err
+	}
 
 	if masterConfig.RootVolume != nil {
 		cfg.RootVolumeSize = masterConfig.RootVolume.Size
@@ -219,12 +240,7 @@ func validateOverriddenImageName(imageName, cloud string) error {
 // 2. In getGlancePublicURL we iterate through the catalog and find "public" endpoint for "image".
 
 // getGlancePublicURL obtains Glance public endpoint URL
-func getGlancePublicURL(cloud string) (string, error) {
-	serviceCatalog, err := getServiceCatalog(cloud)
-	if err != nil {
-		return "", err
-	}
-
+func getGlancePublicURL(serviceCatalog *tokens.ServiceCatalog) (string, error) {
 	glancePublicURL, err := openstack.V3EndpointURL(serviceCatalog, gophercloud.EndpointOpts{
 		Type:         "image",
 		Availability: gophercloud.AvailabilityPublic,
@@ -297,4 +313,20 @@ func setNetworkTag(cloud string, networkID string, networkTag string) error {
 	}
 
 	return nil
+}
+
+func isOctaviaSupported(serviceCatalog *tokens.ServiceCatalog) (bool, error) {
+	_, err := openstack.V3EndpointURL(serviceCatalog, gophercloud.EndpointOpts{
+		Type:         "load-balancer",
+		Name:         "octavia",
+		Availability: gophercloud.AvailabilityPublic,
+	})
+	if err != nil {
+		if _, ok := err.(*gophercloud.ErrEndpointNotFound); ok {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
 }

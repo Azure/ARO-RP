@@ -80,6 +80,7 @@ func (client VaultsClient) CheckNameAvailability(ctx context.Context, vaultName 
 	result, err = client.CheckNameAvailabilityResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.VaultsClient", "CheckNameAvailability", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -169,6 +170,7 @@ func (client VaultsClient) CreateOrUpdate(ctx context.Context, resourceGroupName
 	result, err = client.CreateOrUpdateResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.VaultsClient", "CreateOrUpdate", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -246,6 +248,7 @@ func (client VaultsClient) Delete(ctx context.Context, resourceGroupName string,
 	result, err = client.DeleteResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.VaultsClient", "Delete", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -320,6 +323,7 @@ func (client VaultsClient) Get(ctx context.Context, resourceGroupName string, va
 	result, err = client.GetResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.VaultsClient", "Get", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -395,6 +399,7 @@ func (client VaultsClient) GetDeleted(ctx context.Context, vaultName string, loc
 	result, err = client.GetDeletedResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.VaultsClient", "GetDeleted", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -470,9 +475,11 @@ func (client VaultsClient) List(ctx context.Context, top *int32) (result Resourc
 	result.rlr, err = client.ListResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.VaultsClient", "List", resp, "Failure responding to request")
+		return
 	}
 	if result.rlr.hasNextLink() && result.rlr.IsEmpty() {
 		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return
@@ -589,9 +596,11 @@ func (client VaultsClient) ListByResourceGroup(ctx context.Context, resourceGrou
 	result.vlr, err = client.ListByResourceGroupResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.VaultsClient", "ListByResourceGroup", resp, "Failure responding to request")
+		return
 	}
 	if result.vlr.hasNextLink() && result.vlr.IsEmpty() {
 		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return
@@ -706,9 +715,11 @@ func (client VaultsClient) ListBySubscription(ctx context.Context, top *int32) (
 	result.vlr, err = client.ListBySubscriptionResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.VaultsClient", "ListBySubscription", resp, "Failure responding to request")
+		return
 	}
 	if result.vlr.hasNextLink() && result.vlr.IsEmpty() {
 		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return
@@ -820,9 +831,11 @@ func (client VaultsClient) ListDeleted(ctx context.Context) (result DeletedVault
 	result.dvlr, err = client.ListDeletedResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.VaultsClient", "ListDeleted", resp, "Failure responding to request")
+		return
 	}
 	if result.dvlr.hasNextLink() && result.dvlr.IsEmpty() {
 		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return
@@ -925,7 +938,7 @@ func (client VaultsClient) PurgeDeleted(ctx context.Context, vaultName string, l
 
 	result, err = client.PurgeDeletedSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "keyvault.VaultsClient", "PurgeDeleted", result.Response(), "Failure sending request")
+		err = autorest.NewErrorWithError(err, "keyvault.VaultsClient", "PurgeDeleted", nil, "Failure sending request")
 		return
 	}
 
@@ -961,7 +974,23 @@ func (client VaultsClient) PurgeDeletedSender(req *http.Request) (future VaultsP
 	if err != nil {
 		return
 	}
-	future.Future, err = azure.NewFutureFromResponse(resp)
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = func(client VaultsClient) (ar autorest.Response, err error) {
+		var done bool
+		done, err = future.DoneWithContext(context.Background(), client)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "keyvault.VaultsPurgeDeletedFuture", "Result", future.Response(), "Polling failure")
+			return
+		}
+		if !done {
+			err = azure.NewAsyncOpIncompleteError("keyvault.VaultsPurgeDeletedFuture")
+			return
+		}
+		ar.Response = future.Response()
+		return
+	}
 	return
 }
 
@@ -1014,6 +1043,7 @@ func (client VaultsClient) Update(ctx context.Context, resourceGroupName string,
 	result, err = client.UpdateResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.VaultsClient", "Update", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -1102,6 +1132,7 @@ func (client VaultsClient) UpdateAccessPolicy(ctx context.Context, resourceGroup
 	result, err = client.UpdateAccessPolicyResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "keyvault.VaultsClient", "UpdateAccessPolicy", resp, "Failure responding to request")
+		return
 	}
 
 	return

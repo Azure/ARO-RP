@@ -60,9 +60,9 @@ func (*CloudProviderConfig) Name() string {
 // the asset.
 func (*CloudProviderConfig) Dependencies() []asset.Asset {
 	return []asset.Asset{
-		&installconfig.PlatformCreds{},
 		&installconfig.InstallConfig{},
 		&installconfig.ClusterID{},
+
 		// PlatformCredsCheck just checks the creds (and asks, if needed)
 		// We do not actually use it in this asset directly, hence
 		// it is put in the dependencies but not fetched in Generate
@@ -72,10 +72,9 @@ func (*CloudProviderConfig) Dependencies() []asset.Asset {
 
 // Generate generates the CloudProviderConfig.
 func (cpc *CloudProviderConfig) Generate(dependencies asset.Parents) error {
-	platformCreds := &installconfig.PlatformCreds{}
 	installConfig := &installconfig.InstallConfig{}
 	clusterID := &installconfig.ClusterID{}
-	dependencies.Get(platformCreds, installConfig, clusterID)
+	dependencies.Get(installConfig, clusterID)
 
 	cm := &corev1.ConfigMap{
 		TypeMeta: metav1.TypeMeta{
@@ -109,13 +108,13 @@ func (cpc *CloudProviderConfig) Generate(dependencies asset.Parents) error {
 			cm.Data["ca-bundle.pem"] = string(caFile)
 		}
 	case azuretypes.Name:
-		session, err := icazure.GetSession(platformCreds.Azure)
+		session, err := installConfig.Azure.Session()
 		if err != nil {
 			return errors.Wrap(err, "could not get azure session")
 		}
 
 		nsg := fmt.Sprintf("%s-nsg", clusterID.InfraID)
-		nrg := installConfig.Config.Azure.ResourceGroupName
+		nrg := installConfig.Config.Azure.ClusterResourceGroupName(clusterID.InfraID)
 		if installConfig.Config.Azure.NetworkResourceGroupName != "" {
 			nrg = installConfig.Config.Azure.NetworkResourceGroupName
 		}
@@ -128,11 +127,12 @@ func (cpc *CloudProviderConfig) Generate(dependencies asset.Parents) error {
 			subnet = installConfig.Config.Azure.ComputeSubnet
 		}
 		azureConfig, err := azure.CloudProviderConfig{
+			CloudName:                installConfig.Config.Azure.CloudName,
+			ResourceGroupName:        installConfig.Config.Azure.ClusterResourceGroupName(clusterID.InfraID),
 			GroupLocation:            installConfig.Config.Azure.Region,
 			ResourcePrefix:           clusterID.InfraID,
 			SubscriptionID:           session.Credentials.SubscriptionID,
 			TenantID:                 session.Credentials.TenantID,
-			ResourceGroupName:        installConfig.Config.Azure.ResourceGroupName,
 			NetworkResourceGroupName: nrg,
 			NetworkSecurityGroupName: nsg,
 			VirtualNetworkName:       vnet,
@@ -183,9 +183,14 @@ func (cpc *CloudProviderConfig) Generate(dependencies asset.Parents) error {
 		},
 	}
 	if installConfig.Config.Azure.ARO {
+		session, err := installConfig.Azure.Session()
+		if err != nil {
+			return errors.Wrap(err, "could not get azure session")
+		}
+
 		for _, f := range []struct {
 			filename string
-			data     func(*installconfig.PlatformCreds) ([]byte, error)
+			data     func(icazure.Credentials) ([]byte, error)
 		}{
 			{
 				filename: aroCloudProviderRoleFileName,
@@ -200,7 +205,7 @@ func (cpc *CloudProviderConfig) Generate(dependencies asset.Parents) error {
 				data:     aroSecret,
 			},
 		} {
-			b, err := f.data(platformCreds)
+			b, err := f.data(session.Credentials)
 			if err != nil {
 				return errors.Wrapf(err, "failed to create %s manifest", cpc.Name())
 			}
@@ -224,7 +229,7 @@ func (cpc *CloudProviderConfig) Load(f asset.FileFetcher) (bool, error) {
 	return false, nil
 }
 
-func aroRole(*installconfig.PlatformCreds) ([]byte, error) {
+func aroRole(icazure.Credentials) ([]byte, error) {
 	return yaml.Marshal(&rbacv1.Role{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "Role",
@@ -245,7 +250,7 @@ func aroRole(*installconfig.PlatformCreds) ([]byte, error) {
 	})
 }
 
-func aroRoleBinding(*installconfig.PlatformCreds) ([]byte, error) {
+func aroRoleBinding(icazure.Credentials) ([]byte, error) {
 	return yaml.Marshal(&rbacv1.RoleBinding{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "RoleBinding",
@@ -270,7 +275,7 @@ func aroRoleBinding(*installconfig.PlatformCreds) ([]byte, error) {
 	})
 }
 
-func aroSecret(platformCreds *installconfig.PlatformCreds) ([]byte, error) {
+func aroSecret(platformCreds icazure.Credentials) ([]byte, error) {
 	// config is used to created compatible secret to trigger azure cloud
 	// controller config merge behaviour
 	// https://github.com/openshift/origin/blob/release-4.3/vendor/k8s.io/kubernetes/staging/src/k8s.io/legacy-cloud-providers/azure/azure_config.go#L82
@@ -278,8 +283,8 @@ func aroSecret(platformCreds *installconfig.PlatformCreds) ([]byte, error) {
 		AADClientID     string `json:"aadClientId" yaml:"aadClientId"`
 		AADClientSecret string `json:"aadClientSecret" yaml:"aadClientSecret"`
 	}{
-		AADClientID:     platformCreds.Azure.ClientID,
-		AADClientSecret: platformCreds.Azure.ClientSecret,
+		AADClientID:     platformCreds.ClientID,
+		AADClientSecret: platformCreds.ClientSecret,
 	}
 
 	b, err := yaml.Marshal(config)

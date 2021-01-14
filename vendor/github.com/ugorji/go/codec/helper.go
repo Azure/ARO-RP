@@ -220,6 +220,8 @@ var (
 
 	oneByteArr    [1]byte
 	zeroByteSlice = oneByteArr[:0:0]
+
+	eofReader devNullReader
 )
 
 var (
@@ -231,7 +233,11 @@ var (
 	errExtFnConvertExtUnsupported = errors.New("InterfaceExt.ConvertExt is not supported")
 	errExtFnUpdateExtUnsupported  = errors.New("InterfaceExt.UpdateExt is not supported")
 
-	errPanicHdlUndefinedErr = errors.New("panic: undefined error")
+	errPanicUndefined = errors.New("panic: undefined error")
+
+	errHandleInited = errors.New("cannot modify initialized Handle")
+
+	errNoFormatHandle = errors.New("no handle (cannot identify format)")
 )
 
 var pool4tiload = sync.Pool{
@@ -465,16 +471,28 @@ type isCodecEmptyer interface {
 }
 
 type codecError struct {
-	name string
-	err  error
+	err    error
+	name   string
+	pos    int
+	encode bool
 }
 
-func (e codecError) Cause() error {
+func (e *codecError) Cause() error {
 	return e.err
 }
 
-func (e codecError) Error() string {
-	return fmt.Sprintf("%s error: %v", e.name, e.err)
+func (e *codecError) Error() string {
+	if e.encode {
+		return fmt.Sprintf("%s encode error: %v", e.name, e.err)
+	}
+	return fmt.Sprintf("%s decode error [pos %d]: %v", e.name, e.pos, e.err)
+}
+
+func wrapCodecErr(in error, name string, numbytesread int, encode bool) (out error) {
+	if x, ok := in.(*codecError); ok && x.pos == numbytesread && x.name == name && x.encode == encode {
+		return in
+	}
+	return &codecError{in, name, numbytesread, encode}
 }
 
 var (
@@ -634,6 +652,8 @@ type BasicHandle struct {
 
 	extHandle
 
+	// these are used during runtime.
+	// At init time, they should have nothing in them.
 	rtidFns      atomicRtidFnSlice
 	rtidFnsNoExt atomicRtidFnSlice
 
@@ -666,9 +686,13 @@ type BasicHandle struct {
 	//
 	// Note: DO NOT CHANGE AFTER FIRST USE.
 	//
-	// Once a Handle has been used, do not modify this option.
-	// It will lead to unexpected behaviour during encoding and decoding.
+	// Once a Handle has been initialized (used), do not modify this option. It will be ignored.
 	TimeNotBuiltin bool
+
+	// timeBuiltin is initialized from TimeNotBuiltin, and used internally.
+	// once initialized, it cannot be changed, as the function for encoding/decoding time.Time
+	// will have been cached and the TimeNotBuiltin value will not be consulted thereafter.
+	timeBuiltin bool
 
 	// ExplicitRelease configures whether Release() is implicitly called after an encode or
 	// decode call.
@@ -695,9 +719,11 @@ type BasicHandle struct {
 	// ---- cache line
 }
 
-// basicHandle returns an initialized BasicHandle from the Handle.
-func basicHandle(hh Handle) (x *BasicHandle) {
-	x = hh.getBasicHandle()
+// initHandle does a one-time initialization of the handle.
+// After this is run, do not modify the Handle, as some modifications are ignored
+// e.g. extensions, registered interfaces, TimeNotBuiltIn, etc
+func initHandle(hh Handle) {
+	x := hh.getBasicHandle()
 	// ** We need to simulate once.Do, to ensure no data race within the block.
 	// ** Consequently, below would not work.
 	// if atomic.CompareAndSwapUint32(&x.inited, 0, 1) {
@@ -710,9 +736,31 @@ func basicHandle(hh Handle) (x *BasicHandle) {
 	// is not sufficient, since a race condition can occur within init(Handle) function.
 	// init is made noinline, so that this function can be inlined by its caller.
 	if atomic.LoadUint32(&x.inited) == 0 {
-		x.init(hh)
+		x.initHandle(hh)
 	}
-	return
+}
+
+func (x *BasicHandle) basicInit() {
+	x.rtidFns.store(nil)
+	x.rtidFnsNoExt.store(nil)
+	x.timeBuiltin = !x.TimeNotBuiltin
+}
+
+func (x *BasicHandle) init() {}
+
+func (x *BasicHandle) isInited() bool {
+	return atomic.LoadUint32(&x.inited) != 0
+}
+
+// clearInited: DANGEROUS - only use in testing, etc
+func (x *BasicHandle) clearInited() {
+	atomic.StoreUint32(&x.inited, 0)
+}
+
+// TimeBuiltin returns whether time.Time OOTB support is used,
+// based on the initial configuration of TimeNotBuiltin
+func (x *BasicHandle) TimeBuiltin() bool {
+	return x.timeBuiltin
 }
 
 func (x *BasicHandle) isJs() bool {
@@ -724,9 +772,10 @@ func (x *BasicHandle) isBe() bool {
 }
 
 //go:noinline
-func (x *BasicHandle) init(hh Handle) {
+func (x *BasicHandle) initHandle(hh Handle) {
 	// make it uninlineable, as it is called at most once
 	x.mu.Lock()
+	defer x.mu.Unlock() // use defer, as halt may panic below
 	if x.inited == 0 {
 		var f = initedHandleFlag
 		if hh.isBinary() {
@@ -735,7 +784,6 @@ func (x *BasicHandle) init(hh Handle) {
 		if _, b := hh.(*JsonHandle); b {
 			f |= jsonHandleFlag
 		}
-		atomic.StoreUint32(&x.inited, uint32(f))
 		// ensure MapType and SliceType are of correct type
 		if x.MapType != nil && x.MapType.Kind() != reflect.Map {
 			halt.onerror(errMapTypeNotMapKind)
@@ -743,8 +791,10 @@ func (x *BasicHandle) init(hh Handle) {
 		if x.SliceType != nil && x.SliceType.Kind() != reflect.Slice {
 			halt.onerror(errSliceTypeNotSliceKind)
 		}
+		x.basicInit()
+		hh.init()
+		atomic.StoreUint32(&x.inited, uint32(f))
 	}
-	x.mu.Unlock()
 }
 
 func (x *BasicHandle) getBasicHandle() *BasicHandle {
@@ -834,7 +884,7 @@ func (x *BasicHandle) fnLoad(rt reflect.Type, rtid uintptr, checkExt bool) (fn *
 	fi.addrDf = true
 	fi.addrEf = true
 
-	if rtid == timeTypId && !x.TimeNotBuiltin {
+	if rtid == timeTypId && x.timeBuiltin {
 		fn.fe = (*Encoder).kTime
 		fn.fd = (*Decoder).kTime
 	} else if rtid == rawTypId {
@@ -1034,14 +1084,14 @@ func (x *BasicHandle) fnLoad(rt reflect.Type, rtid uintptr, checkExt bool) (fn *
 // Such a pre-configured Handle is safe for concurrent access.
 type Handle interface {
 	Name() string
-	// return the basic handle. It may not have been inited.
-	// Prefer to use basicHandle() helper function that ensures it has been inited.
 	getBasicHandle() *BasicHandle
 	newEncDriver() encDriver
 	newDecDriver() decDriver
 	isBinary() bool
 	// desc describes the current byte descriptor, or returns "unknown[XXX]" if not understood.
 	desc(bd byte) string
+	// init initializes the handle based on handle-specific info (beyond what is in BasicHandle)
+	init()
 }
 
 // Raw represents raw formatted bytes.
@@ -1065,6 +1115,17 @@ type RawExt struct {
 	// Value is used by codecs (e.g. cbor, json) which leverage the format to do
 	// custom serialization of the types.
 	Value interface{}
+}
+
+func (re *RawExt) setData(xbs []byte, zerocopy bool) {
+	if zerocopy {
+		re.Data = xbs
+	} else {
+		if len(re.Data) > 0 {
+			re.Data = re.Data[:0]
+		}
+		re.Data = append(re.Data, xbs...)
+	}
 }
 
 // BytesExt handles custom (de)serialization of types to/from []byte.
@@ -1273,13 +1334,13 @@ type extHandle []extTypeTagFn
 // To deregister an Ext, call AddExt with nil encfn and/or nil decfn.
 //
 // Deprecated: Use SetBytesExt or SetInterfaceExt on the Handle instead.
-func (o *extHandle) AddExt(rt reflect.Type, tag byte,
+func (x *BasicHandle) AddExt(rt reflect.Type, tag byte,
 	encfn func(reflect.Value) ([]byte, error),
 	decfn func(reflect.Value, []byte) error) (err error) {
 	if encfn == nil || decfn == nil {
-		return o.SetExt(rt, uint64(tag), nil)
+		return x.SetExt(rt, uint64(tag), nil)
 	}
-	return o.SetExt(rt, uint64(tag), addExtWrapper{encfn, decfn})
+	return x.SetExt(rt, uint64(tag), addExtWrapper{encfn, decfn})
 }
 
 // SetExt will set the extension for a tag and reflect.Type.
@@ -1288,10 +1349,10 @@ func (o *extHandle) AddExt(rt reflect.Type, tag byte,
 // To Deregister an ext, call SetExt with nil Ext.
 //
 // Deprecated: Use SetBytesExt or SetInterfaceExt on the Handle instead.
-func (o *extHandle) SetExt(rt reflect.Type, tag uint64, ext Ext) (err error) {
-	// o is a pointer, because we may need to initialize it
-	// We EXPECT *o is a pointer to a non-nil extHandle.
-
+func (x *BasicHandle) SetExt(rt reflect.Type, tag uint64, ext Ext) (err error) {
+	if x.isInited() {
+		return errHandleInited
+	}
 	rk := rt.Kind()
 	for rk == reflect.Ptr {
 		rt = rt.Elem()
@@ -1310,16 +1371,15 @@ func (o *extHandle) SetExt(rt reflect.Type, tag uint64, ext Ext) (err error) {
 		// Instead, we silently treat as a no-op, and return.
 		return
 	}
-	o2 := *o
-	for i := range o2 {
-		v := &o2[i]
+	for i := range x.extHandle {
+		v := &x.extHandle[i]
 		if v.rtid == rtid {
 			v.tag, v.ext = tag, ext
 			return
 		}
 	}
 	rtidptr := rt2id(reflect.PtrTo(rt))
-	*o = append(o2, extTypeTagFn{rtid, rtidptr, rt, tag, ext})
+	x.extHandle = append(x.extHandle, extTypeTagFn{rtid, rtidptr, rt, tag, ext})
 	return
 }
 
@@ -1451,7 +1511,7 @@ func (path *structFieldInfoPathNode) field(v reflect.Value) (rv2 reflect.Value) 
 // It allocates if a nil value was seen while searching.
 func (path *structFieldInfoPathNode) fieldAlloc(v reflect.Value) (rv2 reflect.Value) {
 	if parent := path.parent; parent != nil {
-		v = parent.field(v)
+		v = parent.fieldAlloc(v)
 		for j, k := uint8(0), parent.numderef; j < k; j++ {
 			if rvIsNil(v) {
 				rvSetDirect(v, reflect.New(rvType(v).Elem()))
@@ -1603,10 +1663,8 @@ func (ti *typeInfo) siForEncName(name string) (si *structFieldInfo) {
 	return ti.sfi4Name[name]
 }
 
-// resolves the struct field info got from a call to rget.
-// Returns a trimmed, unsorted and sorted []*structFieldInfo.
-func (ti *typeInfo) init(x []structFieldInfo, ss map[string]uint16) {
-	n := len(x)
+func (ti *typeInfo) resolve(x []structFieldInfo, ss map[string]uint16) (n int) {
+	n = len(x)
 
 	for i := range x {
 		ui := uint16(i)
@@ -1627,6 +1685,10 @@ func (ti *typeInfo) init(x []structFieldInfo, ss map[string]uint16) {
 		}
 	}
 
+	return
+}
+
+func (ti *typeInfo) init(x []structFieldInfo, n int) {
 	var anyOmitEmpty bool
 
 	// remove all the nils (non-ready)
@@ -1801,7 +1863,8 @@ func (x *TypeInfos) get(rtid uintptr, rt reflect.Type) (pti *typeInfo) {
 		pv.reset()
 		pv.etypes = append(pv.etypes, ti.rtid)
 		x.rget(rt, rtid, omitEmpty, nil, pv)
-		ti.init(pv.sfis, pv.sfiNames)
+		n := ti.resolve(pv.sfis, pv.sfiNames)
+		ti.init(pv.sfis, n)
 		pp.Put(pi)
 	case reflect.Map:
 		ti.elem = rt.Elem()
@@ -2037,17 +2100,17 @@ func isEmptyStruct(v reflect.Value, tinfos *TypeInfos, recursive bool) bool {
 	if ti.rtid == timeTypId {
 		return rv2i(v).(time.Time).IsZero()
 	}
-	if ti.flagIsZeroerPtr && v.CanAddr() {
-		return rv2i(v.Addr()).(isZeroer).IsZero()
-	}
 	if ti.flagIsZeroer {
 		return rv2i(v).(isZeroer).IsZero()
 	}
-	if ti.flagIsCodecEmptyerPtr && v.CanAddr() {
-		return rv2i(v.Addr()).(isCodecEmptyer).IsCodecEmpty()
+	if ti.flagIsZeroerPtr && v.CanAddr() {
+		return rv2i(v.Addr()).(isZeroer).IsZero()
 	}
 	if ti.flagIsCodecEmptyer {
 		return rv2i(v).(isCodecEmptyer).IsCodecEmpty()
+	}
+	if ti.flagIsCodecEmptyerPtr && v.CanAddr() {
+		return rv2i(v.Addr()).(isCodecEmptyer).IsCodecEmpty()
 	}
 	if ti.flagComparable {
 		return rv2i(v) == rv2i(rvZeroK(vt, reflect.Struct))
@@ -2080,6 +2143,9 @@ func isSliceBoundsError(s string) bool {
 }
 
 func panicValToErr(h errDecorator, v interface{}, err *error) {
+	if v == *err {
+		return
+	}
 	switch xerr := v.(type) {
 	case nil:
 	case runtime.Error:
@@ -2108,15 +2174,22 @@ func isImmutableKind(k reflect.Kind) (v bool) {
 	return scalarBitset.isset(byte(k))
 }
 
-func usableByteSlice(bs []byte, slen int) []byte {
+func usableByteSlice(bs []byte, slen int) (out []byte, changed bool) {
+	if slen <= 0 {
+		return []byte{}, true
+	}
 	if cap(bs) < slen {
-		return make([]byte, slen)
+		return make([]byte, slen), true
 	}
-	if bs == nil {
-		return []byte{}
-	}
-	return bs[:slen]
+	return bs[:slen], false
 }
+
+// func notNilBytes(v []byte) []byte {
+// 	if v == nil {
+// 		return []byte{}
+// 	}
+// 	return v
+// }
 
 // ----
 
@@ -2394,7 +2467,7 @@ func (panicHdl) onerror(err error) {
 //go:noinline
 func (panicHdl) errorf(format string, params ...interface{}) {
 	if format == "" {
-		panic(errPanicHdlUndefinedErr)
+		panic(errPanicUndefined)
 	}
 	if len(params) == 0 {
 		panic(errors.New(format))
@@ -2534,3 +2607,85 @@ func (x *sfiRvFreelist) put(v []sfiRv) {
 		}
 	}
 }
+
+// ---- multiple interner implementations ----
+
+// Hard to tell which is most performant:
+//   - use a map[string]string - worst perf, no collisions, and unlimited entries
+//   - use a linear search with move to front heuristics - no collisions, and maxed at 64 entries
+//   - use a computationally-intensive hash - best performance, some collisions, maxed at 64 entries
+
+const (
+	internMaxStrLen = 16     // if more than 16 bytes, faster to copy than compare bytes
+	internCap       = 64 * 2 // 64 uses 1K bytes RAM, so 128 (anecdotal sweet spot) uses 2K bytes
+)
+
+type internerMap map[string]string
+
+func (x *internerMap) init() {
+	*x = make(map[string]string, internCap)
+}
+
+func (x internerMap) string(v []byte) (s string) {
+	s, ok := x[string(v)] // no allocation here, per go implementation
+	if !ok {
+		s = string(v) // new allocation here
+		x[s] = s
+	}
+	return
+}
+
+/*
+type internerHash struct {
+	v *[internCap]string
+}
+
+func (x *internerHash) init() {
+	var v [internCap]string
+	x.v = &v
+}
+
+func (x *internerHash) string(v []byte) (s string) {
+	h := hashShortString(v) % internCap
+	s = x.v[h]
+	if s != string(v) {
+		s = string(v)
+		x.v[h] = s
+	}
+	return
+}
+
+type internerLinearSearch struct {
+	v *[internCap]string
+}
+
+func (x *internerLinearSearch) init() {
+	var v [internCap]string
+	x.v = &v
+}
+
+func (x *internerLinearSearch) string(v []byte) (s string) {
+	// MARKER: should we move to front, given that we typically might see the field names in sequence?
+	// if most values are encoded in sequence based on field names, then moving is busy work.
+	// Howeer, if most values are accessed randomly, then moving has advantages.
+	const moveToFront = true
+	var i int
+	for i, s = range x.v {
+		if s == "" {
+			s = string(v)
+			x.v[i] = s
+			goto END
+		}
+		if s == string(v) {
+			goto END
+		}
+	}
+	s = string(v)
+END:
+	if moveToFront && i > 0 {
+		copy(x.v[1:], x.v[:i])
+		x.v[0] = s
+	}
+	return s
+}
+*/

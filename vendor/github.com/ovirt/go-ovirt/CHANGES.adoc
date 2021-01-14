@@ -2,6 +2,15 @@
 
 This document describes the relevant changes between releases of the SDK.
 
+== 4.4.3 / Jan 11 2021
+
+Update to model 4.4.22 and metamodel 1.3.4
+
+Bug Fixes:
+
+* Align connection test code with other SDKs
+  https://github.com/oVirt/ovirt-engine-sdk-go/pull/217[GitHub-217]
+
 == 4.4.2 / Oct 13 2020
 
 Update to model 4.4.19 and metamodel 1.3.3

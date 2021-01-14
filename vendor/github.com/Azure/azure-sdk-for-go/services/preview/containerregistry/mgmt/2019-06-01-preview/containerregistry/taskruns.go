@@ -81,7 +81,7 @@ func (client TaskRunsClient) Create(ctx context.Context, resourceGroupName strin
 
 	result, err = client.CreateSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "containerregistry.TaskRunsClient", "Create", result.Response(), "Failure sending request")
+		err = autorest.NewErrorWithError(err, "containerregistry.TaskRunsClient", "Create", nil, "Failure sending request")
 		return
 	}
 
@@ -120,7 +120,29 @@ func (client TaskRunsClient) CreateSender(req *http.Request) (future TaskRunsCre
 	if err != nil {
 		return
 	}
-	future.Future, err = azure.NewFutureFromResponse(resp)
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = func(client TaskRunsClient) (tr TaskRun, err error) {
+		var done bool
+		done, err = future.DoneWithContext(context.Background(), client)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "containerregistry.TaskRunsCreateFuture", "Result", future.Response(), "Polling failure")
+			return
+		}
+		if !done {
+			err = azure.NewAsyncOpIncompleteError("containerregistry.TaskRunsCreateFuture")
+			return
+		}
+		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+		if tr.Response.Response, err = future.GetResult(sender); err == nil && tr.Response.Response.StatusCode != http.StatusNoContent {
+			tr, err = client.CreateResponder(tr.Response.Response)
+			if err != nil {
+				err = autorest.NewErrorWithError(err, "containerregistry.TaskRunsCreateFuture", "Result", tr.Response.Response, "Failure responding to request")
+			}
+		}
+		return
+	}
 	return
 }
 
@@ -174,7 +196,7 @@ func (client TaskRunsClient) Delete(ctx context.Context, resourceGroupName strin
 
 	result, err = client.DeleteSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "containerregistry.TaskRunsClient", "Delete", result.Response(), "Failure sending request")
+		err = autorest.NewErrorWithError(err, "containerregistry.TaskRunsClient", "Delete", nil, "Failure sending request")
 		return
 	}
 
@@ -211,7 +233,23 @@ func (client TaskRunsClient) DeleteSender(req *http.Request) (future TaskRunsDel
 	if err != nil {
 		return
 	}
-	future.Future, err = azure.NewFutureFromResponse(resp)
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = func(client TaskRunsClient) (ar autorest.Response, err error) {
+		var done bool
+		done, err = future.DoneWithContext(context.Background(), client)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "containerregistry.TaskRunsDeleteFuture", "Result", future.Response(), "Polling failure")
+			return
+		}
+		if !done {
+			err = azure.NewAsyncOpIncompleteError("containerregistry.TaskRunsDeleteFuture")
+			return
+		}
+		ar.Response = future.Response()
+		return
+	}
 	return
 }
 
@@ -272,6 +310,7 @@ func (client TaskRunsClient) Get(ctx context.Context, resourceGroupName string, 
 	result, err = client.GetResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "containerregistry.TaskRunsClient", "Get", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -363,6 +402,7 @@ func (client TaskRunsClient) GetDetails(ctx context.Context, resourceGroupName s
 	result, err = client.GetDetailsResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "containerregistry.TaskRunsClient", "GetDetails", resp, "Failure responding to request")
+		return
 	}
 
 	return
@@ -450,9 +490,11 @@ func (client TaskRunsClient) List(ctx context.Context, resourceGroupName string,
 	result.trlr, err = client.ListResponder(resp)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "containerregistry.TaskRunsClient", "List", resp, "Failure responding to request")
+		return
 	}
 	if result.trlr.hasNextLink() && result.trlr.IsEmpty() {
 		err = result.NextWithContext(ctx)
+		return
 	}
 
 	return
@@ -573,7 +615,7 @@ func (client TaskRunsClient) Update(ctx context.Context, resourceGroupName strin
 
 	result, err = client.UpdateSender(req)
 	if err != nil {
-		err = autorest.NewErrorWithError(err, "containerregistry.TaskRunsClient", "Update", result.Response(), "Failure sending request")
+		err = autorest.NewErrorWithError(err, "containerregistry.TaskRunsClient", "Update", nil, "Failure sending request")
 		return
 	}
 
@@ -612,7 +654,29 @@ func (client TaskRunsClient) UpdateSender(req *http.Request) (future TaskRunsUpd
 	if err != nil {
 		return
 	}
-	future.Future, err = azure.NewFutureFromResponse(resp)
+	var azf azure.Future
+	azf, err = azure.NewFutureFromResponse(resp)
+	future.FutureAPI = &azf
+	future.Result = func(client TaskRunsClient) (tr TaskRun, err error) {
+		var done bool
+		done, err = future.DoneWithContext(context.Background(), client)
+		if err != nil {
+			err = autorest.NewErrorWithError(err, "containerregistry.TaskRunsUpdateFuture", "Result", future.Response(), "Polling failure")
+			return
+		}
+		if !done {
+			err = azure.NewAsyncOpIncompleteError("containerregistry.TaskRunsUpdateFuture")
+			return
+		}
+		sender := autorest.DecorateSender(client, autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+		if tr.Response.Response, err = future.GetResult(sender); err == nil && tr.Response.Response.StatusCode != http.StatusNoContent {
+			tr, err = client.UpdateResponder(tr.Response.Response)
+			if err != nil {
+				err = autorest.NewErrorWithError(err, "containerregistry.TaskRunsUpdateFuture", "Result", tr.Response.Response, "Failure responding to request")
+			}
+		}
+		return
+	}
 	return
 }
 

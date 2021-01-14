@@ -13,6 +13,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/AlecAivazis/survey.v1"
+
+	"github.com/openshift/installer/pkg/types/azure"
 )
 
 const azureAuthEnv = "AZURE_AUTH_LOCATION"
@@ -27,6 +29,7 @@ type Session struct {
 	GraphAuthorizer autorest.Authorizer
 	Authorizer      autorest.Authorizer
 	Credentials     Credentials
+	Environment     azureenv.Environment
 }
 
 //Credentials is the data type for credentials as understood by the azure sdk
@@ -39,23 +42,31 @@ type Credentials struct {
 
 // GetSession returns an azure session by using credentials found in ~/.azure/osServicePrincipal.json
 // and, if no creds are found, asks for them and stores them on disk in a config file
-func GetSession(credentials *Credentials) (*Session, error) {
+func GetSession(cloudName azure.CloudEnvironment, credentials *Credentials) (*Session, error) {
 	if credentials != nil {
-		return newSessionFromCredentials(credentials)
+		env, err := azureenv.EnvironmentFromName(string(cloudName))
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to get Azure environment for the %q cloud", cloudName)
+		}
+		return newSessionFromCredentials(env, credentials)
 	}
 
 	authFile := defaultAuthFilePath
 	if f := os.Getenv(azureAuthEnv); len(f) > 0 {
 		authFile = f
 	}
-	return newSessionFromFile(authFile)
+	return newSessionFromFile(authFile, cloudName)
 }
 
-func newSessionFromFile(authFilePath string) (*Session, error) {
+func newSessionFromFile(authFilePath string, cloudName azure.CloudEnvironment) (*Session, error) {
 	// NewAuthorizerFromFileWithResource uses `auth.GetSettingsFromFile`, which uses the `azureAuthEnv` to fetch the auth credentials.
 	// therefore setting the local env here to authFilePath allows NewAuthorizerFromFileWithResource to load credentials.
 	os.Setenv(azureAuthEnv, authFilePath)
-	_, err := auth.NewAuthorizerFromFileWithResource(azureenv.PublicCloud.ResourceManagerEndpoint)
+	env, err := azureenv.EnvironmentFromName(string(cloudName))
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get Azure environment for the %q cloud", cloudName)
+	}
+	_, err = auth.NewAuthorizerFromFileWithResource(env.ResourceManagerEndpoint)
 	if err != nil {
 		logrus.Debug("Could not get an azure authorizer from file. Asking user to provide authentication info")
 		credentials, err := askForCredentials()
@@ -74,6 +85,8 @@ func newSessionFromFile(authFilePath string) (*Session, error) {
 		return nil, errors.Wrap(err, "failed to get settings from file")
 	}
 
+	authSettings.Values[auth.ActiveDirectoryEndpoint] = env.ActiveDirectoryEndpoint
+
 	credentials, err := getCredentials(authSettings)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to map authsettings to credentials")
@@ -86,16 +99,16 @@ func newSessionFromFile(authFilePath string) (*Session, error) {
 		logrus.Infof("Credentials loaded from file %q", authFilePath)
 	})
 
-	return newSessionFromCredentials(credentials)
+	return newSessionFromCredentials(env, credentials)
 }
 
-func newSessionFromCredentials(credentials *Credentials) (*Session, error) {
+func newSessionFromCredentials(env azureenv.Environment, credentials *Credentials) (*Session, error) {
 	c := &auth.ClientCredentialsConfig{
 		TenantID:     credentials.TenantID,
 		ClientID:     credentials.ClientID,
 		ClientSecret: credentials.ClientSecret,
-		AADEndpoint:  azureenv.PublicCloud.ActiveDirectoryEndpoint,
-		Resource:     azureenv.PublicCloud.ResourceManagerEndpoint,
+		AADEndpoint:  env.ActiveDirectoryEndpoint,
+		Resource:     env.ResourceManagerEndpoint,
 	}
 
 	authorizer, err := c.Authorizer()
@@ -107,8 +120,8 @@ func newSessionFromCredentials(credentials *Credentials) (*Session, error) {
 		TenantID:     credentials.TenantID,
 		ClientID:     credentials.ClientID,
 		ClientSecret: credentials.ClientSecret,
-		AADEndpoint:  azureenv.PublicCloud.ActiveDirectoryEndpoint,
-		Resource:     azureenv.PublicCloud.GraphEndpoint,
+		AADEndpoint:  env.ActiveDirectoryEndpoint,
+		Resource:     env.GraphEndpoint,
 	}
 
 	graphAuthorizer, err := c.Authorizer()
@@ -120,6 +133,7 @@ func newSessionFromCredentials(credentials *Credentials) (*Session, error) {
 		GraphAuthorizer: graphAuthorizer,
 		Authorizer:      authorizer,
 		Credentials:     *credentials,
+		Environment:     env,
 	}, nil
 }
 
