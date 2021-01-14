@@ -1080,20 +1080,14 @@ cat >/usr/local/bin/download-credentials.sh <<EOF
 set -eu
 
 COMPONENT="\$1"
-case "\$COMPONENT" in
-  'mdm')
-    NEW_CERT_FILE="/etc/temp-mdm.pem"
-    CURRENT_CERT_FILE="/etc/mdm.pem"
-    SECRET_NAME="rp-mdm"
-  ;;
-  'mdsd')
-    NEW_CERT_FILE="/etc/temp-mdsd.pem"
-    CURRENT_CERT_FILE="/etc/mdsd.pem"
-    SECRET_NAME="rp-mdsd"
-  ;;
-  *) echo Invalid usage && exit 1
-  ;;
-esac
+if [[ "\$COMPONENT" = "mdm" || "\$COMPONENT" = "mdsd" ]]; then
+  NEW_CERT_FILE="/etc/temp-\${COMPONENT}.pem"
+  CURRENT_CERT_FILE="/etc/\${COMPONENT}.pem"
+  SECRET_NAME="rp-\${COMPONENT}"
+  AZURE_CONFIG_DIR="/home/cloud-user/.azure-\${COMPONENT}"
+else
+  echo Invalid usage && exit 1
+fi
 
 echo "Download \$COMPONENT credentials"
 az login -i
@@ -1137,7 +1131,7 @@ Description=Periodic mdsd certificate refresh
 
 [Timer]
 OnBootSec=0min
-OnCalendar=1/12:00:00
+OnCalendar=0/12:00:00
 AccuracySec=5s
 
 [Install]
