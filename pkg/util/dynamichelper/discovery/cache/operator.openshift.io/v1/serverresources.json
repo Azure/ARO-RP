@@ -60,6 +60,34 @@
             ]
         },
         {
+            "name": "clustercsidrivers",
+            "singularName": "clustercsidriver",
+            "namespaced": false,
+            "kind": "ClusterCSIDriver",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "/WO1MfazznM="
+        },
+        {
+            "name": "clustercsidrivers/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "ClusterCSIDriver",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
             "name": "configs",
             "singularName": "config",
             "namespaced": false,
@@ -465,6 +493,34 @@
             "singularName": "",
             "namespaced": false,
             "kind": "ServiceCA",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
+        },
+        {
+            "name": "storages",
+            "singularName": "storage",
+            "namespaced": false,
+            "kind": "Storage",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "NnBYY8EyXNM="
+        },
+        {
+            "name": "storages/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "Storage",
             "verbs": [
                 "get",
                 "patch",

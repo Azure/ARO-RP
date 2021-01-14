@@ -38,10 +38,10 @@
             ]
         },
         {
-            "name": "operatorsources",
-            "singularName": "operatorsource",
-            "namespaced": true,
-            "kind": "OperatorSource",
+            "name": "operators",
+            "singularName": "operator",
+            "namespaced": false,
+            "kind": "Operator",
             "verbs": [
                 "create",
                 "delete",
@@ -52,10 +52,21 @@
                 "update",
                 "watch"
             ],
-            "shortNames": [
-                "opsrc"
+            "categories": [
+                "olm"
             ],
-            "storageVersionHash": "nvjO7aMz/V4="
+            "storageVersionHash": "G7jRFeS6JKo="
+        },
+        {
+            "name": "operators/status",
+            "singularName": "",
+            "namespaced": false,
+            "kind": "Operator",
+            "verbs": [
+                "get",
+                "patch",
+                "update"
+            ]
         }
     ]
 }

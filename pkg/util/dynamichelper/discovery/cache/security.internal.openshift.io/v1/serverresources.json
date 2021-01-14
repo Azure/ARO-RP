@@ -1,0 +1,24 @@
+{
+    "kind": "APIResourceList",
+    "apiVersion": "v1",
+    "groupVersion": "security.internal.openshift.io/v1",
+    "resources": [
+        {
+            "name": "rangeallocations",
+            "singularName": "rangeallocation",
+            "namespaced": false,
+            "kind": "RangeAllocation",
+            "verbs": [
+                "create",
+                "delete",
+                "deletecollection",
+                "get",
+                "list",
+                "patch",
+                "update",
+                "watch"
+            ],
+            "storageVersionHash": "qZRTPsGHJXw="
+        }
+    ]
+}

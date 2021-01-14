@@ -60,10 +60,14 @@
         {
             "name": "events.k8s.io",
             "preferredVersion": {
-                "groupVersion": "events.k8s.io/v1beta1",
-                "version": "v1beta1"
+                "groupVersion": "events.k8s.io/v1",
+                "version": "v1"
             },
             "versions": [
+                {
+                    "groupVersion": "events.k8s.io/v1",
+                    "version": "v1"
+                },
                 {
                     "groupVersion": "events.k8s.io/v1beta1",
                     "version": "v1beta1"
@@ -145,10 +149,14 @@
         {
             "name": "certificates.k8s.io",
             "preferredVersion": {
-                "groupVersion": "certificates.k8s.io/v1beta1",
-                "version": "v1beta1"
+                "groupVersion": "certificates.k8s.io/v1",
+                "version": "v1"
             },
             "versions": [
+                {
+                    "groupVersion": "certificates.k8s.io/v1",
+                    "version": "v1"
+                },
                 {
                     "groupVersion": "certificates.k8s.io/v1beta1",
                     "version": "v1beta1"
@@ -681,6 +689,19 @@
             ]
         },
         {
+            "name": "security.internal.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "security.internal.openshift.io/v1",
+                "version": "v1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "security.internal.openshift.io/v1",
+                    "version": "v1"
+                }
+            ]
+        },
+        {
             "name": "tuned.openshift.io",
             "preferredVersion": {
                 "groupVersion": "tuned.openshift.io/v1",
@@ -742,6 +763,19 @@
                 {
                     "groupVersion": "whereabouts.cni.cncf.io/v1alpha1",
                     "version": "v1alpha1"
+                }
+            ]
+        },
+        {
+            "name": "helm.openshift.io",
+            "preferredVersion": {
+                "groupVersion": "helm.openshift.io/v1beta1",
+                "version": "v1beta1"
+            },
+            "versions": [
+                {
+                    "groupVersion": "helm.openshift.io/v1beta1",
+                    "version": "v1beta1"
                 }
             ]
         },
