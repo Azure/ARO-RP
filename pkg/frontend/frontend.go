@@ -37,8 +37,11 @@ func (err statusCodeError) Error() string {
 	return fmt.Sprintf("%d", err)
 }
 
-type adminActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster,
-	*api.SubscriptionDocument) (adminactions.Interface, error)
+type kubeActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster,
+	*api.SubscriptionDocument) (adminactions.KubeActions, error)
+
+type azureActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluster,
+	*api.SubscriptionDocument) (adminactions.AzureActions, error)
 
 type frontend struct {
 	baseLog *logrus.Entry
@@ -53,7 +56,8 @@ type frontend struct {
 	aead encryption.AEAD
 
 	ocEnricher          clusterdata.OpenShiftClusterEnricher
-	adminActionsFactory adminActionsFactory
+	kubeActionsFactory  kubeActionsFactory
+	azureActionsFactory azureActionsFactory
 
 	l net.Listener
 	s *http.Server
@@ -79,7 +83,8 @@ func NewFrontend(ctx context.Context,
 	apis map[string]*api.Version,
 	m metrics.Interface,
 	aead encryption.AEAD,
-	adminActionsFactory adminActionsFactory) (Runnable, error) {
+	kubeActionsFactory kubeActionsFactory,
+	azureActionsFactory azureActionsFactory) (Runnable, error) {
 	f := &frontend{
 		baseLog:             baseLog,
 		env:                 _env,
@@ -89,7 +94,8 @@ func NewFrontend(ctx context.Context,
 		apis:                apis,
 		m:                   m,
 		aead:                aead,
-		adminActionsFactory: adminActionsFactory,
+		kubeActionsFactory:  kubeActionsFactory,
+		azureActionsFactory: azureActionsFactory,
 
 		ocEnricher: clusterdata.NewBestEffortEnricher(baseLog, _env, m),
 

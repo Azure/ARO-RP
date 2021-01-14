@@ -32,7 +32,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 		objKind        string
 		objNamespace   string
 		objName        string
-		mocks          func(*test, *mock_adminactions.MockInterface)
+		mocks          func(*test, *mock_adminactions.MockKubeActions)
 		method         string
 		wantStatusCode int
 		wantResponse   []byte
@@ -47,9 +47,9 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			objKind:      "ConfigMap",
 			objNamespace: "openshift-project",
 			objName:      "config",
-			mocks: func(tt *test, a *mock_adminactions.MockInterface) {
-				a.EXPECT().
-					K8sGet(gomock.Any(), tt.objKind, tt.objNamespace, tt.objName).
+			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().
+					KubeGet(gomock.Any(), tt.objKind, tt.objNamespace, tt.objName).
 					Return([]byte(`{"Kind": "test"}`), nil)
 
 			},
@@ -62,9 +62,9 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			resourceID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
 			objKind:      "ConfigMap",
 			objNamespace: "openshift-project",
-			mocks: func(tt *test, a *mock_adminactions.MockInterface) {
-				a.EXPECT().
-					K8sList(gomock.Any(), tt.objKind, tt.objNamespace).
+			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().
+					KubeList(gomock.Any(), tt.objKind, tt.objNamespace).
 					Return([]byte(`{"Kind": "test"}`), nil)
 
 			},
@@ -77,7 +77,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			resourceID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
 			objNamespace: "openshift-project",
 			objName:      "config",
-			mocks: func(tt *test, a *mock_adminactions.MockInterface) {
+			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
 			},
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      "400: InvalidParameter: : The provided groupKind '' is invalid.",
@@ -89,7 +89,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			objKind:      "Secret",
 			objNamespace: "openshift-project",
 			objName:      "config",
-			mocks: func(tt *test, a *mock_adminactions.MockInterface) {
+			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
 			},
 			wantStatusCode: http.StatusForbidden,
 			wantError:      "403: Forbidden: : Access to secrets is forbidden.",
@@ -101,9 +101,9 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			objKind:      "ConfigMap",
 			objNamespace: "openshift-project",
 			objName:      "config",
-			mocks: func(tt *test, a *mock_adminactions.MockInterface) {
-				a.EXPECT().
-					K8sDelete(gomock.Any(), tt.objKind, tt.objNamespace, tt.objName).
+			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().
+					KubeDelete(gomock.Any(), tt.objKind, tt.objNamespace, tt.objName).
 					Return(nil)
 
 			},
@@ -115,7 +115,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			resourceID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
 			objNamespace: "openshift-project",
 			objName:      "config",
-			mocks: func(tt *test, a *mock_adminactions.MockInterface) {
+			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
 			},
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      "400: InvalidParameter: : The provided groupKind '' is invalid.",
@@ -126,7 +126,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			resourceID:   fmt.Sprintf("/subscriptions/%s/resourcegroups/resourceGroup/providers/Microsoft.RedHatOpenShift/openShiftClusters/resourceName", mockSubID),
 			objKind:      "this",
 			objNamespace: "openshift-project",
-			mocks: func(tt *test, a *mock_adminactions.MockInterface) {
+			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
 			},
 			wantStatusCode: http.StatusBadRequest,
 			wantError:      "400: InvalidParameter: : The provided name '' is invalid.",
@@ -138,7 +138,7 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			objKind:      "Secret",
 			objNamespace: "openshift-project",
 			objName:      "config",
-			mocks: func(tt *test, a *mock_adminactions.MockInterface) {
+			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
 			},
 			wantStatusCode: http.StatusForbidden,
 			wantError:      "403: Forbidden: : Access to secrets is forbidden.",
@@ -148,8 +148,8 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			ti := newTestInfra(t).WithOpenShiftClusters().WithSubscriptions()
 			defer ti.done()
 
-			a := mock_adminactions.NewMockInterface(ti.controller)
-			tt.mocks(tt, a)
+			k := mock_adminactions.NewMockKubeActions(ti.controller)
+			tt.mocks(tt, k)
 
 			ti.fixture.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 				Key: strings.ToLower(tt.resourceID),
@@ -175,9 +175,9 @@ func TestAdminKubernetesObjectsGetAndDelete(t *testing.T) {
 			}
 
 			f, err := NewFrontend(ctx, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster,
-				*api.SubscriptionDocument) (adminactions.Interface, error) {
-				return a, nil
-			})
+				*api.SubscriptionDocument) (adminactions.KubeActions, error) {
+				return k, nil
+			}, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -301,7 +301,7 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 	type test struct {
 		name           string
 		resourceID     string
-		mocks          func(*test, *mock_adminactions.MockInterface)
+		mocks          func(*test, *mock_adminactions.MockKubeActions)
 		wantStatusCode int
 		objInBody      *unstructured.Unstructured
 		wantError      string
@@ -320,8 +320,8 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 					},
 				},
 			},
-			mocks: func(tt *test, a *mock_adminactions.MockInterface) {
-				a.EXPECT().K8sCreateOrUpdate(gomock.Any(), tt.objInBody).
+			mocks: func(tt *test, k *mock_adminactions.MockKubeActions) {
+				k.EXPECT().KubeCreateOrUpdate(gomock.Any(), tt.objInBody).
 					Return(nil)
 			},
 			wantStatusCode: http.StatusOK,
@@ -334,7 +334,7 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 					"kind": "Secret",
 				},
 			},
-			mocks:          func(tt *test, a *mock_adminactions.MockInterface) {},
+			mocks:          func(tt *test, k *mock_adminactions.MockKubeActions) {},
 			wantStatusCode: http.StatusForbidden,
 			wantError:      "403: Forbidden: : Access to secrets is forbidden.",
 		},
@@ -343,8 +343,8 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 			ti := newTestInfra(t).WithOpenShiftClusters().WithSubscriptions()
 			defer ti.done()
 
-			a := mock_adminactions.NewMockInterface(ti.controller)
-			tt.mocks(tt, a)
+			k := mock_adminactions.NewMockKubeActions(ti.controller)
+			tt.mocks(tt, k)
 
 			ti.fixture.AddOpenShiftClusterDocuments(&api.OpenShiftClusterDocument{
 				Key: strings.ToLower(tt.resourceID),
@@ -370,9 +370,9 @@ func TestAdminPostKubernetesObjects(t *testing.T) {
 			}
 
 			f, err := NewFrontend(ctx, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster,
-				*api.SubscriptionDocument) (adminactions.Interface, error) {
-				return a, nil
-			})
+				*api.SubscriptionDocument) (adminactions.KubeActions, error) {
+				return k, nil
+			}, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

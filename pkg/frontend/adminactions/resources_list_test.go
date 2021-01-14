@@ -143,7 +143,7 @@ func TestResourcesList(t *testing.T) {
 			routeTables := mock_network.NewMockRouteTablesClient(controller)
 			tt.mocks(tt, resources, virtualMachines, virtualNetworks, routeTables)
 
-			a := adminactions{
+			a := azureActions{
 				log: logrus.NewEntry(logrus.StandardLogger()),
 				env: env,
 				oc: &api.OpenShiftCluster{

@@ -51,7 +51,7 @@ func (f *frontend) _postAdminOpenShiftClusterRedeployVM(ctx context.Context, r *
 		return err
 	}
 
-	a, err := f.adminActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
+	a, err := f.azureActionsFactory(log, f.env, doc.OpenShiftCluster, subscriptionDoc)
 	if err != nil {
 		return err
 	}

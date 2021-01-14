@@ -32,7 +32,7 @@ func TestAdminRedeployVM(t *testing.T) {
 		resourceID     string
 		fixture        func(*testdatabase.Fixture)
 		vmName         string
-		mocks          func(*test, *mock_adminactions.MockInterface)
+		mocks          func(*test, *mock_adminactions.MockAzureActions)
 		wantStatusCode int
 		wantResponse   []byte
 		wantError      string
@@ -66,7 +66,7 @@ func TestAdminRedeployVM(t *testing.T) {
 					},
 				})
 			},
-			mocks: func(tt *test, a *mock_adminactions.MockInterface) {
+			mocks: func(tt *test, a *mock_adminactions.MockAzureActions) {
 				a.EXPECT().VMRedeployAndWait(gomock.Any(), tt.vmName).Return(nil)
 			},
 			wantStatusCode: http.StatusOK,
@@ -76,7 +76,7 @@ func TestAdminRedeployVM(t *testing.T) {
 			ti := newTestInfra(t).WithOpenShiftClusters().WithSubscriptions()
 			defer ti.done()
 
-			a := mock_adminactions.NewMockInterface(ti.controller)
+			a := mock_adminactions.NewMockAzureActions(ti.controller)
 			tt.mocks(tt, a)
 
 			err := ti.buildFixtures(tt.fixture)
@@ -84,8 +84,8 @@ func TestAdminRedeployVM(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, api.APIs, &noop.Noop{}, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster,
-				*api.SubscriptionDocument) (adminactions.Interface, error) {
+			f, err := NewFrontend(ctx, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, api.APIs, &noop.Noop{}, nil, nil, func(*logrus.Entry, env.Interface, *api.OpenShiftCluster,
+				*api.SubscriptionDocument) (adminactions.AzureActions, error) {
 				return a, nil
 			})
 

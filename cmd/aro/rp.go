@@ -120,7 +120,7 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), _env, dbAsyncOperations, dbOpenShiftClusters, dbSubscriptions, api.APIs, m, feAead, adminactions.New)
+	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), _env, dbAsyncOperations, dbOpenShiftClusters, dbSubscriptions, api.APIs, m, feAead, adminactions.NewKubeActions, adminactions.NewAzureActions)
 	if err != nil {
 		return err
 	}

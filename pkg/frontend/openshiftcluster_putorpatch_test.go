@@ -203,7 +203,7 @@ func TestPutOrPatchOpenShiftClusterAdminAPI(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, apis, &noop.Noop{}, nil, nil)
+			f, err := NewFrontend(ctx, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, apis, &noop.Noop{}, nil, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -872,7 +872,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := NewFrontend(ctx, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, apis, &noop.Noop{}, nil, nil)
+			f, err := NewFrontend(ctx, ti.log, ti.env, ti.asyncOperationsDatabase, ti.openShiftClustersDatabase, ti.subscriptionsDatabase, apis, &noop.Noop{}, nil, nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
