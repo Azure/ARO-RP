@@ -6,6 +6,7 @@ package cluster
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/golang/mock/gomock"
 	configv1 "github.com/openshift/api/config/v1"
@@ -68,6 +69,8 @@ func TestEmitSummary(t *testing.T) {
 
 	m := mock_metrics.NewMockInterface(controller)
 
+	mockCreatedAt := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
+
 	mon := &Monitor{
 		configcli: configcli,
 		cli:       cli,
@@ -75,6 +78,7 @@ func TestEmitSummary(t *testing.T) {
 		oc: &api.OpenShiftCluster{
 			Properties: api.OpenShiftClusterProperties{
 				ProvisioningState: api.ProvisioningStateFailed,
+				CreatedAt:         mockCreatedAt,
 			},
 		},
 		hourlyRun: true,
@@ -86,6 +90,7 @@ func TestEmitSummary(t *testing.T) {
 		"masterCount":       "1",
 		"workerCount":       "2",
 		"provisioningState": api.ProvisioningStateFailed.String(),
+		"createdAt":         mockCreatedAt.String(),
 	})
 
 	err := mon.emitSummary(ctx)

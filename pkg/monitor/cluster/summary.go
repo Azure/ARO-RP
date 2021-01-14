@@ -46,6 +46,7 @@ func (mon *Monitor) emitSummary(ctx context.Context) error {
 		"masterCount":       strconv.Itoa(masterCount),
 		"workerCount":       strconv.Itoa(workerCount),
 		"provisioningState": mon.oc.Properties.ProvisioningState.String(),
+		"createdAt":         mon.oc.Properties.CreatedAt.String(),
 	})
 
 	return nil
