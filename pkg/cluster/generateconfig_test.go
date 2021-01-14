@@ -11,7 +11,7 @@ import (
 func TestRHCOSImage(t *testing.T) {
 	ctx := context.Background()
 
-	err, i := getRHCOSImage(ctx)
+	i, err := getRHCOSImage(ctx)
 	if err != nil {
 		t.Error(err)
 	}
