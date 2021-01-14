@@ -1053,18 +1053,21 @@ EOF
 
 chcon -R system_u:object_r:var_log_t:s0 /var/opt/microsoft/linuxmonagent
 
-cat >/etc/systemd/system/download-mdm-credentials.service <<'EOF'
+mkdir -p /var/lib/waagent/Microsoft.Azure.KeyVault.Store
+
+for var in "mdsd" "mdm"; do
+cat >/etc/systemd/system/download-$var-credentials.service <<EOF
 [Unit]
-Description=Periodic mdm credentials refresh
+Description=Periodic $var credentials refresh
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/bin/download-credentials.sh mdm
+ExecStart=/usr/local/bin/download-credentials.sh $var
 EOF
 
-cat >/etc/systemd/system/download-mdm-credentials.timer <<'EOF'
+cat >/etc/systemd/system/download-$var-credentials.timer <<EOF
 [Unit]
-Description=Periodic mdm credentials refresh
+Description=Periodic $var credentials refresh
 
 [Timer]
 OnBootSec=0min
@@ -1074,30 +1077,40 @@ AccuracySec=5s
 [Install]
 WantedBy=timers.target
 EOF
+done
 
 cat >/usr/local/bin/download-credentials.sh <<EOF
 #!/bin/bash
 set -eu
 
 COMPONENT="\$1"
-if [[ "\$COMPONENT" = "mdm" || "\$COMPONENT" = "mdsd" ]]; then
-  NEW_CERT_FILE="/etc/temp-\${COMPONENT}.pem"
-  CURRENT_CERT_FILE="/etc/\${COMPONENT}.pem"
-  SECRET_NAME="rp-\${COMPONENT}"
-  AZURE_CONFIG_DIR="/home/cloud-user/.azure-\${COMPONENT}"
+echo "Download \$COMPONENT credentials"
+
+TEMP_DIR=\$(mktemp -d)
+export AZURE_CONFIG_DIR=\$(mktemp -d)
+az login -i
+az account set -s "$SUBSCRIPTIONID"
+
+trap "cleanup" EXIT
+
+cleanup() {
+  az logout
+  [[ "\$TEMP_DIR" =~ /tmp/.+ ]] && rm -rf \$TEMP_DIR
+  [[ "\$AZURE_CONFIG_DIR" =~ /tmp/.+ ]] && rm -rf \$AZURE_CONFIG_DIR
+}
+
+if [ "\$COMPONENT" = "mdm" ]; then
+  CURRENT_CERT_FILE="/etc/mdm.pem"
+elif [ "\$COMPONENT" = "mdsd" ]; then
+  CURRENT_CERT_FILE="/var/lib/waagent/Microsoft.Azure.KeyVault.Store/mdsd.pem"
 else
   echo Invalid usage && exit 1
 fi
 
-echo "Download \$COMPONENT credentials"
-az login -i
-az account set -s "$SUBSCRIPTIONID"
-trap "az logout" EXIT
-
-rm -f \$NEW_CERT_FILE
-
+SECRET_NAME="rp-\${COMPONENT}"
+NEW_CERT_FILE="\$TEMP_DIR/\$COMPONENT.pem"
 for attempt in {1..5}; do
-  az keyvault certificate download --file \$NEW_CERT_FILE --id "https://$KEYVAULTPREFIX-svc.vault.azure.net/secrets/\$SECRET_NAME" && break
+  az keyvault secret download --file \$NEW_CERT_FILE --id "https://$KEYVAULTPREFIX-svc.vault.azure.net/secrets/\$SECRET_NAME" && break
   if [[ \$attempt -lt 5 ]]; then sleep 10; else exit 1; fi
 done
 
@@ -1116,34 +1129,12 @@ EOF
 
 chmod u+x /usr/local/bin/download-credentials.sh
 
-cat >/etc/systemd/system/download-mdsd-credentials.service <<EOF
-[Unit]
-Description=Periodic mdsd certificate refresh
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/download-credentials.sh mdsd
-EOF
-
-cat >/etc/systemd/system/download-mdsd-credentials.timer <<EOF
-[Unit]
-Description=Periodic mdsd certificate refresh
-
-[Timer]
-OnBootSec=0min
-OnCalendar=0/12:00:00
-AccuracySec=5s
-
-[Install]
-WantedBy=timers.target
-EOF
-
 systemctl enable download-mdsd-credentials.timer
 systemctl enable download-mdm-credentials.timer
 
-/usr/local/bin/download-mdsd-credentials.sh
-/usr/local/bin/download-mdm-credentials.sh
-MDSDCERTIFICATESAN=$(openssl x509 -in /etc/mdsd.pem -noout -subject | sed -e 's/.*CN = //')
+/usr/local/bin/download-credentials.sh mdsd
+/usr/local/bin/download-credentials.sh mdm
+MDSDCERTIFICATESAN=$(openssl x509 -in /var/lib/waagent/Microsoft.Azure.KeyVault.Store/mdsd.pem -noout -subject | sed -e 's/.*CN=//')
 
 mkdir /etc/systemd/system/mdsd.service.d
 cat >/etc/systemd/system/mdsd.service.d/override.conf <<'EOF'
