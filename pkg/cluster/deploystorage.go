@@ -78,7 +78,7 @@ func (m *manager) clusterSPObjectID(ctx context.Context) (string, error) {
 	return clusterSPObjectID, err
 }
 
-func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *installconfig.InstallConfig, platformCreds *installconfig.PlatformCreds, image *releaseimage.Image) error {
+func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *installconfig.InstallConfig, image *releaseimage.Image) error {
 	if m.doc.OpenShiftCluster.Properties.InfraID == "" {
 		g := newGraph(&installconfig.InstallConfig{
 			Config: &types.InstallConfig{
@@ -216,7 +216,7 @@ func (m *manager) deployStorageTemplate(ctx context.Context, installConfig *inst
 		return err
 	}
 
-	g := newGraph(installConfig, platformCreds, image, clusterID, bootstrapLoggingConfig)
+	g := newGraph(installConfig, image, clusterID, bootstrapLoggingConfig)
 
 	m.log.Print("resolving graph")
 	for _, a := range targets.Cluster {

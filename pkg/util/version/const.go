@@ -13,14 +13,18 @@ var GitCommit = "unknown"
 
 // InstallStream describes stream we are defaulting to for all new clusters
 var InstallStream = &Stream{
-	Version:  NewVersion(4, 5, 27),
-	PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:412276155bfe186c35322a788321ebf110130a272e18f55a1a2510f15ee0bb04",
+	Version:  NewVersion(4, 6, 12),
+	PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:5c3618ab914eb66267b7c552a9b51c3018c3a8f8acf08ce1ff7ae4bfdd3a82bd",
 }
 
 // Streams describes list of streams we support for upgrades
 var (
 	Streams = []*Stream{
 		InstallStream,
+		{
+			Version:  NewVersion(4, 5, 27),
+			PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:412276155bfe186c35322a788321ebf110130a272e18f55a1a2510f15ee0bb04",
+		},
 		{
 			Version:  NewVersion(4, 4, 31),
 			PullSpec: "quay.io/openshift-release-dev/ocp-release@sha256:52ca6e018793f068f994ff1e85d86283fd4a9875390dffde55c97fd59d03a009",
