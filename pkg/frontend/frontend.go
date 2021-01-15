@@ -66,6 +66,8 @@ type frontend struct {
 
 	startTime time.Time
 	ready     atomic.Value
+
+	now func() time.Time
 }
 
 // Runnable represents a runnable object
@@ -102,6 +104,8 @@ func NewFrontend(ctx context.Context,
 		bucketAllocator: &bucket.Random{},
 
 		startTime: time.Now(),
+
+		now: time.Now,
 	}
 
 	l, err := f.env.Listen()

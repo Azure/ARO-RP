@@ -71,6 +71,8 @@ type OpenShiftClusterProperties struct {
 	FailedProvisioningState ProvisioningState   `json:"failedProvisioningState,omitempty"`
 	LastAdminUpdateError    string              `json:"lastAdminUpdateError,omitempty"`
 
+	CreatedAt time.Time `json:"createdAt,omitempty"`
+
 	// CreatedBy is the RP version (Git commit hash) that created this cluster
 	CreatedBy string `json:"createdBy,omitempty"`
 

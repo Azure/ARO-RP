@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	admin "github.com/Azure/ARO-RP/pkg/api/admin"
@@ -281,6 +282,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 	}
 
 	mockSubID := "00000000-0000-0000-0000-000000000000"
+	mockCurrentTime := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	type test struct {
 		name           string
@@ -331,6 +333,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 							ArchitectureVersion: version.InstallArchitectureVersion,
 							ProvisioningState:   api.ProvisioningStateCreating,
 							ProvisionedBy:       version.GitCommit,
+							CreatedAt:           mockCurrentTime,
 							CreatedBy:           version.GitCommit,
 							ClusterProfile: api.ClusterProfile{
 								Version: "4.3.0",
@@ -878,6 +881,7 @@ func TestPutOrPatchOpenShiftCluster(t *testing.T) {
 			}
 			f.(*frontend).bucketAllocator = bucket.Fixed(1)
 			f.(*frontend).ocEnricher = ti.enricher
+			f.(*frontend).now = func() time.Time { return mockCurrentTime }
 
 			go f.Run(ctx, nil, nil)
 
