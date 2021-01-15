@@ -32,7 +32,7 @@ import (
 	"github.com/Azure/ARO-RP/pkg/util/encryption"
 )
 
-func rp(ctx context.Context, log *logrus.Entry) error {
+func rp(ctx context.Context, log, audit *logrus.Entry) error {
 	_env, err := env.NewEnv(ctx, log)
 	if err != nil {
 		return err
@@ -121,7 +121,7 @@ func rp(ctx context.Context, log *logrus.Entry) error {
 		return err
 	}
 
-	f, err := frontend.NewFrontend(ctx, log.WithField("component", "frontend"), _env, dbAsyncOperations, dbOpenShiftClusters, dbSubscriptions, api.APIs, m, feAead, adminactions.NewKubeActions, adminactions.NewAzureActions, clusterdata.NewBestEffortEnricher)
+	f, err := frontend.NewFrontend(ctx, audit, log.WithField("component", "frontend"), _env, dbAsyncOperations, dbOpenShiftClusters, dbSubscriptions, api.APIs, m, feAead, adminactions.NewKubeActions, adminactions.NewAzureActions, clusterdata.NewBestEffortEnricher)
 	if err != nil {
 		return err
 	}

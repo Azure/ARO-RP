@@ -6,13 +6,12 @@ package middleware
 import (
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/sirupsen/logrus"
 
 	"github.com/Azure/ARO-RP/pkg/api"
 	"github.com/Azure/ARO-RP/pkg/env"
-	"github.com/Azure/ARO-RP/pkg/util/log"
+	utillog "github.com/Azure/ARO-RP/pkg/util/log"
 	"github.com/Azure/ARO-RP/pkg/util/log/audit"
 )
 
@@ -22,17 +21,10 @@ import (
 func Audit(env env.Core, entry *logrus.Entry) func(http.Handler) http.Handler {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// skip requests to the 'operationsstatus' endpoints
-			if strings.Contains(r.URL.Path, "operationsstatus") {
-				h.ServeHTTP(w, r)
-				return
-			}
-
 			callerIdentity, callerType, correlationID, requestID := callerRequestData(r)
 			targetResourceName, targetResourceType := targetResourceData(entry, r)
 
-			auditEntry := audit.NewEntry(entry.Logger)
-			auditEntry = auditEntry.WithFields(logrus.Fields{
+			entry = entry.WithFields(logrus.Fields{
 				audit.EnvKeyAppID:             audit.SourceRP,
 				audit.EnvKeyCloudRole:         audit.CloudRoleRP,
 				audit.EnvKeyCorrelationID:     correlationID,
@@ -59,7 +51,7 @@ func Audit(env env.Core, entry *logrus.Entry) func(http.Handler) http.Handler {
 
 			defer func() {
 				resultType, resultDescription := resultData(w)
-				auditEntry.WithFields(logrus.Fields{
+				entry.WithFields(logrus.Fields{
 					audit.PayloadKeyResult: audit.Result{
 						ResultType:        resultType,
 						ResultDescription: resultDescription,
@@ -73,43 +65,44 @@ func Audit(env env.Core, entry *logrus.Entry) func(http.Handler) http.Handler {
 }
 
 func callerRequestData(r *http.Request) (
-	callerIdentity string,
-	callerType string,
-	correlationID string,
-	requestID string) {
+	string, string, string, string) {
 
-	callerIdentity = r.UserAgent()
-	callerType = audit.CallerIdentityTypeApplicationID
+	var (
+		callerIdentity = r.UserAgent()
+		callerType     = audit.CallerIdentityTypeApplicationID
+		correlationID  = ""
+		requestID      = ""
+	)
 
-	if v := r.Context().Value(ContextKeyCorrelationData); v != nil {
-		if correlationData, ok := v.(*api.CorrelationData); ok {
-			if correlationData.ClientPrincipalName != "" {
-				callerIdentity = correlationData.ClientPrincipalName
-				callerType = audit.CallerIdentityTypeObjectID
-			}
-
-			correlationID = correlationData.CorrelationID
-			requestID = correlationData.RequestID
+	// if log middleware isn't run, this type assertion will panic as intended.
+	// the frontend will recover from the panic and exit
+	correlationData := r.Context().Value(ContextKeyCorrelationData).(*api.CorrelationData)
+	if correlationData != nil {
+		if correlationData.ClientPrincipalName != "" {
+			callerIdentity = correlationData.ClientPrincipalName
+			callerType = audit.CallerIdentityTypeObjectID
 		}
+
+		correlationID = correlationData.CorrelationID
+		requestID = correlationData.RequestID
 	}
 
-	return
+	return callerIdentity, callerType, correlationID, requestID
 }
 
 func targetResourceData(entry *logrus.Entry, r *http.Request) (string, string) {
-	entry = log.EnrichWithPath(entry, r.URL.Path)
+	matches := utillog.RXTolerantResourceID.FindStringSubmatch(r.URL.Path)
+	if matches == nil {
+		return audit.UnknownValue, audit.UnknownValue
+	}
 
 	var resourceName, resourceKind string
-	if v, ok := entry.Data["resource_id"].(string); ok {
-		resourceName = v
+	if matches[3] != "" {
+		resourceKind = matches[3]
 	}
 
-	if v, ok := entry.Data["resource_kind"].(string); ok {
-		resourceKind = v
-	}
-
-	if resourceKind == "" && strings.Contains(r.URL.Path, "/admin") {
-		resourceKind = audit.ResourceTypeAdminAction
+	if matches[5] != "" {
+		resourceName = fmt.Sprintf("/subscriptions/%s/resourcegroups/%s/providers/%s/%s/%s", matches[1], matches[2], matches[3], matches[4], matches[5])
 	}
 
 	return resourceName, resourceKind
@@ -122,9 +115,14 @@ func resultData(w http.ResponseWriter) (string, string) {
 	)
 
 	statusCode := http.StatusOK
-	if v, ok := w.(*logResponseWriter); ok {
-		statusCode = v.statusCode
+
+	// if log middleware isn't run, this type assertion will panic as intended.
+	// the frontend will recover from the panic and exit
+	responseWriter := w.(*logResponseWriter)
+	if responseWriter != nil {
+		statusCode = responseWriter.statusCode
 	}
+
 	if statusCode >= http.StatusBadRequest {
 		resultType = audit.ResultTypeFail
 	}

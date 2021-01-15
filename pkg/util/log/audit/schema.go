@@ -3,14 +3,14 @@ package audit
 // Copyright (c) Microsoft Corporation.
 // Licensed under the Apache License 2.0.
 
-// AuditPayload is the IFxAudit log payload that will be sent to Geneva. It has
+// payload is the IFxAudit log payload that will be sent to Geneva. It has
 // all the required and optional fields defined in IFxAudit Part-A and Part-B
 // schema.
 //
 // Fields that are marked as optional or "required when applicable" in the
 // schema are marked with the omitempty tag. Fields that are marked as "unused"
 // are not included.
-type AuditPayload struct {
+type payload struct {
 	// Part-A
 	EnvVer                 float64 `json:"env_ver"`
 	EnvName                string  `json:"env_name"`

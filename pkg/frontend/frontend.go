@@ -45,8 +45,9 @@ type azureActionsFactory func(*logrus.Entry, env.Interface, *api.OpenShiftCluste
 type ocEnricherFactory func(log *logrus.Entry, dialer proxy.Dialer, m metrics.Interface) clusterdata.OpenShiftClusterEnricher
 
 type frontend struct {
-	baseLog *logrus.Entry
-	env     env.Interface
+	auditLog *logrus.Entry
+	baseLog  *logrus.Entry
+	env      env.Interface
 
 	dbAsyncOperations   database.AsyncOperations
 	dbOpenShiftClusters database.OpenShiftClusters
@@ -78,6 +79,7 @@ type Runnable interface {
 
 // NewFrontend returns a new runnable frontend
 func NewFrontend(ctx context.Context,
+	auditLog *logrus.Entry,
 	baseLog *logrus.Entry,
 	_env env.Interface,
 	dbAsyncOperations database.AsyncOperations,
@@ -90,6 +92,7 @@ func NewFrontend(ctx context.Context,
 	azureActionsFactory azureActionsFactory,
 	ocEnricherFactory ocEnricherFactory) (Runnable, error) {
 	f := &frontend{
+		auditLog:            auditLog,
 		baseLog:             baseLog,
 		env:                 _env,
 		dbAsyncOperations:   dbAsyncOperations,
@@ -262,7 +265,7 @@ func (f *frontend) authenticatedRoutes(r *mux.Router) {
 func (f *frontend) setupRouter() *mux.Router {
 	r := mux.NewRouter()
 	r.Use(middleware.Log(f.baseLog.WithField("component", "access")))
-	r.Use(middleware.Audit(f.env, f.baseLog))
+	r.Use(middleware.Audit(f.env, f.auditLog))
 	r.Use(middleware.Metrics(f.m))
 	r.Use(middleware.Panic)
 	r.Use(middleware.Headers(f.env.DeploymentMode()))

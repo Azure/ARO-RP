@@ -5,6 +5,7 @@ package audit
 
 import (
 	"encoding/json"
+	"strings"
 	"sync"
 	"time"
 
@@ -16,9 +17,10 @@ const (
 	// see pkg/deploy/generator/resources.go#L901
 	CloudRoleRP = "rp"
 
-	MetadataCreatedTime = "createdTime"
-	MetadataPayload     = "payload"
-	MetadataLogKind     = "logKind"
+	MetadataCreatedTime    = "createdTime"
+	MetadataPayload        = "payload"
+	MetadataLogKind        = "logKind"
+	MetadataAdminOperation = "adminOp"
 
 	SourceAdminPortal = "aro-admin"
 	SourceRP          = "aro-rp"
@@ -34,7 +36,7 @@ const (
 	EnvKeyIKey                = "envIKey"
 	EnvKeyLocation            = "envLocation"
 
-	OperationUnknown = "unknown"
+	UnknownValue = "unknown"
 
 	PayloadKeyCallerIdentities = "payloadCallerIdentities"
 	PayloadKeyCategory         = "payloadCategory"
@@ -43,8 +45,6 @@ const (
 	PayloadKeyResult           = "payloadResult"
 	PayloadKeyRequestID        = "payloadRequestID"
 	PayloadKeyTargetResources  = "payloadTargetResources"
-
-	ResourceTypeAdminAction = "admin action"
 
 	ifxAuditCloudVer = 1.0
 	ifxAuditName     = "#Ifx.AuditSchema"
@@ -73,32 +73,16 @@ var (
 // NewEntry returns a log entry that embeds the provided logger. It has a hook
 // that knows how to hydrate an IFxAudit log payload before logging it.
 func NewEntry(logger *logrus.Logger) *logrus.Entry {
-	// clone logger to avoid audit logs leaking into non-audit logs
-	auditLogger := logrus.New()
-	auditLogger.Out = logger.Out
-	auditLogger.Formatter = logger.Formatter
-	auditLogger.ReportCaller = logger.ReportCaller
-	auditLogger.Level = logger.Level
-	auditLogger.ExitFunc = logger.ExitFunc
-
-	// adding the payload hook first to ensure alll subsequent hooks received
-	// the mutated entry
-	auditLogger.AddHook(&payloadHook{
-		payload: &AuditPayload{},
+	logger.AddHook(&payloadHook{
+		payload: &payload{},
 	})
-	for level, hooks := range logger.Hooks {
-		auditLogger.Hooks[level] = append(
-			auditLogger.Hooks[level],
-			hooks...)
-	}
-
-	return logrus.NewEntry(auditLogger)
+	return logrus.NewEntry(logger)
 }
 
 // payloadHook, when fires, hydrates an IFxAudit log payload using data in a log
 // entry.
 type payloadHook struct {
-	payload *AuditPayload
+	payload *payload
 }
 
 func (payloadHook) Levels() []logrus.Level {
@@ -106,6 +90,8 @@ func (payloadHook) Levels() []logrus.Level {
 }
 
 func (h *payloadHook) Fire(entry *logrus.Entry) error {
+	h.payload = &payload{}
+
 	// Part-A
 	h.payload.EnvVer = ifxAuditVersion
 	h.payload.EnvName = ifxAuditName
@@ -212,6 +198,12 @@ func (h *payloadHook) Fire(entry *logrus.Entry) error {
 	// add non-IFxAudit metadata for our own use
 	entry.Data[MetadataCreatedTime] = logTime
 	entry.Data[MetadataLogKind] = IFXAuditLogKind
+
+	adminOp := false
+	if strings.Contains(h.payload.OperationName, "/admin") {
+		adminOp = true
+	}
+	entry.Data[MetadataAdminOperation] = adminOp
 
 	return nil
 }

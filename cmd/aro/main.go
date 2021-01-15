@@ -37,6 +37,7 @@ func main() {
 	flag.Parse()
 
 	ctx := context.Background()
+	audit := utillog.GetAuditLogger()
 	log := utillog.GetLogger()
 
 	go func() {
@@ -58,7 +59,7 @@ func main() {
 		err = monitor(ctx, log)
 	case "rp":
 		checkArgs(1)
-		err = rp(ctx, log)
+		err = rp(ctx, log, audit)
 	case "portal":
 		checkArgs(1)
 		err = portal(ctx, log)

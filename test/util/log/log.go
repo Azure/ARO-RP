@@ -25,7 +25,7 @@ func New() (*test.Hook, *logrus.Entry) {
 // AssertLoggingOutput compares the logs on `h` with the expected entries in
 // `expected`. It returns a slice of errors encountered, with a zero length if
 // no assertions failed.
-// This function skips audit log entries  in `h` to avoid test flakiness. Use
+// This function skips audit log entries in `h` to avoid test flakiness. Use
 // audit.AssertAuditingOutput() to verify audit entries.
 func AssertLoggingOutput(h *test.Hook, expected []map[string]types.GomegaMatcher) error {
 	var (

@@ -122,7 +122,7 @@ func assertRequiredFields(t *testing.T, h *test.Hook) {
 			continue
 		}
 
-		var payload AuditPayload
+		var payload payload
 		if err := json.Unmarshal([]byte(raw), &payload); err != nil {
 			payloadErrors = append(payloadErrors,
 				fmt.Sprintf("malformed payload JSON: %s", err))
