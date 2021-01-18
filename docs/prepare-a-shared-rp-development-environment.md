@@ -135,7 +135,7 @@ locations.
      --end-date '2299-12-31T11:59:59+00:00' \
      --identifier-uris "https://$(uuidgen)/" \
      --key-type password \
-     --password "$AZURE_CLIENT_SECRET" \
+     --password "$AZURE_RP_CLIENT_SECRET" \
      --query appId \
      -o tsv)"
    az ad sp create --id "$AZURE_RP_CLIENT_ID" >/dev/null
@@ -173,7 +173,7 @@ locations.
 
    ```bash
    az deployment sub create \
-     -l eastus \
+     -l $LOCATION \
      --template-file deploy/rbac-development.json \
      --parameters \
        "armServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_ARM_CLIENT_ID'" --query '[].objectId' -o tsv)" \

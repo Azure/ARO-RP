@@ -32,7 +32,7 @@ deploy_rp_dev() {
             "rpServicePrincipalId=$(az ad sp list --filter "appId eq '$AZURE_RP_CLIENT_ID'" --query '[].objectId' -o tsv)" >/dev/null
 }
 
-deploy_env_dev() {
+deploy_env_dev_ci() {
     echo "########## Deploying env-development in RG $RESOURCEGROUP ##########"
     az deployment group create \
         -g "$RESOURCEGROUP" \
@@ -52,6 +52,23 @@ deploy_env_dev() {
             "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" >/dev/null
 }
 
+deploy_env_dev() {
+    echo "########## Deploying env-development in RG $RESOURCEGROUP ##########"
+    az deployment group create \
+        -g "$RESOURCEGROUP" \
+        -n env-development \
+        --template-file deploy/env-development.json \
+        --parameters \
+            "proxyCert=$(base64 -w0 <secrets/proxy.crt)" \
+            "proxyClientCert=$(base64 -w0 <secrets/proxy-client.crt)" \
+            "proxyDomainNameLabel=$(cut -d. -f2 <<<$PROXY_HOSTNAME)" \
+            "proxyImage=arointsvc.azurecr.io/proxy:latest" \
+            "proxyImageAuth=$(jq -r '.auths["arointsvc.azurecr.io"].auth' <<<$PULL_SECRET)" \
+            "proxyKey=$(base64 -w0 <secrets/proxy.key)" \
+            "sshPublicKey=$(<secrets/proxy_id_rsa.pub)" \
+            "vpnCACertificate=$(base64 -w0 <secrets/vpn-ca.crt)" >/dev/null
+}
+
 deploy_env_dev_override() {
     echo "########## Deploying env-development in RG $RESOURCEGROUP ##########"
     az deployment group create \
@@ -59,9 +76,6 @@ deploy_env_dev_override() {
         -n env-development \
         --template-file deploy/env-development.json \
         --parameters \
-            "ciAzpToken=$AZPTOKEN" \
-            "ciCapacity=3" \
-            "ciPoolName=ARO-CI" \
             "proxyCert=$(base64 -w0 <secrets/proxy.crt)" \
             "proxyClientCert=$(base64 -w0 <secrets/proxy-client.crt)" \
             "proxyDomainNameLabel=$(cut -d. -f2 <<<$PROXY_HOSTNAME)" \
@@ -79,23 +93,23 @@ import_certs_secrets() {
     az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --name rp-firstparty \
-        --file secrets/firstparty.pem
+        --file secrets/firstparty.pem >/dev/null
     az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --name rp-server \
-        --file secrets/localhost.pem
+        --file secrets/localhost.pem >/dev/null
     az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-por" \
         --name portal-server \
-        --file secrets/localhost.pem
+        --file secrets/localhost.pem >/dev/null
     az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-por" \
         --name portal-client \
-        --file secrets/portal-client.pem
+        --file secrets/portal-client.pem >/dev/null
     az keyvault certificate import \
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --name cluster-mdsd \
-        --file secrets/cluster-logging-int.pem
+        --file secrets/cluster-logging-int.pem >/dev/null
     az keyvault secret list \
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --query '[].name' \
@@ -103,7 +117,7 @@ import_certs_secrets() {
     az keyvault secret set \
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --name encryption-key \
-        --value "$(openssl rand -base64 32)"
+        --value "$(openssl rand -base64 32)" >/dev/null
     az keyvault secret list \
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --query '[].name' \
@@ -111,7 +125,7 @@ import_certs_secrets() {
     az keyvault secret set \
         --vault-name "$KEYVAULT_PREFIX-svc" \
         --name fe-encryption-key \
-        --value "$(openssl rand -base64 32)"
+        --value "$(openssl rand -base64 32)" >/dev/null
     az keyvault secret list \
         --vault-name "$KEYVAULT_PREFIX-por" \
         --query '[].name' \
@@ -119,7 +133,7 @@ import_certs_secrets() {
     az keyvault secret set \
         --vault-name "$KEYVAULT_PREFIX-por" \
         --name portal-session-key \
-        --value "$(openssl rand -base64 32)"
+        --value "$(openssl rand -base64 32)" >/dev/null
     az keyvault secret list \
         --vault-name "$KEYVAULT_PREFIX-por" \
         --query '[].name' \
@@ -127,7 +141,7 @@ import_certs_secrets() {
     az keyvault secret set \
         --vault-name "$KEYVAULT_PREFIX-por" \
         --name portal-sshkey \
-        --value "$(openssl genpkey -algorithm rsa -pkeyopt rsa_keygen_bits:2048 -outform der | base64 -w0)"
+        --value "$(openssl genpkey -algorithm rsa -pkeyopt rsa_keygen_bits:2048 -outform der | base64 -w0)" >/dev/null
 }
 
 update_parent_domain_dns_zone() {
