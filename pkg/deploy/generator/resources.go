@@ -647,6 +647,7 @@ func (g *generator) lb() *arm.Resource {
 		Condition:  g.conditionStanza("fullDeploy"),
 		APIVersion: azureclient.APIVersion("Microsoft.Network"),
 		DependsOn: []string{
+			"[resourceId('Microsoft.Network/publicIPAddresses', 'portal-pip')]",
 			"[resourceId('Microsoft.Network/publicIPAddresses', 'rp-pip')]",
 		},
 	}
