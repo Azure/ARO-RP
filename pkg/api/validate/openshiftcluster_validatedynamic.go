@@ -42,11 +42,11 @@ func NewOpenShiftClusterDynamicValidator(log *logrus.Entry, env env.Interface, o
 	}
 }
 
-type azureClaim struct {
+type AzureClaim struct {
 	Roles []string `json:"roles,omitempty"`
 }
 
-func (*azureClaim) Valid() error {
+func (*AzureClaim) Valid() error {
 	return fmt.Errorf("unimplemented")
 }
 
@@ -71,17 +71,17 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 	}
 
 	// FP validation
-	fpDynamic, err := NewValidator(dv.log, dv.env, mSubnetID, wSubnetIDs, dv.subscriptionDoc.ID, dv.fpAuthorizer, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
+	fpDynamic, err := NewValidator(dv.log, dv.env.Environment(), mSubnetID, wSubnetIDs, dv.subscriptionDoc.ID, dv.fpAuthorizer)
 	if err != nil {
 		return err
 	}
 
-	err = fpDynamic.ValidateVnetPermissions(ctx)
+	err = fpDynamic.ValidateVnetPermissions(ctx, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
 	if err != nil {
 		return err
 	}
 
-	err = fpDynamic.ValidateRouteTablesPermissions(ctx)
+	err = fpDynamic.ValidateRouteTablesPermissions(ctx, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
 	if err != nil {
 		return err
 	}
@@ -92,24 +92,24 @@ func (dv *openShiftClusterDynamicValidator) Dynamic(ctx context.Context) error {
 		return err
 	}
 
-	token, err := aad.GetToken(ctx, dv.log, dv.oc, dv.subscriptionDoc, dv.env.Environment().ActiveDirectoryEndpoint, dv.env.Environment().ResourceManagerEndpoint)
+	token, err := aad.GetToken(ctx, dv.log, dv.oc.Properties.ServicePrincipalProfile.ClientID, dv.oc.Properties.ServicePrincipalProfile.ClientSecret, dv.subscriptionDoc.Subscription.Properties.TenantID, dv.env.Environment().ActiveDirectoryEndpoint, dv.env.Environment().ResourceManagerEndpoint)
 	if err != nil {
 		return err
 	}
 
 	spAuthorizer := refreshable.NewAuthorizer(token)
 
-	spDynamic, err := NewValidator(dv.log, dv.env, mSubnetID, wSubnetIDs, dv.subscriptionDoc.ID, spAuthorizer, api.CloudErrorCodeInvalidServicePrincipalPermissions, "provided service principal")
+	spDynamic, err := NewValidator(dv.log, dv.env.Environment(), mSubnetID, wSubnetIDs, dv.subscriptionDoc.ID, spAuthorizer)
 	if err != nil {
 		return err
 	}
 
-	err = spDynamic.ValidateVnetPermissions(ctx)
+	err = spDynamic.ValidateVnetPermissions(ctx, api.CloudErrorCodeInvalidServicePrincipalPermissions, "provided service principal")
 	if err != nil {
 		return err
 	}
 
-	err = spDynamic.ValidateRouteTablesPermissions(ctx)
+	err = spDynamic.ValidateRouteTablesPermissions(ctx, api.CloudErrorCodeInvalidServicePrincipalPermissions, "provided service principal")
 	if err != nil {
 		return err
 	}
@@ -300,13 +300,13 @@ func validateServicePrincipalProfile(ctx context.Context, log *logrus.Entry, env
 
 	log.Print("validateServicePrincipalProfile")
 
-	token, err := aad.GetToken(ctx, log, oc, sub, env.Environment().ActiveDirectoryEndpoint, env.Environment().GraphEndpoint)
+	token, err := aad.GetToken(ctx, log, oc.Properties.ServicePrincipalProfile.ClientID, oc.Properties.ServicePrincipalProfile.ClientSecret, sub.Subscription.Properties.TenantID, env.Environment().ActiveDirectoryEndpoint, env.Environment().ResourceManagerEndpoint)
 	if err != nil {
 		return err
 	}
 
 	p := &jwt.Parser{}
-	c := &azureClaim{}
+	c := &AzureClaim{}
 	_, _, err = p.ParseUnverified(token.OAuthToken(), c)
 	if err != nil {
 		return err

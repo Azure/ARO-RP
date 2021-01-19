@@ -18,7 +18,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 
 	"github.com/Azure/ARO-RP/pkg/api"
-	"github.com/Azure/ARO-RP/pkg/env"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/authorization"
 	"github.com/Azure/ARO-RP/pkg/util/azureclient/mgmt/network"
 	utilpermissions "github.com/Azure/ARO-RP/pkg/util/permissions"
@@ -29,9 +28,9 @@ import (
 
 // SlimDynamic validate in the operator context.
 type SlimDynamic interface {
-	ValidateVnetPermissions(ctx context.Context) error
-	ValidateRouteTablesPermissions(ctx context.Context) error
-	ValidateVnetDns(ctx context.Context) error
+	ValidateVnetPermissions(ctx context.Context, code string, typ string) error
+	ValidateRouteTablesPermissions(ctx context.Context, code string, typ string) error
+	ValidateVnetDNS(ctx context.Context, code string, typ string) error
 	// etc
 	// does Quota code go in here too?
 }
@@ -42,14 +41,11 @@ type dynamic struct {
 	masterSubnetID  string
 	workerSubnetIDs []string
 
-	code string
-	typ  string
-
 	permissions     authorization.PermissionsClient
 	virtualNetworks virtualNetworksGetClient
 }
 
-func NewValidator(log *logrus.Entry, env env.Interface, masterSubnetID string, workerSubnetIDs []string, subscriptionID string, authorizer refreshable.Authorizer, code string, typ string) (*dynamic, error) {
+func NewValidator(log *logrus.Entry, azEnv *azure.Environment, masterSubnetID string, workerSubnetIDs []string, subscriptionID string, authorizer refreshable.Authorizer) (*dynamic, error) {
 	vnetID, _, err := subnet.Split(masterSubnetID)
 	if err != nil {
 		return nil, err
@@ -66,16 +62,13 @@ func NewValidator(log *logrus.Entry, env env.Interface, masterSubnetID string, w
 		masterSubnetID:  masterSubnetID,
 		workerSubnetIDs: workerSubnetIDs,
 
-		code: code,
-		typ:  typ,
-
-		permissions:     authorization.NewPermissionsClient(env.Environment(), subscriptionID, authorizer),
-		virtualNetworks: newVirtualNetworksCache(network.NewVirtualNetworksClient(env.Environment(), subscriptionID, authorizer)),
+		permissions:     authorization.NewPermissionsClient(azEnv, subscriptionID, authorizer),
+		virtualNetworks: newVirtualNetworksCache(network.NewVirtualNetworksClient(azEnv, subscriptionID, authorizer)),
 	}, nil
 }
 
-func (dv *dynamic) ValidateVnetPermissions(ctx context.Context) error {
-	dv.log.Printf("ValidateVnetPermissions (%s)", dv.typ)
+func (dv *dynamic) ValidateVnetPermissions(ctx context.Context, code string, typ string) error {
+	dv.log.Printf("ValidateVnetPermissions (%s)", typ)
 
 	err := dv.validateActions(ctx, dv.vnetr, []string{
 		"Microsoft.Network/virtualNetworks/join/action",
@@ -87,7 +80,7 @@ func (dv *dynamic) ValidateVnetPermissions(ctx context.Context) error {
 	})
 
 	if err == wait.ErrWaitTimeout {
-		return api.NewCloudError(http.StatusBadRequest, dv.code, "", "The %s does not have Network Contributor permission on vnet '%s'.", dv.typ, dv.vnetr)
+		return api.NewCloudError(http.StatusBadRequest, code, "", "The %s does not have Network Contributor permission on vnet '%s'.", typ, dv.vnetr)
 	}
 	if detailedErr, ok := err.(autorest.DetailedError); ok &&
 		detailedErr.StatusCode == http.StatusNotFound {
@@ -96,7 +89,7 @@ func (dv *dynamic) ValidateVnetPermissions(ctx context.Context) error {
 	return err
 }
 
-func (dv *dynamic) ValidateRouteTablesPermissions(ctx context.Context) error {
+func (dv *dynamic) ValidateRouteTablesPermissions(ctx context.Context, code string, typ string) error {
 	vnet, err := dv.virtualNetworks.Get(ctx, dv.vnetr.ResourceGroup, dv.vnetr.ResourceName, "")
 	if err != nil {
 		return err
@@ -135,7 +128,7 @@ func (dv *dynamic) ValidateRouteTablesPermissions(ctx context.Context) error {
 	sort.Slice(rts, func(i, j int) bool { return strings.Compare(m[rts[i]], m[rts[j]]) < 0 })
 
 	for _, rt := range rts {
-		err := dv.validateRouteTablePermissions(ctx, rt, m[rt])
+		err := dv.validateRouteTablePermissions(ctx, rt, m[rt], code, typ)
 		if err != nil {
 			return err
 		}
@@ -144,8 +137,8 @@ func (dv *dynamic) ValidateRouteTablesPermissions(ctx context.Context) error {
 	return nil
 }
 
-func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, rtID string, path string) error {
-	dv.log.Printf("validateRouteTablePermissions(%s, %s)", dv.typ, path)
+func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, rtID string, path string, code string, typ string) error {
+	dv.log.Printf("validateRouteTablePermissions(%s, %s)", typ, path)
 
 	rtr, err := azure.ParseResourceID(rtID)
 	if err != nil {
@@ -158,7 +151,7 @@ func (dv *dynamic) validateRouteTablePermissions(ctx context.Context, rtID strin
 		"Microsoft.Network/routeTables/write",
 	})
 	if err == wait.ErrWaitTimeout {
-		return api.NewCloudError(http.StatusBadRequest, dv.code, "", "The %s does not have Network Contributor permission on route table '%s'.", dv.typ, rtID)
+		return api.NewCloudError(http.StatusBadRequest, code, "", "The %s does not have Network Contributor permission on route table '%s'.", typ, rtID)
 	}
 	if detailedErr, ok := err.(autorest.DetailedError); ok &&
 		detailedErr.StatusCode == http.StatusNotFound {

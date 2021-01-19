@@ -18,6 +18,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/sirupsen/logrus"
 
+	"github.com/Azure/ARO-RP/pkg/api"
 	mock_authorization "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/authorization"
 	mock_network "github.com/Azure/ARO-RP/pkg/util/mocks/azureclient/mgmt/network"
 )
@@ -115,11 +116,9 @@ func TestValidateVnetPermissions(t *testing.T) {
 					ResourceName:   vnetName,
 					SubscriptionID: subscriptionID,
 				},
-				code: "InvalidResourceProviderPermissions",
-				typ:  "resource provider",
 			}
 
-			err := dv.ValidateVnetPermissions(ctx)
+			err := dv.ValidateVnetPermissions(ctx, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)
@@ -347,12 +346,10 @@ func TestValidateRouteTablePermissions(t *testing.T) {
 		dv := &dynamic{
 			log:         logrus.NewEntry(logrus.StandardLogger()),
 			permissions: permissionsClient,
-			code:        "InvalidResourceProviderPermissions",
-			typ:         "resource provider",
 		}
 
 		// purposefully hardcoding path to "" so it is not needed in the wantErr message
-		err := dv.validateRouteTablePermissions(ctx, tt.rtID, "")
+		err := dv.validateRouteTablePermissions(ctx, tt.rtID, "", api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
 		if err != nil && err.Error() != tt.wantErr ||
 			err == nil && tt.wantErr != "" {
 			t.Error(err)
@@ -506,9 +503,6 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 
 				masterSubnetID:  masterSubnet,
 				workerSubnetIDs: []string{workerSubnet},
-
-				code: "InvalidResourceProviderPermissions",
-				typ:  "resource provider",
 			}
 
 			if tt.permissionMocks != nil {
@@ -519,7 +513,7 @@ func TestValidateRouteTablesPermissions(t *testing.T) {
 				tt.vnetMocks(vnetClient, *vnet)
 			}
 
-			err := dv.ValidateRouteTablesPermissions(ctx)
+			err := dv.ValidateRouteTablesPermissions(ctx, api.CloudErrorCodeInvalidResourceProviderPermissions, "resource provider")
 			if err != nil && err.Error() != tt.wantErr ||
 				err == nil && tt.wantErr != "" {
 				t.Error(err)

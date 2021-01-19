@@ -26,10 +26,6 @@ import (
 	_ "github.com/Azure/ARO-RP/pkg/util/scheme"
 )
 
-const (
-	machineSetsNamespace = "openshift-machine-api"
-)
-
 // MachineChecker reconciles the alertmanager webhook
 type MachineChecker struct {
 	clustercli     maoclient.Interface
