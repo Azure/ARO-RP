@@ -88,7 +88,7 @@ secrets-update:
 	rm secrets.tar.gz
 
 e2e.test:
-	go test ./test/e2e -tags e2e -c -o e2e.test
+	go test ./test/e2e -tags e2e -c -ldflags "-X github.com/Azure/ARO-RP/pkg/util/version.GitCommit=$(COMMIT)" -o e2e.test
 
 test-e2e: e2e.test
 	./e2e.test -test.timeout 180m -test.v -ginkgo.v
